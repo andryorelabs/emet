@@ -5,6 +5,7 @@ import path from 'node:path'
 
 import {
   buildForgeConfig,
+  buildTrackerConfig,
   deriveIdPrefix,
   detectGoSelfCheck,
   detectJsSelfCheck,
@@ -87,6 +88,76 @@ describe('buildForgeConfig', () => {
     expect(config.ticket).toEqual({ idPattern: '^NFK-\\d+$', branchPrefix: 'nfk' })
     expect(config.version).toBe(1)
     expect(config.concurrency.waveSize).toBeGreaterThan(0)
+  })
+})
+
+describe('buildTrackerConfig', () => {
+  const base: DetectedRepoInfo = {
+    repoName: 'nfkit',
+    packageManager: 'bun',
+    trunk: 'main',
+    trunkWasDetected: true,
+    tracker: 'local',
+    idPrefix: 'NFK',
+    selfCheck: [],
+  }
+
+  test('linear: onPrOpen/onPrMerge automatic, no per-kind sub-object', () => {
+    const tracker = buildTrackerConfig({ ...base, tracker: 'linear' }) as Record<string, unknown>
+    expect(tracker.kind).toBe('linear')
+    expect(tracker.transitions).toEqual({
+      onStart: 'worker',
+      onPrOpen: 'automatic',
+      onPrMerge: 'automatic',
+    })
+    expect(tracker.github).toBeUndefined()
+    expect(tracker.local).toBeUndefined()
+  })
+
+  test('github: onPrOpen coordinator (label swap), onPrMerge automatic (closing keyword), stateLabels match forge init\'s own label creation', () => {
+    const tracker = buildTrackerConfig({ ...base, tracker: 'github' }) as Record<string, unknown>
+    expect(tracker.kind).toBe('github')
+    expect(tracker.transitions).toEqual({
+      onStart: 'worker',
+      onPrOpen: 'coordinator',
+      onPrMerge: 'automatic',
+    })
+    expect(tracker.github).toEqual({
+      priorityLabels: {},
+      stateLabels: {
+        todo: 'status:todo',
+        'in-progress': 'status:in-progress',
+        'in-review': 'status:in-review',
+      },
+    })
+  })
+
+  test('local: onPrOpen/onPrMerge both coordinator — no tracker automation exists yet', () => {
+    const tracker = buildTrackerConfig({ ...base, tracker: 'local', idPrefix: 'NFK' }) as Record<
+      string,
+      unknown
+    >
+    expect(tracker.kind).toBe('local')
+    expect(tracker.transitions).toEqual({
+      onStart: 'worker',
+      onPrOpen: 'coordinator',
+      onPrMerge: 'coordinator',
+    })
+    expect(tracker.local).toEqual({ idPrefix: 'NFK' })
+  })
+
+  test('every kind carries the same five canonical triage labels', () => {
+    for (const tracker of ['linear', 'github', 'local'] as const) {
+      const config = buildTrackerConfig({ ...base, tracker }) as Record<string, unknown>
+      expect(config.triageLabels).toEqual([
+        'needs-triage',
+        'needs-info',
+        'ready-for-agent',
+        'ready-for-human',
+        'wontfix',
+      ])
+      expect(config.readyLabel).toBe('ready-for-agent')
+    }
   })
 })
 
