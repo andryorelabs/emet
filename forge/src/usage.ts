@@ -5,7 +5,7 @@
  * final context size, the top-10 largest tool results (the usual culprits:
  * unfiltered test output, full-file `Read`s, screenshots), and how many
  * `Read` calls went unbounded (no `offset`/`limit`) against a file over
- * ~400 lines — the `docs/agents/forge.md` "Context budget and output
+ * ~400 lines — the locate-before-`Read` discipline `reference/worker-prompt.md` and `reference/phases-6-9.md` (Phase 7 step 3) spell out as "Context budget and output
  * hygiene" tripwire that a prose-only instruction measurably failed to
  * prevent in a real 4-worker wave.
  *
@@ -14,10 +14,10 @@
  * itself against the plan's targets (peak < 160k, split threshold 240k).
  *
  * Usage:
- *   bun run forge:usage                      # most recent coordinator session + its workers
- *   bun run forge:usage --session <id>        # a specific coordinator session
- *   bun run forge:usage --file <path.jsonl>   # a single transcript file directly
- *   bun run forge:usage --stalled [--minutes N]  # find hung subagents (default 10m)
+ *   forge usage                      # most recent coordinator session + its workers
+ *   forge usage --session <id>        # a specific coordinator session
+ *   forge usage --file <path.jsonl>   # a single transcript file directly
+ *   forge usage --stalled [--minutes N]  # find hung subagents (default 10m)
  *
  * `--stalled` is the watchdog for a coordinator's own `code-review` fan-out
  * (`docs/agents/forge.md` Phase 8): a sub-agent transcript is a plain file
@@ -66,7 +66,7 @@ function contextSize(entry: UsageEntry): number {
 
 /**
  * Records the `tool_use` → name and `tool_result` → size mappings for one
- * message's content blocks, plus the `docs/agents/forge.md` tripwire: every
+ * message's content blocks, plus the locate-before-`Read` tripwire: every
  * unbounded `Read` (no `offset`/`limit`) file path (via
  * `unboundedReadPaths`, resolved against the filesystem after the
  * transcript scan — see {@link analyzeTranscript}). Extracted out of

@@ -40,19 +40,19 @@
  * other's branches.** Every worktree a `/forge` worker bootstraps is
  * `git worktree lock`ed with a reason of the shape
  * `forge run=<runId> ticket=<ticket> anchor=<pid> at=<iso>`
- * ({@link resolveWorktreeOwner}, `forge-worktrees.ts`). A locked worktree is
+ * ({@link resolveWorktreeOwner}, `worktrees.ts`). A locked worktree is
  * never a deletion candidate, full stop, regardless of what content
  * classification says about the branch it holds ({@link guardBranch}) — the
  * classifier is never even consulted for one. `--run <id>` scopes the whole
  * sweep to branches whose still-locked worktree resolves to that run id,
- * releasing the ticket's reservation (`forge-claims.ts`) after each
+ * releasing the ticket's reservation (`claims.ts`) after each
  * successful deletion, and — once branch cleanup is done — every worker slot
- * (`forge-slots.ts`) that run still holds, so a wave's `FORGE_MAX_LIVE_WORKERS`
+ * (`slots.ts`) that run still holds, so a wave's `FORGE_MAX_LIVE_WORKERS`
  * capacity is freed back up without the coordinator having to track which
  * indices it acquired. With no `--run` (the default) or the explicit,
  * synonymous `--all`, every branch in the repo is swept as before, but a
  * locked worktree whose owning run classifies (`classifyRun`,
- * `forge-runs.ts`) as `'live'` or `'idle'` is skipped and reported
+ * `runs.ts`) as `'live'` or `'idle'` is skipped and reported
  * separately from a `'dead'` owner or a non-`/forge` lock reason, which both
  * fall into a generic "locked, protected" bucket — either way, never
  * deleted.
@@ -64,7 +64,7 @@
  */
 import path from 'node:path'
 
-import { releaseTicket } from './claims'
+import { configureTicketPattern, releaseTicket } from './claims'
 import {
   ForgeConfigError,
   requireForgeConfig,
@@ -238,9 +238,13 @@ export function guardBranch(
 
   if (!owner) return { done: true, category: 'locked-protected' }
 
+  // The coordinator's transcript lives under *its own* project slug, not
+  // this worktree's directory — see `WorktreeOwner`'s doc comment
+  // (worktrees.ts). Fall back to the directory-derived guess only for a lock
+  // reason written before `slug=` existed.
   const verdict = classifyRunFunction(
     owner.anchorPid,
-    resolveSessionSlug(matchedEntry.directory),
+    owner.coordinatorSlug ?? resolveSessionSlug(matchedEntry.directory),
     owner.runId,
   )
   if (verdict === 'dead') {
@@ -308,7 +312,7 @@ async function deleteBranch(
 /**
  * Wraps {@link deleteBranch} with `--run` mode's reservation cleanup (AO-260
  * point 1): once a branch is actually gone, its ticket's claim in the
- * registry (T1b, `forge-claims.ts`) is stale and must go with it, or a
+ * registry (T1b, `claims.ts`) is stale and must go with it, or a
  * finished ticket would look permanently reserved to the next `/forge`
  * coordinator. Never releases on a failed deletion — the branch, and
  * whatever legitimately still holds the reservation, is unchanged. `ticket`
@@ -539,6 +543,16 @@ export async function run(argv: string[]): Promise<void> {
       throw new ForgeConfigError('forge cleanup: not inside a git repository')
     }
     const config = await requireForgeConfig(repoRoot)
+    // `deleteAndReleaseTicket` below calls `claims.ts`'s `releaseTicket`,
+    // which validates against `claims.ts`'s module-level `TICKET_PATTERN`
+    // (default: the generic `AO-<digits>`-shaped pattern). Without this call,
+    // a repo with a differently-shaped `ticket.idPattern` (e.g. a numeric
+    // `^#?\d+$` github/local id) throws mid-sweep — after some branches are
+    // already deleted, before `releaseAllSlotsForRun` ever runs — leaking
+    // that run's worker slots. `claims.ts`'s own `run()` configures this for
+    // itself; `cleanup.ts` must do the same since it calls into that module
+    // directly rather than through the `forge claims` CLI entry point.
+    configureTicketPattern(config.ticket.idPattern)
     await main(config)
   } catch (error: unknown) {
     if (error instanceof ForgeConfigError) {

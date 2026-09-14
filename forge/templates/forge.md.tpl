@@ -24,21 +24,27 @@ literal calls `/forge` makes to create, read, and transition tickets here, and
 
 ## Worktree setup
 
-TODO(forge): describe this repo's own per-worker bootstrap beyond a bare
-dependency install — codegen steps, env files to copy from the main checkout,
-anything a fresh worktree needs before a worker can run its self-check. Wire
-the mechanical parts into `worktree.bootstrap`/`worktree.copyFromMain` in
-`forge.config.json`; keep the "why" here.
+A worker's first action in a fresh worktree is always `git worktree lock`
+with the reason the coordinator generated for it (`forge lock-reason`) —
+that's built into `/forge` itself, identical in every repo, and nothing
+below needs to restate it.
+
+TODO(forge): describe this repo's own per-worker bootstrap *after* that lock
+and beyond a bare dependency install — codegen steps, env files to copy from
+the main checkout, anything a fresh worktree needs before a worker can run
+its self-check. Wire the mechanical parts into
+`worktree.bootstrap`/`worktree.copyFromMain` in `forge.config.json`; keep the
+"why" here.
 
 ## Shared/singleton resources
 
 TODO(forge): does a wave of concurrent workers in this repo share a
 non-parallelizable resource — one E2E database, one dev-server port, one
-external service login? If so, describe the lock/queue mechanism here (see
-andryore-dev's own `docs/agents/forge.md` "E2E is a repo-wide singleton"
-section for the shape this usually takes). If this repo has no such resource,
-delete this section — `forge preflight` blocks dispatch while any such marker
-remains in this file.
+external service login? If so, describe the lock/queue mechanism here — the
+usual shape is a single queue file plus a stale-holder reclaim, so a second
+worker waits rather than corrupting the first one's run. If this repo has no
+such resource, delete this section — `forge preflight` blocks dispatch while
+any such marker remains in this file.
 
 ## Schema / migration ownership
 

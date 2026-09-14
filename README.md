@@ -11,7 +11,7 @@ beyond running `forge init` once.
 ## Install
 
 ```bash
-git clone <this repo> claude-forge
+git clone git@github.com:AndryOre/claude-forge.git
 cd claude-forge
 ./install.sh
 ```
@@ -71,8 +71,8 @@ preflight` refuses to dispatch while one remains.
 ## What's in here
 
 - `forge/` — the CLI (`forge init/doctor/preflight/claims/slots/cleanup/
-  usage/handoff/selftest`), its schema, and the doc templates `forge init`
-  fills in.
+  usage/handoff/lock-reason/selftest`), its schema, and the doc templates
+  `forge init` fills in.
 - `commands/forge.md` — the `/forge` command itself (a ~110-line router);
   everything else it needs lives in `forge/reference/`, loaded only when the
   current run's mode needs it.

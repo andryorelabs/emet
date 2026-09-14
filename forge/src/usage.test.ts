@@ -7,11 +7,10 @@ import {
 } from './usage'
 
 /**
- * Pure-function coverage only — `forge-usage.ts` is read-only against real
+ * Pure-function coverage only — `usage.ts` is read-only against real
  * Claude Code transcripts under `~/.claude/projects/`, and its `main()` is
  * guarded by `if (import.meta.main)` specifically so importing it here never
- * runs the CLI. See `scripts/e2e-queue.test.ts` for the same pattern applied
- * to a different script.
+ * runs the CLI.
  */
 
 describe('parseStalledMinutes', () => {

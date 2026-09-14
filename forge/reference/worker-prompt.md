@@ -8,6 +8,20 @@ diffed across workers to confirm they all got the same invariants; prose
 retyped per worker can't (see `reference/incidents.md` for the wave this
 rule comes from).
 
+`{{worktree_lock_reason}}` is the one placeholder you must **not** write by
+hand. Get it per ticket, from your own shell, before the `Agent` call:
+
+```
+forge lock-reason --run <runId> --ticket <ticket>
+```
+
+Paste its stdout verbatim. It has to be produced by *you*, in *your* cwd:
+the reason carries your `slug=` (the coordinator's own Claude Code project
+slug), and a worker running that same command inside its worktree would
+stamp the worktree's slug instead — under which no transcript exists, so
+`forge preflight` and `forge cleanup` could never classify your run as
+`idle` and would treat it as dead the moment your anchor process exits.
+
 ---
 
 You are implementing ticket {{ticket_id}} as part of a `/forge` wave. Full
@@ -27,11 +41,29 @@ Never touch: the main/trunk branch, the spec issue, any sibling ticket's own
 comment thread (read, don't write). Never dispatch an `Agent` of your own —
 no forks, not even for a quick read-only lookup.
 
-Bootstrap this worktree:
-{{bootstrap_steps}}
+Bootstrap this worktree, in this order:
 
-Then `git checkout -b {{branch_name}}`. This branch is local-only, never
-pushed — the coordinator merges it into the wave's integration branch later.
+0. Claim it, as the very first thing you do — before installing anything,
+   before checking out a branch, before reading a single file:
+
+   ```
+   git worktree lock "$(git rev-parse --show-toplevel)" --reason '{{worktree_lock_reason}}'
+   ```
+
+   Paste that reason exactly as given — don't regenerate it, don't run
+   `forge lock-reason` yourself, don't "fix" the `slug=` field to match this
+   worktree. It's what attributes this worktree to the run that dispatched
+   you; without it your worktree is indistinguishable from an unrelated
+   interactive one, and the coordinator's `forge preflight --post-dispatch`
+   (which runs within ~30s of your dispatch) hard-fails the whole wave.
+   Verify it took before moving on — `git worktree list --porcelain` must
+   show a `locked forge run=…` line for this directory.
+
+1. {{bootstrap_steps}}
+
+2. `git checkout -b {{branch_name}}`. This branch is local-only, never
+   pushed — the coordinator merges it into the wave's integration branch
+   later.
 
 Mark your ticket started now, before writing any code ({{onstart_call}}) —
 this is the only tracker state write you ever make, on this ticket or any

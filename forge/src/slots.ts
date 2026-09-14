@@ -20,28 +20,28 @@ import { classifyRun, resolveSessionSlug, type RunVerdict } from './runs'
 /**
  * Concurrency-cap slots under `<git-common-dir>/forge/slots/<index>` — the
  * missing half of `FORGE_MAX_LIVE_WORKERS` (see `docs/agents/forge.md`'s
- * "Concurrency" section). `forge:preflight`'s `checkSlotCapacity` has always
+ * "Concurrency" section). `preflight.ts`'s `checkSlotCapacity` has always
  * *counted* free slots, but nothing ever wrote one, so the cap was
  * aspirational — every slot always read as free no matter how many workers
  * were actually running.
  *
- * **Why this isn't built on `forge-locks.ts`'s own {@link isLockStale}.**
+ * **Why this isn't built on `locks.ts`'s own {@link isLockStale}.**
  * That function treats a holder as stale the instant its literal OS `pid`
  * exits — correct for a lock held by one continuously-running process for
- * its whole lifetime (`e2e-queue.ts`'s own lock). A dispatch slot instead
+ * its whole lifetime. A dispatch slot instead
  * represents one worker's occupancy across an entire wave — hours, spanning
  * many separate short-lived tool-call processes, none of which is the thing
  * actually alive. The right liveness signal is the same one
- * `forge-claims.ts`'s reservations already use: `classifyRun`'s
+ * `claims.ts`'s reservations already use: `classifyRun`'s
  * `runId`/`anchorPid` anchor-process model. This module reuses
- * `forge-locks.ts`'s `mkdirSync`/EEXIST directory primitive — still the
+ * `locks.ts`'s `mkdirSync`/EEXIST directory primitive — still the
  * right atomic acquire mechanism, since two coordinators racing for the same
  * slot index still need exactly one to win — but replaces its
  * pid-liveness-based staleness check with one built on `classifyRun`
  * instead.
  *
- * **Call this through `bun run forge:slots`, never through an inline `bun
- * -e` snippet** — same rationale as `forge-claims.ts`'s file-level doc
+ * **Call this through `forge slots`, never through an inline `bun
+ * -e` snippet** — same rationale as `claims.ts`'s file-level doc
  * comment (AO-285): an untypechecked positional call is how that incident's
  * reservation got corrupted, and a slot holder has the same
  * `runId`/`anchorPid`/`ticket` shape.
@@ -76,7 +76,7 @@ function slotDirectory(slotsDirectory: string, index: number): string {
 
 /**
  * `'idle'` is deliberately treated the same as `'live'` here — the same
- * ambiguity `shouldWriteReservation` (`forge-claims.ts`) refuses to
+ * ambiguity `shouldWriteReservation` (`claims.ts`) refuses to
  * auto-reclaim: a restart mid-run looks identical to a genuinely gone
  * process from the outside, so a slot only frees up once its owner
  * classifies unambiguously `'dead'`.
@@ -172,7 +172,7 @@ export function releaseSlot(slotsDirectory: string, index: number): void {
 
 /**
  * Releases every slot `runId` currently holds — used by
- * `bun run forge:cleanup --run <runId>` at wave close-out, so a coordinator
+ * `forge cleanup --run <runId>` at wave close-out, so a coordinator
  * never has to remember which indices it took across N {@link acquireSlot}
  * calls, and by `forge:slots --release --run <runId>` for the same purpose
  * when a dispatch aborts before reaching cleanup.
@@ -275,10 +275,10 @@ function resolveMaxLiveWorkers(config: ForgeConfig): number {
  * file-level doc comment for why an inline `bun -e` snippet is not).
  *
  * ```
- * bun run forge:slots --acquire --run <runId> --anchor <pid> --ticket <ticket>
- * bun run forge:slots --release --run <runId>
- * bun run forge:slots --release-index <index>
- * bun run forge:slots --list
+ * forge slots --acquire --run <runId> --anchor <pid> --ticket <ticket>
+ * forge slots --release --run <runId>
+ * forge slots --release-index <index>
+ * forge slots --list
  * ```
  */
 async function main(config: ForgeConfig): Promise<void> {
@@ -333,7 +333,7 @@ async function main(config: ForgeConfig): Promise<void> {
   }
 
   console.error(
-    'usage: bun run forge:slots --acquire --run <runId> --anchor <pid> --ticket <ticket> | --release --run <runId> | --release-index <index> | --list',
+    'usage: forge slots --acquire --run <runId> --anchor <pid> --ticket <ticket> | --release --run <runId> | --release-index <index> | --list',
   )
   process.exitCode = 1
 }

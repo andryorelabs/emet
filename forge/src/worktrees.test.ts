@@ -103,6 +103,31 @@ describe('resolveWorktreeOwner', () => {
     })
   })
 
+  test('reads an optional slug= field when present', () => {
+    const entry: WorktreeEntry = {
+      ...baseEntry,
+      lockedReason:
+        'forge run=run-1 ticket=AO-258 anchor=4242 slug=-home-andryore-code-repo at=2026-09-07T20:00:00.000Z',
+    }
+    expect(resolveWorktreeOwner(entry)).toEqual({
+      runId: 'run-1',
+      ticket: 'AO-258',
+      anchorPid: 4242,
+      at: '2026-09-07T20:00:00.000Z',
+      coordinatorSlug: '-home-andryore-code-repo',
+    })
+  })
+
+  test('omits coordinatorSlug entirely for a lock reason written before slug= existed', () => {
+    const entry: WorktreeEntry = {
+      ...baseEntry,
+      lockedReason:
+        'forge run=run-1 ticket=AO-258 anchor=4242 at=2026-09-07T20:00:00.000Z',
+    }
+    expect(resolveWorktreeOwner(entry)?.coordinatorSlug).toBeUndefined()
+    expect('coordinatorSlug' in (resolveWorktreeOwner(entry) ?? {})).toBe(false)
+  })
+
   test('returns null for an unlocked worktree', () => {
     expect(resolveWorktreeOwner(baseEntry)).toBeNull()
   })

@@ -18,16 +18,16 @@ itself, any remaining `TODO(forge):` marker in `docs/agents/`). Fix whatever
 it flags before dispatching; don't dispatch into a dirty or half-initialized
 repo.
 
-Compute this wave's frontier per `docs/agents/forge.md`'s dispatch-frontier
-algorithm and this repo's tracker (`~/.claude/forge/reference/tracker-<kind>.md`
-for the literal calls) — candidates are unassigned, in the tracker's "todo"
+Compute this wave's frontier against this repo's tracker
+(`~/.claude/forge/reference/tracker-<kind>.md` for the literal calls) —
+candidates are unassigned, in the tracker's "todo"
 state, carrying the ready-for-dispatch triage label, under this spec, with no
 open blocker. Sort by priority descending (`tracker.github.priorityLabels`,
 or the tracker's native priority field), then `createdAt` ascending.
 
 Immediately before each survivor's `Agent` call, reserve it with
 `forge claims --reserve <ticket> --run <runId> --anchor <anchorPid>` (the
-real dispatch mutex — see `docs/agents/forge.md`'s "Multiple coordinators"),
+real dispatch mutex — see `reference/incidents.md` §AO-285),
 then take a worker slot with `forge slots --acquire --run <runId> --anchor
 <anchorPid> --ticket <ticket>` (the global, per-host
 `concurrency.maxLiveWorkers` cap — see "Concurrency"). A denied reservation
@@ -42,6 +42,20 @@ with `forge slots --release --run <runId>` before ending the phase —
 otherwise those slots stay occupied until the wave's own
 `forge cleanup --run <runId>` at close-out.
 
+For each ticket in the batch, get its worktree lock reason *before* the
+`Agent` call and put it in that worker's prompt:
+
+```
+forge lock-reason --run <runId> --ticket <ticket>
+```
+
+Never assemble that string yourself — it's the same AO-285 shape as calling
+the claims/slots functions through an inline `bun -e` snippet
+(`reference/incidents.md`), and it carries a `slug=` field only a command
+running in *your* cwd can get right. `forge lock-reason` honors this repo's
+`worktree.lockReason` override if it has one, and refuses to emit a reason
+this CLI's own parser can't read back.
+
 Launch up to `concurrency.waveSize` `Agent` calls in parallel (single
 message, multiple tool uses), each with `isolation: "worktree"` **and
 `model: "sonnet"`** (pinned explicitly — don't rely on whatever model this
@@ -49,7 +63,7 @@ session happens to be on).
 
 **Immediately after that batch returns, before any worker has had a chance to
 commit, run `forge preflight --post-dispatch`** — the fourth enforcement
-gate in `docs/agents/forge.md`'s "Handoff note" section. It hard-fails on:
+gate on a dispatch. It hard-fails on:
 two worktrees claiming the same ticket, two worker branches with the same
 ticket number, a worktree still unlocked 30s+ after dispatch, or a
 worktree's branch not matching its own lock's ticket (see
@@ -107,10 +121,16 @@ Inside each worktree, in order:
    resumed session picking its own prior work back up), read it first and
    enumerate its `dead-ends:` in your first message before touching anything
    else — that's the contract, and it's checkable directly from the
-   transcript. Otherwise, bootstrap per `docs/agents/forge.md` — **use the
-   silent/quiet flags it specifies** — then `git checkout -b
-   <branchPrefix>-<n>-<slug>` (`ticket.branchPrefix` from
-   `forge.config.json`) using the ticket's own id and a slug from its title.
+   transcript. Otherwise: first `git worktree lock "$(git rev-parse
+   --show-toplevel)" --reason '<the reason the dispatch prompt gave you>'`
+   — before anything else, and using that exact string rather than a
+   regenerated one (the coordinator produced it with `forge lock-reason` in
+   Phase 6; a worker regenerating it stamps its own worktree's slug, which
+   is the one value it cannot get right). Then bootstrap per
+   `docs/agents/forge.md` — **use the silent/quiet flags it specifies** —
+   then `git checkout -b <branchPrefix>-<n>-<slug>` (`ticket.branchPrefix`
+   from `forge.config.json`) using the ticket's own id and a slug from its
+   title.
    This branch is local-only and never pushed — the coordinator merges it
    locally into the wave's integration branch in Phase 8 — so its name exists
    purely for local debugging traceability ("which worker produced this
@@ -130,7 +150,7 @@ Inside each worktree, in order:
    further pre-empts a review that hasn't happened yet.
 3. Do not call `ToolSearch("select:LSP")` — `LSP` is not available inside a
    worker (verified: it's wired only into the coordinator's session; see
-   `docs/agents/forge.md`'s "Context budget and output hygiene"). Read the
+   `reference/incidents.md`). Read the
    ticket. Read a sibling's ticket/comments only if you actually need to
    align with a decision it made — the dispatch prompt gave you IDs, not
    bodies, on purpose (see Phase 6). Use `rg -n '<symbol>'` (or `sg run -p
@@ -144,8 +164,8 @@ Inside each worktree, in order:
    named, reaching for `diagnosing-bugs` if something gets stuck.
 5. Write/update `.forge/handoff-<own ticket>.md` at its three fixed
    triggers — first green test, each closed dead-end, before each E2E run
-   (`docs/agents/forge.md`'s "Handoff note" section has the exact format and
-   budget). This is continuous, not a step you do once at the end.
+   (`forge handoff --check` enforces the exact format and budget; run it
+   in step 6 below). This is continuous, not a step you do once at the end.
 6. Self-check with whatever fast, worktree-safe, non-agentic checks
    `docs/agents/forge.md` names for this repo (`commands.selfCheck` in
    `forge.config.json`), **plus `forge handoff --check
@@ -168,9 +188,9 @@ Inside each worktree, in order:
 A worker never runs the repo's end-to-end test suite if `docs/agents/
 forge.md`/`commands.fullSuite.singleton` marks it a shared/singleton
 resource — that runs once per wave, in Phase 8, over the merged result. When
-a worker does run its own scoped E2E (`docs/agents/forge.md`'s "E2E is a
-repo-wide singleton" section, if this repo has one), use whatever quiet,
-stop-on-first-failure invocation that section names — nothing extra to pass.
+a worker does run its own scoped E2E, use whatever quiet,
+stop-on-first-failure invocation `docs/agents/forge.md`'s
+"Shared/singleton resources" names — nothing extra to pass.
 
 ## Phase 8 — Wave close-out
 
@@ -191,9 +211,9 @@ Also run `forge usage --session <this coordinator session>` and, per worker,
 flag (report, don't block the merge on) any full `Read` over
 `usage.oversizedReadLines` lines — same "flag in Phase 9's report" treatment
 as the check above. This is the backstop for Phase 7 step 3
-(locate-before-`Read` discipline): see `docs/agents/forge.md`'s "Context
-budget and output hygiene" for the measured wave where the prose-only
-version of this instruction went 0/4 (`reference/incidents.md`).
+(locate-before-`Read` discipline): see `reference/incidents.md`'s "The
+handoff note's 0-of-4 wave" for the measured run where the prose-only
+version of this instruction was followed by none of four workers.
 
 Use the `resolving-merge-conflicts` skill to merge this wave's worker
 branches, in dependency order, into one integration branch named

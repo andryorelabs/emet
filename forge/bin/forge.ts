@@ -6,7 +6,7 @@
  * inside `andryore-dev`, invoked via `bun run forge:<name>` aliases in that
  * repo's own `package.json`. Extracted here so `/forge` can run in *any* git
  * repo, not just one with those scripts and aliases already installed — see
- * `docs/agents/forge.md`'s "Generalizing /forge" ADR for the full rationale.
+ * the README for the full rationale.
  *
  * Each subcommand module still reads its own arguments off `process.argv`
  * internally (unchanged from the original scripts) and now additionally
@@ -33,6 +33,7 @@ commands:
   cleanup   [--run <id> | --all] [--dry-run] [--force]
   usage     [--session <id> | --file <path>] [--stalled [--minutes N]] [--project-dir <path>]
   handoff   --check <path> | --render <path>
+  lock-reason --run <id> --ticket <ticket> [--anchor <pid>]  — the \`git worktree lock\` reason a worker writes at bootstrap
   selftest  — run this CLI's own unit tests
 `
 
@@ -89,14 +90,36 @@ async function main(): Promise<void> {
       await run(rest)
       return
     }
+    case 'lock-reason': {
+      const { run } = await import('../src/lockreason')
+      await run(rest)
+      return
+    }
     case 'selftest': {
+      const cliRoot = new URL('..', import.meta.url).pathname
+      const tsconfigPath = new URL('../tsconfig.json', import.meta.url).pathname
       const bunfigPath = new URL('../bunfig.toml', import.meta.url).pathname
       const testRoot = new URL('../src', import.meta.url).pathname
-      const proc = Bun.spawn(
+
+      // `tsc --noEmit` first — this CLI's own tsconfig sets `strict: true`,
+      // and AO-285 (the incident that made claims.ts/slots.ts require going
+      // through this dispatcher instead of an inline `bun -e` snippet) was
+      // exactly a type error no runtime test caught. `bunx` resolves to the
+      // `typescript` devDependency `bun install` puts in this tree's own
+      // node_modules rather than requiring a global `tsc`.
+      const typecheck = Bun.spawn(
+        ['bunx', 'tsc', '--noEmit', '-p', tsconfigPath],
+        { cwd: cliRoot, stdio: ['inherit', 'inherit', 'inherit'] },
+      )
+      const typecheckExitCode = await typecheck.exited
+
+      const test = Bun.spawn(
         ['bun', 'test', '--config', bunfigPath, testRoot],
         { stdio: ['inherit', 'inherit', 'inherit'] },
       )
-      process.exitCode = await proc.exited
+      const testExitCode = await test.exited
+
+      process.exitCode = typecheckExitCode !== 0 ? typecheckExitCode : testExitCode
       return
     }
     case '--help':

@@ -9,8 +9,8 @@
  * section; everything until the next section header belongs to it.
  *
  * Usage:
- *   bun run forge:handoff --check <path>    # exit 1 with reasons on any violation
- *   bun run forge:handoff --render <path>   # print a Linear-comment-ready body
+ *   forge handoff --check <path>    # exit 1 with reasons on any violation
+ *   forge handoff --render <path>   # print a Linear-comment-ready body
  */
 
 import {
@@ -119,8 +119,8 @@ function checkHandoff(
  * deliberately generic (`.+` rather than a config-sourced `ticket.idPattern`
  * spliced into a filename regex, which would need to strip that pattern's
  * own `^`/`$` anchors to compose safely) so it never needs to match this
- * repo's `ticket.idPattern` exactly. `docs/agents/forge.md`'s "Branch and
- * commit convention" is what actually enforces the filename shape at
+ * repo's `ticket.idPattern` exactly. `reference/worker-prompt.md`'s
+ * `{{handoff_path}}` is what actually fixes the filename shape at
  * write-time; this only has to extract whatever's there for the rendered
  * heading.
  */
@@ -136,7 +136,7 @@ async function main(config: ForgeConfig): Promise<void> {
 
   if (!targetPath || (mode !== '--check' && mode !== '--render')) {
     console.error(
-      'usage: bun run forge:handoff --check <path> | --render <path>',
+      'usage: forge handoff --check <path> | --render <path>',
     )
     process.exitCode = 1
     return

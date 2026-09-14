@@ -36,14 +36,14 @@ import {
  * separate, more expensive check `/forge`'s own Phase 0 already does by
  * reading the docs.
  *
- * `/forge` worktrees now carry their own liveness signal: `forge-runs.ts`'s
+ * `/forge` worktrees now carry their own liveness signal: `runs.ts`'s
  * {@link classifyRun} walks a worktree's owning run's anchor process (via
  * `resolveWorktreeOwner`'s parse of the `git worktree lock` reason each
  * worker writes at bootstrap, see `docs/agents/forge.md`) to tell a run
  * that's genuinely still going from one abandoned by a crashed or skipped
  * `forge:cleanup`. Only a worktree with no `/forge` lock reason at all
  * (pre-existing worktrees, or an ordinary interactive worktree unrelated to
- * `/forge`) falls back to `forge-cleanup.ts`'s own merge/equivalence
+ * `/forge`) falls back to `cleanup.ts`'s own merge/equivalence
  * classifier ({@link classifyByContent}).
  */
 
@@ -118,7 +118,7 @@ export type WorktreeEntryVerdict =
  * interactive worktree doing unrelated feature work) falls back to
  * `classifyByContent`, decided by the caller since that classification is
  * async and git-backed. An owned entry defers to `classifyOwnerRun` (real
- * callers pass `classifyRun` from `forge-runs.ts`; tests inject a fake) to
+ * callers pass `classifyRun` from `runs.ts`; tests inject a fake) to
  * decide between four outcomes: a `'live'` owner matching the caller's own
  * `--run` is this run's own leftover from an interrupted attempt — still a
  * failure; a `'live'` owner that doesn't match (or no `--run` was given at
@@ -197,13 +197,13 @@ export type SlotCapacityCheck = {
  * now? Counting live claims and then deciding to dispatch would be
  * read-then-write, not atomic, and would race across two coordinators
  * checking at the same moment — the actual fix for that (N slots acquired
- * one at a time via `forge-slots.ts`'s `acquireSlot`, immediately before
+ * one at a time via `slots.ts`'s `acquireSlot`, immediately before
  * each worker's `Agent` call) belongs to dispatch time (Phase 6), out of
  * this script's scope. This only answers the capacity question ahead of
  * time; it never acquires or releases a slot itself. `isSlotFree` is
  * injected so tests can simulate "slots free" and "slots exhausted" without
  * touching the filesystem — production passes the negation of
- * `forge-slots.ts`'s {@link isSlotStale} over each of
+ * `slots.ts`'s {@link isSlotStale} over each of
  * `<git-common-dir>/forge/slots/<index>`.
  */
 export function checkSlotCapacity(
@@ -247,7 +247,7 @@ async function describeWorktreeEntryVerdict(
     case 'own-run-leftover': {
       return {
         bucket: 'fail',
-        line: `  ${entry.directory} (${entry.branch}): live — this run's own leftover from an interrupted attempt (run ${verdict.owner.runId}, ticket ${verdict.owner.ticket}) — run "bun run forge:cleanup --run ${verdict.owner.runId}" to clear it`,
+        line: `  ${entry.directory} (${entry.branch}): live — this run's own leftover from an interrupted attempt (run ${verdict.owner.runId}, ticket ${verdict.owner.ticket}) — run "forge cleanup --run ${verdict.owner.runId}" to clear it`,
       }
     }
     case 'other-run-live': {
@@ -265,7 +265,7 @@ async function describeWorktreeEntryVerdict(
     case 'dead': {
       return {
         bucket: 'info',
-        line: `  ${entry.directory} (${entry.branch}): dead — reclaimable via "bun run forge:cleanup --run ${verdict.owner.runId} --force" (or --all --force if abandoned)`,
+        line: `  ${entry.directory} (${entry.branch}): dead — reclaimable via "forge cleanup --run ${verdict.owner.runId} --force" (or --all --force if abandoned)`,
       }
     }
     case 'content-fallback': {
@@ -277,7 +277,7 @@ async function describeWorktreeEntryVerdict(
       )
       const trunkRef = `${remote}/${trunk}`
       const advice = isSafeToDelete(contentVerdict)
-        ? `looks merged/equivalent to ${trunkRef} — safe to run "bun run forge:cleanup"`
+        ? `looks merged/equivalent to ${trunkRef} — safe to run "forge cleanup"`
         : `${contentVerdict} from ${trunkRef} — needs human review before cleanup, work could be lost`
       return {
         bucket: 'fail',
@@ -290,7 +290,7 @@ async function describeWorktreeEntryVerdict(
 export type PostDispatchFailure = {
   readonly kind:
     | 'duplicate-ticket-worktree'
-    | 'duplicate-ao-branch-number'
+    | 'duplicate-ticket-branch-number'
     | 'unlocked-past-deadline'
     | 'branch-ticket-mismatch'
   readonly message: string
@@ -298,8 +298,8 @@ export type PostDispatchFailure = {
 
 /**
  * Extracts a ticket's numeric suffix (`AO-321` → `321`, `NFK-42` → `42`) —
- * every tracker adapter's id shape (`docs/agents/forge.md`'s "Generalizing
- * /forge") is `<PREFIX>-<digits>`, so this stays a fixed shape regardless of
+ * every tracker adapter's id shape (see `reference/tracker-*.md`) is
+ * `<PREFIX>-<digits>`, so this stays a fixed shape regardless of
  * the configured `ticket.idPattern`, which only varies the prefix.
  */
 function ticketNumber(ticket: string): string | null {
@@ -308,19 +308,22 @@ function ticketNumber(ticket: string): string | null {
 }
 
 /**
- * A worker's own branch convention (`docs/agents/forge.md`'s "Branch and
- * commit convention") is `<branchPrefix>-<n>-<slug>` — this checks that a
+ * A worker's own branch convention (`docs/agents/forge.md`'s "Ticket ids
+ * and branches") is `<branchPrefix>-<n>-<slug>` — this checks that a
  * worktree's checked-out branch actually names the same ticket number its
  * own lock declares, so a shell mis-routed to the wrong worktree fails
  * loudly instead of silently committing under someone else's ticket.
- * `branchPrefix` defaults to `'ao'` (andryore-dev's own convention, and this
- * module's default before `forge.config.json`'s `ticket.branchPrefix`
- * existed) so every existing call site and test stays valid unchanged.
+ *
+ * `branchPrefix` is required, with no default: it used to fall back to
+ * `'ao'` — the Linear team key of the single repo this CLI was extracted
+ * from — which silently reported "branch doesn't match its ticket" in every
+ * repo whose prefix isn't `ao`. A missing argument is now a type error
+ * instead of a wrong answer.
  */
 export function isBranchMatchingTicket(
   branch: string,
   ticket: string,
-  branchPrefix = 'ao',
+  branchPrefix: string,
 ): boolean {
   const number = ticketNumber(ticket)
   if (!number) return false
@@ -354,15 +357,20 @@ export function findDuplicateTicketWorktrees(
 }
 
 /**
- * Groups `ao-<n>-*` branch names by their numeric ticket id, keeping only
- * groups with more than one member — catches the observed
+ * Groups `<branchPrefix>-<n>-*` branch names by their numeric ticket id,
+ * keeping only groups with more than one member — catches the observed
  * `ao-284-starred-page` vs. `ao-284-starred-page-fixes` case, two branches
  * for the same ticket that {@link findDuplicateTicketWorktrees} alone can't
  * see once only one of them still has a live, locked worktree.
+ *
+ * `branchPrefix` is required for the same reason it is on
+ * {@link isBranchMatchingTicket}: defaulting it to one repo's own `'ao'`
+ * turned every other repo's duplicate branches invisible rather than
+ * failing loudly.
  */
-export function findDuplicateAoBranchNumbers(
+export function findDuplicateTicketBranchNumbers(
   branchNames: readonly string[],
-  branchPrefix = 'ao',
+  branchPrefix: string,
 ): Map<string, string[]> {
   const byNumber = new Map<string, string[]>()
   const branchPattern = new RegExp(`^${branchPrefix}-(\\d+)-`)
@@ -383,10 +391,11 @@ export function findDuplicateAoBranchNumbers(
 /**
  * `.claude/worktrees/` entries with no `git worktree lock` at all, more than
  * `maxAgeMs` past the caller-supplied reference time — the AO-321 case:
- * bootstrap step 0.3 (`docs/agents/forge.md`'s "Worktree setup") was
- * skipped, so `resolveWorktreeOwner` can never attribute the worktree to a
- * run and neither `forge:cleanup` nor this script's default mode can tell a
- * canonical worktree from a duplicate. `statMtimeMs` is injected (rather
+ * bootstrap step 0 (`reference/worker-prompt.md`, whose reason string comes
+ * from `forge lock-reason`) was skipped, so `resolveWorktreeOwner` can never
+ * attribute the worktree to a run and neither `forge cleanup` nor this
+ * module's default mode can tell a canonical worktree from a duplicate.
+ * `statMtimeMs` is injected (rather
  * than a direct `statSync` call) so tests can simulate ages without
  * touching the filesystem; production passes the directory's own mtime as a
  * stand-in for "time since this dispatch created it" — reasonable since this
@@ -417,17 +426,17 @@ export function findWorktreesMissingLockPastDeadline(
  */
 export function auditPostDispatch(
   entries: readonly WorktreeEntry[],
-  aoBranchNames: readonly string[],
+  ticketBranchNames: readonly string[],
   options: {
     readonly maxUnlockedAgeMs: number
     readonly nowMs: number
     readonly statMtimeMs: (directory: string) => number | null
-    /** `ticket.branchPrefix` from `forge.config.json` — defaults to `'ao'`
-     * (andryore-dev's own convention) so existing calls stay valid. */
-    readonly branchPrefix?: string
+    /** `ticket.branchPrefix` from `forge.config.json`. Required — see
+     * {@link isBranchMatchingTicket} for why this no longer defaults. */
+    readonly branchPrefix: string
   },
 ): PostDispatchFailure[] {
-  const branchPrefix = options.branchPrefix ?? 'ao'
+  const branchPrefix = options.branchPrefix
   const failures: PostDispatchFailure[] = []
 
   for (const [ticket, group] of findDuplicateTicketWorktrees(entries)) {
@@ -437,12 +446,12 @@ export function auditPostDispatch(
     })
   }
 
-  for (const [number, names] of findDuplicateAoBranchNumbers(
-    aoBranchNames,
+  for (const [number, names] of findDuplicateTicketBranchNumbers(
+    ticketBranchNames,
     branchPrefix,
   )) {
     failures.push({
-      kind: 'duplicate-ao-branch-number',
+      kind: 'duplicate-ticket-branch-number',
       message: `Ticket ${branchPrefix.toUpperCase()}-${number} has ${names.length} branches: ${names.join(', ')} — one of these was created in error.`,
     })
   }
@@ -455,7 +464,7 @@ export function auditPostDispatch(
   )) {
     failures.push({
       kind: 'unlocked-past-deadline',
-      message: `${entry.directory} has no git worktree lock ${Math.round(options.maxUnlockedAgeMs / 1000)}s+ after dispatch — bootstrap step 0.3 (docs/agents/forge.md's "Worktree setup") was skipped.`,
+      message: `${entry.directory} has no git worktree lock ${Math.round(options.maxUnlockedAgeMs / 1000)}s+ after dispatch — the worker skipped bootstrap step 0. Re-lock it with: git worktree lock ${entry.directory} --reason "$(forge lock-reason --run <runId> --ticket <ticket>)"`,
     })
   }
 
@@ -476,8 +485,8 @@ export function auditPostDispatch(
 /**
  * Generous relative to how fast `git worktree lock` actually runs
  * (sub-second) — this only exists to give a worker's own bootstrap script a
- * fair chance to reach step 0.3 before the coordinator's audit runs, not to
- * model any real expected latency.
+ * fair chance to reach bootstrap step 0 before the coordinator's audit runs,
+ * not to model any real expected latency.
  */
 const POST_DISPATCH_UNLOCKED_MAX_AGE_MS = 30_000
 
@@ -557,7 +566,7 @@ async function main(config: ForgeConfig, repoRoot: string) {
   )
   if (orphanedScaffoldBranches.length > 0) {
     failures.push(
-      `Orphaned worktree-agent-* scaffold branches (their worktree is already gone — always safe to delete) — run "bun run forge:cleanup":\n${orphanedScaffoldBranches.map((b) => `  ${b.name}`).join('\n')}`,
+      `Orphaned worktree-agent-* scaffold branches (their worktree is already gone — always safe to delete) — run "forge cleanup":\n${orphanedScaffoldBranches.map((b) => `  ${b.name}`).join('\n')}`,
     )
   }
 
@@ -574,7 +583,11 @@ async function main(config: ForgeConfig, repoRoot: string) {
       const verdict = classifyWorktreeEntry(entry, currentRunId, (owner) =>
         classifyRun(
           owner.anchorPid,
-          resolveSessionSlug(entry.directory),
+          // The coordinator's transcript lives under *its own* project
+          // slug, not this worktree's directory — see `WorktreeOwner`'s doc
+          // comment (worktrees.ts). Fall back to the directory-derived guess
+          // only for a lock reason written before `slug=` existed.
+          owner.coordinatorSlug ?? resolveSessionSlug(entry.directory),
           owner.runId,
           { idleThresholdMs },
         ),

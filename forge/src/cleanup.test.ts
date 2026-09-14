@@ -226,6 +226,45 @@ describe('guardBranch', () => {
       )
       expect(outcome).toEqual({ done: true, category: 'locked-protected' })
     })
+
+    test("uses the lock reason's own slug= as the coordinator's session slug, not the worktree's directory", () => {
+      const seen: unknown[] = []
+      guardBranch(
+        false,
+        lockedEntry({
+          lockedReason:
+            'forge run=session-a ticket=AO-260 anchor=4242 slug=-home-andryore-code-repo at=2026-09-07T00:00:00Z',
+        }),
+        null,
+        (anchorPid, sessionSlug, runId) => {
+          seen.push({ anchorPid, sessionSlug, runId })
+          return 'dead'
+        },
+      )
+      expect(seen).toEqual([
+        { anchorPid: 4242, sessionSlug: '-home-andryore-code-repo', runId: 'session-a' },
+      ])
+    })
+
+    test('falls back to the worktree directory-derived slug when the lock reason predates slug=', () => {
+      const seen: unknown[] = []
+      guardBranch(
+        false,
+        lockedEntry(),
+        null,
+        (anchorPid, sessionSlug, runId) => {
+          seen.push({ anchorPid, sessionSlug, runId })
+          return 'dead'
+        },
+      )
+      expect(seen).toEqual([
+        {
+          anchorPid: 4242,
+          sessionSlug: '-repo-.claude-worktrees-agent-a1',
+          runId: 'session-a',
+        },
+      ])
+    })
   })
 })
 
