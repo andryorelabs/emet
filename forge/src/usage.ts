@@ -14,10 +14,10 @@
  * itself against the plan's targets (peak < 160k, split threshold 240k).
  *
  * Usage:
- *   bun run forge:usage                      # most recent coordinator session + its workers
- *   bun run forge:usage --session <id>        # a specific coordinator session
- *   bun run forge:usage --file <path.jsonl>   # a single transcript file directly
- *   bun run forge:usage --stalled [--minutes N]  # find hung subagents (default 10m)
+ *   forge usage                      # most recent coordinator session + its workers
+ *   forge usage --session <id>        # a specific coordinator session
+ *   forge usage --file <path.jsonl>   # a single transcript file directly
+ *   forge usage --stalled [--minutes N]  # find hung subagents (default 10m)
  *
  * `--stalled` is the watchdog for a coordinator's own `code-review` fan-out
  * (`docs/agents/forge.md` Phase 8): a sub-agent transcript is a plain file

@@ -38,7 +38,7 @@ import { classifyRun, resolveSessionSlug, type RunVerdict } from './runs'
  * `scripts/forge-worktrees.ts`'s `resolveWorktreeOwner`), not a parallel
  * JSON registry that could disagree with git about which worktrees exist.
  *
- * **Call this through `bun run forge:claims`, never through an inline `bun
+ * **Call this through `forge claims`, never through an inline `bun
  * -e` snippet.** A coordinator once called the positional
  * {@link didReserveTicket} with its arguments in the wrong order —
  * `(ticket, runId, anchorPid)` instead of `(runId, anchorPid, ticket)`, three
@@ -391,10 +391,10 @@ function requireFlagValue(argv: readonly string[], flag: string): string {
  * file-level doc comment for why an inline `bun -e` snippet is not).
  *
  * ```
- * bun run forge:claims --reserve AO-321 --run <runId> --anchor <pid>
- * bun run forge:claims --release AO-321
- * bun run forge:claims --list
- * bun run forge:claims --prune [--dry-run]
+ * forge claims --reserve AO-321 --run <runId> --anchor <pid>
+ * forge claims --release AO-321
+ * forge claims --list
+ * forge claims --prune [--dry-run]
  * ```
  */
 async function main(): Promise<void> {
@@ -456,7 +456,7 @@ async function main(): Promise<void> {
   }
 
   console.error(
-    'usage: bun run forge:claims --reserve <ticket> --run <runId> --anchor <pid> | --release <ticket> | --list | --prune [--dry-run]',
+    'usage: forge claims --reserve <ticket> --run <runId> --anchor <pid> | --release <ticket> | --list | --prune [--dry-run]',
   )
   process.exitCode = 1
 }

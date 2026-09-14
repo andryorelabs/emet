@@ -40,7 +40,7 @@ import { classifyRun, resolveSessionSlug, type RunVerdict } from './runs'
  * pid-liveness-based staleness check with one built on `classifyRun`
  * instead.
  *
- * **Call this through `bun run forge:slots`, never through an inline `bun
+ * **Call this through `forge slots`, never through an inline `bun
  * -e` snippet** — same rationale as `forge-claims.ts`'s file-level doc
  * comment (AO-285): an untypechecked positional call is how that incident's
  * reservation got corrupted, and a slot holder has the same
@@ -172,7 +172,7 @@ export function releaseSlot(slotsDirectory: string, index: number): void {
 
 /**
  * Releases every slot `runId` currently holds — used by
- * `bun run forge:cleanup --run <runId>` at wave close-out, so a coordinator
+ * `forge cleanup --run <runId>` at wave close-out, so a coordinator
  * never has to remember which indices it took across N {@link acquireSlot}
  * calls, and by `forge:slots --release --run <runId>` for the same purpose
  * when a dispatch aborts before reaching cleanup.
@@ -275,10 +275,10 @@ function resolveMaxLiveWorkers(config: ForgeConfig): number {
  * file-level doc comment for why an inline `bun -e` snippet is not).
  *
  * ```
- * bun run forge:slots --acquire --run <runId> --anchor <pid> --ticket <ticket>
- * bun run forge:slots --release --run <runId>
- * bun run forge:slots --release-index <index>
- * bun run forge:slots --list
+ * forge slots --acquire --run <runId> --anchor <pid> --ticket <ticket>
+ * forge slots --release --run <runId>
+ * forge slots --release-index <index>
+ * forge slots --list
  * ```
  */
 async function main(config: ForgeConfig): Promise<void> {
@@ -333,7 +333,7 @@ async function main(config: ForgeConfig): Promise<void> {
   }
 
   console.error(
-    'usage: bun run forge:slots --acquire --run <runId> --anchor <pid> --ticket <ticket> | --release --run <runId> | --release-index <index> | --list',
+    'usage: forge slots --acquire --run <runId> --anchor <pid> --ticket <ticket> | --release --run <runId> | --release-index <index> | --list',
   )
   process.exitCode = 1
 }

@@ -9,8 +9,8 @@
  * section; everything until the next section header belongs to it.
  *
  * Usage:
- *   bun run forge:handoff --check <path>    # exit 1 with reasons on any violation
- *   bun run forge:handoff --render <path>   # print a Linear-comment-ready body
+ *   forge handoff --check <path>    # exit 1 with reasons on any violation
+ *   forge handoff --render <path>   # print a Linear-comment-ready body
  */
 
 import {
@@ -136,7 +136,7 @@ async function main(config: ForgeConfig): Promise<void> {
 
   if (!targetPath || (mode !== '--check' && mode !== '--render')) {
     console.error(
-      'usage: bun run forge:handoff --check <path> | --render <path>',
+      'usage: forge handoff --check <path> | --render <path>',
     )
     process.exitCode = 1
     return
