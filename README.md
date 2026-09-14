@@ -11,7 +11,7 @@ beyond running `forge init` once.
 ## Install
 
 ```bash
-git clone <this repo> claude-forge
+git clone git@github.com:AndryOre/claude-forge.git
 cd claude-forge
 ./install.sh
 ```

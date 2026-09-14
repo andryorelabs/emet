@@ -10,6 +10,11 @@ if ! command -v bun >/dev/null 2>&1; then
   exit 1
 fi
 
+if ! command -v rsync >/dev/null 2>&1; then
+  echo "error: rsync is required (used to copy the CLI to ~/.claude/forge) — install it first." >&2
+  exit 1
+fi
+
 echo "==> Copying the forge CLI to ~/.claude/forge"
 mkdir -p "$HOME/.claude/forge"
 rsync -a --delete --exclude node_modules "$SCRIPT_DIR/forge/" "$HOME/.claude/forge/"
