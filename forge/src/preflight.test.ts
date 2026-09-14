@@ -6,7 +6,7 @@ import {
   auditPostDispatch,
   checkSlotCapacity,
   classifyWorktreeEntry,
-  findDuplicateAoBranchNumbers,
+  findDuplicateTicketBranchNumbers,
   findDuplicateTicketWorktrees,
   findTodoMarkers,
   findWorktreesMissingLockPastDeadline,
@@ -157,29 +157,39 @@ function lockedFor(
 
 describe('isBranchMatchingTicket', () => {
   test('matches the ticket number as a branch prefix', () => {
-    expect(isBranchMatchingTicket('ao-321-worktree-lock-guard', 'AO-321')).toBe(
-      true,
-    )
+    expect(
+      isBranchMatchingTicket('ao-321-worktree-lock-guard', 'AO-321', 'ao'),
+    ).toBe(true)
   })
 
-  test('matches a bare ao-<n> branch with no slug', () => {
-    expect(isBranchMatchingTicket('ao-321', 'AO-321')).toBe(true)
+  test('matches a bare <prefix>-<n> branch with no slug', () => {
+    expect(isBranchMatchingTicket('ao-321', 'AO-321', 'ao')).toBe(true)
   })
 
   test('rejects a different ticket number', () => {
-    expect(isBranchMatchingTicket('ao-284-starred-page', 'AO-285')).toBe(false)
+    expect(isBranchMatchingTicket('ao-284-starred-page', 'AO-285', 'ao')).toBe(
+      false,
+    )
   })
 
   test('rejects a prefix collision (ao-32 vs ao-321)', () => {
-    expect(isBranchMatchingTicket('ao-321-worktree-lock-guard', 'AO-32')).toBe(
-      false,
-    )
+    expect(
+      isBranchMatchingTicket('ao-321-worktree-lock-guard', 'AO-32', 'ao'),
+    ).toBe(false)
   })
 
-  test('rejects a non-AO ticket shape', () => {
-    expect(isBranchMatchingTicket('ao-321-something', 'not-a-ticket')).toBe(
-      false,
-    )
+  test('rejects a non-<PREFIX>-<digits> ticket shape', () => {
+    expect(
+      isBranchMatchingTicket('ao-321-something', 'not-a-ticket', 'ao'),
+    ).toBe(false)
+  })
+
+  // The regression the required `branchPrefix` argument exists to prevent:
+  // this used to default to `'ao'`, so a repo whose own prefix is `nfk`
+  // reported every correctly-named branch as a ticket mismatch.
+  test("honors a repo's own branchPrefix rather than any built-in default", () => {
+    expect(isBranchMatchingTicket('nfk-42-login', 'NFK-42', 'nfk')).toBe(true)
+    expect(isBranchMatchingTicket('nfk-42-login', 'NFK-42', 'ao')).toBe(false)
   })
 })
 
@@ -223,13 +233,16 @@ describe('findDuplicateTicketWorktrees', () => {
   })
 })
 
-describe('findDuplicateAoBranchNumbers', () => {
+describe('findDuplicateTicketBranchNumbers', () => {
   test('finds two branches for the same ticket number', () => {
-    const duplicates = findDuplicateAoBranchNumbers([
-      'ao-284-starred-page',
-      'ao-284-starred-page-fixes',
-      'ao-285-unrelated',
-    ])
+    const duplicates = findDuplicateTicketBranchNumbers(
+      [
+        'ao-284-starred-page',
+        'ao-284-starred-page-fixes',
+        'ao-285-unrelated',
+      ],
+      'ao',
+    )
     expect(duplicates.get('284')).toEqual([
       'ao-284-starred-page',
       'ao-284-starred-page-fixes',
@@ -238,7 +251,17 @@ describe('findDuplicateAoBranchNumbers', () => {
   })
 
   test('a branch name with no numeric ticket id is ignored', () => {
-    expect(findDuplicateAoBranchNumbers(['ao--no-number']).size).toBe(0)
+    expect(findDuplicateTicketBranchNumbers(['ao--no-number'], 'ao').size).toBe(
+      0,
+    )
+  })
+
+  test("only groups branches under the repo's own prefix", () => {
+    const duplicates = findDuplicateTicketBranchNumbers(
+      ['nfk-7-a', 'nfk-7-b', 'ao-7-unrelated-repo-leftover'],
+      'nfk',
+    )
+    expect(duplicates.get('7')).toEqual(['nfk-7-a', 'nfk-7-b'])
   })
 })
 
@@ -311,6 +334,7 @@ describe('auditPostDispatch', () => {
     maxUnlockedAgeMs: 30_000,
     nowMs: 1_000_000,
     statMtimeMs: () => 1_000_000 - 5000,
+    branchPrefix: 'ao',
   }
 
   test('a clean dispatch reports no failures', () => {
@@ -345,7 +369,7 @@ describe('auditPostDispatch', () => {
     )
     expect(failures).toEqual([
       expect.objectContaining({ kind: 'duplicate-ticket-worktree' }),
-      expect.objectContaining({ kind: 'duplicate-ao-branch-number' }),
+      expect.objectContaining({ kind: 'duplicate-ticket-branch-number' }),
     ])
   })
 

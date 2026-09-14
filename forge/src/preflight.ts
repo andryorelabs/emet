@@ -290,7 +290,7 @@ async function describeWorktreeEntryVerdict(
 export type PostDispatchFailure = {
   readonly kind:
     | 'duplicate-ticket-worktree'
-    | 'duplicate-ao-branch-number'
+    | 'duplicate-ticket-branch-number'
     | 'unlocked-past-deadline'
     | 'branch-ticket-mismatch'
   readonly message: string
@@ -308,19 +308,22 @@ function ticketNumber(ticket: string): string | null {
 }
 
 /**
- * A worker's own branch convention (`docs/agents/forge.md`'s "Branch and
- * commit convention") is `<branchPrefix>-<n>-<slug>` — this checks that a
+ * A worker's own branch convention (`docs/agents/forge.md`'s "Ticket ids
+ * and branches") is `<branchPrefix>-<n>-<slug>` — this checks that a
  * worktree's checked-out branch actually names the same ticket number its
  * own lock declares, so a shell mis-routed to the wrong worktree fails
  * loudly instead of silently committing under someone else's ticket.
- * `branchPrefix` defaults to `'ao'` (andryore-dev's own convention, and this
- * module's default before `forge.config.json`'s `ticket.branchPrefix`
- * existed) so every existing call site and test stays valid unchanged.
+ *
+ * `branchPrefix` is required, with no default: it used to fall back to
+ * `'ao'` — the Linear team key of the single repo this CLI was extracted
+ * from — which silently reported "branch doesn't match its ticket" in every
+ * repo whose prefix isn't `ao`. A missing argument is now a type error
+ * instead of a wrong answer.
  */
 export function isBranchMatchingTicket(
   branch: string,
   ticket: string,
-  branchPrefix = 'ao',
+  branchPrefix: string,
 ): boolean {
   const number = ticketNumber(ticket)
   if (!number) return false
@@ -354,15 +357,20 @@ export function findDuplicateTicketWorktrees(
 }
 
 /**
- * Groups `ao-<n>-*` branch names by their numeric ticket id, keeping only
- * groups with more than one member — catches the observed
+ * Groups `<branchPrefix>-<n>-*` branch names by their numeric ticket id,
+ * keeping only groups with more than one member — catches the observed
  * `ao-284-starred-page` vs. `ao-284-starred-page-fixes` case, two branches
  * for the same ticket that {@link findDuplicateTicketWorktrees} alone can't
  * see once only one of them still has a live, locked worktree.
+ *
+ * `branchPrefix` is required for the same reason it is on
+ * {@link isBranchMatchingTicket}: defaulting it to one repo's own `'ao'`
+ * turned every other repo's duplicate branches invisible rather than
+ * failing loudly.
  */
-export function findDuplicateAoBranchNumbers(
+export function findDuplicateTicketBranchNumbers(
   branchNames: readonly string[],
-  branchPrefix = 'ao',
+  branchPrefix: string,
 ): Map<string, string[]> {
   const byNumber = new Map<string, string[]>()
   const branchPattern = new RegExp(`^${branchPrefix}-(\\d+)-`)
@@ -418,17 +426,17 @@ export function findWorktreesMissingLockPastDeadline(
  */
 export function auditPostDispatch(
   entries: readonly WorktreeEntry[],
-  aoBranchNames: readonly string[],
+  ticketBranchNames: readonly string[],
   options: {
     readonly maxUnlockedAgeMs: number
     readonly nowMs: number
     readonly statMtimeMs: (directory: string) => number | null
-    /** `ticket.branchPrefix` from `forge.config.json` — defaults to `'ao'`
-     * (andryore-dev's own convention) so existing calls stay valid. */
-    readonly branchPrefix?: string
+    /** `ticket.branchPrefix` from `forge.config.json`. Required — see
+     * {@link isBranchMatchingTicket} for why this no longer defaults. */
+    readonly branchPrefix: string
   },
 ): PostDispatchFailure[] {
-  const branchPrefix = options.branchPrefix ?? 'ao'
+  const branchPrefix = options.branchPrefix
   const failures: PostDispatchFailure[] = []
 
   for (const [ticket, group] of findDuplicateTicketWorktrees(entries)) {
@@ -438,12 +446,12 @@ export function auditPostDispatch(
     })
   }
 
-  for (const [number, names] of findDuplicateAoBranchNumbers(
-    aoBranchNames,
+  for (const [number, names] of findDuplicateTicketBranchNumbers(
+    ticketBranchNames,
     branchPrefix,
   )) {
     failures.push({
-      kind: 'duplicate-ao-branch-number',
+      kind: 'duplicate-ticket-branch-number',
       message: `Ticket ${branchPrefix.toUpperCase()}-${number} has ${names.length} branches: ${names.join(', ')} — one of these was created in error.`,
     })
   }
