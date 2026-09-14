@@ -46,7 +46,7 @@
       "type": "object",
       "required": ["kind"],
       "additionalProperties": false,
-      "description": "Which issue tracker /forge talks to, and how. The CLI never calls a tracker directly — this section documents the adapter the /forge *command* follows as prose (docs/agents/issue-tracker.md), except `local`, which the CLI implements for real under .forge/tickets and <git-common-dir>/forge/tracker.",
+      "description": "Which issue tracker /forge talks to, and how. The CLI never calls a tracker directly — this section documents the adapter the /forge *command* follows as prose (docs/agents/issue-tracker.md). `local` is design-only for now (see reference/tracker-local.md): its planned layout is .forge/tickets + <git-common-dir>/forge/tracker, but no `forge tracker` subcommand implements it yet — don't run Phases 5-9 unattended against a `local`-tracker repo until it does.",
       "properties": {
         "kind": {
           "type": "string",
@@ -160,7 +160,7 @@
         },
         "lockReason": {
           "type": "string",
-          "description": "Template for the `git worktree lock` reason a worker writes at bootstrap. Defaults to the built-in \"forge run={runId} ticket={ticket} anchor={anchorPid} at={iso}\" shape every tool in this CLI already parses — only override if you need extra fields, and keep the four originals in place."
+          "description": "Template for the `git worktree lock` reason a worker writes at bootstrap. Defaults to the built-in \"forge run={runId} ticket={ticket} anchor={anchorPid} at={iso}\" shape every tool in this CLI already parses — only override if you need extra fields, and keep the four originals in place. A fifth, optional \"slug={coordinatorSlug}\" field (the coordinator's own resolveSessionSlug()) is understood when present — without it, forge preflight/forge cleanup can only classify an anchor-less worktree owner as 'dead', never 'idle', because they have no way to find the coordinator's own transcript from the worktree's directory alone."
         },
         "copyFromMain": {
           "type": "array",

@@ -152,18 +152,34 @@ export type WorktreeOwner = {
   readonly ticket: string
   readonly anchorPid: number
   readonly at: string
+  /**
+   * The coordinator's own `resolveSessionSlug()` (`runs.ts`) at the moment it
+   * dispatched this worktree — an optional fifth `slug=<value>` field on top
+   * of the original four, present only when whatever wrote the lock reason
+   * included it. Without it, a caller classifying this owner's liveness has
+   * no way to find the coordinator's *own* transcript (it lives under the
+   * coordinator's project slug, not this worktree's directory — see
+   * `preflight.ts`/`cleanup.ts`'s own callers), so `classifyRun`'s `'idle'`
+   * verdict becomes unreachable and every anchor-less owner reads `'dead'`.
+   * `undefined` when absent — callers fall back to their pre-existing
+   * (directory-derived, known-wrong) slug guess for backward compatibility
+   * with a lock reason written before this field existed.
+   */
+  readonly coordinatorSlug?: string
 }
 
 /**
  * Parses the `git worktree lock` reason `/forge` writes at worker bootstrap
- * — `forge run=<runId> ticket=<ticket> anchor=<pid> at=<iso>`, a literal
- * `forge` token followed by space-separated `key=value` pairs (safe because
- * none of `runId`/`ticket`/pid/ISO-timestamp values can contain whitespace)
- * — back into structured fields. Returns `null` for anything that isn't
- * this exact shape: an unlocked worktree (`lockedReason` is `null`), a
- * human's own unrelated `git worktree lock '<reason>'`, or a reason missing
- * one of the four keys — never throws, since encountering a non-`/forge`
- * lock is an expected, normal case.
+ * — `forge run=<runId> ticket=<ticket> anchor=<pid> at=<iso>` plus an
+ * optional `slug=<coordinatorSlug>` — a literal `forge` token followed by
+ * space-separated `key=value` pairs (safe because none of
+ * `runId`/`ticket`/pid/ISO-timestamp/slug values can contain whitespace) —
+ * back into structured fields. Returns `null` for anything that isn't this
+ * shape: an unlocked worktree (`lockedReason` is `null`), a human's own
+ * unrelated `git worktree lock '<reason>'`, or a reason missing one of the
+ * four *required* keys — never throws, since encountering a non-`/forge`
+ * lock is an expected, normal case. `slug` is optional precisely so a lock
+ * reason written before this field existed still parses.
  */
 export function resolveWorktreeOwner(
   entry: WorktreeEntry,
@@ -186,7 +202,14 @@ export function resolveWorktreeOwner(
   const anchorPid = Number(fields.get('anchor'))
   if (!runId || !ticket || !at || !Number.isFinite(anchorPid)) return null
 
-  return { runId, ticket, anchorPid, at }
+  const coordinatorSlug = fields.get('slug')
+  return {
+    runId,
+    ticket,
+    anchorPid,
+    at,
+    ...(coordinatorSlug ? { coordinatorSlug } : {}),
+  }
 }
 
 export async function listWorktreeEntries(): Promise<WorktreeEntry[]> {

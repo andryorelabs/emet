@@ -247,7 +247,7 @@ async function describeWorktreeEntryVerdict(
     case 'own-run-leftover': {
       return {
         bucket: 'fail',
-        line: `  ${entry.directory} (${entry.branch}): live — this run's own leftover from an interrupted attempt (run ${verdict.owner.runId}, ticket ${verdict.owner.ticket}) — run "bun run forge:cleanup --run ${verdict.owner.runId}" to clear it`,
+        line: `  ${entry.directory} (${entry.branch}): live — this run's own leftover from an interrupted attempt (run ${verdict.owner.runId}, ticket ${verdict.owner.ticket}) — run "forge cleanup --run ${verdict.owner.runId}" to clear it`,
       }
     }
     case 'other-run-live': {
@@ -265,7 +265,7 @@ async function describeWorktreeEntryVerdict(
     case 'dead': {
       return {
         bucket: 'info',
-        line: `  ${entry.directory} (${entry.branch}): dead — reclaimable via "bun run forge:cleanup --run ${verdict.owner.runId} --force" (or --all --force if abandoned)`,
+        line: `  ${entry.directory} (${entry.branch}): dead — reclaimable via "forge cleanup --run ${verdict.owner.runId} --force" (or --all --force if abandoned)`,
       }
     }
     case 'content-fallback': {
@@ -277,7 +277,7 @@ async function describeWorktreeEntryVerdict(
       )
       const trunkRef = `${remote}/${trunk}`
       const advice = isSafeToDelete(contentVerdict)
-        ? `looks merged/equivalent to ${trunkRef} — safe to run "bun run forge:cleanup"`
+        ? `looks merged/equivalent to ${trunkRef} — safe to run "forge cleanup"`
         : `${contentVerdict} from ${trunkRef} — needs human review before cleanup, work could be lost`
       return {
         bucket: 'fail',
@@ -557,7 +557,7 @@ async function main(config: ForgeConfig, repoRoot: string) {
   )
   if (orphanedScaffoldBranches.length > 0) {
     failures.push(
-      `Orphaned worktree-agent-* scaffold branches (their worktree is already gone — always safe to delete) — run "bun run forge:cleanup":\n${orphanedScaffoldBranches.map((b) => `  ${b.name}`).join('\n')}`,
+      `Orphaned worktree-agent-* scaffold branches (their worktree is already gone — always safe to delete) — run "forge cleanup":\n${orphanedScaffoldBranches.map((b) => `  ${b.name}`).join('\n')}`,
     )
   }
 
@@ -574,7 +574,11 @@ async function main(config: ForgeConfig, repoRoot: string) {
       const verdict = classifyWorktreeEntry(entry, currentRunId, (owner) =>
         classifyRun(
           owner.anchorPid,
-          resolveSessionSlug(entry.directory),
+          // The coordinator's transcript lives under *its own* project
+          // slug, not this worktree's directory — see `WorktreeOwner`'s doc
+          // comment (worktrees.ts). Fall back to the directory-derived guess
+          // only for a lock reason written before `slug=` existed.
+          owner.coordinatorSlug ?? resolveSessionSlug(entry.directory),
           owner.runId,
           { idleThresholdMs },
         ),
