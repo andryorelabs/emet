@@ -1,7 +1,7 @@
 /**
- * Shared worktree/branch classification used by both `forge-cleanup.ts` and
- * `forge-preflight.ts` — extracted so the two scripts never disagree about
- * what counts as "live" vs. "safe to delete". See `forge-cleanup.ts`'s own
+ * Shared worktree/branch classification used by both `cleanup.ts` and
+ * `preflight.ts` — extracted so the two scripts never disagree about
+ * what counts as "live" vs. "safe to delete". See `cleanup.ts`'s own
  * top-of-file comment for the full rationale (squash-merge detection via
  * `git merge-tree`, why `git cherry` can't be used, the two-signal liveness
  * check).
@@ -12,7 +12,7 @@
  * from {@link BranchVerdict} so the compiler can catch a future attempt to
  * add a case the function doesn't produce — `'in-use'` is never a content
  * verdict, it's a caller-side fact (a branch is checked out by a live
- * worktree) composed on top, see `forge-cleanup.ts`'s `ClassifiedBranch`.
+ * worktree) composed on top, see `cleanup.ts`'s `ClassifiedBranch`.
  */
 export type ContentVerdict = 'merged' | 'equivalent' | 'diverged' | 'conflicted'
 

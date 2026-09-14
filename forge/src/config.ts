@@ -2,9 +2,9 @@ import path from 'node:path'
 
 /**
  * `forge.config.json` — the per-repo config that makes `/forge`'s repo-side
- * machinery (this CLI) work in any git repo instead of only in one shaped
- * exactly like `andryore-dev`. Strict JSON, not JSONC or YAML frontmatter:
- * see `docs/agents/forge.md`'s "Generalizing /forge" section for why (in
+ * machinery (this CLI) work in any git repo instead of only in the one it
+ * was extracted from. Strict JSON, not JSONC or YAML frontmatter:
+ * see the README for why (in
  * short — a networked-tracker adapter's docs live in prose the model
  * rewrites mid-run, and this repo has already been bitten once by Prettier
  * reflowing a block inside a markdown file and silently corrupting it).
@@ -71,8 +71,8 @@ export interface ForgeConfig {
   readonly preflight: {
     /** Files `forge preflight` requires to exist at the repo root before a
      * wave dispatches, each with a `why` shown in the failure message.
-     * Generalizes andryore-dev's `.env.keys` check — empty means no such
-     * check runs at all. */
+     * Generalizes what used to be a hardcoded `.env.keys` check — empty
+     * means no such check runs at all. */
     readonly requiredFiles: ReadonlyArray<{
       readonly path: string
       readonly why: string

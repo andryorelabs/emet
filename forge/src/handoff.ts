@@ -119,8 +119,8 @@ function checkHandoff(
  * deliberately generic (`.+` rather than a config-sourced `ticket.idPattern`
  * spliced into a filename regex, which would need to strip that pattern's
  * own `^`/`$` anchors to compose safely) so it never needs to match this
- * repo's `ticket.idPattern` exactly. `docs/agents/forge.md`'s "Branch and
- * commit convention" is what actually enforces the filename shape at
+ * repo's `ticket.idPattern` exactly. `reference/worker-prompt.md`'s
+ * `{{handoff_path}}` is what actually fixes the filename shape at
  * write-time; this only has to extract whatever's there for the rendered
  * heading.
  */

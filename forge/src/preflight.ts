@@ -36,14 +36,14 @@ import {
  * separate, more expensive check `/forge`'s own Phase 0 already does by
  * reading the docs.
  *
- * `/forge` worktrees now carry their own liveness signal: `forge-runs.ts`'s
+ * `/forge` worktrees now carry their own liveness signal: `runs.ts`'s
  * {@link classifyRun} walks a worktree's owning run's anchor process (via
  * `resolveWorktreeOwner`'s parse of the `git worktree lock` reason each
  * worker writes at bootstrap, see `docs/agents/forge.md`) to tell a run
  * that's genuinely still going from one abandoned by a crashed or skipped
  * `forge:cleanup`. Only a worktree with no `/forge` lock reason at all
  * (pre-existing worktrees, or an ordinary interactive worktree unrelated to
- * `/forge`) falls back to `forge-cleanup.ts`'s own merge/equivalence
+ * `/forge`) falls back to `cleanup.ts`'s own merge/equivalence
  * classifier ({@link classifyByContent}).
  */
 
@@ -118,7 +118,7 @@ export type WorktreeEntryVerdict =
  * interactive worktree doing unrelated feature work) falls back to
  * `classifyByContent`, decided by the caller since that classification is
  * async and git-backed. An owned entry defers to `classifyOwnerRun` (real
- * callers pass `classifyRun` from `forge-runs.ts`; tests inject a fake) to
+ * callers pass `classifyRun` from `runs.ts`; tests inject a fake) to
  * decide between four outcomes: a `'live'` owner matching the caller's own
  * `--run` is this run's own leftover from an interrupted attempt — still a
  * failure; a `'live'` owner that doesn't match (or no `--run` was given at
@@ -197,13 +197,13 @@ export type SlotCapacityCheck = {
  * now? Counting live claims and then deciding to dispatch would be
  * read-then-write, not atomic, and would race across two coordinators
  * checking at the same moment — the actual fix for that (N slots acquired
- * one at a time via `forge-slots.ts`'s `acquireSlot`, immediately before
+ * one at a time via `slots.ts`'s `acquireSlot`, immediately before
  * each worker's `Agent` call) belongs to dispatch time (Phase 6), out of
  * this script's scope. This only answers the capacity question ahead of
  * time; it never acquires or releases a slot itself. `isSlotFree` is
  * injected so tests can simulate "slots free" and "slots exhausted" without
  * touching the filesystem — production passes the negation of
- * `forge-slots.ts`'s {@link isSlotStale} over each of
+ * `slots.ts`'s {@link isSlotStale} over each of
  * `<git-common-dir>/forge/slots/<index>`.
  */
 export function checkSlotCapacity(
@@ -298,8 +298,8 @@ export type PostDispatchFailure = {
 
 /**
  * Extracts a ticket's numeric suffix (`AO-321` → `321`, `NFK-42` → `42`) —
- * every tracker adapter's id shape (`docs/agents/forge.md`'s "Generalizing
- * /forge") is `<PREFIX>-<digits>`, so this stays a fixed shape regardless of
+ * every tracker adapter's id shape (see `reference/tracker-*.md`) is
+ * `<PREFIX>-<digits>`, so this stays a fixed shape regardless of
  * the configured `ticket.idPattern`, which only varies the prefix.
  */
 function ticketNumber(ticket: string): string | null {

@@ -28,15 +28,14 @@ import { classifyRun, resolveSessionSlug, type RunVerdict } from './runs'
  * Per-ticket reservations under `<git-common-dir>/forge/tickets/` — the
  * registry two `/forge` coordinators race against so the same ticket never
  * gets dispatched twice at once. See AO-256/AO-258. `<git-common-dir>`
- * (resolved via `git rev-parse --git-common-dir`, same as
- * `scripts/e2e-queue.ts:138-147`) rather than `.git` directly, because
- * every worktree of this repo shares one `.git` and what this protects is
- * host-wide, not per-worktree.
+ * (resolved via `git rev-parse --git-common-dir`) rather than `.git`
+ * directly, because every worktree of a repo shares one `.git` and what this
+ * protects is host-wide, not per-worktree.
  *
- * Worktree ownership itself is *not* tracked here — that now rides on
- * git's own `git worktree lock` primitive (see
- * `scripts/forge-worktrees.ts`'s `resolveWorktreeOwner`), not a parallel
- * JSON registry that could disagree with git about which worktrees exist.
+ * Worktree ownership itself is *not* tracked here — that rides on git's own
+ * `git worktree lock` primitive (written via `lockreason.ts`, parsed by
+ * `worktrees.ts`'s `resolveWorktreeOwner`), not a parallel JSON registry
+ * that could disagree with git about which worktrees exist.
  *
  * **Call this through `forge claims`, never through an inline `bun
  * -e` snippet.** A coordinator once called the positional
@@ -132,7 +131,7 @@ function assertValidTicket(ticket: string): void {
 }
 
 /**
-Resolves `<git-common-dir>/forge`, the shared root every worktree of this repo agrees on. Reuses `forge-locks.ts`'s own `--git-common-dir` resolution rather than a second copy of it.
+Resolves `<git-common-dir>/forge`, the shared root every worktree of this repo agrees on. Reuses `locks.ts`'s own `--git-common-dir` resolution rather than a second copy of it.
 */
 export async function resolveForgeDirectory(): Promise<string> {
   return resolveLockDirectory('forge')
@@ -183,7 +182,7 @@ function buildReservationLockHolder(): LockHolder {
 }
 
 /**
- * Atomic acquire via `forge-locks.ts`'s `didAcquireLock`/`isLockStale` —
+ * Atomic acquire via `locks.ts`'s `didAcquireLock`/`isLockStale` —
  * unlike a bare `mkdirSync`, this reclaims immediately if the process that
  * held the lock died mid-reservation (killed between acquiring this lock
  * and its `finally` release below), rather than leaving `<ticket>.lock`
@@ -463,9 +462,8 @@ async function main(): Promise<void> {
 
 /**
  * Entry point invoked by the `forge` CLI dispatcher (`bin/forge.ts`) for the
- * `claims` subcommand. `main()` still reads its arguments off `process.argv`
- * directly (unchanged from the original `bun scripts/forge-claims.ts`
- * script), so this wrapper stages `argv` onto `process.argv` before
+ * `claims` subcommand. `main()` reads its arguments off `process.argv`
+ * directly, so this wrapper stages `argv` onto `process.argv` before
  * delegating — safe because the dispatcher runs exactly one subcommand per
  * process.
  *

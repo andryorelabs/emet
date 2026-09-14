@@ -6,7 +6,7 @@
  * inside `andryore-dev`, invoked via `bun run forge:<name>` aliases in that
  * repo's own `package.json`. Extracted here so `/forge` can run in *any* git
  * repo, not just one with those scripts and aliases already installed — see
- * `docs/agents/forge.md`'s "Generalizing /forge" ADR for the full rationale.
+ * the README for the full rationale.
  *
  * Each subcommand module still reads its own arguments off `process.argv`
  * internally (unchanged from the original scripts) and now additionally

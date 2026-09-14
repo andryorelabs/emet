@@ -432,8 +432,8 @@ async function ensureLocalTrackerGitignore(repoRoot: string): Promise<string[]> 
   if (shadowingRule) {
     warnings.push(
       `.gitignore already has a blanket "${shadowingRule.trim()}" rule that would ` +
-        'shadow an un-ignore for .forge/tickets/ — resolve this by hand (see ' +
-        "andryore-dev's .gitignore for the pattern: `.forge/*` + `!.forge/tickets/`).",
+        'shadow an un-ignore for .forge/tickets/ — resolve this by hand; the ' +
+        'working pattern is `.forge/*` followed by `!.forge/tickets/`.',
     )
     return warnings
   }

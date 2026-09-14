@@ -4,11 +4,11 @@ import path from 'node:path'
 
 /**
  * Classifies whether a `/forge` run (coordinator or worker) is still alive
- * — see `docs/agents/forge.md` and AO-256. The pid a claim/reservation was
- * written from is a short-lived `bun` process, so `process.kill(pid, 0)`
- * (the pattern `scripts/e2e-queue.ts:149` correctly uses for its own,
- * same-process lock) is meaningless here: by the time anything reads the
- * pid back, that `bun` process has already exited. Liveness instead has to
+ * — see AO-256. The pid a claim/reservation was written from is a
+ * short-lived `bun` process, so `process.kill(pid, 0)` (the right pattern
+ * for a lock whose holder *is* the process that took it) is meaningless
+ * here: by the time anything reads the pid back, that `bun` process has
+ * already exited. Liveness instead has to
  * be read off the run's *anchor* — the actual Claude Code process that
  * spawned every short-lived tool-call process the run will ever make — via
  * `/proc`, with a soft, best-effort transcript-freshness fallback for the
@@ -95,10 +95,10 @@ export function resolveAnchorPid(startPid: number = process.pid): number {
 }
 
 /**
- * A bare `/proc/<pid>` existence check is not enough — pids get reused, the
- * same failure mode `!existsSync(holder.worktree)` guards against in
- * `e2e-queue.ts:185-188`. Requiring `comm` to still read `claude` closes
- * that gap: a recycled pid now running an unrelated process reads as dead.
+ * A bare `/proc/<pid>` existence check is not enough — pids get reused, so
+ * an exited anchor whose pid the OS has handed to something else would read
+ * as alive. Requiring `comm` to still read `claude` closes that gap: a
+ * recycled pid now running an unrelated process reads as dead.
  * `readProcComm` already returns `undefined` for a missing `/proc/<pid>`
  * (caught internally), so no separate `existsSync` pre-check is needed.
  */
@@ -156,7 +156,7 @@ export function transcriptMtime(
  * `isAnchorAliveFn`/`transcriptMtimeFn` are injectable so tests can exercise
  * all three verdicts without depending on real `/proc` state or a real
  * transcript file, the same pure-function-over-injected-data shape
- * `forge-worktrees.ts` already uses for `git worktree list --porcelain`.
+ * `worktrees.ts` already uses for `git worktree list --porcelain`.
  */
 export function classifyRun(
   anchorPid: number,

@@ -8,16 +8,26 @@ import {
 import path from 'node:path'
 
 /**
- * Directory-based mutual-exclusion lock, shared by every `/forge` script
- * that needs one — extracted out of `e2e-queue.ts`, which had the only
- * production-proven implementation (its own top-of-file comment carries the
- * full "why a directory, not `flock`" rationale, stale-lock reclaim design,
- * and the `--git-common-dir` reasoning; this module keeps those exact
- * semantics rather than repeating the prose here).
+ * Directory-based mutual-exclusion lock, shared by every `/forge` command
+ * that needs one (`claims.ts`, `slots.ts`).
+ *
+ * **Why a directory and not `flock`**: an `flock` lives with the file
+ * descriptor that took it, so it dies with the short-lived `bun` process
+ * that ran one CLI invocation — exactly the wrong lifetime here, where a
+ * reservation must outlive the process that wrote it and be visible to a
+ * different process minutes later. A directory is durable, inspectable by
+ * hand (`ls`), and survives a crash; the cost is that a crashed holder
+ * leaves one behind, which is what the stale-reclaim path below exists for.
+ *
+ * **Why `--git-common-dir`**: every worktree of a repo shares one real
+ * `.git`, and what these locks protect is host-wide (two coordinators, in
+ * two different worktrees, racing for the same ticket). Resolving against
+ * `.git` directly would give each worktree its own private lock and protect
+ * nothing.
  *
  * Generic over two things every caller picks for itself: the lock's
  * directory name (via {@link resolveLockDirectory}'s `lockName`, e.g.
- * `"e2e-queue.lock"`) and its holder payload shape (via the `THolder`
+ * `"tickets.lock"`) and its holder payload shape (via the `THolder`
  * generic — every holder must carry {@link LockHolder}'s three fields, but a
  * caller can widen it with its own extra fields).
  *
@@ -152,7 +162,7 @@ export interface AcquireLockOptions {
   */
   readonly maxAgeMs: number
   /**
-  Prefixes every message {@link acquireLock} logs or throws (e.g. `"e2e-queue"`).
+  Prefixes every message {@link acquireLock} logs or throws (e.g. `"forge:claims"`).
   */
   readonly logLabel: string
 }

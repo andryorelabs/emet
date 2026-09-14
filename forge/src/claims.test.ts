@@ -115,7 +115,7 @@ describe('didReserveTicket / listReservations / releaseTicket', () => {
   })
 
   /**
-  Regression test for the AO-285 incident (see forge-claims.ts's file-level
+  Regression test for the AO-285 incident (see claims.ts's file-level
   doc comment): a coordinator called this function with its positional
   arguments in the wrong order — `(ticket, runId, anchorPid)` instead of
   `(runId, anchorPid, ticket)` — and the malformed reservation was written to
