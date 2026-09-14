@@ -64,7 +64,7 @@
  */
 import path from 'node:path'
 
-import { releaseTicket } from './claims'
+import { configureTicketPattern, releaseTicket } from './claims'
 import {
   ForgeConfigError,
   requireForgeConfig,
@@ -238,9 +238,13 @@ export function guardBranch(
 
   if (!owner) return { done: true, category: 'locked-protected' }
 
+  // The coordinator's transcript lives under *its own* project slug, not
+  // this worktree's directory — see `WorktreeOwner`'s doc comment
+  // (worktrees.ts). Fall back to the directory-derived guess only for a lock
+  // reason written before `slug=` existed.
   const verdict = classifyRunFunction(
     owner.anchorPid,
-    resolveSessionSlug(matchedEntry.directory),
+    owner.coordinatorSlug ?? resolveSessionSlug(matchedEntry.directory),
     owner.runId,
   )
   if (verdict === 'dead') {
@@ -539,6 +543,16 @@ export async function run(argv: string[]): Promise<void> {
       throw new ForgeConfigError('forge cleanup: not inside a git repository')
     }
     const config = await requireForgeConfig(repoRoot)
+    // `deleteAndReleaseTicket` below calls `claims.ts`'s `releaseTicket`,
+    // which validates against `claims.ts`'s module-level `TICKET_PATTERN`
+    // (default: the generic `AO-<digits>`-shaped pattern). Without this call,
+    // a repo with a differently-shaped `ticket.idPattern` (e.g. a numeric
+    // `^#?\d+$` github/local id) throws mid-sweep — after some branches are
+    // already deleted, before `releaseAllSlotsForRun` ever runs — leaking
+    // that run's worker slots. `claims.ts`'s own `run()` configures this for
+    // itself; `cleanup.ts` must do the same since it calls into that module
+    // directly rather than through the `forge claims` CLI entry point.
+    configureTicketPattern(config.ticket.idPattern)
     await main(config)
   } catch (error: unknown) {
     if (error instanceof ForgeConfigError) {
