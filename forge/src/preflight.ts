@@ -383,10 +383,11 @@ export function findDuplicateAoBranchNumbers(
 /**
  * `.claude/worktrees/` entries with no `git worktree lock` at all, more than
  * `maxAgeMs` past the caller-supplied reference time — the AO-321 case:
- * bootstrap step 0.3 (`docs/agents/forge.md`'s "Worktree setup") was
- * skipped, so `resolveWorktreeOwner` can never attribute the worktree to a
- * run and neither `forge:cleanup` nor this script's default mode can tell a
- * canonical worktree from a duplicate. `statMtimeMs` is injected (rather
+ * bootstrap step 0 (`reference/worker-prompt.md`, whose reason string comes
+ * from `forge lock-reason`) was skipped, so `resolveWorktreeOwner` can never
+ * attribute the worktree to a run and neither `forge cleanup` nor this
+ * module's default mode can tell a canonical worktree from a duplicate.
+ * `statMtimeMs` is injected (rather
  * than a direct `statSync` call) so tests can simulate ages without
  * touching the filesystem; production passes the directory's own mtime as a
  * stand-in for "time since this dispatch created it" — reasonable since this
@@ -455,7 +456,7 @@ export function auditPostDispatch(
   )) {
     failures.push({
       kind: 'unlocked-past-deadline',
-      message: `${entry.directory} has no git worktree lock ${Math.round(options.maxUnlockedAgeMs / 1000)}s+ after dispatch — bootstrap step 0.3 (docs/agents/forge.md's "Worktree setup") was skipped.`,
+      message: `${entry.directory} has no git worktree lock ${Math.round(options.maxUnlockedAgeMs / 1000)}s+ after dispatch — the worker skipped bootstrap step 0. Re-lock it with: git worktree lock ${entry.directory} --reason "$(forge lock-reason --run <runId> --ticket <ticket>)"`,
     })
   }
 
@@ -476,8 +477,8 @@ export function auditPostDispatch(
 /**
  * Generous relative to how fast `git worktree lock` actually runs
  * (sub-second) — this only exists to give a worker's own bootstrap script a
- * fair chance to reach step 0.3 before the coordinator's audit runs, not to
- * model any real expected latency.
+ * fair chance to reach bootstrap step 0 before the coordinator's audit runs,
+ * not to model any real expected latency.
  */
 const POST_DISPATCH_UNLOCKED_MAX_AGE_MS = 30_000
 

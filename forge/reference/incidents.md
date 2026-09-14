@@ -31,6 +31,15 @@ batch, catches both shapes (plus two sibling shapes: two worker branches for
 the same ticket number, and a worktree whose checked-out branch doesn't
 match its own lock's ticket) before any worker has had a chance to commit.
 
+The extraction of this machinery into a standalone CLI briefly made AO-321
+structurally guaranteed rather than merely possible: the audit and the
+parser came along, but the `git worktree lock` command itself did not —
+it lived only as a `{{bootstrap_steps}}` placeholder each target repo was
+expected to fill in by hand. `forge lock-reason` (Phase 6) and bootstrap
+step 0 of `reference/worker-prompt.md` close that: the coordinator asks the
+CLI for the reason, the worker runs one literal command with it, and the CLI
+refuses to emit a reason its own parser can't read back.
+
 ## The 8-finder roster hang
 
 A `code-review` fan-out of 8 `angle-*`-style finder sub-agents hung for

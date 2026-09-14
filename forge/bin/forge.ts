@@ -33,6 +33,7 @@ commands:
   cleanup   [--run <id> | --all] [--dry-run] [--force]
   usage     [--session <id> | --file <path>] [--stalled [--minutes N]] [--project-dir <path>]
   handoff   --check <path> | --render <path>
+  lock-reason --run <id> --ticket <ticket> [--anchor <pid>]  — the \`git worktree lock\` reason a worker writes at bootstrap
   selftest  — run this CLI's own unit tests
 `
 
@@ -86,6 +87,11 @@ async function main(): Promise<void> {
     }
     case 'handoff': {
       const { run } = await import('../src/handoff')
+      await run(rest)
+      return
+    }
+    case 'lock-reason': {
+      const { run } = await import('../src/lockreason')
       await run(rest)
       return
     }

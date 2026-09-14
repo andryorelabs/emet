@@ -160,7 +160,7 @@
         },
         "lockReason": {
           "type": "string",
-          "description": "Template for the `git worktree lock` reason a worker writes at bootstrap. Defaults to the built-in \"forge run={runId} ticket={ticket} anchor={anchorPid} at={iso}\" shape every tool in this CLI already parses — only override if you need extra fields, and keep the four originals in place. A fifth, optional \"slug={coordinatorSlug}\" field (the coordinator's own resolveSessionSlug()) is understood when present — without it, forge preflight/forge cleanup can only classify an anchor-less worktree owner as 'dead', never 'idle', because they have no way to find the coordinator's own transcript from the worktree's directory alone."
+          "description": "Template for the `git worktree lock` reason a worker writes at bootstrap, read by `forge lock-reason` (the command that fills it in and that the coordinator calls once per ticket in Phase 6 — never assemble this string by hand). Defaults to \"forge run={runId} ticket={ticket} anchor={anchorPid} slug={coordinatorSlug} at={iso}\". Only override to ADD fields: `forge lock-reason` parses its own output back with the same parser forge preflight/forge cleanup use and refuses any template that drops the literal \"forge\" token, any of run=/ticket=/anchor=/at=, or slug=. slug is the coordinator's own resolveSessionSlug(), and is what lets those commands find the run's transcript — a lock reason without it classifies as 'dead' the moment the run's anchor process exits, never 'idle'. Reasons written before slug= existed still parse, with that verdict caveat."
         },
         "copyFromMain": {
           "type": "array",
