@@ -1,0 +1,7 @@
+# Config for `forge selftest` (→ `bun test --config bunfig.toml src`).
+# Scoped here rather than a project-root default so this tree can be
+# invoked as a test root from any cwd via `bin/forge.ts`'s `selftest`
+# subcommand (see that file's own comment for why).
+[test]
+root = "src"
+coverage = false

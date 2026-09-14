@@ -1,0 +1,319 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://andryore.dev/schema/forge.config.schema.json",
+  "title": "forge.config.json",
+  "description": "Per-repo configuration for the /forge pipeline. Covers both the subset this CLI (src/config.ts) validates at runtime — repo, ticket, concurrency, preflight.requiredFiles, handoff, usage — and the wider set (tracker, commit, worktree, commands, schema, design) that the /forge *command* reads directly as prose instructions. This file exists for editor completion only; src/config.ts is the runtime source of truth for the fields it checks.",
+  "type": "object",
+  "required": ["version", "repo", "ticket"],
+  "additionalProperties": true,
+  "properties": {
+    "//": {
+      "type": "string",
+      "description": "Free-text documentation field, conventionally used for repo-specific notes about this config. Never read by any tool."
+    },
+    "version": {
+      "const": 1,
+      "description": "Config schema version. Currently always 1."
+    },
+    "repo": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "trunk": {
+          "type": "string",
+          "minLength": 1,
+          "description": "The branch every worker's changes ultimately merge toward, and every cleanup/preflight git comparison is made against (e.g. \"main\", \"master\")."
+        },
+        "remote": {
+          "type": "string",
+          "minLength": 1,
+          "default": "origin",
+          "description": "The git remote `trunk` lives on — almost always \"origin\"."
+        },
+        "integrationBranch": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Optional long-lived branch a wave integrates onto before merging to trunk, if this repo uses one. Prose-only — not read by the CLI."
+        },
+        "commitTypes": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Allowed Conventional Commit types for worker commits (e.g. [\"feat\",\"fix\",\"chore\"]). Prose-only — not read by the CLI."
+        }
+      }
+    },
+    "tracker": {
+      "type": "object",
+      "required": ["kind"],
+      "additionalProperties": false,
+      "description": "Which issue tracker /forge talks to, and how. The CLI never calls a tracker directly — this section documents the adapter the /forge *command* follows as prose (docs/agents/issue-tracker.md), except `local`, which the CLI implements for real under .forge/tickets and <git-common-dir>/forge/tracker.",
+      "properties": {
+        "kind": {
+          "type": "string",
+          "enum": ["linear", "github", "local"]
+        },
+        "readyLabel": {
+          "type": "string",
+          "description": "Label marking a ticket ready for an agent to pick up (e.g. \"ready-for-agent\")."
+        },
+        "triageLabels": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "The canonical triage-role labels this repo uses (needs-triage, needs-info, ready-for-agent, ready-for-human, wontfix, or repo-specific equivalents)."
+        },
+        "transitions": {
+          "type": "object",
+          "additionalProperties": false,
+          "description": "Who is responsible for writing each ticket-state transition: 'worker' (the dispatched agent), 'coordinator' (the /forge coordinator writes it explicitly), or 'automatic' (the tracker integration does it — e.g. Linear's GitHub integration on PR open/merge). The coordinator must never write a transition marked 'automatic' — see docs/agents/forge.md's 'Generalizing /forge'.",
+          "properties": {
+            "onStart": { "type": "string", "enum": ["worker", "coordinator", "automatic"] },
+            "onPrOpen": { "type": "string", "enum": ["worker", "coordinator", "automatic"] },
+            "onPrMerge": { "type": "string", "enum": ["worker", "coordinator", "automatic"] }
+          }
+        },
+        "prReference": {
+          "type": "string",
+          "description": "Template for the PR-body line that links back to the ticket, e.g. \"Closes #{number}\" (github) or \"Refs: {id}\" (linear)."
+        },
+        "linear": {
+          "type": "object",
+          "additionalProperties": true,
+          "description": "Linear-specific settings (team key, workflow-state names, etc.) — consumed only by the model reading docs/agents/issue-tracker.md, never by the CLI."
+        },
+        "github": {
+          "type": "object",
+          "additionalProperties": false,
+          "description": "GitHub Issues has no native priority field or workflow states — these two maps are the substitute, per the 'Generalizing /forge' design notes.",
+          "properties": {
+            "priorityLabels": {
+              "type": "object",
+              "additionalProperties": { "type": "string" },
+              "description": "Maps a priority level (\"1\"=P0 highest .. \"4\"=P3) to the literal GitHub label name, e.g. {\"1\":\"P0\",\"2\":\"P1\"}. A repo with none declared falls back to createdAt-ascending order, and `forge doctor` reports that explicitly."
+            },
+            "stateLabels": {
+              "type": "object",
+              "additionalProperties": { "type": "string" },
+              "description": "Maps a workflow state (todo | in-progress | in-review) to its literal GitHub label name, e.g. {\"todo\":\"status:todo\"}. `done`/`canceled` are inferred from the issue's own closed/state_reason instead of a label."
+            }
+          }
+        },
+        "local": {
+          "type": "object",
+          "additionalProperties": false,
+          "description": "Settings for the CLI-implemented `local` tracker (.forge/tickets + <git-common-dir>/forge/tracker).",
+          "properties": {
+            "idPrefix": {
+              "type": "string",
+              "pattern": "^[A-Z][A-Z0-9]*$",
+              "description": "Uppercase id prefix for local tickets (e.g. \"NFK\" -> NFK-1, NFK-2, ...). Defaults to the first 3 letters of the repo's own directory basename, uppercased."
+            }
+          }
+        }
+      }
+    },
+    "ticket": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "idPattern": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Anchored regex *source* a ticket id must match, e.g. \"^AO-\\\\d+$\", \"^#?\\\\d+$\" for a local/github-numbered tracker. Validated as a real RegExp by src/config.ts; an invalid pattern is a hard config error."
+        },
+        "idExample": {
+          "type": "string",
+          "description": "One example id matching idPattern, shown to workers/humans as a sanity reference (e.g. \"AO-321\"). Prose-only."
+        },
+        "branchPrefix": {
+          "type": "string",
+          "pattern": "^[a-z0-9-]+$",
+          "description": "Lowercase prefix used to build a worker's local branch name and the glob `cleanup` sweeps for leftover worker branches — branches are `<branchPrefix>-<number>-<slug>`, glob `<branchPrefix>-*`."
+        },
+        "branchPattern": {
+          "type": "string",
+          "description": "Optional full branch-name template, if the plain `<branchPrefix>-<number>-<slug>` shape doesn't fit this repo. Prose-only — not read by the CLI."
+        }
+      }
+    },
+    "commit": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "trailer": {
+          "type": "string",
+          "description": "Git trailer key a worker appends to its commits referencing the ticket (e.g. \"Refs\"). Prose-only."
+        },
+        "trailerPosition": {
+          "type": "string",
+          "enum": ["body", "footer"],
+          "description": "Where the trailer goes in the commit message. Prose-only."
+        }
+      }
+    },
+    "worktree": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "stateDir": {
+          "type": "string",
+          "description": "Directory (relative to a worker's worktree root) used for run-local logs/notes, e.g. \".forge\". Prose-only."
+        },
+        "lockReason": {
+          "type": "string",
+          "description": "Template for the `git worktree lock` reason a worker writes at bootstrap. Defaults to the built-in \"forge run={runId} ticket={ticket} anchor={anchorPid} at={iso}\" shape every tool in this CLI already parses — only override if you need extra fields, and keep the four originals in place."
+        },
+        "copyFromMain": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Paths to copy from the trunk checkout into a fresh worktree before bootstrap (e.g. untracked local env files). Prose-only."
+        },
+        "bootstrap": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Shell commands run once in a fresh worktree before a worker starts (e.g. [\"bun install --silent --frozen-lockfile\"]). Prose-only — read and executed by the /forge command's Phase 6, never by this CLI."
+        }
+      }
+    },
+    "commands": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "selfCheck": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Commands a worker runs before considering its own change done (e.g. [\"bun run check\"], [\"go test ./...\"]). Prose-only."
+        },
+        "workerScopedSuite": {
+          "type": "string",
+          "description": "Command a worker runs to test only the area it touched, if this repo supports scoping. Prose-only."
+        },
+        "fullSuite": {
+          "type": "object",
+          "additionalProperties": false,
+          "description": "The repo-wide test suite, if it's a shared singleton that can't run concurrently across worktrees (e.g. an E2E suite hitting one dev server/database).",
+          "properties": {
+            "run": { "type": "string", "description": "Command to run the full suite." },
+            "singleton": { "type": "boolean", "description": "True if only one worktree may run this suite at a time." },
+            "runInBackground": { "type": "boolean" },
+            "reset": {
+              "type": "array",
+              "items": { "type": "string" },
+              "description": "Commands to reset shared state between runs (e.g. reseed a test database)."
+            }
+          }
+        }
+      }
+    },
+    "preflight": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "requiredFiles": {
+          "type": "array",
+          "description": "Files `forge preflight` requires to exist at the repo root before a wave dispatches. Empty means no such check runs at all.",
+          "items": {
+            "type": "object",
+            "required": ["path", "why"],
+            "additionalProperties": false,
+            "properties": {
+              "path": { "type": "string", "minLength": 1, "description": "Path relative to the repo root." },
+              "why": { "type": "string", "minLength": 1, "description": "Shown in the preflight failure message when this file is missing." }
+            }
+          }
+        },
+        "requiredCommands": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Binaries that must resolve on PATH before dispatch (e.g. [\"gh\"] for a github tracker). Prose-only — not read by the CLI."
+        }
+      }
+    },
+    "concurrency": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "waveSize": {
+          "type": "integer",
+          "minimum": 1,
+          "default": 4,
+          "description": "Max Agent calls dispatched together in one wave."
+        },
+        "maxLiveWorkers": {
+          "type": "integer",
+          "minimum": 1,
+          "default": 8,
+          "description": "Global, per-host cap across every concurrently running coordinator. FORGE_MAX_LIVE_WORKERS env var overrides this when set."
+        },
+        "runIdleThresholdMs": {
+          "type": "integer",
+          "minimum": 1,
+          "default": 5400000,
+          "description": "How long a run with no live anchor still classifies 'idle' (rather than 'dead') based on transcript freshness alone, in milliseconds. Default 5400000 = 90 minutes. FORGE_RUN_IDLE_THRESHOLD_MS env var overrides this when set."
+        }
+      }
+    },
+    "schema": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Describes this repo's own data-schema ownership (e.g. a Prisma schema file), used by the /forge command's Phase 3 conflict-avoidance rule when splitting tickets across workers. Prose-only — empty or omitted means that rule is skipped entirely.",
+      "properties": {
+        "ownedPaths": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Paths that define shared schema (e.g. [\"prisma/schema.prisma\"]) — at most one worker per wave may touch these."
+        },
+        "sharedDatabase": {
+          "type": "boolean",
+          "description": "True if workers share one physical database/migration history rather than each getting an isolated one."
+        }
+      }
+    },
+    "handoff": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "maxLines": {
+          "type": "integer",
+          "minimum": 1,
+          "default": 60,
+          "description": "Max lines a .forge/handoff-<ticket>.md note may have before `forge handoff --check` fails it."
+        },
+        "maxChars": {
+          "type": "integer",
+          "minimum": 1,
+          "default": 8000,
+          "description": "Max characters (~2k tokens) a handoff note may have before `forge handoff --check` fails it."
+        }
+      }
+    },
+    "usage": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "oversizedReadLines": {
+          "type": "integer",
+          "minimum": 1,
+          "default": 400,
+          "description": "A Read with no offset/limit against a file over this many lines counts as \"oversized\" in `forge usage`'s report."
+        },
+        "stalledMinutes": {
+          "type": "integer",
+          "minimum": 1,
+          "default": 10,
+          "description": "Default --minutes threshold for `forge usage --stalled`."
+        }
+      }
+    },
+    "design": {
+      "type": ["object", "null"],
+      "additionalProperties": false,
+      "description": "Settings for an optional design/UI-review step in the pipeline. Null (or omitted) means that step is skipped entirely. Prose-only — not read by the CLI.",
+      "properties": {
+        "canvasIndex": {
+          "type": "string",
+          "description": "Path to a design canvas/index file workers should check before implementing UI changes."
+        }
+      }
+    }
+  }
+}
