@@ -119,10 +119,22 @@ export type CleanupOptions = {
 /**
  * `--run <id>` scopes classification/deletion to branches owned by that
  * run's still-locked worktree (see {@link guardBranch}); `--all` is an
- * explicit, self-documenting synonym for the default repo-wide sweep run
- * with no `--run` at all — both apply the same live/idle-owner guard, so the
- * two are mutually exclusive rather than composable. `--dry-run` is
- * unchanged from before AO-260.
+ * explicit, self-documenting synonym for the same repo-wide sweep that used
+ * to run with no scope flag at all — both apply the same live/idle-owner
+ * guard, so the two are mutually exclusive rather than composable. `--dry-run`
+ * is unchanged from before AO-260.
+ *
+ * **Exactly one of `--run`/`--all` is now required.** Before this, the bare
+ * `forge cleanup` (no flags at all — including `forge cleanup --dry-run`) was
+ * silently the full repo-wide sweep, indistinguishable at the call site from
+ * a coordinator that forgot `--run <runId>` — and `docs/agents/forge.md`
+ * only ever documents the `--run`-scoped form. Two coordinators running in
+ * different git worktrees of the same repo (e.g. two Orca worktrees) sharing
+ * one branch/worktree namespace makes that easy typo actively destructive:
+ * an unscoped sweep can force-delete a sibling coordinator's already-merged
+ * branch (AO-260's own protections only cover *locked* worktrees, not a
+ * branch whose worktree already closed). Failing closed here means "clean up
+ * everything" now has to be said on purpose.
  *
  * `--force` has been advertised by `docs/agents/forge.md` and this script's
  * own preflight sibling for a long time without ever actually being parsed
@@ -151,6 +163,12 @@ export function parseCleanupArguments(argv: readonly string[]): CleanupOptions {
 
   if (runId !== null && isAll) {
     throw new Error('forge:cleanup — --run and --all are mutually exclusive')
+  }
+
+  if (runId === null && !isAll) {
+    throw new Error(
+      'forge:cleanup — pass --run <runId> to clean up this run only, or --all for a deliberate repo-wide sweep.',
+    )
   }
 
   return { dryRun: isDryRun, runId, all: isAll, force: isForce }
@@ -344,7 +362,15 @@ async function main(config: ForgeConfig) {
     `Using ${remote}/${trunk} (from forge.config.json's repo.remote/repo.trunk) as the merge-base reference.`,
   )
 
-  await Bun.$`git worktree prune`.nothrow().quiet()
+  // Skipped under --dry-run: a dry run must only report, never mutate git's
+  // own admin state. `git worktree prune` deletes no branch and no
+  // directory (see the file-level comment above), but it does rewrite
+  // `.git/worktrees/*` — a real mutation a "would delete" preview has no
+  // business making. `git fetch` still runs either way: the merge-base
+  // reference the dry-run report itself relies on needs it.
+  if (!dryRun) {
+    await Bun.$`git worktree prune`.nothrow().quiet()
+  }
   await Bun.$`git fetch --quiet ${remote} ${trunk}`.nothrow().quiet()
 
   const trunkRef = `${remote}/${trunk}`

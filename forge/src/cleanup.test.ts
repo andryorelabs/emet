@@ -23,20 +23,35 @@ function lockedEntry(overrides: Partial<WorktreeEntry> = {}): WorktreeEntry {
 }
 
 describe('parseCleanupArguments', () => {
-  test('defaults to no run scope, not dry, not --all, not --force', () => {
-    expect(parseCleanupArguments([])).toEqual({
-      dryRun: false,
-      runId: null,
+  // Fail-closed (see this function's own doc comment): a scope is mandatory
+  // now, so no combination of flags that omits both --run and --all may
+  // ever resolve to the old implicit repo-wide sweep.
+  test('no flags at all throws — no implicit repo-wide sweep', () => {
+    expect(() => parseCleanupArguments([])).toThrow(/--run.*--all/)
+  })
+
+  test('--dry-run alone still throws — scope is required even for a preview', () => {
+    expect(() => parseCleanupArguments(['--dry-run'])).toThrow(/--run.*--all/)
+  })
+
+  test('--force alone still throws — --force is not a scope', () => {
+    expect(() => parseCleanupArguments(['--force'])).toThrow(/--run.*--all/)
+  })
+
+  test('--dry-run --run <id> combine', () => {
+    expect(parseCleanupArguments(['--dry-run', '--run', 'session-a'])).toEqual({
+      dryRun: true,
+      runId: 'session-a',
       all: false,
       force: false,
     })
   })
 
-  test('--dry-run sets dryRun', () => {
-    expect(parseCleanupArguments(['--dry-run'])).toEqual({
+  test('--dry-run --all combine', () => {
+    expect(parseCleanupArguments(['--dry-run', '--all'])).toEqual({
       dryRun: true,
       runId: null,
-      all: false,
+      all: true,
       force: false,
     })
   })
@@ -44,15 +59,6 @@ describe('parseCleanupArguments', () => {
   test('--run <id> captures the run id', () => {
     expect(parseCleanupArguments(['--run', 'session-a'])).toEqual({
       dryRun: false,
-      runId: 'session-a',
-      all: false,
-      force: false,
-    })
-  })
-
-  test('--dry-run --run <id> combine', () => {
-    expect(parseCleanupArguments(['--dry-run', '--run', 'session-a'])).toEqual({
-      dryRun: true,
       runId: 'session-a',
       all: false,
       force: false,
@@ -68,11 +74,11 @@ describe('parseCleanupArguments', () => {
     })
   })
 
-  test('--force sets the force flag', () => {
-    expect(parseCleanupArguments(['--force'])).toEqual({
+  test('--force combines with --all', () => {
+    expect(parseCleanupArguments(['--all', '--force'])).toEqual({
       dryRun: false,
       runId: null,
-      all: false,
+      all: true,
       force: true,
     })
   })
