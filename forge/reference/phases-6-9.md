@@ -230,6 +230,17 @@ are mostly `test(...)`). This is the branch that gets pushed — never the
 workers' own local `<branchPrefix>-<n>-<slug>` branches from Phase 7, and
 never a bare, slash-less name improvised on the spot.
 
+Unlike worker branches (numbered by ticket, so two waves almost never collide
+on one), this name carries no run or ticket discriminator — two waves in
+different git worktrees of the same repo (e.g. two Orca worktrees, each
+running a different spec) can independently land on the same `<type>/<slug>`
+for an unrelated reason. Before running `git checkout -b`, check
+`git rev-parse --verify --quiet <type>/<slug>`; if it already resolves,
+append a short disambiguator (`<type>/<slug>-2`, or something naming this
+wave's own tickets) rather than reusing the name — git will otherwise refuse
+the second worktree's checkout outright, or worse, silently fold two
+unrelated waves' history together if it doesn't.
+
 Run `code-review` here, once, over the full integration branch — this is
 the review Phase 7 deliberately deferred. It fans out its own
 `angle-*`-style finder sub-agents; while waiting on that fan-out, poll
