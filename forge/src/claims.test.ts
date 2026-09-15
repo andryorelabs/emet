@@ -52,7 +52,36 @@ describe('didReserveTicket / listReservations / releaseTicket', () => {
       expect.objectContaining({ runId: 'run-a', ticket: 'AO-999' }),
     ])
 
-    await releaseTicket('AO-999', forgeDirectory)
+    const result = await releaseTicket('AO-999', 'run-a', { forgeDirectory })
+    expect(result).toEqual({ outcome: 'released', previousOwnerRunId: 'run-a' })
+    expect(await listReservations(forgeDirectory)).toEqual([])
+  })
+
+  test('releasing a ticket no one holds is a no-op, not an error', async () => {
+    const result = await releaseTicket('AO-995', 'run-a', { forgeDirectory })
+    expect(result).toEqual({ outcome: 'not-reserved' })
+  })
+
+  test('releasing on behalf of the wrong run is refused, reservation survives', async () => {
+    await didReserveTicket('run-a', process.pid, 'AO-994', forgeDirectory)
+
+    const result = await releaseTicket('AO-994', 'run-b', { forgeDirectory })
+    expect(result).toEqual({ outcome: 'owned-by-another', ownerRunId: 'run-a' })
+
+    const reservations = await listReservations(forgeDirectory)
+    expect(reservations).toEqual([
+      expect.objectContaining({ runId: 'run-a', ticket: 'AO-994' }),
+    ])
+  })
+
+  test('force releases another run\'s reservation anyway', async () => {
+    await didReserveTicket('run-a', process.pid, 'AO-993', forgeDirectory)
+
+    const result = await releaseTicket('AO-993', 'run-b', {
+      forgeDirectory,
+      force: true,
+    })
+    expect(result).toEqual({ outcome: 'released', previousOwnerRunId: 'run-a' })
     expect(await listReservations(forgeDirectory)).toEqual([])
   })
 
@@ -175,9 +204,9 @@ describe('didReserveTicket / listReservations / releaseTicket', () => {
     })
 
     test('releaseTicket also rejects a malformed ticket', () => {
-      expect(releaseTicket('1090684', forgeDirectory)).rejects.toThrow(
-        /ticket must match/,
-      )
+      expect(
+        releaseTicket('1090684', 'run-a', { forgeDirectory }),
+      ).rejects.toThrow(/ticket must match/)
     })
   })
 })

@@ -9,6 +9,7 @@ import {
   listOccupiedSlots,
   releaseAllSlotsForRun,
   releaseSlot,
+  releaseSlotIfOwned,
 } from './slots'
 
 /**
@@ -150,6 +151,62 @@ describe('acquireSlot / releaseSlot / releaseAllSlotsForRun', () => {
   test('releaseAllSlotsForRun on a missing slots directory returns an empty list', async () => {
     rmSync(slotsDirectory, { recursive: true, force: true })
     expect(await releaseAllSlotsForRun('run-a', slotsDirectory)).toEqual([])
+  })
+})
+
+describe('releaseSlotIfOwned', () => {
+  let slotsDirectory: string
+
+  beforeEach(() => {
+    slotsDirectory = mkdtempSync(path.join(os.tmpdir(), 'forge-slots-test-'))
+  })
+
+  afterEach(() => {
+    rmSync(slotsDirectory, { recursive: true, force: true })
+  })
+
+  test('releases a slot held by the expected run', async () => {
+    const index = await acquireSlot(2, 'run-a', LIVE_MARKER_PID, 'AO-1', slotsDirectory, {
+      isAnchorAliveFn: (pid) => pid === LIVE_MARKER_PID,
+    })
+    const result = releaseSlotIfOwned(slotsDirectory, index as number, 'run-a')
+    expect(result).toEqual({ outcome: 'released', previousOwnerRunId: 'run-a' })
+    expect(isSlotStale(slotsDirectory, index as number)).toBe(true)
+  })
+
+  test('an unoccupied index is a no-op, not an error', () => {
+    expect(releaseSlotIfOwned(slotsDirectory, 0, 'run-a')).toEqual({
+      outcome: 'not-occupied',
+    })
+  })
+
+  // The regression this guards: before the ownership check existed,
+  // `--release-index` freed any slot unconditionally, so one coordinator
+  // could free a slot a different, still-live coordinator legitimately holds.
+  test('refuses to release a slot held by a different run', async () => {
+    const index = await acquireSlot(2, 'run-a', LIVE_MARKER_PID, 'AO-1', slotsDirectory, {
+      isAnchorAliveFn: (pid) => pid === LIVE_MARKER_PID,
+    })
+    const result = releaseSlotIfOwned(slotsDirectory, index as number, 'run-b')
+    expect(result).toEqual({ outcome: 'owned-by-another', ownerRunId: 'run-a' })
+    expect(
+      isSlotStale(slotsDirectory, index as number, {
+        isAnchorAliveFn: (pid) => pid === LIVE_MARKER_PID,
+      }),
+    ).toBe(false)
+  })
+
+  test('force releases another run\'s slot anyway', async () => {
+    const index = await acquireSlot(2, 'run-a', LIVE_MARKER_PID, 'AO-1', slotsDirectory, {
+      isAnchorAliveFn: (pid) => pid === LIVE_MARKER_PID,
+    })
+    const result = releaseSlotIfOwned(
+      slotsDirectory,
+      index as number,
+      'run-b',
+      true,
+    )
+    expect(result).toEqual({ outcome: 'released', previousOwnerRunId: 'run-a' })
   })
 })
 

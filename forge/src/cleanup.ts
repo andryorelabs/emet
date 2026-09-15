@@ -311,6 +311,7 @@ async function classifyOneBranch(
     category: isSafeToDelete(contentVerdict) ? 'to-delete' : 'needs-review',
     contentVerdict,
     ownerTicket: guard.owner?.ticket,
+    ownerRunId: guard.owner?.runId,
   }
 }
 
@@ -328,24 +329,30 @@ async function deleteBranch(
 }
 
 /**
- * Wraps {@link deleteBranch} with `--run` mode's reservation cleanup (AO-260
- * point 1): once a branch is actually gone, its ticket's claim in the
- * registry (T1b, `claims.ts`) is stale and must go with it, or a
- * finished ticket would look permanently reserved to the next `/forge`
- * coordinator. Never releases on a failed deletion — the branch, and
- * whatever legitimately still holds the reservation, is unchanged. `ticket`
- * is only ever set for a branch that {@link guardBranch} resolved to a
- * specific run's owned worktree, i.e. only in `--run` mode.
+ * Wraps {@link deleteBranch} with reservation cleanup (AO-260 point 1): once
+ * a branch is actually gone, its ticket's claim in the registry
+ * (T1b, `claims.ts`) is stale and must go with it, or a finished ticket
+ * would look permanently reserved to the next `/forge` coordinator. Never
+ * releases on a failed deletion — the branch, and whatever legitimately
+ * still holds the reservation, is unchanged.
+ *
+ * `ticket`/`ownerRunId` are only ever set together, for a branch that
+ * {@link guardBranch} resolved to a specific run's owned worktree — either
+ * `--run <id>`'s exact match, or a `--force`-reclaimed `'dead'` owner in the
+ * default/`--all` sweep. `ownerRunId` is passed straight through as
+ * {@link releaseTicket}'s `expectedRunId`, so this never releases a
+ * reservation `guardBranch` didn't already attribute to that same run.
  */
 export async function deleteAndReleaseTicket(
   branchName: string,
   ticket: string | undefined,
+  ownerRunId: string | undefined,
   deleteFunction: typeof deleteBranch,
   releaseFunction: typeof releaseTicket,
 ): Promise<{ ok: boolean; message: string }> {
   const result = await deleteFunction(branchName)
-  if (ticket && result.ok) {
-    await releaseFunction(ticket)
+  if (ticket && ownerRunId && result.ok) {
+    await releaseFunction(ticket, ownerRunId)
   }
   return result
 }
@@ -464,6 +471,7 @@ async function main(config: ForgeConfig) {
       const result = await deleteAndReleaseTicket(
         branch.name,
         branch.ownerTicket,
+        branch.ownerRunId,
         deleteBranch,
         releaseTicket,
       )

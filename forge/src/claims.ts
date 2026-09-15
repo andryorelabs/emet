@@ -274,14 +274,44 @@ export async function didReserveTicket(
   }
 }
 
+export type ReleaseTicketResult =
+  | { readonly outcome: 'released'; readonly previousOwnerRunId?: string }
+  | { readonly outcome: 'not-reserved' }
+  | { readonly outcome: 'owned-by-another'; readonly ownerRunId: string }
+
+/**
+ * Releases `ticket`'s reservation, but only on behalf of `expectedRunId` —
+ * the run this caller believes currently owns it. Before this ownership
+ * check existed, `releaseTicket(ticket)` deleted the reservation file
+ * unconditionally: `forge claims --release AO-321` from run B could free run
+ * A's still-live reservation with no error at all, reopening the exact
+ * double-dispatch race `didReserveTicket` exists to prevent — a real risk
+ * once two coordinators (e.g. two Orca worktrees of the same repo) can both
+ * reach for the same ticket id.
+ *
+ * Three outcomes rather than a boolean: `'not-reserved'` (nothing to
+ * release — same no-op the old unconditional `rmSync` produced when the file
+ * never existed) and `'owned-by-another'` (a real reservation exists, but for
+ * a different run — refused unless `force`) are distinguishable so a caller
+ * can tell "already clean" from "blocked." `force` is the deliberate escape
+ * hatch for a human clearing a genuinely stuck reservation by hand.
+ */
 export async function releaseTicket(
   ticket: string,
-  forgeDirectory?: string,
-): Promise<void> {
+  expectedRunId: string,
+  options?: { readonly forgeDirectory?: string; readonly force?: boolean },
+): Promise<ReleaseTicketResult> {
   assertValidTicket(ticket)
   const resolvedForgeDirectory =
-    forgeDirectory ?? (await resolveForgeDirectory())
-  rmSync(reservationFilePath(resolvedForgeDirectory, ticket), { force: true })
+    options?.forgeDirectory ?? (await resolveForgeDirectory())
+  const filePath = reservationFilePath(resolvedForgeDirectory, ticket)
+  const existing = readJsonFile<Reservation>(filePath)
+  if (!existing) return { outcome: 'not-reserved' }
+  if (existing.runId !== expectedRunId && !options?.force) {
+    return { outcome: 'owned-by-another', ownerRunId: existing.runId }
+  }
+  rmSync(filePath, { force: true })
+  return { outcome: 'released', previousOwnerRunId: existing.runId }
 }
 
 export async function listReservations(
@@ -391,7 +421,7 @@ function requireFlagValue(argv: readonly string[], flag: string): string {
  *
  * ```
  * forge claims --reserve AO-321 --run <runId> --anchor <pid>
- * forge claims --release AO-321
+ * forge claims --release AO-321 --run <runId> [--force]
  * forge claims --list
  * forge claims --prune [--dry-run]
  * ```
@@ -417,7 +447,16 @@ async function main(): Promise<void> {
 
   if (argv.includes('--release')) {
     const ticket = requireFlagValue(argv, '--release')
-    await releaseTicket(ticket)
+    const runId = requireFlagValue(argv, '--run')
+    const force = argv.includes('--force')
+    const result = await releaseTicket(ticket, runId, { force })
+    if (result.outcome === 'owned-by-another') {
+      console.error(
+        `forge:claims — ${ticket} is reserved by run ${result.ownerRunId}, not ${runId} — pass --force to release it anyway.`,
+      )
+      process.exitCode = 1
+      return
+    }
     console.log(`forge:claims — released ${ticket}.`)
     return
   }
@@ -455,7 +494,7 @@ async function main(): Promise<void> {
   }
 
   console.error(
-    'usage: forge claims --reserve <ticket> --run <runId> --anchor <pid> | --release <ticket> | --list | --prune [--dry-run]',
+    'usage: forge claims --reserve <ticket> --run <runId> --anchor <pid> | --release <ticket> --run <runId> [--force] | --list | --prune [--dry-run]',
   )
   process.exitCode = 1
 }
