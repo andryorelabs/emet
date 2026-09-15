@@ -23,20 +23,35 @@ function lockedEntry(overrides: Partial<WorktreeEntry> = {}): WorktreeEntry {
 }
 
 describe('parseCleanupArguments', () => {
-  test('defaults to no run scope, not dry, not --all, not --force', () => {
-    expect(parseCleanupArguments([])).toEqual({
-      dryRun: false,
-      runId: null,
+  // Fail-closed (see this function's own doc comment): a scope is mandatory
+  // now, so no combination of flags that omits both --run and --all may
+  // ever resolve to the old implicit repo-wide sweep.
+  test('no flags at all throws — no implicit repo-wide sweep', () => {
+    expect(() => parseCleanupArguments([])).toThrow(/--run.*--all/)
+  })
+
+  test('--dry-run alone still throws — scope is required even for a preview', () => {
+    expect(() => parseCleanupArguments(['--dry-run'])).toThrow(/--run.*--all/)
+  })
+
+  test('--force alone still throws — --force is not a scope', () => {
+    expect(() => parseCleanupArguments(['--force'])).toThrow(/--run.*--all/)
+  })
+
+  test('--dry-run --run <id> combine', () => {
+    expect(parseCleanupArguments(['--dry-run', '--run', 'session-a'])).toEqual({
+      dryRun: true,
+      runId: 'session-a',
       all: false,
       force: false,
     })
   })
 
-  test('--dry-run sets dryRun', () => {
-    expect(parseCleanupArguments(['--dry-run'])).toEqual({
+  test('--dry-run --all combine', () => {
+    expect(parseCleanupArguments(['--dry-run', '--all'])).toEqual({
       dryRun: true,
       runId: null,
-      all: false,
+      all: true,
       force: false,
     })
   })
@@ -44,15 +59,6 @@ describe('parseCleanupArguments', () => {
   test('--run <id> captures the run id', () => {
     expect(parseCleanupArguments(['--run', 'session-a'])).toEqual({
       dryRun: false,
-      runId: 'session-a',
-      all: false,
-      force: false,
-    })
-  })
-
-  test('--dry-run --run <id> combine', () => {
-    expect(parseCleanupArguments(['--dry-run', '--run', 'session-a'])).toEqual({
-      dryRun: true,
       runId: 'session-a',
       all: false,
       force: false,
@@ -68,11 +74,11 @@ describe('parseCleanupArguments', () => {
     })
   })
 
-  test('--force sets the force flag', () => {
-    expect(parseCleanupArguments(['--force'])).toEqual({
+  test('--force combines with --all', () => {
+    expect(parseCleanupArguments(['--all', '--force'])).toEqual({
       dryRun: false,
       runId: null,
-      all: false,
+      all: true,
       force: true,
     })
   })
@@ -295,8 +301,9 @@ describe('deleteAndReleaseTicket', () => {
     const result = await deleteAndReleaseTicket(
       'ao-260-forge-cleanup-run-scoped',
       'AO-260',
+      'session-a',
       async (branch) => ({ ok: true, message: branch }),
-      (ticket) => releaseTicket(ticket, forgeDirectory),
+      (ticket, runId) => releaseTicket(ticket, runId, { forgeDirectory }),
     )
 
     expect(result).toEqual({
@@ -321,8 +328,9 @@ describe('deleteAndReleaseTicket', () => {
     const result = await deleteAndReleaseTicket(
       'ao-260-forge-cleanup-run-scoped',
       'AO-260',
+      'session-a',
       async (branch) => ({ ok: false, message: `${branch} — locked` }),
-      (ticket) => releaseTicket(ticket, forgeDirectory),
+      (ticket, runId) => releaseTicket(ticket, runId, { forgeDirectory }),
     )
 
     expect(result.ok).toBe(false)
@@ -334,13 +342,63 @@ describe('deleteAndReleaseTicket', () => {
     const result = await deleteAndReleaseTicket(
       'worktree-agent-a1',
       undefined,
+      undefined,
       async (branch) => ({ ok: true, message: branch }),
       async () => {
         releaseCalls += 1
+        return { outcome: 'released' as const }
       },
     )
 
     expect(result.ok).toBe(true)
     expect(releaseCalls).toBe(0)
+  })
+
+  // Regression guard: `ticket`/`ownerRunId` are only ever set together by
+  // `classifyOneBranch` (see this function's own doc comment) — this pins
+  // that a `ticket` with no `ownerRunId` never releases anything, so a
+  // future caller can't accidentally reintroduce the unscoped
+  // `releaseTicket(ticket)` this function replaced.
+  test('a ticket with no ownerRunId never releases either', async () => {
+    let releaseCalls = 0
+    const result = await deleteAndReleaseTicket(
+      'ao-260-forge-cleanup-run-scoped',
+      'AO-260',
+      undefined,
+      async (branch) => ({ ok: true, message: branch }),
+      async () => {
+        releaseCalls += 1
+        return { outcome: 'released' as const }
+      },
+    )
+
+    expect(result.ok).toBe(true)
+    expect(releaseCalls).toBe(0)
+  })
+
+  test("does not release a reservation owned by a different run", async () => {
+    await Bun.write(
+      path.join(forgeDirectory, 'tickets', 'AO-260.json'),
+      JSON.stringify({
+        runId: 'session-other',
+        anchorPid: 4242,
+        ticket: 'AO-260',
+        reservedAt: Date.now(),
+        sessionSlug: '-repo',
+      }),
+    )
+
+    const result = await deleteAndReleaseTicket(
+      'ao-260-forge-cleanup-run-scoped',
+      'AO-260',
+      'session-a',
+      async (branch) => ({ ok: true, message: branch }),
+      (ticket, runId) => releaseTicket(ticket, runId, { forgeDirectory }),
+    )
+
+    expect(result.ok).toBe(true)
+    expect(await listReservations(forgeDirectory)).toEqual([
+      expect.objectContaining({ runId: 'session-other', ticket: 'AO-260' }),
+    ])
   })
 })

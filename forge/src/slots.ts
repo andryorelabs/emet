@@ -170,6 +170,35 @@ export function releaseSlot(slotsDirectory: string, index: number): void {
   releaseLock(slotDirectory(slotsDirectory, index))
 }
 
+export type ReleaseSlotResult =
+  | { readonly outcome: 'released'; readonly previousOwnerRunId?: string }
+  | { readonly outcome: 'not-occupied' }
+  | { readonly outcome: 'owned-by-another'; readonly ownerRunId: string }
+
+/**
+ * Releases slot `index`, but only on behalf of `expectedRunId` — mirrors
+ * `claims.ts`'s {@link releaseTicket} ownership check. Before this existed,
+ * `forge slots --release-index <i>` freed any slot unconditionally, unlike
+ * `--release --run <id>` ({@link releaseAllSlotsForRun}), which already
+ * filtered on `holder.runId` — so the single-index path let one coordinator
+ * free a slot a different, still-live coordinator legitimately holds. `force`
+ * is the deliberate escape hatch for a human clearing a stuck slot by hand.
+ */
+export function releaseSlotIfOwned(
+  slotsDirectory: string,
+  index: number,
+  expectedRunId: string,
+  force = false,
+): ReleaseSlotResult {
+  const holder = readLockHolder<SlotHolder>(slotDirectory(slotsDirectory, index))
+  if (!holder) return { outcome: 'not-occupied' }
+  if (holder.runId !== expectedRunId && !force) {
+    return { outcome: 'owned-by-another', ownerRunId: holder.runId }
+  }
+  releaseSlot(slotsDirectory, index)
+  return { outcome: 'released', previousOwnerRunId: holder.runId }
+}
+
 /**
  * Releases every slot `runId` currently holds — used by
  * `forge cleanup --run <runId>` at wave close-out, so a coordinator
@@ -277,7 +306,7 @@ function resolveMaxLiveWorkers(config: ForgeConfig): number {
  * ```
  * forge slots --acquire --run <runId> --anchor <pid> --ticket <ticket>
  * forge slots --release --run <runId>
- * forge slots --release-index <index>
+ * forge slots --release-index <index> --run <runId> [--force]
  * forge slots --list
  * ```
  */
@@ -312,8 +341,17 @@ async function main(config: ForgeConfig): Promise<void> {
 
   if (argv.includes('--release-index')) {
     const index = Number(requireFlagValue(argv, '--release-index'))
+    const runId = requireFlagValue(argv, '--run')
+    const force = argv.includes('--force')
     const slotsDirectory = await resolveSlotsDirectory()
-    releaseSlot(slotsDirectory, index)
+    const result = releaseSlotIfOwned(slotsDirectory, index, runId, force)
+    if (result.outcome === 'owned-by-another') {
+      console.error(
+        `forge:slots — slot ${index} is held by run ${result.ownerRunId}, not ${runId} — pass --force to release it anyway.`,
+      )
+      process.exitCode = 1
+      return
+    }
     console.log(`forge:slots — released slot ${index}.`)
     return
   }
@@ -333,7 +371,7 @@ async function main(config: ForgeConfig): Promise<void> {
   }
 
   console.error(
-    'usage: forge slots --acquire --run <runId> --anchor <pid> --ticket <ticket> | --release --run <runId> | --release-index <index> | --list',
+    'usage: forge slots --acquire --run <runId> --anchor <pid> --ticket <ticket> | --release --run <runId> | --release-index <index> --run <runId> [--force] | --list',
   )
   process.exitCode = 1
 }

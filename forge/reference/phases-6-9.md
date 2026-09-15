@@ -33,8 +33,9 @@ Immediately before each survivor's `Agent` call, reserve it with
 `forge claims --reserve <ticket> --run <runId> --anchor <anchorPid>` (the
 real dispatch mutex — see `reference/incidents.md` §AO-285),
 then take a worker slot with `forge slots --acquire --run <runId> --anchor
-<anchorPid> --ticket <ticket>` (the global, per-host
-`concurrency.maxLiveWorkers` cap — see "Concurrency"). A denied reservation
+<anchorPid> --ticket <ticket>` (the global `concurrency.maxLiveWorkers` cap,
+shared by every coordinator working in this repo — see "Concurrency"). A
+denied reservation
 or a "no free slot" both drop that ticket from this wave; it does not get
 dispatched. **Never call the claims/slots mutex inline via `bun -e`** — an
 untypechecked snippet with its positional arguments in the wrong order is
@@ -228,6 +229,17 @@ actually contains (e.g. `test/unit-test-foundation` for a wave whose commits
 are mostly `test(...)`). This is the branch that gets pushed — never the
 workers' own local `<branchPrefix>-<n>-<slug>` branches from Phase 7, and
 never a bare, slash-less name improvised on the spot.
+
+Unlike worker branches (numbered by ticket, so two waves almost never collide
+on one), this name carries no run or ticket discriminator — two waves in
+different git worktrees of the same repo (e.g. two Orca worktrees, each
+running a different spec) can independently land on the same `<type>/<slug>`
+for an unrelated reason. Before running `git checkout -b`, check
+`git rev-parse --verify --quiet <type>/<slug>`; if it already resolves,
+append a short disambiguator (`<type>/<slug>-2`, or something naming this
+wave's own tickets) rather than reusing the name — git will otherwise refuse
+the second worktree's checkout outright, or worse, silently fold two
+unrelated waves' history together if it doesn't.
 
 Run `code-review` here, once, over the full integration branch — this is
 the review Phase 7 deliberately deferred. It fans out its own
