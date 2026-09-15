@@ -251,7 +251,14 @@ export function buildForgeConfig(detected: DetectedRepoInfo): ForgeConfig {
       branchPrefix: detected.idPrefix.toLowerCase(),
     },
     concurrency: { ...DEFAULT_FORGE_CONFIG.concurrency },
-    preflight: { requiredFiles: [] },
+    tracker: { kind: detected.tracker },
+    // `gh` is seeded for a github repo so the written config shows the value
+    // rather than leaving a reader to infer an implicit one. It is not
+    // injected at runtime: `preflight` reads exactly what is on disk.
+    preflight: {
+      requiredFiles: [],
+      requiredCommands: detected.tracker === 'github' ? ['gh'] : [],
+    },
     handoff: { ...DEFAULT_FORGE_CONFIG.handoff },
     usage: { ...DEFAULT_FORGE_CONFIG.usage },
   }

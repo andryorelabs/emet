@@ -10,16 +10,16 @@ import path from 'node:path'
  * reflowing a block inside a markdown file and silently corrupting it).
  *
  * This module only types and validates the subset of the config this CLI's
- * scripts (`preflight`, `claims`, `slots`, `cleanup`, `usage`, `handoff`)
- * actually read at runtime — `repo`, `ticket`, `concurrency`,
- * `preflight.requiredFiles`, `handoff`, `usage`. The rest of the full schema
- * (`tracker`, `commands`, `worktree.bootstrap`, `commit`, `schema.ownedPaths`,
- * `design`) is consumed by the `/forge` *command* itself — read directly by
- * the model as instructions to follow, never by this code — so it is
- * type-checked by the JSON Schema at `../schema/forge.config.schema.json`
- * (for editor completion) but not re-validated here. An unrecognized
- * top-level key is never an error: this file only complains about the keys
- * it actually uses.
+ * scripts (`preflight`, `claims`, `slots`, `cleanup`, `usage`, `handoff`,
+ * `doctor`) actually read at runtime — `repo`, `ticket`, `concurrency`,
+ * `tracker.kind`, `preflight`, `handoff`, `usage`. The rest of the full schema
+ * (the remainder of `tracker`, `commands`, `worktree.bootstrap`, `commit`,
+ * `schema.ownedPaths`, `design`) is consumed by the `/forge` *command* itself
+ * — read directly by the model as instructions to follow, never by this code
+ * — so it is type-checked by the JSON Schema at
+ * `../schema/forge.config.schema.json` (for editor completion) but not
+ * re-validated here. An unrecognized top-level key is never an error: this
+ * file only complains about the keys it actually uses.
  */
 
 /**
@@ -39,7 +39,8 @@ export const DEFAULT_FORGE_CONFIG: ForgeConfig = {
     maxLiveWorkers: 8,
     runIdleThresholdMs: 90 * 60_000,
   },
-  preflight: { requiredFiles: [] },
+  tracker: { kind: null },
+  preflight: { requiredFiles: [], requiredCommands: [] },
   handoff: { maxLines: 60, maxChars: 8000 },
   usage: { oversizedReadLines: 400, stalledMinutes: 10 },
 }
@@ -76,6 +77,15 @@ export interface ForgeConfig {
      * `FORGE_RUN_IDLE_THRESHOLD_MS` env var overrides this when set. */
     readonly runIdleThresholdMs: number
   }
+  readonly tracker: {
+    /** Which issue tracker this repo's `/forge` runs against. `null` when the
+     * config predates this field: tracker-specific dependency checks (`gh`,
+     * the Linear MCP server) are then skipped rather than guessed, since
+     * defaulting to any one kind would silently hide the check a repo of
+     * another kind actually needs. The rest of the `tracker` section stays
+     * prose for the `/forge` command; only `kind` is read here. */
+    readonly kind: TrackerKind | null
+  }
   readonly preflight: {
     /** Files `forge preflight` requires to exist at the repo root before a
      * wave dispatches, each with a `why` shown in the failure message.
@@ -85,6 +95,10 @@ export interface ForgeConfig {
       readonly path: string
       readonly why: string
     }>
+    /** Binaries that must resolve on `PATH` before a wave dispatches — the
+     * repo's own list (`rg`, `sg`, a linter), separate from the dependency
+     * checks that `tracker.kind` drives. Empty means no such check runs. */
+    readonly requiredCommands: readonly string[]
   }
   readonly handoff: {
     readonly maxLines: number
@@ -213,6 +227,38 @@ function validateAndMerge(raw: unknown): { ok: true; config: ForgeConfig } | { o
     }
   }
 
+  const requiredCommandsRaw = preflightSection.requiredCommands
+  const requiredCommands: string[] = []
+  if (requiredCommandsRaw !== undefined) {
+    if (!Array.isArray(requiredCommandsRaw)) {
+      return { ok: false, reason: '"preflight.requiredCommands" must be an array' }
+    }
+    for (const [index, entry] of requiredCommandsRaw.entries()) {
+      if (!isNonEmptyString(entry)) {
+        return {
+          ok: false,
+          reason: `"preflight.requiredCommands[${index}]" must be a non-empty string`,
+        }
+      }
+      requiredCommands.push(entry)
+    }
+  }
+
+  const trackerSection = raw.tracker
+  let trackerKind: TrackerKind | null = null
+  if (trackerSection !== undefined) {
+    if (!isRecord(trackerSection)) {
+      return { ok: false, reason: '"tracker" must be an object' }
+    }
+    const kind = trackerSection.kind
+    if (kind !== undefined) {
+      if (kind !== 'linear' && kind !== 'github' && kind !== 'local') {
+        return { ok: false, reason: '"tracker.kind" must be one of linear|github|local' }
+      }
+      trackerKind = kind
+    }
+  }
+
   const handoffSection = isRecord(raw.handoff) ? raw.handoff : {}
   const maxLines = handoffSection.maxLines ?? DEFAULT_FORGE_CONFIG.handoff.maxLines
   const maxChars = handoffSection.maxChars ?? DEFAULT_FORGE_CONFIG.handoff.maxChars
@@ -240,7 +286,8 @@ function validateAndMerge(raw: unknown): { ok: true; config: ForgeConfig } | { o
       repo: { trunk, remote },
       ticket: { idPattern, branchPrefix },
       concurrency: { waveSize, maxLiveWorkers, runIdleThresholdMs },
-      preflight: { requiredFiles },
+      tracker: { kind: trackerKind },
+      preflight: { requiredFiles, requiredCommands },
       handoff: { maxLines, maxChars },
       usage: { oversizedReadLines, stalledMinutes },
     },
