@@ -87,6 +87,21 @@ describe('buildForgeConfig', () => {
     expect(config.ticket).toEqual({ idPattern: '^NFK-\\d+$', branchPrefix: 'nfk' })
     expect(config.version).toBe(1)
     expect(config.concurrency.waveSize).toBeGreaterThan(0)
+    expect(config.tracker).toEqual({ kind: 'local' })
+    expect(config.preflight.requiredCommands).toEqual([])
+  })
+
+  test('seeds preflight.requiredCommands with gh for a github tracker', () => {
+    const detected: DetectedRepoInfo = {
+      repoName: 'nfkit',
+      packageManager: 'bun',
+      trunk: 'main',
+      trunkWasDetected: true,
+      tracker: 'github',
+      idPrefix: 'NFK',
+      selfCheck: [],
+    }
+    expect(buildForgeConfig(detected).preflight.requiredCommands).toEqual(['gh'])
   })
 })
 
