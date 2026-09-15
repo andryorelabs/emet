@@ -62,11 +62,16 @@ Commands a worker runs before considering its own change done: see
 
 ## Concurrency
 
-Max `concurrency.waveSize` live agents per wave, and a global, per-host
-`concurrency.maxLiveWorkers` cap across every concurrently running `/forge`
-coordinator — both in `forge.config.json`. `FORGE_MAX_LIVE_WORKERS` and
-`FORGE_RUN_IDLE_THRESHOLD_MS` still override their config counterparts when
-set, same as before this repo had a config file at all.
+Max `concurrency.waveSize` live agents per wave, and a global
+`concurrency.maxLiveWorkers` cap shared by every concurrently running
+`/forge` coordinator working in *this repo* — including one running from a
+different git worktree of it (e.g. another Orca worktree). It is **not**
+shared across different repos or clones: the cap lives under this repo's own
+`--git-common-dir`, so a coordinator in an unrelated repo has its own,
+separate pool. Both settings live in `forge.config.json`.
+`FORGE_MAX_LIVE_WORKERS` and `FORGE_RUN_IDLE_THRESHOLD_MS` still override
+their config counterparts when set, same as before this repo had a config
+file at all.
 
 ---
 

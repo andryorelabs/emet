@@ -242,7 +242,7 @@
           "type": "integer",
           "minimum": 1,
           "default": 8,
-          "description": "Global, per-host cap across every concurrently running coordinator. FORGE_MAX_LIVE_WORKERS env var overrides this when set."
+          "description": "Global cap shared by every /forge coordinator concurrently working in this repo, including one running from a different git worktree of it — not shared across other repos or clones. FORGE_MAX_LIVE_WORKERS env var overrides this when set."
         },
         "runIdleThresholdMs": {
           "type": "integer",

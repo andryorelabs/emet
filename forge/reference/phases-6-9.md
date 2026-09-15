@@ -33,8 +33,9 @@ Immediately before each survivor's `Agent` call, reserve it with
 `forge claims --reserve <ticket> --run <runId> --anchor <anchorPid>` (the
 real dispatch mutex — see `reference/incidents.md` §AO-285),
 then take a worker slot with `forge slots --acquire --run <runId> --anchor
-<anchorPid> --ticket <ticket>` (the global, per-host
-`concurrency.maxLiveWorkers` cap — see "Concurrency"). A denied reservation
+<anchorPid> --ticket <ticket>` (the global `concurrency.maxLiveWorkers` cap,
+shared by every coordinator working in this repo — see "Concurrency"). A
+denied reservation
 or a "no free slot" both drop that ticket from this wave; it does not get
 dispatched. **Never call the claims/slots mutex inline via `bun -e`** — an
 untypechecked snippet with its positional arguments in the wrong order is
