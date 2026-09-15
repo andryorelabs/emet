@@ -1,7 +1,13 @@
 import os from 'node:os'
 import path from 'node:path'
 
-import { DEFAULT_FORGE_CONFIG, resolveRepoRoot, type ForgeConfig } from './config'
+import { DEFAULT_FORGE_CONFIG, resolveRepoRoot, type ForgeConfig, type TrackerKind } from './config'
+import {
+  checkDependencies,
+  createDependencyProbes,
+  findLinearMcpEntry,
+  formatDependencyCheck,
+} from './dependencies'
 
 /**
  * `forge init` — generates a repo's `forge.config.json` plus its
@@ -31,7 +37,7 @@ export type PackageManagerKind =
   | 'python'
   | 'unknown'
 
-export type TrackerKind = 'linear' | 'github' | 'local'
+export type { TrackerKind }
 
 /**
  * Lockfile-based detection first (this repo's own convention, see the global
@@ -82,11 +88,12 @@ export async function detectTrunk(repoRoot: string): Promise<string | null> {
 }
 
 /**
- * `.mcp.json` uses a server key naming convention (`linear-server`, per
- * every real config seen in this fleet) rather than a fixed field to grep
- * for — checks both the server's key and its `args` for the literal
- * substring `linear`, since a self-hosted or renamed entry might still carry
- * it only in one place (e.g. `mcp-remote https://mcp.linear.app/...`).
+ * Tracker *autodetection* asks a laxer question than the dependency check in
+ * `dependencies.ts` does: a Linear entry that exists but is malformed still
+ * means "this repo means to use Linear", which is what `init` needs to pick a
+ * tracker kind — reporting that the entry is broken is the gate's job, not
+ * detection's. Both share {@link findLinearMcpEntry} so the two can never
+ * disagree about what counts as a Linear entry in the first place.
  */
 export async function hasLinearMcpServer(repoRoot: string): Promise<boolean> {
   const file = Bun.file(path.join(repoRoot, '.mcp.json'))
@@ -97,18 +104,7 @@ export async function hasLinearMcpServer(repoRoot: string): Promise<boolean> {
   } catch {
     return false
   }
-  if (typeof parsed !== 'object' || parsed === null) return false
-  const servers = (parsed as Record<string, unknown>).mcpServers
-  if (typeof servers !== 'object' || servers === null) return false
-  for (const [key, value] of Object.entries(servers as Record<string, unknown>)) {
-    if (key.toLowerCase().includes('linear')) return true
-    if (typeof value !== 'object' || value === null) continue
-    const entry = value as Record<string, unknown>
-    const args = Array.isArray(entry.args) ? entry.args.join(' ') : ''
-    const command = typeof entry.command === 'string' ? entry.command : ''
-    if (`${command} ${args}`.toLowerCase().includes('linear')) return true
-  }
-  return false
+  return findLinearMcpEntry(parsed).kind !== 'absent'
 }
 
 /**
@@ -480,104 +476,6 @@ async function ensureGithubStateLabels(repoRoot: string): Promise<string[]> {
   return failures
 }
 
-export type PluginStatus = 'installed' | 'disabled' | 'missing'
-
-/**
- * `/forge`'s interview/spec/ticket phases (1–5) call skills that all live in
- * one official plugin — `mattpocock-skills@claude-plugins-official` — so
- * this is the one dependency every repo needs regardless of tracker kind.
- * Shells out to `claude plugin list` (the CLI's own authoritative source,
- * not a hand-parsed config file whose shape could change across versions)
- * and degrades to `'missing'` on any failure (e.g. `claude` not on this
- * shell's PATH) rather than throwing — this is an advisory check, never a
- * hard requirement for `forge init` itself to finish.
- */
-/**
- * Pure over `claude plugin list`'s own text output, so the parsing logic is
- * testable without a real `claude` binary on the test machine's PATH (CI
- * included). Finds the plugin's own block (from its `❯` header line to the
- * next one) rather than searching the whole output for "disabled", since a
- * *different* disabled plugin listed elsewhere must not produce a false
- * positive here.
- */
-export function parsePluginListOutput(output: string, pluginId: string): PluginStatus {
-  const markerIndex = output.indexOf(pluginId)
-  if (markerIndex === -1) return 'missing'
-  const nextEntryIndex = output.indexOf('❯', markerIndex + pluginId.length)
-  const ownBlock = output.slice(markerIndex, nextEntryIndex === -1 ? undefined : nextEntryIndex)
-  return /disabled/i.test(ownBlock) ? 'disabled' : 'installed'
-}
-
-export async function checkMattpocockSkillsPlugin(): Promise<PluginStatus> {
-  const result = await Bun.$`claude plugin list`.nothrow().quiet()
-  if (result.exitCode !== 0) return 'missing'
-  return parsePluginListOutput(result.stdout.toString(), 'mattpocock-skills@claude-plugins-official')
-}
-
-/**
- * `gh` itself and whether it's authenticated are independent questions — a
- * `github`-tracker repo needs both before dispatch, but each fails
- * differently (install the CLI vs. `gh auth login`), so the caller gets
- * both bits rather than one collapsed boolean.
- */
-export async function checkGithubCli(): Promise<{
-  readonly onPath: boolean
-  readonly authenticated: boolean
-}> {
-  const which = await Bun.$`which gh`.nothrow().quiet()
-  const onPath = which.exitCode === 0
-  if (!onPath) return { onPath: false, authenticated: false }
-  const authStatus = await Bun.$`gh auth status`.nothrow().quiet()
-  return { onPath: true, authenticated: authStatus.exitCode === 0 }
-}
-
-/**
- * What `forge init` can safely automate stops at *checking* — the check
- * itself is read-only, but `claude plugin install`, `gh auth login`, and
- * authenticating someone else's Linear MCP server are all account-level
- * actions on the *person running init*, not on the repo. Printing the exact
- * command and letting them decide when to run it matches how the rest of
- * this tool already treats anything it can't safely act on by itself (a
- * `TODO(forge):` marker, a warning).
- */
-export async function checkDependencies(tracker: TrackerKind): Promise<string[]> {
-  const notes: string[] = []
-
-  const pluginStatus = await checkMattpocockSkillsPlugin()
-  if (pluginStatus === 'missing') {
-    notes.push(
-      "mattpocock-skills plugin not found — /forge's interview/spec/ticket phases (1-5) need it. Run:\n" +
-        '      claude plugin marketplace add anthropics/claude-plugins-official\n' +
-        '      claude plugin install mattpocock-skills@claude-plugins-official',
-    )
-  } else if (pluginStatus === 'disabled') {
-    notes.push(
-      'mattpocock-skills plugin is installed but disabled — run ' +
-        '`claude plugin enable mattpocock-skills@claude-plugins-official`.',
-    )
-  }
-
-  if (tracker === 'github') {
-    const { onPath, authenticated } = await checkGithubCli()
-    if (!onPath) {
-      notes.push(
-        'gh CLI not found on PATH — required for this repo\'s github tracker. Install: https://cli.github.com',
-      )
-    } else if (!authenticated) {
-      notes.push('gh CLI found but not authenticated — run `gh auth login` before dispatching a wave.')
-    }
-  }
-
-  if (tracker === 'linear') {
-    notes.push(
-      'tracker: linear — make sure the Linear MCP server declared in .mcp.json is authenticated ' +
-        '(restart Claude Code and approve the connection if prompted).',
-    )
-  }
-
-  return notes
-}
-
 export type InitOptions = {
   readonly force: boolean
   readonly trackerOverride: TrackerKind | null
@@ -710,7 +608,11 @@ async function main(options: InitOptions): Promise<void> {
     }
   }
 
-  const dependencyNotes = await checkDependencies(tracker)
+  const dependencyChecks = await checkDependencies({
+    tracker,
+    repoRoot,
+    probes: createDependencyProbes(),
+  })
 
   console.log(`forge init — ${repoRoot}`)
   console.log(`  package manager: ${packageManager}`)
@@ -723,9 +625,16 @@ async function main(options: InitOptions): Promise<void> {
     console.log('\nWarnings:')
     for (const warning of warnings) console.log(`  - ${warning}`)
   }
-  if (dependencyNotes.length > 0) {
+  const dependencyNotes = dependencyChecks.filter((check) => check.status !== 'satisfied')
+  const limitations = dependencyChecks
+    .filter((check) => check.status === 'satisfied' && check.limitation !== null)
+    .map((check) => check.limitation as string)
+  if (dependencyNotes.length > 0 || limitations.length > 0) {
     console.log('\nDependencies:')
-    for (const note of dependencyNotes) console.log(`  - ${note}`)
+    for (const check of dependencyNotes) {
+      console.log(`  - ${formatDependencyCheck(check, '      ')}`)
+    }
+    for (const limitation of limitations) console.log(`  - note: ${limitation}`)
   }
   console.log(
     '\nNext: fill in every TODO(forge): marker under docs/agents/ — `forge preflight` refuses to dispatch while one remains.',

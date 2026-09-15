@@ -22,6 +22,14 @@ import path from 'node:path'
  * it actually uses.
  */
 
+/**
+ * Which issue tracker `/forge` talks to in a given repo. Lives here rather
+ * than in `init.ts` (which is where it was first needed) because
+ * `dependencies.ts` keys its tracker-specific checks off it and `init.ts`
+ * already imports from this module — the other direction would be a cycle.
+ */
+export type TrackerKind = 'linear' | 'github' | 'local'
+
 export const DEFAULT_FORGE_CONFIG: ForgeConfig = {
   version: 1,
   repo: { trunk: 'main', remote: 'origin' },
