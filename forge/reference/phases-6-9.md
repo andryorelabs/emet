@@ -12,11 +12,15 @@ to use instead (see "Modes" in the main command file). In every other mode,
 it's the spec issue Phase 5 just created.
 
 Run `forge preflight` first — cheap local git/filesystem hygiene (this
-repo's configured `preflight.requiredFiles`, leftover `worktree-agent-*`
-branches, a dirty `.claude/worktrees/` from a run that didn't clean up after
-itself, any remaining `TODO(forge):` marker in `docs/agents/`). Fix whatever
-it flags before dispatching; don't dispatch into a dirty or half-initialized
-repo.
+repo's configured `preflight.requiredFiles` and `preflight.requiredCommands`,
+leftover `worktree-agent-*` branches, a dirty `.claude/worktrees/` from a run
+that didn't clean up after itself, any remaining `TODO(forge):` marker in
+`docs/agents/`) plus a third-party dependency gate keyed off `tracker.kind`
+(the mattpocock-skills plugin always, `gh` for a `github` tracker, the Linear
+MCP server for a `linear` tracker). Fix whatever it flags before dispatching;
+don't dispatch into a dirty or half-initialized repo. A failure here means a
+real, verified gap — an environment quirk it merely couldn't check (e.g. no
+network to validate `gh auth`) shows as a non-blocking warning instead.
 
 Compute this wave's frontier against this repo's tracker
 (`~/.claude/forge/reference/tracker-<kind>.md` for the literal calls) —
