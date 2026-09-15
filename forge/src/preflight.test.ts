@@ -2,17 +2,31 @@ import { describe, expect, test } from 'bun:test'
 import { readFileSync } from 'node:fs'
 import path from 'node:path'
 
+import type { DependencyCheck } from './dependencies'
 import {
   auditPostDispatch,
   checkSlotCapacity,
   classifyWorktreeEntry,
+  evaluateDependencyGate,
   findDuplicateTicketBranchNumbers,
   findDuplicateTicketWorktrees,
+  findMissingRequiredCommands,
   findTodoMarkers,
   findWorktreesMissingLockPastDeadline,
   isBranchMatchingTicket,
 } from './preflight'
 import type { WorktreeEntry, WorktreeOwner } from './worktrees'
+
+function makeCheck(overrides: Partial<DependencyCheck>): DependencyCheck {
+  return {
+    dependency: 'github-cli',
+    status: 'unsatisfied',
+    summary: 'gh not on PATH',
+    remedy: [],
+    limitation: null,
+    ...overrides,
+  }
+}
 
 const owner: WorktreeOwner = {
   runId: 'run-a',
@@ -460,5 +474,55 @@ describe('findTodoMarkers', () => {
       const content = readFileSync(path.join(templatesDirectory, fileName), 'utf8')
       expect(findTodoMarkers(fileName, content).length).toBe(expectedCount)
     }
+  })
+})
+
+describe('evaluateDependencyGate', () => {
+  test('an unsatisfied check fails dispatch by default', () => {
+    const gate = evaluateDependencyGate([makeCheck({ status: 'unsatisfied' })], { skip: false })
+    expect(gate.failures).toEqual(['gh not on PATH'])
+    expect(gate.warnings).toEqual([])
+  })
+
+  test('an indeterminate check only ever warns, never blocks', () => {
+    const gate = evaluateDependencyGate(
+      [makeCheck({ status: 'indeterminate', summary: 'gh auth status timed out' })],
+      { skip: false },
+    )
+    expect(gate.failures).toEqual([])
+    expect(gate.warnings).toEqual(['gh auth status timed out'])
+  })
+
+  test('a satisfied check produces neither a failure nor a warning', () => {
+    const gate = evaluateDependencyGate([makeCheck({ status: 'satisfied', summary: 'gh OK' })], {
+      skip: false,
+    })
+    expect(gate.failures).toEqual([])
+    expect(gate.warnings).toEqual([])
+  })
+
+  test('skip: true downgrades an unsatisfied check to a warning, stating why', () => {
+    const gate = evaluateDependencyGate([makeCheck({ status: 'unsatisfied' })], { skip: true })
+    expect(gate.failures).toEqual([])
+    expect(gate.warnings).toEqual(['gh not on PATH — downgraded by FORGE_SKIP_DEPENDENCY_CHECKS'])
+  })
+})
+
+describe('findMissingRequiredCommands', () => {
+  test('reports a binary that does not resolve', async () => {
+    const missing = await findMissingRequiredCommands(['rg', 'sg'], new Set(), async (binary) =>
+      binary === 'rg',
+    )
+    expect(missing).toEqual(['sg'])
+  })
+
+  test('skips a binary a dependency check already covers', async () => {
+    const missing = await findMissingRequiredCommands(['gh', 'rg'], new Set(['gh']), async () => false)
+    expect(missing).toEqual(['rg'])
+  })
+
+  test('empty when every command resolves', async () => {
+    const missing = await findMissingRequiredCommands(['rg'], new Set(), async () => true)
+    expect(missing).toEqual([])
   })
 })
