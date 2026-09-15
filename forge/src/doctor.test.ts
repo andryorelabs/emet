@@ -3,6 +3,7 @@ import { mkdtempSync, rmSync } from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
 
+import type { DependencyProbes } from './dependencies'
 import {
   auditRepo,
   checkSelfCheckCommand,
@@ -20,6 +21,14 @@ const cleanReport: RepoDoctorReport = {
   missingDocs: [],
   todoMarkers: [],
   selfCheckIssues: [],
+  trackerKind: null,
+  dependencyFindings: [],
+}
+
+const healthyProbes: DependencyProbes = {
+  claudePlugin: async () => ({ kind: 'listed', status: 'installed' }),
+  githubCli: async () => ({ kind: 'authenticated' }),
+  linearMcpServer: async () => ({ kind: 'declared', source: 'mcp-json' }),
 }
 
 describe('isReportClean', () => {
@@ -51,6 +60,40 @@ describe('isReportClean', () => {
 
   test('not clean with a selfCheck issue', () => {
     expect(isReportClean({ ...cleanReport, selfCheckIssues: ['bad command'] })).toBe(false)
+  })
+
+  test('not clean with an unsatisfied dependency finding', () => {
+    expect(
+      isReportClean({
+        ...cleanReport,
+        dependencyFindings: [
+          {
+            dependency: 'github-cli',
+            status: 'unsatisfied',
+            summary: 'gh not on PATH',
+            remedy: [],
+            limitation: null,
+          },
+        ],
+      }),
+    ).toBe(false)
+  })
+
+  test('an indeterminate dependency finding does not dirty the repo', () => {
+    expect(
+      isReportClean({
+        ...cleanReport,
+        dependencyFindings: [
+          {
+            dependency: 'github-cli',
+            status: 'indeterminate',
+            summary: 'gh auth status timed out',
+            remedy: [],
+            limitation: null,
+          },
+        ],
+      }),
+    ).toBe(true)
   })
 })
 
@@ -134,13 +177,13 @@ describe('auditRepo', () => {
   })
 
   test('reports isGitRepo: false for a plain directory', async () => {
-    const report = await auditRepo(repoRoot)
+    const report = await auditRepo(repoRoot, healthyProbes)
     expect(report.isGitRepo).toBe(false)
   })
 
   test('reports hasConfig: false for a git repo with no forge.config.json', async () => {
     await Bun.$`git -C ${repoRoot} init --quiet`.quiet()
-    const report = await auditRepo(repoRoot)
+    const report = await auditRepo(repoRoot, healthyProbes)
     expect(report.isGitRepo).toBe(true)
     expect(report.hasConfig).toBe(false)
     expect(report.configError).toBeNull()
@@ -150,7 +193,7 @@ describe('auditRepo', () => {
   test('reports a configError for malformed JSON, without crashing', async () => {
     await Bun.$`git -C ${repoRoot} init --quiet`.quiet()
     await Bun.write(path.join(repoRoot, 'forge.config.json'), '{not json')
-    const report = await auditRepo(repoRoot)
+    const report = await auditRepo(repoRoot, healthyProbes)
     expect(report.hasConfig).toBe(false)
     expect(report.configError).toContain('not valid JSON')
   })
@@ -173,7 +216,7 @@ describe('auditRepo', () => {
       await Bun.write(path.join(docsAgentsDirectory, doc), '# all set, no markers here\n')
     }
 
-    const report = await auditRepo(repoRoot)
+    const report = await auditRepo(repoRoot, healthyProbes)
     expect(report.isGitRepo).toBe(true)
     expect(report.hasConfig).toBe(true)
     expect(report.missingDocs).toEqual([])
@@ -199,10 +242,84 @@ describe('auditRepo', () => {
       'TODO(forge): fill this in\n',
     )
 
-    const report = await auditRepo(repoRoot)
+    const report = await auditRepo(repoRoot, healthyProbes)
     expect(report.hasConfig).toBe(true)
     expect(report.missingDocs).toEqual(['issue-tracker.md', 'triage-labels.md', 'domain.md'])
     expect(report.todoMarkers).toEqual(['docs/agents/forge.md:1: TODO(forge): fill this in'])
     expect(isReportClean(report)).toBe(false)
+  })
+
+  test('reads tracker.kind from the config and reports it', async () => {
+    await Bun.$`git -C ${repoRoot} init --quiet`.quiet()
+    await Bun.write(
+      path.join(repoRoot, 'forge.config.json'),
+      JSON.stringify({
+        version: 1,
+        repo: { trunk: 'main', remote: 'origin' },
+        ticket: { idPattern: '^X-\\d+$', branchPrefix: 'x' },
+        tracker: { kind: 'github' },
+      }),
+    )
+    const report = await auditRepo(repoRoot, healthyProbes)
+    expect(report.trackerKind).toBe('github')
+  })
+
+  test('a github tracker with gh unauthenticated produces a dependency finding', async () => {
+    await Bun.$`git -C ${repoRoot} init --quiet`.quiet()
+    await Bun.write(
+      path.join(repoRoot, 'forge.config.json'),
+      JSON.stringify({
+        version: 1,
+        repo: { trunk: 'main', remote: 'origin' },
+        ticket: { idPattern: '^X-\\d+$', branchPrefix: 'x' },
+        tracker: { kind: 'github' },
+      }),
+    )
+    const probes: DependencyProbes = {
+      ...healthyProbes,
+      githubCli: async () => ({ kind: 'unauthenticated' }),
+    }
+    const report = await auditRepo(repoRoot, probes)
+    expect(report.dependencyFindings.map((check) => check.dependency)).toEqual(['github-cli'])
+    expect(isReportClean(report)).toBe(false)
+  })
+
+  test('a linear tracker with no server declared produces a dependency finding', async () => {
+    await Bun.$`git -C ${repoRoot} init --quiet`.quiet()
+    await Bun.write(
+      path.join(repoRoot, 'forge.config.json'),
+      JSON.stringify({
+        version: 1,
+        repo: { trunk: 'main', remote: 'origin' },
+        ticket: { idPattern: '^X-\\d+$', branchPrefix: 'x' },
+        tracker: { kind: 'linear' },
+      }),
+    )
+    const probes: DependencyProbes = {
+      ...healthyProbes,
+      linearMcpServer: async () => ({ kind: 'not-declared', searchedAllScopes: true }),
+    }
+    const report = await auditRepo(repoRoot, probes)
+    expect(report.dependencyFindings.map((check) => check.dependency)).toEqual(['linear-mcp-server'])
+    expect(isReportClean(report)).toBe(false)
+  })
+
+  test('no tracker.kind declared produces no tracker-scoped dependency findings', async () => {
+    await Bun.$`git -C ${repoRoot} init --quiet`.quiet()
+    await Bun.write(
+      path.join(repoRoot, 'forge.config.json'),
+      JSON.stringify({
+        version: 1,
+        repo: { trunk: 'main', remote: 'origin' },
+        ticket: { idPattern: '^X-\\d+$', branchPrefix: 'x' },
+      }),
+    )
+    const probes: DependencyProbes = {
+      ...healthyProbes,
+      githubCli: async () => ({ kind: 'unauthenticated' }),
+    }
+    const report = await auditRepo(repoRoot, probes)
+    expect(report.trackerKind).toBeNull()
+    expect(report.dependencyFindings).toEqual([])
   })
 })

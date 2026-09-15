@@ -9,6 +9,13 @@ import {
   type ForgeConfig,
 } from './config'
 import {
+  checkDependencies,
+  createDependencyProbes,
+  formatDependencyCheck,
+  resolveBinaryOnPath,
+  type DependencyCheck,
+} from './dependencies'
+import {
   classifyRun,
   resolveIdleThresholdMs,
   resolveSessionSlug,
@@ -45,6 +52,16 @@ import {
  * (pre-existing worktrees, or an ordinary interactive worktree unrelated to
  * `/forge`) falls back to `cleanup.ts`'s own merge/equivalence
  * classifier ({@link classifyByContent}).
+ *
+ * It does gate on third-party dependencies now (`dependencies.ts`): a repo
+ * whose `tracker.kind` is `github` or `linear` refuses to dispatch while `gh`
+ * or the Linear MCP server is verifiably unusable — never while that could
+ * merely not be checked (see `evaluateDependencyGate`). This still never
+ * calls the Linear API itself, only checks what `.mcp.json`/`claude mcp
+ * list` declare. `FORGE_SKIP_DEPENDENCY_CHECKS=1` downgrades a blocking
+ * finding to a warning for one invocation; it is deliberately not a CLI flag
+ * — `preflight` is invoked unattended by the `/forge` coordinator, and a flag
+ * is exactly what an agent would learn to add once its own gate turns red.
  */
 
 function readPositiveIntEnvironment(name: string, fallback: number): number {
@@ -81,6 +98,64 @@ function resolveMaxLiveWorkers(config: ForgeConfig): number {
  */
 function resolveWaveSize(config: ForgeConfig): number {
   return config.concurrency.waveSize
+}
+
+const SKIP_DEPENDENCY_CHECKS_ENV = 'FORGE_SKIP_DEPENDENCY_CHECKS'
+
+function dependencyChecksSkipped(): boolean {
+  return process.env[SKIP_DEPENDENCY_CHECKS_ENV] === '1'
+}
+
+/**
+ * Splits dependency checks into what blocks dispatch and what only warns —
+ * kept pure and separate from the probing so the *gating policy* is what a
+ * test exercises directly, without spawning anything. `indeterminate` always
+ * warns, never blocks (see `dependencies.ts`'s module doc comment for why).
+ * `options.skip` downgrades an `unsatisfied` finding to a warning rather than
+ * silencing it, so `FORGE_SKIP_DEPENDENCY_CHECKS=1` still shows what it
+ * bypassed.
+ */
+export function evaluateDependencyGate(
+  checks: readonly DependencyCheck[],
+  options: { readonly skip: boolean },
+): { readonly failures: readonly string[]; readonly warnings: readonly string[] } {
+  const failures: string[] = []
+  const warnings: string[] = []
+  for (const check of checks) {
+    if (check.status === 'indeterminate') {
+      warnings.push(formatDependencyCheck(check, '  '))
+    } else if (check.status === 'unsatisfied') {
+      if (options.skip) {
+        warnings.push(
+          `${formatDependencyCheck(check, '  ')} — downgraded by ${SKIP_DEPENDENCY_CHECKS_ENV}`,
+        )
+      } else {
+        failures.push(formatDependencyCheck(check, '  '))
+      }
+    }
+  }
+  return { failures, warnings }
+}
+
+/**
+ * Binaries the repo's own `preflight.requiredCommands` names — a check
+ * distinct from `checkDependencies`, which asks whether a tracker's tool is
+ * *usable* (installed, authenticated), not merely present. `alreadyCovered`
+ * excludes a binary a dependency check already owns (`gh`, for a github
+ * tracker) so one missing tool never produces two failures for the same
+ * root cause. `resolve` is injectable so a test never has to shell out.
+ */
+export async function findMissingRequiredCommands(
+  commands: readonly string[],
+  alreadyCovered: ReadonlySet<string>,
+  resolve: (binary: string) => Promise<boolean> = resolveBinaryOnPath,
+): Promise<readonly string[]> {
+  const missing: string[] = []
+  for (const command of commands) {
+    if (alreadyCovered.has(command)) continue
+    if (!(await resolve(command))) missing.push(command)
+  }
+  return missing
 }
 
 export type WorktreeEntryVerdict =
@@ -543,6 +618,16 @@ async function main(config: ForgeConfig, repoRoot: string) {
   const failures: string[] = []
   const infoLines: string[] = []
   const warnLines: string[] = []
+  const dependencyWarnLines: string[] = []
+
+  // Kicked off first so these probes (each capped at
+  // DEPENDENCY_PROBE_TIMEOUT_MS) run concurrently with the git/filesystem
+  // work below rather than adding their own latency on top of it.
+  const dependencyChecksPromise = checkDependencies({
+    tracker: config.tracker.kind,
+    repoRoot,
+    probes: createDependencyProbes(),
+  })
 
   for (const required of config.preflight.requiredFiles) {
     if (!existsSync(path.join(repoRoot, required.path))) {
@@ -623,6 +708,26 @@ async function main(config: ForgeConfig, repoRoot: string) {
     )
   }
 
+  const dependencyChecks = await dependencyChecksPromise
+  const dependencyGate = evaluateDependencyGate(dependencyChecks, {
+    skip: dependencyChecksSkipped(),
+  })
+  failures.push(...dependencyGate.failures)
+  dependencyWarnLines.push(...dependencyGate.warnings)
+
+  const coveredByDependencyChecks = new Set(
+    dependencyChecks.some((check) => check.dependency === 'github-cli') ? ['gh'] : [],
+  )
+  const missingRequiredCommands = await findMissingRequiredCommands(
+    config.preflight.requiredCommands,
+    coveredByDependencyChecks,
+  )
+  if (missingRequiredCommands.length > 0) {
+    failures.push(
+      `preflight.requiredCommands not on PATH: ${missingRequiredCommands.join(', ')}.`,
+    )
+  }
+
   if (infoLines.length > 0) {
     console.log(
       `Info — live/reclaimable /forge worktrees (not blocking dispatch):\n${infoLines.join('\n')}\n`,
@@ -631,6 +736,11 @@ async function main(config: ForgeConfig, repoRoot: string) {
   if (warnLines.length > 0) {
     console.log(
       `Warning — idle /forge worktrees (not blocking dispatch):\n${warnLines.join('\n')}\n`,
+    )
+  }
+  if (dependencyWarnLines.length > 0) {
+    console.log(
+      `Warning — dependencies (not blocking dispatch):\n${dependencyWarnLines.join('\n')}\n`,
     )
   }
 
@@ -648,8 +758,13 @@ async function main(config: ForgeConfig, repoRoot: string) {
       ? `${config.preflight.requiredFiles.map((f) => f.path).join(', ')} present`
       : 'no required files configured'
 
+  const satisfiedDependencyCount = dependencyChecks.filter(
+    (check) => check.status === 'satisfied',
+  ).length
+  const dependenciesSummary = `${satisfiedDependencyCount}/${dependencyChecks.length} dependency check(s) satisfied`
+
   console.log(
-    `forge:preflight OK — ${requiredFilesSummary}, no leftover worktree-agent-* branches, .claude/worktrees/ clean (or owned by a live/reclaimable /forge run), ${capacityCheck.freeCount}/${capacityCheck.cap} worker slots free.`,
+    `forge:preflight OK — ${requiredFilesSummary}, no leftover worktree-agent-* branches, .claude/worktrees/ clean (or owned by a live/reclaimable /forge run), ${capacityCheck.freeCount}/${capacityCheck.cap} worker slots free, ${dependenciesSummary}.`,
   )
 }
 

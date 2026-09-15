@@ -14,7 +14,6 @@ import {
   detectTrunk,
   hasLinearMcpServer,
   parseInitArguments,
-  parsePluginListOutput,
   substituteTemplate,
   type DetectedRepoInfo,
 } from './init'
@@ -88,6 +87,21 @@ describe('buildForgeConfig', () => {
     expect(config.ticket).toEqual({ idPattern: '^NFK-\\d+$', branchPrefix: 'nfk' })
     expect(config.version).toBe(1)
     expect(config.concurrency.waveSize).toBeGreaterThan(0)
+    expect(config.tracker).toEqual({ kind: 'local' })
+    expect(config.preflight.requiredCommands).toEqual([])
+  })
+
+  test('seeds preflight.requiredCommands with gh for a github tracker', () => {
+    const detected: DetectedRepoInfo = {
+      repoName: 'nfkit',
+      packageManager: 'bun',
+      trunk: 'main',
+      trunkWasDetected: true,
+      tracker: 'github',
+      idPrefix: 'NFK',
+      selfCheck: [],
+    }
+    expect(buildForgeConfig(detected).preflight.requiredCommands).toEqual(['gh'])
   })
 })
 
@@ -335,64 +349,5 @@ describe('filesystem-based detection', () => {
       JSON.stringify({ mcpServers: { 'linear-server': { command: 'npx', args: [] } } }),
     )
     expect(await detectTrackerKind(repoRoot)).toBe('linear')
-  })
-})
-
-describe('parsePluginListOutput', () => {
-  const PLUGIN_ID = 'mattpocock-skills@claude-plugins-official'
-
-  test('missing when the plugin is absent from the listing', () => {
-    const output = [
-      'Installed plugins:',
-      '',
-      '  ❯ cloudflare@cloudflare',
-      '    Version: 1.0.0',
-      '    Status: ✔ enabled',
-      '',
-    ].join('\n')
-    expect(parsePluginListOutput(output, PLUGIN_ID)).toBe('missing')
-  })
-
-  test('installed when the plugin is listed as enabled', () => {
-    const output = [
-      'Installed plugins:',
-      '',
-      `  ❯ ${PLUGIN_ID}`,
-      '    Version: 1.2.3',
-      '    Scope: user',
-      '    Status: ✔ enabled',
-      '',
-    ].join('\n')
-    expect(parsePluginListOutput(output, PLUGIN_ID)).toBe('installed')
-  })
-
-  test('disabled when the plugin is listed as disabled', () => {
-    const output = [
-      'Installed plugins:',
-      '',
-      `  ❯ ${PLUGIN_ID}`,
-      '    Version: 1.2.3',
-      '    Status: disabled',
-      '',
-    ].join('\n')
-    expect(parsePluginListOutput(output, PLUGIN_ID)).toBe('disabled')
-  })
-
-  test('a different disabled plugin does not produce a false positive', () => {
-    const output = [
-      'Installed plugins:',
-      '',
-      '  ❯ some-other-plugin@marketplace',
-      '    Status: disabled',
-      '',
-      `  ❯ ${PLUGIN_ID}`,
-      '    Status: ✔ enabled',
-      '',
-    ].join('\n')
-    expect(parsePluginListOutput(output, PLUGIN_ID)).toBe('installed')
-  })
-
-  test('missing on empty output', () => {
-    expect(parsePluginListOutput('', PLUGIN_ID)).toBe('missing')
   })
 })

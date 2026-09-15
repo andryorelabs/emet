@@ -1,7 +1,16 @@
 import { existsSync } from 'node:fs'
 import path from 'node:path'
 
-import { loadForgeConfig } from './config'
+import { loadForgeConfig, type TrackerKind } from './config'
+import {
+  checkDependencies,
+  classifyClaudePluginProbe,
+  createDependencyProbes,
+  formatDependencyCheck,
+  resolveBinaryOnPath,
+  type DependencyCheck,
+  type DependencyProbes,
+} from './dependencies'
 import { findTodoMarkersInDocsAgents } from './preflight'
 
 /**
@@ -12,6 +21,13 @@ import { findTodoMarkersInDocsAgents } from './preflight'
  * argv). Never writes anything, never requires a git repo it's told to
  * check to exist — a path that isn't a repo, or a repo with no
  * `forge.config.json` at all, is a normal, reportable finding, not a crash.
+ *
+ * Also reports third-party dependency findings (see `dependencies.ts`): the
+ * mattpocock-skills plugin (global — one repo-independent finding printed
+ * once for the whole sweep, not per repo) and, per repo, `gh` or the Linear
+ * MCP server when that repo's `tracker.kind` calls for it. Unlike
+ * `preflight`, an `unsatisfied` finding here never blocks anything — this
+ * command only ever reports.
  */
 
 const REQUIRED_DOCS = ['forge.md', 'issue-tracker.md', 'triage-labels.md', 'domain.md']
@@ -24,11 +40,20 @@ export type RepoDoctorReport = {
   readonly missingDocs: readonly string[]
   readonly todoMarkers: readonly string[]
   readonly selfCheckIssues: readonly string[]
+  /** This repo's declared tracker, straight from its config — `null` when
+   * absent, which is also why tracker-scoped dependency findings below may
+   * be empty even for a repo that actually needs `gh` or Linear. */
+  readonly trackerKind: TrackerKind | null
+  /** Repo-scoped dependency findings only (`gh`, Linear) — the plugin check
+   * is global and printed once, not per repo; see {@link auditFleet}. */
+  readonly dependencyFindings: readonly DependencyCheck[]
 }
 
 /** A repo is clean if every check came back empty/false-negative — used both
  * to decide the process exit code and to print a one-line "OK" per repo
- * instead of an empty findings list. */
+ * instead of an empty findings list. An `indeterminate` dependency finding
+ * (e.g. `gh auth status` timing out) does not dirty a repo — it is something
+ * that could not be checked, not something known to be wrong. */
 export function isReportClean(report: RepoDoctorReport): boolean {
   if (!report.isGitRepo) return false
   if (!report.hasConfig) return false
@@ -36,7 +61,8 @@ export function isReportClean(report: RepoDoctorReport): boolean {
   return (
     report.missingDocs.length === 0 &&
     report.todoMarkers.length === 0 &&
-    report.selfCheckIssues.length === 0
+    report.selfCheckIssues.length === 0 &&
+    report.dependencyFindings.every((check) => check.status !== 'unsatisfied')
   )
 }
 
@@ -82,8 +108,7 @@ export async function checkSelfCheckCommand(
 
   const firstToken = command.trim().split(/\s+/)[0]
   if (!firstToken) return `empty command in commands.selfCheck`
-  const result = await Bun.$`which ${firstToken}`.cwd(repoRoot).nothrow().quiet()
-  if (result.exitCode !== 0) {
+  if (!(await resolveBinaryOnPath(firstToken))) {
     return `"${command}": "${firstToken}" is not on PATH`
   }
   return null
@@ -129,8 +154,18 @@ async function isGitRepo(targetPath: string): Promise<boolean> {
 /** Audits one path. Never throws — every failure mode (not a repo, no
  * config, malformed config, missing docs) is a field on the returned
  * report, not an exception, so a fleet sweep over many paths never aborts
- * partway through on one bad repo. */
-export async function auditRepo(targetPath: string): Promise<RepoDoctorReport> {
+ * partway through on one bad repo.
+ *
+ * `probes` is required, not optional: an optional parameter that silently
+ * skips the dependency checks when omitted is exactly the kind of implicit
+ * default this repo avoids, and it would let a test "forget" the stub and
+ * accidentally shell out to real binaries. Callers needing no dependency
+ * checks at all still pass `createDependencyProbes()` or a stub explicitly.
+ */
+export async function auditRepo(
+  targetPath: string,
+  probes: DependencyProbes,
+): Promise<RepoDoctorReport> {
   const absolutePath = path.resolve(targetPath)
 
   if (!(await isGitRepo(absolutePath))) {
@@ -142,12 +177,15 @@ export async function auditRepo(targetPath: string): Promise<RepoDoctorReport> {
       missingDocs: [],
       todoMarkers: [],
       selfCheckIssues: [],
+      trackerKind: null,
+      dependencyFindings: [],
     }
   }
 
   const configResult = await loadForgeConfig(absolutePath)
   const hasConfig = configResult.status === 'ok'
   const configError = configResult.status === 'malformed' ? configResult.reason : null
+  const trackerKind = configResult.status === 'ok' ? configResult.config.tracker.kind : null
 
   const docsAgentsDirectory = path.join(absolutePath, 'docs', 'agents')
   const existingDocs = new Set(
@@ -165,6 +203,14 @@ export async function auditRepo(targetPath: string): Promise<RepoDoctorReport> {
     if (issue) selfCheckIssues.push(issue)
   }
 
+  // The plugin check is repo-independent and printed once, fleet-wide (see
+  // `main`) — only the tracker-scoped checks (gh, Linear) belong to this repo.
+  const dependencyFindings = hasConfig
+    ? (
+        await checkDependencies({ tracker: trackerKind, repoRoot: absolutePath, probes })
+      ).filter((check) => check.dependency !== 'claude-plugin' && check.dependency !== 'tracker-kind')
+    : []
+
   return {
     path: absolutePath,
     isGitRepo: true,
@@ -173,6 +219,8 @@ export async function auditRepo(targetPath: string): Promise<RepoDoctorReport> {
     missingDocs,
     todoMarkers,
     selfCheckIssues,
+    trackerKind,
+    dependencyFindings,
   }
 }
 
@@ -200,6 +248,13 @@ function formatReport(report: RepoDoctorReport): string {
   for (const issue of report.selfCheckIssues) {
     lines.push(`  - commands.selfCheck: ${issue}`)
   }
+  for (const check of report.dependencyFindings) {
+    if (check.status === 'unsatisfied') {
+      lines.push(`  - dependency: ${formatDependencyCheck(check, '    ')}`)
+    } else if (check.status === 'indeterminate') {
+      lines.push(`  - note: ${formatDependencyCheck(check, '    ')}`)
+    }
+  }
   return lines.join('\n')
 }
 
@@ -207,15 +262,32 @@ export function parseDoctorArguments(argv: readonly string[]): string[] {
   return argv.filter((argument) => argument !== '--all')
 }
 
+/** Prints the plugin's own status once, fleet-wide — the alternative,
+ * repeating it under every one of N repos, would both spam a large sweep and
+ * hide that it is one global fact, not something particular to any one repo. */
+function formatGlobalDependencyFinding(check: DependencyCheck): string | null {
+  if (check.status === 'satisfied') return null
+  const label = check.status === 'unsatisfied' ? 'dependency' : 'note'
+  return `  - ${label}: ${formatDependencyCheck(check, '    ')}`
+}
+
 async function main(targets: readonly string[]): Promise<void> {
   const paths = targets.length > 0 ? targets : ['.']
+  const probes = createDependencyProbes()
+
   const reports: RepoDoctorReport[] = []
   for (const target of paths) {
-    reports.push(await auditRepo(target))
+    reports.push(await auditRepo(target, probes))
   }
 
   for (const report of reports) {
     console.log(formatReport(report))
+  }
+
+  const globalPluginCheck = classifyClaudePluginProbe(await probes.claudePlugin())
+  const globalFindingLine = formatGlobalDependencyFinding(globalPluginCheck)
+  if (globalFindingLine !== null) {
+    console.log(`\nGlobal dependencies:\n${globalFindingLine}`)
   }
 
   const cleanCount = reports.filter((report) => isReportClean(report)).length
@@ -224,7 +296,8 @@ async function main(targets: readonly string[]): Promise<void> {
     `\n${cleanCount}/${gitRepoCount} repos clean (${reports.length - gitRepoCount} skipped, not a git repo).`,
   )
 
-  process.exitCode = cleanCount === gitRepoCount ? 0 : 1
+  const exitClean = cleanCount === gitRepoCount && globalPluginCheck.status !== 'unsatisfied'
+  process.exitCode = exitClean ? 0 : 1
 }
 
 export async function run(argv: string[]): Promise<void> {

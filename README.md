@@ -29,22 +29,42 @@ forge selftest
 ## Dependencies
 
 - **[bun](https://bun.sh)** — required, the CLI runs on it.
+- **`rsync`** — required by `install.sh` to copy the CLI into `~/.claude/forge`.
+- **`git`** — required at runtime; nearly every subcommand shells out to it.
 - **The `mattpocock-skills` plugin** (`claude-plugins-official` marketplace)
   — `/forge`'s interview/spec/ticket phases call skills that live there.
-  `forge init` checks for this and prints the exact install command if it's
-  missing:
   ```
   claude plugin marketplace add anthropics/claude-plugins-official
   claude plugin install mattpocock-skills@claude-plugins-official
   ```
-- **`gh` CLI, authenticated** — only if the repo ends up using the `github`
-  tracker. `forge init` checks and tells you if it's missing or not logged
-  in.
-- **A Linear MCP server in `.mcp.json`, authenticated** — only if the repo
-  uses the `linear` tracker (autodetected from that same `.mcp.json`).
+- **`gh` CLI, authenticated** — only if the repo uses the `github` tracker.
+- **A Linear MCP server declared in `.mcp.json` (or at user scope)** — only
+  if the repo uses the `linear` tracker. Declaration is what gets verified;
+  whether the connection is actually *authenticated* lives in Claude Code's
+  own credential store and can't be checked from here — if a run fails to
+  read tickets, restart Claude Code and approve the connection.
 
-Everything above is a *check*, never an automatic install/login on your
-behalf — `forge init` only ever tells you what to run.
+None of the above is ever installed or logged in on your behalf. What
+changed is *who checks it and how hard*:
+
+| | `forge init` | `forge doctor` | `forge preflight` |
+|---|---|---|---|
+| plugin missing/disabled | prints the install command | reports it (once, fleet-wide) | **blocks dispatch** |
+| `gh` missing/unauthenticated (tracker: `github`) | prints what to run | reports it | **blocks dispatch** |
+| Linear server undeclared (tracker: `linear`) | prints a note | reports it | **blocks dispatch** |
+| `claude` not on PATH, or a probe timing out | prints a note | reports it | **warns, never blocks** — this is "couldn't check", not "verified broken" |
+
+Every probe is capped at 5s so a stalled `gh auth status` (no network) can't
+hang a wave. If a `preflight` block is itself wrong for your environment,
+`FORGE_SKIP_DEPENDENCY_CHECKS=1 forge preflight` downgrades it to a warning
+for that one run — set it in your own shell, not in anything the `/forge`
+coordinator runs unattended.
+
+A repo's `preflight.requiredCommands` (in `forge.config.json`) is a separate,
+repo-owned list of binaries `forge preflight`/`forge doctor` require on PATH
+— useful for `rg`/`sg`, which the worker prompts offer as faster alternatives
+to reading a file whole. `gh` doesn't need to be listed there; the check
+above already covers it.
 
 ## Use
 
@@ -87,5 +107,7 @@ forge doctor ~/code/*
 ```
 
 Reports, per repo: valid `forge.config.json`, all four `docs/agents/*.md`
-files present, zero leftover `TODO(forge):` markers, and whether the
-commands in `commands.selfCheck` actually resolve.
+files present, zero leftover `TODO(forge):` markers, whether the commands in
+`commands.selfCheck` actually resolve, and that repo's tracker-specific
+dependency findings (`gh`, Linear — see Dependencies above). The
+mattpocock-skills plugin is checked once for the whole sweep, not per repo.

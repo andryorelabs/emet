@@ -46,7 +46,7 @@
       "type": "object",
       "required": ["kind"],
       "additionalProperties": false,
-      "description": "Which issue tracker /forge talks to, and how. The CLI never calls a tracker directly — this section documents the adapter the /forge *command* follows as prose (docs/agents/issue-tracker.md). `local` is design-only for now (see reference/tracker-local.md): its planned layout is .forge/tickets + <git-common-dir>/forge/tracker, but no `forge tracker` subcommand implements it yet — don't run Phases 5-9 unattended against a `local`-tracker repo until it does.",
+      "description": "Which issue tracker /forge talks to, and how. The CLI reads `kind` (to decide which dependency checks apply in `forge preflight` and `forge doctor`) and never calls a tracker directly; the rest of this section documents the adapter the /forge *command* follows as prose (docs/agents/issue-tracker.md). `local` is design-only for now (see reference/tracker-local.md): its planned layout is .forge/tickets + <git-common-dir>/forge/tracker, but no `forge tracker` subcommand implements it yet — don't run Phases 5-9 unattended against a `local`-tracker repo until it does.",
       "properties": {
         "kind": {
           "type": "string",
@@ -223,8 +223,8 @@
         },
         "requiredCommands": {
           "type": "array",
-          "items": { "type": "string" },
-          "description": "Binaries that must resolve on PATH before dispatch (e.g. [\"gh\"] for a github tracker). Prose-only — not read by the CLI."
+          "items": { "type": "string", "minLength": 1 },
+          "description": "Binaries that must resolve on PATH before dispatch. `forge preflight` fails with exit 1 naming any that don't, and `forge doctor` reports them. This is the repo's own list, separate from the tracker-driven dependency checks — `gh` already has a dedicated check that also verifies authentication, so listing it here is optional. Common opt-in additions: \"rg\" and \"sg\", which the worker prompts offer as alternatives to reading files whole."
         }
       }
     },

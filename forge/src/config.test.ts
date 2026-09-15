@@ -70,7 +70,11 @@ describe('loadForgeConfig', () => {
       repo: { trunk: 'develop', remote: 'upstream' },
       ticket: { idPattern: '^NFK-\\d+$', branchPrefix: 'nfk' },
       concurrency: { waveSize: 2, maxLiveWorkers: 4, runIdleThresholdMs: 60_000 },
-      preflight: { requiredFiles: [{ path: '.env.keys', why: 'needed for tests' }] },
+      tracker: { kind: 'github' },
+      preflight: {
+        requiredFiles: [{ path: '.env.keys', why: 'needed for tests' }],
+        requiredCommands: ['gh'],
+      },
       handoff: { maxLines: 30, maxChars: 4000 },
       usage: { oversizedReadLines: 200, stalledMinutes: 5 },
     }
@@ -156,6 +160,63 @@ describe('loadForgeConfig', () => {
     await writeConfig({ tracker: { kind: 'github' }, someFutureField: true })
     const result = await loadForgeConfig(repoRoot)
     expect(result.status).toBe('ok')
+  })
+
+  test('reads tracker.kind', async () => {
+    await writeConfig({ tracker: { kind: 'github' } })
+    const result = await loadForgeConfig(repoRoot)
+    expect((result as { config: typeof DEFAULT_FORGE_CONFIG }).config.tracker).toEqual({
+      kind: 'github',
+    })
+  })
+
+  test('keeps the rest of the prose tracker section out of the way', async () => {
+    await writeConfig({ tracker: { kind: 'linear', readyLabel: 'ready-for-agent' } })
+    const result = await loadForgeConfig(repoRoot)
+    expect((result as { config: typeof DEFAULT_FORGE_CONFIG }).config.tracker).toEqual({
+      kind: 'linear',
+    })
+  })
+
+  test('a config predating tracker.kind reads as null, never a guessed default', async () => {
+    await writeConfig({ repo: { trunk: 'main' } })
+    const result = await loadForgeConfig(repoRoot)
+    expect((result as { config: typeof DEFAULT_FORGE_CONFIG }).config.tracker).toEqual({
+      kind: null,
+    })
+  })
+
+  test('rejects a tracker.kind outside the enum', async () => {
+    await writeConfig({ tracker: { kind: 'jira' } })
+    const result = await loadForgeConfig(repoRoot)
+    expect((result as { reason: string }).reason).toMatch(
+      /"tracker.kind" must be one of linear\|github\|local/,
+    )
+  })
+
+  test('rejects a non-object tracker', async () => {
+    await writeConfig({ tracker: 'github' })
+    const result = await loadForgeConfig(repoRoot)
+    expect((result as { reason: string }).reason).toMatch(/"tracker" must be an object/)
+  })
+
+  test('reads preflight.requiredCommands, defaulting to empty', async () => {
+    await writeConfig({ preflight: { requiredCommands: ['rg', 'sg'] } })
+    const result = await loadForgeConfig(repoRoot)
+    expect(
+      (result as { config: typeof DEFAULT_FORGE_CONFIG }).config.preflight.requiredCommands,
+    ).toEqual(['rg', 'sg'])
+  })
+
+  test('rejects preflight.requiredCommands when not an array of non-empty strings', async () => {
+    await writeConfig({ preflight: { requiredCommands: 'rg' } })
+    expect((await loadForgeConfig(repoRoot) as { reason: string }).reason).toMatch(
+      /"preflight.requiredCommands" must be an array/,
+    )
+    await writeConfig({ preflight: { requiredCommands: [''] } })
+    expect((await loadForgeConfig(repoRoot) as { reason: string }).reason).toMatch(
+      /"preflight.requiredCommands\[0\]" must be a non-empty string/,
+    )
   })
 })
 
