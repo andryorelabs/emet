@@ -1,3 +1,5 @@
+import path from 'node:path'
+
 /**
  * Shared worktree/branch classification used by both `cleanup.ts` and
  * `preflight.ts` — extracted so the two scripts never disagree about
@@ -6,6 +8,32 @@
  * `git merge-tree`, why `git cherry` can't be used, the two-signal liveness
  * check).
  */
+
+/**
+ * Whether `directory` (an absolute path, as `git worktree list --porcelain`
+ * always reports) is one of *this coordinator's own* agent worktrees — i.e.
+ * lives under `<repoRoot>/.claude/worktrees/`. `repoRoot` is the caller's own
+ * `git rev-parse --show-toplevel`, which in a linked worktree resolves to
+ * that worktree's own root, not the main checkout — so two coordinators
+ * running in two different worktrees of the same repo (e.g. two Orca
+ * worktrees) each get a distinct prefix here, even though they share one
+ * `.git` and therefore one branch/worktree-list namespace.
+ *
+ * Before this helper existed, `preflight.ts` matched on the substring
+ * `'.claude/worktrees/'` alone, which is true of *every* coordinator's agent
+ * worktrees regardless of which checkout launched them — so one
+ * coordinator's `preflight`/`preflight --post-dispatch` would fail on a
+ * sibling coordinator's in-flight worker (a worktree mid-bootstrap, not yet
+ * locked, is indistinguishable from one that skipped bootstrap entirely).
+ * Prefix-matching against the caller's own `repoRoot` fixes that without
+ * needing any run-scoping: Claude Code's `Agent` `isolation: "worktree"`
+ * always nests an agent's worktree inside the launching worktree's own
+ * `.claude/worktrees/`, never a sibling's.
+ */
+export function isOwnAgentWorktree(directory: string, repoRoot: string): boolean {
+  const ownWorktreesPrefix = path.join(repoRoot, '.claude', 'worktrees') + path.sep
+  return directory.startsWith(ownWorktreesPrefix)
+}
 
 /**
  * What {@link classifyByContent} itself can actually return. Kept distinct

@@ -24,6 +24,7 @@ import {
 import { isSlotStale, resolveSlotsDirectory } from './slots'
 import {
   classifyByContent,
+  isOwnAgentWorktree,
   isSafeToDelete,
   isWorktreeAgentBranchLive,
   listBranches,
@@ -573,31 +574,41 @@ const POST_DISPATCH_UNLOCKED_MAX_AGE_MS = 30_000
  * {@link findWorktreesMissingLockPastDeadline}), and a duplicate ticket or
  * branch number is a failure regardless of which run(s) created the
  * duplicates.
+ *
+ * What *is* scoped is which worktrees/branches enter the audit at all:
+ * {@link isOwnAgentWorktree} keeps only entries under this coordinator's own
+ * `repoRoot`, and ticket branches are kept only when checked out inside that
+ * same tree — so a sibling coordinator running a different spec in another
+ * git worktree of this repo (e.g. another Orca worktree) never trips these
+ * gates, no matter how mid-bootstrap or unlocked its own workers currently
+ * are.
  */
-async function mainPostDispatch(config: ForgeConfig): Promise<void> {
+async function mainPostDispatch(
+  config: ForgeConfig,
+  repoRoot: string,
+): Promise<void> {
   const branchPrefix = config.ticket.branchPrefix
   const allWorktreeEntries = await listWorktreeEntries()
   const worktreeEntries = allWorktreeEntries.filter((entry) =>
-    entry.directory.includes('.claude/worktrees/'),
+    isOwnAgentWorktree(entry.directory, repoRoot),
   )
   const ticketBranches = await listBranches(`${branchPrefix}-*`)
+  const ownTicketBranchNames = ticketBranches
+    .filter((branch) => isOwnAgentWorktree(branch.worktreePath, repoRoot))
+    .map((branch) => branch.name)
 
-  const failures = auditPostDispatch(
-    worktreeEntries,
-    ticketBranches.map((branch) => branch.name),
-    {
-      maxUnlockedAgeMs: POST_DISPATCH_UNLOCKED_MAX_AGE_MS,
-      nowMs: Date.now(),
-      statMtimeMs: (directory) => {
-        try {
-          return statSync(directory).mtimeMs
-        } catch {
-          return null
-        }
-      },
-      branchPrefix,
+  const failures = auditPostDispatch(worktreeEntries, ownTicketBranchNames, {
+    maxUnlockedAgeMs: POST_DISPATCH_UNLOCKED_MAX_AGE_MS,
+    nowMs: Date.now(),
+    statMtimeMs: (directory) => {
+      try {
+        return statSync(directory).mtimeMs
+      } catch {
+        return null
+      }
     },
-  )
+    branchPrefix,
+  })
 
   if (failures.length > 0) {
     console.error('forge:preflight --post-dispatch failed:\n')
@@ -657,7 +668,7 @@ async function main(config: ForgeConfig, repoRoot: string) {
 
   const allWorktreeEntries = await listWorktreeEntries()
   const worktreeEntries = allWorktreeEntries.filter((entry) =>
-    entry.directory.includes('.claude/worktrees/'),
+    isOwnAgentWorktree(entry.directory, repoRoot),
   )
   if (worktreeEntries.length > 0) {
     const mainTree = await resolveMainTree(config.repo.remote, config.repo.trunk)
@@ -785,7 +796,7 @@ export async function run(argv: string[]): Promise<void> {
     }
     const config = await requireForgeConfig(repoRoot)
     if (argv.includes('--post-dispatch')) {
-      await mainPostDispatch(config)
+      await mainPostDispatch(config, repoRoot)
     } else {
       await main(config, repoRoot)
     }
