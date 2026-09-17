@@ -3,6 +3,7 @@ import { mkdtempSync, rmSync } from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
 
+import { DEFAULT_FORGE_CONFIG, type ForgeConfig } from './config'
 import {
   acquireSlot,
   isSlotStale,
@@ -10,6 +11,7 @@ import {
   releaseAllSlotsForRun,
   releaseSlot,
   releaseSlotIfOwned,
+  resolveMaxLiveWorkers,
 } from './slots'
 
 /**
@@ -239,6 +241,51 @@ describe('isSlotStale', () => {
   test('a dead owner is stale', async () => {
     await acquireSlot(1, 'run-dead', IMPOSSIBLE_PID, 'AO-1', slotsDirectory)
     expect(isSlotStale(slotsDirectory, 0)).toBe(true)
+  })
+})
+
+describe('resolveMaxLiveWorkers', () => {
+  const originalEnv = process.env.FORGE_MAX_LIVE_WORKERS
+
+  afterEach(() => {
+    if (originalEnv === undefined) delete process.env.FORGE_MAX_LIVE_WORKERS
+    else process.env.FORGE_MAX_LIVE_WORKERS = originalEnv
+  })
+
+  function configWith(maxLiveWorkers: ForgeConfig['concurrency']['maxLiveWorkers']): ForgeConfig {
+    return {
+      ...DEFAULT_FORGE_CONFIG,
+      concurrency: { ...DEFAULT_FORGE_CONFIG.concurrency, maxLiveWorkers },
+    }
+  }
+
+  test('returns the config\'s own fixed number when no env override is set', () => {
+    delete process.env.FORGE_MAX_LIVE_WORKERS
+    expect(resolveMaxLiveWorkers(configWith(6))).toBe(6)
+  })
+
+  test('a numeric env override wins over the config value', () => {
+    process.env.FORGE_MAX_LIVE_WORKERS = '3'
+    expect(resolveMaxLiveWorkers(configWith(6))).toBe(3)
+  })
+
+  test('config "auto" resolves to a positive integer from this host\'s own resources', () => {
+    delete process.env.FORGE_MAX_LIVE_WORKERS
+    const result = resolveMaxLiveWorkers(configWith('auto'))
+    expect(Number.isInteger(result)).toBe(true)
+    expect(result).toBeGreaterThan(0)
+  })
+
+  test('an env override of "auto" also resolves to a positive integer, even over a fixed config value', () => {
+    process.env.FORGE_MAX_LIVE_WORKERS = 'auto'
+    const result = resolveMaxLiveWorkers(configWith(6))
+    expect(Number.isInteger(result)).toBe(true)
+    expect(result).toBeGreaterThan(0)
+  })
+
+  test('an invalid env override falls back to the config value', () => {
+    process.env.FORGE_MAX_LIVE_WORKERS = 'not-a-number'
+    expect(resolveMaxLiveWorkers(configWith(6))).toBe(6)
   })
 })
 

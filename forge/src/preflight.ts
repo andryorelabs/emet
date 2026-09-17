@@ -21,10 +21,15 @@ import {
   resolveSessionSlug,
   type RunVerdict,
 } from './runs'
-import { isSlotStale, resolveSlotsDirectory } from './slots'
+import {
+  isSlotStale,
+  listOccupiedSlots,
+  resolveMaxLiveWorkers,
+  resolveSlotsDirectory,
+} from './slots'
 import {
   classifyByContent,
-  isOwnAgentWorktree,
+  isAgentWorktree,
   isSafeToDelete,
   isWorktreeAgentBranchLive,
   listBranches,
@@ -65,29 +70,10 @@ import {
  * is exactly what an agent would learn to add once its own gate turns red.
  */
 
-function readPositiveIntEnvironment(name: string, fallback: number): number {
-  const raw = process.env[name]
-  if (raw === undefined) return fallback
-  const parsed = Number(raw)
-  return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback
-}
-
 function readFlagValue(flag: string): string | undefined {
   const flagIndex = process.argv.indexOf(flag)
   if (flagIndex === -1) return undefined
   return process.argv[flagIndex + 1]
-}
-
-/**
- * `FORGE_MAX_LIVE_WORKERS` still overrides `forge.config.json`'s
- * `concurrency.maxLiveWorkers` when set — same precedence `slots.ts` already
- * honors, kept so the existing escape hatch never breaks.
- */
-function resolveMaxLiveWorkers(config: ForgeConfig): number {
-  return readPositiveIntEnvironment(
-    'FORGE_MAX_LIVE_WORKERS',
-    config.concurrency.maxLiveWorkers,
-  )
 }
 
 /**
@@ -265,22 +251,41 @@ export type SlotCapacityCheck = {
   readonly freeCount: number
   readonly cap: number
   readonly waveSize: number
+  /** `false` only when every slot is occupied — the one condition that
+   * actually blocks dispatch outright. See the doc comment below for why
+   * `freeCount < waveSize` alone is no longer this. */
   readonly ok: boolean
+  /** `true` when some, but fewer than `waveSize`, slots are free — this
+   * wave can still dispatch, just fewer tickets than a full wave. Never
+   * `true` when `ok` is `false` (0 free is reported via `ok` alone, not as
+   * "degraded"). */
+  readonly degraded: boolean
 }
 
 /**
- * Can this wave's up to `waveSize` workers each claim a free slot right
- * now? Counting live claims and then deciding to dispatch would be
- * read-then-write, not atomic, and would race across two coordinators
- * checking at the same moment — the actual fix for that (N slots acquired
- * one at a time via `slots.ts`'s `acquireSlot`, immediately before
- * each worker's `Agent` call) belongs to dispatch time (Phase 6), out of
- * this script's scope. This only answers the capacity question ahead of
- * time; it never acquires or releases a slot itself. `isSlotFree` is
- * injected so tests can simulate "slots free" and "slots exhausted" without
- * touching the filesystem — production passes the negation of
- * `slots.ts`'s {@link isSlotStale} over each of
- * `<git-common-dir>/forge/slots/<index>`.
+ * Can this wave dispatch *at all* right now — not "a full wave", just at
+ * least one worker? A hard requirement of `freeCount >= waveSize` meant 5
+ * busy slots out of 8 blocked a wave of even a single ticket, which is the
+ * cap fighting the very thing it exists to protect: real host capacity was
+ * never actually exhausted, only `waveSize`'s worth of it. `acquireSlot`
+ * (`slots.ts`) is already per-worker and already drops just the one ticket
+ * that couldn't get a slot, not the whole wave — this check now mirrors that
+ * granularity instead of being stricter than the mechanism it's gating.
+ * `freeCount === 0` is still a hard failure (nothing to dispatch against at
+ * all); `0 < freeCount < waveSize` is `ok: true, degraded: true` (dispatch a
+ * partial wave, note there's less room than a full one) — see `main()` for
+ * how each is surfaced.
+ *
+ * Counting live claims and then deciding to dispatch would be read-then-
+ * write, not atomic, and would race across two coordinators checking at the
+ * same moment — the actual fix for that (N slots acquired one at a time via
+ * `slots.ts`'s `acquireSlot`, immediately before each worker's `Agent` call)
+ * belongs to dispatch time (Phase 6), out of this script's scope. This only
+ * answers the capacity question ahead of time; it never acquires or
+ * releases a slot itself. `isSlotFree` is injected so tests can simulate
+ * "slots free" and "slots exhausted" without touching the filesystem —
+ * production passes the negation of `slots.ts`'s {@link isSlotStale} over
+ * each of the host-wide slot pool's indices.
  */
 export function checkSlotCapacity(
   cap: number,
@@ -291,7 +296,13 @@ export function checkSlotCapacity(
   for (let index = 0; index < cap; index++) {
     if (isSlotFree(index)) freeCount++
   }
-  return { freeCount, cap, waveSize, ok: freeCount >= waveSize }
+  return {
+    freeCount,
+    cap,
+    waveSize,
+    ok: freeCount > 0,
+    degraded: freeCount > 0 && freeCount < waveSize,
+  }
 }
 
 type WorktreeEntryReport = {
@@ -369,6 +380,7 @@ export type PostDispatchFailure = {
     | 'duplicate-ticket-branch-number'
     | 'unlocked-past-deadline'
     | 'branch-ticket-mismatch'
+    | 'missing-worktrees'
   readonly message: string
 }
 
@@ -492,6 +504,91 @@ export function findWorktreesMissingLockPastDeadline(
   })
 }
 
+function buildDuplicateTicketWorktreeFailures(
+  entries: readonly WorktreeEntry[],
+): PostDispatchFailure[] {
+  const failures: PostDispatchFailure[] = []
+  for (const [ticket, group] of findDuplicateTicketWorktrees(entries)) {
+    failures.push({
+      kind: 'duplicate-ticket-worktree',
+      message: `${ticket} is claimed by ${group.length} worktrees — pick the canonical one, delete/re-lock the rest:\n${group.map((entry) => `  ${entry.directory} (${entry.branch ?? 'detached'}, HEAD ${entry.head ?? 'unknown'})`).join('\n')}`,
+    })
+  }
+  return failures
+}
+
+function buildDuplicateTicketBranchNumberFailures(
+  branchNames: readonly string[],
+  branchPrefix: string,
+): PostDispatchFailure[] {
+  const failures: PostDispatchFailure[] = []
+  for (const [number, names] of findDuplicateTicketBranchNumbers(branchNames, branchPrefix)) {
+    failures.push({
+      kind: 'duplicate-ticket-branch-number',
+      message: `Ticket ${branchPrefix.toUpperCase()}-${number} has ${names.length} branches: ${names.join(', ')} — one of these was created in error.`,
+    })
+  }
+  return failures
+}
+
+function buildUnlockedPastDeadlineFailures(
+  entries: readonly WorktreeEntry[],
+  maxAgeMs: number,
+  nowMs: number,
+  statMtimeMs: (directory: string) => number | null,
+): PostDispatchFailure[] {
+  return findWorktreesMissingLockPastDeadline(entries, maxAgeMs, nowMs, statMtimeMs).map(
+    (entry) => ({
+      kind: 'unlocked-past-deadline',
+      message: `${entry.directory} has no git worktree lock ${Math.round(maxAgeMs / 1000)}s+ after dispatch — the worker skipped bootstrap step 0. Re-lock it with: git worktree lock ${entry.directory} --reason "$(forge lock-reason --run <runId> --ticket <ticket>)"`,
+    }),
+  )
+}
+
+/**
+ * A worktree's checked-out branch not matching its own lock's ticket — a
+ * shell mis-routed to the wrong worktree. Scoped by whichever `entries` the
+ * caller passes: `auditPostDispatch` passes everything (no run to scope by),
+ * `mainPostDispatch` passes only entries it has already attributed to the
+ * current run, so a sibling coordinator's own unrelated mismatch never fails
+ * *this* run's audit.
+ */
+export function findBranchTicketMismatches(
+  entries: readonly WorktreeEntry[],
+  branchPrefix: string,
+): PostDispatchFailure[] {
+  const failures: PostDispatchFailure[] = []
+  for (const entry of entries) {
+    const owner = resolveWorktreeOwner(entry)
+    if (!owner || !entry.branch) continue
+    if (!isBranchMatchingTicket(entry.branch, owner.ticket, branchPrefix)) {
+      failures.push({
+        kind: 'branch-ticket-mismatch',
+        message: `${entry.directory} is checked out on branch ${entry.branch}, but its own lock names ticket ${owner.ticket} — a shell was likely routed to the wrong worktree.`,
+      })
+    }
+  }
+  return failures
+}
+
+/**
+ * Which of `expectedTickets` (this run's own slot holdings — see
+ * `mainPostDispatch`) have no matching entry in `mineEntries` (worktrees
+ * already attributed to this run). Empty means every ticket this run
+ * dispatched has a locked worktree accounted for.
+ */
+export function findMissingTicketsForRun(
+  mineEntries: readonly WorktreeEntry[],
+  expectedTickets: readonly string[],
+): string[] {
+  const claimed = new Set(
+    mineEntries
+      .map((entry) => resolveWorktreeOwner(entry)?.ticket)
+      .filter((ticket): ticket is string => Boolean(ticket)),
+  )
+  return expectedTickets.filter((ticket) => !claimed.has(ticket))
+}
+
 /**
  * The four post-dispatch gates from `docs/agents/forge.md` — run once,
  * immediately after a wave's batch of parallel `Agent` calls returns, before
@@ -499,6 +596,12 @@ export function findWorktreesMissingLockPastDeadline(
  * above (which only ever warns/informs about a live worktree), every finding
  * here is a hard failure: each one means dispatch itself went wrong, not
  * that a long-running worker is merely still in flight.
+ *
+ * Runs every check over exactly the `entries`/`ticketBranchNames` given, with
+ * no run-scoping of its own — `mainPostDispatch` is what decides which
+ * entries enter this audit at all, and additionally runs the run-scoped
+ * missing-worktrees check this function doesn't know about (it has no
+ * `runId` or slot data to compare against).
  */
 export function auditPostDispatch(
   entries: readonly WorktreeEntry[],
@@ -512,50 +615,17 @@ export function auditPostDispatch(
     readonly branchPrefix: string
   },
 ): PostDispatchFailure[] {
-  const branchPrefix = options.branchPrefix
-  const failures: PostDispatchFailure[] = []
-
-  for (const [ticket, group] of findDuplicateTicketWorktrees(entries)) {
-    failures.push({
-      kind: 'duplicate-ticket-worktree',
-      message: `${ticket} is claimed by ${group.length} worktrees — pick the canonical one, delete/re-lock the rest:\n${group.map((entry) => `  ${entry.directory} (${entry.branch ?? 'detached'}, HEAD ${entry.head ?? 'unknown'})`).join('\n')}`,
-    })
-  }
-
-  for (const [number, names] of findDuplicateTicketBranchNumbers(
-    ticketBranchNames,
-    branchPrefix,
-  )) {
-    failures.push({
-      kind: 'duplicate-ticket-branch-number',
-      message: `Ticket ${branchPrefix.toUpperCase()}-${number} has ${names.length} branches: ${names.join(', ')} — one of these was created in error.`,
-    })
-  }
-
-  for (const entry of findWorktreesMissingLockPastDeadline(
-    entries,
-    options.maxUnlockedAgeMs,
-    options.nowMs,
-    options.statMtimeMs,
-  )) {
-    failures.push({
-      kind: 'unlocked-past-deadline',
-      message: `${entry.directory} has no git worktree lock ${Math.round(options.maxUnlockedAgeMs / 1000)}s+ after dispatch — the worker skipped bootstrap step 0. Re-lock it with: git worktree lock ${entry.directory} --reason "$(forge lock-reason --run <runId> --ticket <ticket>)"`,
-    })
-  }
-
-  for (const entry of entries) {
-    const owner = resolveWorktreeOwner(entry)
-    if (!owner || !entry.branch) continue
-    if (!isBranchMatchingTicket(entry.branch, owner.ticket, branchPrefix)) {
-      failures.push({
-        kind: 'branch-ticket-mismatch',
-        message: `${entry.directory} is checked out on branch ${entry.branch}, but its own lock names ticket ${owner.ticket} — a shell was likely routed to the wrong worktree.`,
-      })
-    }
-  }
-
-  return failures
+  return [
+    ...buildDuplicateTicketWorktreeFailures(entries),
+    ...buildDuplicateTicketBranchNumberFailures(ticketBranchNames, options.branchPrefix),
+    ...buildUnlockedPastDeadlineFailures(
+      entries,
+      options.maxUnlockedAgeMs,
+      options.nowMs,
+      options.statMtimeMs,
+    ),
+    ...findBranchTicketMismatches(entries, options.branchPrefix),
+  ]
 }
 
 /**
@@ -567,60 +637,154 @@ export function auditPostDispatch(
 const POST_DISPATCH_UNLOCKED_MAX_AGE_MS = 30_000
 
 /**
- * `--post-dispatch` mode. `--run <runId>` is accepted (so the exact command
- * `docs/agents/forge.md` documents never errors) but not required and not
- * used to scope detection: an unlocked worktree can't be attributed to any
- * run at all (that's the whole problem, see
- * {@link findWorktreesMissingLockPastDeadline}), and a duplicate ticket or
- * branch number is a failure regardless of which run(s) created the
- * duplicates.
+ * `--post-dispatch` mode: run once, immediately after a wave's batch of
+ * parallel `Agent` calls returns, before any worker has had a chance to
+ * commit.
  *
- * What *is* scoped is which worktrees/branches enter the audit at all:
- * {@link isOwnAgentWorktree} keeps only entries under this coordinator's own
- * `repoRoot`, and ticket branches are kept only when checked out inside that
- * same tree — so a sibling coordinator running a different spec in another
- * git worktree of this repo (e.g. another Orca worktree) never trips these
- * gates, no matter how mid-bootstrap or unlocked its own workers currently
- * are.
+ * **Scoping used to be by path** (`isOwnAgentWorktree(entry, repoRoot)`) —
+ * every entry under the *coordinator's own* `repoRoot`'s `.claude/worktrees/`
+ * was "mine", everything else invisible, on the assumption that a dispatched
+ * agent worktree always nests under the launching worktree. That assumption
+ * is false under Orca (see `worktrees.ts`'s `isAgentWorktree` doc comment and
+ * `reference/incidents.md`), so this now scopes by **run**, using
+ * {@link resolveWorktreeOwner}'s `runId` — the one signal that actually
+ * identifies whose dispatch a worktree belongs to, regardless of where
+ * `isolation: "worktree"` physically put it:
+ *
+ * - **duplicate-ticket-worktree / duplicate-ticket-branch-number**: run over
+ *   *every* agent worktree/branch on the repo, any run — these only ever
+ *   fire when the *same ticket* appears twice, which a sibling coordinator's
+ *   own (necessarily different) ticket can never trigger, so there is
+ *   nothing to falsely fail here by widening the scope.
+ * - **branch-ticket-mismatch**: scoped to entries this run's own `--run
+ *   <runId>` owns — a sibling's unrelated mismatch is that sibling's audit
+ *   to fail, not this one's.
+ * - **missing-worktrees** (new): the real fix for the "0 worktree(s)
+ *   checked" vacuous pass. This run's own slot holdings (each worker
+ *   acquires its slot immediately before its `Agent` call, per Phase 6 —
+ *   see `slots.ts`) say how many tickets this wave dispatched; if fewer
+ *   locked worktrees are attributed to this run than that, something is
+ *   wrong — a worker skipped bootstrap, or `isolation: "worktree"` put it
+ *   somewhere unexpected — and this now **fails**, listing any stale
+ *   unlocked candidates as leads, rather than silently reporting `0
+ *   worktree(s) checked ... OK`. `--expect <n>` overrides the slot-derived
+ *   count for a coordinator that dispatched without acquiring slots.
+ *
+ * With no `--run` given at all (an ad-hoc/manual invocation — every
+ * documented dispatch always passes it), this falls back to the old
+ * behavior: every check runs globally, best-effort, since there is no run to
+ * scope by.
  */
-async function mainPostDispatch(
-  config: ForgeConfig,
-  repoRoot: string,
-): Promise<void> {
+async function mainPostDispatch(config: ForgeConfig): Promise<void> {
   const branchPrefix = config.ticket.branchPrefix
+  const currentRunId = readFlagValue('--run')
+  const explicitExpectRaw = readFlagValue('--expect')
+
   const allWorktreeEntries = await listWorktreeEntries()
-  const worktreeEntries = allWorktreeEntries.filter((entry) =>
-    isOwnAgentWorktree(entry.directory, repoRoot),
-  )
+  const agentEntries = allWorktreeEntries.filter((entry) => isAgentWorktree(entry.directory))
   const ticketBranches = await listBranches(`${branchPrefix}-*`)
-  const ownTicketBranchNames = ticketBranches
-    .filter((branch) => isOwnAgentWorktree(branch.worktreePath, repoRoot))
+  const agentTicketBranchNames = ticketBranches
+    .filter((branch) => isAgentWorktree(branch.worktreePath))
     .map((branch) => branch.name)
 
-  const failures = auditPostDispatch(worktreeEntries, ownTicketBranchNames, {
-    maxUnlockedAgeMs: POST_DISPATCH_UNLOCKED_MAX_AGE_MS,
-    nowMs: Date.now(),
-    statMtimeMs: (directory) => {
-      try {
-        return statSync(directory).mtimeMs
-      } catch {
-        return null
-      }
-    },
-    branchPrefix,
-  })
+  const nowMs = Date.now()
+  const statMtimeMs = (directory: string): number | null => {
+    try {
+      return statSync(directory).mtimeMs
+    } catch {
+      return null
+    }
+  }
+
+  const failures: PostDispatchFailure[] = [
+    ...buildDuplicateTicketWorktreeFailures(agentEntries),
+    ...buildDuplicateTicketBranchNumberFailures(agentTicketBranchNames, branchPrefix),
+  ]
+
+  if (!currentRunId) {
+    failures.push(
+      ...buildUnlockedPastDeadlineFailures(
+        agentEntries,
+        POST_DISPATCH_UNLOCKED_MAX_AGE_MS,
+        nowMs,
+        statMtimeMs,
+      ),
+      ...findBranchTicketMismatches(agentEntries, branchPrefix),
+    )
+    if (failures.length > 0) {
+      console.error('forge:preflight --post-dispatch failed:\n')
+      for (const failure of failures) console.error(`- ${failure.message}`)
+      process.exitCode = 1
+      return
+    }
+    console.log(
+      `forge:preflight --post-dispatch OK — ${agentEntries.length} worktree(s) checked (no --run given, so not scoped to any one dispatch), no ticket/branch duplicates, no unlocked stragglers.`,
+    )
+    return
+  }
+
+  const mineEntries = agentEntries.filter(
+    (entry) => resolveWorktreeOwner(entry)?.runId === currentRunId,
+  )
+  failures.push(...findBranchTicketMismatches(mineEntries, branchPrefix))
+
+  const expectedTickets =
+    explicitExpectRaw === undefined
+      ? (await listOccupiedSlots())
+          .filter((entry) => entry.holder.runId === currentRunId)
+          .map((entry) => entry.holder.ticket)
+      : []
+  const explicitExpectedCount =
+    explicitExpectRaw !== undefined ? Number(explicitExpectRaw) : undefined
+  const expectationKnown =
+    expectedTickets.length > 0 || (explicitExpectedCount !== undefined && explicitExpectedCount > 0)
+
+  if (expectationKnown) {
+    const missingTickets = findMissingTicketsForRun(mineEntries, expectedTickets)
+    const missingCount =
+      explicitExpectedCount !== undefined
+        ? Math.max(0, explicitExpectedCount - mineEntries.length)
+        : missingTickets.length
+
+    if (missingCount > 0) {
+      const unlockedCandidates = agentEntries.filter((entry) => entry.lockedReason === null)
+      const stale = findWorktreesMissingLockPastDeadline(
+        unlockedCandidates,
+        POST_DISPATCH_UNLOCKED_MAX_AGE_MS,
+        nowMs,
+        statMtimeMs,
+      )
+      const ticketsNote =
+        expectedTickets.length > 0
+          ? ` (tickets: ${expectedTickets.join(', ')}${missingTickets.length > 0 ? `; missing: ${missingTickets.join(', ')}` : ''})`
+          : ''
+      const staleNote =
+        stale.length > 0
+          ? ` ${stale.length} unlocked worktree(s) past the ${Math.round(POST_DISPATCH_UNLOCKED_MAX_AGE_MS / 1000)}s deadline may be the missing one(s) — a worker may have skipped bootstrap step 0:\n${stale.map((entry) => `  ${entry.directory}`).join('\n')}`
+          : ' No unlocked candidate worktrees were found either — check where isolation:"worktree" actually placed them (see reference/incidents.md).'
+      failures.push({
+        kind: 'missing-worktrees',
+        message: `Expected ${explicitExpectedCount ?? expectedTickets.length} locked worktree(s) for run ${currentRunId}${ticketsNote}, found ${mineEntries.length}.${staleNote}`,
+      })
+    }
+  }
 
   if (failures.length > 0) {
     console.error('forge:preflight --post-dispatch failed:\n')
-    for (const failure of failures) {
-      console.error(`- ${failure.message}`)
-    }
+    for (const failure of failures) console.error(`- ${failure.message}`)
     process.exitCode = 1
     return
   }
 
+  if (mineEntries.length === 0 && agentEntries.length > 0 && !expectationKnown) {
+    console.log(
+      `forge:preflight --post-dispatch OK — but 0 of run ${currentRunId}'s worktree(s) were attributed out of ${agentEntries.length} agent worktree(s) present, and no slot/--expect data was available to check for a miss. Verify by hand: "forge slots --list" and "git worktree list --porcelain".`,
+    )
+    return
+  }
+
   console.log(
-    `forge:preflight --post-dispatch OK — ${worktreeEntries.length} worktree(s) checked, no ticket/branch duplicates, no unlocked stragglers.`,
+    `forge:preflight --post-dispatch OK — ${mineEntries.length} of run ${currentRunId}'s worktree(s) checked (${agentEntries.length} total across every /forge coordinator in this repo), no ticket/branch duplicates, no unlocked stragglers.`,
   )
 }
 
@@ -668,7 +832,7 @@ async function main(config: ForgeConfig, repoRoot: string) {
 
   const allWorktreeEntries = await listWorktreeEntries()
   const worktreeEntries = allWorktreeEntries.filter((entry) =>
-    isOwnAgentWorktree(entry.directory, repoRoot),
+    isAgentWorktree(entry.directory),
   )
   if (worktreeEntries.length > 0) {
     const mainTree = await resolveMainTree(config.repo.remote, config.repo.trunk)
@@ -713,9 +877,14 @@ async function main(config: ForgeConfig, repoRoot: string) {
     resolveWaveSize(config),
     (index) => isSlotStale(slotsDirectory, index),
   )
+  const capacityWarnLines: string[] = []
   if (!capacityCheck.ok) {
     failures.push(
-      `Not enough free worker slots for a full wave: ${capacityCheck.freeCount} free out of ${capacityCheck.cap} (FORGE_MAX_LIVE_WORKERS), need ${capacityCheck.waveSize}.`,
+      `No free worker slots at all: 0 free out of ${capacityCheck.cap} — every slot is held by a live or idle run. Wait for one to free up, or "forge cleanup --run <runId>" a run you know is done.`,
+    )
+  } else if (capacityCheck.degraded) {
+    capacityWarnLines.push(
+      `  only ${capacityCheck.freeCount}/${capacityCheck.cap} worker slot(s) free — this wave can dispatch at most ${capacityCheck.freeCount} of its usual ${capacityCheck.waveSize}; the rest drop from this wave the same way a single denied "forge slots --acquire" already does.`,
     )
   }
 
@@ -752,6 +921,11 @@ async function main(config: ForgeConfig, repoRoot: string) {
   if (dependencyWarnLines.length > 0) {
     console.log(
       `Warning — dependencies (not blocking dispatch):\n${dependencyWarnLines.join('\n')}\n`,
+    )
+  }
+  if (capacityWarnLines.length > 0) {
+    console.log(
+      `Warning — worker capacity (not blocking dispatch):\n${capacityWarnLines.join('\n')}\n`,
     )
   }
 
@@ -796,7 +970,7 @@ export async function run(argv: string[]): Promise<void> {
     }
     const config = await requireForgeConfig(repoRoot)
     if (argv.includes('--post-dispatch')) {
-      await mainPostDispatch(config, repoRoot)
+      await mainPostDispatch(config)
     } else {
       await main(config, repoRoot)
     }

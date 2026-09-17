@@ -63,15 +63,26 @@ Commands a worker runs before considering its own change done: see
 ## Concurrency
 
 Max `concurrency.waveSize` live agents per wave, and a global
-`concurrency.maxLiveWorkers` cap shared by every concurrently running
-`/forge` coordinator working in *this repo* — including one running from a
-different git worktree of it (e.g. another Orca worktree). It is **not**
-shared across different repos or clones: the cap lives under this repo's own
-`--git-common-dir`, so a coordinator in an unrelated repo has its own,
-separate pool. Both settings live in `forge.config.json`.
-`FORGE_MAX_LIVE_WORKERS` and `FORGE_RUN_IDLE_THRESHOLD_MS` still override
-their config counterparts when set, same as before this repo had a config
-file at all.
+`concurrency.maxLiveWorkers` cap shared **host-wide** — by every
+concurrently running `/forge` coordinator on this machine, across *every*
+repo and every git worktree of every repo (e.g. several Orca worktrees of
+this same repo, or an entirely unrelated repo, all draw from one pool). The
+pool lives under `~/.local/state/forge/slots`, not this repo's own
+`--git-common-dir`. A slot is held only while its worker is actually live —
+it's released as soon as that worker reports done, not held for the rest of
+the wave.
+
+`concurrency.maxLiveWorkers` defaults to `"auto"`: derived from this host's
+own cpu count and RAM rather than a fixed number, so it scales with the
+machine `/forge` actually runs on instead of an arbitrary constant. A
+separate memory-headroom brake also denies new slot acquisitions when
+`MemAvailable` is too low, regardless of how many slots are technically free
+— see `forge doctor` for this host's resolved numbers, and pin an explicit
+integer here instead of `"auto"` only when there's a specific reason to cap
+this repo lower than the host otherwise would. Both settings live in
+`forge.config.json`. `FORGE_MAX_LIVE_WORKERS` (accepting `"auto"` too) and
+`FORGE_RUN_IDLE_THRESHOLD_MS` still override their config counterparts when
+set, same as before this repo had a config file at all.
 
 ---
 

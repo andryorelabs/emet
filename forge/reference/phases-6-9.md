@@ -21,6 +21,11 @@ MCP server for a `linear` tracker). Fix whatever it flags before dispatching;
 don't dispatch into a dirty or half-initialized repo. A failure here means a
 real, verified gap — an environment quirk it merely couldn't check (e.g. no
 network to validate `gh auth`) shows as a non-blocking warning instead.
+The worker-slot capacity gate is relaxed on purpose: it only hard-fails at
+**zero** free slots host-wide; anywhere from 1 slot up to a full free wave
+prints a warning ("only N/`waveSize` free") and still lets dispatch proceed —
+`acquireSlot` is per-worker, so a partially-full pool already just drops the
+tickets it can't seat from this wave rather than blocking the ones it can.
 
 Compute this wave's frontier against this repo's tracker
 (`~/.claude/forge/reference/tracker-<kind>.md` for the literal calls) —
@@ -33,11 +38,12 @@ Immediately before each survivor's `Agent` call, reserve it with
 `forge claims --reserve <ticket> --run <runId> --anchor <anchorPid>` (the
 real dispatch mutex — see `reference/incidents.md` §AO-285),
 then take a worker slot with `forge slots --acquire --run <runId> --anchor
-<anchorPid> --ticket <ticket>` (the global `concurrency.maxLiveWorkers` cap,
-shared by every coordinator working in this repo — see "Concurrency"). A
-denied reservation
-or a "no free slot" both drop that ticket from this wave; it does not get
-dispatched. **Never call the claims/slots mutex inline via `bun -e`** — an
+<anchorPid> --ticket <ticket>` (the `concurrency.maxLiveWorkers` cap — a
+single pool shared **host-wide**, by every coordinator on this machine across
+every repo, not just this one; see "Concurrency"). A denied reservation, a
+"no free slot", or a denial from the memory-headroom brake (distinct message —
+this host is low on `MemAvailable`, not merely out of slots) all drop that
+ticket from this wave; it does not get dispatched. **Never call the claims/slots mutex inline via `bun -e`** — an
 untypechecked snippet with its positional arguments in the wrong order is
 exactly how a real run lost its reservation silently and ended up with no
 mutex at all (see `reference/incidents.md`). Always go through the `forge`
@@ -67,12 +73,17 @@ message, multiple tool uses), each with `isolation: "worktree"` **and
 session happens to be on).
 
 **Immediately after that batch returns, before any worker has had a chance to
-commit, run `forge preflight --post-dispatch`** — the fourth enforcement
-gate on a dispatch. It hard-fails on:
+commit, run `forge preflight --run <runId> --post-dispatch`** — always pass
+`--run`, not the bare flag: it's how this audit attributes agent worktrees to
+*this* wave instead of a sibling coordinator's. It hard-fails on:
 two worktrees claiming the same ticket, two worker branches with the same
-ticket number, a worktree still unlocked 30s+ after dispatch, or a
-worktree's branch not matching its own lock's ticket (see
-`reference/incidents.md` for the real runs that exposed each of these). Fix
+ticket number, a worktree still unlocked 30s+ after dispatch, a worktree's
+branch not matching its own lock's ticket, or fewer of this run's own
+worktrees found than slots this run is holding (see `reference/incidents.md`
+for the real runs that exposed each of these — the last one is what closes the
+gap where `Agent({isolation: "worktree"})` nests every agent worktree under
+the **main checkout's** `.claude/worktrees/`, never the launching worktree's
+own, when dispatched from a non-main worktree such as an Orca one). Fix
 whatever it flags before proceeding to Phase 7 — don't let a bad dispatch run
 unattended for a whole wave.
 
@@ -199,6 +210,18 @@ stop-on-first-failure invocation `docs/agents/forge.md`'s
 
 ## Phase 8 — Wave close-out
 
+As each worker's completion notification arrives — not once the whole wave is
+done — release that worker's own slot: `forge slots --release --run <runId>
+--ticket <ticket>`. Slot lifetime is per-worker, not per-wave: a worker that
+finished in minute 2 of a 40-minute wave should free its slot for the next
+ticket immediately, not sit on it until this whole phase closes out. `forge
+cleanup --run <runId>` at the end of this phase stays the backstop that
+releases anything still held (a worker that never reported, one flagged and
+left for a human) — it is not the primary release path anymore. A ticket
+retried in Phase 9 re-acquires its own slot from scratch and can be denied
+exactly like a fresh dispatch (no free slot, or the memory brake) if the host
+has filled up since.
+
 Before merging any worker's branch, confirm its ticket has at least one
 tracker comment, a final `.forge/handoff-<ticket>.md` in its worktree
 (`state: done`, or whatever it actually ended at), and that its worktree is
@@ -211,6 +234,12 @@ needs-a-human-decision ticket is flagged. This is the real backstop for the
 "comment as you go" rule: every worker's branch passes through this gate
 regardless of ticket type, unlike the E2E queue's own check, which only fires
 for E2E-touching tickets.
+
+A worker (or a coordinator's own fork) that reports success with no commit in
+its worktree did not do the work — a confident summary is not evidence.
+Verify with `git -C <worktree> log`/`status` before merging or trusting the
+report; a transcript with zero tool calls behind a "done" claim is the
+canonical shape of this failure (`reference/incidents.md`).
 
 Also run `forge usage --session <this coordinator session>` and, per worker,
 flag (report, don't block the merge on) any full `Read` over
@@ -252,7 +281,10 @@ entirely (`reference/incidents.md`). If `--stalled` reports the roster hung,
 `TaskStop` every one of those tasks and retry `code-review` at `--level
 medium` (smaller fan-out) or, if it hangs again, run the review in a single
 pass with no fan-out at all rather than retrying the same shape a third
-time. Then run this repo's full test suite exactly once over the merged
+time. If other background tasks (another wave's workers, a fork) are already
+running when this phase starts, skip straight to a no-fan-out `code-review`
+pass instead of discovering the same roster hang a second time on an already
+busy host. Then run this repo's full test suite exactly once over the merged
 result (`commands.fullSuite`, the shared/singleton resource from Phase 7, if
 this repo has one).
 

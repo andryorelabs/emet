@@ -239,10 +239,12 @@
           "description": "Max Agent calls dispatched together in one wave."
         },
         "maxLiveWorkers": {
-          "type": "integer",
-          "minimum": 1,
-          "default": 8,
-          "description": "Global cap shared by every /forge coordinator concurrently working in this repo, including one running from a different git worktree of it — not shared across other repos or clones. FORGE_MAX_LIVE_WORKERS env var overrides this when set."
+          "oneOf": [
+            { "type": "integer", "minimum": 1 },
+            { "const": "auto" }
+          ],
+          "default": "auto",
+          "description": "Global cap shared by every /forge coordinator concurrently running on this HOST, across every repo — the slot pool lives under ~/.local/state/forge/slots, not any one repo's --git-common-dir. \"auto\" (the default) derives the cap from this host's own cpu count/RAM (src/resources.ts's computeAutoMaxLiveWorkers) instead of a fixed number nobody measured; a positive integer pins it. A separate, always-on memory-headroom check (FORGE_MEM_RESERVE_GIB, default 8 GiB) denies an acquire outright when MemAvailable is too low, regardless of this cap — see src/resources.ts's checkMemoryHeadroom. FORGE_MAX_LIVE_WORKERS env var overrides this field (accepting \"auto\" too) when set."
         },
         "runIdleThresholdMs": {
           "type": "integer",

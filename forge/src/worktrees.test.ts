@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'bun:test'
 
 import {
-  isOwnAgentWorktree,
+  isAgentWorktree,
   parseWorktreeEntries,
   resolveWorktreeOwner,
   type WorktreeEntry,
@@ -167,40 +167,40 @@ describe('resolveWorktreeOwner', () => {
   })
 })
 
-describe('isOwnAgentWorktree', () => {
-  test('accepts an agent worktree nested under this repoRoot', () => {
+describe('isAgentWorktree', () => {
+  test('accepts an agent worktree nested under the main checkout', () => {
     expect(
-      isOwnAgentWorktree(
-        '/home/andry/orca/workspaces/repo/sandlance/.claude/worktrees/agent-abc',
-        '/home/andry/orca/workspaces/repo/sandlance',
-      ),
+      isAgentWorktree('/home/andry/code/repo/.claude/worktrees/agent-abc'),
     ).toBe(true)
   })
 
-  test('rejects a sibling Orca worktree of the same repo', () => {
+  // The regression this whole helper exists to fix: a coordinator launched
+  // from an Orca-managed secondary worktree still gets its agent worktrees
+  // nested under the *main checkout's* `.claude/worktrees/`, not its own —
+  // isAgentWorktree must recognize this shape too, with no repoRoot to match
+  // against at all (see worktrees.ts's doc comment and
+  // reference/incidents.md).
+  test('accepts an agent worktree under the main checkout even when the launching worktree differs', () => {
     expect(
-      isOwnAgentWorktree(
-        '/home/andry/orca/workspaces/repo/seapen/.claude/worktrees/agent-xyz',
-        '/home/andry/orca/workspaces/repo/sandlance',
-      ),
+      isAgentWorktree('/home/andry/code/repo/.claude/worktrees/agent-abc'),
+    ).toBe(true)
+    // The launching (Orca) worktree itself is irrelevant to this check —
+    // there is no repoRoot parameter to pass it as.
+  })
+
+  test('rejects the main checkout itself (not nested under .claude/worktrees/)', () => {
+    expect(isAgentWorktree('/home/andry/code/repo')).toBe(false)
+  })
+
+  test('rejects an ordinary worktree with no .claude/worktrees/ segment', () => {
+    expect(
+      isAgentWorktree('/home/andry/orca/workspaces/repo/sandlance'),
     ).toBe(false)
   })
 
-  // Regression: a naive `startsWith(repoRoot)` (no separator) would wrongly
-  // match a sibling directory that merely shares a name prefix, e.g.
-  // `sandlance-old` matching a `repoRoot` of `sandlance`.
-  test('rejects a sibling directory whose name is a prefix of repoRoot', () => {
-    expect(
-      isOwnAgentWorktree(
-        '/home/andry/orca/workspaces/repo/sandlance-old/.claude/worktrees/agent-abc',
-        '/home/andry/orca/workspaces/repo/sandlance',
-      ),
-    ).toBe(false)
-  })
-
-  test('rejects the repoRoot itself (not nested under .claude/worktrees/)', () => {
-    expect(
-      isOwnAgentWorktree('/home/andry/code/repo', '/home/andry/code/repo'),
-    ).toBe(false)
+  test('rejects a path that merely contains the literal substring without path separators', () => {
+    expect(isAgentWorktree('/home/andry/code/.claude-worktrees-backup')).toBe(
+      false,
+    )
   })
 })

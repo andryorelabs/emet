@@ -11,28 +11,38 @@ import path from 'node:path'
 
 /**
  * Whether `directory` (an absolute path, as `git worktree list --porcelain`
- * always reports) is one of *this coordinator's own* agent worktrees — i.e.
- * lives under `<repoRoot>/.claude/worktrees/`. `repoRoot` is the caller's own
- * `git rev-parse --show-toplevel`, which in a linked worktree resolves to
- * that worktree's own root, not the main checkout — so two coordinators
- * running in two different worktrees of the same repo (e.g. two Orca
- * worktrees) each get a distinct prefix here, even though they share one
- * `.git` and therefore one branch/worktree-list namespace.
+ * always reports) is one of `/forge`'s own agent worktrees — i.e. lives
+ * under some checkout's `.claude/worktrees/`, as opposed to the main
+ * checkout itself or an ordinary feature-branch worktree a human made by
+ * hand.
  *
- * Before this helper existed, `preflight.ts` matched on the substring
- * `'.claude/worktrees/'` alone, which is true of *every* coordinator's agent
- * worktrees regardless of which checkout launched them — so one
- * coordinator's `preflight`/`preflight --post-dispatch` would fail on a
- * sibling coordinator's in-flight worker (a worktree mid-bootstrap, not yet
- * locked, is indistinguishable from one that skipped bootstrap entirely).
- * Prefix-matching against the caller's own `repoRoot` fixes that without
- * needing any run-scoping: Claude Code's `Agent` `isolation: "worktree"`
- * always nests an agent's worktree inside the launching worktree's own
- * `.claude/worktrees/`, never a sibling's.
+ * **This used to be `isOwnAgentWorktree(directory, repoRoot)`, matching only
+ * `<repoRoot>/.claude/worktrees/`** — `repoRoot` being the caller's own `git
+ * rev-parse --show-toplevel`, on the assumption that Claude Code's `Agent`
+ * `isolation: "worktree"` always nests a new agent worktree inside the
+ * *launching* worktree's own `.claude/worktrees/`. **That assumption is
+ * false**: measured across three separate `/forge` runs, each launched from
+ * an Orca-managed secondary worktree
+ * (`~/orca/workspaces/<repo>/{urchin,tern,hake}`), every dispatched agent
+ * worktree landed under the repo's **main checkout's**
+ * `.claude/worktrees/` instead — regardless of which worktree the
+ * coordinator itself was running from (see `reference/incidents.md`, "The
+ * post-dispatch audit that checked zero worktrees"). Under that prefix
+ * filter, a coordinator running from anywhere but the main checkout matched
+ * none of its own real agent worktrees, so `preflight --post-dispatch`
+ * printed `0 worktree(s) checked ... OK` and every one of its four
+ * enforcement gates (duplicate ticket worktree, duplicate branch number,
+ * unlocked-past-deadline, branch/ticket mismatch) silently never ran.
+ *
+ * The fix is to stop trying to scope "own" by *path* at all — this function
+ * now matches any agent worktree, anywhere, from any coordinator on this
+ * repo. Whose it is (this run's, a sibling run's, or unattributed) is
+ * decided downstream from the worktree's own `git worktree lock` reason via
+ * {@link resolveWorktreeOwner}'s `runId`, which is the one signal that
+ * actually identifies a run — see `preflight.ts`'s `mainPostDispatch`.
  */
-export function isOwnAgentWorktree(directory: string, repoRoot: string): boolean {
-  const ownWorktreesPrefix = path.join(repoRoot, '.claude', 'worktrees') + path.sep
-  return directory.startsWith(ownWorktreesPrefix)
+export function isAgentWorktree(directory: string): boolean {
+  return directory.includes(`${path.sep}.claude${path.sep}worktrees${path.sep}`)
 }
 
 /**

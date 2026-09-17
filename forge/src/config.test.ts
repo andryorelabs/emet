@@ -142,6 +142,32 @@ describe('loadForgeConfig', () => {
     expect((result as { reason: string }).reason).toContain(`"${field}"`)
   })
 
+  test('accepts "auto" for concurrency.maxLiveWorkers', async () => {
+    await writeConfig({ concurrency: { maxLiveWorkers: 'auto' } })
+    const result = await loadForgeConfig(repoRoot)
+    expect(result.status).toBe('ok')
+    expect(
+      (result as { config: typeof DEFAULT_FORGE_CONFIG }).config.concurrency.maxLiveWorkers,
+    ).toBe('auto')
+  })
+
+  test('rejects a concurrency.maxLiveWorkers string other than "auto"', async () => {
+    await writeConfig({ concurrency: { maxLiveWorkers: 'unlimited' } })
+    const result = await loadForgeConfig(repoRoot)
+    expect(result.status).toBe('malformed')
+    expect((result as { reason: string }).reason).toMatch(
+      /"concurrency.maxLiveWorkers" must be a positive integer, or the string "auto"/,
+    )
+  })
+
+  test('defaults concurrency.maxLiveWorkers to "auto" when omitted', async () => {
+    await writeConfig({})
+    const result = await loadForgeConfig(repoRoot)
+    expect(
+      (result as { config: typeof DEFAULT_FORGE_CONFIG }).config.concurrency.maxLiveWorkers,
+    ).toBe('auto')
+  })
+
   test('rejects preflight.requiredFiles when not an array', async () => {
     await writeConfig({ preflight: { requiredFiles: 'nope' } })
     const result = await loadForgeConfig(repoRoot)
