@@ -23,12 +23,13 @@ import {
 } from './runs'
 import {
   isSlotStale,
+  listOccupiedSlots,
   resolveMaxLiveWorkers,
   resolveSlotsDirectory,
 } from './slots'
 import {
   classifyByContent,
-  isOwnAgentWorktree,
+  isAgentWorktree,
   isSafeToDelete,
   isWorktreeAgentBranchLive,
   listBranches,
@@ -379,6 +380,7 @@ export type PostDispatchFailure = {
     | 'duplicate-ticket-branch-number'
     | 'unlocked-past-deadline'
     | 'branch-ticket-mismatch'
+    | 'missing-worktrees'
   readonly message: string
 }
 
@@ -502,6 +504,91 @@ export function findWorktreesMissingLockPastDeadline(
   })
 }
 
+function buildDuplicateTicketWorktreeFailures(
+  entries: readonly WorktreeEntry[],
+): PostDispatchFailure[] {
+  const failures: PostDispatchFailure[] = []
+  for (const [ticket, group] of findDuplicateTicketWorktrees(entries)) {
+    failures.push({
+      kind: 'duplicate-ticket-worktree',
+      message: `${ticket} is claimed by ${group.length} worktrees — pick the canonical one, delete/re-lock the rest:\n${group.map((entry) => `  ${entry.directory} (${entry.branch ?? 'detached'}, HEAD ${entry.head ?? 'unknown'})`).join('\n')}`,
+    })
+  }
+  return failures
+}
+
+function buildDuplicateTicketBranchNumberFailures(
+  branchNames: readonly string[],
+  branchPrefix: string,
+): PostDispatchFailure[] {
+  const failures: PostDispatchFailure[] = []
+  for (const [number, names] of findDuplicateTicketBranchNumbers(branchNames, branchPrefix)) {
+    failures.push({
+      kind: 'duplicate-ticket-branch-number',
+      message: `Ticket ${branchPrefix.toUpperCase()}-${number} has ${names.length} branches: ${names.join(', ')} — one of these was created in error.`,
+    })
+  }
+  return failures
+}
+
+function buildUnlockedPastDeadlineFailures(
+  entries: readonly WorktreeEntry[],
+  maxAgeMs: number,
+  nowMs: number,
+  statMtimeMs: (directory: string) => number | null,
+): PostDispatchFailure[] {
+  return findWorktreesMissingLockPastDeadline(entries, maxAgeMs, nowMs, statMtimeMs).map(
+    (entry) => ({
+      kind: 'unlocked-past-deadline',
+      message: `${entry.directory} has no git worktree lock ${Math.round(maxAgeMs / 1000)}s+ after dispatch — the worker skipped bootstrap step 0. Re-lock it with: git worktree lock ${entry.directory} --reason "$(forge lock-reason --run <runId> --ticket <ticket>)"`,
+    }),
+  )
+}
+
+/**
+ * A worktree's checked-out branch not matching its own lock's ticket — a
+ * shell mis-routed to the wrong worktree. Scoped by whichever `entries` the
+ * caller passes: `auditPostDispatch` passes everything (no run to scope by),
+ * `mainPostDispatch` passes only entries it has already attributed to the
+ * current run, so a sibling coordinator's own unrelated mismatch never fails
+ * *this* run's audit.
+ */
+export function findBranchTicketMismatches(
+  entries: readonly WorktreeEntry[],
+  branchPrefix: string,
+): PostDispatchFailure[] {
+  const failures: PostDispatchFailure[] = []
+  for (const entry of entries) {
+    const owner = resolveWorktreeOwner(entry)
+    if (!owner || !entry.branch) continue
+    if (!isBranchMatchingTicket(entry.branch, owner.ticket, branchPrefix)) {
+      failures.push({
+        kind: 'branch-ticket-mismatch',
+        message: `${entry.directory} is checked out on branch ${entry.branch}, but its own lock names ticket ${owner.ticket} — a shell was likely routed to the wrong worktree.`,
+      })
+    }
+  }
+  return failures
+}
+
+/**
+ * Which of `expectedTickets` (this run's own slot holdings — see
+ * `mainPostDispatch`) have no matching entry in `mineEntries` (worktrees
+ * already attributed to this run). Empty means every ticket this run
+ * dispatched has a locked worktree accounted for.
+ */
+export function findMissingTicketsForRun(
+  mineEntries: readonly WorktreeEntry[],
+  expectedTickets: readonly string[],
+): string[] {
+  const claimed = new Set(
+    mineEntries
+      .map((entry) => resolveWorktreeOwner(entry)?.ticket)
+      .filter((ticket): ticket is string => Boolean(ticket)),
+  )
+  return expectedTickets.filter((ticket) => !claimed.has(ticket))
+}
+
 /**
  * The four post-dispatch gates from `docs/agents/forge.md` — run once,
  * immediately after a wave's batch of parallel `Agent` calls returns, before
@@ -509,6 +596,12 @@ export function findWorktreesMissingLockPastDeadline(
  * above (which only ever warns/informs about a live worktree), every finding
  * here is a hard failure: each one means dispatch itself went wrong, not
  * that a long-running worker is merely still in flight.
+ *
+ * Runs every check over exactly the `entries`/`ticketBranchNames` given, with
+ * no run-scoping of its own — `mainPostDispatch` is what decides which
+ * entries enter this audit at all, and additionally runs the run-scoped
+ * missing-worktrees check this function doesn't know about (it has no
+ * `runId` or slot data to compare against).
  */
 export function auditPostDispatch(
   entries: readonly WorktreeEntry[],
@@ -522,50 +615,17 @@ export function auditPostDispatch(
     readonly branchPrefix: string
   },
 ): PostDispatchFailure[] {
-  const branchPrefix = options.branchPrefix
-  const failures: PostDispatchFailure[] = []
-
-  for (const [ticket, group] of findDuplicateTicketWorktrees(entries)) {
-    failures.push({
-      kind: 'duplicate-ticket-worktree',
-      message: `${ticket} is claimed by ${group.length} worktrees — pick the canonical one, delete/re-lock the rest:\n${group.map((entry) => `  ${entry.directory} (${entry.branch ?? 'detached'}, HEAD ${entry.head ?? 'unknown'})`).join('\n')}`,
-    })
-  }
-
-  for (const [number, names] of findDuplicateTicketBranchNumbers(
-    ticketBranchNames,
-    branchPrefix,
-  )) {
-    failures.push({
-      kind: 'duplicate-ticket-branch-number',
-      message: `Ticket ${branchPrefix.toUpperCase()}-${number} has ${names.length} branches: ${names.join(', ')} — one of these was created in error.`,
-    })
-  }
-
-  for (const entry of findWorktreesMissingLockPastDeadline(
-    entries,
-    options.maxUnlockedAgeMs,
-    options.nowMs,
-    options.statMtimeMs,
-  )) {
-    failures.push({
-      kind: 'unlocked-past-deadline',
-      message: `${entry.directory} has no git worktree lock ${Math.round(options.maxUnlockedAgeMs / 1000)}s+ after dispatch — the worker skipped bootstrap step 0. Re-lock it with: git worktree lock ${entry.directory} --reason "$(forge lock-reason --run <runId> --ticket <ticket>)"`,
-    })
-  }
-
-  for (const entry of entries) {
-    const owner = resolveWorktreeOwner(entry)
-    if (!owner || !entry.branch) continue
-    if (!isBranchMatchingTicket(entry.branch, owner.ticket, branchPrefix)) {
-      failures.push({
-        kind: 'branch-ticket-mismatch',
-        message: `${entry.directory} is checked out on branch ${entry.branch}, but its own lock names ticket ${owner.ticket} — a shell was likely routed to the wrong worktree.`,
-      })
-    }
-  }
-
-  return failures
+  return [
+    ...buildDuplicateTicketWorktreeFailures(entries),
+    ...buildDuplicateTicketBranchNumberFailures(ticketBranchNames, options.branchPrefix),
+    ...buildUnlockedPastDeadlineFailures(
+      entries,
+      options.maxUnlockedAgeMs,
+      options.nowMs,
+      options.statMtimeMs,
+    ),
+    ...findBranchTicketMismatches(entries, options.branchPrefix),
+  ]
 }
 
 /**
@@ -577,60 +637,154 @@ export function auditPostDispatch(
 const POST_DISPATCH_UNLOCKED_MAX_AGE_MS = 30_000
 
 /**
- * `--post-dispatch` mode. `--run <runId>` is accepted (so the exact command
- * `docs/agents/forge.md` documents never errors) but not required and not
- * used to scope detection: an unlocked worktree can't be attributed to any
- * run at all (that's the whole problem, see
- * {@link findWorktreesMissingLockPastDeadline}), and a duplicate ticket or
- * branch number is a failure regardless of which run(s) created the
- * duplicates.
+ * `--post-dispatch` mode: run once, immediately after a wave's batch of
+ * parallel `Agent` calls returns, before any worker has had a chance to
+ * commit.
  *
- * What *is* scoped is which worktrees/branches enter the audit at all:
- * {@link isOwnAgentWorktree} keeps only entries under this coordinator's own
- * `repoRoot`, and ticket branches are kept only when checked out inside that
- * same tree — so a sibling coordinator running a different spec in another
- * git worktree of this repo (e.g. another Orca worktree) never trips these
- * gates, no matter how mid-bootstrap or unlocked its own workers currently
- * are.
+ * **Scoping used to be by path** (`isOwnAgentWorktree(entry, repoRoot)`) —
+ * every entry under the *coordinator's own* `repoRoot`'s `.claude/worktrees/`
+ * was "mine", everything else invisible, on the assumption that a dispatched
+ * agent worktree always nests under the launching worktree. That assumption
+ * is false under Orca (see `worktrees.ts`'s `isAgentWorktree` doc comment and
+ * `reference/incidents.md`), so this now scopes by **run**, using
+ * {@link resolveWorktreeOwner}'s `runId` — the one signal that actually
+ * identifies whose dispatch a worktree belongs to, regardless of where
+ * `isolation: "worktree"` physically put it:
+ *
+ * - **duplicate-ticket-worktree / duplicate-ticket-branch-number**: run over
+ *   *every* agent worktree/branch on the repo, any run — these only ever
+ *   fire when the *same ticket* appears twice, which a sibling coordinator's
+ *   own (necessarily different) ticket can never trigger, so there is
+ *   nothing to falsely fail here by widening the scope.
+ * - **branch-ticket-mismatch**: scoped to entries this run's own `--run
+ *   <runId>` owns — a sibling's unrelated mismatch is that sibling's audit
+ *   to fail, not this one's.
+ * - **missing-worktrees** (new): the real fix for the "0 worktree(s)
+ *   checked" vacuous pass. This run's own slot holdings (each worker
+ *   acquires its slot immediately before its `Agent` call, per Phase 6 —
+ *   see `slots.ts`) say how many tickets this wave dispatched; if fewer
+ *   locked worktrees are attributed to this run than that, something is
+ *   wrong — a worker skipped bootstrap, or `isolation: "worktree"` put it
+ *   somewhere unexpected — and this now **fails**, listing any stale
+ *   unlocked candidates as leads, rather than silently reporting `0
+ *   worktree(s) checked ... OK`. `--expect <n>` overrides the slot-derived
+ *   count for a coordinator that dispatched without acquiring slots.
+ *
+ * With no `--run` given at all (an ad-hoc/manual invocation — every
+ * documented dispatch always passes it), this falls back to the old
+ * behavior: every check runs globally, best-effort, since there is no run to
+ * scope by.
  */
-async function mainPostDispatch(
-  config: ForgeConfig,
-  repoRoot: string,
-): Promise<void> {
+async function mainPostDispatch(config: ForgeConfig): Promise<void> {
   const branchPrefix = config.ticket.branchPrefix
+  const currentRunId = readFlagValue('--run')
+  const explicitExpectRaw = readFlagValue('--expect')
+
   const allWorktreeEntries = await listWorktreeEntries()
-  const worktreeEntries = allWorktreeEntries.filter((entry) =>
-    isOwnAgentWorktree(entry.directory, repoRoot),
-  )
+  const agentEntries = allWorktreeEntries.filter((entry) => isAgentWorktree(entry.directory))
   const ticketBranches = await listBranches(`${branchPrefix}-*`)
-  const ownTicketBranchNames = ticketBranches
-    .filter((branch) => isOwnAgentWorktree(branch.worktreePath, repoRoot))
+  const agentTicketBranchNames = ticketBranches
+    .filter((branch) => isAgentWorktree(branch.worktreePath))
     .map((branch) => branch.name)
 
-  const failures = auditPostDispatch(worktreeEntries, ownTicketBranchNames, {
-    maxUnlockedAgeMs: POST_DISPATCH_UNLOCKED_MAX_AGE_MS,
-    nowMs: Date.now(),
-    statMtimeMs: (directory) => {
-      try {
-        return statSync(directory).mtimeMs
-      } catch {
-        return null
-      }
-    },
-    branchPrefix,
-  })
+  const nowMs = Date.now()
+  const statMtimeMs = (directory: string): number | null => {
+    try {
+      return statSync(directory).mtimeMs
+    } catch {
+      return null
+    }
+  }
+
+  const failures: PostDispatchFailure[] = [
+    ...buildDuplicateTicketWorktreeFailures(agentEntries),
+    ...buildDuplicateTicketBranchNumberFailures(agentTicketBranchNames, branchPrefix),
+  ]
+
+  if (!currentRunId) {
+    failures.push(
+      ...buildUnlockedPastDeadlineFailures(
+        agentEntries,
+        POST_DISPATCH_UNLOCKED_MAX_AGE_MS,
+        nowMs,
+        statMtimeMs,
+      ),
+      ...findBranchTicketMismatches(agentEntries, branchPrefix),
+    )
+    if (failures.length > 0) {
+      console.error('forge:preflight --post-dispatch failed:\n')
+      for (const failure of failures) console.error(`- ${failure.message}`)
+      process.exitCode = 1
+      return
+    }
+    console.log(
+      `forge:preflight --post-dispatch OK — ${agentEntries.length} worktree(s) checked (no --run given, so not scoped to any one dispatch), no ticket/branch duplicates, no unlocked stragglers.`,
+    )
+    return
+  }
+
+  const mineEntries = agentEntries.filter(
+    (entry) => resolveWorktreeOwner(entry)?.runId === currentRunId,
+  )
+  failures.push(...findBranchTicketMismatches(mineEntries, branchPrefix))
+
+  const expectedTickets =
+    explicitExpectRaw === undefined
+      ? (await listOccupiedSlots())
+          .filter((entry) => entry.holder.runId === currentRunId)
+          .map((entry) => entry.holder.ticket)
+      : []
+  const explicitExpectedCount =
+    explicitExpectRaw !== undefined ? Number(explicitExpectRaw) : undefined
+  const expectationKnown =
+    expectedTickets.length > 0 || (explicitExpectedCount !== undefined && explicitExpectedCount > 0)
+
+  if (expectationKnown) {
+    const missingTickets = findMissingTicketsForRun(mineEntries, expectedTickets)
+    const missingCount =
+      explicitExpectedCount !== undefined
+        ? Math.max(0, explicitExpectedCount - mineEntries.length)
+        : missingTickets.length
+
+    if (missingCount > 0) {
+      const unlockedCandidates = agentEntries.filter((entry) => entry.lockedReason === null)
+      const stale = findWorktreesMissingLockPastDeadline(
+        unlockedCandidates,
+        POST_DISPATCH_UNLOCKED_MAX_AGE_MS,
+        nowMs,
+        statMtimeMs,
+      )
+      const ticketsNote =
+        expectedTickets.length > 0
+          ? ` (tickets: ${expectedTickets.join(', ')}${missingTickets.length > 0 ? `; missing: ${missingTickets.join(', ')}` : ''})`
+          : ''
+      const staleNote =
+        stale.length > 0
+          ? ` ${stale.length} unlocked worktree(s) past the ${Math.round(POST_DISPATCH_UNLOCKED_MAX_AGE_MS / 1000)}s deadline may be the missing one(s) — a worker may have skipped bootstrap step 0:\n${stale.map((entry) => `  ${entry.directory}`).join('\n')}`
+          : ' No unlocked candidate worktrees were found either — check where isolation:"worktree" actually placed them (see reference/incidents.md).'
+      failures.push({
+        kind: 'missing-worktrees',
+        message: `Expected ${explicitExpectedCount ?? expectedTickets.length} locked worktree(s) for run ${currentRunId}${ticketsNote}, found ${mineEntries.length}.${staleNote}`,
+      })
+    }
+  }
 
   if (failures.length > 0) {
     console.error('forge:preflight --post-dispatch failed:\n')
-    for (const failure of failures) {
-      console.error(`- ${failure.message}`)
-    }
+    for (const failure of failures) console.error(`- ${failure.message}`)
     process.exitCode = 1
     return
   }
 
+  if (mineEntries.length === 0 && agentEntries.length > 0 && !expectationKnown) {
+    console.log(
+      `forge:preflight --post-dispatch OK — but 0 of run ${currentRunId}'s worktree(s) were attributed out of ${agentEntries.length} agent worktree(s) present, and no slot/--expect data was available to check for a miss. Verify by hand: "forge slots --list" and "git worktree list --porcelain".`,
+    )
+    return
+  }
+
   console.log(
-    `forge:preflight --post-dispatch OK — ${worktreeEntries.length} worktree(s) checked, no ticket/branch duplicates, no unlocked stragglers.`,
+    `forge:preflight --post-dispatch OK — ${mineEntries.length} of run ${currentRunId}'s worktree(s) checked (${agentEntries.length} total across every /forge coordinator in this repo), no ticket/branch duplicates, no unlocked stragglers.`,
   )
 }
 
@@ -678,7 +832,7 @@ async function main(config: ForgeConfig, repoRoot: string) {
 
   const allWorktreeEntries = await listWorktreeEntries()
   const worktreeEntries = allWorktreeEntries.filter((entry) =>
-    isOwnAgentWorktree(entry.directory, repoRoot),
+    isAgentWorktree(entry.directory),
   )
   if (worktreeEntries.length > 0) {
     const mainTree = await resolveMainTree(config.repo.remote, config.repo.trunk)
@@ -816,7 +970,7 @@ export async function run(argv: string[]): Promise<void> {
     }
     const config = await requireForgeConfig(repoRoot)
     if (argv.includes('--post-dispatch')) {
-      await mainPostDispatch(config, repoRoot)
+      await mainPostDispatch(config)
     } else {
       await main(config, repoRoot)
     }

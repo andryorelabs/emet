@@ -40,6 +40,34 @@ step 0 of `reference/worker-prompt.md` close that: the coordinator asks the
 CLI for the reason, the worker runs one literal command with it, and the CLI
 refuses to emit a reason its own parser can't read back.
 
+## Agent worktrees nesting under the main checkout, not the launching worktree
+
+`isOwnAgentWorktree`'s original design assumed `Agent({isolation:
+"worktree"})` always nests a dispatched agent's worktree inside the
+*launching* worktree's own `.claude/worktrees/`. Three separate runs
+(coordinators in `~/orca/workspaces/andryore-dev/{urchin,tern,hake}`, each a
+non-main git worktree of the same repo) measured the opposite: every agent
+worktree landed under the **main checkout's** `.claude/worktrees/` instead,
+regardless of which worktree dispatched it. The path-prefix filter then
+matched zero entries, and `forge preflight --post-dispatch` printed
+`0 worktree(s) checked ... OK` — a vacuous pass, not a real one — silently
+turning off all four of its enforcement gates for every Orca-launched wave.
+
+The fix could not simply be "match the main checkout's path instead": the
+prefix filter existed in the first place to stop one coordinator's audit
+failing on a *sibling* coordinator's own legitimate, mid-bootstrap agent
+worktree — and once every coordinator's agents nest under the same main
+checkout, a path-based filter can no longer tell those two cases apart at
+all. Ownership had to move from **where** a worktree lives to **which run**
+it belongs to: `isAgentWorktree` now matches any `.claude/worktrees/` entry
+(repo-scoped by construction, since `git worktree list` only ever lists this
+repo's own worktrees), and `resolveWorktreeOwner`'s `run=` field — already
+parsed out of the lock reason for other purposes — attributes each one. A new
+check closes the vacuous-pass hole for good: post-dispatch compares how many
+worktrees got attributed to this run against how many slots this run is
+holding, and hard-fails a mismatch instead of ever printing "0 checked, OK"
+again.
+
 ## The 8-finder roster hang
 
 A `code-review` fan-out of 8 `angle-*`-style finder sub-agents hung for
@@ -81,3 +109,26 @@ while the 129K ticket kept those separate. This is the source of Phase 3's
 ticket-splitting tripwires (estimated peak > 160K; touch set > 8 files or
 > 1,500 lines; new surface > 500 lines; more than one new E2E spec; a new
 page object and a new spec together).
+
+## A confabulated success with zero tool calls behind it
+
+A worker/fork reported finishing its assigned work — a confident, specific
+summary of what it had done — while its transcript showed zero tool calls and
+its worktree had no commit at all. Nothing in that report distinguished it
+from a real one by reading the summary alone; only checking `git -C
+<worktree> log`/`status` exposed it. This is why Phase 8 treats "reported
+done" and "actually done" as separate facts to verify, never one implied by
+the other: a worker or fork that reports success with no commit in its
+worktree did not do the work, no matter how confident the report reads.
+
+## A background E2E run killed for "low memory" with 50+ GiB free
+
+A background `Bash` E2E suite was killed by the harness's own low-memory
+guard while the host had 50+ GiB of `MemAvailable` free and no OOM kill in
+`dmesg` — the guard's signal didn't correspond to the host's actual memory
+state. This is a harness reliability gap, not something a repo's own config
+can fix directly, but it's why `resources.ts`'s memory-headroom brake reads
+`MemAvailable` itself (via `/proc/meminfo`) rather than trusting any
+higher-level "low memory" signal, and why every one of its thresholds
+(`FORGE_MEM_RESERVE_GIB`, `FORGE_MEM_PER_WORKER_GIB`) is an env override a
+real run can tune against what it actually observes on a given host.

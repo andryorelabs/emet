@@ -73,12 +73,17 @@ message, multiple tool uses), each with `isolation: "worktree"` **and
 session happens to be on).
 
 **Immediately after that batch returns, before any worker has had a chance to
-commit, run `forge preflight --post-dispatch`** — the fourth enforcement
-gate on a dispatch. It hard-fails on:
+commit, run `forge preflight --run <runId> --post-dispatch`** — always pass
+`--run`, not the bare flag: it's how this audit attributes agent worktrees to
+*this* wave instead of a sibling coordinator's. It hard-fails on:
 two worktrees claiming the same ticket, two worker branches with the same
-ticket number, a worktree still unlocked 30s+ after dispatch, or a
-worktree's branch not matching its own lock's ticket (see
-`reference/incidents.md` for the real runs that exposed each of these). Fix
+ticket number, a worktree still unlocked 30s+ after dispatch, a worktree's
+branch not matching its own lock's ticket, or fewer of this run's own
+worktrees found than slots this run is holding (see `reference/incidents.md`
+for the real runs that exposed each of these — the last one is what closes the
+gap where `Agent({isolation: "worktree"})` nests every agent worktree under
+the **main checkout's** `.claude/worktrees/`, never the launching worktree's
+own, when dispatched from a non-main worktree such as an Orca one). Fix
 whatever it flags before proceeding to Phase 7 — don't let a bad dispatch run
 unattended for a whole wave.
 
@@ -230,6 +235,12 @@ needs-a-human-decision ticket is flagged. This is the real backstop for the
 regardless of ticket type, unlike the E2E queue's own check, which only fires
 for E2E-touching tickets.
 
+A worker (or a coordinator's own fork) that reports success with no commit in
+its worktree did not do the work — a confident summary is not evidence.
+Verify with `git -C <worktree> log`/`status` before merging or trusting the
+report; a transcript with zero tool calls behind a "done" claim is the
+canonical shape of this failure (`reference/incidents.md`).
+
 Also run `forge usage --session <this coordinator session>` and, per worker,
 flag (report, don't block the merge on) any full `Read` over
 `usage.oversizedReadLines` lines — same "flag in Phase 9's report" treatment
@@ -270,7 +281,10 @@ entirely (`reference/incidents.md`). If `--stalled` reports the roster hung,
 `TaskStop` every one of those tasks and retry `code-review` at `--level
 medium` (smaller fan-out) or, if it hangs again, run the review in a single
 pass with no fan-out at all rather than retrying the same shape a third
-time. Then run this repo's full test suite exactly once over the merged
+time. If other background tasks (another wave's workers, a fork) are already
+running when this phase starts, skip straight to a no-fan-out `code-review`
+pass instead of discovering the same roster hang a second time on an already
+busy host. Then run this repo's full test suite exactly once over the merged
 result (`commands.fullSuite`, the shared/singleton resource from Phase 7, if
 this repo has one).
 

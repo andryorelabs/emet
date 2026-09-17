@@ -8,9 +8,11 @@ import {
   checkSlotCapacity,
   classifyWorktreeEntry,
   evaluateDependencyGate,
+  findBranchTicketMismatches,
   findDuplicateTicketBranchNumbers,
   findDuplicateTicketWorktrees,
   findMissingRequiredCommands,
+  findMissingTicketsForRun,
   findTodoMarkers,
   findWorktreesMissingLockPastDeadline,
   isBranchMatchingTicket,
@@ -425,6 +427,69 @@ describe('auditPostDispatch', () => {
     expect(failures).toEqual([
       expect.objectContaining({ kind: 'branch-ticket-mismatch' }),
     ])
+  })
+})
+
+describe('findBranchTicketMismatches', () => {
+  test('empty when every entry\'s branch matches its own lock ticket', () => {
+    const entry = lockedFor(
+      '/repo/.claude/worktrees/agent-a',
+      'ao-321-worktree-lock-guard',
+      'AO-321',
+    )
+    expect(findBranchTicketMismatches([entry], 'ao')).toEqual([])
+  })
+
+  test('reports a branch that does not match its own lock ticket', () => {
+    const entry = lockedFor(
+      '/repo/.claude/worktrees/agent-a',
+      'ao-999-wrong-branch',
+      'AO-321',
+    )
+    expect(findBranchTicketMismatches([entry], 'ao')).toEqual([
+      expect.objectContaining({ kind: 'branch-ticket-mismatch' }),
+    ])
+  })
+
+  test('skips an unlocked or detached entry — nothing to compare', () => {
+    const unlocked: WorktreeEntry = {
+      directory: '/repo/.claude/worktrees/agent-a',
+      branch: 'ao-1-something',
+      lockedReason: null,
+    }
+    const detached: WorktreeEntry = {
+      directory: '/repo/.claude/worktrees/agent-b',
+      branch: null,
+      lockedReason: `forge run=run-a ticket=AO-1 anchor=4242 at=2026-09-11T00:00:00.000Z`,
+    }
+    expect(findBranchTicketMismatches([unlocked, detached], 'ao')).toEqual([])
+  })
+})
+
+describe('findMissingTicketsForRun', () => {
+  test('empty when every expected ticket has a matching mine-entry', () => {
+    const entry = lockedFor(
+      '/repo/.claude/worktrees/agent-a',
+      'ao-1-something',
+      'AO-1',
+    )
+    expect(findMissingTicketsForRun([entry], ['AO-1'])).toEqual([])
+  })
+
+  test('reports every expected ticket with no matching entry', () => {
+    const entry = lockedFor(
+      '/repo/.claude/worktrees/agent-a',
+      'ao-1-something',
+      'AO-1',
+    )
+    expect(findMissingTicketsForRun([entry], ['AO-1', 'AO-2', 'AO-3'])).toEqual([
+      'AO-2',
+      'AO-3',
+    ])
+  })
+
+  test('reports every expected ticket when no entries are attributed at all', () => {
+    expect(findMissingTicketsForRun([], ['AO-1', 'AO-2'])).toEqual(['AO-1', 'AO-2'])
   })
 })
 
