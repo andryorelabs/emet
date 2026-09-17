@@ -21,7 +21,11 @@ import {
   resolveSessionSlug,
   type RunVerdict,
 } from './runs'
-import { isSlotStale, resolveSlotsDirectory } from './slots'
+import {
+  isSlotStale,
+  resolveMaxLiveWorkers,
+  resolveSlotsDirectory,
+} from './slots'
 import {
   classifyByContent,
   isOwnAgentWorktree,
@@ -65,29 +69,10 @@ import {
  * is exactly what an agent would learn to add once its own gate turns red.
  */
 
-function readPositiveIntEnvironment(name: string, fallback: number): number {
-  const raw = process.env[name]
-  if (raw === undefined) return fallback
-  const parsed = Number(raw)
-  return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback
-}
-
 function readFlagValue(flag: string): string | undefined {
   const flagIndex = process.argv.indexOf(flag)
   if (flagIndex === -1) return undefined
   return process.argv[flagIndex + 1]
-}
-
-/**
- * `FORGE_MAX_LIVE_WORKERS` still overrides `forge.config.json`'s
- * `concurrency.maxLiveWorkers` when set — same precedence `slots.ts` already
- * honors, kept so the existing escape hatch never breaks.
- */
-function resolveMaxLiveWorkers(config: ForgeConfig): number {
-  return readPositiveIntEnvironment(
-    'FORGE_MAX_LIVE_WORKERS',
-    config.concurrency.maxLiveWorkers,
-  )
 }
 
 /**
@@ -265,22 +250,41 @@ export type SlotCapacityCheck = {
   readonly freeCount: number
   readonly cap: number
   readonly waveSize: number
+  /** `false` only when every slot is occupied — the one condition that
+   * actually blocks dispatch outright. See the doc comment below for why
+   * `freeCount < waveSize` alone is no longer this. */
   readonly ok: boolean
+  /** `true` when some, but fewer than `waveSize`, slots are free — this
+   * wave can still dispatch, just fewer tickets than a full wave. Never
+   * `true` when `ok` is `false` (0 free is reported via `ok` alone, not as
+   * "degraded"). */
+  readonly degraded: boolean
 }
 
 /**
- * Can this wave's up to `waveSize` workers each claim a free slot right
- * now? Counting live claims and then deciding to dispatch would be
- * read-then-write, not atomic, and would race across two coordinators
- * checking at the same moment — the actual fix for that (N slots acquired
- * one at a time via `slots.ts`'s `acquireSlot`, immediately before
- * each worker's `Agent` call) belongs to dispatch time (Phase 6), out of
- * this script's scope. This only answers the capacity question ahead of
- * time; it never acquires or releases a slot itself. `isSlotFree` is
- * injected so tests can simulate "slots free" and "slots exhausted" without
- * touching the filesystem — production passes the negation of
- * `slots.ts`'s {@link isSlotStale} over each of
- * `<git-common-dir>/forge/slots/<index>`.
+ * Can this wave dispatch *at all* right now — not "a full wave", just at
+ * least one worker? A hard requirement of `freeCount >= waveSize` meant 5
+ * busy slots out of 8 blocked a wave of even a single ticket, which is the
+ * cap fighting the very thing it exists to protect: real host capacity was
+ * never actually exhausted, only `waveSize`'s worth of it. `acquireSlot`
+ * (`slots.ts`) is already per-worker and already drops just the one ticket
+ * that couldn't get a slot, not the whole wave — this check now mirrors that
+ * granularity instead of being stricter than the mechanism it's gating.
+ * `freeCount === 0` is still a hard failure (nothing to dispatch against at
+ * all); `0 < freeCount < waveSize` is `ok: true, degraded: true` (dispatch a
+ * partial wave, note there's less room than a full one) — see `main()` for
+ * how each is surfaced.
+ *
+ * Counting live claims and then deciding to dispatch would be read-then-
+ * write, not atomic, and would race across two coordinators checking at the
+ * same moment — the actual fix for that (N slots acquired one at a time via
+ * `slots.ts`'s `acquireSlot`, immediately before each worker's `Agent` call)
+ * belongs to dispatch time (Phase 6), out of this script's scope. This only
+ * answers the capacity question ahead of time; it never acquires or
+ * releases a slot itself. `isSlotFree` is injected so tests can simulate
+ * "slots free" and "slots exhausted" without touching the filesystem —
+ * production passes the negation of `slots.ts`'s {@link isSlotStale} over
+ * each of the host-wide slot pool's indices.
  */
 export function checkSlotCapacity(
   cap: number,
@@ -291,7 +295,13 @@ export function checkSlotCapacity(
   for (let index = 0; index < cap; index++) {
     if (isSlotFree(index)) freeCount++
   }
-  return { freeCount, cap, waveSize, ok: freeCount >= waveSize }
+  return {
+    freeCount,
+    cap,
+    waveSize,
+    ok: freeCount > 0,
+    degraded: freeCount > 0 && freeCount < waveSize,
+  }
 }
 
 type WorktreeEntryReport = {
@@ -713,9 +723,14 @@ async function main(config: ForgeConfig, repoRoot: string) {
     resolveWaveSize(config),
     (index) => isSlotStale(slotsDirectory, index),
   )
+  const capacityWarnLines: string[] = []
   if (!capacityCheck.ok) {
     failures.push(
-      `Not enough free worker slots for a full wave: ${capacityCheck.freeCount} free out of ${capacityCheck.cap} (FORGE_MAX_LIVE_WORKERS), need ${capacityCheck.waveSize}.`,
+      `No free worker slots at all: 0 free out of ${capacityCheck.cap} — every slot is held by a live or idle run. Wait for one to free up, or "forge cleanup --run <runId>" a run you know is done.`,
+    )
+  } else if (capacityCheck.degraded) {
+    capacityWarnLines.push(
+      `  only ${capacityCheck.freeCount}/${capacityCheck.cap} worker slot(s) free — this wave can dispatch at most ${capacityCheck.freeCount} of its usual ${capacityCheck.waveSize}; the rest drop from this wave the same way a single denied "forge slots --acquire" already does.`,
     )
   }
 
@@ -752,6 +767,11 @@ async function main(config: ForgeConfig, repoRoot: string) {
   if (dependencyWarnLines.length > 0) {
     console.log(
       `Warning — dependencies (not blocking dispatch):\n${dependencyWarnLines.join('\n')}\n`,
+    )
+  }
+  if (capacityWarnLines.length > 0) {
+    console.log(
+      `Warning — worker capacity (not blocking dispatch):\n${capacityWarnLines.join('\n')}\n`,
     )
   }
 

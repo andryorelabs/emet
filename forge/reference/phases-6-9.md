@@ -21,6 +21,11 @@ MCP server for a `linear` tracker). Fix whatever it flags before dispatching;
 don't dispatch into a dirty or half-initialized repo. A failure here means a
 real, verified gap — an environment quirk it merely couldn't check (e.g. no
 network to validate `gh auth`) shows as a non-blocking warning instead.
+The worker-slot capacity gate is relaxed on purpose: it only hard-fails at
+**zero** free slots host-wide; anywhere from 1 slot up to a full free wave
+prints a warning ("only N/`waveSize` free") and still lets dispatch proceed —
+`acquireSlot` is per-worker, so a partially-full pool already just drops the
+tickets it can't seat from this wave rather than blocking the ones it can.
 
 Compute this wave's frontier against this repo's tracker
 (`~/.claude/forge/reference/tracker-<kind>.md` for the literal calls) —
@@ -33,11 +38,12 @@ Immediately before each survivor's `Agent` call, reserve it with
 `forge claims --reserve <ticket> --run <runId> --anchor <anchorPid>` (the
 real dispatch mutex — see `reference/incidents.md` §AO-285),
 then take a worker slot with `forge slots --acquire --run <runId> --anchor
-<anchorPid> --ticket <ticket>` (the global `concurrency.maxLiveWorkers` cap,
-shared by every coordinator working in this repo — see "Concurrency"). A
-denied reservation
-or a "no free slot" both drop that ticket from this wave; it does not get
-dispatched. **Never call the claims/slots mutex inline via `bun -e`** — an
+<anchorPid> --ticket <ticket>` (the `concurrency.maxLiveWorkers` cap — a
+single pool shared **host-wide**, by every coordinator on this machine across
+every repo, not just this one; see "Concurrency"). A denied reservation, a
+"no free slot", or a denial from the memory-headroom brake (distinct message —
+this host is low on `MemAvailable`, not merely out of slots) all drop that
+ticket from this wave; it does not get dispatched. **Never call the claims/slots mutex inline via `bun -e`** — an
 untypechecked snippet with its positional arguments in the wrong order is
 exactly how a real run lost its reservation silently and ended up with no
 mutex at all (see `reference/incidents.md`). Always go through the `forge`
@@ -198,6 +204,18 @@ stop-on-first-failure invocation `docs/agents/forge.md`'s
 "Shared/singleton resources" names — nothing extra to pass.
 
 ## Phase 8 — Wave close-out
+
+As each worker's completion notification arrives — not once the whole wave is
+done — release that worker's own slot: `forge slots --release --run <runId>
+--ticket <ticket>`. Slot lifetime is per-worker, not per-wave: a worker that
+finished in minute 2 of a 40-minute wave should free its slot for the next
+ticket immediately, not sit on it until this whole phase closes out. `forge
+cleanup --run <runId>` at the end of this phase stays the backstop that
+releases anything still held (a worker that never reported, one flagged and
+left for a human) — it is not the primary release path anymore. A ticket
+retried in Phase 9 re-acquires its own slot from scratch and can be denied
+exactly like a fresh dispatch (no free slot, or the memory brake) if the host
+has filled up since.
 
 Before merging any worker's branch, confirm its ticket has at least one
 tracker comment, a final `.forge/handoff-<ticket>.md` in its worktree

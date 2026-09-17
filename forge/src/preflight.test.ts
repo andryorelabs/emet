@@ -129,29 +129,38 @@ describe('classifyWorktreeEntry', () => {
 })
 
 describe('checkSlotCapacity', () => {
-  test('ok when at least waveSize slots are free', () => {
+  test('ok, not degraded, when at least waveSize slots are free', () => {
     const result = checkSlotCapacity(8, 4, (index) => index < 5)
-    expect(result).toEqual({ freeCount: 5, cap: 8, waveSize: 4, ok: true })
+    expect(result).toEqual({ freeCount: 5, cap: 8, waveSize: 4, ok: true, degraded: false })
   })
 
-  test('ok at exactly the boundary (freeCount === waveSize)', () => {
+  test('ok, not degraded, at exactly the boundary (freeCount === waveSize)', () => {
     const result = checkSlotCapacity(8, 4, (index) => index < 4)
-    expect(result).toEqual({ freeCount: 4, cap: 8, waveSize: 4, ok: true })
+    expect(result).toEqual({ freeCount: 4, cap: 8, waveSize: 4, ok: true, degraded: false })
   })
 
-  test('fails when fewer than waveSize slots are free', () => {
+  // The behavior this replaces: 5 busy slots out of 8 used to hard-fail a
+  // wave of even one ticket. A partial wave can still dispatch — it's ok,
+  // just degraded — since `acquireSlot` already drops only the tickets that
+  // can't get a slot, not the whole wave.
+  test('ok but degraded when fewer than waveSize slots are free (and at least one is)', () => {
     const result = checkSlotCapacity(8, 4, (index) => index < 3)
-    expect(result).toEqual({ freeCount: 3, cap: 8, waveSize: 4, ok: false })
+    expect(result).toEqual({ freeCount: 3, cap: 8, waveSize: 4, ok: true, degraded: true })
   })
 
-  test('fails when every slot is exhausted', () => {
+  test('fails (not merely degraded) when every slot is exhausted', () => {
     const result = checkSlotCapacity(8, 4, () => false)
-    expect(result).toEqual({ freeCount: 0, cap: 8, waveSize: 4, ok: false })
+    expect(result).toEqual({ freeCount: 0, cap: 8, waveSize: 4, ok: false, degraded: false })
   })
 
-  test('ok when every slot is free', () => {
+  test('ok, not degraded, when every slot is free', () => {
     const result = checkSlotCapacity(8, 4, () => true)
-    expect(result).toEqual({ freeCount: 8, cap: 8, waveSize: 4, ok: true })
+    expect(result).toEqual({ freeCount: 8, cap: 8, waveSize: 4, ok: true, degraded: false })
+  })
+
+  test('degraded even with a single free slot out of a large cap', () => {
+    const result = checkSlotCapacity(16, 4, (index) => index === 0)
+    expect(result).toEqual({ freeCount: 1, cap: 16, waveSize: 4, ok: true, degraded: true })
   })
 })
 

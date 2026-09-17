@@ -8,8 +8,16 @@ import {
 import path from 'node:path'
 
 /**
- * Directory-based mutual-exclusion lock, shared by every `/forge` command
- * that needs one (`claims.ts`, `slots.ts`).
+ * Directory-based mutual-exclusion lock. The atomic `mkdirSync`/holder-file
+ * primitive below (`didAcquireLock`, `readLockHolder`, `releaseLock`) is
+ * shared by every `/forge` command that needs one — `claims.ts` and
+ * `slots.ts` both build on it — but {@link resolveLockDirectory} itself,
+ * which resolves a lock's directory under this repo's own
+ * `--git-common-dir`, is no longer one of them: `slots.ts` resolves its own
+ * pool directory host-wide (`~/.local/state/forge/slots`, shared across
+ * every repo on this machine), since the pool it guards is a host resource,
+ * not a per-repo one. `claims.ts` still calls this function — a ticket claim
+ * is a per-repo concept.
  *
  * **Why a directory and not `flock`**: an `flock` lives with the file
  * descriptor that took it, so it dies with the short-lived `bun` process
@@ -19,11 +27,11 @@ import path from 'node:path'
  * hand (`ls`), and survives a crash; the cost is that a crashed holder
  * leaves one behind, which is what the stale-reclaim path below exists for.
  *
- * **Why `--git-common-dir`**: every worktree of a repo shares one real
- * `.git`, and what these locks protect is host-wide (two coordinators, in
- * two different worktrees, racing for the same ticket). Resolving against
- * `.git` directly would give each worktree its own private lock and protect
- * nothing.
+ * **Why `--git-common-dir`** (for callers of {@link resolveLockDirectory}):
+ * every worktree of a repo shares one real `.git`, and what these locks
+ * protect is repo-wide (two coordinators, in two different worktrees of the
+ * same repo, racing for the same ticket). Resolving against `.git` directly
+ * would give each worktree its own private lock and protect nothing.
  *
  * Generic over two things every caller picks for itself: the lock's
  * directory name (via {@link resolveLockDirectory}'s `lockName`, e.g.
@@ -67,11 +75,12 @@ export async function resolveLockDirectory(lockName: string): Promise<string> {
   // the repo root itself. The global `forge` CLI is invoked from whatever
   // directory a worker's tool call happens to be in — often a worktree
   // subdirectory, never guaranteed to be the root — so joining a *relative*
-  // git-common-dir onto an unrelated cwd would resolve `forge/slots` against
-  // a different base per caller, silently splitting the dispatch mutex into
-  // two disagreeing trees. Assert absoluteness rather than trust the flag
-  // silently, since a future git without `--path-format` would otherwise
-  // reintroduce this exact bug with no error at all.
+  // git-common-dir onto an unrelated cwd would resolve `claims.ts`'s lock
+  // directory against a different base per caller, silently splitting the
+  // dispatch mutex into two disagreeing trees. Assert absoluteness rather
+  // than trust the flag silently, since a future git without
+  // `--path-format` would otherwise reintroduce this exact bug with no
+  // error at all.
   if (!path.isAbsolute(gitCommonDirectory)) {
     throw new Error(
       `forge-locks: --git-common-dir returned a non-absolute path ("${gitCommonDirectory}") for lock "${lockName}" — refusing to build a lock path that could resolve differently depending on cwd`,

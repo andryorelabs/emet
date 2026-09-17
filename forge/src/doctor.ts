@@ -1,4 +1,4 @@
-import { existsSync } from 'node:fs'
+import { existsSync, readdirSync } from 'node:fs'
 import path from 'node:path'
 
 import { loadForgeConfig, type TrackerKind } from './config'
@@ -12,6 +12,8 @@ import {
   type DependencyProbes,
 } from './dependencies'
 import { findTodoMarkersInDocsAgents } from './preflight'
+import { computeAutoMaxLiveWorkers, readHostResources } from './resources'
+import { listOccupiedSlots, resolveLegacySlotsDirectory } from './slots'
 
 /**
  * `forge doctor` — a read-only fleet sweep. `forge preflight` answers "is
@@ -47,6 +49,13 @@ export type RepoDoctorReport = {
   /** Repo-scoped dependency findings only (`gh`, Linear) — the plugin check
    * is global and printed once, not per repo; see {@link auditFleet}. */
   readonly dependencyFindings: readonly DependencyCheck[]
+  /** Non-`null` only when this repo's `concurrency.maxLiveWorkers` is a
+   * pinned number lower than what this HOST could auto-compute
+   * (`resources.ts`'s `computeAutoMaxLiveWorkers`) — informational, never
+   * part of {@link isReportClean}: a repo may have a deliberate reason to
+   * pin it low (a heavier per-worker footprint than the default budget
+   * assumes), so this is a nudge toward `"auto"`, not a finding to fix. */
+  readonly maxLiveWorkersNote: string | null
 }
 
 /** A repo is clean if every check came back empty/false-negative — used both
@@ -179,6 +188,7 @@ export async function auditRepo(
       selfCheckIssues: [],
       trackerKind: null,
       dependencyFindings: [],
+      maxLiveWorkersNote: null,
     }
   }
 
@@ -186,6 +196,17 @@ export async function auditRepo(
   const hasConfig = configResult.status === 'ok'
   const configError = configResult.status === 'malformed' ? configResult.reason : null
   const trackerKind = configResult.status === 'ok' ? configResult.config.tracker.kind : null
+
+  let maxLiveWorkersNote: string | null = null
+  if (configResult.status === 'ok') {
+    const pinned = configResult.config.concurrency.maxLiveWorkers
+    if (pinned !== 'auto') {
+      const autoCap = computeAutoMaxLiveWorkers(readHostResources())
+      if (pinned < autoCap) {
+        maxLiveWorkersNote = `concurrency.maxLiveWorkers is pinned at ${pinned}, below what this host could auto-compute (${autoCap}) — consider "auto" unless ${pinned} is deliberate`
+      }
+    }
+  }
 
   const docsAgentsDirectory = path.join(absolutePath, 'docs', 'agents')
   const existingDocs = new Set(
@@ -221,6 +242,7 @@ export async function auditRepo(
     selfCheckIssues,
     trackerKind,
     dependencyFindings,
+    maxLiveWorkersNote,
   }
 }
 
@@ -229,7 +251,9 @@ function formatReport(report: RepoDoctorReport): string {
     return `${report.path}: not a git repository — skipped`
   }
   if (isReportClean(report)) {
-    return `${report.path}: OK`
+    return report.maxLiveWorkersNote
+      ? `${report.path}: OK\n  - note: ${report.maxLiveWorkersNote}`
+      : `${report.path}: OK`
   }
 
   const lines = [`${report.path}:`]
@@ -271,6 +295,45 @@ function formatGlobalDependencyFinding(check: DependencyCheck): string | null {
   return `  - ${label}: ${formatDependencyCheck(check, '    ')}`
 }
 
+const BYTES_PER_GIB = 1024 ** 3
+
+function formatGiB(bytes: number): string {
+  return (bytes / BYTES_PER_GIB).toFixed(1)
+}
+
+/**
+ * One line, once per sweep — this host's own numbers, the `"auto"` cap they
+ * resolve to, and how many slots are actually held right now. The slot pool
+ * is host-wide (see `slots.ts`), so this is never per-repo the way the rest
+ * of the report is; a repo pinning below this cap gets its own
+ * {@link RepoDoctorReport.maxLiveWorkersNote} instead.
+ */
+async function formatHostResourcesSummary(): Promise<string> {
+  const resources = readHostResources()
+  const autoCap = computeAutoMaxLiveWorkers(resources)
+  const occupied = await listOccupiedSlots()
+  const liveOccupied = occupied.filter((entry) => entry.verdict !== 'dead')
+
+  const memPart =
+    resources.memAvailableBytes !== null
+      ? `${formatGiB(resources.memTotalBytes)} GiB RAM (${formatGiB(resources.memAvailableBytes)} GiB available)`
+      : `${formatGiB(resources.memTotalBytes)} GiB RAM`
+
+  const lines = [
+    `Host resources: ${resources.cpuCount} vCPU, ${memPart} — "auto" would cap at ${autoCap}; ` +
+      `${liveOccupied.length} slot(s) held host-wide right now.`,
+  ]
+
+  const legacyDirectory = await resolveLegacySlotsDirectory()
+  if (legacyDirectory && existsSync(legacyDirectory) && readdirSync(legacyDirectory).length > 0) {
+    lines.push(
+      `  - note: ${legacyDirectory} still has entries — leftover from the pre-host-wide per-repo pool, safe to remove once no wave is running.`,
+    )
+  }
+
+  return lines.join('\n')
+}
+
 async function main(targets: readonly string[]): Promise<void> {
   const paths = targets.length > 0 ? targets : ['.']
   const probes = createDependencyProbes()
@@ -283,6 +346,8 @@ async function main(targets: readonly string[]): Promise<void> {
   for (const report of reports) {
     console.log(formatReport(report))
   }
+
+  console.log(`\n${await formatHostResourcesSummary()}`)
 
   const globalPluginCheck = classifyClaudePluginProbe(await probes.claudePlugin())
   const globalFindingLine = formatGlobalDependencyFinding(globalPluginCheck)

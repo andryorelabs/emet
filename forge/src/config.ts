@@ -36,7 +36,7 @@ export const DEFAULT_FORGE_CONFIG: ForgeConfig = {
   ticket: { idPattern: '^[A-Z][A-Z0-9]*-\\d+$', branchPrefix: 'ticket' },
   concurrency: {
     waveSize: 4,
-    maxLiveWorkers: 8,
+    maxLiveWorkers: 'auto',
     runIdleThresholdMs: 90 * 60_000,
   },
   tracker: { kind: null },
@@ -69,9 +69,14 @@ export interface ForgeConfig {
   readonly concurrency: {
     /** Max `Agent` calls dispatched together in one wave. */
     readonly waveSize: number
-    /** Global, per-host cap across every concurrently running coordinator —
-     * `FORGE_MAX_LIVE_WORKERS` env var overrides this when set. */
-    readonly maxLiveWorkers: number
+    /** Global, host-wide cap shared by every concurrently running
+     * coordinator on this machine, across every repo — the slot pool lives
+     * under `~/.local/state/forge/slots` (see `slots.ts`), not under any one
+     * repo's `--git-common-dir`. `"auto"` (the default) derives the cap from
+     * this host's own cpu/RAM (`resources.ts`'s `computeAutoMaxLiveWorkers`)
+     * instead of a fixed number nobody measured. `FORGE_MAX_LIVE_WORKERS` env
+     * var overrides either form when set. */
+    readonly maxLiveWorkers: number | 'auto'
     /** How long a run with no live anchor still classifies `'idle'` (rather
      * than `'dead'`) based on transcript freshness alone —
      * `FORGE_RUN_IDLE_THRESHOLD_MS` env var overrides this when set. */
@@ -197,14 +202,24 @@ function validateAndMerge(raw: unknown): { ok: true; config: ForgeConfig } | { o
 
   const concurrency = isRecord(raw.concurrency) ? raw.concurrency : {}
   const waveSize = concurrency.waveSize ?? DEFAULT_FORGE_CONFIG.concurrency.waveSize
-  const maxLiveWorkers = concurrency.maxLiveWorkers ?? DEFAULT_FORGE_CONFIG.concurrency.maxLiveWorkers
+  const maxLiveWorkersRaw =
+    concurrency.maxLiveWorkers ?? DEFAULT_FORGE_CONFIG.concurrency.maxLiveWorkers
   const runIdleThresholdMs = concurrency.runIdleThresholdMs ?? DEFAULT_FORGE_CONFIG.concurrency.runIdleThresholdMs
   if (!isPositiveInteger(waveSize)) {
     return { ok: false, reason: '"concurrency.waveSize" must be a positive integer' }
   }
-  if (!isPositiveInteger(maxLiveWorkers)) {
-    return { ok: false, reason: '"concurrency.maxLiveWorkers" must be a positive integer' }
+  if (maxLiveWorkersRaw !== 'auto' && !isPositiveInteger(maxLiveWorkersRaw)) {
+    return {
+      ok: false,
+      reason: '"concurrency.maxLiveWorkers" must be a positive integer, or the string "auto"',
+    }
   }
+  // `maxLiveWorkersRaw` is validated but not narrowed by the guard above (a
+  // compound `!== 'auto' && !isPositiveInteger(...)` check doesn't narrow a
+  // value whose static type is `unknown`) — this ternary is the explicit,
+  // TS-checkable equivalent instead of relying on control-flow narrowing.
+  const maxLiveWorkers: number | 'auto' =
+    maxLiveWorkersRaw === 'auto' ? 'auto' : (maxLiveWorkersRaw as number)
   if (!isPositiveInteger(runIdleThresholdMs)) {
     return { ok: false, reason: '"concurrency.runIdleThresholdMs" must be a positive integer' }
   }

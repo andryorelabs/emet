@@ -23,6 +23,7 @@ const cleanReport: RepoDoctorReport = {
   selfCheckIssues: [],
   trackerKind: null,
   dependencyFindings: [],
+  maxLiveWorkersNote: null,
 }
 
 const healthyProbes: DependencyProbes = {
