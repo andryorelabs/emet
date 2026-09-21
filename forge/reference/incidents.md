@@ -99,6 +99,20 @@ This is why the worker prompt template spells out the literal commands
 the practice abstractly, and why the handoff-note triggers are three fixed
 moments, not a token-count threshold a worker has to estimate itself.
 
+## Why 160K, not some other number
+
+Measured against real workers, `cache_read` — every prior turn's context,
+reread in full on the next one — dominates the token bill by roughly two
+orders of magnitude over cache-creation and output combined. That makes cost
+quadratic in the amount of work stuffed into one session: splitting a job in
+two leaves the fixed per-session floor (system prompt, this command's own
+files, tool schemas) unchanged but roughly halves the quadratic term. This is
+why Phase 3's ticket-sizing target is a peak-context number at all, rather
+than a file count or a time estimate — what a worker reads matters far more
+than what it does, and an early, large, avoidable tool result is the single
+most expensive thing that can happen to a context window, since it gets
+reread on every subsequent turn.
+
 ## The 348K vs 129K sibling tickets
 
 Two nearly-identical sibling tickets in the same wave produced wildly
