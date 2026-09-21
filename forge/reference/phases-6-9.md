@@ -298,7 +298,17 @@ that's what makes running the shared suite once per wave enough). Its body
 closes every ticket this wave completed using this repo's tracker's
 closing-keyword convention (`docs/agents/issue-tracker.md` — a plain
 `commit.trailer` only links without closing; it's for a ticket this wave
-touches but doesn't finish). Wait for CI, merge, then run
+touches but doesn't finish).
+
+**Verify the closing line landed, right after `gh pr create`, before doing
+anything else** — a markdown formatter reflowing the blank line that
+separates it from the rest of the PR body silently breaks the tracker's
+keyword parsing (see `reference/tracker-<kind>.md`'s `pr.referenceLines`):
+`gh pr view <n> --json body -q .body | grep -c '^Closes'` must return `1`+;
+if it doesn't, fix it with `gh pr edit <n> --body-file …` before reporting
+the wave done. This has no cheap fix later — the merge webhook that would
+have closed those tickets doesn't retry, so a PR that already merged without
+this line needs a manual per-ticket state write instead. Wait for CI, merge, then run
 `forge cleanup --run <runId>` to delete this wave's local branches
 (`worktree-agent-*` residue and fully-merged worker branches), prune
 worktrees, and release this run's ticket reservations and worker slots —
