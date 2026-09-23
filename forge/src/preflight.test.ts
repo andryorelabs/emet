@@ -128,6 +128,23 @@ describe('classifyWorktreeEntry', () => {
       branch: 'ao-1-something',
     })
   })
+
+  test('an injected resolveOwner (e.g. reservation fallback) is used instead of the raw lock', () => {
+    const entry: WorktreeEntry = {
+      // The harness unlocked this worktree — resolveWorktreeOwner alone
+      // would return null and this would fall through to content-fallback.
+      directory: '/repo/.claude/worktrees/agent-abc',
+      branch: 'ao-259-forge-preflight-ownership-aware',
+      lockedReason: null,
+    }
+    const verdict = classifyWorktreeEntry(
+      entry,
+      owner.runId,
+      () => 'live',
+      () => owner,
+    )
+    expect(verdict).toEqual({ kind: 'own-run-leftover', entry, owner })
+  })
 })
 
 describe('checkSlotCapacity', () => {
@@ -463,6 +480,48 @@ describe('findBranchTicketMismatches', () => {
       lockedReason: `forge run=run-a ticket=AO-1 anchor=4242 at=2026-09-11T00:00:00.000Z`,
     }
     expect(findBranchTicketMismatches([unlocked, detached], 'ao')).toEqual([])
+  })
+
+  test('tolerates its own scaffold branch still on the recently-locked worktree (bootstrap race)', () => {
+    const entry: WorktreeEntry = {
+      directory: '/repo/.claude/worktrees/agent-abc',
+      branch: 'worktree-agent-abc',
+      lockedReason: `forge run=run-a ticket=AO-321 anchor=4242 at=2026-09-11T00:00:00.000Z`,
+    }
+    expect(
+      findBranchTicketMismatches([entry], 'ao', {
+        nowMs: Date.parse('2026-09-11T00:00:10.000Z'),
+        maxAgeMs: 30_000,
+      }),
+    ).toEqual([])
+  })
+
+  test('a stale scaffold branch past maxAgeMs is still reported', () => {
+    const entry: WorktreeEntry = {
+      directory: '/repo/.claude/worktrees/agent-abc',
+      branch: 'worktree-agent-abc',
+      lockedReason: `forge run=run-a ticket=AO-321 anchor=4242 at=2026-09-11T00:00:00.000Z`,
+    }
+    expect(
+      findBranchTicketMismatches([entry], 'ao', {
+        nowMs: Date.parse('2026-09-11T00:01:00.000Z'),
+        maxAgeMs: 30_000,
+      }),
+    ).toEqual([expect.objectContaining({ kind: 'branch-ticket-mismatch' })])
+  })
+
+  test("a scaffold branch belonging to a DIFFERENT worktree is still a mismatch", () => {
+    const entry: WorktreeEntry = {
+      directory: '/repo/.claude/worktrees/agent-abc',
+      branch: 'worktree-agent-xyz',
+      lockedReason: `forge run=run-a ticket=AO-321 anchor=4242 at=2026-09-11T00:00:00.000Z`,
+    }
+    expect(
+      findBranchTicketMismatches([entry], 'ao', {
+        nowMs: Date.parse('2026-09-11T00:00:01.000Z'),
+        maxAgeMs: 30_000,
+      }),
+    ).toEqual([expect.objectContaining({ kind: 'branch-ticket-mismatch' })])
   })
 })
 

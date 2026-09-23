@@ -1,9 +1,12 @@
 import { describe, expect, test } from 'bun:test'
 
+import type { Reservation } from './claims'
 import {
+  findReservationForBranch,
   isAgentWorktree,
   parseWorktreeEntries,
   resolveWorktreeOwner,
+  resolveWorktreeOwnerWithReservations,
   type WorktreeEntry,
 } from './worktrees'
 
@@ -164,6 +167,89 @@ describe('resolveWorktreeOwner', () => {
           'forge run=run-1 ticket=AO-258 anchor=nope at=2026-09-07T20:00:00.000Z',
       }),
     ).toBeNull()
+  })
+})
+
+describe('findReservationForBranch', () => {
+  const reservation: Reservation = {
+    runId: 'run-1',
+    anchorPid: 4242,
+    ticket: 'AO-258',
+    reservedAt: 1_700_000_000_000,
+    sessionSlug: '-home-andryore-code-repo',
+  }
+
+  test('matches a worker branch by its numeric ticket suffix', () => {
+    expect(
+      findReservationForBranch('ao-258-forge-claims-registry', 'ao', [reservation]),
+    ).toEqual(reservation)
+  })
+
+  test('matches a bare <prefix>-<n> branch with no slug', () => {
+    expect(findReservationForBranch('ao-258', 'ao', [reservation])).toEqual(reservation)
+  })
+
+  test('returns null when no reservation names that ticket', () => {
+    expect(findReservationForBranch('ao-999-unrelated', 'ao', [reservation])).toBeNull()
+  })
+
+  test("returns null for a branch that isn't this repo's worker-branch shape", () => {
+    expect(findReservationForBranch('feat/some-branch', 'ao', [reservation])).toBeNull()
+  })
+
+  test('never matches a different ticket number sharing a prefix', () => {
+    expect(findReservationForBranch('ao-2580-other', 'ao', [reservation])).toBeNull()
+  })
+})
+
+describe('resolveWorktreeOwnerWithReservations', () => {
+  const reservation: Reservation = {
+    runId: 'run-1',
+    anchorPid: 4242,
+    ticket: 'AO-258',
+    reservedAt: 1_700_000_000_000,
+    sessionSlug: '-home-andryore-code-repo',
+  }
+  const baseEntry: WorktreeEntry = {
+    directory: '/repo/.claude/worktrees/agent-abc',
+    branch: 'ao-258-forge-claims-registry',
+    lockedReason: null,
+  }
+
+  test('prefers a real /forge lock over the reservation fallback', () => {
+    const entry: WorktreeEntry = {
+      ...baseEntry,
+      lockedReason:
+        'forge run=run-2 ticket=AO-258 anchor=9999 at=2026-09-07T20:00:00.000Z',
+    }
+    expect(resolveWorktreeOwnerWithReservations(entry, [reservation], 'ao')).toEqual({
+      runId: 'run-2',
+      ticket: 'AO-258',
+      anchorPid: 9999,
+      at: '2026-09-07T20:00:00.000Z',
+    })
+  })
+
+  test('falls back to the live reservation when the harness dropped the lock', () => {
+    expect(resolveWorktreeOwnerWithReservations(baseEntry, [reservation], 'ao')).toEqual({
+      runId: 'run-1',
+      ticket: 'AO-258',
+      anchorPid: 4242,
+      at: new Date(1_700_000_000_000).toISOString(),
+      coordinatorSlug: '-home-andryore-code-repo',
+    })
+  })
+
+  test("never second-guesses a human's own unrelated lock reason", () => {
+    const entry: WorktreeEntry = {
+      ...baseEntry,
+      lockedReason: 'testing something, do not delete',
+    }
+    expect(resolveWorktreeOwnerWithReservations(entry, [reservation], 'ao')).toBeNull()
+  })
+
+  test('returns null when no reservation matches either', () => {
+    expect(resolveWorktreeOwnerWithReservations(baseEntry, [], 'ao')).toBeNull()
   })
 })
 

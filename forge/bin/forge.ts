@@ -34,6 +34,7 @@ commands:
   usage     [--session <id> | --file <path>] [--stalled [--minutes N]] [--project-dir <path>]
   handoff   --check <path> | --render <path>
   lock-reason --run <id> --ticket <ticket> [--anchor <pid>]  — the \`git worktree lock\` reason a worker writes at bootstrap
+  guard     — Claude Code PreToolUse hook (reads hook JSON on stdin); see src/guard.ts
   selftest  — run this CLI's own unit tests
 `
 
@@ -93,6 +94,11 @@ async function main(): Promise<void> {
     case 'lock-reason': {
       const { run } = await import('../src/lockreason')
       await run(rest)
+      return
+    }
+    case 'guard': {
+      const { run } = await import('../src/guard')
+      await run()
       return
     }
     case 'selftest': {

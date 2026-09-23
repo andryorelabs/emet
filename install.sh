@@ -40,6 +40,26 @@ if [[ ":$PATH:" != *":$HOME/.local/bin:"* ]]; then
   echo '  export PATH="$HOME/.local/bin:$PATH"'
 fi
 
+echo "==> Wiring the forge guard PreToolUse hook into ~/.claude/settings.json"
+SETTINGS_FILE="$HOME/.claude/settings.json"
+GUARD_COMMAND="$HOME/.local/bin/forge guard"
+if ! command -v jq >/dev/null 2>&1; then
+  echo "warning: jq is required to wire the forge guard hook automatically — skipping." >&2
+  echo "  Add this by hand to $SETTINGS_FILE's hooks.PreToolUse:" >&2
+  echo "  {\"matcher\": \"Bash|ScheduleWakeup|Skill\", \"hooks\": [{\"type\": \"command\", \"command\": \"$GUARD_COMMAND\"}]}" >&2
+elif [[ -f "$SETTINGS_FILE" ]] && jq -e --arg cmd "$GUARD_COMMAND" \
+  'any(.hooks.PreToolUse[]?.hooks[]?; .command == $cmd)' "$SETTINGS_FILE" >/dev/null 2>&1; then
+  echo "  already wired — leaving $SETTINGS_FILE untouched."
+else
+  mkdir -p "$HOME/.claude"
+  [[ -f "$SETTINGS_FILE" ]] || echo '{}' > "$SETTINGS_FILE"
+  cp "$SETTINGS_FILE" "$SETTINGS_FILE.pre-forge-guard-backup"
+  jq --arg cmd "$GUARD_COMMAND" \
+    '.hooks.PreToolUse = ((.hooks.PreToolUse // []) + [{"matcher": "Bash|ScheduleWakeup|Skill", "hooks": [{"type": "command", "command": $cmd}]}])' \
+    "$SETTINGS_FILE" > "$SETTINGS_FILE.tmp" && mv "$SETTINGS_FILE.tmp" "$SETTINGS_FILE"
+  echo "  added (backup at $SETTINGS_FILE.pre-forge-guard-backup)."
+fi
+
 echo
 echo "Done. Verify with:"
 echo "  forge selftest"

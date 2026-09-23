@@ -146,3 +146,32 @@ can fix directly, but it's why `resources.ts`'s memory-headroom brake reads
 higher-level "low memory" signal, and why every one of its thresholds
 (`FORGE_MEM_RESERVE_GIB`, `FORGE_MEM_PER_WORKER_GIB`) is an env override a
 real run can tune against what it actually observes on a given host.
+
+## The harness drops the forge lock when an agent exits
+
+Four coordinators (`turban`, `charybdis`, `guitarfish`, `taimen`, each an
+Orca worktree of the same repo) ran `/forge` at once. Their `forge
+preflight` calls repeatedly failed on **each other's** worktrees, sometimes
+for hours after the owning wave had already dispatched them. Traced to one
+worktree (ticket AO-553): `git worktree list --porcelain` showed `locked
+forge run=ao550 ticket=AO-553 …` while its worker was still running, and no
+lock at all a few hours later, worker long finished. Nothing in `/forge`
+itself ever ran `git worktree unlock` on it — the harness's own `Agent
+isolation:"worktree"` unlocks a worker's worktree the moment its agent
+process exits, dropping whatever lock reason was there, `/forge`'s own or
+not.
+
+Without a lock, `resolveWorktreeOwner` returns `null` and the worktree falls
+through to the unowned `content-fallback` path, which — before this was
+fixed — was always a hard failure regardless of content. That blocked every
+sibling coordinator's dispatch on residue from a run that had already
+finished cleanly, for as long as its own `forge cleanup --run` hadn't run
+yet (which can be hours, since cleanup happens at wave close-out, not
+worker exit). This is why worktree ownership now falls back to the live
+ticket reservation (`claims.ts`, `resolveWorktreeOwnerWithReservations` in
+`worktrees.ts`) when the lock itself is gone — reservations are released
+only by `forge cleanup --run`/`--force`, so they outlive a dropped lock —
+and why the worker prompt's bootstrap step 0 now always `unlock`s before
+`lock`ing (the harness's own generic lock made every worker's first attempt
+at step 0 fail outright, which is a separate but related symptom of the
+same root cause: the harness manages this lock too, not just `/forge`).

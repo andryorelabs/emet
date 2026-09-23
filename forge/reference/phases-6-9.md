@@ -129,6 +129,16 @@ available") while `TaskStop`/`SendMessage` kept working. The fallback is
 `TaskStop`'s own error text, which lists the background agents it knows
 about — not a retry loop on `ListAgents`.
 
+If this coordinator's own turn needs to end while background work (a
+worker, a fork, a backgrounded `Bash` task) is still in flight, never give
+`ScheduleWakeup`'s `prompt` a slash command — `/forge --dispatch <spec-id>`
+resumed this way arrives as a fresh `<command-message>` turn, indistinguishable
+from a human re-typing it, which risks restarting the whole run from Phase 0
+instead of resuming the in-progress wave (a real run measured exactly this).
+Use a short resume note instead (e.g. "resume wave close-out for run
+`<runId>`") — one that tells the next turn what state it's picking back up,
+not one that re-invokes the command that started it.
+
 ## Phase 7 — Per-worker implementation
 
 Inside each worktree, in order:
@@ -284,7 +294,12 @@ pass with no fan-out at all rather than retrying the same shape a third
 time. If other background tasks (another wave's workers, a fork) are already
 running when this phase starts, skip straight to a no-fan-out `code-review`
 pass instead of discovering the same roster hang a second time on an already
-busy host. Then run this repo's full test suite exactly once over the merged
+busy host — this includes a **sibling coordinator's** wave: check `forge
+slots` first, and if it shows a live run other than your own, treat this
+host as already busy and skip the fan-out, since the hang has repeatedly
+correlated with several waves' worth of subagents/background tasks
+contending for the host at once, host-wide, not just within one session.
+Then run this repo's full test suite exactly once over the merged
 result (`commands.fullSuite`, the shared/singleton resource from Phase 7, if
 this repo has one).
 
@@ -316,6 +331,15 @@ always pass `--run <runId>` here, not the bare command, or those
 reservations and slots outlive the wave and stay occupied until someone
 else's `forge claims --prune`/manual cleanup reclaims them. Don't leave any
 of this for the next wave or the final report to discover.
+
+**Never `git worktree remove` a worktree by hand, and never run `forge
+cleanup --all --force` (or the bare, unscoped command) while `forge slots`
+shows a live run other than your own.** Both sweep every branch/worktree in
+the repo, not just this run's — a sibling coordinator's still-in-progress
+worktree looks identical to abandoned residue from the outside, and either
+command can delete a sibling's uncommitted work or leave its lock
+inconsistent. `forge cleanup --run <runId>` is always scoped and always
+safe to run for your own wave, regardless of who else is running.
 
 If anything was flagged (a ticket failed twice, produced a
 needs-a-human-decision, or a conflict got resolved by judgment rather than

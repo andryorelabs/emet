@@ -1,5 +1,7 @@
 import path from 'node:path'
 
+import type { Reservation } from './claims'
+
 /**
  * Shared worktree/branch classification used by both `cleanup.ts` and
  * `preflight.ts` — extracted so the two scripts never disagree about
@@ -253,6 +255,63 @@ export function resolveWorktreeOwner(
 export async function listWorktreeEntries(): Promise<WorktreeEntry[]> {
   const output = await Bun.$`git worktree list --porcelain`.text()
   return parseWorktreeEntries(output)
+}
+
+/**
+ * Finds the reservation (from `claims.ts`'s `listReservations`) matching a
+ * worker branch's own numeric ticket suffix — `<branchPrefix>-<n>-<slug>` on
+ * the branch side, `<PREFIX>-<n>` (case-insensitive, tracker's own casing)
+ * on the reservation side. Returns `null` when the branch doesn't look like
+ * a worker branch at all, or no live reservation names that ticket.
+ */
+export function findReservationForBranch(
+  branch: string,
+  branchPrefix: string,
+  reservations: readonly Reservation[],
+): Reservation | null {
+  const escapedPrefix = branchPrefix.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+  const match = new RegExp(`^${escapedPrefix}-(\\d+)(?:-|$)`).exec(branch)
+  if (!match) return null
+  const number = match[1]
+  return (
+    reservations.find((reservation) => reservation.ticket.endsWith(`-${number}`)) ?? null
+  )
+}
+
+/**
+ * `resolveWorktreeOwner` returns `null` for an entry whose `git worktree
+ * lock` reason isn't `/forge`'s own shape — the common case now that the
+ * harness itself unlocks a worker's worktree the moment its agent process
+ * exits (observed across real runs: a worktree locked `forge run=… ticket=…`
+ * while its worker was live comes back with `lockedReason: null` shortly
+ * after — see `reference/incidents.md`). Losing the lock must not mean
+ * losing attribution: `ticket.branchPrefix`-scoped reservations
+ * (`claims.ts`, shared host-wide via `--git-common-dir`, released only at
+ * wave close-out by `forge cleanup --run`) outlive the lock and still say
+ * which run owns this ticket. This tries the lock first, falling back to
+ * {@link findReservationForBranch} only when the lock itself gives nothing
+ * — a worktree with a *different*, unrelated lock reason (a human's own) is
+ * never second-guessed by this fallback.
+ */
+export function resolveWorktreeOwnerWithReservations(
+  entry: WorktreeEntry,
+  reservations: readonly Reservation[],
+  branchPrefix: string,
+): WorktreeOwner | null {
+  const lockOwner = resolveWorktreeOwner(entry)
+  if (lockOwner) return lockOwner
+  if (entry.lockedReason !== null || !entry.branch) return null
+
+  const reservation = findReservationForBranch(entry.branch, branchPrefix, reservations)
+  if (!reservation) return null
+
+  return {
+    runId: reservation.runId,
+    ticket: reservation.ticket,
+    anchorPid: reservation.anchorPid,
+    at: new Date(reservation.reservedAt).toISOString(),
+    coordinatorSlug: reservation.sessionSlug,
+  }
 }
 
 /**
