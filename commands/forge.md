@@ -89,7 +89,11 @@ unless the run continues from Phase 5 straight into Phase 6.
   with `~/.claude/forge/reference/worker-prompt.md` (the dispatch prompt
   template) and `~/.claude/forge/reference/tracker-<kind>.md` (`<kind>` from
   `forge.config.json`'s `tracker.kind`) for this repo's literal tracker
-  calls.
+  calls. Workers dispatch as `subagent_type: "forge-worker"`; Phase 8's
+  review dispatches as `subagent_type: "forge-reviewer"` from
+  `~/.claude/forge/reference/reviewer-prompt.md`'s template — both agent
+  definitions pin their own model and effort (see the README's "Models &
+  effort" section) and are installed by `install.sh`.
 - **`reference/incidents.md`** — the evidence behind the five non-negotiables
   below (real run failures, with what broke and how). Never loaded during a
   normal run; read it only when someone asks why a rule exists.
