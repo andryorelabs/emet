@@ -147,6 +147,42 @@ higher-level "low memory" signal, and why every one of its thresholds
 (`FORGE_MEM_RESERVE_GIB`, `FORGE_MEM_PER_WORKER_GIB`) is an env override a
 real run can tune against what it actually observes on a given host.
 
+## `/design` lost model invocation (Claude Code 2.1.278+)
+
+Phase 5's design step used to call `/design` directly. Claude Code 2.1.280
+resolves `/design` to one of four modes at startup, in this priority order:
+`types` (create a new Artifact from a published type) → `canvas` (the
+model-invocable canvas editor) → `hub` → `consent`. Its registration carries
+`disableModelInvocation: () => mode() !== "canvas"` — every mode except
+`canvas` is user-invocable only.
+
+This account's session now resolves to `types`, gated by the server-side
+GrowthBook flag `tengu_cobalt_plinth_larch` (Artifact types / quickstart),
+which got flipped on between 2.1.269 and 2.1.278 with no corresponding
+changelog entry. `types` is checked before `canvas`, so once it's on,
+`canvas` is unreachable regardless of whether the canvas skill itself is
+enabled — the forge lost the ability to invoke `/design` at all and started
+handing the step back to the user mid-run.
+
+The obvious workaround — `CLAUDE_CODE_ARTIFACT_TYPES=0` (or `false`) to force
+`typeCreateOn` off — was tested against real `claude -p` sessions and does
+**not** restore `canvas`: this account's canvas skill is independently gated
+off, so `/design` instead drops to `consent` (only `/design consent|revoke`).
+There is no environment override that reaches `canvas` from here; it's a
+runtime resolution controlled entirely by feature flags Claude Code doesn't
+expose.
+
+The actual fix didn't need `/design` in the first place: the canvases this
+command produced were never the Claude Design editor — reading a real one
+back (`Artifact action:"read"`) shows a plain single-page static HTML the
+model wrote itself (a nav rail, one `<section class="artboard">` per screen,
+a per-artboard state switch for empty/error/loading, a hand-off block, theme
+tokens), no capabilities, no extra files. The `Artifact` tool reproduces that
+exactly — read the canvas, append artboards, publish back to the same URL —
+without ever depending on which mode `/design` happens to resolve to. This is
+why Phase 5 now publishes canvases through `Artifact` directly and never
+invokes `/design` or asks the user to run it.
+
 ## The harness drops the forge lock when an agent exits
 
 Four coordinators (`turban`, `charybdis`, `guitarfish`, `taimen`, each an

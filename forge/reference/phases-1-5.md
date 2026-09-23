@@ -16,8 +16,8 @@ yet** — note it in the plan file and apply it in Phase 5, alongside every
 other write this run makes.
 
 If the feature touches a screen (judge this yourself from the interview; the
-user isn't asked to classify it), don't run `/design` here — publishing is a
-write and this phase is inside plan mode. Instead, describe in the plan file
+user isn't asked to classify it), don't publish the design here — publishing
+is a write and this phase is inside plan mode. Instead, describe in the plan file
 what an artboard would need: one screen description per screen, plus the
 states a worker would otherwise improvise badly alone (empty, error,
 loading). Confirm the UI/non-UI classification with the user at the end of
@@ -108,15 +108,32 @@ the main command file.)
 Now that the plan is approved, in this exact order:
 
 1. Apply the `CONTEXT.md`/`docs/adr/` edits deferred from Phase 1.
-2. If the feature touches a screen: run `/design` now — one artboard per
-   screen plus empty/error/loading states, static mockups only, published to
-   this product area's living canvas (see `docs/design/README.md`'s index) —
-   one canvas per area, updated and republished to the same URL, never a new
-   canvas per feature; split an area only once two features collide over the
-   same screen. This is the one write in this run that needs a live
-   permission prompt (publishing can't be skipped) — the user is still
-   around right after approving the plan. Update
-   `docs/design/README.md`'s table.
+2. If the feature touches a screen: publish the canvas now with the `Artifact`
+   tool directly — never invoke `/design` or ask the user to run it. In
+   current Claude Code `/design` resolves to a mode that's user-invocable
+   only (see `reference/incidents.md` for why); the forge's own canvases were
+   never the Claude Design editor anyway — they're a plain single-page HTML
+   the model writes itself (nav + one `<section class="artboard">` per
+   screen + a state switch for empty/error/loading + a hand-off block per
+   artboard), so the `Artifact` tool reproduces them exactly:
+   - **This product area already has a canvas** (URL in
+     `docs/design/README.md`'s index): `Artifact action:"read"` its URL, Read
+     the saved file in full, append one artboard section (plus its nav
+     button) per new screen reusing the page's existing classes/tokens, mark
+     any superseded artboards with the page's own historical note, then
+     `Artifact` publish that file back with `url` — same URL, living canvas,
+     never a new canvas per feature; split an area only once two features
+     collide over the same screen.
+   - **This product area has no canvas yet**: read an existing canvas from
+     `docs/design/README.md` as the template for chrome/CSS/patterns and
+     publish a new one with the same structure (first publish, set `icon`).
+     If the repo has no canvas at all yet, load the `artifact-design` skill
+     and build the nav + artboards + state-switch + hand-off structure from
+     scratch.
+   - One artboard per screen plus empty/error/loading states, static mockups
+     only. This is the one write in this run that needs a live permission
+     prompt (publishing can't be skipped) — the user is still around right
+     after approving the plan. Update `docs/design/README.md`'s table.
 3. Create the spec issue and every ticket from the plan file per
    `docs/agents/issue-tracker.md`'s literal calls for this repo's tracker —
    set each ticket's state to the tracker's initial dispatch-eligible state
