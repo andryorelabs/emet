@@ -37,6 +37,9 @@ forge selftest
   claude plugin marketplace add anthropics/claude-plugins-official
   claude plugin install mattpocock-skills@claude-plugins-official
   ```
+- **The `forge-worker` and `forge-reviewer` agents** in `~/.claude/agents/`
+  — installed by `install.sh` (see "Models & effort" below); Phase 6 and
+  Phase 8 dispatch by `subagent_type`, so either one missing breaks dispatch.
 - **`gh` CLI, authenticated** — only if the repo uses the `github` tracker.
 - **A Linear MCP server declared in `.mcp.json` (or at user scope)** — only
   if the repo uses the `linear` tracker. Declaration is what gets verified;
@@ -50,6 +53,7 @@ changed is *who checks it and how hard*:
 | | `forge init` | `forge doctor` | `forge preflight` |
 |---|---|---|---|
 | plugin missing/disabled | prints the install command | reports it (once, fleet-wide) | **blocks dispatch** |
+| `forge-worker`/`forge-reviewer` agent missing | — | reports it (once, fleet-wide) | **blocks dispatch** |
 | `gh` missing/unauthenticated (tracker: `github`) | prints what to run | reports it | **blocks dispatch** |
 | Linear server undeclared (tracker: `linear`) | prints a note | reports it | **blocks dispatch** |
 | `claude` not on PATH, or a probe timing out | prints a note | reports it | **warns, never blocks** — this is "couldn't check", not "verified broken" |
@@ -100,6 +104,51 @@ preflight` refuses to dispatch while one remains.
 - `commands/forge.md` — the `/forge` command itself (a ~110-line router);
   everything else it needs lives in `forge/reference/`, loaded only when the
   current run's mode needs it.
+
+## Models & effort
+
+`/forge` picks a model and a reasoning effort per role automatically —
+nothing to switch by hand mid-run:
+
+| Role | Model | Effort | Set by |
+|---|---|---|---|
+| Planning (Phases 1–4) | Opus, via `opusplan` | your session's | you, once |
+| Coordinator, Phase 5 on | Sonnet, via `opusplan` | your session's | you, once |
+| Workers (Phase 7) | Sonnet | `medium` | `agents/forge-worker.md` |
+| Review (Phase 8) | Opus | `medium` | `agents/forge-reviewer.md` |
+
+The two agent definitions (installed by `install.sh` to `~/.claude/agents/`)
+pin their own `model`/`effort` in frontmatter, so the coordinator's own
+model/effort choice never leaks into a worker or the reviewer. `forge doctor`
+reports (never blocks on) either file going missing.
+
+Why a single fresh-context reviewer instead of a multi-angle fan-out: no
+public benchmark compares the two directly, but a fan-out re-reads the whole
+diff once per angle and has hung for over an hour in this repo, while
+Anthropic and third-party reports on Opus-tier models suggest the model
+upgrade buys as much as the extra angles would. For a high-stakes wave, run
+`/code-review ultra` by hand afterward — `/forge` never dispatches that on
+its own.
+
+**What you set once, yourself** — `/forge` can't switch these mid-run:
+
+- `model: "opusplan"` in `~/.claude/settings.json` — this is what makes
+  Phases 1–4 run on Opus and Phase 5 onward run on Sonnet, with no `/model`
+  needed. `forge doctor` warns (never edits your settings) if it's unset.
+- A session effort of `medium` or `high` rather than `xhigh` — the workers
+  and reviewer already carry their own effort regardless of yours, and a
+  high global default mostly adds cost to the coordinator's own turns
+  (dispatch bookkeeping, merges, reports) that don't need it.
+- `permissions.defaultMode` able to run unattended (`auto`, `acceptEdits`,
+  or `bypassPermissions`), plus `permissions.deny` rules blocking
+  `git push * main|master` and `git push --force *` — `forge doctor` warns
+  on both, since a wave that stalls on a permission prompt or that can force
+  its way past the trunk branch defeats the point of running unattended.
+
+These are starting points, not settled numbers — Opus 5.5 launched
+2026-09-22, and effort/model choice for coding agents is still an active
+area; re-tune after a few real waves rather than treating this table as
+final.
 
 ## Fleet check
 
