@@ -99,6 +99,13 @@ file over ~400 lines whole — locate first, then `Read` with
 — `limit: 30` or `grep -o` for the specific thing being hunted instead. Do
 not call `ToolSearch("select:LSP")` — it never reaches a worker.
 
+Before writing any code, load every skill listed in your ticket's
+`## Project skills` section with the `Skill` tool; if one isn't available to
+you, `Read` `.claude/skills/<name>/SKILL.md` in your worktree instead. Follow
+them alongside `tdd`; where a project skill conflicts with the ticket's own
+hand-off, the ticket wins — note the conflict in a ticket comment rather than
+silently picking one.
+
 Implement with the `tdd` skill at the seams the ticket already named,
 reaching for `diagnosing-bugs` if something gets stuck.
 

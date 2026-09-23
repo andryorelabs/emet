@@ -2,7 +2,9 @@
 
 The global `/forge` command for [Claude Code](https://claude.com/claude-code):
 interview → spec → tickets → one approval → parallel worktree agents that
-implement, test, and merge a feature unattended.
+implement, test, and merge a feature unattended. Each ticket is matched
+against the repo's own `.claude/skills/` and carries only the skills
+relevant to its task, which workers and the reviewer load in turn.
 
 Runs in any git repo — bun, pnpm, npm, Go, Rust, Python — with a tracker of
 Linear, GitHub Issues, or none at all. Nothing project-specific is required
