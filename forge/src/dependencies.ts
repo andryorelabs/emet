@@ -1,3 +1,5 @@
+import { existsSync } from 'node:fs'
+import os from 'node:os'
 import path from 'node:path'
 
 import type { TrackerKind } from './config'
@@ -24,6 +26,12 @@ import type { TrackerKind } from './config'
 
 export const MATTPOCOCK_SKILLS_PLUGIN_ID = 'mattpocock-skills@claude-plugins-official'
 
+/** The two `~/.claude/agents/*.md` files `install.sh` copies from this repo's
+ * own `agents/` directory. Phase 6 dispatches workers as `forge-worker` and
+ * Phase 8 dispatches the reviewer as `forge-reviewer` — either name missing
+ * makes that `Agent({subagent_type: ...})` call fail outright. */
+export const FORGE_AGENT_NAMES = ['forge-worker', 'forge-reviewer'] as const
+
 /**
  * Every probe runs a foreign binary that can block on the network —
  * `gh auth status` validates the token against the API, and `claude` may go
@@ -34,7 +42,12 @@ export const MATTPOCOCK_SKILLS_PLUGIN_ID = 'mattpocock-skills@claude-plugins-off
  */
 export const DEPENDENCY_PROBE_TIMEOUT_MS = 5_000
 
-export type DependencyName = 'claude-plugin' | 'github-cli' | 'linear-mcp-server' | 'tracker-kind'
+export type DependencyName =
+  | 'claude-plugin'
+  | 'forge-agents'
+  | 'github-cli'
+  | 'linear-mcp-server'
+  | 'tracker-kind'
 
 export type DependencyStatus =
   /** Verified present and usable — never reported to anyone. */
@@ -64,6 +77,13 @@ export type ClaudePluginProbe =
   | { readonly kind: 'claude-not-on-path' }
   | { readonly kind: 'claude-failed'; readonly detail: string }
 
+/** Filesystem-only — unlike the plugin/gh/Linear probes, there's no binary to
+ * shell out to: `install.sh` just copies files, so checking they landed is a
+ * plain `existsSync` per name. */
+export type ForgeAgentsProbe =
+  | { readonly kind: 'present' }
+  | { readonly kind: 'missing'; readonly missing: readonly string[] }
+
 export type GithubCliProbe =
   | { readonly kind: 'authenticated' }
   | { readonly kind: 'unauthenticated' }
@@ -83,6 +103,8 @@ export type DependencyProbes = {
   /** Memoized for the same reason: `gh` auth is per account/host, not per repo. */
   readonly githubCli: () => Promise<GithubCliProbe>
   readonly linearMcpServer: (repoRoot: string) => Promise<LinearMcpProbe>
+  /** Memoized: `~/.claude/agents/` is a fixed, user-scoped path, not per repo. */
+  readonly forgeAgents: () => Promise<ForgeAgentsProbe>
 }
 
 type ProbeRun =
@@ -245,6 +267,21 @@ export function classifyClaudePluginProbe(probe: ClaudePluginProbe): DependencyC
   }
 }
 
+export function classifyForgeAgentsProbe(probe: ForgeAgentsProbe): DependencyCheck {
+  const base = { dependency: 'forge-agents' as const, limitation: null }
+  if (probe.kind === 'present') {
+    return { ...base, status: 'satisfied', summary: 'forge-worker and forge-reviewer agents are installed', remedy: [] }
+  }
+  return {
+    ...base,
+    status: 'unsatisfied',
+    summary:
+      `~/.claude/agents/ is missing ${probe.missing.join(', ')} — Phase 6/8 dispatch will fail to resolve ` +
+      'the subagent_type. Re-run:',
+    remedy: ['./install.sh'],
+  }
+}
+
 export function classifyGithubCliProbe(probe: GithubCliProbe): DependencyCheck {
   const base = { dependency: 'github-cli' as const, limitation: null, remedy: [] }
   switch (probe.kind) {
@@ -339,7 +376,10 @@ export async function checkDependencies(input: {
   readonly repoRoot: string
   readonly probes: DependencyProbes
 }): Promise<readonly DependencyCheck[]> {
-  const checks: DependencyCheck[] = [classifyClaudePluginProbe(await input.probes.claudePlugin())]
+  const checks: DependencyCheck[] = [
+    classifyClaudePluginProbe(await input.probes.claudePlugin()),
+    classifyForgeAgentsProbe(await input.probes.forgeAgents()),
+  ]
 
   if (input.tracker === null) {
     checks.push(trackerKindUndeclaredCheck())
@@ -391,6 +431,13 @@ async function probeClaudePlugin(): Promise<ClaudePluginProbe> {
   }
 }
 
+export function probeForgeAgents(agentsDirectory: string): ForgeAgentsProbe {
+  const missing = FORGE_AGENT_NAMES.filter(
+    (name) => !existsSync(path.join(agentsDirectory, `${name}.md`)),
+  )
+  return missing.length === 0 ? { kind: 'present' } : { kind: 'missing', missing }
+}
+
 async function probeGithubCli(): Promise<GithubCliProbe> {
   if (!(await resolveBinaryOnPath('gh'))) return { kind: 'not-on-path' }
   const result = await runProbeCommand(['gh', 'auth', 'status'])
@@ -436,9 +483,15 @@ export function createDependencyProbes(): DependencyProbes {
   let claudePluginResult: Promise<ClaudePluginProbe> | null = null
   let githubCliResult: Promise<GithubCliProbe> | null = null
 
+  let forgeAgentsResult: Promise<ForgeAgentsProbe> | null = null
+
   return {
     claudePlugin: () => (claudePluginResult ??= probeClaudePlugin()),
     githubCli: () => (githubCliResult ??= probeGithubCli()),
     linearMcpServer: probeLinearMcpServer,
+    forgeAgents: () =>
+      (forgeAgentsResult ??= Promise.resolve(
+        probeForgeAgents(path.join(os.homedir(), '.claude', 'agents')),
+      )),
   }
 }

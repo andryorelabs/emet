@@ -1,10 +1,12 @@
 import { existsSync, readdirSync } from 'node:fs'
+import os from 'node:os'
 import path from 'node:path'
 
 import { loadForgeConfig, type TrackerKind } from './config'
 import {
   checkDependencies,
   classifyClaudePluginProbe,
+  classifyForgeAgentsProbe,
   createDependencyProbes,
   formatDependencyCheck,
   resolveBinaryOnPath,
@@ -25,9 +27,10 @@ import { listOccupiedSlots, resolveLegacySlotsDirectory } from './slots'
  * `forge.config.json` at all, is a normal, reportable finding, not a crash.
  *
  * Also reports third-party dependency findings (see `dependencies.ts`): the
- * mattpocock-skills plugin (global — one repo-independent finding printed
- * once for the whole sweep, not per repo) and, per repo, `gh` or the Linear
- * MCP server when that repo's `tracker.kind` calls for it. Unlike
+ * mattpocock-skills plugin and the `forge-worker`/`forge-reviewer` agents in
+ * `~/.claude/agents/` (both global — one repo-independent finding each,
+ * printed once for the whole sweep, not per repo) and, per repo, `gh` or the
+ * Linear MCP server when that repo's `tracker.kind` calls for it. Unlike
  * `preflight`, an `unsatisfied` finding here never blocks anything — this
  * command only ever reports.
  */
@@ -224,12 +227,18 @@ export async function auditRepo(
     if (issue) selfCheckIssues.push(issue)
   }
 
-  // The plugin check is repo-independent and printed once, fleet-wide (see
-  // `main`) — only the tracker-scoped checks (gh, Linear) belong to this repo.
+  // The plugin and forge-agents checks are repo-independent and printed once,
+  // fleet-wide (see `main`) — only the tracker-scoped checks (gh, Linear)
+  // belong to this repo.
   const dependencyFindings = hasConfig
     ? (
         await checkDependencies({ tracker: trackerKind, repoRoot: absolutePath, probes })
-      ).filter((check) => check.dependency !== 'claude-plugin' && check.dependency !== 'tracker-kind')
+      ).filter(
+        (check) =>
+          check.dependency !== 'claude-plugin' &&
+          check.dependency !== 'forge-agents' &&
+          check.dependency !== 'tracker-kind',
+      )
     : []
 
   return {
@@ -334,6 +343,71 @@ async function formatHostResourcesSummary(): Promise<string> {
   return lines.join('\n')
 }
 
+/**
+ * Advisories on `~/.claude/settings.json` keys that specifically affect
+ * `/forge` — never blocking, never written by this CLI (only `install.sh`'s
+ * guard-hook wiring touches that file). Personal keys (theme, OTEL, IDE
+ * integration, other plugins) are deliberately out of scope: this checks
+ * only what determines whether an unattended `/forge` run behaves, not the
+ * user's own preferences.
+ *
+ * `model: "opusplan"` is what makes Phases 1-4 (plan mode) run on Opus and
+ * Phase 6 onward run on Sonnet without the user touching `/model` — see the
+ * README's "Models & effort" section. `permissions.defaultMode` and the
+ * `git push`/`--force` deny rules are what let a wave run unattended without
+ * stalling on a prompt or being able to overwrite the trunk branch.
+ */
+export function checkSettingsAdvisories(settings: unknown): readonly string[] {
+  if (typeof settings !== 'object' || settings === null) return []
+  const advisories: string[] = []
+  const record = settings as Record<string, unknown>
+
+  if (record.model !== 'opusplan') {
+    advisories.push(
+      'model is not "opusplan" — /forge assumes Opus plans (Phases 1-4) and Sonnet ' +
+        'executes from Phase 6 on, with no /model switch needed; see the README\'s "Models & effort" section.',
+    )
+  }
+
+  const permissions =
+    typeof record.permissions === 'object' && record.permissions !== null
+      ? (record.permissions as Record<string, unknown>)
+      : {}
+  const unattendedModes = new Set(['auto', 'acceptEdits', 'bypassPermissions'])
+  if (typeof permissions.defaultMode !== 'string' || !unattendedModes.has(permissions.defaultMode)) {
+    advisories.push(
+      'permissions.defaultMode is not one that can run unattended (auto/acceptEdits/bypassPermissions) — ' +
+        'a /forge wave will stall on a permission prompt with no one there to answer it.',
+    )
+  }
+
+  const denyRules = Array.isArray(permissions.deny)
+    ? permissions.deny.filter((rule): rule is string => typeof rule === 'string')
+    : []
+  if (!denyRules.some((rule) => /git push[^)]*\b(main|master)\b/.test(rule))) {
+    advisories.push(
+      'no permissions.deny rule blocks `git push * main|master` — recommended before running /forge unattended.',
+    )
+  }
+  if (!denyRules.some((rule) => /git push[^)]*--force/.test(rule))) {
+    advisories.push(
+      'no permissions.deny rule blocks `git push --force *` — recommended before running /forge unattended.',
+    )
+  }
+
+  return advisories
+}
+
+async function readUserSettings(): Promise<unknown> {
+  const file = Bun.file(path.join(os.homedir(), '.claude', 'settings.json'))
+  if (!(await file.exists())) return null
+  try {
+    return await file.json()
+  } catch {
+    return null
+  }
+}
+
 async function main(targets: readonly string[]): Promise<void> {
   const paths = targets.length > 0 ? targets : ['.']
   const probes = createDependencyProbes()
@@ -350,9 +424,21 @@ async function main(targets: readonly string[]): Promise<void> {
   console.log(`\n${await formatHostResourcesSummary()}`)
 
   const globalPluginCheck = classifyClaudePluginProbe(await probes.claudePlugin())
-  const globalFindingLine = formatGlobalDependencyFinding(globalPluginCheck)
-  if (globalFindingLine !== null) {
-    console.log(`\nGlobal dependencies:\n${globalFindingLine}`)
+  const globalForgeAgentsCheck = classifyForgeAgentsProbe(await probes.forgeAgents())
+  const globalFindingLines = [globalPluginCheck, globalForgeAgentsCheck]
+    .map(formatGlobalDependencyFinding)
+    .filter((line): line is string => line !== null)
+  if (globalFindingLines.length > 0) {
+    console.log(`\nGlobal dependencies:\n${globalFindingLines.join('\n')}`)
+  }
+
+  const settingsAdvisories = checkSettingsAdvisories(await readUserSettings())
+  if (settingsAdvisories.length > 0) {
+    console.log(
+      `\nSettings advisories (~/.claude/settings.json, never auto-fixed):\n${settingsAdvisories
+        .map((advisory) => `  - ${advisory}`)
+        .join('\n')}`,
+    )
   }
 
   const cleanCount = reports.filter((report) => isReportClean(report)).length
@@ -361,7 +447,10 @@ async function main(targets: readonly string[]): Promise<void> {
     `\n${cleanCount}/${gitRepoCount} repos clean (${reports.length - gitRepoCount} skipped, not a git repo).`,
   )
 
-  const exitClean = cleanCount === gitRepoCount && globalPluginCheck.status !== 'unsatisfied'
+  const exitClean =
+    cleanCount === gitRepoCount &&
+    globalPluginCheck.status !== 'unsatisfied' &&
+    globalForgeAgentsCheck.status !== 'unsatisfied'
   process.exitCode = exitClean ? 0 : 1
 }
 

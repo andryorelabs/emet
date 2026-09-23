@@ -2,7 +2,7 @@
 
 Loaded in every mode. Also load `worker-prompt.md` and `tracker-<kind>.md`
 (`<kind>` from `forge.config.json`'s `tracker.kind`) before Phase 6
-dispatches anything.
+dispatches anything, and `reviewer-prompt.md` before Phase 8's review.
 
 ## Phase 6 — Dispatch
 
@@ -69,8 +69,13 @@ this CLI's own parser can't read back.
 
 Launch up to `concurrency.waveSize` `Agent` calls in parallel (single
 message, multiple tool uses), each with `isolation: "worktree"` **and
-`model: "sonnet"`** (pinned explicitly — don't rely on whatever model this
-session happens to be on).
+`subagent_type: "forge-worker"`** — that agent definition (`~/.claude/agents/
+forge-worker.md`, installed by `install.sh`) pins its own model and effort,
+so don't also pass a per-call `model`: a per-call `model` overrides the
+agent's frontmatter, and pinning it in two places invites them drifting
+apart. If `forge doctor`'s global findings flag `forge-agents` as missing,
+fix that (`./install.sh`) before dispatching — a missing agent definition
+makes this call fail outright.
 
 **Immediately after that batch returns, before any worker has had a chance to
 commit, run `forge preflight --run <runId> --post-dispatch`** — always pass
@@ -196,12 +201,11 @@ Inside each worktree, in order:
    `docs/agents/forge.md` names for this repo (`commands.selfCheck` in
    `forge.config.json`), **plus `forge handoff --check
    .forge/handoff-<own ticket>.md`** — run them yourself, don't invoke the
-   `code-review` skill here. You're already a subagent; `code-review`
-   dispatches subagents of its own, and nesting them this way is exactly
-   what caused two workers to hang mid-review in the run that prompted this
-   rule (`reference/incidents.md`). The coordinator runs `code-review` once,
-   in Phase 8, over the whole wave's integration branch, where there's no
-   nesting and the full diff is visible at once.
+   review of your own. You're already a subagent; a review dispatched from
+   inside a subagent is exactly what caused two workers to hang mid-review
+   in the run that prompted this rule (`reference/incidents.md`). The
+   coordinator reviews once, in Phase 8, over the whole wave's integration
+   branch, where there's no nesting and the full diff is visible at once.
 7. Comment real decisions on your own ticket as you make them — sync your
    handoff note to a tracker comment at first-green and again now.
 8. Commit(s) using this repo's normal commit convention, with the ticket
@@ -280,25 +284,22 @@ wave's own tickets) rather than reusing the name — git will otherwise refuse
 the second worktree's checkout outright, or worse, silently fold two
 unrelated waves' history together if it doesn't.
 
-Run `code-review` here, once, over the full integration branch — this is
-the review Phase 7 deliberately deferred. It fans out its own
-`angle-*`-style finder sub-agents; while waiting on that fan-out, poll
-`forge usage --stalled` (default `usage.stalledMinutes`) every few minutes
-instead of just watching for the completion notification — a roster that
-goes silent gives no notification of its own, and this repo has seen an
-8-finder roster hang for ~1h45m with transcripts that stopped growing
-entirely (`reference/incidents.md`). If `--stalled` reports the roster hung,
-`TaskStop` every one of those tasks and retry `code-review` at `--level
-medium` (smaller fan-out) or, if it hangs again, run the review in a single
-pass with no fan-out at all rather than retrying the same shape a third
-time. If other background tasks (another wave's workers, a fork) are already
-running when this phase starts, skip straight to a no-fan-out `code-review`
-pass instead of discovering the same roster hang a second time on an already
-busy host — this includes a **sibling coordinator's** wave: check `forge
-slots` first, and if it shows a live run other than your own, treat this
-host as already busy and skip the fan-out, since the hang has repeatedly
-correlated with several waves' worth of subagents/background tasks
-contending for the host at once, host-wide, not just within one session.
+Review here, once, over the full integration branch — this is the review
+Phase 7 deliberately deferred. Dispatch a single `Agent({subagent_type:
+"forge-reviewer"})` call built from `reference/reviewer-prompt.md`'s
+template — a fresh-context, single-pass review, never a fan-out: nesting
+sub-agents inside a subagent's own review is what caused two workers to hang
+mid-review in the run that originally motivated a fan-out here
+(`reference/incidents.md`), and a fan-out's own roster has separately hung
+for ~1h45m in this repo. Apply whatever the reviewer flags as a blocker
+before proceeding; a should-fix finding is the coordinator's judgment call,
+noted in this wave's report either way (Phase 9). If `forge-reviewer` is
+missing (`forge doctor`'s global findings), fall back to the `code-review`
+skill's own no-fan-out mode (`--level low` or `medium`) rather than its
+default fan-out. For a high-stakes wave, the user can additionally run
+`/code-review ultra` by hand afterward — that's a manual, opt-in step, never
+something this phase dispatches on its own.
+
 Then run this repo's full test suite exactly once over the merged
 result (`commands.fullSuite`, the shared/singleton resource from Phase 7, if
 this repo has one).

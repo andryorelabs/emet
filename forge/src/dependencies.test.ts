@@ -4,9 +4,11 @@ import os from 'node:os'
 import path from 'node:path'
 
 import {
+  FORGE_AGENT_NAMES,
   MATTPOCOCK_SKILLS_PLUGIN_ID,
   checkDependencies,
   classifyClaudePluginProbe,
+  classifyForgeAgentsProbe,
   classifyGithubCliProbe,
   classifyLinearMcpProbe,
   findLinearMcpEntry,
@@ -14,10 +16,12 @@ import {
   indeterminateChecks,
   mcpListMentionsLinear,
   parsePluginListOutput,
+  probeForgeAgents,
   probeLinearMcpServer,
   unsatisfiedChecks,
   type ClaudePluginProbe,
   type DependencyProbes,
+  type ForgeAgentsProbe,
   type GithubCliProbe,
   type LinearMcpProbe,
 } from './dependencies'
@@ -28,12 +32,14 @@ function stubProbes(overrides: {
   readonly claudePlugin?: ClaudePluginProbe
   readonly githubCli?: GithubCliProbe
   readonly linearMcpServer?: LinearMcpProbe
+  readonly forgeAgents?: ForgeAgentsProbe
 }): DependencyProbes {
   return {
     claudePlugin: async () => overrides.claudePlugin ?? { kind: 'listed', status: 'installed' },
     githubCli: async () => overrides.githubCli ?? { kind: 'authenticated' },
     linearMcpServer: async () =>
       overrides.linearMcpServer ?? { kind: 'declared', source: 'mcp-json' },
+    forgeAgents: async () => overrides.forgeAgents ?? { kind: 'present' },
   }
 }
 
@@ -161,6 +167,45 @@ describe('classifyClaudePluginProbe', () => {
     expect(classifyClaudePluginProbe({ kind: 'claude-failed', detail: 'exit code 1' }).status).toBe(
       'indeterminate',
     )
+  })
+})
+
+describe('classifyForgeAgentsProbe', () => {
+  test('present is satisfied', () => {
+    expect(classifyForgeAgentsProbe({ kind: 'present' }).status).toBe('satisfied')
+  })
+
+  test('missing is unsatisfied and names the missing agents plus the fix', () => {
+    const check = classifyForgeAgentsProbe({ kind: 'missing', missing: ['forge-reviewer'] })
+    expect(check.status).toBe('unsatisfied')
+    expect(check.summary).toContain('forge-reviewer')
+    expect(check.remedy).toEqual(['./install.sh'])
+  })
+})
+
+describe('probeForgeAgents', () => {
+  test('present when both agent files exist', () => {
+    const directory = mkdtempSync(path.join(os.tmpdir(), 'forge-agents-'))
+    try {
+      for (const name of FORGE_AGENT_NAMES) {
+        writeFileSync(path.join(directory, `${name}.md`), '')
+      }
+      expect(probeForgeAgents(directory)).toEqual({ kind: 'present' })
+    } finally {
+      rmSync(directory, { recursive: true, force: true })
+    }
+  })
+
+  test('missing lists every agent file that is absent', () => {
+    const directory = mkdtempSync(path.join(os.tmpdir(), 'forge-agents-'))
+    try {
+      expect(probeForgeAgents(directory)).toEqual({
+        kind: 'missing',
+        missing: [...FORGE_AGENT_NAMES],
+      })
+    } finally {
+      rmSync(directory, { recursive: true, force: true })
+    }
   })
 })
 
@@ -397,7 +442,11 @@ describe('checkDependencies', () => {
       repoRoot: '/tmp',
       probes: stubProbes({ githubCli: { kind: 'not-on-path' } }),
     })
-    expect(checks.map((check) => check.dependency)).toEqual(['claude-plugin', 'tracker-kind'])
+    expect(checks.map((check) => check.dependency)).toEqual([
+      'claude-plugin',
+      'forge-agents',
+      'tracker-kind',
+    ])
     expect(indeterminateChecks(checks).map((check) => check.dependency)).toEqual(['tracker-kind'])
     expect(unsatisfiedChecks(checks)).toEqual([])
   })

@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
-# Installs the global `forge` CLI + the `/forge` Claude Code command.
+# Installs the global `forge` CLI, the `/forge` Claude Code command, and the
+# forge-worker/forge-reviewer agents it dispatches.
 # Safe to re-run — it overwrites its own previous install, nothing else.
 set -euo pipefail
 
@@ -22,6 +23,11 @@ rsync -a --delete --exclude node_modules "$SCRIPT_DIR/forge/" "$HOME/.claude/for
 echo "==> Copying the /forge command to ~/.claude/commands/forge.md"
 mkdir -p "$HOME/.claude/commands"
 cp "$SCRIPT_DIR/commands/forge.md" "$HOME/.claude/commands/forge.md"
+
+echo "==> Copying the forge-worker and forge-reviewer agents to ~/.claude/agents/"
+mkdir -p "$HOME/.claude/agents"
+cp "$SCRIPT_DIR/agents/forge-worker.md" "$HOME/.claude/agents/forge-worker.md"
+cp "$SCRIPT_DIR/agents/forge-reviewer.md" "$HOME/.claude/agents/forge-reviewer.md"
 
 echo "==> Installing forge CLI dependencies"
 (cd "$HOME/.claude/forge" && bun install --silent)
@@ -63,6 +69,12 @@ fi
 echo
 echo "Done. Verify with:"
 echo "  forge selftest"
+echo "  forge doctor ."
+echo
+echo "\`forge doctor\` also reports any recommended ~/.claude/settings.json"
+echo "tweaks for running /forge unattended (model: opusplan, an unattended"
+echo "permissions.defaultMode, deny rules for pushing to main/force) — see"
+echo "the README's \"Models & effort\" section. It never edits that file."
 echo
 echo "Then, in any git repo, run \`forge init\` once and read what it prints —"
 echo "it tells you about any missing dependency (the mattpocock-skills plugin,"
