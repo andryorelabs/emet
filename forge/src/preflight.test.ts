@@ -128,6 +128,23 @@ describe('classifyWorktreeEntry', () => {
       branch: 'ao-1-something',
     })
   })
+
+  test('an injected resolveOwner (e.g. reservation fallback) is used instead of the raw lock', () => {
+    const entry: WorktreeEntry = {
+      // The harness unlocked this worktree — resolveWorktreeOwner alone
+      // would return null and this would fall through to content-fallback.
+      directory: '/repo/.claude/worktrees/agent-abc',
+      branch: 'ao-259-forge-preflight-ownership-aware',
+      lockedReason: null,
+    }
+    const verdict = classifyWorktreeEntry(
+      entry,
+      owner.runId,
+      () => 'live',
+      () => owner,
+    )
+    expect(verdict).toEqual({ kind: 'own-run-leftover', entry, owner })
+  })
 })
 
 describe('checkSlotCapacity', () => {

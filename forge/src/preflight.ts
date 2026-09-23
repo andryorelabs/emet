@@ -27,6 +27,7 @@ import {
   resolveMaxLiveWorkers,
   resolveSlotsDirectory,
 } from './slots'
+import { listReservations } from './claims'
 import {
   classifyByContent,
   isAgentWorktree,
@@ -37,6 +38,7 @@ import {
   listWorktreeEntries,
   resolveMainTree,
   resolveWorktreeOwner,
+  resolveWorktreeOwnerWithReservations,
   type WorktreeEntry,
   type WorktreeOwner,
 } from './worktrees'
@@ -191,10 +193,11 @@ export function classifyWorktreeEntry(
   entry: WorktreeEntry,
   currentRunId: string | undefined,
   classifyOwnerRun: (owner: WorktreeOwner) => RunVerdict,
+  resolveOwner: (entry: WorktreeEntry) => WorktreeOwner | null = resolveWorktreeOwner,
 ): WorktreeEntryVerdict {
   if (!entry.branch) return { kind: 'detached', entry }
 
-  const owner = resolveWorktreeOwner(entry)
+  const owner = resolveOwner(entry)
   if (!owner) return { kind: 'content-fallback', entry, branch: entry.branch }
 
   const runVerdict = classifyOwnerRun(owner)
@@ -317,7 +320,7 @@ type WorktreeEntryReport = {
  * levels deep as ambiguous. `'fail'` blocks dispatch; `'info'`/`'warn'`
  * never do.
  */
-async function describeWorktreeEntryVerdict(
+export async function describeWorktreeEntryVerdict(
   entry: WorktreeEntry,
   verdict: WorktreeEntryVerdict,
   mainTree: string,
@@ -363,11 +366,16 @@ async function describeWorktreeEntryVerdict(
         trunk,
       )
       const trunkRef = `${remote}/${trunk}`
-      const advice = isSafeToDelete(contentVerdict)
+      const safe = isSafeToDelete(contentVerdict)
+      const advice = safe
         ? `looks merged/equivalent to ${trunkRef} — safe to run "forge cleanup"`
         : `${contentVerdict} from ${trunkRef} — needs human review before cleanup, work could be lost`
+      // Merged/equivalent residue is harmless leftover, never a hazard to a
+      // sibling coordinator — only genuinely unclassifiable content (still
+      // diverged/conflicted against trunk, with no reservation to attribute
+      // it either) blocks dispatch.
       return {
-        bucket: 'fail',
+        bucket: safe ? 'info' : 'fail',
         line: `  ${entry.directory} (${verdict.branch}): ${advice}`,
       }
     }
@@ -825,7 +833,10 @@ async function main(config: ForgeConfig, repoRoot: string) {
       !isWorktreeAgentBranchLive(branch.name, liveWorktreeDirectoryNames),
   )
   if (orphanedScaffoldBranches.length > 0) {
-    failures.push(
+    // Always safe to delete, per this repo's own message below — a sibling
+    // coordinator's own leftover residue is never a reason to fail *this*
+    // coordinator's dispatch.
+    warnLines.push(
       `Orphaned worktree-agent-* scaffold branches (their worktree is already gone — always safe to delete) — run "forge cleanup":\n${orphanedScaffoldBranches.map((b) => `  ${b.name}`).join('\n')}`,
     )
   }
@@ -838,19 +849,32 @@ async function main(config: ForgeConfig, repoRoot: string) {
     const mainTree = await resolveMainTree(config.repo.remote, config.repo.trunk)
     const idleThresholdMs = resolveIdleThresholdMs(config)
     const worktreeFailLines: string[] = []
+    // The harness's own `Agent({isolation: "worktree"})` unlocks a worker's
+    // worktree the moment its agent process exits, dropping the `/forge`
+    // lock reason `resolveWorktreeOwner` needs (see `reference/incidents.md`
+    // — "the harness drops the forge lock when an agent exits"). Ticket
+    // reservations (`claims.ts`) outlive that lock, so an unlocked worktree
+    // still gets attributed to its real owning run instead of falling
+    // through to the unowned `content-fallback` path.
+    const reservations = await listReservations()
 
     for (const entry of worktreeEntries) {
-      const verdict = classifyWorktreeEntry(entry, currentRunId, (owner) =>
-        classifyRun(
-          owner.anchorPid,
-          // The coordinator's transcript lives under *its own* project
-          // slug, not this worktree's directory — see `WorktreeOwner`'s doc
-          // comment (worktrees.ts). Fall back to the directory-derived guess
-          // only for a lock reason written before `slug=` existed.
-          owner.coordinatorSlug ?? resolveSessionSlug(entry.directory),
-          owner.runId,
-          { idleThresholdMs },
-        ),
+      const verdict = classifyWorktreeEntry(
+        entry,
+        currentRunId,
+        (owner) =>
+          classifyRun(
+            owner.anchorPid,
+            // The coordinator's transcript lives under *its own* project
+            // slug, not this worktree's directory — see `WorktreeOwner`'s doc
+            // comment (worktrees.ts). Fall back to the directory-derived guess
+            // only for a lock reason written before `slug=` existed.
+            owner.coordinatorSlug ?? resolveSessionSlug(entry.directory),
+            owner.runId,
+            { idleThresholdMs },
+          ),
+        (entry) =>
+          resolveWorktreeOwnerWithReservations(entry, reservations, config.ticket.branchPrefix),
       )
       const report = await describeWorktreeEntryVerdict(
         entry,
@@ -949,7 +973,7 @@ async function main(config: ForgeConfig, repoRoot: string) {
   const dependenciesSummary = `${satisfiedDependencyCount}/${dependencyChecks.length} dependency check(s) satisfied`
 
   console.log(
-    `forge:preflight OK — ${requiredFilesSummary}, no leftover worktree-agent-* branches, .claude/worktrees/ clean (or owned by a live/reclaimable /forge run), ${capacityCheck.freeCount}/${capacityCheck.cap} worker slots free, ${dependenciesSummary}.`,
+    `forge:preflight OK — ${requiredFilesSummary}, .claude/worktrees/ clean (or owned by a live/reclaimable /forge run; see any warnings above for leftover worktree-agent-* branches), ${capacityCheck.freeCount}/${capacityCheck.cap} worker slots free, ${dependenciesSummary}.`,
   )
 }
 
