@@ -7,6 +7,7 @@ import type { DependencyProbes } from './dependencies'
 import {
   auditRepo,
   checkSelfCheckCommand,
+  checkSettingsAdvisories,
   findMissingDocs,
   isReportClean,
   parseDoctorArguments,
@@ -30,6 +31,7 @@ const healthyProbes: DependencyProbes = {
   claudePlugin: async () => ({ kind: 'listed', status: 'installed' }),
   githubCli: async () => ({ kind: 'authenticated' }),
   linearMcpServer: async () => ({ kind: 'declared', source: 'mcp-json' }),
+  forgeAgents: async () => ({ kind: 'present' }),
 }
 
 describe('isReportClean', () => {
@@ -322,5 +324,52 @@ describe('auditRepo', () => {
     const report = await auditRepo(repoRoot, probes)
     expect(report.trackerKind).toBeNull()
     expect(report.dependencyFindings).toEqual([])
+  })
+})
+
+const readySettings = {
+  model: 'opusplan',
+  permissions: {
+    defaultMode: 'auto',
+    deny: ['Bash(git push * main)', 'Bash(git push --force *)'],
+  },
+}
+
+describe('checkSettingsAdvisories', () => {
+  test('no advisories when every forge-relevant key is already set', () => {
+    expect(checkSettingsAdvisories(readySettings)).toEqual([])
+  })
+
+  test('no settings.json at all produces no advisories to act on', () => {
+    expect(checkSettingsAdvisories(null)).toEqual([])
+  })
+
+  test('flags a model other than opusplan', () => {
+    const advisories = checkSettingsAdvisories({ ...readySettings, model: 'sonnet' })
+    expect(advisories.some((advisory) => advisory.includes('opusplan'))).toBe(true)
+  })
+
+  test('flags a permissions.defaultMode that cannot run unattended', () => {
+    const advisories = checkSettingsAdvisories({
+      ...readySettings,
+      permissions: { ...readySettings.permissions, defaultMode: 'default' },
+    })
+    expect(advisories.some((advisory) => advisory.includes('permission prompt'))).toBe(true)
+  })
+
+  test('flags a missing deny rule for pushing to main/master', () => {
+    const advisories = checkSettingsAdvisories({
+      ...readySettings,
+      permissions: { ...readySettings.permissions, deny: ['Bash(git push --force *)'] },
+    })
+    expect(advisories.some((advisory) => advisory.includes('main|master'))).toBe(true)
+  })
+
+  test('flags a missing deny rule for force-pushing', () => {
+    const advisories = checkSettingsAdvisories({
+      ...readySettings,
+      permissions: { ...readySettings.permissions, deny: ['Bash(git push * main)'] },
+    })
+    expect(advisories.some((advisory) => advisory.includes('--force'))).toBe(true)
   })
 })
