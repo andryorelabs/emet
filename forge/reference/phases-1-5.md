@@ -65,6 +65,15 @@ Phase 2. Reinforce two rules on top of the skill's own breakdown:
   (e.g. `Pricing.dc.html`). A UI ticket with no named artboard means that
   screen was never designed: mark it explicitly rather than let the worker
   improvise the interface.
+- List this repo's project skills once (`ls .claude/skills/*/SKILL.md`; read only
+  each file's frontmatter — `head -n 10`, never the full body). For every
+  ticket, write a mandatory `## Project skills` section listing only the
+  skills relevant to *that ticket's* own task — never the whole catalog,
+  never a blanket "all UI skills" — one line per skill:
+  `- <name> — <why it applies>`, or `none` if nothing matches or the repo has
+  no `.claude/skills/`. Relevance is the only selection criterion; prefer a
+  specific skill over a generic one, and let the `## Context budget` tripwire
+  below split the ticket if the relevant set gets heavy.
 - Every ticket carries a mandatory `## Context budget` section, computed
   mechanically (`wc -l`/`grep -c` against the actual files it touches, not a
   guess), so sizing is checkable before any code exists:
@@ -78,6 +87,9 @@ Phase 2. Reinforce two rules on top of the skill's own breakdown:
   Estimated peak: ~Y K. PASS if < 160K.
   ```
 
+  Add each `## Project skills` entry's own `SKILL.md` line count into the
+  touch-set estimate — it's context the worker reads too.
+
   Split the ticket into two (same wave, parallel, no extra close-out cost) if
   any tripwire fires: estimated peak > 160K; touch set > 8 files or > 1,500
   lines; new surface > 500 lines; more than one new E2E spec in the ticket;
@@ -89,7 +101,7 @@ Phase 2. Reinforce two rules on top of the skill's own breakdown:
 ## Phase 4 — The one freeze point
 
 Write the complete plan to the plan file: the spec, every ticket with its
-blockers, and **who's doing what** — which tickets are unassigned (a worker
+blockers and its `## Project skills` picks, and **who's doing what** — which tickets are unassigned (a worker
 will take them) and which are assigned to a human (skipped entirely, they're
 doing those by hand). This doubles as the safety net against "I meant to
 assign myself that one and forgot" — the whole dispatch plan is visible

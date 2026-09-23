@@ -15,6 +15,15 @@ Spec summary (do not fetch or read the full spec):
 
 {{spec_summary_15_lines}}
 
+Project skills this wave's tickets named (union across tickets, `none` if
+none applied):
+
+{{project_skills}}
+
+Read each listed skill's `.claude/skills/<name>/SKILL.md` and treat a clear
+violation of one in the diff as a finding — severity by actual impact, not
+automatically a blocker.
+
 Diff the integration branch against the base branch yourself
 (`git diff {{base_branch}}...{{integration_branch}}`) — don't rely on a diff
 pasted here. Read only what the diff touches plus whatever surrounding

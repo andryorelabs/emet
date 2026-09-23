@@ -191,7 +191,12 @@ Inside each worktree, in order:
    with `offset`/`limit`. Never `Read` a raw log, an RSC/flight payload, or a
    full `error-context.md` (use `limit: 30` — the useful lines are first) —
    `grep`/`grep -o` for the specific thing being hunted instead.
-4. Implement with the `tdd` skill at the seams the spec/ticket already
+4. Before writing any code, load every skill listed in the ticket's
+   `## Project skills` section with the `Skill` tool; if one isn't available,
+   `Read` `.claude/skills/<name>/SKILL.md` in your worktree instead. Follow
+   them alongside `tdd`; where a project skill conflicts with the ticket's
+   own hand-off, the ticket wins — note the conflict in a ticket comment.
+   Implement with the `tdd` skill at the seams the spec/ticket already
    named, reaching for `diagnosing-bugs` if something gets stuck.
 5. Write/update `.forge/handoff-<own ticket>.md` at its three fixed
    triggers — first green test, each closed dead-end, before each E2E run
@@ -287,7 +292,9 @@ unrelated waves' history together if it doesn't.
 Review here, once, over the full integration branch — this is the review
 Phase 7 deliberately deferred. Dispatch a single `Agent({subagent_type:
 "forge-reviewer"})` call built from `reference/reviewer-prompt.md`'s
-template — a fresh-context, single-pass review, never a fan-out: nesting
+template — fill its `{{project_skills}}` placeholder with the union of every
+wave ticket's `## Project skills` entries (`none` if all tickets said
+`none`) — a fresh-context, single-pass review, never a fan-out: nesting
 sub-agents inside a subagent's own review is what caused two workers to hang
 mid-review in the run that originally motivated a fan-out here
 (`reference/incidents.md`), and a fan-out's own roster has separately hung
