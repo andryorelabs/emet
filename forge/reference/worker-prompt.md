@@ -47,10 +47,20 @@ Bootstrap this worktree, in this order:
    before checking out a branch, before reading a single file:
 
    ```
-   git worktree lock "$(git rev-parse --show-toplevel)" --reason '{{worktree_lock_reason}}'
+   git worktree unlock . 2>/dev/null; git worktree lock . --reason '{{worktree_lock_reason}}'
    ```
 
-   Paste that reason exactly as given — don't regenerate it, don't run
+   Use `.`, not `$(git rev-parse --show-toplevel)` — the isolation guard
+   refuses a git invocation too complex for it to verify stays inside your
+   own worktree, and a subshell inside the target argument is exactly that
+   shape. The leading `unlock` is not optional: your worktree usually
+   arrives already locked by the harness itself (a generic `claude agent
+   agent-<id> (pid …)` reason, not `/forge`'s own shape), and `lock`
+   over an existing lock fails outright — `unlock` first, silencing the
+   "not locked" error on the rare worktree that arrives unlocked, then
+   `lock` unconditionally.
+
+   Paste the reason exactly as given — don't regenerate it, don't run
    `forge lock-reason` yourself, don't "fix" the `slug=` field to match this
    worktree. It's what attributes this worktree to the run that dispatched
    you; without it your worktree is indistinguishable from an unrelated
@@ -58,6 +68,18 @@ Bootstrap this worktree, in this order:
    (which runs within ~30s of your dispatch) hard-fails the whole wave.
    Verify it took before moving on — `git worktree list --porcelain` must
    show a `locked forge run=…` line for this directory.
+
+   This lock does not survive you: the harness unlocks this worktree itself
+   the moment your agent process exits, regardless of whether your work is
+   done — see `reference/incidents.md`. That's expected and handled on the
+   coordinator's side (ticket reservations outlive the lock); it's not
+   something you can prevent or need to work around.
+
+   Never call `Bash` with `run_in_background: true` for anything you intend
+   to wait on — you are a worker, not the top-level session, and you get no
+   completion notification for a backgrounded process; it will run
+   unattended with nothing to resume you. Run it in the foreground, with a
+   `timeout` wrapper if it might hang.
 
 1. {{bootstrap_steps}}
 
