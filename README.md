@@ -102,7 +102,11 @@ what happens next (both validated by `forge preflight`):
 ```json
 {
   "pr": { "autoMerge": true, "mergeMethod": "squash", "maxCiFixAttempts": 2 },
-  "handoff": { "autoChain": false }
+  "handoff": {
+    "autoChain": false,
+    "launcher": "auto",
+    "permissionMode": "bypassPermissions"
+  }
 }
 ```
 
@@ -114,6 +118,16 @@ what happens next (both validated by `forge preflight`):
   waves left, launch the next one with `claude --bg` instead of printing
   `/forge --dispatch <spec-id>`. Inspect it with `claude agents` /
   `claude attach forge-<spec-id>-w<n>`.
+- `handoff.launcher` (default `auto`): also open the chained wave in an
+  Orca tab running `claude attach`.
+  `auto` does it only inside Orca, `orca` always tries, `bg` never. The wave
+  runs in the background either way.
+- `handoff.permissionMode` (default `bypassPermissions`): permission mode of
+  the chained session. Not inherited from the launching session, because
+  `auto` mode's classifier can deny a step such as `gh pr merge` and leave a
+  wave half-finished. Your `permissions.deny` rules still apply, but the
+  bypass warning must have been accepted once interactively
+  (`skipDangerousModePermissionPrompt`).
 
 ## What's in here
 

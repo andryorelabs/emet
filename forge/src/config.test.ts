@@ -75,7 +75,7 @@ describe('loadForgeConfig', () => {
         requiredFiles: [{ path: '.env.keys', why: 'needed for tests' }],
         requiredCommands: ['gh'],
       },
-      handoff: { maxLines: 30, maxChars: 4000, autoChain: true },
+      handoff: { maxLines: 30, maxChars: 4000, autoChain: true, launcher: 'orca', permissionMode: 'acceptEdits' },
       pr: { autoMerge: false, mergeMethod: 'merge', maxCiFixAttempts: 3 },
       usage: { oversizedReadLines: 200, stalledMinutes: 5 },
     }
@@ -130,6 +130,8 @@ describe('loadForgeConfig', () => {
 
   test.each([
     ['handoff.autoChain', { handoff: { autoChain: 'yes' } }, /"handoff.autoChain" must be a boolean/],
+    ['handoff.launcher', { handoff: { launcher: 'tmux' } }, /"handoff.launcher" must be one of/],
+    ['handoff.permissionMode', { handoff: { permissionMode: 'plan' } }, /"handoff.permissionMode" must be one of/],
     ['pr.autoMerge', { pr: { autoMerge: 1 } }, /"pr.autoMerge" must be a boolean/],
     ['pr.mergeMethod', { pr: { mergeMethod: 'fast-forward' } }, /"pr.mergeMethod" must be one of/],
     ['pr.maxCiFixAttempts', { pr: { maxCiFixAttempts: -1 } }, /"pr.maxCiFixAttempts" must be a non-negative integer/],

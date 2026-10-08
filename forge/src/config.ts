@@ -41,10 +41,18 @@ export const DEFAULT_FORGE_CONFIG: ForgeConfig = {
   },
   tracker: { kind: null },
   preflight: { requiredFiles: [], requiredCommands: [] },
-  handoff: { maxLines: 60, maxChars: 8000, autoChain: false },
+  handoff: { maxLines: 60, maxChars: 8000, autoChain: false, launcher: 'auto', permissionMode: 'bypassPermissions' },
   pr: { autoMerge: true, mergeMethod: 'squash', maxCiFixAttempts: 2 },
   usage: { oversizedReadLines: 400, stalledMinutes: 10 },
 }
+
+export type HandoffLauncher = 'auto' | 'orca' | 'bg'
+
+const HANDOFF_LAUNCHERS: readonly HandoffLauncher[] = ['auto', 'orca', 'bg']
+
+export type HandoffPermissionMode = 'bypassPermissions' | 'auto' | 'acceptEdits'
+
+const HANDOFF_PERMISSION_MODES: readonly HandoffPermissionMode[] = ['bypassPermissions', 'auto', 'acceptEdits']
 
 export type MergeMethod = 'squash' | 'merge' | 'rebase'
 
@@ -117,6 +125,11 @@ export interface ForgeConfig {
      * launches the next wave itself via `claude --bg` instead of printing
      * the `/forge --dispatch` command for a human to paste. */
     readonly autoChain: boolean
+    /** Where a chained wave becomes visible: `auto` opens an Orca tab when
+     * the session runs inside Orca, `orca` always tries, `bg` never does. */
+    readonly launcher: HandoffLauncher
+    /** Permission mode the chained wave's `claude --bg` session runs in. */
+    readonly permissionMode: HandoffPermissionMode
   }
   readonly pr: {
     /** When true, Phase 8 waits for the wave PR's checks and merges it. */
@@ -304,6 +317,14 @@ function validateAndMerge(raw: unknown): { ok: true; config: ForgeConfig } | { o
   if (typeof autoChain !== 'boolean') {
     return { ok: false, reason: '"handoff.autoChain" must be a boolean' }
   }
+  const launcher = handoffSection.launcher ?? DEFAULT_FORGE_CONFIG.handoff.launcher
+  if (typeof launcher !== 'string' || !HANDOFF_LAUNCHERS.includes(launcher as HandoffLauncher)) {
+    return { ok: false, reason: '"handoff.launcher" must be one of auto|orca|bg' }
+  }
+  const permissionMode = handoffSection.permissionMode ?? DEFAULT_FORGE_CONFIG.handoff.permissionMode
+  if (typeof permissionMode !== 'string' || !HANDOFF_PERMISSION_MODES.includes(permissionMode as HandoffPermissionMode)) {
+    return { ok: false, reason: '"handoff.permissionMode" must be one of bypassPermissions|auto|acceptEdits' }
+  }
 
   const prSection = isRecord(raw.pr) ? raw.pr : {}
   const autoMerge = prSection.autoMerge ?? DEFAULT_FORGE_CONFIG.pr.autoMerge
@@ -338,7 +359,13 @@ function validateAndMerge(raw: unknown): { ok: true; config: ForgeConfig } | { o
       concurrency: { waveSize, maxLiveWorkers, runIdleThresholdMs },
       tracker: { kind: trackerKind },
       preflight: { requiredFiles, requiredCommands },
-      handoff: { maxLines, maxChars, autoChain },
+      handoff: {
+        maxLines,
+        maxChars,
+        autoChain,
+        launcher: launcher as HandoffLauncher,
+        permissionMode: permissionMode as HandoffPermissionMode,
+      },
       pr: { autoMerge, mergeMethod: mergeMethod as MergeMethod, maxCiFixAttempts },
       usage: { oversizedReadLines, stalledMinutes },
     },
