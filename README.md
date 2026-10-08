@@ -84,7 +84,7 @@ forge preflight      # confirms the repo is dispatch-ready
 Then, inside Claude Code:
 
 ```
-/forge <describe the feature>              # full run: interview through merge
+/forge <describe the feature>              # interview → wave 1; later waves via --dispatch/autoChain
 /forge --draft <describe the feature>      # stop after tickets are created
 /forge --dispatch <spec-id>                # dispatch a --draft'd spec later
 ```
@@ -96,7 +96,14 @@ preflight` refuses to dispatch while one remains.
 
 ### Landing PRs and chaining waves
 
-Each wave ships as one PR. Two optional `forge.config.json` sections control
+One wave is one PR. Its body carries `Closes #N` for each ticket (the
+tracker's closing keyword), and the coordinator moves the tickets to in-review
+when it opens the PR. The PR is then merged per `pr.autoMerge`, or left open
+when the wave was flagged, `autoMerge` is `false`, or CI fixes ran out (the PR
+then gets the human-decision label). After a merge, `forge cleanup --run
+<runId>` frees the wave's branches, ticket claims, and worker slots. Later
+waves run in their own sessions, never in the one that ran wave 1. Two optional
+`forge.config.json` sections control
 what happens next (both validated by `forge preflight`):
 
 ```json
@@ -117,7 +124,17 @@ what happens next (both validated by `forge preflight`):
 - `handoff.autoChain` (default `false`): after a clean, merged wave with more
   waves left, launch the next one with `claude --bg` instead of printing
   `/forge --dispatch <spec-id>`. Inspect it with `claude agents` /
-  `claude attach forge-<spec-id>-w<n>`.
+  `claude attach forge-<spec-id>-w<n>`. Requirements:
+  1. `claude` on PATH, with `--bg` support.
+  2. A trusted workspace. `--bg` runs non-interactively, so the trust dialog
+     never shows; open `claude` interactively in the repo once and accept it.
+  3. The bypass warning accepted once in an interactive session
+     (`skipDangerousModePermissionPrompt`), since the next wave runs in
+     `handoff.permissionMode` (below), not in the launching session's mode.
+
+  It launches only when the PR merged and nothing was flagged, and it skips
+  if a `forge-<spec-id>-*` session is already live (`claude agents --json`).
+  If the launch fails, it falls back to printing `/forge --dispatch <spec-id>`.
 - `handoff.launcher` (default `auto`): also open the chained wave in an
   Orca tab running `claude attach`.
   `auto` does it only inside Orca, `orca` always tries, `bg` never. The wave
