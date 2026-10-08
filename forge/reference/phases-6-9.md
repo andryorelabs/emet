@@ -350,8 +350,9 @@ this line needs a manual per-ticket state write instead.
    (`docs/agents/triage-labels.md`), and report the failing check.
 
 Never auto-merge a wave with anything flagged (see below), whatever
-`pr.autoMerge` says. After a merge, run
-`forge cleanup --run <runId>` to delete this wave's local branches
+`pr.autoMerge` says. Run the merge and the cleanup below as **separate Bash
+calls** — never chained with `&&` or `;` — so one being blocked can't stop
+the other. After a merge, run `forge cleanup --run <runId>` to delete this wave's local branches
 (`worktree-agent-*` residue and fully-merged worker branches), prune
 worktrees, and release this run's ticket reservations and worker slots —
 always pass `--run <runId>` here, not the bare command, or those
@@ -408,13 +409,27 @@ instead of one session accumulating every wave in the run (see
    - First run `claude agents --json`; if a live session named
      `forge-<spec-id>-*` already exists, don't launch a second one.
    - Otherwise, from the repo root, run `claude --bg --name
-     forge-<spec-id>-w<n+1> --permission-mode <mode> "/forge --dispatch
-     <spec-id>"` (`<n+1>` is the next wave's number; `<mode>` is the mode
-     this session runs in, so the next wave gets the same prompts or none).
+     forge-<spec-id>-w<n+1> --permission-mode <handoff.permissionMode>
+     "/forge --dispatch <spec-id>"` (`<n+1>` is the next wave's number).
+     The mode comes from the config (default `bypassPermissions`), **not**
+     from this session: in `auto` mode the classifier can deny a step like
+     `gh pr merge` mid-wave and leave the wave half-finished. `permissions.
+     deny` rules and the `forge guard` hook still apply in bypass. If
+     Claude Code refuses the launch in that mode (the bypass warning was
+     never accepted interactively), relaunch with this session's own mode
+     and say so in the report.
    - Confirm it started with `claude agents --json` (it appears with that
      name), and put the name plus `claude attach <name>` in this wave's
      report. If the launch fails, fall through to the manual path below and
      report why.
+   - Make it visible per `handoff.launcher`. `bg`: nothing more. `auto`:
+     only when `$TERM_PROGRAM` is `Orca` and `orca status` shows
+     `runtimeReachable: true`. `orca`: always try. To open the tab run
+     `orca terminal create --worktree path:<repo root> --title
+     forge-<spec-id>-w<n+1> --command "claude attach
+     forge-<spec-id>-w<n+1>" --json`. The wave already runs in the
+     background, so if this fails just report the `claude attach` command —
+     it never stops the chain.
 
    Otherwise (`autoChain` is `false`, or the PR is open or flagged), print,
    verbatim, the command for the next wave: `/forge --dispatch <spec-id>`
