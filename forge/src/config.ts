@@ -41,9 +41,14 @@ export const DEFAULT_FORGE_CONFIG: ForgeConfig = {
   },
   tracker: { kind: null },
   preflight: { requiredFiles: [], requiredCommands: [] },
-  handoff: { maxLines: 60, maxChars: 8000 },
+  handoff: { maxLines: 60, maxChars: 8000, autoChain: false },
+  pr: { autoMerge: true, mergeMethod: 'squash', maxCiFixAttempts: 2 },
   usage: { oversizedReadLines: 400, stalledMinutes: 10 },
 }
+
+export type MergeMethod = 'squash' | 'merge' | 'rebase'
+
+const MERGE_METHODS: readonly MergeMethod[] = ['squash', 'merge', 'rebase']
 
 export interface ForgeConfig {
   readonly version: 1
@@ -108,6 +113,18 @@ export interface ForgeConfig {
   readonly handoff: {
     readonly maxLines: number
     readonly maxChars: number
+    /** When true, a wave that closes cleanly with a non-empty frontier
+     * launches the next wave itself via `claude --bg` instead of printing
+     * the `/forge --dispatch` command for a human to paste. */
+    readonly autoChain: boolean
+  }
+  readonly pr: {
+    /** When true, Phase 8 waits for the wave PR's checks and merges it. */
+    readonly autoMerge: boolean
+    readonly mergeMethod: MergeMethod
+    /** How many times the coordinator may try to fix a failing check before
+     * leaving the PR open for a human. */
+    readonly maxCiFixAttempts: number
   }
   readonly usage: {
     /** A `Read` with no `offset`/`limit` against a file over this many lines
@@ -283,6 +300,24 @@ function validateAndMerge(raw: unknown): { ok: true; config: ForgeConfig } | { o
   if (!isPositiveInteger(maxChars)) {
     return { ok: false, reason: '"handoff.maxChars" must be a positive integer' }
   }
+  const autoChain = handoffSection.autoChain ?? DEFAULT_FORGE_CONFIG.handoff.autoChain
+  if (typeof autoChain !== 'boolean') {
+    return { ok: false, reason: '"handoff.autoChain" must be a boolean' }
+  }
+
+  const prSection = isRecord(raw.pr) ? raw.pr : {}
+  const autoMerge = prSection.autoMerge ?? DEFAULT_FORGE_CONFIG.pr.autoMerge
+  const mergeMethod = prSection.mergeMethod ?? DEFAULT_FORGE_CONFIG.pr.mergeMethod
+  const maxCiFixAttempts = prSection.maxCiFixAttempts ?? DEFAULT_FORGE_CONFIG.pr.maxCiFixAttempts
+  if (typeof autoMerge !== 'boolean') {
+    return { ok: false, reason: '"pr.autoMerge" must be a boolean' }
+  }
+  if (typeof mergeMethod !== 'string' || !MERGE_METHODS.includes(mergeMethod as MergeMethod)) {
+    return { ok: false, reason: '"pr.mergeMethod" must be one of squash|merge|rebase' }
+  }
+  if (typeof maxCiFixAttempts !== 'number' || !Number.isInteger(maxCiFixAttempts) || maxCiFixAttempts < 0) {
+    return { ok: false, reason: '"pr.maxCiFixAttempts" must be a non-negative integer' }
+  }
 
   const usageSection = isRecord(raw.usage) ? raw.usage : {}
   const oversizedReadLines = usageSection.oversizedReadLines ?? DEFAULT_FORGE_CONFIG.usage.oversizedReadLines
@@ -303,7 +338,8 @@ function validateAndMerge(raw: unknown): { ok: true; config: ForgeConfig } | { o
       concurrency: { waveSize, maxLiveWorkers, runIdleThresholdMs },
       tracker: { kind: trackerKind },
       preflight: { requiredFiles, requiredCommands },
-      handoff: { maxLines, maxChars },
+      handoff: { maxLines, maxChars, autoChain },
+      pr: { autoMerge, mergeMethod: mergeMethod as MergeMethod, maxCiFixAttempts },
       usage: { oversizedReadLines, stalledMinutes },
     },
   }

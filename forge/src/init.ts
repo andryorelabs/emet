@@ -260,6 +260,7 @@ export function buildForgeConfig(detected: DetectedRepoInfo): ForgeConfig {
       requiredCommands: detected.tracker === 'github' ? ['gh'] : [],
     },
     handoff: { ...DEFAULT_FORGE_CONFIG.handoff },
+    pr: { ...DEFAULT_FORGE_CONFIG.pr },
     usage: { ...DEFAULT_FORGE_CONFIG.usage },
   }
 }
