@@ -9,8 +9,10 @@ FEATURE: $ARGUMENTS
 Parse `$ARGUMENTS` for a leading `--draft` or `--dispatch <spec-id>` flag
 before anything else:
 
-- **No flag** (default): the full run described below, start to finish, in
-  one session.
+- **No flag** (default): Phases 1–5 plus the first wave in this session; each
+  later wave runs in its own session — `/forge --dispatch <spec-id>` by hand,
+  or auto-launched when `handoff.autoChain` is on (see Phase 9 in
+  `reference/phases-6-9.md`).
 - **`--draft <feature>`**: run Phases 0–5 and then stop (see the note at the
   end of Phase 5). Nothing gets dispatched; the run ends with a spec issue
   and its tickets sitting in the tracker, ready for `--dispatch` later, in
@@ -83,6 +85,16 @@ unless the run continues from Phase 5 straight into Phase 6.
   dependency layers produces 4 waves, 4 integration branches, 4 PRs — never
   one PR for the whole run. This is load-bearing: it keeps each PR reviewable
   and lets a repo's E2E singleton (if any) run serialized, once per wave.
+  Lifecycle of one wave:
+  1. Dispatch the unblocked tickets; workers implement in worktrees.
+  2. Integration plus review on the wave's integration branch.
+  3. One PR, with a `Closes` line per ticket.
+  4. Merged when `pr.autoMerge` is on and checks pass (CI fixes up to
+     `pr.maxCiFixAttempts`); left open when autoMerge is off, anything was
+     flagged, or CI fixes ran out.
+  5. If merged, `forge cleanup --run <runId>`. Then the Phase 9 hand-off: if
+     more tickets can run, the next wave starts in a new session; if none can,
+     the run ends with the final report. Details in `reference/phases-6-9.md`.
 - **Phases 6–9** (every mode): dispatch → per-worker implementation → wave
   close-out → wave close and hand off. Read
   `~/.claude/forge/reference/phases-6-9.md` when you reach Phase 6, along
