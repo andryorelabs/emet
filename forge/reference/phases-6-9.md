@@ -331,7 +331,26 @@ keyword parsing (see `reference/tracker-<kind>.md`'s `pr.referenceLines`):
 if it doesn't, fix it with `gh pr edit <n> --body-file …` before reporting
 the wave done. This has no cheap fix later — the merge webhook that would
 have closed those tickets doesn't retry, so a PR that already merged without
-this line needs a manual per-ticket state write instead. Wait for CI, merge, then run
+this line needs a manual per-ticket state write instead.
+
+**Land the PR** per `forge.config.json`'s `pr` section (`autoMerge` default
+`true`, `mergeMethod` default `squash`, `maxCiFixAttempts` default `2`):
+
+1. `pr.autoMerge: false` → leave the PR open, skip cleanup of this wave's
+   branches, and say so in the report.
+2. No checks at all (`gh pr checks <n> --json bucket -q length` returns `0`,
+   or `gh` says no checks are reported) → merge at once:
+   `gh pr merge <n> --<mergeMethod> --delete-branch`.
+3. Checks exist → `gh pr checks <n> --watch --fail-fast`. All green → merge
+   as in step 2.
+4. A check failed → read the failure (`gh run view <run-id> --log-failed`),
+   fix it on the integration branch, run the affected fast checks locally,
+   push, and go back to step 3. After `pr.maxCiFixAttempts` failed fix
+   attempts, stop: leave the PR open, apply the human-decision label
+   (`docs/agents/triage-labels.md`), and report the failing check.
+
+Never auto-merge a wave with anything flagged (see below), whatever
+`pr.autoMerge` says. After a merge, run
 `forge cleanup --run <runId>` to delete this wave's local branches
 (`worktree-agent-*` residue and fully-merged worker branches), prune
 worktrees, and release this run's ticket reservations and worker slots —
@@ -382,14 +401,27 @@ instead of one session accumulating every wave in the run (see
 1. Report this wave's outcome (PR link, what shipped, what got flagged) —
    the same content a mid-run status update would carry, just written down
    instead of only said.
-2. Print, verbatim, the command for the next wave: `/forge --dispatch
-   <spec-id>` (the same spec issue this whole run has been using as parent).
-3. End the session here. A human runs that command — in this terminal or a
-   fresh one — to continue. This mirrors exactly the `--draft`/`--dispatch`
-   split already described in "Modes": nothing about wave computation depends
-   on which session created the spec or dispatched any prior wave, since the
-   frontier is always recomputed fresh from the tracker.
+2. Hand off to the next wave. If `handoff.autoChain` is `true` **and** this
+   wave's PR actually merged **and** nothing was flagged (the next wave
+   builds on the merged trunk, so an open or flagged PR always means a human
+   step), launch it yourself:
+   - First run `claude agents --json`; if a live session named
+     `forge-<spec-id>-*` already exists, don't launch a second one.
+   - Otherwise, from the repo root, run `claude --bg --name
+     forge-<spec-id>-w<n+1> --permission-mode <mode> "/forge --dispatch
+     <spec-id>"` (`<n+1>` is the next wave's number; `<mode>` is the mode
+     this session runs in, so the next wave gets the same prompts or none).
+   - Confirm it started with `claude agents --json` (it appears with that
+     name), and put the name plus `claude attach <name>` in this wave's
+     report. If the launch fails, fall through to the manual path below and
+     report why.
 
-There is currently no automated version of step 3 (spawning the next session
-itself without a human pasting the command) — that's a deliberate, separate
-step, gated on proving this manual handoff works across real runs first.
+   Otherwise (`autoChain` is `false`, or the PR is open or flagged), print,
+   verbatim, the command for the next wave: `/forge --dispatch <spec-id>`
+   (the same spec issue this whole run has been using as parent).
+3. End the session here. When it was not auto-chained, a human runs that
+   command — in this terminal or a fresh one — to continue. This mirrors
+   exactly the `--draft`/`--dispatch` split already described in "Modes":
+   nothing about wave computation depends on which session created the spec
+   or dispatched any prior wave, since the frontier is always recomputed
+   fresh from the tracker.

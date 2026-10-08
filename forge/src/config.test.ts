@@ -75,7 +75,8 @@ describe('loadForgeConfig', () => {
         requiredFiles: [{ path: '.env.keys', why: 'needed for tests' }],
         requiredCommands: ['gh'],
       },
-      handoff: { maxLines: 30, maxChars: 4000 },
+      handoff: { maxLines: 30, maxChars: 4000, autoChain: true },
+      pr: { autoMerge: false, mergeMethod: 'merge', maxCiFixAttempts: 3 },
       usage: { oversizedReadLines: 200, stalledMinutes: 5 },
     }
     await writeConfig(full)
@@ -125,6 +126,27 @@ describe('loadForgeConfig', () => {
     expect((result as { reason: string }).reason).toMatch(
       /"ticket.branchPrefix" must be a non-empty lowercase string/,
     )
+  })
+
+  test.each([
+    ['handoff.autoChain', { handoff: { autoChain: 'yes' } }, /"handoff.autoChain" must be a boolean/],
+    ['pr.autoMerge', { pr: { autoMerge: 1 } }, /"pr.autoMerge" must be a boolean/],
+    ['pr.mergeMethod', { pr: { mergeMethod: 'fast-forward' } }, /"pr.mergeMethod" must be one of/],
+    ['pr.maxCiFixAttempts', { pr: { maxCiFixAttempts: -1 } }, /"pr.maxCiFixAttempts" must be a non-negative integer/],
+  ])('rejects an invalid %s', async (_field, patch, reason) => {
+    await writeConfig(patch)
+    const result = await loadForgeConfig(repoRoot)
+    expect(result.status).toBe('malformed')
+    expect((result as { reason: string }).reason).toMatch(reason)
+  })
+
+  test('accepts pr and handoff.autoChain overrides, including maxCiFixAttempts 0', async () => {
+    await writeConfig({ handoff: { autoChain: true }, pr: { autoMerge: false, mergeMethod: 'rebase', maxCiFixAttempts: 0 } })
+    const result = await loadForgeConfig(repoRoot)
+    expect(result.status).toBe('ok')
+    const config = (result as { config: typeof DEFAULT_FORGE_CONFIG }).config
+    expect(config.handoff.autoChain).toBe(true)
+    expect(config.pr).toEqual({ autoMerge: false, mergeMethod: 'rebase', maxCiFixAttempts: 0 })
   })
 
   test.each([

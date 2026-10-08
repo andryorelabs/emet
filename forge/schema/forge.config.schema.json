@@ -285,6 +285,34 @@
           "minimum": 1,
           "default": 8000,
           "description": "Max characters (~2k tokens) a handoff note may have before `forge handoff --check` fails it."
+        },
+        "autoChain": {
+          "type": "boolean",
+          "default": false,
+          "description": "When true, a wave that closes cleanly with a non-empty frontier launches the next wave itself with `claude --bg \"/forge --dispatch <spec-id>\"` instead of printing the command for a human to paste."
+        }
+      }
+    },
+    "pr": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "autoMerge": {
+          "type": "boolean",
+          "default": true,
+          "description": "When true, Phase 8 waits for the wave PR's checks (merging at once if there are none) and merges it. A wave with anything flagged is never auto-merged."
+        },
+        "mergeMethod": {
+          "type": "string",
+          "enum": ["squash", "merge", "rebase"],
+          "default": "squash",
+          "description": "Method passed to `gh pr merge`."
+        },
+        "maxCiFixAttempts": {
+          "type": "integer",
+          "minimum": 0,
+          "default": 2,
+          "description": "How many times the coordinator may try to fix a failing check before leaving the PR open for a human."
         }
       }
     },

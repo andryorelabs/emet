@@ -94,6 +94,27 @@ Then, inside Claude Code:
 test-database lock, schema ownership, etc.) — fill those in; `forge
 preflight` refuses to dispatch while one remains.
 
+### Landing PRs and chaining waves
+
+Each wave ships as one PR. Two optional `forge.config.json` sections control
+what happens next (both validated by `forge preflight`):
+
+```json
+{
+  "pr": { "autoMerge": true, "mergeMethod": "squash", "maxCiFixAttempts": 2 },
+  "handoff": { "autoChain": false }
+}
+```
+
+- `pr.autoMerge` (default `true`): wait for the PR's checks and merge; with no
+  checks, merge at once. A failing check is fixed and pushed, up to
+  `maxCiFixAttempts` times, then the PR is left open for a human. A wave with
+  anything flagged is never auto-merged.
+- `handoff.autoChain` (default `false`): after a clean, merged wave with more
+  waves left, launch the next one with `claude --bg` instead of printing
+  `/forge --dispatch <spec-id>`. Inspect it with `claude agents` /
+  `claude attach forge-<spec-id>-w<n>`.
+
 ## What's in here
 
 - `forge/` — the CLI (`forge init/doctor/preflight/claims/slots/cleanup/
