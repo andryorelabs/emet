@@ -84,7 +84,7 @@ forge preflight      # confirms the repo is dispatch-ready
 Then, inside Claude Code:
 
 ```
-/forge <describe the feature>              # interview → wave 1; later waves chain
+/forge <describe the feature>              # interview → wave 1; later waves via --dispatch/autoChain
 /forge --draft <describe the feature>      # stop after tickets are created
 /forge --dispatch <spec-id>                # dispatch a --draft'd spec later
 ```
@@ -96,12 +96,14 @@ preflight` refuses to dispatch while one remains.
 
 ### Landing PRs and chaining waves
 
-One wave is one PR. Its body carries `Closes #N` for each ticket (the tracker's closing keyword), and the
-tickets move to in-review on their own. The PR is then merged per `pr.autoMerge`, or left
-open when the wave was flagged, `autoMerge` is `false`, or CI fixes ran out
-(the PR then gets the human-decision label). After a merge, `forge cleanup
---run <runId>` frees the wave's branches, ticket claims, and worker slots.
-Later waves run in their own sessions, never in the one that ran wave 1. Two optional `forge.config.json` sections control
+One wave is one PR. Its body carries `Closes #N` for each ticket (the
+tracker's closing keyword), and the coordinator moves the tickets to in-review
+when it opens the PR. The PR is then merged per `pr.autoMerge`, or left open
+when the wave was flagged, `autoMerge` is `false`, or CI fixes ran out (the PR
+then gets the human-decision label). After a merge, `forge cleanup --run
+<runId>` frees the wave's branches, ticket claims, and worker slots. Later
+waves run in their own sessions, never in the one that ran wave 1. Two optional
+`forge.config.json` sections control
 what happens next (both validated by `forge preflight`):
 
 ```json
