@@ -290,6 +290,18 @@
           "type": "boolean",
           "default": false,
           "description": "When true, a wave that closes cleanly with a non-empty frontier launches the next wave itself with `claude --bg \"/forge --dispatch <spec-id>\"` instead of printing the command for a human to paste."
+        },
+        "launcher": {
+          "type": "string",
+          "enum": ["auto", "orca", "bg"],
+          "default": "auto",
+          "description": "Where a chained wave becomes visible. 'auto' opens an Orca tab (`orca terminal create ... claude attach <name>`) when the session runs inside Orca and the runtime answers `orca status`; 'orca' always tries; 'bg' never opens a tab. The wave itself always runs as a `claude --bg` session, so a failed or skipped tab never stops the chain."
+        },
+        "permissionMode": {
+          "type": "string",
+          "enum": ["bypassPermissions", "auto", "acceptEdits"],
+          "default": "bypassPermissions",
+          "description": "Permission mode the chained wave's `claude --bg` session runs in. Defaults to bypassPermissions because auto mode's classifier can deny steps like `gh pr merge` mid-wave, leaving the wave half-finished; `permissions.deny` rules still apply in every mode."
         }
       }
     },

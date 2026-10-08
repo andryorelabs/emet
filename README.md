@@ -109,7 +109,11 @@ what happens next (both validated by `forge preflight`):
 ```json
 {
   "pr": { "autoMerge": true, "mergeMethod": "squash", "maxCiFixAttempts": 2 },
-  "handoff": { "autoChain": false }
+  "handoff": {
+    "autoChain": false,
+    "launcher": "auto",
+    "permissionMode": "bypassPermissions"
+  }
 }
 ```
 
@@ -124,14 +128,23 @@ what happens next (both validated by `forge preflight`):
   1. `claude` on PATH, with `--bg` support.
   2. A trusted workspace. `--bg` runs non-interactively, so the trust dialog
      never shows; open `claude` interactively in the repo once and accept it.
-  3. The current session in an unattended permission mode (`auto`,
-     `acceptEdits`, or `bypassPermissions`). The next wave inherits it via
-     `--permission-mode`; see the `permissions.defaultMode` bullet under
-     "Models & effort", which `forge doctor` checks.
+  3. The bypass warning accepted once in an interactive session
+     (`skipDangerousModePermissionPrompt`), since the next wave runs in
+     `handoff.permissionMode` (below), not in the launching session's mode.
 
   It launches only when the PR merged and nothing was flagged, and it skips
   if a `forge-<spec-id>-*` session is already live (`claude agents --json`).
   If the launch fails, it falls back to printing `/forge --dispatch <spec-id>`.
+- `handoff.launcher` (default `auto`): also open the chained wave in an
+  Orca tab running `claude attach`.
+  `auto` does it only inside Orca, `orca` always tries, `bg` never. The wave
+  runs in the background either way.
+- `handoff.permissionMode` (default `bypassPermissions`): permission mode of
+  the chained session. Not inherited from the launching session, because
+  `auto` mode's classifier can deny a step such as `gh pr merge` and leave a
+  wave half-finished. Your `permissions.deny` rules still apply, but the
+  bypass warning must have been accepted once interactively
+  (`skipDangerousModePermissionPrompt`).
 
 ## What's in here
 
