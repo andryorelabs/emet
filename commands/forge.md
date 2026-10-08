@@ -92,8 +92,9 @@ unless the run continues from Phase 5 straight into Phase 6.
   4. Merged when `pr.autoMerge` is on and checks pass (CI fixes up to
      `pr.maxCiFixAttempts`); left open when autoMerge is off, anything was
      flagged, or CI fixes ran out.
-  5. `forge cleanup --run <runId>`, then the Phase 9 hand-off: the next wave
-     starts in a new session. Details in `reference/phases-6-9.md`.
+  5. If merged, `forge cleanup --run <runId>`. Then the Phase 9 hand-off: if
+     more tickets can run, the next wave starts in a new session; if none can,
+     the run ends with the final report. Details in `reference/phases-6-9.md`.
 - **Phases 6–9** (every mode): dispatch → per-worker implementation → wave
   close-out → wave close and hand off. Read
   `~/.claude/forge/reference/phases-6-9.md` when you reach Phase 6, along
