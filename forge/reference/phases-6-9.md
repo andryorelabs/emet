@@ -406,30 +406,34 @@ instead of one session accumulating every wave in the run (see
    wave's PR actually merged **and** nothing was flagged (the next wave
    builds on the merged trunk, so an open or flagged PR always means a human
    step), launch it yourself:
-   - First run `claude agents --json`; if a live session named
-     `forge-<spec-id>-*` already exists, don't launch a second one.
-   - Otherwise, from the repo root, run `claude --bg --name
-     forge-<spec-id>-w<n+1> --permission-mode <handoff.permissionMode>
-     "/forge --dispatch <spec-id>"` (`<n+1>` is the next wave's number).
-     The mode comes from the config (default `bypassPermissions`), **not**
-     from this session: in `auto` mode the classifier can deny a step like
-     `gh pr merge` mid-wave and leave the wave half-finished. `permissions.
-     deny` rules and the `forge guard` hook still apply in bypass. If
-     Claude Code refuses the launch in that mode (the bypass warning was
-     never accepted interactively), relaunch with this session's own mode
-     and say so in the report.
-   - Confirm it started with `claude agents --json` (it appears with that
-     name), and put the name plus `claude attach <name>` in this wave's
-     report. If the launch fails, fall through to the manual path below and
-     report why.
-   - Make it visible per `handoff.launcher`. `bg`: nothing more. `auto`:
-     only when `$TERM_PROGRAM` is `Orca` and `orca status` shows
-     `runtimeReachable: true`. `orca`: always try. To open the tab run
-     `orca terminal create --worktree path:<repo root> --title
-     forge-<spec-id>-w<n+1> --command "claude attach
-     forge-<spec-id>-w<n+1>" --json`. The wave already runs in the
-     background, so if this fails just report the `claude attach` command —
-     it never stops the chain.
+   - Run `forge launch <spec-id> --wave <n+1>` from the repo root, as its
+     own Bash call. It refuses when a live `forge-<spec-id>-*` session
+     already exists, runs `claude --bg --name forge-<spec-id>-w<n+1>
+     --permission-mode <handoff.permissionMode> "/forge --dispatch
+     <spec-id>"`, confirms the session appears in `claude agents --json`,
+     and — per `handoff.launcher` — opens an Orca tab running `claude attach
+     forge-<spec-id>-w<n+1>`. It prints one JSON line:
+     `{ name, id, attach, orcaTab: { opened, reason } }`.
+   - The permission mode comes from the config (default
+     `bypassPermissions`), **not** from this session: in `auto` mode the
+     classifier can deny a step like `gh pr merge` mid-wave and leave the
+     wave half-finished. `permissions.deny` rules and the `forge guard`
+     hook still apply in bypass. If Claude Code refuses the launch in that
+     mode (the bypass warning was never accepted interactively), relaunch
+     by hand with this session's own mode and say so in the report.
+   - Put `name` and `attach` in this wave's report, plus `orcaTab.reason`
+     when `orcaTab.opened` is `false`. A failed tab never stops the chain:
+     the wave already runs in the background, so report the `claude attach`
+     command. If `forge launch` itself exits non-zero, fall through to the
+     manual path below and report why.
+   - `launcher: auto` detects Orca by asking its runtime (`orca status`),
+     not `$TERM_PROGRAM`: a `claude --bg` session has no `TERM_PROGRAM`, so
+     an env check would never fire on a chained launch.
+
+   The same command covers a launch the user asks for by hand ("run the
+   wave in another session", including wave 1 of a `--draft` spec): use
+   `forge launch <spec-id> --wave <n>`, never a bare `claude --bg`, which
+   skips the Orca tab and the duplicate-session check.
 
    Otherwise (`autoChain` is `false`, or the PR is open or flagged), print,
    verbatim, the command for the next wave: `/forge --dispatch <spec-id>`
