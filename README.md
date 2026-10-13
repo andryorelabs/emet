@@ -135,10 +135,16 @@ what happens next (both validated by `forge preflight`):
   It launches only when the PR merged and nothing was flagged, and it skips
   if a `forge-<spec-id>-*` session is already live (`claude agents --json`).
   If the launch fails, it falls back to printing `/forge --dispatch <spec-id>`.
-- `handoff.launcher` (default `auto`): also open the chained wave in an
-  Orca tab running `claude attach`.
-  `auto` does it only inside Orca, `orca` always tries, `bg` never. The wave
-  runs in the background either way.
+- `handoff.launcher` (default `auto`): also open the wave in an Orca tab
+  running `claude attach`. `auto` asks the Orca runtime (`orca status`), so it
+  works from `claude --bg` sessions too, which have no `TERM_PROGRAM`; `orca`
+  always tries, `bg` never. The wave runs in the background either way, and a
+  tab that fails to open never stops the chain.
+
+  `forge launch <spec-id> --wave <n>` does the whole launch (duplicate-session
+  check, `claude --bg`, tab) and prints
+  `{ name, id, attach, orcaTab: { opened, reason } }`. Use it, not a bare
+  `claude --bg`, whenever you want a wave in another session by hand.
 - `handoff.permissionMode` (default `bypassPermissions`): permission mode of
   the chained session. Not inherited from the launching session, because
   `auto` mode's classifier can deny a step such as `gh pr merge` and leave a
@@ -149,7 +155,7 @@ what happens next (both validated by `forge preflight`):
 ## What's in here
 
 - `forge/` — the CLI (`forge init/doctor/preflight/claims/slots/cleanup/
-  usage/handoff/lock-reason/guard/selftest`), its schema, and the doc
+  usage/handoff/launch/lock-reason/guard/selftest`), its schema, and the doc
   templates `forge init` fills in. `install.sh` also wires `forge guard` in
   as a Claude Code `PreToolUse` hook (`~/.claude/settings.json`) that blocks
   a handful of known, unattended-run failure triggers (see

@@ -33,6 +33,7 @@ commands:
   cleanup   [--run <id> | --all] [--dry-run] [--force]
   usage     [--session <id> | --file <path>] [--stalled [--minutes N]] [--project-dir <path>]
   handoff   --check <path> | --render <path>
+  launch    <spec-id> --wave <n>  — start a wave as a \`claude --bg\` session and open its Orca tab per handoff.launcher
   lock-reason --run <id> --ticket <ticket> [--anchor <pid>]  — the \`git worktree lock\` reason a worker writes at bootstrap
   guard     — Claude Code PreToolUse hook (reads hook JSON on stdin); see src/guard.ts
   selftest  — run this CLI's own unit tests
@@ -88,6 +89,11 @@ async function main(): Promise<void> {
     }
     case 'handoff': {
       const { run } = await import('../src/handoff')
+      await run(rest)
+      return
+    }
+    case 'launch': {
+      const { run } = await import('../src/launch')
       await run(rest)
       return
     }

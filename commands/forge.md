@@ -13,6 +13,8 @@ before anything else:
   later wave runs in its own session — `/forge --dispatch <spec-id>` by hand,
   or auto-launched when `handoff.autoChain` is on (see Phase 9 in
   `reference/phases-6-9.md`).
+  To run a wave in another session, always use `forge launch <spec-id> --wave
+  <n>` — never a bare `claude --bg`.
 - **`--draft <feature>`**: run Phases 0–5 and then stop (see the note at the
   end of Phase 5). Nothing gets dispatched; the run ends with a spec issue
   and its tickets sitting in the tracker, ready for `--dispatch` later, in
