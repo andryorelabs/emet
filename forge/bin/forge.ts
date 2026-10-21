@@ -35,6 +35,7 @@ commands:
   handoff   --check <path> | --render <path>
   launch    <spec-id> --wave <n>  — start a wave as a \`claude --bg\` session and open its Orca tab per handoff.launcher
   lock-reason --run <id> --ticket <ticket> [--anchor <pid>]  — the \`git worktree lock\` reason a worker writes at bootstrap
+  assess    --base <ref> --head <ref>  — classify a diff as passive|medium|high and pick the reviewer model
   guard     — Claude Code PreToolUse hook (reads hook JSON on stdin); see src/guard.ts
   selftest  — run this CLI's own unit tests
 `
@@ -99,6 +100,11 @@ async function main(): Promise<void> {
     }
     case 'lock-reason': {
       const { run } = await import('../src/lockreason')
+      await run(rest)
+      return
+    }
+    case 'assess': {
+      const { run } = await import('../src/assess')
       await run(rest)
       return
     }

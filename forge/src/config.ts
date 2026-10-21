@@ -44,6 +44,24 @@ export const DEFAULT_FORGE_CONFIG: ForgeConfig = {
   handoff: { maxLines: 60, maxChars: 8000, autoChain: false, launcher: 'auto', permissionMode: 'bypassPermissions' },
   pr: { autoMerge: true, mergeMethod: 'squash', maxCiFixAttempts: 2 },
   usage: { oversizedReadLines: 400, stalledMinutes: 10 },
+  models: {
+    worker: { model: 'sonnet', effort: 'medium' },
+    reviewer: {
+      medium: { model: 'opus', effort: 'medium' },
+      high: { model: 'opus', effort: 'medium' },
+    },
+    triage: 'haiku',
+  },
+  review: { highRiskPaths: [] },
+}
+
+export type ModelEffort = 'low' | 'medium' | 'high' | 'xhigh' | 'max'
+
+const MODEL_EFFORTS: readonly ModelEffort[] = ['low', 'medium', 'high', 'xhigh', 'max']
+
+export interface ModelChoice {
+  readonly model: string
+  readonly effort: ModelEffort
 }
 
 export type HandoffLauncher = 'auto' | 'orca' | 'bg'
@@ -146,6 +164,18 @@ export interface ForgeConfig {
     /** Default `--minutes` threshold for `forge usage --stalled`. */
     readonly stalledMinutes: number
   }
+  readonly models: {
+    readonly worker: ModelChoice
+    /** Reviewer model per risk tier `forge assess` can return. */
+    readonly reviewer: { readonly medium: ModelChoice; readonly high: ModelChoice }
+    /** Cheap model used for triage and passive-tier review. */
+    readonly triage: string
+  }
+  readonly review: {
+    /** Extra path tokens (case-insensitive substrings) that force the `high`
+     * tier in `forge assess`, on top of the built-in set. */
+    readonly highRiskPaths: readonly string[]
+  }
 }
 
 /**
@@ -173,6 +203,24 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 
 function isNonEmptyString(value: unknown): value is string {
   return typeof value === 'string' && value.length > 0
+}
+
+function mergeModelChoice(
+  raw: unknown,
+  fallback: ModelChoice,
+  field: string,
+): { ok: true; value: ModelChoice } | { ok: false; reason: string } {
+  if (raw === undefined) return { ok: true, value: fallback }
+  if (!isRecord(raw)) return { ok: false, reason: `"${field}" must be an object` }
+  const model = raw.model ?? fallback.model
+  const effort = raw.effort ?? fallback.effort
+  if (!isNonEmptyString(model)) {
+    return { ok: false, reason: `"${field}.model" must be a non-empty string` }
+  }
+  if (typeof effort !== 'string' || !MODEL_EFFORTS.includes(effort as ModelEffort)) {
+    return { ok: false, reason: `"${field}.effort" must be one of ${MODEL_EFFORTS.join('|')}` }
+  }
+  return { ok: true, value: { model, effort: effort as ModelEffort } }
 }
 
 function isPositiveInteger(value: unknown): value is number {
@@ -350,6 +398,51 @@ function validateAndMerge(raw: unknown): { ok: true; config: ForgeConfig } | { o
     return { ok: false, reason: '"usage.stalledMinutes" must be a positive integer' }
   }
 
+  const modelsSection = raw.models
+  if (modelsSection !== undefined && !isRecord(modelsSection)) {
+    return { ok: false, reason: '"models" must be an object' }
+  }
+  const modelsRecord = modelsSection ?? {}
+  const defaultModels = DEFAULT_FORGE_CONFIG.models
+  const worker = mergeModelChoice(modelsRecord.worker, defaultModels.worker, 'models.worker')
+  if (!worker.ok) return worker
+  const reviewerRaw = modelsRecord.reviewer
+  if (reviewerRaw !== undefined && !isRecord(reviewerRaw)) {
+    return { ok: false, reason: '"models.reviewer" must be an object' }
+  }
+  const reviewerRecord = reviewerRaw ?? {}
+  const reviewerMedium = mergeModelChoice(
+    reviewerRecord.medium,
+    defaultModels.reviewer.medium,
+    'models.reviewer.medium',
+  )
+  if (!reviewerMedium.ok) return reviewerMedium
+  const reviewerHigh = mergeModelChoice(
+    reviewerRecord.high,
+    defaultModels.reviewer.high,
+    'models.reviewer.high',
+  )
+  if (!reviewerHigh.ok) return reviewerHigh
+  const triage = modelsRecord.triage ?? defaultModels.triage
+  if (!isNonEmptyString(triage)) {
+    return { ok: false, reason: '"models.triage" must be a non-empty string' }
+  }
+
+  const reviewSection = isRecord(raw.review) ? raw.review : {}
+  const highRiskPathsRaw = reviewSection.highRiskPaths
+  const highRiskPaths: string[] = []
+  if (highRiskPathsRaw !== undefined) {
+    if (!Array.isArray(highRiskPathsRaw)) {
+      return { ok: false, reason: '"review.highRiskPaths" must be an array' }
+    }
+    for (const [index, entry] of highRiskPathsRaw.entries()) {
+      if (!isNonEmptyString(entry)) {
+        return { ok: false, reason: `"review.highRiskPaths[${index}]" must be a non-empty string` }
+      }
+      highRiskPaths.push(entry)
+    }
+  }
+
   return {
     ok: true,
     config: {
@@ -368,6 +461,12 @@ function validateAndMerge(raw: unknown): { ok: true; config: ForgeConfig } | { o
       },
       pr: { autoMerge, mergeMethod: mergeMethod as MergeMethod, maxCiFixAttempts },
       usage: { oversizedReadLines, stalledMinutes },
+      models: {
+        worker: worker.value,
+        reviewer: { medium: reviewerMedium.value, high: reviewerHigh.value },
+        triage,
+      },
+      review: { highRiskPaths },
     },
   }
 }

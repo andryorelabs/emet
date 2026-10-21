@@ -346,6 +346,36 @@
         }
       }
     },
+    "models": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Models and effort per role. Omitting the section keeps today's behavior: worker sonnet/medium, reviewer opus/medium.",
+      "properties": {
+        "worker": { "type": "object", "additionalProperties": false, "properties": { "model": { "type": "string", "minLength": 1, "default": "sonnet" }, "effort": { "type": "string", "enum": ["low", "medium", "high", "xhigh", "max"], "default": "medium" } }, "description": "Worker model and effort." },
+        "reviewer": {
+          "type": "object",
+          "additionalProperties": false,
+          "description": "Reviewer model per risk tier returned by `forge assess`.",
+          "properties": {
+            "medium": { "type": "object", "additionalProperties": false, "properties": { "model": { "type": "string", "minLength": 1, "default": "opus" }, "effort": { "type": "string", "enum": ["low", "medium", "high", "xhigh", "max"], "default": "medium" } }, "description": "Reviewer for the medium tier." },
+            "high": { "type": "object", "additionalProperties": false, "properties": { "model": { "type": "string", "minLength": 1, "default": "opus" }, "effort": { "type": "string", "enum": ["low", "medium", "high", "xhigh", "max"], "default": "medium" } }, "description": "Reviewer for the high tier." }
+          }
+        },
+        "triage": { "type": "string", "minLength": 1, "default": "haiku", "description": "Cheap model for triage and passive-tier review." }
+      }
+    },
+    "review": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "highRiskPaths": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 },
+          "default": [],
+          "description": "Extra case-insensitive path tokens that force the high review tier in `forge assess`, on top of the built-in set."
+        }
+      }
+    },
     "design": {
       "type": ["object", "null"],
       "additionalProperties": false,

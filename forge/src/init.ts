@@ -262,6 +262,8 @@ export function buildForgeConfig(detected: DetectedRepoInfo): ForgeConfig {
     handoff: { ...DEFAULT_FORGE_CONFIG.handoff },
     pr: { ...DEFAULT_FORGE_CONFIG.pr },
     usage: { ...DEFAULT_FORGE_CONFIG.usage },
+    models: DEFAULT_FORGE_CONFIG.models,
+    review: DEFAULT_FORGE_CONFIG.review,
   }
 }
 
