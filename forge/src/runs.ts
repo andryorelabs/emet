@@ -95,6 +95,22 @@ export function resolveAnchorPid(startPid: number = process.pid): number {
 }
 
 /**
+ * Field 22 (`starttime`, clock ticks since boot) of `/proc/<pid>/stat`: it
+ * never changes for a process's lifetime and differs for a later process
+ * that reuses the same pid. `comm` may contain spaces and parentheses, so
+ * fields are counted from after the last `)`.
+ */
+export function readProcessStartToken(pid: number): string | undefined {
+  try {
+    const stat = readFileSync(`/proc/${pid}/stat`, 'utf8')
+    const fieldsAfterComm = stat.slice(stat.lastIndexOf(')') + 2).split(' ')
+    return fieldsAfterComm[19] || undefined
+  } catch {
+    return undefined
+  }
+}
+
+/**
  * A bare `/proc/<pid>` existence check is not enough — pids get reused, so
  * an exited anchor whose pid the OS has handed to something else would read
  * as alive. Requiring `comm` to still read `claude` closes that gap: a
@@ -102,8 +118,10 @@ export function resolveAnchorPid(startPid: number = process.pid): number {
  * `readProcComm` already returns `undefined` for a missing `/proc/<pid>`
  * (caught internally), so no separate `existsSync` pre-check is needed.
  */
-export function isAnchorAlive(pid: number): boolean {
-  return readProcComm(pid) === 'claude'
+export function isAnchorAlive(pid: number, startToken?: string): boolean {
+  if (readProcComm(pid) !== 'claude') return false
+  if (startToken === undefined) return true
+  return readProcessStartToken(pid) === startToken
 }
 
 /**
@@ -165,7 +183,8 @@ export function classifyRun(
   options: {
     readonly now?: number
     readonly idleThresholdMs?: number
-    readonly isAnchorAliveFn?: (pid: number) => boolean
+    readonly anchorStartToken?: string
+    readonly isAnchorAliveFn?: (pid: number, startToken?: string) => boolean
     readonly transcriptMtimeFn?: (
       sessionSlug: string,
       runId: string,
@@ -174,12 +193,13 @@ export function classifyRun(
 ): RunVerdict {
   const {
     now = Date.now(),
+    anchorStartToken,
     idleThresholdMs = RUN_IDLE_THRESHOLD_MS,
     isAnchorAliveFn: isAnchorAliveFunction = isAnchorAlive,
     transcriptMtimeFn: transcriptMtimeFunction = transcriptMtime,
   } = options
 
-  if (isAnchorAliveFunction(anchorPid)) return 'live'
+  if (isAnchorAliveFunction(anchorPid, anchorStartToken)) return 'live'
 
   const mtime = transcriptMtimeFunction(sessionSlug, runId)
   if (mtime !== null && now - mtime <= idleThresholdMs) return 'idle'

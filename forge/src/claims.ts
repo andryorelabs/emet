@@ -4,6 +4,7 @@ import {
   readdirSync,
   readFileSync,
   rmSync,
+  renameSync,
   writeFileSync,
 } from 'node:fs'
 import path from 'node:path'
@@ -22,7 +23,12 @@ import {
   releaseLock,
   resolveLockDirectory,
 } from './locks'
-import { classifyRun, resolveSessionSlug, type RunVerdict } from './runs'
+import {
+  classifyRun,
+  readProcessStartToken,
+  resolveSessionSlug,
+  type RunVerdict,
+} from './runs'
 
 /**
  * Per-ticket reservations under `<git-common-dir>/forge/tickets/` — the
@@ -56,6 +62,7 @@ import { classifyRun, resolveSessionSlug, type RunVerdict } from './runs'
 export type Reservation = {
   readonly runId: string
   readonly anchorPid: number
+  readonly anchorStartToken?: string
   readonly ticket: string
   readonly reservedAt: number
   /**
@@ -253,7 +260,7 @@ export async function didReserveTicket(
           existing.anchorPid,
           existing.sessionSlug,
           existing.runId,
-          classifyRunOptions,
+          withAnchorStartToken(classifyRunOptions, existing),
         )
       : 'dead'
 
@@ -263,11 +270,12 @@ export async function didReserveTicket(
     const reservation: Reservation = {
       runId,
       anchorPid,
+      anchorStartToken: readProcessStartToken(anchorPid),
       ticket,
       reservedAt: Date.now(),
       sessionSlug: resolveSessionSlug(),
     }
-    writeFileSync(filePath, JSON.stringify(reservation, null, 2))
+    writeJsonAtomically(filePath, reservation)
     return true
   } finally {
     releaseLock(lockPath)
@@ -320,6 +328,22 @@ export async function listReservations(
   const resolvedForgeDirectory =
     forgeDirectory ?? (await resolveForgeDirectory())
   return listJsonFiles<Reservation>(ticketsDirectory(resolvedForgeDirectory))
+}
+
+function withAnchorStartToken(
+  classifyRunOptions: Parameters<typeof classifyRun>[3],
+  reservation: Reservation,
+): Parameters<typeof classifyRun>[3] {
+  return {
+    ...classifyRunOptions,
+    anchorStartToken: reservation.anchorStartToken,
+  }
+}
+
+function writeJsonAtomically(filePath: string, value: unknown): void {
+  const temporaryPath = `${filePath}.${process.pid}.tmp`
+  writeFileSync(temporaryPath, JSON.stringify(value, null, 2))
+  renameSync(temporaryPath, filePath)
 }
 
 function isValidReservationShape(value: unknown): value is Reservation {
@@ -389,7 +413,7 @@ export async function pruneDeadReservations(
       raw.anchorPid,
       raw.sessionSlug,
       raw.runId,
-      classifyRunOptions,
+      withAnchorStartToken(classifyRunOptions, raw),
     )
     if (verdict === 'dead') {
       if (!isDryRun) rmSync(filePath, { force: true })
