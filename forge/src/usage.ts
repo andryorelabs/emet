@@ -348,11 +348,27 @@ function printStats(
 
 const DEFAULT_STALLED_MINUTES = 10
 
+const DEFAULT_PENDING_TOOL_MINUTES = 30
+
+export type StalledThresholds = {
+  readonly idleMinutes: number
+  readonly pendingToolMinutes: number
+}
+
+export type LastTranscriptStep = {
+  readonly step: string
+  readonly pendingTool: string | null
+}
+
 export type StalledTranscript = {
   readonly taskId: string
   readonly path: string
   readonly minutesSinceLastWrite: number
+  readonly lastStep: string
+  readonly pendingTool: string | null
 }
+
+const UNKNOWN_STEP: LastTranscriptStep = { step: 'unknown', pendingTool: null }
 
 /**
  * Reads a `--minutes N` value out of raw argv, falling back to
@@ -367,7 +383,15 @@ export function parseStalledMinutes(
   arguments_: string[],
   defaultMinutes: number = DEFAULT_STALLED_MINUTES,
 ): number {
-  const index = arguments_.indexOf('--minutes')
+  return parseFlagMinutes(arguments_, '--minutes', defaultMinutes)
+}
+
+export function parseFlagMinutes(
+  arguments_: string[],
+  flag: string,
+  defaultMinutes: number,
+): number {
+  const index = arguments_.indexOf(flag)
   if (index === -1) {
     return defaultMinutes
   }
@@ -388,6 +412,64 @@ function isStalled(
   return nowMs - mtimeMs > staleMinutes * 60_000
 }
 
+function messageBlocks(event: unknown): { role: string; blocks: unknown[] } | null {
+  if (typeof event !== 'object' || event === null) {
+    return null
+  }
+  const record = event as Record<string, unknown>
+  if (record.type !== 'assistant' && record.type !== 'user') {
+    return null
+  }
+  const message = record.message
+  if (typeof message !== 'object' || message === null) {
+    return null
+  }
+  const content = (message as Record<string, unknown>).content
+  return { role: record.type, blocks: Array.isArray(content) ? content : [] }
+}
+
+/**
+ * Describes the last user/assistant event of a transcript's raw JSONL. A
+ * final assistant event carrying `tool_use` blocks is a pending call: nothing
+ * after it can have answered it, so no `tool_result` match is needed.
+ */
+export function describeLastStep(transcriptText: string): LastTranscriptStep {
+  const lines = transcriptText.split('\n')
+  for (let index = lines.length - 1; index >= 0; index--) {
+    const line = lines[index]!.trim()
+    if (!line) {
+      continue
+    }
+    let parsed: ReturnType<typeof messageBlocks> = null
+    try {
+      parsed = messageBlocks(JSON.parse(line))
+    } catch {
+      continue
+    }
+    if (!parsed) {
+      continue
+    }
+    const toolNames = parsed.blocks.flatMap((block) => {
+      const record = block as Record<string, unknown>
+      return record?.type === 'tool_use' ? [String(record.name ?? 'unknown')] : []
+    })
+    if (parsed.role === 'assistant' && toolNames.length > 0) {
+      const pendingTool = toolNames.join(', ')
+      return { step: `tool_use ${pendingTool}`, pendingTool }
+    }
+    const hasToolResult = parsed.blocks.some(
+      (block) => (block as Record<string, unknown>)?.type === 'tool_result',
+    )
+    const step = hasToolResult ? 'tool_result' : `${parsed.role} message`
+    return { step, pendingTool: null }
+  }
+  return UNKNOWN_STEP
+}
+
+async function defaultReadLastStep(path: string): Promise<LastTranscriptStep> {
+  return describeLastStep(await Bun.file(path).text())
+}
+
 async function defaultStatMtimeMs(path: string): Promise<number | null> {
   const file = Bun.file(path)
   if (!(await file.exists())) {
@@ -399,7 +481,9 @@ async function defaultStatMtimeMs(path: string): Promise<number | null> {
 
 /**
  * Checks each transcript's own mtime against `nowMs`, reporting every one
- * silent for longer than `staleMinutes`. A path that no longer exists (e.g.
+ * silent for longer than `thresholds.idleMinutes`, or
+ * `thresholds.pendingToolMinutes` when the last event is an unanswered
+ * `tool_use` (a long test run is not a hang). A path that no longer exists (e.g.
  * a worktree already reclaimed by `forge:cleanup`) is skipped rather than
  * reported — same "unverifiable candidate is dropped, not assumed guilty"
  * rule {@link countOversizedReads} already follows.
@@ -407,8 +491,9 @@ async function defaultStatMtimeMs(path: string): Promise<number | null> {
 export async function findStalledTranscripts(
   paths: string[],
   nowMs: number,
-  staleMinutes: number,
+  thresholds: StalledThresholds,
   statMtimeMs: (path: string) => Promise<number | null> = defaultStatMtimeMs,
+  readLastStep: (path: string) => Promise<LastTranscriptStep> = defaultReadLastStep,
 ): Promise<StalledTranscript[]> {
   const stalled: StalledTranscript[] = []
   for (const path of paths) {
@@ -416,11 +501,20 @@ export async function findStalledTranscripts(
     if (mtimeMs === null) {
       continue
     }
-    if (isStalled(mtimeMs, nowMs, staleMinutes)) {
+    if (!isStalled(mtimeMs, nowMs, thresholds.idleMinutes)) {
+      continue
+    }
+    const last = await readLastStep(path)
+    const limit = last.pendingTool
+      ? Math.max(thresholds.pendingToolMinutes, thresholds.idleMinutes)
+      : thresholds.idleMinutes
+    if (isStalled(mtimeMs, nowMs, limit)) {
       stalled.push({
         taskId: taskIdFromTranscriptPath(path),
         path,
         minutesSinceLastWrite: Math.floor((nowMs - mtimeMs) / 60_000),
+        lastStep: last.step,
+        pendingTool: last.pendingTool,
       })
     }
   }
@@ -433,7 +527,7 @@ export async function findStalledTranscripts(
  * silent past `staleMinutes`. Exits with code 1 when any are found, so a
  * coordinator can branch on it directly instead of parsing stdout.
  */
-async function runStalledMode(staleMinutes: number): Promise<void> {
+async function runStalledMode(thresholds: StalledThresholds): Promise<void> {
   const arguments_ = process.argv.slice(2)
   const sessionFlagIndex = arguments_.indexOf('--session')
   const directory = projectsDirectory(arguments_)
@@ -464,22 +558,22 @@ async function runStalledMode(staleMinutes: number): Promise<void> {
   const stalled = await findStalledTranscripts(
     workerFiles,
     Date.now(),
-    staleMinutes,
+    thresholds,
   )
 
   if (stalled.length === 0) {
     console.log(
-      `forge:usage --stalled OK — ${workerFiles.length} subagent transcript(s) checked, none stalled past ${staleMinutes}m.`,
+      `forge:usage --stalled OK — ${workerFiles.length} subagent transcript(s) checked, none stalled past ${thresholds.idleMinutes}m idle (${thresholds.pendingToolMinutes}m with a pending tool).`,
     )
     return
   }
 
   console.log(
-    `forge:usage --stalled: ${stalled.length}/${workerFiles.length} subagent(s) stalled past ${staleMinutes}m:`,
+    `forge:usage --stalled: ${stalled.length}/${workerFiles.length} subagent(s) stalled (${thresholds.idleMinutes}m idle, ${thresholds.pendingToolMinutes}m with a pending tool):`,
   )
   for (const entry of stalled) {
     console.log(
-      `  ${entry.taskId}  (${entry.minutesSinceLastWrite}m since last write)  ${entry.path}`,
+      `  ${entry.taskId}  (${entry.minutesSinceLastWrite}m since last write)  last step: ${entry.lastStep}${entry.pendingTool ? `  pending tool: ${entry.pendingTool}` : ''}  ${entry.path}`,
     )
   }
   process.exitCode = 1
@@ -490,9 +584,14 @@ async function main(config: ForgeConfig): Promise<void> {
   const oversizedThreshold = config.usage.oversizedReadLines
 
   if (arguments_.includes('--stalled')) {
-    await runStalledMode(
-      parseStalledMinutes(arguments_, config.usage.stalledMinutes),
-    )
+    await runStalledMode({
+      idleMinutes: parseStalledMinutes(arguments_, config.usage.stalledMinutes),
+      pendingToolMinutes: parseFlagMinutes(
+        arguments_,
+        '--tool-minutes',
+        DEFAULT_PENDING_TOOL_MINUTES,
+      ),
+    })
     return
   }
 
