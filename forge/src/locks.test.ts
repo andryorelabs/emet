@@ -84,6 +84,12 @@ describe('forge-locks', () => {
       expect(existsSync(lockDirectory)).toBe(false)
       expect(() => releaseLock(lockDirectory)).not.toThrow()
     })
+
+    test('releaseLock leaves no trash directory behind', () => {
+      didAcquireLock(lockDirectory, buildHolder())
+      releaseLock(lockDirectory)
+      expect(readdirSync(temporaryRoot)).toEqual([])
+    })
   })
 
   describe('isLockStale', () => {

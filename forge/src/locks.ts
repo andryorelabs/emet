@@ -7,6 +7,7 @@ import {
   statSync,
   writeFileSync,
 } from 'node:fs'
+import { randomUUID } from 'node:crypto'
 import path from 'node:path'
 
 /**
@@ -172,7 +173,14 @@ export function didAcquireLock<THolder extends LockHolder>(
 }
 
 export function releaseLock(lockDirectory: string): void {
-  rmSync(lockDirectory, { recursive: true, force: true })
+  const trashDirectory = `${lockDirectory}.released-${process.pid}-${randomUUID()}`
+  try {
+    renameSync(lockDirectory, trashDirectory)
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === 'ENOENT') return
+    throw error
+  }
+  rmSync(trashDirectory, { recursive: true, force: true })
 }
 
 export interface AcquireLockOptions {
@@ -217,7 +225,7 @@ export async function acquireLock<THolder extends LockHolder>(
       console.log(
         `${logLabel}: reclaiming a stale lock${holder ? ` (pid ${holder.pid} is no longer alive, or the lock is too old)` : ' (unreadable holder metadata)'}...`,
       )
-      rmSync(lockDirectory, { recursive: true, force: true })
+      releaseLock(lockDirectory)
       continue
     }
     if (Date.now() >= deadline) {
