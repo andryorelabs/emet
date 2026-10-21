@@ -78,6 +78,15 @@ describe('loadForgeConfig', () => {
       handoff: { maxLines: 30, maxChars: 4000, autoChain: true, launcher: 'orca', permissionMode: 'acceptEdits' },
       pr: { autoMerge: false, mergeMethod: 'merge', maxCiFixAttempts: 3 },
       usage: { oversizedReadLines: 200, stalledMinutes: 5 },
+      models: {
+        worker: { model: 'opus', effort: 'high' },
+        reviewer: {
+          medium: { model: 'sonnet', effort: 'low' },
+          high: { model: 'opus', effort: 'max' },
+        },
+        triage: 'sonnet',
+      },
+      review: { highRiskPaths: ['billing'] },
     }
     await writeConfig(full)
     expect(await loadForgeConfig(repoRoot)).toEqual({ status: 'ok', config: full })
@@ -340,5 +349,46 @@ describe('resolveRepoRoot', () => {
     const output = await new Response(proc.stdout).text()
     await proc.exited
     expect(JSON.parse(output.trim())).toBeNull()
+  })
+})
+
+describe('models and review sections', () => {
+  test('omitting models and review yields today\'s behavior', async () => {
+    await writeConfig({})
+    const { config } = (await loadForgeConfig(repoRoot)) as { config: ForgeConfig }
+    expect(config.models.worker).toEqual({ model: 'sonnet', effort: 'medium' })
+    expect(config.models.reviewer.medium).toEqual({ model: 'opus', effort: 'medium' })
+    expect(config.models.reviewer.high).toEqual({ model: 'opus', effort: 'medium' })
+    expect(config.models.triage).toBe('haiku')
+    expect(config.review.highRiskPaths).toEqual([])
+  })
+
+  test('a partial models section merges onto defaults', async () => {
+    await writeConfig({ models: { reviewer: { high: { effort: 'max' } } } })
+    const { config } = (await loadForgeConfig(repoRoot)) as { config: ForgeConfig }
+    expect(config.models.reviewer.high).toEqual({ model: 'opus', effort: 'max' })
+    expect(config.models.reviewer.medium).toEqual(DEFAULT_FORGE_CONFIG.models.reviewer.medium)
+    expect(config.models.worker).toEqual(DEFAULT_FORGE_CONFIG.models.worker)
+  })
+
+  test.each([
+    [{ models: 'x' }, /"models" must be an object/],
+    [{ models: { worker: { effort: 'turbo' } } }, /"models.worker.effort" must be one of/],
+    [{ models: { worker: { model: '' } } }, /"models.worker.model"/],
+    [{ models: { reviewer: { medium: 3 } } }, /"models.reviewer.medium" must be an object/],
+    [{ models: { triage: '' } }, /"models.triage"/],
+    [{ review: { highRiskPaths: 'auth' } }, /"review.highRiskPaths" must be an array/],
+    [{ review: { highRiskPaths: [''] } }, /"review.highRiskPaths\[0\]"/],
+  ])('malformed for %j', async (value, pattern) => {
+    await writeConfig(value)
+    const result = await loadForgeConfig(repoRoot)
+    expect(result.status).toBe('malformed')
+    expect((result as { reason: string }).reason).toMatch(pattern)
+  })
+
+  test('review.highRiskPaths is read', async () => {
+    await writeConfig({ review: { highRiskPaths: ['billing', 'ledger'] } })
+    const { config } = (await loadForgeConfig(repoRoot)) as { config: ForgeConfig }
+    expect(config.review.highRiskPaths).toEqual(['billing', 'ledger'])
   })
 })
