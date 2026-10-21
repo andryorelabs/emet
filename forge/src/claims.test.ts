@@ -1,5 +1,13 @@
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test'
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs'
+import {
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readdirSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
 
@@ -55,6 +63,37 @@ describe('didReserveTicket / listReservations / releaseTicket', () => {
     const result = await releaseTicket('AO-999', 'run-a', { forgeDirectory })
     expect(result).toEqual({ outcome: 'released', previousOwnerRunId: 'run-a' })
     expect(await listReservations(forgeDirectory)).toEqual([])
+  })
+
+  test('writes the reservation tmp+rename: complete JSON, no temp files left', async () => {
+    await didReserveTicket('run-a', process.pid, 'AO-997', forgeDirectory)
+    const ticketsDirectory = path.join(forgeDirectory, 'tickets')
+    expect(existsSync(ticketsDirectory)).toBe(true)
+    const names = readdirSync(ticketsDirectory)
+    expect(names.some((name) => name.endsWith('.tmp'))).toBe(false)
+    const file = names.find((name) => name.endsWith('.json'))!
+    const parsed = JSON.parse(
+      readFileSync(path.join(ticketsDirectory, file), 'utf8'),
+    ) as Reservation
+    expect(parsed.runId).toBe('run-a')
+  })
+
+  test('records the anchor start token and treats a reused pid with a different token as dead', async () => {
+    await didReserveTicket('run-a', process.pid, 'AO-995', forgeDirectory)
+    const [stored] = await listReservations(forgeDirectory)
+    expect(stored?.anchorStartToken).toMatch(/^\d+$/)
+
+    const isReclaimed = await didReserveTicket(
+      'run-b',
+      process.pid,
+      'AO-995',
+      forgeDirectory,
+      {
+        isAnchorAliveFn: (_pid, token) => token === undefined,
+        transcriptMtimeFn: () => null,
+      },
+    )
+    expect(isReclaimed).toBe(true)
   })
 
   test('releasing a ticket no one holds is a no-op, not an error', async () => {
