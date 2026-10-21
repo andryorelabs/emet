@@ -154,13 +154,40 @@ describe('launchWave', () => {
     expect(outcome.orcaTab.reason).toContain('no window')
   })
 
-  test('refuses to start a second session for the same spec', async () => {
+  test('an earlier wave of the same spec does not block the next wave', async () => {
     const { runner, calls } = scriptedRunner({
-      agents: [json([{ id: 'old', name: 'forge-AO-1880-w1' }])],
+      agents: [json([{ id: 'old', name: 'forge-AO-1880-w1' }]), STARTED],
+    })
+    const outcome = await launchWave({ ...REQUEST, launcher: 'bg' }, runner)
+
+    expect(outcome.name).toBe('forge-AO-1880-w2')
+    expect(calls.some((c) => c[0] === 'claude' && c[1] === '--bg')).toBe(true)
+  })
+
+  test('a session of the requested wave blocks the launch', async () => {
+    const { runner, calls } = scriptedRunner({
+      agents: [json([{ id: 'old', name: 'forge-AO-1880-w2' }])],
     })
 
     await expect(launchWave(REQUEST, runner)).rejects.toBeInstanceOf(ForgeConfigError)
     expect(calls.some((c) => c[0] === 'claude' && c[1] === '--bg')).toBe(false)
+  })
+
+  test('a later wave of the same spec blocks the launch', async () => {
+    const { runner, calls } = scriptedRunner({
+      agents: [json([{ id: 'old', name: 'forge-AO-1880-w3' }])],
+    })
+
+    await expect(launchWave(REQUEST, runner)).rejects.toBeInstanceOf(ForgeConfigError)
+    expect(calls.some((c) => c[0] === 'claude' && c[1] === '--bg')).toBe(false)
+  })
+
+  test('a same-spec session with an unreadable wave blocks the launch', async () => {
+    const { runner } = scriptedRunner({
+      agents: [json([{ id: 'old', name: 'forge-AO-1880-manual' }])],
+    })
+
+    await expect(launchWave(REQUEST, runner)).rejects.toBeInstanceOf(ForgeConfigError)
   })
 
   test('another spec with a shared prefix does not block the launch', async () => {
