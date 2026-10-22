@@ -75,6 +75,13 @@ Phase 2. Reinforce two rules on top of the skill's own breakdown:
   (e.g. `Pricing.dc.html`). A UI ticket with no named artboard means that
   screen was never designed: mark it explicitly rather than let the worker
   improvise the interface.
+- Optional `Model:` line (e.g. `Model: opus`, or `Model: opus/high` for model/effort),
+  right under `Covers:`. Set it only when the ticket's own files match what
+  `forge assess` calls high-risk (auth, security, payments, webhook, CI,
+  installer, lockfiles, migrations, dangerous sinks, or a path listed in
+  `review.highRiskPaths`). It overrides `models.worker` for that worker
+  alone; omit it everywhere else so the default worker applies and existing
+  repos behave as before. Phase 6 passes it as the `Agent` `model` parameter.
 - List this repo's project skills once (`ls .claude/skills/*/SKILL.md`; read only
   each file's frontmatter — `head -n 10`, never the full body). For every
   ticket, write a mandatory `## Project skills` section listing only the
