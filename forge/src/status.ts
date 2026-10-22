@@ -14,7 +14,7 @@ import path from 'node:path'
 
 import { DEFAULT_FORGE_CONFIG, resolveRepoRoot } from './config'
 import { listReservations } from './claims'
-import { classifyRun, resolveSessionSlug, type RunVerdict } from './runs'
+import { classifyRun, type RunVerdict } from './runs'
 import { listOccupiedSlots } from './slots'
 import { findStalledTranscripts } from './usage'
 import {
@@ -196,6 +196,7 @@ type RawPullRequest = {
   number: number
   state: string
   headRefName: string
+  body?: string | null
   mergeable?: string
   reviewDecision?: string | null
   statusCheckRollup?:
@@ -225,7 +226,7 @@ export function parsePullRequests(json: string): Map<string, PullRequestStatus> 
     )
     const checksState: ChecksState =
       checks.length === 0 ? 'none' : failed ? 'failing' : pending ? 'pending' : 'passing'
-    result.set(item.headRefName, {
+    const status: PullRequestStatus = {
       number: item.number,
       state:
         item.state === 'MERGED' ? 'merged' : item.state === 'CLOSED' ? 'closed' : 'open',
@@ -233,9 +234,40 @@ export function parsePullRequests(json: string): Map<string, PullRequestStatus> 
       mergeable:
         item.mergeable === 'CONFLICTING' ? false : item.mergeable === 'MERGEABLE' ? true : null,
       changesRequested: item.reviewDecision === 'CHANGES_REQUESTED',
-    })
+    }
+    result.set(item.headRefName, status)
+    for (const issueNumber of closingIssueNumbers(item.body ?? '')) {
+      const key = `#${issueNumber}`
+      if (!result.has(key)) result.set(key, status)
+    }
   }
   return result
+}
+
+/**
+ * A wave opens one PR from its integration branch, never from a worker branch,
+ * and closes its tickets with `Closes #N, #M`. Those issue numbers are the only
+ * link between a worker and its wave's PR, so they are indexed as `#<n>` keys.
+ */
+export function closingIssueNumbers(body: string): string[] {
+  const numbers: string[] = []
+  for (const line of body.split('\n')) {
+    const match = /^\s*(?:close[sd]?|fix(?:e[sd])?|resolve[sd]?)\s*:?\s+(.*)$/i.exec(line)
+    if (!match) continue
+    for (const reference of match[1]!.matchAll(/#(\d+)/g)) numbers.push(reference[1]!)
+  }
+  return numbers
+}
+
+function findPullRequest(
+  pullRequests: ReadonlyMap<string, PullRequestStatus>,
+  branch: string | null,
+  ticket: string,
+): PullRequestStatus | null {
+  const byBranch = branch ? pullRequests.get(branch) : undefined
+  if (byBranch) return byBranch
+  const issueNumber = /(\d+)$/.exec(ticket)?.[1]
+  return issueNumber ? (pullRequests.get(`#${issueNumber}`) ?? null) : null
 }
 
 export function groupWorkers(
@@ -255,7 +287,7 @@ export function groupWorkers(
     add(reservation.runId, {
       ticket: reservation.ticket,
       branch: null,
-      pullRequest: null,
+      pullRequest: findPullRequest(pullRequests, null, reservation.ticket),
       stalled: false,
     })
   }
@@ -265,7 +297,7 @@ export function groupWorkers(
     add(owner.runId, {
       ticket: owner.ticket,
       branch: entry.branch,
-      pullRequest: entry.branch ? (pullRequests.get(entry.branch) ?? null) : null,
+      pullRequest: findPullRequest(pullRequests, entry.branch, owner.ticket),
       stalled: stalledDirectories.has(entry.directory),
     })
   }
@@ -277,17 +309,14 @@ export function groupWorkers(
 }
 
 async function newestTranscript(directory: string): Promise<string | null> {
-  const projectDirectory = path.join(
-    os.homedir(),
-    '.claude',
-    'projects',
-    resolveSessionSlug(directory),
-  )
+  const agentId = /^agent-(.+)$/.exec(path.basename(directory))?.[1]
+  if (!agentId) return null
+  const projectsDirectory = path.join(os.homedir(), '.claude', 'projects')
   let newest: { file: string; mtimeMs: number } | null = null
   try {
-    const glob = new Bun.Glob('*.jsonl')
-    for await (const name of glob.scan({ cwd: projectDirectory, onlyFiles: true })) {
-      const file = path.join(projectDirectory, name)
+    const glob = new Bun.Glob(`*/*/subagents/agent-${agentId}.jsonl`)
+    for await (const name of glob.scan({ cwd: projectsDirectory, onlyFiles: true })) {
+      const file = path.join(projectsDirectory, name)
       const mtimeMs = Bun.file(file).lastModified
       if (!newest || mtimeMs > newest.mtimeMs) newest = { file, mtimeMs }
     }
@@ -299,7 +328,7 @@ async function newestTranscript(directory: string): Promise<string | null> {
 
 async function fetchPullRequests(): Promise<Map<string, PullRequestStatus>> {
   const output =
-    await Bun.$`gh pr list --state all --limit 100 --json number,state,headRefName,mergeable,reviewDecision,statusCheckRollup`
+    await Bun.$`gh pr list --state all --limit 100 --json number,state,headRefName,body,mergeable,reviewDecision,statusCheckRollup`
       .nothrow()
       .quiet()
   if (output.exitCode !== 0) return new Map()

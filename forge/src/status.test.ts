@@ -2,6 +2,7 @@ import { describe, expect, test } from 'bun:test'
 
 import {
   buildStatusReport,
+  closingIssueNumbers,
   groupWorkers,
   parsePullRequests,
   parseRunIdentity,
@@ -141,5 +142,36 @@ describe('parsing and merging', () => {
       { ticket: 'CLA-1', branch: 'br', pullRequest: greenPullRequest, stalled: true },
       { ticket: 'CLA-2', branch: null, pullRequest: null, stalled: false },
     ])
+  })
+})
+
+describe('wave PR lookup', () => {
+  test('closingIssueNumbers reads Closes lines', () => {
+    expect(closingIssueNumbers('intro\n\nCloses #25, #26, #28\n')).toEqual(['25', '26', '28'])
+    expect(closingIssueNumbers('Refs: #4')).toEqual([])
+  })
+
+  test('workers find the wave PR through its Closes line', () => {
+    const pullRequests = parsePullRequests(
+      JSON.stringify([
+        {
+          number: 99,
+          state: 'OPEN',
+          headRefName: 'feat/wave',
+          body: 'x\n\nCloses #25, #26',
+          mergeable: 'MERGEABLE',
+          statusCheckRollup: [{ status: 'IN_PROGRESS' }],
+        },
+      ]),
+    )
+    const [wave] = groupWorkers(
+      [],
+      [{ runId: 'forge20w2111111', ticket: 'CLA-25' }],
+      pullRequests,
+      new Set(),
+      new Map([['forge20w2111111', 'live']]),
+    )
+    expect(wave!.workers[0]!.pullRequest?.number).toBe(99)
+    expect(wave!.workers[0]!.pullRequest?.checks).toBe('pending')
   })
 })
