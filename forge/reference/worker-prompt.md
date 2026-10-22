@@ -29,9 +29,11 @@ ticket body:
 
 {{ticket_body}}
 
-Spec summary (do not fetch or read the full spec):
-
-{{spec_summary_15_lines}}
+Spec: {{spec_id}}. Read only its `## Specs` section yourself, via the
+tracker (`{{spec_read_call}}`) — the verbatim requirements `S1..Sn`, and
+nothing else of the spec. Your ticket's `Covers:` line names the S# you own.
+In your final report and handoff, state which S# you covered (and any you
+could not).
 
 Sibling tickets in this wave (IDs only — read a sibling's own ticket/comments
 yourself, only if you actually need to align with a decision it made):

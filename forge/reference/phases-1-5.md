@@ -46,6 +46,12 @@ can't happen inside plan mode. Section it as a spec block per
 `docs/agents/issue-tracker.md`'s conventions, ready to be published verbatim
 in Phase 5.
 
+Put the requirements in a `## Specs` section, numbered `S1..Sn`, one per
+line (`- **S1**: …`). Quote the user's own strings, commands and examples
+verbatim inside each one — never paraphrase them. Tickets and prompts cite
+these numbers, and workers read this section directly from the tracker, so
+whatever is not in `## Specs` does not reach them.
+
 ## Phase 3 — Tickets
 
 Read
@@ -54,6 +60,10 @@ and follow its tracer-bullet breakdown (with blocking edges), but write the
 tickets **into the plan file** instead of publishing them — same reason as
 Phase 2. Reinforce two rules on top of the skill's own breakdown:
 
+- Every ticket declares a `Covers: S…` line right under its title, listing
+  the `## Specs` numbers it implements (e.g. `Covers: S2, S3`). Every S#
+  must be covered by at least one ticket; a ticket covering none is
+  unjustified scope.
 - Any change to a path listed in `schema.ownedPaths` (`forge.config.json`)
   goes in exactly one ticket, first in the dependency chain, blocking every
   other ticket that touches the feature — see `docs/agents/forge.md` for why

@@ -1,4 +1,6 @@
+import { createHash } from 'node:crypto'
 import { existsSync, readdirSync } from 'node:fs'
+import { readFile } from 'node:fs/promises'
 import os from 'node:os'
 import path from 'node:path'
 
@@ -398,6 +400,46 @@ export function checkSettingsAdvisories(settings: unknown): readonly string[] {
   return advisories
 }
 
+export const INSTALL_MANIFEST_RELATIVE_PATH = '.claude/forge/.install-manifest.json'
+
+/**
+ * Compares every file recorded in the installer's SHA-256 manifest against
+ * what is on disk now. Returns one human-readable line per edited or missing
+ * file; an absent or unreadable manifest yields no findings (nothing to compare).
+ */
+export async function findInstallDrift(homeDirectory: string): Promise<string[]> {
+  let manifest: unknown
+  try {
+    manifest = JSON.parse(
+      await readFile(path.join(homeDirectory, INSTALL_MANIFEST_RELATIVE_PATH), 'utf8'),
+    )
+  } catch {
+    return []
+  }
+  if (typeof manifest !== 'object' || manifest === null) return []
+
+  const findings: string[] = []
+  for (const [relativePath, expectedHash] of Object.entries(manifest)) {
+    const absolutePath = path.join(homeDirectory, relativePath)
+    let currentHash: string
+    try {
+      currentHash = createHash('sha256')
+        .update(await readFile(absolutePath))
+        .digest('hex')
+    } catch {
+      findings.push(`~/${relativePath} is missing — re-run install.sh`)
+      continue
+    }
+    if (currentHash !== expectedHash) {
+      const pendingNote = existsSync(`${absolutePath}.new`)
+        ? ` (new version waiting at ~/${relativePath}.new)`
+        : ''
+      findings.push(`~/${relativePath} was edited since install${pendingNote}`)
+    }
+  }
+  return findings
+}
+
 async function readUserSettings(): Promise<unknown> {
   const file = Bun.file(path.join(os.homedir(), '.claude', 'settings.json'))
   if (!(await file.exists())) return null
@@ -437,6 +479,15 @@ async function main(targets: readonly string[]): Promise<void> {
     console.log(
       `\nSettings advisories (~/.claude/settings.json, never auto-fixed):\n${settingsAdvisories
         .map((advisory) => `  - ${advisory}`)
+        .join('\n')}`,
+    )
+  }
+
+  const installDrift = await findInstallDrift(os.homedir())
+  if (installDrift.length > 0) {
+    console.log(
+      `\nInstall drift (informational — install.sh keeps your edits and writes <file>.new):\n${installDrift
+        .map((line) => `  - ${line}`)
         .join('\n')}`,
     )
   }
