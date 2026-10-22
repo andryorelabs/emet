@@ -11,9 +11,9 @@ You are reviewing the `{{integration_branch}}` branch, based off
 `{{base_branch}}`, as part of a `/forge` wave. This branch merges
 {{ticket_count}} tickets' worth of worker output.
 
-Spec summary (do not fetch or read the full spec):
-
-{{spec_summary_15_lines}}
+Spec: {{spec_id}}. Read its `## Specs` section yourself via the tracker
+(`{{spec_read_call}}`) — the verbatim requirements `S1..Sn`. Each ticket in
+this wave declares which it `Covers:`.
 
 Project skills this wave's tickets named (union across tickets, `none` if
 none applied):
@@ -28,6 +28,10 @@ Diff the integration branch against the base branch yourself
 (`git diff {{base_branch}}...{{integration_branch}}`) — don't rely on a diff
 pasted here. Read only what the diff touches plus whatever surrounding
 context you need to judge it.
+
+Give a verdict per S# for every requirement this wave's tickets cover:
+`S<n>: met | partial | unmet`, with a one-line reason and `file:line`
+evidence. A `partial` or `unmet` verdict is a finding.
 
 Report only problems that should block this merge, ranked most severe first,
 each with a severity, an exact `file:line`, and the concrete failure
