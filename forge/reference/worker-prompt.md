@@ -101,7 +101,8 @@ other, regardless of how the work turns out.
 Your first step after bootstrap, before anything else: write
 `.forge/surface.json` in your worktree as `{"surfaces": [<globs from your
 ticket's "Allowed edit surfaces">]}` (create `.forge/` if missing). The edit
-guard blocks writes outside those globs.
+guard blocks writes outside those globs. Never commit it:
+run `echo .forge/surface.json >> "$(git rev-parse --git-path info/exclude)"` first.
 
 Locate before you `Read`: use `rg -n '<symbol>'` (or `sg run -p '<pattern>'
 -l` for a structural question) instead of a full `Read` whenever the

@@ -92,7 +92,8 @@ Phase 2. Reinforce two rules on top of the skill's own breakdown:
   specific skill over a generic one, and let the `## Context budget` tripwire
   below split the ticket if the relevant set gets heavy.
 - Every ticket carries a mandatory `## Allowed edit surfaces` section: the
-  globs it may edit, one line, comma-separated (e.g. `src/foo.ts, tests/foo/**`).
+  globs it may edit, one line, comma-separated (e.g. `src/foo.ts, tests/foo/**`); no brace
+  globs (`{a,b}`) — list each path separately.
   Same-wave tickets must not overlap; Phase 6 enforces it with
   `forge surfaces --check`.
 - Every ticket carries a mandatory `## Context budget` section, computed
