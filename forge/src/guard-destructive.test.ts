@@ -108,6 +108,12 @@ describe('review regressions', () => {
   test('still denies destructive heredoc bodies fed to a shell', () => {
     expect(bash('sh <<EOF\ngit reset --hard\nEOF')).toBe('deny')
   })
+  test('denies destructive heredoc bodies not opened by the first command', () => {
+    expect(bash('echo hi; bash <<EOF\nrm -rf x\nEOF')).toBe('deny')
+    expect(bash('git commit --allow-empty -m x; bash <<EOF\nrm -rf x\nEOF')).toBe('deny')
+    expect(bash('gh api x; bash <<EOF\ngit push --force\nEOF')).toBe('deny')
+    expect(bash('grep . <<EOF | sh\nrm -rf x\nEOF')).toBe('deny')
+  })
   test('denies path-qualified, escaped and substituted rm', () => {
     expect(bash('/bin/rm -rf x')).toBe('deny')
     expect(bash('\\rm -rf x')).toBe('deny')

@@ -123,7 +123,10 @@ export function findDestructiveOperation(command: string): string | null {
       const opener = /<<-?\s*(["']?)([A-Za-z_][A-Za-z0-9_]*)\1/.exec(line)
       if (opener) {
         heredocTerminator = opener[2] ?? null
-        skipHeredocBody = isInertSegment(line.split(SEGMENT_SEPARATOR)[0] ?? line)
+        const openerSegment = line
+          .split(SEGMENT_SEPARATOR)
+          .find((candidate) => candidate.includes(opener[0])) ?? line
+        skipHeredocBody = !pipedToShell && isInertSegment(openerSegment)
       }
     }
   }
