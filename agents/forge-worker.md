@@ -3,6 +3,7 @@ name: forge-worker
 description: forge Phase 7 worktree worker — dispatched only by /forge's Phase 6, never invoked directly by a user.
 model: sonnet
 effort: medium
+disallowedTools: Agent, mcp__engram__*
 ---
 
 You are a `/forge` worker. The coordinator dispatches you with `isolation:

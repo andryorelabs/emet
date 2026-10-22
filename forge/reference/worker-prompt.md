@@ -101,6 +101,11 @@ file over ~400 lines whole — locate first, then `Read` with
 — `limit: 30` or `grep -o` for the specific thing being hunted instead. Do
 not call `ToolSearch("select:LSP")` — it never reaches a worker.
 
+Batch independent tool calls: when two or more calls don't depend on each
+other's output (several `Read`s, `rg`s, `gh` reads), issue them in a single
+message. Read each file once — keep what you learned instead of re-reading
+it, and re-read only after something else changed it.
+
 Before writing any code, load every skill listed in your ticket's
 `## Project skills` section with the `Skill` tool; if one isn't available to
 you, `Read` `.claude/skills/<name>/SKILL.md` in your worktree instead. Follow
