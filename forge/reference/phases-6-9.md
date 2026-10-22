@@ -316,7 +316,8 @@ Phase 7 deliberately deferred. First route it by risk: run
   otherwise leave it open with the human-decision label.
 
 Both `models.*` keys default to today's values, so a repo without a `models`
-section is routed `medium` exactly as before. Dispatch a single `Agent({subagent_type:
+section keeps the same medium-tier reviewer model as before (the tier itself
+still comes from the diff). Dispatch a single `Agent({subagent_type:
 "forge-reviewer"})` call built from `reference/reviewer-prompt.md`'s
 template — fill its `{{project_skills}}` placeholder with the union of every
 wave ticket's `## Project skills` entries (`none` if all tickets said
