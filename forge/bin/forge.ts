@@ -36,6 +36,7 @@ commands:
   launch    <spec-id> --wave <n>  — start a wave as a \`claude --bg\` session and open its Orca tab per handoff.launcher
   lock-reason --run <id> --ticket <ticket> [--anchor <pid>]  — the \`git worktree lock\` reason a worker writes at bootstrap
   assess    --base <ref> --head <ref>  — classify a diff as passive|medium|high and pick the reviewer model
+  status    [--spec <id>]  — Working / Checking / Ready / Needs-decision per wave as JSON + a summary line (\`forge status --help\` documents the JSON)
   guard     — Claude Code PreToolUse hook (reads hook JSON on stdin); see src/guard.ts
   selftest  — run this CLI's own unit tests
 `
@@ -105,6 +106,11 @@ async function main(): Promise<void> {
     }
     case 'assess': {
       const { run } = await import('../src/assess')
+      await run(rest)
+      return
+    }
+    case 'status': {
+      const { run } = await import('../src/status')
       await run(rest)
       return
     }
