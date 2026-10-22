@@ -347,9 +347,13 @@ this line needs a manual per-ticket state write instead.
    `gh pr merge <n> --<mergeMethod> --delete-branch`.
 3. Checks exist → `gh pr checks <n> --watch --fail-fast`. All green → merge
    as in step 2.
-4. A check failed → read the failure (`gh run view <run-id> --log-failed`),
-   fix it on the integration branch, run the affected fast checks locally,
-   push, and go back to step 3. After `pr.maxCiFixAttempts` failed fix
+4. A check failed → never read the CI log yourself (no `--log-failed` into
+   your own context). Dispatch an `Agent` on `models.triage` (default
+   `haiku`) to fetch and read it (`gh run view <run-id> --log-failed`) and
+   return at most ~2k tokens: the failing check, the root-cause error, and
+   `file:line` for each failure, with no raw log excerpts beyond a few lines.
+   Fix it on the integration branch from that report, run the affected fast
+   checks locally, push, and go back to step 3. After `pr.maxCiFixAttempts` failed fix
    attempts, stop: leave the PR open, apply the human-decision label
    (`docs/agents/triage-labels.md`), and report the failing check.
 
