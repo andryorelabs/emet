@@ -263,29 +263,43 @@ describe('stop hooks', () => {
     ...overrides,
   })
 
-  test('Stop blocks once while the run holds slots and no marker exists', async () => {
-    const input: StopHookInput = { session_id: 'sess-1' }
-    expect((await checkSessionStop(input, [10, 500], sessionDeps())).decision).toBe('block')
-    const second = await checkSessionStop(
-      { ...input, stop_hook_active: true },
-      [10, 500],
-      sessionDeps(),
+  const heldClaim = { runId: 'r', anchorPid: 500, ticket: 'AO-1', reservedAt: 0, sessionSlug: 's' }
+
+  test('Stop allows while a worker slot is held, even with claims', async () => {
+    const deps = sessionDeps({ listClaims: async () => [heldClaim] })
+    expect((await checkSessionStop({ session_id: 'sess-1' }, [10, 500], deps)).decision).toBe(
+      'allow',
     )
+  })
+
+  test('Stop blocks once when claims remain, no worker is in flight and no marker exists', async () => {
+    const input: StopHookInput = { session_id: 'sess-1' }
+    const deps = sessionDeps({ listSlots: async () => [], listClaims: async () => [heldClaim] })
+    expect((await checkSessionStop(input, [10, 500], deps)).decision).toBe('block')
+    const second = await checkSessionStop({ ...input, stop_hook_active: true }, [10, 500], deps)
     expect(second.decision).toBe('allow')
   })
 
   test('Stop blocks on a held claim alone', async () => {
-    const claim = { runId: 'r', anchorPid: 500, ticket: 'AO-1', reservedAt: 0, sessionSlug: 's' }
-    const deps = sessionDeps({ listSlots: async () => [], listClaims: async () => [claim] })
+    const deps = sessionDeps({ listSlots: async () => [], listClaims: async () => [heldClaim] })
     expect((await checkSessionStop({ session_id: 'sess-1' }, [500], deps)).decision).toBe('block')
   })
 
   test('Stop allows with a marker, without a held run, or with a bad session id', async () => {
     const input: StopHookInput = { session_id: 'sess-1' }
-    const marked = await checkSessionStop(input, [500], sessionDeps({ markerExists: () => true }))
+    const claimsOnly = { listSlots: async () => [], listClaims: async () => [heldClaim] }
+    const marked = await checkSessionStop(
+      input,
+      [500],
+      sessionDeps({ ...claimsOnly, markerExists: () => true }),
+    )
     expect(marked.decision).toBe('allow')
-    expect((await checkSessionStop(input, [999], sessionDeps())).decision).toBe('allow')
-    const badId = await checkSessionStop({ session_id: '../etc/passwd' }, [500], sessionDeps())
+    expect((await checkSessionStop(input, [999], sessionDeps(claimsOnly))).decision).toBe('allow')
+    const badId = await checkSessionStop(
+      { session_id: '../etc/passwd' },
+      [500],
+      sessionDeps(claimsOnly),
+    )
     expect(badId.decision).toBe('allow')
   })
 

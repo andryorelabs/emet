@@ -337,7 +337,8 @@ const DEFAULT_SESSION_STOP_DEPENDENCIES: SessionStopDependencies = {
 
 /**
  * Blocks a coordinator's first stop when a run anchored in this session's
- * own process ancestry still holds slots or ticket claims and no final
+ * own process ancestry still holds ticket claims, has no worker in flight
+ * (a held slot means the coordinator is legitimately waiting), and no final
  * report marker exists for the session.
  */
 export async function checkSessionStop(
@@ -356,10 +357,11 @@ export async function checkSessionStop(
   const heldClaims = (await dependencies.listClaims()).filter((claim) =>
     ownPids.has(claim.anchorPid),
   )
-  if (heldSlots.length === 0 && heldClaims.length === 0) return STOP_ALLOW
+  if (heldSlots.length > 0) return STOP_ALLOW
+  if (heldClaims.length === 0) return STOP_ALLOW
 
   return stopBlock(
-    `forge guard: this run still holds ${heldSlots.length} slot(s) and ${heldClaims.length} claim(s) and no final report was written — finish the wave close-out, post the final report, then run \`forge guard --mark-final-report ${input.session_id}\`.`,
+    `forge guard: this run still holds ${heldClaims.length} claim(s), no worker is in flight and no final report was written — finish the wave close-out, post the final report, then run \`forge guard --mark-final-report ${input.session_id}\`.`,
   )
 }
 
