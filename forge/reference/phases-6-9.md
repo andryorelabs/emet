@@ -37,6 +37,12 @@ state, carrying the ready-for-dispatch triage label, under this spec, with no
 open blocker. Sort by priority descending (`tracker.github.priorityLabels`,
 or the tracker's native priority field), then `createdAt` ascending.
 
+Before any claim or slot, check the wave's surfaces: write
+`{"<ticket>": ["<glob>", ...]}` from each ticket's `## Allowed edit surfaces`
+and run `forge surfaces --check <file | ->`. Exit 1 lists overlapping tickets;
+narrow the globs or serialize one into a later wave (add a blocking edge)
+before dispatching. Exit 2 is a malformed input — fix it.
+
 Immediately before each survivor's `Agent` call, reserve it with
 `forge claims --reserve <ticket> --run <runId> --anchor <anchorPid>` (the
 real dispatch mutex — see `reference/incidents.md` §AO-285),

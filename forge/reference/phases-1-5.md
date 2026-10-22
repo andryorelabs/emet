@@ -91,6 +91,10 @@ Phase 2. Reinforce two rules on top of the skill's own breakdown:
   no `.claude/skills/`. Relevance is the only selection criterion; prefer a
   specific skill over a generic one, and let the `## Context budget` tripwire
   below split the ticket if the relevant set gets heavy.
+- Every ticket carries a mandatory `## Allowed edit surfaces` section: the
+  globs it may edit, one line, comma-separated (e.g. `src/foo.ts, tests/foo/**`).
+  Same-wave tickets must not overlap; Phase 6 enforces it with
+  `forge surfaces --check`.
 - Every ticket carries a mandatory `## Context budget` section, computed
   mechanically (`wc -l`/`grep -c` against the actual files it touches, not a
   guess), so sizing is checkable before any code exists:
@@ -106,6 +110,10 @@ Phase 2. Reinforce two rules on top of the skill's own breakdown:
 
   Add each `## Project skills` entry's own `SKILL.md` line count into the
   touch-set estimate — it's context the worker reads too.
+
+  Lower tripwire: a ticket with New surface <=~100 lines merges into an
+  adjacent same-wave sibling (files nearby). Never split one behavior into
+  separate code, test, and docs tickets.
 
   Split the ticket into two (same wave, parallel, no extra close-out cost) if
   any tripwire fires: estimated peak > 160K; touch set > 8 files or > 1,500
