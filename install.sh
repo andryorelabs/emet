@@ -128,7 +128,7 @@ if ! command -v jq >/dev/null 2>&1; then
   echo "  {\"matcher\": \"Bash|ScheduleWakeup|Skill\", \"hooks\": [{\"type\": \"command\", \"command\": \"$GUARD_COMMAND\"}]}" >&2
 elif [[ -f "$SETTINGS_FILE" ]] && jq -e --arg cmd "$GUARD_COMMAND" \
   'any(.hooks.PreToolUse[]?.hooks[]?; .command == $cmd)' "$SETTINGS_FILE" >/dev/null 2>&1; then
-  echo "  already wired — leaving $SETTINGS_FILE untouched."
+  echo "  PreToolUse already wired."
 else
   mkdir -p "$HOME/.claude"
   [[ -f "$SETTINGS_FILE" ]] || echo '{}' > "$SETTINGS_FILE"
@@ -143,6 +143,33 @@ else
   ls -1 "$SETTINGS_FILE".pre-forge-guard-backup.* 2>/dev/null | sort -r | tail -n +"$((BACKUPS_TO_KEEP + 1))" | while IFS= read -r stale_backup; do
     rm -f -- "$stale_backup"
   done
+fi
+
+echo "==> Wiring the forge guard SubagentStop and Stop hooks"
+if command -v jq >/dev/null 2>&1; then
+  for STOP_EVENT in SubagentStop Stop; do
+    STOP_COMMAND="$GUARD_COMMAND --event $STOP_EVENT"
+    if [[ -f "$SETTINGS_FILE" ]] && jq -e --arg event "$STOP_EVENT" --arg cmd "$STOP_COMMAND" \
+      'any(.hooks[$event][]?.hooks[]?; .command == $cmd)' "$SETTINGS_FILE" >/dev/null 2>&1; then
+      echo "  $STOP_EVENT already wired."
+    else
+      mkdir -p "$HOME/.claude"
+      [[ -f "$SETTINGS_FILE" ]] || echo '{}' > "$SETTINGS_FILE"
+      cp "$SETTINGS_FILE" "$SETTINGS_FILE.pre-forge-guard-backup.$(date -u +%Y%m%dT%H%M%SZ)"
+      jq --arg event "$STOP_EVENT" --arg cmd "$STOP_COMMAND" \
+        '.hooks[$event] = ((.hooks[$event] // []) + [{"hooks": [{"type": "command", "command": $cmd}]}])' \
+        "$SETTINGS_FILE" > "$SETTINGS_FILE.tmp" && mv "$SETTINGS_FILE.tmp" "$SETTINGS_FILE"
+      echo "  $STOP_EVENT added."
+    fi
+  done
+  # shellcheck disable=SC2012
+  ls -1 "$SETTINGS_FILE".pre-forge-guard-backup.* 2>/dev/null | sort -r | tail -n +"$((BACKUPS_TO_KEEP + 1))" | while IFS= read -r stale_backup; do
+    rm -f -- "$stale_backup"
+  done
+else
+  echo "warning: jq is required to wire the SubagentStop/Stop hooks automatically — skipping." >&2
+  echo "  Add {\"hooks\": [{\"type\": \"command\", \"command\": \"$GUARD_COMMAND --event SubagentStop\"}]} to hooks.SubagentStop" >&2
+  echo "  and the same with --event Stop to hooks.Stop in $SETTINGS_FILE." >&2
 fi
 
 echo

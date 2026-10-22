@@ -3,6 +3,14 @@ import { describe, expect, test } from 'bun:test'
 import {
   checkBackgroundBashInWorktree,
   checkCodeReviewFanoutWithSiblingRun,
+  checkSessionStop,
+  checkSubagentStop,
+  finalReportMarkerPath,
+  formatStopOutput,
+  isValidSessionId,
+  readBoundedStdin,
+  type SessionStopDependencies,
+  type StopHookInput,
   checkScheduleWakeupSlashCommand,
   collectProcessAncestry,
   evaluateGuard,
@@ -203,5 +211,115 @@ describe('evaluateGuard', () => {
     const input = {} as PreToolUseHookInput
     const verdict = await evaluateGuard(input, process.pid)
     expect(verdict).toEqual({ decision: 'allow' })
+  })
+})
+
+describe('stop hooks', () => {
+  const worktreeCwd = '/repo/.claude/worktrees/agent-abc'
+  const noteWithState = 'state: implementing\n'
+  const subagentDeps = (commits: number | null, notes: string[]) => ({
+    countNewCommits: async () => commits,
+    readHandoffNotes: () => notes,
+  })
+
+  test('SubagentStop blocks without a commit, then allows on stop_hook_active', async () => {
+    const input: StopHookInput = { cwd: worktreeCwd }
+    const blocked = await checkSubagentStop(input, subagentDeps(0, [noteWithState]))
+    expect(blocked.decision).toBe('block')
+    const second = await checkSubagentStop(
+      { ...input, stop_hook_active: true },
+      subagentDeps(0, []),
+    )
+    expect(second.decision).toBe('allow')
+  })
+
+  test('SubagentStop blocks when the handoff has no state', async () => {
+    const withoutState = await checkSubagentStop(
+      { cwd: worktreeCwd },
+      subagentDeps(2, ['notes: x\n']),
+    )
+    expect(withoutState.decision).toBe('block')
+    const noNote = await checkSubagentStop({ cwd: worktreeCwd }, subagentDeps(2, []))
+    expect(noNote.decision).toBe('block')
+  })
+
+  test('SubagentStop allows with a commit and state, and outside worktrees', async () => {
+    const complete = await checkSubagentStop(
+      { cwd: worktreeCwd },
+      subagentDeps(1, [noteWithState]),
+    )
+    expect(complete.decision).toBe('allow')
+    const outside = await checkSubagentStop({ cwd: '/home/u/repo' }, subagentDeps(0, []))
+    expect(outside.decision).toBe('allow')
+  })
+
+  const holder = makeHolder({ anchorPid: 500 })
+  const sessionDeps = (
+    overrides: Partial<SessionStopDependencies> = {},
+  ): SessionStopDependencies => ({
+    listSlots: async () => [{ index: 0, holder, verdict: 'live' }],
+    listClaims: async () => [],
+    markerExists: () => false,
+    ...overrides,
+  })
+
+  const heldClaim = { runId: 'r', anchorPid: 500, ticket: 'AO-1', reservedAt: 0, sessionSlug: 's' }
+
+  test('Stop allows while a worker slot is held, even with claims', async () => {
+    const deps = sessionDeps({ listClaims: async () => [heldClaim] })
+    expect((await checkSessionStop({ session_id: 'sess-1' }, [10, 500], deps)).decision).toBe(
+      'allow',
+    )
+  })
+
+  test('Stop blocks once when claims remain, no worker is in flight and no marker exists', async () => {
+    const input: StopHookInput = { session_id: 'sess-1' }
+    const deps = sessionDeps({ listSlots: async () => [], listClaims: async () => [heldClaim] })
+    expect((await checkSessionStop(input, [10, 500], deps)).decision).toBe('block')
+    const second = await checkSessionStop({ ...input, stop_hook_active: true }, [10, 500], deps)
+    expect(second.decision).toBe('allow')
+  })
+
+  test('Stop blocks on a held claim alone', async () => {
+    const deps = sessionDeps({ listSlots: async () => [], listClaims: async () => [heldClaim] })
+    expect((await checkSessionStop({ session_id: 'sess-1' }, [500], deps)).decision).toBe('block')
+  })
+
+  test('Stop allows with a marker, without a held run, or with a bad session id', async () => {
+    const input: StopHookInput = { session_id: 'sess-1' }
+    const claimsOnly = { listSlots: async () => [], listClaims: async () => [heldClaim] }
+    const marked = await checkSessionStop(
+      input,
+      [500],
+      sessionDeps({ ...claimsOnly, markerExists: () => true }),
+    )
+    expect(marked.decision).toBe('allow')
+    expect((await checkSessionStop(input, [999], sessionDeps(claimsOnly))).decision).toBe('allow')
+    const badId = await checkSessionStop(
+      { session_id: '../etc/passwd' },
+      [500],
+      sessionDeps(claimsOnly),
+    )
+    expect(badId.decision).toBe('allow')
+  })
+
+  test('isValidSessionId rejects path traversal', () => {
+    expect(isValidSessionId('abc-123_X')).toBe(true)
+    expect(isValidSessionId('../x')).toBe(false)
+    expect(isValidSessionId('a/b')).toBe(false)
+    expect(isValidSessionId('')).toBe(false)
+    expect(() => finalReportMarkerPath('../x', '/tmp')).toThrow()
+  })
+
+  test('readBoundedStdin returns null past the limit', async () => {
+    const make = (text: string) => new Response(text).body as ReadableStream<Uint8Array>
+    expect(await readBoundedStdin(make('hello'), 10)).toBe('hello')
+    expect(await readBoundedStdin(make('x'.repeat(50)), 10)).toBeNull()
+  })
+
+  test('formatStopOutput emits a block payload only on block', () => {
+    expect(formatStopOutput({ decision: 'allow' })).toBeNull()
+    const output = formatStopOutput({ decision: 'block', reason: 'r' })
+    expect(JSON.parse(output!)).toEqual({ decision: 'block', reason: 'r' })
   })
 })

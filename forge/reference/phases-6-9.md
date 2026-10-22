@@ -347,9 +347,13 @@ this line needs a manual per-ticket state write instead.
    `gh pr merge <n> --<mergeMethod> --delete-branch`.
 3. Checks exist → `gh pr checks <n> --watch --fail-fast`. All green → merge
    as in step 2.
-4. A check failed → read the failure (`gh run view <run-id> --log-failed`),
-   fix it on the integration branch, run the affected fast checks locally,
-   push, and go back to step 3. After `pr.maxCiFixAttempts` failed fix
+4. A check failed → never read the CI log yourself (no `--log-failed` into
+   your own context). Dispatch an `Agent` on `models.triage` (default
+   `haiku`) to fetch and read it (`gh run view <run-id> --log-failed`) and
+   return at most ~2k tokens: the failing check, the root-cause error, and
+   `file:line` for each failure, with no raw log excerpts beyond a few lines.
+   Fix it on the integration branch from that report, run the affected fast
+   checks locally, push, and go back to step 3. After `pr.maxCiFixAttempts` failed fix
    attempts, stop: leave the PR open, apply the human-decision label
    (`docs/agents/triage-labels.md`), and report the failing check.
 
@@ -396,6 +400,11 @@ produce the **final report, always, exactly once**: every wave's PR link,
 what shipped, what got flagged and why, and what's still waiting on a human
 decision. This is the terminal case regardless of which mode started this
 session (default, `--draft`+`--dispatch`, or a chained `--dispatch`).
+Whenever this session ends a wave — frontier empty or not — right after
+posting its report, run `forge guard --mark-final-report <session id>` (the
+id is printed in the `Stop` hook's block message); the
+hook only blocks once no worker is in flight and claims remain, so a turn
+spent waiting on workers is never blocked.
 
 **If the frontier is non-empty, do not loop back to Phase 6 in this same
 session.** Waves chain across sessions, not within one — each session pays

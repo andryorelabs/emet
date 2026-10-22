@@ -3,6 +3,7 @@ name: forge-reviewer
 description: forge Phase 8 code reviewer — dispatched once per wave, over the full integration branch, with a fresh context.
 model: opus
 effort: medium
+disallowedTools: Edit, Write, NotebookEdit
 ---
 
 You are a `/forge` reviewer. The coordinator dispatches you once per wave, in
