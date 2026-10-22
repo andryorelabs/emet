@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test'
-import { mkdtempSync, rmSync } from 'node:fs'
+import { createHash } from 'node:crypto'
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
 
@@ -8,6 +9,7 @@ import {
   auditRepo,
   checkSelfCheckCommand,
   checkSettingsAdvisories,
+  findInstallDrift,
   findMissingDocs,
   isReportClean,
   parseDoctorArguments,
@@ -371,5 +373,46 @@ describe('checkSettingsAdvisories', () => {
       permissions: { ...readySettings.permissions, deny: ['Bash(git push * main)'] },
     })
     expect(advisories.some((advisory) => advisory.includes('--force'))).toBe(true)
+  })
+})
+
+describe('findInstallDrift', () => {
+  let home: string
+  const sha = (text: string) => createHash('sha256').update(text).digest('hex')
+
+  beforeEach(() => {
+    home = mkdtempSync(path.join(os.tmpdir(), 'forge-drift-'))
+    mkdirSync(path.join(home, '.claude/forge'), { recursive: true })
+    mkdirSync(path.join(home, '.claude/agents'), { recursive: true })
+  })
+  afterEach(() => rmSync(home, { recursive: true, force: true }))
+
+  function writeManifest(entries: Record<string, string>) {
+    writeFileSync(path.join(home, '.claude/forge/.install-manifest.json'), JSON.stringify(entries))
+  }
+
+  test('no manifest means no findings', async () => {
+    expect(await findInstallDrift(home)).toEqual([])
+  })
+
+  test('unchanged files are not drift', async () => {
+    writeFileSync(path.join(home, '.claude/agents/a.md'), 'original')
+    writeManifest({ '.claude/agents/a.md': sha('original') })
+    expect(await findInstallDrift(home)).toEqual([])
+  })
+
+  test('reports an edited file and a pending .new', async () => {
+    writeFileSync(path.join(home, '.claude/agents/a.md'), 'edited')
+    writeFileSync(path.join(home, '.claude/agents/a.md.new'), 'upstream')
+    writeManifest({ '.claude/agents/a.md': sha('original') })
+    const findings = await findInstallDrift(home)
+    expect(findings).toHaveLength(1)
+    expect(findings[0]).toContain('.claude/agents/a.md was edited')
+    expect(findings[0]).toContain('a.md.new')
+  })
+
+  test('reports a missing file', async () => {
+    writeManifest({ '.claude/agents/gone.md': sha('x') })
+    expect((await findInstallDrift(home))[0]).toContain('missing')
   })
 })
