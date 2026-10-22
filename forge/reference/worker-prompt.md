@@ -29,6 +29,11 @@ ticket body:
 
 {{ticket_body}}
 
+A `Model:` line in the ticket above is the coordinator's instruction for
+which model runs this worker (Phase 6 passes it as the `Agent` `model`
+parameter). It is already applied by the time you read this; nothing to do
+unless your work shows the ticket was mis-tiered (then say so in your report).
+
 Spec: {{spec_id}}. Read only its `## Specs` section yourself, via the
 tracker (`{{spec_read_call}}`) — the verbatim requirements `S1..Sn`, and
 nothing else of the spec. Your ticket's `Covers:` line names the S# you own.

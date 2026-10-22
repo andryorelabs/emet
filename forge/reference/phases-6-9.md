@@ -74,9 +74,12 @@ Launch up to `concurrency.waveSize` `Agent` calls in parallel (single
 message, multiple tool uses), each with `isolation: "worktree"` **and
 `subagent_type: "forge-worker"`** — that agent definition (`~/.claude/agents/
 forge-worker.md`, installed by `install.sh`) pins its own model and effort,
-so don't also pass a per-call `model`: a per-call `model` overrides the
-agent's frontmatter, and pinning it in two places invites them drifting
-apart. If `forge doctor`'s global findings flag `forge-agents` as missing,
+so don't also pass a per-call `model` by default: a per-call `model`
+overrides the agent's frontmatter, and pinning it in two places invites them
+drifting apart. The one exception is a ticket carrying a `Model:` line
+(Phase 3): pass that value as the `Agent` `model` parameter for that worker
+only (the model part; an effort part, as in `opus/high`, applies only where
+the dispatch supports an effort override). If `forge doctor`'s global findings flag `forge-agents` as missing,
 fix that (`./install.sh`) before dispatching — a missing agent definition
 makes this call fail outright.
 
@@ -298,7 +301,22 @@ the second worktree's checkout outright, or worse, silently fold two
 unrelated waves' history together if it doesn't.
 
 Review here, once, over the full integration branch — this is the review
-Phase 7 deliberately deferred. Dispatch a single `Agent({subagent_type:
+Phase 7 deliberately deferred. First route it by risk: run
+`forge assess --base <trunk> --head <integration branch>`. It prints JSON
+`{tier, reasons, reviewer:{model,effort}}`, and the tier decides:
+
+- `passive` (docs-only diff) → no reviewer. Skip the dispatch below, note the
+  `reasons` in this wave's report, and continue with the full suite.
+- `medium` → today's reviewer, dispatched as below on `models.reviewer.medium`
+  (default opus/medium).
+- `high` → the same dispatch on `models.reviewer.high` (the `reviewer` object
+  `forge assess` printed: pass its model, and its effort where the dispatch
+  supports one). Auto-merge is additionally gated: `pr.autoMerge` lands the PR
+  only when every check is green **and** the ledger has no open finding;
+  otherwise leave it open with the human-decision label.
+
+Both `models.*` keys default to today's values, so a repo without a `models`
+section is routed `medium` exactly as before. Dispatch a single `Agent({subagent_type:
 "forge-reviewer"})` call built from `reference/reviewer-prompt.md`'s
 template — fill its `{{project_skills}}` placeholder with the union of every
 wave ticket's `## Project skills` entries (`none` if all tickets said
