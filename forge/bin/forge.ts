@@ -37,6 +37,7 @@ commands:
   lock-reason --run <id> --ticket <ticket> [--anchor <pid>]  — the \`git worktree lock\` reason a worker writes at bootstrap
   assess    --base <ref> --head <ref>  — classify a diff as passive|medium|high and pick the reviewer model
   status    [--spec <id>]  — Working / Checking / Ready / Needs-decision per wave as JSON + a summary line (\`forge status --help\` documents the JSON)
+  surfaces  --check <file.json | ->  — reject overlapping allowed-surface globs between a wave's tickets
   guard     — Claude Code PreToolUse hook (reads hook JSON on stdin); see src/guard.ts
   selftest  — run this CLI's own unit tests
 `
@@ -111,6 +112,11 @@ async function main(): Promise<void> {
     }
     case 'status': {
       const { run } = await import('../src/status')
+      await run(rest)
+      return
+    }
+    case 'surfaces': {
+      const { run } = await import('../src/surfaces')
       await run(rest)
       return
     }

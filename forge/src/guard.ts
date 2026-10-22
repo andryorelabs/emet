@@ -8,6 +8,7 @@ import {
 import os from 'node:os'
 import path from 'node:path'
 
+import { checkDestructiveCommand, checkEditSurface } from './guard-destructive'
 import { listReservations, type Reservation } from './claims'
 import { listOccupiedSlots, type SlotListEntry } from './slots'
 
@@ -199,6 +200,12 @@ export async function evaluateGuard(
   hookPid: number,
 ): Promise<GuardVerdict> {
   try {
+    const destructiveVerdict = checkDestructiveCommand(input)
+    if (destructiveVerdict.decision === 'deny') return destructiveVerdict
+
+    const surfaceVerdict = checkEditSurface(input)
+    if (surfaceVerdict.decision === 'deny') return surfaceVerdict
+
     const backgroundBashVerdict = checkBackgroundBashInWorktree(input)
     if (backgroundBashVerdict.decision === 'deny') return backgroundBashVerdict
 
