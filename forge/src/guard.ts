@@ -1,5 +1,14 @@
-import { readFileSync } from 'node:fs'
+import {
+  existsSync,
+  mkdirSync,
+  readdirSync,
+  readFileSync,
+  writeFileSync,
+} from 'node:fs'
+import os from 'node:os'
+import path from 'node:path'
 
+import { listReservations, type Reservation } from './claims'
 import { listOccupiedSlots, type SlotListEntry } from './slots'
 
 /**
@@ -203,6 +212,192 @@ export async function evaluateGuard(
   }
 }
 
+export type StopHookInput = {
+  readonly hook_event_name?: string
+  readonly session_id?: string
+  readonly cwd?: string
+  readonly stop_hook_active?: boolean
+}
+
+export type StopVerdict =
+  | { readonly decision: 'allow' }
+  | { readonly decision: 'block'; readonly reason: string }
+
+const STOP_ALLOW: StopVerdict = { decision: 'allow' }
+
+const MAX_STDIN_BYTES = 1024 * 1024
+const SESSION_ID_PATTERN = /^[A-Za-z0-9_-]{1,128}$/
+
+export function isValidSessionId(value: unknown): value is string {
+  return typeof value === 'string' && SESSION_ID_PATTERN.test(value)
+}
+
+function resolveForgeStateDirectory(): string {
+  const explicit = process.env.FORGE_STATE_DIR
+  if (explicit) return explicit
+  const xdgStateHome = process.env.XDG_STATE_HOME
+  if (xdgStateHome) return path.join(xdgStateHome, 'forge')
+  return path.join(os.homedir(), '.local', 'state', 'forge')
+}
+
+export function finalReportMarkerPath(
+  sessionId: string,
+  stateDirectory: string = resolveForgeStateDirectory(),
+): string {
+  if (!isValidSessionId(sessionId)) {
+    throw new Error(`forge:guard — invalid session id ${JSON.stringify(sessionId)}`)
+  }
+  return path.join(stateDirectory, 'final-report', sessionId)
+}
+
+/** Records that this session delivered its final report, so the `Stop` hook
+ * stops blocking. CLI: `forge guard --mark-final-report <session_id>`. */
+export function writeFinalReportMarker(sessionId: string, stateDirectory?: string): string {
+  const markerPath = finalReportMarkerPath(sessionId, stateDirectory)
+  mkdirSync(path.dirname(markerPath), { recursive: true })
+  writeFileSync(markerPath, `${new Date().toISOString()}\n`)
+  return markerPath
+}
+
+function isAgentWorktreeCwd(cwd: string | undefined): cwd is string {
+  return typeof cwd === 'string' && cwd.includes('.claude/worktrees/agent-')
+}
+
+async function countNewCommits(cwd: string): Promise<number | null> {
+  for (const base of ['origin/HEAD', 'origin/main', 'main', 'origin/master', 'master']) {
+    const result = await Bun.$`git -C ${cwd} rev-list --count ${base}..HEAD`.nothrow().quiet()
+    if (result.exitCode === 0) {
+      const count = Number(result.stdout.toString().trim())
+      if (Number.isSafeInteger(count)) return count
+    }
+  }
+  return null
+}
+
+function readHandoffNotes(cwd: string): string[] {
+  const forgeDirectory = path.join(cwd, '.forge')
+  if (!existsSync(forgeDirectory)) return []
+  return readdirSync(forgeDirectory)
+    .filter((name) => /^handoff-.+\.md$/i.test(name))
+    .map((name) => readFileSync(path.join(forgeDirectory, name), 'utf8'))
+}
+
+function stopBlock(reason: string): StopVerdict {
+  return { decision: 'block', reason }
+}
+
+export type SubagentStopDependencies = {
+  readonly countNewCommits: (cwd: string) => Promise<number | null>
+  readonly readHandoffNotes: (cwd: string) => string[]
+}
+
+const DEFAULT_SUBAGENT_STOP_DEPENDENCIES: SubagentStopDependencies = {
+  countNewCommits,
+  readHandoffNotes,
+}
+
+/**
+ * Blocks a worktree worker's first stop when it has no new commit or its
+ * handoff note carries no `state:` line. `stop_hook_active` means the harness
+ * is already continuing because of a previous block, so that stop is allowed.
+ */
+export async function checkSubagentStop(
+  input: StopHookInput,
+  dependencies: SubagentStopDependencies = DEFAULT_SUBAGENT_STOP_DEPENDENCIES,
+): Promise<StopVerdict> {
+  if (input.stop_hook_active === true) return STOP_ALLOW
+  if (!isAgentWorktreeCwd(input.cwd)) return STOP_ALLOW
+
+  const problems: string[] = []
+  const commits = await dependencies.countNewCommits(input.cwd)
+  if (commits === 0) problems.push('the worktree has no new commit')
+
+  const notes = dependencies.readHandoffNotes(input.cwd)
+  if (!notes.some((note) => /^state:\s*\S/m.test(note))) {
+    problems.push('the handoff note (.forge/handoff-<ticket>.md) has no "state:" line')
+  }
+  if (problems.length === 0) return STOP_ALLOW
+
+  return stopBlock(
+    `forge guard: do not stop yet — ${problems.join(' and ')}. Commit your work and update the handoff note, then report.`,
+  )
+}
+
+export type SessionStopDependencies = {
+  readonly listSlots: () => Promise<readonly SlotListEntry[]>
+  readonly listClaims: () => Promise<readonly Reservation[]>
+  readonly markerExists: (sessionId: string) => boolean
+}
+
+const DEFAULT_SESSION_STOP_DEPENDENCIES: SessionStopDependencies = {
+  listSlots: () => listOccupiedSlots(),
+  listClaims: () => listReservations(),
+  markerExists: (sessionId) => existsSync(finalReportMarkerPath(sessionId)),
+}
+
+/**
+ * Blocks a coordinator's first stop when a run anchored in this session's
+ * own process ancestry still holds slots or ticket claims and no final
+ * report marker exists for the session.
+ */
+export async function checkSessionStop(
+  input: StopHookInput,
+  ownAncestry: readonly number[],
+  dependencies: SessionStopDependencies = DEFAULT_SESSION_STOP_DEPENDENCIES,
+): Promise<StopVerdict> {
+  if (input.stop_hook_active === true) return STOP_ALLOW
+  if (!isValidSessionId(input.session_id)) return STOP_ALLOW
+  if (dependencies.markerExists(input.session_id)) return STOP_ALLOW
+
+  const ownPids = new Set(ownAncestry)
+  const heldSlots = (await dependencies.listSlots()).filter(
+    (entry) => entry.verdict !== 'dead' && ownPids.has(entry.holder.anchorPid),
+  )
+  const heldClaims = (await dependencies.listClaims()).filter((claim) =>
+    ownPids.has(claim.anchorPid),
+  )
+  if (heldSlots.length === 0 && heldClaims.length === 0) return STOP_ALLOW
+
+  return stopBlock(
+    `forge guard: this run still holds ${heldSlots.length} slot(s) and ${heldClaims.length} claim(s) and no final report was written — finish the wave close-out, post the final report, then run \`forge guard --mark-final-report ${input.session_id}\`.`,
+  )
+}
+
+export async function evaluateStopGuard(
+  event: 'SubagentStop' | 'Stop',
+  input: StopHookInput,
+  hookPid: number,
+): Promise<StopVerdict> {
+  try {
+    if (event === 'SubagentStop') return await checkSubagentStop(input)
+    return await checkSessionStop(input, collectProcessAncestry(hookPid))
+  } catch (error) {
+    console.error('forge:guard — internal error, allowing the stop:', error)
+    return STOP_ALLOW
+  }
+}
+
+/** Reads a stream up to `limit` bytes; returns `null` when it exceeds the bound. */
+export async function readBoundedStdin(
+  stream: ReadableStream<Uint8Array> = Bun.stdin.stream(),
+  limit: number = MAX_STDIN_BYTES,
+): Promise<string | null> {
+  const reader = stream.getReader()
+  const chunks: Uint8Array[] = []
+  let total = 0
+  for (;;) {
+    const { done, value } = await reader.read()
+    if (done) break
+    total += value.byteLength
+    if (total > limit) {
+      await reader.cancel()
+      return null
+    }
+    chunks.push(value)
+  }
+  return Buffer.concat(chunks).toString('utf8')
+}
+
 function formatHookOutput(verdict: GuardVerdict): string | null {
   if (verdict.decision === 'allow') return null
   return JSON.stringify({
@@ -214,24 +409,59 @@ function formatHookOutput(verdict: GuardVerdict): string | null {
   })
 }
 
-export async function run(): Promise<void> {
-  let raw: string
+export function formatStopOutput(verdict: StopVerdict): string | null {
+  if (verdict.decision === 'allow') return null
+  return JSON.stringify({ decision: 'block', reason: verdict.reason })
+}
+
+function readEventFlag(argv: readonly string[]): string | null {
+  const index = argv.indexOf('--event')
+  return index === -1 ? null : (argv[index + 1] ?? null)
+}
+
+export async function run(
+  argv: readonly string[] = process.argv.slice(2),
+): Promise<void> {
+  const markIndex = argv.indexOf('--mark-final-report')
+  if (markIndex !== -1) {
+    try {
+      console.log(writeFinalReportMarker(argv[markIndex + 1] ?? ''))
+    } catch (error) {
+      console.error(error instanceof Error ? error.message : String(error))
+      process.exitCode = 1
+    }
+    return
+  }
+
+  let raw: string | null
   try {
-    raw = await Bun.stdin.text()
+    raw = await readBoundedStdin()
   } catch (error) {
     console.error('forge:guard — could not read stdin, allowing the call:', error)
     return
   }
+  if (raw === null) {
+    console.error('forge:guard — stdin exceeds 1 MiB, allowing the call')
+    return
+  }
 
-  let input: PreToolUseHookInput
+  let parsed: unknown
   try {
-    input = raw.trim().length > 0 ? (JSON.parse(raw) as PreToolUseHookInput) : {}
+    parsed = raw.trim().length > 0 ? JSON.parse(raw) : {}
   } catch (error) {
     console.error('forge:guard — could not parse hook input, allowing the call:', error)
     return
   }
 
-  const verdict = await evaluateGuard(input, process.pid)
+  const event = readEventFlag(argv)
+  if (event === 'SubagentStop' || event === 'Stop') {
+    const stopVerdict = await evaluateStopGuard(event, parsed as StopHookInput, process.pid)
+    const stopOutput = formatStopOutput(stopVerdict)
+    if (stopOutput) console.log(stopOutput)
+    return
+  }
+
+  const verdict = await evaluateGuard(parsed as PreToolUseHookInput, process.pid)
   const output = formatHookOutput(verdict)
   if (output) console.log(output)
 }
