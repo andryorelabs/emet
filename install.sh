@@ -122,20 +122,30 @@ echo "==> Wiring the forge guard PreToolUse hook into ~/.claude/settings.json"
 SETTINGS_FILE="$HOME/.claude/settings.json"
 GUARD_COMMAND="$HOME/.local/bin/forge guard"
 BACKUPS_TO_KEEP=5
+GUARD_MATCHER="Bash|ScheduleWakeup|Skill|Edit|Write|MultiEdit|NotebookEdit"
 if ! command -v jq >/dev/null 2>&1; then
   echo "warning: jq is required to wire the forge guard hook automatically — skipping." >&2
   echo "  Add this by hand to $SETTINGS_FILE's hooks.PreToolUse:" >&2
-  echo "  {\"matcher\": \"Bash|ScheduleWakeup|Skill\", \"hooks\": [{\"type\": \"command\", \"command\": \"$GUARD_COMMAND\"}]}" >&2
+  echo "  {\"matcher\": \"Bash|ScheduleWakeup|Skill|Edit|Write|MultiEdit|NotebookEdit\", \"hooks\": [{\"type\": \"command\", \"command\": \"$GUARD_COMMAND\"}]}" >&2
 elif [[ -f "$SETTINGS_FILE" ]] && jq -e --arg cmd "$GUARD_COMMAND" \
   'any(.hooks.PreToolUse[]?.hooks[]?; .command == $cmd)' "$SETTINGS_FILE" >/dev/null 2>&1; then
-  echo "  PreToolUse already wired."
+  if jq -e --arg cmd "$GUARD_COMMAND" --arg matcher "$GUARD_MATCHER" \
+    'any(.hooks.PreToolUse[]?; .matcher != $matcher and any(.hooks[]?; .command == $cmd))' "$SETTINGS_FILE" >/dev/null 2>&1; then
+    cp "$SETTINGS_FILE" "$SETTINGS_FILE.pre-forge-guard-backup.$(date -u +%Y%m%dT%H%M%SZ)"
+    jq --arg cmd "$GUARD_COMMAND" --arg matcher "$GUARD_MATCHER" \
+      '(.hooks.PreToolUse[] | select(any(.hooks[]?; .command == $cmd))).matcher = $matcher' \
+      "$SETTINGS_FILE" > "$SETTINGS_FILE.tmp" && mv "$SETTINGS_FILE.tmp" "$SETTINGS_FILE"
+    echo "  PreToolUse matcher widened to cover Edit/Write."
+  else
+    echo "  PreToolUse already wired."
+  fi
 else
   mkdir -p "$HOME/.claude"
   [[ -f "$SETTINGS_FILE" ]] || echo '{}' > "$SETTINGS_FILE"
   BACKUP_FILE="$SETTINGS_FILE.pre-forge-guard-backup.$(date -u +%Y%m%dT%H%M%SZ)"
   cp "$SETTINGS_FILE" "$BACKUP_FILE"
-  jq --arg cmd "$GUARD_COMMAND" \
-    '.hooks.PreToolUse = ((.hooks.PreToolUse // []) + [{"matcher": "Bash|ScheduleWakeup|Skill", "hooks": [{"type": "command", "command": $cmd}]}])' \
+  jq --arg cmd "$GUARD_COMMAND" --arg matcher "$GUARD_MATCHER" \
+    '.hooks.PreToolUse = ((.hooks.PreToolUse // []) + [{"matcher": $matcher, "hooks": [{"type": "command", "command": $cmd}]}])' \
     "$SETTINGS_FILE" > "$SETTINGS_FILE.tmp" && mv "$SETTINGS_FILE.tmp" "$SETTINGS_FILE"
   echo "  added (backup at $BACKUP_FILE)."
   # Timestamps sort lexicographically; drop everything but the newest few.

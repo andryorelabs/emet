@@ -103,6 +103,10 @@ instruction to read its `## Specs` section from the tracker (the verbatim
 list of sibling ticket IDs under this spec — not their contents. The worker reads a sibling's ticket/comments itself only if
 it actually needs to (step 3 of Phase 7 below), instead of every worker's
 context paying for every ticket's full text whether it's relevant or not.
+Once per run, run `commands.selfCheck` on trunk (before any worker exists)
+and pass each failure to every worker as a `## Known environmental failures`
+section (`none` if clean), so workers neither chase nor mistake them for
+their own regressions.
 Build the actual prompt from `worker-prompt.md`'s template — it already
 encodes what never to touch, the worktree bootstrap steps and branch/commit
 convention, the handoff-note contract, and the locate-before-`Read`
@@ -302,8 +306,12 @@ wave ticket's `## Project skills` entries (`none` if all tickets said
 sub-agents inside a subagent's own review is what caused two workers to hang
 mid-review in the run that originally motivated a fan-out here
 (`reference/incidents.md`), and a fan-out's own roster has separately hung
-for ~1h45m in this repo. Apply whatever the reviewer flags as a blocker
-before proceeding; a should-fix finding is the coordinator's judgment call,
+for ~1h45m in this repo. The reviewer writes a ledger to `.forge/review-<runId>.md`. Apply whatever
+it flags as a blocker before proceeding, then (and again after any CI fix in
+step 4 below) re-dispatch `forge-reviewer` in `recheck` mode with only the
+ledger and the diff from the reviewed sha to HEAD (`reviewer-prompt.md`,
+"Recheck variant"), at most 2 rounds. A finding still open after round 2
+gets the human-decision label and blocks auto-merge, like any other flag; a should-fix finding is the coordinator's judgment call,
 noted in this wave's report either way (Phase 9). If `forge-reviewer` is
 missing (`forge doctor`'s global findings), fall back to the `code-review`
 skill's own no-fan-out mode (`--level low` or `medium`) rather than its
@@ -352,9 +360,16 @@ this line needs a manual per-ticket state write instead.
    `haiku`) to fetch and read it (`gh run view <run-id> --log-failed`) and
    return at most ~2k tokens: the failing check, the root-cause error, and
    `file:line` for each failure, with no raw log excerpts beyond a few lines.
-   Fix it on the integration branch from that report, run the affected fast
-   checks locally, push, and go back to step 3. After `pr.maxCiFixAttempts` failed fix
-   attempts, stop: leave the PR open, apply the human-decision label
+   Before spending an attempt, compare the failing *job* with trunk's
+   latest completed run (`gh run list --branch <base> --workflow <name>
+   --status completed --limit 1 --json databaseId`, then `gh run view <id>
+   --json jobs`). Only if that same job failed on trunk is it baseline:
+   spend no attempt, note it in the PR body, and treat that check as
+   non-blocking. A different job failing on trunk, or no completed trunk
+   run, is not baseline.
+   Otherwise fix it on the integration branch from that report, run the
+   affected fast checks locally, push, and go back to step 3. After
+   `pr.maxCiFixAttempts` failed fix attempts, stop: leave the PR open, apply the human-decision label
    (`docs/agents/triage-labels.md`), and report the failing check.
 
 Never auto-merge a wave with anything flagged (see below), whatever

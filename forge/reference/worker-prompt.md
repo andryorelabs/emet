@@ -113,6 +113,8 @@ them alongside `tdd`; where a project skill conflicts with the ticket's own
 hand-off, the ticket wins — note the conflict in a ticket comment rather than
 silently picking one.
 
+{{known_environmental_failures}}
+
 Implement with the `tdd` skill at the seams the ticket already named,
 reaching for `diagnosing-bugs` if something gets stuck.
 
@@ -131,3 +133,8 @@ Commit with this repo's normal convention, ending the body with:
 {{commit_trailer}}
 
 Always report — success, failure, or blocked — never end silently.
+
+`{{known_environmental_failures}}` is a `## Known environmental failures`
+section listing the checks that already fail on trunk (Phase 6 computes it),
+or `none`. A failure on that list is not yours: do not try to fix it, and
+note in your report that it was pre-existing.
