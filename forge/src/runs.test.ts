@@ -1,6 +1,11 @@
 import { describe, expect, test } from 'bun:test'
 
-import { classifyRun, resolveSessionSlug } from './runs'
+import {
+  classifyRun,
+  isAnchorAlive,
+  readProcessStartToken,
+  resolveSessionSlug,
+} from './runs'
 
 describe('classifyRun', () => {
   test('live: anchor process is still running', () => {
@@ -59,5 +64,42 @@ describe('resolveSessionSlug', () => {
     expect(resolveSessionSlug('/home/andryore/code/andryore-dev')).toBe(
       '-home-andryore-code-andryore-dev',
     )
+  })
+})
+
+describe('process start token', () => {
+  test('reads a numeric start token for a live process', () => {
+    expect(readProcessStartToken(process.pid)).toMatch(/^\d+$/)
+  })
+
+  test('returns undefined for a missing process', () => {
+    expect(readProcessStartToken(2_000_000_000)).toBeUndefined()
+  })
+
+  test('classifyRun forwards the token to the liveness check', () => {
+    const received: Array<string | undefined> = []
+    classifyRun(4242, 'slug', 'run-a', {
+      anchorStartToken: '777',
+      isAnchorAliveFn: (_pid, token) => {
+        received.push(token)
+        return true
+      },
+    })
+    expect(received).toEqual(['777'])
+  })
+
+  test('a legacy run without a token is classified by the injected check with no token', () => {
+    const received: Array<string | undefined> = []
+    classifyRun(4242, 'slug', 'run-a', {
+      isAnchorAliveFn: (_pid, token) => {
+        received.push(token)
+        return true
+      },
+    })
+    expect(received).toEqual([undefined])
+  })
+
+  test('a mismatched start token reports not alive', () => {
+    expect(isAnchorAlive(process.pid, 'not-a-real-token')).toBe(false)
   })
 })

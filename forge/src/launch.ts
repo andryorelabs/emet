@@ -105,13 +105,23 @@ async function listAgents(runner: CommandRunner): Promise<AgentRow[]> {
 /**
  * `claude agents --json` lists sessions of every project, and a name can
  * outlive its process, so a "live" `forge-<spec-id>-*` session is any row
- * carrying that name prefix — the same check the autoChain prose used.
+ * carrying that name prefix. Sessions of an earlier or the same wave are
+ * ignored so wave n can launch wave n+1 from inside its own session; a
+ * session whose wave cannot be read still blocks.
  */
-function findSpecSessions(rows: readonly AgentRow[], specId: string): string[] {
+function findBlockingSessions(
+  rows: readonly AgentRow[],
+  specId: string,
+  wave: number,
+): string[] {
   const prefix = `forge-${specId}-`
   return rows
     .map((row) => row.name ?? '')
     .filter((name) => name.startsWith(prefix))
+    .filter((name) => {
+      const match = /^w(\d+)$/.exec(name.slice(prefix.length))
+      return !match || Number(match[1]) >= wave
+    })
 }
 
 /**
@@ -192,7 +202,11 @@ export async function launchWave(
 ): Promise<LaunchOutcome> {
   const name = waveSessionName(request.specId, request.wave)
 
-  const existing = findSpecSessions(await listAgents(runner), request.specId)
+  const existing = findBlockingSessions(
+    await listAgents(runner),
+    request.specId,
+    request.wave,
+  )
   if (existing.length > 0) {
     throw new ForgeConfigError(
       `forge launch: a session for spec ${request.specId} already exists (${existing.join(', ')}) — not launching a second one.`,

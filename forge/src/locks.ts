@@ -1,10 +1,13 @@
 import {
   existsSync,
-  mkdirSync,
+  mkdtempSync,
   readFileSync,
+  renameSync,
   rmSync,
+  statSync,
   writeFileSync,
 } from 'node:fs'
+import { randomUUID } from 'node:crypto'
 import path from 'node:path'
 
 /**
@@ -122,9 +125,19 @@ export function readLockHolder<THolder extends LockHolder = LockHolder>(
  * that combination can only mean the original process died and its pid was
  * later recycled by an unrelated one.
  */
+export const HOLDERLESS_LOCK_GRACE_MS = 10_000
+
+function lockDirectoryAgeMs(lockDirectory: string): number {
+  try {
+    return Date.now() - statSync(lockDirectory).mtimeMs
+  } catch {
+    return Infinity
+  }
+}
+
 export function isLockStale(lockDirectory: string, maxAgeMs: number): boolean {
   const holder = readLockHolder(lockDirectory)
-  if (!holder) return true
+  if (!holder) return lockDirectoryAgeMs(lockDirectory) > HOLDERLESS_LOCK_GRACE_MS
   if (!isProcessAlive(holder.pid)) return true
   return (
     Date.now() - holder.acquiredAt > maxAgeMs && !existsSync(holder.worktree)
@@ -143,18 +156,31 @@ export function didAcquireLock<THolder extends LockHolder>(
   lockDirectory: string,
   holder: THolder,
 ): boolean {
+  const stagingDirectory = mkdtempSync(`${lockDirectory}.staging-`)
   try {
-    mkdirSync(lockDirectory)
+    writeFileSync(
+      path.join(stagingDirectory, 'holder.json'),
+      JSON.stringify(holder),
+    )
+    renameSync(stagingDirectory, lockDirectory)
+    return true
   } catch (error) {
-    if ((error as NodeJS.ErrnoException).code === 'EEXIST') return false
+    rmSync(stagingDirectory, { recursive: true, force: true })
+    const code = (error as NodeJS.ErrnoException).code
+    if (code === 'EEXIST' || code === 'ENOTEMPTY') return false
     throw error
   }
-  writeFileSync(path.join(lockDirectory, 'holder.json'), JSON.stringify(holder))
-  return true
 }
 
 export function releaseLock(lockDirectory: string): void {
-  rmSync(lockDirectory, { recursive: true, force: true })
+  const trashDirectory = `${lockDirectory}.released-${process.pid}-${randomUUID()}`
+  try {
+    renameSync(lockDirectory, trashDirectory)
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === 'ENOENT') return
+    throw error
+  }
+  rmSync(trashDirectory, { recursive: true, force: true })
 }
 
 export interface AcquireLockOptions {
@@ -199,7 +225,7 @@ export async function acquireLock<THolder extends LockHolder>(
       console.log(
         `${logLabel}: reclaiming a stale lock${holder ? ` (pid ${holder.pid} is no longer alive, or the lock is too old)` : ' (unreadable holder metadata)'}...`,
       )
-      rmSync(lockDirectory, { recursive: true, force: true })
+      releaseLock(lockDirectory)
       continue
     }
     if (Date.now() >= deadline) {

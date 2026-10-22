@@ -3,7 +3,9 @@ import {
   existsSync,
   mkdirSync,
   mkdtempSync,
+  readdirSync,
   rmSync,
+  utimesSync,
   writeFileSync,
 } from 'node:fs'
 import { tmpdir } from 'node:os'
@@ -12,6 +14,7 @@ import path from 'node:path'
 import {
   acquireLock,
   didAcquireLock,
+  HOLDERLESS_LOCK_GRACE_MS,
   isLockStale,
   type LockHolder,
   readLockHolder,
@@ -66,17 +69,39 @@ describe('forge-locks', () => {
       expect(readLockHolder(lockDirectory)?.pid).toBe(process.pid)
     })
 
+    test('a lock directory never exists without holder.json and leaves no staging directory', () => {
+      expect(didAcquireLock(lockDirectory, buildHolder())).toBe(true)
+      expect(existsSync(path.join(lockDirectory, 'holder.json'))).toBe(true)
+      expect(readdirSync(temporaryRoot)).toEqual(['test.lock'])
+      expect(didAcquireLock(lockDirectory, buildHolder({ pid: 1 }))).toBe(false)
+      expect(readLockHolder(lockDirectory)?.pid).toBe(process.pid)
+      expect(readdirSync(temporaryRoot)).toEqual(['test.lock'])
+    })
+
     test('releaseLock is idempotent, matching --unlock force-releasing a lock that may already be gone', () => {
       didAcquireLock(lockDirectory, buildHolder())
       releaseLock(lockDirectory)
       expect(existsSync(lockDirectory)).toBe(false)
       expect(() => releaseLock(lockDirectory)).not.toThrow()
     })
+
+    test('releaseLock leaves no trash directory behind', () => {
+      didAcquireLock(lockDirectory, buildHolder())
+      releaseLock(lockDirectory)
+      expect(readdirSync(temporaryRoot)).toEqual([])
+    })
   })
 
   describe('isLockStale', () => {
-    test('a lock directory with no readable holder.json is treated as abandoned', () => {
+    test('a freshly created holder-less lock directory is not stale within the grace period', () => {
       mkdirSync(lockDirectory)
+      expect(isLockStale(lockDirectory, 999_999_999)).toBe(false)
+    })
+
+    test('a holder-less lock directory older than the grace period is stale', () => {
+      mkdirSync(lockDirectory)
+      const old = new Date(Date.now() - HOLDERLESS_LOCK_GRACE_MS - 1000)
+      utimesSync(lockDirectory, old, old)
       expect(isLockStale(lockDirectory, 999_999_999)).toBe(true)
     })
 
