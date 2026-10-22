@@ -155,7 +155,7 @@ describe('checkSelfCheckCommand', () => {
   })
 
   test('resolves a bare command whose binary is on PATH', async () => {
-    expect(await checkSelfCheckCommand(repoRoot, 'go build ./...', null)).toBeNull()
+    expect(await checkSelfCheckCommand(repoRoot, 'git status --short', null)).toBeNull()
   })
 
   test('flags a bare command whose binary is not on PATH', async () => {
