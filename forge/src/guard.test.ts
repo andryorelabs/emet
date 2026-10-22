@@ -323,3 +323,20 @@ describe('stop hooks', () => {
     expect(JSON.parse(output!)).toEqual({ decision: 'block', reason: 'r' })
   })
 })
+
+describe("evaluateGuard destructive commands", () => {
+  test("denies a wrapped destructive Bash command", async () => {
+    const verdict = await evaluateGuard(
+      { tool_name: "Bash", cwd: "/tmp", tool_input: { command: "sudo sh -c \"git reset --hard\"" } },
+      process.pid,
+    )
+    expect(verdict.decision).toBe("deny")
+  })
+  test("allows a benign look-alike", async () => {
+    const verdict = await evaluateGuard(
+      { tool_name: "Bash", cwd: "/tmp", tool_input: { command: "git reset --soft HEAD~1" } },
+      process.pid,
+    )
+    expect(verdict.decision).toBe("allow")
+  })
+})
