@@ -92,3 +92,26 @@ describe('edit surfaces', () => {
     expect(edit('/repo/anything.ts', () => null)).toBe('allow')
   })
 })
+
+describe('review regressions', () => {
+  const bash = (command: string) =>
+    checkDestructiveCommand({ tool_name: 'Bash', tool_input: { command } }).decision
+
+  test('allows commit and PR bodies that mention destructive commands', () => {
+    expect(
+      bash("git commit -m \"$(cat <<'EOF'\nfeat: x\n\n- Deny git reset --hard, DROP TABLE\nEOF\n)\""),
+    ).toBe('allow')
+    expect(
+      bash("gh pr create --body \"$(cat <<'EOF'\ndenies git push --force\nEOF\n)\""),
+    ).toBe('allow')
+  })
+  test('still denies destructive heredoc bodies fed to a shell', () => {
+    expect(bash('sh <<EOF\ngit reset --hard\nEOF')).toBe('deny')
+  })
+  test('denies path-qualified, escaped and substituted rm', () => {
+    expect(bash('/bin/rm -rf x')).toBe('deny')
+    expect(bash('\\rm -rf x')).toBe('deny')
+    expect(bash('echo $(rm -rf x)')).toBe('deny')
+    expect(bash('echo "rm -rf x" | sh')).toBe('deny')
+  })
+})

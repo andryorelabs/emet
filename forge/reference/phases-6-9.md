@@ -360,10 +360,13 @@ this line needs a manual per-ticket state write instead.
    `haiku`) to fetch and read it (`gh run view <run-id> --log-failed`) and
    return at most ~2k tokens: the failing check, the root-cause error, and
    `file:line` for each failure, with no raw log excerpts beyond a few lines.
-   Before spending an attempt, compare with the latest run of the same
-   check on trunk (`gh run list --branch <base> --workflow <name> --limit 1
-   --json conclusion`). If trunk fails it too, it is baseline: spend no
-   attempt, note it in the PR body, and treat that check as non-blocking.
+   Before spending an attempt, compare the failing *job* with trunk's
+   latest completed run (`gh run list --branch <base> --workflow <name>
+   --status completed --limit 1 --json databaseId`, then `gh run view <id>
+   --json jobs`). Only if that same job failed on trunk is it baseline:
+   spend no attempt, note it in the PR body, and treat that check as
+   non-blocking. A different job failing on trunk, or no completed trunk
+   run, is not baseline.
    Otherwise fix it on the integration branch from that report, run the
    affected fast checks locally, push, and go back to step 3. After
    `pr.maxCiFixAttempts` failed fix attempts, stop: leave the PR open, apply the human-decision label

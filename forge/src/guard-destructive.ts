@@ -53,7 +53,7 @@ const RULES: readonly DestructiveRule[] = [
   {
     label: 'rm -r',
     pattern:
-      /(?:^|[\s;&|("'`])rm\s(?:[^\n]*\s)?(?:-[a-zA-Z]*[rR][a-zA-Z]*|--recursive)(?=\s|$|["'`)])/,
+      /(?:^|[\s;&|("'`/\\])rm\s(?:[^\n]*\s)?(?:-[a-zA-Z]*[rR][a-zA-Z]*|--recursive)(?=\s|$|["'`)])/,
   },
 ]
 
@@ -80,14 +80,52 @@ function isInertSegment(segment: string): boolean {
   return INERT_COMMANDS.has(leadingCommandWord(segment))
 }
 
+const PIPED_TO_SHELL = /\|\s*(?:(?:sudo|env|doas)\s+)*(?:\S*\/)?(?:ba|z|da|k)?sh\b/
+
+function substitutionBodies(segment: string): string[] {
+  const bodies: string[] = []
+  for (const match of segment.matchAll(/\$\(([^)]*)/g)) bodies.push(match[1] ?? '')
+  for (const match of segment.matchAll(/`([^`]*)`/g)) bodies.push(match[1] ?? '')
+  return bodies
+}
+
+function matchRules(segment: string): string | null {
+  for (const rule of RULES) {
+    if (rule.pattern.test(segment)) return rule.label
+  }
+  return SQL_UPPERCASE.test(segment) ? 'DROP/TRUNCATE' : null
+}
+
 /** Returns the matched rule's label when `command` contains a destructive operation, even wrapped. */
 export function findDestructiveOperation(command: string): string | null {
-  for (const segment of command.split(SEGMENT_SEPARATOR)) {
-    if (segment.trim().length === 0 || isInertSegment(segment)) continue
-    for (const rule of RULES) {
-      if (rule.pattern.test(segment)) return rule.label
+  const pipedToShell = PIPED_TO_SHELL.test(command)
+  let heredocTerminator: string | null = null
+  let skipHeredocBody = false
+  for (const line of command.split('\n')) {
+    if (heredocTerminator !== null) {
+      if (line.trim() === heredocTerminator) heredocTerminator = null
+      else if (skipHeredocBody) continue
     }
-    if (SQL_UPPERCASE.test(segment)) return 'DROP/TRUNCATE'
+    const inBody = heredocTerminator !== null
+    for (const segment of inBody ? [line] : line.split(SEGMENT_SEPARATOR)) {
+      if (segment.trim().length === 0) continue
+      if (!inBody && isInertSegment(segment) && !pipedToShell) {
+        for (const body of substitutionBodies(segment)) {
+          const found = findDestructiveOperation(body)
+          if (found) return found
+        }
+        continue
+      }
+      const label = matchRules(segment)
+      if (label) return label
+    }
+    if (!inBody) {
+      const opener = /<<-?\s*(["']?)([A-Za-z_][A-Za-z0-9_]*)\1/.exec(line)
+      if (opener) {
+        heredocTerminator = opener[2] ?? null
+        skipHeredocBody = isInertSegment(line.split(SEGMENT_SEPARATOR)[0] ?? line)
+      }
+    }
   }
   if (SQL_CLIENTS.test(command) && SQL_ANY_CASE.test(command)) return 'DROP/TRUNCATE'
   return null
