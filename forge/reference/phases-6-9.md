@@ -400,6 +400,10 @@ produce the **final report, always, exactly once**: every wave's PR link,
 what shipped, what got flagged and why, and what's still waiting on a human
 decision. This is the terminal case regardless of which mode started this
 session (default, `--draft`+`--dispatch`, or a chained `--dispatch`).
+Whenever this session ends a wave — frontier empty or not — right after
+posting its report, run `forge guard --mark-final-report <this coordinator
+session id>`; without that marker the `Stop` hook blocks one stop while the
+run still holds slots or claims.
 
 **If the frontier is non-empty, do not loop back to Phase 6 in this same
 session.** Waves chain across sessions, not within one — each session pays
