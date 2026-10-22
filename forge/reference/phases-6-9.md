@@ -94,9 +94,10 @@ unattended for a whole wave.
 
 Keep the dispatch prompt itself small — **the full spec and every sibling
 ticket's full body do not get pasted in**. Give each worker: the full body of
-its own ticket, a ≤15-line summary of the spec (goal, constraints, what this
-wave is for), and the bare list of sibling ticket IDs under this spec — not
-their contents. The worker reads a sibling's ticket/comments itself only if
+its own ticket (including its `Covers: S…` line), the spec issue's ID with an
+instruction to read its `## Specs` section from the tracker (the verbatim
+`S1..Sn` requirements — there is no summary placeholder to fill), and the bare
+list of sibling ticket IDs under this spec — not their contents. The worker reads a sibling's ticket/comments itself only if
 it actually needs to (step 3 of Phase 7 below), instead of every worker's
 context paying for every ticket's full text whether it's relevant or not.
 Build the actual prompt from `worker-prompt.md`'s template — it already
