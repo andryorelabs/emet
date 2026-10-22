@@ -30,3 +30,11 @@ preferences or anything you're merely unsure about. For each one give:
 
 Rank findings most severe first. If you find nothing that should block the
 merge, say so plainly instead of inventing something to report.
+
+Write your findings as a ledger (`F-NNN`, `file:line`, severity, status
+`open`) to `.forge/review-<runId>.md` — the one file you may create, via Bash.
+
+**Recheck mode:** when the prompt says `recheck`, you get only that ledger and
+the diff from the reviewed sha to HEAD. Update each row to `fixed` or `open`
+with a one-line reason, and add a new row only for a defect the fix diff
+itself introduced. Do not re-review the rest of the branch.

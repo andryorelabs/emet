@@ -36,3 +36,24 @@ evidence. A `partial` or `unmet` verdict is a finding.
 Report only problems that should block this merge, ranked most severe first,
 each with a severity, an exact `file:line`, and the concrete failure
 scenario. If nothing should block the merge, say so plainly.
+
+Write your findings as a ledger to `.forge/review-{{run_id}}.md` (the one file
+you may create), one row per finding:
+
+`F-NNN | file:line | blocker/should-fix | open`
+
+The coordinator applies fixes and may re-dispatch you; the ledger is how your
+findings survive that.
+
+## Recheck variant
+
+Use this instead of the full template when re-reviewing fixes. Give the
+reviewer **only** the ledger and the fix diff, nothing else:
+
+```
+Recheck round {{round}} of 2 on `{{integration_branch}}`. Read the ledger at
+`.forge/review-{{run_id}}.md` and the output of `git diff {{reviewed_sha}}..HEAD`.
+For each `open` finding, mark it `fixed` or `open` with a one-line reason, and
+add a new `F-NNN` row only for a defect the fix diff itself introduced. Do not
+re-review anything outside that diff.
+```
