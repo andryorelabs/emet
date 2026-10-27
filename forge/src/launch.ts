@@ -163,9 +163,10 @@ async function shouldOpenOrcaTab(
  * make it discoverable" warning for tabs that do render and run their
  * command, so only `ok` decides success here.
  *
- * The tab's command uses the absolute `claude` path: Orca rewrites a typed
- * command that starts with the bare word `claude` to inject `--plugin-dir`
- * ahead of the subcommand, which turns `attach <name>` into a prompt.
+ * The tab's command runs inside `bash -c` with the absolute `claude` path:
+ * Orca rewrites a typed command that invokes `claude` (bare or by path) to
+ * inject `--plugin-dir` ahead of the subcommand, which turns `attach <name>`
+ * into a prompt.
  */
 async function openOrcaTab(
   request: LaunchRequest,
@@ -181,7 +182,7 @@ async function openOrcaTab(
     '--title',
     name,
     '--command',
-    `${Bun.which('claude') ?? 'claude'} attach ${name}`,
+    `bash -c '${Bun.which('claude') ?? 'claude'} attach ${name}'`,
     '--json',
   ])
   if (result.exitCode !== 0) {

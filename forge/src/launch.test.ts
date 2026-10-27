@@ -81,7 +81,7 @@ describe('launchWave', () => {
       expect(outcome.attach).toBe('claude attach forge-AO-1880-w2')
       const create = calls.find((c) => c[0] === 'orca' && c[2] === 'create')
       expect(create).toContain('path:/repo')
-      expect(create).toContain(`${Bun.which('claude') ?? 'claude'} attach forge-AO-1880-w2`)
+      expect(create).toContain(`bash -c '${Bun.which('claude') ?? 'claude'} attach forge-AO-1880-w2'`)
     } finally {
       if (previous !== undefined) process.env.TERM_PROGRAM = previous
     }
