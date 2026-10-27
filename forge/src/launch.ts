@@ -162,6 +162,10 @@ async function shouldOpenOrcaTab(
  * `orca terminal create` reports `surface: "background"` plus a "could not
  * make it discoverable" warning for tabs that do render and run their
  * command, so only `ok` decides success here.
+ *
+ * The tab's command uses the absolute `claude` path: Orca rewrites a typed
+ * command that starts with the bare word `claude` to inject `--plugin-dir`
+ * ahead of the subcommand, which turns `attach <name>` into a prompt.
  */
 async function openOrcaTab(
   request: LaunchRequest,
@@ -177,7 +181,7 @@ async function openOrcaTab(
     '--title',
     name,
     '--command',
-    `claude attach ${name}`,
+    `${Bun.which('claude') ?? 'claude'} attach ${name}`,
     '--json',
   ])
   if (result.exitCode !== 0) {
