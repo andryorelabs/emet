@@ -66,6 +66,7 @@ jobs:
       - run: bun run test
 
   test-macos:
+    name: Test (macOS)
     runs-on: macos-latest
     timeout-minutes: 20
     steps:
