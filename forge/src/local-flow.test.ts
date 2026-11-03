@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import {
+  mkdirSync,
   mkdtempSync,
   readFileSync,
   realpathSync,
@@ -29,7 +30,11 @@ function childPath(): string {
 }
 
 function childEnv(): Record<string, string | undefined> {
-  const env: Record<string, string | undefined> = { ...process.env, PATH: childPath() };
+  const env: Record<string, string | undefined> = {
+    ...process.env,
+    PATH: childPath(),
+    HOME: path.join(scratchDir, "home"),
+  };
   for (const key of Object.keys(env)) {
     if (key.startsWith("GH_") || key.startsWith("GITHUB_")) delete env[key];
   }
@@ -62,6 +67,11 @@ beforeEach(() => {
   repo = realpathSync(mkdtempSync(path.join(os.tmpdir(), "forge-local-flow-")));
   emptyBin = realpathSync(mkdtempSync(path.join(os.tmpdir(), "forge-local-flow-bin-")));
   scratchDir = realpathSync(mkdtempSync(path.join(os.tmpdir(), "forge-local-flow-body-")));
+  const agentsDirectory = path.join(scratchDir, "home", ".claude", "agents");
+  mkdirSync(agentsDirectory, { recursive: true });
+  for (const agentName of ["forge-worker", "forge-reviewer"]) {
+    writeFileSync(path.join(agentsDirectory, `${agentName}.md`), "stub\n");
+  }
   const gitBinary = Bun.which("git");
   if (gitBinary === null) throw new Error("git is required on PATH");
   symlinkSync(gitBinary, path.join(emptyBin, "git"));
