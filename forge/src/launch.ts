@@ -1,3 +1,4 @@
+import { optionalProperty } from './optional'
 import {
   ForgeConfigError,
   loadForgeConfigWithDefaults,
@@ -64,7 +65,7 @@ const LAUNCH_TIMEOUT_MS = 15_000
 export const defaultRunner: CommandRunner = async (command, options) => {
   try {
     const child = Bun.spawn([...command], {
-      cwd: options?.cwd,
+      ...optionalProperty('cwd', options?.cwd),
       stdout: 'pipe',
       stderr: 'pipe',
       timeout: LAUNCH_TIMEOUT_MS,

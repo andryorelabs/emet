@@ -9,6 +9,7 @@
  * Stalled workers (the `usage` stalled signal) force `needs-decision`.
  */
 
+import { optionalProperty } from './optional'
 import os from 'node:os'
 import path from 'node:path'
 
@@ -371,7 +372,7 @@ export async function run(argv: string[]): Promise<void> {
       runVerdicts.set(
         reservation.runId,
         classifyRun(reservation.anchorPid, reservation.sessionSlug, reservation.runId, {
-          anchorStartToken: reservation.anchorStartToken,
+          ...optionalProperty('anchorStartToken', reservation.anchorStartToken),
         }),
       )
     }

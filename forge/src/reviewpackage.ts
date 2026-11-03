@@ -6,6 +6,7 @@
  * be the worker's actual output.
  */
 
+import { optionalProperty } from './optional'
 import { mkdirSync, writeFileSync } from 'node:fs'
 import path from 'node:path'
 
@@ -77,7 +78,12 @@ function parseArguments(argv: readonly string[]): { base?: string; head?: string
       positional.push(argv[index]!)
     }
   }
-  return { base: positional[0], head: positional[1], out, bad }
+  return {
+    ...optionalProperty('base', positional[0]),
+    ...optionalProperty('head', positional[1]),
+    ...optionalProperty('out', out),
+    bad,
+  }
 }
 
 export async function run(argv: string[]): Promise<void> {

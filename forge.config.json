@@ -62,12 +62,13 @@
   },
   "commands": {
     "selfCheck": [
-      "bun run --cwd forge typecheck",
-      "bun test --cwd forge"
+      "bun run check",
+      "bun run test"
     ]
   },
   "worktree": {
     "bootstrap": [
+      "bun install --frozen-lockfile --silent",
       "bun install --cwd forge --frozen-lockfile --silent"
     ]
   }

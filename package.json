@@ -1,0 +1,31 @@
+{
+  "name": "claude-forge-dev",
+  "private": true,
+  "type": "module",
+  "packageManager": "bun@1.4.4",
+  "scripts": {
+    "typecheck": "bun node_modules/typescript7/bin/tsc --noEmit -p forge/tsconfig.json && bun node_modules/typescript7/bin/tsc --noEmit -p tsconfig.json",
+    "lint": "oxlint --type-aware --deny-warnings",
+    "fix": "bun run format && bun run lint --fix",
+    "format": "oxfmt",
+    "format:check": "oxfmt --check",
+    "knip": "knip",
+    "lint:docs": "bun tools/lint-docs.ts",
+    "check": "bun run typecheck",
+    "test": "bun test ./tools && bun test --cwd forge",
+    "prepare": "husky"
+  },
+  "devDependencies": {
+    "@commitlint/cli": "latest",
+    "@commitlint/config-conventional": "latest",
+    "@types/bun": "^1.2.0",
+    "@types/node": "^24.0.0",
+    "husky": "latest",
+    "knip": "latest",
+    "lint-staged": "latest",
+    "oxfmt": "latest",
+    "oxlint": "latest",
+    "oxlint-tsgolint": "latest",
+    "typescript7": "npm:typescript@7.1.0-beta"
+  }
+}
