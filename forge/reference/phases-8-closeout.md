@@ -22,24 +22,20 @@ retried in Phase 9 re-acquires its own slot from scratch and can be denied
 exactly like a fresh dispatch (no free slot, or the memory brake) if the host
 has filled up since.
 
-Before merging any worker's branch, confirm its ticket has at least one
-tracker comment, a final `.forge/handoff-<ticket>.md` in its worktree
-(`state: done`, or whatever it actually ended at), and that its worktree is
-still `git worktree lock`ed with a `/forge` reason naming that exact ticket
-(`git worktree list --porcelain`) — an unlocked or mismatched lock at this
-point means the Phase 6 post-dispatch audit's finding was ignored or the lock
-was lost mid-wave. If any of these is missing, don't merge that branch
-silently — flag it in this wave's report (Phase 9) the same way a failed or
-needs-a-human-decision ticket is flagged. This is the real backstop for the
-"comment as you go" rule: every worker's branch passes through this gate
-regardless of ticket type, unlike the E2E queue's own check, which only fires
-for E2E-touching tickets.
+Before merging any worker's branch, confirm a final
+`.forge/handoff-<ticket>.md` in its worktree and that the worktree is still
+locked with a `/forge` reason naming that ticket (`git worktree list
+--porcelain`). If either is missing, don't merge that branch silently — flag
+it in Phase 9's report like any failed ticket.
 
-A worker (or a coordinator's own fork) that reports success with no commit in
-its worktree did not do the work — a confident summary is not evidence.
-Verify with `git -C <worktree> log`/`status` before merging or trusting the
-report; a transcript with zero tool calls behind a "done" claim is the
-canonical shape of this failure (`reference/incidents.md`).
+A confident summary is not evidence (`reference/incidents.md`). For each
+worker: `forge results --run <runId> --read <ticket>` (status, report path,
+`Risk:` line; no result = no report), then `forge verify <ticket> --run
+<runId>` — commits beyond the dispatch baseline, paths inside the edit
+surfaces, `handoff --check`, `commands.workerScopedSuite`. Exit 1 means the
+branch is neither reviewed nor merged: `forge gate <ticket>` decides retry or
+defer against `budgets.workerAttempts`. You post the worker's decisions and
+final status to its ticket (workers never write the tracker).
 
 Also run `forge usage --session <this coordinator session>` and, per worker,
 flag (report, don't block the merge on) any full `Read` over
@@ -59,16 +55,10 @@ are mostly `test(...)`). This is the branch that gets pushed — never the
 workers' own local `<branchPrefix>-<n>-<slug>` branches from Phase 7, and
 never a bare, slash-less name improvised on the spot.
 
-Unlike worker branches (numbered by ticket, so two waves almost never collide
-on one), this name carries no run or ticket discriminator — two waves in
-different git worktrees of the same repo (e.g. two Orca worktrees, each
-running a different spec) can independently land on the same `<type>/<slug>`
-for an unrelated reason. Before running `git checkout -b`, check
-`git rev-parse --verify --quiet <type>/<slug>`; if it already resolves,
-append a short disambiguator (`<type>/<slug>-2`, or something naming this
-wave's own tickets) rather than reusing the name — git will otherwise refuse
-the second worktree's checkout outright, or worse, silently fold two
-unrelated waves' history together if it doesn't.
+This name has no run or ticket discriminator, so two waves in different
+worktrees can collide on it. Before `git checkout -b`, check `git rev-parse
+--verify --quiet <type>/<slug>`; if it resolves, append a disambiguator
+(`<type>/<slug>-2`) rather than reusing it.
 
 Review here, once, over the full integration branch — this is the review
 Phase 7 deliberately deferred. First route it by risk: run
@@ -85,32 +75,37 @@ Phase 7 deliberately deferred. First route it by risk: run
   only when every check is green **and** the ledger has no open finding;
   otherwise leave it open with the human-decision label.
 
-Both `models.*` keys default to today's values, so a repo without a `models`
-section keeps the same medium-tier reviewer model as before (the tier itself
-still comes from the diff). Dispatch a single `Agent({subagent_type:
-"forge-reviewer"})` call built from `reference/reviewer-prompt.md`'s
-template — fill its `{{project_skills}}` placeholder with the union of every
-wave ticket's `## Project skills` entries (`none` if all tickets said
-`none`) — a fresh-context, single-pass review, never a fan-out: nesting
-sub-agents inside a subagent's own review is what caused two workers to hang
-mid-review in the run that originally motivated a fan-out here
-(`reference/incidents.md`), and a fan-out's own roster has separately hung
-for ~1h45m in this repo. The reviewer writes a ledger to `.forge/review-<runId>.md`. Apply whatever
-it flags as a blocker before proceeding, then (and again after any CI fix in
-step 4 below) re-dispatch `forge-reviewer` in `recheck` mode with only the
-ledger and the diff from the reviewed sha to HEAD (`reviewer-prompt.md`,
-"Recheck variant"), at most 2 rounds. A finding still open after round 2
-gets the human-decision label and blocks auto-merge, like any other flag; a should-fix finding is the coordinator's judgment call,
-noted in this wave's report either way (Phase 9). If `forge-reviewer` is
-missing (`forge doctor`'s global findings), fall back to the `code-review`
-skill's own no-fan-out mode (`--level low` or `medium`) rather than its
-default fan-out. For a high-stakes wave, the user can additionally run
-`/code-review ultra` by hand afterward — that's a manual, opt-in step, never
-something this phase dispatches on its own.
+A worker's `Risk:` line other than `none` can only raise the tier you take
+from `forge assess`, never lower it. Package the diff first: `forge
+review-package <base> <head> --out <file>` (exit 3 on an empty or
+non-descendant range — fix the range, don't review nothing) and pass the
+reviewer that path. Dispatch one `Agent({subagent_type: "forge-reviewer"})`
+built from `reference/reviewer-prompt.md` (fill `{{project_skills}}` with the
+union of the wave tickets' `## Project skills`, `none` if all say `none`; add
+the spec's `## Global Constraints`) — single-pass, never a fan-out (nesting
+hung workers and a fan-out roster hung ~1h45m; `reference/incidents.md`).
+Fallback if `forge-reviewer` is missing: the `code-review` skill at `--level
+low|medium`. `/code-review ultra` is a manual, opt-in step only.
 
-Then run this repo's full test suite exactly once over the merged
-result (`commands.fullSuite`, the shared/singleton resource from Phase 7, if
-this repo has one).
+Record the reviewer's findings JSON per ticket: `forge review --ticket
+<ticket> --findings <file|-> [--changed <files since the last round>]`. The
+CLI enforces triage order (intent_gap, bad_plan, patch, defer) and the
+`budgets.reviewRounds` cap, and exits 1 while findings are open. Fix, then
+re-dispatch `forge-reviewer` in `recheck` mode (ledger plus the diff from the
+reviewed sha only; "Recheck variant") and record again, also after any CI fix.
+At the cap, escalate once: `forge review --ticket <ticket> --escalate --model
+<current>` prints the next tier (exit 1 if none); run one fresh worker on it.
+Anything still open you rule on: `forge review --ticket <ticket> --rule
+"<what>" --why "<why>" --cost "<cost if wrong>"`. `--rulings` prints them
+for "Rulings I made" in the final report and PR body.
+
+Then run `commands.fullSuite` exactly once over the merged result (the
+Phase 7 singleton, if any). Red blocks the PR and `autoChain`. Finally ask
+the one decision: `forge gate <ticket> --tier <assess tier> --ci
+<pass|fail|pending|none> --integration <pass|fail|pending|none>` prints
+`{decision, reasons}` as JSON — `merge`, `hold`, `chain`, `stop`, or `defer`
+(label `forge:deferred`; the wave continues). `hold` and `stop` leave the PR
+open with the human-decision label; don't re-derive the rules in prose.
 
 The coordinator writes a tracker-state transition only where
 `forge.config.json`'s `tracker.transitions` names it `coordinator` for
@@ -119,7 +114,7 @@ tracker's own PR-linked automation already marks it `automatic` (e.g.
 Linear's GitHub integration). If green and nothing was flagged: push the
 integration branch once, open one PR for this wave (never one per ticket —
 that's what makes running the shared suite once per wave enough). Its body
-closes every ticket this wave completed using this repo's tracker's
+lists "Rulings I made" (`forge review --rulings`) and closes every ticket this wave completed using this repo's tracker's
 closing-keyword convention (`docs/agents/issue-tracker.md` — a plain
 `commit.trailer` only links without closing; it's for a ticket this wave
 touches but doesn't finish).
@@ -140,10 +135,13 @@ this line needs a manual per-ticket state write instead.
 1. `pr.autoMerge: false` → leave the PR open, skip cleanup of this wave's
    branches, and say so in the report.
 2. No checks at all (`gh pr checks <n> --json bucket -q length` returns `0`,
-   or `gh` says no checks are reported) → merge at once:
-   `gh pr merge <n> --<mergeMethod> --delete-branch`.
-3. Checks exist → `gh pr checks <n> --watch --fail-fast`. All green → merge
-   as in step 2.
+   or `gh` says none are reported) → CI counts as `pass`: go to the gate.
+3. Checks exist → `gh pr checks <n> --watch --fail-fast`. All green → the gate.
+   Run `forge gate <ticket> --ci pass …` per ticket (above); merge only if
+   every ticket answers `merge` or `chain`: `gh pr merge <n> --<mergeMethod>
+   --delete-branch`. Then, as its own call, `forge spec-merge --spec <spec-id>`
+   folds the spec's `.forge/runs/<spec-id>/spec-deltas/` into `specs.dir`
+   (exit 1 = conflict or scenario loss, nothing written: report it).
 4. A check failed → never read the CI log yourself (no `--log-failed` into
    your own context). Dispatch an `Agent` on `models.triage` (default
    `haiku`) to fetch and read it (`gh run view <run-id> --log-failed`) and

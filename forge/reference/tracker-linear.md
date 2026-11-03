@@ -30,8 +30,8 @@ for every Linear-tracker repo.
 - **ticket.setState**: `save_issue({ id, state: "<name>" })`. The coordinator
   only calls this for a transition `tracker.transitions` marks `coordinator`
   — `onPrOpen`/`onPrMerge` are `automatic` here (Linear's own GitHub
-  integration); `onStart` is `worker` (`In Progress`, the worker's own first
-  write). **`In Review` and `Done` are not both gated on the PR** when
+  integration); `onStart` (`In Progress`) is written by the coordinator at
+  dispatch, never by a worker. **`In Review` and `Done` are not both gated on the PR** when
   commit-message linking is on (see `pr.referenceLines` below): a worker's
   own `Refs:` trailer moves its ticket to `In Review` on push, independently
   of and often well before the wave PR exists — only `Done` waits for the
