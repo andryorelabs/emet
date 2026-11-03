@@ -72,7 +72,8 @@ describe("didReserveTicket / listReservations / releaseTicket", () => {
   test("records the anchor start token and treats a reused pid with a different token as dead", async () => {
     await didReserveTicket("run-a", process.pid, "AO-995", forgeDirectory);
     const [stored] = await listReservations(forgeDirectory);
-    expect(stored?.anchorStartToken).toMatch(/^\d+$/);
+    if (existsSync("/proc/self/stat")) expect(stored?.anchorStartToken).toMatch(/^\d+$/);
+    else expect(stored?.anchorStartToken).toBeUndefined();
 
     const isReclaimed = await didReserveTicket("run-b", process.pid, "AO-995", forgeDirectory, {
       isAnchorAliveFn: (_pid, token) => token === undefined,
