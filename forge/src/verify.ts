@@ -15,6 +15,7 @@
  * missing-input errors.
  */
 
+import { optionalProperty } from './optional'
 import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from 'node:fs'
 import path from 'node:path'
 import { resolveRepoRoot } from './config'
@@ -227,7 +228,12 @@ function parseArguments(argv: readonly string[]): { ticket?: string; run?: strin
       positional.push(argument)
     }
   }
-  return { ticket: positional[0], run: options['--run'], worktree: options['--worktree'], bad }
+  return {
+    ...optionalProperty('ticket', positional[0]),
+    ...optionalProperty('run', options['--run']),
+    ...optionalProperty('worktree', options['--worktree']),
+    bad,
+  }
 }
 
 export async function run(argv: string[]): Promise<void> {

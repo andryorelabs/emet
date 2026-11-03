@@ -62,6 +62,7 @@
  * never leaves the repo in a half-cleaned state. Pass `--dry-run` to print
  * the plan without deleting anything.
  */
+import { optionalProperty } from './optional'
 import path from 'node:path'
 
 import { configureTicketPattern, releaseTicket } from './claims'
@@ -301,8 +302,8 @@ async function classifyOneBranch(
     return {
       name,
       category: guard.category,
-      ownerRunId: guard.ownerRunId,
-      runVerdict: guard.runVerdict,
+      ...optionalProperty('ownerRunId', guard.ownerRunId),
+      ...optionalProperty('runVerdict', guard.runVerdict),
     }
   }
   const contentVerdict = await classifyByContent(name, mainTree, remote, trunk)
@@ -310,8 +311,8 @@ async function classifyOneBranch(
     name,
     category: isSafeToDelete(contentVerdict) ? 'to-delete' : 'needs-review',
     contentVerdict,
-    ownerTicket: guard.owner?.ticket,
-    ownerRunId: guard.owner?.runId,
+    ...optionalProperty('ownerTicket', guard.owner?.ticket),
+    ...optionalProperty('ownerRunId', guard.owner?.runId),
   }
 }
 
