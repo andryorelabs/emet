@@ -251,11 +251,16 @@ export async function listWorktreeEntries(): Promise<WorktreeEntry[]> {
   return parseWorktreeEntries(output);
 }
 
+function startsWithTicket(candidate: string, ticket: string): boolean {
+  return candidate === ticket || candidate.startsWith(`${ticket}-`);
+}
+
 /**
  * Finds the reservation (from `claims.ts`'s `listReservations`) matching a
- * worker branch's own numeric ticket suffix — `<branchPrefix>-<n>-<slug>` on
- * the branch side, `<PREFIX>-<n>` (case-insensitive, tracker's own casing)
- * on the reservation side. Returns `null` when the branch doesn't look like
+ * worker branch's full ticket id — `<branchPrefix>-<ticket-id>-<slug>` on
+ * the branch side (or, when the tracker's ticket ids already start with the
+ * prefix, `<ticket-id>-<slug>`), compared case-insensitively against the
+ * reservation's whole ticket id, never only its trailing number. Returns `null` when the branch doesn't look like
  * a worker branch at all, or no live reservation names that ticket.
  */
 export function findReservationForBranch(
@@ -263,11 +268,20 @@ export function findReservationForBranch(
   branchPrefix: string,
   reservations: readonly Reservation[],
 ): Reservation | null {
-  const escapedPrefix = branchPrefix.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-  const match = new RegExp(`^${escapedPrefix}-(\\d+)(?:-|$)`).exec(branch);
-  if (!match) return null;
-  const number = match[1];
-  return reservations.find((reservation) => reservation.ticket.endsWith(`-${number}`)) ?? null;
+  const lowerBranch = branch.toLowerCase();
+  const prefixWithDash = `${branchPrefix.toLowerCase()}-`;
+  if (!lowerBranch.startsWith(prefixWithDash)) return null;
+  const afterPrefix = lowerBranch.slice(prefixWithDash.length);
+
+  let best: Reservation | null = null;
+  for (const reservation of reservations) {
+    const ticket = reservation.ticket.toLowerCase();
+    const matches = startsWithTicket(afterPrefix, ticket) || startsWithTicket(lowerBranch, ticket);
+    if (matches && (best === null || reservation.ticket.length > best.ticket.length)) {
+      best = reservation;
+    }
+  }
+  return best;
 }
 
 /**
@@ -320,6 +334,16 @@ export function isWorktreeAgentBranchLive(
   return liveDirectoryNames.has(agentId);
 }
 
+export interface LocalTrunkOption {
+  /** True in `landing.mode` `merge`: compare against local `<trunk>`. */
+  readonly local: boolean;
+}
+
+/** The ref "landed" is measured against: local `<trunk>` or `<remote>/<trunk>`. */
+export function trunkReference(remote: string, trunk: string, local: boolean): string {
+  return local ? trunk : `${remote}/${trunk}`;
+}
+
 /**
  * Resolves `<remote>/<trunk>`'s tree sha (e.g. `origin/main^{tree}`) —
  * `remote`/`trunk` come from a repo's `forge.config.json` (`repo.remote`,
@@ -328,8 +352,12 @@ export function isWorktreeAgentBranchLive(
  * does, right before calling this) so classification is never made against a
  * stale local ref.
  */
-export async function resolveMainTree(remote: string, trunk: string): Promise<string> {
-  const ref = `${remote}/${trunk}`;
+export async function resolveMainTree(
+  remote: string,
+  trunk: string,
+  { local }: LocalTrunkOption = { local: false },
+): Promise<string> {
+  const ref = trunkReference(remote, trunk, local);
   const output = await Bun.$`git rev-parse ${`${ref}^{tree}`}`.text();
   const tree = output.trim();
   if (tree.length === 0) {
@@ -349,8 +377,9 @@ export async function classifyByContent(
   mainTree: string,
   remote: string,
   trunk: string,
+  { local }: LocalTrunkOption = { local: false },
 ): Promise<ContentVerdict> {
-  const ref = `${remote}/${trunk}`;
+  const ref = trunkReference(remote, trunk, local);
   const ancestorCheck = await Bun.$`git merge-base --is-ancestor ${branch} ${ref}`
     .nothrow()
     .quiet();
