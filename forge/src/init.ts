@@ -14,6 +14,7 @@ import {
   formatDependencyCheck,
 } from "./dependencies";
 import { isObject } from "./narrow";
+import { readTemplate } from "./assets";
 
 /**
  * `forge init` — generates a repo's `forge.config.json` plus its
@@ -557,7 +558,6 @@ async function main(options: InitOptions): Promise<void> {
   };
   await Bun.write(configPath, `${JSON.stringify(configJson, null, 2)}\n`);
 
-  const templatesDirectory = path.join(import.meta.dirname, "..", "templates");
   const vars: Record<string, string> = {
     REPO_NAME: detected.repoName,
     TRACKER_KIND: detected.tracker,
@@ -582,8 +582,7 @@ async function main(options: InitOptions): Promise<void> {
 
   const results: string[] = [];
   for (const { template, target } of writes) {
-    // oxlint-disable-next-line eslint/no-await-in-loop -- sequential on purpose: later iterations depend on earlier ones or on output order
-    const templateContent = await Bun.file(path.join(templatesDirectory, template)).text();
+    const templateContent = readTemplate(template);
     const rendered = substituteTemplate(templateContent, vars);
     // oxlint-disable-next-line eslint/no-await-in-loop -- sequential on purpose: later iterations depend on earlier ones or on output order
     const outcome = await writeIfAbsentOrForced(

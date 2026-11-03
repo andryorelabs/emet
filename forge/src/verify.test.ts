@@ -5,6 +5,7 @@ import path from "node:path";
 import {
   findOutOfSurfacePaths,
   gitDependencies,
+  handoffCheckCommand,
   isBookkeepingPath,
   parseDispatchRecord,
   verifyTicket,
@@ -165,5 +166,23 @@ describe("against a real git worktree", () => {
       "handoff",
       "suite",
     ]);
+  });
+});
+
+describe("handoffCheckCommand", () => {
+  test("compiled binaries re-spawn themselves without a forge.ts path", () => {
+    expect(handoffCheckCommand("/h.md", true)).toEqual([
+      process.execPath,
+      "handoff",
+      "--check",
+      "/h.md",
+    ]);
+  });
+
+  test("source runs re-spawn bun with bin/forge.ts", () => {
+    const command = handoffCheckCommand("/h.md", false);
+    expect(command[0]).toBe(process.execPath);
+    expect(command[1]).toEndWith(path.join("bin", "forge.ts"));
+    expect(command.slice(2)).toEqual(["handoff", "--check", "/h.md"]);
   });
 });

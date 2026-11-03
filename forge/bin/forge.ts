@@ -50,7 +50,8 @@ commands:
   map       [--refresh]
   metrics   [--run <id>]
   guard     — Claude Code PreToolUse hook (reads hook JSON on stdin); see src/guard.ts
-  selftest  — run this CLI's own unit tests
+  selftest  — run this CLI's own unit tests (source installs only)
+  --version — print the forge version
 `;
 
 const EXIT_CONFIG_OR_USAGE_ERROR = 2;
@@ -191,7 +192,19 @@ async function main(): Promise<void> {
       await run();
       return;
     }
+    case "--version":
+    case "-v": {
+      const { FORGE_VERSION } = await import("../src/assets");
+      console.log(FORGE_VERSION);
+      return;
+    }
     case "selftest": {
+      const { isCompiledBinary } = await import("../src/assets");
+      if (isCompiledBinary()) {
+        console.error("selftest needs a source install; run forge doctor");
+        process.exitCode = 1;
+        return;
+      }
       const cliRoot = new URL("..", import.meta.url).pathname;
       const tsconfigPath = new URL("../tsconfig.json", import.meta.url).pathname;
       const bunfigPath = new URL("../bunfig.toml", import.meta.url).pathname;

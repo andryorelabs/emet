@@ -15,6 +15,7 @@
  * missing-input errors.
  */
 
+import { isCompiledBinary } from "./assets";
 import { optionalProperty } from "./optional";
 import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
@@ -149,6 +150,16 @@ async function spawnCapture(command: readonly string[], cwd: string): Promise<Co
   return { exitCode, output: stdout + stderr };
 }
 
+/**
+ * The argv that re-spawns `forge handoff --check`: the executable itself when
+ * compiled (it embeds the dispatcher), `bun <forge.ts>` from source.
+ */
+export function handoffCheckCommand(handoffPath: string, compiled: boolean): string[] {
+  const subcommand = ["handoff", "--check", handoffPath];
+  if (compiled) return [process.execPath, ...subcommand];
+  return [process.execPath, path.join(import.meta.dir, "..", "bin", "forge.ts"), ...subcommand];
+}
+
 export function gitDependencies(
   worktree: string,
   handoffPath: string,
@@ -160,7 +171,6 @@ export function gitDependencies(
       throw new Error(`git ${args.join(" ")} failed: ${result.output.trim()}`);
     return result.output;
   };
-  const forgeBin = path.join(import.meta.dir, "..", "bin", "forge.ts");
   return {
     head: async () => (await git(["rev-parse", "HEAD"])).trim(),
     commitCount: async (baseline) =>
@@ -168,7 +178,7 @@ export function gitDependencies(
     changedPaths: async (baseline) =>
       (await git(["diff", "--name-only", `${baseline}..HEAD`])).split("\n").filter(Boolean),
     handoffCheck: () =>
-      spawnCapture([process.execPath, forgeBin, "handoff", "--check", handoffPath], worktree),
+      spawnCapture(handoffCheckCommand(handoffPath, isCompiledBinary()), worktree),
     workerScopedSuite,
     runSuite: (command) => spawnCapture(["sh", "-c", command], worktree),
   };
