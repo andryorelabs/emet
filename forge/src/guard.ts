@@ -226,6 +226,7 @@ export type StopHookInput = {
   readonly session_id?: string
   readonly cwd?: string
   readonly stop_hook_active?: boolean
+  readonly agent_transcript_path?: string
 }
 
 export type StopVerdict =
@@ -445,6 +446,9 @@ export async function recordCompletionEvent(
       sessionId: isValidSessionId(input.session_id) ? input.session_id : null,
       branch: owner.branch,
       commits: await dependencies.countNewCommits(input.cwd),
+      ...(typeof input.agent_transcript_path === 'string' && input.agent_transcript_path.length > 0
+        ? { agentTranscriptPath: input.agent_transcript_path }
+        : {}),
     })
   } catch (error) {
     console.error('forge:guard — could not record the completion event:', error)

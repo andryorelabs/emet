@@ -20,6 +20,9 @@ produce the **final report, always, exactly once**: every wave's PR link,
 what shipped, what got flagged and why, and what's still waiting on a human
 decision. This is the terminal case regardless of which mode started this
 session (default, `--draft`+`--dispatch`, or a chained `--dispatch`).
+Append `forge metrics --run <run id>` output (tokens, $, wall time per
+run/wave/ticket; peak context vs estimate) to the final report.
+
 Whenever this session ends a wave — frontier empty or not — right after
 posting its report, run `forge guard --mark-final-report <session id>` (the
 id is printed in the `Stop` hook's block message); the

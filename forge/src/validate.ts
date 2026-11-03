@@ -7,7 +7,7 @@ const USAGE = `usage: forge validate --file <plan.json | -> | --spec <id> --tick
 
 plan.json: { "spec": "<markdown with S# items>", "sizing"?: { "inlineMaxLines": n },
              "tickets": [{ "id", "covers": ["S1"], "surfaces": ["glob"], "wave"?: n,
-                           "blockedBy"?: ["id"], "newSurfaceLines"?: n, "folded"?: bool }] }`
+                           "blockedBy"?: ["id"], "newSurfaceLines"?: n, "estimatedPeakTokens"?: n, "folded"?: bool }] }`
 
 export type PlanTicket = {
   readonly id: string
@@ -16,6 +16,7 @@ export type PlanTicket = {
   readonly wave: number
   readonly blockedBy: readonly string[]
   readonly newSurfaceLines?: number
+  readonly estimatedPeakTokens?: number
   readonly folded: boolean
 }
 
@@ -128,6 +129,8 @@ function parseTickets(raw: unknown): PlanTicket[] {
     if (typeof candidate?.id !== 'string') throw new Error(`forge validate: ticket ${index} needs an "id"`)
     const id = candidate.id
     const newSurfaceLines = typeof candidate.newSurfaceLines === 'number' ? candidate.newSurfaceLines : undefined
+    const estimatedPeakTokens =
+      typeof candidate.estimatedPeakTokens === 'number' ? candidate.estimatedPeakTokens : undefined
     return {
       id,
       covers: strings(candidate.covers, 'covers', id),
@@ -135,6 +138,7 @@ function parseTickets(raw: unknown): PlanTicket[] {
       wave: typeof candidate.wave === 'number' ? candidate.wave : 1,
       blockedBy: strings(candidate.blockedBy, 'blockedBy', id),
       ...(newSurfaceLines === undefined ? {} : { newSurfaceLines }),
+      ...(estimatedPeakTokens === undefined ? {} : { estimatedPeakTokens }),
       folded: candidate.folded === true,
     }
   })

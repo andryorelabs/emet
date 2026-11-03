@@ -118,7 +118,7 @@ Phase 2. Reinforce two rules on top of the skill's own breakdown:
   New surface:   ~X new lines
   Verification:  unit + e2e estimate
   Siblings:      K tickets × ~2K (comments a worker reads before starting)
-  Estimated peak: ~Y K. PASS if < 160K.
+  Estimated peak: ~Y K (`estimatedPeakTokens` = Y×1000). PASS if < 160K.
   ```
 
   Add each `## Project skills` entry's own `SKILL.md` line count into the

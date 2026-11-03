@@ -28,8 +28,23 @@ trap 'rm -rf "$WORK_DIR"' EXIT
 STAGE="$WORK_DIR/stage"
 ENTRIES_FILE="$WORK_DIR/entries.tsv"
 KEPT_FILE="$WORK_DIR/kept.txt"
+RETIRED_NOTES_FILE="$WORK_DIR/retired.txt"
 : > "$ENTRIES_FILE"
 : > "$KEPT_FILE"
+: > "$RETIRED_NOTES_FILE"
+
+# Files a previous install shipped that forge no longer loads (split or renamed).
+RETIRED_PATHS=(
+  ".claude/forge/reference/phases-6-9.md"
+)
+
+is_retired() {
+  local candidate="$1" retired_path
+  for retired_path in "${RETIRED_PATHS[@]}"; do
+    [[ "$candidate" == "$retired_path" ]] && return 0
+  done
+  return 1
+}
 
 echo "==> Staging the forge CLI, /forge command, agents and wrapper"
 mkdir -p "$STAGE/.claude/forge" "$STAGE/.claude/commands" "$STAGE/.claude/agents" "$STAGE/.local/bin"
@@ -85,12 +100,22 @@ if [[ -f "$MANIFEST" ]]; then
     if ! grep -qF -- "$previous_path"$'\t' "$ENTRIES_FILE" && [[ -f "$HOME/$previous_path" ]]; then
       if [[ "$(file_hash "$HOME/$previous_path")" == "$(manifest_hash "$previous_path")" ]]; then
         rm -f "$HOME/$previous_path" "$HOME/$previous_path.new"
-      else
+      elif ! is_retired "$previous_path"; then
         echo "$previous_path (no longer shipped, left in place)" >> "$KEPT_FILE"
       fi
     fi
   done < <(sed -n 's|^  "\(.*\)": "[0-9a-f]*",\{0,1\}$|\1|p' "$MANIFEST")
 fi
+
+# Retired files are moved aside even when edited or untracked (pre-manifest
+# installs), since a stale reference file would be loaded in place of its split.
+for retired_path in "${RETIRED_PATHS[@]}"; do
+  if [[ -f "$HOME/$retired_path" ]] && ! grep -qF -- "$retired_path"$'\t' "$ENTRIES_FILE"; then
+    mv -f "$HOME/$retired_path" "$HOME/$retired_path.retired"
+    rm -f "$HOME/$retired_path.new"
+    echo "$retired_path (retired; your copy moved to ~/$retired_path.retired)" >> "$RETIRED_NOTES_FILE"
+  fi
+done
 
 {
   echo "{"
@@ -106,6 +131,16 @@ if [[ -s "$KEPT_FILE" ]]; then
     echo "  - ~/$kept  (new version written to ~/$kept.new)"
   done < "$KEPT_FILE"
   echo "  Merge or delete the .new files; \`forge doctor\` keeps reporting the drift."
+  echo
+fi
+
+if [[ -s "$RETIRED_NOTES_FILE" ]]; then
+  echo
+  echo "note: these files are no longer shipped and were moved aside:"
+  while IFS= read -r retired_note; do
+    echo "  - ~/$retired_note"
+  done < "$RETIRED_NOTES_FILE"
+  echo "  Delete the .retired files once you no longer need them."
   echo
 fi
 
