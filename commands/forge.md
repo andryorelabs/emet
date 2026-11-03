@@ -56,10 +56,12 @@ against a `local`-tracker repo; a human creates/updates tickets by hand
 following `docs/agents/issue-tracker.md`'s file format.
 
 `/forge` is designed to run inside plan mode (Phases 1–4 do no writes; the
-plan's approval — `ExitPlanMode` — is the one freeze point). If plan mode
-isn't active, tell the user and offer to let them enter it before continuing;
-this command doesn't gate on it automatically since there's no way to detect
-plan-mode state from inside a command.
+plan's approval — `ExitPlanMode` — is the one freeze point). The harness
+signals plan mode with a system reminder. In the default and `--draft` modes,
+if that reminder is absent, load the tool with
+`ToolSearch("select:EnterPlanMode")` and call `EnterPlanMode` before Phase 1;
+the user confirms the switch. If `EnterPlanMode` can't be loaded or the user
+declines, tell the user and continue anyway, keeping Phases 1–4 write-free.
 
 This only applies to the default and `--draft` modes. `--dispatch` skips
 straight to Phase 6 — there's no Phases 1–4 write-free zone to protect, and
