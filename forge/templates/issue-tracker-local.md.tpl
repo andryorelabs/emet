@@ -2,60 +2,96 @@
 
 {{REPO_NAME}} has no networked issue tracker configured (no Linear MCP server,
 no active GitHub Issues usage detected), so `/forge` is configured for the
-`local` tracker: tickets as files in this repo, no external service.
+`local` tracker: specs and tickets as markdown files under `.scratch/`, driven
+by the `forge tracker` CLI. No external service, no `gh`.
 
-**Status: design only, CLI not yet implemented.** The `forge` CLI's `preflight`
-/ `claims` / `slots` / `cleanup` / `usage` / `handoff` subcommands all work
-today and are tracker-agnostic — they don't care which tracker a repo uses. The
-`forge tracker` subcommand (ticket create/read/comment/state, frontier
-computation, `sync-frontmatter`) described below is not built yet. Until it
-lands, run `/forge` here with tickets tracked by hand against the layout below,
-or point `tracker.kind` at `linear`/`github` instead if this repo actually has
-one of those available.
-
-## Planned file layout
+## File layout
 
 ```
-.forge/tickets/                    versioned in git
-    SPEC-<n>.md  {{ID_PREFIX}}-<n>.md
-<git-common-dir>/forge/tracker/    NOT versioned, shared across worktrees
-    seq
-    state/{{ID_PREFIX}}-<n>.json
-    comments/{{ID_PREFIX}}-<n>/<epoch>-<pid>-<author>.md
+.scratch/                          NOT versioned (git-ignored)
+    <feature-slug>/
+        spec.md                    the spec
+        issues/
+            01-<slug>.md           tickets, numbered from 01
+            02-<slug>.md
 ```
 
-Mutable state (current status, comments) lives outside the versioned file on
-purpose: N worktrees writing the same versioned file produces merge conflicts
-by construction on every wave, and a dirty versioned file can block the
-coordinator's own `git checkout` between a worker's branch and the integration
-branch mid-run. A future `forge tracker sync-frontmatter --spec SPEC-<n>` folds
-final states back into the versioned `.forge/tickets/*.md` file once a spec's
-last ticket closes — one commit, once, not per-transition.
+`.scratch/` always lives in the main worktree, resolved from
+`git rev-parse --git-common-dir`, whichever worktree runs `forge tracker`.
 
-States: `backlog | todo | in-progress | in-review | done | canceled` — the
-same six Linear itself uses, so `/forge`'s own prose reads identically
-regardless of which tracker backend a repo configures.
+Ids: a spec id is its feature slug (`^[a-z0-9][a-z0-9-]*$`); a ticket id is
+`<feature-slug>-<NN>` (e.g. `local-tracker-03`), matching `ticket.idPattern`
+`{{ID_PATTERN}}`. A worker branch is `{{BRANCH_PREFIX}}-<ticket-id>-<title-slug>`.
+
+## File format
+
+Metadata lines sit near the top of each file, plain (`Status: ready-for-agent`)
+or bold (`**Status:** ready-for-agent`):
+
+```
+Status: ready-for-agent
+Blocked by: None
+```
+
+`Blocked by:` takes `None` or a list of ticket numbers (`01, 03`); trailing
+text such as `None (can start immediately)` is allowed. Comments append under
+a `## Comments` heading, each as `### <ISO timestamp> — <author>`.
+
+## Statuses
+
+`Status:` holds one vocabulary:
+
+- triage: `needs-triage | needs-info | ready-for-agent | ready-for-human | wontfix`
+- workflow: `in-progress | in-review | done | canceled`
+- read-only (wayfinder): `claimed | resolved`
+
+`ready-for-agent` is the dispatch-eligible state. The frontier of a spec is
+every ticket with `Status: ready-for-agent` whose every `Blocked by` ticket is
+`done` or `resolved`, ordered by `NN` ascending.
+
+## Operations
+
+All output is JSON on stdout; exit 0 ok, 1 not found or refused, 2 usage.
+
+```
+forge tracker create-spec --slug <slug> --title <title> --body-file <file>
+forge tracker create-ticket --spec <slug> --title <title> --body-file <file> [--blocked-by NN,NN]
+forge tracker read <spec-slug | ticket-id>
+forge tracker frontier --spec <slug>
+forge tracker set-state <id> <status>
+forge tracker comment <id> --body-file <file> [--author <name>]
+forge tracker close <id> [--canceled]
+```
+
+- `create-ticket` assigns the next `NN` and writes `Status: ready-for-agent`.
+- `read` returns title, status, blockedBy, body and comments.
+- `close` sets `done` (or `canceled`); when the last open ticket of a spec
+  closes, `spec.md` gets `Status: done`.
+- `set-state` rejects a value outside the vocabulary above with exit 2.
+- Every write takes a per-spec lock and writes tmp-then-rename.
+
+Workers may only call `read` and `frontier`; the coordinator is the single
+tracker writer.
 
 ## Spec and ticket blocks
 
-- `SPEC-<n>.md`: `## Specs` (`- **S1**: …`, one per line), then
+- `spec.md`: `## Specs` (`- **S1**: …`, one per line), then
   `## Global Constraints` (rules every worker and reviewer must obey; copied verbatim
   into each brief) and `## Review Focus` (inputs the spec implies but nothing
   tests; each gets a test).
-- `{{ID_PREFIX}}-<n>.md`: `Covers: S…` under the title, then `## Interfaces`
+- Ticket files: `Covers: S…` under the title, then `## Interfaces`
   (`Consumes:` / `Produces:` with signatures), `## Project skills`,
   `## Allowed edit surfaces`, `## Context budget`.
 - Every S# needs an acceptance scenario (`Scenario: WHEN … THEN …`); `forge
   validate` enforces coverage, scenarios, disjoint wave surfaces and acyclic
   blockers before approval.
 
-## Who will write state transitions
+## Who writes state transitions
 
-See `tracker.transitions` in `forge.config.json`: `onStart: worker`,
-`onPrOpen: coordinator`, `onPrMerge: coordinator`. Unlike a networked tracker
-with PR-integration automation, there is no automation to rely on here — the
-coordinator is responsible for writing `in-review` on PR open and
-`done`/`canceled` on PR merge/close itself, once that CLI surface exists.
+See `tracker.transitions` in `forge.config.json`: `onStart`, `onPrOpen` and
+`onPrMerge` are all `coordinator`. There is no automation to rely on here: the
+coordinator writes `in-progress` on dispatch, `in-review` when the wave lands
+for review, and `done`/`canceled` on merge via `forge tracker close`.
 
 ---
 

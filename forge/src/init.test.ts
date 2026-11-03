@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, test } from "bun:test";
+import { afterEach, beforeEach, describe, expect, setDefaultTimeout, test } from "bun:test";
 import { mkdtempSync, rmSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
@@ -87,11 +87,31 @@ describe("buildForgeConfig", () => {
     };
     const config = buildForgeConfig(detected);
     expect(config.repo).toEqual({ trunk: "main", remote: "origin" });
-    expect(config.ticket).toEqual({ idPattern: "^NFK-\\d+$", branchPrefix: "nfk" });
+    expect(config.ticket).toEqual({
+      idPattern: String.raw`^[a-z0-9-]+-\d{2,}$`,
+      branchPrefix: "forge",
+    });
+    expect(config.landing.mode).toBe("pr");
     expect(config.version).toBe(1);
     expect(config.concurrency.waveSize).toBeGreaterThan(0);
     expect(config.tracker).toEqual({ kind: "local" });
     expect(config.preflight.requiredCommands).toEqual([]);
+  });
+
+  test("local with no remote defaults landing.mode to merge", () => {
+    const detected: DetectedRepoInfo = {
+      repoName: "nfkit",
+      packageManager: "bun",
+      trunk: "main",
+      trunkWasDetected: true,
+      tracker: "local",
+      idPrefix: "NFK",
+      selfCheck: [],
+      hasRemote: false,
+    };
+    expect(buildForgeConfig(detected).landing.mode).toBe("merge");
+    expect(buildForgeConfig({ ...detected, hasRemote: true }).landing.mode).toBe("pr");
+    expect(buildForgeConfig({ ...detected, tracker: "github" }).landing.mode).toBe("pr");
   });
 
   test("seeds preflight.requiredCommands with gh for a github tracker", () => {
@@ -149,15 +169,15 @@ describe("buildTrackerConfig", () => {
     });
   });
 
-  test("local: onPrOpen/onPrMerge both coordinator — no tracker automation exists yet", () => {
+  test("local: every transition is coordinator and no local.idPrefix is written", () => {
     const tracker = buildTrackerConfig({ ...base, tracker: "local", idPrefix: "NFK" });
     expect(tracker.kind).toBe("local");
     expect(tracker.transitions).toEqual({
-      onStart: "worker",
+      onStart: "coordinator",
       onPrOpen: "coordinator",
       onPrMerge: "coordinator",
     });
-    expect(tracker.local).toEqual({ idPrefix: "NFK" });
+    expect(tracker.local).toBeUndefined();
   });
 
   test("every kind carries the same five canonical triage labels", () => {
@@ -371,8 +391,13 @@ describe("filesystem-based detection", () => {
     expect(await detectGoSelfCheck(repoRoot)).toEqual(["go build ./...", "go test ./..."]);
   });
 
-  test("detectTrackerKind: null (never local) when there is no Linear MCP server and no issue usage", async () => {
+  test("detectTrackerKind: null when there is no Linear MCP server, issue usage or .scratch/", async () => {
     expect(await detectTrackerKind(repoRoot)).toBeNull();
+  });
+
+  test("detectTrackerKind: local when .scratch/ exists", async () => {
+    await Bun.$`mkdir -p ${path.join(repoRoot, ".scratch", "feature")}`.quiet();
+    expect(await detectTrackerKind(repoRoot)).toBe("local");
   });
 
   test("detectTrackerKind: linear takes priority over any GitHub signal", async () => {
@@ -444,5 +469,58 @@ describe("upsertForgeSection", () => {
 
   test("creates the section in an empty file", () => {
     expect(upsertForgeSection("", "x")).toBe("<!-- forge:begin -->\nx\n<!-- forge:end -->\n");
+  });
+});
+
+describe("forge init --tracker local end to end", () => {
+  let repoRoot = "";
+  const entry = path.resolve(import.meta.dir, "init.ts");
+
+  setDefaultTimeout(30_000);
+
+  beforeEach(async () => {
+    repoRoot = mkdtempSync(path.join(os.tmpdir(), "forge-init-local-"));
+    await Bun.$`git init -q -b main ${repoRoot}`.quiet();
+  });
+
+  afterEach(() => {
+    rmSync(repoRoot, { recursive: true, force: true });
+  });
+
+  async function runInit(extra: readonly string[] = []): Promise<void> {
+    const result = await Bun.$`bun ${entry} --tracker local ${extra}`
+      .cwd(repoRoot)
+      .nothrow()
+      .quiet();
+    expect(result.exitCode).toBe(0);
+  }
+
+  test("no remote: merge landing, local id pattern, .scratch/ ignored, no tickets un-ignore", async () => {
+    await runInit();
+    const config = await Bun.file(path.join(repoRoot, "forge.config.json")).json();
+    expect(config.landing.mode).toBe("merge");
+    expect(config.ticket.idPattern).toBe(String.raw`^[a-z0-9-]+-\d{2,}$`);
+    expect(config.ticket.branchPrefix).toBe("forge");
+    expect(config.tracker.kind).toBe("local");
+    expect(config.tracker.local).toBeUndefined();
+    const gitignore = await Bun.file(path.join(repoRoot, ".gitignore")).text();
+    expect(gitignore).toContain(".scratch/");
+    expect(gitignore).not.toContain("!.forge/tickets/");
+    const doc = await Bun.file(path.join(repoRoot, "docs", "agents", "issue-tracker.md")).text();
+    expect(doc).toContain("forge tracker create-ticket --spec");
+  });
+
+  test("with a remote: pr landing", async () => {
+    await Bun.$`git -C ${repoRoot} remote add origin https://example.invalid/x.git`.quiet();
+    await runInit();
+    const config = await Bun.file(path.join(repoRoot, "forge.config.json")).json();
+    expect(config.landing.mode).toBe("pr");
+  });
+
+  test("re-running does not duplicate .scratch/ in .gitignore", async () => {
+    await runInit();
+    await runInit(["--force"]);
+    const gitignore = await Bun.file(path.join(repoRoot, ".gitignore")).text();
+    expect(gitignore.match(/\.scratch\//g)).toHaveLength(1);
   });
 });

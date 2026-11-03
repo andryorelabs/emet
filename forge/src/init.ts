@@ -1,3 +1,4 @@
+import { stat } from "node:fs/promises";
 import path from "node:path";
 
 import {
@@ -292,14 +293,29 @@ async function hasGithubIssueUsage(repoRoot: string): Promise<boolean> {
  * Priority order matches `forge.config.json`'s own design notes: a
  * networked tracker only counts if there's real evidence of it — a
  * configured Linear MCP server, or actual (not merely enabled) GitHub Issues
- * usage. Absent both it returns `null`: the local tracker is not implemented
- * yet, so `init` never selects it by default and instead writes a
+ * usage. Failing both, a `.scratch/` directory (the local tracker's root)
+ * means `local`. Absent all three it returns `null` and `init` writes a
  * `TODO(forge):` marker asking the owner to choose.
  */
 export async function detectTrackerKind(repoRoot: string): Promise<TrackerKind | null> {
   if (await hasLinearMcpServer(repoRoot)) return "linear";
   if (await hasGithubIssueUsage(repoRoot)) return "github";
+  if (await hasScratchDirectory(repoRoot)) return "local";
   return null;
+}
+
+async function hasScratchDirectory(repoRoot: string): Promise<boolean> {
+  try {
+    return (await stat(path.join(repoRoot, ".scratch"))).isDirectory();
+  } catch {
+    return false;
+  }
+}
+
+/** True when the repo has at least one git remote configured. */
+async function detectHasRemote(repoRoot: string): Promise<boolean> {
+  const result = await Bun.$`git -C ${repoRoot} remote`.nothrow().quiet();
+  return result.exitCode === 0 && result.stdout.toString().trim().length > 0;
 }
 
 /**
@@ -378,7 +394,11 @@ export type DetectedRepoInfo = {
   readonly tracker: TrackerKind;
   readonly idPrefix: string;
   readonly selfCheck: readonly string[];
+  /** When `false` and the tracker is `local`, landing defaults to `merge`. */
+  readonly hasRemote?: boolean;
 };
+
+const LOCAL_ID_PATTERN = String.raw`^[a-z0-9-]+-\d{2,}$`;
 
 /**
  * Merges autodetected values into a fully-materialized {@link ForgeConfig} —
@@ -387,13 +407,17 @@ export type DetectedRepoInfo = {
  * loader would accept one).
  */
 export function buildForgeConfig(detected: DetectedRepoInfo): ForgeConfig {
+  const isLocal = detected.tracker === "local";
+  const landingMode = isLocal && detected.hasRemote === false ? "merge" : "pr";
   return {
     version: 1,
     repo: { trunk: detected.trunk, remote: "origin" },
-    ticket: {
-      idPattern: `^${detected.idPrefix}-\\d+$`,
-      branchPrefix: detected.idPrefix.toLowerCase(),
-    },
+    ticket: isLocal
+      ? { idPattern: LOCAL_ID_PATTERN, branchPrefix: "forge" }
+      : {
+          idPattern: `^${detected.idPrefix}-\\d+$`,
+          branchPrefix: detected.idPrefix.toLowerCase(),
+        },
     concurrency: { ...DEFAULT_FORGE_CONFIG.concurrency },
     tracker: { kind: detected.tracker },
     /**
@@ -406,7 +430,7 @@ export function buildForgeConfig(detected: DetectedRepoInfo): ForgeConfig {
       requiredCommands: detected.tracker === "github" ? ["gh"] : [],
     },
     handoff: { ...DEFAULT_FORGE_CONFIG.handoff },
-    landing: { ...DEFAULT_FORGE_CONFIG.landing },
+    landing: { ...DEFAULT_FORGE_CONFIG.landing, mode: landingMode },
     pr: { ...DEFAULT_FORGE_CONFIG.pr },
     usage: { ...DEFAULT_FORGE_CONFIG.usage },
     models: DEFAULT_FORGE_CONFIG.models,
@@ -440,9 +464,9 @@ export function buildForgeConfig(detected: DetectedRepoInfo): ForgeConfig {
  * - `github`: `onStart` is the worker; `onPrOpen` is `coordinator` (a label
  *   swap — GitHub has no native workflow-state field); `onPrMerge` is
  *   `automatic` (the PR's own closing keyword closes the issue).
- * - `local`: no tracker-side automation exists yet (see
- *   `reference/tracker-local.md`), so both `onPrOpen` and `onPrMerge` are
- *   `coordinator` until a real `forge tracker` implementation lands.
+ * - `local`: no tracker-side automation exists, so every transition is
+ *   `coordinator` (see `reference/tracker-local.md`); ids are
+ *   `<feature-slug>-<NN>`.
  */
 export function buildTrackerConfig(detected: DetectedRepoInfo): Record<string, unknown> {
   const readyLabel = "ready-for-agent";
@@ -486,9 +510,8 @@ export function buildTrackerConfig(detected: DetectedRepoInfo): Record<string, u
     kind: "local",
     readyLabel,
     triageLabels,
-    transitions: { onStart: "worker", onPrOpen: "coordinator", onPrMerge: "coordinator" },
+    transitions: { onStart: "coordinator", onPrOpen: "coordinator", onPrMerge: "coordinator" },
     prReference: "Refs: {id}",
-    local: { idPrefix: detected.idPrefix },
   };
 }
 
@@ -566,9 +589,9 @@ async function writeIfAbsentOrForced(
 }
 
 const TRACKER_CHOICE_TODO =
-  "TODO(forge): no Linear MCP server or GitHub Issues usage was detected, and the `local` " +
-  "tracker is not implemented yet, so `tracker.kind` in `forge.config.json` is a placeholder " +
-  "(`github`). Choose a tracker by re-running `forge init --force --tracker <linear|github>`.";
+  "TODO(forge): no Linear MCP server, GitHub Issues usage or `.scratch/` directory was " +
+  "detected, so `tracker.kind` in `forge.config.json` is a placeholder (`github`). Choose a " +
+  "tracker by re-running `forge init --force --tracker <linear|github|local>`.";
 
 const LEGACY_FORGE_DOC_FOOTER = "Generated by `forge init`";
 
@@ -597,21 +620,48 @@ async function writeSharedDoc(
 }
 
 /**
+ * For the `local` tracker: appends `.forge/` (runtime state) and `.scratch/`
+ * (the unversioned tracker root) unless an equivalent rule is already there.
+ * Returns the file content unchanged when both are present.
+ */
+function appendLocalTrackerIgnores(existing: string, lines: readonly string[]): string {
+  const trimmed = new Set(lines.map((line) => line.trim()));
+  const missing: string[] = [];
+  if (![".forge", ".forge/", ".forge/*"].some((rule) => trimmed.has(rule))) {
+    missing.push(".forge/");
+  }
+  if (![".scratch", ".scratch/"].some((rule) => trimmed.has(rule))) {
+    missing.push(".scratch/");
+  }
+  if (missing.length === 0) return existing;
+  const block = ["# forge: runtime state and the local tracker are not versioned.", ...missing, ""];
+  const head = existing.length > 0 ? `${existing.replace(/\n+$/, "\n")}\n` : "";
+  return `${head}${block.join("\n")}`;
+}
+
+/**
  * Ignores forge's runtime state under `.forge/` (reviewer output such as
- * `review-<runId>.md`) for every tracker and un-ignores `.forge/tickets/`,
- * which the `local` tracker versions (its tickets are versioned; its mutable state under
- * `<git-common-dir>/forge/tracker/` never is — see
- * `templates/issue-tracker-local.md.tpl`). Refuses rather than silently
+ * `review-<runId>.md`) for every tracker. For `local` it also ignores
+ * `.scratch/` and no longer un-ignores `.forge/tickets/`; other trackers
+ * keep the legacy un-ignore of `.forge/tickets/`. Refuses rather than silently
  * doing nothing useful if a broader existing rule (a bare `.forge` or
  * `.forge/` line) would still shadow the un-ignore — that combination needs
  * a human to resolve, not a guess about which line to remove.
  */
-async function ensureForgeStateGitignore(repoRoot: string): Promise<string[]> {
+async function ensureForgeStateGitignore(
+  repoRoot: string,
+  tracker: TrackerKind,
+): Promise<string[]> {
   const gitignorePath = path.join(repoRoot, ".gitignore");
   const file = Bun.file(gitignorePath);
   const existing = (await file.exists()) ? await file.text() : "";
   const lines = existing.split("\n");
   const warnings: string[] = [];
+
+  if (tracker === "local") {
+    await Bun.write(gitignorePath, appendLocalTrackerIgnores(existing, lines));
+    return warnings;
+  }
 
   const shadowingRule = lines.find((line) => line.trim() === ".forge" || line.trim() === ".forge/");
   if (shadowingRule) {
@@ -729,6 +779,7 @@ async function main(options: InitOptions): Promise<void> {
     tracker,
     idPrefix,
     selfCheck,
+    hasRemote: await detectHasRemote(repoRoot),
   };
 
   const config = buildForgeConfig(detected);
@@ -798,7 +849,7 @@ async function main(options: InitOptions): Promise<void> {
         "`forge init --force`.",
     );
   }
-  warnings.push(...(await ensureForgeStateGitignore(repoRoot)));
+  warnings.push(...(await ensureForgeStateGitignore(repoRoot, detected.tracker)));
   if (detected.tracker === "github") {
     const labelFailures = await ensureGithubStateLabels(repoRoot);
     if (labelFailures.length > 0) {
