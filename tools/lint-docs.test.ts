@@ -17,11 +17,27 @@ interface WorkflowStep {
   with?: { args?: string };
 }
 
+interface Workflow {
+  jobs: Record<string, { steps: WorkflowStep[] }>;
+}
+
+/** Whether `value` is a parsed workflow document with a `jobs` mapping. */
+function isWorkflow(value: unknown): value is Workflow {
+  return (
+    typeof value === "object" &&
+    value !== null &&
+    "jobs" in value &&
+    typeof value.jobs === "object" &&
+    value.jobs !== null
+  );
+}
+
 /** Parses the lint-docs workflow and returns its steps. */
 function readWorkflowSteps(): WorkflowStep[] {
-  const workflow = Bun.YAML.parse(readFileSync(workflowPath, "utf8")) as {
-    jobs: Record<string, { steps: WorkflowStep[] }>;
-  };
+  const workflow: unknown = Bun.YAML.parse(readFileSync(workflowPath, "utf8"));
+  if (!isWorkflow(workflow)) {
+    throw new Error("lint-docs workflow has no jobs mapping");
+  }
   return Object.values(workflow.jobs).flatMap((job) => job.steps);
 }
 

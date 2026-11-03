@@ -22,9 +22,28 @@ interface RenovateConfig {
   packageRules: PackageRule[];
 }
 
-const config = Bun.JSON5.parse(
-  readFileSync(path.join(repoRoot, "renovate.json5"), "utf8"),
-) as RenovateConfig;
+/** Whether `value` is a parsed Renovate config with a `packageRules` list. */
+function isRenovateConfig(value: unknown): value is RenovateConfig {
+  return (
+    typeof value === "object" &&
+    value !== null &&
+    "packageRules" in value &&
+    Array.isArray(value.packageRules)
+  );
+}
+
+/** Parses `renovate.json5`, failing when it has no `packageRules` list. */
+function readRenovateConfig(): RenovateConfig {
+  const parsed: unknown = Bun.JSON5.parse(
+    readFileSync(path.join(repoRoot, "renovate.json5"), "utf8"),
+  );
+  if (!isRenovateConfig(parsed)) {
+    throw new Error("renovate.json5 has no packageRules list");
+  }
+  return parsed;
+}
+
+const config = readRenovateConfig();
 
 const exactPinnedPackages = ["oxlint", "oxlint-tsgolint", "oxfmt", "typescript7"];
 
@@ -64,10 +83,27 @@ describe("renovate.json5 policy", () => {
   });
 });
 
-describe("package.json exact pins", () => {
-  const manifest = JSON.parse(readFileSync(path.join(repoRoot, "package.json"), "utf8")) as {
-    devDependencies: Record<string, string>;
+/** Reads the root `package.json` `devDependencies` as a name-to-range map. */
+function readDevDependencies(): { devDependencies: Record<string, string> } {
+  const parsed: unknown = JSON.parse(readFileSync(path.join(repoRoot, "package.json"), "utf8"));
+  if (
+    typeof parsed !== "object" ||
+    parsed === null ||
+    !("devDependencies" in parsed) ||
+    typeof parsed.devDependencies !== "object" ||
+    parsed.devDependencies === null
+  ) {
+    throw new Error("package.json has no devDependencies");
+  }
+  return {
+    devDependencies: Object.fromEntries(
+      Object.entries(parsed.devDependencies).map(([name, range]) => [name, String(range)]),
+    ),
   };
+}
+
+describe("package.json exact pins", () => {
+  const manifest = readDevDependencies();
 
   test.each(exactPinnedPackages)("%s is pinned to an exact version", (name) => {
     expect(manifest.devDependencies[name]).toMatch(/^(npm:typescript@)?\d+\.\d+\.\d+/);

@@ -32,15 +32,39 @@ interface WorkflowFile {
 }
 
 /**
+ * Whether `value` is a parsed workflow document with a `jobs` mapping.
+ */
+function isWorkflow(value: unknown): value is Workflow {
+  return (
+    typeof value === "object" &&
+    value !== null &&
+    "jobs" in value &&
+    typeof value.jobs === "object" &&
+    value.jobs !== null
+  );
+}
+
+/**
+ * Parses one workflow file, failing when it has no `jobs` mapping.
+ */
+function parseWorkflow(raw: string): Workflow {
+  const parsed: unknown = Bun.YAML.parse(raw);
+  if (!isWorkflow(parsed)) {
+    throw new Error("workflow has no jobs mapping");
+  }
+  return parsed;
+}
+
+/**
  * Parses every `.github/workflows/*.yml` file with `Bun.YAML.parse`.
  */
 function readWorkflows(): WorkflowFile[] {
   return readdirSync(WORKFLOW_DIRECTORY)
     .filter((fileName) => fileName.endsWith(".yml"))
-    .sort()
+    .toSorted()
     .map((fileName) => {
       const raw = readFileSync(join(WORKFLOW_DIRECTORY, fileName), "utf8");
-      return { fileName, raw, workflow: Bun.YAML.parse(raw) as Workflow };
+      return { fileName, raw, workflow: parseWorkflow(raw) };
     });
 }
 
@@ -64,7 +88,7 @@ function neededJobs(job: WorkflowJob | undefined): string[] {
   if (needs === undefined) {
     return [];
   }
-  return [...(typeof needs === "string" ? [needs] : needs)].sort();
+  return (typeof needs === "string" ? [needs] : needs).toSorted();
 }
 
 const workflows = readWorkflows();
@@ -125,7 +149,7 @@ describe("ci.yml", () => {
     const jobs = ci?.jobs ?? {};
     const others = Object.keys(jobs)
       .filter((name) => name !== "ci-passed")
-      .sort();
+      .toSorted();
     expect(neededJobs(jobs["ci-passed"])).toEqual(others);
     expect(jobs["ci-passed"]?.if).toContain("always()");
   });
