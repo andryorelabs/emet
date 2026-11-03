@@ -417,15 +417,16 @@ async function writeIfAbsentOrForced(
 }
 
 /**
- * Un-ignores `.forge/tickets/` in this repo's `.gitignore` for the `local`
- * tracker (its tickets are versioned; its mutable state under
+ * Ignores forge's runtime state under `.forge/` (reviewer output such as
+ * `review-<runId>.md`) for every tracker and un-ignores `.forge/tickets/`,
+ * which the `local` tracker versions (its tickets are versioned; its mutable state under
  * `<git-common-dir>/forge/tracker/` never is — see
  * `templates/issue-tracker-local.md.tpl`). Refuses rather than silently
  * doing nothing useful if a broader existing rule (a bare `.forge` or
  * `.forge/` line) would still shadow the un-ignore — that combination needs
  * a human to resolve, not a guess about which line to remove.
  */
-async function ensureLocalTrackerGitignore(repoRoot: string): Promise<string[]> {
+async function ensureForgeStateGitignore(repoRoot: string): Promise<string[]> {
   const gitignorePath = path.join(repoRoot, '.gitignore')
   const file = Bun.file(gitignorePath)
   const existing = (await file.exists()) ? await file.text() : ''
@@ -606,9 +607,7 @@ async function main(options: InitOptions): Promise<void> {
         '`forge init --force`.',
     )
   }
-  if (detected.tracker === 'local') {
-    warnings.push(...(await ensureLocalTrackerGitignore(repoRoot)))
-  }
+  warnings.push(...(await ensureForgeStateGitignore(repoRoot)))
   if (detected.tracker === 'github') {
     const labelFailures = await ensureGithubStateLabels(repoRoot)
     if (labelFailures.length > 0) {
