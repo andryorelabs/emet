@@ -12,7 +12,7 @@ before anything else:
 - **No flag** (default): Phases 1–5 plus the first wave in this session; each
   later wave runs in its own session — `/forge --dispatch <spec-id>` by hand,
   or auto-launched when `handoff.autoChain` is on (see Phase 9 in
-  `reference/phases-6-9.md`).
+  `reference/phases-9-handoff.md`).
   To run a wave in another session, always use `forge launch <spec-id> --wave
   <n>` — never a bare `claude --bg`.
 - **`--draft <feature>`**: run Phases 0–5 and then stop (see the note at the
@@ -96,11 +96,13 @@ unless the run continues from Phase 5 straight into Phase 6.
      flagged, or CI fixes ran out.
   5. If merged, `forge cleanup --run <runId>`. Then the Phase 9 hand-off: if
      more tickets can run, the next wave starts in a new session; if none can,
-     the run ends with the final report. Details in `reference/phases-6-9.md`.
+     the run ends with the final report. Details in `reference/phases-9-handoff.md`.
 - **Phases 6–9** (every mode): dispatch → per-worker implementation → wave
   close-out → wave close and hand off. Read
-  `~/.claude/forge/reference/phases-6-9.md` when you reach Phase 6, along
-  with `~/.claude/forge/reference/worker-prompt.md` (the dispatch prompt
+  `~/.claude/forge/reference/phases-6-7-dispatch.md` when you reach Phase 6
+  (Phase 8 lives in `phases-8-closeout.md`, Phase 9 in `phases-9-handoff.md`;
+  load each when you reach it, and re-read Phase 8 before every fix/review
+  round), along with `~/.claude/forge/reference/worker-prompt.md` (the dispatch prompt
   template) and `~/.claude/forge/reference/tracker-<kind>.md` (`<kind>` from
   `forge.config.json`'s `tracker.kind`) for this repo's literal tracker
   calls. Workers dispatch as `subagent_type: "forge-worker"`; Phase 8's
@@ -116,12 +118,12 @@ unless the run continues from Phase 5 straight into Phase 6.
 
 These apply in every mode, can't be paraphrased away by a reference file,
 and are restated here so they're never missed even by a run that only ever
-loads `phases-6-9.md`:
+loads `phases-6-7-dispatch.md`:
 
 1. Never dispatch a ticket without both `forge claims --reserve` and
    `forge slots --acquire` succeeding for it first.
 2. Never call either through an inline snippet (e.g. `bun -e`) — always the
-   `forge` CLI, exactly as documented in `reference/phases-6-9.md`.
+   `forge` CLI, exactly as documented in `reference/phases-6-7-dispatch.md`.
 3. A worker never dispatches agents of its own — no `Agent` calls, no forks.
 4. The coordinator writes a tracker-state transition only where
    `forge.config.json`'s `tracker.transitions` names it `coordinator` for

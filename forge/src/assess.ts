@@ -4,8 +4,8 @@
  * Usage:
  *   forge assess --base <ref> --head <ref>
  *
- * Prints `{tier, reasons, reviewer:{model,effort}}` as JSON. Tier is
- * `passive` for docs-only diffs, `high` when a changed path matches a
+ * Prints `{tier, reasons, reviewer:{model,effort}|null}` as JSON. Tier
+ * is `passive` (reviewer null: no review) for docs-only diffs, `high` when a changed path matches a
  * high-risk token (built-in or `review.highRiskPaths`) or an added line
  * matches a dangerous-sink pattern, and `medium` otherwise.
  */
@@ -23,7 +23,7 @@ export type AssessTier = 'passive' | 'medium' | 'high'
 export interface AssessResult {
   readonly tier: AssessTier
   readonly reasons: readonly string[]
-  readonly reviewer: ModelChoice
+  readonly reviewer: ModelChoice | null
 }
 
 export interface DiffInput {
@@ -72,7 +72,7 @@ export function classifyDiff(input: DiffInput, config: ForgeConfig): AssessResul
     return {
       tier: 'passive',
       reasons: [input.paths.length === 0 ? 'empty diff' : 'docs-only diff'],
-      reviewer: { model: models.triage, effort: 'low' },
+      reviewer: null,
     }
   }
 
