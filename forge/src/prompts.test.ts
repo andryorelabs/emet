@@ -9,10 +9,12 @@ const REPO_ROOT = resolve(import.meta.dir, '..', '..')
  * is a reviewed decision: edit the number here, in the same PR as the growth.
  */
 const BYTE_CEILINGS: Readonly<Record<string, number>> = {
-  'commands/forge.md': 7600,
+  'commands/forge.md': 7770,
   'forge/reference/incidents.md': 12950,
   'forge/reference/phases-1-5.md': 11300,
-  'forge/reference/phases-6-9.md': 32650,
+  'forge/reference/phases-6-7-dispatch.md': 16310,
+  'forge/reference/phases-8-closeout.md': 12250,
+  'forge/reference/phases-9-handoff.md': 4820,
   'forge/reference/reviewer-prompt.md': 2550,
   'forge/reference/tracker-github.md': 3250,
   'forge/reference/tracker-linear.md': 4850,
@@ -21,6 +23,12 @@ const BYTE_CEILINGS: Readonly<Record<string, number>> = {
   'agents/forge-reviewer.md': 1980,
   'agents/forge-worker.md': 1230,
 }
+
+/**
+ * Hard cap for every reference file, independent of its ceiling: a prompt over
+ * this size is split, not given a bigger ceiling (compaction safety).
+ */
+const REFERENCE_HARD_CAP_BYTES = 20_000
 
 const PINNED_DIRECTORIES = ['forge/reference', 'agents'] as const
 
@@ -53,6 +61,23 @@ describe('prompt byte budget', () => {
       expect(size).toBeLessThanOrEqual(ceiling!)
     })
   }
+})
+
+describe('reference hard cap', () => {
+  for (const relativePath of listMarkdown('forge/reference')) {
+    test(`${relativePath} is at most ${REFERENCE_HARD_CAP_BYTES} bytes`, () => {
+      const size = readFileSync(join(REPO_ROOT, relativePath)).byteLength
+      expect(size).toBeLessThanOrEqual(REFERENCE_HARD_CAP_BYTES)
+    })
+  }
+
+  test('no ceiling for a reference file exceeds the hard cap', () => {
+    for (const [relativePath, ceiling] of Object.entries(BYTE_CEILINGS)) {
+      if (relativePath.startsWith('forge/reference/')) {
+        expect(ceiling).toBeLessThanOrEqual(REFERENCE_HARD_CAP_BYTES)
+      }
+    }
+  })
 })
 
 describe('retired phrases', () => {

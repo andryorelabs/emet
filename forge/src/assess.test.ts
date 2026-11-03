@@ -11,10 +11,10 @@ function diffOf(paths: string[], added: string[] = []): DiffInput {
 }
 
 describe('classifyDiff', () => {
-  test('docs-only diff is passive and uses the triage model', () => {
+  test('docs-only diff is passive and dispatches no reviewer', () => {
     const result = classifyDiff(diffOf(['README.md', 'docs/guide/setup.mdx', 'LICENSE']), DEFAULT_FORGE_CONFIG)
     expect(result.tier).toBe('passive')
-    expect(result.reviewer).toEqual({ model: 'haiku', effort: 'low' })
+    expect(result.reviewer).toBeNull()
   })
 
   test('empty diff is passive', () => {
@@ -81,7 +81,7 @@ describe('classifyDiff', () => {
     }
     expect(classifyDiff(diffOf(['src/a.ts']), config).reviewer).toEqual({ model: 'sonnet', effort: 'high' })
     expect(classifyDiff(diffOf(['bun.lock']), config).reviewer).toEqual({ model: 'opus', effort: 'max' })
-    expect(classifyDiff(diffOf(['a.md']), config).reviewer.model).toBe('tiny')
+    expect(classifyDiff(diffOf(['a.md']), config).reviewer).toBeNull()
   })
 })
 
