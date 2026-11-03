@@ -1,0 +1,12 @@
+{
+  "name": "forge-marketplace",
+  "owner": { "name": "AndryOre" },
+  "allowCrossMarketplaceDependenciesOn": ["claude-plugins-official"],
+  "plugins": [
+    {
+      "name": "forge",
+      "source": "./",
+      "description": "One-shot feature pipeline: interview, spec, tickets, then parallel worktree agents implement, test and merge."
+    }
+  ]
+}
