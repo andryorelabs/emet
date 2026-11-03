@@ -1,10 +1,15 @@
-import { describe, expect, test } from "bun:test";
+import { afterEach, beforeEach, describe, expect, test } from "bun:test";
+import { mkdtempSync, rmSync } from "node:fs";
+import os from "node:os";
+import path from "node:path";
 
 import type { Reservation } from "./claims";
 import {
+  classifyByContent,
   findReservationForBranch,
   isAgentWorktree,
   parseWorktreeEntries,
+  resolveMainTree,
   resolveWorktreeOwner,
   resolveWorktreeOwnerWithReservations,
   type WorktreeEntry,
@@ -171,6 +176,12 @@ describe("findReservationForBranch", () => {
     sessionSlug: "-home-andryore-code-repo",
   };
 
+  test("matches by numeric suffix when the branch prefix is not the ticket key", () => {
+    expect(findReservationForBranch("ticket-258-login", "ticket", [reservation])).toEqual(
+      reservation,
+    );
+  });
+
   test("matches a worker branch by its numeric ticket suffix", () => {
     expect(findReservationForBranch("ao-258-forge-claims-registry", "ao", [reservation])).toEqual(
       reservation,
@@ -275,5 +286,86 @@ describe("isAgentWorktree", () => {
 
   test("rejects a path that merely contains the literal substring without path separators", () => {
     expect(isAgentWorktree("/home/andry/code/.claude-worktrees-backup")).toBe(false);
+  });
+});
+
+const reserve = (ticket: string): Reservation => ({
+  runId: "run-1",
+  anchorPid: 1,
+  ticket,
+  reservedAt: 1_700_000_000_000,
+  sessionSlug: "-repo",
+});
+
+describe("findReservationForBranch with slug-style ticket ids", () => {
+  test("matches the full ticket id after the branch prefix", () => {
+    const reservation = reserve("local-tracker-03");
+    expect(
+      findReservationForBranch("ticket-local-tracker-03-parser", "ticket", [reservation]),
+    ).toEqual(reservation);
+  });
+
+  test("does not match a different spec sharing the trailing number", () => {
+    expect(findReservationForBranch("ticket-a-01-parser", "ticket", [reserve("b-01")])).toBeNull();
+  });
+
+  test("prefers the longest matching ticket id", () => {
+    const short = reserve("a-01");
+    const long = reserve("a-01-extra");
+    expect(findReservationForBranch("ticket-a-01-extra-slug", "ticket", [short, long])).toEqual(
+      long,
+    );
+  });
+});
+
+describe("local trunk comparison", () => {
+  let repoDirectory: string;
+  let previousDirectory: string;
+
+  const runGit = async (...args: string[]): Promise<string> =>
+    (await Bun.$`git ${args}`.cwd(repoDirectory).quiet().text()).trim();
+
+  beforeEach(async () => {
+    previousDirectory = process.cwd();
+    repoDirectory = mkdtempSync(path.join(os.tmpdir(), "forge-worktrees-test-"));
+    await runGit("init", "-q", "-b", "main");
+    await runGit("config", "user.email", "t@example.com");
+    await runGit("config", "user.name", "t");
+    await runGit("config", "commit.gpgsign", "false");
+    await Bun.write(path.join(repoDirectory, "a.txt"), "base\n");
+    await runGit("add", ".");
+    await runGit("commit", "-q", "-m", "base");
+    process.chdir(repoDirectory);
+  });
+
+  afterEach(() => {
+    process.chdir(previousDirectory);
+    rmSync(repoDirectory, { recursive: true, force: true });
+  });
+
+  test("resolveMainTree reads local trunk when local, with no remote", async () => {
+    const expected = await runGit("rev-parse", "main^{tree}");
+    expect(await resolveMainTree("origin", "main", { local: true })).toBe(expected);
+    const remoteResult = await resolveMainTree("origin", "main").catch(() => "unresolvable");
+    expect(remoteResult).toBe("unresolvable");
+  });
+
+  test("classifyByContent treats merged and squash-landed branches as safe locally", async () => {
+    await runGit("checkout", "-q", "-b", "work");
+    await Bun.write(path.join(repoDirectory, "b.txt"), "feature\n");
+    await runGit("add", ".");
+    await runGit("commit", "-q", "-m", "feature");
+    await runGit("checkout", "-q", "main");
+    await runGit("merge", "--squash", "work");
+    await runGit("commit", "-q", "-m", "squash");
+
+    const mainTree = await resolveMainTree("origin", "main", { local: true });
+    const verdict = await classifyByContent("work", mainTree, "origin", "main", { local: true });
+    expect(verdict).toBe("equivalent");
+
+    await runGit("branch", "merged", "main");
+    expect(await classifyByContent("merged", mainTree, "origin", "main", { local: true })).toBe(
+      "merged",
+    );
   });
 });

@@ -4,7 +4,7 @@ import { readFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
-import { loadForgeConfig, type TrackerKind } from "./config";
+import { loadForgeConfig, type LandingMode, type TrackerKind } from "./config";
 import {
   checkDependencies,
   classifyClaudePluginProbe,
@@ -212,6 +212,22 @@ export function findDeprecatedConfigFields(rawConfig: unknown): string[] {
   }).map((field) => `deprecated config field "${field}" is set; nothing reads it, remove it`);
 }
 
+/** Warns about the deprecated `tracker.local.idPrefix` field of a raw parsed config. */
+function findLocalTrackerWarnings(rawConfig: unknown): string[] {
+  if (!isObject(rawConfig) || !isObject(rawConfig.tracker)) return [];
+  const local = rawConfig.tracker.local;
+  return isObject(local) && "idPrefix" in local
+    ? ["`tracker.local.idPrefix` is deprecated; local ticket ids come from the spec slug"]
+    : [];
+}
+
+/** Warns when version control tracks any file under `.scratch/`, which must stay unversioned. */
+async function findTrackedScratchWarnings(repoRoot: string): Promise<string[]> {
+  const listed = await Bun.$`git -C ${repoRoot} ls-files -- .scratch`.nothrow().quiet();
+  if (listed.exitCode !== 0 || listed.text().trim() === "") return [];
+  return ["`.scratch/` is tracked by git; untrack it with `git rm --cached` and ignore it"];
+}
+
 /** Warns when a repo still carries the legacy `CONTEXT.md` without `GLOSSARY.md`. */
 export function findGlossaryWarnings(existingFiles: ReadonlySet<string>): string[] {
   return existingFiles.has("CONTEXT.md") && !existingFiles.has("GLOSSARY.md")
@@ -286,9 +302,14 @@ export function findMissingFlags(helpText: string, flags: readonly string[]): st
 /** One finding per command whose `--help` lacks a required flag. A command
  * that cannot be run at all is reported too: dependency presence is checked
  * elsewhere, but a silent skip here would hide a half-installed CLI. */
-export async function checkExternalCliFlags(probes: EnvironmentProbes): Promise<string[]> {
+export async function checkExternalCliFlags(
+  probes: EnvironmentProbes,
+  options: { readonly requireGh?: boolean } = {},
+): Promise<string[]> {
   const findings: string[] = [];
+  const requireGh = options.requireGh ?? true;
   for (const requirement of REQUIRED_CLI_FLAGS) {
+    if (!requireGh && requirement.command[0] === "gh") continue;
     // oxlint-disable-next-line eslint/no-await-in-loop -- sequential on purpose: later iterations depend on earlier ones or on output order
     const helpText = await probes.helpText(requirement.command);
     if (helpText === null) {
@@ -431,7 +452,12 @@ export function createEnvironmentProbes(): EnvironmentProbes {
 
 async function auditEnvironment(
   repoRoot: string,
-  config: { readonly trunk: string; readonly remote: string; readonly kind: TrackerKind | null },
+  config: {
+    readonly trunk: string;
+    readonly remote: string;
+    readonly kind: TrackerKind | null;
+    readonly landingMode: LandingMode;
+  },
   probes: EnvironmentProbes,
 ): Promise<string[]> {
   const findings: string[] = [];
@@ -445,7 +471,8 @@ async function auditEnvironment(
     }),
   );
 
-  const harnessBaseRef = `${config.remote}/${config.trunk}`;
+  const harnessBaseRef =
+    config.landingMode === "merge" ? config.trunk : `${config.remote}/${config.trunk}`;
   findings.push(
     ...checkWorktreeForkBase({
       coordinatorHead: await probes.resolveRef(repoRoot, "HEAD"),
@@ -512,7 +539,11 @@ export async function auditRepo(
     configResult.status === "ok"
       ? await auditEnvironment(
           absolutePath,
-          { ...configResult.config.repo, kind: trackerKind },
+          {
+            ...configResult.config.repo,
+            kind: trackerKind,
+            landingMode: configResult.config.landing.mode,
+          },
           environment,
         )
       : [];
@@ -543,7 +574,14 @@ export async function auditRepo(
    * belong to this repo.
    */
   const dependencyFindings = hasConfig
-    ? (await checkDependencies({ tracker: trackerKind, repoRoot: absolutePath, probes })).filter(
+    ? (
+        await checkDependencies({
+          tracker: trackerKind,
+          landingMode: configResult.status === "ok" ? configResult.config.landing.mode : "pr",
+          repoRoot: absolutePath,
+          probes,
+        })
+      ).filter(
         (check) =>
           check.dependency !== "claude-plugin" &&
           check.dependency !== "skills-contract" &&
@@ -571,6 +609,8 @@ export async function auditRepo(
         ),
       ),
       ...(hasConfig ? findDeprecatedConfigFields(await readRawConfig(absolutePath)) : []),
+      ...(hasConfig ? findLocalTrackerWarnings(await readRawConfig(absolutePath)) : []),
+      ...(hasConfig ? await findTrackedScratchWarnings(absolutePath) : []),
     ],
   };
 }
@@ -795,6 +835,14 @@ async function readUserSettings(): Promise<unknown> {
   }
 }
 
+/** False only when at least one target has a valid config and none of those need `gh`. */
+async function anyRepoRequiresGh(targets: readonly string[]): Promise<boolean> {
+  const loaded = await Promise.all(targets.map((target) => loadForgeConfig(path.resolve(target))));
+  const configs = loaded.flatMap((result) => (result.status === "ok" ? [result.config] : []));
+  if (configs.length === 0) return true;
+  return configs.some((config) => config.tracker.kind === "github" || config.landing.mode === "pr");
+}
+
 async function main(targets: readonly string[]): Promise<void> {
   const paths = targets.length > 0 ? targets : ["."];
   const probes = createDependencyProbes();
@@ -827,7 +875,9 @@ async function main(targets: readonly string[]): Promise<void> {
     console.log(`\nDouble install:\n${doubleInstall.map((line) => `  - ${line}`).join("\n")}`);
   }
 
-  const cliFlagFindings = await checkExternalCliFlags(environment);
+  const cliFlagFindings = await checkExternalCliFlags(environment, {
+    requireGh: await anyRepoRequiresGh(paths),
+  });
   if (cliFlagFindings.length > 0) {
     console.log(
       `\nExternal CLI flags (verified via --help):\n${cliFlagFindings.map((line) => `  - ${line}`).join("\n")}`,

@@ -1,4 +1,7 @@
 import { describe, expect, test } from "bun:test";
+import { mkdirSync, mkdtempSync, realpathSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import path from "node:path";
 import { type PlanTicket, parseSpecItems, validatePlan } from "./validate";
 
 const SPEC = `## Specs
@@ -94,5 +97,44 @@ describe("validatePlan", () => {
       tickets: [ticket({ id: "A", covers: ["S1", "S2"], newSurfaceLines: 101 })],
     });
     expect(big.findings).toEqual([]);
+  });
+});
+
+describe("local tracker spec source", () => {
+  test("reads .scratch/<id>/spec.md without gh on PATH", async () => {
+    const repo = realpathSync(mkdtempSync(path.join(tmpdir(), "validate-local-")));
+    try {
+      await Bun.$`git -C ${repo} init -q -b main`.quiet();
+      writeFileSync(path.join(repo, "forge.config.json"), '{"tracker":{"kind":"local"}}');
+      mkdirSync(path.join(repo, ".scratch/feat"), { recursive: true });
+      writeFileSync(path.join(repo, ".scratch/feat/spec.md"), SPEC);
+      const tickets = path.join(repo, "tickets.json");
+      writeFileSync(
+        tickets,
+        JSON.stringify([
+          { id: "A", covers: ["S1", "S2"], surfaces: ["src/a.ts"], wave: 1, blockedBy: [] },
+        ]),
+      );
+      const binDirectory = path.join(repo, "bin");
+      mkdirSync(binDirectory);
+      symlinkSync(Bun.which("git") ?? "git", path.join(binDirectory, "git"));
+      const entry = path.join(import.meta.dir, "validate.ts");
+      const child = Bun.spawn([process.execPath, entry, "--spec", "feat", "--tickets", tickets], {
+        cwd: repo,
+        env: { PATH: binDirectory },
+        stdout: "pipe",
+        stderr: "pipe",
+      });
+      const [stdout, stderr, code] = await Promise.all([
+        new Response(child.stdout).text(),
+        new Response(child.stderr).text(),
+        child.exited,
+      ]);
+      expect(stderr).toBe("");
+      expect(code).toBe(0);
+      expect(JSON.parse(stdout).ok).toBe(true);
+    } finally {
+      rmSync(repo, { recursive: true, force: true });
+    }
   });
 });

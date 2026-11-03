@@ -1,8 +1,10 @@
 import { readFileSync } from "node:fs";
-import { DEFAULT_FORGE_CONFIG } from "./config";
+import path from "node:path";
+import { DEFAULT_FORGE_CONFIG, loadForgeConfigWithDefaults, resolveRepoRoot } from "./config";
 import { analyzeTicketGraph } from "./dependencies";
 import { findSurfaceOverlaps } from "./surfaces";
 import { isObject } from "./narrow";
+import { resolveTrackerRoot } from "./tracker-files";
 
 const USAGE = `usage: forge validate --file <plan.json | -> | --spec <id> --tickets <tickets.json | ->
 
@@ -186,6 +188,25 @@ async function fetchSpecBody(specId: string): Promise<string> {
   return body;
 }
 
+async function isLocalTracker(): Promise<boolean> {
+  const repoRoot = await resolveRepoRoot();
+  if (repoRoot === null) return false;
+  const { config } = await loadForgeConfigWithDefaults(repoRoot);
+  return config.tracker.kind === "local";
+}
+
+async function readLocalSpecBody(specId: string): Promise<string> {
+  if (!/^[a-z0-9][a-z0-9-]*$/.test(specId))
+    throw new Error(`forge validate: invalid spec slug "${specId}"`);
+  const root = await resolveTrackerRoot();
+  const specPath = path.join(root, ".scratch", specId, "spec.md");
+  try {
+    return readFileSync(specPath, "utf8");
+  } catch {
+    throw new Error(`forge validate: could not read local spec ${specPath}`);
+  }
+}
+
 export async function run(argv: string[]): Promise<void> {
   try {
     const file = flagValue(argv, "--file");
@@ -207,7 +228,9 @@ export async function run(argv: string[]): Promise<void> {
       if (typeof plan.sizing?.inlineMaxLines === "number")
         inlineMaxLines = plan.sizing.inlineMaxLines;
     } else if (specId !== undefined && ticketsSource !== undefined) {
-      specMarkdown = await fetchSpecBody(specId);
+      specMarkdown = (await isLocalTracker())
+        ? await readLocalSpecBody(specId)
+        : await fetchSpecBody(specId);
       rawTickets = JSON.parse(await readSource(ticketsSource));
     } else {
       console.error(USAGE);

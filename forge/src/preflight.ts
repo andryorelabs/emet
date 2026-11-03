@@ -2,13 +2,20 @@ import { existsSync, readFileSync, statSync } from "node:fs";
 import { readdir } from "node:fs/promises";
 import path from "node:path";
 
-import { ForgeConfigError, requireForgeConfig, resolveRepoRoot, type ForgeConfig } from "./config";
+import {
+  ForgeConfigError,
+  requireForgeConfig,
+  resolveRepoRoot,
+  type ForgeConfig,
+  type LandingMode,
+} from "./config";
 import {
   checkDependencies,
   createDependencyProbes,
   formatDependencyCheck,
   resolveBinaryOnPath,
   type DependencyCheck,
+  type DependencyProbes,
 } from "./dependencies";
 import { classifyRun, resolveIdleThresholdMs, resolveSessionSlug, type RunVerdict } from "./runs";
 import {
@@ -104,14 +111,21 @@ export const DEPRECATED_CONFIG_FIELDS: readonly string[] = [
   "design.canvasIndex",
 ];
 
-const LOCAL_TRACKER_UNSUPPORTED_MESSAGE =
-  'tracker.kind "local" is not supported: local tracker is not implemented yet. Set tracker.kind to "github" or "linear" in forge.config.json.';
-
 /**
- * Failure lines for a tracker kind `forge preflight` cannot dispatch against.
+ * Dependency probes for `config`'s tracker and landing mode: `gh` is only
+ * required when the tracker is `github` or landing opens PRs.
  */
-export function findUnsupportedTrackerFailures(config: ForgeConfig): string[] {
-  return config.tracker.kind === "local" ? [LOCAL_TRACKER_UNSUPPORTED_MESSAGE] : [];
+export function collectDependencyChecks(
+  config: ForgeConfig,
+  repoRoot: string,
+  probes: DependencyProbes,
+): Promise<readonly DependencyCheck[]> {
+  return checkDependencies({
+    tracker: config.tracker.kind,
+    landingMode: config.landing.mode,
+    repoRoot,
+    probes,
+  });
 }
 
 const SKIP_DEPENDENCY_CHECKS_ENV = "FORGE_SKIP_DEPENDENCY_CHECKS";
@@ -353,6 +367,7 @@ async function describeWorktreeEntryVerdict(
   mainTree: string,
   remote: string,
   trunk: string,
+  local: boolean,
 ): Promise<WorktreeEntryReport> {
   switch (verdict.kind) {
     case "detached": {
@@ -386,8 +401,10 @@ async function describeWorktreeEntryVerdict(
       };
     }
     default: {
-      const contentVerdict = await classifyByContent(verdict.branch, mainTree, remote, trunk);
-      const trunkRef = `${remote}/${trunk}`;
+      const contentVerdict = await classifyByContent(verdict.branch, mainTree, remote, trunk, {
+        local,
+      });
+      const trunkRef = local ? trunk : `${remote}/${trunk}`;
       const safe = isSafeToDelete(contentVerdict);
       const advice = safe
         ? `looks merged/equivalent to ${trunkRef} — safe to run "forge cleanup"`
@@ -445,6 +462,12 @@ export function isBranchMatchingTicket(
   ticket: string,
   branchPrefix: string,
 ): boolean {
+  const loweredTicket = ticket.toLowerCase();
+  if (!loweredTicket.startsWith(`${branchPrefix}-`)) {
+    const fullStem = `${branchPrefix}-${loweredTicket}`;
+    if (branch === fullStem || branch.startsWith(`${fullStem}-`)) return true;
+    if (ticket === loweredTicket) return false;
+  }
   const number = ticketNumber(ticket);
   if (!number) return false;
   return branch === `${branchPrefix}-${number}` || branch.startsWith(`${branchPrefix}-${number}-`);
@@ -491,8 +514,9 @@ export function findDuplicateTicketBranchNumbers(
 ): Map<string, string[]> {
   const byNumber = new Map<string, string[]>();
   const branchPattern = new RegExp(`^${branchPrefix}-(\\d+)-`);
+  const slugPattern = new RegExp(`^${branchPrefix}-([a-z][a-z0-9-]*?-\\d{2,})-`);
   for (const name of branchNames) {
-    const match = branchPattern.exec(name);
+    const match = slugPattern.exec(name) ?? branchPattern.exec(name);
     const number = match?.[1];
     if (!number) continue;
     const group = byNumber.get(number) ?? [];
@@ -964,8 +988,9 @@ export async function collectForkBaseFailures(
   remote: string,
   trunk: string,
   probes: EnvironmentProbes,
+  landingMode: LandingMode = "pr",
 ): Promise<string[]> {
-  const harnessBaseRef = `${remote}/${trunk}`;
+  const harnessBaseRef = landingMode === "merge" ? trunk : `${remote}/${trunk}`;
   return checkWorktreeForkBase({
     coordinatorHead: await probes.resolveRef(repoRoot, "HEAD"),
     harnessBase: await probes.resolveRef(repoRoot, harnessBaseRef),
@@ -998,13 +1023,11 @@ async function main(config: ForgeConfig, repoRoot: string) {
    * DEPENDENCY_PROBE_TIMEOUT_MS) run concurrently with the git/filesystem
    * work below rather than adding their own latency on top of it.
    */
-  const dependencyChecksPromise = checkDependencies({
-    tracker: config.tracker.kind,
+  const dependencyChecksPromise = collectDependencyChecks(
+    config,
     repoRoot,
-    probes: createDependencyProbes(),
-  });
-
-  failures.push(...findUnsupportedTrackerFailures(config));
+    createDependencyProbes(),
+  );
 
   for (const required of config.preflight.requiredFiles) {
     if (!existsSync(path.join(repoRoot, required.path))) {
@@ -1027,6 +1050,7 @@ async function main(config: ForgeConfig, repoRoot: string) {
       config.repo.remote,
       config.repo.trunk,
       createEnvironmentProbes(),
+      config.landing.mode,
     )),
   );
 
@@ -1060,7 +1084,8 @@ async function main(config: ForgeConfig, repoRoot: string) {
   const allWorktreeEntries = await listWorktreeEntries();
   const worktreeEntries = allWorktreeEntries.filter((entry) => isAgentWorktree(entry.directory));
   if (worktreeEntries.length > 0) {
-    const mainTree = await resolveMainTree(config.repo.remote, config.repo.trunk);
+    const local = config.landing.mode === "merge";
+    const mainTree = await resolveMainTree(config.repo.remote, config.repo.trunk, { local });
     const idleThresholdMs = resolveIdleThresholdMs(config);
     const worktreeFailLines: string[] = [];
     /**
@@ -1101,6 +1126,7 @@ async function main(config: ForgeConfig, repoRoot: string) {
         mainTree,
         config.repo.remote,
         config.repo.trunk,
+        local,
       );
       if (report.bucket === "fail") worktreeFailLines.push(report.line);
       else if (report.bucket === "info") infoLines.push(report.line);

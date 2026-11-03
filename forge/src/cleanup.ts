@@ -78,6 +78,7 @@ import {
   listLiveWorktreeDirectoryNames,
   listWorktreeEntries,
   resolveMainTree,
+  trunkReference,
   resolveWorktreeOwner,
   type WorktreeEntry,
   type WorktreeOwner,
@@ -273,6 +274,7 @@ async function classifyOneBranch(
   mainTree: string,
   remote: string,
   trunk: string,
+  local: boolean,
   force: boolean,
   idleThresholdMs: number,
 ): Promise<ClassifiedBranch> {
@@ -292,7 +294,7 @@ async function classifyOneBranch(
       ...optionalProperty("runVerdict", guard.runVerdict),
     };
   }
-  const contentVerdict = await classifyByContent(name, mainTree, remote, trunk);
+  const contentVerdict = await classifyByContent(name, mainTree, remote, trunk, { local });
   return {
     name,
     category: isSafeToDelete(contentVerdict) ? "to-delete" : "needs-review",
@@ -345,11 +347,13 @@ export async function deleteAndReleaseTicket(
 async function main(config: ForgeConfig) {
   const { dryRun, runId, all, force } = parseCleanupArguments(process.argv.slice(2));
   const { remote, trunk } = config.repo;
+  const local = config.landing.mode === "merge";
   const branchPrefix = config.ticket.branchPrefix;
   const idleThresholdMs = resolveIdleThresholdMs(config);
 
+  const trunkRef = trunkReference(remote, trunk, local);
   console.log(
-    `Using ${remote}/${trunk} (from forge.config.json's repo.remote/repo.trunk) as the merge-base reference.`,
+    `Using ${trunkRef} (from forge.config.json's repo.remote/repo.trunk) as the merge-base reference.`,
   );
 
   /**
@@ -363,9 +367,10 @@ async function main(config: ForgeConfig) {
   if (!dryRun) {
     await Bun.$`git worktree prune`.nothrow().quiet();
   }
-  await Bun.$`git fetch --quiet ${remote} ${trunk}`.nothrow().quiet();
+  if (!local) {
+    await Bun.$`git fetch --quiet ${remote} ${trunk}`.nothrow().quiet();
+  }
 
-  const trunkRef = `${remote}/${trunk}`;
   const mainShaResult = await Bun.$`git rev-parse ${trunkRef}`.nothrow().quiet();
   if (mainShaResult.exitCode !== 0) {
     throw new ForgeConfigError(
@@ -373,7 +378,7 @@ async function main(config: ForgeConfig) {
     );
   }
   const mainSha = mainShaResult.stdout.toString().trim();
-  const mainTree = await resolveMainTree(remote, trunk);
+  const mainTree = await resolveMainTree(remote, trunk, { local });
   const liveWorktreeDirectoryNames = await listLiveWorktreeDirectoryNames();
   const worktreeEntries = await listWorktreeEntries();
 
@@ -394,6 +399,7 @@ async function main(config: ForgeConfig) {
         mainTree,
         remote,
         trunk,
+        local,
         force,
         idleThresholdMs,
       ),
@@ -412,6 +418,7 @@ async function main(config: ForgeConfig) {
         mainTree,
         remote,
         trunk,
+        local,
         force,
         idleThresholdMs,
       ),

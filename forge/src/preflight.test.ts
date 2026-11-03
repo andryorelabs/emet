@@ -5,7 +5,7 @@ import path from "node:path";
 
 import { writeApproval } from "./approve";
 import { DEFAULT_FORGE_CONFIG } from "./config";
-import type { DependencyCheck } from "./dependencies";
+import type { DependencyCheck, DependencyProbes } from "./dependencies";
 import type { EnvironmentProbes } from "./doctor";
 import {
   auditPostDispatch,
@@ -16,7 +16,7 @@ import {
   evaluateDependencyGate,
   evaluateRunGate,
   DEPRECATED_CONFIG_FIELDS,
-  findUnsupportedTrackerFailures,
+  collectDependencyChecks,
   findBranchTicketMismatches,
   findDuplicateTicketBranchNumbers,
   findDuplicateTicketWorktrees,
@@ -85,6 +85,22 @@ describe("collectForkBaseFailures (S2)", () => {
       probesFor("aaaaaaa1", "bbbbbbb2", null),
     );
     expect(failures).toHaveLength(1);
+  });
+
+  test("merge mode compares against local trunk, not <remote>/<trunk>", async () => {
+    const refs: string[] = [];
+    const probes: EnvironmentProbes = {
+      ...probesFor("aaaaaaa1", "bbbbbbb2", null),
+      resolveRef: async (_root, ref) => {
+        refs.push(ref);
+        return ref === "HEAD" ? "aaaaaaa1" : "bbbbbbb2";
+      },
+    };
+    const failures = await collectForkBaseFailures("/r", "origin", "main", probes, "merge");
+    expect(refs).toContain("main");
+    expect(refs).not.toContain("origin/main");
+    expect(failures.join("\n")).toContain("main");
+    expect(failures.join("\n")).not.toContain("origin/main");
   });
 
   test("passes when baseRef is head", async () => {
@@ -286,6 +302,10 @@ function lockedFor(
 }
 
 describe("isBranchMatchingTicket", () => {
+  test("keeps the numeric match when the prefix differs from the ticket key", () => {
+    expect(isBranchMatchingTicket("ticket-258-login", "AO-258", "ticket")).toBe(true);
+  });
+
   test("matches the ticket number as a branch prefix", () => {
     expect(isBranchMatchingTicket("ao-321-worktree-lock-guard", "AO-321", "ao")).toBe(true);
   });
@@ -311,6 +331,28 @@ describe("isBranchMatchingTicket", () => {
    * this used to default to `'ao'`, so a repo whose own prefix is `nfk`
    * reported every correctly-named branch as a ticket mismatch.
    */
+  test("compares the full ticket id for slug-prefixed ids", () => {
+    expect(
+      isBranchMatchingTicket("forge-local-tracker-03-parser", "local-tracker-03", "forge"),
+    ).toBe(true);
+    expect(isBranchMatchingTicket("forge-local-tracker-03", "local-tracker-03", "forge")).toBe(
+      true,
+    );
+    expect(isBranchMatchingTicket("forge-other-spec-03-parser", "local-tracker-03", "forge")).toBe(
+      false,
+    );
+    expect(isBranchMatchingTicket("forge-03-parser", "local-tracker-03", "forge")).toBe(false);
+  });
+
+  test("specs a and b with ticket 01 report no mismatch or duplicate", () => {
+    const entryA = lockedFor("/repo/.claude/worktrees/agent-a", "forge-a-01-x", "a-01");
+    const entryB = lockedFor("/repo/.claude/worktrees/agent-b", "forge-b-01-y", "b-01");
+    expect(findBranchTicketMismatches([entryA, entryB], "forge")).toEqual([]);
+    expect(findDuplicateTicketBranchNumbers(["forge-a-01-x", "forge-b-01-y"], "forge").size).toBe(
+      0,
+    );
+  });
+
   test("honors a repo's own branchPrefix rather than any built-in default", () => {
     expect(isBranchMatchingTicket("nfk-42-login", "NFK-42", "nfk")).toBe(true);
     expect(isBranchMatchingTicket("nfk-42-login", "NFK-42", "ao")).toBe(false);
@@ -350,6 +392,15 @@ describe("findDuplicateTicketWorktrees", () => {
 });
 
 describe("findDuplicateTicketBranchNumbers", () => {
+  test("groups two branches of the same slug-style ticket and keeps distinct tickets apart", () => {
+    const duplicates = findDuplicateTicketBranchNumbers(
+      ["forge-a-01-x", "forge-a-01-y", "forge-a-02-z", "forge-b-01-w"],
+      "forge",
+    );
+    expect(duplicates.get("a-01")).toEqual(["forge-a-01-x", "forge-a-01-y"]);
+    expect(duplicates.size).toBe(1);
+  });
+
   test("finds two branches for the same ticket number", () => {
     const duplicates = findDuplicateTicketBranchNumbers(
       ["ao-284-starred-page", "ao-284-starred-page-fixes", "ao-285-unrelated"],
@@ -672,21 +723,30 @@ describe("findMissingRequiredCommands", () => {
   });
 });
 
-describe("findUnsupportedTrackerFailures", () => {
-  test("blocks the local tracker", () => {
-    const failures = findUnsupportedTrackerFailures({
-      ...DEFAULT_FORGE_CONFIG,
-      tracker: { kind: "local" },
-    });
-    expect(failures.join("\n")).toContain("local tracker is not implemented yet");
+describe("collectDependencyChecks (S10)", () => {
+  const absentGithubCliProbes: DependencyProbes = {
+    claudePlugin: async () => ({ kind: "listed", status: "installed" }),
+    githubCli: async () => ({ kind: "not-on-path" }),
+    linearMcpServer: async () => ({ kind: "declared", source: "mcp-json" }),
+    forgeAgents: async () => ({ kind: "present" }),
+  };
+
+  test("emits no github-cli check when gh is absent, tracker local, landing merge", async () => {
+    const checks = await collectDependencyChecks(
+      { ...DEFAULT_FORGE_CONFIG, tracker: { kind: "local" }, landing: { mode: "merge" } },
+      "/r",
+      absentGithubCliProbes,
+    );
+    expect(checks.map((check) => check.dependency)).not.toContain("github-cli");
   });
 
-  test("allows github and linear", () => {
-    for (const kind of ["github", "linear"] as const) {
-      expect(
-        findUnsupportedTrackerFailures({ ...DEFAULT_FORGE_CONFIG, tracker: { kind } }),
-      ).toEqual([]);
-    }
+  test("still probes gh when landing mode is pr", async () => {
+    const checks = await collectDependencyChecks(
+      { ...DEFAULT_FORGE_CONFIG, tracker: { kind: "local" }, landing: { mode: "pr" } },
+      "/r",
+      absentGithubCliProbes,
+    );
+    expect(checks.map((check) => check.dependency)).toContain("github-cli");
   });
 });
 
