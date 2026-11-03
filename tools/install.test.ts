@@ -101,7 +101,9 @@ afterEach(() => {
   rmSync(workDir, { recursive: true, force: true });
 });
 
-describe("install.sh without bun", () => {
+const describeInstaller = describe.skipIf(!Bun.which("rsync"));
+
+describeInstaller("install.sh without bun", () => {
   test("installs rewritten prompts and the shim into a temp HOME", () => {
     const { exitCode, output } = runInstaller();
     expect(output).toContain("bun not found");
@@ -150,7 +152,7 @@ describe("install.sh without bun", () => {
   });
 });
 
-describe("install.sh with bun", () => {
+describeInstaller("install.sh with bun", () => {
   test("installs the bun wrapper, not the shim", () => {
     const { exitCode, output } = runInstaller({ withBun: true });
     expect(output).not.toContain("bun not found");
