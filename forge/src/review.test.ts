@@ -114,6 +114,23 @@ describe('recordRound resolution', () => {
   })
 })
 
+describe('recordRound repeats', () => {
+  test('a repeated blocker stays open even when its file did not change', () => {
+    const parse = (items: Record<string, unknown>[]) => parseFindings(JSON.stringify(items))
+    const first = recordRound(emptyLedger('T'), parse([finding()]), {
+      changedFiles: [],
+      reviewRounds: 3,
+    })
+    if (!first.ok) throw new Error('round 1 failed')
+    const second = recordRound(first.ledger, parse([finding()]), {
+      changedFiles: ['b.ts'],
+      reviewRounds: 3,
+    })
+    if (!second.ok) throw new Error('round 2 failed')
+    expect(second.ledger.findings.map((entry) => entry.status)).toEqual(['open'])
+  })
+})
+
 describe('escalation and rulings', () => {
   test('nextEscalationModel follows the map', () => {
     expect(nextEscalationModel({ sonnet: 'opus' }, 'sonnet')).toBe('opus')
