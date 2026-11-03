@@ -1,0 +1,3 @@
+# forge: runtime state is not versioned; tickets are (local tracker).
+.forge/*
+!.forge/tickets/
