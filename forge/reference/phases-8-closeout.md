@@ -160,6 +160,18 @@ this line needs a manual per-ticket state write instead.
    `pr.maxCiFixAttempts` failed fix attempts, stop: leave the PR open, apply the human-decision label
    (`docs/agents/triage-labels.md`), and report the failing check.
 
+**Merge mode** (`landing.mode: merge`): no push, no PR, no `gh`. Run
+`commands.selfCheck` on the integration branch as CI (on red, up to
+`pr.maxCiFixAttempts` fix rounds, then leave the branch unmerged and report);
+its result is the `--ci` value for `forge gate`. If every ticket answers
+`merge` or `chain` and `pr.autoMerge` is on: `forge land --spec <spec-id>
+--branch <integration> --tickets <id,…> --wave <n> --summary "<what the wave
+contains>"` (refuses with exit 1 unless the main
+worktree is on `repo.trunk` and clean; prints the new trunk sha as JSON). Then
+close each ticket per `onPrMerge: coordinator`, and run `forge spec-merge` and
+`forge cleanup --run <runId>` as separate calls. `pr.autoMerge` off or anything
+flagged: leave the integration branch unmerged and report it.
+
 Never auto-merge a wave with anything flagged (see below), whatever
 `pr.autoMerge` says. Run the merge and the cleanup below as **separate Bash
 calls** — never chained with `&&` or `;` — so one being blocked can't stop

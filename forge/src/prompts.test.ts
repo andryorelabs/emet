@@ -9,16 +9,16 @@ const REPO_ROOT = resolve(import.meta.dir, "..", "..");
  * is a reviewed decision: edit the number here, in the same PR as the growth.
  */
 const BYTE_CEILINGS: Readonly<Record<string, number>> = {
-  "commands/forge.md": 7770,
+  "commands/forge.md": 8100,
   "forge/reference/incidents.md": 12950,
   "forge/reference/phases-1-5.md": 11300,
   "forge/reference/phases-6-7-dispatch.md": 16310,
-  "forge/reference/phases-8-closeout.md": 12250,
-  "forge/reference/phases-9-handoff.md": 4820,
+  "forge/reference/phases-8-closeout.md": 13350,
+  "forge/reference/phases-9-handoff.md": 4980,
   "forge/reference/reviewer-prompt.md": 2550,
   "forge/reference/tracker-github.md": 3250,
   "forge/reference/tracker-linear.md": 4850,
-  "forge/reference/tracker-local.md": 1220,
+  "forge/reference/tracker-local.md": 1810,
   "forge/reference/worker-prompt.md": 7600,
   "agents/forge-reviewer.md": 1980,
   "agents/forge-worker.md": 1230,

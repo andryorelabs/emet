@@ -1,20 +1,23 @@
 # Triage labels
 
-The five canonical triage roles, as `local`-tracker ticket labels (the
-comma-separated `labels:` frontmatter field described in
+The five canonical triage roles, as `Status:` values in a `local`-tracker
+ticket file (the metadata line described in
 [issue-tracker.md](issue-tracker.md)):
 
-| Label             | Meaning                                                      |
-| ----------------- | ------------------------------------------------------------ |
-| `needs-triage`    | Freshly captured, not yet reviewed or spec'd                 |
-| `needs-info`      | Waiting on more information before it can proceed            |
-| `ready-for-agent` | Spec'd and unblocked — eligible for automatic agent dispatch |
-| `ready-for-human` | Needs a human decision or judgment call before continuing    |
-| `wontfix`         | Reviewed and deliberately not going to be worked on          |
+| Role              | `Status:` value   | Meaning                                                      |
+| ----------------- | ----------------- | ------------------------------------------------------------ |
+| `needs-triage`    | `needs-triage`    | Freshly captured, not yet reviewed or spec'd                 |
+| `needs-info`      | `needs-info`      | Waiting on more information before it can proceed            |
+| `ready-for-agent` | `ready-for-agent` | Spec'd and unblocked — eligible for automatic agent dispatch |
+| `ready-for-human` | `ready-for-human` | Needs a human decision or judgment call before continuing    |
+| `wontfix`         | `wontfix`         | Reviewed and deliberately not going to be worked on          |
 
-`/forge`'s dispatch frontier requires `ready-for-agent` alongside no open
-`blockedBy` — a ticket without this label never gets picked up automatically,
-even if otherwise unblocked.
+Change one with `forge tracker set-state <id> <status>`.
+
+`/forge`'s dispatch frontier (`forge tracker frontier --spec <slug>`) requires
+`Status: ready-for-agent` and every `Blocked by` ticket `done` or `resolved` —
+a ticket in any other status never gets picked up automatically, even if
+otherwise unblocked.
 
 ---
 

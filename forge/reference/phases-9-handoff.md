@@ -35,7 +35,9 @@ its fixed startup cost once and carries one wave's worth of growing context,
 instead of one session accumulating every wave in the run (see
 `docs/agents/forge.md`'s "Concurrency" section for the reasoning). Instead:
 
-1. Report this wave's outcome (PR link, what shipped, what got flagged) —
+1. Report this wave's outcome (PR link, or in merge mode the `forge land`
+   trunk sha or the unmerged integration branch; what shipped, what got
+   flagged) —
    the same content a mid-run status update would carry, just written down
    instead of only said.
 2. Hand off to the next wave. Chain only when Phase 8's `forge gate <ticket>
