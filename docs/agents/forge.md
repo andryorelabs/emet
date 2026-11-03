@@ -37,8 +37,9 @@ This repo's code lives under `forge/`, not the root, so a fresh worktree needs
 Commands a worker runs before considering its own change done: see
 `commands.selfCheck` in `forge.config.json`.
 
-Both commands target `forge/` (the only package), matching what CI runs
-(`.github/workflows/ci.yml`: typecheck, then `bun test`).
+CI runs the same commands as separate `check` and `test` jobs
+(`.github/workflows/ci.yml`), gated by a final `ci-passed` job.
+`tools/workflows-invariants.test.ts` enforces the workflow hardening rules.
 
 ## Gates and budgets
 
