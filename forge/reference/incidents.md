@@ -120,10 +120,9 @@ different worker context: one peaked at 129K, the other at 348K. The
 difference traced to ticket shape, not implementation difficulty: the 348K
 ticket combined a new page object **and** a new E2E spec in one ticket,
 while the 129K ticket kept those separate. This is the source of Phase 3's
-ticket-splitting tripwires (estimated peak > 160K; touch set > 8 files or
-
-> 1,500 lines; new surface > 500 lines; more than one new E2E spec; a new
-> page object and a new spec together).
+ticket-splitting tripwires (estimated peak > 160K; touch set > 8 files
+or > 1,500 lines; new surface > 500 lines; more than one new E2E spec; a new
+page object and a new spec together).
 
 ## A confabulated success with zero tool calls behind it
 
