@@ -3,7 +3,7 @@ import { mkdtempSync, rmSync } from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
 
-import { classifyDiff, parseDiffInput, type DiffInput } from './assess'
+import { applyRiskLine, classifyDiff, parseDiffInput, parseRiskLine, type DiffInput } from './assess'
 import { DEFAULT_FORGE_CONFIG, type ForgeConfig } from './config'
 
 function diffOf(paths: string[], added: string[] = []): DiffInput {
@@ -131,5 +131,63 @@ describe('forge assess (cli)', () => {
 
   test('plain source fixture is medium', async () => {
     expect((await assessAfter({ 'src/app.ts': 'export const a = 1\n' })).tier).toBe('medium')
+  })
+
+  test('--risk-line raises a medium diff to high', async () => {
+    await Bun.write(path.join(repo, 'src/app.ts'), 'export const a = 1\n')
+    await Bun.$`git -C ${repo} add -A`.quiet()
+    await Bun.$`git -C ${repo} commit -q -m change`.quiet()
+    const binPath = new URL('../bin/forge.ts', import.meta.url).pathname
+    const output = await Bun.$`bun ${binPath} assess --base HEAD~1 --head HEAD --risk-line ${'Risk: item 1 (shared caller)'}`
+      .cwd(repo)
+      .quiet()
+    expect(JSON.parse(output.stdout.toString()).tier).toBe('high')
+  })
+})
+
+describe('parseRiskLine', () => {
+  test('Risk: none is recognised as no risk', () => {
+    expect(parseRiskLine('Risk: none')).toEqual({ kind: 'none' })
+  })
+
+  test('Risk: item N (reason) is recognised with its reason', () => {
+    expect(parseRiskLine('Risk: item 3 (shared caller in guard.ts)')).toEqual({
+      kind: 'item',
+      reason: 'item 3 (shared caller in guard.ts)',
+    })
+  })
+
+  test('unparseable text is treated as a risk item rather than silently ignored', () => {
+    expect(parseRiskLine('looks fine?').kind).toBe('item')
+    expect(parseRiskLine('').kind).toBe('item')
+  })
+})
+
+describe('applyRiskLine', () => {
+  const medium = classifyDiff(diffOf(['src/a.ts']), DEFAULT_FORGE_CONFIG)
+  const passive = classifyDiff(diffOf(['a.md']), DEFAULT_FORGE_CONFIG)
+  const high = classifyDiff(diffOf(['bun.lock']), DEFAULT_FORGE_CONFIG)
+
+  test('none never changes the tier, including never lowering high', () => {
+    expect(applyRiskLine(high, 'Risk: none', DEFAULT_FORGE_CONFIG)).toEqual(high)
+    expect(applyRiskLine(medium, 'Risk: none', DEFAULT_FORGE_CONFIG)).toEqual(medium)
+    expect(applyRiskLine(passive, 'Risk: none', DEFAULT_FORGE_CONFIG)).toEqual(passive)
+  })
+
+  test('a risk item raises medium to high with the high reviewer', () => {
+    const raised = applyRiskLine(medium, 'Risk: item 2 (touches shared parser)', DEFAULT_FORGE_CONFIG)
+    expect(raised.tier).toBe('high')
+    expect(raised.reviewer).toEqual(DEFAULT_FORGE_CONFIG.models.reviewer.high)
+    expect(raised.reasons.join('\n')).toContain('risk line')
+  })
+
+  test('a risk item raises passive to medium', () => {
+    const raised = applyRiskLine(passive, 'Risk: item 1 (docs change ships a script)', DEFAULT_FORGE_CONFIG)
+    expect(raised.tier).toBe('medium')
+    expect(raised.reviewer).toEqual(DEFAULT_FORGE_CONFIG.models.reviewer.medium)
+  })
+
+  test('a risk item leaves high unchanged', () => {
+    expect(applyRiskLine(high, 'Risk: item 1 (x)', DEFAULT_FORGE_CONFIG).tier).toBe('high')
   })
 })
