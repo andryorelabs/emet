@@ -20,6 +20,13 @@ unmet is a finding.
 Project skills: {{project_skills}}. Read each `.claude/skills/<name>/SKILL.md`;
 a clear violation is a finding.
 
+Standards axis: check the diff against the repo's documented coding
+standards (`CODING_STANDARDS.md`, `CONTRIBUTING.md`, `AGENTS.md`, whichever
+exist); a clear violation is a finding.
+
+Spec axis: the per-S# verdicts above; code that does not match what the spec
+asked for is a finding.
+
 Lenses: medium = correctness + verification-gap; high adds security/resilience.
 Verification-gap: one finding per gap, "one test that would catch <named
 regression>".

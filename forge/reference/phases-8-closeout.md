@@ -45,11 +45,10 @@ as the check above. This is the backstop for Phase 7 step 3
 handoff note's 0-of-4 wave" for the measured run where the prose-only
 version of this instruction was followed by none of four workers.
 
-Use the `resolving-merge-conflicts` skill to merge this wave's worker
-branches, in dependency order, into one integration branch named
+Merge this wave's worker branches, in dependency order, into one integration branch named
 `<type>/<slug>` — the `<type>` matching this repo's own convention (`feat`,
 `fix`, `docs`, `refactor`, `chore`, `test`, …) and chosen from whichever
-commit type dominates the wave, the `<slug>` describing what the wave
+commit type dominates the wave, resolving any merge conflicts inline, the `<slug>` describing what the wave
 actually contains (e.g. `test/unit-test-foundation` for a wave whose commits
 are mostly `test(...)`). This is the branch that gets pushed — never the
 workers' own local `<branchPrefix>-<n>-<slug>` branches from Phase 7, and
@@ -114,7 +113,8 @@ The coordinator writes a tracker-state transition only where
 tracker's own PR-linked automation already marks it `automatic` (e.g.
 Linear's GitHub integration). If green and nothing was flagged: push the
 integration branch once, open one PR for this wave (never one per ticket —
-that's what makes running the shared suite once per wave enough). Its body
+that's what makes running the shared suite once per wave enough). Write its body by calling the Skill tool with `pr` and following
+its template. It
 lists "Rulings I made" (`forge review --rulings`) and closes every ticket this wave completed using this repo's tracker's
 closing-keyword convention (`docs/agents/issue-tracker.md` — a plain
 `commit.trailer` only links without closing; it's for a ticket this wave

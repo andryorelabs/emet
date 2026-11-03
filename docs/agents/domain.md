@@ -8,18 +8,20 @@ repo's domain documentation, and how it relates to any existing `docs/` tree.
 
 An existing `docs/` tree (if this repo has one) is **published** ground:
 finished reference material, written and maintained by hand. Don't restructure
-it or fold `CONTEXT.md` into it.
+it or fold `GLOSSARY.md` into it.
 
-`CONTEXT.md` and `docs/adr/` are the **live** ground that `domain-modeling`
+`GLOSSARY.md` and `docs/adr/` are the **live** ground that `domain-modeling`
 maintains as `/forge` runs features through this repo: its ubiquitous language
 and the architectural decisions made along the way. Both are
-kept current: add or sharpen a term in [`CONTEXT.md`](../../CONTEXT.md) and
+kept current: add or sharpen a term in [`GLOSSARY.md`](../../GLOSSARY.md) and
 record decisions in [`docs/adr/`](../adr/README.md) only when they actually
 crystallize during a `grill-with-docs` session, never speculatively.
 
 ## Before exploring, read these
 
-- **`CONTEXT.md`** at the repo root, if it exists.
+- **`GLOSSARY-MAP.md`** at the repo root, if it exists (it routes to per-context
+  glossaries), otherwise **`GLOSSARY.md`**. In older repos with neither, fall
+  back to `CONTEXT.md`.
 - **`docs/adr/`**, if it exists: read ADRs that touch the area you're about to
   work in.
 
@@ -32,7 +34,7 @@ Single-context repo (no monorepo signals detected: no `pnpm-workspace.yaml`, no 
 
 ```
 /
-├── CONTEXT.md
+├── GLOSSARY.md
 └── docs/adr/
     ├── 0001-....md
     └── 0002-....md
@@ -41,7 +43,7 @@ Single-context repo (no monorepo signals detected: no `pnpm-workspace.yaml`, no 
 ## Use the glossary's vocabulary
 
 When your output names a domain concept (an issue title, a ticket, a test
-name), use the term as defined in `CONTEXT.md`. Don't drift to synonyms the
+name), use the term as defined in `GLOSSARY.md`. Don't drift to synonyms the
 glossary explicitly avoids.
 
 If the concept you need isn't in the glossary yet, that's a signal: either

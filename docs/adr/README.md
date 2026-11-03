@@ -1,6 +1,6 @@
 # Architecture decision records
 
-Decisions that are hard to reverse, surprising without context, and the result of a real trade-off. Terms follow [CONTEXT.md](../../CONTEXT.md). Each ADR has the sections Status (with date), Context, Decision, Consequences and Alternatives considered. `tools/adr-invariants.test.ts` keeps this index and the files in sync.
+Decisions that are hard to reverse, surprising without context, and the result of a real trade-off. Terms follow [GLOSSARY.md](../../GLOSSARY.md). Each ADR has the sections Status (with date), Context, Decision, Consequences and Alternatives considered. `tools/adr-invariants.test.ts` keeps this index and the files in sync.
 
 ## Index
 
