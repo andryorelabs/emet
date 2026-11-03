@@ -1,6 +1,6 @@
-import { existsSync, mkdirSync, readdirSync } from 'node:fs'
-import os from 'node:os'
-import path from 'node:path'
+import { existsSync, mkdirSync, readdirSync } from "node:fs";
+import os from "node:os";
+import path from "node:path";
 
 import {
   ForgeConfigError,
@@ -8,21 +8,22 @@ import {
   requireForgeConfig,
   resolveRepoRoot,
   type ForgeConfig,
-} from './config'
+} from "./config";
 import {
   didAcquireLock,
   type LockHolder,
-  readLockHolder,
+  isLockHolder,
+  readLockHolderAs,
   releaseLock,
-} from './locks'
+} from "./locks";
 import {
   checkMemoryHeadroom,
   computeAutoMaxLiveWorkers,
   readHostResources,
   resolveAutoCapOptionsFromEnvironment,
   resolveMemReserveBytesFromEnvironment,
-} from './resources'
-import { classifyRun, resolveSessionSlug, type RunVerdict } from './runs'
+} from "./resources";
+import { classifyRun, resolveSessionSlug, type RunVerdict } from "./runs";
 
 /**
  * Concurrency-cap slots under `~/.local/state/forge/slots/<index>` — the
@@ -69,32 +70,47 @@ import { classifyRun, resolveSessionSlug, type RunVerdict } from './runs'
  * `runId`/`anchorPid`/`ticket` shape.
  */
 
+/** Whether `value` is a lock holder carrying every slot-specific field. */
+function isSlotHolder(value: unknown): value is SlotHolder {
+  return (
+    isLockHolder(value) &&
+    "runId" in value &&
+    typeof value.runId === "string" &&
+    "anchorPid" in value &&
+    typeof value.anchorPid === "number" &&
+    "ticket" in value &&
+    typeof value.ticket === "string" &&
+    "sessionSlug" in value &&
+    typeof value.sessionSlug === "string"
+  );
+}
+
 export interface SlotHolder extends LockHolder {
-  readonly runId: string
-  readonly anchorPid: number
-  readonly ticket: string
-  readonly sessionSlug: string
+  readonly runId: string;
+  readonly anchorPid: number;
+  readonly ticket: string;
+  readonly sessionSlug: string;
   /** Which repo's dispatch this slot belongs to (`git rev-parse
    * --show-toplevel` at acquire time) — informational only, so `--list` and
    * `forge doctor` can say whose wave is holding a slot on a shared,
    * host-wide pool. Never used to scope acquisition or release; a repo has
    * no special claim over "its own" slots on a pool it doesn't own. */
-  readonly repoRoot: string
+  readonly repoRoot: string;
 }
 
 /** `$FORGE_STATE_DIR` (an explicit override, e.g. for a test or an
  * unusual install), else `$XDG_STATE_HOME/forge`, else `~/.local/state/forge`
  * — resolved once, host-wide, never against any repo's own `.git`. */
 function resolveForgeStateDirectory(): string {
-  const explicit = process.env.FORGE_STATE_DIR
-  if (explicit) return explicit
-  const xdgStateHome = process.env.XDG_STATE_HOME
-  if (xdgStateHome) return path.join(xdgStateHome, 'forge')
-  return path.join(os.homedir(), '.local', 'state', 'forge')
+  const explicit = process.env.FORGE_STATE_DIR;
+  if (explicit) return explicit;
+  const xdgStateHome = process.env.XDG_STATE_HOME;
+  if (xdgStateHome) return path.join(xdgStateHome, "forge");
+  return path.join(os.homedir(), ".local", "state", "forge");
 }
 
 export async function resolveSlotsDirectory(): Promise<string> {
-  const slotsDirectory = path.join(resolveForgeStateDirectory(), 'slots')
+  const slotsDirectory = path.join(resolveForgeStateDirectory(), "slots");
   /**
    * Recursive on purpose, unlike {@link didAcquireLock}'s own `mkdirSync`:
    * this creates the shared *container* (`forge/slots/`), never the atomic
@@ -102,8 +118,8 @@ export async function resolveSlotsDirectory(): Promise<string> {
    * exclusion to break here — only whether the parent exists at all before
    * the first `acquireSlot` call ever made on this host.
    */
-  mkdirSync(slotsDirectory, { recursive: true })
-  return slotsDirectory
+  mkdirSync(slotsDirectory, { recursive: true });
+  return slotsDirectory;
 }
 
 /**
@@ -118,15 +134,15 @@ export async function resolveSlotsDirectory(): Promise<string> {
 export async function resolveLegacySlotsDirectory(): Promise<string | null> {
   const output = await Bun.$`git rev-parse --path-format=absolute --git-common-dir`
     .nothrow()
-    .quiet()
-  if (output.exitCode !== 0) return null
-  const gitCommonDirectory = output.stdout.toString().trim()
-  if (!gitCommonDirectory || !path.isAbsolute(gitCommonDirectory)) return null
-  return path.join(gitCommonDirectory, 'forge', 'slots')
+    .quiet();
+  if (output.exitCode !== 0) return null;
+  const gitCommonDirectory = output.stdout.toString().trim();
+  if (!gitCommonDirectory || !path.isAbsolute(gitCommonDirectory)) return null;
+  return path.join(gitCommonDirectory, "forge", "slots");
 }
 
 function slotDirectory(slotsDirectory: string, index: number): string {
-  return path.join(slotsDirectory, String(index))
+  return path.join(slotsDirectory, String(index));
 }
 
 /**
@@ -141,18 +157,11 @@ export function isSlotStale(
   index: number,
   classifyRunOptions?: Parameters<typeof classifyRun>[3],
 ): boolean {
-  const holder: SlotHolder | undefined = readLockHolder(
-    slotDirectory(slotsDirectory, index),
-  )
-  if (!holder) return true
+  const holder = readLockHolderAs(slotDirectory(slotsDirectory, index), isSlotHolder);
+  if (!holder) return true;
   return (
-    classifyRun(
-      holder.anchorPid,
-      holder.sessionSlug,
-      holder.runId,
-      classifyRunOptions,
-    ) === 'dead'
-  )
+    classifyRun(holder.anchorPid, holder.sessionSlug, holder.runId, classifyRunOptions) === "dead"
+  );
 }
 
 /**
@@ -177,7 +186,7 @@ async function buildSlotHolder(
     ticket,
     sessionSlug: resolveSessionSlug(),
     repoRoot: (await resolveRepoRoot()) ?? process.cwd(),
-  }
+  };
 }
 
 function didAcquireSlotIndex(
@@ -186,13 +195,13 @@ function didAcquireSlotIndex(
   holder: SlotHolder,
   classifyRunOptions?: Parameters<typeof classifyRun>[3],
 ): boolean {
-  const directory = slotDirectory(slotsDirectory, index)
-  if (didAcquireLock(directory, holder)) return true
+  const directory = slotDirectory(slotsDirectory, index);
+  if (didAcquireLock(directory, holder)) return true;
   if (isSlotStale(slotsDirectory, index, classifyRunOptions)) {
-    releaseLock(directory)
-    return didAcquireLock(directory, holder)
+    releaseLock(directory);
+    return didAcquireLock(directory, holder);
   }
-  return false
+  return false;
 }
 
 /**
@@ -212,32 +221,24 @@ export async function acquireSlot(
   slotsDirectory?: string,
   classifyRunOptions?: Parameters<typeof classifyRun>[3],
 ): Promise<number | null> {
-  const resolvedSlotsDirectory =
-    slotsDirectory ?? (await resolveSlotsDirectory())
-  const holder = await buildSlotHolder(runId, anchorPid, ticket)
+  const resolvedSlotsDirectory = slotsDirectory ?? (await resolveSlotsDirectory());
+  const holder = await buildSlotHolder(runId, anchorPid, ticket);
   for (let index = 0; index < cap; index++) {
-    if (
-      didAcquireSlotIndex(
-        resolvedSlotsDirectory,
-        index,
-        holder,
-        classifyRunOptions,
-      )
-    ) {
-      return index
+    if (didAcquireSlotIndex(resolvedSlotsDirectory, index, holder, classifyRunOptions)) {
+      return index;
     }
   }
-  return null
+  return null;
 }
 
 export function releaseSlot(slotsDirectory: string, index: number): void {
-  releaseLock(slotDirectory(slotsDirectory, index))
+  releaseLock(slotDirectory(slotsDirectory, index));
 }
 
 export type ReleaseSlotResult =
-  | { readonly outcome: 'released'; readonly previousOwnerRunId?: string }
-  | { readonly outcome: 'not-occupied' }
-  | { readonly outcome: 'owned-by-another'; readonly ownerRunId: string }
+  | { readonly outcome: "released"; readonly previousOwnerRunId?: string }
+  | { readonly outcome: "not-occupied" }
+  | { readonly outcome: "owned-by-another"; readonly ownerRunId: string };
 
 /**
  * Releases slot `index`, but only on behalf of `expectedRunId` — mirrors
@@ -254,14 +255,13 @@ export function releaseSlotIfOwned(
   expectedRunId: string,
   force = false,
 ): ReleaseSlotResult {
-  const holder: SlotHolder | undefined = readLockHolder(
-    slotDirectory(slotsDirectory, index))
-  if (!holder) return { outcome: 'not-occupied' }
+  const holder = readLockHolderAs(slotDirectory(slotsDirectory, index), isSlotHolder);
+  if (!holder) return { outcome: "not-occupied" };
   if (holder.runId !== expectedRunId && !force) {
-    return { outcome: 'owned-by-another', ownerRunId: holder.runId }
+    return { outcome: "owned-by-another", ownerRunId: holder.runId };
   }
-  releaseSlot(slotsDirectory, index)
-  return { outcome: 'released', previousOwnerRunId: holder.runId }
+  releaseSlot(slotsDirectory, index);
+  return { outcome: "released", previousOwnerRunId: holder.runId };
 }
 
 /**
@@ -283,74 +283,63 @@ export async function releaseAllSlotsForRun(
   slotsDirectory?: string,
   ticket?: string,
 ): Promise<number[]> {
-  const resolvedSlotsDirectory =
-    slotsDirectory ?? (await resolveSlotsDirectory())
-  if (!existsSync(resolvedSlotsDirectory)) return []
+  const resolvedSlotsDirectory = slotsDirectory ?? (await resolveSlotsDirectory());
+  if (!existsSync(resolvedSlotsDirectory)) return [];
 
-  const released: number[] = []
+  const released: number[] = [];
   for (const name of readdirSync(resolvedSlotsDirectory)) {
-    const index = Number(name)
-    if (!Number.isSafeInteger(index)) continue
-    const holder: SlotHolder | undefined = readLockHolder(
-    slotDirectory(resolvedSlotsDirectory, index),
-    )
+    const index = Number(name);
+    if (!Number.isSafeInteger(index)) continue;
+    const holder = readLockHolderAs(slotDirectory(resolvedSlotsDirectory, index), isSlotHolder);
     if (holder?.runId === runId && (ticket === undefined || holder.ticket === ticket)) {
-      releaseSlot(resolvedSlotsDirectory, index)
-      released.push(index)
+      releaseSlot(resolvedSlotsDirectory, index);
+      released.push(index);
     }
   }
-  return released
+  return released;
 }
 
 export type SlotListEntry = {
-  readonly index: number
-  readonly holder: SlotHolder
-  readonly verdict: RunVerdict
-}
+  readonly index: number;
+  readonly holder: SlotHolder;
+  readonly verdict: RunVerdict;
+};
 
 export async function listOccupiedSlots(
   slotsDirectory?: string,
   classifyRunOptions?: Parameters<typeof classifyRun>[3],
 ): Promise<SlotListEntry[]> {
-  const resolvedSlotsDirectory =
-    slotsDirectory ?? (await resolveSlotsDirectory())
-  if (!existsSync(resolvedSlotsDirectory)) return []
+  const resolvedSlotsDirectory = slotsDirectory ?? (await resolveSlotsDirectory());
+  if (!existsSync(resolvedSlotsDirectory)) return [];
 
-  const entries: SlotListEntry[] = []
+  const entries: SlotListEntry[] = [];
   for (const name of readdirSync(resolvedSlotsDirectory)) {
-    const index = Number(name)
-    if (!Number.isSafeInteger(index)) continue
-    const holder: SlotHolder | undefined = readLockHolder(
-    slotDirectory(resolvedSlotsDirectory, index),
-    )
-    if (!holder) continue
+    const index = Number(name);
+    if (!Number.isSafeInteger(index)) continue;
+    const holder = readLockHolderAs(slotDirectory(resolvedSlotsDirectory, index), isSlotHolder);
+    if (!holder) continue;
     entries.push({
       index,
       holder,
-      verdict: classifyRun(
-        holder.anchorPid,
-        holder.sessionSlug,
-        holder.runId,
-        classifyRunOptions,
-      ),
-    })
+      verdict: classifyRun(holder.anchorPid, holder.sessionSlug, holder.runId, classifyRunOptions),
+    });
   }
-  return entries.toSorted((a, b) => a.index - b.index)
+  return entries.toSorted((a, b) => a.index - b.index);
 }
 
 function readFlagValue(argv: readonly string[], flag: string): string | null {
-  const index = argv.indexOf(flag)
-  if (index === -1) return null
-  const value = argv[index + 1]
-  return value && !value.startsWith('--') ? value : null
+  const index = argv.indexOf(flag);
+  if (index === -1) return null;
+  const value = argv[index + 1];
+  return value && !value.startsWith("--") ? value : null;
 }
 
 function requireFlagValue(argv: readonly string[], flag: string): string {
-  const value = readFlagValue(argv, flag)
+  const value = readFlagValue(argv, flag);
   if (!value) {
-    throw new Error(`forge:slots — ${flag} requires a value`)
+    throw new Error(`forge:slots — ${flag} requires a value`);
   }
-  return value
+  return value;
 }
 
 /**
@@ -364,18 +353,18 @@ function requireFlagValue(argv: readonly string[], flag: string): string {
  * var is unset.
  */
 export function resolveMaxLiveWorkers(config: ForgeConfig): number {
-  const raw = process.env.FORGE_MAX_LIVE_WORKERS
+  const raw = process.env.FORGE_MAX_LIVE_WORKERS;
   if (raw !== undefined) {
-    if (raw === 'auto') {
-      return computeAutoMaxLiveWorkers(readHostResources(), resolveAutoCapOptionsFromEnvironment())
+    if (raw === "auto") {
+      return computeAutoMaxLiveWorkers(readHostResources(), resolveAutoCapOptionsFromEnvironment());
     }
-    const parsed = Number(raw)
-    if (Number.isFinite(parsed) && parsed > 0) return parsed
+    const parsed = Number(raw);
+    if (Number.isFinite(parsed) && parsed > 0) return parsed;
   }
-  if (config.concurrency.maxLiveWorkers === 'auto') {
-    return computeAutoMaxLiveWorkers(readHostResources(), resolveAutoCapOptionsFromEnvironment())
+  if (config.concurrency.maxLiveWorkers === "auto") {
+    return computeAutoMaxLiveWorkers(readHostResources(), resolveAutoCapOptionsFromEnvironment());
   }
-  return config.concurrency.maxLiveWorkers
+  return config.concurrency.maxLiveWorkers;
 }
 
 /**
@@ -390,13 +379,13 @@ export function resolveMaxLiveWorkers(config: ForgeConfig): number {
  * ```
  */
 async function main(config: ForgeConfig): Promise<void> {
-  const argv = process.argv.slice(2)
+  const argv = process.argv.slice(2);
 
-  if (argv.includes('--acquire')) {
-    const runId = requireFlagValue(argv, '--run')
-    const anchorPid = Number(requireFlagValue(argv, '--anchor'))
-    const ticket = requireFlagValue(argv, '--ticket')
-    const maxLiveWorkers = resolveMaxLiveWorkers(config)
+  if (argv.includes("--acquire")) {
+    const runId = requireFlagValue(argv, "--run");
+    const anchorPid = Number(requireFlagValue(argv, "--anchor"));
+    const ticket = requireFlagValue(argv, "--ticket");
+    const maxLiveWorkers = resolveMaxLiveWorkers(config);
 
     /**
      * The admission brake runs before ever scanning a slot index — with no
@@ -408,87 +397,87 @@ async function main(config: ForgeConfig): Promise<void> {
     const headroom = checkMemoryHeadroom(
       readHostResources(),
       resolveMemReserveBytesFromEnvironment(),
-    )
+    );
     if (!headroom.ok) {
       console.error(
         `forge:slots — denied by the memory brake: ${headroom.reason}. Not a capacity issue (slots may still be free) — wait for memory to free up, or raise FORGE_MEM_RESERVE_GIB if this repo's workers genuinely need less headroom than the default.`,
-      )
-      process.exitCode = 1
-      return
+      );
+      process.exitCode = 1;
+      return;
     }
 
-    const index = await acquireSlot(maxLiveWorkers, runId, anchorPid, ticket)
+    const index = await acquireSlot(maxLiveWorkers, runId, anchorPid, ticket);
     if (index === null) {
       console.error(
         `forge:slots — no free slot (all ${maxLiveWorkers} occupied by a live or idle run).`,
-      )
-      process.exitCode = 1
-      return
+      );
+      process.exitCode = 1;
+      return;
     }
-    console.log(`forge:slots — acquired slot ${index} for ${ticket}.`)
-    return
+    console.log(`forge:slots — acquired slot ${index} for ${ticket}.`);
+    return;
   }
 
-  if (argv.includes('--release')) {
-    const runId = requireFlagValue(argv, '--run')
-    const ticket = readFlagValue(argv, '--ticket') ?? undefined
-    const released = await releaseAllSlotsForRun(runId, undefined, ticket)
+  if (argv.includes("--release")) {
+    const runId = requireFlagValue(argv, "--run");
+    const ticket = readFlagValue(argv, "--ticket") ?? undefined;
+    const released = await releaseAllSlotsForRun(runId, undefined, ticket);
     console.log(
-      `forge:slots — released ${released.length} slot(s) for run ${runId}${ticket ? ` (ticket ${ticket})` : ''}${released.length > 0 ? `: ${released.join(', ')}` : ''}.`,
-    )
-    return
+      `forge:slots — released ${released.length} slot(s) for run ${runId}${ticket ? ` (ticket ${ticket})` : ""}${released.length > 0 ? `: ${released.join(", ")}` : ""}.`,
+    );
+    return;
   }
 
-  if (argv.includes('--release-index')) {
-    const index = Number(requireFlagValue(argv, '--release-index'))
-    const runId = requireFlagValue(argv, '--run')
-    const force = argv.includes('--force')
-    const slotsDirectory = await resolveSlotsDirectory()
-    const result = releaseSlotIfOwned(slotsDirectory, index, runId, force)
-    if (result.outcome === 'owned-by-another') {
+  if (argv.includes("--release-index")) {
+    const index = Number(requireFlagValue(argv, "--release-index"));
+    const runId = requireFlagValue(argv, "--run");
+    const force = argv.includes("--force");
+    const slotsDirectory = await resolveSlotsDirectory();
+    const result = releaseSlotIfOwned(slotsDirectory, index, runId, force);
+    if (result.outcome === "owned-by-another") {
       console.error(
         `forge:slots — slot ${index} is held by run ${result.ownerRunId}, not ${runId} — pass --force to release it anyway.`,
-      )
-      process.exitCode = 1
-      return
+      );
+      process.exitCode = 1;
+      return;
     }
-    console.log(`forge:slots — released slot ${index}.`)
-    return
+    console.log(`forge:slots — released slot ${index}.`);
+    return;
   }
 
-  if (argv.includes('--list')) {
-    const maxLiveWorkers = resolveMaxLiveWorkers(config)
+  if (argv.includes("--list")) {
+    const maxLiveWorkers = resolveMaxLiveWorkers(config);
     const capSource =
       process.env.FORGE_MAX_LIVE_WORKERS !== undefined
-        ? 'FORGE_MAX_LIVE_WORKERS'
-        : config.concurrency.maxLiveWorkers === 'auto'
-          ? 'auto'
-          : 'forge.config.json'
-    const entries = await listOccupiedSlots()
+        ? "FORGE_MAX_LIVE_WORKERS"
+        : config.concurrency.maxLiveWorkers === "auto"
+          ? "auto"
+          : "forge.config.json";
+    const entries = await listOccupiedSlots();
     if (entries.length === 0) {
-      console.log(`forge:slots — no slots occupied (0/${maxLiveWorkers}, cap=${capSource}).`)
+      console.log(`forge:slots — no slots occupied (0/${maxLiveWorkers}, cap=${capSource}).`);
     } else {
       for (const { index, holder, verdict } of entries) {
         console.log(
           `${index}  run=${holder.runId}  anchor=${holder.anchorPid}  ticket=${holder.ticket}  repo=${holder.repoRoot}  ${verdict}  since=${new Date(holder.acquiredAt).toISOString()}`,
-        )
+        );
       }
-      console.log(`(${entries.length}/${maxLiveWorkers} occupied, cap=${capSource})`)
+      console.log(`(${entries.length}/${maxLiveWorkers} occupied, cap=${capSource})`);
     }
 
-    const legacyDirectory = await resolveLegacySlotsDirectory()
+    const legacyDirectory = await resolveLegacySlotsDirectory();
     if (legacyDirectory && existsSync(legacyDirectory) && readdirSync(legacyDirectory).length > 0) {
       console.log(
         `note: ${legacyDirectory} still has entries — leftover from the pre-host-wide per-repo pool, safe to remove once no wave is running.`,
-      )
+      );
     }
-    return
+    return;
   }
 
   console.error(
-    'usage: forge slots --acquire --run <runId> --anchor <pid> --ticket <ticket> | --release --run <runId> [--ticket <ticket>] | --release-index <index> --run <runId> [--force] | --list',
-  )
-  process.exitCode = 1
+    "usage: forge slots --acquire --run <runId> --anchor <pid> --ticket <ticket> | --release --run <runId> [--ticket <ticket>] | --release-index <index> --run <runId> [--force] | --list",
+  );
+  process.exitCode = 1;
 }
 
 /**
@@ -500,27 +489,27 @@ async function main(config: ForgeConfig): Promise<void> {
  * (`--acquire`/`--release`/`--release-index`) requires a real one.
  */
 export async function run(argv: string[]): Promise<void> {
-  process.argv = [process.argv[0]!, process.argv[1]!, ...argv]
+  process.argv = [process.argv[0]!, process.argv[1]!, ...argv];
   try {
-    const repoRoot = await resolveRepoRoot()
+    const repoRoot = await resolveRepoRoot();
     if (!repoRoot) {
-      throw new ForgeConfigError('forge slots: not inside a git repository')
+      throw new ForgeConfigError("forge slots: not inside a git repository");
     }
-    const config = argv.includes('--list')
+    const config = argv.includes("--list")
       ? (await loadForgeConfigWithDefaults(repoRoot)).config
-      : await requireForgeConfig(repoRoot)
-    await main(config)
+      : await requireForgeConfig(repoRoot);
+    await main(config);
   } catch (error: unknown) {
     if (error instanceof ForgeConfigError) {
-      console.error(error.message)
-      process.exitCode = 2
-      return
+      console.error(error.message);
+      process.exitCode = 2;
+      return;
     }
-    console.error(error)
-    process.exitCode = 1
+    console.error(error);
+    process.exitCode = 1;
   }
 }
 
 if (import.meta.main) {
-  await run(process.argv.slice(2))
+  await run(process.argv.slice(2));
 }

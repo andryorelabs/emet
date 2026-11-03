@@ -1,13 +1,7 @@
-import {
-  mkdirSync,
-  readFileSync,
-  renameSync,
-  statSync,
-  writeFileSync,
-} from 'node:fs'
-import os from 'node:os'
-import path from 'node:path'
-import { errnoCode } from './narrow'
+import { mkdirSync, readFileSync, renameSync, statSync, writeFileSync } from "node:fs";
+import os from "node:os";
+import path from "node:path";
+import { errnoCode, isObject } from "./narrow";
 
 /**
  * Classifies whether a `/forge` run (coordinator or worker) is still alive
@@ -27,19 +21,19 @@ import { errnoCode } from './narrow'
  * the caller.
  */
 
-export type RunVerdict = 'live' | 'idle' | 'dead'
+export type RunVerdict = "live" | "idle" | "dead";
 
 function readPositiveIntEnvironment(name: string, fallback: number): number {
-  const raw = process.env[name]
-  if (raw === undefined) return fallback
-  const parsed = Number(raw)
-  return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback
+  const raw = process.env[name];
+  if (raw === undefined) return fallback;
+  const parsed = Number(raw);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
 }
 
 const RUN_IDLE_THRESHOLD_MS = readPositiveIntEnvironment(
-  'FORGE_RUN_IDLE_THRESHOLD_MS',
+  "FORGE_RUN_IDLE_THRESHOLD_MS",
   90 * 60_000,
-)
+);
 
 /**
  * `FORGE_RUN_IDLE_THRESHOLD_MS` still overrides `forge.config.json`'s
@@ -50,31 +44,29 @@ const RUN_IDLE_THRESHOLD_MS = readPositiveIntEnvironment(
  * own tests keep exercising the pure default.
  */
 export function resolveIdleThresholdMs(config: {
-  readonly concurrency: { readonly runIdleThresholdMs: number }
+  readonly concurrency: { readonly runIdleThresholdMs: number };
 }): number {
   return readPositiveIntEnvironment(
-    'FORGE_RUN_IDLE_THRESHOLD_MS',
+    "FORGE_RUN_IDLE_THRESHOLD_MS",
     config.concurrency.runIdleThresholdMs,
-  )
+  );
 }
 
 function readProcStatusField(pid: number, field: string): string | undefined {
   try {
-    const status = readFileSync(`/proc/${pid}/status`, 'utf8')
-    const line = status
-      .split('\n')
-      .find((candidate) => candidate.startsWith(`${field}:`))
-    return line?.slice(field.length + 1).trim()
+    const status = readFileSync(`/proc/${pid}/status`, "utf8");
+    const line = status.split("\n").find((candidate) => candidate.startsWith(`${field}:`));
+    return line?.slice(field.length + 1).trim();
   } catch {
-    return undefined
+    return undefined;
   }
 }
 
 function readProcComm(pid: number): string | undefined {
   try {
-    return readFileSync(`/proc/${pid}/comm`, 'utf8').trim()
+    return readFileSync(`/proc/${pid}/comm`, "utf8").trim();
   } catch {
-    return undefined
+    return undefined;
   }
 }
 
@@ -88,17 +80,15 @@ function readProcComm(pid: number): string | undefined {
  * exiting mid-walk and producing a cycle or a dead end.
  */
 export function resolveAnchorPid(startPid: number = process.pid): number {
-  let pid = startPid
+  let pid = startPid;
   for (let hop = 0; hop < 32; hop++) {
-    if (readProcComm(pid) === 'claude') return pid
-    const ppidRaw = readProcStatusField(pid, 'PPid')
-    const ppid = ppidRaw === undefined ? NaN : Number(ppidRaw)
-    if (!Number.isFinite(ppid) || ppid <= 1) break
-    pid = ppid
+    if (readProcComm(pid) === "claude") return pid;
+    const ppidRaw = readProcStatusField(pid, "PPid");
+    const ppid = ppidRaw === undefined ? NaN : Number(ppidRaw);
+    if (!Number.isFinite(ppid) || ppid <= 1) break;
+    pid = ppid;
   }
-  throw new Error(
-    `forge-runs: no ancestor of pid ${startPid} has comm "claude" within 32 hops`,
-  )
+  throw new Error(`forge-runs: no ancestor of pid ${startPid} has comm "claude" within 32 hops`);
 }
 
 /**
@@ -109,11 +99,11 @@ export function resolveAnchorPid(startPid: number = process.pid): number {
  */
 export function readProcessStartToken(pid: number): string | undefined {
   try {
-    const stat = readFileSync(`/proc/${pid}/stat`, 'utf8')
-    const fieldsAfterComm = stat.slice(stat.lastIndexOf(')') + 2).split(' ')
-    return fieldsAfterComm[19] || undefined
+    const stat = readFileSync(`/proc/${pid}/stat`, "utf8");
+    const fieldsAfterComm = stat.slice(stat.lastIndexOf(")") + 2).split(" ");
+    return fieldsAfterComm[19] || undefined;
   } catch {
-    return undefined
+    return undefined;
   }
 }
 
@@ -126,9 +116,9 @@ export function readProcessStartToken(pid: number): string | undefined {
  * (caught internally), so no separate `existsSync` pre-check is needed.
  */
 export function isAnchorAlive(pid: number, startToken?: string): boolean {
-  if (readProcComm(pid) !== 'claude') return false
-  if (startToken === undefined) return true
-  return readProcessStartToken(pid) === startToken
+  if (readProcComm(pid) !== "claude") return false;
+  if (startToken === undefined) return true;
+  return readProcessStartToken(pid) === startToken;
 }
 
 /**
@@ -140,7 +130,7 @@ export function isAnchorAlive(pid: number, startToken?: string): boolean {
  * process's own `cwd`, never a value stored per-reservation.
  */
 export function resolveSessionSlug(cwd: string = process.cwd()): string {
-  return cwd.replaceAll('/', '-')
+  return cwd.replaceAll("/", "-");
 }
 
 /**
@@ -150,21 +140,18 @@ export function resolveSessionSlug(cwd: string = process.cwd()): string {
  * {@link isAnchorAlive}, never the primary liveness check, so a transcript
  * read failing must never itself be mistaken for "the run is dead".
  */
-export function transcriptMtime(
-  sessionSlug: string,
-  runId: string,
-): number | null {
+export function transcriptMtime(sessionSlug: string, runId: string): number | null {
   try {
     const transcriptPath = path.join(
       os.homedir(),
-      '.claude',
-      'projects',
+      ".claude",
+      "projects",
       sessionSlug,
       `${runId}.jsonl`,
-    )
-    return statSync(transcriptPath).mtimeMs
+    );
+    return statSync(transcriptPath).mtimeMs;
   } catch {
-    return null
+    return null;
   }
 }
 
@@ -188,14 +175,11 @@ export function classifyRun(
   sessionSlug: string,
   runId: string,
   options: {
-    readonly now?: number
-    readonly idleThresholdMs?: number
-    readonly anchorStartToken?: string
-    readonly isAnchorAliveFn?: (pid: number, startToken?: string) => boolean
-    readonly transcriptMtimeFn?: (
-      sessionSlug: string,
-      runId: string,
-    ) => number | null
+    readonly now?: number;
+    readonly idleThresholdMs?: number;
+    readonly anchorStartToken?: string;
+    readonly isAnchorAliveFn?: (pid: number, startToken?: string) => boolean;
+    readonly transcriptMtimeFn?: (sessionSlug: string, runId: string) => number | null;
   } = {},
 ): RunVerdict {
   const {
@@ -204,34 +188,34 @@ export function classifyRun(
     idleThresholdMs = RUN_IDLE_THRESHOLD_MS,
     isAnchorAliveFn: isAnchorAliveFunction = isAnchorAlive,
     transcriptMtimeFn: transcriptMtimeFunction = transcriptMtime,
-  } = options
+  } = options;
 
-  if (isAnchorAliveFunction(anchorPid, anchorStartToken)) return 'live'
+  if (isAnchorAliveFunction(anchorPid, anchorStartToken)) return "live";
 
-  const mtime = transcriptMtimeFunction(sessionSlug, runId)
-  if (mtime !== null && now - mtime <= idleThresholdMs) return 'idle'
+  const mtime = transcriptMtimeFunction(sessionSlug, runId);
+  if (mtime !== null && now - mtime <= idleThresholdMs) return "idle";
 
-  return 'dead'
+  return "dead";
 }
 
-const SAFE_ID_PATTERN = /^[A-Za-z0-9._-]{1,128}$/
+const SAFE_ID_PATTERN = /^[A-Za-z0-9._-]{1,128}$/;
 
 function assertSafeId(label: string, value: string): void {
-  if (!SAFE_ID_PATTERN.test(value) || value === '.' || value === '..') {
-    throw new Error(`forge-runs: unsafe ${label} ${JSON.stringify(value)}`)
+  if (!SAFE_ID_PATTERN.test(value) || value === "." || value === "..") {
+    throw new Error(`forge-runs: unsafe ${label} ${JSON.stringify(value)}`);
   }
 }
 
 function runDirectory(commonDirectory: string, runId: string): string {
-  assertSafeId('run id', runId)
-  return path.join(commonDirectory, '.forge', 'runs', runId)
+  assertSafeId("run id", runId);
+  return path.join(commonDirectory, ".forge", "runs", runId);
 }
 
 function writeJsonAtomically(filePath: string, value: unknown): void {
-  mkdirSync(path.dirname(filePath), { recursive: true })
-  const temporaryPath = `${filePath}.${process.pid}.tmp`
-  writeFileSync(temporaryPath, `${JSON.stringify(value, null, 2)}\n`)
-  renameSync(temporaryPath, filePath)
+  mkdirSync(path.dirname(filePath), { recursive: true });
+  const temporaryPath = `${filePath}.${process.pid}.tmp`;
+  writeFileSync(temporaryPath, `${JSON.stringify(value, null, 2)}\n`);
+  renameSync(temporaryPath, filePath);
 }
 
 /**
@@ -241,34 +225,31 @@ function writeJsonAtomically(filePath: string, value: unknown): void {
  * commit probe was unavailable — a distinct state from `0`.
  */
 export type CompletionEvent = {
-  readonly runId: string
-  readonly ticket: string
-  readonly event: 'SubagentStop' | 'Stop'
-  readonly outcome: 'allowed' | 'blocked'
-  readonly at: string
-  readonly sessionId: string | null
-  readonly branch: string | null
-  readonly commits: number | null
+  readonly runId: string;
+  readonly ticket: string;
+  readonly event: "SubagentStop" | "Stop";
+  readonly outcome: "allowed" | "blocked";
+  readonly at: string;
+  readonly sessionId: string | null;
+  readonly branch: string | null;
+  readonly commits: number | null;
   /** The subagent's own transcript (SubagentStop's `agent_transcript_path`); absent for a plain Stop. */
-  readonly agentTranscriptPath?: string
-}
+  readonly agentTranscriptPath?: string;
+};
 
 export function completionEventPath(
   commonDirectory: string,
   runId: string,
   ticket: string,
 ): string {
-  assertSafeId('ticket', ticket)
-  return path.join(runDirectory(commonDirectory, runId), 'events', `${ticket}.json`)
+  assertSafeId("ticket", ticket);
+  return path.join(runDirectory(commonDirectory, runId), "events", `${ticket}.json`);
 }
 
-export function writeCompletionEvent(
-  commonDirectory: string,
-  event: CompletionEvent,
-): string {
-  const filePath = completionEventPath(commonDirectory, event.runId, event.ticket)
-  writeJsonAtomically(filePath, event)
-  return filePath
+export function writeCompletionEvent(commonDirectory: string, event: CompletionEvent): string {
+  const filePath = completionEventPath(commonDirectory, event.runId, event.ticket);
+  writeJsonAtomically(filePath, event);
+  return filePath;
 }
 
 /** `null` when the event is missing or unparseable — callers treat both as "no event". */
@@ -278,28 +259,40 @@ export function readCompletionEvent(
   ticket: string,
 ): CompletionEvent | null {
   try {
-    const parsed: any = JSON.parse(
-      readFileSync(completionEventPath(commonDirectory, runId, ticket), 'utf8'),
-    )
-    if (typeof parsed !== 'object' || parsed === null) return null
+    const parsed: unknown = JSON.parse(
+      readFileSync(completionEventPath(commonDirectory, runId, ticket), "utf8"),
+    );
+    if (!isObject(parsed)) return null;
     if (
-      typeof parsed.runId !== 'string' ||
-      typeof parsed.ticket !== 'string' ||
-      (parsed.event !== 'SubagentStop' && parsed.event !== 'Stop') ||
-      (parsed.outcome !== 'allowed' && parsed.outcome !== 'blocked') ||
-      typeof parsed.at !== 'string'
+      typeof parsed.runId !== "string" ||
+      typeof parsed.ticket !== "string" ||
+      (parsed.event !== "SubagentStop" && parsed.event !== "Stop") ||
+      (parsed.outcome !== "allowed" && parsed.outcome !== "blocked") ||
+      typeof parsed.at !== "string"
     ) {
-      return null
+      return null;
     }
-    return parsed
+    return {
+      runId: parsed.runId,
+      ticket: parsed.ticket,
+      event: parsed.event,
+      outcome: parsed.outcome,
+      at: parsed.at,
+      sessionId: typeof parsed.sessionId === "string" ? parsed.sessionId : null,
+      branch: typeof parsed.branch === "string" ? parsed.branch : null,
+      commits: typeof parsed.commits === "number" ? parsed.commits : null,
+      ...(typeof parsed.agentTranscriptPath === "string"
+        ? { agentTranscriptPath: parsed.agentTranscriptPath }
+        : {}),
+    };
   } catch {
-    return null
+    return null;
   }
 }
 
 function stallNudgePath(commonDirectory: string, runId: string, ticket: string): string {
-  assertSafeId('ticket', ticket)
-  return path.join(runDirectory(commonDirectory, runId), 'nudges', `${ticket}.json`)
+  assertSafeId("ticket", ticket);
+  return path.join(runDirectory(commonDirectory, runId), "nudges", `${ticket}.json`);
 }
 
 /** `0` when never nudged; `Infinity` when the counter file is unreadable (fails closed). */
@@ -308,29 +301,29 @@ export function readStallNudgeCount(
   runId: string,
   ticket: string,
 ): number {
-  let text: string
+  let text: string;
   try {
-    text = readFileSync(stallNudgePath(commonDirectory, runId, ticket), 'utf8')
+    text = readFileSync(stallNudgePath(commonDirectory, runId, ticket), "utf8");
   } catch (error) {
-    if (errnoCode(error) === 'ENOENT') return 0
-    return Number.POSITIVE_INFINITY
+    if (errnoCode(error) === "ENOENT") return 0;
+    return Number.POSITIVE_INFINITY;
   }
   try {
-    const parsedCounter: { count?: unknown } = JSON.parse(text)
-    const { count } = parsedCounter
-    return typeof count === 'number' && Number.isSafeInteger(count) && count >= 0
+    const parsedCounter: { count?: unknown } = JSON.parse(text);
+    const { count } = parsedCounter;
+    return typeof count === "number" && Number.isSafeInteger(count) && count >= 0
       ? count
-      : Number.POSITIVE_INFINITY
+      : Number.POSITIVE_INFINITY;
   } catch {
-    return Number.POSITIVE_INFINITY
+    return Number.POSITIVE_INFINITY;
   }
 }
 
 export type StallNudgeResult = {
-  readonly granted: boolean
-  readonly count: number
-  readonly cap: number
-}
+  readonly granted: boolean;
+  readonly count: number;
+  readonly cap: number;
+};
 
 /**
  * Spends one stall nudge for a ticket if `budgets.stallNudgeCap` allows. The
@@ -343,11 +336,11 @@ export function recordStallNudge(
   ticket: string,
   cap: number,
 ): StallNudgeResult {
-  const current = readStallNudgeCount(commonDirectory, runId, ticket)
+  const current = readStallNudgeCount(commonDirectory, runId, ticket);
   if (current >= cap) {
-    return { granted: false, count: Math.min(current, cap), cap }
+    return { granted: false, count: Math.min(current, cap), cap };
   }
-  const count = current + 1
-  writeJsonAtomically(stallNudgePath(commonDirectory, runId, ticket), { count })
-  return { granted: true, count, cap }
+  const count = current + 1;
+  writeJsonAtomically(stallNudgePath(commonDirectory, runId, ticket), { count });
+  return { granted: true, count, cap };
 }
