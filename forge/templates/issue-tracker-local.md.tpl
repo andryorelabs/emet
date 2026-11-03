@@ -36,6 +36,19 @@ States: `backlog | todo | in-progress | in-review | done | canceled` — the
 same six Linear itself uses, so `/forge`'s own prose reads identically
 regardless of which tracker backend a repo configures.
 
+## Spec and ticket blocks
+
+- `SPEC-<n>.md`: `## Specs` (`- **S1**: …`, one per line), then
+  `## Global Constraints` (rules every worker and reviewer must obey; copied verbatim
+  into each brief) and `## Review Focus` (inputs the spec implies but nothing
+  tests; each gets a test).
+- `{{ID_PREFIX}}-<n>.md`: `Covers: S…` under the title, then `## Interfaces`
+  (`Consumes:` / `Produces:` with signatures), `## Project skills`,
+  `## Allowed edit surfaces`, `## Context budget`.
+- Every S# needs an acceptance scenario (`Scenario: WHEN … THEN …`); `forge
+  validate` enforces coverage, scenarios, disjoint wave surfaces and acyclic
+  blockers before approval.
+
 ## Who will write state transitions
 
 See `tracker.transitions` in `forge.config.json`: `onStart: worker`,

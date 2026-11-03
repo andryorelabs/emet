@@ -41,6 +41,19 @@ workspace's team/project settings over MCP without making live calls during
   state transitions" below for the only transition `/forge` writes directly.
 - **Priority**: `0` = None, `1` = Urgent, `2` = High, `3` = Medium, `4` = Low.
 
+## Spec and ticket blocks
+
+- Spec description: `## Specs` (`- **S1**: …`, one per line), then
+  `## Global Constraints` (rules every worker and reviewer must obey; copied verbatim
+  into each brief) and `## Review Focus` (inputs the spec implies but nothing
+  tests; each gets a test).
+- Ticket description: `Covers: S…` under the title, then `## Interfaces`
+  (`Consumes:` / `Produces:` with signatures), `## Project skills`,
+  `## Allowed edit surfaces`, `## Context budget`.
+- Every S# needs an acceptance scenario (`Scenario: WHEN … THEN …`); `forge
+  validate` enforces coverage, scenarios, disjoint wave surfaces and acyclic
+  blockers before approval.
+
 ## Who writes state transitions
 
 `tracker.transitions`: `onStart: worker`, `onPrOpen: automatic`,
