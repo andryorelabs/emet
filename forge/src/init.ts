@@ -406,6 +406,7 @@ export function buildForgeConfig(detected: DetectedRepoInfo): ForgeConfig {
       requiredCommands: detected.tracker === "github" ? ["gh"] : [],
     },
     handoff: { ...DEFAULT_FORGE_CONFIG.handoff },
+    landing: { ...DEFAULT_FORGE_CONFIG.landing },
     pr: { ...DEFAULT_FORGE_CONFIG.pr },
     usage: { ...DEFAULT_FORGE_CONFIG.usage },
     models: DEFAULT_FORGE_CONFIG.models,
