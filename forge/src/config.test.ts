@@ -9,6 +9,7 @@ import {
   loadForgeConfig,
   loadForgeConfigWithDefaults,
   requireForgeConfig,
+  resolveWorkerModel,
   type ForgeConfig,
 } from './config'
 
@@ -85,8 +86,13 @@ describe('loadForgeConfig', () => {
           high: { model: 'opus', effort: 'max' },
         },
         triage: 'sonnet',
+        escalation: { sonnet: 'opus', haiku: 'sonnet' },
       },
       review: { highRiskPaths: ['billing'] },
+      budgets: { workerAttempts: 3, reviewRounds: 4, stallNudgeCap: 9 },
+      sizing: { inlineMaxLines: 50 },
+      map: { path: 'docs/map.md' },
+      specs: { dir: 'docs/s' },
     }
     await writeConfig(full)
     expect(await loadForgeConfig(repoRoot)).toEqual({ status: 'ok', config: full })
@@ -377,6 +383,15 @@ describe('models and review sections', () => {
     [{ models: { worker: { model: '' } } }, /"models.worker.model"/],
     [{ models: { reviewer: { medium: 3 } } }, /"models.reviewer.medium" must be an object/],
     [{ models: { triage: '' } }, /"models.triage"/],
+    [{ budgets: 'x' }, /"budgets" must be an object/],
+    [{ budgets: { workerAttempts: 0 } }, /"budgets.workerAttempts" must be a positive integer/],
+    [{ budgets: { reviewRounds: 1.5 } }, /"budgets.reviewRounds" must be a positive integer/],
+    [{ budgets: { stallNudgeCap: -1 } }, /"budgets.stallNudgeCap" must be a positive integer/],
+    [{ models: { escalation: [] } }, /"models.escalation" must be an object/],
+    [{ models: { escalation: { sonnet: '' } } }, /"models.escalation.sonnet" must be a non-empty string/],
+    [{ sizing: { inlineMaxLines: 0 } }, /"sizing.inlineMaxLines" must be a positive integer/],
+    [{ map: { path: '' } }, /"map.path" must be a non-empty string/],
+    [{ specs: { dir: 3 } }, /"specs.dir" must be a non-empty string/],
     [{ review: { highRiskPaths: 'auth' } }, /"review.highRiskPaths" must be an array/],
     [{ review: { highRiskPaths: [''] } }, /"review.highRiskPaths\[0\]"/],
   ])('malformed for %j', async (value, pattern) => {
@@ -390,5 +405,38 @@ describe('models and review sections', () => {
     await writeConfig({ review: { highRiskPaths: ['billing', 'ledger'] } })
     const { config } = (await loadForgeConfig(repoRoot)) as { config: ForgeConfig }
     expect(config.review.highRiskPaths).toEqual(['billing', 'ledger'])
+  })
+})
+
+describe('new scaffold defaults', () => {
+  test('defaults match the spec', () => {
+    expect(DEFAULT_FORGE_CONFIG.budgets).toEqual({ workerAttempts: 2, reviewRounds: 2, stallNudgeCap: 6 })
+    expect(DEFAULT_FORGE_CONFIG.models.escalation).toEqual({ sonnet: 'opus' })
+    expect(DEFAULT_FORGE_CONFIG.sizing.inlineMaxLines).toBe(100)
+    expect(DEFAULT_FORGE_CONFIG.map.path).toBe('docs/agents/codebase.md')
+    expect(DEFAULT_FORGE_CONFIG.specs.dir).toBe('docs/specs')
+  })
+
+  test('a partial budgets section keeps the other defaults', async () => {
+    await writeConfig({ budgets: { reviewRounds: 5 } })
+    const { config } = (await loadForgeConfig(repoRoot)) as { config: ForgeConfig }
+    expect(config.budgets).toEqual({ workerAttempts: 2, reviewRounds: 5, stallNudgeCap: 6 })
+  })
+
+  test('a user escalation map replaces the default map', async () => {
+    await writeConfig({ models: { escalation: { haiku: 'sonnet' } } })
+    const { config } = (await loadForgeConfig(repoRoot)) as { config: ForgeConfig }
+    expect(config.models.escalation).toEqual({ haiku: 'sonnet' })
+  })
+})
+
+describe('resolveWorkerModel', () => {
+  test('falls back to models.worker when the ticket names no model', () => {
+    expect(resolveWorkerModel(DEFAULT_FORGE_CONFIG)).toEqual({ model: 'sonnet', effort: 'medium' })
+    expect(resolveWorkerModel(DEFAULT_FORGE_CONFIG, '  ')).toEqual({ model: 'sonnet', effort: 'medium' })
+  })
+
+  test('a ticket Model: wins and keeps the configured effort', () => {
+    expect(resolveWorkerModel(DEFAULT_FORGE_CONFIG, ' opus ')).toEqual({ model: 'opus', effort: 'medium' })
   })
 })

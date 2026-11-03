@@ -361,7 +361,8 @@
             "high": { "type": "object", "additionalProperties": false, "properties": { "model": { "type": "string", "minLength": 1, "default": "opus" }, "effort": { "type": "string", "enum": ["low", "medium", "high", "xhigh", "max"], "default": "medium" } }, "description": "Reviewer for the high tier." }
           }
         },
-        "triage": { "type": "string", "minLength": 1, "default": "haiku", "description": "Cheap model for triage and passive-tier review." }
+        "triage": { "type": "string", "minLength": 1, "default": "haiku", "description": "Cheap model for triage and passive-tier review." },
+        "escalation": { "type": "object", "additionalProperties": { "type": "string", "minLength": 1 }, "default": { "sonnet": "opus" }, "description": "Next model tier per model name, used when a ticket reaches its fix cap." }
       }
     },
     "review": {
@@ -374,6 +375,36 @@
           "default": [],
           "description": "Extra case-insensitive path tokens that force the high review tier in `forge assess`, on top of the built-in set."
         }
+      }
+    },
+    "budgets": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "workerAttempts": { "type": "integer", "minimum": 1, "default": 2, "description": "Worker attempts per ticket before it is deferred." },
+        "reviewRounds": { "type": "integer", "minimum": 1, "default": 2, "description": "Review/fix rounds per ticket." },
+        "stallNudgeCap": { "type": "integer", "minimum": 1, "default": 6, "description": "Stall nudges per worker; never refills." }
+      }
+    },
+    "sizing": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "inlineMaxLines": { "type": "integer", "minimum": 1, "default": 100, "description": "Largest ticket body (lines) kept inline in a worker prompt." }
+      }
+    },
+    "map": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "path": { "type": "string", "minLength": 1, "default": "docs/agents/codebase.md", "description": "Repo-relative path of the generated codebase map." }
+      }
+    },
+    "specs": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "dir": { "type": "string", "minLength": 1, "default": "docs/specs", "description": "Repo-relative directory of living specs." }
       }
     },
     "design": {

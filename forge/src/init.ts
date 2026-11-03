@@ -264,6 +264,10 @@ export function buildForgeConfig(detected: DetectedRepoInfo): ForgeConfig {
     usage: { ...DEFAULT_FORGE_CONFIG.usage },
     models: DEFAULT_FORGE_CONFIG.models,
     review: DEFAULT_FORGE_CONFIG.review,
+    budgets: { ...DEFAULT_FORGE_CONFIG.budgets },
+    sizing: { ...DEFAULT_FORGE_CONFIG.sizing },
+    map: { ...DEFAULT_FORGE_CONFIG.map },
+    specs: { ...DEFAULT_FORGE_CONFIG.specs },
   }
 }
 
