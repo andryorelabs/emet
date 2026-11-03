@@ -9,6 +9,7 @@ import {
   auditRepo,
   checkExternalCliFlags,
   checkTrackerTarget,
+  createEnvironmentProbes,
   checkWorktreeForkBase,
   findMissingFlags,
   normalizeGithubSlug,
@@ -577,5 +578,12 @@ describe('findInstallDrift', () => {
   test('reports a missing file', async () => {
     writeManifest({ '.claude/agents/gone.md': sha('x') })
     expect((await findInstallDrift(home))[0]).toContain('missing')
+  })
+})
+
+describe('createEnvironmentProbes', () => {
+  test('helpText reports a missing binary as unrunnable, not as help text', async () => {
+    const probes = createEnvironmentProbes()
+    expect(await probes.helpText(['forge-no-such-binary-xyz', '--help'])).toBeNull()
   })
 })

@@ -324,6 +324,7 @@ async function readBaseRefSetting(repoRoot: string): Promise<string | null> {
 export function createEnvironmentProbes(): EnvironmentProbes {
   return {
     helpText: async (command) => {
+      if (!command[0] || Bun.which(command[0]) === null) return null
       try {
         const result = await Bun.$`${command}`.nothrow().quiet()
         const text = `${result.stdout.toString()}${result.stderr.toString()}`

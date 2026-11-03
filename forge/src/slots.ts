@@ -273,7 +273,7 @@ export function releaseSlotIfOwned(
  * `ticket`, when given, additionally scopes the release to the one slot
  * matching `holder.ticket` — this is what lets a worker's own slot free up
  * the moment *that* worker's completion notification arrives (Phase 7/8;
- * see `reference/phases-6-9.md`), instead of every slot the whole run holds
+ * see `reference/phases-8-closeout.md`), instead of every slot the whole run holds
  * staying occupied until the entire wave's `forge cleanup --run` at
  * close-out.
  */

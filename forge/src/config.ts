@@ -207,12 +207,19 @@ export interface ForgeConfig {
 
 /**
  * The worker model for a ticket: its own `Model:` line wins over
- * `models.worker.model`; the configured effort is kept either way.
+ * `models.worker.model`. A `model/effort` value (e.g. `opus/high`) also
+ * overrides the effort; a bare model keeps the configured one, and an
+ * unrecognized effort part is ignored rather than passed through.
  */
 export function resolveWorkerModel(config: ForgeConfig, ticketModel?: string): ModelChoice {
   const override = ticketModel?.trim()
   if (!override) return config.models.worker
-  return { model: override, effort: config.models.worker.effort }
+  const [modelPart = '', effortPart = ''] = override.split('/', 2).map((part) => part.trim())
+  if (!modelPart) return config.models.worker
+  const effort = MODEL_EFFORTS.includes(effortPart as ModelEffort)
+    ? (effortPart as ModelEffort)
+    : config.models.worker.effort
+  return { model: modelPart, effort }
 }
 
 /**

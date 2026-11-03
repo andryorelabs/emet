@@ -439,4 +439,14 @@ describe('resolveWorkerModel', () => {
   test('a ticket Model: wins and keeps the configured effort', () => {
     expect(resolveWorkerModel(DEFAULT_FORGE_CONFIG, ' opus ')).toEqual({ model: 'opus', effort: 'medium' })
   })
+
+  test('a model/effort ticket value overrides both parts', () => {
+    expect(resolveWorkerModel(DEFAULT_FORGE_CONFIG, 'opus/high')).toEqual({ model: 'opus', effort: 'high' })
+    expect(resolveWorkerModel(DEFAULT_FORGE_CONFIG, ' opus / xhigh ')).toEqual({ model: 'opus', effort: 'xhigh' })
+  })
+
+  test('an unknown effort part is ignored and an empty model falls back to the config', () => {
+    expect(resolveWorkerModel(DEFAULT_FORGE_CONFIG, 'opus/turbo')).toEqual({ model: 'opus', effort: 'medium' })
+    expect(resolveWorkerModel(DEFAULT_FORGE_CONFIG, '/high')).toEqual(DEFAULT_FORGE_CONFIG.models.worker)
+  })
 })

@@ -24,7 +24,7 @@ import { listOccupiedSlots, type SlotListEntry } from './slots'
  * is already busy on this host.
  *
  * None of these are `/forge`-internal bugs — they're triggers this repo's
- * own docs (`worker-prompt.md`, `phases-6-9.md`) already ask a session not
+ * own docs (`worker-prompt.md`, `phases-6-7-dispatch.md`) already ask a session not
  * to pull, restated here as a hook because a prose rule has, measurably,
  * not been enough (`reference/incidents.md`'s "handoff note's 0-of-4 wave").
  * A hook makes the same rule structurally true regardless of whether this
@@ -145,7 +145,7 @@ export function collectProcessAncestry(
 /**
  * Whether at least one *other* run (an `anchorPid` outside this hook
  * process's own ancestry) holds a slot with a `'live'` verdict — the signal
- * `phases-6-9.md`'s Phase 8 uses to skip `code-review`'s finder-roster
+ * `phases-8-closeout.md`'s Phase 8 uses to skip `code-review`'s finder-roster
  * fan-out: several real runs measured that roster hanging when multiple
  * `/forge` coordinators' background work was contending for the same host
  * at once, unrelated to raw memory/cpu headroom.
