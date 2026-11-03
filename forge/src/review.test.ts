@@ -78,7 +78,7 @@ describe('recordRound', () => {
     )
     if (!second.ok) throw new Error('unreachable')
     const status = Object.fromEntries(second.ledger.findings.map((f) => [f.id, f.status]))
-    expect(status).toMatchObject({ F1: 'open', N1: 'deferred', N2: 'open', N3: 'open', N4: 'open' })
+    expect(status).toMatchObject({ F1: 'resolved', N1: 'deferred', N2: 'open', N3: 'open', N4: 'open' })
   })
 
   test('refuses a round past the cap', () => {
@@ -91,6 +91,26 @@ describe('recordRound', () => {
     const over = recordRound(ledger, [], { changedFiles: [], reviewRounds: cap })
     expect(over.ok).toBe(false)
     if (!over.ok) expect(over.reason).toMatch(/cap/)
+  })
+})
+
+describe('recordRound resolution', () => {
+  test('resolves findings the next round no longer reports and does not duplicate repeats', () => {
+    const options = { changedFiles: [], reviewRounds: 3 }
+    const parse = (items: Record<string, unknown>[]) => parseFindings(JSON.stringify(items))
+    const first = recordRound(
+      emptyLedger('T'),
+      parse([finding({ id: 'F1' }), finding({ id: 'F2' })]),
+      options,
+    )
+    if (!first.ok) throw new Error('round 1 failed')
+    const second = recordRound(first.ledger, parse([finding({ id: 'F2' })]), options)
+    if (!second.ok) throw new Error('round 2 failed')
+    expect(second.ledger.findings.filter((entry) => entry.id === 'F2')).toHaveLength(1)
+    expect(second.ledger.findings.find((entry) => entry.id === 'F1')?.status).toBe('resolved')
+    const third = recordRound(second.ledger, [], options)
+    if (!third.ok) throw new Error('round 3 failed')
+    expect(third.ledger.findings.some((entry) => entry.status === 'open')).toBe(false)
   })
 })
 

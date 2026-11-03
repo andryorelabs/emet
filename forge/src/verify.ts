@@ -230,6 +230,11 @@ export async function run(argv: string[]): Promise<void> {
     return
   }
   try {
+    for (const [label, value] of [['ticket', ticket], ['--run', explicitRun]] as const) {
+      if (value !== undefined && !/^[\w-]+$/.test(value)) {
+        throw new Error(`invalid ${label} id "${value}"`)
+      }
+    }
     const repoRoot = (await resolveRepoRoot()) ?? process.cwd()
     const runId = resolveRunId(repoRoot, ticket, explicitRun)
     const runDir = path.join(repoRoot, '.forge', 'runs', runId)

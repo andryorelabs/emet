@@ -35,7 +35,7 @@ export interface Finding {
 }
 
 export interface LedgerFinding extends Finding {
-  readonly status: 'open' | 'deferred'
+  readonly status: 'open' | 'deferred' | 'resolved'
   readonly round: number
   readonly deferReason?: string
 }
@@ -140,7 +140,11 @@ export function recordRound(
         'new blocker in recheck cites no prior finding and no file changed since last review',
     }
   })
-  return { ok: true, ledger: { ...ledger, rounds: round, findings: [...ledger.findings, ...added] } }
+  const reportedIds = new Set(findings.map((entry) => entry.id))
+  const carried = ledger.findings
+    .filter((entry) => !reportedIds.has(entry.id))
+    .map((entry): LedgerFinding => (entry.status === 'open' ? { ...entry, status: 'resolved' } : entry))
+  return { ok: true, ledger: { ...ledger, rounds: round, findings: [...carried, ...added] } }
 }
 
 export function nextEscalationModel(
@@ -194,6 +198,9 @@ export async function run(argv: string[]): Promise<void> {
       console.error(USAGE)
       process.exitCode = 2
       return
+    }
+    if (!/^[\w-]+$/.test(ticket)) {
+      throw new ForgeConfigError(`forge review: invalid ticket id "${ticket}"`)
     }
     const repoRoot = await resolveRepoRoot()
     if (!repoRoot) throw new ForgeConfigError('forge review: not inside a git repository')
