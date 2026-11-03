@@ -10,6 +10,12 @@ and this project adheres to
 
 ### Added
 
+- `install.sh` works without Bun: it installs the standalone-binary shim as
+  `~/.local/bin/forge`, rewrites plugin placeholders in the prompts it copies,
+  installs `commands/run.md` as `~/.claude/commands/forge.md` and accepts
+  `shasum -a 256` in place of `sha256sum`.
+- README states the real requirements, both install paths and the
+  `/setup-matt-pocock-skills` then `forge init` order.
 - Agent guide (`AGENTS.md`), domain glossary (`CONTEXT.md`) and architecture
   decision records under `docs/adr/`.
 
