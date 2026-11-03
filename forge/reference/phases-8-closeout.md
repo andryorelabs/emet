@@ -165,7 +165,8 @@ this line needs a manual per-ticket state write instead.
 `pr.maxCiFixAttempts` fix rounds, then leave the branch unmerged and report);
 its result is the `--ci` value for `forge gate`. If every ticket answers
 `merge` or `chain` and `pr.autoMerge` is on: `forge land --spec <spec-id>
---branch <integration> --tickets <id,…>` (refuses with exit 1 unless the main
+--branch <integration> --tickets <id,…> --wave <n> --summary "<what the wave
+contains>"` (refuses with exit 1 unless the main
 worktree is on `repo.trunk` and clean; prints the new trunk sha as JSON). Then
 close each ticket per `onPrMerge: coordinator`, and run `forge spec-merge` and
 `forge cleanup --run <runId>` as separate calls. `pr.autoMerge` off or anything
