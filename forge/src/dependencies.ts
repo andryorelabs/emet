@@ -2,7 +2,7 @@ import { existsSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
 
-import type { TrackerKind } from "./config";
+import type { LandingMode, TrackerKind } from "./config";
 import { isObject } from "./narrow";
 import {
   checkSkillsContract,
@@ -394,6 +394,7 @@ function trackerKindUndeclaredCheck(): DependencyCheck {
 
 export async function checkDependencies(input: {
   readonly tracker: TrackerKind | null;
+  readonly landingMode?: LandingMode;
   readonly repoRoot: string;
   readonly probes: DependencyProbes;
 }): Promise<readonly DependencyCheck[]> {
@@ -407,7 +408,9 @@ export async function checkDependencies(input: {
     checks.push(trackerKindUndeclaredCheck());
     return checks;
   }
-  checks.push(classifyGithubCliProbe(await input.probes.githubCli()));
+  if (input.tracker === "github" || (input.landingMode ?? "pr") === "pr") {
+    checks.push(classifyGithubCliProbe(await input.probes.githubCli()));
+  }
   if (input.tracker === "linear") {
     checks.push(classifyLinearMcpProbe(await input.probes.linearMcpServer(input.repoRoot)));
   }

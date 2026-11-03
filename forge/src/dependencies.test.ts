@@ -443,6 +443,37 @@ describe("checkDependencies", () => {
     expect(unsatisfiedChecks(local).map((check) => check.dependency)).toEqual(["github-cli"]);
   });
 
+  test("skips gh for a local tracker with merge landing", async () => {
+    const local = await checkDependencies({
+      tracker: "local",
+      landingMode: "merge",
+      repoRoot: "/tmp",
+      probes: stubProbes({ githubCli: { kind: "not-on-path" } }),
+    });
+    expect(local.some((check) => check.dependency === "github-cli")).toBe(false);
+    expect(unsatisfiedChecks(local)).toEqual([]);
+  });
+
+  test("still checks gh for a github tracker with merge landing", async () => {
+    const github = await checkDependencies({
+      tracker: "github",
+      landingMode: "merge",
+      repoRoot: "/tmp",
+      probes: stubProbes({ githubCli: { kind: "not-on-path" } }),
+    });
+    expect(unsatisfiedChecks(github).map((check) => check.dependency)).toEqual(["github-cli"]);
+  });
+
+  test("checks gh for a local tracker with pr landing", async () => {
+    const local = await checkDependencies({
+      tracker: "local",
+      landingMode: "pr",
+      repoRoot: "/tmp",
+      probes: stubProbes({ githubCli: { kind: "not-on-path" } }),
+    });
+    expect(unsatisfiedChecks(local).map((check) => check.dependency)).toEqual(["github-cli"]);
+  });
+
   test("checks Linear only for a linear tracker", async () => {
     const linear = await checkDependencies({
       tracker: "linear",
