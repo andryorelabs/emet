@@ -69,6 +69,8 @@ if [ ! -x "$cached_binary" ]; then
 
   chmod +x "$staging/$asset" || fail "cannot mark $asset executable"
   mv -f "$staging/$asset" "$cached_binary" || fail "cannot cache $asset"
+  rmdir "$staging" 2>/dev/null || true
+  trap - EXIT
 fi
 
 if [ "${FORGE_PREFETCH:-}" = "1" ]; then
