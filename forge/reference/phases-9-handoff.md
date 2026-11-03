@@ -35,7 +35,7 @@ instead of one session accumulating every wave in the run (see
 1. Report this wave's outcome (PR link, what shipped, what got flagged) —
    the same content a mid-run status update would carry, just written down
    instead of only said.
-2. Hand off to the next wave. Chain only when `forge gate <ticket>
+2. Hand off to the next wave. Chain only when Phase 8's `forge gate <ticket>
    --waves-remaining <n>` answered `chain` for every ticket of this wave (it
    folds in `handoff.autoChain`, the merged PR, the green integration suite,
    and nothing flagged); anything else — `merge` without `chain`, `hold`,

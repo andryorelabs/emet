@@ -133,7 +133,7 @@ Commit with this repo's normal convention, ending the body with:
 1. Write the full report (changes, decisions, S# covered or not, dead-ends,
    test output tail) to a file, then record it:
    `forge results --run {{run_id}} --write {{ticket_id}} --status
-   <DONE|DONE_WITH_CONCERNS|BLOCKED|NEEDS_CONTEXT> --report <path> --risk
+   <DONE|DONE_WITH_CONCERNS|BLOCKED|NEEDS_CONTEXT> --report .forge/report-{{ticket_id}}.md (untracked; never commit it) --risk
    "<Risk: …>"`.
 2. Your final message is at most **15 lines**: status, S# covered, commit
    SHA(s), one line per concern/blocker, the report path. No diffs, no logs.

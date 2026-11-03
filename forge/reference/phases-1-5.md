@@ -185,8 +185,8 @@ Now that the plan is approved, in this exact order:
    `forge materialize-log --run <id> --lookup <localKey>` (exit 0 = already
    created, skip); right after, `--record <localKey> <trackerId>` — an
    interrupted run never duplicates.
-4. `forge approve --run <id> --spec <file> [--tickets <file>]` writes
-   `approval.json` (spec and ticket hashes); Phase 6 refuses to dispatch when
+4. `forge approve --run spec<spec-id> --spec <file> [--tickets <file>]` writes
+   `approval.json` (spec and ticket hashes; write the ticket list to `.forge/runs/spec<spec-id>/tickets.json` first); Phase 6 refuses to dispatch when
    `approve --check` reports a change.
 
 **`--draft` stops here.** Print the spec issue's ID as the handle for a

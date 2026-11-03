@@ -31,7 +31,7 @@ it in Phase 9's report like any failed ticket.
 A confident summary is not evidence (`reference/incidents.md`). For each
 worker: `forge results --run <runId> --read <ticket>` (status, report path,
 `Risk:` line; no result = no report), then `forge verify <ticket> --run
-<runId>` — commits beyond the dispatch baseline, paths inside the edit
+<runId> --worktree <its worktree>` — commits beyond the dispatch baseline, paths inside the edit
 surfaces, `handoff --check`, `commands.workerScopedSuite`. Exit 1 means the
 branch is neither reviewed nor merged: `forge gate <ticket>` decides retry or
 defer against `budgets.workerAttempts`. You post the worker's decisions and
@@ -62,7 +62,7 @@ worktrees can collide on it. Before `git checkout -b`, check `git rev-parse
 
 Review here, once, over the full integration branch — this is the review
 Phase 7 deliberately deferred. First route it by risk: run
-`forge assess --base <trunk> --head <integration branch>`. It prints JSON
+`forge assess --base <trunk> --head <integration branch> [--risk-line "<first non-none Risk: line>"]`. It prints JSON
 `{tier, reasons, reviewer:{model,effort}}`, and the tier decides:
 
 - `passive` (docs-only diff) → no reviewer. Skip the dispatch below, note the
@@ -102,7 +102,8 @@ for "Rulings I made" in the final report and PR body.
 Then run `commands.fullSuite` exactly once over the merged result (the
 Phase 7 singleton, if any). Red blocks the PR and `autoChain`. Finally ask
 the one decision: `forge gate <ticket> --tier <assess tier> --ci
-<pass|fail|pending|none> --integration <pass|fail|pending|none>` prints
+<pass|fail|pending|none> --integration <pass|fail|pending|none>
+--waves-remaining <n>` prints
 `{decision, reasons}` as JSON — `merge`, `hold`, `chain`, `stop`, or `defer`
 (label `forge:deferred`; the wave continues). `hold` and `stop` leave the PR
 open with the human-decision label; don't re-derive the rules in prose.

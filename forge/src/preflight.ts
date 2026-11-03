@@ -986,8 +986,9 @@ async function main(config: ForgeConfig, repoRoot: string) {
     }
   }
 
-  if (currentRunId !== undefined) {
-    const gate = evaluateRunGate(path.join(repoRoot, '.forge', 'runs', currentRunId), {
+  const approvalRunId = readFlagValue('--approval')
+  if (approvalRunId !== undefined) {
+    const gate = evaluateRunGate(path.join(repoRoot, '.forge', 'runs', approvalRunId), {
       inlineMaxLines: config.sizing.inlineMaxLines,
     })
     failures.push(...gate.failures)
