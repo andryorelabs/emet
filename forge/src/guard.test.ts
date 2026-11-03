@@ -5,6 +5,9 @@ import {
   checkCodeReviewFanoutWithSiblingRun,
   checkSessionStop,
   checkSubagentStop,
+  evaluateStopGuard,
+  recordCompletionEvent,
+  type CompletionEventDependencies,
   finalReportMarkerPath,
   formatStopOutput,
   isValidSessionId,
@@ -251,6 +254,79 @@ describe('stop hooks', () => {
     expect(complete.decision).toBe('allow')
     const outside = await checkSubagentStop({ cwd: '/home/u/repo' }, subagentDeps(0, []))
     expect(outside.decision).toBe('allow')
+  })
+
+  const eventDeps = (
+    written: unknown[],
+    overrides: Partial<CompletionEventDependencies> = {},
+  ): CompletionEventDependencies => ({
+    resolveOwner: async () => ({ runId: 'run-a', ticket: 'CLA-50', branch: 'cla-50-x' }),
+    resolveCommonDirectory: async () => '/repo/.git',
+    countNewCommits: async () => 3,
+    writeEvent: (_commonDirectory, event) => {
+      written.push(event)
+    },
+    now: () => new Date('2026-11-03T00:00:00.000Z'),
+    ...overrides,
+  })
+
+  test('records an allowed completion event for a forge-owned worktree', async () => {
+    const written: unknown[] = []
+    await recordCompletionEvent(
+      'SubagentStop',
+      { cwd: worktreeCwd, session_id: 's1' },
+      { decision: 'allow' },
+      eventDeps(written),
+    )
+    expect(written).toEqual([
+      {
+        runId: 'run-a',
+        ticket: 'CLA-50',
+        event: 'SubagentStop',
+        outcome: 'allowed',
+        at: '2026-11-03T00:00:00.000Z',
+        sessionId: 's1',
+        branch: 'cla-50-x',
+        commits: 3,
+      },
+    ])
+  })
+
+  test('records blocked outcome and a null commit probe as such', async () => {
+    const written: unknown[] = []
+    await recordCompletionEvent(
+      'Stop',
+      { cwd: worktreeCwd },
+      { decision: 'block', reason: 'x' },
+      eventDeps(written, { countNewCommits: async () => null }),
+    )
+    expect(written[0]).toMatchObject({ outcome: 'blocked', commits: null, sessionId: null })
+  })
+
+  test('records nothing when the cwd is not a forge-owned worktree, and never throws', async () => {
+    const written: unknown[] = []
+    await recordCompletionEvent(
+      'SubagentStop',
+      { cwd: '/home/u/repo' },
+      { decision: 'allow' },
+      eventDeps(written, { resolveOwner: async () => null }),
+    )
+    expect(written).toEqual([])
+    await recordCompletionEvent(
+      'SubagentStop',
+      { cwd: worktreeCwd },
+      { decision: 'allow' },
+      eventDeps(written, {
+        writeEvent: () => {
+          throw new Error('disk full')
+        },
+      }),
+    )
+  })
+
+  test('evaluateStopGuard still returns the verdict when recording fails', async () => {
+    const verdict = await evaluateStopGuard('SubagentStop', { cwd: '/home/u/repo' }, process.pid)
+    expect(verdict.decision).toBe('allow')
   })
 
   const holder = makeHolder({ anchorPid: 500 })

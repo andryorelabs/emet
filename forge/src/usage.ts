@@ -18,6 +18,7 @@
  *   forge usage --session <id>        # a specific coordinator session
  *   forge usage --file <path.jsonl>   # a single transcript file directly
  *   forge usage --stalled [--minutes N]  # find hung subagents (default 10m)
+ *   forge usage --stalled --run <id> [--nudge]  # per-ticket state from events + branch commits
  *
  * `--stalled` is the watchdog for a coordinator's own `code-review` fan-out
  * (`docs/agents/forge.md` Phase 8): a sub-agent transcript is a plain file
@@ -36,6 +37,12 @@ import {
   resolveRepoRoot,
   type ForgeConfig,
 } from './config'
+import {
+  readCompletionEvent,
+  recordStallNudge,
+  type CompletionEvent,
+} from './runs'
+import { parseWorktreeEntries, resolveWorktreeOwner } from './worktrees'
 
 type UsageEntry = {
   readonly inputTokens: number
@@ -521,6 +528,114 @@ export async function findStalledTranscripts(
   return stalled
 }
 
+export type TicketStallState =
+  | 'completed'
+  | 'stopped-without-commits'
+  | 'probe-unavailable'
+  | 'stalled'
+  | 'working'
+
+/**
+ * Decides one ticket's state from its completion event and a branch-commit
+ * probe — never from transcript prose. `commits === null` means the probe
+ * could not run, which is reported as its own state rather than collapsed
+ * into "no commits". A `blocked` stop is the hook sending the worker back to
+ * work, so it counts as no event.
+ */
+export function classifyTicketStall(input: {
+  readonly event: CompletionEvent | null
+  readonly commits: number | null
+  readonly lastActivityMs: number
+  readonly nowMs: number
+  readonly idleMinutes: number
+}): TicketStallState {
+  if (input.commits === null) return 'probe-unavailable'
+  if (input.event?.outcome === 'allowed') {
+    return input.commits > 0 ? 'completed' : 'stopped-without-commits'
+  }
+  return isStalled(input.lastActivityMs, input.nowMs, input.idleMinutes)
+    ? 'stalled'
+    : 'working'
+}
+
+async function probeBranchCommits(
+  commonDirectory: string,
+  branch: string,
+): Promise<number | null> {
+  for (const base of ['origin/HEAD', 'origin/main', 'main', 'origin/master', 'master']) {
+    const result =
+      await Bun.$`git -C ${commonDirectory} rev-list --count ${base}..${branch}`.nothrow().quiet()
+    if (result.exitCode === 0) {
+      const count = Number(result.stdout.toString().trim())
+      if (Number.isSafeInteger(count)) return count
+    }
+  }
+  return null
+}
+
+async function lastCommitMs(commonDirectory: string, branch: string): Promise<number> {
+  const result = await Bun.$`git -C ${commonDirectory} log -1 --format=%ct ${branch}`
+    .nothrow()
+    .quiet()
+  const seconds = Number(result.stdout.toString().trim())
+  return result.exitCode === 0 && Number.isFinite(seconds) ? seconds * 1000 : 0
+}
+
+/**
+ * `--stalled --run <runId>`: one line per forge-owned worktree of that run,
+ * from its completion event plus branch commits. With `--nudge`, each
+ * stalled ticket spends one persisted nudge (`budgets.stallNudgeCap`, never
+ * refilled); an exhausted cap is reported so the caller escalates instead.
+ * Last activity is the newest of the last branch commit and the worktree's
+ * handoff note.
+ */
+async function runTicketStalledMode(
+  runId: string,
+  idleMinutes: number,
+  nudgeCap: number,
+  spendNudges: boolean,
+): Promise<void> {
+  const commonDirectoryOutput =
+    await Bun.$`git rev-parse --path-format=absolute --git-common-dir`.nothrow().quiet()
+  if (commonDirectoryOutput.exitCode !== 0) {
+    console.error('forge:usage --stalled --run: not inside a git repository')
+    process.exitCode = 1
+    return
+  }
+  const commonDirectory = commonDirectoryOutput.stdout.toString().trim()
+  const entries = parseWorktreeEntries((await Bun.$`git worktree list --porcelain`.text()))
+  let attention = 0
+  for (const entry of entries) {
+    const owner = resolveWorktreeOwner(entry)
+    if (!owner || owner.runId !== runId) continue
+    const branch = entry.branch?.replace(/^refs\/heads\//, '') ?? null
+    const commits = branch ? await probeBranchCommits(commonDirectory, branch) : null
+    const handoff = await defaultStatMtimeMs(`${entry.directory}/.forge/handoff-${owner.ticket}.md`)
+    const lastActivityMs = Math.max(
+      handoff ?? 0,
+      branch ? await lastCommitMs(commonDirectory, branch) : 0,
+      Date.parse(owner.at) || 0,
+    )
+    const state = classifyTicketStall({
+      event: readCompletionEvent(commonDirectory, runId, owner.ticket),
+      commits,
+      lastActivityMs,
+      nowMs: Date.now(),
+      idleMinutes,
+    })
+    let suffix = ''
+    if (state === 'stalled' && spendNudges) {
+      const nudge = recordStallNudge(commonDirectory, runId, owner.ticket, nudgeCap)
+      suffix = nudge.granted
+        ? `  nudge ${nudge.count}/${nudge.cap} spent`
+        : `  nudge cap ${nudge.cap} exhausted — escalate, do not nudge again`
+    }
+    if (state === 'stalled' || state === 'probe-unavailable') attention++
+    console.log(`${owner.ticket}  ${state}  commits=${commits ?? 'unavailable'}${suffix}`)
+  }
+  if (attention > 0) process.exitCode = 1
+}
+
 /**
  * `--stalled` mode: resolves the same coordinator session + worker-
  * transcript set the default report uses, then reports which ones have gone
@@ -584,6 +699,17 @@ async function main(config: ForgeConfig): Promise<void> {
   const oversizedThreshold = config.usage.oversizedReadLines
 
   if (arguments_.includes('--stalled')) {
+    const runFlagIndex = arguments_.indexOf('--run')
+    const runId = runFlagIndex === -1 ? null : (arguments_[runFlagIndex + 1] ?? null)
+    if (runId) {
+      await runTicketStalledMode(
+        runId,
+        parseStalledMinutes(arguments_, config.usage.stalledMinutes),
+        config.budgets.stallNudgeCap,
+        arguments_.includes('--nudge'),
+      )
+      return
+    }
     await runStalledMode({
       idleMinutes: parseStalledMinutes(arguments_, config.usage.stalledMinutes),
       pendingToolMinutes: parseFlagMinutes(
