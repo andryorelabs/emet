@@ -4,6 +4,9 @@ import os from 'node:os'
 import path from 'node:path'
 
 import {
+  type TicketNode,
+  analyzeTicketGraph,
+  formatTicketGraphJson,
   FORGE_AGENT_NAMES,
   MATTPOCOCK_SKILLS_PLUGIN_ID,
   checkDependencies,
@@ -472,5 +475,68 @@ describe('checkDependencies', () => {
     })
     expect(unsatisfiedChecks(checks).map((check) => check.dependency)).toEqual(['github-cli'])
     expect(indeterminateChecks(checks).map((check) => check.dependency)).toEqual(['claude-plugin'])
+  })
+})
+
+const ticket = (id: string, overrides: Partial<TicketNode> = {}): TicketNode => ({
+  id,
+  status: 'todo',
+  priority: 3,
+  createdAt: '2026-01-01T00:00:00Z',
+  blockedBy: [],
+  ...overrides,
+})
+
+describe('analyzeTicketGraph', () => {
+  test('a cancelled or dropped blocker still blocks', () => {
+    for (const status of ['cancelled', 'dropped'] as const) {
+      const result = analyzeTicketGraph([ticket('A', { status }), ticket('B', { blockedBy: ['A'] })])
+      expect(result.ready.map((node) => node.id)).not.toContain('B')
+      expect(result.blocked).toEqual([{ id: 'B', blockers: ['A'] }])
+    }
+  })
+
+  test('a done blocker releases its dependent', () => {
+    const result = analyzeTicketGraph([ticket('A', { status: 'done' }), ticket('B', { blockedBy: ['A'] })])
+    expect(result.ready.map((node) => node.id)).toEqual(['B'])
+  })
+
+  test('an unknown blocker id blocks', () => {
+    const result = analyzeTicketGraph([ticket('B', { blockedBy: ['GHOST'] })])
+    expect(result.blocked).toEqual([{ id: 'B', blockers: ['GHOST'] }])
+  })
+
+  test('detects a cycle and reports its path with exit code 1', () => {
+    const result = analyzeTicketGraph([
+      ticket('A', { blockedBy: ['C'] }),
+      ticket('B', { blockedBy: ['A'] }),
+      ticket('C', { blockedBy: ['B'] }),
+    ])
+    expect(result.exitCode).toBe(1)
+    expect(result.cycle).toEqual(['A', 'C', 'B', 'A'])
+    expect(result.ready).toEqual([])
+  })
+
+  test('orders ready set by critical path, then priority, then created', () => {
+    const result = analyzeTicketGraph([
+      ticket('lone-urgent', { priority: 1 }),
+      ticket('root', { priority: 4 }),
+      ticket('mid', { blockedBy: ['root'] }),
+      ticket('leaf', { blockedBy: ['mid'] }),
+      ticket('lone-old', { priority: 2, createdAt: '2025-01-01T00:00:00Z' }),
+      ticket('lone-new', { priority: 2, createdAt: '2026-06-01T00:00:00Z' }),
+    ])
+    expect(result.exitCode).toBe(0)
+    expect(result.ready.map((node) => node.id)).toEqual(['root', 'lone-urgent', 'lone-old', 'lone-new'])
+  })
+
+  test('formats a stable JSON document', () => {
+    const result = analyzeTicketGraph([ticket('A'), ticket('B', { blockedBy: ['A'] })])
+    expect(JSON.parse(formatTicketGraphJson(result))).toEqual({
+      exitCode: 0,
+      cycle: null,
+      ready: ['A'],
+      blocked: [{ id: 'B', blockers: ['A'] }],
+    })
   })
 })

@@ -51,8 +51,13 @@ export const DEFAULT_FORGE_CONFIG: ForgeConfig = {
       high: { model: 'opus', effort: 'medium' },
     },
     triage: 'haiku',
+    escalation: { sonnet: 'opus' },
   },
   review: { highRiskPaths: [] },
+  budgets: { workerAttempts: 2, reviewRounds: 2, stallNudgeCap: 6 },
+  sizing: { inlineMaxLines: 100 },
+  map: { path: 'docs/agents/codebase.md' },
+  specs: { dir: 'docs/specs' },
 }
 
 export type ModelEffort = 'low' | 'medium' | 'high' | 'xhigh' | 'max'
@@ -170,12 +175,51 @@ export interface ForgeConfig {
     readonly reviewer: { readonly medium: ModelChoice; readonly high: ModelChoice }
     /** Cheap model used for triage and passive-tier review. */
     readonly triage: string
+    /** Next model tier per model name, used when a ticket hits its fix cap. */
+    readonly escalation: Readonly<Record<string, string>>
   }
   readonly review: {
     /** Extra path tokens (case-insensitive substrings) that force the `high`
      * tier in `forge assess`, on top of the built-in set. */
     readonly highRiskPaths: readonly string[]
   }
+  readonly budgets: {
+    /** Worker attempts per ticket before it is deferred. */
+    readonly workerAttempts: number
+    /** Review/fix rounds per ticket. */
+    readonly reviewRounds: number
+    /** Stall nudges per worker; never refills. */
+    readonly stallNudgeCap: number
+  }
+  readonly sizing: {
+    /** Largest ticket body (lines) kept inline in a worker prompt. */
+    readonly inlineMaxLines: number
+  }
+  readonly map: {
+    /** Repo-relative path of the generated codebase map. */
+    readonly path: string
+  }
+  readonly specs: {
+    /** Repo-relative directory of living specs. */
+    readonly dir: string
+  }
+}
+
+/**
+ * The worker model for a ticket: its own `Model:` line wins over
+ * `models.worker.model`. A `model/effort` value (e.g. `opus/high`) also
+ * overrides the effort; a bare model keeps the configured one, and an
+ * unrecognized effort part is ignored rather than passed through.
+ */
+export function resolveWorkerModel(config: ForgeConfig, ticketModel?: string): ModelChoice {
+  const override = ticketModel?.trim()
+  if (!override) return config.models.worker
+  const [modelPart = '', effortPart = ''] = override.split('/', 2).map((part) => part.trim())
+  if (!modelPart) return config.models.worker
+  const effort = MODEL_EFFORTS.includes(effortPart as ModelEffort)
+    ? (effortPart as ModelEffort)
+    : config.models.worker.effort
+  return { model: modelPart, effort }
 }
 
 /**
@@ -428,6 +472,21 @@ function validateAndMerge(raw: unknown): { ok: true; config: ForgeConfig } | { o
     return { ok: false, reason: '"models.triage" must be a non-empty string' }
   }
 
+  const escalationRaw = modelsRecord.escalation
+  let escalation: Record<string, string> = { ...defaultModels.escalation }
+  if (escalationRaw !== undefined) {
+    if (!isRecord(escalationRaw)) {
+      return { ok: false, reason: '"models.escalation" must be an object' }
+    }
+    escalation = {}
+    for (const [tier, next] of Object.entries(escalationRaw)) {
+      if (!isNonEmptyString(next)) {
+        return { ok: false, reason: `"models.escalation.${tier}" must be a non-empty string` }
+      }
+      escalation[tier] = next
+    }
+  }
+
   const reviewSection = isRecord(raw.review) ? raw.review : {}
   const highRiskPathsRaw = reviewSection.highRiskPaths
   const highRiskPaths: string[] = []
@@ -441,6 +500,40 @@ function validateAndMerge(raw: unknown): { ok: true; config: ForgeConfig } | { o
       }
       highRiskPaths.push(entry)
     }
+  }
+
+  const budgetsSection = raw.budgets
+  if (budgetsSection !== undefined && !isRecord(budgetsSection)) {
+    return { ok: false, reason: '"budgets" must be an object' }
+  }
+  const budgetsRecord = budgetsSection ?? {}
+  const budgetKeys = ['workerAttempts', 'reviewRounds', 'stallNudgeCap'] as const
+  const budgets = { ...DEFAULT_FORGE_CONFIG.budgets }
+  for (const key of budgetKeys) {
+    const value = budgetsRecord[key]
+    if (value === undefined) continue
+    if (!isPositiveInteger(value)) {
+      return { ok: false, reason: `"budgets.${key}" must be a positive integer` }
+    }
+    budgets[key] = value
+  }
+
+  const sizingRecord = isRecord(raw.sizing) ? raw.sizing : {}
+  const inlineMaxLines = sizingRecord.inlineMaxLines ?? DEFAULT_FORGE_CONFIG.sizing.inlineMaxLines
+  if (!isPositiveInteger(inlineMaxLines)) {
+    return { ok: false, reason: '"sizing.inlineMaxLines" must be a positive integer' }
+  }
+
+  const mapRecord = isRecord(raw.map) ? raw.map : {}
+  const mapPath = mapRecord.path ?? DEFAULT_FORGE_CONFIG.map.path
+  if (!isNonEmptyString(mapPath)) {
+    return { ok: false, reason: '"map.path" must be a non-empty string' }
+  }
+
+  const specsRecord = isRecord(raw.specs) ? raw.specs : {}
+  const specsDir = specsRecord.dir ?? DEFAULT_FORGE_CONFIG.specs.dir
+  if (!isNonEmptyString(specsDir)) {
+    return { ok: false, reason: '"specs.dir" must be a non-empty string' }
   }
 
   return {
@@ -465,8 +558,13 @@ function validateAndMerge(raw: unknown): { ok: true; config: ForgeConfig } | { o
         worker: worker.value,
         reviewer: { medium: reviewerMedium.value, high: reviewerHigh.value },
         triage,
+        escalation,
       },
       review: { highRiskPaths },
+      budgets,
+      sizing: { inlineMaxLines },
+      map: { path: mapPath },
+      specs: { dir: specsDir },
     },
   }
 }

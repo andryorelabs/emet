@@ -1,7 +1,7 @@
 # Phases 1–5 — interview through materialize
 
 Loaded only in the default and `--draft` modes; `--dispatch` skips straight
-to `phases-6-9.md`.
+to `phases-6-7-dispatch.md`.
 
 ## Phase 1 — Interview
 

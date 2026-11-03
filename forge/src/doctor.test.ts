@@ -7,6 +7,13 @@ import path from 'node:path'
 import type { DependencyProbes } from './dependencies'
 import {
   auditRepo,
+  checkExternalCliFlags,
+  checkTrackerTarget,
+  createEnvironmentProbes,
+  checkWorktreeForkBase,
+  findMissingFlags,
+  normalizeGithubSlug,
+  type EnvironmentProbes,
   checkSelfCheckCommand,
   checkSettingsAdvisories,
   findInstallDrift,
@@ -27,6 +34,7 @@ const cleanReport: RepoDoctorReport = {
   trackerKind: null,
   dependencyFindings: [],
   maxLiveWorkersNote: null,
+  environmentFindings: [],
 }
 
 const healthyProbes: DependencyProbes = {
@@ -34,6 +42,21 @@ const healthyProbes: DependencyProbes = {
   githubCli: async () => ({ kind: 'authenticated' }),
   linearMcpServer: async () => ({ kind: 'declared', source: 'mcp-json' }),
   forgeAgents: async () => ({ kind: 'present' }),
+}
+
+const healthyEnvironment: EnvironmentProbes = {
+  helpText: async (command) => {
+    const joined = command.join(' ')
+    if (joined.startsWith('gh issue view')) return '      --json fields   Output JSON'
+    if (joined.startsWith('gh issue edit')) return '      --add-label name\n      --remove-label name'
+    if (joined.startsWith('gh repo view')) return '      --json fields'
+    if (joined === 'claude agents --help') return '  --json   Print active sessions'
+    return '  --bg, --background   Start in background'
+  },
+  ghRepoNameWithOwner: async () => 'Owner/repo',
+  remoteUrl: async () => 'git@github.com:owner/repo.git',
+  resolveRef: async () => 'a'.repeat(40),
+  worktreeBaseRef: async () => null,
 }
 
 describe('isReportClean', () => {
@@ -182,13 +205,13 @@ describe('auditRepo', () => {
   })
 
   test('reports isGitRepo: false for a plain directory', async () => {
-    const report = await auditRepo(repoRoot, healthyProbes)
+    const report = await auditRepo(repoRoot, healthyProbes, healthyEnvironment)
     expect(report.isGitRepo).toBe(false)
   })
 
   test('reports hasConfig: false for a git repo with no forge.config.json', async () => {
     await Bun.$`git -C ${repoRoot} init --quiet`.quiet()
-    const report = await auditRepo(repoRoot, healthyProbes)
+    const report = await auditRepo(repoRoot, healthyProbes, healthyEnvironment)
     expect(report.isGitRepo).toBe(true)
     expect(report.hasConfig).toBe(false)
     expect(report.configError).toBeNull()
@@ -198,7 +221,7 @@ describe('auditRepo', () => {
   test('reports a configError for malformed JSON, without crashing', async () => {
     await Bun.$`git -C ${repoRoot} init --quiet`.quiet()
     await Bun.write(path.join(repoRoot, 'forge.config.json'), '{not json')
-    const report = await auditRepo(repoRoot, healthyProbes)
+    const report = await auditRepo(repoRoot, healthyProbes, healthyEnvironment)
     expect(report.hasConfig).toBe(false)
     expect(report.configError).toContain('not valid JSON')
   })
@@ -221,7 +244,7 @@ describe('auditRepo', () => {
       await Bun.write(path.join(docsAgentsDirectory, doc), '# all set, no markers here\n')
     }
 
-    const report = await auditRepo(repoRoot, healthyProbes)
+    const report = await auditRepo(repoRoot, healthyProbes, healthyEnvironment)
     expect(report.isGitRepo).toBe(true)
     expect(report.hasConfig).toBe(true)
     expect(report.missingDocs).toEqual([])
@@ -247,7 +270,7 @@ describe('auditRepo', () => {
       'TODO(forge): fill this in\n',
     )
 
-    const report = await auditRepo(repoRoot, healthyProbes)
+    const report = await auditRepo(repoRoot, healthyProbes, healthyEnvironment)
     expect(report.hasConfig).toBe(true)
     expect(report.missingDocs).toEqual(['issue-tracker.md', 'triage-labels.md', 'domain.md'])
     expect(report.todoMarkers).toEqual(['docs/agents/forge.md:1: TODO(forge): fill this in'])
@@ -265,7 +288,7 @@ describe('auditRepo', () => {
         tracker: { kind: 'github' },
       }),
     )
-    const report = await auditRepo(repoRoot, healthyProbes)
+    const report = await auditRepo(repoRoot, healthyProbes, healthyEnvironment)
     expect(report.trackerKind).toBe('github')
   })
 
@@ -284,7 +307,7 @@ describe('auditRepo', () => {
       ...healthyProbes,
       githubCli: async () => ({ kind: 'unauthenticated' }),
     }
-    const report = await auditRepo(repoRoot, probes)
+    const report = await auditRepo(repoRoot, probes, healthyEnvironment)
     expect(report.dependencyFindings.map((check) => check.dependency)).toEqual(['github-cli'])
     expect(isReportClean(report)).toBe(false)
   })
@@ -304,7 +327,7 @@ describe('auditRepo', () => {
       ...healthyProbes,
       linearMcpServer: async () => ({ kind: 'not-declared', searchedAllScopes: true }),
     }
-    const report = await auditRepo(repoRoot, probes)
+    const report = await auditRepo(repoRoot, probes, healthyEnvironment)
     expect(report.dependencyFindings.map((check) => check.dependency)).toEqual(['linear-mcp-server'])
     expect(isReportClean(report)).toBe(false)
   })
@@ -323,7 +346,7 @@ describe('auditRepo', () => {
       ...healthyProbes,
       githubCli: async () => ({ kind: 'unauthenticated' }),
     }
-    const report = await auditRepo(repoRoot, probes)
+    const report = await auditRepo(repoRoot, probes, healthyEnvironment)
     expect(report.trackerKind).toBeNull()
     expect(report.dependencyFindings).toEqual([])
   })
@@ -336,6 +359,147 @@ const readySettings = {
     deny: ['Bash(git push * main)', 'Bash(git push --force *)'],
   },
 }
+
+describe('findMissingFlags', () => {
+  test('matches a whole flag, not a longer flag sharing its prefix', () => {
+    expect(findMissingFlags('  --json-extra  x', ['--json'])).toEqual(['--json'])
+    expect(findMissingFlags('  --bg, --background  x', ['--bg'])).toEqual([])
+  })
+})
+
+describe('checkExternalCliFlags', () => {
+  test('clean when every required flag is documented', async () => {
+    expect(await checkExternalCliFlags(healthyEnvironment)).toEqual([])
+  })
+
+  test('reports a command whose --help lost a flag', async () => {
+    const findings = await checkExternalCliFlags({
+      ...healthyEnvironment,
+      helpText: async (command) =>
+        command.join(' ') === 'claude agents --help'
+          ? 'nothing here'
+          : healthyEnvironment.helpText(command),
+    })
+    expect(findings).toHaveLength(1)
+    expect(findings[0]).toContain('claude agents')
+    expect(findings[0]).toContain('--json')
+  })
+
+  test('reports a command that cannot be run', async () => {
+    const findings = await checkExternalCliFlags({ ...healthyEnvironment, helpText: async () => null })
+    expect(findings.length).toBeGreaterThan(0)
+    expect(findings[0]).toContain('could not be run')
+  })
+})
+
+describe('normalizeGithubSlug', () => {
+  test('handles ssh and https remotes', () => {
+    expect(normalizeGithubSlug('git@github.com:Owner/Repo.git')).toBe('owner/repo')
+    expect(normalizeGithubSlug('https://github.com/Owner/Repo')).toBe('owner/repo')
+  })
+  test('null for a non-github remote', () => {
+    expect(normalizeGithubSlug('git@gitlab.com:a/b.git')).toBeNull()
+  })
+})
+
+describe('checkTrackerTarget', () => {
+  const noLinear = { linearTeam: undefined }
+  test('github: matching repo is fine, case-insensitively', () => {
+    expect(
+      checkTrackerTarget({
+        kind: 'github',
+        ghRepo: 'Owner/Repo',
+        remoteUrl: 'git@github.com:owner/repo.git',
+        ...noLinear,
+      }),
+    ).toEqual([])
+  })
+  test('github: mismatch is reported with both slugs', () => {
+    const findings = checkTrackerTarget({
+      kind: 'github',
+      ghRepo: 'other/fork',
+      remoteUrl: 'git@github.com:owner/repo.git',
+      ...noLinear,
+    })
+    expect(findings).toHaveLength(1)
+    expect(findings[0]).toContain('other/fork')
+    expect(findings[0]).toContain('owner/repo')
+  })
+  test('github: undeterminable repo is not a finding', () => {
+    expect(checkTrackerTarget({ kind: 'github', ghRepo: null, remoteUrl: 'x', ...noLinear })).toEqual([])
+  })
+  test('linear: missing or blank team is reported', () => {
+    expect(checkTrackerTarget({ kind: 'linear', ghRepo: null, remoteUrl: null, ...noLinear })).toHaveLength(1)
+    expect(checkTrackerTarget({ kind: 'linear', ghRepo: null, remoteUrl: null, linearTeam: ' ' })).toHaveLength(1)
+  })
+  test('linear: declared team is fine; local tracker has no target', () => {
+    expect(checkTrackerTarget({ kind: 'linear', ghRepo: null, remoteUrl: null, linearTeam: 'ENG' })).toEqual([])
+    expect(checkTrackerTarget({ kind: 'local', ghRepo: null, remoteUrl: null, ...noLinear })).toEqual([])
+  })
+})
+
+describe('checkWorktreeForkBase', () => {
+  const base = {
+    coordinatorHead: 'a'.repeat(40),
+    harnessBase: 'b'.repeat(40),
+    baseRefSetting: null,
+    harnessBaseRef: 'origin/main',
+  }
+  test('equal SHAs are fine', () => {
+    expect(checkWorktreeForkBase({ ...base, harnessBase: base.coordinatorHead })).toEqual([])
+  })
+  test('divergence reports the worktree.baseRef fix', () => {
+    const findings = checkWorktreeForkBase(base)
+    expect(findings).toHaveLength(1)
+    expect(findings[0]).toContain('baseRef')
+  })
+  test('baseRef: head makes divergence irrelevant', () => {
+    expect(checkWorktreeForkBase({ ...base, baseRefSetting: 'head' })).toEqual([])
+  })
+  test('unresolvable refs are not a finding', () => {
+    expect(checkWorktreeForkBase({ ...base, harnessBase: null })).toEqual([])
+  })
+})
+
+describe('auditRepo environment findings', () => {
+  let repoRoot: string
+  beforeEach(() => {
+    repoRoot = mkdtempSync(path.join(os.tmpdir(), 'forge-doctor-env-'))
+  })
+  afterEach(() => {
+    rmSync(repoRoot, { recursive: true, force: true })
+  })
+
+  async function initRepo(tracker: object | undefined): Promise<void> {
+    await Bun.$`git init --quiet`.cwd(repoRoot).quiet()
+    await Bun.write(
+      path.join(repoRoot, 'forge.config.json'),
+      JSON.stringify({
+        version: 1,
+        repo: { trunk: 'main', remote: 'origin' },
+        ticket: { idPattern: '^X-\\d+$', branchPrefix: 'x' },
+        ...(tracker ? { tracker } : {}),
+      }),
+    )
+  }
+
+  test('a linear repo without tracker.team is dirty', async () => {
+    await initRepo({ kind: 'linear' })
+    const report = await auditRepo(repoRoot, healthyProbes, healthyEnvironment)
+    expect(report.environmentFindings.join('\n')).toContain('tracker.team')
+    expect(isReportClean(report)).toBe(false)
+  })
+
+  test('a diverged fork base is dirty', async () => {
+    await initRepo(undefined)
+    const report = await auditRepo(repoRoot, healthyProbes, {
+      ...healthyEnvironment,
+      resolveRef: async (_root, ref) => (ref === 'HEAD' ? 'a'.repeat(40) : 'b'.repeat(40)),
+    })
+    expect(report.environmentFindings.join('\n')).toContain('baseRef')
+    expect(isReportClean(report)).toBe(false)
+  })
+})
 
 describe('checkSettingsAdvisories', () => {
   test('no advisories when every forge-relevant key is already set', () => {
@@ -414,5 +578,12 @@ describe('findInstallDrift', () => {
   test('reports a missing file', async () => {
     writeManifest({ '.claude/agents/gone.md': sha('x') })
     expect((await findInstallDrift(home))[0]).toContain('missing')
+  })
+})
+
+describe('createEnvironmentProbes', () => {
+  test('helpText reports a missing binary as unrunnable, not as help text', async () => {
+    const probes = createEnvironmentProbes()
+    expect(await probes.helpText(['forge-no-such-binary-xyz', '--help'])).toBeNull()
   })
 })

@@ -10,7 +10,7 @@ import {
  * Launches one wave of a run as a background `claude --bg` session and, per
  * `handoff.launcher`, opens an Orca tab attached to it.
  *
- * This is a CLI command rather than prose in `reference/phases-6-9.md`
+ * This is a CLI command rather than prose in `reference/phases-9-handoff.md`
  * because the prose version failed twice in the field:
  *
  * - A wave launched by hand ("run it in another session") had no written

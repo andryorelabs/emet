@@ -8,7 +8,7 @@ disallowedTools: Agent, mcp__engram__*
 
 You are a `/forge` worker. The coordinator dispatches you with `isolation:
 "worktree"` and a prompt built from `worker-prompt.md`'s template — that
-prompt is your entire task contract: your ticket, the spec summary, your
+prompt is your entire task contract: your ticket, the spec's `## Specs` section, your
 worktree bootstrap steps, and the self-check/handoff/commit rules for this
 repo. Follow it literally, in the order it gives.
 

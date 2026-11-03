@@ -38,6 +38,17 @@ commands:
   assess    --base <ref> --head <ref>  — classify a diff as passive|medium|high and pick the reviewer model
   status    [--spec <id>]  — Working / Checking / Ready / Needs-decision per wave as JSON + a summary line (\`forge status --help\` documents the JSON)
   surfaces  --check <file.json | ->  — reject overlapping allowed-surface globs between a wave's tickets
+  verify    <ticket>  — post-worker enforcement check
+  review-package <base> <head>  — review range package
+  review    --ticket <ticket> [--round <n>]
+  approve   --run <id>
+  results   --run <id> [--ticket <ticket>]
+  materialize-log --run <id> [--ticket <ticket> --id <tracker-id>]
+  gate      <ticket> [--run <id>]  — merge|hold|chain|stop decision as JSON
+  validate  --spec <id> | --file <path>
+  spec-merge --spec <id>
+  map       [--refresh]
+  metrics   [--run <id>]
   guard     — Claude Code PreToolUse hook (reads hook JSON on stdin); see src/guard.ts
   selftest  — run this CLI's own unit tests
 `
@@ -117,6 +128,61 @@ async function main(): Promise<void> {
     }
     case 'surfaces': {
       const { run } = await import('../src/surfaces')
+      await run(rest)
+      return
+    }
+    case 'verify': {
+      const { run } = await import('../src/verify')
+      await run(rest)
+      return
+    }
+    case 'review-package': {
+      const { run } = await import('../src/reviewpackage')
+      await run(rest)
+      return
+    }
+    case 'review': {
+      const { run } = await import('../src/review')
+      await run(rest)
+      return
+    }
+    case 'approve': {
+      const { run } = await import('../src/approve')
+      await run(rest)
+      return
+    }
+    case 'results': {
+      const { run } = await import('../src/results')
+      await run(rest)
+      return
+    }
+    case 'materialize-log': {
+      const { run } = await import('../src/materializelog')
+      await run(rest)
+      return
+    }
+    case 'gate': {
+      const { run } = await import('../src/gate')
+      await run(rest)
+      return
+    }
+    case 'validate': {
+      const { run } = await import('../src/validate')
+      await run(rest)
+      return
+    }
+    case 'spec-merge': {
+      const { run } = await import('../src/specmerge')
+      await run(rest)
+      return
+    }
+    case 'map': {
+      const { run } = await import('../src/map')
+      await run(rest)
+      return
+    }
+    case 'metrics': {
+      const { run } = await import('../src/metrics')
       await run(rest)
       return
     }
