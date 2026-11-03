@@ -7,6 +7,8 @@ import {
   EXPECTED_LYCHEE_ACTION_VERSION,
   LYCHEE_ARGS,
   LYCHEE_VERSION,
+  LYCHEE_SHA256,
+  matchesLycheeChecksum,
   resolveLycheeArch,
 } from "./lint-docs.ts";
 
@@ -83,5 +85,17 @@ describe("lychee paths", () => {
 
   test("nests the cached binary under lychee/<version>/lychee", () => {
     expect(buildLycheeCacheRelativePath("v0.24.2")).toBe(path.join("lychee", "v0.24.2", "lychee"));
+  });
+});
+
+describe("lychee checksum pin", () => {
+  test("pins a 64-hex digest for each supported architecture", () => {
+    for (const digest of Object.values(LYCHEE_SHA256)) {
+      expect(digest).toMatch(/^[0-9a-f]{64}$/);
+    }
+  });
+
+  test("rejects bytes that do not hash to the pin", () => {
+    expect(matchesLycheeChecksum(new TextEncoder().encode("tampered"), "x86_64")).toBe(false);
   });
 });

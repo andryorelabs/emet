@@ -25,6 +25,25 @@ import path from "node:path";
 export const LYCHEE_VERSION = "v0.24.2";
 
 /**
+ * SHA-256 of each Linux release tarball of {@link LYCHEE_VERSION}, as published by
+ * the GitHub release asset digests. Bumping the version requires new hashes.
+ */
+export const LYCHEE_SHA256: Readonly<Record<"aarch64" | "x86_64", string>> = {
+  aarch64: "91a7bd65685da41b90ccb9bc867a3d649a7818042dae04ff405e55a25bddee4c",
+  x86_64: "1f4e0ef7f6554a6ed33dd7ac144fb2e1bbed98598e7af973042fc5cd43951c9a",
+};
+
+/**
+ * Checks a downloaded tarball against the pinned digest.
+ * @param archive The tarball bytes.
+ * @param arch The lychee release architecture.
+ * @returns Whether the SHA-256 of the bytes matches the pin.
+ */
+export function matchesLycheeChecksum(archive: Uint8Array, arch: "aarch64" | "x86_64"): boolean {
+  return new Bun.CryptoHasher("sha256").update(archive).digest("hex") === LYCHEE_SHA256[arch];
+}
+
+/**
  * The `lycheeverse/lychee-action` release whose default `lycheeVersion` is
  * {@link LYCHEE_VERSION}. The test asserts the workflow still pins it, so an
  * action bump forces a re-check of the lychee version.
@@ -134,7 +153,8 @@ function findBinaryRecursively(rootDirectory: string, maxDepth: number): string 
  * @returns Resolves once the binary is in place.
  */
 async function downloadLycheeBinary(version: string, destinationPath: string): Promise<void> {
-  const url = buildLycheeDownloadUrl(version, resolveLycheeArch());
+  const arch = resolveLycheeArch();
+  const url = buildLycheeDownloadUrl(version, arch);
   const response = await fetch(url);
   if (!response.ok) {
     throw new Error(`lint-docs: failed to download lychee from ${url} (HTTP ${response.status}).`);
@@ -143,7 +163,11 @@ async function downloadLycheeBinary(version: string, destinationPath: string): P
   const workingDirectory = mkdtempSync(path.join(tmpdir(), "lint-docs-lychee-"));
   try {
     const archivePath = path.join(workingDirectory, "lychee.tar.gz");
-    await Bun.write(archivePath, response);
+    const archive = new Uint8Array(await response.arrayBuffer());
+    if (!matchesLycheeChecksum(archive, arch)) {
+      throw new Error(`lint-docs: SHA-256 mismatch for ${url}; refusing to run the download.`);
+    }
+    await Bun.write(archivePath, archive);
     const extractedDirectory = path.join(workingDirectory, "extracted");
     mkdirSync(extractedDirectory);
     const tar = Bun.spawn({
