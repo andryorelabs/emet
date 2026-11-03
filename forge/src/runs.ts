@@ -6,7 +6,7 @@ import { readParent, type ProcessTreeReader, defaultProcessTreeReader } from "./
 
 /**
  * Classifies whether a `/forge` run (coordinator or worker) is still alive
- * — see AO-256. The pid a claim/reservation was written from is a
+ * — see PROJ-256. The pid a claim/reservation was written from is a
  * short-lived `bun` process, so `process.kill(pid, 0)` (the right pattern
  * for a lock whose holder *is* the process that took it) is meaningless
  * here: by the time anything reads the pid back, that `bun` process has
@@ -113,14 +113,14 @@ export function isAnchorAlive(
 
 /**
  * Derives the `~/.claude/projects/<slug>` directory name Claude Code itself
- * uses for a working directory — every path separator replaced with `-`
+ * uses for a working directory — every path separator and dot replaced with `-`
  * (observable directly in this repo's own scratchpad path, which is nested
  * under exactly this slug for the main checkout). Every reservation in this
  * registry belongs to the same project, so this only ever needs the current
  * process's own `cwd`, never a value stored per-reservation.
  */
 export function resolveSessionSlug(cwd: string = process.cwd()): string {
-  return cwd.replaceAll("/", "-");
+  return cwd.replaceAll(/[/.]/g, "-");
 }
 
 /**

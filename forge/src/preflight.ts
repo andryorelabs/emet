@@ -85,6 +85,35 @@ function resolveWaveSize(config: ForgeConfig): number {
   return config.concurrency.waveSize;
 }
 
+/**
+ * Config fields the schema marks deprecated because no code reads them. They
+ * stay valid in existing configs; `forge doctor` warns when one is set.
+ */
+export const DEPRECATED_CONFIG_FIELDS: readonly string[] = [
+  "repo.commitTypes",
+  "repo.integrationBranch",
+  "ticket.branchPattern",
+  "ticket.idExample",
+  "tracker.readyLabel",
+  "tracker.triageLabels",
+  "tracker.prReference",
+  "schema.sharedDatabase",
+  "commands.fullSuite.runInBackground",
+  "commands.fullSuite.reset",
+  "worktree.stateDir",
+  "design.canvasIndex",
+];
+
+const LOCAL_TRACKER_UNSUPPORTED_MESSAGE =
+  'tracker.kind "local" is not supported: local tracker is not implemented yet. Set tracker.kind to "github" or "linear" in forge.config.json.';
+
+/**
+ * Failure lines for a tracker kind `forge preflight` cannot dispatch against.
+ */
+export function findUnsupportedTrackerFailures(config: ForgeConfig): string[] {
+  return config.tracker.kind === "local" ? [LOCAL_TRACKER_UNSUPPORTED_MESSAGE] : [];
+}
+
 const SKIP_DEPENDENCY_CHECKS_ENV = "FORGE_SKIP_DEPENDENCY_CHECKS";
 
 function dependencyChecksSkipped(): boolean {
@@ -388,7 +417,7 @@ export type PostDispatchFailure = {
 };
 
 /**
- * Extracts a ticket's numeric suffix (`AO-321` → `321`, `NFK-42` → `42`) —
+ * Extracts a ticket's numeric suffix (`PROJ-321` → `321`, `NFK-42` → `42`) —
  * every tracker adapter's id shape (see `reference/tracker-*.md`) is
  * `<PREFIX>-<digits>`, so this stays a fixed shape regardless of
  * the configured `ticket.idPattern`, which only varies the prefix.
@@ -424,7 +453,7 @@ export function isBranchMatchingTicket(
 /**
  * Groups `.claude/worktrees/` entries by the ticket their own `git worktree
  * lock` reason declares, keeping only groups with more than one member — the
- * AO-281 wave 2 failure mode: two worktrees claiming the same ticket, with
+ * PROJ-281 wave 2 failure mode: two worktrees claiming the same ticket, with
  * nothing distinguishing the canonical one from the duplicate.
  */
 export function findDuplicateTicketWorktrees(
@@ -447,7 +476,7 @@ export function findDuplicateTicketWorktrees(
 /**
  * Groups `<branchPrefix>-<n>-*` branch names by their numeric ticket id,
  * keeping only groups with more than one member — catches the observed
- * `ao-284-starred-page` vs. `ao-284-starred-page-fixes` case, two branches
+ * `proj-284-starred-page` vs. `proj-284-starred-page-fixes` case, two branches
  * for the same ticket that {@link findDuplicateTicketWorktrees} alone can't
  * see once only one of them still has a live, locked worktree.
  *
@@ -478,7 +507,7 @@ export function findDuplicateTicketBranchNumbers(
 
 /**
  * `.claude/worktrees/` entries with no `git worktree lock` at all, more than
- * `maxAgeMs` past the caller-supplied reference time — the AO-321 case:
+ * `maxAgeMs` past the caller-supplied reference time — the PROJ-321 case:
  * bootstrap step 0 (`reference/worker-prompt.md`, whose reason string comes
  * from `forge lock-reason`) was skipped, so `resolveWorktreeOwner` can never
  * attribute the worktree to a run and neither `forge cleanup` nor this
@@ -974,6 +1003,8 @@ async function main(config: ForgeConfig, repoRoot: string) {
     repoRoot,
     probes: createDependencyProbes(),
   });
+
+  failures.push(...findUnsupportedTrackerFailures(config));
 
   for (const required of config.preflight.requiredFiles) {
     if (!existsSync(path.join(repoRoot, required.path))) {

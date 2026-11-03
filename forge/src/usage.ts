@@ -37,7 +37,12 @@ import {
   resolveRepoRoot,
   type ForgeConfig,
 } from "./config";
-import { readCompletionEvent, recordStallNudge, type CompletionEvent } from "./runs";
+import {
+  readCompletionEvent,
+  recordStallNudge,
+  resolveSessionSlug,
+  type CompletionEvent,
+} from "./runs";
 import { isObject } from "./narrow";
 import { parseWorktreeEntries, resolveWorktreeOwner } from "./worktrees";
 
@@ -257,10 +262,6 @@ function toolResultCharCount(content: unknown): number {
   return 0;
 }
 
-function projectSlug(cwd: string): string {
-  return cwd.replaceAll("/", "-");
-}
-
 /**
  * Resolves an explicit `--project-dir <path>` off `argv`, defaulting to
  * `process.cwd()`. Needed once `usage` is a subcommand of a global CLI: a
@@ -276,7 +277,7 @@ function resolveProjectDirectoryFlag(argv: readonly string[]): string {
 
 function projectsDirectory(argv: readonly string[] = []): string {
   const projectDirectory = resolveProjectDirectoryFlag(argv);
-  return `${os.homedir()}/.claude/projects/${projectSlug(projectDirectory)}`;
+  return `${os.homedir()}/.claude/projects/${resolveSessionSlug(projectDirectory)}`;
 }
 
 async function findMostRecentSessionFile(directory: string): Promise<string | null> {

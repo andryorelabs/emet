@@ -4,6 +4,7 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 
 import { writeApproval } from "./approve";
+import { DEFAULT_FORGE_CONFIG } from "./config";
 import type { DependencyCheck } from "./dependencies";
 import type { EnvironmentProbes } from "./doctor";
 import {
@@ -14,6 +15,8 @@ import {
   collectMapStaleWarning,
   evaluateDependencyGate,
   evaluateRunGate,
+  DEPRECATED_CONFIG_FIELDS,
+  findUnsupportedTrackerFailures,
   findBranchTicketMismatches,
   findDuplicateTicketBranchNumbers,
   findDuplicateTicketWorktrees,
@@ -666,5 +669,30 @@ describe("findMissingRequiredCommands", () => {
   test("empty when every command resolves", async () => {
     const missing = await findMissingRequiredCommands(["rg"], new Set(), async () => true);
     expect(missing).toEqual([]);
+  });
+});
+
+describe("findUnsupportedTrackerFailures", () => {
+  test("blocks the local tracker", () => {
+    const failures = findUnsupportedTrackerFailures({
+      ...DEFAULT_FORGE_CONFIG,
+      tracker: { kind: "local" },
+    });
+    expect(failures.join("\n")).toContain("local tracker is not implemented yet");
+  });
+
+  test("allows github and linear", () => {
+    for (const kind of ["github", "linear"] as const) {
+      expect(
+        findUnsupportedTrackerFailures({ ...DEFAULT_FORGE_CONFIG, tracker: { kind } }),
+      ).toEqual([]);
+    }
+  });
+});
+
+describe("DEPRECATED_CONFIG_FIELDS", () => {
+  test("lists the twelve unread fields", () => {
+    expect(DEPRECATED_CONFIG_FIELDS).toHaveLength(12);
+    expect(DEPRECATED_CONFIG_FIELDS).toContain("tracker.readyLabel");
   });
 });
