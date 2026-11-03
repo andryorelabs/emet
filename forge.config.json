@@ -62,7 +62,7 @@
   },
   "commands": {
     "selfCheck": [
-      "bun --cwd forge run typecheck",
+      "bun run --cwd forge typecheck",
       "bun test --cwd forge"
     ]
   },
