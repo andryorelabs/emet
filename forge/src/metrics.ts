@@ -28,27 +28,35 @@ export type TranscriptMetrics = TokenTotals & {
   readonly models: readonly string[]
 }
 
-type Rates = { readonly input: number; readonly output: number }
+type Rates = { readonly input: number; readonly output: number; readonly cacheRead?: number }
 
-/** USD per million tokens. Cache read is 0.1x input and cache creation 1.25x input. */
-const RATES_BY_FAMILY: Record<string, Rates> = {
-  opus: { input: 5, output: 25 },
-  sonnet: { input: 3, output: 15 },
-  haiku: { input: 1, output: 5 },
-}
+/**
+ * USD per million tokens, first-party API rates (claude-api skill, cached 2026-10-06).
+ * Cache creation is 1.25x input; cache read defaults to 0.1x input unless `cacheRead` is set.
+ * Entries are matched in order, so the specific Claude 5 ids come before the family fallbacks.
+ */
+const RATES_BY_MODEL_MARKER: readonly (readonly [string, Rates])[] = [
+  ['fable', { input: 10, output: 50, cacheRead: 0.25 }],
+  ['opus-5-5', { input: 4, output: 20, cacheRead: 0.2 }],
+  ['sonnet-5', { input: 2, output: 10, cacheRead: 0.2 }],
+  ['haiku-5', { input: 0.1, output: 0.5 }],
+  ['opus', { input: 5, output: 25 }],
+  ['sonnet', { input: 3, output: 15 }],
+  ['haiku', { input: 1, output: 5 }],
+]
 
-const FALLBACK_RATES = RATES_BY_FAMILY.sonnet!
+const FALLBACK_RATES: Rates = { input: 3, output: 15 }
 
 function ratesForModel(model: string): Rates {
-  const family = Object.keys(RATES_BY_FAMILY).find((name) => model.includes(name))
-  return family ? RATES_BY_FAMILY[family]! : FALLBACK_RATES
+  return RATES_BY_MODEL_MARKER.find(([marker]) => model.includes(marker))?.[1] ?? FALLBACK_RATES
 }
 
 export function costUsd(model: string, tokens: TokenTotals): number {
   const rates = ratesForModel(model)
+  const cacheReadRate = rates.cacheRead ?? rates.input * 0.1
   return (
     (tokens.inputTokens * rates.input +
-      tokens.cacheReadTokens * rates.input * 0.1 +
+      tokens.cacheReadTokens * cacheReadRate +
       tokens.cacheCreationTokens * rates.input * 1.25 +
       tokens.outputTokens * rates.output) /
     1e6

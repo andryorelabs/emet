@@ -1,10 +1,14 @@
 import { describe, expect, test } from 'bun:test'
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs'
+import os from 'node:os'
+import path from 'node:path'
 
 import {
   aggregateRun,
   costUsd,
   formatMetricsSummary,
   parseTranscriptMetrics,
+  run,
   type TicketMetrics,
 } from './metrics'
 
@@ -96,5 +100,72 @@ describe('aggregateRun', () => {
     expect(summary).toMatch(/\| B \| 1 .*\(OVER\)/)
     expect(summary).toMatch(/\| A \| 1 .*\(within\)/)
     expect(summary).toMatch(/\| C \| 2 .*\(no estimate\)/)
+  })
+})
+
+describe('claude 5 pricing', () => {
+  const million = {
+    inputTokens: 1e6,
+    outputTokens: 1e6,
+    cacheReadTokens: 1e6,
+    cacheCreationTokens: 1e6,
+  }
+
+  test('uses the Claude 5 rates and falls back to the family rates', () => {
+    expect(costUsd('claude-opus-5-5', million)).toBeCloseTo(4 + 20 + 0.2 + 5)
+    expect(costUsd('claude-sonnet-5-5', million)).toBeCloseTo(2 + 10 + 0.2 + 2.5)
+    expect(costUsd('claude-haiku-5-5', million)).toBeCloseTo(0.1 + 0.5 + 0.01 + 0.125)
+    expect(costUsd('claude-opus-5', million)).toBeCloseTo(5 + 25 + 0.5 + 6.25)
+  })
+})
+
+describe('run', () => {
+  test('reads events from the git common dir and the subagent transcript from the event', async () => {
+    const root = mkdtempSync(path.join(os.tmpdir(), 'forge-metrics-'))
+    try {
+      expect(Bun.spawnSync(['git', 'init', '-q', root]).exitCode).toBe(0)
+      const runDirectory = path.join(root, '.git', '.forge', 'runs', 'r1')
+      mkdirSync(path.join(runDirectory, 'events'), { recursive: true })
+      writeFileSync(
+        path.join(runDirectory, 'tickets.json'),
+        JSON.stringify([{ id: 'CLA-1', wave: 1, estimatedPeakTokens: 1_000 }]),
+      )
+      const transcript = path.join(root, 'agent-a1.jsonl')
+      writeFileSync(
+        transcript,
+        [
+          turn('2026-01-01T00:00:00Z', 'claude-opus-5-5', { input_tokens: 1_000_000, output_tokens: 0 }),
+          turn('2026-01-01T00:01:00Z', 'claude-opus-5-5', { input_tokens: 0, output_tokens: 1_000_000 }),
+        ].join('\n'),
+      )
+      writeFileSync(
+        path.join(runDirectory, 'events', 'CLA-1.json'),
+        JSON.stringify({
+          runId: 'r1',
+          ticket: 'CLA-1',
+          event: 'SubagentStop',
+          outcome: 'allowed',
+          at: '2026-01-01T00:02:00Z',
+          sessionId: 'coordinator',
+          branch: null,
+          commits: 1,
+          agentTranscriptPath: transcript,
+        }),
+      )
+      const lines: string[] = []
+      const originalLog = console.log
+      console.log = (line: string) => void lines.push(line)
+      try {
+        await run(['--run', 'r1', '--root', root, '--json'])
+      } finally {
+        console.log = originalLog
+      }
+      const parsed = JSON.parse(lines.join('\n'))
+      expect(parsed.missing).toEqual([])
+      expect(parsed.run.costUsd).toBeCloseTo(24)
+      expect(parsed.tickets[0].ticket).toBe('CLA-1')
+    } finally {
+      rmSync(root, { recursive: true, force: true })
+    }
   })
 })
