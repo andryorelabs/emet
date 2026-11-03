@@ -6,13 +6,12 @@
  */
 
 import { existsSync, readFileSync } from 'node:fs'
-import os from 'node:os'
 import path from 'node:path'
 
 import { resolveRepoRoot } from './config'
 import { readCompletionEvent } from './runs'
 
-const USAGE = `usage: forge metrics --run <id> [--root <dir>] [--project-dir <dir>] [--json]`
+const USAGE = `usage: forge metrics --run <id> [--root <dir>] [--json]`
 
 export type TokenTotals = {
   readonly inputTokens: number
@@ -232,15 +231,6 @@ export function readPlanEntries(ticketsPath: string): PlanEntry[] {
   })
 }
 
-function findTranscript(projectsDirectory: string, sessionId: string): string | null {
-  const direct = path.join(projectsDirectory, `${sessionId}.jsonl`)
-  if (existsSync(direct)) return direct
-  for (const match of new Bun.Glob(`*/subagents/agent-${sessionId}.jsonl`).scanSync({ cwd: projectsDirectory })) {
-    return path.join(projectsDirectory, match)
-  }
-  return null
-}
-
 function readFlag(argv: string[], name: string): string | undefined {
   const index = argv.indexOf(name)
   return index === -1 ? undefined : argv[index + 1]
@@ -254,13 +244,14 @@ export async function run(argv: string[]): Promise<void> {
     return
   }
   const root = readFlag(argv, '--root') ?? (await resolveRepoRoot()) ?? process.cwd()
-  const projectsDirectory = path.join(
-    os.homedir(),
-    '.claude',
-    'projects',
-    (readFlag(argv, '--project-dir') ?? root).replaceAll('/', '-'),
-  )
-  const ticketsPath = path.join(root, '.forge', 'runs', runId, 'tickets.json')
+  const commonDirectoryOutput =
+    await Bun.$`git -C ${root} rev-parse --path-format=absolute --git-common-dir`.nothrow().quiet()
+  const commonDirectory =
+    commonDirectoryOutput.exitCode === 0 ? commonDirectoryOutput.stdout.toString().trim() : root
+  const ticketsPath = [
+    path.join(commonDirectory, '.forge', 'runs', runId, 'tickets.json'),
+    path.join(root, '.forge', 'runs', runId, 'tickets.json'),
+  ].find((candidate) => existsSync(candidate)) ?? path.join(root, '.forge', 'runs', runId, 'tickets.json')
   if (!existsSync(ticketsPath)) {
     console.error(`forge metrics: no tickets.json at ${ticketsPath}`)
     process.exitCode = 1
@@ -270,8 +261,11 @@ export async function run(argv: string[]): Promise<void> {
   const tickets: TicketMetrics[] = []
   const missing: string[] = []
   for (const entry of readPlanEntries(ticketsPath)) {
-    const event = readCompletionEvent(root, runId, entry.id)
-    const transcript = event?.sessionId ? findTranscript(projectsDirectory, event.sessionId) : null
+    const event = readCompletionEvent(commonDirectory, runId, entry.id)
+    const transcript =
+      event?.agentTranscriptPath && existsSync(event.agentTranscriptPath)
+        ? event.agentTranscriptPath
+        : null
     if (!transcript) {
       missing.push(entry.id)
       continue

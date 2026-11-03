@@ -270,6 +270,17 @@ describe('stop hooks', () => {
     ...overrides,
   })
 
+  test('records the subagent transcript path when the hook provides one', async () => {
+    const written: unknown[] = []
+    await recordCompletionEvent(
+      'SubagentStop',
+      { cwd: worktreeCwd, session_id: 's1', agent_transcript_path: '/t/agent-a1.jsonl' },
+      { decision: 'allow' },
+      eventDeps(written),
+    )
+    expect(written[0]).toMatchObject({ agentTranscriptPath: '/t/agent-a1.jsonl' })
+  })
+
   test('records an allowed completion event for a forge-owned worktree', async () => {
     const written: unknown[] = []
     await recordCompletionEvent(

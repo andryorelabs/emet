@@ -248,6 +248,8 @@ export type CompletionEvent = {
   readonly sessionId: string | null
   readonly branch: string | null
   readonly commits: number | null
+  /** The subagent's own transcript (SubagentStop's `agent_transcript_path`); absent for a plain Stop. */
+  readonly agentTranscriptPath?: string
 }
 
 export function completionEventPath(
