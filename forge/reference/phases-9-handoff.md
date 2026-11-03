@@ -35,10 +35,11 @@ instead of one session accumulating every wave in the run (see
 1. Report this wave's outcome (PR link, what shipped, what got flagged) —
    the same content a mid-run status update would carry, just written down
    instead of only said.
-2. Hand off to the next wave. If `handoff.autoChain` is `true` **and** this
-   wave's PR actually merged **and** nothing was flagged (the next wave
-   builds on the merged trunk, so an open or flagged PR always means a human
-   step), launch it yourself:
+2. Hand off to the next wave. Chain only when Phase 8's `forge gate <ticket>
+   --waves-remaining <n>` answered `chain` for every ticket of this wave (it
+   folds in `handoff.autoChain`, the merged PR, the green integration suite,
+   and nothing flagged); anything else — `merge` without `chain`, `hold`,
+   `stop`, `defer` — is a human step. To chain, launch it yourself:
    - Run `forge launch <spec-id> --wave <n+1>` from the repo root, as its
      own Bash call. It refuses when a live `forge-<spec-id>-*` session
      already exists, runs `claude --bg --name forge-<spec-id>-w<n+1>
@@ -68,12 +69,9 @@ instead of one session accumulating every wave in the run (see
    `forge launch <spec-id> --wave <n>`, never a bare `claude --bg`, which
    skips the Orca tab and the duplicate-session check.
 
-   Otherwise (`autoChain` is `false`, or the PR is open or flagged), print,
-   verbatim, the command for the next wave: `/forge --dispatch <spec-id>`
-   (the same spec issue this whole run has been using as parent).
-3. End the session here. When it was not auto-chained, a human runs that
-   command — in this terminal or a fresh one — to continue. This mirrors
-   exactly the `--draft`/`--dispatch` split already described in "Modes":
-   nothing about wave computation depends on which session created the spec
-   or dispatched any prior wave, since the frontier is always recomputed
-   fresh from the tracker.
+   Otherwise print, verbatim, the command for the next wave:
+   `/forge --dispatch <spec-id>`.
+3. End the session here. Unless auto-chained, a human runs that command to
+   continue; the frontier is always recomputed fresh from the tracker, so
+   nothing depends on which session ran any prior wave. Include "Rulings I
+   made" (`forge review --rulings`) in the report.

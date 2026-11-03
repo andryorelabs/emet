@@ -6,24 +6,25 @@ to `phases-6-7-dispatch.md`.
 ## Phase 1 — Interview
 
 Reach a shared understanding of $ARGUMENTS by calling the Skill tool twice —
-`grilling` (relentless interview to sharpen the plan) then `domain-modeling`
-(reconcile terminology against `CONTEXT.md`/`docs/adr/` per
-`docs/agents/domain.md`) — the same two calls `grill-with-docs` itself makes
-(that skill is user-invocable only, not model-invocable, so call its two
-underlying skills directly instead of trying to invoke it by name). Any
-`CONTEXT.md`/`docs/adr/` edit `domain-modeling` proposes is **not written
-yet** — note it in the plan file and apply it in Phase 5, alongside every
-other write this run makes.
+`grilling` then `domain-modeling` (terminology against `CONTEXT.md`/`docs/adr/`
+per `docs/agents/domain.md`); `grill-with-docs` is user-invocable only, so call
+its two skills directly. Any `CONTEXT.md`/`docs/adr/` edit `domain-modeling`
+proposes is **not written yet** — note it in the plan file, apply in Phase 5.
 
-If the feature touches a screen (judge this yourself from the interview; the
-user isn't asked to classify it), don't publish the design here — publishing
-is a write and this phase is inside plan mode. Instead, describe in the plan file
-what an artboard would need: one screen description per screen, plus the
-states a worker would otherwise improvise badly alone (empty, error,
-loading). Confirm the UI/non-UI classification with the user at the end of
-this phase — it's the one moment they're actually present for it. The actual
-canvas gets designed and published in Phase 5, right after the plan is
-approved.
+Interview in **frontier rounds**, not one question at a time. Each round asks
+every currently unblocked decision together; each carries a `➡️` recommended
+answer, so the user can reply "yes" to accept all. A decision answerable from
+the repo or docs is not asked: have a fresh-context subagent look the fact up
+and state it. Answers unblock the next round. Soft cap: after ~4 rounds, or
+once only low-stakes decisions remain, wrap up — list the leftovers with their
+`➡️` defaults and ask one "go with these?".
+
+If the feature touches a screen (judge this yourself), don't publish the
+design here — publishing is a write and this phase is inside plan mode.
+Describe in the plan file one screen description per screen, plus the states
+a worker would otherwise improvise badly (empty, error, loading). Confirm the
+UI/non-UI classification with the user at the end of this phase. The canvas is
+published in Phase 5.
 
 If the interview ends with real fog — open questions that don't resolve by
 talking, because they need research, a prototype, or a decision nobody can
@@ -50,7 +51,12 @@ Put the requirements in a `## Specs` section, numbered `S1..Sn`, one per
 line (`- **S1**: …`). Quote the user's own strings, commands and examples
 verbatim inside each one — never paraphrase them. Tickets and prompts cite
 these numbers, and workers read this section directly from the tracker, so
-whatever is not in `## Specs` does not reach them.
+whatever is not in `## Specs` does not reach them. Give every S# an
+acceptance scenario (`Scenario: WHEN … THEN …`).
+
+Add two more sections to the spec block. `## Global Constraints`: rules every
+worker and reviewer must obey (the harness copies it into each brief).
+`## Review Focus`: inputs the spec implies but nothing tests — each gets a test.
 
 ## Phase 3 — Tickets
 
@@ -64,6 +70,12 @@ Phase 2. Reinforce two rules on top of the skill's own breakdown:
   the `## Specs` numbers it implements (e.g. `Covers: S2, S3`). Every S#
   must be covered by at least one ticket; a ticket covering none is
   unjustified scope.
+- Every ticket carries `## Interfaces`: `Consumes:` / `Produces:` with
+  signatures, so parallel workers agree on the seams.
+- Fast path: a unit of ≲100 changed lines (`sizing.inlineMaxLines`) that
+  passes the resume-from-diff test is folded into a sibling worker's ticket
+  (one worktree), never given its own. If the whole request is below that
+  threshold, write no tickets: one worker plus review.
 - Any change to a path listed in `schema.ownedPaths` (`forge.config.json`)
   goes in exactly one ticket, first in the dependency chain, blocking every
   other ticket that touches the feature — see `docs/agents/forge.md` for why
@@ -119,19 +131,22 @@ Phase 2. Reinforce two rules on top of the skill's own breakdown:
   Split the ticket into two (same wave, parallel, no extra close-out cost) if
   any tripwire fires: estimated peak > 160K; touch set > 8 files or > 1,500
   lines; new surface > 500 lines; more than one new E2E spec in the ticket;
-  or a new page object **and** a new spec in the same ticket — that exact
-  shape produced the single largest worker context measured (348K) against
-  an almost-identical sibling ticket that stayed at 129K (see
-  `reference/incidents.md`).
+  or a new page object **and** a new spec in the same ticket (348K vs 129K
+  for an almost-identical sibling; see `reference/incidents.md`).
+
+Before Phase 4, run `forge validate --file <plan.json | ->` (usage:
+`forge validate --help`; plan = spec markdown + tickets with `covers`,
+`surfaces`, `wave`, `blockedBy`, `newSurfaceLines`, `folded`). Fix every error
+(uncovered S#, ticket covering nothing, missing scenario, overlapping wave
+surfaces, dependency cycle) and re-run until it exits 0; warnings, like an
+unfolded small ticket, need a fold or a reason.
 
 ## Phase 4 — The one freeze point
 
 Write the complete plan to the plan file: the spec, every ticket with its
-blockers and its `## Project skills` picks, and **who's doing what** — which tickets are unassigned (a worker
-will take them) and which are assigned to a human (skipped entirely, they're
-doing those by hand). This doubles as the safety net against "I meant to
-assign myself that one and forgot" — the whole dispatch plan is visible
-before anything launches.
+blockers and `## Project skills` picks, and **who's doing what** — tickets
+unassigned (a worker takes them) vs assigned to a human (skipped entirely).
+The whole dispatch plan is visible before anything launches.
 
 Call `ExitPlanMode` to request approval. This **is** the one OK — nothing
 below this line asks another question (aside from the one design-publish
@@ -147,41 +162,32 @@ Now that the plan is approved, in this exact order:
 
 1. Apply the `CONTEXT.md`/`docs/adr/` edits deferred from Phase 1.
 2. If the feature touches a screen: publish the canvas now with the `Artifact`
-   tool directly — never invoke `/design` or ask the user to run it. In
-   current Claude Code `/design` resolves to a mode that's user-invocable
-   only (see `reference/incidents.md` for why); the forge's own canvases were
-   never the Claude Design editor anyway — they're a plain single-page HTML
-   the model writes itself (nav + one `<section class="artboard">` per
-   screen + a state switch for empty/error/loading + a hand-off block per
-   artboard), so the `Artifact` tool reproduces them exactly:
-   - **This product area already has a canvas** (URL in
-     `docs/design/README.md`'s index): `Artifact action:"read"` its URL, Read
-     the saved file in full, append one artboard section (plus its nav
-     button) per new screen reusing the page's existing classes/tokens, mark
-     any superseded artboards with the page's own historical note, then
-     `Artifact` publish that file back with `url` — same URL, living canvas,
-     never a new canvas per feature; split an area only once two features
-     collide over the same screen.
-   - **This product area has no canvas yet**: read an existing canvas from
-     `docs/design/README.md` as the template for chrome/CSS/patterns and
-     publish a new one with the same structure (first publish, set `icon`).
-     If the repo has no canvas at all yet, load the `artifact-design` skill
-     and build the nav + artboards + state-switch + hand-off structure from
-     scratch.
-   - One artboard per screen plus empty/error/loading states, static mockups
-     only. This is the one write in this run that needs a live permission
-     prompt (publishing can't be skipped) — the user is still around right
-     after approving the plan. Update `docs/design/README.md`'s table.
-3. Create the spec issue and every ticket from the plan file per
-   `docs/agents/issue-tracker.md`'s literal calls for this repo's tracker —
-   set each ticket's state to the tracker's initial dispatch-eligible state
-   explicitly (never leave it unset — some trackers default an issue with no
-   state to a backlog-equivalent that never reaches the dispatch frontier),
-   apply the triage label from `docs/agents/triage-labels.md` that marks it
-   ready for automatic dispatch, plus `blockedBy` and priority — UI tickets
-   now carry the real hand-off from the published canvas (measurements,
-   states, copy, the artboard's name). Don't apply the ready-for-dispatch
-   label to the spec issue itself — it's the container, not a ticket.
+   tool directly — never invoke `/design` or ask the user to run it (it is
+   user-invocable only; see `reference/incidents.md`). A canvas is a plain
+   single-page HTML you write: nav + one `<section class="artboard">` per
+   screen + empty/error/loading state switch + a hand-off block per artboard.
+   - **Area already has a canvas** (URL in `docs/design/README.md`):
+     `Artifact action:"read"` it, Read the saved file in full, append one
+     artboard (plus nav button) per new screen reusing its classes/tokens,
+     mark superseded artboards with its historical note, republish with
+     `url` — same URL, never a new canvas per feature; split an area only
+     once two features collide over a screen.
+   - **No canvas yet**: use an existing one as the template and publish a new
+     one (set `icon`); if the repo has none, load the `artifact-design` skill.
+   - Static mockups only. The one write needing a live permission prompt;
+     update `docs/design/README.md`'s table.
+3. Create the spec issue and every ticket per `docs/agents/issue-tracker.md`'s
+   literal calls: each ticket's state set explicitly to the dispatch-eligible
+   one (unset can default to a backlog that never reaches the frontier), the
+   ready-for-dispatch label from `docs/agents/triage-labels.md`, plus
+   `blockedBy` and priority; UI tickets carry the real hand-off from the
+   canvas. Never label the spec issue itself. Before each create run
+   `forge materialize-log --run <id> --lookup <localKey>` (exit 0 = already
+   created, skip); right after, `--record <localKey> <trackerId>` — an
+   interrupted run never duplicates.
+4. `forge approve --run spec<spec-id> --spec <file> [--tickets <file>]` writes
+   `approval.json` (spec and ticket hashes; write the ticket list to `.forge/runs/spec<spec-id>/tickets.json` first); Phase 6 refuses to dispatch when
+   `approve --check` reports a change.
 
 **`--draft` stops here.** Print the spec issue's ID as the handle for a
 later `--dispatch <spec-id>` — in this session or a fresh one — and end the

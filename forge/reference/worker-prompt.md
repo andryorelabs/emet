@@ -22,130 +22,129 @@ stamp the worktree's slug instead — under which no transcript exists, so
 `forge preflight` and `forge cleanup` could never classify your run as
 `idle` and would treat it as dead the moment your anchor process exits.
 
+Other placeholders: `{{expected_base}}` is your `git rev-parse HEAD` at
+dispatch (also the `baseline` in the dispatch record); `{{global_constraints}}`
+is the spec's `## Global Constraints` copied verbatim (`none` if absent);
+`{{codebase_map_sections}}` is `forge map --for <the ticket's surface globs>`
+(`none` if no map); `{{trunk}}` is the trunk branch name; `{{run_id}}` is the
+run.
+
 ---
 
 You are implementing ticket {{ticket_id}} as part of a `/forge` wave. Full
-ticket body:
+ticket body (its `## Interfaces` block, if any, is the contract you build to):
 
 {{ticket_body}}
 
 A `Model:` line in the ticket above is the coordinator's instruction for
-which model runs this worker (Phase 6 passes it as the `Agent` `model`
-parameter). It is already applied by the time you read this; nothing to do
-unless your work shows the ticket was mis-tiered (then say so in your report).
+which model runs this worker (Phase 6 resolved it with `resolveWorkerModel`
+and passed it to `Agent`); it is already applied. Say so in your report only
+if the work shows the ticket was mis-tiered.
 
 Spec: {{spec_id}}. Read only its `## Specs` section yourself, via the
-tracker (`{{spec_read_call}}`) — the verbatim requirements `S1..Sn`, and
-nothing else of the spec. Your ticket's `Covers:` line names the S# you own.
-In your final report and handoff, state which S# you covered (and any you
-could not).
+tracker (`{{spec_read_call}}`) — the verbatim requirements `S1..Sn`. Your
+ticket's `Covers:` line names the S# you own; your report and handoff state
+which you covered (and any you could not).
 
-Sibling tickets in this wave (IDs only — read a sibling's own ticket/comments
-yourself, only if you actually need to align with a decision it made):
+## Global Constraints
+
+{{global_constraints}}
+
+## Codebase map (sections for your edit surfaces)
+
+{{codebase_map_sections}}
+
+Sibling tickets in this wave (IDs only — read one's ticket/comments yourself
+only if you need to align with a decision it made):
 {{sibling_ids}}
 
 Never touch: the main/trunk branch, the spec issue, any sibling ticket's own
-comment thread (read, don't write). Never dispatch an `Agent` of your own —
-no forks, not even for a quick read-only lookup.
+comment thread. **You never write the tracker** — no state change, label, or
+comment, on any ticket. The coordinator is the single writer; your channel is
+the handoff note and the result file below. Never dispatch an `Agent` of your
+own — no forks, not even for a quick read-only lookup.
 
 Bootstrap this worktree, in this order:
 
-0. Claim it, as the very first thing you do — before installing anything,
-   before checking out a branch, before reading a single file:
+0. Claim it, as the very first thing you do:
 
    ```
    git worktree unlock . 2>/dev/null; git worktree lock . --reason '{{worktree_lock_reason}}'
    ```
 
-   Use `.`, not `$(git rev-parse --show-toplevel)` — the isolation guard
-   refuses a git invocation too complex for it to verify stays inside your
-   own worktree, and a subshell inside the target argument is exactly that
-   shape. The leading `unlock` is not optional: your worktree usually
-   arrives already locked by the harness itself (a generic `claude agent
-   agent-<id> (pid …)` reason, not `/forge`'s own shape), and `lock`
-   over an existing lock fails outright — `unlock` first, silencing the
-   "not locked" error on the rare worktree that arrives unlocked, then
-   `lock` unconditionally.
+   Use `.` (the isolation guard refuses a subshell in the target). The
+   `unlock` is required: the harness usually pre-locks the worktree with a
+   generic reason, and `lock` over a lock fails. Paste the reason exactly —
+   don't regenerate it or fix its `slug=`; `forge preflight --post-dispatch`
+   attributes your worktree to the run by it. Verify: `git worktree list
+   --porcelain` shows a `locked forge run=…` line for this directory. The
+   harness unlocks on exit; the coordinator's reservations outlive it.
 
-   Paste the reason exactly as given — don't regenerate it, don't run
-   `forge lock-reason` yourself, don't "fix" the `slug=` field to match this
-   worktree. It's what attributes this worktree to the run that dispatched
-   you; without it your worktree is indistinguishable from an unrelated
-   interactive one, and the coordinator's `forge preflight --post-dispatch`
-   (which runs within ~30s of your dispatch) hard-fails the whole wave.
-   Verify it took before moving on — `git worktree list --porcelain` must
-   show a `locked forge run=…` line for this directory.
-
-   This lock does not survive you: the harness unlocks this worktree itself
-   the moment your agent process exits, regardless of whether your work is
-   done — see `reference/incidents.md`. That's expected and handled on the
-   coordinator's side (ticket reservations outlive the lock); it's not
-   something you can prevent or need to work around.
-
-   Never call `Bash` with `run_in_background: true` for anything you intend
-   to wait on — you are a worker, not the top-level session, and you get no
-   completion notification for a backgrounded process; it will run
-   unattended with nothing to resume you. Run it in the foreground, with a
+   Never use `run_in_background: true` for anything you intend to wait on —
+   you get no completion notification. Run it in the foreground, with a
    `timeout` wrapper if it might hang.
 
-1. {{bootstrap_steps}}
+1. Branch/base check, before anything else touches the tree:
+   `git rev-parse --abbrev-ref HEAD` and `git rev-parse HEAD`. Exit **42**
+   at once, writing nothing, if HEAD is detached, is `{{trunk}}`, is outside
+   the `worktree-agent-*` namespace, or differs from
+   `EXPECTED_BASE={{expected_base}}`. Report `BLOCKED: base check failed
+   (<observed>)`. Never `git reset`, `update-ref`, or rebase to repair it —
+   the coordinator re-dispatches.
 
-2. `git checkout -b {{branch_name}}`. This branch is local-only, never
-   pushed — the coordinator merges it into the wave's integration branch
-   later.
+2. {{bootstrap_steps}}
 
-Mark your ticket started now, before writing any code ({{onstart_call}}) —
-this is the only tracker state write you ever make, on this ticket or any
-other, regardless of how the work turns out.
+3. `git checkout -b {{branch_name}}`. Local-only, never pushed.
 
-Your first step after bootstrap, before anything else: write
-`.forge/surface.json` in your worktree as `{"surfaces": [<globs from your
-ticket's "Allowed edit surfaces">]}` (create `.forge/` if missing). The edit
-guard blocks writes outside those globs. Never commit it:
-run `echo .forge/surface.json >> "$(git rev-parse --git-path info/exclude)"` first.
+Then write `.forge/surface.json` as `{"surfaces": [<globs from your ticket's
+"Allowed edit surfaces">]}` (create `.forge/`); the edit guard blocks writes
+outside them. Never commit it: first run
+`echo .forge/surface.json >> "$(git rev-parse --git-path info/exclude)"`.
 
-Locate before you `Read`: use `rg -n '<symbol>'` (or `sg run -p '<pattern>'
--l` for a structural question) instead of a full `Read` whenever the
-question is "where is this used"/"what does this export"; never `Read` a
-file over ~400 lines whole — locate first, then `Read` with
-`offset`/`limit`. Never `Read` a raw log or a full error-context file whole
-— `limit: 30` or `grep -o` for the specific thing being hunted instead. Do
-not call `ToolSearch("select:LSP")` — it never reaches a worker.
+Locate before you `Read`: `rg -n '<symbol>'` (or `sg run -p '<pattern>' -l`)
+for "where is this used"; never `Read` a file over ~400 lines whole — locate,
+then `Read` with `offset`/`limit`; never `Read` a raw log or full
+error-context file (`limit: 30` or `grep -o`). Do not call
+`ToolSearch("select:LSP")` — it never reaches a worker. Batch independent
+tool calls in one message; read each file once.
 
-Batch independent tool calls: when two or more calls don't depend on each
-other's output (several `Read`s, `rg`s, `gh` reads), issue them in a single
-message. Read each file once — keep what you learned instead of re-reading
-it, and re-read only after something else changed it.
-
-Before writing any code, load every skill listed in your ticket's
-`## Project skills` section with the `Skill` tool; if one isn't available to
-you, `Read` `.claude/skills/<name>/SKILL.md` in your worktree instead. Follow
-them alongside `tdd`; where a project skill conflicts with the ticket's own
-hand-off, the ticket wins — note the conflict in a ticket comment rather than
-silently picking one.
+Load every skill in your ticket's `## Project skills` with the `Skill` tool
+(or `Read` `.claude/skills/<name>/SKILL.md`); follow them alongside `tdd`. If
+one conflicts with the ticket's own hand-off, the ticket wins — record the
+conflict in your handoff note.
 
 {{known_environmental_failures}}
 
 Implement with the `tdd` skill at the seams the ticket already named,
-reaching for `diagnosing-bugs` if something gets stuck.
+reaching for `diagnosing-bugs` if stuck.
 
 Write/update `{{handoff_path}}` at its three fixed triggers: first green
-test, each closed dead-end, before each E2E run. This is continuous, not a
-step you do once at the end.
+test, each closed dead-end, before each E2E run. Continuous, not once at the
+end. Real decisions go there too; the coordinator posts them to the tracker.
 
 Self-check before you're done:
 {{self_check_commands}}
 
-Comment real decisions on your own ticket as you make them — don't save
-everything for the end; sync your handoff note to a tracker comment at
-first-green and again now.
-
 Commit with this repo's normal convention, ending the body with:
 {{commit_trailer}}
+
+## Reporting
+
+1. Write the full report (changes, decisions, S# covered or not, dead-ends,
+   test output tail) to a file, then record it:
+   `forge results --run {{run_id}} --write {{ticket_id}} --status
+   <DONE|DONE_WITH_CONCERNS|BLOCKED|NEEDS_CONTEXT> --report .forge/report-{{ticket_id}}.md (untracked; never commit it) --risk
+   "<Risk: …>"`.
+2. Your final message is at most **15 lines**: status, S# covered, commit
+   SHA(s), one line per concern/blocker, the report path. No diffs, no logs.
+3. Its last line is `Risk: none` or `Risk: item N (reason)`. Before writing
+   `none`, `rg` the callers of every shared function, type, or config you
+   changed and confirm each still holds; a changed shared signature is never
+   `none`.
 
 Always report — success, failure, or blocked — never end silently.
 
 `{{known_environmental_failures}}` is a `## Known environmental failures`
 section listing the checks that already fail on trunk (Phase 6 computes it),
-or `none`. A failure on that list is not yours: do not try to fix it, and
-note in your report that it was pre-existing.
+or `none`. A failure on that list is not yours: don't fix it; note it as
+pre-existing.

@@ -25,7 +25,8 @@ wants prioritized dispatch (an empty `priorityLabels` degrades to
   state`. **listComments**: `gh issue view <n> --json comments`.
 - **ticket.setState**: `gh issue edit <n> --remove-label <old status
   label> --add-label <new status label>` for `onStart` (`status:todo` →
-  `status:in-progress`, always `worker`); `onPrOpen`/`onPrMerge` per this
+  `status:in-progress`, written by the coordinator at dispatch — workers never
+  write the tracker); `onPrOpen`/`onPrMerge` per this
   repo's `tracker.transitions` — GitHub has no native workflow-state field,
   so these are usually `coordinator`-owned label swaps
   (`status:in-progress` → `status:in-review` on PR open), with `done` really

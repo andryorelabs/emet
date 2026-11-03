@@ -1,13 +1,19 @@
 import { describe, expect, test } from 'bun:test'
-import { readFileSync } from 'node:fs'
+import { mkdtempSync, readFileSync, writeFileSync } from 'node:fs'
+import { tmpdir } from 'node:os'
 import path from 'node:path'
 
+import { writeApproval } from './approve'
 import type { DependencyCheck } from './dependencies'
+import type { EnvironmentProbes } from './doctor'
 import {
   auditPostDispatch,
   checkSlotCapacity,
   classifyWorktreeEntry,
+  collectForkBaseFailures,
+  collectMapStaleWarning,
   evaluateDependencyGate,
+  evaluateRunGate,
   findBranchTicketMismatches,
   findDuplicateTicketBranchNumbers,
   findDuplicateTicketWorktrees,
@@ -18,6 +24,73 @@ import {
   isBranchMatchingTicket,
 } from './preflight'
 import type { WorktreeEntry, WorktreeOwner } from './worktrees'
+
+describe('evaluateRunGate (S9, S15)', () => {
+  const spec = '- **S1**: does a thing. Scenario: when x then y.\n'
+  const tickets = [{ id: 'T1', covers: ['S1'], surfaces: ['a.ts'], wave: 1, blockedBy: [] }]
+
+  function setUpRun(ticketList: unknown = tickets): string {
+    const directory = mkdtempSync(path.join(tmpdir(), 'preflight-gate-'))
+    writeFileSync(path.join(directory, 'spec.md'), spec)
+    writeFileSync(path.join(directory, 'tickets.json'), JSON.stringify(ticketList))
+    writeApproval({
+      approvalPath: path.join(directory, 'approval.json'),
+      specPath: path.join(directory, 'spec.md'),
+      ticketsPath: path.join(directory, 'tickets.json'),
+    })
+    return directory
+  }
+
+  test('passes for an approved, valid plan', () => {
+    const gate = evaluateRunGate(setUpRun(), { inlineMaxLines: 100 })
+    expect(gate.failures).toEqual([])
+  })
+
+  test('fails when the approval record is missing', () => {
+    const directory = mkdtempSync(path.join(tmpdir(), 'preflight-gate-'))
+    expect(evaluateRunGate(directory, { inlineMaxLines: 100 }).failures[0]).toContain('approval:')
+  })
+
+  test('fails when tickets changed after approval', () => {
+    const directory = setUpRun()
+    writeFileSync(path.join(directory, 'tickets.json'), '[]')
+    const gate = evaluateRunGate(directory, { inlineMaxLines: 100 })
+    expect(gate.failures.join('\n')).toContain('tickets changed since approval')
+  })
+
+  test('fails validate when a spec item is uncovered', () => {
+    const directory = setUpRun([{ ...tickets[0], covers: [] }])
+    const gate = evaluateRunGate(directory, { inlineMaxLines: 100 })
+    expect(gate.failures.some((line) => line.startsWith('validate:'))).toBe(true)
+  })
+})
+
+describe('collectForkBaseFailures (S2)', () => {
+  const probesFor = (head: string, base: string, setting: string | null): EnvironmentProbes => ({
+    helpText: async () => null,
+    ghRepoNameWithOwner: async () => null,
+    remoteUrl: async () => null,
+    resolveRef: async (_root, ref) => (ref === 'HEAD' ? head : base),
+    worktreeBaseRef: async () => setting,
+  })
+
+  test('flags a harness base that differs from the coordinator HEAD', async () => {
+    const failures = await collectForkBaseFailures('/r', 'origin', 'main', probesFor('aaaaaaa1', 'bbbbbbb2', null))
+    expect(failures).toHaveLength(1)
+  })
+
+  test('passes when baseRef is head', async () => {
+    expect(await collectForkBaseFailures('/r', 'origin', 'main', probesFor('aaaaaaa1', 'bbbbbbb2', 'head'))).toEqual([])
+  })
+})
+
+describe('collectMapStaleWarning (S18)', () => {
+  test('warns when the map is missing', async () => {
+    const directory = mkdtempSync(path.join(tmpdir(), 'preflight-map-'))
+    const warning = await collectMapStaleWarning(directory, 'docs/agents/codebase.md')
+    expect(warning).toContain('stale')
+  })
+})
 
 function makeCheck(overrides: Partial<DependencyCheck>): DependencyCheck {
   return {
