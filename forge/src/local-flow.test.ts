@@ -1,5 +1,12 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
-import { mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSync } from "node:fs";
+import {
+  mkdtempSync,
+  readFileSync,
+  realpathSync,
+  rmSync,
+  symlinkSync,
+  writeFileSync,
+} from "node:fs";
 import os from "node:os";
 import path from "node:path";
 
@@ -17,12 +24,24 @@ function git(cwd: string, ...args: string[]): string {
   return result.stdout.toString().trim();
 }
 
+function childPath(): string {
+  return `${emptyBin}:${path.dirname(process.execPath)}`;
+}
+
+function childEnv(): Record<string, string | undefined> {
+  const env: Record<string, string | undefined> = { ...process.env, PATH: childPath() };
+  for (const key of Object.keys(env)) {
+    if (key.startsWith("GH_") || key.startsWith("GITHUB_")) delete env[key];
+  }
+  return env;
+}
+
 function forge(...args: string[]): CliResult {
   const result = Bun.spawnSync([process.execPath, CLI_ENTRY, ...args], {
     cwd: repo,
     stdout: "pipe",
     stderr: "pipe",
-    env: { ...process.env, PATH: `${emptyBin}:${path.dirname(process.execPath)}:/usr/bin:/bin` },
+    env: childEnv(),
   });
   return {
     exitCode: result.exitCode,
@@ -43,6 +62,9 @@ beforeEach(() => {
   repo = realpathSync(mkdtempSync(path.join(os.tmpdir(), "forge-local-flow-")));
   emptyBin = realpathSync(mkdtempSync(path.join(os.tmpdir(), "forge-local-flow-bin-")));
   scratchDir = realpathSync(mkdtempSync(path.join(os.tmpdir(), "forge-local-flow-body-")));
+  const gitBinary = Bun.which("git");
+  if (gitBinary === null) throw new Error("git is required on PATH");
+  symlinkSync(gitBinary, path.join(emptyBin, "git"));
   git(repo, "init", "-q", "-b", "main");
   git(repo, "config", "user.email", "t@example.com");
   git(repo, "config", "user.name", "Test");
@@ -76,7 +98,8 @@ function resolveInitTodoMarkers(): void {
 
 describe("local flow", () => {
   test("init, tickets, frontier, land, cleanup and preflight with no remote and no gh", () => {
-    expect(Bun.which("gh", { PATH: emptyBin })).toBeNull();
+    expect(Bun.which("gh", { PATH: childPath() })).toBeNull();
+    expect(Bun.which("git", { PATH: childPath() })).not.toBeNull();
     expect(git(repo, "remote")).toBe("");
 
     forgeOk("init", "--tracker", "local");
@@ -120,6 +143,10 @@ describe("local flow", () => {
     writeFileSync(path.join(repo, "feature.txt"), "feature\n");
     git(repo, "add", "feature.txt");
     git(repo, "commit", "-q", "-m", "work one");
+    writeFileSync(path.join(repo, "feature-two.txt"), "feature two\n");
+    git(repo, "add", "feature-two.txt");
+    git(repo, "commit", "-q", "-m", "work two");
+    const branchTip = git(repo, "rev-parse", branch);
     git(repo, "checkout", "-q", "main");
 
     const commitsBefore = Number(git(repo, "rev-list", "--count", "main"));
@@ -137,6 +164,8 @@ describe("local flow", () => {
       "1",
     );
     expect(Number(git(repo, "rev-list", "--count", "main"))).toBe(commitsBefore + 1);
+    expect(git(repo, "rev-parse", "main")).not.toBe(branchTip);
+    expect(git(repo, "rev-list", "--parents", "-n", "1", "main").split(" ")).toHaveLength(2);
 
     forgeOk("cleanup", "--all");
     expect(git(repo, "branch", "--list", branch)).toBe("");
