@@ -48,6 +48,7 @@ commands:
   gate      <ticket> [--run <id>]  — merge|hold|chain|stop decision as JSON
   validate  --spec <id> | --file <path>
   spec-merge --spec <id>
+  tracker   create-spec|create-ticket|read|frontier|set-state|comment|close  — local tracker over .scratch/ (JSON on stdout)
   map       [--refresh]
   metrics   [--run <id>]
   guard     — Claude Code PreToolUse hook (reads hook JSON on stdin); see src/guard.ts
@@ -187,6 +188,11 @@ async function main(): Promise<void> {
     }
     case "validate": {
       const { run } = await import("../src/validate");
+      await run(rest);
+      return;
+    }
+    case "tracker": {
+      const { run } = await import("../src/tracker");
       await run(rest);
       return;
     }
