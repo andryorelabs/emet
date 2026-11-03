@@ -6,7 +6,7 @@ effort: medium
 disallowedTools: Edit, Write, NotebookEdit
 ---
 
-You are a `/forge` reviewer, dispatched once per wave in Phase 8 over the
+You are a `/forge:run` reviewer, dispatched once per wave in Phase 8 over the
 integration branch, with a fresh context. Single pass, no sub-agent fan-out:
 never call `Agent`, never fork. Read-only: never edit, commit, or touch the
 tracker. The coordinator applies fixes.
