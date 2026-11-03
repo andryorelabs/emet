@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { mkdtempSync, realpathSync, rmSync, writeFileSync } from "node:fs";
+import { chmodSync, existsSync, mkdtempSync, realpathSync, rmSync, writeFileSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
 
@@ -10,6 +10,7 @@ import {
   localLandedBranches,
   parsePullRequests,
   parseRunIdentity,
+  run,
   summarize,
   type PullRequestStatus,
   type WaveInput,
@@ -173,6 +174,49 @@ describe("parsing and merging", () => {
     } finally {
       process.chdir(original);
       rmSync(repo, { recursive: true, force: true });
+    }
+  });
+
+  test("run never calls gh in merge landing mode", async () => {
+    const repo = realpathSync(mkdtempSync(path.join(os.tmpdir(), "forge-status-run-")));
+    const stubDirectory = realpathSync(mkdtempSync(path.join(os.tmpdir(), "forge-status-gh-")));
+    const marker = path.join(stubDirectory, "gh-was-called");
+    const originalCwd = process.cwd();
+    const originalPath = process.env.PATH;
+    const originalExitCode = process.exitCode;
+    const originalLog = console.log;
+    try {
+      writeFileSync(
+        path.join(repo, "forge.config.json"),
+        JSON.stringify({ version: 1, landing: { mode: "merge" } }),
+      );
+      const identity = ["-c", "user.email=t@example.com", "-c", "user.name=T"];
+      for (const args of [
+        ["init", "-q", "-b", "main"],
+        ["add", "forge.config.json"],
+        [...identity, "commit", "-q", "-m", "init"],
+      ]) {
+        const result = Bun.spawnSync(["git", "-C", repo, ...args]);
+        if (result.exitCode !== 0) throw new Error(result.stderr.toString());
+      }
+      const stub = path.join(stubDirectory, "gh");
+      writeFileSync(stub, `#!/bin/sh\ntouch "${marker}"\nexit 1\n`);
+      chmodSync(stub, 0o755);
+      process.env.PATH = `${stubDirectory}:${originalPath ?? ""}`;
+      process.chdir(repo);
+      process.exitCode = undefined;
+      console.log = () => {};
+      await run([]);
+      console.log = originalLog;
+      expect(existsSync(marker)).toBe(false);
+      expect(process.exitCode).toBeUndefined();
+    } finally {
+      console.log = originalLog;
+      process.exitCode = originalExitCode;
+      process.env.PATH = originalPath;
+      process.chdir(originalCwd);
+      rmSync(repo, { recursive: true, force: true });
+      rmSync(stubDirectory, { recursive: true, force: true });
     }
   });
 
