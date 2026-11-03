@@ -2,7 +2,12 @@
  * Deterministic diff risk classifier behind review routing.
  *
  * Usage:
- *   forge assess --base <ref> --head <ref>
+ *   forge assess --base <ref> --head <ref> [--risk-line <text>]
+ *
+ * `--risk-line` takes the worker report's `Risk:` line. `Risk: none` changes
+ * nothing; any other text (a `Risk: item N (reason)`, or anything unparseable)
+ * raises the tier one step (passive -> medium, medium -> high). It can never
+ * lower a tier.
  *
  * Prints `{tier, reasons, reviewer:{model,effort}|null}` as JSON. Tier
  * is `passive` (reviewer null: no review) for docs-only diffs, `high` when a changed path matches a
@@ -31,7 +36,7 @@ export interface DiffInput {
   readonly addedLines: ReadonlyArray<{ readonly path: string; readonly line: string }>
 }
 
-const USAGE = 'usage: forge assess --base <ref> --head <ref>'
+const USAGE = 'usage: forge assess --base <ref> --head <ref> [--risk-line <text>]'
 
 const DOC_EXTENSIONS = /\.(md|mdx|markdown|txt|rst|adoc)$/i
 const DOC_DIRECTORIES = /(^|\/)(docs?|documentation)\//i
@@ -100,6 +105,24 @@ export function classifyDiff(input: DiffInput, config: ForgeConfig): AssessResul
   return { tier: 'medium', reasons: ['source change with no high-risk signals'], reviewer: models.reviewer.medium }
 }
 
+export type RiskLine = { readonly kind: 'none' } | { readonly kind: 'item'; readonly reason: string }
+
+export function parseRiskLine(text: string): RiskLine {
+  const body = text.trim().replace(/^risk:\s*/i, '')
+  if (/^none\.?$/i.test(body)) return { kind: 'none' }
+  return { kind: 'item', reason: body || 'empty risk line' }
+}
+
+export function applyRiskLine(result: AssessResult, riskLineText: string, config: ForgeConfig): AssessResult {
+  const risk = parseRiskLine(riskLineText)
+  if (risk.kind === 'none' || result.tier === 'high') return result
+  const reasons = [...result.reasons, `risk line: ${risk.reason}`]
+  if (result.tier === 'passive') {
+    return { tier: 'medium', reasons, reviewer: config.models.reviewer.medium }
+  }
+  return { tier: 'high', reasons, reviewer: config.models.reviewer.high }
+}
+
 export function parseDiffInput(nameOnlyOutput: string, patch: string): DiffInput {
   const paths = nameOnlyOutput.split('\0').filter((entry) => entry.length > 0)
   const addedLines: Array<{ path: string; line: string }> = []
@@ -144,7 +167,10 @@ export async function run(argv: string[]): Promise<void> {
     const { config } = await loadForgeConfigWithDefaults(repoRoot)
     const nameOnly = await gitDiff(repoRoot, ['-z', '--name-only', base, head, '--'])
     const patch = await gitDiff(repoRoot, ['-U0', base, head, '--'])
-    console.log(JSON.stringify(classifyDiff(parseDiffInput(nameOnly, patch), config), null, 2))
+    const classified = classifyDiff(parseDiffInput(nameOnly, patch), config)
+    const riskLine = readFlagValue(argv, '--risk-line')
+    const result = riskLine === undefined ? classified : applyRiskLine(classified, riskLine, config)
+    console.log(JSON.stringify(result, null, 2))
   } catch (error: unknown) {
     if (error instanceof ForgeConfigError) {
       console.error(error.message)

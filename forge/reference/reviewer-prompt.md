@@ -1,59 +1,51 @@
-# Reviewer dispatch prompt template
+# Reviewer dispatch prompt
 
-Fill in every `{{placeholder}}` from this wave's own state, then paste the
-filled template as the entire prompt for the Phase 8 `Agent({subagent_type:
-"forge-reviewer"})` call. Dispatch this **once per wave**, after every
-worker's branch is merged into the integration branch and before pushing it.
+Fill each `{{placeholder}}` and paste as the whole prompt of the Phase 8
+`Agent({subagent_type: "forge-reviewer"})` call. Once per wave, after every
+branch is merged into the integration branch, before pushing it.
 
 ---
 
-You are reviewing the `{{integration_branch}}` branch, based off
-`{{base_branch}}`, as part of a `/forge` wave. This branch merges
-{{ticket_count}} tickets' worth of worker output.
+Review `{{integration_branch}}` (base `{{base_branch}}`, {{ticket_count}}
+tickets). Risk tier: `{{risk_tier}}` (`forge assess`, already raised by any
+worker `Risk:` line).
 
-Spec: {{spec_id}}. Read its `## Specs` section yourself via the tracker
-(`{{spec_read_call}}`) — the verbatim requirements `S1..Sn`. Each ticket in
-this wave declares which it `Covers:`.
+Diff: read the file `{{diff_path}}` FIRST, before any worker report. Read
+only what it touches plus needed context.
 
-Project skills this wave's tickets named (union across tickets, `none` if
-none applied):
+Spec {{spec_id}}: read its `## Specs` via `{{spec_read_call}}`. Give a verdict
+per covered S#: `S<n>: met | partial | unmet`, reason, `file:line`. Partial or
+unmet is a finding.
 
-{{project_skills}}
+Project skills: {{project_skills}}. Read each `.claude/skills/<name>/SKILL.md`;
+a clear violation is a finding.
 
-Read each listed skill's `.claude/skills/<name>/SKILL.md` and treat a clear
-violation of one in the diff as a finding — severity by actual impact, not
-automatically a blocker.
+Lenses: medium = correctness + verification-gap; high adds security/resilience.
+Verification-gap: one finding per gap, "one test that would catch <named
+regression>".
 
-Diff the integration branch against the base branch yourself
-(`git diff {{base_branch}}...{{integration_branch}}`) — don't rely on a diff
-pasted here. Read only what the diff touches plus whatever surrounding
-context you need to judge it.
+Emit a JSON array, also written to `.forge/review-{{run_id}}.json` (the exact
+input of `forge review --ticket <t> --findings <file|->`):
 
-Give a verdict per S# for every requirement this wave's tickets cover:
-`S<n>: met | partial | unmet`, with a one-line reason and `file:line`
-evidence. A `partial` or `unmet` verdict is a finding.
+```json
+[{"id":"F-001","file":"a.ts","line":42,"severity":"blocker","kind":"patch","claim":"failure scenario"}]
+```
 
-Report only problems that should block this merge, ranked most severe first,
-each with a severity, an exact `file:line`, and the concrete failure
-scenario. If nothing should block the merge, say so plainly.
+`severity`: blocker|critical|major|minor|nit. `kind`: intent_gap|bad_plan|
+patch|defer (triaged in that order). `line` is an integer, `id` stable across
+rounds, no other fields; `[]` = nothing blocks.
 
-Write your findings as a ledger to `.forge/review-{{run_id}}.md` (the one file
-you may create), one row per finding:
-
-`F-NNN | file:line | blocker/should-fix | open`
-
-The coordinator applies fixes and may re-dispatch you; the ledger is how your
-findings survive that.
+Refuter: once, over all blocker/critical findings together, try to refute them;
+drop or downgrade what you refute.
 
 ## Recheck variant
 
-Use this instead of the full template when re-reviewing fixes. Give the
-reviewer **only** the ledger and the fix diff, nothing else:
+Give the reviewer only the findings file and the fix diff:
 
 ```
-Recheck round {{round}} of 2 on `{{integration_branch}}`. Read the ledger at
-`.forge/review-{{run_id}}.md` and the output of `git diff {{reviewed_sha}}..HEAD`.
-For each `open` finding, mark it `fixed` or `open` with a one-line reason, and
-add a new `F-NNN` row only for a defect the fix diff itself introduced. Do not
-re-review anything outside that diff.
+Recheck round {{round}} of 2 on `{{integration_branch}}`. Findings:
+`.forge/review-{{run_id}}.json`; fix diff: `{{diff_path}}`
+(`git diff {{reviewed_sha}}..HEAD`). Re-emit the array minus fixed findings. A
+new blocker/critical must cite a prior id or a file in the fix diff, else
+`kind: "defer"`.
 ```
