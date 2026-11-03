@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
 
@@ -212,6 +212,23 @@ describe("probeForgeAgents", () => {
   });
 });
 
+describe("probeForgeAgents with a forge plugin", () => {
+  test("present when the plugin ships both agents", () => {
+    const agents = mkdtempSync(path.join(os.tmpdir(), "forge-agents-"));
+    const plugin = mkdtempSync(path.join(os.tmpdir(), "forge-plugin-"));
+    try {
+      mkdirSync(path.join(plugin, "agents"));
+      for (const name of FORGE_AGENT_NAMES) {
+        writeFileSync(path.join(plugin, "agents", `${name}.md`), "");
+      }
+      expect(probeForgeAgents(agents, [plugin])).toEqual({ kind: "present" });
+    } finally {
+      rmSync(agents, { recursive: true, force: true });
+      rmSync(plugin, { recursive: true, force: true });
+    }
+  });
+});
+
 describe("classifyGithubCliProbe", () => {
   test("authenticated is satisfied", () => {
     expect(classifyGithubCliProbe({ kind: "authenticated" }).status).toBe("satisfied");
@@ -380,7 +397,7 @@ describe("formatDependencyCheck", () => {
 
   test("reproduces the exact gh texts", () => {
     expect(formatDependencyCheck(classifyGithubCliProbe({ kind: "not-on-path" }), "      ")).toBe(
-      "gh CLI not found on PATH — required for this repo's github tracker. Install: https://cli.github.com",
+      "gh CLI not found on PATH — required for every tracker (PRs always use it). Install: https://cli.github.com",
     );
     expect(
       formatDependencyCheck(classifyGithubCliProbe({ kind: "unauthenticated" }), "      "),
@@ -410,7 +427,7 @@ describe("checkDependencies", () => {
     }
   });
 
-  test("checks gh only for a github tracker", async () => {
+  test("checks gh for every tracker kind", async () => {
     const github = await checkDependencies({
       tracker: "github",
       repoRoot: "/tmp",
@@ -423,7 +440,7 @@ describe("checkDependencies", () => {
       repoRoot: "/tmp",
       probes: stubProbes({ githubCli: { kind: "unauthenticated" } }),
     });
-    expect(local.some((check) => check.dependency === "github-cli")).toBe(false);
+    expect(unsatisfiedChecks(local).map((check) => check.dependency)).toEqual(["github-cli"]);
   });
 
   test("checks Linear only for a linear tracker", async () => {
