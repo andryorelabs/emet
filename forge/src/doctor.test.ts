@@ -179,6 +179,36 @@ describe('checkSelfCheckCommand', () => {
     expect(issue).toContain('no readable package.json')
   })
 
+  describe('with a package manager directory option', () => {
+    beforeEach(() => {
+      mkdirSync(path.join(repoRoot, 'sub'))
+      writeFileSync(
+        path.join(repoRoot, 'sub', 'package.json'),
+        JSON.stringify({ scripts: { check: 'true' } }),
+      )
+    })
+
+    test.each([
+      'bun run --cwd sub check',
+      'bun run --cwd=sub check',
+      'npm --prefix sub run check',
+      'pnpm -C sub run check',
+      'pnpm --dir sub run check',
+    ])('resolves "%s" against the subdirectory package.json', async (command) => {
+      expect(await checkSelfCheckCommand(repoRoot, command, null)).toBeNull()
+    })
+
+    test('flags a script missing from the subdirectory package.json', async () => {
+      const issue = await checkSelfCheckCommand(repoRoot, 'bun run --cwd sub lint', null)
+      expect(issue).toContain("script \"lint\", which doesn't exist")
+    })
+
+    test('flags a directory with no package.json', async () => {
+      const issue = await checkSelfCheckCommand(repoRoot, 'bun run --cwd missing check', null)
+      expect(issue).toContain('"missing" has no readable package.json')
+    })
+  })
+
   test('resolves a bare command whose binary is on PATH', async () => {
     expect(await checkSelfCheckCommand(repoRoot, 'git status --short', null)).toBeNull()
   })

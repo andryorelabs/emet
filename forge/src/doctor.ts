@@ -93,6 +93,41 @@ export function findMissingDocs(existing: ReadonlySet<string>): string[] {
   return REQUIRED_DOCS.filter((doc) => !existing.has(doc))
 }
 
+const DIRECTORY_OPTIONS = new Set(['--cwd', '--prefix', '--dir', '-C'])
+
+/**
+ * Parses `<bun|pnpm|npm> [dir-option] run [dir-option] <script> ...`, where the
+ * directory option (`--cwd`, `--prefix`, `--dir`, `-C`, each also as
+ * `--opt=<dir>`) points at the package.json the script lives in. Returns null
+ * when the command isn't a package-manager `run` invocation.
+ */
+function parsePackageManagerRun(
+  command: string,
+): { directory: string | null; script: string } | null {
+  const [manager, ...tokens] = command.trim().split(/\s+/)
+  if (manager !== 'bun' && manager !== 'pnpm' && manager !== 'npm') return null
+
+  let directory: string | null = null
+  let sawRun = false
+  for (let index = 0; index < tokens.length; index++) {
+    const token = tokens[index]!
+    const inlineDirectory = /^(?:--cwd|--prefix|--dir)=(.+)$/.exec(token)
+    if (inlineDirectory) {
+      directory = inlineDirectory[1]!
+    } else if (DIRECTORY_OPTIONS.has(token)) {
+      directory = tokens[++index] ?? null
+    } else if (token.startsWith('-')) {
+      continue
+    } else if (!sawRun) {
+      if (token !== 'run') return null
+      sawRun = true
+    } else {
+      return { directory, script: token }
+    }
+  }
+  return null
+}
+
 /**
  * A `commands.selfCheck` entry "resolves" if either it's a `<packageManager>
  * run <script>` invocation and `package.json` actually declares that
@@ -112,14 +147,18 @@ export async function checkSelfCheckCommand(
   command: string,
   packageManagerScripts: ReadonlySet<string> | null,
 ): Promise<string | null> {
-  const runMatch = /^(?:bun|pnpm|npm) run (\S+)/.exec(command)
-  if (runMatch) {
-    const script = runMatch[1]!
-    if (packageManagerScripts === null) {
-      return `"${command}" looks like a package-manager script, but this repo has no readable package.json`
+  const run = parsePackageManagerRun(command)
+  if (run) {
+    const scripts =
+      run.directory === null
+        ? packageManagerScripts
+        : await readPackageManagerScripts(path.resolve(repoRoot, run.directory))
+    if (scripts === null) {
+      const where = run.directory === null ? 'this repo' : `"${run.directory}"`
+      return `"${command}" looks like a package-manager script, but ${where} has no readable package.json`
     }
-    if (!packageManagerScripts.has(script)) {
-      return `"${command}" references package.json script "${script}", which doesn't exist`
+    if (!scripts.has(run.script)) {
+      return `"${command}" references package.json script "${run.script}", which doesn't exist`
     }
     return null
   }
