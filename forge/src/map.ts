@@ -3,6 +3,7 @@ import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 
 import { loadForgeConfigWithDefaults, resolveRepoRoot } from "./config";
+import { classifyPackageManager, type PackageManager } from "./init";
 import { globsOverlap } from "./surfaces";
 
 /**
@@ -64,13 +65,21 @@ function parsePackageJson(raw: string | undefined): PackageJson | null {
   }
 }
 
-function detectPackageManager(files: ReadonlySet<string>, pkg: PackageJson | null): string | null {
-  if (files.has("bun.lock") || files.has("bun.lockb")) return "bun";
-  if (files.has("pnpm-lock.yaml")) return "pnpm";
-  if (files.has("yarn.lock")) return "yarn";
-  if (files.has("package-lock.json")) return "npm";
-  return pkg?.packageManager?.split("@")[0] ?? null;
+function detectPackageManager(
+  files: ReadonlySet<string>,
+  pkg: PackageJson | null,
+): PackageManager | null {
+  const detected = classifyPackageManager((name) => files.has(name), pkg?.packageManager ?? null);
+  return detected === "unknown" ? null : detected;
 }
+
+const NON_JS_TEST_COMMANDS: ReadonlyArray<readonly [PackageManager, string]> = [
+  ["go", "go test ./..."],
+  ["cargo", "cargo test"],
+  ["uv", "uv run pytest"],
+  ["poetry", "poetry run pytest"],
+  ["pip", "pytest"],
+];
 
 function stackSection(inputs: MapInputs): string[] {
   const fileSet = new Set(inputs.files);
@@ -91,11 +100,16 @@ function stackSection(inputs: MapInputs): string[] {
     if (scriptNames.length > 0)
       lines.push(`- Scripts: ${scriptNames.map((name) => `\`${name}\``).join(", ")}`);
   }
+  if (!pkg) {
+    const manager = detectPackageManager(fileSet, null);
+    if (manager && manager !== "npm") lines.push(`- Package manager: ${manager}`);
+  }
   const otherManifests: ReadonlyArray<readonly [string, string]> = [
     ["go.mod", "Go module"],
     ["Cargo.toml", "Rust crate"],
     ["pyproject.toml", "Python project"],
     ["requirements.txt", "Python (requirements.txt)"],
+    ["setup.py", "Python (setup.py)"],
     ["Gemfile", "Ruby (Bundler)"],
     ["pom.xml", "Java (Maven)"],
     ["build.gradle", "Java/Kotlin (Gradle)"],
@@ -163,6 +177,9 @@ function testingSection(inputs: MapInputs): string[] {
   const pkg = parsePackageJson(inputs.manifests.get("package.json"));
   const testScript = pkg?.scripts?.test;
   if (testScript) lines.push(`- Test command: \`${testScript}\``);
+  const manager = detectPackageManager(new Set(inputs.files), pkg);
+  const ecosystemCommand = NON_JS_TEST_COMMANDS.find(([name]) => name === manager);
+  if (ecosystemCommand && !pkg) lines.push(`- Test command: \`${ecosystemCommand[1]}\``);
   const hasBunTypes = Object.keys({ ...pkg?.devDependencies, ...pkg?.dependencies }).includes(
     "@types/bun",
   );
