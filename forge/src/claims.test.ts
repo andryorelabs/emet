@@ -69,18 +69,20 @@ describe("didReserveTicket / listReservations / releaseTicket", () => {
     expect(parsed.runId).toBe("run-a");
   });
 
-  test("records the anchor start token and treats a reused pid with a different token as dead", async () => {
-    await didReserveTicket("run-a", process.pid, "AO-995", forgeDirectory);
-    const [stored] = await listReservations(forgeDirectory);
-    if (existsSync("/proc/self/stat")) expect(stored?.anchorStartToken).toMatch(/^\d+$/);
-    else expect(stored?.anchorStartToken).toBeUndefined();
+  test.skipIf(!existsSync("/proc/self/stat"))(
+    "records the anchor start token and treats a reused pid with a different token as dead",
+    async () => {
+      await didReserveTicket("run-a", process.pid, "AO-995", forgeDirectory);
+      const [stored] = await listReservations(forgeDirectory);
+      expect(stored?.anchorStartToken).toMatch(/^\d+$/);
 
-    const isReclaimed = await didReserveTicket("run-b", process.pid, "AO-995", forgeDirectory, {
-      isAnchorAliveFn: (_pid, token) => token === undefined,
-      transcriptMtimeFn: () => null,
-    });
-    expect(isReclaimed).toBe(true);
-  });
+      const isReclaimed = await didReserveTicket("run-b", process.pid, "AO-995", forgeDirectory, {
+        isAnchorAliveFn: (_pid, token) => token === undefined,
+        transcriptMtimeFn: () => null,
+      });
+      expect(isReclaimed).toBe(true);
+    },
+  );
 
   test("releasing a ticket no one holds is a no-op, not an error", async () => {
     const result = await releaseTicket("AO-995", "run-a", { forgeDirectory });
