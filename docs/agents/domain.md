@@ -12,9 +12,10 @@ it or fold `CONTEXT.md` into it.
 
 `CONTEXT.md` and `docs/adr/` are the **live** ground that `domain-modeling`
 maintains as `/forge` runs features through this repo: its ubiquitous language
-and the architectural decisions made along the way. Both start empty and are
-created lazily — only when a term or a decision actually crystallizes during a
-`grill-with-docs` session, never speculatively.
+and the architectural decisions made along the way. Both are
+kept current: add or sharpen a term in [`CONTEXT.md`](../../CONTEXT.md) and
+record decisions in [`docs/adr/`](../adr/README.md) only when they actually
+crystallize during a `grill-with-docs` session, never speculatively.
 
 ## Before exploring, read these
 
