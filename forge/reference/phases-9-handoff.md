@@ -46,7 +46,7 @@ instead of one session accumulating every wave in the run (see
    - Run `forge launch <spec-id> --wave <n+1>` from the repo root, as its
      own Bash call. It refuses when a live `forge-<spec-id>-*` session
      already exists, runs `claude --bg --name forge-<spec-id>-w<n+1>
-     --permission-mode <handoff.permissionMode> "/forge --dispatch
+     --permission-mode <handoff.permissionMode> "/forge:run --dispatch
      <spec-id>"`, confirms the session appears in `claude agents --json`,
      and — per `handoff.launcher` — opens an Orca tab running `claude attach
      forge-<spec-id>-w<n+1>`. It prints one JSON line:
@@ -73,7 +73,7 @@ instead of one session accumulating every wave in the run (see
    skips the Orca tab and the duplicate-session check.
 
    Otherwise print, verbatim, the command for the next wave:
-   `/forge --dispatch <spec-id>`.
+   `/forge:run --dispatch <spec-id>`.
 
 3. End the session here. Unless auto-chained, a human runs that command to
    continue; the frontier is always recomputed fresh from the tracker, so

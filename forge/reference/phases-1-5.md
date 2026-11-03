@@ -36,9 +36,7 @@ operations" section; loop back to Phase 1 once its map clears.
 
 ## Phase 2 — Spec
 
-Read
-`~/.claude/plugins/cache/claude-plugins-official/mattpocock-skills/*/skills/engineering/to-spec/SKILL.md`
-(glob the version — don't hardcode it) and follow its synthesis template,
+Run `forge skill-path to-spec` and read the `SKILL.md` it prints, then follow its synthesis template,
 but write the result **into the plan file**, not to the issue tracker —
 `to-spec` is user-invocable only and its own publish step is a write that
 can't happen inside plan mode. Section it as a spec block per
@@ -58,9 +56,7 @@ worker and reviewer must obey (the harness copies it into each brief).
 
 ## Phase 3 — Tickets
 
-Read
-`~/.claude/plugins/cache/claude-plugins-official/mattpocock-skills/*/skills/engineering/to-tickets/SKILL.md`
-and follow its tracer-bullet breakdown (with blocking edges), but write the
+Run `forge skill-path to-tickets` and read the `SKILL.md` it prints, then follow its tracer-bullet breakdown (with blocking edges), but write the
 tickets **into the plan file** instead of publishing them — same reason as
 Phase 2. Reinforce two rules on top of the skill's own breakdown:
 
