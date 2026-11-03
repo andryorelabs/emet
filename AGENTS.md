@@ -5,7 +5,7 @@ Guide for coding agents working in claude-forge. Terms follow [GLOSSARY.md](GLOS
 ## Layout
 
 - `forge/`: the runtime `forge` CLI (`bin/`, `src/`, `reference/` prompts, `schema/`, `templates/`). Installed to `~/.claude/forge` by `install.sh`.
-- `commands/forge.md`, `agents/*.md`: installed prompts for the `/forge` command and its worker and reviewer agents.
+- `commands/run.md`, `agents/*.md`: prompts for the `/forge:run` plugin command and its worker and reviewer agents. `install.sh` rewrites them and installs `commands/run.md` as `~/.claude/commands/forge.md`. See [ADR-0008](docs/adr/0008-standalone-binaries-and-plugin-distribution.md).
 - `tools/`: dev-only tests and scripts (lint plugin, invariant tests).
 - `docs/agents/`: per-repo `/forge` config prose. `docs/adr/`: architecture decisions.
 - Root: dev tooling config. `forge.config.json` is this repo's `/forge` config.
@@ -26,10 +26,11 @@ Run from the repo root with bun.
 - Never loosen a tsconfig or lint setting to pass a check; fix the code. See [ADR-0002](docs/adr/0002-oxc-toolchain-and-typescript-7-typecheck.md).
 - Typecheck with the aliased `typescript7` by path, never bare `tsc`. See ADR-0002.
 - `install.sh` and the runtime behaviour of the `forge` CLI must not change without an explicit ticket. See ADR-0001.
-- Installed prompt markdown (`forge/reference/*.md`, `commands/forge.md`, `agents/*.md`): whitespace and wrapping only, never wording. See ADR-0001.
+- Installed prompt markdown (`forge/reference/*.md`, `commands/run.md`, `agents/*.md`): whitespace and wrapping only, never wording. See ADR-0001.
 - Workers commit to local branches; one wave is one dependency layer and lands as one PR. See [ADR-0004](docs/adr/0004-one-wave-one-dependency-layer-one-pr.md).
 - Only the coordinator writes the tracker. See [ADR-0005](docs/adr/0005-coordinator-is-the-single-tracker-writer.md).
-- CI is Linux only. See [ADR-0006](docs/adr/0006-linux-only-ci.md).
+- CI runs on Linux and macOS; Windows is unsupported except via WSL. See [ADR-0007](docs/adr/0007-macos-support.md), which supersedes [ADR-0006](docs/adr/0006-linux-only-ci.md).
+- mattpocock-skills is a contracted core dependency (`forge/src/skills.ts`). See [ADR-0009](docs/adr/0009-mattpocock-skills-contracted-core-dependency.md).
 
 ## ADRs
 

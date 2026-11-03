@@ -12,27 +12,51 @@ beyond running `forge init` once.
 
 ## Install
 
+Requirements: Claude Code, `git`, `gh` (authenticated) and the
+`mattpocock-skills` plugin, on Linux or macOS. Bun is needed only for a source
+install; native Windows is unsupported (use WSL).
+
+There are two install paths.
+
+**Plugin, from a private marketplace** (no Bun needed). Add this repo as a
+marketplace and install the `forge` plugin; it brings `/forge:run`, the
+agents, the guard hooks and a `forge` shim that downloads a checksum-verified
+standalone binary on first use.
+
+**`install.sh`** (works with or without Bun):
+
 ```bash
 git clone git@github.com:AndryOre/claude-forge.git
 cd claude-forge
 ./install.sh
 ```
 
-This copies the CLI to `~/.claude/forge`, the command to
-`~/.claude/commands/forge.md`, and a `forge` wrapper to `~/.local/bin/forge`.
-Re-running it is safe — it just overwrites its own previous install.
+With `bun` on PATH it copies the CLI source to `~/.claude/forge` and a `forge`
+wrapper to `~/.local/bin/forge`. Without `bun` it installs the standalone-binary
+shim instead (`~/.local/bin/forge`, linked to `~/.claude/forge/bin/forge`),
+which downloads and checksum-verifies the binary on first run (needs `curl`).
+Either way the command lands in `~/.claude/commands/forge.md` and the agents in
+`~/.claude/agents/`; plugin placeholders in the prompts are rewritten to plain
+`~/.claude` paths and `/forge`. Re-running it is safe, and a file you edited is
+kept with the new version written beside it as `<file>.new`.
 
-Verify it worked:
+Recommended order, in each repo: run `/setup-matt-pocock-skills` first, then
+`forge init`.
+
+Verify it worked (`selftest` needs a source install):
 
 ```bash
-forge selftest
+forge doctor .
 ```
 
 ## Dependencies
 
-- **[bun](https://bun.sh)** — required, the CLI runs on it.
-- **`rsync`** — required by `install.sh` to copy the CLI into `~/.claude/forge`.
+- **[bun](https://bun.sh)** — only for source installs; the standalone binary
+  needs no runtime.
+- **`rsync`** and **`sha256sum` or `shasum`** — required by `install.sh`.
 - **`git`** — required at runtime; nearly every subcommand shells out to it.
+- **`gh` CLI, authenticated** — required for every tracker kind (PRs always
+  use it).
 - **The `mattpocock-skills` plugin** (`claude-plugins-official` marketplace)
   — `/forge`'s interview/spec/ticket phases call skills that live there.
   ```
@@ -42,7 +66,6 @@ forge selftest
 - **The `forge-worker` and `forge-reviewer` agents** in `~/.claude/agents/`
   — installed by `install.sh` (see "Models & effort" below); Phase 6 and
   Phase 8 dispatch by `subagent_type`, so either one missing breaks dispatch.
-- **`gh` CLI, authenticated** — only if the repo uses the `github` tracker.
 - **A Linear MCP server declared in `.mcp.json` (or at user scope)** — only
   if the repo uses the `linear` tracker. Declaration is what gets verified;
   whether the connection is actually _authenticated_ lives in Claude Code's

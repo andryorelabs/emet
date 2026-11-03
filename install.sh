@@ -7,9 +7,15 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
-if ! command -v bun >/dev/null 2>&1; then
-  echo "error: bun is required (https://bun.sh) — install it first." >&2
-  exit 1
+if command -v bun >/dev/null 2>&1; then
+  INSTALL_MODE="source"
+else
+  INSTALL_MODE="binary"
+  echo "note: bun not found — installing the standalone-binary shim instead of the source CLI."
+  if ! command -v curl >/dev/null 2>&1; then
+    echo "error: curl is required to download the forge binary when bun is absent — install it first." >&2
+    exit 1
+  fi
 fi
 
 if ! command -v rsync >/dev/null 2>&1; then
@@ -17,8 +23,12 @@ if ! command -v rsync >/dev/null 2>&1; then
   exit 1
 fi
 
-if ! command -v sha256sum >/dev/null 2>&1; then
-  echo "error: sha256sum is required (used for the install manifest) — install it first." >&2
+if command -v sha256sum >/dev/null 2>&1; then
+  SHA256_COMMAND=(sha256sum)
+elif command -v shasum >/dev/null 2>&1; then
+  SHA256_COMMAND=(shasum -a 256)
+else
+  echo "error: sha256sum or shasum is required (used for the install manifest) — install one first." >&2
   exit 1
 fi
 
@@ -46,19 +56,40 @@ is_retired() {
   return 1
 }
 
+rewrite_prompt() {
+  sed \
+    -e 's|[$]{CLAUDE_PLUGIN_ROOT}|$HOME/.claude|g' \
+    -e 's|/forge:run|/forge|g' \
+    -e 's|forge:forge-worker|forge-worker|g' \
+    -e 's|forge:forge-reviewer|forge-reviewer|g' \
+    "$1" > "$2"
+}
+
 echo "==> Staging the forge CLI, /forge command, agents and wrapper"
 mkdir -p "$STAGE/.claude/forge" "$STAGE/.claude/commands" "$STAGE/.claude/agents" "$STAGE/.local/bin"
 rsync -a --exclude node_modules "$SCRIPT_DIR/forge/" "$STAGE/.claude/forge/"
-cp "$SCRIPT_DIR/commands/forge.md" "$STAGE/.claude/commands/forge.md"
-cp "$SCRIPT_DIR/agents/forge-worker.md" "$STAGE/.claude/agents/forge-worker.md"
-cp "$SCRIPT_DIR/agents/forge-reviewer.md" "$STAGE/.claude/agents/forge-reviewer.md"
-cat > "$STAGE/.local/bin/forge" <<'WRAPPER'
+for reference_file in "$STAGE/.claude/forge/reference/"*.md; do
+  [[ -e "$reference_file" ]] || continue
+  rewrite_prompt "$reference_file" "$reference_file.rewritten"
+  mv "$reference_file.rewritten" "$reference_file"
+done
+rewrite_prompt "$SCRIPT_DIR/commands/run.md" "$STAGE/.claude/commands/forge.md"
+rewrite_prompt "$SCRIPT_DIR/agents/forge-worker.md" "$STAGE/.claude/agents/forge-worker.md"
+rewrite_prompt "$SCRIPT_DIR/agents/forge-reviewer.md" "$STAGE/.claude/agents/forge-reviewer.md"
+if [[ "$INSTALL_MODE" == "source" ]]; then
+  cat > "$STAGE/.local/bin/forge" <<'WRAPPER'
 #!/usr/bin/env bash
 exec bun "$HOME/.claude/forge/bin/forge.ts" "$@"
 WRAPPER
-chmod +x "$STAGE/.local/bin/forge"
+  chmod +x "$STAGE/.local/bin/forge"
+else
+  mkdir -p "$STAGE/.claude/forge/.claude-plugin"
+  cp "$SCRIPT_DIR/bin/forge" "$STAGE/.claude/forge/bin/forge"
+  cp "$SCRIPT_DIR/.claude-plugin/plugin.json" "$STAGE/.claude/forge/.claude-plugin/plugin.json"
+  chmod +x "$STAGE/.claude/forge/bin/forge"
+fi
 
-file_hash() { sha256sum "$1" | cut -d' ' -f1; }
+file_hash() { "${SHA256_COMMAND[@]}" "$1" | cut -d' ' -f1; }
 
 manifest_hash() {
   [[ -f "$MANIFEST" ]] || return 0
@@ -67,6 +98,7 @@ manifest_hash() {
 
 echo "==> Installing files (your edits are kept; new versions go to <file>.new)"
 mkdir -p "$HOME/.claude/forge"
+[[ -L "$HOME/.local/bin/forge" ]] && rm -f "$HOME/.local/bin/forge"
 
 while IFS= read -r -d '' staged_file; do
   relative_path="${staged_file#"$STAGE"/}"
@@ -144,8 +176,14 @@ if [[ -s "$RETIRED_NOTES_FILE" ]]; then
   echo
 fi
 
-echo "==> Installing forge CLI dependencies"
-(cd "$HOME/.claude/forge" && bun install --silent)
+if [[ "$INSTALL_MODE" == "source" ]]; then
+  echo "==> Installing forge CLI dependencies"
+  (cd "$HOME/.claude/forge" && bun install --silent)
+else
+  echo "==> Linking the forge shim into ~/.local/bin"
+  mkdir -p "$HOME/.local/bin"
+  ln -sf "$HOME/.claude/forge/bin/forge" "$HOME/.local/bin/forge"
+fi
 
 if [[ ":$PATH:" != *":$HOME/.local/bin:"* ]]; then
   echo
@@ -219,7 +257,9 @@ fi
 
 echo
 echo "Done. Verify with:"
-echo "  forge selftest"
+if [[ "$INSTALL_MODE" == "source" ]]; then
+  echo "  forge selftest"
+fi
 echo "  forge doctor ."
 echo
 echo "\`forge doctor\` also reports any recommended ~/.claude/settings.json"
@@ -227,6 +267,7 @@ echo "tweaks for running /forge unattended (model: opusplan, an unattended"
 echo "permissions.defaultMode, deny rules for pushing to main/force) — see"
 echo "the README's \"Models & effort\" section. It never edits that file."
 echo
-echo "Then, in any git repo, run \`forge init\` once and read what it prints —"
+echo "Recommended order: run /setup-matt-pocock-skills in the repo first, then"
+echo "run \`forge init\` once and read what it prints —"
 echo "it tells you about any missing dependency (the mattpocock-skills plugin,"
 echo "gh, Linear) before you use /forge there."
