@@ -2,6 +2,7 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import path from 'node:path'
 
 import { resolveRepoRoot } from './config'
+import { errorMessage, isOneOf } from './narrow'
 
 async function resolveSharedRoot(): Promise<string> {
   const output = await Bun.$`git rev-parse --path-format=absolute --git-common-dir`.nothrow().quiet()
@@ -55,7 +56,7 @@ export function writeResult(resultsDirectory: string, ticket: string, result: Wo
 export function readResult(resultsDirectory: string, ticket: string): WorkerResult | null {
   const target = resultPath(resultsDirectory, ticket)
   if (!existsSync(target)) return null
-  const parsed = JSON.parse(readFileSync(target, 'utf8')) as WorkerResult
+  const parsed: WorkerResult = JSON.parse(readFileSync(target, 'utf8'))
   validateResult(parsed)
   return parsed
 }
@@ -87,8 +88,11 @@ export async function run(argv: string[]): Promise<void> {
         process.exitCode = 2
         return
       }
+      if (!isOneOf(RESULT_STATUSES, status)) {
+        throw new Error(`invalid status "${status}" (expected ${RESULT_STATUSES.join('|')})`)
+      }
       writeResult(resultsDirectory, writeTicket, {
-        status: status as ResultStatus,
+        status,
         reportPath,
         risk,
       })
@@ -107,7 +111,7 @@ export async function run(argv: string[]): Promise<void> {
     console.error(USAGE)
     process.exitCode = 2
   } catch (error) {
-    console.error(`forge results: ${(error as Error).message}`)
+    console.error(`forge results: ${errorMessage(error)}`)
     process.exitCode = 1
   }
 }

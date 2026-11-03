@@ -1,6 +1,7 @@
 import { describe, expect, test } from 'bun:test'
 
 import { ForgeConfigError } from './config'
+import { errorMessage } from './narrow'
 import {
   launchWave,
   waveSessionName,
@@ -8,6 +9,15 @@ import {
   type CommandRunner,
   type LaunchRequest,
 } from './launch'
+
+async function rejectionOf(promise: Promise<unknown>): Promise<unknown> {
+  try {
+    await promise
+  } catch (error) {
+    return error
+  }
+  throw new Error('expected the promise to reject')
+}
 
 const REQUEST: LaunchRequest = {
   specId: 'AO-1880',
@@ -169,7 +179,7 @@ describe('launchWave', () => {
       agents: [json([{ id: 'old', name: 'forge-AO-1880-w2' }])],
     })
 
-    await expect(launchWave(REQUEST, runner)).rejects.toBeInstanceOf(ForgeConfigError)
+    expect(await rejectionOf(launchWave(REQUEST, runner))).toBeInstanceOf(ForgeConfigError)
     expect(calls.some((c) => c[0] === 'claude' && c[1] === '--bg')).toBe(false)
   })
 
@@ -178,7 +188,7 @@ describe('launchWave', () => {
       agents: [json([{ id: 'old', name: 'forge-AO-1880-w3' }])],
     })
 
-    await expect(launchWave(REQUEST, runner)).rejects.toBeInstanceOf(ForgeConfigError)
+    expect(await rejectionOf(launchWave(REQUEST, runner))).toBeInstanceOf(ForgeConfigError)
     expect(calls.some((c) => c[0] === 'claude' && c[1] === '--bg')).toBe(false)
   })
 
@@ -187,7 +197,7 @@ describe('launchWave', () => {
       agents: [json([{ id: 'old', name: 'forge-AO-1880-manual' }])],
     })
 
-    await expect(launchWave(REQUEST, runner)).rejects.toBeInstanceOf(ForgeConfigError)
+    expect(await rejectionOf(launchWave(REQUEST, runner))).toBeInstanceOf(ForgeConfigError)
   })
 
   test('another spec with a shared prefix does not block the launch', async () => {
@@ -205,12 +215,12 @@ describe('launchWave', () => {
       launch: { exitCode: 1, stdout: '', stderr: 'workspace not trusted' },
     })
 
-    await expect(launchWave(REQUEST, runner)).rejects.toThrow('workspace not trusted')
+    expect(errorMessage(await rejectionOf(launchWave(REQUEST, runner)))).toContain('workspace not trusted')
   })
 
   test('fails when the session never shows up in claude agents', async () => {
     const { runner } = scriptedRunner({ agents: [json([]), json([])] })
 
-    await expect(launchWave(REQUEST, runner)).rejects.toThrow('no session named')
+    expect(errorMessage(await rejectionOf(launchWave(REQUEST, runner)))).toContain('no session named')
   })
 })

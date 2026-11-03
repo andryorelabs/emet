@@ -93,10 +93,10 @@ describe('edit surfaces', () => {
   })
 })
 
-describe('review regressions', () => {
-  const bash = (command: string) =>
-    checkDestructiveCommand({ tool_name: 'Bash', tool_input: { command } }).decision
+const bash = (command: string) =>
+  checkDestructiveCommand({ tool_name: 'Bash', tool_input: { command } }).decision
 
+describe('review regressions', () => {
   test('allows commit and PR bodies that mention destructive commands', () => {
     expect(
       bash("git commit -m \"$(cat <<'EOF'\nfeat: x\n\n- Deny git reset --hard, DROP TABLE\nEOF\n)\""),

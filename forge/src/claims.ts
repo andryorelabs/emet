@@ -30,6 +30,7 @@ import {
   resolveSessionSlug,
   type RunVerdict,
 } from './runs'
+import { errnoCode, isObject } from './narrow'
 
 /**
  * Per-ticket reservations under `<git-common-dir>/forge/tickets/` — the
@@ -157,11 +158,11 @@ function reservationLockPath(forgeDirectory: string, ticket: string): string {
   return path.join(ticketsDirectory(forgeDirectory), `${ticket}.lock`)
 }
 
-function readJsonFile<T>(filePath: string): T | undefined {
+function readJsonFile(filePath: string): any {
   try {
-    return JSON.parse(readFileSync(filePath, 'utf8')) as T
+    return JSON.parse(readFileSync(filePath, 'utf8'))
   } catch (error) {
-    if ((error as NodeJS.ErrnoException).code === 'ENOENT') return undefined
+    if (errnoCode(error) === 'ENOENT') return undefined
     throw error
   }
 }
@@ -170,7 +171,7 @@ function listJsonFiles<T>(directory: string): T[] {
   if (!existsSync(directory)) return []
   return readdirSync(directory)
     .filter((name) => name.endsWith('.json'))
-    .map((name) => readJsonFile<T>(path.join(directory, name)))
+    .map((name): T | undefined => readJsonFile(path.join(directory, name)))
     .filter((entry): entry is T => entry !== undefined)
 }
 
@@ -255,7 +256,7 @@ export async function didReserveTicket(
 
   try {
     const filePath = reservationFilePath(resolvedForgeDirectory, ticket)
-    const existing = readJsonFile<Reservation>(filePath)
+    const existing: Reservation | undefined = readJsonFile(filePath)
     const existingOwnerVerdict = existing
       ? classifyRun(
           existing.anchorPid,
@@ -314,7 +315,7 @@ export async function releaseTicket(
   const resolvedForgeDirectory =
     options?.forgeDirectory ?? (await resolveForgeDirectory())
   const filePath = reservationFilePath(resolvedForgeDirectory, ticket)
-  const existing = readJsonFile<Reservation>(filePath)
+  const existing: Reservation | undefined = readJsonFile(filePath)
   if (!existing) return { outcome: 'not-reserved' }
   if (existing.runId !== expectedRunId && !options?.force) {
     return { outcome: 'owned-by-another', ownerRunId: existing.runId }
@@ -348,13 +349,14 @@ function writeJsonAtomically(filePath: string, value: unknown): void {
 }
 
 function isValidReservationShape(value: unknown): value is Reservation {
-  if (typeof value !== 'object' || value === null) return false
-  const record = value as Record<string, unknown>
+  if (!isObject(value)) return false
+  const record = value
   return (
     typeof record.runId === 'string' &&
     record.runId.length > 0 &&
+    typeof record.anchorPid === 'number' &&
     Number.isSafeInteger(record.anchorPid) &&
-    (record.anchorPid as number) > 0 &&
+    record.anchorPid > 0 &&
     typeof record.ticket === 'string' &&
     TICKET_PATTERN.test(record.ticket) &&
     typeof record.reservedAt === 'number' &&
@@ -405,7 +407,7 @@ export async function pruneDeadReservations(
   for (const fileName of readdirSync(directory)) {
     if (!fileName.endsWith('.json')) continue
     const filePath = path.join(directory, fileName)
-    const raw = readJsonFile<unknown>(filePath)
+    const raw: unknown = readJsonFile(filePath)
     if (!isValidReservationShape(raw)) {
       malformedFiles.push(fileName)
       continue

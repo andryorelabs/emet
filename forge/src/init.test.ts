@@ -117,7 +117,7 @@ describe('buildTrackerConfig', () => {
   }
 
   test('linear: onPrOpen/onPrMerge automatic, no per-kind sub-object', () => {
-    const tracker = buildTrackerConfig({ ...base, tracker: 'linear' }) as Record<string, unknown>
+    const tracker = buildTrackerConfig({ ...base, tracker: 'linear' })
     expect(tracker.kind).toBe('linear')
     expect(tracker.transitions).toEqual({
       onStart: 'worker',
@@ -129,7 +129,7 @@ describe('buildTrackerConfig', () => {
   })
 
   test('github: onPrOpen coordinator (label swap), onPrMerge automatic (closing keyword), stateLabels match forge init\'s own label creation', () => {
-    const tracker = buildTrackerConfig({ ...base, tracker: 'github' }) as Record<string, unknown>
+    const tracker = buildTrackerConfig({ ...base, tracker: 'github' })
     expect(tracker.kind).toBe('github')
     expect(tracker.transitions).toEqual({
       onStart: 'worker',
@@ -147,10 +147,7 @@ describe('buildTrackerConfig', () => {
   })
 
   test('local: onPrOpen/onPrMerge both coordinator — no tracker automation exists yet', () => {
-    const tracker = buildTrackerConfig({ ...base, tracker: 'local', idPrefix: 'NFK' }) as Record<
-      string,
-      unknown
-    >
+    const tracker = buildTrackerConfig({ ...base, tracker: 'local', idPrefix: 'NFK' })
     expect(tracker.kind).toBe('local')
     expect(tracker.transitions).toEqual({
       onStart: 'worker',
@@ -162,7 +159,7 @@ describe('buildTrackerConfig', () => {
 
   test('every kind carries the same five canonical triage labels', () => {
     for (const tracker of ['linear', 'github', 'local'] as const) {
-      const config = buildTrackerConfig({ ...base, tracker }) as Record<string, unknown>
+      const config = buildTrackerConfig({ ...base, tracker })
       expect(config.triageLabels).toEqual([
         'needs-triage',
         'needs-info',

@@ -3,6 +3,7 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import path from 'node:path'
 
 import { resolveRepoRoot } from './config'
+import { errorMessage } from './narrow'
 
 const USAGE = `usage: forge approve --run <id> --spec <file> [--tickets <file>] [--root <dir>]
        forge approve --run <id> --check [--root <dir>]
@@ -51,20 +52,20 @@ export function writeApproval(input: {
 function readApproval(approvalPath: string): ApprovalRecord | string {
   if (!existsSync(approvalPath)) return `no approval record at ${approvalPath}`
   try {
-    const parsed = JSON.parse(readFileSync(approvalPath, 'utf8')) as Partial<ApprovalRecord>
-    const fields = [
-      parsed.specPath,
-      parsed.ticketsPath,
-      parsed.specHash,
-      parsed.ticketsHash,
-      parsed.approvedAt,
-    ]
-    if (fields.some((field) => typeof field !== 'string')) {
+    const parsed: Partial<ApprovalRecord> = JSON.parse(readFileSync(approvalPath, 'utf8'))
+    const { specPath, ticketsPath, specHash, ticketsHash, approvedAt } = parsed
+    if (
+      typeof specPath !== 'string' ||
+      typeof ticketsPath !== 'string' ||
+      typeof specHash !== 'string' ||
+      typeof ticketsHash !== 'string' ||
+      typeof approvedAt !== 'string'
+    ) {
       return `approval record at ${approvalPath} is missing fields`
     }
-    return parsed as ApprovalRecord
+    return { specPath, ticketsPath, specHash, ticketsHash, approvedAt }
   } catch (error) {
-    return `approval record at ${approvalPath} is unreadable: ${(error as Error).message}`
+    return `approval record at ${approvalPath} is unreadable: ${errorMessage(error)}`
   }
 }
 
@@ -116,7 +117,7 @@ export async function run(argv: string[]): Promise<void> {
   try {
     console.log(JSON.stringify(writeApproval({ approvalPath, specPath, ticketsPath })))
   } catch (error) {
-    console.error(`forge approve: ${(error as Error).message}`)
+    console.error(`forge approve: ${errorMessage(error)}`)
     process.exitCode = 1
   }
 }

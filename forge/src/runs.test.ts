@@ -16,8 +16,9 @@ import {
   type CompletionEvent,
 } from './runs'
 
+const makeCommonDirectory = () => mkdtempSync(path.join(os.tmpdir(), 'forge-runs-'))
+
 describe('completion events and stall nudges', () => {
-  const makeCommonDirectory = () => mkdtempSync(path.join(os.tmpdir(), 'forge-runs-'))
   const sampleEvent: CompletionEvent = {
     runId: 'run-a',
     ticket: 'CLA-50',

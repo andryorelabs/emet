@@ -141,7 +141,7 @@ export function isSlotStale(
   index: number,
   classifyRunOptions?: Parameters<typeof classifyRun>[3],
 ): boolean {
-  const holder = readLockHolder<SlotHolder>(
+  const holder: SlotHolder | undefined = readLockHolder(
     slotDirectory(slotsDirectory, index),
   )
   if (!holder) return true
@@ -254,7 +254,8 @@ export function releaseSlotIfOwned(
   expectedRunId: string,
   force = false,
 ): ReleaseSlotResult {
-  const holder = readLockHolder<SlotHolder>(slotDirectory(slotsDirectory, index))
+  const holder: SlotHolder | undefined = readLockHolder(
+    slotDirectory(slotsDirectory, index))
   if (!holder) return { outcome: 'not-occupied' }
   if (holder.runId !== expectedRunId && !force) {
     return { outcome: 'owned-by-another', ownerRunId: holder.runId }
@@ -290,8 +291,8 @@ export async function releaseAllSlotsForRun(
   for (const name of readdirSync(resolvedSlotsDirectory)) {
     const index = Number(name)
     if (!Number.isSafeInteger(index)) continue
-    const holder = readLockHolder<SlotHolder>(
-      slotDirectory(resolvedSlotsDirectory, index),
+    const holder: SlotHolder | undefined = readLockHolder(
+    slotDirectory(resolvedSlotsDirectory, index),
     )
     if (holder?.runId === runId && (ticket === undefined || holder.ticket === ticket)) {
       releaseSlot(resolvedSlotsDirectory, index)
@@ -319,8 +320,8 @@ export async function listOccupiedSlots(
   for (const name of readdirSync(resolvedSlotsDirectory)) {
     const index = Number(name)
     if (!Number.isSafeInteger(index)) continue
-    const holder = readLockHolder<SlotHolder>(
-      slotDirectory(resolvedSlotsDirectory, index),
+    const holder: SlotHolder | undefined = readLockHolder(
+    slotDirectory(resolvedSlotsDirectory, index),
     )
     if (!holder) continue
     entries.push({
@@ -397,11 +398,13 @@ async function main(config: ForgeConfig): Promise<void> {
     const ticket = requireFlagValue(argv, '--ticket')
     const maxLiveWorkers = resolveMaxLiveWorkers(config)
 
-    // The admission brake runs before ever scanning a slot index — with no
-    // swap, exhausting RAM is an OOM kill, not a slowdown, so this is
-    // checked fresh on every acquire rather than folded into the cap
-    // computed once at `forge init`/`forge doctor` time. See
-    // `resources.ts`'s `checkMemoryHeadroom` doc comment.
+    /**
+     * The admission brake runs before ever scanning a slot index — with no
+     * swap, exhausting RAM is an OOM kill, not a slowdown, so this is
+     * checked fresh on every acquire rather than folded into the cap
+     * computed once at `forge init`/`forge doctor` time. See
+     * `resources.ts`'s `checkMemoryHeadroom` doc comment.
+     */
     const headroom = checkMemoryHeadroom(
       readHostResources(),
       resolveMemReserveBytesFromEnvironment(),

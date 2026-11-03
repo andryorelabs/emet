@@ -9,20 +9,24 @@ import {
 } from './usage'
 import type { CompletionEvent } from './runs'
 
+const stoppedEvent = (overrides: Partial<CompletionEvent> = {}): CompletionEvent => ({
+  runId: 'run-a',
+  ticket: 'CLA-50',
+  event: 'SubagentStop',
+  outcome: 'allowed',
+  at: '2026-11-03T00:00:00.000Z',
+  sessionId: null,
+  branch: 'b',
+  commits: 1,
+  ...overrides,
+})
+const noPendingTool = () => Promise.resolve({ step: 'assistant message', pendingTool: null })
+const pending = () => Promise.resolve({ step: 'tool_use Bash', pendingTool: 'Bash' })
+const idle = () => Promise.resolve({ step: 'assistant message', pendingTool: null })
+
 describe('classifyTicketStall', () => {
   const now = 10_000_000
   const idleMinutes = 10
-  const stoppedEvent = (overrides: Partial<CompletionEvent> = {}): CompletionEvent => ({
-    runId: 'run-a',
-    ticket: 'CLA-50',
-    event: 'SubagentStop',
-    outcome: 'allowed',
-    at: '2026-11-03T00:00:00.000Z',
-    sessionId: null,
-    branch: 'b',
-    commits: 1,
-    ...overrides,
-  })
   const classify = (
     event: CompletionEvent | null,
     commits: number | null,
@@ -103,7 +107,6 @@ describe('taskIdFromTranscriptPath', () => {
 describe('findStalledTranscripts', () => {
   const NOW = 1_000_000_000
   const THRESHOLDS = { idleMinutes: 10, pendingToolMinutes: 30 }
-  const noPendingTool = () => Promise.resolve({ step: 'assistant message', pendingTool: null })
 
   test('reports a transcript silent past the threshold', async () => {
     const staleMtimeMs = NOW - 15 * 60_000
@@ -217,8 +220,6 @@ describe('describeLastStep', () => {
 describe('findStalledTranscripts with a pending tool', () => {
   const NOW = 1_000_000_000
   const THRESHOLDS = { idleMinutes: 4, pendingToolMinutes: 30 }
-  const pending = () => Promise.resolve({ step: 'tool_use Bash', pendingTool: 'Bash' })
-  const idle = () => Promise.resolve({ step: 'assistant message', pendingTool: null })
   const at = (minutes: number) => () => Promise.resolve(NOW - minutes * 60_000)
 
   test('idle past 4 minutes with no pending tool is stalled', async () => {

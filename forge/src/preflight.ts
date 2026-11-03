@@ -28,6 +28,7 @@ import {
   resolveSlotsDirectory,
 } from './slots'
 import { checkApproval, type ApprovalRecord } from './approve'
+import { isObject } from './narrow'
 import { listReservations } from './claims'
 import {
   checkWorktreeForkBase,
@@ -151,6 +152,7 @@ export async function findMissingRequiredCommands(
   const missing: string[] = []
   for (const command of commands) {
     if (alreadyCovered.has(command)) continue
+    // oxlint-disable-next-line eslint/no-await-in-loop -- sequential on purpose: later iterations depend on earlier ones or on output order
     if (!(await resolve(command))) missing.push(command)
   }
   return missing
@@ -253,6 +255,7 @@ export async function findTodoMarkersInDocsAgents(repoRoot: string): Promise<str
   for (const entry of entries) {
     if (!entry.endsWith('.md')) continue
     const filePath = path.join(docsAgentsDirectory, entry)
+    // oxlint-disable-next-line eslint/no-await-in-loop -- sequential on purpose: later iterations depend on earlier ones or on output order
     const content = await Bun.file(filePath).text()
     markers.push(...findTodoMarkers(`docs/agents/${entry}`, content))
   }
@@ -367,7 +370,7 @@ export async function describeWorktreeEntryVerdict(
         line: `  ${entry.directory} (${entry.branch}): dead — reclaimable via "forge cleanup --run ${verdict.owner.runId} --force" (or --all --force if abandoned)`,
       }
     }
-    case 'content-fallback': {
+    default: {
       const contentVerdict = await classifyByContent(
         verdict.branch,
         mainTree,
@@ -379,10 +382,12 @@ export async function describeWorktreeEntryVerdict(
       const advice = safe
         ? `looks merged/equivalent to ${trunkRef} — safe to run "forge cleanup"`
         : `${contentVerdict} from ${trunkRef} — needs human review before cleanup, work could be lost`
-      // Merged/equivalent residue is harmless leftover, never a hazard to a
-      // sibling coordinator — only genuinely unclassifiable content (still
-      // diverged/conflicted against trunk, with no reservation to attribute
-      // it either) blocks dispatch.
+      /**
+       * Merged/equivalent residue is harmless leftover, never a hazard to a
+       * sibling coordinator — only genuinely unclassifiable content (still
+       * diverged/conflicted against trunk, with no reservation to attribute
+       * it either) blocks dispatch.
+       */
       return {
         bucket: safe ? 'info' : 'fail',
         line: `  ${entry.directory} (${verdict.branch}): ${advice}`,
@@ -688,6 +693,14 @@ export function auditPostDispatch(
  */
 const POST_DISPATCH_UNLOCKED_MAX_AGE_MS = 30_000
 
+function statDirectoryMtimeMs(directory: string): number | null {
+  try {
+    return statSync(directory).mtimeMs
+  } catch {
+    return null
+  }
+}
+
 /**
  * `--post-dispatch` mode: run once, immediately after a wave's batch of
  * parallel `Agent` calls returns, before any worker has had a chance to
@@ -740,14 +753,6 @@ async function mainPostDispatch(config: ForgeConfig): Promise<void> {
     .map((branch) => branch.name)
 
   const nowMs = Date.now()
-  const statMtimeMs = (directory: string): number | null => {
-    try {
-      return statSync(directory).mtimeMs
-    } catch {
-      return null
-    }
-  }
-
   const failures: PostDispatchFailure[] = [
     ...buildDuplicateTicketWorktreeFailures(agentEntries),
     ...buildDuplicateTicketBranchNumberFailures(agentTicketBranchNames, branchPrefix),
@@ -759,7 +764,7 @@ async function mainPostDispatch(config: ForgeConfig): Promise<void> {
         agentEntries,
         POST_DISPATCH_UNLOCKED_MAX_AGE_MS,
         nowMs,
-        statMtimeMs,
+        statDirectoryMtimeMs,
       ),
       ...findBranchTicketMismatches(agentEntries, branchPrefix, {
         nowMs,
@@ -807,12 +812,14 @@ async function mainPostDispatch(config: ForgeConfig): Promise<void> {
         : missingTickets.length
 
     if (missingCount > 0) {
-      // Only worktrees a *sibling's* reservation doesn't already explain are
-      // real leads for this run's missing ticket(s) — an unlocked worktree
-      // the harness dropped the lock on for a sibling's already-finished
-      // worker (see `reference/incidents.md`) is not a candidate for this
-      // run's own dispatch, and pointing at it wastes the coordinator's time
-      // chasing another run's worktree.
+      /**
+       * Only worktrees a *sibling's* reservation doesn't already explain are
+       * real leads for this run's missing ticket(s) — an unlocked worktree
+       * the harness dropped the lock on for a sibling's already-finished
+       * worker (see `reference/incidents.md`) is not a candidate for this
+       * run's own dispatch, and pointing at it wastes the coordinator's time
+       * chasing another run's worktree.
+       */
       const reservations = await listReservations()
       const unlockedCandidates = agentEntries.filter((entry) => {
         if (entry.lockedReason !== null) return false
@@ -825,7 +832,7 @@ async function mainPostDispatch(config: ForgeConfig): Promise<void> {
         unlockedCandidates,
         POST_DISPATCH_UNLOCKED_MAX_AGE_MS,
         nowMs,
-        statMtimeMs,
+        statDirectoryMtimeMs,
       )
       const ticketsNote =
         expectedTickets.length > 0
@@ -868,36 +875,41 @@ export type RunGateFindings = {
 
 function readApprovalRecord(approvalPath: string): ApprovalRecord | null {
   try {
-    return JSON.parse(readFileSync(approvalPath, 'utf8')) as ApprovalRecord
+    const record: ApprovalRecord = JSON.parse(readFileSync(approvalPath, 'utf8'))
+    return record
   } catch {
     return null
   }
 }
 
+function stringsOrEmpty(value: unknown): string[] {
+  return Array.isArray(value) ? value.filter((entry): entry is string => typeof entry === 'string') : []
+}
+
 function toPlanTickets(raw: unknown): PlanTicket[] {
   const list = Array.isArray(raw)
     ? raw
-    : Array.isArray((raw as { tickets?: unknown } | null)?.tickets)
-      ? (raw as { tickets: unknown[] }).tickets
+    : isObject(raw) && Array.isArray(raw.tickets)
+      ? raw.tickets
       : null
   if (list === null) throw new Error('tickets file must be an array (or {"tickets": [...]})')
-  const strings = (value: unknown): string[] =>
-    Array.isArray(value) ? value.filter((entry): entry is string => typeof entry === 'string') : []
-  return list.map((entry, index) => {
-    const candidate = (entry ?? {}) as Record<string, unknown>
+  const tickets: PlanTicket[] = []
+  for (const [index, entry] of list.entries()) {
+    const candidate: Record<string, unknown> = isObject(entry) ? entry : {}
     if (typeof candidate.id !== 'string') throw new Error(`ticket ${index} needs an "id"`)
-    return {
+    tickets.push({
       id: candidate.id,
-      covers: strings(candidate.covers),
-      surfaces: strings(candidate.surfaces),
+      covers: stringsOrEmpty(candidate.covers),
+      surfaces: stringsOrEmpty(candidate.surfaces),
       wave: typeof candidate.wave === 'number' ? candidate.wave : 1,
-      blockedBy: strings(candidate.blockedBy),
+      blockedBy: stringsOrEmpty(candidate.blockedBy),
       ...(typeof candidate.newSurfaceLines === 'number'
         ? { newSurfaceLines: candidate.newSurfaceLines }
         : {}),
       folded: candidate.folded === true,
-    }
-  })
+    })
+  }
+  return tickets
 }
 
 /**
@@ -971,9 +983,11 @@ async function main(config: ForgeConfig, repoRoot: string) {
   const dependencyWarnLines: string[] = []
   const gateWarnLines: string[] = []
 
-  // Kicked off first so these probes (each capped at
-  // DEPENDENCY_PROBE_TIMEOUT_MS) run concurrently with the git/filesystem
-  // work below rather than adding their own latency on top of it.
+  /**
+   * Kicked off first so these probes (each capped at
+   * DEPENDENCY_PROBE_TIMEOUT_MS) run concurrently with the git/filesystem
+   * work below rather than adding their own latency on top of it.
+   */
   const dependencyChecksPromise = checkDependencies({
     tracker: config.tracker.kind,
     repoRoot,
@@ -1022,9 +1036,11 @@ async function main(config: ForgeConfig, repoRoot: string) {
       !isWorktreeAgentBranchLive(branch.name, liveWorktreeDirectoryNames),
   )
   if (orphanedScaffoldBranches.length > 0) {
-    // Always safe to delete, per this repo's own message below — a sibling
-    // coordinator's own leftover residue is never a reason to fail *this*
-    // coordinator's dispatch.
+    /**
+     * Always safe to delete, per this repo's own message below — a sibling
+     * coordinator's own leftover residue is never a reason to fail *this*
+     * coordinator's dispatch.
+     */
     warnLines.push(
       `Orphaned worktree-agent-* scaffold branches (their worktree is already gone — always safe to delete) — run "forge cleanup":\n${orphanedScaffoldBranches.map((b) => `  ${b.name}`).join('\n')}`,
     )
@@ -1038,13 +1054,15 @@ async function main(config: ForgeConfig, repoRoot: string) {
     const mainTree = await resolveMainTree(config.repo.remote, config.repo.trunk)
     const idleThresholdMs = resolveIdleThresholdMs(config)
     const worktreeFailLines: string[] = []
-    // The harness's own `Agent({isolation: "worktree"})` unlocks a worker's
-    // worktree the moment its agent process exits, dropping the `/forge`
-    // lock reason `resolveWorktreeOwner` needs (see `reference/incidents.md`
-    // — "the harness drops the forge lock when an agent exits"). Ticket
-    // reservations (`claims.ts`) outlive that lock, so an unlocked worktree
-    // still gets attributed to its real owning run instead of falling
-    // through to the unowned `content-fallback` path.
+    /**
+     * The harness's own `Agent({isolation: "worktree"})` unlocks a worker's
+     * worktree the moment its agent process exits, dropping the `/forge`
+     * lock reason `resolveWorktreeOwner` needs (see `reference/incidents.md`
+     * — "the harness drops the forge lock when an agent exits"). Ticket
+     * reservations (`claims.ts`) outlive that lock, so an unlocked worktree
+     * still gets attributed to its real owning run instead of falling
+     * through to the unowned `content-fallback` path.
+     */
     const reservations = await listReservations()
 
     for (const entry of worktreeEntries) {
@@ -1054,17 +1072,20 @@ async function main(config: ForgeConfig, repoRoot: string) {
         (owner) =>
           classifyRun(
             owner.anchorPid,
-            // The coordinator's transcript lives under *its own* project
-            // slug, not this worktree's directory — see `WorktreeOwner`'s doc
-            // comment (worktrees.ts). Fall back to the directory-derived guess
-            // only for a lock reason written before `slug=` existed.
+            /**
+             * The coordinator's transcript lives under *its own* project
+             * slug, not this worktree's directory — see `WorktreeOwner`'s doc
+             * comment (worktrees.ts). Fall back to the directory-derived guess
+             * only for a lock reason written before `slug=` existed.
+             */
             owner.coordinatorSlug ?? resolveSessionSlug(entry.directory),
             owner.runId,
             { idleThresholdMs },
           ),
-        (entry) =>
-          resolveWorktreeOwnerWithReservations(entry, reservations, config.ticket.branchPrefix),
+        (candidate) =>
+          resolveWorktreeOwnerWithReservations(candidate, reservations, config.ticket.branchPrefix),
       )
+      // oxlint-disable-next-line eslint/no-await-in-loop -- sequential on purpose: later iterations depend on earlier ones or on output order
       const report = await describeWorktreeEntryVerdict(
         entry,
         verdict,

@@ -205,20 +205,21 @@ type RawPullRequest = {
     | null
 }
 
-const FAILED_CONCLUSIONS = [
+const FAILED_CONCLUSIONS = new Set([
   'FAILURE',
   'ERROR',
   'TIMED_OUT',
   'CANCELLED',
   'STARTUP_FAILURE',
-]
+])
 
 export function parsePullRequests(json: string): Map<string, PullRequestStatus> {
   const result = new Map<string, PullRequestStatus>()
-  for (const item of JSON.parse(json) as RawPullRequest[]) {
+  const items: RawPullRequest[] = JSON.parse(json)
+  for (const item of items) {
     const checks = item.statusCheckRollup ?? []
     const failed = checks.some((c) =>
-      FAILED_CONCLUSIONS.includes(c.conclusion ?? c.state ?? ''),
+      FAILED_CONCLUSIONS.has(c.conclusion ?? c.state ?? ''),
     )
     const pending = checks.some((c) =>
       c.status !== undefined
@@ -383,8 +384,10 @@ export async function run(argv: string[]): Promise<void> {
     const stalledDirectories = new Set<string>()
     for (const entry of entries) {
       if (!resolveWorktreeOwner(entry)) continue
+      // oxlint-disable-next-line eslint/no-await-in-loop -- sequential on purpose: later iterations depend on earlier ones or on output order
       const transcript = await newestTranscript(entry.directory)
       if (!transcript) continue
+      // oxlint-disable-next-line eslint/no-await-in-loop -- sequential on purpose: later iterations depend on earlier ones or on output order
       const stalled = await findStalledTranscripts([transcript], Date.now(), thresholds)
       if (stalled.length > 0) stalledDirectories.add(entry.directory)
     }

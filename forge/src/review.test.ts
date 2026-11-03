@@ -21,6 +21,8 @@ const finding = (over: Record<string, unknown> = {}) => ({
   ...over,
 })
 
+const parseItems = (items: Record<string, unknown>[]) => parseFindings(JSON.stringify(items))
+
 describe('parseFindings', () => {
   test('accepts a valid array and rejects bad kind/severity/shape', () => {
     expect(parseFindings(JSON.stringify([finding()]))).toHaveLength(1)
@@ -97,14 +99,13 @@ describe('recordRound', () => {
 describe('recordRound resolution', () => {
   test('resolves findings the next round no longer reports and does not duplicate repeats', () => {
     const options = { changedFiles: [], reviewRounds: 3 }
-    const parse = (items: Record<string, unknown>[]) => parseFindings(JSON.stringify(items))
     const first = recordRound(
       emptyLedger('T'),
-      parse([finding({ id: 'F1' }), finding({ id: 'F2' })]),
+      parseItems([finding({ id: 'F1' }), finding({ id: 'F2' })]),
       options,
     )
     if (!first.ok) throw new Error('round 1 failed')
-    const second = recordRound(first.ledger, parse([finding({ id: 'F2' })]), options)
+    const second = recordRound(first.ledger, parseItems([finding({ id: 'F2' })]), options)
     if (!second.ok) throw new Error('round 2 failed')
     expect(second.ledger.findings.filter((entry) => entry.id === 'F2')).toHaveLength(1)
     expect(second.ledger.findings.find((entry) => entry.id === 'F1')?.status).toBe('resolved')
@@ -116,13 +117,12 @@ describe('recordRound resolution', () => {
 
 describe('recordRound repeats', () => {
   test('a repeated blocker stays open even when its file did not change', () => {
-    const parse = (items: Record<string, unknown>[]) => parseFindings(JSON.stringify(items))
-    const first = recordRound(emptyLedger('T'), parse([finding()]), {
+    const first = recordRound(emptyLedger('T'), parseItems([finding()]), {
       changedFiles: [],
       reviewRounds: 3,
     })
     if (!first.ok) throw new Error('round 1 failed')
-    const second = recordRound(first.ledger, parse([finding()]), {
+    const second = recordRound(first.ledger, parseItems([finding()]), {
       changedFiles: ['b.ts'],
       reviewRounds: 3,
     })
@@ -133,13 +133,12 @@ describe('recordRound repeats', () => {
 
 describe('recordRound deferred repeats', () => {
   test('a deferred blocker reported again stays deferred', () => {
-    const parse = (items: Record<string, unknown>[]) => parseFindings(JSON.stringify(items))
     const options = { changedFiles: ['a.ts'], reviewRounds: 4 }
-    const first = recordRound(emptyLedger('T'), parse([finding()]), options)
+    const first = recordRound(emptyLedger('T'), parseItems([finding()]), options)
     if (!first.ok) throw new Error('round 1 failed')
-    const second = recordRound(first.ledger, parse([finding(), finding({ id: 'F9', file: 'c.ts' })]), options)
+    const second = recordRound(first.ledger, parseItems([finding(), finding({ id: 'F9', file: 'c.ts' })]), options)
     if (!second.ok) throw new Error('round 2 failed')
-    const third = recordRound(second.ledger, parse([finding(), finding({ id: 'F9', file: 'c.ts' })]), options)
+    const third = recordRound(second.ledger, parseItems([finding(), finding({ id: 'F9', file: 'c.ts' })]), options)
     if (!third.ok) throw new Error('round 3 failed')
     const status = Object.fromEntries(third.ledger.findings.map((entry) => [entry.id, entry.status]))
     expect(status).toEqual({ F1: 'open', F9: 'deferred' })

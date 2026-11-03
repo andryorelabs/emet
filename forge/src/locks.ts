@@ -9,6 +9,7 @@ import {
 } from 'node:fs'
 import { randomUUID } from 'node:crypto'
 import path from 'node:path'
+import { errnoCode } from './narrow'
 
 /**
  * Directory-based mutual-exclusion lock. The atomic `mkdirSync`/holder-file
@@ -38,9 +39,9 @@ import path from 'node:path'
  *
  * Generic over two things every caller picks for itself: the lock's
  * directory name (via {@link resolveLockDirectory}'s `lockName`, e.g.
- * `"tickets.lock"`) and its holder payload shape (via the `THolder`
- * generic — every holder must carry {@link LockHolder}'s three fields, but a
- * caller can widen it with its own extra fields).
+ * `"tickets.lock"`) and its holder payload shape (every holder must carry
+ * {@link LockHolder}'s three fields, but a caller can widen it with its own
+ * extra fields and annotate what {@link readLockHolder} returns).
  *
  * `mkdirSync` — always without `{ recursive: true }`, which would silently
  * succeed against an already-existing directory and break the mutual
@@ -72,18 +73,20 @@ export async function resolveLockDirectory(lockName: string): Promise<string> {
       `forge-locks: could not resolve --git-common-dir for lock "${lockName}" — are we inside a git repo?`,
     )
   }
-  // `--path-format=absolute` (git ≥2.31) is load-bearing, not cosmetic: a
-  // bare `--git-common-dir` prints a path relative to `process.cwd()` (`.git`
-  // at the repo root, `../.git` from a subdirectory) instead of relative to
-  // the repo root itself. The global `forge` CLI is invoked from whatever
-  // directory a worker's tool call happens to be in — often a worktree
-  // subdirectory, never guaranteed to be the root — so joining a *relative*
-  // git-common-dir onto an unrelated cwd would resolve `claims.ts`'s lock
-  // directory against a different base per caller, silently splitting the
-  // dispatch mutex into two disagreeing trees. Assert absoluteness rather
-  // than trust the flag silently, since a future git without
-  // `--path-format` would otherwise reintroduce this exact bug with no
-  // error at all.
+  /**
+   * `--path-format=absolute` (git ≥2.31) is load-bearing, not cosmetic: a
+   * bare `--git-common-dir` prints a path relative to `process.cwd()` (`.git`
+   * at the repo root, `../.git` from a subdirectory) instead of relative to
+   * the repo root itself. The global `forge` CLI is invoked from whatever
+   * directory a worker's tool call happens to be in — often a worktree
+   * subdirectory, never guaranteed to be the root — so joining a *relative*
+   * git-common-dir onto an unrelated cwd would resolve `claims.ts`'s lock
+   * directory against a different base per caller, silently splitting the
+   * dispatch mutex into two disagreeing trees. Assert absoluteness rather
+   * than trust the flag silently, since a future git without
+   * `--path-format` would otherwise reintroduce this exact bug with no
+   * error at all.
+   */
   if (!path.isAbsolute(gitCommonDirectory)) {
     throw new Error(
       `forge-locks: --git-common-dir returned a non-absolute path ("${gitCommonDirectory}") for lock "${lockName}" — refusing to build a lock path that could resolve differently depending on cwd`,
@@ -97,16 +100,14 @@ function isProcessAlive(pid: number): boolean {
     process.kill(pid, 0)
     return true
   } catch (error) {
-    return (error as NodeJS.ErrnoException).code !== 'ESRCH'
+    return errnoCode(error) !== 'ESRCH'
   }
 }
 
-export function readLockHolder<THolder extends LockHolder = LockHolder>(
-  lockDirectory: string,
-): THolder | undefined {
+export function readLockHolder(lockDirectory: string): any {
   try {
     const raw = readFileSync(path.join(lockDirectory, 'holder.json'), 'utf8')
-    return JSON.parse(raw) as THolder
+    return JSON.parse(raw)
   } catch {
     return undefined
   }
@@ -152,9 +153,9 @@ export function isLockStale(lockDirectory: string, maxAgeMs: number): boolean {
  * writer (a `bun` script that exits right after this call, with no
  * long-lived process left around to poll) can call this directly instead.
  */
-export function didAcquireLock<THolder extends LockHolder>(
+export function didAcquireLock(
   lockDirectory: string,
-  holder: THolder,
+  holder: LockHolder,
 ): boolean {
   const stagingDirectory = mkdtempSync(`${lockDirectory}.staging-`)
   try {
@@ -166,7 +167,7 @@ export function didAcquireLock<THolder extends LockHolder>(
     return true
   } catch (error) {
     rmSync(stagingDirectory, { recursive: true, force: true })
-    const code = (error as NodeJS.ErrnoException).code
+    const code = errnoCode(error)
     if (code === 'EEXIST' || code === 'ENOTEMPTY') return false
     throw error
   }
@@ -177,7 +178,7 @@ export function releaseLock(lockDirectory: string): void {
   try {
     renameSync(lockDirectory, trashDirectory)
   } catch (error) {
-    if ((error as NodeJS.ErrnoException).code === 'ENOENT') return
+    if (errnoCode(error) === 'ENOENT') return
     throw error
   }
   rmSync(trashDirectory, { recursive: true, force: true })
@@ -211,9 +212,9 @@ export interface AcquireLockOptions {
  * wait started. Throws once `options.timeoutMs` elapses with the lock still
  * held by a live holder.
  */
-export async function acquireLock<THolder extends LockHolder>(
+export async function acquireLock(
   lockDirectory: string,
-  buildHolder: () => THolder,
+  buildHolder: () => LockHolder,
   options: AcquireLockOptions,
 ): Promise<void> {
   const { timeoutMs, pollIntervalMs, maxAgeMs, logLabel } = options
@@ -236,6 +237,7 @@ export async function acquireLock<THolder extends LockHolder>(
           ' — another process is mid-run. Re-run this command to retry.',
       )
     }
+    // oxlint-disable-next-line eslint/no-await-in-loop -- polling loop, each probe must follow the previous sleep
     await Bun.sleep(pollIntervalMs)
   }
 }

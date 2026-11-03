@@ -15,6 +15,7 @@ import {
   type DependencyCheck,
   type DependencyProbes,
 } from './dependencies'
+import { isObject } from './narrow'
 import { findTodoMarkersInDocsAgents } from './preflight'
 import { computeAutoMaxLiveWorkers, readHostResources } from './resources'
 import { listOccupiedSlots, resolveLegacySlotsDirectory } from './slots'
@@ -147,18 +148,18 @@ export async function checkSelfCheckCommand(
   command: string,
   packageManagerScripts: ReadonlySet<string> | null,
 ): Promise<string | null> {
-  const run = parsePackageManagerRun(command)
-  if (run) {
+  const packageRun = parsePackageManagerRun(command)
+  if (packageRun) {
     const scripts =
-      run.directory === null
+      packageRun.directory === null
         ? packageManagerScripts
-        : await readPackageManagerScripts(path.resolve(repoRoot, run.directory))
+        : await readPackageManagerScripts(path.resolve(repoRoot, packageRun.directory))
     if (scripts === null) {
-      const where = run.directory === null ? 'this repo' : `"${run.directory}"`
+      const where = packageRun.directory === null ? 'this repo' : `"${packageRun.directory}"`
       return `"${command}" looks like a package-manager script, but ${where} has no readable package.json`
     }
-    if (!scripts.has(run.script)) {
-      return `"${command}" references package.json script "${run.script}", which doesn't exist`
+    if (!scripts.has(packageRun.script)) {
+      return `"${command}" references package.json script "${packageRun.script}", which doesn't exist`
     }
     return null
   }
@@ -177,10 +178,10 @@ async function readPackageManagerScripts(
   const file = Bun.file(path.join(repoRoot, 'package.json'))
   if (!(await file.exists())) return null
   try {
-    const parsed = (await file.json()) as Record<string, unknown>
+    const parsed: Record<string, unknown> = await file.json()
     const scripts = parsed.scripts
-    if (typeof scripts !== 'object' || scripts === null) return new Set()
-    return new Set(Object.keys(scripts as Record<string, unknown>))
+    if (!isObject(scripts)) return new Set()
+    return new Set(Object.keys(scripts))
   } catch {
     return null
   }
@@ -190,10 +191,10 @@ async function readSelfCheckCommands(repoRoot: string): Promise<string[]> {
   const file = Bun.file(path.join(repoRoot, 'forge.config.json'))
   if (!(await file.exists())) return []
   try {
-    const parsed = (await file.json()) as Record<string, unknown>
+    const parsed: Record<string, unknown> = await file.json()
     const commands = parsed.commands
-    if (typeof commands !== 'object' || commands === null) return []
-    const selfCheck = (commands as Record<string, unknown>).selfCheck
+    if (!isObject(commands)) return []
+    const selfCheck = commands.selfCheck
     if (!Array.isArray(selfCheck)) return []
     return selfCheck.filter((entry): entry is string => typeof entry === 'string')
   } catch {
@@ -250,6 +251,7 @@ export function findMissingFlags(helpText: string, flags: readonly string[]): st
 export async function checkExternalCliFlags(probes: EnvironmentProbes): Promise<string[]> {
   const findings: string[] = []
   for (const requirement of REQUIRED_CLI_FLAGS) {
+    // oxlint-disable-next-line eslint/no-await-in-loop -- sequential on purpose: later iterations depend on earlier ones or on output order
     const helpText = await probes.helpText(requirement.command)
     if (helpText === null) {
       findings.push(`\`${requirement.command.join(' ')}\` could not be run — cannot verify ${requirement.flags.join(', ')}`)
@@ -319,11 +321,9 @@ export function checkWorktreeForkBase(input: ForkBaseInput): string[] {
 
 async function readRawTrackerTeam(repoRoot: string): Promise<unknown> {
   try {
-    const parsed = (await Bun.file(path.join(repoRoot, 'forge.config.json')).json()) as Record<string, unknown>
+    const parsed: Record<string, unknown> = await Bun.file(path.join(repoRoot, 'forge.config.json')).json()
     const tracker = parsed.tracker
-    return typeof tracker === 'object' && tracker !== null
-      ? (tracker as Record<string, unknown>).team
-      : undefined
+    return isObject(tracker) ? tracker.team : undefined
   } catch {
     return undefined
   }
@@ -347,10 +347,11 @@ async function readBaseRefSetting(repoRoot: string): Promise<string | null> {
   ]
   for (const candidate of candidates) {
     try {
-      const parsed = (await Bun.file(candidate).json()) as Record<string, unknown>
+      // oxlint-disable-next-line eslint/no-await-in-loop -- sequential on purpose: later iterations depend on earlier ones or on output order
+      const parsed: Record<string, unknown> = await Bun.file(candidate).json()
       const worktree = parsed.worktree
-      if (typeof worktree === 'object' && worktree !== null) {
-        const baseRef = (worktree as Record<string, unknown>).baseRef
+      if (isObject(worktree)) {
+        const baseRef = worktree.baseRef
         if (typeof baseRef === 'string') return baseRef
       }
     } catch {
@@ -479,13 +480,16 @@ export async function auditRepo(
   const packageManagerScripts = await readPackageManagerScripts(absolutePath)
   const selfCheckIssues: string[] = []
   for (const command of selfCheckCommands) {
+    // oxlint-disable-next-line eslint/no-await-in-loop -- sequential on purpose: later iterations depend on earlier ones or on output order
     const issue = await checkSelfCheckCommand(absolutePath, command, packageManagerScripts)
     if (issue) selfCheckIssues.push(issue)
   }
 
-  // The plugin and forge-agents checks are repo-independent and printed once,
-  // fleet-wide (see `main`) — only the tracker-scoped checks (gh, Linear)
-  // belong to this repo.
+  /**
+   * The plugin and forge-agents checks are repo-independent and printed once,
+   * fleet-wide (see `main`) — only the tracker-scoped checks (gh, Linear)
+   * belong to this repo.
+   */
   const dependencyFindings = hasConfig
     ? (
         await checkDependencies({ tracker: trackerKind, repoRoot: absolutePath, probes })
@@ -618,9 +622,9 @@ async function formatHostResourcesSummary(): Promise<string> {
  * stalling on a prompt or being able to overwrite the trunk branch.
  */
 export function checkSettingsAdvisories(settings: unknown): readonly string[] {
-  if (typeof settings !== 'object' || settings === null) return []
+  if (!isObject(settings)) return []
   const advisories: string[] = []
-  const record = settings as Record<string, unknown>
+  const record = settings
 
   if (record.model !== 'opusplan') {
     advisories.push(
@@ -629,10 +633,7 @@ export function checkSettingsAdvisories(settings: unknown): readonly string[] {
     )
   }
 
-  const permissions =
-    typeof record.permissions === 'object' && record.permissions !== null
-      ? (record.permissions as Record<string, unknown>)
-      : {}
+  const permissions = isObject(record.permissions) ? record.permissions : {}
   const unattendedModes = new Set(['auto', 'acceptEdits', 'bypassPermissions'])
   if (typeof permissions.defaultMode !== 'string' || !unattendedModes.has(permissions.defaultMode)) {
     advisories.push(
@@ -682,6 +683,7 @@ export async function findInstallDrift(homeDirectory: string): Promise<string[]>
     let currentHash: string
     try {
       currentHash = createHash('sha256')
+        // oxlint-disable-next-line eslint/no-await-in-loop -- sequential on purpose: later iterations depend on earlier ones or on output order
         .update(await readFile(absolutePath))
         .digest('hex')
     } catch {
@@ -715,6 +717,7 @@ async function main(targets: readonly string[]): Promise<void> {
 
   const reports: RepoDoctorReport[] = []
   for (const target of paths) {
+    // oxlint-disable-next-line eslint/no-await-in-loop -- sequential on purpose: later iterations depend on earlier ones or on output order
     reports.push(await auditRepo(target, probes, environment))
   }
 

@@ -9,6 +9,7 @@ import { existsSync, readFileSync } from 'node:fs'
 import path from 'node:path'
 
 import { resolveRepoRoot } from './config'
+import { isObject } from './narrow'
 import { readCompletionEvent } from './runs'
 
 const USAGE = `usage: forge metrics --run <id> [--root <dir>] [--json]`
@@ -87,8 +88,8 @@ export function parseTranscriptMetrics(text: string): TranscriptMetrics {
     } catch {
       continue
     }
-    if (typeof event !== 'object' || event === null) continue
-    const record = event as Record<string, unknown>
+    if (!isObject(event)) continue
+    const record = event
 
     const stamp = typeof record.timestamp === 'string' ? Date.parse(record.timestamp) : Number.NaN
     if (Number.isFinite(stamp)) {
@@ -97,10 +98,10 @@ export function parseTranscriptMetrics(text: string): TranscriptMetrics {
     }
 
     const message = record.message
-    if (typeof message !== 'object' || message === null) continue
-    const usage = (message as Record<string, unknown>).usage
-    if (typeof usage !== 'object' || usage === null) continue
-    const fields = usage as Record<string, unknown>
+    if (!isObject(message)) continue
+    const usage = message.usage
+    if (!isObject(usage)) continue
+    const fields = usage
     if (typeof fields.input_tokens !== 'number') continue
 
     const turn: TokenTotals = {
@@ -109,7 +110,7 @@ export function parseTranscriptMetrics(text: string): TranscriptMetrics {
       cacheReadTokens: numberOr0(fields.cache_read_input_tokens),
       cacheCreationTokens: numberOr0(fields.cache_creation_input_tokens),
     }
-    const model = (message as Record<string, unknown>).model
+    const model = message.model
     const modelName = typeof model === 'string' ? model : ''
     if (modelName) models.add(modelName)
 
@@ -177,8 +178,8 @@ export function aggregateRun(runId: string, tickets: readonly TicketMetrics[]): 
     const members = byWave.get(wave)!
     waves.set(wave, { ...sumGroup(members), wallMs: Math.max(...members.map((member) => member.wallMs)) })
   }
-  const run = sumGroup(tickets)
-  return { runId, tickets, waves, run: { ...run, wallMs: [...waves.values()].reduce((sum, wave) => sum + wave.wallMs, 0) } }
+  const runTotals = sumGroup(tickets)
+  return { runId, tickets, waves, run: { ...runTotals, wallMs: [...waves.values()].reduce((sum, wave) => sum + wave.wallMs, 0) } }
 }
 
 function formatTokens(tokens: number): string {
@@ -223,11 +224,12 @@ type PlanEntry = { readonly id: string; readonly wave: number; readonly estimate
 
 export function readPlanEntries(ticketsPath: string): PlanEntry[] {
   const parsed: unknown = JSON.parse(readFileSync(ticketsPath, 'utf8'))
-  const list = Array.isArray(parsed) ? parsed : (parsed as { tickets?: unknown }).tickets
+  const list = Array.isArray(parsed) ? parsed : isObject(parsed) ? parsed.tickets : undefined
   if (!Array.isArray(list)) throw new Error(`${ticketsPath}: expected a tickets array`)
   return list.flatMap((entry: unknown) => {
-    const candidate = entry as Record<string, unknown>
-    if (typeof candidate?.id !== 'string') return []
+    if (!isObject(entry)) return []
+    const candidate = entry
+    if (typeof candidate.id !== 'string') return []
     return [
       {
         id: candidate.id,

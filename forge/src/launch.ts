@@ -6,6 +6,7 @@ import {
   type HandoffLauncher,
   type HandoffPermissionMode,
 } from './config'
+import { errorMessage } from './narrow'
 
 /**
  * Launches one wave of a run as a background `claude --bg` session and, per
@@ -77,7 +78,7 @@ export const defaultRunner: CommandRunner = async (command, options) => {
     ])
     return { exitCode, stdout, stderr }
   } catch (error: unknown) {
-    return { exitCode: 127, stdout: '', stderr: (error as Error).message }
+    return { exitCode: 127, stdout: '', stderr: errorMessage(error) }
   }
 }
 
@@ -90,7 +91,7 @@ function parseAgentRows(stdout: string): AgentRow[] {
   if (!Array.isArray(parsed)) {
     throw new Error('`claude agents --json` did not return an array')
   }
-  return parsed as AgentRow[]
+  return parsed
 }
 
 async function listAgents(runner: CommandRunner): Promise<AgentRow[]> {
@@ -148,9 +149,9 @@ async function shouldOpenOrcaTab(
     }
   }
   try {
-    const parsed = JSON.parse(status.stdout) as {
+    const parsed: {
       result?: { runtime?: { reachable?: unknown } }
-    }
+    } = JSON.parse(status.stdout)
     return parsed.result?.runtime?.reachable === true
       ? { attempt: true, reason: 'orca runtime reachable' }
       : { attempt: false, reason: 'orca runtime not reachable' }
@@ -193,7 +194,7 @@ async function openOrcaTab(
     }
   }
   try {
-    const parsed = JSON.parse(result.stdout) as { ok?: unknown }
+    const parsed: { ok?: unknown } = JSON.parse(result.stdout)
     return parsed.ok === true
       ? { opened: true, reason: 'orca tab created' }
       : { opened: false, reason: 'orca terminal create returned ok=false' }
@@ -298,7 +299,7 @@ export async function run(argv: string[]): Promise<void> {
       process.exitCode = 2
       return
     }
-    console.error((error as Error).message)
+    console.error(errorMessage(error))
     process.exitCode = 1
   }
 }

@@ -20,6 +20,7 @@ import {
   readLockHolder,
   releaseLock,
 } from './locks'
+import { errorMessage } from './narrow'
 
 /**
  * Builds a fresh holder the same way a real caller's `buildHolder` would —
@@ -181,7 +182,7 @@ describe('forge-locks', () => {
       }
 
       expect(thrownError).toBeInstanceOf(Error)
-      expect((thrownError as Error).message).toMatch(/timed out/)
+      expect(errorMessage(thrownError)).toMatch(/timed out/)
     })
   })
 })

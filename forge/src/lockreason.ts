@@ -4,6 +4,7 @@ import {
   resolveRepoRoot,
 } from './config'
 import { resolveWorktreeOwner } from './worktrees'
+import { errorMessage, isObject } from './narrow'
 
 /**
  * Produces the `git worktree lock` reason a `/forge` worker writes at
@@ -151,12 +152,12 @@ export async function readLockReasonTemplate(
     raw = await file.json()
   } catch (error: unknown) {
     throw new ForgeConfigError(
-      `forge lock-reason: forge.config.json is not valid JSON — ${(error as Error).message}`,
+      `forge lock-reason: forge.config.json is not valid JSON — ${errorMessage(error)}`,
     )
   }
 
-  const worktree = (raw as { worktree?: unknown })?.worktree
-  const template = (worktree as { lockReason?: unknown })?.lockReason
+  const worktree = isObject(raw) ? raw.worktree : undefined
+  const template = isObject(worktree) ? worktree.lockReason : undefined
   if (template === undefined) return DEFAULT_LOCK_REASON_TEMPLATE
   if (typeof template !== 'string' || template.trim().length === 0) {
     throw new ForgeConfigError(

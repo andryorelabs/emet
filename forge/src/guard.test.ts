@@ -217,13 +217,34 @@ describe('evaluateGuard', () => {
   })
 })
 
+const subagentDeps = (commits: number | null, notes: string[]) => ({
+  countNewCommits: async () => commits,
+  readHandoffNotes: () => notes,
+})
+
+function streamOf(text: string): ReadableStream<Uint8Array> {
+  const { body } = new Response(text)
+  if (body === null) throw new Error('response has no body')
+  return body
+}
+
+const eventDeps = (
+  written: unknown[],
+  overrides: Partial<CompletionEventDependencies> = {},
+): CompletionEventDependencies => ({
+  resolveOwner: async () => ({ runId: 'run-a', ticket: 'CLA-50', branch: 'cla-50-x' }),
+  resolveCommonDirectory: async () => '/repo/.git',
+  countNewCommits: async () => 3,
+  writeEvent: (_commonDirectory, event) => {
+    written.push(event)
+  },
+  now: () => new Date('2026-11-03T00:00:00.000Z'),
+  ...overrides,
+})
+
 describe('stop hooks', () => {
   const worktreeCwd = '/repo/.claude/worktrees/agent-abc'
   const noteWithState = 'state: implementing\n'
-  const subagentDeps = (commits: number | null, notes: string[]) => ({
-    countNewCommits: async () => commits,
-    readHandoffNotes: () => notes,
-  })
 
   test('SubagentStop blocks without a commit, then allows on stop_hook_active', async () => {
     const input: StopHookInput = { cwd: worktreeCwd }
@@ -254,20 +275,6 @@ describe('stop hooks', () => {
     expect(complete.decision).toBe('allow')
     const outside = await checkSubagentStop({ cwd: '/home/u/repo' }, subagentDeps(0, []))
     expect(outside.decision).toBe('allow')
-  })
-
-  const eventDeps = (
-    written: unknown[],
-    overrides: Partial<CompletionEventDependencies> = {},
-  ): CompletionEventDependencies => ({
-    resolveOwner: async () => ({ runId: 'run-a', ticket: 'CLA-50', branch: 'cla-50-x' }),
-    resolveCommonDirectory: async () => '/repo/.git',
-    countNewCommits: async () => 3,
-    writeEvent: (_commonDirectory, event) => {
-      written.push(event)
-    },
-    now: () => new Date('2026-11-03T00:00:00.000Z'),
-    ...overrides,
   })
 
   test('records the subagent transcript path when the hook provides one', async () => {
@@ -399,9 +406,8 @@ describe('stop hooks', () => {
   })
 
   test('readBoundedStdin returns null past the limit', async () => {
-    const make = (text: string) => new Response(text).body as ReadableStream<Uint8Array>
-    expect(await readBoundedStdin(make('hello'), 10)).toBe('hello')
-    expect(await readBoundedStdin(make('x'.repeat(50)), 10)).toBeNull()
+    expect(await readBoundedStdin(streamOf('hello'), 10)).toBe('hello')
+    expect(await readBoundedStdin(streamOf('x'.repeat(50)), 10)).toBeNull()
   })
 
   test('formatStopOutput emits a block payload only on block', () => {

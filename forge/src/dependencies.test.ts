@@ -398,6 +398,7 @@ describe('formatDependencyCheck', () => {
 describe('checkDependencies', () => {
   test('always checks the plugin, whatever the tracker', async () => {
     for (const tracker of ['github', 'linear', 'local'] as const) {
+      // oxlint-disable-next-line eslint/no-await-in-loop -- sequential on purpose: later iterations depend on earlier ones or on output order
       const checks = await checkDependencies({
         tracker,
         repoRoot: '/tmp',
