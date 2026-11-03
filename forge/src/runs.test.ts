@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
 
@@ -10,6 +10,7 @@ import {
   readCompletionEvent,
   readProcessStartToken,
   readStallNudgeCount,
+  resolveAnchorPid,
   recordStallNudge,
   resolveSessionSlug,
   writeCompletionEvent,
@@ -164,7 +165,9 @@ describe("resolveSessionSlug", () => {
 
 describe("process start token", () => {
   test("reads a numeric start token for a live process", () => {
-    expect(readProcessStartToken(process.pid)).toMatch(/^\d+$/);
+    const token = readProcessStartToken(process.pid);
+    if (existsSync("/proc/self/stat")) expect(token).toMatch(/^\d+$/);
+    else expect(token).toBeUndefined();
   });
 
   test("returns undefined for a missing process", () => {
@@ -196,5 +199,31 @@ describe("process start token", () => {
 
   test("a mismatched start token reports not alive", () => {
     expect(isAnchorAlive(process.pid, "not-a-real-token")).toBe(false);
+  });
+});
+
+describe("resolveAnchorPid without procfs", () => {
+  const tree: Record<number, string> = {
+    300: "  200 bun\n",
+    200: "  100 /bin/zsh\n",
+    100: "  1 /usr/local/bin/claude\n",
+  };
+  const reader = {
+    hasProcfs: () => false,
+    readFile: (): string => {
+      throw new Error("no procfs");
+    },
+    runPs: (pid: number) => tree[pid] ?? null,
+  };
+
+  test("resolves the claude ancestor via ps", () => {
+    expect(resolveAnchorPid(300, reader)).toBe(100);
+    expect(isAnchorAlive(100, undefined, reader)).toBe(true);
+    expect(isAnchorAlive(200, undefined, reader)).toBe(false);
+  });
+
+  test("throws when no ancestor is claude", () => {
+    const noClaude = { ...reader, runPs: (pid: number) => (pid === 300 ? "200 bun" : null) };
+    expect(() => resolveAnchorPid(300, noClaude)).toThrow("no ancestor");
   });
 });

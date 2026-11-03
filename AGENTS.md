@@ -1,6 +1,6 @@
 # AGENTS.md
 
-Guide for coding agents working in claude-forge. Terms follow [CONTEXT.md](CONTEXT.md).
+Guide for coding agents working in claude-forge. Terms follow [GLOSSARY.md](GLOSSARY.md).
 
 ## Layout
 

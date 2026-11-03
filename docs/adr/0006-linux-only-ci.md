@@ -1,6 +1,6 @@
 # 0006. Linux-only CI
 
-Status: Accepted (2026-11-03)
+Status: Superseded by [0007](0007-macos-support.md) (2026-11-03)
 Spec: #73 (S10)
 
 ## Context

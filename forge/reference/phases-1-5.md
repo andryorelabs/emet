@@ -6,16 +6,16 @@ to `phases-6-7-dispatch.md`.
 ## Phase 1 — Interview
 
 Reach a shared understanding of $ARGUMENTS by calling the Skill tool twice —
-`grilling` then `domain-modeling` (terminology against `CONTEXT.md`/`docs/adr/`
-per `docs/agents/domain.md`); `grill-with-docs` is user-invocable only, so call
-its two skills directly. Any `CONTEXT.md`/`docs/adr/` edit `domain-modeling`
+`grilling` then `domain-modeling` (terminology per `docs/agents/domain.md`); `grill-with-docs` is
+user-invocable only, so call its two skills directly. Any `GLOSSARY.md`/`docs/adr/` edit `domain-modeling`
 proposes is **not written yet** — note it in the plan file, apply in Phase 5.
 
 Interview in **frontier rounds**, not one question at a time. Each round asks
 every currently unblocked decision together; each carries a `➡️` recommended
 answer, so the user can reply "yes" to accept all. A decision answerable from
-the repo or docs is not asked: have a fresh-context subagent look the fact up
-and state it. Answers unblock the next round. Soft cap: after ~4 rounds, or
+the repo or docs is not asked: have a fresh-context subagent look it up. Fog
+answerable from primary sources is not asked either: call the Skill tool with
+`research`, recording findings in the plan file. Answers unblock the next round. Soft cap: after ~4 rounds, or
 once only low-stakes decisions remain, wrap up — list the leftovers with their
 `➡️` defaults and ask one "go with these?".
 
@@ -26,15 +26,13 @@ a worker would otherwise improvise badly (empty, error, loading). Confirm the
 UI/non-UI classification with the user at the end of this phase. The canvas is
 published in Phase 5.
 
-If the interview ends with real fog — open questions that don't resolve by
-talking, because they need research, a prototype, or a decision nobody can
-make from a chair — tell the user to run the `wayfinder` skill themselves
-(it's user-invocable only, not something this command can call) instead of
-forcing a spec that fakes certainty, and stop here. `wayfinder` is HITL by
-design (one ticket per session, never answers for the human) and never runs
-inside Phases 5–9. If adopted, its map/tickets use
-`docs/agents/issue-tracker.md`'s "Wayfinding operations" section; loop back
-to Phase 1 once its map clears.
+If real fog remains — open questions that talking can't resolve, because they
+need a prototype or a decision nobody can make from a chair — tell the user to
+run the `prototype`/`wayfinder` skill themselves (user-invocable only)
+instead of faking certainty in a spec, and stop here. `wayfinder` is
+HITL and never runs inside Phases 5–9. If
+adopted, its map/tickets use `docs/agents/issue-tracker.md`'s "Wayfinding
+operations" section; loop back to Phase 1 once its map clears.
 
 ## Phase 2 — Spec
 
@@ -71,7 +69,8 @@ Phase 2. Reinforce two rules on top of the skill's own breakdown:
   must be covered by at least one ticket; a ticket covering none is
   unjustified scope.
 - Every ticket carries `## Interfaces`: `Consumes:` / `Produces:` with
-  signatures, so parallel workers agree on the seams.
+  signatures, so parallel workers agree on the seams. Call the Skill tool with
+  `codebase-design` when writing them.
 - Fast path: a unit of ≲100 changed lines (`sizing.inlineMaxLines`) that
   passes the resume-from-diff test is folded into a sibling worker's ticket
   (one worktree), never given its own. If the whole request is below that
@@ -161,7 +160,7 @@ the main command file.)
 
 Now that the plan is approved, in this exact order:
 
-1. Apply the `CONTEXT.md`/`docs/adr/` edits deferred from Phase 1.
+1. Apply the `GLOSSARY.md`/`docs/adr/` edits deferred from Phase 1.
 2. If the feature touches a screen: publish the canvas now with the `Artifact`
    tool directly — never invoke `/design` or ask the user to run it (it is
    user-invocable only; see `reference/incidents.md`). A canvas is a plain
