@@ -302,6 +302,10 @@ function lockedFor(
 }
 
 describe("isBranchMatchingTicket", () => {
+  test("keeps the numeric match when the prefix differs from the ticket key", () => {
+    expect(isBranchMatchingTicket("ticket-258-login", "AO-258", "ticket")).toBe(true);
+  });
+
   test("matches the ticket number as a branch prefix", () => {
     expect(isBranchMatchingTicket("ao-321-worktree-lock-guard", "AO-321", "ao")).toBe(true);
   });
@@ -388,6 +392,15 @@ describe("findDuplicateTicketWorktrees", () => {
 });
 
 describe("findDuplicateTicketBranchNumbers", () => {
+  test("groups two branches of the same slug-style ticket and keeps distinct tickets apart", () => {
+    const duplicates = findDuplicateTicketBranchNumbers(
+      ["forge-a-01-x", "forge-a-01-y", "forge-a-02-z", "forge-b-01-w"],
+      "forge",
+    );
+    expect(duplicates.get("a-01")).toEqual(["forge-a-01-x", "forge-a-01-y"]);
+    expect(duplicates.size).toBe(1);
+  });
+
   test("finds two branches for the same ticket number", () => {
     const duplicates = findDuplicateTicketBranchNumbers(
       ["ao-284-starred-page", "ao-284-starred-page-fixes", "ao-285-unrelated"],

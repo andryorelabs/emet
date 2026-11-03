@@ -281,7 +281,14 @@ export function findReservationForBranch(
       best = reservation;
     }
   }
-  return best;
+  if (best !== null) return best;
+  for (const reservation of reservations) {
+    if (reservation.ticket === reservation.ticket.toLowerCase()) continue;
+    const number = /-(\d+)$/.exec(reservation.ticket)?.[1];
+    if (!number) continue;
+    if (afterPrefix === number || afterPrefix.startsWith(`${number}-`)) return reservation;
+  }
+  return null;
 }
 
 /**

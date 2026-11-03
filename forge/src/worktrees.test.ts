@@ -176,6 +176,12 @@ describe("findReservationForBranch", () => {
     sessionSlug: "-home-andryore-code-repo",
   };
 
+  test("matches by numeric suffix when the branch prefix is not the ticket key", () => {
+    expect(findReservationForBranch("ticket-258-login", "ticket", [reservation])).toEqual(
+      reservation,
+    );
+  });
+
   test("matches a worker branch by its numeric ticket suffix", () => {
     expect(findReservationForBranch("ao-258-forge-claims-registry", "ao", [reservation])).toEqual(
       reservation,

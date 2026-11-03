@@ -465,7 +465,8 @@ export function isBranchMatchingTicket(
   const loweredTicket = ticket.toLowerCase();
   if (!loweredTicket.startsWith(`${branchPrefix}-`)) {
     const fullStem = `${branchPrefix}-${loweredTicket}`;
-    return branch === fullStem || branch.startsWith(`${fullStem}-`);
+    if (branch === fullStem || branch.startsWith(`${fullStem}-`)) return true;
+    if (ticket === loweredTicket) return false;
   }
   const number = ticketNumber(ticket);
   if (!number) return false;
@@ -513,8 +514,9 @@ export function findDuplicateTicketBranchNumbers(
 ): Map<string, string[]> {
   const byNumber = new Map<string, string[]>();
   const branchPattern = new RegExp(`^${branchPrefix}-(\\d+)-`);
+  const slugPattern = new RegExp(`^${branchPrefix}-([a-z][a-z0-9-]*?-\\d{2,})-`);
   for (const name of branchNames) {
-    const match = branchPattern.exec(name);
+    const match = slugPattern.exec(name) ?? branchPattern.exec(name);
     const number = match?.[1];
     if (!number) continue;
     const group = byNumber.get(number) ?? [];
