@@ -127,11 +127,12 @@ export function checkScheduleWakeupSlashCommand(input: PreToolUseHookInput): Gua
  * the *last* `)` first, exactly like `ps`/procfs docs recommend, so that
  * case still parses correctly).
  */
-export function readParentPid(
-  pid: number,
-  readFile: (filePath: string) => string = defaultProcessTreeReader.readFile,
-): number | null {
-  return readProcessParent(pid, { ...defaultProcessTreeReader, readFile })?.ppid ?? null;
+export function readParentPid(pid: number, readFile?: (filePath: string) => string): number | null {
+  const reader =
+    readFile === undefined
+      ? defaultProcessTreeReader
+      : { ...defaultProcessTreeReader, hasProcfs: () => true, readFile };
+  return readProcessParent(pid, reader)?.ppid ?? null;
 }
 
 /**

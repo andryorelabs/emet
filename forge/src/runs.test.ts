@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
 
@@ -165,7 +165,9 @@ describe("resolveSessionSlug", () => {
 
 describe("process start token", () => {
   test("reads a numeric start token for a live process", () => {
-    expect(readProcessStartToken(process.pid)).toMatch(/^\d+$/);
+    const token = readProcessStartToken(process.pid);
+    if (existsSync("/proc/self/stat")) expect(token).toMatch(/^\d+$/);
+    else expect(token).toBeUndefined();
   });
 
   test("returns undefined for a missing process", () => {

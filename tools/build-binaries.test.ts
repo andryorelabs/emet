@@ -78,9 +78,12 @@ describe.skipIf(process.platform !== "linux" || process.arch !== "x64")(
       );
     });
 
-    test("init and validate --help never crash with no bun on PATH", () => {
+    test("init, validate --help and doctor never crash with no bun on PATH", () => {
       expect(run("init", "--help").exitCode).not.toBe(3);
       expect(run("validate", "--help").exitCode).not.toBe(3);
+      const doctor = run("doctor");
+      expect(doctor.exitCode).not.toBe(3);
+      expect(doctor.stderr.toString()).not.toContain("Cannot find module");
     });
   },
 );
