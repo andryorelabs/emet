@@ -1,3 +1,4 @@
+import { optionalProperty } from './optional'
 import {
   existsSync,
   mkdirSync,
@@ -270,7 +271,7 @@ export async function didReserveTicket(
     const reservation: Reservation = {
       runId,
       anchorPid,
-      anchorStartToken: readProcessStartToken(anchorPid),
+      ...optionalProperty('anchorStartToken', readProcessStartToken(anchorPid)),
       ticket,
       reservedAt: Date.now(),
       sessionSlug: resolveSessionSlug(),
@@ -336,7 +337,7 @@ function withAnchorStartToken(
 ): Parameters<typeof classifyRun>[3] {
   return {
     ...classifyRunOptions,
-    anchorStartToken: reservation.anchorStartToken,
+    ...optionalProperty('anchorStartToken', reservation.anchorStartToken),
   }
 }
 
