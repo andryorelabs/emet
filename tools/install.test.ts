@@ -162,4 +162,16 @@ describe("install.sh with bun", () => {
     const command = readFileSync(path.join(homeDir, ".claude/commands/forge.md"), "utf8");
     expect(command).not.toContain("${CLAUDE_PLUGIN_ROOT}");
   });
+
+  test("a source install over a binary-mode install leaves the shim intact", () => {
+    expect(runInstaller().exitCode).toBe(0);
+    const shimPath = path.join(homeDir, ".claude/forge/bin/forge");
+    const shimBefore = readFileSync(shimPath, "utf8");
+    expect(runInstaller({ withBun: true }).exitCode).toBe(0);
+
+    const wrapperPath = path.join(homeDir, ".local/bin/forge");
+    expect(lstatSync(wrapperPath).isSymbolicLink()).toBe(false);
+    expect(readFileSync(wrapperPath, "utf8")).toContain("forge.ts");
+    if (existsSync(shimPath)) expect(readFileSync(shimPath, "utf8")).toBe(shimBefore);
+  });
 });
