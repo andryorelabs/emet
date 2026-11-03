@@ -495,3 +495,99 @@ export function createDependencyProbes(): DependencyProbes {
       )),
   }
 }
+
+export type TicketStatus = 'todo' | 'in-progress' | 'done' | 'cancelled' | 'dropped'
+
+export type TicketNode = {
+  id: string
+  status: TicketStatus
+  priority: number
+  createdAt: string
+  blockedBy: readonly string[]
+}
+
+export type TicketGraphResult = {
+  exitCode: 0 | 1
+  cycle: string[] | null
+  ready: TicketNode[]
+  blocked: { id: string; blockers: string[] }[]
+}
+
+function findDependencyCycle(nodesById: Map<string, TicketNode>): string[] | null {
+  const finished = new Set<string>()
+  const onPath: string[] = []
+
+  const visit = (id: string): string[] | null => {
+    const cycleStart = onPath.indexOf(id)
+    if (cycleStart !== -1) return [...onPath.slice(cycleStart), id]
+    if (finished.has(id)) return null
+    const node = nodesById.get(id)
+    if (node === undefined) return null
+    onPath.push(id)
+    for (const blockerId of node.blockedBy) {
+      const found = visit(blockerId)
+      if (found !== null) return found
+    }
+    onPath.pop()
+    finished.add(id)
+    return null
+  }
+
+  for (const id of nodesById.keys()) {
+    const found = visit(id)
+    if (found !== null) return found
+  }
+  return null
+}
+
+function criticalPathLengths(nodes: readonly TicketNode[]): Map<string, number> {
+  const dependentsById = new Map<string, string[]>()
+  for (const node of nodes) {
+    for (const blockerId of node.blockedBy) {
+      dependentsById.set(blockerId, [...(dependentsById.get(blockerId) ?? []), node.id])
+    }
+  }
+  const lengths = new Map<string, number>()
+  const lengthOf = (id: string): number => {
+    const cached = lengths.get(id)
+    if (cached !== undefined) return cached
+    const longestDependent = Math.max(0, ...(dependentsById.get(id) ?? []).map(lengthOf))
+    lengths.set(id, longestDependent + 1)
+    return longestDependent + 1
+  }
+  for (const node of nodes) lengthOf(node.id)
+  return lengths
+}
+
+/** Only a `done` blocker releases its dependents: cancelled and dropped ones still block. */
+export function analyzeTicketGraph(nodes: readonly TicketNode[]): TicketGraphResult {
+  const nodesById = new Map(nodes.map((node) => [node.id, node]))
+  const cycle = findDependencyCycle(nodesById)
+  if (cycle !== null) return { exitCode: 1, cycle, ready: [], blocked: [] }
+
+  const lengths = criticalPathLengths(nodes)
+  const ready: TicketNode[] = []
+  const blocked: TicketGraphResult['blocked'] = []
+  for (const node of nodes) {
+    if (node.status !== 'todo') continue
+    const blockers = node.blockedBy.filter((blockerId) => nodesById.get(blockerId)?.status !== 'done')
+    if (blockers.length === 0) ready.push(node)
+    else blocked.push({ id: node.id, blockers })
+  }
+  ready.sort(
+    (left, right) =>
+      (lengths.get(right.id) ?? 0) - (lengths.get(left.id) ?? 0) ||
+      left.priority - right.priority ||
+      left.createdAt.localeCompare(right.createdAt),
+  )
+  return { exitCode: 0, cycle: null, ready, blocked }
+}
+
+export function formatTicketGraphJson(result: TicketGraphResult): string {
+  return JSON.stringify({
+    exitCode: result.exitCode,
+    cycle: result.cycle,
+    ready: result.ready.map((node) => node.id),
+    blocked: result.blocked,
+  })
+}
