@@ -1,6 +1,6 @@
 # 0004. One wave = one dependency layer = one PR
 
-Status: Accepted (2026-11-03)
+Status: Accepted (2026-11-03). Amended by [0010](0010-local-merge-landing.md): the landing unit is a PR or a local merge.
 Spec: #73
 
 ## Context
