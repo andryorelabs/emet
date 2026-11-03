@@ -27,7 +27,7 @@
 - `CODE_OF_CONDUCT.md`
 - `commands/` (1 files)
 - `commitlint.config.ts`
-- `CONTEXT.md`
+- `GLOSSARY.md`
 - `CONTRIBUTING.md`
 - `docs/` (11 files)
 - `forge.config.json`
