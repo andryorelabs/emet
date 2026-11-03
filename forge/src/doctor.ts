@@ -61,6 +61,9 @@ export type RepoDoctorReport = {
    * pin it low (a heavier per-worker footprint than the default budget
    * assumes), so this is a nudge toward `"auto"`, not a finding to fix. */
   readonly maxLiveWorkersNote: string | null
+  /** Tracker-target and worktree fork-base findings for this repo — each is a
+   * known mismatch (never "could not check"), so any entry dirties the repo. */
+  readonly environmentFindings: readonly string[]
 }
 
 /** A repo is clean if every check came back empty/false-negative — used both
@@ -76,6 +79,7 @@ export function isReportClean(report: RepoDoctorReport): boolean {
     report.missingDocs.length === 0 &&
     report.todoMarkers.length === 0 &&
     report.selfCheckIssues.length === 0 &&
+    report.environmentFindings.length === 0 &&
     report.dependencyFindings.every((check) => check.status !== 'unsatisfied')
   )
 }
@@ -165,6 +169,205 @@ async function isGitRepo(targetPath: string): Promise<boolean> {
   return result.exitCode === 0
 }
 
+/** Flags forge shells out with, per external command. Presence of the binary
+ * is not enough: a CLI release that renames or drops one of these breaks a
+ * wave mid-flight, so `--help` is the contract being verified. */
+export const REQUIRED_CLI_FLAGS: readonly {
+  readonly label: string
+  readonly command: readonly string[]
+  readonly flags: readonly string[]
+}[] = [
+  { label: 'gh issue view', command: ['gh', 'issue', 'view', '--help'], flags: ['--json'] },
+  {
+    label: 'gh issue edit',
+    command: ['gh', 'issue', 'edit', '--help'],
+    flags: ['--add-label', '--remove-label'],
+  },
+  { label: 'gh repo view', command: ['gh', 'repo', 'view', '--help'], flags: ['--json'] },
+  { label: 'claude', command: ['claude', '--help'], flags: ['--bg'] },
+  { label: 'claude agents', command: ['claude', 'agents', '--help'], flags: ['--json'] },
+]
+
+export type EnvironmentProbes = {
+  /** `--help` output of the command, or `null` when it could not be run. */
+  readonly helpText: (command: readonly string[]) => Promise<string | null>
+  /** `owner/name` per `gh repo view`, or `null` when unavailable. */
+  readonly ghRepoNameWithOwner: (repoRoot: string) => Promise<string | null>
+  /** URL of the named git remote, or `null` when it does not exist. */
+  readonly remoteUrl: (repoRoot: string, remote: string) => Promise<string | null>
+  /** Full SHA the ref resolves to, or `null` when it does not resolve. */
+  readonly resolveRef: (repoRoot: string, ref: string) => Promise<string | null>
+  /** `worktree.baseRef` from the first of repo-local/user settings that sets it. */
+  readonly worktreeBaseRef: (repoRoot: string) => Promise<string | null>
+}
+
+export function findMissingFlags(helpText: string, flags: readonly string[]): string[] {
+  return flags.filter((flag) => !new RegExp(`(^|[\\s,\\[])${flag}(?![\\w-])`).test(helpText))
+}
+
+/** One finding per command whose `--help` lacks a required flag. A command
+ * that cannot be run at all is reported too: dependency presence is checked
+ * elsewhere, but a silent skip here would hide a half-installed CLI. */
+export async function checkExternalCliFlags(probes: EnvironmentProbes): Promise<string[]> {
+  const findings: string[] = []
+  for (const requirement of REQUIRED_CLI_FLAGS) {
+    const helpText = await probes.helpText(requirement.command)
+    if (helpText === null) {
+      findings.push(`\`${requirement.command.join(' ')}\` could not be run — cannot verify ${requirement.flags.join(', ')}`)
+      continue
+    }
+    const missing = findMissingFlags(helpText, requirement.flags)
+    if (missing.length > 0) {
+      findings.push(`${requirement.label} no longer documents ${missing.join(', ')} in --help — forge relies on it`)
+    }
+  }
+  return findings
+}
+
+export function normalizeGithubSlug(remoteUrl: string): string | null {
+  const match = /github\.com[:/]+([^/\s]+)\/([^/\s]+?)(?:\.git)?\/?$/.exec(remoteUrl.trim())
+  return match ? `${match[1]}/${match[2]}`.toLowerCase() : null
+}
+
+export type TrackerTargetInput = {
+  readonly kind: TrackerKind | null
+  readonly ghRepo: string | null
+  readonly remoteUrl: string | null
+  readonly linearTeam: unknown
+}
+
+/** github: the repo `gh` resolves must be the repo the configured remote points
+ * at, else tickets get written to the wrong tracker. linear: a team must be
+ * declared in `tracker.team`, since the Linear MCP has no ambient repo to infer from. */
+export function checkTrackerTarget(input: TrackerTargetInput): string[] {
+  if (input.kind === 'github') {
+    if (input.ghRepo === null || input.remoteUrl === null) return []
+    const remoteSlug = normalizeGithubSlug(input.remoteUrl)
+    if (remoteSlug === null) return []
+    if (input.ghRepo.toLowerCase() !== remoteSlug) {
+      return [
+        `tracker.kind is github but \`gh repo view\` resolves ${input.ghRepo} while the configured remote points at ${remoteSlug} — set the gh default with \`gh repo set-default\``,
+      ]
+    }
+    return []
+  }
+  if (input.kind === 'linear') {
+    if (typeof input.linearTeam !== 'string' || input.linearTeam.trim() === '') {
+      return ['tracker.kind is linear but tracker.team is not declared in forge.config.json']
+    }
+  }
+  return []
+}
+
+export type ForkBaseInput = {
+  readonly coordinatorHead: string | null
+  readonly harnessBase: string | null
+  readonly baseRefSetting: string | null
+  readonly harnessBaseRef: string
+}
+
+/** The harness forks agent worktrees from `worktree.baseRef` (default: the
+ * remote trunk), not from the coordinator's HEAD. A worker forked from a stale
+ * base cannot see the ticket's predecessors and merges garbage. */
+export function checkWorktreeForkBase(input: ForkBaseInput): string[] {
+  if (input.baseRefSetting === 'head') return []
+  if (input.coordinatorHead === null || input.harnessBase === null) return []
+  if (input.coordinatorHead === input.harnessBase) return []
+  return [
+    `harness worktree base ${input.harnessBaseRef} (${input.harnessBase.slice(0, 7)}) != coordinator HEAD (${input.coordinatorHead.slice(0, 7)}) — set "worktree": { "baseRef": "head" } in .claude/settings.json so workers fork from the coordinator's HEAD`,
+  ]
+}
+
+async function readRawTrackerTeam(repoRoot: string): Promise<unknown> {
+  try {
+    const parsed = (await Bun.file(path.join(repoRoot, 'forge.config.json')).json()) as Record<string, unknown>
+    const tracker = parsed.tracker
+    return typeof tracker === 'object' && tracker !== null
+      ? (tracker as Record<string, unknown>).team
+      : undefined
+  } catch {
+    return undefined
+  }
+}
+
+async function runCapture(command: readonly string[], cwd: string): Promise<string | null> {
+  try {
+    const result = await Bun.$`${command}`.cwd(cwd).nothrow().quiet()
+    if (result.exitCode !== 0) return null
+    return result.text().trim()
+  } catch {
+    return null
+  }
+}
+
+async function readBaseRefSetting(repoRoot: string): Promise<string | null> {
+  const candidates = [
+    path.join(repoRoot, '.claude', 'settings.local.json'),
+    path.join(repoRoot, '.claude', 'settings.json'),
+    path.join(os.homedir(), '.claude', 'settings.json'),
+  ]
+  for (const candidate of candidates) {
+    try {
+      const parsed = (await Bun.file(candidate).json()) as Record<string, unknown>
+      const worktree = parsed.worktree
+      if (typeof worktree === 'object' && worktree !== null) {
+        const baseRef = (worktree as Record<string, unknown>).baseRef
+        if (typeof baseRef === 'string') return baseRef
+      }
+    } catch {
+      continue
+    }
+  }
+  return null
+}
+
+export function createEnvironmentProbes(): EnvironmentProbes {
+  return {
+    helpText: async (command) => {
+      try {
+        const result = await Bun.$`${command}`.nothrow().quiet()
+        const text = `${result.stdout.toString()}${result.stderr.toString()}`
+        return result.exitCode === 0 || text.trim() !== '' ? text : null
+      } catch {
+        return null
+      }
+    },
+    ghRepoNameWithOwner: (repoRoot) =>
+      runCapture(['gh', 'repo', 'view', '--json', 'nameWithOwner', '-q', '.nameWithOwner'], repoRoot),
+    remoteUrl: (repoRoot, remote) => runCapture(['git', 'remote', 'get-url', remote], repoRoot),
+    resolveRef: (repoRoot, ref) => runCapture(['git', 'rev-parse', '--verify', '--quiet', `${ref}^{commit}`], repoRoot),
+    worktreeBaseRef: readBaseRefSetting,
+  }
+}
+
+async function auditEnvironment(
+  repoRoot: string,
+  config: { readonly trunk: string; readonly remote: string; readonly kind: TrackerKind | null },
+  probes: EnvironmentProbes,
+): Promise<string[]> {
+  const findings: string[] = []
+
+  findings.push(
+    ...checkTrackerTarget({
+      kind: config.kind,
+      ghRepo: config.kind === 'github' ? await probes.ghRepoNameWithOwner(repoRoot) : null,
+      remoteUrl: config.kind === 'github' ? await probes.remoteUrl(repoRoot, config.remote) : null,
+      linearTeam: config.kind === 'linear' ? await readRawTrackerTeam(repoRoot) : undefined,
+    }),
+  )
+
+  const harnessBaseRef = `${config.remote}/${config.trunk}`
+  findings.push(
+    ...checkWorktreeForkBase({
+      coordinatorHead: await probes.resolveRef(repoRoot, 'HEAD'),
+      harnessBase: await probes.resolveRef(repoRoot, harnessBaseRef),
+      baseRefSetting: await probes.worktreeBaseRef(repoRoot),
+      harnessBaseRef,
+    }),
+  )
+  return findings
+}
+
 /** Audits one path. Never throws — every failure mode (not a repo, no
  * config, malformed config, missing docs) is a field on the returned
  * report, not an exception, so a fleet sweep over many paths never aborts
@@ -179,6 +382,7 @@ async function isGitRepo(targetPath: string): Promise<boolean> {
 export async function auditRepo(
   targetPath: string,
   probes: DependencyProbes,
+  environment: EnvironmentProbes,
 ): Promise<RepoDoctorReport> {
   const absolutePath = path.resolve(targetPath)
 
@@ -194,6 +398,7 @@ export async function auditRepo(
       trackerKind: null,
       dependencyFindings: [],
       maxLiveWorkersNote: null,
+      environmentFindings: [],
     }
   }
 
@@ -212,6 +417,15 @@ export async function auditRepo(
       }
     }
   }
+
+  const environmentFindings =
+    configResult.status === 'ok'
+      ? await auditEnvironment(
+          absolutePath,
+          { ...configResult.config.repo, kind: trackerKind },
+          environment,
+        )
+      : []
 
   const docsAgentsDirectory = path.join(absolutePath, 'docs', 'agents')
   const existingDocs = new Set(
@@ -254,6 +468,7 @@ export async function auditRepo(
     trackerKind,
     dependencyFindings,
     maxLiveWorkersNote,
+    environmentFindings,
   }
 }
 
@@ -282,6 +497,9 @@ function formatReport(report: RepoDoctorReport): string {
   }
   for (const issue of report.selfCheckIssues) {
     lines.push(`  - commands.selfCheck: ${issue}`)
+  }
+  for (const finding of report.environmentFindings) {
+    lines.push(`  - ${finding}`)
   }
   for (const check of report.dependencyFindings) {
     if (check.status === 'unsatisfied') {
@@ -453,10 +671,11 @@ async function readUserSettings(): Promise<unknown> {
 async function main(targets: readonly string[]): Promise<void> {
   const paths = targets.length > 0 ? targets : ['.']
   const probes = createDependencyProbes()
+  const environment = createEnvironmentProbes()
 
   const reports: RepoDoctorReport[] = []
   for (const target of paths) {
-    reports.push(await auditRepo(target, probes))
+    reports.push(await auditRepo(target, probes, environment))
   }
 
   for (const report of reports) {
@@ -472,6 +691,13 @@ async function main(targets: readonly string[]): Promise<void> {
     .filter((line): line is string => line !== null)
   if (globalFindingLines.length > 0) {
     console.log(`\nGlobal dependencies:\n${globalFindingLines.join('\n')}`)
+  }
+
+  const cliFlagFindings = await checkExternalCliFlags(environment)
+  if (cliFlagFindings.length > 0) {
+    console.log(
+      `\nExternal CLI flags (verified via --help):\n${cliFlagFindings.map((line) => `  - ${line}`).join('\n')}`,
+    )
   }
 
   const settingsAdvisories = checkSettingsAdvisories(await readUserSettings())
@@ -500,6 +726,7 @@ async function main(targets: readonly string[]): Promise<void> {
 
   const exitClean =
     cleanCount === gitRepoCount &&
+    cliFlagFindings.length === 0 &&
     globalPluginCheck.status !== 'unsatisfied' &&
     globalForgeAgentsCheck.status !== 'unsatisfied'
   process.exitCode = exitClean ? 0 : 1
