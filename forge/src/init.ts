@@ -1,4 +1,3 @@
-import os from "node:os";
 import path from "node:path";
 
 import {
@@ -35,30 +34,188 @@ import { readTemplate } from "./assets";
  * everything inferable, mark everything else, never guess silently.
  */
 
-export type PackageManagerKind = "bun" | "pnpm" | "npm" | "go" | "cargo" | "python" | "unknown";
+export type PackageManager =
+  | "bun"
+  | "pnpm"
+  | "yarn"
+  | "npm"
+  | "go"
+  | "cargo"
+  | "uv"
+  | "poetry"
+  | "pip"
+  | "unknown";
 
 export type { TrackerKind };
 
+type JsPackageManager = "bun" | "pnpm" | "yarn" | "npm";
+
+const JS_PACKAGE_MANAGERS: ReadonlySet<string> = new Set(["bun", "pnpm", "yarn", "npm"]);
+
+function isJsPackageManager(value: string): value is JsPackageManager {
+  return JS_PACKAGE_MANAGERS.has(value);
+}
+
+const PACKAGE_MANAGER_PROBE_FILES: readonly string[] = [
+  "bun.lock",
+  "bun.lockb",
+  "pnpm-lock.yaml",
+  "yarn.lock",
+  "package-lock.json",
+  "package.json",
+  "go.mod",
+  "Cargo.toml",
+  "uv.lock",
+  "poetry.lock",
+  "pyproject.toml",
+  "requirements.txt",
+  "setup.py",
+];
+
 /**
- * Lockfile-based detection first (this repo's own convention, see the global
- * CLAUDE.md: "detect lockfile: bun.lock -> bun, pnpm-lock.yaml -> pnpm,
- * package-lock.json -> npm"), falling back to a non-JS ecosystem manifest,
- * and finally `'unknown'` (never guessed) rather than defaulting to `bun` —
- * unlike the "no lockfile in a JS repo" case that default applies to,
- * `'unknown'` here usually means this isn't a JS repo at all, and guessing
- * `bun` would produce a nonsensical `bun run <script>` in the generated
- * `commands.selfCheck`.
+ * Pure classification shared by `forge init` (files probed on disk) and
+ * `forge map` (the tracked file list). Lockfiles win, then the
+ * `package.json` `packageManager` field, then a bare `package.json` means
+ * npm; non-JS ecosystems follow, and `'unknown'` is never guessed into a
+ * JS manager.
  */
-export async function detectPackageManager(repoRoot: string): Promise<PackageManagerKind> {
-  if (await Bun.file(path.join(repoRoot, "bun.lock")).exists()) return "bun";
-  if (await Bun.file(path.join(repoRoot, "bun.lockb")).exists()) return "bun";
-  if (await Bun.file(path.join(repoRoot, "pnpm-lock.yaml")).exists()) return "pnpm";
-  if (await Bun.file(path.join(repoRoot, "package-lock.json")).exists()) return "npm";
-  if (await Bun.file(path.join(repoRoot, "package.json")).exists()) return "bun";
-  if (await Bun.file(path.join(repoRoot, "go.mod")).exists()) return "go";
-  if (await Bun.file(path.join(repoRoot, "Cargo.toml")).exists()) return "cargo";
-  if (await Bun.file(path.join(repoRoot, "pyproject.toml")).exists()) return "python";
+export function classifyPackageManager(
+  has: (fileName: string) => boolean,
+  packageManagerField: string | null,
+): PackageManager {
+  if (has("bun.lock") || has("bun.lockb")) return "bun";
+  if (has("pnpm-lock.yaml")) return "pnpm";
+  if (has("yarn.lock")) return "yarn";
+  if (has("package-lock.json")) return "npm";
+  const declared = packageManagerField?.split("@")[0] ?? "";
+  if (isJsPackageManager(declared)) return declared;
+  if (has("package.json")) return "npm";
+  if (has("go.mod")) return "go";
+  if (has("Cargo.toml")) return "cargo";
+  if (has("uv.lock")) return "uv";
+  if (has("poetry.lock")) return "poetry";
+  if (has("pyproject.toml") || has("requirements.txt") || has("setup.py")) return "pip";
   return "unknown";
+}
+
+async function readPackageManagerField(repoRoot: string): Promise<string | null> {
+  const file = Bun.file(path.join(repoRoot, "package.json"));
+  if (!(await file.exists())) return null;
+  try {
+    const parsed: unknown = await file.json();
+    return isObject(parsed) && typeof parsed.packageManager === "string"
+      ? parsed.packageManager
+      : null;
+  } catch {
+    return null;
+  }
+}
+
+export async function detectPackageManager(repoRoot: string): Promise<PackageManager> {
+  const present = new Set<string>();
+  for (const fileName of PACKAGE_MANAGER_PROBE_FILES) {
+    // oxlint-disable-next-line eslint/no-await-in-loop -- sequential probe, cheap
+    if (await Bun.file(path.join(repoRoot, fileName)).exists()) present.add(fileName);
+  }
+  return classifyPackageManager(
+    (fileName) => present.has(fileName),
+    present.has("package.json") ? await readPackageManagerField(repoRoot) : null,
+  );
+}
+
+/**
+ * Non-empty bootstrap per ecosystem; `unknown` has none (never guessed).
+ */
+export function defaultBootstrap(packageManager: PackageManager): string[] {
+  switch (packageManager) {
+    case "bun": {
+      return ["bun install --frozen-lockfile"];
+    }
+    case "pnpm": {
+      return ["pnpm install --frozen-lockfile"];
+    }
+    case "yarn": {
+      return ["yarn install --immutable"];
+    }
+    case "npm": {
+      return ["npm ci"];
+    }
+    case "uv": {
+      return ["uv sync"];
+    }
+    case "poetry": {
+      return ["poetry install"];
+    }
+    case "pip": {
+      return ["pip install -r requirements.txt"];
+    }
+    case "go": {
+      return ["go mod download"];
+    }
+    case "cargo": {
+      return ["cargo fetch"];
+    }
+    default: {
+      return [];
+    }
+  }
+}
+
+/**
+ * Ecosystem-default self-check, used when the repo gives no better signal
+ * (JS repos prefer their own `package.json` scripts, see
+ * {@link detectJsSelfCheck}).
+ */
+export function defaultSelfCheck(packageManager: PackageManager): string[] {
+  switch (packageManager) {
+    case "bun":
+    case "pnpm":
+    case "yarn":
+    case "npm": {
+      return [`${packageManager} run test`];
+    }
+    case "go": {
+      return ["go build ./...", "go test ./..."];
+    }
+    case "cargo": {
+      return ["cargo test", "cargo clippy -- -D warnings"];
+    }
+    case "uv": {
+      return ["uv run pytest"];
+    }
+    case "poetry": {
+      return ["poetry run pytest"];
+    }
+    case "pip": {
+      return ["pytest"];
+    }
+    default: {
+      return [];
+    }
+  }
+}
+
+const FORGE_BEGIN_MARKER = "<!-- forge:begin -->";
+const FORGE_END_MARKER = "<!-- forge:end -->";
+
+/**
+ * Inserts `section` between the forge markers: replaces a previous forge
+ * section in place, otherwise appends. Everything outside the markers is
+ * returned byte-for-byte. `section` may already carry the markers.
+ */
+export function upsertForgeSection(existing: string, section: string): string {
+  const block = section.includes(FORGE_BEGIN_MARKER)
+    ? section.trim()
+    : `${FORGE_BEGIN_MARKER}\n${section.trim()}\n${FORGE_END_MARKER}`;
+  const beginIndex = existing.indexOf(FORGE_BEGIN_MARKER);
+  const endIndex = beginIndex === -1 ? -1 : existing.indexOf(FORGE_END_MARKER, beginIndex);
+  if (beginIndex !== -1 && endIndex !== -1) {
+    return (
+      existing.slice(0, beginIndex) + block + existing.slice(endIndex + FORGE_END_MARKER.length)
+    );
+  }
+  if (existing.length === 0) return `${block}\n`;
+  return `${existing.replace(/\n*$/, "\n")}\n${block}\n`;
 }
 
 /**
@@ -133,14 +290,14 @@ async function hasGithubIssueUsage(repoRoot: string): Promise<boolean> {
  * Priority order matches `forge.config.json`'s own design notes: a
  * networked tracker only counts if there's real evidence of it — a
  * configured Linear MCP server, or actual (not merely enabled) GitHub Issues
- * usage. Absent both, `local` is the safe default: no external dependency,
- * and `forge init` marks its issue-tracker doc as design-only until that
- * CLI surface exists (see `templates/issue-tracker-local.md.tpl`).
+ * usage. Absent both it returns `null`: the local tracker is not implemented
+ * yet, so `init` never selects it by default and instead writes a
+ * `TODO(forge):` marker asking the owner to choose.
  */
-export async function detectTrackerKind(repoRoot: string): Promise<TrackerKind> {
+export async function detectTrackerKind(repoRoot: string): Promise<TrackerKind | null> {
   if (await hasLinearMcpServer(repoRoot)) return "linear";
   if (await hasGithubIssueUsage(repoRoot)) return "github";
-  return "local";
+  return null;
 }
 
 /**
@@ -153,7 +310,7 @@ export async function detectTrackerKind(repoRoot: string): Promise<TrackerKind> 
  */
 export async function detectJsSelfCheck(
   repoRoot: string,
-  packageManager: "bun" | "pnpm" | "npm",
+  packageManager: JsPackageManager,
 ): Promise<string[]> {
   const file = Bun.file(path.join(repoRoot, "package.json"));
   if (!(await file.exists())) return [];
@@ -165,11 +322,12 @@ export async function detectJsSelfCheck(
   }
   const scripts = isObject(parsed) && isObject(parsed.scripts) ? parsed.scripts : undefined;
   if (!scripts) return [];
-  const runner = packageManager === "npm" ? "npm run" : `${packageManager} run`;
+  const runner = `${packageManager} run`;
   if (typeof scripts.check === "string") return [`${runner} check`];
   const commands: string[] = [];
   if (typeof scripts.lint === "string") commands.push(`${runner} lint`);
   if (typeof scripts.typecheck === "string") commands.push(`${runner} typecheck`);
+  if (commands.length === 0 && typeof scripts.test === "string") commands.push(`${runner} test`);
   return commands;
 }
 
@@ -191,13 +349,11 @@ export async function detectGoSelfCheck(repoRoot: string): Promise<string[]> {
 
 async function detectSelfCheck(
   repoRoot: string,
-  packageManager: PackageManagerKind,
+  packageManager: PackageManager,
 ): Promise<string[]> {
-  if (packageManager === "bun" || packageManager === "pnpm" || packageManager === "npm") {
-    return detectJsSelfCheck(repoRoot, packageManager);
-  }
+  if (isJsPackageManager(packageManager)) return detectJsSelfCheck(repoRoot, packageManager);
   if (packageManager === "go") return detectGoSelfCheck(repoRoot);
-  return [];
+  return defaultSelfCheck(packageManager);
 }
 
 /**
@@ -214,7 +370,7 @@ export function deriveIdPrefix(repoBasename: string): string {
 
 export type DetectedRepoInfo = {
   readonly repoName: string;
-  readonly packageManager: PackageManagerKind;
+  readonly packageManager: PackageManager;
   readonly trunk: string;
   readonly trunkWasDetected: boolean;
   readonly tracker: TrackerKind;
@@ -365,14 +521,14 @@ function monorepoSection(hasWorkspaces: boolean): string {
     return (
       "This repo has monorepo signals (a `pnpm-workspace.yaml`/`workspaces` field, " +
       "or populated `packages/*`). TODO(forge): describe the workspace layout — " +
-      "which package(s) a typical ticket touches, and whether `CONTEXT.md`/" +
+      "which package(s) a typical ticket touches, and whether `GLOSSARY.md`/" +
       "`docs/adr/` live at the repo root or per-package."
     );
   }
   return (
     "Single-context repo (no monorepo signals detected: no " +
     "`pnpm-workspace.yaml`, no `workspaces` field, no populated `packages/*`).\n\n" +
-    "```\n/\n├── CONTEXT.md\n└── docs/adr/\n    ├── 0001-....md\n    └── 0002-....md\n```"
+    "```\n/\n├── GLOSSARY.md\n└── docs/adr/\n    ├── 0001-....md\n    └── 0002-....md\n```"
   );
 }
 
@@ -404,6 +560,37 @@ async function writeIfAbsentOrForced(
   if (!force && (await Bun.file(filePath).exists())) return "skipped-exists";
   await Bun.write(filePath, content);
   return "written";
+}
+
+const TRACKER_CHOICE_TODO =
+  "TODO(forge): no Linear MCP server or GitHub Issues usage was detected, and the `local` " +
+  "tracker is not implemented yet, so `tracker.kind` in `forge.config.json` is a placeholder " +
+  "(`github`). Choose `linear` or `github` there and re-run `forge init --force`.";
+
+const LEGACY_FORGE_DOC_FOOTER = "Generated by `forge init`";
+
+/**
+ * Docs shared with `setup-matt-pocock-skills` (`issue-tracker.md`,
+ * `domain.md`, `triage-labels.md`): forge's content lives between the
+ * `forge:begin`/`forge:end` markers and nothing outside them is ever touched.
+ * A file written by an older forge (footer, no markers) is left alone rather
+ * than duplicated.
+ */
+async function writeSharedDoc(
+  filePath: string,
+  rendered: string,
+): Promise<"written" | "updated" | "skipped-legacy"> {
+  const file = Bun.file(filePath);
+  if (!(await file.exists())) {
+    await Bun.write(filePath, upsertForgeSection("", rendered));
+    return "written";
+  }
+  const existing = await file.text();
+  if (!existing.includes(FORGE_BEGIN_MARKER) && existing.includes(LEGACY_FORGE_DOC_FOOTER)) {
+    return "skipped-legacy";
+  }
+  await Bun.write(filePath, upsertForgeSection(existing, rendered));
+  return "updated";
 }
 
 /**
@@ -524,7 +711,9 @@ async function main(options: InitOptions): Promise<void> {
   const packageManager = await detectPackageManager(repoRoot);
   const detectedTrunk = await detectTrunk(repoRoot);
   const trunk = detectedTrunk ?? "main";
-  const tracker = options.trackerOverride ?? (await detectTrackerKind(repoRoot));
+  const detectedTracker = options.trackerOverride ?? (await detectTrackerKind(repoRoot));
+  const trackerNeedsChoice = detectedTracker === null;
+  const tracker: TrackerKind = detectedTracker ?? "github";
   const idPrefix = deriveIdPrefix(repoBasename);
   const selfCheck = await detectSelfCheck(repoRoot, packageManager);
   const hasWorkspaces = await detectHasWorkspaces(repoRoot);
@@ -541,11 +730,6 @@ async function main(options: InitOptions): Promise<void> {
 
   const config = buildForgeConfig(detected);
   const configJson = {
-    /**
-     * `~` is never expanded by a JSON Schema resolver or editor completion —
-     * write the absolute path this CLI is actually installed at.
-     */
-    $schema: path.join(os.homedir(), ".claude", "forge", "schema", "forge.config.schema.json"),
     "//":
       `Generated by \`forge init\` on ${new Date().toISOString().slice(0, 10)}. ` +
       "Every value below is either autodetected or a built-in default — review " +
@@ -555,6 +739,7 @@ async function main(options: InitOptions): Promise<void> {
     ...config,
     tracker: buildTrackerConfig(detected),
     commands: { selfCheck: detected.selfCheck },
+    worktree: { bootstrap: defaultBootstrap(packageManager) },
   };
   await Bun.write(configPath, `${JSON.stringify(configJson, null, 2)}\n`);
 
@@ -573,23 +758,32 @@ async function main(options: InitOptions): Promise<void> {
   const docsAgentsDirectory = path.join(repoRoot, "docs", "agents");
   await Bun.$`mkdir -p ${docsAgentsDirectory}`.quiet();
 
-  const writes: Array<{ template: string; target: string }> = [
-    { template: "forge.md.tpl", target: "forge.md" },
-    { template: `issue-tracker-${detected.tracker}.md.tpl`, target: "issue-tracker.md" },
-    { template: `triage-labels-${detected.tracker}.md.tpl`, target: "triage-labels.md" },
-    { template: "domain.md.tpl", target: "domain.md" },
+  const writes: Array<{ template: string; target: string; shared: boolean; note: string }> = [
+    { template: "forge.md.tpl", target: "forge.md", shared: false, note: "" },
+    {
+      template: `issue-tracker-${detected.tracker}.md.tpl`,
+      target: "issue-tracker.md",
+      shared: true,
+      note: trackerNeedsChoice ? `${TRACKER_CHOICE_TODO}\n\n` : "",
+    },
+    {
+      template: `triage-labels-${detected.tracker}.md.tpl`,
+      target: "triage-labels.md",
+      shared: true,
+      note: "",
+    },
+    { template: "domain.md.tpl", target: "domain.md", shared: true, note: "" },
   ];
 
   const results: string[] = [];
-  for (const { template, target } of writes) {
-    const templateContent = readTemplate(template);
-    const rendered = substituteTemplate(templateContent, vars);
+  for (const { template, target, shared, note } of writes) {
+    const rendered = note + substituteTemplate(readTemplate(template), vars);
+    const targetPath = path.join(docsAgentsDirectory, target);
+    const write = shared
+      ? writeSharedDoc(targetPath, rendered)
+      : writeIfAbsentOrForced(targetPath, rendered, options.force);
     // oxlint-disable-next-line eslint/no-await-in-loop -- sequential on purpose: later iterations depend on earlier ones or on output order
-    const outcome = await writeIfAbsentOrForced(
-      path.join(docsAgentsDirectory, target),
-      rendered,
-      options.force,
-    );
+    const outcome = await write;
     results.push(`docs/agents/${target}: ${outcome}`);
   }
 
