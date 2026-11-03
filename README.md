@@ -59,6 +59,13 @@ changed is *who checks it and how hard*:
 | `gh` missing/unauthenticated (tracker: `github`) | prints what to run | reports it | **blocks dispatch** |
 | Linear server undeclared (tracker: `linear`) | prints a note | reports it | **blocks dispatch** |
 | `claude` not on PATH, or a probe timing out | prints a note | reports it | **warns, never blocks** — this is "couldn't check", not "verified broken" |
+| a flag forge relies on missing from `--help` | — | reports it | — |
+
+`forge doctor` checks the flags themselves, not only that the binaries exist.
+It reads `--help` for `gh issue view`/`gh repo view` (`--json`),
+`gh issue edit` (`--add-label`, `--remove-label`), `claude` (`--bg`) and
+`claude agents` (`--json`), and reports any flag a newer or older CLI no
+longer documents. A renamed flag would otherwise fail a wave midway.
 
 Every probe is capped at 5s so a stalled `gh auth status` (no network) can't
 hang a wave. If a `preflight` block is itself wrong for your environment,
@@ -152,18 +159,87 @@ what happens next (both validated by `forge preflight`):
   bypass warning must have been accepted once interactively
   (`skipDangerousModePermissionPrompt`).
 
+## Gates, budgets and records
+
+The phases don't decide on their own when a ticket is done, mergeable or
+worth retrying. They call a CLI command that reads a record on disk and
+prints the decision. Run records live under `.forge/runs/<run-id>/` and the
+review ledger under `.forge/review/`, in the main checkout, not in a worker's
+worktree. Every command prints its usage with `--help`.
+
+| Step | Command | What it enforces |
+|---|---|---|
+| Before approval | `forge validate --file <plan.json>` | Every `S#` is covered by at least one ticket and has an acceptance scenario. Every ticket covers at least one `S#`. Edit surfaces are disjoint within a wave. No dependency cycles. `forge preflight` runs it again on the approved plan. |
+| Approval | `forge approve --run <id> --spec <file>` | Writes `approval.json` with the spec and ticket-list hashes. Dispatch refuses if either changed afterwards (`--check`). |
+| Ticket creation | `forge materialize-log --run <id> --record/--lookup` | Saves each created ticket's ID as soon as it exists, so an interrupted run never creates duplicates. |
+| Worker done | `forge results --run <id> --write/--read <ticket>` | Workers write a local result file (`DONE`, `DONE_WITH_CONCERNS`, `BLOCKED` or `NEEDS_CONTEXT`, plus a `Risk:` line). Only the coordinator writes to the tracker. |
+| After each worker | `forge verify <ticket> --run <id>` | Checks that commits exist beyond the dispatch baseline, every changed path is inside the ticket's edit surfaces, the handoff note passes `handoff --check`, and `commands.workerScopedSuite` passes. Review and merge refuse a ticket without a pass record. |
+| Review input | `forge review-package <base> <head> --out <file>` | Bundles the diff for the reviewer, who receives it as a file path. Exits 3 if the range is empty or not a descendant of base. |
+| Review | `forge review --ticket <t> --findings <file>` | Keeps the findings ledger and enforces triage order (`intent_gap` → `bad_plan` → `patch` → `defer`) and the round cap. `--escalate` moves to the next model tier. `--rule`/`--rulings` record and list the "Rulings I made" for the report and the PR body. |
+| Merge or chain | `forge gate <ticket> --tier … --ci … --integration …` | Prints `merge`, `hold`, `chain`, `stop` or `defer` as JSON with its reasons. It reads the verify record, the open findings, the risk tier, CI, the integration suite and the budgets. |
+
+After a wave's branches are merged together, `commands.fullSuite` runs once
+on the integration branch. A red run blocks the PR and `autoChain`. The gate
+receives the result as `--integration`.
+
+**Budgets** (`forge.config.json`, all optional):
+
+```json
+{ "budgets": { "workerAttempts": 2, "reviewRounds": 2, "stallNudgeCap": 6 } }
+```
+
+- `workerAttempts`: how many times a ticket can fail `verify` before the gate
+  answers `defer`. The ticket gets the `forge:deferred` label and the rest of
+  the wave continues. An environment fault, such as the test command exiting
+  126/127 or a provider outage, pauses the run without spending an attempt.
+- `reviewRounds`: how many review/fix rounds a ticket gets before one
+  escalation to the next model tier. Whatever is still open after that gets a
+  ruling.
+- `stallNudgeCap`: how many times a stalled worker gets nudged. The count
+  never resets.
+
+**Living specs.** After a wave auto-merges, `forge spec-merge --spec <id>`
+merges the spec's `ADDED`/`MODIFIED`/`REMOVED` requirement deltas into
+`docs/specs/<area>.md` (`specs.dir`). It checks every area before writing
+anything. A conflict, or a requirement that would lose a scenario, exits 1
+and leaves every file untouched.
+
+**Codebase map.** `forge map` writes a brief of an existing codebase (stack,
+structure, conventions, testing, hotspots) to `docs/agents/codebase.md`
+(`map.path`), stamped with the commit SHA it was built from. The same commit
+always produces the same file. `forge map --stale` exits 1 once HEAD has
+moved past the stamp, and `forge preflight` warns in that case.
+`forge map --for <globs>` prints only the sections that match a ticket's
+edit surfaces. That output is the only part of the map a worker brief
+includes.
+
+**Metrics.** `forge metrics --run <id>` reports tokens, API-equivalent cost
+and wall time per ticket, per wave and per run, read from the session
+transcripts. It also compares the context budget estimated per ticket with
+what each worker actually used. Its summary goes at the end of the run's
+final report.
+
 ## What's in here
 
 - `forge/` — the CLI (`forge init/doctor/preflight/claims/slots/cleanup/
-  usage/handoff/launch/lock-reason/guard/selftest`), its schema, and the doc
-  templates `forge init` fills in. `install.sh` also wires `forge guard` in
+  usage/handoff/launch/lock-reason/assess/status/surfaces/validate/approve/
+  materialize-log/results/verify/review-package/review/gate/spec-merge/map/
+  metrics/guard/selftest`), its schema, and the doc templates `forge init`
+  fills in. `install.sh` also wires `forge guard` in
   as a Claude Code `PreToolUse` hook (`~/.claude/settings.json`) that blocks
   a handful of known, unattended-run failure triggers (see
   `forge/src/guard.ts`) regardless of whether the current session's context
   happens to include the doc that already asks not to do them.
 - `commands/forge.md` — the `/forge` command itself (a ~110-line router);
   everything else it needs lives in `forge/reference/`, loaded only when the
-  current run's mode needs it.
+  current run's mode needs it. Each reference file is a separate phase group
+  (`phases-1-5.md`, `phases-6-7-dispatch.md`, `phases-8-closeout.md`,
+  `phases-9-handoff.md`). A test fails if any of them grows past 20,000 bytes,
+  so a single file can't take over the context after compaction. The phases
+  tell the coordinator to re-read the relevant section before each fix or
+  review round. `install.sh` moves the old single `phases-6-9.md` aside as
+  `phases-6-9.md.retired` when you edited it or it predates the install
+  manifest. Otherwise it deletes it.
 
 ## Models & effort
 
@@ -266,4 +342,6 @@ Reports, per repo: valid `forge.config.json`, all four `docs/agents/*.md`
 files present, zero leftover `TODO(forge):` markers, whether the commands in
 `commands.selfCheck` actually resolve, and that repo's tracker-specific
 dependency findings (`gh`, Linear — see Dependencies above). The
-mattpocock-skills plugin is checked once for the whole sweep, not per repo.
+mattpocock-skills plugin and the external CLI flags (`gh`, `claude --bg`,
+`claude agents --json`, checked via `--help`) are checked once for the
+whole sweep, not per repo.

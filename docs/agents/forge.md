@@ -40,6 +40,20 @@ Commands a worker runs before considering its own change done: see
 Both commands target `forge/` (the only package), matching what CI runs
 (`.github/workflows/ci.yml`: typecheck, then `bun test`).
 
+## Gates and budgets
+
+`forge verify <ticket>` runs after each worker and checks its commits, edit
+surfaces and handoff note. This repo sets no `commands.workerScopedSuite` or
+`commands.fullSuite`, so neither suite step runs. The `selfCheck` commands
+above, plus CI on the PR, are what guard the code. `forge gate` makes the
+merge/chain decision with the default `budgets` (`workerAttempts` 2,
+`reviewRounds` 2, `stallNudgeCap` 6).
+
+`forge map` writes the codebase brief to `docs/agents/codebase.md`. Each
+worker brief includes only the sections that match the ticket's edit
+surfaces. After an auto-merge, `forge spec-merge` folds the spec's
+requirement deltas into `docs/specs/`.
+
 ## Concurrency
 
 Max `concurrency.waveSize` live agents per wave, and a global

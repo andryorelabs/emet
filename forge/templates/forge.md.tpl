@@ -60,6 +60,22 @@ Commands a worker runs before considering its own change done: see
 
 {{SELF_CHECK_SECTION}}
 
+## Gates and budgets
+
+`forge verify <ticket>` runs `commands.workerScopedSuite` itself after each
+worker. A worker that reports green is not trusted on its word. After a
+wave's branches are merged, `commands.fullSuite` runs once on the
+integration branch, and a red result blocks the PR and `autoChain`.
+`forge gate` then makes the merge/chain decision, within the limits set in
+`budgets` (`workerAttempts`, `reviewRounds`, `stallNudgeCap`). Change those
+values in `forge.config.json`, and record the reason here.
+
+`forge map` writes the codebase brief to `map.path` (default
+`docs/agents/codebase.md`). Each worker brief includes only the sections
+that match the ticket's edit surfaces. After an auto-merge,
+`forge spec-merge` folds the spec's requirement deltas into `specs.dir`
+(default `docs/specs/`).
+
 ## Concurrency
 
 Max `concurrency.waveSize` live agents per wave, and a global
