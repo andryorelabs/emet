@@ -13,12 +13,24 @@ import { optionalProperty } from "./optional";
 import os from "node:os";
 import path from "node:path";
 
-import { DEFAULT_FORGE_CONFIG, resolveRepoRoot } from "./config";
+import {
+  DEFAULT_FORGE_CONFIG,
+  loadForgeConfigWithDefaults,
+  resolveRepoRoot,
+  type ForgeConfig,
+} from "./config";
 import { listReservations } from "./claims";
 import { classifyRun, type RunVerdict } from "./runs";
 import { listOccupiedSlots } from "./slots";
 import { findStalledTranscripts } from "./usage";
-import { listWorktreeEntries, resolveWorktreeOwner, type WorktreeEntry } from "./worktrees";
+import {
+  classifyByContent,
+  isSafeToDelete,
+  listWorktreeEntries,
+  resolveMainTree,
+  resolveWorktreeOwner,
+  type WorktreeEntry,
+} from "./worktrees";
 
 type WaveState = "working" | "checking" | "ready" | "needs-decision";
 type OverallState = WaveState | "idle";
@@ -96,7 +108,7 @@ export function parseRunIdentity(runId: string): {
   spec: string | null;
   wave: number | null;
 } {
-  const match = /^forge(\d+)w(\d+?)(\d{6})$/.exec(runId);
+  const match = /^forge([a-z0-9][a-z0-9-]*)w(\d+?)(\d{6})$/.exec(runId);
   if (!match) return { spec: null, wave: null };
   return { spec: match[1]!, wave: Number(match[2]) };
 }
@@ -308,6 +320,37 @@ async function newestTranscript(directory: string): Promise<string | null> {
   return newest?.file ?? null;
 }
 
+/**
+ * In `landing.mode: merge` there is no PR: a worker branch is landed when its
+ * content is already in local trunk (ancestor, or an equivalent squash). It is
+ * reported as a merged pull request numbered 0 so `classifyWorker` is shared.
+ */
+export async function localLandedBranches(
+  entries: readonly WorktreeEntry[],
+  config: Pick<ForgeConfig, "repo">,
+): Promise<Map<string, PullRequestStatus>> {
+  const landed = new Map<string, PullRequestStatus>();
+  const { remote, trunk } = config.repo;
+  const mainTree = await resolveMainTree(remote, trunk, { local: true });
+  for (const entry of entries) {
+    if (!entry.branch || entry.branch.startsWith("worktree-agent-")) continue;
+    if (!resolveWorktreeOwner(entry)) continue;
+    // oxlint-disable-next-line eslint/no-await-in-loop -- sequential on purpose: later iterations depend on earlier ones or on output order
+    const verdict = await classifyByContent(entry.branch, mainTree, remote, trunk, {
+      local: true,
+    });
+    if (!isSafeToDelete(verdict)) continue;
+    landed.set(entry.branch, {
+      number: 0,
+      state: "merged",
+      checks: "none",
+      mergeable: null,
+      changesRequested: false,
+    });
+  }
+  return landed;
+}
+
 async function fetchPullRequests(): Promise<Map<string, PullRequestStatus>> {
   const output =
     await Bun.$`gh pr list --state all --limit 100 --json number,state,headRefName,body,mergeable,reviewDecision,statusCheckRollup`
@@ -335,17 +378,22 @@ export async function run(argv: string[]): Promise<void> {
       return;
     }
     const spec = readSpecFlag(argv);
-    if (!(await resolveRepoRoot())) {
+    const repoRoot = await resolveRepoRoot();
+    if (!repoRoot) {
       console.error("forge status: not inside a git repository");
       process.exitCode = 2;
       return;
     }
-    const [slots, reservations, entries, pullRequests] = await Promise.all([
+    const { config } = await loadForgeConfigWithDefaults(repoRoot);
+    const localLanding = config.landing.mode === "merge";
+    const [slots, reservations, entries] = await Promise.all([
       listOccupiedSlots(),
       listReservations(),
       listWorktreeEntries(),
-      fetchPullRequests(),
     ]);
+    const pullRequests = localLanding
+      ? await localLandedBranches(entries, config)
+      : await fetchPullRequests();
     const runVerdicts = new Map<string, RunVerdict>();
     for (const slot of slots) runVerdicts.set(slot.holder.runId, slot.verdict);
     for (const reservation of reservations) {
