@@ -1,4 +1,4 @@
-import { existsSync, statSync } from 'node:fs'
+import { existsSync, readFileSync, statSync } from 'node:fs'
 import { readdir } from 'node:fs/promises'
 import path from 'node:path'
 
@@ -27,7 +27,15 @@ import {
   resolveMaxLiveWorkers,
   resolveSlotsDirectory,
 } from './slots'
+import { checkApproval, type ApprovalRecord } from './approve'
 import { listReservations } from './claims'
+import {
+  checkWorktreeForkBase,
+  createEnvironmentProbes,
+  type EnvironmentProbes,
+} from './doctor'
+import { checkStale } from './map'
+import { validatePlan, type PlanTicket } from './validate'
 import {
   classifyByContent,
   findReservationForBranch,
@@ -853,12 +861,115 @@ async function mainPostDispatch(config: ForgeConfig): Promise<void> {
   )
 }
 
+export type RunGateFindings = {
+  readonly failures: readonly string[]
+  readonly warnings: readonly string[]
+}
+
+function readApprovalRecord(approvalPath: string): ApprovalRecord | null {
+  try {
+    return JSON.parse(readFileSync(approvalPath, 'utf8')) as ApprovalRecord
+  } catch {
+    return null
+  }
+}
+
+function toPlanTickets(raw: unknown): PlanTicket[] {
+  const list = Array.isArray(raw)
+    ? raw
+    : Array.isArray((raw as { tickets?: unknown } | null)?.tickets)
+      ? (raw as { tickets: unknown[] }).tickets
+      : null
+  if (list === null) throw new Error('tickets file must be an array (or {"tickets": [...]})')
+  const strings = (value: unknown): string[] =>
+    Array.isArray(value) ? value.filter((entry): entry is string => typeof entry === 'string') : []
+  return list.map((entry, index) => {
+    const candidate = (entry ?? {}) as Record<string, unknown>
+    if (typeof candidate.id !== 'string') throw new Error(`ticket ${index} needs an "id"`)
+    return {
+      id: candidate.id,
+      covers: strings(candidate.covers),
+      surfaces: strings(candidate.surfaces),
+      wave: typeof candidate.wave === 'number' ? candidate.wave : 1,
+      blockedBy: strings(candidate.blockedBy),
+      ...(typeof candidate.newSurfaceLines === 'number'
+        ? { newSurfaceLines: candidate.newSurfaceLines }
+        : {}),
+      folded: candidate.folded === true,
+    }
+  })
+}
+
+/**
+ * S9 + S15: dispatch refuses when the approved spec/tickets changed
+ * (`approve --check`) and when the approved plan no longer validates
+ * (`validate`). Both read the paths recorded in the run's approval record.
+ */
+export function evaluateRunGate(
+  runDirectory: string,
+  options: { readonly inlineMaxLines: number },
+): RunGateFindings {
+  const failures: string[] = []
+  const warnings: string[] = []
+  const approvalPath = path.join(runDirectory, 'approval.json')
+  const approval = checkApproval(approvalPath)
+  if (!approval.ok) {
+    for (const reason of approval.reasons) failures.push(`approval: ${reason}`)
+    return { failures, warnings }
+  }
+  const record = readApprovalRecord(approvalPath)
+  if (record === null) return { failures: ['approval: record unreadable'], warnings }
+  try {
+    const result = validatePlan({
+      specMarkdown: readFileSync(record.specPath, 'utf8'),
+      tickets: toPlanTickets(JSON.parse(readFileSync(record.ticketsPath, 'utf8'))),
+      inlineMaxLines: options.inlineMaxLines,
+    })
+    for (const finding of result.findings) {
+      const line = `validate: ${finding.message}`
+      if (finding.severity === 'error') failures.push(line)
+      else warnings.push(line)
+    }
+  } catch (error) {
+    failures.push(`validate: ${error instanceof Error ? error.message : String(error)}`)
+  }
+  return { failures, warnings }
+}
+
+/** S2: the harness must fork worker worktrees from the coordinator's HEAD. */
+export async function collectForkBaseFailures(
+  repoRoot: string,
+  remote: string,
+  trunk: string,
+  probes: EnvironmentProbes,
+): Promise<string[]> {
+  const harnessBaseRef = `${remote}/${trunk}`
+  return checkWorktreeForkBase({
+    coordinatorHead: await probes.resolveRef(repoRoot, 'HEAD'),
+    harnessBase: await probes.resolveRef(repoRoot, harnessBaseRef),
+    baseRefSetting: await probes.worktreeBaseRef(repoRoot),
+    harnessBaseRef,
+  })
+}
+
+const MAP_STALE_MAX_COMMITS = 10
+
+/** S18: a stale or missing codebase map only warns, never blocks. */
+export async function collectMapStaleWarning(
+  repoRoot: string,
+  mapRelativePath: string,
+): Promise<string | null> {
+  const verdict = await checkStale(repoRoot, mapRelativePath, MAP_STALE_MAX_COMMITS)
+  return verdict.stale ? `codebase map is stale — ${verdict.reason}; run "forge map"` : null
+}
+
 async function main(config: ForgeConfig, repoRoot: string) {
   const currentRunId = readFlagValue('--run')
   const failures: string[] = []
   const infoLines: string[] = []
   const warnLines: string[] = []
   const dependencyWarnLines: string[] = []
+  const gateWarnLines: string[] = []
 
   // Kicked off first so these probes (each capped at
   // DEPENDENCY_PROBE_TIMEOUT_MS) run concurrently with the git/filesystem
@@ -874,6 +985,26 @@ async function main(config: ForgeConfig, repoRoot: string) {
       failures.push(`${required.path} is missing at the repo root — ${required.why}`)
     }
   }
+
+  if (currentRunId !== undefined) {
+    const gate = evaluateRunGate(path.join(repoRoot, '.forge', 'runs', currentRunId), {
+      inlineMaxLines: config.sizing.inlineMaxLines,
+    })
+    failures.push(...gate.failures)
+    gateWarnLines.push(...gate.warnings)
+  }
+
+  failures.push(
+    ...(await collectForkBaseFailures(
+      repoRoot,
+      config.repo.remote,
+      config.repo.trunk,
+      createEnvironmentProbes(),
+    )),
+  )
+
+  const mapWarning = await collectMapStaleWarning(repoRoot, config.map.path)
+  if (mapWarning !== null) gateWarnLines.push(mapWarning)
 
   const todoMarkers = await findTodoMarkersInDocsAgents(repoRoot)
   if (todoMarkers.length > 0) {
@@ -997,6 +1128,11 @@ async function main(config: ForgeConfig, repoRoot: string) {
   if (warnLines.length > 0) {
     console.log(
       `Warning — idle /forge worktrees (not blocking dispatch):\n${warnLines.join('\n')}\n`,
+    )
+  }
+  if (gateWarnLines.length > 0) {
+    console.log(
+      `Warning — plan/map (not blocking dispatch):\n${gateWarnLines.map((line) => `  ${line}`).join('\n')}\n`,
     )
   }
   if (dependencyWarnLines.length > 0) {
