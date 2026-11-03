@@ -257,10 +257,12 @@ export function guardBranch(
 
   if (!owner) return { done: true, category: 'locked-protected' }
 
-  // The coordinator's transcript lives under *its own* project slug, not
-  // this worktree's directory — see `WorktreeOwner`'s doc comment
-  // (worktrees.ts). Fall back to the directory-derived guess only for a lock
-  // reason written before `slug=` existed.
+  /**
+   * The coordinator's transcript lives under *its own* project slug, not
+   * this worktree's directory — see `WorktreeOwner`'s doc comment
+   * (worktrees.ts). Fall back to the directory-derived guess only for a lock
+   * reason written before `slug=` existed.
+   */
   const verdict = classifyRunFunction(
     owner.anchorPid,
     owner.coordinatorSlug ?? resolveSessionSlug(matchedEntry.directory),
@@ -370,12 +372,14 @@ async function main(config: ForgeConfig) {
     `Using ${remote}/${trunk} (from forge.config.json's repo.remote/repo.trunk) as the merge-base reference.`,
   )
 
-  // Skipped under --dry-run: a dry run must only report, never mutate git's
-  // own admin state. `git worktree prune` deletes no branch and no
-  // directory (see the file-level comment above), but it does rewrite
-  // `.git/worktrees/*` — a real mutation a "would delete" preview has no
-  // business making. `git fetch` still runs either way: the merge-base
-  // reference the dry-run report itself relies on needs it.
+  /**
+   * Skipped under --dry-run: a dry run must only report, never mutate git's
+   * own admin state. `git worktree prune` deletes no branch and no
+   * directory (see the file-level comment above), but it does rewrite
+   * `.git/worktrees/*` — a real mutation a "would delete" preview has no
+   * business making. `git fetch` still runs either way: the merge-base
+   * reference the dry-run report itself relies on needs it.
+   */
   if (!dryRun) {
     await Bun.$`git worktree prune`.nothrow().quiet()
   }
@@ -404,6 +408,7 @@ async function main(config: ForgeConfig) {
     )
     const matchedEntry = findWorktreeEntryForBranch(entry.name, worktreeEntries)
     classified.push(
+      // oxlint-disable-next-line eslint/no-await-in-loop -- sequential on purpose: later iterations depend on earlier ones or on output order
       await classifyOneBranch(
         entry.name,
         isBaselineLive,
@@ -421,6 +426,7 @@ async function main(config: ForgeConfig) {
     const isBaselineLive = entry.worktreePath.length > 0
     const matchedEntry = findWorktreeEntryForBranch(entry.name, worktreeEntries)
     classified.push(
+      // oxlint-disable-next-line eslint/no-await-in-loop -- sequential on purpose: later iterations depend on earlier ones or on output order
       await classifyOneBranch(
         entry.name,
         isBaselineLive,
@@ -469,6 +475,7 @@ async function main(config: ForgeConfig) {
     const deleted: string[] = []
     const failed: string[] = []
     for (const branch of toDelete) {
+      // oxlint-disable-next-line eslint/no-await-in-loop -- sequential on purpose: later iterations depend on earlier ones or on output order
       const result = await deleteAndReleaseTicket(
         branch.name,
         branch.ownerTicket,
@@ -578,15 +585,17 @@ export async function run(argv: string[]): Promise<void> {
       throw new ForgeConfigError('forge cleanup: not inside a git repository')
     }
     const config = await requireForgeConfig(repoRoot)
-    // `deleteAndReleaseTicket` below calls `claims.ts`'s `releaseTicket`,
-    // which validates against `claims.ts`'s module-level `TICKET_PATTERN`
-    // (default: the generic `AO-<digits>`-shaped pattern). Without this call,
-    // a repo with a differently-shaped `ticket.idPattern` (e.g. a numeric
-    // `^#?\d+$` github/local id) throws mid-sweep — after some branches are
-    // already deleted, before `releaseAllSlotsForRun` ever runs — leaking
-    // that run's worker slots. `claims.ts`'s own `run()` configures this for
-    // itself; `cleanup.ts` must do the same since it calls into that module
-    // directly rather than through the `forge claims` CLI entry point.
+    /**
+     * `deleteAndReleaseTicket` below calls `claims.ts`'s `releaseTicket`,
+     * which validates against `claims.ts`'s module-level `TICKET_PATTERN`
+     * (default: the generic `AO-<digits>`-shaped pattern). Without this call,
+     * a repo with a differently-shaped `ticket.idPattern` (e.g. a numeric
+     * `^#?\d+$` github/local id) throws mid-sweep — after some branches are
+     * already deleted, before `releaseAllSlotsForRun` ever runs — leaking
+     * that run's worker slots. `claims.ts`'s own `run()` configures this for
+     * itself; `cleanup.ts` must do the same since it calls into that module
+     * directly rather than through the `forge claims` CLI entry point.
+     */
     configureTicketPattern(config.ticket.idPattern)
     await main(config)
   } catch (error: unknown) {

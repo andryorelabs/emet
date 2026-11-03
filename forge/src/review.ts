@@ -14,6 +14,7 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import path from 'node:path'
 
 import { ForgeConfigError, loadForgeConfigWithDefaults, resolveRepoRoot } from './config'
+import { isOneOf } from './narrow'
 
 const USAGE = `usage: forge review --ticket <ticket> --findings <file|-> [--changed <a,b>]
        forge review --ticket <ticket> --escalate --model <model>
@@ -71,14 +72,14 @@ function parseFinding(raw: unknown, index: number): Finding {
   if (typeof line !== 'number' || !Number.isInteger(line)) {
     throw new ForgeConfigError(`finding ${id}: line must be an integer`)
   }
-  if (!SEVERITIES.includes(severity as Severity)) {
+  if (!isOneOf(SEVERITIES, severity)) {
     throw new ForgeConfigError(`finding ${id}: severity must be one of ${SEVERITIES.join(', ')}`)
   }
-  if (!KINDS.includes(kind as FindingKind)) {
+  if (!isOneOf(KINDS, kind)) {
     throw new ForgeConfigError(`finding ${id}: kind must be one of ${KINDS.join(', ')}`)
   }
   if (typeof claim !== 'string') throw new ForgeConfigError(`finding ${id}: claim must be a string`)
-  return { id, file, line, severity: severity as Severity, kind: kind as FindingKind, claim }
+  return { id, file, line, severity, kind, claim }
 }
 
 export function parseFindings(text: string): Finding[] {
@@ -93,7 +94,7 @@ export function parseFindings(text: string): Finding[] {
 }
 
 export function triageOrder<T extends { readonly kind: FindingKind }>(findings: readonly T[]): T[] {
-  return [...findings].sort((a, b) => KINDS.indexOf(a.kind) - KINDS.indexOf(b.kind))
+  return findings.toSorted((a, b) => KINDS.indexOf(a.kind) - KINDS.indexOf(b.kind))
 }
 
 function isBlocking(severity: Severity): boolean {
@@ -130,23 +131,27 @@ export function recordRound(
     ledger.findings.filter((entry) => entry.status !== 'deferred').map((entry) => entry.id),
   )
   const changed = new Set(options.changedFiles)
-  const added: LedgerFinding[] = triageOrder(findings).map((entry) => {
+  const added: LedgerFinding[] = []
+  for (const entry of triageOrder(findings)) {
     const exempt = round === 1 || !isBlocking(entry.severity) || keptIds.has(entry.id)
     if (exempt || citesPriorFinding(entry.claim, priorIds) || changed.has(entry.file)) {
-      return { ...entry, status: 'open', round }
+      added.push({ ...entry, status: 'open', round })
+      continue
     }
-    return {
+    added.push({
       ...entry,
       status: 'deferred',
       round,
       deferReason:
         'new blocker in recheck cites no prior finding and no file changed since last review',
-    }
-  })
+    })
+  }
   const reportedIds = new Set(findings.map((entry) => entry.id))
-  const carried = ledger.findings
-    .filter((entry) => !reportedIds.has(entry.id))
-    .map((entry): LedgerFinding => (entry.status === 'open' ? { ...entry, status: 'resolved' } : entry))
+  const carried: LedgerFinding[] = []
+  for (const entry of ledger.findings) {
+    if (reportedIds.has(entry.id)) continue
+    carried.push(entry.status === 'open' ? { ...entry, status: 'resolved' } : entry)
+  }
   return { ok: true, ledger: { ...ledger, rounds: round, findings: [...carried, ...added] } }
 }
 
@@ -174,7 +179,8 @@ function ledgerPath(repoRoot: string, ticket: string): string {
 function loadLedger(repoRoot: string, ticket: string): Ledger {
   const file = ledgerPath(repoRoot, ticket)
   if (!existsSync(file)) return emptyLedger(ticket)
-  return JSON.parse(readFileSync(file, 'utf8')) as Ledger
+  const ledger: Ledger = JSON.parse(readFileSync(file, 'utf8'))
+  return ledger
 }
 
 function saveLedger(repoRoot: string, ledger: Ledger): void {

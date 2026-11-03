@@ -65,15 +65,15 @@ describe('evaluateRunGate (S9, S15)', () => {
   })
 })
 
-describe('collectForkBaseFailures (S2)', () => {
-  const probesFor = (head: string, base: string, setting: string | null): EnvironmentProbes => ({
-    helpText: async () => null,
-    ghRepoNameWithOwner: async () => null,
-    remoteUrl: async () => null,
-    resolveRef: async (_root, ref) => (ref === 'HEAD' ? head : base),
-    worktreeBaseRef: async () => setting,
-  })
+const probesFor = (head: string, base: string, setting: string | null): EnvironmentProbes => ({
+  helpText: async () => null,
+  ghRepoNameWithOwner: async () => null,
+  remoteUrl: async () => null,
+  resolveRef: async (_root, ref) => (ref === 'HEAD' ? head : base),
+  worktreeBaseRef: async () => setting,
+})
 
+describe('collectForkBaseFailures (S2)', () => {
   test('flags a harness base that differs from the coordinator HEAD', async () => {
     const failures = await collectForkBaseFailures('/r', 'origin', 'main', probesFor('aaaaaaa1', 'bbbbbbb2', null))
     expect(failures).toHaveLength(1)
@@ -204,8 +204,10 @@ describe('classifyWorktreeEntry', () => {
 
   test('an injected resolveOwner (e.g. reservation fallback) is used instead of the raw lock', () => {
     const entry: WorktreeEntry = {
-      // The harness unlocked this worktree — resolveWorktreeOwner alone
-      // would return null and this would fall through to content-fallback.
+      /**
+       * The harness unlocked this worktree — resolveWorktreeOwner alone
+       * would return null and this would fall through to content-fallback.
+       */
       directory: '/repo/.claude/worktrees/agent-abc',
       branch: 'ao-259-forge-preflight-ownership-aware',
       lockedReason: null,
@@ -231,10 +233,12 @@ describe('checkSlotCapacity', () => {
     expect(result).toEqual({ freeCount: 4, cap: 8, waveSize: 4, ok: true, degraded: false })
   })
 
-  // The behavior this replaces: 5 busy slots out of 8 used to hard-fail a
-  // wave of even one ticket. A partial wave can still dispatch — it's ok,
-  // just degraded — since `acquireSlot` already drops only the tickets that
-  // can't get a slot, not the whole wave.
+  /**
+   * The behavior this replaces: 5 busy slots out of 8 used to hard-fail a
+   * wave of even one ticket. A partial wave can still dispatch — it's ok,
+   * just degraded — since `acquireSlot` already drops only the tickets that
+   * can't get a slot, not the whole wave.
+   */
   test('ok but degraded when fewer than waveSize slots are free (and at least one is)', () => {
     const result = checkSlotCapacity(8, 4, (index) => index < 3)
     expect(result).toEqual({ freeCount: 3, cap: 8, waveSize: 4, ok: true, degraded: true })
@@ -299,9 +303,11 @@ describe('isBranchMatchingTicket', () => {
     ).toBe(false)
   })
 
-  // The regression the required `branchPrefix` argument exists to prevent:
-  // this used to default to `'ao'`, so a repo whose own prefix is `nfk`
-  // reported every correctly-named branch as a ticket mismatch.
+  /**
+   * The regression the required `branchPrefix` argument exists to prevent:
+   * this used to default to `'ao'`, so a repo whose own prefix is `nfk`
+   * reported every correctly-named branch as a ticket mismatch.
+   */
   test("honors a repo's own branchPrefix rather than any built-in default", () => {
     expect(isBranchMatchingTicket('nfk-42-login', 'NFK-42', 'nfk')).toBe(true)
     expect(isBranchMatchingTicket('nfk-42-login', 'NFK-42', 'ao')).toBe(false)

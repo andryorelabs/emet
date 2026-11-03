@@ -11,6 +11,7 @@ import {
   type LockReasonFields,
 } from './lockreason'
 import { resolveWorktreeOwner } from './worktrees'
+import { errorMessage } from './narrow'
 
 /**
  * The contract under test is a round trip, not a string: whatever
@@ -83,9 +84,11 @@ describe('buildLockReason', () => {
     ).toThrow(/does not round-trip/)
   })
 
-  // A template keeping all four originals still parses, so the round-trip
-  // check above passes — this is the separate, more pointed failure for the
-  // one field whose absence is silent rather than fatal.
+  /**
+   * A template keeping all four originals still parses, so the round-trip
+   * check above passes — this is the separate, more pointed failure for the
+   * one field whose absence is silent rather than fatal.
+   */
   test('rejects an override that drops only the slug', () => {
     expect(() =>
       buildLockReason(
@@ -182,6 +185,6 @@ describe('readLockReasonTemplate', () => {
   test('throws on a non-string override', async () => {
     await writeConfig({ worktree: { lockReason: 42 } })
     const error = await captureRejection(readLockReasonTemplate(repoRoot))
-    expect((error as Error).message).toMatch(/must be a non-empty string/)
+    expect(errorMessage(error)).toMatch(/must be a non-empty string/)
   })
 })

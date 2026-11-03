@@ -1,3 +1,4 @@
+import { isObject } from './narrow'
 import { readFileSync } from 'node:fs'
 
 export type TicketSurfaces = { readonly ticket: string; readonly surfaces: readonly string[] }
@@ -73,14 +74,16 @@ export function findSurfaceOverlaps(tickets: readonly TicketSurfaces[]): Surface
   return overlaps
 }
 
+function isGlobList(value: unknown): value is string[] {
+  return Array.isArray(value) && value.every((entry) => typeof entry === 'string')
+}
+
 /** Accepts `{ "CLA-1": ["a/**"] }` or `[{ ticket, surfaces }]`. */
 export function parseTicketSurfaces(raw: unknown): TicketSurfaces[] {
-  const isGlobList = (value: unknown): value is string[] =>
-    Array.isArray(value) && value.every((entry) => typeof entry === 'string')
   if (Array.isArray(raw)) {
     return raw.map((entry, index) => {
-      const candidate = entry as { ticket?: unknown; surfaces?: unknown }
-      if (typeof candidate?.ticket !== 'string' || !isGlobList(candidate.surfaces)) {
+      const candidate: Record<string, unknown> = isObject(entry) ? entry : {}
+      if (typeof candidate.ticket !== 'string' || !isGlobList(candidate.surfaces)) {
         throw new Error(`forge:surfaces — entry ${index} needs { ticket, surfaces: string[] }`)
       }
       return { ticket: candidate.ticket, surfaces: candidate.surfaces }

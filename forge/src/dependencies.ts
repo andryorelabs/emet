@@ -3,6 +3,7 @@ import os from 'node:os'
 import path from 'node:path'
 
 import type { TrackerKind } from './config'
+import { isObject } from './narrow'
 
 /**
  * The third-party tools `/forge` needs, and how far this CLI will go about
@@ -123,7 +124,7 @@ export async function runProbeCommand(
   timeoutMs: number = DEPENDENCY_PROBE_TIMEOUT_MS,
 ): Promise<ProbeRun> {
   try {
-    const child = Bun.spawn(command as string[], {
+    const child = Bun.spawn([...command], {
       stdout: 'pipe',
       stderr: 'pipe',
       timeout: timeoutMs,
@@ -200,12 +201,12 @@ export type LinearEntryLookup =
  * a real, detectable misconfiguration rather than a working server.
  */
 export function findLinearMcpEntry(parsed: unknown): LinearEntryLookup {
-  if (typeof parsed !== 'object' || parsed === null) return { kind: 'absent' }
-  const servers = (parsed as Record<string, unknown>).mcpServers
-  if (typeof servers !== 'object' || servers === null) return { kind: 'absent' }
+  if (!isObject(parsed)) return { kind: 'absent' }
+  const servers = parsed.mcpServers
+  if (!isObject(servers)) return { kind: 'absent' }
 
-  for (const [key, value] of Object.entries(servers as Record<string, unknown>)) {
-    const entry = typeof value === 'object' && value !== null ? (value as Record<string, unknown>) : {}
+  for (const [key, value] of Object.entries(servers)) {
+    const entry = isObject(value) ? value : {}
     const args = Array.isArray(entry.args) ? entry.args.join(' ') : ''
     const command = typeof entry.command === 'string' ? entry.command : ''
     const url = typeof entry.url === 'string' ? entry.url : ''
@@ -240,7 +241,7 @@ export function classifyClaudePluginProbe(probe: ClaudePluginProbe): DependencyC
         summary: `could not verify the mattpocock-skills plugin — \`claude plugin list\` failed: ${probe.detail}`,
         remedy: [],
       }
-    case 'listed':
+    default:
       if (probe.status === 'installed') {
         return { ...base, status: 'satisfied', summary: 'mattpocock-skills plugin is installed', remedy: [] }
       }
@@ -300,7 +301,7 @@ export function classifyGithubCliProbe(probe: GithubCliProbe): DependencyCheck {
         status: 'unsatisfied',
         summary: 'gh CLI found but not authenticated — run `gh auth login` before dispatching a wave.',
       }
-    case 'timed-out':
+    default:
       return {
         ...base,
         status: 'indeterminate',
@@ -349,7 +350,7 @@ export function classifyLinearMcpProbe(probe: LinearMcpProbe): DependencyCheck {
           : "tracker: linear — no Linear MCP server in .mcp.json, and `claude` is not on PATH to check user-level scopes. If yours is configured at user level this is fine.",
         limitation: null,
       }
-    case 'mcp-json-unreadable':
+    default:
       return {
         ...base,
         status: 'unsatisfied',

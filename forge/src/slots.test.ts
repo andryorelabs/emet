@@ -27,6 +27,11 @@ const IMPOSSIBLE_PID = 999_999_999
  */
 const LIVE_MARKER_PID = 424_242
 
+function expectSlot(index: number | null): number {
+  if (index === null) throw new Error('expected an acquired slot index')
+  return index
+}
+
 describe('acquireSlot / releaseSlot / releaseAllSlotsForRun', () => {
   let slotsDirectory: string
 
@@ -73,6 +78,7 @@ describe('acquireSlot / releaseSlot / releaseAllSlotsForRun', () => {
 
   test('returns null once every slot is held by a live owner', async () => {
     for (let index = 0; index < 2; index++) {
+      // oxlint-disable-next-line eslint/no-await-in-loop -- slots must be acquired one at a time to assert ordering
       await acquireSlot(
         2,
         `run-${index}`,
@@ -116,7 +122,7 @@ describe('acquireSlot / releaseSlot / releaseAllSlotsForRun', () => {
       { isAnchorAliveFn: (pid) => pid === LIVE_MARKER_PID },
     )
     expect(index).not.toBeNull()
-    releaseSlot(slotsDirectory, index as number)
+    releaseSlot(slotsDirectory, expectSlot(index))
 
     const reacquired = await acquireSlot(
       2,
@@ -171,9 +177,9 @@ describe('releaseSlotIfOwned', () => {
     const index = await acquireSlot(2, 'run-a', LIVE_MARKER_PID, 'AO-1', slotsDirectory, {
       isAnchorAliveFn: (pid) => pid === LIVE_MARKER_PID,
     })
-    const result = releaseSlotIfOwned(slotsDirectory, index as number, 'run-a')
+    const result = releaseSlotIfOwned(slotsDirectory, expectSlot(index), 'run-a')
     expect(result).toEqual({ outcome: 'released', previousOwnerRunId: 'run-a' })
-    expect(isSlotStale(slotsDirectory, index as number)).toBe(true)
+    expect(isSlotStale(slotsDirectory, expectSlot(index))).toBe(true)
   })
 
   test('an unoccupied index is a no-op, not an error', () => {
@@ -182,17 +188,19 @@ describe('releaseSlotIfOwned', () => {
     })
   })
 
-  // The regression this guards: before the ownership check existed,
-  // `--release-index` freed any slot unconditionally, so one coordinator
-  // could free a slot a different, still-live coordinator legitimately holds.
+  /**
+   * The regression this guards: before the ownership check existed,
+   * `--release-index` freed any slot unconditionally, so one coordinator
+   * could free a slot a different, still-live coordinator legitimately holds.
+   */
   test('refuses to release a slot held by a different run', async () => {
     const index = await acquireSlot(2, 'run-a', LIVE_MARKER_PID, 'AO-1', slotsDirectory, {
       isAnchorAliveFn: (pid) => pid === LIVE_MARKER_PID,
     })
-    const result = releaseSlotIfOwned(slotsDirectory, index as number, 'run-b')
+    const result = releaseSlotIfOwned(slotsDirectory, expectSlot(index), 'run-b')
     expect(result).toEqual({ outcome: 'owned-by-another', ownerRunId: 'run-a' })
     expect(
-      isSlotStale(slotsDirectory, index as number, {
+      isSlotStale(slotsDirectory, expectSlot(index), {
         isAnchorAliveFn: (pid) => pid === LIVE_MARKER_PID,
       }),
     ).toBe(false)
@@ -204,7 +212,7 @@ describe('releaseSlotIfOwned', () => {
     })
     const result = releaseSlotIfOwned(
       slotsDirectory,
-      index as number,
+      expectSlot(index),
       'run-b',
       true,
     )
@@ -244,6 +252,15 @@ describe('isSlotStale', () => {
   })
 })
 
+function configWith(
+  maxLiveWorkers: ForgeConfig['concurrency']['maxLiveWorkers'],
+): ForgeConfig {
+  return {
+    ...DEFAULT_FORGE_CONFIG,
+    concurrency: { ...DEFAULT_FORGE_CONFIG.concurrency, maxLiveWorkers },
+  }
+}
+
 describe('resolveMaxLiveWorkers', () => {
   const originalEnv = process.env.FORGE_MAX_LIVE_WORKERS
 
@@ -251,13 +268,6 @@ describe('resolveMaxLiveWorkers', () => {
     if (originalEnv === undefined) delete process.env.FORGE_MAX_LIVE_WORKERS
     else process.env.FORGE_MAX_LIVE_WORKERS = originalEnv
   })
-
-  function configWith(maxLiveWorkers: ForgeConfig['concurrency']['maxLiveWorkers']): ForgeConfig {
-    return {
-      ...DEFAULT_FORGE_CONFIG,
-      concurrency: { ...DEFAULT_FORGE_CONFIG.concurrency, maxLiveWorkers },
-    }
-  }
 
   test('returns the config\'s own fixed number when no env override is set', () => {
     delete process.env.FORGE_MAX_LIVE_WORKERS

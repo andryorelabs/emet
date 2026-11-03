@@ -35,6 +35,7 @@ export async function buildReviewPackage(
 ): Promise<ReviewPackage> {
   const range = `${base}..${head}`
   for (const ref of [base, head]) {
+    // oxlint-disable-next-line eslint/no-await-in-loop -- git and gh calls stay sequential to keep output and side effects ordered
     const resolved = await runGit(['rev-parse', '--verify', '--quiet', `${ref}^{commit}`], cwd)
     if (resolved.exitCode !== 0) {
       return { ok: false, problem: 'unresolvable', detail: `cannot resolve "${ref}" to a commit` }

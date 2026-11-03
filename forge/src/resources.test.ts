@@ -15,8 +15,10 @@ describe('computeAutoMaxLiveWorkers', () => {
       memTotalBytes: 4 * GIB,
       memAvailableBytes: 3 * GIB,
     }
-    // memory-bound: floor((4 - 8) / 2) clamps to 0 before the floor, so the
-    // absolute min (2) wins.
+    /**
+     * memory-bound: floor((4 - 8) / 2) clamps to 0 before the floor, so the
+     * absolute min (2) wins.
+     */
     expect(computeAutoMaxLiveWorkers(resources)).toBe(2)
   })
 
@@ -35,7 +37,9 @@ describe('computeAutoMaxLiveWorkers', () => {
       memTotalBytes: 62 * GIB,
       memAvailableBytes: 49 * GIB,
     }
-    // cpu-bound: 16 × 1 = 16; memory-bound: floor((62-8)/2) = 27 — cpu wins.
+    /**
+     * cpu-bound: 16 × 1 = 16; memory-bound: floor((62-8)/2) = 27 — cpu wins.
+     */
     expect(computeAutoMaxLiveWorkers(resources)).toBe(16)
   })
 
@@ -45,7 +49,9 @@ describe('computeAutoMaxLiveWorkers', () => {
       memTotalBytes: 16 * GIB,
       memAvailableBytes: 10 * GIB,
     }
-    // cpu-bound: 32; memory-bound: floor((16-8)/2) = 4 — memory wins.
+    /**
+     * cpu-bound: 32; memory-bound: floor((16-8)/2) = 4 — memory wins.
+     */
     expect(computeAutoMaxLiveWorkers(resources)).toBe(4)
   })
 
@@ -55,7 +61,9 @@ describe('computeAutoMaxLiveWorkers', () => {
       memTotalBytes: 8 * GIB,
       memAvailableBytes: 6 * GIB,
     }
-    // cpu-bound: 4; memory-bound: floor((8-8)/2) = 0 -> min(4,0)=0 -> floors at the absolute min (2).
+    /**
+     * cpu-bound: 4; memory-bound: floor((8-8)/2) = 0 -> min(4,0)=0 -> floors at the absolute min (2).
+     */
     expect(computeAutoMaxLiveWorkers(resources)).toBe(2)
   })
 
@@ -65,6 +73,7 @@ describe('computeAutoMaxLiveWorkers', () => {
       memTotalBytes: 32 * GIB,
       memAvailableBytes: 20 * GIB,
     }
+    /** cpu-bound: 8*2=16; memory-bound: floor((32-4)/1)=28 -> cpu wins */
     expect(
       computeAutoMaxLiveWorkers(resources, {
         cpuOversubscribe: 2,
@@ -73,7 +82,7 @@ describe('computeAutoMaxLiveWorkers', () => {
         min: 1,
         max: 100,
       }),
-    ).toBe(16) // cpu-bound: 8*2=16; memory-bound: floor((32-4)/1)=28 -> cpu wins
+    ).toBe(16)
   })
 
   test('never goes below min even on a starved host', () => {

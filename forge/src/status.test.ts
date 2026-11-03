@@ -164,14 +164,14 @@ describe('wave PR lookup', () => {
         },
       ]),
     )
-    const [wave] = groupWorkers(
+    const [group] = groupWorkers(
       [],
       [{ runId: 'forge20w2111111', ticket: 'CLA-25' }],
       pullRequests,
       new Set(),
       new Map([['forge20w2111111', 'live']]),
     )
-    expect(wave!.workers[0]!.pullRequest?.number).toBe(99)
-    expect(wave!.workers[0]!.pullRequest?.checks).toBe('pending')
+    expect(group!.workers[0]!.pullRequest?.number).toBe(99)
+    expect(group!.workers[0]!.pullRequest?.checks).toBe('pending')
   })
 })

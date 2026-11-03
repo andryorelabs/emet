@@ -10,6 +10,7 @@ import {
 import path from 'node:path'
 
 import { loadForgeConfigWithDefaults, resolveRepoRoot } from './config'
+import { errorMessage, isOneOf } from './narrow'
 
 const USAGE = `usage: forge spec-merge --spec <id> [--root <dir>]
 
@@ -33,7 +34,8 @@ export type MergeResult =
   | { readonly ok: true; readonly text: string }
   | { readonly ok: false; readonly conflicts: readonly string[] }
 
-type DeltaKind = 'ADDED' | 'MODIFIED' | 'REMOVED'
+const DELTA_KINDS = ['ADDED', 'MODIFIED', 'REMOVED'] as const
+type DeltaKind = (typeof DELTA_KINDS)[number]
 
 const REQUIREMENT_HEADING = /^### Requirement:\s*(.+?)\s*$/
 const SCENARIO_HEADING = /^#### Scenario:\s*(.+?)\s*$/
@@ -85,10 +87,11 @@ function parseDelta(delta: string): Record<DeltaKind, Requirement[]> | null {
   let found = false
   for (const line of delta.split('\n')) {
     const heading = DELTA_HEADING.exec(line)
-    if (heading) {
-      kind = heading[1] as DeltaKind
+    const headingKind = heading?.[1]
+    if (isOneOf(DELTA_KINDS, headingKind)) {
+      kind = headingKind
       found = true
-    } else if (/^## /.test(line)) {
+    } else if (line.startsWith('## ')) {
       kind = null
     } else if (kind !== null) {
       sections[kind].push(line)
@@ -240,7 +243,7 @@ export async function run(argv: string[]): Promise<void> {
     }
     const deltas = readdirSync(deltaDirectory)
       .filter((file) => file.endsWith('.md'))
-      .sort()
+      .toSorted()
       .map((file) => ({
         area: file.slice(0, -'.md'.length),
         delta: readFileSync(path.join(deltaDirectory, file), 'utf8'),
@@ -253,7 +256,7 @@ export async function run(argv: string[]): Promise<void> {
     }
     for (const written of result.written) console.log(path.relative(root, written))
   } catch (error) {
-    console.error(`forge spec-merge: ${(error as Error).message}`)
+    console.error(`forge spec-merge: ${errorMessage(error)}`)
     process.exitCode = 2
   }
 }

@@ -42,6 +42,7 @@ import {
   recordStallNudge,
   type CompletionEvent,
 } from './runs'
+import { isObject } from './narrow'
 import { parseWorktreeEntries, resolveWorktreeOwner } from './worktrees'
 
 type UsageEntry = {
@@ -88,16 +89,16 @@ function recordToolBlocks(
   unboundedReadPaths: string[],
 ): void {
   for (const block of content) {
-    if (typeof block !== 'object' || block === null) {
+    if (!isObject(block)) {
       continue
     }
-    const blockRecord = block as Record<string, unknown>
+    const blockRecord = block
     if (blockRecord.type === 'tool_use' && typeof blockRecord.id === 'string') {
       const name =
         typeof blockRecord.name === 'string' ? blockRecord.name : 'unknown'
       toolNameById.set(blockRecord.id, name)
       if (name === 'Read') {
-        const input = blockRecord.input as Record<string, unknown> | undefined
+        const input = isObject(blockRecord.input) ? blockRecord.input : undefined
         const filePath =
           input && typeof input.file_path === 'string'
             ? input.file_path
@@ -144,9 +145,11 @@ async function countOversizedReads(
   let count = 0
   for (const path of paths) {
     const file = Bun.file(path)
+    // oxlint-disable-next-line eslint/no-await-in-loop -- sequential on purpose: later iterations depend on earlier ones or on output order
     if (!(await file.exists())) {
       continue
     }
+    // oxlint-disable-next-line eslint/no-await-in-loop -- sequential on purpose: later iterations depend on earlier ones or on output order
     const text = await file.text()
     const lineCount = text.split('\n').length
     if (lineCount > oversizedThreshold) {
@@ -186,26 +189,26 @@ async function analyzeTranscript(
     } catch {
       continue
     }
-    if (typeof event !== 'object' || event === null) {
+    if (!isObject(event)) {
       continue
     }
-    const record = event as Record<string, unknown>
+    const record = event
 
     if (JSON.stringify(record).includes('compact_boundary')) {
       compactBoundaries += 1
     }
 
-    const message = record.message as Record<string, unknown> | undefined
+    const message = isObject(record.message) ? record.message : undefined
     if (!message) {
       continue
     }
 
-    const usage = message.usage as Record<string, unknown> | undefined
+    const usage = isObject(message.usage) ? message.usage : undefined
     if (usage && typeof usage.input_tokens === 'number') {
       usageEntries.push({
-        inputTokens: usage.input_tokens as number,
-        cacheReadTokens: (usage.cache_read_input_tokens as number) ?? 0,
-        cacheCreationTokens: (usage.cache_creation_input_tokens as number) ?? 0,
+        inputTokens: usage.input_tokens,
+        cacheReadTokens: numberOrZero(usage.cache_read_input_tokens),
+        cacheCreationTokens: numberOrZero(usage.cache_creation_input_tokens),
       })
     }
 
@@ -261,11 +264,11 @@ function toolResultCharCount(content: unknown): number {
   if (Array.isArray(content)) {
     let total = 0
     for (const part of content) {
-      if (typeof part !== 'object' || part === null) {
+      if (!isObject(part)) {
         continue
       }
 
-      const text = (part as Record<string, unknown>).text
+      const text = part.text
       if (typeof text === 'string') {
         total += text.length
       }
@@ -387,22 +390,22 @@ const UNKNOWN_STEP: LastTranscriptStep = { step: 'unknown', pendingTool: null }
  * scope (e.g. this file's own tests).
  */
 export function parseStalledMinutes(
-  arguments_: string[],
+  cliArguments: string[],
   defaultMinutes: number = DEFAULT_STALLED_MINUTES,
 ): number {
-  return parseFlagMinutes(arguments_, '--minutes', defaultMinutes)
+  return parseFlagMinutes(cliArguments, '--minutes', defaultMinutes)
 }
 
 export function parseFlagMinutes(
-  arguments_: string[],
+  cliArguments: string[],
   flag: string,
   defaultMinutes: number,
 ): number {
-  const index = arguments_.indexOf(flag)
+  const index = cliArguments.indexOf(flag)
   if (index === -1) {
     return defaultMinutes
   }
-  const raw = arguments_[index + 1]
+  const raw = cliArguments[index + 1]
   const parsed = raw ? Math.trunc(Number(raw)) : NaN
   return Number.isFinite(parsed) && parsed > 0 ? parsed : defaultMinutes
 }
@@ -420,18 +423,18 @@ function isStalled(
 }
 
 function messageBlocks(event: unknown): { role: string; blocks: unknown[] } | null {
-  if (typeof event !== 'object' || event === null) {
+  if (!isObject(event)) {
     return null
   }
-  const record = event as Record<string, unknown>
+  const record = event
   if (record.type !== 'assistant' && record.type !== 'user') {
     return null
   }
   const message = record.message
-  if (typeof message !== 'object' || message === null) {
+  if (!isObject(message)) {
     return null
   }
-  const content = (message as Record<string, unknown>).content
+  const content = message.content
   return { role: record.type, blocks: Array.isArray(content) ? content : [] }
 }
 
@@ -457,15 +460,15 @@ export function describeLastStep(transcriptText: string): LastTranscriptStep {
       continue
     }
     const toolNames = parsed.blocks.flatMap((block) => {
-      const record = block as Record<string, unknown>
-      return record?.type === 'tool_use' ? [String(record.name ?? 'unknown')] : []
+      const record: Record<string, unknown> = isObject(block) ? block : {}
+      return record.type === 'tool_use' ? [typeof record.name === 'string' ? record.name : 'unknown'] : []
     })
     if (parsed.role === 'assistant' && toolNames.length > 0) {
       const pendingTool = toolNames.join(', ')
       return { step: `tool_use ${pendingTool}`, pendingTool }
     }
     const hasToolResult = parsed.blocks.some(
-      (block) => (block as Record<string, unknown>)?.type === 'tool_result',
+      (block) => isObject(block) && block.type === 'tool_result',
     )
     const step = hasToolResult ? 'tool_result' : `${parsed.role} message`
     return { step, pendingTool: null }
@@ -504,6 +507,7 @@ export async function findStalledTranscripts(
 ): Promise<StalledTranscript[]> {
   const stalled: StalledTranscript[] = []
   for (const path of paths) {
+    // oxlint-disable-next-line eslint/no-await-in-loop -- sequential on purpose: later iterations depend on earlier ones or on output order
     const mtimeMs = await statMtimeMs(path)
     if (mtimeMs === null) {
       continue
@@ -511,6 +515,7 @@ export async function findStalledTranscripts(
     if (!isStalled(mtimeMs, nowMs, thresholds.idleMinutes)) {
       continue
     }
+    // oxlint-disable-next-line eslint/no-await-in-loop -- sequential on purpose: later iterations depend on earlier ones or on output order
     const last = await readLastStep(path)
     const limit = last.pendingTool
       ? Math.max(thresholds.pendingToolMinutes, thresholds.idleMinutes)
@@ -581,6 +586,7 @@ async function probeBranchCommits(
   }
   for (const base of ['origin/HEAD', 'origin/main', 'main', 'origin/master', 'master']) {
     const result =
+      // oxlint-disable-next-line eslint/no-await-in-loop -- git and gh calls stay sequential to keep output and side effects ordered
       await Bun.$`git -C ${commonDirectory} rev-list --count ${base}..${branch}`.nothrow().quiet()
     if (result.exitCode === 0) {
       const count = Number(result.stdout.toString().trim())
@@ -626,10 +632,13 @@ async function runTicketStalledMode(
     const owner = resolveWorktreeOwner(entry)
     if (!owner || owner.runId !== runId) continue
     const branch = entry.branch?.replace(/^refs\/heads\//, '') ?? null
+    // oxlint-disable-next-line eslint/no-await-in-loop -- sequential on purpose: later iterations depend on earlier ones or on output order
     const commits = branch ? await probeBranchCommits(commonDirectory, branch, entry.directory) : null
+    // oxlint-disable-next-line eslint/no-await-in-loop -- sequential on purpose: later iterations depend on earlier ones or on output order
     const handoff = await defaultStatMtimeMs(`${entry.directory}/.forge/handoff-${owner.ticket}.md`)
     const lastActivityMs = Math.max(
       handoff ?? 0,
+      // oxlint-disable-next-line eslint/no-await-in-loop -- sequential on purpose: later iterations depend on earlier ones or on output order
       branch ? await lastCommitMs(commonDirectory, branch) : 0,
       Date.parse(owner.at) || 0,
     )
@@ -660,11 +669,11 @@ async function runTicketStalledMode(
  * coordinator can branch on it directly instead of parsing stdout.
  */
 async function runStalledMode(thresholds: StalledThresholds): Promise<void> {
-  const arguments_ = process.argv.slice(2)
-  const sessionFlagIndex = arguments_.indexOf('--session')
-  const directory = projectsDirectory(arguments_)
+  const cliArguments = process.argv.slice(2)
+  const sessionFlagIndex = cliArguments.indexOf('--session')
+  const directory = projectsDirectory(cliArguments)
   const sessionId =
-    sessionFlagIndex === -1 ? null : (arguments_[sessionFlagIndex + 1] ?? null)
+    sessionFlagIndex === -1 ? null : (cliArguments[sessionFlagIndex + 1] ?? null)
 
   const sessionFile = sessionId
     ? `${directory}/${sessionId}.jsonl`
@@ -712,25 +721,25 @@ async function runStalledMode(thresholds: StalledThresholds): Promise<void> {
 }
 
 async function main(config: ForgeConfig): Promise<void> {
-  const arguments_ = process.argv.slice(2)
+  const cliArguments = process.argv.slice(2)
   const oversizedThreshold = config.usage.oversizedReadLines
 
-  if (arguments_.includes('--stalled')) {
-    const runFlagIndex = arguments_.indexOf('--run')
-    const runId = runFlagIndex === -1 ? null : (arguments_[runFlagIndex + 1] ?? null)
+  if (cliArguments.includes('--stalled')) {
+    const runFlagIndex = cliArguments.indexOf('--run')
+    const runId = runFlagIndex === -1 ? null : (cliArguments[runFlagIndex + 1] ?? null)
     if (runId) {
       await runTicketStalledMode(
         runId,
-        parseStalledMinutes(arguments_, config.usage.stalledMinutes),
+        parseStalledMinutes(cliArguments, config.usage.stalledMinutes),
         config.budgets.stallNudgeCap,
-        arguments_.includes('--nudge'),
+        cliArguments.includes('--nudge'),
       )
       return
     }
     await runStalledMode({
-      idleMinutes: parseStalledMinutes(arguments_, config.usage.stalledMinutes),
+      idleMinutes: parseStalledMinutes(cliArguments, config.usage.stalledMinutes),
       pendingToolMinutes: parseFlagMinutes(
-        arguments_,
+        cliArguments,
         '--tool-minutes',
         DEFAULT_PENDING_TOOL_MINUTES,
       ),
@@ -738,11 +747,11 @@ async function main(config: ForgeConfig): Promise<void> {
     return
   }
 
-  const fileFlagIndex = arguments_.indexOf('--file')
-  const sessionFlagIndex = arguments_.indexOf('--session')
+  const fileFlagIndex = cliArguments.indexOf('--file')
+  const sessionFlagIndex = cliArguments.indexOf('--session')
 
   if (fileFlagIndex !== -1) {
-    const path = arguments_[fileFlagIndex + 1]
+    const path = cliArguments[fileFlagIndex + 1]
     if (!path) {
       console.error('--file requires a path')
       process.exitCode = 1
@@ -758,9 +767,9 @@ async function main(config: ForgeConfig): Promise<void> {
     return
   }
 
-  const directory = projectsDirectory(arguments_)
+  const directory = projectsDirectory(cliArguments)
   const sessionId =
-    sessionFlagIndex === -1 ? null : (arguments_[sessionFlagIndex + 1] ?? null)
+    sessionFlagIndex === -1 ? null : (cliArguments[sessionFlagIndex + 1] ?? null)
 
   const sessionFile = sessionId
     ? `${directory}/${sessionId}.jsonl`
@@ -788,6 +797,7 @@ async function main(config: ForgeConfig): Promise<void> {
   let totalWorkerCacheReadMillion = 0
   for (const workerFile of workerFiles) {
     const label = workerFile.split('/').pop()!.replace('.jsonl', '')
+    // oxlint-disable-next-line eslint/no-await-in-loop -- sequential on purpose: later iterations depend on earlier ones or on output order
     const stats = await analyzeTranscript(
       workerFile,
       `worker ${label}`,
@@ -829,4 +839,9 @@ export async function run(argv: string[]): Promise<void> {
 
 if (import.meta.main) {
   await run(process.argv.slice(2))
+}
+
+/** Returns `value` when it is a number, otherwise `0`. */
+function numberOrZero(value: unknown): number {
+  return typeof value === 'number' ? value : 0
 }

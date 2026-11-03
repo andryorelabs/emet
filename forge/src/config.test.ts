@@ -12,6 +12,19 @@ import {
   resolveWorkerModel,
   type ForgeConfig,
 } from './config'
+import { errorMessage } from './narrow'
+
+type LoadResult = Awaited<ReturnType<typeof loadForgeConfig>>
+
+function configOf(result: LoadResult): ForgeConfig {
+  if (result.status !== 'ok') throw new Error(`expected an ok config, got ${result.status}`)
+  return result.config
+}
+
+function reasonOf(result: LoadResult): string {
+  if (result.status !== 'malformed') throw new Error(`expected a malformed config, got ${result.status}`)
+  return result.reason
+}
 
 /**
  * `config.ts` gates whether `cleanup` (which force-deletes branches) and
@@ -49,14 +62,14 @@ describe('loadForgeConfig', () => {
     await writeConfig('{not json')
     const result = await loadForgeConfig(repoRoot)
     expect(result.status).toBe('malformed')
-    expect((result as { reason: string }).reason).toMatch(/not valid JSON/)
+    expect(reasonOf(result)).toMatch(/not valid JSON/)
   })
 
   test('malformed when the top-level value is not an object', async () => {
     await writeConfig(['not', 'an', 'object'])
     const result = await loadForgeConfig(repoRoot)
     expect(result.status).toBe('malformed')
-    expect((result as { reason: string }).reason).toMatch(/top-level value must be a JSON object/)
+    expect(reasonOf(result)).toMatch(/top-level value must be a JSON object/)
   })
 
   test('an empty object merges cleanly onto every default', async () => {
@@ -102,7 +115,7 @@ describe('loadForgeConfig', () => {
     await writeConfig({ repo: { trunk: 'develop' } })
     const result = await loadForgeConfig(repoRoot)
     expect(result.status).toBe('ok')
-    const config = (result as { config: typeof DEFAULT_FORGE_CONFIG }).config
+    const config = configOf(result)
     expect(config.repo).toEqual({ trunk: 'develop', remote: 'origin' })
     expect(config.ticket).toEqual(DEFAULT_FORGE_CONFIG.ticket)
     expect(config.concurrency).toEqual(DEFAULT_FORGE_CONFIG.concurrency)
@@ -112,25 +125,25 @@ describe('loadForgeConfig', () => {
     await writeConfig({ version: 2 })
     const result = await loadForgeConfig(repoRoot)
     expect(result.status).toBe('malformed')
-    expect((result as { reason: string }).reason).toMatch(/unsupported "version"/)
+    expect(reasonOf(result)).toMatch(/unsupported "version"/)
   })
 
   test('rejects an empty repo.trunk', async () => {
     await writeConfig({ repo: { trunk: '' } })
     const result = await loadForgeConfig(repoRoot)
-    expect((result as { reason: string }).reason).toMatch(/"repo.trunk" must be a non-empty string/)
+    expect(reasonOf(result)).toMatch(/"repo.trunk" must be a non-empty string/)
   })
 
   test('rejects an empty repo.remote', async () => {
     await writeConfig({ repo: { remote: '' } })
     const result = await loadForgeConfig(repoRoot)
-    expect((result as { reason: string }).reason).toMatch(/"repo.remote" must be a non-empty string/)
+    expect(reasonOf(result)).toMatch(/"repo.remote" must be a non-empty string/)
   })
 
   test('rejects an invalid ticket.idPattern regex', async () => {
     await writeConfig({ ticket: { idPattern: '(unterminated' } })
     const result = await loadForgeConfig(repoRoot)
-    expect((result as { reason: string }).reason).toMatch(
+    expect(reasonOf(result)).toMatch(
       /"ticket.idPattern" is not a valid regular expression/,
     )
   })
@@ -138,7 +151,7 @@ describe('loadForgeConfig', () => {
   test('rejects a ticket.branchPrefix with uppercase or invalid characters', async () => {
     await writeConfig({ ticket: { branchPrefix: 'AO_1' } })
     const result = await loadForgeConfig(repoRoot)
-    expect((result as { reason: string }).reason).toMatch(
+    expect(reasonOf(result)).toMatch(
       /"ticket.branchPrefix" must be a non-empty lowercase string/,
     )
   })
@@ -154,14 +167,14 @@ describe('loadForgeConfig', () => {
     await writeConfig(patch)
     const result = await loadForgeConfig(repoRoot)
     expect(result.status).toBe('malformed')
-    expect((result as { reason: string }).reason).toMatch(reason)
+    expect(reasonOf(result)).toMatch(reason)
   })
 
   test('accepts pr and handoff.autoChain overrides, including maxCiFixAttempts 0', async () => {
     await writeConfig({ handoff: { autoChain: true }, pr: { autoMerge: false, mergeMethod: 'rebase', maxCiFixAttempts: 0 } })
     const result = await loadForgeConfig(repoRoot)
     expect(result.status).toBe('ok')
-    const config = (result as { config: typeof DEFAULT_FORGE_CONFIG }).config
+    const config = configOf(result)
     expect(config.handoff.autoChain).toBe(true)
     expect(config.pr).toEqual({ autoMerge: false, mergeMethod: 'rebase', maxCiFixAttempts: 0 })
   })
@@ -178,7 +191,7 @@ describe('loadForgeConfig', () => {
     await writeConfig(patch)
     const result = await loadForgeConfig(repoRoot)
     expect(result.status).toBe('malformed')
-    expect((result as { reason: string }).reason).toContain(`"${field}"`)
+    expect(reasonOf(result)).toContain(`"${field}"`)
   })
 
   test('accepts "auto" for concurrency.maxLiveWorkers', async () => {
@@ -186,7 +199,7 @@ describe('loadForgeConfig', () => {
     const result = await loadForgeConfig(repoRoot)
     expect(result.status).toBe('ok')
     expect(
-      (result as { config: typeof DEFAULT_FORGE_CONFIG }).config.concurrency.maxLiveWorkers,
+      configOf(result).concurrency.maxLiveWorkers,
     ).toBe('auto')
   })
 
@@ -194,7 +207,7 @@ describe('loadForgeConfig', () => {
     await writeConfig({ concurrency: { maxLiveWorkers: 'unlimited' } })
     const result = await loadForgeConfig(repoRoot)
     expect(result.status).toBe('malformed')
-    expect((result as { reason: string }).reason).toMatch(
+    expect(reasonOf(result)).toMatch(
       /"concurrency.maxLiveWorkers" must be a positive integer, or the string "auto"/,
     )
   })
@@ -203,20 +216,20 @@ describe('loadForgeConfig', () => {
     await writeConfig({})
     const result = await loadForgeConfig(repoRoot)
     expect(
-      (result as { config: typeof DEFAULT_FORGE_CONFIG }).config.concurrency.maxLiveWorkers,
+      configOf(result).concurrency.maxLiveWorkers,
     ).toBe('auto')
   })
 
   test('rejects preflight.requiredFiles when not an array', async () => {
     await writeConfig({ preflight: { requiredFiles: 'nope' } })
     const result = await loadForgeConfig(repoRoot)
-    expect((result as { reason: string }).reason).toMatch(/"preflight.requiredFiles" must be an array/)
+    expect(reasonOf(result)).toMatch(/"preflight.requiredFiles" must be an array/)
   })
 
   test('rejects a preflight.requiredFiles entry missing "why"', async () => {
     await writeConfig({ preflight: { requiredFiles: [{ path: '.env.keys' }] } })
     const result = await loadForgeConfig(repoRoot)
-    expect((result as { reason: string }).reason).toMatch(
+    expect(reasonOf(result)).toMatch(
       /"preflight.requiredFiles\[0\]" must be \{"path": string, "why": string\}/,
     )
   })
@@ -230,7 +243,7 @@ describe('loadForgeConfig', () => {
   test('reads tracker.kind', async () => {
     await writeConfig({ tracker: { kind: 'github' } })
     const result = await loadForgeConfig(repoRoot)
-    expect((result as { config: typeof DEFAULT_FORGE_CONFIG }).config.tracker).toEqual({
+    expect(configOf(result).tracker).toEqual({
       kind: 'github',
     })
   })
@@ -238,7 +251,7 @@ describe('loadForgeConfig', () => {
   test('keeps the rest of the prose tracker section out of the way', async () => {
     await writeConfig({ tracker: { kind: 'linear', readyLabel: 'ready-for-agent' } })
     const result = await loadForgeConfig(repoRoot)
-    expect((result as { config: typeof DEFAULT_FORGE_CONFIG }).config.tracker).toEqual({
+    expect(configOf(result).tracker).toEqual({
       kind: 'linear',
     })
   })
@@ -246,7 +259,7 @@ describe('loadForgeConfig', () => {
   test('a config predating tracker.kind reads as null, never a guessed default', async () => {
     await writeConfig({ repo: { trunk: 'main' } })
     const result = await loadForgeConfig(repoRoot)
-    expect((result as { config: typeof DEFAULT_FORGE_CONFIG }).config.tracker).toEqual({
+    expect(configOf(result).tracker).toEqual({
       kind: null,
     })
   })
@@ -254,7 +267,7 @@ describe('loadForgeConfig', () => {
   test('rejects a tracker.kind outside the enum', async () => {
     await writeConfig({ tracker: { kind: 'jira' } })
     const result = await loadForgeConfig(repoRoot)
-    expect((result as { reason: string }).reason).toMatch(
+    expect(reasonOf(result)).toMatch(
       /"tracker.kind" must be one of linear\|github\|local/,
     )
   })
@@ -262,24 +275,24 @@ describe('loadForgeConfig', () => {
   test('rejects a non-object tracker', async () => {
     await writeConfig({ tracker: 'github' })
     const result = await loadForgeConfig(repoRoot)
-    expect((result as { reason: string }).reason).toMatch(/"tracker" must be an object/)
+    expect(reasonOf(result)).toMatch(/"tracker" must be an object/)
   })
 
   test('reads preflight.requiredCommands, defaulting to empty', async () => {
     await writeConfig({ preflight: { requiredCommands: ['rg', 'sg'] } })
     const result = await loadForgeConfig(repoRoot)
     expect(
-      (result as { config: typeof DEFAULT_FORGE_CONFIG }).config.preflight.requiredCommands,
+      configOf(result).preflight.requiredCommands,
     ).toEqual(['rg', 'sg'])
   })
 
   test('rejects preflight.requiredCommands when not an array of non-empty strings', async () => {
     await writeConfig({ preflight: { requiredCommands: 'rg' } })
-    expect((await loadForgeConfig(repoRoot) as { reason: string }).reason).toMatch(
+    expect(reasonOf(await loadForgeConfig(repoRoot))).toMatch(
       /"preflight.requiredCommands" must be an array/,
     )
     await writeConfig({ preflight: { requiredCommands: [''] } })
-    expect((await loadForgeConfig(repoRoot) as { reason: string }).reason).toMatch(
+    expect(reasonOf(await loadForgeConfig(repoRoot))).toMatch(
       /"preflight.requiredCommands\[0\]" must be a non-empty string/,
     )
   })
@@ -298,13 +311,13 @@ describe('requireForgeConfig', () => {
   test('throws ForgeConfigError naming `forge init` when absent', async () => {
     const error = await captureRejection(requireForgeConfig(repoRoot))
     expect(error).toBeInstanceOf(ForgeConfigError)
-    expect((error as Error).message).toMatch(/forge init/)
+    expect(errorMessage(error)).toMatch(/forge init/)
   })
 
   test('throws ForgeConfigError with the validation reason when malformed', async () => {
     await writeConfig({ version: 2 })
     const error = await captureRejection(requireForgeConfig(repoRoot))
-    expect((error as Error).message).toMatch(/unsupported "version"/)
+    expect(errorMessage(error)).toMatch(/unsupported "version"/)
   })
 
   test('returns the merged config when valid', async () => {
@@ -337,15 +350,17 @@ describe('loadForgeConfigWithDefaults', () => {
 
 describe('resolveRepoRoot', () => {
   test('null outside a git repository', async () => {
-    // resolveRepoRoot() shells `git rev-parse --show-toplevel` against
-    // process.cwd() with no override, and this test file's own cwd (this
-    // repo's own checkout) is itself a git repo — the only way to exercise
-    // the null branch is a different cwd. A real `process.chdir()` would do
-    // that, but `bun test` runs every file's tests in one shared process, so
-    // mutating global cwd here can race a concurrently-running test in
-    // another file that (correctly) assumes its own cwd is unchanged — a
-    // separate `bun -e` subprocess, given the tmpdir as its own `cwd`, is
-    // isolated instead.
+    /**
+     * resolveRepoRoot() shells `git rev-parse --show-toplevel` against
+     * process.cwd() with no override, and this test file's own cwd (this
+     * repo's own checkout) is itself a git repo — the only way to exercise
+     * the null branch is a different cwd. A real `process.chdir()` would do
+     * that, but `bun test` runs every file's tests in one shared process, so
+     * mutating global cwd here can race a concurrently-running test in
+     * another file that (correctly) assumes its own cwd is unchanged — a
+     * separate `bun -e` subprocess, given the tmpdir as its own `cwd`, is
+     * isolated instead.
+     */
     const script = `import { resolveRepoRoot } from ${JSON.stringify(path.join(import.meta.dirname, 'config.ts'))}; console.log(JSON.stringify(await resolveRepoRoot()))`
     const proc = Bun.spawn(['bun', '-e', script], {
       cwd: repoRoot,
@@ -361,7 +376,7 @@ describe('resolveRepoRoot', () => {
 describe('models and review sections', () => {
   test('omitting models and review yields today\'s behavior', async () => {
     await writeConfig({})
-    const { config } = (await loadForgeConfig(repoRoot)) as { config: ForgeConfig }
+    const config = configOf(await loadForgeConfig(repoRoot))
     expect(config.models.worker).toEqual({ model: 'sonnet', effort: 'medium' })
     expect(config.models.reviewer.medium).toEqual({ model: 'opus', effort: 'medium' })
     expect(config.models.reviewer.high).toEqual({ model: 'opus', effort: 'medium' })
@@ -371,7 +386,7 @@ describe('models and review sections', () => {
 
   test('a partial models section merges onto defaults', async () => {
     await writeConfig({ models: { reviewer: { high: { effort: 'max' } } } })
-    const { config } = (await loadForgeConfig(repoRoot)) as { config: ForgeConfig }
+    const config = configOf(await loadForgeConfig(repoRoot))
     expect(config.models.reviewer.high).toEqual({ model: 'opus', effort: 'max' })
     expect(config.models.reviewer.medium).toEqual(DEFAULT_FORGE_CONFIG.models.reviewer.medium)
     expect(config.models.worker).toEqual(DEFAULT_FORGE_CONFIG.models.worker)
@@ -398,12 +413,12 @@ describe('models and review sections', () => {
     await writeConfig(value)
     const result = await loadForgeConfig(repoRoot)
     expect(result.status).toBe('malformed')
-    expect((result as { reason: string }).reason).toMatch(pattern)
+    expect(reasonOf(result)).toMatch(pattern)
   })
 
   test('review.highRiskPaths is read', async () => {
     await writeConfig({ review: { highRiskPaths: ['billing', 'ledger'] } })
-    const { config } = (await loadForgeConfig(repoRoot)) as { config: ForgeConfig }
+    const config = configOf(await loadForgeConfig(repoRoot))
     expect(config.review.highRiskPaths).toEqual(['billing', 'ledger'])
   })
 })
@@ -419,13 +434,13 @@ describe('new scaffold defaults', () => {
 
   test('a partial budgets section keeps the other defaults', async () => {
     await writeConfig({ budgets: { reviewRounds: 5 } })
-    const { config } = (await loadForgeConfig(repoRoot)) as { config: ForgeConfig }
+    const config = configOf(await loadForgeConfig(repoRoot))
     expect(config.budgets).toEqual({ workerAttempts: 2, reviewRounds: 5, stallNudgeCap: 6 })
   })
 
   test('a user escalation map replaces the default map', async () => {
     await writeConfig({ models: { escalation: { haiku: 'sonnet' } } })
-    const { config } = (await loadForgeConfig(repoRoot)) as { config: ForgeConfig }
+    const config = configOf(await loadForgeConfig(repoRoot))
     expect(config.models.escalation).toEqual({ haiku: 'sonnet' })
   })
 })

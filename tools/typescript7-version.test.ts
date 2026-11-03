@@ -6,7 +6,21 @@ const repoRoot = join(import.meta.dir, "..");
 
 /** Reads and parses a JSON file relative to the repository root. */
 function readJson(relativePath: string): Record<string, unknown> {
-  return JSON.parse(readFileSync(join(repoRoot, relativePath), "utf8")) as Record<string, unknown>;
+  const parsed: Record<string, unknown> = JSON.parse(
+    readFileSync(join(repoRoot, relativePath), "utf8"),
+  );
+  return parsed;
+}
+
+/** Reads the root `package.json` scripts as command strings. */
+function readRootScripts(): Record<string, string> {
+  const scripts = readJson("package.json")["scripts"];
+  if (typeof scripts !== "object" || scripts === null) {
+    throw new Error("package.json has no scripts object");
+  }
+  return Object.fromEntries(
+    Object.entries(scripts).map(([name, command]) => [name, String(command)]),
+  );
 }
 
 test("the typescript7 alias resolves to a 7.x compiler", () => {
@@ -15,7 +29,7 @@ test("the typescript7 alias resolves to a 7.x compiler", () => {
 });
 
 test("no root script calls bare tsc", () => {
-  const scripts = readJson("package.json")["scripts"] as Record<string, string>;
+  const scripts = readRootScripts();
   for (const [name, command] of Object.entries(scripts)) {
     const callsBareTsc = command
       .split(/&&|\|\||;|\|/)
