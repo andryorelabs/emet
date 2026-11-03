@@ -97,7 +97,7 @@ Phase 2. Reinforce two rules on top of the skill's own breakdown:
 - List this repo's project skills once (`ls .claude/skills/*/SKILL.md`; read only
   each file's frontmatter — `head -n 10`, never the full body). For every
   ticket, write a mandatory `## Project skills` section listing only the
-  skills relevant to *that ticket's* own task — never the whole catalog,
+  skills relevant to _that ticket's_ own task — never the whole catalog,
   never a blanket "all UI skills" — one line per skill:
   `- <name> — <why it applies>`, or `none` if nothing matches or the repo has
   no `.claude/skills/`. Relevance is the only selection criterion; prefer a
@@ -114,10 +114,11 @@ Phase 2. Reinforce two rules on top of the skill's own breakdown:
 
   ```markdown
   ## Context budget
-  Touch set:     N files, M lines to read
-  New surface:   ~X new lines
-  Verification:  unit + e2e estimate
-  Siblings:      K tickets × ~2K (comments a worker reads before starting)
+
+  Touch set: N files, M lines to read
+  New surface: ~X new lines
+  Verification: unit + e2e estimate
+  Siblings: K tickets × ~2K (comments a worker reads before starting)
   Estimated peak: ~Y K (`estimatedPeakTokens` = Y×1000). PASS if < 160K.
   ```
 

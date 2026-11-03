@@ -74,6 +74,7 @@ instead of one session accumulating every wave in the run (see
 
    Otherwise print, verbatim, the command for the next wave:
    `/forge --dispatch <spec-id>`.
+
 3. End the session here. Unless auto-chained, a human runs that command to
    continue; the frontier is always recomputed fresh from the tracker, so
    nothing depends on which session ran any prior wave. Include "Rulings I

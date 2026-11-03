@@ -1,42 +1,28 @@
-import { existsSync, readFileSync, statSync } from 'node:fs'
-import { readdir } from 'node:fs/promises'
-import path from 'node:path'
+import { existsSync, readFileSync, statSync } from "node:fs";
+import { readdir } from "node:fs/promises";
+import path from "node:path";
 
-import {
-  ForgeConfigError,
-  requireForgeConfig,
-  resolveRepoRoot,
-  type ForgeConfig,
-} from './config'
+import { ForgeConfigError, requireForgeConfig, resolveRepoRoot, type ForgeConfig } from "./config";
 import {
   checkDependencies,
   createDependencyProbes,
   formatDependencyCheck,
   resolveBinaryOnPath,
   type DependencyCheck,
-} from './dependencies'
-import {
-  classifyRun,
-  resolveIdleThresholdMs,
-  resolveSessionSlug,
-  type RunVerdict,
-} from './runs'
+} from "./dependencies";
+import { classifyRun, resolveIdleThresholdMs, resolveSessionSlug, type RunVerdict } from "./runs";
 import {
   isSlotStale,
   listOccupiedSlots,
   resolveMaxLiveWorkers,
   resolveSlotsDirectory,
-} from './slots'
-import { checkApproval, type ApprovalRecord } from './approve'
-import { isObject } from './narrow'
-import { listReservations } from './claims'
-import {
-  checkWorktreeForkBase,
-  createEnvironmentProbes,
-  type EnvironmentProbes,
-} from './doctor'
-import { checkStale } from './map'
-import { validatePlan, type PlanTicket } from './validate'
+} from "./slots";
+import { checkApproval, type ApprovalRecord } from "./approve";
+import { isObject } from "./narrow";
+import { listReservations } from "./claims";
+import { checkWorktreeForkBase, createEnvironmentProbes, type EnvironmentProbes } from "./doctor";
+import { checkStale } from "./map";
+import { validatePlan, type PlanTicket } from "./validate";
 import {
   classifyByContent,
   findReservationForBranch,
@@ -51,7 +37,7 @@ import {
   resolveWorktreeOwnerWithReservations,
   type WorktreeEntry,
   type WorktreeOwner,
-} from './worktrees'
+} from "./worktrees";
 
 /**
  * Local git/filesystem hygiene checks that must pass before `/forge`
@@ -83,9 +69,9 @@ import {
  */
 
 function readFlagValue(flag: string): string | undefined {
-  const flagIndex = process.argv.indexOf(flag)
-  if (flagIndex === -1) return undefined
-  return process.argv[flagIndex + 1]
+  const flagIndex = process.argv.indexOf(flag);
+  if (flagIndex === -1) return undefined;
+  return process.argv[flagIndex + 1];
 }
 
 /**
@@ -96,13 +82,13 @@ function readFlagValue(flag: string): string | undefined {
  * existed before this config field did).
  */
 function resolveWaveSize(config: ForgeConfig): number {
-  return config.concurrency.waveSize
+  return config.concurrency.waveSize;
 }
 
-const SKIP_DEPENDENCY_CHECKS_ENV = 'FORGE_SKIP_DEPENDENCY_CHECKS'
+const SKIP_DEPENDENCY_CHECKS_ENV = "FORGE_SKIP_DEPENDENCY_CHECKS";
 
 function dependencyChecksSkipped(): boolean {
-  return process.env[SKIP_DEPENDENCY_CHECKS_ENV] === '1'
+  return process.env[SKIP_DEPENDENCY_CHECKS_ENV] === "1";
 }
 
 /**
@@ -118,22 +104,22 @@ export function evaluateDependencyGate(
   checks: readonly DependencyCheck[],
   options: { readonly skip: boolean },
 ): { readonly failures: readonly string[]; readonly warnings: readonly string[] } {
-  const failures: string[] = []
-  const warnings: string[] = []
+  const failures: string[] = [];
+  const warnings: string[] = [];
   for (const check of checks) {
-    if (check.status === 'indeterminate') {
-      warnings.push(formatDependencyCheck(check, '  '))
-    } else if (check.status === 'unsatisfied') {
+    if (check.status === "indeterminate") {
+      warnings.push(formatDependencyCheck(check, "  "));
+    } else if (check.status === "unsatisfied") {
       if (options.skip) {
         warnings.push(
-          `${formatDependencyCheck(check, '  ')} — downgraded by ${SKIP_DEPENDENCY_CHECKS_ENV}`,
-        )
+          `${formatDependencyCheck(check, "  ")} — downgraded by ${SKIP_DEPENDENCY_CHECKS_ENV}`,
+        );
       } else {
-        failures.push(formatDependencyCheck(check, '  '))
+        failures.push(formatDependencyCheck(check, "  "));
       }
     }
   }
-  return { failures, warnings }
+  return { failures, warnings };
 }
 
 /**
@@ -149,42 +135,42 @@ export async function findMissingRequiredCommands(
   alreadyCovered: ReadonlySet<string>,
   resolve: (binary: string) => Promise<boolean> = resolveBinaryOnPath,
 ): Promise<readonly string[]> {
-  const missing: string[] = []
+  const missing: string[] = [];
   for (const command of commands) {
-    if (alreadyCovered.has(command)) continue
+    if (alreadyCovered.has(command)) continue;
     // oxlint-disable-next-line eslint/no-await-in-loop -- sequential on purpose: later iterations depend on earlier ones or on output order
-    if (!(await resolve(command))) missing.push(command)
+    if (!(await resolve(command))) missing.push(command);
   }
-  return missing
+  return missing;
 }
 
 export type WorktreeEntryVerdict =
-  | { readonly kind: 'detached'; readonly entry: WorktreeEntry }
+  | { readonly kind: "detached"; readonly entry: WorktreeEntry }
   | {
-      readonly kind: 'own-run-leftover'
-      readonly entry: WorktreeEntry
-      readonly owner: WorktreeOwner
+      readonly kind: "own-run-leftover";
+      readonly entry: WorktreeEntry;
+      readonly owner: WorktreeOwner;
     }
   | {
-      readonly kind: 'other-run-live'
-      readonly entry: WorktreeEntry
-      readonly owner: WorktreeOwner
+      readonly kind: "other-run-live";
+      readonly entry: WorktreeEntry;
+      readonly owner: WorktreeOwner;
     }
   | {
-      readonly kind: 'idle'
-      readonly entry: WorktreeEntry
-      readonly owner: WorktreeOwner
+      readonly kind: "idle";
+      readonly entry: WorktreeEntry;
+      readonly owner: WorktreeOwner;
     }
   | {
-      readonly kind: 'dead'
-      readonly entry: WorktreeEntry
-      readonly owner: WorktreeOwner
+      readonly kind: "dead";
+      readonly entry: WorktreeEntry;
+      readonly owner: WorktreeOwner;
     }
   | {
-      readonly kind: 'content-fallback'
-      readonly entry: WorktreeEntry
-      readonly branch: string
-    }
+      readonly kind: "content-fallback";
+      readonly entry: WorktreeEntry;
+      readonly branch: string;
+    };
 
 /**
  * Decides what one `.claude/worktrees/` entry means for preflight. A
@@ -206,19 +192,19 @@ export function classifyWorktreeEntry(
   classifyOwnerRun: (owner: WorktreeOwner) => RunVerdict,
   resolveOwner: (entry: WorktreeEntry) => WorktreeOwner | null = resolveWorktreeOwner,
 ): WorktreeEntryVerdict {
-  if (!entry.branch) return { kind: 'detached', entry }
+  if (!entry.branch) return { kind: "detached", entry };
 
-  const owner = resolveOwner(entry)
-  if (!owner) return { kind: 'content-fallback', entry, branch: entry.branch }
+  const owner = resolveOwner(entry);
+  if (!owner) return { kind: "content-fallback", entry, branch: entry.branch };
 
-  const runVerdict = classifyOwnerRun(owner)
-  if (runVerdict === 'live') {
+  const runVerdict = classifyOwnerRun(owner);
+  if (runVerdict === "live") {
     return owner.runId === currentRunId
-      ? { kind: 'own-run-leftover', entry, owner }
-      : { kind: 'other-run-live', entry, owner }
+      ? { kind: "own-run-leftover", entry, owner }
+      : { kind: "other-run-live", entry, owner };
   }
-  if (runVerdict === 'idle') return { kind: 'idle', entry, owner }
-  return { kind: 'dead', entry, owner }
+  if (runVerdict === "idle") return { kind: "idle", entry, owner };
+  return { kind: "dead", entry, owner };
 }
 
 /**
@@ -233,10 +219,10 @@ export function classifyWorktreeEntry(
  */
 export function findTodoMarkers(fileName: string, content: string): string[] {
   return content
-    .split('\n')
+    .split("\n")
     .map((line, index) => ({ text: line.trim(), number: index + 1 }))
-    .filter(({ text }) => text.includes('TODO(forge):'))
-    .map(({ text, number }) => `${fileName}:${number}: ${text}`)
+    .filter(({ text }) => text.includes("TODO(forge):"))
+    .map(({ text, number }) => `${fileName}:${number}: ${text}`);
 }
 
 /**
@@ -248,34 +234,34 @@ export function findTodoMarkers(fileName: string, content: string): string[] {
  * own.
  */
 export async function findTodoMarkersInDocsAgents(repoRoot: string): Promise<string[]> {
-  const docsAgentsDirectory = path.join(repoRoot, 'docs', 'agents')
-  if (!existsSync(docsAgentsDirectory)) return []
-  const entries = await readdir(docsAgentsDirectory)
-  const markers: string[] = []
+  const docsAgentsDirectory = path.join(repoRoot, "docs", "agents");
+  if (!existsSync(docsAgentsDirectory)) return [];
+  const entries = await readdir(docsAgentsDirectory);
+  const markers: string[] = [];
   for (const entry of entries) {
-    if (!entry.endsWith('.md')) continue
-    const filePath = path.join(docsAgentsDirectory, entry)
+    if (!entry.endsWith(".md")) continue;
+    const filePath = path.join(docsAgentsDirectory, entry);
     // oxlint-disable-next-line eslint/no-await-in-loop -- sequential on purpose: later iterations depend on earlier ones or on output order
-    const content = await Bun.file(filePath).text()
-    markers.push(...findTodoMarkers(`docs/agents/${entry}`, content))
+    const content = await Bun.file(filePath).text();
+    markers.push(...findTodoMarkers(`docs/agents/${entry}`, content));
   }
-  return markers
+  return markers;
 }
 
 export type SlotCapacityCheck = {
-  readonly freeCount: number
-  readonly cap: number
-  readonly waveSize: number
+  readonly freeCount: number;
+  readonly cap: number;
+  readonly waveSize: number;
   /** `false` only when every slot is occupied — the one condition that
    * actually blocks dispatch outright. See the doc comment below for why
    * `freeCount < waveSize` alone is no longer this. */
-  readonly ok: boolean
+  readonly ok: boolean;
   /** `true` when some, but fewer than `waveSize`, slots are free — this
    * wave can still dispatch, just fewer tickets than a full wave. Never
    * `true` when `ok` is `false` (0 free is reported via `ok` alone, not as
    * "degraded"). */
-  readonly degraded: boolean
-}
+  readonly degraded: boolean;
+};
 
 /**
  * Can this wave dispatch *at all* right now — not "a full wave", just at
@@ -307,9 +293,9 @@ export function checkSlotCapacity(
   waveSize: number,
   isSlotFree: (slotIndex: number) => boolean,
 ): SlotCapacityCheck {
-  let freeCount = 0
+  let freeCount = 0;
   for (let index = 0; index < cap; index++) {
-    if (isSlotFree(index)) freeCount++
+    if (isSlotFree(index)) freeCount++;
   }
   return {
     freeCount,
@@ -317,13 +303,13 @@ export function checkSlotCapacity(
     waveSize,
     ok: freeCount > 0,
     degraded: freeCount > 0 && freeCount < waveSize,
-  }
+  };
 }
 
 type WorktreeEntryReport = {
-  readonly bucket: 'fail' | 'info' | 'warn'
-  readonly line: string
-}
+  readonly bucket: "fail" | "info" | "warn";
+  readonly line: string;
+};
 
 /**
  * Turns one {@link WorktreeEntryVerdict} into a bucketed, printable line —
@@ -332,7 +318,7 @@ type WorktreeEntryReport = {
  * levels deep as ambiguous. `'fail'` blocks dispatch; `'info'`/`'warn'`
  * never do.
  */
-export async function describeWorktreeEntryVerdict(
+async function describeWorktreeEntryVerdict(
   entry: WorktreeEntry,
   verdict: WorktreeEntryVerdict,
   mainTree: string,
@@ -340,48 +326,43 @@ export async function describeWorktreeEntryVerdict(
   trunk: string,
 ): Promise<WorktreeEntryReport> {
   switch (verdict.kind) {
-    case 'detached': {
+    case "detached": {
       return {
-        bucket: 'fail',
+        bucket: "fail",
         line: `  ${entry.directory}: detached, no branch — needs human review`,
-      }
+      };
     }
-    case 'own-run-leftover': {
+    case "own-run-leftover": {
       return {
-        bucket: 'fail',
+        bucket: "fail",
         line: `  ${entry.directory} (${entry.branch}): live — this run's own leftover from an interrupted attempt (run ${verdict.owner.runId}, ticket ${verdict.owner.ticket}) — run "forge cleanup --run ${verdict.owner.runId}" to clear it`,
-      }
+      };
     }
-    case 'other-run-live': {
+    case "other-run-live": {
       return {
-        bucket: 'info',
+        bucket: "info",
         line: `  ${entry.directory} (${entry.branch}): live — owned by run ${verdict.owner.runId}, ticket ${verdict.owner.ticket}`,
-      }
+      };
     }
-    case 'idle': {
+    case "idle": {
       return {
-        bucket: 'warn',
+        bucket: "warn",
         line: `  ${entry.directory} (${entry.branch}): idle since ${verdict.owner.at} — owned by run ${verdict.owner.runId}, ticket ${verdict.owner.ticket} (not blocking dispatch)`,
-      }
+      };
     }
-    case 'dead': {
+    case "dead": {
       return {
-        bucket: 'info',
+        bucket: "info",
         line: `  ${entry.directory} (${entry.branch}): dead — reclaimable via "forge cleanup --run ${verdict.owner.runId} --force" (or --all --force if abandoned)`,
-      }
+      };
     }
     default: {
-      const contentVerdict = await classifyByContent(
-        verdict.branch,
-        mainTree,
-        remote,
-        trunk,
-      )
-      const trunkRef = `${remote}/${trunk}`
-      const safe = isSafeToDelete(contentVerdict)
+      const contentVerdict = await classifyByContent(verdict.branch, mainTree, remote, trunk);
+      const trunkRef = `${remote}/${trunk}`;
+      const safe = isSafeToDelete(contentVerdict);
       const advice = safe
         ? `looks merged/equivalent to ${trunkRef} — safe to run "forge cleanup"`
-        : `${contentVerdict} from ${trunkRef} — needs human review before cleanup, work could be lost`
+        : `${contentVerdict} from ${trunkRef} — needs human review before cleanup, work could be lost`;
       /**
        * Merged/equivalent residue is harmless leftover, never a hazard to a
        * sibling coordinator — only genuinely unclassifiable content (still
@@ -389,22 +370,22 @@ export async function describeWorktreeEntryVerdict(
        * it either) blocks dispatch.
        */
       return {
-        bucket: safe ? 'info' : 'fail',
+        bucket: safe ? "info" : "fail",
         line: `  ${entry.directory} (${verdict.branch}): ${advice}`,
-      }
+      };
     }
   }
 }
 
 export type PostDispatchFailure = {
   readonly kind:
-    | 'duplicate-ticket-worktree'
-    | 'duplicate-ticket-branch-number'
-    | 'unlocked-past-deadline'
-    | 'branch-ticket-mismatch'
-    | 'missing-worktrees'
-  readonly message: string
-}
+    | "duplicate-ticket-worktree"
+    | "duplicate-ticket-branch-number"
+    | "unlocked-past-deadline"
+    | "branch-ticket-mismatch"
+    | "missing-worktrees";
+  readonly message: string;
+};
 
 /**
  * Extracts a ticket's numeric suffix (`AO-321` → `321`, `NFK-42` → `42`) —
@@ -413,8 +394,8 @@ export type PostDispatchFailure = {
  * the configured `ticket.idPattern`, which only varies the prefix.
  */
 function ticketNumber(ticket: string): string | null {
-  const match = /-(\d+)$/.exec(ticket)
-  return match ? (match[1] ?? null) : null
+  const match = /-(\d+)$/.exec(ticket);
+  return match ? (match[1] ?? null) : null;
 }
 
 /**
@@ -435,12 +416,9 @@ export function isBranchMatchingTicket(
   ticket: string,
   branchPrefix: string,
 ): boolean {
-  const number = ticketNumber(ticket)
-  if (!number) return false
-  return (
-    branch === `${branchPrefix}-${number}` ||
-    branch.startsWith(`${branchPrefix}-${number}-`)
-  )
+  const number = ticketNumber(ticket);
+  if (!number) return false;
+  return branch === `${branchPrefix}-${number}` || branch.startsWith(`${branchPrefix}-${number}-`);
 }
 
 /**
@@ -452,18 +430,18 @@ export function isBranchMatchingTicket(
 export function findDuplicateTicketWorktrees(
   entries: readonly WorktreeEntry[],
 ): Map<string, WorktreeEntry[]> {
-  const byTicket = new Map<string, WorktreeEntry[]>()
+  const byTicket = new Map<string, WorktreeEntry[]>();
   for (const entry of entries) {
-    const owner = resolveWorktreeOwner(entry)
-    if (!owner) continue
-    const group = byTicket.get(owner.ticket) ?? []
-    group.push(entry)
-    byTicket.set(owner.ticket, group)
+    const owner = resolveWorktreeOwner(entry);
+    if (!owner) continue;
+    const group = byTicket.get(owner.ticket) ?? [];
+    group.push(entry);
+    byTicket.set(owner.ticket, group);
   }
   for (const [ticket, group] of byTicket) {
-    if (group.length < 2) byTicket.delete(ticket)
+    if (group.length < 2) byTicket.delete(ticket);
   }
-  return byTicket
+  return byTicket;
 }
 
 /**
@@ -482,20 +460,20 @@ export function findDuplicateTicketBranchNumbers(
   branchNames: readonly string[],
   branchPrefix: string,
 ): Map<string, string[]> {
-  const byNumber = new Map<string, string[]>()
-  const branchPattern = new RegExp(`^${branchPrefix}-(\\d+)-`)
+  const byNumber = new Map<string, string[]>();
+  const branchPattern = new RegExp(`^${branchPrefix}-(\\d+)-`);
   for (const name of branchNames) {
-    const match = branchPattern.exec(name)
-    const number = match?.[1]
-    if (!number) continue
-    const group = byNumber.get(number) ?? []
-    group.push(name)
-    byNumber.set(number, group)
+    const match = branchPattern.exec(name);
+    const number = match?.[1];
+    if (!number) continue;
+    const group = byNumber.get(number) ?? [];
+    group.push(name);
+    byNumber.set(number, group);
   }
   for (const [number, group] of byNumber) {
-    if (group.length < 2) byNumber.delete(number)
+    if (group.length < 2) byNumber.delete(number);
   }
-  return byNumber
+  return byNumber;
 }
 
 /**
@@ -519,38 +497,38 @@ export function findWorktreesMissingLockPastDeadline(
   statMtimeMs: (directory: string) => number | null,
 ): WorktreeEntry[] {
   return entries.filter((entry) => {
-    if (entry.lockedReason !== null) return false
-    const mtimeMs = statMtimeMs(entry.directory)
-    if (mtimeMs === null) return false
-    return nowMs - mtimeMs > maxAgeMs
-  })
+    if (entry.lockedReason !== null) return false;
+    const mtimeMs = statMtimeMs(entry.directory);
+    if (mtimeMs === null) return false;
+    return nowMs - mtimeMs > maxAgeMs;
+  });
 }
 
 function buildDuplicateTicketWorktreeFailures(
   entries: readonly WorktreeEntry[],
 ): PostDispatchFailure[] {
-  const failures: PostDispatchFailure[] = []
+  const failures: PostDispatchFailure[] = [];
   for (const [ticket, group] of findDuplicateTicketWorktrees(entries)) {
     failures.push({
-      kind: 'duplicate-ticket-worktree',
-      message: `${ticket} is claimed by ${group.length} worktrees — pick the canonical one, delete/re-lock the rest:\n${group.map((entry) => `  ${entry.directory} (${entry.branch ?? 'detached'}, HEAD ${entry.head ?? 'unknown'})`).join('\n')}`,
-    })
+      kind: "duplicate-ticket-worktree",
+      message: `${ticket} is claimed by ${group.length} worktrees — pick the canonical one, delete/re-lock the rest:\n${group.map((entry) => `  ${entry.directory} (${entry.branch ?? "detached"}, HEAD ${entry.head ?? "unknown"})`).join("\n")}`,
+    });
   }
-  return failures
+  return failures;
 }
 
 function buildDuplicateTicketBranchNumberFailures(
   branchNames: readonly string[],
   branchPrefix: string,
 ): PostDispatchFailure[] {
-  const failures: PostDispatchFailure[] = []
+  const failures: PostDispatchFailure[] = [];
   for (const [number, names] of findDuplicateTicketBranchNumbers(branchNames, branchPrefix)) {
     failures.push({
-      kind: 'duplicate-ticket-branch-number',
-      message: `Ticket ${branchPrefix.toUpperCase()}-${number} has ${names.length} branches: ${names.join(', ')} — one of these was created in error.`,
-    })
+      kind: "duplicate-ticket-branch-number",
+      message: `Ticket ${branchPrefix.toUpperCase()}-${number} has ${names.length} branches: ${names.join(", ")} — one of these was created in error.`,
+    });
   }
-  return failures
+  return failures;
 }
 
 function buildUnlockedPastDeadlineFailures(
@@ -561,10 +539,10 @@ function buildUnlockedPastDeadlineFailures(
 ): PostDispatchFailure[] {
   return findWorktreesMissingLockPastDeadline(entries, maxAgeMs, nowMs, statMtimeMs).map(
     (entry) => ({
-      kind: 'unlocked-past-deadline',
+      kind: "unlocked-past-deadline",
       message: `${entry.directory} has no git worktree lock ${Math.round(maxAgeMs / 1000)}s+ after dispatch — the worker skipped bootstrap step 0. Re-lock it with: git worktree lock ${entry.directory} --reason "$(forge lock-reason --run <runId> --ticket <ticket>)"`,
     }),
-  )
+  );
 }
 
 /**
@@ -576,8 +554,8 @@ function buildUnlockedPastDeadlineFailures(
  * finished bootstrapping.
  */
 function isOwnScaffoldBranch(entry: WorktreeEntry): boolean {
-  if (!entry.branch) return false
-  return entry.branch === `worktree-${path.basename(entry.directory)}`
+  if (!entry.branch) return false;
+  return entry.branch === `worktree-${path.basename(entry.directory)}`;
 }
 
 /**
@@ -606,23 +584,23 @@ export function findBranchTicketMismatches(
   branchPrefix: string,
   options: { readonly nowMs?: number; readonly maxAgeMs?: number } = {},
 ): PostDispatchFailure[] {
-  const nowMs = options.nowMs ?? Date.now()
-  const maxAgeMs = options.maxAgeMs ?? POST_DISPATCH_UNLOCKED_MAX_AGE_MS
-  const failures: PostDispatchFailure[] = []
+  const nowMs = options.nowMs ?? Date.now();
+  const maxAgeMs = options.maxAgeMs ?? POST_DISPATCH_UNLOCKED_MAX_AGE_MS;
+  const failures: PostDispatchFailure[] = [];
   for (const entry of entries) {
-    const owner = resolveWorktreeOwner(entry)
-    if (!owner || !entry.branch) continue
-    if (isBranchMatchingTicket(entry.branch, owner.ticket, branchPrefix)) continue
+    const owner = resolveWorktreeOwner(entry);
+    if (!owner || !entry.branch) continue;
+    if (isBranchMatchingTicket(entry.branch, owner.ticket, branchPrefix)) continue;
     if (isOwnScaffoldBranch(entry)) {
-      const lockedAtMs = Date.parse(owner.at)
-      if (Number.isFinite(lockedAtMs) && nowMs - lockedAtMs <= maxAgeMs) continue
+      const lockedAtMs = Date.parse(owner.at);
+      if (Number.isFinite(lockedAtMs) && nowMs - lockedAtMs <= maxAgeMs) continue;
     }
     failures.push({
-      kind: 'branch-ticket-mismatch',
+      kind: "branch-ticket-mismatch",
       message: `${entry.directory} is checked out on branch ${entry.branch}, but its own lock names ticket ${owner.ticket} — a shell was likely routed to the wrong worktree.`,
-    })
+    });
   }
-  return failures
+  return failures;
 }
 
 /**
@@ -639,8 +617,8 @@ export function findMissingTicketsForRun(
     mineEntries
       .map((entry) => resolveWorktreeOwner(entry)?.ticket)
       .filter((ticket): ticket is string => Boolean(ticket)),
-  )
-  return expectedTickets.filter((ticket) => !claimed.has(ticket))
+  );
+  return expectedTickets.filter((ticket) => !claimed.has(ticket));
 }
 
 /**
@@ -661,12 +639,12 @@ export function auditPostDispatch(
   entries: readonly WorktreeEntry[],
   ticketBranchNames: readonly string[],
   options: {
-    readonly maxUnlockedAgeMs: number
-    readonly nowMs: number
-    readonly statMtimeMs: (directory: string) => number | null
+    readonly maxUnlockedAgeMs: number;
+    readonly nowMs: number;
+    readonly statMtimeMs: (directory: string) => number | null;
     /** `ticket.branchPrefix` from `forge.config.json`. Required — see
      * {@link isBranchMatchingTicket} for why this no longer defaults. */
-    readonly branchPrefix: string
+    readonly branchPrefix: string;
   },
 ): PostDispatchFailure[] {
   return [
@@ -682,7 +660,7 @@ export function auditPostDispatch(
       nowMs: options.nowMs,
       maxAgeMs: options.maxUnlockedAgeMs,
     }),
-  ]
+  ];
 }
 
 /**
@@ -691,13 +669,13 @@ export function auditPostDispatch(
  * fair chance to reach bootstrap step 0 before the coordinator's audit runs,
  * not to model any real expected latency.
  */
-const POST_DISPATCH_UNLOCKED_MAX_AGE_MS = 30_000
+const POST_DISPATCH_UNLOCKED_MAX_AGE_MS = 30_000;
 
 function statDirectoryMtimeMs(directory: string): number | null {
   try {
-    return statSync(directory).mtimeMs
+    return statSync(directory).mtimeMs;
   } catch {
-    return null
+    return null;
   }
 }
 
@@ -741,22 +719,22 @@ function statDirectoryMtimeMs(directory: string): number | null {
  * scope by.
  */
 async function mainPostDispatch(config: ForgeConfig): Promise<void> {
-  const branchPrefix = config.ticket.branchPrefix
-  const currentRunId = readFlagValue('--run')
-  const explicitExpectRaw = readFlagValue('--expect')
+  const branchPrefix = config.ticket.branchPrefix;
+  const currentRunId = readFlagValue("--run");
+  const explicitExpectRaw = readFlagValue("--expect");
 
-  const allWorktreeEntries = await listWorktreeEntries()
-  const agentEntries = allWorktreeEntries.filter((entry) => isAgentWorktree(entry.directory))
-  const ticketBranches = await listBranches(`${branchPrefix}-*`)
+  const allWorktreeEntries = await listWorktreeEntries();
+  const agentEntries = allWorktreeEntries.filter((entry) => isAgentWorktree(entry.directory));
+  const ticketBranches = await listBranches(`${branchPrefix}-*`);
   const agentTicketBranchNames = ticketBranches
     .filter((branch) => isAgentWorktree(branch.worktreePath))
-    .map((branch) => branch.name)
+    .map((branch) => branch.name);
 
-  const nowMs = Date.now()
+  const nowMs = Date.now();
   const failures: PostDispatchFailure[] = [
     ...buildDuplicateTicketWorktreeFailures(agentEntries),
     ...buildDuplicateTicketBranchNumberFailures(agentTicketBranchNames, branchPrefix),
-  ]
+  ];
 
   if (!currentRunId) {
     failures.push(
@@ -770,46 +748,47 @@ async function mainPostDispatch(config: ForgeConfig): Promise<void> {
         nowMs,
         maxAgeMs: POST_DISPATCH_UNLOCKED_MAX_AGE_MS,
       }),
-    )
+    );
     if (failures.length > 0) {
-      console.error('forge:preflight --post-dispatch failed:\n')
-      for (const failure of failures) console.error(`- ${failure.message}`)
-      process.exitCode = 1
-      return
+      console.error("forge:preflight --post-dispatch failed:\n");
+      for (const failure of failures) console.error(`- ${failure.message}`);
+      process.exitCode = 1;
+      return;
     }
     console.log(
       `forge:preflight --post-dispatch OK — ${agentEntries.length} worktree(s) checked (no --run given, so not scoped to any one dispatch), no ticket/branch duplicates, no unlocked stragglers.`,
-    )
-    return
+    );
+    return;
   }
 
   const mineEntries = agentEntries.filter(
     (entry) => resolveWorktreeOwner(entry)?.runId === currentRunId,
-  )
+  );
   failures.push(
     ...findBranchTicketMismatches(mineEntries, branchPrefix, {
       nowMs,
       maxAgeMs: POST_DISPATCH_UNLOCKED_MAX_AGE_MS,
     }),
-  )
+  );
 
   const expectedTickets =
     explicitExpectRaw === undefined
       ? (await listOccupiedSlots())
           .filter((entry) => entry.holder.runId === currentRunId)
           .map((entry) => entry.holder.ticket)
-      : []
+      : [];
   const explicitExpectedCount =
-    explicitExpectRaw !== undefined ? Number(explicitExpectRaw) : undefined
+    explicitExpectRaw !== undefined ? Number(explicitExpectRaw) : undefined;
   const expectationKnown =
-    expectedTickets.length > 0 || (explicitExpectedCount !== undefined && explicitExpectedCount > 0)
+    expectedTickets.length > 0 ||
+    (explicitExpectedCount !== undefined && explicitExpectedCount > 0);
 
   if (expectationKnown) {
-    const missingTickets = findMissingTicketsForRun(mineEntries, expectedTickets)
+    const missingTickets = findMissingTicketsForRun(mineEntries, expectedTickets);
     const missingCount =
       explicitExpectedCount !== undefined
         ? Math.max(0, explicitExpectedCount - mineEntries.length)
-        : missingTickets.length
+        : missingTickets.length;
 
     if (missingCount > 0) {
       /**
@@ -820,70 +799,72 @@ async function mainPostDispatch(config: ForgeConfig): Promise<void> {
        * run's own dispatch, and pointing at it wastes the coordinator's time
        * chasing another run's worktree.
        */
-      const reservations = await listReservations()
+      const reservations = await listReservations();
       const unlockedCandidates = agentEntries.filter((entry) => {
-        if (entry.lockedReason !== null) return false
+        if (entry.lockedReason !== null) return false;
         const reservationOwner = entry.branch
           ? findReservationForBranch(entry.branch, branchPrefix, reservations)
-          : null
-        return !reservationOwner || reservationOwner.runId === currentRunId
-      })
+          : null;
+        return !reservationOwner || reservationOwner.runId === currentRunId;
+      });
       const stale = findWorktreesMissingLockPastDeadline(
         unlockedCandidates,
         POST_DISPATCH_UNLOCKED_MAX_AGE_MS,
         nowMs,
         statDirectoryMtimeMs,
-      )
+      );
       const ticketsNote =
         expectedTickets.length > 0
-          ? ` (tickets: ${expectedTickets.join(', ')}${missingTickets.length > 0 ? `; missing: ${missingTickets.join(', ')}` : ''})`
-          : ''
+          ? ` (tickets: ${expectedTickets.join(", ")}${missingTickets.length > 0 ? `; missing: ${missingTickets.join(", ")}` : ""})`
+          : "";
       const staleNote =
         stale.length > 0
-          ? ` ${stale.length} unlocked worktree(s) past the ${Math.round(POST_DISPATCH_UNLOCKED_MAX_AGE_MS / 1000)}s deadline may be the missing one(s) — a worker may have skipped bootstrap step 0:\n${stale.map((entry) => `  ${entry.directory}`).join('\n')}`
-          : ' No unlocked candidate worktrees were found either — check where isolation:"worktree" actually placed them (see reference/incidents.md).'
+          ? ` ${stale.length} unlocked worktree(s) past the ${Math.round(POST_DISPATCH_UNLOCKED_MAX_AGE_MS / 1000)}s deadline may be the missing one(s) — a worker may have skipped bootstrap step 0:\n${stale.map((entry) => `  ${entry.directory}`).join("\n")}`
+          : ' No unlocked candidate worktrees were found either — check where isolation:"worktree" actually placed them (see reference/incidents.md).';
       failures.push({
-        kind: 'missing-worktrees',
+        kind: "missing-worktrees",
         message: `Expected ${explicitExpectedCount ?? expectedTickets.length} locked worktree(s) for run ${currentRunId}${ticketsNote}, found ${mineEntries.length}.${staleNote}`,
-      })
+      });
     }
   }
 
   if (failures.length > 0) {
-    console.error('forge:preflight --post-dispatch failed:\n')
-    for (const failure of failures) console.error(`- ${failure.message}`)
-    process.exitCode = 1
-    return
+    console.error("forge:preflight --post-dispatch failed:\n");
+    for (const failure of failures) console.error(`- ${failure.message}`);
+    process.exitCode = 1;
+    return;
   }
 
   if (mineEntries.length === 0 && agentEntries.length > 0 && !expectationKnown) {
     console.log(
       `forge:preflight --post-dispatch OK — but 0 of run ${currentRunId}'s worktree(s) were attributed out of ${agentEntries.length} agent worktree(s) present, and no slot/--expect data was available to check for a miss. Verify by hand: "forge slots --list" and "git worktree list --porcelain".`,
-    )
-    return
+    );
+    return;
   }
 
   console.log(
     `forge:preflight --post-dispatch OK — ${mineEntries.length} of run ${currentRunId}'s worktree(s) checked (${agentEntries.length} total across every /forge coordinator in this repo), no ticket/branch duplicates, no unlocked stragglers.`,
-  )
+  );
 }
 
 export type RunGateFindings = {
-  readonly failures: readonly string[]
-  readonly warnings: readonly string[]
-}
+  readonly failures: readonly string[];
+  readonly warnings: readonly string[];
+};
 
 function readApprovalRecord(approvalPath: string): ApprovalRecord | null {
   try {
-    const record: ApprovalRecord = JSON.parse(readFileSync(approvalPath, 'utf8'))
-    return record
+    const record: ApprovalRecord = JSON.parse(readFileSync(approvalPath, "utf8"));
+    return record;
   } catch {
-    return null
+    return null;
   }
 }
 
 function stringsOrEmpty(value: unknown): string[] {
-  return Array.isArray(value) ? value.filter((entry): entry is string => typeof entry === 'string') : []
+  return Array.isArray(value)
+    ? value.filter((entry): entry is string => typeof entry === "string")
+    : [];
 }
 
 function toPlanTickets(raw: unknown): PlanTicket[] {
@@ -891,25 +872,25 @@ function toPlanTickets(raw: unknown): PlanTicket[] {
     ? raw
     : isObject(raw) && Array.isArray(raw.tickets)
       ? raw.tickets
-      : null
-  if (list === null) throw new Error('tickets file must be an array (or {"tickets": [...]})')
-  const tickets: PlanTicket[] = []
+      : null;
+  if (list === null) throw new Error('tickets file must be an array (or {"tickets": [...]})');
+  const tickets: PlanTicket[] = [];
   for (const [index, entry] of list.entries()) {
-    const candidate: Record<string, unknown> = isObject(entry) ? entry : {}
-    if (typeof candidate.id !== 'string') throw new Error(`ticket ${index} needs an "id"`)
+    const candidate: Record<string, unknown> = isObject(entry) ? entry : {};
+    if (typeof candidate.id !== "string") throw new Error(`ticket ${index} needs an "id"`);
     tickets.push({
       id: candidate.id,
       covers: stringsOrEmpty(candidate.covers),
       surfaces: stringsOrEmpty(candidate.surfaces),
-      wave: typeof candidate.wave === 'number' ? candidate.wave : 1,
+      wave: typeof candidate.wave === "number" ? candidate.wave : 1,
       blockedBy: stringsOrEmpty(candidate.blockedBy),
-      ...(typeof candidate.newSurfaceLines === 'number'
+      ...(typeof candidate.newSurfaceLines === "number"
         ? { newSurfaceLines: candidate.newSurfaceLines }
         : {}),
       folded: candidate.folded === true,
-    })
+    });
   }
-  return tickets
+  return tickets;
 }
 
 /**
@@ -921,31 +902,31 @@ export function evaluateRunGate(
   runDirectory: string,
   options: { readonly inlineMaxLines: number },
 ): RunGateFindings {
-  const failures: string[] = []
-  const warnings: string[] = []
-  const approvalPath = path.join(runDirectory, 'approval.json')
-  const approval = checkApproval(approvalPath)
+  const failures: string[] = [];
+  const warnings: string[] = [];
+  const approvalPath = path.join(runDirectory, "approval.json");
+  const approval = checkApproval(approvalPath);
   if (!approval.ok) {
-    for (const reason of approval.reasons) failures.push(`approval: ${reason}`)
-    return { failures, warnings }
+    for (const reason of approval.reasons) failures.push(`approval: ${reason}`);
+    return { failures, warnings };
   }
-  const record = readApprovalRecord(approvalPath)
-  if (record === null) return { failures: ['approval: record unreadable'], warnings }
+  const record = readApprovalRecord(approvalPath);
+  if (record === null) return { failures: ["approval: record unreadable"], warnings };
   try {
     const result = validatePlan({
-      specMarkdown: readFileSync(record.specPath, 'utf8'),
-      tickets: toPlanTickets(JSON.parse(readFileSync(record.ticketsPath, 'utf8'))),
+      specMarkdown: readFileSync(record.specPath, "utf8"),
+      tickets: toPlanTickets(JSON.parse(readFileSync(record.ticketsPath, "utf8"))),
       inlineMaxLines: options.inlineMaxLines,
-    })
+    });
     for (const finding of result.findings) {
-      const line = `validate: ${finding.message}`
-      if (finding.severity === 'error') failures.push(line)
-      else warnings.push(line)
+      const line = `validate: ${finding.message}`;
+      if (finding.severity === "error") failures.push(line);
+      else warnings.push(line);
     }
   } catch (error) {
-    failures.push(`validate: ${error instanceof Error ? error.message : String(error)}`)
+    failures.push(`validate: ${error instanceof Error ? error.message : String(error)}`);
   }
-  return { failures, warnings }
+  return { failures, warnings };
 }
 
 /** S2: the harness must fork worker worktrees from the coordinator's HEAD. */
@@ -955,33 +936,33 @@ export async function collectForkBaseFailures(
   trunk: string,
   probes: EnvironmentProbes,
 ): Promise<string[]> {
-  const harnessBaseRef = `${remote}/${trunk}`
+  const harnessBaseRef = `${remote}/${trunk}`;
   return checkWorktreeForkBase({
-    coordinatorHead: await probes.resolveRef(repoRoot, 'HEAD'),
+    coordinatorHead: await probes.resolveRef(repoRoot, "HEAD"),
     harnessBase: await probes.resolveRef(repoRoot, harnessBaseRef),
     baseRefSetting: await probes.worktreeBaseRef(repoRoot),
     harnessBaseRef,
-  })
+  });
 }
 
-const MAP_STALE_MAX_COMMITS = 10
+const MAP_STALE_MAX_COMMITS = 10;
 
 /** S18: a stale or missing codebase map only warns, never blocks. */
 export async function collectMapStaleWarning(
   repoRoot: string,
   mapRelativePath: string,
 ): Promise<string | null> {
-  const verdict = await checkStale(repoRoot, mapRelativePath, MAP_STALE_MAX_COMMITS)
-  return verdict.stale ? `codebase map is stale — ${verdict.reason}; run "forge map"` : null
+  const verdict = await checkStale(repoRoot, mapRelativePath, MAP_STALE_MAX_COMMITS);
+  return verdict.stale ? `codebase map is stale — ${verdict.reason}; run "forge map"` : null;
 }
 
 async function main(config: ForgeConfig, repoRoot: string) {
-  const currentRunId = readFlagValue('--run')
-  const failures: string[] = []
-  const infoLines: string[] = []
-  const warnLines: string[] = []
-  const dependencyWarnLines: string[] = []
-  const gateWarnLines: string[] = []
+  const currentRunId = readFlagValue("--run");
+  const failures: string[] = [];
+  const infoLines: string[] = [];
+  const warnLines: string[] = [];
+  const dependencyWarnLines: string[] = [];
+  const gateWarnLines: string[] = [];
 
   /**
    * Kicked off first so these probes (each capped at
@@ -992,21 +973,21 @@ async function main(config: ForgeConfig, repoRoot: string) {
     tracker: config.tracker.kind,
     repoRoot,
     probes: createDependencyProbes(),
-  })
+  });
 
   for (const required of config.preflight.requiredFiles) {
     if (!existsSync(path.join(repoRoot, required.path))) {
-      failures.push(`${required.path} is missing at the repo root — ${required.why}`)
+      failures.push(`${required.path} is missing at the repo root — ${required.why}`);
     }
   }
 
-  const approvalRunId = readFlagValue('--approval')
+  const approvalRunId = readFlagValue("--approval");
   if (approvalRunId !== undefined) {
-    const gate = evaluateRunGate(path.join(repoRoot, '.forge', 'runs', approvalRunId), {
+    const gate = evaluateRunGate(path.join(repoRoot, ".forge", "runs", approvalRunId), {
       inlineMaxLines: config.sizing.inlineMaxLines,
-    })
-    failures.push(...gate.failures)
-    gateWarnLines.push(...gate.warnings)
+    });
+    failures.push(...gate.failures);
+    gateWarnLines.push(...gate.warnings);
   }
 
   failures.push(
@@ -1016,25 +997,24 @@ async function main(config: ForgeConfig, repoRoot: string) {
       config.repo.trunk,
       createEnvironmentProbes(),
     )),
-  )
+  );
 
-  const mapWarning = await collectMapStaleWarning(repoRoot, config.map.path)
-  if (mapWarning !== null) gateWarnLines.push(mapWarning)
+  const mapWarning = await collectMapStaleWarning(repoRoot, config.map.path);
+  if (mapWarning !== null) gateWarnLines.push(mapWarning);
 
-  const todoMarkers = await findTodoMarkersInDocsAgents(repoRoot)
+  const todoMarkers = await findTodoMarkersInDocsAgents(repoRoot);
   if (todoMarkers.length > 0) {
     failures.push(
-      `docs/agents/ still has ${todoMarkers.length} TODO(forge): marker(s) — fill these in (or run "forge init --force" after resolving them) before dispatching:\n${todoMarkers.map((m) => `  ${m}`).join('\n')}`,
-    )
+      `docs/agents/ still has ${todoMarkers.length} TODO(forge): marker(s) — fill these in (or run "forge init --force" after resolving them) before dispatching:\n${todoMarkers.map((m) => `  ${m}`).join("\n")}`,
+    );
   }
 
-  const liveWorktreeDirectoryNames = await listLiveWorktreeDirectoryNames()
+  const liveWorktreeDirectoryNames = await listLiveWorktreeDirectoryNames();
 
-  const worktreeAgentBranches = await listBranches('worktree-agent-*')
+  const worktreeAgentBranches = await listBranches("worktree-agent-*");
   const orphanedScaffoldBranches = worktreeAgentBranches.filter(
-    (branch) =>
-      !isWorktreeAgentBranchLive(branch.name, liveWorktreeDirectoryNames),
-  )
+    (branch) => !isWorktreeAgentBranchLive(branch.name, liveWorktreeDirectoryNames),
+  );
   if (orphanedScaffoldBranches.length > 0) {
     /**
      * Always safe to delete, per this repo's own message below — a sibling
@@ -1042,18 +1022,16 @@ async function main(config: ForgeConfig, repoRoot: string) {
      * coordinator's dispatch.
      */
     warnLines.push(
-      `Orphaned worktree-agent-* scaffold branches (their worktree is already gone — always safe to delete) — run "forge cleanup":\n${orphanedScaffoldBranches.map((b) => `  ${b.name}`).join('\n')}`,
-    )
+      `Orphaned worktree-agent-* scaffold branches (their worktree is already gone — always safe to delete) — run "forge cleanup":\n${orphanedScaffoldBranches.map((b) => `  ${b.name}`).join("\n")}`,
+    );
   }
 
-  const allWorktreeEntries = await listWorktreeEntries()
-  const worktreeEntries = allWorktreeEntries.filter((entry) =>
-    isAgentWorktree(entry.directory),
-  )
+  const allWorktreeEntries = await listWorktreeEntries();
+  const worktreeEntries = allWorktreeEntries.filter((entry) => isAgentWorktree(entry.directory));
   if (worktreeEntries.length > 0) {
-    const mainTree = await resolveMainTree(config.repo.remote, config.repo.trunk)
-    const idleThresholdMs = resolveIdleThresholdMs(config)
-    const worktreeFailLines: string[] = []
+    const mainTree = await resolveMainTree(config.repo.remote, config.repo.trunk);
+    const idleThresholdMs = resolveIdleThresholdMs(config);
+    const worktreeFailLines: string[] = [];
     /**
      * The harness's own `Agent({isolation: "worktree"})` unlocks a worker's
      * worktree the moment its agent process exits, dropping the `/forge`
@@ -1063,7 +1041,7 @@ async function main(config: ForgeConfig, repoRoot: string) {
      * still gets attributed to its real owning run instead of falling
      * through to the unowned `content-fallback` path.
      */
-    const reservations = await listReservations()
+    const reservations = await listReservations();
 
     for (const entry of worktreeEntries) {
       const verdict = classifyWorktreeEntry(
@@ -1084,7 +1062,7 @@ async function main(config: ForgeConfig, repoRoot: string) {
           ),
         (candidate) =>
           resolveWorktreeOwnerWithReservations(candidate, reservations, config.ticket.branchPrefix),
-      )
+      );
       // oxlint-disable-next-line eslint/no-await-in-loop -- sequential on purpose: later iterations depend on earlier ones or on output order
       const report = await describeWorktreeEntryVerdict(
         entry,
@@ -1092,104 +1070,102 @@ async function main(config: ForgeConfig, repoRoot: string) {
         mainTree,
         config.repo.remote,
         config.repo.trunk,
-      )
-      if (report.bucket === 'fail') worktreeFailLines.push(report.line)
-      else if (report.bucket === 'info') infoLines.push(report.line)
-      else warnLines.push(report.line)
+      );
+      if (report.bucket === "fail") worktreeFailLines.push(report.line);
+      else if (report.bucket === "info") infoLines.push(report.line);
+      else warnLines.push(report.line);
     }
 
     if (worktreeFailLines.length > 0) {
       failures.push(
-        `.claude/worktrees/ has entries needing attention:\n${worktreeFailLines.join('\n')}`,
-      )
+        `.claude/worktrees/ has entries needing attention:\n${worktreeFailLines.join("\n")}`,
+      );
     }
   }
 
-  const slotsDirectory = await resolveSlotsDirectory()
+  const slotsDirectory = await resolveSlotsDirectory();
   const capacityCheck = checkSlotCapacity(
     resolveMaxLiveWorkers(config),
     resolveWaveSize(config),
     (index) => isSlotStale(slotsDirectory, index),
-  )
-  const capacityWarnLines: string[] = []
+  );
+  const capacityWarnLines: string[] = [];
   if (!capacityCheck.ok) {
     failures.push(
       `No free worker slots at all: 0 free out of ${capacityCheck.cap} — every slot is held by a live or idle run. Wait for one to free up, or "forge cleanup --run <runId>" a run you know is done.`,
-    )
+    );
   } else if (capacityCheck.degraded) {
     capacityWarnLines.push(
       `  only ${capacityCheck.freeCount}/${capacityCheck.cap} worker slot(s) free — this wave can dispatch at most ${capacityCheck.freeCount} of its usual ${capacityCheck.waveSize}; the rest drop from this wave the same way a single denied "forge slots --acquire" already does.`,
-    )
+    );
   }
 
-  const dependencyChecks = await dependencyChecksPromise
+  const dependencyChecks = await dependencyChecksPromise;
   const dependencyGate = evaluateDependencyGate(dependencyChecks, {
     skip: dependencyChecksSkipped(),
-  })
-  failures.push(...dependencyGate.failures)
-  dependencyWarnLines.push(...dependencyGate.warnings)
+  });
+  failures.push(...dependencyGate.failures);
+  dependencyWarnLines.push(...dependencyGate.warnings);
 
   const coveredByDependencyChecks = new Set(
-    dependencyChecks.some((check) => check.dependency === 'github-cli') ? ['gh'] : [],
-  )
+    dependencyChecks.some((check) => check.dependency === "github-cli") ? ["gh"] : [],
+  );
   const missingRequiredCommands = await findMissingRequiredCommands(
     config.preflight.requiredCommands,
     coveredByDependencyChecks,
-  )
+  );
   if (missingRequiredCommands.length > 0) {
-    failures.push(
-      `preflight.requiredCommands not on PATH: ${missingRequiredCommands.join(', ')}.`,
-    )
+    failures.push(`preflight.requiredCommands not on PATH: ${missingRequiredCommands.join(", ")}.`);
   }
 
   if (infoLines.length > 0) {
     console.log(
-      `Info — live/reclaimable /forge worktrees (not blocking dispatch):\n${infoLines.join('\n')}\n`,
-    )
+      `Info — live/reclaimable /forge worktrees (not blocking dispatch):\n${infoLines.join("\n")}\n`,
+    );
   }
   if (warnLines.length > 0) {
     console.log(
-      `Warning — idle /forge worktrees (not blocking dispatch):\n${warnLines.join('\n')}\n`,
-    )
+      `Warning — idle /forge worktrees (not blocking dispatch):\n${warnLines.join("\n")}\n`,
+    );
   }
   if (gateWarnLines.length > 0) {
     console.log(
-      `Warning — plan/map (not blocking dispatch):\n${gateWarnLines.map((line) => `  ${line}`).join('\n')}\n`,
-    )
+      `Warning — plan/map (not blocking dispatch):\n${gateWarnLines.map((line) => `  ${line}`).join("\n")}\n`,
+    );
   }
   if (dependencyWarnLines.length > 0) {
     console.log(
-      `Warning — dependencies (not blocking dispatch):\n${dependencyWarnLines.join('\n')}\n`,
-    )
+      `Warning — dependencies (not blocking dispatch):\n${dependencyWarnLines.join("\n")}\n`,
+    );
   }
   if (capacityWarnLines.length > 0) {
     console.log(
-      `Warning — worker capacity (not blocking dispatch):\n${capacityWarnLines.join('\n')}\n`,
-    )
+      `Warning — worker capacity (not blocking dispatch):\n${capacityWarnLines.join("\n")}\n`,
+    );
   }
 
   if (failures.length > 0) {
-    console.error('forge:preflight failed:\n')
+    console.error("forge:preflight failed:\n");
     for (const failure of failures) {
-      console.error(`- ${failure}`)
+      console.error(`- ${failure}`);
     }
-    process.exitCode = 1
-    return
+    process.exitCode = 1;
+    return;
   }
 
   const requiredFilesSummary =
     config.preflight.requiredFiles.length > 0
-      ? `${config.preflight.requiredFiles.map((f) => f.path).join(', ')} present`
-      : 'no required files configured'
+      ? `${config.preflight.requiredFiles.map((f) => f.path).join(", ")} present`
+      : "no required files configured";
 
   const satisfiedDependencyCount = dependencyChecks.filter(
-    (check) => check.status === 'satisfied',
-  ).length
-  const dependenciesSummary = `${satisfiedDependencyCount}/${dependencyChecks.length} dependency check(s) satisfied`
+    (check) => check.status === "satisfied",
+  ).length;
+  const dependenciesSummary = `${satisfiedDependencyCount}/${dependencyChecks.length} dependency check(s) satisfied`;
 
   console.log(
     `forge:preflight OK — ${requiredFilesSummary}, .claude/worktrees/ clean (or owned by a live/reclaimable /forge run; see any warnings above for leftover worktree-agent-* branches), ${capacityCheck.freeCount}/${capacityCheck.cap} worker slots free, ${dependenciesSummary}.`,
-  )
+  );
 }
 
 /**
@@ -1201,29 +1177,29 @@ async function main(config: ForgeConfig, repoRoot: string) {
  * malformed `forge.config.json` is always fatal (exit 2) here.
  */
 export async function run(argv: string[]): Promise<void> {
-  process.argv = [process.argv[0]!, process.argv[1]!, ...argv]
+  process.argv = [process.argv[0]!, process.argv[1]!, ...argv];
   try {
-    const repoRoot = await resolveRepoRoot()
+    const repoRoot = await resolveRepoRoot();
     if (!repoRoot) {
-      throw new ForgeConfigError('forge preflight: not inside a git repository')
+      throw new ForgeConfigError("forge preflight: not inside a git repository");
     }
-    const config = await requireForgeConfig(repoRoot)
-    if (argv.includes('--post-dispatch')) {
-      await mainPostDispatch(config)
+    const config = await requireForgeConfig(repoRoot);
+    if (argv.includes("--post-dispatch")) {
+      await mainPostDispatch(config);
     } else {
-      await main(config, repoRoot)
+      await main(config, repoRoot);
     }
   } catch (error: unknown) {
     if (error instanceof ForgeConfigError) {
-      console.error(error.message)
-      process.exitCode = 2
-      return
+      console.error(error.message);
+      process.exitCode = 2;
+      return;
     }
-    console.error(error)
-    process.exitCode = 1
+    console.error(error);
+    process.exitCode = 1;
   }
 }
 
 if (import.meta.main) {
-  await run(process.argv.slice(2))
+  await run(process.argv.slice(2));
 }

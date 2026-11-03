@@ -18,55 +18,55 @@ import {
   loadForgeConfigWithDefaults,
   resolveRepoRoot,
   type ForgeConfig,
-} from './config'
+} from "./config";
 
 const REQUIRED_SECTIONS = [
-  'state',
-  'done',
-  'next',
-  'dead-ends',
-  'invariants',
-  'files',
-  'commands',
-] as const
+  "state",
+  "done",
+  "next",
+  "dead-ends",
+  "invariants",
+  "files",
+  "commands",
+] as const;
 
-const VALID_STATES = ['investigating', 'implementing', 'blocked', 'done']
+const VALID_STATES = ["investigating", "implementing", "blocked", "done"];
 
 /**
  * Fallback budget when a caller doesn't pass one explicitly — historically
  * hardcoded, now sourced from `forge.config.json`'s `handoff.maxLines`/
  * `maxChars`. See {@link checkHandoff}.
  */
-const MAX_LINES = 60
-const MAX_CHARS = 8000
+const MAX_LINES = 60;
+const MAX_CHARS = 8000;
 
-type Sections = Map<string, string>
+type Sections = Map<string, string>;
 
 function parseSections(content: string): Sections {
-  const sections: Sections = new Map()
-  let currentKey: string | null = null
-  let currentLines: string[] = []
+  const sections: Sections = new Map();
+  let currentKey: string | null = null;
+  let currentLines: string[] = [];
 
   const flush = () => {
     if (currentKey) {
-      sections.set(currentKey, currentLines.join('\n').trim())
+      sections.set(currentKey, currentLines.join("\n").trim());
     }
-  }
+  };
 
-  for (const line of content.split('\n')) {
-    const match = /^([a-z-]+):\s?(.*)$/i.exec(line)
-    const key = match?.[1]?.toLowerCase()
+  for (const line of content.split("\n")) {
+    const match = /^([a-z-]+):\s?(.*)$/i.exec(line);
+    const key = match?.[1]?.toLowerCase();
     if (key && (REQUIRED_SECTIONS as readonly string[]).includes(key)) {
-      flush()
-      currentKey = key
-      currentLines = match![2] ? [match![2]] : []
+      flush();
+      currentKey = key;
+      currentLines = match![2] ? [match![2]] : [];
     } else if (currentKey) {
-      currentLines.push(line)
+      currentLines.push(line);
     }
   }
-  flush()
+  flush();
 
-  return sections
+  return sections;
 }
 
 function checkHandoff(
@@ -75,43 +75,41 @@ function checkHandoff(
   maxLines: number = MAX_LINES,
   maxChars: number = MAX_CHARS,
 ): string[] {
-  const problems: string[] = []
-  const lineCount = content.split('\n').length
+  const problems: string[] = [];
+  const lineCount = content.split("\n").length;
 
   if (lineCount > maxLines) {
     problems.push(
       `${path}: ${lineCount} lines exceeds the ${maxLines}-line budget — trim it, this is a checkpoint, not a log`,
-    )
+    );
   }
   if (content.length > maxChars) {
     problems.push(
       `${path}: ${content.length} chars exceeds the ~${maxChars}-char (~2k token) budget`,
-    )
+    );
   }
 
-  const sections = parseSections(content)
+  const sections = parseSections(content);
 
   for (const key of REQUIRED_SECTIONS) {
     if (!sections.has(key) || sections.get(key)!.length === 0) {
-      problems.push(`${path}: missing or empty required section "${key}:"`)
+      problems.push(`${path}: missing or empty required section "${key}:"`);
     }
   }
 
-  const state = sections.get('state')?.trim()
+  const state = sections.get("state")?.trim();
   if (state && !VALID_STATES.includes(state)) {
-    problems.push(
-      `${path}: "state: ${state}" is not one of ${VALID_STATES.join(' | ')}`,
-    )
+    problems.push(`${path}: "state: ${state}" is not one of ${VALID_STATES.join(" | ")}`);
   }
 
-  const deadEnds = sections.get('dead-ends')?.trim() ?? ''
-  if (state && state !== 'done' && deadEnds.length === 0) {
+  const deadEnds = sections.get("dead-ends")?.trim() ?? "";
+  if (state && state !== "done" && deadEnds.length === 0) {
     problems.push(
       `${path}: state is "${state}" but "dead-ends:" is empty — a still-open ticket that has tried and failed anything must record it here, that's the field that pays for this whole mechanism`,
-    )
+    );
   }
 
-  return problems
+  return problems;
 }
 
 /**
@@ -125,52 +123,50 @@ function checkHandoff(
  * heading.
  */
 function ticketReferenceFromPath(path: string): string {
-  const match = /handoff-(.+)\.md$/i.exec(path)
-  return match?.[1] ?? 'ticket'
+  const match = /handoff-(.+)\.md$/i.exec(path);
+  return match?.[1] ?? "ticket";
 }
 
 async function main(config: ForgeConfig): Promise<void> {
-  const cliArguments = process.argv.slice(2)
-  const mode = cliArguments[0]
-  const targetPath = cliArguments[1]
+  const cliArguments = process.argv.slice(2);
+  const mode = cliArguments[0];
+  const targetPath = cliArguments[1];
 
-  if (!targetPath || (mode !== '--check' && mode !== '--render')) {
-    console.error(
-      'usage: forge handoff --check <path> | --render <path>',
-    )
-    process.exitCode = 1
-    return
+  if (!targetPath || (mode !== "--check" && mode !== "--render")) {
+    console.error("usage: forge handoff --check <path> | --render <path>");
+    process.exitCode = 1;
+    return;
   }
 
-  const file = Bun.file(targetPath)
+  const file = Bun.file(targetPath);
   if (!(await file.exists())) {
-    console.error(`${targetPath}: not found`)
-    process.exitCode = 1
-    return
+    console.error(`${targetPath}: not found`);
+    process.exitCode = 1;
+    return;
   }
-  const content = await file.text()
+  const content = await file.text();
 
-  if (mode === '--check') {
+  if (mode === "--check") {
     const problems = checkHandoff(
       content,
       targetPath,
       config.handoff.maxLines,
       config.handoff.maxChars,
-    )
+    );
     if (problems.length > 0) {
-      console.error('forge:handoff --check failed:')
+      console.error("forge:handoff --check failed:");
       for (const problem of problems) {
-        console.error(`  - ${problem}`)
+        console.error(`  - ${problem}`);
       }
-      process.exitCode = 1
-      return
+      process.exitCode = 1;
+      return;
     }
-    console.log(`forge:handoff --check OK (${targetPath})`)
-    return
+    console.log(`forge:handoff --check OK (${targetPath})`);
+    return;
   }
 
-  const ticketReference = ticketReferenceFromPath(targetPath)
-  console.log(`## Handoff — ${ticketReference}\n\n${content.trim()}`)
+  const ticketReference = ticketReferenceFromPath(targetPath);
+  console.log(`## Handoff — ${ticketReference}\n\n${content.trim()}`);
 }
 
 /**
@@ -184,20 +180,20 @@ async function main(config: ForgeConfig): Promise<void> {
  * modules that had this gap, and the only one still lacking a test file.
  */
 export async function run(argv: string[]): Promise<void> {
-  process.argv = [process.argv[0]!, process.argv[1]!, ...argv]
+  process.argv = [process.argv[0]!, process.argv[1]!, ...argv];
   try {
-    const repoRoot = await resolveRepoRoot()
+    const repoRoot = await resolveRepoRoot();
     const { config, note } = repoRoot
       ? await loadForgeConfigWithDefaults(repoRoot)
-      : { config: DEFAULT_FORGE_CONFIG, note: undefined }
-    if (note) console.error(note)
-    await main(config)
+      : { config: DEFAULT_FORGE_CONFIG, note: undefined };
+    if (note) console.error(note);
+    await main(config);
   } catch (error: unknown) {
-    console.error(error)
-    process.exitCode = 1
+    console.error(error);
+    process.exitCode = 1;
   }
 }
 
 if (import.meta.main) {
-  await run(process.argv.slice(2))
+  await run(process.argv.slice(2));
 }

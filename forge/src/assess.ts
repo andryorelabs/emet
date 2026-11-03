@@ -21,167 +21,189 @@ import {
   resolveRepoRoot,
   type ForgeConfig,
   type ModelChoice,
-} from './config'
+} from "./config";
 
-export type AssessTier = 'passive' | 'medium' | 'high'
+type AssessTier = "passive" | "medium" | "high";
 
 export interface AssessResult {
-  readonly tier: AssessTier
-  readonly reasons: readonly string[]
-  readonly reviewer: ModelChoice | null
+  readonly tier: AssessTier;
+  readonly reasons: readonly string[];
+  readonly reviewer: ModelChoice | null;
 }
 
 export interface DiffInput {
-  readonly paths: readonly string[]
-  readonly addedLines: ReadonlyArray<{ readonly path: string; readonly line: string }>
+  readonly paths: readonly string[];
+  readonly addedLines: ReadonlyArray<{ readonly path: string; readonly line: string }>;
 }
 
-const USAGE = 'usage: forge assess --base <ref> --head <ref> [--risk-line <text>]'
+const USAGE = "usage: forge assess --base <ref> --head <ref> [--risk-line <text>]";
 
-const DOC_EXTENSIONS = /\.(md|mdx|markdown|txt|rst|adoc)$/i
-const DOC_DIRECTORIES = /(^|\/)(docs?|documentation)\//i
-const DOC_FILES = /(^|\/)(LICENSE|CHANGELOG|CONTRIBUTING|AUTHORS)(\.[a-z]+)?$/i
+const DOC_EXTENSIONS = /\.(md|mdx|markdown|txt|rst|adoc)$/i;
+const DOC_DIRECTORIES = /(^|\/)(docs?|documentation)\//i;
+const DOC_FILES = /(^|\/)(LICENSE|CHANGELOG|CONTRIBUTING|AUTHORS)(\.[a-z]+)?$/i;
 
 const HIGH_RISK_PATH_RULES: ReadonlyArray<{ readonly label: string; readonly pattern: RegExp }> = [
-  { label: 'auth', pattern: /(^|[^a-z])(auth|oauth|authn|authz|authenticat\w*|authoriz\w*)([^a-z]|$)/i },
-  { label: 'security', pattern: /(^|[^a-z])security([^a-z]|$)/i },
-  { label: 'payments', pattern: /(^|[^a-z])payments?([^a-z]|$)/i },
-  { label: 'webhook', pattern: /(^|[^a-z])webhooks?([^a-z]|$)/i },
-  { label: 'CI workflow', pattern: /(^|\/)\.github\/workflows\/|(^|\/)\.gitlab-ci\.ya?ml$|(^|\/)\.circleci\// },
-  { label: 'installer', pattern: /(^|[^a-z])install(er)?([^a-z]|$)/i },
   {
-    label: 'lockfile',
-    pattern: /(^|\/)(bun\.lockb?|package-lock\.json|pnpm-lock\.yaml|yarn\.lock|Cargo\.lock|poetry\.lock|go\.sum|Gemfile\.lock|composer\.lock)$/,
+    label: "auth",
+    pattern: /(^|[^a-z])(auth|oauth|authn|authz|authenticat\w*|authoriz\w*)([^a-z]|$)/i,
   },
-  { label: 'migration', pattern: /(^|[^a-z])migrations?([^a-z]|$)/i },
-]
+  { label: "security", pattern: /(^|[^a-z])security([^a-z]|$)/i },
+  { label: "payments", pattern: /(^|[^a-z])payments?([^a-z]|$)/i },
+  { label: "webhook", pattern: /(^|[^a-z])webhooks?([^a-z]|$)/i },
+  {
+    label: "CI workflow",
+    pattern: /(^|\/)\.github\/workflows\/|(^|\/)\.gitlab-ci\.ya?ml$|(^|\/)\.circleci\//,
+  },
+  { label: "installer", pattern: /(^|[^a-z])install(er)?([^a-z]|$)/i },
+  {
+    label: "lockfile",
+    pattern:
+      /(^|\/)(bun\.lockb?|package-lock\.json|pnpm-lock\.yaml|yarn\.lock|Cargo\.lock|poetry\.lock|go\.sum|Gemfile\.lock|composer\.lock)$/,
+  },
+  { label: "migration", pattern: /(^|[^a-z])migrations?([^a-z]|$)/i },
+];
 
 const DANGEROUS_SINKS: ReadonlyArray<{ readonly label: string; readonly pattern: RegExp }> = [
-  { label: 'eval()', pattern: /\beval\s*\(/ },
-  { label: 'new Function()', pattern: /\bnew\s+Function\s*\(/ },
-  { label: 'child_process exec', pattern: /\b(exec|execSync|spawnSync)\s*\(|child_process/ },
-  { label: 'innerHTML', pattern: /\binnerHTML\b|dangerouslySetInnerHTML/ },
-  { label: 'rm -rf', pattern: /\brm\s+-[a-z]*r[a-z]*f|\brm\s+-[a-z]*f[a-z]*r/ },
-  { label: 'pipe to shell', pattern: /\b(curl|wget)\b[^\n|]*\|\s*(sudo\s+)?(ba|z)?sh\b/ },
-  { label: 'unsafe raw SQL', pattern: /\$queryRawUnsafe|\bexecuteRawUnsafe\b/ },
-]
+  { label: "eval()", pattern: /\beval\s*\(/ },
+  { label: "new Function()", pattern: /\bnew\s+Function\s*\(/ },
+  { label: "child_process exec", pattern: /\b(exec|execSync|spawnSync)\s*\(|child_process/ },
+  { label: "innerHTML", pattern: /\binnerHTML\b|dangerouslySetInnerHTML/ },
+  { label: "rm -rf", pattern: /\brm\s+-[a-z]*r[a-z]*f|\brm\s+-[a-z]*f[a-z]*r/ },
+  { label: "pipe to shell", pattern: /\b(curl|wget)\b[^\n|]*\|\s*(sudo\s+)?(ba|z)?sh\b/ },
+  { label: "unsafe raw SQL", pattern: /\$queryRawUnsafe|\bexecuteRawUnsafe\b/ },
+];
 
 function isDocPath(filePath: string): boolean {
-  return DOC_EXTENSIONS.test(filePath) || DOC_DIRECTORIES.test(filePath) || DOC_FILES.test(filePath)
+  return (
+    DOC_EXTENSIONS.test(filePath) || DOC_DIRECTORIES.test(filePath) || DOC_FILES.test(filePath)
+  );
 }
 
 export function classifyDiff(input: DiffInput, config: ForgeConfig): AssessResult {
-  const { models, review } = config
+  const { models, review } = config;
 
   if (input.paths.length === 0 || input.paths.every(isDocPath)) {
     return {
-      tier: 'passive',
-      reasons: [input.paths.length === 0 ? 'empty diff' : 'docs-only diff'],
+      tier: "passive",
+      reasons: [input.paths.length === 0 ? "empty diff" : "docs-only diff"],
       reviewer: null,
-    }
+    };
   }
 
-  const reasons: string[] = []
-  const extraTokens = review.highRiskPaths.map((token) => token.toLowerCase())
+  const reasons: string[] = [];
+  const extraTokens = review.highRiskPaths.map((token) => token.toLowerCase());
   for (const filePath of input.paths) {
-    const rule = HIGH_RISK_PATH_RULES.find((candidate) => candidate.pattern.test(filePath))
+    const rule = HIGH_RISK_PATH_RULES.find((candidate) => candidate.pattern.test(filePath));
     if (rule) {
-      reasons.push(`high-risk path (${rule.label}): ${filePath}`)
-      continue
+      reasons.push(`high-risk path (${rule.label}): ${filePath}`);
+      continue;
     }
-    const lowered = filePath.toLowerCase()
-    const extra = extraTokens.find((token) => lowered.includes(token))
-    if (extra) reasons.push(`high-risk path (review.highRiskPaths "${extra}"): ${filePath}`)
+    const lowered = filePath.toLowerCase();
+    const extra = extraTokens.find((token) => lowered.includes(token));
+    if (extra) reasons.push(`high-risk path (review.highRiskPaths "${extra}"): ${filePath}`);
   }
 
   for (const { path: filePath, line } of input.addedLines) {
-    const sink = DANGEROUS_SINKS.find((candidate) => candidate.pattern.test(line))
-    if (sink) reasons.push(`dangerous sink (${sink.label}): ${filePath}`)
+    const sink = DANGEROUS_SINKS.find((candidate) => candidate.pattern.test(line));
+    if (sink) reasons.push(`dangerous sink (${sink.label}): ${filePath}`);
   }
 
   if (reasons.length > 0) {
-    return { tier: 'high', reasons: [...new Set(reasons)], reviewer: models.reviewer.high }
+    return { tier: "high", reasons: [...new Set(reasons)], reviewer: models.reviewer.high };
   }
-  return { tier: 'medium', reasons: ['source change with no high-risk signals'], reviewer: models.reviewer.medium }
+  return {
+    tier: "medium",
+    reasons: ["source change with no high-risk signals"],
+    reviewer: models.reviewer.medium,
+  };
 }
 
-export type RiskLine = { readonly kind: 'none' } | { readonly kind: 'item'; readonly reason: string }
+export type RiskLine =
+  | { readonly kind: "none" }
+  | { readonly kind: "item"; readonly reason: string };
 
 export function parseRiskLine(text: string): RiskLine {
-  const body = text.trim().replace(/^risk:\s*/i, '')
-  if (/^none\.?$/i.test(body)) return { kind: 'none' }
-  return { kind: 'item', reason: body || 'empty risk line' }
+  const body = text.trim().replace(/^risk:\s*/i, "");
+  if (/^none\.?$/i.test(body)) return { kind: "none" };
+  return { kind: "item", reason: body || "empty risk line" };
 }
 
-export function applyRiskLine(result: AssessResult, riskLineText: string, config: ForgeConfig): AssessResult {
-  const risk = parseRiskLine(riskLineText)
-  if (risk.kind === 'none' || result.tier === 'high') return result
-  const reasons = [...result.reasons, `risk line: ${risk.reason}`]
-  if (result.tier === 'passive') {
-    return { tier: 'medium', reasons, reviewer: config.models.reviewer.medium }
+export function applyRiskLine(
+  result: AssessResult,
+  riskLineText: string,
+  config: ForgeConfig,
+): AssessResult {
+  const risk = parseRiskLine(riskLineText);
+  if (risk.kind === "none" || result.tier === "high") return result;
+  const reasons = [...result.reasons, `risk line: ${risk.reason}`];
+  if (result.tier === "passive") {
+    return { tier: "medium", reasons, reviewer: config.models.reviewer.medium };
   }
-  return { tier: 'high', reasons, reviewer: config.models.reviewer.high }
+  return { tier: "high", reasons, reviewer: config.models.reviewer.high };
 }
 
 export function parseDiffInput(nameOnlyOutput: string, patch: string): DiffInput {
-  const paths = nameOnlyOutput.split('\0').filter((entry) => entry.length > 0)
-  const addedLines: Array<{ path: string; line: string }> = []
-  let currentPath = ''
-  for (const line of patch.split('\n')) {
-    if (line.startsWith('+++ ')) {
-      currentPath = line.startsWith('+++ b/') ? line.slice('+++ b/'.length) : ''
-    } else if (line.startsWith('+') && currentPath) {
-      addedLines.push({ path: currentPath, line: line.slice(1) })
+  const paths = nameOnlyOutput.split("\0").filter((entry) => entry.length > 0);
+  const addedLines: Array<{ path: string; line: string }> = [];
+  let currentPath = "";
+  for (const line of patch.split("\n")) {
+    if (line.startsWith("+++ ")) {
+      currentPath = line.startsWith("+++ b/") ? line.slice("+++ b/".length) : "";
+    } else if (line.startsWith("+") && currentPath) {
+      addedLines.push({ path: currentPath, line: line.slice(1) });
     }
   }
-  return { paths, addedLines }
+  return { paths, addedLines };
 }
 
 function readFlagValue(argv: readonly string[], flag: string): string | undefined {
-  const index = argv.indexOf(flag)
-  if (index === -1) return undefined
-  const value = argv[index + 1]
-  return value === undefined || value.startsWith('--') ? undefined : value
+  const index = argv.indexOf(flag);
+  if (index === -1) return undefined;
+  const value = argv[index + 1];
+  return value === undefined || value.startsWith("--") ? undefined : value;
 }
 
 async function gitDiff(repoRoot: string, args: readonly string[]): Promise<string> {
-  const output = await Bun.$`git -C ${repoRoot} diff --no-color --no-ext-diff ${args}`.nothrow().quiet()
+  const output = await Bun.$`git -C ${repoRoot} diff --no-color --no-ext-diff ${args}`
+    .nothrow()
+    .quiet();
   if (output.exitCode !== 0) {
-    throw new ForgeConfigError(`forge assess: git diff failed: ${output.stderr.toString().trim()}`)
+    throw new ForgeConfigError(`forge assess: git diff failed: ${output.stderr.toString().trim()}`);
   }
-  return output.stdout.toString()
+  return output.stdout.toString();
 }
 
 export async function run(argv: string[]): Promise<void> {
   try {
-    const base = readFlagValue(argv, '--base')
-    const head = readFlagValue(argv, '--head')
+    const base = readFlagValue(argv, "--base");
+    const head = readFlagValue(argv, "--head");
     if (!base || !head) {
-      console.error(USAGE)
-      process.exitCode = 2
-      return
+      console.error(USAGE);
+      process.exitCode = 2;
+      return;
     }
-    const repoRoot = await resolveRepoRoot()
-    if (!repoRoot) throw new ForgeConfigError('forge assess: not inside a git repository')
+    const repoRoot = await resolveRepoRoot();
+    if (!repoRoot) throw new ForgeConfigError("forge assess: not inside a git repository");
 
-    const { config } = await loadForgeConfigWithDefaults(repoRoot)
-    const nameOnly = await gitDiff(repoRoot, ['-z', '--name-only', base, head, '--'])
-    const patch = await gitDiff(repoRoot, ['-U0', base, head, '--'])
-    const classified = classifyDiff(parseDiffInput(nameOnly, patch), config)
-    const riskLine = readFlagValue(argv, '--risk-line')
-    const result = riskLine === undefined ? classified : applyRiskLine(classified, riskLine, config)
-    console.log(JSON.stringify(result, null, 2))
+    const { config } = await loadForgeConfigWithDefaults(repoRoot);
+    const nameOnly = await gitDiff(repoRoot, ["-z", "--name-only", base, head, "--"]);
+    const patch = await gitDiff(repoRoot, ["-U0", base, head, "--"]);
+    const classified = classifyDiff(parseDiffInput(nameOnly, patch), config);
+    const riskLine = readFlagValue(argv, "--risk-line");
+    const result =
+      riskLine === undefined ? classified : applyRiskLine(classified, riskLine, config);
+    console.log(JSON.stringify(result, null, 2));
   } catch (error: unknown) {
     if (error instanceof ForgeConfigError) {
-      console.error(error.message)
-      process.exitCode = 2
-      return
+      console.error(error.message);
+      process.exitCode = 2;
+      return;
     }
-    console.error(error)
-    process.exitCode = 3
+    console.error(error);
+    process.exitCode = 3;
   }
 }
 
 if (import.meta.main) {
-  await run(process.argv.slice(2))
+  await run(process.argv.slice(2));
 }

@@ -1,7 +1,7 @@
 name: Enhancement Request
 description: Suggest an improvement to an existing feature
-title: 'feat: '
-labels: ['enhancement', 'needs-triage']
+title: "feat: "
+labels: ["enhancement", "needs-triage"]
 
 body:
   - type: checkboxes

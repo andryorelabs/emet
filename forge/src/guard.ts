@@ -286,7 +286,7 @@ export function finalReportMarkerPath(
 
 /** Records that this session delivered its final report, so the `Stop` hook
  * stops blocking. CLI: `forge guard --mark-final-report <session_id>`. */
-export function writeFinalReportMarker(sessionId: string, stateDirectory?: string): string {
+function writeFinalReportMarker(sessionId: string, stateDirectory?: string): string {
   const markerPath = finalReportMarkerPath(sessionId, stateDirectory);
   mkdirSync(path.dirname(markerPath), { recursive: true });
   writeFileSync(markerPath, `${new Date().toISOString()}\n`);
@@ -400,7 +400,7 @@ export async function checkSessionStop(
   );
 }
 
-export type CompletionEventOwner = {
+type CompletionEventOwner = {
   readonly runId: string;
   readonly ticket: string;
   readonly branch: string | null;

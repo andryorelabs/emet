@@ -15,7 +15,7 @@ hand. Get it per ticket, from your own shell, before the `Agent` call:
 forge lock-reason --run <runId> --ticket <ticket>
 ```
 
-Paste its stdout verbatim. It has to be produced by *you*, in *your* cwd:
+Paste its stdout verbatim. It has to be produced by _you_, in _your_ cwd:
 the reason carries your `slug=` (the coordinator's own Claude Code project
 slug), and a worker running that same command inside its worktree would
 stamp the worktree's slug instead — under which no transcript exists, so

@@ -45,21 +45,21 @@ forge selftest
 - **`gh` CLI, authenticated** — only if the repo uses the `github` tracker.
 - **A Linear MCP server declared in `.mcp.json` (or at user scope)** — only
   if the repo uses the `linear` tracker. Declaration is what gets verified;
-  whether the connection is actually *authenticated* lives in Claude Code's
+  whether the connection is actually _authenticated_ lives in Claude Code's
   own credential store and can't be checked from here — if a run fails to
   read tickets, restart Claude Code and approve the connection.
 
 None of the above is ever installed or logged in on your behalf. What
-changed is *who checks it and how hard*:
+changed is _who checks it and how hard_:
 
-| | `forge init` | `forge doctor` | `forge preflight` |
-|---|---|---|---|
-| plugin missing/disabled | prints the install command | reports it (once, fleet-wide) | **blocks dispatch** |
-| `forge-worker`/`forge-reviewer` agent missing | — | reports it (once, fleet-wide) | **blocks dispatch** |
-| `gh` missing/unauthenticated (tracker: `github`) | prints what to run | reports it | **blocks dispatch** |
-| Linear server undeclared (tracker: `linear`) | prints a note | reports it | **blocks dispatch** |
-| `claude` not on PATH, or a probe timing out | prints a note | reports it | **warns, never blocks** — this is "couldn't check", not "verified broken" |
-| a flag forge relies on missing from `--help` | — | reports it | — |
+|                                                  | `forge init`               | `forge doctor`                | `forge preflight`                                                         |
+| ------------------------------------------------ | -------------------------- | ----------------------------- | ------------------------------------------------------------------------- |
+| plugin missing/disabled                          | prints the install command | reports it (once, fleet-wide) | **blocks dispatch**                                                       |
+| `forge-worker`/`forge-reviewer` agent missing    | —                          | reports it (once, fleet-wide) | **blocks dispatch**                                                       |
+| `gh` missing/unauthenticated (tracker: `github`) | prints what to run         | reports it                    | **blocks dispatch**                                                       |
+| Linear server undeclared (tracker: `linear`)     | prints a note              | reports it                    | **blocks dispatch**                                                       |
+| `claude` not on PATH, or a probe timing out      | prints a note              | reports it                    | **warns, never blocks** — this is "couldn't check", not "verified broken" |
+| a flag forge relies on missing from `--help`     | —                          | reports it                    | —                                                                         |
 
 `forge doctor` checks the flags themselves, not only that the binaries exist.
 It reads `--help` for `gh issue view`/`gh repo view` (`--json`),
@@ -142,6 +142,7 @@ what happens next (both validated by `forge preflight`):
   It launches only when the PR merged and nothing was flagged, and it skips
   if a `forge-<spec-id>-*` session is already live (`claude agents --json`).
   If the launch fails, it falls back to printing `/forge --dispatch <spec-id>`.
+
 - `handoff.launcher` (default `auto`): also open the wave in an Orca tab
   running `claude attach`. `auto` asks the Orca runtime (`orca status`), so it
   works from `claude --bg` sessions too, which have no `TERM_PROGRAM`; `orca`
@@ -152,6 +153,7 @@ what happens next (both validated by `forge preflight`):
   check, `claude --bg`, tab) and prints
   `{ name, id, attach, orcaTab: { opened, reason } }`. Use it, not a bare
   `claude --bg`, whenever you want a wave in another session by hand.
+
 - `handoff.permissionMode` (default `bypassPermissions`): permission mode of
   the chained session. Not inherited from the launching session, because
   `auto` mode's classifier can deny a step such as `gh pr merge` and leave a
@@ -167,16 +169,16 @@ prints the decision. Run records live under `.forge/runs/<run-id>/` and the
 review ledger under `.forge/review/`, in the main checkout, not in a worker's
 worktree. Every command prints its usage with `--help`.
 
-| Step | Command | What it enforces |
-|---|---|---|
-| Before approval | `forge validate --file <plan.json>` | Every `S#` is covered by at least one ticket and has an acceptance scenario. Every ticket covers at least one `S#`. Edit surfaces are disjoint within a wave. No dependency cycles. `forge preflight` runs it again on the approved plan. |
-| Approval | `forge approve --run <id> --spec <file>` | Writes `approval.json` with the spec and ticket-list hashes. Dispatch refuses if either changed afterwards (`--check`). |
-| Ticket creation | `forge materialize-log --run <id> --record/--lookup` | Saves each created ticket's ID as soon as it exists, so an interrupted run never creates duplicates. |
-| Worker done | `forge results --run <id> --write/--read <ticket>` | Workers write a local result file (`DONE`, `DONE_WITH_CONCERNS`, `BLOCKED` or `NEEDS_CONTEXT`, plus a `Risk:` line). Only the coordinator writes to the tracker. |
-| After each worker | `forge verify <ticket> --run <id>` | Checks that commits exist beyond the dispatch baseline, every changed path is inside the ticket's edit surfaces, the handoff note passes `handoff --check`, and `commands.workerScopedSuite` passes. Review and merge refuse a ticket without a pass record. |
-| Review input | `forge review-package <base> <head> --out <file>` | Bundles the diff for the reviewer, who receives it as a file path. Exits 3 if the range is empty or not a descendant of base. |
-| Review | `forge review --ticket <t> --findings <file>` | Keeps the findings ledger and enforces triage order (`intent_gap` → `bad_plan` → `patch` → `defer`) and the round cap. `--escalate` moves to the next model tier. `--rule`/`--rulings` record and list the "Rulings I made" for the report and the PR body. |
-| Merge or chain | `forge gate <ticket> --tier … --ci … --integration …` | Prints `merge`, `hold`, `chain`, `stop` or `defer` as JSON with its reasons. It reads the verify record, the open findings, the risk tier, CI, the integration suite and the budgets. |
+| Step              | Command                                               | What it enforces                                                                                                                                                                                                                                             |
+| ----------------- | ----------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Before approval   | `forge validate --file <plan.json>`                   | Every `S#` is covered by at least one ticket and has an acceptance scenario. Every ticket covers at least one `S#`. Edit surfaces are disjoint within a wave. No dependency cycles. `forge preflight` runs it again on the approved plan.                    |
+| Approval          | `forge approve --run <id> --spec <file>`              | Writes `approval.json` with the spec and ticket-list hashes. Dispatch refuses if either changed afterwards (`--check`).                                                                                                                                      |
+| Ticket creation   | `forge materialize-log --run <id> --record/--lookup`  | Saves each created ticket's ID as soon as it exists, so an interrupted run never creates duplicates.                                                                                                                                                         |
+| Worker done       | `forge results --run <id> --write/--read <ticket>`    | Workers write a local result file (`DONE`, `DONE_WITH_CONCERNS`, `BLOCKED` or `NEEDS_CONTEXT`, plus a `Risk:` line). Only the coordinator writes to the tracker.                                                                                             |
+| After each worker | `forge verify <ticket> --run <id>`                    | Checks that commits exist beyond the dispatch baseline, every changed path is inside the ticket's edit surfaces, the handoff note passes `handoff --check`, and `commands.workerScopedSuite` passes. Review and merge refuse a ticket without a pass record. |
+| Review input      | `forge review-package <base> <head> --out <file>`     | Bundles the diff for the reviewer, who receives it as a file path. Exits 3 if the range is empty or not a descendant of base.                                                                                                                                |
+| Review            | `forge review --ticket <t> --findings <file>`         | Keeps the findings ledger and enforces triage order (`intent_gap` → `bad_plan` → `patch` → `defer`) and the round cap. `--escalate` moves to the next model tier. `--rule`/`--rulings` record and list the "Rulings I made" for the report and the PR body.  |
+| Merge or chain    | `forge gate <ticket> --tier … --ci … --integration …` | Prints `merge`, `hold`, `chain`, `stop` or `defer` as JSON with its reasons. It reads the verify record, the open findings, the risk tier, CI, the integration suite and the budgets.                                                                        |
 
 After a wave's branches are merged together, `commands.fullSuite` runs once
 on the integration branch. A red run blocks the PR and `autoChain`. The gate
@@ -246,15 +248,15 @@ final report.
 `/forge` picks a model and a reasoning effort per role automatically —
 nothing to switch by hand mid-run:
 
-| Role | Model | Effort | Set by |
-|---|---|---|---|
-| Planning (Phases 1–4) | Opus, via `opusplan` | your session's | you, once |
-| Coordinator, Phase 5 on | Sonnet, via `opusplan` | your session's | you, once |
-| Workers (Phase 7) | Sonnet | `medium` | `agents/forge-worker.md`, or `models.worker` |
-| Review, `passive` tier (docs-only diff) | none | — | `forge assess` |
-| Review, `medium` tier (ordinary source change) | Opus | `medium` | `models.reviewer.medium` |
-| Review, `high` tier (risky paths or sinks) | Opus | `medium` by default | `models.reviewer.high` |
-| CI-log triage (Phase 8) | Haiku | — | `models.triage` |
+| Role                                           | Model                  | Effort              | Set by                                       |
+| ---------------------------------------------- | ---------------------- | ------------------- | -------------------------------------------- |
+| Planning (Phases 1–4)                          | Opus, via `opusplan`   | your session's      | you, once                                    |
+| Coordinator, Phase 5 on                        | Sonnet, via `opusplan` | your session's      | you, once                                    |
+| Workers (Phase 7)                              | Sonnet                 | `medium`            | `agents/forge-worker.md`, or `models.worker` |
+| Review, `passive` tier (docs-only diff)        | none                   | —                   | `forge assess`                               |
+| Review, `medium` tier (ordinary source change) | Opus                   | `medium`            | `models.reviewer.medium`                     |
+| Review, `high` tier (risky paths or sinks)     | Opus                   | `medium` by default | `models.reviewer.high`                       |
+| CI-log triage (Phase 8)                        | Haiku                  | —                   | `models.triage`                              |
 
 The two agent definitions (installed by `install.sh` to `~/.claude/agents/`)
 pin their own `model`/`effort` in frontmatter, so the coordinator's own

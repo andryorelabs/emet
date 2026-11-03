@@ -1,12 +1,12 @@
-import { optionalProperty } from './optional'
+import { optionalProperty } from "./optional";
 import {
   ForgeConfigError,
   loadForgeConfigWithDefaults,
   resolveRepoRoot,
   type HandoffLauncher,
   type HandoffPermissionMode,
-} from './config'
-import { errorMessage } from './narrow'
+} from "./config";
+import { errorMessage } from "./narrow";
 
 /**
  * Launches one wave of a run as a background `claude --bg` session and, per
@@ -29,79 +29,79 @@ import { errorMessage } from './narrow'
  */
 
 export type CommandResult = {
-  readonly exitCode: number
-  readonly stdout: string
-  readonly stderr: string
-}
+  readonly exitCode: number;
+  readonly stdout: string;
+  readonly stderr: string;
+};
 
 export type CommandRunner = (
   command: readonly string[],
   options?: { readonly cwd?: string },
-) => Promise<CommandResult>
+) => Promise<CommandResult>;
 
 export type LaunchRequest = {
-  readonly specId: string
-  readonly wave: number
-  readonly repoRoot: string
-  readonly launcher: HandoffLauncher
-  readonly permissionMode: HandoffPermissionMode
-}
+  readonly specId: string;
+  readonly wave: number;
+  readonly repoRoot: string;
+  readonly launcher: HandoffLauncher;
+  readonly permissionMode: HandoffPermissionMode;
+};
 
-export type OrcaTabOutcome = {
-  readonly opened: boolean
-  readonly reason: string
-}
+type OrcaTabOutcome = {
+  readonly opened: boolean;
+  readonly reason: string;
+};
 
 export type LaunchOutcome = {
-  readonly name: string
-  readonly id: string | null
-  readonly attach: string
-  readonly orcaTab: OrcaTabOutcome
-}
+  readonly name: string;
+  readonly id: string | null;
+  readonly attach: string;
+  readonly orcaTab: OrcaTabOutcome;
+};
 
-type AgentRow = { readonly id?: string | null; readonly name?: string | null }
+type AgentRow = { readonly id?: string | null; readonly name?: string | null };
 
-const LAUNCH_TIMEOUT_MS = 15_000
+const LAUNCH_TIMEOUT_MS = 15_000;
 
-export const defaultRunner: CommandRunner = async (command, options) => {
+const defaultRunner: CommandRunner = async (command, options) => {
   try {
     const child = Bun.spawn([...command], {
-      ...optionalProperty('cwd', options?.cwd),
-      stdout: 'pipe',
-      stderr: 'pipe',
+      ...optionalProperty("cwd", options?.cwd),
+      stdout: "pipe",
+      stderr: "pipe",
       timeout: LAUNCH_TIMEOUT_MS,
-    })
+    });
     const [stdout, stderr, exitCode] = await Promise.all([
       new Response(child.stdout).text(),
       new Response(child.stderr).text(),
       child.exited,
-    ])
-    return { exitCode, stdout, stderr }
+    ]);
+    return { exitCode, stdout, stderr };
   } catch (error: unknown) {
-    return { exitCode: 127, stdout: '', stderr: errorMessage(error) }
+    return { exitCode: 127, stdout: "", stderr: errorMessage(error) };
   }
-}
+};
 
 export function waveSessionName(specId: string, wave: number): string {
-  return `forge-${specId}-w${wave}`
+  return `forge-${specId}-w${wave}`;
 }
 
 function parseAgentRows(stdout: string): AgentRow[] {
-  const parsed: unknown = JSON.parse(stdout)
+  const parsed: unknown = JSON.parse(stdout);
   if (!Array.isArray(parsed)) {
-    throw new Error('`claude agents --json` did not return an array')
+    throw new Error("`claude agents --json` did not return an array");
   }
-  return parsed
+  return parsed;
 }
 
 async function listAgents(runner: CommandRunner): Promise<AgentRow[]> {
-  const result = await runner(['claude', 'agents', '--json'])
+  const result = await runner(["claude", "agents", "--json"]);
   if (result.exitCode !== 0) {
     throw new Error(
       `\`claude agents --json\` failed (exit ${result.exitCode}): ${result.stderr.trim()}`,
-    )
+    );
   }
-  return parseAgentRows(result.stdout)
+  return parseAgentRows(result.stdout);
 }
 
 /**
@@ -111,19 +111,15 @@ async function listAgents(runner: CommandRunner): Promise<AgentRow[]> {
  * ignored so wave n can launch wave n+1 from inside its own session; a
  * session whose wave cannot be read still blocks.
  */
-function findBlockingSessions(
-  rows: readonly AgentRow[],
-  specId: string,
-  wave: number,
-): string[] {
-  const prefix = `forge-${specId}-`
+function findBlockingSessions(rows: readonly AgentRow[], specId: string, wave: number): string[] {
+  const prefix = `forge-${specId}-`;
   return rows
-    .map((row) => row.name ?? '')
+    .map((row) => row.name ?? "")
     .filter((name) => name.startsWith(prefix))
     .filter((name) => {
-      const match = /^w(\d+)$/.exec(name.slice(prefix.length))
-      return !match || Number(match[1]) >= wave
-    })
+      const match = /^w(\d+)$/.exec(name.slice(prefix.length));
+      return !match || Number(match[1]) >= wave;
+    });
 }
 
 /**
@@ -135,28 +131,28 @@ async function shouldOpenOrcaTab(
   launcher: HandoffLauncher,
   runner: CommandRunner,
 ): Promise<{ readonly attempt: boolean; readonly reason: string }> {
-  if (launcher === 'bg') {
-    return { attempt: false, reason: 'handoff.launcher is "bg"' }
+  if (launcher === "bg") {
+    return { attempt: false, reason: 'handoff.launcher is "bg"' };
   }
-  if (launcher === 'orca') {
-    return { attempt: true, reason: 'handoff.launcher is "orca"' }
+  if (launcher === "orca") {
+    return { attempt: true, reason: 'handoff.launcher is "orca"' };
   }
-  const status = await runner(['orca', 'status', '--json'])
+  const status = await runner(["orca", "status", "--json"]);
   if (status.exitCode !== 0) {
     return {
       attempt: false,
       reason: `orca CLI unavailable (exit ${status.exitCode})`,
-    }
+    };
   }
   try {
     const parsed: {
-      result?: { runtime?: { reachable?: unknown } }
-    } = JSON.parse(status.stdout)
+      result?: { runtime?: { reachable?: unknown } };
+    } = JSON.parse(status.stdout);
     return parsed.result?.runtime?.reachable === true
-      ? { attempt: true, reason: 'orca runtime reachable' }
-      : { attempt: false, reason: 'orca runtime not reachable' }
+      ? { attempt: true, reason: "orca runtime reachable" }
+      : { attempt: false, reason: "orca runtime not reachable" };
   } catch {
-    return { attempt: false, reason: 'orca status output was not JSON' }
+    return { attempt: false, reason: "orca status output was not JSON" };
   }
 }
 
@@ -176,30 +172,30 @@ async function openOrcaTab(
   runner: CommandRunner,
 ): Promise<OrcaTabOutcome> {
   const result = await runner([
-    'orca',
-    'terminal',
-    'create',
-    '--worktree',
+    "orca",
+    "terminal",
+    "create",
+    "--worktree",
     `path:${request.repoRoot}`,
-    '--title',
+    "--title",
     name,
-    '--command',
-    `bash -c '${Bun.which('claude') ?? 'claude'} attach ${name}'`,
-    '--json',
-  ])
+    "--command",
+    `bash -c '${Bun.which("claude") ?? "claude"} attach ${name}'`,
+    "--json",
+  ]);
   if (result.exitCode !== 0) {
     return {
       opened: false,
       reason: `orca terminal create failed (exit ${result.exitCode}): ${result.stderr.trim()}`,
-    }
+    };
   }
   try {
-    const parsed: { ok?: unknown } = JSON.parse(result.stdout)
+    const parsed: { ok?: unknown } = JSON.parse(result.stdout);
     return parsed.ok === true
-      ? { opened: true, reason: 'orca tab created' }
-      : { opened: false, reason: 'orca terminal create returned ok=false' }
+      ? { opened: true, reason: "orca tab created" }
+      : { opened: false, reason: "orca terminal create returned ok=false" };
   } catch {
-    return { opened: false, reason: 'orca terminal create output was not JSON' }
+    return { opened: false, reason: "orca terminal create output was not JSON" };
   }
 }
 
@@ -207,83 +203,76 @@ export async function launchWave(
   request: LaunchRequest,
   runner: CommandRunner = defaultRunner,
 ): Promise<LaunchOutcome> {
-  const name = waveSessionName(request.specId, request.wave)
+  const name = waveSessionName(request.specId, request.wave);
 
-  const existing = findBlockingSessions(
-    await listAgents(runner),
-    request.specId,
-    request.wave,
-  )
+  const existing = findBlockingSessions(await listAgents(runner), request.specId, request.wave);
   if (existing.length > 0) {
     throw new ForgeConfigError(
-      `forge launch: a session for spec ${request.specId} already exists (${existing.join(', ')}) — not launching a second one.`,
-    )
+      `forge launch: a session for spec ${request.specId} already exists (${existing.join(", ")}) — not launching a second one.`,
+    );
   }
 
   const launched = await runner(
     [
-      'claude',
-      '--bg',
-      '--name',
+      "claude",
+      "--bg",
+      "--name",
       name,
-      '--permission-mode',
+      "--permission-mode",
       request.permissionMode,
       `/forge --dispatch ${request.specId}`,
     ],
     { cwd: request.repoRoot },
-  )
+  );
   if (launched.exitCode !== 0) {
     throw new Error(
       `forge launch: \`claude --bg\` failed (exit ${launched.exitCode}): ${(launched.stderr || launched.stdout).trim()}`,
-    )
+    );
   }
 
-  const started = (await listAgents(runner)).find((row) => row.name === name)
+  const started = (await listAgents(runner)).find((row) => row.name === name);
   if (!started) {
     throw new Error(
       `forge launch: \`claude --bg\` exited 0 but no session named ${name} appears in \`claude agents --json\`.`,
-    )
+    );
   }
 
-  const decision = await shouldOpenOrcaTab(request.launcher, runner)
+  const decision = await shouldOpenOrcaTab(request.launcher, runner);
   const orcaTab = decision.attempt
     ? await openOrcaTab(request, name, runner)
-    : { opened: false, reason: `skipped: ${decision.reason}` }
+    : { opened: false, reason: `skipped: ${decision.reason}` };
 
-  return { name, id: started.id ?? null, attach: `claude attach ${name}`, orcaTab }
+  return { name, id: started.id ?? null, attach: `claude attach ${name}`, orcaTab };
 }
 
-function readFlagValue(
-  argv: readonly string[],
-  flag: string,
-): string | undefined {
-  const index = argv.indexOf(flag)
-  if (index === -1) return undefined
-  return argv[index + 1]
+function readFlagValue(argv: readonly string[], flag: string): string | undefined {
+  const index = argv.indexOf(flag);
+  if (index === -1) return undefined;
+  return argv[index + 1];
 }
 
-const USAGE = 'usage: forge launch <spec-id> --wave <n>'
+const USAGE = "usage: forge launch <spec-id> --wave <n>";
 
 export async function run(argv: string[]): Promise<void> {
   try {
-    if (argv.length === 0 || argv.includes('--help')) {
-      console.error(USAGE)
-      process.exitCode = 2
-      return
+    if (argv.length === 0 || argv.includes("--help")) {
+      console.error(USAGE);
+      process.exitCode = 2;
+      return;
     }
 
-    const specId = argv[0]
-    const waveRaw = readFlagValue(argv, '--wave')
-    const wave = Number(waveRaw)
-    if (!specId || specId.startsWith('--') || !Number.isInteger(wave) || wave < 1) {
-      throw new ForgeConfigError(`forge launch: ${USAGE}`)
+    const specId = argv[0];
+    const waveRaw = readFlagValue(argv, "--wave");
+    const wave = Number(waveRaw);
+    if (!specId || specId.startsWith("--") || !Number.isInteger(wave) || wave < 1) {
+      throw new ForgeConfigError(`forge launch: ${USAGE}`);
     }
 
-    const repoRoot = await resolveRepoRoot()
+    const repoRoot = await resolveRepoRoot();
     if (!repoRoot) {
-      throw new ForgeConfigError('forge launch: not inside a git repository')
+      throw new ForgeConfigError("forge launch: not inside a git repository");
     }
-    const { config } = await loadForgeConfigWithDefaults(repoRoot)
+    const { config } = await loadForgeConfigWithDefaults(repoRoot);
 
     const outcome = await launchWave({
       specId,
@@ -291,19 +280,19 @@ export async function run(argv: string[]): Promise<void> {
       repoRoot,
       launcher: config.handoff.launcher,
       permissionMode: config.handoff.permissionMode,
-    })
-    console.log(JSON.stringify(outcome))
+    });
+    console.log(JSON.stringify(outcome));
   } catch (error: unknown) {
     if (error instanceof ForgeConfigError) {
-      console.error(error.message)
-      process.exitCode = 2
-      return
+      console.error(error.message);
+      process.exitCode = 2;
+      return;
     }
-    console.error(errorMessage(error))
-    process.exitCode = 1
+    console.error(errorMessage(error));
+    process.exitCode = 1;
   }
 }
 
 if (import.meta.main) {
-  await run(process.argv.slice(2))
+  await run(process.argv.slice(2));
 }

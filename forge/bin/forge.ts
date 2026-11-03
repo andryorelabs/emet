@@ -51,151 +51,151 @@ commands:
   metrics   [--run <id>]
   guard     — Claude Code PreToolUse hook (reads hook JSON on stdin); see src/guard.ts
   selftest  — run this CLI's own unit tests
-`
+`;
 
-const EXIT_CONFIG_OR_USAGE_ERROR = 2
-const EXIT_INTERNAL_ERROR = 3
+const EXIT_CONFIG_OR_USAGE_ERROR = 2;
+const EXIT_INTERNAL_ERROR = 3;
 
 async function main(): Promise<void> {
-  const [command, ...rest] = process.argv.slice(2)
+  const [command, ...rest] = process.argv.slice(2);
 
   if (!command) {
-    console.error(USAGE)
-    process.exitCode = EXIT_CONFIG_OR_USAGE_ERROR
-    return
+    console.error(USAGE);
+    process.exitCode = EXIT_CONFIG_OR_USAGE_ERROR;
+    return;
   }
 
   switch (command) {
-    case 'init': {
-      const { run } = await import('../src/init')
-      await run(rest)
-      return
+    case "init": {
+      const { run } = await import("../src/init");
+      await run(rest);
+      return;
     }
-    case 'doctor': {
-      const { run } = await import('../src/doctor')
-      await run(rest)
-      return
+    case "doctor": {
+      const { run } = await import("../src/doctor");
+      await run(rest);
+      return;
     }
-    case 'preflight': {
-      const { run } = await import('../src/preflight')
-      await run(rest)
-      return
+    case "preflight": {
+      const { run } = await import("../src/preflight");
+      await run(rest);
+      return;
     }
-    case 'claims': {
-      const { run } = await import('../src/claims')
-      await run(rest)
-      return
+    case "claims": {
+      const { run } = await import("../src/claims");
+      await run(rest);
+      return;
     }
-    case 'slots': {
-      const { run } = await import('../src/slots')
-      await run(rest)
-      return
+    case "slots": {
+      const { run } = await import("../src/slots");
+      await run(rest);
+      return;
     }
-    case 'cleanup': {
-      const { run } = await import('../src/cleanup')
-      await run(rest)
-      return
+    case "cleanup": {
+      const { run } = await import("../src/cleanup");
+      await run(rest);
+      return;
     }
-    case 'usage': {
-      const { run } = await import('../src/usage')
-      await run(rest)
-      return
+    case "usage": {
+      const { run } = await import("../src/usage");
+      await run(rest);
+      return;
     }
-    case 'handoff': {
-      const { run } = await import('../src/handoff')
-      await run(rest)
-      return
+    case "handoff": {
+      const { run } = await import("../src/handoff");
+      await run(rest);
+      return;
     }
-    case 'launch': {
-      const { run } = await import('../src/launch')
-      await run(rest)
-      return
+    case "launch": {
+      const { run } = await import("../src/launch");
+      await run(rest);
+      return;
     }
-    case 'lock-reason': {
-      const { run } = await import('../src/lockreason')
-      await run(rest)
-      return
+    case "lock-reason": {
+      const { run } = await import("../src/lockreason");
+      await run(rest);
+      return;
     }
-    case 'assess': {
-      const { run } = await import('../src/assess')
-      await run(rest)
-      return
+    case "assess": {
+      const { run } = await import("../src/assess");
+      await run(rest);
+      return;
     }
-    case 'status': {
-      const { run } = await import('../src/status')
-      await run(rest)
-      return
+    case "status": {
+      const { run } = await import("../src/status");
+      await run(rest);
+      return;
     }
-    case 'surfaces': {
-      const { run } = await import('../src/surfaces')
-      await run(rest)
-      return
+    case "surfaces": {
+      const { run } = await import("../src/surfaces");
+      await run(rest);
+      return;
     }
-    case 'verify': {
-      const { run } = await import('../src/verify')
-      await run(rest)
-      return
+    case "verify": {
+      const { run } = await import("../src/verify");
+      await run(rest);
+      return;
     }
-    case 'review-package': {
-      const { run } = await import('../src/reviewpackage')
-      await run(rest)
-      return
+    case "review-package": {
+      const { run } = await import("../src/reviewpackage");
+      await run(rest);
+      return;
     }
-    case 'review': {
-      const { run } = await import('../src/review')
-      await run(rest)
-      return
+    case "review": {
+      const { run } = await import("../src/review");
+      await run(rest);
+      return;
     }
-    case 'approve': {
-      const { run } = await import('../src/approve')
-      await run(rest)
-      return
+    case "approve": {
+      const { run } = await import("../src/approve");
+      await run(rest);
+      return;
     }
-    case 'results': {
-      const { run } = await import('../src/results')
-      await run(rest)
-      return
+    case "results": {
+      const { run } = await import("../src/results");
+      await run(rest);
+      return;
     }
-    case 'materialize-log': {
-      const { run } = await import('../src/materializelog')
-      await run(rest)
-      return
+    case "materialize-log": {
+      const { run } = await import("../src/materializelog");
+      await run(rest);
+      return;
     }
-    case 'gate': {
-      const { run } = await import('../src/gate')
-      await run(rest)
-      return
+    case "gate": {
+      const { run } = await import("../src/gate");
+      await run(rest);
+      return;
     }
-    case 'validate': {
-      const { run } = await import('../src/validate')
-      await run(rest)
-      return
+    case "validate": {
+      const { run } = await import("../src/validate");
+      await run(rest);
+      return;
     }
-    case 'spec-merge': {
-      const { run } = await import('../src/specmerge')
-      await run(rest)
-      return
+    case "spec-merge": {
+      const { run } = await import("../src/specmerge");
+      await run(rest);
+      return;
     }
-    case 'map': {
-      const { run } = await import('../src/map')
-      await run(rest)
-      return
+    case "map": {
+      const { run } = await import("../src/map");
+      await run(rest);
+      return;
     }
-    case 'metrics': {
-      const { run } = await import('../src/metrics')
-      await run(rest)
-      return
+    case "metrics": {
+      const { run } = await import("../src/metrics");
+      await run(rest);
+      return;
     }
-    case 'guard': {
-      const { run } = await import('../src/guard')
-      await run()
-      return
+    case "guard": {
+      const { run } = await import("../src/guard");
+      await run();
+      return;
     }
-    case 'selftest': {
-      const cliRoot = new URL('..', import.meta.url).pathname
-      const tsconfigPath = new URL('../tsconfig.json', import.meta.url).pathname
-      const bunfigPath = new URL('../bunfig.toml', import.meta.url).pathname
-      const testRoot = new URL('../src', import.meta.url).pathname
+    case "selftest": {
+      const cliRoot = new URL("..", import.meta.url).pathname;
+      const tsconfigPath = new URL("../tsconfig.json", import.meta.url).pathname;
+      const bunfigPath = new URL("../bunfig.toml", import.meta.url).pathname;
+      const testRoot = new URL("../src", import.meta.url).pathname;
 
       /**
        * `tsc --noEmit` first — this CLI's own tsconfig sets `strict: true`,
@@ -205,37 +205,36 @@ async function main(): Promise<void> {
        * `typescript` devDependency `bun install` puts in this tree's own
        * node_modules rather than requiring a global `tsc`.
        */
-      const typecheck = Bun.spawn(
-        ['bunx', 'tsc', '--noEmit', '-p', tsconfigPath],
-        { cwd: cliRoot, stdio: ['inherit', 'inherit', 'inherit'] },
-      )
-      const typecheckExitCode = await typecheck.exited
+      const typecheck = Bun.spawn(["bunx", "tsc", "--noEmit", "-p", tsconfigPath], {
+        cwd: cliRoot,
+        stdio: ["inherit", "inherit", "inherit"],
+      });
+      const typecheckExitCode = await typecheck.exited;
 
-      const test = Bun.spawn(
-        ['bun', 'test', '--config', bunfigPath, testRoot],
-        { stdio: ['inherit', 'inherit', 'inherit'] },
-      )
-      const testExitCode = await test.exited
+      const test = Bun.spawn(["bun", "test", "--config", bunfigPath, testRoot], {
+        stdio: ["inherit", "inherit", "inherit"],
+      });
+      const testExitCode = await test.exited;
 
-      process.exitCode = typecheckExitCode !== 0 ? typecheckExitCode : testExitCode
-      return
+      process.exitCode = typecheckExitCode !== 0 ? typecheckExitCode : testExitCode;
+      return;
     }
-    case '--help':
-    case '-h':
-    case 'help': {
-      console.log(USAGE)
-      return
+    case "--help":
+    case "-h":
+    case "help": {
+      console.log(USAGE);
+      return;
     }
     default: {
-      console.error(`forge: unknown command "${command}"\n\n${USAGE}`)
-      process.exitCode = EXIT_CONFIG_OR_USAGE_ERROR
+      console.error(`forge: unknown command "${command}"\n\n${USAGE}`);
+      process.exitCode = EXIT_CONFIG_OR_USAGE_ERROR;
     }
   }
 }
 
 try {
-  await main()
+  await main();
 } catch (error: unknown) {
-  console.error(error)
-  process.exitCode = EXIT_INTERNAL_ERROR
+  console.error(error);
+  process.exitCode = EXIT_INTERNAL_ERROR;
 }

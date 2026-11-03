@@ -1,14 +1,19 @@
-import os from 'node:os'
-import path from 'node:path'
+import os from "node:os";
+import path from "node:path";
 
-import { DEFAULT_FORGE_CONFIG, resolveRepoRoot, type ForgeConfig, type TrackerKind } from './config'
+import {
+  DEFAULT_FORGE_CONFIG,
+  resolveRepoRoot,
+  type ForgeConfig,
+  type TrackerKind,
+} from "./config";
 import {
   checkDependencies,
   createDependencyProbes,
   findLinearMcpEntry,
   formatDependencyCheck,
-} from './dependencies'
-import { isObject } from './narrow'
+} from "./dependencies";
+import { isObject } from "./narrow";
 
 /**
  * `forge init` — generates a repo's `forge.config.json` plus its
@@ -29,16 +34,9 @@ import { isObject } from './narrow'
  * everything inferable, mark everything else, never guess silently.
  */
 
-export type PackageManagerKind =
-  | 'bun'
-  | 'pnpm'
-  | 'npm'
-  | 'go'
-  | 'cargo'
-  | 'python'
-  | 'unknown'
+export type PackageManagerKind = "bun" | "pnpm" | "npm" | "go" | "cargo" | "python" | "unknown";
 
-export type { TrackerKind }
+export type { TrackerKind };
 
 /**
  * Lockfile-based detection first (this repo's own convention, see the global
@@ -50,23 +48,16 @@ export type { TrackerKind }
  * `bun` would produce a nonsensical `bun run <script>` in the generated
  * `commands.selfCheck`.
  */
-export async function detectPackageManager(
-  repoRoot: string,
-): Promise<PackageManagerKind> {
-  if (await Bun.file(path.join(repoRoot, 'bun.lock')).exists()) return 'bun'
-  if (await Bun.file(path.join(repoRoot, 'bun.lockb')).exists()) return 'bun'
-  if (await Bun.file(path.join(repoRoot, 'pnpm-lock.yaml')).exists())
-    return 'pnpm'
-  if (await Bun.file(path.join(repoRoot, 'package-lock.json')).exists())
-    return 'npm'
-  if (await Bun.file(path.join(repoRoot, 'package.json')).exists())
-    return 'bun'
-  if (await Bun.file(path.join(repoRoot, 'go.mod')).exists()) return 'go'
-  if (await Bun.file(path.join(repoRoot, 'Cargo.toml')).exists())
-    return 'cargo'
-  if (await Bun.file(path.join(repoRoot, 'pyproject.toml')).exists())
-    return 'python'
-  return 'unknown'
+export async function detectPackageManager(repoRoot: string): Promise<PackageManagerKind> {
+  if (await Bun.file(path.join(repoRoot, "bun.lock")).exists()) return "bun";
+  if (await Bun.file(path.join(repoRoot, "bun.lockb")).exists()) return "bun";
+  if (await Bun.file(path.join(repoRoot, "pnpm-lock.yaml")).exists()) return "pnpm";
+  if (await Bun.file(path.join(repoRoot, "package-lock.json")).exists()) return "npm";
+  if (await Bun.file(path.join(repoRoot, "package.json")).exists()) return "bun";
+  if (await Bun.file(path.join(repoRoot, "go.mod")).exists()) return "go";
+  if (await Bun.file(path.join(repoRoot, "Cargo.toml")).exists()) return "cargo";
+  if (await Bun.file(path.join(repoRoot, "pyproject.toml")).exists()) return "python";
+  return "unknown";
 }
 
 /**
@@ -78,14 +69,13 @@ export async function detectPackageManager(
  * explicitly and say so.
  */
 export async function detectTrunk(repoRoot: string): Promise<string | null> {
-  const result =
-    await Bun.$`git -C ${repoRoot} symbolic-ref --short refs/remotes/origin/HEAD`
-      .nothrow()
-      .quiet()
-  if (result.exitCode !== 0) return null
-  const ref = result.stdout.toString().trim()
-  const prefix = 'origin/'
-  return ref.startsWith(prefix) ? ref.slice(prefix.length) : ref || null
+  const result = await Bun.$`git -C ${repoRoot} symbolic-ref --short refs/remotes/origin/HEAD`
+    .nothrow()
+    .quiet();
+  if (result.exitCode !== 0) return null;
+  const ref = result.stdout.toString().trim();
+  const prefix = "origin/";
+  return ref.startsWith(prefix) ? ref.slice(prefix.length) : ref || null;
 }
 
 /**
@@ -97,15 +87,15 @@ export async function detectTrunk(repoRoot: string): Promise<string | null> {
  * disagree about what counts as a Linear entry in the first place.
  */
 export async function hasLinearMcpServer(repoRoot: string): Promise<boolean> {
-  const file = Bun.file(path.join(repoRoot, '.mcp.json'))
-  if (!(await file.exists())) return false
-  let parsed: unknown
+  const file = Bun.file(path.join(repoRoot, ".mcp.json"));
+  if (!(await file.exists())) return false;
+  let parsed: unknown;
   try {
-    parsed = await file.json()
+    parsed = await file.json();
   } catch {
-    return false
+    return false;
   }
-  return findLinearMcpEntry(parsed).kind !== 'absent'
+  return findLinearMcpEntry(parsed).kind !== "absent";
 }
 
 /**
@@ -118,23 +108,23 @@ export async function hasLinearMcpServer(repoRoot: string): Promise<boolean> {
  * outright (no remote, `gh` not authenticated) also reads as `false` here,
  * never thrown — this is a soft detection signal, not a required dependency.
  */
-export async function hasGithubIssueUsage(repoRoot: string): Promise<boolean> {
+async function hasGithubIssueUsage(repoRoot: string): Promise<boolean> {
   const view = await Bun.$`gh repo view --json hasIssuesEnabled -q .hasIssuesEnabled`
     .cwd(repoRoot)
     .nothrow()
-    .quiet()
-  if (view.exitCode !== 0) return false
-  if (view.stdout.toString().trim() !== 'true') return false
+    .quiet();
+  if (view.exitCode !== 0) return false;
+  if (view.stdout.toString().trim() !== "true") return false;
   const list = await Bun.$`gh issue list --state all --limit 1 --json number`
     .cwd(repoRoot)
     .nothrow()
-    .quiet()
-  if (list.exitCode !== 0) return false
+    .quiet();
+  if (list.exitCode !== 0) return false;
   try {
-    const issues: unknown[] = JSON.parse(list.stdout.toString())
-    return issues.length > 0
+    const issues: unknown[] = JSON.parse(list.stdout.toString());
+    return issues.length > 0;
   } catch {
-    return false
+    return false;
   }
 }
 
@@ -147,9 +137,9 @@ export async function hasGithubIssueUsage(repoRoot: string): Promise<boolean> {
  * CLI surface exists (see `templates/issue-tracker-local.md.tpl`).
  */
 export async function detectTrackerKind(repoRoot: string): Promise<TrackerKind> {
-  if (await hasLinearMcpServer(repoRoot)) return 'linear'
-  if (await hasGithubIssueUsage(repoRoot)) return 'github'
-  return 'local'
+  if (await hasLinearMcpServer(repoRoot)) return "linear";
+  if (await hasGithubIssueUsage(repoRoot)) return "github";
+  return "local";
 }
 
 /**
@@ -162,25 +152,24 @@ export async function detectTrackerKind(repoRoot: string): Promise<TrackerKind> 
  */
 export async function detectJsSelfCheck(
   repoRoot: string,
-  packageManager: 'bun' | 'pnpm' | 'npm',
+  packageManager: "bun" | "pnpm" | "npm",
 ): Promise<string[]> {
-  const file = Bun.file(path.join(repoRoot, 'package.json'))
-  if (!(await file.exists())) return []
-  let parsed: unknown
+  const file = Bun.file(path.join(repoRoot, "package.json"));
+  if (!(await file.exists())) return [];
+  let parsed: unknown;
   try {
-    parsed = await file.json()
+    parsed = await file.json();
   } catch {
-    return []
+    return [];
   }
-  const scripts = isObject(parsed) && isObject(parsed.scripts) ? parsed.scripts : undefined
-  if (!scripts) return []
-  const runner = packageManager === 'npm' ? 'npm run' : `${packageManager} run`
-  if (typeof scripts.check === 'string') return [`${runner} check`]
-  const commands: string[] = []
-  if (typeof scripts.lint === 'string') commands.push(`${runner} lint`)
-  if (typeof scripts.typecheck === 'string')
-    commands.push(`${runner} typecheck`)
-  return commands
+  const scripts = isObject(parsed) && isObject(parsed.scripts) ? parsed.scripts : undefined;
+  if (!scripts) return [];
+  const runner = packageManager === "npm" ? "npm run" : `${packageManager} run`;
+  if (typeof scripts.check === "string") return [`${runner} check`];
+  const commands: string[] = [];
+  if (typeof scripts.lint === "string") commands.push(`${runner} lint`);
+  if (typeof scripts.typecheck === "string") commands.push(`${runner} typecheck`);
+  return commands;
 }
 
 /**
@@ -190,24 +179,24 @@ export async function detectJsSelfCheck(
  * target — never invented for a repo with no `Makefile` at all.
  */
 export async function detectGoSelfCheck(repoRoot: string): Promise<string[]> {
-  const commands = ['go build ./...', 'go test ./...']
-  const makefile = Bun.file(path.join(repoRoot, 'Makefile'))
+  const commands = ["go build ./...", "go test ./..."];
+  const makefile = Bun.file(path.join(repoRoot, "Makefile"));
   if (await makefile.exists()) {
-    const content = await makefile.text()
-    if (/^lint:/m.test(content)) commands.push('make lint')
+    const content = await makefile.text();
+    if (/^lint:/m.test(content)) commands.push("make lint");
   }
-  return commands
+  return commands;
 }
 
-export async function detectSelfCheck(
+async function detectSelfCheck(
   repoRoot: string,
   packageManager: PackageManagerKind,
 ): Promise<string[]> {
-  if (packageManager === 'bun' || packageManager === 'pnpm' || packageManager === 'npm') {
-    return detectJsSelfCheck(repoRoot, packageManager)
+  if (packageManager === "bun" || packageManager === "pnpm" || packageManager === "npm") {
+    return detectJsSelfCheck(repoRoot, packageManager);
   }
-  if (packageManager === 'go') return detectGoSelfCheck(repoRoot)
-  return []
+  if (packageManager === "go") return detectGoSelfCheck(repoRoot);
+  return [];
 }
 
 /**
@@ -217,20 +206,20 @@ export async function detectSelfCheck(
  * all, e.g. a directory named only digits/punctuation).
  */
 export function deriveIdPrefix(repoBasename: string): string {
-  const letters = repoBasename.replaceAll(/[^a-zA-Z]/g, '').toUpperCase()
-  if (letters.length === 0) return 'TICKET'
-  return letters.slice(0, 3)
+  const letters = repoBasename.replaceAll(/[^a-zA-Z]/g, "").toUpperCase();
+  if (letters.length === 0) return "TICKET";
+  return letters.slice(0, 3);
 }
 
 export type DetectedRepoInfo = {
-  readonly repoName: string
-  readonly packageManager: PackageManagerKind
-  readonly trunk: string
-  readonly trunkWasDetected: boolean
-  readonly tracker: TrackerKind
-  readonly idPrefix: string
-  readonly selfCheck: readonly string[]
-}
+  readonly repoName: string;
+  readonly packageManager: PackageManagerKind;
+  readonly trunk: string;
+  readonly trunkWasDetected: boolean;
+  readonly tracker: TrackerKind;
+  readonly idPrefix: string;
+  readonly selfCheck: readonly string[];
+};
 
 /**
  * Merges autodetected values into a fully-materialized {@link ForgeConfig} —
@@ -241,7 +230,7 @@ export type DetectedRepoInfo = {
 export function buildForgeConfig(detected: DetectedRepoInfo): ForgeConfig {
   return {
     version: 1,
-    repo: { trunk: detected.trunk, remote: 'origin' },
+    repo: { trunk: detected.trunk, remote: "origin" },
     ticket: {
       idPattern: `^${detected.idPrefix}-\\d+$`,
       branchPrefix: detected.idPrefix.toLowerCase(),
@@ -255,7 +244,7 @@ export function buildForgeConfig(detected: DetectedRepoInfo): ForgeConfig {
      */
     preflight: {
       requiredFiles: [],
-      requiredCommands: detected.tracker === 'github' ? ['gh'] : [],
+      requiredCommands: detected.tracker === "github" ? ["gh"] : [],
     },
     handoff: { ...DEFAULT_FORGE_CONFIG.handoff },
     pr: { ...DEFAULT_FORGE_CONFIG.pr },
@@ -266,7 +255,7 @@ export function buildForgeConfig(detected: DetectedRepoInfo): ForgeConfig {
     sizing: { ...DEFAULT_FORGE_CONFIG.sizing },
     map: { ...DEFAULT_FORGE_CONFIG.map },
     specs: { ...DEFAULT_FORGE_CONFIG.specs },
-  }
+  };
 }
 
 /**
@@ -295,54 +284,52 @@ export function buildForgeConfig(detected: DetectedRepoInfo): ForgeConfig {
  *   `reference/tracker-local.md`), so both `onPrOpen` and `onPrMerge` are
  *   `coordinator` until a real `forge tracker` implementation lands.
  */
-export function buildTrackerConfig(
-  detected: DetectedRepoInfo,
-): Record<string, unknown> {
-  const readyLabel = 'ready-for-agent'
+export function buildTrackerConfig(detected: DetectedRepoInfo): Record<string, unknown> {
+  const readyLabel = "ready-for-agent";
   const triageLabels = [
-    'needs-triage',
-    'needs-info',
-    'ready-for-agent',
-    'ready-for-human',
-    'wontfix',
-  ]
+    "needs-triage",
+    "needs-info",
+    "ready-for-agent",
+    "ready-for-human",
+    "wontfix",
+  ];
 
-  if (detected.tracker === 'linear') {
+  if (detected.tracker === "linear") {
     return {
-      kind: 'linear',
+      kind: "linear",
       readyLabel,
       triageLabels,
-      transitions: { onStart: 'worker', onPrOpen: 'automatic', onPrMerge: 'automatic' },
-      prReference: 'Refs: {id}',
-    }
+      transitions: { onStart: "worker", onPrOpen: "automatic", onPrMerge: "automatic" },
+      prReference: "Refs: {id}",
+    };
   }
 
-  if (detected.tracker === 'github') {
+  if (detected.tracker === "github") {
     return {
-      kind: 'github',
+      kind: "github",
       readyLabel,
       triageLabels,
-      transitions: { onStart: 'worker', onPrOpen: 'coordinator', onPrMerge: 'automatic' },
-      prReference: 'Closes #{number}',
+      transitions: { onStart: "worker", onPrOpen: "coordinator", onPrMerge: "automatic" },
+      prReference: "Closes #{number}",
       github: {
         priorityLabels: {},
         stateLabels: {
-          todo: 'status:todo',
-          'in-progress': 'status:in-progress',
-          'in-review': 'status:in-review',
+          todo: "status:todo",
+          "in-progress": "status:in-progress",
+          "in-review": "status:in-review",
         },
       },
-    }
+    };
   }
 
   return {
-    kind: 'local',
+    kind: "local",
     readyLabel,
     triageLabels,
-    transitions: { onStart: 'worker', onPrOpen: 'coordinator', onPrMerge: 'coordinator' },
-    prReference: 'Refs: {id}',
+    transitions: { onStart: "worker", onPrOpen: "coordinator", onPrMerge: "coordinator" },
+    prReference: "Refs: {id}",
     local: { idPrefix: detected.idPrefix },
-  }
+  };
 }
 
 /** Replaces every `{{TOKEN}}` in `template` with `vars.TOKEN`, throwing on an
@@ -354,70 +341,68 @@ export function substituteTemplate(
 ): string {
   return template.replaceAll(/\{\{([A-Z_]+)\}\}/g, (_match, token: string) => {
     if (!(token in vars)) {
-      throw new Error(`init: template references unknown placeholder {{${token}}}`)
+      throw new Error(`init: template references unknown placeholder {{${token}}}`);
     }
-    return vars[token]!
-  })
+    return vars[token]!;
+  });
 }
 
 function selfCheckSection(selfCheck: readonly string[]): string {
   if (selfCheck.length === 0) {
     return (
-      'TODO(forge): no self-check command was auto-detected for this repo — ' +
-      'add one to `commands.selfCheck` in `forge.config.json` (a lint/typecheck ' +
-      'alias, `go vet`, etc.), or delete this TODO if this repo genuinely has ' +
+      "TODO(forge): no self-check command was auto-detected for this repo — " +
+      "add one to `commands.selfCheck` in `forge.config.json` (a lint/typecheck " +
+      "alias, `go vet`, etc.), or delete this TODO if this repo genuinely has " +
       "none and workers should judge for themselves."
-    )
+    );
   }
-  return `Auto-detected: ${selfCheck.map((command) => `\`${command}\``).join(', ')}.`
+  return `Auto-detected: ${selfCheck.map((command) => `\`${command}\``).join(", ")}.`;
 }
 
 function monorepoSection(hasWorkspaces: boolean): string {
   if (hasWorkspaces) {
     return (
-      'This repo has monorepo signals (a `pnpm-workspace.yaml`/`workspaces` field, ' +
-      'or populated `packages/*`). TODO(forge): describe the workspace layout — ' +
-      'which package(s) a typical ticket touches, and whether `CONTEXT.md`/' +
-      '`docs/adr/` live at the repo root or per-package.'
-    )
+      "This repo has monorepo signals (a `pnpm-workspace.yaml`/`workspaces` field, " +
+      "or populated `packages/*`). TODO(forge): describe the workspace layout — " +
+      "which package(s) a typical ticket touches, and whether `CONTEXT.md`/" +
+      "`docs/adr/` live at the repo root or per-package."
+    );
   }
   return (
-    'Single-context repo (no monorepo signals detected: no ' +
-    '`pnpm-workspace.yaml`, no `workspaces` field, no populated `packages/*`).\n\n' +
-    '```\n/\n├── CONTEXT.md\n└── docs/adr/\n    ├── 0001-....md\n    └── 0002-....md\n```'
-  )
+    "Single-context repo (no monorepo signals detected: no " +
+    "`pnpm-workspace.yaml`, no `workspaces` field, no populated `packages/*`).\n\n" +
+    "```\n/\n├── CONTEXT.md\n└── docs/adr/\n    ├── 0001-....md\n    └── 0002-....md\n```"
+  );
 }
 
 async function detectHasWorkspaces(repoRoot: string): Promise<boolean> {
-  if (await Bun.file(path.join(repoRoot, 'pnpm-workspace.yaml')).exists())
-    return true
-  const packageJson = Bun.file(path.join(repoRoot, 'package.json'))
+  if (await Bun.file(path.join(repoRoot, "pnpm-workspace.yaml")).exists()) return true;
+  const packageJson = Bun.file(path.join(repoRoot, "package.json"));
   if (await packageJson.exists()) {
     try {
-      const parsed: Record<string, unknown> = await packageJson.json()
-      if (Array.isArray(parsed.workspaces) || typeof parsed.workspaces === 'object')
-        return true
+      const parsed: Record<string, unknown> = await packageJson.json();
+      if (Array.isArray(parsed.workspaces) || typeof parsed.workspaces === "object") return true;
     } catch {
       /**
        * malformed package.json — treated as no workspaces, not fatal here
        */
     }
   }
-  return false
+  return false;
 }
 
 function idExampleFor(idPrefix: string): string {
-  return `${idPrefix}-1`
+  return `${idPrefix}-1`;
 }
 
 async function writeIfAbsentOrForced(
   filePath: string,
   content: string,
   force: boolean,
-): Promise<'written' | 'skipped-exists'> {
-  if (!force && (await Bun.file(filePath).exists())) return 'skipped-exists'
-  await Bun.write(filePath, content)
-  return 'written'
+): Promise<"written" | "skipped-exists"> {
+  if (!force && (await Bun.file(filePath).exists())) return "skipped-exists";
+  await Bun.write(filePath, content);
+  return "written";
 }
 
 /**
@@ -431,31 +416,36 @@ async function writeIfAbsentOrForced(
  * a human to resolve, not a guess about which line to remove.
  */
 async function ensureForgeStateGitignore(repoRoot: string): Promise<string[]> {
-  const gitignorePath = path.join(repoRoot, '.gitignore')
-  const file = Bun.file(gitignorePath)
-  const existing = (await file.exists()) ? await file.text() : ''
-  const lines = existing.split('\n')
-  const warnings: string[] = []
+  const gitignorePath = path.join(repoRoot, ".gitignore");
+  const file = Bun.file(gitignorePath);
+  const existing = (await file.exists()) ? await file.text() : "";
+  const lines = existing.split("\n");
+  const warnings: string[] = [];
 
-  const shadowingRule = lines.find(
-    (line) => line.trim() === '.forge' || line.trim() === '.forge/',
-  )
+  const shadowingRule = lines.find((line) => line.trim() === ".forge" || line.trim() === ".forge/");
   if (shadowingRule) {
     warnings.push(
       `.gitignore already has a blanket "${shadowingRule.trim()}" rule that would ` +
-        'shadow an un-ignore for .forge/tickets/ — resolve this by hand; the ' +
-        'working pattern is `.forge/*` followed by `!.forge/tickets/`.',
-    )
-    return warnings
+        "shadow an un-ignore for .forge/tickets/ — resolve this by hand; the " +
+        "working pattern is `.forge/*` followed by `!.forge/tickets/`.",
+    );
+    return warnings;
   }
 
-  const alreadyPresent = lines.some((line) => line.trim() === '!.forge/tickets/')
-  if (alreadyPresent) return warnings
+  const alreadyPresent = lines.some((line) => line.trim() === "!.forge/tickets/");
+  if (alreadyPresent) return warnings;
 
-  const block = ['', '# forge local tracker: tickets are versioned, tracker state is not.', '.forge/*', '!.forge/tickets/', '']
-  const updated = existing.length > 0 ? `${existing.replace(/\n+$/, '\n')}${block.join('\n')}` : block.join('\n')
-  await Bun.write(gitignorePath, updated)
-  return warnings
+  const block = [
+    "",
+    "# forge local tracker: tickets are versioned, tracker state is not.",
+    ".forge/*",
+    "!.forge/tickets/",
+    "",
+  ];
+  const updated =
+    existing.length > 0 ? `${existing.replace(/\n+$/, "\n")}${block.join("\n")}` : block.join("\n");
+  await Bun.write(gitignorePath, updated);
+  return warnings;
 }
 
 /** Idempotent — `gh label create --force` overwrites color/description on an
@@ -465,80 +455,78 @@ async function ensureForgeStateGitignore(repoRoot: string): Promise<string[]> {
  * rest of `init`. */
 async function ensureGithubStateLabels(repoRoot: string): Promise<string[]> {
   const labels: Array<{ name: string; color: string; description: string }> = [
-    { name: 'status:todo', color: 'ededed', description: 'forge: not started' },
+    { name: "status:todo", color: "ededed", description: "forge: not started" },
     {
-      name: 'status:in-progress',
-      color: 'fbca04',
-      description: 'forge: a worker is on this',
+      name: "status:in-progress",
+      color: "fbca04",
+      description: "forge: a worker is on this",
     },
     {
-      name: 'status:in-review',
-      color: '0e8a16',
-      description: 'forge: PR open, awaiting merge',
+      name: "status:in-review",
+      color: "0e8a16",
+      description: "forge: PR open, awaiting merge",
     },
-  ]
-  const failures: string[] = []
+  ];
+  const failures: string[] = [];
   for (const label of labels) {
     const result =
       // oxlint-disable-next-line eslint/no-await-in-loop -- git and gh calls stay sequential to keep output and side effects ordered
       await Bun.$`gh label create ${label.name} --color ${label.color} --description ${label.description} --force`
         .cwd(repoRoot)
         .nothrow()
-        .quiet()
+        .quiet();
     if (result.exitCode !== 0) {
-      failures.push(`${label.name}: ${result.stderr.toString().trim()}`)
+      failures.push(`${label.name}: ${result.stderr.toString().trim()}`);
     }
   }
-  return failures
+  return failures;
 }
 
 export type InitOptions = {
-  readonly force: boolean
-  readonly trackerOverride: TrackerKind | null
-}
+  readonly force: boolean;
+  readonly trackerOverride: TrackerKind | null;
+};
 
 export function parseInitArguments(argv: readonly string[]): InitOptions {
-  const force = argv.includes('--force')
-  const trackerIndex = argv.indexOf('--tracker')
-  const trackerValue = trackerIndex === -1 ? undefined : argv[trackerIndex + 1]
+  const force = argv.includes("--force");
+  const trackerIndex = argv.indexOf("--tracker");
+  const trackerValue = trackerIndex === -1 ? undefined : argv[trackerIndex + 1];
   if (
     trackerValue !== undefined &&
-    trackerValue !== 'linear' &&
-    trackerValue !== 'github' &&
-    trackerValue !== 'local'
+    trackerValue !== "linear" &&
+    trackerValue !== "github" &&
+    trackerValue !== "local"
   ) {
     throw new Error(
       `forge init: --tracker must be one of linear|github|local, got "${trackerValue}"`,
-    )
+    );
   }
-  return { force, trackerOverride: trackerValue ?? null }
+  return { force, trackerOverride: trackerValue ?? null };
 }
 
 async function main(options: InitOptions): Promise<void> {
-  const repoRoot = await resolveRepoRoot()
+  const repoRoot = await resolveRepoRoot();
   if (!repoRoot) {
-    console.error('forge init: not inside a git repository')
-    process.exitCode = 2
-    return
+    console.error("forge init: not inside a git repository");
+    process.exitCode = 2;
+    return;
   }
 
-  const configPath = path.join(repoRoot, 'forge.config.json')
+  const configPath = path.join(repoRoot, "forge.config.json");
   if (!options.force && (await Bun.file(configPath).exists())) {
-    console.error(
-      `forge init: ${configPath} already exists — pass --force to overwrite.`,
-    )
-    process.exitCode = 2
-    return
+    console.error(`forge init: ${configPath} already exists — pass --force to overwrite.`);
+    process.exitCode = 2;
+    return;
   }
 
-  const repoBasename = path.basename(repoRoot)
-  const packageManager = await detectPackageManager(repoRoot)
-  const detectedTrunk = await detectTrunk(repoRoot)
-  const trunk = detectedTrunk ?? 'main'
-  const tracker = options.trackerOverride ?? (await detectTrackerKind(repoRoot))
-  const idPrefix = deriveIdPrefix(repoBasename)
-  const selfCheck = await detectSelfCheck(repoRoot, packageManager)
-  const hasWorkspaces = await detectHasWorkspaces(repoRoot)
+  const repoBasename = path.basename(repoRoot);
+  const packageManager = await detectPackageManager(repoRoot);
+  const detectedTrunk = await detectTrunk(repoRoot);
+  const trunk = detectedTrunk ?? "main";
+  const tracker = options.trackerOverride ?? (await detectTrackerKind(repoRoot));
+  const idPrefix = deriveIdPrefix(repoBasename);
+  const selfCheck = await detectSelfCheck(repoRoot, packageManager);
+  const hasWorkspaces = await detectHasWorkspaces(repoRoot);
 
   const detected: DetectedRepoInfo = {
     repoName: repoBasename,
@@ -548,28 +536,28 @@ async function main(options: InitOptions): Promise<void> {
     tracker,
     idPrefix,
     selfCheck,
-  }
+  };
 
-  const config = buildForgeConfig(detected)
+  const config = buildForgeConfig(detected);
   const configJson = {
     /**
      * `~` is never expanded by a JSON Schema resolver or editor completion —
      * write the absolute path this CLI is actually installed at.
      */
-    $schema: path.join(os.homedir(), '.claude', 'forge', 'schema', 'forge.config.schema.json'),
-    '//':
+    $schema: path.join(os.homedir(), ".claude", "forge", "schema", "forge.config.schema.json"),
+    "//":
       `Generated by \`forge init\` on ${new Date().toISOString().slice(0, 10)}. ` +
-      'Every value below is either autodetected or a built-in default — review ' +
-      'before relying on it, especially repo.trunk if it was not detected (see ' +
-      'the summary this command printed). `commands` is prose-only (see the ' +
-      'schema) — the /forge command reads it directly, this CLI never does.',
+      "Every value below is either autodetected or a built-in default — review " +
+      "before relying on it, especially repo.trunk if it was not detected (see " +
+      "the summary this command printed). `commands` is prose-only (see the " +
+      "schema) — the /forge command reads it directly, this CLI never does.",
     ...config,
     tracker: buildTrackerConfig(detected),
     commands: { selfCheck: detected.selfCheck },
-  }
-  await Bun.write(configPath, `${JSON.stringify(configJson, null, 2)}\n`)
+  };
+  await Bun.write(configPath, `${JSON.stringify(configJson, null, 2)}\n`);
 
-  const templatesDirectory = path.join(import.meta.dirname, '..', 'templates')
+  const templatesDirectory = path.join(import.meta.dirname, "..", "templates");
   const vars: Record<string, string> = {
     REPO_NAME: detected.repoName,
     TRACKER_KIND: detected.tracker,
@@ -580,49 +568,47 @@ async function main(options: InitOptions): Promise<void> {
     SELF_CHECK_SECTION: selfCheckSection(detected.selfCheck),
     MONOREPO_SECTION: monorepoSection(hasWorkspaces),
     DATE: new Date().toISOString().slice(0, 10),
-  }
+  };
 
-  const docsAgentsDirectory = path.join(repoRoot, 'docs', 'agents')
-  await Bun.$`mkdir -p ${docsAgentsDirectory}`.quiet()
+  const docsAgentsDirectory = path.join(repoRoot, "docs", "agents");
+  await Bun.$`mkdir -p ${docsAgentsDirectory}`.quiet();
 
   const writes: Array<{ template: string; target: string }> = [
-    { template: 'forge.md.tpl', target: 'forge.md' },
-    { template: `issue-tracker-${detected.tracker}.md.tpl`, target: 'issue-tracker.md' },
-    { template: `triage-labels-${detected.tracker}.md.tpl`, target: 'triage-labels.md' },
-    { template: 'domain.md.tpl', target: 'domain.md' },
-  ]
+    { template: "forge.md.tpl", target: "forge.md" },
+    { template: `issue-tracker-${detected.tracker}.md.tpl`, target: "issue-tracker.md" },
+    { template: `triage-labels-${detected.tracker}.md.tpl`, target: "triage-labels.md" },
+    { template: "domain.md.tpl", target: "domain.md" },
+  ];
 
-  const results: string[] = []
+  const results: string[] = [];
   for (const { template, target } of writes) {
     // oxlint-disable-next-line eslint/no-await-in-loop -- sequential on purpose: later iterations depend on earlier ones or on output order
-    const templateContent = await Bun.file(
-      path.join(templatesDirectory, template),
-    ).text()
-    const rendered = substituteTemplate(templateContent, vars)
+    const templateContent = await Bun.file(path.join(templatesDirectory, template)).text();
+    const rendered = substituteTemplate(templateContent, vars);
     // oxlint-disable-next-line eslint/no-await-in-loop -- sequential on purpose: later iterations depend on earlier ones or on output order
     const outcome = await writeIfAbsentOrForced(
       path.join(docsAgentsDirectory, target),
       rendered,
       options.force,
-    )
-    results.push(`docs/agents/${target}: ${outcome}`)
+    );
+    results.push(`docs/agents/${target}: ${outcome}`);
   }
 
-  const warnings: string[] = []
+  const warnings: string[] = [];
   if (!detectedTrunk) {
     warnings.push(
       `repo.trunk: could not resolve origin/HEAD's symref — defaulted to "main". ` +
-        'Run `git remote set-head origin --auto` if that\'s wrong, then re-run ' +
-        '`forge init --force`.',
-    )
+        "Run `git remote set-head origin --auto` if that's wrong, then re-run " +
+        "`forge init --force`.",
+    );
   }
-  warnings.push(...(await ensureForgeStateGitignore(repoRoot)))
-  if (detected.tracker === 'github') {
-    const labelFailures = await ensureGithubStateLabels(repoRoot)
+  warnings.push(...(await ensureForgeStateGitignore(repoRoot)));
+  if (detected.tracker === "github") {
+    const labelFailures = await ensureGithubStateLabels(repoRoot);
     if (labelFailures.length > 0) {
       warnings.push(
-        `could not create tracker.github status labels (create them by hand): ${labelFailures.join('; ')}`,
-      )
+        `could not create tracker.github status labels (create them by hand): ${labelFailures.join("; ")}`,
+      );
     }
   }
 
@@ -630,46 +616,45 @@ async function main(options: InitOptions): Promise<void> {
     tracker,
     repoRoot,
     probes: createDependencyProbes(),
-  })
+  });
 
-  console.log(`forge init — ${repoRoot}`)
-  console.log(`  package manager: ${packageManager}`)
-  console.log(`  trunk: ${trunk}${detectedTrunk ? '' : ' (default — not detected)'}`)
-  console.log(`  tracker: ${tracker}${options.trackerOverride ? ' (--tracker override)' : ''}`)
-  console.log(`  ticket id prefix: ${idPrefix}`)
-  console.log('')
-  for (const line of results) console.log(`  ${line}`)
+  console.log(`forge init — ${repoRoot}`);
+  console.log(`  package manager: ${packageManager}`);
+  console.log(`  trunk: ${trunk}${detectedTrunk ? "" : " (default — not detected)"}`);
+  console.log(`  tracker: ${tracker}${options.trackerOverride ? " (--tracker override)" : ""}`);
+  console.log(`  ticket id prefix: ${idPrefix}`);
+  console.log("");
+  for (const line of results) console.log(`  ${line}`);
   if (warnings.length > 0) {
-    console.log('\nWarnings:')
-    for (const warning of warnings) console.log(`  - ${warning}`)
+    console.log("\nWarnings:");
+    for (const warning of warnings) console.log(`  - ${warning}`);
   }
-  const dependencyNotes = dependencyChecks.filter((check) => check.status !== 'satisfied')
-  const limitations = dependencyChecks
-    .flatMap((check) =>
-      check.status === 'satisfied' && check.limitation !== null ? [check.limitation] : [],
-    )
+  const dependencyNotes = dependencyChecks.filter((check) => check.status !== "satisfied");
+  const limitations = dependencyChecks.flatMap((check) =>
+    check.status === "satisfied" && check.limitation !== null ? [check.limitation] : [],
+  );
   if (dependencyNotes.length > 0 || limitations.length > 0) {
-    console.log('\nDependencies:')
+    console.log("\nDependencies:");
     for (const check of dependencyNotes) {
-      console.log(`  - ${formatDependencyCheck(check, '      ')}`)
+      console.log(`  - ${formatDependencyCheck(check, "      ")}`);
     }
-    for (const limitation of limitations) console.log(`  - note: ${limitation}`)
+    for (const limitation of limitations) console.log(`  - note: ${limitation}`);
   }
   console.log(
-    '\nNext: fill in every TODO(forge): marker under docs/agents/ — `forge preflight` refuses to dispatch while one remains.',
-  )
+    "\nNext: fill in every TODO(forge): marker under docs/agents/ — `forge preflight` refuses to dispatch while one remains.",
+  );
 }
 
 export async function run(argv: string[]): Promise<void> {
   try {
-    const options = parseInitArguments(argv)
-    await main(options)
+    const options = parseInitArguments(argv);
+    await main(options);
   } catch (error: unknown) {
-    console.error(error)
-    process.exitCode = process.exitCode ?? 1
+    console.error(error);
+    process.exitCode = process.exitCode ?? 1;
   }
 }
 
 if (import.meta.main) {
-  await run(process.argv.slice(2))
+  await run(process.argv.slice(2));
 }

@@ -22,10 +22,10 @@ const USAGE = `usage: forge gate <ticket> [--run <id>] [--tier passive|medium|hi
 
 export const DEFERRED_LABEL = "forge:deferred";
 
-export type Decision = "merge" | "hold" | "chain" | "stop" | "defer";
-export type CheckState = "pass" | "fail" | "pending" | "none";
+type Decision = "merge" | "hold" | "chain" | "stop" | "defer";
+type CheckState = "pass" | "fail" | "pending" | "none";
 const GATE_TIERS = ["passive", "medium", "high"] as const;
-export type GateTier = (typeof GATE_TIERS)[number];
+type GateTier = (typeof GATE_TIERS)[number];
 const FINDING_SEVERITIES = ["blocker", "critical", "major", "minor", "nit"] as const;
 type FindingSeverity = (typeof FINDING_SEVERITIES)[number];
 

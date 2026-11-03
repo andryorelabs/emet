@@ -44,7 +44,7 @@ refuses to emit a reason its own parser can't read back.
 
 `isOwnAgentWorktree`'s original design assumed `Agent({isolation:
 "worktree"})` always nests a dispatched agent's worktree inside the
-*launching* worktree's own `.claude/worktrees/`. Three separate runs
+_launching_ worktree's own `.claude/worktrees/`. Three separate runs
 (coordinators in `~/orca/workspaces/andryore-dev/{urchin,tern,hake}`, each a
 non-main git worktree of the same repo) measured the opposite: every agent
 worktree landed under the **main checkout's** `.claude/worktrees/` instead,
@@ -55,7 +55,7 @@ turning off all four of its enforcement gates for every Orca-launched wave.
 
 The fix could not simply be "match the main checkout's path instead": the
 prefix filter existed in the first place to stop one coordinator's audit
-failing on a *sibling* coordinator's own legitimate, mid-bootstrap agent
+failing on a _sibling_ coordinator's own legitimate, mid-bootstrap agent
 worktree — and once every coordinator's agents nest under the same main
 checkout, a path-based filter can no longer tell those two cases apart at
 all. Ownership had to move from **where** a worktree lives to **which run**
@@ -82,7 +82,7 @@ than waited out indefinitely.
 
 Verified across 97 subagent transcripts (2026-09-01): `LSP` never reaches a
 worker regardless of `subagent_type` or `isolation: "worktree"` — it's a
-tool wired into the *main* (coordinator) session only, and
+tool wired into the _main_ (coordinator) session only, and
 `ToolSearch("select:LSP")` returns "No matching deferred tools found" from
 inside every worker, every time. This is why workers are told not to call
 `ToolSearch("select:LSP")` at all, and to `SendMessage` the coordinator
@@ -120,8 +120,8 @@ different worker context: one peaked at 129K, the other at 348K. The
 difference traced to ticket shape, not implementation difficulty: the 348K
 ticket combined a new page object **and** a new E2E spec in one ticket,
 while the 129K ticket kept those separate. This is the source of Phase 3's
-ticket-splitting tripwires (estimated peak > 160K; touch set > 8 files or
-> 1,500 lines; new surface > 500 lines; more than one new E2E spec; a new
+ticket-splitting tripwires (estimated peak > 160K; touch set > 8 files
+or > 1,500 lines; new surface > 500 lines; more than one new E2E spec; a new
 page object and a new spec together).
 
 ## A confabulated success with zero tool calls behind it
