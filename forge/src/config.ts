@@ -49,6 +49,7 @@ export const DEFAULT_FORGE_CONFIG: ForgeConfig = {
     launcher: "auto",
     permissionMode: "bypassPermissions",
   },
+  landing: { mode: "pr" },
   pr: { autoMerge: true, mergeMethod: "squash", maxCiFixAttempts: 2 },
   usage: { oversizedReadLines: 400, stalledMinutes: 10 },
   models: {
@@ -91,6 +92,10 @@ const HANDOFF_PERMISSION_MODES: readonly HandoffPermissionMode[] = [
 type MergeMethod = "squash" | "merge" | "rebase";
 
 const MERGE_METHODS: readonly MergeMethod[] = ["squash", "merge", "rebase"];
+
+export type LandingMode = "pr" | "merge";
+
+const LANDING_MODES: readonly LandingMode[] = ["pr", "merge"];
 
 export interface ForgeConfig {
   readonly version: 1;
@@ -164,6 +169,12 @@ export interface ForgeConfig {
     readonly launcher: HandoffLauncher;
     /** Permission mode the chained wave's `claude --bg` session runs in. */
     readonly permissionMode: HandoffPermissionMode;
+  };
+  readonly landing: {
+    /** How a finished wave reaches trunk: `pr` opens a pull request, `merge`
+     * merges the integration branch into local trunk. Independent of the
+     * tracker. */
+    readonly mode: LandingMode;
   };
   readonly pr: {
     /** When true, Phase 8 waits for the wave PR's checks and merges it. */
@@ -436,6 +447,12 @@ function validateAndMerge(
     };
   }
 
+  const landingSection = isRecord(raw.landing) ? raw.landing : {};
+  const landingMode = landingSection.mode ?? DEFAULT_FORGE_CONFIG.landing.mode;
+  if (!isOneOf(LANDING_MODES, landingMode)) {
+    return { ok: false, reason: '"landing.mode" must be one of pr|merge' };
+  }
+
   const prSection = isRecord(raw.pr) ? raw.pr : {};
   const autoMerge = prSection.autoMerge ?? DEFAULT_FORGE_CONFIG.pr.autoMerge;
   const mergeMethod = prSection.mergeMethod ?? DEFAULT_FORGE_CONFIG.pr.mergeMethod;
@@ -575,6 +592,7 @@ function validateAndMerge(
         launcher,
         permissionMode,
       },
+      landing: { mode: landingMode },
       pr: { autoMerge, mergeMethod, maxCiFixAttempts },
       usage: { oversizedReadLines, stalledMinutes },
       models: {
