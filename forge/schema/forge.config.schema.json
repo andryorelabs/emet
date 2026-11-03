@@ -124,9 +124,10 @@
           "description": "Settings for the CLI-implemented `local` tracker (.forge/tickets + <git-common-dir>/forge/tracker).",
           "properties": {
             "idPrefix": {
+              "deprecated": true,
               "type": "string",
               "pattern": "^[A-Z][A-Z0-9]*$",
-              "description": "Uppercase id prefix for local tickets (e.g. \"NFK\" -> NFK-1, NFK-2, ...). Defaults to the first 3 letters of the repo's own directory basename, uppercased."
+              "description": "Deprecated: local ticket ids are now `<feature-slug>-<NN>`. Uppercase id prefix for local tickets (e.g. \"NFK\" -> NFK-1, NFK-2, ...). Defaults to the first 3 letters of the repo's own directory basename, uppercased."
             }
           }
         }
@@ -363,6 +364,18 @@
           "enum": ["bypassPermissions", "auto", "acceptEdits"],
           "default": "bypassPermissions",
           "description": "Permission mode the chained wave's `claude --bg` session runs in. Defaults to bypassPermissions because auto mode's classifier can deny steps like `gh pr merge` mid-wave, leaving the wave half-finished; `permissions.deny` rules still apply in every mode."
+        }
+      }
+    },
+    "landing": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "mode": {
+          "type": "string",
+          "enum": ["pr", "merge"],
+          "default": "pr",
+          "description": "How a finished wave reaches trunk, independent of the tracker. `pr` opens a pull request (requires `gh`); `merge` merges the integration branch into local trunk and never pushes."
         }
       }
     },

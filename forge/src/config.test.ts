@@ -97,6 +97,7 @@ describe("loadForgeConfig", () => {
         launcher: "orca",
         permissionMode: "acceptEdits",
       },
+      landing: { mode: "merge" },
       pr: { autoMerge: false, mergeMethod: "merge", maxCiFixAttempts: 3 },
       usage: { oversizedReadLines: 200, stalledMinutes: 5 },
       models: {
@@ -171,6 +172,7 @@ describe("loadForgeConfig", () => {
       { handoff: { permissionMode: "plan" } },
       /"handoff.permissionMode" must be one of/,
     ],
+    ["landing.mode", { landing: { mode: "push" } }, /"landing.mode" must be one of pr\|merge/],
     ["pr.autoMerge", { pr: { autoMerge: 1 } }, /"pr.autoMerge" must be a boolean/],
     ["pr.mergeMethod", { pr: { mergeMethod: "fast-forward" } }, /"pr.mergeMethod" must be one of/],
     [
@@ -183,6 +185,13 @@ describe("loadForgeConfig", () => {
     const result = await loadForgeConfig(repoRoot);
     expect(result.status).toBe("malformed");
     expect(reasonOf(result)).toMatch(reason);
+  });
+
+  test("landing.mode defaults to pr and accepts merge", async () => {
+    await writeConfig({});
+    expect(configOf(await loadForgeConfig(repoRoot)).landing).toEqual({ mode: "pr" });
+    await writeConfig({ landing: { mode: "merge" } });
+    expect(configOf(await loadForgeConfig(repoRoot)).landing).toEqual({ mode: "merge" });
   });
 
   test("accepts pr and handoff.autoChain overrides, including maxCiFixAttempts 0", async () => {

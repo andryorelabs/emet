@@ -184,6 +184,22 @@ what happens next (both validated by `forge preflight`):
   bypass warning must have been accepted once interactively
   (`skipDangerousModePermissionPrompt`).
 
+### Local tracker and local landing
+
+With `tracker.kind: "local"`, specs and tickets are markdown files under the
+main worktree's `.scratch/` (not versioned): `.scratch/<slug>/spec.md` and
+`.scratch/<slug>/issues/<NN>-<slug>.md`, each with `Status:` and `Blocked by:`
+lines and comments under `## Comments`. The coordinator reads and writes them
+through `forge tracker` (`create-spec`, `create-ticket`, `read`, `frontier`,
+`set-state`, `comment`, `close`). `forge init --tracker local` sets this up. See
+[ADR-0011](docs/adr/0011-local-tracker-scratch-convention.md).
+
+`landing.mode` is `"pr"` (default) or `"merge"`, independent of the tracker. In
+`merge` mode a wave lands as one local merge into trunk with `forge land`, with
+`commands.selfCheck` standing in for CI and no push. `gh` is only required when
+the tracker is `github` or landing is `pr`. See
+[ADR-0010](docs/adr/0010-local-merge-landing.md).
+
 ## Gates, budgets and records
 
 The phases don't decide on their own when a ticket is done, mergeable or
