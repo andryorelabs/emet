@@ -1,12 +1,12 @@
 ---
 name: forge-worker
-description: forge Phase 7 worktree worker — dispatched only by /forge's Phase 6, never invoked directly by a user.
+description: forge Phase 7 worktree worker — dispatched only by /forge:run Phase 6, never invoked by a user.
 model: sonnet
 effort: medium
 disallowedTools: Agent, mcp__engram__*
 ---
 
-You are a `/forge` worker. The coordinator dispatches you with `isolation:
+You are a `/forge:run` worker. The coordinator dispatches you with `isolation:
 "worktree"` and a prompt built from `worker-prompt.md`'s template — that
 prompt is your entire task contract: your ticket, the spec's `## Specs`
 section, your worktree bootstrap steps, and the self-check/handoff/commit

@@ -4,7 +4,7 @@ Real run failures that produced a rule elsewhere in this command. Never
 loaded during a normal run — read this only when someone asks why a rule
 exists, or before changing one of the rules it justifies.
 
-## AO-285 — lost mutex via inline `bun -e`
+## INC-285 — lost mutex via inline `bun -e`
 
 A coordinator called the claims/slots reservation functions directly via an
 inline `bun -e` snippet instead of the `forge` CLI. The snippet's positional
@@ -14,15 +14,15 @@ rule is "always go through the `forge` CLI", not "call the underlying
 function correctly": an untypechecked one-off snippet has no argument names
 to get right in the first place.
 
-## AO-281 wave 2 / AO-321 — duplicate worktrees and unlocked stragglers
+## INC-281 wave 2 / INC-321 — duplicate worktrees and unlocked stragglers
 
 Two separate real-run shapes exposed the gap a post-dispatch audit now
 closes:
 
-- **AO-281 wave 2**: two worktrees ended up claiming the same ticket, with
+- **INC-281 wave 2**: two worktrees ended up claiming the same ticket, with
   nothing distinguishing the canonical one from the duplicate.
-- **AO-321**: a worker's bootstrap step (the `git worktree lock` call) was
-  skipped, leaving a worktree under `.claude/worktrees/` with no `/forge`
+- **INC-321**: a worker's bootstrap step (the `git worktree lock` call) was
+  skipped, leaving a worktree under `.claude/worktrees/` with no `/forge:run`
   lock reason at all — unattributable to any run, and indistinguishable from
   an ordinary interactive worktree doing unrelated work.
 
@@ -31,12 +31,12 @@ batch, catches both shapes (plus two sibling shapes: two worker branches for
 the same ticket number, and a worktree whose checked-out branch doesn't
 match its own lock's ticket) before any worker has had a chance to commit.
 
-The extraction of this machinery into a standalone CLI briefly made AO-321
+The extraction of this machinery into a standalone CLI briefly made INC-321
 structurally guaranteed rather than merely possible: the audit and the
 parser came along, but the `git worktree lock` command itself did not —
 it lived only as a `{{bootstrap_steps}}` placeholder each target repo was
 expected to fill in by hand. `forge lock-reason` (Phase 6) and bootstrap
-step 0 of `reference/worker-prompt.md` close that: the coordinator asks the
+step 0 of `${CLAUDE_PLUGIN_ROOT}/forge/reference/worker-prompt.md` close that: the coordinator asks the
 CLI for the reason, the worker runs one literal command with it, and the CLI
 refuses to emit a reason its own parser can't read back.
 
@@ -45,7 +45,7 @@ refuses to emit a reason its own parser can't read back.
 `isOwnAgentWorktree`'s original design assumed `Agent({isolation:
 "worktree"})` always nests a dispatched agent's worktree inside the
 _launching_ worktree's own `.claude/worktrees/`. Three separate runs
-(coordinators in `~/orca/workspaces/andryore-dev/{urchin,tern,hake}`, each a
+(coordinators in `~/workspaces/<owner>/{repo-a,repo-b,repo-c}`, each a
 non-main git worktree of the same repo) measured the opposite: every agent
 worktree landed under the **main checkout's** `.claude/worktrees/` instead,
 regardless of which worktree dispatched it. The path-prefix filter then
@@ -186,15 +186,15 @@ invokes `/design` or asks the user to run it.
 ## The harness drops the forge lock when an agent exits
 
 Four coordinators (`turban`, `charybdis`, `guitarfish`, `taimen`, each an
-Orca worktree of the same repo) ran `/forge` at once. Their `forge
+Orca worktree of the same repo) ran `/forge:run` at once. Their `forge
 preflight` calls repeatedly failed on **each other's** worktrees, sometimes
 for hours after the owning wave had already dispatched them. Traced to one
-worktree (ticket AO-553): `git worktree list --porcelain` showed `locked
-forge run=ao550 ticket=AO-553 …` while its worker was still running, and no
-lock at all a few hours later, worker long finished. Nothing in `/forge`
+worktree (ticket INC-553): `git worktree list --porcelain` showed `locked
+forge run=run550 ticket=CLA-553 …` while its worker was still running, and no
+lock at all a few hours later, worker long finished. Nothing in `/forge:run`
 itself ever ran `git worktree unlock` on it — the harness's own `Agent
 isolation:"worktree"` unlocks a worker's worktree the moment its agent
-process exits, dropping whatever lock reason was there, `/forge`'s own or
+process exits, dropping whatever lock reason was there, `/forge:run`'s own or
 not.
 
 Without a lock, `resolveWorktreeOwner` returns `null` and the worktree falls
@@ -210,4 +210,4 @@ only by `forge cleanup --run`/`--force`, so they outlive a dropped lock —
 and why the worker prompt's bootstrap step 0 now always `unlock`s before
 `lock`ing (the harness's own generic lock made every worker's first attempt
 at step 0 fail outright, which is a separate but related symptom of the
-same root cause: the harness manages this lock too, not just `/forge`).
+same root cause: the harness manages this lock too, not just `/forge:run`).

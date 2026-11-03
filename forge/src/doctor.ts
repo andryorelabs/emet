@@ -16,8 +16,14 @@ import {
   type DependencyProbes,
 } from "./dependencies";
 import { isObject } from "./narrow";
-import { findTodoMarkersInDocsAgents } from "./preflight";
+import { DEPRECATED_CONFIG_FIELDS, findTodoMarkersInDocsAgents } from "./preflight";
 import { computeAutoMaxLiveWorkers, readHostResources } from "./resources";
+import {
+  checkSkillsContract,
+  findPluginByName,
+  listInstalledPlugins,
+  type InstalledPlugin,
+} from "./skills";
 import { listOccupiedSlots, resolveLegacySlotsDirectory } from "./slots";
 
 /**
@@ -65,6 +71,10 @@ export type RepoDoctorReport = {
   /** Tracker-target and worktree fork-base findings for this repo — each is a
    * known mismatch (never "could not check"), so any entry dirties the repo. */
   readonly environmentFindings: readonly string[];
+  /** Warnings only (never part of {@link isReportClean}): a legacy
+   * `CONTEXT.md` without `GLOSSARY.md`, or a deprecated config field that is
+   * still set. */
+  readonly warnings: readonly string[];
 };
 
 /** A repo is clean if every check came back empty/false-negative — used both
@@ -106,7 +116,9 @@ function parsePackageManagerRun(
   command: string,
 ): { directory: string | null; script: string } | null {
   const [manager, ...tokens] = command.trim().split(/\s+/);
-  if (manager !== "bun" && manager !== "pnpm" && manager !== "npm") return null;
+  if (manager !== "bun" && manager !== "pnpm" && manager !== "npm" && manager !== "yarn") {
+    return null;
+  }
 
   let directory: string | null = null;
   let sawRun = false;
@@ -180,6 +192,36 @@ async function readPackageManagerScripts(repoRoot: string): Promise<ReadonlySet<
     const scripts = parsed.scripts;
     if (!isObject(scripts)) return new Set();
     return new Set(Object.keys(scripts));
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * One warning per {@link DEPRECATED_CONFIG_FIELDS} dotted path that a raw
+ * parsed config sets.
+ */
+export function findDeprecatedConfigFields(rawConfig: unknown): string[] {
+  return DEPRECATED_CONFIG_FIELDS.filter((field) => {
+    let node: unknown = rawConfig;
+    for (const key of field.split(".")) {
+      if (!isObject(node) || !(key in node)) return false;
+      node = node[key];
+    }
+    return true;
+  }).map((field) => `deprecated config field "${field}" is set; nothing reads it, remove it`);
+}
+
+/** Warns when a repo still carries the legacy `CONTEXT.md` without `GLOSSARY.md`. */
+export function findGlossaryWarnings(existingFiles: ReadonlySet<string>): string[] {
+  return existingFiles.has("CONTEXT.md") && !existingFiles.has("GLOSSARY.md")
+    ? ["rename CONTEXT.md to GLOSSARY.md"]
+    : [];
+}
+
+async function readRawConfig(repoRoot: string): Promise<unknown> {
+  try {
+    return await Bun.file(path.join(repoRoot, "forge.config.json")).json();
   } catch {
     return null;
   }
@@ -446,6 +488,7 @@ export async function auditRepo(
       dependencyFindings: [],
       maxLiveWorkersNote: null,
       environmentFindings: [],
+      warnings: [],
     };
   }
 
@@ -503,6 +546,7 @@ export async function auditRepo(
     ? (await checkDependencies({ tracker: trackerKind, repoRoot: absolutePath, probes })).filter(
         (check) =>
           check.dependency !== "claude-plugin" &&
+          check.dependency !== "skills-contract" &&
           check.dependency !== "forge-agents" &&
           check.dependency !== "tracker-kind",
       )
@@ -520,6 +564,14 @@ export async function auditRepo(
     dependencyFindings,
     maxLiveWorkersNote,
     environmentFindings,
+    warnings: [
+      ...findGlossaryWarnings(
+        new Set(
+          ["CONTEXT.md", "GLOSSARY.md"].filter((file) => existsSync(path.join(absolutePath, file))),
+        ),
+      ),
+      ...(hasConfig ? findDeprecatedConfigFields(await readRawConfig(absolutePath)) : []),
+    ],
   };
 }
 
@@ -528,8 +580,12 @@ function formatReport(report: RepoDoctorReport): string {
     return `${report.path}: not a git repository — skipped`;
   }
   if (isReportClean(report)) {
-    return report.maxLiveWorkersNote
-      ? `${report.path}: OK\n  - note: ${report.maxLiveWorkersNote}`
+    const notes = [
+      ...(report.maxLiveWorkersNote ? [report.maxLiveWorkersNote] : []),
+      ...report.warnings,
+    ];
+    return notes.length > 0
+      ? `${report.path}: OK\n${notes.map((note) => `  - note: ${note}`).join("\n")}`
       : `${report.path}: OK`;
   }
 
@@ -551,6 +607,9 @@ function formatReport(report: RepoDoctorReport): string {
   }
   for (const finding of report.environmentFindings) {
     lines.push(`  - ${finding}`);
+  }
+  for (const warning of report.warnings) {
+    lines.push(`  - warning: ${warning}`);
   }
   for (const check of report.dependencyFindings) {
     if (check.status === "unsatisfied") {
@@ -710,6 +769,22 @@ export async function findInstallDrift(homeDirectory: string): Promise<string[]>
   return findings;
 }
 
+/**
+ * Warns when forge is installed both as a plugin and by `install.sh` (the
+ * installer's manifest is present), which would load two copies of the
+ * `/forge` command and agents.
+ */
+export function findDoubleInstall(
+  homeDirectory: string,
+  plugins: readonly InstalledPlugin[],
+): string[] {
+  const installedByScript = existsSync(path.join(homeDirectory, INSTALL_MANIFEST_RELATIVE_PATH));
+  if (!installedByScript || findPluginByName(plugins, "forge") === null) return [];
+  return [
+    "forge is installed both as a plugin and by install.sh; remove one (uninstall the plugin, or delete ~/.claude/forge, ~/.claude/commands/forge.md and the forge agents)",
+  ];
+}
+
 async function readUserSettings(): Promise<unknown> {
   const file = Bun.file(path.join(os.homedir(), ".claude", "settings.json"));
   if (!(await file.exists())) return null;
@@ -739,11 +814,17 @@ async function main(targets: readonly string[]): Promise<void> {
 
   const globalPluginCheck = classifyClaudePluginProbe(await probes.claudePlugin());
   const globalForgeAgentsCheck = classifyForgeAgentsProbe(await probes.forgeAgents());
-  const globalFindingLines = [globalPluginCheck, globalForgeAgentsCheck]
+  const skillsChecks = probes.skillsContract?.() ?? checkSkillsContract();
+  const doubleInstall = findDoubleInstall(os.homedir(), listInstalledPlugins());
+  const globalFindingLines = [globalPluginCheck, globalForgeAgentsCheck, ...skillsChecks]
     .map(formatGlobalDependencyFinding)
     .filter((line): line is string => line !== null);
   if (globalFindingLines.length > 0) {
     console.log(`\nGlobal dependencies:\n${globalFindingLines.join("\n")}`);
+  }
+
+  if (doubleInstall.length > 0) {
+    console.log(`\nDouble install:\n${doubleInstall.map((line) => `  - ${line}`).join("\n")}`);
   }
 
   const cliFlagFindings = await checkExternalCliFlags(environment);
@@ -781,7 +862,8 @@ async function main(targets: readonly string[]): Promise<void> {
     cleanCount === gitRepoCount &&
     cliFlagFindings.length === 0 &&
     globalPluginCheck.status !== "unsatisfied" &&
-    globalForgeAgentsCheck.status !== "unsatisfied";
+    globalForgeAgentsCheck.status !== "unsatisfied" &&
+    skillsChecks.every((check) => check.status !== "unsatisfied");
   process.exitCode = exitClean ? 0 : 1;
 }
 

@@ -24,11 +24,11 @@ has filled up since.
 
 Before merging any worker's branch, confirm a final
 `.forge/handoff-<ticket>.md` in its worktree and that the worktree is still
-locked with a `/forge` reason naming that ticket (`git worktree list
+locked with a `/forge:run` reason naming that ticket (`git worktree list
 --porcelain`). If either is missing, don't merge that branch silently — flag
 it in Phase 9's report like any failed ticket.
 
-A confident summary is not evidence (`reference/incidents.md`). For each
+A confident summary is not evidence (`${CLAUDE_PLUGIN_ROOT}/forge/reference/incidents.md`). For each
 worker: `forge results --run <runId> --read <ticket>` (status, report path,
 `Risk:` line; no result = no report), then `forge verify <ticket> --run
 <runId> --worktree <its worktree>` — commits beyond the dispatch baseline, paths inside the edit
@@ -41,7 +41,7 @@ Also run `forge usage --session <this coordinator session>` and, per worker,
 flag (report, don't block the merge on) any full `Read` over
 `usage.oversizedReadLines` lines — same "flag in Phase 9's report" treatment
 as the check above. This is the backstop for Phase 7 step 3
-(locate-before-`Read` discipline): see `reference/incidents.md`'s "The
+(locate-before-`Read` discipline): see `${CLAUDE_PLUGIN_ROOT}/forge/reference/incidents.md`'s "The
 handoff note's 0-of-4 wave" for the measured run where the prose-only
 version of this instruction was followed by none of four workers.
 
@@ -78,19 +78,19 @@ A worker's `Risk:` line other than `none` can only raise the tier you take
 from `forge assess`, never lower it. Package the diff first: `forge
 review-package <base> <head> --out <file>` (exit 3 on an empty or
 non-descendant range — fix the range, don't review nothing) and pass the
-reviewer that path. Dispatch one `Agent({subagent_type: "forge-reviewer"})`
-built from `reference/reviewer-prompt.md` (fill `{{project_skills}}` with the
+reviewer that path. Dispatch one `Agent({subagent_type: "forge:forge-reviewer"})`
+built from `${CLAUDE_PLUGIN_ROOT}/forge/reference/reviewer-prompt.md` (fill `{{project_skills}}` with the
 union of the wave tickets' `## Project skills`, `none` if all say `none`; add
 the spec's `## Global Constraints`) — single-pass, never a fan-out (nesting
-hung workers and a fan-out roster hung ~1h45m; `reference/incidents.md`).
-Fallback if `forge-reviewer` is missing: the `code-review` skill at `--level
+hung workers and a fan-out roster hung ~1h45m; `${CLAUDE_PLUGIN_ROOT}/forge/reference/incidents.md`).
+Fallback if `forge:forge-reviewer` is missing: the `code-review` skill at `--level
 low|medium`. `/code-review ultra` is a manual, opt-in step only.
 
 Record the reviewer's findings JSON per ticket: `forge review --ticket
 <ticket> --findings <file|-> [--changed <files since the last round>]`. The
 CLI enforces triage order (intent_gap, bad_plan, patch, defer) and the
 `budgets.reviewRounds` cap, and exits 1 while findings are open. Fix, then
-re-dispatch `forge-reviewer` in `recheck` mode (ledger plus the diff from the
+re-dispatch `forge:forge-reviewer` in `recheck` mode (ledger plus the diff from the
 reviewed sha only; "Recheck variant") and record again, also after any CI fix.
 At the cap, escalate once: `forge review --ticket <ticket> --escalate --model
 <current>` prints the next tier (exit 1 if none); run one fresh worker on it.
@@ -109,7 +109,7 @@ open with the human-decision label; don't re-derive the rules in prose.
 
 The coordinator writes a tracker-state transition only where
 `forge.config.json`'s `tracker.transitions` names it `coordinator` for
-`onPrOpen`/`onPrMerge` (see `reference/tracker-<kind>.md`) — never where a
+`onPrOpen`/`onPrMerge` (see `${CLAUDE_PLUGIN_ROOT}/forge/reference/tracker-<kind>.md`) — never where a
 tracker's own PR-linked automation already marks it `automatic` (e.g.
 Linear's GitHub integration). If green and nothing was flagged: push the
 integration branch once, open one PR for this wave (never one per ticket —
@@ -123,7 +123,7 @@ touches but doesn't finish).
 **Verify the closing line landed, right after `gh pr create`, before doing
 anything else** — a markdown formatter reflowing the blank line that
 separates it from the rest of the PR body silently breaks the tracker's
-keyword parsing (see `reference/tracker-<kind>.md`'s `pr.referenceLines`):
+keyword parsing (see `${CLAUDE_PLUGIN_ROOT}/forge/reference/tracker-<kind>.md`'s `pr.referenceLines`):
 `gh pr view <n> --json body -q .body | grep -c '^Closes'` must return `1`+;
 if it doesn't, fix it with `gh pr edit <n> --body-file …` before reporting
 the wave done. This has no cheap fix later — the merge webhook that would

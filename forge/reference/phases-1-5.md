@@ -36,9 +36,7 @@ operations" section; loop back to Phase 1 once its map clears.
 
 ## Phase 2 — Spec
 
-Read
-`~/.claude/plugins/cache/claude-plugins-official/mattpocock-skills/*/skills/engineering/to-spec/SKILL.md`
-(glob the version — don't hardcode it) and follow its synthesis template,
+Run `forge skill-path to-spec` and read the `SKILL.md` it prints, then follow its synthesis template,
 but write the result **into the plan file**, not to the issue tracker —
 `to-spec` is user-invocable only and its own publish step is a write that
 can't happen inside plan mode. Section it as a spec block per
@@ -58,9 +56,7 @@ worker and reviewer must obey (the harness copies it into each brief).
 
 ## Phase 3 — Tickets
 
-Read
-`~/.claude/plugins/cache/claude-plugins-official/mattpocock-skills/*/skills/engineering/to-tickets/SKILL.md`
-and follow its tracer-bullet breakdown (with blocking edges), but write the
+Run `forge skill-path to-tickets` and read the `SKILL.md` it prints, then follow its tracer-bullet breakdown (with blocking edges), but write the
 tickets **into the plan file** instead of publishing them — same reason as
 Phase 2. Reinforce two rules on top of the skill's own breakdown:
 
@@ -132,7 +128,7 @@ Phase 2. Reinforce two rules on top of the skill's own breakdown:
   any tripwire fires: estimated peak > 160K; touch set > 8 files or > 1,500
   lines; new surface > 500 lines; more than one new E2E spec in the ticket;
   or a new page object **and** a new spec in the same ticket (348K vs 129K
-  for an almost-identical sibling; see `reference/incidents.md`).
+  for an almost-identical sibling; see `${CLAUDE_PLUGIN_ROOT}/forge/reference/incidents.md`).
 
 Before Phase 4, run `forge validate --file <plan.json | ->` (usage:
 `forge validate --help`; plan = spec markdown + tickets with `covers`,
@@ -163,7 +159,7 @@ Now that the plan is approved, in this exact order:
 1. Apply the `GLOSSARY.md`/`docs/adr/` edits deferred from Phase 1.
 2. If the feature touches a screen: publish the canvas now with the `Artifact`
    tool directly — never invoke `/design` or ask the user to run it (it is
-   user-invocable only; see `reference/incidents.md`). A canvas is a plain
+   user-invocable only; see `${CLAUDE_PLUGIN_ROOT}/forge/reference/incidents.md`). A canvas is a plain
    single-page HTML you write: nav + one `<section class="artboard">` per
    screen + empty/error/loading state switch + a hand-off block per artboard.
    - **Area already has a canvas** (URL in `docs/design/README.md`):

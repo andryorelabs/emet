@@ -16,6 +16,9 @@ import {
   type EnvironmentProbes,
   checkSelfCheckCommand,
   checkSettingsAdvisories,
+  findDeprecatedConfigFields,
+  findDoubleInstall,
+  findGlossaryWarnings,
   findInstallDrift,
   findMissingDocs,
   isReportClean,
@@ -35,6 +38,7 @@ const cleanReport: RepoDoctorReport = {
   dependencyFindings: [],
   maxLiveWorkersNote: null,
   environmentFindings: [],
+  warnings: [],
 };
 
 const healthyProbes: DependencyProbes = {
@@ -286,6 +290,37 @@ describe("auditRepo", () => {
     expect(report.missingDocs).toEqual([]);
     expect(report.todoMarkers).toEqual([]);
     expect(report.selfCheckIssues).toEqual([]);
+    expect(isReportClean(report)).toBe(true);
+  });
+
+  test("surfaces glossary and deprecated-field warnings without dirtying a clean repo", async () => {
+    await Bun.$`git -C ${repoRoot} init --quiet`.quiet();
+    await Bun.write(
+      path.join(repoRoot, "forge.config.json"),
+      JSON.stringify({
+        version: 1,
+        repo: { trunk: "main", remote: "origin" },
+        ticket: { idPattern: "^X-\\d+$", branchPrefix: "x" },
+        tracker: { kind: "github", readyLabel: "ready" },
+        commands: { selfCheck: ["bun run check"] },
+      }),
+    );
+    await Bun.write(
+      path.join(repoRoot, "package.json"),
+      JSON.stringify({ scripts: { check: "x" } }),
+    );
+    await Bun.write(path.join(repoRoot, "CONTEXT.md"), "# context\n");
+    const docsAgentsDirectory = path.join(repoRoot, "docs", "agents");
+    await Bun.$`mkdir -p ${docsAgentsDirectory}`.quiet();
+    await Promise.all(
+      ["forge.md", "issue-tracker.md", "triage-labels.md", "domain.md"].map((doc) =>
+        Bun.write(path.join(docsAgentsDirectory, doc), "# all set, no markers here\n"),
+      ),
+    );
+
+    const report = await auditRepo(repoRoot, healthyProbes, healthyEnvironment);
+    expect(report.warnings).toContain("rename CONTEXT.md to GLOSSARY.md");
+    expect(report.warnings.some((warning) => warning.includes("tracker.readyLabel"))).toBe(true);
     expect(isReportClean(report)).toBe(true);
   });
 
@@ -635,5 +670,74 @@ describe("createEnvironmentProbes", () => {
   test("helpText reports a missing binary as unrunnable, not as help text", async () => {
     const probes = createEnvironmentProbes();
     expect(await probes.helpText(["forge-no-such-binary-xyz", "--help"])).toBeNull();
+  });
+});
+
+describe("findGlossaryWarnings", () => {
+  test("warns when only CONTEXT.md exists", () => {
+    expect(findGlossaryWarnings(new Set(["CONTEXT.md"]))).toEqual([
+      "rename CONTEXT.md to GLOSSARY.md",
+    ]);
+  });
+
+  test("is silent with GLOSSARY.md or neither", () => {
+    expect(findGlossaryWarnings(new Set(["CONTEXT.md", "GLOSSARY.md"]))).toEqual([]);
+    expect(findGlossaryWarnings(new Set())).toEqual([]);
+  });
+});
+
+describe("findDeprecatedConfigFields", () => {
+  test("names each deprecated field that is set", () => {
+    const findings = findDeprecatedConfigFields({
+      tracker: { kind: "github", readyLabel: "ready" },
+      commands: { fullSuite: { reset: "x" } },
+    });
+    expect(findings).toHaveLength(2);
+    expect(findings[0]).toContain("tracker.readyLabel");
+    expect(findings[1]).toContain("commands.fullSuite.reset");
+  });
+
+  test("is silent for a config without deprecated fields or a non-object", () => {
+    expect(findDeprecatedConfigFields({ tracker: { kind: "github" } })).toEqual([]);
+    expect(findDeprecatedConfigFields(null)).toEqual([]);
+  });
+});
+
+describe("findDoubleInstall", () => {
+  let home: string;
+  beforeEach(() => {
+    home = mkdtempSync(path.join(os.tmpdir(), "forge-double-"));
+  });
+  afterEach(() => {
+    rmSync(home, { recursive: true, force: true });
+  });
+
+  const forgePlugin: Parameters<typeof findDoubleInstall>[1] = [
+    { id: "forge@marketplace", version: "1.0.0", enabled: true, installPath: "/x" },
+  ];
+
+  const writeManifest = (): void => {
+    mkdirSync(path.join(home, ".claude", "forge"), { recursive: true });
+    writeFileSync(path.join(home, ".claude", "forge", ".install-manifest.json"), "{}");
+  };
+
+  test("warns when the plugin and the install manifest both exist", () => {
+    writeManifest();
+    expect(findDoubleInstall(home, forgePlugin)).toHaveLength(1);
+  });
+
+  test("is silent with only one install route", () => {
+    expect(findDoubleInstall(home, forgePlugin)).toEqual([]);
+    writeManifest();
+    expect(findDoubleInstall(home, [])).toEqual([]);
+  });
+});
+
+describe("checkSelfCheckCommand ecosystems", () => {
+  test("resolves yarn run against package.json scripts", async () => {
+    expect(await checkSelfCheckCommand("/nowhere", "yarn run test", new Set(["test"]))).toBeNull();
+    expect(await checkSelfCheckCommand("/nowhere", "yarn run lint", new Set(["test"]))).toContain(
+      "lint",
+    );
   });
 });
