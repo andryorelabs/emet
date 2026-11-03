@@ -126,9 +126,12 @@ export function recordRound(
   }
   const round = ledger.rounds + 1
   const priorIds = ledger.findings.map((entry) => entry.id)
+  const keptIds = new Set(
+    ledger.findings.filter((entry) => entry.status !== 'deferred').map((entry) => entry.id),
+  )
   const changed = new Set(options.changedFiles)
   const added: LedgerFinding[] = triageOrder(findings).map((entry) => {
-    const exempt = round === 1 || !isBlocking(entry.severity) || priorIds.includes(entry.id)
+    const exempt = round === 1 || !isBlocking(entry.severity) || keptIds.has(entry.id)
     if (exempt || citesPriorFinding(entry.claim, priorIds) || changed.has(entry.file)) {
       return { ...entry, status: 'open', round }
     }

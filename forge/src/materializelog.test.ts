@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test'
-import { mkdtempSync, rmSync } from 'node:fs'
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
 
@@ -16,6 +16,14 @@ beforeEach(() => {
 afterEach(() => rmSync(directory, { recursive: true, force: true }))
 
 describe('materialize log', () => {
+  test('an unreadable or non-map log throws instead of looking empty', () => {
+    mkdirSync(path.dirname(logPath), { recursive: true })
+    writeFileSync(logPath, '{"a": ')
+    expect(() => lookupTicket(logPath, 'a')).toThrow('unreadable')
+    writeFileSync(logPath, 'null')
+    expect(() => lookupTicket(logPath, 'a')).toThrow('not a key/ticket map')
+  })
+
   test('lookup of an unrecorded key is null', () => {
     expect(lookupTicket(logPath, 'a')).toBeNull()
   })

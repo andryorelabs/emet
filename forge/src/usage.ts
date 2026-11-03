@@ -558,10 +558,27 @@ export function classifyTicketStall(input: {
     : 'working'
 }
 
+async function worktreeStartCommit(worktreeDirectory: string): Promise<string | null> {
+  const result = await Bun.$`git -C ${worktreeDirectory} reflog show HEAD --format=%H`
+    .nothrow()
+    .quiet()
+  if (result.exitCode !== 0) return null
+  const lines = result.stdout.toString().trim().split('\n').filter(Boolean)
+  return lines.at(-1) ?? null
+}
+
 async function probeBranchCommits(
   commonDirectory: string,
   branch: string,
+  worktreeDirectory: string,
 ): Promise<number | null> {
+  const start = await worktreeStartCommit(worktreeDirectory)
+  if (start !== null) {
+    const result =
+      await Bun.$`git -C ${commonDirectory} rev-list --count ${start}..${branch}`.nothrow().quiet()
+    const count = Number(result.stdout.toString().trim())
+    if (result.exitCode === 0 && Number.isSafeInteger(count)) return count
+  }
   for (const base of ['origin/HEAD', 'origin/main', 'main', 'origin/master', 'master']) {
     const result =
       await Bun.$`git -C ${commonDirectory} rev-list --count ${base}..${branch}`.nothrow().quiet()
@@ -609,7 +626,7 @@ async function runTicketStalledMode(
     const owner = resolveWorktreeOwner(entry)
     if (!owner || owner.runId !== runId) continue
     const branch = entry.branch?.replace(/^refs\/heads\//, '') ?? null
-    const commits = branch ? await probeBranchCommits(commonDirectory, branch) : null
+    const commits = branch ? await probeBranchCommits(commonDirectory, branch, entry.directory) : null
     const handoff = await defaultStatMtimeMs(`${entry.directory}/.forge/handoff-${owner.ticket}.md`)
     const lastActivityMs = Math.max(
       handoff ?? 0,

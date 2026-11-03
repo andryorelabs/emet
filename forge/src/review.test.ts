@@ -131,6 +131,21 @@ describe('recordRound repeats', () => {
   })
 })
 
+describe('recordRound deferred repeats', () => {
+  test('a deferred blocker reported again stays deferred', () => {
+    const parse = (items: Record<string, unknown>[]) => parseFindings(JSON.stringify(items))
+    const options = { changedFiles: ['a.ts'], reviewRounds: 4 }
+    const first = recordRound(emptyLedger('T'), parse([finding()]), options)
+    if (!first.ok) throw new Error('round 1 failed')
+    const second = recordRound(first.ledger, parse([finding(), finding({ id: 'F9', file: 'c.ts' })]), options)
+    if (!second.ok) throw new Error('round 2 failed')
+    const third = recordRound(second.ledger, parse([finding(), finding({ id: 'F9', file: 'c.ts' })]), options)
+    if (!third.ok) throw new Error('round 3 failed')
+    const status = Object.fromEntries(third.ledger.findings.map((entry) => [entry.id, entry.status]))
+    expect(status).toEqual({ F1: 'open', F9: 'deferred' })
+  })
+})
+
 describe('escalation and rulings', () => {
   test('nextEscalationModel follows the map', () => {
     expect(nextEscalationModel({ sonnet: 'opus' }, 'sonnet')).toBe('opus')

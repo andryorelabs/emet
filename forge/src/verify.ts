@@ -197,11 +197,19 @@ function resolveRunId(repoRoot: string, ticket: string, explicit: string | undef
   return candidates[0]!
 }
 
-function readWorkerScopedSuite(repoRoot: string): string | undefined {
-  const configPath = path.join(repoRoot, 'forge.config.json')
-  if (!existsSync(configPath)) return undefined
-  const suite = (readJson(configPath) as { commands?: { workerScopedSuite?: unknown } }).commands
-    ?.workerScopedSuite
+async function readWorkerScopedSuite(
+  workTree: string,
+  baseline: string,
+): Promise<string | undefined> {
+  const shown = await Bun.$`git -C ${workTree} show ${baseline}:forge.config.json`.nothrow().quiet()
+  if (shown.exitCode !== 0) return undefined
+  let config: { commands?: { workerScopedSuite?: unknown } }
+  try {
+    config = JSON.parse(shown.stdout.toString())
+  } catch {
+    return undefined
+  }
+  const suite = config.commands?.workerScopedSuite
   return typeof suite === 'string' && suite.length > 0 ? suite : undefined
 }
 
@@ -244,7 +252,7 @@ export async function run(argv: string[]): Promise<void> {
     const record = await verifyTicket(
       ticket,
       dispatch,
-      gitDependencies(workTree, handoffPath, readWorkerScopedSuite(workTree)),
+      gitDependencies(workTree, handoffPath, await readWorkerScopedSuite(workTree, dispatch.baseline)),
     )
     const verifyDir = path.join(runDir, 'verify')
     mkdirSync(verifyDir, { recursive: true })

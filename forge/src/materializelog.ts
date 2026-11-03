@@ -8,13 +8,23 @@ const USAGE = `usage: forge materialize-log --run <id> --record <localKey> <trac
 
 --record persists immediately to .forge/runs/<id>/materialize.json.
 --lookup prints the tracker id and exits 0, or exits 1 when the key was never recorded
-(materialize re-runs skip recorded keys).`
+(materialize re-runs skip recorded keys). Any other failure, including an unreadable
+log, exits 2.`
 
 type MaterializeLog = Record<string, string>
 
 function readLog(logPath: string): MaterializeLog {
   if (!existsSync(logPath)) return {}
-  return JSON.parse(readFileSync(logPath, 'utf8')) as MaterializeLog
+  let parsed: unknown
+  try {
+    parsed = JSON.parse(readFileSync(logPath, 'utf8'))
+  } catch (error) {
+    throw new Error(`materialize log ${logPath} is unreadable: ${(error as Error).message}`)
+  }
+  if (typeof parsed !== 'object' || parsed === null || Array.isArray(parsed)) {
+    throw new Error(`materialize log ${logPath} is not a key/ticket map`)
+  }
+  return parsed as MaterializeLog
 }
 
 export function lookupTicket(logPath: string, localKey: string): string | null {
@@ -79,7 +89,7 @@ export async function run(argv: string[]): Promise<void> {
     process.exitCode = 2
   } catch (error) {
     console.error(`forge materialize-log: ${(error as Error).message}`)
-    process.exitCode = 1
+    process.exitCode = 2
   }
 }
 

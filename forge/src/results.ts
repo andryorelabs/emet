@@ -3,11 +3,19 @@ import path from 'node:path'
 
 import { resolveRepoRoot } from './config'
 
+async function resolveSharedRoot(): Promise<string> {
+  const output = await Bun.$`git rev-parse --path-format=absolute --git-common-dir`.nothrow().quiet()
+  const commonDirectory = output.stdout.toString().trim()
+  if (output.exitCode === 0 && commonDirectory.length > 0) return commonDirectory
+  return (await resolveRepoRoot()) ?? process.cwd()
+}
+
 const USAGE = `usage: forge results --run <id> --write <ticket> --status <status> --report <path> --risk "<Risk: ...>" [--root <dir>]
        forge results --run <id> --read <ticket> [--root <dir>]
 
 status: DONE | DONE_WITH_CONCERNS | BLOCKED | NEEDS_CONTEXT
-Files live in .forge/runs/<id>/results/<ticket>.json (local; only the coordinator writes the tracker).`
+Files live in <git-common-dir>/.forge/runs/<id>/results/<ticket>.json, shared by every worktree
+(local; only the coordinator writes the tracker).`
 
 export const RESULT_STATUSES = ['DONE', 'DONE_WITH_CONCERNS', 'BLOCKED', 'NEEDS_CONTEXT'] as const
 
@@ -64,7 +72,7 @@ export async function run(argv: string[]): Promise<void> {
     process.exitCode = 2
     return
   }
-  const root = readFlag(argv, '--root') ?? (await resolveRepoRoot()) ?? process.cwd()
+  const root = readFlag(argv, '--root') ?? (await resolveSharedRoot())
   const resultsDirectory = path.join(root, '.forge', 'runs', runId, 'results')
   const writeTicket = readFlag(argv, '--write')
   const readTicket = readFlag(argv, '--read')
