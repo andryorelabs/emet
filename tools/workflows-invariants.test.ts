@@ -154,3 +154,35 @@ describe("ci.yml", () => {
     expect(jobs["ci-passed"]?.if).toContain("always()");
   });
 });
+
+describe("ci.yml macOS job", () => {
+  const ci = workflows.find(({ fileName }) => fileName === "ci.yml")?.workflow;
+
+  test("exists and is gated by ci-passed", () => {
+    expect(Object.keys(ci?.jobs ?? {})).toContain("test-macos");
+    expect(neededJobs(ci?.jobs["ci-passed"])).toContain("test-macos");
+  });
+});
+
+describe("release.yml", () => {
+  const release = workflows.find(({ fileName }) => fileName === "release.yml");
+
+  test("checks the tag against plugin.json before building", () => {
+    const raw = release?.raw ?? "";
+    expect(raw).toContain(".claude-plugin/plugin.json");
+    expect(raw.indexOf("plugin.json")).toBeLessThan(raw.indexOf("build-binaries.ts"));
+  });
+
+  test("uploads the four binaries and SHA256SUMS", () => {
+    const raw = release?.raw ?? "";
+    for (const asset of [
+      "forge-linux-x64",
+      "forge-linux-arm64",
+      "forge-darwin-x64",
+      "forge-darwin-arm64",
+      "SHA256SUMS",
+    ]) {
+      expect(raw).toContain(asset);
+    }
+  });
+});
