@@ -2,6 +2,7 @@ import { mkdirSync, readFileSync, renameSync, statSync, writeFileSync } from "no
 import os from "node:os";
 import path from "node:path";
 import { errnoCode, isObject } from "./narrow";
+import { readParent, type ProcessTreeReader, defaultProcessTreeReader } from "./proctree";
 
 /**
  * Classifies whether a `/forge` run (coordinator or worker) is still alive
@@ -52,41 +53,26 @@ export function resolveIdleThresholdMs(config: {
   );
 }
 
-function readProcStatusField(pid: number, field: string): string | undefined {
-  try {
-    const status = readFileSync(`/proc/${pid}/status`, "utf8");
-    const line = status.split("\n").find((candidate) => candidate.startsWith(`${field}:`));
-    return line?.slice(field.length + 1).trim();
-  } catch {
-    return undefined;
-  }
-}
-
-function readProcComm(pid: number): string | undefined {
-  try {
-    return readFileSync(`/proc/${pid}/comm`, "utf8").trim();
-  } catch {
-    return undefined;
-  }
-}
-
 /**
  * Walks `PPid` upward from `startPid` (a tool-call process, e.g. this
- * script's own `bun`) until it finds an ancestor whose `/proc/<pid>/comm`
- * reads `claude` — the Claude Code process itself, which outlives every
+ * script's own `bun`) until it finds an ancestor whose command name (procfs,
+ * or `ps` where `/proc` is absent) reads `claude` — the Claude Code process itself, which outlives every
  * short-lived process it spawns for the life of the run. Two hops from a
  * Bash-tool-spawned process (bun → the shell → claude) is the common case;
  * the walk is bounded to guard against a `/proc` read racing a process
  * exiting mid-walk and producing a cycle or a dead end.
  */
-export function resolveAnchorPid(startPid: number = process.pid): number {
+export function resolveAnchorPid(
+  startPid: number = process.pid,
+  reader: ProcessTreeReader = defaultProcessTreeReader,
+): number {
   let pid = startPid;
   for (let hop = 0; hop < 32; hop++) {
-    if (readProcComm(pid) === "claude") return pid;
-    const ppidRaw = readProcStatusField(pid, "PPid");
-    const ppid = ppidRaw === undefined ? NaN : Number(ppidRaw);
-    if (!Number.isFinite(ppid) || ppid <= 1) break;
-    pid = ppid;
+    const info = readParent(pid, reader);
+    if (info === null) break;
+    if (info.comm === "claude") return pid;
+    if (info.ppid <= 1) break;
+    pid = info.ppid;
   }
   throw new Error(`forge-runs: no ancestor of pid ${startPid} has comm "claude" within 32 hops`);
 }
@@ -112,11 +98,15 @@ export function readProcessStartToken(pid: number): string | undefined {
  * an exited anchor whose pid the OS has handed to something else would read
  * as alive. Requiring `comm` to still read `claude` closes that gap: a
  * recycled pid now running an unrelated process reads as dead.
- * `readProcComm` already returns `undefined` for a missing `/proc/<pid>`
- * (caught internally), so no separate `existsSync` pre-check is needed.
+ * `readParent` already returns `null` for a missing process, so no separate
+ * existence pre-check is needed.
  */
-export function isAnchorAlive(pid: number, startToken?: string): boolean {
-  if (readProcComm(pid) !== "claude") return false;
+export function isAnchorAlive(
+  pid: number,
+  startToken?: string,
+  reader: ProcessTreeReader = defaultProcessTreeReader,
+): boolean {
+  if (readParent(pid, reader)?.comm !== "claude") return false;
   if (startToken === undefined) return true;
   return readProcessStartToken(pid) === startToken;
 }

@@ -8,6 +8,7 @@ import { writeCompletionEvent, type CompletionEvent } from "./runs";
 import { listOccupiedSlots, type SlotListEntry } from "./slots";
 import { parseWorktreeEntries, resolveWorktreeOwner } from "./worktrees";
 import { isObject } from "./narrow";
+import { defaultProcessTreeReader, readParent as readProcessParent } from "./proctree";
 
 /**
  * `forge guard` — a Claude Code `PreToolUse` hook that blocks the three
@@ -118,8 +119,8 @@ export function checkScheduleWakeupSlashCommand(input: PreToolUseHookInput): Gua
 }
 
 /**
- * Parses `/proc/<pid>/stat`'s 4th whitespace-separated field (`ppid`) — the
- * one line this hook needs from procfs, read directly rather than pulling in
+ * Reads a pid's parent via {@link readParent} (procfs, or `ps` where `/proc`
+ * is absent) — read directly rather than pulling in
  * a process-tree library for a single integer. Returns `null` for a pid
  * that's gone, unreadable, or whose `stat` doesn't parse (e.g. a process
  * name containing a literal `)` throws off naive splitting — this locates
@@ -128,22 +129,9 @@ export function checkScheduleWakeupSlashCommand(input: PreToolUseHookInput): Gua
  */
 export function readParentPid(
   pid: number,
-  readFile: (filePath: string) => string = (filePath) => readFileSync(filePath, "utf8"),
+  readFile: (filePath: string) => string = defaultProcessTreeReader.readFile,
 ): number | null {
-  try {
-    const raw = readFile(`/proc/${pid}/stat`);
-    const afterComm = raw.slice(raw.lastIndexOf(")") + 1).trim();
-    const fields = afterComm.split(/\s+/);
-    /**
-     * fields[0] is state, fields[1] is ppid — the ppid is the 4th field of
-     * the whole stat line, but the first two (pid, comm) were consumed by
-     * `lastIndexOf(')')` above.
-     */
-    const ppid = Number(fields[1]);
-    return Number.isSafeInteger(ppid) && ppid > 0 ? ppid : null;
-  } catch {
-    return null;
-  }
+  return readProcessParent(pid, { ...defaultProcessTreeReader, readFile })?.ppid ?? null;
 }
 
 /**
