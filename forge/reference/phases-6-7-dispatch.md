@@ -63,7 +63,7 @@ with `forge slots --release --run <runId>` before ending the phase —
 otherwise those slots stay occupied until the wave's own
 `forge cleanup --run <runId>` at close-out.
 
-For each ticket in the batch, get its worktree lock reason *before* the
+For each ticket in the batch, get its worktree lock reason _before_ the
 `Agent` call and put it in that worker's prompt:
 
 ```
@@ -73,7 +73,7 @@ forge lock-reason --run <runId> --ticket <ticket>
 Never assemble that string yourself — it's the same AO-285 shape as calling
 the claims/slots functions through an inline `bun -e` snippet
 (`reference/incidents.md`), and it carries a `slug=` field only a command
-running in *your* cwd can get right. `forge lock-reason` honors this repo's
+running in _your_ cwd can get right. `forge lock-reason` honors this repo's
 `worktree.lockReason` override if it has one, and refuses to emit a reason
 this CLI's own parser can't read back.
 
@@ -96,7 +96,7 @@ that exits 42 failed its branch/base check; re-dispatch from the current HEAD.
 **Immediately after that batch returns, before any worker has had a chance to
 commit, run `forge preflight --run <runId> --post-dispatch`** — always pass
 `--run`, not the bare flag: it's how this audit attributes agent worktrees to
-*this* wave instead of a sibling coordinator's. It hard-fails on:
+_this_ wave instead of a sibling coordinator's. It hard-fails on:
 two worktrees claiming the same ticket, two worker branches with the same
 ticket number, a worktree still unlocked 30s+ after dispatch, a worktree's
 branch not matching its own lock's ticket, or fewer of this run's own
@@ -128,7 +128,7 @@ command — see `reference/incidents.md`).
 
 Do **not** instruct workers to use `LSP` — verified across 97 subagent
 transcripts, `LSP` never reaches a worker regardless of `subagent_type` or
-`isolation: "worktree"`: it's a tool wired into the *main* session only, and
+`isolation: "worktree"`: it's a tool wired into the _main_ session only, and
 `ToolSearch("select:LSP")` returns "No matching deferred tools found" from
 inside every worker, every time (see `reference/incidents.md`). A worker
 that needs a real `findReferences` can `SendMessage` the coordinator, which
@@ -185,7 +185,7 @@ Inside each worktree, in order:
    locally into the wave's integration branch in Phase 8 — so its name exists
    purely for local debugging traceability ("which worker produced this
    commit"), not for any tracker automation: a tracker's own PR-linked
-   automation can only match a *pushed* branch, and this one never reaches
+   automation can only match a _pushed_ branch, and this one never reaches
    the remote.
 2. Run the branch/base check from `worker-prompt.md` (exit 42, no
    self-repair). You never write the tracker: the coordinator marks `onStart`

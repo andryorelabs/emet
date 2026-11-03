@@ -1,4 +1,4 @@
-import { describe, expect, test } from 'bun:test'
+import { describe, expect, test } from "bun:test";
 
 import {
   type Ledger,
@@ -9,151 +9,167 @@ import {
   parseFindings,
   recordRound,
   triageOrder,
-} from './review'
+} from "./review";
 
 const finding = (over: Record<string, unknown> = {}) => ({
-  id: 'F1',
-  file: 'a.ts',
+  id: "F1",
+  file: "a.ts",
   line: 3,
-  severity: 'blocker',
-  kind: 'patch',
-  claim: 'bad',
+  severity: "blocker",
+  kind: "patch",
+  claim: "bad",
   ...over,
-})
+});
 
-const parseItems = (items: Record<string, unknown>[]) => parseFindings(JSON.stringify(items))
+const parseItems = (items: Record<string, unknown>[]) => parseFindings(JSON.stringify(items));
 
-describe('parseFindings', () => {
-  test('accepts a valid array and rejects bad kind/severity/shape', () => {
-    expect(parseFindings(JSON.stringify([finding()]))).toHaveLength(1)
-    expect(() => parseFindings('nope')).toThrow()
-    expect(() => parseFindings(JSON.stringify({}))).toThrow()
-    expect(() => parseFindings(JSON.stringify([finding({ kind: 'x' })]))).toThrow(/kind/)
-    expect(() => parseFindings(JSON.stringify([finding({ severity: 'x' })]))).toThrow(/severity/)
-    expect(() => parseFindings(JSON.stringify([finding({ line: 'a' })]))).toThrow(/line/)
-  })
-})
+describe("parseFindings", () => {
+  test("accepts a valid array and rejects bad kind/severity/shape", () => {
+    expect(parseFindings(JSON.stringify([finding()]))).toHaveLength(1);
+    expect(() => parseFindings("nope")).toThrow();
+    expect(() => parseFindings(JSON.stringify({}))).toThrow();
+    expect(() => parseFindings(JSON.stringify([finding({ kind: "x" })]))).toThrow(/kind/);
+    expect(() => parseFindings(JSON.stringify([finding({ severity: "x" })]))).toThrow(/severity/);
+    expect(() => parseFindings(JSON.stringify([finding({ line: "a" })]))).toThrow(/line/);
+  });
+});
 
-describe('triageOrder', () => {
-  test('orders intent_gap, bad_plan, patch, defer', () => {
+describe("triageOrder", () => {
+  test("orders intent_gap, bad_plan, patch, defer", () => {
     const list = parseFindings(
       JSON.stringify([
-        finding({ id: 'd', kind: 'defer' }),
-        finding({ id: 'p', kind: 'patch' }),
-        finding({ id: 'i', kind: 'intent_gap' }),
-        finding({ id: 'b', kind: 'bad_plan' }),
+        finding({ id: "d", kind: "defer" }),
+        finding({ id: "p", kind: "patch" }),
+        finding({ id: "i", kind: "intent_gap" }),
+        finding({ id: "b", kind: "bad_plan" }),
       ]),
-    )
-    expect(triageOrder(list).map((f) => f.id)).toEqual(['i', 'b', 'p', 'd'])
-  })
-})
+    );
+    expect(triageOrder(list).map((f) => f.id)).toEqual(["i", "b", "p", "d"]);
+  });
+});
 
-describe('recordRound', () => {
-  const cap = 2
+describe("recordRound", () => {
+  const cap = 2;
 
-  test('round one keeps findings open', () => {
-    const result = recordRound(emptyLedger('T'), parseFindings(JSON.stringify([finding()])), {
+  test("round one keeps findings open", () => {
+    const result = recordRound(emptyLedger("T"), parseFindings(JSON.stringify([finding()])), {
       changedFiles: [],
       reviewRounds: cap,
-    })
-    expect(result.ok).toBe(true)
-    if (result.ok) expect(result.ledger.findings[0]?.status).toBe('open')
-  })
+    });
+    expect(result.ok).toBe(true);
+    if (result.ok) expect(result.ledger.findings[0]?.status).toBe("open");
+  });
 
-  test('recheck defers a new blocker that cites nothing and touches no changed file', () => {
-    const first = recordRound(emptyLedger('T'), parseFindings(JSON.stringify([finding()])), {
+  test("recheck defers a new blocker that cites nothing and touches no changed file", () => {
+    const first = recordRound(emptyLedger("T"), parseFindings(JSON.stringify([finding()])), {
       changedFiles: [],
       reviewRounds: cap,
-    })
-    if (!first.ok) throw new Error('unreachable')
+    });
+    if (!first.ok) throw new Error("unreachable");
     const second = recordRound(
       first.ledger,
       parseFindings(
         JSON.stringify([
-          finding({ id: 'N1', file: 'z.ts' }),
-          finding({ id: 'N2', file: 'z.ts', claim: 'follow-up to F1' }),
-          finding({ id: 'N3', file: 'a.ts' }),
-          finding({ id: 'N4', file: 'z.ts', severity: 'minor' }),
+          finding({ id: "N1", file: "z.ts" }),
+          finding({ id: "N2", file: "z.ts", claim: "follow-up to F1" }),
+          finding({ id: "N3", file: "a.ts" }),
+          finding({ id: "N4", file: "z.ts", severity: "minor" }),
         ]),
       ),
-      { changedFiles: ['a.ts'], reviewRounds: cap },
-    )
-    if (!second.ok) throw new Error('unreachable')
-    const status = Object.fromEntries(second.ledger.findings.map((f) => [f.id, f.status]))
-    expect(status).toMatchObject({ F1: 'resolved', N1: 'deferred', N2: 'open', N3: 'open', N4: 'open' })
-  })
+      { changedFiles: ["a.ts"], reviewRounds: cap },
+    );
+    if (!second.ok) throw new Error("unreachable");
+    const status = Object.fromEntries(second.ledger.findings.map((f) => [f.id, f.status]));
+    expect(status).toMatchObject({
+      F1: "resolved",
+      N1: "deferred",
+      N2: "open",
+      N3: "open",
+      N4: "open",
+    });
+  });
 
-  test('refuses a round past the cap', () => {
-    let ledger: Ledger = emptyLedger('T')
+  test("refuses a round past the cap", () => {
+    let ledger: Ledger = emptyLedger("T");
     for (let i = 0; i < cap; i++) {
-      const r = recordRound(ledger, [], { changedFiles: [], reviewRounds: cap })
-      if (!r.ok) throw new Error('unreachable')
-      ledger = r.ledger
+      const r = recordRound(ledger, [], { changedFiles: [], reviewRounds: cap });
+      if (!r.ok) throw new Error("unreachable");
+      ledger = r.ledger;
     }
-    const over = recordRound(ledger, [], { changedFiles: [], reviewRounds: cap })
-    expect(over.ok).toBe(false)
-    if (!over.ok) expect(over.reason).toMatch(/cap/)
-  })
-})
+    const over = recordRound(ledger, [], { changedFiles: [], reviewRounds: cap });
+    expect(over.ok).toBe(false);
+    if (!over.ok) expect(over.reason).toMatch(/cap/);
+  });
+});
 
-describe('recordRound resolution', () => {
-  test('resolves findings the next round no longer reports and does not duplicate repeats', () => {
-    const options = { changedFiles: [], reviewRounds: 3 }
+describe("recordRound resolution", () => {
+  test("resolves findings the next round no longer reports and does not duplicate repeats", () => {
+    const options = { changedFiles: [], reviewRounds: 3 };
     const first = recordRound(
-      emptyLedger('T'),
-      parseItems([finding({ id: 'F1' }), finding({ id: 'F2' })]),
+      emptyLedger("T"),
+      parseItems([finding({ id: "F1" }), finding({ id: "F2" })]),
       options,
-    )
-    if (!first.ok) throw new Error('round 1 failed')
-    const second = recordRound(first.ledger, parseItems([finding({ id: 'F2' })]), options)
-    if (!second.ok) throw new Error('round 2 failed')
-    expect(second.ledger.findings.filter((entry) => entry.id === 'F2')).toHaveLength(1)
-    expect(second.ledger.findings.find((entry) => entry.id === 'F1')?.status).toBe('resolved')
-    const third = recordRound(second.ledger, [], options)
-    if (!third.ok) throw new Error('round 3 failed')
-    expect(third.ledger.findings.some((entry) => entry.status === 'open')).toBe(false)
-  })
-})
+    );
+    if (!first.ok) throw new Error("round 1 failed");
+    const second = recordRound(first.ledger, parseItems([finding({ id: "F2" })]), options);
+    if (!second.ok) throw new Error("round 2 failed");
+    expect(second.ledger.findings.filter((entry) => entry.id === "F2")).toHaveLength(1);
+    expect(second.ledger.findings.find((entry) => entry.id === "F1")?.status).toBe("resolved");
+    const third = recordRound(second.ledger, [], options);
+    if (!third.ok) throw new Error("round 3 failed");
+    expect(third.ledger.findings.some((entry) => entry.status === "open")).toBe(false);
+  });
+});
 
-describe('recordRound repeats', () => {
-  test('a repeated blocker stays open even when its file did not change', () => {
-    const first = recordRound(emptyLedger('T'), parseItems([finding()]), {
+describe("recordRound repeats", () => {
+  test("a repeated blocker stays open even when its file did not change", () => {
+    const first = recordRound(emptyLedger("T"), parseItems([finding()]), {
       changedFiles: [],
       reviewRounds: 3,
-    })
-    if (!first.ok) throw new Error('round 1 failed')
+    });
+    if (!first.ok) throw new Error("round 1 failed");
     const second = recordRound(first.ledger, parseItems([finding()]), {
-      changedFiles: ['b.ts'],
+      changedFiles: ["b.ts"],
       reviewRounds: 3,
-    })
-    if (!second.ok) throw new Error('round 2 failed')
-    expect(second.ledger.findings.map((entry) => entry.status)).toEqual(['open'])
-  })
-})
+    });
+    if (!second.ok) throw new Error("round 2 failed");
+    expect(second.ledger.findings.map((entry) => entry.status)).toEqual(["open"]);
+  });
+});
 
-describe('recordRound deferred repeats', () => {
-  test('a deferred blocker reported again stays deferred', () => {
-    const options = { changedFiles: ['a.ts'], reviewRounds: 4 }
-    const first = recordRound(emptyLedger('T'), parseItems([finding()]), options)
-    if (!first.ok) throw new Error('round 1 failed')
-    const second = recordRound(first.ledger, parseItems([finding(), finding({ id: 'F9', file: 'c.ts' })]), options)
-    if (!second.ok) throw new Error('round 2 failed')
-    const third = recordRound(second.ledger, parseItems([finding(), finding({ id: 'F9', file: 'c.ts' })]), options)
-    if (!third.ok) throw new Error('round 3 failed')
-    const status = Object.fromEntries(third.ledger.findings.map((entry) => [entry.id, entry.status]))
-    expect(status).toEqual({ F1: 'open', F9: 'deferred' })
-  })
-})
+describe("recordRound deferred repeats", () => {
+  test("a deferred blocker reported again stays deferred", () => {
+    const options = { changedFiles: ["a.ts"], reviewRounds: 4 };
+    const first = recordRound(emptyLedger("T"), parseItems([finding()]), options);
+    if (!first.ok) throw new Error("round 1 failed");
+    const second = recordRound(
+      first.ledger,
+      parseItems([finding(), finding({ id: "F9", file: "c.ts" })]),
+      options,
+    );
+    if (!second.ok) throw new Error("round 2 failed");
+    const third = recordRound(
+      second.ledger,
+      parseItems([finding(), finding({ id: "F9", file: "c.ts" })]),
+      options,
+    );
+    if (!third.ok) throw new Error("round 3 failed");
+    const status = Object.fromEntries(
+      third.ledger.findings.map((entry) => [entry.id, entry.status]),
+    );
+    expect(status).toEqual({ F1: "open", F9: "deferred" });
+  });
+});
 
-describe('escalation and rulings', () => {
-  test('nextEscalationModel follows the map', () => {
-    expect(nextEscalationModel({ sonnet: 'opus' }, 'sonnet')).toBe('opus')
-    expect(nextEscalationModel({ sonnet: 'opus' }, 'opus')).toBeUndefined()
-  })
+describe("escalation and rulings", () => {
+  test("nextEscalationModel follows the map", () => {
+    expect(nextEscalationModel({ sonnet: "opus" }, "sonnet")).toBe("opus");
+    expect(nextEscalationModel({ sonnet: "opus" }, "opus")).toBeUndefined();
+  });
 
-  test('rulings are recorded and formatted', () => {
-    const ledger = addRuling(emptyLedger('T'), { what: 'ship', why: 'low risk', cost: 'rework' })
-    expect(formatRulings(ledger)).toBe('Ruling: ship — low risk — rework if wrong')
-    expect(formatRulings(emptyLedger('T'))).toBe('')
-  })
-})
+  test("rulings are recorded and formatted", () => {
+    const ledger = addRuling(emptyLedger("T"), { what: "ship", why: "low risk", cost: "rework" });
+    expect(formatRulings(ledger)).toBe("Ruling: ship — low risk — rework if wrong");
+    expect(formatRulings(emptyLedger("T"))).toBe("");
+  });
+});

@@ -148,7 +148,7 @@ this line needs a manual per-ticket state write instead.
    `haiku`) to fetch and read it (`gh run view <run-id> --log-failed`) and
    return at most ~2k tokens: the failing check, the root-cause error, and
    `file:line` for each failure, with no raw log excerpts beyond a few lines.
-   Before spending an attempt, compare the failing *job* with trunk's
+   Before spending an attempt, compare the failing _job_ with trunk's
    latest completed run (`gh run list --branch <base> --workflow <name>
    --status completed --limit 1 --json databaseId`, then `gh run view <id>
    --json jobs`). Only if that same job failed on trunk is it baseline:

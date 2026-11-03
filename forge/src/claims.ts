@@ -133,7 +133,7 @@ function assertValidTicket(ticket: string): void {
 /**
 Resolves `<git-common-dir>/forge`, the shared root every worktree of this repo agrees on. Reuses `locks.ts`'s own `--git-common-dir` resolution rather than a second copy of it.
 */
-export async function resolveForgeDirectory(): Promise<string> {
+async function resolveForgeDirectory(): Promise<string> {
   return resolveLockDirectory("forge");
 }
 

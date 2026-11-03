@@ -1,127 +1,127 @@
-import { createHash } from 'node:crypto'
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
-import path from 'node:path'
+import { createHash } from "node:crypto";
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import path from "node:path";
 
-import { resolveRepoRoot } from './config'
-import { errorMessage } from './narrow'
+import { resolveRepoRoot } from "./config";
+import { errorMessage } from "./narrow";
 
 const USAGE = `usage: forge approve --run <id> --spec <file> [--tickets <file>] [--root <dir>]
        forge approve --run <id> --check [--root <dir>]
 
 Writes .forge/runs/<id>/approval.json (spec hash, tickets hash, timestamp).
 --tickets defaults to .forge/runs/<id>/tickets.json.
---check exits 1 when the spec or tickets changed since approval.`
+--check exits 1 when the spec or tickets changed since approval.`;
 
 export interface ApprovalRecord {
-  readonly specPath: string
-  readonly ticketsPath: string
-  readonly specHash: string
-  readonly ticketsHash: string
-  readonly approvedAt: string
+  readonly specPath: string;
+  readonly ticketsPath: string;
+  readonly specHash: string;
+  readonly ticketsHash: string;
+  readonly approvedAt: string;
 }
 
 export interface ApprovalCheck {
-  readonly ok: boolean
-  readonly reasons: string[]
+  readonly ok: boolean;
+  readonly reasons: string[];
 }
 
 export function hashFile(filePath: string): string {
-  return createHash('sha256').update(readFileSync(filePath)).digest('hex')
+  return createHash("sha256").update(readFileSync(filePath)).digest("hex");
 }
 
 export function writeApproval(input: {
-  approvalPath: string
-  specPath: string
-  ticketsPath: string
-  now?: Date
+  approvalPath: string;
+  specPath: string;
+  ticketsPath: string;
+  now?: Date;
 }): ApprovalRecord {
-  const specPath = path.resolve(input.specPath)
-  const ticketsPath = path.resolve(input.ticketsPath)
+  const specPath = path.resolve(input.specPath);
+  const ticketsPath = path.resolve(input.ticketsPath);
   const record: ApprovalRecord = {
     specPath,
     ticketsPath,
     specHash: hashFile(specPath),
     ticketsHash: hashFile(ticketsPath),
     approvedAt: (input.now ?? new Date()).toISOString(),
-  }
-  mkdirSync(path.dirname(input.approvalPath), { recursive: true })
-  writeFileSync(input.approvalPath, `${JSON.stringify(record, null, 2)}\n`)
-  return record
+  };
+  mkdirSync(path.dirname(input.approvalPath), { recursive: true });
+  writeFileSync(input.approvalPath, `${JSON.stringify(record, null, 2)}\n`);
+  return record;
 }
 
 function readApproval(approvalPath: string): ApprovalRecord | string {
-  if (!existsSync(approvalPath)) return `no approval record at ${approvalPath}`
+  if (!existsSync(approvalPath)) return `no approval record at ${approvalPath}`;
   try {
-    const parsed: Partial<ApprovalRecord> = JSON.parse(readFileSync(approvalPath, 'utf8'))
-    const { specPath, ticketsPath, specHash, ticketsHash, approvedAt } = parsed
+    const parsed: Partial<ApprovalRecord> = JSON.parse(readFileSync(approvalPath, "utf8"));
+    const { specPath, ticketsPath, specHash, ticketsHash, approvedAt } = parsed;
     if (
-      typeof specPath !== 'string' ||
-      typeof ticketsPath !== 'string' ||
-      typeof specHash !== 'string' ||
-      typeof ticketsHash !== 'string' ||
-      typeof approvedAt !== 'string'
+      typeof specPath !== "string" ||
+      typeof ticketsPath !== "string" ||
+      typeof specHash !== "string" ||
+      typeof ticketsHash !== "string" ||
+      typeof approvedAt !== "string"
     ) {
-      return `approval record at ${approvalPath} is missing fields`
+      return `approval record at ${approvalPath} is missing fields`;
     }
-    return { specPath, ticketsPath, specHash, ticketsHash, approvedAt }
+    return { specPath, ticketsPath, specHash, ticketsHash, approvedAt };
   } catch (error) {
-    return `approval record at ${approvalPath} is unreadable: ${errorMessage(error)}`
+    return `approval record at ${approvalPath} is unreadable: ${errorMessage(error)}`;
   }
 }
 
 function currentHashMismatch(label: string, filePath: string, expected: string): string | null {
-  if (!existsSync(filePath)) return `${label} file is missing: ${filePath}`
-  return hashFile(filePath) === expected ? null : `${label} changed since approval: ${filePath}`
+  if (!existsSync(filePath)) return `${label} file is missing: ${filePath}`;
+  return hashFile(filePath) === expected ? null : `${label} changed since approval: ${filePath}`;
 }
 
 export function checkApproval(approvalPath: string): ApprovalCheck {
-  const record = readApproval(approvalPath)
-  if (typeof record === 'string') return { ok: false, reasons: [record] }
+  const record = readApproval(approvalPath);
+  if (typeof record === "string") return { ok: false, reasons: [record] };
   const reasons = [
-    currentHashMismatch('spec', record.specPath, record.specHash),
-    currentHashMismatch('tickets', record.ticketsPath, record.ticketsHash),
-  ].filter((reason): reason is string => reason !== null)
-  return { ok: reasons.length === 0, reasons }
+    currentHashMismatch("spec", record.specPath, record.specHash),
+    currentHashMismatch("tickets", record.ticketsPath, record.ticketsHash),
+  ].filter((reason): reason is string => reason !== null);
+  return { ok: reasons.length === 0, reasons };
 }
 
 function readFlag(argv: string[], name: string): string | undefined {
-  const index = argv.indexOf(name)
-  return index === -1 ? undefined : argv[index + 1]
+  const index = argv.indexOf(name);
+  return index === -1 ? undefined : argv[index + 1];
 }
 
 export async function run(argv: string[]): Promise<void> {
-  const runId = readFlag(argv, '--run')
+  const runId = readFlag(argv, "--run");
   if (runId === undefined || runId.length === 0 || /[\\/]|^\.\.?$/.test(runId)) {
-    console.error(USAGE)
-    process.exitCode = 2
-    return
+    console.error(USAGE);
+    process.exitCode = 2;
+    return;
   }
-  const root = readFlag(argv, '--root') ?? (await resolveRepoRoot()) ?? process.cwd()
-  const runDirectory = path.join(root, '.forge', 'runs', runId)
-  const approvalPath = path.join(runDirectory, 'approval.json')
+  const root = readFlag(argv, "--root") ?? (await resolveRepoRoot()) ?? process.cwd();
+  const runDirectory = path.join(root, ".forge", "runs", runId);
+  const approvalPath = path.join(runDirectory, "approval.json");
 
-  if (argv.includes('--check')) {
-    const result = checkApproval(approvalPath)
-    console.log(JSON.stringify(result))
-    process.exitCode = result.ok ? 0 : 1
-    return
+  if (argv.includes("--check")) {
+    const result = checkApproval(approvalPath);
+    console.log(JSON.stringify(result));
+    process.exitCode = result.ok ? 0 : 1;
+    return;
   }
 
-  const specPath = readFlag(argv, '--spec')
+  const specPath = readFlag(argv, "--spec");
   if (specPath === undefined) {
-    console.error(USAGE)
-    process.exitCode = 2
-    return
+    console.error(USAGE);
+    process.exitCode = 2;
+    return;
   }
-  const ticketsPath = readFlag(argv, '--tickets') ?? path.join(runDirectory, 'tickets.json')
+  const ticketsPath = readFlag(argv, "--tickets") ?? path.join(runDirectory, "tickets.json");
   try {
-    console.log(JSON.stringify(writeApproval({ approvalPath, specPath, ticketsPath })))
+    console.log(JSON.stringify(writeApproval({ approvalPath, specPath, ticketsPath })));
   } catch (error) {
-    console.error(`forge approve: ${errorMessage(error)}`)
-    process.exitCode = 1
+    console.error(`forge approve: ${errorMessage(error)}`);
+    process.exitCode = 1;
   }
 }
 
 if (import.meta.main) {
-  await run(process.argv.slice(2))
+  await run(process.argv.slice(2));
 }

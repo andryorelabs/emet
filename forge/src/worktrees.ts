@@ -1,6 +1,6 @@
-import path from 'node:path'
+import path from "node:path";
 
-import type { Reservation } from './claims'
+import type { Reservation } from "./claims";
 
 /**
  * Shared worktree/branch classification used by both `cleanup.ts` and
@@ -44,7 +44,7 @@ import type { Reservation } from './claims'
  * actually identifies a run — see `preflight.ts`'s `mainPostDispatch`.
  */
 export function isAgentWorktree(directory: string): boolean {
-  return directory.includes(`${path.sep}.claude${path.sep}worktrees${path.sep}`)
+  return directory.includes(`${path.sep}.claude${path.sep}worktrees${path.sep}`);
 }
 
 /**
@@ -54,7 +54,7 @@ export function isAgentWorktree(directory: string): boolean {
  * verdict, it's a caller-side fact (a branch is checked out by a live
  * worktree) composed on top, see `cleanup.ts`'s `ClassifiedBranch`.
  */
-export type ContentVerdict = 'merged' | 'equivalent' | 'diverged' | 'conflicted'
+export type ContentVerdict = "merged" | "equivalent" | "diverged" | "conflicted";
 
 /**
  * The wider verdict type callers compose once they layer their own
@@ -62,65 +62,65 @@ export type ContentVerdict = 'merged' | 'equivalent' | 'diverged' | 'conflicted'
  * {@link isSafeToDelete} so both a bare content verdict and a
  * caller-composed one can be checked with the same function.
  */
-export type BranchVerdict = ContentVerdict | 'in-use'
+export type BranchVerdict = ContentVerdict | "in-use";
 
 export type BranchEntry = {
-  readonly name: string
-  readonly worktreePath: string
-}
+  readonly name: string;
+  readonly worktreePath: string;
+};
 
 /**
  * Parses `git branch --list <pattern> '--format=%(refname:short)%09%(worktreepath)'`
  * output into structured entries. A branch not checked out by any worktree
  * has an empty `worktreePath`.
  */
-export function parseBranchListing(output: string): BranchEntry[] {
-  const trimmed = output.trim()
+function parseBranchListing(output: string): BranchEntry[] {
+  const trimmed = output.trim();
   if (trimmed.length === 0) {
-    return []
+    return [];
   }
-  return trimmed.split('\n').map((line) => {
-    const [name, worktreePath] = line.split('\t', 2)
-    return { name: name ?? '', worktreePath: worktreePath ?? '' }
-  })
+  return trimmed.split("\n").map((line) => {
+    const [name, worktreePath] = line.split("\t", 2);
+    return { name: name ?? "", worktreePath: worktreePath ?? "" };
+  });
 }
 
 /**
  * Parses `git worktree list --porcelain` output into the set of live
  * worktree directory basenames (e.g. `agent-a2d4c8f6ee10afe2e`).
  */
-export function parseWorktreeDirectoryNames(output: string): Set<string> {
-  const names = new Set<string>()
-  for (const line of output.split('\n')) {
-    if (!line.startsWith('worktree ')) {
-      continue
+function parseWorktreeDirectoryNames(output: string): Set<string> {
+  const names = new Set<string>();
+  for (const line of output.split("\n")) {
+    if (!line.startsWith("worktree ")) {
+      continue;
     }
-    const directory = line.slice('worktree '.length).trim()
-    names.add(directory.split('/').pop() ?? '')
+    const directory = line.slice("worktree ".length).trim();
+    names.add(directory.split("/").pop() ?? "");
   }
-  return names
+  return names;
 }
 
 export async function listBranches(pattern: string): Promise<BranchEntry[]> {
   const output =
-    await Bun.$`git branch --list ${pattern} '--format=%(refname:short)%09%(worktreepath)'`.text()
-  return parseBranchListing(output)
+    await Bun.$`git branch --list ${pattern} '--format=%(refname:short)%09%(worktreepath)'`.text();
+  return parseBranchListing(output);
 }
 
 export async function listLiveWorktreeDirectoryNames(): Promise<Set<string>> {
-  const output = await Bun.$`git worktree list --porcelain`.text()
-  return parseWorktreeDirectoryNames(output)
+  const output = await Bun.$`git worktree list --porcelain`.text();
+  return parseWorktreeDirectoryNames(output);
 }
 
 export type WorktreeEntry = {
-  readonly directory: string
-  readonly branch: string | null
+  readonly directory: string;
+  readonly branch: string | null;
   /**
    * The raw text after a `locked` porcelain line — `''` for `git worktree
    * lock` with no reason given, `null` when the worktree isn't locked at
    * all. See {@link resolveWorktreeOwner} for `/forge`'s own reason format.
    */
-  readonly lockedReason: string | null
+  readonly lockedReason: string | null;
   /**
    * The commit sha from the porcelain `HEAD <sha>` line. Optional (rather
    * than always required) so existing fixtures across this repo's test
@@ -129,8 +129,8 @@ export type WorktreeEntry = {
    * itself always sets it, `undefined` only when a caller builds an entry
    * by hand without it.
    */
-  readonly head?: string | null
-}
+  readonly head?: string | null;
+};
 
 /**
  * Parses `git worktree list --porcelain` into `{directory, branch,
@@ -140,11 +140,11 @@ export type WorktreeEntry = {
  * worktree is locked.
  */
 export function parseWorktreeEntries(output: string): WorktreeEntry[] {
-  const entries: WorktreeEntry[] = []
-  let currentDirectory: string | null = null
-  let currentBranch: string | null = null
-  let currentLockedReason: string | null = null
-  let currentHead: string | null = null
+  const entries: WorktreeEntry[] = [];
+  let currentDirectory: string | null = null;
+  let currentBranch: string | null = null;
+  let currentLockedReason: string | null = null;
+  let currentHead: string | null = null;
 
   const flush = () => {
     if (currentDirectory) {
@@ -153,45 +153,41 @@ export function parseWorktreeEntries(output: string): WorktreeEntry[] {
         branch: currentBranch,
         lockedReason: currentLockedReason,
         head: currentHead,
-      })
+      });
     }
-  }
+  };
 
-  for (const line of output.split('\n')) {
-    if (line.startsWith('worktree ')) {
-      flush()
-      currentDirectory = line.slice('worktree '.length).trim()
-      currentBranch = null
-      currentLockedReason = null
-      currentHead = null
-    } else if (line.startsWith('HEAD ')) {
-      currentHead = line.slice('HEAD '.length).trim()
-    } else if (line.startsWith('branch ')) {
-      currentBranch = line
-        .slice('branch '.length)
-        .trim()
-        .replace('refs/heads/', '')
-    } else if (line === 'locked' || line.startsWith('locked ')) {
-      currentLockedReason =
-        line === 'locked' ? '' : line.slice('locked '.length).trim()
+  for (const line of output.split("\n")) {
+    if (line.startsWith("worktree ")) {
+      flush();
+      currentDirectory = line.slice("worktree ".length).trim();
+      currentBranch = null;
+      currentLockedReason = null;
+      currentHead = null;
+    } else if (line.startsWith("HEAD ")) {
+      currentHead = line.slice("HEAD ".length).trim();
+    } else if (line.startsWith("branch ")) {
+      currentBranch = line.slice("branch ".length).trim().replace("refs/heads/", "");
+    } else if (line === "locked" || line.startsWith("locked ")) {
+      currentLockedReason = line === "locked" ? "" : line.slice("locked ".length).trim();
     } else if (line.trim().length === 0) {
-      flush()
-      currentDirectory = null
-      currentBranch = null
-      currentLockedReason = null
-      currentHead = null
+      flush();
+      currentDirectory = null;
+      currentBranch = null;
+      currentLockedReason = null;
+      currentHead = null;
     }
   }
-  flush()
+  flush();
 
-  return entries
+  return entries;
 }
 
 export type WorktreeOwner = {
-  readonly runId: string
-  readonly ticket: string
-  readonly anchorPid: number
-  readonly at: string
+  readonly runId: string;
+  readonly ticket: string;
+  readonly anchorPid: number;
+  readonly at: string;
   /**
    * The coordinator's own `resolveSessionSlug()` (`runs.ts`) at the moment it
    * dispatched this worktree — an optional fifth `slug=<value>` field on top
@@ -205,8 +201,8 @@ export type WorktreeOwner = {
    * (directory-derived, known-wrong) slug guess for backward compatibility
    * with a lock reason written before this field existed.
    */
-  readonly coordinatorSlug?: string
-}
+  readonly coordinatorSlug?: string;
+};
 
 /**
  * Parses the `git worktree lock` reason `/forge` writes at worker bootstrap
@@ -221,40 +217,38 @@ export type WorktreeOwner = {
  * lock is an expected, normal case. `slug` is optional precisely so a lock
  * reason written before this field existed still parses.
  */
-export function resolveWorktreeOwner(
-  entry: WorktreeEntry,
-): WorktreeOwner | null {
-  if (entry.lockedReason === null) return null
+export function resolveWorktreeOwner(entry: WorktreeEntry): WorktreeOwner | null {
+  if (entry.lockedReason === null) return null;
 
-  const tokens = entry.lockedReason.trim().split(/\s+/)
-  if (tokens[0] !== 'forge') return null
+  const tokens = entry.lockedReason.trim().split(/\s+/);
+  if (tokens[0] !== "forge") return null;
 
-  const fields = new Map<string, string>()
+  const fields = new Map<string, string>();
   for (const token of tokens.slice(1)) {
-    const separatorIndex = token.indexOf('=')
-    if (separatorIndex === -1) continue
-    fields.set(token.slice(0, separatorIndex), token.slice(separatorIndex + 1))
+    const separatorIndex = token.indexOf("=");
+    if (separatorIndex === -1) continue;
+    fields.set(token.slice(0, separatorIndex), token.slice(separatorIndex + 1));
   }
 
-  const runId = fields.get('run')
-  const ticket = fields.get('ticket')
-  const at = fields.get('at')
-  const anchorPid = Number(fields.get('anchor'))
-  if (!runId || !ticket || !at || !Number.isFinite(anchorPid)) return null
+  const runId = fields.get("run");
+  const ticket = fields.get("ticket");
+  const at = fields.get("at");
+  const anchorPid = Number(fields.get("anchor"));
+  if (!runId || !ticket || !at || !Number.isFinite(anchorPid)) return null;
 
-  const coordinatorSlug = fields.get('slug')
+  const coordinatorSlug = fields.get("slug");
   return {
     runId,
     ticket,
     anchorPid,
     at,
     ...(coordinatorSlug ? { coordinatorSlug } : {}),
-  }
+  };
 }
 
 export async function listWorktreeEntries(): Promise<WorktreeEntry[]> {
-  const output = await Bun.$`git worktree list --porcelain`.text()
-  return parseWorktreeEntries(output)
+  const output = await Bun.$`git worktree list --porcelain`.text();
+  return parseWorktreeEntries(output);
 }
 
 /**
@@ -269,13 +263,11 @@ export function findReservationForBranch(
   branchPrefix: string,
   reservations: readonly Reservation[],
 ): Reservation | null {
-  const escapedPrefix = branchPrefix.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
-  const match = new RegExp(`^${escapedPrefix}-(\\d+)(?:-|$)`).exec(branch)
-  if (!match) return null
-  const number = match[1]
-  return (
-    reservations.find((reservation) => reservation.ticket.endsWith(`-${number}`)) ?? null
-  )
+  const escapedPrefix = branchPrefix.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const match = new RegExp(`^${escapedPrefix}-(\\d+)(?:-|$)`).exec(branch);
+  if (!match) return null;
+  const number = match[1];
+  return reservations.find((reservation) => reservation.ticket.endsWith(`-${number}`)) ?? null;
 }
 
 /**
@@ -298,12 +290,12 @@ export function resolveWorktreeOwnerWithReservations(
   reservations: readonly Reservation[],
   branchPrefix: string,
 ): WorktreeOwner | null {
-  const lockOwner = resolveWorktreeOwner(entry)
-  if (lockOwner) return lockOwner
-  if (entry.lockedReason !== null || !entry.branch) return null
+  const lockOwner = resolveWorktreeOwner(entry);
+  if (lockOwner) return lockOwner;
+  if (entry.lockedReason !== null || !entry.branch) return null;
 
-  const reservation = findReservationForBranch(entry.branch, branchPrefix, reservations)
-  if (!reservation) return null
+  const reservation = findReservationForBranch(entry.branch, branchPrefix, reservations);
+  if (!reservation) return null;
 
   return {
     runId: reservation.runId,
@@ -311,7 +303,7 @@ export function resolveWorktreeOwnerWithReservations(
     anchorPid: reservation.anchorPid,
     at: new Date(reservation.reservedAt).toISOString(),
     coordinatorSlug: reservation.sessionSlug,
-  }
+  };
 }
 
 /**
@@ -324,8 +316,8 @@ export function isWorktreeAgentBranchLive(
   branchName: string,
   liveDirectoryNames: ReadonlySet<string>,
 ): boolean {
-  const agentId = branchName.slice('worktree-'.length)
-  return liveDirectoryNames.has(agentId)
+  const agentId = branchName.slice("worktree-".length);
+  return liveDirectoryNames.has(agentId);
 }
 
 /**
@@ -336,19 +328,14 @@ export function isWorktreeAgentBranchLive(
  * does, right before calling this) so classification is never made against a
  * stale local ref.
  */
-export async function resolveMainTree(
-  remote: string,
-  trunk: string,
-): Promise<string> {
-  const ref = `${remote}/${trunk}`
-  const output = await Bun.$`git rev-parse ${`${ref}^{tree}`}`.text()
-  const tree = output.trim()
+export async function resolveMainTree(remote: string, trunk: string): Promise<string> {
+  const ref = `${remote}/${trunk}`;
+  const output = await Bun.$`git rev-parse ${`${ref}^{tree}`}`.text();
+  const tree = output.trim();
   if (tree.length === 0) {
-    throw new Error(
-      `could not resolve ${ref}'s tree — refusing to classify branches`,
-    )
+    throw new Error(`could not resolve ${ref}'s tree — refusing to classify branches`);
   }
-  return tree
+  return tree;
 }
 
 /**
@@ -363,27 +350,25 @@ export async function classifyByContent(
   remote: string,
   trunk: string,
 ): Promise<ContentVerdict> {
-  const ref = `${remote}/${trunk}`
+  const ref = `${remote}/${trunk}`;
   const ancestorCheck = await Bun.$`git merge-base --is-ancestor ${branch} ${ref}`
     .nothrow()
-    .quiet()
+    .quiet();
   if (ancestorCheck.exitCode === 0) {
-    return 'merged'
+    return "merged";
   }
 
-  const merged = await Bun.$`git merge-tree --write-tree ${ref} ${branch}`
-    .nothrow()
-    .quiet()
+  const merged = await Bun.$`git merge-tree --write-tree ${ref} ${branch}`.nothrow().quiet();
   if (merged.exitCode !== 0) {
-    return 'conflicted'
+    return "conflicted";
   }
-  const resultTree = merged.stdout.toString().trim().split('\n', 1)[0] ?? ''
+  const resultTree = merged.stdout.toString().trim().split("\n", 1)[0] ?? "";
   if (resultTree.length === 0 || mainTree.length === 0) {
-    return 'conflicted'
+    return "conflicted";
   }
-  return resultTree === mainTree ? 'equivalent' : 'diverged'
+  return resultTree === mainTree ? "equivalent" : "diverged";
 }
 
 export function isSafeToDelete(verdict: BranchVerdict): boolean {
-  return verdict === 'merged' || verdict === 'equivalent'
+  return verdict === "merged" || verdict === "equivalent";
 }

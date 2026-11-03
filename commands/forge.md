@@ -42,7 +42,7 @@ dispatch against a repo `forge preflight` would reject.
 
 If it exists, read it plus `docs/agents/{forge,issue-tracker,triage-labels,
 domain}.md` at the root. Everything below defers to what those four files
-(and `forge.config.json`) say for *this* repo over the generic defaults
+(and `forge.config.json`) say for _this_ repo over the generic defaults
 described here — this includes the literal tracker calls
 (`docs/agents/issue-tracker.md`), which of `onStart`/`onPrOpen`/`onPrMerge`
 this coordinator itself must write (`tracker.transitions` — see

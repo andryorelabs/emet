@@ -14,8 +14,7 @@ concurrency:
 
 jobs:
   check:
-    runs-on:
-      ${{ github.event.repository.private && vars.CI_RUNNER || 'ubuntu-latest'
+    runs-on: ${{ github.event.repository.private && vars.CI_RUNNER || 'ubuntu-latest'
       }}
     timeout-minutes: 15
     steps:
@@ -40,8 +39,7 @@ jobs:
       - run: bun run check
 
   test:
-    runs-on:
-      ${{ github.event.repository.private && vars.CI_RUNNER || 'ubuntu-latest'
+    runs-on: ${{ github.event.repository.private && vars.CI_RUNNER || 'ubuntu-latest'
       }}
     timeout-minutes: 15
     steps:
@@ -69,8 +67,7 @@ jobs:
     name: ci-passed
     if: always()
     needs: [check, test]
-    runs-on:
-      ${{ github.event.repository.private && vars.CI_RUNNER || 'ubuntu-latest'
+    runs-on: ${{ github.event.repository.private && vars.CI_RUNNER || 'ubuntu-latest'
       }}
     timeout-minutes: 5
     steps:

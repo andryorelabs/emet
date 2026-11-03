@@ -1,10 +1,7 @@
-import { resolveAnchorPid, resolveSessionSlug } from './runs'
-import {
-  ForgeConfigError,
-  resolveRepoRoot,
-} from './config'
-import { resolveWorktreeOwner } from './worktrees'
-import { errorMessage, isObject } from './narrow'
+import { resolveAnchorPid, resolveSessionSlug } from "./runs";
+import { ForgeConfigError, resolveRepoRoot } from "./config";
+import { resolveWorktreeOwner } from "./worktrees";
+import { errorMessage, isObject } from "./narrow";
 
 /**
  * Produces the `git worktree lock` reason a `/forge` worker writes at
@@ -48,15 +45,15 @@ import { errorMessage, isObject } from './narrow'
  * written before this command existed still parses.
  */
 export const DEFAULT_LOCK_REASON_TEMPLATE =
-  'forge run={runId} ticket={ticket} anchor={anchorPid} slug={coordinatorSlug} at={iso}'
+  "forge run={runId} ticket={ticket} anchor={anchorPid} slug={coordinatorSlug} at={iso}";
 
 export type LockReasonFields = {
-  readonly runId: string
-  readonly ticket: string
-  readonly anchorPid: number
-  readonly coordinatorSlug: string
-  readonly iso: string
-}
+  readonly runId: string;
+  readonly ticket: string;
+  readonly anchorPid: number;
+  readonly coordinatorSlug: string;
+  readonly iso: string;
+};
 
 /**
  * Every value is interpolated into a whitespace-separated `key=value` string
@@ -72,8 +69,8 @@ export type LockReasonFields = {
 function assertNoWhitespace(field: string, value: string): void {
   if (/\s/.test(value)) {
     throw new ForgeConfigError(
-      `forge lock-reason: ${field} contains whitespace (${JSON.stringify(value)}) — the lock reason is parsed by splitting on whitespace, so this would corrupt every field after it.${field === 'slug' ? ' The slug is this repo\'s checkout path with "/" replaced by "-"; a path component containing a space cannot be represented.' : ''}`,
-    )
+      `forge lock-reason: ${field} contains whitespace (${JSON.stringify(value)}) — the lock reason is parsed by splitting on whitespace, so this would corrupt every field after it.${field === "slug" ? ' The slug is this repo\'s checkout path with "/" replaced by "-"; a path component containing a space cannot be represented.' : ""}`,
+    );
   }
 }
 
@@ -89,29 +86,29 @@ export function buildLockReason(
   fields: LockReasonFields,
   template: string = DEFAULT_LOCK_REASON_TEMPLATE,
 ): string {
-  assertNoWhitespace('run', fields.runId)
-  assertNoWhitespace('ticket', fields.ticket)
-  assertNoWhitespace('slug', fields.coordinatorSlug)
-  assertNoWhitespace('at', fields.iso)
+  assertNoWhitespace("run", fields.runId);
+  assertNoWhitespace("ticket", fields.ticket);
+  assertNoWhitespace("slug", fields.coordinatorSlug);
+  assertNoWhitespace("at", fields.iso);
 
   if (!Number.isInteger(fields.anchorPid) || fields.anchorPid <= 0) {
     throw new ForgeConfigError(
       `forge lock-reason: --anchor must be a positive integer pid, got ${JSON.stringify(fields.anchorPid)}`,
-    )
+    );
   }
 
   const reason = template
-    .replaceAll('{runId}', fields.runId)
-    .replaceAll('{ticket}', fields.ticket)
-    .replaceAll('{anchorPid}', String(fields.anchorPid))
-    .replaceAll('{coordinatorSlug}', fields.coordinatorSlug)
-    .replaceAll('{iso}', fields.iso)
+    .replaceAll("{runId}", fields.runId)
+    .replaceAll("{ticket}", fields.ticket)
+    .replaceAll("{anchorPid}", String(fields.anchorPid))
+    .replaceAll("{coordinatorSlug}", fields.coordinatorSlug)
+    .replaceAll("{iso}", fields.iso);
 
   const parsed = resolveWorktreeOwner({
-    directory: '<validation>',
+    directory: "<validation>",
     branch: null,
     lockedReason: reason,
-  })
+  });
   if (
     !parsed ||
     parsed.runId !== fields.runId ||
@@ -121,14 +118,14 @@ export function buildLockReason(
   ) {
     throw new ForgeConfigError(
       `forge lock-reason: the configured worktree.lockReason template does not round-trip through this CLI's own parser.\n  template: ${template}\n  produced: ${reason}\nKeep the literal "forge" token and the run=/ticket=/anchor=/at= fields (see schema/forge.config.schema.json).`,
-    )
+    );
   }
   if (parsed.coordinatorSlug !== fields.coordinatorSlug) {
     throw new ForgeConfigError(
       `forge lock-reason: the configured worktree.lockReason template drops the slug={coordinatorSlug} field.\n  template: ${template}\nWithout it, forge preflight and forge cleanup cannot find this run's transcript and will classify it as dead the moment its anchor process exits.`,
-    )
+    );
   }
-  return reason
+  return reason;
 }
 
 /**
@@ -141,51 +138,45 @@ export function buildLockReason(
  * Malformed JSON *is* an error — the same "a typo is never mistaken for
  * absent" rule `loadForgeConfigWithDefaults` enforces.
  */
-export async function readLockReasonTemplate(
-  repoRoot: string,
-): Promise<string> {
-  const file = Bun.file(`${repoRoot}/forge.config.json`)
-  if (!(await file.exists())) return DEFAULT_LOCK_REASON_TEMPLATE
+export async function readLockReasonTemplate(repoRoot: string): Promise<string> {
+  const file = Bun.file(`${repoRoot}/forge.config.json`);
+  if (!(await file.exists())) return DEFAULT_LOCK_REASON_TEMPLATE;
 
-  let raw: unknown
+  let raw: unknown;
   try {
-    raw = await file.json()
+    raw = await file.json();
   } catch (error: unknown) {
     throw new ForgeConfigError(
       `forge lock-reason: forge.config.json is not valid JSON — ${errorMessage(error)}`,
-    )
+    );
   }
 
-  const worktree = isObject(raw) ? raw.worktree : undefined
-  const template = isObject(worktree) ? worktree.lockReason : undefined
-  if (template === undefined) return DEFAULT_LOCK_REASON_TEMPLATE
-  if (typeof template !== 'string' || template.trim().length === 0) {
+  const worktree = isObject(raw) ? raw.worktree : undefined;
+  const template = isObject(worktree) ? worktree.lockReason : undefined;
+  if (template === undefined) return DEFAULT_LOCK_REASON_TEMPLATE;
+  if (typeof template !== "string" || template.trim().length === 0) {
     throw new ForgeConfigError(
       'forge lock-reason: "worktree.lockReason" must be a non-empty string template',
-    )
+    );
   }
-  return template
+  return template;
 }
 
-function readFlagValue(
-  argv: readonly string[],
-  flag: string,
-): string | undefined {
-  const index = argv.indexOf(flag)
-  if (index === -1) return undefined
-  return argv[index + 1]
+function readFlagValue(argv: readonly string[], flag: string): string | undefined {
+  const index = argv.indexOf(flag);
+  if (index === -1) return undefined;
+  return argv[index + 1];
 }
 
 function requireFlagValue(argv: readonly string[], flag: string): string {
-  const value = readFlagValue(argv, flag)
-  if (!value || value.startsWith('--')) {
-    throw new ForgeConfigError(`forge lock-reason: ${flag} requires a value`)
+  const value = readFlagValue(argv, flag);
+  if (!value || value.startsWith("--")) {
+    throw new ForgeConfigError(`forge lock-reason: ${flag} requires a value`);
   }
-  return value
+  return value;
 }
 
-const USAGE =
-  'usage: forge lock-reason --run <runId> --ticket <ticket> [--anchor <pid>]'
+const USAGE = "usage: forge lock-reason --run <runId> --ticket <ticket> [--anchor <pid>]";
 
 /**
  * Prints the lock reason on stdout with no decoration, so the coordinator
@@ -199,24 +190,21 @@ const USAGE =
  */
 export async function run(argv: string[]): Promise<void> {
   try {
-    if (argv.length === 0 || argv.includes('--help')) {
-      console.error(USAGE)
-      process.exitCode = 2
-      return
+    if (argv.length === 0 || argv.includes("--help")) {
+      console.error(USAGE);
+      process.exitCode = 2;
+      return;
     }
 
-    const repoRoot = await resolveRepoRoot()
+    const repoRoot = await resolveRepoRoot();
     if (!repoRoot) {
-      throw new ForgeConfigError(
-        'forge lock-reason: not inside a git repository',
-      )
+      throw new ForgeConfigError("forge lock-reason: not inside a git repository");
     }
 
-    const runId = requireFlagValue(argv, '--run')
-    const ticket = requireFlagValue(argv, '--ticket')
-    const anchorRaw = readFlagValue(argv, '--anchor')
-    const anchorPid =
-      anchorRaw === undefined ? resolveAnchorPid() : Number(anchorRaw)
+    const runId = requireFlagValue(argv, "--run");
+    const ticket = requireFlagValue(argv, "--ticket");
+    const anchorRaw = readFlagValue(argv, "--anchor");
+    const anchorPid = anchorRaw === undefined ? resolveAnchorPid() : Number(anchorRaw);
 
     const reason = buildLockReason(
       {
@@ -227,20 +215,20 @@ export async function run(argv: string[]): Promise<void> {
         iso: new Date().toISOString(),
       },
       await readLockReasonTemplate(repoRoot),
-    )
+    );
 
-    console.log(reason)
+    console.log(reason);
   } catch (error: unknown) {
     if (error instanceof ForgeConfigError) {
-      console.error(error.message)
-      process.exitCode = 2
-      return
+      console.error(error.message);
+      process.exitCode = 2;
+      return;
     }
-    console.error(error)
-    process.exitCode = 1
+    console.error(error);
+    process.exitCode = 1;
   }
 }
 
 if (import.meta.main) {
-  await run(process.argv.slice(2))
+  await run(process.argv.slice(2));
 }

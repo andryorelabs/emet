@@ -140,7 +140,7 @@ export function resolveSessionSlug(cwd: string = process.cwd()): string {
  * {@link isAnchorAlive}, never the primary liveness check, so a transcript
  * read failing must never itself be mistaken for "the run is dead".
  */
-export function transcriptMtime(sessionSlug: string, runId: string): number | null {
+function transcriptMtime(sessionSlug: string, runId: string): number | null {
   try {
     const transcriptPath = path.join(
       os.homedir(),

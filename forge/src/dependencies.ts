@@ -1,9 +1,9 @@
-import { existsSync } from 'node:fs'
-import os from 'node:os'
-import path from 'node:path'
+import { existsSync } from "node:fs";
+import os from "node:os";
+import path from "node:path";
 
-import type { TrackerKind } from './config'
-import { isObject } from './narrow'
+import type { TrackerKind } from "./config";
+import { isObject } from "./narrow";
 
 /**
  * The third-party tools `/forge` needs, and how far this CLI will go about
@@ -25,13 +25,13 @@ import { isObject } from './narrow'
  * into the same answer once one of them blocks a wave.
  */
 
-export const MATTPOCOCK_SKILLS_PLUGIN_ID = 'mattpocock-skills@claude-plugins-official'
+export const MATTPOCOCK_SKILLS_PLUGIN_ID = "mattpocock-skills@claude-plugins-official";
 
 /** The two `~/.claude/agents/*.md` files `install.sh` copies from this repo's
  * own `agents/` directory. Phase 6 dispatches workers as `forge-worker` and
  * Phase 8 dispatches the reviewer as `forge-reviewer` — either name missing
  * makes that `Agent({subagent_type: ...})` call fail outright. */
-export const FORGE_AGENT_NAMES = ['forge-worker', 'forge-reviewer'] as const
+export const FORGE_AGENT_NAMES = ["forge-worker", "forge-reviewer"] as const;
 
 /**
  * Every probe runs a foreign binary that can block on the network —
@@ -41,77 +41,77 @@ export const FORGE_AGENT_NAMES = ['forge-worker', 'forge-reviewer'] as const
  * reported as `indeterminate` rather than waited out. Bun Shell (`Bun.$`)
  * has no timeout option, which is why these use `Bun.spawn` directly.
  */
-export const DEPENDENCY_PROBE_TIMEOUT_MS = 5_000
+const DEPENDENCY_PROBE_TIMEOUT_MS = 5_000;
 
-export type DependencyName =
-  | 'claude-plugin'
-  | 'forge-agents'
-  | 'github-cli'
-  | 'linear-mcp-server'
-  | 'tracker-kind'
+type DependencyName =
+  | "claude-plugin"
+  | "forge-agents"
+  | "github-cli"
+  | "linear-mcp-server"
+  | "tracker-kind";
 
-export type DependencyStatus =
+type DependencyStatus =
   /** Verified present and usable — never reported to anyone. */
-  | 'satisfied'
+  | "satisfied"
   /** Verified absent or unusable. `preflight` refuses to dispatch on this. */
-  | 'unsatisfied'
+  | "unsatisfied"
   /** Could not be verified either way (tool not on PATH, probe timed out).
    * Always advisory: blocking here would strand anyone whose environment is
    * merely unusual rather than broken. */
-  | 'indeterminate'
+  | "indeterminate";
 
 export type DependencyCheck = {
-  readonly dependency: DependencyName
-  readonly status: DependencyStatus
+  readonly dependency: DependencyName;
+  readonly status: DependencyStatus;
   /** One line, no newlines: what is wrong and why it matters. */
-  readonly summary: string
+  readonly summary: string;
   /** Literal commands to run, one per line. Empty when the remedy fits in
    * `summary` or when there is nothing the user can run. */
-  readonly remedy: readonly string[]
+  readonly remedy: readonly string[];
   /** What could *not* be verified, when the check passed but only partly —
    * today just the Linear MCP server's authentication. */
-  readonly limitation: string | null
-}
+  readonly limitation: string | null;
+};
 
 export type ClaudePluginProbe =
-  | { readonly kind: 'listed'; readonly status: 'installed' | 'disabled' | 'missing' }
-  | { readonly kind: 'claude-not-on-path' }
-  | { readonly kind: 'claude-failed'; readonly detail: string }
+  | { readonly kind: "listed"; readonly status: "installed" | "disabled" | "missing" }
+  | { readonly kind: "claude-not-on-path" }
+  | { readonly kind: "claude-failed"; readonly detail: string };
 
 /** Filesystem-only — unlike the plugin/gh/Linear probes, there's no binary to
  * shell out to: `install.sh` just copies files, so checking they landed is a
  * plain `existsSync` per name. */
 export type ForgeAgentsProbe =
-  | { readonly kind: 'present' }
-  | { readonly kind: 'missing'; readonly missing: readonly string[] }
+  | { readonly kind: "present" }
+  | { readonly kind: "missing"; readonly missing: readonly string[] };
 
 export type GithubCliProbe =
-  | { readonly kind: 'authenticated' }
-  | { readonly kind: 'unauthenticated' }
-  | { readonly kind: 'not-on-path' }
-  | { readonly kind: 'timed-out' }
+  | { readonly kind: "authenticated" }
+  | { readonly kind: "unauthenticated" }
+  | { readonly kind: "not-on-path" }
+  | { readonly kind: "timed-out" };
 
 export type LinearMcpProbe =
-  | { readonly kind: 'declared'; readonly source: 'mcp-json' | 'claude-mcp-list' }
-  | { readonly kind: 'entry-malformed'; readonly serverKey: string }
-  | { readonly kind: 'not-declared'; readonly searchedAllScopes: boolean }
-  | { readonly kind: 'mcp-json-unreadable'; readonly detail: string }
+  | { readonly kind: "declared"; readonly source: "mcp-json" | "claude-mcp-list" }
+  | { readonly kind: "entry-malformed"; readonly serverKey: string }
+  | { readonly kind: "not-declared"; readonly searchedAllScopes: boolean }
+  | { readonly kind: "mcp-json-unreadable"; readonly detail: string };
 
 export type DependencyProbes = {
   /** Memoized by {@link createDependencyProbes} — the plugin list is global,
    * so a fleet sweep over 30 repos must still shell out exactly once. */
-  readonly claudePlugin: () => Promise<ClaudePluginProbe>
+  readonly claudePlugin: () => Promise<ClaudePluginProbe>;
   /** Memoized for the same reason: `gh` auth is per account/host, not per repo. */
-  readonly githubCli: () => Promise<GithubCliProbe>
-  readonly linearMcpServer: (repoRoot: string) => Promise<LinearMcpProbe>
+  readonly githubCli: () => Promise<GithubCliProbe>;
+  readonly linearMcpServer: (repoRoot: string) => Promise<LinearMcpProbe>;
   /** Memoized: `~/.claude/agents/` is a fixed, user-scoped path, not per repo. */
-  readonly forgeAgents: () => Promise<ForgeAgentsProbe>
-}
+  readonly forgeAgents: () => Promise<ForgeAgentsProbe>;
+};
 
 type ProbeRun =
-  | { readonly kind: 'ran'; readonly exitCode: number; readonly stdout: string }
-  | { readonly kind: 'timed-out' }
-  | { readonly kind: 'spawn-failed'; readonly message: string }
+  | { readonly kind: "ran"; readonly exitCode: number; readonly stdout: string }
+  | { readonly kind: "timed-out" }
+  | { readonly kind: "spawn-failed"; readonly message: string };
 
 /**
  * A process killed by `Bun.spawn`'s `timeout` surfaces as `exitCode === null`
@@ -119,26 +119,26 @@ type ProbeRun =
  * inspecting the finished subprocess, while a genuinely un-spawnable binary
  * (not on PATH) throws and lands in `spawn-failed`.
  */
-export async function runProbeCommand(
+async function runProbeCommand(
   command: readonly string[],
   timeoutMs: number = DEPENDENCY_PROBE_TIMEOUT_MS,
 ): Promise<ProbeRun> {
   try {
     const child = Bun.spawn([...command], {
-      stdout: 'pipe',
-      stderr: 'pipe',
+      stdout: "pipe",
+      stderr: "pipe",
       timeout: timeoutMs,
-      killSignal: 'SIGTERM',
-    })
-    const stdout = await new Response(child.stdout).text()
-    await child.exited
-    if (child.exitCode === null) return { kind: 'timed-out' }
-    return { kind: 'ran', exitCode: child.exitCode, stdout }
+      killSignal: "SIGTERM",
+    });
+    const stdout = await new Response(child.stdout).text();
+    await child.exited;
+    if (child.exitCode === null) return { kind: "timed-out" };
+    return { kind: "ran", exitCode: child.exitCode, stdout };
   } catch (error: unknown) {
     return {
-      kind: 'spawn-failed',
+      kind: "spawn-failed",
       message: error instanceof Error ? error.message : String(error),
-    }
+    };
   }
 }
 
@@ -146,8 +146,8 @@ export async function runProbeCommand(
  * shell, so the usual `command -v` builtin isn't available inside a `Bun.$`
  * template — `which` is what this codebase resolves binaries with. */
 export async function resolveBinaryOnPath(binary: string): Promise<boolean> {
-  const result = await Bun.$`which ${binary}`.nothrow().quiet()
-  return result.exitCode === 0
+  const result = await Bun.$`which ${binary}`.nothrow().quiet();
+  return result.exitCode === 0;
 }
 
 /**
@@ -165,29 +165,29 @@ export async function resolveBinaryOnPath(binary: string): Promise<boolean> {
 export function parsePluginListOutput(
   output: string,
   pluginId: string,
-): 'installed' | 'disabled' | 'missing' {
-  const blocks = output.split('❯').slice(1)
-  let sawPlugin = false
+): "installed" | "disabled" | "missing" {
+  const blocks = output.split("❯").slice(1);
+  let sawPlugin = false;
   for (const block of blocks) {
-    const header = block.split('\n', 1)[0]?.trim()
-    if (header !== pluginId) continue
-    sawPlugin = true
-    if (!/disabled/i.test(block)) return 'installed'
+    const header = block.split("\n", 1)[0]?.trim();
+    if (header !== pluginId) continue;
+    sawPlugin = true;
+    if (!/disabled/i.test(block)) return "installed";
   }
-  return sawPlugin ? 'disabled' : 'missing'
+  return sawPlugin ? "disabled" : "missing";
 }
 
 /** `claude mcp list` covers every scope (user-level `~/.claude.json` included),
  * not just the repo's `.mcp.json` — a repo-local check alone would block a
  * perfectly working user-level Linear server. */
 export function mcpListMentionsLinear(output: string): boolean {
-  return output.toLowerCase().includes('linear')
+  return output.toLowerCase().includes("linear");
 }
 
 export type LinearEntryLookup =
-  | { readonly kind: 'absent' }
-  | { readonly kind: 'malformed'; readonly serverKey: string }
-  | { readonly kind: 'well-formed'; readonly serverKey: string }
+  | { readonly kind: "absent" }
+  | { readonly kind: "malformed"; readonly serverKey: string }
+  | { readonly kind: "well-formed"; readonly serverKey: string };
 
 /**
  * `.mcp.json` uses a server key naming convention (`linear-server`, per every
@@ -201,112 +201,123 @@ export type LinearEntryLookup =
  * a real, detectable misconfiguration rather than a working server.
  */
 export function findLinearMcpEntry(parsed: unknown): LinearEntryLookup {
-  if (!isObject(parsed)) return { kind: 'absent' }
-  const servers = parsed.mcpServers
-  if (!isObject(servers)) return { kind: 'absent' }
+  if (!isObject(parsed)) return { kind: "absent" };
+  const servers = parsed.mcpServers;
+  if (!isObject(servers)) return { kind: "absent" };
 
   for (const [key, value] of Object.entries(servers)) {
-    const entry = isObject(value) ? value : {}
-    const args = Array.isArray(entry.args) ? entry.args.join(' ') : ''
-    const command = typeof entry.command === 'string' ? entry.command : ''
-    const url = typeof entry.url === 'string' ? entry.url : ''
-    const haystack = `${key} ${command} ${args} ${url}`.toLowerCase()
-    if (!haystack.includes('linear')) continue
+    const entry = isObject(value) ? value : {};
+    const args = Array.isArray(entry.args) ? entry.args.join(" ") : "";
+    const command = typeof entry.command === "string" ? entry.command : "";
+    const url = typeof entry.url === "string" ? entry.url : "";
+    const haystack = `${key} ${command} ${args} ${url}`.toLowerCase();
+    if (!haystack.includes("linear")) continue;
 
-    const isStdio = command.length > 0
-    const isRemote = typeof entry.type === 'string' && url.length > 0
+    const isStdio = command.length > 0;
+    const isRemote = typeof entry.type === "string" && url.length > 0;
     return isStdio || isRemote
-      ? { kind: 'well-formed', serverKey: key }
-      : { kind: 'malformed', serverKey: key }
+      ? { kind: "well-formed", serverKey: key }
+      : { kind: "malformed", serverKey: key };
   }
-  return { kind: 'absent' }
+  return { kind: "absent" };
 }
 
 export function classifyClaudePluginProbe(probe: ClaudePluginProbe): DependencyCheck {
-  const base = { dependency: 'claude-plugin' as const, limitation: null }
+  const base = { dependency: "claude-plugin" as const, limitation: null };
   switch (probe.kind) {
-    case 'claude-not-on-path':
+    case "claude-not-on-path":
       return {
         ...base,
-        status: 'indeterminate',
+        status: "indeterminate",
         summary:
           "could not verify the mattpocock-skills plugin — the `claude` binary is not on this shell's PATH. " +
           "/forge's interview/spec/ticket phases (1-5) need that plugin; check it from a shell where `claude` resolves.",
         remedy: [],
-      }
-    case 'claude-failed':
+      };
+    case "claude-failed":
       return {
         ...base,
-        status: 'indeterminate',
+        status: "indeterminate",
         summary: `could not verify the mattpocock-skills plugin — \`claude plugin list\` failed: ${probe.detail}`,
         remedy: [],
-      }
+      };
     default:
-      if (probe.status === 'installed') {
-        return { ...base, status: 'satisfied', summary: 'mattpocock-skills plugin is installed', remedy: [] }
-      }
-      if (probe.status === 'disabled') {
+      if (probe.status === "installed") {
         return {
           ...base,
-          status: 'unsatisfied',
+          status: "satisfied",
+          summary: "mattpocock-skills plugin is installed",
+          remedy: [],
+        };
+      }
+      if (probe.status === "disabled") {
+        return {
+          ...base,
+          status: "unsatisfied",
           summary:
-            'mattpocock-skills plugin is installed but disabled — run ' +
+            "mattpocock-skills plugin is installed but disabled — run " +
             `\`claude plugin enable ${MATTPOCOCK_SKILLS_PLUGIN_ID}\`.`,
           remedy: [],
-        }
+        };
       }
       return {
         ...base,
-        status: 'unsatisfied',
+        status: "unsatisfied",
         summary:
           "mattpocock-skills plugin not found — /forge's interview/spec/ticket phases (1-5) need it. Run:",
         remedy: [
-          'claude plugin marketplace add anthropics/claude-plugins-official',
+          "claude plugin marketplace add anthropics/claude-plugins-official",
           `claude plugin install ${MATTPOCOCK_SKILLS_PLUGIN_ID}`,
         ],
-      }
+      };
   }
 }
 
 export function classifyForgeAgentsProbe(probe: ForgeAgentsProbe): DependencyCheck {
-  const base = { dependency: 'forge-agents' as const, limitation: null }
-  if (probe.kind === 'present') {
-    return { ...base, status: 'satisfied', summary: 'forge-worker and forge-reviewer agents are installed', remedy: [] }
+  const base = { dependency: "forge-agents" as const, limitation: null };
+  if (probe.kind === "present") {
+    return {
+      ...base,
+      status: "satisfied",
+      summary: "forge-worker and forge-reviewer agents are installed",
+      remedy: [],
+    };
   }
   return {
     ...base,
-    status: 'unsatisfied',
+    status: "unsatisfied",
     summary:
-      `~/.claude/agents/ is missing ${probe.missing.join(', ')} — Phase 6/8 dispatch will fail to resolve ` +
-      'the subagent_type. Re-run:',
-    remedy: ['./install.sh'],
-  }
+      `~/.claude/agents/ is missing ${probe.missing.join(", ")} — Phase 6/8 dispatch will fail to resolve ` +
+      "the subagent_type. Re-run:",
+    remedy: ["./install.sh"],
+  };
 }
 
 export function classifyGithubCliProbe(probe: GithubCliProbe): DependencyCheck {
-  const base = { dependency: 'github-cli' as const, limitation: null, remedy: [] }
+  const base = { dependency: "github-cli" as const, limitation: null, remedy: [] };
   switch (probe.kind) {
-    case 'authenticated':
-      return { ...base, status: 'satisfied', summary: 'gh CLI is installed and authenticated' }
-    case 'not-on-path':
+    case "authenticated":
+      return { ...base, status: "satisfied", summary: "gh CLI is installed and authenticated" };
+    case "not-on-path":
       return {
         ...base,
-        status: 'unsatisfied',
+        status: "unsatisfied",
         summary:
           "gh CLI not found on PATH — required for this repo's github tracker. Install: https://cli.github.com",
-      }
-    case 'unauthenticated':
+      };
+    case "unauthenticated":
       return {
         ...base,
-        status: 'unsatisfied',
-        summary: 'gh CLI found but not authenticated — run `gh auth login` before dispatching a wave.',
-      }
+        status: "unsatisfied",
+        summary:
+          "gh CLI found but not authenticated — run `gh auth login` before dispatching a wave.",
+      };
     default:
       return {
         ...base,
-        status: 'indeterminate',
+        status: "indeterminate",
         summary: `could not verify gh authentication — \`gh auth status\` timed out after ${DEPENDENCY_PROBE_TIMEOUT_MS}ms (no network?).`,
-      }
+      };
   }
 }
 
@@ -319,80 +330,80 @@ export function classifyGithubCliProbe(probe: GithubCliProbe): DependencyCheck {
  * `limitation` rather than silently treated as proof of a working tracker.
  */
 export function classifyLinearMcpProbe(probe: LinearMcpProbe): DependencyCheck {
-  const base = { dependency: 'linear-mcp-server' as const, remedy: [] }
+  const base = { dependency: "linear-mcp-server" as const, remedy: [] };
   const authLimitation =
-    'forge can verify the Linear MCP server is declared, not that the connection is authenticated — ' +
-    'if Phase 0 fails to read tickets, restart Claude Code and approve the connection.'
+    "forge can verify the Linear MCP server is declared, not that the connection is authenticated — " +
+    "if Phase 0 fails to read tickets, restart Claude Code and approve the connection.";
 
   switch (probe.kind) {
-    case 'declared':
+    case "declared":
       return {
         ...base,
-        status: 'satisfied',
-        summary: `Linear MCP server declared (${probe.source === 'mcp-json' ? '.mcp.json' : 'claude mcp list'})`,
+        status: "satisfied",
+        summary: `Linear MCP server declared (${probe.source === "mcp-json" ? ".mcp.json" : "claude mcp list"})`,
         limitation: authLimitation,
-      }
-    case 'entry-malformed':
+      };
+    case "entry-malformed":
       return {
         ...base,
-        status: 'unsatisfied',
+        status: "unsatisfied",
         summary:
           `tracker: linear — the "${probe.serverKey}" entry in .mcp.json has neither a \`command\` (stdio) ` +
-          'nor a `type` + `url` (remote), so no MCP client can start it.',
+          "nor a `type` + `url` (remote), so no MCP client can start it.",
         limitation: null,
-      }
-    case 'not-declared':
+      };
+    case "not-declared":
       return {
         ...base,
-        status: probe.searchedAllScopes ? 'unsatisfied' : 'indeterminate',
+        status: probe.searchedAllScopes ? "unsatisfied" : "indeterminate",
         summary: probe.searchedAllScopes
-          ? 'tracker: linear — no Linear MCP server found in .mcp.json or in `claude mcp list`. /forge cannot read or move tickets without it.'
+          ? "tracker: linear — no Linear MCP server found in .mcp.json or in `claude mcp list`. /forge cannot read or move tickets without it."
           : "tracker: linear — no Linear MCP server in .mcp.json, and `claude` is not on PATH to check user-level scopes. If yours is configured at user level this is fine.",
         limitation: null,
-      }
+      };
     default:
       return {
         ...base,
-        status: 'unsatisfied',
+        status: "unsatisfied",
         summary: `tracker: linear — .mcp.json could not be read as JSON: ${probe.detail}`,
         limitation: null,
-      }
+      };
   }
 }
 
 function trackerKindUndeclaredCheck(): DependencyCheck {
   return {
-    dependency: 'tracker-kind',
-    status: 'indeterminate',
+    dependency: "tracker-kind",
+    status: "indeterminate",
     summary:
-      'forge.config.json declares no tracker.kind — tracker-specific dependency checks (gh, Linear) were skipped. ' +
+      "forge.config.json declares no tracker.kind — tracker-specific dependency checks (gh, Linear) were skipped. " +
       'Re-run `forge init --force` or add a "tracker": { "kind": ... } section.',
     remedy: [],
     limitation: null,
-  }
+  };
 }
 
 export async function checkDependencies(input: {
-  readonly tracker: TrackerKind | null
-  readonly repoRoot: string
-  readonly probes: DependencyProbes
+  readonly tracker: TrackerKind | null;
+  readonly repoRoot: string;
+  readonly probes: DependencyProbes;
 }): Promise<readonly DependencyCheck[]> {
   const checks: DependencyCheck[] = [
     classifyClaudePluginProbe(await input.probes.claudePlugin()),
     classifyForgeAgentsProbe(await input.probes.forgeAgents()),
-  ]
+  ];
 
   if (input.tracker === null) {
-    checks.push(trackerKindUndeclaredCheck())
-    return checks
+    checks.push(trackerKindUndeclaredCheck());
+    return checks;
   }
-  if (input.tracker === 'github') {
-    checks.push(classifyGithubCliProbe(await input.probes.githubCli()))
+  if (input.tracker === "github") {
+    checks.push(classifyGithubCliProbe(await input.probes.githubCli()));
   }
-  if (input.tracker === 'linear') {
-    checks.push(classifyLinearMcpProbe(await input.probes.linearMcpServer(input.repoRoot)))
+  if (input.tracker === "linear") {
+    checks.push(classifyLinearMcpProbe(await input.probes.linearMcpServer(input.repoRoot)));
   }
-  return checks
+  return checks;
 }
 
 /**
@@ -402,89 +413,88 @@ export async function checkDependencies(input: {
  * hardcodes a layout.
  */
 export function formatDependencyCheck(check: DependencyCheck, continuationIndent: string): string {
-  if (check.remedy.length === 0) return check.summary
-  return `${check.summary}\n${check.remedy.map((line) => `${continuationIndent}${line}`).join('\n')}`
+  if (check.remedy.length === 0) return check.summary;
+  return `${check.summary}\n${check.remedy.map((line) => `${continuationIndent}${line}`).join("\n")}`;
 }
 
-export function unsatisfiedChecks(
-  checks: readonly DependencyCheck[],
-): readonly DependencyCheck[] {
-  return checks.filter((check) => check.status === 'unsatisfied')
+export function unsatisfiedChecks(checks: readonly DependencyCheck[]): readonly DependencyCheck[] {
+  return checks.filter((check) => check.status === "unsatisfied");
 }
 
 export function indeterminateChecks(
   checks: readonly DependencyCheck[],
 ): readonly DependencyCheck[] {
-  return checks.filter((check) => check.status === 'indeterminate')
+  return checks.filter((check) => check.status === "indeterminate");
 }
 
 async function probeClaudePlugin(): Promise<ClaudePluginProbe> {
-  if (!(await resolveBinaryOnPath('claude'))) return { kind: 'claude-not-on-path' }
-  const result = await runProbeCommand(['claude', 'plugin', 'list'])
-  if (result.kind === 'timed-out') {
-    return { kind: 'claude-failed', detail: `timed out after ${DEPENDENCY_PROBE_TIMEOUT_MS}ms` }
+  if (!(await resolveBinaryOnPath("claude"))) return { kind: "claude-not-on-path" };
+  const result = await runProbeCommand(["claude", "plugin", "list"]);
+  if (result.kind === "timed-out") {
+    return { kind: "claude-failed", detail: `timed out after ${DEPENDENCY_PROBE_TIMEOUT_MS}ms` };
   }
-  if (result.kind === 'spawn-failed') return { kind: 'claude-failed', detail: result.message }
-  if (result.exitCode !== 0) return { kind: 'claude-failed', detail: `exit code ${result.exitCode}` }
+  if (result.kind === "spawn-failed") return { kind: "claude-failed", detail: result.message };
+  if (result.exitCode !== 0)
+    return { kind: "claude-failed", detail: `exit code ${result.exitCode}` };
   return {
-    kind: 'listed',
+    kind: "listed",
     status: parsePluginListOutput(result.stdout, MATTPOCOCK_SKILLS_PLUGIN_ID),
-  }
+  };
 }
 
 export function probeForgeAgents(agentsDirectory: string): ForgeAgentsProbe {
   const missing = FORGE_AGENT_NAMES.filter(
     (name) => !existsSync(path.join(agentsDirectory, `${name}.md`)),
-  )
-  return missing.length === 0 ? { kind: 'present' } : { kind: 'missing', missing }
+  );
+  return missing.length === 0 ? { kind: "present" } : { kind: "missing", missing };
 }
 
 async function probeGithubCli(): Promise<GithubCliProbe> {
-  if (!(await resolveBinaryOnPath('gh'))) return { kind: 'not-on-path' }
-  const result = await runProbeCommand(['gh', 'auth', 'status'])
-  if (result.kind === 'timed-out') return { kind: 'timed-out' }
-  if (result.kind === 'spawn-failed') return { kind: 'not-on-path' }
-  return result.exitCode === 0 ? { kind: 'authenticated' } : { kind: 'unauthenticated' }
+  if (!(await resolveBinaryOnPath("gh"))) return { kind: "not-on-path" };
+  const result = await runProbeCommand(["gh", "auth", "status"]);
+  if (result.kind === "timed-out") return { kind: "timed-out" };
+  if (result.kind === "spawn-failed") return { kind: "not-on-path" };
+  return result.exitCode === 0 ? { kind: "authenticated" } : { kind: "unauthenticated" };
 }
 
 export async function probeLinearMcpServer(repoRoot: string): Promise<LinearMcpProbe> {
-  const file = Bun.file(path.join(repoRoot, '.mcp.json'))
+  const file = Bun.file(path.join(repoRoot, ".mcp.json"));
   if (await file.exists()) {
-    let parsed: unknown
+    let parsed: unknown;
     try {
-      parsed = await file.json()
+      parsed = await file.json();
     } catch (error: unknown) {
       return {
-        kind: 'mcp-json-unreadable',
+        kind: "mcp-json-unreadable",
         detail: error instanceof Error ? error.message : String(error),
-      }
+      };
     }
-    const lookup = findLinearMcpEntry(parsed)
-    if (lookup.kind === 'well-formed') return { kind: 'declared', source: 'mcp-json' }
-    if (lookup.kind === 'malformed') {
-      return { kind: 'entry-malformed', serverKey: lookup.serverKey }
+    const lookup = findLinearMcpEntry(parsed);
+    if (lookup.kind === "well-formed") return { kind: "declared", source: "mcp-json" };
+    if (lookup.kind === "malformed") {
+      return { kind: "entry-malformed", serverKey: lookup.serverKey };
     }
   }
 
-  if (!(await resolveBinaryOnPath('claude'))) {
-    return { kind: 'not-declared', searchedAllScopes: false }
+  if (!(await resolveBinaryOnPath("claude"))) {
+    return { kind: "not-declared", searchedAllScopes: false };
   }
-  const result = await runProbeCommand(['claude', 'mcp', 'list'])
-  if (result.kind !== 'ran' || result.exitCode !== 0) {
-    return { kind: 'not-declared', searchedAllScopes: false }
+  const result = await runProbeCommand(["claude", "mcp", "list"]);
+  if (result.kind !== "ran" || result.exitCode !== 0) {
+    return { kind: "not-declared", searchedAllScopes: false };
   }
   return mcpListMentionsLinear(result.stdout)
-    ? { kind: 'declared', source: 'claude-mcp-list' }
-    : { kind: 'not-declared', searchedAllScopes: true }
+    ? { kind: "declared", source: "claude-mcp-list" }
+    : { kind: "not-declared", searchedAllScopes: true };
 }
 
 /** Memoizes the two repo-independent probes so a fleet sweep shells out once
  * rather than once per repo. */
 export function createDependencyProbes(): DependencyProbes {
-  let claudePluginResult: Promise<ClaudePluginProbe> | null = null
-  let githubCliResult: Promise<GithubCliProbe> | null = null
+  let claudePluginResult: Promise<ClaudePluginProbe> | null = null;
+  let githubCliResult: Promise<GithubCliProbe> | null = null;
 
-  let forgeAgentsResult: Promise<ForgeAgentsProbe> | null = null
+  let forgeAgentsResult: Promise<ForgeAgentsProbe> | null = null;
 
   return {
     claudePlugin: () => (claudePluginResult ??= probeClaudePlugin()),
@@ -492,96 +502,98 @@ export function createDependencyProbes(): DependencyProbes {
     linearMcpServer: probeLinearMcpServer,
     forgeAgents: () =>
       (forgeAgentsResult ??= Promise.resolve(
-        probeForgeAgents(path.join(os.homedir(), '.claude', 'agents')),
+        probeForgeAgents(path.join(os.homedir(), ".claude", "agents")),
       )),
-  }
+  };
 }
 
-export type TicketStatus = 'todo' | 'in-progress' | 'done' | 'cancelled' | 'dropped'
+type TicketStatus = "todo" | "in-progress" | "done" | "cancelled" | "dropped";
 
 export type TicketNode = {
-  id: string
-  status: TicketStatus
-  priority: number
-  createdAt: string
-  blockedBy: readonly string[]
-}
+  id: string;
+  status: TicketStatus;
+  priority: number;
+  createdAt: string;
+  blockedBy: readonly string[];
+};
 
 export type TicketGraphResult = {
-  exitCode: 0 | 1
-  cycle: string[] | null
-  ready: TicketNode[]
-  blocked: { id: string; blockers: string[] }[]
-}
+  exitCode: 0 | 1;
+  cycle: string[] | null;
+  ready: TicketNode[];
+  blocked: { id: string; blockers: string[] }[];
+};
 
 function findDependencyCycle(nodesById: Map<string, TicketNode>): string[] | null {
-  const finished = new Set<string>()
-  const onPath: string[] = []
+  const finished = new Set<string>();
+  const onPath: string[] = [];
 
   const visit = (id: string): string[] | null => {
-    const cycleStart = onPath.indexOf(id)
-    if (cycleStart !== -1) return [...onPath.slice(cycleStart), id]
-    if (finished.has(id)) return null
-    const node = nodesById.get(id)
-    if (node === undefined) return null
-    onPath.push(id)
+    const cycleStart = onPath.indexOf(id);
+    if (cycleStart !== -1) return [...onPath.slice(cycleStart), id];
+    if (finished.has(id)) return null;
+    const node = nodesById.get(id);
+    if (node === undefined) return null;
+    onPath.push(id);
     for (const blockerId of node.blockedBy) {
-      const found = visit(blockerId)
-      if (found !== null) return found
+      const found = visit(blockerId);
+      if (found !== null) return found;
     }
-    onPath.pop()
-    finished.add(id)
-    return null
-  }
+    onPath.pop();
+    finished.add(id);
+    return null;
+  };
 
   for (const id of nodesById.keys()) {
-    const found = visit(id)
-    if (found !== null) return found
+    const found = visit(id);
+    if (found !== null) return found;
   }
-  return null
+  return null;
 }
 
 function criticalPathLengths(nodes: readonly TicketNode[]): Map<string, number> {
-  const dependentsById = new Map<string, string[]>()
+  const dependentsById = new Map<string, string[]>();
   for (const node of nodes) {
     for (const blockerId of node.blockedBy) {
-      dependentsById.set(blockerId, [...(dependentsById.get(blockerId) ?? []), node.id])
+      dependentsById.set(blockerId, [...(dependentsById.get(blockerId) ?? []), node.id]);
     }
   }
-  const lengths = new Map<string, number>()
+  const lengths = new Map<string, number>();
   const lengthOf = (id: string): number => {
-    const cached = lengths.get(id)
-    if (cached !== undefined) return cached
-    const longestDependent = Math.max(0, ...(dependentsById.get(id) ?? []).map(lengthOf))
-    lengths.set(id, longestDependent + 1)
-    return longestDependent + 1
-  }
-  for (const node of nodes) lengthOf(node.id)
-  return lengths
+    const cached = lengths.get(id);
+    if (cached !== undefined) return cached;
+    const longestDependent = Math.max(0, ...(dependentsById.get(id) ?? []).map(lengthOf));
+    lengths.set(id, longestDependent + 1);
+    return longestDependent + 1;
+  };
+  for (const node of nodes) lengthOf(node.id);
+  return lengths;
 }
 
 /** Only a `done` blocker releases its dependents: cancelled and dropped ones still block. */
 export function analyzeTicketGraph(nodes: readonly TicketNode[]): TicketGraphResult {
-  const nodesById = new Map(nodes.map((node) => [node.id, node]))
-  const cycle = findDependencyCycle(nodesById)
-  if (cycle !== null) return { exitCode: 1, cycle, ready: [], blocked: [] }
+  const nodesById = new Map(nodes.map((node) => [node.id, node]));
+  const cycle = findDependencyCycle(nodesById);
+  if (cycle !== null) return { exitCode: 1, cycle, ready: [], blocked: [] };
 
-  const lengths = criticalPathLengths(nodes)
-  const ready: TicketNode[] = []
-  const blocked: TicketGraphResult['blocked'] = []
+  const lengths = criticalPathLengths(nodes);
+  const ready: TicketNode[] = [];
+  const blocked: TicketGraphResult["blocked"] = [];
   for (const node of nodes) {
-    if (node.status !== 'todo') continue
-    const blockers = node.blockedBy.filter((blockerId) => nodesById.get(blockerId)?.status !== 'done')
-    if (blockers.length === 0) ready.push(node)
-    else blocked.push({ id: node.id, blockers })
+    if (node.status !== "todo") continue;
+    const blockers = node.blockedBy.filter(
+      (blockerId) => nodesById.get(blockerId)?.status !== "done",
+    );
+    if (blockers.length === 0) ready.push(node);
+    else blocked.push({ id: node.id, blockers });
   }
   ready.sort(
     (left, right) =>
       (lengths.get(right.id) ?? 0) - (lengths.get(left.id) ?? 0) ||
       left.priority - right.priority ||
       left.createdAt.localeCompare(right.createdAt),
-  )
-  return { exitCode: 0, cycle: null, ready, blocked }
+  );
+  return { exitCode: 0, cycle: null, ready, blocked };
 }
 
 export function formatTicketGraphJson(result: TicketGraphResult): string {
@@ -590,5 +602,5 @@ export function formatTicketGraphJson(result: TicketGraphResult): string {
     cycle: result.cycle,
     ready: result.ready.map((node) => node.id),
     blocked: result.blocked,
-  })
+  });
 }

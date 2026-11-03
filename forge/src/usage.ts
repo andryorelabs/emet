@@ -29,47 +29,43 @@
  * default report, just checked for silence instead of summarized.
  */
 
-import os from 'node:os'
+import os from "node:os";
 
 import {
   DEFAULT_FORGE_CONFIG,
   loadForgeConfigWithDefaults,
   resolveRepoRoot,
   type ForgeConfig,
-} from './config'
-import {
-  readCompletionEvent,
-  recordStallNudge,
-  type CompletionEvent,
-} from './runs'
-import { isObject } from './narrow'
-import { parseWorktreeEntries, resolveWorktreeOwner } from './worktrees'
+} from "./config";
+import { readCompletionEvent, recordStallNudge, type CompletionEvent } from "./runs";
+import { isObject } from "./narrow";
+import { parseWorktreeEntries, resolveWorktreeOwner } from "./worktrees";
 
 type UsageEntry = {
-  readonly inputTokens: number
-  readonly cacheReadTokens: number
-  readonly cacheCreationTokens: number
-}
+  readonly inputTokens: number;
+  readonly cacheReadTokens: number;
+  readonly cacheCreationTokens: number;
+};
 
 type ToolResultSample = {
-  readonly name: string
-  readonly chars: number
-}
+  readonly name: string;
+  readonly chars: number;
+};
 
 type TranscriptStats = {
-  readonly label: string
-  readonly turns: number
-  readonly cacheReadMillionTokens: number
-  readonly floorContext: number
-  readonly peakContext: number
-  readonly finalContext: number
-  readonly compactBoundaries: number
-  readonly topToolResults: ToolResultSample[]
-  readonly oversizedFullReads: number
-}
+  readonly label: string;
+  readonly turns: number;
+  readonly cacheReadMillionTokens: number;
+  readonly floorContext: number;
+  readonly peakContext: number;
+  readonly finalContext: number;
+  readonly compactBoundaries: number;
+  readonly topToolResults: ToolResultSample[];
+  readonly oversizedFullReads: number;
+};
 
 function contextSize(entry: UsageEntry): number {
-  return entry.inputTokens + entry.cacheReadTokens + entry.cacheCreationTokens
+  return entry.inputTokens + entry.cacheReadTokens + entry.cacheCreationTokens;
 }
 
 /**
@@ -90,35 +86,23 @@ function recordToolBlocks(
 ): void {
   for (const block of content) {
     if (!isObject(block)) {
-      continue
+      continue;
     }
-    const blockRecord = block
-    if (blockRecord.type === 'tool_use' && typeof blockRecord.id === 'string') {
-      const name =
-        typeof blockRecord.name === 'string' ? blockRecord.name : 'unknown'
-      toolNameById.set(blockRecord.id, name)
-      if (name === 'Read') {
-        const input = isObject(blockRecord.input) ? blockRecord.input : undefined
-        const filePath =
-          input && typeof input.file_path === 'string'
-            ? input.file_path
-            : undefined
-        const isBounded = Boolean(
-          input && ('offset' in input || 'limit' in input),
-        )
+    const blockRecord = block;
+    if (blockRecord.type === "tool_use" && typeof blockRecord.id === "string") {
+      const name = typeof blockRecord.name === "string" ? blockRecord.name : "unknown";
+      toolNameById.set(blockRecord.id, name);
+      if (name === "Read") {
+        const input = isObject(blockRecord.input) ? blockRecord.input : undefined;
+        const filePath = input && typeof input.file_path === "string" ? input.file_path : undefined;
+        const isBounded = Boolean(input && ("offset" in input || "limit" in input));
         if (filePath && !isBounded) {
-          unboundedReadPaths.push(filePath)
+          unboundedReadPaths.push(filePath);
         }
       }
     }
-    if (
-      blockRecord.type === 'tool_result' &&
-      typeof blockRecord.tool_use_id === 'string'
-    ) {
-      resultSizeById.set(
-        blockRecord.tool_use_id,
-        toolResultCharCount(blockRecord.content),
-      )
+    if (blockRecord.type === "tool_result" && typeof blockRecord.tool_use_id === "string") {
+      resultSizeById.set(blockRecord.tool_use_id, toolResultCharCount(blockRecord.content));
     }
   }
 }
@@ -129,7 +113,7 @@ function recordToolBlocks(
  * constant survives only as the fallback when a caller doesn't pass one
  * explicitly.
  */
-const OVERSIZED_READ_LINE_THRESHOLD = 400
+const OVERSIZED_READ_LINE_THRESHOLD = 400;
 
 /**
  * Counts how many of `paths` currently exceed `oversizedThreshold` lines. A
@@ -142,21 +126,21 @@ async function countOversizedReads(
   paths: string[],
   oversizedThreshold: number = OVERSIZED_READ_LINE_THRESHOLD,
 ): Promise<number> {
-  let count = 0
+  let count = 0;
   for (const path of paths) {
-    const file = Bun.file(path)
+    const file = Bun.file(path);
     // oxlint-disable-next-line eslint/no-await-in-loop -- sequential on purpose: later iterations depend on earlier ones or on output order
     if (!(await file.exists())) {
-      continue
+      continue;
     }
     // oxlint-disable-next-line eslint/no-await-in-loop -- sequential on purpose: later iterations depend on earlier ones or on output order
-    const text = await file.text()
-    const lineCount = text.split('\n').length
+    const text = await file.text();
+    const lineCount = text.split("\n").length;
     if (lineCount > oversizedThreshold) {
-      count += 1
+      count += 1;
     }
   }
-  return count
+  return count;
 }
 
 /**
@@ -169,80 +153,75 @@ async function analyzeTranscript(
   label: string,
   oversizedThreshold: number = OVERSIZED_READ_LINE_THRESHOLD,
 ): Promise<TranscriptStats | null> {
-  const file = Bun.file(filePath)
+  const file = Bun.file(filePath);
   if (!(await file.exists())) {
-    return null
+    return null;
   }
-  const text = await file.text()
-  const lines = text.split('\n').filter((line) => line.trim().length > 0)
+  const text = await file.text();
+  const lines = text.split("\n").filter((line) => line.trim().length > 0);
 
-  const usageEntries: UsageEntry[] = []
-  let compactBoundaries = 0
-  const toolNameById = new Map<string, string>()
-  const resultSizeById = new Map<string, number>()
-  const unboundedReadPaths: string[] = []
+  const usageEntries: UsageEntry[] = [];
+  let compactBoundaries = 0;
+  const toolNameById = new Map<string, string>();
+  const resultSizeById = new Map<string, number>();
+  const unboundedReadPaths: string[] = [];
 
   for (const line of lines) {
-    let event: unknown
+    let event: unknown;
     try {
-      event = JSON.parse(line)
+      event = JSON.parse(line);
     } catch {
-      continue
+      continue;
     }
     if (!isObject(event)) {
-      continue
+      continue;
     }
-    const record = event
+    const record = event;
 
-    if (JSON.stringify(record).includes('compact_boundary')) {
-      compactBoundaries += 1
+    if (JSON.stringify(record).includes("compact_boundary")) {
+      compactBoundaries += 1;
     }
 
-    const message = isObject(record.message) ? record.message : undefined
+    const message = isObject(record.message) ? record.message : undefined;
     if (!message) {
-      continue
+      continue;
     }
 
-    const usage = isObject(message.usage) ? message.usage : undefined
-    if (usage && typeof usage.input_tokens === 'number') {
+    const usage = isObject(message.usage) ? message.usage : undefined;
+    if (usage && typeof usage.input_tokens === "number") {
       usageEntries.push({
         inputTokens: usage.input_tokens,
         cacheReadTokens: numberOrZero(usage.cache_read_input_tokens),
         cacheCreationTokens: numberOrZero(usage.cache_creation_input_tokens),
-      })
+      });
     }
 
-    const content = message.content
+    const content = message.content;
     if (!Array.isArray(content)) {
-      continue
+      continue;
     }
-    recordToolBlocks(content, toolNameById, resultSizeById, unboundedReadPaths)
+    recordToolBlocks(content, toolNameById, resultSizeById, unboundedReadPaths);
   }
 
   if (usageEntries.length === 0) {
-    return null
+    return null;
   }
 
   const topToolResults: ToolResultSample[] = [...resultSizeById]
     .map(([id, chars]) => ({
-      name: toolNameById.get(id) ?? 'unknown',
+      name: toolNameById.get(id) ?? "unknown",
       chars,
     }))
     .toSorted((a, b) => b.chars - a.chars)
-    .slice(0, 10)
+    .slice(0, 10);
 
-  let cacheReadTotal = 0
+  let cacheReadTotal = 0;
 
   for (const entry of usageEntries) {
-    cacheReadTotal += entry.cacheReadTokens
+    cacheReadTotal += entry.cacheReadTokens;
   }
-  const peakContext = Math.max(
-    ...usageEntries.map((entry) => contextSize(entry)),
-  )
-  const oversizedFullReads = await countOversizedReads(
-    unboundedReadPaths,
-    oversizedThreshold,
-  )
+  const peakContext = Math.max(...usageEntries.map((entry) => contextSize(entry)));
+  const oversizedFullReads = await countOversizedReads(unboundedReadPaths, oversizedThreshold);
 
   return {
     label,
@@ -254,32 +233,32 @@ async function analyzeTranscript(
     oversizedFullReads,
     compactBoundaries,
     topToolResults,
-  }
+  };
 }
 
 function toolResultCharCount(content: unknown): number {
-  if (typeof content === 'string') {
-    return content.length
+  if (typeof content === "string") {
+    return content.length;
   }
   if (Array.isArray(content)) {
-    let total = 0
+    let total = 0;
     for (const part of content) {
       if (!isObject(part)) {
-        continue
+        continue;
       }
 
-      const text = part.text
-      if (typeof text === 'string') {
-        total += text.length
+      const text = part.text;
+      if (typeof text === "string") {
+        total += text.length;
       }
     }
-    return total
+    return total;
   }
-  return 0
+  return 0;
 }
 
 function projectSlug(cwd: string): string {
-  return cwd.replaceAll('/', '-')
+  return cwd.replaceAll("/", "-");
 }
 
 /**
@@ -290,95 +269,90 @@ function projectSlug(cwd: string): string {
  * read) has no other way to point this at the right project slug.
  */
 function resolveProjectDirectoryFlag(argv: readonly string[]): string {
-  const flagIndex = argv.indexOf('--project-dir')
-  const value = flagIndex === -1 ? undefined : argv[flagIndex + 1]
-  return value ?? process.cwd()
+  const flagIndex = argv.indexOf("--project-dir");
+  const value = flagIndex === -1 ? undefined : argv[flagIndex + 1];
+  return value ?? process.cwd();
 }
 
 function projectsDirectory(argv: readonly string[] = []): string {
-  const projectDirectory = resolveProjectDirectoryFlag(argv)
-  return `${os.homedir()}/.claude/projects/${projectSlug(projectDirectory)}`
+  const projectDirectory = resolveProjectDirectoryFlag(argv);
+  return `${os.homedir()}/.claude/projects/${projectSlug(projectDirectory)}`;
 }
 
-async function findMostRecentSessionFile(
-  directory: string,
-): Promise<string | null> {
-  const glob = new Bun.Glob('*.jsonl')
-  const entries = glob.scan({ cwd: directory, onlyFiles: true })
-  let newest: { path: string; mtimeMs: number } | null = null
+async function findMostRecentSessionFile(directory: string): Promise<string | null> {
+  const glob = new Bun.Glob("*.jsonl");
+  const entries = glob.scan({ cwd: directory, onlyFiles: true });
+  let newest: { path: string; mtimeMs: number } | null = null;
   for await (const entry of entries) {
-    const path = `${directory}/${entry}`
-    const stat = await Bun.file(path).stat()
+    const path = `${directory}/${entry}`;
+    const stat = await Bun.file(path).stat();
     if (!newest || stat.mtimeMs > newest.mtimeMs) {
-      newest = { path, mtimeMs: stat.mtimeMs }
+      newest = { path, mtimeMs: stat.mtimeMs };
     }
   }
-  return newest?.path ?? null
+  return newest?.path ?? null;
 }
 
-async function findWorkerTranscripts(
-  directory: string,
-  sessionId: string,
-): Promise<string[]> {
-  const subagentsDirectory = `${directory}/${sessionId}/subagents`
-  const glob = new Bun.Glob('agent-*.jsonl')
-  const paths: string[] = []
+async function findWorkerTranscripts(directory: string, sessionId: string): Promise<string[]> {
+  const subagentsDirectory = `${directory}/${sessionId}/subagents`;
+  const glob = new Bun.Glob("agent-*.jsonl");
+  const paths: string[] = [];
   try {
-    const entries = glob.scan({ cwd: subagentsDirectory, onlyFiles: true })
+    const entries = glob.scan({ cwd: subagentsDirectory, onlyFiles: true });
     for await (const entry of entries) {
-      paths.push(`${subagentsDirectory}/${entry}`)
+      paths.push(`${subagentsDirectory}/${entry}`);
     }
   } catch {
-    return []
+    return [];
   }
-  return paths.toSorted((a, b) => a.localeCompare(b))
+  return paths.toSorted((a, b) => a.localeCompare(b));
 }
 
 function printStats(
   stats: TranscriptStats,
   oversizedThreshold: number = OVERSIZED_READ_LINE_THRESHOLD,
 ): void {
-  console.log(`\n=== ${stats.label} ===`)
-  console.log(`turns:               ${stats.turns}`)
-  console.log(`cache_read (M tok):  ${stats.cacheReadMillionTokens.toFixed(2)}`)
-  console.log(`floor context:       ${stats.floorContext.toLocaleString()}`)
-  console.log(`peak context:        ${stats.peakContext.toLocaleString()}`)
-  console.log(`final context:       ${stats.finalContext.toLocaleString()}`)
-  console.log(`compact boundaries:  ${stats.compactBoundaries}`)
+  console.log(`\n=== ${stats.label} ===`);
+  console.log(`turns:               ${stats.turns}`);
+  console.log(`cache_read (M tok):  ${stats.cacheReadMillionTokens.toFixed(2)}`);
+  console.log(`floor context:       ${stats.floorContext.toLocaleString()}`);
+  console.log(`peak context:        ${stats.peakContext.toLocaleString()}`);
+  console.log(`final context:       ${stats.finalContext.toLocaleString()}`);
+  console.log(`compact boundaries:  ${stats.compactBoundaries}`);
   console.log(
     `oversized Read (>${oversizedThreshold} lines, unbounded): ${stats.oversizedFullReads}`,
-  )
+  );
   if (stats.topToolResults.length > 0) {
-    console.log('top tool results:')
+    console.log("top tool results:");
     for (const result of stats.topToolResults) {
-      console.log(`  ${(result.chars / 1024).toFixed(1)} KB  ${result.name}`)
+      console.log(`  ${(result.chars / 1024).toFixed(1)} KB  ${result.name}`);
     }
   }
 }
 
-const DEFAULT_STALLED_MINUTES = 10
+const DEFAULT_STALLED_MINUTES = 10;
 
-const DEFAULT_PENDING_TOOL_MINUTES = 30
+const DEFAULT_PENDING_TOOL_MINUTES = 30;
 
 export type StalledThresholds = {
-  readonly idleMinutes: number
-  readonly pendingToolMinutes: number
-}
+  readonly idleMinutes: number;
+  readonly pendingToolMinutes: number;
+};
 
 export type LastTranscriptStep = {
-  readonly step: string
-  readonly pendingTool: string | null
-}
+  readonly step: string;
+  readonly pendingTool: string | null;
+};
 
 export type StalledTranscript = {
-  readonly taskId: string
-  readonly path: string
-  readonly minutesSinceLastWrite: number
-  readonly lastStep: string
-  readonly pendingTool: string | null
-}
+  readonly taskId: string;
+  readonly path: string;
+  readonly minutesSinceLastWrite: number;
+  readonly lastStep: string;
+  readonly pendingTool: string | null;
+};
 
-const UNKNOWN_STEP: LastTranscriptStep = { step: 'unknown', pendingTool: null }
+const UNKNOWN_STEP: LastTranscriptStep = { step: "unknown", pendingTool: null };
 
 /**
  * Reads a `--minutes N` value out of raw argv, falling back to
@@ -393,49 +367,41 @@ export function parseStalledMinutes(
   cliArguments: string[],
   defaultMinutes: number = DEFAULT_STALLED_MINUTES,
 ): number {
-  return parseFlagMinutes(cliArguments, '--minutes', defaultMinutes)
+  return parseFlagMinutes(cliArguments, "--minutes", defaultMinutes);
 }
 
-export function parseFlagMinutes(
-  cliArguments: string[],
-  flag: string,
-  defaultMinutes: number,
-): number {
-  const index = cliArguments.indexOf(flag)
+function parseFlagMinutes(cliArguments: string[], flag: string, defaultMinutes: number): number {
+  const index = cliArguments.indexOf(flag);
   if (index === -1) {
-    return defaultMinutes
+    return defaultMinutes;
   }
-  const raw = cliArguments[index + 1]
-  const parsed = raw ? Math.trunc(Number(raw)) : NaN
-  return Number.isFinite(parsed) && parsed > 0 ? parsed : defaultMinutes
+  const raw = cliArguments[index + 1];
+  const parsed = raw ? Math.trunc(Number(raw)) : NaN;
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : defaultMinutes;
 }
 
 export function taskIdFromTranscriptPath(path: string): string {
-  return path.split('/').pop()!.replace('.jsonl', '')
+  return path.split("/").pop()!.replace(".jsonl", "");
 }
 
-function isStalled(
-  mtimeMs: number,
-  nowMs: number,
-  staleMinutes: number,
-): boolean {
-  return nowMs - mtimeMs > staleMinutes * 60_000
+function isStalled(mtimeMs: number, nowMs: number, staleMinutes: number): boolean {
+  return nowMs - mtimeMs > staleMinutes * 60_000;
 }
 
 function messageBlocks(event: unknown): { role: string; blocks: unknown[] } | null {
   if (!isObject(event)) {
-    return null
+    return null;
   }
-  const record = event
-  if (record.type !== 'assistant' && record.type !== 'user') {
-    return null
+  const record = event;
+  if (record.type !== "assistant" && record.type !== "user") {
+    return null;
   }
-  const message = record.message
+  const message = record.message;
   if (!isObject(message)) {
-    return null
+    return null;
   }
-  const content = message.content
-  return { role: record.type, blocks: Array.isArray(content) ? content : [] }
+  const content = message.content;
+  return { role: record.type, blocks: Array.isArray(content) ? content : [] };
 }
 
 /**
@@ -444,49 +410,51 @@ function messageBlocks(event: unknown): { role: string; blocks: unknown[] } | nu
  * after it can have answered it, so no `tool_result` match is needed.
  */
 export function describeLastStep(transcriptText: string): LastTranscriptStep {
-  const lines = transcriptText.split('\n')
+  const lines = transcriptText.split("\n");
   for (let index = lines.length - 1; index >= 0; index--) {
-    const line = lines[index]!.trim()
+    const line = lines[index]!.trim();
     if (!line) {
-      continue
+      continue;
     }
-    let parsed: ReturnType<typeof messageBlocks> = null
+    let parsed: ReturnType<typeof messageBlocks> = null;
     try {
-      parsed = messageBlocks(JSON.parse(line))
+      parsed = messageBlocks(JSON.parse(line));
     } catch {
-      continue
+      continue;
     }
     if (!parsed) {
-      continue
+      continue;
     }
     const toolNames = parsed.blocks.flatMap((block) => {
-      const record: Record<string, unknown> = isObject(block) ? block : {}
-      return record.type === 'tool_use' ? [typeof record.name === 'string' ? record.name : 'unknown'] : []
-    })
-    if (parsed.role === 'assistant' && toolNames.length > 0) {
-      const pendingTool = toolNames.join(', ')
-      return { step: `tool_use ${pendingTool}`, pendingTool }
+      const record: Record<string, unknown> = isObject(block) ? block : {};
+      return record.type === "tool_use"
+        ? [typeof record.name === "string" ? record.name : "unknown"]
+        : [];
+    });
+    if (parsed.role === "assistant" && toolNames.length > 0) {
+      const pendingTool = toolNames.join(", ");
+      return { step: `tool_use ${pendingTool}`, pendingTool };
     }
     const hasToolResult = parsed.blocks.some(
-      (block) => isObject(block) && block.type === 'tool_result',
-    )
-    const step = hasToolResult ? 'tool_result' : `${parsed.role} message`
-    return { step, pendingTool: null }
+      (block) => isObject(block) && block.type === "tool_result",
+    );
+    const step = hasToolResult ? "tool_result" : `${parsed.role} message`;
+    return { step, pendingTool: null };
   }
-  return UNKNOWN_STEP
+  return UNKNOWN_STEP;
 }
 
 async function defaultReadLastStep(path: string): Promise<LastTranscriptStep> {
-  return describeLastStep(await Bun.file(path).text())
+  return describeLastStep(await Bun.file(path).text());
 }
 
 async function defaultStatMtimeMs(path: string): Promise<number | null> {
-  const file = Bun.file(path)
+  const file = Bun.file(path);
   if (!(await file.exists())) {
-    return null
+    return null;
   }
-  const stat = await file.stat()
-  return stat.mtimeMs
+  const stat = await file.stat();
+  return stat.mtimeMs;
 }
 
 /**
@@ -505,21 +473,21 @@ export async function findStalledTranscripts(
   statMtimeMs: (path: string) => Promise<number | null> = defaultStatMtimeMs,
   readLastStep: (path: string) => Promise<LastTranscriptStep> = defaultReadLastStep,
 ): Promise<StalledTranscript[]> {
-  const stalled: StalledTranscript[] = []
+  const stalled: StalledTranscript[] = [];
   for (const path of paths) {
     // oxlint-disable-next-line eslint/no-await-in-loop -- sequential on purpose: later iterations depend on earlier ones or on output order
-    const mtimeMs = await statMtimeMs(path)
+    const mtimeMs = await statMtimeMs(path);
     if (mtimeMs === null) {
-      continue
+      continue;
     }
     if (!isStalled(mtimeMs, nowMs, thresholds.idleMinutes)) {
-      continue
+      continue;
     }
     // oxlint-disable-next-line eslint/no-await-in-loop -- sequential on purpose: later iterations depend on earlier ones or on output order
-    const last = await readLastStep(path)
+    const last = await readLastStep(path);
     const limit = last.pendingTool
       ? Math.max(thresholds.pendingToolMinutes, thresholds.idleMinutes)
-      : thresholds.idleMinutes
+      : thresholds.idleMinutes;
     if (isStalled(mtimeMs, nowMs, limit)) {
       stalled.push({
         taskId: taskIdFromTranscriptPath(path),
@@ -527,18 +495,18 @@ export async function findStalledTranscripts(
         minutesSinceLastWrite: Math.floor((nowMs - mtimeMs) / 60_000),
         lastStep: last.step,
         pendingTool: last.pendingTool,
-      })
+      });
     }
   }
-  return stalled
+  return stalled;
 }
 
 export type TicketStallState =
-  | 'completed'
-  | 'stopped-without-commits'
-  | 'probe-unavailable'
-  | 'stalled'
-  | 'working'
+  | "completed"
+  | "stopped-without-commits"
+  | "probe-unavailable"
+  | "stalled"
+  | "working";
 
 /**
  * Decides one ticket's state from its completion event and a branch-commit
@@ -548,28 +516,26 @@ export type TicketStallState =
  * work, so it counts as no event.
  */
 export function classifyTicketStall(input: {
-  readonly event: CompletionEvent | null
-  readonly commits: number | null
-  readonly lastActivityMs: number
-  readonly nowMs: number
-  readonly idleMinutes: number
+  readonly event: CompletionEvent | null;
+  readonly commits: number | null;
+  readonly lastActivityMs: number;
+  readonly nowMs: number;
+  readonly idleMinutes: number;
 }): TicketStallState {
-  if (input.commits === null) return 'probe-unavailable'
-  if (input.event?.outcome === 'allowed') {
-    return input.commits > 0 ? 'completed' : 'stopped-without-commits'
+  if (input.commits === null) return "probe-unavailable";
+  if (input.event?.outcome === "allowed") {
+    return input.commits > 0 ? "completed" : "stopped-without-commits";
   }
-  return isStalled(input.lastActivityMs, input.nowMs, input.idleMinutes)
-    ? 'stalled'
-    : 'working'
+  return isStalled(input.lastActivityMs, input.nowMs, input.idleMinutes) ? "stalled" : "working";
 }
 
 async function worktreeStartCommit(worktreeDirectory: string): Promise<string | null> {
   const result = await Bun.$`git -C ${worktreeDirectory} reflog show HEAD --format=%H`
     .nothrow()
-    .quiet()
-  if (result.exitCode !== 0) return null
-  const lines = result.stdout.toString().trim().split('\n').filter(Boolean)
-  return lines.at(-1) ?? null
+    .quiet();
+  if (result.exitCode !== 0) return null;
+  const lines = result.stdout.toString().trim().split("\n").filter(Boolean);
+  return lines.at(-1) ?? null;
 }
 
 async function probeBranchCommits(
@@ -577,31 +543,32 @@ async function probeBranchCommits(
   branch: string,
   worktreeDirectory: string,
 ): Promise<number | null> {
-  const start = await worktreeStartCommit(worktreeDirectory)
+  const start = await worktreeStartCommit(worktreeDirectory);
   if (start !== null) {
-    const result =
-      await Bun.$`git -C ${commonDirectory} rev-list --count ${start}..${branch}`.nothrow().quiet()
-    const count = Number(result.stdout.toString().trim())
-    if (result.exitCode === 0 && Number.isSafeInteger(count)) return count
+    const result = await Bun.$`git -C ${commonDirectory} rev-list --count ${start}..${branch}`
+      .nothrow()
+      .quiet();
+    const count = Number(result.stdout.toString().trim());
+    if (result.exitCode === 0 && Number.isSafeInteger(count)) return count;
   }
-  for (const base of ['origin/HEAD', 'origin/main', 'main', 'origin/master', 'master']) {
+  for (const base of ["origin/HEAD", "origin/main", "main", "origin/master", "master"]) {
     const result =
       // oxlint-disable-next-line eslint/no-await-in-loop -- git and gh calls stay sequential to keep output and side effects ordered
-      await Bun.$`git -C ${commonDirectory} rev-list --count ${base}..${branch}`.nothrow().quiet()
+      await Bun.$`git -C ${commonDirectory} rev-list --count ${base}..${branch}`.nothrow().quiet();
     if (result.exitCode === 0) {
-      const count = Number(result.stdout.toString().trim())
-      if (Number.isSafeInteger(count)) return count
+      const count = Number(result.stdout.toString().trim());
+      if (Number.isSafeInteger(count)) return count;
     }
   }
-  return null
+  return null;
 }
 
 async function lastCommitMs(commonDirectory: string, branch: string): Promise<number> {
   const result = await Bun.$`git -C ${commonDirectory} log -1 --format=%ct ${branch}`
     .nothrow()
-    .quiet()
-  const seconds = Number(result.stdout.toString().trim())
-  return result.exitCode === 0 && Number.isFinite(seconds) ? seconds * 1000 : 0
+    .quiet();
+  const seconds = Number(result.stdout.toString().trim());
+  return result.exitCode === 0 && Number.isFinite(seconds) ? seconds * 1000 : 0;
 }
 
 /**
@@ -618,48 +585,54 @@ async function runTicketStalledMode(
   nudgeCap: number,
   spendNudges: boolean,
 ): Promise<void> {
-  const commonDirectoryOutput =
-    await Bun.$`git rev-parse --path-format=absolute --git-common-dir`.nothrow().quiet()
+  const commonDirectoryOutput = await Bun.$`git rev-parse --path-format=absolute --git-common-dir`
+    .nothrow()
+    .quiet();
   if (commonDirectoryOutput.exitCode !== 0) {
-    console.error('forge:usage --stalled --run: not inside a git repository')
-    process.exitCode = 1
-    return
+    console.error("forge:usage --stalled --run: not inside a git repository");
+    process.exitCode = 1;
+    return;
   }
-  const commonDirectory = commonDirectoryOutput.stdout.toString().trim()
-  const entries = parseWorktreeEntries((await Bun.$`git worktree list --porcelain`.text()))
-  let attention = 0
+  const commonDirectory = commonDirectoryOutput.stdout.toString().trim();
+  const entries = parseWorktreeEntries(await Bun.$`git worktree list --porcelain`.text());
+  let attention = 0;
   for (const entry of entries) {
-    const owner = resolveWorktreeOwner(entry)
-    if (!owner || owner.runId !== runId) continue
-    const branch = entry.branch?.replace(/^refs\/heads\//, '') ?? null
+    const owner = resolveWorktreeOwner(entry);
+    if (!owner || owner.runId !== runId) continue;
+    const branch = entry.branch?.replace(/^refs\/heads\//, "") ?? null;
+    const commitsProbe = branch
+      ? probeBranchCommits(commonDirectory, branch, entry.directory)
+      : Promise.resolve(null);
     // oxlint-disable-next-line eslint/no-await-in-loop -- sequential on purpose: later iterations depend on earlier ones or on output order
-    const commits = branch ? await probeBranchCommits(commonDirectory, branch, entry.directory) : null
+    const commits = await commitsProbe;
     // oxlint-disable-next-line eslint/no-await-in-loop -- sequential on purpose: later iterations depend on earlier ones or on output order
-    const handoff = await defaultStatMtimeMs(`${entry.directory}/.forge/handoff-${owner.ticket}.md`)
+    const handoff = await defaultStatMtimeMs(
+      `${entry.directory}/.forge/handoff-${owner.ticket}.md`,
+    );
     const lastActivityMs = Math.max(
       handoff ?? 0,
       // oxlint-disable-next-line eslint/no-await-in-loop -- sequential on purpose: later iterations depend on earlier ones or on output order
       branch ? await lastCommitMs(commonDirectory, branch) : 0,
       Date.parse(owner.at) || 0,
-    )
+    );
     const state = classifyTicketStall({
       event: readCompletionEvent(commonDirectory, runId, owner.ticket),
       commits,
       lastActivityMs,
       nowMs: Date.now(),
       idleMinutes,
-    })
-    let suffix = ''
-    if (state === 'stalled' && spendNudges) {
-      const nudge = recordStallNudge(commonDirectory, runId, owner.ticket, nudgeCap)
+    });
+    let suffix = "";
+    if (state === "stalled" && spendNudges) {
+      const nudge = recordStallNudge(commonDirectory, runId, owner.ticket, nudgeCap);
       suffix = nudge.granted
         ? `  nudge ${nudge.count}/${nudge.cap} spent`
-        : `  nudge cap ${nudge.cap} exhausted — escalate, do not nudge again`
+        : `  nudge cap ${nudge.cap} exhausted — escalate, do not nudge again`;
     }
-    if (state === 'stalled' || state === 'probe-unavailable') attention++
-    console.log(`${owner.ticket}  ${state}  commits=${commits ?? 'unavailable'}${suffix}`)
+    if (state === "stalled" || state === "probe-unavailable") attention++;
+    console.log(`${owner.ticket}  ${state}  commits=${commits ?? "unavailable"}${suffix}`);
   }
-  if (attention > 0) process.exitCode = 1
+  if (attention > 0) process.exitCode = 1;
 }
 
 /**
@@ -669,149 +642,137 @@ async function runTicketStalledMode(
  * coordinator can branch on it directly instead of parsing stdout.
  */
 async function runStalledMode(thresholds: StalledThresholds): Promise<void> {
-  const cliArguments = process.argv.slice(2)
-  const sessionFlagIndex = cliArguments.indexOf('--session')
-  const directory = projectsDirectory(cliArguments)
-  const sessionId =
-    sessionFlagIndex === -1 ? null : (cliArguments[sessionFlagIndex + 1] ?? null)
+  const cliArguments = process.argv.slice(2);
+  const sessionFlagIndex = cliArguments.indexOf("--session");
+  const directory = projectsDirectory(cliArguments);
+  const sessionId = sessionFlagIndex === -1 ? null : (cliArguments[sessionFlagIndex + 1] ?? null);
 
   const sessionFile = sessionId
     ? `${directory}/${sessionId}.jsonl`
-    : await findMostRecentSessionFile(directory)
+    : await findMostRecentSessionFile(directory);
 
   if (!sessionFile) {
-    console.error(`no session transcripts found under ${directory}`)
-    process.exitCode = 1
-    return
+    console.error(`no session transcripts found under ${directory}`);
+    process.exitCode = 1;
+    return;
   }
 
-  const resolvedSessionId =
-    sessionId ?? sessionFile.split('/').pop()!.replace('.jsonl', '')
+  const resolvedSessionId = sessionId ?? sessionFile.split("/").pop()!.replace(".jsonl", "");
 
-  const workerFiles = await findWorkerTranscripts(directory, resolvedSessionId)
+  const workerFiles = await findWorkerTranscripts(directory, resolvedSessionId);
   if (workerFiles.length === 0) {
     console.log(
       `forge:usage --stalled: no subagent transcripts found for session ${resolvedSessionId}.`,
-    )
-    return
+    );
+    return;
   }
 
-  const stalled = await findStalledTranscripts(
-    workerFiles,
-    Date.now(),
-    thresholds,
-  )
+  const stalled = await findStalledTranscripts(workerFiles, Date.now(), thresholds);
 
   if (stalled.length === 0) {
     console.log(
       `forge:usage --stalled OK — ${workerFiles.length} subagent transcript(s) checked, none stalled past ${thresholds.idleMinutes}m idle (${thresholds.pendingToolMinutes}m with a pending tool).`,
-    )
-    return
+    );
+    return;
   }
 
   console.log(
     `forge:usage --stalled: ${stalled.length}/${workerFiles.length} subagent(s) stalled (${thresholds.idleMinutes}m idle, ${thresholds.pendingToolMinutes}m with a pending tool):`,
-  )
+  );
   for (const entry of stalled) {
     console.log(
-      `  ${entry.taskId}  (${entry.minutesSinceLastWrite}m since last write)  last step: ${entry.lastStep}${entry.pendingTool ? `  pending tool: ${entry.pendingTool}` : ''}  ${entry.path}`,
-    )
+      `  ${entry.taskId}  (${entry.minutesSinceLastWrite}m since last write)  last step: ${entry.lastStep}${entry.pendingTool ? `  pending tool: ${entry.pendingTool}` : ""}  ${entry.path}`,
+    );
   }
-  process.exitCode = 1
+  process.exitCode = 1;
 }
 
 async function main(config: ForgeConfig): Promise<void> {
-  const cliArguments = process.argv.slice(2)
-  const oversizedThreshold = config.usage.oversizedReadLines
+  const cliArguments = process.argv.slice(2);
+  const oversizedThreshold = config.usage.oversizedReadLines;
 
-  if (cliArguments.includes('--stalled')) {
-    const runFlagIndex = cliArguments.indexOf('--run')
-    const runId = runFlagIndex === -1 ? null : (cliArguments[runFlagIndex + 1] ?? null)
+  if (cliArguments.includes("--stalled")) {
+    const runFlagIndex = cliArguments.indexOf("--run");
+    const runId = runFlagIndex === -1 ? null : (cliArguments[runFlagIndex + 1] ?? null);
     if (runId) {
       await runTicketStalledMode(
         runId,
         parseStalledMinutes(cliArguments, config.usage.stalledMinutes),
         config.budgets.stallNudgeCap,
-        cliArguments.includes('--nudge'),
-      )
-      return
+        cliArguments.includes("--nudge"),
+      );
+      return;
     }
     await runStalledMode({
       idleMinutes: parseStalledMinutes(cliArguments, config.usage.stalledMinutes),
       pendingToolMinutes: parseFlagMinutes(
         cliArguments,
-        '--tool-minutes',
+        "--tool-minutes",
         DEFAULT_PENDING_TOOL_MINUTES,
       ),
-    })
-    return
+    });
+    return;
   }
 
-  const fileFlagIndex = cliArguments.indexOf('--file')
-  const sessionFlagIndex = cliArguments.indexOf('--session')
+  const fileFlagIndex = cliArguments.indexOf("--file");
+  const sessionFlagIndex = cliArguments.indexOf("--session");
 
   if (fileFlagIndex !== -1) {
-    const path = cliArguments[fileFlagIndex + 1]
+    const path = cliArguments[fileFlagIndex + 1];
     if (!path) {
-      console.error('--file requires a path')
-      process.exitCode = 1
-      return
+      console.error("--file requires a path");
+      process.exitCode = 1;
+      return;
     }
-    const stats = await analyzeTranscript(path, path, oversizedThreshold)
+    const stats = await analyzeTranscript(path, path, oversizedThreshold);
     if (!stats) {
-      console.error(`no usage data found in ${path}`)
-      process.exitCode = 1
-      return
+      console.error(`no usage data found in ${path}`);
+      process.exitCode = 1;
+      return;
     }
-    printStats(stats, oversizedThreshold)
-    return
+    printStats(stats, oversizedThreshold);
+    return;
   }
 
-  const directory = projectsDirectory(cliArguments)
-  const sessionId =
-    sessionFlagIndex === -1 ? null : (cliArguments[sessionFlagIndex + 1] ?? null)
+  const directory = projectsDirectory(cliArguments);
+  const sessionId = sessionFlagIndex === -1 ? null : (cliArguments[sessionFlagIndex + 1] ?? null);
 
   const sessionFile = sessionId
     ? `${directory}/${sessionId}.jsonl`
-    : await findMostRecentSessionFile(directory)
+    : await findMostRecentSessionFile(directory);
 
   if (!sessionFile) {
-    console.error(`no session transcripts found under ${directory}`)
-    process.exitCode = 1
-    return
+    console.error(`no session transcripts found under ${directory}`);
+    process.exitCode = 1;
+    return;
   }
 
-  const resolvedSessionId =
-    sessionId ?? sessionFile.split('/').pop()!.replace('.jsonl', '')
+  const resolvedSessionId = sessionId ?? sessionFile.split("/").pop()!.replace(".jsonl", "");
 
   const coordinatorStats = await analyzeTranscript(
     sessionFile,
     `coordinator ${resolvedSessionId}`,
     oversizedThreshold,
-  )
+  );
   if (coordinatorStats) {
-    printStats(coordinatorStats, oversizedThreshold)
+    printStats(coordinatorStats, oversizedThreshold);
   }
 
-  const workerFiles = await findWorkerTranscripts(directory, resolvedSessionId)
-  let totalWorkerCacheReadMillion = 0
+  const workerFiles = await findWorkerTranscripts(directory, resolvedSessionId);
+  let totalWorkerCacheReadMillion = 0;
   for (const workerFile of workerFiles) {
-    const label = workerFile.split('/').pop()!.replace('.jsonl', '')
+    const label = workerFile.split("/").pop()!.replace(".jsonl", "");
     // oxlint-disable-next-line eslint/no-await-in-loop -- sequential on purpose: later iterations depend on earlier ones or on output order
-    const stats = await analyzeTranscript(
-      workerFile,
-      `worker ${label}`,
-      oversizedThreshold,
-    )
+    const stats = await analyzeTranscript(workerFile, `worker ${label}`, oversizedThreshold);
     if (stats) {
-      printStats(stats, oversizedThreshold)
-      totalWorkerCacheReadMillion += stats.cacheReadMillionTokens
+      printStats(stats, oversizedThreshold);
+      totalWorkerCacheReadMillion += stats.cacheReadMillionTokens;
     }
   }
 
   console.log(
     `\n=== total ===\nworkers: ${workerFiles.length}\nworker cache_read (M tok): ${totalWorkerCacheReadMillion.toFixed(2)}`,
-  )
+  );
 }
 
 /**
@@ -823,25 +784,25 @@ async function main(config: ForgeConfig): Promise<void> {
  * {@link DEFAULT_FORGE_CONFIG} with a printed note rather than exiting 2.
  */
 export async function run(argv: string[]): Promise<void> {
-  process.argv = [process.argv[0]!, process.argv[1]!, ...argv]
+  process.argv = [process.argv[0]!, process.argv[1]!, ...argv];
   try {
-    const repoRoot = await resolveRepoRoot()
+    const repoRoot = await resolveRepoRoot();
     const { config, note } = repoRoot
       ? await loadForgeConfigWithDefaults(repoRoot)
-      : { config: DEFAULT_FORGE_CONFIG, note: undefined }
-    if (note) console.error(note)
-    await main(config)
+      : { config: DEFAULT_FORGE_CONFIG, note: undefined };
+    if (note) console.error(note);
+    await main(config);
   } catch (error: unknown) {
-    console.error(error)
-    process.exitCode = 1
+    console.error(error);
+    process.exitCode = 1;
   }
 }
 
 if (import.meta.main) {
-  await run(process.argv.slice(2))
+  await run(process.argv.slice(2));
 }
 
 /** Returns `value` when it is a number, otherwise `0`. */
 function numberOrZero(value: unknown): number {
-  return typeof value === 'number' ? value : 0
+  return typeof value === "number" ? value : 0;
 }

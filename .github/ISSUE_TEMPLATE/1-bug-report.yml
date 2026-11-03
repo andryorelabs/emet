@@ -1,7 +1,7 @@
 name: Bug Report
 description: Report a reproducible bug or unexpected behavior
-title: 'fix: '
-labels: ['bug', 'needs-triage']
+title: "fix: "
+labels: ["bug", "needs-triage"]
 
 body:
   - type: checkboxes

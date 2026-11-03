@@ -62,23 +62,13 @@
  * never leaves the repo in a half-cleaned state. Pass `--dry-run` to print
  * the plan without deleting anything.
  */
-import { optionalProperty } from './optional'
-import path from 'node:path'
+import { optionalProperty } from "./optional";
+import path from "node:path";
 
-import { configureTicketPattern, releaseTicket } from './claims'
-import {
-  ForgeConfigError,
-  requireForgeConfig,
-  resolveRepoRoot,
-  type ForgeConfig,
-} from './config'
-import {
-  classifyRun,
-  resolveIdleThresholdMs,
-  resolveSessionSlug,
-  type RunVerdict,
-} from './runs'
-import { releaseAllSlotsForRun } from './slots'
+import { configureTicketPattern, releaseTicket } from "./claims";
+import { ForgeConfigError, requireForgeConfig, resolveRepoRoot, type ForgeConfig } from "./config";
+import { classifyRun, resolveIdleThresholdMs, resolveSessionSlug, type RunVerdict } from "./runs";
+import { releaseAllSlotsForRun } from "./slots";
 import {
   type BranchVerdict,
   classifyByContent,
@@ -91,31 +81,31 @@ import {
   resolveWorktreeOwner,
   type WorktreeEntry,
   type WorktreeOwner,
-} from './worktrees'
+} from "./worktrees";
 
-export type CleanupCategory =
-  | 'in-use'
-  | 'to-delete'
-  | 'needs-review'
-  | 'locked-protected'
-  | 'live-or-idle-protected'
-  | 'out-of-scope'
+type CleanupCategory =
+  | "in-use"
+  | "to-delete"
+  | "needs-review"
+  | "locked-protected"
+  | "live-or-idle-protected"
+  | "out-of-scope";
 
 type ClassifiedBranch = {
-  readonly name: string
-  readonly category: CleanupCategory
-  readonly contentVerdict?: BranchVerdict
-  readonly ownerRunId?: string
-  readonly ownerTicket?: string
-  readonly runVerdict?: RunVerdict
-}
+  readonly name: string;
+  readonly category: CleanupCategory;
+  readonly contentVerdict?: BranchVerdict;
+  readonly ownerRunId?: string;
+  readonly ownerTicket?: string;
+  readonly runVerdict?: RunVerdict;
+};
 
 export type CleanupOptions = {
-  readonly dryRun: boolean
-  readonly runId: string | null
-  readonly all: boolean
-  readonly force: boolean
-}
+  readonly dryRun: boolean;
+  readonly runId: string | null;
+  readonly all: boolean;
+  readonly force: boolean;
+};
 
 /**
  * `--run <id>` scopes classification/deletion to branches owned by that
@@ -146,33 +136,31 @@ export type CleanupOptions = {
  * `'idle'` owner — those stay protected regardless.
  */
 export function parseCleanupArguments(argv: readonly string[]): CleanupOptions {
-  const isDryRun = argv.includes('--dry-run')
-  const isAll = argv.includes('--all')
-  const isForce = argv.includes('--force')
+  const isDryRun = argv.includes("--dry-run");
+  const isAll = argv.includes("--all");
+  const isForce = argv.includes("--force");
 
-  const runIndex = argv.indexOf('--run')
-  let runId: string | null = null
+  const runIndex = argv.indexOf("--run");
+  let runId: string | null = null;
   if (runIndex !== -1) {
-    const value = argv[runIndex + 1]
-    if (!value || value.startsWith('--')) {
-      throw new Error(
-        'forge:cleanup — --run requires a value, e.g. --run session_abc123',
-      )
+    const value = argv[runIndex + 1];
+    if (!value || value.startsWith("--")) {
+      throw new Error("forge:cleanup — --run requires a value, e.g. --run session_abc123");
     }
-    runId = value
+    runId = value;
   }
 
   if (runId !== null && isAll) {
-    throw new Error('forge:cleanup — --run and --all are mutually exclusive')
+    throw new Error("forge:cleanup — --run and --all are mutually exclusive");
   }
 
   if (runId === null && !isAll) {
     throw new Error(
-      'forge:cleanup — pass --run <runId> to clean up this run only, or --all for a deliberate repo-wide sweep.',
-    )
+      "forge:cleanup — pass --run <runId> to clean up this run only, or --all for a deliberate repo-wide sweep.",
+    );
   }
 
-  return { dryRun: isDryRun, runId, all: isAll, force: isForce }
+  return { dryRun: isDryRun, runId, all: isAll, force: isForce };
 }
 
 /**
@@ -191,21 +179,21 @@ export function findWorktreeEntryForBranch(
   branchName: string,
   entries: readonly WorktreeEntry[],
 ): WorktreeEntry | undefined {
-  const direct = entries.find((entry) => entry.branch === branchName)
-  if (direct) return direct
-  if (!branchName.startsWith('worktree-')) return undefined
-  const agentId = branchName.slice('worktree-'.length)
-  return entries.find((entry) => path.basename(entry.directory) === agentId)
+  const direct = entries.find((entry) => entry.branch === branchName);
+  if (direct) return direct;
+  if (!branchName.startsWith("worktree-")) return undefined;
+  const agentId = branchName.slice("worktree-".length);
+  return entries.find((entry) => path.basename(entry.directory) === agentId);
 }
 
 export type GuardOutcome =
   | {
-      readonly done: true
-      readonly category: Exclude<CleanupCategory, 'to-delete' | 'needs-review'>
-      readonly ownerRunId?: string
-      readonly runVerdict?: RunVerdict
+      readonly done: true;
+      readonly category: Exclude<CleanupCategory, "to-delete" | "needs-review">;
+      readonly ownerRunId?: string;
+      readonly runVerdict?: RunVerdict;
     }
-  | { readonly done: false; readonly owner: WorktreeOwner | null }
+  | { readonly done: false; readonly owner: WorktreeOwner | null };
 
 /**
  * Decides, for one branch, whether classification should even reach
@@ -239,23 +227,21 @@ export function guardBranch(
   classifyRunFunction: typeof classifyRun = classifyRun,
   force = false,
 ): GuardOutcome {
-  if (isBaselineLive) return { done: true, category: 'in-use' }
+  if (isBaselineLive) return { done: true, category: "in-use" };
 
   if (!matchedEntry || matchedEntry.lockedReason === null) {
-    return runId === null
-      ? { done: false, owner: null }
-      : { done: true, category: 'out-of-scope' }
+    return runId === null ? { done: false, owner: null } : { done: true, category: "out-of-scope" };
   }
 
-  const owner = resolveWorktreeOwner(matchedEntry)
+  const owner = resolveWorktreeOwner(matchedEntry);
 
   if (runId !== null) {
     return owner && owner.runId === runId
       ? { done: false, owner }
-      : { done: true, category: 'out-of-scope' }
+      : { done: true, category: "out-of-scope" };
   }
 
-  if (!owner) return { done: true, category: 'locked-protected' }
+  if (!owner) return { done: true, category: "locked-protected" };
 
   /**
    * The coordinator's transcript lives under *its own* project slug, not
@@ -267,18 +253,16 @@ export function guardBranch(
     owner.anchorPid,
     owner.coordinatorSlug ?? resolveSessionSlug(matchedEntry.directory),
     owner.runId,
-  )
-  if (verdict === 'dead') {
-    return force
-      ? { done: false, owner }
-      : { done: true, category: 'locked-protected' }
+  );
+  if (verdict === "dead") {
+    return force ? { done: false, owner } : { done: true, category: "locked-protected" };
   }
   return {
     done: true,
-    category: 'live-or-idle-protected',
+    category: "live-or-idle-protected",
     ownerRunId: owner.runId,
     runVerdict: verdict,
-  }
+  };
 }
 
 async function classifyOneBranch(
@@ -299,36 +283,34 @@ async function classifyOneBranch(
     (anchorPid, sessionSlug, ownerRunId) =>
       classifyRun(anchorPid, sessionSlug, ownerRunId, { idleThresholdMs }),
     force,
-  )
+  );
   if (guard.done) {
     return {
       name,
       category: guard.category,
-      ...optionalProperty('ownerRunId', guard.ownerRunId),
-      ...optionalProperty('runVerdict', guard.runVerdict),
-    }
+      ...optionalProperty("ownerRunId", guard.ownerRunId),
+      ...optionalProperty("runVerdict", guard.runVerdict),
+    };
   }
-  const contentVerdict = await classifyByContent(name, mainTree, remote, trunk)
+  const contentVerdict = await classifyByContent(name, mainTree, remote, trunk);
   return {
     name,
-    category: isSafeToDelete(contentVerdict) ? 'to-delete' : 'needs-review',
+    category: isSafeToDelete(contentVerdict) ? "to-delete" : "needs-review",
     contentVerdict,
-    ...optionalProperty('ownerTicket', guard.owner?.ticket),
-    ...optionalProperty('ownerRunId', guard.owner?.runId),
-  }
+    ...optionalProperty("ownerTicket", guard.owner?.ticket),
+    ...optionalProperty("ownerRunId", guard.owner?.runId),
+  };
 }
 
-async function deleteBranch(
-  branch: string,
-): Promise<{ ok: boolean; message: string }> {
-  const result = await Bun.$`git branch -D ${branch}`.nothrow().quiet()
+async function deleteBranch(branch: string): Promise<{ ok: boolean; message: string }> {
+  const result = await Bun.$`git branch -D ${branch}`.nothrow().quiet();
   if (result.exitCode === 0) {
-    return { ok: true, message: branch }
+    return { ok: true, message: branch };
   }
   return {
     ok: false,
     message: `${branch} — ${result.stderr.toString().trim()}`,
-  }
+  };
 }
 
 /**
@@ -353,24 +335,22 @@ export async function deleteAndReleaseTicket(
   deleteFunction: typeof deleteBranch,
   releaseFunction: typeof releaseTicket,
 ): Promise<{ ok: boolean; message: string }> {
-  const result = await deleteFunction(branchName)
+  const result = await deleteFunction(branchName);
   if (ticket && ownerRunId && result.ok) {
-    await releaseFunction(ticket, ownerRunId)
+    await releaseFunction(ticket, ownerRunId);
   }
-  return result
+  return result;
 }
 
 async function main(config: ForgeConfig) {
-  const { dryRun, runId, all, force } = parseCleanupArguments(
-    process.argv.slice(2),
-  )
-  const { remote, trunk } = config.repo
-  const branchPrefix = config.ticket.branchPrefix
-  const idleThresholdMs = resolveIdleThresholdMs(config)
+  const { dryRun, runId, all, force } = parseCleanupArguments(process.argv.slice(2));
+  const { remote, trunk } = config.repo;
+  const branchPrefix = config.ticket.branchPrefix;
+  const idleThresholdMs = resolveIdleThresholdMs(config);
 
   console.log(
     `Using ${remote}/${trunk} (from forge.config.json's repo.remote/repo.trunk) as the merge-base reference.`,
-  )
+  );
 
   /**
    * Skipped under --dry-run: a dry run must only report, never mutate git's
@@ -381,32 +361,29 @@ async function main(config: ForgeConfig) {
    * reference the dry-run report itself relies on needs it.
    */
   if (!dryRun) {
-    await Bun.$`git worktree prune`.nothrow().quiet()
+    await Bun.$`git worktree prune`.nothrow().quiet();
   }
-  await Bun.$`git fetch --quiet ${remote} ${trunk}`.nothrow().quiet()
+  await Bun.$`git fetch --quiet ${remote} ${trunk}`.nothrow().quiet();
 
-  const trunkRef = `${remote}/${trunk}`
-  const mainShaResult = await Bun.$`git rev-parse ${trunkRef}`.nothrow().quiet()
+  const trunkRef = `${remote}/${trunk}`;
+  const mainShaResult = await Bun.$`git rev-parse ${trunkRef}`.nothrow().quiet();
   if (mainShaResult.exitCode !== 0) {
     throw new ForgeConfigError(
       `forge cleanup: could not resolve ${trunkRef} — check forge.config.json's repo.remote/repo.trunk and that you've fetched.`,
-    )
+    );
   }
-  const mainSha = mainShaResult.stdout.toString().trim()
-  const mainTree = await resolveMainTree(remote, trunk)
-  const liveWorktreeDirectoryNames = await listLiveWorktreeDirectoryNames()
-  const worktreeEntries = await listWorktreeEntries()
+  const mainSha = mainShaResult.stdout.toString().trim();
+  const mainTree = await resolveMainTree(remote, trunk);
+  const liveWorktreeDirectoryNames = await listLiveWorktreeDirectoryNames();
+  const worktreeEntries = await listWorktreeEntries();
 
-  const worktreeAgentBranches = await listBranches('worktree-agent-*')
-  const aoBranches = await listBranches(`${branchPrefix}-*`)
+  const worktreeAgentBranches = await listBranches("worktree-agent-*");
+  const aoBranches = await listBranches(`${branchPrefix}-*`);
 
-  const classified: ClassifiedBranch[] = []
+  const classified: ClassifiedBranch[] = [];
   for (const entry of worktreeAgentBranches) {
-    const isBaselineLive = isWorktreeAgentBranchLive(
-      entry.name,
-      liveWorktreeDirectoryNames,
-    )
-    const matchedEntry = findWorktreeEntryForBranch(entry.name, worktreeEntries)
+    const isBaselineLive = isWorktreeAgentBranchLive(entry.name, liveWorktreeDirectoryNames);
+    const matchedEntry = findWorktreeEntryForBranch(entry.name, worktreeEntries);
     classified.push(
       // oxlint-disable-next-line eslint/no-await-in-loop -- sequential on purpose: later iterations depend on earlier ones or on output order
       await classifyOneBranch(
@@ -420,11 +397,11 @@ async function main(config: ForgeConfig) {
         force,
         idleThresholdMs,
       ),
-    )
+    );
   }
   for (const entry of aoBranches) {
-    const isBaselineLive = entry.worktreePath.length > 0
-    const matchedEntry = findWorktreeEntryForBranch(entry.name, worktreeEntries)
+    const isBaselineLive = entry.worktreePath.length > 0;
+    const matchedEntry = findWorktreeEntryForBranch(entry.name, worktreeEntries);
     classified.push(
       // oxlint-disable-next-line eslint/no-await-in-loop -- sequential on purpose: later iterations depend on earlier ones or on output order
       await classifyOneBranch(
@@ -438,42 +415,28 @@ async function main(config: ForgeConfig) {
         force,
         idleThresholdMs,
       ),
-    )
+    );
   }
 
-  const scopeLabel = runId
-    ? ` — run ${runId}`
-    : all
-      ? ' — explicit repo-wide sweep'
-      : ''
-  console.log(
-    `forge:cleanup — ${trunkRef} ${mainSha}${dryRun ? ' (dry run)' : ''}${scopeLabel}\n`,
-  )
+  const scopeLabel = runId ? ` — run ${runId}` : all ? " — explicit repo-wide sweep" : "";
+  console.log(`forge:cleanup — ${trunkRef} ${mainSha}${dryRun ? " (dry run)" : ""}${scopeLabel}\n`);
 
-  const toDelete = classified.filter(
-    (branch) => branch.category === 'to-delete',
-  )
-  const inUse = classified.filter((branch) => branch.category === 'in-use')
-  const needsReview = classified.filter(
-    (branch) => branch.category === 'needs-review',
-  )
+  const toDelete = classified.filter((branch) => branch.category === "to-delete");
+  const inUse = classified.filter((branch) => branch.category === "in-use");
+  const needsReview = classified.filter((branch) => branch.category === "needs-review");
   const liveOrIdleProtected = classified.filter(
-    (branch) => branch.category === 'live-or-idle-protected',
-  )
-  const lockedProtected = classified.filter(
-    (branch) => branch.category === 'locked-protected',
-  )
-  const outOfScope = classified.filter(
-    (branch) => branch.category === 'out-of-scope',
-  )
+    (branch) => branch.category === "live-or-idle-protected",
+  );
+  const lockedProtected = classified.filter((branch) => branch.category === "locked-protected");
+  const outOfScope = classified.filter((branch) => branch.category === "out-of-scope");
 
   if (dryRun) {
     for (const branch of toDelete) {
-      console.log(`Would delete: ${branch.name} (${branch.contentVerdict})`)
+      console.log(`Would delete: ${branch.name} (${branch.contentVerdict})`);
     }
   } else {
-    const deleted: string[] = []
-    const failed: string[] = []
+    const deleted: string[] = [];
+    const failed: string[] = [];
     for (const branch of toDelete) {
       // oxlint-disable-next-line eslint/no-await-in-loop -- sequential on purpose: later iterations depend on earlier ones or on output order
       const result = await deleteAndReleaseTicket(
@@ -482,84 +445,72 @@ async function main(config: ForgeConfig) {
         branch.ownerRunId,
         deleteBranch,
         releaseTicket,
-      )
+      );
       if (result.ok) {
-        deleted.push(`${result.message} (${branch.contentVerdict})`)
+        deleted.push(`${result.message} (${branch.contentVerdict})`);
       } else {
-        failed.push(result.message)
+        failed.push(result.message);
       }
     }
-    console.log(`Deleted ${deleted.length} branch(es):`)
+    console.log(`Deleted ${deleted.length} branch(es):`);
     for (const message of deleted) {
-      console.log(`  - ${message}`)
+      console.log(`  - ${message}`);
     }
     if (failed.length > 0) {
-      console.log(`\nFailed to delete ${failed.length} branch(es):`)
+      console.log(`\nFailed to delete ${failed.length} branch(es):`);
       for (const message of failed) {
-        console.log(`  - ${message}`)
+        console.log(`  - ${message}`);
       }
-      process.exitCode = 1
+      process.exitCode = 1;
     }
   }
 
   if (inUse.length > 0) {
-    console.log(`\nKept ${inUse.length} branch(es) held by a live worktree:`)
+    console.log(`\nKept ${inUse.length} branch(es) held by a live worktree:`);
     for (const branch of inUse) {
-      console.log(`  - ${branch.name}`)
+      console.log(`  - ${branch.name}`);
     }
   }
 
   if (needsReview.length > 0) {
     console.log(
       `\nKept ${needsReview.length} branch(es) with unmerged or unresolved work — review, then delete by hand:`,
-    )
+    );
     for (const branch of needsReview) {
-      console.log(
-        `  - ${branch.name} (${branch.contentVerdict}) — git branch -D ${branch.name}`,
-      )
+      console.log(`  - ${branch.name} (${branch.contentVerdict}) — git branch -D ${branch.name}`);
     }
   }
 
   if (liveOrIdleProtected.length > 0) {
     console.log(
       `\nSkipped ${liveOrIdleProtected.length} branch(es) — owning run is still active, protected:`,
-    )
+    );
     for (const branch of liveOrIdleProtected) {
-      console.log(
-        `  - ${branch.name} (run ${branch.ownerRunId}, ${branch.runVerdict})`,
-      )
+      console.log(`  - ${branch.name} (run ${branch.ownerRunId}, ${branch.runVerdict})`);
     }
   }
 
   if (lockedProtected.length > 0) {
-    console.log(
-      `\nSkipped ${lockedProtected.length} branch(es) — worktree is locked, protected:`,
-    )
+    console.log(`\nSkipped ${lockedProtected.length} branch(es) — worktree is locked, protected:`);
     for (const branch of lockedProtected) {
-      console.log(`  - ${branch.name}`)
+      console.log(`  - ${branch.name}`);
     }
   }
 
   if (outOfScope.length > 0) {
-    console.log(
-      `\n${outOfScope.length} branch(es) out of scope for run ${runId} — not touched.`,
-    )
+    console.log(`\n${outOfScope.length} branch(es) out of scope for run ${runId} — not touched.`);
   }
 
   if (runId && !dryRun) {
-    const releasedSlots = await releaseAllSlotsForRun(runId)
+    const releasedSlots = await releaseAllSlotsForRun(runId);
     if (releasedSlots.length > 0) {
       console.log(
-        `\nReleased ${releasedSlots.length} worker slot(s) for run ${runId}: ${releasedSlots.join(', ')}.`,
-      )
+        `\nReleased ${releasedSlots.length} worker slot(s) for run ${runId}: ${releasedSlots.join(", ")}.`,
+      );
     }
   }
 
-  console.log(
-    dryRun
-      ? '\nDry run — nothing was deleted.'
-      : '\ngit worktree prune complete.',
-  )
+  console.log(dryRun ? "\nDry run — nothing was deleted." : "\ngit worktree prune complete.");
 }
 
 /**
@@ -578,13 +529,13 @@ async function main(config: ForgeConfig) {
  * `git branch -D` sweep as a side effect.
  */
 export async function run(argv: string[]): Promise<void> {
-  process.argv = [process.argv[0]!, process.argv[1]!, ...argv]
+  process.argv = [process.argv[0]!, process.argv[1]!, ...argv];
   try {
-    const repoRoot = await resolveRepoRoot()
+    const repoRoot = await resolveRepoRoot();
     if (!repoRoot) {
-      throw new ForgeConfigError('forge cleanup: not inside a git repository')
+      throw new ForgeConfigError("forge cleanup: not inside a git repository");
     }
-    const config = await requireForgeConfig(repoRoot)
+    const config = await requireForgeConfig(repoRoot);
     /**
      * `deleteAndReleaseTicket` below calls `claims.ts`'s `releaseTicket`,
      * which validates against `claims.ts`'s module-level `TICKET_PATTERN`
@@ -596,19 +547,19 @@ export async function run(argv: string[]): Promise<void> {
      * itself; `cleanup.ts` must do the same since it calls into that module
      * directly rather than through the `forge claims` CLI entry point.
      */
-    configureTicketPattern(config.ticket.idPattern)
-    await main(config)
+    configureTicketPattern(config.ticket.idPattern);
+    await main(config);
   } catch (error: unknown) {
     if (error instanceof ForgeConfigError) {
-      console.error(error.message)
-      process.exitCode = 2
-      return
+      console.error(error.message);
+      process.exitCode = 2;
+      return;
     }
-    console.error(error)
-    process.exitCode = 1
+    console.error(error);
+    process.exitCode = 1;
   }
 }
 
 if (import.meta.main) {
-  await run(process.argv.slice(2))
+  await run(process.argv.slice(2));
 }

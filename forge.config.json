@@ -18,13 +18,7 @@
   "tracker": {
     "kind": "github",
     "readyLabel": "ready-for-agent",
-    "triageLabels": [
-      "needs-triage",
-      "needs-info",
-      "ready-for-agent",
-      "ready-for-human",
-      "wontfix"
-    ],
+    "triageLabels": ["needs-triage", "needs-info", "ready-for-agent", "ready-for-human", "wontfix"],
     "transitions": {
       "onStart": "worker",
       "onPrOpen": "coordinator",
@@ -42,9 +36,7 @@
   },
   "preflight": {
     "requiredFiles": [],
-    "requiredCommands": [
-      "gh"
-    ]
+    "requiredCommands": ["gh"]
   },
   "handoff": {
     "maxLines": 60,
@@ -61,10 +53,7 @@
     "stalledMinutes": 10
   },
   "commands": {
-    "selfCheck": [
-      "bun run check",
-      "bun run test"
-    ]
+    "selfCheck": ["bun run check", "bun run test"]
   },
   "worktree": {
     "bootstrap": [

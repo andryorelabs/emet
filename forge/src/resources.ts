@@ -1,5 +1,5 @@
-import { readFileSync } from 'node:fs'
-import os from 'node:os'
+import { readFileSync } from "node:fs";
+import os from "node:os";
 
 /**
  * Host facts `concurrency.maxLiveWorkers: "auto"` (`config.ts`) derives its
@@ -19,19 +19,19 @@ import os from 'node:os'
  */
 
 export interface HostResources {
-  readonly cpuCount: number
-  readonly memTotalBytes: number
+  readonly cpuCount: number;
+  readonly memTotalBytes: number;
   /** `null` on a host with no readable `/proc/meminfo` (non-Linux) — callers
    * degrade rather than fail: {@link computeAutoMaxLiveWorkers} falls back to
    * `memTotalBytes` alone, {@link checkMemoryHeadroom} always passes. */
-  readonly memAvailableBytes: number | null
+  readonly memAvailableBytes: number | null;
 }
 
 function readProcMeminfoField(content: string, field: string): number | null {
-  const match = new RegExp(`^${field}:\\s+(\\d+)\\s*kB`, 'm').exec(content)
-  if (!match) return null
-  const kib = Number(match[1])
-  return Number.isFinite(kib) ? kib * 1024 : null
+  const match = new RegExp(`^${field}:\\s+(\\d+)\\s*kB`, "m").exec(content);
+  if (!match) return null;
+  const kib = Number(match[1]);
+  return Number.isFinite(kib) ? kib * 1024 : null;
 }
 
 /**
@@ -45,26 +45,26 @@ function readProcMeminfoField(content: string, field: string): number | null {
  */
 function readCgroupCpuLimit(): number | null {
   try {
-    const raw = readFileSync('/sys/fs/cgroup/cpu.max', 'utf8').trim()
-    const [quotaRaw, periodRaw] = raw.split(/\s+/)
-    if (quotaRaw === 'max' || !quotaRaw || !periodRaw) return null
-    const quota = Number(quotaRaw)
-    const period = Number(periodRaw)
-    if (!Number.isFinite(quota) || !Number.isFinite(period) || period <= 0) return null
-    return quota / period
+    const raw = readFileSync("/sys/fs/cgroup/cpu.max", "utf8").trim();
+    const [quotaRaw, periodRaw] = raw.split(/\s+/);
+    if (quotaRaw === "max" || !quotaRaw || !periodRaw) return null;
+    const quota = Number(quotaRaw);
+    const period = Number(periodRaw);
+    if (!Number.isFinite(quota) || !Number.isFinite(period) || period <= 0) return null;
+    return quota / period;
   } catch {
-    return null
+    return null;
   }
 }
 
 function readCgroupMemoryLimit(): number | null {
   try {
-    const raw = readFileSync('/sys/fs/cgroup/memory.max', 'utf8').trim()
-    if (raw === 'max') return null
-    const bytes = Number(raw)
-    return Number.isFinite(bytes) ? bytes : null
+    const raw = readFileSync("/sys/fs/cgroup/memory.max", "utf8").trim();
+    if (raw === "max") return null;
+    const bytes = Number(raw);
+    return Number.isFinite(bytes) ? bytes : null;
   } catch {
-    return null
+    return null;
   }
 }
 
@@ -79,7 +79,7 @@ function readCgroupMemoryLimit(): number | null {
  * `memAvailableBytes: null` rather than failing the caller.
  */
 export function readHostResources(): HostResources {
-  const cgroupCpuLimit = readCgroupCpuLimit()
+  const cgroupCpuLimit = readCgroupCpuLimit();
   const cpuCount = Math.max(
     1,
     Math.floor(
@@ -87,53 +87,53 @@ export function readHostResources(): HostResources {
         ? Math.min(os.availableParallelism(), cgroupCpuLimit)
         : os.availableParallelism(),
     ),
-  )
+  );
 
-  const cgroupMemoryLimit = readCgroupMemoryLimit()
+  const cgroupMemoryLimit = readCgroupMemoryLimit();
   const memTotalBytes =
-    cgroupMemoryLimit !== null ? Math.min(os.totalmem(), cgroupMemoryLimit) : os.totalmem()
+    cgroupMemoryLimit !== null ? Math.min(os.totalmem(), cgroupMemoryLimit) : os.totalmem();
 
-  let memAvailableBytes: number | null = null
+  let memAvailableBytes: number | null = null;
   try {
-    const meminfo = readFileSync('/proc/meminfo', 'utf8')
-    memAvailableBytes = readProcMeminfoField(meminfo, 'MemAvailable')
+    const meminfo = readFileSync("/proc/meminfo", "utf8");
+    memAvailableBytes = readProcMeminfoField(meminfo, "MemAvailable");
   } catch {
-    memAvailableBytes = null
+    memAvailableBytes = null;
   }
   if (memAvailableBytes !== null && cgroupMemoryLimit !== null) {
-    memAvailableBytes = Math.min(memAvailableBytes, cgroupMemoryLimit)
+    memAvailableBytes = Math.min(memAvailableBytes, cgroupMemoryLimit);
   }
 
-  return { cpuCount, memTotalBytes, memAvailableBytes }
+  return { cpuCount, memTotalBytes, memAvailableBytes };
 }
 
-const BYTES_PER_GIB = 1024 ** 3
+const BYTES_PER_GIB = 1024 ** 3;
 
 export interface AutoCapOptions {
   /** Worker slots per cpu core. Default 1 — a worker's own steady-state load
    * (tsc/eslint/test runs inside its worktree) is cpu-bound enough that
    * oversubscribing cores buys throughput on paper but not in practice once
    * every worker is compiling at once. */
-  readonly cpuOversubscribe?: number
+  readonly cpuOversubscribe?: number;
   /** RAM held back for the coordinator itself, the OS, and everything else
    * already running on the host (docker, an IDE, other sessions) — never
    * handed to the worker-count formula. Default 8 GiB. */
-  readonly memReserveBytes?: number
+  readonly memReserveBytes?: number;
   /** RAM budgeted per worker (its own worktree's build/test/dev-server
    * footprint). Default 2 GiB — conservative for a `bun`/`tsc`/`eslint`
    * worker; a repo running a heavier per-worker stack (e.g. a browser-driven
    * E2E suite per worktree) should raise this via
    * `FORGE_MEM_PER_WORKER_GIB`. */
-  readonly memPerWorkerBytes?: number
+  readonly memPerWorkerBytes?: number;
   /** Absolute floor — never auto-compute below this, even on a tiny host,
    * so a wave of `waveSize` (default 4) can still always attempt to
    * dispatch. Default 2. */
-  readonly min?: number
+  readonly min?: number;
   /** Absolute ceiling — ports, a shared docker Postgres/greenmail instance,
    * and API rate limits don't scale with cores or RAM, so an auto-computed
    * cap never exceeds this regardless of how large the host is. Default
    * 32. */
-  readonly max?: number
+  readonly max?: number;
 }
 
 const DEFAULT_AUTO_CAP_OPTIONS: Required<AutoCapOptions> = {
@@ -142,7 +142,7 @@ const DEFAULT_AUTO_CAP_OPTIONS: Required<AutoCapOptions> = {
   memPerWorkerBytes: 2 * BYTES_PER_GIB,
   min: 2,
   max: 32,
-}
+};
 
 /**
  * `concurrency.maxLiveWorkers: "auto"`'s formula:
@@ -163,23 +163,23 @@ export function computeAutoMaxLiveWorkers(
   const { cpuOversubscribe, memReserveBytes, memPerWorkerBytes, min, max } = {
     ...DEFAULT_AUTO_CAP_OPTIONS,
     ...options,
-  }
-  const cpuBound = resources.cpuCount * cpuOversubscribe
+  };
+  const cpuBound = resources.cpuCount * cpuOversubscribe;
   const memoryBound = Math.floor(
     Math.max(0, resources.memTotalBytes - memReserveBytes) / memPerWorkerBytes,
-  )
-  const raw = Math.min(cpuBound, memoryBound)
-  return Math.min(max, Math.max(min, raw))
+  );
+  const raw = Math.min(cpuBound, memoryBound);
+  return Math.min(max, Math.max(min, raw));
 }
 
 export type HeadroomVerdict =
   | { readonly ok: true }
   | {
-      readonly ok: false
-      readonly reason: string
-      readonly memAvailableBytes: number
-      readonly reserveBytes: number
-    }
+      readonly ok: false;
+      readonly reason: string;
+      readonly memAvailableBytes: number;
+      readonly reserveBytes: number;
+    };
 
 /**
  * The admission brake `acquireSlot` checks before ever scanning a slot index
@@ -199,21 +199,21 @@ export function checkMemoryHeadroom(
   resources: HostResources,
   reserveBytes: number,
 ): HeadroomVerdict {
-  if (resources.memAvailableBytes === null) return { ok: true }
-  if (resources.memAvailableBytes >= reserveBytes) return { ok: true }
+  if (resources.memAvailableBytes === null) return { ok: true };
+  if (resources.memAvailableBytes >= reserveBytes) return { ok: true };
   return {
     ok: false,
     reason: `only ${(resources.memAvailableBytes / BYTES_PER_GIB).toFixed(1)} GiB available, below the ${(reserveBytes / BYTES_PER_GIB).toFixed(1)} GiB reserve`,
     memAvailableBytes: resources.memAvailableBytes,
     reserveBytes,
-  }
+  };
 }
 
 function readPositiveFloatEnvironment(name: string, fallback: number): number {
-  const raw = process.env[name]
-  if (raw === undefined) return fallback
-  const parsed = Number(raw)
-  return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback
+  const raw = process.env[name];
+  if (raw === undefined) return fallback;
+  const parsed = Number(raw);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
 }
 
 /**
@@ -225,20 +225,20 @@ function readPositiveFloatEnvironment(name: string, fallback: number): number {
 export function resolveAutoCapOptionsFromEnvironment(): AutoCapOptions {
   return {
     cpuOversubscribe: readPositiveFloatEnvironment(
-      'FORGE_CPU_OVERSUBSCRIBE',
+      "FORGE_CPU_OVERSUBSCRIBE",
       DEFAULT_AUTO_CAP_OPTIONS.cpuOversubscribe,
     ),
     memReserveBytes:
       readPositiveFloatEnvironment(
-        'FORGE_MEM_RESERVE_GIB',
+        "FORGE_MEM_RESERVE_GIB",
         DEFAULT_AUTO_CAP_OPTIONS.memReserveBytes / BYTES_PER_GIB,
       ) * BYTES_PER_GIB,
     memPerWorkerBytes:
       readPositiveFloatEnvironment(
-        'FORGE_MEM_PER_WORKER_GIB',
+        "FORGE_MEM_PER_WORKER_GIB",
         DEFAULT_AUTO_CAP_OPTIONS.memPerWorkerBytes / BYTES_PER_GIB,
       ) * BYTES_PER_GIB,
-  }
+  };
 }
 
 /** `FORGE_MEM_RESERVE_GIB` alone, as bytes — the single value
@@ -248,8 +248,8 @@ export function resolveAutoCapOptionsFromEnvironment(): AutoCapOptions {
 export function resolveMemReserveBytesFromEnvironment(): number {
   return (
     readPositiveFloatEnvironment(
-      'FORGE_MEM_RESERVE_GIB',
+      "FORGE_MEM_RESERVE_GIB",
       DEFAULT_AUTO_CAP_OPTIONS.memReserveBytes / BYTES_PER_GIB,
     ) * BYTES_PER_GIB
-  )
+  );
 }

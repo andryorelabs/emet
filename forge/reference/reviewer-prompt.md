@@ -28,7 +28,16 @@ Emit a JSON array, also written to `.forge/review-{{run_id}}.json` (the exact
 input of `forge review --ticket <t> --findings <file|->`):
 
 ```json
-[{"id":"F-001","file":"a.ts","line":42,"severity":"blocker","kind":"patch","claim":"failure scenario"}]
+[
+  {
+    "id": "F-001",
+    "file": "a.ts",
+    "line": 42,
+    "severity": "blocker",
+    "kind": "patch",
+    "claim": "failure scenario"
+  }
+]
 ```
 
 `severity`: blocker|critical|major|minor|nit. `kind`: intent_gap|bad_plan|
