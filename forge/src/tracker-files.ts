@@ -79,17 +79,18 @@ function parseStatusValue(value: string): TrackerStatus | null {
 
 function parseBlockedByValue(value: string): string[] {
   const cleaned = value.replace(/\*+/g, "").trim();
-  if (/^none\b/i.test(cleaned)) {
+  if (cleaned === "" || /^none\b/i.test(cleaned)) {
     return [];
   }
-  const numbers: string[] = [];
-  for (const segment of cleaned.split(",")) {
-    const number = /^\s*#?(\d{2,})\b/.exec(segment)?.[1];
-    if (number !== undefined) {
-      numbers.push(number);
+  const blockers: string[] = [];
+  for (const segment of cleaned.split(/[,;]|\band\b/i)) {
+    if (segment.trim() === "") {
+      continue;
     }
+    const number = /^\s*[[#]?(?:[a-z0-9-]*-)?(\d+)\b/i.exec(segment)?.[1];
+    blockers.push(number ?? `unresolved:${segment.trim()}`);
   }
-  return numbers;
+  return blockers;
 }
 
 function splitComments(lines: string[]): string[] {
@@ -163,7 +164,8 @@ export function parseTrackerFile(text: string): ParsedTrackerFile {
  * and otherwise inserting `Status: <value>` right after the title.
  */
 export function setStatusLine(text: string, status: TrackerStatus): string {
-  const lines = text.split("\n");
+  const eol = text.includes("\r\n") ? "\r\n" : "\n";
+  const lines = text.split(/\r?\n/);
   const commentsIndex = lines.findIndex((line) => COMMENTS_HEADING.test(line));
   const limit = commentsIndex === -1 ? lines.length : commentsIndex;
   for (let index = 0; index < limit; index += 1) {
@@ -174,15 +176,15 @@ export function setStatusLine(text: string, status: TrackerStatus): string {
     const match = STATUS_LINE.exec(line);
     if (match) {
       lines[index] = match[1] ? `**Status:** ${status}` : `Status: ${status}`;
-      return lines.join("\n");
+      return lines.join(eol);
     }
   }
   const titleIndex = lines.findIndex((line) => /^#\s/.test(line));
   if (titleIndex === -1) {
-    return `Status: ${status}\n\n${text}`;
+    return `Status: ${status}${eol}${eol}${text}`;
   }
   lines.splice(titleIndex + 1, 0, "", `Status: ${status}`);
-  return lines.join("\n");
+  return lines.join(eol);
 }
 
 /**
@@ -191,7 +193,7 @@ export function setStatusLine(text: string, status: TrackerStatus): string {
  */
 export function appendComment(text: string, header: string, body: string): string {
   const base = text.replace(/\s+$/, "");
-  const hasHeading = text.split("\n").some((line) => COMMENTS_HEADING.test(line));
+  const hasHeading = text.split(/\r?\n/).some((line) => COMMENTS_HEADING.test(line));
   const prefix = hasHeading ? `${base}\n\n` : `${base}\n\n## Comments\n\n`;
   return `${prefix}### ${header}\n\n${body.trim()}\n`;
 }

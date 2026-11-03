@@ -207,3 +207,42 @@ describe("resolveTrackerRoot", () => {
     return expect(resolveTrackerRoot(makeTemporaryDirectory())).rejects.toThrow();
   });
 });
+
+describe("review regressions", () => {
+  test("unparseable or title-only blockers keep the ticket out of the frontier", async () => {
+    const root = makeTemporaryDirectory();
+    writeTicket(root, "feat", "01-parser.md", "# Parser\nStatus: in-review\nBlocked by: None\n");
+    for (const [index, value] of [
+      "Parser",
+      "1",
+      "[01](01-parser.md)",
+      "feat-01",
+      "01 and 03",
+      "01; 03",
+    ].entries()) {
+      writeTicket(
+        root,
+        "feat",
+        `0${index + 2}-dependant.md`,
+        `# Dependant\nStatus: ready-for-agent\nBlocked by: ${value}\n`,
+      );
+    }
+    expect(computeFrontier(await listTickets(root, "feat"))).toEqual([]);
+    expect(parseTrackerFile("# T\nBlocked by: Parser\n").blockedBy).toHaveLength(1);
+    expect(parseTrackerFile("# T\nBlocked by: 01 and 03\n").blockedBy).toEqual(["01", "03"]);
+    expect(parseTrackerFile("# T\nBlocked by: 1\n").blockedBy).toEqual(["1"]);
+  });
+
+  test("setStatusLine round-trips on a CRLF file and keeps its line endings", () => {
+    const source = "# T\r\n\r\nStatus: ready-for-agent\r\n\r\nBody\r\n";
+    const updated = setStatusLine(source, "done");
+    expect(parseTrackerFile(updated).status).toBe("done");
+    expect(
+      updated
+        .split("\n")
+        .every((line, index, all) => index === all.length - 1 || line.endsWith("\r")),
+    ).toBe(true);
+    const inserted = setStatusLine("# T\r\n\r\nBody\r\n", "done");
+    expect(parseTrackerFile(inserted).status).toBe("done");
+  });
+});
