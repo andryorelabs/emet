@@ -1,0 +1,43 @@
+name: Enhancement Request
+description: Suggest an improvement to an existing feature
+title: 'feat: '
+labels: ['enhancement', 'needs-triage']
+
+body:
+  - type: checkboxes
+    id: preflight
+    attributes:
+      label: Pre-flight checklist
+      options:
+        - label: I have searched the existing issues and confirmed this hasn't been proposed.
+          required: true
+
+  - type: input
+    id: feature
+    attributes:
+      label: Existing feature
+      description: Which command, workflow, or behavior would this improve?
+    validations:
+      required: true
+
+  - type: textarea
+    id: current
+    attributes:
+      label: Current behavior
+      description: How does it work today, and what is lacking?
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed improvement
+      description: Describe the change you'd like.
+    validations:
+      required: true
+
+  - type: textarea
+    id: context
+    attributes:
+      label: Additional context
+      description: References, related issues, or any other context.

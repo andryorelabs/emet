@@ -1,0 +1,73 @@
+# Synced by .github/workflows/labels.yml. The sync never deletes labels missing from this file.
+
+# ── Forge triage labels (forge.config.json: tracker.triageLabels) ─────────────
+
+- name: needs-triage
+  color: 'ededed'
+  description: Maintainer has not evaluated this yet
+
+- name: needs-info
+  color: 'd876e3'
+  description: Waiting for more information from the reporter
+
+- name: ready-for-agent
+  color: '0e8a16'
+  description: Fully specified, ready for an AI agent to pick up
+
+- name: ready-for-human
+  color: '1d76db'
+  description: Needs human implementation
+
+- name: wontfix
+  color: 'cfd3d7'
+  description: Will not be worked on
+
+# ── Forge state labels (forge.config.json: tracker.github.stateLabels) ────────
+
+- name: 'status:todo'
+  color: 'c5def5'
+  description: Ticket is queued for work
+
+- name: 'status:in-progress'
+  color: 'fbca04'
+  description: Ticket is being worked on
+
+- name: 'status:in-review'
+  color: '5319e7'
+  description: Ticket has an open pull request
+
+# ── Type ──────────────────────────────────────────────────────────────────────
+
+- name: bug
+  color: 'd73a4a'
+  description: Something isn't working correctly
+
+- name: enhancement
+  color: '54aeff'
+  description: New feature or improvement to an existing one
+
+- name: documentation
+  color: '0052cc'
+  description: Documentation additions, corrections, or improvements
+
+- name: security
+  color: 'b60205'
+  description: Security vulnerability or hardening
+
+- name: breaking-change
+  color: 'b60205'
+  description: Changes behavior in a backwards-incompatible way
+
+# ── Tooling ───────────────────────────────────────────────────────────────────
+
+- name: dependencies
+  color: '0366d6'
+  description: Dependency updates
+
+- name: github-actions
+  color: '2088ff'
+  description: GitHub Actions workflow changes
+
+- name: duplicate
+  color: 'cfd3d7'
+  description: This issue or pull request already exists
