@@ -7,6 +7,8 @@ import {
   buildForgeConfig,
   buildTrackerConfig,
   deriveIdPrefix,
+  defaultBootstrap,
+  defaultSelfCheck,
   detectGoSelfCheck,
   detectJsSelfCheck,
   detectPackageManager,
@@ -15,6 +17,7 @@ import {
   hasLinearMcpServer,
   parseInitArguments,
   substituteTemplate,
+  upsertForgeSection,
   type DetectedRepoInfo,
 } from "./init";
 
@@ -198,9 +201,36 @@ describe("filesystem-based detection", () => {
     expect(await detectPackageManager(repoRoot)).toBe("npm");
   });
 
-  test("detectPackageManager: package.json with no lockfile defaults to bun", async () => {
+  test("detectPackageManager: bare package.json -> npm", async () => {
     await Bun.write(path.join(repoRoot, "package.json"), "{}");
-    expect(await detectPackageManager(repoRoot)).toBe("bun");
+    expect(await detectPackageManager(repoRoot)).toBe("npm");
+  });
+
+  test("detectPackageManager: packageManager field when no lockfile", async () => {
+    await Bun.write(path.join(repoRoot, "package.json"), '{"packageManager":"pnpm@9.1.0"}');
+    expect(await detectPackageManager(repoRoot)).toBe("pnpm");
+  });
+
+  test("detectPackageManager: yarn.lock -> yarn", async () => {
+    await Bun.write(path.join(repoRoot, "yarn.lock"), "");
+    expect(await detectPackageManager(repoRoot)).toBe("yarn");
+  });
+
+  test("detectPackageManager: uv.lock -> uv, poetry.lock -> poetry", async () => {
+    await Bun.write(path.join(repoRoot, "pyproject.toml"), "[project]\n");
+    await Bun.write(path.join(repoRoot, "uv.lock"), "");
+    expect(await detectPackageManager(repoRoot)).toBe("uv");
+    rmSync(path.join(repoRoot, "uv.lock"));
+    await Bun.write(path.join(repoRoot, "poetry.lock"), "");
+    expect(await detectPackageManager(repoRoot)).toBe("poetry");
+  });
+
+  test("detectPackageManager: requirements.txt and setup.py -> pip", async () => {
+    await Bun.write(path.join(repoRoot, "requirements.txt"), "");
+    expect(await detectPackageManager(repoRoot)).toBe("pip");
+    rmSync(path.join(repoRoot, "requirements.txt"));
+    await Bun.write(path.join(repoRoot, "setup.py"), "");
+    expect(await detectPackageManager(repoRoot)).toBe("pip");
   });
 
   test("detectPackageManager: go.mod with no package.json -> go", async () => {
@@ -213,9 +243,9 @@ describe("filesystem-based detection", () => {
     expect(await detectPackageManager(repoRoot)).toBe("cargo");
   });
 
-  test("detectPackageManager: pyproject.toml -> python", async () => {
+  test("detectPackageManager: pyproject.toml -> pip", async () => {
     await Bun.write(path.join(repoRoot, "pyproject.toml"), "[project]\n");
-    expect(await detectPackageManager(repoRoot)).toBe("python");
+    expect(await detectPackageManager(repoRoot)).toBe("pip");
   });
 
   test("detectPackageManager: nothing recognizable -> unknown", async () => {
@@ -341,8 +371,8 @@ describe("filesystem-based detection", () => {
     expect(await detectGoSelfCheck(repoRoot)).toEqual(["go build ./...", "go test ./..."]);
   });
 
-  test("detectTrackerKind: local when there is no Linear MCP server and no GitHub remote", async () => {
-    expect(await detectTrackerKind(repoRoot)).toBe("local");
+  test("detectTrackerKind: null (never local) when there is no Linear MCP server and no issue usage", async () => {
+    expect(await detectTrackerKind(repoRoot)).toBeNull();
   });
 
   test("detectTrackerKind: linear takes priority over any GitHub signal", async () => {
@@ -368,4 +398,51 @@ describe("issue-tracker templates carry the v2 spec and ticket blocks", () => {
       expect(content).toContain("Covers:");
     });
   }
+});
+
+describe("ecosystem defaults", () => {
+  test("defaultSelfCheck is non-empty per ecosystem", () => {
+    expect(defaultSelfCheck("cargo")).toEqual(["cargo test", "cargo clippy -- -D warnings"]);
+    expect(defaultSelfCheck("uv")).toEqual(["uv run pytest"]);
+    expect(defaultSelfCheck("poetry")).toEqual(["poetry run pytest"]);
+    expect(defaultSelfCheck("pip")).toEqual(["pytest"]);
+    expect(defaultSelfCheck("go")).toEqual(["go build ./...", "go test ./..."]);
+    expect(defaultSelfCheck("unknown")).toEqual([]);
+  });
+
+  test("defaultBootstrap matches the spec per ecosystem", () => {
+    expect(defaultBootstrap("bun")).toEqual(["bun install --frozen-lockfile"]);
+    expect(defaultBootstrap("pnpm")).toEqual(["pnpm install --frozen-lockfile"]);
+    expect(defaultBootstrap("yarn")).toEqual(["yarn install --immutable"]);
+    expect(defaultBootstrap("npm")).toEqual(["npm ci"]);
+    expect(defaultBootstrap("uv")).toEqual(["uv sync"]);
+    expect(defaultBootstrap("poetry")).toEqual(["poetry install"]);
+    expect(defaultBootstrap("go")).toEqual(["go mod download"]);
+    expect(defaultBootstrap("cargo")).toEqual(["cargo fetch"]);
+    expect(defaultBootstrap("pip")).not.toEqual([]);
+  });
+});
+
+describe("upsertForgeSection", () => {
+  test("appends to existing content without touching it", () => {
+    const result = upsertForgeSection("# Mine\n\nuser text\n", "forge body");
+    expect(result.startsWith("# Mine\n\nuser text\n")).toBe(true);
+    expect(result).toContain("<!-- forge:begin -->\nforge body\n<!-- forge:end -->");
+  });
+
+  test("is idempotent and replaces a previous section, keeping surrounding text", () => {
+    const once = upsertForgeSection("before\n", "v1");
+    const twice = upsertForgeSection(once, "v1");
+    expect(twice).toBe(once);
+    const replaced = upsertForgeSection(`${once}\nafter\n`, "v2");
+    expect(replaced.match(/forge:begin/g)).toHaveLength(1);
+    expect(replaced).toContain("v2");
+    expect(replaced).not.toContain("v1");
+    expect(replaced.startsWith("before\n")).toBe(true);
+    expect(replaced.endsWith("\nafter\n")).toBe(true);
+  });
+
+  test("creates the section in an empty file", () => {
+    expect(upsertForgeSection("", "x")).toBe("<!-- forge:begin -->\nx\n<!-- forge:end -->\n");
+  });
 });

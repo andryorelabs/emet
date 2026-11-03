@@ -71,6 +71,26 @@ describe("generateMap", () => {
     expect(map).toContain("- `src/app.ts` (2 commits)");
   });
 
+  const ecosystems: ReadonlyArray<readonly [string, readonly string[], string, string]> = [
+    ["go", ["go.mod"], "go test ./...", "Package manager: go"],
+    ["cargo", ["Cargo.toml"], "cargo test", "Package manager: cargo"],
+    ["uv", ["pyproject.toml", "uv.lock"], "uv run pytest", "Package manager: uv"],
+    ["poetry", ["pyproject.toml", "poetry.lock"], "poetry run pytest", "Package manager: poetry"],
+    ["pip", ["requirements.txt"], "pytest", "Package manager: pip"],
+  ];
+  for (const [name, files, command, stack] of ecosystems) {
+    test(`names the ${name} test command and package manager`, async () => {
+      const root = mkdtempSync(path.join(os.tmpdir(), "forge-map-"));
+      roots.push(root);
+      await sh(root, "init", "-q");
+      for (const file of files) write(root, file, "");
+      await commit(root, "feat: init");
+      const map = await generateMap(root);
+      expect(map).toContain(`Test command: \`${command}\``);
+      expect(map).toContain(stack);
+    });
+  }
+
   test("is deterministic for the same commit", async () => {
     const root = await fixtureRepo();
     expect(await generateMap(root)).toBe(await generateMap(root));

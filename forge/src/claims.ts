@@ -30,7 +30,7 @@ import { errnoCode, isObject } from "./narrow";
 /**
  * Per-ticket reservations under `<git-common-dir>/forge/tickets/` — the
  * registry two `/forge` coordinators race against so the same ticket never
- * gets dispatched twice at once. See AO-256/AO-258. `<git-common-dir>`
+ * gets dispatched twice at once. See PROJ-256/PROJ-258. `<git-common-dir>`
  * (resolved via `git rev-parse --git-common-dir`) rather than `.git`
  * directly, because every worktree of a repo shares one `.git` and what this
  * protects is host-wide, not per-worktree.
@@ -46,8 +46,8 @@ import { errnoCode, isObject } from "./narrow";
  * `(ticket, runId, anchorPid)` instead of `(runId, anchorPid, ticket)`, three
  * positional parameters where two are `string` — and since ad-hoc snippets
  * never pass through `typecheck`, the malformed reservation
- * (`{runId:"AO-285", anchorPid:"session_...", ticket:1090684}`) was written
- * to disk without a single error surfacing. That ticket (AO-285) never had a
+ * (`{runId:"PROJ-285", anchorPid:"session_...", ticket:1090684}`) was written
+ * to disk without a single error surfacing. That ticket (PROJ-285) never had a
  * real reservation, and its worker went on to lose worktree isolation
  * entirely — the dispatch mutex hadn't failed, it had never existed for that
  * ticket. {@link didReserveTicket} and {@link releaseTicket} now validate
@@ -74,13 +74,13 @@ export type Reservation = {
 
 /**
  * The ticket-id shape this module enforces — historically hardcoded to
- * `AO-<digits>` (andryore-dev's own Linear team key), now sourced from
+ * `AO-<digits>` (a Linear team key), now sourced from
  * `forge.config.json`'s `ticket.idPattern` via {@link configureTicketPattern}
  * so this module works against any repo's ticket ids, not only one Linear
  * team's. Defaults to a generic `<UPPERCASE-PREFIX>-<digits>` shape (still
  * matching `AO-<digits>`) until `run()` configures it from the repo's own
  * config. Rejecting anything outside the configured shape at the door is
- * what would have caught the AO-285 incident (see the file-level doc
+ * what would have caught the PROJ-285 incident (see the file-level doc
  * comment): a `ticket` argument that's actually a `runId` or a bare number
  * never matches a well-formed pattern.
  */
@@ -100,7 +100,7 @@ export function configureTicketPattern(source: string): void {
 /**
  * Throws with a message naming the exact bad argument and its position,
  * rather than letting a malformed call silently write a corrupt reservation
- * — the AO-285 failure mode this whole module exists to close off. Called at
+ * — the PROJ-285 failure mode this whole module exists to close off. Called at
  * the top of every function that accepts `runId`/`anchorPid`/`ticket`, before
  * any lock is acquired or any file is touched.
  */
@@ -117,7 +117,7 @@ function assertValidReservationArguments(runId: string, anchorPid: number, ticke
   }
   if (!TICKET_PATTERN.test(ticket)) {
     throw new TypeError(
-      `forge-claims: ticket must match ${TICKET_PATTERN} (e.g. "AO-321"), got ${JSON.stringify(ticket)}. Check argument order — the signature is (runId, anchorPid, ticket).`,
+      `forge-claims: ticket must match ${TICKET_PATTERN} (e.g. "PROJ-321"), got ${JSON.stringify(ticket)}. Check argument order — the signature is (runId, anchorPid, ticket).`,
     );
   }
 }
@@ -125,7 +125,7 @@ function assertValidReservationArguments(runId: string, anchorPid: number, ticke
 function assertValidTicket(ticket: string): void {
   if (!TICKET_PATTERN.test(ticket)) {
     throw new TypeError(
-      `forge-claims: ticket must match ${TICKET_PATTERN} (e.g. "AO-321"), got ${JSON.stringify(ticket)}.`,
+      `forge-claims: ticket must match ${TICKET_PATTERN} (e.g. "PROJ-321"), got ${JSON.stringify(ticket)}.`,
     );
   }
 }
@@ -287,7 +287,7 @@ export type ReleaseTicketResult =
  * Releases `ticket`'s reservation, but only on behalf of `expectedRunId` —
  * the run this caller believes currently owns it. Before this ownership
  * check existed, `releaseTicket(ticket)` deleted the reservation file
- * unconditionally: `forge claims --release AO-321` from run B could free run
+ * unconditionally: `forge claims --release PROJ-321` from run B could free run
  * A's still-live reservation with no error at all, reopening the exact
  * double-dispatch race `didReserveTicket` exists to prevent — a real risk
  * once two coordinators (e.g. two Orca worktrees of the same repo) can both
@@ -358,7 +358,7 @@ export type PruneResult = {
   readonly releasedTickets: string[];
   /**
   Files whose content doesn't pass {@link isValidReservationShape} — e.g. a
-  past call with `runId`/`anchorPid`/`ticket` in the wrong order (the AO-285
+  past call with `runId`/`anchorPid`/`ticket` in the wrong order (the PROJ-285
   incident this module's validation now prevents at write time, but an
   already-corrupted file predates that fix). Never auto-deleted: a sweep that
   can't classify a record's owner must never guess at whether it's safe to
@@ -436,8 +436,8 @@ function requireFlagValue(argv: readonly string[], flag: string): string {
  * file-level doc comment for why an inline `bun -e` snippet is not).
  *
  * ```
- * forge claims --reserve AO-321 --run <runId> --anchor <pid>
- * forge claims --release AO-321 --run <runId> [--force]
+ * forge claims --reserve PROJ-321 --run <runId> --anchor <pid>
+ * forge claims --release PROJ-321 --run <runId> [--force]
  * forge claims --list
  * forge claims --prune [--dry-run]
  * ```

@@ -362,6 +362,7 @@ describe("auditRepo", () => {
     };
     const report = await auditRepo(repoRoot, probes, healthyEnvironment);
     expect(report.dependencyFindings.map((check) => check.dependency)).toEqual([
+      "github-cli",
       "linear-mcp-server",
     ]);
     expect(isReportClean(report)).toBe(false);

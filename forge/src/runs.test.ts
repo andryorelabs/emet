@@ -163,6 +163,12 @@ describe("resolveSessionSlug", () => {
   });
 });
 
+describe("resolveSessionSlug with dots", () => {
+  test("replaces dots as well as separators", () => {
+    expect(resolveSessionSlug("/Users/first.last/repo")).toBe("-Users-first-last-repo");
+  });
+});
+
 describe("process start token", () => {
   test("reads a numeric start token for a live process", () => {
     const token = readProcessStartToken(process.pid);

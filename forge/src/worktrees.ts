@@ -309,7 +309,7 @@ export function resolveWorktreeOwnerWithReservations(
 /**
  * `worktree-agent-<id>` branches map 1:1 to a `.claude/worktrees/agent-<id>`
  * directory. The branch itself carries no `%(worktreepath)` once the worker
- * checks out its own `ao-*` branch, so liveness has to be read from the
+ * checks out its own worker branch, so liveness has to be read from the
  * directory instead.
  */
 export function isWorktreeAgentBranchLive(
