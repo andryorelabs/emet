@@ -1,6 +1,5 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "$id": "https://andryore.dev/schema/forge.config.schema.json",
   "title": "forge.config.json",
   "description": "Per-repo configuration for the /forge pipeline. Covers both the subset this CLI (src/config.ts) validates at runtime — repo, ticket, concurrency, preflight.requiredFiles, handoff, usage — and the wider set (tracker, commit, worktree, commands, schema, design) that the /forge *command* reads directly as prose instructions. This file exists for editor completion only; src/config.ts is the runtime source of truth for the fields it checks.",
   "type": "object",
@@ -33,12 +32,16 @@
         "integrationBranch": {
           "type": "string",
           "minLength": 1,
-          "description": "Optional long-lived branch a wave integrates onto before merging to trunk, if this repo uses one. Prose-only — not read by the CLI."
+          "description": "Optional long-lived branch a wave integrates onto before merging to trunk, if this repo uses one. Prose-only — not read by the CLI.",
+          "deprecated": true
         },
         "commitTypes": {
           "type": "array",
-          "items": { "type": "string" },
-          "description": "Allowed Conventional Commit types for worker commits (e.g. [\"feat\",\"fix\",\"chore\"]). Prose-only — not read by the CLI."
+          "items": {
+            "type": "string"
+          },
+          "description": "Allowed Conventional Commit types for worker commits (e.g. [\"feat\",\"fix\",\"chore\"]). Prose-only — not read by the CLI.",
+          "deprecated": true
         }
       }
     },
@@ -54,26 +57,40 @@
         },
         "readyLabel": {
           "type": "string",
-          "description": "Label marking a ticket ready for an agent to pick up (e.g. \"ready-for-agent\")."
+          "description": "Label marking a ticket ready for an agent to pick up (e.g. \"ready-for-agent\").",
+          "deprecated": true
         },
         "triageLabels": {
           "type": "array",
-          "items": { "type": "string" },
-          "description": "The canonical triage-role labels this repo uses (needs-triage, needs-info, ready-for-agent, ready-for-human, wontfix, or repo-specific equivalents)."
+          "items": {
+            "type": "string"
+          },
+          "description": "The canonical triage-role labels this repo uses (needs-triage, needs-info, ready-for-agent, ready-for-human, wontfix, or repo-specific equivalents).",
+          "deprecated": true
         },
         "transitions": {
           "type": "object",
           "additionalProperties": false,
           "description": "Who is responsible for writing each ticket-state transition: 'worker' (the dispatched agent), 'coordinator' (the /forge coordinator writes it explicitly), or 'automatic' (the tracker integration does it — e.g. Linear's GitHub integration on PR open/merge). The coordinator must never write a transition marked 'automatic' — see docs/agents/forge.md's 'Generalizing /forge'.",
           "properties": {
-            "onStart": { "type": "string", "enum": ["worker", "coordinator", "automatic"] },
-            "onPrOpen": { "type": "string", "enum": ["worker", "coordinator", "automatic"] },
-            "onPrMerge": { "type": "string", "enum": ["worker", "coordinator", "automatic"] }
+            "onStart": {
+              "type": "string",
+              "enum": ["worker", "coordinator", "automatic"]
+            },
+            "onPrOpen": {
+              "type": "string",
+              "enum": ["worker", "coordinator", "automatic"]
+            },
+            "onPrMerge": {
+              "type": "string",
+              "enum": ["worker", "coordinator", "automatic"]
+            }
           }
         },
         "prReference": {
           "type": "string",
-          "description": "Template for the PR-body line that links back to the ticket, e.g. \"Closes #{number}\" (github) or \"Refs: {id}\" (linear)."
+          "description": "Template for the PR-body line that links back to the ticket, e.g. \"Closes #{number}\" (github) or \"Refs: {id}\" (linear).",
+          "deprecated": true
         },
         "linear": {
           "type": "object",
@@ -87,12 +104,16 @@
           "properties": {
             "priorityLabels": {
               "type": "object",
-              "additionalProperties": { "type": "string" },
+              "additionalProperties": {
+                "type": "string"
+              },
               "description": "Maps a priority level (\"1\"=P0 highest .. \"4\"=P3) to the literal GitHub label name, e.g. {\"1\":\"P0\",\"2\":\"P1\"}. A repo with none declared falls back to createdAt-ascending order, and `forge doctor` reports that explicitly."
             },
             "stateLabels": {
               "type": "object",
-              "additionalProperties": { "type": "string" },
+              "additionalProperties": {
+                "type": "string"
+              },
               "description": "Maps a workflow state (todo | in-progress | in-review) to its literal GitHub label name, e.g. {\"todo\":\"status:todo\"}. `done`/`canceled` are inferred from the issue's own closed/state_reason instead of a label."
             }
           }
@@ -118,11 +139,12 @@
         "idPattern": {
           "type": "string",
           "minLength": 1,
-          "description": "Anchored regex *source* a ticket id must match, e.g. \"^AO-\\\\d+$\", \"^#?\\\\d+$\" for a local/github-numbered tracker. Validated as a real RegExp by src/config.ts; an invalid pattern is a hard config error."
+          "description": "Anchored regex *source* a ticket id must match, e.g. \"^PROJ-\\\\d+$\", \"^#?\\\\d+$\" for a local/github-numbered tracker. Validated as a real RegExp by src/config.ts; an invalid pattern is a hard config error."
         },
         "idExample": {
           "type": "string",
-          "description": "One example id matching idPattern, shown to workers/humans as a sanity reference (e.g. \"AO-321\"). Prose-only."
+          "description": "One example id matching idPattern, shown to workers/humans as a sanity reference (e.g. \"PROJ-321\"). Prose-only.",
+          "deprecated": true
         },
         "branchPrefix": {
           "type": "string",
@@ -131,7 +153,8 @@
         },
         "branchPattern": {
           "type": "string",
-          "description": "Optional full branch-name template, if the plain `<branchPrefix>-<number>-<slug>` shape doesn't fit this repo. Prose-only — not read by the CLI."
+          "description": "Optional full branch-name template, if the plain `<branchPrefix>-<number>-<slug>` shape doesn't fit this repo. Prose-only — not read by the CLI.",
+          "deprecated": true
         }
       }
     },
@@ -156,7 +179,8 @@
       "properties": {
         "stateDir": {
           "type": "string",
-          "description": "Directory (relative to a worker's worktree root) used for run-local logs/notes, e.g. \".forge\". Prose-only."
+          "description": "Directory (relative to a worker's worktree root) used for run-local logs/notes, e.g. \".forge\". Prose-only.",
+          "deprecated": true
         },
         "lockReason": {
           "type": "string",
@@ -164,13 +188,17 @@
         },
         "copyFromMain": {
           "type": "array",
-          "items": { "type": "string" },
+          "items": {
+            "type": "string"
+          },
           "description": "Paths to copy from the trunk checkout into a fresh worktree before bootstrap (e.g. untracked local env files). Prose-only."
         },
         "bootstrap": {
           "type": "array",
-          "items": { "type": "string" },
-          "description": "Shell commands run once in a fresh worktree before a worker starts (e.g. [\"bun install --silent --frozen-lockfile\"]). Prose-only — read and executed by the /forge command's Phase 6, never by this CLI."
+          "items": {
+            "type": "string"
+          },
+          "description": "Shell commands run once in a fresh worktree before a worker starts (e.g. [\"npm ci\"]). Prose-only — read and executed by the /forge command's Phase 6, never by this CLI."
         }
       }
     },
@@ -180,8 +208,10 @@
       "properties": {
         "selfCheck": {
           "type": "array",
-          "items": { "type": "string" },
-          "description": "Commands a worker runs before considering its own change done (e.g. [\"bun run check\"], [\"go test ./...\"]). Prose-only."
+          "items": {
+            "type": "string"
+          },
+          "description": "Commands a worker runs before considering its own change done (e.g. [\"npm run check\"], [\"go test ./...\"]). Prose-only."
         },
         "workerScopedSuite": {
           "type": "string",
@@ -192,16 +222,25 @@
           "additionalProperties": false,
           "description": "The repo-wide test suite, if it's a shared singleton that can't run concurrently across worktrees (e.g. an E2E suite hitting one dev server/database).",
           "properties": {
-            "run": { "type": "string", "description": "Command to run the full suite." },
+            "run": {
+              "type": "string",
+              "description": "Command to run the full suite."
+            },
             "singleton": {
               "type": "boolean",
               "description": "True if only one worktree may run this suite at a time."
             },
-            "runInBackground": { "type": "boolean" },
+            "runInBackground": {
+              "type": "boolean",
+              "deprecated": true
+            },
             "reset": {
               "type": "array",
-              "items": { "type": "string" },
-              "description": "Commands to reset shared state between runs (e.g. reseed a test database)."
+              "items": {
+                "type": "string"
+              },
+              "description": "Commands to reset shared state between runs (e.g. reseed a test database).",
+              "deprecated": true
             }
           }
         }
@@ -234,7 +273,10 @@
         },
         "requiredCommands": {
           "type": "array",
-          "items": { "type": "string", "minLength": 1 },
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
           "description": "Binaries that must resolve on PATH before dispatch. `forge preflight` fails with exit 1 naming any that don't, and `forge doctor` reports them. This is the repo's own list, separate from the tracker-driven dependency checks — `gh` already has a dedicated check that also verifies authentication, so listing it here is optional. Common opt-in additions: \"rg\" and \"sg\", which the worker prompts offer as alternatives to reading files whole."
         }
       }
@@ -250,7 +292,15 @@
           "description": "Max Agent calls dispatched together in one wave."
         },
         "maxLiveWorkers": {
-          "oneOf": [{ "type": "integer", "minimum": 1 }, { "const": "auto" }],
+          "oneOf": [
+            {
+              "type": "integer",
+              "minimum": 1
+            },
+            {
+              "const": "auto"
+            }
+          ],
           "default": "auto",
           "description": "Global cap shared by every /forge coordinator concurrently running on this HOST, across every repo — the slot pool lives under ~/.local/state/forge/slots, not any one repo's --git-common-dir. \"auto\" (the default) derives the cap from this host's own cpu count/RAM (src/resources.ts's computeAutoMaxLiveWorkers) instead of a fixed number nobody measured; a positive integer pins it. A separate, always-on memory-headroom check (FORGE_MEM_RESERVE_GIB, default 8 GiB) denies an acquire outright when MemAvailable is too low, regardless of this cap — see src/resources.ts's checkMemoryHeadroom. FORGE_MAX_LIVE_WORKERS env var overrides this field (accepting \"auto\" too) when set."
         },
@@ -269,12 +319,15 @@
       "properties": {
         "ownedPaths": {
           "type": "array",
-          "items": { "type": "string" },
+          "items": {
+            "type": "string"
+          },
           "description": "Paths that define shared schema (e.g. [\"prisma/schema.prisma\"]) — at most one worker per wave may touch these."
         },
         "sharedDatabase": {
           "type": "boolean",
-          "description": "True if workers share one physical database/migration history rather than each getting an isolated one."
+          "description": "True if workers share one physical database/migration history rather than each getting an isolated one.",
+          "deprecated": true
         }
       }
     },
@@ -363,7 +416,11 @@
           "type": "object",
           "additionalProperties": false,
           "properties": {
-            "model": { "type": "string", "minLength": 1, "default": "sonnet" },
+            "model": {
+              "type": "string",
+              "minLength": 1,
+              "default": "sonnet"
+            },
             "effort": {
               "type": "string",
               "enum": ["low", "medium", "high", "xhigh", "max"],
@@ -381,7 +438,11 @@
               "type": "object",
               "additionalProperties": false,
               "properties": {
-                "model": { "type": "string", "minLength": 1, "default": "opus" },
+                "model": {
+                  "type": "string",
+                  "minLength": 1,
+                  "default": "opus"
+                },
                 "effort": {
                   "type": "string",
                   "enum": ["low", "medium", "high", "xhigh", "max"],
@@ -394,7 +455,11 @@
               "type": "object",
               "additionalProperties": false,
               "properties": {
-                "model": { "type": "string", "minLength": 1, "default": "opus" },
+                "model": {
+                  "type": "string",
+                  "minLength": 1,
+                  "default": "opus"
+                },
                 "effort": {
                   "type": "string",
                   "enum": ["low", "medium", "high", "xhigh", "max"],
@@ -413,8 +478,13 @@
         },
         "escalation": {
           "type": "object",
-          "additionalProperties": { "type": "string", "minLength": 1 },
-          "default": { "sonnet": "opus" },
+          "additionalProperties": {
+            "type": "string",
+            "minLength": 1
+          },
+          "default": {
+            "sonnet": "opus"
+          },
           "description": "Next model tier per model name, used when a ticket reaches its fix cap."
         }
       }
@@ -425,7 +495,10 @@
       "properties": {
         "highRiskPaths": {
           "type": "array",
-          "items": { "type": "string", "minLength": 1 },
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
           "default": [],
           "description": "Extra case-insensitive path tokens that force the high review tier in `forge assess`, on top of the built-in set."
         }
@@ -498,7 +571,8 @@
       "properties": {
         "canvasIndex": {
           "type": "string",
-          "description": "Path to a design canvas/index file workers should check before implementing UI changes."
+          "description": "Path to a design canvas/index file workers should check before implementing UI changes.",
+          "deprecated": true
         }
       }
     }

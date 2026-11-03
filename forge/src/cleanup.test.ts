@@ -252,7 +252,7 @@ describe("guardBranch", () => {
       expect(seen).toEqual([
         {
           anchorPid: 4242,
-          sessionSlug: "-repo-.claude-worktrees-agent-a1",
+          sessionSlug: "-repo--claude-worktrees-agent-a1",
           runId: "session-a",
         },
       ]);
