@@ -2,6 +2,7 @@ import { readFileSync } from 'node:fs'
 import { DEFAULT_FORGE_CONFIG } from './config'
 import { analyzeTicketGraph } from './dependencies'
 import { findSurfaceOverlaps } from './surfaces'
+import { isObject } from './narrow'
 
 const USAGE = `usage: forge validate --file <plan.json | -> | --spec <id> --tickets <tickets.json | ->
 
@@ -115,28 +116,29 @@ export function validatePlan(input: {
   return { ok: findings.every((finding) => finding.severity !== 'error'), findings }
 }
 
+function stringsField(value: unknown, label: string, id: string): string[] {
+  if (value === undefined) return []
+  if (!Array.isArray(value) || !value.every((entry) => typeof entry === 'string')) {
+    throw new Error(`forge validate: ${id}.${label} must be string[]`)
+  }
+  return value
+}
+
 function parseTickets(raw: unknown): PlanTicket[] {
   if (!Array.isArray(raw)) throw new Error('forge validate: "tickets" must be an array')
-  const strings = (value: unknown, label: string, id: string): string[] => {
-    if (value === undefined) return []
-    if (!Array.isArray(value) || !value.every((entry) => typeof entry === 'string')) {
-      throw new Error(`forge validate: ${id}.${label} must be string[]`)
-    }
-    return value
-  }
   return raw.map((entry, index) => {
-    const candidate = entry as Record<string, unknown>
-    if (typeof candidate?.id !== 'string') throw new Error(`forge validate: ticket ${index} needs an "id"`)
+    const candidate: Record<string, unknown> = isObject(entry) ? entry : {}
+    if (typeof candidate.id !== 'string') throw new Error(`forge validate: ticket ${index} needs an "id"`)
     const id = candidate.id
     const newSurfaceLines = typeof candidate.newSurfaceLines === 'number' ? candidate.newSurfaceLines : undefined
     const estimatedPeakTokens =
       typeof candidate.estimatedPeakTokens === 'number' ? candidate.estimatedPeakTokens : undefined
     return {
       id,
-      covers: strings(candidate.covers, 'covers', id),
-      surfaces: strings(candidate.surfaces, 'surfaces', id),
+      covers: stringsField(candidate.covers, 'covers', id),
+      surfaces: stringsField(candidate.surfaces, 'surfaces', id),
       wave: typeof candidate.wave === 'number' ? candidate.wave : 1,
-      blockedBy: strings(candidate.blockedBy, 'blockedBy', id),
+      blockedBy: stringsField(candidate.blockedBy, 'blockedBy', id),
       ...(newSurfaceLines === undefined ? {} : { newSurfaceLines }),
       ...(estimatedPeakTokens === undefined ? {} : { estimatedPeakTokens }),
       folded: candidate.folded === true,
@@ -172,11 +174,11 @@ export async function run(argv: string[]): Promise<void> {
     let rawTickets: unknown
     let inlineMaxLines: number | undefined
     if (file !== undefined) {
-      const plan = JSON.parse(await readSource(file)) as {
+      const plan: {
         spec?: unknown
         tickets?: unknown
         sizing?: { inlineMaxLines?: unknown }
-      }
+      } = JSON.parse(await readSource(file))
       if (typeof plan.spec !== 'string') throw new Error('forge validate: plan needs a "spec" string')
       specMarkdown = plan.spec
       rawTickets = plan.tickets

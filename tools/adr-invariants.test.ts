@@ -29,7 +29,7 @@ interface IndexRow {
 function readAdrFiles(): AdrFile[] {
   return readdirSync(ADR_DIRECTORY)
     .filter((fileName) => fileName !== "README.md")
-    .sort()
+    .toSorted()
     .map((fileName) => {
       const match = ADR_FILE_PATTERN.exec(fileName);
       return {
@@ -84,7 +84,7 @@ describe("ADR invariants", () => {
 
   test("every ADR has an index row and every row has a file", () => {
     const rows = readIndexRows();
-    expect(rows.map((row) => row.fileName).sort()).toEqual(adrs.map((adr) => adr.fileName));
+    expect(rows.map((row) => row.fileName).toSorted()).toEqual(adrs.map((adr) => adr.fileName));
     for (const row of rows) {
       const adr = adrs.find((candidate) => candidate.fileName === row.fileName);
       expect(adr?.number).toBe(row.number);

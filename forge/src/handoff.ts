@@ -130,9 +130,9 @@ function ticketReferenceFromPath(path: string): string {
 }
 
 async function main(config: ForgeConfig): Promise<void> {
-  const arguments_ = process.argv.slice(2)
-  const mode = arguments_[0]
-  const targetPath = arguments_[1]
+  const cliArguments = process.argv.slice(2)
+  const mode = cliArguments[0]
+  const targetPath = cliArguments[1]
 
   if (!targetPath || (mode !== '--check' && mode !== '--render')) {
     console.error(

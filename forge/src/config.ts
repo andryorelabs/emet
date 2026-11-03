@@ -1,4 +1,5 @@
 import path from 'node:path'
+import { errorMessage, isOneOf } from './narrow'
 
 /**
  * `forge.config.json` — the per-repo config that makes `/forge`'s repo-side
@@ -216,8 +217,8 @@ export function resolveWorkerModel(config: ForgeConfig, ticketModel?: string): M
   if (!override) return config.models.worker
   const [modelPart = '', effortPart = ''] = override.split('/', 2).map((part) => part.trim())
   if (!modelPart) return config.models.worker
-  const effort = MODEL_EFFORTS.includes(effortPart as ModelEffort)
-    ? (effortPart as ModelEffort)
+  const effort = isOneOf(MODEL_EFFORTS, effortPart)
+    ? effortPart
     : config.models.worker.effort
   return { model: modelPart, effort }
 }
@@ -261,10 +262,10 @@ function mergeModelChoice(
   if (!isNonEmptyString(model)) {
     return { ok: false, reason: `"${field}.model" must be a non-empty string` }
   }
-  if (typeof effort !== 'string' || !MODEL_EFFORTS.includes(effort as ModelEffort)) {
+  if (!isOneOf(MODEL_EFFORTS, effort)) {
     return { ok: false, reason: `"${field}.effort" must be one of ${MODEL_EFFORTS.join('|')}` }
   }
-  return { ok: true, value: { model, effort: effort as ModelEffort } }
+  return { ok: true, value: { model, effort } }
 }
 
 function isPositiveInteger(value: unknown): value is number {
@@ -312,7 +313,7 @@ function validateAndMerge(raw: unknown): { ok: true; config: ForgeConfig } | { o
   } catch (error) {
     return {
       ok: false,
-      reason: `"ticket.idPattern" is not a valid regular expression: ${(error as Error).message}`,
+      reason: `"ticket.idPattern" is not a valid regular expression: ${errorMessage(error)}`,
     }
   }
   if (!isNonEmptyString(branchPrefix) || /[^a-z0-9-]/.test(branchPrefix)) {
@@ -336,12 +337,14 @@ function validateAndMerge(raw: unknown): { ok: true; config: ForgeConfig } | { o
       reason: '"concurrency.maxLiveWorkers" must be a positive integer, or the string "auto"',
     }
   }
-  // `maxLiveWorkersRaw` is validated but not narrowed by the guard above (a
-  // compound `!== 'auto' && !isPositiveInteger(...)` check doesn't narrow a
-  // value whose static type is `unknown`) — this ternary is the explicit,
-  // TS-checkable equivalent instead of relying on control-flow narrowing.
+  /**
+   * `maxLiveWorkersRaw` is validated but not narrowed by the guard above (a
+   * compound `!== 'auto' && !isPositiveInteger(...)` check doesn't narrow a
+   * value whose static type is `unknown`) — this ternary is the explicit,
+   * TS-checkable equivalent instead of relying on control-flow narrowing.
+   */
   const maxLiveWorkers: number | 'auto' =
-    maxLiveWorkersRaw === 'auto' ? 'auto' : (maxLiveWorkersRaw as number)
+    maxLiveWorkersRaw === 'auto' ? 'auto' : maxLiveWorkersRaw
   if (!isPositiveInteger(runIdleThresholdMs)) {
     return { ok: false, reason: '"concurrency.runIdleThresholdMs" must be a positive integer' }
   }
@@ -410,11 +413,11 @@ function validateAndMerge(raw: unknown): { ok: true; config: ForgeConfig } | { o
     return { ok: false, reason: '"handoff.autoChain" must be a boolean' }
   }
   const launcher = handoffSection.launcher ?? DEFAULT_FORGE_CONFIG.handoff.launcher
-  if (typeof launcher !== 'string' || !HANDOFF_LAUNCHERS.includes(launcher as HandoffLauncher)) {
+  if (!isOneOf(HANDOFF_LAUNCHERS, launcher)) {
     return { ok: false, reason: '"handoff.launcher" must be one of auto|orca|bg' }
   }
   const permissionMode = handoffSection.permissionMode ?? DEFAULT_FORGE_CONFIG.handoff.permissionMode
-  if (typeof permissionMode !== 'string' || !HANDOFF_PERMISSION_MODES.includes(permissionMode as HandoffPermissionMode)) {
+  if (!isOneOf(HANDOFF_PERMISSION_MODES, permissionMode)) {
     return { ok: false, reason: '"handoff.permissionMode" must be one of bypassPermissions|auto|acceptEdits' }
   }
 
@@ -425,7 +428,7 @@ function validateAndMerge(raw: unknown): { ok: true; config: ForgeConfig } | { o
   if (typeof autoMerge !== 'boolean') {
     return { ok: false, reason: '"pr.autoMerge" must be a boolean' }
   }
-  if (typeof mergeMethod !== 'string' || !MERGE_METHODS.includes(mergeMethod as MergeMethod)) {
+  if (!isOneOf(MERGE_METHODS, mergeMethod)) {
     return { ok: false, reason: '"pr.mergeMethod" must be one of squash|merge|rebase' }
   }
   if (typeof maxCiFixAttempts !== 'number' || !Number.isInteger(maxCiFixAttempts) || maxCiFixAttempts < 0) {
@@ -549,10 +552,10 @@ function validateAndMerge(raw: unknown): { ok: true; config: ForgeConfig } | { o
         maxLines,
         maxChars,
         autoChain,
-        launcher: launcher as HandoffLauncher,
-        permissionMode: permissionMode as HandoffPermissionMode,
+        launcher,
+        permissionMode,
       },
-      pr: { autoMerge, mergeMethod: mergeMethod as MergeMethod, maxCiFixAttempts },
+      pr: { autoMerge, mergeMethod, maxCiFixAttempts },
       usage: { oversizedReadLines, stalledMinutes },
       models: {
         worker: worker.value,
@@ -591,7 +594,7 @@ export async function loadForgeConfig(repoRoot: string): Promise<ConfigLoadResul
   } catch (error) {
     return {
       status: 'malformed',
-      reason: `${configPath} is not valid JSON: ${(error as Error).message}`,
+      reason: `${configPath} is not valid JSON: ${errorMessage(error)}`,
     }
   }
   const validated = validateAndMerge(raw)

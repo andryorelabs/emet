@@ -4,7 +4,7 @@ import { join } from "node:path";
 
 const repoRoot = join(import.meta.dir, "..");
 
-const allowedRuntimeDevDependencies = ["@types/bun", "@types/node", "typescript"];
+const allowedRuntimeDevDependencies = new Set(["@types/bun", "@types/node", "typescript"]);
 
 /** Reads and parses forge/package.json, the manifest install.sh ships to users. */
 function readRuntimeManifest(): {
@@ -20,7 +20,7 @@ test("forge/package.json ships no runtime dependencies", () => {
 
 test("forge/package.json devDependencies stay on the allowlist install.sh can afford", () => {
   const unexpected = Object.keys(readRuntimeManifest().devDependencies ?? {}).filter(
-    (name) => !allowedRuntimeDevDependencies.includes(name),
+    (name) => !allowedRuntimeDevDependencies.has(name),
   );
   expect(unexpected).toEqual([]);
 });

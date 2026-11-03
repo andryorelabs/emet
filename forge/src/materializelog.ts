@@ -2,6 +2,7 @@ import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from '
 import path from 'node:path'
 
 import { resolveRepoRoot } from './config'
+import { errorMessage } from './narrow'
 
 const USAGE = `usage: forge materialize-log --run <id> --record <localKey> <trackerId> [--root <dir>]
        forge materialize-log --run <id> --lookup <localKey> [--root <dir>]
@@ -15,16 +16,16 @@ type MaterializeLog = Record<string, string>
 
 function readLog(logPath: string): MaterializeLog {
   if (!existsSync(logPath)) return {}
-  let parsed: unknown
+  let parsed: any
   try {
     parsed = JSON.parse(readFileSync(logPath, 'utf8'))
   } catch (error) {
-    throw new Error(`materialize log ${logPath} is unreadable: ${(error as Error).message}`)
+    throw new Error(`materialize log ${logPath} is unreadable: ${errorMessage(error)}`, { cause: error })
   }
   if (typeof parsed !== 'object' || parsed === null || Array.isArray(parsed)) {
     throw new Error(`materialize log ${logPath} is not a key/ticket map`)
   }
-  return parsed as MaterializeLog
+  return parsed
 }
 
 export function lookupTicket(logPath: string, localKey: string): string | null {
@@ -88,7 +89,7 @@ export async function run(argv: string[]): Promise<void> {
     console.error(USAGE)
     process.exitCode = 2
   } catch (error) {
-    console.error(`forge materialize-log: ${(error as Error).message}`)
+    console.error(`forge materialize-log: ${errorMessage(error)}`)
     process.exitCode = 2
   }
 }

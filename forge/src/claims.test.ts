@@ -72,9 +72,9 @@ describe('didReserveTicket / listReservations / releaseTicket', () => {
     const names = readdirSync(ticketsDirectory)
     expect(names.some((name) => name.endsWith('.tmp'))).toBe(false)
     const file = names.find((name) => name.endsWith('.json'))!
-    const parsed = JSON.parse(
+    const parsed: Reservation = JSON.parse(
       readFileSync(path.join(ticketsDirectory, file), 'utf8'),
-    ) as Reservation
+    )
     expect(parsed.runId).toBe('run-a')
   })
 
@@ -193,9 +193,10 @@ describe('didReserveTicket / listReservations / releaseTicket', () => {
     test('rejects the exact AO-285 swapped call shape (ticket, runId, anchorPid)', () => {
       expect(
         didReserveTicket(
-          'AO-285' as unknown as string,
-          'session_014iteBD9ym4zLFz5NSPVhPu' as unknown as number,
-          1_090_684 as unknown as string,
+          'AO-285',
+          // @ts-expect-error deliberately mistyped argument
+          'session_014iteBD9ym4zLFz5NSPVhPu',
+          1_090_684,
           forgeDirectory,
         ),
       ).rejects.toThrow(/anchorPid must be a positive integer/)
@@ -206,7 +207,8 @@ describe('didReserveTicket / listReservations / releaseTicket', () => {
         didReserveTicket(
           'run-a',
           process.pid,
-          1_090_684 as unknown as string,
+          // @ts-expect-error deliberately mistyped argument
+          1_090_684,
           forgeDirectory,
         ),
       ).rejects.toThrow(/ticket must match/)
@@ -216,7 +218,8 @@ describe('didReserveTicket / listReservations / releaseTicket', () => {
       expect(
         didReserveTicket(
           'run-a',
-          'session_abc123' as unknown as number,
+          // @ts-expect-error deliberately mistyped argument
+          'session_abc123',
           'AO-1',
           forgeDirectory,
         ),

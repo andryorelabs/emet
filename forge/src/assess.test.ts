@@ -113,7 +113,9 @@ describe('forge assess (cli)', () => {
   })
 
   async function assessAfter(files: Record<string, string>): Promise<{ tier: string }> {
-    for (const [name, content] of Object.entries(files)) await Bun.write(path.join(repo, name), content)
+    await Promise.all(
+      Object.entries(files).map(([name, content]) => Bun.write(path.join(repo, name), content)),
+    )
     await Bun.$`git -C ${repo} add -A`.quiet()
     await Bun.$`git -C ${repo} commit -q -m change`.quiet()
     const binPath = new URL('../bin/forge.ts', import.meta.url).pathname

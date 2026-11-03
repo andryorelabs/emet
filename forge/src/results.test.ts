@@ -30,7 +30,8 @@ describe('worker results', () => {
   test('rejects an unknown status', () => {
     expect(() =>
       writeResult(directory, 'CLA-1', {
-        status: 'FINE' as never,
+        // @ts-expect-error deliberately invalid status
+        status: 'FINE',
         reportPath: 'r.md',
         risk: 'Risk: none',
       }),

@@ -23,9 +23,11 @@ function lockedEntry(overrides: Partial<WorktreeEntry> = {}): WorktreeEntry {
 }
 
 describe('parseCleanupArguments', () => {
-  // Fail-closed (see this function's own doc comment): a scope is mandatory
-  // now, so no combination of flags that omits both --run and --all may
-  // ever resolve to the old implicit repo-wide sweep.
+  /**
+   * Fail-closed (see this function's own doc comment): a scope is mandatory
+   * now, so no combination of flags that omits both --run and --all may
+   * ever resolve to the old implicit repo-wide sweep.
+   */
   test('no flags at all throws — no implicit repo-wide sweep', () => {
     expect(() => parseCleanupArguments([])).toThrow(/--run.*--all/)
   })
@@ -354,11 +356,13 @@ describe('deleteAndReleaseTicket', () => {
     expect(releaseCalls).toBe(0)
   })
 
-  // Regression guard: `ticket`/`ownerRunId` are only ever set together by
-  // `classifyOneBranch` (see this function's own doc comment) — this pins
-  // that a `ticket` with no `ownerRunId` never releases anything, so a
-  // future caller can't accidentally reintroduce the unscoped
-  // `releaseTicket(ticket)` this function replaced.
+  /**
+   * Regression guard: `ticket`/`ownerRunId` are only ever set together by
+   * `classifyOneBranch` (see this function's own doc comment) — this pins
+   * that a `ticket` with no `ownerRunId` never releases anything, so a
+   * future caller can't accidentally reintroduce the unscoped
+   * `releaseTicket(ticket)` this function replaced.
+   */
   test('a ticket with no ownerRunId never releases either', async () => {
     let releaseCalls = 0
     const result = await deleteAndReleaseTicket(

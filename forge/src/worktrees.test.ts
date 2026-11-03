@@ -260,18 +260,22 @@ describe('isAgentWorktree', () => {
     ).toBe(true)
   })
 
-  // The regression this whole helper exists to fix: a coordinator launched
-  // from an Orca-managed secondary worktree still gets its agent worktrees
-  // nested under the *main checkout's* `.claude/worktrees/`, not its own —
-  // isAgentWorktree must recognize this shape too, with no repoRoot to match
-  // against at all (see worktrees.ts's doc comment and
-  // reference/incidents.md).
+  /**
+   * The regression this whole helper exists to fix: a coordinator launched
+   * from an Orca-managed secondary worktree still gets its agent worktrees
+   * nested under the *main checkout's* `.claude/worktrees/`, not its own —
+   * isAgentWorktree must recognize this shape too, with no repoRoot to match
+   * against at all (see worktrees.ts's doc comment and
+   * reference/incidents.md).
+   */
   test('accepts an agent worktree under the main checkout even when the launching worktree differs', () => {
     expect(
       isAgentWorktree('/home/andry/code/repo/.claude/worktrees/agent-abc'),
     ).toBe(true)
-    // The launching (Orca) worktree itself is irrelevant to this check —
-    // there is no repoRoot parameter to pass it as.
+    /**
+     * The launching (Orca) worktree itself is irrelevant to this check —
+     * there is no repoRoot parameter to pass it as.
+     */
   })
 
   test('rejects the main checkout itself (not nested under .claude/worktrees/)', () => {

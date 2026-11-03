@@ -14,6 +14,7 @@ import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from 
 import path from 'node:path'
 
 import { loadForgeConfigWithDefaults, resolveRepoRoot } from './config'
+import { isOneOf } from './narrow'
 
 const USAGE = `usage: forge gate <ticket> [--run <id>] [--tier passive|medium|high]
        [--ci pass|fail|pending|none] [--integration pass|fail|pending|none]
@@ -23,7 +24,8 @@ export const DEFERRED_LABEL = 'forge:deferred'
 
 export type Decision = 'merge' | 'hold' | 'chain' | 'stop' | 'defer'
 export type CheckState = 'pass' | 'fail' | 'pending' | 'none'
-export type GateTier = 'passive' | 'medium' | 'high'
+const GATE_TIERS = ['passive', 'medium', 'high'] as const
+export type GateTier = (typeof GATE_TIERS)[number]
 type FindingSeverity = 'blocker' | 'critical' | 'major' | 'minor' | 'nit'
 
 export interface GateInput {
@@ -60,13 +62,11 @@ function blockingSeverities(tier: GateTier): readonly FindingSeverity[] {
   return tier === 'high' ? ['blocker', 'critical', 'major'] : ['blocker', 'critical']
 }
 
-export function decide(input: GateInput): GateResult {
-  const hold = (reasons: string[], chargeAttempt = false): GateResult => ({
-    decision: 'hold',
-    reasons,
-    chargeAttempt,
-  })
+function hold(reasons: string[], chargeAttempt = false): GateResult {
+  return { decision: 'hold', reasons, chargeAttempt }
+}
 
+export function decide(input: GateInput): GateResult {
   if (input.integration === 'fail') {
     return {
       decision: 'stop',
@@ -78,7 +78,7 @@ export function decide(input: GateInput): GateResult {
     return hold(['environment fault (exit 126/127 or provider outage); pausing without charging an attempt'])
   }
   if (input.verifyOk === null) return hold(['no verify record; run forge verify first'])
-  if (input.verifyOk === false) {
+  if (!input.verifyOk) {
     if (input.attemptsUsed >= input.workerAttempts) {
       return {
         decision: 'defer',
@@ -123,7 +123,7 @@ function readFlag(argv: readonly string[], flag: string): string | undefined {
   return index === -1 ? undefined : argv[index + 1]
 }
 
-function readJsonIfPresent(file: string): unknown {
+function readJsonIfPresent(file: string): any {
   return existsSync(file) ? JSON.parse(readFileSync(file, 'utf8')) : undefined
 }
 
@@ -157,14 +157,14 @@ export async function run(argv: string[]): Promise<void> {
     if (!/^[\w-]+$/.test(runId) || !/^[\w-]+$/.test(ticket)) throw new Error('invalid run or ticket id')
     const runDir = path.join(runsDir, runId)
 
-    const verify = readJsonIfPresent(path.join(runDir, 'verify', `${ticket}.json`)) as { ok?: boolean } | undefined
-    const ledger = readJsonIfPresent(path.join(repoRoot, '.forge', 'review', `${ticket}.json`)) as
-      | { rounds: number; findings: { status: string; severity: FindingSeverity }[] }
-      | undefined
-    const stored = readJsonIfPresent(path.join(runDir, 'attempts', `${ticket}.json`)) as { count?: number } | undefined
+    const verify: { ok?: boolean } | undefined = readJsonIfPresent(path.join(runDir, 'verify', `${ticket}.json`))
+    const ledger: { rounds: number; findings: { status: string; severity: FindingSeverity }[] } | undefined = readJsonIfPresent(
+      path.join(repoRoot, '.forge', 'review', `${ticket}.json`),
+    )
+    const stored: { count?: number } | undefined = readJsonIfPresent(path.join(runDir, 'attempts', `${ticket}.json`))
 
-    const tier = (readFlag(argv, '--tier') ?? 'medium') as GateTier
-    if (!['passive', 'medium', 'high'].includes(tier)) throw new Error('--tier must be passive|medium|high')
+    const tier = readFlag(argv, '--tier') ?? 'medium'
+    if (!isOneOf(GATE_TIERS, tier)) throw new Error('--tier must be passive|medium|high')
     const envExit = readFlag(argv, '--env-exit')
     const envOutputFile = readFlag(argv, '--env-output')
     const envOutput = envOutputFile && existsSync(envOutputFile) ? readFileSync(envOutputFile, 'utf8') : ''

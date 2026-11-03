@@ -106,15 +106,17 @@ export function checkScheduleWakeupSlashCommand(input: PreToolUseHookInput): Gua
  */
 export function readParentPid(
   pid: number,
-  readFile: (path: string) => string = (path) => readFileSync(path, 'utf8'),
+  readFile: (filePath: string) => string = (filePath) => readFileSync(filePath, 'utf8'),
 ): number | null {
   try {
     const raw = readFile(`/proc/${pid}/stat`)
     const afterComm = raw.slice(raw.lastIndexOf(')') + 1).trim()
     const fields = afterComm.split(/\s+/)
-    // fields[0] is state, fields[1] is ppid — the ppid is the 4th field of
-    // the whole stat line, but the first two (pid, comm) were consumed by
-    // `lastIndexOf(')')` above.
+    /**
+     * fields[0] is state, fields[1] is ppid — the ppid is the 4th field of
+     * the whole stat line, but the first two (pid, comm) were consumed by
+     * `lastIndexOf(')')` above.
+     */
     const ppid = Number(fields[1])
     return Number.isSafeInteger(ppid) && ppid > 0 ? ppid : null
   } catch {
@@ -275,6 +277,7 @@ function isAgentWorktreeCwd(cwd: string | undefined): cwd is string {
 
 async function countNewCommits(cwd: string): Promise<number | null> {
   for (const base of ['origin/HEAD', 'origin/main', 'main', 'origin/master', 'master']) {
+    // oxlint-disable-next-line eslint/no-await-in-loop -- git and gh calls stay sequential to keep output and side effects ordered
     const result = await Bun.$`git -C ${cwd} rev-list --count ${base}..HEAD`.nothrow().quiet()
     if (result.exitCode === 0) {
       const count = Number(result.stdout.toString().trim())
@@ -482,10 +485,12 @@ export async function readBoundedStdin(
   const chunks: Uint8Array[] = []
   let total = 0
   for (;;) {
+    // oxlint-disable-next-line eslint/no-await-in-loop -- stream chunks must be read in order
     const { done, value } = await reader.read()
     if (done) break
     total += value.byteLength
     if (total > limit) {
+      // oxlint-disable-next-line eslint/no-await-in-loop -- stream chunks must be read in order
       await reader.cancel()
       return null
     }
@@ -541,7 +546,7 @@ export async function run(
     return
   }
 
-  let parsed: unknown
+  let parsed: any
   try {
     parsed = raw.trim().length > 0 ? JSON.parse(raw) : {}
   } catch (error) {
@@ -551,13 +556,13 @@ export async function run(
 
   const event = readEventFlag(argv)
   if (event === 'SubagentStop' || event === 'Stop') {
-    const stopVerdict = await evaluateStopGuard(event, parsed as StopHookInput, process.pid)
+    const stopVerdict = await evaluateStopGuard(event, parsed, process.pid)
     const stopOutput = formatStopOutput(stopVerdict)
     if (stopOutput) console.log(stopOutput)
     return
   }
 
-  const verdict = await evaluateGuard(parsed as PreToolUseHookInput, process.pid)
+  const verdict = await evaluateGuard(parsed, process.pid)
   const output = formatHookOutput(verdict)
   if (output) console.log(output)
 }

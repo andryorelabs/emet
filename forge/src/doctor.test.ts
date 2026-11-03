@@ -270,9 +270,11 @@ describe('auditRepo', () => {
     await Bun.write(path.join(repoRoot, 'package.json'), JSON.stringify({ scripts: { check: 'x' } }))
     const docsAgentsDirectory = path.join(repoRoot, 'docs', 'agents')
     await Bun.$`mkdir -p ${docsAgentsDirectory}`.quiet()
-    for (const doc of ['forge.md', 'issue-tracker.md', 'triage-labels.md', 'domain.md']) {
-      await Bun.write(path.join(docsAgentsDirectory, doc), '# all set, no markers here\n')
-    }
+    await Promise.all(
+      ['forge.md', 'issue-tracker.md', 'triage-labels.md', 'domain.md'].map((doc) =>
+        Bun.write(path.join(docsAgentsDirectory, doc), '# all set, no markers here\n'),
+      ),
+    )
 
     const report = await auditRepo(repoRoot, healthyProbes, healthyEnvironment)
     expect(report.isGitRepo).toBe(true)
@@ -570,9 +572,10 @@ describe('checkSettingsAdvisories', () => {
   })
 })
 
+const sha = (text: string) => createHash('sha256').update(text).digest('hex')
+
 describe('findInstallDrift', () => {
   let home: string
-  const sha = (text: string) => createHash('sha256').update(text).digest('hex')
 
   beforeEach(() => {
     home = mkdtempSync(path.join(os.tmpdir(), 'forge-drift-'))

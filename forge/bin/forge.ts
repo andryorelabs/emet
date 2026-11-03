@@ -197,12 +197,14 @@ async function main(): Promise<void> {
       const bunfigPath = new URL('../bunfig.toml', import.meta.url).pathname
       const testRoot = new URL('../src', import.meta.url).pathname
 
-      // `tsc --noEmit` first — this CLI's own tsconfig sets `strict: true`,
-      // and AO-285 (the incident that made claims.ts/slots.ts require going
-      // through this dispatcher instead of an inline `bun -e` snippet) was
-      // exactly a type error no runtime test caught. `bunx` resolves to the
-      // `typescript` devDependency `bun install` puts in this tree's own
-      // node_modules rather than requiring a global `tsc`.
+      /**
+       * `tsc --noEmit` first — this CLI's own tsconfig sets `strict: true`,
+       * and AO-285 (the incident that made claims.ts/slots.ts require going
+       * through this dispatcher instead of an inline `bun -e` snippet) was
+       * exactly a type error no runtime test caught. `bunx` resolves to the
+       * `typescript` devDependency `bun install` puts in this tree's own
+       * node_modules rather than requiring a global `tsc`.
+       */
       const typecheck = Bun.spawn(
         ['bunx', 'tsc', '--noEmit', '-p', tsconfigPath],
         { cwd: cliRoot, stdio: ['inherit', 'inherit', 'inherit'] },

@@ -20,6 +20,7 @@ import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from 
 import path from 'node:path'
 import { resolveRepoRoot } from './config'
 import { globsOverlap } from './surfaces'
+import { isObject } from './narrow'
 
 const USAGE = `usage: forge verify <ticket> [--run <id>] [--worktree <path>]`
 
@@ -170,23 +171,23 @@ function readJson(file: string): unknown {
 }
 
 export function parseDispatchRecord(raw: unknown): DispatchRecord {
-  const candidate = raw as { baseline?: unknown; surfaces?: unknown }
-  const surfaces = candidate?.surfaces
+  const candidate: Record<string, unknown> = isObject(raw) ? raw : {}
+  const surfaces = candidate.surfaces
   if (
-    typeof candidate?.baseline !== 'string' ||
+    typeof candidate.baseline !== 'string' ||
     !Array.isArray(surfaces) ||
     !surfaces.every((glob) => typeof glob === 'string')
   ) {
     throw new Error('dispatch record needs { baseline: string, surfaces: string[] }')
   }
-  return { baseline: candidate.baseline, surfaces: surfaces as string[] }
+  return { baseline: candidate.baseline, surfaces }
 }
 
 function resolveRunId(repoRoot: string, ticket: string, explicit: string | undefined): string {
   if (explicit) return explicit
   const runsDir = path.join(repoRoot, '.forge', 'runs')
   const candidates = existsSync(runsDir)
-    ? readdirSync(runsDir).filter((run) => existsSync(path.join(runsDir, run, 'dispatch', `${ticket}.json`)))
+    ? readdirSync(runsDir).filter((candidateRun) => existsSync(path.join(runsDir, candidateRun, 'dispatch', `${ticket}.json`)))
     : []
   if (candidates.length !== 1) {
     throw new Error(

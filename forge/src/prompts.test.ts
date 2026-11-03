@@ -46,11 +46,11 @@ function listMarkdown(directory: string): string[] {
     .map((name) => `${directory}/${name}`)
 }
 
-const PINNED_FILES = ['commands/forge.md', ...PINNED_DIRECTORIES.flatMap(listMarkdown)].sort()
+const PINNED_FILES = ['commands/forge.md', ...PINNED_DIRECTORIES.flatMap(listMarkdown)].toSorted()
 
 describe('prompt byte budget', () => {
   test('every prompt file has a pinned ceiling and every ceiling has a file', () => {
-    expect(Object.keys(BYTE_CEILINGS).sort()).toEqual(PINNED_FILES)
+    expect(Object.keys(BYTE_CEILINGS).toSorted()).toEqual(PINNED_FILES)
   })
 
   for (const relativePath of PINNED_FILES) {

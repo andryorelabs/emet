@@ -22,19 +22,23 @@ let originalLog: typeof console.log
 let originalError: typeof console.error
 
 beforeEach(() => {
-  // Deliberately avoids the literal substring "handoff-" in the tmpdir
-  // prefix: `ticketReferenceFromPath`'s regex (`/handoff-(.+)\.md$/i`) is
-  // unanchored, and a prefix containing it would match *inside the tmpdir
-  // path itself* before ever reaching the real `handoff-<ticket>.md`
-  // basename this suite writes.
+  /**
+   * Deliberately avoids the literal substring "handoff-" in the tmpdir
+   * prefix: `ticketReferenceFromPath`'s regex (`/handoff-(.+)\.md$/i`) is
+   * unanchored, and a prefix containing it would match *inside the tmpdir
+   * path itself* before ever reaching the real `handoff-<ticket>.md`
+   * basename this suite writes.
+   */
   directory = mkdtempSync(path.join(os.tmpdir(), 'forge-checkpoint-test-'))
-  // Reset to `0`, never `undefined`: once `process.exitCode` has been set to
-  // a real number anywhere in this (shared, bun:test-managed) process, Bun
-  // silently ignores a later assignment of `undefined` — it does not clear
-  // back to "unset" the way Node's own docs describe. `run()`'s own success
-  // path never touches `process.exitCode` at all, so `0` is what a clean run
-  // leaves behind here, and every "clean" assertion below checks for `0`,
-  // never `toBeUndefined()`.
+  /**
+   * Reset to `0`, never `undefined`: once `process.exitCode` has been set to
+   * a real number anywhere in this (shared, bun:test-managed) process, Bun
+   * silently ignores a later assignment of `undefined` — it does not clear
+   * back to "unset" the way Node's own docs describe. `run()`'s own success
+   * path never touches `process.exitCode` at all, so `0` is what a clean run
+   * leaves behind here, and every "clean" assertion below checks for `0`,
+   * never `toBeUndefined()`.
+   */
   process.exitCode = 0
   logs = []
   errors = []
@@ -75,10 +79,12 @@ describe('forge handoff --check', () => {
     const filePath = await writeHandoff('AO-321', VALID_HANDOFF)
     await run(['--check', filePath])
     expect(process.exitCode).toBe(0)
-    // `errors` may carry `run()`'s own "no forge.config.json — using
-    // defaults" note (this test's cwd is inside a real repo with no config
-    // at its root) — that's not a validation problem, so only assert no
-    // `checkHandoff` problem line was printed.
+    /**
+     * `errors` may carry `run()`'s own "no forge.config.json — using
+     * defaults" note (this test's cwd is inside a real repo with no config
+     * at its root) — that's not a validation problem, so only assert no
+     * `checkHandoff` problem line was printed.
+     */
     expect(errors.join('\n')).not.toMatch(/--check failed/)
     expect(logs.join('\n')).toMatch(/--check OK/)
   })
@@ -112,13 +118,15 @@ describe('forge handoff --check', () => {
     expect(errors.join('\n')).toMatch(/"state: paused" is not one of/)
   })
 
-  // `dead-ends` is itself one of `REQUIRED_SECTIONS` — empty always fails
-  // the generic "missing or empty required section" check regardless of
-  // state. The state-specific message below is strictly additional: it only
-  // ever fires *alongside* that generic one (never instead of it), and only
-  // for a still-open ticket — this is the field the whole handoff mechanism
-  // pays for, so a still-open ticket gets a second, more pointed message
-  // than "done" does for the exact same empty section.
+  /**
+   * `dead-ends` is itself one of `REQUIRED_SECTIONS` — empty always fails
+   * the generic "missing or empty required section" check regardless of
+   * state. The state-specific message below is strictly additional: it only
+   * ever fires *alongside* that generic one (never instead of it), and only
+   * for a still-open ticket — this is the field the whole handoff mechanism
+   * pays for, so a still-open ticket gets a second, more pointed message
+   * than "done" does for the exact same empty section.
+   */
   test('an empty dead-ends section on a still-open ticket fails with both the generic and the state-specific message', async () => {
     const noDeadEnds = VALID_HANDOFF.replace(
       'dead-ends: tried a middleware guard, reverted — broke the health check',

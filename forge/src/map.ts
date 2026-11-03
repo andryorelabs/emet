@@ -56,7 +56,7 @@ function parsePackageJson(raw: string | undefined): PackageJson | null {
   if (raw === undefined) return null
   try {
     const parsed: unknown = JSON.parse(raw)
-    return typeof parsed === 'object' && parsed !== null ? (parsed as PackageJson) : null
+    return typeof parsed === 'object' && parsed !== null ? parsed : null
   } catch {
     return null
   }
@@ -75,12 +75,12 @@ function stackSection(inputs: MapInputs): string[] {
   const lines: string[] = []
   const pkg = parsePackageJson(inputs.manifests.get('package.json'))
   if (pkg) {
-    const dependencyNames = Object.keys({ ...pkg.dependencies, ...pkg.devDependencies }).sort()
+    const dependencyNames = Object.keys({ ...pkg.dependencies, ...pkg.devDependencies }).toSorted()
     const manager = detectPackageManager(fileSet, pkg)
     lines.push(`- Node/TypeScript package${pkg.name ? ` \`${pkg.name}\`` : ''}${manager ? `, package manager: ${manager}` : ''}`)
     if (fileSet.has('tsconfig.json')) lines.push('- TypeScript (tsconfig.json present)')
     if (dependencyNames.length > 0) lines.push(`- Dependencies: ${dependencyNames.slice(0, 15).join(', ')}${dependencyNames.length > 15 ? ', ...' : ''}`)
-    const scriptNames = Object.keys(pkg.scripts ?? {}).sort()
+    const scriptNames = Object.keys(pkg.scripts ?? {}).toSorted()
     if (scriptNames.length > 0) lines.push(`- Scripts: ${scriptNames.map((name) => `\`${name}\``).join(', ')}`)
   }
   const otherManifests: ReadonlyArray<readonly [string, string]> = [
@@ -110,7 +110,7 @@ function structureSection(inputs: MapInputs): string[] {
     counts.set(entry, (counts.get(entry) ?? 0) + 1)
   }
   return [...counts.entries()]
-    .sort(([a], [b]) => a.localeCompare(b))
+    .toSorted(([a], [b]) => a.localeCompare(b))
     .map(([entry, count]) => (entry.endsWith('/') ? `- \`${entry}\` (${count} files)` : `- \`${entry}\``))
 }
 
@@ -157,7 +157,7 @@ function testingSection(inputs: MapInputs): string[] {
     const key = directory === '.' ? '.' : `${directory}/`
     countsByDirectory.set(key, (countsByDirectory.get(key) ?? 0) + 1)
   }
-  for (const [directory, count] of [...countsByDirectory.entries()].sort(([a], [b]) => a.localeCompare(b))) {
+  for (const [directory, count] of [...countsByDirectory.entries()].toSorted(([a], [b]) => a.localeCompare(b))) {
     lines.push(`- \`${directory === '.' ? '*' : directory}\` (${count} test files)`)
   }
   return lines.length > 0 ? lines : ['- No test files found']
@@ -167,7 +167,7 @@ function hotspotsSection(inputs: MapInputs): string[] {
   const tracked = new Set(inputs.files)
   const ranked = [...inputs.churn.entries()]
     .filter(([file]) => tracked.has(file) && !IGNORED_CHURN.test(file))
-    .sort(([fileA, countA], [fileB, countB]) => countB - countA || fileA.localeCompare(fileB))
+    .toSorted(([fileA, countA], [fileB, countB]) => countB - countA || fileA.localeCompare(fileB))
     .slice(0, HOTSPOT_LIMIT)
   return ranked.length > 0
     ? ranked.map(([file, count]) => `- \`${file}\` (${count} commits)`)
@@ -193,7 +193,8 @@ export function parseStamp(content: string): string | null {
 function bulletGlob(line: string): string | null {
   const match = /^- `([^`]+)`/.exec(line)
   if (!match) return null
-  const target = match[1] as string
+  const target = match[1]
+  if (target === undefined) return null
   if (target === '*') return '**'
   return target.endsWith('/') ? `${target}**` : target
 }
@@ -242,6 +243,7 @@ export async function collectInputs(root: string): Promise<MapInputs> {
   const manifestNames = ['package.json', 'tsconfig.json']
   const manifests = new Map<string, string>()
   for (const name of manifestNames) {
+    // oxlint-disable-next-line eslint/no-await-in-loop -- sequential on purpose: later iterations depend on earlier ones or on output order
     if (files.includes(name)) manifests.set(name, await readFile(path.join(root, name), 'utf8'))
   }
   const history = await git(root, 'log', `-n${CHURN_COMMIT_WINDOW}`, '--name-only', '--pretty=format:')

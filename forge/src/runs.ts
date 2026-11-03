@@ -7,6 +7,7 @@ import {
 } from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
+import { errnoCode } from './narrow'
 
 /**
  * Classifies whether a `/forge` run (coordinator or worker) is still alive
@@ -277,21 +278,20 @@ export function readCompletionEvent(
   ticket: string,
 ): CompletionEvent | null {
   try {
-    const parsed: unknown = JSON.parse(
+    const parsed: any = JSON.parse(
       readFileSync(completionEventPath(commonDirectory, runId, ticket), 'utf8'),
     )
     if (typeof parsed !== 'object' || parsed === null) return null
-    const record = parsed as Record<string, unknown>
     if (
-      typeof record.runId !== 'string' ||
-      typeof record.ticket !== 'string' ||
-      (record.event !== 'SubagentStop' && record.event !== 'Stop') ||
-      (record.outcome !== 'allowed' && record.outcome !== 'blocked') ||
-      typeof record.at !== 'string'
+      typeof parsed.runId !== 'string' ||
+      typeof parsed.ticket !== 'string' ||
+      (parsed.event !== 'SubagentStop' && parsed.event !== 'Stop') ||
+      (parsed.outcome !== 'allowed' && parsed.outcome !== 'blocked') ||
+      typeof parsed.at !== 'string'
     ) {
       return null
     }
-    return parsed as CompletionEvent
+    return parsed
   } catch {
     return null
   }
@@ -312,11 +312,12 @@ export function readStallNudgeCount(
   try {
     text = readFileSync(stallNudgePath(commonDirectory, runId, ticket), 'utf8')
   } catch (error) {
-    if ((error as NodeJS.ErrnoException).code === 'ENOENT') return 0
+    if (errnoCode(error) === 'ENOENT') return 0
     return Number.POSITIVE_INFINITY
   }
   try {
-    const count = (JSON.parse(text) as { count?: unknown }).count
+    const parsedCounter: { count?: unknown } = JSON.parse(text)
+    const { count } = parsedCounter
     return typeof count === 'number' && Number.isSafeInteger(count) && count >= 0
       ? count
       : Number.POSITIVE_INFINITY
