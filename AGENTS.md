@@ -27,7 +27,7 @@ Run from the repo root with bun.
 - Typecheck with the aliased `typescript7` by path, never bare `tsc`. See ADR-0002.
 - `install.sh` and the runtime behaviour of the `forge` CLI must not change without an explicit ticket. See ADR-0001.
 - Installed prompt markdown (`forge/reference/*.md`, `commands/run.md`, `agents/*.md`): whitespace and wrapping only, never wording. See ADR-0001.
-- Workers commit to local branches; one wave is one dependency layer and lands as one PR. See [ADR-0004](docs/adr/0004-one-wave-one-dependency-layer-one-pr.md).
+- Workers commit to local branches; one wave is one dependency layer and lands as one PR, or as one local merge when `landing.mode` is `merge`. See [ADR-0004](docs/adr/0004-one-wave-one-dependency-layer-one-pr.md), amended by [ADR-0010](docs/adr/0010-local-merge-landing.md).
 - Only the coordinator writes the tracker. See [ADR-0005](docs/adr/0005-coordinator-is-the-single-tracker-writer.md).
 - CI runs on Linux and macOS; Windows is unsupported except via WSL. See [ADR-0007](docs/adr/0007-macos-support.md), which supersedes [ADR-0006](docs/adr/0006-linux-only-ci.md).
 - mattpocock-skills is a contracted core dependency (`forge/src/skills.ts`). See [ADR-0009](docs/adr/0009-mattpocock-skills-contracted-core-dependency.md).
