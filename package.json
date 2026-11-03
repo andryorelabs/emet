@@ -9,7 +9,7 @@
     "fix": "bun run format && bun run lint --fix",
     "format": "oxfmt",
     "format:check": "oxfmt --check",
-    "knip": "^6.44.1",
+    "knip": "knip",
     "lint:docs": "bun tools/lint-docs.ts",
     "check": "bun run typecheck",
     "test": "bun test ./tools && bun test --cwd forge",
