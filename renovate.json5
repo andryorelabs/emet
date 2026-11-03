@@ -1,0 +1,95 @@
+{
+  $schema: "https://docs.renovatebot.com/renovate-schema.json",
+  extends: [
+    "config:best-practices",
+    ":dependencyDashboard",
+    ":semanticCommits",
+    ":semanticCommitTypeAll(chore)",
+    "helpers:pinGitHubActionDigests",
+  ],
+
+  timezone: "UTC",
+  schedule: ["before 12pm on monday"],
+
+  prConcurrentLimit: 3,
+  prHourlyLimit: 2,
+
+  rangeStrategy: "bump",
+  rebaseWhen: "behind-base-branch",
+  minimumReleaseAge: "3 days",
+  labels: ["dependencies"],
+
+  osvVulnerabilityAlerts: true,
+  vulnerabilityAlerts: {
+    enabled: true,
+    assignees: ["AndryOre"],
+  },
+
+  lockFileMaintenance: {
+    enabled: true,
+    schedule: ["before 12pm on monday"],
+    automerge: true,
+    automergeType: "pr",
+  },
+
+  customManagers: [
+    {
+      customType: "regex",
+      managerFilePatterns: ["/^\\.github/workflows/lint-workflows\\.yml$/"],
+      matchStrings: ["ACTIONLINT_VERSION: (?<currentValue>\\d+\\.\\d+\\.\\d+)"],
+      datasourceTemplate: "github-releases",
+      depNameTemplate: "rhysd/actionlint",
+      extractVersionTemplate: "^v(?<version>.+)$",
+    },
+    {
+      customType: "regex",
+      managerFilePatterns: ["/^\\.github/workflows/lint-workflows\\.yml$/"],
+      matchStrings: [
+        "zizmorcore/zizmor-action@[^\\n]+\\n\\s+with:\\n\\s+version: (?<currentValue>v\\d+\\.\\d+\\.\\d+)",
+      ],
+      datasourceTemplate: "github-releases",
+      depNameTemplate: "zizmorcore/zizmor",
+    },
+  ],
+
+  packageRules: [
+    {
+      matchDepTypes: ["devDependencies"],
+      semanticCommitScope: "deps-dev",
+    },
+    {
+      matchUpdateTypes: ["minor", "patch"],
+      groupName: "all non-major",
+      groupSlug: "all-minor-patch",
+    },
+    {
+      groupName: "github-actions",
+      matchManagers: ["github-actions"],
+    },
+    {
+      matchPackageNames: ["bun"],
+      matchManagers: ["npm"],
+      enabled: false,
+    },
+    {
+      matchDepTypes: ["devDependencies"],
+      matchUpdateTypes: ["patch", "minor"],
+      automerge: true,
+      automergeType: "pr",
+      minimumReleaseAge: "7 days",
+    },
+    {
+      matchManagers: ["github-actions"],
+      matchUpdateTypes: ["patch", "minor", "digest", "pinDigest"],
+      automerge: true,
+      automergeType: "pr",
+      minimumReleaseAge: "7 days",
+    },
+    {
+      groupName: "oxc",
+      matchDepNames: ["oxlint", "oxlint-tsgolint", "oxfmt", "typescript7"],
+      rangeStrategy: "pin",
+      automerge: false,
+    },
+  ],
+}
