@@ -46,6 +46,19 @@ opening the wave's PR), `onPrMerge: automatic` — a `Closes #N` line in the PR
 body uses GitHub's own closing keywords, which close the issue on merge with
 no `/forge`-side write needed.
 
+## Spec and ticket blocks
+
+- Spec body: `## Specs` (`- **S1**: …`, one per line), then
+  `## Global Constraints` (rules every worker and reviewer must obey; copied verbatim
+  into each brief) and `## Review Focus` (inputs the spec implies but nothing
+  tests; each gets a test).
+- Ticket body: `Covers: S…` under the title, then `## Interfaces`
+  (`Consumes:` / `Produces:` with signatures), `## Project skills`,
+  `## Allowed edit surfaces`, `## Context budget`.
+- Every S# needs an acceptance scenario (`Scenario: WHEN … THEN …`); `forge
+  validate` enforces coverage, scenarios, disjoint wave surfaces and acyclic
+  blockers before approval.
+
 ## External surface
 
 Solo-maintained repo: no outside contributors, so no extra triage convention.

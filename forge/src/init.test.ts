@@ -351,3 +351,19 @@ describe('filesystem-based detection', () => {
     expect(await detectTrackerKind(repoRoot)).toBe('linear')
   })
 })
+
+describe('issue-tracker templates carry the v2 spec and ticket blocks', () => {
+  const templatesDirectory = path.resolve(import.meta.dir, '..', 'templates')
+
+  for (const kind of ['github', 'linear', 'local'] as const) {
+    test(`${kind}: documents Global Constraints, Review Focus and Interfaces`, async () => {
+      const content = await Bun.file(
+        path.join(templatesDirectory, `issue-tracker-${kind}.md.tpl`),
+      ).text()
+      expect(content).toContain('## Global Constraints')
+      expect(content).toContain('## Review Focus')
+      expect(content).toContain('## Interfaces')
+      expect(content).toContain('Covers:')
+    })
+  }
+})
