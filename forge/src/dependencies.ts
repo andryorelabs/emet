@@ -4,6 +4,12 @@ import path from "node:path";
 
 import type { TrackerKind } from "./config";
 import { isObject } from "./narrow";
+import {
+  checkSkillsContract,
+  findPluginAgentFile,
+  findPluginByName,
+  listInstalledPlugins,
+} from "./skills";
 
 /**
  * The third-party tools `/forge` needs, and how far this CLI will go about
@@ -48,6 +54,7 @@ type DependencyName =
   | "forge-agents"
   | "github-cli"
   | "linear-mcp-server"
+  | "skills-contract"
   | "tracker-kind";
 
 type DependencyStatus =
@@ -106,6 +113,8 @@ export type DependencyProbes = {
   readonly linearMcpServer: (repoRoot: string) => Promise<LinearMcpProbe>;
   /** Memoized: `~/.claude/agents/` is a fixed, user-scoped path, not per repo. */
   readonly forgeAgents: () => Promise<ForgeAgentsProbe>;
+  /** Optional so existing stubs stay valid; absent means the contract is not checked. */
+  readonly skillsContract?: () => readonly DependencyCheck[];
 };
 
 type ProbeRun =
@@ -303,7 +312,7 @@ export function classifyGithubCliProbe(probe: GithubCliProbe): DependencyCheck {
         ...base,
         status: "unsatisfied",
         summary:
-          "gh CLI not found on PATH — required for this repo's github tracker. Install: https://cli.github.com",
+          "gh CLI not found on PATH — required for every tracker (PRs always use it). Install: https://cli.github.com",
       };
     case "unauthenticated":
       return {
@@ -391,15 +400,14 @@ export async function checkDependencies(input: {
   const checks: DependencyCheck[] = [
     classifyClaudePluginProbe(await input.probes.claudePlugin()),
     classifyForgeAgentsProbe(await input.probes.forgeAgents()),
+    ...(input.probes.skillsContract?.() ?? []),
   ];
 
   if (input.tracker === null) {
     checks.push(trackerKindUndeclaredCheck());
     return checks;
   }
-  if (input.tracker === "github") {
-    checks.push(classifyGithubCliProbe(await input.probes.githubCli()));
-  }
+  checks.push(classifyGithubCliProbe(await input.probes.githubCli()));
   if (input.tracker === "linear") {
     checks.push(classifyLinearMcpProbe(await input.probes.linearMcpServer(input.repoRoot)));
   }
@@ -442,9 +450,18 @@ async function probeClaudePlugin(): Promise<ClaudePluginProbe> {
   };
 }
 
-export function probeForgeAgents(agentsDirectory: string): ForgeAgentsProbe {
+/**
+ * An agent is present as `~/.claude/agents/<name>.md` (install.sh) or inside
+ * an installed `forge` plugin, where it dispatches as `forge:<name>`.
+ */
+export function probeForgeAgents(
+  agentsDirectory: string,
+  pluginInstallPaths: readonly string[] = [],
+): ForgeAgentsProbe {
   const missing = FORGE_AGENT_NAMES.filter(
-    (name) => !existsSync(path.join(agentsDirectory, `${name}.md`)),
+    (name) =>
+      !existsSync(path.join(agentsDirectory, `${name}.md`)) &&
+      !pluginInstallPaths.some((installPath) => findPluginAgentFile(installPath, name) !== null),
   );
   return missing.length === 0 ? { kind: "present" } : { kind: "missing", missing };
 }
@@ -488,6 +505,11 @@ export async function probeLinearMcpServer(repoRoot: string): Promise<LinearMcpP
     : { kind: "not-declared", searchedAllScopes: true };
 }
 
+function forgePluginInstallPaths(plugins: Parameters<typeof findPluginByName>[0]): string[] {
+  const plugin = findPluginByName(plugins, "forge");
+  return plugin === null ? [] : [plugin.installPath];
+}
+
 /** Memoizes the two repo-independent probes so a fleet sweep shells out once
  * rather than once per repo. */
 export function createDependencyProbes(): DependencyProbes {
@@ -495,6 +517,7 @@ export function createDependencyProbes(): DependencyProbes {
   let githubCliResult: Promise<GithubCliProbe> | null = null;
 
   let forgeAgentsResult: Promise<ForgeAgentsProbe> | null = null;
+  let skillsContractResult: readonly DependencyCheck[] | null = null;
 
   return {
     claudePlugin: () => (claudePluginResult ??= probeClaudePlugin()),
@@ -502,8 +525,12 @@ export function createDependencyProbes(): DependencyProbes {
     linearMcpServer: probeLinearMcpServer,
     forgeAgents: () =>
       (forgeAgentsResult ??= Promise.resolve(
-        probeForgeAgents(path.join(os.homedir(), ".claude", "agents")),
+        probeForgeAgents(
+          path.join(os.homedir(), ".claude", "agents"),
+          forgePluginInstallPaths(listInstalledPlugins()),
+        ),
       )),
+    skillsContract: () => (skillsContractResult ??= checkSkillsContract()),
   };
 }
 

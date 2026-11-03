@@ -28,6 +28,7 @@ commands:
   init      [--tracker linear|github|local] [--force]
   doctor    [--all] [<path> ...]  — read-only fleet sweep, defaults to cwd
   preflight [--run <id>] [--post-dispatch]
+  skill-path <name>  — print the absolute SKILL.md path of a mattpocock-skills skill
   claims    --reserve <ticket> --run <id> --anchor <pid> | --release <ticket> | --list | --prune [--dry-run]
   slots     --acquire --run <id> --anchor <pid> --ticket <ticket> | --release --run <id> | --release-index <index> | --list
   cleanup   [--run <id> | --all] [--dry-run] [--force]
@@ -80,6 +81,23 @@ async function main(): Promise<void> {
     case "preflight": {
       const { run } = await import("../src/preflight");
       await run(rest);
+      return;
+    }
+    case "skill-path": {
+      const skillName = rest[0];
+      if (skillName === undefined) {
+        console.error("usage: forge skill-path <name>");
+        process.exitCode = EXIT_CONFIG_OR_USAGE_ERROR;
+        return;
+      }
+      const { resolveSkillPath } = await import("../src/skills");
+      const skillPath = resolveSkillPath(skillName);
+      if (skillPath === null) {
+        console.error(`skill not found: ${skillName}`);
+        process.exitCode = 1;
+        return;
+      }
+      console.log(skillPath);
       return;
     }
     case "claims": {
