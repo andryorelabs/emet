@@ -209,7 +209,7 @@ describe("parsing and merging", () => {
       await run([]);
       console.log = originalLog;
       expect(existsSync(marker)).toBe(false);
-      expect(process.exitCode).toBeUndefined();
+      expect(process.exitCode ?? 0).toBe(0);
     } finally {
       console.log = originalLog;
       process.exitCode = originalExitCode;
