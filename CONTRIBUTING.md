@@ -8,8 +8,9 @@ By participating in this project, you agree to abide by the
 
 ## Setup
 
-This repository uses [bun](https://bun.sh) only. Install dependencies for the
-runtime package with `bun install --cwd forge --frozen-lockfile`. Check
+This repository uses [bun](https://bun.sh) only. Install the root dev tooling with
+`bun install --frozen-lockfile` and the runtime package with
+`bun install --cwd forge --frozen-lockfile`. Check
 `package.json` scripts before running anything, and do not run the build unless
 asked.
 
