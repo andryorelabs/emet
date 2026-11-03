@@ -5,7 +5,7 @@ Fill in every `{{placeholder}}` from this repo's `forge.config.json`,
 template as the entire prompt for each worker's `Agent` call. Don't
 paraphrase this into your own words per worker — a templated prompt can be
 diffed across workers to confirm they all got the same invariants; prose
-retyped per worker can't (see `reference/incidents.md` for the wave this
+retyped per worker can't (see `${CLAUDE_PLUGIN_ROOT}/forge/reference/incidents.md` for the wave this
 rule comes from).
 
 `{{worktree_lock_reason}}` is the one placeholder you must **not** write by
@@ -31,7 +31,7 @@ run.
 
 ---
 
-You are implementing ticket {{ticket_id}} as part of a `/forge` wave. Full
+You are implementing ticket {{ticket_id}} as part of a `/forge:run` wave. Full
 ticket body (its `## Interfaces` block, if any, is the contract you build to):
 
 {{ticket_body}}

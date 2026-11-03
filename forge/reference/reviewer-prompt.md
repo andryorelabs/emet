@@ -1,7 +1,7 @@
 # Reviewer dispatch prompt
 
 Fill each `{{placeholder}}` and paste as the whole prompt of the Phase 8
-`Agent({subagent_type: "forge-reviewer"})` call. Once per wave, after every
+`Agent({subagent_type: "forge:forge-reviewer"})` call. Once per wave, after every
 branch is merged into the integration branch, before pushing it.
 
 ---

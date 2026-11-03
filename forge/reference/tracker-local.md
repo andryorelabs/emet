@@ -17,5 +17,5 @@ Only the coordinator writes tracker state; workers use `forge results`.
 
 **Don't run Phases 5–9 unattended against a `local`-tracker repo until this
 lands.** A human creates and updates tickets by hand, following the file
-format in `docs/agents/issue-tracker.md`, and `/forge`'s Phases 1–4
+format in `docs/agents/issue-tracker.md`, and `/forge:run`'s Phases 1–4
 (interview through the plan file) still work fine on their own.
