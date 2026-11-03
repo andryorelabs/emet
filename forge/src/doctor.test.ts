@@ -585,6 +585,99 @@ describe("auditRepo environment findings", () => {
   });
 });
 
+describe("doctor with a local tracker and merge landing", () => {
+  let repoRoot: string;
+  beforeEach(() => {
+    repoRoot = mkdtempSync(path.join(os.tmpdir(), "forge-doctor-local-"));
+  });
+  afterEach(() => {
+    rmSync(repoRoot, { recursive: true, force: true });
+  });
+
+  async function initLocalRepo(
+    overrides: { landing?: object; tracker?: object } = {},
+  ): Promise<void> {
+    await Bun.$`git init --quiet`.cwd(repoRoot).quiet();
+    await Bun.write(
+      path.join(repoRoot, "forge.config.json"),
+      JSON.stringify({
+        version: 1,
+        repo: { trunk: "main", remote: "origin" },
+        ticket: { idPattern: "^[a-z0-9-]+-\\d{2,}$", branchPrefix: "forge" },
+        landing: overrides.landing ?? { mode: "merge" },
+        tracker: { kind: "local", ...overrides.tracker },
+      }),
+    );
+  }
+
+  const ghAbsentProbes: DependencyProbes = {
+    ...healthyProbes,
+    githubCli: async () => ({ kind: "not-on-path" }),
+  };
+
+  test("reports no gh finding when gh is absent", async () => {
+    await initLocalRepo();
+    const report = await auditRepo(repoRoot, ghAbsentProbes, healthyEnvironment);
+    expect(report.dependencyFindings.filter((check) => check.dependency === "github-cli")).toEqual(
+      [],
+    );
+  });
+
+  test("still reports gh when landing is pr", async () => {
+    await initLocalRepo({ landing: { mode: "pr" } });
+    const report = await auditRepo(repoRoot, ghAbsentProbes, healthyEnvironment);
+    expect(report.dependencyFindings.some((check) => check.dependency === "github-cli")).toBe(true);
+  });
+
+  test("skips gh CLI flag probes only when asked", async () => {
+    const probed: string[] = [];
+    const environment: EnvironmentProbes = {
+      ...healthyEnvironment,
+      helpText: async (command) => {
+        probed.push(command[0] ?? "");
+        return healthyEnvironment.helpText(command);
+      },
+    };
+    expect(await checkExternalCliFlags(environment, { requireGh: false })).toEqual([]);
+    expect(probed).not.toContain("gh");
+    await checkExternalCliFlags(environment);
+    expect(probed).toContain("gh");
+  });
+
+  test("fork base compares against local trunk in merge mode", async () => {
+    await initLocalRepo();
+    const refs: string[] = [];
+    await auditRepo(repoRoot, healthyProbes, {
+      ...healthyEnvironment,
+      resolveRef: async (_root, ref) => {
+        refs.push(ref);
+        return "a".repeat(40);
+      },
+    });
+    expect(refs).toContain("main");
+    expect(refs).not.toContain("origin/main");
+  });
+
+  test("warns when .scratch is tracked and when idPrefix is set", async () => {
+    await initLocalRepo({ tracker: { local: { idPrefix: "X" } } });
+    await Bun.$`mkdir -p .scratch/a`.cwd(repoRoot).quiet();
+    await Bun.write(path.join(repoRoot, ".scratch", "a", "spec.md"), "x");
+    await Bun.$`git add .scratch`.cwd(repoRoot).quiet();
+    const report = await auditRepo(repoRoot, healthyProbes, healthyEnvironment);
+    const warnings = report.warnings.join("\n");
+    expect(warnings).toContain("`.scratch/` is tracked by git");
+    expect(warnings).toContain("`tracker.local.idPrefix` is deprecated");
+  });
+
+  test("no warnings when .scratch is untracked", async () => {
+    await initLocalRepo();
+    await Bun.$`mkdir -p .scratch/a`.cwd(repoRoot).quiet();
+    await Bun.write(path.join(repoRoot, ".scratch", "a", "spec.md"), "x");
+    const report = await auditRepo(repoRoot, healthyProbes, healthyEnvironment);
+    expect(report.warnings).toEqual([]);
+  });
+});
+
 describe("checkSettingsAdvisories", () => {
   test("no advisories when every forge-relevant key is already set", () => {
     expect(checkSettingsAdvisories(readySettings)).toEqual([]);
