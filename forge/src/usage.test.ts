@@ -1,11 +1,64 @@
 import { describe, expect, test } from 'bun:test'
 
 import {
+  classifyTicketStall,
   describeLastStep,
   findStalledTranscripts,
   parseStalledMinutes,
   taskIdFromTranscriptPath,
 } from './usage'
+import type { CompletionEvent } from './runs'
+
+describe('classifyTicketStall', () => {
+  const now = 10_000_000
+  const idleMinutes = 10
+  const stoppedEvent = (overrides: Partial<CompletionEvent> = {}): CompletionEvent => ({
+    runId: 'run-a',
+    ticket: 'CLA-50',
+    event: 'SubagentStop',
+    outcome: 'allowed',
+    at: '2026-11-03T00:00:00.000Z',
+    sessionId: null,
+    branch: 'b',
+    commits: 1,
+    ...overrides,
+  })
+  const classify = (
+    event: CompletionEvent | null,
+    commits: number | null,
+    silentMinutes: number,
+  ) =>
+    classifyTicketStall({
+      event,
+      commits,
+      lastActivityMs: now - silentMinutes * 60_000,
+      nowMs: now,
+      idleMinutes,
+    })
+
+  test('an allowed stop event with commits is completed, however silent', () => {
+    expect(classify(stoppedEvent(), 2, 999)).toBe('completed')
+  })
+
+  test('an allowed stop event with zero commits is stopped-without-commits', () => {
+    expect(classify(stoppedEvent(), 0, 999)).toBe('stopped-without-commits')
+  })
+
+  test('an unavailable commit probe is its own state, never "no commits"', () => {
+    expect(classify(stoppedEvent(), null, 1)).toBe('probe-unavailable')
+    expect(classify(null, null, 999)).toBe('probe-unavailable')
+  })
+
+  test('no event: silent past the threshold is stalled, otherwise working', () => {
+    expect(classify(null, 0, 11)).toBe('stalled')
+    expect(classify(null, 0, 5)).toBe('working')
+  })
+
+  test('a blocked stop is not a completion: the worker is continuing', () => {
+    expect(classify(stoppedEvent({ outcome: 'blocked' }), 0, 11)).toBe('stalled')
+    expect(classify(stoppedEvent({ outcome: 'blocked' }), 0, 2)).toBe('working')
+  })
+})
 
 /**
  * Pure-function coverage only — `usage.ts` is read-only against real

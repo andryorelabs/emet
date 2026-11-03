@@ -10,7 +10,9 @@ import path from 'node:path'
 
 import { checkDestructiveCommand, checkEditSurface } from './guard-destructive'
 import { listReservations, type Reservation } from './claims'
+import { writeCompletionEvent, type CompletionEvent } from './runs'
 import { listOccupiedSlots, type SlotListEntry } from './slots'
+import { parseWorktreeEntries, resolveWorktreeOwner } from './worktrees'
 
 /**
  * `forge guard` — a Claude Code `PreToolUse` hook that blocks the three
@@ -372,18 +374,99 @@ export async function checkSessionStop(
   )
 }
 
+export type CompletionEventOwner = {
+  readonly runId: string
+  readonly ticket: string
+  readonly branch: string | null
+}
+
+export type CompletionEventDependencies = {
+  readonly resolveOwner: (cwd: string) => Promise<CompletionEventOwner | null>
+  readonly resolveCommonDirectory: (cwd: string) => Promise<string | null>
+  readonly countNewCommits: (cwd: string) => Promise<number | null>
+  readonly writeEvent: (commonDirectory: string, event: CompletionEvent) => void
+  readonly now: () => Date
+}
+
+async function gitOutput(cwd: string, ...args: string[]): Promise<string | null> {
+  const result = await Bun.$`git -C ${cwd} ${args}`.nothrow().quiet()
+  return result.exitCode === 0 ? result.stdout.toString().trim() : null
+}
+
+async function resolveWorktreeEventOwner(cwd: string): Promise<CompletionEventOwner | null> {
+  const topLevel = await gitOutput(cwd, 'rev-parse', '--show-toplevel')
+  const listing = await gitOutput(cwd, 'worktree', 'list', '--porcelain')
+  if (topLevel === null || listing === null) return null
+  const entry = parseWorktreeEntries(listing).find((candidate) => candidate.directory === topLevel)
+  const owner = entry ? resolveWorktreeOwner(entry) : null
+  if (!entry || !owner) return null
+  return {
+    runId: owner.runId,
+    ticket: owner.ticket,
+    branch: entry.branch?.replace(/^refs\/heads\//, '') ?? null,
+  }
+}
+
+const DEFAULT_COMPLETION_EVENT_DEPENDENCIES: CompletionEventDependencies = {
+  resolveOwner: resolveWorktreeEventOwner,
+  resolveCommonDirectory: (cwd) =>
+    gitOutput(cwd, 'rev-parse', '--path-format=absolute', '--git-common-dir'),
+  countNewCommits,
+  writeEvent: (commonDirectory, event) => {
+    writeCompletionEvent(commonDirectory, event)
+  },
+  now: () => new Date(),
+}
+
+/**
+ * Writes `<git-common-dir>/.forge/runs/<run>/events/<ticket>.json` for a stop
+ * inside a forge-owned worktree, so `forge usage --stalled` and `forge gate`
+ * decide from events plus git state instead of transcript prose. Best
+ * effort: a failure here is logged and never changes the stop verdict.
+ */
+export async function recordCompletionEvent(
+  event: 'SubagentStop' | 'Stop',
+  input: StopHookInput,
+  verdict: StopVerdict,
+  dependencies: CompletionEventDependencies = DEFAULT_COMPLETION_EVENT_DEPENDENCIES,
+): Promise<void> {
+  try {
+    if (typeof input.cwd !== 'string') return
+    const owner = await dependencies.resolveOwner(input.cwd)
+    if (!owner) return
+    const commonDirectory = await dependencies.resolveCommonDirectory(input.cwd)
+    if (!commonDirectory) return
+    dependencies.writeEvent(commonDirectory, {
+      runId: owner.runId,
+      ticket: owner.ticket,
+      event,
+      outcome: verdict.decision === 'allow' ? 'allowed' : 'blocked',
+      at: dependencies.now().toISOString(),
+      sessionId: isValidSessionId(input.session_id) ? input.session_id : null,
+      branch: owner.branch,
+      commits: await dependencies.countNewCommits(input.cwd),
+    })
+  } catch (error) {
+    console.error('forge:guard — could not record the completion event:', error)
+  }
+}
+
 export async function evaluateStopGuard(
   event: 'SubagentStop' | 'Stop',
   input: StopHookInput,
   hookPid: number,
 ): Promise<StopVerdict> {
+  let verdict: StopVerdict = STOP_ALLOW
   try {
-    if (event === 'SubagentStop') return await checkSubagentStop(input)
-    return await checkSessionStop(input, collectProcessAncestry(hookPid))
+    verdict =
+      event === 'SubagentStop'
+        ? await checkSubagentStop(input)
+        : await checkSessionStop(input, collectProcessAncestry(hookPid))
   } catch (error) {
     console.error('forge:guard — internal error, allowing the stop:', error)
-    return STOP_ALLOW
   }
+  await recordCompletionEvent(event, input, verdict)
+  return verdict
 }
 
 /** Reads a stream up to `limit` bytes; returns `null` when it exceeds the bound. */

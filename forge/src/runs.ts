@@ -1,4 +1,10 @@
-import { readFileSync, statSync } from 'node:fs'
+import {
+  mkdirSync,
+  readFileSync,
+  renameSync,
+  statSync,
+  writeFileSync,
+} from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
 
@@ -205,4 +211,140 @@ export function classifyRun(
   if (mtime !== null && now - mtime <= idleThresholdMs) return 'idle'
 
   return 'dead'
+}
+
+const SAFE_ID_PATTERN = /^[A-Za-z0-9._-]{1,128}$/
+
+function assertSafeId(label: string, value: string): void {
+  if (!SAFE_ID_PATTERN.test(value) || value === '.' || value === '..') {
+    throw new Error(`forge-runs: unsafe ${label} ${JSON.stringify(value)}`)
+  }
+}
+
+function runDirectory(commonDirectory: string, runId: string): string {
+  assertSafeId('run id', runId)
+  return path.join(commonDirectory, '.forge', 'runs', runId)
+}
+
+function writeJsonAtomically(filePath: string, value: unknown): void {
+  mkdirSync(path.dirname(filePath), { recursive: true })
+  const temporaryPath = `${filePath}.${process.pid}.tmp`
+  writeFileSync(temporaryPath, `${JSON.stringify(value, null, 2)}\n`)
+  renameSync(temporaryPath, filePath)
+}
+
+/**
+ * What a `SubagentStop`/`Stop` hook records about a worker's stop. Lives
+ * under the git common dir (shared by every worktree, survives a worktree
+ * reclaim), never inside the worker's own tree. `commits` is `null` when the
+ * commit probe was unavailable — a distinct state from `0`.
+ */
+export type CompletionEvent = {
+  readonly runId: string
+  readonly ticket: string
+  readonly event: 'SubagentStop' | 'Stop'
+  readonly outcome: 'allowed' | 'blocked'
+  readonly at: string
+  readonly sessionId: string | null
+  readonly branch: string | null
+  readonly commits: number | null
+}
+
+export function completionEventPath(
+  commonDirectory: string,
+  runId: string,
+  ticket: string,
+): string {
+  assertSafeId('ticket', ticket)
+  return path.join(runDirectory(commonDirectory, runId), 'events', `${ticket}.json`)
+}
+
+export function writeCompletionEvent(
+  commonDirectory: string,
+  event: CompletionEvent,
+): string {
+  const filePath = completionEventPath(commonDirectory, event.runId, event.ticket)
+  writeJsonAtomically(filePath, event)
+  return filePath
+}
+
+/** `null` when the event is missing or unparseable — callers treat both as "no event". */
+export function readCompletionEvent(
+  commonDirectory: string,
+  runId: string,
+  ticket: string,
+): CompletionEvent | null {
+  try {
+    const parsed: unknown = JSON.parse(
+      readFileSync(completionEventPath(commonDirectory, runId, ticket), 'utf8'),
+    )
+    if (typeof parsed !== 'object' || parsed === null) return null
+    const record = parsed as Record<string, unknown>
+    if (
+      typeof record.runId !== 'string' ||
+      typeof record.ticket !== 'string' ||
+      (record.event !== 'SubagentStop' && record.event !== 'Stop') ||
+      (record.outcome !== 'allowed' && record.outcome !== 'blocked') ||
+      typeof record.at !== 'string'
+    ) {
+      return null
+    }
+    return parsed as CompletionEvent
+  } catch {
+    return null
+  }
+}
+
+function stallNudgePath(commonDirectory: string, runId: string, ticket: string): string {
+  assertSafeId('ticket', ticket)
+  return path.join(runDirectory(commonDirectory, runId), 'nudges', `${ticket}.json`)
+}
+
+/** `0` when never nudged; `Infinity` when the counter file is unreadable (fails closed). */
+export function readStallNudgeCount(
+  commonDirectory: string,
+  runId: string,
+  ticket: string,
+): number {
+  let text: string
+  try {
+    text = readFileSync(stallNudgePath(commonDirectory, runId, ticket), 'utf8')
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === 'ENOENT') return 0
+    return Number.POSITIVE_INFINITY
+  }
+  try {
+    const count = (JSON.parse(text) as { count?: unknown }).count
+    return typeof count === 'number' && Number.isSafeInteger(count) && count >= 0
+      ? count
+      : Number.POSITIVE_INFINITY
+  } catch {
+    return Number.POSITIVE_INFINITY
+  }
+}
+
+export type StallNudgeResult = {
+  readonly granted: boolean
+  readonly count: number
+  readonly cap: number
+}
+
+/**
+ * Spends one stall nudge for a ticket if `budgets.stallNudgeCap` allows. The
+ * counter only ever increases: there is no reset, and an unreadable counter
+ * counts as exhausted, so the cap can never be refilled by accident.
+ */
+export function recordStallNudge(
+  commonDirectory: string,
+  runId: string,
+  ticket: string,
+  cap: number,
+): StallNudgeResult {
+  const current = readStallNudgeCount(commonDirectory, runId, ticket)
+  if (current >= cap) {
+    return { granted: false, count: Math.min(current, cap), cap }
+  }
+  const count = current + 1
+  writeJsonAtomically(stallNudgePath(commonDirectory, runId, ticket), { count })
+  return { granted: true, count, cap }
 }
