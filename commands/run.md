@@ -50,10 +50,9 @@ this coordinator itself must write (`tracker.transitions` — see
 `forge.config.json`'s `tracker.kind`), and the branch/commit convention
 (`ticket.branchPrefix`/`commit.trailer`).
 
-`local`-tracker repos: ticket creation and state writes need `forge tracker`
-operations not yet implemented — until then, don't run Phases 5–9 unattended
-against a `local`-tracker repo; a human creates/updates tickets by hand
-following `docs/agents/issue-tracker.md`'s file format.
+`local`-tracker repos: tickets live under the main worktree's `.scratch/` and
+every op is a literal `forge tracker` call (see the `tracker-local.md`
+reference). With `landing.mode: merge` a wave lands as a local merge, not a PR.
 
 `/forge:run` is designed to run inside plan mode (Phases 1–4 do no writes; the
 plan's approval — `ExitPlanMode` — is the one freeze point). The harness
@@ -84,17 +83,18 @@ unless the run continues from Phase 5 straight into Phase 6.
 - **What a "wave" is**: Phases 6–8 are the body of a loop, not three
   one-shot steps. **One wave = one dependency layer** — the set of tickets
   simultaneously unblocked, dispatched together, implemented in parallel,
-  then merged and shipped as their own PR before the next layer's tickets
+  then landed (one PR, or one local merge when `landing.mode` is `merge`) before the next layer's tickets
   (now unblocked in turn) get computed and dispatched. A spec with 4
-  dependency layers produces 4 waves, 4 integration branches, 4 PRs — never
-  one PR for the whole run. This is load-bearing: it keeps each PR reviewable
+  dependency layers produces 4 waves, 4 integration branches, 4 landings — never
+  one for the whole run. This is load-bearing: it keeps each landing reviewable
   and lets a repo's E2E singleton (if any) run serialized, once per wave.
   Lifecycle of one wave:
   1. Dispatch the unblocked tickets; workers implement in worktrees.
   2. Integration plus review on the wave's integration branch.
-  3. One PR, with a `Closes` line per ticket.
+  3. One PR with a `Closes` line per ticket, or in merge mode one local merge.
   4. Merged when `pr.autoMerge` is on and checks pass (CI fixes up to
-     `pr.maxCiFixAttempts`); left open when autoMerge is off, anything was
+     `pr.maxCiFixAttempts`; in merge mode `commands.selfCheck` stands in for
+     CI); left open when autoMerge is off, anything was
      flagged, or CI fixes ran out.
   5. If merged, `forge cleanup --run <runId>`. Then the Phase 9 hand-off: if
      more tickets can run, the next wave starts in a new session; if none can,
