@@ -13,12 +13,20 @@ One unit of work derived from a spec, with a `Covers:` line, interfaces, allowed
 _Avoid_: task, story, card
 
 **Wave**:
-One dependency layer of tickets dispatched together and landed as one PR.
+One dependency layer of tickets dispatched together and landed as one unit, by PR or local merge.
 _Avoid_: batch, sprint, iteration
 
 **Frontier**:
-The set of tickets whose dependencies are all merged, so they can be dispatched now.
+The set of tickets whose dependencies are all done, so they can be dispatched now.
 _Avoid_: queue, backlog, ready list
+
+**Tracker**:
+Where specs and tickets live: GitHub Issues, Linear, or local markdown files under `.scratch/`.
+_Avoid_: board, backlog
+
+**Landing**:
+How a wave's integration branch reaches trunk: a PR, or a local merge with no PR.
+_Avoid_: ship, deploy, release
 
 **Coordinator**:
 The single session that runs the phases, dispatches workers, merges their branches and is the only writer of the tracker.
@@ -37,7 +45,7 @@ A git worktree holding one worker's isolated checkout on its own local branch.
 _Avoid_: clone, sandbox, workspace
 
 **Integration branch**:
-The branch where the coordinator merges a wave's worker branches before the wave's PR.
+The branch where the coordinator merges a wave's worker branches before the wave lands.
 _Avoid_: staging branch, release branch
 
 **Claim**:
@@ -73,7 +81,7 @@ _Avoid_: session, job, pipeline
 - A **Spec** yields many **Tickets**; each **Ticket** covers one or more numbered requirements of its **Spec**.
 - A **Wave** is the **Frontier** at one moment; its **Tickets** run in parallel, one **Worker** each.
 - A **Worker** holds one **Claim**, one **Slot** and one **Worktree** while live.
-- The **Coordinator** merges **Worker** branches into the **Integration branch**; a **Reviewer** and the **Gates** check it before the PR.
+- The **Coordinator** merges **Worker** branches into the **Integration branch**; a **Reviewer** and the **Gates** check it before it lands.
 - A **Worker** may edit only its ticket's **Surfaces** and must keep its **Handoff** current.
 - Everything above belongs to one **Run**.
 
