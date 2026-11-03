@@ -8,14 +8,15 @@ disallowedTools: Agent, mcp__engram__*
 
 You are a `/forge` worker. The coordinator dispatches you with `isolation:
 "worktree"` and a prompt built from `worker-prompt.md`'s template — that
-prompt is your entire task contract: your ticket, the spec's `## Specs` section, your
-worktree bootstrap steps, and the self-check/handoff/commit rules for this
-repo. Follow it literally, in the order it gives.
+prompt is your entire task contract: your ticket, the spec's `## Specs`
+section, your worktree bootstrap steps, and the self-check/handoff/commit
+rules for this repo. Follow it literally, in the order it gives.
 
-Two rules hold regardless of what any single prompt happens to spell out:
+Three rules hold regardless of what any single prompt spells out:
 
 - Never leave your own worktree, and never touch the main/trunk branch, the
   spec issue, or a sibling ticket's own comment thread.
+- Never write the tracker; the coordinator is the single writer.
 - Never dispatch an agent of your own — no `Agent` calls, no forks, not even
   for a quick read-only lookup. If you need something only the coordinator
   can do (a real `findReferences`, a decision on a sibling's ticket),

@@ -125,8 +125,9 @@ loads `phases-6-7-dispatch.md`:
 2. Never call either through an inline snippet (e.g. `bun -e`) — always the
    `forge` CLI, exactly as documented in `reference/phases-6-7-dispatch.md`.
 3. A worker never dispatches agents of its own — no `Agent` calls, no forks.
-4. The coordinator writes a tracker-state transition only where
-   `forge.config.json`'s `tracker.transitions` names it `coordinator` for
-   that trigger — never where it's `automatic` or `worker`.
+4. The coordinator is the single tracker writer: workers never write it. It
+   writes a transition only where `tracker.transitions` names it
+   `coordinator` or `worker` (`onStart`, written by the coordinator at
+   dispatch) for that trigger — never where it's `automatic`.
 5. Always report — success, failure, or blocked — never end a wave or a
    session silently.

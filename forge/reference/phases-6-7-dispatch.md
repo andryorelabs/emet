@@ -79,16 +79,19 @@ this CLI's own parser can't read back.
 
 Launch up to `concurrency.waveSize` `Agent` calls in parallel (single
 message, multiple tool uses), each with `isolation: "worktree"` **and
-`subagent_type: "forge-worker"`** — that agent definition (`~/.claude/agents/
-forge-worker.md`, installed by `install.sh`) pins its own model and effort,
-so don't also pass a per-call `model` by default: a per-call `model`
-overrides the agent's frontmatter, and pinning it in two places invites them
-drifting apart. The one exception is a ticket carrying a `Model:` line
-(Phase 3): pass that value as the `Agent` `model` parameter for that worker
-only (the model part; an effort part, as in `opus/high`, applies only where
-the dispatch supports an effort override). If `forge doctor`'s global findings flag `forge-agents` as missing,
-fix that (`./install.sh`) before dispatching — a missing agent definition
-makes this call fail outright.
+`subagent_type: "forge-worker"`**. The model is `resolveWorkerModel(config,
+<ticket's Model: line>)`: the ticket's `Model:` (`opus` or `opus/high`) wins,
+else `models.worker`. Pass its model as the `Agent` `model` parameter for every
+worker (effort too where dispatch supports it); the agent file's frontmatter
+is only the fallback. If `forge doctor` flags `forge-agents` as missing, run
+`./install.sh` first — a missing agent definition makes the call fail.
+
+Just before each `Agent` call, write the dispatch record
+`.forge/runs/<runId>/dispatch/<ticket>.json` = `{"baseline": "<HEAD sha>",
+"surfaces": [<the ticket's globs>]}` (that sha is also the prompt's
+`{{expected_base}}`), and mark the ticket started yourself (`onStart`, see
+`reference/tracker-<kind>.md`): workers never write the tracker. A worker
+that exits 42 failed its branch/base check; re-dispatch from the current HEAD.
 
 **Immediately after that batch returns, before any worker has had a chance to
 commit, run `forge preflight --run <runId> --post-dispatch`** — always pass
@@ -105,14 +108,12 @@ own, when dispatched from a non-main worktree such as an Orca one). Fix
 whatever it flags before proceeding to Phase 7 — don't let a bad dispatch run
 unattended for a whole wave.
 
-Keep the dispatch prompt itself small — **the full spec and every sibling
-ticket's full body do not get pasted in**. Give each worker: the full body of
-its own ticket (including its `Covers: S…` line), the spec issue's ID with an
-instruction to read its `## Specs` section from the tracker (the verbatim
-`S1..Sn` requirements — there is no summary placeholder to fill), and the bare
-list of sibling ticket IDs under this spec — not their contents. The worker reads a sibling's ticket/comments itself only if
-it actually needs to (step 3 of Phase 7 below), instead of every worker's
-context paying for every ticket's full text whether it's relevant or not.
+Keep the dispatch prompt small — **the full spec and sibling ticket bodies do
+not get pasted in**. Give each worker: its own ticket body (with `Covers:`
+and `## Interfaces`), the spec ID with an instruction to read only its
+`## Specs` section, the spec's `## Global Constraints` verbatim, the
+`forge map --for <its surface globs>` sections (`forge map --stale` exiting 1
+means run `forge map --refresh` first), and the bare sibling IDs.
 Once per run, run `commands.selfCheck` on trunk (before any worker exists)
 and pass each failure to every worker as a `## Known environmental failures`
 section (`none` if clean), so workers neither chase nor mistake them for
@@ -186,17 +187,9 @@ Inside each worktree, in order:
    commit"), not for any tracker automation: a tracker's own PR-linked
    automation can only match a *pushed* branch, and this one never reaches
    the remote.
-2. Mark your own ticket started, per this repo's tracker (`onStart` in
-   `forge.config.json`'s `tracker.transitions` is always `worker` — see
-   `reference/tracker-<kind>.md` for the literal call) — first write, before
-   touching any code, and the **only** state write you ever make. No git
-   automation can infer this moment in this design (see
-   `docs/agents/forge.md`). Never write any other transition — not
-   in-review, not done, not on this ticket and not on a sibling's — even if
-   you're confident the work is finished; whichever of `onPrOpen`/
-   `onPrMerge` this repo's tracker marks `automatic` happens on its own once
-   the wave's PR exists (see Phase 8), and a worker moving its own ticket
-   further pre-empts a review that hasn't happened yet.
+2. Run the branch/base check from `worker-prompt.md` (exit 42, no
+   self-repair). You never write the tracker: the coordinator marks `onStart`
+   at dispatch and posts your decisions from the handoff note and results.
 3. Do not call `ToolSearch("select:LSP")` — `LSP` is not available inside a
    worker (verified: it's wired only into the coordinator's session; see
    `reference/incidents.md`). Read the
@@ -229,14 +222,16 @@ Inside each worktree, in order:
    in the run that prompted this rule (`reference/incidents.md`). The
    coordinator reviews once, in Phase 8, over the whole wave's integration
    branch, where there's no nesting and the full diff is visible at once.
-7. Comment real decisions on your own ticket as you make them — sync your
-   handoff note to a tracker comment at first-green and again now.
+7. Record real decisions in the handoff note as you make them.
 8. Commit(s) using this repo's normal commit convention, with the ticket
    trailer (`commit.trailer`/`commit.trailerPosition`, `forge.config.json`)
    as the last line of the body (never the first token — see
    `docs/agents/forge.md` for why).
-9. **Always report** — success, failure, or blocked — never end silently.
-   A worker that dies without reporting leaves the whole wave stuck.
+9. **Always report**, never silently: full report to a file, recorded with
+   `forge results --run <runId> --write <ticket> --status
+   <DONE|DONE_WITH_CONCERNS|BLOCKED|NEEDS_CONTEXT> --report <path> --risk
+   "<Risk: …>"`; the final message is at most 15 lines and ends with the
+   `Risk:` line (`none` only after checking shared-code callers).
 
 A worker never runs the repo's end-to-end test suite if `docs/agents/
 forge.md`/`commands.fullSuite.singleton` marks it a shared/singleton

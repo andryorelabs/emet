@@ -9,10 +9,11 @@ outside version control, the same six states as Linear/GitHub
 abstract ops (`spec.create`, `ticket.create`, `frontier.candidates`,
 `ticket.setState`, etc.) have a `forge tracker` subcommand behind them yet.
 
-Multi-worktree writes to the same tracker state need an atomic,
-mutex-protected implementation the same way `forge claims`/`forge slots`
-already are — prose alone can't make that safe, which is why (unlike
-`linear`/`github`) this file has no literal calls to hand the model.
+Multi-worktree writes need an atomic, mutex-protected implementation like
+`forge claims`/`forge slots` — prose can't make that safe, so (unlike
+`linear`/`github`) this file has no literal calls.
+
+Only the coordinator writes tracker state; workers use `forge results`.
 
 **Don't run Phases 5–9 unattended against a `local`-tracker repo until this
 lands.** A human creates and updates tickets by hand, following the file
