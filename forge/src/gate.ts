@@ -10,14 +10,14 @@
  * integration-suite results (flags), budgets from forge.config.json.
  */
 
-import { existsSync, readdirSync, readFileSync } from 'node:fs'
+import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from 'node:fs'
 import path from 'node:path'
 
 import { loadForgeConfigWithDefaults, resolveRepoRoot } from './config'
 
 const USAGE = `usage: forge gate <ticket> [--run <id>] [--tier passive|medium|high]
        [--ci pass|fail|pending|none] [--integration pass|fail|pending|none]
-       [--env-exit <code>] [--env-output <file>] [--attempts <n>] [--waves-remaining <n>]`
+       [--env-exit <code>] [--env-output <file>] [--attempts <n>] [--waves-remaining <n>] [--no-record]`
 
 export const DEFERRED_LABEL = 'forge:deferred'
 
@@ -169,6 +169,7 @@ export async function run(argv: string[]): Promise<void> {
     const envOutputFile = readFlag(argv, '--env-output')
     const envOutput = envOutputFile && existsSync(envOutputFile) ? readFileSync(envOutputFile, 'utf8') : ''
 
+    const attemptsUsedBefore = Number(readFlag(argv, '--attempts') ?? stored?.count ?? 0)
     const result = decide({
       verifyOk: verify === undefined ? null : verify.ok === true,
       tier,
@@ -177,12 +178,17 @@ export async function run(argv: string[]): Promise<void> {
       reviewRoundsCap: config.budgets.reviewRounds,
       ci: parseState(readFlag(argv, '--ci'), '--ci'),
       integration: parseState(readFlag(argv, '--integration'), '--integration'),
-      attemptsUsed: Number(readFlag(argv, '--attempts') ?? stored?.count ?? 0),
+      attemptsUsed: attemptsUsedBefore,
       workerAttempts: config.budgets.workerAttempts,
       envFault: isEnvFault(envExit === undefined ? 0 : Number(envExit), envOutput),
       autoChain: config.handoff.autoChain,
       wavesRemaining: Number(readFlag(argv, '--waves-remaining') ?? 0),
     })
+    if (result.chargeAttempt && !argv.includes('--no-record')) {
+      const attemptsDir = path.join(runDir, 'attempts')
+      mkdirSync(attemptsDir, { recursive: true })
+      writeFileSync(path.join(attemptsDir, `${ticket}.json`), JSON.stringify({ count: attemptsUsedBefore + 1 }))
+    }
     console.log(JSON.stringify(result))
   } catch (error) {
     console.error(`forge gate: ${error instanceof Error ? error.message : String(error)}`)

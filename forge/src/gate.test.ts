@@ -95,3 +95,29 @@ describe('decide', () => {
     expect(decide({ ...clean, integration: 'pending' }).decision).toBe('hold')
   })
 })
+
+describe('gate attempt persistence', () => {
+  test('run() records a charged attempt and eventually defers', async () => {
+    const { mkdtempSync, mkdirSync, writeFileSync, readFileSync } = await import('node:fs')
+    const { tmpdir } = await import('node:os')
+    const path = await import('node:path')
+    const root = mkdtempSync(path.join(tmpdir(), 'gate-'))
+    const runDir = path.join(root, '.forge', 'runs', 'r1')
+    mkdirSync(path.join(runDir, 'verify'), { recursive: true })
+    writeFileSync(path.join(runDir, 'verify', 'CLA-1.json'), JSON.stringify({ ok: false }))
+    const previous = process.cwd()
+    process.chdir(root)
+    const logs: string[] = []
+    const originalLog = console.log
+    console.log = (line: string) => void logs.push(line)
+    try {
+      const { run } = await import('./gate')
+      await run(['CLA-1', '--run', 'r1'])
+      expect(JSON.parse(logs[0]!).decision).toBe('hold')
+      expect(JSON.parse(readFileSync(path.join(runDir, 'attempts', 'CLA-1.json'), 'utf8')).count).toBe(1)
+    } finally {
+      console.log = originalLog
+      process.chdir(previous)
+    }
+  })
+})
