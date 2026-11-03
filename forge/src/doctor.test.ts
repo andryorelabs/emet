@@ -293,6 +293,37 @@ describe("auditRepo", () => {
     expect(isReportClean(report)).toBe(true);
   });
 
+  test("surfaces glossary and deprecated-field warnings without dirtying a clean repo", async () => {
+    await Bun.$`git -C ${repoRoot} init --quiet`.quiet();
+    await Bun.write(
+      path.join(repoRoot, "forge.config.json"),
+      JSON.stringify({
+        version: 1,
+        repo: { trunk: "main", remote: "origin" },
+        ticket: { idPattern: "^X-\\d+$", branchPrefix: "x" },
+        tracker: { kind: "github", readyLabel: "ready" },
+        commands: { selfCheck: ["bun run check"] },
+      }),
+    );
+    await Bun.write(
+      path.join(repoRoot, "package.json"),
+      JSON.stringify({ scripts: { check: "x" } }),
+    );
+    await Bun.write(path.join(repoRoot, "CONTEXT.md"), "# context\n");
+    const docsAgentsDirectory = path.join(repoRoot, "docs", "agents");
+    await Bun.$`mkdir -p ${docsAgentsDirectory}`.quiet();
+    await Promise.all(
+      ["forge.md", "issue-tracker.md", "triage-labels.md", "domain.md"].map((doc) =>
+        Bun.write(path.join(docsAgentsDirectory, doc), "# all set, no markers here\n"),
+      ),
+    );
+
+    const report = await auditRepo(repoRoot, healthyProbes, healthyEnvironment);
+    expect(report.warnings).toContain("rename CONTEXT.md to GLOSSARY.md");
+    expect(report.warnings.some((warning) => warning.includes("tracker.readyLabel"))).toBe(true);
+    expect(isReportClean(report)).toBe(true);
+  });
+
   test("flags a leftover TODO(forge) marker and a missing doc together", async () => {
     await Bun.$`git -C ${repoRoot} init --quiet`.quiet();
     await Bun.write(

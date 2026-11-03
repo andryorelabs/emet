@@ -128,7 +128,7 @@ Phase 2. Reinforce two rules on top of the skill's own breakdown:
   any tripwire fires: estimated peak > 160K; touch set > 8 files or > 1,500
   lines; new surface > 500 lines; more than one new E2E spec in the ticket;
   or a new page object **and** a new spec in the same ticket (348K vs 129K
-  for an almost-identical sibling; see `reference/incidents.md`).
+  for an almost-identical sibling; see `${CLAUDE_PLUGIN_ROOT}/forge/reference/incidents.md`).
 
 Before Phase 4, run `forge validate --file <plan.json | ->` (usage:
 `forge validate --help`; plan = spec markdown + tickets with `covers`,
@@ -159,7 +159,7 @@ Now that the plan is approved, in this exact order:
 1. Apply the `GLOSSARY.md`/`docs/adr/` edits deferred from Phase 1.
 2. If the feature touches a screen: publish the canvas now with the `Artifact`
    tool directly — never invoke `/design` or ask the user to run it (it is
-   user-invocable only; see `reference/incidents.md`). A canvas is a plain
+   user-invocable only; see `${CLAUDE_PLUGIN_ROOT}/forge/reference/incidents.md`). A canvas is a plain
    single-page HTML you write: nav + one `<section class="artboard">` per
    screen + empty/error/loading state switch + a hand-off block per artboard.
    - **Area already has a canvas** (URL in `docs/design/README.md`):

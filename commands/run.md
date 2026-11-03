@@ -12,7 +12,7 @@ before anything else:
 - **No flag** (default): Phases 1–5 plus the first wave in this session; each
   later wave runs in its own session — `/forge:run --dispatch <spec-id>` by hand,
   or auto-launched when `handoff.autoChain` is on (see Phase 9 in
-  `reference/phases-9-handoff.md`).
+  `${CLAUDE_PLUGIN_ROOT}/forge/reference/phases-9-handoff.md`).
   To run a wave in another session, always use `forge launch <spec-id> --wave
   <n>` — never a bare `claude --bg`.
 - **`--draft <feature>`**: run Phases 0–5 and then stop (see the note at the
@@ -98,7 +98,7 @@ unless the run continues from Phase 5 straight into Phase 6.
      flagged, or CI fixes ran out.
   5. If merged, `forge cleanup --run <runId>`. Then the Phase 9 hand-off: if
      more tickets can run, the next wave starts in a new session; if none can,
-     the run ends with the final report. Details in `reference/phases-9-handoff.md`.
+     the run ends with the final report. Details in `${CLAUDE_PLUGIN_ROOT}/forge/reference/phases-9-handoff.md`.
 - **Phases 6–9** (every mode): dispatch → per-worker implementation → wave
   close-out → wave close and hand off. Read
   `${CLAUDE_PLUGIN_ROOT}/forge/reference/phases-6-7-dispatch.md` when you reach Phase 6
@@ -112,7 +112,7 @@ unless the run continues from Phase 5 straight into Phase 6.
   `${CLAUDE_PLUGIN_ROOT}/forge/reference/reviewer-prompt.md`'s template — both agent
   definitions pin their own model and effort (see the README's "Models &
   effort" section) and ship with the plugin.
-- **`reference/incidents.md`** — the evidence behind the five non-negotiables
+- **`${CLAUDE_PLUGIN_ROOT}/forge/reference/incidents.md`** — the evidence behind the five non-negotiables
   below (real run failures, with what broke and how). Never loaded during a
   normal run; read it only when someone asks why a rule exists.
 
@@ -125,7 +125,7 @@ loads `phases-6-7-dispatch.md`:
 1. Never dispatch a ticket without both `forge claims --reserve` and
    `forge slots --acquire` succeeding for it first.
 2. Never call either through an inline snippet (e.g. `bun -e`) — always the
-   `forge` CLI, exactly as documented in `reference/phases-6-7-dispatch.md`.
+   `forge` CLI, exactly as documented in `${CLAUDE_PLUGIN_ROOT}/forge/reference/phases-6-7-dispatch.md`.
 3. A worker never dispatches agents of its own — no `Agent` calls, no forks.
 4. The coordinator is the single tracker writer: workers never write it. It
    writes a transition only where `tracker.transitions` names it
