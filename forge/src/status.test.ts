@@ -1,9 +1,13 @@
 import { describe, expect, test } from "bun:test";
+import { mkdtempSync, realpathSync, rmSync, writeFileSync } from "node:fs";
+import os from "node:os";
+import path from "node:path";
 
 import {
   buildStatusReport,
   closingIssueNumbers,
   groupWorkers,
+  localLandedBranches,
   parsePullRequests,
   parseRunIdentity,
   summarize,
@@ -27,6 +31,9 @@ function worker(overrides: Partial<WorkerSignal> = {}): WorkerSignal {
 function wave(workers: WorkerSignal[], runVerdict: WaveInput["runVerdict"] = "live"): WaveInput {
   return { runId: "forge20w2042651", runVerdict, workers };
 }
+
+const lockedReason = (ticket: string) =>
+  `forge run=forge1w1000000 ticket=${ticket} anchor=1 at=2026-01-01T00:00:00Z`;
 
 const stateOf = (input: WaveInput) => buildStatusReport([input], null).waves[0]!.state;
 
@@ -115,6 +122,58 @@ describe("parsing and merging", () => {
   test("parseRunIdentity", () => {
     expect(parseRunIdentity("forge20w2042651")).toEqual({ spec: "20", wave: 2 });
     expect(parseRunIdentity("weird")).toEqual({ spec: null, wave: null });
+  });
+
+  test("parseRunIdentity reads slug specs, using the last w before the digits", () => {
+    expect(parseRunIdentity("forgelocal-trackerw3231500")).toEqual({
+      spec: "local-tracker",
+      wave: 3,
+    });
+    expect(parseRunIdentity("forgeaw2042651")).toEqual({ spec: "a", wave: 2 });
+    expect(parseRunIdentity("forgew3xw1123456")).toEqual({ spec: "w3x", wave: 1 });
+    expect(parseRunIdentity("forgeapi-w2w10123456")).toEqual({ spec: "api-w2", wave: 10 });
+    expect(parseRunIdentity("forgeshow2042651")).toEqual({ spec: "sho", wave: 2 });
+  });
+
+  test("localLandedBranches marks a squash-landed worker branch as merged", async () => {
+    const repo = realpathSync(mkdtempSync(path.join(os.tmpdir(), "forge-status-")));
+    const original = process.cwd();
+    const sh = (...args: string[]) => {
+      const result = Bun.spawnSync(["git", "-C", repo, ...args]);
+      if (result.exitCode !== 0) throw new Error(result.stderr.toString());
+    };
+    try {
+      sh("init", "-q", "-b", "main");
+      sh("config", "user.email", "t@example.com");
+      sh("config", "user.name", "T");
+      writeFileSync(path.join(repo, "f"), "1\n");
+      sh("add", "f");
+      sh("commit", "-q", "-m", "init");
+      sh("checkout", "-q", "-b", "cla-1-landed");
+      writeFileSync(path.join(repo, "g"), "2\n");
+      sh("add", "g");
+      sh("commit", "-q", "-m", "work");
+      sh("checkout", "-q", "-b", "cla-2-open", "main");
+      writeFileSync(path.join(repo, "h"), "3\n");
+      sh("add", "h");
+      sh("commit", "-q", "-m", "other work");
+      sh("checkout", "-q", "main");
+      sh("merge", "-q", "--squash", "cla-1-landed");
+      sh("commit", "-q", "-m", "squash");
+      process.chdir(repo);
+      const landed = await localLandedBranches(
+        [
+          { directory: "/x/agent-1", branch: "cla-1-landed", lockedReason: lockedReason("CLA-1") },
+          { directory: "/x/agent-2", branch: "cla-2-open", lockedReason: lockedReason("CLA-2") },
+        ],
+        { repo: { trunk: "main", remote: "origin" } },
+      );
+      expect([...landed.keys()]).toEqual(["cla-1-landed"]);
+      expect(landed.get("cla-1-landed")?.state).toBe("merged");
+    } finally {
+      process.chdir(original);
+      rmSync(repo, { recursive: true, force: true });
+    }
   });
 
   test("parsePullRequests maps gh JSON", () => {
