@@ -77,10 +77,10 @@ function runInstaller(options: { hashTool?: keyof typeof hashTools; withBun?: bo
     stdout: "pipe",
     stderr: "pipe",
   });
-  return {
-    exitCode: result.exitCode,
-    output: `${result.stdout.toString()}${result.stderr.toString()}`,
-  };
+  const output = `${result.stdout.toString()}${result.stderr.toString()}`;
+  if (result.exitCode !== 0)
+    process.stderr.write(`install.sh failed (${result.exitCode}):\n${output}\n`);
+  return { exitCode: result.exitCode, output };
 }
 
 function listFilesRecursively(directory: string): string[] {
