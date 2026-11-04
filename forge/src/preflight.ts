@@ -1192,7 +1192,7 @@ async function main(config: ForgeConfig, repoRoot: string) {
      * coordinator's dispatch.
      */
     warnLines.push(
-      `Orphaned worktree-agent-* scaffold branches (their worktree is already gone — always safe to delete) — run "forge cleanup":\n${orphanedScaffoldBranches.map((b) => `  ${b.name}`).join("\n")}`,
+      `Orphaned worktree-agent-* scaffold branches (their worktree is already gone) — run "forge cleanup" (it deletes only those already merged into trunk):\n${orphanedScaffoldBranches.map((b) => `  ${b.name}`).join("\n")}`,
     );
   }
 
