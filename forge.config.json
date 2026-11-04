@@ -55,7 +55,7 @@
   "worktree": {
     "bootstrap": [
       "bun install --frozen-lockfile --silent",
-      "bun install --cwd forge --frozen-lockfile --silent"
+      "bun install --cwd emet --frozen-lockfile --silent"
     ]
   }
 }

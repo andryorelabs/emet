@@ -3,7 +3,7 @@
   "configVersion": 1,
   "workspaces": {
     "": {
-      "name": "forge-cli",
+      "name": "emet-cli",
       "devDependencies": {
         "@types/bun": "^1.2.0",
         "@types/node": "^24.0.0",

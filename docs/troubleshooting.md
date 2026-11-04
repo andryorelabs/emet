@@ -26,7 +26,7 @@ Failures of `forge doctor` and `forge preflight`, grouped by what you see, each 
 
 **Symptom:** `forge.config.json is malformed: <reason>`; `forge preflight` exits 2.
 
-**Cause:** The config is strict JSON and is validated against `forge/schema/forge.config.schema.json`. Comments and trailing commas are rejected.
+**Cause:** The config is strict JSON and is validated against `emet/schema/forge.config.schema.json`. Comments and trailing commas are rejected.
 
 **Fix:** Correct the field named in the reason, or regenerate with `forge init --force`.
 
@@ -42,7 +42,7 @@ Failures of `forge doctor` and `forge preflight`, grouped by what you see, each 
 
 **Symptom:** `dependency: ...` lines in `forge doctor`, or a blocking dependency failure in `forge preflight` (for example `gh` missing or unauthenticated, or the mattpocock-skills plugin absent or at an untested version).
 
-**Cause:** `/forge` needs `git`, `gh` and the mattpocock-skills plugin; see `forge/src/dependencies.ts` and `forge/src/skills.ts`.
+**Cause:** `/forge` needs `git`, `gh` and the mattpocock-skills plugin; see `emet/src/dependencies.ts` and `emet/src/skills.ts`.
 
 **Fix:** Install or authenticate the tool, or run `/setup-matt-pocock-skills`. If a check is wrong for your environment, `FORGE_SKIP_DEPENDENCY_CHECKS=1 forge preflight` downgrades it to a warning.
 
@@ -74,7 +74,7 @@ Failures of `forge doctor` and `forge preflight`, grouped by what you see, each 
 
 **Symptom:** `Expected N locked worktree(s) for run <id>, found M`.
 
-**Cause:** Workers did not claim their worktree with the lock reason, or `isolation: "worktree"` placed them elsewhere. See [`incidents.md`](../forge/reference/incidents.md).
+**Cause:** Workers did not claim their worktree with the lock reason, or `isolation: "worktree"` placed them elsewhere. See [`incidents.md`](../emet/reference/incidents.md).
 
 **Fix:** Check `git worktree list --porcelain` for the locked entries, and `forge lock-reason` for the expected reason format.
 

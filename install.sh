@@ -67,7 +67,7 @@ rewrite_prompt() {
 
 echo "==> Staging the forge CLI, /forge command, agents and wrapper"
 mkdir -p "$STAGE/.claude/forge" "$STAGE/.claude/commands" "$STAGE/.claude/agents" "$STAGE/.local/bin"
-rsync -a --exclude node_modules "$SCRIPT_DIR/forge/" "$STAGE/.claude/forge/"
+rsync -a --exclude node_modules "$SCRIPT_DIR/emet/" "$STAGE/.claude/forge/"
 for reference_file in "$STAGE/.claude/forge/reference/"*.md; do
   [[ -e "$reference_file" ]] || continue
   rewrite_prompt "$reference_file" "$reference_file.rewritten"
@@ -79,7 +79,7 @@ rewrite_prompt "$SCRIPT_DIR/agents/forge-reviewer.md" "$STAGE/.claude/agents/for
 if [[ "$INSTALL_MODE" == "source" ]]; then
   cat > "$STAGE/.local/bin/forge" <<'WRAPPER'
 #!/usr/bin/env bash
-exec bun "$HOME/.claude/forge/bin/forge.ts" "$@"
+exec bun "$HOME/.claude/forge/bin/emet.ts" "$@"
 WRAPPER
   chmod +x "$STAGE/.local/bin/forge"
 else

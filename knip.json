@@ -1,7 +1,7 @@
 {
   "$schema": "https://unpkg.com/knip@6/schema.json",
-  "entry": ["forge/bin/forge.ts", "forge/src/**/*.test.ts", "tools/**/*.ts"],
-  "project": ["forge/**/*.ts", "tools/**/*.ts"],
+  "entry": ["emet/bin/emet.ts", "emet/src/**/*.test.ts", "tools/**/*.ts"],
+  "project": ["emet/**/*.ts", "tools/**/*.ts"],
   // typescript7 is only invoked by path (node_modules/typescript7/bin/tsc) in the typecheck script, which knip cannot trace to the package.
   "ignoreDependencies": ["typescript7"]
 }

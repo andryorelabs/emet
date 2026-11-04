@@ -1,5 +1,5 @@
 {
-  "name": "forge-cli",
+  "name": "emet-cli",
   "private": true,
   "type": "module",
   "scripts": {

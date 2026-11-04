@@ -1,6 +1,6 @@
 # Architecture
 
-A code map of `forge/src` and how the `/forge:run` prompts drive it. Terms follow [GLOSSARY.md](../GLOSSARY.md); decisions behind the shape live in [docs/adr](adr/README.md). For problems, see [troubleshooting](troubleshooting.md).
+A code map of `emet/src` and how the `/forge:run` prompts drive it. Terms follow [GLOSSARY.md](../GLOSSARY.md); decisions behind the shape live in [docs/adr](adr/README.md). For problems, see [troubleshooting](troubleshooting.md).
 
 - [Shape](#shape)
 - [How the prompts drive the CLI](#how-the-prompts-drive-the-cli)
@@ -10,13 +10,13 @@ A code map of `forge/src` and how the `/forge:run` prompts drive it. Terms follo
 
 ## Shape
 
-There are two halves. The prompts (`commands/run.md`, `agents/*.md`, `forge/reference/*.md`) tell Claude what to do in each phase. The `forge` CLI (`forge/bin/forge.ts` and `forge/src/`) does everything that must be deterministic: checks, claims, slots, gates, tracker writes and landing. The prompts never re-implement a check the CLI already makes.
+There are two halves. The prompts (`commands/run.md`, `agents/*.md`, `emet/reference/*.md`) tell Claude what to do in each phase. The `forge` CLI (`emet/bin/emet.ts` and `emet/src/`) does everything that must be deterministic: checks, claims, slots, gates, tracker writes and landing. The prompts never re-implement a check the CLI already makes.
 
-`forge/bin/forge.ts` is a thin dispatcher: it reads the first argument and hands off to one subcommand module, which reads the rest of `process.argv` itself. Exit codes are meaningful across subcommands.
+`emet/bin/emet.ts` is a thin dispatcher: it reads the first argument and hands off to one subcommand module, which reads the rest of `process.argv` itself. Exit codes are meaningful across subcommands.
 
 ## How the prompts drive the CLI
 
-`commands/run.md` is a short router. It loads one `forge/reference/` phase file at a time, so a compaction never drops the rules for the current phase.
+`commands/run.md` is a short router. It loads one `emet/reference/` phase file at a time, so a compaction never drops the rules for the current phase.
 
 | Phase                                  | Prompt                                       | CLI calls                                                                     |
 | -------------------------------------- | -------------------------------------------- | ----------------------------------------------------------------------------- |
@@ -44,9 +44,9 @@ Each module has a `*.test.ts` beside it.
 
 ## Distribution
 
-`install.sh` copies `forge/` to `~/.claude/forge` and rewrites the prompts. The plugin path ships a shim that downloads a checksum-verified standalone binary built by `tools/build-binaries.ts`. See [ADR-0008](adr/0008-standalone-binaries-and-plugin-distribution.md).
+`install.sh` copies `emet/` to `~/.claude/forge` and rewrites the prompts. The plugin path ships a shim that downloads a checksum-verified standalone binary built by `tools/build-binaries.ts`. See [ADR-0008](adr/0008-standalone-binaries-and-plugin-distribution.md).
 
 ## See also
 
-- [AGENTS.md](../AGENTS.md) and [forge/AGENTS.md](../forge/AGENTS.md)
+- [AGENTS.md](../AGENTS.md) and [emet/AGENTS.md](../emet/AGENTS.md)
 - [Documentation index](README.md)

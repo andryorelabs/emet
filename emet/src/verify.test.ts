@@ -169,7 +169,7 @@ describe("against a real git worktree", () => {
 });
 
 describe("handoffCheckCommand", () => {
-  test("compiled binaries re-spawn themselves without a forge.ts path", () => {
+  test("compiled binaries re-spawn themselves without an emet.ts path", () => {
     expect(handoffCheckCommand("/h.md", true)).toEqual([
       process.execPath,
       "handoff",
@@ -178,10 +178,10 @@ describe("handoffCheckCommand", () => {
     ]);
   });
 
-  test("source runs re-spawn bun with bin/forge.ts", () => {
+  test("source runs re-spawn bun with bin/emet.ts", () => {
     const command = handoffCheckCommand("/h.md", false);
     expect(command[0]).toBe(process.execPath);
-    expect(command[1]).toEndWith(path.join("bin", "forge.ts"));
+    expect(command[1]).toEndWith(path.join("bin", "emet.ts"));
     expect(command.slice(2)).toEqual(["handoff", "--check", "/h.md"]);
   });
 });

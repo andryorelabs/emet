@@ -268,17 +268,17 @@ final report.
 
 ## What's in here
 
-- `forge/` — the CLI (`forge init/doctor/preflight/claims/slots/cleanup/
+- `emet/` — the CLI (`forge init/doctor/preflight/claims/slots/cleanup/
   usage/handoff/launch/lock-reason/assess/status/surfaces/validate/approve/
   materialize-log/results/verify/review-package/review/gate/spec-merge/map/
   metrics/guard/selftest`), its schema, and the doc templates `forge init`
   fills in. `install.sh` also wires `forge guard` in
   as a Claude Code `PreToolUse` hook (`~/.claude/settings.json`) that blocks
   a handful of known, unattended-run failure triggers (see
-  `forge/src/guard.ts`) regardless of whether the current session's context
+  `emet/src/guard.ts`) regardless of whether the current session's context
   happens to include the doc that already asks not to do them.
 - `commands/forge.md` — the `/forge` command itself (a ~110-line router);
-  everything else it needs lives in `forge/reference/`, loaded only when the
+  everything else it needs lives in `emet/reference/`, loaded only when the
   current run's mode needs it. Each reference file is a separate phase group
   (`phases-1-5.md`, `phases-6-7-dispatch.md`, `phases-8-closeout.md`,
   `phases-9-handoff.md`). A test fails if any of them grows past 20,000 bytes,

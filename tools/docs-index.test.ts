@@ -44,7 +44,7 @@ describe("docs index", () => {
       "../CHANGELOG.md",
       "../GLOSSARY.md",
       "../AGENTS.md",
-      "../forge/AGENTS.md",
+      "../emet/AGENTS.md",
     ]) {
       expect(indexContent).toContain(`](${target})`);
     }

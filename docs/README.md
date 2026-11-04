@@ -5,13 +5,13 @@ An index of every document in this repository. Terms follow [GLOSSARY.md](../GLO
 ## Core
 
 - [`README.md`](../README.md): install, requirements, usage and the config reference.
-- [`architecture.md`](architecture.md): code map of `forge/src` and how the `/forge:run` prompts drive the CLI.
+- [`architecture.md`](architecture.md): code map of `emet/src` and how the `/forge:run` prompts drive the CLI.
 - [`troubleshooting.md`](troubleshooting.md): `forge doctor` and `forge preflight` failures, by symptom.
 - [`CHANGELOG.md`](../CHANGELOG.md): release notes, newest first.
 - [`GLOSSARY.md`](../GLOSSARY.md): the domain terms every doc and prompt uses.
 - [`AGENTS.md`](../AGENTS.md): instructions for coding agents.
 - [`CLAUDE.md`](../CLAUDE.md): imports `AGENTS.md` for Claude Code.
-- [`forge/AGENTS.md`](../forge/AGENTS.md): the runtime-only rules for work inside `forge/`.
+- [`emet/AGENTS.md`](../emet/AGENTS.md): the runtime-only rules for work inside `emet/`.
 
 ## Contributing and community
 
@@ -75,13 +75,13 @@ Installed prompt markdown; wording changes only with an explicit ticket (ADR-000
 - [`commands/forge.md`](../commands/forge.md): the same router, installed as `/forge`.
 - [`agents/forge-worker.md`](../agents/forge-worker.md): the worker agent.
 - [`agents/forge-reviewer.md`](../agents/forge-reviewer.md): the reviewer agent.
-- [`forge/reference/phases-1-5.md`](../forge/reference/phases-1-5.md): interview to approval.
-- [`forge/reference/phases-6-7-dispatch.md`](../forge/reference/phases-6-7-dispatch.md): dispatch and workers.
-- [`forge/reference/phases-8-closeout.md`](../forge/reference/phases-8-closeout.md): review, landing and closeout.
-- [`forge/reference/phases-9-handoff.md`](../forge/reference/phases-9-handoff.md): handoff and chaining.
-- [`forge/reference/worker-prompt.md`](../forge/reference/worker-prompt.md): the worker prompt template.
-- [`forge/reference/reviewer-prompt.md`](../forge/reference/reviewer-prompt.md): the reviewer prompt template.
-- [`forge/reference/incidents.md`](../forge/reference/incidents.md): known harness incidents.
-- [`forge/reference/tracker-github.md`](../forge/reference/tracker-github.md): GitHub Issues tracker steps.
-- [`forge/reference/tracker-linear.md`](../forge/reference/tracker-linear.md): Linear tracker steps.
-- [`forge/reference/tracker-local.md`](../forge/reference/tracker-local.md): local markdown tracker steps.
+- [`emet/reference/phases-1-5.md`](../emet/reference/phases-1-5.md): interview to approval.
+- [`emet/reference/phases-6-7-dispatch.md`](../emet/reference/phases-6-7-dispatch.md): dispatch and workers.
+- [`emet/reference/phases-8-closeout.md`](../emet/reference/phases-8-closeout.md): review, landing and closeout.
+- [`emet/reference/phases-9-handoff.md`](../emet/reference/phases-9-handoff.md): handoff and chaining.
+- [`emet/reference/worker-prompt.md`](../emet/reference/worker-prompt.md): the worker prompt template.
+- [`emet/reference/reviewer-prompt.md`](../emet/reference/reviewer-prompt.md): the reviewer prompt template.
+- [`emet/reference/incidents.md`](../emet/reference/incidents.md): known harness incidents.
+- [`emet/reference/tracker-github.md`](../emet/reference/tracker-github.md): GitHub Issues tracker steps.
+- [`emet/reference/tracker-linear.md`](../emet/reference/tracker-linear.md): Linear tracker steps.
+- [`emet/reference/tracker-local.md`](../emet/reference/tracker-local.md): local markdown tracker steps.
