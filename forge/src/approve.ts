@@ -4,12 +4,14 @@ import path from "node:path";
 
 import { resolveRepoRoot } from "./config";
 import { errorMessage, isObject } from "./narrow";
+import { resolveRunArtifactPath } from "./runs";
 
 const USAGE = `usage: forge approve --run <id> --spec <file> [--tickets <file>] [--root <dir>]
        forge approve --run <id> --check [--root <dir>]
 
-Writes .forge/runs/<id>/approval.json (spec hash, tickets hash, timestamp).
---tickets defaults to .forge/runs/<id>/tickets.json.
+Writes <git-common-dir>/.forge/runs/<id>/approval.json (spec hash, tickets hash, timestamp).
+--tickets defaults to <git-common-dir>/.forge/runs/<id>/tickets.json, falling back to
+<root>/.forge/runs/<id>/tickets.json.
 --check exits 1 when the spec or tickets changed since approval.`;
 
 export interface ApprovalRecord {
@@ -98,11 +100,10 @@ export async function run(argv: string[]): Promise<void> {
     return;
   }
   const root = readFlag(argv, "--root") ?? (await resolveRepoRoot()) ?? process.cwd();
-  const runDirectory = path.join(root, ".forge", "runs", runId);
-  const approvalPath = path.join(runDirectory, "approval.json");
+  const approval = await resolveRunArtifactPath(runId, "approval.json", { repoRoot: root });
 
   if (argv.includes("--check")) {
-    const result = checkApproval(approvalPath);
+    const result = checkApproval(approval.readPath ?? approval.writePath);
     console.log(JSON.stringify(result));
     process.exitCode = result.ok ? 0 : 1;
     return;
@@ -114,9 +115,12 @@ export async function run(argv: string[]): Promise<void> {
     process.exitCode = 2;
     return;
   }
-  const ticketsPath = readFlag(argv, "--tickets") ?? path.join(runDirectory, "tickets.json");
+  const tickets = await resolveRunArtifactPath(runId, "tickets.json", { repoRoot: root });
+  const ticketsPath = readFlag(argv, "--tickets") ?? tickets.readPath ?? tickets.writePath;
   try {
-    console.log(JSON.stringify(writeApproval({ approvalPath, specPath, ticketsPath })));
+    console.log(
+      JSON.stringify(writeApproval({ approvalPath: approval.writePath, specPath, ticketsPath })),
+    );
   } catch (error) {
     console.error(`forge approve: ${errorMessage(error)}`);
     process.exitCode = 1;
