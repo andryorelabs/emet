@@ -8,6 +8,7 @@
     "helpers:pinGitHubActionDigests",
   ],
 
+  baseBranches: ["develop"],
   timezone: "UTC",
   schedule: ["before 12pm on monday"],
 

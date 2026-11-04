@@ -17,3 +17,4 @@ Decisions that are hard to reverse, surprising without context, and the result o
 | 0009 | [mattpocock-skills as a contracted core dependency](0009-mattpocock-skills-contracted-core-dependency.md)             | Accepted   |                                     |
 | 0010 | [Local merge landing](0010-local-merge-landing.md)                                                                    | Accepted   |                                     |
 | 0011 | [Local tracker on the .scratch convention](0011-local-tracker-scratch-convention.md)                                  | Accepted   |                                     |
+| 0012 | [develop development branch](0012-develop-development-branch.md)                                                      | Accepted   |                                     |
