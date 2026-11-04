@@ -132,13 +132,14 @@ function assertValidTicket(ticket: string): void {
 }
 
 /**
-Resolves `<git-common-dir>/emet`, the shared root every worktree of this repo agrees on, falling back to a pre-rename `<git-common-dir>/forge` that still exists. Reuses `locks.ts`'s own `--git-common-dir` resolution rather than a second copy of it.
+Resolves `<git-common-dir>/emet`, the shared root every worktree of this repo agrees on, falling back to a pre-rename `<git-common-dir>/forge` while only that one holds a `tickets/` directory, so an empty `emet/` appearing next to live legacy reservations never moves the root. Reuses `locks.ts`'s own `--git-common-dir` resolution rather than a second copy of it.
 */
 async function resolveForgeDirectory(): Promise<string> {
   const currentDirectory = await resolveLockDirectory(PRODUCT);
-  if (existsSync(currentDirectory)) return currentDirectory;
   const legacyDirectory = path.join(path.dirname(currentDirectory), LEGACY_PRODUCT);
-  return existsSync(legacyDirectory) ? legacyDirectory : currentDirectory;
+  const legacyTicketsExist = existsSync(path.join(legacyDirectory, "tickets"));
+  const currentTicketsExist = existsSync(path.join(currentDirectory, "tickets"));
+  return legacyTicketsExist && !currentTicketsExist ? legacyDirectory : currentDirectory;
 }
 
 function ticketsDirectory(forgeDirectory: string): string {

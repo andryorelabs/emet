@@ -8,15 +8,7 @@ import {
   type ForgeConfig,
   type TrackerKind,
 } from "./config";
-import {
-  BINARY,
-  CONFIG_FILE,
-  LEGACY_CONFIG_FILE,
-  LEGACY_PRODUCT,
-  LEGACY_RUN_DIR,
-  PRODUCT,
-  RUN_DIR,
-} from "./names";
+import { BINARY, CONFIG_FILE, LEGACY_CONFIG_FILE, LEGACY_PRODUCT, PRODUCT, RUN_DIR } from "./names";
 import {
   checkDependencies,
   createDependencyProbes,
@@ -634,7 +626,7 @@ async function writeSharedDoc(
 function appendLocalTrackerIgnores(existing: string, lines: readonly string[]): string {
   const trimmed = new Set(lines.map((line) => line.trim()));
   const missing: string[] = [];
-  const runDirRules = [RUN_DIR, LEGACY_RUN_DIR].flatMap((dir) => [dir, `${dir}/`, `${dir}/*`]);
+  const runDirRules = [RUN_DIR].flatMap((dir) => [dir, `${dir}/`, `${dir}/*`]);
   if (!runDirRules.some((rule) => trimmed.has(rule))) {
     missing.push(`${RUN_DIR}/`);
   }
@@ -669,7 +661,7 @@ async function ensureEmetStateGitignore(repoRoot: string, tracker: TrackerKind):
   }
 
   const shadowingRule = lines.find((line) =>
-    [RUN_DIR, LEGACY_RUN_DIR].some((dir) => line.trim() === dir || line.trim() === `${dir}/`),
+    [RUN_DIR].some((dir) => line.trim() === dir || line.trim() === `${dir}/`),
   );
   if (shadowingRule) {
     warnings.push(
@@ -681,7 +673,7 @@ async function ensureEmetStateGitignore(repoRoot: string, tracker: TrackerKind):
   }
 
   const alreadyPresent = lines.some((line) =>
-    [RUN_DIR, LEGACY_RUN_DIR].some((dir) => line.trim() === `!${dir}/tickets/`),
+    [RUN_DIR].some((dir) => line.trim() === `!${dir}/tickets/`),
   );
   if (alreadyPresent) return warnings;
 

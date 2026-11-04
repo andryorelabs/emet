@@ -968,7 +968,7 @@ async function mainPostDispatch(config: ForgeConfig): Promise<void> {
   }
 
   console.log(
-    `emet preflight --post-dispatch OK — ${mineEntries.length} of run ${currentRunId}'s worktree(s) checked (${agentEntries.length} total across every /forge coordinator in this repo), no ticket/branch duplicates, no unlocked stragglers.`,
+    `emet preflight --post-dispatch OK — ${mineEntries.length} of run ${currentRunId}'s worktree(s) checked (${agentEntries.length} total across every /emet coordinator in this repo), no ticket/branch duplicates, no unlocked stragglers.`,
   );
 }
 
@@ -1402,12 +1402,12 @@ async function main(config: ForgeConfig, repoRoot: string) {
 
   if (infoLines.length > 0) {
     console.log(
-      `Info — live/reclaimable /forge worktrees (not blocking dispatch):\n${infoLines.join("\n")}\n`,
+      `Info — live/reclaimable /emet worktrees (not blocking dispatch):\n${infoLines.join("\n")}\n`,
     );
   }
   if (warnLines.length > 0) {
     console.log(
-      `Warning — idle /forge worktrees (not blocking dispatch):\n${warnLines.join("\n")}\n`,
+      `Warning — idle /emet worktrees (not blocking dispatch):\n${warnLines.join("\n")}\n`,
     );
   }
   if (gateWarnLines.length > 0) {
@@ -1446,7 +1446,7 @@ async function main(config: ForgeConfig, repoRoot: string) {
   const dependenciesSummary = `${satisfiedDependencyCount}/${dependencyChecks.length} dependency check(s) satisfied`;
 
   console.log(
-    `emet preflight OK — ${requiredFilesSummary}, .claude/worktrees/ clean (or owned by a live/reclaimable /forge run; see any warnings above for leftover worktree-agent-* branches), ${capacityCheck.freeCount}/${capacityCheck.cap} worker slots free, ${dependenciesSummary}.`,
+    `emet preflight OK — ${requiredFilesSummary}, .claude/worktrees/ clean (or owned by a live/reclaimable /emet run; see any warnings above for leftover worktree-agent-* branches), ${capacityCheck.freeCount}/${capacityCheck.cap} worker slots free, ${dependenciesSummary}.`,
   );
 }
 

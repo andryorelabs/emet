@@ -541,11 +541,12 @@ describe("emet init --tracker local end to end", () => {
     expect(doc.startsWith("mine\n")).toBe(true);
   });
 
-  test("a legacy .forge/ ignore rule is not duplicated", async () => {
+  test("a legacy .forge/ ignore rule is kept and .emet/ is still ignored", async () => {
     await Bun.write(path.join(repoRoot, ".gitignore"), ".forge/\n");
     await runInit();
     const gitignore = await Bun.file(path.join(repoRoot, ".gitignore")).text();
-    expect(gitignore).not.toContain(".emet/");
+    expect(gitignore).toContain(".forge/");
+    expect(gitignore).toContain(".emet/");
   });
 
   test("with a remote: pr landing", async () => {

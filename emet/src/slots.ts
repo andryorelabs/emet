@@ -444,7 +444,9 @@ async function main(config: ForgeConfig): Promise<void> {
     const maxLiveWorkers = resolveMaxLiveWorkers(config);
     const capSource =
       readEnv("MAX_LIVE_WORKERS") !== undefined
-        ? "EMET_MAX_LIVE_WORKERS"
+        ? process.env["EMET_MAX_LIVE_WORKERS"]
+          ? "EMET_MAX_LIVE_WORKERS"
+          : "FORGE_MAX_LIVE_WORKERS"
         : config.concurrency.maxLiveWorkers === "auto"
           ? "auto"
           : CONFIG_FILE;
