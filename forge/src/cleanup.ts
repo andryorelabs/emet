@@ -108,6 +108,14 @@ export type CleanupOptions = {
   readonly force: boolean;
 };
 
+/** A malformed `forge cleanup` command line: reported as a plain message with exit code 2. */
+export class CleanupUsageError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "CleanupUsageError";
+  }
+}
+
 /**
  * `--run <id>` scopes classification/deletion to branches owned by that
  * run's still-locked worktree (see {@link guardBranch}); `--all` is an
@@ -146,17 +154,19 @@ export function parseCleanupArguments(argv: readonly string[]): CleanupOptions {
   if (runIndex !== -1) {
     const value = argv[runIndex + 1];
     if (!value || value.startsWith("--")) {
-      throw new Error("forge:cleanup — --run requires a value, e.g. --run session_abc123");
+      throw new CleanupUsageError(
+        "forge:cleanup — --run requires a value, e.g. --run session_abc123",
+      );
     }
     runId = value;
   }
 
   if (runId !== null && isAll) {
-    throw new Error("forge:cleanup — --run and --all are mutually exclusive");
+    throw new CleanupUsageError("forge:cleanup — --run and --all are mutually exclusive");
   }
 
   if (runId === null && !isAll) {
-    throw new Error(
+    throw new CleanupUsageError(
       "forge:cleanup — pass --run <runId> to clean up this run only, or --all for a deliberate repo-wide sweep.",
     );
   }
@@ -557,7 +567,7 @@ export async function run(argv: string[]): Promise<void> {
     configureTicketPattern(config.ticket.idPattern);
     await main(config);
   } catch (error: unknown) {
-    if (error instanceof ForgeConfigError) {
+    if (error instanceof ForgeConfigError || error instanceof CleanupUsageError) {
       console.error(error.message);
       process.exitCode = 2;
       return;

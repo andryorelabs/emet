@@ -454,7 +454,7 @@ export function buildForgeConfig(detected: DetectedRepoInfo): ForgeConfig {
  * freshly-`init`'d repo can't be dispatched against until someone hand-writes
  * this whole block first.
  *
- * `transitions`/`prReference` per kind mirror what
+ * `transitions` per kind mirror what
  * `reference/tracker-<kind>.md` and `templates/issue-tracker-<kind>.md.tpl`
  * already document as this repo's own convention — not invented here, only
  * finally written down where the command can actually read them:
@@ -469,32 +469,17 @@ export function buildForgeConfig(detected: DetectedRepoInfo): ForgeConfig {
  *   `<feature-slug>-<NN>`.
  */
 export function buildTrackerConfig(detected: DetectedRepoInfo): Record<string, unknown> {
-  const readyLabel = "ready-for-agent";
-  const triageLabels = [
-    "needs-triage",
-    "needs-info",
-    "ready-for-agent",
-    "ready-for-human",
-    "wontfix",
-  ];
-
   if (detected.tracker === "linear") {
     return {
       kind: "linear",
-      readyLabel,
-      triageLabels,
       transitions: { onStart: "worker", onPrOpen: "automatic", onPrMerge: "automatic" },
-      prReference: "Refs: {id}",
     };
   }
 
   if (detected.tracker === "github") {
     return {
       kind: "github",
-      readyLabel,
-      triageLabels,
       transitions: { onStart: "worker", onPrOpen: "coordinator", onPrMerge: "automatic" },
-      prReference: "Closes #{number}",
       github: {
         priorityLabels: {},
         stateLabels: {
@@ -508,10 +493,7 @@ export function buildTrackerConfig(detected: DetectedRepoInfo): Record<string, u
 
   return {
     kind: "local",
-    readyLabel,
-    triageLabels,
     transitions: { onStart: "coordinator", onPrOpen: "coordinator", onPrMerge: "coordinator" },
-    prReference: "Refs: {id}",
   };
 }
 

@@ -8,6 +8,7 @@ import {
   deleteAndReleaseTicket,
   findWorktreeEntryForBranch,
   guardBranch,
+  CleanupUsageError,
   parseCleanupArguments,
 } from "./cleanup";
 import type { WorktreeEntry } from "./worktrees";
@@ -29,6 +30,7 @@ describe("parseCleanupArguments", () => {
    */
   test("no flags at all throws — no implicit repo-wide sweep", () => {
     expect(() => parseCleanupArguments([])).toThrow(/--run.*--all/);
+    expect(() => parseCleanupArguments([])).toThrow(CleanupUsageError);
   });
 
   test("--dry-run alone still throws — scope is required even for a preview", () => {

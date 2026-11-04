@@ -180,17 +180,12 @@ describe("buildTrackerConfig", () => {
     expect(tracker.local).toBeUndefined();
   });
 
-  test("every kind carries the same five canonical triage labels", () => {
+  test("no kind writes the deprecated readyLabel, triageLabels or prReference", () => {
     for (const tracker of ["linear", "github", "local"] as const) {
       const config = buildTrackerConfig({ ...base, tracker });
-      expect(config.triageLabels).toEqual([
-        "needs-triage",
-        "needs-info",
-        "ready-for-agent",
-        "ready-for-human",
-        "wontfix",
-      ]);
-      expect(config.readyLabel).toBe("ready-for-agent");
+      expect(config).not.toHaveProperty("readyLabel");
+      expect(config).not.toHaveProperty("triageLabels");
+      expect(config).not.toHaveProperty("prReference");
     }
   });
 });
