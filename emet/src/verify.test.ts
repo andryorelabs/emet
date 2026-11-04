@@ -18,7 +18,7 @@ function fakeDependencies(overrides: Partial<VerifyDependencies> = {}): VerifyDe
   return {
     head: () => Promise.resolve("headsha"),
     commitCount: () => Promise.resolve(1),
-    changedPaths: () => Promise.resolve(["src/a.ts", ".forge/handoff-T-1.md"]),
+    changedPaths: () => Promise.resolve(["src/a.ts", ".emet/handoff-T-1.md"]),
     handoffCheck: () => Promise.resolve({ exitCode: 0, output: "" }),
     workerScopedSuite: "bun test",
     runSuite: () => Promise.resolve({ exitCode: 0, output: "" }),
@@ -36,8 +36,9 @@ describe("surface matching", () => {
     ).toEqual(["src/b.ts"]);
   });
   test("bookkeeping paths", () => {
+    expect(isBookkeepingPath(".emet/surface.json")).toBe(true);
     expect(isBookkeepingPath(".forge/surface.json")).toBe(true);
-    expect(isBookkeepingPath("src/.forge/x")).toBe(false);
+    expect(isBookkeepingPath("src/.emet/x")).toBe(false);
   });
 });
 
@@ -61,7 +62,7 @@ describe("verifyTicket", () => {
     const record = await verifyTicket(
       "T-1",
       dispatch,
-      fakeDependencies({ changedPaths: () => Promise.resolve([".forge/handoff-T-1.md"]) }),
+      fakeDependencies({ changedPaths: () => Promise.resolve([".emet/handoff-T-1.md"]) }),
     );
     expect(failed(record)).toContain("commits");
   });
@@ -119,7 +120,7 @@ describe("against a real git worktree", () => {
   };
 
   beforeAll(() => {
-    repo = mkdtempSync(path.join(os.tmpdir(), "forge-verify-"));
+    repo = mkdtempSync(path.join(os.tmpdir(), "emet-verify-"));
     git("init", "-q", "-b", "main");
     git("config", "user.email", "t@example.com");
     git("config", "user.name", "t");
@@ -131,7 +132,7 @@ describe("against a real git worktree", () => {
 
   test("counts commits and lists changed paths past the baseline", async () => {
     const baseline = git("rev-parse", "HEAD");
-    const deps = gitDependencies(repo, path.join(repo, ".forge/handoff-T-1.md"), undefined);
+    const deps = gitDependencies(repo, path.join(repo, ".emet/handoff-T-1.md"), undefined);
     expect(await deps.commitCount(baseline)).toBe(0);
     mkdirSync(path.join(repo, "src"));
     writeFileSync(path.join(repo, "src/a.ts"), "x\n");
@@ -145,7 +146,7 @@ describe("against a real git worktree", () => {
 
   test("CLI writes the verify record and exits 1 on failure", () => {
     const baseline = git("rev-parse", "HEAD");
-    const dispatchDir = path.join(repo, ".forge/runs/r1/dispatch");
+    const dispatchDir = path.join(repo, ".emet/runs/r1/dispatch");
     mkdirSync(dispatchDir, { recursive: true });
     writeFileSync(
       path.join(dispatchDir, "T-1.json"),
@@ -159,7 +160,7 @@ describe("against a real git worktree", () => {
     );
     expect(result.exitCode).toBe(1);
     const record: unknown = JSON.parse(
-      readFileSync(path.join(repo, ".forge/runs/r1/verify/T-1.json"), "utf8"),
+      readFileSync(path.join(repo, ".emet/runs/r1/verify/T-1.json"), "utf8"),
     );
     expect(record).toMatchObject({
       ok: false,

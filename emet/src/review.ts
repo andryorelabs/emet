@@ -2,24 +2,25 @@
  * Review findings ledger.
  *
  * Usage:
- *   forge review --ticket <ticket> --findings <file|-> [--changed <a,b>]
- *   forge review --ticket <ticket> --escalate --model <model>
- *   forge review --ticket <ticket> --rule <what> --why <why> --cost <cost>
- *   forge review --ticket <ticket> --rulings
+ *   emet review --ticket <ticket> --findings <file|-> [--changed <a,b>]
+ *   emet review --ticket <ticket> --escalate --model <model>
+ *   emet review --ticket <ticket> --rule <what> --why <why> --cost <cost>
+ *   emet review --ticket <ticket> --rulings
  *
- * The ledger lives at `<repo>/.forge/review/<ticket>.json`.
+ * The ledger lives at `<repo>/.emet/review/<ticket>.json`.
  */
 
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
 
 import { ForgeConfigError, loadForgeConfigWithDefaults, resolveRepoRoot } from "./config";
+import { BINARY, resolveRunDir } from "./names";
 import { isOneOf } from "./narrow";
 
-const USAGE = `usage: forge review --ticket <ticket> --findings <file|-> [--changed <a,b>]
-       forge review --ticket <ticket> --escalate --model <model>
-       forge review --ticket <ticket> --rule <what> --why <why> --cost <cost>
-       forge review --ticket <ticket> --rulings`;
+const USAGE = `usage: ${BINARY} review --ticket <ticket> --findings <file|-> [--changed <a,b>]
+       ${BINARY} review --ticket <ticket> --escalate --model <model>
+       ${BINARY} review --ticket <ticket> --rule <what> --why <why> --cost <cost>
+       ${BINARY} review --ticket <ticket> --rulings`;
 
 const KINDS = ["intent_gap", "bad_plan", "patch", "defer"] as const;
 const SEVERITIES = ["blocker", "critical", "major", "minor", "nit"] as const;
@@ -174,7 +175,7 @@ export function formatRulings(ledger: Ledger): string {
 }
 
 function ledgerPath(repoRoot: string, ticket: string): string {
-  return path.join(repoRoot, ".forge", "review", `${ticket}.json`);
+  return path.join(resolveRunDir(repoRoot).path, "review", `${ticket}.json`);
 }
 
 const LEDGER_STATUSES = ["open", "deferred", "resolved"] as const;
@@ -253,10 +254,10 @@ export async function run(argv: string[]): Promise<void> {
       return;
     }
     if (!/^[\w-]+$/.test(ticket)) {
-      throw new ForgeConfigError(`forge review: invalid ticket id "${ticket}"`);
+      throw new ForgeConfigError(`${BINARY} review: invalid ticket id "${ticket}"`);
     }
     const repoRoot = await resolveRepoRoot();
-    if (!repoRoot) throw new ForgeConfigError("forge review: not inside a git repository");
+    if (!repoRoot) throw new ForgeConfigError(`${BINARY} review: not inside a git repository`);
     const { config } = await loadForgeConfigWithDefaults(repoRoot);
     const ledger = loadLedger(repoRoot, ticket);
 
@@ -268,10 +269,10 @@ export async function run(argv: string[]): Promise<void> {
     if (argv.includes("--escalate")) {
       const model = readFlagValue(argv, "--model");
       if (!model)
-        throw new ForgeConfigError("forge review: --escalate needs --model <current model>");
+        throw new ForgeConfigError(`${BINARY} review: --escalate needs --model <current model>`);
       const next = nextEscalationModel(config.models.escalation, model);
       if (!next) {
-        console.error(`forge review: no escalation tier above "${model}"`);
+        console.error(`${BINARY} review: no escalation tier above "${model}"`);
         process.exitCode = 1;
         return;
       }
@@ -283,7 +284,8 @@ export async function run(argv: string[]): Promise<void> {
     if (what !== undefined) {
       const why = readFlagValue(argv, "--why");
       const cost = readFlagValue(argv, "--cost");
-      if (!why || !cost) throw new ForgeConfigError("forge review: --rule needs --why and --cost");
+      if (!why || !cost)
+        throw new ForgeConfigError(`${BINARY} review: --rule needs --why and --cost`);
       saveLedger(repoRoot, addRuling(ledger, { what, why, cost }));
       return;
     }
