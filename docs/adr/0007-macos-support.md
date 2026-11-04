@@ -3,6 +3,8 @@
 Status: Accepted (2026-11-03)
 Spec: #88
 
+Supersedes [0006](0006-linux-only-ci.md).
+
 ## Context
 
 ADR-0006 limited CI to Linux because nobody ran forge elsewhere. Distributing forge as a plugin and standalone binaries (ADR-0008) puts it on macOS machines, where `/proc` does not exist.

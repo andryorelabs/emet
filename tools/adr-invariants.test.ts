@@ -11,6 +11,21 @@ const REQUIRED_SECTIONS = [
   "## Alternatives considered",
 ];
 
+const REVISED_LINE_PATTERN = /^Revised: \d{4}-\d{2}-\d{2}, \S/;
+const RELATION_PATTERN = /\b(Supersedes|Superseded by|Amends|Amended by) \[(\d{4})\]\(([^)]+)\)/g;
+const INVERSE_RELATION: Readonly<Record<string, string>> = {
+  Supersedes: "Superseded by",
+  "Superseded by": "Supersedes",
+  Amends: "Amended by",
+  "Amended by": "Amends",
+};
+
+interface AdrRelation {
+  readonly kind: string;
+  readonly number: number;
+  readonly target: string;
+}
+
 interface AdrFile {
   readonly fileName: string;
   readonly number: number;
@@ -38,6 +53,27 @@ function readAdrFiles(): AdrFile[] {
         content: readFileSync(join(ADR_DIRECTORY, fileName), "utf8"),
       };
     });
+}
+
+/**
+ * Returns the header lines of an ADR: everything before the first `##` section.
+ */
+function readHeaderLines(adr: AdrFile): string[] {
+  const lines = adr.content.split("\n");
+  const firstSection = lines.findIndex((line) => line.startsWith("## "));
+  return firstSection === -1 ? lines : lines.slice(0, firstSection);
+}
+
+/**
+ * Extracts the linked supersede/amend relations declared in an ADR header.
+ */
+function readRelations(adr: AdrFile): AdrRelation[] {
+  const header = readHeaderLines(adr).join("\n");
+  return [...header.matchAll(RELATION_PATTERN)].map((match) => ({
+    kind: match[1] ?? "",
+    number: Number(match[2]),
+    target: match[3] ?? "",
+  }));
 }
 
 /**
@@ -92,8 +128,45 @@ describe("ADR invariants", () => {
     }
   });
 
+  test("supersede and amend relations link a real ADR and are recorded on both sides", () => {
+    const problems: string[] = [];
+    for (const adr of adrs) {
+      for (const relation of readRelations(adr)) {
+        const other = adrs.find((candidate) => candidate.number === relation.number);
+        if (!other || other.fileName !== relation.target) {
+          problems.push(
+            `${adr.fileName}: "${relation.kind}" links no real ADR (${relation.target})`,
+          );
+          continue;
+        }
+        const inverse = INVERSE_RELATION[relation.kind];
+        const recorded = readRelations(other).some(
+          (candidate) => candidate.kind === inverse && candidate.number === adr.number,
+        );
+        if (!recorded) {
+          problems.push(`${other.fileName}: missing "${inverse}" for ${adr.fileName}`);
+        }
+      }
+    }
+    expect(problems).toEqual([]);
+  });
+
+  test("a Superseded status requires a Superseded by relation", () => {
+    const missing = adrs
+      .filter((adr) => /^Status: Superseded/m.test(adr.content))
+      .filter((adr) => !readRelations(adr).some((relation) => relation.kind === "Superseded by"))
+      .map((adr) => adr.fileName);
+    expect(missing).toEqual([]);
+  });
+
   for (const adr of adrs) {
     describe(adr.fileName, () => {
+      test("Revised lines read Revised: YYYY-MM-DD, <what changed>", () => {
+        const revisedLines = readHeaderLines(adr).filter((line) => line.startsWith("Revised:"));
+        const invalid = revisedLines.filter((line) => !REVISED_LINE_PATTERN.test(line));
+        expect(invalid).toEqual([]);
+      });
+
       test("starts with its numbered title", () => {
         const number = String(adr.number).padStart(4, "0");
         expect(adr.content.startsWith(`# ${number}. `)).toBe(true);

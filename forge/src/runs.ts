@@ -299,8 +299,8 @@ export function readStallNudgeCount(
     return Number.POSITIVE_INFINITY;
   }
   try {
-    const parsedCounter: { count?: unknown } = JSON.parse(text);
-    const { count } = parsedCounter;
+    const parsedCounter: unknown = JSON.parse(text);
+    const count = isObject(parsedCounter) ? parsedCounter.count : undefined;
     return typeof count === "number" && Number.isSafeInteger(count) && count >= 0
       ? count
       : Number.POSITIVE_INFINITY;

@@ -10,8 +10,11 @@
     "format:check": "oxfmt --check",
     "knip": "knip",
     "lint:docs": "bun tools/lint-docs.ts",
-    "check": "bun run typecheck && bun run lint && bun run format:check && bun run knip && bun run lint:docs",
-    "test": "bun test ./tools && bun test --cwd forge",
+    "check:map": "bun tools/check-map.ts",
+    "check": "bun run typecheck && bun run lint && bun run format:check && bun run knip && bun run lint:docs && bun run check:map",
+    "test": "bun test ./tools ./.claude/hooks && bun test --cwd forge",
+    "test:coverage": "bun test ./tools && bun test --cwd forge --coverage",
+    "ci:local": "bun install --frozen-lockfile && bun install --cwd forge --frozen-lockfile && bun run check && bun run test:coverage && bun x --no-install commitlint --from origin/main --to HEAD",
     "prepare": "husky"
   },
   "devDependencies": {
@@ -26,6 +29,9 @@
     "oxlint": "1.90.0",
     "oxlint-tsgolint": "7.0.2005",
     "typescript7": "npm:typescript@7.1.0-beta"
+  },
+  "engines": {
+    "bun": "1.4.4"
   },
   "packageManager": "bun@1.4.4"
 }
