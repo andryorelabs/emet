@@ -408,3 +408,26 @@ export async function classifyByContent(
 export function isSafeToDelete(verdict: BranchVerdict): boolean {
   return verdict === "merged" || verdict === "equivalent";
 }
+
+/**
+ * Whether `branch` has the shape `/forge` gives its own branches: a worker
+ * branch `<branchPrefix>-*` or a harness agent branch `worktree-agent-*`.
+ */
+export function isForgeShapedBranch(branch: string, branchPrefix: string): boolean {
+  return branch.startsWith(`${branchPrefix}-`) || branch.startsWith("worktree-agent-");
+}
+
+/**
+ * Whether `entry` belongs to neither a run nor `/forge`: no owner (already
+ * resolved through any claim fallback by the caller) and a branch that is not
+ * forge-shaped. A detached worktree has no forge-shaped branch, so it counts
+ * as foreign too.
+ */
+export function isForeignWorktree(
+  entry: WorktreeEntry,
+  owner: WorktreeOwner | null,
+  branchPrefix: string,
+): boolean {
+  if (owner !== null) return false;
+  return entry.branch === null || !isForgeShapedBranch(entry.branch, branchPrefix);
+}
