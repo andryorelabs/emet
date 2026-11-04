@@ -11,6 +11,7 @@ import type { EnvironmentProbes } from "./doctor";
 import {
   auditPostDispatch,
   checkHeadDescendsFromTrunk,
+  checkPhaseFiveRecordsLanded,
   checkSlotCapacity,
   classifyWorktreeEntry,
   collectForkBaseFailures,
@@ -929,6 +930,45 @@ function repoWithTrunk(): string {
   runGit(directory, "commit", "-q", "--allow-empty", "-m", "root");
   return directory;
 }
+
+describe("checkPhaseFiveRecordsLanded (S10)", () => {
+  test("fails on a committed ADR that is not on trunk", async () => {
+    const directory = repoWithTrunk();
+    runGit(directory, "switch", "-q", "-c", "phase-five");
+    mkdirSync(path.join(directory, "docs/adr"), { recursive: true });
+    writeFileSync(path.join(directory, "docs/adr/0001-x.md"), "adr");
+    runGit(directory, "add", ".");
+    runGit(directory, "commit", "-q", "-m", "adr");
+    expect(await inside(directory, () => checkPhaseFiveRecordsLanded("main"))).toEqual({
+      ok: false,
+      paths: ["docs/adr/0001-x.md"],
+    });
+  });
+
+  test("fails on an untracked ADR and an uncommitted glossary edit", async () => {
+    const directory = repoWithTrunk();
+    writeFileSync(path.join(directory, "GLOSSARY.md"), "one");
+    runGit(directory, "add", ".");
+    runGit(directory, "commit", "-q", "-m", "glossary");
+    writeFileSync(path.join(directory, "GLOSSARY.md"), "two");
+    mkdirSync(path.join(directory, "docs/adr"), { recursive: true });
+    writeFileSync(path.join(directory, "docs/adr/0002-y.md"), "adr");
+    runGit(directory, "branch", "-f", "trunk-ref", "HEAD");
+    const verdict = await inside(directory, () => checkPhaseFiveRecordsLanded("trunk-ref"));
+    expect(verdict).toEqual({ ok: false, paths: ["GLOSSARY.md", "docs/adr/0002-y.md"] });
+  });
+
+  test("passes when only other paths differ from trunk", async () => {
+    const directory = repoWithTrunk();
+    runGit(directory, "switch", "-q", "-c", "feature");
+    writeFileSync(path.join(directory, "other.txt"), "x");
+    runGit(directory, "add", ".");
+    runGit(directory, "commit", "-q", "-m", "other");
+    expect(await inside(directory, () => checkPhaseFiveRecordsLanded("main"))).toEqual({
+      ok: true,
+    });
+  });
+});
 
 describe("checkHeadDescendsFromTrunk (S11)", () => {
   test("passes when HEAD equals trunk", async () => {

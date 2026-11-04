@@ -1134,6 +1134,30 @@ export async function checkHeadDescendsFromTrunk(
   return { ok: false, branch, fix };
 }
 
+/** Paths Phase 5 defers, which must already be on trunk before dispatch. */
+const PHASE_FIVE_RECORD_PATHS = ["GLOSSARY.md", "docs/adr/"] as const;
+
+/**
+ * S10: `GLOSSARY.md` and `docs/adr/` must match `trunkRef`, in commits and in
+ * the working tree, so a worker branching from trunk sees every record a
+ * ticket cites. Lists the differing or untracked paths on failure.
+ */
+export async function checkPhaseFiveRecordsLanded(
+  trunkRef: string,
+): Promise<{ ok: true } | { ok: false; paths: string[] }> {
+  const changed = await Bun.$`git diff --name-only ${trunkRef} -- ${PHASE_FIVE_RECORD_PATHS}`
+    .quiet()
+    .nothrow()
+    .text();
+  const untracked =
+    await Bun.$`git ls-files --others --exclude-standard -- ${PHASE_FIVE_RECORD_PATHS}`
+      .quiet()
+      .nothrow()
+      .text();
+  const paths = [...new Set(`${changed}\n${untracked}`.split("\n").filter(Boolean))];
+  return paths.length === 0 ? { ok: true } : { ok: false, paths };
+}
+
 /** The S11 preflight failure line, or `null` when HEAD descends from trunk. */
 async function collectHeadTrunkFailure(
   repoRoot: string,
@@ -1146,7 +1170,11 @@ async function collectHeadTrunkFailure(
   const headSha = await probes.resolveRef(repoRoot, "HEAD");
   if (headSha === null) return null;
   const verdict = await checkHeadDescendsFromTrunk(headSha, trunkRef, trunk, remote);
-  if (verdict.ok) return null;
+  if (verdict.ok) {
+    const records = await checkPhaseFiveRecordsLanded(trunkRef);
+    if (records.ok) return null;
+    return `Phase 5 records are not on ${trunkRef}: ${records.paths.join(", ")} — land them on trunk (PR, or local merge) before dispatch.`;
+  }
   return `HEAD (${verdict.branch}) is not ${trunkRef} or a descendant of it — dispatch from trunk so workers contain Phase 5's landed records. Fix: ${verdict.fix}`;
 }
 

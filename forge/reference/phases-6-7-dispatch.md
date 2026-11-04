@@ -25,8 +25,9 @@ that didn't clean up after itself, any remaining `TODO(forge):` marker in
 (the mattpocock-skills plugin always, `gh` for a `github` tracker, the Linear
 MCP server for a `linear` tracker), and it fails when HEAD is not
 `<remote>/<trunk>` (local `<trunk>` in `landing.mode: merge`) or a descendant of
-it, naming the current branch and the fix command. Phase 6 also refuses to
-dispatch while Phase 5's `GLOSSARY.md`/`docs/adr/` edits are not yet on trunk.
+it, naming the current branch and the fix command. It also fails while
+Phase 5's `GLOSSARY.md`/`docs/adr/` edits differ from trunk, so Phase 6
+refuses to dispatch until they are landed.
 Fix whatever it flags before dispatching;
 don't dispatch into a dirty or half-initialized repo. A failure here means a
 real, verified gap — an environment quirk it merely couldn't check (e.g. no
