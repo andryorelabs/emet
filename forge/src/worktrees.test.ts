@@ -8,6 +8,8 @@ import {
   classifyByContent,
   findReservationForBranch,
   isAgentWorktree,
+  isForeignWorktree,
+  isForgeShapedBranch,
   parseWorktreeEntries,
   resolveMainTree,
   resolveWorktreeOwner,
@@ -367,5 +369,35 @@ describe("local trunk comparison", () => {
     expect(await classifyByContent("merged", mainTree, "origin", "main", { local: true })).toBe(
       "merged",
     );
+  });
+});
+
+const entry = (branch: string | null): WorktreeEntry => ({
+  directory: "/repo/.claude/worktrees/x",
+  branch,
+  lockedReason: null,
+});
+
+describe("isForgeShapedBranch and isForeignWorktree", () => {
+  const owner = { runId: "r", ticket: "CLA-1", anchorPid: 1, at: "2026-01-01T00:00:00Z" };
+
+  test("recognises worker and harness agent branches", () => {
+    expect(isForgeShapedBranch("cla-152-landed", "cla")).toBe(true);
+    expect(isForgeShapedBranch("worktree-agent-abc", "cla")).toBe(true);
+    expect(isForgeShapedBranch("chore/strict-lint-gates", "cla")).toBe(false);
+    expect(isForgeShapedBranch("claim-1", "cla")).toBe(false);
+  });
+
+  test("a worktree with an owner is never foreign", () => {
+    expect(isForeignWorktree(entry("chore/x"), owner, "cla")).toBe(false);
+  });
+
+  test("an unowned worktree on a foreign branch is foreign", () => {
+    expect(isForeignWorktree(entry("chore/x"), null, "cla")).toBe(true);
+    expect(isForeignWorktree(entry(null), null, "cla")).toBe(true);
+  });
+
+  test("an unowned worktree on a forge-shaped branch is not foreign", () => {
+    expect(isForeignWorktree(entry("cla-3-x"), null, "cla")).toBe(false);
   });
 });
