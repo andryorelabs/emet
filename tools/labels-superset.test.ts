@@ -21,12 +21,20 @@ function declaredLabelNames(): string[] {
   });
 }
 
+const TRIAGE_LABELS = [
+  "needs-triage",
+  "needs-info",
+  "ready-for-agent",
+  "ready-for-human",
+  "wontfix",
+];
+
 /** Collects every label name the forge tracker config depends on. */
 function requiredForgeLabels(): string[] {
   const config: {
-    tracker: { triageLabels: string[]; github: { stateLabels: Record<string, string> } };
+    tracker: { github: { stateLabels: Record<string, string> } };
   } = JSON.parse(readText("forge.config.json"));
-  return [...config.tracker.triageLabels, ...Object.values(config.tracker.github.stateLabels)];
+  return [...TRIAGE_LABELS, ...Object.values(config.tracker.github.stateLabels)];
 }
 
 test("labels.yml declares every label forge.config.json depends on", () => {

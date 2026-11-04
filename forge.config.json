@@ -17,14 +17,11 @@
   },
   "tracker": {
     "kind": "github",
-    "readyLabel": "ready-for-agent",
-    "triageLabels": ["needs-triage", "needs-info", "ready-for-agent", "ready-for-human", "wontfix"],
     "transitions": {
       "onStart": "worker",
       "onPrOpen": "coordinator",
       "onPrMerge": "automatic"
     },
-    "prReference": "Closes #{number}",
     "github": {
       "priorityLabels": {},
       "stateLabels": {
