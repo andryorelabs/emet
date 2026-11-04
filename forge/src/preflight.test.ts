@@ -958,6 +958,17 @@ describe("checkPhaseFiveRecordsLanded (S10)", () => {
     expect(verdict).toEqual({ ok: false, paths: ["GLOSSARY.md", "docs/adr/0002-y.md"] });
   });
 
+  test("finds root records when invoked from a subdirectory", async () => {
+    const directory = repoWithTrunk();
+    mkdirSync(path.join(directory, "docs/adr"), { recursive: true });
+    mkdirSync(path.join(directory, "sub"));
+    writeFileSync(path.join(directory, "docs/adr/0003-z.md"), "adr");
+    const verdict = await inside(path.join(directory, "sub"), () =>
+      checkPhaseFiveRecordsLanded("main", directory),
+    );
+    expect(verdict).toEqual({ ok: false, paths: ["docs/adr/0003-z.md"] });
+  });
+
   test("passes when only other paths differ from trunk", async () => {
     const directory = repoWithTrunk();
     runGit(directory, "switch", "-q", "-c", "feature");

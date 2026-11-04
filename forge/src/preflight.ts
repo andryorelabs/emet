@@ -1144,13 +1144,16 @@ const PHASE_FIVE_RECORD_PATHS = ["GLOSSARY.md", "docs/adr/"] as const;
  */
 export async function checkPhaseFiveRecordsLanded(
   trunkRef: string,
+  repoRoot: string = process.cwd(),
 ): Promise<{ ok: true } | { ok: false; paths: string[] }> {
   const changed = await Bun.$`git diff --name-only ${trunkRef} -- ${PHASE_FIVE_RECORD_PATHS}`
+    .cwd(repoRoot)
     .quiet()
     .nothrow()
     .text();
   const untracked =
     await Bun.$`git ls-files --others --exclude-standard -- ${PHASE_FIVE_RECORD_PATHS}`
+      .cwd(repoRoot)
       .quiet()
       .nothrow()
       .text();
@@ -1171,7 +1174,7 @@ async function collectHeadTrunkFailure(
   if (headSha === null) return null;
   const verdict = await checkHeadDescendsFromTrunk(headSha, trunkRef, trunk, remote);
   if (verdict.ok) {
-    const records = await checkPhaseFiveRecordsLanded(trunkRef);
+    const records = await checkPhaseFiveRecordsLanded(trunkRef, repoRoot);
     if (records.ok) return null;
     return `Phase 5 records are not on ${trunkRef}: ${records.paths.join(", ")} — land them on trunk (PR, or local merge) before dispatch.`;
   }
