@@ -2,7 +2,7 @@ name: Labels
 
 on:
   push:
-    branches: [main]
+    branches: [main, develop]
     paths:
       - .github/labels.yml
       - .github/workflows/labels.yml
