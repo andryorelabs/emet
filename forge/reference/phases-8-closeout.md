@@ -175,22 +175,24 @@ flagged: leave the integration branch unmerged and report it.
 Never auto-merge a wave with anything flagged (see below), whatever
 `pr.autoMerge` says. Run the merge and the cleanup below as **separate Bash
 calls** — never chained with `&&` or `;` — so one being blocked can't stop
-the other. After a merge, run `forge cleanup --run <runId>` to delete this wave's local branches
-(`worktree-agent-*` residue and fully-merged worker branches), prune
-worktrees, and release this run's ticket reservations and worker slots —
-always pass `--run <runId>` here, not the bare command, or those
-reservations and slots outlive the wave and stay occupied until someone
-else's `forge claims --prune`/manual cleanup reclaims them. Don't leave any
-of this for the next wave or the final report to discover.
+the other. After a merge, run `forge cleanup --run <runId>`. For each worktree
+this run owns (attributed by its forge lock, else by the claim on its ticket)
+whose ticket landed and whose tree is clean, it removes the worktree, deletes
+its worker and `worktree-agent-*` branches, and releases its claim; it also
+releases the run's worker slots. A dirty worktree, or one whose ticket has not
+landed, is kept and reported with the command to run by hand. When the sweep
+has no failures it marks the run closed, so every later reclaim treats the run
+as finished even while your session stays open. Don't leave any of this for the
+next wave or the final report to discover.
 
-**Never `git worktree remove` a worktree by hand, and never run `forge
-cleanup --all --force` (or the bare, unscoped command) while `forge slots`
-shows a live run other than your own.** Both sweep every branch/worktree in
-the repo, not just this run's — a sibling coordinator's still-in-progress
-worktree looks identical to abandoned residue from the outside, and either
-command can delete a sibling's uncommitted work or leave its lock
-inconsistent. `forge cleanup --run <runId>` is always scoped and always
-safe to run for your own wave, regardless of who else is running.
+The bare `forge cleanup` is the safe reclaim: it removes the same things for
+every run that is closed or dead and whose ticket landed, and never touches a
+live or idle run, a worktree it cannot attribute to a run, or a foreign
+worktree. Run it to sweep up after a crashed or abandoned wave. `forge cleanup
+--all` stays the deliberate repo-wide branch sweep; never run `--all --force`
+while `forge slots` shows a live run other than your own, since it reaches
+every branch in the repo. Worktrees are removed only through `forge cleanup`,
+never by hand with `git worktree remove` or `rm`.
 
 If anything was flagged (a ticket failed twice, produced a
 needs-a-human-decision, or a conflict got resolved by judgment rather than
