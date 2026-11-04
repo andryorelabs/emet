@@ -19,3 +19,4 @@ Decisions that are hard to reverse, surprising without context, and the result o
 | 0011 | [Local tracker on the .scratch convention](0011-local-tracker-scratch-convention.md)                                  | Accepted   |                                                                                 |
 | 0012 | [develop development branch](0012-develop-development-branch.md)                                                      | Accepted   |                                                                                 |
 | 0013 | [Cleanup owns the worker worktree lifecycle](0013-cleanup-owns-worker-worktree-lifecycle.md)                          | Accepted   |                                                                                 |
+| 0014 | [Brand kit lives in docs/brand](0014-brand-kit-in-docs-brand.md)                                                      | Accepted   |                                                                                 |
