@@ -46,22 +46,24 @@ function scriptedRunner(script: {
 }) {
   const calls: string[][] = [];
   const agentQueue = [...script.agents];
-  const runner: CommandRunner = async (command) => {
+  const runner: CommandRunner = (command) => {
     calls.push([...command]);
     const key = command.slice(0, 3).join(" ");
     if (key === "claude agents --json") {
-      return agentQueue.shift() ?? json([]);
+      return Promise.resolve(agentQueue.shift() ?? json([]));
     }
     if (command[0] === "claude" && command[1] === "--bg") {
-      return script.launch ?? OK_EMPTY;
+      return Promise.resolve(script.launch ?? OK_EMPTY);
     }
     if (key === "orca status --json") {
-      return script.orcaStatus ?? { exitCode: 127, stdout: "", stderr: "not found" };
+      return Promise.resolve(
+        script.orcaStatus ?? { exitCode: 127, stdout: "", stderr: "not found" },
+      );
     }
     if (key === "orca terminal create") {
-      return script.orcaCreate ?? json({ ok: true });
+      return Promise.resolve(script.orcaCreate ?? json({ ok: true }));
     }
-    throw new Error(`unscripted command: ${command.join(" ")}`);
+    return Promise.reject(new Error(`unscripted command: ${command.join(" ")}`));
   };
   return { runner, calls };
 }

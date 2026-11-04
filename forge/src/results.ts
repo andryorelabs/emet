@@ -2,7 +2,7 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
 
 import { resolveRepoRoot } from "./config";
-import { errorMessage, isOneOf } from "./narrow";
+import { errorMessage, isObject, isOneOf } from "./narrow";
 
 async function resolveSharedRoot(): Promise<string> {
   const output = await Bun.$`git rev-parse --path-format=absolute --git-common-dir`
@@ -58,9 +58,18 @@ export function writeResult(resultsDirectory: string, ticket: string, result: Wo
 export function readResult(resultsDirectory: string, ticket: string): WorkerResult | null {
   const target = resultPath(resultsDirectory, ticket);
   if (!existsSync(target)) return null;
-  const parsed: WorkerResult = JSON.parse(readFileSync(target, "utf8"));
-  validateResult(parsed);
-  return parsed;
+  const parsed: unknown = JSON.parse(readFileSync(target, "utf8"));
+  if (!isObject(parsed)) throw new Error("result is not a JSON object");
+  const { status, reportPath, risk } = parsed;
+  if (!isOneOf(RESULT_STATUSES, status)) {
+    throw new Error(`invalid status "${String(status)}" (expected ${RESULT_STATUSES.join("|")})`);
+  }
+  if (typeof reportPath !== "string" || typeof risk !== "string") {
+    throw new Error("report path and risk must be strings");
+  }
+  const result: WorkerResult = { status, reportPath, risk };
+  validateResult(result);
+  return result;
 }
 
 function readFlag(argv: string[], name: string): string | undefined {

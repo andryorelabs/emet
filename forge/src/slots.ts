@@ -109,7 +109,13 @@ function resolveForgeStateDirectory(): string {
   return path.join(os.homedir(), ".local", "state", "forge");
 }
 
-export async function resolveSlotsDirectory(): Promise<string> {
+export function resolveSlotsDirectory(): Promise<string> {
+  return new Promise((resolve) => {
+    resolve(createSlotsDirectory());
+  });
+}
+
+function createSlotsDirectory(): string {
   const slotsDirectory = path.join(resolveForgeStateDirectory(), "slots");
   /**
    * Recursive on purpose, unlike {@link didAcquireLock}'s own `mkdirSync`:

@@ -3,7 +3,7 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
 
 import { resolveRepoRoot } from "./config";
-import { errorMessage } from "./narrow";
+import { errorMessage, isObject } from "./narrow";
 
 const USAGE = `usage: forge approve --run <id> --spec <file> [--tickets <file>] [--root <dir>]
        forge approve --run <id> --check [--root <dir>]
@@ -52,7 +52,8 @@ export function writeApproval(input: {
 function readApproval(approvalPath: string): ApprovalRecord | string {
   if (!existsSync(approvalPath)) return `no approval record at ${approvalPath}`;
   try {
-    const parsed: Partial<ApprovalRecord> = JSON.parse(readFileSync(approvalPath, "utf8"));
+    const parsed: unknown = JSON.parse(readFileSync(approvalPath, "utf8"));
+    if (!isObject(parsed)) return `approval record at ${approvalPath} is missing fields`;
     const { specPath, ticketsPath, specHash, ticketsHash, approvedAt } = parsed;
     if (
       typeof specPath !== "string" ||

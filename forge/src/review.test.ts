@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
+import { isObject } from "./narrow";
 
 import {
   type Ledger,
@@ -25,6 +26,11 @@ const finding = (over: Record<string, unknown> = {}) => ({
 });
 
 const parseItems = (items: Record<string, unknown>[]) => parseFindings(JSON.stringify(items));
+
+function readRound(stdout: string): unknown {
+  const parsed: unknown = JSON.parse(stdout);
+  return isObject(parsed) ? parsed.round : undefined;
+}
 
 describe("parseFindings", () => {
   test("accepts a valid array and rejects bad kind/severity/shape", () => {
@@ -209,18 +215,17 @@ describe("review ledger round trip through the CLI", () => {
   test("a saved ledger with a deferred entry loads again in round two", () => {
     const first = runReview([finding({ id: "F1", severity: "minor" })]);
     expect(first.exitCode).toBe(1);
-    expect(JSON.parse(first.stdout).round).toBe(1);
+    expect(readRound(first.stdout)).toBe(1);
     const second = runReview([
       finding({ id: "F1", severity: "minor" }),
       finding({ id: "F2", file: "b.ts", claim: "unrelated new blocker" }),
     ]);
-    expect(JSON.parse(second.stdout).round).toBe(2);
-    const ledger = JSON.parse(
+    expect(readRound(second.stdout)).toBe(2);
+    const ledger: unknown = JSON.parse(
       readFileSync(path.join(repo, ".forge", "review", "T-1.json"), "utf8"),
     );
-    expect(ledger.findings.some((entry: { status: string }) => entry.status === "deferred")).toBe(
-      true,
-    );
+    const findings = isObject(ledger) && Array.isArray(ledger.findings) ? ledger.findings : [];
+    expect(findings.some((entry) => isObject(entry) && entry.status === "deferred")).toBe(true);
   });
 
   test("a corrupted ledger exits 2", () => {

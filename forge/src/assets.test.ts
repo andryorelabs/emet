@@ -24,7 +24,9 @@ describe("assets", () => {
       "utf8",
     );
     expect(readSchema()).toBe(onDisk);
-    expect(() => JSON.parse(readSchema())).not.toThrow();
+    expect(() => {
+      JSON.parse(readSchema());
+    }).not.toThrow();
   });
 
   test("source runs report the dev version and are not compiled", () => {
