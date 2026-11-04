@@ -12,6 +12,7 @@ import {
   guardBranch,
   CleanupUsageError,
   parseCleanupArguments,
+  planOrphanedScaffolds,
   planWorktreeRemoval,
   reclaimOwnedWorktrees,
   shouldMarkRunClosed,
@@ -22,6 +23,7 @@ import {
   listBranches,
   listLiveWorktreeDirectoryNames,
   listWorktreeEntries,
+  type BranchVerdict,
   type WorktreeEntry,
 } from "./worktrees";
 
@@ -466,10 +468,29 @@ describe("findOrphanedScaffoldBranches", () => {
   });
 });
 
+describe("planOrphanedScaffolds", () => {
+  test("only merged or equivalent scaffolds are deletable, the rest are kept with their verdict", async () => {
+    const verdicts = new Map<string, BranchVerdict>([
+      ["worktree-agent-merged", "merged"],
+      ["worktree-agent-squashed", "equivalent"],
+      ["worktree-agent-diverged", "diverged"],
+      ["worktree-agent-conflicted", "conflicted"],
+    ]);
+    const plan = await planOrphanedScaffolds([...verdicts.keys()], (branch) =>
+      Promise.resolve(verdicts.get(branch) ?? "conflicted"),
+    );
+    expect(plan.deletable).toEqual(["worktree-agent-merged", "worktree-agent-squashed"]);
+    expect(plan.kept).toEqual([
+      { name: "worktree-agent-diverged", verdict: "diverged" },
+      { name: "worktree-agent-conflicted", verdict: "conflicted" },
+    ]);
+  });
+});
+
 describe("reclaim against a real repository", () => {
   const originalDirectory = process.cwd();
   let repo: string;
-  let logSpy: { mockRestore: () => void };
+  let logSpy: { mockRestore: () => void; mock: { calls: unknown[][] } };
 
   const config: ForgeConfig = {
     ...DEFAULT_FORGE_CONFIG,
@@ -602,6 +623,33 @@ describe("reclaim against a real repository", () => {
     expect(branches).not.toContain("worktree-agent-orphan");
     expect(branches).toContain("worktree-agent-live");
     expect(branches).toContain("cla-4-live");
+  });
+
+  test("an orphaned scaffold already inside trunk is deleted", async () => {
+    await git("branch", "worktree-agent-behind", "main");
+    writeFileSync(path.join(repo, "file.txt"), "advanced\n");
+    await git("commit", "-q", "-am", "advance trunk");
+
+    await reclaimOwnedWorktrees(await buildContext("finished", null));
+
+    expect(await branchNames()).not.toContain("worktree-agent-behind");
+  });
+
+  test("an orphaned scaffold with a commit not on trunk survives and is reported", async () => {
+    const scratch = path.join(repo, "scratch");
+    await git("worktree", "add", "-q", "-b", "worktree-agent-unmerged", scratch, "main");
+    writeFileSync(path.join(scratch, "file.txt"), "unmerged work\n");
+    await git("-C", scratch, "commit", "-q", "-am", "unmerged work");
+    await git("worktree", "remove", scratch);
+
+    await reclaimOwnedWorktrees(await buildContext("finished", null));
+
+    expect(await branchNames()).toContain("worktree-agent-unmerged");
+    expect(process.exitCode).not.toBe(1);
+    const output = logSpy.mock.calls.map((call: unknown[]) => String(call[0])).join("\n");
+    expect(output).toContain(
+      "worktree-agent-unmerged (diverged) — git branch -D worktree-agent-unmerged",
+    );
   });
 
   test("a dry run deletes no orphaned scaffold branch", async () => {

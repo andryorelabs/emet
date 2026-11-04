@@ -413,8 +413,9 @@ export function shouldMarkRunClosed(
 /**
  * `worktree-agent-*` scaffold branches nothing refers to anymore: not checked
  * out in any worktree, and no `.claude/worktrees/<id>` directory registered
- * for them. Their worktree is already gone, so they carry no live work and
- * are always safe to delete, whichever run created them.
+ * for them. Their worktree is already gone, so no live work sits on them,
+ * but a branch may still hold commits nobody merged. These are only
+ * candidates: {@link planOrphanedScaffolds} decides which may be deleted.
  */
 export function findOrphanedScaffoldBranches(
   agentBranches: readonly BranchEntry[],
@@ -433,6 +434,46 @@ export function findOrphanedScaffoldBranches(
         !isWorktreeAgentBranchLive(branch.name, liveDirectoryNames),
     )
     .map((branch) => branch.name);
+}
+
+export type OrphanedScaffoldPlan = {
+  readonly deletable: readonly string[];
+  readonly kept: readonly { readonly name: string; readonly verdict: BranchVerdict }[];
+};
+
+/**
+ * Splits orphaned scaffold branches by content, with no mutations. A branch
+ * may be deleted only when `classify` clears it ({@link isSafeToDelete}):
+ * its tip is already contained in trunk, or its content is (a squash merge).
+ * Anything else may hold unmerged commits, whoever made them, and is kept
+ * for review.
+ */
+export async function planOrphanedScaffolds(
+  branches: readonly string[],
+  classify: (branch: string) => Promise<BranchVerdict>,
+): Promise<OrphanedScaffoldPlan> {
+  const deletable: string[] = [];
+  const kept: { name: string; verdict: BranchVerdict }[] = [];
+  for (const name of branches) {
+    // oxlint-disable-next-line eslint/no-await-in-loop -- sequential on purpose: later iterations depend on earlier ones or on output order
+    const verdict = await classify(name);
+    if (isSafeToDelete(verdict)) deletable.push(name);
+    else kept.push({ name, verdict });
+  }
+  return { deletable, kept };
+}
+
+async function classifyScaffoldsAgainstTrunk(
+  config: ForgeConfig,
+  branches: readonly string[],
+): Promise<OrphanedScaffoldPlan> {
+  if (branches.length === 0) return { deletable: [], kept: [] };
+  const { remote, trunk } = config.repo;
+  const local = config.landing.mode === "merge";
+  const mainTree = await resolveMainTree(remote, trunk, { local });
+  return planOrphanedScaffolds(branches, (branch) =>
+    classifyByContent(branch, mainTree, remote, trunk, { local }),
+  );
 }
 
 async function resolveRunState(
@@ -587,6 +628,7 @@ export async function reclaimOwnedWorktrees(context: ReclaimContext): Promise<vo
     context.worktreeEntries,
     context.liveDirectoryNames ?? new Set<string>(),
   ).filter((branch) => !claimedBranches.has(branch));
+  const scaffoldPlan = await classifyScaffoldsAgainstTrunk(config, orphanedScaffolds);
 
   const reclaimedRuns = new Set<string>();
   const failures: string[] = [];
@@ -610,7 +652,7 @@ export async function reclaimOwnedWorktrees(context: ReclaimContext): Promise<vo
     }
   }
 
-  for (const branch of orphanedScaffolds) {
+  for (const branch of scaffoldPlan.deletable) {
     if (dryRun) {
       removedScaffolds.push(branch);
       continue;
@@ -628,6 +670,14 @@ export async function reclaimOwnedWorktrees(context: ReclaimContext): Promise<vo
       `\n${dryRun ? "Would delete" : "Deleted"} ${removedScaffolds.length} orphaned scaffold branch(es):`,
     );
     for (const branch of removedScaffolds) console.log(`  - ${branch}`);
+  }
+  if (scaffoldPlan.kept.length > 0) {
+    console.log(
+      `\nKept ${scaffoldPlan.kept.length} orphaned scaffold branch(es) with unmerged or unresolved work — review, then delete by hand:`,
+    );
+    for (const { name, verdict } of scaffoldPlan.kept) {
+      console.log(`  - ${name} (${verdict}) — git branch -D ${name}`);
+    }
   }
 
   const keptDirty = planned.filter((item) => item.plan === "keep-dirty");
@@ -711,11 +761,16 @@ async function main(config: ForgeConfig) {
   }
   const mainSha = mainShaResult.stdout.toString().trim();
   const mainTree = await resolveMainTree(remote, trunk, { local });
-  const liveWorktreeDirectoryNames = await listLiveWorktreeDirectoryNames();
-  const worktreeEntries = await listWorktreeEntries();
-
+  /**
+   * Branches are listed before the worktrees on purpose: a scaffold branch
+   * seen here already had its worktree added, so the worktree listing read
+   * next always includes it. The other order could miss a worktree added
+   * between the two reads and make its scaffold look orphaned.
+   */
   const worktreeAgentBranches = await listBranches("worktree-agent-*");
   const aoBranches = await listBranches(`${branchPrefix}-*`);
+  const liveWorktreeDirectoryNames = await listLiveWorktreeDirectoryNames();
+  const worktreeEntries = await listWorktreeEntries();
 
   if (mode !== "all") {
     await reclaimOwnedWorktrees({
