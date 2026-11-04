@@ -1,0 +1,386 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Mascot directions (run 1, options only)</title>
+    <style>
+      :root {
+        --bg: oklch(0.985 0.003 250);
+        --fg: oklch(0.22 0.02 255);
+        --muted: oklch(0.45 0.02 255);
+        --card: oklch(1 0 0);
+        --line: oklch(0.9 0.008 255);
+        --accent: oklch(0.5 0.09 200);
+        --dark-bg: oklch(0.2 0.015 255);
+        --dark-fg: oklch(0.95 0.005 255);
+        --cut: var(--card);
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        padding: 32px;
+        background: var(--bg);
+        color: var(--fg);
+        font:
+          15px/1.5 system-ui,
+          -apple-system,
+          "Segoe UI",
+          sans-serif;
+      }
+      h1 {
+        margin: 0 0 4px;
+        font-size: 24px;
+      }
+      header p {
+        margin: 0 0 24px;
+        color: var(--muted);
+        max-width: 72ch;
+      }
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+        gap: 20px;
+      }
+      article {
+        background: var(--card);
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        padding: 20px;
+      }
+      article h2 {
+        margin: 0 0 4px;
+        font-size: 18px;
+      }
+      .concept {
+        margin: 0 0 16px;
+        color: var(--muted);
+      }
+      .hero {
+        display: flex;
+        justify-content: center;
+        padding: 12px 0;
+        color: var(--accent);
+      }
+      .hero svg {
+        width: 160px;
+        height: 160px;
+      }
+      .previews {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 8px;
+        margin: 12px 0 16px;
+        text-align: center;
+        font-size: 12px;
+        color: var(--muted);
+      }
+      .tile {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        height: 56px;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        margin-bottom: 4px;
+      }
+      .tile.light {
+        --cut: var(--card);
+        background: var(--card);
+        color: var(--fg);
+      }
+      .tile.dark {
+        --cut: var(--dark-bg);
+        background: var(--dark-bg);
+        color: var(--dark-fg);
+      }
+      .px16 {
+        width: 16px;
+        height: 16px;
+      }
+      .px32 {
+        width: 32px;
+        height: 32px;
+      }
+      h3 {
+        margin: 12px 0 4px;
+        font-size: 13px;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        color: var(--muted);
+      }
+      ul {
+        margin: 0;
+        padding-left: 18px;
+      }
+      footer {
+        margin-top: 28px;
+        color: var(--muted);
+        font-size: 13px;
+        max-width: 72ch;
+      }
+      code {
+        font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+      }
+    </style>
+  </head>
+  <body>
+    <svg width="0" height="0" style="position: absolute" aria-hidden="true">
+      <symbol id="d1" viewBox="0 0 32 32">
+        <rect x="8" y="4" width="16" height="8" rx="3" fill="currentColor" />
+        <rect x="5" y="13" width="22" height="7" rx="3" fill="currentColor" />
+        <rect x="2" y="21" width="28" height="7" rx="3" fill="currentColor" />
+        <circle cx="13" cy="8" r="1.7" style="fill: var(--cut)" />
+        <circle cx="19" cy="8" r="1.7" style="fill: var(--cut)" />
+      </symbol>
+      <symbol id="d2" viewBox="0 0 32 32">
+        <g fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round">
+          <path d="M24 8 L27 3" />
+          <path d="M22.5 8 L21 3" />
+          <path d="M14 17 L11 25" />
+          <path d="M16.5 18 L16.5 26" />
+          <path d="M19 17 L22 25" />
+        </g>
+        <ellipse cx="7.5" cy="17" rx="5.5" ry="4.8" fill="currentColor" />
+        <ellipse cx="16" cy="15.5" rx="3.6" ry="3" fill="currentColor" />
+        <circle cx="23.5" cy="12" r="4" fill="currentColor" />
+        <circle cx="25" cy="11" r="1" style="fill: var(--cut)" />
+      </symbol>
+      <symbol id="d3" viewBox="0 0 32 32">
+        <ellipse
+          cx="6"
+          cy="23"
+          rx="5.5"
+          ry="2.6"
+          transform="rotate(-25 6 23)"
+          fill="currentColor"
+        />
+        <ellipse cx="15" cy="18" rx="9" ry="7" fill="currentColor" />
+        <circle cx="23" cy="12.5" r="5.5" fill="currentColor" />
+        <circle cx="20.5" cy="7.5" r="1.8" fill="currentColor" />
+        <rect x="25.5" y="16" width="2.4" height="3.2" rx="0.6" fill="currentColor" />
+        <circle cx="24.6" cy="11" r="1.1" style="fill: var(--cut)" />
+        <rect x="8" y="26.5" width="17" height="3.5" rx="1.75" fill="currentColor" />
+      </symbol>
+      <symbol id="d4" viewBox="0 0 32 32">
+        <ellipse
+          cx="6.5"
+          cy="12"
+          rx="3.4"
+          ry="7"
+          transform="rotate(28 6.5 12)"
+          fill="currentColor"
+        />
+        <ellipse
+          cx="25.5"
+          cy="12"
+          rx="3.4"
+          ry="7"
+          transform="rotate(-28 25.5 12)"
+          fill="currentColor"
+        />
+        <ellipse cx="16" cy="17.5" rx="10" ry="9.5" fill="currentColor" />
+        <path d="M16 9 L13.6 21 L18.4 21 Z" style="fill: var(--cut)" />
+        <circle cx="11.5" cy="16" r="1.5" style="fill: var(--cut)" />
+        <circle cx="20.5" cy="16" r="1.5" style="fill: var(--cut)" />
+        <ellipse cx="16" cy="22" rx="2.4" ry="1.7" fill="currentColor" />
+      </symbol>
+    </svg>
+
+    <header>
+      <h1>Mascot directions</h1>
+      <p>
+        Four name-independent directions from <code>docs/brand/mascot-research.md</code>. Rough
+        silhouettes only: options for the maintainer, not a decision. Each card shows the concept,
+        the silhouette, a true 16&nbsp;px render, a 32&nbsp;px render and a one-colour preview on
+        light and dark. Features are cut out as negative space, so every preview uses a single
+        colour.
+      </p>
+    </header>
+
+    <main class="grid">
+      <article id="card-d1">
+        <h2>D1. Tiered stack</h2>
+        <p class="concept">
+          Three rounded slabs, narrow on top, with two dot eyes. Each slab is a wave: a dependency
+          layer that lands before the next.
+        </p>
+        <div class="hero">
+          <svg role="img" aria-label="Tiered stack silhouette"><use href="#d1" /></svg>
+        </div>
+        <div class="previews">
+          <div>
+            <div class="tile light">
+              <svg class="px16" aria-hidden="true"><use href="#d1" /></svg>
+            </div>
+            16 px
+          </div>
+          <div>
+            <div class="tile light">
+              <svg class="px32" aria-hidden="true"><use href="#d1" /></svg>
+            </div>
+            32 px
+          </div>
+          <div>
+            <div class="tile dark">
+              <svg class="px16" aria-hidden="true"><use href="#d1" /></svg>
+              <svg class="px32" aria-hidden="true"><use href="#d1" /></svg>
+            </div>
+            mono, dark
+          </div>
+        </div>
+        <h3>Pros</h3>
+        <ul>
+          <li>Most legible at 16 px; doubles as the simplified mark.</li>
+          <li>No animal collisions found among the ten cases.</li>
+        </ul>
+        <h3>Risks</h3>
+        <ul>
+          <li>Abstract: needs copy to explain it; may read as a cake or burger.</li>
+          <li>
+            A boxy creature with eyes sits near the Claude Code block mascot: keep it rounded, no
+            legs, no pixel grid, no orange.
+          </li>
+        </ul>
+      </article>
+
+      <article id="card-d2">
+        <h2>D2. Worker ant</h2>
+        <p class="concept">
+          A colony of workers moving tickets in parallel under a coordinator. Large art shows the
+          ant carrying a ticket card.
+        </p>
+        <div class="hero">
+          <svg role="img" aria-label="Worker ant silhouette"><use href="#d2" /></svg>
+        </div>
+        <div class="previews">
+          <div>
+            <div class="tile light">
+              <svg class="px16" aria-hidden="true"><use href="#d2" /></svg>
+            </div>
+            16 px
+          </div>
+          <div>
+            <div class="tile light">
+              <svg class="px32" aria-hidden="true"><use href="#d2" /></svg>
+            </div>
+            32 px
+          </div>
+          <div>
+            <div class="tile dark">
+              <svg class="px16" aria-hidden="true"><use href="#d2" /></svg>
+              <svg class="px32" aria-hidden="true"><use href="#d2" /></svg>
+            </div>
+            mono, dark
+          </div>
+        </div>
+        <h3>Pros</h3>
+        <ul>
+          <li>Clearest picture of the parallel-worker model.</li>
+          <li>Three body blobs still read at 16 px.</li>
+        </ul>
+        <h3>Risks</h3>
+        <ul>
+          <li>Insects read as "bugs" in software.</li>
+          <li>Legs and antennae vanish at 16 px.</li>
+          <li>Apache Ant owns "Ant" in build tools (logo not checked).</li>
+        </ul>
+      </article>
+
+      <article id="card-d3">
+        <h2>D3. Builder beaver</h2>
+        <p class="concept">
+          A beaver building a dam log by log: small careful pieces that add up to one structure, as
+          tickets add up to one merged change.
+        </p>
+        <div class="hero">
+          <svg role="img" aria-label="Builder beaver silhouette"><use href="#d3" /></svg>
+        </div>
+        <div class="previews">
+          <div>
+            <div class="tile light">
+              <svg class="px16" aria-hidden="true"><use href="#d3" /></svg>
+            </div>
+            16 px
+          </div>
+          <div>
+            <div class="tile light">
+              <svg class="px32" aria-hidden="true"><use href="#d3" /></svg>
+            </div>
+            32 px
+          </div>
+          <div>
+            <div class="tile dark">
+              <svg class="px16" aria-hidden="true"><use href="#d3" /></svg>
+              <svg class="px32" aria-hidden="true"><use href="#d3" /></svg>
+            </div>
+            mono, dark
+          </div>
+        </div>
+        <h3>Pros</h3>
+        <ul>
+          <li>Strong side silhouette: flat tail, round head.</li>
+          <li>"Careful builder" fits a tool that merges unattended.</li>
+        </ul>
+        <h3>Risks</h3>
+        <ul>
+          <li>Cute animals drift childish.</li>
+          <li>BuildStream, another build tool, has a beaver mascot.</li>
+          <li>Teeth and log detail are lost at 16 px.</li>
+        </ul>
+      </article>
+
+      <article id="card-d4">
+        <h2>D4. Herding dog</h2>
+        <p class="concept">
+          A border collie head with a white blaze: the coordinator that keeps many workers moving
+          one way and gathers them at each wave.
+        </p>
+        <div class="hero">
+          <svg role="img" aria-label="Herding dog silhouette"><use href="#d4" /></svg>
+        </div>
+        <div class="previews">
+          <div>
+            <div class="tile light">
+              <svg class="px16" aria-hidden="true"><use href="#d4" /></svg>
+            </div>
+            16 px
+          </div>
+          <div>
+            <div class="tile light">
+              <svg class="px32" aria-hidden="true"><use href="#d4" /></svg>
+            </div>
+            32 px
+          </div>
+          <div>
+            <div class="tile dark">
+              <svg class="px16" aria-hidden="true"><use href="#d4" /></svg>
+              <svg class="px32" aria-hidden="true"><use href="#d4" /></svg>
+            </div>
+            mono, dark
+          </div>
+        </div>
+        <h3>Pros</h3>
+        <ul>
+          <li>Warm and trustworthy without being childish.</li>
+          <li>Symmetric front face; the blaze is one strong cut-out.</li>
+        </ul>
+        <h3>Risks</h3>
+        <ul>
+          <li>Dogs are common in branding (no trademark search run).</li>
+          <li>Carries less of the parallel-work idea than D1 or D2.</li>
+        </ul>
+      </article>
+    </main>
+
+    <footer>
+      Research and sources: <code>docs/brand/mascot-research.md</code> and
+      <code>docs/brand/research-notes/mascots-cases.md</code>. No network requests: inline SVG and
+      system fonts only. Avoided on purpose: crabs, lobsters, claws, octopuses, block-pixel
+      creatures, sparks and any orange or clay palette.
+    </footer>
+  </body>
+</html>
