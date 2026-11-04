@@ -10,6 +10,7 @@ import {
   guardBranch,
   CleanupUsageError,
   parseCleanupArguments,
+  planWorktreeRemoval,
 } from "./cleanup";
 import type { WorktreeEntry } from "./worktrees";
 
@@ -23,79 +24,93 @@ function lockedEntry(overrides: Partial<WorktreeEntry> = {}): WorktreeEntry {
 }
 
 describe("parseCleanupArguments", () => {
-  /**
-   * Fail-closed (see this function's own doc comment): a scope is mandatory
-   * now, so no combination of flags that omits both --run and --all may
-   * ever resolve to the old implicit repo-wide sweep.
-   */
-  test("no flags at all throws — no implicit repo-wide sweep", () => {
-    expect(() => parseCleanupArguments([])).toThrow(/--run.*--all/);
-    expect(() => parseCleanupArguments([])).toThrow(CleanupUsageError);
-  });
-
-  test("--dry-run alone still throws — scope is required even for a preview", () => {
-    expect(() => parseCleanupArguments(["--dry-run"])).toThrow(/--run.*--all/);
-  });
-
-  test("--force alone still throws — --force is not a scope", () => {
-    expect(() => parseCleanupArguments(["--force"])).toThrow(/--run.*--all/);
-  });
-
-  test("--dry-run --run <id> combine", () => {
-    expect(parseCleanupArguments(["--dry-run", "--run", "session-a"])).toEqual({
-      dryRun: true,
-      runId: "session-a",
-      all: false,
+  test("no flags is the finished-runs reclaim", () => {
+    expect(parseCleanupArguments([])).toEqual({
+      dryRun: false,
+      mode: "finished",
+      runId: null,
       force: false,
     });
   });
 
-  test("--dry-run --all combine", () => {
-    expect(parseCleanupArguments(["--dry-run", "--all"])).toEqual({
+  test("--dry-run alone previews the finished-runs reclaim", () => {
+    expect(parseCleanupArguments(["--dry-run"])).toEqual({
       dryRun: true,
+      mode: "finished",
       runId: null,
-      all: true,
       force: false,
     });
   });
 
   test("--run <id> captures the run id", () => {
-    expect(parseCleanupArguments(["--run", "session-a"])).toEqual({
-      dryRun: false,
+    expect(parseCleanupArguments(["--dry-run", "--run", "session-a"])).toEqual({
+      dryRun: true,
+      mode: "run",
       runId: "session-a",
-      all: false,
       force: false,
     });
   });
 
-  test("--all sets the explicit repo-wide flag", () => {
-    expect(parseCleanupArguments(["--all"])).toEqual({
-      dryRun: false,
-      runId: null,
-      all: true,
-      force: false,
-    });
-  });
-
-  test("--force combines with --all", () => {
+  test("--all is the explicit repo-wide mode and combines with --force", () => {
     expect(parseCleanupArguments(["--all", "--force"])).toEqual({
       dryRun: false,
+      mode: "all",
       runId: null,
-      all: true,
       force: true,
     });
   });
 
-  test("--run with no value throws", () => {
-    expect(() => parseCleanupArguments(["--run"])).toThrow();
-  });
-
-  test("--run followed by another flag throws", () => {
-    expect(() => parseCleanupArguments(["--run", "--dry-run"])).toThrow();
+  test("--run with no value or followed by a flag throws", () => {
+    expect(() => parseCleanupArguments(["--run"])).toThrow(CleanupUsageError);
+    expect(() => parseCleanupArguments(["--run", "--dry-run"])).toThrow(CleanupUsageError);
   });
 
   test("--run and --all together throws", () => {
-    expect(() => parseCleanupArguments(["--run", "session-a", "--all"])).toThrow();
+    expect(() => parseCleanupArguments(["--run", "session-a", "--all"])).toThrow(
+      /mutually exclusive/,
+    );
+  });
+});
+
+describe("planWorktreeRemoval", () => {
+  const owner = {
+    runId: "session-a",
+    ticket: "AO-260",
+    anchorPid: 4242,
+    at: "2026-09-07T00:00:00Z",
+  };
+
+  test("a landed clean owned worktree is removed", () => {
+    expect(planWorktreeRemoval(lockedEntry(), owner, "landed", false)).toBe("remove");
+  });
+
+  test("an unlocked worktree attributed by claim is removed when landed and clean", () => {
+    expect(planWorktreeRemoval(lockedEntry({ lockedReason: null }), owner, "landed", false)).toBe(
+      "remove",
+    );
+  });
+
+  test("a worktree whose directory is gone is still planned for removal", () => {
+    const entry = { directory: "", branch: "ao-260-x", lockedReason: null };
+    expect(planWorktreeRemoval(entry, owner, "landed", false)).toBe("remove");
+  });
+
+  test("a dirty landed worktree is kept", () => {
+    expect(planWorktreeRemoval(lockedEntry(), owner, "landed", true)).toBe("keep-dirty");
+  });
+
+  test("not-landed and unknown verdicts are kept, so a tracker error never removes", () => {
+    expect(planWorktreeRemoval(lockedEntry(), owner, "not-landed", false)).toBe("keep-not-landed");
+    expect(planWorktreeRemoval(lockedEntry(), owner, "unknown", false)).toBe("keep-not-landed");
+  });
+
+  test("no owner is protected", () => {
+    expect(planWorktreeRemoval(lockedEntry(), null, "landed", false)).toBe("protected");
+  });
+
+  test("a non-forge lock stays protected even when a claim supplied an owner", () => {
+    const entry = lockedEntry({ lockedReason: "human lock" });
+    expect(planWorktreeRemoval(entry, owner, "landed", false)).toBe("protected");
   });
 });
 
