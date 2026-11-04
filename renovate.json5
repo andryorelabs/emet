@@ -11,6 +11,9 @@
   timezone: "UTC",
   schedule: ["before 12pm on monday"],
 
+  platformAutomerge: false,
+  automergeStrategy: "squash",
+  branchConcurrentLimit: 5,
   prConcurrentLimit: 3,
   prHourlyLimit: 2,
 
@@ -23,6 +26,7 @@
   vulnerabilityAlerts: {
     enabled: true,
     assignees: ["AndryOre"],
+    labels: ["security"],
   },
 
   lockFileMaintenance: {

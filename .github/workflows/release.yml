@@ -8,12 +8,13 @@ permissions:
   contents: read
 
 jobs:
-  release:
-    name: Create GitHub release
+  verify:
+    name: Verify tagged commit
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 100
     permissions:
-      contents: write
+      contents: read
+      checks: read
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -22,10 +23,70 @@ jobs:
 
       - name: Check the tagged commit is on main
         run: |
-          if ! git merge-base --is-ancestor "${GITHUB_SHA}" origin/main; then
+          git fetch --no-tags origin main
+          if ! git merge-base --is-ancestor "${GITHUB_SHA}" FETCH_HEAD; then
             echo "Tagged commit ${GITHUB_SHA} is not on main"
             exit 1
           fi
+
+      - name: Require green CI on the tagged commit
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          deadline=$((SECONDS + 4200))
+          while true; do
+            run_json=$(gh api "repos/${GITHUB_REPOSITORY}/commits/${GITHUB_SHA}/check-runs?per_page=100" \
+              --jq '[.check_runs[] | select(.name == "CI passed")] | sort_by(.id) | last // empty')
+            status=$(jq -r '.status // empty' <<< "${run_json}")
+            conclusion=$(jq -r '.conclusion // empty' <<< "${run_json}")
+            if [[ "${status}" == "completed" ]]; then
+              if [[ "${conclusion}" == "success" ]]; then
+                echo "CI passed concluded success for ${GITHUB_SHA}"
+                exit 0
+              fi
+              echo "CI passed concluded ${conclusion} for ${GITHUB_SHA}. Re-run the failed CI job on main, then re-run this workflow."
+              exit 1
+            fi
+            if (( SECONDS >= deadline )); then
+              if [[ -z "${status}" ]]; then
+                echo "No CI passed check run found for ${GITHUB_SHA} after 70 minutes"
+              else
+                echo "CI passed is still ${status} for ${GITHUB_SHA} after 70 minutes"
+              fi
+              exit 1
+            fi
+            echo "CI passed is ${status:-missing}, checking again in 30s"
+            sleep 30
+          done
+
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
+        with:
+          bun-version-file: package.json
+          no-cache: true
+
+      - run: bun install --frozen-lockfile
+
+      - run: bun install --cwd forge --frozen-lockfile
+
+      - name: Check
+        run: bun run check
+
+      - name: Test
+        run: bun run test
+
+  release:
+    name: Create GitHub release
+    needs: verify
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: write
+      id-token: write
+      attestations: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
 
       - name: Check the tag matches plugin.json
         run: |
@@ -47,15 +108,31 @@ jobs:
       - name: Build the standalone binaries
         run: bun tools/build-binaries.ts --outdir dist
 
+      - name: Smoke-run the linux binary
+        run: ./dist/forge-linux-x64 --version
+
       - name: Write SHA256SUMS
         working-directory: dist
         run: |
           sha256sum forge-linux-x64 forge-linux-arm64 forge-darwin-x64 forge-darwin-arm64 > SHA256SUMS
 
+      - name: Write sizes and checksums to the job summary
+        run: |
+          {
+            echo "### Release binaries"
+            echo
+            echo '```'
+            ls -l dist/forge-linux-x64 dist/forge-linux-arm64 dist/forge-darwin-x64 dist/forge-darwin-arm64
+            echo
+            cat dist/SHA256SUMS
+            echo '```'
+          } >> "${GITHUB_STEP_SUMMARY}"
+
       - name: Extract changelog section
         run: |
           tag_version="${GITHUB_REF_NAME#v}"
           awk -v ver="${tag_version}" '
+            /^\[[^]]+\]: / { if (found) exit }
             /^## \[/ {
               if (found) exit
               if (index($0, "## [" ver "]") == 1) { found = 1 }
@@ -68,11 +145,31 @@ jobs:
             exit 1
           fi
 
+      - name: Attest build provenance
+        if: ${{ !github.event.repository.private }}
+        uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
+        with:
+          subject-path: |
+            dist/forge-linux-x64
+            dist/forge-linux-arm64
+            dist/forge-darwin-x64
+            dist/forge-darwin-arm64
+
       - name: Publish GitHub Release
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
+          if gh release view "${GITHUB_REF_NAME}" > /dev/null 2>&1; then
+            echo "Release ${GITHUB_REF_NAME} already exists, nothing to publish"
+            exit 0
+          fi
+          release_flags=()
+          if [[ "${GITHUB_REF_NAME}" == *-* ]]; then
+            release_flags+=(--prerelease --latest=false)
+          fi
           gh release create "${GITHUB_REF_NAME}" \
+            --verify-tag \
+            "${release_flags[@]}" \
             --title "${GITHUB_REF_NAME}" \
             --notes-file release-notes.md \
             dist/forge-linux-x64 \
