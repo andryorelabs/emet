@@ -8,6 +8,15 @@ and this project adheres to
 
 ## [Unreleased]
 
+### Changed
+
+- The project is renamed from claude-forge to emet: the CLI is `emet`, the
+  command is `/emet`, the agents are `emet-worker` and `emet-reviewer`, and the
+  README carries the new brand. Existing installs and repos keep working:
+  legacy names (`forge.config.json`, `.forge/`, `docs/agents/forge.md`,
+  `FORGE_*`) are still read with a notice, and `emet migrate` moves a repo to
+  the new names.
+
 ### Added
 
 - `install.sh` works without Bun: it installs the standalone-binary shim as

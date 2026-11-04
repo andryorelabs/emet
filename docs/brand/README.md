@@ -2,7 +2,8 @@
 
 Research and exploration for a possible rename and brand kit for claude-forge.
 
-**Status: identity decided; kit pending.** The maintainer approved the name,
+**Status: identity decided; kit applied (runs 3 and 4, spec: issue #174; see
+[`apply-spec.md`](apply-spec.md)).** The maintainer approved the name,
 mascot, typography, palette and logo concept on 2026-11-04 (see "Decisions"
 below). Everything else here is research or a rejected option, kept as a record.
 
@@ -87,8 +88,10 @@ Still manual: the trademark check for EMET in USPTO and EUIPO classes 9 and 42.
 - Run 1b: logo and mascot concepts, once the name and mascot direction are
   picked.
 - Run 2: the kit, meaning tokens, voice, copy and brand book.
-- Run 3: apply the kit across the repository.
-- Run 4: the rename itself.
+- Run 3: apply the kit across the repository. Applied, see
+  [`apply-spec.md`](apply-spec.md) (spec: issue #174).
+- Run 4: the rename itself. Applied (spec: issue #174,
+  [ADR-0015](../adr/0015-rename-to-emet-with-legacy-name-compatibility.md)).
 
 ## Constraints
 
