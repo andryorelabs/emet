@@ -17,7 +17,13 @@ import {
   type DependencyCheck,
   type DependencyProbes,
 } from "./dependencies";
-import { classifyRun, resolveIdleThresholdMs, resolveSessionSlug, type RunVerdict } from "./runs";
+import {
+  classifyRun,
+  resolveIdleThresholdMs,
+  resolveRunArtifactPath,
+  resolveSessionSlug,
+  type RunVerdict,
+} from "./runs";
 import {
   isSlotStale,
   listOccupiedSlots,
@@ -959,6 +965,24 @@ function toPlanTickets(raw: unknown): PlanTicket[] {
 }
 
 /**
+ * The directory holding a run's `approval.json`: the shared git-common-dir
+ * location first, then the legacy `<repoRoot>/.forge/runs/<id>/`. A run with
+ * no approval anywhere resolves to the shared write location, so the gate
+ * reports the missing record there.
+ */
+export async function resolveApprovalDirectory(
+  runId: string,
+  repoRoot: string,
+  commonDirectory?: string,
+): Promise<string> {
+  const location = await resolveRunArtifactPath(runId, "approval.json", {
+    repoRoot,
+    ...(commonDirectory === undefined ? {} : { commonDirectory }),
+  });
+  return path.dirname(location.readPath ?? location.writePath);
+}
+
+/**
  * S9 + S15: dispatch refuses when the approved spec/tickets changed
  * (`approve --check`) and when the approved plan no longer validates
  * (`validate`). Both read the paths recorded in the run's approval record.
@@ -1049,7 +1073,7 @@ async function main(config: ForgeConfig, repoRoot: string) {
 
   const approvalRunId = readFlagValue("--approval");
   if (approvalRunId !== undefined) {
-    const gate = evaluateRunGate(path.join(repoRoot, ".forge", "runs", approvalRunId), {
+    const gate = evaluateRunGate(await resolveApprovalDirectory(approvalRunId, repoRoot), {
       inlineMaxLines: config.sizing.inlineMaxLines,
     });
     failures.push(...gate.failures);
