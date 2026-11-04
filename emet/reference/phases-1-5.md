@@ -36,7 +36,7 @@ operations" section; loop back to Phase 1 once its map clears.
 
 ## Phase 2 — Spec
 
-Run `forge skill-path to-spec` and read the `SKILL.md` it prints, then follow its synthesis template,
+Run `emet skill-path to-spec` and read the `SKILL.md` it prints, then follow its synthesis template,
 but write the result **into the plan file**, not to the issue tracker —
 `to-spec` is user-invocable only and its own publish step is a write that
 can't happen inside plan mode. Section it as a spec block per
@@ -56,7 +56,7 @@ worker and reviewer must obey (the harness copies it into each brief).
 
 ## Phase 3 — Tickets
 
-Run `forge skill-path to-tickets` and read the `SKILL.md` it prints, then follow its tracer-bullet breakdown (with blocking edges), but write the
+Run `emet skill-path to-tickets` and read the `SKILL.md` it prints, then follow its tracer-bullet breakdown (with blocking edges), but write the
 tickets **into the plan file** instead of publishing them — same reason as
 Phase 2. Reinforce two rules on top of the skill's own breakdown:
 
@@ -71,9 +71,9 @@ Phase 2. Reinforce two rules on top of the skill's own breakdown:
   passes the resume-from-diff test is folded into a sibling worker's ticket
   (one worktree), never given its own. If the whole request is below that
   threshold, write no tickets: one worker plus review.
-- Any change to a path listed in `schema.ownedPaths` (`forge.config.json`)
+- Any change to a path listed in `schema.ownedPaths` (`emet.config.json`)
   goes in exactly one ticket, first in the dependency chain, blocking every
-  other ticket that touches the feature — see `docs/agents/forge.md` for why
+  other ticket that touches the feature — see `docs/agents/emet.md` for why
   a schema conflict can't be resolved like a text conflict. An empty
   `schema.ownedPaths` means this repo declared no such path — skip the rule.
 - For every UI ticket, write the actual hand-off into the ticket body —
@@ -84,7 +84,7 @@ Phase 2. Reinforce two rules on top of the skill's own breakdown:
   improvise the interface.
 - Optional `Model:` line (e.g. `Model: opus`, or `Model: opus/high` for model/effort),
   right under `Covers:`. Set it only when the ticket's own files match what
-  `forge assess` calls high-risk (auth, security, payments, webhook, CI,
+  `emet assess` calls high-risk (auth, security, payments, webhook, CI,
   installer, lockfiles, migrations, dangerous sinks, or a path listed in
   `review.highRiskPaths`). It overrides `models.worker` for that worker
   alone; omit it everywhere else so the default worker applies and existing
@@ -102,7 +102,7 @@ Phase 2. Reinforce two rules on top of the skill's own breakdown:
   globs it may edit, one line, comma-separated (e.g. `src/foo.ts, tests/foo/**`); no brace
   globs (`{a,b}`) — list each path separately.
   Same-wave tickets must not overlap; Phase 6 enforces it with
-  `forge surfaces --check`.
+  `emet surfaces --check`.
 - Every ticket carries a mandatory `## Context budget` section, computed
   mechanically (`wc -l`/`grep -c` against the actual files it touches, not a
   guess), so sizing is checkable before any code exists:
@@ -128,10 +128,10 @@ Phase 2. Reinforce two rules on top of the skill's own breakdown:
   any tripwire fires: estimated peak > 160K; touch set > 8 files or > 1,500
   lines; new surface > 500 lines; more than one new E2E spec in the ticket;
   or a new page object **and** a new spec in the same ticket (348K vs 129K
-  for an almost-identical sibling; see `${CLAUDE_PLUGIN_ROOT}/forge/reference/incidents.md`).
+  for an almost-identical sibling; see `${CLAUDE_PLUGIN_ROOT}/emet/reference/incidents.md`).
 
-Before Phase 4, run `forge validate --file <plan.json | ->` (usage:
-`forge validate --help`; plan = spec markdown + tickets with `covers`,
+Before Phase 4, run `emet validate --file <plan.json | ->` (usage:
+`emet validate --help`; plan = spec markdown + tickets with `covers`,
 `surfaces`, `wave`, `blockedBy`, `newSurfaceLines`, `folded`). Fix every error
 (uncovered S#, ticket covering nothing, missing scenario, overlapping wave
 surfaces, dependency cycle) and re-run until it exits 0; warnings, like an
@@ -160,7 +160,7 @@ Now that the plan is approved, in this exact order:
    it on trunk (PR, or local merge if `landing.mode` is `merge`) before Phase 6.
 2. If the feature touches a screen: publish the canvas now with the `Artifact`
    tool directly — never invoke `/design` or ask the user to run it (it is
-   user-invocable only; see `${CLAUDE_PLUGIN_ROOT}/forge/reference/incidents.md`). A canvas is a plain
+   user-invocable only; see `${CLAUDE_PLUGIN_ROOT}/emet/reference/incidents.md`). A canvas is a plain
    single-page HTML you write: nav + one `<section class="artboard">` per
    screen + empty/error/loading state switch + a hand-off block per artboard.
    - **Area already has a canvas** (URL in `docs/design/README.md`):
@@ -179,11 +179,11 @@ Now that the plan is approved, in this exact order:
    ready-for-dispatch label from `docs/agents/triage-labels.md`, plus
    `blockedBy` and priority; UI tickets carry the real hand-off from the
    canvas. Never label the spec issue itself. Before each create run
-   `forge materialize-log --run <id> --lookup <localKey>` (exit 0 = already
+   `emet materialize-log --run <id> --lookup <localKey>` (exit 0 = already
    created, skip); right after, `--record <localKey> <trackerId>` — an
    interrupted run never duplicates.
-4. `forge approve --run spec<spec-id> --spec <file> [--tickets <file>]` writes
-   `approval.json` (spec and ticket hashes; write the ticket list to `.forge/runs/spec<spec-id>/tickets.json` first); Phase 6 refuses to dispatch when
+4. `emet approve --run spec<spec-id> --spec <file> [--tickets <file>]` writes
+   `approval.json` (spec and ticket hashes; write the ticket list to `.emet/runs/spec<spec-id>/tickets.json` first); Phase 6 refuses to dispatch when
    `approve --check` reports a change.
 
 **`--draft` stops here.** Print the spec issue's ID as the handle for a

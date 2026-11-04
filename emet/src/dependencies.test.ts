@@ -7,7 +7,8 @@ import {
   type TicketNode,
   analyzeTicketGraph,
   formatTicketGraphJson,
-  FORGE_AGENT_NAMES,
+  AGENT_NAMES,
+  agentPluginInstallPaths,
   MATTPOCOCK_SKILLS_PLUGIN_ID,
   checkDependencies,
   classifyClaudePluginProbe,
@@ -28,6 +29,7 @@ import {
   type GithubCliProbe,
   type LinearMcpProbe,
 } from "./dependencies";
+import type { InstalledPlugin } from "./skills";
 
 const PLUGIN_ID = MATTPOCOCK_SKILLS_PLUGIN_ID;
 
@@ -180,9 +182,9 @@ describe("classifyForgeAgentsProbe", () => {
   });
 
   test("missing is unsatisfied and names the missing agents plus the fix", () => {
-    const check = classifyForgeAgentsProbe({ kind: "missing", missing: ["forge-reviewer"] });
+    const check = classifyForgeAgentsProbe({ kind: "missing", missing: ["emet-reviewer"] });
     expect(check.status).toBe("unsatisfied");
-    expect(check.summary).toContain("forge-reviewer");
+    expect(check.summary).toContain("emet-reviewer");
     expect(check.remedy).toEqual(["./install.sh"]);
   });
 });
@@ -191,7 +193,7 @@ describe("probeForgeAgents", () => {
   test("present when both agent files exist", () => {
     const directory = mkdtempSync(path.join(os.tmpdir(), "forge-agents-"));
     try {
-      for (const name of FORGE_AGENT_NAMES) {
+      for (const name of AGENT_NAMES) {
         writeFileSync(path.join(directory, `${name}.md`), "");
       }
       expect(probeForgeAgents(directory)).toEqual({ kind: "present" });
@@ -205,7 +207,7 @@ describe("probeForgeAgents", () => {
     try {
       expect(probeForgeAgents(directory)).toEqual({
         kind: "missing",
-        missing: [...FORGE_AGENT_NAMES],
+        missing: [...AGENT_NAMES],
       });
     } finally {
       rmSync(directory, { recursive: true, force: true });
@@ -219,7 +221,7 @@ describe("probeForgeAgents with a forge plugin", () => {
     const plugin = mkdtempSync(path.join(os.tmpdir(), "forge-plugin-"));
     try {
       mkdirSync(path.join(plugin, "agents"));
-      for (const name of FORGE_AGENT_NAMES) {
+      for (const name of AGENT_NAMES) {
         writeFileSync(path.join(plugin, "agents", `${name}.md`), "");
       }
       expect(probeForgeAgents(agents, [plugin])).toEqual({ kind: "present" });
@@ -228,6 +230,53 @@ describe("probeForgeAgents with a forge plugin", () => {
       rmSync(plugin, { recursive: true, force: true });
     }
   });
+
+  test("present when a legacy forge install ships the legacy agent names", () => {
+    const agents = mkdtempSync(path.join(os.tmpdir(), "forge-agents-"));
+    try {
+      for (const name of ["forge-worker", "forge-reviewer"]) {
+        writeFileSync(path.join(agents, `${name}.md`), "");
+      }
+      expect(probeForgeAgents(agents)).toEqual({ kind: "present" });
+    } finally {
+      rmSync(agents, { recursive: true, force: true });
+    }
+  });
+});
+
+function installed(id: string, installPath: string): InstalledPlugin {
+  return { id, version: "1.0.0", enabled: true, installPath };
+}
+
+describe("agentPluginInstallPaths", () => {
+  test("names the emet plugin's install path", () => {
+    expect(agentPluginInstallPaths([installed("emet@emet-marketplace", "/plugins/emet")])).toEqual([
+      "/plugins/emet",
+    ]);
+  });
+
+  test("falls back to a legacy forge plugin when emet is absent", () => {
+    expect(
+      agentPluginInstallPaths([installed("forge@forge-marketplace", "/plugins/forge")]),
+    ).toEqual(["/plugins/forge"]);
+  });
+
+  test("prefers the emet plugin over a legacy forge plugin", () => {
+    expect(
+      agentPluginInstallPaths([
+        installed("forge@forge-marketplace", "/plugins/forge"),
+        installed("emet@emet-marketplace", "/plugins/emet"),
+      ]),
+    ).toEqual(["/plugins/emet"]);
+  });
+
+  test("is empty when neither plugin is installed", () => {
+    expect(agentPluginInstallPaths([installed("other@x", "/plugins/other")])).toEqual([]);
+  });
+});
+
+test("AGENT_NAMES are the emet agents", () => {
+  expect(AGENT_NAMES).toEqual(["emet-worker", "emet-reviewer"]);
 });
 
 describe("classifyGithubCliProbe", () => {

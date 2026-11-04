@@ -10,10 +10,10 @@ Parse `$ARGUMENTS` for a leading `--draft` or `--dispatch <spec-id>` flag
 before anything else:
 
 - **No flag** (default): Phases 1–5 plus the first wave in this session; each
-  later wave runs in its own session — `/forge:run --dispatch <spec-id>` by hand,
+  later wave runs in its own session — `/emet:run --dispatch <spec-id>` by hand,
   or auto-launched when `handoff.autoChain` is on (see Phase 9 in
-  `${CLAUDE_PLUGIN_ROOT}/forge/reference/phases-9-handoff.md`).
-  To run a wave in another session, always use `forge launch <spec-id> --wave
+  `${CLAUDE_PLUGIN_ROOT}/emet/reference/phases-9-handoff.md`).
+  To run a wave in another session, always use `emet launch <spec-id> --wave
   <n>` — never a bare `claude --bg`.
 - **`--draft <feature>`**: run Phases 0–5 and then stop (see the note at the
   end of Phase 5). Nothing gets dispatched; the run ends with a spec issue
@@ -30,31 +30,31 @@ before anything else:
 ## 0. Repo gate
 
 Detect the repo root (`git rev-parse --show-toplevel`; if that fails, stop —
-`/forge:run` needs a git repo). Read `forge.config.json` at that root.
+`/emet:run` needs a git repo). Read `emet.config.json` at that root.
 
-**If it doesn't exist**, `/forge:run` has no safe default for this repo's
+**If it doesn't exist**, `/emet:run` has no safe default for this repo's
 tracker, ticket shape, or worktree/concurrency settings — offer to run
-`forge init` (autodetects package manager, trunk, and tracker kind; writes
-`forge.config.json` plus `docs/agents/{forge,issue-tracker,triage-labels,
-domain}.md`, leaving `TODO(forge):` markers for anything it can't infer),
+`emet init` (autodetects package manager, trunk, and tracker kind; writes
+`emet.config.json` plus `docs/agents/{emet,issue-tracker,triage-labels,
+domain}.md`, leaving `TODO(emet):` markers for anything it can't infer),
 then grill the user for whatever markers remain before continuing. Don't
-dispatch against a repo `forge preflight` would reject.
+dispatch against a repo `emet preflight` would reject.
 
-If it exists, read it plus `docs/agents/{forge,issue-tracker,triage-labels,
+If it exists, read it plus `docs/agents/{emet,issue-tracker,triage-labels,
 domain}.md` at the root. Everything below defers to what those four files
-(and `forge.config.json`) say for _this_ repo over the generic defaults
+(and `emet.config.json`) say for _this_ repo over the generic defaults
 described here — this includes the literal tracker calls
 (`docs/agents/issue-tracker.md`), which of `onStart`/`onPrOpen`/`onPrMerge`
 this coordinator itself must write (`tracker.transitions` — see
-`${CLAUDE_PLUGIN_ROOT}/forge/reference/tracker-<kind>.md`, `<kind>` from
-`forge.config.json`'s `tracker.kind`), and the branch/commit convention
+`${CLAUDE_PLUGIN_ROOT}/emet/reference/tracker-<kind>.md`, `<kind>` from
+`emet.config.json`'s `tracker.kind`), and the branch/commit convention
 (`ticket.branchPrefix`/`commit.trailer`).
 
 `local`-tracker repos: tickets live under the main worktree's `.scratch/` and
-every op is a literal `forge tracker` call (see the `tracker-local.md`
+every op is a literal `emet tracker` call (see the `tracker-local.md`
 reference). With `landing.mode: merge` a wave lands as a local merge, not a PR.
 
-`/forge:run` is designed to run inside plan mode (Phases 1–4 do no writes; the
+`/emet:run` is designed to run inside plan mode (Phases 1–4 do no writes; the
 plan's approval — `ExitPlanMode` — is the one freeze point). The harness
 signals plan mode with a system reminder. In the default and `--draft` modes,
 if that reminder is absent, load the tool with
@@ -79,7 +79,7 @@ unless the run continues from Phase 5 straight into Phase 6.
 
 - **Phases 1–5** (default and `--draft` only): interview → spec → tickets →
   the one approval → materialize. Read
-  `${CLAUDE_PLUGIN_ROOT}/forge/reference/phases-1-5.md` when you reach Phase 1.
+  `${CLAUDE_PLUGIN_ROOT}/emet/reference/phases-1-5.md` when you reach Phase 1.
 - **What a "wave" is**: Phases 6–8 are the body of a loop, not three
   one-shot steps. **One wave = one dependency layer** — the set of tickets
   simultaneously unblocked, dispatched together, implemented in parallel,
@@ -96,23 +96,23 @@ unless the run continues from Phase 5 straight into Phase 6.
      `pr.maxCiFixAttempts`; in merge mode `commands.selfCheck` stands in for
      CI); left open when autoMerge is off, anything was
      flagged, or CI fixes ran out.
-  5. If merged, `forge cleanup --run <runId>`. Then the Phase 9 hand-off: if
+  5. If merged, `emet cleanup --run <runId>`. Then the Phase 9 hand-off: if
      more tickets can run, the next wave starts in a new session; if none can,
-     the run ends with the final report. Details in `${CLAUDE_PLUGIN_ROOT}/forge/reference/phases-9-handoff.md`.
+     the run ends with the final report. Details in `${CLAUDE_PLUGIN_ROOT}/emet/reference/phases-9-handoff.md`.
 - **Phases 6–9** (every mode): dispatch → per-worker implementation → wave
   close-out → wave close and hand off. Read
-  `${CLAUDE_PLUGIN_ROOT}/forge/reference/phases-6-7-dispatch.md` when you reach Phase 6
+  `${CLAUDE_PLUGIN_ROOT}/emet/reference/phases-6-7-dispatch.md` when you reach Phase 6
   (Phase 8 lives in `phases-8-closeout.md`, Phase 9 in `phases-9-handoff.md`;
   load each when you reach it, and re-read Phase 8 before every fix/review
-  round), along with `${CLAUDE_PLUGIN_ROOT}/forge/reference/worker-prompt.md` (the dispatch prompt
-  template) and `${CLAUDE_PLUGIN_ROOT}/forge/reference/tracker-<kind>.md` (`<kind>` from
-  `forge.config.json`'s `tracker.kind`) for this repo's literal tracker
-  calls. Workers dispatch as `subagent_type: "forge:forge-worker"`; Phase 8's
-  review dispatches as `subagent_type: "forge:forge-reviewer"` from
-  `${CLAUDE_PLUGIN_ROOT}/forge/reference/reviewer-prompt.md`'s template — both agent
+  round), along with `${CLAUDE_PLUGIN_ROOT}/emet/reference/worker-prompt.md` (the dispatch prompt
+  template) and `${CLAUDE_PLUGIN_ROOT}/emet/reference/tracker-<kind>.md` (`<kind>` from
+  `emet.config.json`'s `tracker.kind`) for this repo's literal tracker
+  calls. Workers dispatch as `subagent_type: "emet:emet-worker"`; Phase 8's
+  review dispatches as `subagent_type: "emet:emet-reviewer"` from
+  `${CLAUDE_PLUGIN_ROOT}/emet/reference/reviewer-prompt.md`'s template — both agent
   definitions pin their own model and effort (see the README's "Models &
   effort" section) and ship with the plugin.
-- **`${CLAUDE_PLUGIN_ROOT}/forge/reference/incidents.md`** — the evidence behind the five non-negotiables
+- **`${CLAUDE_PLUGIN_ROOT}/emet/reference/incidents.md`** — the evidence behind the five non-negotiables
   below (real run failures, with what broke and how). Never loaded during a
   normal run; read it only when someone asks why a rule exists.
 
@@ -122,10 +122,10 @@ These apply in every mode, can't be paraphrased away by a reference file,
 and are restated here so they're never missed even by a run that only ever
 loads `phases-6-7-dispatch.md`:
 
-1. Never dispatch a ticket without both `forge claims --reserve` and
-   `forge slots --acquire` succeeding for it first.
+1. Never dispatch a ticket without both `emet claims --reserve` and
+   `emet slots --acquire` succeeding for it first.
 2. Never call either through an inline snippet (e.g. `bun -e`) — always the
-   `forge` CLI, exactly as documented in `${CLAUDE_PLUGIN_ROOT}/forge/reference/phases-6-7-dispatch.md`.
+   `emet` CLI, exactly as documented in `${CLAUDE_PLUGIN_ROOT}/emet/reference/phases-6-7-dispatch.md`.
 3. A worker never dispatches agents of its own — no `Agent` calls, no forks.
 4. The coordinator is the single tracker writer: workers never write it. It
    writes a transition only where `tracker.transitions` names it

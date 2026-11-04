@@ -1,13 +1,13 @@
 # Reviewer dispatch prompt
 
 Fill each `{{placeholder}}` and paste as the whole prompt of the Phase 8
-`Agent({subagent_type: "forge:forge-reviewer"})` call. Once per wave, after every
+`Agent({subagent_type: "emet:emet-reviewer"})` call. Once per wave, after every
 branch is merged into the integration branch, before pushing it.
 
 ---
 
 Review `{{integration_branch}}` (base `{{base_branch}}`, {{ticket_count}}
-tickets). Risk tier: `{{risk_tier}}` (`forge assess`, already raised by any
+tickets). Risk tier: `{{risk_tier}}` (`emet assess`, already raised by any
 worker `Risk:` line).
 
 Diff: read the file `{{diff_path}}` FIRST, before any worker report. Read
@@ -31,8 +31,8 @@ Lenses: medium = correctness + verification-gap; high adds security/resilience.
 Verification-gap: one finding per gap, "one test that would catch <named
 regression>".
 
-Emit a JSON array, also written to `.forge/review-{{run_id}}.json` (the exact
-input of `forge review --ticket <t> --findings <file|->`):
+Emit a JSON array, also written to `.emet/review-{{run_id}}.json` (the exact
+input of `emet review --ticket <t> --findings <file|->`):
 
 ```json
 [
@@ -60,7 +60,7 @@ Give the reviewer only the findings file and the fix diff:
 
 ```
 Recheck round {{round}} of 2 on `{{integration_branch}}`. Findings:
-`.forge/review-{{run_id}}.json`; fix diff: `{{diff_path}}`
+`.emet/review-{{run_id}}.json`; fix diff: `{{diff_path}}`
 (`git diff {{reviewed_sha}}..HEAD`). Re-emit the array minus fixed findings. A
 new blocker/critical must cite a prior id or a file in the fix diff, else
 `kind: "defer"`.

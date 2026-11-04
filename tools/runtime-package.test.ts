@@ -46,6 +46,6 @@ test("emet/package.json devDependencies stay on the allowlist install.sh can aff
 
 test("install.sh installs only from emet/ and leaves the repo root untouched", () => {
   const installer = readFileSync(join(repoRoot, "install.sh"), "utf8");
-  expect(installer).toContain('cd "$HOME/.claude/forge" && bun install');
+  expect(installer).toContain('cd "$HOME/.claude/emet" && bun install');
   expect(installer).not.toMatch(/rsync[^\n]*\$SCRIPT_DIR\/(package\.json|node_modules)/);
 });

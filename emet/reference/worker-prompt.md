@@ -1,37 +1,37 @@
 # Worker dispatch prompt template
 
-Fill in every `{{placeholder}}` from this repo's `forge.config.json`,
-`docs/agents/forge.md`, and the current run's state, then paste the filled
+Fill in every `{{placeholder}}` from this repo's `emet.config.json`,
+`docs/agents/emet.md`, and the current run's state, then paste the filled
 template as the entire prompt for each worker's `Agent` call. Don't
 paraphrase this into your own words per worker — a templated prompt can be
 diffed across workers to confirm they all got the same invariants; prose
-retyped per worker can't (see `${CLAUDE_PLUGIN_ROOT}/forge/reference/incidents.md` for the wave this
+retyped per worker can't (see `${CLAUDE_PLUGIN_ROOT}/emet/reference/incidents.md` for the wave this
 rule comes from).
 
 `{{worktree_lock_reason}}` is the one placeholder you must **not** write by
 hand. Get it per ticket, from your own shell, before the `Agent` call:
 
 ```
-forge lock-reason --run <runId> --ticket <ticket>
+emet lock-reason --run <runId> --ticket <ticket>
 ```
 
 Paste its stdout verbatim. It has to be produced by _you_, in _your_ cwd:
 the reason carries your `slug=` (the coordinator's own Claude Code project
 slug), and a worker running that same command inside its worktree would
 stamp the worktree's slug instead — under which no transcript exists, so
-`forge preflight` and `forge cleanup` could never classify your run as
+`emet preflight` and `emet cleanup` could never classify your run as
 `idle` and would treat it as dead the moment your anchor process exits.
 
 Other placeholders: `{{expected_base}}` is your `git rev-parse HEAD` at
 dispatch (also the `baseline` in the dispatch record); `{{global_constraints}}`
 is the spec's `## Global Constraints` copied verbatim (`none` if absent);
-`{{codebase_map_sections}}` is `forge map --for <the ticket's surface globs>`
+`{{codebase_map_sections}}` is `emet map --for <the ticket's surface globs>`
 (`none` if no map); `{{trunk}}` is the trunk branch name; `{{run_id}}` is the
 run.
 
 ---
 
-You are implementing ticket {{ticket_id}} as part of a `/forge:run` wave. Full
+You are implementing ticket {{ticket_id}} as part of a `/emet:run` wave. Full
 ticket body (its `## Interfaces` block, if any, is the contract you build to):
 
 {{ticket_body}}
@@ -75,9 +75,9 @@ Bootstrap this worktree, in this order:
    Use `.` (the isolation guard refuses a subshell in the target). The
    `unlock` is required: the harness usually pre-locks the worktree with a
    generic reason, and `lock` over a lock fails. Paste the reason exactly —
-   don't regenerate it or fix its `slug=`; `forge preflight --post-dispatch`
+   don't regenerate it or fix its `slug=`; `emet preflight --post-dispatch`
    attributes your worktree to the run by it. Verify: `git worktree list
-   --porcelain` shows a `locked forge run=…` line for this directory. The
+   --porcelain` shows a `locked emet run=…` line for this directory. The
    harness unlocks on exit; the coordinator's reservations outlive it.
 
    Never use `run_in_background: true` for anything you intend to wait on —
@@ -96,10 +96,10 @@ Bootstrap this worktree, in this order:
 
 3. `git checkout -b {{branch_name}}`. Local-only, never pushed.
 
-Then write `.forge/surface.json` as `{"surfaces": [<globs from your ticket's
-"Allowed edit surfaces">]}` (create `.forge/`); the edit guard blocks writes
+Then write `.emet/surface.json` as `{"surfaces": [<globs from your ticket's
+"Allowed edit surfaces">]}` (create `.emet/`); the edit guard blocks writes
 outside them. Never commit it: first run
-`echo .forge/surface.json >> "$(git rev-parse --git-path info/exclude)"`.
+`echo .emet/surface.json >> "$(git rev-parse --git-path info/exclude)"`.
 
 Locate before you `Read`: `rg -n '<symbol>'` (or `sg run -p '<pattern>' -l`)
 for "where is this used"; never `Read` a file over ~400 lines whole — locate,
@@ -132,8 +132,8 @@ Commit with this repo's normal convention, ending the body with:
 
 1. Write the full report (changes, decisions, S# covered or not, dead-ends,
    test output tail) to a file, then record it:
-   `forge results --run {{run_id}} --write {{ticket_id}} --status
-   <DONE|DONE_WITH_CONCERNS|BLOCKED|NEEDS_CONTEXT> --report .forge/report-{{ticket_id}}.md (untracked; never commit it) --risk
+   `emet results --run {{run_id}} --write {{ticket_id}} --status
+   <DONE|DONE_WITH_CONCERNS|BLOCKED|NEEDS_CONTEXT> --report .emet/report-{{ticket_id}}.md (untracked; never commit it) --risk
    "<Risk: …>"`.
 2. Your final message is at most **15 lines**: status, S# covered, commit
    SHA(s), one line per concern/blocker, the report path. No diffs, no logs.

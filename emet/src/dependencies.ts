@@ -5,6 +5,14 @@ import path from "node:path";
 import type { LandingMode, TrackerKind } from "./config";
 import { isObject } from "./narrow";
 import {
+  LEGACY_PRODUCT,
+  LEGACY_REVIEWER_AGENT,
+  LEGACY_WORKER_AGENT,
+  PRODUCT,
+  REVIEWER_AGENT,
+  WORKER_AGENT,
+} from "./names";
+import {
   checkSkillsContract,
   findPluginAgentFile,
   findPluginByName,
@@ -34,10 +42,19 @@ import {
 export const MATTPOCOCK_SKILLS_PLUGIN_ID = "mattpocock-skills@claude-plugins-official";
 
 /** The two `~/.claude/agents/*.md` files `install.sh` copies from this repo's
- * own `agents/` directory. Phase 6 dispatches workers as `forge-worker` and
- * Phase 8 dispatches the reviewer as `forge-reviewer` — either name missing
+ * own `agents/` directory. Phase 6 dispatches workers as `emet-worker` and
+ * Phase 8 dispatches the reviewer as `emet-reviewer` — either name missing
  * makes that `Agent({subagent_type: ...})` call fail outright. */
-export const FORGE_AGENT_NAMES = ["forge-worker", "forge-reviewer"] as const;
+export const AGENT_NAMES = [WORKER_AGENT, REVIEWER_AGENT] as const;
+
+/** The pre-rename name of each agent, still read so a legacy install counts. */
+const LEGACY_AGENT_NAMES: Readonly<Record<(typeof AGENT_NAMES)[number], string>> = {
+  [WORKER_AGENT]: LEGACY_WORKER_AGENT,
+  [REVIEWER_AGENT]: LEGACY_REVIEWER_AGENT,
+};
+
+/** The plugin that ships the agents, then its pre-rename name. */
+const AGENT_PLUGIN_NAMES = [PRODUCT, LEGACY_PRODUCT] as const;
 
 /**
  * Every probe runs a foreign binary that can block on the network —
@@ -289,7 +306,7 @@ export function classifyForgeAgentsProbe(probe: ForgeAgentsProbe): DependencyChe
     return {
       ...base,
       status: "satisfied",
-      summary: "forge-worker and forge-reviewer agents are installed",
+      summary: `${AGENT_NAMES.join(" and ")} agents are installed`,
       remedy: [],
     };
   }
@@ -458,16 +475,21 @@ async function probeClaudePlugin(): Promise<ClaudePluginProbe> {
 
 /**
  * An agent is present as `~/.claude/agents/<name>.md` (install.sh) or inside
- * an installed `forge` plugin, where it dispatches as `forge:<name>`.
+ * an installed `emet` plugin, where it dispatches as `emet:<name>`. Its legacy
+ * `forge-*` name counts too, so a pre-rename install still resolves.
  */
 export function probeForgeAgents(
   agentsDirectory: string,
   pluginInstallPaths: readonly string[] = [],
 ): ForgeAgentsProbe {
-  const missing = FORGE_AGENT_NAMES.filter(
-    (name) =>
-      !existsSync(path.join(agentsDirectory, `${name}.md`)) &&
-      !pluginInstallPaths.some((installPath) => findPluginAgentFile(installPath, name) !== null),
+  const missing = AGENT_NAMES.filter((name) =>
+    [name, LEGACY_AGENT_NAMES[name]].every(
+      (candidate) =>
+        !existsSync(path.join(agentsDirectory, `${candidate}.md`)) &&
+        !pluginInstallPaths.some(
+          (installPath) => findPluginAgentFile(installPath, candidate) !== null,
+        ),
+    ),
   );
   return missing.length === 0 ? { kind: "present" } : { kind: "missing", missing };
 }
@@ -511,9 +533,14 @@ export async function probeLinearMcpServer(repoRoot: string): Promise<LinearMcpP
     : { kind: "not-declared", searchedAllScopes: true };
 }
 
-function forgePluginInstallPaths(plugins: Parameters<typeof findPluginByName>[0]): string[] {
-  const plugin = findPluginByName(plugins, "forge");
-  return plugin === null ? [] : [plugin.installPath];
+/** The install path of the `emet` plugin, or of a legacy `forge` plugin when
+ * `emet` is not installed. */
+export function agentPluginInstallPaths(plugins: Parameters<typeof findPluginByName>[0]): string[] {
+  for (const pluginName of AGENT_PLUGIN_NAMES) {
+    const plugin = findPluginByName(plugins, pluginName);
+    if (plugin !== null) return [plugin.installPath];
+  }
+  return [];
 }
 
 /** Memoizes the two repo-independent probes so a fleet sweep shells out once
@@ -533,7 +560,7 @@ export function createDependencyProbes(): DependencyProbes {
       (forgeAgentsResult ??= Promise.resolve(
         probeForgeAgents(
           path.join(os.homedir(), ".claude", "agents"),
-          forgePluginInstallPaths(listInstalledPlugins()),
+          agentPluginInstallPaths(listInstalledPlugins()),
         ),
       )),
     skillsContract: () => (skillsContractResult ??= checkSkillsContract()),

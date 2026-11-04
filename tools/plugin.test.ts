@@ -28,9 +28,11 @@ const plugin = readJson(".claude-plugin/plugin.json");
 const marketplace = readJson(".claude-plugin/marketplace.json");
 const hooks = readJson("hooks/hooks.json");
 const pluginName = String(plugin["name"]);
+const description =
+  "Spec to merge on one approval: parallel workers in isolated worktrees, a review per wave, CI green before merge.";
 
 function promptFiles(): string[] {
-  const files = ["commands/run.md", "commands/forge.md"].filter((file) =>
+  const files = ["commands/run.md", "commands/emet.md", "commands/forge.md"].filter((file) =>
     existsSync(path.join(repoRoot, file)),
   );
   for (const file of readdirSync(path.join(repoRoot, "agents"))) files.push(`agents/${file}`);
@@ -39,7 +41,8 @@ function promptFiles(): string[] {
 
 describe("plugin manifests", () => {
   test("plugin.json names the plugin, a version and the unconstrained skills dependency", () => {
-    expect(pluginName).toBe("forge");
+    expect(pluginName).toBe("emet");
+    expect(plugin["description"]).toBe(description);
     expect(plugin["version"]).toMatch(/^\d+\.\d+\.\d+/);
     expect(plugin["dependencies"]).toEqual([
       { name: "mattpocock-skills", marketplace: "claude-plugins-official" },
@@ -47,18 +50,40 @@ describe("plugin manifests", () => {
   });
 
   test("marketplace.json allows the cross-marketplace dependency and lists the plugin", () => {
+    expect(marketplace["name"]).toBe("emet-marketplace");
     expect(marketplace["allowCrossMarketplaceDependenciesOn"]).toEqual(["claude-plugins-official"]);
     const entries = asRecordArray(marketplace["plugins"]);
     expect(entries.map((entry) => entry["name"])).toEqual([pluginName]);
     expect(entries[0]?.["source"]).toBe("./");
+    expect(entries[0]?.["description"]).toBe(description);
+  });
+
+  test("ships the emet-worker and emet-reviewer agents", () => {
+    expect(readdirSync(path.join(repoRoot, "agents")).toSorted()).toEqual([
+      "emet-reviewer.md",
+      "emet-worker.md",
+    ]);
+  });
+
+  test("no manifest, agent or hook contains forge", () => {
+    const files = [
+      ".claude-plugin/plugin.json",
+      ".claude-plugin/marketplace.json",
+      "hooks/hooks.json",
+      ...readdirSync(path.join(repoRoot, "agents")).map((file) => `agents/${file}`),
+    ];
+    const offending = files.filter((file) =>
+      /forge/i.test(readFileSync(path.join(repoRoot, file), "utf8")),
+    );
+    expect(offending).toEqual([]);
   });
 
   test("the plugin name is the one string used by manifests, prompts and hooks", () => {
-    expect(JSON.stringify(hooks)).toContain("${CLAUDE_PLUGIN_ROOT}/bin/forge");
+    expect(JSON.stringify(hooks)).toContain("${CLAUDE_PLUGIN_ROOT}/bin/emet");
     const prefixes = new Set<string>();
     for (const file of promptFiles()) {
       const text = readFileSync(path.join(repoRoot, file), "utf8");
-      for (const match of text.matchAll(/\b([a-z][a-z-]*):forge-(?:worker|reviewer)\b/g)) {
+      for (const match of text.matchAll(/\b([a-z][a-z-]*):emet-(?:worker|reviewer)\b/g)) {
         prefixes.add(match[1] ?? "");
       }
       for (const match of text.matchAll(/(?<![\w/])\/([a-z][a-z-]*):run\b/g)) {
@@ -84,13 +109,13 @@ describe("hooks.json", () => {
     expect(firstEntry("PreToolUse")["matcher"]).toBe(
       "Bash|ScheduleWakeup|Skill|Edit|Write|MultiEdit|NotebookEdit",
     );
-    expect(firstCommand("PreToolUse")).toBe('"${CLAUDE_PLUGIN_ROOT}/bin/forge" guard');
+    expect(firstCommand("PreToolUse")).toBe('"${CLAUDE_PLUGIN_ROOT}/bin/emet" guard');
     for (const event of ["SubagentStop", "Stop"]) {
-      expect(firstCommand(event)).toBe(`"\${CLAUDE_PLUGIN_ROOT}/bin/forge" guard --event ${event}`);
+      expect(firstCommand(event)).toBe(`"\${CLAUDE_PLUGIN_ROOT}/bin/emet" guard --event ${event}`);
     }
   });
 
   test("prefetches the binary on SessionStart", () => {
-    expect(firstCommand("SessionStart")).toBe('FORGE_PREFETCH=1 "${CLAUDE_PLUGIN_ROOT}/bin/forge"');
+    expect(firstCommand("SessionStart")).toBe('EMET_PREFETCH=1 "${CLAUDE_PLUGIN_ROOT}/bin/emet"');
   });
 });

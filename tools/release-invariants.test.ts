@@ -29,7 +29,7 @@ describe("release.yml invariants", () => {
   });
 
   test("smoke-runs the linux binary before publishing", () => {
-    const smokeIndex = releaseWorkflow.indexOf("./dist/forge-linux-x64 --version");
+    const smokeIndex = releaseWorkflow.indexOf("./dist/emet-linux-x64 --version");
     expect(smokeIndex).toBeGreaterThan(-1);
     expect(smokeIndex).toBeLessThan(releaseWorkflow.indexOf("gh release create"));
   });
