@@ -1,6 +1,6 @@
 #!/usr/bin/env bun
 /**
- * `forge` — the global CLI dispatcher for `/forge`'s repo-side machinery.
+ * `emet` — the global CLI dispatcher for `/emet`'s repo-side machinery.
  *
  * Historically these were nine separate `scripts/forge-*.ts` files living
  * inside `andryore-dev`, invoked via `bun run forge:<name>` aliases in that
@@ -22,9 +22,10 @@
  * (the tool never actually ran), `3` internal error.
  */
 
-const USAGE = `usage: forge <command> [...args]
+const USAGE = `usage: emet <command> [...args]
 
 commands:
+  migrate   [--dry-run]  — rename a legacy repo to the emet names
   init      [--tracker linear|github|local] [--force]
   doctor    [--all] [<path> ...]  — read-only fleet sweep, defaults to cwd
   preflight [--run <id>] [--post-dispatch]
@@ -38,7 +39,7 @@ commands:
   launch    <spec-id> --wave <n>  — start a wave as a \`claude --bg\` session and open its Orca tab per handoff.launcher
   lock-reason --run <id> --ticket <ticket> [--anchor <pid>]  — the \`git worktree lock\` reason a worker writes at bootstrap
   assess    --base <ref> --head <ref>  — classify a diff as passive|medium|high and pick the reviewer model
-  status    [--spec <id>]  — Working / Checking / Ready / Needs-decision per wave as JSON + a summary line (\`forge status --help\` documents the JSON)
+  status    [--spec <id>]  — Working / Checking / Ready / Needs-decision per wave as JSON + a summary line (\`emet status --help\` documents the JSON)
   surfaces  --check <file.json | ->  — reject overlapping allowed-surface globs between a wave's tickets
   verify    <ticket>  — post-worker enforcement check
   review-package <base> <head>  — review range package
@@ -54,28 +55,46 @@ commands:
   metrics   [--run <id>]
   guard     — Claude Code PreToolUse hook (reads hook JSON on stdin); see src/guard.ts
   selftest  — run this CLI's own unit tests (source installs only)
-  --version — print the forge version
+  --version — print the emet version
 `;
 
 const EXIT_CONFIG_OR_USAGE_ERROR = 2;
 const EXIT_INTERNAL_ERROR = 3;
 
+/**
+ * Writes the brand banner to stdout. Skipped when the invocation asks for
+ * machine-readable output with `--json`.
+ */
+async function printBanner(args: readonly string[]): Promise<void> {
+  if (args.includes("--json")) return;
+  const { renderBanner } = await import("../src/banner");
+  process.stdout.write(renderBanner(process.stdout, process.env));
+}
+
 async function main(): Promise<void> {
   const [command, ...rest] = process.argv.slice(2);
 
   if (!command) {
+    await printBanner([]);
     console.error(USAGE);
     process.exitCode = EXIT_CONFIG_OR_USAGE_ERROR;
     return;
   }
 
   switch (command) {
+    case "migrate": {
+      const { run } = await import("../src/migrate");
+      run(rest);
+      return;
+    }
     case "init": {
+      await printBanner(rest);
       const { run } = await import("../src/init");
       await run(rest);
       return;
     }
     case "doctor": {
+      await printBanner(rest);
       const { run } = await import("../src/doctor");
       await run(rest);
       return;
@@ -88,7 +107,7 @@ async function main(): Promise<void> {
     case "skill-path": {
       const skillName = rest[0];
       if (skillName === undefined) {
-        console.error("usage: forge skill-path <name>");
+        console.error("usage: emet skill-path <name>");
         process.exitCode = EXIT_CONFIG_OR_USAGE_ERROR;
         return;
       }
@@ -265,11 +284,12 @@ async function main(): Promise<void> {
     case "--help":
     case "-h":
     case "help": {
+      await printBanner(rest);
       console.log(USAGE);
       return;
     }
     default: {
-      console.error(`forge: unknown command "${command}"\n\n${USAGE}`);
+      console.error(`emet: unknown command "${command}"\n\n${USAGE}`);
       process.exitCode = EXIT_CONFIG_OR_USAGE_ERROR;
     }
   }
