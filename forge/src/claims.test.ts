@@ -51,7 +51,7 @@ describe("didReserveTicket / listReservations / releaseTicket", () => {
     expect(isAcquired).toBe(true);
 
     const reservations = await listReservations(forgeDirectory);
-    expect(reservations).toEqual([expect.objectContaining({ runId: "run-a", ticket: "AO-999" })]);
+    expect(reservations).toMatchObject([{ runId: "run-a", ticket: "AO-999" }]);
 
     const result = await releaseTicket("AO-999", "run-a", { forgeDirectory });
     expect(result).toEqual({ outcome: "released", previousOwnerRunId: "run-a" });
@@ -65,8 +65,8 @@ describe("didReserveTicket / listReservations / releaseTicket", () => {
     const names = readdirSync(ticketsDirectory);
     expect(names.some((name) => name.endsWith(".tmp"))).toBe(false);
     const file = names.find((name) => name.endsWith(".json"))!;
-    const parsed: Reservation = JSON.parse(readFileSync(path.join(ticketsDirectory, file), "utf8"));
-    expect(parsed.runId).toBe("run-a");
+    const parsed: unknown = JSON.parse(readFileSync(path.join(ticketsDirectory, file), "utf8"));
+    expect(parsed).toMatchObject({ runId: "run-a" });
   });
 
   test.skipIf(!existsSync("/proc/self/stat"))(
@@ -96,7 +96,7 @@ describe("didReserveTicket / listReservations / releaseTicket", () => {
     expect(result).toEqual({ outcome: "owned-by-another", ownerRunId: "run-a" });
 
     const reservations = await listReservations(forgeDirectory);
-    expect(reservations).toEqual([expect.objectContaining({ runId: "run-a", ticket: "AO-994" })]);
+    expect(reservations).toMatchObject([{ runId: "run-a", ticket: "AO-994" }]);
   });
 
   test("force releases another run's reservation anyway", async () => {
@@ -120,7 +120,7 @@ describe("didReserveTicket / listReservations / releaseTicket", () => {
     expect(isSecond).toBe(false);
 
     const reservations = await listReservations(forgeDirectory);
-    expect(reservations).toEqual([expect.objectContaining({ runId: "run-a", ticket: "AO-998" })]);
+    expect(reservations).toMatchObject([{ runId: "run-a", ticket: "AO-998" }]);
   });
 
   test("the same run re-reserving its own ticket is idempotent", async () => {
@@ -137,7 +137,7 @@ describe("didReserveTicket / listReservations / releaseTicket", () => {
     expect(isReclaimed).toBe(true);
 
     const reservations = await listReservations(forgeDirectory);
-    expect(reservations).toEqual([expect.objectContaining({ runId: "run-c", ticket: "AO-997" })]);
+    expect(reservations).toMatchObject([{ runId: "run-c", ticket: "AO-997" }]);
   });
 
   /**
@@ -236,7 +236,7 @@ describe("pruneDeadReservations", () => {
     expect(result.releasedTickets).toEqual(["AO-1"]);
     expect(result.malformedFiles).toEqual([]);
     const remaining = await listReservations(forgeDirectory);
-    expect(remaining).toEqual([expect.objectContaining({ runId: "run-live", ticket: "AO-2" })]);
+    expect(remaining).toMatchObject([{ runId: "run-live", ticket: "AO-2" }]);
   });
 
   test("dry-run reports what would be released without deleting anything", async () => {

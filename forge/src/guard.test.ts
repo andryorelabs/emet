@@ -184,13 +184,17 @@ describe("checkCodeReviewFanoutWithSiblingRun", () => {
     const entries = [
       { index: 0, holder: makeHolder({ anchorPid: 777 }), verdict: "live" as const },
     ];
-    const verdict = await checkCodeReviewFanoutWithSiblingRun(input, 111, async () => entries);
+    const verdict = await checkCodeReviewFanoutWithSiblingRun(input, 111, () =>
+      Promise.resolve(entries),
+    );
     expect(verdict.decision).toBe("deny");
   });
 
   test("allows code-review when no sibling run is live", async () => {
     const input: PreToolUseHookInput = { tool_name: "Skill", tool_input: { skill: "code-review" } };
-    const verdict = await checkCodeReviewFanoutWithSiblingRun(input, 111, async () => []);
+    const verdict = await checkCodeReviewFanoutWithSiblingRun(input, 111, () =>
+      Promise.resolve([]),
+    );
     expect(verdict).toEqual({ decision: "allow" });
   });
 
@@ -202,7 +206,9 @@ describe("checkCodeReviewFanoutWithSiblingRun", () => {
     const entries = [
       { index: 0, holder: makeHolder({ anchorPid: 777 }), verdict: "live" as const },
     ];
-    const verdict = await checkCodeReviewFanoutWithSiblingRun(input, 111, async () => entries);
+    const verdict = await checkCodeReviewFanoutWithSiblingRun(input, 111, () =>
+      Promise.resolve(entries),
+    );
     expect(verdict.decision).toBe("deny");
   });
 
@@ -211,7 +217,9 @@ describe("checkCodeReviewFanoutWithSiblingRun", () => {
     const entries = [
       { index: 0, holder: makeHolder({ anchorPid: 777 }), verdict: "live" as const },
     ];
-    const verdict = await checkCodeReviewFanoutWithSiblingRun(input, 111, async () => entries);
+    const verdict = await checkCodeReviewFanoutWithSiblingRun(input, 111, () =>
+      Promise.resolve(entries),
+    );
     expect(verdict).toEqual({ decision: "allow" });
   });
 });
@@ -230,7 +238,7 @@ describe("evaluateGuard", () => {
 });
 
 const subagentDeps = (commits: number | null, notes: string[]) => ({
-  countNewCommits: async () => commits,
+  countNewCommits: () => Promise.resolve(commits),
   readHandoffNotes: () => notes,
 });
 
@@ -244,9 +252,9 @@ const eventDeps = (
   written: unknown[],
   overrides: Partial<CompletionEventDependencies> = {},
 ): CompletionEventDependencies => ({
-  resolveOwner: async () => ({ runId: "run-a", ticket: "CLA-50", branch: "cla-50-x" }),
-  resolveCommonDirectory: async () => "/repo/.git",
-  countNewCommits: async () => 3,
+  resolveOwner: () => Promise.resolve({ runId: "run-a", ticket: "CLA-50", branch: "cla-50-x" }),
+  resolveCommonDirectory: () => Promise.resolve("/repo/.git"),
+  countNewCommits: () => Promise.resolve(3),
   writeEvent: (_commonDirectory, event) => {
     written.push(event);
   },
@@ -328,7 +336,7 @@ describe("stop hooks", () => {
       "Stop",
       { cwd: worktreeCwd },
       { decision: "block", reason: "x" },
-      eventDeps(written, { countNewCommits: async () => null }),
+      eventDeps(written, { countNewCommits: () => Promise.resolve(null) }),
     );
     expect(written[0]).toMatchObject({ outcome: "blocked", commits: null, sessionId: null });
   });
@@ -339,7 +347,7 @@ describe("stop hooks", () => {
       "SubagentStop",
       { cwd: "/home/u/repo" },
       { decision: "allow" },
-      eventDeps(written, { resolveOwner: async () => null }),
+      eventDeps(written, { resolveOwner: () => Promise.resolve(null) }),
     );
     expect(written).toEqual([]);
     await recordCompletionEvent(
@@ -363,8 +371,8 @@ describe("stop hooks", () => {
   const sessionDeps = (
     overrides: Partial<SessionStopDependencies> = {},
   ): SessionStopDependencies => ({
-    listSlots: async () => [{ index: 0, holder, verdict: "live" }],
-    listClaims: async () => [],
+    listSlots: () => Promise.resolve([{ index: 0, holder, verdict: "live" }]),
+    listClaims: () => Promise.resolve([]),
     markerExists: () => false,
     ...overrides,
   });
@@ -372,7 +380,7 @@ describe("stop hooks", () => {
   const heldClaim = { runId: "r", anchorPid: 500, ticket: "AO-1", reservedAt: 0, sessionSlug: "s" };
 
   test("Stop allows while a worker slot is held, even with claims", async () => {
-    const deps = sessionDeps({ listClaims: async () => [heldClaim] });
+    const deps = sessionDeps({ listClaims: () => Promise.resolve([heldClaim]) });
     expect((await checkSessionStop({ session_id: "sess-1" }, [10, 500], deps)).decision).toBe(
       "allow",
     );
@@ -380,20 +388,29 @@ describe("stop hooks", () => {
 
   test("Stop blocks once when claims remain, no worker is in flight and no marker exists", async () => {
     const input: StopHookInput = { session_id: "sess-1" };
-    const deps = sessionDeps({ listSlots: async () => [], listClaims: async () => [heldClaim] });
+    const deps = sessionDeps({
+      listSlots: () => Promise.resolve([]),
+      listClaims: () => Promise.resolve([heldClaim]),
+    });
     expect((await checkSessionStop(input, [10, 500], deps)).decision).toBe("block");
     const second = await checkSessionStop({ ...input, stop_hook_active: true }, [10, 500], deps);
     expect(second.decision).toBe("allow");
   });
 
   test("Stop blocks on a held claim alone", async () => {
-    const deps = sessionDeps({ listSlots: async () => [], listClaims: async () => [heldClaim] });
+    const deps = sessionDeps({
+      listSlots: () => Promise.resolve([]),
+      listClaims: () => Promise.resolve([heldClaim]),
+    });
     expect((await checkSessionStop({ session_id: "sess-1" }, [500], deps)).decision).toBe("block");
   });
 
   test("Stop allows with a marker, without a held run, or with a bad session id", async () => {
     const input: StopHookInput = { session_id: "sess-1" };
-    const claimsOnly = { listSlots: async () => [], listClaims: async () => [heldClaim] };
+    const claimsOnly = {
+      listSlots: () => Promise.resolve([]),
+      listClaims: () => Promise.resolve([heldClaim]),
+    };
     const marked = await checkSessionStop(
       input,
       [500],

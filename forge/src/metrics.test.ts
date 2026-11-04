@@ -177,10 +177,10 @@ describe("run", () => {
       } finally {
         console.log = originalLog;
       }
-      const parsed = JSON.parse(lines.join("\n"));
-      expect(parsed.missing).toEqual([]);
-      expect(parsed.run.costUsd).toBeCloseTo(24);
-      expect(parsed.tickets[0].ticket).toBe("CLA-1");
+      const parsed: unknown = JSON.parse(lines.join("\n"));
+      expect(parsed).toMatchObject({ missing: [] });
+      expect(parsed).toHaveProperty("run.costUsd", expect.closeTo(24));
+      expect(parsed).toHaveProperty("tickets.0.ticket", "CLA-1");
     } finally {
       rmSync(root, { recursive: true, force: true });
     }

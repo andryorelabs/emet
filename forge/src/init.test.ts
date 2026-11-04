@@ -492,12 +492,13 @@ describe("forge init --tracker local end to end", () => {
 
   test("no remote: merge landing, local id pattern, .scratch/ ignored, no tickets un-ignore", async () => {
     await runInit();
-    const config = await Bun.file(path.join(repoRoot, "forge.config.json")).json();
-    expect(config.landing.mode).toBe("merge");
-    expect(config.ticket.idPattern).toBe(String.raw`^[a-z0-9-]+-\d{2,}$`);
-    expect(config.ticket.branchPrefix).toBe("forge");
-    expect(config.tracker.kind).toBe("local");
-    expect(config.tracker.local).toBeUndefined();
+    const config: unknown = await Bun.file(path.join(repoRoot, "forge.config.json")).json();
+    expect(config).toMatchObject({
+      landing: { mode: "merge" },
+      ticket: { idPattern: String.raw`^[a-z0-9-]+-\d{2,}$`, branchPrefix: "forge" },
+      tracker: { kind: "local" },
+    });
+    expect(config).not.toHaveProperty("tracker.local");
     const gitignore = await Bun.file(path.join(repoRoot, ".gitignore")).text();
     expect(gitignore).toContain(".scratch/");
     expect(gitignore).not.toContain("!.forge/tickets/");
@@ -508,8 +509,8 @@ describe("forge init --tracker local end to end", () => {
   test("with a remote: pr landing", async () => {
     await Bun.$`git -C ${repoRoot} remote add origin https://example.invalid/x.git`.quiet();
     await runInit();
-    const config = await Bun.file(path.join(repoRoot, "forge.config.json")).json();
-    expect(config.landing.mode).toBe("pr");
+    const config: unknown = await Bun.file(path.join(repoRoot, "forge.config.json")).json();
+    expect(config).toMatchObject({ landing: { mode: "pr" } });
   });
 
   test("re-running does not duplicate .scratch/ in .gitignore", async () => {

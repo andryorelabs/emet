@@ -69,11 +69,11 @@ describe("evaluateRunGate (S9, S15)", () => {
 });
 
 const probesFor = (head: string, base: string, setting: string | null): EnvironmentProbes => ({
-  helpText: async () => null,
-  ghRepoNameWithOwner: async () => null,
-  remoteUrl: async () => null,
-  resolveRef: async (_root, ref) => (ref === "HEAD" ? head : base),
-  worktreeBaseRef: async () => setting,
+  helpText: () => Promise.resolve(null),
+  ghRepoNameWithOwner: () => Promise.resolve(null),
+  remoteUrl: () => Promise.resolve(null),
+  resolveRef: (_root, ref) => Promise.resolve(ref === "HEAD" ? head : base),
+  worktreeBaseRef: () => Promise.resolve(setting),
 });
 
 describe("collectForkBaseFailures (S2)", () => {
@@ -91,9 +91,9 @@ describe("collectForkBaseFailures (S2)", () => {
     const refs: string[] = [];
     const probes: EnvironmentProbes = {
       ...probesFor("aaaaaaa1", "bbbbbbb2", null),
-      resolveRef: async (_root, ref) => {
+      resolveRef: (_root, ref) => {
         refs.push(ref);
-        return ref === "HEAD" ? "aaaaaaa1" : "bbbbbbb2";
+        return Promise.resolve(ref === "HEAD" ? "aaaaaaa1" : "bbbbbbb2");
       },
     };
     const failures = await collectForkBaseFailures("/r", "origin", "main", probes, "merge");
@@ -493,9 +493,9 @@ describe("auditPostDispatch", () => {
       ["ao-284-starred-page", "ao-284-starred-page-fixes"],
       baseOptions,
     );
-    expect(failures).toEqual([
-      expect.objectContaining({ kind: "duplicate-ticket-worktree" }),
-      expect.objectContaining({ kind: "duplicate-ticket-branch-number" }),
+    expect(failures).toMatchObject([
+      { kind: "duplicate-ticket-worktree" },
+      { kind: "duplicate-ticket-branch-number" },
     ]);
   });
 
@@ -509,13 +509,13 @@ describe("auditPostDispatch", () => {
       ...baseOptions,
       statMtimeMs: () => 1_000_000 - 60_000,
     });
-    expect(failures).toEqual([expect.objectContaining({ kind: "unlocked-past-deadline" })]);
+    expect(failures).toMatchObject([{ kind: "unlocked-past-deadline" }]);
   });
 
   test("reports a branch that does not match its own lock ticket", () => {
     const entry = lockedFor("/repo/.claude/worktrees/agent-a", "ao-999-wrong-branch", "AO-321");
     const failures = auditPostDispatch([entry], ["ao-999-wrong-branch"], baseOptions);
-    expect(failures).toEqual([expect.objectContaining({ kind: "branch-ticket-mismatch" })]);
+    expect(failures).toMatchObject([{ kind: "branch-ticket-mismatch" }]);
   });
 });
 
@@ -531,8 +531,8 @@ describe("findBranchTicketMismatches", () => {
 
   test("reports a branch that does not match its own lock ticket", () => {
     const entry = lockedFor("/repo/.claude/worktrees/agent-a", "ao-999-wrong-branch", "AO-321");
-    expect(findBranchTicketMismatches([entry], "ao")).toEqual([
-      expect.objectContaining({ kind: "branch-ticket-mismatch" }),
+    expect(findBranchTicketMismatches([entry], "ao")).toMatchObject([
+      { kind: "branch-ticket-mismatch" },
     ]);
   });
 
@@ -575,7 +575,7 @@ describe("findBranchTicketMismatches", () => {
         nowMs: Date.parse("2026-09-11T00:01:00.000Z"),
         maxAgeMs: 30_000,
       }),
-    ).toEqual([expect.objectContaining({ kind: "branch-ticket-mismatch" })]);
+    ).toMatchObject([{ kind: "branch-ticket-mismatch" }]);
   });
 
   test("a scaffold branch belonging to a DIFFERENT worktree is still a mismatch", () => {
@@ -589,7 +589,7 @@ describe("findBranchTicketMismatches", () => {
         nowMs: Date.parse("2026-09-11T00:00:01.000Z"),
         maxAgeMs: 30_000,
       }),
-    ).toEqual([expect.objectContaining({ kind: "branch-ticket-mismatch" })]);
+    ).toMatchObject([{ kind: "branch-ticket-mismatch" }]);
   });
 });
 
@@ -700,35 +700,33 @@ describe("evaluateDependencyGate", () => {
 
 describe("findMissingRequiredCommands", () => {
   test("reports a binary that does not resolve", async () => {
-    const missing = await findMissingRequiredCommands(
-      ["rg", "sg"],
-      new Set(),
-      async (binary) => binary === "rg",
+    const missing = await findMissingRequiredCommands(["rg", "sg"], new Set(), (binary) =>
+      Promise.resolve(binary === "rg"),
     );
     expect(missing).toEqual(["sg"]);
   });
 
   test("skips a binary a dependency check already covers", async () => {
-    const missing = await findMissingRequiredCommands(
-      ["gh", "rg"],
-      new Set(["gh"]),
-      async () => false,
+    const missing = await findMissingRequiredCommands(["gh", "rg"], new Set(["gh"]), () =>
+      Promise.resolve(false),
     );
     expect(missing).toEqual(["rg"]);
   });
 
   test("empty when every command resolves", async () => {
-    const missing = await findMissingRequiredCommands(["rg"], new Set(), async () => true);
+    const missing = await findMissingRequiredCommands(["rg"], new Set(), () =>
+      Promise.resolve(true),
+    );
     expect(missing).toEqual([]);
   });
 });
 
 describe("collectDependencyChecks (S10)", () => {
   const absentGithubCliProbes: DependencyProbes = {
-    claudePlugin: async () => ({ kind: "listed", status: "installed" }),
-    githubCli: async () => ({ kind: "not-on-path" }),
-    linearMcpServer: async () => ({ kind: "declared", source: "mcp-json" }),
-    forgeAgents: async () => ({ kind: "present" }),
+    claudePlugin: () => Promise.resolve({ kind: "listed", status: "installed" }),
+    githubCli: () => Promise.resolve({ kind: "not-on-path" }),
+    linearMcpServer: () => Promise.resolve({ kind: "declared", source: "mcp-json" }),
+    forgeAgents: () => Promise.resolve({ kind: "present" }),
   };
 
   test("emits no github-cli check when gh is absent, tracker local, landing merge", async () => {

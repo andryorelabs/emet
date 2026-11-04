@@ -38,11 +38,12 @@ function stubProbes(overrides: {
   readonly forgeAgents?: ForgeAgentsProbe;
 }): DependencyProbes {
   return {
-    claudePlugin: async () => overrides.claudePlugin ?? { kind: "listed", status: "installed" },
-    githubCli: async () => overrides.githubCli ?? { kind: "authenticated" },
-    linearMcpServer: async () =>
-      overrides.linearMcpServer ?? { kind: "declared", source: "mcp-json" },
-    forgeAgents: async () => overrides.forgeAgents ?? { kind: "present" },
+    claudePlugin: () =>
+      Promise.resolve(overrides.claudePlugin ?? { kind: "listed", status: "installed" }),
+    githubCli: () => Promise.resolve(overrides.githubCli ?? { kind: "authenticated" }),
+    linearMcpServer: () =>
+      Promise.resolve(overrides.linearMcpServer ?? { kind: "declared", source: "mcp-json" }),
+    forgeAgents: () => Promise.resolve(overrides.forgeAgents ?? { kind: "present" }),
   };
 }
 
