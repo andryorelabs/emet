@@ -400,6 +400,7 @@ async function describeWorktreeEntryVerdict(
         line: `  ${entry.directory} (${entry.branch}): dead — reclaimable via "forge cleanup --run ${verdict.owner.runId} --force" (or --all --force if abandoned)`,
       };
     }
+    case "content-fallback":
     default: {
       const contentVerdict = await classifyByContent(verdict.branch, mainTree, remote, trunk, {
         local,
@@ -907,8 +908,19 @@ export type RunGateFindings = {
 
 function readApprovalRecord(approvalPath: string): ApprovalRecord | null {
   try {
-    const record: ApprovalRecord = JSON.parse(readFileSync(approvalPath, "utf8"));
-    return record;
+    const parsed: unknown = JSON.parse(readFileSync(approvalPath, "utf8"));
+    if (!isObject(parsed)) return null;
+    const { specPath, ticketsPath, specHash, ticketsHash, approvedAt } = parsed;
+    if (
+      typeof specPath !== "string" ||
+      typeof ticketsPath !== "string" ||
+      typeof specHash !== "string" ||
+      typeof ticketsHash !== "string" ||
+      typeof approvedAt !== "string"
+    ) {
+      return null;
+    }
+    return { specPath, ticketsPath, specHash, ticketsHash, approvedAt };
   } catch {
     return null;
   }

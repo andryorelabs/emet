@@ -142,7 +142,8 @@ describe("ci.yml", () => {
   });
 
   test("has separate check and test jobs", () => {
-    expect(Object.keys(ci?.jobs ?? {})).toEqual(expect.arrayContaining(["check", "test"]));
+    expect(Object.keys(ci?.jobs ?? {})).toContain("check");
+    expect(Object.keys(ci?.jobs ?? {})).toContain("test");
   });
 
   test("ci-passed needs every other job and always runs", () => {

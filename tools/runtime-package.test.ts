@@ -6,12 +6,31 @@ const repoRoot = join(import.meta.dir, "..");
 
 const allowedRuntimeDevDependencies = new Set(["@types/bun", "@types/node", "typescript"]);
 
+/** Whether `value` is a plain object whose values are all strings. */
+function isStringRecord(value: unknown): value is Record<string, string> {
+  return (
+    typeof value === "object" &&
+    value !== null &&
+    Object.values(value).every((entry) => typeof entry === "string")
+  );
+}
+
 /** Reads and parses forge/package.json, the manifest install.sh ships to users. */
 function readRuntimeManifest(): {
   dependencies?: Record<string, string>;
   devDependencies?: Record<string, string>;
 } {
-  return JSON.parse(readFileSync(join(repoRoot, "forge/package.json"), "utf8"));
+  const parsed: unknown = JSON.parse(readFileSync(join(repoRoot, "forge/package.json"), "utf8"));
+  if (typeof parsed !== "object" || parsed === null) {
+    throw new Error("forge/package.json is not a JSON object");
+  }
+  const manifest = Object.fromEntries(Object.entries(parsed));
+  return {
+    ...(isStringRecord(manifest["dependencies"]) ? { dependencies: manifest["dependencies"] } : {}),
+    ...(isStringRecord(manifest["devDependencies"])
+      ? { devDependencies: manifest["devDependencies"] }
+      : {}),
+  };
 }
 
 test("forge/package.json ships no runtime dependencies", () => {
