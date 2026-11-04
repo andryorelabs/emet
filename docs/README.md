@@ -26,6 +26,20 @@ An index of every document in this repository. Terms follow [GLOSSARY.md](../GLO
 
 - [`adr/README.md`](adr/README.md): the architecture decision record index, one file per decision (`adr/NNNN-*.md`).
 
+## Brand
+
+Research for the brand kit, run 1. Options and recommendations only; no decision is made here.
+
+- [`brand/README.md`](brand/README.md): index of the brand research and the decisions still pending.
+- [`brand/competitors.md`](brand/competitors.md): tools that orchestrate coding agents, with positioning lessons.
+- [`brand/mascot-research.md`](brand/mascot-research.md): developer-tool mascot cases, a checklist and four directions.
+- [`brand/naming-candidates.md`](brand/naming-candidates.md): the rename study, with the availability filter and /70 scoring.
+- [`brand/research-notes/competitors-2026-11-04.md`](brand/research-notes/competitors-2026-11-04.md): raw competitor notes.
+- [`brand/research-notes/mascots-cases.md`](brand/research-notes/mascots-cases.md): raw mascot case notes.
+- [`brand/research-notes/naming-checks.md`](brand/research-notes/naming-checks.md): availability check commands and results.
+- [`brand/research-notes/naming-category-search.md`](brand/research-notes/naming-category-search.md): same-name agent tools found per finalist.
+- [`brand/explorations/fonts/OFL.md`](brand/explorations/fonts/OFL.md): licenses of the typography sheet fonts.
+
 ## Per-repo `/forge` config
 
 Prose that `forge init` generates and the coordinator reads.
