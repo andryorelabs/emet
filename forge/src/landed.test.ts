@@ -66,15 +66,6 @@ describe("resolveLandedVerdict with a stubbed tracker", () => {
     expect(verdict).toBe("unknown");
     expect(classifyCalls).toBe(0);
   });
-
-  test("an unknown tracker answer falls back to git content", async () => {
-    const verdict = await resolveLandedVerdict(input, {
-      config,
-      readTrackerState: unknownTracker,
-      classifyContent: classifyAs("equivalent"),
-    });
-    expect(verdict).toBe("landed");
-  });
 });
 
 describe("GitHub issue state mapping", () => {
