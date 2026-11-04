@@ -18,7 +18,8 @@ Preflight then fails on residue. Orca worktrees of one repo share a git-common-d
 - **Bare `forge cleanup`** reclaims owned worktrees of closed or dead runs whose work landed. It never touches live or idle runs or foreign worktrees. `--all` keeps its repo-wide meaning, and `--run` and `--all` stay mutually exclusive.
 - **A foreign worktree** has no forge lock, no matching claim, and a branch that is neither `<branchPrefix>-*` nor `worktree-agent-*`. Preflight reports it as info and cleanup never touches it.
 - **Run artifacts** that cross sessions or worktrees (`approval.json`, `tickets.json`, `materialize.json`, `closed.json`) live under `<git-common-dir>/.forge/runs/<id>/`, read there first and then from the legacy `<repoRoot>/.forge/runs/<id>/`. Results, verify and gate records stay where they are.
-- **Prompt wording exception.** The rule that installed prompt markdown changes only in whitespace and wrapping does not apply to the cleanup paragraphs of `forge/reference/phases-8-closeout.md`. They must be reworded so the prompt matches the CLI.
+- **Dispatch base.** Phase 5 lands its deferred `GLOSSARY.md` and `docs/adr/` edits on trunk before Phase 6 starts, and `forge preflight` fails when HEAD is not trunk or a descendant of it. Workers therefore always branch from a trunk that contains the records their tickets cite.
+- **Prompt wording exception.** The rule that installed prompt markdown changes only in whitespace and wrapping does not apply to the cleanup paragraphs of `forge/reference/phases-8-closeout.md`, nor to the Phase 5 and Phase 6 paragraphs of `forge/reference/phases-1-5.md` and `forge/reference/phases-6-7-dispatch.md` that describe the dispatch base. They must be reworded so the prompts match the CLI.
 
 ## Consequences
 
