@@ -4,12 +4,16 @@ import os from "node:os";
 import path from "node:path";
 
 import { DEFAULT_FORGE_CONFIG } from "./config";
-import { resolveLandedVerdict } from "./landed";
+import { parseGithubIssueState, readGithubIssueState, resolveLandedVerdict } from "./landed";
 import type { ContentVerdict } from "./worktrees";
 
 const input = { ticket: "CLA-9", branch: "cla-9-thing" };
 const config = DEFAULT_FORGE_CONFIG;
 const unknownTracker = () => Promise.resolve("unknown" as const);
+
+function view(exitCode: number, stdout: string) {
+  return () => Promise.resolve({ exitCode, stdout });
+}
 
 function classifyAs(verdict: ContentVerdict) {
   return (): Promise<ContentVerdict> => Promise.resolve(verdict);
@@ -47,15 +51,77 @@ describe("resolveLandedVerdict with a stubbed tracker", () => {
     expect(verdict).toBe("unknown");
   });
 
-  test("a tracker error falls back to git content", async () => {
+  test("a tracker error is unknown even when the branch looks merged, and git is never consulted", async () => {
+    let classifyCalls = 0;
     const verdict = await resolveLandedVerdict(input, {
       config,
       readTrackerState: () => {
         return Promise.reject(new Error("gh exploded"));
       },
-      classifyContent: classifyAs("diverged"),
+      classifyContent: () => {
+        classifyCalls += 1;
+        return Promise.resolve("merged" as const);
+      },
     });
-    expect(verdict).not.toBe("landed");
+    expect(verdict).toBe("unknown");
+    expect(classifyCalls).toBe(0);
+  });
+
+  test("an unknown tracker answer falls back to git content", async () => {
+    const verdict = await resolveLandedVerdict(input, {
+      config,
+      readTrackerState: unknownTracker,
+      classifyContent: classifyAs("equivalent"),
+    });
+    expect(verdict).toBe("landed");
+  });
+});
+
+describe("GitHub issue state mapping", () => {
+  test("an open issue is open", () => {
+    expect(parseGithubIssueState('{"state":"OPEN","stateReason":""}')).toBe("open");
+  });
+
+  test("an issue closed as completed is done", () => {
+    expect(parseGithubIssueState('{"state":"CLOSED","stateReason":"COMPLETED"}')).toBe("done");
+  });
+
+  test("an issue closed as not planned is open", () => {
+    expect(parseGithubIssueState('{"state":"CLOSED","stateReason":"NOT_PLANNED"}')).toBe("open");
+  });
+
+  test("unreadable output throws instead of answering unknown", () => {
+    expect(() => parseGithubIssueState("not json")).toThrow();
+    expect(() => parseGithubIssueState("null")).toThrow();
+    expect(() => parseGithubIssueState('{"state":"MERGED"}')).toThrow();
+  });
+
+  test("a failing gh call rejects instead of answering unknown", async () => {
+    const failure = await readGithubIssueState("CLA-9", view(1, "")).catch(
+      (error: unknown) => error,
+    );
+    expect(failure).toBeInstanceOf(Error);
+  });
+
+  test("a ticket id without an issue number is unknown", async () => {
+    expect(await readGithubIssueState("CLA-x", view(0, "{}"))).toBe("unknown");
+  });
+
+  test("a successful gh call maps through the runner", async () => {
+    const state = await readGithubIssueState(
+      "CLA-9",
+      view(0, '{"state":"CLOSED","stateReason":"COMPLETED"}'),
+    );
+    expect(state).toBe("done");
+  });
+
+  test("a gh failure makes the whole verdict unknown, never landed", async () => {
+    const verdict = await resolveLandedVerdict(input, {
+      config,
+      readTrackerState: (ticket) => readGithubIssueState(ticket, view(1, "")),
+      classifyContent: classifyAs("merged"),
+    });
+    expect(verdict).toBe("unknown");
   });
 });
 

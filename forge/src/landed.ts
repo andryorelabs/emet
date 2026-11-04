@@ -12,25 +12,50 @@ export interface LandedContext {
   readonly classifyContent?: typeof classifyByContent;
 }
 
+export type GithubIssueRunner = (
+  issueNumber: string,
+) => Promise<{ readonly exitCode: number; readonly stdout: string }>;
+
+const runGithubIssueView: GithubIssueRunner = async (issueNumber) => {
+  const result = await Bun.$`gh issue view ${issueNumber} --json state,stateReason`
+    .nothrow()
+    .quiet();
+  return { exitCode: result.exitCode, stdout: result.stdout.toString() };
+};
+
 /**
- * Reads a GitHub issue's state through `gh`: closed as completed is `done`,
- * open or closed as not planned is `open`. Any failure is `unknown`.
+ * Maps `gh issue view --json state,stateReason` output to a tracker state:
+ * closed as completed is `done`, open or closed as not planned is `open`.
+ * Output it cannot interpret throws, because a failed read must never look
+ * like the tracker's own "unknown" answer.
  */
-async function readGithubIssueState(ticket: string): Promise<TrackerState> {
-  const number = /(\d+)$/.exec(ticket)?.[1];
-  if (number === undefined) return "unknown";
-  const result = await Bun.$`gh issue view ${number} --json state,stateReason`.nothrow().quiet();
-  if (result.exitCode !== 0) return "unknown";
-  try {
-    const parsed: unknown = JSON.parse(result.stdout.toString());
-    if (typeof parsed !== "object" || parsed === null) return "unknown";
-    const { state, stateReason } = parsed as { state?: unknown; stateReason?: unknown };
-    if (state === "OPEN") return "open";
-    if (state !== "CLOSED") return "unknown";
-    return stateReason === "COMPLETED" ? "done" : "open";
-  } catch {
-    return "unknown";
+export function parseGithubIssueState(stdout: string): TrackerState {
+  const parsed: unknown = JSON.parse(stdout);
+  if (typeof parsed !== "object" || parsed === null) {
+    throw new Error("landed: unexpected gh issue view output");
   }
+  const { state, stateReason } = parsed as { state?: unknown; stateReason?: unknown };
+  if (state === "OPEN") return "open";
+  if (state === "CLOSED") return stateReason === "COMPLETED" ? "done" : "open";
+  throw new Error(`landed: unexpected issue state ${JSON.stringify(state)}`);
+}
+
+/**
+ * Reads a GitHub issue's state through `gh`. A ticket id with no issue number
+ * is `unknown`; a `gh` failure (offline, rate limit, auth) or unreadable
+ * output rejects, so the caller can tell an error apart from "unknown".
+ */
+export async function readGithubIssueState(
+  ticket: string,
+  run: GithubIssueRunner = runGithubIssueView,
+): Promise<TrackerState> {
+  const issueNumber = /(\d+)$/.exec(ticket)?.[1];
+  if (issueNumber === undefined) return "unknown";
+  const result = await run(issueNumber);
+  if (result.exitCode !== 0) {
+    throw new Error(`landed: gh issue view ${issueNumber} failed with exit ${result.exitCode}`);
+  }
+  return parseGithubIssueState(result.stdout);
 }
 
 /** Reads a local tracker ticket's `Status:`: `done` is `done`, any other status is `open`. */
@@ -53,22 +78,12 @@ async function readConfiguredTrackerState(
   return "unknown";
 }
 
-async function readStateOrUnknown(
-  read: (ticket: string) => Promise<TrackerState>,
-  ticket: string,
-): Promise<TrackerState> {
-  try {
-    return await read(ticket);
-  } catch {
-    return "unknown";
-  }
-}
-
 /**
  * The landed verdict for a ticket's branch. The tracker answers first
- * (`done` is `landed`, `open` is `not-landed`); only an `unknown` answer, or
- * a tracker error, falls back to the branch's content against trunk. A
- * tracker error is never `landed` by itself.
+ * (`done` is `landed`, `open` is `not-landed`); only an `unknown` answer
+ * falls back to the branch's content against trunk. A tracker read that
+ * rejects is `unknown` and skips git too: an empty or already-merged worker
+ * branch would otherwise look landed while the ticket is still open.
  */
 export async function resolveLandedVerdict(
   input: { ticket: string; branch: string },
@@ -78,7 +93,12 @@ export async function resolveLandedVerdict(
   const readState =
     context.readTrackerState ??
     ((ticket: string) => readConfiguredTrackerState(ticket, config.tracker.kind));
-  const state = await readStateOrUnknown(readState, input.ticket);
+  let state: TrackerState;
+  try {
+    state = await readState(input.ticket);
+  } catch {
+    return "unknown";
+  }
   if (state === "done") return "landed";
   if (state === "open") return "not-landed";
 
