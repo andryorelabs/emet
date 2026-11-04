@@ -9,7 +9,8 @@ An index of every document in this repository. Terms follow [GLOSSARY.md](../GLO
 - [`troubleshooting.md`](troubleshooting.md): `forge doctor` and `forge preflight` failures, by symptom.
 - [`CHANGELOG.md`](../CHANGELOG.md): release notes, newest first.
 - [`GLOSSARY.md`](../GLOSSARY.md): the domain terms every doc and prompt uses.
-- [`AGENTS.md`](../AGENTS.md): instructions for coding agents (`CLAUDE.md` imports it).
+- [`AGENTS.md`](../AGENTS.md): instructions for coding agents.
+- [`CLAUDE.md`](../CLAUDE.md): imports `AGENTS.md` for Claude Code.
 - [`forge/AGENTS.md`](../forge/AGENTS.md): the runtime-only rules for work inside `forge/`.
 
 ## Contributing and community
@@ -40,6 +41,7 @@ Prose that `forge init` generates and the coordinator reads.
 Installed prompt markdown; wording changes only with an explicit ticket (ADR-0001).
 
 - [`commands/run.md`](../commands/run.md): the `/forge:run` router.
+- [`commands/forge.md`](../commands/forge.md): the same router, installed as `/forge`.
 - [`agents/forge-worker.md`](../agents/forge-worker.md): the worker agent.
 - [`agents/forge-reviewer.md`](../agents/forge-reviewer.md): the reviewer agent.
 - [`forge/reference/phases-1-5.md`](../forge/reference/phases-1-5.md): interview to approval.

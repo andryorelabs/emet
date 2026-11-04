@@ -36,7 +36,7 @@ jobs:
           deadline=$((SECONDS + 4200))
           while true; do
             run_json=$(gh api "repos/${GITHUB_REPOSITORY}/commits/${GITHUB_SHA}/check-runs?per_page=100" \
-              --jq '[.check_runs[] | select(.name == "CI passed")] | sort_by(.id) | last // empty')
+              --jq '[.check_runs[] | select(.name == "CI passed")] | sort_by(.id) | last // empty') || run_json=''
             status=$(jq -r '.status // empty' <<< "${run_json}")
             conclusion=$(jq -r '.conclusion // empty' <<< "${run_json}")
             if [[ "${status}" == "completed" ]]; then

@@ -1,5 +1,6 @@
 import { describe, expect, test } from "bun:test";
-import { readFileSync } from "node:fs";
+import { chmodSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
 import { join } from "node:path";
 
 const releaseWorkflow = readFileSync(
@@ -38,5 +39,69 @@ describe("release.yml invariants", () => {
     expect(releaseWorkflow).toContain("!github.event.repository.private");
     expect(releaseWorkflow).toContain("id-token: write");
     expect(releaseWorkflow).toContain("attestations: write");
+  });
+});
+
+/** Extracts the shell script of the "Require green CI" step from the release workflow. */
+function readCiGateScript(): string {
+  const stepStart = releaseWorkflow.indexOf("- name: Require green CI on the tagged commit");
+  const scriptStart = releaseWorkflow.indexOf("run: |\n", stepStart) + "run: |\n".length;
+  const nextStep = releaseWorkflow.indexOf("\n      - ", scriptStart);
+  return releaseWorkflow
+    .slice(scriptStart, nextStep)
+    .split("\n")
+    .map((line) => line.replace(/^ {10}/, ""))
+    .join("\n");
+}
+
+describe("release CI gate behaviour", () => {
+  test("fails with a clear message when no CI passed check run exists", () => {
+    const directory = mkdtempSync(join(tmpdir(), "release-gate-"));
+    try {
+      const stubPath = join(directory, "gh");
+      writeFileSync(stubPath, "#!/usr/bin/env bash\nexit 0\n");
+      chmodSync(stubPath, 0o755);
+      const scriptPath = join(directory, "gate.sh");
+      writeFileSync(scriptPath, readCiGateScript().replace("SECONDS + 4200", "SECONDS + 0"));
+      const result = Bun.spawnSync(["bash", "-e", scriptPath], {
+        env: {
+          ...process.env,
+          PATH: `${directory}:${process.env.PATH ?? ""}`,
+          GITHUB_REPOSITORY: "owner/repo",
+          GITHUB_SHA: "deadbeef",
+        },
+        stdout: "pipe",
+        stderr: "pipe",
+      });
+      expect(result.exitCode).toBe(1);
+      expect(result.stdout.toString()).toContain("No CI passed check run found");
+    } finally {
+      rmSync(directory, { recursive: true, force: true });
+    }
+  });
+
+  test("treats a failing gh api call as a missing check run and keeps the deadline message", () => {
+    const directory = mkdtempSync(join(tmpdir(), "release-gate-"));
+    try {
+      const stubPath = join(directory, "gh");
+      writeFileSync(stubPath, "#!/usr/bin/env bash\nexit 1\n");
+      chmodSync(stubPath, 0o755);
+      const scriptPath = join(directory, "gate.sh");
+      writeFileSync(scriptPath, readCiGateScript().replace("SECONDS + 4200", "SECONDS + 0"));
+      const result = Bun.spawnSync(["bash", "-e", scriptPath], {
+        env: {
+          ...process.env,
+          PATH: `${directory}:${process.env.PATH ?? ""}`,
+          GITHUB_REPOSITORY: "owner/repo",
+          GITHUB_SHA: "deadbeef",
+        },
+        stdout: "pipe",
+        stderr: "pipe",
+      });
+      expect(result.exitCode).toBe(1);
+      expect(result.stdout.toString()).toContain("No CI passed check run found");
+    } finally {
+      rmSync(directory, { recursive: true, force: true });
+    }
   });
 });
