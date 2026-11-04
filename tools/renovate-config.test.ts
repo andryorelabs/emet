@@ -19,6 +19,10 @@ interface RenovateConfig {
   minimumReleaseAge: string;
   osvVulnerabilityAlerts: boolean;
   lockFileMaintenance: { enabled: boolean };
+  platformAutomerge: boolean;
+  automergeStrategy: string;
+  branchConcurrentLimit: number;
+  vulnerabilityAlerts: { labels: string[] };
   packageRules: PackageRule[];
 }
 
@@ -58,6 +62,13 @@ describe("renovate.json5 policy", () => {
     expect(config.minimumReleaseAge).toBe("3 days");
     expect(config.osvVulnerabilityAlerts).toBe(true);
     expect(config.lockFileMaintenance.enabled).toBe(true);
+  });
+
+  test("merges itself with squash, flags vulnerability PRs, and caps branches", () => {
+    expect(config.platformAutomerge).toBe(false);
+    expect(config.automergeStrategy).toBe("squash");
+    expect(config.vulnerabilityAlerts.labels).toEqual(["security"]);
+    expect(config.branchConcurrentLimit).toBe(5);
   });
 
   test("automerges patch and minor devDependency updates only", () => {
