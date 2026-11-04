@@ -1,0 +1,2609 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>emet mascot options, round 3</title>
+    <style>
+      :root {
+        --bgp: #ecece6;
+        --ink: #1f2420;
+        --sub: #5a625b;
+        --line: #cfd1c8;
+        font-family:
+          system-ui,
+          -apple-system,
+          "Segoe UI",
+          sans-serif;
+        line-height: 1.5;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        background: var(--bgp);
+        color: var(--ink);
+        padding: 3rem clamp(1rem, 4vw, 3.5rem) 5rem;
+      }
+      main {
+        max-width: 1160px;
+        margin: 0 auto;
+      }
+      h1 {
+        font-size: clamp(2rem, 5vw, 3.4rem);
+        line-height: 1.05;
+        margin: 0 0 0.75rem;
+        letter-spacing: -0.02em;
+      }
+      .lead {
+        max-width: 70ch;
+        color: var(--sub);
+        margin: 0 0 1rem;
+      }
+      nav {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.5rem 1.25rem;
+        margin: 1.5rem 0 3rem;
+        padding: 0.75rem 0;
+        border-block: 1px solid var(--line);
+        font-size: 0.9rem;
+      }
+      nav a {
+        color: var(--ink);
+      }
+      section {
+        border-top: 2px solid var(--ink);
+        padding-top: 1.25rem;
+        margin-top: 4rem;
+      }
+      section header {
+        display: grid;
+        grid-template-columns: 3rem 1fr;
+        column-gap: 1rem;
+        align-items: baseline;
+        margin-bottom: 1.25rem;
+      }
+      .idx {
+        font-size: 2.4rem;
+        font-weight: 700;
+        margin: 0;
+        grid-row: 1/3;
+        line-height: 1;
+      }
+      h2 {
+        margin: 0;
+        font-size: 1.7rem;
+        letter-spacing: -0.01em;
+      }
+      .trait {
+        margin: 0;
+        color: var(--sub);
+      }
+      h3 {
+        font-size: 0.75rem;
+        text-transform: uppercase;
+        letter-spacing: 0.09em;
+        color: var(--sub);
+        margin: 1.25rem 0 0.5rem;
+      }
+      .var {
+        margin: 0 0 0.5rem;
+        font-size: 0.9rem;
+      }
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
+        gap: 0 2rem;
+      }
+      .panel {
+        border-radius: 10px;
+        padding: 1rem 1.25rem;
+        margin-bottom: 0.6rem;
+        border: 1px solid var(--line);
+        --b: #a39a89;
+        --g: #5d8a3a;
+        --gs: none;
+        --k: #23272d;
+        --l: #e8b923;
+        --w: #2f9a94;
+        --ho: 0.3;
+        --bg: #f4f5f7;
+        background: var(--bg);
+        color: var(--ink);
+      }
+      .panel.dark {
+        --b: #b9af9d;
+        --g: #86b858;
+        --k: #14171a;
+        --l: #f4d35e;
+        --w: #5fc9c0;
+        --bg: #15181c;
+        color: #c9ced6;
+        border-color: #15181c;
+      }
+      .panel .mono {
+        border-top: 1px dashed var(--line);
+        margin-top: 0.5rem;
+        padding-top: 0.75rem;
+      }
+      .panel.light .mono {
+        --b: #23272d;
+        --g: #23272d;
+        --gs: #f4f5f7;
+        --k: #f4f5f7;
+        --l: #23272d;
+        --w: #23272d;
+        --ho: 0;
+      }
+      .panel.dark .mono {
+        --b: #e6e8eb;
+        --g: #e6e8eb;
+        --gs: #15181c;
+        --k: #15181c;
+        --l: #e6e8eb;
+        --w: #e6e8eb;
+        --ho: 0;
+      }
+      .b {
+        fill: var(--b);
+      }
+      .g {
+        fill: var(--g);
+        stroke: var(--gs);
+        stroke-width: 0.7;
+        stroke-linejoin: round;
+      }
+      .k {
+        fill: var(--k);
+      }
+      .l {
+        fill: var(--l);
+      }
+      .w {
+        fill: var(--w);
+      }
+      .h {
+        fill: var(--l);
+        fill-opacity: var(--ho);
+      }
+      .g.ns {
+        stroke: none;
+      }
+      .gl {
+        stroke: var(--g);
+        fill: none;
+        stroke-linecap: round;
+      }
+      .bl {
+        stroke: var(--b);
+        fill: none;
+        stroke-linecap: round;
+      }
+      .bgl {
+        stroke: var(--bg);
+        fill: none;
+        stroke-width: 0.9;
+        stroke-linecap: round;
+      }
+      .st {
+        stroke: var(--bg);
+        stroke-width: 0.9;
+      }
+      .wr {
+        fill: none;
+        stroke: var(--w);
+        stroke-width: 0.8;
+      }
+      .bud {
+        stroke: var(--b);
+        stroke-width: 0.8;
+      }
+      .row {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: flex-end;
+        gap: 1.25rem;
+        padding: 0.25rem 0;
+      }
+      .states {
+        gap: 1.5rem;
+      }
+      figure {
+        margin: 0;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 0.35rem;
+      }
+      figcaption {
+        font-size: 0.7rem;
+        opacity: 0.75;
+        text-align: center;
+        max-width: 8rem;
+      }
+      .loop {
+        display: flex;
+        align-items: flex-end;
+        gap: 2rem;
+      }
+      .lp svg {
+        width: 128px;
+        height: 128px;
+        display: block;
+      }
+      .lp.small svg {
+        width: 32px;
+        height: 32px;
+      }
+      .termbox {
+        background: #0f1215;
+        color: #c9ced6;
+        border-radius: 10px;
+        padding: 1rem 1.25rem;
+        overflow-x: auto;
+      }
+      .term,
+      .art {
+        margin: 0;
+        font:
+          13px/1.25 ui-monospace,
+          "SF Mono",
+          "DejaVu Sans Mono",
+          Menlo,
+          monospace;
+        white-space: pre;
+      }
+      .art {
+        font-size: 13.29px;
+        line-height: 1;
+        margin-bottom: 0.6rem;
+      }
+      .c0 {
+        color: #2b2f35;
+      }
+      .bg0 {
+        background: #2b2f35;
+      }
+      .c1 {
+        color: #d05a5a;
+      }
+      .bg1 {
+        background: #d05a5a;
+      }
+      .c2 {
+        color: #6fae5a;
+      }
+      .bg2 {
+        background: #6fae5a;
+      }
+      .c3 {
+        color: #c9a53d;
+      }
+      .bg3 {
+        background: #c9a53d;
+      }
+      .c4 {
+        color: #5b86c9;
+      }
+      .bg4 {
+        background: #5b86c9;
+      }
+      .c5 {
+        color: #b07ab8;
+      }
+      .bg5 {
+        background: #b07ab8;
+      }
+      .c6 {
+        color: #4fb3ae;
+      }
+      .bg6 {
+        background: #4fb3ae;
+      }
+      .c7 {
+        color: #c9ced6;
+      }
+      .bg7 {
+        background: #c9ced6;
+      }
+      .c8 {
+        color: #5d646e;
+      }
+      .bg8 {
+        background: #5d646e;
+      }
+      .c9 {
+        color: #ec7a7a;
+      }
+      .bg9 {
+        background: #ec7a7a;
+      }
+      .c10 {
+        color: #8fd17a;
+      }
+      .bg10 {
+        background: #8fd17a;
+      }
+      .c11 {
+        color: #f1d56a;
+      }
+      .bg11 {
+        background: #f1d56a;
+      }
+      .c12 {
+        color: #7aa6ee;
+      }
+      .bg12 {
+        background: #7aa6ee;
+      }
+      .c13 {
+        color: #ca9bd1;
+      }
+      .bg13 {
+        background: #ca9bd1;
+      }
+      .c14 {
+        color: #7fd6d0;
+      }
+      .bg14 {
+        background: #7fd6d0;
+      }
+      .c15 {
+        color: #f4f6f8;
+      }
+      .bg15 {
+        background: #f4f6f8;
+      }
+      .term b {
+        font-weight: 700;
+      }
+      .empty {
+        font:
+          14px/1.5 ui-monospace,
+          "DejaVu Sans Mono",
+          monospace;
+        background: #f4f5f7;
+        border: 1px solid var(--line);
+        border-radius: 10px;
+        padding: 0.75rem 1rem;
+        margin: 0;
+      }
+      .empty code {
+        color: var(--sub);
+      }
+      .verdict {
+        margin: 0;
+        padding-left: 1.1rem;
+        font-size: 0.92rem;
+      }
+      .verdict li {
+        margin: 0.3rem 0;
+      }
+      .pals {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+        gap: 1.5rem;
+      }
+      .sw {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.6rem;
+      }
+      .chip {
+        display: flex;
+        flex-direction: column;
+        gap: 0.15rem;
+        font-size: 0.75rem;
+        width: 92px;
+      }
+      .chip span {
+        display: block;
+        height: 48px;
+        border-radius: 8px;
+        border: 1px solid var(--line);
+      }
+      .chip code {
+        font-size: 0.65rem;
+        color: var(--sub);
+      }
+      .rec {
+        margin-top: 4rem;
+        padding-top: 1.25rem;
+        border-top: 2px solid var(--ink);
+        font-size: 1.1rem;
+      }
+      .foot {
+        color: var(--sub);
+        font-size: 0.85rem;
+      }
+      @media (prefers-reduced-motion: no-preference) {
+        .pulse,
+        .pulseh {
+          transform-box: fill-box;
+          transform-origin: center;
+        }
+        .pulse {
+          animation: pulse 2s ease-in-out infinite;
+        }
+        .pulseh {
+          animation: pulseh 2s ease-in-out infinite;
+        }
+        .lampL {
+          animation: lamp 2.4s ease-in-out infinite;
+        }
+        .lampR {
+          animation: lamp 2.4s ease-in-out 1.2s infinite;
+        }
+        .sway {
+          transform-origin: 15.4px 7.8px;
+          transform-box: view-box;
+          animation: sway 3s ease-in-out infinite;
+        }
+        .drop {
+          animation: fall 1.8s linear infinite;
+        }
+        .d2 {
+          animation-delay: 0.6s;
+        }
+        .d3 {
+          animation-delay: 1.2s;
+        }
+      }
+      @keyframes pulse {
+        0%,
+        100% {
+          transform: scale(0.7);
+        }
+        50% {
+          transform: scale(1.2);
+        }
+      }
+      @keyframes pulseh {
+        0%,
+        100% {
+          transform: scale(0.8);
+          opacity: 0.5;
+        }
+        50% {
+          transform: scale(1.2);
+          opacity: 1;
+        }
+      }
+      @keyframes lamp {
+        0%,
+        100% {
+          opacity: 1;
+        }
+        50% {
+          opacity: 0.2;
+        }
+      }
+      @keyframes sway {
+        0%,
+        100% {
+          transform: rotate(-7deg);
+        }
+        50% {
+          transform: rotate(7deg);
+        }
+      }
+      @keyframes fall {
+        0% {
+          transform: translateY(-3px);
+          opacity: 0;
+        }
+        20% {
+          opacity: 1;
+        }
+        80% {
+          opacity: 1;
+        }
+        100% {
+          transform: translateY(5px);
+          opacity: 0;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <svg style="position: absolute; width: 0; height: 0" aria-hidden="true">
+      <defs>
+        <g id="A-sleep">
+          <path class="b" d="M9 28Q5 28 5 24L6 14Q6 7 16 7Q26 7 26 14L27 24Q27 28 23 28Z" />
+          <path
+            class="g"
+            d="M6 14Q6.2 9 10.5 7.6L13 7.3Q12 9.5 10.6 10Q9.6 11.6 10.6 12.6Q8.4 12.2 8 14.6Z"
+          />
+          <path class="gl" d="M16 7.2V3.6" stroke-width="1.5" />
+          <path class="g" d="M16 4.6Q12.4 1.6 10.6 3.8Q13.4 6.2 16 4.6Z" />
+          <path class="g" d="M16 4.6Q19.6 1.4 22 3.4Q19 6.2 16 4.6Z" />
+          <circle class="k" cx="12" cy="14" r="1.1" />
+          <circle class="k" cx="20" cy="14" r="1.1" />
+          <circle class="k" cx="16" cy="21" r="3.7" />
+          <circle class="l" cx="16" cy="21" r="0.9" />
+        </g>
+        <g id="A-work">
+          <path class="b" d="M9 28Q5 28 5 24L6 14Q6 7 16 7Q26 7 26 14L27 24Q27 28 23 28Z" />
+          <path
+            class="g"
+            d="M6 14Q6.2 9 10.5 7.6L13 7.3Q12 9.5 10.6 10Q9.6 11.6 10.6 12.6Q8.4 12.2 8 14.6Z"
+          />
+          <path class="gl" d="M16 7.2V3.6" stroke-width="1.5" />
+          <path class="g" d="M16 4.6Q12.4 1.6 10.6 3.8Q13.4 6.2 16 4.6Z" />
+          <path class="g" d="M16 4.6Q19.6 1.4 22 3.4Q19 6.2 16 4.6Z" />
+          <circle class="k" cx="12" cy="14" r="1.1" />
+          <circle class="k" cx="20" cy="14" r="1.1" />
+          <circle class="k" cx="16" cy="21" r="3.7" />
+          <circle class="h" cx="16" cy="21" r="5.6" />
+          <circle class="l" cx="16" cy="21" r="2.3" />
+        </g>
+        <g id="A-done">
+          <path class="b" d="M9 28Q5 28 5 24L6 14Q6 7 16 7Q26 7 26 14L27 24Q27 28 23 28Z" />
+          <path
+            class="g"
+            d="M6 14Q6.2 9 10.5 7.6L13 7.3Q12 9.5 10.6 10Q9.6 11.6 10.6 12.6Q8.4 12.2 8 14.6Z"
+          />
+          <path class="gl" d="M16 7.2V3.6" stroke-width="1.5" />
+          <path class="g" d="M16 4.6Q12.4 1.6 10.6 3.8Q13.4 6.2 16 4.6Z" />
+          <path class="g" d="M16 4.6Q19.6 1.4 22 3.4Q19 6.2 16 4.6Z" />
+          <circle class="k" cx="12" cy="14" r="1.1" />
+          <circle class="k" cx="20" cy="14" r="1.1" />
+          <circle class="k" cx="16" cy="21" r="3.7" />
+          <circle class="l" cx="16" cy="21" r="2.9" />
+        </g>
+        <g id="A-err">
+          <path class="b" d="M9 28Q5 28 5 24L6 14Q6 7 16 7Q26 7 26 14L27 24Q27 28 23 28Z" />
+          <path
+            class="g"
+            d="M6 14Q6.2 9 10.5 7.6L13 7.3Q12 9.5 10.6 10Q9.6 11.6 10.6 12.6Q8.4 12.2 8 14.6Z"
+          />
+          <path class="gl" d="M16 7.2V3.6" stroke-width="1.5" />
+          <path class="g" d="M16 4.6Q12.4 1.6 10.6 3.8Q13.4 6.2 16 4.6Z" />
+          <path class="g" d="M16 4.6Q19.6 1.4 22 3.4Q19 6.2 16 4.6Z" />
+          <circle class="k" cx="12" cy="14" r="1.1" />
+          <circle class="k" cx="20" cy="14" r="1.1" />
+          <circle class="k" cx="16" cy="21" r="3.7" />
+        </g>
+        <g id="B-sleep">
+          <path
+            class="b"
+            d="M4 27Q3 17 9 12Q11 10 12 10L12 8.5Q12 5 16 5Q20 5 20 8.5L20 10Q21 10 23 12Q29 17 28 27Q28 29 26 29L19 29V26.5H13V29L6 29Q4 29 4 27Z"
+          />
+          <path class="g" d="M21 12Q25 12.6 27.3 16.4Q25.6 15.4 24 16Q22.6 15 21 13.2Z" />
+          <path class="gl" d="M24.4 12.4V9.4" stroke-width="1.2" />
+          <path class="g" d="M24.4 10.4Q27.2 7.6 29.4 9.2Q27.2 11.8 24.4 10.4Z" />
+          <path class="bgl" d="M8.6 15.5Q6.8 21 8 26M23.4 15.5Q25.2 21 24 26" />
+          <rect class="k" x="13" y="8" width="2" height="0.7" rx="0.3" />
+          <rect class="k" x="17" y="8" width="2" height="0.7" rx="0.3" />
+        </g>
+        <g id="B-work">
+          <path
+            class="b"
+            d="M4 27Q3 17 9 12Q11 10 12 10L12 8.5Q12 5 16 5Q20 5 20 8.5L20 10Q21 10 23 12Q29 17 28 27Q28 29 26 29L19 29V26.5H13V29L6 29Q4 29 4 27Z"
+          />
+          <path class="g" d="M21 12Q25 12.6 27.3 16.4Q25.6 15.4 24 16Q22.6 15 21 13.2Z" />
+          <path class="gl" d="M24.4 12.4V9.4" stroke-width="1.2" />
+          <path class="g" d="M24.4 10.4Q27.2 7.6 29.4 9.2Q27.2 11.8 24.4 10.4Z" />
+          <path class="bgl" d="M8.6 15.5Q6.8 21 8 26M23.4 15.5Q25.2 21 24 26" />
+          <circle class="k" cx="14" cy="8.3" r="1.35" />
+          <circle class="k" cx="18" cy="8.3" r="1.35" />
+          <circle class="h" cx="14" cy="8.3" r="2.6" />
+          <circle class="h" cx="18" cy="8.3" r="2.6" />
+          <circle class="l" cx="14" cy="8.3" r="0.85" />
+          <circle class="l" cx="18" cy="8.3" r="0.85" />
+        </g>
+        <g id="B-done">
+          <path
+            class="b"
+            d="M4 27Q3 17 9 12Q11 10 12 10L12 8.5Q12 5 16 5Q20 5 20 8.5L20 10Q21 10 23 12Q29 17 28 27Q28 29 26 29L19 29V26.5H13V29L6 29Q4 29 4 27Z"
+          />
+          <path class="g" d="M21 12Q25 12.6 27.3 16.4Q25.6 15.4 24 16Q22.6 15 21 13.2Z" />
+          <path class="gl" d="M24.4 12.4V9.4" stroke-width="1.2" />
+          <path class="g" d="M24.4 10.4Q27.2 7.6 29.4 9.2Q27.2 11.8 24.4 10.4Z" />
+          <path class="bgl" d="M8.6 15.5Q6.8 21 8 26M23.4 15.5Q25.2 21 24 26" />
+          <circle class="k" cx="14" cy="8.3" r="1.35" />
+          <circle class="k" cx="18" cy="8.3" r="1.35" />
+          <circle class="l" cx="14" cy="8.3" r="0.85" />
+          <circle class="l" cx="18" cy="8.3" r="0.85" />
+        </g>
+        <g id="B-err">
+          <path
+            class="b"
+            d="M4 27Q3 17 9 12Q11 10 12 10L12 8.5Q12 5 16 5Q20 5 20 8.5L20 10Q21 10 23 12Q29 17 28 27Q28 29 26 29L19 29V26.5H13V29L6 29Q4 29 4 27Z"
+          />
+          <path class="g" d="M21 12Q25 12.6 27.3 16.4Q25.6 15.4 24 16Q22.6 15 21 13.2Z" />
+          <path class="gl" d="M24.4 12.4V9.4" stroke-width="1.2" />
+          <path class="g" d="M24.4 10.4Q27.2 7.6 29.4 9.2Q27.2 11.8 24.4 10.4Z" />
+          <path class="bgl" d="M8.6 15.5Q6.8 21 8 26M23.4 15.5Q25.2 21 24 26" />
+          <circle class="k" cx="14" cy="8.3" r="1.35" />
+          <circle class="k" cx="18" cy="8.3" r="1.35" />
+          <circle class="l" cx="14" cy="8.3" r="0.85" />
+        </g>
+        <g id="C-sleep">
+          <rect class="b st" x="4.5" y="21" width="23" height="8.5" rx="4.2" />
+          <rect class="b st" x="8.5" y="13.4" width="16.5" height="8.4" rx="4" />
+          <rect class="b st" x="11" y="7.6" width="9.4" height="6.6" rx="3" />
+          <circle class="k" cx="13.6" cy="17.6" r="1" />
+          <circle class="k" cx="19.6" cy="17.6" r="1" />
+          <path class="gl" d="M15.4 7.8V5.8" stroke-width="1.3" />
+          <path class="g" d="M15.4 6.2Q17.2 4.4 18.2 5.4Q17 7 15.4 6.2Z" />
+        </g>
+        <g id="C-work">
+          <rect class="b st" x="4.5" y="21" width="23" height="8.5" rx="4.2" />
+          <rect class="b st" x="8.5" y="13.4" width="16.5" height="8.4" rx="4" />
+          <rect class="b st" x="11" y="7.6" width="9.4" height="6.6" rx="3" />
+          <circle class="k" cx="13.6" cy="17.6" r="1" />
+          <circle class="k" cx="19.6" cy="17.6" r="1" />
+          <g class="">
+            <path class="gl" d="M15.4 7.8V4.6" stroke-width="1.3" />
+            <path class="g" d="M15.4 5.6Q19.4 1.4 23.4 3.6Q20.4 6.8 15.4 5.6Z" />
+          </g>
+        </g>
+        <g id="C-done">
+          <rect class="b st" x="4.5" y="21" width="23" height="8.5" rx="4.2" />
+          <rect class="b st" x="8.5" y="13.4" width="16.5" height="8.4" rx="4" />
+          <rect class="b st" x="11" y="7.6" width="9.4" height="6.6" rx="3" />
+          <circle class="k" cx="13.6" cy="17.6" r="1" />
+          <circle class="k" cx="19.6" cy="17.6" r="1" />
+          <path class="gl" d="M15.4 7.8V4.6" stroke-width="1.3" />
+          <path class="g" d="M15.4 5.6Q19.4 1.4 23.4 3.6Q20.4 6.8 15.4 5.6Z" />
+          <path class="g" d="M15.4 6.6Q11.4 3.2 8 5Q10.4 8.2 15.4 6.6Z" />
+        </g>
+        <g id="C-err">
+          <rect class="b st" x="4.5" y="21" width="23" height="8.5" rx="4.2" />
+          <rect class="b st" x="8.5" y="13.4" width="16.5" height="8.4" rx="4" />
+          <rect class="b st" x="11" y="7.6" width="9.4" height="6.6" rx="3" />
+          <circle class="k" cx="13.6" cy="17.6" r="1" />
+          <circle class="k" cx="19.6" cy="17.6" r="1" />
+          <path class="gl" d="M15.4 7.8Q15.4 5.2 18.4 4.6" stroke-width="1.3" />
+          <path class="g" d="M18.4 4.6Q22.9 4.8 24.2 9.4Q20 9 18.4 4.6Z" />
+        </g>
+        <g id="D-sleep">
+          <rect class="b" x="3.6" y="16" width="4.4" height="10" rx="2.2" />
+          <rect class="b" x="24" y="16" width="4.4" height="10" rx="2.2" />
+          <path
+            class="b"
+            d="M6 28V15Q6 4 16 4Q26 4 26 15V28Q26 29 25 29H19V26.5H13V29H7Q6 29 6 28Z"
+          />
+          <path
+            class="g ns"
+            d="M6 25L8.5 23.6L11 25L14 23.8L16 25L19 23.6L22 25L24.5 23.8L26 25V28Q26 29 25 29H19V26.5H13V29H7Q6 29 6 28Z"
+          />
+          <rect class="k" x="9.5" y="16.5" width="4.5" height="1.3" rx="0.6" />
+          <rect class="k" x="18" y="16.5" width="4.5" height="1.3" rx="0.6" />
+          <circle class="k" cx="16" cy="9" r="2.6" />
+          <circle class="l" cx="16" cy="9" r="0.8" />
+        </g>
+        <g id="D-work">
+          <rect class="b" x="3.6" y="16" width="4.4" height="10" rx="2.2" />
+          <rect class="b" x="24" y="16" width="4.4" height="10" rx="2.2" />
+          <path
+            class="b"
+            d="M6 28V15Q6 4 16 4Q26 4 26 15V28Q26 29 25 29H19V26.5H13V29H7Q6 29 6 28Z"
+          />
+          <path
+            class="g ns"
+            d="M6 25L8.5 23.6L11 25L14 23.8L16 25L19 23.6L22 25L24.5 23.8L26 25V28Q26 29 25 29H19V26.5H13V29H7Q6 29 6 28Z"
+          />
+          <rect class="k" x="9.5" y="16.5" width="4.5" height="1.3" rx="0.6" />
+          <rect class="k" x="18" y="16.5" width="4.5" height="1.3" rx="0.6" />
+          <circle class="k" cx="16" cy="9" r="2.6" />
+          <circle class="h" cx="16" cy="9" r="4.4" />
+          <circle class="l" cx="16" cy="9" r="1.6" />
+        </g>
+        <g id="D-done">
+          <rect class="b" x="3.6" y="16" width="4.4" height="10" rx="2.2" />
+          <rect class="b" x="24" y="16" width="4.4" height="10" rx="2.2" />
+          <path
+            class="b"
+            d="M6 28V15Q6 4 16 4Q26 4 26 15V28Q26 29 25 29H19V26.5H13V29H7Q6 29 6 28Z"
+          />
+          <path
+            class="g ns"
+            d="M6 25L8.5 23.6L11 25L14 23.8L16 25L19 23.6L22 25L24.5 23.8L26 25V28Q26 29 25 29H19V26.5H13V29H7Q6 29 6 28Z"
+          />
+          <rect class="k" x="9.5" y="16.5" width="4.5" height="1.3" rx="0.6" />
+          <rect class="k" x="18" y="16.5" width="4.5" height="1.3" rx="0.6" />
+          <circle class="k" cx="16" cy="9" r="2.6" />
+          <circle class="l" cx="16" cy="9" r="1.8" />
+        </g>
+        <g id="D-err">
+          <rect class="b" x="3.6" y="16" width="4.4" height="10" rx="2.2" />
+          <rect class="b" x="24" y="16" width="4.4" height="10" rx="2.2" />
+          <path
+            class="b"
+            d="M6 28V15Q6 4 16 4Q26 4 26 15V28Q26 29 25 29H19V26.5H13V29H7Q6 29 6 28Z"
+          />
+          <path
+            class="g ns"
+            d="M6 25L8.5 23.6L11 25L14 23.8L16 25L19 23.6L22 25L24.5 23.8L26 25V28Q26 29 25 29H19V26.5H13V29H7Q6 29 6 28Z"
+          />
+          <rect class="k" x="9.5" y="16.5" width="4.5" height="1.3" rx="0.6" />
+          <rect class="k" x="18" y="16.5" width="4.5" height="1.3" rx="0.6" />
+          <rect class="k" x="14" y="8.6" width="4" height="0.9" rx="0.4" />
+        </g>
+        <g id="E-sleep">
+          <path class="b" d="M6 12Q6 9 9 9L19 9Q22 9 22 12L22 25Q22 28 19 28L9 28Q6 28 6 25Z" />
+          <path class="bl" d="M6.3 13Q1.2 13 1.6 18.6Q2 23.6 6.3 23.6" stroke-width="2.2" />
+          <path class="bl" d="M22 22.5L27.6 14" stroke-width="2.8" />
+          <path class="bl" d="M26.6 12.4L29.8 14.4" stroke-width="2.6" />
+          <path
+            class="g"
+            d="M6 12Q6 9 9 9L19 9Q22 9 22 12Q19 11 17 12.2Q14 10.4 11 12.2Q8 11 6 12Z"
+          />
+          <circle class="k" cx="11.5" cy="17" r="1.1" />
+          <circle class="k" cx="16.5" cy="17" r="1.1" />
+        </g>
+        <g id="E-work">
+          <path class="b" d="M6 12Q6 9 9 9L19 9Q22 9 22 12L22 25Q22 28 19 28L9 28Q6 28 6 25Z" />
+          <path class="bl" d="M6.3 13Q1.2 13 1.6 18.6Q2 23.6 6.3 23.6" stroke-width="2.2" />
+          <path class="bl" d="M22 22.5L27.6 14" stroke-width="2.8" />
+          <path class="bl" d="M26.6 12.4L29.8 14.4" stroke-width="2.6" />
+          <path
+            class="g"
+            d="M6 12Q6 9 9 9L19 9Q22 9 22 12Q19 11 17 12.2Q14 10.4 11 12.2Q8 11 6 12Z"
+          />
+          <circle class="k" cx="11.5" cy="17" r="1.1" />
+          <circle class="k" cx="16.5" cy="17" r="1.1" />
+          <path
+            class="w"
+            d="M29.4 16.799999999999997Q30.7 18.599999999999998 29.4 19.7Q28.099999999999998 18.599999999999998 29.4 16.799999999999997Z"
+          />
+          <path class="w" d="M29.4 21.2Q30.7 23 29.4 24.1Q28.099999999999998 23 29.4 21.2Z" />
+          <path
+            class="w"
+            d="M29.4 25.599999999999998Q30.7 27.4 29.4 28.5Q28.099999999999998 27.4 29.4 25.599999999999998Z"
+          />
+        </g>
+        <g id="E-done">
+          <path class="b" d="M6 12Q6 9 9 9L19 9Q22 9 22 12L22 25Q22 28 19 28L9 28Q6 28 6 25Z" />
+          <path class="bl" d="M6.3 13Q1.2 13 1.6 18.6Q2 23.6 6.3 23.6" stroke-width="2.2" />
+          <path class="bl" d="M22 22.5L27.6 14" stroke-width="2.8" />
+          <path class="bl" d="M26.6 12.4L29.8 14.4" stroke-width="2.6" />
+          <path
+            class="g"
+            d="M6 12Q6 9 9 9L19 9Q22 9 22 12Q19 11 17 12.2Q14 10.4 11 12.2Q8 11 6 12Z"
+          />
+          <circle class="k" cx="11.5" cy="17" r="1.1" />
+          <circle class="k" cx="16.5" cy="17" r="1.1" />
+          <path
+            class="w"
+            d="M29.4 16.799999999999997Q30.7 18.599999999999998 29.4 19.7Q28.099999999999998 18.599999999999998 29.4 16.799999999999997Z"
+          />
+          <path class="w" d="M29.4 21.2Q30.7 23 29.4 24.1Q28.099999999999998 23 29.4 21.2Z" />
+          <path
+            class="w"
+            d="M29.4 25.599999999999998Q30.7 27.4 29.4 28.5Q28.099999999999998 27.4 29.4 25.599999999999998Z"
+          />
+        </g>
+        <g id="E-err">
+          <path class="b" d="M6 12Q6 9 9 9L19 9Q22 9 22 12L22 25Q22 28 19 28L9 28Q6 28 6 25Z" />
+          <path class="bl" d="M6.3 13Q1.2 13 1.6 18.6Q2 23.6 6.3 23.6" stroke-width="2.2" />
+          <path class="bl" d="M22 22.5L27.6 14" stroke-width="2.8" />
+          <path class="bl" d="M26.6 12.4L29.8 14.4" stroke-width="2.6" />
+          <path
+            class="g"
+            d="M6 12Q6 9 9 9L19 9Q22 9 22 12Q19 11 17 12.2Q14 10.4 11 12.2Q8 11 6 12Z"
+          />
+          <circle class="k" cx="11.5" cy="17" r="1.1" />
+          <circle class="k" cx="16.5" cy="17" r="1.1" />
+          <circle class="wr" cx="29.4" cy="18.2" r="1.3" />
+        </g>
+        <g id="F-sleep">
+          <path class="b" d="M16 9Q27.5 9 28 18.5Q28 28.5 16 28.5Q4 28.5 4 18.5Q4.5 9 16 9Z" />
+          <path class="g" d="M4.1 20Q4.4 26.6 10.5 28.2Q8.4 26 9 24.2Q6.2 24.4 4.1 20Z" />
+          <path class="bgl" d="M23.4 12L22.2 14.2L23.4 15.6" />
+          <path class="k" d="M9.4 17.2H14.6A2.6 2.6 0 0 1 9.4 17.2Z" />
+          <path class="k" d="M17.4 17.2H22.6A2.6 2.6 0 0 1 17.4 17.2Z" />
+          <path class="gl" d="M16 9.6V6.3" stroke-width="1.4" />
+          <path class="g" d="M16 8.6Q12.6 5.4 9.6 7.4Q12 10 16 8.6Z" />
+          <path class="g" d="M16 8.6Q19.4 5.4 22.4 7.4Q20 10 16 8.6Z" />
+          <circle class="k bud" cx="16" cy="3.9" r="2.5" />
+          <circle class="l" cx="16" cy="3.9" r="0.7" />
+        </g>
+        <g id="F-work">
+          <path class="b" d="M16 9Q27.5 9 28 18.5Q28 28.5 16 28.5Q4 28.5 4 18.5Q4.5 9 16 9Z" />
+          <path class="g" d="M4.1 20Q4.4 26.6 10.5 28.2Q8.4 26 9 24.2Q6.2 24.4 4.1 20Z" />
+          <path class="bgl" d="M23.4 12L22.2 14.2L23.4 15.6" />
+          <path class="k" d="M9.4 17.2H14.6A2.6 2.6 0 0 1 9.4 17.2Z" />
+          <path class="k" d="M17.4 17.2H22.6A2.6 2.6 0 0 1 17.4 17.2Z" />
+          <path class="gl" d="M16 9.6V6.3" stroke-width="1.4" />
+          <path class="g" d="M16 8.6Q12.6 5.4 9.6 7.4Q12 10 16 8.6Z" />
+          <path class="g" d="M16 8.6Q19.4 5.4 22.4 7.4Q20 10 16 8.6Z" />
+          <circle class="k bud" cx="16" cy="3.9" r="2.5" />
+          <circle class="h" cx="16" cy="3.9" r="4" />
+          <circle class="l" cx="16" cy="3.9" r="1.4" />
+        </g>
+        <g id="F-done">
+          <path class="b" d="M16 9Q27.5 9 28 18.5Q28 28.5 16 28.5Q4 28.5 4 18.5Q4.5 9 16 9Z" />
+          <path class="g" d="M4.1 20Q4.4 26.6 10.5 28.2Q8.4 26 9 24.2Q6.2 24.4 4.1 20Z" />
+          <path class="bgl" d="M23.4 12L22.2 14.2L23.4 15.6" />
+          <path class="k" d="M9.4 17.2H14.6A2.6 2.6 0 0 1 9.4 17.2Z" />
+          <path class="k" d="M17.4 17.2H22.6A2.6 2.6 0 0 1 17.4 17.2Z" />
+          <path class="gl" d="M16 9.6V6.3" stroke-width="1.4" />
+          <path class="g" d="M16 8.6Q12.6 5.4 9.6 7.4Q12 10 16 8.6Z" />
+          <path class="g" d="M16 8.6Q19.4 5.4 22.4 7.4Q20 10 16 8.6Z" />
+          <circle class="k bud" cx="16" cy="3.9" r="2.5" />
+          <circle class="l" cx="16" cy="3.9" r="1.6" />
+        </g>
+        <g id="F-err">
+          <path class="b" d="M16 9Q27.5 9 28 18.5Q28 28.5 16 28.5Q4 28.5 4 18.5Q4.5 9 16 9Z" />
+          <path class="g" d="M4.1 20Q4.4 26.6 10.5 28.2Q8.4 26 9 24.2Q6.2 24.4 4.1 20Z" />
+          <path class="bgl" d="M23.4 12L22.2 14.2L23.4 15.6" />
+          <path class="k" d="M9.4 17.2H14.6A2.6 2.6 0 0 1 9.4 17.2Z" />
+          <path class="k" d="M17.4 17.2H22.6A2.6 2.6 0 0 1 17.4 17.2Z" />
+          <path class="gl" d="M16 9.6V6.3" stroke-width="1.4" />
+          <path class="g" d="M16 8.6Q12.6 5.4 9.6 7.4Q12 10 16 8.6Z" />
+          <path class="g" d="M16 8.6Q19.4 5.4 22.4 7.4Q20 10 16 8.6Z" />
+          <circle class="k bud" cx="16" cy="3.9" r="2.5" />
+        </g>
+      </defs>
+    </svg>
+    <main>
+      <h1>emet mascot options, round 3</h1>
+      <p class="lead">
+        New direction after rounds 1 and 2: a golem can sound old, but this is technology. Mood
+        only: calm, large, gentle machines gone green, and solarpunk, where plants and devices share
+        a roof, with warm light and clean energy. All forms are original. Every idea has one
+        variable (a light, a plant or water) that goes off to stop it and animates to work. The
+        mascot is a companion to the mark, not the logo.
+      </p>
+      <p class="lead">
+        Note: <code>docs/brand/brief.md</code> and <code>naming.md</code> were not present in any
+        checkout, so the story is taken from the task text: a clay golem woken by one word, emet
+        means truth, erase one letter and it stops.
+      </p>
+      <nav aria-label="Ideas">
+        <a href="#a">A Moss pebble</a><a href="#b">B Soft giant</a
+        ><a href="#c">C Cairn with a leaf</a><a href="#d">D Forehead glyph</a
+        ><a href="#e">E Can-bearer</a><a href="#f">F Lamp-bud head</a><a href="#palette">Palette</a>
+      </nav>
+
+      <section id="a" aria-labelledby="h-a">
+        <header>
+          <p class="idx">A</p>
+          <h2 id="h-a">Moss pebble</h2>
+          <p class="trait">Asleep until its core is lit. The sprout keeps growing either way.</p>
+        </header>
+        <div class="grid">
+          <div class="col">
+            <h3>Sizes 16 / 32 / 64 / 160, light and dark, plus one colour</h3>
+            <div class="panel light">
+              <div class="row">
+                <figure>
+                  <svg width="16" height="16" viewBox="0 0 32 32" aria-hidden="true">
+                    <use href="#A-work" />
+                  </svg>
+                  <figcaption>16</figcaption>
+                </figure>
+                <figure>
+                  <svg width="32" height="32" viewBox="0 0 32 32" aria-hidden="true">
+                    <use href="#A-work" />
+                  </svg>
+                  <figcaption>32</figcaption>
+                </figure>
+                <figure>
+                  <svg width="64" height="64" viewBox="0 0 32 32" aria-hidden="true">
+                    <use href="#A-work" />
+                  </svg>
+                  <figcaption>64</figcaption>
+                </figure>
+                <figure>
+                  <svg width="160" height="160" viewBox="0 0 32 32" aria-hidden="true">
+                    <use href="#A-work" />
+                  </svg>
+                  <figcaption>160</figcaption>
+                </figure>
+              </div>
+              <div class="row mono">
+                <figure>
+                  <svg width="16" height="16" viewBox="0 0 32 32" aria-hidden="true">
+                    <use href="#A-work" />
+                  </svg>
+                  <figcaption>one colour 16</figcaption>
+                </figure>
+                <figure>
+                  <svg width="32" height="32" viewBox="0 0 32 32" aria-hidden="true">
+                    <use href="#A-work" />
+                  </svg>
+                  <figcaption>one colour 32</figcaption>
+                </figure>
+                <figure>
+                  <svg width="64" height="64" viewBox="0 0 32 32" aria-hidden="true">
+                    <use href="#A-work" />
+                  </svg>
+                  <figcaption>one colour 64</figcaption>
+                </figure>
+              </div>
+            </div>
+            <div class="panel dark">
+              <div class="row">
+                <figure>
+                  <svg width="16" height="16" viewBox="0 0 32 32" aria-hidden="true">
+                    <use href="#A-work" />
+                  </svg>
+                  <figcaption>16</figcaption>
+                </figure>
+                <figure>
+                  <svg width="32" height="32" viewBox="0 0 32 32" aria-hidden="true">
+                    <use href="#A-work" />
+                  </svg>
+                  <figcaption>32</figcaption>
+                </figure>
+                <figure>
+                  <svg width="64" height="64" viewBox="0 0 32 32" aria-hidden="true">
+                    <use href="#A-work" />
+                  </svg>
+                  <figcaption>64</figcaption>
+                </figure>
+                <figure>
+                  <svg width="160" height="160" viewBox="0 0 32 32" aria-hidden="true">
+                    <use href="#A-work" />
+                  </svg>
+                  <figcaption>160</figcaption>
+                </figure>
+              </div>
+              <div class="row mono">
+                <figure>
+                  <svg width="16" height="16" viewBox="0 0 32 32" aria-hidden="true">
+                    <use href="#A-work" />
+                  </svg>
+                  <figcaption>one colour 16</figcaption>
+                </figure>
+                <figure>
+                  <svg width="32" height="32" viewBox="0 0 32 32" aria-hidden="true">
+                    <use href="#A-work" />
+                  </svg>
+                  <figcaption>one colour 32</figcaption>
+                </figure>
+                <figure>
+                  <svg width="64" height="64" viewBox="0 0 32 32" aria-hidden="true">
+                    <use href="#A-work" />
+                  </svg>
+                  <figcaption>one colour 64</figcaption>
+                </figure>
+              </div>
+            </div>
+          </div>
+          <div class="col">
+            <h3>States, one variable</h3>
+            <p class="var">
+              Chest core: dot radius 0.9 asleep, 2.3 pulsing, 2.9 done, socket empty on error.
+            </p>
+            <div class="panel light">
+              <div class="row states">
+                <figure>
+                  <svg width="64" height="64" viewBox="0 0 32 32" aria-hidden="true">
+                    <use href="#A-sleep" />
+                  </svg>
+                  <figcaption>asleep / off</figcaption>
+                </figure>
+                <figure>
+                  <svg width="64" height="64" viewBox="0 0 32 32" aria-hidden="true">
+                    <use href="#A-work" />
+                  </svg>
+                  <figcaption>awake / working</figcaption>
+                </figure>
+                <figure>
+                  <svg width="64" height="64" viewBox="0 0 32 32" aria-hidden="true">
+                    <use href="#A-done" />
+                  </svg>
+                  <figcaption>done</figcaption>
+                </figure>
+                <figure>
+                  <svg width="64" height="64" viewBox="0 0 32 32" aria-hidden="true">
+                    <use href="#A-err" />
+                  </svg>
+                  <figcaption>error / stopped</figcaption>
+                </figure>
+              </div>
+              <div class="row states mono">
+                <figure>
+                  <svg width="64" height="64" viewBox="0 0 32 32" aria-hidden="true">
+                    <use href="#A-sleep" />
+                  </svg>
+                </figure>
+                <figure>
+                  <svg width="64" height="64" viewBox="0 0 32 32" aria-hidden="true">
+                    <use href="#A-work" />
+                  </svg>
+                </figure>
+                <figure>
+                  <svg width="64" height="64" viewBox="0 0 32 32" aria-hidden="true">
+                    <use href="#A-done" />
+                  </svg>
+                </figure>
+                <figure>
+                  <svg width="64" height="64" viewBox="0 0 32 32" aria-hidden="true">
+                    <use href="#A-err" />
+                  </svg>
+                </figure>
+              </div>
+            </div>
+            <div class="panel dark">
+              <div class="row states">
+                <figure>
+                  <svg width="64" height="64" viewBox="0 0 32 32" aria-hidden="true">
+                    <use href="#A-sleep" />
+                  </svg>
+                </figure>
+                <figure>
+                  <svg width="64" height="64" viewBox="0 0 32 32" aria-hidden="true">
+                    <use href="#A-work" />
+                  </svg>
+                </figure>
+                <figure>
+                  <svg width="64" height="64" viewBox="0 0 32 32" aria-hidden="true">
+                    <use href="#A-done" />
+                  </svg>
+                </figure>
+                <figure>
+                  <svg width="64" height="64" viewBox="0 0 32 32" aria-hidden="true">
+                    <use href="#A-err" />
+                  </svg>
+                </figure>
+              </div>
+            </div>
+            <h3>Working loop</h3>
+            <div class="panel light loop">
+              <div class="lp">
+                <svg viewBox="0 0 32 32" aria-hidden="true">
+                  <path class="b" d="M9 28Q5 28 5 24L6 14Q6 7 16 7Q26 7 26 14L27 24Q27 28 23 28Z" />
+                  <path
+                    class="g"
+                    d="M6 14Q6.2 9 10.5 7.6L13 7.3Q12 9.5 10.6 10Q9.6 11.6 10.6 12.6Q8.4 12.2 8 14.6Z"
+                  />
+                  <path class="gl" d="M16 7.2V3.6" stroke-width="1.5" />
+                  <path class="g" d="M16 4.6Q12.4 1.6 10.6 3.8Q13.4 6.2 16 4.6Z" />
+                  <path class="g" d="M16 4.6Q19.6 1.4 22 3.4Q19 6.2 16 4.6Z" />
+                  <circle class="k" cx="12" cy="14" r="1.1" />
+                  <circle class="k" cx="20" cy="14" r="1.1" />
+                  <circle class="k" cx="16" cy="21" r="3.7" />
+                  <circle class="h pulseh" cx="16" cy="21" r="5.6" />
+                  <circle class="l pulse" cx="16" cy="21" r="2.3" />
+                </svg>
+              </div>
+              <div class="lp small">
+                <svg viewBox="0 0 32 32" aria-hidden="true">
+                  <path class="b" d="M9 28Q5 28 5 24L6 14Q6 7 16 7Q26 7 26 14L27 24Q27 28 23 28Z" />
+                  <path
+                    class="g"
+                    d="M6 14Q6.2 9 10.5 7.6L13 7.3Q12 9.5 10.6 10Q9.6 11.6 10.6 12.6Q8.4 12.2 8 14.6Z"
+                  />
+                  <path class="gl" d="M16 7.2V3.6" stroke-width="1.5" />
+                  <path class="g" d="M16 4.6Q12.4 1.6 10.6 3.8Q13.4 6.2 16 4.6Z" />
+                  <path class="g" d="M16 4.6Q19.6 1.4 22 3.4Q19 6.2 16 4.6Z" />
+                  <circle class="k" cx="12" cy="14" r="1.1" />
+                  <circle class="k" cx="20" cy="14" r="1.1" />
+                  <circle class="k" cx="16" cy="21" r="3.7" />
+                  <circle class="h pulseh" cx="16" cy="21" r="5.6" />
+                  <circle class="l pulse" cx="16" cy="21" r="2.3" />
+                </svg>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="grid">
+          <div class="col">
+            <h3>Terminal banner</h3>
+            <div class="termbox" role="img" aria-label="Terminal banner mock for idea A">
+              <pre class="art">     <span class="c10">▄▀▄▄</span>
+      <span class="c10">█</span>
+  <span class="c2">▄██</span><span class="c7">███████▄</span>
+  <span class="c7">██ █████ ██</span>
+  <span class="c7">████</span> <span class="c11">●</span> <span class="c7">████</span>
+  <span class="c7">▀█████████▀</span></pre>
+              <pre
+                class="term"
+              ><span class="c15"><b>emet</b></span> <span class="c8">0.1.0</span>  <span class="c10">3 agents running</span> <span class="c8">/</span> <span class="c11">1 waiting</span> <span class="c8">/</span> <span class="c9">0 failed</span>
+<span class="c12">$</span> emet run <span class="c14">--wave 2</span>
+<span class="bg0">  </span><span class="bg1">  </span><span class="bg2">  </span><span class="bg3">  </span><span class="bg4">  </span><span class="bg5">  </span><span class="bg6">  </span><span class="bg7">  </span><span class="bg8">  </span><span class="bg9">  </span><span class="bg10">  </span><span class="bg11">  </span><span class="bg12">  </span><span class="bg13">  </span><span class="bg14">  </span><span class="bg15">  </span></pre>
+            </div>
+          </div>
+          <div class="col">
+            <h3>Empty state</h3>
+            <p class="empty">
+              <code>$ emet status</code><br />No agents running. The core is dark and the moss does
+              not mind.
+            </p>
+            <h3>Verdict</h3>
+            <ul class="verdict">
+              <li>
+                Golem: medium. A heavy bean of clay with a light in its chest reads as a made thing;
+                the sprout pushes it toward plant sprite more than golem.
+              </li>
+              <li>
+                Distinct: medium. Bean body plus sprout is a common friendly-robot recipe; the moss
+                patch and chest socket help.
+              </li>
+              <li>
+                16 px: good. Body, sprout and socket survive; the dot is about 1 px, so awake and
+                asleep differ by a single pixel of light.
+              </li>
+              <li>
+                Childish: borderline. Round, small, sprouting; it needs flat colour and a dry tone
+                to stay sober.
+              </li>
+            </ul>
+          </div>
+        </div>
+      </section>
+
+      <section id="b" aria-labelledby="h-b">
+        <header>
+          <p class="idx">B</p>
+          <h2 id="h-b">Soft giant</h2>
+          <p class="trait">Large, calm and in no hurry. Two small lamps are all it shows.</p>
+        </header>
+        <div class="grid">
+          <div class="col">
+            <h3>Sizes 16 / 32 / 64 / 160, light and dark, plus one colour</h3>
+            <div class="panel light">
+              <div class="row">
+                <figure>
+                  <svg width="16" height="16" viewBox="0 0 32 32" aria-hidden="true">
+                    <use href="#B-work" />
+                  </svg>
+                  <figcaption>16</figcaption>
+                </figure>
+                <figure>
+                  <svg width="32" height="32" viewBox="0 0 32 32" aria-hidden="true">
+                    <use href="#B-work" />
+                  </svg>
+                  <figcaption>32</figcaption>
+                </figure>
+                <figure>
+                  <svg width="64" height="64" viewBox="0 0 32 32" aria-hidden="true">
+                    <use href="#B-work" />
+                  </svg>
+                  <figcaption>64</figcaption>
+                </figure>
+                <figure>
+                  <svg width="160" height="160" viewBox="0 0 32 32" aria-hidden="true">
+                    <use href="#B-work" />
+                  </svg>
+                  <figcaption>160</figcaption>
+                </figure>
+              </div>
+              <div class="row mono">
+                <figure>
+                  <svg width="16" height="16" viewBox="0 0 32 32" aria-hidden="true">
+                    <use href="#B-work" />
+                  </svg>
+                  <figcaption>one colour 16</figcaption>
+                </figure>
+                <figure>
+                  <svg width="32" height="32" viewBox="0 0 32 32" aria-hidden="true">
+                    <use href="#B-work" />
+                  </svg>
+                  <figcaption>one colour 32</figcaption>
+                </figure>
+                <figure>
+                  <svg width="64" height="64" viewBox="0 0 32 32" aria-hidden="true">
+                    <use href="#B-work" />
+                  </svg>
+                  <figcaption>one colour 64</figcaption>
+                </figure>
+              </div>
+            </div>
+            <div class="panel dark">
+              <div class="row">
+                <figure>
+                  <svg width="16" height="16" viewBox="0 0 32 32" aria-hidden="true">
+                    <use href="#B-work" />
+                  </svg>
+                  <figcaption>16</figcaption>
+                </figure>
+                <figure>
+                  <svg width="32" height="32" viewBox="0 0 32 32" aria-hidden="true">
+                    <use href="#B-work" />
+                  </svg>
+                  <figcaption>32</figcaption>
+                </figure>
+                <figure>
+                  <svg width="64" height="64" viewBox="0 0 32 32" aria-hidden="true">
+                    <use href="#B-work" />
+                  </svg>
+                  <figcaption>64</figcaption>
+                </figure>
+                <figure>
+                  <svg width="160" height="160" viewBox="0 0 32 32" aria-hidden="true">
+                    <use href="#B-work" />
+                  </svg>
+                  <figcaption>160</figcaption>
+                </figure>
+              </div>
+              <div class="row mono">
+                <figure>
+                  <svg width="16" height="16" viewBox="0 0 32 32" aria-hidden="true">
+                    <use href="#B-work" />
+                  </svg>
+                  <figcaption>one colour 16</figcaption>
+                </figure>
+                <figure>
+                  <svg width="32" height="32" viewBox="0 0 32 32" aria-hidden="true">
+                    <use href="#B-work" />
+                  </svg>
+                  <figcaption>one colour 32</figcaption>
+                </figure>
+                <figure>
+                  <svg width="64" height="64" viewBox="0 0 32 32" aria-hidden="true">
+                    <use href="#B-work" />
+                  </svg>
+                  <figcaption>one colour 64</figcaption>
+                </figure>
+              </div>
+            </div>
+          </div>
+          <div class="col">
+            <h3>States, one variable</h3>
+            <p class="var">
+              Eye lamps: closed dashes asleep, both lit (haloed) working, both lit done, right lamp
+              out on error.
+            </p>
+            <div class="panel light">
+              <div class="row states">
+                <figure>
+                  <svg width="64" height="64" viewBox="0 0 32 32" aria-hidden="true">
+                    <use href="#B-sleep" />
+                  </svg>
+                  <figcaption>asleep / off</figcaption>
+                </figure>
+                <figure>
+                  <svg width="64" height="64" viewBox="0 0 32 32" aria-hidden="true">
+                    <use href="#B-work" />
+                  </svg>
+                  <figcaption>awake / working</figcaption>
+                </figure>
+                <figure>
+                  <svg width="64" height="64" viewBox="0 0 32 32" aria-hidden="true">
+                    <use href="#B-done" />
+                  </svg>
+                  <figcaption>done</figcaption>
+                </figure>
+                <figure>
+                  <svg width="64" height="64" viewBox="0 0 32 32" aria-hidden="true">
+                    <use href="#B-err" />
+                  </svg>
+                  <figcaption>error / stopped</figcaption>
+                </figure>
+              </div>
+              <div class="row states mono">
+                <figure>
+                  <svg width="64" height="64" viewBox="0 0 32 32" aria-hidden="true">
+                    <use href="#B-sleep" />
+                  </svg>
+                </figure>
+                <figure>
+                  <svg width="64" height="64" viewBox="0 0 32 32" aria-hidden="true">
+                    <use href="#B-work" />
+                  </svg>
+                </figure>
+                <figure>
+                  <svg width="64" height="64" viewBox="0 0 32 32" aria-hidden="true">
+                    <use href="#B-done" />
+                  </svg>
+                </figure>
+                <figure>
+                  <svg width="64" height="64" viewBox="0 0 32 32" aria-hidden="true">
+                    <use href="#B-err" />
+                  </svg>
+                </figure>
+              </div>
+            </div>
+            <div class="panel dark">
+              <div class="row states">
+                <figure>
+                  <svg width="64" height="64" viewBox="0 0 32 32" aria-hidden="true">
+                    <use href="#B-sleep" />
+                  </svg>
+                </figure>
+                <figure>
+                  <svg width="64" height="64" viewBox="0 0 32 32" aria-hidden="true">
+                    <use href="#B-work" />
+                  </svg>
+                </figure>
+                <figure>
+                  <svg width="64" height="64" viewBox="0 0 32 32" aria-hidden="true">
+                    <use href="#B-done" />
+                  </svg>
+                </figure>
+                <figure>
+                  <svg width="64" height="64" viewBox="0 0 32 32" aria-hidden="true">
+                    <use href="#B-err" />
+                  </svg>
+                </figure>
+              </div>
+            </div>
+            <h3>Working loop</h3>
+            <div class="panel light loop">
+              <div class="lp">
+                <svg viewBox="0 0 32 32" aria-hidden="true">
+                  <path
+                    class="b"
+                    d="M4 27Q3 17 9 12Q11 10 12 10L12 8.5Q12 5 16 5Q20 5 20 8.5L20 10Q21 10 23 12Q29 17 28 27Q28 29 26 29L19 29V26.5H13V29L6 29Q4 29 4 27Z"
+                  />
+                  <path class="g" d="M21 12Q25 12.6 27.3 16.4Q25.6 15.4 24 16Q22.6 15 21 13.2Z" />
+                  <path class="gl" d="M24.4 12.4V9.4" stroke-width="1.2" />
+                  <path class="g" d="M24.4 10.4Q27.2 7.6 29.4 9.2Q27.2 11.8 24.4 10.4Z" />
+                  <path class="bgl" d="M8.6 15.5Q6.8 21 8 26M23.4 15.5Q25.2 21 24 26" />
+                  <circle class="k" cx="14" cy="8.3" r="1.35" />
+                  <circle class="k" cx="18" cy="8.3" r="1.35" />
+                  <circle class="h" cx="14" cy="8.3" r="2.6" />
+                  <circle class="h" cx="18" cy="8.3" r="2.6" />
+                  <circle class="l lampL" cx="14" cy="8.3" r="0.85" />
+                  <circle class="l lampR" cx="18" cy="8.3" r="0.85" />
+                </svg>
+              </div>
+              <div class="lp small">
+                <svg viewBox="0 0 32 32" aria-hidden="true">
+                  <path
+                    class="b"
+                    d="M4 27Q3 17 9 12Q11 10 12 10L12 8.5Q12 5 16 5Q20 5 20 8.5L20 10Q21 10 23 12Q29 17 28 27Q28 29 26 29L19 29V26.5H13V29L6 29Q4 29 4 27Z"
+                  />
+                  <path class="g" d="M21 12Q25 12.6 27.3 16.4Q25.6 15.4 24 16Q22.6 15 21 13.2Z" />
+                  <path class="gl" d="M24.4 12.4V9.4" stroke-width="1.2" />
+                  <path class="g" d="M24.4 10.4Q27.2 7.6 29.4 9.2Q27.2 11.8 24.4 10.4Z" />
+                  <path class="bgl" d="M8.6 15.5Q6.8 21 8 26M23.4 15.5Q25.2 21 24 26" />
+                  <circle class="k" cx="14" cy="8.3" r="1.35" />
+                  <circle class="k" cx="18" cy="8.3" r="1.35" />
+                  <circle class="h" cx="14" cy="8.3" r="2.6" />
+                  <circle class="h" cx="18" cy="8.3" r="2.6" />
+                  <circle class="l lampL" cx="14" cy="8.3" r="0.85" />
+                  <circle class="l lampR" cx="18" cy="8.3" r="0.85" />
+                </svg>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="grid">
+          <div class="col">
+            <h3>Terminal banner</h3>
+            <div class="termbox" role="img" aria-label="Terminal banner mock for idea B">
+              <pre class="art">    <span class="c7">▄███▄</span>
+    <span class="c7">█</span><span class="c11">▪</span> <span class="c11">▪</span><span class="c7">█</span>
+  <span class="c7">▄███████▄</span>
+ <span class="c7">████████</span><span class="c2">███</span>
+ <span class="c7">███████████</span>
+ <span class="c7">▀▀▀▀▀▀▀▀▀▀▀</span></pre>
+              <pre
+                class="term"
+              ><span class="c15"><b>emet</b></span> <span class="c8">0.1.0</span>  <span class="c10">3 agents running</span> <span class="c8">/</span> <span class="c11">1 waiting</span> <span class="c8">/</span> <span class="c9">0 failed</span>
+<span class="c12">$</span> emet run <span class="c14">--wave 2</span>
+<span class="bg0">  </span><span class="bg1">  </span><span class="bg2">  </span><span class="bg3">  </span><span class="bg4">  </span><span class="bg5">  </span><span class="bg6">  </span><span class="bg7">  </span><span class="bg8">  </span><span class="bg9">  </span><span class="bg10">  </span><span class="bg11">  </span><span class="bg12">  </span><span class="bg13">  </span><span class="bg14">  </span><span class="bg15">  </span></pre>
+            </div>
+          </div>
+          <div class="col">
+            <h3>Empty state</h3>
+            <p class="empty">
+              <code>$ emet status</code><br />No agents running. Large, calm, and in no hurry.
+            </p>
+            <h3>Verdict</h3>
+            <ul class="verdict">
+              <li>
+                Golem: good. The wide mound with a tiny head and moss on the shoulder is the closest
+                to a guardian-machine mood in the set.
+              </li>
+              <li>
+                Distinct: high. A bell silhouette with a small head nub is unlike any dev-tool
+                mascot I know of.
+              </li>
+              <li>
+                16 px: weak on the face. The silhouette holds; the lamps fall below 1 px and the
+                state is nearly invisible, so the shape must carry it.
+              </li>
+              <li>Childish: low risk. Mass and tiny features read as grave, not cute.</li>
+            </ul>
+          </div>
+        </div>
+      </section>
+
+      <section id="c" aria-labelledby="h-c">
+        <header>
+          <p class="idx">C</p>
+          <h2 id="h-c">Cairn with a leaf</h2>
+          <p class="trait">Three stones, balanced. The leaf is the only thing that reports.</p>
+        </header>
+        <div class="grid">
+          <div class="col">
+            <h3>Sizes 16 / 32 / 64 / 160, light and dark, plus one colour</h3>
+            <div class="panel light">
+              <div class="row">
+                <figure>
+                  <svg width="16" height="16" viewBox="0 0 32 32" aria-hidden="true">
+                    <use href="#C-work" />
+                  </svg>
+                  <figcaption>16</figcaption>
+                </figure>
+                <figure>
+                  <svg width="32" height="32" viewBox="0 0 32 32" aria-hidden="true">
+                    <use href="#C-work" />
+                  </svg>
+                  <figcaption>32</figcaption>
+                </figure>
+                <figure>
+                  <svg width="64" height="64" viewBox="0 0 32 32" aria-hidden="true">
+                    <use href="#C-work" />
+                  </svg>
+                  <figcaption>64</figcaption>
+                </figure>
+                <figure>
+                  <svg width="160" height="160" viewBox="0 0 32 32" aria-hidden="true">
+                    <use href="#C-work" />
+                  </svg>
+                  <figcaption>160</figcaption>
+                </figure>
+              </div>
+              <div class="row mono">
+                <figure>
+                  <svg width="16" height="16" viewBox="0 0 32 32" aria-hidden="true">
+                    <use href="#C-work" />
+                  </svg>
+                  <figcaption>one colour 16</figcaption>
+                </figure>
+                <figure>
+                  <svg width="32" height="32" viewBox="0 0 32 32" aria-hidden="true">
+                    <use href="#C-work" />
+                  </svg>
+                  <figcaption>one colour 32</figcaption>
+                </figure>
+                <figure>
+                  <svg width="64" height="64" viewBox="0 0 32 32" aria-hidden="true">
+                    <use href="#C-work" />
+                  </svg>
+                  <figcaption>one colour 64</figcaption>
+                </figure>
+              </div>
+            </div>
+            <div class="panel dark">
+              <div class="row">
+                <figure>
+                  <svg width="16" height="16" viewBox="0 0 32 32" aria-hidden="true">
+                    <use href="#C-work" />
+                  </svg>
+                  <figcaption>16</figcaption>
+                </figure>
+                <figure>
+                  <svg width="32" height="32" viewBox="0 0 32 32" aria-hidden="true">
+                    <use href="#C-work" />
+                  </svg>
+                  <figcaption>32</figcaption>
+                </figure>
+                <figure>
+                  <svg width="64" height="64" viewBox="0 0 32 32" aria-hidden="true">
+                    <use href="#C-work" />
+                  </svg>
+                  <figcaption>64</figcaption>
+                </figure>
+                <figure>
+                  <svg width="160" height="160" viewBox="0 0 32 32" aria-hidden="true">
+                    <use href="#C-work" />
+                  </svg>
+                  <figcaption>160</figcaption>
+                </figure>
+              </div>
+              <div class="row mono">
+                <figure>
+                  <svg width="16" height="16" viewBox="0 0 32 32" aria-hidden="true">
+                    <use href="#C-work" />
+                  </svg>
+                  <figcaption>one colour 16</figcaption>
+                </figure>
+                <figure>
+                  <svg width="32" height="32" viewBox="0 0 32 32" aria-hidden="true">
+                    <use href="#C-work" />
+                  </svg>
+                  <figcaption>one colour 32</figcaption>
+                </figure>
+                <figure>
+                  <svg width="64" height="64" viewBox="0 0 32 32" aria-hidden="true">
+                    <use href="#C-work" />
+                  </svg>
+                  <figcaption>one colour 64</figcaption>
+                </figure>
+              </div>
+            </div>
+          </div>
+          <div class="col">
+            <h3>States, one variable</h3>
+            <p class="var">
+              Leaf: bud asleep, upright and swaying working, two leaves done, drooped on error.
+            </p>
+            <div class="panel light">
+              <div class="row states">
+                <figure>
+                  <svg width="64" height="64" viewBox="0 0 32 32" aria-hidden="true">
+                    <use href="#C-sleep" />
+                  </svg>
+                  <figcaption>asleep / off</figcaption>
+                </figure>
+                <figure>
+                  <svg width="64" height="64" viewBox="0 0 32 32" aria-hidden="true">
+                    <use href="#C-work" />
+                  </svg>
+                  <figcaption>awake / working</figcaption>
+                </figure>
+                <figure>
+                  <svg width="64" height="64" viewBox="0 0 32 32" aria-hidden="true">
+                    <use href="#C-done" />
+                  </svg>
+                  <figcaption>done</figcaption>
+                </figure>
+                <figure>
+                  <svg width="64" height="64" viewBox="0 0 32 32" aria-hidden="true">
+                    <use href="#C-err" />
+                  </svg>
+                  <figcaption>error / stopped</figcaption>
+                </figure>
+              </div>
+              <div class="row states mono">
+                <figure>
+                  <svg width="64" height="64" viewBox="0 0 32 32" aria-hidden="true">
+                    <use href="#C-sleep" />
+                  </svg>
+                </figure>
+                <figure>
+                  <svg width="64" height="64" viewBox="0 0 32 32" aria-hidden="true">
+                    <use href="#C-work" />
+                  </svg>
+                </figure>
+                <figure>
+                  <svg width="64" height="64" viewBox="0 0 32 32" aria-hidden="true">
+                    <use href="#C-done" />
+                  </svg>
+                </figure>
+                <figure>
+                  <svg width="64" height="64" viewBox="0 0 32 32" aria-hidden="true">
+                    <use href="#C-err" />
+                  </svg>
+                </figure>
+              </div>
+            </div>
+            <div class="panel dark">
+              <div class="row states">
+                <figure>
+                  <svg width="64" height="64" viewBox="0 0 32 32" aria-hidden="true">
+                    <use href="#C-sleep" />
+                  </svg>
+                </figure>
+                <figure>
+                  <svg width="64" height="64" viewBox="0 0 32 32" aria-hidden="true">
+                    <use href="#C-work" />
+                  </svg>
+                </figure>
+                <figure>
+                  <svg width="64" height="64" viewBox="0 0 32 32" aria-hidden="true">
+                    <use href="#C-done" />
+                  </svg>
+                </figure>
+                <figure>
+                  <svg width="64" height="64" viewBox="0 0 32 32" aria-hidden="true">
+                    <use href="#C-err" />
+                  </svg>
+                </figure>
+              </div>
+            </div>
+            <h3>Working loop</h3>
+            <div class="panel light loop">
+              <div class="lp">
+                <svg viewBox="0 0 32 32" aria-hidden="true">
+                  <rect class="b st" x="4.5" y="21" width="23" height="8.5" rx="4.2" />
+                  <rect class="b st" x="8.5" y="13.4" width="16.5" height="8.4" rx="4" />
+                  <rect class="b st" x="11" y="7.6" width="9.4" height="6.6" rx="3" />
+                  <circle class="k" cx="13.6" cy="17.6" r="1" />
+                  <circle class="k" cx="19.6" cy="17.6" r="1" />
+                  <g class="sway">
+                    <path class="gl" d="M15.4 7.8V4.6" stroke-width="1.3" />
+                    <path class="g" d="M15.4 5.6Q19.4 1.4 23.4 3.6Q20.4 6.8 15.4 5.6Z" />
+                  </g>
+                </svg>
+              </div>
+              <div class="lp small">
+                <svg viewBox="0 0 32 32" aria-hidden="true">
+                  <rect class="b st" x="4.5" y="21" width="23" height="8.5" rx="4.2" />
+                  <rect class="b st" x="8.5" y="13.4" width="16.5" height="8.4" rx="4" />
+                  <rect class="b st" x="11" y="7.6" width="9.4" height="6.6" rx="3" />
+                  <circle class="k" cx="13.6" cy="17.6" r="1" />
+                  <circle class="k" cx="19.6" cy="17.6" r="1" />
+                  <g class="sway">
+                    <path class="gl" d="M15.4 7.8V4.6" stroke-width="1.3" />
+                    <path class="g" d="M15.4 5.6Q19.4 1.4 23.4 3.6Q20.4 6.8 15.4 5.6Z" />
+                  </g>
+                </svg>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="grid">
+          <div class="col">
+            <h3>Terminal banner</h3>
+            <div class="termbox" role="img" aria-label="Terminal banner mock for idea C">
+              <pre class="art">       <span class="c10">▀▄</span>
+      <span class="c10">█</span>
+    <span class="c7">▄███▄</span>
+  <span class="c7">▄███████▄</span>
+  <span class="c7">██ ███ ██</span>
+ <span class="c7">▄█████████▄</span>
+ <span class="c7">▀█████████▀</span></pre>
+              <pre
+                class="term"
+              ><span class="c15"><b>emet</b></span> <span class="c8">0.1.0</span>  <span class="c10">3 agents running</span> <span class="c8">/</span> <span class="c11">1 waiting</span> <span class="c8">/</span> <span class="c9">0 failed</span>
+<span class="c12">$</span> emet run <span class="c14">--wave 2</span>
+<span class="bg0">  </span><span class="bg1">  </span><span class="bg2">  </span><span class="bg3">  </span><span class="bg4">  </span><span class="bg5">  </span><span class="bg6">  </span><span class="bg7">  </span><span class="bg8">  </span><span class="bg9">  </span><span class="bg10">  </span><span class="bg11">  </span><span class="bg12">  </span><span class="bg13">  </span><span class="bg14">  </span><span class="bg15">  </span></pre>
+            </div>
+          </div>
+          <div class="col">
+            <h3>Empty state</h3>
+            <p class="empty">
+              <code>$ emet status</code><br />No agents running. Three stones, one leaf, zero tasks.
+            </p>
+            <h3>Verdict</h3>
+            <ul class="verdict">
+              <li>
+                Golem: medium. Stacked stones with a face are a golem, but also a cairn or a spa
+                logo; the eyes do the work.
+              </li>
+              <li>
+                Distinct: high among golems, though stacked-stone icons exist in wellness branding.
+              </li>
+              <li>
+                16 px: good. Three pebbles and a leaf tick are bold; the wilt (leaf pointing down)
+                is visible at 16 px. At a glance it can read as a pear or a gourd.
+              </li>
+              <li>
+                Childish: low to medium. The leaf is the risk; keep it a flat shape, no highlights.
+              </li>
+            </ul>
+          </div>
+        </div>
+      </section>
+
+      <section id="d" aria-labelledby="h-d">
+        <header>
+          <p class="idx">D</p>
+          <h2 id="h-d">Forehead glyph</h2>
+          <p class="trait">A doorway of clay with one lit dot. The word, without the letters.</p>
+        </header>
+        <div class="grid">
+          <div class="col">
+            <h3>Sizes 16 / 32 / 64 / 160, light and dark, plus one colour</h3>
+            <div class="panel light">
+              <div class="row">
+                <figure>
+                  <svg width="16" height="16" viewBox="0 0 32 32" aria-hidden="true">
+                    <use href="#D-work" />
+                  </svg>
+                  <figcaption>16</figcaption>
+                </figure>
+                <figure>
+                  <svg width="32" height="32" viewBox="0 0 32 32" aria-hidden="true">
+                    <use href="#D-work" />
+                  </svg>
+                  <figcaption>32</figcaption>
+                </figure>
+                <figure>
+                  <svg width="64" height="64" viewBox="0 0 32 32" aria-hidden="true">
+                    <use href="#D-work" />
+                  </svg>
+                  <figcaption>64</figcaption>
+                </figure>
+                <figure>
+                  <svg width="160" height="160" viewBox="0 0 32 32" aria-hidden="true">
+                    <use href="#D-work" />
+                  </svg>
+                  <figcaption>160</figcaption>
+                </figure>
+              </div>
+              <div class="row mono">
+                <figure>
+                  <svg width="16" height="16" viewBox="0 0 32 32" aria-hidden="true">
+                    <use href="#D-work" />
+                  </svg>
+                  <figcaption>one colour 16</figcaption>
+                </figure>
+                <figure>
+                  <svg width="32" height="32" viewBox="0 0 32 32" aria-hidden="true">
+                    <use href="#D-work" />
+                  </svg>
+                  <figcaption>one colour 32</figcaption>
+                </figure>
+                <figure>
+                  <svg width="64" height="64" viewBox="0 0 32 32" aria-hidden="true">
+                    <use href="#D-work" />
+                  </svg>
+                  <figcaption>one colour 64</figcaption>
+                </figure>
+              </div>
+            </div>
+            <div class="panel dark">
+              <div class="row">
+                <figure>
+                  <svg width="16" height="16" viewBox="0 0 32 32" aria-hidden="true">
+                    <use href="#D-work" />
+                  </svg>
+                  <figcaption>16</figcaption>
+                </figure>
+                <figure>
+                  <svg width="32" height="32" viewBox="0 0 32 32" aria-hidden="true">
+                    <use href="#D-work" />
+                  </svg>
+                  <figcaption>32</figcaption>
+                </figure>
+                <figure>
+                  <svg width="64" height="64" viewBox="0 0 32 32" aria-hidden="true">
+                    <use href="#D-work" />
+                  </svg>
+                  <figcaption>64</figcaption>
+                </figure>
+                <figure>
+                  <svg width="160" height="160" viewBox="0 0 32 32" aria-hidden="true">
+                    <use href="#D-work" />
+                  </svg>
+                  <figcaption>160</figcaption>
+                </figure>
+              </div>
+              <div class="row mono">
+                <figure>
+                  <svg width="16" height="16" viewBox="0 0 32 32" aria-hidden="true">
+                    <use href="#D-work" />
+                  </svg>
+                  <figcaption>one colour 16</figcaption>
+                </figure>
+                <figure>
+                  <svg width="32" height="32" viewBox="0 0 32 32" aria-hidden="true">
+                    <use href="#D-work" />
+                  </svg>
+                  <figcaption>one colour 32</figcaption>
+                </figure>
+                <figure>
+                  <svg width="64" height="64" viewBox="0 0 32 32" aria-hidden="true">
+                    <use href="#D-work" />
+                  </svg>
+                  <figcaption>one colour 64</figcaption>
+                </figure>
+              </div>
+            </div>
+          </div>
+          <div class="col">
+            <h3>States, one variable</h3>
+            <p class="var">
+              Forehead dot: faint asleep, 1.6 pulsing, 1.8 done, socket closed to a dash on error.
+            </p>
+            <div class="panel light">
+              <div class="row states">
+                <figure>
+                  <svg width="64" height="64" viewBox="0 0 32 32" aria-hidden="true">
+                    <use href="#D-sleep" />
+                  </svg>
+                  <figcaption>asleep / off</figcaption>
+                </figure>
+                <figure>
+                  <svg width="64" height="64" viewBox="0 0 32 32" aria-hidden="true">
+                    <use href="#D-work" />
+                  </svg>
+                  <figcaption>awake / working</figcaption>
+                </figure>
+                <figure>
+                  <svg width="64" height="64" viewBox="0 0 32 32" aria-hidden="true">
+                    <use href="#D-done" />
+                  </svg>
+                  <figcaption>done</figcaption>
+                </figure>
+                <figure>
+                  <svg width="64" height="64" viewBox="0 0 32 32" aria-hidden="true">
+                    <use href="#D-err" />
+                  </svg>
+                  <figcaption>error / stopped</figcaption>
+                </figure>
+              </div>
+              <div class="row states mono">
+                <figure>
+                  <svg width="64" height="64" viewBox="0 0 32 32" aria-hidden="true">
+                    <use href="#D-sleep" />
+                  </svg>
+                </figure>
+                <figure>
+                  <svg width="64" height="64" viewBox="0 0 32 32" aria-hidden="true">
+                    <use href="#D-work" />
+                  </svg>
+                </figure>
+                <figure>
+                  <svg width="64" height="64" viewBox="0 0 32 32" aria-hidden="true">
+                    <use href="#D-done" />
+                  </svg>
+                </figure>
+                <figure>
+                  <svg width="64" height="64" viewBox="0 0 32 32" aria-hidden="true">
+                    <use href="#D-err" />
+                  </svg>
+                </figure>
+              </div>
+            </div>
+            <div class="panel dark">
+              <div class="row states">
+                <figure>
+                  <svg width="64" height="64" viewBox="0 0 32 32" aria-hidden="true">
+                    <use href="#D-sleep" />
+                  </svg>
+                </figure>
+                <figure>
+                  <svg width="64" height="64" viewBox="0 0 32 32" aria-hidden="true">
+                    <use href="#D-work" />
+                  </svg>
+                </figure>
+                <figure>
+                  <svg width="64" height="64" viewBox="0 0 32 32" aria-hidden="true">
+                    <use href="#D-done" />
+                  </svg>
+                </figure>
+                <figure>
+                  <svg width="64" height="64" viewBox="0 0 32 32" aria-hidden="true">
+                    <use href="#D-err" />
+                  </svg>
+                </figure>
+              </div>
+            </div>
+            <h3>Working loop</h3>
+            <div class="panel light loop">
+              <div class="lp">
+                <svg viewBox="0 0 32 32" aria-hidden="true">
+                  <rect class="b" x="3.6" y="16" width="4.4" height="10" rx="2.2" />
+                  <rect class="b" x="24" y="16" width="4.4" height="10" rx="2.2" />
+                  <path
+                    class="b"
+                    d="M6 28V15Q6 4 16 4Q26 4 26 15V28Q26 29 25 29H19V26.5H13V29H7Q6 29 6 28Z"
+                  />
+                  <path
+                    class="g ns"
+                    d="M6 25L8.5 23.6L11 25L14 23.8L16 25L19 23.6L22 25L24.5 23.8L26 25V28Q26 29 25 29H19V26.5H13V29H7Q6 29 6 28Z"
+                  />
+                  <rect class="k" x="9.5" y="16.5" width="4.5" height="1.3" rx="0.6" />
+                  <rect class="k" x="18" y="16.5" width="4.5" height="1.3" rx="0.6" />
+                  <circle class="k" cx="16" cy="9" r="2.6" />
+                  <circle class="h pulseh" cx="16" cy="9" r="4.4" />
+                  <circle class="l pulse" cx="16" cy="9" r="1.6" />
+                </svg>
+              </div>
+              <div class="lp small">
+                <svg viewBox="0 0 32 32" aria-hidden="true">
+                  <rect class="b" x="3.6" y="16" width="4.4" height="10" rx="2.2" />
+                  <rect class="b" x="24" y="16" width="4.4" height="10" rx="2.2" />
+                  <path
+                    class="b"
+                    d="M6 28V15Q6 4 16 4Q26 4 26 15V28Q26 29 25 29H19V26.5H13V29H7Q6 29 6 28Z"
+                  />
+                  <path
+                    class="g ns"
+                    d="M6 25L8.5 23.6L11 25L14 23.8L16 25L19 23.6L22 25L24.5 23.8L26 25V28Q26 29 25 29H19V26.5H13V29H7Q6 29 6 28Z"
+                  />
+                  <rect class="k" x="9.5" y="16.5" width="4.5" height="1.3" rx="0.6" />
+                  <rect class="k" x="18" y="16.5" width="4.5" height="1.3" rx="0.6" />
+                  <circle class="k" cx="16" cy="9" r="2.6" />
+                  <circle class="h pulseh" cx="16" cy="9" r="4.4" />
+                  <circle class="l pulse" cx="16" cy="9" r="1.6" />
+                </svg>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="grid">
+          <div class="col">
+            <h3>Terminal banner</h3>
+            <div class="termbox" role="img" aria-label="Terminal banner mock for idea D">
+              <pre class="art">   <span class="c7">▄█████▄</span>
+ <span class="c7">███</span> <span class="c11">●</span> <span class="c7">███</span>
+ <span class="c7">███████████</span>
+ <span class="c7">██▄▄███▄▄██</span>
+ <span class="c7">███████████</span>
+ <span class="c2">▀▄▀▄▀▄▀▄▀▄▀</span></pre>
+              <pre
+                class="term"
+              ><span class="c15"><b>emet</b></span> <span class="c8">0.1.0</span>  <span class="c10">3 agents running</span> <span class="c8">/</span> <span class="c11">1 waiting</span> <span class="c8">/</span> <span class="c9">0 failed</span>
+<span class="c12">$</span> emet run <span class="c14">--wave 2</span>
+<span class="bg0">  </span><span class="bg1">  </span><span class="bg2">  </span><span class="bg3">  </span><span class="bg4">  </span><span class="bg5">  </span><span class="bg6">  </span><span class="bg7">  </span><span class="bg8">  </span><span class="bg9">  </span><span class="bg10">  </span><span class="bg11">  </span><span class="bg12">  </span><span class="bg13">  </span><span class="bg14">  </span><span class="bg15">  </span></pre>
+            </div>
+          </div>
+          <div class="col">
+            <h3>Empty state</h3>
+            <p class="empty">
+              <code>$ emet status</code><br />No agents running. The forehead is dark. Nobody is
+              home, in a calm way.
+            </p>
+            <h3>Verdict</h3>
+            <ul class="verdict">
+              <li>
+                Golem: good. The lit mark on the forehead carries the emet story directly (a word
+                wakes it, erase the mark and it stops) with no letterform.
+              </li>
+              <li>
+                Distinct: medium to high. An arch with a forehead dot is close to a door, a
+                tombstone or a ghost; the notched feet and the side lumps (arms) are what keep it a
+                standing figure, and it needs both.
+              </li>
+              <li>
+                16 px: good. The arch is a clean silhouette; the dot is the one pixel that matters
+                and it can be shown as a status colour.
+              </li>
+              <li>Childish: low. The tall, plain form is the most sober of the six.</li>
+            </ul>
+          </div>
+        </div>
+      </section>
+
+      <section id="e" aria-labelledby="h-e">
+        <header>
+          <p class="idx">E</p>
+          <h2 id="h-e">Can-bearer</h2>
+          <p class="trait">A gardener of a golem. It carries water and says nothing.</p>
+        </header>
+        <div class="grid">
+          <div class="col">
+            <h3>Sizes 16 / 32 / 64 / 160, light and dark, plus one colour</h3>
+            <div class="panel light">
+              <div class="row">
+                <figure>
+                  <svg width="16" height="16" viewBox="0 0 32 32" aria-hidden="true">
+                    <use href="#E-work" />
+                  </svg>
+                  <figcaption>16</figcaption>
+                </figure>
+                <figure>
+                  <svg width="32" height="32" viewBox="0 0 32 32" aria-hidden="true">
+                    <use href="#E-work" />
+                  </svg>
+                  <figcaption>32</figcaption>
+                </figure>
+                <figure>
+                  <svg width="64" height="64" viewBox="0 0 32 32" aria-hidden="true">
+                    <use href="#E-work" />
+                  </svg>
+                  <figcaption>64</figcaption>
+                </figure>
+                <figure>
+                  <svg width="160" height="160" viewBox="0 0 32 32" aria-hidden="true">
+                    <use href="#E-work" />
+                  </svg>
+                  <figcaption>160</figcaption>
+                </figure>
+              </div>
+              <div class="row mono">
+                <figure>
+                  <svg width="16" height="16" viewBox="0 0 32 32" aria-hidden="true">
+                    <use href="#E-work" />
+                  </svg>
+                  <figcaption>one colour 16</figcaption>
+                </figure>
+                <figure>
+                  <svg width="32" height="32" viewBox="0 0 32 32" aria-hidden="true">
+                    <use href="#E-work" />
+                  </svg>
+                  <figcaption>one colour 32</figcaption>
+                </figure>
+                <figure>
+                  <svg width="64" height="64" viewBox="0 0 32 32" aria-hidden="true">
+                    <use href="#E-work" />
+                  </svg>
+                  <figcaption>one colour 64</figcaption>
+                </figure>
+              </div>
+            </div>
+            <div class="panel dark">
+              <div class="row">
+                <figure>
+                  <svg width="16" height="16" viewBox="0 0 32 32" aria-hidden="true">
+                    <use href="#E-work" />
+                  </svg>
+                  <figcaption>16</figcaption>
+                </figure>
+                <figure>
+                  <svg width="32" height="32" viewBox="0 0 32 32" aria-hidden="true">
+                    <use href="#E-work" />
+                  </svg>
+                  <figcaption>32</figcaption>
+                </figure>
+                <figure>
+                  <svg width="64" height="64" viewBox="0 0 32 32" aria-hidden="true">
+                    <use href="#E-work" />
+                  </svg>
+                  <figcaption>64</figcaption>
+                </figure>
+                <figure>
+                  <svg width="160" height="160" viewBox="0 0 32 32" aria-hidden="true">
+                    <use href="#E-work" />
+                  </svg>
+                  <figcaption>160</figcaption>
+                </figure>
+              </div>
+              <div class="row mono">
+                <figure>
+                  <svg width="16" height="16" viewBox="0 0 32 32" aria-hidden="true">
+                    <use href="#E-work" />
+                  </svg>
+                  <figcaption>one colour 16</figcaption>
+                </figure>
+                <figure>
+                  <svg width="32" height="32" viewBox="0 0 32 32" aria-hidden="true">
+                    <use href="#E-work" />
+                  </svg>
+                  <figcaption>one colour 32</figcaption>
+                </figure>
+                <figure>
+                  <svg width="64" height="64" viewBox="0 0 32 32" aria-hidden="true">
+                    <use href="#E-work" />
+                  </svg>
+                  <figcaption>one colour 64</figcaption>
+                </figure>
+              </div>
+            </div>
+          </div>
+          <div class="col">
+            <h3>States, one variable</h3>
+            <p class="var">
+              Water: no drops asleep, three falling working, three steady done, a dry ring at the
+              spout on error.
+            </p>
+            <div class="panel light">
+              <div class="row states">
+                <figure>
+                  <svg width="64" height="64" viewBox="0 0 32 32" aria-hidden="true">
+                    <use href="#E-sleep" />
+                  </svg>
+                  <figcaption>asleep / off</figcaption>
+                </figure>
+                <figure>
+                  <svg width="64" height="64" viewBox="0 0 32 32" aria-hidden="true">
+                    <use href="#E-work" />
+                  </svg>
+                  <figcaption>awake / working</figcaption>
+                </figure>
+                <figure>
+                  <svg width="64" height="64" viewBox="0 0 32 32" aria-hidden="true">
+                    <use href="#E-done" />
+                  </svg>
+                  <figcaption>done</figcaption>
+                </figure>
+                <figure>
+                  <svg width="64" height="64" viewBox="0 0 32 32" aria-hidden="true">
+                    <use href="#E-err" />
+                  </svg>
+                  <figcaption>error / stopped</figcaption>
+                </figure>
+              </div>
+              <div class="row states mono">
+                <figure>
+                  <svg width="64" height="64" viewBox="0 0 32 32" aria-hidden="true">
+                    <use href="#E-sleep" />
+                  </svg>
+                </figure>
+                <figure>
+                  <svg width="64" height="64" viewBox="0 0 32 32" aria-hidden="true">
+                    <use href="#E-work" />
+                  </svg>
+                </figure>
+                <figure>
+                  <svg width="64" height="64" viewBox="0 0 32 32" aria-hidden="true">
+                    <use href="#E-done" />
+                  </svg>
+                </figure>
+                <figure>
+                  <svg width="64" height="64" viewBox="0 0 32 32" aria-hidden="true">
+                    <use href="#E-err" />
+                  </svg>
+                </figure>
+              </div>
+            </div>
+            <div class="panel dark">
+              <div class="row states">
+                <figure>
+                  <svg width="64" height="64" viewBox="0 0 32 32" aria-hidden="true">
+                    <use href="#E-sleep" />
+                  </svg>
+                </figure>
+                <figure>
+                  <svg width="64" height="64" viewBox="0 0 32 32" aria-hidden="true">
+                    <use href="#E-work" />
+                  </svg>
+                </figure>
+                <figure>
+                  <svg width="64" height="64" viewBox="0 0 32 32" aria-hidden="true">
+                    <use href="#E-done" />
+                  </svg>
+                </figure>
+                <figure>
+                  <svg width="64" height="64" viewBox="0 0 32 32" aria-hidden="true">
+                    <use href="#E-err" />
+                  </svg>
+                </figure>
+              </div>
+            </div>
+            <h3>Working loop</h3>
+            <div class="panel light loop">
+              <div class="lp">
+                <svg viewBox="0 0 32 32" aria-hidden="true">
+                  <path
+                    class="b"
+                    d="M6 12Q6 9 9 9L19 9Q22 9 22 12L22 25Q22 28 19 28L9 28Q6 28 6 25Z"
+                  />
+                  <path class="bl" d="M6.3 13Q1.2 13 1.6 18.6Q2 23.6 6.3 23.6" stroke-width="2.2" />
+                  <path class="bl" d="M22 22.5L27.6 14" stroke-width="2.8" />
+                  <path class="bl" d="M26.6 12.4L29.8 14.4" stroke-width="2.6" />
+                  <path
+                    class="g"
+                    d="M6 12Q6 9 9 9L19 9Q22 9 22 12Q19 11 17 12.2Q14 10.4 11 12.2Q8 11 6 12Z"
+                  />
+                  <circle class="k" cx="11.5" cy="17" r="1.1" />
+                  <circle class="k" cx="16.5" cy="17" r="1.1" />
+                  <path
+                    class="w drop d1"
+                    d="M29.4 16.799999999999997Q30.7 18.599999999999998 29.4 19.7Q28.099999999999998 18.599999999999998 29.4 16.799999999999997Z"
+                  />
+                  <path
+                    class="w drop d2"
+                    d="M29.4 21.2Q30.7 23 29.4 24.1Q28.099999999999998 23 29.4 21.2Z"
+                  />
+                  <path
+                    class="w drop d3"
+                    d="M29.4 25.599999999999998Q30.7 27.4 29.4 28.5Q28.099999999999998 27.4 29.4 25.599999999999998Z"
+                  />
+                </svg>
+              </div>
+              <div class="lp small">
+                <svg viewBox="0 0 32 32" aria-hidden="true">
+                  <path
+                    class="b"
+                    d="M6 12Q6 9 9 9L19 9Q22 9 22 12L22 25Q22 28 19 28L9 28Q6 28 6 25Z"
+                  />
+                  <path class="bl" d="M6.3 13Q1.2 13 1.6 18.6Q2 23.6 6.3 23.6" stroke-width="2.2" />
+                  <path class="bl" d="M22 22.5L27.6 14" stroke-width="2.8" />
+                  <path class="bl" d="M26.6 12.4L29.8 14.4" stroke-width="2.6" />
+                  <path
+                    class="g"
+                    d="M6 12Q6 9 9 9L19 9Q22 9 22 12Q19 11 17 12.2Q14 10.4 11 12.2Q8 11 6 12Z"
+                  />
+                  <circle class="k" cx="11.5" cy="17" r="1.1" />
+                  <circle class="k" cx="16.5" cy="17" r="1.1" />
+                  <path
+                    class="w drop d1"
+                    d="M29.4 16.799999999999997Q30.7 18.599999999999998 29.4 19.7Q28.099999999999998 18.599999999999998 29.4 16.799999999999997Z"
+                  />
+                  <path
+                    class="w drop d2"
+                    d="M29.4 21.2Q30.7 23 29.4 24.1Q28.099999999999998 23 29.4 21.2Z"
+                  />
+                  <path
+                    class="w drop d3"
+                    d="M29.4 25.599999999999998Q30.7 27.4 29.4 28.5Q28.099999999999998 27.4 29.4 25.599999999999998Z"
+                  />
+                </svg>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="grid">
+          <div class="col">
+            <h3>Terminal banner</h3>
+            <div class="termbox" role="img" aria-label="Terminal banner mock for idea E">
+              <pre class="art">   <span class="c2">▄▄▄▄▄▄▄</span>    <span class="c7">▄▄</span>
+ <span class="c7">▄▄█████████▄▀</span>
+ <span class="c7">█ ██ █ ██ ██▀</span>  <span class="c14">·</span>
+ <span class="c7">▀▄█████████▀</span>   <span class="c14">·</span>
+   <span class="c7">▀▀▀▀▀▀▀▀▀</span>     <span class="c14">·</span></pre>
+              <pre
+                class="term"
+              ><span class="c15"><b>emet</b></span> <span class="c8">0.1.0</span>  <span class="c10">3 agents running</span> <span class="c8">/</span> <span class="c11">1 waiting</span> <span class="c8">/</span> <span class="c9">0 failed</span>
+<span class="c12">$</span> emet run <span class="c14">--wave 2</span>
+<span class="bg0">  </span><span class="bg1">  </span><span class="bg2">  </span><span class="bg3">  </span><span class="bg4">  </span><span class="bg5">  </span><span class="bg6">  </span><span class="bg7">  </span><span class="bg8">  </span><span class="bg9">  </span><span class="bg10">  </span><span class="bg11">  </span><span class="bg12">  </span><span class="bg13">  </span><span class="bg14">  </span><span class="bg15">  </span></pre>
+            </div>
+          </div>
+          <div class="col">
+            <h3>Empty state</h3>
+            <p class="empty">
+              <code>$ emet status</code><br />No agents running. The can is dry. Nothing to water
+              yet.
+            </p>
+            <h3>Verdict</h3>
+            <ul class="verdict">
+              <li>
+                Golem: low to medium. It reads as a watering can with a face; the clay and the moss
+                rim help a little.
+              </li>
+              <li>
+                Distinct: very high. Nothing in dev tooling looks like this, and the spout gives a
+                left-right direction the others lack.
+              </li>
+              <li>
+                16 px: medium. The can shape holds; the drops are specks, so the state change is
+                nearly lost.
+              </li>
+              <li>
+                Childish: medium to high. An anthropomorphic gardening tool is storybook territory;
+                it works only if kept strictly flat.
+              </li>
+            </ul>
+          </div>
+        </div>
+      </section>
+
+      <section id="f" aria-labelledby="h-f">
+        <header>
+          <p class="idx">F</p>
+          <h2 id="h-f">Lamp-bud head</h2>
+          <p class="trait">Only a head, half-lidded, with a bud on a stalk that is the lamp.</p>
+        </header>
+        <div class="grid">
+          <div class="col">
+            <h3>Sizes 16 / 32 / 64 / 160, light and dark, plus one colour</h3>
+            <div class="panel light">
+              <div class="row">
+                <figure>
+                  <svg width="16" height="16" viewBox="0 0 32 32" aria-hidden="true">
+                    <use href="#F-work" />
+                  </svg>
+                  <figcaption>16</figcaption>
+                </figure>
+                <figure>
+                  <svg width="32" height="32" viewBox="0 0 32 32" aria-hidden="true">
+                    <use href="#F-work" />
+                  </svg>
+                  <figcaption>32</figcaption>
+                </figure>
+                <figure>
+                  <svg width="64" height="64" viewBox="0 0 32 32" aria-hidden="true">
+                    <use href="#F-work" />
+                  </svg>
+                  <figcaption>64</figcaption>
+                </figure>
+                <figure>
+                  <svg width="160" height="160" viewBox="0 0 32 32" aria-hidden="true">
+                    <use href="#F-work" />
+                  </svg>
+                  <figcaption>160</figcaption>
+                </figure>
+              </div>
+              <div class="row mono">
+                <figure>
+                  <svg width="16" height="16" viewBox="0 0 32 32" aria-hidden="true">
+                    <use href="#F-work" />
+                  </svg>
+                  <figcaption>one colour 16</figcaption>
+                </figure>
+                <figure>
+                  <svg width="32" height="32" viewBox="0 0 32 32" aria-hidden="true">
+                    <use href="#F-work" />
+                  </svg>
+                  <figcaption>one colour 32</figcaption>
+                </figure>
+                <figure>
+                  <svg width="64" height="64" viewBox="0 0 32 32" aria-hidden="true">
+                    <use href="#F-work" />
+                  </svg>
+                  <figcaption>one colour 64</figcaption>
+                </figure>
+              </div>
+            </div>
+            <div class="panel dark">
+              <div class="row">
+                <figure>
+                  <svg width="16" height="16" viewBox="0 0 32 32" aria-hidden="true">
+                    <use href="#F-work" />
+                  </svg>
+                  <figcaption>16</figcaption>
+                </figure>
+                <figure>
+                  <svg width="32" height="32" viewBox="0 0 32 32" aria-hidden="true">
+                    <use href="#F-work" />
+                  </svg>
+                  <figcaption>32</figcaption>
+                </figure>
+                <figure>
+                  <svg width="64" height="64" viewBox="0 0 32 32" aria-hidden="true">
+                    <use href="#F-work" />
+                  </svg>
+                  <figcaption>64</figcaption>
+                </figure>
+                <figure>
+                  <svg width="160" height="160" viewBox="0 0 32 32" aria-hidden="true">
+                    <use href="#F-work" />
+                  </svg>
+                  <figcaption>160</figcaption>
+                </figure>
+              </div>
+              <div class="row mono">
+                <figure>
+                  <svg width="16" height="16" viewBox="0 0 32 32" aria-hidden="true">
+                    <use href="#F-work" />
+                  </svg>
+                  <figcaption>one colour 16</figcaption>
+                </figure>
+                <figure>
+                  <svg width="32" height="32" viewBox="0 0 32 32" aria-hidden="true">
+                    <use href="#F-work" />
+                  </svg>
+                  <figcaption>one colour 32</figcaption>
+                </figure>
+                <figure>
+                  <svg width="64" height="64" viewBox="0 0 32 32" aria-hidden="true">
+                    <use href="#F-work" />
+                  </svg>
+                  <figcaption>one colour 64</figcaption>
+                </figure>
+              </div>
+            </div>
+          </div>
+          <div class="col">
+            <h3>States, one variable</h3>
+            <p class="var">
+              Bud light: faint asleep, 1.4 pulsing, 1.6 done, socket empty on error.
+            </p>
+            <div class="panel light">
+              <div class="row states">
+                <figure>
+                  <svg width="64" height="64" viewBox="0 0 32 32" aria-hidden="true">
+                    <use href="#F-sleep" />
+                  </svg>
+                  <figcaption>asleep / off</figcaption>
+                </figure>
+                <figure>
+                  <svg width="64" height="64" viewBox="0 0 32 32" aria-hidden="true">
+                    <use href="#F-work" />
+                  </svg>
+                  <figcaption>awake / working</figcaption>
+                </figure>
+                <figure>
+                  <svg width="64" height="64" viewBox="0 0 32 32" aria-hidden="true">
+                    <use href="#F-done" />
+                  </svg>
+                  <figcaption>done</figcaption>
+                </figure>
+                <figure>
+                  <svg width="64" height="64" viewBox="0 0 32 32" aria-hidden="true">
+                    <use href="#F-err" />
+                  </svg>
+                  <figcaption>error / stopped</figcaption>
+                </figure>
+              </div>
+              <div class="row states mono">
+                <figure>
+                  <svg width="64" height="64" viewBox="0 0 32 32" aria-hidden="true">
+                    <use href="#F-sleep" />
+                  </svg>
+                </figure>
+                <figure>
+                  <svg width="64" height="64" viewBox="0 0 32 32" aria-hidden="true">
+                    <use href="#F-work" />
+                  </svg>
+                </figure>
+                <figure>
+                  <svg width="64" height="64" viewBox="0 0 32 32" aria-hidden="true">
+                    <use href="#F-done" />
+                  </svg>
+                </figure>
+                <figure>
+                  <svg width="64" height="64" viewBox="0 0 32 32" aria-hidden="true">
+                    <use href="#F-err" />
+                  </svg>
+                </figure>
+              </div>
+            </div>
+            <div class="panel dark">
+              <div class="row states">
+                <figure>
+                  <svg width="64" height="64" viewBox="0 0 32 32" aria-hidden="true">
+                    <use href="#F-sleep" />
+                  </svg>
+                </figure>
+                <figure>
+                  <svg width="64" height="64" viewBox="0 0 32 32" aria-hidden="true">
+                    <use href="#F-work" />
+                  </svg>
+                </figure>
+                <figure>
+                  <svg width="64" height="64" viewBox="0 0 32 32" aria-hidden="true">
+                    <use href="#F-done" />
+                  </svg>
+                </figure>
+                <figure>
+                  <svg width="64" height="64" viewBox="0 0 32 32" aria-hidden="true">
+                    <use href="#F-err" />
+                  </svg>
+                </figure>
+              </div>
+            </div>
+            <h3>Working loop</h3>
+            <div class="panel light loop">
+              <div class="lp">
+                <svg viewBox="0 0 32 32" aria-hidden="true">
+                  <path
+                    class="b"
+                    d="M16 9Q27.5 9 28 18.5Q28 28.5 16 28.5Q4 28.5 4 18.5Q4.5 9 16 9Z"
+                  />
+                  <path class="g" d="M4.1 20Q4.4 26.6 10.5 28.2Q8.4 26 9 24.2Q6.2 24.4 4.1 20Z" />
+                  <path class="bgl" d="M23.4 12L22.2 14.2L23.4 15.6" />
+                  <path class="k" d="M9.4 17.2H14.6A2.6 2.6 0 0 1 9.4 17.2Z" />
+                  <path class="k" d="M17.4 17.2H22.6A2.6 2.6 0 0 1 17.4 17.2Z" />
+                  <path class="gl" d="M16 9.6V6.3" stroke-width="1.4" />
+                  <path class="g" d="M16 8.6Q12.6 5.4 9.6 7.4Q12 10 16 8.6Z" />
+                  <path class="g" d="M16 8.6Q19.4 5.4 22.4 7.4Q20 10 16 8.6Z" />
+                  <circle class="k bud" cx="16" cy="3.9" r="2.5" />
+                  <circle class="h pulseh" cx="16" cy="3.9" r="4" />
+                  <circle class="l pulse" cx="16" cy="3.9" r="1.4" />
+                </svg>
+              </div>
+              <div class="lp small">
+                <svg viewBox="0 0 32 32" aria-hidden="true">
+                  <path
+                    class="b"
+                    d="M16 9Q27.5 9 28 18.5Q28 28.5 16 28.5Q4 28.5 4 18.5Q4.5 9 16 9Z"
+                  />
+                  <path class="g" d="M4.1 20Q4.4 26.6 10.5 28.2Q8.4 26 9 24.2Q6.2 24.4 4.1 20Z" />
+                  <path class="bgl" d="M23.4 12L22.2 14.2L23.4 15.6" />
+                  <path class="k" d="M9.4 17.2H14.6A2.6 2.6 0 0 1 9.4 17.2Z" />
+                  <path class="k" d="M17.4 17.2H22.6A2.6 2.6 0 0 1 17.4 17.2Z" />
+                  <path class="gl" d="M16 9.6V6.3" stroke-width="1.4" />
+                  <path class="g" d="M16 8.6Q12.6 5.4 9.6 7.4Q12 10 16 8.6Z" />
+                  <path class="g" d="M16 8.6Q19.4 5.4 22.4 7.4Q20 10 16 8.6Z" />
+                  <circle class="k bud" cx="16" cy="3.9" r="2.5" />
+                  <circle class="h pulseh" cx="16" cy="3.9" r="4" />
+                  <circle class="l pulse" cx="16" cy="3.9" r="1.4" />
+                </svg>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="grid">
+          <div class="col">
+            <h3>Terminal banner</h3>
+            <div class="termbox" role="img" aria-label="Terminal banner mock for idea F">
+              <pre class="art">      <span class="c11">●</span>
+     <span class="c10">▀█▀</span>
+  <span class="c7">▄███████▄</span>
+ <span class="c7">███████████</span>
+ <span class="c7">███ ███ ███</span>
+ <span class="c2">███</span><span class="c7">████████</span>
+  <span class="c7">▀███████▀</span></pre>
+              <pre
+                class="term"
+              ><span class="c15"><b>emet</b></span> <span class="c8">0.1.0</span>  <span class="c10">3 agents running</span> <span class="c8">/</span> <span class="c11">1 waiting</span> <span class="c8">/</span> <span class="c9">0 failed</span>
+<span class="c12">$</span> emet run <span class="c14">--wave 2</span>
+<span class="bg0">  </span><span class="bg1">  </span><span class="bg2">  </span><span class="bg3">  </span><span class="bg4">  </span><span class="bg5">  </span><span class="bg6">  </span><span class="bg7">  </span><span class="bg8">  </span><span class="bg9">  </span><span class="bg10">  </span><span class="bg11">  </span><span class="bg12">  </span><span class="bg13">  </span><span class="bg14">  </span><span class="bg15">  </span></pre>
+            </div>
+          </div>
+          <div class="col">
+            <h3>Empty state</h3>
+            <p class="empty">
+              <code>$ emet status</code><br />No agents running. The bud is off. The head is
+              thinking about nothing.
+            </p>
+            <h3>Verdict</h3>
+            <ul class="verdict">
+              <li>
+                Golem: medium. A cracked stone head with half-lidded eyes is a golem face; with no
+                body it is closer to a moai or a bust.
+              </li>
+              <li>
+                Distinct: medium. Head plus sprout is the most obvious pairing in the idea space;
+                the bulb bud is the new part.
+              </li>
+              <li>
+                16 px: good. A big round shape, a stalk and a lit dot; the cheapest to reproduce as
+                an avatar or favicon.
+              </li>
+              <li>
+                Childish: medium. Half-lidded eyes add calm, but a round head with a sprout is near
+                a plant-pet.
+              </li>
+            </ul>
+          </div>
+        </div>
+      </section>
+      <section id="palette" aria-labelledby="h-palette">
+        <header>
+          <p class="idx">P</p>
+          <h2 id="h-palette">Palette this direction suggests</h2>
+          <p class="trait">Three oklch sets. No purple, no orange or terracotta accent.</p>
+        </header>
+        <div class="pals">
+          <div class="pal">
+            <h3>1. Moss, stone, sun-light</h3>
+            <div class="sw">
+              <div class="chip">
+                <span style="background: oklch(0.72 0.025 80)"></span><b>stone</b
+                ><code>oklch(0.72 0.025 80)</code>
+              </div>
+              <div class="chip">
+                <span style="background: oklch(0.58 0.1 135)"></span><b>moss</b
+                ><code>oklch(0.58 0.10 135)</code>
+              </div>
+              <div class="chip">
+                <span style="background: oklch(0.88 0.15 95)"></span><b>sun-light</b
+                ><code>oklch(0.88 0.15 95)</code>
+              </div>
+              <div class="chip">
+                <span style="background: oklch(0.22 0.01 250)"></span><b>ink</b
+                ><code>oklch(0.22 0.01 250)</code>
+              </div>
+              <div class="chip">
+                <span style="background: oklch(0.96 0.006 100)"></span><b>paper</b
+                ><code>oklch(0.96 0.006 100)</code>
+              </div>
+            </div>
+            <p class="foot">
+              Best fit. Stone maps to white (7) and bright black (8), moss to green (2, 10),
+              sun-light to bright yellow (11). Use bright yellow, not 3: many themes render plain
+              yellow as brown or orange.
+            </p>
+          </div>
+          <div class="pal">
+            <h3>2. Clay-grey, teal, leaf</h3>
+            <div class="sw">
+              <div class="chip">
+                <span style="background: oklch(0.7 0.03 70)"></span><b>clay-grey</b
+                ><code>oklch(0.70 0.03 70)</code>
+              </div>
+              <div class="chip">
+                <span style="background: oklch(0.62 0.09 195)"></span><b>teal</b
+                ><code>oklch(0.62 0.09 195)</code>
+              </div>
+              <div class="chip">
+                <span style="background: oklch(0.76 0.17 135)"></span><b>leaf</b
+                ><code>oklch(0.76 0.17 135)</code>
+              </div>
+              <div class="chip">
+                <span style="background: oklch(0.22 0.01 250)"></span><b>ink</b
+                ><code>oklch(0.22 0.01 250)</code>
+              </div>
+              <div class="chip">
+                <span style="background: oklch(0.96 0.006 100)"></span><b>paper</b
+                ><code>oklch(0.96 0.006 100)</code>
+              </div>
+            </div>
+            <p class="foot">
+              Good fit. Clay-grey to white (7), teal to cyan (6, 14), leaf to bright green (10). Two
+              cool accents sit close in a terminal, so keep teal for structure and leaf for state.
+            </p>
+          </div>
+          <div class="pal">
+            <h3>3. Basalt, fern, glow-cyan</h3>
+            <div class="sw">
+              <div class="chip">
+                <span style="background: oklch(0.4 0.015 250)"></span><b>basalt</b
+                ><code>oklch(0.40 0.015 250)</code>
+              </div>
+              <div class="chip">
+                <span style="background: oklch(0.65 0.14 150)"></span><b>fern</b
+                ><code>oklch(0.65 0.14 150)</code>
+              </div>
+              <div class="chip">
+                <span style="background: oklch(0.9 0.12 190)"></span><b>glow</b
+                ><code>oklch(0.90 0.12 190)</code>
+              </div>
+              <div class="chip">
+                <span style="background: oklch(0.8 0.09 120)"></span><b>lichen</b
+                ><code>oklch(0.80 0.09 120)</code>
+              </div>
+              <div class="chip">
+                <span style="background: oklch(0.96 0.006 100)"></span><b>paper</b
+                ><code>oklch(0.96 0.006 100)</code>
+              </div>
+            </div>
+            <p class="foot">
+              Fits, but colder. Basalt to bright black (8), fern to green (2), glow to bright cyan
+              (14). The glow loses its warmth, and the dark body is hard to see on a dark terminal.
+            </p>
+          </div>
+        </div>
+        <p class="foot">
+          On a 16-colour terminal oklch is approximated by the nearest ANSI slot, and each theme
+          draws those slots differently. All three sets keep to green, yellow or cyan plus greys, so
+          they survive; set 1 survives best.
+        </p>
+      </section>
+      <p class="rec">
+        <b>Recommendation:</b> D (forehead glyph) in palette 1, with B as the silhouette to revisit
+        if a bigger, calmer body is wanted.
+      </p>
+    </main>
+  </body>
+</html>

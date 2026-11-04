@@ -1,0 +1,940 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>emet typography</title>
+    <style>
+      @font-face {
+        font-family: "Figtree";
+        font-weight: 300 900;
+        font-display: block;
+        src: url("fonts/Figtree-var.woff2") format("woff2");
+      }
+      @font-face {
+        font-family: "Geist";
+        font-weight: 100 900;
+        font-display: block;
+        src: url("fonts/Geist-var.woff2") format("woff2");
+      }
+      @font-face {
+        font-family: "Geist Mono";
+        font-weight: 100 900;
+        font-display: block;
+        src: url("fonts/GeistMono-var.woff2") format("woff2");
+      }
+      @font-face {
+        font-family: "Space Grotesk";
+        font-weight: 300 700;
+        font-display: block;
+        src: url("fonts/SpaceGrotesk-var.woff2") format("woff2");
+      }
+      @font-face {
+        font-family: "JetBrains Mono";
+        font-weight: 100 800;
+        font-display: block;
+        src: url("fonts/JetBrainsMono-var.woff2") format("woff2");
+      }
+      @font-face {
+        font-family: "Manrope";
+        font-weight: 200 800;
+        font-display: block;
+        src: url("fonts/Manrope-var.woff2") format("woff2");
+      }
+      :root {
+        --ink: #1d1f24;
+        --paper: #f7f7f8;
+        --card: #fff;
+        --muted: #4f5560;
+        --line: #dcdee3;
+        --code-bg: #eef0f3;
+        --term-bg: #16181d;
+        --term-fg: #e6e8ec;
+        --term-dim: #9aa1ad;
+        --term-ok: #6fd6a0;
+        --term-warn: #e6c86a;
+        --term-err: #ff8f8f;
+        color-scheme: light;
+        font-family: system-ui, sans-serif;
+        line-height: 1.5;
+      }
+      body {
+        margin: 0;
+        padding: 2rem 1rem;
+        background: var(--paper);
+        color: var(--ink);
+      }
+      .page {
+        max-width: 1200px;
+        margin: 0 auto;
+      }
+      h1 {
+        margin: 0 0 0.25rem;
+        text-wrap: balance;
+      }
+      .lead {
+        max-width: 72ch;
+        margin: 0 0 1.5rem;
+      }
+      .rec {
+        max-width: 72ch;
+        background: var(--card);
+        border: 1px solid var(--line);
+        border-left: 4px solid var(--ink);
+        padding: 1rem 1.25rem;
+        margin: 0 0 2rem;
+        border-radius: 8px;
+      }
+      .rec h2 {
+        margin: 0 0 0.4rem;
+        font-size: 1.1rem;
+      }
+      .rec p {
+        margin: 0.4rem 0;
+      }
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(min(100%, 520px), 1fr));
+        gap: 1.25rem;
+      }
+      .pairing {
+        background: var(--card);
+        border: 1px solid var(--line);
+        border-radius: 14px;
+        padding: 1.25rem 1.5rem 1.5rem;
+        min-width: 0;
+      }
+      .pairing header h2 {
+        margin: 0;
+        font-size: 1.1rem;
+      }
+      .pairing header p {
+        margin: 0.25rem 0 0.5rem;
+        color: var(--muted);
+        font-size: 0.9rem;
+      }
+      .label {
+        margin: 1.1rem 0 0.4rem;
+        font-size: 0.7rem;
+        font-weight: 600;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: var(--muted);
+      }
+      .row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.5rem 1.5rem;
+        align-items: flex-end;
+      }
+      .size {
+        align-items: baseline;
+      }
+      .cell {
+        display: flex;
+        flex-direction: column;
+        gap: 0.15rem;
+      }
+      .cell .cap {
+        font-size: 0.7rem;
+        color: var(--muted);
+        font-variant-numeric: tabular-nums;
+      }
+      .wm {
+        line-height: 1;
+        white-space: nowrap;
+      }
+      .tiles {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+      }
+      .tile {
+        display: inline-flex;
+        align-items: center;
+        padding: 0.6rem 0.9rem;
+        border-radius: 6px;
+        border: 1px solid var(--line);
+      }
+      .tile.light {
+        background: #fff;
+        color: var(--ink);
+      }
+      .tile.dark {
+        background: var(--term-bg);
+        color: var(--term-fg);
+      }
+      .notes {
+        margin: 0;
+        padding-left: 1.1rem;
+        font-size: 0.88rem;
+      }
+      .notes li {
+        margin: 0.2rem 0;
+      }
+      .flaws {
+        margin: 0;
+        font-size: 0.88rem;
+        max-width: 62ch;
+      }
+      .readme h3 {
+        margin: 0 0 0.4rem;
+        font-size: 1.4rem;
+        line-height: 1.2;
+        text-wrap: balance;
+      }
+      .readme p {
+        margin: 0.4rem 0;
+      }
+      .readme .fine {
+        font-size: 0.8rem;
+        color: var(--muted);
+      }
+      .readme code,
+      .cmd {
+        border-radius: 4px;
+      }
+      .readme code {
+        background: var(--code-bg);
+        padding: 0.1em 0.35em;
+        font-size: 0.88em;
+      }
+      .cmd {
+        background: var(--code-bg);
+        padding: 0.6rem 0.9rem;
+        font-size: 1rem;
+        overflow-x: auto;
+        white-space: nowrap;
+      }
+      .term {
+        background: var(--term-bg);
+        color: var(--term-fg);
+        border-radius: 8px;
+        padding: 0.8rem 1rem;
+        font-size: 0.85rem;
+        line-height: 1.55;
+        overflow-x: auto;
+        white-space: nowrap;
+      }
+      .dim {
+        color: var(--term-dim);
+      }
+      .cmd .dim {
+        color: var(--muted);
+      }
+      .ok {
+        color: var(--term-ok);
+      }
+      .warn {
+        color: var(--term-warn);
+      }
+      .err {
+        color: var(--term-err);
+      }
+      .meta {
+        margin: 1rem 0 0;
+        font-size: 0.78rem;
+        color: var(--muted);
+      }
+      footer {
+        margin-top: 2rem;
+        max-width: 72ch;
+        font-size: 0.85rem;
+      }
+      table {
+        border-collapse: collapse;
+        font-size: 0.85rem;
+        margin: 0.5rem 0;
+      }
+      th,
+      td {
+        border: 1px solid var(--line);
+        padding: 0.3rem 0.6rem;
+        text-align: left;
+      }
+      .t1 .ui {
+        font-family: "Figtree", sans-serif;
+      }
+      .t1 .mono,
+      .t1 code {
+        font-family: "Geist Mono", monospace;
+      }
+      .t1 .wm {
+        font-weight: 800;
+        letter-spacing: -0.035em;
+      }
+      .t2 .ui {
+        font-family: "Space Grotesk", sans-serif;
+      }
+      .t2 .mono,
+      .t2 code {
+        font-family: "JetBrains Mono", monospace;
+      }
+      .t2 .wm {
+        font-weight: 700;
+        letter-spacing: -0.045em;
+      }
+      .t3 .ui {
+        font-family: "Geist", sans-serif;
+      }
+      .t3 .mono,
+      .t3 code {
+        font-family: "Geist Mono", monospace;
+      }
+      .t3 .wm {
+        font-weight: 600;
+        letter-spacing: -0.04em;
+      }
+      .t4 .ui {
+        font-family: "Manrope", sans-serif;
+      }
+      .t4 .mono,
+      .t4 code {
+        font-family: "JetBrains Mono", monospace;
+      }
+      .t4 .wm {
+        font-weight: 800;
+        letter-spacing: -0.05em;
+      }
+      .readme h3 .wm {
+        display: inline;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="page">
+      <h1>emet typography, T1 to T4</h1>
+      <p class="lead">
+        The four run-1 pairings applied to the real wordmark <strong>emet</strong>, lowercase, from
+        the golem legend. Each card sets the word at four sizes, in five weights and five tracking
+        values, then shows README text, the <code>/emet:run</code> command in the mono face and a
+        terminal sample. All fonts are OFL, loaded from local <code>fonts/</code> files. These are
+        options, not a decision.
+      </p>
+      <section class="rec" id="recommendation">
+        <h2>Recommendation: T3 Geist + Geist Mono, wordmark at weight 600</h2>
+        <p>
+          The mark has to survive 16 px and sit in a terminal first. Geist keeps the e aperture open
+          and the m wide at small sizes, which is the main risk in a word made of two e's, an m and
+          a t. One family across UI and mono means the README and the terminal look like the same
+          tool, which fits a sober, precise voice.
+        </p>
+        <p>
+          Its weakness is anonymity and a resemblance to Vercel. The identity should come from the
+          palette and the mascot, and the humour from the copy. If the maintainer wants the type to
+          carry more character, T2 is the runner-up, with tracking loosened below 24 px.
+        </p>
+        <p>
+          No pairing was swapped: none of the faces already in <code>fonts/</code> was clearly
+          better for this word, and adding one needs a woff2 plus a licence line. A geometric face
+          with a single-storey, open e (for example a Sora or Outfit style) is worth testing in a
+          later run.
+        </p>
+        <p>
+          Letterform and flaw notes come from general knowledge of these faces and were not checked
+          against a rendered screenshot (no browser was available when this sheet was built). Verify
+          them on the 16 px tiles on your own display before deciding.
+        </p>
+      </section>
+      <div class="grid">
+        <article class="pairing t1" id="t1">
+          <header>
+            <h2>T1 Figtree + Geist Mono</h2>
+            <p>Friendly geometric sans, rounded terminals, a technical mono.</p>
+          </header>
+          <div class="label">Wordmark at four sizes (weight 800, tracking -0.035em)</div>
+          <div class="row size">
+            <div class="cell">
+              <span class="wm ui" style="font-size: 16px">emet</span><span class="cap">16 px</span>
+            </div>
+            <div class="cell">
+              <span class="wm ui" style="font-size: 24px">emet</span><span class="cap">24 px</span>
+            </div>
+            <div class="cell">
+              <span class="wm ui" style="font-size: 48px">emet</span><span class="cap">48 px</span>
+            </div>
+            <div class="cell">
+              <span class="wm ui" style="font-size: 120px">emet</span
+              ><span class="cap">120 px</span>
+            </div>
+          </div>
+          <div class="label">At 16 px, as an icon would sit</div>
+          <div class="tiles">
+            <span class="tile light"><span class="wm ui" style="font-size: 16px">emet</span></span>
+            <span class="tile dark"><span class="wm ui" style="font-size: 16px">emet</span></span>
+            <span class="tile light"
+              ><span class="wm ui" style="font-size: 16px">emet cemet emel</span></span
+            >
+            <span class="tile dark"
+              ><span class="wm ui" style="font-size: 16px; letter-spacing: 0.02em">emet</span></span
+            >
+          </div>
+          <div class="label">Weight variants</div>
+          <div class="row">
+            <div class="cell">
+              <span
+                class="wm ui"
+                style="font-size: 44px; font-weight: 400; letter-spacing: -0.035em"
+                >emet</span
+              ><span class="cap">400</span>
+            </div>
+            <div class="cell">
+              <span
+                class="wm ui"
+                style="font-size: 44px; font-weight: 500; letter-spacing: -0.035em"
+                >emet</span
+              ><span class="cap">500</span>
+            </div>
+            <div class="cell">
+              <span
+                class="wm ui"
+                style="font-size: 44px; font-weight: 600; letter-spacing: -0.035em"
+                >emet</span
+              ><span class="cap">600</span>
+            </div>
+            <div class="cell">
+              <span
+                class="wm ui"
+                style="font-size: 44px; font-weight: 700; letter-spacing: -0.035em"
+                >emet</span
+              ><span class="cap">700</span>
+            </div>
+            <div class="cell">
+              <span
+                class="wm ui"
+                style="font-size: 44px; font-weight: 800; letter-spacing: -0.035em"
+                >emet</span
+              ><span class="cap">800</span>
+            </div>
+          </div>
+          <div class="label">Tracking variants (weight 800)</div>
+          <div class="row">
+            <div class="cell">
+              <span class="wm ui" style="font-size: 44px; letter-spacing: -0.06em">emet</span
+              ><span class="cap">-0.06em</span>
+            </div>
+            <div class="cell">
+              <span class="wm ui" style="font-size: 44px; letter-spacing: -0.03em">emet</span
+              ><span class="cap">-0.03em</span>
+            </div>
+            <div class="cell">
+              <span class="wm ui" style="font-size: 44px; letter-spacing: 0">emet</span
+              ><span class="cap">0</span>
+            </div>
+            <div class="cell">
+              <span class="wm ui" style="font-size: 44px; letter-spacing: 0.04em">emet</span
+              ><span class="cap">0.04em</span>
+            </div>
+            <div class="cell">
+              <span class="wm ui" style="font-size: 44px; letter-spacing: 0.1em">emet</span
+              ><span class="cap">0.1em</span>
+            </div>
+          </div>
+          <div class="label">Letterforms</div>
+          <ul class="notes">
+            <li>
+              e: round bowl, horizontal bar, open aperture. The two e's are identical, so the double
+              e reads as a deliberate rhythm.
+            </li>
+            <li>m: medium width, two even arches. Reads as a block, neither narrow nor spread.</li>
+            <li>
+              t: short crossbar that sits at x-height, with a small curved foot. The foot is the one
+              detail that survives at 16 px.
+            </li>
+          </ul>
+          <div class="label">Flaws</div>
+          <p class="flaws">
+            Rounded terminals look soft for a tool whose voice is dry. At 16 px and weight 800 the e
+            aperture closes, so e can read as c or o. Fix: use weight 700 and +0.01em tracking below
+            20 px.
+          </p>
+          <div class="label">README</div>
+          <div class="readme ui">
+            <h3><span class="wm">emet</span> runs a spec to a merged change</h3>
+            <p>
+              Interview, spec, tickets and one approval. Then workers implement in isolated
+              worktrees and nothing merges when something is flagged. Run
+              <code>/emet:run 138</code> to start.
+            </p>
+            <p class="fine">
+              Plugin for Claude Code. Not affiliated with or endorsed by Anthropic.
+            </p>
+          </div>
+          <div class="label">Command, in the mono face</div>
+          <div class="cmd mono">
+            <span class="dim">&gt;</span> /emet:run 138 <span class="dim">--wave 1</span>
+          </div>
+          <div class="label">Terminal</div>
+          <div class="term mono">
+            <div><span class="dim">$</span> emet run 138</div>
+            <div><span class="dim">wave 1 of 2</span> 3 tickets <span class="ok">pass</span></div>
+            <div>
+              <span class="warn">warn</span> lint: 2 warnings <span class="dim">(12.4s)</span>
+            </div>
+            <div>
+              <span class="err">fail</span> test: 1 failed, nothing merged. 0O 1lI {} =&gt; !=
+            </div>
+            <div class="dim">emet: flagged. The golem stays still.</div>
+          </div>
+          <p class="meta">Figtree for display, Geist Mono for code. Both OFL 1.1.</p>
+        </article>
+
+        <article class="pairing t2" id="t2">
+          <header>
+            <h2>T2 Space Grotesk + JetBrains Mono</h2>
+            <p>
+              Grotesk with quirks and the tallest x-height of the four, backed by a coding mono.
+            </p>
+          </header>
+          <div class="label">Wordmark at four sizes (weight 700, tracking -0.045em)</div>
+          <div class="row size">
+            <div class="cell">
+              <span class="wm ui" style="font-size: 16px">emet</span><span class="cap">16 px</span>
+            </div>
+            <div class="cell">
+              <span class="wm ui" style="font-size: 24px">emet</span><span class="cap">24 px</span>
+            </div>
+            <div class="cell">
+              <span class="wm ui" style="font-size: 48px">emet</span><span class="cap">48 px</span>
+            </div>
+            <div class="cell">
+              <span class="wm ui" style="font-size: 120px">emet</span
+              ><span class="cap">120 px</span>
+            </div>
+          </div>
+          <div class="label">At 16 px, as an icon would sit</div>
+          <div class="tiles">
+            <span class="tile light"><span class="wm ui" style="font-size: 16px">emet</span></span>
+            <span class="tile dark"><span class="wm ui" style="font-size: 16px">emet</span></span>
+            <span class="tile light"
+              ><span class="wm ui" style="font-size: 16px">emet cemet emel</span></span
+            >
+            <span class="tile dark"
+              ><span class="wm ui" style="font-size: 16px; letter-spacing: 0.02em">emet</span></span
+            >
+          </div>
+          <div class="label">Weight variants</div>
+          <div class="row">
+            <div class="cell">
+              <span
+                class="wm ui"
+                style="font-size: 44px; font-weight: 400; letter-spacing: -0.045em"
+                >emet</span
+              ><span class="cap">400</span>
+            </div>
+            <div class="cell">
+              <span
+                class="wm ui"
+                style="font-size: 44px; font-weight: 500; letter-spacing: -0.045em"
+                >emet</span
+              ><span class="cap">500</span>
+            </div>
+            <div class="cell">
+              <span
+                class="wm ui"
+                style="font-size: 44px; font-weight: 600; letter-spacing: -0.045em"
+                >emet</span
+              ><span class="cap">600</span>
+            </div>
+            <div class="cell">
+              <span
+                class="wm ui"
+                style="font-size: 44px; font-weight: 700; letter-spacing: -0.045em"
+                >emet</span
+              ><span class="cap">700</span>
+            </div>
+            <div class="cell">
+              <span
+                class="wm ui"
+                style="font-size: 44px; font-weight: 800; letter-spacing: -0.045em"
+                >emet</span
+              ><span class="cap">800</span>
+            </div>
+          </div>
+          <div class="label">Tracking variants (weight 700)</div>
+          <div class="row">
+            <div class="cell">
+              <span class="wm ui" style="font-size: 44px; letter-spacing: -0.06em">emet</span
+              ><span class="cap">-0.06em</span>
+            </div>
+            <div class="cell">
+              <span class="wm ui" style="font-size: 44px; letter-spacing: -0.03em">emet</span
+              ><span class="cap">-0.03em</span>
+            </div>
+            <div class="cell">
+              <span class="wm ui" style="font-size: 44px; letter-spacing: 0">emet</span
+              ><span class="cap">0</span>
+            </div>
+            <div class="cell">
+              <span class="wm ui" style="font-size: 44px; letter-spacing: 0.04em">emet</span
+              ><span class="cap">0.04em</span>
+            </div>
+            <div class="cell">
+              <span class="wm ui" style="font-size: 44px; letter-spacing: 0.1em">emet</span
+              ><span class="cap">0.1em</span>
+            </div>
+          </div>
+          <div class="label">Letterforms</div>
+          <ul class="notes">
+            <li>
+              e: flat-cut terminals and a horizontal bar. The cut gives the double e an engineered,
+              stamped look.
+            </li>
+            <li>
+              m: slightly narrower than T1, with squared shoulders. It is the most compact of the
+              four.
+            </li>
+            <li>
+              t: crossbar extends further left than right and the stem is cut flat, which makes the
+              t the most distinctive letter in the word.
+            </li>
+          </ul>
+          <div class="label">Flaws</div>
+          <p class="flaws">
+            The most character, so the most likely to date. At -0.045em the m and e touch below 24
+            px. Space Grotesk is also on the design guide's list of safe, generic picks. Fix:
+            tracking no tighter than -0.02em under 24 px.
+          </p>
+          <div class="label">README</div>
+          <div class="readme ui">
+            <h3><span class="wm">emet</span> runs a spec to a merged change</h3>
+            <p>
+              Interview, spec, tickets and one approval. Then workers implement in isolated
+              worktrees and nothing merges when something is flagged. Run
+              <code>/emet:run 138</code> to start.
+            </p>
+            <p class="fine">
+              Plugin for Claude Code. Not affiliated with or endorsed by Anthropic.
+            </p>
+          </div>
+          <div class="label">Command, in the mono face</div>
+          <div class="cmd mono">
+            <span class="dim">&gt;</span> /emet:run 138 <span class="dim">--wave 1</span>
+          </div>
+          <div class="label">Terminal</div>
+          <div class="term mono">
+            <div><span class="dim">$</span> emet run 138</div>
+            <div><span class="dim">wave 1 of 2</span> 3 tickets <span class="ok">pass</span></div>
+            <div>
+              <span class="warn">warn</span> lint: 2 warnings <span class="dim">(12.4s)</span>
+            </div>
+            <div>
+              <span class="err">fail</span> test: 1 failed, nothing merged. 0O 1lI {} =&gt; !=
+            </div>
+            <div class="dim">emet: flagged. The golem stays still.</div>
+          </div>
+          <p class="meta">Space Grotesk for display, JetBrains Mono for code. Both OFL 1.1.</p>
+        </article>
+
+        <article class="pairing t3" id="t3">
+          <header>
+            <h2>T3 Geist + Geist Mono</h2>
+            <p>One family for UI and code. Neutral, tightly matched, the least personality.</p>
+          </header>
+          <div class="label">Wordmark at four sizes (weight 600, tracking -0.04em)</div>
+          <div class="row size">
+            <div class="cell">
+              <span class="wm ui" style="font-size: 16px">emet</span><span class="cap">16 px</span>
+            </div>
+            <div class="cell">
+              <span class="wm ui" style="font-size: 24px">emet</span><span class="cap">24 px</span>
+            </div>
+            <div class="cell">
+              <span class="wm ui" style="font-size: 48px">emet</span><span class="cap">48 px</span>
+            </div>
+            <div class="cell">
+              <span class="wm ui" style="font-size: 120px">emet</span
+              ><span class="cap">120 px</span>
+            </div>
+          </div>
+          <div class="label">At 16 px, as an icon would sit</div>
+          <div class="tiles">
+            <span class="tile light"><span class="wm ui" style="font-size: 16px">emet</span></span>
+            <span class="tile dark"><span class="wm ui" style="font-size: 16px">emet</span></span>
+            <span class="tile light"
+              ><span class="wm ui" style="font-size: 16px">emet cemet emel</span></span
+            >
+            <span class="tile dark"
+              ><span class="wm ui" style="font-size: 16px; letter-spacing: 0.02em">emet</span></span
+            >
+          </div>
+          <div class="label">Weight variants</div>
+          <div class="row">
+            <div class="cell">
+              <span class="wm ui" style="font-size: 44px; font-weight: 400; letter-spacing: -0.04em"
+                >emet</span
+              ><span class="cap">400</span>
+            </div>
+            <div class="cell">
+              <span class="wm ui" style="font-size: 44px; font-weight: 500; letter-spacing: -0.04em"
+                >emet</span
+              ><span class="cap">500</span>
+            </div>
+            <div class="cell">
+              <span class="wm ui" style="font-size: 44px; font-weight: 600; letter-spacing: -0.04em"
+                >emet</span
+              ><span class="cap">600</span>
+            </div>
+            <div class="cell">
+              <span class="wm ui" style="font-size: 44px; font-weight: 700; letter-spacing: -0.04em"
+                >emet</span
+              ><span class="cap">700</span>
+            </div>
+            <div class="cell">
+              <span class="wm ui" style="font-size: 44px; font-weight: 800; letter-spacing: -0.04em"
+                >emet</span
+              ><span class="cap">800</span>
+            </div>
+          </div>
+          <div class="label">Tracking variants (weight 600)</div>
+          <div class="row">
+            <div class="cell">
+              <span class="wm ui" style="font-size: 44px; letter-spacing: -0.06em">emet</span
+              ><span class="cap">-0.06em</span>
+            </div>
+            <div class="cell">
+              <span class="wm ui" style="font-size: 44px; letter-spacing: -0.03em">emet</span
+              ><span class="cap">-0.03em</span>
+            </div>
+            <div class="cell">
+              <span class="wm ui" style="font-size: 44px; letter-spacing: 0">emet</span
+              ><span class="cap">0</span>
+            </div>
+            <div class="cell">
+              <span class="wm ui" style="font-size: 44px; letter-spacing: 0.04em">emet</span
+              ><span class="cap">0.04em</span>
+            </div>
+            <div class="cell">
+              <span class="wm ui" style="font-size: 44px; letter-spacing: 0.1em">emet</span
+              ><span class="cap">0.1em</span>
+            </div>
+          </div>
+          <div class="label">Letterforms</div>
+          <ul class="notes">
+            <li>
+              e: open, slightly squarish bowl. The aperture stays open at small sizes, the best of
+              the four against e/c confusion.
+            </li>
+            <li>m: wide, with clear internal counters. It carries the mark at 16 px.</li>
+            <li>
+              t: tall stem, crossbar at x-height, a clean hook. Close to the Vercel look, which is
+              the risk.
+            </li>
+          </ul>
+          <div class="label">Flaws</div>
+          <p class="flaws">
+            Looks like a Vercel product at a glance, so it adds no identity of its own. Neutral to
+            the point of anonymous; the dry humour has to come from the copy, not the type.
+          </p>
+          <div class="label">README</div>
+          <div class="readme ui">
+            <h3><span class="wm">emet</span> runs a spec to a merged change</h3>
+            <p>
+              Interview, spec, tickets and one approval. Then workers implement in isolated
+              worktrees and nothing merges when something is flagged. Run
+              <code>/emet:run 138</code> to start.
+            </p>
+            <p class="fine">
+              Plugin for Claude Code. Not affiliated with or endorsed by Anthropic.
+            </p>
+          </div>
+          <div class="label">Command, in the mono face</div>
+          <div class="cmd mono">
+            <span class="dim">&gt;</span> /emet:run 138 <span class="dim">--wave 1</span>
+          </div>
+          <div class="label">Terminal</div>
+          <div class="term mono">
+            <div><span class="dim">$</span> emet run 138</div>
+            <div><span class="dim">wave 1 of 2</span> 3 tickets <span class="ok">pass</span></div>
+            <div>
+              <span class="warn">warn</span> lint: 2 warnings <span class="dim">(12.4s)</span>
+            </div>
+            <div>
+              <span class="err">fail</span> test: 1 failed, nothing merged. 0O 1lI {} =&gt; !=
+            </div>
+            <div class="dim">emet: flagged. The golem stays still.</div>
+          </div>
+          <p class="meta">Geist for display, Geist Mono for code. Both OFL 1.1.</p>
+        </article>
+
+        <article class="pairing t4" id="t4">
+          <header>
+            <h2>T4 Manrope + JetBrains Mono</h2>
+            <p>Semi-condensed modern sans with open shapes and a wide weight range.</p>
+          </header>
+          <div class="label">Wordmark at four sizes (weight 800, tracking -0.05em)</div>
+          <div class="row size">
+            <div class="cell">
+              <span class="wm ui" style="font-size: 16px">emet</span><span class="cap">16 px</span>
+            </div>
+            <div class="cell">
+              <span class="wm ui" style="font-size: 24px">emet</span><span class="cap">24 px</span>
+            </div>
+            <div class="cell">
+              <span class="wm ui" style="font-size: 48px">emet</span><span class="cap">48 px</span>
+            </div>
+            <div class="cell">
+              <span class="wm ui" style="font-size: 120px">emet</span
+              ><span class="cap">120 px</span>
+            </div>
+          </div>
+          <div class="label">At 16 px, as an icon would sit</div>
+          <div class="tiles">
+            <span class="tile light"><span class="wm ui" style="font-size: 16px">emet</span></span>
+            <span class="tile dark"><span class="wm ui" style="font-size: 16px">emet</span></span>
+            <span class="tile light"
+              ><span class="wm ui" style="font-size: 16px">emet cemet emel</span></span
+            >
+            <span class="tile dark"
+              ><span class="wm ui" style="font-size: 16px; letter-spacing: 0.02em">emet</span></span
+            >
+          </div>
+          <div class="label">Weight variants</div>
+          <div class="row">
+            <div class="cell">
+              <span class="wm ui" style="font-size: 44px; font-weight: 400; letter-spacing: -0.05em"
+                >emet</span
+              ><span class="cap">400</span>
+            </div>
+            <div class="cell">
+              <span class="wm ui" style="font-size: 44px; font-weight: 500; letter-spacing: -0.05em"
+                >emet</span
+              ><span class="cap">500</span>
+            </div>
+            <div class="cell">
+              <span class="wm ui" style="font-size: 44px; font-weight: 600; letter-spacing: -0.05em"
+                >emet</span
+              ><span class="cap">600</span>
+            </div>
+            <div class="cell">
+              <span class="wm ui" style="font-size: 44px; font-weight: 700; letter-spacing: -0.05em"
+                >emet</span
+              ><span class="cap">700</span>
+            </div>
+            <div class="cell">
+              <span class="wm ui" style="font-size: 44px; font-weight: 800; letter-spacing: -0.05em"
+                >emet</span
+              ><span class="cap">800</span>
+            </div>
+          </div>
+          <div class="label">Tracking variants (weight 800)</div>
+          <div class="row">
+            <div class="cell">
+              <span class="wm ui" style="font-size: 44px; letter-spacing: -0.06em">emet</span
+              ><span class="cap">-0.06em</span>
+            </div>
+            <div class="cell">
+              <span class="wm ui" style="font-size: 44px; letter-spacing: -0.03em">emet</span
+              ><span class="cap">-0.03em</span>
+            </div>
+            <div class="cell">
+              <span class="wm ui" style="font-size: 44px; letter-spacing: 0">emet</span
+              ><span class="cap">0</span>
+            </div>
+            <div class="cell">
+              <span class="wm ui" style="font-size: 44px; letter-spacing: 0.04em">emet</span
+              ><span class="cap">0.04em</span>
+            </div>
+            <div class="cell">
+              <span class="wm ui" style="font-size: 44px; letter-spacing: 0.1em">emet</span
+              ><span class="cap">0.1em</span>
+            </div>
+          </div>
+          <div class="label">Letterforms</div>
+          <ul class="notes">
+            <li>
+              e: oval bowl with an angled terminal. The double e is the most calligraphic of the
+              four.
+            </li>
+            <li>
+              m: narrow and tall. Words made of m and e stay compact, which suits a four-letter
+              mark.
+            </li>
+            <li>
+              t: crossbar is thin relative to the stem at 800, so the t can look like a plain l with
+              a nick at 16 px.
+            </li>
+          </ul>
+          <div class="label">Flaws</div>
+          <p class="flaws">
+            At 16 px the heavy weight fills the e counter and the thin t crossbar nearly vanishes,
+            so it reads as emel. Needs weight 700 or lower and positive tracking at small sizes.
+          </p>
+          <div class="label">README</div>
+          <div class="readme ui">
+            <h3><span class="wm">emet</span> runs a spec to a merged change</h3>
+            <p>
+              Interview, spec, tickets and one approval. Then workers implement in isolated
+              worktrees and nothing merges when something is flagged. Run
+              <code>/emet:run 138</code> to start.
+            </p>
+            <p class="fine">
+              Plugin for Claude Code. Not affiliated with or endorsed by Anthropic.
+            </p>
+          </div>
+          <div class="label">Command, in the mono face</div>
+          <div class="cmd mono">
+            <span class="dim">&gt;</span> /emet:run 138 <span class="dim">--wave 1</span>
+          </div>
+          <div class="label">Terminal</div>
+          <div class="term mono">
+            <div><span class="dim">$</span> emet run 138</div>
+            <div><span class="dim">wave 1 of 2</span> 3 tickets <span class="ok">pass</span></div>
+            <div>
+              <span class="warn">warn</span> lint: 2 warnings <span class="dim">(12.4s)</span>
+            </div>
+            <div>
+              <span class="err">fail</span> test: 1 failed, nothing merged. 0O 1lI {} =&gt; !=
+            </div>
+            <div class="dim">emet: flagged. The golem stays still.</div>
+          </div>
+          <p class="meta">Manrope for display, JetBrains Mono for code. Both OFL 1.1.</p>
+        </article>
+      </div>
+      <footer>
+        <h2>Summary at 16 px</h2>
+        <table>
+          <tr>
+            <th>Pairing</th>
+            <th>e/c risk</th>
+            <th>m</th>
+            <th>t</th>
+            <th>Character</th>
+          </tr>
+          <tr>
+            <td>T1</td>
+            <td>medium at 800</td>
+            <td>even</td>
+            <td>foot helps</td>
+            <td>friendly</td>
+          </tr>
+          <tr>
+            <td>T2</td>
+            <td>low</td>
+            <td>touches e if tight</td>
+            <td>most distinctive</td>
+            <td>quirky</td>
+          </tr>
+          <tr>
+            <td>T3</td>
+            <td>lowest</td>
+            <td>wide, clear</td>
+            <td>clean</td>
+            <td>neutral</td>
+          </tr>
+          <tr>
+            <td>T4</td>
+            <td>high at 800</td>
+            <td>narrow, compact</td>
+            <td>crossbar thin</td>
+            <td>modern</td>
+          </tr>
+        </table>
+        <p>
+          All files are Latin subsets. Terminal colours are illustrative; the ANSI previews are on
+          the palette sheet.
+        </p>
+      </footer>
+    </div>
+  </body>
+</html>
