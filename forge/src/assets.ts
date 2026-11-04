@@ -16,15 +16,20 @@ declare const FORGE_BUILD_VERSION: string | undefined;
 
 const DEV_VERSION = "0.0.0-dev";
 
+/** Narrows a text-attribute import, which the type-aware linter resolves as an error type. */
+function templateText(imported: unknown): string {
+  return String(imported);
+}
+
 const TEMPLATES: Readonly<Record<string, string>> = {
-  "domain.md.tpl": domainTemplate,
-  "forge.md.tpl": forgeTemplate,
-  "issue-tracker-github.md.tpl": issueTrackerGithubTemplate,
-  "issue-tracker-linear.md.tpl": issueTrackerLinearTemplate,
-  "issue-tracker-local.md.tpl": issueTrackerLocalTemplate,
-  "triage-labels-github.md.tpl": triageLabelsGithubTemplate,
-  "triage-labels-linear.md.tpl": triageLabelsLinearTemplate,
-  "triage-labels-local.md.tpl": triageLabelsLocalTemplate,
+  "domain.md.tpl": templateText(domainTemplate),
+  "forge.md.tpl": templateText(forgeTemplate),
+  "issue-tracker-github.md.tpl": templateText(issueTrackerGithubTemplate),
+  "issue-tracker-linear.md.tpl": templateText(issueTrackerLinearTemplate),
+  "issue-tracker-local.md.tpl": templateText(issueTrackerLocalTemplate),
+  "triage-labels-github.md.tpl": templateText(triageLabelsGithubTemplate),
+  "triage-labels-linear.md.tpl": templateText(triageLabelsLinearTemplate),
+  "triage-labels-local.md.tpl": templateText(triageLabelsLocalTemplate),
 };
 
 /** The version embedded at build time, or `0.0.0-dev` when running from source. */

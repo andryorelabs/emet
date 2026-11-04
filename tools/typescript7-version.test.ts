@@ -6,10 +6,11 @@ const repoRoot = join(import.meta.dir, "..");
 
 /** Reads and parses a JSON file relative to the repository root. */
 function readJson(relativePath: string): Record<string, unknown> {
-  const parsed: Record<string, unknown> = JSON.parse(
-    readFileSync(join(repoRoot, relativePath), "utf8"),
-  );
-  return parsed;
+  const parsed: unknown = JSON.parse(readFileSync(join(repoRoot, relativePath), "utf8"));
+  if (typeof parsed !== "object" || parsed === null) {
+    throw new Error(`${relativePath} is not a JSON object`);
+  }
+  return Object.fromEntries(Object.entries(parsed));
 }
 
 /** Reads the root `package.json` scripts as command strings. */

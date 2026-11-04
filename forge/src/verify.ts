@@ -227,13 +227,14 @@ async function readWorkerScopedSuite(
     .nothrow()
     .quiet();
   if (shown.exitCode !== 0) return undefined;
-  let config: { commands?: { workerScopedSuite?: unknown } };
+  let config: unknown;
   try {
     config = JSON.parse(shown.stdout.toString());
   } catch {
     return undefined;
   }
-  const suite = config.commands?.workerScopedSuite;
+  const commands = isObject(config) ? config.commands : undefined;
+  const suite = isObject(commands) ? commands.workerScopedSuite : undefined;
   return typeof suite === "string" && suite.length > 0 ? suite : undefined;
 }
 

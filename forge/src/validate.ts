@@ -174,8 +174,8 @@ function flagValue(argv: readonly string[], flag: string): string | undefined {
   return index === -1 ? undefined : argv[index + 1];
 }
 
-async function readSource(source: string): Promise<string> {
-  return source === "-" ? await Bun.stdin.text() : readFileSync(source, "utf8");
+function readSource(source: string): Promise<string> {
+  return source === "-" ? Bun.stdin.text() : Promise.resolve(readFileSync(source, "utf8"));
 }
 
 async function fetchSpecBody(specId: string): Promise<string> {
@@ -216,17 +216,15 @@ export async function run(argv: string[]): Promise<void> {
     let rawTickets: unknown;
     let inlineMaxLines: number | undefined;
     if (file !== undefined) {
-      const plan: {
-        spec?: unknown;
-        tickets?: unknown;
-        sizing?: { inlineMaxLines?: unknown };
-      } = JSON.parse(await readSource(file));
-      if (typeof plan.spec !== "string")
+      const plan: unknown = JSON.parse(await readSource(file));
+      const spec = isObject(plan) ? plan.spec : undefined;
+      if (!isObject(plan) || typeof spec !== "string")
         throw new Error('forge validate: plan needs a "spec" string');
-      specMarkdown = plan.spec;
+      specMarkdown = spec;
       rawTickets = plan.tickets;
-      if (typeof plan.sizing?.inlineMaxLines === "number")
-        inlineMaxLines = plan.sizing.inlineMaxLines;
+      const sizing = plan.sizing;
+      const planInlineMaxLines = isObject(sizing) ? sizing.inlineMaxLines : undefined;
+      if (typeof planInlineMaxLines === "number") inlineMaxLines = planInlineMaxLines;
     } else if (specId !== undefined && ticketsSource !== undefined) {
       specMarkdown = (await isLocalTracker())
         ? await readLocalSpecBody(specId)

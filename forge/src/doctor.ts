@@ -188,7 +188,8 @@ async function readPackageManagerScripts(repoRoot: string): Promise<ReadonlySet<
   const file = Bun.file(path.join(repoRoot, "package.json"));
   if (!(await file.exists())) return null;
   try {
-    const parsed: Record<string, unknown> = await file.json();
+    const parsed: unknown = await file.json();
+    if (!isObject(parsed)) return null;
     const scripts = parsed.scripts;
     if (!isObject(scripts)) return new Set();
     return new Set(Object.keys(scripts));
@@ -247,7 +248,8 @@ async function readSelfCheckCommands(repoRoot: string): Promise<string[]> {
   const file = Bun.file(path.join(repoRoot, "forge.config.json"));
   if (!(await file.exists())) return [];
   try {
-    const parsed: Record<string, unknown> = await file.json();
+    const parsed: unknown = await file.json();
+    if (!isObject(parsed)) return [];
     const commands = parsed.commands;
     if (!isObject(commands)) return [];
     const selfCheck = commands.selfCheck;
@@ -384,9 +386,8 @@ export function checkWorktreeForkBase(input: ForkBaseInput): string[] {
 
 async function readRawTrackerTeam(repoRoot: string): Promise<unknown> {
   try {
-    const parsed: Record<string, unknown> = await Bun.file(
-      path.join(repoRoot, "forge.config.json"),
-    ).json();
+    const parsed: unknown = await Bun.file(path.join(repoRoot, "forge.config.json")).json();
+    if (!isObject(parsed)) return undefined;
     const tracker = parsed.tracker;
     return isObject(tracker) ? tracker.team : undefined;
   } catch {
@@ -413,7 +414,8 @@ async function readBaseRefSetting(repoRoot: string): Promise<string | null> {
   for (const candidate of candidates) {
     try {
       // oxlint-disable-next-line eslint/no-await-in-loop -- sequential on purpose: later iterations depend on earlier ones or on output order
-      const parsed: Record<string, unknown> = await Bun.file(candidate).json();
+      const parsed: unknown = await Bun.file(candidate).json();
+      if (!isObject(parsed)) continue;
       const worktree = parsed.worktree;
       if (isObject(worktree)) {
         const baseRef = worktree.baseRef;
