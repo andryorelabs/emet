@@ -1,6 +1,6 @@
 ---
 name: cut-release
-description: 'Cut a claude-forge release: bump plugin.json, move CHANGELOG [Unreleased], open the develop to main merge-commit PR and tag main. Use when asked to release, cut a version or publish a tag.'
+description: 'Cut a emet release: bump plugin.json, move CHANGELOG [Unreleased], open the develop to main merge-commit PR and tag main. Use when asked to release, cut a version or publish a tag.'
 allowed-tools: Bash, Read, Edit
 ---
 

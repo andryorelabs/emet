@@ -1,6 +1,6 @@
 # Architecture
 
-A code map of `emet/src` and how the `/forge:run` prompts drive it. Terms follow [GLOSSARY.md](../GLOSSARY.md); decisions behind the shape live in [docs/adr](adr/README.md). For problems, see [troubleshooting](troubleshooting.md).
+A code map of `emet/src` and how the `/emet` prompts drive it. Terms follow [GLOSSARY.md](../GLOSSARY.md); decisions behind the shape live in [docs/adr](adr/README.md). For problems, see [troubleshooting](troubleshooting.md).
 
 - [Shape](#shape)
 - [How the prompts drive the CLI](#how-the-prompts-drive-the-cli)
@@ -10,7 +10,7 @@ A code map of `emet/src` and how the `/forge:run` prompts drive it. Terms follow
 
 ## Shape
 
-There are two halves. The prompts (`commands/run.md`, `agents/*.md`, `emet/reference/*.md`) tell Claude what to do in each phase. The `forge` CLI (`emet/bin/emet.ts` and `emet/src/`) does everything that must be deterministic: checks, claims, slots, gates, tracker writes and landing. The prompts never re-implement a check the CLI already makes.
+There are two halves. The prompts (`commands/run.md`, `agents/*.md`, `emet/reference/*.md`) tell Claude what to do in each phase. The `emet` CLI (`emet/bin/emet.ts` and `emet/src/`) does everything that must be deterministic: checks, claims, slots, gates, tracker writes and landing. The prompts never re-implement a check the CLI already makes.
 
 `emet/bin/emet.ts` is a thin dispatcher: it reads the first argument and hands off to one subcommand module, which reads the rest of `process.argv` itself. Exit codes are meaningful across subcommands.
 
@@ -25,26 +25,26 @@ There are two halves. The prompts (`commands/run.md`, `agents/*.md`, `emet/refer
 | 8 review, gate, landing, closeout      | `phases-8-closeout.md`, `reviewer-prompt.md` | `verify`, `review-package`, `review`, `assess`, `gate`, `land`, `cleanup`     |
 | 9 handoff and chaining                 | `phases-9-handoff.md`                        | `status`, `metrics`, `usage`, `spec-merge`                                    |
 
-The coordinator is the single tracker writer (ADR-0005): workers report through a handoff note and `forge results`, and the coordinator posts them. `forge guard` runs as a `PreToolUse` hook and blocks known unattended-run failure triggers.
+The coordinator is the single tracker writer (ADR-0005): workers report through a handoff note and `emet results`, and the coordinator posts them. `emet guard` runs as a `PreToolUse` hook and blocks known unattended-run failure triggers.
 
 ## Module map
 
 Each module has a `*.test.ts` beside it.
 
-| Area            | Modules                                                                                                                                                                                                                      |
-| --------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Setup and audit | `init.ts` (config and doc skeleton), `config.ts` (`forge.config.json`), `doctor.ts` (fleet sweep), `preflight.ts` (dispatch hygiene), `dependencies.ts`, `skills.ts` (mattpocock-skills contract), `map.ts` (codebase brief) |
-| Run state       | `claims.ts` (ticket reservations), `slots.ts` (worker slot pool), `resources.ts` (host facts), `runs.ts` (liveness), `locks.ts`, `lockreason.ts`, `proctree.ts`, `worktrees.ts`, `cleanup.ts`, `status.ts`, `launch.ts`      |
-| Tracker         | `tracker.ts`, `tracker-files.ts` (local `.scratch/` tracker), `validate.ts` (spec coverage), `specmerge.ts`, `approve.ts`, `surfaces.ts` (edit-surface overlap)                                                              |
-| Worker handoff  | `handoff.ts`, `results.ts`, `materializelog.ts`                                                                                                                                                                              |
-| Review and land | `verify.ts`, `reviewpackage.ts`, `review.ts` (findings ledger), `assess.ts` (risk classifier), `gate.ts`, `land.ts`                                                                                                          |
-| Reporting       | `metrics.ts`, `usage.ts`                                                                                                                                                                                                     |
-| Safety          | `guard.ts`, `guard-destructive.ts`                                                                                                                                                                                           |
-| Shared helpers  | `narrow.ts`, `optional.ts`, `assets.ts` (embedded files in compiled binaries)                                                                                                                                                |
+| Area            | Modules                                                                                                                                                                                                                                                            |
+| --------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Setup and audit | `init.ts` (config and doc skeleton), `config.ts` (`emet.config.json`, legacy `forge.config.json` still read), `doctor.ts` (fleet sweep), `preflight.ts` (dispatch hygiene), `dependencies.ts`, `skills.ts` (mattpocock-skills contract), `map.ts` (codebase brief) |
+| Run state       | `claims.ts` (ticket reservations), `slots.ts` (worker slot pool), `resources.ts` (host facts), `runs.ts` (liveness), `locks.ts`, `lockreason.ts`, `proctree.ts`, `worktrees.ts`, `cleanup.ts`, `status.ts`, `launch.ts`                                            |
+| Tracker         | `tracker.ts`, `tracker-files.ts` (local `.scratch/` tracker), `validate.ts` (spec coverage), `specmerge.ts`, `approve.ts`, `surfaces.ts` (edit-surface overlap)                                                                                                    |
+| Worker handoff  | `handoff.ts`, `results.ts`, `materializelog.ts`                                                                                                                                                                                                                    |
+| Review and land | `verify.ts`, `reviewpackage.ts`, `review.ts` (findings ledger), `assess.ts` (risk classifier), `gate.ts`, `land.ts`                                                                                                                                                |
+| Reporting       | `metrics.ts`, `usage.ts`                                                                                                                                                                                                                                           |
+| Safety          | `guard.ts`, `guard-destructive.ts`                                                                                                                                                                                                                                 |
+| Shared helpers  | `narrow.ts`, `optional.ts`, `assets.ts` (embedded files in compiled binaries)                                                                                                                                                                                      |
 
 ## Distribution
 
-`install.sh` copies `emet/` to `~/.claude/forge` and rewrites the prompts. The plugin path ships a shim that downloads a checksum-verified standalone binary built by `tools/build-binaries.ts`. See [ADR-0008](adr/0008-standalone-binaries-and-plugin-distribution.md).
+`install.sh` copies `emet/` to `~/.claude/emet` and rewrites the prompts. The plugin path ships a shim that downloads a checksum-verified standalone binary built by `tools/build-binaries.ts`. See [ADR-0008](adr/0008-standalone-binaries-and-plugin-distribution.md).
 
 ## See also
 

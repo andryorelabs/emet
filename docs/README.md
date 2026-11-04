@@ -5,8 +5,8 @@ An index of every document in this repository. Terms follow [GLOSSARY.md](../GLO
 ## Core
 
 - [`README.md`](../README.md): install, requirements, usage and the config reference.
-- [`architecture.md`](architecture.md): code map of `emet/src` and how the `/forge:run` prompts drive the CLI.
-- [`troubleshooting.md`](troubleshooting.md): `forge doctor` and `forge preflight` failures, by symptom.
+- [`architecture.md`](architecture.md): code map of `emet/src` and how the `/emet` prompts drive the CLI.
+- [`troubleshooting.md`](troubleshooting.md): `emet doctor` and `emet preflight` failures, by symptom.
 - [`CHANGELOG.md`](../CHANGELOG.md): release notes, newest first.
 - [`GLOSSARY.md`](../GLOSSARY.md): the domain terms every doc and prompt uses.
 - [`AGENTS.md`](../AGENTS.md): instructions for coding agents.
@@ -57,11 +57,11 @@ Research for the brand kit, run 1. Options and recommendations only; no decision
 - [`brand/brandbook/fonts/OFL.md`](brand/brandbook/fonts/OFL.md): licenses of the two brandbook fonts, Space Grotesk and JetBrains Mono.
 - [`brand/explorations/emet-logo-r2.html`](brand/explorations/emet-logo-r2.html): logo round 2, five marks derived from the brand parts, with lockups, icon and mocks.
 
-## Per-repo `/forge` config
+## Per-repo `/emet` config
 
-Prose that `forge init` generates and the coordinator reads.
+Prose that `emet init` generates and the coordinator reads.
 
-- [`agents/forge.md`](agents/forge.md): commands, gates and concurrency for this repo.
+- [`agents/forge.md`](agents/forge.md): commands, gates and concurrency for this repo, under its legacy name until `emet migrate` renames it.
 - [`agents/issue-tracker.md`](agents/issue-tracker.md): how the tracker is used.
 - [`agents/triage-labels.md`](agents/triage-labels.md): the label vocabulary.
 - [`agents/domain.md`](agents/domain.md): where the domain docs live.
