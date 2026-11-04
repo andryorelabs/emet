@@ -809,7 +809,7 @@ describe("findTodoMarkers", () => {
   test("every doc template has exactly its intentional markers — none from its own explanatory prose", () => {
     const templatesDirectory = path.join(import.meta.dir, "..", "templates");
     const expectedMarkerCounts: Record<string, number> = {
-      "forge.md.tpl": 3,
+      "emet.md.tpl": 3,
       "issue-tracker-linear.md.tpl": 2,
       "issue-tracker-github.md.tpl": 1,
       "issue-tracker-local.md.tpl": 0,
