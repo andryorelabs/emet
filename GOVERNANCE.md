@@ -1,6 +1,6 @@
 # Governance
 
-This document describes how claude-forge is governed today: who decides what,
+This document describes how emet is governed today: who decides what,
 how changes get made, and what happens if the maintainer goes away.
 
 ## Model: BDFL

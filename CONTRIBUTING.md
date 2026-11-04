@@ -1,6 +1,6 @@
 # Contributing
 
-Thanks for your interest in contributing to claude-forge! This document covers
+Thanks for your interest in contributing to emet! This document covers
 the conventions this repository expects from a pull request.
 
 By participating in this project, you agree to abide by the
@@ -10,7 +10,7 @@ By participating in this project, you agree to abide by the
 
 This repository uses [bun](https://bun.sh) only. Install the root dev tooling with
 `bun install --frozen-lockfile` and the runtime package with
-`bun install --cwd forge --frozen-lockfile`. Check
+`bun install --cwd emet --frozen-lockfile`. Check
 `package.json` scripts before running anything, and do not run the build unless
 asked.
 
