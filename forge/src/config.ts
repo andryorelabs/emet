@@ -329,7 +329,7 @@ function validateAndMerge(
     return { ok: false, reason: '"ticket.idPattern" must be a non-empty string' };
   }
   try {
-    // eslint-disable-next-line no-new
+    // oxlint-disable-next-line no-new -- constructing the RegExp only validates the pattern, the instance is discarded
     new RegExp(idPattern);
   } catch (error) {
     return {
