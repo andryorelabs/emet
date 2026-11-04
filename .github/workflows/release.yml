@@ -109,12 +109,12 @@ jobs:
         run: bun tools/build-binaries.ts --outdir dist
 
       - name: Smoke-run the linux binary
-        run: ./dist/forge-linux-x64 --version
+        run: ./dist/emet-linux-x64 --version
 
       - name: Write SHA256SUMS
         working-directory: dist
         run: |
-          sha256sum forge-linux-x64 forge-linux-arm64 forge-darwin-x64 forge-darwin-arm64 > SHA256SUMS
+          sha256sum emet-linux-x64 emet-linux-arm64 emet-darwin-x64 emet-darwin-arm64 > SHA256SUMS
 
       - name: Write sizes and checksums to the job summary
         run: |
@@ -122,7 +122,7 @@ jobs:
             echo "### Release binaries"
             echo
             echo '```'
-            ls -l dist/forge-linux-x64 dist/forge-linux-arm64 dist/forge-darwin-x64 dist/forge-darwin-arm64
+            ls -l dist/emet-linux-x64 dist/emet-linux-arm64 dist/emet-darwin-x64 dist/emet-darwin-arm64
             echo
             cat dist/SHA256SUMS
             echo '```'
@@ -150,10 +150,10 @@ jobs:
         uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
         with:
           subject-path: |
-            dist/forge-linux-x64
-            dist/forge-linux-arm64
-            dist/forge-darwin-x64
-            dist/forge-darwin-arm64
+            dist/emet-linux-x64
+            dist/emet-linux-arm64
+            dist/emet-darwin-x64
+            dist/emet-darwin-arm64
 
       - name: Publish GitHub Release
         env:
@@ -172,8 +172,8 @@ jobs:
             "${release_flags[@]}" \
             --title "${GITHUB_REF_NAME}" \
             --notes-file release-notes.md \
-            dist/forge-linux-x64 \
-            dist/forge-linux-arm64 \
-            dist/forge-darwin-x64 \
-            dist/forge-darwin-arm64 \
+            dist/emet-linux-x64 \
+            dist/emet-linux-arm64 \
+            dist/emet-darwin-x64 \
+            dist/emet-darwin-arm64 \
             dist/SHA256SUMS
