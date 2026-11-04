@@ -20,13 +20,25 @@ describe("assets", () => {
 
   test("readSchema returns the schema file as parseable JSON", () => {
     const onDisk = readFileSync(
-      path.join(import.meta.dir, "..", "schema", "forge.config.schema.json"),
+      path.join(import.meta.dir, "..", "schema", "emet.config.schema.json"),
       "utf8",
     );
     expect(readSchema()).toBe(onDisk);
     expect(() => {
       JSON.parse(readSchema());
     }).not.toThrow();
+  });
+
+  test("the legacy schema path stays a byte-identical copy", () => {
+    const schemaDirectory = path.join(import.meta.dir, "..", "schema");
+    expect(readFileSync(path.join(schemaDirectory, "forge.config.schema.json"), "utf8")).toBe(
+      readSchema(),
+    );
+  });
+
+  test("the agents-doc template is emet.md.tpl", () => {
+    expect(readTemplate("emet.md.tpl")).toContain("TODO(emet):");
+    expect(() => readTemplate("forge.md.tpl")).toThrow("unknown template");
   });
 
   test("source runs report the dev version and are not compiled", () => {

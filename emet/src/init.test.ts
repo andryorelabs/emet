@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, setDefaultTimeout, test } from "bun:test";
-import { mkdtempSync, rmSync } from "node:fs";
+import { existsSync, mkdtempSync, readdirSync, readFileSync, rmSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
 
@@ -17,7 +17,7 @@ import {
   hasLinearMcpServer,
   parseInitArguments,
   substituteTemplate,
-  upsertForgeSection,
+  upsertEmetSection,
   type DetectedRepoInfo,
 } from "./init";
 
@@ -89,7 +89,7 @@ describe("buildForgeConfig", () => {
     expect(config.repo).toEqual({ trunk: "main", remote: "origin" });
     expect(config.ticket).toEqual({
       idPattern: String.raw`^[a-z0-9-]+-\d{2,}$`,
-      branchPrefix: "forge",
+      branchPrefix: "emet",
     });
     expect(config.landing.mode).toBe("pr");
     expect(config.version).toBe(1);
@@ -151,7 +151,7 @@ describe("buildTrackerConfig", () => {
     expect(tracker.local).toBeUndefined();
   });
 
-  test("github: onPrOpen coordinator (label swap), onPrMerge automatic (closing keyword), stateLabels match forge init's own label creation", () => {
+  test("github: onPrOpen coordinator (label swap), onPrMerge automatic (closing keyword), stateLabels match emet init's own label creation", () => {
     const tracker = buildTrackerConfig({ ...base, tracker: "github" });
     expect(tracker.kind).toBe("github");
     expect(tracker.transitions).toEqual({
@@ -194,7 +194,7 @@ describe("filesystem-based detection", () => {
   let repoRoot: string;
 
   beforeEach(() => {
-    repoRoot = mkdtempSync(path.join(os.tmpdir(), "forge-init-test-"));
+    repoRoot = mkdtempSync(path.join(os.tmpdir(), "emet-init-test-"));
   });
 
   afterEach(() => {
@@ -314,7 +314,7 @@ describe("filesystem-based detection", () => {
   });
 
   test("detectTrunk: resolves the trunk from a real origin/HEAD symref, regardless of the current branch", async () => {
-    const remoteRoot = mkdtempSync(path.join(os.tmpdir(), "forge-init-remote-"));
+    const remoteRoot = mkdtempSync(path.join(os.tmpdir(), "emet-init-remote-"));
     try {
       await Bun.$`git -C ${remoteRoot} init --quiet --bare --initial-branch=main`.quiet();
       await Bun.$`git -C ${repoRoot} init --quiet --initial-branch=main`.quiet();
@@ -443,19 +443,19 @@ describe("ecosystem defaults", () => {
   });
 });
 
-describe("upsertForgeSection", () => {
+describe("upsertEmetSection", () => {
   test("appends to existing content without touching it", () => {
-    const result = upsertForgeSection("# Mine\n\nuser text\n", "forge body");
+    const result = upsertEmetSection("# Mine\n\nuser text\n", "emet body");
     expect(result.startsWith("# Mine\n\nuser text\n")).toBe(true);
-    expect(result).toContain("<!-- forge:begin -->\nforge body\n<!-- forge:end -->");
+    expect(result).toContain("<!-- emet:begin -->\nemet body\n<!-- emet:end -->");
   });
 
   test("is idempotent and replaces a previous section, keeping surrounding text", () => {
-    const once = upsertForgeSection("before\n", "v1");
-    const twice = upsertForgeSection(once, "v1");
+    const once = upsertEmetSection("before\n", "v1");
+    const twice = upsertEmetSection(once, "v1");
     expect(twice).toBe(once);
-    const replaced = upsertForgeSection(`${once}\nafter\n`, "v2");
-    expect(replaced.match(/forge:begin/g)).toHaveLength(1);
+    const replaced = upsertEmetSection(`${once}\nafter\n`, "v2");
+    expect(replaced.match(/emet:begin/g)).toHaveLength(1);
     expect(replaced).toContain("v2");
     expect(replaced).not.toContain("v1");
     expect(replaced.startsWith("before\n")).toBe(true);
@@ -463,18 +463,18 @@ describe("upsertForgeSection", () => {
   });
 
   test("creates the section in an empty file", () => {
-    expect(upsertForgeSection("", "x")).toBe("<!-- forge:begin -->\nx\n<!-- forge:end -->\n");
+    expect(upsertEmetSection("", "x")).toBe("<!-- emet:begin -->\nx\n<!-- emet:end -->\n");
   });
 });
 
-describe("forge init --tracker local end to end", () => {
+describe("emet init --tracker local end to end", () => {
   let repoRoot = "";
   const entry = path.resolve(import.meta.dir, "init.ts");
 
   setDefaultTimeout(30_000);
 
   beforeEach(async () => {
-    repoRoot = mkdtempSync(path.join(os.tmpdir(), "forge-init-local-"));
+    repoRoot = mkdtempSync(path.join(os.tmpdir(), "emet-init-local-"));
     await Bun.$`git init -q -b main ${repoRoot}`.quiet();
   });
 
@@ -492,24 +492,66 @@ describe("forge init --tracker local end to end", () => {
 
   test("no remote: merge landing, local id pattern, .scratch/ ignored, no tickets un-ignore", async () => {
     await runInit();
-    const config: unknown = await Bun.file(path.join(repoRoot, "forge.config.json")).json();
+    const config: unknown = await Bun.file(path.join(repoRoot, "emet.config.json")).json();
     expect(config).toMatchObject({
       landing: { mode: "merge" },
-      ticket: { idPattern: String.raw`^[a-z0-9-]+-\d{2,}$`, branchPrefix: "forge" },
+      ticket: { idPattern: String.raw`^[a-z0-9-]+-\d{2,}$`, branchPrefix: "emet" },
       tracker: { kind: "local" },
     });
     expect(config).not.toHaveProperty("tracker.local");
     const gitignore = await Bun.file(path.join(repoRoot, ".gitignore")).text();
     expect(gitignore).toContain(".scratch/");
-    expect(gitignore).not.toContain("!.forge/tickets/");
+    expect(gitignore).not.toContain("!.emet/tickets/");
     const doc = await Bun.file(path.join(repoRoot, "docs", "agents", "issue-tracker.md")).text();
-    expect(doc).toContain("forge tracker create-ticket --spec");
+    expect(doc).toContain("emet tracker create-ticket --spec");
+  });
+
+  test("writes only new names: no file contains the legacy product name", async () => {
+    await runInit();
+    const written = [
+      "emet.config.json",
+      ".gitignore",
+      ...readdirSync(path.join(repoRoot, "docs", "agents")).map((name) => `docs/agents/${name}`),
+    ];
+    expect(existsSync(path.join(repoRoot, "docs", "agents", "emet.md"))).toBe(true);
+    for (const relative of written) {
+      const content = readFileSync(path.join(repoRoot, relative), "utf8");
+      expect(content.toLowerCase()).not.toContain("forge");
+    }
+    const config: unknown = await Bun.file(path.join(repoRoot, "emet.config.json")).json();
+    expect(config).toMatchObject({
+      $schema: "~/.claude/emet/schema/emet.config.schema.json",
+    });
+  });
+
+  test("a legacy forge.config.json blocks init without --force", async () => {
+    await Bun.write(path.join(repoRoot, "forge.config.json"), "{}");
+    const result = await Bun.$`bun ${entry} --tracker local`.cwd(repoRoot).nothrow().quiet();
+    expect(result.exitCode).toBe(2);
+    expect(result.stderr.toString()).toContain("forge.config.json already exists");
+  });
+
+  test("a legacy forge:begin section in a shared doc is replaced, not duplicated", async () => {
+    const docPath = path.join(repoRoot, "docs", "agents", "domain.md");
+    await Bun.write(docPath, "mine\n<!-- forge:begin -->\nold\n<!-- forge:end -->\n");
+    await runInit();
+    const doc = await Bun.file(docPath).text();
+    expect(doc).not.toContain("forge:begin");
+    expect(doc.match(/emet:begin/g)).toHaveLength(1);
+    expect(doc.startsWith("mine\n")).toBe(true);
+  });
+
+  test("a legacy .forge/ ignore rule is not duplicated", async () => {
+    await Bun.write(path.join(repoRoot, ".gitignore"), ".forge/\n");
+    await runInit();
+    const gitignore = await Bun.file(path.join(repoRoot, ".gitignore")).text();
+    expect(gitignore).not.toContain(".emet/");
   });
 
   test("with a remote: pr landing", async () => {
     await Bun.$`git -C ${repoRoot} remote add origin https://example.invalid/x.git`.quiet();
     await runInit();
-    const config: unknown = await Bun.file(path.join(repoRoot, "forge.config.json")).json();
+    const config: unknown = await Bun.file(path.join(repoRoot, "emet.config.json")).json();
     expect(config).toMatchObject({ landing: { mode: "pr" } });
   });
 
