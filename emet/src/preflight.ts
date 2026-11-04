@@ -33,6 +33,7 @@ import {
 } from "./slots";
 import { checkApproval, type ApprovalRecord } from "./approve";
 import { isObject } from "./narrow";
+import { readEnv, TODO_MARKER, TODO_MARKERS } from "./names";
 import { listReservations } from "./claims";
 import { resolveLandedVerdict, type LandedVerdict } from "./landed";
 import { checkWorktreeForkBase, createEnvironmentProbes, type EnvironmentProbes } from "./doctor";
@@ -138,10 +139,11 @@ export function collectDependencyChecks(
   });
 }
 
-const SKIP_DEPENDENCY_CHECKS_ENV = "FORGE_SKIP_DEPENDENCY_CHECKS";
+const SKIP_DEPENDENCY_CHECKS_KEY = "SKIP_DEPENDENCY_CHECKS";
+const SKIP_DEPENDENCY_CHECKS_ENV = `EMET_${SKIP_DEPENDENCY_CHECKS_KEY}`;
 
 function dependencyChecksSkipped(): boolean {
-  return process.env[SKIP_DEPENDENCY_CHECKS_ENV] === "1";
+  return readEnv(SKIP_DEPENDENCY_CHECKS_KEY) === "1";
 }
 
 /**
@@ -150,7 +152,7 @@ function dependencyChecksSkipped(): boolean {
  * test exercises directly, without spawning anything. `indeterminate` always
  * warns, never blocks (see `dependencies.ts`'s module doc comment for why).
  * `options.skip` downgrades an `unsatisfied` finding to a warning rather than
- * silencing it, so `FORGE_SKIP_DEPENDENCY_CHECKS=1` still shows what it
+ * silencing it, so `EMET_SKIP_DEPENDENCY_CHECKS=1` still shows what it
  * bypassed.
  */
 export function evaluateDependencyGate(
@@ -289,7 +291,7 @@ export function classifyWorktreeEntry(
 }
 
 /**
- * `forge init` writes a `TODO(forge):` marker into a generated
+ * `emet init` writes a `TODO(forge):` marker into a generated
  * `docs/agents/*.md` file for anything it couldn't infer on its own — a
  * shared singleton resource, schema/migration ownership, a Linear team key
  * (see `src/init.ts`'s templates). A repo that still carries one hasn't
@@ -302,12 +304,12 @@ export function findTodoMarkers(fileName: string, content: string): string[] {
   return content
     .split("\n")
     .map((line, index) => ({ text: line.trim(), number: index + 1 }))
-    .filter(({ text }) => text.includes("TODO(forge):"))
+    .filter(({ text }) => TODO_MARKERS.some((marker) => text.includes(marker)))
     .map(({ text, number }) => `${fileName}:${number}: ${text}`);
 }
 
 /**
- * Scans every `docs/agents/*.md` file (not just `forge.md` — `forge init`'s
+ * Scans every `docs/agents/*.md` file (not just `forge.md` — `emet init`'s
  * own templates also leave `TODO(forge):` markers in `issue-tracker.md` and
  * `domain.md`, so a check scoped to a single file would miss most of them)
  * for a leftover marker. Missing `docs/agents/` entirely is not itself a
@@ -428,7 +430,7 @@ export async function describeWorktreeEntryVerdict(
     case "own-run-leftover": {
       return {
         bucket: "fail",
-        line: `  ${entry.directory} (${entry.branch}): live — this run's own leftover from an interrupted attempt (run ${verdict.owner.runId}, ticket ${verdict.owner.ticket}) — run "forge cleanup --run ${verdict.owner.runId}" to clear it`,
+        line: `  ${entry.directory} (${entry.branch}): live — this run's own leftover from an interrupted attempt (run ${verdict.owner.runId}, ticket ${verdict.owner.ticket}) — run "emet cleanup --run ${verdict.owner.runId}" to clear it`,
       };
     }
     case "other-run-live": {
@@ -446,19 +448,19 @@ export async function describeWorktreeEntryVerdict(
     case "dead": {
       return {
         bucket: "info",
-        line: `  ${entry.directory} (${entry.branch}): dead — reclaimable via "forge cleanup --run ${verdict.owner.runId} --force" (or --all --force if abandoned)`,
+        line: `  ${entry.directory} (${entry.branch}): dead — reclaimable via "emet cleanup --run ${verdict.owner.runId} --force" (or --all --force if abandoned)`,
       };
     }
     case "closed": {
       return {
         bucket: "info",
-        line: `  ${entry.directory} (${entry.branch}): closed — run ${verdict.owner.runId} is finished (ticket ${verdict.owner.ticket}) — reclaimable via "forge cleanup"`,
+        line: `  ${entry.directory} (${entry.branch}): closed — run ${verdict.owner.runId} is finished (ticket ${verdict.owner.ticket}) — reclaimable via "emet cleanup"`,
       };
     }
     case "foreign": {
       return {
         bucket: "info",
-        line: `  ${entry.directory} (${entry.branch}): foreign worktree — not a forge worker, left alone`,
+        line: `  ${entry.directory} (${entry.branch}): foreign worktree — not an emet worker, left alone`,
       };
     }
     case "content-fallback":
@@ -466,7 +468,7 @@ export async function describeWorktreeEntryVerdict(
       if ((await resolveLanded(verdict.branch)) === "landed") {
         return {
           bucket: "info",
-          line: `  ${entry.directory} (${verdict.branch}): unowned, but its ticket landed — safe to run "forge cleanup"`,
+          line: `  ${entry.directory} (${verdict.branch}): unowned, but its ticket landed — safe to run "emet cleanup"`,
         };
       }
       const contentVerdict = await classifyByContent(verdict.branch, mainTree, remote, trunk, {
@@ -475,7 +477,7 @@ export async function describeWorktreeEntryVerdict(
       const trunkRef = local ? trunk : `${remote}/${trunk}`;
       const safe = isSafeToDelete(contentVerdict);
       const advice = safe
-        ? `looks merged/equivalent to ${trunkRef} — safe to run "forge cleanup"`
+        ? `looks merged/equivalent to ${trunkRef} — safe to run "emet cleanup"`
         : `${contentVerdict} from ${trunkRef} — needs human review before cleanup, work could be lost`;
       /**
        * Merged/equivalent residue is harmless leftover, never a hazard to a
@@ -601,8 +603,8 @@ export function findDuplicateTicketBranchNumbers(
  * `.claude/worktrees/` entries with no `git worktree lock` at all, more than
  * `maxAgeMs` past the caller-supplied reference time — the PROJ-321 case:
  * bootstrap step 0 (`reference/worker-prompt.md`, whose reason string comes
- * from `forge lock-reason`) was skipped, so `resolveWorktreeOwner` can never
- * attribute the worktree to a run and neither `forge cleanup` nor this
+ * from `emet lock-reason`) was skipped, so `resolveWorktreeOwner` can never
+ * attribute the worktree to a run and neither `emet cleanup` nor this
  * module's default mode can tell a canonical worktree from a duplicate.
  * `statMtimeMs` is injected (rather
  * than a direct `statSync` call) so tests can simulate ages without
@@ -661,7 +663,7 @@ function buildUnlockedPastDeadlineFailures(
   return findWorktreesMissingLockPastDeadline(entries, maxAgeMs, nowMs, statMtimeMs).map(
     (entry) => ({
       kind: "unlocked-past-deadline",
-      message: `${entry.directory} has no git worktree lock ${Math.round(maxAgeMs / 1000)}s+ after dispatch — the worker skipped bootstrap step 0. Re-lock it with: git worktree lock ${entry.directory} --reason "$(forge lock-reason --run <runId> --ticket <ticket>)"`,
+      message: `${entry.directory} has no git worktree lock ${Math.round(maxAgeMs / 1000)}s+ after dispatch — the worker skipped bootstrap step 0. Re-lock it with: git worktree lock ${entry.directory} --reason "$(emet lock-reason --run <runId> --ticket <ticket>)"`,
     }),
   );
 }
@@ -871,13 +873,13 @@ async function mainPostDispatch(config: ForgeConfig): Promise<void> {
       }),
     );
     if (failures.length > 0) {
-      console.error("forge:preflight --post-dispatch failed:\n");
+      console.error("emet preflight --post-dispatch failed:\n");
       for (const failure of failures) console.error(`- ${failure.message}`);
       process.exitCode = 1;
       return;
     }
     console.log(
-      `forge:preflight --post-dispatch OK — ${agentEntries.length} worktree(s) checked (no --run given, so not scoped to any one dispatch), no ticket/branch duplicates, no unlocked stragglers.`,
+      `emet preflight --post-dispatch OK — ${agentEntries.length} worktree(s) checked (no --run given, so not scoped to any one dispatch), no ticket/branch duplicates, no unlocked stragglers.`,
     );
     return;
   }
@@ -952,7 +954,7 @@ async function mainPostDispatch(config: ForgeConfig): Promise<void> {
   }
 
   if (failures.length > 0) {
-    console.error("forge:preflight --post-dispatch failed:\n");
+    console.error("emet preflight --post-dispatch failed:\n");
     for (const failure of failures) console.error(`- ${failure.message}`);
     process.exitCode = 1;
     return;
@@ -960,13 +962,13 @@ async function mainPostDispatch(config: ForgeConfig): Promise<void> {
 
   if (mineEntries.length === 0 && agentEntries.length > 0 && !expectationKnown) {
     console.log(
-      `forge:preflight --post-dispatch OK — but 0 of run ${currentRunId}'s worktree(s) were attributed out of ${agentEntries.length} agent worktree(s) present, and no slot/--expect data was available to check for a miss. Verify by hand: "forge slots --list" and "git worktree list --porcelain".`,
+      `emet preflight --post-dispatch OK — but 0 of run ${currentRunId}'s worktree(s) were attributed out of ${agentEntries.length} agent worktree(s) present, and no slot/--expect data was available to check for a miss. Verify by hand: "emet slots --list" and "git worktree list --porcelain".`,
     );
     return;
   }
 
   console.log(
-    `forge:preflight --post-dispatch OK — ${mineEntries.length} of run ${currentRunId}'s worktree(s) checked (${agentEntries.length} total across every /forge coordinator in this repo), no ticket/branch duplicates, no unlocked stragglers.`,
+    `emet preflight --post-dispatch OK — ${mineEntries.length} of run ${currentRunId}'s worktree(s) checked (${agentEntries.length} total across every /forge coordinator in this repo), no ticket/branch duplicates, no unlocked stragglers.`,
   );
 }
 
@@ -1189,7 +1191,7 @@ export async function collectMapStaleWarning(
   mapRelativePath: string,
 ): Promise<string | null> {
   const verdict = await checkStale(repoRoot, mapRelativePath, MAP_STALE_MAX_COMMITS);
-  return verdict.stale ? `codebase map is stale — ${verdict.reason}; run "forge map"` : null;
+  return verdict.stale ? `codebase map is stale — ${verdict.reason}; run "emet map"` : null;
 }
 
 /** The run ids among `owners` whose closed marker exists. */
@@ -1268,7 +1270,7 @@ async function main(config: ForgeConfig, repoRoot: string) {
   const todoMarkers = await findTodoMarkersInDocsAgents(repoRoot);
   if (todoMarkers.length > 0) {
     failures.push(
-      `docs/agents/ still has ${todoMarkers.length} TODO(forge): marker(s) — fill these in (or run "forge init --force" after resolving them) before dispatching:\n${todoMarkers.map((m) => `  ${m}`).join("\n")}`,
+      `docs/agents/ still has ${todoMarkers.length} ${TODO_MARKER} marker(s) — fill these in (or run "emet init --force" after resolving them) before dispatching:\n${todoMarkers.map((m) => `  ${m}`).join("\n")}`,
     );
   }
 
@@ -1285,7 +1287,7 @@ async function main(config: ForgeConfig, repoRoot: string) {
      * coordinator's dispatch.
      */
     warnLines.push(
-      `Orphaned worktree-agent-* scaffold branches (their worktree is already gone) — run "forge cleanup" (it deletes only those already merged into trunk):\n${orphanedScaffoldBranches.map((b) => `  ${b.name}`).join("\n")}`,
+      `Orphaned worktree-agent-* scaffold branches (their worktree is already gone) — run "emet cleanup" (it deletes only those already merged into trunk):\n${orphanedScaffoldBranches.map((b) => `  ${b.name}`).join("\n")}`,
     );
   }
 
@@ -1372,11 +1374,11 @@ async function main(config: ForgeConfig, repoRoot: string) {
   const capacityWarnLines: string[] = [];
   if (!capacityCheck.ok) {
     failures.push(
-      `No free worker slots at all: 0 free out of ${capacityCheck.cap} — every slot is held by a live or idle run. Wait for one to free up, or "forge cleanup" to reclaim finished runs ("forge slots --list" shows who holds each slot).`,
+      `No free worker slots at all: 0 free out of ${capacityCheck.cap} — every slot is held by a live or idle run. Wait for one to free up, or "emet cleanup" to reclaim finished runs ("emet slots --list" shows who holds each slot).`,
     );
   } else if (capacityCheck.degraded) {
     capacityWarnLines.push(
-      `  only ${capacityCheck.freeCount}/${capacityCheck.cap} worker slot(s) free — this wave can dispatch at most ${capacityCheck.freeCount} of its usual ${capacityCheck.waveSize}; the rest drop from this wave the same way a single denied "forge slots --acquire" already does.`,
+      `  only ${capacityCheck.freeCount}/${capacityCheck.cap} worker slot(s) free — this wave can dispatch at most ${capacityCheck.freeCount} of its usual ${capacityCheck.waveSize}; the rest drop from this wave the same way a single denied "emet slots --acquire" already does.`,
     );
   }
 
@@ -1425,7 +1427,7 @@ async function main(config: ForgeConfig, repoRoot: string) {
   }
 
   if (failures.length > 0) {
-    console.error("forge:preflight failed:\n");
+    console.error("emet preflight failed:\n");
     for (const failure of failures) {
       console.error(`- ${failure}`);
     }
@@ -1444,7 +1446,7 @@ async function main(config: ForgeConfig, repoRoot: string) {
   const dependenciesSummary = `${satisfiedDependencyCount}/${dependencyChecks.length} dependency check(s) satisfied`;
 
   console.log(
-    `forge:preflight OK — ${requiredFilesSummary}, .claude/worktrees/ clean (or owned by a live/reclaimable /forge run; see any warnings above for leftover worktree-agent-* branches), ${capacityCheck.freeCount}/${capacityCheck.cap} worker slots free, ${dependenciesSummary}.`,
+    `emet preflight OK — ${requiredFilesSummary}, .claude/worktrees/ clean (or owned by a live/reclaimable /forge run; see any warnings above for leftover worktree-agent-* branches), ${capacityCheck.freeCount}/${capacityCheck.cap} worker slots free, ${dependenciesSummary}.`,
   );
 }
 
@@ -1461,7 +1463,7 @@ export async function run(argv: string[]): Promise<void> {
   try {
     const repoRoot = await resolveRepoRoot();
     if (!repoRoot) {
-      throw new ForgeConfigError("forge preflight: not inside a git repository");
+      throw new ForgeConfigError("emet preflight: not inside a git repository");
     }
     const config = await requireForgeConfig(repoRoot);
     if (argv.includes("--post-dispatch")) {

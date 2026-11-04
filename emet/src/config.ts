@@ -1,5 +1,5 @@
-import path from "node:path";
 import { errorMessage, isOneOf } from "./narrow";
+import { BINARY, CONFIG_FILE, resolveConfigPath } from "./names";
 
 /**
  * `forge.config.json` — the per-repo config that makes `/forge`'s repo-side
@@ -621,11 +621,12 @@ function validateAndMerge(
  * against the wrong branch.
  */
 export async function loadForgeConfig(repoRoot: string): Promise<ConfigLoadResult> {
-  const configPath = path.join(repoRoot, "forge.config.json");
-  const file = Bun.file(configPath);
-  if (!(await file.exists())) {
+  const resolved = resolveConfigPath(repoRoot);
+  if (resolved === undefined) {
     return { status: "absent" };
   }
+  const configPath = resolved.path;
+  const file = Bun.file(configPath);
   let raw: unknown;
   try {
     raw = await file.json();
@@ -653,7 +654,7 @@ export async function requireForgeConfig(repoRoot: string): Promise<ForgeConfig>
   if (result.status === "ok") return result.config;
   if (result.status === "absent") {
     throw new ForgeConfigError(
-      `no forge.config.json at ${repoRoot} — run \`forge init\` in this repo first.`,
+      `no ${CONFIG_FILE} at ${repoRoot} — run \`${BINARY} init\` in this repo first.`,
     );
   }
   throw new ForgeConfigError(result.reason);
@@ -678,7 +679,7 @@ export async function loadForgeConfigWithDefaults(
   }
   return {
     config: DEFAULT_FORGE_CONFIG,
-    note: "note: no forge.config.json — using defaults",
+    note: `note: no ${CONFIG_FILE} — using defaults`,
   };
 }
 

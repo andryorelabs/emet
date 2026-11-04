@@ -20,6 +20,8 @@ import {
   findDoubleInstall,
   findGlossaryWarnings,
   findInstallDrift,
+  findLegacyNameWarnings,
+  findLegacyStateDirFindings,
   findMissingDocs,
   isReportClean,
   parseDoctorArguments,
@@ -246,7 +248,7 @@ describe("auditRepo", () => {
     expect(report.isGitRepo).toBe(false);
   });
 
-  test("reports hasConfig: false for a git repo with no forge.config.json", async () => {
+  test("reports hasConfig: false for a git repo with no emet.config.json", async () => {
     await Bun.$`git -C ${repoRoot} init --quiet`.quiet();
     const report = await auditRepo(repoRoot, healthyProbes, healthyEnvironment);
     expect(report.isGitRepo).toBe(true);
@@ -601,7 +603,7 @@ describe("doctor with a local tracker and merge landing", () => {
   ): Promise<void> {
     await Bun.$`git init --quiet`.cwd(repoRoot).quiet();
     await Bun.write(
-      path.join(repoRoot, "forge.config.json"),
+      path.join(repoRoot, "emet.config.json"),
       JSON.stringify({
         version: 1,
         repo: { trunk: "main", remote: "origin" },
@@ -834,5 +836,60 @@ describe("checkSelfCheckCommand ecosystems", () => {
     expect(await checkSelfCheckCommand("/nowhere", "yarn run lint", new Set(["test"]))).toContain(
       "lint",
     );
+  });
+});
+
+describe("legacy name findings", () => {
+  test("names each legacy config, agents doc and run dir present", () => {
+    const root = mkdtempSync(path.join(os.tmpdir(), "emet-legacy-names-"));
+    try {
+      writeFileSync(path.join(root, "forge.config.json"), "{}");
+      mkdirSync(path.join(root, "docs/agents"), { recursive: true });
+      writeFileSync(path.join(root, "docs/agents/forge.md"), "");
+      mkdirSync(path.join(root, ".forge"));
+      expect(findLegacyNameWarnings(root)).toEqual([
+        "legacy name forge.config.json in use; run `emet migrate`",
+        "legacy name docs/agents/forge.md in use; run `emet migrate`",
+        "legacy name .forge/ in use; run `emet migrate`",
+      ]);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  test("a repo with only new names has no legacy findings", () => {
+    const root = mkdtempSync(path.join(os.tmpdir(), "emet-legacy-names-"));
+    try {
+      writeFileSync(path.join(root, "emet.config.json"), "{}");
+      expect(findLegacyNameWarnings(root)).toEqual([]);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  test("reports a leftover legacy state dir, and nothing once it is gone", () => {
+    const xdg = mkdtempSync(path.join(os.tmpdir(), "emet-legacy-state-"));
+    try {
+      const env = { XDG_STATE_HOME: xdg };
+      expect(findLegacyStateDirFindings(env)).toEqual([]);
+      mkdirSync(path.join(xdg, "forge"));
+      expect(findLegacyStateDirFindings(env)).toHaveLength(1);
+      expect(findLegacyStateDirFindings(env)[0]).toContain(path.join(xdg, "forge"));
+    } finally {
+      rmSync(xdg, { recursive: true, force: true });
+    }
+  });
+
+  test("a legacy-only repo audits with a legacy warning and no missing agents doc", async () => {
+    const root = mkdtempSync(path.join(os.tmpdir(), "emet-legacy-audit-"));
+    try {
+      await Bun.$`git -C ${root} init --quiet`.quiet();
+      await Bun.write(path.join(root, "forge.config.json"), "{}");
+      const report = await auditRepo(root, healthyProbes, healthyEnvironment);
+      expect(report.hasConfig).toBe(true);
+      expect(report.warnings).toContain("legacy name forge.config.json in use; run `emet migrate`");
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
   });
 });

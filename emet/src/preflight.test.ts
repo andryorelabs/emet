@@ -391,7 +391,7 @@ describe("classifyWorktreeEntry foreign and closed (S6, S7)", () => {
       false,
     );
     expect(report.bucket).toBe("info");
-    expect(report.line).toContain('"forge cleanup"');
+    expect(report.line).toContain('"emet cleanup"');
   });
 
   test("ticketFromWorkerBranch maps a worker branch to its ticket id", () => {
@@ -783,6 +783,12 @@ describe("findTodoMarkers", () => {
     ]);
   });
 
+  test("finds a TODO(emet): marker", () => {
+    expect(findTodoMarkers("docs/agents/emet.md", "x\nTODO(emet): fill")).toEqual([
+      "docs/agents/emet.md:2: TODO(emet): fill",
+    ]);
+  });
+
   test("returns an empty array when there is no marker", () => {
     expect(findTodoMarkers("forge.md", "# All set\n\nNo markers here.")).toEqual([]);
   });
@@ -846,7 +852,7 @@ describe("evaluateDependencyGate", () => {
   test("skip: true downgrades an unsatisfied check to a warning, stating why", () => {
     const gate = evaluateDependencyGate([makeCheck({ status: "unsatisfied" })], { skip: true });
     expect(gate.failures).toEqual([]);
-    expect(gate.warnings).toEqual(["gh not on PATH — downgraded by FORGE_SKIP_DEPENDENCY_CHECKS"]);
+    expect(gate.warnings).toEqual(["gh not on PATH — downgraded by EMET_SKIP_DEPENDENCY_CHECKS"]);
   });
 });
 
