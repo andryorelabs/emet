@@ -12,6 +12,8 @@ import {
   checkSlotCapacity,
   classifyWorktreeEntry,
   collectForkBaseFailures,
+  describeWorktreeEntryVerdict,
+  ticketFromWorkerBranch,
   collectMapStaleWarning,
   evaluateDependencyGate,
   evaluateRunGate,
@@ -279,6 +281,120 @@ describe("classifyWorktreeEntry", () => {
       () => owner,
     );
     expect(verdict).toEqual({ kind: "own-run-leftover", entry, owner });
+  });
+});
+
+describe("classifyWorktreeEntry foreign and closed (S6, S7)", () => {
+  const foreignEntry: WorktreeEntry = {
+    directory: "/repo/.claude/worktrees/chore-wave2-integration",
+    branch: "chore/strict-lint-gates-and-agent-config",
+    lockedReason: null,
+  };
+
+  test("an unowned non-forge branch is foreign when a branch prefix is known", () => {
+    const verdict = classifyWorktreeEntry(
+      foreignEntry,
+      undefined,
+      () => "dead",
+      () => null,
+      {
+        branchPrefix: "ao",
+      },
+    );
+    expect(verdict).toEqual({ kind: "foreign", entry: foreignEntry });
+  });
+
+  test("a foreign worktree describes as info, never fail", async () => {
+    const report = await describeWorktreeEntryVerdict(
+      foreignEntry,
+      { kind: "foreign", entry: foreignEntry },
+      "tree",
+      "origin",
+      "main",
+      false,
+    );
+    expect(report.bucket).toBe("info");
+    expect(report.line).toContain("foreign worktree");
+  });
+
+  test("a worker-named branch with no owner stays content-fallback, not foreign", () => {
+    const entry: WorktreeEntry = {
+      directory: "/repo/.claude/worktrees/agent-q",
+      branch: "cla-9-orphaned-work",
+      lockedReason: null,
+    };
+    const verdict = classifyWorktreeEntry(
+      entry,
+      undefined,
+      () => "dead",
+      () => null,
+      {
+        branchPrefix: "cla",
+      },
+    );
+    expect(verdict.kind).toBe("content-fallback");
+  });
+
+  test("a worker-named branch with no owner and nothing landed still fails", async () => {
+    const entry: WorktreeEntry = {
+      directory: "/repo/.claude/worktrees/agent-q",
+      branch: "cla-9-orphaned-work",
+      lockedReason: null,
+    };
+    const report = await describeWorktreeEntryVerdict(
+      entry,
+      { kind: "content-fallback", entry, branch: "cla-9-orphaned-work" },
+      "tree",
+      "origin",
+      "no-such-trunk-ref",
+      false,
+      () => Promise.resolve("not-landed"),
+    );
+    expect(report.bucket).toBe("fail");
+  });
+
+  test("an unowned worker-named branch whose ticket landed is info", async () => {
+    const entry: WorktreeEntry = {
+      directory: "/repo/.claude/worktrees/agent-q",
+      branch: "cla-9-orphaned-work",
+      lockedReason: null,
+    };
+    const report = await describeWorktreeEntryVerdict(
+      entry,
+      { kind: "content-fallback", entry, branch: "cla-9-orphaned-work" },
+      "tree",
+      "origin",
+      "main",
+      false,
+      () => Promise.resolve("landed"),
+    );
+    expect(report.bucket).toBe("info");
+  });
+
+  test("an owner whose run is closed is closed even when its anchor is live", () => {
+    const verdict = classifyWorktreeEntry(ownedEntry, undefined, () => "live", undefined, {
+      isRunClosed: (runId) => runId === owner.runId,
+    });
+    expect(verdict).toEqual({ kind: "closed", entry: ownedEntry, owner });
+  });
+
+  test("a closed run describes as info and suggests a valid command", async () => {
+    const report = await describeWorktreeEntryVerdict(
+      ownedEntry,
+      { kind: "closed", entry: ownedEntry, owner },
+      "tree",
+      "origin",
+      "main",
+      false,
+    );
+    expect(report.bucket).toBe("info");
+    expect(report.line).toContain('"forge cleanup"');
+  });
+
+  test("ticketFromWorkerBranch maps a worker branch to its ticket id", () => {
+    expect(ticketFromWorkerBranch("cla-154-preflight-ignores", "cla")).toBe("CLA-154");
+    expect(ticketFromWorkerBranch("worktree-agent-abc", "cla")).toBeNull();
+    expect(ticketFromWorkerBranch("cla-notanumber", "cla")).toBeNull();
   });
 });
 

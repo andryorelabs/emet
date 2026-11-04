@@ -19,6 +19,7 @@ import {
 } from "./dependencies";
 import {
   classifyRun,
+  isRunClosed,
   resolveIdleThresholdMs,
   resolveRunArtifactPath,
   resolveSessionSlug,
@@ -33,6 +34,7 @@ import {
 import { checkApproval, type ApprovalRecord } from "./approve";
 import { isObject } from "./narrow";
 import { listReservations } from "./claims";
+import { resolveLandedVerdict, type LandedVerdict } from "./landed";
 import { checkWorktreeForkBase, createEnvironmentProbes, type EnvironmentProbes } from "./doctor";
 import { checkStale } from "./map";
 import { validatePlan, type PlanTicket } from "./validate";
@@ -40,6 +42,7 @@ import {
   classifyByContent,
   findReservationForBranch,
   isAgentWorktree,
+  isForeignWorktree,
   isSafeToDelete,
   isWorktreeAgentBranchLive,
   listBranches,
@@ -216,10 +219,23 @@ export type WorktreeEntryVerdict =
       readonly owner: WorktreeOwner;
     }
   | {
+      readonly kind: "closed";
+      readonly entry: WorktreeEntry;
+      readonly owner: WorktreeOwner;
+    }
+  | { readonly kind: "foreign"; readonly entry: WorktreeEntry }
+  | {
       readonly kind: "content-fallback";
       readonly entry: WorktreeEntry;
       readonly branch: string;
     };
+
+export interface ClassifyWorktreeEntryOptions {
+  /** Enables the `foreign` verdict: without it every unowned entry is `content-fallback`. */
+  readonly branchPrefix?: string;
+  /** Runs this returns `true` for are `closed`, whatever their anchor process is doing. */
+  readonly isRunClosed?: (runId: string) => boolean;
+}
 
 /**
  * Decides what one `.claude/worktrees/` entry means for preflight. A
@@ -233,18 +249,33 @@ export type WorktreeEntryVerdict =
  * `--run` is this run's own leftover from an interrupted attempt — still a
  * failure; a `'live'` owner that doesn't match (or no `--run` was given at
  * all) is informational only; `'idle'` is a warning, never a failure;
- * `'dead'` is reported as reclaimable, never a hard failure on its own.
+ * `'dead'` is reported as reclaimable, never a hard failure on its own. An
+ * owner whose run is closed is `'closed'`, checked before liveness so a
+ * finished run with a still-open coordinator is not live. With
+ * `options.branchPrefix`, an unowned entry whose branch is not forge-shaped is
+ * `'foreign'`; an unowned `<branchPrefix>-*` branch stays `content-fallback`.
  */
 export function classifyWorktreeEntry(
   entry: WorktreeEntry,
   currentRunId: string | undefined,
   classifyOwnerRun: (owner: WorktreeOwner) => RunVerdict,
   resolveOwner: (entry: WorktreeEntry) => WorktreeOwner | null = resolveWorktreeOwner,
+  options: ClassifyWorktreeEntryOptions = {},
 ): WorktreeEntryVerdict {
   if (!entry.branch) return { kind: "detached", entry };
 
   const owner = resolveOwner(entry);
-  if (!owner) return { kind: "content-fallback", entry, branch: entry.branch };
+  if (!owner) {
+    if (
+      options.branchPrefix !== undefined &&
+      isForeignWorktree(entry, null, options.branchPrefix)
+    ) {
+      return { kind: "foreign", entry };
+    }
+    return { kind: "content-fallback", entry, branch: entry.branch };
+  }
+
+  if (options.isRunClosed?.(owner.runId) === true) return { kind: "closed", entry, owner };
 
   const runVerdict = classifyOwnerRun(owner);
   if (runVerdict === "live") {
@@ -355,7 +386,17 @@ export function checkSlotCapacity(
   };
 }
 
-type WorktreeEntryReport = {
+/**
+ * The ticket id an unowned worker-shaped branch names: `cla-154-slug` with
+ * prefix `cla` is `CLA-154`. `null` for any other branch shape, such as a
+ * `worktree-agent-*` scaffold, which names no ticket.
+ */
+export function ticketFromWorkerBranch(branch: string, branchPrefix: string): string | null {
+  const match = new RegExp(`^${branchPrefix.toLowerCase()}-(\\d+)(?:-|$)`, "i").exec(branch);
+  return match?.[1] === undefined ? null : `${branchPrefix.toUpperCase()}-${match[1]}`;
+}
+
+export type WorktreeEntryReport = {
   readonly bucket: "fail" | "info" | "warn";
   readonly line: string;
 };
@@ -367,13 +408,14 @@ type WorktreeEntryReport = {
  * levels deep as ambiguous. `'fail'` blocks dispatch; `'info'`/`'warn'`
  * never do.
  */
-async function describeWorktreeEntryVerdict(
+export async function describeWorktreeEntryVerdict(
   entry: WorktreeEntry,
   verdict: WorktreeEntryVerdict,
   mainTree: string,
   remote: string,
   trunk: string,
   local: boolean,
+  resolveLanded: (branch: string) => Promise<LandedVerdict> = () => Promise.resolve("unknown"),
 ): Promise<WorktreeEntryReport> {
   switch (verdict.kind) {
     case "detached": {
@@ -406,8 +448,26 @@ async function describeWorktreeEntryVerdict(
         line: `  ${entry.directory} (${entry.branch}): dead — reclaimable via "forge cleanup --run ${verdict.owner.runId} --force" (or --all --force if abandoned)`,
       };
     }
+    case "closed": {
+      return {
+        bucket: "info",
+        line: `  ${entry.directory} (${entry.branch}): closed — run ${verdict.owner.runId} is finished (ticket ${verdict.owner.ticket}) — reclaimable via "forge cleanup"`,
+      };
+    }
+    case "foreign": {
+      return {
+        bucket: "info",
+        line: `  ${entry.directory} (${entry.branch}): foreign worktree — not a forge worker, left alone`,
+      };
+    }
     case "content-fallback":
     default: {
+      if ((await resolveLanded(verdict.branch)) === "landed") {
+        return {
+          bucket: "info",
+          line: `  ${entry.directory} (${verdict.branch}): unowned, but its ticket landed — safe to run "forge cleanup"`,
+        };
+      }
       const contentVerdict = await classifyByContent(verdict.branch, mainTree, remote, trunk, {
         local,
       });
@@ -821,8 +881,11 @@ async function mainPostDispatch(config: ForgeConfig): Promise<void> {
     return;
   }
 
+  const reservations = await listReservations();
   const mineEntries = agentEntries.filter(
-    (entry) => resolveWorktreeOwner(entry)?.runId === currentRunId,
+    (entry) =>
+      resolveWorktreeOwnerWithReservations(entry, reservations, branchPrefix)?.runId ===
+      currentRunId,
   );
   failures.push(
     ...findBranchTicketMismatches(mineEntries, branchPrefix, {
@@ -859,7 +922,6 @@ async function mainPostDispatch(config: ForgeConfig): Promise<void> {
        * run's own dispatch, and pointing at it wastes the coordinator's time
        * chasing another run's worktree.
        */
-      const reservations = await listReservations();
       const unlockedCandidates = agentEntries.filter((entry) => {
         if (entry.lockedReason !== null) return false;
         const reservationOwner = entry.branch
@@ -1046,6 +1108,23 @@ export async function collectMapStaleWarning(
   return verdict.stale ? `codebase map is stale — ${verdict.reason}; run "forge map"` : null;
 }
 
+/** The run ids among `owners` whose closed marker exists. */
+async function collectClosedRunIds(
+  owners: readonly (WorktreeOwner | null)[],
+): Promise<ReadonlySet<string>> {
+  const runIds = new Set<string>();
+  for (const owner of owners) {
+    if (owner !== null) runIds.add(owner.runId);
+  }
+  const closed = new Set<string>();
+  await Promise.all(
+    [...runIds].map(async (runId) => {
+      if (await isRunClosed(runId)) closed.add(runId);
+    }),
+  );
+  return closed;
+}
+
 async function main(config: ForgeConfig, repoRoot: string) {
   const currentRunId = readFlagValue("--run");
   const failures: string[] = [];
@@ -1113,7 +1192,7 @@ async function main(config: ForgeConfig, repoRoot: string) {
      * coordinator's dispatch.
      */
     warnLines.push(
-      `Orphaned worktree-agent-* scaffold branches (their worktree is already gone — always safe to delete) — run "forge cleanup":\n${orphanedScaffoldBranches.map((b) => `  ${b.name}`).join("\n")}`,
+      `Orphaned worktree-agent-* scaffold branches (their worktree is already gone) — run "forge cleanup" (it deletes only those already merged into trunk):\n${orphanedScaffoldBranches.map((b) => `  ${b.name}`).join("\n")}`,
     );
   }
 
@@ -1134,6 +1213,17 @@ async function main(config: ForgeConfig, repoRoot: string) {
      * through to the unowned `content-fallback` path.
      */
     const reservations = await listReservations();
+    const resolveOwnerForEntry = (candidate: WorktreeEntry) =>
+      resolveWorktreeOwnerWithReservations(candidate, reservations, config.ticket.branchPrefix);
+    const closedRunIds = await collectClosedRunIds(
+      worktreeEntries.map((candidate) => resolveOwnerForEntry(candidate)),
+    );
+    const resolveLanded = (branch: string): Promise<LandedVerdict> => {
+      const ticket = ticketFromWorkerBranch(branch, config.ticket.branchPrefix);
+      return ticket === null
+        ? Promise.resolve("unknown")
+        : resolveLandedVerdict({ ticket, branch }, { config });
+    };
 
     for (const entry of worktreeEntries) {
       const verdict = classifyWorktreeEntry(
@@ -1152,8 +1242,11 @@ async function main(config: ForgeConfig, repoRoot: string) {
             owner.runId,
             { idleThresholdMs },
           ),
-        (candidate) =>
-          resolveWorktreeOwnerWithReservations(candidate, reservations, config.ticket.branchPrefix),
+        resolveOwnerForEntry,
+        {
+          branchPrefix: config.ticket.branchPrefix,
+          isRunClosed: (runId) => closedRunIds.has(runId),
+        },
       );
       // oxlint-disable-next-line eslint/no-await-in-loop -- sequential on purpose: later iterations depend on earlier ones or on output order
       const report = await describeWorktreeEntryVerdict(
@@ -1163,6 +1256,7 @@ async function main(config: ForgeConfig, repoRoot: string) {
         config.repo.remote,
         config.repo.trunk,
         local,
+        resolveLanded,
       );
       if (report.bucket === "fail") worktreeFailLines.push(report.line);
       else if (report.bucket === "info") infoLines.push(report.line);
@@ -1185,7 +1279,7 @@ async function main(config: ForgeConfig, repoRoot: string) {
   const capacityWarnLines: string[] = [];
   if (!capacityCheck.ok) {
     failures.push(
-      `No free worker slots at all: 0 free out of ${capacityCheck.cap} — every slot is held by a live or idle run. Wait for one to free up, or "forge cleanup --run <runId>" a run you know is done.`,
+      `No free worker slots at all: 0 free out of ${capacityCheck.cap} — every slot is held by a live or idle run. Wait for one to free up, or "forge cleanup" to reclaim finished runs ("forge slots --list" shows who holds each slot).`,
     );
   } else if (capacityCheck.degraded) {
     capacityWarnLines.push(
