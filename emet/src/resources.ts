@@ -1,5 +1,6 @@
 import { readFileSync } from "node:fs";
 import os from "node:os";
+import { readEnv } from "./names";
 
 /**
  * Host facts `concurrency.maxLiveWorkers: "auto"` (`config.ts`) derives its
@@ -12,7 +13,7 @@ import os from "node:os";
  *
  * **Why this exists at all** — `concurrency.maxLiveWorkers: 8` was `2 ×
  * waveSize`, chosen once (AO-259) with no relationship to any host's actual
- * capacity, then carried forward verbatim into every repo `forge init`
+ * capacity, then carried forward verbatim into every repo `emet init`
  * writes. On a 16-vCPU/62GiB host running several Orca worktrees, that cap
  * bites long before the machine's own resources do (see
  * `reference/incidents.md`, "The 8-slot ceiling on a 16-core host").
@@ -123,7 +124,7 @@ export interface AutoCapOptions {
    * footprint). Default 2 GiB — conservative for a `bun`/`tsc`/`eslint`
    * worker; a repo running a heavier per-worker stack (e.g. a browser-driven
    * E2E suite per worktree) should raise this via
-   * `FORGE_MEM_PER_WORKER_GIB`. */
+   * `EMET_MEM_PER_WORKER_GIB`. */
   readonly memPerWorkerBytes?: number;
   /** Absolute floor — never auto-compute below this, even on a tiny host,
    * so a wave of `waveSize` (default 4) can still always attempt to
@@ -150,9 +151,9 @@ const DEFAULT_AUTO_CAP_OPTIONS: Required<AutoCapOptions> = {
  *
  * Deliberately built from **static** facts (cpu count, total RAM) rather
  * than momentary `MemAvailable` — the cap is meant to be a stable number a
- * human can reason about (`forge doctor` prints it once, unsurprising run to
+ * human can reason about (`emet doctor` prints it once, unsurprising run to
  * run), not one that silently shrinks because another program happened to be
- * using RAM at the instant `forge init`/`forge doctor` ran. Momentary
+ * using RAM at the instant `emet init`/`emet doctor` ran. Momentary
  * pressure is {@link checkMemoryHeadroom}'s job, checked fresh on every
  * `acquireSlot` call instead.
  */
@@ -210,45 +211,45 @@ export function checkMemoryHeadroom(
 }
 
 function readPositiveFloatEnvironment(name: string, fallback: number): number {
-  const raw = process.env[name];
+  const raw = readEnv(name);
   if (raw === undefined) return fallback;
   const parsed = Number(raw);
   return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
 }
 
 /**
- * `AutoCapOptions` sourced from `FORGE_CPU_OVERSUBSCRIBE`,
- * `FORGE_MEM_RESERVE_GIB`, `FORGE_MEM_PER_WORKER_GIB` — all optional, same
+ * `AutoCapOptions` sourced from `EMET_CPU_OVERSUBSCRIBE`,
+ * `EMET_MEM_RESERVE_GIB`, `EMET_MEM_PER_WORKER_GIB` — all optional, same
  * "escape hatch env var overrides a config/default value" precedence every
- * other `FORGE_*` variable in this CLI already has.
+ * other `EMET_*` variable in this CLI already has.
  */
 export function resolveAutoCapOptionsFromEnvironment(): AutoCapOptions {
   return {
     cpuOversubscribe: readPositiveFloatEnvironment(
-      "FORGE_CPU_OVERSUBSCRIBE",
+      "CPU_OVERSUBSCRIBE",
       DEFAULT_AUTO_CAP_OPTIONS.cpuOversubscribe,
     ),
     memReserveBytes:
       readPositiveFloatEnvironment(
-        "FORGE_MEM_RESERVE_GIB",
+        "MEM_RESERVE_GIB",
         DEFAULT_AUTO_CAP_OPTIONS.memReserveBytes / BYTES_PER_GIB,
       ) * BYTES_PER_GIB,
     memPerWorkerBytes:
       readPositiveFloatEnvironment(
-        "FORGE_MEM_PER_WORKER_GIB",
+        "MEM_PER_WORKER_GIB",
         DEFAULT_AUTO_CAP_OPTIONS.memPerWorkerBytes / BYTES_PER_GIB,
       ) * BYTES_PER_GIB,
   };
 }
 
-/** `FORGE_MEM_RESERVE_GIB` alone, as bytes — the single value
+/** `EMET_MEM_RESERVE_GIB` alone, as bytes — the single value
  * {@link checkMemoryHeadroom} needs, kept separate from
  * {@link resolveAutoCapOptionsFromEnvironment} so `slots.ts` doesn't have to
  * reach into an options bag for one field. */
 export function resolveMemReserveBytesFromEnvironment(): number {
   return (
     readPositiveFloatEnvironment(
-      "FORGE_MEM_RESERVE_GIB",
+      "MEM_RESERVE_GIB",
       DEFAULT_AUTO_CAP_OPTIONS.memReserveBytes / BYTES_PER_GIB,
     ) * BYTES_PER_GIB
   );

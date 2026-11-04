@@ -1,6 +1,11 @@
-import { describe, expect, test } from "bun:test";
+import { afterEach, describe, expect, test } from "bun:test";
 
-import { checkMemoryHeadroom, computeAutoMaxLiveWorkers, type HostResources } from "./resources";
+import {
+  checkMemoryHeadroom,
+  computeAutoMaxLiveWorkers,
+  resolveAutoCapOptionsFromEnvironment,
+  type HostResources,
+} from "./resources";
 
 const GIB = 1024 ** 3;
 
@@ -119,5 +124,30 @@ describe("checkMemoryHeadroom", () => {
       memAvailableBytes: null,
     };
     expect(checkMemoryHeadroom(resources, 8 * GIB)).toEqual({ ok: true });
+  });
+});
+
+describe("resolveAutoCapOptionsFromEnvironment", () => {
+  const keys = ["EMET_MEM_RESERVE_GIB", "FORGE_MEM_RESERVE_GIB"] as const;
+  const saved = keys.map((key) => process.env[key]);
+
+  afterEach(() => {
+    keys.forEach((key, index) => {
+      const value = saved[index];
+      if (value === undefined) delete process.env[key];
+      else process.env[key] = value;
+    });
+  });
+
+  test("EMET_MEM_RESERVE_GIB wins over the legacy FORGE_MEM_RESERVE_GIB", () => {
+    process.env.EMET_MEM_RESERVE_GIB = "3";
+    process.env.FORGE_MEM_RESERVE_GIB = "9";
+    expect(resolveAutoCapOptionsFromEnvironment().memReserveBytes).toBe(3 * GIB);
+  });
+
+  test("a legacy FORGE_MEM_RESERVE_GIB alone still applies", () => {
+    delete process.env.EMET_MEM_RESERVE_GIB;
+    process.env.FORGE_MEM_RESERVE_GIB = "9";
+    expect(resolveAutoCapOptionsFromEnvironment().memReserveBytes).toBe(9 * GIB);
   });
 });

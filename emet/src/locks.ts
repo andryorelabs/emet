@@ -14,11 +14,11 @@ import { errnoCode, isObject } from "./narrow";
 /**
  * Directory-based mutual-exclusion lock. The atomic `mkdirSync`/holder-file
  * primitive below (`didAcquireLock`, `readLockHolder`, `releaseLock`) is
- * shared by every `/forge` command that needs one — `claims.ts` and
+ * shared by every `/emet` command that needs one — `claims.ts` and
  * `slots.ts` both build on it — but {@link resolveLockDirectory} itself,
  * which resolves a lock's directory under this repo's own
  * `--git-common-dir`, is no longer one of them: `slots.ts` resolves its own
- * pool directory host-wide (`~/.local/state/forge/slots`, shared across
+ * pool directory host-wide (`~/.local/state/emet/slots`, shared across
  * every repo on this machine), since the pool it guards is a host resource,
  * not a per-repo one. `claims.ts` still calls this function — a ticket claim
  * is a per-repo concept.
@@ -58,7 +58,7 @@ export interface LockHolder {
 
 /**
  * Resolves `<git-common-dir>/<lockName>`. `--git-common-dir`, not
- * `process.cwd()`, is deliberate: every `/forge` worktree shares one
+ * `process.cwd()`, is deliberate: every `/emet` worktree shares one
  * `.git`, and a lock only serializes access if every worktree agrees on its
  * path — one scoped to a single worktree's own `.git` would let two
  * worktrees each "hold" an independent lock while stepping on the same
@@ -69,14 +69,14 @@ export async function resolveLockDirectory(lockName: string): Promise<string> {
   const gitCommonDirectory = output.trim();
   if (!gitCommonDirectory) {
     throw new Error(
-      `forge-locks: could not resolve --git-common-dir for lock "${lockName}" — are we inside a git repo?`,
+      `emet-locks: could not resolve --git-common-dir for lock "${lockName}" — are we inside a git repo?`,
     );
   }
   /**
    * `--path-format=absolute` (git ≥2.31) is load-bearing, not cosmetic: a
    * bare `--git-common-dir` prints a path relative to `process.cwd()` (`.git`
    * at the repo root, `../.git` from a subdirectory) instead of relative to
-   * the repo root itself. The global `forge` CLI is invoked from whatever
+   * the repo root itself. The global `emet` CLI is invoked from whatever
    * directory a worker's tool call happens to be in — often a worktree
    * subdirectory, never guaranteed to be the root — so joining a *relative*
    * git-common-dir onto an unrelated cwd would resolve `claims.ts`'s lock
@@ -88,7 +88,7 @@ export async function resolveLockDirectory(lockName: string): Promise<string> {
    */
   if (!path.isAbsolute(gitCommonDirectory)) {
     throw new Error(
-      `forge-locks: --git-common-dir returned a non-absolute path ("${gitCommonDirectory}") for lock "${lockName}" — refusing to build a lock path that could resolve differently depending on cwd`,
+      `emet-locks: --git-common-dir returned a non-absolute path ("${gitCommonDirectory}") for lock "${lockName}" — refusing to build a lock path that could resolve differently depending on cwd`,
     );
   }
   return path.join(gitCommonDirectory, lockName);
@@ -211,7 +211,7 @@ export interface AcquireLockOptions {
   */
   readonly maxAgeMs: number;
   /**
-  Prefixes every message {@link acquireLock} logs or throws (e.g. `"forge:claims"`).
+  Prefixes every message {@link acquireLock} logs or throws (e.g. `"emet:claims"`).
   */
   readonly logLabel: string;
 }

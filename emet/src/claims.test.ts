@@ -39,7 +39,7 @@ describe("didReserveTicket / listReservations / releaseTicket", () => {
   let forgeDirectory: string;
 
   beforeEach(() => {
-    forgeDirectory = mkdtempSync(path.join(os.tmpdir(), "forge-claims-test-"));
+    forgeDirectory = mkdtempSync(path.join(os.tmpdir(), "emet-claims-test-"));
   });
 
   afterEach(() => {
@@ -214,7 +214,7 @@ describe("pruneDeadReservations", () => {
   let ticketsDirectory: string;
 
   beforeEach(() => {
-    forgeDirectory = mkdtempSync(path.join(os.tmpdir(), "forge-claims-test-"));
+    forgeDirectory = mkdtempSync(path.join(os.tmpdir(), "emet-claims-test-"));
     ticketsDirectory = path.join(forgeDirectory, "tickets");
     mkdirSync(ticketsDirectory, { recursive: true });
   });

@@ -36,7 +36,7 @@ describe("acquireSlot / releaseSlot / releaseAllSlotsForRun", () => {
   let slotsDirectory: string;
 
   beforeEach(() => {
-    slotsDirectory = mkdtempSync(path.join(os.tmpdir(), "forge-slots-test-"));
+    slotsDirectory = mkdtempSync(path.join(os.tmpdir(), "emet-slots-test-"));
   });
 
   afterEach(() => {
@@ -126,7 +126,7 @@ describe("releaseSlotIfOwned", () => {
   let slotsDirectory: string;
 
   beforeEach(() => {
-    slotsDirectory = mkdtempSync(path.join(os.tmpdir(), "forge-slots-test-"));
+    slotsDirectory = mkdtempSync(path.join(os.tmpdir(), "emet-slots-test-"));
   });
 
   afterEach(() => {
@@ -179,7 +179,7 @@ describe("isSlotStale", () => {
   let slotsDirectory: string;
 
   beforeEach(() => {
-    slotsDirectory = mkdtempSync(path.join(os.tmpdir(), "forge-slots-test-"));
+    slotsDirectory = mkdtempSync(path.join(os.tmpdir(), "emet-slots-test-"));
   });
 
   afterEach(() => {
@@ -250,13 +250,36 @@ describe("resolveMaxLiveWorkers", () => {
     process.env.FORGE_MAX_LIVE_WORKERS = "not-a-number";
     expect(resolveMaxLiveWorkers(configWith(6))).toBe(6);
   });
+
+  test("EMET_MAX_LIVE_WORKERS wins over the legacy FORGE_MAX_LIVE_WORKERS", () => {
+    const originalEmet = process.env.EMET_MAX_LIVE_WORKERS;
+    try {
+      process.env.EMET_MAX_LIVE_WORKERS = "2";
+      process.env.FORGE_MAX_LIVE_WORKERS = "5";
+      expect(resolveMaxLiveWorkers(configWith(6))).toBe(2);
+    } finally {
+      if (originalEmet === undefined) delete process.env.EMET_MAX_LIVE_WORKERS;
+      else process.env.EMET_MAX_LIVE_WORKERS = originalEmet;
+    }
+  });
+
+  test("a legacy FORGE_MAX_LIVE_WORKERS alone still applies", () => {
+    const originalEmet = process.env.EMET_MAX_LIVE_WORKERS;
+    delete process.env.EMET_MAX_LIVE_WORKERS;
+    try {
+      process.env.FORGE_MAX_LIVE_WORKERS = "4";
+      expect(resolveMaxLiveWorkers(configWith(6))).toBe(4);
+    } finally {
+      if (originalEmet !== undefined) process.env.EMET_MAX_LIVE_WORKERS = originalEmet;
+    }
+  });
 });
 
 describe("listOccupiedSlots", () => {
   let slotsDirectory: string;
 
   beforeEach(() => {
-    slotsDirectory = mkdtempSync(path.join(os.tmpdir(), "forge-slots-test-"));
+    slotsDirectory = mkdtempSync(path.join(os.tmpdir(), "emet-slots-test-"));
   });
 
   afterEach(() => {
