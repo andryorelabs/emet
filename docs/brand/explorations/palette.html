@@ -1,0 +1,2541 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Palette options P1-P4</title>
+    <style>
+      :root {
+        font-family:
+          system-ui,
+          -apple-system,
+          "Segoe UI",
+          sans-serif;
+        line-height: 1.5;
+      }
+      body {
+        margin: 0;
+        padding: 2rem;
+        background: #f6f6f7;
+        color: #1c1c1e;
+      }
+      h1 {
+        margin: 0 0 0.25rem;
+      }
+      .lead {
+        max-width: 70ch;
+        margin: 0 0 2rem;
+      }
+      article {
+        margin: 0 0 3rem;
+      }
+      article > header h2 span {
+        font-weight: 400;
+        opacity: 0.8;
+      }
+      .risk {
+        font-size: 0.9rem;
+      }
+      .pair {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(420px, 1fr));
+        gap: 1rem;
+      }
+      .panel {
+        background: var(--background);
+        color: var(--foreground);
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        padding: 1rem 1.25rem;
+      }
+      .panel h3 {
+        margin: 0 0 0.75rem;
+        font-size: 0.8rem;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        color: var(--muted-foreground);
+      }
+      .mock {
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        padding: 0.75rem 1rem;
+        margin: 0 0 0.75rem;
+        background: var(--card);
+        color: var(--card-foreground);
+      }
+      .readme h4 {
+        margin: 0 0 0.5rem;
+        font-size: 1.4rem;
+      }
+      .readme p {
+        margin: 0.4rem 0;
+      }
+      .readme a {
+        color: var(--primary-text);
+        text-decoration: underline;
+      }
+      .readme code {
+        background: var(--muted);
+        color: var(--foreground);
+        padding: 0.1em 0.35em;
+        border-radius: 4px;
+        font-family: ui-monospace, monospace;
+        font-size: 0.9em;
+      }
+      .muted {
+        color: var(--muted-foreground);
+      }
+      .btn {
+        display: inline-block;
+        background: var(--primary);
+        color: var(--primary-foreground);
+        padding: 0.35rem 0.8rem;
+        border-radius: 6px;
+        font-weight: 600;
+      }
+      .badge {
+        display: inline-block;
+        background: var(--muted);
+        color: var(--muted-foreground);
+        padding: 0.1rem 0.5rem;
+        border-radius: 99px;
+        font-size: 0.8rem;
+      }
+      .ok {
+        color: var(--success);
+      }
+      .bad {
+        color: var(--destructive);
+      }
+      .term {
+        font-family: ui-monospace, Menlo, Consolas, monospace;
+        font-size: 0.85rem;
+        line-height: 1.55;
+        white-space: normal;
+      }
+      .ansi {
+        display: grid;
+        grid-template-columns: repeat(16, 1fr);
+        gap: 2px;
+        background: var(--background);
+        border: 1px solid var(--border);
+        border-radius: 6px;
+        padding: 0.4rem;
+        font-family: ui-monospace, monospace;
+      }
+      .as {
+        text-align: center;
+        font-weight: 700;
+        font-size: 0.85rem;
+      }
+      .as small {
+        display: block;
+        font-weight: 400;
+        font-size: 0.6rem;
+        color: var(--muted-foreground);
+      }
+      .fine {
+        font-size: 0.75rem;
+        color: var(--muted-foreground);
+        margin: 0.4rem 0 0.75rem;
+      }
+      summary {
+        cursor: pointer;
+        font-weight: 600;
+        margin: 0.5rem 0;
+        color: var(--foreground);
+      }
+      table {
+        border-collapse: collapse;
+        width: 100%;
+        font-size: 0.8rem;
+        color: var(--foreground);
+      }
+      td,
+      th {
+        padding: 0.2rem 0.4rem;
+        border-bottom: 1px solid var(--border);
+        text-align: left;
+      }
+      .num {
+        font-variant-numeric: tabular-nums;
+        font-family: ui-monospace, monospace;
+      }
+      .sw {
+        display: block;
+        width: 1.4rem;
+        height: 1rem;
+        border-radius: 3px;
+        border: 1px solid var(--border);
+      }
+      .g {
+        font-size: 0.7rem;
+      }
+      .g.AA {
+        color: var(--success);
+      }
+      .g.AAA {
+        color: var(--success);
+      }
+      .g.FAIL {
+        color: var(--destructive);
+      }
+      .tok code {
+        font-size: 0.75rem;
+      }
+      footer {
+        max-width: 70ch;
+        font-size: 0.85rem;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Palette options P1-P4</h1>
+    <p class="lead">
+      Four palette options for the rename and kit run, each in light and dark with shadcn-style
+      oklch tokens, a README mock, an ANSI 16-color terminal preview and WCAG 2.x contrast ratios.
+      These are options for the maintainer to compare, not a decision. None uses Claude orange, clay
+      or any Anthropic palette value; each card notes its proximity risk. Lowest ratio of every text
+      pair and ANSI color on this sheet: <b>4.53:1</b> (AA body text needs 4.5:1).
+    </p>
+    <article id="p1">
+      <header>
+        <h2>P1 <span>Indigo Ink</span></h2>
+        <p>Cool blue-violet accent on blue-tinted neutrals. Reads as precise and technical.</p>
+        <p class="risk">
+          <b>Proximity and risk:</b> Violet is crowded in dev tools (several editors and CI
+          products); no Anthropic proximity. Not derived from Anthropic's or Claude's palette.
+        </p>
+      </header>
+      <div class="pair">
+        <section
+          class="panel"
+          style="
+            --background: oklch(0.985 0.005 277);
+            --foreground: oklch(0.22 0.012 277);
+            --card: oklch(1 0 277);
+            --card-foreground: oklch(0.22 0.012 277);
+            --primary: oklch(0.5 0.16 277);
+            --primary-foreground: oklch(0.985 0.005 277);
+            --primary-text: oklch(0.5 0.16 277);
+            --secondary: oklch(0.955 0.013 277);
+            --secondary-foreground: oklch(0.22 0.012 277);
+            --muted: oklch(0.955 0.013 277);
+            --muted-foreground: oklch(0.48 0.024 277);
+            --accent: oklch(0.955 0.013 277);
+            --accent-foreground: oklch(0.22 0.012 277);
+            --destructive: oklch(0.55 0.19 25);
+            --success: oklch(0.5 0.138 150);
+            --border: oklch(0.915 0.014 277);
+            --input: oklch(0.915 0.014 277);
+            --ring: oklch(0.5 0.16 277);
+            --a0: oklch(0.4 0.024 277);
+            --a1: oklch(0.5 0.15 25);
+            --a2: oklch(0.5 0.15 145);
+            --a3: oklch(0.5 0.104 100);
+            --a4: oklch(0.5 0.15 277);
+            --a5: oklch(0.5 0.15 330);
+            --a6: oklch(0.5 0.084 200);
+            --a7: oklch(0.3 0.012 277);
+            --a8: oklch(0.34 0.024 277);
+            --a9: oklch(0.42 0.16 25);
+            --a10: oklch(0.42 0.132 145);
+            --a11: oklch(0.42 0.088 100);
+            --a12: oklch(0.42 0.16 277);
+            --a13: oklch(0.42 0.16 330);
+            --a14: oklch(0.42 0.07 200);
+            --a15: oklch(0.22 0.012 277);
+          "
+        >
+          <h3>Light</h3>
+          <div class="mock readme">
+            <h4>placeholder-name</h4>
+            <p>
+              Turn a spec into merged changes with parallel agents. See the <a>quickstart</a> or run
+              <code>/placeholder:run</code>.
+            </p>
+            <p class="muted">Muted helper text explains a flag or a default value.</p>
+            <p>
+              <span class="btn">Get started</span> <span class="badge">v0.0.0</span>
+              <span class="ok">3 merged</span> <span class="bad">1 blocked</span>
+            </p>
+          </div>
+          <div class="mock term" style="background: var(--background); color: var(--a15)">
+            <div>
+              <span style="color: var(--a10)">~/repo</span>
+              <span style="color: var(--a8)">main</span>
+              <span style="color: var(--a15)">$</span> placeholder run 138
+            </div>
+            <div>
+              <span style="color: var(--a4)">info</span>
+              <span style="color: var(--a7)">wave 1 of 2: 3 tickets</span>
+            </div>
+            <div>
+              <span style="color: var(--a2)">pass</span>
+              <span style="color: var(--a15)">check</span>
+              <span style="color: var(--a8)">(12.4s)</span>
+            </div>
+            <div>
+              <span style="color: var(--a3)">warn</span>
+              <span style="color: var(--a15)">lint: 2 warnings</span>
+            </div>
+            <div>
+              <span style="color: var(--a1)">fail</span>
+              <span style="color: var(--a15)">test: 1 failed</span>
+              <span style="color: var(--a9)">x</span> <span style="color: var(--a5)">~</span>
+              <span style="color: var(--a6)">#</span>
+            </div>
+          </div>
+          <div class="ansi">
+            <span class="as" style="color: var(--a0)" title="black #444755 8.83:1"
+              >0<small>8.8</small></span
+            ><span class="as" style="color: var(--a1)" title="red #a83634 6.21:1"
+              >1<small>6.2</small></span
+            ><span class="as" style="color: var(--a2)" title="green #107823 5.39:1"
+              >2<small>5.4</small></span
+            ><span class="as" style="color: var(--a3)" title="yellow #716400 5.71:1"
+              >3<small>5.7</small></span
+            ><span class="as" style="color: var(--a4)" title="blue #5056b6 6.01:1"
+              >4<small>6.0</small></span
+            ><span class="as" style="color: var(--a5)" title="magenta #903d8b 6.24:1"
+              >5<small>6.2</small></span
+            ><span class="as" style="color: var(--a6)" title="cyan #057176 5.54:1"
+              >6<small>5.5</small></span
+            ><span class="as" style="color: var(--a7)" title="white #2c2d34 13.13:1"
+              >7<small>13.1</small></span
+            ><span class="as" style="color: var(--a8)" title="bright black #353745 11.28:1"
+              >8<small>11.3</small></span
+            ><span class="as" style="color: var(--a9)" title="bright red #90101a 8.84:1"
+              >9<small>8.8</small></span
+            ><span class="as" style="color: var(--a10)" title="bright green #005e15 7.70:1"
+              >10<small>7.7</small></span
+            ><span class="as" style="color: var(--a11)" title="bright yellow #584d00 8.12:1"
+              >11<small>8.1</small></span
+            ><span class="as" style="color: var(--a12)" title="bright blue #3c3ca1 8.55:1"
+              >12<small>8.6</small></span
+            ><span class="as" style="color: var(--a13)" title="bright magenta #791f75 8.88:1"
+              >13<small>8.9</small></span
+            ><span class="as" style="color: var(--a14)" title="bright cyan #04585c 7.87:1"
+              >14<small>7.9</small></span
+            ><span class="as" style="color: var(--a15)" title="bright white #191a20 16.63:1"
+              >15<small>16.6</small></span
+            >
+          </div>
+          <p class="fine">
+            ANSI 0-15 on the light background. Number = index, small = contrast. Minimum 5.39:1.
+          </p>
+          <details open>
+            <summary>Tokens</summary>
+            <table class="tok">
+              <tr>
+                <td><i class="sw" style="background: oklch(0.985 0.005 277)"></i></td>
+                <td><code>--background</code></td>
+                <td><code>oklch(0.985 0.005 277)</code></td>
+                <td><code>#f9fafd</code></td>
+              </tr>
+              <tr>
+                <td><i class="sw" style="background: oklch(0.22 0.012 277)"></i></td>
+                <td><code>--foreground</code></td>
+                <td><code>oklch(0.220 0.012 277)</code></td>
+                <td><code>#191a20</code></td>
+              </tr>
+              <tr>
+                <td><i class="sw" style="background: oklch(1 0 277)"></i></td>
+                <td><code>--card</code></td>
+                <td><code>oklch(1.000 0.000 277)</code></td>
+                <td><code>#ffffff</code></td>
+              </tr>
+              <tr>
+                <td><i class="sw" style="background: oklch(0.22 0.012 277)"></i></td>
+                <td><code>--card-foreground</code></td>
+                <td><code>oklch(0.220 0.012 277)</code></td>
+                <td><code>#191a20</code></td>
+              </tr>
+              <tr>
+                <td><i class="sw" style="background: oklch(0.5 0.16 277)"></i></td>
+                <td><code>--primary</code></td>
+                <td><code>oklch(0.500 0.160 277)</code></td>
+                <td><code>#4f54bc</code></td>
+              </tr>
+              <tr>
+                <td><i class="sw" style="background: oklch(0.985 0.005 277)"></i></td>
+                <td><code>--primary-foreground</code></td>
+                <td><code>oklch(0.985 0.005 277)</code></td>
+                <td><code>#f9fafd</code></td>
+              </tr>
+              <tr>
+                <td><i class="sw" style="background: oklch(0.5 0.16 277)"></i></td>
+                <td><code>--primary-text</code></td>
+                <td><code>oklch(0.500 0.160 277)</code></td>
+                <td><code>#4f54bc</code></td>
+              </tr>
+              <tr>
+                <td><i class="sw" style="background: oklch(0.955 0.013 277)"></i></td>
+                <td><code>--secondary</code></td>
+                <td><code>oklch(0.955 0.013 277)</code></td>
+                <td><code>#eef0f9</code></td>
+              </tr>
+              <tr>
+                <td><i class="sw" style="background: oklch(0.22 0.012 277)"></i></td>
+                <td><code>--secondary-foreground</code></td>
+                <td><code>oklch(0.220 0.012 277)</code></td>
+                <td><code>#191a20</code></td>
+              </tr>
+              <tr>
+                <td><i class="sw" style="background: oklch(0.955 0.013 277)"></i></td>
+                <td><code>--muted</code></td>
+                <td><code>oklch(0.955 0.013 277)</code></td>
+                <td><code>#eef0f9</code></td>
+              </tr>
+              <tr>
+                <td><i class="sw" style="background: oklch(0.48 0.024 277)"></i></td>
+                <td><code>--muted-foreground</code></td>
+                <td><code>oklch(0.480 0.024 277)</code></td>
+                <td><code>#5a5d6b</code></td>
+              </tr>
+              <tr>
+                <td><i class="sw" style="background: oklch(0.955 0.013 277)"></i></td>
+                <td><code>--accent</code></td>
+                <td><code>oklch(0.955 0.013 277)</code></td>
+                <td><code>#eef0f9</code></td>
+              </tr>
+              <tr>
+                <td><i class="sw" style="background: oklch(0.22 0.012 277)"></i></td>
+                <td><code>--accent-foreground</code></td>
+                <td><code>oklch(0.220 0.012 277)</code></td>
+                <td><code>#191a20</code></td>
+              </tr>
+              <tr>
+                <td><i class="sw" style="background: oklch(0.55 0.19 25)"></i></td>
+                <td><code>--destructive</code></td>
+                <td><code>oklch(0.550 0.190 25)</code></td>
+                <td><code>#c92f33</code></td>
+              </tr>
+              <tr>
+                <td><i class="sw" style="background: oklch(0.5 0.138 150)"></i></td>
+                <td><code>--success</code></td>
+                <td><code>oklch(0.500 0.138 150)</code></td>
+                <td><code>#007835</code></td>
+              </tr>
+              <tr>
+                <td><i class="sw" style="background: oklch(0.915 0.014 277)"></i></td>
+                <td><code>--border</code></td>
+                <td><code>oklch(0.915 0.014 277)</code></td>
+                <td><code>#e0e2ed</code></td>
+              </tr>
+              <tr>
+                <td><i class="sw" style="background: oklch(0.915 0.014 277)"></i></td>
+                <td><code>--input</code></td>
+                <td><code>oklch(0.915 0.014 277)</code></td>
+                <td><code>#e0e2ed</code></td>
+              </tr>
+              <tr>
+                <td><i class="sw" style="background: oklch(0.5 0.16 277)"></i></td>
+                <td><code>--ring</code></td>
+                <td><code>oklch(0.500 0.160 277)</code></td>
+                <td><code>#4f54bc</code></td>
+              </tr>
+            </table>
+          </details>
+          <details open>
+            <summary>Contrast (WCAG 2.x)</summary>
+            <table class="ratio">
+              <tr>
+                <th>Pair</th>
+                <th>Ratio</th>
+                <th>Level</th>
+              </tr>
+              <tr>
+                <td>foreground on background</td>
+                <td class="num">16.63:1</td>
+                <td><b class="g AAA">AAA</b></td>
+              </tr>
+              <tr>
+                <td>card-foreground on card</td>
+                <td class="num">17.36:1</td>
+                <td><b class="g AAA">AAA</b></td>
+              </tr>
+              <tr>
+                <td>muted-foreground on background</td>
+                <td class="num">6.26:1</td>
+                <td><b class="g AA">AA</b></td>
+              </tr>
+              <tr>
+                <td>muted-foreground on muted</td>
+                <td class="num">5.75:1</td>
+                <td><b class="g AA">AA</b></td>
+              </tr>
+              <tr>
+                <td>primary-text on background</td>
+                <td class="num">6.05:1</td>
+                <td><b class="g AA">AA</b></td>
+              </tr>
+              <tr>
+                <td>primary-text on card</td>
+                <td class="num">6.31:1</td>
+                <td><b class="g AA">AA</b></td>
+              </tr>
+              <tr>
+                <td>primary-foreground on primary</td>
+                <td class="num">6.05:1</td>
+                <td><b class="g AA">AA</b></td>
+              </tr>
+              <tr>
+                <td>destructive on background</td>
+                <td class="num">5.11:1</td>
+                <td><b class="g AA">AA</b></td>
+              </tr>
+              <tr>
+                <td>success on background</td>
+                <td class="num">5.38:1</td>
+                <td><b class="g AA">AA</b></td>
+              </tr>
+            </table>
+          </details>
+        </section>
+        <section
+          class="panel"
+          style="
+            --background: oklch(0.19 0.014 277);
+            --foreground: oklch(0.95 0.012 277);
+            --card: oklch(0.235 0.014 277);
+            --card-foreground: oklch(0.95 0.012 277);
+            --primary: oklch(0.72 0.146 277);
+            --primary-foreground: oklch(0.17 0.012 277);
+            --primary-text: oklch(0.72 0.146 277);
+            --secondary: oklch(0.275 0.013 277);
+            --secondary-foreground: oklch(0.95 0.012 277);
+            --muted: oklch(0.275 0.013 277);
+            --muted-foreground: oklch(0.75 0.024 277);
+            --accent: oklch(0.275 0.013 277);
+            --accent-foreground: oklch(0.95 0.012 277);
+            --destructive: oklch(0.7 0.19 25);
+            --success: oklch(0.72 0.14 150);
+            --border: oklch(0.32 0.014 277);
+            --input: oklch(0.32 0.014 277);
+            --ring: oklch(0.72 0.146 277);
+            --a0: oklch(0.594 0.024 277);
+            --a1: oklch(0.7 0.15 25);
+            --a2: oklch(0.7 0.15 145);
+            --a3: oklch(0.7 0.144 100);
+            --a4: oklch(0.7 0.15 277);
+            --a5: oklch(0.7 0.15 330);
+            --a6: oklch(0.7 0.118 200);
+            --a7: oklch(0.85 0.012 277);
+            --a8: oklch(0.62 0.024 277);
+            --a9: oklch(0.8 0.114 25);
+            --a10: oklch(0.8 0.16 145);
+            --a11: oklch(0.8 0.16 100);
+            --a12: oklch(0.8 0.1 277);
+            --a13: oklch(0.8 0.16 330);
+            --a14: oklch(0.8 0.136 200);
+            --a15: oklch(0.95 0.012 277);
+          "
+        >
+          <h3>Dark</h3>
+          <div class="mock readme">
+            <h4>placeholder-name</h4>
+            <p>
+              Turn a spec into merged changes with parallel agents. See the <a>quickstart</a> or run
+              <code>/placeholder:run</code>.
+            </p>
+            <p class="muted">Muted helper text explains a flag or a default value.</p>
+            <p>
+              <span class="btn">Get started</span> <span class="badge">v0.0.0</span>
+              <span class="ok">3 merged</span> <span class="bad">1 blocked</span>
+            </p>
+          </div>
+          <div class="mock term" style="background: var(--background); color: var(--a15)">
+            <div>
+              <span style="color: var(--a10)">~/repo</span>
+              <span style="color: var(--a8)">main</span>
+              <span style="color: var(--a15)">$</span> placeholder run 138
+            </div>
+            <div>
+              <span style="color: var(--a4)">info</span>
+              <span style="color: var(--a7)">wave 1 of 2: 3 tickets</span>
+            </div>
+            <div>
+              <span style="color: var(--a2)">pass</span>
+              <span style="color: var(--a15)">check</span>
+              <span style="color: var(--a8)">(12.4s)</span>
+            </div>
+            <div>
+              <span style="color: var(--a3)">warn</span>
+              <span style="color: var(--a15)">lint: 2 warnings</span>
+            </div>
+            <div>
+              <span style="color: var(--a1)">fail</span>
+              <span style="color: var(--a15)">test: 1 failed</span>
+              <span style="color: var(--a9)">x</span> <span style="color: var(--a5)">~</span>
+              <span style="color: var(--a6)">#</span>
+            </div>
+          </div>
+          <div class="ansi">
+            <span class="as" style="color: var(--a0)" title="black #7a7d8d 4.54:1"
+              >0<small>4.5</small></span
+            ><span class="as" style="color: var(--a1)" title="red #ed756e 6.50:1"
+              >1<small>6.5</small></span
+            ><span class="as" style="color: var(--a2)" title="green #5bb661 7.33:1"
+              >2<small>7.3</small></span
+            ><span class="as" style="color: var(--a3)" title="yellow #b49f08 6.97:1"
+              >3<small>7.0</small></span
+            ><span class="as" style="color: var(--a4)" title="blue #8893fa 6.70:1"
+              >4<small>6.7</small></span
+            ><span class="as" style="color: var(--a5)" title="magenta #d179ca 6.44:1"
+              >5<small>6.4</small></span
+            ><span class="as" style="color: var(--a6)" title="cyan #09b4bb 7.28:1"
+              >6<small>7.3</small></span
+            ><span class="as" style="color: var(--a7)" title="white #cbcdd6 11.68:1"
+              >7<small>11.7</small></span
+            ><span class="as" style="color: var(--a8)" title="bright black #828595 5.06:1"
+              >8<small>5.1</small></span
+            ><span class="as" style="color: var(--a9)" title="bright red #ffa098 9.47:1"
+              >9<small>9.5</small></span
+            ><span class="as" style="color: var(--a10)" title="bright green #75d87a 10.46:1"
+              >10<small>10.5</small></span
+            ><span class="as" style="color: var(--a11)" title="bright yellow #d6bf1f 9.99:1"
+              >11<small>10.0</small></span
+            ><span class="as" style="color: var(--a12)" title="bright blue #adb8fe 9.76:1"
+              >12<small>9.8</small></span
+            ><span class="as" style="color: var(--a13)" title="bright magenta #f695ee 9.22:1"
+              >13<small>9.2</small></span
+            ><span class="as" style="color: var(--a14)" title="bright cyan #00d7e0 10.40:1"
+              >14<small>10.4</small></span
+            ><span class="as" style="color: var(--a15)" title="bright white #eceef7 16.00:1"
+              >15<small>16.0</small></span
+            >
+          </div>
+          <p class="fine">
+            ANSI 0-15 on the dark background. Number = index, small = contrast. Minimum 4.54:1.
+          </p>
+          <details open>
+            <summary>Tokens</summary>
+            <table class="tok">
+              <tr>
+                <td><i class="sw" style="background: oklch(0.19 0.014 277)"></i></td>
+                <td><code>--background</code></td>
+                <td><code>oklch(0.190 0.014 277)</code></td>
+                <td><code>#12131a</code></td>
+              </tr>
+              <tr>
+                <td><i class="sw" style="background: oklch(0.95 0.012 277)"></i></td>
+                <td><code>--foreground</code></td>
+                <td><code>oklch(0.950 0.012 277)</code></td>
+                <td><code>#eceef7</code></td>
+              </tr>
+              <tr>
+                <td><i class="sw" style="background: oklch(0.235 0.014 277)"></i></td>
+                <td><code>--card</code></td>
+                <td><code>oklch(0.235 0.014 277)</code></td>
+                <td><code>#1c1e25</code></td>
+              </tr>
+              <tr>
+                <td><i class="sw" style="background: oklch(0.95 0.012 277)"></i></td>
+                <td><code>--card-foreground</code></td>
+                <td><code>oklch(0.950 0.012 277)</code></td>
+                <td><code>#eceef7</code></td>
+              </tr>
+              <tr>
+                <td><i class="sw" style="background: oklch(0.72 0.146 277)"></i></td>
+                <td><code>--primary</code></td>
+                <td><code>oklch(0.720 0.146 277)</code></td>
+                <td><code>#8e9aff</code></td>
+              </tr>
+              <tr>
+                <td><i class="sw" style="background: oklch(0.17 0.012 277)"></i></td>
+                <td><code>--primary-foreground</code></td>
+                <td><code>oklch(0.170 0.012 277)</code></td>
+                <td><code>#0e0f15</code></td>
+              </tr>
+              <tr>
+                <td><i class="sw" style="background: oklch(0.72 0.146 277)"></i></td>
+                <td><code>--primary-text</code></td>
+                <td><code>oklch(0.720 0.146 277)</code></td>
+                <td><code>#8e9aff</code></td>
+              </tr>
+              <tr>
+                <td><i class="sw" style="background: oklch(0.275 0.013 277)"></i></td>
+                <td><code>--secondary</code></td>
+                <td><code>oklch(0.275 0.013 277)</code></td>
+                <td><code>#26272e</code></td>
+              </tr>
+              <tr>
+                <td><i class="sw" style="background: oklch(0.95 0.012 277)"></i></td>
+                <td><code>--secondary-foreground</code></td>
+                <td><code>oklch(0.950 0.012 277)</code></td>
+                <td><code>#eceef7</code></td>
+              </tr>
+              <tr>
+                <td><i class="sw" style="background: oklch(0.275 0.013 277)"></i></td>
+                <td><code>--muted</code></td>
+                <td><code>oklch(0.275 0.013 277)</code></td>
+                <td><code>#26272e</code></td>
+              </tr>
+              <tr>
+                <td><i class="sw" style="background: oklch(0.75 0.024 277)"></i></td>
+                <td><code>--muted-foreground</code></td>
+                <td><code>oklch(0.750 0.024 277)</code></td>
+                <td><code>#aaadbe</code></td>
+              </tr>
+              <tr>
+                <td><i class="sw" style="background: oklch(0.275 0.013 277)"></i></td>
+                <td><code>--accent</code></td>
+                <td><code>oklch(0.275 0.013 277)</code></td>
+                <td><code>#26272e</code></td>
+              </tr>
+              <tr>
+                <td><i class="sw" style="background: oklch(0.95 0.012 277)"></i></td>
+                <td><code>--accent-foreground</code></td>
+                <td><code>oklch(0.950 0.012 277)</code></td>
+                <td><code>#eceef7</code></td>
+              </tr>
+              <tr>
+                <td><i class="sw" style="background: oklch(0.7 0.19 25)"></i></td>
+                <td><code>--destructive</code></td>
+                <td><code>oklch(0.700 0.190 25)</code></td>
+                <td><code>#ff645f</code></td>
+              </tr>
+              <tr>
+                <td><i class="sw" style="background: oklch(0.72 0.14 150)"></i></td>
+                <td><code>--success</code></td>
+                <td><code>oklch(0.720 0.140 150)</code></td>
+                <td><code>#5bbd74</code></td>
+              </tr>
+              <tr>
+                <td><i class="sw" style="background: oklch(0.32 0.014 277)"></i></td>
+                <td><code>--border</code></td>
+                <td><code>oklch(0.320 0.014 277)</code></td>
+                <td><code>#31323a</code></td>
+              </tr>
+              <tr>
+                <td><i class="sw" style="background: oklch(0.32 0.014 277)"></i></td>
+                <td><code>--input</code></td>
+                <td><code>oklch(0.320 0.014 277)</code></td>
+                <td><code>#31323a</code></td>
+              </tr>
+              <tr>
+                <td><i class="sw" style="background: oklch(0.72 0.146 277)"></i></td>
+                <td><code>--ring</code></td>
+                <td><code>oklch(0.720 0.146 277)</code></td>
+                <td><code>#8e9aff</code></td>
+              </tr>
+            </table>
+          </details>
+          <details open>
+            <summary>Contrast (WCAG 2.x)</summary>
+            <table class="ratio">
+              <tr>
+                <th>Pair</th>
+                <th>Ratio</th>
+                <th>Level</th>
+              </tr>
+              <tr>
+                <td>foreground on background</td>
+                <td class="num">16.00:1</td>
+                <td><b class="g AAA">AAA</b></td>
+              </tr>
+              <tr>
+                <td>card-foreground on card</td>
+                <td class="num">14.38:1</td>
+                <td><b class="g AAA">AAA</b></td>
+              </tr>
+              <tr>
+                <td>muted-foreground on background</td>
+                <td class="num">8.32:1</td>
+                <td><b class="g AAA">AAA</b></td>
+              </tr>
+              <tr>
+                <td>muted-foreground on muted</td>
+                <td class="num">6.68:1</td>
+                <td><b class="g AA">AA</b></td>
+              </tr>
+              <tr>
+                <td>primary-text on background</td>
+                <td class="num">7.25:1</td>
+                <td><b class="g AAA">AAA</b></td>
+              </tr>
+              <tr>
+                <td>primary-text on card</td>
+                <td class="num">6.51:1</td>
+                <td><b class="g AA">AA</b></td>
+              </tr>
+              <tr>
+                <td>primary-foreground on primary</td>
+                <td class="num">7.48:1</td>
+                <td><b class="g AAA">AAA</b></td>
+              </tr>
+              <tr>
+                <td>destructive on background</td>
+                <td class="num">6.39:1</td>
+                <td><b class="g AA">AA</b></td>
+              </tr>
+              <tr>
+                <td>success on background</td>
+                <td class="num">7.92:1</td>
+                <td><b class="g AAA">AAA</b></td>
+              </tr>
+            </table>
+          </details>
+        </section>
+      </div>
+    </article>
+    <article id="p2">
+      <header>
+        <h2>P2 <span>Deep Teal</span></h2>
+        <p>Saturated cyan-teal accent on near-neutral greys. Calm, workshop-like.</p>
+        <p class="risk">
+          <b>Proximity and risk:</b> Teal is common for Go and infra tooling; far from Anthropic's
+          warm palette. Not derived from Anthropic's or Claude's palette.
+        </p>
+      </header>
+      <div class="pair">
+        <section
+          class="panel"
+          style="
+            --background: oklch(0.985 0.004 200);
+            --foreground: oklch(0.22 0.01 200);
+            --card: oklch(1 0 200);
+            --card-foreground: oklch(0.22 0.01 200);
+            --primary: oklch(0.5 0.084 200);
+            --primary-foreground: oklch(0.985 0.004 200);
+            --primary-text: oklch(0.5 0.084 200);
+            --secondary: oklch(0.955 0.011 200);
+            --secondary-foreground: oklch(0.22 0.01 200);
+            --muted: oklch(0.955 0.011 200);
+            --muted-foreground: oklch(0.48 0.02 200);
+            --accent: oklch(0.955 0.011 200);
+            --accent-foreground: oklch(0.22 0.01 200);
+            --destructive: oklch(0.55 0.19 25);
+            --success: oklch(0.5 0.138 150);
+            --border: oklch(0.915 0.012 200);
+            --input: oklch(0.915 0.012 200);
+            --ring: oklch(0.5 0.084 200);
+            --a0: oklch(0.4 0.02 200);
+            --a1: oklch(0.5 0.15 25);
+            --a2: oklch(0.5 0.15 145);
+            --a3: oklch(0.5 0.104 100);
+            --a4: oklch(0.5 0.084 200);
+            --a5: oklch(0.5 0.15 330);
+            --a6: oklch(0.5 0.084 200);
+            --a7: oklch(0.3 0.01 200);
+            --a8: oklch(0.34 0.02 200);
+            --a9: oklch(0.42 0.16 25);
+            --a10: oklch(0.42 0.132 145);
+            --a11: oklch(0.42 0.088 100);
+            --a12: oklch(0.42 0.07 200);
+            --a13: oklch(0.42 0.16 330);
+            --a14: oklch(0.42 0.07 200);
+            --a15: oklch(0.22 0.01 200);
+          "
+        >
+          <h3>Light</h3>
+          <div class="mock readme">
+            <h4>placeholder-name</h4>
+            <p>
+              Turn a spec into merged changes with parallel agents. See the <a>quickstart</a> or run
+              <code>/placeholder:run</code>.
+            </p>
+            <p class="muted">Muted helper text explains a flag or a default value.</p>
+            <p>
+              <span class="btn">Get started</span> <span class="badge">v0.0.0</span>
+              <span class="ok">3 merged</span> <span class="bad">1 blocked</span>
+            </p>
+          </div>
+          <div class="mock term" style="background: var(--background); color: var(--a15)">
+            <div>
+              <span style="color: var(--a10)">~/repo</span>
+              <span style="color: var(--a8)">main</span>
+              <span style="color: var(--a15)">$</span> placeholder run 138
+            </div>
+            <div>
+              <span style="color: var(--a4)">info</span>
+              <span style="color: var(--a7)">wave 1 of 2: 3 tickets</span>
+            </div>
+            <div>
+              <span style="color: var(--a2)">pass</span>
+              <span style="color: var(--a15)">check</span>
+              <span style="color: var(--a8)">(12.4s)</span>
+            </div>
+            <div>
+              <span style="color: var(--a3)">warn</span>
+              <span style="color: var(--a15)">lint: 2 warnings</span>
+            </div>
+            <div>
+              <span style="color: var(--a1)">fail</span>
+              <span style="color: var(--a15)">test: 1 failed</span>
+              <span style="color: var(--a9)">x</span> <span style="color: var(--a5)">~</span>
+              <span style="color: var(--a6)">#</span>
+            </div>
+          </div>
+          <div class="ansi">
+            <span class="as" style="color: var(--a0)" title="black #3b4b4c 8.77:1"
+              >0<small>8.8</small></span
+            ><span class="as" style="color: var(--a1)" title="red #a83634 6.21:1"
+              >1<small>6.2</small></span
+            ><span class="as" style="color: var(--a2)" title="green #107823 5.40:1"
+              >2<small>5.4</small></span
+            ><span class="as" style="color: var(--a3)" title="yellow #716400 5.72:1"
+              >3<small>5.7</small></span
+            ><span class="as" style="color: var(--a4)" title="blue #057176 5.55:1"
+              >4<small>5.5</small></span
+            ><span class="as" style="color: var(--a5)" title="magenta #903d8b 6.24:1"
+              >5<small>6.2</small></span
+            ><span class="as" style="color: var(--a6)" title="cyan #057176 5.55:1"
+              >6<small>5.5</small></span
+            ><span class="as" style="color: var(--a7)" title="white #282f30 13.09:1"
+              >7<small>13.1</small></span
+            ><span class="as" style="color: var(--a8)" title="bright black #2c3b3c 11.21:1"
+              >8<small>11.2</small></span
+            ><span class="as" style="color: var(--a9)" title="bright red #90101a 8.86:1"
+              >9<small>8.9</small></span
+            ><span class="as" style="color: var(--a10)" title="bright green #005e15 7.71:1"
+              >10<small>7.7</small></span
+            ><span class="as" style="color: var(--a11)" title="bright yellow #584d00 8.14:1"
+              >11<small>8.1</small></span
+            ><span class="as" style="color: var(--a12)" title="bright blue #04585c 7.88:1"
+              >12<small>7.9</small></span
+            ><span class="as" style="color: var(--a13)" title="bright magenta #791f75 8.89:1"
+              >13<small>8.9</small></span
+            ><span class="as" style="color: var(--a14)" title="bright cyan #04585c 7.88:1"
+              >14<small>7.9</small></span
+            ><span class="as" style="color: var(--a15)" title="bright white #151c1c 16.58:1"
+              >15<small>16.6</small></span
+            >
+          </div>
+          <p class="fine">
+            ANSI 0-15 on the light background. Number = index, small = contrast. Minimum 5.40:1.
+          </p>
+          <details open>
+            <summary>Tokens</summary>
+            <table class="tok">
+              <tr>
+                <td><i class="sw" style="background: oklch(0.985 0.004 200)"></i></td>
+                <td><code>--background</code></td>
+                <td><code>oklch(0.985 0.004 200)</code></td>
+                <td><code>#f7fbfb</code></td>
+              </tr>
+              <tr>
+                <td><i class="sw" style="background: oklch(0.22 0.01 200)"></i></td>
+                <td><code>--foreground</code></td>
+                <td><code>oklch(0.220 0.010 200)</code></td>
+                <td><code>#151c1c</code></td>
+              </tr>
+              <tr>
+                <td><i class="sw" style="background: oklch(1 0 200)"></i></td>
+                <td><code>--card</code></td>
+                <td><code>oklch(1.000 0.000 200)</code></td>
+                <td><code>#ffffff</code></td>
+              </tr>
+              <tr>
+                <td><i class="sw" style="background: oklch(0.22 0.01 200)"></i></td>
+                <td><code>--card-foreground</code></td>
+                <td><code>oklch(0.220 0.010 200)</code></td>
+                <td><code>#151c1c</code></td>
+              </tr>
+              <tr>
+                <td><i class="sw" style="background: oklch(0.5 0.084 200)"></i></td>
+                <td><code>--primary</code></td>
+                <td><code>oklch(0.500 0.084 200)</code></td>
+                <td><code>#057176</code></td>
+              </tr>
+              <tr>
+                <td><i class="sw" style="background: oklch(0.985 0.004 200)"></i></td>
+                <td><code>--primary-foreground</code></td>
+                <td><code>oklch(0.985 0.004 200)</code></td>
+                <td><code>#f7fbfb</code></td>
+              </tr>
+              <tr>
+                <td><i class="sw" style="background: oklch(0.5 0.084 200)"></i></td>
+                <td><code>--primary-text</code></td>
+                <td><code>oklch(0.500 0.084 200)</code></td>
+                <td><code>#057176</code></td>
+              </tr>
+              <tr>
+                <td><i class="sw" style="background: oklch(0.955 0.011 200)"></i></td>
+                <td><code>--secondary</code></td>
+                <td><code>oklch(0.955 0.011 200)</code></td>
+                <td><code>#e8f2f3</code></td>
+              </tr>
+              <tr>
+                <td><i class="sw" style="background: oklch(0.22 0.01 200)"></i></td>
+                <td><code>--secondary-foreground</code></td>
+                <td><code>oklch(0.220 0.010 200)</code></td>
+                <td><code>#151c1c</code></td>
+              </tr>
+              <tr>
+                <td><i class="sw" style="background: oklch(0.955 0.011 200)"></i></td>
+                <td><code>--muted</code></td>
+                <td><code>oklch(0.955 0.011 200)</code></td>
+                <td><code>#e8f2f3</code></td>
+              </tr>
+              <tr>
+                <td><i class="sw" style="background: oklch(0.48 0.02 200)"></i></td>
+                <td><code>--muted-foreground</code></td>
+                <td><code>oklch(0.480 0.020 200)</code></td>
+                <td><code>#516162</code></td>
+              </tr>
+              <tr>
+                <td><i class="sw" style="background: oklch(0.955 0.011 200)"></i></td>
+                <td><code>--accent</code></td>
+                <td><code>oklch(0.955 0.011 200)</code></td>
+                <td><code>#e8f2f3</code></td>
+              </tr>
+              <tr>
+                <td><i class="sw" style="background: oklch(0.22 0.01 200)"></i></td>
+                <td><code>--accent-foreground</code></td>
+                <td><code>oklch(0.220 0.010 200)</code></td>
+                <td><code>#151c1c</code></td>
+              </tr>
+              <tr>
+                <td><i class="sw" style="background: oklch(0.55 0.19 25)"></i></td>
+                <td><code>--destructive</code></td>
+                <td><code>oklch(0.550 0.190 25)</code></td>
+                <td><code>#c92f33</code></td>
+              </tr>
+              <tr>
+                <td><i class="sw" style="background: oklch(0.5 0.138 150)"></i></td>
+                <td><code>--success</code></td>
+                <td><code>oklch(0.500 0.138 150)</code></td>
+                <td><code>#007835</code></td>
+              </tr>
+              <tr>
+                <td><i class="sw" style="background: oklch(0.915 0.012 200)"></i></td>
+                <td><code>--border</code></td>
+                <td><code>oklch(0.915 0.012 200)</code></td>
+                <td><code>#dae5e6</code></td>
+              </tr>
+              <tr>
+                <td><i class="sw" style="background: oklch(0.915 0.012 200)"></i></td>
+                <td><code>--input</code></td>
+                <td><code>oklch(0.915 0.012 200)</code></td>
+                <td><code>#dae5e6</code></td>
+              </tr>
+              <tr>
+                <td><i class="sw" style="background: oklch(0.5 0.084 200)"></i></td>
+                <td><code>--ring</code></td>
+                <td><code>oklch(0.500 0.084 200)</code></td>
+                <td><code>#057176</code></td>
+              </tr>
+            </table>
+          </details>
+          <details open>
+            <summary>Contrast (WCAG 2.x)</summary>
+            <table class="ratio">
+              <tr>
+                <th>Pair</th>
+                <th>Ratio</th>
+                <th>Level</th>
+              </tr>
+              <tr>
+                <td>foreground on background</td>
+                <td class="num">16.58:1</td>
+                <td><b class="g AAA">AAA</b></td>
+              </tr>
+              <tr>
+                <td>card-foreground on card</td>
+                <td class="num">17.29:1</td>
+                <td><b class="g AAA">AAA</b></td>
+              </tr>
+              <tr>
+                <td>muted-foreground on background</td>
+                <td class="num">6.23:1</td>
+                <td><b class="g AA">AA</b></td>
+              </tr>
+              <tr>
+                <td>muted-foreground on muted</td>
+                <td class="num">5.69:1</td>
+                <td><b class="g AA">AA</b></td>
+              </tr>
+              <tr>
+                <td>primary-text on background</td>
+                <td class="num">5.55:1</td>
+                <td><b class="g AA">AA</b></td>
+              </tr>
+              <tr>
+                <td>primary-text on card</td>
+                <td class="num">5.78:1</td>
+                <td><b class="g AA">AA</b></td>
+              </tr>
+              <tr>
+                <td>primary-foreground on primary</td>
+                <td class="num">5.55:1</td>
+                <td><b class="g AA">AA</b></td>
+              </tr>
+              <tr>
+                <td>destructive on background</td>
+                <td class="num">5.12:1</td>
+                <td><b class="g AA">AA</b></td>
+              </tr>
+              <tr>
+                <td>success on background</td>
+                <td class="num">5.39:1</td>
+                <td><b class="g AA">AA</b></td>
+              </tr>
+            </table>
+          </details>
+        </section>
+        <section
+          class="panel"
+          style="
+            --background: oklch(0.19 0.012 200);
+            --foreground: oklch(0.95 0.01 200);
+            --card: oklch(0.235 0.012 200);
+            --card-foreground: oklch(0.95 0.01 200);
+            --primary: oklch(0.72 0.11 200);
+            --primary-foreground: oklch(0.17 0.01 200);
+            --primary-text: oklch(0.72 0.11 200);
+            --secondary: oklch(0.275 0.011 200);
+            --secondary-foreground: oklch(0.95 0.01 200);
+            --muted: oklch(0.275 0.011 200);
+            --muted-foreground: oklch(0.75 0.02 200);
+            --accent: oklch(0.275 0.011 200);
+            --accent-foreground: oklch(0.95 0.01 200);
+            --destructive: oklch(0.7 0.19 25);
+            --success: oklch(0.72 0.14 150);
+            --border: oklch(0.32 0.012 200);
+            --input: oklch(0.32 0.012 200);
+            --ring: oklch(0.72 0.11 200);
+            --a0: oklch(0.59 0.02 200);
+            --a1: oklch(0.7 0.15 25);
+            --a2: oklch(0.7 0.15 145);
+            --a3: oklch(0.7 0.144 100);
+            --a4: oklch(0.7 0.118 200);
+            --a5: oklch(0.7 0.15 330);
+            --a6: oklch(0.7 0.118 200);
+            --a7: oklch(0.85 0.01 200);
+            --a8: oklch(0.62 0.02 200);
+            --a9: oklch(0.8 0.114 25);
+            --a10: oklch(0.8 0.16 145);
+            --a11: oklch(0.8 0.16 100);
+            --a12: oklch(0.8 0.136 200);
+            --a13: oklch(0.8 0.16 330);
+            --a14: oklch(0.8 0.136 200);
+            --a15: oklch(0.95 0.01 200);
+          "
+        >
+          <h3>Dark</h3>
+          <div class="mock readme">
+            <h4>placeholder-name</h4>
+            <p>
+              Turn a spec into merged changes with parallel agents. See the <a>quickstart</a> or run
+              <code>/placeholder:run</code>.
+            </p>
+            <p class="muted">Muted helper text explains a flag or a default value.</p>
+            <p>
+              <span class="btn">Get started</span> <span class="badge">v0.0.0</span>
+              <span class="ok">3 merged</span> <span class="bad">1 blocked</span>
+            </p>
+          </div>
+          <div class="mock term" style="background: var(--background); color: var(--a15)">
+            <div>
+              <span style="color: var(--a10)">~/repo</span>
+              <span style="color: var(--a8)">main</span>
+              <span style="color: var(--a15)">$</span> placeholder run 138
+            </div>
+            <div>
+              <span style="color: var(--a4)">info</span>
+              <span style="color: var(--a7)">wave 1 of 2: 3 tickets</span>
+            </div>
+            <div>
+              <span style="color: var(--a2)">pass</span>
+              <span style="color: var(--a15)">check</span>
+              <span style="color: var(--a8)">(12.4s)</span>
+            </div>
+            <div>
+              <span style="color: var(--a3)">warn</span>
+              <span style="color: var(--a15)">lint: 2 warnings</span>
+            </div>
+            <div>
+              <span style="color: var(--a1)">fail</span>
+              <span style="color: var(--a15)">test: 1 failed</span>
+              <span style="color: var(--a9)">x</span> <span style="color: var(--a5)">~</span>
+              <span style="color: var(--a6)">#</span>
+            </div>
+          </div>
+          <div class="ansi">
+            <span class="as" style="color: var(--a0)" title="black #708182 4.53:1"
+              >0<small>4.5</small></span
+            ><span class="as" style="color: var(--a1)" title="red #ed756e 6.49:1"
+              >1<small>6.5</small></span
+            ><span class="as" style="color: var(--a2)" title="green #5bb661 7.31:1"
+              >2<small>7.3</small></span
+            ><span class="as" style="color: var(--a3)" title="yellow #b49f08 6.96:1"
+              >3<small>7.0</small></span
+            ><span class="as" style="color: var(--a4)" title="blue #09b4bb 7.27:1"
+              >4<small>7.3</small></span
+            ><span class="as" style="color: var(--a5)" title="magenta #d179ca 6.43:1"
+              >5<small>6.4</small></span
+            ><span class="as" style="color: var(--a6)" title="cyan #09b4bb 7.27:1"
+              >6<small>7.3</small></span
+            ><span class="as" style="color: var(--a7)" title="white #c7d0d0 11.76:1"
+              >7<small>11.8</small></span
+            ><span class="as" style="color: var(--a8)" title="bright black #798a8b 5.12:1"
+              >8<small>5.1</small></span
+            ><span class="as" style="color: var(--a9)" title="bright red #ffa098 9.45:1"
+              >9<small>9.4</small></span
+            ><span class="as" style="color: var(--a10)" title="bright green #75d87a 10.44:1"
+              >10<small>10.4</small></span
+            ><span class="as" style="color: var(--a11)" title="bright yellow #d6bf1f 9.98:1"
+              >11<small>10.0</small></span
+            ><span class="as" style="color: var(--a12)" title="bright blue #00d7e0 10.38:1"
+              >12<small>10.4</small></span
+            ><span class="as" style="color: var(--a13)" title="bright magenta #f695ee 9.20:1"
+              >13<small>9.2</small></span
+            ><span class="as" style="color: var(--a14)" title="bright cyan #00d7e0 10.38:1"
+              >14<small>10.4</small></span
+            ><span class="as" style="color: var(--a15)" title="bright white #e7f1f1 16.07:1"
+              >15<small>16.1</small></span
+            >
+          </div>
+          <p class="fine">
+            ANSI 0-15 on the dark background. Number = index, small = contrast. Minimum 4.53:1.
+          </p>
+          <details open>
+            <summary>Tokens</summary>
+            <table class="tok">
+              <tr>
+                <td><i class="sw" style="background: oklch(0.19 0.012 200)"></i></td>
+                <td><code>--background</code></td>
+                <td><code>oklch(0.190 0.012 200)</code></td>
+                <td><code>#0d1516</code></td>
+              </tr>
+              <tr>
+                <td><i class="sw" style="background: oklch(0.95 0.01 200)"></i></td>
+                <td><code>--foreground</code></td>
+                <td><code>oklch(0.950 0.010 200)</code></td>
+                <td><code>#e7f1f1</code></td>
+              </tr>
+              <tr>
+                <td><i class="sw" style="background: oklch(0.235 0.012 200)"></i></td>
+                <td><code>--card</code></td>
+                <td><code>oklch(0.235 0.012 200)</code></td>
+                <td><code>#182020</code></td>
+              </tr>
+              <tr>
+                <td><i class="sw" style="background: oklch(0.95 0.01 200)"></i></td>
+                <td><code>--card-foreground</code></td>
+                <td><code>oklch(0.950 0.010 200)</code></td>
+                <td><code>#e7f1f1</code></td>
+              </tr>
+              <tr>
+                <td><i class="sw" style="background: oklch(0.72 0.11 200)"></i></td>
+                <td><code>--primary</code></td>
+                <td><code>oklch(0.720 0.110 200)</code></td>
+                <td><code>#35b9c0</code></td>
+              </tr>
+              <tr>
+                <td><i class="sw" style="background: oklch(0.17 0.01 200)"></i></td>
+                <td><code>--primary-foreground</code></td>
+                <td><code>oklch(0.170 0.010 200)</code></td>
+                <td><code>#0a1111</code></td>
+              </tr>
+              <tr>
+                <td><i class="sw" style="background: oklch(0.72 0.11 200)"></i></td>
+                <td><code>--primary-text</code></td>
+                <td><code>oklch(0.720 0.110 200)</code></td>
+                <td><code>#35b9c0</code></td>
+              </tr>
+              <tr>
+                <td><i class="sw" style="background: oklch(0.275 0.011 200)"></i></td>
+                <td><code>--secondary</code></td>
+                <td><code>oklch(0.275 0.011 200)</code></td>
+                <td><code>#22292a</code></td>
+              </tr>
+              <tr>
+                <td><i class="sw" style="background: oklch(0.95 0.01 200)"></i></td>
+                <td><code>--secondary-foreground</code></td>
+                <td><code>oklch(0.950 0.010 200)</code></td>
+                <td><code>#e7f1f1</code></td>
+              </tr>
+              <tr>
+                <td><i class="sw" style="background: oklch(0.275 0.011 200)"></i></td>
+                <td><code>--muted</code></td>
+                <td><code>oklch(0.275 0.011 200)</code></td>
+                <td><code>#22292a</code></td>
+              </tr>
+              <tr>
+                <td><i class="sw" style="background: oklch(0.75 0.02 200)"></i></td>
+                <td><code>--muted-foreground</code></td>
+                <td><code>oklch(0.750 0.020 200)</code></td>
+                <td><code>#a0b2b3</code></td>
+              </tr>
+              <tr>
+                <td><i class="sw" style="background: oklch(0.275 0.011 200)"></i></td>
+                <td><code>--accent</code></td>
+                <td><code>oklch(0.275 0.011 200)</code></td>
+                <td><code>#22292a</code></td>
+              </tr>
+              <tr>
+                <td><i class="sw" style="background: oklch(0.95 0.01 200)"></i></td>
+                <td><code>--accent-foreground</code></td>
+                <td><code>oklch(0.950 0.010 200)</code></td>
+                <td><code>#e7f1f1</code></td>
+              </tr>
+              <tr>
+                <td><i class="sw" style="background: oklch(0.7 0.19 25)"></i></td>
+                <td><code>--destructive</code></td>
+                <td><code>oklch(0.700 0.190 25)</code></td>
+                <td><code>#ff645f</code></td>
+              </tr>
+              <tr>
+                <td><i class="sw" style="background: oklch(0.72 0.14 150)"></i></td>
+                <td><code>--success</code></td>
+                <td><code>oklch(0.720 0.140 150)</code></td>
+                <td><code>#5bbd74</code></td>
+              </tr>
+              <tr>
+                <td><i class="sw" style="background: oklch(0.32 0.012 200)"></i></td>
+                <td><code>--border</code></td>
+                <td><code>oklch(0.320 0.012 200)</code></td>
+                <td><code>#2c3535</code></td>
+              </tr>
+              <tr>
+                <td><i class="sw" style="background: oklch(0.32 0.012 200)"></i></td>
+                <td><code>--input</code></td>
+                <td><code>oklch(0.320 0.012 200)</code></td>
+                <td><code>#2c3535</code></td>
+              </tr>
+              <tr>
+                <td><i class="sw" style="background: oklch(0.72 0.11 200)"></i></td>
+                <td><code>--ring</code></td>
+                <td><code>oklch(0.720 0.110 200)</code></td>
+                <td><code>#35b9c0</code></td>
+              </tr>
+            </table>
+          </details>
+          <details open>
+            <summary>Contrast (WCAG 2.x)</summary>
+            <table class="ratio">
+              <tr>
+                <th>Pair</th>
+                <th>Ratio</th>
+                <th>Level</th>
+              </tr>
+              <tr>
+                <td>foreground on background</td>
+                <td class="num">16.07:1</td>
+                <td><b class="g AAA">AAA</b></td>
+              </tr>
+              <tr>
+                <td>card-foreground on card</td>
+                <td class="num">14.41:1</td>
+                <td><b class="g AAA">AAA</b></td>
+              </tr>
+              <tr>
+                <td>muted-foreground on background</td>
+                <td class="num">8.38:1</td>
+                <td><b class="g AAA">AAA</b></td>
+              </tr>
+              <tr>
+                <td>muted-foreground on muted</td>
+                <td class="num">6.71:1</td>
+                <td><b class="g AA">AA</b></td>
+              </tr>
+              <tr>
+                <td>primary-text on background</td>
+                <td class="num">7.79:1</td>
+                <td><b class="g AAA">AAA</b></td>
+              </tr>
+              <tr>
+                <td>primary-text on card</td>
+                <td class="num">6.99:1</td>
+                <td><b class="g AA">AA</b></td>
+              </tr>
+              <tr>
+                <td>primary-foreground on primary</td>
+                <td class="num">8.04:1</td>
+                <td><b class="g AAA">AAA</b></td>
+              </tr>
+              <tr>
+                <td>destructive on background</td>
+                <td class="num">6.37:1</td>
+                <td><b class="g AA">AA</b></td>
+              </tr>
+              <tr>
+                <td>success on background</td>
+                <td class="num">7.90:1</td>
+                <td><b class="g AAA">AAA</b></td>
+              </tr>
+            </table>
+          </details>
+        </section>
+      </div>
+    </article>
+    <article id="p3">
+      <header>
+        <h2>P3 <span>Plum Signal</span></h2>
+        <p>Magenta-plum accent on warm-grey neutrals. Distinctive in a blue and green field.</p>
+        <p class="risk">
+          <b>Proximity and risk:</b> Pink-magenta can read playful; keep it to accents, not large
+          fills. Not derived from Anthropic's or Claude's palette.
+        </p>
+      </header>
+      <div class="pair">
+        <section
+          class="panel"
+          style="
+            --background: oklch(0.985 0.005 340);
+            --foreground: oklch(0.22 0.012 340);
+            --card: oklch(1 0 340);
+            --card-foreground: oklch(0.22 0.012 340);
+            --primary: oklch(0.5 0.17 340);
+            --primary-foreground: oklch(0.985 0.005 340);
+            --primary-text: oklch(0.5 0.17 340);
+            --secondary: oklch(0.955 0.013 340);
+            --secondary-foreground: oklch(0.22 0.012 340);
+            --muted: oklch(0.955 0.013 340);
+            --muted-foreground: oklch(0.48 0.024 340);
+            --accent: oklch(0.955 0.013 340);
+            --accent-foreground: oklch(0.22 0.012 340);
+            --destructive: oklch(0.55 0.19 25);
+            --success: oklch(0.5 0.138 150);
+            --border: oklch(0.915 0.014 340);
+            --input: oklch(0.915 0.014 340);
+            --ring: oklch(0.5 0.17 340);
+            --a0: oklch(0.4 0.024 340);
+            --a1: oklch(0.5 0.15 25);
+            --a2: oklch(0.5 0.15 145);
+            --a3: oklch(0.5 0.104 100);
+            --a4: oklch(0.5 0.15 340);
+            --a5: oklch(0.5 0.15 330);
+            --a6: oklch(0.5 0.084 200);
+            --a7: oklch(0.3 0.012 340);
+            --a8: oklch(0.34 0.024 340);
+            --a9: oklch(0.42 0.16 25);
+            --a10: oklch(0.42 0.132 145);
+            --a11: oklch(0.42 0.088 100);
+            --a12: oklch(0.42 0.16 340);
+            --a13: oklch(0.42 0.16 330);
+            --a14: oklch(0.42 0.07 200);
+            --a15: oklch(0.22 0.012 340);
+          "
+        >
+          <h3>Light</h3>
+          <div class="mock readme">
+            <h4>placeholder-name</h4>
+            <p>
+              Turn a spec into merged changes with parallel agents. See the <a>quickstart</a> or run
+              <code>/placeholder:run</code>.
+            </p>
+            <p class="muted">Muted helper text explains a flag or a default value.</p>
+            <p>
+              <span class="btn">Get started</span> <span class="badge">v0.0.0</span>
+              <span class="ok">3 merged</span> <span class="bad">1 blocked</span>
+            </p>
+          </div>
+          <div class="mock term" style="background: var(--background); color: var(--a15)">
+            <div>
+              <span style="color: var(--a10)">~/repo</span>
+              <span style="color: var(--a8)">main</span>
+              <span style="color: var(--a15)">$</span> placeholder run 138
+            </div>
+            <div>
+              <span style="color: var(--a4)">info</span>
+              <span style="color: var(--a7)">wave 1 of 2: 3 tickets</span>
+            </div>
+            <div>
+              <span style="color: var(--a2)">pass</span>
+              <span style="color: var(--a15)">check</span>
+              <span style="color: var(--a8)">(12.4s)</span>
+            </div>
+            <div>
+              <span style="color: var(--a3)">warn</span>
+              <span style="color: var(--a15)">lint: 2 warnings</span>
+            </div>
+            <div>
+              <span style="color: var(--a1)">fail</span>
+              <span style="color: var(--a15)">test: 1 failed</span>
+              <span style="color: var(--a9)">x</span> <span style="color: var(--a5)">~</span>
+              <span style="color: var(--a6)">#</span>
+            </div>
+          </div>
+          <div class="ansi">
+            <span class="as" style="color: var(--a0)" title="black #51434c 8.90:1"
+              >0<small>8.9</small></span
+            ><span class="as" style="color: var(--a1)" title="red #a83634 6.19:1"
+              >1<small>6.2</small></span
+            ><span class="as" style="color: var(--a2)" title="green #107823 5.38:1"
+              >2<small>5.4</small></span
+            ><span class="as" style="color: var(--a3)" title="yellow #716400 5.70:1"
+              >3<small>5.7</small></span
+            ><span class="as" style="color: var(--a4)" title="blue #98397e 6.23:1"
+              >4<small>6.2</small></span
+            ><span class="as" style="color: var(--a5)" title="magenta #903d8b 6.22:1"
+              >5<small>6.2</small></span
+            ><span class="as" style="color: var(--a6)" title="cyan #057176 5.53:1"
+              >6<small>5.5</small></span
+            ><span class="as" style="color: var(--a7)" title="white #322c30 13.05:1"
+              >7<small>13.1</small></span
+            ><span class="as" style="color: var(--a8)" title="bright black #41333c 11.39:1"
+              >8<small>11.4</small></span
+            ><span class="as" style="color: var(--a9)" title="bright red #90101a 8.83:1"
+              >9<small>8.8</small></span
+            ><span class="as" style="color: var(--a10)" title="bright green #005e15 7.69:1"
+              >10<small>7.7</small></span
+            ><span class="as" style="color: var(--a11)" title="bright yellow #584d00 8.11:1"
+              >11<small>8.1</small></span
+            ><span class="as" style="color: var(--a12)" title="bright blue #811968 8.84:1"
+              >12<small>8.8</small></span
+            ><span class="as" style="color: var(--a13)" title="bright magenta #791f75 8.86:1"
+              >13<small>8.9</small></span
+            ><span class="as" style="color: var(--a14)" title="bright cyan #04585c 7.86:1"
+              >14<small>7.9</small></span
+            ><span class="as" style="color: var(--a15)" title="bright white #1f181c 16.66:1"
+              >15<small>16.7</small></span
+            >
+          </div>
+          <p class="fine">
+            ANSI 0-15 on the light background. Number = index, small = contrast. Minimum 5.38:1.
+          </p>
+          <details open>
+            <summary>Tokens</summary>
+            <table class="tok">
+              <tr>
+                <td><i class="sw" style="background: oklch(0.985 0.005 340)"></i></td>
+                <td><code>--background</code></td>
+                <td><code>oklch(0.985 0.005 340)</code></td>
+                <td><code>#fcf9fb</code></td>
+              </tr>
+              <tr>
+                <td><i class="sw" style="background: oklch(0.22 0.012 340)"></i></td>
+                <td><code>--foreground</code></td>
+                <td><code>oklch(0.220 0.012 340)</code></td>
+                <td><code>#1f181c</code></td>
+              </tr>
+              <tr>
+                <td><i class="sw" style="background: oklch(1 0 340)"></i></td>
+                <td><code>--card</code></td>
+                <td><code>oklch(1.000 0.000 340)</code></td>
+                <td><code>#ffffff</code></td>
+              </tr>
+              <tr>
+                <td><i class="sw" style="background: oklch(0.22 0.012 340)"></i></td>
+                <td><code>--card-foreground</code></td>
+                <td><code>oklch(0.220 0.012 340)</code></td>
+                <td><code>#1f181c</code></td>
+              </tr>
+              <tr>
+                <td><i class="sw" style="background: oklch(0.5 0.17 340)"></i></td>
+                <td><code>--primary</code></td>
+                <td><code>oklch(0.500 0.170 340)</code></td>
+                <td><code>#9e3081</code></td>
+              </tr>
+              <tr>
+                <td><i class="sw" style="background: oklch(0.985 0.005 340)"></i></td>
+                <td><code>--primary-foreground</code></td>
+                <td><code>oklch(0.985 0.005 340)</code></td>
+                <td><code>#fcf9fb</code></td>
+              </tr>
+              <tr>
+                <td><i class="sw" style="background: oklch(0.5 0.17 340)"></i></td>
+                <td><code>--primary-text</code></td>
+                <td><code>oklch(0.500 0.170 340)</code></td>
+                <td><code>#9e3081</code></td>
+              </tr>
+              <tr>
+                <td><i class="sw" style="background: oklch(0.955 0.013 340)"></i></td>
+                <td><code>--secondary</code></td>
+                <td><code>oklch(0.955 0.013 340)</code></td>
+                <td><code>#f7edf3</code></td>
+              </tr>
+              <tr>
+                <td><i class="sw" style="background: oklch(0.22 0.012 340)"></i></td>
+                <td><code>--secondary-foreground</code></td>
+                <td><code>oklch(0.220 0.012 340)</code></td>
+                <td><code>#1f181c</code></td>
+              </tr>
+              <tr>
+                <td><i class="sw" style="background: oklch(0.955 0.013 340)"></i></td>
+                <td><code>--muted</code></td>
+                <td><code>oklch(0.955 0.013 340)</code></td>
+                <td><code>#f7edf3</code></td>
+              </tr>
+              <tr>
+                <td><i class="sw" style="background: oklch(0.48 0.024 340)"></i></td>
+                <td><code>--muted-foreground</code></td>
+                <td><code>oklch(0.480 0.024 340)</code></td>
+                <td><code>#675962</code></td>
+              </tr>
+              <tr>
+                <td><i class="sw" style="background: oklch(0.955 0.013 340)"></i></td>
+                <td><code>--accent</code></td>
+                <td><code>oklch(0.955 0.013 340)</code></td>
+                <td><code>#f7edf3</code></td>
+              </tr>
+              <tr>
+                <td><i class="sw" style="background: oklch(0.22 0.012 340)"></i></td>
+                <td><code>--accent-foreground</code></td>
+                <td><code>oklch(0.220 0.012 340)</code></td>
+                <td><code>#1f181c</code></td>
+              </tr>
+              <tr>
+                <td><i class="sw" style="background: oklch(0.55 0.19 25)"></i></td>
+                <td><code>--destructive</code></td>
+                <td><code>oklch(0.550 0.190 25)</code></td>
+                <td><code>#c92f33</code></td>
+              </tr>
+              <tr>
+                <td><i class="sw" style="background: oklch(0.5 0.138 150)"></i></td>
+                <td><code>--success</code></td>
+                <td><code>oklch(0.500 0.138 150)</code></td>
+                <td><code>#007835</code></td>
+              </tr>
+              <tr>
+                <td><i class="sw" style="background: oklch(0.915 0.014 340)"></i></td>
+                <td><code>--border</code></td>
+                <td><code>oklch(0.915 0.014 340)</code></td>
+                <td><code>#eadfe6</code></td>
+              </tr>
+              <tr>
+                <td><i class="sw" style="background: oklch(0.915 0.014 340)"></i></td>
+                <td><code>--input</code></td>
+                <td><code>oklch(0.915 0.014 340)</code></td>
+                <td><code>#eadfe6</code></td>
+              </tr>
+              <tr>
+                <td><i class="sw" style="background: oklch(0.5 0.17 340)"></i></td>
+                <td><code>--ring</code></td>
+                <td><code>oklch(0.500 0.170 340)</code></td>
+                <td><code>#9e3081</code></td>
+              </tr>
+            </table>
+          </details>
+          <details open>
+            <summary>Contrast (WCAG 2.x)</summary>
+            <table class="ratio">
+              <tr>
+                <th>Pair</th>
+                <th>Ratio</th>
+                <th>Level</th>
+              </tr>
+              <tr>
+                <td>foreground on background</td>
+                <td class="num">16.66:1</td>
+                <td><b class="g AAA">AAA</b></td>
+              </tr>
+              <tr>
+                <td>card-foreground on card</td>
+                <td class="num">17.42:1</td>
+                <td><b class="g AAA">AAA</b></td>
+              </tr>
+              <tr>
+                <td>muted-foreground on background</td>
+                <td class="num">6.31:1</td>
+                <td><b class="g AA">AA</b></td>
+              </tr>
+              <tr>
+                <td>muted-foreground on muted</td>
+                <td class="num">5.77:1</td>
+                <td><b class="g AA">AA</b></td>
+              </tr>
+              <tr>
+                <td>primary-text on background</td>
+                <td class="num">6.29:1</td>
+                <td><b class="g AA">AA</b></td>
+              </tr>
+              <tr>
+                <td>primary-text on card</td>
+                <td class="num">6.58:1</td>
+                <td><b class="g AA">AA</b></td>
+              </tr>
+              <tr>
+                <td>primary-foreground on primary</td>
+                <td class="num">6.29:1</td>
+                <td><b class="g AA">AA</b></td>
+              </tr>
+              <tr>
+                <td>destructive on background</td>
+                <td class="num">5.10:1</td>
+                <td><b class="g AA">AA</b></td>
+              </tr>
+              <tr>
+                <td>success on background</td>
+                <td class="num">5.37:1</td>
+                <td><b class="g AA">AA</b></td>
+              </tr>
+            </table>
+          </details>
+        </section>
+        <section
+          class="panel"
+          style="
+            --background: oklch(0.19 0.014 340);
+            --foreground: oklch(0.95 0.012 340);
+            --card: oklch(0.235 0.014 340);
+            --card-foreground: oklch(0.95 0.012 340);
+            --primary: oklch(0.72 0.17 340);
+            --primary-foreground: oklch(0.17 0.012 340);
+            --primary-text: oklch(0.72 0.17 340);
+            --secondary: oklch(0.275 0.013 340);
+            --secondary-foreground: oklch(0.95 0.012 340);
+            --muted: oklch(0.275 0.013 340);
+            --muted-foreground: oklch(0.75 0.024 340);
+            --accent: oklch(0.275 0.013 340);
+            --accent-foreground: oklch(0.95 0.012 340);
+            --destructive: oklch(0.7 0.19 25);
+            --success: oklch(0.72 0.14 150);
+            --border: oklch(0.32 0.014 340);
+            --input: oklch(0.32 0.014 340);
+            --ring: oklch(0.72 0.17 340);
+            --a0: oklch(0.594 0.024 340);
+            --a1: oklch(0.7 0.15 25);
+            --a2: oklch(0.7 0.15 145);
+            --a3: oklch(0.7 0.144 100);
+            --a4: oklch(0.7 0.15 340);
+            --a5: oklch(0.7 0.15 330);
+            --a6: oklch(0.7 0.118 200);
+            --a7: oklch(0.85 0.012 340);
+            --a8: oklch(0.62 0.024 340);
+            --a9: oklch(0.8 0.114 25);
+            --a10: oklch(0.8 0.16 145);
+            --a11: oklch(0.8 0.16 100);
+            --a12: oklch(0.8 0.156 340);
+            --a13: oklch(0.8 0.16 330);
+            --a14: oklch(0.8 0.136 200);
+            --a15: oklch(0.95 0.012 340);
+          "
+        >
+          <h3>Dark</h3>
+          <div class="mock readme">
+            <h4>placeholder-name</h4>
+            <p>
+              Turn a spec into merged changes with parallel agents. See the <a>quickstart</a> or run
+              <code>/placeholder:run</code>.
+            </p>
+            <p class="muted">Muted helper text explains a flag or a default value.</p>
+            <p>
+              <span class="btn">Get started</span> <span class="badge">v0.0.0</span>
+              <span class="ok">3 merged</span> <span class="bad">1 blocked</span>
+            </p>
+          </div>
+          <div class="mock term" style="background: var(--background); color: var(--a15)">
+            <div>
+              <span style="color: var(--a10)">~/repo</span>
+              <span style="color: var(--a8)">main</span>
+              <span style="color: var(--a15)">$</span> placeholder run 138
+            </div>
+            <div>
+              <span style="color: var(--a4)">info</span>
+              <span style="color: var(--a7)">wave 1 of 2: 3 tickets</span>
+            </div>
+            <div>
+              <span style="color: var(--a2)">pass</span>
+              <span style="color: var(--a15)">check</span>
+              <span style="color: var(--a8)">(12.4s)</span>
+            </div>
+            <div>
+              <span style="color: var(--a3)">warn</span>
+              <span style="color: var(--a15)">lint: 2 warnings</span>
+            </div>
+            <div>
+              <span style="color: var(--a1)">fail</span>
+              <span style="color: var(--a15)">test: 1 failed</span>
+              <span style="color: var(--a9)">x</span> <span style="color: var(--a5)">~</span>
+              <span style="color: var(--a6)">#</span>
+            </div>
+          </div>
+          <div class="ansi">
+            <span class="as" style="color: var(--a0)" title="black #897983 4.53:1"
+              >0<small>4.5</small></span
+            ><span class="as" style="color: var(--a1)" title="red #ed756e 6.52:1"
+              >1<small>6.5</small></span
+            ><span class="as" style="color: var(--a2)" title="green #5bb661 7.35:1"
+              >2<small>7.3</small></span
+            ><span class="as" style="color: var(--a3)" title="yellow #b49f08 6.99:1"
+              >3<small>7.0</small></span
+            ><span class="as" style="color: var(--a4)" title="blue #da76bb 6.45:1"
+              >4<small>6.4</small></span
+            ><span class="as" style="color: var(--a5)" title="magenta #d179ca 6.46:1"
+              >5<small>6.5</small></span
+            ><span class="as" style="color: var(--a6)" title="cyan #09b4bb 7.30:1"
+              >6<small>7.3</small></span
+            ><span class="as" style="color: var(--a7)" title="white #d3cbd0 11.70:1"
+              >7<small>11.7</small></span
+            ><span class="as" style="color: var(--a8)" title="bright black #91818b 5.06:1"
+              >8<small>5.1</small></span
+            ><span class="as" style="color: var(--a9)" title="bright red #ffa098 9.49:1"
+              >9<small>9.5</small></span
+            ><span class="as" style="color: var(--a10)" title="bright green #75d87a 10.49:1"
+              >10<small>10.5</small></span
+            ><span class="as" style="color: var(--a11)" title="bright yellow #d6bf1f 10.02:1"
+              >11<small>10.0</small></span
+            ><span class="as" style="color: var(--a12)" title="bright blue #ff93dd 9.26:1"
+              >12<small>9.3</small></span
+            ><span class="as" style="color: var(--a13)" title="bright magenta #f695ee 9.24:1"
+              >13<small>9.2</small></span
+            ><span class="as" style="color: var(--a14)" title="bright cyan #00d7e0 10.43:1"
+              >14<small>10.4</small></span
+            ><span class="as" style="color: var(--a15)" title="bright white #f4ebf1 15.92:1"
+              >15<small>15.9</small></span
+            >
+          </div>
+          <p class="fine">
+            ANSI 0-15 on the dark background. Number = index, small = contrast. Minimum 4.53:1.
+          </p>
+          <details open>
+            <summary>Tokens</summary>
+            <table class="tok">
+              <tr>
+                <td><i class="sw" style="background: oklch(0.19 0.014 340)"></i></td>
+                <td><code>--background</code></td>
+                <td><code>oklch(0.190 0.014 340)</code></td>
+                <td><code>#181116</code></td>
+              </tr>
+              <tr>
+                <td><i class="sw" style="background: oklch(0.95 0.012 340)"></i></td>
+                <td><code>--foreground</code></td>
+                <td><code>oklch(0.950 0.012 340)</code></td>
+                <td><code>#f4ebf1</code></td>
+              </tr>
+              <tr>
+                <td><i class="sw" style="background: oklch(0.235 0.014 340)"></i></td>
+                <td><code>--card</code></td>
+                <td><code>oklch(0.235 0.014 340)</code></td>
+                <td><code>#231b20</code></td>
+              </tr>
+              <tr>
+                <td><i class="sw" style="background: oklch(0.95 0.012 340)"></i></td>
+                <td><code>--card-foreground</code></td>
+                <td><code>oklch(0.950 0.012 340)</code></td>
+                <td><code>#f4ebf1</code></td>
+              </tr>
+              <tr>
+                <td><i class="sw" style="background: oklch(0.72 0.17 340)"></i></td>
+                <td><code>--primary</code></td>
+                <td><code>oklch(0.720 0.170 340)</code></td>
+                <td><code>#e875c6</code></td>
+              </tr>
+              <tr>
+                <td><i class="sw" style="background: oklch(0.17 0.012 340)"></i></td>
+                <td><code>--primary-foreground</code></td>
+                <td><code>oklch(0.170 0.012 340)</code></td>
+                <td><code>#130d11</code></td>
+              </tr>
+              <tr>
+                <td><i class="sw" style="background: oklch(0.72 0.17 340)"></i></td>
+                <td><code>--primary-text</code></td>
+                <td><code>oklch(0.720 0.170 340)</code></td>
+                <td><code>#e875c6</code></td>
+              </tr>
+              <tr>
+                <td><i class="sw" style="background: oklch(0.275 0.013 340)"></i></td>
+                <td><code>--secondary</code></td>
+                <td><code>oklch(0.275 0.013 340)</code></td>
+                <td><code>#2c252a</code></td>
+              </tr>
+              <tr>
+                <td><i class="sw" style="background: oklch(0.95 0.012 340)"></i></td>
+                <td><code>--secondary-foreground</code></td>
+                <td><code>oklch(0.950 0.012 340)</code></td>
+                <td><code>#f4ebf1</code></td>
+              </tr>
+              <tr>
+                <td><i class="sw" style="background: oklch(0.275 0.013 340)"></i></td>
+                <td><code>--muted</code></td>
+                <td><code>oklch(0.275 0.013 340)</code></td>
+                <td><code>#2c252a</code></td>
+              </tr>
+              <tr>
+                <td><i class="sw" style="background: oklch(0.75 0.024 340)"></i></td>
+                <td><code>--muted-foreground</code></td>
+                <td><code>oklch(0.750 0.024 340)</code></td>
+                <td><code>#b9a8b3</code></td>
+              </tr>
+              <tr>
+                <td><i class="sw" style="background: oklch(0.275 0.013 340)"></i></td>
+                <td><code>--accent</code></td>
+                <td><code>oklch(0.275 0.013 340)</code></td>
+                <td><code>#2c252a</code></td>
+              </tr>
+              <tr>
+                <td><i class="sw" style="background: oklch(0.95 0.012 340)"></i></td>
+                <td><code>--accent-foreground</code></td>
+                <td><code>oklch(0.950 0.012 340)</code></td>
+                <td><code>#f4ebf1</code></td>
+              </tr>
+              <tr>
+                <td><i class="sw" style="background: oklch(0.7 0.19 25)"></i></td>
+                <td><code>--destructive</code></td>
+                <td><code>oklch(0.700 0.190 25)</code></td>
+                <td><code>#ff645f</code></td>
+              </tr>
+              <tr>
+                <td><i class="sw" style="background: oklch(0.72 0.14 150)"></i></td>
+                <td><code>--success</code></td>
+                <td><code>oklch(0.720 0.140 150)</code></td>
+                <td><code>#5bbd74</code></td>
+              </tr>
+              <tr>
+                <td><i class="sw" style="background: oklch(0.32 0.014 340)"></i></td>
+                <td><code>--border</code></td>
+                <td><code>oklch(0.320 0.014 340)</code></td>
+                <td><code>#383035</code></td>
+              </tr>
+              <tr>
+                <td><i class="sw" style="background: oklch(0.32 0.014 340)"></i></td>
+                <td><code>--input</code></td>
+                <td><code>oklch(0.320 0.014 340)</code></td>
+                <td><code>#383035</code></td>
+              </tr>
+              <tr>
+                <td><i class="sw" style="background: oklch(0.72 0.17 340)"></i></td>
+                <td><code>--ring</code></td>
+                <td><code>oklch(0.720 0.170 340)</code></td>
+                <td><code>#e875c6</code></td>
+              </tr>
+            </table>
+          </details>
+          <details open>
+            <summary>Contrast (WCAG 2.x)</summary>
+            <table class="ratio">
+              <tr>
+                <th>Pair</th>
+                <th>Ratio</th>
+                <th>Level</th>
+              </tr>
+              <tr>
+                <td>foreground on background</td>
+                <td class="num">15.92:1</td>
+                <td><b class="g AAA">AAA</b></td>
+              </tr>
+              <tr>
+                <td>card-foreground on card</td>
+                <td class="num">14.41:1</td>
+                <td><b class="g AAA">AAA</b></td>
+              </tr>
+              <tr>
+                <td>muted-foreground on background</td>
+                <td class="num">8.24:1</td>
+                <td><b class="g AAA">AAA</b></td>
+              </tr>
+              <tr>
+                <td>muted-foreground on muted</td>
+                <td class="num">6.63:1</td>
+                <td><b class="g AA">AA</b></td>
+              </tr>
+              <tr>
+                <td>primary-text on background</td>
+                <td class="num">6.89:1</td>
+                <td><b class="g AA">AA</b></td>
+              </tr>
+              <tr>
+                <td>primary-text on card</td>
+                <td class="num">6.24:1</td>
+                <td><b class="g AA">AA</b></td>
+              </tr>
+              <tr>
+                <td>primary-foreground on primary</td>
+                <td class="num">7.13:1</td>
+                <td><b class="g AAA">AAA</b></td>
+              </tr>
+              <tr>
+                <td>destructive on background</td>
+                <td class="num">6.40:1</td>
+                <td><b class="g AA">AA</b></td>
+              </tr>
+              <tr>
+                <td>success on background</td>
+                <td class="num">7.94:1</td>
+                <td><b class="g AAA">AAA</b></td>
+              </tr>
+            </table>
+          </details>
+        </section>
+      </div>
+    </article>
+    <article id="p4">
+      <header>
+        <h2>P4 <span>Moss Lime</span></h2>
+        <p>Fresh green accent on green-tinted neutrals. Terminal-native and legible.</p>
+        <p class="risk">
+          <b>Proximity and risk:</b> Green implies success state everywhere; this option shifts the
+          success token toward teal-green to stay distinct. Not derived from Anthropic's or Claude's
+          palette.
+        </p>
+      </header>
+      <div class="pair">
+        <section
+          class="panel"
+          style="
+            --background: oklch(0.985 0.005 135);
+            --foreground: oklch(0.22 0.012 135);
+            --card: oklch(1 0 135);
+            --card-foreground: oklch(0.22 0.012 135);
+            --primary: oklch(0.5 0.146 135);
+            --primary-foreground: oklch(0.985 0.005 135);
+            --primary-text: oklch(0.5 0.146 135);
+            --secondary: oklch(0.955 0.013 135);
+            --secondary-foreground: oklch(0.22 0.012 135);
+            --muted: oklch(0.955 0.013 135);
+            --muted-foreground: oklch(0.48 0.024 135);
+            --accent: oklch(0.955 0.013 135);
+            --accent-foreground: oklch(0.22 0.012 135);
+            --destructive: oklch(0.55 0.19 25);
+            --success: oklch(0.5 0.094 175);
+            --border: oklch(0.915 0.014 135);
+            --input: oklch(0.915 0.014 135);
+            --ring: oklch(0.5 0.146 135);
+            --a0: oklch(0.4 0.024 135);
+            --a1: oklch(0.5 0.15 25);
+            --a2: oklch(0.5 0.15 145);
+            --a3: oklch(0.5 0.104 100);
+            --a4: oklch(0.5 0.146 135);
+            --a5: oklch(0.5 0.15 330);
+            --a6: oklch(0.5 0.084 200);
+            --a7: oklch(0.3 0.012 135);
+            --a8: oklch(0.34 0.024 135);
+            --a9: oklch(0.42 0.16 25);
+            --a10: oklch(0.42 0.132 145);
+            --a11: oklch(0.42 0.088 100);
+            --a12: oklch(0.42 0.122 135);
+            --a13: oklch(0.42 0.16 330);
+            --a14: oklch(0.42 0.07 200);
+            --a15: oklch(0.22 0.012 135);
+          "
+        >
+          <h3>Light</h3>
+          <div class="mock readme">
+            <h4>placeholder-name</h4>
+            <p>
+              Turn a spec into merged changes with parallel agents. See the <a>quickstart</a> or run
+              <code>/placeholder:run</code>.
+            </p>
+            <p class="muted">Muted helper text explains a flag or a default value.</p>
+            <p>
+              <span class="btn">Get started</span> <span class="badge">v0.0.0</span>
+              <span class="ok">3 merged</span> <span class="bad">1 blocked</span>
+            </p>
+          </div>
+          <div class="mock term" style="background: var(--background); color: var(--a15)">
+            <div>
+              <span style="color: var(--a10)">~/repo</span>
+              <span style="color: var(--a8)">main</span>
+              <span style="color: var(--a15)">$</span> placeholder run 138
+            </div>
+            <div>
+              <span style="color: var(--a4)">info</span>
+              <span style="color: var(--a7)">wave 1 of 2: 3 tickets</span>
+            </div>
+            <div>
+              <span style="color: var(--a2)">pass</span>
+              <span style="color: var(--a15)">check</span>
+              <span style="color: var(--a8)">(12.4s)</span>
+            </div>
+            <div>
+              <span style="color: var(--a3)">warn</span>
+              <span style="color: var(--a15)">lint: 2 warnings</span>
+            </div>
+            <div>
+              <span style="color: var(--a1)">fail</span>
+              <span style="color: var(--a15)">test: 1 failed</span>
+              <span style="color: var(--a9)">x</span> <span style="color: var(--a5)">~</span>
+              <span style="color: var(--a6)">#</span>
+            </div>
+          </div>
+          <div class="ansi">
+            <span class="as" style="color: var(--a0)" title="black #424b3e 8.75:1"
+              >0<small>8.7</small></span
+            ><span class="as" style="color: var(--a1)" title="red #a83634 6.22:1"
+              >1<small>6.2</small></span
+            ><span class="as" style="color: var(--a2)" title="green #107823 5.41:1"
+              >2<small>5.4</small></span
+            ><span class="as" style="color: var(--a3)" title="yellow #716400 5.73:1"
+              >3<small>5.7</small></span
+            ><span class="as" style="color: var(--a4)" title="blue #3a7400 5.49:1"
+              >4<small>5.5</small></span
+            ><span class="as" style="color: var(--a5)" title="magenta #903d8b 6.26:1"
+              >5<small>6.3</small></span
+            ><span class="as" style="color: var(--a6)" title="cyan #057176 5.56:1"
+              >6<small>5.6</small></span
+            ><span class="as" style="color: var(--a7)" title="white #2b2f29 13.09:1"
+              >7<small>13.1</small></span
+            ><span class="as" style="color: var(--a8)" title="bright black #333b2e 11.18:1"
+              >8<small>11.2</small></span
+            ><span class="as" style="color: var(--a9)" title="bright red #90101a 8.87:1"
+              >9<small>8.9</small></span
+            ><span class="as" style="color: var(--a10)" title="bright green #005e15 7.73:1"
+              >10<small>7.7</small></span
+            ><span class="as" style="color: var(--a11)" title="bright yellow #584d00 8.15:1"
+              >11<small>8.1</small></span
+            ><span class="as" style="color: var(--a12)" title="bright blue #2c5b01 7.75:1"
+              >12<small>7.8</small></span
+            ><span class="as" style="color: var(--a13)" title="bright magenta #791f75 8.91:1"
+              >13<small>8.9</small></span
+            ><span class="as" style="color: var(--a14)" title="bright cyan #04585c 7.90:1"
+              >14<small>7.9</small></span
+            ><span class="as" style="color: var(--a15)" title="bright white #181c16 16.59:1"
+              >15<small>16.6</small></span
+            >
+          </div>
+          <p class="fine">
+            ANSI 0-15 on the light background. Number = index, small = contrast. Minimum 5.41:1.
+          </p>
+          <details open>
+            <summary>Tokens</summary>
+            <table class="tok">
+              <tr>
+                <td><i class="sw" style="background: oklch(0.985 0.005 135)"></i></td>
+                <td><code>--background</code></td>
+                <td><code>oklch(0.985 0.005 135)</code></td>
+                <td><code>#f9fbf8</code></td>
+              </tr>
+              <tr>
+                <td><i class="sw" style="background: oklch(0.22 0.012 135)"></i></td>
+                <td><code>--foreground</code></td>
+                <td><code>oklch(0.220 0.012 135)</code></td>
+                <td><code>#181c16</code></td>
+              </tr>
+              <tr>
+                <td><i class="sw" style="background: oklch(1 0 135)"></i></td>
+                <td><code>--card</code></td>
+                <td><code>oklch(1.000 0.000 135)</code></td>
+                <td><code>#ffffff</code></td>
+              </tr>
+              <tr>
+                <td><i class="sw" style="background: oklch(0.22 0.012 135)"></i></td>
+                <td><code>--card-foreground</code></td>
+                <td><code>oklch(0.220 0.012 135)</code></td>
+                <td><code>#181c16</code></td>
+              </tr>
+              <tr>
+                <td><i class="sw" style="background: oklch(0.5 0.146 135)"></i></td>
+                <td><code>--primary</code></td>
+                <td><code>oklch(0.500 0.146 135)</code></td>
+                <td><code>#3a7400</code></td>
+              </tr>
+              <tr>
+                <td><i class="sw" style="background: oklch(0.985 0.005 135)"></i></td>
+                <td><code>--primary-foreground</code></td>
+                <td><code>oklch(0.985 0.005 135)</code></td>
+                <td><code>#f9fbf8</code></td>
+              </tr>
+              <tr>
+                <td><i class="sw" style="background: oklch(0.5 0.146 135)"></i></td>
+                <td><code>--primary-text</code></td>
+                <td><code>oklch(0.500 0.146 135)</code></td>
+                <td><code>#3a7400</code></td>
+              </tr>
+              <tr>
+                <td><i class="sw" style="background: oklch(0.955 0.013 135)"></i></td>
+                <td><code>--secondary</code></td>
+                <td><code>oklch(0.955 0.013 135)</code></td>
+                <td><code>#ecf2e9</code></td>
+              </tr>
+              <tr>
+                <td><i class="sw" style="background: oklch(0.22 0.012 135)"></i></td>
+                <td><code>--secondary-foreground</code></td>
+                <td><code>oklch(0.220 0.012 135)</code></td>
+                <td><code>#181c16</code></td>
+              </tr>
+              <tr>
+                <td><i class="sw" style="background: oklch(0.955 0.013 135)"></i></td>
+                <td><code>--muted</code></td>
+                <td><code>oklch(0.955 0.013 135)</code></td>
+                <td><code>#ecf2e9</code></td>
+              </tr>
+              <tr>
+                <td><i class="sw" style="background: oklch(0.48 0.024 135)"></i></td>
+                <td><code>--muted-foreground</code></td>
+                <td><code>oklch(0.480 0.024 135)</code></td>
+                <td><code>#586153</code></td>
+              </tr>
+              <tr>
+                <td><i class="sw" style="background: oklch(0.955 0.013 135)"></i></td>
+                <td><code>--accent</code></td>
+                <td><code>oklch(0.955 0.013 135)</code></td>
+                <td><code>#ecf2e9</code></td>
+              </tr>
+              <tr>
+                <td><i class="sw" style="background: oklch(0.22 0.012 135)"></i></td>
+                <td><code>--accent-foreground</code></td>
+                <td><code>oklch(0.220 0.012 135)</code></td>
+                <td><code>#181c16</code></td>
+              </tr>
+              <tr>
+                <td><i class="sw" style="background: oklch(0.55 0.19 25)"></i></td>
+                <td><code>--destructive</code></td>
+                <td><code>oklch(0.550 0.190 25)</code></td>
+                <td><code>#c92f33</code></td>
+              </tr>
+              <tr>
+                <td><i class="sw" style="background: oklch(0.5 0.094 175)"></i></td>
+                <td><code>--success</code></td>
+                <td><code>oklch(0.500 0.094 175)</code></td>
+                <td><code>#017460</code></td>
+              </tr>
+              <tr>
+                <td><i class="sw" style="background: oklch(0.915 0.014 135)"></i></td>
+                <td><code>--border</code></td>
+                <td><code>oklch(0.915 0.014 135)</code></td>
+                <td><code>#dfe5dc</code></td>
+              </tr>
+              <tr>
+                <td><i class="sw" style="background: oklch(0.915 0.014 135)"></i></td>
+                <td><code>--input</code></td>
+                <td><code>oklch(0.915 0.014 135)</code></td>
+                <td><code>#dfe5dc</code></td>
+              </tr>
+              <tr>
+                <td><i class="sw" style="background: oklch(0.5 0.146 135)"></i></td>
+                <td><code>--ring</code></td>
+                <td><code>oklch(0.500 0.146 135)</code></td>
+                <td><code>#3a7400</code></td>
+              </tr>
+            </table>
+          </details>
+          <details open>
+            <summary>Contrast (WCAG 2.x)</summary>
+            <table class="ratio">
+              <tr>
+                <th>Pair</th>
+                <th>Ratio</th>
+                <th>Level</th>
+              </tr>
+              <tr>
+                <td>foreground on background</td>
+                <td class="num">16.59:1</td>
+                <td><b class="g AAA">AAA</b></td>
+              </tr>
+              <tr>
+                <td>card-foreground on card</td>
+                <td class="num">17.26:1</td>
+                <td><b class="g AAA">AAA</b></td>
+              </tr>
+              <tr>
+                <td>muted-foreground on background</td>
+                <td class="num">6.21:1</td>
+                <td><b class="g AA">AA</b></td>
+              </tr>
+              <tr>
+                <td>muted-foreground on muted</td>
+                <td class="num">5.68:1</td>
+                <td><b class="g AA">AA</b></td>
+              </tr>
+              <tr>
+                <td>primary-text on background</td>
+                <td class="num">5.49:1</td>
+                <td><b class="g AA">AA</b></td>
+              </tr>
+              <tr>
+                <td>primary-text on card</td>
+                <td class="num">5.71:1</td>
+                <td><b class="g AA">AA</b></td>
+              </tr>
+              <tr>
+                <td>primary-foreground on primary</td>
+                <td class="num">5.49:1</td>
+                <td><b class="g AA">AA</b></td>
+              </tr>
+              <tr>
+                <td>destructive on background</td>
+                <td class="num">5.13:1</td>
+                <td><b class="g AA">AA</b></td>
+              </tr>
+              <tr>
+                <td>success on background</td>
+                <td class="num">5.50:1</td>
+                <td><b class="g AA">AA</b></td>
+              </tr>
+            </table>
+          </details>
+        </section>
+        <section
+          class="panel"
+          style="
+            --background: oklch(0.19 0.014 135);
+            --foreground: oklch(0.95 0.012 135);
+            --card: oklch(0.235 0.014 135);
+            --card-foreground: oklch(0.95 0.012 135);
+            --primary: oklch(0.72 0.15 135);
+            --primary-foreground: oklch(0.17 0.012 135);
+            --primary-text: oklch(0.72 0.15 135);
+            --secondary: oklch(0.275 0.013 135);
+            --secondary-foreground: oklch(0.95 0.012 135);
+            --muted: oklch(0.275 0.013 135);
+            --muted-foreground: oklch(0.75 0.024 135);
+            --accent: oklch(0.275 0.013 135);
+            --accent-foreground: oklch(0.95 0.012 135);
+            --destructive: oklch(0.7 0.19 25);
+            --success: oklch(0.72 0.134 175);
+            --border: oklch(0.32 0.014 135);
+            --input: oklch(0.32 0.014 135);
+            --ring: oklch(0.72 0.15 135);
+            --a0: oklch(0.59 0.024 135);
+            --a1: oklch(0.7 0.15 25);
+            --a2: oklch(0.7 0.15 145);
+            --a3: oklch(0.7 0.144 100);
+            --a4: oklch(0.7 0.15 135);
+            --a5: oklch(0.7 0.15 330);
+            --a6: oklch(0.7 0.118 200);
+            --a7: oklch(0.85 0.012 135);
+            --a8: oklch(0.62 0.024 135);
+            --a9: oklch(0.8 0.114 25);
+            --a10: oklch(0.8 0.16 145);
+            --a11: oklch(0.8 0.16 100);
+            --a12: oklch(0.8 0.16 135);
+            --a13: oklch(0.8 0.16 330);
+            --a14: oklch(0.8 0.136 200);
+            --a15: oklch(0.95 0.012 135);
+          "
+        >
+          <h3>Dark</h3>
+          <div class="mock readme">
+            <h4>placeholder-name</h4>
+            <p>
+              Turn a spec into merged changes with parallel agents. See the <a>quickstart</a> or run
+              <code>/placeholder:run</code>.
+            </p>
+            <p class="muted">Muted helper text explains a flag or a default value.</p>
+            <p>
+              <span class="btn">Get started</span> <span class="badge">v0.0.0</span>
+              <span class="ok">3 merged</span> <span class="bad">1 blocked</span>
+            </p>
+          </div>
+          <div class="mock term" style="background: var(--background); color: var(--a15)">
+            <div>
+              <span style="color: var(--a10)">~/repo</span>
+              <span style="color: var(--a8)">main</span>
+              <span style="color: var(--a15)">$</span> placeholder run 138
+            </div>
+            <div>
+              <span style="color: var(--a4)">info</span>
+              <span style="color: var(--a7)">wave 1 of 2: 3 tickets</span>
+            </div>
+            <div>
+              <span style="color: var(--a2)">pass</span>
+              <span style="color: var(--a15)">check</span>
+              <span style="color: var(--a8)">(12.4s)</span>
+            </div>
+            <div>
+              <span style="color: var(--a3)">warn</span>
+              <span style="color: var(--a15)">lint: 2 warnings</span>
+            </div>
+            <div>
+              <span style="color: var(--a1)">fail</span>
+              <span style="color: var(--a15)">test: 1 failed</span>
+              <span style="color: var(--a9)">x</span> <span style="color: var(--a5)">~</span>
+              <span style="color: var(--a6)">#</span>
+            </div>
+          </div>
+          <div class="ansi">
+            <span class="as" style="color: var(--a0)" title="black #778172 4.54:1"
+              >0<small>4.5</small></span
+            ><span class="as" style="color: var(--a1)" title="red #ed756e 6.48:1"
+              >1<small>6.5</small></span
+            ><span class="as" style="color: var(--a2)" title="green #5bb661 7.30:1"
+              >2<small>7.3</small></span
+            ><span class="as" style="color: var(--a3)" title="yellow #b49f08 6.95:1"
+              >3<small>6.9</small></span
+            ><span class="as" style="color: var(--a4)" title="blue #74b24c 7.22:1"
+              >4<small>7.2</small></span
+            ><span class="as" style="color: var(--a5)" title="magenta #d179ca 6.41:1"
+              >5<small>6.4</small></span
+            ><span class="as" style="color: var(--a6)" title="cyan #09b4bb 7.26:1"
+              >6<small>7.3</small></span
+            ><span class="as" style="color: var(--a7)" title="white #cad0c8 11.75:1"
+              >7<small>11.7</small></span
+            ><span class="as" style="color: var(--a8)" title="bright black #808a7b 5.13:1"
+              >8<small>5.1</small></span
+            ><span class="as" style="color: var(--a9)" title="bright red #ffa098 9.43:1"
+              >9<small>9.4</small></span
+            ><span class="as" style="color: var(--a10)" title="bright green #75d87a 10.42:1"
+              >10<small>10.4</small></span
+            ><span class="as" style="color: var(--a11)" title="bright yellow #d6bf1f 9.96:1"
+              >11<small>10.0</small></span
+            ><span class="as" style="color: var(--a12)" title="bright blue #8fd465 10.35:1"
+              >12<small>10.3</small></span
+            ><span class="as" style="color: var(--a13)" title="bright magenta #f695ee 9.18:1"
+              >13<small>9.2</small></span
+            ><span class="as" style="color: var(--a14)" title="bright cyan #00d7e0 10.37:1"
+              >14<small>10.4</small></span
+            ><span class="as" style="color: var(--a15)" title="bright white #ebf0e8 15.96:1"
+              >15<small>16.0</small></span
+            >
+          </div>
+          <p class="fine">
+            ANSI 0-15 on the dark background. Number = index, small = contrast. Minimum 4.54:1.
+          </p>
+          <details open>
+            <summary>Tokens</summary>
+            <table class="tok">
+              <tr>
+                <td><i class="sw" style="background: oklch(0.19 0.014 135)"></i></td>
+                <td><code>--background</code></td>
+                <td><code>oklch(0.190 0.014 135)</code></td>
+                <td><code>#11150f</code></td>
+              </tr>
+              <tr>
+                <td><i class="sw" style="background: oklch(0.95 0.012 135)"></i></td>
+                <td><code>--foreground</code></td>
+                <td><code>oklch(0.950 0.012 135)</code></td>
+                <td><code>#ebf0e8</code></td>
+              </tr>
+              <tr>
+                <td><i class="sw" style="background: oklch(0.235 0.014 135)"></i></td>
+                <td><code>--card</code></td>
+                <td><code>oklch(0.235 0.014 135)</code></td>
+                <td><code>#1b2019</code></td>
+              </tr>
+              <tr>
+                <td><i class="sw" style="background: oklch(0.95 0.012 135)"></i></td>
+                <td><code>--card-foreground</code></td>
+                <td><code>oklch(0.950 0.012 135)</code></td>
+                <td><code>#ebf0e8</code></td>
+              </tr>
+              <tr>
+                <td><i class="sw" style="background: oklch(0.72 0.15 135)"></i></td>
+                <td><code>--primary</code></td>
+                <td><code>oklch(0.720 0.150 135)</code></td>
+                <td><code>#7ab953</code></td>
+              </tr>
+              <tr>
+                <td><i class="sw" style="background: oklch(0.17 0.012 135)"></i></td>
+                <td><code>--primary-foreground</code></td>
+                <td><code>oklch(0.170 0.012 135)</code></td>
+                <td><code>#0d110b</code></td>
+              </tr>
+              <tr>
+                <td><i class="sw" style="background: oklch(0.72 0.15 135)"></i></td>
+                <td><code>--primary-text</code></td>
+                <td><code>oklch(0.720 0.150 135)</code></td>
+                <td><code>#7ab953</code></td>
+              </tr>
+              <tr>
+                <td><i class="sw" style="background: oklch(0.275 0.013 135)"></i></td>
+                <td><code>--secondary</code></td>
+                <td><code>oklch(0.275 0.013 135)</code></td>
+                <td><code>#252923</code></td>
+              </tr>
+              <tr>
+                <td><i class="sw" style="background: oklch(0.95 0.012 135)"></i></td>
+                <td><code>--secondary-foreground</code></td>
+                <td><code>oklch(0.950 0.012 135)</code></td>
+                <td><code>#ebf0e8</code></td>
+              </tr>
+              <tr>
+                <td><i class="sw" style="background: oklch(0.275 0.013 135)"></i></td>
+                <td><code>--muted</code></td>
+                <td><code>oklch(0.275 0.013 135)</code></td>
+                <td><code>#252923</code></td>
+              </tr>
+              <tr>
+                <td><i class="sw" style="background: oklch(0.75 0.024 135)"></i></td>
+                <td><code>--muted-foreground</code></td>
+                <td><code>oklch(0.750 0.024 135)</code></td>
+                <td><code>#a8b2a3</code></td>
+              </tr>
+              <tr>
+                <td><i class="sw" style="background: oklch(0.275 0.013 135)"></i></td>
+                <td><code>--accent</code></td>
+                <td><code>oklch(0.275 0.013 135)</code></td>
+                <td><code>#252923</code></td>
+              </tr>
+              <tr>
+                <td><i class="sw" style="background: oklch(0.95 0.012 135)"></i></td>
+                <td><code>--accent-foreground</code></td>
+                <td><code>oklch(0.950 0.012 135)</code></td>
+                <td><code>#ebf0e8</code></td>
+              </tr>
+              <tr>
+                <td><i class="sw" style="background: oklch(0.7 0.19 25)"></i></td>
+                <td><code>--destructive</code></td>
+                <td><code>oklch(0.700 0.190 25)</code></td>
+                <td><code>#ff645f</code></td>
+              </tr>
+              <tr>
+                <td><i class="sw" style="background: oklch(0.72 0.134 175)"></i></td>
+                <td><code>--success</code></td>
+                <td><code>oklch(0.720 0.134 175)</code></td>
+                <td><code>#0ebfa0</code></td>
+              </tr>
+              <tr>
+                <td><i class="sw" style="background: oklch(0.32 0.014 135)"></i></td>
+                <td><code>--border</code></td>
+                <td><code>oklch(0.320 0.014 135)</code></td>
+                <td><code>#30352d</code></td>
+              </tr>
+              <tr>
+                <td><i class="sw" style="background: oklch(0.32 0.014 135)"></i></td>
+                <td><code>--input</code></td>
+                <td><code>oklch(0.320 0.014 135)</code></td>
+                <td><code>#30352d</code></td>
+              </tr>
+              <tr>
+                <td><i class="sw" style="background: oklch(0.72 0.15 135)"></i></td>
+                <td><code>--ring</code></td>
+                <td><code>oklch(0.720 0.150 135)</code></td>
+                <td><code>#7ab953</code></td>
+              </tr>
+            </table>
+          </details>
+          <details open>
+            <summary>Contrast (WCAG 2.x)</summary>
+            <table class="ratio">
+              <tr>
+                <th>Pair</th>
+                <th>Ratio</th>
+                <th>Level</th>
+              </tr>
+              <tr>
+                <td>foreground on background</td>
+                <td class="num">15.96:1</td>
+                <td><b class="g AAA">AAA</b></td>
+              </tr>
+              <tr>
+                <td>card-foreground on card</td>
+                <td class="num">14.33:1</td>
+                <td><b class="g AAA">AAA</b></td>
+              </tr>
+              <tr>
+                <td>muted-foreground on background</td>
+                <td class="num">8.40:1</td>
+                <td><b class="g AAA">AAA</b></td>
+              </tr>
+              <tr>
+                <td>muted-foreground on muted</td>
+                <td class="num">6.73:1</td>
+                <td><b class="g AA">AA</b></td>
+              </tr>
+              <tr>
+                <td>primary-text on background</td>
+                <td class="num">7.81:1</td>
+                <td><b class="g AAA">AAA</b></td>
+              </tr>
+              <tr>
+                <td>primary-text on card</td>
+                <td class="num">7.02:1</td>
+                <td><b class="g AAA">AAA</b></td>
+              </tr>
+              <tr>
+                <td>primary-foreground on primary</td>
+                <td class="num">8.07:1</td>
+                <td><b class="g AAA">AAA</b></td>
+              </tr>
+              <tr>
+                <td>destructive on background</td>
+                <td class="num">6.36:1</td>
+                <td><b class="g AA">AA</b></td>
+              </tr>
+              <tr>
+                <td>success on background</td>
+                <td class="num">7.89:1</td>
+                <td><b class="g AAA">AAA</b></td>
+              </tr>
+            </table>
+          </details>
+        </section>
+      </div>
+    </article>
+    <footer>
+      <h2>Method</h2>
+      <p>
+        Ratios are WCAG 2.x relative-luminance contrast, computed by script from the sRGB value each
+        oklch token resolves to (chroma reduced until the colour is inside sRGB, so the browser
+        shows the same value). Text pairs are tuned to at least 4.5:1; ANSI colors are checked
+        against the terminal background of the same mode. The mocks use the system font stack;
+        typefaces are on the typography sheet.
+      </p>
+    </footer>
+  </body>
+</html>
