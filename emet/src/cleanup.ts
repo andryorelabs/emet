@@ -1,5 +1,5 @@
 /**
- * Deletes the local branches a `/forge` wave leaves behind once its PR has
+ * Deletes the local branches a `/emet` wave leaves behind once its PR has
  * merged, and prunes stale worktree metadata. Every `worktree-agent-*` (the
  * scaffolding branch `Agent`'s `isolation: "worktree"` creates automatically)
  * and ticket-prefixed worker branch is classified by content before anything
@@ -9,7 +9,7 @@
  * merge — this repo's actual merge style, and the one case `git cherry`
  * cannot see, since it matches patch-ids per commit and a squash collapses N
  * commits into one with a different patch-id. `remote`/`trunk` come from
- * `forge.config.json`'s `repo.remote`/`repo.trunk` (see `config.ts`) —
+ * `emet.config.json`'s `repo.remote`/`repo.trunk` (see `config.ts`) —
  * there's no default here, missing config is a hard `exit 2` (see `run()`),
  * since a wrong trunk here doesn't warn, it deletes unmerged work. Only a
  * branch resolved as fully contained in `<remote>/<trunk>` (either way) is
@@ -27,7 +27,7 @@
  * ways: an `ao-*` branch via its own `%(worktreepath)`, and a
  * `worktree-agent-<id>` branch via the matching `.claude/worktrees/agent-<id>`
  * directory still existing — the worker's `git checkout -b ao-*` (see
- * docs/agents/forge.md) leaves the scaffolding branch itself with an empty
+ * docs/agents/emet.md) leaves the scaffolding branch itself with an empty
  * `%(worktreepath)`, so it needs this second signal to not look abandoned.
  * `git worktree prune` runs before either signal is read, since both read the
  * same metadata and stale entries would make the guard see live worktrees as
@@ -36,10 +36,10 @@
  * gone — so it stays unconditional and always runs first, confirmed safe by
  * an adversarial review of AO-260.
  *
- * **Run scoping (AO-260) — concurrent `/forge` sessions never delete each
- * other's branches.** Every worktree a `/forge` worker bootstraps is
+ * **Run scoping (AO-260) — concurrent `/emet` sessions never delete each
+ * other's branches.** Every worktree a `/emet` worker bootstraps is
  * `git worktree lock`ed with a reason of the shape
- * `forge run=<runId> ticket=<ticket> anchor=<pid> at=<iso>`
+ * `emet run=<runId> ticket=<ticket> anchor=<pid> at=<iso>`
  * ({@link resolveWorktreeOwner}, `worktrees.ts`). A locked worktree is
  * never a deletion candidate, full stop, regardless of what content
  * classification says about the branch it holds ({@link guardBranch}) — the
@@ -47,13 +47,13 @@
  * sweep to branches whose still-locked worktree resolves to that run id,
  * releasing the ticket's reservation (`claims.ts`) after each
  * successful deletion, and — once branch cleanup is done — every worker slot
- * (`slots.ts`) that run still holds, so a wave's `FORGE_MAX_LIVE_WORKERS`
+ * (`slots.ts`) that run still holds, so a wave's `EMET_MAX_LIVE_WORKERS`
  * capacity is freed back up without the coordinator having to track which
  * indices it acquired. With no `--run` (the default) or the explicit,
  * synonymous `--all`, every branch in the repo is swept as before, but a
  * locked worktree whose owning run classifies (`classifyRun`,
  * `runs.ts`) as `'live'` or `'idle'` is skipped and reported
- * separately from a `'dead'` owner or a non-`/forge` lock reason, which both
+ * separately from a `'dead'` owner or a non-`/emet` lock reason, which both
  * fall into a generic "locked, protected" bucket — either way, never
  * deleted.
  *
@@ -77,6 +77,7 @@ import {
   resolveSessionSlug,
   type RunVerdict,
 } from "./runs";
+import { BINARY, CONFIG_FILE } from "./names";
 import { releaseAllSlotsForRun } from "./slots";
 import {
   type BranchEntry,
@@ -123,7 +124,7 @@ export type CleanupOptions = {
   readonly force: boolean;
 };
 
-/** A malformed `forge cleanup` command line: reported as a plain message with exit code 2. */
+/** A malformed `emet cleanup` command line: reported as a plain message with exit code 2. */
 export class CleanupUsageError extends Error {
   constructor(message: string) {
     super(message);
@@ -156,14 +157,14 @@ export function parseCleanupArguments(argv: readonly string[]): CleanupOptions {
     const value = argv[runIndex + 1];
     if (!value || value.startsWith("--")) {
       throw new CleanupUsageError(
-        "forge:cleanup — --run requires a value, e.g. --run session_abc123",
+        `${BINARY}:cleanup — --run requires a value, e.g. --run session_abc123`,
       );
     }
     runId = value;
   }
 
   if (runId !== null && isAll) {
-    throw new CleanupUsageError("forge:cleanup — --run and --all are mutually exclusive");
+    throw new CleanupUsageError(`${BINARY}:cleanup — --run and --all are mutually exclusive`);
   }
 
   const mode: CleanupMode = runId !== null ? "run" : isAll ? "all" : "finished";
@@ -219,7 +220,7 @@ export type GuardOutcome =
  * `'out-of-scope'` and left untouched. Outside `--run` mode, a locked
  * worktree whose owning run classifies as `'live'` or `'idle'` gets its own
  * `'live-or-idle-protected'` category so the report can tell it apart from a
- * `'dead'` owner or an unparseable (non-`/forge`) lock reason, both of which
+ * `'dead'` owner or an unparseable (non-`/emet`) lock reason, both of which
  * fall back to the generic `'locked-protected'` bucket — either way, the
  * lock alone is reason enough to never touch it, *unless* `force` is set and
  * the owner specifically classifies `'dead'` (see `parseCleanupArguments`'s
@@ -325,7 +326,7 @@ async function deleteBranch(branch: string): Promise<{ ok: boolean; message: str
  * Wraps {@link deleteBranch} with reservation cleanup (AO-260 point 1): once
  * a branch is actually gone, its ticket's claim in the registry
  * (T1b, `claims.ts`) is stale and must go with it, or a finished ticket
- * would look permanently reserved to the next `/forge` coordinator. Never
+ * would look permanently reserved to the next `/emet` coordinator. Never
  * releases on a failed deletion — the branch, and whatever legitimately
  * still holds the reservation, is unchanged.
  *
@@ -354,7 +355,7 @@ export type RemovalPlan = "remove" | "keep-dirty" | "keep-not-landed" | "protect
 
 /**
  * What to do with one worktree. `protected` wins over everything: no owner
- * (a foreign worktree, or a worktree whose lock is not forge's, even when a
+ * (a foreign worktree, or a worktree whose lock is not emet's, even when a
  * claim matches its branch). Otherwise the ticket must have landed, and the
  * tree must be clean, before the worktree may be removed.
  */
@@ -605,7 +606,9 @@ async function reclaimUnit(unit: ReclaimUnit): Promise<string[]> {
 export async function reclaimOwnedWorktrees(context: ReclaimContext): Promise<void> {
   const { config, mode, runId, dryRun, trunkRef, mainSha } = context;
   const scopeLabel = mode === "run" ? ` — run ${runId}` : " — closed or dead runs";
-  console.log(`forge:cleanup — ${trunkRef} ${mainSha}${dryRun ? " (dry run)" : ""}${scopeLabel}\n`);
+  console.log(
+    `${BINARY}:cleanup — ${trunkRef} ${mainSha}${dryRun ? " (dry run)" : ""}${scopeLabel}\n`,
+  );
 
   const { units, protectedLines, outOfScope } = await collectUnits(context);
 
@@ -735,7 +738,7 @@ async function main(config: ForgeConfig) {
 
   const trunkRef = trunkReference(remote, trunk, local);
   console.log(
-    `Using ${trunkRef} (from forge.config.json's repo.remote/repo.trunk) as the merge-base reference.`,
+    `Using ${trunkRef} (from ${CONFIG_FILE}'s repo.remote/repo.trunk) as the merge-base reference.`,
   );
 
   /**
@@ -756,7 +759,7 @@ async function main(config: ForgeConfig) {
   const mainShaResult = await Bun.$`git rev-parse ${trunkRef}`.nothrow().quiet();
   if (mainShaResult.exitCode !== 0) {
     throw new ForgeConfigError(
-      `forge cleanup: could not resolve ${trunkRef} — check forge.config.json's repo.remote/repo.trunk and that you've fetched.`,
+      `${BINARY} cleanup: could not resolve ${trunkRef} — check ${CONFIG_FILE}'s repo.remote/repo.trunk and that you've fetched.`,
     );
   }
   const mainSha = mainShaResult.stdout.toString().trim();
@@ -830,7 +833,9 @@ async function main(config: ForgeConfig) {
   }
 
   const scopeLabel = " — explicit repo-wide sweep";
-  console.log(`forge:cleanup — ${trunkRef} ${mainSha}${dryRun ? " (dry run)" : ""}${scopeLabel}\n`);
+  console.log(
+    `${BINARY}:cleanup — ${trunkRef} ${mainSha}${dryRun ? " (dry run)" : ""}${scopeLabel}\n`,
+  );
 
   const toDelete = classified.filter((branch) => branch.category === "to-delete");
   const inUse = classified.filter((branch) => branch.category === "in-use");
@@ -916,11 +921,11 @@ async function main(config: ForgeConfig) {
 }
 
 /**
- * Entry point invoked by the `forge` CLI dispatcher (`bin/emet.ts`) for the
+ * Entry point invoked by the `emet` CLI dispatcher (`bin/emet.ts`) for the
  * `cleanup` subcommand. See `claims.ts`'s `run()` for why this stages `argv`
  * onto `process.argv` rather than threading it through `main()` directly.
  * `cleanup` deletes branches, so — like `preflight` — a missing or malformed
- * `forge.config.json` is always fatal (exit 2), never a silent fall back to
+ * `emet.config.json` is always fatal (exit 2), never a silent fall back to
  * defaults: this script used to run with zero config validation at all,
  * which is exactly how a wrong trunk destroys unmerged work instead of
  * merely producing a wrong report.
@@ -935,7 +940,7 @@ export async function run(argv: string[]): Promise<void> {
   try {
     const repoRoot = await resolveRepoRoot();
     if (!repoRoot) {
-      throw new ForgeConfigError("forge cleanup: not inside a git repository");
+      throw new ForgeConfigError(`${BINARY} cleanup: not inside a git repository`);
     }
     const config = await requireForgeConfig(repoRoot);
     /**
@@ -947,7 +952,7 @@ export async function run(argv: string[]): Promise<void> {
      * already deleted, before `releaseAllSlotsForRun` ever runs — leaking
      * that run's worker slots. `claims.ts`'s own `run()` configures this for
      * itself; `cleanup.ts` must do the same since it calls into that module
-     * directly rather than through the `forge claims` CLI entry point.
+     * directly rather than through the `emet claims` CLI entry point.
      */
     configureTicketPattern(config.ticket.idPattern);
     await main(config);

@@ -187,7 +187,7 @@ describe("review ledger round trip through the CLI", () => {
   let repo = "";
 
   beforeEach(() => {
-    repo = realpathSync(mkdtempSync(path.join(os.tmpdir(), "forge-review-")));
+    repo = realpathSync(mkdtempSync(path.join(os.tmpdir(), "emet-review-")));
     Bun.spawnSync(["git", "-C", repo, "init", "-q"]);
   });
 
@@ -222,16 +222,16 @@ describe("review ledger round trip through the CLI", () => {
     ]);
     expect(readRound(second.stdout)).toBe(2);
     const ledger: unknown = JSON.parse(
-      readFileSync(path.join(repo, ".forge", "review", "T-1.json"), "utf8"),
+      readFileSync(path.join(repo, ".emet", "review", "T-1.json"), "utf8"),
     );
     const findings = isObject(ledger) && Array.isArray(ledger.findings) ? ledger.findings : [];
     expect(findings.some((entry) => isObject(entry) && entry.status === "deferred")).toBe(true);
   });
 
   test("a corrupted ledger exits 2", () => {
-    mkdirSync(path.join(repo, ".forge", "review"), { recursive: true });
+    mkdirSync(path.join(repo, ".emet", "review"), { recursive: true });
     writeFileSync(
-      path.join(repo, ".forge", "review", "T-1.json"),
+      path.join(repo, ".emet", "review", "T-1.json"),
       JSON.stringify({
         ticket: "T-1",
         rounds: 1,
