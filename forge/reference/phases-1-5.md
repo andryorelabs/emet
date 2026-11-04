@@ -156,7 +156,8 @@ the main command file.)
 
 Now that the plan is approved, in this exact order:
 
-1. Apply the `GLOSSARY.md`/`docs/adr/` edits deferred from Phase 1.
+1. Apply the deferred `GLOSSARY.md`/`docs/adr/` edits on a feature branch; land
+   it on trunk (PR, or local merge if `landing.mode` is `merge`) before Phase 6.
 2. If the feature touches a screen: publish the canvas now with the `Artifact`
    tool directly — never invoke `/design` or ask the user to run it (it is
    user-invocable only; see `${CLAUDE_PLUGIN_ROOT}/forge/reference/incidents.md`). A canvas is a plain

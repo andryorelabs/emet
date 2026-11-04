@@ -51,6 +51,7 @@ import {
   resolveMainTree,
   resolveWorktreeOwner,
   resolveWorktreeOwnerWithReservations,
+  trunkReference,
   type WorktreeEntry,
   type WorktreeOwner,
 } from "./worktrees";
@@ -1097,6 +1098,52 @@ export async function collectForkBaseFailures(
   });
 }
 
+/** Result of {@link checkHeadDescendsFromTrunk}. */
+export type HeadDescendsFromTrunkResult =
+  | { readonly ok: true }
+  | { readonly ok: false; readonly branch: string; readonly fix: string };
+
+/**
+ * S11: HEAD must equal `trunkRef` or descend from it, so workers branch from
+ * a trunk that already holds the records their tickets cite. On failure
+ * names the current branch and the exact command that fixes it; `localTrunk`
+ * is the plain trunk branch name the fix switches to.
+ */
+export async function checkHeadDescendsFromTrunk(
+  headSha: string,
+  trunkRef: string,
+  localTrunk: string = trunkRef,
+): Promise<HeadDescendsFromTrunkResult> {
+  const ancestry = await Bun.$`git merge-base --is-ancestor ${trunkRef} ${headSha}`
+    .quiet()
+    .nothrow();
+  if (ancestry.exitCode === 0) return { ok: true };
+  const branchName = (await Bun.$`git rev-parse --abbrev-ref HEAD`.quiet().nothrow().text()).trim();
+  const branch =
+    branchName === "HEAD" || branchName === "" ? `detached HEAD at ${headSha}` : branchName;
+  const fix =
+    trunkRef === localTrunk
+      ? `git switch ${localTrunk}`
+      : `git fetch && git switch ${localTrunk} && git merge --ff-only ${trunkRef}`;
+  return { ok: false, branch, fix };
+}
+
+/** The S11 preflight failure line, or `null` when HEAD descends from trunk. */
+async function collectHeadTrunkFailure(
+  repoRoot: string,
+  remote: string,
+  trunk: string,
+  probes: EnvironmentProbes,
+  landingMode: LandingMode = "pr",
+): Promise<string | null> {
+  const trunkRef = trunkReference(remote, trunk, landingMode === "merge");
+  const headSha = await probes.resolveRef(repoRoot, "HEAD");
+  if (headSha === null) return null;
+  const verdict = await checkHeadDescendsFromTrunk(headSha, trunkRef, trunk);
+  if (verdict.ok) return null;
+  return `HEAD (${verdict.branch}) is not ${trunkRef} or a descendant of it — dispatch from trunk so workers contain Phase 5's landed records. Fix: ${verdict.fix}`;
+}
+
 const MAP_STALE_MAX_COMMITS = 10;
 
 /** S18: a stale or missing codebase map only warns, never blocks. */
@@ -1168,6 +1215,15 @@ async function main(config: ForgeConfig, repoRoot: string) {
       config.landing.mode,
     )),
   );
+
+  const headTrunkFailure = await collectHeadTrunkFailure(
+    repoRoot,
+    config.repo.remote,
+    config.repo.trunk,
+    createEnvironmentProbes(),
+    config.landing.mode,
+  );
+  if (headTrunkFailure !== null) failures.push(headTrunkFailure);
 
   const mapWarning = await collectMapStaleWarning(repoRoot, config.map.path);
   if (mapWarning !== null) gateWarnLines.push(mapWarning);
