@@ -25,6 +25,12 @@ jobs:
 
       - uses: lycheeverse/lychee-action@e7477775783ea5526144ba13e8db5eec57747ce8 # v2.9.0
         with:
+          # --offline: check only local files and in-repo anchors, never the network,
+          #   so the job is deterministic and cannot flake on third-party sites.
+          # --include-fragments=anchor-only: also verify #heading anchors, but only
+          #   fragments of local markdown targets (no HTTP fragment fetching).
+          # --no-progress: keep CI logs free of the progress bar.
+          # fail: true makes any broken link fail the job.
           args: >-
             --offline --include-fragments=anchor-only --no-progress '*.md'
             'docs/**/*.md' 'forge/**/*.md' '.github/**/*.md' 'commands/*.md'

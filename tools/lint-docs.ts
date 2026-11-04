@@ -54,6 +54,11 @@ export const EXPECTED_LYCHEE_ACTION_VERSION = "v2.9.0";
  * Byte-identical to the `args` of the lychee step in
  * `.github/workflows/lint-docs.yml`, as an argv array so the globs reach
  * lychee unexpanded.
+ *
+ * `--offline` checks only local files, never the network, so the run is
+ * deterministic. `--include-fragments=anchor-only` also verifies `#heading`
+ * anchors, but only for local markdown targets. `--no-progress` keeps logs
+ * free of the progress bar.
  */
 export const LYCHEE_ARGS = [
   "--offline",

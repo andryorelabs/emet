@@ -4,6 +4,7 @@ on:
   push:
     branches: [main]
   pull_request:
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -64,7 +65,7 @@ jobs:
 
       - run: bun install --cwd forge --frozen-lockfile
 
-      - run: bun run test
+      - run: bun run test:coverage
 
   test-macos:
     name: Test (macOS)
@@ -89,21 +90,47 @@ jobs:
         run: |
           bun tools/build-binaries.ts --target bun-darwin-arm64 --outdir dist
           ./dist/forge-darwin-arm64 --version
+          size_bytes=$(wc -c < ./dist/forge-darwin-arm64 | tr -d ' ')
+          echo "forge-darwin-arm64 binary size: ${size_bytes} bytes" >> "$GITHUB_STEP_SUMMARY"
 
-  ci-passed:
-    name: CI passed
-    if: always()
-    needs: [check, test, test-macos]
+  commitlint:
+    name: Commitlint
+    if: github.event_name == 'pull_request'
     runs-on: ${{ github.event.repository.private && vars.CI_RUNNER || 'ubuntu-latest'
       }}
     timeout-minutes: 5
     steps:
-      - name: Fail unless every required job succeeded
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
+        with:
+          bun-version-file: package.json
+
+      - run: bun install --frozen-lockfile --ignore-scripts
+
+      - name: Lint commit messages
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: bun x --no-install commitlint --from "$BASE_SHA" --to "$HEAD_SHA" --verbose
+
+  ci-passed:
+    name: CI passed
+    if: always()
+    needs: [check, test, test-macos, commitlint]
+    runs-on: ${{ github.event.repository.private && vars.CI_RUNNER || 'ubuntu-latest'
+      }}
+    timeout-minutes: 5
+    steps:
+      - name: Fail on any failed or cancelled job (skipped is fine)
         env:
           NEEDS_RESULTS: ${{ join(needs.*.result, ' ') }}
         run: |
           for result in $NEEDS_RESULTS; do
-            if [ "$result" != "success" ]; then
+            if [ "$result" = "failure" ] || [ "$result" = "cancelled" ]; then
               echo "A required job finished with result: $result"
               exit 1
             fi
