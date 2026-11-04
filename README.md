@@ -1,5 +1,11 @@
 # claude-forge
 
+[![CI](https://github.com/AndryOre/claude-forge/actions/workflows/ci.yml/badge.svg)](https://github.com/AndryOre/claude-forge/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/github/license/AndryOre/claude-forge)](LICENSE)
+
+Docs: [index](docs/README.md) · [architecture](docs/architecture.md) ·
+[troubleshooting](docs/troubleshooting.md) · [changelog](CHANGELOG.md)
+
 The global `/forge` command for [Claude Code](https://claude.com/claude-code):
 interview → spec → tickets → one approval → parallel worktree agents that
 implement, test, and merge a feature unattended. Each ticket is matched

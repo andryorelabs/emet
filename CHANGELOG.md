@@ -16,7 +16,7 @@ and this project adheres to
   `shasum -a 256` in place of `sha256sum`.
 - README states the real requirements, both install paths and the
   `/setup-matt-pocock-skills` then `forge init` order.
-- Agent guide (`AGENTS.md`), domain glossary (`CONTEXT.md`) and architecture
+- Agent guide (`AGENTS.md`), domain glossary (`GLOSSARY.md`) and architecture
   decision records under `docs/adr/`.
 - Local markdown tracker on the `.scratch/` convention, with a `forge tracker`
   CLI (`create-spec`, `create-ticket`, `frontier`, `set-state`, `comment`,
@@ -30,6 +30,8 @@ and this project adheres to
   skills, glossary, deprecations and double installs.
 - Language-neutral `forge init` and `forge map` for JS, Go, Rust and Python repos.
 - ADR-0007 to ADR-0011.
+- Docs index, architecture code map, troubleshooting by symptom, a richer PR
+  template and `forge/AGENTS.md` with the runtime-only rules.
 
 ### Changed
 

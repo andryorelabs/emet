@@ -28,6 +28,11 @@ Closes #<!-- GitHub issue number, delete this line if not applicable -->
 - [ ] Added/updated tests for new behavior
 - [ ] Passes `bun run check` and `bun run test`
 - [ ] Docs updated if user-visible behavior changed
+- [ ] `CHANGELOG.md` has an entry under `[Unreleased]`
+- [ ] An ADR in `docs/adr/` is added or amended when a decision changes
+- [ ] Terms follow `GLOSSARY.md`; new terms are added there
+- [ ] Commit bodies end with `Refs: #<n>`
+- [ ] Any new doc is linked from `docs/README.md`
 - [ ] PR title follows
       [Conventional Commits](https://www.conventionalcommits.org/)
       (`type: description`)
