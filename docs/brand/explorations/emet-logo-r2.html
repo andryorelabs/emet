@@ -1,0 +1,1676 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>emet logo, round 2</title>
+    <style>
+      @font-face {
+        font-family: "Space Grotesk";
+        font-weight: 300 700;
+        font-display: block;
+        src: url("fonts/SpaceGrotesk-var.woff2") format("woff2");
+      }
+      @font-face {
+        font-family: "JetBrains Mono";
+        font-weight: 100 800;
+        font-display: block;
+        src: url("fonts/JetBrainsMono-var.woff2") format("woff2");
+      }
+      :root {
+        --page: #ecece8;
+        --ink: #1d201e;
+        --sub: #5a5f5b;
+        --line: #cfd1ca;
+        --display: "Space Grotesk", system-ui, sans-serif;
+        --mono: "JetBrains Mono", ui-monospace, monospace;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        background: var(--page);
+        color: var(--ink);
+        font-family: system-ui, sans-serif;
+        line-height: 1.5;
+      }
+      main {
+        max-width: 1180px;
+        margin: 0 auto;
+        padding: 40px 20px 80px;
+      }
+      h1 {
+        font-family: var(--display);
+        font-size: 2.4rem;
+        letter-spacing: -0.03em;
+        margin: 0 0 8px;
+        text-wrap: balance;
+      }
+      h2 {
+        font-family: var(--display);
+        font-size: 1.7rem;
+        letter-spacing: -0.02em;
+        margin: 0;
+      }
+      h3 {
+        font-family: var(--mono);
+        font-size: 0.78rem;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+        color: var(--sub);
+        margin: 28px 0 10px;
+      }
+      p {
+        max-width: 70ch;
+        margin: 0 0 10px;
+      }
+      .lead {
+        color: var(--sub);
+      }
+      .note {
+        font-size: 0.9rem;
+        color: var(--sub);
+        border-left: 3px solid var(--line);
+        padding-left: 12px;
+      }
+      .concept {
+        border-top: 2px solid var(--ink);
+        margin-top: 48px;
+        padding-top: 18px;
+      }
+      .concept header {
+        display: flex;
+        align-items: baseline;
+        gap: 14px;
+        margin-bottom: 8px;
+      }
+      .num {
+        font-family: var(--mono);
+        font-size: 0.9rem;
+        color: var(--sub);
+      }
+      .weak {
+        color: #6a3a1a;
+        font-size: 0.95rem;
+      }
+      .weak b {
+        color: var(--ink);
+      }
+
+      .panel {
+        --c: #7d7b74;
+        --a: #4f8a2c;
+        --pbg: #f3f3ef;
+        --pink: #1d201e;
+        background: var(--pbg);
+        color: var(--pink);
+        border-radius: 10px;
+        padding: 14px 16px;
+        border: 1px solid var(--line);
+        overflow-x: auto;
+      }
+      .panel.dark {
+        --c: #b8b5ac;
+        --a: #a6dc62;
+        --pbg: #16181a;
+        --pink: #eceae4;
+        border-color: #16181a;
+      }
+      .panel.mono-l {
+        --c: #1d201e;
+        --a: #1d201e;
+      }
+      .panel.mono-d {
+        --c: #eceae4;
+        --a: #eceae4;
+        --pbg: #16181a;
+        --pink: #eceae4;
+        border-color: #16181a;
+      }
+      .lbl {
+        font-family: var(--mono);
+        font-size: 0.7rem;
+        opacity: 0.7;
+        margin-bottom: 10px;
+      }
+      .sizes {
+        display: flex;
+        align-items: flex-end;
+        gap: 24px;
+        flex-wrap: wrap;
+      }
+      .sizes figure {
+        margin: 0;
+        display: flex;
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 6px;
+      }
+      .sizes figcaption {
+        font-family: var(--mono);
+        font-size: 0.65rem;
+        opacity: 0.6;
+      }
+      .trio {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 12px;
+      }
+      .locks {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 12px;
+      }
+      .locks .panel {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 190px;
+      }
+      .mk {
+        display: block;
+        flex: none;
+      }
+      .wm {
+        font-family: var(--display);
+        font-weight: 700;
+        letter-spacing: -0.045em;
+        line-height: 1;
+        color: var(--pink);
+      }
+      .lock-h {
+        display: flex;
+        align-items: center;
+        gap: 14px;
+      }
+      .lock-s {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 10px;
+      }
+      .tile {
+        --c: #c9c6bc;
+        --a: #a6dc62;
+        background: #24272a;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+
+      .mock-wrap {
+        overflow-x: auto;
+      }
+      .mock {
+        --c: #7d7b74;
+        --a: #4f8a2c;
+        --pink: #1d201e;
+        background: #f6f6f2;
+        border: 1px solid var(--line);
+        border-radius: 10px;
+        padding: 36px 44px;
+        width: 880px;
+        max-width: none;
+        color: var(--pink);
+      }
+      .rm-top {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+      }
+      .rm-tag {
+        font-family: var(--display);
+        font-size: 1.5rem;
+        letter-spacing: -0.02em;
+        margin: 14px 0;
+        color: #3b403c;
+      }
+      .rm-badges {
+        display: flex;
+        gap: 8px;
+        margin-bottom: 18px;
+      }
+      .rm-badges span {
+        font-family: var(--mono);
+        font-size: 0.72rem;
+        background: #e4e4de;
+        border-radius: 4px;
+        padding: 3px 8px;
+      }
+      .rm-term {
+        font-family: var(--mono);
+        font-size: 0.85rem;
+        background: #1b1d1f;
+        color: #d8d6cf;
+        border-radius: 8px;
+        padding: 14px 16px;
+        margin: 0 0 12px;
+      }
+      .rm-fine {
+        font-size: 0.78rem;
+        color: var(--sub);
+        margin: 0;
+      }
+
+      .social-wrap {
+        width: 640px;
+        height: 320px;
+        max-width: 100%;
+        overflow: hidden;
+        border-radius: 10px;
+        border: 1px solid var(--line);
+      }
+      .social {
+        --c: #b8b5ac;
+        --a: #a6dc62;
+        --pink: #eceae4;
+        width: 1280px;
+        height: 640px;
+        transform: scale(0.5);
+        transform-origin: 0 0;
+        background: #16181a;
+        color: var(--pink);
+        position: relative;
+        display: flex;
+        align-items: center;
+        gap: 56px;
+        padding: 0 96px;
+      }
+      .so-text p {
+        font-family: var(--display);
+        font-size: 40px;
+        letter-spacing: -0.02em;
+        margin: 24px 0 0;
+        color: #b9b9b1;
+        max-width: none;
+      }
+      .so-text {
+        display: flex;
+        flex-direction: column;
+      }
+      .so-foot {
+        position: absolute;
+        left: 96px;
+        bottom: 48px;
+        font-family: var(--mono);
+        font-size: 22px;
+        color: #8d8e87;
+      }
+
+      .overview {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px 28px;
+        align-items: flex-end;
+      }
+      .ov {
+        display: flex;
+        align-items: flex-end;
+        gap: 12px;
+        color: inherit;
+        text-decoration: none;
+        padding: 8px;
+        border-radius: 8px;
+      }
+      .ov:hover,
+      .ov:focus-visible {
+        background: rgba(0, 0, 0, 0.06);
+        outline: none;
+      }
+      .ovn {
+        font-family: var(--display);
+        font-weight: 600;
+        font-size: 0.95rem;
+        align-self: center;
+      }
+      .reco {
+        font-family: var(--display);
+        font-size: 1.3rem;
+        letter-spacing: -0.02em;
+        border-top: 2px solid var(--ink);
+        margin-top: 56px;
+        padding-top: 18px;
+        max-width: 70ch;
+      }
+      @media (max-width: 760px) {
+        .trio,
+        .locks {
+          grid-template-columns: 1fr;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <svg width="0" height="0" style="position: absolute" aria-hidden="true">
+      <defs>
+        <symbol id="m1" viewBox="0 0 32 32">
+          <path
+            fill="var(--c)"
+            fill-rule="evenodd"
+            d="M10 6H13V10H19V6H22Q29 6 29 13V21Q29 28 22 28H10Q3 28 3 21V13Q3 6 10 6ZM6.3 17a4.2 4.2 0 1 0 8.4 0a4.2 4.2 0 1 0-8.4 0ZM17.3 17a4.2 4.2 0 1 0 8.4 0a4.2 4.2 0 1 0-8.4 0Z"
+          />
+          <circle cx="10.5" cy="17" r="2.6" fill="var(--a)" />
+          <circle cx="21.5" cy="17" r="2.6" fill="var(--a)" />
+        </symbol>
+        <symbol id="m2" viewBox="0 0 32 32">
+          <rect x="6" y="25" width="20" height="4" rx="2" fill="var(--c)" />
+          <path
+            d="M16 25V13"
+            stroke="var(--c)"
+            stroke-width="2.8"
+            stroke-linecap="round"
+            fill="none"
+          />
+          <path fill="var(--c)" d="M16 22Q7 22 5 13Q14 13 16 22ZM16 22Q25 22 27 13Q18 13 16 22Z" />
+          <circle cx="16" cy="8.5" r="5" fill="var(--a)" />
+        </symbol>
+        <symbol id="m3" viewBox="0 0 32 32">
+          <path
+            d="M25.5 16A9.5 9.5 0 1 0 22.7 22.7"
+            stroke="var(--c)"
+            stroke-width="4.6"
+            stroke-linecap="round"
+            fill="none"
+          />
+          <path
+            d="M7 16H25"
+            stroke="var(--a)"
+            stroke-width="3.6"
+            stroke-linecap="round"
+            fill="none"
+          />
+        </symbol>
+        <symbol id="m4" viewBox="0 0 32 32">
+          <path
+            fill="var(--c)"
+            fill-rule="evenodd"
+            d="M12 3H20Q27 3 27 10V22Q27 29 20 29H12Q5 29 5 22V10Q5 3 12 3ZM9.5 11.5a3.5 3.5 0 0 1 3.5-3.5H19a3.5 3.5 0 0 1 0 7H13a3.5 3.5 0 0 1-3.5-3.5Z"
+          />
+          <rect x="12" y="10" width="8" height="3" rx="1.5" fill="var(--a)" />
+        </symbol>
+        <symbol id="m5" viewBox="0 0 32 32">
+          <rect x="10" y="5" width="5" height="22" rx="2.5" fill="var(--c)" />
+          <rect x="17" y="5" width="5" height="22" rx="2.5" fill="var(--c)" />
+          <rect x="24" y="5" width="5" height="22" rx="2.5" fill="var(--c)" />
+          <rect x="3" y="17" width="5" height="10" rx="2.5" fill="var(--c)" />
+          <circle cx="5.5" cy="10" r="2.9" fill="var(--a)" />
+        </symbol>
+      </defs>
+    </svg>
+    <main>
+      <h1>emet logo, round 2</h1>
+      <p class="lead">
+        Five marks derived from the brand's own parts: the eye lamps, the sprout, the single notch,
+        the on and off lamp, and the word emet losing a letter. The mascot stays a separate
+        companion. Colours are placeholders: a neutral clay-grey and one moss lamp accent, so colour
+        does not bias the choice. Wordmark in the T2 display face, Space Grotesk 700 at -0.045em.
+      </p>
+      <p class="note">
+        Every mark is a 32 x 32 grid drawing in two fills, clay and accent. The one-colour panels
+        set both to the same value; concepts 1 and 4 keep their lamps readable through a gap, the
+        others merge.
+      </p>
+      <h3>All five at 16, 32 and 64 px</h3>
+      <div class="panel light overview">
+        <a href="#m1-s" class="ov"
+          ><span class="num">01</span
+          ><svg class="mk" width="16" height="16" viewBox="0 0 32 32" aria-hidden="true">
+            <use href="#m1" /></svg
+          ><svg class="mk" width="32" height="32" viewBox="0 0 32 32" aria-hidden="true">
+            <use href="#m1" /></svg
+          ><svg class="mk" width="64" height="64" viewBox="0 0 32 32" aria-hidden="true">
+            <use href="#m1" /></svg
+          ><span class="ovn">Twin lamps</span></a
+        ><a href="#m2-s" class="ov"
+          ><span class="num">02</span
+          ><svg class="mk" width="16" height="16" viewBox="0 0 32 32" aria-hidden="true">
+            <use href="#m2" /></svg
+          ><svg class="mk" width="32" height="32" viewBox="0 0 32 32" aria-hidden="true">
+            <use href="#m2" /></svg
+          ><svg class="mk" width="64" height="64" viewBox="0 0 32 32" aria-hidden="true">
+            <use href="#m2" /></svg
+          ><span class="ovn">Lamp sprout</span></a
+        ><a href="#m3-s" class="ov"
+          ><span class="num">03</span
+          ><svg class="mk" width="16" height="16" viewBox="0 0 32 32" aria-hidden="true">
+            <use href="#m3" /></svg
+          ><svg class="mk" width="32" height="32" viewBox="0 0 32 32" aria-hidden="true">
+            <use href="#m3" /></svg
+          ><svg class="mk" width="64" height="64" viewBox="0 0 32 32" aria-hidden="true">
+            <use href="#m3" /></svg
+          ><span class="ovn">Lit e</span></a
+        ><a href="#m4-s" class="ov"
+          ><span class="num">04</span
+          ><svg class="mk" width="16" height="16" viewBox="0 0 32 32" aria-hidden="true">
+            <use href="#m4" /></svg
+          ><svg class="mk" width="32" height="32" viewBox="0 0 32 32" aria-hidden="true">
+            <use href="#m4" /></svg
+          ><svg class="mk" width="64" height="64" viewBox="0 0 32 32" aria-hidden="true">
+            <use href="#m4" /></svg
+          ><span class="ovn">Forehead slot</span></a
+        ><a href="#m5-s" class="ov"
+          ><span class="num">05</span
+          ><svg class="mk" width="16" height="16" viewBox="0 0 32 32" aria-hidden="true">
+            <use href="#m5" /></svg
+          ><svg class="mk" width="32" height="32" viewBox="0 0 32 32" aria-hidden="true">
+            <use href="#m5" /></svg
+          ><svg class="mk" width="64" height="64" viewBox="0 0 32 32" aria-hidden="true">
+            <use href="#m5" /></svg
+          ><span class="ovn">Four, one lit</span></a
+        >
+      </div>
+
+      <section class="concept" id="m1-s">
+        <header>
+          <span class="num">01</span>
+          <h2>Twin lamps</h2>
+        </header>
+        <p class="rat">
+          The two eye lamps set into a clay slab with its single notch, the socket where the sprout
+          grows. It is the mascot's face reduced to two holes and one bite, with no mouth, body or
+          sprout drawn.
+        </p>
+        <p class="weak">
+          <b>Small-size weakness.</b> Closest to the mascot and to any robot-face emoji. At 16 px
+          the lamp discs are about 2.6 px and the ring gap between lamp and hole is under 1 px, so
+          it reads as a slab with two dots. The notch vanishes below 24 px.
+        </p>
+
+        <h3>Mark alone</h3>
+        <div class="trio">
+          <div class="panel light">
+            <div class="lbl">Light</div>
+            <div class="sizes">
+              <figure>
+                <svg class="mk" width="16" height="16" viewBox="0 0 32 32" aria-hidden="true">
+                  <use href="#m1" />
+                </svg>
+                <figcaption>16</figcaption>
+              </figure>
+              <figure>
+                <svg class="mk" width="32" height="32" viewBox="0 0 32 32" aria-hidden="true">
+                  <use href="#m1" />
+                </svg>
+                <figcaption>32</figcaption>
+              </figure>
+              <figure>
+                <svg class="mk" width="64" height="64" viewBox="0 0 32 32" aria-hidden="true">
+                  <use href="#m1" />
+                </svg>
+                <figcaption>64</figcaption>
+              </figure>
+              <figure>
+                <svg class="mk" width="256" height="256" viewBox="0 0 32 32" aria-hidden="true">
+                  <use href="#m1" />
+                </svg>
+                <figcaption>256</figcaption>
+              </figure>
+            </div>
+          </div>
+          <div class="panel dark">
+            <div class="lbl">Dark</div>
+            <div class="sizes">
+              <figure>
+                <svg class="mk" width="16" height="16" viewBox="0 0 32 32" aria-hidden="true">
+                  <use href="#m1" />
+                </svg>
+                <figcaption>16</figcaption>
+              </figure>
+              <figure>
+                <svg class="mk" width="32" height="32" viewBox="0 0 32 32" aria-hidden="true">
+                  <use href="#m1" />
+                </svg>
+                <figcaption>32</figcaption>
+              </figure>
+              <figure>
+                <svg class="mk" width="64" height="64" viewBox="0 0 32 32" aria-hidden="true">
+                  <use href="#m1" />
+                </svg>
+                <figcaption>64</figcaption>
+              </figure>
+              <figure>
+                <svg class="mk" width="256" height="256" viewBox="0 0 32 32" aria-hidden="true">
+                  <use href="#m1" />
+                </svg>
+                <figcaption>256</figcaption>
+              </figure>
+            </div>
+          </div>
+          <div class="panel mono-l">
+            <div class="lbl">One colour, on light</div>
+            <div class="sizes">
+              <figure>
+                <svg class="mk" width="16" height="16" viewBox="0 0 32 32" aria-hidden="true">
+                  <use href="#m1" />
+                </svg>
+                <figcaption>16</figcaption>
+              </figure>
+              <figure>
+                <svg class="mk" width="32" height="32" viewBox="0 0 32 32" aria-hidden="true">
+                  <use href="#m1" />
+                </svg>
+                <figcaption>32</figcaption>
+              </figure>
+              <figure>
+                <svg class="mk" width="64" height="64" viewBox="0 0 32 32" aria-hidden="true">
+                  <use href="#m1" />
+                </svg>
+                <figcaption>64</figcaption>
+              </figure>
+              <figure>
+                <svg class="mk" width="256" height="256" viewBox="0 0 32 32" aria-hidden="true">
+                  <use href="#m1" />
+                </svg>
+                <figcaption>256</figcaption>
+              </figure>
+            </div>
+          </div>
+          <div class="panel mono-d">
+            <div class="lbl">One colour, on dark</div>
+            <div class="sizes">
+              <figure>
+                <svg class="mk" width="16" height="16" viewBox="0 0 32 32" aria-hidden="true">
+                  <use href="#m1" />
+                </svg>
+                <figcaption>16</figcaption>
+              </figure>
+              <figure>
+                <svg class="mk" width="32" height="32" viewBox="0 0 32 32" aria-hidden="true">
+                  <use href="#m1" />
+                </svg>
+                <figcaption>32</figcaption>
+              </figure>
+              <figure>
+                <svg class="mk" width="64" height="64" viewBox="0 0 32 32" aria-hidden="true">
+                  <use href="#m1" />
+                </svg>
+                <figcaption>64</figcaption>
+              </figure>
+              <figure>
+                <svg class="mk" width="256" height="256" viewBox="0 0 32 32" aria-hidden="true">
+                  <use href="#m1" />
+                </svg>
+                <figcaption>256</figcaption>
+              </figure>
+            </div>
+          </div>
+        </div>
+
+        <h3>Lockups with the wordmark</h3>
+        <div class="locks">
+          <div class="panel light">
+            <div class="lock-h">
+              <svg class="mk" width="56" height="56" viewBox="0 0 32 32" aria-hidden="true">
+                <use href="#m1" /></svg
+              ><span class="wm" style="font-size: 60px">emet</span>
+            </div>
+          </div>
+          <div class="panel dark">
+            <div class="lock-h">
+              <svg class="mk" width="56" height="56" viewBox="0 0 32 32" aria-hidden="true">
+                <use href="#m1" /></svg
+              ><span class="wm" style="font-size: 60px">emet</span>
+            </div>
+          </div>
+          <div class="panel light">
+            <div class="lock-s">
+              <svg class="mk" width="96" height="96" viewBox="0 0 32 32" aria-hidden="true">
+                <use href="#m1" /></svg
+              ><span class="wm" style="font-size: 64px">emet</span>
+            </div>
+          </div>
+          <div class="panel dark">
+            <div class="lock-s">
+              <svg class="mk" width="96" height="96" viewBox="0 0 32 32" aria-hidden="true">
+                <use href="#m1" /></svg
+              ><span class="wm" style="font-size: 64px">emet</span>
+            </div>
+          </div>
+        </div>
+
+        <h3>Plugin icon</h3>
+        <div class="panel light">
+          <div class="sizes">
+            <figure>
+              <div class="tile" style="width: 16px; height: 16px; border-radius: 4px">
+                <svg class="mk" width="11" height="11" viewBox="0 0 32 32" aria-hidden="true">
+                  <use href="#m1" />
+                </svg>
+              </div>
+              <figcaption>16</figcaption>
+            </figure>
+            <figure>
+              <div class="tile" style="width: 32px; height: 32px; border-radius: 7px">
+                <svg class="mk" width="22" height="22" viewBox="0 0 32 32" aria-hidden="true">
+                  <use href="#m1" />
+                </svg>
+              </div>
+              <figcaption>32</figcaption>
+            </figure>
+            <figure>
+              <div class="tile" style="width: 64px; height: 64px; border-radius: 14px">
+                <svg class="mk" width="45" height="45" viewBox="0 0 32 32" aria-hidden="true">
+                  <use href="#m1" />
+                </svg>
+              </div>
+              <figcaption>64</figcaption>
+            </figure>
+            <figure>
+              <div class="tile" style="width: 256px; height: 256px; border-radius: 56px">
+                <svg class="mk" width="179" height="179" viewBox="0 0 32 32" aria-hidden="true">
+                  <use href="#m1" />
+                </svg>
+              </div>
+              <figcaption>256</figcaption>
+            </figure>
+          </div>
+        </div>
+
+        <h3>README cover</h3>
+        <div class="mock-wrap">
+          <div class="mock readme">
+            <div class="rm-top">
+              <svg class="mk" width="64" height="64" viewBox="0 0 32 32" aria-hidden="true">
+                <use href="#m1" /></svg
+              ><span class="wm" style="font-size: 56px">emet</span>
+            </div>
+            <p class="rm-tag">One approval, then you come back to a merge.</p>
+            <div class="rm-badges">
+              <span>plugin for Claude Code</span><span>MIT</span><span>bun</span>
+            </div>
+            <pre class="rm-term">
+$ emet run
+spec approved. 4 workers, 1 wave.</pre>
+            <p class="rm-fine">Not affiliated with or endorsed by Anthropic.</p>
+          </div>
+        </div>
+
+        <h3>GitHub social preview, 1280 x 640 shown at half size</h3>
+        <div class="social-wrap">
+          <div class="social">
+            <svg class="mk" width="230" height="230" viewBox="0 0 32 32" aria-hidden="true">
+              <use href="#m1" />
+            </svg>
+            <div class="so-text">
+              <span class="wm" style="font-size: 150px">emet</span>
+              <p>One approval, then you come back to a merge.</p>
+            </div>
+            <span class="so-foot"
+              >Plugin for Claude Code. Not affiliated with or endorsed by Anthropic.</span
+            >
+          </div>
+        </div>
+      </section>
+
+      <section class="concept" id="m2-s">
+        <header>
+          <span class="num">02</span>
+          <h2>Lamp sprout</h2>
+        </header>
+        <p class="rat">
+          The sprout whose bud is the lamp: growth and the lit eye in one stroke, standing on the
+          moss base. The pairing is the mascot's only vertical element, so it is the brand's own,
+          not a generic leaf.
+        </p>
+        <p class="weak">
+          <b>Small-size weakness.</b> Sprouts are common in eco and wellness marks. The leaf pair is
+          about 4 px wide at 16 px and fills in. In one colour the lamp loses its accent role and
+          the mark reads as a plant on a shelf.
+        </p>
+
+        <h3>Mark alone</h3>
+        <div class="trio">
+          <div class="panel light">
+            <div class="lbl">Light</div>
+            <div class="sizes">
+              <figure>
+                <svg class="mk" width="16" height="16" viewBox="0 0 32 32" aria-hidden="true">
+                  <use href="#m2" />
+                </svg>
+                <figcaption>16</figcaption>
+              </figure>
+              <figure>
+                <svg class="mk" width="32" height="32" viewBox="0 0 32 32" aria-hidden="true">
+                  <use href="#m2" />
+                </svg>
+                <figcaption>32</figcaption>
+              </figure>
+              <figure>
+                <svg class="mk" width="64" height="64" viewBox="0 0 32 32" aria-hidden="true">
+                  <use href="#m2" />
+                </svg>
+                <figcaption>64</figcaption>
+              </figure>
+              <figure>
+                <svg class="mk" width="256" height="256" viewBox="0 0 32 32" aria-hidden="true">
+                  <use href="#m2" />
+                </svg>
+                <figcaption>256</figcaption>
+              </figure>
+            </div>
+          </div>
+          <div class="panel dark">
+            <div class="lbl">Dark</div>
+            <div class="sizes">
+              <figure>
+                <svg class="mk" width="16" height="16" viewBox="0 0 32 32" aria-hidden="true">
+                  <use href="#m2" />
+                </svg>
+                <figcaption>16</figcaption>
+              </figure>
+              <figure>
+                <svg class="mk" width="32" height="32" viewBox="0 0 32 32" aria-hidden="true">
+                  <use href="#m2" />
+                </svg>
+                <figcaption>32</figcaption>
+              </figure>
+              <figure>
+                <svg class="mk" width="64" height="64" viewBox="0 0 32 32" aria-hidden="true">
+                  <use href="#m2" />
+                </svg>
+                <figcaption>64</figcaption>
+              </figure>
+              <figure>
+                <svg class="mk" width="256" height="256" viewBox="0 0 32 32" aria-hidden="true">
+                  <use href="#m2" />
+                </svg>
+                <figcaption>256</figcaption>
+              </figure>
+            </div>
+          </div>
+          <div class="panel mono-l">
+            <div class="lbl">One colour, on light</div>
+            <div class="sizes">
+              <figure>
+                <svg class="mk" width="16" height="16" viewBox="0 0 32 32" aria-hidden="true">
+                  <use href="#m2" />
+                </svg>
+                <figcaption>16</figcaption>
+              </figure>
+              <figure>
+                <svg class="mk" width="32" height="32" viewBox="0 0 32 32" aria-hidden="true">
+                  <use href="#m2" />
+                </svg>
+                <figcaption>32</figcaption>
+              </figure>
+              <figure>
+                <svg class="mk" width="64" height="64" viewBox="0 0 32 32" aria-hidden="true">
+                  <use href="#m2" />
+                </svg>
+                <figcaption>64</figcaption>
+              </figure>
+              <figure>
+                <svg class="mk" width="256" height="256" viewBox="0 0 32 32" aria-hidden="true">
+                  <use href="#m2" />
+                </svg>
+                <figcaption>256</figcaption>
+              </figure>
+            </div>
+          </div>
+          <div class="panel mono-d">
+            <div class="lbl">One colour, on dark</div>
+            <div class="sizes">
+              <figure>
+                <svg class="mk" width="16" height="16" viewBox="0 0 32 32" aria-hidden="true">
+                  <use href="#m2" />
+                </svg>
+                <figcaption>16</figcaption>
+              </figure>
+              <figure>
+                <svg class="mk" width="32" height="32" viewBox="0 0 32 32" aria-hidden="true">
+                  <use href="#m2" />
+                </svg>
+                <figcaption>32</figcaption>
+              </figure>
+              <figure>
+                <svg class="mk" width="64" height="64" viewBox="0 0 32 32" aria-hidden="true">
+                  <use href="#m2" />
+                </svg>
+                <figcaption>64</figcaption>
+              </figure>
+              <figure>
+                <svg class="mk" width="256" height="256" viewBox="0 0 32 32" aria-hidden="true">
+                  <use href="#m2" />
+                </svg>
+                <figcaption>256</figcaption>
+              </figure>
+            </div>
+          </div>
+        </div>
+
+        <h3>Lockups with the wordmark</h3>
+        <div class="locks">
+          <div class="panel light">
+            <div class="lock-h">
+              <svg class="mk" width="56" height="56" viewBox="0 0 32 32" aria-hidden="true">
+                <use href="#m2" /></svg
+              ><span class="wm" style="font-size: 60px">emet</span>
+            </div>
+          </div>
+          <div class="panel dark">
+            <div class="lock-h">
+              <svg class="mk" width="56" height="56" viewBox="0 0 32 32" aria-hidden="true">
+                <use href="#m2" /></svg
+              ><span class="wm" style="font-size: 60px">emet</span>
+            </div>
+          </div>
+          <div class="panel light">
+            <div class="lock-s">
+              <svg class="mk" width="96" height="96" viewBox="0 0 32 32" aria-hidden="true">
+                <use href="#m2" /></svg
+              ><span class="wm" style="font-size: 64px">emet</span>
+            </div>
+          </div>
+          <div class="panel dark">
+            <div class="lock-s">
+              <svg class="mk" width="96" height="96" viewBox="0 0 32 32" aria-hidden="true">
+                <use href="#m2" /></svg
+              ><span class="wm" style="font-size: 64px">emet</span>
+            </div>
+          </div>
+        </div>
+
+        <h3>Plugin icon</h3>
+        <div class="panel light">
+          <div class="sizes">
+            <figure>
+              <div class="tile" style="width: 16px; height: 16px; border-radius: 4px">
+                <svg class="mk" width="11" height="11" viewBox="0 0 32 32" aria-hidden="true">
+                  <use href="#m2" />
+                </svg>
+              </div>
+              <figcaption>16</figcaption>
+            </figure>
+            <figure>
+              <div class="tile" style="width: 32px; height: 32px; border-radius: 7px">
+                <svg class="mk" width="22" height="22" viewBox="0 0 32 32" aria-hidden="true">
+                  <use href="#m2" />
+                </svg>
+              </div>
+              <figcaption>32</figcaption>
+            </figure>
+            <figure>
+              <div class="tile" style="width: 64px; height: 64px; border-radius: 14px">
+                <svg class="mk" width="45" height="45" viewBox="0 0 32 32" aria-hidden="true">
+                  <use href="#m2" />
+                </svg>
+              </div>
+              <figcaption>64</figcaption>
+            </figure>
+            <figure>
+              <div class="tile" style="width: 256px; height: 256px; border-radius: 56px">
+                <svg class="mk" width="179" height="179" viewBox="0 0 32 32" aria-hidden="true">
+                  <use href="#m2" />
+                </svg>
+              </div>
+              <figcaption>256</figcaption>
+            </figure>
+          </div>
+        </div>
+
+        <h3>README cover</h3>
+        <div class="mock-wrap">
+          <div class="mock readme">
+            <div class="rm-top">
+              <svg class="mk" width="64" height="64" viewBox="0 0 32 32" aria-hidden="true">
+                <use href="#m2" /></svg
+              ><span class="wm" style="font-size: 56px">emet</span>
+            </div>
+            <p class="rm-tag">One approval, then you come back to a merge.</p>
+            <div class="rm-badges">
+              <span>plugin for Claude Code</span><span>MIT</span><span>bun</span>
+            </div>
+            <pre class="rm-term">
+$ emet run
+spec approved. 4 workers, 1 wave.</pre>
+            <p class="rm-fine">Not affiliated with or endorsed by Anthropic.</p>
+          </div>
+        </div>
+
+        <h3>GitHub social preview, 1280 x 640 shown at half size</h3>
+        <div class="social-wrap">
+          <div class="social">
+            <svg class="mk" width="230" height="230" viewBox="0 0 32 32" aria-hidden="true">
+              <use href="#m2" />
+            </svg>
+            <div class="so-text">
+              <span class="wm" style="font-size: 150px">emet</span>
+              <p>One approval, then you come back to a merge.</p>
+            </div>
+            <span class="so-foot"
+              >Plugin for Claude Code. Not affiliated with or endorsed by Anthropic.</span
+            >
+          </div>
+        </div>
+      </section>
+
+      <section class="concept" id="m3-s">
+        <header>
+          <span class="num">03</span>
+          <h2>Lit e</h2>
+        </header>
+        <p class="rat">
+          A lowercase e whose crossbar is the lamp: the word alive. Take the bar away and a c
+          remains, the same erasure as emet to met, with no Hebrew letter drawn.
+        </p>
+        <p class="weak">
+          <b>Small-size weakness.</b> The most legible at 16 px, and the most generic: any e in a
+          ring looks like a browser or a settings icon. The erased state only reads if the story is
+          told. Weakest ownership of the five.
+        </p>
+
+        <h3>Mark alone</h3>
+        <div class="trio">
+          <div class="panel light">
+            <div class="lbl">Light</div>
+            <div class="sizes">
+              <figure>
+                <svg class="mk" width="16" height="16" viewBox="0 0 32 32" aria-hidden="true">
+                  <use href="#m3" />
+                </svg>
+                <figcaption>16</figcaption>
+              </figure>
+              <figure>
+                <svg class="mk" width="32" height="32" viewBox="0 0 32 32" aria-hidden="true">
+                  <use href="#m3" />
+                </svg>
+                <figcaption>32</figcaption>
+              </figure>
+              <figure>
+                <svg class="mk" width="64" height="64" viewBox="0 0 32 32" aria-hidden="true">
+                  <use href="#m3" />
+                </svg>
+                <figcaption>64</figcaption>
+              </figure>
+              <figure>
+                <svg class="mk" width="256" height="256" viewBox="0 0 32 32" aria-hidden="true">
+                  <use href="#m3" />
+                </svg>
+                <figcaption>256</figcaption>
+              </figure>
+            </div>
+          </div>
+          <div class="panel dark">
+            <div class="lbl">Dark</div>
+            <div class="sizes">
+              <figure>
+                <svg class="mk" width="16" height="16" viewBox="0 0 32 32" aria-hidden="true">
+                  <use href="#m3" />
+                </svg>
+                <figcaption>16</figcaption>
+              </figure>
+              <figure>
+                <svg class="mk" width="32" height="32" viewBox="0 0 32 32" aria-hidden="true">
+                  <use href="#m3" />
+                </svg>
+                <figcaption>32</figcaption>
+              </figure>
+              <figure>
+                <svg class="mk" width="64" height="64" viewBox="0 0 32 32" aria-hidden="true">
+                  <use href="#m3" />
+                </svg>
+                <figcaption>64</figcaption>
+              </figure>
+              <figure>
+                <svg class="mk" width="256" height="256" viewBox="0 0 32 32" aria-hidden="true">
+                  <use href="#m3" />
+                </svg>
+                <figcaption>256</figcaption>
+              </figure>
+            </div>
+          </div>
+          <div class="panel mono-l">
+            <div class="lbl">One colour, on light</div>
+            <div class="sizes">
+              <figure>
+                <svg class="mk" width="16" height="16" viewBox="0 0 32 32" aria-hidden="true">
+                  <use href="#m3" />
+                </svg>
+                <figcaption>16</figcaption>
+              </figure>
+              <figure>
+                <svg class="mk" width="32" height="32" viewBox="0 0 32 32" aria-hidden="true">
+                  <use href="#m3" />
+                </svg>
+                <figcaption>32</figcaption>
+              </figure>
+              <figure>
+                <svg class="mk" width="64" height="64" viewBox="0 0 32 32" aria-hidden="true">
+                  <use href="#m3" />
+                </svg>
+                <figcaption>64</figcaption>
+              </figure>
+              <figure>
+                <svg class="mk" width="256" height="256" viewBox="0 0 32 32" aria-hidden="true">
+                  <use href="#m3" />
+                </svg>
+                <figcaption>256</figcaption>
+              </figure>
+            </div>
+          </div>
+          <div class="panel mono-d">
+            <div class="lbl">One colour, on dark</div>
+            <div class="sizes">
+              <figure>
+                <svg class="mk" width="16" height="16" viewBox="0 0 32 32" aria-hidden="true">
+                  <use href="#m3" />
+                </svg>
+                <figcaption>16</figcaption>
+              </figure>
+              <figure>
+                <svg class="mk" width="32" height="32" viewBox="0 0 32 32" aria-hidden="true">
+                  <use href="#m3" />
+                </svg>
+                <figcaption>32</figcaption>
+              </figure>
+              <figure>
+                <svg class="mk" width="64" height="64" viewBox="0 0 32 32" aria-hidden="true">
+                  <use href="#m3" />
+                </svg>
+                <figcaption>64</figcaption>
+              </figure>
+              <figure>
+                <svg class="mk" width="256" height="256" viewBox="0 0 32 32" aria-hidden="true">
+                  <use href="#m3" />
+                </svg>
+                <figcaption>256</figcaption>
+              </figure>
+            </div>
+          </div>
+        </div>
+
+        <h3>Lockups with the wordmark</h3>
+        <div class="locks">
+          <div class="panel light">
+            <div class="lock-h">
+              <svg class="mk" width="56" height="56" viewBox="0 0 32 32" aria-hidden="true">
+                <use href="#m3" /></svg
+              ><span class="wm" style="font-size: 60px">emet</span>
+            </div>
+          </div>
+          <div class="panel dark">
+            <div class="lock-h">
+              <svg class="mk" width="56" height="56" viewBox="0 0 32 32" aria-hidden="true">
+                <use href="#m3" /></svg
+              ><span class="wm" style="font-size: 60px">emet</span>
+            </div>
+          </div>
+          <div class="panel light">
+            <div class="lock-s">
+              <svg class="mk" width="96" height="96" viewBox="0 0 32 32" aria-hidden="true">
+                <use href="#m3" /></svg
+              ><span class="wm" style="font-size: 64px">emet</span>
+            </div>
+          </div>
+          <div class="panel dark">
+            <div class="lock-s">
+              <svg class="mk" width="96" height="96" viewBox="0 0 32 32" aria-hidden="true">
+                <use href="#m3" /></svg
+              ><span class="wm" style="font-size: 64px">emet</span>
+            </div>
+          </div>
+        </div>
+
+        <h3>Plugin icon</h3>
+        <div class="panel light">
+          <div class="sizes">
+            <figure>
+              <div class="tile" style="width: 16px; height: 16px; border-radius: 4px">
+                <svg class="mk" width="11" height="11" viewBox="0 0 32 32" aria-hidden="true">
+                  <use href="#m3" />
+                </svg>
+              </div>
+              <figcaption>16</figcaption>
+            </figure>
+            <figure>
+              <div class="tile" style="width: 32px; height: 32px; border-radius: 7px">
+                <svg class="mk" width="22" height="22" viewBox="0 0 32 32" aria-hidden="true">
+                  <use href="#m3" />
+                </svg>
+              </div>
+              <figcaption>32</figcaption>
+            </figure>
+            <figure>
+              <div class="tile" style="width: 64px; height: 64px; border-radius: 14px">
+                <svg class="mk" width="45" height="45" viewBox="0 0 32 32" aria-hidden="true">
+                  <use href="#m3" />
+                </svg>
+              </div>
+              <figcaption>64</figcaption>
+            </figure>
+            <figure>
+              <div class="tile" style="width: 256px; height: 256px; border-radius: 56px">
+                <svg class="mk" width="179" height="179" viewBox="0 0 32 32" aria-hidden="true">
+                  <use href="#m3" />
+                </svg>
+              </div>
+              <figcaption>256</figcaption>
+            </figure>
+          </div>
+        </div>
+
+        <h3>README cover</h3>
+        <div class="mock-wrap">
+          <div class="mock readme">
+            <div class="rm-top">
+              <svg class="mk" width="64" height="64" viewBox="0 0 32 32" aria-hidden="true">
+                <use href="#m3" /></svg
+              ><span class="wm" style="font-size: 56px">emet</span>
+            </div>
+            <p class="rm-tag">One approval, then you come back to a merge.</p>
+            <div class="rm-badges">
+              <span>plugin for Claude Code</span><span>MIT</span><span>bun</span>
+            </div>
+            <pre class="rm-term">
+$ emet run
+spec approved. 4 workers, 1 wave.</pre>
+            <p class="rm-fine">Not affiliated with or endorsed by Anthropic.</p>
+          </div>
+        </div>
+
+        <h3>GitHub social preview, 1280 x 640 shown at half size</h3>
+        <div class="social-wrap">
+          <div class="social">
+            <svg class="mk" width="230" height="230" viewBox="0 0 32 32" aria-hidden="true">
+              <use href="#m3" />
+            </svg>
+            <div class="so-text">
+              <span class="wm" style="font-size: 150px">emet</span>
+              <p>One approval, then you come back to a merge.</p>
+            </div>
+            <span class="so-foot"
+              >Plugin for Claude Code. Not affiliated with or endorsed by Anthropic.</span
+            >
+          </div>
+        </div>
+      </section>
+
+      <section class="concept" id="m4-s">
+        <header>
+          <span class="num">04</span>
+          <h2>Forehead slot</h2>
+        </header>
+        <p class="rat">
+          The word written on the golem's forehead: a clay block with a slot, and one lit line
+          inside it. One approved spec, one lit word, then it works.
+        </p>
+        <p class="weak">
+          <b>Small-size weakness.</b> Reads as a mailbox, a battery or an ID card before it reads as
+          a golem. The lit line is 1.5 px at 16 px, so it nearly vanishes. Needs the story told.
+        </p>
+
+        <h3>Mark alone</h3>
+        <div class="trio">
+          <div class="panel light">
+            <div class="lbl">Light</div>
+            <div class="sizes">
+              <figure>
+                <svg class="mk" width="16" height="16" viewBox="0 0 32 32" aria-hidden="true">
+                  <use href="#m4" />
+                </svg>
+                <figcaption>16</figcaption>
+              </figure>
+              <figure>
+                <svg class="mk" width="32" height="32" viewBox="0 0 32 32" aria-hidden="true">
+                  <use href="#m4" />
+                </svg>
+                <figcaption>32</figcaption>
+              </figure>
+              <figure>
+                <svg class="mk" width="64" height="64" viewBox="0 0 32 32" aria-hidden="true">
+                  <use href="#m4" />
+                </svg>
+                <figcaption>64</figcaption>
+              </figure>
+              <figure>
+                <svg class="mk" width="256" height="256" viewBox="0 0 32 32" aria-hidden="true">
+                  <use href="#m4" />
+                </svg>
+                <figcaption>256</figcaption>
+              </figure>
+            </div>
+          </div>
+          <div class="panel dark">
+            <div class="lbl">Dark</div>
+            <div class="sizes">
+              <figure>
+                <svg class="mk" width="16" height="16" viewBox="0 0 32 32" aria-hidden="true">
+                  <use href="#m4" />
+                </svg>
+                <figcaption>16</figcaption>
+              </figure>
+              <figure>
+                <svg class="mk" width="32" height="32" viewBox="0 0 32 32" aria-hidden="true">
+                  <use href="#m4" />
+                </svg>
+                <figcaption>32</figcaption>
+              </figure>
+              <figure>
+                <svg class="mk" width="64" height="64" viewBox="0 0 32 32" aria-hidden="true">
+                  <use href="#m4" />
+                </svg>
+                <figcaption>64</figcaption>
+              </figure>
+              <figure>
+                <svg class="mk" width="256" height="256" viewBox="0 0 32 32" aria-hidden="true">
+                  <use href="#m4" />
+                </svg>
+                <figcaption>256</figcaption>
+              </figure>
+            </div>
+          </div>
+          <div class="panel mono-l">
+            <div class="lbl">One colour, on light</div>
+            <div class="sizes">
+              <figure>
+                <svg class="mk" width="16" height="16" viewBox="0 0 32 32" aria-hidden="true">
+                  <use href="#m4" />
+                </svg>
+                <figcaption>16</figcaption>
+              </figure>
+              <figure>
+                <svg class="mk" width="32" height="32" viewBox="0 0 32 32" aria-hidden="true">
+                  <use href="#m4" />
+                </svg>
+                <figcaption>32</figcaption>
+              </figure>
+              <figure>
+                <svg class="mk" width="64" height="64" viewBox="0 0 32 32" aria-hidden="true">
+                  <use href="#m4" />
+                </svg>
+                <figcaption>64</figcaption>
+              </figure>
+              <figure>
+                <svg class="mk" width="256" height="256" viewBox="0 0 32 32" aria-hidden="true">
+                  <use href="#m4" />
+                </svg>
+                <figcaption>256</figcaption>
+              </figure>
+            </div>
+          </div>
+          <div class="panel mono-d">
+            <div class="lbl">One colour, on dark</div>
+            <div class="sizes">
+              <figure>
+                <svg class="mk" width="16" height="16" viewBox="0 0 32 32" aria-hidden="true">
+                  <use href="#m4" />
+                </svg>
+                <figcaption>16</figcaption>
+              </figure>
+              <figure>
+                <svg class="mk" width="32" height="32" viewBox="0 0 32 32" aria-hidden="true">
+                  <use href="#m4" />
+                </svg>
+                <figcaption>32</figcaption>
+              </figure>
+              <figure>
+                <svg class="mk" width="64" height="64" viewBox="0 0 32 32" aria-hidden="true">
+                  <use href="#m4" />
+                </svg>
+                <figcaption>64</figcaption>
+              </figure>
+              <figure>
+                <svg class="mk" width="256" height="256" viewBox="0 0 32 32" aria-hidden="true">
+                  <use href="#m4" />
+                </svg>
+                <figcaption>256</figcaption>
+              </figure>
+            </div>
+          </div>
+        </div>
+
+        <h3>Lockups with the wordmark</h3>
+        <div class="locks">
+          <div class="panel light">
+            <div class="lock-h">
+              <svg class="mk" width="56" height="56" viewBox="0 0 32 32" aria-hidden="true">
+                <use href="#m4" /></svg
+              ><span class="wm" style="font-size: 60px">emet</span>
+            </div>
+          </div>
+          <div class="panel dark">
+            <div class="lock-h">
+              <svg class="mk" width="56" height="56" viewBox="0 0 32 32" aria-hidden="true">
+                <use href="#m4" /></svg
+              ><span class="wm" style="font-size: 60px">emet</span>
+            </div>
+          </div>
+          <div class="panel light">
+            <div class="lock-s">
+              <svg class="mk" width="96" height="96" viewBox="0 0 32 32" aria-hidden="true">
+                <use href="#m4" /></svg
+              ><span class="wm" style="font-size: 64px">emet</span>
+            </div>
+          </div>
+          <div class="panel dark">
+            <div class="lock-s">
+              <svg class="mk" width="96" height="96" viewBox="0 0 32 32" aria-hidden="true">
+                <use href="#m4" /></svg
+              ><span class="wm" style="font-size: 64px">emet</span>
+            </div>
+          </div>
+        </div>
+
+        <h3>Plugin icon</h3>
+        <div class="panel light">
+          <div class="sizes">
+            <figure>
+              <div class="tile" style="width: 16px; height: 16px; border-radius: 4px">
+                <svg class="mk" width="11" height="11" viewBox="0 0 32 32" aria-hidden="true">
+                  <use href="#m4" />
+                </svg>
+              </div>
+              <figcaption>16</figcaption>
+            </figure>
+            <figure>
+              <div class="tile" style="width: 32px; height: 32px; border-radius: 7px">
+                <svg class="mk" width="22" height="22" viewBox="0 0 32 32" aria-hidden="true">
+                  <use href="#m4" />
+                </svg>
+              </div>
+              <figcaption>32</figcaption>
+            </figure>
+            <figure>
+              <div class="tile" style="width: 64px; height: 64px; border-radius: 14px">
+                <svg class="mk" width="45" height="45" viewBox="0 0 32 32" aria-hidden="true">
+                  <use href="#m4" />
+                </svg>
+              </div>
+              <figcaption>64</figcaption>
+            </figure>
+            <figure>
+              <div class="tile" style="width: 256px; height: 256px; border-radius: 56px">
+                <svg class="mk" width="179" height="179" viewBox="0 0 32 32" aria-hidden="true">
+                  <use href="#m4" />
+                </svg>
+              </div>
+              <figcaption>256</figcaption>
+            </figure>
+          </div>
+        </div>
+
+        <h3>README cover</h3>
+        <div class="mock-wrap">
+          <div class="mock readme">
+            <div class="rm-top">
+              <svg class="mk" width="64" height="64" viewBox="0 0 32 32" aria-hidden="true">
+                <use href="#m4" /></svg
+              ><span class="wm" style="font-size: 56px">emet</span>
+            </div>
+            <p class="rm-tag">One approval, then you come back to a merge.</p>
+            <div class="rm-badges">
+              <span>plugin for Claude Code</span><span>MIT</span><span>bun</span>
+            </div>
+            <pre class="rm-term">
+$ emet run
+spec approved. 4 workers, 1 wave.</pre>
+            <p class="rm-fine">Not affiliated with or endorsed by Anthropic.</p>
+          </div>
+        </div>
+
+        <h3>GitHub social preview, 1280 x 640 shown at half size</h3>
+        <div class="social-wrap">
+          <div class="social">
+            <svg class="mk" width="230" height="230" viewBox="0 0 32 32" aria-hidden="true">
+              <use href="#m4" />
+            </svg>
+            <div class="so-text">
+              <span class="wm" style="font-size: 150px">emet</span>
+              <p>One approval, then you come back to a merge.</p>
+            </div>
+            <span class="so-foot"
+              >Plugin for Claude Code. Not affiliated with or endorsed by Anthropic.</span
+            >
+          </div>
+        </div>
+      </section>
+
+      <section class="concept" id="m5-s">
+        <header>
+          <span class="num">05</span>
+          <h2>Four, one lit</h2>
+        </header>
+        <p class="rat">
+          Four letters as four clay columns, the first one cut short and replaced by a lit lamp:
+          emet losing a letter, and also four parallel workers with one awake.
+        </p>
+        <p class="weak">
+          <b>Small-size weakness.</b> Reads as a signal meter or a bar chart. The lamp dot is 2.9 px
+          wide at 16 px, close to the column width, so the erased idea is easy to miss. Strong
+          silhouette, weak story.
+        </p>
+
+        <h3>Mark alone</h3>
+        <div class="trio">
+          <div class="panel light">
+            <div class="lbl">Light</div>
+            <div class="sizes">
+              <figure>
+                <svg class="mk" width="16" height="16" viewBox="0 0 32 32" aria-hidden="true">
+                  <use href="#m5" />
+                </svg>
+                <figcaption>16</figcaption>
+              </figure>
+              <figure>
+                <svg class="mk" width="32" height="32" viewBox="0 0 32 32" aria-hidden="true">
+                  <use href="#m5" />
+                </svg>
+                <figcaption>32</figcaption>
+              </figure>
+              <figure>
+                <svg class="mk" width="64" height="64" viewBox="0 0 32 32" aria-hidden="true">
+                  <use href="#m5" />
+                </svg>
+                <figcaption>64</figcaption>
+              </figure>
+              <figure>
+                <svg class="mk" width="256" height="256" viewBox="0 0 32 32" aria-hidden="true">
+                  <use href="#m5" />
+                </svg>
+                <figcaption>256</figcaption>
+              </figure>
+            </div>
+          </div>
+          <div class="panel dark">
+            <div class="lbl">Dark</div>
+            <div class="sizes">
+              <figure>
+                <svg class="mk" width="16" height="16" viewBox="0 0 32 32" aria-hidden="true">
+                  <use href="#m5" />
+                </svg>
+                <figcaption>16</figcaption>
+              </figure>
+              <figure>
+                <svg class="mk" width="32" height="32" viewBox="0 0 32 32" aria-hidden="true">
+                  <use href="#m5" />
+                </svg>
+                <figcaption>32</figcaption>
+              </figure>
+              <figure>
+                <svg class="mk" width="64" height="64" viewBox="0 0 32 32" aria-hidden="true">
+                  <use href="#m5" />
+                </svg>
+                <figcaption>64</figcaption>
+              </figure>
+              <figure>
+                <svg class="mk" width="256" height="256" viewBox="0 0 32 32" aria-hidden="true">
+                  <use href="#m5" />
+                </svg>
+                <figcaption>256</figcaption>
+              </figure>
+            </div>
+          </div>
+          <div class="panel mono-l">
+            <div class="lbl">One colour, on light</div>
+            <div class="sizes">
+              <figure>
+                <svg class="mk" width="16" height="16" viewBox="0 0 32 32" aria-hidden="true">
+                  <use href="#m5" />
+                </svg>
+                <figcaption>16</figcaption>
+              </figure>
+              <figure>
+                <svg class="mk" width="32" height="32" viewBox="0 0 32 32" aria-hidden="true">
+                  <use href="#m5" />
+                </svg>
+                <figcaption>32</figcaption>
+              </figure>
+              <figure>
+                <svg class="mk" width="64" height="64" viewBox="0 0 32 32" aria-hidden="true">
+                  <use href="#m5" />
+                </svg>
+                <figcaption>64</figcaption>
+              </figure>
+              <figure>
+                <svg class="mk" width="256" height="256" viewBox="0 0 32 32" aria-hidden="true">
+                  <use href="#m5" />
+                </svg>
+                <figcaption>256</figcaption>
+              </figure>
+            </div>
+          </div>
+          <div class="panel mono-d">
+            <div class="lbl">One colour, on dark</div>
+            <div class="sizes">
+              <figure>
+                <svg class="mk" width="16" height="16" viewBox="0 0 32 32" aria-hidden="true">
+                  <use href="#m5" />
+                </svg>
+                <figcaption>16</figcaption>
+              </figure>
+              <figure>
+                <svg class="mk" width="32" height="32" viewBox="0 0 32 32" aria-hidden="true">
+                  <use href="#m5" />
+                </svg>
+                <figcaption>32</figcaption>
+              </figure>
+              <figure>
+                <svg class="mk" width="64" height="64" viewBox="0 0 32 32" aria-hidden="true">
+                  <use href="#m5" />
+                </svg>
+                <figcaption>64</figcaption>
+              </figure>
+              <figure>
+                <svg class="mk" width="256" height="256" viewBox="0 0 32 32" aria-hidden="true">
+                  <use href="#m5" />
+                </svg>
+                <figcaption>256</figcaption>
+              </figure>
+            </div>
+          </div>
+        </div>
+
+        <h3>Lockups with the wordmark</h3>
+        <div class="locks">
+          <div class="panel light">
+            <div class="lock-h">
+              <svg class="mk" width="56" height="56" viewBox="0 0 32 32" aria-hidden="true">
+                <use href="#m5" /></svg
+              ><span class="wm" style="font-size: 60px">emet</span>
+            </div>
+          </div>
+          <div class="panel dark">
+            <div class="lock-h">
+              <svg class="mk" width="56" height="56" viewBox="0 0 32 32" aria-hidden="true">
+                <use href="#m5" /></svg
+              ><span class="wm" style="font-size: 60px">emet</span>
+            </div>
+          </div>
+          <div class="panel light">
+            <div class="lock-s">
+              <svg class="mk" width="96" height="96" viewBox="0 0 32 32" aria-hidden="true">
+                <use href="#m5" /></svg
+              ><span class="wm" style="font-size: 64px">emet</span>
+            </div>
+          </div>
+          <div class="panel dark">
+            <div class="lock-s">
+              <svg class="mk" width="96" height="96" viewBox="0 0 32 32" aria-hidden="true">
+                <use href="#m5" /></svg
+              ><span class="wm" style="font-size: 64px">emet</span>
+            </div>
+          </div>
+        </div>
+
+        <h3>Plugin icon</h3>
+        <div class="panel light">
+          <div class="sizes">
+            <figure>
+              <div class="tile" style="width: 16px; height: 16px; border-radius: 4px">
+                <svg class="mk" width="11" height="11" viewBox="0 0 32 32" aria-hidden="true">
+                  <use href="#m5" />
+                </svg>
+              </div>
+              <figcaption>16</figcaption>
+            </figure>
+            <figure>
+              <div class="tile" style="width: 32px; height: 32px; border-radius: 7px">
+                <svg class="mk" width="22" height="22" viewBox="0 0 32 32" aria-hidden="true">
+                  <use href="#m5" />
+                </svg>
+              </div>
+              <figcaption>32</figcaption>
+            </figure>
+            <figure>
+              <div class="tile" style="width: 64px; height: 64px; border-radius: 14px">
+                <svg class="mk" width="45" height="45" viewBox="0 0 32 32" aria-hidden="true">
+                  <use href="#m5" />
+                </svg>
+              </div>
+              <figcaption>64</figcaption>
+            </figure>
+            <figure>
+              <div class="tile" style="width: 256px; height: 256px; border-radius: 56px">
+                <svg class="mk" width="179" height="179" viewBox="0 0 32 32" aria-hidden="true">
+                  <use href="#m5" />
+                </svg>
+              </div>
+              <figcaption>256</figcaption>
+            </figure>
+          </div>
+        </div>
+
+        <h3>README cover</h3>
+        <div class="mock-wrap">
+          <div class="mock readme">
+            <div class="rm-top">
+              <svg class="mk" width="64" height="64" viewBox="0 0 32 32" aria-hidden="true">
+                <use href="#m5" /></svg
+              ><span class="wm" style="font-size: 56px">emet</span>
+            </div>
+            <p class="rm-tag">One approval, then you come back to a merge.</p>
+            <div class="rm-badges">
+              <span>plugin for Claude Code</span><span>MIT</span><span>bun</span>
+            </div>
+            <pre class="rm-term">
+$ emet run
+spec approved. 4 workers, 1 wave.</pre>
+            <p class="rm-fine">Not affiliated with or endorsed by Anthropic.</p>
+          </div>
+        </div>
+
+        <h3>GitHub social preview, 1280 x 640 shown at half size</h3>
+        <div class="social-wrap">
+          <div class="social">
+            <svg class="mk" width="230" height="230" viewBox="0 0 32 32" aria-hidden="true">
+              <use href="#m5" />
+            </svg>
+            <div class="so-text">
+              <span class="wm" style="font-size: 150px">emet</span>
+              <p>One approval, then you come back to a merge.</p>
+            </div>
+            <span class="so-foot"
+              >Plugin for Claude Code. Not affiliated with or endorsed by Anthropic.</span
+            >
+          </div>
+        </div>
+      </section>
+      <p class="reco">
+        Recommendation: 01 Twin lamps, because it is the only one that cannot be mistaken for
+        another product and still shares the mascot's silhouette; add 02 as the sprout accent for
+        the mascot's art, not as the logo.
+      </p>
+    </main>
+  </body>
+</html>

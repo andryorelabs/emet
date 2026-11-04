@@ -42,9 +42,15 @@ Research for the brand kit, run 1. Options and recommendations only; no decision
 - [`brand/naming-candidates.md`](brand/naming-candidates.md): the rename study, with the availability filter and /70 scoring.
 - [`brand/research-notes/competitors-2026-11-04.md`](brand/research-notes/competitors-2026-11-04.md): raw competitor notes.
 - [`brand/research-notes/mascots-cases.md`](brand/research-notes/mascots-cases.md): raw mascot case notes.
+- [`brand/research-notes/mascots-modern-abstract.md`](brand/research-notes/mascots-modern-abstract.md): how modern tools build abstract mascots, principles and golem silhouette ideas.
 - [`brand/research-notes/naming-checks.md`](brand/research-notes/naming-checks.md): availability check commands and results.
 - [`brand/research-notes/naming-category-search.md`](brand/research-notes/naming-category-search.md): same-name agent tools found per finalist.
+- [`brand/explorations/emet-mascot-r3.html`](brand/explorations/emet-mascot-r3.html): mascot round 3, six solarpunk-mood ideas with palette sets.
+- [`brand/explorations/emet-mascot-r4.html`](brand/explorations/emet-mascot-r4.html): mascot round 4, A fixed, D refined and two hybrids.
+- [`brand/explorations/emet-mascot-r5.html`](brand/explorations/emet-mascot-r5.html): mascot round 5, A1-M and a COMBO beside the r4 originals.
+- [`brand/explorations/emet-palette-r2.html`](brand/explorations/emet-palette-r2.html): palette round 2 for emet, four options from the approved mascot.
 - [`brand/explorations/fonts/OFL.md`](brand/explorations/fonts/OFL.md): licenses of the typography sheet fonts.
+- [`brand/explorations/emet-logo-r2.html`](brand/explorations/emet-logo-r2.html): logo round 2, five marks derived from the brand parts, with lockups, icon and mocks.
 
 ## Per-repo `/forge` config
 

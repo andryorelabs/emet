@@ -2,9 +2,9 @@
 
 Research and exploration for a possible rename and brand kit for claude-forge.
 
-**Status: research; decisions pending.** Everything here is an option or a
-recommendation. Nothing has been decided yet: the name, mascot, palette and typeface are all
-open.
+**Status: identity decided; kit pending.** The maintainer approved the name,
+mascot, typography, palette and logo concept on 2026-11-04 (see "Decisions"
+below). Everything else here is research or a rejected option, kept as a record.
 
 ## Run 1 deliverables
 
@@ -28,22 +28,52 @@ Exploration sheets (standalone HTML, open from disk, no network):
 - [`explorations/palette.html`](explorations/palette.html): four palette
   options P1 to P4, light and dark, with oklch tokens, a README mock, an ANSI
   16-color preview and WCAG contrast ratios.
+- [`explorations/emet-palette-r2.html`](explorations/emet-palette-r2.html): palette round 2,
+  four options P1 to P4 derived from the approved COMBO mascot (clay, moss, lamp), with tokens,
+  mascot, README and social mocks, ANSI 16 and computed contrast.
 - [`explorations/typography.html`](explorations/typography.html): four type
   pairings T1 to T4 (UI plus mono), all OFL, with a placeholder wordmark, README
   text and terminal output.
+- [`explorations/emet-typography.html`](explorations/emet-typography.html): the
+  T1 to T4 pairings applied to the real `emet` wordmark, with sizes, weights,
+  tracking, letterform notes, flaws and a recommendation.
+- [`explorations/emet-mascot-r3.html`](explorations/emet-mascot-r3.html): mascot
+  round 3, six overgrown-machine and solarpunk ideas (moss pebble, soft giant,
+  cairn, forehead glyph, can-bearer, lamp-bud head), each with sizes, one-colour,
+  states, a working loop and a terminal banner, plus three oklch palette sets.
+- [`explorations/emet-mascot-r4.html`](explorations/emet-mascot-r4.html): mascot
+  round 4, A redrawn three ways, D plus two refinements and two A-with-D-glyph
+  hybrids, with a palette 1 and 2 toggle.
+- [`explorations/emet-mascot-r5.html`](explorations/emet-mascot-r5.html): mascot
+  round 5, A1-M (A1 with a slit mouth) and a COMBO with a green base, beside the
+  r4 originals, with a palette 1 and 2 toggle.
 - [`explorations/fonts/`](explorations/fonts/): the local `woff2` files the
   typography sheet loads, with licenses and sources in
   [`OFL.md`](explorations/fonts/OFL.md).
+- [`explorations/emet-logo-r2.html`](explorations/emet-logo-r2.html): logo round 2, five marks
+  with lockups, plugin icon, README cover and social preview mocks.
 
 Raw notes behind the research documents live in `docs/brand/research-notes/`.
+They include
+[`mascots-modern-abstract.md`](research-notes/mascots-modern-abstract.md): modern
+abstract mascot cases (2023 to 2026), principles and golem silhouette ideas.
 
-## Decisions the maintainer takes next
+## Decisions
 
-1. Name: pick from the finalists in `docs/brand/naming-candidates.md`.
-2. Mascot direction: pick one of the directions in
-   `docs/brand/mascot-research.md`, or none.
-3. Palette: pick one of P1 to P4 in the palette sheet, or ask for a variation.
-4. Type: pick one of T1 to T4 in the typography sheet.
+Approved on 2026-11-04:
+
+1. Name: `emet` (`docs/brand/naming.md`).
+2. Mascot: COMBO from round 5, a gentle clay-and-moss golem with a sprout, eye
+   lamps, a slit mouth and a green base
+   (`explorations/emet-mascot-r5.html`). Rounds 3 and 4 are the path to it.
+3. Typography: T2 (`explorations/emet-typography.html`).
+4. Palette: P2 Moss (`explorations/emet-palette-r2.html`).
+5. Logo: concept 04 (`explorations/emet-logo-r2.html`).
+
+Rejected rounds (mascot rounds 1 and 2, palette round 1, logo round 1) are not
+part of this directory.
+
+Still manual: the trademark check for EMET in USPTO and EUIPO classes 9 and 42.
 
 ## Follow-up runs
 
