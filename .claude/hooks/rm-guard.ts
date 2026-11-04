@@ -1,13 +1,11 @@
 import os from "node:os";
 import path from "node:path";
 
-const SEGMENT_SEPARATOR = /&&|\|\||[;|&\n]/;
-
-const WRAPPER_COMMANDS = new Set(["sudo", "command", "xargs", "env", "nohup", "time", "exec"]);
+const SEGMENT_SEPARATOR = /&&|\|\||[;|&\n()`]/;
 
 const SHELL_COMMANDS = new Set(["sh", "bash", "zsh", "dash"]);
 
-const ENVIRONMENT_ASSIGNMENT = /^[A-Za-z_][A-Za-z0-9_]*=/;
+const PRINT_COMMANDS = new Set(["echo", "printf"]);
 
 const UNRESOLVABLE_TARGET = /[$`~]/;
 
@@ -91,54 +89,64 @@ function isRecursiveForce(flags: readonly string[]): boolean {
 }
 
 /**
- * Finds the real command word of a segment, skipping `sudo`, `env VAR=x`,
- * `xargs` and similar wrappers, and returns the tokens from it onward.
+ * Strips a leading backslash (`\rm` skips aliases) and any directory prefix
+ * from a word.
  */
-function commandTokens(tokens: readonly string[]): string[] {
-  let index = 0;
-  while (index < tokens.length) {
-    const token = tokens[index] ?? "";
-    const isOption = token.startsWith("-") && index > 0;
-    if (
-      WRAPPER_COMMANDS.has(path.basename(token)) ||
-      ENVIRONMENT_ASSIGNMENT.test(token) ||
-      isOption
-    ) {
-      index += 1;
-    } else {
-      break;
-    }
+function plainWord(token: string): string {
+  return path.basename(token.replace(/^\\+/, ""));
+}
+
+/**
+ * Index of the first word that is `rm` (not a `git rm` subcommand), wherever
+ * it sits in the segment, so wrappers, compound keywords, option values and
+ * `find -exec` cannot hide it.
+ */
+function findRmIndex(tokens: readonly string[]): number {
+  return tokens.findIndex(
+    (token, index) => plainWord(token) === "rm" && plainWord(tokens[index - 1] ?? "") !== "git",
+  );
+}
+
+/**
+ * The script of the first `sh -c`-style invocation in the segment, or
+ * undefined when there is none.
+ */
+function shellScript(tokens: readonly string[]): string | undefined {
+  const shellIndex = tokens.findIndex((token) => SHELL_COMMANDS.has(plainWord(token)));
+  if (shellIndex === -1) {
+    return undefined;
   }
-  return tokens.slice(index);
+  const rest = tokens.slice(shellIndex + 1);
+  const scriptIndex = rest.indexOf("-c") + 1;
+  return scriptIndex > 0 ? rest[scriptIndex] : undefined;
 }
 
 function isSegmentAllowed(segment: string, cwd: string): boolean {
-  const [commandWord = "", ...rest] = commandTokens(tokenize(segment));
-  const commandName = path.basename(commandWord);
-  if (SHELL_COMMANDS.has(commandName)) {
-    const scriptIndex = rest.indexOf("-c") + 1;
-    const script = scriptIndex > 0 ? rest[scriptIndex] : undefined;
-    return script === undefined || isAllowedRemoval(script, cwd);
+  const tokens = tokenize(segment);
+  const script = shellScript(tokens);
+  if (script !== undefined && !isAllowedRemoval(script, cwd)) {
+    return false;
   }
-  if (commandName !== "rm") {
+  const rmIndex = findRmIndex(tokens);
+  if (rmIndex === -1 || PRINT_COMMANDS.has(plainWord(tokens[0] ?? ""))) {
     return true;
   }
   const flags: string[] = [];
   const targets: string[] = [];
   let optionsEnded = false;
-  for (const argument of rest) {
+  for (const argument of tokens.slice(rmIndex + 1)) {
     if (!optionsEnded && argument === "--") {
       optionsEnded = true;
     } else if (!optionsEnded && argument.startsWith("-")) {
       flags.push(argument);
-    } else {
+    } else if (argument !== "}") {
       targets.push(argument);
     }
   }
   if (!isRecursiveForce(flags)) {
     return true;
   }
-  return targets.every((target) => isInsideScratch(target, cwd));
+  return targets.length > 0 && targets.every((target) => isInsideScratch(target, cwd));
 }
 
 /**

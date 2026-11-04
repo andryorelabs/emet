@@ -60,6 +60,31 @@ describe("isAllowedRemoval", () => {
     expect(isAllowedRemoval("rm -r build", repo)).toBe(true);
   });
 
+  test("blocks recursive force-deletes hidden behind shell constructs and wrappers", () => {
+    const hidden = [
+      "(rm -rf src)",
+      "{ rm -rf src; }",
+      "\\rm -rf src",
+      "echo $(rm -rf src)",
+      "echo `rm -rf src`",
+      "if true; then rm -rf src; fi",
+      "for d in a; do rm -rf src; done",
+      "sudo -u root rm -rf src",
+      "timeout 5 rm -rf src",
+      "nice rm -rf src",
+      "find . -exec rm -rf {} +",
+      "ls | xargs rm -rf",
+    ];
+    for (const command of hidden) {
+      expect(isAllowedRemoval(command, repo)).toBe(false);
+    }
+  });
+
+  test("still allows scratch removals behind wrappers", () => {
+    expect(isAllowedRemoval("timeout 5 rm -rf /tmp/x", repo)).toBe(true);
+    expect(isAllowedRemoval("(rm -rf /tmp/x)", repo)).toBe(true);
+  });
+
   test("allows commands that do not remove anything", () => {
     expect(isAllowedRemoval("bun run check", repo)).toBe(true);
     expect(isAllowedRemoval("git rm -rf src", repo)).toBe(true);
