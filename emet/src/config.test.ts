@@ -49,14 +49,31 @@ afterEach(() => {
 
 async function writeConfig(value: unknown): Promise<void> {
   await Bun.write(
-    path.join(repoRoot, "forge.config.json"),
+    path.join(repoRoot, "emet.config.json"),
     typeof value === "string" ? value : JSON.stringify(value),
   );
 }
 
 describe("loadForgeConfig", () => {
-  test("absent when forge.config.json does not exist", async () => {
+  test("absent when emet.config.json does not exist", async () => {
     expect(await loadForgeConfig(repoRoot)).toEqual({ status: "absent" });
+  });
+
+  test("reads a legacy forge.config.json when emet.config.json is absent", async () => {
+    await Bun.write(
+      path.join(repoRoot, "forge.config.json"),
+      JSON.stringify({ repo: { trunk: "legacy-trunk", remote: "origin" } }),
+    );
+    expect(configOf(await loadForgeConfig(repoRoot)).repo.trunk).toBe("legacy-trunk");
+  });
+
+  test("emet.config.json wins over forge.config.json", async () => {
+    await Bun.write(
+      path.join(repoRoot, "forge.config.json"),
+      JSON.stringify({ repo: { trunk: "legacy-trunk", remote: "origin" } }),
+    );
+    await writeConfig({ repo: { trunk: "new-trunk", remote: "origin" } });
+    expect(configOf(await loadForgeConfig(repoRoot)).repo.trunk).toBe("new-trunk");
   });
 
   test("malformed on invalid JSON", async () => {
@@ -327,10 +344,10 @@ async function captureRejection(promise: Promise<unknown>): Promise<unknown> {
 }
 
 describe("requireForgeConfig", () => {
-  test("throws ForgeConfigError naming `forge init` when absent", async () => {
+  test("throws ForgeConfigError naming `emet init` when absent", async () => {
     const error = await captureRejection(requireForgeConfig(repoRoot));
     expect(error).toBeInstanceOf(ForgeConfigError);
-    expect(errorMessage(error)).toMatch(/forge init/);
+    expect(errorMessage(error)).toMatch(/emet init/);
   });
 
   test("throws ForgeConfigError with the validation reason when malformed", async () => {
@@ -350,7 +367,7 @@ describe("loadForgeConfigWithDefaults", () => {
   test("degrades to DEFAULT_FORGE_CONFIG with a note when absent", async () => {
     const result = await loadForgeConfigWithDefaults(repoRoot);
     expect(result.config).toEqual(DEFAULT_FORGE_CONFIG);
-    expect(result.note).toMatch(/no forge.config.json/);
+    expect(result.note).toMatch(/no emet.config.json/);
   });
 
   test("still throws ForgeConfigError when malformed — a typo is never mistaken for absent", async () => {

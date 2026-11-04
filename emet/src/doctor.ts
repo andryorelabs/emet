@@ -16,6 +16,17 @@ import {
   type DependencyProbes,
 } from "./dependencies";
 import { isObject } from "./narrow";
+import {
+  AGENTS_DOC,
+  BINARY,
+  CONFIG_FILE,
+  LEGACY_AGENTS_DOC,
+  LEGACY_CONFIG_FILE,
+  LEGACY_RUN_DIR,
+  legacyStateDir,
+  resolveConfigPath,
+  stateDir,
+} from "./names";
 import { DEPRECATED_CONFIG_FIELDS, findTodoMarkersInDocsAgents } from "./preflight";
 import { computeAutoMaxLiveWorkers, readHostResources } from "./resources";
 import {
@@ -27,7 +38,7 @@ import {
 import { listOccupiedSlots, resolveLegacySlotsDirectory } from "./slots";
 
 /**
- * `forge doctor` — a read-only fleet sweep. `forge preflight` answers "is
+ * `emet doctor` — a read-only fleet sweep. `emet preflight` answers "is
  * dispatch safe right now" for one repo you're standing in; this answers
  * "is `/forge` even set up correctly" across every repo you point it at
  * (e.g. `forge doctor ~/code/*`, shell-glob-expanded before this ever sees
@@ -44,7 +55,9 @@ import { listOccupiedSlots, resolveLegacySlotsDirectory } from "./slots";
  * command only ever reports.
  */
 
-const REQUIRED_DOCS = ["forge.md", "issue-tracker.md", "triage-labels.md", "domain.md"];
+const AGENTS_DOC_NAME = path.basename(AGENTS_DOC);
+const LEGACY_AGENTS_DOC_NAME = path.basename(LEGACY_AGENTS_DOC);
+const REQUIRED_DOCS = [AGENTS_DOC_NAME, "issue-tracker.md", "triage-labels.md", "domain.md"];
 
 export type RepoDoctorReport = {
   readonly path: string;
@@ -101,7 +114,10 @@ export function isReportClean(report: RepoDoctorReport): boolean {
  * filesystem order, so a report's list is stable across runs.
  */
 export function findMissingDocs(existing: ReadonlySet<string>): string[] {
-  return REQUIRED_DOCS.filter((doc) => !existing.has(doc));
+  return REQUIRED_DOCS.filter(
+    (doc) =>
+      !existing.has(doc) && !(doc === AGENTS_DOC_NAME && existing.has(LEGACY_AGENTS_DOC_NAME)),
+  );
 }
 
 const DIRECTORY_OPTIONS = new Set(["--cwd", "--prefix", "--dir", "-C"]);
@@ -152,7 +168,7 @@ function parsePackageManagerRun(
  * shape is reported as unresolved rather than silently assumed fine —
  * `forge init` never writes anything this check wouldn't recognize, so an
  * unrecognized shape here means a human hand-edited `commands.selfCheck`
- * into something `forge doctor` can't verify, which is itself worth
+ * into something `emet doctor` can't verify, which is itself worth
  * surfacing.
  */
 export async function checkSelfCheckCommand(
@@ -236,16 +252,37 @@ export function findGlossaryWarnings(existingFiles: ReadonlySet<string>): string
     : [];
 }
 
+function resolveConfigFile(repoRoot: string): string {
+  return resolveConfigPath(repoRoot)?.path ?? path.join(repoRoot, CONFIG_FILE);
+}
+
+/** Lines naming legacy-spelled config, agents doc and run dir present in a repo. */
+export function findLegacyNameWarnings(repoRoot: string): string[] {
+  const legacyNames = [LEGACY_CONFIG_FILE, LEGACY_AGENTS_DOC, `${LEGACY_RUN_DIR}/`].filter((name) =>
+    existsSync(path.join(repoRoot, name)),
+  );
+  return legacyNames.map((name) => `legacy name ${name} in use; run \`${BINARY} migrate\``);
+}
+
+/** A finding when the pre-rename state dir still exists next to (or instead of) the new one. */
+export function findLegacyStateDirFindings(env: NodeJS.ProcessEnv = process.env): string[] {
+  const legacy = legacyStateDir(env);
+  if (legacy === stateDir(env) || !existsSync(legacy)) return [];
+  return [
+    `leftover legacy state dir ${legacy}; move its contents to ${stateDir(env)} and delete it`,
+  ];
+}
+
 async function readRawConfig(repoRoot: string): Promise<unknown> {
   try {
-    return await Bun.file(path.join(repoRoot, "forge.config.json")).json();
+    return await Bun.file(resolveConfigFile(repoRoot)).json();
   } catch {
     return null;
   }
 }
 
 async function readSelfCheckCommands(repoRoot: string): Promise<string[]> {
-  const file = Bun.file(path.join(repoRoot, "forge.config.json"));
+  const file = Bun.file(resolveConfigFile(repoRoot));
   if (!(await file.exists())) return [];
   try {
     const parsed: unknown = await file.json();
@@ -323,7 +360,7 @@ export async function checkExternalCliFlags(
     const missing = findMissingFlags(helpText, requirement.flags);
     if (missing.length > 0) {
       findings.push(
-        `${requirement.label} no longer documents ${missing.join(", ")} in --help — forge relies on it`,
+        `${requirement.label} no longer documents ${missing.join(", ")} in --help — emet relies on it`,
       );
     }
   }
@@ -359,7 +396,7 @@ export function checkTrackerTarget(input: TrackerTargetInput): string[] {
   }
   if (input.kind === "linear") {
     if (typeof input.linearTeam !== "string" || input.linearTeam.trim() === "") {
-      return ["tracker.kind is linear but tracker.team is not declared in forge.config.json"];
+      return ["tracker.kind is linear but tracker.team is not declared in emet.config.json"];
     }
   }
   return [];
@@ -386,7 +423,7 @@ export function checkWorktreeForkBase(input: ForkBaseInput): string[] {
 
 async function readRawTrackerTeam(repoRoot: string): Promise<unknown> {
   try {
-    const parsed: unknown = await Bun.file(path.join(repoRoot, "forge.config.json")).json();
+    const parsed: unknown = await Bun.file(resolveConfigFile(repoRoot)).json();
     if (!isObject(parsed)) return undefined;
     const tracker = parsed.tracker;
     return isObject(tracker) ? tracker.team : undefined;
@@ -552,7 +589,9 @@ export async function auditRepo(
 
   const docsAgentsDirectory = path.join(absolutePath, "docs", "agents");
   const existingDocs = new Set(
-    REQUIRED_DOCS.filter((doc) => existsSync(path.join(docsAgentsDirectory, doc))),
+    [...REQUIRED_DOCS, LEGACY_AGENTS_DOC_NAME].filter((doc) =>
+      existsSync(path.join(docsAgentsDirectory, doc)),
+    ),
   );
   const missingDocs = existsSync(docsAgentsDirectory)
     ? findMissingDocs(existingDocs)
@@ -605,6 +644,7 @@ export async function auditRepo(
     maxLiveWorkersNote,
     environmentFindings,
     warnings: [
+      ...findLegacyNameWarnings(absolutePath),
       ...findGlossaryWarnings(
         new Set(
           ["CONTEXT.md", "GLOSSARY.md"].filter((file) => existsSync(path.join(absolutePath, file))),
@@ -633,10 +673,10 @@ function formatReport(report: RepoDoctorReport): string {
 
   const lines = [`${report.path}:`];
   if (!report.hasConfig && report.configError === null) {
-    lines.push('  - no forge.config.json — run "forge init" here');
+    lines.push(`  - no ${CONFIG_FILE} — run "${BINARY} init" here`);
   }
   if (report.configError !== null) {
-    lines.push(`  - forge.config.json is malformed: ${report.configError}`);
+    lines.push(`  - ${CONFIG_FILE} is malformed: ${report.configError}`);
   }
   for (const doc of report.missingDocs) {
     lines.push(`  - missing docs/agents/${doc}`);
@@ -736,7 +776,7 @@ export function checkSettingsAdvisories(settings: unknown): readonly string[] {
 
   if (record.model !== "opusplan") {
     advisories.push(
-      'model is not "opusplan" — /forge assumes Opus plans (Phases 1-4) and Sonnet ' +
+      'model is not "opusplan" — /emet assumes Opus plans (Phases 1-4) and Sonnet ' +
         'executes from Phase 6 on, with no /model switch needed; see the README\'s "Models & effort" section.',
     );
   }
@@ -749,7 +789,7 @@ export function checkSettingsAdvisories(settings: unknown): readonly string[] {
   ) {
     advisories.push(
       "permissions.defaultMode is not one that can run unattended (auto/acceptEdits/bypassPermissions) — " +
-        "a /forge wave will stall on a permission prompt with no one there to answer it.",
+        "a /emet wave will stall on a permission prompt with no one there to answer it.",
     );
   }
 
@@ -758,12 +798,12 @@ export function checkSettingsAdvisories(settings: unknown): readonly string[] {
     : [];
   if (!denyRules.some((rule) => /git push[^)]*\b(main|master)\b/.test(rule))) {
     advisories.push(
-      "no permissions.deny rule blocks `git push * main|master` — recommended before running /forge unattended.",
+      "no permissions.deny rule blocks `git push * main|master` — recommended before running /emet unattended.",
     );
   }
   if (!denyRules.some((rule) => /git push[^)]*--force/.test(rule))) {
     advisories.push(
-      "no permissions.deny rule blocks `git push --force *` — recommended before running /forge unattended.",
+      "no permissions.deny rule blocks `git push --force *` — recommended before running /emet unattended.",
     );
   }
 
@@ -893,6 +933,11 @@ async function main(targets: readonly string[]): Promise<void> {
         .map((advisory) => `  - ${advisory}`)
         .join("\n")}`,
     );
+  }
+
+  const legacyStateFindings = findLegacyStateDirFindings();
+  if (legacyStateFindings.length > 0) {
+    console.log(`\nLegacy state:\n${legacyStateFindings.map((line) => `  - ${line}`).join("\n")}`);
   }
 
   const installDrift = await findInstallDrift(os.homedir());
