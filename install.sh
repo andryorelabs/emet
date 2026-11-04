@@ -257,7 +257,11 @@ if [[ -f "$SETTINGS_FILE" ]] && command -v jq >/dev/null 2>&1 && jq -e \
   echo "==> Renaming the forge guard hooks in ~/.claude/settings.json to emet guard"
   LEGACY_BACKUP_FILE="$SETTINGS_FILE.pre-emet-guard-backup.$(date -u +%Y%m%dT%H%M%SZ).legacy"
   cp "$SETTINGS_FILE" "$LEGACY_BACKUP_FILE"
-  jq "$LEGACY_GUARD_FILTER" "$SETTINGS_FILE" > "$SETTINGS_FILE.tmp" && mv "$SETTINGS_FILE.tmp" "$SETTINGS_FILE"
+  if ! jq "$LEGACY_GUARD_FILTER" "$SETTINGS_FILE" > "$SETTINGS_FILE.tmp"; then
+    echo "error: could not rewrite the forge guard hooks; settings.json is unchanged (backup at $LEGACY_BACKUP_FILE)." >&2
+    exit 1
+  fi
+  mv "$SETTINGS_FILE.tmp" "$SETTINGS_FILE"
   echo "  renamed (backup at $LEGACY_BACKUP_FILE)."
 fi
 

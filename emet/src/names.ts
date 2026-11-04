@@ -18,6 +18,9 @@ const LEGACY_LOCK_TOKEN = "forge";
 export const LOCK_TOKENS: readonly string[] = [LOCK_TOKEN, LEGACY_LOCK_TOKEN];
 export const WORKER_AGENT = "emet-worker";
 export const REVIEWER_AGENT = "emet-reviewer";
+export const LEGACY_WORKER_AGENT = "forge-worker";
+export const LEGACY_REVIEWER_AGENT = "forge-reviewer";
+export const LEGACY_PRODUCT = "forge";
 const ENV_PREFIX = "EMET_";
 const LEGACY_ENV_PREFIX = "FORGE_";
 

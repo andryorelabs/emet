@@ -5,6 +5,14 @@ import path from "node:path";
 import type { LandingMode, TrackerKind } from "./config";
 import { isObject } from "./narrow";
 import {
+  LEGACY_PRODUCT,
+  LEGACY_REVIEWER_AGENT,
+  LEGACY_WORKER_AGENT,
+  PRODUCT,
+  REVIEWER_AGENT,
+  WORKER_AGENT,
+} from "./names";
+import {
   checkSkillsContract,
   findPluginAgentFile,
   findPluginByName,
@@ -37,16 +45,16 @@ export const MATTPOCOCK_SKILLS_PLUGIN_ID = "mattpocock-skills@claude-plugins-off
  * own `agents/` directory. Phase 6 dispatches workers as `emet-worker` and
  * Phase 8 dispatches the reviewer as `emet-reviewer` — either name missing
  * makes that `Agent({subagent_type: ...})` call fail outright. */
-export const AGENT_NAMES = ["emet-worker", "emet-reviewer"] as const;
+export const AGENT_NAMES = [WORKER_AGENT, REVIEWER_AGENT] as const;
 
 /** The pre-rename name of each agent, still read so a legacy install counts. */
 const LEGACY_AGENT_NAMES: Readonly<Record<(typeof AGENT_NAMES)[number], string>> = {
-  "emet-worker": "forge-worker",
-  "emet-reviewer": "forge-reviewer",
+  [WORKER_AGENT]: LEGACY_WORKER_AGENT,
+  [REVIEWER_AGENT]: LEGACY_REVIEWER_AGENT,
 };
 
 /** The plugin that ships the agents, then its pre-rename name. */
-const AGENT_PLUGIN_NAMES = ["emet", "forge"] as const;
+const AGENT_PLUGIN_NAMES = [PRODUCT, LEGACY_PRODUCT] as const;
 
 /**
  * Every probe runs a foreign binary that can block on the network —

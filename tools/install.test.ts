@@ -133,7 +133,8 @@ describeInstaller("install.sh without bun", () => {
     expect(exitCode).toBe(0);
 
     const command = readFileSync(path.join(homeDir, ".claude/commands/emet.md"), "utf8");
-    expect(command).toMatch(/(emet|forge)-worker/);
+    expect(command).toContain("emet-worker");
+    expect(command).not.toMatch(/forge-(worker|reviewer)/);
     expect(command).not.toContain("${CLAUDE_PLUGIN_ROOT}");
 
     for (const role of ["worker", "reviewer"]) {
