@@ -9,7 +9,7 @@ import path from "node:path";
  * this gap". `checkHandoff`/`parseSections`/`ticketReferenceFromPath` aren't
  * exported (this module's public surface is `run()`, invoked by
  * `bin/emet.ts`), so these tests drive it the same way the CLI does: real
- * `.forge/handoff-<ticket>.md` files under a tmpdir, checked via
+ * `.emet/handoff-<ticket>.md` files under a tmpdir, checked via
  * `run(['--check', path])`/`run(['--render', path])` and asserted against
  * captured stdout/stderr and `process.exitCode`.
  */
@@ -74,7 +74,7 @@ async function writeHandoff(ticket: string, content: string): Promise<string> {
   return filePath;
 }
 
-describe("forge handoff --check", () => {
+describe("emet handoff --check", () => {
   test("passes a well-formed handoff note", async () => {
     const filePath = await writeHandoff("AO-321", VALID_HANDOFF);
     await run(["--check", filePath]);
@@ -177,11 +177,11 @@ describe("forge handoff --check", () => {
   test("usage error on a missing path or unknown mode", async () => {
     await run(["--check"]);
     expect(process.exitCode).toBe(1);
-    expect(errors.join("\n")).toMatch(/usage: forge handoff/);
+    expect(errors.join("\n")).toMatch(/usage: emet handoff/);
   });
 });
 
-describe("forge handoff --render", () => {
+describe("emet handoff --render", () => {
   test("renders a heading with the ticket extracted from the filename", async () => {
     const filePath = await writeHandoff("AO-321", VALID_HANDOFF);
     await run(["--render", filePath]);

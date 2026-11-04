@@ -135,7 +135,7 @@ describe("run", () => {
     const root = mkdtempSync(path.join(os.tmpdir(), "forge-metrics-"));
     try {
       expect(Bun.spawnSync(["git", "init", "-q", root]).exitCode).toBe(0);
-      const runDirectory = path.join(root, ".git", ".forge", "runs", "r1");
+      const runDirectory = path.join(root, ".git", ".emet", "runs", "r1");
       mkdirSync(path.join(runDirectory, "events"), { recursive: true });
       writeFileSync(
         path.join(runDirectory, "tickets.json"),

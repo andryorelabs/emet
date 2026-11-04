@@ -84,25 +84,25 @@ export function parseTicketSurfaces(raw: unknown): TicketSurfaces[] {
     return raw.map((entry, index) => {
       const candidate: Record<string, unknown> = isObject(entry) ? entry : {};
       if (typeof candidate.ticket !== "string" || !isGlobList(candidate.surfaces)) {
-        throw new Error(`forge:surfaces — entry ${index} needs { ticket, surfaces: string[] }`);
+        throw new Error(`emet:surfaces — entry ${index} needs { ticket, surfaces: string[] }`);
       }
       return { ticket: candidate.ticket, surfaces: candidate.surfaces };
     });
   }
   if (raw && typeof raw === "object") {
     return Object.entries(raw).map(([ticket, surfaces]) => {
-      if (!isGlobList(surfaces)) throw new Error(`forge:surfaces — ${ticket} needs string[] globs`);
+      if (!isGlobList(surfaces)) throw new Error(`emet:surfaces — ${ticket} needs string[] globs`);
       return { ticket, surfaces };
     });
   }
-  throw new Error("forge:surfaces — expected an object or array of ticket surfaces");
+  throw new Error("emet:surfaces — expected an object or array of ticket surfaces");
 }
 
 export async function run(argv: readonly string[] = process.argv.slice(2)): Promise<void> {
   const checkIndex = argv.indexOf("--check");
   const source = checkIndex === -1 ? undefined : argv[checkIndex + 1];
   if (!source) {
-    console.error("usage: forge surfaces --check <file.json | ->");
+    console.error("usage: emet surfaces --check <file.json | ->");
     process.exitCode = 2;
     return;
   }

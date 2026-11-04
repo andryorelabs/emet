@@ -3,6 +3,7 @@ import path from "node:path";
 
 import { resolveRepoRoot } from "./config";
 import { errorMessage, isObject, isOneOf } from "./narrow";
+import { resolveRunDir } from "./names";
 
 async function resolveSharedRoot(): Promise<string> {
   const output = await Bun.$`git rev-parse --path-format=absolute --git-common-dir`
@@ -13,11 +14,11 @@ async function resolveSharedRoot(): Promise<string> {
   return (await resolveRepoRoot()) ?? process.cwd();
 }
 
-const USAGE = `usage: forge results --run <id> --write <ticket> --status <status> --report <path> --risk "<Risk: ...>" [--root <dir>]
-       forge results --run <id> --read <ticket> [--root <dir>]
+const USAGE = `usage: emet results --run <id> --write <ticket> --status <status> --report <path> --risk "<Risk: ...>" [--root <dir>]
+       emet results --run <id> --read <ticket> [--root <dir>]
 
 status: DONE | DONE_WITH_CONCERNS | BLOCKED | NEEDS_CONTEXT
-Files live in <git-common-dir>/.forge/runs/<id>/results/<ticket>.json, shared by every worktree
+Files live in <git-common-dir>/.emet/runs/<id>/results/<ticket>.json, shared by every worktree
 (local; only the coordinator writes the tracker).`;
 
 const RESULT_STATUSES = ["DONE", "DONE_WITH_CONCERNS", "BLOCKED", "NEEDS_CONTEXT"] as const;
@@ -85,7 +86,7 @@ export async function run(argv: string[]): Promise<void> {
     return;
   }
   const root = readFlag(argv, "--root") ?? (await resolveSharedRoot());
-  const resultsDirectory = path.join(root, ".forge", "runs", runId, "results");
+  const resultsDirectory = path.join(resolveRunDir(root).path, "runs", runId, "results");
   const writeTicket = readFlag(argv, "--write");
   const readTicket = readFlag(argv, "--read");
 
@@ -112,7 +113,7 @@ export async function run(argv: string[]): Promise<void> {
     if (readTicket !== undefined) {
       const result = readResult(resultsDirectory, readTicket);
       if (result === null) {
-        console.error(`forge results: no result for ${readTicket}`);
+        console.error(`emet results: no result for ${readTicket}`);
         process.exitCode = 1;
         return;
       }
@@ -122,7 +123,7 @@ export async function run(argv: string[]): Promise<void> {
     console.error(USAGE);
     process.exitCode = 2;
   } catch (error) {
-    console.error(`forge results: ${errorMessage(error)}`);
+    console.error(`emet results: ${errorMessage(error)}`);
     process.exitCode = 1;
   }
 }

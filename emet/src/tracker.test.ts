@@ -98,7 +98,7 @@ async function frontierIds(repo: string): Promise<string[]> {
   return tickets.map((ticket: unknown) => stringField(ticket, "id"));
 }
 
-describe("forge tracker", () => {
+describe("emet tracker", () => {
   test("create-spec then read returns the spec", async () => {
     const repo = await makeRepo();
     await seedSpec(repo);

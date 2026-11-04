@@ -1,5 +1,5 @@
 /**
- * `forge land --spec <s> --branch <integration> --tickets <id,...>` — the
+ * `emet land --spec <s> --branch <integration> --tickets <id,...>` — the
  * `landing.mode: merge` counterpart of opening and merging a PR.
  *
  * Merges the integration branch into local trunk in the main worktree per
@@ -16,7 +16,7 @@ import { errorMessage } from "./narrow";
 
 type MergeMethod = ForgeConfig["pr"]["mergeMethod"];
 
-const USAGE = `usage: forge land --spec <s> --branch <integration> --tickets <id,...> [--summary <text>] [--type <type>] [--wave <n>]
+const USAGE = `usage: emet land --spec <s> --branch <integration> --tickets <id,...> [--summary <text>] [--type <type>] [--wave <n>]
 
 Merges <integration> into local trunk (landing.mode "merge"), per pr.mergeMethod:
   squash  one commit "<type>: <summary> (wave <n> of <spec>)" whose body lists each ticket
@@ -229,10 +229,10 @@ export async function run(argv: string[]): Promise<void> {
       console.error(error.message);
       process.exitCode = EXIT_USAGE;
     } else if (error instanceof LandRefusedError) {
-      console.error(`forge land: ${error.message}`);
+      console.error(`emet land: ${error.message}`);
       process.exitCode = EXIT_REFUSED;
     } else {
-      console.error(`forge land: ${errorMessage(error)}`);
+      console.error(`emet land: ${errorMessage(error)}`);
       process.exitCode = EXIT_INTERNAL;
     }
   }

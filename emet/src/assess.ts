@@ -2,7 +2,7 @@
  * Deterministic diff risk classifier behind review routing.
  *
  * Usage:
- *   forge assess --base <ref> --head <ref> [--risk-line <text>]
+ *   emet assess --base <ref> --head <ref> [--risk-line <text>]
  *
  * `--risk-line` takes the worker report's `Risk:` line. `Risk: none` changes
  * nothing; any other text (a `Risk: item N (reason)`, or anything unparseable)
@@ -36,7 +36,7 @@ export interface DiffInput {
   readonly addedLines: ReadonlyArray<{ readonly path: string; readonly line: string }>;
 }
 
-const USAGE = "usage: forge assess --base <ref> --head <ref> [--risk-line <text>]";
+const USAGE = "usage: emet assess --base <ref> --head <ref> [--risk-line <text>]";
 
 const DOC_EXTENSIONS = /\.(md|mdx|markdown|txt|rst|adoc)$/i;
 const DOC_DIRECTORIES = /(^|\/)(docs?|documentation)\//i;
@@ -168,7 +168,7 @@ async function gitDiff(repoRoot: string, args: readonly string[]): Promise<strin
     .nothrow()
     .quiet();
   if (output.exitCode !== 0) {
-    throw new ForgeConfigError(`forge assess: git diff failed: ${output.stderr.toString().trim()}`);
+    throw new ForgeConfigError(`emet assess: git diff failed: ${output.stderr.toString().trim()}`);
   }
   return output.stdout.toString();
 }
@@ -183,7 +183,7 @@ export async function run(argv: string[]): Promise<void> {
       return;
     }
     const repoRoot = await resolveRepoRoot();
-    if (!repoRoot) throw new ForgeConfigError("forge assess: not inside a git repository");
+    if (!repoRoot) throw new ForgeConfigError("emet assess: not inside a git repository");
 
     const { config } = await loadForgeConfigWithDefaults(repoRoot);
     const nameOnly = await gitDiff(repoRoot, ["-z", "--name-only", base, head, "--"]);

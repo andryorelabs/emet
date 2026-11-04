@@ -3,10 +3,11 @@ import os from "node:os";
 import path from "node:path";
 import { resolveLockDirectory } from "./locks";
 import { errnoCode, isObject } from "./narrow";
+import { readEnv, resolveRunDir } from "./names";
 import { readParent, type ProcessTreeReader, defaultProcessTreeReader } from "./proctree";
 
 /**
- * Classifies whether a `/forge` run (coordinator or worker) is still alive
+ * Classifies whether a `/emet` run (coordinator or worker) is still alive
  * — see PROJ-256. The pid a claim/reservation was written from is a
  * short-lived `bun` process, so `process.kill(pid, 0)` (the right pattern
  * for a lock whose holder *is* the process that took it) is meaningless
@@ -26,21 +27,18 @@ import { readParent, type ProcessTreeReader, defaultProcessTreeReader } from "./
 export type RunVerdict = "live" | "idle" | "dead";
 
 function readPositiveIntEnvironment(name: string, fallback: number): number {
-  const raw = process.env[name];
+  const raw = readEnv(name);
   if (raw === undefined) return fallback;
   const parsed = Number(raw);
   return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
 }
 
-const RUN_IDLE_THRESHOLD_MS = readPositiveIntEnvironment(
-  "FORGE_RUN_IDLE_THRESHOLD_MS",
-  90 * 60_000,
-);
+const RUN_IDLE_THRESHOLD_MS = readPositiveIntEnvironment("RUN_IDLE_THRESHOLD_MS", 90 * 60_000);
 
 /**
- * `FORGE_RUN_IDLE_THRESHOLD_MS` still overrides `forge.config.json`'s
+ * `EMET_RUN_IDLE_THRESHOLD_MS` still overrides `emet.config.json`'s
  * `concurrency.runIdleThresholdMs` when set — same precedence
- * `preflight.ts`'s `FORGE_MAX_LIVE_WORKERS` honors, kept so the existing
+ * `preflight.ts`'s `EMET_MAX_LIVE_WORKERS` honors, kept so the existing
  * escape hatch never breaks. Callers pass the result as `classifyRun`'s
  * `idleThresholdMs` option; `classifyRun` itself stays config-unaware so its
  * own tests keep exercising the pure default.
@@ -48,10 +46,7 @@ const RUN_IDLE_THRESHOLD_MS = readPositiveIntEnvironment(
 export function resolveIdleThresholdMs(config: {
   readonly concurrency: { readonly runIdleThresholdMs: number };
 }): number {
-  return readPositiveIntEnvironment(
-    "FORGE_RUN_IDLE_THRESHOLD_MS",
-    config.concurrency.runIdleThresholdMs,
-  );
+  return readPositiveIntEnvironment("RUN_IDLE_THRESHOLD_MS", config.concurrency.runIdleThresholdMs);
 }
 
 /**
@@ -75,7 +70,7 @@ export function resolveAnchorPid(
     if (info.ppid <= 1) break;
     pid = info.ppid;
   }
-  throw new Error(`forge-runs: no ancestor of pid ${startPid} has comm "claude" within 32 hops`);
+  throw new Error(`emet-runs: no ancestor of pid ${startPid} has comm "claude" within 32 hops`);
 }
 
 /**
@@ -149,7 +144,7 @@ function transcriptMtime(sessionSlug: string, runId: string): number | null {
 /**
  * `'live'`: the anchor process is still running — the strong, primary
  * signal. `'idle'`: the anchor is gone but the run's transcript was
- * touched within `idleThresholdMs` (default `FORGE_RUN_IDLE_THRESHOLD_MS`,
+ * touched within `idleThresholdMs` (default `EMET_RUN_IDLE_THRESHOLD_MS`,
  * 90 minutes) — ambiguous (a restart mid-run looks identical to this from
  * the outside), so callers must report it, never auto-act on it. `'dead'`:
  * neither signal holds — reclaimable, but still only under whatever
@@ -193,13 +188,13 @@ const SAFE_ID_PATTERN = /^[A-Za-z0-9._-]{1,128}$/;
 
 function assertSafeId(label: string, value: string): void {
   if (!SAFE_ID_PATTERN.test(value) || value === "." || value === "..") {
-    throw new Error(`forge-runs: unsafe ${label} ${JSON.stringify(value)}`);
+    throw new Error(`emet-runs: unsafe ${label} ${JSON.stringify(value)}`);
   }
 }
 
 function runDirectory(commonDirectory: string, runId: string): string {
   assertSafeId("run id", runId);
-  return path.join(commonDirectory, ".forge", "runs", runId);
+  return path.join(resolveRunDir(commonDirectory).path, "runs", runId);
 }
 
 function writeJsonAtomically(filePath: string, value: unknown): void {
@@ -391,7 +386,7 @@ async function resolveCommonDirectoryFor(repoRoot: string): Promise<string | nul
 /**
  * Where a per-run artifact is written and read. Writes go under the
  * git-common-dir run directory, shared by every worktree of the repo; reads
- * try that first, then the legacy `<repoRoot>/.forge/runs/<id>/`. When the
+ * try that first, then the legacy `<repoRoot>/.emet/runs/<id>/`. When the
  * repo has no resolvable git-common-dir, the legacy location is used for both.
  */
 export async function resolveRunArtifactPath(

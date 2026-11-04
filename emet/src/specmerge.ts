@@ -11,10 +11,11 @@ import path from "node:path";
 
 import { loadForgeConfigWithDefaults, resolveRepoRoot } from "./config";
 import { errorMessage, isOneOf } from "./narrow";
+import { resolveRunDir } from "./names";
 
-const USAGE = `usage: forge spec-merge --spec <id> [--root <dir>]
+const USAGE = `usage: emet spec-merge --spec <id> [--root <dir>]
 
-Merges the ADDED/MODIFIED/REMOVED deltas in .forge/runs/<id>/spec-deltas/<area>.md
+Merges the ADDED/MODIFIED/REMOVED deltas in .emet/runs/<id>/spec-deltas/<area>.md
 into <specs.dir>/<area>.md, keyed by requirement name. Every area is checked before
 anything is written; any conflict or scenario loss aborts with exit 1 and no file
 is touched.`;
@@ -238,9 +239,9 @@ export async function run(argv: string[]): Promise<void> {
   try {
     const root = readFlag(argv, "--root") ?? (await resolveRepoRoot()) ?? process.cwd();
     const { config } = await loadForgeConfigWithDefaults(root);
-    const deltaDirectory = path.join(root, ".forge", "runs", specId, "spec-deltas");
+    const deltaDirectory = path.join(resolveRunDir(root).path, "runs", specId, "spec-deltas");
     if (!existsSync(deltaDirectory)) {
-      console.error(`forge spec-merge: no deltas at ${deltaDirectory}`);
+      console.error(`emet spec-merge: no deltas at ${deltaDirectory}`);
       process.exitCode = 2;
       return;
     }
@@ -259,7 +260,7 @@ export async function run(argv: string[]): Promise<void> {
     }
     for (const written of result.written) console.log(path.relative(root, written));
   } catch (error) {
-    console.error(`forge spec-merge: ${errorMessage(error)}`);
+    console.error(`emet spec-merge: ${errorMessage(error)}`);
     process.exitCode = 2;
   }
 }
