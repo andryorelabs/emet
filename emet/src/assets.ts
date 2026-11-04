@@ -1,6 +1,7 @@
-import configSchema from "../schema/forge.config.schema.json" with { type: "text" };
+import { BINARY } from "./names";
+import configSchema from "../schema/emet.config.schema.json" with { type: "text" };
 import domainTemplate from "../templates/domain.md.tpl" with { type: "text" };
-import forgeTemplate from "../templates/forge.md.tpl" with { type: "text" };
+import emetTemplate from "../templates/emet.md.tpl" with { type: "text" };
 import issueTrackerGithubTemplate from "../templates/issue-tracker-github.md.tpl" with { type: "text" };
 import issueTrackerLinearTemplate from "../templates/issue-tracker-linear.md.tpl" with { type: "text" };
 import issueTrackerLocalTemplate from "../templates/issue-tracker-local.md.tpl" with { type: "text" };
@@ -23,7 +24,7 @@ function templateText(imported: unknown): string {
 
 const TEMPLATES: Readonly<Record<string, string>> = {
   "domain.md.tpl": templateText(domainTemplate),
-  "forge.md.tpl": templateText(forgeTemplate),
+  "emet.md.tpl": templateText(emetTemplate),
   "issue-tracker-github.md.tpl": templateText(issueTrackerGithubTemplate),
   "issue-tracker-linear.md.tpl": templateText(issueTrackerLinearTemplate),
   "issue-tracker-local.md.tpl": templateText(issueTrackerLocalTemplate),
@@ -39,11 +40,11 @@ export const FORGE_VERSION: string =
 /** Returns the embedded `emet/templates/<name>` text; throws for an unknown name. */
 export function readTemplate(name: string): string {
   const content = TEMPLATES[name];
-  if (content === undefined) throw new Error(`forge: unknown template "${name}"`);
+  if (content === undefined) throw new Error(`${BINARY}: unknown template "${name}"`);
   return content;
 }
 
-/** Returns the embedded `forge.config.schema.json` text. */
+/** Returns the embedded `emet.config.schema.json` text. */
 export function readSchema(): string {
   return configSchema;
 }

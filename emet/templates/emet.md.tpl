@@ -1,16 +1,16 @@
-# `/forge` operational specifics for {{REPO_NAME}}
+# `/emet` operational specifics for {{REPO_NAME}}
 
-Repo-specific config the global `/forge` command reads before running any of
+Repo-specific config the global `/emet` command reads before running any of
 its 9 phases. Machine-checkable values (trunk/remote, ticket id shape,
 concurrency, preflight's required files, handoff/usage thresholds) live in
-[`forge.config.json`](../../forge.config.json) at the repo root, matching
-`~/.claude/forge/schema/forge.config.schema.json`. This file holds the "why"
+[`emet.config.json`](../../emet.config.json) at the repo root, matching
+`~/.claude/emet/schema/emet.config.schema.json`. This file holds the "why"
 prose and everything a JSON value can't express.
 
 ## Tracker
 
 Tracker: `{{TRACKER_KIND}}`. See [issue-tracker.md](issue-tracker.md) for the
-literal calls `/forge` makes to create, read, and transition tickets here, and
+literal calls `/emet` makes to create, read, and transition tickets here, and
 [triage-labels.md](triage-labels.md) for the triage vocabulary.
 
 ## Ticket ids and branches
@@ -19,89 +19,89 @@ literal calls `/forge` makes to create, read, and transition tickets here, and
 - Worker branch: `{{BRANCH_PREFIX}}-<n>-<slug>` — each worker checks this out
   itself at worktree step 0. Local-only, never pushed.
 - Commit: add a trailer line referencing the ticket at the end of the commit
-  body (see `commit.trailer`/`commit.trailerPosition` in `forge.config.json` if
+  body (see `commit.trailer`/`commit.trailerPosition` in `emet.config.json` if
   this repo wants something other than the built-in default).
 
 ## Worktree setup
 
 A worker's first action in a fresh worktree is always `git worktree lock`
-with the reason the coordinator generated for it (`forge lock-reason`) —
-that's built into `/forge` itself, identical in every repo, and nothing
+with the reason the coordinator generated for it (`emet lock-reason`) —
+that's built into `/emet` itself, identical in every repo, and nothing
 below needs to restate it.
 
-TODO(forge): describe this repo's own per-worker bootstrap *after* that lock
+TODO(emet): describe this repo's own per-worker bootstrap *after* that lock
 and beyond a bare dependency install — codegen steps, env files to copy from
 the main checkout, anything a fresh worktree needs before a worker can run
 its self-check. Wire the mechanical parts into
-`worktree.bootstrap`/`worktree.copyFromMain` in `forge.config.json`; keep the
+`worktree.bootstrap`/`worktree.copyFromMain` in `emet.config.json`; keep the
 "why" here.
 
 ## Shared/singleton resources
 
-TODO(forge): does a wave of concurrent workers in this repo share a
+TODO(emet): does a wave of concurrent workers in this repo share a
 non-parallelizable resource — one E2E database, one dev-server port, one
 external service login? If so, describe the lock/queue mechanism here — the
 usual shape is a single queue file plus a stale-holder reclaim, so a second
 worker waits rather than corrupting the first one's run. If this repo has no
-such resource, delete this section — `forge preflight` blocks dispatch while
+such resource, delete this section — `emet preflight` blocks dispatch while
 any such marker remains in this file.
 
 ## Schema / migration ownership
 
-TODO(forge): if this repo has a shared schema or migration file that two
+TODO(emet): if this repo has a shared schema or migration file that two
 tickets in the same wave must never both touch, name it here and in
-`schema.ownedPaths` (`forge.config.json`). If not applicable, delete this
+`schema.ownedPaths` (`emet.config.json`). If not applicable, delete this
 section.
 
 ## Self-check
 
 Commands a worker runs before considering its own change done: see
-`commands.selfCheck` in `forge.config.json`.
+`commands.selfCheck` in `emet.config.json`.
 
 {{SELF_CHECK_SECTION}}
 
 ## Gates and budgets
 
-`forge verify <ticket>` runs `commands.workerScopedSuite` itself after each
+`emet verify <ticket>` runs `commands.workerScopedSuite` itself after each
 worker. A worker that reports green is not trusted on its word. After a
 wave's branches are merged, `commands.fullSuite` runs once on the
 integration branch, and a red result blocks the PR and `autoChain`.
-`forge gate` then makes the merge/chain decision, within the limits set in
+`emet gate` then makes the merge/chain decision, within the limits set in
 `budgets` (`workerAttempts`, `reviewRounds`, `stallNudgeCap`). Change those
-values in `forge.config.json`, and record the reason here.
+values in `emet.config.json`, and record the reason here.
 
-`forge map` writes the codebase brief to `map.path` (default
+`emet map` writes the codebase brief to `map.path` (default
 `docs/agents/codebase.md`). Each worker brief includes only the sections
 that match the ticket's edit surfaces. After an auto-merge,
-`forge spec-merge` folds the spec's requirement deltas into `specs.dir`
+`emet spec-merge` folds the spec's requirement deltas into `specs.dir`
 (default `docs/specs/`).
 
 ## Concurrency
 
 Max `concurrency.waveSize` live agents per wave, and a global
 `concurrency.maxLiveWorkers` cap shared **host-wide** — by every
-concurrently running `/forge` coordinator on this machine, across *every*
+concurrently running `/emet` coordinator on this machine, across *every*
 repo and every git worktree of every repo (e.g. several Orca worktrees of
 this same repo, or an entirely unrelated repo, all draw from one pool). The
-pool lives under `~/.local/state/forge/slots`, not this repo's own
+pool lives under `~/.local/state/emet/slots`, not this repo's own
 `--git-common-dir`. A slot is held only while its worker is actually live —
 it's released as soon as that worker reports done, not held for the rest of
 the wave.
 
 `concurrency.maxLiveWorkers` defaults to `"auto"`: derived from this host's
 own cpu count and RAM rather than a fixed number, so it scales with the
-machine `/forge` actually runs on instead of an arbitrary constant. A
+machine `/emet` actually runs on instead of an arbitrary constant. A
 separate memory-headroom brake also denies new slot acquisitions when
 `MemAvailable` is too low, regardless of how many slots are technically free
-— see `forge doctor` for this host's resolved numbers, and pin an explicit
+— see `emet doctor` for this host's resolved numbers, and pin an explicit
 integer here instead of `"auto"` only when there's a specific reason to cap
 this repo lower than the host otherwise would. Both settings live in
-`forge.config.json`. `FORGE_MAX_LIVE_WORKERS` (accepting `"auto"` too) and
-`FORGE_RUN_IDLE_THRESHOLD_MS` still override their config counterparts when
+`emet.config.json`. `EMET_MAX_LIVE_WORKERS` (accepting `"auto"` too) and
+`EMET_RUN_IDLE_THRESHOLD_MS` still override their config counterparts when
 set, same as before this repo had a config file at all.
 
 ---
 
-Generated by `forge init` on {{DATE}}. Replace every such marker above before
-running `/forge` unattended in this repo — `forge preflight` refuses to
+Generated by `emet init` on {{DATE}}. Replace every such marker above before
+running `/emet` unattended in this repo — `emet preflight` refuses to
 dispatch while one remains.

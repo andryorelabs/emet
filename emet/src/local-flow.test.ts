@@ -102,8 +102,8 @@ function frontierIds(): string[] {
 }
 
 function resolveInitTodoMarkers(): void {
-  const guidePath = path.join(repo, "docs", "agents", "forge.md");
-  writeFileSync(guidePath, readFileSync(guidePath, "utf8").replaceAll("TODO(forge):", "Done:"));
+  const guidePath = path.join(repo, "docs", "agents", "emet.md");
+  writeFileSync(guidePath, readFileSync(guidePath, "utf8").replaceAll("TODO(emet):", "Done:"));
 }
 
 describe("local flow", () => {
@@ -148,7 +148,7 @@ describe("local flow", () => {
     forgeOk("tracker", "close", "demo-01");
     expect(frontierIds()).toEqual(["demo-02"]);
 
-    const branch = "forge-demo-wave-1";
+    const branch = "emet-demo-wave-1";
     git(repo, "checkout", "-q", "-b", branch);
     writeFileSync(path.join(repo, "feature.txt"), "feature\n");
     git(repo, "add", "feature.txt");

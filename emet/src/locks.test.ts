@@ -37,12 +37,12 @@ function buildHolder(overrides: Partial<LockHolder> = {}): LockHolder {
   };
 }
 
-describe("forge-locks", () => {
+describe("emet-locks", () => {
   let temporaryRoot: string;
   let lockDirectory: string;
 
   beforeEach(() => {
-    temporaryRoot = mkdtempSync(path.join(tmpdir(), "forge-locks-test-"));
+    temporaryRoot = mkdtempSync(path.join(tmpdir(), "emet-locks-test-"));
     lockDirectory = path.join(temporaryRoot, "test.lock");
   });
 

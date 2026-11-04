@@ -109,6 +109,30 @@ describe("resolveWorktreeOwner", () => {
     });
   });
 
+  test("parses a lock reason written with the emet token", () => {
+    const entry: WorktreeEntry = {
+      ...baseEntry,
+      lockedReason:
+        "emet run=run-1 ticket=AO-258 anchor=4242 slug=-home-andryore-code-repo at=2026-09-07T20:00:00.000Z",
+    };
+    expect(resolveWorktreeOwner(entry)).toEqual({
+      runId: "run-1",
+      ticket: "AO-258",
+      anchorPid: 4242,
+      at: "2026-09-07T20:00:00.000Z",
+      coordinatorSlug: "-home-andryore-code-repo",
+    });
+  });
+
+  test("returns null for a lock reason with an unknown leading token", () => {
+    expect(
+      resolveWorktreeOwner({
+        ...baseEntry,
+        lockedReason: "other run=run-1 ticket=AO-258 anchor=4242 at=2026-09-07T20:00:00.000Z",
+      }),
+    ).toBeNull();
+  });
+
   test("reads an optional slug= field when present", () => {
     const entry: WorktreeEntry = {
       ...baseEntry,

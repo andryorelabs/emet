@@ -1,3 +1,4 @@
+import { existsSync } from "node:fs";
 import { stat } from "node:fs/promises";
 import path from "node:path";
 
@@ -7,6 +8,7 @@ import {
   type ForgeConfig,
   type TrackerKind,
 } from "./config";
+import { BINARY, CONFIG_FILE, LEGACY_CONFIG_FILE, LEGACY_PRODUCT, PRODUCT, RUN_DIR } from "./names";
 import {
   checkDependencies,
   createDependencyProbes,
@@ -17,17 +19,17 @@ import { isObject } from "./narrow";
 import { readTemplate } from "./assets";
 
 /**
- * `forge init` — generates a repo's `forge.config.json` plus its
- * `docs/agents/{forge,issue-tracker,triage-labels,domain}.md` skeleton from
- * templates, so `/forge` can run in any repo without a human hand-writing
+ * `emet init` — generates a repo's `emet.config.json` plus its
+ * `docs/agents/{emet,issue-tracker,triage-labels,domain}.md` skeleton from
+ * templates, so `/emet` can run in any repo without a human hand-writing
  * either from scratch. Autodetects what it safely can (package manager,
  * trunk branch, tracker kind); everything it can't infer (a shared singleton
- * resource, schema ownership, a Linear team key) is left as a `TODO(forge):`
- * marker in the generated docs — `forge preflight` refuses to dispatch while
+ * resource, schema ownership, a Linear team key) is left as a `TODO(emet):`
+ * marker in the generated docs — `emet preflight` refuses to dispatch while
  * one remains (see `preflight.ts`'s `checkForTodoMarkers`).
  *
  * Deliberately non-interactive: no readline prompts. A CLI tool asking
- * blocking questions on stdin doesn't compose with how `/forge` itself
+ * blocking questions on stdin doesn't compose with how `/emet` itself
  * (a Claude Code command) would drive this — if the command wants an actual
  * conversational interview before running `init`, it has that conversation
  * itself and either edits the generated file afterward or a future flag
@@ -74,8 +76,8 @@ const PACKAGE_MANAGER_PROBE_FILES: readonly string[] = [
 ];
 
 /**
- * Pure classification shared by `forge init` (files probed on disk) and
- * `forge map` (the tracked file list). Lockfiles win, then the
+ * Pure classification shared by `emet init` (files probed on disk) and
+ * `emet map` (the tracked file list). Lockfiles win, then the
  * `package.json` `packageManager` field, then a bare `package.json` means
  * npm; non-JS ecosystems follow, and `'unknown'` is never guessed into a
  * JS manager.
@@ -200,24 +202,29 @@ export function defaultSelfCheck(packageManager: PackageManager): string[] {
   }
 }
 
-const FORGE_BEGIN_MARKER = "<!-- forge:begin -->";
-const FORGE_END_MARKER = "<!-- forge:end -->";
+const EMET_BEGIN_MARKER = `<!-- ${PRODUCT}:begin -->`;
+const EMET_END_MARKER = `<!-- ${PRODUCT}:end -->`;
+const LEGACY_BEGIN_MARKER = `<!-- ${LEGACY_PRODUCT}:begin -->`;
+const LEGACY_END_MARKER = `<!-- ${LEGACY_PRODUCT}:end -->`;
 
 /**
- * Inserts `section` between the forge markers: replaces a previous forge
+ * Inserts `section` between the emet markers: replaces a previous emet
  * section in place, otherwise appends. Everything outside the markers is
  * returned byte-for-byte. `section` may already carry the markers.
  */
-export function upsertForgeSection(existing: string, section: string): string {
-  const block = section.includes(FORGE_BEGIN_MARKER)
+export function upsertEmetSection(existing: string, section: string): string {
+  const block = section.includes(EMET_BEGIN_MARKER)
     ? section.trim()
-    : `${FORGE_BEGIN_MARKER}\n${section.trim()}\n${FORGE_END_MARKER}`;
-  const beginIndex = existing.indexOf(FORGE_BEGIN_MARKER);
-  const endIndex = beginIndex === -1 ? -1 : existing.indexOf(FORGE_END_MARKER, beginIndex);
-  if (beginIndex !== -1 && endIndex !== -1) {
-    return (
-      existing.slice(0, beginIndex) + block + existing.slice(endIndex + FORGE_END_MARKER.length)
-    );
+    : `${EMET_BEGIN_MARKER}\n${section.trim()}\n${EMET_END_MARKER}`;
+  for (const [beginMarker, endMarker] of [
+    [EMET_BEGIN_MARKER, EMET_END_MARKER],
+    [LEGACY_BEGIN_MARKER, LEGACY_END_MARKER],
+  ] as const) {
+    const beginIndex = existing.indexOf(beginMarker);
+    const endIndex = beginIndex === -1 ? -1 : existing.indexOf(endMarker, beginIndex);
+    if (beginIndex !== -1 && endIndex !== -1) {
+      return existing.slice(0, beginIndex) + block + existing.slice(endIndex + endMarker.length);
+    }
   }
   if (existing.length === 0) return `${block}\n`;
   return `${existing.replace(/\n*$/, "\n")}\n${block}\n`;
@@ -292,12 +299,12 @@ async function hasGithubIssueUsage(repoRoot: string): Promise<boolean> {
 }
 
 /**
- * Priority order matches `forge.config.json`'s own design notes: a
+ * Priority order matches `emet.config.json`'s own design notes: a
  * networked tracker only counts if there's real evidence of it — a
  * configured Linear MCP server, or actual (not merely enabled) GitHub Issues
  * usage. Failing both, a `.scratch/` directory (the local tracker's root)
  * means `local`. Absent all three it returns `null` and `init` writes a
- * `TODO(forge):` marker asking the owner to choose.
+ * `TODO(emet):` marker asking the owner to choose.
  */
 export async function detectTrackerKind(repoRoot: string): Promise<TrackerKind | null> {
   if (await hasLinearMcpServer(repoRoot)) return "linear";
@@ -325,7 +332,7 @@ async function detectHasRemote(repoRoot: string): Promise<boolean> {
  * repo doesn't already have) — prefers a single `check` alias if one exists
  * (this fleet's own convention for "format+lint+typecheck in one call"),
  * otherwise falls back to `lint`+`typecheck` run separately, otherwise an
- * empty list (never guessed) so the generated doc's TODO(forge) is honest
+ * empty list (never guessed) so the generated doc's TODO(emet) is honest
  * about there being nothing to autodetect.
  */
 export async function detectJsSelfCheck(
@@ -378,7 +385,7 @@ async function detectSelfCheck(
 
 /**
  * `nfkit` -> `NFK`, `le-petit-prince` -> `LEP`, `a` -> `A` (never empty —
- * `forge.config.json`'s own validation rejects an empty `idPrefix`, and
+ * `emet.config.json`'s own validation rejects an empty `idPrefix`, and
  * `TICKET` is the last-resort fallback for a basename with no letters at
  * all, e.g. a directory named only digits/punctuation).
  */
@@ -404,7 +411,7 @@ const LOCAL_ID_PATTERN = String.raw`^[a-z0-9-]+-\d{2,}$`;
 
 /**
  * Merges autodetected values into a fully-materialized {@link ForgeConfig} —
- * every field explicit, per `forge.config.json`'s own design (`forge init`
+ * every field explicit, per `emet.config.json`'s own design (`emet init`
  * never writes a partial file relying on implicit defaults, even though the
  * loader would accept one).
  */
@@ -415,7 +422,7 @@ export function buildForgeConfig(detected: DetectedRepoInfo): ForgeConfig {
     version: 1,
     repo: { trunk: detected.trunk, remote: "origin" },
     ticket: isLocal
-      ? { idPattern: LOCAL_ID_PATTERN, branchPrefix: "forge" }
+      ? { idPattern: LOCAL_ID_PATTERN, branchPrefix: PRODUCT }
       : {
           idPattern: `^${detected.idPrefix}-\\d+$`,
           branchPrefix: detected.idPrefix.toLowerCase(),
@@ -445,11 +452,11 @@ export function buildForgeConfig(detected: DetectedRepoInfo): ForgeConfig {
 }
 
 /**
- * Prose-only `tracker` section (schema at `../schema/forge.config.schema.json`,
- * consumed by the `/forge` *command* per `docs/agents/issue-tracker.md` — see
+ * Prose-only `tracker` section (schema at `../schema/emet.config.schema.json`,
+ * consumed by the `/emet` *command* per `docs/agents/issue-tracker.md` — see
  * `reference/tracker-<kind>.md` for the literal calls each shape below drives).
  * Never validated by `config.ts` — this CLI never reads it — but every default
- * here has to exist for `/forge` Phase 0 to have something to read at all:
+ * here has to exist for `/emet` Phase 0 to have something to read at all:
  * without it, `tracker.kind` and `tracker.transitions` (the source of
  * non-negotiable #4 — "the coordinator writes a transition only where
  * `tracker.transitions` names it `coordinator`") are simply undefined, and a
@@ -517,8 +524,8 @@ export function substituteTemplate(
 function selfCheckSection(selfCheck: readonly string[]): string {
   if (selfCheck.length === 0) {
     return (
-      "TODO(forge): no self-check command was auto-detected for this repo — " +
-      "add one to `commands.selfCheck` in `forge.config.json` (a lint/typecheck " +
+      "TODO(emet): no self-check command was auto-detected for this repo — " +
+      "add one to `commands.selfCheck` in `emet.config.json` (a lint/typecheck " +
       "alias, `go vet`, etc.), or delete this TODO if this repo genuinely has " +
       "none and workers should judge for themselves."
     );
@@ -530,7 +537,7 @@ function monorepoSection(hasWorkspaces: boolean): string {
   if (hasWorkspaces) {
     return (
       "This repo has monorepo signals (a `pnpm-workspace.yaml`/`workspaces` field, " +
-      "or populated `packages/*`). TODO(forge): describe the workspace layout — " +
+      "or populated `packages/*`). TODO(emet): describe the workspace layout — " +
       "which package(s) a typical ticket touches, and whether `GLOSSARY.md`/" +
       "`docs/adr/` live at the repo root or per-package."
     );
@@ -578,17 +585,19 @@ async function writeIfAbsentOrForced(
 }
 
 const TRACKER_CHOICE_TODO =
-  "TODO(forge): no Linear MCP server, GitHub Issues usage or `.scratch/` directory was " +
-  "detected, so `tracker.kind` in `forge.config.json` is a placeholder (`github`). Choose a " +
-  "tracker by re-running `forge init --force --tracker <linear|github|local>`.";
+  "TODO(emet): no Linear MCP server, GitHub Issues usage or `.scratch/` directory was " +
+  "detected, so `tracker.kind` in `emet.config.json` is a placeholder (`github`). Choose a " +
+  "tracker by re-running `emet init --force --tracker <linear|github|local>`.";
 
-const LEGACY_FORGE_DOC_FOOTER = "Generated by `forge init`";
+const DOC_FOOTERS: readonly string[] = [PRODUCT, LEGACY_PRODUCT].map(
+  (name) => `Generated by \`${name} init\``,
+);
 
 /**
  * Docs shared with `setup-matt-pocock-skills` (`issue-tracker.md`,
- * `domain.md`, `triage-labels.md`): forge's content lives between the
- * `forge:begin`/`forge:end` markers and nothing outside them is ever touched.
- * A file written by an older forge (footer, no markers) is left alone rather
+ * `domain.md`, `triage-labels.md`): emet's content lives between the
+ * `emet:begin`/`emet:end` markers and nothing outside them is ever touched.
+ * A file written by an older emet (footer, no markers) is left alone rather
  * than duplicated.
  */
 async function writeSharedDoc(
@@ -597,50 +606,49 @@ async function writeSharedDoc(
 ): Promise<"written" | "updated" | "skipped-legacy"> {
   const file = Bun.file(filePath);
   if (!(await file.exists())) {
-    await Bun.write(filePath, upsertForgeSection("", rendered));
+    await Bun.write(filePath, upsertEmetSection("", rendered));
     return "written";
   }
   const existing = await file.text();
-  if (!existing.includes(FORGE_BEGIN_MARKER) && existing.includes(LEGACY_FORGE_DOC_FOOTER)) {
+  const hasMarkers = existing.includes(EMET_BEGIN_MARKER) || existing.includes(LEGACY_BEGIN_MARKER);
+  if (!hasMarkers && DOC_FOOTERS.some((footer) => existing.includes(footer))) {
     return "skipped-legacy";
   }
-  await Bun.write(filePath, upsertForgeSection(existing, rendered));
+  await Bun.write(filePath, upsertEmetSection(existing, rendered));
   return "updated";
 }
 
 /**
- * For the `local` tracker: appends `.forge/` (runtime state) and `.scratch/`
+ * For the `local` tracker: appends `.emet/` (runtime state) and `.scratch/`
  * (the unversioned tracker root) unless an equivalent rule is already there.
  * Returns the file content unchanged when both are present.
  */
 function appendLocalTrackerIgnores(existing: string, lines: readonly string[]): string {
   const trimmed = new Set(lines.map((line) => line.trim()));
   const missing: string[] = [];
-  if (![".forge", ".forge/", ".forge/*"].some((rule) => trimmed.has(rule))) {
-    missing.push(".forge/");
+  const runDirRules = [RUN_DIR].flatMap((dir) => [dir, `${dir}/`, `${dir}/*`]);
+  if (!runDirRules.some((rule) => trimmed.has(rule))) {
+    missing.push(`${RUN_DIR}/`);
   }
   if (![".scratch", ".scratch/"].some((rule) => trimmed.has(rule))) {
     missing.push(".scratch/");
   }
   if (missing.length === 0) return existing;
-  const block = ["# forge: runtime state and the local tracker are not versioned.", ...missing, ""];
+  const block = ["# emet: runtime state and the local tracker are not versioned.", ...missing, ""];
   const head = existing.length > 0 ? `${existing.replace(/\n+$/, "\n")}\n` : "";
   return `${head}${block.join("\n")}`;
 }
 
 /**
- * Ignores forge's runtime state under `.forge/` (reviewer output such as
+ * Ignores emet's runtime state under `.emet/` (reviewer output such as
  * `review-<runId>.md`) for every tracker. For `local` it also ignores
- * `.scratch/` and no longer un-ignores `.forge/tickets/`; other trackers
- * keep the legacy un-ignore of `.forge/tickets/`. Refuses rather than silently
- * doing nothing useful if a broader existing rule (a bare `.forge` or
- * `.forge/` line) would still shadow the un-ignore — that combination needs
+ * `.scratch/` and no longer un-ignores `.emet/tickets/`; other trackers
+ * keep the legacy un-ignore of `.emet/tickets/`. Refuses rather than silently
+ * doing nothing useful if a broader existing rule (a bare `.emet` or
+ * `.emet/` line) would still shadow the un-ignore — that combination needs
  * a human to resolve, not a guess about which line to remove.
  */
-async function ensureForgeStateGitignore(
-  repoRoot: string,
-  tracker: TrackerKind,
-): Promise<string[]> {
+async function ensureEmetStateGitignore(repoRoot: string, tracker: TrackerKind): Promise<string[]> {
   const gitignorePath = path.join(repoRoot, ".gitignore");
   const file = Bun.file(gitignorePath);
   const existing = (await file.exists()) ? await file.text() : "";
@@ -652,24 +660,28 @@ async function ensureForgeStateGitignore(
     return warnings;
   }
 
-  const shadowingRule = lines.find((line) => line.trim() === ".forge" || line.trim() === ".forge/");
+  const shadowingRule = lines.find((line) =>
+    [RUN_DIR].some((dir) => line.trim() === dir || line.trim() === `${dir}/`),
+  );
   if (shadowingRule) {
     warnings.push(
       `.gitignore already has a blanket "${shadowingRule.trim()}" rule that would ` +
-        "shadow an un-ignore for .forge/tickets/ — resolve this by hand; the " +
-        "working pattern is `.forge/*` followed by `!.forge/tickets/`.",
+        `shadow an un-ignore for ${RUN_DIR}/tickets/ — resolve this by hand; the ` +
+        `working pattern is \`${RUN_DIR}/*\` followed by \`!${RUN_DIR}/tickets/\`.`,
     );
     return warnings;
   }
 
-  const alreadyPresent = lines.some((line) => line.trim() === "!.forge/tickets/");
+  const alreadyPresent = lines.some((line) =>
+    [RUN_DIR].some((dir) => line.trim() === `!${dir}/tickets/`),
+  );
   if (alreadyPresent) return warnings;
 
   const block = [
     "",
-    "# forge local tracker: tickets are versioned, tracker state is not.",
-    ".forge/*",
-    "!.forge/tickets/",
+    "# emet local tracker: tickets are versioned, tracker state is not.",
+    `${RUN_DIR}/*`,
+    `!${RUN_DIR}/tickets/`,
     "",
   ];
   const updated =
@@ -685,16 +697,16 @@ async function ensureForgeStateGitignore(
  * rest of `init`. */
 async function ensureGithubStateLabels(repoRoot: string): Promise<string[]> {
   const labels: Array<{ name: string; color: string; description: string }> = [
-    { name: "status:todo", color: "ededed", description: "forge: not started" },
+    { name: "status:todo", color: "ededed", description: "emet: not started" },
     {
       name: "status:in-progress",
       color: "fbca04",
-      description: "forge: a worker is on this",
+      description: "emet: a worker is on this",
     },
     {
       name: "status:in-review",
       color: "0e8a16",
-      description: "forge: PR open, awaiting merge",
+      description: "emet: PR open, awaiting merge",
     },
   ];
   const failures: string[] = [];
@@ -728,7 +740,7 @@ export function parseInitArguments(argv: readonly string[]): InitOptions {
     trackerValue !== "local"
   ) {
     throw new Error(
-      `forge init: --tracker must be one of linear|github|local, got "${trackerValue}"`,
+      `emet init: --tracker must be one of linear|github|local, got "${trackerValue}"`,
     );
   }
   return { force, trackerOverride: trackerValue ?? null };
@@ -737,14 +749,19 @@ export function parseInitArguments(argv: readonly string[]): InitOptions {
 async function main(options: InitOptions): Promise<void> {
   const repoRoot = await resolveRepoRoot();
   if (!repoRoot) {
-    console.error("forge init: not inside a git repository");
+    console.error("emet init: not inside a git repository");
     process.exitCode = 2;
     return;
   }
 
-  const configPath = path.join(repoRoot, "forge.config.json");
-  if (!options.force && (await Bun.file(configPath).exists())) {
-    console.error(`forge init: ${configPath} already exists — pass --force to overwrite.`);
+  const configPath = path.join(repoRoot, CONFIG_FILE);
+  const existingConfigPath = [configPath, path.join(repoRoot, LEGACY_CONFIG_FILE)].find(
+    (candidate) => existsSync(candidate),
+  );
+  if (!options.force && existingConfigPath !== undefined) {
+    console.error(
+      `${BINARY} init: ${existingConfigPath} already exists — pass --force to overwrite.`,
+    );
     process.exitCode = 2;
     return;
   }
@@ -773,12 +790,13 @@ async function main(options: InitOptions): Promise<void> {
 
   const config = buildForgeConfig(detected);
   const configJson = {
+    $schema: `~/.claude/${PRODUCT}/schema/${PRODUCT}.config.schema.json`,
     "//":
-      `Generated by \`forge init\` on ${new Date().toISOString().slice(0, 10)}. ` +
+      `Generated by \`emet init\` on ${new Date().toISOString().slice(0, 10)}. ` +
       "Every value below is either autodetected or a built-in default — review " +
       "before relying on it, especially repo.trunk if it was not detected (see " +
       "the summary this command printed). `commands` is prose-only (see the " +
-      "schema) — the /forge command reads it directly, this CLI never does.",
+      "schema) — the /emet command reads it directly, this CLI never does.",
     ...config,
     tracker: buildTrackerConfig(detected),
     commands: { selfCheck: detected.selfCheck },
@@ -802,7 +820,7 @@ async function main(options: InitOptions): Promise<void> {
   await Bun.$`mkdir -p ${docsAgentsDirectory}`.quiet();
 
   const writes: Array<{ template: string; target: string; shared: boolean; note: string }> = [
-    { template: "forge.md.tpl", target: "forge.md", shared: false, note: "" },
+    { template: "emet.md.tpl", target: "emet.md", shared: false, note: "" },
     {
       template: `issue-tracker-${detected.tracker}.md.tpl`,
       target: "issue-tracker.md",
@@ -835,10 +853,10 @@ async function main(options: InitOptions): Promise<void> {
     warnings.push(
       `repo.trunk: could not resolve origin/HEAD's symref — defaulted to "main". ` +
         "Run `git remote set-head origin --auto` if that's wrong, then re-run " +
-        "`forge init --force`.",
+        "`emet init --force`.",
     );
   }
-  warnings.push(...(await ensureForgeStateGitignore(repoRoot, detected.tracker)));
+  warnings.push(...(await ensureEmetStateGitignore(repoRoot, detected.tracker)));
   if (detected.tracker === "github") {
     const labelFailures = await ensureGithubStateLabels(repoRoot);
     if (labelFailures.length > 0) {
@@ -854,7 +872,7 @@ async function main(options: InitOptions): Promise<void> {
     probes: createDependencyProbes(),
   });
 
-  console.log(`forge init — ${repoRoot}`);
+  console.log(`emet init — ${repoRoot}`);
   console.log(`  package manager: ${packageManager}`);
   console.log(`  trunk: ${trunk}${detectedTrunk ? "" : " (default — not detected)"}`);
   console.log(`  tracker: ${tracker}${options.trackerOverride ? " (--tracker override)" : ""}`);
@@ -877,7 +895,7 @@ async function main(options: InitOptions): Promise<void> {
     for (const limitation of limitations) console.log(`  - note: ${limitation}`);
   }
   console.log(
-    "\nNext: fill in every TODO(forge): marker under docs/agents/ — `forge preflight` refuses to dispatch while one remains.",
+    "\nNext: fill in every TODO(emet): marker under docs/agents/ — `emet preflight` refuses to dispatch while one remains.",
   );
 }
 

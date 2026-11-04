@@ -1,21 +1,27 @@
+import path from "node:path";
+
 import { resolveAnchorPid, resolveSessionSlug } from "./runs";
 import { ForgeConfigError, resolveRepoRoot } from "./config";
 import { resolveWorktreeOwner } from "./worktrees";
 import { errorMessage, isObject } from "./narrow";
+import { BINARY, CONFIG_FILE, LOCK_TOKEN, resolveConfigPath } from "./names";
+
+const COMMAND_PREFIX = `${BINARY} lock-reason:`;
+const SCHEMA_FILE = CONFIG_FILE.replace(/\.json$/, ".schema.json");
 
 /**
- * Produces the `git worktree lock` reason a `/forge` worker writes at
+ * Produces the `git worktree lock` reason an `/emet` worker writes at
  * bootstrap — the string every other command in this CLI parses back via
  * {@link resolveWorktreeOwner} to answer "which run owns this worktree, and
  * is that run still alive".
  *
  * This command exists because that string was, until now, the one piece of
- * `/forge`'s coordination machinery nothing in this repo actually produced.
+ * `/emet`'s coordination machinery nothing in this repo actually produced.
  * `worktrees.ts` parsed it, `preflight --post-dispatch` hard-failed on its
  * absence (AO-321), and `cleanup` refused to delete a branch whose worktree
  * carried it — but the only instruction for *writing* it was a
  * `{{bootstrap_steps}}` placeholder in `reference/worker-prompt.md`, filled
- * from each target repo's own hand-written `docs/agents/forge.md`. Every
+ * from each target repo's own hand-written agents doc. Every
  * repo was expected to reinvent, by hand, a string with five positional
  * fields and an exact parser on the other side.
  *
@@ -44,8 +50,7 @@ import { errorMessage, isObject } from "./narrow";
  * order-independently, and treats `slug` as optional so a lock reason
  * written before this command existed still parses.
  */
-export const DEFAULT_LOCK_REASON_TEMPLATE =
-  "forge run={runId} ticket={ticket} anchor={anchorPid} slug={coordinatorSlug} at={iso}";
+export const DEFAULT_LOCK_REASON_TEMPLATE = `${LOCK_TOKEN} run={runId} ticket={ticket} anchor={anchorPid} slug={coordinatorSlug} at={iso}`;
 
 export type LockReasonFields = {
   readonly runId: string;
@@ -69,7 +74,7 @@ export type LockReasonFields = {
 function assertNoWhitespace(field: string, value: string): void {
   if (/\s/.test(value)) {
     throw new ForgeConfigError(
-      `forge lock-reason: ${field} contains whitespace (${JSON.stringify(value)}) — the lock reason is parsed by splitting on whitespace, so this would corrupt every field after it.${field === "slug" ? ' The slug is this repo\'s checkout path with "/" replaced by "-"; a path component containing a space cannot be represented.' : ""}`,
+      `${COMMAND_PREFIX} ${field} contains whitespace (${JSON.stringify(value)}) — the lock reason is parsed by splitting on whitespace, so this would corrupt every field after it.${field === "slug" ? ' The slug is this repo\'s checkout path with "/" replaced by "-"; a path component containing a space cannot be represented.' : ""}`,
     );
   }
 }
@@ -93,7 +98,7 @@ export function buildLockReason(
 
   if (!Number.isInteger(fields.anchorPid) || fields.anchorPid <= 0) {
     throw new ForgeConfigError(
-      `forge lock-reason: --anchor must be a positive integer pid, got ${JSON.stringify(fields.anchorPid)}`,
+      `${COMMAND_PREFIX} --anchor must be a positive integer pid, got ${JSON.stringify(fields.anchorPid)}`,
     );
   }
 
@@ -117,21 +122,22 @@ export function buildLockReason(
     parsed.at !== fields.iso
   ) {
     throw new ForgeConfigError(
-      `forge lock-reason: the configured worktree.lockReason template does not round-trip through this CLI's own parser.\n  template: ${template}\n  produced: ${reason}\nKeep the literal "forge" token and the run=/ticket=/anchor=/at= fields (see schema/forge.config.schema.json).`,
+      `${COMMAND_PREFIX} the configured worktree.lockReason template does not round-trip through this CLI's own parser.\n  template: ${template}\n  produced: ${reason}\nKeep the literal "${LOCK_TOKEN}" token and the run=/ticket=/anchor=/at= fields (see schema/${SCHEMA_FILE}).`,
     );
   }
   if (parsed.coordinatorSlug !== fields.coordinatorSlug) {
     throw new ForgeConfigError(
-      `forge lock-reason: the configured worktree.lockReason template drops the slug={coordinatorSlug} field.\n  template: ${template}\nWithout it, forge preflight and forge cleanup cannot find this run's transcript and will classify it as dead the moment its anchor process exits.`,
+      `${COMMAND_PREFIX} the configured worktree.lockReason template drops the slug={coordinatorSlug} field.\n  template: ${template}\nWithout it, ${BINARY} preflight and ${BINARY} cleanup cannot find this run's transcript and will classify it as dead the moment its anchor process exits.`,
     );
   }
   return reason;
 }
 
 /**
- * Reads `worktree.lockReason` straight off the repo's `forge.config.json`.
+ * Reads `worktree.lockReason` straight off the repo's `emet.config.json`, or
+ * the legacy `forge.config.json` when only that exists.
  * `config.ts` deliberately validates only the subset this CLI acts on, and
- * the `worktree` block is documented in the schema as read by the `/forge`
+ * the `worktree` block is documented in the schema as read by the `/emet`
  * *command* rather than by the CLI — so this reads the raw JSON instead of
  * widening `ForgeConfig` for one optional string. A missing file or a
  * missing key is not an error: the built-in template is the answer.
@@ -139,15 +145,16 @@ export function buildLockReason(
  * absent" rule `loadForgeConfigWithDefaults` enforces.
  */
 export async function readLockReasonTemplate(repoRoot: string): Promise<string> {
-  const file = Bun.file(`${repoRoot}/forge.config.json`);
-  if (!(await file.exists())) return DEFAULT_LOCK_REASON_TEMPLATE;
+  const configPath = resolveConfigPath(repoRoot);
+  if (!configPath) return DEFAULT_LOCK_REASON_TEMPLATE;
+  const file = Bun.file(configPath.path);
 
   let raw: unknown;
   try {
     raw = await file.json();
   } catch (error: unknown) {
     throw new ForgeConfigError(
-      `forge lock-reason: forge.config.json is not valid JSON — ${errorMessage(error)}`,
+      `${COMMAND_PREFIX} ${path.basename(configPath.path)} is not valid JSON — ${errorMessage(error)}`,
     );
   }
 
@@ -156,7 +163,7 @@ export async function readLockReasonTemplate(repoRoot: string): Promise<string> 
   if (template === undefined) return DEFAULT_LOCK_REASON_TEMPLATE;
   if (typeof template !== "string" || template.trim().length === 0) {
     throw new ForgeConfigError(
-      'forge lock-reason: "worktree.lockReason" must be a non-empty string template',
+      `${COMMAND_PREFIX} "worktree.lockReason" must be a non-empty string template`,
     );
   }
   return template;
@@ -171,12 +178,12 @@ function readFlagValue(argv: readonly string[], flag: string): string | undefine
 function requireFlagValue(argv: readonly string[], flag: string): string {
   const value = readFlagValue(argv, flag);
   if (!value || value.startsWith("--")) {
-    throw new ForgeConfigError(`forge lock-reason: ${flag} requires a value`);
+    throw new ForgeConfigError(`${COMMAND_PREFIX} ${flag} requires a value`);
   }
   return value;
 }
 
-const USAGE = "usage: forge lock-reason --run <runId> --ticket <ticket> [--anchor <pid>]";
+const USAGE = `usage: ${BINARY} lock-reason --run <runId> --ticket <ticket> [--anchor <pid>]`;
 
 /**
  * Prints the lock reason on stdout with no decoration, so the coordinator
@@ -198,7 +205,7 @@ export async function run(argv: string[]): Promise<void> {
 
     const repoRoot = await resolveRepoRoot();
     if (!repoRoot) {
-      throw new ForgeConfigError("forge lock-reason: not inside a git repository");
+      throw new ForgeConfigError(`${COMMAND_PREFIX} not inside a git repository`);
     }
 
     const runId = requireFlagValue(argv, "--run");

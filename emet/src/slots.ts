@@ -1,5 +1,4 @@
 import { existsSync, mkdirSync, readdirSync } from "node:fs";
-import os from "node:os";
 import path from "node:path";
 
 import {
@@ -24,27 +23,28 @@ import {
   resolveMemReserveBytesFromEnvironment,
 } from "./resources";
 import { classifyRun, resolveSessionSlug, type RunVerdict } from "./runs";
+import { CONFIG_FILE, LEGACY_PRODUCT, readEnv, stateDir } from "./names";
 
 /**
- * Concurrency-cap slots under `~/.local/state/forge/slots/<index>` — the
- * missing half of `FORGE_MAX_LIVE_WORKERS` (see `docs/agents/forge.md`'s
+ * Concurrency-cap slots under `~/.local/state/emet/slots/<index>` — the
+ * missing half of `EMET_MAX_LIVE_WORKERS` (see `docs/agents/emet.md`'s
  * "Concurrency" section). `preflight.ts`'s `checkSlotCapacity` has always
  * *counted* free slots, but nothing ever wrote one, so the cap was
  * aspirational — every slot always read as free no matter how many workers
  * were actually running.
  *
- * **Why host-wide, not `<git-common-dir>/forge/slots` like `locks.ts`'s
+ * **Why host-wide, not `<git-common-dir>/emet/slots` like `locks.ts`'s
  * other lock directories.** Every other lock in this CLI protects a
  * *repo*-scoped resource (a ticket, a branch), so it correctly lives under
  * that repo's own `.git`. A worker slot protects something host-wide — the
  * cpu/RAM this machine actually has — so two different repos being worked on
  * concurrently must draw from the *same* pool, not each get their own
- * independent 8 (or "auto") slots. Before this, running `/forge` in two
+ * independent 8 (or "auto") slots. Before this, running `/emet` in two
  * repos on one host had no shared budget at all; running it from two Orca
  * worktrees of *one* repo (which do share one `--git-common-dir`) happened
  * to share a pool only by accident of that repo's own layout, not by design.
- * `$FORGE_STATE_DIR`, then `$XDG_STATE_HOME/forge`, then
- * `~/.local/state/forge` is the resolution order — the same
+ * `$EMET_STATE_DIR`, then `$XDG_STATE_HOME/emet`, then
+ * `~/.local/state/emet` is the resolution order — the same
  * XDG-base-dir-first, home-fallback shape every other host-wide (not
  * repo-wide) piece of state on this machine already follows.
  *
@@ -63,7 +63,7 @@ import { classifyRun, resolveSessionSlug, type RunVerdict } from "./runs";
  * pid-liveness-based staleness check with one built on `classifyRun`
  * instead.
  *
- * **Call this through `forge slots`, never through an inline `bun
+ * **Call this through `emet slots`, never through an inline `bun
  * -e` snippet** — same rationale as `claims.ts`'s file-level doc
  * comment (AO-285): an untypechecked positional call is how that incident's
  * reservation got corrupted, and a slot holder has the same
@@ -92,21 +92,10 @@ export interface SlotHolder extends LockHolder {
   readonly sessionSlug: string;
   /** Which repo's dispatch this slot belongs to (`git rev-parse
    * --show-toplevel` at acquire time) — informational only, so `--list` and
-   * `forge doctor` can say whose wave is holding a slot on a shared,
+   * `emet doctor` can say whose wave is holding a slot on a shared,
    * host-wide pool. Never used to scope acquisition or release; a repo has
    * no special claim over "its own" slots on a pool it doesn't own. */
   readonly repoRoot: string;
-}
-
-/** `$FORGE_STATE_DIR` (an explicit override, e.g. for a test or an
- * unusual install), else `$XDG_STATE_HOME/forge`, else `~/.local/state/forge`
- * — resolved once, host-wide, never against any repo's own `.git`. */
-function resolveForgeStateDirectory(): string {
-  const explicit = process.env.FORGE_STATE_DIR;
-  if (explicit) return explicit;
-  const xdgStateHome = process.env.XDG_STATE_HOME;
-  if (xdgStateHome) return path.join(xdgStateHome, "forge");
-  return path.join(os.homedir(), ".local", "state", "forge");
 }
 
 export function resolveSlotsDirectory(): Promise<string> {
@@ -116,11 +105,11 @@ export function resolveSlotsDirectory(): Promise<string> {
 }
 
 function createSlotsDirectory(): string {
-  const slotsDirectory = path.join(resolveForgeStateDirectory(), "slots");
+  const slotsDirectory = path.join(stateDir(), "slots");
   /**
    * Recursive on purpose, unlike {@link didAcquireLock}'s own `mkdirSync`:
-   * this creates the shared *container* (`forge/slots/`), never the atomic
-   * per-index lock itself (`forge/slots/<index>/`), so there is no mutual
+   * this creates the shared *container* (`emet/slots/`), never the atomic
+   * per-index lock itself (`emet/slots/<index>/`), so there is no mutual
    * exclusion to break here — only whether the parent exists at all before
    * the first `acquireSlot` call ever made on this host.
    */
@@ -132,7 +121,7 @@ function createSlotsDirectory(): string {
  * The legacy per-repo pool a repo may still have under its own
  * `--git-common-dir` from before slots moved host-wide — never read from or
  * written to by {@link acquireSlot}/{@link releaseSlot}, only surfaced by
- * `forge doctor`/`slots --list` as a "safe to remove once no wave is
+ * `emet doctor`/`slots --list` as a "safe to remove once no wave is
  * running" note. Resolves to `null` outside a git repo, or if
  * `--git-common-dir` can't be resolved, rather than throwing — this is a
  * best-effort informational check, never one that should block anything.
@@ -144,7 +133,7 @@ export async function resolveLegacySlotsDirectory(): Promise<string | null> {
   if (output.exitCode !== 0) return null;
   const gitCommonDirectory = output.stdout.toString().trim();
   if (!gitCommonDirectory || !path.isAbsolute(gitCommonDirectory)) return null;
-  return path.join(gitCommonDirectory, "forge", "slots");
+  return path.join(gitCommonDirectory, LEGACY_PRODUCT, "slots");
 }
 
 function slotDirectory(slotsDirectory: string, index: number): string {
@@ -249,7 +238,7 @@ export type ReleaseSlotResult =
 /**
  * Releases slot `index`, but only on behalf of `expectedRunId` — mirrors
  * `claims.ts`'s {@link releaseTicket} ownership check. Before this existed,
- * `forge slots --release-index <i>` freed any slot unconditionally, unlike
+ * `emet slots --release-index <i>` freed any slot unconditionally, unlike
  * `--release --run <id>` ({@link releaseAllSlotsForRun}), which already
  * filtered on `holder.runId` — so the single-index path let one coordinator
  * free a slot a different, still-live coordinator legitimately holds. `force`
@@ -272,16 +261,16 @@ export function releaseSlotIfOwned(
 
 /**
  * Releases every slot `runId` currently holds — used by
- * `forge cleanup --run <runId>` at wave close-out, so a coordinator
+ * `emet cleanup --run <runId>` at wave close-out, so a coordinator
  * never has to remember which indices it took across N {@link acquireSlot}
- * calls, and by `forge:slots --release --run <runId>` for the same purpose
+ * calls, and by `emet:slots --release --run <runId>` for the same purpose
  * when a dispatch aborts before reaching cleanup.
  *
  * `ticket`, when given, additionally scopes the release to the one slot
  * matching `holder.ticket` — this is what lets a worker's own slot free up
  * the moment *that* worker's completion notification arrives (Phase 7/8;
  * see `reference/phases-8-closeout.md`), instead of every slot the whole run holds
- * staying occupied until the entire wave's `forge cleanup --run` at
+ * staying occupied until the entire wave's `emet cleanup --run` at
  * close-out.
  */
 export async function releaseAllSlotsForRun(
@@ -343,13 +332,13 @@ function readFlagValue(argv: readonly string[], flag: string): string | null {
 function requireFlagValue(argv: readonly string[], flag: string): string {
   const value = readFlagValue(argv, flag);
   if (!value) {
-    throw new Error(`forge:slots — ${flag} requires a value`);
+    throw new Error(`emet:slots — ${flag} requires a value`);
   }
   return value;
 }
 
 /**
- * `FORGE_MAX_LIVE_WORKERS` still overrides `forge.config.json`'s
+ * `EMET_MAX_LIVE_WORKERS` still overrides `emet.config.json`'s
  * `concurrency.maxLiveWorkers` when set — same precedence `preflight.ts`
  * honors, kept so the existing escape hatch never breaks. Accepts the
  * literal `"auto"` too (matching what a config's own `maxLiveWorkers` field
@@ -359,7 +348,7 @@ function requireFlagValue(argv: readonly string[], flag: string): string {
  * var is unset.
  */
 export function resolveMaxLiveWorkers(config: ForgeConfig): number {
-  const raw = process.env.FORGE_MAX_LIVE_WORKERS;
+  const raw = readEnv("MAX_LIVE_WORKERS");
   if (raw !== undefined) {
     if (raw === "auto") {
       return computeAutoMaxLiveWorkers(readHostResources(), resolveAutoCapOptionsFromEnvironment());
@@ -378,10 +367,10 @@ export function resolveMaxLiveWorkers(config: ForgeConfig): number {
  * file-level doc comment for why an inline `bun -e` snippet is not).
  *
  * ```
- * forge slots --acquire --run <runId> --anchor <pid> --ticket <ticket>
- * forge slots --release --run <runId> [--ticket <ticket>]
- * forge slots --release-index <index> --run <runId> [--force]
- * forge slots --list
+ * emet slots --acquire --run <runId> --anchor <pid> --ticket <ticket>
+ * emet slots --release --run <runId> [--ticket <ticket>]
+ * emet slots --release-index <index> --run <runId> [--force]
+ * emet slots --list
  * ```
  */
 async function main(config: ForgeConfig): Promise<void> {
@@ -397,7 +386,7 @@ async function main(config: ForgeConfig): Promise<void> {
      * The admission brake runs before ever scanning a slot index — with no
      * swap, exhausting RAM is an OOM kill, not a slowdown, so this is
      * checked fresh on every acquire rather than folded into the cap
-     * computed once at `forge init`/`forge doctor` time. See
+     * computed once at `emet init`/`emet doctor` time. See
      * `resources.ts`'s `checkMemoryHeadroom` doc comment.
      */
     const headroom = checkMemoryHeadroom(
@@ -406,7 +395,7 @@ async function main(config: ForgeConfig): Promise<void> {
     );
     if (!headroom.ok) {
       console.error(
-        `forge:slots — denied by the memory brake: ${headroom.reason}. Not a capacity issue (slots may still be free) — wait for memory to free up, or raise FORGE_MEM_RESERVE_GIB if this repo's workers genuinely need less headroom than the default.`,
+        `emet:slots — denied by the memory brake: ${headroom.reason}. Not a capacity issue (slots may still be free) — wait for memory to free up, or raise EMET_MEM_RESERVE_GIB if this repo's workers genuinely need less headroom than the default.`,
       );
       process.exitCode = 1;
       return;
@@ -415,12 +404,12 @@ async function main(config: ForgeConfig): Promise<void> {
     const index = await acquireSlot(maxLiveWorkers, runId, anchorPid, ticket);
     if (index === null) {
       console.error(
-        `forge:slots — no free slot (all ${maxLiveWorkers} occupied by a live or idle run).`,
+        `emet:slots — no free slot (all ${maxLiveWorkers} occupied by a live or idle run).`,
       );
       process.exitCode = 1;
       return;
     }
-    console.log(`forge:slots — acquired slot ${index} for ${ticket}.`);
+    console.log(`emet:slots — acquired slot ${index} for ${ticket}.`);
     return;
   }
 
@@ -429,7 +418,7 @@ async function main(config: ForgeConfig): Promise<void> {
     const ticket = readFlagValue(argv, "--ticket") ?? undefined;
     const released = await releaseAllSlotsForRun(runId, undefined, ticket);
     console.log(
-      `forge:slots — released ${released.length} slot(s) for run ${runId}${ticket ? ` (ticket ${ticket})` : ""}${released.length > 0 ? `: ${released.join(", ")}` : ""}.`,
+      `emet:slots — released ${released.length} slot(s) for run ${runId}${ticket ? ` (ticket ${ticket})` : ""}${released.length > 0 ? `: ${released.join(", ")}` : ""}.`,
     );
     return;
   }
@@ -442,26 +431,28 @@ async function main(config: ForgeConfig): Promise<void> {
     const result = releaseSlotIfOwned(slotsDirectory, index, runId, force);
     if (result.outcome === "owned-by-another") {
       console.error(
-        `forge:slots — slot ${index} is held by run ${result.ownerRunId}, not ${runId} — pass --force to release it anyway.`,
+        `emet:slots — slot ${index} is held by run ${result.ownerRunId}, not ${runId} — pass --force to release it anyway.`,
       );
       process.exitCode = 1;
       return;
     }
-    console.log(`forge:slots — released slot ${index}.`);
+    console.log(`emet:slots — released slot ${index}.`);
     return;
   }
 
   if (argv.includes("--list")) {
     const maxLiveWorkers = resolveMaxLiveWorkers(config);
     const capSource =
-      process.env.FORGE_MAX_LIVE_WORKERS !== undefined
-        ? "FORGE_MAX_LIVE_WORKERS"
+      readEnv("MAX_LIVE_WORKERS") !== undefined
+        ? process.env["EMET_MAX_LIVE_WORKERS"]
+          ? "EMET_MAX_LIVE_WORKERS"
+          : "FORGE_MAX_LIVE_WORKERS"
         : config.concurrency.maxLiveWorkers === "auto"
           ? "auto"
-          : "forge.config.json";
+          : CONFIG_FILE;
     const entries = await listOccupiedSlots();
     if (entries.length === 0) {
-      console.log(`forge:slots — no slots occupied (0/${maxLiveWorkers}, cap=${capSource}).`);
+      console.log(`emet:slots — no slots occupied (0/${maxLiveWorkers}, cap=${capSource}).`);
     } else {
       for (const { index, holder, verdict } of entries) {
         console.log(
@@ -481,16 +472,16 @@ async function main(config: ForgeConfig): Promise<void> {
   }
 
   console.error(
-    "usage: forge slots --acquire --run <runId> --anchor <pid> --ticket <ticket> | --release --run <runId> [--ticket <ticket>] | --release-index <index> --run <runId> [--force] | --list",
+    "usage: emet slots --acquire --run <runId> --anchor <pid> --ticket <ticket> | --release --run <runId> [--ticket <ticket>] | --release-index <index> --run <runId> [--force] | --list",
   );
   process.exitCode = 1;
 }
 
 /**
- * Entry point invoked by the `forge` CLI dispatcher (`bin/emet.ts`) for the
+ * Entry point invoked by the `emet` CLI dispatcher (`bin/emet.ts`) for the
  * `slots` subcommand. See `claims.ts`'s `run()` for why this stages `argv`
  * onto `process.argv` rather than threading it through `main()` directly, and
- * for why `--list` alone tolerates a missing `forge.config.json` (falls back
+ * for why `--list` alone tolerates a missing `emet.config.json` (falls back
  * to {@link DEFAULT_FORGE_CONFIG}) while every mutating mode
  * (`--acquire`/`--release`/`--release-index`) requires a real one.
  */
@@ -499,7 +490,7 @@ export async function run(argv: string[]): Promise<void> {
   try {
     const repoRoot = await resolveRepoRoot();
     if (!repoRoot) {
-      throw new ForgeConfigError("forge slots: not inside a git repository");
+      throw new ForgeConfigError("emet slots: not inside a git repository");
     }
     const config = argv.includes("--list")
       ? (await loadForgeConfigWithDefaults(repoRoot)).config

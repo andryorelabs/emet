@@ -1,7 +1,7 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "title": "forge.config.json",
-  "description": "Per-repo configuration for the /forge pipeline. Covers both the subset this CLI (src/config.ts) validates at runtime — repo, ticket, concurrency, preflight.requiredFiles, handoff, usage — and the wider set (tracker, commit, worktree, commands, schema, design) that the /forge *command* reads directly as prose instructions. This file exists for editor completion only; src/config.ts is the runtime source of truth for the fields it checks.",
+  "title": "emet.config.json",
+  "description": "Per-repo configuration for the /emet pipeline. Covers both the subset this CLI (src/config.ts) validates at runtime — repo, ticket, concurrency, preflight.requiredFiles, handoff, usage — and the wider set (tracker, commit, worktree, commands, schema, design) that the /emet *command* reads directly as prose instructions. This file exists for editor completion only; src/config.ts is the runtime source of truth for the fields it checks.",
   "type": "object",
   "required": ["version", "repo", "ticket"],
   "additionalProperties": true,
@@ -49,7 +49,7 @@
       "type": "object",
       "required": ["kind"],
       "additionalProperties": false,
-      "description": "Which issue tracker /forge talks to, and how. The CLI reads `kind` (to decide which dependency checks apply in `forge preflight` and `forge doctor`) and never calls a tracker directly; the rest of this section documents the adapter the /forge *command* follows as prose (docs/agents/issue-tracker.md). `local` is design-only for now (see reference/tracker-local.md): its planned layout is .forge/tickets + <git-common-dir>/forge/tracker, but no `forge tracker` subcommand implements it yet — don't run Phases 5-9 unattended against a `local`-tracker repo until it does.",
+      "description": "Which issue tracker /emet talks to, and how. The CLI reads `kind` (to decide which dependency checks apply in `emet preflight` and `emet doctor`) and never calls a tracker directly; the rest of this section documents the adapter the /emet *command* follows as prose (docs/agents/issue-tracker.md). `local` is design-only for now (see reference/tracker-local.md): its planned layout is .emet/tickets + <git-common-dir>/emet/tracker, but no `emet tracker` subcommand implements it yet — don't run Phases 5-9 unattended against a `local`-tracker repo until it does.",
       "properties": {
         "kind": {
           "type": "string",
@@ -71,7 +71,7 @@
         "transitions": {
           "type": "object",
           "additionalProperties": false,
-          "description": "Who is responsible for writing each ticket-state transition: 'worker' (the dispatched agent), 'coordinator' (the /forge coordinator writes it explicitly), or 'automatic' (the tracker integration does it — e.g. Linear's GitHub integration on PR open/merge). The coordinator must never write a transition marked 'automatic' — see docs/agents/forge.md's 'Generalizing /forge'.",
+          "description": "Who is responsible for writing each ticket-state transition: 'worker' (the dispatched agent), 'coordinator' (the /emet coordinator writes it explicitly), or 'automatic' (the tracker integration does it — e.g. Linear's GitHub integration on PR open/merge). The coordinator must never write a transition marked 'automatic' — see docs/agents/emet.md's 'Generalizing /emet'.",
           "properties": {
             "onStart": {
               "type": "string",
@@ -100,14 +100,14 @@
         "github": {
           "type": "object",
           "additionalProperties": false,
-          "description": "GitHub Issues has no native priority field or workflow states — these two maps are the substitute, per the 'Generalizing /forge' design notes.",
+          "description": "GitHub Issues has no native priority field or workflow states — these two maps are the substitute, per the 'Generalizing /emet' design notes.",
           "properties": {
             "priorityLabels": {
               "type": "object",
               "additionalProperties": {
                 "type": "string"
               },
-              "description": "Maps a priority level (\"1\"=P0 highest .. \"4\"=P3) to the literal GitHub label name, e.g. {\"1\":\"P0\",\"2\":\"P1\"}. A repo with none declared falls back to createdAt-ascending order, and `forge doctor` reports that explicitly."
+              "description": "Maps a priority level (\"1\"=P0 highest .. \"4\"=P3) to the literal GitHub label name, e.g. {\"1\":\"P0\",\"2\":\"P1\"}. A repo with none declared falls back to createdAt-ascending order, and `emet doctor` reports that explicitly."
             },
             "stateLabels": {
               "type": "object",
@@ -121,7 +121,7 @@
         "local": {
           "type": "object",
           "additionalProperties": false,
-          "description": "Settings for the CLI-implemented `local` tracker (.forge/tickets + <git-common-dir>/forge/tracker).",
+          "description": "Settings for the CLI-implemented `local` tracker (.emet/tickets + <git-common-dir>/emet/tracker).",
           "properties": {
             "idPrefix": {
               "deprecated": true,
@@ -180,12 +180,12 @@
       "properties": {
         "stateDir": {
           "type": "string",
-          "description": "Directory (relative to a worker's worktree root) used for run-local logs/notes, e.g. \".forge\". Prose-only.",
+          "description": "Directory (relative to a worker's worktree root) used for run-local logs/notes, e.g. \".emet\". Prose-only.",
           "deprecated": true
         },
         "lockReason": {
           "type": "string",
-          "description": "Template for the `git worktree lock` reason a worker writes at bootstrap, read by `forge lock-reason` (the command that fills it in and that the coordinator calls once per ticket in Phase 6 — never assemble this string by hand). Defaults to \"forge run={runId} ticket={ticket} anchor={anchorPid} slug={coordinatorSlug} at={iso}\". Only override to ADD fields: `forge lock-reason` parses its own output back with the same parser forge preflight/forge cleanup use and refuses any template that drops the literal \"forge\" token, any of run=/ticket=/anchor=/at=, or slug=. slug is the coordinator's own resolveSessionSlug(), and is what lets those commands find the run's transcript — a lock reason without it classifies as 'dead' the moment the run's anchor process exits, never 'idle'. Reasons written before slug= existed still parse, with that verdict caveat."
+          "description": "Template for the `git worktree lock` reason a worker writes at bootstrap, read by `emet lock-reason` (the command that fills it in and that the coordinator calls once per ticket in Phase 6 — never assemble this string by hand). Defaults to \"emet run={runId} ticket={ticket} anchor={anchorPid} slug={coordinatorSlug} at={iso}\". Only override to ADD fields: `emet lock-reason` parses its own output back with the same parser emet preflight/emet cleanup use and refuses any template that drops the literal \"emet\" token, any of run=/ticket=/anchor=/at=, or slug=. slug is the coordinator's own resolveSessionSlug(), and is what lets those commands find the run's transcript — a lock reason without it classifies as 'dead' the moment the run's anchor process exits, never 'idle'. Reasons written before slug= existed still parse, with that verdict caveat."
         },
         "copyFromMain": {
           "type": "array",
@@ -199,7 +199,7 @@
           "items": {
             "type": "string"
           },
-          "description": "Shell commands run once in a fresh worktree before a worker starts (e.g. [\"npm ci\"]). Prose-only — read and executed by the /forge command's Phase 6, never by this CLI."
+          "description": "Shell commands run once in a fresh worktree before a worker starts (e.g. [\"npm ci\"]). Prose-only — read and executed by the /emet command's Phase 6, never by this CLI."
         }
       }
     },
@@ -253,7 +253,7 @@
       "properties": {
         "requiredFiles": {
           "type": "array",
-          "description": "Files `forge preflight` requires to exist at the repo root before a wave dispatches. Empty means no such check runs at all.",
+          "description": "Files `emet preflight` requires to exist at the repo root before a wave dispatches. Empty means no such check runs at all.",
           "items": {
             "type": "object",
             "required": ["path", "why"],
@@ -278,7 +278,7 @@
             "type": "string",
             "minLength": 1
           },
-          "description": "Binaries that must resolve on PATH before dispatch. `forge preflight` fails with exit 1 naming any that don't, and `forge doctor` reports them. This is the repo's own list, separate from the tracker-driven dependency checks — `gh` already has a dedicated check that also verifies authentication, so listing it here is optional. Common opt-in additions: \"rg\" and \"sg\", which the worker prompts offer as alternatives to reading files whole."
+          "description": "Binaries that must resolve on PATH before dispatch. `emet preflight` fails with exit 1 naming any that don't, and `emet doctor` reports them. This is the repo's own list, separate from the tracker-driven dependency checks — `gh` already has a dedicated check that also verifies authentication, so listing it here is optional. Common opt-in additions: \"rg\" and \"sg\", which the worker prompts offer as alternatives to reading files whole."
         }
       }
     },
@@ -303,20 +303,20 @@
             }
           ],
           "default": "auto",
-          "description": "Global cap shared by every /forge coordinator concurrently running on this HOST, across every repo — the slot pool lives under ~/.local/state/forge/slots, not any one repo's --git-common-dir. \"auto\" (the default) derives the cap from this host's own cpu count/RAM (src/resources.ts's computeAutoMaxLiveWorkers) instead of a fixed number nobody measured; a positive integer pins it. A separate, always-on memory-headroom check (FORGE_MEM_RESERVE_GIB, default 8 GiB) denies an acquire outright when MemAvailable is too low, regardless of this cap — see src/resources.ts's checkMemoryHeadroom. FORGE_MAX_LIVE_WORKERS env var overrides this field (accepting \"auto\" too) when set."
+          "description": "Global cap shared by every /emet coordinator concurrently running on this HOST, across every repo — the slot pool lives under ~/.local/state/emet/slots, not any one repo's --git-common-dir. \"auto\" (the default) derives the cap from this host's own cpu count/RAM (src/resources.ts's computeAutoMaxLiveWorkers) instead of a fixed number nobody measured; a positive integer pins it. A separate, always-on memory-headroom check (EMET_MEM_RESERVE_GIB, default 8 GiB) denies an acquire outright when MemAvailable is too low, regardless of this cap — see src/resources.ts's checkMemoryHeadroom. EMET_MAX_LIVE_WORKERS env var overrides this field (accepting \"auto\" too) when set."
         },
         "runIdleThresholdMs": {
           "type": "integer",
           "minimum": 1,
           "default": 5400000,
-          "description": "How long a run with no live anchor still classifies 'idle' (rather than 'dead') based on transcript freshness alone, in milliseconds. Default 5400000 = 90 minutes. FORGE_RUN_IDLE_THRESHOLD_MS env var overrides this when set."
+          "description": "How long a run with no live anchor still classifies 'idle' (rather than 'dead') based on transcript freshness alone, in milliseconds. Default 5400000 = 90 minutes. EMET_RUN_IDLE_THRESHOLD_MS env var overrides this when set."
         }
       }
     },
     "schema": {
       "type": "object",
       "additionalProperties": false,
-      "description": "Describes this repo's own data-schema ownership (e.g. a Prisma schema file), used by the /forge command's Phase 3 conflict-avoidance rule when splitting tickets across workers. Prose-only — empty or omitted means that rule is skipped entirely.",
+      "description": "Describes this repo's own data-schema ownership (e.g. a Prisma schema file), used by the /emet command's Phase 3 conflict-avoidance rule when splitting tickets across workers. Prose-only — empty or omitted means that rule is skipped entirely.",
       "properties": {
         "ownedPaths": {
           "type": "array",
@@ -340,18 +340,18 @@
           "type": "integer",
           "minimum": 1,
           "default": 60,
-          "description": "Max lines a .forge/handoff-<ticket>.md note may have before `forge handoff --check` fails it."
+          "description": "Max lines a .emet/handoff-<ticket>.md note may have before `emet handoff --check` fails it."
         },
         "maxChars": {
           "type": "integer",
           "minimum": 1,
           "default": 8000,
-          "description": "Max characters (~2k tokens) a handoff note may have before `forge handoff --check` fails it."
+          "description": "Max characters (~2k tokens) a handoff note may have before `emet handoff --check` fails it."
         },
         "autoChain": {
           "type": "boolean",
           "default": false,
-          "description": "When true, a wave that closes cleanly with a non-empty frontier launches the next wave itself with `claude --bg \"/forge --dispatch <spec-id>\"` instead of printing the command for a human to paste."
+          "description": "When true, a wave that closes cleanly with a non-empty frontier launches the next wave itself with `claude --bg \"/emet --dispatch <spec-id>\"` instead of printing the command for a human to paste."
         },
         "launcher": {
           "type": "string",
@@ -410,13 +410,13 @@
           "type": "integer",
           "minimum": 1,
           "default": 400,
-          "description": "A Read with no offset/limit against a file over this many lines counts as \"oversized\" in `forge usage`'s report."
+          "description": "A Read with no offset/limit against a file over this many lines counts as \"oversized\" in `emet usage`'s report."
         },
         "stalledMinutes": {
           "type": "integer",
           "minimum": 1,
           "default": 10,
-          "description": "Default --minutes threshold for `forge usage --stalled`."
+          "description": "Default --minutes threshold for `emet usage --stalled`."
         }
       }
     },
@@ -445,7 +445,7 @@
         "reviewer": {
           "type": "object",
           "additionalProperties": false,
-          "description": "Reviewer model per risk tier returned by `forge assess`.",
+          "description": "Reviewer model per risk tier returned by `emet assess`.",
           "properties": {
             "medium": {
               "type": "object",
@@ -513,7 +513,7 @@
             "minLength": 1
           },
           "default": [],
-          "description": "Extra case-insensitive path tokens that force the high review tier in `forge assess`, on top of the built-in set."
+          "description": "Extra case-insensitive path tokens that force the high review tier in `emet assess`, on top of the built-in set."
         }
       }
     },

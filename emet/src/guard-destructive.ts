@@ -1,6 +1,10 @@
 import { existsSync, readFileSync } from "node:fs";
 import path from "node:path";
 
+import { BINARY, LEGACY_RUN_DIR, RUN_DIR } from "./names";
+
+const RUN_DIRECTORIES: readonly string[] = [RUN_DIR, LEGACY_RUN_DIR];
+
 export type DestructiveVerdict =
   | { readonly decision: "allow" }
   | { readonly decision: "deny"; readonly reason: string };
@@ -143,12 +147,17 @@ export function checkDestructiveCommand(input: ToolHookInput): DestructiveVerdic
   return {
     decision: "deny",
     reason:
-      `forge guard: \`${label}\` is a destructive operation and is denied (also when wrapped in ` +
+      `${BINARY} guard: \`${label}\` is a destructive operation and is denied (also when wrapped in ` +
       "env/sudo/timeout/xargs/sh -c/heredoc). Use a non-destructive alternative, or ask the user to run it.",
   };
 }
 
-export type SurfaceFile = { readonly root: string; readonly globs: readonly string[] };
+export type SurfaceFile = {
+  readonly root: string;
+  readonly globs: readonly string[];
+  /** Where the globs came from, relative to `root`; defaults to `.emet/surface.json`. */
+  readonly source?: string;
+};
 
 function parseSurfaceGlobs(raw: unknown): string[] | null {
   const list = Array.isArray(raw)
@@ -160,15 +169,25 @@ function parseSurfaceGlobs(raw: unknown): string[] | null {
   return list.filter((entry): entry is string => typeof entry === "string");
 }
 
-/** Walks up from `cwd` for `.forge/surface.json`; a missing or unreadable file means no restriction. */
+/** `<directory>/.emet/surface.json`, then the legacy `.forge/surface.json`, when either exists. */
+function findSurfaceCandidate(directory: string): string | undefined {
+  return RUN_DIRECTORIES.map((runDirectory) =>
+    path.join(directory, runDirectory, "surface.json"),
+  ).find((candidate) => existsSync(candidate));
+}
+
+/**
+ * Walks up from `cwd` for `.emet/surface.json`, or the legacy
+ * `.forge/surface.json`; a missing or unreadable file means no restriction.
+ */
 function loadSurfaceFile(cwd: string): SurfaceFile | null {
   let current = path.resolve(cwd);
   for (let hop = 0; hop < 12; hop++) {
-    const candidate = path.join(current, ".forge", "surface.json");
-    if (existsSync(candidate)) {
+    const candidate = findSurfaceCandidate(current);
+    if (candidate) {
       try {
         const globs = parseSurfaceGlobs(JSON.parse(readFileSync(candidate, "utf8")));
-        return globs ? { root: current, globs } : null;
+        return globs ? { root: current, globs, source: path.relative(current, candidate) } : null;
       } catch {
         return null;
       }
@@ -198,15 +217,15 @@ export function checkEditSurface(
   const inside = !relative.startsWith("..") && !path.isAbsolute(relative);
   const allowed =
     inside &&
-    (relative.startsWith(`.forge${path.sep}`) ||
+    (RUN_DIRECTORIES.some((runDirectory) => relative.startsWith(`${runDirectory}${path.sep}`)) ||
       surface.globs.some((glob) => new Bun.Glob(glob).match(relative)));
   if (allowed) return ALLOW;
 
   return {
     decision: "deny",
     reason:
-      `forge guard: ${target} is outside this ticket's allowed edit surfaces ` +
-      `(${surface.globs.join(", ") || "none"}, from .forge/surface.json). Edit only allowed files, ` +
+      `${BINARY} guard: ${target} is outside this ticket's allowed edit surfaces ` +
+      `(${surface.globs.join(", ") || "none"}, from ${surface.source ?? `${RUN_DIR}/surface.json`}). Edit only allowed files, ` +
       "or ask the coordinator to widen the surface.",
   };
 }

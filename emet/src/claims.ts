@@ -24,12 +24,13 @@ import {
   releaseLock,
   resolveLockDirectory,
 } from "./locks";
+import { LEGACY_PRODUCT, PRODUCT } from "./names";
 import { classifyRun, readProcessStartToken, resolveSessionSlug, type RunVerdict } from "./runs";
 import { errnoCode, isObject } from "./narrow";
 
 /**
- * Per-ticket reservations under `<git-common-dir>/forge/tickets/` — the
- * registry two `/forge` coordinators race against so the same ticket never
+ * Per-ticket reservations under `<git-common-dir>/emet/tickets/` — the
+ * registry two `/emet` coordinators race against so the same ticket never
  * gets dispatched twice at once. See PROJ-256/PROJ-258. `<git-common-dir>`
  * (resolved via `git rev-parse --git-common-dir`) rather than `.git`
  * directly, because every worktree of a repo shares one `.git` and what this
@@ -40,7 +41,7 @@ import { errnoCode, isObject } from "./narrow";
  * `worktrees.ts`'s `resolveWorktreeOwner`), not a parallel JSON registry
  * that could disagree with git about which worktrees exist.
  *
- * **Call this through `forge claims`, never through an inline `bun
+ * **Call this through `emet claims`, never through an inline `bun
  * -e` snippet.** A coordinator once called the positional
  * {@link didReserveTicket} with its arguments in the wrong order —
  * `(ticket, runId, anchorPid)` instead of `(runId, anchorPid, ticket)`, three
@@ -75,7 +76,7 @@ export type Reservation = {
 /**
  * The ticket-id shape this module enforces — historically hardcoded to
  * `AO-<digits>` (a Linear team key), now sourced from
- * `forge.config.json`'s `ticket.idPattern` via {@link configureTicketPattern}
+ * `emet.config.json`'s `ticket.idPattern` via {@link configureTicketPattern}
  * so this module works against any repo's ticket ids, not only one Linear
  * team's. Defaults to a generic `<UPPERCASE-PREFIX>-<digits>` shape (still
  * matching `AO-<digits>`) until `run()` configures it from the repo's own
@@ -87,7 +88,7 @@ export type Reservation = {
 let TICKET_PATTERN = new RegExp(DEFAULT_FORGE_CONFIG.ticket.idPattern);
 
 /**
- * Overrides {@link TICKET_PATTERN} from a repo's own `forge.config.json`.
+ * Overrides {@link TICKET_PATTERN} from a repo's own `emet.config.json`.
  * Called once, by `run()`, before any reservation logic executes — every
  * function below reads the module-level `TICKET_PATTERN` rather than taking
  * it as a parameter, so this is the single point of configuration and every
@@ -107,17 +108,17 @@ export function configureTicketPattern(source: string): void {
 function assertValidReservationArguments(runId: string, anchorPid: number, ticket: string): void {
   if (typeof runId !== "string" || runId.length === 0) {
     throw new TypeError(
-      `forge-claims: runId must be a non-empty string, got ${JSON.stringify(runId)}. Check argument order — the signature is (runId, anchorPid, ticket).`,
+      `emet-claims: runId must be a non-empty string, got ${JSON.stringify(runId)}. Check argument order — the signature is (runId, anchorPid, ticket).`,
     );
   }
   if (!Number.isSafeInteger(anchorPid) || anchorPid <= 0) {
     throw new TypeError(
-      `forge-claims: anchorPid must be a positive integer, got ${JSON.stringify(anchorPid)}. Check argument order — the signature is (runId, anchorPid, ticket).`,
+      `emet-claims: anchorPid must be a positive integer, got ${JSON.stringify(anchorPid)}. Check argument order — the signature is (runId, anchorPid, ticket).`,
     );
   }
   if (!TICKET_PATTERN.test(ticket)) {
     throw new TypeError(
-      `forge-claims: ticket must match ${TICKET_PATTERN} (e.g. "PROJ-321"), got ${JSON.stringify(ticket)}. Check argument order — the signature is (runId, anchorPid, ticket).`,
+      `emet-claims: ticket must match ${TICKET_PATTERN} (e.g. "PROJ-321"), got ${JSON.stringify(ticket)}. Check argument order — the signature is (runId, anchorPid, ticket).`,
     );
   }
 }
@@ -125,16 +126,20 @@ function assertValidReservationArguments(runId: string, anchorPid: number, ticke
 function assertValidTicket(ticket: string): void {
   if (!TICKET_PATTERN.test(ticket)) {
     throw new TypeError(
-      `forge-claims: ticket must match ${TICKET_PATTERN} (e.g. "PROJ-321"), got ${JSON.stringify(ticket)}.`,
+      `emet-claims: ticket must match ${TICKET_PATTERN} (e.g. "PROJ-321"), got ${JSON.stringify(ticket)}.`,
     );
   }
 }
 
 /**
-Resolves `<git-common-dir>/forge`, the shared root every worktree of this repo agrees on. Reuses `locks.ts`'s own `--git-common-dir` resolution rather than a second copy of it.
+Resolves `<git-common-dir>/emet`, the shared root every worktree of this repo agrees on, falling back to a pre-rename `<git-common-dir>/forge` while only that one holds a `tickets/` directory, so an empty `emet/` appearing next to live legacy reservations never moves the root. Reuses `locks.ts`'s own `--git-common-dir` resolution rather than a second copy of it.
 */
 async function resolveForgeDirectory(): Promise<string> {
-  return resolveLockDirectory("forge");
+  const currentDirectory = await resolveLockDirectory(PRODUCT);
+  const legacyDirectory = path.join(path.dirname(currentDirectory), LEGACY_PRODUCT);
+  const legacyTicketsExist = existsSync(path.join(legacyDirectory, "tickets"));
+  const currentTicketsExist = existsSync(path.join(currentDirectory, "tickets"));
+  return legacyTicketsExist && !currentTicketsExist ? legacyDirectory : currentDirectory;
 }
 
 function ticketsDirectory(forgeDirectory: string): string {
@@ -287,7 +292,7 @@ export type ReleaseTicketResult =
  * Releases `ticket`'s reservation, but only on behalf of `expectedRunId` —
  * the run this caller believes currently owns it. Before this ownership
  * check existed, `releaseTicket(ticket)` deleted the reservation file
- * unconditionally: `forge claims --release PROJ-321` from run B could free run
+ * unconditionally: `emet claims --release PROJ-321` from run B could free run
  * A's still-live reservation with no error at all, reopening the exact
  * double-dispatch race `didReserveTicket` exists to prevent — a real risk
  * once two coordinators (e.g. two Orca worktrees of the same repo) can both
@@ -426,7 +431,7 @@ function readFlagValue(argv: readonly string[], flag: string): string | null {
 function requireFlagValue(argv: readonly string[], flag: string): string {
   const value = readFlagValue(argv, flag);
   if (!value) {
-    throw new Error(`forge:claims — ${flag} requires a value`);
+    throw new Error(`emet:claims — ${flag} requires a value`);
   }
   return value;
 }
@@ -436,10 +441,10 @@ function requireFlagValue(argv: readonly string[], flag: string): string {
  * file-level doc comment for why an inline `bun -e` snippet is not).
  *
  * ```
- * forge claims --reserve PROJ-321 --run <runId> --anchor <pid>
- * forge claims --release PROJ-321 --run <runId> [--force]
- * forge claims --list
- * forge claims --prune [--dry-run]
+ * emet claims --reserve PROJ-321 --run <runId> --anchor <pid>
+ * emet claims --release PROJ-321 --run <runId> [--force]
+ * emet claims --list
+ * emet claims --prune [--dry-run]
  * ```
  */
 async function main(): Promise<void> {
@@ -451,11 +456,11 @@ async function main(): Promise<void> {
     const anchorPid = Number(requireFlagValue(argv, "--anchor"));
     const isReserved = await didReserveTicket(runId, anchorPid, ticket);
     if (!isReserved) {
-      console.error(`forge:claims — ${ticket} is already reserved by a live or idle run.`);
+      console.error(`emet:claims — ${ticket} is already reserved by a live or idle run.`);
       process.exitCode = 1;
       return;
     }
-    console.log(`forge:claims — reserved ${ticket} for run ${runId}.`);
+    console.log(`emet:claims — reserved ${ticket} for run ${runId}.`);
     return;
   }
 
@@ -466,19 +471,19 @@ async function main(): Promise<void> {
     const result = await releaseTicket(ticket, runId, { force });
     if (result.outcome === "owned-by-another") {
       console.error(
-        `forge:claims — ${ticket} is reserved by run ${result.ownerRunId}, not ${runId} — pass --force to release it anyway.`,
+        `emet:claims — ${ticket} is reserved by run ${result.ownerRunId}, not ${runId} — pass --force to release it anyway.`,
       );
       process.exitCode = 1;
       return;
     }
-    console.log(`forge:claims — released ${ticket}.`);
+    console.log(`emet:claims — released ${ticket}.`);
     return;
   }
 
   if (argv.includes("--list")) {
     const reservations = await listReservations();
     if (reservations.length === 0) {
-      console.log("forge:claims — no reservations.");
+      console.log("emet:claims — no reservations.");
       return;
     }
     for (const reservation of reservations) {
@@ -497,31 +502,31 @@ async function main(): Promise<void> {
       isDryRun,
     );
     console.log(
-      `forge:claims — ${isDryRun ? "would release" : "released"} ${releasedTickets.length} dead reservation(s)${releasedTickets.length > 0 ? `: ${releasedTickets.join(", ")}` : ""}.`,
+      `emet:claims — ${isDryRun ? "would release" : "released"} ${releasedTickets.length} dead reservation(s)${releasedTickets.length > 0 ? `: ${releasedTickets.join(", ")}` : ""}.`,
     );
     if (malformedFiles.length > 0) {
       console.log(
-        `forge:claims — ${malformedFiles.length} malformed reservation file(s), never auto-deleted, review by hand:\n${malformedFiles.map((name) => `  ${path.join("<git-common-dir>/forge/tickets", name)}`).join("\n")}`,
+        `emet:claims — ${malformedFiles.length} malformed reservation file(s), never auto-deleted, review by hand:\n${malformedFiles.map((name) => `  ${path.join("<git-common-dir>/emet/tickets", name)}`).join("\n")}`,
       );
     }
     return;
   }
 
   console.error(
-    "usage: forge claims --reserve <ticket> --run <runId> --anchor <pid> | --release <ticket> --run <runId> [--force] | --list | --prune [--dry-run]",
+    "usage: emet claims --reserve <ticket> --run <runId> --anchor <pid> | --release <ticket> --run <runId> [--force] | --list | --prune [--dry-run]",
   );
   process.exitCode = 1;
 }
 
 /**
- * Entry point invoked by the `forge` CLI dispatcher (`bin/emet.ts`) for the
+ * Entry point invoked by the `emet` CLI dispatcher (`bin/emet.ts`) for the
  * `claims` subcommand. `main()` reads its arguments off `process.argv`
  * directly, so this wrapper stages `argv` onto `process.argv` before
  * delegating — safe because the dispatcher runs exactly one subcommand per
  * process.
  *
  * `--list` is read-only (falls back to {@link DEFAULT_FORGE_CONFIG} when a
- * repo has no `forge.config.json` yet); `--reserve`/`--release`/`--prune`
+ * repo has no `emet.config.json` yet); `--reserve`/`--release`/`--prune`
  * mutate the dispatch-mutex registry, so they require a real config — see
  * `config.ts`'s two loader tiers.
  */
@@ -530,7 +535,7 @@ export async function run(argv: string[]): Promise<void> {
   try {
     const repoRoot = await resolveRepoRoot();
     if (!repoRoot) {
-      throw new ForgeConfigError("forge claims: not inside a git repository");
+      throw new ForgeConfigError("emet claims: not inside a git repository");
     }
     const config = argv.includes("--list")
       ? (await loadForgeConfigWithDefaults(repoRoot)).config

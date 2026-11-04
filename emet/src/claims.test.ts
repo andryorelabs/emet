@@ -5,6 +5,7 @@ import {
   mkdtempSync,
   readdirSync,
   readFileSync,
+  realpathSync,
   rmSync,
   writeFileSync,
 } from "node:fs";
@@ -39,7 +40,7 @@ describe("didReserveTicket / listReservations / releaseTicket", () => {
   let forgeDirectory: string;
 
   beforeEach(() => {
-    forgeDirectory = mkdtempSync(path.join(os.tmpdir(), "forge-claims-test-"));
+    forgeDirectory = mkdtempSync(path.join(os.tmpdir(), "emet-claims-test-"));
   });
 
   afterEach(() => {
@@ -214,7 +215,7 @@ describe("pruneDeadReservations", () => {
   let ticketsDirectory: string;
 
   beforeEach(() => {
-    forgeDirectory = mkdtempSync(path.join(os.tmpdir(), "forge-claims-test-"));
+    forgeDirectory = mkdtempSync(path.join(os.tmpdir(), "emet-claims-test-"));
     ticketsDirectory = path.join(forgeDirectory, "tickets");
     mkdirSync(ticketsDirectory, { recursive: true });
   });
@@ -310,5 +311,42 @@ describe("shouldWriteReservation", () => {
 
   test("a different run can reclaim a dead reservation", () => {
     expect(shouldWriteReservation("run-b", existing, "dead")).toBe(true);
+  });
+});
+
+describe("legacy claims directory fallback", () => {
+  let repositoryRoot: string;
+  let originalDirectory: string;
+
+  const legacyReservation = {
+    runId: "run-legacy",
+    anchorPid: process.pid,
+    ticket: "AO-777",
+    reservedAt: Date.now(),
+    sessionSlug: "slug",
+  };
+
+  beforeEach(async () => {
+    originalDirectory = process.cwd();
+    repositoryRoot = realpathSync(mkdtempSync(path.join(os.tmpdir(), "emet-claims-legacy-")));
+    await Bun.$`git init -q ${repositoryRoot}`.quiet();
+    const legacyTickets = path.join(repositoryRoot, ".git", "forge", "tickets");
+    mkdirSync(legacyTickets, { recursive: true });
+    writeFileSync(path.join(legacyTickets, "AO-777.json"), JSON.stringify(legacyReservation));
+    process.chdir(repositoryRoot);
+  });
+
+  afterEach(() => {
+    process.chdir(originalDirectory);
+    rmSync(repositoryRoot, { recursive: true, force: true });
+  });
+
+  test("reads a reservation held under the legacy directory when only it exists", async () => {
+    expect(await listReservations()).toMatchObject([{ runId: "run-legacy", ticket: "AO-777" }]);
+  });
+
+  test("an empty emet directory appearing next to it does not hide the legacy reservation", async () => {
+    mkdirSync(path.join(repositoryRoot, ".git", "emet"));
+    expect(await listReservations()).toMatchObject([{ runId: "run-legacy", ticket: "AO-777" }]);
   });
 });

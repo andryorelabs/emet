@@ -111,7 +111,7 @@ describe("local tracker spec source", () => {
     const repo = realpathSync(mkdtempSync(path.join(tmpdir(), "validate-local-")));
     try {
       await Bun.$`git -C ${repo} init -q -b main`.quiet();
-      writeFileSync(path.join(repo, "forge.config.json"), '{"tracker":{"kind":"local"}}');
+      writeFileSync(path.join(repo, "emet.config.json"), '{"tracker":{"kind":"local"}}');
       mkdirSync(path.join(repo, ".scratch/feat"), { recursive: true });
       writeFileSync(path.join(repo, ".scratch/feat/spec.md"), SPEC);
       const tickets = path.join(repo, "tickets.json");
