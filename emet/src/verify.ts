@@ -152,12 +152,12 @@ async function spawnCapture(command: readonly string[], cwd: string): Promise<Co
 
 /**
  * The argv that re-spawns `forge handoff --check`: the executable itself when
- * compiled (it embeds the dispatcher), `bun <forge.ts>` from source.
+ * compiled (it embeds the dispatcher), `bun <emet.ts>` from source.
  */
 export function handoffCheckCommand(handoffPath: string, compiled: boolean): string[] {
   const subcommand = ["handoff", "--check", handoffPath];
   if (compiled) return [process.execPath, ...subcommand];
-  return [process.execPath, path.join(import.meta.dir, "..", "bin", "forge.ts"), ...subcommand];
+  return [process.execPath, path.join(import.meta.dir, "..", "bin", "emet.ts"), ...subcommand];
 }
 
 export function gitDependencies(

@@ -66,7 +66,7 @@ export const LYCHEE_ARGS = [
   "--no-progress",
   "*.md",
   "docs/**/*.md",
-  "forge/**/*.md",
+  "emet/**/*.md",
   ".github/**/*.md",
   "commands/*.md",
   "agents/*.md",

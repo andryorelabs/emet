@@ -8,7 +8,7 @@ import path from "node:path";
  * comment used to call it out as "the only one of the nine modules that had
  * this gap". `checkHandoff`/`parseSections`/`ticketReferenceFromPath` aren't
  * exported (this module's public surface is `run()`, invoked by
- * `bin/forge.ts`), so these tests drive it the same way the CLI does: real
+ * `bin/emet.ts`), so these tests drive it the same way the CLI does: real
  * `.forge/handoff-<ticket>.md` files under a tmpdir, checked via
  * `run(['--check', path])`/`run(['--render', path])` and asserted against
  * captured stdout/stderr and `process.exitCode`.

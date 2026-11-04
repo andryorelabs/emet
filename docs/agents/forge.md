@@ -29,7 +29,7 @@ with the reason the coordinator generated for it (`forge lock-reason`) —
 that's built into `/forge` itself, identical in every repo, and nothing
 below needs to restate it.
 
-This repo's code lives under `forge/`, not the root, so a fresh worktree needs
+This repo's code lives under `emet/`, not the root, so a fresh worktree needs
 `bun install` run there (`worktree.bootstrap`). No env files or codegen.
 
 ## Self-check

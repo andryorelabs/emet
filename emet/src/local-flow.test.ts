@@ -11,7 +11,7 @@ import {
 import os from "node:os";
 import path from "node:path";
 
-const CLI_ENTRY = path.resolve(import.meta.dir, "../bin/forge.ts");
+const CLI_ENTRY = path.resolve(import.meta.dir, "../bin/emet.ts");
 
 let repo = "";
 let emptyBin = "";

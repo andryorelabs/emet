@@ -160,7 +160,7 @@ describeInstaller("install.sh with bun", () => {
 
     const wrapperPath = path.join(homeDir, ".local/bin/forge");
     expect(lstatSync(wrapperPath).isSymbolicLink()).toBe(false);
-    expect(readFileSync(wrapperPath, "utf8")).toContain("forge.ts");
+    expect(readFileSync(wrapperPath, "utf8")).toContain("emet.ts");
     const command = readFileSync(path.join(homeDir, ".claude/commands/forge.md"), "utf8");
     expect(command).not.toContain("${CLAUDE_PLUGIN_ROOT}");
   });
@@ -173,7 +173,7 @@ describeInstaller("install.sh with bun", () => {
 
     const wrapperPath = path.join(homeDir, ".local/bin/forge");
     expect(lstatSync(wrapperPath).isSymbolicLink()).toBe(false);
-    expect(readFileSync(wrapperPath, "utf8")).toContain("forge.ts");
+    expect(readFileSync(wrapperPath, "utf8")).toContain("emet.ts");
     if (existsSync(shimPath)) expect(readFileSync(shimPath, "utf8")).toBe(shimBefore);
   });
 });

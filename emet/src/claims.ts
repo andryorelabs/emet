@@ -514,7 +514,7 @@ async function main(): Promise<void> {
 }
 
 /**
- * Entry point invoked by the `forge` CLI dispatcher (`bin/forge.ts`) for the
+ * Entry point invoked by the `forge` CLI dispatcher (`bin/emet.ts`) for the
  * `claims` subcommand. `main()` reads its arguments off `process.argv`
  * directly, so this wrapper stages `argv` onto `process.argv` before
  * delegating — safe because the dispatcher runs exactly one subcommand per

@@ -1,9 +1,9 @@
 {
-  "name": "claude-forge-dev",
+  "name": "emet-dev",
   "private": true,
   "type": "module",
   "scripts": {
-    "typecheck": "bun node_modules/typescript7/bin/tsc --noEmit -p forge/tsconfig.json && bun node_modules/typescript7/bin/tsc --noEmit -p tsconfig.json",
+    "typecheck": "bun node_modules/typescript7/bin/tsc --noEmit -p emet/tsconfig.json && bun node_modules/typescript7/bin/tsc --noEmit -p tsconfig.json",
     "lint": "oxlint --type-aware --deny-warnings",
     "fix": "bun run format && bun run lint --fix",
     "format": "oxfmt",
@@ -13,9 +13,9 @@
     "check:map": "bun tools/check-map.ts",
     "brand:export": "bun tools/brand-export.ts",
     "check": "bun run typecheck && bun run lint && bun run format:check && bun run knip && bun run lint:docs && bun run check:map",
-    "test": "bun test ./tools ./.claude/hooks && bun test --cwd forge",
-    "test:coverage": "bun test ./tools ./.claude/hooks && bun test --cwd forge --coverage",
-    "ci:local": "bun install --frozen-lockfile && bun install --cwd forge --frozen-lockfile && bun run check && bun run test:coverage && bun x --no-install commitlint --from origin/main --to HEAD",
+    "test": "bun test ./tools ./.claude/hooks && bun test --cwd emet",
+    "test:coverage": "bun test ./tools ./.claude/hooks && bun test --cwd emet --coverage",
+    "ci:local": "bun install --frozen-lockfile && bun install --cwd emet --frozen-lockfile && bun run check && bun run test:coverage && bun x --no-install commitlint --from origin/main --to HEAD",
     "prepare": "husky"
   },
   "devDependencies": {

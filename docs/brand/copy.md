@@ -27,15 +27,15 @@ Not affiliated with or endorsed by Anthropic
 
 ## Claims checked
 
-| Claim                          | Backed by                                                                                                                                                   |
-| ------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| One approval                   | `forge/src/approve.ts`; `forge/reference/phases-1-5.md` (phases 1-5 end at the approval); `README.md` intro                                                 |
-| A review per wave              | `forge/src/review.ts`, `forge/src/reviewpackage.ts`; `forge/reference/reviewer-prompt.md`; `forge/reference/phases-8-closeout.md`                           |
-| Nothing merges when flagged    | `forge/src/gate.ts`; `forge/reference/phases-8-closeout.md` ("Never auto-merge a wave with anything flagged"); `README.md` "Landing PRs and chaining waves" |
-| CI green before merge          | `forge/src/land.ts`; `forge/reference/phases-8-closeout.md` (merge only if green); `README.md` `pr.autoMerge`, `maxCiFixAttempts`                           |
-| Workers in isolated worktrees  | `forge/src/worktrees.ts`; `forge/reference/worker-prompt.md`; `docs/architecture.md` (run state)                                                            |
-| Linear, GitHub Issues or none  | `forge/reference/tracker-linear.md`, `tracker-github.md`, `tracker-local.md`; `README.md` intro                                                             |
-| Runs on your machine, any repo | `README.md` intro ("Runs in any git repo")                                                                                                                  |
+| Claim                          | Backed by                                                                                                                                                 |
+| ------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| One approval                   | `emet/src/approve.ts`; `emet/reference/phases-1-5.md` (phases 1-5 end at the approval); `README.md` intro                                                 |
+| A review per wave              | `emet/src/review.ts`, `emet/src/reviewpackage.ts`; `emet/reference/reviewer-prompt.md`; `emet/reference/phases-8-closeout.md`                             |
+| Nothing merges when flagged    | `emet/src/gate.ts`; `emet/reference/phases-8-closeout.md` ("Never auto-merge a wave with anything flagged"); `README.md` "Landing PRs and chaining waves" |
+| CI green before merge          | `emet/src/land.ts`; `emet/reference/phases-8-closeout.md` (merge only if green); `README.md` `pr.autoMerge`, `maxCiFixAttempts`                           |
+| Workers in isolated worktrees  | `emet/src/worktrees.ts`; `emet/reference/worker-prompt.md`; `docs/architecture.md` (run state)                                                            |
+| Linear, GitHub Issues or none  | `emet/reference/tracker-linear.md`, `tracker-github.md`, `tracker-local.md`; `README.md` intro                                                            |
+| Runs on your machine, any repo | `README.md` intro ("Runs in any git repo")                                                                                                                |
 
 ## Open items
 

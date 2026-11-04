@@ -35,8 +35,8 @@ describe("classifyDiff", () => {
   test.each([
     ["CI workflow", ".github/workflows/ci.yml"],
     ["installer", "scripts/install.sh"],
-    ["installer", "forge/src/installer.ts"],
-    ["lockfile", "forge/bun.lock"],
+    ["installer", "emet/src/installer.ts"],
+    ["lockfile", "emet/bun.lock"],
     ["lockfile", "package-lock.json"],
     ["auth", "src/auth/session.ts"],
     ["auth", "src/oauth-callback.ts"],
@@ -156,7 +156,7 @@ describe("forge assess (cli)", () => {
     );
     await Bun.$`git -C ${repo} add -A`.quiet();
     await Bun.$`git -C ${repo} commit -q -m change`.quiet();
-    const binPath = new URL("../bin/forge.ts", import.meta.url).pathname;
+    const binPath = new URL("../bin/emet.ts", import.meta.url).pathname;
     const output = await Bun.$`bun ${binPath} assess --base HEAD~1 --head HEAD`.cwd(repo).quiet();
     const parsed: unknown = JSON.parse(output.stdout.toString());
     if (!isObject(parsed) || typeof parsed.tier !== "string") {
@@ -181,7 +181,7 @@ describe("forge assess (cli)", () => {
     await Bun.write(path.join(repo, "src/app.ts"), "export const a = 1\n");
     await Bun.$`git -C ${repo} add -A`.quiet();
     await Bun.$`git -C ${repo} commit -q -m change`.quiet();
-    const binPath = new URL("../bin/forge.ts", import.meta.url).pathname;
+    const binPath = new URL("../bin/emet.ts", import.meta.url).pathname;
     const output =
       await Bun.$`bun ${binPath} assess --base HEAD~1 --head HEAD --risk-line ${"Risk: item 1 (shared caller)"}`
         .cwd(repo)

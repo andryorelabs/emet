@@ -69,7 +69,7 @@ describe("destructive commands", () => {
 });
 
 describe("edit surfaces", () => {
-  const surface = { root: "/repo", globs: ["forge/src/guard*.ts", "forge/bin/forge.ts"] };
+  const surface = { root: "/repo", globs: ["emet/src/guard*.ts", "emet/bin/emet.ts"] };
   const load = () => surface;
   const edit = (
     file_path: string,
@@ -79,9 +79,9 @@ describe("edit surfaces", () => {
       .decision;
 
   test("allows inside, denies outside", () => {
-    expect(edit("/repo/forge/src/guard.ts")).toBe("allow");
-    expect(edit("forge/bin/forge.ts")).toBe("allow");
-    expect(edit("/repo/forge/src/claims.ts")).toBe("deny");
+    expect(edit("/repo/emet/src/guard.ts")).toBe("allow");
+    expect(edit("emet/bin/emet.ts")).toBe("allow");
+    expect(edit("/repo/emet/src/claims.ts")).toBe("deny");
     expect(edit("/etc/passwd")).toBe("deny");
     expect(edit("/repo/../other/x.ts")).toBe("deny");
   });

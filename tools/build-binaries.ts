@@ -63,7 +63,7 @@ export async function buildBinary(
 ): Promise<string> {
   const outfile = path.resolve(outdir, binaryName(target));
   const result = await Bun.build({
-    entrypoints: [path.join(repoRoot, "forge", "bin", "forge.ts")],
+    entrypoints: [path.join(repoRoot, "emet", "bin", "emet.ts")],
     compile: { target, outfile },
     define: { FORGE_BUILD_VERSION: JSON.stringify(version) },
   });
