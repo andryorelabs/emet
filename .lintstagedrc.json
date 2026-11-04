@@ -1,4 +1,4 @@
 {
   "*": "oxfmt --no-error-on-unmatched-pattern",
-  "*.ts": "oxlint --type-aware --deny-warnings"
+  "*.ts": "oxlint --type-aware --deny-warnings --no-error-on-unmatched-pattern"
 }
