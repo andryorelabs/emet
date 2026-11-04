@@ -1,4 +1,7 @@
 import { describe, expect, test } from "bun:test";
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import os from "node:os";
+import path from "node:path";
 
 import {
   checkDestructiveCommand,
@@ -61,6 +64,13 @@ describe("destructive commands", () => {
       expect(findDestructiveOperation(command)).toBeNull();
     });
   }
+  test("names the emet binary when it denies", () => {
+    const verdict = checkDestructiveCommand({
+      tool_name: "Bash",
+      tool_input: { command: "git clean -fd" },
+    });
+    expect(verdict.decision === "deny" ? verdict.reason : "").toMatch(/^emet guard: /);
+  });
   test("ignores non-Bash tools", () => {
     expect(
       checkDestructiveCommand({ tool_name: "Read", tool_input: { command: "rm -rf /" } }).decision,
@@ -85,9 +95,35 @@ describe("edit surfaces", () => {
     expect(edit("/etc/passwd")).toBe("deny");
     expect(edit("/repo/../other/x.ts")).toBe("deny");
   });
-  test("always allows .forge notes", () => {
+  test("always allows .emet and legacy .forge notes", () => {
+    expect(edit("/repo/.emet/handoff-CLA-30.md")).toBe("allow");
     expect(edit("/repo/.forge/handoff-CLA-30.md")).toBe("allow");
   });
+  test("names the emet binary when it denies", () => {
+    const verdict = checkEditSurface(
+      { tool_name: "Edit", cwd: "/repo", tool_input: { file_path: "/repo/emet/src/claims.ts" } },
+      load,
+    );
+    expect(verdict.decision === "deny" ? verdict.reason : "").toMatch(/^emet guard: /);
+  });
+  for (const runDirectory of [".emet", ".forge"]) {
+    test(`reads the surface file from ${runDirectory}/surface.json`, () => {
+      const root = mkdtempSync(path.join(os.tmpdir(), "emet-surface-test-"));
+      try {
+        mkdirSync(path.join(root, runDirectory));
+        writeFileSync(
+          path.join(root, runDirectory, "surface.json"),
+          JSON.stringify({ surfaces: ["allowed.ts"] }),
+        );
+        const decide = (file_path: string) =>
+          checkEditSurface({ tool_name: "Write", cwd: root, tool_input: { file_path } }).decision;
+        expect(decide("allowed.ts")).toBe("allow");
+        expect(decide("other.ts")).toBe("deny");
+      } finally {
+        rmSync(root, { recursive: true, force: true });
+      }
+    });
+  }
   test("no surface file means no restriction", () => {
     expect(edit("/repo/anything.ts", () => null)).toBe("allow");
   });
