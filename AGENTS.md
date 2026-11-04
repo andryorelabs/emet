@@ -38,7 +38,8 @@ Decisions live in [docs/adr/](docs/adr/README.md). Read those touching your area
 
 ## Branch and commit conventions
 
-- Feature branches always; never push to `main`. Worker branches are `cla-<n>-<slug>`.
+- Feature branches always; never push to `main` or `develop`. Worker branches are `cla-<n>-<slug>`.
+- `develop` is the trunk: wave PRs squash into `develop`, releases merge `develop` into `main` with a merge commit. See [ADR-0012](docs/adr/0012-develop-development-branch.md).
 - Commits are gitmoji + conventional, in English, with a bullet body: `feat: ✨ add user authentication`.
 - A ticket's commit body ends with `Refs: #<n>`.
 - PR titles use the same conventional types as commitlint.

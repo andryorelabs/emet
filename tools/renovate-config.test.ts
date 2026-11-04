@@ -15,6 +15,7 @@ interface PackageRule {
 
 interface RenovateConfig {
   extends: string[];
+  baseBranches: string[];
   rangeStrategy: string;
   minimumReleaseAge: string;
   osvVulnerabilityAlerts: boolean;
@@ -55,6 +56,10 @@ describe("renovate.json5 policy", () => {
   test("extends best-practices and pins GitHub Action digests", () => {
     expect(config.extends).toContain("config:best-practices");
     expect(config.extends).toContain("helpers:pinGitHubActionDigests");
+  });
+
+  test("targets the develop branch", () => {
+    expect(config.baseBranches).toEqual(["develop"]);
   });
 
   test("bumps ranges, waits three days, and watches OSV and lockfiles", () => {
