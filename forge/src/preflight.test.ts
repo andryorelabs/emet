@@ -958,6 +958,37 @@ describe("checkHeadDescendsFromTrunk (S11)", () => {
     expect(verdict).toEqual({ ok: false, branch: "docs/brand-brief", fix: "git switch main" });
   });
 
+  test("PR-mode fix fetches the configured remote and labels a detached HEAD", async () => {
+    const directory = repoWithTrunk();
+    const head = runGit(directory, "rev-parse", "HEAD");
+    runGit(directory, "update-ref", "refs/remotes/upstream/main", head);
+    runGit(directory, "commit", "-q", "--allow-empty", "-m", "ahead");
+    runGit(
+      directory,
+      "update-ref",
+      "refs/remotes/upstream/main",
+      runGit(directory, "rev-parse", "HEAD"),
+    );
+    runGit(directory, "checkout", "-q", "--detach", head);
+    const verdict = await inside(directory, () =>
+      checkHeadDescendsFromTrunk(head, "upstream/main", "main", "upstream"),
+    );
+    expect(verdict).toEqual({
+      ok: false,
+      branch: `detached HEAD at ${head}`,
+      fix: "git fetch upstream main && git switch main && git merge --ff-only upstream/main",
+    });
+  });
+
+  test("fix quotes a trunk name with shell metacharacters", async () => {
+    const directory = repoWithTrunk();
+    runGit(directory, "switch", "-q", "--orphan", "other");
+    runGit(directory, "commit", "-q", "--allow-empty", "-m", "unrelated");
+    const head = runGit(directory, "rev-parse", "HEAD");
+    const verdict = await inside(directory, () => checkHeadDescendsFromTrunk(head, "main;x"));
+    expect(verdict).toMatchObject({ ok: false, fix: "git switch 'main;x'" });
+  });
+
   test("fails when trunk has moved ahead of HEAD", async () => {
     const directory = repoWithTrunk();
     const head = runGit(directory, "rev-parse", "HEAD");

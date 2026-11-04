@@ -1103,6 +1103,11 @@ export type HeadDescendsFromTrunkResult =
   | { readonly ok: true }
   | { readonly ok: false; readonly branch: string; readonly fix: string };
 
+/** Single-quotes `value` for a copy-pasteable shell command unless it is plainly safe. */
+function shellQuote(value: string): string {
+  return /^[\w./-]+$/.test(value) ? value : `'${value.replaceAll("'", "'\\''")}'`;
+}
+
 /**
  * S11: HEAD must equal `trunkRef` or descend from it, so workers branch from
  * a trunk that already holds the records their tickets cite. On failure
@@ -1113,6 +1118,7 @@ export async function checkHeadDescendsFromTrunk(
   headSha: string,
   trunkRef: string,
   localTrunk: string = trunkRef,
+  remote: string = "origin",
 ): Promise<HeadDescendsFromTrunkResult> {
   const ancestry = await Bun.$`git merge-base --is-ancestor ${trunkRef} ${headSha}`
     .quiet()
@@ -1123,8 +1129,8 @@ export async function checkHeadDescendsFromTrunk(
     branchName === "HEAD" || branchName === "" ? `detached HEAD at ${headSha}` : branchName;
   const fix =
     trunkRef === localTrunk
-      ? `git switch ${localTrunk}`
-      : `git fetch && git switch ${localTrunk} && git merge --ff-only ${trunkRef}`;
+      ? `git switch ${shellQuote(localTrunk)}`
+      : `git fetch ${shellQuote(remote)} ${shellQuote(localTrunk)} && git switch ${shellQuote(localTrunk)} && git merge --ff-only ${shellQuote(trunkRef)}`;
   return { ok: false, branch, fix };
 }
 
@@ -1139,7 +1145,7 @@ async function collectHeadTrunkFailure(
   const trunkRef = trunkReference(remote, trunk, landingMode === "merge");
   const headSha = await probes.resolveRef(repoRoot, "HEAD");
   if (headSha === null) return null;
-  const verdict = await checkHeadDescendsFromTrunk(headSha, trunkRef, trunk);
+  const verdict = await checkHeadDescendsFromTrunk(headSha, trunkRef, trunk, remote);
   if (verdict.ok) return null;
   return `HEAD (${verdict.branch}) is not ${trunkRef} or a descendant of it — dispatch from trunk so workers contain Phase 5's landed records. Fix: ${verdict.fix}`;
 }

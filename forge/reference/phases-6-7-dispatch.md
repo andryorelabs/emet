@@ -15,7 +15,9 @@ it's the spec issue Phase 5 just created.
 Name the run `forge<spec-id>w<wave><HHMMSS>` (e.g. `forge20w2042651`) —
 `forge status --spec` reads the spec and wave back out of that shape.
 
-Run `forge preflight --approval spec<spec-id>` first — cheap local git/filesystem hygiene (this
+Run `git fetch <remote> <trunk>` first (`repo.remote`, `repo.trunk`; skip in
+merge mode), so the trunk reference reflects landed Phase 5 edits. Then run
+`forge preflight --approval spec<spec-id>` — cheap local git/filesystem hygiene (this
 repo's configured `preflight.requiredFiles` and `preflight.requiredCommands`,
 leftover `worktree-agent-*` branches, a dirty `.claude/worktrees/` from a run
 that didn't clean up after itself, any remaining `TODO(forge):` marker in
