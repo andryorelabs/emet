@@ -20,11 +20,11 @@ produce the **final report, always, exactly once**: every wave's PR link,
 what shipped, what got flagged and why, and what's still waiting on a human
 decision. This is the terminal case regardless of which mode started this
 session (default, `--draft`+`--dispatch`, or a chained `--dispatch`).
-Append `forge metrics --run <run id>` output (tokens, $, wall time per
+Append `emet metrics --run <run id>` output (tokens, $, wall time per
 run/wave/ticket; peak context vs estimate) to the final report, and suggest the user run `/retro` on the run.
 
 Whenever this session ends a wave — frontier empty or not — right after
-posting its report, run `forge guard --mark-final-report <session id>` (the
+posting its report, run `emet guard --mark-final-report <session id>` (the
 id is printed in the `Stop` hook's block message); the
 hook only blocks once no worker is in flight and claims remain, so a turn
 spent waiting on workers is never blocked.
@@ -33,37 +33,37 @@ spent waiting on workers is never blocked.
 session.** Waves chain across sessions, not within one — each session pays
 its fixed startup cost once and carries one wave's worth of growing context,
 instead of one session accumulating every wave in the run (see
-`docs/agents/forge.md`'s "Concurrency" section for the reasoning). Instead:
+`docs/agents/emet.md`'s "Concurrency" section for the reasoning). Instead:
 
-1. Report this wave's outcome (PR link, or in merge mode the `forge land`
+1. Report this wave's outcome (PR link, or in merge mode the `emet land`
    trunk sha or the unmerged integration branch; what shipped, what got
    flagged) —
    the same content a mid-run status update would carry, just written down
    instead of only said.
-2. Hand off to the next wave. Chain only when Phase 8's `forge gate <ticket>
+2. Hand off to the next wave. Chain only when Phase 8's `emet gate <ticket>
    --waves-remaining <n>` answered `chain` for every ticket of this wave (it
    folds in `handoff.autoChain`, the merged PR, the green integration suite,
    and nothing flagged); anything else — `merge` without `chain`, `hold`,
    `stop`, `defer` — is a human step. To chain, launch it yourself:
-   - Run `forge launch <spec-id> --wave <n+1>` from the repo root, as its
-     own Bash call. It refuses when a live `forge-<spec-id>-*` session
-     already exists, runs `claude --bg --name forge-<spec-id>-w<n+1>
-     --permission-mode <handoff.permissionMode> "/forge:run --dispatch
+   - Run `emet launch <spec-id> --wave <n+1>` from the repo root, as its
+     own Bash call. It refuses when a live `emet-<spec-id>-*` session
+     already exists, runs `claude --bg --name emet-<spec-id>-w<n+1>
+     --permission-mode <handoff.permissionMode> "/emet:run --dispatch
      <spec-id>"`, confirms the session appears in `claude agents --json`,
      and — per `handoff.launcher` — opens an Orca tab running `claude attach
-     forge-<spec-id>-w<n+1>`. It prints one JSON line:
+     emet-<spec-id>-w<n+1>`. It prints one JSON line:
      `{ name, id, attach, orcaTab: { opened, reason } }`.
    - The permission mode comes from the config (default
      `bypassPermissions`), **not** from this session: in `auto` mode the
      classifier can deny a step like `gh pr merge` mid-wave and leave the
-     wave half-finished. `permissions.deny` rules and the `forge guard`
+     wave half-finished. `permissions.deny` rules and the `emet guard`
      hook still apply in bypass. If Claude Code refuses the launch in that
      mode (the bypass warning was never accepted interactively), relaunch
      by hand with this session's own mode and say so in the report.
    - Put `name` and `attach` in this wave's report, plus `orcaTab.reason`
      when `orcaTab.opened` is `false`. A failed tab never stops the chain:
      the wave already runs in the background, so report the `claude attach`
-     command. If `forge launch` itself exits non-zero, fall through to the
+     command. If `emet launch` itself exits non-zero, fall through to the
      manual path below and report why.
    - `launcher: auto` detects Orca by asking its runtime (`orca status`),
      not `$TERM_PROGRAM`: a `claude --bg` session has no `TERM_PROGRAM`, so
@@ -71,13 +71,13 @@ instead of one session accumulating every wave in the run (see
 
    The same command covers a launch the user asks for by hand ("run the
    wave in another session", including wave 1 of a `--draft` spec): use
-   `forge launch <spec-id> --wave <n>`, never a bare `claude --bg`, which
+   `emet launch <spec-id> --wave <n>`, never a bare `claude --bg`, which
    skips the Orca tab and the duplicate-session check.
 
    Otherwise print, verbatim, the command for the next wave:
-   `/forge:run --dispatch <spec-id>`.
+   `/emet:run --dispatch <spec-id>`.
 
 3. End the session here. Unless auto-chained, a human runs that command to
    continue; the frontier is always recomputed fresh from the tracker, so
    nothing depends on which session ran any prior wave. Include "Rulings I
-   made" (`forge review --rulings`) in the report.
+   made" (`emet review --rulings`) in the report.
