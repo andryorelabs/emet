@@ -1,6 +1,6 @@
-# claude-forge
+# emet
 
-claude-forge is the global `/forge` command for Claude Code plus the `forge` CLI that turns a feature request into a spec, tickets, and parallel worktree agents that implement, test and merge it unattended.
+emet (formerly claude-forge) is the global `/emet` command for Claude Code plus the `emet` CLI that turns a feature request into a spec, tickets, and parallel worktree agents that implement, test and merge it unattended.
 
 ## Language
 
@@ -41,7 +41,7 @@ An agent that checks a wave's integrated result against the spec.
 _Avoid_: QA, verifier
 
 **Worktree**:
-A git worktree holding one worker's isolated checkout on its own local branch. A worktree no run can be attributed to is a _foreign worktree_: forge never blocks on it and never removes it.
+A git worktree holding one worker's isolated checkout on its own local branch. A worktree no run can be attributed to is a _foreign worktree_: emet never blocks on it and never removes it.
 _Avoid_: clone, sandbox, workspace
 
 **Integration branch**:
@@ -81,8 +81,12 @@ The continuously updated note a worker keeps so the coordinator can continue or 
 _Avoid_: status update, summary
 
 **Run**:
-One execution of `/forge` for a spec, identified by a run id shared by its claims, slots, locks and results.
+One execution of `/emet` for a spec, identified by a run id shared by its claims, slots, locks and results.
 _Avoid_: session, job, pipeline
+
+**Legacy name**:
+A pre-rename name (`forge.config.json`, `docs/agents/forge.md`, `.forge/`, `FORGE_*`, `TODO(forge):`, the `forge` lock token) that emet still reads, with one warning, until `emet migrate` renames it.
+_Avoid_: deprecated name, old name
 
 ## Relationships
 
