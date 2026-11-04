@@ -51,6 +51,7 @@ import {
   resolveMainTree,
   resolveWorktreeOwner,
   resolveWorktreeOwnerWithReservations,
+  trunkReference,
   type WorktreeEntry,
   type WorktreeOwner,
 } from "./worktrees";
@@ -1097,6 +1098,89 @@ export async function collectForkBaseFailures(
   });
 }
 
+/** Result of {@link checkHeadDescendsFromTrunk}. */
+export type HeadDescendsFromTrunkResult =
+  | { readonly ok: true }
+  | { readonly ok: false; readonly branch: string; readonly fix: string };
+
+/** Single-quotes `value` for a copy-pasteable shell command unless it is plainly safe. */
+function shellQuote(value: string): string {
+  return /^[\w./-]+$/.test(value) ? value : `'${value.replaceAll("'", "'\\''")}'`;
+}
+
+/**
+ * S11: HEAD must equal `trunkRef` or descend from it, so workers branch from
+ * a trunk that already holds the records their tickets cite. On failure
+ * names the current branch and the exact command that fixes it; `localTrunk`
+ * is the plain trunk branch name the fix switches to.
+ */
+export async function checkHeadDescendsFromTrunk(
+  headSha: string,
+  trunkRef: string,
+  localTrunk: string = trunkRef,
+  remote: string = "origin",
+): Promise<HeadDescendsFromTrunkResult> {
+  const ancestry = await Bun.$`git merge-base --is-ancestor ${trunkRef} ${headSha}`
+    .quiet()
+    .nothrow();
+  if (ancestry.exitCode === 0) return { ok: true };
+  const branchName = (await Bun.$`git rev-parse --abbrev-ref HEAD`.quiet().nothrow().text()).trim();
+  const branch =
+    branchName === "HEAD" || branchName === "" ? `detached HEAD at ${headSha}` : branchName;
+  const fix =
+    trunkRef === localTrunk
+      ? `git switch ${shellQuote(localTrunk)}`
+      : `git fetch ${shellQuote(remote)} ${shellQuote(localTrunk)} && git switch ${shellQuote(localTrunk)} && git merge --ff-only ${shellQuote(trunkRef)}`;
+  return { ok: false, branch, fix };
+}
+
+/** Paths Phase 5 defers, which must already be on trunk before dispatch. */
+const PHASE_FIVE_RECORD_PATHS = ["GLOSSARY.md", "docs/adr/"] as const;
+
+/**
+ * S10: `GLOSSARY.md` and `docs/adr/` must match `trunkRef`, in commits and in
+ * the working tree, so a worker branching from trunk sees every record a
+ * ticket cites. Lists the differing or untracked paths on failure.
+ */
+export async function checkPhaseFiveRecordsLanded(
+  trunkRef: string,
+  repoRoot: string = process.cwd(),
+): Promise<{ ok: true } | { ok: false; paths: string[] }> {
+  const changed = await Bun.$`git diff --name-only ${trunkRef} -- ${PHASE_FIVE_RECORD_PATHS}`
+    .cwd(repoRoot)
+    .quiet()
+    .nothrow()
+    .text();
+  const untracked =
+    await Bun.$`git ls-files --others --exclude-standard -- ${PHASE_FIVE_RECORD_PATHS}`
+      .cwd(repoRoot)
+      .quiet()
+      .nothrow()
+      .text();
+  const paths = [...new Set(`${changed}\n${untracked}`.split("\n").filter(Boolean))];
+  return paths.length === 0 ? { ok: true } : { ok: false, paths };
+}
+
+/** The S11 preflight failure line, or `null` when HEAD descends from trunk. */
+async function collectHeadTrunkFailure(
+  repoRoot: string,
+  remote: string,
+  trunk: string,
+  probes: EnvironmentProbes,
+  landingMode: LandingMode = "pr",
+): Promise<string | null> {
+  const trunkRef = trunkReference(remote, trunk, landingMode === "merge");
+  const headSha = await probes.resolveRef(repoRoot, "HEAD");
+  if (headSha === null) return null;
+  const verdict = await checkHeadDescendsFromTrunk(headSha, trunkRef, trunk, remote);
+  if (verdict.ok) {
+    const records = await checkPhaseFiveRecordsLanded(trunkRef, repoRoot);
+    if (records.ok) return null;
+    return `Phase 5 records are not on ${trunkRef}: ${records.paths.join(", ")} — land them on trunk (PR, or local merge) before dispatch.`;
+  }
+  return `HEAD (${verdict.branch}) is not ${trunkRef} or a descendant of it — dispatch from trunk so workers contain Phase 5's landed records. Fix: ${verdict.fix}`;
+}
+
 const MAP_STALE_MAX_COMMITS = 10;
 
 /** S18: a stale or missing codebase map only warns, never blocks. */
@@ -1168,6 +1252,15 @@ async function main(config: ForgeConfig, repoRoot: string) {
       config.landing.mode,
     )),
   );
+
+  const headTrunkFailure = await collectHeadTrunkFailure(
+    repoRoot,
+    config.repo.remote,
+    config.repo.trunk,
+    createEnvironmentProbes(),
+    config.landing.mode,
+  );
+  if (headTrunkFailure !== null) failures.push(headTrunkFailure);
 
   const mapWarning = await collectMapStaleWarning(repoRoot, config.map.path);
   if (mapWarning !== null) gateWarnLines.push(mapWarning);

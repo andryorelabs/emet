@@ -1,4 +1,5 @@
 import { describe, expect, test } from "bun:test";
+import { execFileSync } from "node:child_process";
 import { mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
@@ -9,6 +10,8 @@ import type { DependencyCheck, DependencyProbes } from "./dependencies";
 import type { EnvironmentProbes } from "./doctor";
 import {
   auditPostDispatch,
+  checkHeadDescendsFromTrunk,
+  checkPhaseFiveRecordsLanded,
   checkSlotCapacity,
   classifyWorktreeEntry,
   collectForkBaseFailures,
@@ -901,5 +904,147 @@ describe("DEPRECATED_CONFIG_FIELDS", () => {
   test("lists the twelve unread fields", () => {
     expect(DEPRECATED_CONFIG_FIELDS).toHaveLength(12);
     expect(DEPRECATED_CONFIG_FIELDS).toContain("tracker.readyLabel");
+  });
+});
+
+function runGit(directory: string, ...args: string[]): string {
+  return execFileSync("git", args, { cwd: directory, encoding: "utf8" }).trim();
+}
+
+async function inside<T>(directory: string, body: () => Promise<T>): Promise<T> {
+  const previous = process.cwd();
+  process.chdir(directory);
+  try {
+    return await body();
+  } finally {
+    process.chdir(previous);
+  }
+}
+
+function repoWithTrunk(): string {
+  const directory = mkdtempSync(path.join(tmpdir(), "forge-head-trunk-"));
+  runGit(directory, "init", "-q", "-b", "main");
+  runGit(directory, "config", "user.email", "t@example.com");
+  runGit(directory, "config", "user.name", "t");
+  runGit(directory, "config", "commit.gpgsign", "false");
+  runGit(directory, "commit", "-q", "--allow-empty", "-m", "root");
+  return directory;
+}
+
+describe("checkPhaseFiveRecordsLanded (S10)", () => {
+  test("fails on a committed ADR that is not on trunk", async () => {
+    const directory = repoWithTrunk();
+    runGit(directory, "switch", "-q", "-c", "phase-five");
+    mkdirSync(path.join(directory, "docs/adr"), { recursive: true });
+    writeFileSync(path.join(directory, "docs/adr/0001-x.md"), "adr");
+    runGit(directory, "add", ".");
+    runGit(directory, "commit", "-q", "-m", "adr");
+    expect(await inside(directory, () => checkPhaseFiveRecordsLanded("main"))).toEqual({
+      ok: false,
+      paths: ["docs/adr/0001-x.md"],
+    });
+  });
+
+  test("fails on an untracked ADR and an uncommitted glossary edit", async () => {
+    const directory = repoWithTrunk();
+    writeFileSync(path.join(directory, "GLOSSARY.md"), "one");
+    runGit(directory, "add", ".");
+    runGit(directory, "commit", "-q", "-m", "glossary");
+    writeFileSync(path.join(directory, "GLOSSARY.md"), "two");
+    mkdirSync(path.join(directory, "docs/adr"), { recursive: true });
+    writeFileSync(path.join(directory, "docs/adr/0002-y.md"), "adr");
+    runGit(directory, "branch", "-f", "trunk-ref", "HEAD");
+    const verdict = await inside(directory, () => checkPhaseFiveRecordsLanded("trunk-ref"));
+    expect(verdict).toEqual({ ok: false, paths: ["GLOSSARY.md", "docs/adr/0002-y.md"] });
+  });
+
+  test("finds root records when invoked from a subdirectory", async () => {
+    const directory = repoWithTrunk();
+    mkdirSync(path.join(directory, "docs/adr"), { recursive: true });
+    mkdirSync(path.join(directory, "sub"));
+    writeFileSync(path.join(directory, "docs/adr/0003-z.md"), "adr");
+    const verdict = await inside(path.join(directory, "sub"), () =>
+      checkPhaseFiveRecordsLanded("main", directory),
+    );
+    expect(verdict).toEqual({ ok: false, paths: ["docs/adr/0003-z.md"] });
+  });
+
+  test("passes when only other paths differ from trunk", async () => {
+    const directory = repoWithTrunk();
+    runGit(directory, "switch", "-q", "-c", "feature");
+    writeFileSync(path.join(directory, "other.txt"), "x");
+    runGit(directory, "add", ".");
+    runGit(directory, "commit", "-q", "-m", "other");
+    expect(await inside(directory, () => checkPhaseFiveRecordsLanded("main"))).toEqual({
+      ok: true,
+    });
+  });
+});
+
+describe("checkHeadDescendsFromTrunk (S11)", () => {
+  test("passes when HEAD equals trunk", async () => {
+    const directory = repoWithTrunk();
+    const head = runGit(directory, "rev-parse", "HEAD");
+    expect(await inside(directory, () => checkHeadDescendsFromTrunk(head, "main"))).toEqual({
+      ok: true,
+    });
+  });
+
+  test("passes when HEAD descends from trunk", async () => {
+    const directory = repoWithTrunk();
+    runGit(directory, "switch", "-q", "-c", "feature");
+    runGit(directory, "commit", "-q", "--allow-empty", "-m", "work");
+    const head = runGit(directory, "rev-parse", "HEAD");
+    expect(await inside(directory, () => checkHeadDescendsFromTrunk(head, "main"))).toEqual({
+      ok: true,
+    });
+  });
+
+  test("fails on an unrelated branch, naming it and the fix", async () => {
+    const directory = repoWithTrunk();
+    runGit(directory, "switch", "-q", "--orphan", "docs/brand-brief");
+    runGit(directory, "commit", "-q", "--allow-empty", "-m", "unrelated");
+    const head = runGit(directory, "rev-parse", "HEAD");
+    const verdict = await inside(directory, () => checkHeadDescendsFromTrunk(head, "main"));
+    expect(verdict).toEqual({ ok: false, branch: "docs/brand-brief", fix: "git switch main" });
+  });
+
+  test("PR-mode fix fetches the configured remote and labels a detached HEAD", async () => {
+    const directory = repoWithTrunk();
+    const head = runGit(directory, "rev-parse", "HEAD");
+    runGit(directory, "update-ref", "refs/remotes/upstream/main", head);
+    runGit(directory, "commit", "-q", "--allow-empty", "-m", "ahead");
+    runGit(
+      directory,
+      "update-ref",
+      "refs/remotes/upstream/main",
+      runGit(directory, "rev-parse", "HEAD"),
+    );
+    runGit(directory, "checkout", "-q", "--detach", head);
+    const verdict = await inside(directory, () =>
+      checkHeadDescendsFromTrunk(head, "upstream/main", "main", "upstream"),
+    );
+    expect(verdict).toEqual({
+      ok: false,
+      branch: `detached HEAD at ${head}`,
+      fix: "git fetch upstream main && git switch main && git merge --ff-only upstream/main",
+    });
+  });
+
+  test("fix quotes a trunk name with shell metacharacters", async () => {
+    const directory = repoWithTrunk();
+    runGit(directory, "switch", "-q", "--orphan", "other");
+    runGit(directory, "commit", "-q", "--allow-empty", "-m", "unrelated");
+    const head = runGit(directory, "rev-parse", "HEAD");
+    const verdict = await inside(directory, () => checkHeadDescendsFromTrunk(head, "main;x"));
+    expect(verdict).toMatchObject({ ok: false, fix: "git switch 'main;x'" });
+  });
+
+  test("fails when trunk has moved ahead of HEAD", async () => {
+    const directory = repoWithTrunk();
+    const head = runGit(directory, "rev-parse", "HEAD");
+    runGit(directory, "commit", "-q", "--allow-empty", "-m", "trunk moves");
+    const verdict = await inside(directory, () => checkHeadDescendsFromTrunk(head, "main"));
+    expect(verdict.ok).toBe(false);
   });
 });

@@ -15,13 +15,20 @@ it's the spec issue Phase 5 just created.
 Name the run `forge<spec-id>w<wave><HHMMSS>` (e.g. `forge20w2042651`) —
 `forge status --spec` reads the spec and wave back out of that shape.
 
-Run `forge preflight --approval spec<spec-id>` first — cheap local git/filesystem hygiene (this
+Run `git fetch <remote> <trunk>` first (`repo.remote`, `repo.trunk`; skip in
+merge mode), so the trunk reference reflects landed Phase 5 edits. Then run
+`forge preflight --approval spec<spec-id>` — cheap local git/filesystem hygiene (this
 repo's configured `preflight.requiredFiles` and `preflight.requiredCommands`,
 leftover `worktree-agent-*` branches, a dirty `.claude/worktrees/` from a run
 that didn't clean up after itself, any remaining `TODO(forge):` marker in
 `docs/agents/`) plus a third-party dependency gate keyed off `tracker.kind`
 (the mattpocock-skills plugin always, `gh` for a `github` tracker, the Linear
-MCP server for a `linear` tracker). Fix whatever it flags before dispatching;
+MCP server for a `linear` tracker), and it fails when HEAD is not
+`<remote>/<trunk>` (local `<trunk>` in `landing.mode: merge`) or a descendant of
+it, naming the current branch and the fix command. It also fails while
+Phase 5's `GLOSSARY.md`/`docs/adr/` edits differ from trunk, so Phase 6
+refuses to dispatch until they are landed.
+Fix whatever it flags before dispatching;
 don't dispatch into a dirty or half-initialized repo. A failure here means a
 real, verified gap — an environment quirk it merely couldn't check (e.g. no
 network to validate `gh auth`) shows as a non-blocking warning instead.
@@ -87,11 +94,12 @@ is only the fallback. If `forge doctor` flags `forge-agents` as missing, run
 `./install.sh` first — a missing agent definition makes the call fail.
 
 Just before each `Agent` call, write the dispatch record
-`.forge/runs/<runId>/dispatch/<ticket>.json` = `{"baseline": "<HEAD sha>",
-"surfaces": [<the ticket's globs>]}` (that sha is also the prompt's
-`{{expected_base}}`), and mark the ticket started yourself (`onStart`, see
+`.forge/runs/<runId>/dispatch/<ticket>.json` = `{"baseline": "<trunk sha>",
+"surfaces": [<the ticket's globs>]}` (that sha, `git rev-parse
+<remote>/<trunk>` — or local `<trunk>` when `landing.mode` is `merge` — and
+never the caller's HEAD, is also the prompt's `{{expected_base}}`), and mark the ticket started yourself (`onStart`, see
 `${CLAUDE_PLUGIN_ROOT}/forge/reference/tracker-<kind>.md`): workers never write the tracker. A worker
-that exits 42 failed its branch/base check; re-dispatch from the current HEAD.
+that exits 42 failed its branch/base check; re-dispatch from the current trunk.
 
 **Immediately after that batch returns, before any worker has had a chance to
 commit, run `forge preflight --run <runId> --post-dispatch`** — always pass
