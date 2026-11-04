@@ -244,8 +244,8 @@ describe("ci.yml commitlint and manual runs", () => {
 
   test("ci-passed fails only on failure or cancelled", () => {
     const raw = ci?.raw ?? "";
-    expect(raw).toContain("failure");
-    expect(raw).toContain("cancelled");
+    expect(raw).toContain('[ "$result" = "failure" ]');
+    expect(raw).toContain('[ "$result" = "cancelled" ]');
     expect(raw).not.toContain('!= "success"');
   });
 
