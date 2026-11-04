@@ -1,5 +1,14 @@
 import { describe, expect, test } from "bun:test";
-import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { execFileSync } from "node:child_process";
+import {
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  realpathSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
 import os from "node:os";
 import path from "node:path";
 
@@ -7,6 +16,9 @@ import {
   classifyRun,
   completionEventPath,
   isAnchorAlive,
+  isRunClosed,
+  markRunClosed,
+  resolveRunArtifactPath,
   readCompletionEvent,
   readProcessStartToken,
   readStallNudgeCount,
@@ -231,5 +243,116 @@ describe("resolveAnchorPid without procfs", () => {
   test("throws when no ancestor is claude", () => {
     const noClaude = { ...reader, runPs: (pid: number) => (pid === 300 ? "200 bun" : null) };
     expect(() => resolveAnchorPid(300, noClaude)).toThrow("no ancestor");
+  });
+});
+
+describe("closed-run marker", () => {
+  test("round-trips and is false for an unmarked run", async () => {
+    const commonDirectory = makeCommonDirectory();
+    try {
+      expect(await isRunClosed("run-a", { commonDirectory })).toBe(false);
+      await markRunClosed("run-a", { commonDirectory, now: () => 42 });
+      expect(await isRunClosed("run-a", { commonDirectory })).toBe(true);
+      expect(await isRunClosed("run-b", { commonDirectory })).toBe(false);
+      const written = JSON.parse(
+        readFileSync(path.join(commonDirectory, ".forge", "runs", "run-a", "closed.json"), "utf8"),
+      ) as unknown;
+      expect(written).toMatchObject({ closedAt: 42 });
+    } finally {
+      rmSync(commonDirectory, { recursive: true, force: true });
+    }
+  });
+
+  test("an unsafe run id is rejected", async () => {
+    const commonDirectory = makeCommonDirectory();
+    try {
+      const outcome = await markRunClosed("../x", { commonDirectory }).catch(
+        (error: unknown) => error,
+      );
+      expect(String(outcome)).toContain("unsafe run id");
+    } finally {
+      rmSync(commonDirectory, { recursive: true, force: true });
+    }
+  });
+});
+
+const runGit = (cwd: string, ...args: string[]) =>
+  execFileSync("git", args, { cwd, stdio: "pipe" });
+
+const makeRepo = () => {
+  const base = realpathSync(mkdtempSync(path.join(os.tmpdir(), "forge-artifact-")));
+  const main = path.join(base, "main");
+  const sibling = path.join(base, "sibling");
+  mkdirSync(main);
+  runGit(main, "init", "-q", "-b", "trunk");
+  runGit(
+    main,
+    "-c",
+    "user.name=t",
+    "-c",
+    "user.email=t@t",
+    "commit",
+    "-q",
+    "--allow-empty",
+    "-m",
+    "i",
+  );
+  runGit(main, "worktree", "add", "-q", "-b", "other", sibling);
+  return { base, main, sibling };
+};
+
+describe("resolveRunArtifactPath", () => {
+  test("an artifact written from one worktree is readable from a sibling", async () => {
+    const { base, main, sibling } = makeRepo();
+    try {
+      const fromMain = await resolveRunArtifactPath("spec1", "approval.json", { repoRoot: main });
+      expect(fromMain.writePath).toBe(
+        path.join(main, ".git", ".forge", "runs", "spec1", "approval.json"),
+      );
+      expect(fromMain.readPath).toBeNull();
+      mkdirSync(path.dirname(fromMain.writePath), { recursive: true });
+      writeFileSync(fromMain.writePath, "{}");
+      const fromSibling = await resolveRunArtifactPath("spec1", "approval.json", {
+        repoRoot: sibling,
+      });
+      expect(fromSibling.readPath).toBe(fromMain.writePath);
+    } finally {
+      rmSync(base, { recursive: true, force: true });
+    }
+  });
+
+  test("a legacy artifact under the repo root is still read", async () => {
+    const { base, main } = makeRepo();
+    try {
+      const legacyPath = path.join(main, ".forge", "runs", "spec1", "tickets.json");
+      mkdirSync(path.dirname(legacyPath), { recursive: true });
+      writeFileSync(legacyPath, "{}");
+      const resolved = await resolveRunArtifactPath("spec1", "tickets.json", { repoRoot: main });
+      expect(resolved.readPath).toBe(legacyPath);
+      expect(resolved.writePath).not.toBe(legacyPath);
+    } finally {
+      rmSync(base, { recursive: true, force: true });
+    }
+  });
+
+  test("the shared location wins over the legacy one", async () => {
+    const commonDirectory = makeCommonDirectory();
+    const repoRoot = makeCommonDirectory();
+    try {
+      for (const directory of [commonDirectory, repoRoot]) {
+        const file = path.join(directory, ".forge", "runs", "r", "materialize.json");
+        mkdirSync(path.dirname(file), { recursive: true });
+        writeFileSync(file, "{}");
+      }
+      const resolved = await resolveRunArtifactPath("r", "materialize.json", {
+        repoRoot,
+        commonDirectory,
+      });
+      expect(resolved.readPath).toBe(resolved.writePath);
+      expect(resolved.writePath.startsWith(commonDirectory)).toBe(true);
+    } finally {
+      rmSync(commonDirectory, { recursive: true, force: true });
+      rmSync(repoRoot, { recursive: true, force: true });
+    }
   });
 });

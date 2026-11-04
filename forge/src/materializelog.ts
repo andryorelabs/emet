@@ -3,11 +3,12 @@ import path from "node:path";
 
 import { resolveRepoRoot } from "./config";
 import { errorMessage, isObject } from "./narrow";
+import { resolveRunArtifactPath } from "./runs";
 
 const USAGE = `usage: forge materialize-log --run <id> --record <localKey> <trackerId> [--root <dir>]
        forge materialize-log --run <id> --lookup <localKey> [--root <dir>]
 
---record persists immediately to .forge/runs/<id>/materialize.json.
+--record persists immediately to <git-common-dir>/.forge/runs/<id>/materialize.json.
 --lookup prints the tracker id and exits 0, or exits 1 when the key was never recorded
 (materialize re-runs skip recorded keys). Any other failure, including an unreadable
 log, exits 2.`;
@@ -39,8 +40,13 @@ export function lookupTicket(logPath: string, localKey: string): string | null {
   return Object.hasOwn(log, localKey) ? log[localKey]! : null;
 }
 
-export function recordTicket(logPath: string, localKey: string, trackerId: string): void {
-  const log = readLog(logPath);
+export function recordTicket(
+  logPath: string,
+  localKey: string,
+  trackerId: string,
+  readPath: string = logPath,
+): void {
+  const log = readLog(readPath);
   if (Object.hasOwn(log, localKey)) {
     if (log[localKey] === trackerId) return;
     throw new Error(
@@ -67,7 +73,9 @@ export async function run(argv: string[]): Promise<void> {
     return;
   }
   const root = readFlag(argv, "--root") ?? (await resolveRepoRoot()) ?? process.cwd();
-  const logPath = path.join(root, ".forge", "runs", runId, "materialize.json");
+  const artifact = await resolveRunArtifactPath(runId, "materialize.json", { repoRoot: root });
+  const logPath = artifact.writePath;
+  const readPath = artifact.readPath ?? logPath;
   const recordIndex = argv.indexOf("--record");
   const lookupKey = readFlag(argv, "--lookup");
 
@@ -80,11 +88,11 @@ export async function run(argv: string[]): Promise<void> {
         process.exitCode = 2;
         return;
       }
-      recordTicket(logPath, localKey, trackerId);
+      recordTicket(logPath, localKey, trackerId, readPath);
       return;
     }
     if (lookupKey !== undefined) {
-      const trackerId = lookupTicket(logPath, lookupKey);
+      const trackerId = lookupTicket(readPath, lookupKey);
       if (trackerId === null) {
         process.exitCode = 1;
         return;
