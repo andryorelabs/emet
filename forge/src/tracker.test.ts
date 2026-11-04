@@ -3,6 +3,18 @@ import { mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSy
 import { tmpdir } from "node:os";
 import path from "node:path";
 
+import { isObject } from "./narrow";
+
+function parseJson(text: string): unknown {
+  return JSON.parse(text);
+}
+
+function stringField(value: unknown, key: string): string {
+  const field = isObject(value) ? value[key] : undefined;
+  if (typeof field !== "string") throw new Error(`expected a string field "${key}"`);
+  return field;
+}
+
 const TRACKER_ENTRY = path.join(import.meta.dir, "tracker.ts");
 const created: string[] = [];
 
@@ -81,8 +93,9 @@ async function seedTicket(repo: string, title: string, ...extra: string[]): Prom
 
 async function frontierIds(repo: string): Promise<string[]> {
   const result = await tracker(repo, "frontier", "--spec", "feat");
-  const tickets: { id: string }[] = JSON.parse(result.stdout);
-  return tickets.map((ticket) => ticket.id);
+  const tickets = parseJson(result.stdout);
+  if (!Array.isArray(tickets)) throw new Error("expected a JSON array");
+  return tickets.map((ticket: unknown) => stringField(ticket, "id"));
 }
 
 describe("forge tracker", () => {
@@ -91,10 +104,10 @@ describe("forge tracker", () => {
     await seedSpec(repo);
     const result = await tracker(repo, "read", "feat");
     expect(result.code).toBe(0);
-    const parsed = JSON.parse(result.stdout);
-    expect(parsed.title).toBe("Feature");
-    expect(parsed.status).toBe("in-progress");
-    expect(parsed.body).toContain("## Specs");
+    const parsed = parseJson(result.stdout);
+    expect(stringField(parsed, "title")).toBe("Feature");
+    expect(stringField(parsed, "status")).toBe("in-progress");
+    expect(stringField(parsed, "body")).toContain("## Specs");
     const again = await tracker(
       repo,
       "create-spec",
@@ -111,9 +124,11 @@ describe("forge tracker", () => {
   test("frontier follows blockers and close", async () => {
     const repo = await makeRepo();
     await seedSpec(repo);
-    expect(JSON.parse((await seedTicket(repo, "First thing")).stdout).id).toBe("feat-01");
+    expect(stringField(parseJson((await seedTicket(repo, "First thing")).stdout), "id")).toBe(
+      "feat-01",
+    );
     const second = await seedTicket(repo, "Second", "--blocked-by", "01");
-    expect(JSON.parse(second.stdout).id).toBe("feat-02");
+    expect(stringField(parseJson(second.stdout), "id")).toBe("feat-02");
     expect(await frontierIds(repo)).toEqual(["feat-01"]);
     expect((await tracker(repo, "set-state", "feat-01", "in-review")).code).toBe(0);
     expect(await frontierIds(repo)).toEqual([]);
@@ -127,10 +142,16 @@ describe("forge tracker", () => {
     await seedTicket(repo, "Only");
     await seedTicket(repo, "Other");
     await tracker(repo, "close", "feat-01");
-    expect(JSON.parse((await tracker(repo, "read", "feat")).stdout).status).toBe("in-progress");
+    expect(stringField(parseJson((await tracker(repo, "read", "feat")).stdout), "status")).toBe(
+      "in-progress",
+    );
     await tracker(repo, "close", "feat-02", "--canceled");
-    expect(JSON.parse((await tracker(repo, "read", "feat-02")).stdout).status).toBe("canceled");
-    expect(JSON.parse((await tracker(repo, "read", "feat")).stdout).status).toBe("done");
+    expect(stringField(parseJson((await tracker(repo, "read", "feat-02")).stdout), "status")).toBe(
+      "canceled",
+    );
+    expect(stringField(parseJson((await tracker(repo, "read", "feat")).stdout), "status")).toBe(
+      "done",
+    );
   });
 
   test("set-state rejects values outside the vocabulary with exit 2", async () => {
@@ -147,10 +168,10 @@ describe("forge tracker", () => {
     await seedTicket(repo, "One");
     await tracker(repo, "comment", "feat-01", "--body-file", bodyFile("first"), "--author", "me");
     await tracker(repo, "comment", "feat-01", "--body-file", bodyFile("second"));
-    const parsed = JSON.parse((await tracker(repo, "read", "feat-01")).stdout);
-    expect(parsed.comments).toHaveLength(2);
-    expect(parsed.comments[0]).toContain("— me");
-    expect(parsed.comments[0]).toContain("first");
+    const parsed = parseJson((await tracker(repo, "read", "feat-01")).stdout);
+    expect(parsed).toHaveProperty("comments.length", 2);
+    expect(parsed).toHaveProperty("comments.0", expect.stringContaining("— me"));
+    expect(parsed).toHaveProperty("comments.0", expect.stringContaining("first"));
     const file = readFileSync(path.join(repo, ".scratch/feat/issues/01-one.md"), "utf8");
     expect(file.match(/^## Comments$/gm)).toHaveLength(1);
   });
@@ -163,7 +184,7 @@ describe("forge tracker", () => {
     await Bun.$`git -C ${repo} worktree add -q ${linked} -b side`.quiet();
     const result = await tracker(linked, "read", "feat-01");
     expect(result.code).toBe(0);
-    expect(JSON.parse(result.stdout).title).toBe("One");
+    expect(stringField(parseJson(result.stdout), "title")).toBe("One");
   });
 
   test("rejects slugs that escape .scratch", async () => {
@@ -206,8 +227,8 @@ describe("forge tracker", () => {
     const results = await Promise.all(
       Array.from({ length: 8 }, (_, index) => seedTicket(repo, `Ticket ${index}`)),
     );
-    expect(results.map((result) => result.code)).toEqual(Array(8).fill(0));
-    const numbers = results.map((result) => String(JSON.parse(result.stdout).nn)).toSorted();
+    expect(results.map((result) => result.code)).toEqual(Array.from({ length: 8 }, () => 0));
+    const numbers = results.map((result) => stringField(parseJson(result.stdout), "nn")).toSorted();
     expect(numbers).toEqual(["01", "02", "03", "04", "05", "06", "07", "08"]);
     expect(await frontierIds(repo)).toHaveLength(8);
   });

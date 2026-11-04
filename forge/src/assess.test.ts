@@ -3,6 +3,8 @@ import { mkdtempSync, rmSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
 
+import { isObject } from "./narrow";
+
 import {
   applyRiskLine,
   classifyDiff,
@@ -156,7 +158,11 @@ describe("forge assess (cli)", () => {
     await Bun.$`git -C ${repo} commit -q -m change`.quiet();
     const binPath = new URL("../bin/forge.ts", import.meta.url).pathname;
     const output = await Bun.$`bun ${binPath} assess --base HEAD~1 --head HEAD`.cwd(repo).quiet();
-    return JSON.parse(output.stdout.toString());
+    const parsed: unknown = JSON.parse(output.stdout.toString());
+    if (!isObject(parsed) || typeof parsed.tier !== "string") {
+      throw new Error("assess output has no string tier");
+    }
+    return { tier: parsed.tier };
   }
 
   test("docs fixture is passive", async () => {
@@ -180,7 +186,7 @@ describe("forge assess (cli)", () => {
       await Bun.$`bun ${binPath} assess --base HEAD~1 --head HEAD --risk-line ${"Risk: item 1 (shared caller)"}`
         .cwd(repo)
         .quiet();
-    expect(JSON.parse(output.stdout.toString()).tier).toBe("high");
+    expect(JSON.parse(output.stdout.toString())).toMatchObject({ tier: "high" });
   });
 });
 

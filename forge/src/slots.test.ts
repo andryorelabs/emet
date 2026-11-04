@@ -275,20 +275,20 @@ describe("listOccupiedSlots", () => {
       isAnchorAliveFn: (pid) => pid === LIVE_MARKER_PID,
     });
 
-    expect(entries).toEqual([
-      expect.objectContaining({
+    expect(entries).toMatchObject([
+      {
         index: 0,
         verdict: "live",
-        holder: expect.objectContaining({ runId: "run-a", ticket: "AO-1" }),
-      }),
-      expect.objectContaining({
+        holder: { runId: "run-a", ticket: "AO-1" },
+      },
+      {
         index: 1,
         verdict: "dead",
-        holder: expect.objectContaining({
+        holder: {
           runId: "run-dead",
           ticket: "AO-2",
-        }),
-      }),
+        },
+      },
     ]);
   });
 
