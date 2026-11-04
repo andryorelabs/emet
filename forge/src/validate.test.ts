@@ -40,9 +40,15 @@ describe("validatePlan", () => {
       tickets: [ticket({ id: "A", covers: ["S1", "S9"] }), ticket({ id: "B" })],
     });
     expect(result.ok).toBe(false);
-    expect(codes(result)).toEqual(
-      expect.arrayContaining(["uncovered-spec-item", "ticket-covers-nothing", "unknown-spec-item"]),
-    );
+    const found = codes(result);
+    const expected: typeof found = [
+      "uncovered-spec-item",
+      "ticket-covers-nothing",
+      "unknown-spec-item",
+    ];
+    for (const code of expected) {
+      expect(found).toContain(code);
+    }
   });
 
   test("flags S# without a scenario", () => {
@@ -132,7 +138,7 @@ describe("local tracker spec source", () => {
       ]);
       expect(stderr).toBe("");
       expect(code).toBe(0);
-      expect(JSON.parse(stdout).ok).toBe(true);
+      expect(JSON.parse(stdout)).toMatchObject({ ok: true });
     } finally {
       rmSync(repo, { recursive: true, force: true });
     }

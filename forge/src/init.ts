@@ -158,6 +158,7 @@ export function defaultBootstrap(packageManager: PackageManager): string[] {
     case "cargo": {
       return ["cargo fetch"];
     }
+    case "unknown":
     default: {
       return [];
     }
@@ -192,6 +193,7 @@ export function defaultSelfCheck(packageManager: PackageManager): string[] {
     case "pip": {
       return ["pytest"];
     }
+    case "unknown":
     default: {
       return [];
     }
@@ -282,8 +284,8 @@ async function hasGithubIssueUsage(repoRoot: string): Promise<boolean> {
     .quiet();
   if (list.exitCode !== 0) return false;
   try {
-    const issues: unknown[] = JSON.parse(list.stdout.toString());
-    return issues.length > 0;
+    const issues: unknown = JSON.parse(list.stdout.toString());
+    return Array.isArray(issues) && issues.length > 0;
   } catch {
     return false;
   }
@@ -545,8 +547,13 @@ async function detectHasWorkspaces(repoRoot: string): Promise<boolean> {
   const packageJson = Bun.file(path.join(repoRoot, "package.json"));
   if (await packageJson.exists()) {
     try {
-      const parsed: Record<string, unknown> = await packageJson.json();
-      if (Array.isArray(parsed.workspaces) || typeof parsed.workspaces === "object") return true;
+      const parsed: unknown = await packageJson.json();
+      if (
+        isObject(parsed) &&
+        (Array.isArray(parsed.workspaces) || typeof parsed.workspaces === "object")
+      ) {
+        return true;
+      }
     } catch {
       /**
        * malformed package.json — treated as no workspaces, not fatal here

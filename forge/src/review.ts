@@ -177,11 +177,54 @@ function ledgerPath(repoRoot: string, ticket: string): string {
   return path.join(repoRoot, ".forge", "review", `${ticket}.json`);
 }
 
+const LEDGER_STATUSES = ["open", "deferred", "resolved"] as const;
+
+function parseLedgerFinding(raw: unknown, index: number): LedgerFinding {
+  const finding = parseFinding(raw, index);
+  if (!isRecord(raw)) throw new ForgeConfigError(`ledger finding ${index} must be an object`);
+  const { status, round, deferReason } = raw;
+  if (!isOneOf(LEDGER_STATUSES, status) || typeof round !== "number") {
+    throw new ForgeConfigError(`ledger finding ${finding.id}: bad status or round`);
+  }
+  return {
+    ...finding,
+    status,
+    round,
+    ...(typeof deferReason === "string" ? { deferReason } : {}),
+  };
+}
+
+function parseRuling(raw: unknown, index: number): Ruling {
+  if (!isRecord(raw)) throw new ForgeConfigError(`ledger ruling ${index} must be an object`);
+  const { what, why, cost } = raw;
+  if (typeof what !== "string" || typeof why !== "string" || typeof cost !== "string") {
+    throw new ForgeConfigError(`ledger ruling ${index}: what, why and cost must be strings`);
+  }
+  return { what, why, cost };
+}
+
+function parseLedger(parsed: unknown): Ledger {
+  if (!isRecord(parsed)) throw new ForgeConfigError("ledger must be a JSON object");
+  const { ticket, rounds, findings, rulings } = parsed;
+  if (typeof ticket !== "string" || typeof rounds !== "number") {
+    throw new ForgeConfigError("ledger needs a string ticket and a numeric rounds");
+  }
+  if (!Array.isArray(findings) || !Array.isArray(rulings)) {
+    throw new ForgeConfigError("ledger findings and rulings must be arrays");
+  }
+  return {
+    ticket,
+    rounds,
+    findings: findings.map(parseLedgerFinding),
+    rulings: rulings.map(parseRuling),
+  };
+}
+
 function loadLedger(repoRoot: string, ticket: string): Ledger {
   const file = ledgerPath(repoRoot, ticket);
   if (!existsSync(file)) return emptyLedger(ticket);
-  const ledger: Ledger = JSON.parse(readFileSync(file, "utf8"));
-  return ledger;
+  const parsed: unknown = JSON.parse(readFileSync(file, "utf8"));
+  return parseLedger(parsed);
 }
 
 function saveLedger(repoRoot: string, ledger: Ledger): void {
@@ -197,8 +240,8 @@ function readFlagValue(argv: readonly string[], flag: string): string | undefine
   return value === undefined || (value.startsWith("--") && value !== "-") ? undefined : value;
 }
 
-async function readFindingsInput(source: string): Promise<string> {
-  return source === "-" ? await Bun.stdin.text() : readFileSync(source, "utf8");
+function readFindingsInput(source: string): Promise<string> {
+  return source === "-" ? Bun.stdin.text() : Promise.resolve(readFileSync(source, "utf8"));
 }
 
 export async function run(argv: string[]): Promise<void> {

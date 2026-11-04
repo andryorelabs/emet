@@ -9,6 +9,7 @@
  * Stalled workers (the `usage` stalled signal) force `needs-decision`.
  */
 
+import { isObject } from "./narrow";
 import { optionalProperty } from "./optional";
 import os from "node:os";
 import path from "node:path";
@@ -208,10 +209,44 @@ const FAILED_CONCLUSIONS = new Set([
   "STARTUP_FAILURE",
 ]);
 
+type RawCheck = { conclusion?: string | null; status?: string; state?: string };
+
+function toRawCheck(raw: unknown): RawCheck {
+  if (!isObject(raw)) return {};
+  const { conclusion, status, state } = raw;
+  return {
+    ...(typeof conclusion === "string" || conclusion === null ? { conclusion } : {}),
+    ...(typeof status === "string" ? { status } : {}),
+    ...(typeof state === "string" ? { state } : {}),
+  };
+}
+
+function toRawPullRequest(raw: unknown): RawPullRequest | null {
+  if (!isObject(raw)) return null;
+  const { number, state, headRefName, body, mergeable, reviewDecision, statusCheckRollup } = raw;
+  if (typeof number !== "number" || typeof state !== "string" || typeof headRefName !== "string") {
+    return null;
+  }
+  const checks: unknown[] | null | undefined = Array.isArray(statusCheckRollup)
+    ? statusCheckRollup
+    : undefined;
+  return {
+    number,
+    state,
+    headRefName,
+    ...(typeof body === "string" || body === null ? { body } : {}),
+    ...(typeof mergeable === "string" ? { mergeable } : {}),
+    ...(typeof reviewDecision === "string" || reviewDecision === null ? { reviewDecision } : {}),
+    ...(checks === undefined ? {} : { statusCheckRollup: checks.map(toRawCheck) }),
+  };
+}
+
 export function parsePullRequests(json: string): Map<string, PullRequestStatus> {
   const result = new Map<string, PullRequestStatus>();
-  const items: RawPullRequest[] = JSON.parse(json);
-  for (const item of items) {
+  const parsed: unknown = JSON.parse(json);
+  if (!Array.isArray(parsed)) throw new TypeError("gh pr list output was not a JSON array");
+  const rawItems: unknown[] = parsed;
+  for (const item of rawItems.flatMap((raw) => toRawPullRequest(raw) ?? [])) {
     const checks = item.statusCheckRollup ?? [];
     const failed = checks.some((c) => FAILED_CONCLUSIONS.has(c.conclusion ?? c.state ?? ""));
     const pending = checks.some((c) =>

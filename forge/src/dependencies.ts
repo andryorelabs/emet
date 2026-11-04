@@ -250,6 +250,7 @@ export function classifyClaudePluginProbe(probe: ClaudePluginProbe): DependencyC
         summary: `could not verify the mattpocock-skills plugin — \`claude plugin list\` failed: ${probe.detail}`,
         remedy: [],
       };
+    case "listed":
     default:
       if (probe.status === "installed") {
         return {
@@ -321,6 +322,7 @@ export function classifyGithubCliProbe(probe: GithubCliProbe): DependencyCheck {
         summary:
           "gh CLI found but not authenticated — run `gh auth login` before dispatching a wave.",
       };
+    case "timed-out":
     default:
       return {
         ...base,
@@ -370,6 +372,7 @@ export function classifyLinearMcpProbe(probe: LinearMcpProbe): DependencyCheck {
           : "tracker: linear — no Linear MCP server in .mcp.json, and `claude` is not on PATH to check user-level scopes. If yours is configured at user level this is fine.",
         limitation: null,
       };
+    case "mcp-json-unreadable":
     default:
       return {
         ...base,

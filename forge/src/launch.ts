@@ -6,7 +6,7 @@ import {
   type HandoffLauncher,
   type HandoffPermissionMode,
 } from "./config";
-import { errorMessage } from "./narrow";
+import { errorMessage, isObject } from "./narrow";
 
 /**
  * Launches one wave of a run as a background `claude --bg` session and, per
@@ -91,7 +91,20 @@ function parseAgentRows(stdout: string): AgentRow[] {
   if (!Array.isArray(parsed)) {
     throw new Error("`claude agents --json` did not return an array");
   }
-  return parsed;
+  const rows: unknown[] = parsed;
+  const agentRows: AgentRow[] = [];
+  for (const row of rows) {
+    if (!isObject(row)) {
+      agentRows.push({});
+      continue;
+    }
+    const { id, name } = row;
+    agentRows.push({
+      ...(typeof id === "string" || id === null ? { id } : {}),
+      ...(typeof name === "string" || name === null ? { name } : {}),
+    });
+  }
+  return agentRows;
 }
 
 async function listAgents(runner: CommandRunner): Promise<AgentRow[]> {
@@ -145,10 +158,11 @@ async function shouldOpenOrcaTab(
     };
   }
   try {
-    const parsed: {
-      result?: { runtime?: { reachable?: unknown } };
-    } = JSON.parse(status.stdout);
-    return parsed.result?.runtime?.reachable === true
+    const parsed: unknown = JSON.parse(status.stdout);
+    const result = isObject(parsed) ? parsed.result : undefined;
+    const runtime = isObject(result) ? result.runtime : undefined;
+    const reachable = isObject(runtime) ? runtime.reachable : undefined;
+    return reachable === true
       ? { attempt: true, reason: "orca runtime reachable" }
       : { attempt: false, reason: "orca runtime not reachable" };
   } catch {
@@ -190,8 +204,8 @@ async function openOrcaTab(
     };
   }
   try {
-    const parsed: { ok?: unknown } = JSON.parse(result.stdout);
-    return parsed.ok === true
+    const parsed: unknown = JSON.parse(result.stdout);
+    return isObject(parsed) && parsed.ok === true
       ? { opened: true, reason: "orca tab created" }
       : { opened: false, reason: "orca terminal create returned ok=false" };
   } catch {

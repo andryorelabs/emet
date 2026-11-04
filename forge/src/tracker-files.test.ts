@@ -203,7 +203,7 @@ describe("resolveTrackerRoot", () => {
     expect(await resolveTrackerRoot(linked)).toBe(main);
   });
 
-  test("rejects a directory outside a repository", async () => {
+  test("rejects a directory outside a repository", () => {
     return expect(resolveTrackerRoot(makeTemporaryDirectory())).rejects.toThrow();
   });
 });

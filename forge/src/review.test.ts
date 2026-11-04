@@ -1,4 +1,7 @@
-import { describe, expect, test } from "bun:test";
+import { afterEach, beforeEach, describe, expect, test } from "bun:test";
+import { mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSync } from "node:fs";
+import os from "node:os";
+import path from "node:path";
 
 import {
   type Ledger,
@@ -171,5 +174,66 @@ describe("escalation and rulings", () => {
     const ledger = addRuling(emptyLedger("T"), { what: "ship", why: "low risk", cost: "rework" });
     expect(formatRulings(ledger)).toBe("Ruling: ship — low risk — rework if wrong");
     expect(formatRulings(emptyLedger("T"))).toBe("");
+  });
+});
+
+describe("review ledger round trip through the CLI", () => {
+  let repo = "";
+
+  beforeEach(() => {
+    repo = realpathSync(mkdtempSync(path.join(os.tmpdir(), "forge-review-")));
+    Bun.spawnSync(["git", "-C", repo, "init", "-q"]);
+  });
+
+  afterEach(() => {
+    rmSync(repo, { recursive: true, force: true });
+  });
+
+  function runReview(findings: readonly Record<string, unknown>[]) {
+    const findingsPath = path.join(repo, "findings.json");
+    writeFileSync(findingsPath, JSON.stringify(findings));
+    const result = Bun.spawnSync(
+      [
+        "bun",
+        path.join(import.meta.dir, "review.ts"),
+        "--ticket",
+        "T-1",
+        "--findings",
+        findingsPath,
+      ],
+      { cwd: repo, stdout: "pipe", stderr: "pipe" },
+    );
+    return { exitCode: result.exitCode, stdout: result.stdout.toString() };
+  }
+
+  test("a saved ledger with a deferred entry loads again in round two", () => {
+    const first = runReview([finding({ id: "F1", severity: "minor" })]);
+    expect(first.exitCode).toBe(1);
+    expect(JSON.parse(first.stdout).round).toBe(1);
+    const second = runReview([
+      finding({ id: "F1", severity: "minor" }),
+      finding({ id: "F2", file: "b.ts", claim: "unrelated new blocker" }),
+    ]);
+    expect(JSON.parse(second.stdout).round).toBe(2);
+    const ledger = JSON.parse(
+      readFileSync(path.join(repo, ".forge", "review", "T-1.json"), "utf8"),
+    );
+    expect(ledger.findings.some((entry: { status: string }) => entry.status === "deferred")).toBe(
+      true,
+    );
+  });
+
+  test("a corrupted ledger exits 2", () => {
+    mkdirSync(path.join(repo, ".forge", "review"), { recursive: true });
+    writeFileSync(
+      path.join(repo, ".forge", "review", "T-1.json"),
+      JSON.stringify({
+        ticket: "T-1",
+        rounds: 1,
+        rulings: [],
+        findings: [{ ...finding(), status: "bogus", round: 1 }],
+      }),
+    );
+    expect(runReview([finding()]).exitCode).toBe(2);
   });
 });

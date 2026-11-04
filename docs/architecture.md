@@ -1,0 +1,52 @@
+# Architecture
+
+A code map of `forge/src` and how the `/forge:run` prompts drive it. Terms follow [GLOSSARY.md](../GLOSSARY.md); decisions behind the shape live in [docs/adr](adr/README.md). For problems, see [troubleshooting](troubleshooting.md).
+
+- [Shape](#shape)
+- [How the prompts drive the CLI](#how-the-prompts-drive-the-cli)
+- [Module map](#module-map)
+- [Distribution](#distribution)
+- [See also](#see-also)
+
+## Shape
+
+There are two halves. The prompts (`commands/run.md`, `agents/*.md`, `forge/reference/*.md`) tell Claude what to do in each phase. The `forge` CLI (`forge/bin/forge.ts` and `forge/src/`) does everything that must be deterministic: checks, claims, slots, gates, tracker writes and landing. The prompts never re-implement a check the CLI already makes.
+
+`forge/bin/forge.ts` is a thin dispatcher: it reads the first argument and hands off to one subcommand module, which reads the rest of `process.argv` itself. Exit codes are meaningful across subcommands.
+
+## How the prompts drive the CLI
+
+`commands/run.md` is a short router. It loads one `forge/reference/` phase file at a time, so a compaction never drops the rules for the current phase.
+
+| Phase                                  | Prompt                                       | CLI calls                                                                     |
+| -------------------------------------- | -------------------------------------------- | ----------------------------------------------------------------------------- |
+| 1-5 interview, spec, tickets, approval | `phases-1-5.md`                              | `init`, `doctor`, `validate`, `surfaces`, `approve`, `tracker`                |
+| 6-7 dispatch and workers               | `phases-6-7-dispatch.md`, `worker-prompt.md` | `preflight`, `claims`, `slots`, `launch`, `lock-reason`, `handoff`, `results` |
+| 8 review, gate, landing, closeout      | `phases-8-closeout.md`, `reviewer-prompt.md` | `verify`, `review-package`, `review`, `assess`, `gate`, `land`, `cleanup`     |
+| 9 handoff and chaining                 | `phases-9-handoff.md`                        | `status`, `metrics`, `usage`, `spec-merge`                                    |
+
+The coordinator is the single tracker writer (ADR-0005): workers report through a handoff note and `forge results`, and the coordinator posts them. `forge guard` runs as a `PreToolUse` hook and blocks known unattended-run failure triggers.
+
+## Module map
+
+Each module has a `*.test.ts` beside it.
+
+| Area            | Modules                                                                                                                                                                                                                      |
+| --------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Setup and audit | `init.ts` (config and doc skeleton), `config.ts` (`forge.config.json`), `doctor.ts` (fleet sweep), `preflight.ts` (dispatch hygiene), `dependencies.ts`, `skills.ts` (mattpocock-skills contract), `map.ts` (codebase brief) |
+| Run state       | `claims.ts` (ticket reservations), `slots.ts` (worker slot pool), `resources.ts` (host facts), `runs.ts` (liveness), `locks.ts`, `lockreason.ts`, `proctree.ts`, `worktrees.ts`, `cleanup.ts`, `status.ts`, `launch.ts`      |
+| Tracker         | `tracker.ts`, `tracker-files.ts` (local `.scratch/` tracker), `validate.ts` (spec coverage), `specmerge.ts`, `approve.ts`, `surfaces.ts` (edit-surface overlap)                                                              |
+| Worker handoff  | `handoff.ts`, `results.ts`, `materializelog.ts`                                                                                                                                                                              |
+| Review and land | `verify.ts`, `reviewpackage.ts`, `review.ts` (findings ledger), `assess.ts` (risk classifier), `gate.ts`, `land.ts`                                                                                                          |
+| Reporting       | `metrics.ts`, `usage.ts`                                                                                                                                                                                                     |
+| Safety          | `guard.ts`, `guard-destructive.ts`                                                                                                                                                                                           |
+| Shared helpers  | `narrow.ts`, `optional.ts`, `assets.ts` (embedded files in compiled binaries)                                                                                                                                                |
+
+## Distribution
+
+`install.sh` copies `forge/` to `~/.claude/forge` and rewrites the prompts. The plugin path ships a shim that downloads a checksum-verified standalone binary built by `tools/build-binaries.ts`. See [ADR-0008](adr/0008-standalone-binaries-and-plugin-distribution.md).
+
+## See also
+
+- [AGENTS.md](../AGENTS.md) and [forge/AGENTS.md](../forge/AGENTS.md)
+- [Documentation index](README.md)

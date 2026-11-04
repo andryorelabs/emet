@@ -42,26 +42,28 @@ const cleanReport: RepoDoctorReport = {
 };
 
 const healthyProbes: DependencyProbes = {
-  claudePlugin: async () => ({ kind: "listed", status: "installed" }),
-  githubCli: async () => ({ kind: "authenticated" }),
-  linearMcpServer: async () => ({ kind: "declared", source: "mcp-json" }),
-  forgeAgents: async () => ({ kind: "present" }),
+  claudePlugin: () => Promise.resolve({ kind: "listed", status: "installed" }),
+  githubCli: () => Promise.resolve({ kind: "authenticated" }),
+  linearMcpServer: () => Promise.resolve({ kind: "declared", source: "mcp-json" }),
+  forgeAgents: () => Promise.resolve({ kind: "present" }),
 };
 
 const healthyEnvironment: EnvironmentProbes = {
-  helpText: async (command) => {
+  helpText: (command) => {
     const joined = command.join(" ");
-    if (joined.startsWith("gh issue view")) return "      --json fields   Output JSON";
+    if (joined.startsWith("gh issue view"))
+      return Promise.resolve("      --json fields   Output JSON");
     if (joined.startsWith("gh issue edit"))
-      return "      --add-label name\n      --remove-label name";
-    if (joined.startsWith("gh repo view")) return "      --json fields";
-    if (joined === "claude agents --help") return "  --json   Print active sessions";
-    return "  --bg, --background   Start in background";
+      return Promise.resolve("      --add-label name\n      --remove-label name");
+    if (joined.startsWith("gh repo view")) return Promise.resolve("      --json fields");
+    if (joined === "claude agents --help")
+      return Promise.resolve("  --json   Print active sessions");
+    return Promise.resolve("  --bg, --background   Start in background");
   },
-  ghRepoNameWithOwner: async () => "Owner/repo",
-  remoteUrl: async () => "git@github.com:owner/repo.git",
-  resolveRef: async () => "a".repeat(40),
-  worktreeBaseRef: async () => null,
+  ghRepoNameWithOwner: () => Promise.resolve("Owner/repo"),
+  remoteUrl: () => Promise.resolve("git@github.com:owner/repo.git"),
+  resolveRef: () => Promise.resolve("a".repeat(40)),
+  worktreeBaseRef: () => Promise.resolve(null),
 };
 
 describe("isReportClean", () => {
@@ -373,7 +375,7 @@ describe("auditRepo", () => {
     );
     const probes: DependencyProbes = {
       ...healthyProbes,
-      githubCli: async () => ({ kind: "unauthenticated" }),
+      githubCli: () => Promise.resolve({ kind: "unauthenticated" }),
     };
     const report = await auditRepo(repoRoot, probes, healthyEnvironment);
     expect(report.dependencyFindings.map((check) => check.dependency)).toEqual(["github-cli"]);
@@ -393,7 +395,7 @@ describe("auditRepo", () => {
     );
     const probes: DependencyProbes = {
       ...healthyProbes,
-      linearMcpServer: async () => ({ kind: "not-declared", searchedAllScopes: true }),
+      linearMcpServer: () => Promise.resolve({ kind: "not-declared", searchedAllScopes: true }),
     };
     const report = await auditRepo(repoRoot, probes, healthyEnvironment);
     expect(report.dependencyFindings.map((check) => check.dependency)).toEqual([
@@ -415,7 +417,7 @@ describe("auditRepo", () => {
     );
     const probes: DependencyProbes = {
       ...healthyProbes,
-      githubCli: async () => ({ kind: "unauthenticated" }),
+      githubCli: () => Promise.resolve({ kind: "unauthenticated" }),
     };
     const report = await auditRepo(repoRoot, probes, healthyEnvironment);
     expect(report.trackerKind).toBeNull();
@@ -459,7 +461,7 @@ describe("checkExternalCliFlags", () => {
   test("reports a command that cannot be run", async () => {
     const findings = await checkExternalCliFlags({
       ...healthyEnvironment,
-      helpText: async () => null,
+      helpText: () => Promise.resolve(null),
     });
     expect(findings.length).toBeGreaterThan(0);
     expect(findings[0]).toContain("could not be run");
@@ -578,7 +580,7 @@ describe("auditRepo environment findings", () => {
     await initRepo(undefined);
     const report = await auditRepo(repoRoot, healthyProbes, {
       ...healthyEnvironment,
-      resolveRef: async (_root, ref) => (ref === "HEAD" ? "a".repeat(40) : "b".repeat(40)),
+      resolveRef: (_root, ref) => Promise.resolve(ref === "HEAD" ? "a".repeat(40) : "b".repeat(40)),
     });
     expect(report.environmentFindings.join("\n")).toContain("baseRef");
     expect(isReportClean(report)).toBe(false);
@@ -612,7 +614,7 @@ describe("doctor with a local tracker and merge landing", () => {
 
   const ghAbsentProbes: DependencyProbes = {
     ...healthyProbes,
-    githubCli: async () => ({ kind: "not-on-path" }),
+    githubCli: () => Promise.resolve({ kind: "not-on-path" }),
   };
 
   test("reports no gh finding when gh is absent", async () => {
@@ -649,9 +651,9 @@ describe("doctor with a local tracker and merge landing", () => {
     const refs: string[] = [];
     await auditRepo(repoRoot, healthyProbes, {
       ...healthyEnvironment,
-      resolveRef: async (_root, ref) => {
+      resolveRef: (_root, ref) => {
         refs.push(ref);
-        return "a".repeat(40);
+        return Promise.resolve("a".repeat(40));
       },
     });
     expect(refs).toContain("main");

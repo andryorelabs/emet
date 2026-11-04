@@ -16,12 +16,12 @@ const dispatch = { baseline: "abcdef1234567890", surfaces: ["src/a.ts", "src/lib
 
 function fakeDependencies(overrides: Partial<VerifyDependencies> = {}): VerifyDependencies {
   return {
-    head: async () => "headsha",
-    commitCount: async () => 1,
-    changedPaths: async () => ["src/a.ts", ".forge/handoff-T-1.md"],
-    handoffCheck: async () => ({ exitCode: 0, output: "" }),
+    head: () => Promise.resolve("headsha"),
+    commitCount: () => Promise.resolve(1),
+    changedPaths: () => Promise.resolve(["src/a.ts", ".forge/handoff-T-1.md"]),
+    handoffCheck: () => Promise.resolve({ exitCode: 0, output: "" }),
     workerScopedSuite: "bun test",
-    runSuite: async () => ({ exitCode: 0, output: "" }),
+    runSuite: () => Promise.resolve({ exitCode: 0, output: "" }),
     ...overrides,
   };
 }
@@ -52,7 +52,7 @@ describe("verifyTicket", () => {
     const record = await verifyTicket(
       "T-1",
       dispatch,
-      fakeDependencies({ commitCount: async () => 0 }),
+      fakeDependencies({ commitCount: () => Promise.resolve(0) }),
     );
     expect(failed(record)).toEqual(["commits"]);
   });
@@ -61,7 +61,7 @@ describe("verifyTicket", () => {
     const record = await verifyTicket(
       "T-1",
       dispatch,
-      fakeDependencies({ changedPaths: async () => [".forge/handoff-T-1.md"] }),
+      fakeDependencies({ changedPaths: () => Promise.resolve([".forge/handoff-T-1.md"]) }),
     );
     expect(failed(record)).toContain("commits");
   });
@@ -70,7 +70,7 @@ describe("verifyTicket", () => {
     const record = await verifyTicket(
       "T-1",
       dispatch,
-      fakeDependencies({ changedPaths: async () => ["src/a.ts", "README.md"] }),
+      fakeDependencies({ changedPaths: () => Promise.resolve(["src/a.ts", "README.md"]) }),
     );
     expect(failed(record)).toEqual(["surfaces"]);
     expect(record.checks.find((c) => c.name === "surfaces")!.detail).toContain("README.md");
@@ -80,7 +80,9 @@ describe("verifyTicket", () => {
     const record = await verifyTicket(
       "T-1",
       dispatch,
-      fakeDependencies({ handoffCheck: async () => ({ exitCode: 1, output: 'missing "next:"' }) }),
+      fakeDependencies({
+        handoffCheck: () => Promise.resolve({ exitCode: 1, output: 'missing "next:"' }),
+      }),
     );
     expect(failed(record)).toEqual(["handoff"]);
   });
@@ -89,7 +91,7 @@ describe("verifyTicket", () => {
     const bad = await verifyTicket(
       "T-1",
       dispatch,
-      fakeDependencies({ runSuite: async () => ({ exitCode: 1, output: "boom" }) }),
+      fakeDependencies({ runSuite: () => Promise.resolve({ exitCode: 1, output: "boom" }) }),
     );
     expect(failed(bad)).toEqual(["suite"]);
     const skipped = await verifyTicket(
@@ -156,16 +158,13 @@ describe("against a real git worktree", () => {
       },
     );
     expect(result.exitCode).toBe(1);
-    const record = JSON.parse(
+    const record: unknown = JSON.parse(
       readFileSync(path.join(repo, ".forge/runs/r1/verify/T-1.json"), "utf8"),
     );
-    expect(record.ok).toBe(false);
-    expect(record.checks.map((c: { name: string }) => c.name)).toEqual([
-      "commits",
-      "surfaces",
-      "handoff",
-      "suite",
-    ]);
+    expect(record).toMatchObject({
+      ok: false,
+      checks: [{ name: "commits" }, { name: "surfaces" }, { name: "handoff" }, { name: "suite" }],
+    });
   });
 });
 

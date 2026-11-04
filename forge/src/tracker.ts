@@ -173,7 +173,7 @@ async function loadTickets(root: string, slug: string): Promise<TicketFile[]> {
   return tickets;
 }
 
-async function requireSpec(root: string, slug: string): Promise<void> {
+function requireSpec(root: string, slug: string): void {
   if (!existsSync(specFile(root, slug))) {
     throw new TrackerRefusedError(`spec "${slug}" not found`);
   }
@@ -249,7 +249,7 @@ async function createTicket(root: string, argv: readonly string[]): Promise<unkn
   const body = await readBodyFile(argv);
   const blockedBy = parseBlockedByFlag(argv);
   return withSpecLock(slug, async () => {
-    await requireSpec(root, slug);
+    requireSpec(root, slug);
     const tickets = await loadTickets(root, slug);
     const highest = tickets.reduce((maximum, ticket) => Math.max(maximum, Number(ticket.nn)), 0);
     const nn = String(highest + 1).padStart(2, "0");
@@ -281,7 +281,7 @@ async function readItem(root: string, argv: readonly string[]): Promise<unknown>
 
 async function frontier(root: string, argv: readonly string[]): Promise<unknown> {
   const slug = requireSlug(requireFlag(argv, "--spec"));
-  await requireSpec(root, slug);
+  requireSpec(root, slug);
   const tickets = await loadTickets(root, slug);
   return computeFrontier(tickets).map(ticketSummary);
 }

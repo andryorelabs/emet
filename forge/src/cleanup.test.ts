@@ -290,7 +290,7 @@ describe("deleteAndReleaseTicket", () => {
       "ao-260-forge-cleanup-run-scoped",
       "AO-260",
       "session-a",
-      async (branch) => ({ ok: true, message: branch }),
+      (branch) => Promise.resolve({ ok: true, message: branch }),
       (ticket, runId) => releaseTicket(ticket, runId, { forgeDirectory }),
     );
 
@@ -317,7 +317,7 @@ describe("deleteAndReleaseTicket", () => {
       "ao-260-forge-cleanup-run-scoped",
       "AO-260",
       "session-a",
-      async (branch) => ({ ok: false, message: `${branch} — locked` }),
+      (branch) => Promise.resolve({ ok: false, message: `${branch} — locked` }),
       (ticket, runId) => releaseTicket(ticket, runId, { forgeDirectory }),
     );
 
@@ -331,10 +331,10 @@ describe("deleteAndReleaseTicket", () => {
       "worktree-agent-a1",
       undefined,
       undefined,
-      async (branch) => ({ ok: true, message: branch }),
-      async () => {
+      (branch) => Promise.resolve({ ok: true, message: branch }),
+      () => {
         releaseCalls += 1;
-        return { outcome: "released" as const };
+        return Promise.resolve({ outcome: "released" as const });
       },
     );
 
@@ -355,10 +355,10 @@ describe("deleteAndReleaseTicket", () => {
       "ao-260-forge-cleanup-run-scoped",
       "AO-260",
       undefined,
-      async (branch) => ({ ok: true, message: branch }),
-      async () => {
+      (branch) => Promise.resolve({ ok: true, message: branch }),
+      () => {
         releaseCalls += 1;
-        return { outcome: "released" as const };
+        return Promise.resolve({ outcome: "released" as const });
       },
     );
 
@@ -382,13 +382,13 @@ describe("deleteAndReleaseTicket", () => {
       "ao-260-forge-cleanup-run-scoped",
       "AO-260",
       "session-a",
-      async (branch) => ({ ok: true, message: branch }),
+      (branch) => Promise.resolve({ ok: true, message: branch }),
       (ticket, runId) => releaseTicket(ticket, runId, { forgeDirectory }),
     );
 
     expect(result.ok).toBe(true);
-    expect(await listReservations(forgeDirectory)).toEqual([
-      expect.objectContaining({ runId: "session-other", ticket: "AO-260" }),
+    expect(await listReservations(forgeDirectory)).toMatchObject([
+      { runId: "session-other", ticket: "AO-260" },
     ]);
   });
 });
