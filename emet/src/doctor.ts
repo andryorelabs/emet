@@ -22,8 +22,10 @@ import {
   CONFIG_FILE,
   LEGACY_AGENTS_DOC,
   LEGACY_CONFIG_FILE,
+  LEGACY_PRODUCT,
   LEGACY_RUN_DIR,
   legacyStateDir,
+  PRODUCT,
   resolveConfigPath,
   stateDir,
 } from "./names";
@@ -810,7 +812,16 @@ export function checkSettingsAdvisories(settings: unknown): readonly string[] {
   return advisories;
 }
 
-const INSTALL_MANIFEST_RELATIVE_PATH = ".claude/forge/.install-manifest.json";
+const INSTALL_MANIFEST_RELATIVE_PATHS: readonly string[] = [
+  ".claude/emet/.install-manifest.json",
+  ".claude/forge/.install-manifest.json",
+];
+
+function findInstallManifestPath(homeDirectory: string): string | undefined {
+  return INSTALL_MANIFEST_RELATIVE_PATHS.find((relativePath) =>
+    existsSync(path.join(homeDirectory, relativePath)),
+  );
+}
 
 /**
  * Compares every file recorded in the installer's SHA-256 manifest against
@@ -821,7 +832,10 @@ export async function findInstallDrift(homeDirectory: string): Promise<string[]>
   let manifest: unknown;
   try {
     manifest = JSON.parse(
-      await readFile(path.join(homeDirectory, INSTALL_MANIFEST_RELATIVE_PATH), "utf8"),
+      await readFile(
+        path.join(homeDirectory, findInstallManifestPath(homeDirectory) ?? ""),
+        "utf8",
+      ),
     );
   } catch {
     return [];
@@ -860,10 +874,13 @@ export function findDoubleInstall(
   homeDirectory: string,
   plugins: readonly InstalledPlugin[],
 ): string[] {
-  const installedByScript = existsSync(path.join(homeDirectory, INSTALL_MANIFEST_RELATIVE_PATH));
-  if (!installedByScript || findPluginByName(plugins, "forge") === null) return [];
+  const installedByScript = findInstallManifestPath(homeDirectory) !== undefined;
+  const pluginInstalled =
+    findPluginByName(plugins, PRODUCT) !== null ||
+    findPluginByName(plugins, LEGACY_PRODUCT) !== null;
+  if (!installedByScript || !pluginInstalled) return [];
   return [
-    "forge is installed both as a plugin and by install.sh; remove one (uninstall the plugin, or delete ~/.claude/forge, ~/.claude/commands/forge.md and the forge agents)",
+    "emet is installed both as a plugin and by install.sh; remove one (uninstall the plugin, or delete ~/.claude/emet, ~/.claude/commands/emet.md and the emet agents)",
   ];
 }
 

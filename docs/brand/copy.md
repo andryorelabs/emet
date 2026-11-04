@@ -41,9 +41,7 @@ Not affiliated with or endorsed by Anthropic
 
 ### Short description
 
-Not selected. Two proposals, both within the claims above:
+Selected: option 1. Two proposals were made, both within the claims above:
 
-1. "Spec to merge on one approval: parallel workers in isolated worktrees, a review per wave, CI green before merge."
-2. "A Claude Code plugin that turns an approved spec into a merged change, with a review per wave."
-
-Pick one, or replace both, before it appears on any listing.
+1. "Spec to merge on one approval: parallel workers in isolated worktrees, a review per wave, CI green before merge." (selected)
+2. "A Claude Code plugin that turns an approved spec into a merged change, with a review per wave." (not selected)

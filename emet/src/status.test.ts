@@ -30,11 +30,11 @@ function worker(overrides: Partial<WorkerSignal> = {}): WorkerSignal {
 }
 
 function wave(workers: WorkerSignal[], runVerdict: WaveInput["runVerdict"] = "live"): WaveInput {
-  return { runId: "forge20w2042651", runVerdict, workers };
+  return { runId: "emet20w2042651", runVerdict, workers };
 }
 
 const lockedReason = (ticket: string) =>
-  `forge run=forge1w1000000 ticket=${ticket} anchor=1 at=2026-01-01T00:00:00Z`;
+  `emet run=emet1w1000000 ticket=${ticket} anchor=1 at=2026-01-01T00:00:00Z`;
 
 const stateOf = (input: WaveInput) => buildStatusReport([input], null).waves[0]!.state;
 
@@ -80,13 +80,13 @@ describe("report", () => {
   });
 
   test("--spec filters waves by the spec in the run id", () => {
-    const other: WaveInput = { ...wave([worker()]), runId: "forge21w1000000" };
+    const other: WaveInput = { ...wave([worker()]), runId: "emet21w1000000" };
     const report = buildStatusReport([wave([worker()]), other], "21");
-    expect(report.waves.map((w) => w.runId)).toEqual(["forge21w1000000"]);
+    expect(report.waves.map((w) => w.runId)).toEqual(["emet21w1000000"]);
   });
 
   test("overall state is the most urgent wave", () => {
-    const blocked: WaveInput = { ...wave([worker({ stalled: true })]), runId: "forge20w1000000" };
+    const blocked: WaveInput = { ...wave([worker({ stalled: true })]), runId: "emet20w1000000" };
     const ready = wave([worker({ pullRequest: greenPullRequest })]);
     expect(buildStatusReport([ready, blocked], null).state).toBe("needs-decision");
   });
@@ -121,7 +121,7 @@ describe("report", () => {
 
 describe("parsing and merging", () => {
   test("parseRunIdentity", () => {
-    expect(parseRunIdentity("forge20w2042651")).toEqual({ spec: "20", wave: 2 });
+    expect(parseRunIdentity("emet20w2042651")).toEqual({ spec: "20", wave: 2 });
     expect(parseRunIdentity("weird")).toEqual({ spec: null, wave: null });
   });
 
@@ -137,7 +137,7 @@ describe("parsing and merging", () => {
   });
 
   test("localLandedBranches marks a squash-landed worker branch as merged", async () => {
-    const repo = realpathSync(mkdtempSync(path.join(os.tmpdir(), "forge-status-")));
+    const repo = realpathSync(mkdtempSync(path.join(os.tmpdir(), "emet-status-")));
     const original = process.cwd();
     const sh = (...args: string[]) => {
       const result = Bun.spawnSync(["git", "-C", repo, ...args]);
@@ -178,8 +178,8 @@ describe("parsing and merging", () => {
   });
 
   test("run never calls gh in merge landing mode", async () => {
-    const repo = realpathSync(mkdtempSync(path.join(os.tmpdir(), "forge-status-run-")));
-    const stubDirectory = realpathSync(mkdtempSync(path.join(os.tmpdir(), "forge-status-gh-")));
+    const repo = realpathSync(mkdtempSync(path.join(os.tmpdir(), "emet-status-run-")));
+    const stubDirectory = realpathSync(mkdtempSync(path.join(os.tmpdir(), "emet-status-gh-")));
     const marker = path.join(stubDirectory, "gh-was-called");
     const originalCwd = process.cwd();
     const originalPath = process.env.PATH;
@@ -187,13 +187,13 @@ describe("parsing and merging", () => {
     const originalLog = console.log;
     try {
       writeFileSync(
-        path.join(repo, "forge.config.json"),
+        path.join(repo, "emet.config.json"),
         JSON.stringify({ version: 1, landing: { mode: "merge" } }),
       );
       const identity = ["-c", "user.email=t@example.com", "-c", "user.name=T"];
       for (const args of [
         ["init", "-q", "-b", "main"],
-        ["add", "forge.config.json"],
+        ["add", "emet.config.json"],
         [...identity, "commit", "-q", "-m", "init"],
       ]) {
         const result = Bun.spawnSync(["git", "-C", repo, ...args]);
@@ -255,16 +255,16 @@ describe("parsing and merging", () => {
         {
           directory: "/w/1",
           branch: "br",
-          lockedReason: "forge run=forge20w2042651 ticket=CLA-1 anchor=1 at=x",
+          lockedReason: "emet run=emet20w2042651 ticket=CLA-1 anchor=1 at=x",
         },
       ],
       [
-        { runId: "forge20w2042651", ticket: "CLA-1" },
-        { runId: "forge20w2042651", ticket: "CLA-2" },
+        { runId: "emet20w2042651", ticket: "CLA-1" },
+        { runId: "emet20w2042651", ticket: "CLA-2" },
       ],
       new Map([["br", greenPullRequest]]),
       new Set(["/w/1"]),
-      new Map([["forge20w2042651", "live"]]),
+      new Map([["emet20w2042651", "live"]]),
     );
     expect(waves).toHaveLength(1);
     expect(waves[0]!.workers).toEqual([
@@ -295,10 +295,10 @@ describe("wave PR lookup", () => {
     );
     const [group] = groupWorkers(
       [],
-      [{ runId: "forge20w2111111", ticket: "CLA-25" }],
+      [{ runId: "emet20w2111111", ticket: "CLA-25" }],
       pullRequests,
       new Set(),
-      new Map([["forge20w2111111", "live"]]),
+      new Map([["emet20w2111111", "live"]]),
     );
     expect(group!.workers[0]!.pullRequest?.number).toBe(99);
     expect(group!.workers[0]!.pullRequest?.checks).toBe("pending");

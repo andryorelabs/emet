@@ -31,7 +31,7 @@ function lockedEntry(overrides: Partial<WorktreeEntry> = {}): WorktreeEntry {
   return {
     directory: "/repo/.claude/worktrees/agent-a1",
     branch: "ao-260-forge-cleanup-run-scoped",
-    lockedReason: "forge run=session-a ticket=AO-260 anchor=4242 at=2026-09-07T00:00:00Z",
+    lockedReason: "emet run=session-a ticket=AO-260 anchor=4242 at=2026-09-07T00:00:00Z",
     ...overrides,
   };
 }
@@ -436,7 +436,7 @@ function scaffoldBranch(name: string, worktreePath = "") {
 }
 
 function lockReason(runId: string, ticket: string): string {
-  return `forge run=${runId} ticket=${ticket} anchor=${process.pid} at=2026-09-07T00:00:00Z`;
+  return `emet run=${runId} ticket=${ticket} anchor=${process.pid} at=2026-09-07T00:00:00Z`;
 }
 
 async function lockOf(directory: string): Promise<string | null> {

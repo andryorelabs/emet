@@ -61,7 +61,7 @@ describe("resolveApprovalDirectory", () => {
     const repoRoot = mkdtempSync(path.join(tmpdir(), "approval-repo-"));
     const common = mkdtempSync(path.join(tmpdir(), "approval-common-"));
     expect(await resolveApprovalDirectory("spec9", repoRoot, common)).toBe(
-      path.join(common, ".forge", "runs", "spec9"),
+      path.join(common, ".emet", "runs", "spec9"),
     );
   });
 });

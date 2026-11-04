@@ -6,7 +6,7 @@ import { findSurfaceOverlaps } from "./surfaces";
 import { isObject } from "./narrow";
 import { resolveTrackerRoot } from "./tracker-files";
 
-const USAGE = `usage: forge validate --file <plan.json | -> | --spec <id> --tickets <tickets.json | ->
+const USAGE = `usage: emet validate --file <plan.json | -> | --spec <id> --tickets <tickets.json | ->
 
 plan.json: { "spec": "<markdown with S# items>", "sizing"?: { "inlineMaxLines": n },
              "tickets": [{ "id", "covers": ["S1"], "surfaces": ["glob"], "wave"?: n,
@@ -140,17 +140,17 @@ export function validatePlan(input: {
 function stringsField(value: unknown, label: string, id: string): string[] {
   if (value === undefined) return [];
   if (!Array.isArray(value) || !value.every((entry) => typeof entry === "string")) {
-    throw new Error(`forge validate: ${id}.${label} must be string[]`);
+    throw new Error(`emet validate: ${id}.${label} must be string[]`);
   }
   return value;
 }
 
 function parseTickets(raw: unknown): PlanTicket[] {
-  if (!Array.isArray(raw)) throw new Error('forge validate: "tickets" must be an array');
+  if (!Array.isArray(raw)) throw new Error('emet validate: "tickets" must be an array');
   return raw.map((entry, index) => {
     const candidate: Record<string, unknown> = isObject(entry) ? entry : {};
     if (typeof candidate.id !== "string")
-      throw new Error(`forge validate: ticket ${index} needs an "id"`);
+      throw new Error(`emet validate: ticket ${index} needs an "id"`);
     const id = candidate.id;
     const newSurfaceLines =
       typeof candidate.newSurfaceLines === "number" ? candidate.newSurfaceLines : undefined;
@@ -184,7 +184,7 @@ async function fetchSpecBody(specId: string): Promise<string> {
     stderr: "pipe",
   });
   const [body, code] = await Promise.all([new Response(child.stdout).text(), child.exited]);
-  if (code !== 0) throw new Error(`forge validate: could not read spec issue ${specId}`);
+  if (code !== 0) throw new Error(`emet validate: could not read spec issue ${specId}`);
   return body;
 }
 
@@ -197,13 +197,13 @@ async function isLocalTracker(): Promise<boolean> {
 
 async function readLocalSpecBody(specId: string): Promise<string> {
   if (!/^[a-z0-9][a-z0-9-]*$/.test(specId))
-    throw new Error(`forge validate: invalid spec slug "${specId}"`);
+    throw new Error(`emet validate: invalid spec slug "${specId}"`);
   const root = await resolveTrackerRoot();
   const specPath = path.join(root, ".scratch", specId, "spec.md");
   try {
     return readFileSync(specPath, "utf8");
   } catch {
-    throw new Error(`forge validate: could not read local spec ${specPath}`);
+    throw new Error(`emet validate: could not read local spec ${specPath}`);
   }
 }
 
@@ -219,7 +219,7 @@ export async function run(argv: string[]): Promise<void> {
       const plan: unknown = JSON.parse(await readSource(file));
       const spec = isObject(plan) ? plan.spec : undefined;
       if (!isObject(plan) || typeof spec !== "string")
-        throw new Error('forge validate: plan needs a "spec" string');
+        throw new Error('emet validate: plan needs a "spec" string');
       specMarkdown = spec;
       rawTickets = plan.tickets;
       const sizing = plan.sizing;

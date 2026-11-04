@@ -43,12 +43,12 @@ describe("completion events and stall nudges", () => {
     commits: 2,
   };
 
-  test("events live under <common-dir>/.forge/runs/<id>/events/<ticket>.json and round-trip", () => {
+  test("events live under <common-dir>/.emet/runs/<id>/events/<ticket>.json and round-trip", () => {
     const commonDirectory = makeCommonDirectory();
     try {
       writeCompletionEvent(commonDirectory, sampleEvent);
       expect(completionEventPath(commonDirectory, "run-a", "CLA-50")).toBe(
-        path.join(commonDirectory, ".forge", "runs", "run-a", "events", "CLA-50.json"),
+        path.join(commonDirectory, ".emet", "runs", "run-a", "events", "CLA-50.json"),
       );
       expect(readCompletionEvent(commonDirectory, "run-a", "CLA-50")).toEqual(sampleEvent);
       expect(readCompletionEvent(commonDirectory, "run-a", "CLA-99")).toBeNull();
@@ -100,7 +100,7 @@ describe("completion events and stall nudges", () => {
       recordStallNudge(commonDirectory, "run-a", "CLA-50", 3);
       const nudgeFile = path.join(
         commonDirectory,
-        ".forge",
+        ".emet",
         "runs",
         "run-a",
         "nudges",
@@ -255,7 +255,7 @@ describe("closed-run marker", () => {
       expect(await isRunClosed("run-a", { commonDirectory })).toBe(true);
       expect(await isRunClosed("run-b", { commonDirectory })).toBe(false);
       const written = JSON.parse(
-        readFileSync(path.join(commonDirectory, ".forge", "runs", "run-a", "closed.json"), "utf8"),
+        readFileSync(path.join(commonDirectory, ".emet", "runs", "run-a", "closed.json"), "utf8"),
       ) as unknown;
       expect(written).toMatchObject({ closedAt: 42 });
     } finally {
@@ -307,7 +307,7 @@ describe("resolveRunArtifactPath", () => {
     try {
       const fromMain = await resolveRunArtifactPath("spec1", "approval.json", { repoRoot: main });
       expect(fromMain.writePath).toBe(
-        path.join(main, ".git", ".forge", "runs", "spec1", "approval.json"),
+        path.join(main, ".git", ".emet", "runs", "spec1", "approval.json"),
       );
       expect(fromMain.readPath).toBeNull();
       mkdirSync(path.dirname(fromMain.writePath), { recursive: true });
@@ -324,7 +324,7 @@ describe("resolveRunArtifactPath", () => {
   test("a legacy artifact under the repo root is still read", async () => {
     const { base, main } = makeRepo();
     try {
-      const legacyPath = path.join(main, ".forge", "runs", "spec1", "tickets.json");
+      const legacyPath = path.join(main, ".emet", "runs", "spec1", "tickets.json");
       mkdirSync(path.dirname(legacyPath), { recursive: true });
       writeFileSync(legacyPath, "{}");
       const resolved = await resolveRunArtifactPath("spec1", "tickets.json", { repoRoot: main });
@@ -340,7 +340,7 @@ describe("resolveRunArtifactPath", () => {
     const repoRoot = makeCommonDirectory();
     try {
       for (const directory of [commonDirectory, repoRoot]) {
-        const file = path.join(directory, ".forge", "runs", "r", "materialize.json");
+        const file = path.join(directory, ".emet", "runs", "r", "materialize.json");
         mkdirSync(path.dirname(file), { recursive: true });
         writeFileSync(file, "{}");
       }

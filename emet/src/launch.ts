@@ -7,6 +7,7 @@ import {
   type HandoffPermissionMode,
 } from "./config";
 import { errorMessage, isObject } from "./narrow";
+import { BINARY, LEGACY_PRODUCT, PRODUCT } from "./names";
 
 /**
  * Launches one wave of a run as a background `claude --bg` session and, per
@@ -83,7 +84,7 @@ const defaultRunner: CommandRunner = async (command, options) => {
 };
 
 export function waveSessionName(specId: string, wave: number): string {
-  return `forge-${specId}-w${wave}`;
+  return `${PRODUCT}-${specId}-w${wave}`;
 }
 
 function parseAgentRows(stdout: string): AgentRow[] {
@@ -119,20 +120,24 @@ async function listAgents(runner: CommandRunner): Promise<AgentRow[]> {
 
 /**
  * `claude agents --json` lists sessions of every project, and a name can
- * outlive its process, so a "live" `forge-<spec-id>-*` session is any row
+ * outlive its process, so a "live" `emet-<spec-id>-*` (or legacy `forge-<spec-id>-*`) session is any row
  * carrying that name prefix. Sessions of an earlier or the same wave are
  * ignored so wave n can launch wave n+1 from inside its own session; a
  * session whose wave cannot be read still blocks.
  */
 function findBlockingSessions(rows: readonly AgentRow[], specId: string, wave: number): string[] {
-  const prefix = `forge-${specId}-`;
+  const prefixes = [PRODUCT, LEGACY_PRODUCT].map((product) => `${product}-${specId}-`);
   return rows
     .map((row) => row.name ?? "")
-    .filter((name) => name.startsWith(prefix))
-    .filter((name) => {
+    .flatMap((name) => {
+      const prefix = prefixes.find((candidate) => name.startsWith(candidate));
+      return prefix === undefined ? [] : [{ name, prefix }];
+    })
+    .filter(({ name, prefix }) => {
       const match = /^w(\d+)$/.exec(name.slice(prefix.length));
       return !match || Number(match[1]) >= wave;
-    });
+    })
+    .map(({ name }) => name);
 }
 
 /**
@@ -222,7 +227,7 @@ export async function launchWave(
   const existing = findBlockingSessions(await listAgents(runner), request.specId, request.wave);
   if (existing.length > 0) {
     throw new ForgeConfigError(
-      `forge launch: a session for spec ${request.specId} already exists (${existing.join(", ")}) — not launching a second one.`,
+      `${BINARY} launch: a session for spec ${request.specId} already exists (${existing.join(", ")}) — not launching a second one.`,
     );
   }
 
@@ -234,20 +239,20 @@ export async function launchWave(
       name,
       "--permission-mode",
       request.permissionMode,
-      `/forge --dispatch ${request.specId}`,
+      `/${BINARY} --dispatch ${request.specId}`,
     ],
     { cwd: request.repoRoot },
   );
   if (launched.exitCode !== 0) {
     throw new Error(
-      `forge launch: \`claude --bg\` failed (exit ${launched.exitCode}): ${(launched.stderr || launched.stdout).trim()}`,
+      `${BINARY} launch: \`claude --bg\` failed (exit ${launched.exitCode}): ${(launched.stderr || launched.stdout).trim()}`,
     );
   }
 
   const started = (await listAgents(runner)).find((row) => row.name === name);
   if (!started) {
     throw new Error(
-      `forge launch: \`claude --bg\` exited 0 but no session named ${name} appears in \`claude agents --json\`.`,
+      `${BINARY} launch: \`claude --bg\` exited 0 but no session named ${name} appears in \`claude agents --json\`.`,
     );
   }
 
@@ -265,7 +270,7 @@ function readFlagValue(argv: readonly string[], flag: string): string | undefine
   return argv[index + 1];
 }
 
-const USAGE = "usage: forge launch <spec-id> --wave <n>";
+const USAGE = `usage: ${BINARY} launch <spec-id> --wave <n>`;
 
 export async function run(argv: string[]): Promise<void> {
   try {
@@ -279,12 +284,12 @@ export async function run(argv: string[]): Promise<void> {
     const waveRaw = readFlagValue(argv, "--wave");
     const wave = Number(waveRaw);
     if (!specId || specId.startsWith("--") || !Number.isInteger(wave) || wave < 1) {
-      throw new ForgeConfigError(`forge launch: ${USAGE}`);
+      throw new ForgeConfigError(`${BINARY} launch: ${USAGE}`);
     }
 
     const repoRoot = await resolveRepoRoot();
     if (!repoRoot) {
-      throw new ForgeConfigError("forge launch: not inside a git repository");
+      throw new ForgeConfigError(`${BINARY} launch: not inside a git repository`);
     }
     const { config } = await loadForgeConfigWithDefaults(repoRoot);
 

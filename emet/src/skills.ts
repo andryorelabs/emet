@@ -5,8 +5,8 @@ import type { DependencyCheck } from "./dependencies";
 import { isObject } from "./narrow";
 
 /**
- * The skills `/forge` prompts name, and the mattpocock-skills versions they
- * were tested against. `forge doctor` and `forge preflight` check the
+ * The skills `/emet` prompts name, and the mattpocock-skills versions they
+ * were tested against. `emet doctor` and `emet preflight` check the
  * installed plugin against this; `tools/skills-contract.test.ts` fails when an
  * installed prompt names a skill that is not listed here.
  */
@@ -100,7 +100,7 @@ function findSkillFile(installPath: string, name: string): string | null {
   return null;
 }
 
-/** `<installPath>/agents/<name>.md` of a plugin that ships forge's agents. */
+/** `<installPath>/agents/<name>.md` of a plugin that ships emet's agents. */
 export function findPluginAgentFile(installPath: string, name: string): string | null {
   const candidate = path.join(installPath, "agents", `${name}.md`);
   return existsSync(candidate) ? candidate : null;
@@ -133,7 +133,7 @@ export function checkSkillsContract(
     checks.push({
       dependency: "skills-contract",
       status: "unsatisfied",
-      summary: `mattpocock-skills ${plugin.version} is missing skills forge uses: ${missing.join(", ")}. Update the plugin:`,
+      summary: `mattpocock-skills ${plugin.version} is missing skills emet uses: ${missing.join(", ")}. Update the plugin:`,
       remedy: ["claude plugin update mattpocock-skills@claude-plugins-official"],
       limitation: null,
     });
@@ -142,7 +142,7 @@ export function checkSkillsContract(
     checks.push({
       dependency: "skills-contract",
       status: "indeterminate",
-      summary: `mattpocock-skills ${plugin.version} is outside the range forge was tested against (${SKILLS_CONTRACT.versionRange}); prompts may reference changed skills.`,
+      summary: `mattpocock-skills ${plugin.version} is outside the range emet was tested against (${SKILLS_CONTRACT.versionRange}); prompts may reference changed skills.`,
       remedy: [],
       limitation: null,
     });

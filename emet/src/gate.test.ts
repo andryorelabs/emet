@@ -102,6 +102,34 @@ describe("gate attempt persistence", () => {
     const { tmpdir } = await import("node:os");
     const path = await import("node:path");
     const root = mkdtempSync(path.join(tmpdir(), "gate-"));
+    const runDir = path.join(root, ".emet", "runs", "r1");
+    mkdirSync(path.join(runDir, "verify"), { recursive: true });
+    writeFileSync(path.join(runDir, "verify", "CLA-1.json"), JSON.stringify({ ok: false }));
+    const previous = process.cwd();
+    process.chdir(root);
+    const logs: string[] = [];
+    const originalLog = console.log;
+    console.log = (line: string) => void logs.push(line);
+    try {
+      const { run } = await import("./gate");
+      await run(["CLA-1", "--run", "r1"]);
+      expect(JSON.parse(logs[0]!)).toMatchObject({ decision: "hold" });
+      expect(
+        JSON.parse(readFileSync(path.join(runDir, "attempts", "CLA-1.json"), "utf8")),
+      ).toMatchObject({ count: 1 });
+    } finally {
+      console.log = originalLog;
+      process.chdir(previous);
+    }
+  });
+});
+
+describe("gate on a legacy-only run dir", () => {
+  test("run() reads and writes run state under .forge when .emet is absent", async () => {
+    const { mkdtempSync, mkdirSync, writeFileSync, readFileSync } = await import("node:fs");
+    const { tmpdir } = await import("node:os");
+    const path = await import("node:path");
+    const root = mkdtempSync(path.join(tmpdir(), "gate-"));
     const runDir = path.join(root, ".forge", "runs", "r1");
     mkdirSync(path.join(runDir, "verify"), { recursive: true });
     writeFileSync(path.join(runDir, "verify", "CLA-1.json"), JSON.stringify({ ok: false }));

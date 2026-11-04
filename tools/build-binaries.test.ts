@@ -74,7 +74,7 @@ describe.skipIf(process.platform !== "linux" || process.arch !== "x64")(
       const result = run("selftest");
       expect(result.exitCode).toBe(1);
       expect(result.stderr.toString()).toContain(
-        "selftest needs a source install; run forge doctor",
+        "selftest needs a source install; run emet doctor",
       );
     });
 

@@ -63,7 +63,7 @@ describe("buildReviewPackage", () => {
   });
 });
 
-describe("forge review-package CLI", () => {
+describe("emet review-package CLI", () => {
   const cli = path.join(import.meta.dir, "reviewpackage.ts");
   const runCli = (...args: string[]) => Bun.spawnSync(["bun", cli, ...args], { cwd: repo });
 

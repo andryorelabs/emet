@@ -1,5 +1,5 @@
 /**
- * Read-only token-usage report for a `/forge` run. Reads Claude Code
+ * Read-only token-usage report for a `/emet` run. Reads Claude Code
  * transcripts directly (JSONL, one line per event) and prints, per session:
  * turn count, total `cache_read_input_tokens` (the dominant cost term),
  * final context size, the top-10 largest tool results (the usual culprits:
@@ -14,14 +14,14 @@
  * itself against the plan's targets (peak < 160k, split threshold 240k).
  *
  * Usage:
- *   forge usage                      # most recent coordinator session + its workers
- *   forge usage --session <id>        # a specific coordinator session
- *   forge usage --file <path.jsonl>   # a single transcript file directly
- *   forge usage --stalled [--minutes N]  # find hung subagents (default 10m)
- *   forge usage --stalled --run <id> [--nudge]  # per-ticket state from events + branch commits
+ *   emet usage                      # most recent coordinator session + its workers
+ *   emet usage --session <id>        # a specific coordinator session
+ *   emet usage --file <path.jsonl>   # a single transcript file directly
+ *   emet usage --stalled [--minutes N]  # find hung subagents (default 10m)
+ *   emet usage --stalled --run <id> [--nudge]  # per-ticket state from events + branch commits
  *
  * `--stalled` is the watchdog for a coordinator's own `code-review` fan-out
- * (`docs/agents/forge.md` Phase 8): a sub-agent transcript is a plain file
+ * (`docs/agents/emet.md` Phase 8): a sub-agent transcript is a plain file
  * that only grows while its process is actually producing output, so a
  * transcript whose mtime hasn't advanced in N minutes names a hung roster
  * member without needing to inspect the harness's own process/task state at
@@ -37,6 +37,7 @@ import {
   resolveRepoRoot,
   type ForgeConfig,
 } from "./config";
+import { BINARY, LEGACY_RUN_DIR, RUN_DIR } from "./names";
 import {
   readCompletionEvent,
   recordStallNudge,
@@ -114,7 +115,7 @@ function recordToolBlocks(
 
 /**
  * Default `oversizedThreshold` (line count) below, historically hardcoded —
- * now sourced from `forge.config.json`'s `usage.oversizedReadLines`, this
+ * now sourced from `emet.config.json`'s `usage.oversizedReadLines`, this
  * constant survives only as the fallback when a caller doesn't pass one
  * explicitly.
  */
@@ -122,7 +123,7 @@ const OVERSIZED_READ_LINE_THRESHOLD = 400;
 
 /**
  * Counts how many of `paths` currently exceed `oversizedThreshold` lines. A
- * path from a cleaned-up worktree (deleted by `forge:cleanup`) silently
+ * path from a cleaned-up worktree (deleted by `emet:cleanup`) silently
  * doesn't count — this is a best-effort signal computed after the fact, not
  * a guarantee, so an unverifiable candidate is dropped rather than assumed
  * guilty.
@@ -265,7 +266,7 @@ function toolResultCharCount(content: unknown): number {
 /**
  * Resolves an explicit `--project-dir <path>` off `argv`, defaulting to
  * `process.cwd()`. Needed once `usage` is a subcommand of a global CLI: a
- * coordinator invoking `forge usage` from a worker's own worktree (a
+ * coordinator invoking `emet usage` from a worker's own worktree (a
  * different directory than the one that produced the transcript it wants to
  * read) has no other way to point this at the right project slug.
  */
@@ -360,7 +361,7 @@ const UNKNOWN_STEP: LastTranscriptStep = { step: "unknown", pendingTool: null };
  * `defaultMinutes` (itself defaulting to {@link DEFAULT_STALLED_MINUTES})
  * whenever the flag is absent or its value isn't a positive integer — a
  * malformed flag should degrade to the default, never crash a watchdog
- * check. `main()` passes `forge.config.json`'s `usage.stalledMinutes` here;
+ * check. `main()` passes `emet.config.json`'s `usage.stalledMinutes` here;
  * the parameter default only matters for a direct call with no config in
  * scope (e.g. this file's own tests).
  */
@@ -463,7 +464,7 @@ async function defaultStatMtimeMs(path: string): Promise<number | null> {
  * silent for longer than `thresholds.idleMinutes`, or
  * `thresholds.pendingToolMinutes` when the last event is an unanswered
  * `tool_use` (a long test run is not a hang). A path that no longer exists (e.g.
- * a worktree already reclaimed by `forge:cleanup`) is skipped rather than
+ * a worktree already reclaimed by `emet:cleanup`) is skipped rather than
  * reported — same "unverifiable candidate is dropped, not assumed guilty"
  * rule {@link countOversizedReads} already follows.
  */
@@ -573,7 +574,7 @@ async function lastCommitMs(commonDirectory: string, branch: string): Promise<nu
 }
 
 /**
- * `--stalled --run <runId>`: one line per forge-owned worktree of that run,
+ * `--stalled --run <runId>`: one line per emet-owned worktree of that run,
  * from its completion event plus branch commits. With `--nudge`, each
  * stalled ticket spends one persisted nudge (`budgets.stallNudgeCap`, never
  * refilled); an exhausted cap is reported so the caller escalates instead.
@@ -590,7 +591,7 @@ async function runTicketStalledMode(
     .nothrow()
     .quiet();
   if (commonDirectoryOutput.exitCode !== 0) {
-    console.error("forge:usage --stalled --run: not inside a git repository");
+    console.error(`${BINARY}:usage --stalled --run: not inside a git repository`);
     process.exitCode = 1;
     return;
   }
@@ -607,8 +608,14 @@ async function runTicketStalledMode(
     // oxlint-disable-next-line eslint/no-await-in-loop -- sequential on purpose: later iterations depend on earlier ones or on output order
     const commits = await commitsProbe;
     // oxlint-disable-next-line eslint/no-await-in-loop -- sequential on purpose: later iterations depend on earlier ones or on output order
-    const handoff = await defaultStatMtimeMs(
-      `${entry.directory}/.forge/handoff-${owner.ticket}.md`,
+    const handoffTimes = await Promise.all(
+      [RUN_DIR, LEGACY_RUN_DIR].map((runDirectory) =>
+        defaultStatMtimeMs(`${entry.directory}/${runDirectory}/handoff-${owner.ticket}.md`),
+      ),
+    );
+    const handoff = handoffTimes.reduce<number | null>(
+      (latest, time) => (time === null ? latest : Math.max(latest ?? 0, time)),
+      null,
     );
     const lastActivityMs = Math.max(
       handoff ?? 0,
@@ -663,7 +670,7 @@ async function runStalledMode(thresholds: StalledThresholds): Promise<void> {
   const workerFiles = await findWorkerTranscripts(directory, resolvedSessionId);
   if (workerFiles.length === 0) {
     console.log(
-      `forge:usage --stalled: no subagent transcripts found for session ${resolvedSessionId}.`,
+      `${BINARY}:usage --stalled: no subagent transcripts found for session ${resolvedSessionId}.`,
     );
     return;
   }
@@ -672,13 +679,13 @@ async function runStalledMode(thresholds: StalledThresholds): Promise<void> {
 
   if (stalled.length === 0) {
     console.log(
-      `forge:usage --stalled OK — ${workerFiles.length} subagent transcript(s) checked, none stalled past ${thresholds.idleMinutes}m idle (${thresholds.pendingToolMinutes}m with a pending tool).`,
+      `${BINARY}:usage --stalled OK — ${workerFiles.length} subagent transcript(s) checked, none stalled past ${thresholds.idleMinutes}m idle (${thresholds.pendingToolMinutes}m with a pending tool).`,
     );
     return;
   }
 
   console.log(
-    `forge:usage --stalled: ${stalled.length}/${workerFiles.length} subagent(s) stalled (${thresholds.idleMinutes}m idle, ${thresholds.pendingToolMinutes}m with a pending tool):`,
+    `${BINARY}:usage --stalled: ${stalled.length}/${workerFiles.length} subagent(s) stalled (${thresholds.idleMinutes}m idle, ${thresholds.pendingToolMinutes}m with a pending tool):`,
   );
   for (const entry of stalled) {
     console.log(
@@ -777,11 +784,11 @@ async function main(config: ForgeConfig): Promise<void> {
 }
 
 /**
- * Entry point invoked by the `forge` CLI dispatcher (`bin/emet.ts`) for the
+ * Entry point invoked by the `emet` CLI dispatcher (`bin/emet.ts`) for the
  * `usage` subcommand. See `claims.ts`'s `run()` for why this stages `argv`
  * onto `process.argv` rather than threading it through `main()` directly.
  * `usage` is read-only (never touches git or Linear state, see the
- * file-level doc comment), so a missing `forge.config.json` degrades to
+ * file-level doc comment), so a missing `emet.config.json` degrades to
  * {@link DEFAULT_FORGE_CONFIG} with a printed note rather than exiting 2.
  */
 export async function run(argv: string[]): Promise<void> {

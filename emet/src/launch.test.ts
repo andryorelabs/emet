@@ -68,12 +68,12 @@ function scriptedRunner(script: {
   return { runner, calls };
 }
 
-const STARTED = json([{ id: "abc12345", name: "forge-AO-1880-w2" }]);
+const STARTED = json([{ id: "abc12345", name: "emet-AO-1880-w2" }]);
 const REACHABLE = json({ ok: true, result: { runtime: { reachable: true } } });
 
 describe("waveSessionName", () => {
   test("matches the name the phases doc tells users to attach to", () => {
-    expect(waveSessionName("AO-1880", 3)).toBe("forge-AO-1880-w3");
+    expect(waveSessionName("AO-1880", 3)).toBe("emet-AO-1880-w3");
   });
 });
 
@@ -90,11 +90,11 @@ describe("launchWave", () => {
 
       expect(outcome.orcaTab.opened).toBe(true);
       expect(outcome.id).toBe("abc12345");
-      expect(outcome.attach).toBe("claude attach forge-AO-1880-w2");
+      expect(outcome.attach).toBe("claude attach emet-AO-1880-w2");
       const create = calls.find((c) => c[0] === "orca" && c[2] === "create");
       expect(create).toContain("path:/repo");
       expect(create).toContain(
-        `bash -c '${Bun.which("claude") ?? "claude"} attach forge-AO-1880-w2'`,
+        `bash -c '${Bun.which("claude") ?? "claude"} attach emet-AO-1880-w2'`,
       );
     } finally {
       if (previous !== undefined) process.env.TERM_PROGRAM = previous;
@@ -113,10 +113,10 @@ describe("launchWave", () => {
       "claude",
       "--bg",
       "--name",
-      "forge-AO-1880-w2",
+      "emet-AO-1880-w2",
       "--permission-mode",
       "acceptEdits",
-      "/forge --dispatch AO-1880",
+      "/emet --dispatch AO-1880",
     ]);
   });
 
@@ -163,7 +163,7 @@ describe("launchWave", () => {
     });
     const outcome = await launchWave(REQUEST, runner);
 
-    expect(outcome.name).toBe("forge-AO-1880-w2");
+    expect(outcome.name).toBe("emet-AO-1880-w2");
     expect(outcome.orcaTab.opened).toBe(false);
     expect(outcome.orcaTab.reason).toContain("no window");
   });
@@ -174,7 +174,7 @@ describe("launchWave", () => {
     });
     const outcome = await launchWave({ ...REQUEST, launcher: "bg" }, runner);
 
-    expect(outcome.name).toBe("forge-AO-1880-w2");
+    expect(outcome.name).toBe("emet-AO-1880-w2");
     expect(calls.some((c) => c[0] === "claude" && c[1] === "--bg")).toBe(true);
   });
 
@@ -189,7 +189,7 @@ describe("launchWave", () => {
 
   test("a later wave of the same spec blocks the launch", async () => {
     const { runner, calls } = scriptedRunner({
-      agents: [json([{ id: "old", name: "forge-AO-1880-w3" }])],
+      agents: [json([{ id: "old", name: "emet-AO-1880-w3" }])],
     });
 
     expect(await rejectionOf(launchWave(REQUEST, runner))).toBeInstanceOf(ForgeConfigError);
@@ -198,7 +198,7 @@ describe("launchWave", () => {
 
   test("a same-spec session with an unreadable wave blocks the launch", async () => {
     const { runner } = scriptedRunner({
-      agents: [json([{ id: "old", name: "forge-AO-1880-manual" }])],
+      agents: [json([{ id: "old", name: "emet-AO-1880-manual" }])],
     });
 
     expect(await rejectionOf(launchWave(REQUEST, runner))).toBeInstanceOf(ForgeConfigError);
@@ -206,11 +206,11 @@ describe("launchWave", () => {
 
   test("another spec with a shared prefix does not block the launch", async () => {
     const { runner } = scriptedRunner({
-      agents: [json([{ id: "x", name: "forge-AO-18800-w1" }]), STARTED],
+      agents: [json([{ id: "x", name: "emet-AO-18800-w1" }]), STARTED],
     });
     const outcome = await launchWave({ ...REQUEST, launcher: "bg" }, runner);
 
-    expect(outcome.name).toBe("forge-AO-1880-w2");
+    expect(outcome.name).toBe("emet-AO-1880-w2");
   });
 
   test("fails when claude --bg exits non-zero", async () => {

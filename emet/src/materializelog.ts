@@ -5,10 +5,10 @@ import { resolveRepoRoot } from "./config";
 import { errorMessage, isObject } from "./narrow";
 import { resolveRunArtifactPath } from "./runs";
 
-const USAGE = `usage: forge materialize-log --run <id> --record <localKey> <trackerId> [--root <dir>]
-       forge materialize-log --run <id> --lookup <localKey> [--root <dir>]
+const USAGE = `usage: emet materialize-log --run <id> --record <localKey> <trackerId> [--root <dir>]
+       emet materialize-log --run <id> --lookup <localKey> [--root <dir>]
 
---record persists immediately to <git-common-dir>/.forge/runs/<id>/materialize.json.
+--record persists immediately to <git-common-dir>/.emet/runs/<id>/materialize.json.
 --lookup prints the tracker id and exits 0, or exits 1 when the key was never recorded
 (materialize re-runs skip recorded keys). Any other failure, including an unreadable
 log, exits 2.`;
@@ -103,7 +103,7 @@ export async function run(argv: string[]): Promise<void> {
     console.error(USAGE);
     process.exitCode = 2;
   } catch (error) {
-    console.error(`forge materialize-log: ${errorMessage(error)}`);
+    console.error(`emet materialize-log: ${errorMessage(error)}`);
     process.exitCode = 2;
   }
 }

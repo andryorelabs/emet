@@ -1,16 +1,17 @@
 /**
- * `forge review-package <base> <head> [--out <file>]` — bundles the commit
+ * `emet review-package <base> <head> [--out <file>]` — bundles the commit
  * list, `--stat` and a `-U10` diff for a ticket's range into one file the
  * reviewer reads by path. Exits 3 when the range is empty or `head` is not a
  * descendant of `base`, so a reviewer is never handed a package that cannot
  * be the worker's actual output.
  */
 
+import { resolveRunDir } from "./names";
 import { optionalProperty } from "./optional";
 import { mkdirSync, writeFileSync } from "node:fs";
 import path from "node:path";
 
-const USAGE = `usage: forge review-package <base> <head> [--out <file>]`;
+const USAGE = `usage: emet review-package <base> <head> [--out <file>]`;
 
 const EXIT_BAD_RANGE = 3;
 
@@ -105,11 +106,14 @@ export async function run(argv: string[]): Promise<void> {
   }
   const result = await buildReviewPackage(base, head);
   if (!result.ok) {
-    console.error(`forge review-package: ${result.problem} — ${result.detail}`);
+    console.error(`emet review-package: ${result.problem} — ${result.detail}`);
     process.exitCode = EXIT_BAD_RANGE;
     return;
   }
-  const target = path.resolve(out ?? `.forge/review-package-${head.replace(/[^\w.-]/g, "_")}.md`);
+  const target = path.resolve(
+    out ??
+      `${resolveRunDir(process.cwd()).path}/review-package-${head.replace(/[^\w.-]/g, "_")}.md`,
+  );
   mkdirSync(path.dirname(target), { recursive: true });
   writeFileSync(target, result.content);
   console.log(target);

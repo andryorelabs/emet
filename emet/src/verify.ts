@@ -1,16 +1,16 @@
 /**
- * `forge verify <ticket> [--run <id>] [--worktree <path>]` — the enforcement
+ * `emet verify <ticket> [--run <id>] [--worktree <path>]` — the enforcement
  * check the coordinator runs after each worker, before review/merge. It
  * passes only when, against the baseline recorded at dispatch:
  *
- *   1. commits exist beyond the baseline (forge bookkeeping files excluded),
+ *   1. commits exist beyond the baseline (emet bookkeeping files excluded),
  *   2. every changed path is inside the ticket's edit surfaces,
- *   3. the ticket's handoff note passes `forge handoff --check`,
- *   4. `commands.workerScopedSuite` (when configured) passes, run by forge.
+ *   3. the ticket's handoff note passes `emet handoff --check`,
+ *   4. `commands.workerScopedSuite` (when configured) passes, run by emet.
  *
  * Dispatch record (written by the coordinator at dispatch):
- *   `.forge/runs/<run>/dispatch/<ticket>.json` = { baseline, surfaces[] }
- * The pass/fail record lands at `.forge/runs/<run>/verify/<ticket>.json`
+ *   `.emet/runs/<run>/dispatch/<ticket>.json` = { baseline, surfaces[] }
+ * The pass/fail record lands at `.emet/runs/<run>/verify/<ticket>.json`
  * (in the repo root, not the worker worktree). Exit 1 on fail, 2 on usage or
  * missing-input errors.
  */
@@ -20,12 +20,20 @@ import { optionalProperty } from "./optional";
 import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { resolveRepoRoot } from "./config";
+import {
+  BINARY,
+  CONFIG_FILE,
+  LEGACY_CONFIG_FILE,
+  LEGACY_RUN_DIR,
+  RUN_DIR,
+  resolveRunDir,
+} from "./names";
 import { globsOverlap } from "./surfaces";
 import { isObject } from "./narrow";
 
-const USAGE = `usage: forge verify <ticket> [--run <id>] [--worktree <path>]`;
+const USAGE = `usage: ${BINARY} verify <ticket> [--run <id>] [--worktree <path>]`;
 
-const BOOKKEEPING_PREFIX = ".forge/";
+const BOOKKEEPING_PREFIXES: readonly string[] = [`${RUN_DIR}/`, `${LEGACY_RUN_DIR}/`];
 
 export type DispatchRecord = {
   readonly baseline: string;
@@ -59,7 +67,7 @@ export type VerifyDependencies = {
 };
 
 export function isBookkeepingPath(changedPath: string): boolean {
-  return changedPath.startsWith(BOOKKEEPING_PREFIX);
+  return BOOKKEEPING_PREFIXES.some((prefix) => changedPath.startsWith(prefix));
 }
 
 export function findOutOfSurfacePaths(
@@ -151,7 +159,7 @@ async function spawnCapture(command: readonly string[], cwd: string): Promise<Co
 }
 
 /**
- * The argv that re-spawns `forge handoff --check`: the executable itself when
+ * The argv that re-spawns `emet handoff --check`: the executable itself when
  * compiled (it embeds the dispatcher), `bun <emet.ts>` from source.
  */
 export function handoffCheckCommand(handoffPath: string, compiled: boolean): string[] {
@@ -203,7 +211,7 @@ export function parseDispatchRecord(raw: unknown): DispatchRecord {
 
 function resolveRunId(repoRoot: string, ticket: string, explicit: string | undefined): string {
   if (explicit) return explicit;
-  const runsDir = path.join(repoRoot, ".forge", "runs");
+  const runsDir = path.join(resolveRunDir(repoRoot).path, "runs");
   const candidates = existsSync(runsDir)
     ? readdirSync(runsDir).filter((candidateRun) =>
         existsSync(path.join(runsDir, candidateRun, "dispatch", `${ticket}.json`)),
@@ -219,17 +227,24 @@ function resolveRunId(repoRoot: string, ticket: string, explicit: string | undef
   return candidates[0]!;
 }
 
+async function showBaselineConfig(workTree: string, baseline: string): Promise<string | undefined> {
+  for (const configFile of [CONFIG_FILE, LEGACY_CONFIG_FILE]) {
+    // oxlint-disable-next-line eslint/no-await-in-loop -- sequential on purpose: the legacy name is only tried when the current one is absent
+    const shown = await Bun.$`git -C ${workTree} show ${baseline}:${configFile}`.nothrow().quiet();
+    if (shown.exitCode === 0) return shown.stdout.toString();
+  }
+  return undefined;
+}
+
 async function readWorkerScopedSuite(
   workTree: string,
   baseline: string,
 ): Promise<string | undefined> {
-  const shown = await Bun.$`git -C ${workTree} show ${baseline}:forge.config.json`
-    .nothrow()
-    .quiet();
-  if (shown.exitCode !== 0) return undefined;
+  const shownConfig = await showBaselineConfig(workTree, baseline);
+  if (shownConfig === undefined) return undefined;
   let config: unknown;
   try {
-    config = JSON.parse(shown.stdout.toString());
+    config = JSON.parse(shownConfig);
   } catch {
     return undefined;
   }
@@ -283,10 +298,10 @@ export async function run(argv: string[]): Promise<void> {
     }
     const repoRoot = (await resolveRepoRoot()) ?? process.cwd();
     const runId = resolveRunId(repoRoot, ticket, explicitRun);
-    const runDir = path.join(repoRoot, ".forge", "runs", runId);
+    const runDir = path.join(resolveRunDir(repoRoot).path, "runs", runId);
     const dispatch = parseDispatchRecord(readJson(path.join(runDir, "dispatch", `${ticket}.json`)));
     const workTree = path.resolve(worktree ?? process.cwd());
-    const handoffPath = path.join(workTree, ".forge", `handoff-${ticket}.md`);
+    const handoffPath = path.join(resolveRunDir(workTree).path, `handoff-${ticket}.md`);
     const record = await verifyTicket(
       ticket,
       dispatch,
@@ -302,7 +317,7 @@ export async function run(argv: string[]): Promise<void> {
     console.log(JSON.stringify(record));
     if (!record.ok) process.exitCode = 1;
   } catch (error) {
-    console.error(`forge verify: ${error instanceof Error ? error.message : String(error)}`);
+    console.error(`${BINARY} verify: ${error instanceof Error ? error.message : String(error)}`);
     process.exitCode = 2;
   }
 }

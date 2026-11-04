@@ -1,8 +1,8 @@
 /**
- * `forge status [--spec <id>]` — one answer to "where is my wave?".
+ * `emet status [--spec <id>]` — one answer to "where is my wave?".
  *
  * Merges runs (slot holders), claims (ticket reservations), worktrees (locked
- * by `forge lock-reason`) and the PR of each worker branch into one state per
+ * by `emet lock-reason`) and the PR of each worker branch into one state per
  * wave: `working | checking | ready | needs-decision`. A host with no wave at
  * all reports `idle`. Prints a JSON report, then a one-line human summary.
  *
@@ -10,6 +10,7 @@
  */
 
 import { isObject } from "./narrow";
+import { BINARY, LEGACY_PRODUCT, PRODUCT } from "./names";
 import { optionalProperty } from "./optional";
 import os from "node:os";
 import path from "node:path";
@@ -77,7 +78,11 @@ export type StatusReport = {
   readonly waves: readonly WaveReport[];
 };
 
-const STATUS_USAGE = `usage: forge status [--spec <id>]
+const RUN_ID_PATTERN = new RegExp(
+  `^(?:${PRODUCT}|${LEGACY_PRODUCT})([a-z0-9][a-z0-9-]*)w(\\d+?)(\\d{6})$`,
+);
+
+const STATUS_USAGE = `usage: ${BINARY} status [--spec <id>]
 
 Prints one JSON object, then a one-line summary.
 
@@ -101,7 +106,7 @@ JSON shape:
 
 Overall state is the most urgent wave state: needs-decision > ready >
 checking > working. No active run reports "idle". Run ids shaped
-forge<spec>w<wave><HHMMSS> carry their spec and wave for --spec filtering.`;
+emet<spec>w<wave><HHMMSS> (or the legacy forge prefix) carry their spec and wave for --spec filtering.`;
 
 const STATE_PRIORITY: readonly WaveState[] = ["needs-decision", "ready", "checking", "working"];
 
@@ -109,7 +114,7 @@ export function parseRunIdentity(runId: string): {
   spec: string | null;
   wave: number | null;
 } {
-  const match = /^forge([a-z0-9][a-z0-9-]*)w(\d+?)(\d{6})$/.exec(runId);
+  const match = RUN_ID_PATTERN.exec(runId);
   if (!match) return { spec: null, wave: null };
   return { spec: match[1]!, wave: Number(match[2]) };
 }
@@ -179,7 +184,7 @@ export function buildStatusReport(waves: readonly WaveInput[], spec: string | nu
 
 export function summarize(report: StatusReport): string {
   if (report.waves.length === 0) {
-    return `forge status: idle — no active wave${report.spec ? ` for spec ${report.spec}` : ""}`;
+    return `${BINARY} status: idle — no active wave${report.spec ? ` for spec ${report.spec}` : ""}`;
   }
   const parts = report.waves.map((wave) => {
     const label = wave.wave === null ? wave.runId : `wave ${wave.wave}`;
@@ -188,7 +193,7 @@ export function summarize(report: StatusReport): string {
     ];
     return `${label} ${wave.state} (${wave.workers.length} worker(s)${reasons.length ? `: ${reasons.join(", ")}` : ""})`;
   });
-  return `forge status: ${report.state} — ${parts.join("; ")}`;
+  return `${BINARY} status: ${report.state} — ${parts.join("; ")}`;
 }
 
 type RawPullRequest = {
@@ -408,14 +413,14 @@ export async function run(argv: string[]): Promise<void> {
   }
   try {
     if (argv.includes("--spec") && readSpecFlag(argv) === null) {
-      console.error("forge status: --spec requires a value");
+      console.error(`${BINARY} status: --spec requires a value`);
       process.exitCode = 2;
       return;
     }
     const spec = readSpecFlag(argv);
     const repoRoot = await resolveRepoRoot();
     if (!repoRoot) {
-      console.error("forge status: not inside a git repository");
+      console.error(`${BINARY} status: not inside a git repository`);
       process.exitCode = 2;
       return;
     }
