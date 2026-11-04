@@ -1,0 +1,1693 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>emet mascot options, round 5</title>
+    <style>
+      :root {
+        --bgp: #ecece6;
+        --ink: #1f2420;
+        --sub: #5a625b;
+        --line: #cfd1c8;
+        font-family:
+          system-ui,
+          -apple-system,
+          "Segoe UI",
+          sans-serif;
+        line-height: 1.5;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        background: var(--bgp);
+        color: var(--ink);
+        padding: 3rem clamp(1rem, 4vw, 3.5rem) 5rem;
+      }
+      main {
+        max-width: 1160px;
+        margin: 0 auto;
+      }
+      h1 {
+        font-size: clamp(2rem, 5vw, 3.4rem);
+        line-height: 1.05;
+        margin: 0 0 0.75rem;
+        letter-spacing: -0.02em;
+      }
+      .lead {
+        max-width: 70ch;
+        color: var(--sub);
+        margin: 0 0 1rem;
+      }
+      .bar {
+        position: sticky;
+        top: 0;
+        z-index: 2;
+        background: var(--bgp);
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 0.5rem 1.25rem;
+        margin: 1.5rem 0 3rem;
+        padding: 0.75rem 0;
+        border-block: 1px solid var(--line);
+        font-size: 0.9rem;
+      }
+      .bar a {
+        color: var(--ink);
+      }
+      .bar button {
+        font: inherit;
+        border: 1px solid var(--ink);
+        background: transparent;
+        color: var(--ink);
+        border-radius: 999px;
+        padding: 0.2rem 0.8rem;
+        cursor: pointer;
+      }
+      .bar button[aria-pressed="true"] {
+        background: var(--ink);
+        color: var(--bgp);
+      }
+      section {
+        border-top: 2px solid var(--ink);
+        padding-top: 1.25rem;
+        margin-top: 4rem;
+      }
+      section header {
+        display: grid;
+        grid-template-columns: auto 1fr;
+        column-gap: 1rem;
+        align-items: baseline;
+        margin-bottom: 1.25rem;
+      }
+      .idx {
+        font-size: 2.4rem;
+        font-weight: 700;
+        margin: 0;
+        grid-row: 1/3;
+        line-height: 1;
+      }
+      h2 {
+        margin: 0;
+        font-size: 1.7rem;
+        letter-spacing: -0.01em;
+      }
+      .trait {
+        margin: 0;
+        color: var(--sub);
+      }
+      h3 {
+        font-size: 0.75rem;
+        text-transform: uppercase;
+        letter-spacing: 0.09em;
+        color: var(--sub);
+        margin: 1.25rem 0 0.5rem;
+      }
+      .var {
+        margin: 0 0 0.5rem;
+        font-size: 0.9rem;
+      }
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
+        gap: 0 2rem;
+      }
+      .panel {
+        border-radius: 10px;
+        padding: 1rem 1.25rem;
+        margin-bottom: 0.6rem;
+        border: 1px solid var(--line);
+        --b: #a39a89;
+        --g: #5d8a3a;
+        --gs: none;
+        --k: #23272d;
+        --l: #e8b923;
+        --ho: 0.3;
+        --bg: #f4f5f7;
+        background: var(--bg);
+        color: var(--ink);
+      }
+      .panel.dark {
+        --b: #b9af9d;
+        --g: #86b858;
+        --k: #14171a;
+        --l: #f4d35e;
+        --bg: #15181c;
+        color: #c9ced6;
+        border-color: #15181c;
+      }
+      body[data-pal="2"] .panel.light {
+        --b: #a99d8e;
+        --g: #66ad36;
+        --l: #2aa69e;
+      }
+      body[data-pal="2"] .panel.dark {
+        --b: #b8ac9b;
+        --g: #8cd05a;
+        --l: #5fd3cb;
+      }
+      .panel .mono {
+        border-top: 1px dashed var(--line);
+        margin-top: 0.5rem;
+        padding-top: 0.75rem;
+      }
+      .panel.light .mono {
+        --b: #23272d;
+        --g: #23272d;
+        --gs: #f4f5f7;
+        --k: #f4f5f7;
+        --l: #23272d;
+        --ho: 0;
+      }
+      .panel.dark .mono {
+        --b: #e6e8eb;
+        --g: #e6e8eb;
+        --gs: #15181c;
+        --k: #15181c;
+        --l: #e6e8eb;
+        --ho: 0;
+      }
+      .b {
+        fill: var(--b);
+      }
+      .g {
+        fill: var(--g);
+        stroke: var(--gs);
+        stroke-width: 0.7;
+        stroke-linejoin: round;
+      }
+      .g.ns {
+        stroke: none;
+      }
+      .k {
+        fill: var(--k);
+      }
+      .l {
+        fill: var(--l);
+      }
+      .h {
+        fill: var(--l);
+        fill-opacity: var(--ho);
+      }
+      .gl {
+        stroke: var(--g);
+        fill: none;
+        stroke-linecap: round;
+      }
+      .bud {
+        stroke: var(--b);
+        stroke-width: 0.8;
+      }
+      .row {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: flex-end;
+        gap: 1.25rem;
+        padding: 0.25rem 0;
+      }
+      .states {
+        gap: 1.5rem;
+      }
+      figure {
+        margin: 0;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 0.35rem;
+      }
+      figcaption {
+        font-size: 0.7rem;
+        opacity: 0.75;
+        text-align: center;
+        max-width: 8rem;
+      }
+      .loop {
+        display: flex;
+        align-items: flex-end;
+        gap: 2rem;
+      }
+      .lp svg {
+        width: 128px;
+        height: 128px;
+        display: block;
+      }
+      .lp.small svg {
+        width: 32px;
+        height: 32px;
+      }
+      .termbox {
+        background: #0f1215;
+        color: #c9ced6;
+        border-radius: 10px;
+        padding: 1rem 1.25rem;
+        overflow-x: auto;
+      }
+      .term,
+      .art {
+        margin: 0;
+        font:
+          13px/1.25 ui-monospace,
+          "SF Mono",
+          "DejaVu Sans Mono",
+          Menlo,
+          monospace;
+        white-space: pre;
+      }
+      .art {
+        font-size: 13.29px;
+        line-height: 1;
+        margin-bottom: 0.6rem;
+      }
+      .c0 {
+        color: #2b2f35;
+      }
+      .bg0 {
+        background: #2b2f35;
+      }
+      .c1 {
+        color: #d05a5a;
+      }
+      .bg1 {
+        background: #d05a5a;
+      }
+      .c2 {
+        color: #6fae5a;
+      }
+      .bg2 {
+        background: #6fae5a;
+      }
+      .c3 {
+        color: #c9a53d;
+      }
+      .bg3 {
+        background: #c9a53d;
+      }
+      .c4 {
+        color: #5b86c9;
+      }
+      .bg4 {
+        background: #5b86c9;
+      }
+      .c5 {
+        color: #b07ab8;
+      }
+      .bg5 {
+        background: #b07ab8;
+      }
+      .c6 {
+        color: #4fb3ae;
+      }
+      .bg6 {
+        background: #4fb3ae;
+      }
+      .c7 {
+        color: #c9ced6;
+      }
+      .bg7 {
+        background: #c9ced6;
+      }
+      .c8 {
+        color: #5d646e;
+      }
+      .bg8 {
+        background: #5d646e;
+      }
+      .c9 {
+        color: #ec7a7a;
+      }
+      .bg9 {
+        background: #ec7a7a;
+      }
+      .c10 {
+        color: #8fd17a;
+      }
+      .bg10 {
+        background: #8fd17a;
+      }
+      .c11 {
+        color: #f1d56a;
+      }
+      .bg11 {
+        background: #f1d56a;
+      }
+      .c12 {
+        color: #7aa6ee;
+      }
+      .bg12 {
+        background: #7aa6ee;
+      }
+      .c13 {
+        color: #ca9bd1;
+      }
+      .bg13 {
+        background: #ca9bd1;
+      }
+      .c14 {
+        color: #7fd6d0;
+      }
+      .bg14 {
+        background: #7fd6d0;
+      }
+      .c15 {
+        color: #f4f6f8;
+      }
+      .bg15 {
+        background: #f4f6f8;
+      }
+      .lt {
+        color: #f1d56a;
+      }
+      body[data-pal="2"] .lt {
+        color: #7fd6d0;
+      }
+      .term b {
+        font-weight: 700;
+      }
+      .empty {
+        font:
+          14px/1.5 ui-monospace,
+          "DejaVu Sans Mono",
+          monospace;
+        background: #f4f5f7;
+        border: 1px solid var(--line);
+        border-radius: 10px;
+        padding: 0.75rem 1rem;
+        margin: 0;
+      }
+      .empty code {
+        color: var(--sub);
+      }
+      .verdict {
+        margin: 0;
+        padding-left: 1.1rem;
+        font-size: 0.92rem;
+      }
+      .verdict li {
+        margin: 0.3rem 0;
+      }
+      .rec {
+        margin-top: 4rem;
+        padding-top: 1.25rem;
+        border-top: 2px solid var(--ink);
+        font-size: 1.1rem;
+      }
+      .foot {
+        color: var(--sub);
+        font-size: 0.85rem;
+      }
+      @media (prefers-reduced-motion: no-preference) {
+        .pulse,
+        .pulseh {
+          transform-box: fill-box;
+          transform-origin: center;
+        }
+        .pulse {
+          animation: pulse 2s ease-in-out infinite;
+        }
+        .pulseh {
+          animation: pulseh 2s ease-in-out infinite;
+        }
+        .lampL {
+          animation: lamp 2.4s ease-in-out infinite;
+        }
+        .lampR {
+          animation: lamp 2.4s ease-in-out 1.2s infinite;
+        }
+      }
+      @keyframes pulse {
+        0%,
+        100% {
+          transform: scale(0.7);
+        }
+        50% {
+          transform: scale(1.2);
+        }
+      }
+      @keyframes pulseh {
+        0%,
+        100% {
+          transform: scale(0.8);
+          opacity: 0.5;
+        }
+        50% {
+          transform: scale(1.2);
+          opacity: 1;
+        }
+      }
+      @keyframes lamp {
+        0%,
+        100% {
+          opacity: 1;
+        }
+        50% {
+          opacity: 0.2;
+        }
+      }
+    </style>
+  </head>
+  <body data-pal="1">
+    <svg style="position: absolute; width: 0; height: 0" aria-hidden="true">
+      <defs>
+        <g id="A1-sleep">
+          <path class="b" d="M9 28Q5 28 5 24L6 14Q6 7 16 7Q26 7 26 14L27 24Q27 28 23 28Z" />
+          <path
+            class="g"
+            d="M6 14Q6.2 9 10.5 7.6L13 7.3Q12 9.5 10.6 10Q9.6 11.6 10.6 12.6Q8.4 12.2 8 14.6Z"
+          />
+          <path class="gl" d="M16 7.2V3.6" stroke-width="1.5" />
+          <path class="g" d="M16 4.6Q12.4 1.6 10.6 3.8000000000000003Q13.4 6.2 16 4.6Z" />
+          <path class="g" d="M16 4.6Q19.6 1.4 22 3.4Q19 6.2 16 4.6Z" />
+          <rect class="k" x="10.6" y="14.7" width="2.8" height="0.8" rx="0.4" />
+          <rect class="k" x="18.6" y="14.7" width="2.8" height="0.8" rx="0.4" />
+        </g>
+        <g id="A1-work">
+          <path class="b" d="M9 28Q5 28 5 24L6 14Q6 7 16 7Q26 7 26 14L27 24Q27 28 23 28Z" />
+          <path
+            class="g"
+            d="M6 14Q6.2 9 10.5 7.6L13 7.3Q12 9.5 10.6 10Q9.6 11.6 10.6 12.6Q8.4 12.2 8 14.6Z"
+          />
+          <path class="gl" d="M16 7.2V3.6" stroke-width="1.5" />
+          <path class="g" d="M16 4.6Q12.4 1.6 10.6 3.8000000000000003Q13.4 6.2 16 4.6Z" />
+          <path class="g" d="M16 4.6Q19.6 1.4 22 3.4Q19 6.2 16 4.6Z" />
+          <circle class="k" cx="12" cy="15" r="1.7" />
+          <circle class="k" cx="20" cy="15" r="1.7" />
+          <circle class="h" cx="12" cy="15" r="3.2" />
+          <circle class="h" cx="20" cy="15" r="3.2" />
+          <circle class="l" cx="12" cy="15" r="1" />
+          <circle class="l" cx="20" cy="15" r="1" />
+        </g>
+        <g id="A1-done">
+          <path class="b" d="M9 28Q5 28 5 24L6 14Q6 7 16 7Q26 7 26 14L27 24Q27 28 23 28Z" />
+          <path
+            class="g"
+            d="M6 14Q6.2 9 10.5 7.6L13 7.3Q12 9.5 10.6 10Q9.6 11.6 10.6 12.6Q8.4 12.2 8 14.6Z"
+          />
+          <path class="gl" d="M16 7.2V3.6" stroke-width="1.5" />
+          <path class="g" d="M16 4.6Q12.4 1.6 10.6 3.8000000000000003Q13.4 6.2 16 4.6Z" />
+          <path class="g" d="M16 4.6Q19.6 1.4 22 3.4Q19 6.2 16 4.6Z" />
+          <circle class="k" cx="12" cy="15" r="1.7" />
+          <circle class="k" cx="20" cy="15" r="1.7" />
+          <circle class="l" cx="12" cy="15" r="1" />
+          <circle class="l" cx="20" cy="15" r="1" />
+        </g>
+        <g id="A1-err">
+          <path class="b" d="M9 28Q5 28 5 24L6 14Q6 7 16 7Q26 7 26 14L27 24Q27 28 23 28Z" />
+          <path
+            class="g"
+            d="M6 14Q6.2 9 10.5 7.6L13 7.3Q12 9.5 10.6 10Q9.6 11.6 10.6 12.6Q8.4 12.2 8 14.6Z"
+          />
+          <path class="gl" d="M16 7.2V3.6" stroke-width="1.5" />
+          <path class="g" d="M16 4.6Q12.4 1.6 10.6 3.8000000000000003Q13.4 6.2 16 4.6Z" />
+          <path class="g" d="M16 4.6Q19.6 1.4 22 3.4Q19 6.2 16 4.6Z" />
+          <circle class="k" cx="12" cy="15" r="1.7" />
+          <circle class="k" cx="20" cy="15" r="1.7" />
+          <circle class="l" cx="12" cy="15" r="1" />
+        </g>
+        <g id="A2-sleep">
+          <path class="b" d="M9 28Q5 28 5 24L6 14Q6 7 16 7Q26 7 26 14L27 24Q27 28 23 28Z" />
+          <path
+            class="g"
+            d="M6 14Q6.2 9 10.5 7.6L13 7.3Q12 9.5 10.6 10Q9.6 11.6 10.6 12.6Q8.4 12.2 8 14.6Z"
+          />
+          <path class="gl" d="M16 7.2V5.4" stroke-width="1.4" />
+          <path class="g" d="M16 7.2Q12.8 4.4 10.8 6.4Q13.6 8.6 16 7.2Z" />
+          <path class="g" d="M16 7.2Q19.2 4.4 21.4 6.2Q18.6 8.6 16 7.2Z" />
+          <circle class="k" cx="12" cy="14.5" r="1.2" />
+          <circle class="k" cx="20" cy="14.5" r="1.2" />
+          <rect class="k" x="14" y="19.6" width="4" height="0.9" rx="0.45" />
+          <circle class="k bud" cx="16" cy="4.1" r="2.3" />
+          <circle class="l" cx="16" cy="4.1" r="0.68" />
+        </g>
+        <g id="A2-work">
+          <path class="b" d="M9 28Q5 28 5 24L6 14Q6 7 16 7Q26 7 26 14L27 24Q27 28 23 28Z" />
+          <path
+            class="g"
+            d="M6 14Q6.2 9 10.5 7.6L13 7.3Q12 9.5 10.6 10Q9.6 11.6 10.6 12.6Q8.4 12.2 8 14.6Z"
+          />
+          <path class="gl" d="M16 7.2V5.4" stroke-width="1.4" />
+          <path class="g" d="M16 7.2Q12.8 4.4 10.8 6.4Q13.6 8.6 16 7.2Z" />
+          <path class="g" d="M16 7.2Q19.2 4.4 21.4 6.2Q18.6 8.6 16 7.2Z" />
+          <circle class="k" cx="12" cy="14.5" r="1.2" />
+          <circle class="k" cx="20" cy="14.5" r="1.2" />
+          <rect class="k" x="14" y="19.6" width="4" height="0.9" rx="0.45" />
+          <circle class="k bud" cx="16" cy="4.1" r="2.3" />
+          <circle class="h" cx="16" cy="4.1" r="2.9899999999999998" />
+          <circle class="l" cx="16" cy="4.1" r="1.53" />
+        </g>
+        <g id="A2-done">
+          <path class="b" d="M9 28Q5 28 5 24L6 14Q6 7 16 7Q26 7 26 14L27 24Q27 28 23 28Z" />
+          <path
+            class="g"
+            d="M6 14Q6.2 9 10.5 7.6L13 7.3Q12 9.5 10.6 10Q9.6 11.6 10.6 12.6Q8.4 12.2 8 14.6Z"
+          />
+          <path class="gl" d="M16 7.2V5.4" stroke-width="1.4" />
+          <path class="g" d="M16 7.2Q12.8 4.4 10.8 6.4Q13.6 8.6 16 7.2Z" />
+          <path class="g" d="M16 7.2Q19.2 4.4 21.4 6.2Q18.6 8.6 16 7.2Z" />
+          <circle class="k" cx="12" cy="14.5" r="1.2" />
+          <circle class="k" cx="20" cy="14.5" r="1.2" />
+          <rect class="k" x="14" y="19.6" width="4" height="0.9" rx="0.45" />
+          <circle class="k bud" cx="16" cy="4.1" r="2.3" />
+          <circle class="l" cx="16" cy="4.1" r="1.7" />
+        </g>
+        <g id="A2-err">
+          <path class="b" d="M9 28Q5 28 5 24L6 14Q6 7 16 7Q26 7 26 14L27 24Q27 28 23 28Z" />
+          <path
+            class="g"
+            d="M6 14Q6.2 9 10.5 7.6L13 7.3Q12 9.5 10.6 10Q9.6 11.6 10.6 12.6Q8.4 12.2 8 14.6Z"
+          />
+          <path class="gl" d="M16 7.2V5.4" stroke-width="1.4" />
+          <path class="g" d="M16 7.2Q12.8 4.4 10.8 6.4Q13.6 8.6 16 7.2Z" />
+          <path class="g" d="M16 7.2Q19.2 4.4 21.4 6.2Q18.6 8.6 16 7.2Z" />
+          <circle class="k" cx="12" cy="14.5" r="1.2" />
+          <circle class="k" cx="20" cy="14.5" r="1.2" />
+          <rect class="k" x="14" y="19.6" width="4" height="0.9" rx="0.45" />
+          <circle class="k bud" cx="16" cy="4.1" r="2.3" />
+        </g>
+        <g id="H1-sleep">
+          <path class="b" d="M9 28Q5 28 5 24L6 14Q6 7 16 7Q26 7 26 14L27 24Q27 28 23 28Z" />
+          <path
+            class="g"
+            d="M6 14Q6.2 9 10.5 7.6L13 7.3Q12 9.5 10.6 10Q9.6 11.6 10.6 12.6Q8.4 12.2 8 14.6Z"
+          />
+          <path class="gl" d="M16 7.2V3.2" stroke-width="1.5" />
+          <path
+            class="g"
+            d="M16 4.2Q12.4 1.2000000000000002 10.6 3.4000000000000004Q13.4 5.800000000000001 16 4.2Z"
+          />
+          <path class="g" d="M16 4.2Q19.6 1 22 3Q19 5.800000000000001 16 4.2Z" />
+          <circle class="k" cx="12" cy="16.4" r="1.2" />
+          <circle class="k" cx="20" cy="16.4" r="1.2" />
+          <circle class="k" cx="16" cy="11" r="2.4" />
+          <circle class="l" cx="16" cy="11" r="0.68" />
+          <path
+            class="g ns"
+            d="M5.4 24.4L8 23.4L10.4 24.5L13 23.4L16 24.6L19 23.4L21.6 24.5L24 23.4L26.6 24.4L27 24Q27 28 23 28H9Q5 28 5 24Z"
+          />
+        </g>
+        <g id="H1-work">
+          <path class="b" d="M9 28Q5 28 5 24L6 14Q6 7 16 7Q26 7 26 14L27 24Q27 28 23 28Z" />
+          <path
+            class="g"
+            d="M6 14Q6.2 9 10.5 7.6L13 7.3Q12 9.5 10.6 10Q9.6 11.6 10.6 12.6Q8.4 12.2 8 14.6Z"
+          />
+          <path class="gl" d="M16 7.2V3.2" stroke-width="1.5" />
+          <path
+            class="g"
+            d="M16 4.2Q12.4 1.2000000000000002 10.6 3.4000000000000004Q13.4 5.800000000000001 16 4.2Z"
+          />
+          <path class="g" d="M16 4.2Q19.6 1 22 3Q19 5.800000000000001 16 4.2Z" />
+          <circle class="k" cx="12" cy="16.4" r="1.2" />
+          <circle class="k" cx="20" cy="16.4" r="1.2" />
+          <circle class="k" cx="16" cy="11" r="2.4" />
+          <circle class="h" cx="16" cy="11" r="4.32" />
+          <circle class="l" cx="16" cy="11" r="1.53" />
+          <path
+            class="g ns"
+            d="M5.4 24.4L8 23.4L10.4 24.5L13 23.4L16 24.6L19 23.4L21.6 24.5L24 23.4L26.6 24.4L27 24Q27 28 23 28H9Q5 28 5 24Z"
+          />
+        </g>
+        <g id="H1-done">
+          <path class="b" d="M9 28Q5 28 5 24L6 14Q6 7 16 7Q26 7 26 14L27 24Q27 28 23 28Z" />
+          <path
+            class="g"
+            d="M6 14Q6.2 9 10.5 7.6L13 7.3Q12 9.5 10.6 10Q9.6 11.6 10.6 12.6Q8.4 12.2 8 14.6Z"
+          />
+          <path class="gl" d="M16 7.2V3.2" stroke-width="1.5" />
+          <path
+            class="g"
+            d="M16 4.2Q12.4 1.2000000000000002 10.6 3.4000000000000004Q13.4 5.800000000000001 16 4.2Z"
+          />
+          <path class="g" d="M16 4.2Q19.6 1 22 3Q19 5.800000000000001 16 4.2Z" />
+          <circle class="k" cx="12" cy="16.4" r="1.2" />
+          <circle class="k" cx="20" cy="16.4" r="1.2" />
+          <circle class="k" cx="16" cy="11" r="2.4" />
+          <circle class="l" cx="16" cy="11" r="1.7" />
+          <path
+            class="g ns"
+            d="M5.4 24.4L8 23.4L10.4 24.5L13 23.4L16 24.6L19 23.4L21.6 24.5L24 23.4L26.6 24.4L27 24Q27 28 23 28H9Q5 28 5 24Z"
+          />
+        </g>
+        <g id="H1-err">
+          <path class="b" d="M9 28Q5 28 5 24L6 14Q6 7 16 7Q26 7 26 14L27 24Q27 28 23 28Z" />
+          <path
+            class="g"
+            d="M6 14Q6.2 9 10.5 7.6L13 7.3Q12 9.5 10.6 10Q9.6 11.6 10.6 12.6Q8.4 12.2 8 14.6Z"
+          />
+          <path class="gl" d="M16 7.2V3.2" stroke-width="1.5" />
+          <path
+            class="g"
+            d="M16 4.2Q12.4 1.2000000000000002 10.6 3.4000000000000004Q13.4 5.800000000000001 16 4.2Z"
+          />
+          <path class="g" d="M16 4.2Q19.6 1 22 3Q19 5.800000000000001 16 4.2Z" />
+          <circle class="k" cx="12" cy="16.4" r="1.2" />
+          <circle class="k" cx="20" cy="16.4" r="1.2" />
+          <rect class="k" x="14" y="10.6" width="4" height="0.9" rx="0.4" />
+          <path
+            class="g ns"
+            d="M5.4 24.4L8 23.4L10.4 24.5L13 23.4L16 24.6L19 23.4L21.6 24.5L24 23.4L26.6 24.4L27 24Q27 28 23 28H9Q5 28 5 24Z"
+          />
+        </g>
+        <g id="A1M-sleep">
+          <path class="b" d="M9 28Q5 28 5 24L6 14Q6 7 16 7Q26 7 26 14L27 24Q27 28 23 28Z" />
+          <path
+            class="g"
+            d="M6 14Q6.2 9 10.5 7.6L13 7.3Q12 9.5 10.6 10Q9.6 11.6 10.6 12.6Q8.4 12.2 8 14.6Z"
+          />
+          <path class="gl" d="M16 7.2V3.6" stroke-width="1.5" />
+          <path class="g" d="M16 4.6Q12.4 1.6 10.6 3.8000000000000003Q13.4 6.2 16 4.6Z" />
+          <path class="g" d="M16 4.6Q19.6 1.4 22 3.4Q19 6.2 16 4.6Z" />
+          <rect class="k" x="10.6" y="14.7" width="2.8" height="0.8" rx="0.4" />
+          <rect class="k" x="18.6" y="14.7" width="2.8" height="0.8" rx="0.4" />
+          <rect class="k" x="14" y="20.4" width="4" height="0.9" rx="0.45" />
+        </g>
+        <g id="A1M-work">
+          <path class="b" d="M9 28Q5 28 5 24L6 14Q6 7 16 7Q26 7 26 14L27 24Q27 28 23 28Z" />
+          <path
+            class="g"
+            d="M6 14Q6.2 9 10.5 7.6L13 7.3Q12 9.5 10.6 10Q9.6 11.6 10.6 12.6Q8.4 12.2 8 14.6Z"
+          />
+          <path class="gl" d="M16 7.2V3.6" stroke-width="1.5" />
+          <path class="g" d="M16 4.6Q12.4 1.6 10.6 3.8000000000000003Q13.4 6.2 16 4.6Z" />
+          <path class="g" d="M16 4.6Q19.6 1.4 22 3.4Q19 6.2 16 4.6Z" />
+          <circle class="k" cx="12" cy="15" r="1.7" />
+          <circle class="k" cx="20" cy="15" r="1.7" />
+          <circle class="h" cx="12" cy="15" r="3.2" />
+          <circle class="h" cx="20" cy="15" r="3.2" />
+          <circle class="l" cx="12" cy="15" r="1" />
+          <circle class="l" cx="20" cy="15" r="1" />
+          <rect class="k" x="14" y="20.4" width="4" height="0.9" rx="0.45" />
+        </g>
+        <g id="A1M-done">
+          <path class="b" d="M9 28Q5 28 5 24L6 14Q6 7 16 7Q26 7 26 14L27 24Q27 28 23 28Z" />
+          <path
+            class="g"
+            d="M6 14Q6.2 9 10.5 7.6L13 7.3Q12 9.5 10.6 10Q9.6 11.6 10.6 12.6Q8.4 12.2 8 14.6Z"
+          />
+          <path class="gl" d="M16 7.2V3.6" stroke-width="1.5" />
+          <path class="g" d="M16 4.6Q12.4 1.6 10.6 3.8000000000000003Q13.4 6.2 16 4.6Z" />
+          <path class="g" d="M16 4.6Q19.6 1.4 22 3.4Q19 6.2 16 4.6Z" />
+          <circle class="k" cx="12" cy="15" r="1.7" />
+          <circle class="k" cx="20" cy="15" r="1.7" />
+          <circle class="l" cx="12" cy="15" r="1" />
+          <circle class="l" cx="20" cy="15" r="1" />
+          <rect class="k" x="14" y="20.4" width="4" height="0.9" rx="0.45" />
+        </g>
+        <g id="A1M-err">
+          <path class="b" d="M9 28Q5 28 5 24L6 14Q6 7 16 7Q26 7 26 14L27 24Q27 28 23 28Z" />
+          <path
+            class="g"
+            d="M6 14Q6.2 9 10.5 7.6L13 7.3Q12 9.5 10.6 10Q9.6 11.6 10.6 12.6Q8.4 12.2 8 14.6Z"
+          />
+          <path class="gl" d="M16 7.2V3.6" stroke-width="1.5" />
+          <path class="g" d="M16 4.6Q12.4 1.6 10.6 3.8000000000000003Q13.4 6.2 16 4.6Z" />
+          <path class="g" d="M16 4.6Q19.6 1.4 22 3.4Q19 6.2 16 4.6Z" />
+          <circle class="k" cx="12" cy="15" r="1.7" />
+          <circle class="k" cx="20" cy="15" r="1.7" />
+          <circle class="l" cx="12" cy="15" r="1" />
+          <rect class="k" x="14" y="20.4" width="4" height="0.9" rx="0.45" />
+        </g>
+        <g id="COMBO-sleep">
+          <path class="b" d="M9 28Q5 28 5 24L6 14Q6 7 16 7Q26 7 26 14L27 24Q27 28 23 28Z" />
+          <path
+            class="g"
+            d="M6 14Q6.2 9 10.5 7.6L13 7.3Q12 9.5 10.6 10Q9.6 11.6 10.6 12.6Q8.4 12.2 8 14.6Z"
+          />
+          <path class="gl" d="M16 7.2V3.6" stroke-width="1.5" />
+          <path class="g" d="M16 4.6Q12.4 1.6 10.6 3.8000000000000003Q13.4 6.2 16 4.6Z" />
+          <path class="g" d="M16 4.6Q19.6 1.4 22 3.4Q19 6.2 16 4.6Z" />
+          <rect class="k" x="10.6" y="14.7" width="2.8" height="0.8" rx="0.4" />
+          <rect class="k" x="18.6" y="14.7" width="2.8" height="0.8" rx="0.4" />
+          <rect class="k" x="14" y="20" width="4" height="0.9" rx="0.45" />
+          <path
+            class="g ns"
+            d="M5.4 24.4L8 23.4L10.4 24.5L13 23.4L16 24.6L19 23.4L21.6 24.5L24 23.4L26.6 24.4L27 24Q27 28 23 28H9Q5 28 5 24Z"
+          />
+        </g>
+        <g id="COMBO-work">
+          <path class="b" d="M9 28Q5 28 5 24L6 14Q6 7 16 7Q26 7 26 14L27 24Q27 28 23 28Z" />
+          <path
+            class="g"
+            d="M6 14Q6.2 9 10.5 7.6L13 7.3Q12 9.5 10.6 10Q9.6 11.6 10.6 12.6Q8.4 12.2 8 14.6Z"
+          />
+          <path class="gl" d="M16 7.2V3.6" stroke-width="1.5" />
+          <path class="g" d="M16 4.6Q12.4 1.6 10.6 3.8000000000000003Q13.4 6.2 16 4.6Z" />
+          <path class="g" d="M16 4.6Q19.6 1.4 22 3.4Q19 6.2 16 4.6Z" />
+          <circle class="k" cx="12" cy="15" r="1.7" />
+          <circle class="k" cx="20" cy="15" r="1.7" />
+          <circle class="h" cx="12" cy="15" r="3.2" />
+          <circle class="h" cx="20" cy="15" r="3.2" />
+          <circle class="l" cx="12" cy="15" r="1" />
+          <circle class="l" cx="20" cy="15" r="1" />
+          <rect class="k" x="14" y="20" width="4" height="0.9" rx="0.45" />
+          <path
+            class="g ns"
+            d="M5.4 24.4L8 23.4L10.4 24.5L13 23.4L16 24.6L19 23.4L21.6 24.5L24 23.4L26.6 24.4L27 24Q27 28 23 28H9Q5 28 5 24Z"
+          />
+        </g>
+        <g id="COMBO-done">
+          <path class="b" d="M9 28Q5 28 5 24L6 14Q6 7 16 7Q26 7 26 14L27 24Q27 28 23 28Z" />
+          <path
+            class="g"
+            d="M6 14Q6.2 9 10.5 7.6L13 7.3Q12 9.5 10.6 10Q9.6 11.6 10.6 12.6Q8.4 12.2 8 14.6Z"
+          />
+          <path class="gl" d="M16 7.2V3.6" stroke-width="1.5" />
+          <path class="g" d="M16 4.6Q12.4 1.6 10.6 3.8000000000000003Q13.4 6.2 16 4.6Z" />
+          <path class="g" d="M16 4.6Q19.6 1.4 22 3.4Q19 6.2 16 4.6Z" />
+          <circle class="k" cx="12" cy="15" r="1.7" />
+          <circle class="k" cx="20" cy="15" r="1.7" />
+          <circle class="l" cx="12" cy="15" r="1" />
+          <circle class="l" cx="20" cy="15" r="1" />
+          <rect class="k" x="14" y="20" width="4" height="0.9" rx="0.45" />
+          <path
+            class="g ns"
+            d="M5.4 24.4L8 23.4L10.4 24.5L13 23.4L16 24.6L19 23.4L21.6 24.5L24 23.4L26.6 24.4L27 24Q27 28 23 28H9Q5 28 5 24Z"
+          />
+        </g>
+        <g id="COMBO-err">
+          <path class="b" d="M9 28Q5 28 5 24L6 14Q6 7 16 7Q26 7 26 14L27 24Q27 28 23 28Z" />
+          <path
+            class="g"
+            d="M6 14Q6.2 9 10.5 7.6L13 7.3Q12 9.5 10.6 10Q9.6 11.6 10.6 12.6Q8.4 12.2 8 14.6Z"
+          />
+          <path class="gl" d="M16 7.2V3.6" stroke-width="1.5" />
+          <path class="g" d="M16 4.6Q12.4 1.6 10.6 3.8000000000000003Q13.4 6.2 16 4.6Z" />
+          <path class="g" d="M16 4.6Q19.6 1.4 22 3.4Q19 6.2 16 4.6Z" />
+          <circle class="k" cx="12" cy="15" r="1.7" />
+          <circle class="k" cx="20" cy="15" r="1.7" />
+          <circle class="l" cx="12" cy="15" r="1" />
+          <rect class="k" x="14" y="20" width="4" height="0.9" rx="0.45" />
+          <path
+            class="g ns"
+            d="M5.4 24.4L8 23.4L10.4 24.5L13 23.4L16 24.6L19 23.4L21.6 24.5L24 23.4L26.6 24.4L27 24Q27 28 23 28H9Q5 28 5 24Z"
+          />
+        </g>
+      </defs>
+    </svg>
+    <main>
+      <h1>emet mascot options, round 5</h1>
+      <p class="lead">
+        Round 4 feedback: two items only. A1-M puts A2's slit mouth back on A1 and keeps the light
+        in the eyes. COMBO keeps A1 as the lead, takes A2's slit mouth and H1's green base, and says
+        what wins when they clash. The r4 originals A1, A2 and H1 are shown beside them. Same rule
+        as before: one variable goes off to stop it and animates to work.
+      </p>
+      <p class="lead">
+        Palette 1 (moss, stone, sun-light) is the default; use the toggle for palette 2 (clay-grey,
+        teal, leaf). The toggle recolours every figure, state, loop and banner.
+      </p>
+      <nav class="bar" aria-label="Items">
+        <span role="group" aria-label="Palette"
+          ><button id="p1" type="button" aria-pressed="true">Palette 1</button>
+          <button id="p2" type="button" aria-pressed="false">Palette 2</button></span
+        ><a href="#a1m">A1M</a><a href="#combo">COMBO</a><a href="#compare">Compare</a
+        ><a href="#rec">Recommendation</a>
+      </nav>
+
+      <section id="compare" aria-labelledby="h-compare">
+        <header>
+          <p class="idx">VS</p>
+          <h2 id="h-compare">Side by side with the r4 originals</h2>
+          <p class="trait">A1, A2 and H1 from round 4 next to the two new items, working state.</p>
+        </header>
+        <div class="grid">
+          <div class="col">
+            <div class="panel light">
+              <div class="row">
+                <figure>
+                  <svg width="64" height="64" viewBox="0 0 32 32" aria-hidden="true">
+                    <use href="#A1-work" />
+                  </svg>
+                  <figcaption>A1 (r4)</figcaption>
+                </figure>
+                <figure>
+                  <svg width="64" height="64" viewBox="0 0 32 32" aria-hidden="true">
+                    <use href="#A2-work" />
+                  </svg>
+                  <figcaption>A2 (r4)</figcaption>
+                </figure>
+                <figure>
+                  <svg width="64" height="64" viewBox="0 0 32 32" aria-hidden="true">
+                    <use href="#H1-work" />
+                  </svg>
+                  <figcaption>H1 (r4)</figcaption>
+                </figure>
+                <figure>
+                  <svg width="64" height="64" viewBox="0 0 32 32" aria-hidden="true">
+                    <use href="#A1M-work" />
+                  </svg>
+                  <figcaption>A1-M</figcaption>
+                </figure>
+                <figure>
+                  <svg width="64" height="64" viewBox="0 0 32 32" aria-hidden="true">
+                    <use href="#COMBO-work" />
+                  </svg>
+                  <figcaption>COMBO</figcaption>
+                </figure>
+              </div>
+              <div class="row">
+                <figure>
+                  <svg width="16" height="16" viewBox="0 0 32 32" aria-hidden="true">
+                    <use href="#A1-work" />
+                  </svg>
+                  <figcaption>A1 (r4) 16</figcaption>
+                </figure>
+                <figure>
+                  <svg width="16" height="16" viewBox="0 0 32 32" aria-hidden="true">
+                    <use href="#A2-work" />
+                  </svg>
+                  <figcaption>A2 (r4) 16</figcaption>
+                </figure>
+                <figure>
+                  <svg width="16" height="16" viewBox="0 0 32 32" aria-hidden="true">
+                    <use href="#H1-work" />
+                  </svg>
+                  <figcaption>H1 (r4) 16</figcaption>
+                </figure>
+                <figure>
+                  <svg width="16" height="16" viewBox="0 0 32 32" aria-hidden="true">
+                    <use href="#A1M-work" />
+                  </svg>
+                  <figcaption>A1-M 16</figcaption>
+                </figure>
+                <figure>
+                  <svg width="16" height="16" viewBox="0 0 32 32" aria-hidden="true">
+                    <use href="#COMBO-work" />
+                  </svg>
+                  <figcaption>COMBO 16</figcaption>
+                </figure>
+                <span style="width: 1rem"></span>
+                <figure>
+                  <svg width="32" height="32" viewBox="0 0 32 32" aria-hidden="true">
+                    <use href="#A1-work" />
+                  </svg>
+                  <figcaption>A1 (r4) 32</figcaption>
+                </figure>
+                <figure>
+                  <svg width="32" height="32" viewBox="0 0 32 32" aria-hidden="true">
+                    <use href="#A2-work" />
+                  </svg>
+                  <figcaption>A2 (r4) 32</figcaption>
+                </figure>
+                <figure>
+                  <svg width="32" height="32" viewBox="0 0 32 32" aria-hidden="true">
+                    <use href="#H1-work" />
+                  </svg>
+                  <figcaption>H1 (r4) 32</figcaption>
+                </figure>
+                <figure>
+                  <svg width="32" height="32" viewBox="0 0 32 32" aria-hidden="true">
+                    <use href="#A1M-work" />
+                  </svg>
+                  <figcaption>A1-M 32</figcaption>
+                </figure>
+                <figure>
+                  <svg width="32" height="32" viewBox="0 0 32 32" aria-hidden="true">
+                    <use href="#COMBO-work" />
+                  </svg>
+                  <figcaption>COMBO 32</figcaption>
+                </figure>
+              </div>
+              <div class="row mono">
+                <figure>
+                  <svg width="64" height="64" viewBox="0 0 32 32" aria-hidden="true">
+                    <use href="#A1-work" />
+                  </svg>
+                  <figcaption>one colour</figcaption>
+                </figure>
+                <figure>
+                  <svg width="64" height="64" viewBox="0 0 32 32" aria-hidden="true">
+                    <use href="#A2-work" />
+                  </svg>
+                  <figcaption>one colour</figcaption>
+                </figure>
+                <figure>
+                  <svg width="64" height="64" viewBox="0 0 32 32" aria-hidden="true">
+                    <use href="#H1-work" />
+                  </svg>
+                  <figcaption>one colour</figcaption>
+                </figure>
+                <figure>
+                  <svg width="64" height="64" viewBox="0 0 32 32" aria-hidden="true">
+                    <use href="#A1M-work" />
+                  </svg>
+                  <figcaption>one colour</figcaption>
+                </figure>
+                <figure>
+                  <svg width="64" height="64" viewBox="0 0 32 32" aria-hidden="true">
+                    <use href="#COMBO-work" />
+                  </svg>
+                  <figcaption>one colour</figcaption>
+                </figure>
+              </div>
+            </div>
+          </div>
+          <div class="col">
+            <div class="panel dark">
+              <div class="row">
+                <figure>
+                  <svg width="64" height="64" viewBox="0 0 32 32" aria-hidden="true">
+                    <use href="#A1-work" />
+                  </svg>
+                  <figcaption>A1 (r4)</figcaption>
+                </figure>
+                <figure>
+                  <svg width="64" height="64" viewBox="0 0 32 32" aria-hidden="true">
+                    <use href="#A2-work" />
+                  </svg>
+                  <figcaption>A2 (r4)</figcaption>
+                </figure>
+                <figure>
+                  <svg width="64" height="64" viewBox="0 0 32 32" aria-hidden="true">
+                    <use href="#H1-work" />
+                  </svg>
+                  <figcaption>H1 (r4)</figcaption>
+                </figure>
+                <figure>
+                  <svg width="64" height="64" viewBox="0 0 32 32" aria-hidden="true">
+                    <use href="#A1M-work" />
+                  </svg>
+                  <figcaption>A1-M</figcaption>
+                </figure>
+                <figure>
+                  <svg width="64" height="64" viewBox="0 0 32 32" aria-hidden="true">
+                    <use href="#COMBO-work" />
+                  </svg>
+                  <figcaption>COMBO</figcaption>
+                </figure>
+              </div>
+              <div class="row">
+                <figure>
+                  <svg width="16" height="16" viewBox="0 0 32 32" aria-hidden="true">
+                    <use href="#A1-work" />
+                  </svg>
+                  <figcaption>A1 (r4) 16</figcaption>
+                </figure>
+                <figure>
+                  <svg width="16" height="16" viewBox="0 0 32 32" aria-hidden="true">
+                    <use href="#A2-work" />
+                  </svg>
+                  <figcaption>A2 (r4) 16</figcaption>
+                </figure>
+                <figure>
+                  <svg width="16" height="16" viewBox="0 0 32 32" aria-hidden="true">
+                    <use href="#H1-work" />
+                  </svg>
+                  <figcaption>H1 (r4) 16</figcaption>
+                </figure>
+                <figure>
+                  <svg width="16" height="16" viewBox="0 0 32 32" aria-hidden="true">
+                    <use href="#A1M-work" />
+                  </svg>
+                  <figcaption>A1-M 16</figcaption>
+                </figure>
+                <figure>
+                  <svg width="16" height="16" viewBox="0 0 32 32" aria-hidden="true">
+                    <use href="#COMBO-work" />
+                  </svg>
+                  <figcaption>COMBO 16</figcaption>
+                </figure>
+                <span style="width: 1rem"></span>
+                <figure>
+                  <svg width="32" height="32" viewBox="0 0 32 32" aria-hidden="true">
+                    <use href="#A1-work" />
+                  </svg>
+                  <figcaption>A1 (r4) 32</figcaption>
+                </figure>
+                <figure>
+                  <svg width="32" height="32" viewBox="0 0 32 32" aria-hidden="true">
+                    <use href="#A2-work" />
+                  </svg>
+                  <figcaption>A2 (r4) 32</figcaption>
+                </figure>
+                <figure>
+                  <svg width="32" height="32" viewBox="0 0 32 32" aria-hidden="true">
+                    <use href="#H1-work" />
+                  </svg>
+                  <figcaption>H1 (r4) 32</figcaption>
+                </figure>
+                <figure>
+                  <svg width="32" height="32" viewBox="0 0 32 32" aria-hidden="true">
+                    <use href="#A1M-work" />
+                  </svg>
+                  <figcaption>A1-M 32</figcaption>
+                </figure>
+                <figure>
+                  <svg width="32" height="32" viewBox="0 0 32 32" aria-hidden="true">
+                    <use href="#COMBO-work" />
+                  </svg>
+                  <figcaption>COMBO 32</figcaption>
+                </figure>
+              </div>
+              <div class="row mono">
+                <figure>
+                  <svg width="64" height="64" viewBox="0 0 32 32" aria-hidden="true">
+                    <use href="#A1-work" />
+                  </svg>
+                  <figcaption>one colour</figcaption>
+                </figure>
+                <figure>
+                  <svg width="64" height="64" viewBox="0 0 32 32" aria-hidden="true">
+                    <use href="#A2-work" />
+                  </svg>
+                  <figcaption>one colour</figcaption>
+                </figure>
+                <figure>
+                  <svg width="64" height="64" viewBox="0 0 32 32" aria-hidden="true">
+                    <use href="#H1-work" />
+                  </svg>
+                  <figcaption>one colour</figcaption>
+                </figure>
+                <figure>
+                  <svg width="64" height="64" viewBox="0 0 32 32" aria-hidden="true">
+                    <use href="#A1M-work" />
+                  </svg>
+                  <figcaption>one colour</figcaption>
+                </figure>
+                <figure>
+                  <svg width="64" height="64" viewBox="0 0 32 32" aria-hidden="true">
+                    <use href="#COMBO-work" />
+                  </svg>
+                  <figcaption>one colour</figcaption>
+                </figure>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section id="a1m" aria-labelledby="h-a1m">
+        <header>
+          <p class="idx">A1M</p>
+          <h2 id="h-a1m">Moss pebble, eye lamps and a slit mouth</h2>
+          <p class="trait">A1's body and lit eyes, with A2's dry line of a mouth added back.</p>
+        </header>
+        <div class="grid">
+          <div class="col">
+            <h3>Sizes 16 / 32 / 64 / 160, light and dark, plus one colour</h3>
+            <div class="panel light">
+              <div class="row">
+                <figure>
+                  <svg width="16" height="16" viewBox="0 0 32 32" aria-hidden="true">
+                    <use href="#A1M-work" />
+                  </svg>
+                  <figcaption>16</figcaption>
+                </figure>
+                <figure>
+                  <svg width="32" height="32" viewBox="0 0 32 32" aria-hidden="true">
+                    <use href="#A1M-work" />
+                  </svg>
+                  <figcaption>32</figcaption>
+                </figure>
+                <figure>
+                  <svg width="64" height="64" viewBox="0 0 32 32" aria-hidden="true">
+                    <use href="#A1M-work" />
+                  </svg>
+                  <figcaption>64</figcaption>
+                </figure>
+                <figure>
+                  <svg width="160" height="160" viewBox="0 0 32 32" aria-hidden="true">
+                    <use href="#A1M-work" />
+                  </svg>
+                  <figcaption>160</figcaption>
+                </figure>
+              </div>
+              <div class="row mono">
+                <figure>
+                  <svg width="16" height="16" viewBox="0 0 32 32" aria-hidden="true">
+                    <use href="#A1M-work" />
+                  </svg>
+                  <figcaption>one colour 16</figcaption>
+                </figure>
+                <figure>
+                  <svg width="32" height="32" viewBox="0 0 32 32" aria-hidden="true">
+                    <use href="#A1M-work" />
+                  </svg>
+                  <figcaption>one colour 32</figcaption>
+                </figure>
+                <figure>
+                  <svg width="64" height="64" viewBox="0 0 32 32" aria-hidden="true">
+                    <use href="#A1M-work" />
+                  </svg>
+                  <figcaption>one colour 64</figcaption>
+                </figure>
+              </div>
+            </div>
+            <div class="panel dark">
+              <div class="row">
+                <figure>
+                  <svg width="16" height="16" viewBox="0 0 32 32" aria-hidden="true">
+                    <use href="#A1M-work" />
+                  </svg>
+                  <figcaption>16</figcaption>
+                </figure>
+                <figure>
+                  <svg width="32" height="32" viewBox="0 0 32 32" aria-hidden="true">
+                    <use href="#A1M-work" />
+                  </svg>
+                  <figcaption>32</figcaption>
+                </figure>
+                <figure>
+                  <svg width="64" height="64" viewBox="0 0 32 32" aria-hidden="true">
+                    <use href="#A1M-work" />
+                  </svg>
+                  <figcaption>64</figcaption>
+                </figure>
+                <figure>
+                  <svg width="160" height="160" viewBox="0 0 32 32" aria-hidden="true">
+                    <use href="#A1M-work" />
+                  </svg>
+                  <figcaption>160</figcaption>
+                </figure>
+              </div>
+              <div class="row mono">
+                <figure>
+                  <svg width="16" height="16" viewBox="0 0 32 32" aria-hidden="true">
+                    <use href="#A1M-work" />
+                  </svg>
+                  <figcaption>one colour 16</figcaption>
+                </figure>
+                <figure>
+                  <svg width="32" height="32" viewBox="0 0 32 32" aria-hidden="true">
+                    <use href="#A1M-work" />
+                  </svg>
+                  <figcaption>one colour 32</figcaption>
+                </figure>
+                <figure>
+                  <svg width="64" height="64" viewBox="0 0 32 32" aria-hidden="true">
+                    <use href="#A1M-work" />
+                  </svg>
+                  <figcaption>one colour 64</figcaption>
+                </figure>
+              </div>
+            </div>
+          </div>
+          <div class="col">
+            <h3>States, one variable</h3>
+            <p class="var">
+              Eye lamps: closed dashes asleep, both lit (haloed) working, both lit done, right lamp
+              out on error. The mouth never changes.
+            </p>
+            <div class="panel light">
+              <div class="row states">
+                <figure>
+                  <svg width="64" height="64" viewBox="0 0 32 32" aria-hidden="true">
+                    <use href="#A1M-sleep" />
+                  </svg>
+                  <figcaption>asleep / off</figcaption>
+                </figure>
+                <figure>
+                  <svg width="64" height="64" viewBox="0 0 32 32" aria-hidden="true">
+                    <use href="#A1M-work" />
+                  </svg>
+                  <figcaption>awake / working</figcaption>
+                </figure>
+                <figure>
+                  <svg width="64" height="64" viewBox="0 0 32 32" aria-hidden="true">
+                    <use href="#A1M-done" />
+                  </svg>
+                  <figcaption>done</figcaption>
+                </figure>
+                <figure>
+                  <svg width="64" height="64" viewBox="0 0 32 32" aria-hidden="true">
+                    <use href="#A1M-err" />
+                  </svg>
+                  <figcaption>error / stopped</figcaption>
+                </figure>
+              </div>
+              <div class="row states mono">
+                <figure>
+                  <svg width="64" height="64" viewBox="0 0 32 32" aria-hidden="true">
+                    <use href="#A1M-sleep" />
+                  </svg>
+                  <figcaption></figcaption>
+                </figure>
+                <figure>
+                  <svg width="64" height="64" viewBox="0 0 32 32" aria-hidden="true">
+                    <use href="#A1M-work" />
+                  </svg>
+                  <figcaption></figcaption>
+                </figure>
+                <figure>
+                  <svg width="64" height="64" viewBox="0 0 32 32" aria-hidden="true">
+                    <use href="#A1M-done" />
+                  </svg>
+                  <figcaption></figcaption>
+                </figure>
+                <figure>
+                  <svg width="64" height="64" viewBox="0 0 32 32" aria-hidden="true">
+                    <use href="#A1M-err" />
+                  </svg>
+                  <figcaption></figcaption>
+                </figure>
+              </div>
+            </div>
+            <div class="panel dark">
+              <div class="row states">
+                <figure>
+                  <svg width="64" height="64" viewBox="0 0 32 32" aria-hidden="true">
+                    <use href="#A1M-sleep" />
+                  </svg>
+                  <figcaption></figcaption>
+                </figure>
+                <figure>
+                  <svg width="64" height="64" viewBox="0 0 32 32" aria-hidden="true">
+                    <use href="#A1M-work" />
+                  </svg>
+                  <figcaption></figcaption>
+                </figure>
+                <figure>
+                  <svg width="64" height="64" viewBox="0 0 32 32" aria-hidden="true">
+                    <use href="#A1M-done" />
+                  </svg>
+                  <figcaption></figcaption>
+                </figure>
+                <figure>
+                  <svg width="64" height="64" viewBox="0 0 32 32" aria-hidden="true">
+                    <use href="#A1M-err" />
+                  </svg>
+                  <figcaption></figcaption>
+                </figure>
+              </div>
+            </div>
+            <h3>Working loop</h3>
+            <div class="panel light loop" data-loop="A1M">
+              <div class="lp">
+                <svg viewBox="0 0 32 32" aria-hidden="true">
+                  <path class="b" d="M9 28Q5 28 5 24L6 14Q6 7 16 7Q26 7 26 14L27 24Q27 28 23 28Z" />
+                  <path
+                    class="g"
+                    d="M6 14Q6.2 9 10.5 7.6L13 7.3Q12 9.5 10.6 10Q9.6 11.6 10.6 12.6Q8.4 12.2 8 14.6Z"
+                  />
+                  <path class="gl" d="M16 7.2V3.6" stroke-width="1.5" />
+                  <path class="g" d="M16 4.6Q12.4 1.6 10.6 3.8000000000000003Q13.4 6.2 16 4.6Z" />
+                  <path class="g" d="M16 4.6Q19.6 1.4 22 3.4Q19 6.2 16 4.6Z" />
+                  <circle class="k" cx="12" cy="15" r="1.7" />
+                  <circle class="k" cx="20" cy="15" r="1.7" />
+                  <circle class="h" cx="12" cy="15" r="3.2" />
+                  <circle class="h" cx="20" cy="15" r="3.2" />
+                  <circle class="l lampL" cx="12" cy="15" r="1" />
+                  <circle class="l lampR" cx="20" cy="15" r="1" />
+                  <rect class="k" x="14" y="20.4" width="4" height="0.9" rx="0.45" />
+                </svg>
+              </div>
+              <div class="lp small">
+                <svg viewBox="0 0 32 32" aria-hidden="true">
+                  <path class="b" d="M9 28Q5 28 5 24L6 14Q6 7 16 7Q26 7 26 14L27 24Q27 28 23 28Z" />
+                  <path
+                    class="g"
+                    d="M6 14Q6.2 9 10.5 7.6L13 7.3Q12 9.5 10.6 10Q9.6 11.6 10.6 12.6Q8.4 12.2 8 14.6Z"
+                  />
+                  <path class="gl" d="M16 7.2V3.6" stroke-width="1.5" />
+                  <path class="g" d="M16 4.6Q12.4 1.6 10.6 3.8000000000000003Q13.4 6.2 16 4.6Z" />
+                  <path class="g" d="M16 4.6Q19.6 1.4 22 3.4Q19 6.2 16 4.6Z" />
+                  <circle class="k" cx="12" cy="15" r="1.7" />
+                  <circle class="k" cx="20" cy="15" r="1.7" />
+                  <circle class="h" cx="12" cy="15" r="3.2" />
+                  <circle class="h" cx="20" cy="15" r="3.2" />
+                  <circle class="l lampL" cx="12" cy="15" r="1" />
+                  <circle class="l lampR" cx="20" cy="15" r="1" />
+                  <rect class="k" x="14" y="20.4" width="4" height="0.9" rx="0.45" />
+                </svg>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="grid">
+          <div class="col">
+            <h3>Terminal banner</h3>
+            <div class="termbox" role="img" aria-label="Terminal banner mock for A1M">
+              <pre class="art">     <span class="c10">▄▀▄▄</span>
+      <span class="c10">█</span>
+  <span class="c2">▄██</span><span class="c7">███████▄</span>
+  <span class="c7">███</span><span class="lt">●</span><span class="c7">███</span><span class="lt">●</span><span class="c7">███</span>
+  <span class="c7">████▄▄▄████</span>
+  <span class="c7">▀█████████▀</span></pre>
+              <pre
+                class="term"
+              ><span class="c15"><b>emet</b></span> <span class="c8">0.1.0</span>  <span class="c10">3 agents running</span> <span class="c8">/</span> <span class="lt">1 waiting</span> <span class="c8">/</span> <span class="c9">0 failed</span>
+<span class="c12">$</span> emet run <span class="c14">--wave 2</span>
+<span class="bg0">  </span><span class="bg1">  </span><span class="bg2">  </span><span class="bg3">  </span><span class="bg4">  </span><span class="bg5">  </span><span class="bg6">  </span><span class="bg7">  </span><span class="bg8">  </span><span class="bg9">  </span><span class="bg10">  </span><span class="bg11">  </span><span class="bg12">  </span><span class="bg13">  </span><span class="bg14">  </span><span class="bg15">  </span></pre>
+            </div>
+          </div>
+          <div class="col">
+            <h3>Empty state</h3>
+            <p class="empty">
+              <code>$ emet status</code><br />No agents running. The lamps are off. The mouth has no
+              comment.
+            </p>
+            <h3>Verdict</h3>
+            <ul class="verdict">
+              <li>
+                Golem: medium. Heavy bean, moss patch and a dour mouth; the sprout still leans it
+                toward plant sprite.
+              </li>
+              <li>
+                Mouth: it does not read odd again. The slit is 4 units wide against the 7-unit ring
+                that made the A mouth in round 3, and it sits well below the eyes, so it reads as a
+                flat, deadpan line. One caveat: lit, haloed eyes over a flat mouth give a wide-eyed
+                look that can read as startled in the working state; the dashed asleep state and the
+                done state read calm.
+              </li>
+              <li>
+                Distinct: medium. It is A1 with a face line; the lamp eyes are the part that is not
+                generic.
+              </li>
+              <li>
+                16 px: the silhouette and the sprout hold; the mouth is under 1 px and vanishes, and
+                the lamps are about 1 px each, so the light state mostly shows as a halo.
+              </li>
+              <li>
+                Childish: borderline. The mouth makes it look deadpan, which helps against cute, but
+                round body plus sprout is still friendly.
+              </li>
+            </ul>
+          </div>
+        </div>
+      </section>
+
+      <section id="combo" aria-labelledby="h-combo">
+        <header>
+          <p class="idx">COMBO</p>
+          <h2 id="h-combo">Moss pebble with lamp eyes, slit mouth and a green base</h2>
+          <p class="trait">A1 leads. A2 gives the slit mouth, H1 gives the green base.</p>
+        </header>
+        <div class="grid">
+          <div class="col">
+            <h3>Sizes 16 / 32 / 64 / 160, light and dark, plus one colour</h3>
+            <div class="panel light">
+              <div class="row">
+                <figure>
+                  <svg width="16" height="16" viewBox="0 0 32 32" aria-hidden="true">
+                    <use href="#COMBO-work" />
+                  </svg>
+                  <figcaption>16</figcaption>
+                </figure>
+                <figure>
+                  <svg width="32" height="32" viewBox="0 0 32 32" aria-hidden="true">
+                    <use href="#COMBO-work" />
+                  </svg>
+                  <figcaption>32</figcaption>
+                </figure>
+                <figure>
+                  <svg width="64" height="64" viewBox="0 0 32 32" aria-hidden="true">
+                    <use href="#COMBO-work" />
+                  </svg>
+                  <figcaption>64</figcaption>
+                </figure>
+                <figure>
+                  <svg width="160" height="160" viewBox="0 0 32 32" aria-hidden="true">
+                    <use href="#COMBO-work" />
+                  </svg>
+                  <figcaption>160</figcaption>
+                </figure>
+              </div>
+              <div class="row mono">
+                <figure>
+                  <svg width="16" height="16" viewBox="0 0 32 32" aria-hidden="true">
+                    <use href="#COMBO-work" />
+                  </svg>
+                  <figcaption>one colour 16</figcaption>
+                </figure>
+                <figure>
+                  <svg width="32" height="32" viewBox="0 0 32 32" aria-hidden="true">
+                    <use href="#COMBO-work" />
+                  </svg>
+                  <figcaption>one colour 32</figcaption>
+                </figure>
+                <figure>
+                  <svg width="64" height="64" viewBox="0 0 32 32" aria-hidden="true">
+                    <use href="#COMBO-work" />
+                  </svg>
+                  <figcaption>one colour 64</figcaption>
+                </figure>
+              </div>
+            </div>
+            <div class="panel dark">
+              <div class="row">
+                <figure>
+                  <svg width="16" height="16" viewBox="0 0 32 32" aria-hidden="true">
+                    <use href="#COMBO-work" />
+                  </svg>
+                  <figcaption>16</figcaption>
+                </figure>
+                <figure>
+                  <svg width="32" height="32" viewBox="0 0 32 32" aria-hidden="true">
+                    <use href="#COMBO-work" />
+                  </svg>
+                  <figcaption>32</figcaption>
+                </figure>
+                <figure>
+                  <svg width="64" height="64" viewBox="0 0 32 32" aria-hidden="true">
+                    <use href="#COMBO-work" />
+                  </svg>
+                  <figcaption>64</figcaption>
+                </figure>
+                <figure>
+                  <svg width="160" height="160" viewBox="0 0 32 32" aria-hidden="true">
+                    <use href="#COMBO-work" />
+                  </svg>
+                  <figcaption>160</figcaption>
+                </figure>
+              </div>
+              <div class="row mono">
+                <figure>
+                  <svg width="16" height="16" viewBox="0 0 32 32" aria-hidden="true">
+                    <use href="#COMBO-work" />
+                  </svg>
+                  <figcaption>one colour 16</figcaption>
+                </figure>
+                <figure>
+                  <svg width="32" height="32" viewBox="0 0 32 32" aria-hidden="true">
+                    <use href="#COMBO-work" />
+                  </svg>
+                  <figcaption>one colour 32</figcaption>
+                </figure>
+                <figure>
+                  <svg width="64" height="64" viewBox="0 0 32 32" aria-hidden="true">
+                    <use href="#COMBO-work" />
+                  </svg>
+                  <figcaption>one colour 64</figcaption>
+                </figure>
+              </div>
+            </div>
+          </div>
+          <div class="col">
+            <h3>States, one variable</h3>
+            <p class="var">
+              Eye lamps (A1's): closed dashes asleep, both lit (haloed) working, both lit done,
+              right lamp out on error. Mouth and base never change.
+            </p>
+            <div class="panel light">
+              <div class="row states">
+                <figure>
+                  <svg width="64" height="64" viewBox="0 0 32 32" aria-hidden="true">
+                    <use href="#COMBO-sleep" />
+                  </svg>
+                  <figcaption>asleep / off</figcaption>
+                </figure>
+                <figure>
+                  <svg width="64" height="64" viewBox="0 0 32 32" aria-hidden="true">
+                    <use href="#COMBO-work" />
+                  </svg>
+                  <figcaption>awake / working</figcaption>
+                </figure>
+                <figure>
+                  <svg width="64" height="64" viewBox="0 0 32 32" aria-hidden="true">
+                    <use href="#COMBO-done" />
+                  </svg>
+                  <figcaption>done</figcaption>
+                </figure>
+                <figure>
+                  <svg width="64" height="64" viewBox="0 0 32 32" aria-hidden="true">
+                    <use href="#COMBO-err" />
+                  </svg>
+                  <figcaption>error / stopped</figcaption>
+                </figure>
+              </div>
+              <div class="row states mono">
+                <figure>
+                  <svg width="64" height="64" viewBox="0 0 32 32" aria-hidden="true">
+                    <use href="#COMBO-sleep" />
+                  </svg>
+                  <figcaption></figcaption>
+                </figure>
+                <figure>
+                  <svg width="64" height="64" viewBox="0 0 32 32" aria-hidden="true">
+                    <use href="#COMBO-work" />
+                  </svg>
+                  <figcaption></figcaption>
+                </figure>
+                <figure>
+                  <svg width="64" height="64" viewBox="0 0 32 32" aria-hidden="true">
+                    <use href="#COMBO-done" />
+                  </svg>
+                  <figcaption></figcaption>
+                </figure>
+                <figure>
+                  <svg width="64" height="64" viewBox="0 0 32 32" aria-hidden="true">
+                    <use href="#COMBO-err" />
+                  </svg>
+                  <figcaption></figcaption>
+                </figure>
+              </div>
+            </div>
+            <div class="panel dark">
+              <div class="row states">
+                <figure>
+                  <svg width="64" height="64" viewBox="0 0 32 32" aria-hidden="true">
+                    <use href="#COMBO-sleep" />
+                  </svg>
+                  <figcaption></figcaption>
+                </figure>
+                <figure>
+                  <svg width="64" height="64" viewBox="0 0 32 32" aria-hidden="true">
+                    <use href="#COMBO-work" />
+                  </svg>
+                  <figcaption></figcaption>
+                </figure>
+                <figure>
+                  <svg width="64" height="64" viewBox="0 0 32 32" aria-hidden="true">
+                    <use href="#COMBO-done" />
+                  </svg>
+                  <figcaption></figcaption>
+                </figure>
+                <figure>
+                  <svg width="64" height="64" viewBox="0 0 32 32" aria-hidden="true">
+                    <use href="#COMBO-err" />
+                  </svg>
+                  <figcaption></figcaption>
+                </figure>
+              </div>
+            </div>
+            <h3>Working loop</h3>
+            <div class="panel light loop" data-loop="COMBO">
+              <div class="lp">
+                <svg viewBox="0 0 32 32" aria-hidden="true">
+                  <path class="b" d="M9 28Q5 28 5 24L6 14Q6 7 16 7Q26 7 26 14L27 24Q27 28 23 28Z" />
+                  <path
+                    class="g"
+                    d="M6 14Q6.2 9 10.5 7.6L13 7.3Q12 9.5 10.6 10Q9.6 11.6 10.6 12.6Q8.4 12.2 8 14.6Z"
+                  />
+                  <path class="gl" d="M16 7.2V3.6" stroke-width="1.5" />
+                  <path class="g" d="M16 4.6Q12.4 1.6 10.6 3.8000000000000003Q13.4 6.2 16 4.6Z" />
+                  <path class="g" d="M16 4.6Q19.6 1.4 22 3.4Q19 6.2 16 4.6Z" />
+                  <circle class="k" cx="12" cy="15" r="1.7" />
+                  <circle class="k" cx="20" cy="15" r="1.7" />
+                  <circle class="h" cx="12" cy="15" r="3.2" />
+                  <circle class="h" cx="20" cy="15" r="3.2" />
+                  <circle class="l lampL" cx="12" cy="15" r="1" />
+                  <circle class="l lampR" cx="20" cy="15" r="1" />
+                  <rect class="k" x="14" y="20" width="4" height="0.9" rx="0.45" />
+                  <path
+                    class="g ns"
+                    d="M5.4 24.4L8 23.4L10.4 24.5L13 23.4L16 24.6L19 23.4L21.6 24.5L24 23.4L26.6 24.4L27 24Q27 28 23 28H9Q5 28 5 24Z"
+                  />
+                </svg>
+              </div>
+              <div class="lp small">
+                <svg viewBox="0 0 32 32" aria-hidden="true">
+                  <path class="b" d="M9 28Q5 28 5 24L6 14Q6 7 16 7Q26 7 26 14L27 24Q27 28 23 28Z" />
+                  <path
+                    class="g"
+                    d="M6 14Q6.2 9 10.5 7.6L13 7.3Q12 9.5 10.6 10Q9.6 11.6 10.6 12.6Q8.4 12.2 8 14.6Z"
+                  />
+                  <path class="gl" d="M16 7.2V3.6" stroke-width="1.5" />
+                  <path class="g" d="M16 4.6Q12.4 1.6 10.6 3.8000000000000003Q13.4 6.2 16 4.6Z" />
+                  <path class="g" d="M16 4.6Q19.6 1.4 22 3.4Q19 6.2 16 4.6Z" />
+                  <circle class="k" cx="12" cy="15" r="1.7" />
+                  <circle class="k" cx="20" cy="15" r="1.7" />
+                  <circle class="h" cx="12" cy="15" r="3.2" />
+                  <circle class="h" cx="20" cy="15" r="3.2" />
+                  <circle class="l lampL" cx="12" cy="15" r="1" />
+                  <circle class="l lampR" cx="20" cy="15" r="1" />
+                  <rect class="k" x="14" y="20" width="4" height="0.9" rx="0.45" />
+                  <path
+                    class="g ns"
+                    d="M5.4 24.4L8 23.4L10.4 24.5L13 23.4L16 24.6L19 23.4L21.6 24.5L24 23.4L26.6 24.4L27 24Q27 28 23 28H9Q5 28 5 24Z"
+                  />
+                </svg>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="grid">
+          <div class="col">
+            <h3>Terminal banner</h3>
+            <div class="termbox" role="img" aria-label="Terminal banner mock for COMBO">
+              <pre class="art">     <span class="c10">▄▀▄▄</span>
+      <span class="c10">█</span>
+  <span class="c2">▄██</span><span class="c7">███████▄</span>
+  <span class="c7">███</span><span class="lt">●</span><span class="c7">███</span><span class="lt">●</span><span class="c7">███</span>
+  <span class="c7">████▄▄▄████</span>
+  <span class="c2">▀▄▀▄▀▄▀▄▀▄▀</span></pre>
+              <pre
+                class="term"
+              ><span class="c15"><b>emet</b></span> <span class="c8">0.1.0</span>  <span class="c10">3 agents running</span> <span class="c8">/</span> <span class="lt">1 waiting</span> <span class="c8">/</span> <span class="c9">0 failed</span>
+<span class="c12">$</span> emet run <span class="c14">--wave 2</span>
+<span class="bg0">  </span><span class="bg1">  </span><span class="bg2">  </span><span class="bg3">  </span><span class="bg4">  </span><span class="bg5">  </span><span class="bg6">  </span><span class="bg7">  </span><span class="bg8">  </span><span class="bg9">  </span><span class="bg10">  </span><span class="bg11">  </span><span class="bg12">  </span><span class="bg13">  </span><span class="bg14">  </span><span class="bg15">  </span></pre>
+            </div>
+          </div>
+          <div class="col">
+            <h3>Empty state</h3>
+            <p class="empty">
+              <code>$ emet status</code><br />No agents running. The lamps are off. The base keeps
+              growing regardless.
+            </p>
+            <h3>Verdict</h3>
+            <ul class="verdict">
+              <li>
+                Clash and decision: A1 dominates, so its body, sprout and eye lamps stay untouched
+                and the lamps remain the only variable. The slit mouth is static. H1's bean body and
+                forehead glyph are not used, as asked; only its mossy hem is taken, as a plain green
+                band at the foot. Nothing fights for the light, because only the eyes ever change.
+              </li>
+              <li>
+                Golem: medium. The green base grounds the bean and adds the overgrown mood; the
+                sprout still leans it toward plant sprite.
+              </li>
+              <li>
+                Distinct: medium. It is A1-M plus a hem, so it differs from A1-M by one band of
+                colour.
+              </li>
+              <li>
+                16 px: reads cleanly. At 2x the silhouette, sprout, moss patch and green base are
+                all legible and the three green features share one colour, so they do not compete.
+                The slit mouth (under 1 px) disappears and the eye lamps are about 1 px, so the
+                state shows as a halo, as in A1. In one colour the base vanishes and it collapses to
+                A1-M.
+              </li>
+              <li>
+                Childish: borderline. The dour mouth helps; round body, sprout and foliage hem push
+                back toward friendly.
+              </li>
+            </ul>
+          </div>
+        </div>
+      </section>
+      <p class="rec" id="rec">
+        <b>Recommendation:</b> COMBO, since the green base grounds the bean at no cost to the single
+        eye-lamp variable; A1-M is the same figure without the base if the extra colour is unwanted.
+      </p>
+    </main>
+    <script>
+      (function () {
+        var body = document.body;
+        function set(p) {
+          body.setAttribute("data-pal", p);
+          document.getElementById("p1").setAttribute("aria-pressed", String(p === "1"));
+          document.getElementById("p2").setAttribute("aria-pressed", String(p === "2"));
+        }
+        document.getElementById("p1").addEventListener("click", function () {
+          set("1");
+        });
+        document.getElementById("p2").addEventListener("click", function () {
+          set("2");
+        });
+        if (location.hash === "#p2") set("2");
+      })();
+    </script>
+  </body>
+</html>
