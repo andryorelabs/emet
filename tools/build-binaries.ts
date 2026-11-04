@@ -13,9 +13,9 @@ export type BuildTarget = (typeof TARGETS)[number];
 const repoRoot = path.join(import.meta.dir, "..");
 const DEV_VERSION = "0.0.0-dev";
 
-/** `forge-<os>-<arch>` for a `bun-<os>-<arch>` target. */
+/** `emet-<os>-<arch>` for a `bun-<os>-<arch>` target. */
 export function binaryName(target: BuildTarget): string {
-  return `forge-${target.slice("bun-".length)}`;
+  return `emet-${target.slice("bun-".length)}`;
 }
 
 /** Reads `.claude-plugin/plugin.json` `version`; absent file or field means `0.0.0-dev`. */
@@ -55,7 +55,7 @@ export function parseArguments(argv: readonly string[]): {
   return { targets: [target], outdir };
 }
 
-/** Compiles the forge CLI for one target into `<outdir>/forge-<os>-<arch>`; returns the path. */
+/** Compiles the emet CLI for one target into `<outdir>/emet-<os>-<arch>`; returns the path. */
 export async function buildBinary(
   target: BuildTarget,
   outdir: string,

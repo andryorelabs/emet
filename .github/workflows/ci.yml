@@ -89,9 +89,9 @@ jobs:
       - name: Compiled binary smoke
         run: |
           bun tools/build-binaries.ts --target bun-darwin-arm64 --outdir dist
-          ./dist/forge-darwin-arm64 --version
-          size_bytes=$(wc -c < ./dist/forge-darwin-arm64 | tr -d ' ')
-          echo "forge-darwin-arm64 binary size: ${size_bytes} bytes" >> "$GITHUB_STEP_SUMMARY"
+          ./dist/emet-darwin-arm64 --version
+          size_bytes=$(wc -c < ./dist/emet-darwin-arm64 | tr -d ' ')
+          echo "emet-darwin-arm64 binary size: ${size_bytes} bytes" >> "$GITHUB_STEP_SUMMARY"
 
   commitlint:
     name: Commitlint
