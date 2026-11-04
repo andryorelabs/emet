@@ -1,6 +1,7 @@
-import { mkdirSync, readFileSync, renameSync, statSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, renameSync, statSync, writeFileSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
+import { resolveLockDirectory } from "./locks";
 import { errnoCode, isObject } from "./narrow";
 import { readParent, type ProcessTreeReader, defaultProcessTreeReader } from "./proctree";
 
@@ -333,4 +334,78 @@ export function recordStallNudge(
   const count = current + 1;
   writeJsonAtomically(stallNudgePath(commonDirectory, runId, ticket), { count });
   return { granted: true, count, cap };
+}
+
+const CLOSED_MARKER_FILE = "closed.json";
+
+async function resolveCommonDirectory(explicit: string | undefined): Promise<string> {
+  return explicit ?? (await resolveLockDirectory("."));
+}
+
+/**
+ * Records that a run's cleanup sweep finished with no failures, so every
+ * reclaim rule treats the run as finished even while its anchor is alive.
+ */
+export async function markRunClosed(
+  runId: string,
+  options: { commonDirectory?: string; now?: () => number } = {},
+): Promise<void> {
+  const commonDirectory = await resolveCommonDirectory(options.commonDirectory);
+  const closedAt = (options.now ?? Date.now)();
+  writeJsonAtomically(path.join(runDirectory(commonDirectory, runId), CLOSED_MARKER_FILE), {
+    runId,
+    closedAt,
+  });
+}
+
+/** `true` when {@link markRunClosed} wrote a readable marker for the run. */
+export async function isRunClosed(
+  runId: string,
+  options: { commonDirectory?: string } = {},
+): Promise<boolean> {
+  const commonDirectory = await resolveCommonDirectory(options.commonDirectory);
+  try {
+    const parsed: unknown = JSON.parse(
+      readFileSync(path.join(runDirectory(commonDirectory, runId), CLOSED_MARKER_FILE), "utf8"),
+    );
+    return isObject(parsed);
+  } catch (error) {
+    if (errnoCode(error) === "ENOENT" || error instanceof SyntaxError) return false;
+    throw error;
+  }
+}
+
+async function resolveCommonDirectoryFor(repoRoot: string): Promise<string | null> {
+  try {
+    const output = await Bun.$`git rev-parse --path-format=absolute --git-common-dir`
+      .cwd(repoRoot)
+      .quiet()
+      .text();
+    const resolved = output.trim();
+    return path.isAbsolute(resolved) ? resolved : null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Where a per-run artifact is written and read. Writes go under the
+ * git-common-dir run directory, shared by every worktree of the repo; reads
+ * try that first, then the legacy `<repoRoot>/.forge/runs/<id>/`. When the
+ * repo has no resolvable git-common-dir, the legacy location is used for both.
+ */
+export async function resolveRunArtifactPath(
+  runId: string,
+  fileName: "approval.json" | "tickets.json" | "materialize.json",
+  options: { repoRoot: string; commonDirectory?: string },
+): Promise<{ writePath: string; readPath: string | null }> {
+  const legacyPath = path.join(runDirectory(options.repoRoot, runId), fileName);
+  const commonDirectory =
+    options.commonDirectory ?? (await resolveCommonDirectoryFor(options.repoRoot));
+  const sharedPath =
+    commonDirectory === null
+      ? legacyPath
+      : path.join(runDirectory(commonDirectory, runId), fileName);
+  const readPath = [sharedPath, legacyPath].find((candidate) => existsSync(candidate)) ?? null;
+  return { writePath: sharedPath, readPath };
 }

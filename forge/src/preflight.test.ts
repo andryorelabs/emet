@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { mkdtempSync, readFileSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 
@@ -25,8 +25,41 @@ import {
   findTodoMarkers,
   findWorktreesMissingLockPastDeadline,
   isBranchMatchingTicket,
+  resolveApprovalDirectory,
 } from "./preflight";
 import type { WorktreeEntry, WorktreeOwner } from "./worktrees";
+
+function approvalIn(root: string, runId: string): string {
+  const directory = path.join(root, ".forge", "runs", runId);
+  mkdirSync(directory, { recursive: true });
+  writeFileSync(path.join(directory, "approval.json"), "{}");
+  return directory;
+}
+
+describe("resolveApprovalDirectory", () => {
+  test("prefers the shared git-common-dir location over the legacy one", async () => {
+    const repoRoot = mkdtempSync(path.join(tmpdir(), "approval-repo-"));
+    const common = mkdtempSync(path.join(tmpdir(), "approval-common-"));
+    approvalIn(repoRoot, "spec9");
+    const shared = approvalIn(common, "spec9");
+    expect(await resolveApprovalDirectory("spec9", repoRoot, common)).toBe(shared);
+  });
+
+  test("still finds an approval that only exists in the legacy location", async () => {
+    const repoRoot = mkdtempSync(path.join(tmpdir(), "approval-repo-"));
+    const common = mkdtempSync(path.join(tmpdir(), "approval-common-"));
+    const legacy = approvalIn(repoRoot, "spec9");
+    expect(await resolveApprovalDirectory("spec9", repoRoot, common)).toBe(legacy);
+  });
+
+  test("resolves a run with no approval to the shared location", async () => {
+    const repoRoot = mkdtempSync(path.join(tmpdir(), "approval-repo-"));
+    const common = mkdtempSync(path.join(tmpdir(), "approval-common-"));
+    expect(await resolveApprovalDirectory("spec9", repoRoot, common)).toBe(
+      path.join(common, ".forge", "runs", "spec9"),
+    );
+  });
+});
 
 describe("evaluateRunGate (S9, S15)", () => {
   const spec = "- **S1**: does a thing. Scenario: when x then y.\n";
