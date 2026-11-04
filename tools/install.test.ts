@@ -51,12 +51,6 @@ let homeDir = "";
 let toolsDir = "";
 let fixtureRepo = "";
 
-/** The repo path of `preferred`, or of `fallback` while a sibling rename has not landed yet. */
-function sourcePath(preferred: string, fallback: string): string {
-  const preferredPath = path.join(repoRoot, preferred);
-  return existsSync(preferredPath) ? preferredPath : path.join(repoRoot, fallback);
-}
-
 /** Builds a repo copy laid out as install.sh expects, linking the real sources into it. */
 function buildFixtureRepo(): void {
   fixtureRepo = path.join(workDir, "repo");
@@ -68,11 +62,11 @@ function buildFixtureRepo(): void {
   }
   for (const role of ["worker", "reviewer"]) {
     symlinkSync(
-      sourcePath(`agents/emet-${role}.md`, `agents/forge-${role}.md`),
+      path.join(repoRoot, `agents/emet-${role}.md`),
       path.join(fixtureRepo, "agents", `emet-${role}.md`),
     );
   }
-  symlinkSync(sourcePath("bin/emet", "bin/forge"), path.join(fixtureRepo, "bin", "emet"));
+  symlinkSync(path.join(repoRoot, "bin/emet"), path.join(fixtureRepo, "bin", "emet"));
 }
 
 function linkTools(names: string[]): void {

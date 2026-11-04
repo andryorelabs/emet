@@ -20,8 +20,8 @@ const BYTE_CEILINGS: Readonly<Record<string, number>> = {
   "emet/reference/tracker-linear.md": 4850,
   "emet/reference/tracker-local.md": 1810,
   "emet/reference/worker-prompt.md": 7600,
-  "agents/forge-reviewer.md": 1980,
-  "agents/forge-worker.md": 1230,
+  "agents/emet-reviewer.md": 1980,
+  "agents/emet-worker.md": 1230,
 };
 
 /**

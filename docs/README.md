@@ -71,10 +71,10 @@ Prose that `forge init` generates and the coordinator reads.
 
 Installed prompt markdown; wording changes only with an explicit ticket (ADR-0001).
 
-- [`commands/run.md`](../commands/run.md): the `/forge:run` router.
-- [`commands/forge.md`](../commands/forge.md): the same router, installed as `/forge`.
-- [`agents/forge-worker.md`](../agents/forge-worker.md): the worker agent.
-- [`agents/forge-reviewer.md`](../agents/forge-reviewer.md): the reviewer agent.
+- [`commands/run.md`](../commands/run.md): the `/emet:run` router.
+- [`commands/emet.md`](../commands/emet.md): the same router, installed as `/emet`.
+- [`agents/emet-worker.md`](../agents/emet-worker.md): the worker agent.
+- [`agents/emet-reviewer.md`](../agents/emet-reviewer.md): the reviewer agent.
 - [`emet/reference/phases-1-5.md`](../emet/reference/phases-1-5.md): interview to approval.
 - [`emet/reference/phases-6-7-dispatch.md`](../emet/reference/phases-6-7-dispatch.md): dispatch and workers.
 - [`emet/reference/phases-8-closeout.md`](../emet/reference/phases-8-closeout.md): review, landing and closeout.
