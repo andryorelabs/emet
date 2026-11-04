@@ -6,7 +6,7 @@
  * be the worker's actual output.
  */
 
-import { RUN_DIR } from "./names";
+import { resolveRunDir } from "./names";
 import { optionalProperty } from "./optional";
 import { mkdirSync, writeFileSync } from "node:fs";
 import path from "node:path";
@@ -111,7 +111,8 @@ export async function run(argv: string[]): Promise<void> {
     return;
   }
   const target = path.resolve(
-    out ?? `${RUN_DIR}/review-package-${head.replace(/[^\w.-]/g, "_")}.md`,
+    out ??
+      `${resolveRunDir(process.cwd()).path}/review-package-${head.replace(/[^\w.-]/g, "_")}.md`,
   );
   mkdirSync(path.dirname(target), { recursive: true });
   writeFileSync(target, result.content);

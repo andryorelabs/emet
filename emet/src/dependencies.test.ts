@@ -431,7 +431,7 @@ describe("formatDependencyCheck", () => {
   test("reproduces the exact missing-plugin text init has always printed", () => {
     const check = classifyClaudePluginProbe({ kind: "listed", status: "missing" });
     expect(formatDependencyCheck(check, "      ")).toBe(
-      "mattpocock-skills plugin not found — /forge's interview/spec/ticket phases (1-5) need it. Run:\n" +
+      "mattpocock-skills plugin not found — /emet's interview/spec/ticket phases (1-5) need it. Run:\n" +
         "      claude plugin marketplace add anthropics/claude-plugins-official\n" +
         "      claude plugin install mattpocock-skills@claude-plugins-official",
     );
@@ -457,7 +457,7 @@ describe("formatDependencyCheck", () => {
   test("indents every remedy line with the caller-supplied indent", () => {
     const check = classifyClaudePluginProbe({ kind: "listed", status: "missing" });
     expect(formatDependencyCheck(check, "  ")).toBe(
-      "mattpocock-skills plugin not found — /forge's interview/spec/ticket phases (1-5) need it. Run:\n" +
+      "mattpocock-skills plugin not found — /emet's interview/spec/ticket phases (1-5) need it. Run:\n" +
         "  claude plugin marketplace add anthropics/claude-plugins-official\n" +
         "  claude plugin install mattpocock-skills@claude-plugins-official",
     );

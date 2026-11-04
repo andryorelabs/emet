@@ -35,3 +35,24 @@ describe("renderBanner", () => {
     expect(renderBanner({}, {})).toBe(BANNER_TEXT);
   });
 });
+
+describe("banner on the CLI", () => {
+  const entry = path.resolve(import.meta.dir, "../bin/emet.ts");
+  const run = (args: string[], env: Record<string, string>) =>
+    Bun.spawnSync(["bun", entry, ...args], {
+      env: { ...process.env, ...env },
+      stdout: "pipe",
+      stderr: "pipe",
+    });
+
+  it("starts --help output with banner.txt under NO_COLOR", () => {
+    const result = run(["--help"], { NO_COLOR: "1" });
+    expect(result.stdout.toString().startsWith(BANNER_TEXT)).toBe(true);
+  });
+
+  it("keeps the banner out of machine-read output", () => {
+    const firstLine = BANNER_TEXT.split("\n").find((line) => line.trim() !== "") ?? BANNER_TEXT;
+    const result = run(["claims", "--list"], {});
+    expect(result.stdout.toString()).not.toContain(firstLine);
+  });
+});

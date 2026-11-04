@@ -257,7 +257,7 @@ export function classifyClaudePluginProbe(probe: ClaudePluginProbe): DependencyC
         status: "indeterminate",
         summary:
           "could not verify the mattpocock-skills plugin — the `claude` binary is not on this shell's PATH. " +
-          "/forge's interview/spec/ticket phases (1-5) need that plugin; check it from a shell where `claude` resolves.",
+          "/emet's interview/spec/ticket phases (1-5) need that plugin; check it from a shell where `claude` resolves.",
         remedy: [],
       };
     case "claude-failed":
@@ -291,7 +291,7 @@ export function classifyClaudePluginProbe(probe: ClaudePluginProbe): DependencyC
         ...base,
         status: "unsatisfied",
         summary:
-          "mattpocock-skills plugin not found — /forge's interview/spec/ticket phases (1-5) need it. Run:",
+          "mattpocock-skills plugin not found — /emet's interview/spec/ticket phases (1-5) need it. Run:",
         remedy: [
           "claude plugin marketplace add anthropics/claude-plugins-official",
           `claude plugin install ${MATTPOCOCK_SKILLS_PLUGIN_ID}`,
@@ -360,7 +360,7 @@ export function classifyGithubCliProbe(probe: GithubCliProbe): DependencyCheck {
 export function classifyLinearMcpProbe(probe: LinearMcpProbe): DependencyCheck {
   const base = { dependency: "linear-mcp-server" as const, remedy: [] };
   const authLimitation =
-    "forge can verify the Linear MCP server is declared, not that the connection is authenticated — " +
+    "emet can verify the Linear MCP server is declared, not that the connection is authenticated — " +
     "if Phase 0 fails to read tickets, restart Claude Code and approve the connection.";
 
   switch (probe.kind) {
@@ -385,7 +385,7 @@ export function classifyLinearMcpProbe(probe: LinearMcpProbe): DependencyCheck {
         ...base,
         status: probe.searchedAllScopes ? "unsatisfied" : "indeterminate",
         summary: probe.searchedAllScopes
-          ? "tracker: linear — no Linear MCP server found in .mcp.json or in `claude mcp list`. /forge cannot read or move tickets without it."
+          ? "tracker: linear — no Linear MCP server found in .mcp.json or in `claude mcp list`. /emet cannot read or move tickets without it."
           : "tracker: linear — no Linear MCP server in .mcp.json, and `claude` is not on PATH to check user-level scopes. If yours is configured at user level this is fine.",
         limitation: null,
       };
@@ -405,8 +405,8 @@ function trackerKindUndeclaredCheck(): DependencyCheck {
     dependency: "tracker-kind",
     status: "indeterminate",
     summary:
-      "forge.config.json declares no tracker.kind — tracker-specific dependency checks (gh, Linear) were skipped. " +
-      'Re-run `forge init --force` or add a "tracker": { "kind": ... } section.',
+      "The emet config declares no tracker.kind — tracker-specific dependency checks (gh, Linear) were skipped. " +
+      'Re-run `emet init --force` or add a "tracker": { "kind": ... } section.',
     remedy: [],
     limitation: null,
   };

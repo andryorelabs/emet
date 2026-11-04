@@ -90,9 +90,11 @@ function sameContent(root: string, first: string, second: string): boolean {
 
 function swapGitignoreLine(line: string): string {
   const negated = line.startsWith("!");
-  const body = negated ? line.slice(1) : line;
+  const unsigned = negated ? line.slice(1) : line;
+  const anchored = unsigned.startsWith("/");
+  const body = anchored ? unsigned.slice(1) : unsigned;
   if (body === LEGACY_RUN_DIR || body.startsWith(`${LEGACY_RUN_DIR}/`)) {
-    return `${negated ? "!" : ""}${RUN_DIR}${body.slice(LEGACY_RUN_DIR.length)}`;
+    return `${negated ? "!" : ""}${anchored ? "/" : ""}${RUN_DIR}${body.slice(LEGACY_RUN_DIR.length)}`;
   }
   if (line.startsWith(LEGACY_COMMENT_PREFIX)) {
     return `# ${PRODUCT} ${line.slice(LEGACY_COMMENT_PREFIX.length)}`;
