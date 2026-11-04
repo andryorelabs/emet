@@ -17,8 +17,9 @@ asked.
 ## Branch naming and commit format
 
 Work happens on feature branches, never by pushing directly to `main`. Commits
-and PR titles use gitmoji plus Conventional Commits in English, for example
-`feat: ✨ add user authentication`, with a bullet-point body.
+and PR titles use Conventional Commits in English with a bullet-point body.
+Gitmoji is recommended, not required: commitlint accepts both
+`feat: ✨ add user authentication` and `feat: add user authentication`.
 
 ## Merging
 
