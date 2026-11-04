@@ -92,10 +92,52 @@ const noNonDocComments: LocalRule = {
   },
 };
 
+const disableDirectivePattern =
+  /^\s*(?:eslint|oxlint)-disable(?:-next-line|-line)?(?![\w-])([\s\S]*)$/;
+
+/** Returns the reason after `--` in a disable directive, or an empty string. */
+function directiveReason(comment: SourceComment): string {
+  const match = disableDirectivePattern.exec(comment.value);
+  if (match === null) {
+    return "";
+  }
+  const separatorIndex = (match[1] ?? "").indexOf("--");
+  return separatorIndex === -1 ? "" : (match[1] ?? "").slice(separatorIndex + 2).trim();
+}
+
+const requireDescription: LocalRule = {
+  meta: {
+    type: "suggestion",
+    docs: {
+      description: "Require a written reason after every disable directive.",
+    },
+    messages: {
+      missingDescription: "Add a reason after the directive, for example `-- why this is safe`.",
+    },
+    schema: [],
+  },
+  create(context) {
+    return {
+      Program() {
+        for (const comment of context.sourceCode.getAllComments()) {
+          if (
+            comment.type !== "Shebang" &&
+            disableDirectivePattern.test(comment.value) &&
+            directiveReason(comment) === ""
+          ) {
+            context.report({ node: comment, messageId: "missingDescription" });
+          }
+        }
+      },
+    };
+  },
+};
+
 /** Project-local Oxlint rules, loaded as a jsPlugin under the `local` alias. */
 export default {
   meta: { name: "local" },
   rules: {
     "no-non-doc-comments": noNonDocComments,
+    "require-description": requireDescription,
   },
 };
