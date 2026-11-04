@@ -18,3 +18,4 @@ Decisions that are hard to reverse, surprising without context, and the result o
 | 0010 | [Local merge landing](0010-local-merge-landing.md)                                                                    | Accepted   |                                                                                 |
 | 0011 | [Local tracker on the .scratch convention](0011-local-tracker-scratch-convention.md)                                  | Accepted   |                                                                                 |
 | 0012 | [develop development branch](0012-develop-development-branch.md)                                                      | Accepted   |                                                                                 |
+| 0013 | [Cleanup owns the worker worktree lifecycle](0013-cleanup-owns-worker-worktree-lifecycle.md)                          | Accepted   |                                                                                 |
