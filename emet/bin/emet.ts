@@ -250,7 +250,7 @@ async function main(): Promise<void> {
     case "selftest": {
       const { isCompiledBinary } = await import("../src/assets");
       if (isCompiledBinary()) {
-        console.error("selftest needs a source install; run forge doctor");
+        console.error("selftest needs a source install; run emet doctor");
         process.exitCode = 1;
         return;
       }
