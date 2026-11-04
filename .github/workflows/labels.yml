@@ -10,6 +10,7 @@ on:
     paths:
       - .github/labels.yml
       - .github/workflows/labels.yml
+  workflow_dispatch:
 
 permissions:
   contents: read

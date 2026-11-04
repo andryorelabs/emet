@@ -22,6 +22,10 @@ An index of every document in this repository. Terms follow [GLOSSARY.md](../GLO
 - [`SUPPORT.md`](../.github/SUPPORT.md): where to ask for help.
 - [`PULL_REQUEST_TEMPLATE.md`](../.github/PULL_REQUEST_TEMPLATE.md): the checklist every PR shows.
 
+## How-to guides
+
+- [`how-to/cut-a-release.md`](how-to/cut-a-release.md): the release runbook: version bump, changelog, develop to main PR, tag and the CI-gated release.
+
 ## Decisions
 
 - [`adr/README.md`](adr/README.md): the architecture decision record index, one file per decision (`adr/NNNN-*.md`).

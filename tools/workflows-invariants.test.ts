@@ -12,14 +12,18 @@ interface WorkflowStep {
 }
 
 interface WorkflowJob {
+  readonly name?: string;
   readonly uses?: string;
   readonly "timeout-minutes"?: number;
   readonly needs?: string | readonly string[];
   readonly if?: string;
   readonly steps?: readonly WorkflowStep[];
+  readonly permissions?: unknown;
+  readonly strategy?: { readonly matrix?: Record<string, unknown> };
 }
 
 interface Workflow {
+  readonly on?: unknown;
   readonly permissions?: unknown;
   readonly concurrency?: { readonly group?: string; readonly "cancel-in-progress"?: unknown };
   readonly jobs: Record<string, WorkflowJob>;
@@ -91,6 +95,56 @@ function neededJobs(job: WorkflowJob | undefined): string[] {
   return (typeof needs === "string" ? [needs] : needs).toSorted();
 }
 
+/**
+ * Whether a top-level `permissions` value is `{}` or grants nothing beyond `contents: read`.
+ */
+function isReadOnlyPermissions(permissions: unknown): boolean {
+  if (typeof permissions !== "object" || permissions === null) {
+    return false;
+  }
+  return Object.entries(permissions).every(
+    ([scope, level]) => level === "none" || (scope === "contents" && level === "read"),
+  );
+}
+
+/**
+ * Extracts the text of every `run:` block, single-line and multi-line, from raw workflow text.
+ */
+function runBlocks(raw: string): string[] {
+  const lines = raw.split("\n");
+  const blocks: string[] = [];
+  for (const [index, line] of lines.entries()) {
+    const match = /^(\s*)(?:-\s+)?run:\s*(.*)$/.exec(line);
+    if (match === null) {
+      continue;
+    }
+    const indent = (match[1] ?? "").length;
+    const inline = match[2] ?? "";
+    if (!/^[|>][+-]?\d*$/.test(inline)) {
+      blocks.push(inline);
+      continue;
+    }
+    const body: string[] = [];
+    for (const next of lines.slice(index + 1)) {
+      const nextIndent = next.length - next.trimStart().length;
+      if (next.trim() !== "" && nextIndent <= indent) {
+        break;
+      }
+      body.push(next);
+    }
+    blocks.push(body.join("\n"));
+  }
+  return blocks;
+}
+
+/**
+ * Lists the trigger names under a workflow's `on:` mapping.
+ */
+function triggerNames(workflow: Workflow | undefined): string[] {
+  const triggers = workflow?.on;
+  return typeof triggers === "object" && triggers !== null ? Object.keys(triggers) : [];
+}
+
 const workflows = readWorkflows();
 
 test("there is at least one workflow", () => {
@@ -117,6 +171,19 @@ describe.each(workflows)("$fileName", ({ raw, workflow }) => {
       })
       .map(({ reference }) => reference);
     expect(violations).toEqual([]);
+  });
+
+  test("never uses pull_request_target", () => {
+    expect(JSON.stringify(workflow.on ?? {})).not.toContain("pull_request_target");
+  });
+
+  test("has no expression interpolation inside run blocks", () => {
+    const offenders = runBlocks(raw).filter((block) => block.includes("${{"));
+    expect(offenders).toEqual([]);
+  });
+
+  test("top-level permissions are contents: read or stricter", () => {
+    expect(isReadOnlyPermissions(workflow.permissions)).toBe(true);
   });
 
   test("every actions/checkout step sets persist-credentials: false", () => {
@@ -162,6 +229,68 @@ describe("ci.yml macOS job", () => {
   test("exists and is gated by ci-passed", () => {
     expect(Object.keys(ci?.jobs ?? {})).toContain("test-macos");
     expect(neededJobs(ci?.jobs["ci-passed"])).toContain("test-macos");
+  });
+});
+
+describe("ci.yml commitlint and manual runs", () => {
+  const ci = workflows.find(({ fileName }) => fileName === "ci.yml");
+
+  test("has a Commitlint job on pull requests that ci-passed needs", () => {
+    const job = ci?.workflow.jobs["commitlint"];
+    expect(job?.name).toBe("Commitlint");
+    expect(job?.if).toContain("pull_request");
+    expect(neededJobs(ci?.workflow.jobs["ci-passed"])).toContain("commitlint");
+  });
+
+  test("ci-passed fails only on failure or cancelled", () => {
+    const raw = ci?.raw ?? "";
+    expect(raw).toContain('[ "$result" = "failure" ]');
+    expect(raw).toContain('[ "$result" = "cancelled" ]');
+    expect(raw).not.toContain('!= "success"');
+  });
+
+  test("the Test job runs test:coverage", () => {
+    expect(ci?.raw).toContain("bun run test:coverage");
+  });
+
+  test("macOS smoke writes the binary size to the job summary", () => {
+    expect(ci?.raw).toContain("GITHUB_STEP_SUMMARY");
+  });
+
+  test("ci.yml and labels.yml allow workflow_dispatch", () => {
+    for (const fileName of ["ci.yml", "labels.yml"]) {
+      const file = workflows.find((entry) => entry.fileName === fileName);
+      expect(triggerNames(file?.workflow)).toContain("workflow_dispatch");
+    }
+  });
+});
+
+describe("codeql.yml and scorecard.yml", () => {
+  const codeql = workflows.find(({ fileName }) => fileName === "codeql.yml");
+  const scorecard = workflows.find(({ fileName }) => fileName === "scorecard.yml");
+
+  test("CodeQL job is named, private-guarded and scans both languages", () => {
+    const job = codeql?.workflow.jobs["analyze"];
+    expect(job?.name).toBe("CodeQL");
+    expect(job?.if).toContain("!github.event.repository.private");
+    expect(job?.strategy?.matrix?.["language"]).toEqual(["javascript-typescript", "actions"]);
+  });
+
+  test("Scorecard runs weekly with empty top-level permissions and a guarded job", () => {
+    const job = scorecard?.workflow.jobs["analysis"];
+    expect(job?.name).toBe("Scorecard");
+    expect(scorecard?.workflow.permissions).toEqual({});
+    expect(job?.if).toContain("!github.event.repository.private");
+    expect(job?.permissions).toMatchObject({ "security-events": "write" });
+    expect(triggerNames(scorecard?.workflow)).toContain("schedule");
+  });
+});
+
+describe("lint-docs.yml", () => {
+  test("explains the lychee flags", () => {
+    const raw = workflows.find(({ fileName }) => fileName === "lint-docs.yml")?.raw ?? "";
+    expect(raw).toContain("# --offline");
+    expect(raw).toContain("# --include-fragments");
   });
 });
 
