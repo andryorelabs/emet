@@ -36,7 +36,7 @@ const TEMPLATES: Readonly<Record<string, string>> = {
 export const FORGE_VERSION: string =
   typeof FORGE_BUILD_VERSION === "string" ? FORGE_BUILD_VERSION : DEV_VERSION;
 
-/** Returns the embedded `forge/templates/<name>` text; throws for an unknown name. */
+/** Returns the embedded `emet/templates/<name>` text; throws for an unknown name. */
 export function readTemplate(name: string): string {
   const content = TEMPLATES[name];
   if (content === undefined) throw new Error(`forge: unknown template "${name}"`);
