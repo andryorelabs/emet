@@ -1,5 +1,4 @@
 import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
-import os from "node:os";
 import path from "node:path";
 
 import { checkDestructiveCommand, checkEditSurface } from "./guard-destructive";
@@ -9,19 +8,32 @@ import { listOccupiedSlots, type SlotListEntry } from "./slots";
 import { parseWorktreeEntries, resolveWorktreeOwner } from "./worktrees";
 import { isObject } from "./narrow";
 import { defaultProcessTreeReader, readParent as readProcessParent } from "./proctree";
+import {
+  BINARY,
+  LEGACY_PRODUCT,
+  LEGACY_RUN_DIR,
+  PRODUCT,
+  RUN_DIR,
+  legacyStateDir,
+  stateDir,
+} from "./names";
+
+const GUARD_PREFIX = `${BINARY} guard:`;
+const INTERNAL_PREFIX = `${BINARY}:guard —`;
+const SLASH_COMMANDS: readonly string[] = [`/${PRODUCT}`, `/${LEGACY_PRODUCT}`];
 
 /**
- * `forge guard` — a Claude Code `PreToolUse` hook that blocks the three
- * harness-level failure modes real `/forge` runs have hit repeatedly (see
+ * `emet guard` — a Claude Code `PreToolUse` hook that blocks the three
+ * harness-level failure modes real `/emet` runs have hit repeatedly (see
  * `reference/incidents.md`'s bug-report drafts): a worker backgrounding a
  * `Bash` command it means to wait on (it gets no completion notification,
  * so it stalls unattended), `ScheduleWakeup` replaying a slash command
  * while background work is in flight (indistinguishable from a human
  * re-typing it, risking a restart from Phase 0), and `code-review`'s
- * finder-roster fan-out hanging when another `/forge` coordinator's wave
+ * finder-roster fan-out hanging when another `/emet` coordinator's wave
  * is already busy on this host.
  *
- * None of these are `/forge`-internal bugs — they're triggers this repo's
+ * None of these are `/emet`-internal bugs — they're triggers this repo's
  * own docs (`worker-prompt.md`, `phases-6-7-dispatch.md`) already ask a session not
  * to pull, restated here as a hook because a prose rule has, measurably,
  * not been enough (`reference/incidents.md`'s "handoff note's 0-of-4 wave").
@@ -81,7 +93,7 @@ function deny(reason: string): GuardVerdict {
 /**
  * A worker never gets a completion notification for its own `Bash
  * run_in_background: true` call — that channel is wired to the top-level
- * session only. Scoped to a `/forge` agent worktree's own cwd (rather than
+ * session only. Scoped to an `/emet` agent worktree's own cwd (rather than
  * every `Bash` call everywhere) since an ordinary interactive session
  * backgrounding something is a legitimate, supported pattern this hook has
  * no business blocking.
@@ -92,7 +104,7 @@ export function checkBackgroundBashInWorktree(input: PreToolUseHookInput): Guard
   if (!input.cwd?.includes(".claude/worktrees/agent-")) return ALLOW;
 
   return deny(
-    "forge guard: a /forge worker gets no completion notification for a backgrounded Bash " +
+    `${GUARD_PREFIX} a /${PRODUCT} worker gets no completion notification for a backgrounded Bash ` +
       "process (that channel only reaches the top-level session) — run this in the " +
       "foreground, wrapped in `timeout` if it might hang. See reference/incidents.md.",
   );
@@ -101,7 +113,7 @@ export function checkBackgroundBashInWorktree(input: PreToolUseHookInput): Guard
 /**
  * `ScheduleWakeup`'s `prompt` replaying a slash command arrives, on fire, as
  * a fresh `<command-message>` turn — indistinguishable from a human
- * re-typing it. For `/forge` specifically that risks restarting the whole
+ * re-typing it. For `/emet` (or the legacy `/forge`) specifically that risks restarting the whole
  * multi-phase run from Phase 0 instead of resuming an in-progress wave (a
  * real run measured exactly this, three times in a row — see
  * `reference/incidents.md`).
@@ -109,10 +121,12 @@ export function checkBackgroundBashInWorktree(input: PreToolUseHookInput): Guard
 export function checkScheduleWakeupSlashCommand(input: PreToolUseHookInput): GuardVerdict {
   if (input.tool_name !== "ScheduleWakeup") return ALLOW;
   const prompt = input.tool_input?.prompt;
-  if (typeof prompt !== "string" || !prompt.trimStart().startsWith("/forge")) return ALLOW;
+  if (typeof prompt !== "string") return ALLOW;
+  const trimmedPrompt = prompt.trimStart();
+  if (!SLASH_COMMANDS.some((command) => trimmedPrompt.startsWith(command))) return ALLOW;
 
   return deny(
-    "forge guard: ScheduleWakeup's prompt must not be a /forge slash command — on fire it " +
+    `${GUARD_PREFIX} ScheduleWakeup's prompt must not be a /${PRODUCT} slash command — on fire it ` +
       "replays as a fresh command turn and can restart the run from Phase 0. Use a short " +
       'resume note instead (e.g. "resume wave close-out for run <runId>"). See reference/incidents.md.',
   );
@@ -162,7 +176,7 @@ export function collectProcessAncestry(
  * process's own ancestry) holds a slot with a `'live'` verdict — the signal
  * `phases-8-closeout.md`'s Phase 8 uses to skip `code-review`'s finder-roster
  * fan-out: several real runs measured that roster hanging when multiple
- * `/forge` coordinators' background work was contending for the same host
+ * `/emet` coordinators' background work was contending for the same host
  * at once, unrelated to raw memory/cpu headroom.
  */
 export function hasLiveSiblingRun(
@@ -197,8 +211,8 @@ export async function checkCodeReviewFanoutWithSiblingRun(
   if (!hasLiveSiblingRun(entries, ownAncestry)) return ALLOW;
 
   return deny(
-    "forge guard: another /forge coordinator has a live worker slot on this host right now " +
-      '(check "forge slots") — run code-review in a single pass with no finder-roster fan-out ' +
+    `${GUARD_PREFIX} another /${PRODUCT} coordinator has a live worker slot on this host right now ` +
+      `(check "${BINARY} slots") — run code-review in a single pass with no finder-roster fan-out ` +
       "instead (e.g. --level medium or lower); the fan-out has repeatedly hung under host " +
       "contention from a sibling wave. See reference/incidents.md.",
   );
@@ -229,7 +243,7 @@ export async function evaluateGuard(
 
     return await checkCodeReviewFanoutWithSiblingRun(input, hookPid);
   } catch (error) {
-    console.error("forge:guard — internal error, allowing the call:", error);
+    console.error(`${INTERNAL_PREFIX} internal error, allowing the call:`, error);
     return ALLOW;
   }
 }
@@ -255,26 +269,18 @@ export function isValidSessionId(value: unknown): value is string {
   return typeof value === "string" && SESSION_ID_PATTERN.test(value);
 }
 
-function resolveForgeStateDirectory(): string {
-  const explicit = process.env.FORGE_STATE_DIR;
-  if (explicit) return explicit;
-  const xdgStateHome = process.env.XDG_STATE_HOME;
-  if (xdgStateHome) return path.join(xdgStateHome, "forge");
-  return path.join(os.homedir(), ".local", "state", "forge");
-}
-
 export function finalReportMarkerPath(
   sessionId: string,
-  stateDirectory: string = resolveForgeStateDirectory(),
+  stateDirectory: string = stateDir(),
 ): string {
   if (!isValidSessionId(sessionId)) {
-    throw new Error(`forge:guard — invalid session id ${JSON.stringify(sessionId)}`);
+    throw new Error(`${INTERNAL_PREFIX} invalid session id ${JSON.stringify(sessionId)}`);
   }
   return path.join(stateDirectory, "final-report", sessionId);
 }
 
 /** Records that this session delivered its final report, so the `Stop` hook
- * stops blocking. CLI: `forge guard --mark-final-report <session_id>`. */
+ * stops blocking. CLI: `emet guard --mark-final-report <session_id>`. */
 function writeFinalReportMarker(sessionId: string, stateDirectory?: string): string {
   const markerPath = finalReportMarkerPath(sessionId, stateDirectory);
   mkdirSync(path.dirname(markerPath), { recursive: true });
@@ -298,12 +304,15 @@ async function countNewCommits(cwd: string): Promise<number | null> {
   return null;
 }
 
-function readHandoffNotes(cwd: string): string[] {
-  const forgeDirectory = path.join(cwd, ".forge");
-  if (!existsSync(forgeDirectory)) return [];
-  return readdirSync(forgeDirectory)
-    .filter((name) => /^handoff-.+\.md$/i.test(name))
-    .map((name) => readFileSync(path.join(forgeDirectory, name), "utf8"));
+/** Handoff notes from the worker's `.emet/` and legacy `.forge/` run dirs. */
+export function readHandoffNotes(cwd: string): string[] {
+  return [RUN_DIR, LEGACY_RUN_DIR].flatMap((runDirectory) => {
+    const directory = path.join(cwd, runDirectory);
+    if (!existsSync(directory)) return [];
+    return readdirSync(directory)
+      .filter((name) => /^handoff-.+\.md$/i.test(name))
+      .map((name) => readFileSync(path.join(directory, name), "utf8"));
+  });
 }
 
 function stopBlock(reason: string): StopVerdict {
@@ -338,12 +347,12 @@ export async function checkSubagentStop(
 
   const notes = dependencies.readHandoffNotes(input.cwd);
   if (!notes.some((note) => /^state:\s*\S/m.test(note))) {
-    problems.push('the handoff note (.forge/handoff-<ticket>.md) has no "state:" line');
+    problems.push(`the handoff note (${RUN_DIR}/handoff-<ticket>.md) has no "state:" line`);
   }
   if (problems.length === 0) return STOP_ALLOW;
 
   return stopBlock(
-    `forge guard: do not stop yet — ${problems.join(" and ")}. Commit your work and update the handoff note, then report.`,
+    `${GUARD_PREFIX} do not stop yet — ${problems.join(" and ")}. Commit your work and update the handoff note, then report.`,
   );
 }
 
@@ -356,7 +365,9 @@ export type SessionStopDependencies = {
 const DEFAULT_SESSION_STOP_DEPENDENCIES: SessionStopDependencies = {
   listSlots: () => listOccupiedSlots(),
   listClaims: () => listReservations(),
-  markerExists: (sessionId) => existsSync(finalReportMarkerPath(sessionId)),
+  markerExists: (sessionId) =>
+    existsSync(finalReportMarkerPath(sessionId)) ||
+    existsSync(finalReportMarkerPath(sessionId, legacyStateDir())),
 };
 
 /**
@@ -385,7 +396,7 @@ export async function checkSessionStop(
   if (heldClaims.length === 0) return STOP_ALLOW;
 
   return stopBlock(
-    `forge guard: this run still holds ${heldClaims.length} claim(s), no worker is in flight and no final report was written — finish the wave close-out, post the final report, then run \`forge guard --mark-final-report ${input.session_id}\`.`,
+    `${GUARD_PREFIX} this run still holds ${heldClaims.length} claim(s), no worker is in flight and no final report was written — finish the wave close-out, post the final report, then run \`${BINARY} guard --mark-final-report ${input.session_id}\`.`,
   );
 }
 
@@ -434,8 +445,8 @@ const DEFAULT_COMPLETION_EVENT_DEPENDENCIES: CompletionEventDependencies = {
 };
 
 /**
- * Writes `<git-common-dir>/.forge/runs/<run>/events/<ticket>.json` for a stop
- * inside a forge-owned worktree, so `forge usage --stalled` and `forge gate`
+ * Writes `<git-common-dir>/<run dir>/runs/<run>/events/<ticket>.json` for a stop
+ * inside an emet-owned worktree, so `emet usage --stalled` and `emet gate`
  * decide from events plus git state instead of transcript prose. Best
  * effort: a failure here is logged and never changes the stop verdict.
  */
@@ -465,7 +476,7 @@ export async function recordCompletionEvent(
         : {}),
     });
   } catch (error) {
-    console.error("forge:guard — could not record the completion event:", error);
+    console.error(`${INTERNAL_PREFIX} could not record the completion event:`, error);
   }
 }
 
@@ -481,7 +492,7 @@ export async function evaluateStopGuard(
         ? await checkSubagentStop(input)
         : await checkSessionStop(input, collectProcessAncestry(hookPid));
   } catch (error) {
-    console.error("forge:guard — internal error, allowing the stop:", error);
+    console.error(`${INTERNAL_PREFIX} internal error, allowing the stop:`, error);
   }
   await recordCompletionEvent(event, input, verdict);
   return verdict;
@@ -547,11 +558,11 @@ export async function run(argv: readonly string[] = process.argv.slice(2)): Prom
   try {
     raw = await readBoundedStdin();
   } catch (error) {
-    console.error("forge:guard — could not read stdin, allowing the call:", error);
+    console.error(`${INTERNAL_PREFIX} could not read stdin, allowing the call:`, error);
     return;
   }
   if (raw === null) {
-    console.error("forge:guard — stdin exceeds 1 MiB, allowing the call");
+    console.error(`${INTERNAL_PREFIX} stdin exceeds 1 MiB, allowing the call`);
     return;
   }
 
@@ -559,7 +570,7 @@ export async function run(argv: readonly string[] = process.argv.slice(2)): Prom
   try {
     parsed = raw.trim().length > 0 ? JSON.parse(raw) : {};
   } catch (error) {
-    console.error("forge:guard — could not parse hook input, allowing the call:", error);
+    console.error(`${INTERNAL_PREFIX} could not parse hook input, allowing the call:`, error);
     return;
   }
 

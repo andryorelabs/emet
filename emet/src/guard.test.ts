@@ -1,4 +1,7 @@
 import { describe, expect, test } from "bun:test";
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import os from "node:os";
+import path from "node:path";
 
 import {
   checkBackgroundBashInWorktree,
@@ -12,6 +15,7 @@ import {
   formatStopOutput,
   isValidSessionId,
   readBoundedStdin,
+  readHandoffNotes,
   type SessionStopDependencies,
   type StopHookInput,
   checkScheduleWakeupSlashCommand,
@@ -90,6 +94,14 @@ describe("checkScheduleWakeupSlashCommand", () => {
       tool_input: { prompt: "  /forge --dispatch AO-565" },
     };
     expect(checkScheduleWakeupSlashCommand(input).decision).toBe("deny");
+  });
+
+  test("denies an /emet prompt and names the emet binary", () => {
+    const verdict = checkScheduleWakeupSlashCommand({
+      tool_name: "ScheduleWakeup",
+      tool_input: { prompt: "/emet:run --dispatch AO-565" },
+    });
+    expect(verdict.decision === "deny" ? verdict.reason : "").toMatch(/^emet guard: /);
   });
 
   test("allows an ordinary resume-note prompt", () => {
@@ -297,6 +309,25 @@ describe("stop hooks", () => {
     expect(outside.decision).toBe("allow");
   });
 
+  for (const runDirectory of [".emet", ".forge"]) {
+    test(`readHandoffNotes reads the handoff note from ${runDirectory}/`, () => {
+      const root = mkdtempSync(path.join(os.tmpdir(), "emet-guard-handoff-"));
+      try {
+        const cwd = path.join(root, ".claude", "worktrees", "agent-abc");
+        mkdirSync(path.join(cwd, runDirectory), { recursive: true });
+        writeFileSync(path.join(cwd, runDirectory, "handoff-CLA-1.md"), noteWithState);
+        expect(readHandoffNotes(cwd)).toEqual([noteWithState]);
+      } finally {
+        rmSync(root, { recursive: true, force: true });
+      }
+    });
+  }
+
+  test("SubagentStop names the emet binary when it blocks", async () => {
+    const verdict = await checkSubagentStop({ cwd: worktreeCwd }, subagentDeps(0, []));
+    expect(verdict.decision === "block" ? verdict.reason : "").toMatch(/^emet guard: /);
+  });
+
   test("records the subagent transcript path when the hook provides one", async () => {
     const written: unknown[] = [];
     await recordCompletionEvent(
@@ -424,6 +455,17 @@ describe("stop hooks", () => {
       sessionDeps(claimsOnly),
     );
     expect(badId.decision).toBe("allow");
+  });
+
+  test("finalReportMarkerPath defaults to the emet state dir", () => {
+    const previous = process.env.EMET_STATE_DIR;
+    process.env.EMET_STATE_DIR = "/state/emet";
+    try {
+      expect(finalReportMarkerPath("s1")).toBe("/state/emet/final-report/s1");
+    } finally {
+      if (previous === undefined) delete process.env.EMET_STATE_DIR;
+      else process.env.EMET_STATE_DIR = previous;
+    }
   });
 
   test("isValidSessionId rejects path traversal", () => {

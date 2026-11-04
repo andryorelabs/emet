@@ -1,6 +1,7 @@
 import path from "node:path";
 
 import type { Reservation } from "./claims";
+import { LOCK_TOKENS } from "./names";
 
 /**
  * Shared worktree/branch classification used by both `cleanup.ts` and
@@ -205,9 +206,10 @@ export type WorktreeOwner = {
 };
 
 /**
- * Parses the `git worktree lock` reason `/forge` writes at worker bootstrap
- * — `forge run=<runId> ticket=<ticket> anchor=<pid> at=<iso>` plus an
- * optional `slug=<coordinatorSlug>` — a literal `forge` token followed by
+ * Parses the `git worktree lock` reason `/emet` writes at worker bootstrap
+ * — `emet run=<runId> ticket=<ticket> anchor=<pid> at=<iso>` plus an
+ * optional `slug=<coordinatorSlug>` — a literal lock token (`emet`, or the
+ * legacy `forge`; see `LOCK_TOKENS` in `names.ts`) followed by
  * space-separated `key=value` pairs (safe because none of
  * `runId`/`ticket`/pid/ISO-timestamp/slug values can contain whitespace) —
  * back into structured fields. Returns `null` for anything that isn't this
@@ -221,7 +223,8 @@ export function resolveWorktreeOwner(entry: WorktreeEntry): WorktreeOwner | null
   if (entry.lockedReason === null) return null;
 
   const tokens = entry.lockedReason.trim().split(/\s+/);
-  if (tokens[0] !== "forge") return null;
+  const leadingToken = tokens[0];
+  if (leadingToken === undefined || !LOCK_TOKENS.includes(leadingToken)) return null;
 
   const fields = new Map<string, string>();
   for (const token of tokens.slice(1)) {

@@ -50,6 +50,24 @@ describe("buildLockReason", () => {
     });
   });
 
+  test("writes the emet token", () => {
+    expect(buildLockReason(FIELDS)).toBe(
+      "emet run=run-abc123 ticket=AO-321 anchor=4242 slug=-home-andryore-code-repo at=2026-09-15T12:00:00.000Z",
+    );
+  });
+
+  test("still accepts a legacy override that keeps the forge token", () => {
+    const reason = buildLockReason(
+      FIELDS,
+      "forge run={runId} ticket={ticket} anchor={anchorPid} slug={coordinatorSlug} at={iso}",
+    );
+    expect(parse(reason)?.ticket).toBe("AO-321");
+  });
+
+  test("names the emet binary in its errors", () => {
+    expect(() => buildLockReason({ ...FIELDS, anchorPid: 0 })).toThrow(/^emet lock-reason: /);
+  });
+
   test("the default template carries the slug — the whole point of the command", () => {
     expect(DEFAULT_LOCK_REASON_TEMPLATE).toContain("slug={coordinatorSlug}");
     expect(parse(buildLockReason(FIELDS))?.coordinatorSlug).toBe("-home-andryore-code-repo");
@@ -67,7 +85,7 @@ describe("buildLockReason", () => {
     ).toThrow(/does not round-trip/);
   });
 
-  test("rejects an override that drops the literal forge token", () => {
+  test("rejects an override that drops the literal lock token", () => {
     expect(() =>
       buildLockReason(
         FIELDS,
@@ -159,6 +177,18 @@ describe("readLockReasonTemplate", () => {
     const template = `${DEFAULT_LOCK_REASON_TEMPLATE} wave={runId}`;
     await writeConfig({ worktree: { lockReason: template } });
     expect(await readLockReasonTemplate(repoRoot)).toBe(template);
+  });
+
+  test("reads emet.config.json before the legacy forge.config.json", async () => {
+    const legacyTemplate = `${DEFAULT_LOCK_REASON_TEMPLATE} source=legacy`;
+    const currentTemplate = `${DEFAULT_LOCK_REASON_TEMPLATE} source=current`;
+    await writeConfig({ worktree: { lockReason: legacyTemplate } });
+    expect(await readLockReasonTemplate(repoRoot)).toBe(legacyTemplate);
+    await Bun.write(
+      path.join(repoRoot, "emet.config.json"),
+      JSON.stringify({ worktree: { lockReason: currentTemplate } }),
+    );
+    expect(await readLockReasonTemplate(repoRoot)).toBe(currentTemplate);
   });
 
   test("throws on malformed JSON rather than silently using the default", async () => {
