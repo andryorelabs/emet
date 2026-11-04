@@ -1,0 +1,377 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Typography pairings T1-T4</title>
+    <style>
+      @font-face {
+        font-family: "Figtree";
+        font-weight: 300 900;
+        font-display: block;
+        src: url("fonts/Figtree-var.woff2") format("woff2");
+      }
+      @font-face {
+        font-family: "Geist";
+        font-weight: 100 900;
+        font-display: block;
+        src: url("fonts/Geist-var.woff2") format("woff2");
+      }
+      @font-face {
+        font-family: "Geist Mono";
+        font-weight: 100 900;
+        font-display: block;
+        src: url("fonts/GeistMono-var.woff2") format("woff2");
+      }
+      @font-face {
+        font-family: "Space Grotesk";
+        font-weight: 300 700;
+        font-display: block;
+        src: url("fonts/SpaceGrotesk-var.woff2") format("woff2");
+      }
+      @font-face {
+        font-family: "JetBrains Mono";
+        font-weight: 100 800;
+        font-display: block;
+        src: url("fonts/JetBrainsMono-var.woff2") format("woff2");
+      }
+      @font-face {
+        font-family: "Manrope";
+        font-weight: 200 800;
+        font-display: block;
+        src: url("fonts/Manrope-var.woff2") format("woff2");
+      }
+
+      :root {
+        --ink: #1d1f24;
+        --paper: #f7f7f8;
+        --card: #ffffff;
+        --muted: #4f5560;
+        --line: #dcdee3;
+        --code-bg: #eef0f3;
+        --term-bg: #16181d;
+        --term-fg: #e6e8ec;
+        --term-dim: #9aa1ad;
+        --term-ok: #6fd6a0;
+        --term-warn: #e6c86a;
+        --term-err: #ff8f8f;
+        font-family: system-ui, sans-serif;
+        line-height: 1.5;
+      }
+      body {
+        margin: 0;
+        padding: 2rem;
+        background: var(--paper);
+        color: var(--ink);
+      }
+      h1 {
+        margin: 0 0 0.25rem;
+      }
+      .lead {
+        max-width: 72ch;
+        margin: 0 0 2rem;
+      }
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(460px, 1fr));
+        gap: 1.25rem;
+      }
+      .pairing {
+        background: var(--card);
+        border: 1px solid var(--line);
+        border-radius: 14px;
+        padding: 1.25rem 1.5rem 1.5rem;
+      }
+      .pairing > header h2 {
+        margin: 0;
+        font-size: 1.1rem;
+      }
+      .pairing > header p {
+        margin: 0.25rem 0 1rem;
+        color: var(--muted);
+        font-size: 0.9rem;
+      }
+      .label {
+        margin: 1rem 0 0.35rem;
+        font-size: 0.7rem;
+        font-weight: 600;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: var(--muted);
+      }
+      .wordmark {
+        font-size: 2.6rem;
+        line-height: 1.1;
+        margin: 0;
+        letter-spacing: -0.03em;
+      }
+      .wordmark small {
+        display: block;
+        margin-top: 0.3rem;
+        font-size: 0.8rem;
+        letter-spacing: 0;
+        font-weight: 400;
+        color: var(--muted);
+      }
+      .readme h3 {
+        margin: 0 0 0.4rem;
+        font-size: 1.5rem;
+        line-height: 1.2;
+      }
+      .readme p {
+        margin: 0.4rem 0;
+        font-size: 1rem;
+      }
+      .readme code {
+        background: var(--code-bg);
+        padding: 0.1em 0.35em;
+        border-radius: 4px;
+        font-size: 0.88em;
+      }
+      .term {
+        background: var(--term-bg);
+        color: var(--term-fg);
+        border-radius: 8px;
+        padding: 0.8rem 1rem;
+        font-size: 0.85rem;
+        line-height: 1.55;
+        white-space: normal;
+        overflow-x: auto;
+      }
+      .term .dim {
+        color: var(--term-dim);
+      }
+      .term .ok {
+        color: var(--term-ok);
+      }
+      .term .warn {
+        color: var(--term-warn);
+      }
+      .term .err {
+        color: var(--term-err);
+      }
+      .glyphs {
+        font-size: 0.95rem;
+        word-break: break-all;
+      }
+      .meta {
+        margin-top: 1rem;
+        font-size: 0.78rem;
+        color: var(--muted);
+      }
+
+      .t1 .ui {
+        font-family: "Figtree", sans-serif;
+      }
+      .t1 .mono,
+      .t1 code {
+        font-family: "Geist Mono", monospace;
+      }
+      .t1 .wordmark {
+        font-weight: 800;
+      }
+      .t1 .readme h3 {
+        font-weight: 700;
+      }
+
+      .t2 .ui {
+        font-family: "Space Grotesk", sans-serif;
+      }
+      .t2 .mono,
+      .t2 code {
+        font-family: "JetBrains Mono", monospace;
+      }
+      .t2 .wordmark {
+        font-weight: 700;
+        letter-spacing: -0.04em;
+      }
+      .t2 .readme h3 {
+        font-weight: 600;
+      }
+
+      .t3 .ui {
+        font-family: "Geist", sans-serif;
+      }
+      .t3 .mono,
+      .t3 code {
+        font-family: "Geist Mono", monospace;
+      }
+      .t3 .wordmark {
+        font-weight: 600;
+      }
+      .t3 .readme h3 {
+        font-weight: 600;
+      }
+
+      .t4 .ui {
+        font-family: "Manrope", sans-serif;
+      }
+      .t4 .mono,
+      .t4 code {
+        font-family: "JetBrains Mono", monospace;
+      }
+      .t4 .wordmark {
+        font-weight: 800;
+        letter-spacing: -0.045em;
+      }
+      .t4 .readme h3 {
+        font-weight: 700;
+      }
+      footer {
+        margin-top: 2rem;
+        max-width: 72ch;
+        font-size: 0.85rem;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Typography pairings T1-T4</h1>
+    <p class="lead">
+      Four display or UI plus mono pairings, all under the SIL Open Font License, loaded from local
+      <code>woff2</code> files in <code>fonts/</code> with no network access. The wordmark is a
+      placeholder and these are options to compare, not a decision. Each specimen shows a wordmark,
+      a README heading with body text and terminal output. License text and upstream sources are in
+      <code>fonts/OFL.md</code>.
+    </p>
+
+    <div class="grid">
+      <article class="pairing t1" id="t1">
+        <header>
+          <h2>T1 Figtree + Geist Mono</h2>
+          <p>
+            Friendly geometric sans with a technical mono. Rounded terminals suit a mascot-led
+            identity.
+          </p>
+        </header>
+        <div class="label">Wordmark (placeholder)</div>
+        <p class="wordmark ui">placeholder<small class="ui">spec to merged change</small></p>
+        <div class="label">README</div>
+        <div class="readme ui">
+          <h3>Ship a spec with parallel agents</h3>
+          <p>
+            Interview, spec, tickets and one approval, then workers implement in isolated worktrees.
+            Run <code>/placeholder:run 138</code> to start.
+          </p>
+        </div>
+        <div class="label">Terminal</div>
+        <div class="term mono">
+          <div><span class="dim">$</span> placeholder run 138</div>
+          <div><span class="dim">wave 1 of 2</span> 3 tickets <span class="ok">pass</span></div>
+          <div>
+            <span class="warn">warn</span> lint: 2 warnings <span class="dim">(12.4s)</span>
+          </div>
+          <div><span class="err">fail</span> test: 1 failed 0O 1lI {} =&gt; !=</div>
+        </div>
+        <div class="label">Glyph check</div>
+        <div class="glyphs ui">Aa Bb Gg Qq Rr 0123456789 &amp; @ # % ?</div>
+        <p class="meta">Figtree and Geist Mono (Vercel). Both OFL 1.1, variable axes.</p>
+      </article>
+
+      <article class="pairing t2" id="t2">
+        <header>
+          <h2>T2 Space Grotesk + JetBrains Mono</h2>
+          <p>Quirky grotesk with strong character, backed by a tall-x-height coding mono.</p>
+        </header>
+        <div class="label">Wordmark (placeholder)</div>
+        <p class="wordmark ui">placeholder<small class="ui">spec to merged change</small></p>
+        <div class="label">README</div>
+        <div class="readme ui">
+          <h3>Ship a spec with parallel agents</h3>
+          <p>
+            Interview, spec, tickets and one approval, then workers implement in isolated worktrees.
+            Run <code>/placeholder:run 138</code> to start.
+          </p>
+        </div>
+        <div class="label">Terminal</div>
+        <div class="term mono">
+          <div><span class="dim">$</span> placeholder run 138</div>
+          <div><span class="dim">wave 1 of 2</span> 3 tickets <span class="ok">pass</span></div>
+          <div>
+            <span class="warn">warn</span> lint: 2 warnings <span class="dim">(12.4s)</span>
+          </div>
+          <div><span class="err">fail</span> test: 1 failed 0O 1lI {} =&gt; !=</div>
+        </div>
+        <div class="label">Glyph check</div>
+        <div class="glyphs ui">Aa Bb Gg Qq Rr 0123456789 &amp; @ # % ?</div>
+        <p class="meta">
+          Space Grotesk and JetBrains Mono (JetBrains). Both OFL 1.1, variable axes.
+        </p>
+      </article>
+
+      <article class="pairing t3" id="t3">
+        <header>
+          <h2>T3 Geist + Geist Mono</h2>
+          <p>
+            One family for UI and code. Neutral and tightly matched, with the least personality of
+            the four.
+          </p>
+        </header>
+        <div class="label">Wordmark (placeholder)</div>
+        <p class="wordmark ui">placeholder<small class="ui">spec to merged change</small></p>
+        <div class="label">README</div>
+        <div class="readme ui">
+          <h3>Ship a spec with parallel agents</h3>
+          <p>
+            Interview, spec, tickets and one approval, then workers implement in isolated worktrees.
+            Run <code>/placeholder:run 138</code> to start.
+          </p>
+        </div>
+        <div class="label">Terminal</div>
+        <div class="term mono">
+          <div><span class="dim">$</span> placeholder run 138</div>
+          <div><span class="dim">wave 1 of 2</span> 3 tickets <span class="ok">pass</span></div>
+          <div>
+            <span class="warn">warn</span> lint: 2 warnings <span class="dim">(12.4s)</span>
+          </div>
+          <div><span class="err">fail</span> test: 1 failed 0O 1lI {} =&gt; !=</div>
+        </div>
+        <div class="label">Glyph check</div>
+        <div class="glyphs ui">Aa Bb Gg Qq Rr 0123456789 &amp; @ # % ?</div>
+        <p class="meta">
+          Geist and Geist Mono (Vercel, with basement.studio). Both OFL 1.1, variable axes.
+        </p>
+      </article>
+
+      <article class="pairing t4" id="t4">
+        <header>
+          <h2>T4 Manrope + JetBrains Mono</h2>
+          <p>
+            Modern semi-condensed sans with open shapes and a wide weight range, paired with a
+            code-first mono.
+          </p>
+        </header>
+        <div class="label">Wordmark (placeholder)</div>
+        <p class="wordmark ui">placeholder<small class="ui">spec to merged change</small></p>
+        <div class="label">README</div>
+        <div class="readme ui">
+          <h3>Ship a spec with parallel agents</h3>
+          <p>
+            Interview, spec, tickets and one approval, then workers implement in isolated worktrees.
+            Run <code>/placeholder:run 138</code> to start.
+          </p>
+        </div>
+        <div class="label">Terminal</div>
+        <div class="term mono">
+          <div><span class="dim">$</span> placeholder run 138</div>
+          <div><span class="dim">wave 1 of 2</span> 3 tickets <span class="ok">pass</span></div>
+          <div>
+            <span class="warn">warn</span> lint: 2 warnings <span class="dim">(12.4s)</span>
+          </div>
+          <div><span class="err">fail</span> test: 1 failed 0O 1lI {} =&gt; !=</div>
+        </div>
+        <div class="label">Glyph check</div>
+        <div class="glyphs ui">Aa Bb Gg Qq Rr 0123456789 &amp; @ # % ?</div>
+        <p class="meta">Manrope and JetBrains Mono (JetBrains). Both OFL 1.1, variable axes.</p>
+      </article>
+    </div>
+
+    <footer>
+      <h2>Notes</h2>
+      <p>
+        All four files are Latin subsets, so non-Latin scripts fall back to the system font. The
+        mono in T1 and T3 is the same family, so the choice between them is about the UI face.
+        Terminal colors here are illustrative; the ANSI previews are on the palette sheet.
+      </p>
+    </footer>
+  </body>
+</html>
