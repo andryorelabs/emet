@@ -7,9 +7,9 @@ const REPO_ROOT = join(import.meta.dir, "..");
 const PLUGIN_PROMPT_FILES = [
   "commands/run.md",
   ...readdirSync(join(REPO_ROOT, "agents")).map((name) => `agents/${name}`),
-  ...readdirSync(join(REPO_ROOT, "forge", "reference"))
+  ...readdirSync(join(REPO_ROOT, "emet", "reference"))
     .filter((name) => name.endsWith(".md"))
-    .map((name) => `forge/reference/${name}`),
+    .map((name) => `emet/reference/${name}`),
 ];
 
 describe("plugin-form prompt references", () => {

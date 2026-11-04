@@ -916,7 +916,7 @@ async function main(config: ForgeConfig) {
 }
 
 /**
- * Entry point invoked by the `forge` CLI dispatcher (`bin/forge.ts`) for the
+ * Entry point invoked by the `forge` CLI dispatcher (`bin/emet.ts`) for the
  * `cleanup` subcommand. See `claims.ts`'s `run()` for why this stages `argv`
  * onto `process.argv` rather than threading it through `main()` directly.
  * `cleanup` deletes branches, so — like `preflight` — a missing or malformed

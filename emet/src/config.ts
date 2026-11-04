@@ -247,7 +247,7 @@ export function resolveWorkerModel(config: ForgeConfig, ticketModel?: string): M
  * one) or malformed — never for an ordinary "no findings" result. Every
  * subcommand's `run()` catches this specifically to exit `2` (config/usage
  * error, the tool never actually ran) instead of `3` (internal error) or `1`
- * (findings to act on) — see `bin/forge.ts`'s exit-code table.
+ * (findings to act on) — see `bin/emet.ts`'s exit-code table.
  */
 export class ForgeConfigError extends Error {
   constructor(message: string) {

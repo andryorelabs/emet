@@ -487,7 +487,7 @@ async function main(config: ForgeConfig): Promise<void> {
 }
 
 /**
- * Entry point invoked by the `forge` CLI dispatcher (`bin/forge.ts`) for the
+ * Entry point invoked by the `forge` CLI dispatcher (`bin/emet.ts`) for the
  * `slots` subcommand. See `claims.ts`'s `run()` for why this stages `argv`
  * onto `process.argv` rather than threading it through `main()` directly, and
  * for why `--list` alone tolerates a missing `forge.config.json` (falls back

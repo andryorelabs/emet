@@ -1449,7 +1449,7 @@ async function main(config: ForgeConfig, repoRoot: string) {
 }
 
 /**
- * Entry point invoked by the `forge` CLI dispatcher (`bin/forge.ts`) for the
+ * Entry point invoked by the `forge` CLI dispatcher (`bin/emet.ts`) for the
  * `preflight` subcommand. See `claims.ts`'s `run()` for why this stages
  * `argv` onto `process.argv` rather than threading it through `main()`/
  * `mainPostDispatch()` directly. Unlike `claims.ts --list`, preflight has no

@@ -10,16 +10,16 @@ const REPO_ROOT = resolve(import.meta.dir, "..", "..");
  */
 const BYTE_CEILINGS: Readonly<Record<string, number>> = {
   "commands/forge.md": 8100,
-  "forge/reference/incidents.md": 12950,
-  "forge/reference/phases-1-5.md": 11300,
-  "forge/reference/phases-6-7-dispatch.md": 16310,
-  "forge/reference/phases-8-closeout.md": 13350,
-  "forge/reference/phases-9-handoff.md": 4980,
-  "forge/reference/reviewer-prompt.md": 2550,
-  "forge/reference/tracker-github.md": 3250,
-  "forge/reference/tracker-linear.md": 4850,
-  "forge/reference/tracker-local.md": 1810,
-  "forge/reference/worker-prompt.md": 7600,
+  "emet/reference/incidents.md": 12950,
+  "emet/reference/phases-1-5.md": 11300,
+  "emet/reference/phases-6-7-dispatch.md": 16310,
+  "emet/reference/phases-8-closeout.md": 13350,
+  "emet/reference/phases-9-handoff.md": 4980,
+  "emet/reference/reviewer-prompt.md": 2550,
+  "emet/reference/tracker-github.md": 3250,
+  "emet/reference/tracker-linear.md": 4850,
+  "emet/reference/tracker-local.md": 1810,
+  "emet/reference/worker-prompt.md": 7600,
   "agents/forge-reviewer.md": 1980,
   "agents/forge-worker.md": 1230,
 };
@@ -30,7 +30,7 @@ const BYTE_CEILINGS: Readonly<Record<string, number>> = {
  */
 const REFERENCE_HARD_CAP_BYTES = 20_000;
 
-const PINNED_DIRECTORIES = ["forge/reference", "agents"] as const;
+const PINNED_DIRECTORIES = ["emet/reference", "agents"] as const;
 
 const BANNED_PHRASES: readonly { readonly label: string; readonly pattern: RegExp }[] = [
   {
@@ -64,7 +64,7 @@ describe("prompt byte budget", () => {
 });
 
 describe("reference hard cap", () => {
-  for (const relativePath of listMarkdown("forge/reference")) {
+  for (const relativePath of listMarkdown("emet/reference")) {
     test(`${relativePath} is at most ${REFERENCE_HARD_CAP_BYTES} bytes`, () => {
       const size = readFileSync(join(REPO_ROOT, relativePath)).byteLength;
       expect(size).toBeLessThanOrEqual(REFERENCE_HARD_CAP_BYTES);
@@ -73,7 +73,7 @@ describe("reference hard cap", () => {
 
   test("no ceiling for a reference file exceeds the hard cap", () => {
     for (const [relativePath, ceiling] of Object.entries(BYTE_CEILINGS)) {
-      if (relativePath.startsWith("forge/reference/")) {
+      if (relativePath.startsWith("emet/reference/")) {
         expect(ceiling).toBeLessThanOrEqual(REFERENCE_HARD_CAP_BYTES);
       }
     }
