@@ -1,5 +1,5 @@
 /**
- * `forge metrics --run <id>`: tokens, API-equivalent dollars and wall time per
+ * `emet metrics --run <id>`: tokens, API-equivalent dollars and wall time per
  * ticket, wave and run, read from Claude Code transcripts (JSONL), plus the
  * ticket's estimated context budget against its actual peak context. Read-only.
  * The usage fields read here are the same ones `usage.ts` reads.
@@ -10,9 +10,10 @@ import path from "node:path";
 
 import { resolveRepoRoot } from "./config";
 import { isObject } from "./narrow";
+import { resolveRunDir } from "./names";
 import { readCompletionEvent } from "./runs";
 
-const USAGE = `usage: forge metrics --run <id> [--root <dir>] [--json]`;
+const USAGE = `usage: emet metrics --run <id> [--root <dir>] [--json]`;
 
 export type TokenTotals = {
   readonly inputTokens: number;
@@ -290,12 +291,12 @@ export async function run(argv: string[]): Promise<void> {
     commonDirectoryOutput.exitCode === 0 ? commonDirectoryOutput.stdout.toString().trim() : root;
   const ticketsPath =
     [
-      path.join(commonDirectory, ".forge", "runs", runId, "tickets.json"),
-      path.join(root, ".forge", "runs", runId, "tickets.json"),
+      path.join(resolveRunDir(commonDirectory).path, "runs", runId, "tickets.json"),
+      path.join(resolveRunDir(root).path, "runs", runId, "tickets.json"),
     ].find((candidate) => existsSync(candidate)) ??
-    path.join(root, ".forge", "runs", runId, "tickets.json");
+    path.join(resolveRunDir(root).path, "runs", runId, "tickets.json");
   if (!existsSync(ticketsPath)) {
-    console.error(`forge metrics: no tickets.json at ${ticketsPath}`);
+    console.error(`emet metrics: no tickets.json at ${ticketsPath}`);
     process.exitCode = 1;
     return;
   }
@@ -326,7 +327,7 @@ export async function run(argv: string[]): Promise<void> {
       : formatMetricsSummary(metrics),
   );
   if (missing.length > 0)
-    console.error(`forge metrics: no transcript found for ${missing.join(", ")}`);
+    console.error(`emet metrics: no transcript found for ${missing.join(", ")}`);
 }
 
 if (import.meta.main) {

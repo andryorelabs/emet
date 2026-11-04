@@ -6,12 +6,12 @@ import { resolveRepoRoot } from "./config";
 import { errorMessage, isObject } from "./narrow";
 import { resolveRunArtifactPath } from "./runs";
 
-const USAGE = `usage: forge approve --run <id> --spec <file> [--tickets <file>] [--root <dir>]
-       forge approve --run <id> --check [--root <dir>]
+const USAGE = `usage: emet approve --run <id> --spec <file> [--tickets <file>] [--root <dir>]
+       emet approve --run <id> --check [--root <dir>]
 
-Writes <git-common-dir>/.forge/runs/<id>/approval.json (spec hash, tickets hash, timestamp).
---tickets defaults to <git-common-dir>/.forge/runs/<id>/tickets.json, falling back to
-<root>/.forge/runs/<id>/tickets.json.
+Writes <git-common-dir>/.emet/runs/<id>/approval.json (spec hash, tickets hash, timestamp).
+--tickets defaults to <git-common-dir>/.emet/runs/<id>/tickets.json, falling back to
+<root>/.emet/runs/<id>/tickets.json.
 --check exits 1 when the spec or tickets changed since approval.`;
 
 export interface ApprovalRecord {
@@ -122,7 +122,7 @@ export async function run(argv: string[]): Promise<void> {
       JSON.stringify(writeApproval({ approvalPath: approval.writePath, specPath, ticketsPath })),
     );
   } catch (error) {
-    console.error(`forge approve: ${errorMessage(error)}`);
+    console.error(`emet approve: ${errorMessage(error)}`);
     process.exitCode = 1;
   }
 }

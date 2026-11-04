@@ -133,7 +133,7 @@ describe("parseDiffInput", () => {
   });
 });
 
-describe("forge assess (cli)", () => {
+describe("emet assess (cli)", () => {
   let repo: string;
 
   beforeEach(async () => {

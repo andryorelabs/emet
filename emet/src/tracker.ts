@@ -10,6 +10,7 @@ import {
   resolveLockDirectory,
 } from "./locks";
 import { errnoCode, errorMessage } from "./narrow";
+import { PRODUCT } from "./names";
 import {
   appendComment,
   computeFrontier,
@@ -23,7 +24,7 @@ import {
   type TrackerStatus,
 } from "./tracker-files";
 
-const USAGE = `usage: forge tracker <subcommand> [...args]
+const USAGE = `usage: emet tracker <subcommand> [...args]
 
 subcommands (JSON on stdout; exit 0 ok, 1 not found or refused, 2 usage):
   create-spec   --slug <s> --title <t> --body-file <f>
@@ -140,7 +141,7 @@ async function acquireSpecLock(lockDirectory: string): Promise<void> {
     // oxlint-disable-next-line eslint/no-await-in-loop -- polling loop
     if (!(await reclaimIfStale(lockDirectory))) {
       if (Date.now() >= deadline) {
-        throw new Error(`forge:tracker: timed out waiting for ${lockDirectory}; retry`);
+        throw new Error(`emet:tracker: timed out waiting for ${lockDirectory}; retry`);
       }
       // oxlint-disable-next-line eslint/no-await-in-loop -- polling loop
       await Bun.sleep(LOCK_POLL_INTERVAL_MS);
@@ -345,7 +346,7 @@ async function close(root: string, argv: readonly string[]): Promise<unknown> {
 async function comment(root: string, argv: readonly string[]): Promise<unknown> {
   const id = requirePositional(argv, "id");
   const body = await readBodyFile(argv);
-  const author = flagValue(argv, "--author") ?? "forge";
+  const author = flagValue(argv, "--author") ?? PRODUCT;
   requireSlug(id);
   const slug = parseTicketId(id)?.slug ?? id;
   return withSpecLock(slug, async () => {

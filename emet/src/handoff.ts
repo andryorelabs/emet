@@ -1,6 +1,6 @@
 /**
- * Validates and renders `.forge/handoff-AO-<n>.md` notes — the durable
- * checkpoint a `/forge` worker writes at three fixed triggers (first green
+ * Validates and renders `.emet/handoff-AO-<n>.md` notes — the durable
+ * checkpoint a `/emet` worker writes at three fixed triggers (first green
  * test, each closed dead-end, before each E2E run) so a compaction or a
  * successor session never has to re-investigate from scratch.
  *
@@ -9,8 +9,8 @@
  * section; everything until the next section header belongs to it.
  *
  * Usage:
- *   forge handoff --check <path>    # exit 1 with reasons on any violation
- *   forge handoff --render <path>   # print a Linear-comment-ready body
+ *   emet handoff --check <path>    # exit 1 with reasons on any violation
+ *   emet handoff --render <path>   # print a Linear-comment-ready body
  */
 
 import {
@@ -34,7 +34,7 @@ const VALID_STATES = ["investigating", "implementing", "blocked", "done"];
 
 /**
  * Fallback budget when a caller doesn't pass one explicitly — historically
- * hardcoded, now sourced from `forge.config.json`'s `handoff.maxLines`/
+ * hardcoded, now sourced from `emet.config.json`'s `handoff.maxLines`/
  * `maxChars`. See {@link checkHandoff}.
  */
 const MAX_LINES = 60;
@@ -113,7 +113,7 @@ function checkHandoff(
 }
 
 /**
- * Extracts the ticket reference from a `.forge/handoff-<ticket>.md` path —
+ * Extracts the ticket reference from a `.emet/handoff-<ticket>.md` path —
  * deliberately generic (`.+` rather than a config-sourced `ticket.idPattern`
  * spliced into a filename regex, which would need to strip that pattern's
  * own `^`/`$` anchors to compose safely) so it never needs to match this
@@ -133,7 +133,7 @@ async function main(config: ForgeConfig): Promise<void> {
   const targetPath = cliArguments[1];
 
   if (!targetPath || (mode !== "--check" && mode !== "--render")) {
-    console.error("usage: forge handoff --check <path> | --render <path>");
+    console.error("usage: emet handoff --check <path> | --render <path>");
     process.exitCode = 1;
     return;
   }
@@ -154,14 +154,14 @@ async function main(config: ForgeConfig): Promise<void> {
       config.handoff.maxChars,
     );
     if (problems.length > 0) {
-      console.error("forge:handoff --check failed:");
+      console.error("emet:handoff --check failed:");
       for (const problem of problems) {
         console.error(`  - ${problem}`);
       }
       process.exitCode = 1;
       return;
     }
-    console.log(`forge:handoff --check OK (${targetPath})`);
+    console.log(`emet:handoff --check OK (${targetPath})`);
     return;
   }
 
@@ -170,7 +170,7 @@ async function main(config: ForgeConfig): Promise<void> {
 }
 
 /**
- * Entry point invoked by the `forge` CLI dispatcher (`bin/emet.ts`) for the
+ * Entry point invoked by the `emet` CLI dispatcher (`bin/emet.ts`) for the
  * `handoff` subcommand. See `claims.ts`'s `run()` for why this stages `argv`
  * onto `process.argv` rather than threading it through `main()` directly.
  *

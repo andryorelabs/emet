@@ -1,13 +1,13 @@
 /**
- * `forge gate <ticket>` — one decision for auto-merge and autoChain.
+ * `emet gate <ticket>` — one decision for auto-merge and autoChain.
  *
  * Prints `{decision, reasons[], chargeAttempt, label?}` as JSON, where
  * decision is merge | hold | chain | stop | defer.
  *
- * Inputs: verify record (`.forge/runs/<run>/verify/<ticket>.json`), review
- * ledger (`.forge/review/<ticket>.json`), attempt counter
- * (`.forge/runs/<run>/attempts/<ticket>.json` = {count}), risk tier, CI and
- * integration-suite results (flags), budgets from forge.config.json.
+ * Inputs: verify record (`.emet/runs/<run>/verify/<ticket>.json`), review
+ * ledger (`.emet/review/<ticket>.json`), attempt counter
+ * (`.emet/runs/<run>/attempts/<ticket>.json` = {count}), risk tier, CI and
+ * integration-suite results (flags), budgets from emet.config.json.
  */
 
 import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
@@ -15,8 +15,9 @@ import path from "node:path";
 
 import { loadForgeConfigWithDefaults, resolveRepoRoot } from "./config";
 import { isObject, isOneOf } from "./narrow";
+import { resolveRunDir } from "./names";
 
-const USAGE = `usage: forge gate <ticket> [--run <id>] [--tier passive|medium|high]
+const USAGE = `usage: emet gate <ticket> [--run <id>] [--tier passive|medium|high]
        [--ci pass|fail|pending|none] [--integration pass|fail|pending|none]
        [--env-exit <code>] [--env-output <file>] [--attempts <n>] [--waves-remaining <n>] [--no-record]`;
 
@@ -80,7 +81,7 @@ export function decide(input: GateInput): GateResult {
       "environment fault (exit 126/127 or provider outage); pausing without charging an attempt",
     ]);
   }
-  if (input.verifyOk === null) return hold(["no verify record; run forge verify first"]);
+  if (input.verifyOk === null) return hold(["no verify record; run emet verify first"]);
   if (!input.verifyOk) {
     if (input.attemptsUsed >= input.workerAttempts) {
       return {
@@ -189,14 +190,16 @@ export async function run(argv: string[]): Promise<void> {
   try {
     const repoRoot = (await resolveRepoRoot()) ?? process.cwd();
     const { config } = await loadForgeConfigWithDefaults(repoRoot);
-    const runsDir = path.join(repoRoot, ".forge", "runs");
+    const runsDir = path.join(resolveRunDir(repoRoot).path, "runs");
     const runId = resolveRunId(runsDir, ticket, readFlag(argv, "--run"));
     if (!/^[\w-]+$/.test(runId) || !/^[\w-]+$/.test(ticket))
       throw new Error("invalid run or ticket id");
     const runDir = path.join(runsDir, runId);
 
     const verify = readVerifyRecord(path.join(runDir, "verify", `${ticket}.json`));
-    const ledger = readReviewLedger(path.join(repoRoot, ".forge", "review", `${ticket}.json`));
+    const ledger = readReviewLedger(
+      path.join(resolveRunDir(repoRoot).path, "review", `${ticket}.json`),
+    );
     const stored = readAttemptRecord(path.join(runDir, "attempts", `${ticket}.json`));
 
     const tier = readFlag(argv, "--tier") ?? "medium";
@@ -231,7 +234,7 @@ export async function run(argv: string[]): Promise<void> {
     }
     console.log(JSON.stringify(result));
   } catch (error) {
-    console.error(`forge gate: ${error instanceof Error ? error.message : String(error)}`);
+    console.error(`emet gate: ${error instanceof Error ? error.message : String(error)}`);
     process.exitCode = 2;
   }
 }
