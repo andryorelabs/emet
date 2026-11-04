@@ -1,7 +1,10 @@
 import { describe, expect, test } from "bun:test";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import {
   ICO_SIZES,
   KB,
+  MARK_MAX_BYTES,
   MARK_SIZES,
   MB,
   OG_TARGETS,
@@ -153,5 +156,46 @@ describe("encodeIco", () => {
 
   test("throws when an image is not a PNG", () => {
     expect(() => encodeIco([new Uint8Array(40)])).toThrow(/not a PNG/);
+  });
+});
+
+describe("committed rasters", () => {
+  const brandDirectory = join(import.meta.dir, "..", "docs", "brand");
+  const PNG_COLOUR_TYPE_OFFSET = 25;
+  const TRUECOLOUR_ALPHA = 6;
+  const TRUECOLOUR = 2;
+
+  function readRaster(relativePath: string): Uint8Array {
+    return new Uint8Array(readFileSync(join(brandDirectory, relativePath)));
+  }
+
+  test("every mark PNG has its exact size and is truecolour with alpha", () => {
+    for (const size of MARK_SIZES) {
+      const name = `mark-${size}.png`;
+      const png = readRaster(`logo/png/${name}`);
+      assertSpec(name, png, { width: size, height: size, maxBytes: MARK_MAX_BYTES });
+      expect(png[PNG_COLOUR_TYPE_OFFSET]).toBe(TRUECOLOUR_ALPHA);
+    }
+  });
+
+  test("every og PNG has its exact size, stays under budget and is not palette based", () => {
+    for (const target of OG_TARGETS) {
+      const png = readRaster(`og/${target.name}.png`);
+      assertSpec(`${target.name}.png`, png, target.spec);
+      expect([TRUECOLOUR, TRUECOLOUR_ALPHA].includes(png[PNG_COLOUR_TYPE_OFFSET] ?? -1)).toBe(true);
+    }
+  });
+
+  test("favicon.ico holds one 32 bpp entry per ICO size", () => {
+    const ico = readRaster("logo/png/favicon.ico");
+    const view = new DataView(ico.buffer, ico.byteOffset, ico.byteLength);
+    expect(view.getUint16(4, true)).toBe(ICO_SIZES.length);
+    ICO_SIZES.forEach((size, index) => {
+      const entry = 6 + 16 * index;
+      expect(ico[entry]).toBe(size);
+      expect(view.getUint16(entry + 6, true)).toBe(32);
+      const offset = view.getUint32(entry + 12, true);
+      expect(ico[offset + PNG_COLOUR_TYPE_OFFSET]).toBe(TRUECOLOUR_ALPHA);
+    });
   });
 });

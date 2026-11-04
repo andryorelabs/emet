@@ -48,9 +48,11 @@ function parseFontFamilies(value: unknown): string[] {
   return value.map((family: string) => family.replaceAll('"', ""));
 }
 
-/** Re-encodes a PNG with maximum lossless compression. */
+/** Re-encodes a PNG as truecolour RGBA with maximum lossless compression. */
 async function compressPng(png: Uint8Array): Promise<Uint8Array> {
-  return new Uint8Array(await sharp(png).png({ compressionLevel: 9, effort: 10 }).toBuffer());
+  return new Uint8Array(
+    await sharp(png).png({ compressionLevel: 9, effort: 10, palette: false }).toBuffer(),
+  );
 }
 
 /** Rasterises `svg` to a transparent square PNG of `size` pixels. */
