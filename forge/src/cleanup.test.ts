@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, spyOn, test } from "bun:test";
-import { existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, realpathSync, rmSync, writeFileSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
 
@@ -542,7 +542,7 @@ describe("reclaim against a real repository", () => {
   }
 
   beforeEach(async () => {
-    repo = mkdtempSync(path.join(os.tmpdir(), "cleanup-real-"));
+    repo = realpathSync(mkdtempSync(path.join(os.tmpdir(), "cleanup-real-")));
     await git("init", "-q", "-b", "main");
     await git("config", "user.email", "test@example.com");
     await git("config", "user.name", "Test");
