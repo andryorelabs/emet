@@ -1,8 +1,8 @@
 # Naming
 
-Draft v1 (2026-11-04). Status: `emet` selected by the maintainer in an interview;
-final approval pending the trademark check. Supersedes the finalists in
-`docs/brand/naming-candidates.md`.
+Draft v1 (2026-11-04). Status: `emet` approved by the maintainer on 2026-11-04.
+The trademark check stays a manual step before the rename ticket. Supersedes the
+finalists in `docs/brand/naming-candidates.md`.
 
 ## Decision
 
