@@ -11,6 +11,10 @@ below). Everything else here is research or a rejected option, kept as a record.
 Research documents:
 
 - `docs/brand/brief.md`: the approved brand brief (position, audience, voice, what to avoid, closed decisions), from the maintainer interview of 2026-11-04.
+- `docs/brand/voice.md`: the emet voice, tone by context, terminology and the avoid list.
+- `docs/brand/copy.md`: approved public copy (tagline, intro, features) with the claims checked against the CLI.
+- `docs/brand/tokens.css`: design tokens (P2 Moss in oklch, light and dark, T2 fonts, type scale); fonts in `docs/brand/brandbook/fonts/`.
+- `docs/brand/brandbook/fonts/OFL.md`: licenses of the two brandbook fonts.
 - `docs/brand/naming.md`: the selected name `emet` with its story, availability checks and risks.
 - `docs/brand/competitors.md`: tools that orchestrate coding agents from a spec
   or ticket to a merged change, with positioning lessons and territories to
