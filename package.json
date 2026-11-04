@@ -12,7 +12,7 @@
     "lint:docs": "bun tools/lint-docs.ts",
     "check:map": "bun forge/bin/forge.ts map --stale",
     "check": "bun run typecheck && bun run lint && bun run format:check && bun run knip && bun run lint:docs && bun run check:map",
-    "test": "bun test ./tools && bun test --cwd forge",
+    "test": "bun test ./tools ./.claude/hooks && bun test --cwd forge",
     "test:coverage": "bun test ./tools && bun test --cwd forge --coverage",
     "ci:local": "bun install --frozen-lockfile && bun install --cwd forge --frozen-lockfile && bun run check && bun run test:coverage && bun x --no-install commitlint --from origin/main --to HEAD",
     "prepare": "husky"
