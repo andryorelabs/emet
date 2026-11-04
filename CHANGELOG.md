@@ -18,6 +18,25 @@ and this project adheres to
   `/setup-matt-pocock-skills` then `forge init` order.
 - Agent guide (`AGENTS.md`), domain glossary (`CONTEXT.md`) and architecture
   decision records under `docs/adr/`.
+- Local markdown tracker on the `.scratch/` convention, with a `forge tracker`
+  CLI (`create-spec`, `create-ticket`, `frontier`, `set-state`, `comment`,
+  `close`) and local-aware `forge validate`, `preflight` and `doctor`.
+- `landing.mode` (`pr` or `merge`) and `forge land`, which lands a wave as one
+  local merge without a PR; `forge cleanup` and `forge status` compare against
+  local trunk in merge mode.
+- Standalone `forge` binaries, `forge --version`, macOS support in CI and in the
+  process-tree and memory brake, and plugin manifests with a `bin/forge` shim.
+- Skills contract with `forge skill-path`, and a broader `forge doctor` covering
+  skills, glossary, deprecations and double installs.
+- Language-neutral `forge init` and `forge map` for JS, Go, Rust and Python repos.
+- ADR-0007 to ADR-0011.
+
+### Changed
+
+- `gh` is required only when `tracker.kind` is `github` or `landing.mode` is
+  `pr`.
+- `forge init` no longer selects the local tracker by default.
+- ADR-0004 is amended: a wave lands as one PR or one local merge.
 
 ## [0.1.0] - 2026-11-03
 
@@ -28,6 +47,6 @@ and this project adheres to
 - The `forge` CLI with `init`, `doctor`, `preflight`, `selftest`, claims, slots,
   gates, handoff checks, results and metrics subcommands.
 - The `forge-worker` and `forge-reviewer` agents.
-- Trackers for Linear, GitHub Issues and local files.
+- Trackers for Linear and GitHub Issues.
 - Per-repo configuration through `forge.config.json`.
 - `install.sh`, which installs the CLI, command and agents.
