@@ -31,6 +31,7 @@ An index of every document in this repository. Terms follow [GLOSSARY.md](../GLO
 Research for the brand kit, run 1. Options and recommendations only; no decision is made here.
 
 - [`brand/README.md`](brand/README.md): index of the brand research and the decisions still pending.
+- [`brand/brief.md`](brand/brief.md): the approved brand brief: position, audience, voice, what to avoid and closed decisions.
 - [`brand/competitors.md`](brand/competitors.md): tools that orchestrate coding agents, with positioning lessons.
 - [`brand/mascot-research.md`](brand/mascot-research.md): developer-tool mascot cases, a checklist and four directions.
 - [`brand/naming-candidates.md`](brand/naming-candidates.md): the rename study, with the availability filter and /70 scoring.
