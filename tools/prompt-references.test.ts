@@ -17,12 +17,12 @@ describe("plugin-form prompt references", () => {
     const content = readFileSync(join(REPO_ROOT, file), "utf8");
 
     test(`${file} hardcodes no install path`, () => {
-      expect(content).not.toContain("~/.claude/forge");
+      expect(content).not.toContain("~/.claude/emet");
       expect(content).not.toContain("plugins/cache");
     });
 
     test(`${file} dispatches only plugin-namespaced agents`, () => {
-      expect(content).not.toMatch(/subagent_type:\s*"forge-(worker|reviewer)"/);
+      expect(content).not.toMatch(/subagent_type:\s*"emet-(worker|reviewer)"/);
     });
 
     test(`${file} has no bare reference/ pointers`, () => {

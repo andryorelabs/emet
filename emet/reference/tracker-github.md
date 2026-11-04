@@ -2,10 +2,10 @@
 
 The literal `gh` invocations behind the abstract ops. Priority/state label
 names are this repo's `tracker.github.priorityLabels`/`stateLabels`
-(`forge.config.json`) — `forge init` creates the three status labels via `gh
+(`emet.config.json`) — `emet init` creates the three status labels via `gh
 label create --force`; priority labels are created by hand if this repo
 wants prioritized dispatch (an empty `priorityLabels` degrades to
-`createdAt`-only ordering, and `forge doctor` says so).
+`createdAt`-only ordering, and `emet doctor` says so).
 
 - **spec.create**: `gh issue create --title "Spec: <feature>" --body <spec
   body>`. No status label — a spec issue is a container, not itself

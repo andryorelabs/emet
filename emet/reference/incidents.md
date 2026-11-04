@@ -7,10 +7,10 @@ exists, or before changing one of the rules it justifies.
 ## INC-285 — lost mutex via inline `bun -e`
 
 A coordinator called the claims/slots reservation functions directly via an
-inline `bun -e` snippet instead of the `forge` CLI. The snippet's positional
+inline `bun -e` snippet instead of the `emet` CLI. The snippet's positional
 arguments were in the wrong order, and the mistake wasn't caught — the
 ticket dispatched with no working mutex at all, silently. This is why the
-rule is "always go through the `forge` CLI", not "call the underlying
+rule is "always go through the `emet` CLI", not "call the underlying
 function correctly": an untypechecked one-off snippet has no argument names
 to get right in the first place.
 
@@ -22,11 +22,11 @@ closes:
 - **INC-281 wave 2**: two worktrees ended up claiming the same ticket, with
   nothing distinguishing the canonical one from the duplicate.
 - **INC-321**: a worker's bootstrap step (the `git worktree lock` call) was
-  skipped, leaving a worktree under `.claude/worktrees/` with no `/forge:run`
+  skipped, leaving a worktree under `.claude/worktrees/` with no `/emet:run`
   lock reason at all — unattributable to any run, and indistinguishable from
   an ordinary interactive worktree doing unrelated work.
 
-`forge preflight --post-dispatch`, run immediately after every dispatch
+`emet preflight --post-dispatch`, run immediately after every dispatch
 batch, catches both shapes (plus two sibling shapes: two worker branches for
 the same ticket number, and a worktree whose checked-out branch doesn't
 match its own lock's ticket) before any worker has had a chance to commit.
@@ -35,8 +35,8 @@ The extraction of this machinery into a standalone CLI briefly made INC-321
 structurally guaranteed rather than merely possible: the audit and the
 parser came along, but the `git worktree lock` command itself did not —
 it lived only as a `{{bootstrap_steps}}` placeholder each target repo was
-expected to fill in by hand. `forge lock-reason` (Phase 6) and bootstrap
-step 0 of `${CLAUDE_PLUGIN_ROOT}/forge/reference/worker-prompt.md` close that: the coordinator asks the
+expected to fill in by hand. `emet lock-reason` (Phase 6) and bootstrap
+step 0 of `${CLAUDE_PLUGIN_ROOT}/emet/reference/worker-prompt.md` close that: the coordinator asks the
 CLI for the reason, the worker runs one literal command with it, and the CLI
 refuses to emit a reason its own parser can't read back.
 
@@ -49,7 +49,7 @@ _launching_ worktree's own `.claude/worktrees/`. Three separate runs
 non-main git worktree of the same repo) measured the opposite: every agent
 worktree landed under the **main checkout's** `.claude/worktrees/` instead,
 regardless of which worktree dispatched it. The path-prefix filter then
-matched zero entries, and `forge preflight --post-dispatch` printed
+matched zero entries, and `emet preflight --post-dispatch` printed
 `0 worktree(s) checked ... OK` — a vacuous pass, not a real one — silently
 turning off all four of its enforcement gates for every Orca-launched wave.
 
@@ -73,7 +73,7 @@ again.
 A `code-review` fan-out of 8 `angle-*`-style finder sub-agents hung for
 ~1h45m with transcripts that had stopped growing entirely — no notification
 of its own, because a hung roster produces no completion event to notify on.
-This is why Phase 8 polls `forge usage --stalled` while waiting on a
+This is why Phase 8 polls `emet usage --stalled` while waiting on a
 fan-out, instead of only watching for the completion notification, and why
 a stalled roster gets `TaskStop`'d and retried at a smaller fan-out rather
 than waited out indefinitely.
@@ -161,7 +161,7 @@ GrowthBook flag `tengu_cobalt_plinth_larch` (Artifact types / quickstart),
 which got flipped on between 2.1.269 and 2.1.278 with no corresponding
 changelog entry. `types` is checked before `canvas`, so once it's on,
 `canvas` is unreachable regardless of whether the canvas skill itself is
-enabled — the forge lost the ability to invoke `/design` at all and started
+enabled — the emet lost the ability to invoke `/design` at all and started
 handing the step back to the user mid-run.
 
 The obvious workaround — `CLAUDE_CODE_ARTIFACT_TYPES=0` (or `false`) to force
@@ -183,31 +183,31 @@ without ever depending on which mode `/design` happens to resolve to. This is
 why Phase 5 now publishes canvases through `Artifact` directly and never
 invokes `/design` or asks the user to run it.
 
-## The harness drops the forge lock when an agent exits
+## The harness drops the emet lock when an agent exits
 
 Four coordinators (`turban`, `charybdis`, `guitarfish`, `taimen`, each an
-Orca worktree of the same repo) ran `/forge:run` at once. Their `forge
+Orca worktree of the same repo) ran `/emet:run` at once. Their `emet
 preflight` calls repeatedly failed on **each other's** worktrees, sometimes
 for hours after the owning wave had already dispatched them. Traced to one
 worktree (ticket INC-553): `git worktree list --porcelain` showed `locked
 forge run=run550 ticket=CLA-553 …` while its worker was still running, and no
-lock at all a few hours later, worker long finished. Nothing in `/forge:run`
+lock at all a few hours later, worker long finished. Nothing in `/emet:run`
 itself ever ran `git worktree unlock` on it — the harness's own `Agent
 isolation:"worktree"` unlocks a worker's worktree the moment its agent
-process exits, dropping whatever lock reason was there, `/forge:run`'s own or
+process exits, dropping whatever lock reason was there, `/emet:run`'s own or
 not.
 
 Without a lock, `resolveWorktreeOwner` returns `null` and the worktree falls
 through to the unowned `content-fallback` path, which — before this was
 fixed — was always a hard failure regardless of content. That blocked every
 sibling coordinator's dispatch on residue from a run that had already
-finished cleanly, for as long as its own `forge cleanup --run` hadn't run
+finished cleanly, for as long as its own `emet cleanup --run` hadn't run
 yet (which can be hours, since cleanup happens at wave close-out, not
 worker exit). This is why worktree ownership now falls back to the live
 ticket reservation (`claims.ts`, `resolveWorktreeOwnerWithReservations` in
 `worktrees.ts`) when the lock itself is gone — reservations are released
-only by `forge cleanup --run`/`--force`, so they outlive a dropped lock —
+only by `emet cleanup --run`/`--force`, so they outlive a dropped lock —
 and why the worker prompt's bootstrap step 0 now always `unlock`s before
 `lock`ing (the harness's own generic lock made every worker's first attempt
 at step 0 fail outright, which is a separate but related symptom of the
-same root cause: the harness manages this lock too, not just `/forge:run`).
+same root cause: the harness manages this lock too, not just `/emet:run`).
