@@ -37,6 +37,7 @@ Research for the brand kit, run 1. Options and recommendations only; no decision
 - [`brand/README.md`](brand/README.md): index of the brand research and the decisions still pending.
 - [`brand/brief.md`](brand/brief.md): the approved brand brief: position, audience, voice, what to avoid and closed decisions.
 - [`brand/voice.md`](brand/voice.md): the emet voice: we are, we are not, tone by context, terminology and the avoid list.
+- [`brand/apply-spec.md`](brand/apply-spec.md): where each kit asset will be used, how to regenerate the rasters and the manual steps.
 - [`brand/copy.md`](brand/copy.md): approved public copy with the claims checked against the CLI and the open short description.
 - [`brand/tokens.css`](brand/tokens.css): emet design tokens: P2 Moss palette in oklch (light and dark), T2 fonts and type scale.
 - [`brand/naming.md`](brand/naming.md): the selected name `emet`, its story, availability and risks.
