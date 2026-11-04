@@ -11,6 +11,7 @@ open.
 Research documents:
 
 - `docs/brand/brief.md`: the approved brand brief (position, audience, voice, what to avoid, closed decisions), from the maintainer interview of 2026-11-04.
+- `docs/brand/naming.md`: the selected name `emet` with its story, availability checks and risks.
 - `docs/brand/competitors.md`: tools that orchestrate coding agents from a spec
   or ticket to a merged change, with positioning lessons and territories to
   avoid.
