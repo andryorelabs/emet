@@ -67,7 +67,7 @@ import path from "node:path";
 
 import { configureTicketPattern, listReservations, releaseTicket } from "./claims";
 import { ForgeConfigError, requireForgeConfig, resolveRepoRoot, type ForgeConfig } from "./config";
-import { resolveLandedVerdict, type LandedVerdict } from "./landed";
+import { resolveLandedVerdict, type LandedContext, type LandedVerdict } from "./landed";
 import { optionalProperty } from "./optional";
 import {
   classifyRun,
@@ -391,7 +391,49 @@ type ReclaimContext = {
   readonly worktreeEntries: readonly WorktreeEntry[];
   readonly agentBranches: readonly BranchEntry[];
   readonly workerBranches: readonly BranchEntry[];
+  readonly liveDirectoryNames?: ReadonlySet<string>;
+  readonly resolveState?: (owner: WorktreeOwner, entry: WorktreeEntry) => Promise<RunState>;
+  readonly readTrackerState?: LandedContext["readTrackerState"];
 };
+
+/**
+ * Whether a reclaim may stamp the run closed: only a real `--run` sweep that
+ * ended with no failures. Any failed removal or branch deletion leaves the
+ * run open so the next sweep retries it.
+ */
+export function shouldMarkRunClosed(
+  mode: Exclude<CleanupMode, "all">,
+  runId: string | null,
+  dryRun: boolean,
+  failureCount: number,
+): boolean {
+  return !dryRun && mode === "run" && runId !== null && failureCount === 0;
+}
+
+/**
+ * `worktree-agent-*` scaffold branches nothing refers to anymore: not checked
+ * out in any worktree, and no `.claude/worktrees/<id>` directory registered
+ * for them. Their worktree is already gone, so they carry no live work and
+ * are always safe to delete, whichever run created them.
+ */
+export function findOrphanedScaffoldBranches(
+  agentBranches: readonly BranchEntry[],
+  worktreeEntries: readonly WorktreeEntry[],
+  liveDirectoryNames: ReadonlySet<string>,
+): string[] {
+  const checkedOut = new Set<string>();
+  for (const entry of worktreeEntries) {
+    if (entry.branch !== null) checkedOut.add(entry.branch);
+  }
+  return agentBranches
+    .filter(
+      (branch) =>
+        branch.worktreePath.length === 0 &&
+        !checkedOut.has(branch.name) &&
+        !isWorktreeAgentBranchLive(branch.name, liveDirectoryNames),
+    )
+    .map((branch) => branch.name);
+}
 
 async function resolveRunState(
   owner: WorktreeOwner,
@@ -430,7 +472,7 @@ function branchesOfEntry(entry: WorktreeEntry, agentBranchNames: ReadonlySet<str
  * Everything else lands in `protectedLines` (active or unattributable) or is
  * silently out of scope. No mutations.
  */
-async function collectUnits(
+export async function collectUnits(
   context: ReclaimContext,
 ): Promise<{ units: ReclaimUnit[]; protectedLines: string[]; outOfScope: number }> {
   const { config, mode, runId, idleThresholdMs, worktreeEntries } = context;
@@ -458,7 +500,9 @@ async function collectUnits(
     );
     if (branches.length === 0) return;
     if (mode === "finished") {
-      const state = await resolveRunState(owner, entry, idleThresholdMs);
+      const state = context.resolveState
+        ? await context.resolveState(owner, entry)
+        : await resolveRunState(owner, entry, idleThresholdMs);
       if (state !== "closed" && state !== "dead") {
         protectedLines.push(`${branches[0]} (run ${owner.runId}, ${state}) — run is active`);
         return;
@@ -517,7 +561,7 @@ async function reclaimUnit(unit: ReclaimUnit): Promise<string[]> {
   return failures;
 }
 
-async function reclaimOwnedWorktrees(context: ReclaimContext): Promise<void> {
+export async function reclaimOwnedWorktrees(context: ReclaimContext): Promise<void> {
   const { config, mode, runId, dryRun, trunkRef, mainSha } = context;
   const scopeLabel = mode === "run" ? ` — run ${runId}` : " — closed or dead runs";
   console.log(`forge:cleanup — ${trunkRef} ${mainSha}${dryRun ? " (dry run)" : ""}${scopeLabel}\n`);
@@ -529,7 +573,7 @@ async function reclaimOwnedWorktrees(context: ReclaimContext): Promise<void> {
     // oxlint-disable-next-line eslint/no-await-in-loop -- sequential on purpose: later iterations depend on earlier ones or on output order
     const landed = await resolveLandedVerdict(
       { ticket: unit.owner.ticket, branch: unit.branches[0]! },
-      { config },
+      { config, ...optionalProperty("readTrackerState", context.readTrackerState) },
     );
     // oxlint-disable-next-line eslint/no-await-in-loop -- sequential on purpose: later iterations depend on earlier ones or on output order
     const isDirty = await isWorktreeDirty(unit.entry.directory);
@@ -537,9 +581,17 @@ async function reclaimOwnedWorktrees(context: ReclaimContext): Promise<void> {
     planned.push({ unit, landed, plan });
   }
 
+  const claimedBranches = new Set(units.flatMap((unit) => unit.branches));
+  const orphanedScaffolds = findOrphanedScaffoldBranches(
+    context.agentBranches,
+    context.worktreeEntries,
+    context.liveDirectoryNames ?? new Set<string>(),
+  ).filter((branch) => !claimedBranches.has(branch));
+
   const reclaimedRuns = new Set<string>();
   const failures: string[] = [];
   const removed: string[] = [];
+  const removedScaffolds: string[] = [];
   for (const { unit, plan } of planned) {
     if (plan !== "remove") continue;
     const where = unit.directoryExists ? unit.entry.directory : unit.branches[0];
@@ -558,8 +610,25 @@ async function reclaimOwnedWorktrees(context: ReclaimContext): Promise<void> {
     }
   }
 
+  for (const branch of orphanedScaffolds) {
+    if (dryRun) {
+      removedScaffolds.push(branch);
+      continue;
+    }
+    // oxlint-disable-next-line eslint/no-await-in-loop -- sequential on purpose: later iterations depend on earlier ones or on output order
+    const result = await deleteBranch(branch);
+    if (result.ok) removedScaffolds.push(branch);
+    else failures.push(result.message);
+  }
+
   console.log(`${dryRun ? "Would reclaim" : "Reclaimed"} ${removed.length} worktree(s):`);
   for (const label of removed) console.log(`  - ${label}`);
+  if (removedScaffolds.length > 0) {
+    console.log(
+      `\n${dryRun ? "Would delete" : "Deleted"} ${removedScaffolds.length} orphaned scaffold branch(es):`,
+    );
+    for (const branch of removedScaffolds) console.log(`  - ${branch}`);
+  }
 
   const keptDirty = planned.filter((item) => item.plan === "keep-dirty");
   if (keptDirty.length > 0) {
@@ -599,7 +668,7 @@ async function reclaimOwnedWorktrees(context: ReclaimContext): Promise<void> {
         );
       }
     }
-    if (mode === "run" && runId !== null && failures.length === 0) {
+    if (runId !== null && shouldMarkRunClosed(mode, runId, dryRun, failures.length)) {
       await markRunClosed(runId);
       console.log(`\nRun ${runId} marked closed.`);
     }
@@ -660,6 +729,7 @@ async function main(config: ForgeConfig) {
       worktreeEntries,
       agentBranches: worktreeAgentBranches,
       workerBranches: aoBranches,
+      liveDirectoryNames: liveWorktreeDirectoryNames,
     });
     return;
   }
