@@ -4,7 +4,8 @@ An index of every document in this repository. Terms follow [GLOSSARY.md](../GLO
 
 ## Core
 
-- [`README.md`](../README.md): install, requirements, usage and the config reference.
+- [`README.md`](../README.md): the project front page: what emet is, a quickstart and links into the guide and reference.
+- [`llms.txt`](../llms.txt): an llmstxt.org index of the guide, reference and project pages for language models.
 - [`architecture.md`](architecture.md): code map of `emet/src` and how the `/emet` prompts drive the CLI.
 - [`troubleshooting.md`](troubleshooting.md): `emet doctor` and `emet preflight` failures, by symptom.
 - [`CHANGELOG.md`](../CHANGELOG.md): release notes, newest first.

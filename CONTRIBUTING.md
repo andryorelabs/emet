@@ -14,6 +14,8 @@ This repository uses [bun](https://bun.sh) only. Install the root dev tooling wi
 `package.json` scripts before running anything, and do not run the build unless
 asked.
 
+To try the tool itself, see [Getting started](docs/guide/getting-started.md); the config keys are in the [configuration reference](docs/reference/configuration.md).
+
 ## Branch naming and commit format
 
 Work happens on feature branches, never by pushing directly to `main` or

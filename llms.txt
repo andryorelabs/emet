@@ -1,0 +1,26 @@
+# emet
+
+> Spec to merge, on one approval.
+
+emet is a plugin for Claude Code that takes a feature from idea to merged change: interview, spec, tickets, one approval, then parallel workers in isolated worktrees, a review per wave and CI green before merge.
+
+## Guide
+
+- [Getting started](docs/guide/getting-started.md): requirements, both install paths and the first run
+- [Trackers and landing](docs/guide/trackers-and-landing.md): GitHub, Linear and local trackers, landing modes, chaining waves
+- [Models and effort](docs/guide/models-and-effort.md): the model and effort per role, risk-tier routing and Haiku triage
+- [Fleet check](docs/guide/fleet.md): audit several repos at once with `emet doctor`
+
+## Reference
+
+- [Configuration](docs/reference/configuration.md): every `emet.config.json` key with its default
+- [CLI](docs/reference/cli.md): every subcommand, the gates and records table, exit codes and environment variables
+- [Dependencies](docs/reference/dependencies.md): what emet needs installed and which command checks it
+
+## Project
+
+- [Architecture](docs/architecture.md): code map of `emet/src` and how the prompts drive the CLI
+- [Troubleshooting](docs/troubleshooting.md): `emet doctor` and `emet preflight` failures, by symptom
+- [Architecture decisions](docs/adr/README.md): the ADR index
+- [AGENTS.md](AGENTS.md): instructions for coding agents
+- [Changelog](CHANGELOG.md): release notes, newest first
