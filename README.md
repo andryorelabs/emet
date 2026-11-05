@@ -54,10 +54,12 @@ Requirements: Claude Code, `git`, `gh` (authenticated) and the `mattpocock-skill
 
 2. In your repo, set it up and check it:
 
-   ```bash
-   emet init
-   emet doctor .
    ```
+   /emet:init
+   /emet:doctor
+   ```
+
+   In a plain terminal, `emet init` and `emet doctor .` work only after `install.sh`.
 
 3. Inside Claude Code:
 

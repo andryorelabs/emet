@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { createHash } from "node:crypto";
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
 
@@ -17,6 +17,8 @@ import {
   checkSelfCheckCommand,
   checkSettingsAdvisories,
   findDeprecatedConfigFields,
+  deadGuardHookFix,
+  findDeadGuardHooks,
   findDoubleInstall,
   findGlossaryWarnings,
   findInstallDrift,
@@ -800,6 +802,85 @@ describe("findDeprecatedConfigFields", () => {
   });
 });
 
+function settingsWith(command: string, event = "Stop"): unknown {
+  return { hooks: { [event]: [{ matcher: "", hooks: [{ type: "command", command }] }] } };
+}
+
+describe("findDeadGuardHooks", () => {
+  test("reports a hook whose path does not exist", () => {
+    const command = "/Users/x/.local/bin/forge guard";
+    expect(findDeadGuardHooks(settingsWith(command), () => false)).toEqual([
+      { event: "Stop", command },
+    ]);
+  });
+
+  test("is silent when the binary exists", () => {
+    expect(findDeadGuardHooks(settingsWith("/a/b/emet guard"), () => true)).toEqual([]);
+  });
+
+  test("looks a bare name up by name", () => {
+    const seen: string[] = [];
+    const found = findDeadGuardHooks(settingsWith("emet guard --x"), (binary) => {
+      seen.push(binary);
+      return true;
+    });
+    expect(found).toEqual([]);
+    expect(seen).toEqual(["emet"]);
+  });
+
+  test("skips commands with other variables but keeps $HOME", () => {
+    expect(findDeadGuardHooks(settingsWith("$FOO/bin/forge guard"), () => false)).toEqual([]);
+    expect(findDeadGuardHooks(settingsWith("$HOME/bin/forge guard"), () => false)).toHaveLength(1);
+  });
+
+  test("ignores other commands, missing hooks and non-objects", () => {
+    expect(findDeadGuardHooks(settingsWith("/a/forge guardian"), () => false)).toEqual([]);
+    expect(findDeadGuardHooks({}, () => false)).toEqual([]);
+    expect(findDeadGuardHooks(null, () => false)).toEqual([]);
+  });
+
+  test("fix removes only the dead hooks, drops emptied groups and stays valid JSON", () => {
+    const home = mkdtempSync(path.join(os.tmpdir(), "emet-dead-hooks-"));
+    try {
+      mkdirSync(path.join(home, ".claude"));
+      const deadCommand = "/Users/x/it's/forge guard";
+      const settingsPath = path.join(home, ".claude", "settings.json");
+      writeFileSync(
+        settingsPath,
+        JSON.stringify({
+          model: "opusplan",
+          hooks: {
+            Stop: [
+              { matcher: "", hooks: [{ type: "command", command: deadCommand }] },
+              {
+                matcher: "",
+                hooks: [
+                  { type: "command", command: deadCommand },
+                  { type: "command", command: "echo keep" },
+                ],
+              },
+            ],
+            Start: [{ matcher: "", hooks: [] }],
+          },
+        }),
+      );
+      const fix = deadGuardHookFix([{ event: "Stop", command: deadCommand }]);
+      const result = Bun.spawnSync(["sh", "-c", fix], { env: { ...process.env, HOME: home } });
+      expect(result.exitCode).toBe(0);
+      expect(JSON.parse(readFileSync(settingsPath, "utf8"))).toEqual({
+        model: "opusplan",
+        hooks: {
+          Stop: [{ matcher: "", hooks: [{ type: "command", command: "echo keep" }] }],
+          Start: [{ matcher: "", hooks: [] }],
+        },
+      });
+      expect(existsSync(`${settingsPath}.bak`)).toBe(true);
+    } finally {
+      rmSync(home, { recursive: true, force: true });
+    }
+  });
+});
+
 describe("findDoubleInstall", () => {
   let home: string;
   beforeEach(() => {
@@ -820,7 +901,8 @@ describe("findDoubleInstall", () => {
 
   test("warns when the plugin and the install manifest both exist", () => {
     writeManifest();
-    expect(findDoubleInstall(home, forgePlugin)).toHaveLength(1);
+    const [message] = findDoubleInstall(home, forgePlugin);
+    expect(message).toContain("~/.claude/commands/emet/");
   });
 
   test("is silent with only one install route", () => {
