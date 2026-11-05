@@ -750,9 +750,14 @@ async function cleanupIn(argv: string[], unwritable: boolean): Promise<string> {
 }
 
 describe("cleanup phase file", () => {
-  test("writes the done phase", async () => {
+  test("writes the done phase with the run id for a run sweep", async () => {
+    const root = await cleanupIn(["--run", "emet1w1"], false);
+    expect(readPhase(root)).toMatchObject({ phase: "done", runId: "emet1w1" });
+  });
+
+  test("a bare sweep does not touch another run's phase", async () => {
     const root = await cleanupIn([], false);
-    expect(readPhase(root)?.phase).toBe("done");
+    expect(readPhase(root)).toBeNull();
   });
 
   test("a dry run does not write the phase", async () => {
@@ -761,6 +766,6 @@ describe("cleanup phase file", () => {
   });
 
   test("an unwritable phase file does not change the exit code", async () => {
-    await cleanupIn([], true);
+    await cleanupIn(["--run", "emet1w1"], true);
   });
 });

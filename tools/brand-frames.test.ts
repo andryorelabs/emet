@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import sharp from "sharp";
 import { FRAME_HEIGHT, FRAME_WIDTH, type Frame, type MascotState } from "./brand-pet.ts";
+import { FRAMES } from "../mods/emet-mascot/hooks/frames.generated.ts";
 import { buildFramesModule, encodeRasterFrame } from "./brand-frames.ts";
 
 function decode(cells: string): number[] {
@@ -61,5 +62,24 @@ describe("buildFramesModule", () => {
         expect(triplets[cell * 3] ?? 0).toBeOneOf([0x20, 0x2580, 0x2584]);
       }
     });
+  });
+});
+
+describe("committed frames.generated.ts", () => {
+  test("every frame decodes to columns * rows triplets of width-1 half-block cells", () => {
+    const allowedCodePoints = new Set([0x20, 0x2580, 0x2584]);
+    for (const sizes of Object.values(FRAMES)) {
+      for (const size of Object.values(sizes)) {
+        for (const frame of size.frames) {
+          const values = decode(frame.cells);
+          expect(values.length).toBe(size.columns * size.rows * 3);
+          for (let index = 0; index < values.length; index += 3) {
+            expect(allowedCodePoints.has(values[index] ?? -1)).toBe(true);
+            expect(values[index + 1] ?? 0).toBeLessThanOrEqual(0xffffff);
+            expect(values[index + 2] ?? 0).toBeLessThanOrEqual(0xffffff);
+          }
+        }
+      }
+    }
   });
 });

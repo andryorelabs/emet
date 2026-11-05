@@ -223,13 +223,17 @@ export async function run(argv: string[]): Promise<void> {
     return;
   }
   try {
-    const result = await land({ ...parseLandArguments(argv), cwd: process.cwd() });
-    writePhase(await resolveMainWorktree(process.cwd()), {
-      phase: "landing",
-      wave: null,
-      spec: null,
-      runId: null,
-    });
+    const options = parseLandArguments(argv);
+    const result = await land({ ...options, cwd: process.cwd() });
+    const phaseRoot = await resolveMainWorktree(process.cwd()).catch(() => null);
+    if (phaseRoot !== null) {
+      writePhase(phaseRoot, {
+        phase: "landing",
+        wave: options.wave ?? null,
+        spec: options.spec,
+        runId: null,
+      });
+    }
     console.log(JSON.stringify(result));
   } catch (error: unknown) {
     if (error instanceof LandUsageError) {

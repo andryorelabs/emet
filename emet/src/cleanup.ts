@@ -957,8 +957,9 @@ export async function run(argv: string[]): Promise<void> {
      */
     configureTicketPattern(config.ticket.idPattern);
     await main(config);
-    if (!parseCleanupArguments(argv).dryRun) {
-      writePhase(repoRoot, { phase: "done", wave: null, spec: null, runId: null });
+    const { dryRun, mode, runId } = parseCleanupArguments(argv);
+    if (!dryRun && mode === "run" && !process.exitCode) {
+      writePhase(repoRoot, { phase: "done", wave: null, spec: null, runId });
     }
   } catch (error: unknown) {
     if (error instanceof ForgeConfigError || error instanceof CleanupUsageError) {

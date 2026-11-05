@@ -549,12 +549,15 @@ export async function run(argv: readonly string[] = process.argv.slice(2)): Prom
   if (markIndex !== -1) {
     try {
       const markerPath = writeFinalReportMarker(argv[markIndex + 1] ?? "");
-      writePhase((await resolveRepoRoot()) ?? process.cwd(), {
-        phase: argv.includes("--failed") ? "failed" : "done",
-        wave: null,
-        spec: null,
-        runId: null,
-      });
+      const repoRoot = await resolveRepoRoot();
+      if (repoRoot !== null) {
+        writePhase(repoRoot, {
+          phase: argv.includes("--failed") ? "failed" : "done",
+          wave: null,
+          spec: null,
+          runId: null,
+        });
+      }
       console.log(markerPath);
     } catch (error) {
       console.error(error instanceof Error ? error.message : String(error));
