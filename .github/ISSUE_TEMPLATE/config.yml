@@ -2,5 +2,5 @@ blank_issues_enabled: false
 
 contact_links:
   - name: Security Vulnerability
-    url: https://github.com/AndryOre/claude-forge/security/advisories/new
+    url: https://github.com/andryorelabs/emet/security/advisories/new
     about: Report vulnerabilities privately via GitHub Security Advisories.

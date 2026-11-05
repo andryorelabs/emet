@@ -8,8 +8,8 @@
 
 **Spec to merge, on one approval.**
 
-[![CI](https://github.com/AndryOre/emet/actions/workflows/ci.yml/badge.svg)](https://github.com/AndryOre/emet/actions/workflows/ci.yml)
-[![License: MIT](https://img.shields.io/github/license/AndryOre/emet)](LICENSE)
+[![CI](https://github.com/andryorelabs/emet/actions/workflows/ci.yml/badge.svg)](https://github.com/andryorelabs/emet/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/github/license/andryorelabs/emet)](LICENSE)
 
 Docs: [index](docs/README.md) · [architecture](docs/architecture.md) ·
 [troubleshooting](docs/troubleshooting.md) · [changelog](CHANGELOG.md)
@@ -50,7 +50,7 @@ standalone binary on first use.
 **`install.sh`** (works with or without Bun):
 
 ```bash
-git clone git@github.com:AndryOre/emet.git
+git clone git@github.com:andryorelabs/emet.git
 cd emet
 ./install.sh
 ```

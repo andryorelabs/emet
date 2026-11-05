@@ -8,6 +8,12 @@ and this project adheres to
 
 ## [Unreleased]
 
+### Changed
+
+- The repository moved to the `andryorelabs` GitHub organization. Release
+  downloads, the README badges and the clone URL now point at
+  `andryorelabs/emet`; the old `AndryOre/emet` URLs keep redirecting.
+
 ## [0.2.0] - 2026-11-05
 
 ### Changed
