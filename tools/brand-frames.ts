@@ -33,6 +33,15 @@ const BYTES_PER_PIXEL = 4;
 const FRAME_ART_HEIGHT = FRAME_WIDTH;
 const FRAME_PADDING = (FRAME_HEIGHT - FRAME_ART_HEIGHT) / 2;
 
+/** The only colours a mascot raster cell may use, as `0x00RRGGBB`. */
+export const MASCOT_PALETTE: readonly number[] = [
+  0xa5a696, 0x51852f, 0x161c17, 0xe7c952, 0xc33d43, 0x057a6d,
+];
+
+const FEATURE_COLORS: readonly number[] = [0x161c17, 0xc33d43, 0xe7c952];
+const MIN_OPAQUE_COVERAGE = 0.5;
+const MIN_FEATURE_COVERAGE = 0.25;
+
 /** A pixel: its colour as `0x00RRGGBB` and whether it is visible. */
 interface Pixel {
   color: number;
@@ -83,15 +92,89 @@ export function encodeRasterFrame(rgba: Uint8Array, columns: number, rows: numbe
   return Buffer.from(bytes).toString("base64");
 }
 
-/** Crops the transparent padding off an Orca frame and resizes the art to a square of `pixels`. */
+function colorDistance(first: number, second: number): number {
+  const red = (first >> 16) - (second >> 16);
+  const green = ((first >> 8) & 0xff) - ((second >> 8) & 0xff);
+  const blue = (first & 0xff) - (second & 0xff);
+  return red * red + green * green + blue * blue;
+}
+
+function nearestPaletteIndex(color: number): number {
+  let best = 0;
+  let bestDistance = Number.POSITIVE_INFINITY;
+  MASCOT_PALETTE.forEach((candidate, index) => {
+    const distance = colorDistance(color, candidate);
+    if (distance < bestDistance) {
+      best = index;
+      bestDistance = distance;
+    }
+  });
+  return best;
+}
+
+/** Picks the palette colour of one target block from its palette-index counts, or `undefined` when transparent. */
+function resolveBlock(counts: readonly number[], blockArea: number): number | undefined {
+  const opaqueCount = counts.reduce((sum, count) => sum + count, 0);
+  if (opaqueCount === 0 || opaqueCount / blockArea < MIN_OPAQUE_COVERAGE) return undefined;
+  const feature = FEATURE_COLORS.map((color) => MASCOT_PALETTE.indexOf(color)).find(
+    (index) => (counts[index] ?? 0) / opaqueCount >= MIN_FEATURE_COVERAGE,
+  );
+  if (feature !== undefined) return MASCOT_PALETTE[feature];
+  let best = 0;
+  counts.forEach((count, index) => {
+    if (count > (counts[best] ?? 0)) best = index;
+  });
+  return MASCOT_PALETTE[best];
+}
+
+/**
+ * Box-downsamples a square RGBA image to `targetSize` and snaps every pixel to
+ * {@link MASCOT_PALETTE}: a block is transparent below 50% opaque coverage,
+ * else the first feature colour (`#161c17`, `#c33d43`, `#e7c952`) holding at
+ * least 25% of its opaque pixels wins, else the plurality palette colour.
+ * Source pixels snap to their nearest palette colour first.
+ */
+export function downsampleToPalette(
+  rgba: Uint8Array,
+  sourceSize: number,
+  targetSize: number,
+): Uint8Array {
+  const out = new Uint8Array(targetSize * targetSize * BYTES_PER_PIXEL);
+  for (let row = 0; row < targetSize; row++) {
+    const yStart = Math.floor((row * sourceSize) / targetSize);
+    const yEnd = Math.max(yStart + 1, Math.floor(((row + 1) * sourceSize) / targetSize));
+    for (let column = 0; column < targetSize; column++) {
+      const xStart = Math.floor((column * sourceSize) / targetSize);
+      const xEnd = Math.max(xStart + 1, Math.floor(((column + 1) * sourceSize) / targetSize));
+      const counts = MASCOT_PALETTE.map(() => 0);
+      for (let y = yStart; y < yEnd; y++) {
+        for (let x = xStart; x < xEnd; x++) {
+          const pixel = readPixel(rgba, (y * sourceSize + x) * BYTES_PER_PIXEL);
+          if (!pixel.opaque) continue;
+          const index = nearestPaletteIndex(pixel.color);
+          counts[index] = (counts[index] ?? 0) + 1;
+        }
+      }
+      const color = resolveBlock(counts, (yEnd - yStart) * (xEnd - xStart));
+      if (color === undefined) continue;
+      const offset = (row * targetSize + column) * BYTES_PER_PIXEL;
+      out[offset] = color >> 16;
+      out[offset + 1] = (color >> 8) & 0xff;
+      out[offset + 2] = color & 0xff;
+      out[offset + 3] = 255;
+    }
+  }
+  return out;
+}
+
+/** Crops the transparent padding off an Orca frame and palette-snaps the art to a square of `pixels`. */
 async function frameToRgba(png: Uint8Array, pixels: number): Promise<Uint8Array> {
   const { data } = await sharp(png)
     .extract({ left: 0, top: FRAME_PADDING, width: FRAME_WIDTH, height: FRAME_ART_HEIGHT })
-    .resize(pixels, pixels, { kernel: "lanczos3" })
     .ensureAlpha()
     .raw()
     .toBuffer({ resolveWithObject: true });
-  return new Uint8Array(data);
+  return downsampleToPalette(new Uint8Array(data), FRAME_WIDTH, pixels);
 }
 
 /** Renders the generated module source for every state and size from the captured frames. */
