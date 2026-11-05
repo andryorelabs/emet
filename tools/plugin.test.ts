@@ -52,7 +52,7 @@ describe("plugin manifests", () => {
     expect(marketplace["name"]).toBe("emet-marketplace");
     expect(marketplace["allowCrossMarketplaceDependenciesOn"]).toEqual(["claude-plugins-official"]);
     const entries = asRecordArray(marketplace["plugins"]);
-    expect(entries.map((entry) => entry["name"])).toEqual([pluginName]);
+    expect(entries.map((entry) => entry["name"])).toEqual([pluginName, "emet-mascot"]);
     expect(entries[0]?.["source"]).toBe("./");
     expect(entries[0]?.["description"]).toBe(description);
   });
