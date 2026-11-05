@@ -28,7 +28,7 @@ The file holds `phase` (`planning`, `dispatch`, `working`, `review`, `checking`,
 
 ## Use the pet in Orca
 
-The pet bundle lives in `docs/brand/pet/emet/`: `pet.json` and `spritesheet.webp`. Import that folder as a custom pet in Orca's settings. Regenerate it with `bun run brand:export` after changing a mascot SVG, and commit the result.
+The pet bundle lives in `docs/brand/pet/emet/`: `pet.json` and `spritesheet.webp`. In Orca's settings, use "Import .codex-pet bundle…" and pick that folder. Regenerate it with `bun run brand:export` after changing a mascot SVG, and commit the result.
 
 ## Troubleshooting
 
