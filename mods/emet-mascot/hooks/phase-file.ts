@@ -10,9 +10,9 @@ export type PhaseName =
 
 export type PhaseRecord = {
   phase: PhaseName;
-  wave: number;
-  spec: number;
-  runId: string;
+  wave: number | null;
+  spec: string | null;
+  runId: string | null;
   updatedAt: string;
   outcome?: string;
 };
@@ -30,6 +30,14 @@ const PHASE_NAMES: ReadonlySet<string> = new Set([
 
 function isPhaseName(value: unknown): value is PhaseName {
   return typeof value === "string" && PHASE_NAMES.has(value);
+}
+
+function isNumberOrNull(value: unknown): value is number | null {
+  return value === null || typeof value === "number";
+}
+
+function isStringOrNull(value: unknown): value is string | null {
+  return value === null || typeof value === "string";
 }
 
 /**
@@ -54,9 +62,9 @@ export function parsePhaseFile(text: string): PhaseRecord | null {
   const outcome: unknown = Reflect.get(raw, "outcome");
   if (
     !isPhaseName(phase) ||
-    typeof wave !== "number" ||
-    typeof spec !== "number" ||
-    typeof runId !== "string" ||
+    !isNumberOrNull(wave) ||
+    !isStringOrNull(spec) ||
+    !isStringOrNull(runId) ||
     typeof updatedAt !== "string"
   ) {
     return null;
@@ -64,7 +72,6 @@ export function parsePhaseFile(text: string): PhaseRecord | null {
   if (outcome !== undefined && typeof outcome !== "string") {
     return null;
   }
-  return outcome === undefined
-    ? { phase, wave, spec, runId, updatedAt }
-    : { phase, wave, spec, runId, updatedAt, outcome };
+  const base = { phase, wave, spec, runId, updatedAt };
+  return outcome === undefined ? base : { ...base, outcome };
 }

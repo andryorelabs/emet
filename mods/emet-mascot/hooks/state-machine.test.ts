@@ -27,7 +27,7 @@ function phaseAt(updatedAtMs: number, phase: PhaseRecord["phase"]): PhaseRecord 
   return {
     phase,
     wave: 1,
-    spec: 1,
+    spec: "1",
     runId: "r",
     updatedAt: new Date(updatedAtMs).toISOString(),
   };
