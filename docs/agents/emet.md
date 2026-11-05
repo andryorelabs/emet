@@ -44,9 +44,11 @@ CI runs the same commands as separate `check` and `test` jobs
 ## Gates and budgets
 
 `emet verify <ticket>` runs after each worker and checks its commits, edit
-surfaces and handoff note. This repo sets no `commands.workerScopedSuite` or
-`commands.fullSuite`, so neither suite step runs. The `selfCheck` commands
-above, plus CI on the PR, are what guard the code. `emet gate` makes the
+surfaces and handoff note. This repo sets no `commands.workerScopedSuite`, so
+that step is skipped. `commands.fullSuite.run` runs `bun run check` and
+`bun run test` once on the integration branch after a wave's branches merge,
+and its result is the gate's `--integration` value, which `autoChain` needs.
+The `selfCheck` commands above, plus CI on the PR, also guard the code. `emet gate` makes the
 merge/chain decision with the default `budgets` (`workerAttempts` 2,
 `reviewRounds` 2, `stallNudgeCap` 6).
 
