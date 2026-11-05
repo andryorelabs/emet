@@ -46,6 +46,9 @@ const hashTools = {
   shasum: ["shasum", "perl"],
 };
 
+/** The slash commands install.sh ships, as `commands/<name>.md`. */
+const commandNames = ["run", "init", "doctor"] as const;
+
 let workDir = "";
 let homeDir = "";
 let toolsDir = "";
@@ -57,8 +60,15 @@ function buildFixtureRepo(): void {
   mkdirSync(path.join(fixtureRepo, "agents"), { recursive: true });
   mkdirSync(path.join(fixtureRepo, "bin"), { recursive: true });
   copyFileSync(path.join(repoRoot, "install.sh"), path.join(fixtureRepo, "install.sh"));
-  for (const directory of ["emet", "commands", ".claude-plugin"]) {
+  for (const directory of ["emet", ".claude-plugin"]) {
     symlinkSync(path.join(repoRoot, directory), path.join(fixtureRepo, directory));
+  }
+  mkdirSync(path.join(fixtureRepo, "commands"));
+  for (const commandName of commandNames) {
+    const sourcePath = path.join(repoRoot, "commands", `${commandName}.md`);
+    const fixturePath = path.join(fixtureRepo, "commands", `${commandName}.md`);
+    if (existsSync(sourcePath)) symlinkSync(sourcePath, fixturePath);
+    else writeFileSync(fixturePath, `Run \`emet ${commandName}\`.\n`);
   }
   for (const role of ["worker", "reviewer"]) {
     symlinkSync(
@@ -132,7 +142,7 @@ describeInstaller("install.sh without bun", () => {
     expect(output).toContain("bun not found");
     expect(exitCode).toBe(0);
 
-    const command = readFileSync(path.join(homeDir, ".claude/commands/emet.md"), "utf8");
+    const command = readFileSync(path.join(homeDir, ".claude/commands/emet/run.md"), "utf8");
     expect(command).toContain("emet-worker");
     expect(command).not.toMatch(/forge-(worker|reviewer)/);
     expect(command).not.toContain("${CLAUDE_PLUGIN_ROOT}");
@@ -157,7 +167,7 @@ describeInstaller("install.sh without bun", () => {
     for (const promptFile of promptFiles) {
       const content = readFileSync(promptFile, "utf8");
       expect(content).not.toContain("${CLAUDE_PLUGIN_ROOT}");
-      expect(content).not.toMatch(/(forge|emet):(forge|emet)-(worker|reviewer)|\/(forge|emet):run/);
+      expect(content).not.toMatch(/(forge|emet):(forge|emet)-(worker|reviewer)|\/forge:run/);
     }
   });
 
@@ -190,7 +200,7 @@ describeInstaller("install.sh with bun", () => {
     const wrapperPath = path.join(homeDir, ".local/bin/emet");
     expect(lstatSync(wrapperPath).isSymbolicLink()).toBe(false);
     expect(readFileSync(wrapperPath, "utf8")).toContain("emet.ts");
-    const command = readFileSync(path.join(homeDir, ".claude/commands/emet.md"), "utf8");
+    const command = readFileSync(path.join(homeDir, ".claude/commands/emet/run.md"), "utf8");
     expect(command).not.toContain("${CLAUDE_PLUGIN_ROOT}");
   });
 
@@ -208,17 +218,65 @@ describeInstaller("install.sh with bun", () => {
 });
 
 describeInstaller("install.sh prompt rewrites", () => {
-  test("rewrites the plugin command and agent names to the installed ones", () => {
-    rmSync(path.join(fixtureRepo, "commands"));
+  test("installs each command under commands/emet/ with the agent names rewritten", () => {
+    rmSync(path.join(fixtureRepo, "commands"), { recursive: true });
     mkdirSync(path.join(fixtureRepo, "commands"));
-    writeFileSync(
-      path.join(fixtureRepo, "commands", "run.md"),
-      "Run /emet:run, dispatch emet:emet-worker and emet:emet-reviewer.\n",
-    );
+    for (const commandName of commandNames) {
+      writeFileSync(
+        path.join(fixtureRepo, "commands", `${commandName}.md`),
+        `${commandName}: /emet:run, dispatch emet:emet-worker and emet:emet-reviewer.\n`,
+      );
+    }
     expect(runInstaller().exitCode).toBe(0);
-    expect(readFileSync(path.join(homeDir, ".claude/commands/emet.md"), "utf8")).toBe(
-      "Run /emet, dispatch emet-worker and emet-reviewer.\n",
-    );
+    for (const commandName of commandNames) {
+      expect(
+        readFileSync(path.join(homeDir, `.claude/commands/emet/${commandName}.md`), "utf8"),
+      ).toBe(`${commandName}: /emet:run, dispatch emet-worker and emet-reviewer.\n`);
+    }
+    expect(existsSync(path.join(homeDir, ".claude/commands/emet.md"))).toBe(false);
+  });
+
+  test("fails naming the command file that is missing from the source", () => {
+    rmSync(path.join(fixtureRepo, "commands", "doctor.md"));
+    const { exitCode, output } = runInstaller();
+    expect(exitCode).not.toBe(0);
+    expect(output).toContain("commands/doctor.md");
+    expect(existsSync(path.join(homeDir, ".claude/emet/.install-manifest.json"))).toBe(false);
+  });
+});
+
+/** Seeds an earlier install's `~/.claude/commands/emet.md` and the emet manifest recording it. */
+function seedFlatCommandInstall(options: { edited: boolean }): string {
+  const content = "earlier /emet command\n";
+  const commandPath = path.join(homeDir, ".claude/commands/emet.md");
+  mkdirSync(path.dirname(commandPath), { recursive: true });
+  mkdirSync(path.join(homeDir, ".claude/emet"), { recursive: true });
+  writeFileSync(commandPath, options.edited ? `${content}user edit\n` : content);
+  writeFileSync(
+    path.join(homeDir, ".claude/emet/.install-manifest.json"),
+    `{\n  ".claude/commands/emet.md": "${sha256(content)}"\n}\n`,
+  );
+  return commandPath;
+}
+
+describeInstaller("install.sh over an install with the flat /emet command", () => {
+  test("installs the namespaced commands and removes the unedited emet.md", () => {
+    const commandPath = seedFlatCommandInstall({ edited: false });
+    expect(runInstaller().exitCode).toBe(0);
+    for (const commandName of commandNames) {
+      expect(existsSync(path.join(homeDir, `.claude/commands/emet/${commandName}.md`))).toBe(true);
+    }
+    expect(existsSync(commandPath)).toBe(false);
+  });
+
+  test("keeps an edited emet.md and lists it in the summary", () => {
+    const commandPath = seedFlatCommandInstall({ edited: true });
+    const { exitCode, output } = runInstaller();
+    expect(exitCode).toBe(0);
+    expect(existsSync(path.join(homeDir, ".claude/commands/emet/run.md"))).toBe(true);
+    expect(readFileSync(commandPath, "utf8")).toContain("user edit");
+    expect(output).toContain("~/.claude/commands/emet.md");
+    expect(output).not.toContain("~/.claude/commands/emet.md.new");
   });
 });
 
@@ -304,7 +362,9 @@ describeInstaller("install.sh over a legacy forge install", () => {
 
     for (const emetPath of [
       ".claude/emet/.install-manifest.json",
-      ".claude/commands/emet.md",
+      ".claude/commands/emet/run.md",
+      ".claude/commands/emet/init.md",
+      ".claude/commands/emet/doctor.md",
       ".claude/agents/emet-worker.md",
       ".claude/agents/emet-reviewer.md",
       ".local/bin/emet",
