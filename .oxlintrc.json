@@ -33,7 +33,7 @@
   },
   "overrides": [
     {
-      "files": ["**/*.test.ts"],
+      "files": ["**/*.test.ts", "**/*.spec.ts"],
       "rules": {
         "jest/no-focused-tests": "error",
         "jest/no-identical-title": "error",
@@ -41,5 +41,12 @@
       }
     }
   ],
-  "ignorePatterns": [".claude/**", ".forge/**", "**/node_modules/**", "coverage/**", "dist/**"]
+  "ignorePatterns": [
+    ".claude/**",
+    ".forge/**",
+    "**/node_modules/**",
+    "coverage/**",
+    "dist/**",
+    "mods/*/hooks/**/*.tsx"
+  ]
 }
