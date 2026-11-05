@@ -16,6 +16,7 @@ import path from "node:path";
 import { loadForgeConfigWithDefaults, resolveRepoRoot } from "./config";
 import { isObject, isOneOf } from "./narrow";
 import { resolveRunDir } from "./names";
+import { writePhase } from "./phase";
 
 const USAGE = `usage: emet gate <ticket> [--run <id>] [--tier passive|medium|high]
        [--ci pass|fail|pending|none] [--integration pass|fail|pending|none]
@@ -232,6 +233,7 @@ export async function run(argv: string[]): Promise<void> {
         JSON.stringify({ count: attemptsUsedBefore + 1 }),
       );
     }
+    writePhase(repoRoot, { phase: "checking", wave: null, spec: null, runId });
     console.log(JSON.stringify(result));
   } catch (error) {
     console.error(`emet gate: ${error instanceof Error ? error.message : String(error)}`);

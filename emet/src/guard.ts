@@ -6,7 +6,9 @@ import { listReservations, type Reservation } from "./claims";
 import { writeCompletionEvent, type CompletionEvent } from "./runs";
 import { listOccupiedSlots, type SlotListEntry } from "./slots";
 import { parseWorktreeEntries, resolveWorktreeOwner } from "./worktrees";
+import { resolveRepoRoot } from "./config";
 import { isObject } from "./narrow";
+import { writePhase } from "./phase";
 import { defaultProcessTreeReader, readParent as readProcessParent } from "./proctree";
 import {
   BINARY,
@@ -546,7 +548,14 @@ export async function run(argv: readonly string[] = process.argv.slice(2)): Prom
   const markIndex = argv.indexOf("--mark-final-report");
   if (markIndex !== -1) {
     try {
-      console.log(writeFinalReportMarker(argv[markIndex + 1] ?? ""));
+      const markerPath = writeFinalReportMarker(argv[markIndex + 1] ?? "");
+      writePhase((await resolveRepoRoot()) ?? process.cwd(), {
+        phase: argv.includes("--failed") ? "failed" : "done",
+        wave: null,
+        spec: null,
+        runId: null,
+      });
+      console.log(markerPath);
     } catch (error) {
       console.error(error instanceof Error ? error.message : String(error));
       process.exitCode = 1;

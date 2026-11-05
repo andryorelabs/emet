@@ -15,8 +15,10 @@ import {
   planOrphanedScaffolds,
   planWorktreeRemoval,
   reclaimOwnedWorktrees,
+  run as runCleanup,
   shouldMarkRunClosed,
 } from "./cleanup";
+import { readPhase } from "./phase";
 import { DEFAULT_FORGE_CONFIG, type ForgeConfig } from "./config";
 import { isRunClosed } from "./runs";
 import {
@@ -716,5 +718,49 @@ describe("reclaim against a real repository", () => {
     ).toBe(true);
     expect(protectedLines.some((line) => line.includes("feature-x"))).toBe(false);
     expect(units.some((unit) => unit.branches.includes("feature-x"))).toBe(false);
+  });
+});
+
+async function cleanupIn(argv: string[], unwritable: boolean): Promise<string> {
+  const root = realpathSync(mkdtempSync(path.join(os.tmpdir(), "cleanup-phase-")));
+  const git = (...args: string[]) => Bun.spawnSync(["git", "-C", root, ...args]);
+  git("init", "-q", "-b", "main");
+  git("config", "user.email", "t@example.com");
+  git("config", "user.name", "Test");
+  git("config", "commit.gpgsign", "false");
+  writeFileSync(path.join(root, "emet.config.json"), JSON.stringify({}));
+  git("add", ".");
+  git("commit", "-q", "-m", "init");
+  git("update-ref", "refs/remotes/origin/main", "HEAD");
+  if (unwritable) mkdirSync(path.join(root, ".emet", "phase.json"), { recursive: true });
+  const previousDirectory = process.cwd();
+  const previousExit = process.exitCode;
+  const logSpy = spyOn(console, "log").mockImplementation(() => undefined);
+  try {
+    process.chdir(root);
+    process.exitCode = 0;
+    await runCleanup(argv);
+    expect(process.exitCode).toBe(0);
+  } finally {
+    logSpy.mockRestore();
+    process.chdir(previousDirectory);
+    process.exitCode = previousExit ?? 0;
+  }
+  return root;
+}
+
+describe("cleanup phase file", () => {
+  test("writes the done phase", async () => {
+    const root = await cleanupIn([], false);
+    expect(readPhase(root)?.phase).toBe("done");
+  });
+
+  test("a dry run does not write the phase", async () => {
+    const root = await cleanupIn(["--dry-run"], false);
+    expect(readPhase(root)).toBeNull();
+  });
+
+  test("an unwritable phase file does not change the exit code", async () => {
+    await cleanupIn([], true);
   });
 });
