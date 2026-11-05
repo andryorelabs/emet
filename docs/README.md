@@ -38,7 +38,7 @@ An index of every document in this repository. Terms follow [GLOSSARY.md](../GLO
 
 ## How-to guides
 
-- [`how-to/orca-pet.md`](how-to/orca-pet.md): install the optional `emet-mascot` plugin, read the phase file it follows and import the Orca pet bundle.
+- [`how-to/mascot.md`](how-to/mascot.md): install the optional `emet-mascot` plugin, read the phase file it follows and import the Orca pet bundle.
 - [`how-to/cut-a-release.md`](how-to/cut-a-release.md): the release runbook: version bump, changelog, develop to main PR, tag and the CI-gated release.
 
 ## Decisions
