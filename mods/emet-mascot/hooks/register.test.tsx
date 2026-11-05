@@ -191,6 +191,34 @@ test("pane position falls back to the band once the pane is no longer placed", a
   await band.unmount();
 });
 
+test("a pane closed after seating inline is not reopened by the next band render", async ($, on) => {
+  on("clock.now", () => ({ value: 1000 }));
+  on("ui.panes", () => ({ value: paneList(true) }));
+  on("ui.render", engineText);
+  let opens = 0;
+  on("ui.open", () => {
+    opens += 1;
+    return { value: { isPlaced: true } };
+  });
+  on("ui.close", () => ({ value: undefined }));
+  const wideBand = {
+    ...BAND,
+    props: { ...bandProps(false), bodyColumns: 150 },
+    viewport: { columns: 150, rows: 40, isFullscreen: true },
+  } as const;
+
+  const first = await $.ui.mount(wideBand);
+  await first.unmount();
+  expect(opens).toBe(1);
+
+  const inline = await $.ui.mount({ ...PANE, props: paneProps("inline") });
+  await inline.unmount();
+
+  const second = await $.ui.mount(wideBand);
+  await second.unmount();
+  expect(opens).toBe(1);
+});
+
 test("a pane that turns inline while still placed hands the mascot back to the band", async ($, on) => {
   on("clock.now", () => ({ value: 1000 }));
   on("ui.panes", () => ({ value: paneList(true) }));

@@ -18,6 +18,7 @@ const PANE_ID = "emet-mascot";
 const PHASE_PATH = ".emet/phase.json";
 const MASCOT_KEY = "mascot";
 const LABEL_RESERVE_COLUMNS = 24;
+const UNASKED_PANE_MIN_COLUMNS = 144;
 
 const machineAtom = atom({ plugin: "emet-mascot", key: "machine" } as const, initialMachineState);
 const phaseAtom = atom(
@@ -106,6 +107,8 @@ const paint = {
   isDocked: false,
   wasDocked: false,
   isPaneOpened: false,
+  bandColumns: 0,
+  blockedColumns: null as number | null,
   lastStatus: undefined as string | undefined,
 };
 let timer: { cancel: () => void } | null = null;
@@ -175,6 +178,7 @@ export const register: Register = (on, options) => {
     paint.isDocked = false;
     paint.wasDocked = false;
     paint.isPaneOpened = false;
+    paint.blockedColumns = null;
     return next(e);
   });
 
@@ -218,6 +222,7 @@ export const register: Register = (on, options) => {
     if (!paint.isDocked) {
       if (paint.isPaneOpened) {
         paint.isPaneOpened = false;
+        paint.blockedColumns = paint.bandColumns;
         void $.ui.close({ id: PANE_ID });
       }
       return next(e);
@@ -242,7 +247,17 @@ export const register: Register = (on, options) => {
 
   on("ui.render", { component: "AbovePrompt" }, async ($, e, next) => {
     if (e.surface !== "terminal" || e.props.hasSurvey || position === "status") return next(e);
-    if (position === "pane" && e.viewport?.isFullscreen === true && !paint.isPaneOpened) {
+    paint.bandColumns = e.props.bodyColumns;
+    if (paint.blockedColumns !== null && paint.blockedColumns !== e.props.bodyColumns) {
+      paint.blockedColumns = null;
+    }
+    if (
+      position === "pane" &&
+      e.viewport?.isFullscreen === true &&
+      !paint.isPaneOpened &&
+      paint.blockedColumns === null &&
+      e.props.bodyColumns >= UNASKED_PANE_MIN_COLUMNS
+    ) {
       paint.isPaneOpened = true;
       void $.ui.open({ id: PANE_ID, title: "emet" });
     }
