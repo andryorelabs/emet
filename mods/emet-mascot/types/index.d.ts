@@ -25,6 +25,6 @@ export type MascotPhase = {
 
 declare module "claude-code" {
   interface PluginState {
-    "emet-mascot": { machine: MascotMachine; phase: MascotPhase | null };
+    "emet-mascot": { machine: MascotMachine; phase: MascotPhase | null; reported: string[] };
   }
 }

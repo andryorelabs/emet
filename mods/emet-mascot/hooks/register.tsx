@@ -4,8 +4,13 @@ import type { EngineInterface, Register } from "claude-code";
 import { FRAMES } from "./frames.generated.ts";
 import { parsePhaseFile } from "./phase-file.ts";
 import type { PhaseRecord } from "./phase-file.ts";
-import { initialMachineState, nextState } from "./state-machine.ts";
-import type { SessionEvent } from "./state-machine.ts";
+import {
+  PHASE_FRESH_MS,
+  TRANSIENT_DECAY_MS,
+  initialMachineState,
+  nextState,
+} from "./state-machine.ts";
+import type { MachineState, SessionEvent } from "./state-machine.ts";
 
 const TICK_MS = 100;
 const PHASE_POLL_MS = 2000;
@@ -18,6 +23,8 @@ const phaseAtom = atom(
   { plugin: "emet-mascot", key: "phase" } as const,
   null as PhaseRecord | null,
 );
+
+const reportedAtom = atom({ plugin: "emet-mascot", key: "reported" } as const, [] as string[]);
 
 type Engine = Pick<EngineInterface, "clock" | "state" | "fs" | "agent" | "session">;
 
@@ -33,18 +40,40 @@ function frameIndexAt(frames: readonly { ms: number }[], elapsedMs: number): num
   return 0;
 }
 
-function labelFor(state: string, phase: PhaseRecord | null): string {
-  if (phase !== null && state !== "sleep") {
+/** Whether the state machine draws its state from this phase record at `nowMs`. */
+function isPhaseInUse(machine: MachineState, phase: PhaseRecord | null, nowMs: number): boolean {
+  if (phase === null || machine.state === "sleep" || machine.state === "waiting") return false;
+  if (machine.state === "error" && machine.transient === "error") return false;
+  const age = nowMs - Date.parse(phase.updatedAt);
+  if (Number.isNaN(age) || age > PHASE_FRESH_MS) return false;
+  if (phase.phase === "done" || phase.phase === "failed") return age < TRANSIENT_DECAY_MS;
+  return true;
+}
+
+function labelFor(machine: MachineState, phase: PhaseRecord | null, nowMs: number): string {
+  if (phase !== null && isPhaseInUse(machine, phase, nowMs)) {
     const wave = phase.wave === null ? "" : ` · wave ${String(phase.wave)}`;
     return `emet${wave} · ${phase.phase}`;
   }
-  return `emet · ${state}`;
+  return `emet · ${machine.state}`;
+}
+
+function isSameMachine(left: MachineState, right: MachineState): boolean {
+  return (
+    left.state === right.state &&
+    left.working === right.working &&
+    left.waiting === right.waiting &&
+    left.transient === right.transient &&
+    left.transientSince === right.transientSince
+  );
 }
 
 async function dispatch($: Engine, kind: SessionEvent["kind"]): Promise<void> {
   const at = await $.clock.now();
   const phase = await read($, phaseAtom);
-  await update($, machineAtom, (machine) => nextState(machine, { kind, at }, phase, at));
+  const current = await read($, machineAtom);
+  const next = nextState(current, { kind, at }, phase, at);
+  if (!isSameMachine(current, next)) await update($, machineAtom, () => next);
 }
 
 async function readPhaseFile($: Engine): Promise<PhaseRecord | null> {
@@ -57,9 +86,13 @@ async function readPhaseFile($: Engine): Promise<PhaseRecord | null> {
   }
 }
 
-async function hasFailedAgent($: Engine): Promise<boolean> {
+async function reportNewFailures($: Engine): Promise<void> {
   const agents = await $.agent.list();
-  return agents.some((agent) => agent.status === "failed");
+  const failed = agents.filter((agent) => agent.status === "failed").map((agent) => agent.id);
+  const reported = await read($, reportedAtom);
+  if (!failed.some((id) => !reported.includes(id))) return;
+  await update($, reportedAtom, () => failed);
+  await dispatch($, "agent-failed");
 }
 
 const paint = { requestId: null as string | null, startedAt: 0, lastPoll: 0, last: "" };
@@ -71,7 +104,7 @@ async function tick($: Engine, size: "small" | "medium"): Promise<void> {
     paint.lastPoll = now;
     const phase = await readPhaseFile($);
     await update($, phaseAtom, () => phase);
-    if (await hasFailedAgent($)) await dispatch($, "agent-failed");
+    await reportNewFailures($);
   }
   await dispatch($, "tick");
   if (paint.requestId === null) return;
@@ -91,7 +124,11 @@ export const register: Register = (on, options) => {
   on("session.start", async ($, e, next) => {
     paint.startedAt = await $.clock.now();
     timer?.cancel();
-    timer = $.clock.every(TICK_MS, () => void tick($, size));
+    timer = $.clock.every(TICK_MS, () => {
+      tick($, size).catch((error: unknown) => {
+        $.ui.log(`emet-mascot tick failed: ${String(error)}`, { to: "debug" });
+      });
+    });
     return next(e);
   });
 
@@ -108,7 +145,7 @@ export const register: Register = (on, options) => {
 
   on("turn.complete", async ($, e, next) => {
     await dispatch($, "turn-complete");
-    if (await hasFailedAgent($)) await dispatch($, "agent-failed");
+    await reportNewFailures($);
     return next(e);
   });
 
@@ -123,15 +160,10 @@ export const register: Register = (on, options) => {
   });
 
   on("tool.call", { tool: "AskUserQuestion" }, async ($, e, next) => {
+    await dispatch($, "question");
     const result = await next(e);
     await dispatch($, "question-done");
     return result;
-  });
-
-  on("ui.render", { component: "AskUserQuestion" }, async ($, e, next) => {
-    const machine = await read($, machineAtom);
-    if (!machine.waiting) await dispatch($, "question");
-    return next(e);
   });
 
   on("ui.render", { component: "AbovePrompt" }, async ($, e, next) => {
@@ -140,7 +172,8 @@ export const register: Register = (on, options) => {
     const phase = await read($, phaseAtom);
     const sheet = FRAMES[machine.state][size];
     if (e.props.bodyColumns < sheet.columns) return next(e);
-    const index = frameIndexAt(sheet.frames, (await $.clock.now()) - paint.startedAt);
+    const nowMs = await $.clock.now();
+    const index = frameIndexAt(sheet.frames, nowMs - paint.startedAt);
     const frame = sheet.frames[index];
     if (frame === undefined) return next(e);
     paint.requestId = e.requestId;
@@ -151,7 +184,7 @@ export const register: Register = (on, options) => {
       <Box flexDirection="row">
         <Raster key={MASCOT_KEY} columns={sheet.columns} rows={sheet.rows} cells={frame.cells} />
         {showLabel && hasRoomForLabel ? (
-          <Text dimColor> {labelFor(machine.state, phase)}</Text>
+          <Text dimColor> {labelFor(machine, phase, nowMs)}</Text>
         ) : null}
       </Box>
     );

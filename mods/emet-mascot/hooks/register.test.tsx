@@ -1,4 +1,4 @@
-import { expect, test } from "claude-code/testing";
+import { expect, mock, test } from "claude-code/testing";
 
 const BAND = {
   plugin: "emet-mascot",
@@ -81,4 +81,55 @@ test("a failed subagent reads as error", async ($, on) => {
     turnId: "t1",
   });
   expect(await shownState($)).toBe("error");
+});
+
+test("a question tool call reads as waiting while the question is open", async ($, on) => {
+  on("clock.now", () => ({ value: 1000 }));
+  on("agent.list", () => ({ value: [] }));
+  let during: string | undefined;
+  on("tool.call", async () => {
+    during = await shownState($);
+    return { result: {} };
+  });
+
+  await $.tool.call({ tool: "AskUserQuestion", questions: [] });
+  expect(during).toBe("waiting");
+  expect(await shownState($)).toBe("sleep");
+});
+
+test("a failed subagent that stays listed decays to sleep", async ($, on) => {
+  const clock = mock.clock(on, { now: 1000 });
+  on("agent.list", () => ({ value: [FAILED_AGENT] }));
+  on("session.cwd", () => ({ value: "/repo" }));
+  on("fs.exists", () => ({ value: false }));
+  on("session.start", (_, e) => ({ cwd: e.cwd }));
+
+  await $.session.start({ cwd: "/repo", surface: "terminal", isInteractive: true });
+  await clock.advance(2500);
+  expect(await shownState($)).toBe("error");
+  await clock.advance(21_000);
+  expect(await shownState($)).toBe("sleep");
+});
+
+test("a stale phase record is not shown in the label", async ($, on) => {
+  const clock = mock.clock(on, { now: Date.parse("2026-01-01T01:00:00Z") });
+  on("agent.list", () => ({ value: [] }));
+  on("session.cwd", () => ({ value: "/repo" }));
+  on("fs.exists", () => ({ value: true }));
+  on("fs.read", () => ({
+    value: JSON.stringify({
+      phase: "review",
+      wave: 2,
+      spec: "s",
+      runId: "r",
+      updatedAt: "2026-01-01T00:00:00Z",
+    }),
+  }));
+  on("turn.start", (_, e) => ({ turnId: e.turnId }));
+  on("session.start", (_, e) => ({ cwd: e.cwd }));
+
+  await $.session.start({ cwd: "/repo", surface: "terminal", isInteractive: true });
+  await $.turn.start({ text: "hi", turnId: "t1" });
+  await clock.advance(2500);
+  expect(await shownState($)).toBe("work");
 });
