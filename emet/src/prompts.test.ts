@@ -9,6 +9,8 @@ const REPO_ROOT = resolve(import.meta.dir, "..", "..");
  * is a reviewed decision: edit the number here, in the same PR as the growth.
  */
 const BYTE_CEILINGS: Readonly<Record<string, number>> = {
+  "commands/doctor.md": 570,
+  "commands/init.md": 570,
   "commands/run.md": 8270,
   "emet/reference/incidents.md": 12950,
   "emet/reference/phases-1-5.md": 11300,
@@ -46,7 +48,10 @@ function listMarkdown(directory: string): string[] {
     .map((name) => `${directory}/${name}`);
 }
 
-const PINNED_FILES = ["commands/run.md", ...PINNED_DIRECTORIES.flatMap(listMarkdown)].toSorted();
+const PINNED_FILES = [
+  ...listMarkdown("commands"),
+  ...PINNED_DIRECTORIES.flatMap(listMarkdown),
+].toSorted();
 
 describe("prompt byte budget", () => {
   test("every prompt file has a pinned ceiling and every ceiling has a file", () => {

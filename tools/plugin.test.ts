@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { existsSync, readdirSync, readFileSync } from "node:fs";
+import { readdirSync, readFileSync } from "node:fs";
 import path from "node:path";
 
 const repoRoot = path.resolve(import.meta.dir, "..");
@@ -32,7 +32,8 @@ const description =
   "Spec to merge on one approval: parallel workers in isolated worktrees, a review per wave, CI green before merge.";
 
 function promptFiles(): string[] {
-  const files = ["commands/run.md"].filter((file) => existsSync(path.join(repoRoot, file)));
+  const files: string[] = [];
+  for (const file of readdirSync(path.join(repoRoot, "commands"))) files.push(`commands/${file}`);
   for (const file of readdirSync(path.join(repoRoot, "agents"))) files.push(`agents/${file}`);
   return files;
 }
@@ -61,6 +62,26 @@ describe("plugin manifests", () => {
       "emet-reviewer.md",
       "emet-worker.md",
     ]);
+  });
+
+  test("commands/ holds exactly doctor.md, init.md and run.md", () => {
+    const expected = ["doctor.md", "init.md", "run.md"];
+    const unexpected = readdirSync(path.join(repoRoot, "commands")).filter(
+      (file) => !expected.includes(file),
+    );
+    expect(unexpected).toEqual([]);
+    expect(readdirSync(path.join(repoRoot, "commands")).toSorted()).toEqual(expected);
+  });
+
+  test("each command has a description and runs its emet subcommand", () => {
+    for (const [file, call] of [
+      ["init.md", "emet init"],
+      ["doctor.md", "emet doctor"],
+    ] as const) {
+      const text = readFileSync(path.join(repoRoot, "commands", file), "utf8");
+      expect(text).toMatch(/^---\ndescription: .+\n---\n/);
+      expect(text).toContain(call);
+    }
   });
 
   test("no manifest, agent or hook contains forge", () => {
