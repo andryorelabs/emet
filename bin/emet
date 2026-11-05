@@ -45,7 +45,7 @@ if [ ! -x "$cached_binary" ]; then
     *) fail "unsupported architecture $(uname -m)" ;;
   esac
   asset="emet-$os-$arch"
-  base_url=${EMET_RELEASE_BASE_URL:-${FORGE_RELEASE_BASE_URL:-https://github.com/AndryOre/emet/releases/download}}
+  base_url=${EMET_RELEASE_BASE_URL:-${FORGE_RELEASE_BASE_URL:-https://github.com/andryorelabs/emet/releases/download}}
   release_url="$base_url/v$version"
 
   if command -v sha256sum >/dev/null 2>&1; then
