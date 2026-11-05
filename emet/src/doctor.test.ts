@@ -1,6 +1,16 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { createHash } from "node:crypto";
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import {
+  existsSync,
+  lstatSync,
+  mkdirSync,
+  mkdtempSync,
+  readdirSync,
+  readFileSync,
+  rmSync,
+  symlinkSync,
+  writeFileSync,
+} from "node:fs";
 import os from "node:os";
 import path from "node:path";
 
@@ -17,6 +27,8 @@ import {
   checkSelfCheckCommand,
   checkSettingsAdvisories,
   findDeprecatedConfigFields,
+  deadGuardHookFix,
+  findDeadGuardHooks,
   findDoubleInstall,
   findGlossaryWarnings,
   findInstallDrift,
@@ -800,6 +812,138 @@ describe("findDeprecatedConfigFields", () => {
   });
 });
 
+function settingsWith(command: string, event = "Stop"): unknown {
+  return { hooks: { [event]: [{ matcher: "", hooks: [{ type: "command", command }] }] } };
+}
+
+describe("findDeadGuardHooks", () => {
+  test("reports a hook whose path does not exist", () => {
+    const command = "/Users/x/.local/bin/forge guard";
+    expect(findDeadGuardHooks(settingsWith(command), () => false)).toEqual([
+      { event: "Stop", command },
+    ]);
+  });
+
+  test("is silent when the binary exists", () => {
+    expect(findDeadGuardHooks(settingsWith("/a/b/emet guard"), () => true)).toEqual([]);
+  });
+
+  test("looks a bare name up by name", () => {
+    const seen: string[] = [];
+    const found = findDeadGuardHooks(settingsWith("emet guard --x"), (binary) => {
+      seen.push(binary);
+      return true;
+    });
+    expect(found).toEqual([]);
+    expect(seen).toEqual(["emet"]);
+  });
+
+  test("skips commands with other variables but keeps $HOME", () => {
+    expect(findDeadGuardHooks(settingsWith("$FOO/bin/forge guard"), () => false)).toEqual([]);
+    expect(findDeadGuardHooks(settingsWith("$HOME/bin/forge guard"), () => false)).toHaveLength(1);
+  });
+
+  test("ignores other commands, missing hooks and non-objects", () => {
+    expect(findDeadGuardHooks(settingsWith("/a/forge guardian"), () => false)).toEqual([]);
+    expect(findDeadGuardHooks({}, () => false)).toEqual([]);
+    expect(findDeadGuardHooks(null, () => false)).toEqual([]);
+  });
+
+  test("fix removes only the dead hooks, drops emptied groups and stays valid JSON", () => {
+    const home = mkdtempSync(path.join(os.tmpdir(), "emet-dead-hooks-"));
+    try {
+      mkdirSync(path.join(home, ".claude"));
+      const deadCommand = "/Users/x/it's/forge guard";
+      const settingsPath = path.join(home, ".claude", "settings.json");
+      writeFileSync(
+        settingsPath,
+        JSON.stringify({
+          model: "opusplan",
+          hooks: {
+            Stop: [
+              { matcher: "", hooks: [{ type: "command", command: deadCommand }] },
+              {
+                matcher: "",
+                hooks: [
+                  { type: "command", command: deadCommand },
+                  { type: "command", command: "echo keep" },
+                ],
+              },
+            ],
+            Start: [{ matcher: "", hooks: [] }],
+          },
+        }),
+      );
+      const fix = deadGuardHookFix([{ event: "Stop", command: deadCommand }]);
+      const result = Bun.spawnSync(["sh", "-c", fix], { env: { ...process.env, HOME: home } });
+      expect(result.exitCode).toBe(0);
+      expect(JSON.parse(readFileSync(settingsPath, "utf8"))).toEqual({
+        model: "opusplan",
+        hooks: {
+          Stop: [{ matcher: "", hooks: [{ type: "command", command: "echo keep" }] }],
+          Start: [{ matcher: "", hooks: [] }],
+        },
+      });
+      expect(
+        readdirSync(path.join(home, ".claude")).some((name) =>
+          name.startsWith("settings.json.bak-"),
+        ),
+      ).toBe(true);
+      expect(existsSync(`${settingsPath}.tmp`)).toBe(false);
+    } finally {
+      rmSync(home, { recursive: true, force: true });
+    }
+  });
+
+  test("fix keeps a symlinked settings.json and an earlier backup intact", () => {
+    const home = mkdtempSync(path.join(os.tmpdir(), "emet-dead-hooks-link-"));
+    try {
+      mkdirSync(path.join(home, ".claude"));
+      const realSettings = path.join(home, "dotfiles-settings.json");
+      const linkedSettings = path.join(home, ".claude", "settings.json");
+      const earlierBackup = path.join(home, ".claude", "settings.json.bak");
+      writeFileSync(earlierBackup, "earlier");
+      writeFileSync(realSettings, JSON.stringify(settingsWith("/gone/forge guard")));
+      symlinkSync(realSettings, linkedSettings);
+      const fix = deadGuardHookFix([{ event: "Stop", command: "/gone/forge guard" }]);
+      const result = Bun.spawnSync(["sh", "-c", fix], { env: { ...process.env, HOME: home } });
+      expect(result.exitCode).toBe(0);
+      expect(lstatSync(linkedSettings).isSymbolicLink()).toBe(true);
+      expect(JSON.parse(readFileSync(realSettings, "utf8"))).toEqual({ hooks: { Stop: [] } });
+      expect(readFileSync(earlierBackup, "utf8")).toBe("earlier");
+    } finally {
+      rmSync(home, { recursive: true, force: true });
+    }
+  });
+
+  test("doctor prints the dead hook warning, keeps its exit code and never writes settings.json", () => {
+    const home = mkdtempSync(path.join(os.tmpdir(), "emet-dead-hooks-run-"));
+    try {
+      mkdirSync(path.join(home, ".claude"));
+      const settingsPath = path.join(home, ".claude", "settings.json");
+      const deadCommand = "/Users/x/.local/bin/forge guard";
+      const runDoctor = (): { exitCode: number; stdout: string } => {
+        const result = Bun.spawnSync(["bun", path.join(import.meta.dir, "doctor.ts"), home], {
+          env: { ...process.env, HOME: home, EMET_SKIP_DEPENDENCY_CHECKS: "1" },
+        });
+        return { exitCode: result.exitCode, stdout: result.stdout.toString() };
+      };
+      const without = runDoctor();
+      writeFileSync(settingsPath, JSON.stringify(settingsWith(deadCommand)));
+      const before = readFileSync(settingsPath, "utf8");
+      const withHook = runDoctor();
+      expect(withHook.exitCode).toBe(without.exitCode);
+      expect(withHook.stdout).toContain("Stop");
+      expect(withHook.stdout).toContain(deadCommand);
+      expect(withHook.stdout).toContain("jq");
+      expect(without.stdout).not.toContain(deadCommand);
+      expect(readFileSync(settingsPath, "utf8")).toBe(before);
+    } finally {
+      rmSync(home, { recursive: true, force: true });
+    }
+  });
+});
+
 describe("findDoubleInstall", () => {
   let home: string;
   beforeEach(() => {
@@ -820,7 +964,8 @@ describe("findDoubleInstall", () => {
 
   test("warns when the plugin and the install manifest both exist", () => {
     writeManifest();
-    expect(findDoubleInstall(home, forgePlugin)).toHaveLength(1);
+    const [message] = findDoubleInstall(home, forgePlugin);
+    expect(message).toContain("~/.claude/commands/emet/");
   });
 
   test("is silent with only one install route", () => {

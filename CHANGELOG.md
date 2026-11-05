@@ -13,6 +13,12 @@ and this project adheres to
 - The repository moved to the `andryorelabs` GitHub organization. Release
   downloads, the README badges and the clone URL now point at
   `andryorelabs/emet`; the old `AndryOre/emet` URLs keep redirecting.
+- Standalone installs rename `/emet` to `/emet:run`, matching the plugin.
+  `install.sh` now installs `commands/run.md`, `init.md` and `doctor.md` to
+  `~/.claude/commands/emet/`, so `/emet:run`, `/emet:init` and `/emet:doctor`
+  are available without the plugin. The old `~/.claude/commands/emet.md` is
+  removed when unedited; an edited copy is kept and listed in the install
+  summary.
 
 ## [0.2.0] - 2026-11-05
 

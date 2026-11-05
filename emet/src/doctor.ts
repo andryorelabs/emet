@@ -880,8 +880,87 @@ export function findDoubleInstall(
     findPluginByName(plugins, LEGACY_PRODUCT) !== null;
   if (!installedByScript || !pluginInstalled) return [];
   return [
-    "emet is installed both as a plugin and by install.sh; remove one (uninstall the plugin, or delete ~/.claude/emet, ~/.claude/commands/emet.md and the emet agents)",
+    "emet is installed both as a plugin and by install.sh; remove one (uninstall the plugin, or delete ~/.claude/emet, ~/.claude/commands/emet/ and the emet agents)",
   ];
+}
+
+const GUARD_HOOK_PATTERN = /^(\S*\/)?(forge|emet) guard( |$)/;
+const SETTINGS_FILE_SHELL_PATH = '"$HOME/.claude/settings.json"';
+const SETTINGS_BACKUP_SHELL_PATH = '"$HOME/.claude/settings.json.bak-$(date +%Y%m%d%H%M%S)"';
+const SETTINGS_TEMP_SHELL_PATH = '"$HOME/.claude/settings.json.tmp"';
+
+const REMOVE_DEAD_HOOKS_JQ_FILTER =
+  '.hooks |= (if type == "object" then with_entries(.value |= (if type == "array" then ' +
+  'map(if (.hooks | type) == "array" then (.hooks | length) as $before | ' +
+  '.hooks |= map(select((.command // "") as $c | $dead | index($c) | not)) | ' +
+  "if $before > 0 and (.hooks | length) == 0 then empty else . end else . end) else . end)) else . end)";
+
+export interface DeadGuardHook {
+  readonly event: string;
+  readonly command: string;
+}
+
+/**
+ * Finds `forge guard` / `emet guard` hooks in a parsed settings.json whose
+ * binary no longer exists. `binaryExists` receives the command's first word
+ * (a path possibly starting with `~` or `$HOME`, or a bare name). Commands with
+ * any other `$` variable are skipped because their target cannot be resolved.
+ */
+export function findDeadGuardHooks(
+  settings: unknown,
+  binaryExists: (command: string) => boolean,
+): readonly DeadGuardHook[] {
+  if (!isObject(settings) || !isObject(settings.hooks)) return [];
+  const found: DeadGuardHook[] = [];
+  for (const [event, groups] of Object.entries(settings.hooks)) {
+    if (!Array.isArray(groups)) continue;
+    for (const group of groups) {
+      if (!isObject(group) || !Array.isArray(group.hooks)) continue;
+      for (const hook of group.hooks) {
+        if (!isObject(hook) || typeof hook.command !== "string") continue;
+        const command = hook.command;
+        if (!GUARD_HOOK_PATTERN.test(command)) continue;
+        if (command.replace("$HOME", "").includes("$")) continue;
+        const binary = command.split(" ")[0] ?? command;
+        if (binaryExists(binary)) continue;
+        if (!found.some((entry) => entry.event === event && entry.command === command)) {
+          found.push({ event, command });
+        }
+      }
+    }
+  }
+  return found;
+}
+
+function quoteForShell(value: string): string {
+  return `'${value.replaceAll("'", `'\\''`)}'`;
+}
+
+/**
+ * Builds a copy-pasteable shell command that backs up settings.json and
+ * removes exactly the given hooks with `jq`, dropping groups left with no hooks.
+ */
+export function deadGuardHookFix(hooks: readonly DeadGuardHook[]): string {
+  const deadCommands = JSON.stringify([...new Set(hooks.map((hook) => hook.command))]);
+  return (
+    `cp ${SETTINGS_FILE_SHELL_PATH} ${SETTINGS_BACKUP_SHELL_PATH} && ` +
+    `jq --argjson dead ${quoteForShell(deadCommands)} ${quoteForShell(REMOVE_DEAD_HOOKS_JQ_FILTER)} ` +
+    `${SETTINGS_FILE_SHELL_PATH} > ${SETTINGS_TEMP_SHELL_PATH} && ` +
+    `cat ${SETTINGS_TEMP_SHELL_PATH} > ${SETTINGS_FILE_SHELL_PATH} && ` +
+    `rm ${SETTINGS_TEMP_SHELL_PATH}`
+  );
+}
+
+function expandHomePrefix(binary: string): string {
+  const home = os.homedir();
+  if (binary.startsWith("~/")) return path.join(home, binary.slice(2));
+  if (binary.startsWith("$HOME/")) return path.join(home, binary.slice(6));
+  return binary;
+}
+
+function guardBinaryExists(binary: string): boolean {
+  if (!binary.includes("/")) return Bun.which(binary) !== null;
+  return existsSync(expandHomePrefix(binary));
 }
 
 async function readUserSettings(): Promise<unknown> {
@@ -943,12 +1022,21 @@ async function main(targets: readonly string[]): Promise<void> {
     );
   }
 
-  const settingsAdvisories = checkSettingsAdvisories(await readUserSettings());
+  const userSettings = await readUserSettings();
+  const settingsAdvisories = checkSettingsAdvisories(userSettings);
   if (settingsAdvisories.length > 0) {
     console.log(
       `\nSettings advisories (~/.claude/settings.json, never auto-fixed):\n${settingsAdvisories
         .map((advisory) => `  - ${advisory}`)
         .join("\n")}`,
+    );
+  }
+
+  const deadGuardHooks = findDeadGuardHooks(userSettings, guardBinaryExists);
+  if (deadGuardHooks.length > 0) {
+    const lines = deadGuardHooks.map((hook) => `  - warning: ${hook.event}: ${hook.command}`);
+    console.log(
+      `\nDead guard hooks (binary not found; sessions fail with "No such file or directory"):\n${lines.join("\n")}\nFix (backs up settings.json, then removes only these hooks):\n  ${deadGuardHookFix(deadGuardHooks)}`,
     );
   }
 

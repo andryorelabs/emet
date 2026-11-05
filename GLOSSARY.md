@@ -1,6 +1,6 @@
 # emet
 
-emet (formerly claude-forge) is the global `/emet` command for Claude Code plus the `emet` CLI that turns a feature request into a spec, tickets, and parallel worktree agents that implement, test and merge it unattended.
+emet is the `/emet:run` command for Claude Code plus the `emet` CLI that turns a feature request into a spec, tickets, and parallel worktree agents that implement, test and merge it unattended.
 
 ## Language
 

@@ -12,6 +12,7 @@ A repo that still has only `forge.config.json`, `.forge/` or `FORGE_*` variables
 - [A dependency check fails](#a-dependency-check-fails)
 - [no longer documents a flag in --help](#no-longer-documents-a-flag-in---help)
 - [An installed file is missing or was edited since install](#an-installed-file-is-missing-or-was-edited-since-install)
+- [Stop hook error: forge: No such file or directory](#stop-hook-error-forge-no-such-file-or-directory)
 - [No free worker slots](#no-free-worker-slots)
 - [Expected locked worktrees, found fewer](#expected-locked-worktrees-found-fewer)
 - [A ticket is claimed by several worktrees or branches](#a-ticket-is-claimed-by-several-worktrees-or-branches)
@@ -65,6 +66,14 @@ A repo that still has only `forge.config.json`, `.forge/` or `FORGE_*` variables
 **Cause:** The installed copy no longer matches the install manifest.
 
 **Fix:** Re-run `install.sh`. If a pending `.new` file exists beside an edited file, merge it or delete it.
+
+## Stop hook error: forge: No such file or directory
+
+**Symptom:** Claude Code prints `Stop hook error: … forge: No such file or directory` (or the same for `emet`) at the end of every turn.
+
+**Cause:** `~/.claude/settings.json` still has a `forge guard` or `emet guard` hook whose binary was moved or removed.
+
+**Fix:** Run `emet doctor .`. It lists each dead guard hook with its event and prints one `cp … && jq …` command that backs up `settings.json` and removes only those hooks. Doctor never edits the file itself.
 
 ## No free worker slots
 
