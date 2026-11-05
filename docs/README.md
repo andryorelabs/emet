@@ -22,6 +22,12 @@ An index of every document in this repository. Terms follow [GLOSSARY.md](../GLO
 - [`SUPPORT.md`](../.github/SUPPORT.md): where to ask for help.
 - [`PULL_REQUEST_TEMPLATE.md`](../.github/PULL_REQUEST_TEMPLATE.md): the checklist every PR shows.
 
+## Reference
+
+- [`reference/configuration.md`](reference/configuration.md): every `emet.config.json` key with its default and meaning.
+- [`reference/cli.md`](reference/cli.md): every `emet` subcommand, the gates and records table, exit codes and `EMET_*` environment variables.
+- [`reference/dependencies.md`](reference/dependencies.md): what emet needs installed and which of init, doctor and preflight checks each item.
+
 ## How-to guides
 
 - [`how-to/cut-a-release.md`](how-to/cut-a-release.md): the release runbook: version bump, changelog, develop to main PR, tag and the CI-gated release.

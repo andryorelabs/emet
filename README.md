@@ -67,7 +67,7 @@ kept with the new version written beside it as `<file>.new`.
 Recommended order, in each repo: run `/setup-matt-pocock-skills` first, then
 `emet init`.
 
-<img src="docs/brand/mascot/combo-done.svg" alt="" width="96" align="right">
+<img src="docs/brand/mascot/mascot-done.svg" alt="" width="96" align="right">
 
 Verify it worked (`selftest` needs a source install):
 
@@ -228,7 +228,7 @@ the tracker is `github` or landing is `pr`. See
 
 ## Gates, budgets and records
 
-<img src="docs/brand/mascot/combo-work.svg" alt="" width="96" align="right">
+<img src="docs/brand/mascot/mascot-work.svg" alt="" width="96" align="right">
 
 The phases don't decide on their own when a ticket is done, mergeable or
 worth retrying. They call a CLI command that reads a record on disk and
