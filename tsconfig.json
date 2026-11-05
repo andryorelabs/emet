@@ -22,5 +22,5 @@
     "forceConsistentCasingInFileNames": true,
     "erasableSyntaxOnly": true
   },
-  "include": ["tools/**/*.ts"]
+  "include": ["tools/**/*.ts", "mods/*/hooks/**/*.ts"]
 }
