@@ -228,6 +228,12 @@ describe("review ledger round trip through the CLI", () => {
     expect(findings.some((entry) => isObject(entry) && entry.status === "deferred")).toBe(true);
   });
 
+  test("a recorded round writes the review phase", () => {
+    runReview([finding({ id: "F1", severity: "minor" })]);
+    const phase: unknown = JSON.parse(readFileSync(path.join(repo, ".emet", "phase.json"), "utf8"));
+    expect(isObject(phase) && phase.phase).toBe("review");
+  });
+
   test("a corrupted ledger exits 2", () => {
     mkdirSync(path.join(repo, ".emet", "review"), { recursive: true });
     writeFileSync(

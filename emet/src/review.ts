@@ -16,6 +16,7 @@ import path from "node:path";
 import { ForgeConfigError, loadForgeConfigWithDefaults, resolveRepoRoot } from "./config";
 import { BINARY, resolveRunDir } from "./names";
 import { isOneOf } from "./narrow";
+import { writePhase } from "./phase";
 
 const USAGE = `usage: ${BINARY} review --ticket <ticket> --findings <file|-> [--changed <a,b>]
        ${BINARY} review --ticket <ticket> --escalate --model <model>
@@ -308,6 +309,7 @@ export async function run(argv: string[]): Promise<void> {
       return;
     }
     saveLedger(repoRoot, result.ledger);
+    writePhase(repoRoot, { phase: "review", wave: null, spec: null, runId: null });
     const open = triageOrder(result.ledger.findings.filter((entry) => entry.status === "open"));
     console.log(JSON.stringify({ round: result.ledger.rounds, open }, null, 2));
     process.exitCode = open.length > 0 ? 1 : 0;
