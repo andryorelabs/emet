@@ -4,6 +4,8 @@ Every `emet` subcommand, the gates and records table, exit codes and environment
 
 ## Subcommands
 
+Three slash commands wrap the CLI inside Claude Code: `/emet:run` (the pipeline), `/emet:init` (`emet init`) and `/emet:doctor` (`emet doctor .`). A plain-terminal `emet` needs `install.sh`; otherwise run `! emet <subcommand>` inside a session.
+
 `emet <command> [...args]`. `emet --version` prints the version.
 
 ### Setup and audit
