@@ -17,7 +17,7 @@ The mascot follows your session (sleeping, working, waiting, done, error). While
 
 Plugin options:
 
-- `position`: `pane` (the default), `band` or `status`. `pane` docks the mascot beside the transcript, which needs the fullscreen layout from about 110 columns; when it cannot dock, or the terminal narrows later, the mascot shows above the prompt instead. `band` always draws it above the prompt. `status` shows only the text label as the plugin status line, with no mascot art.
+- `position`: `pane` (the default), `band` or `status`. `pane` docks the mascot beside the transcript, which needs the fullscreen layout and a terminal at least 144 columns wide until you open the pane once yourself (about 110 after that); when it cannot dock, or the terminal narrows later, the mascot shows above the prompt instead. `band` always draws it above the prompt. `status` shows only the text label as the plugin status line, with no mascot art.
 - `size`: `small` (16 x 8 cells, the default) or `medium` (24 x 12 cells).
 - `showLabel`: show or hide the label beside the mascot (default on).
 
