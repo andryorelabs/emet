@@ -20,13 +20,13 @@ import {
 } from "./skills";
 
 /**
- * The third-party tools `/forge` needs, and how far this CLI will go about
+ * The third-party tools `/emet` needs, and how far this CLI will go about
  * them.
  *
- * What forge can safely automate stops at *checking*. The check itself is
+ * What emet can safely automate stops at *checking*. The check itself is
  * read-only, but `claude plugin install`, `gh auth login`, and authenticating
  * someone else's Linear MCP server are all account-level actions on the
- * *person running forge*, not on the repo. Printing the exact command and
+ * *person running emet*, not on the repo. Printing the exact command and
  * letting them decide when to run it matches how the rest of this tool
  * already treats anything it can't safely act on by itself (a `TODO(forge):`
  * marker, a warning).
@@ -350,7 +350,7 @@ export function classifyGithubCliProbe(probe: GithubCliProbe): DependencyCheck {
 }
 
 /**
- * The one thing forge deliberately does not try to verify is whether the
+ * The one thing emet deliberately does not try to verify is whether the
  * Linear MCP *connection* is authorized. That token lives in Claude Code's
  * own credential store in a format that is neither documented nor stable,
  * and its presence wouldn't prove the session is still valid anyway. So a
