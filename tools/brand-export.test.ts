@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { readFileSync } from "node:fs";
+import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import {
   ICO_SIZES,
@@ -197,5 +197,50 @@ describe("committed rasters", () => {
       const offset = view.getUint32(entry + 12, true);
       expect(ico[offset + PNG_COLOUR_TYPE_OFFSET]).toBe(TRUECOLOUR_ALPHA);
     });
+  });
+});
+
+function colours(svg: string): string[] {
+  return [...svg.matchAll(/#[0-9a-fA-F]{6}\b/g)].map((match) => match[0].toLowerCase());
+}
+
+describe("mascot states", () => {
+  const brandDirectory = join(import.meta.dir, "..", "docs", "brand");
+  const mascotDirectory = join(brandDirectory, "mascot");
+  const palette = new Set([
+    "#a5a696",
+    "#51852f",
+    "#161c17",
+    "#e7c952",
+    "#057a6d",
+    "#c33d43",
+    "#f4fdf6",
+  ]);
+
+  test("every mascot SVG uses only palette colours and the 32-unit viewBox (except the 16 px one)", () => {
+    const files = readdirSync(mascotDirectory).filter((name) => /^mascot-.*\.svg$/.test(name));
+    expect(files).toContain("mascot-waiting.svg");
+    for (const file of files) {
+      const svg = readFileSync(join(mascotDirectory, file), "utf8");
+      if (file !== "mascot-16.svg") expect(svg).toContain('viewBox="0 0 32 32"');
+      for (const colour of colours(svg)) expect(palette.has(colour)).toBe(true);
+    }
+  });
+
+  test("waiting uses the four core palette colours only", () => {
+    const svg = readFileSync(join(mascotDirectory, "mascot-waiting.svg"), "utf8");
+    expect([...new Set(colours(svg))].toSorted()).toEqual([
+      "#161c17",
+      "#51852f",
+      "#a5a696",
+      "#e7c952",
+    ]);
+  });
+
+  test("the brand README and the brandbook mention the waiting state", () => {
+    expect(readFileSync(join(brandDirectory, "README.md"), "utf8")).toContain("mascot-waiting.svg");
+    expect(readFileSync(join(brandDirectory, "brandbook", "index.html"), "utf8")).toContain(
+      "mascot-waiting.svg",
+    );
   });
 });

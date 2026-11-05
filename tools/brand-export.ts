@@ -13,8 +13,18 @@
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { pathToFileURL } from "node:url";
-import { chromium, type Browser } from "playwright";
+import { chromium, type Browser, type Page } from "playwright";
 import sharp from "sharp";
+import {
+  FRAME_HEIGHT,
+  FRAME_WIDTH,
+  type Frame,
+  type MascotState,
+  buildManifest,
+  buildRows,
+  composeSheet,
+  validateManifest,
+} from "./brand-pet.ts";
 import {
   ICO_MAX_BYTES,
   ICO_SIZES,
@@ -26,10 +36,19 @@ import {
   encodeIco,
 } from "./brand-export-spec.ts";
 
+export type { Frame, MascotState };
+
 const BRAND_DIRECTORY = join(import.meta.dir, "..", "docs", "brand");
 const MARK_SOURCE = join(BRAND_DIRECTORY, "logo", "mark.svg");
 const PNG_DIRECTORY = join(BRAND_DIRECTORY, "logo", "png");
 const OG_DIRECTORY = join(BRAND_DIRECTORY, "og");
+const MASCOT_DIRECTORY = join(BRAND_DIRECTORY, "mascot");
+const PET_DIRECTORY = join(BRAND_DIRECTORY, "pet", "emet");
+const FRAME_ART_HEIGHT = FRAME_WIDTH;
+const FRAME_PADDING = (FRAME_HEIGHT - FRAME_ART_HEIGHT) / 2;
+const ANIMATED_FRAME_COUNT = 24;
+const ANIMATED_FRAME_MS = 500;
+const STILL_FRAME_MS = 1000;
 const REQUIRED_FONTS = ["Space Grotesk", "JetBrains Mono"];
 const DEFAULT_SVG_DENSITY = 72;
 
@@ -164,10 +183,127 @@ async function exportOg(): Promise<void> {
   }
 }
 
+const STATE_SOURCES: Readonly<Record<MascotState, { file: string; animated: boolean }>> = {
+  sleep: { file: "mascot-sleep.svg", animated: false },
+  work: { file: "mascot-work-animated.svg", animated: true },
+  waiting: { file: "mascot-waiting.svg", animated: false },
+  done: { file: "mascot-done.svg", animated: false },
+  error: { file: "mascot-error.svg", animated: false },
+};
+
+/**
+ * Runs in the page: sizes the root SVG to the frame width and lets the
+ * transparent page show through. A string, because `tools/` has no DOM types.
+ */
+const FIT_SVG_SCRIPT = `(() => {
+  const root = document.documentElement;
+  root.setAttribute("width", "${FRAME_WIDTH}");
+  root.setAttribute("height", "${FRAME_ART_HEIGHT}");
+  root.style.background = "transparent";
+})()`;
+
+/**
+ * Pauses every animation of the page, seeks all of them to `timeMs` and waits
+ * until the pause has taken effect and two frames have painted.
+ */
+function seekScript(timeMs: number): string {
+  return `(async () => {
+    const animations = document.getAnimations();
+    animations.forEach((animation) => {
+      animation.pause();
+      animation.currentTime = ${timeMs};
+    });
+    await Promise.all(animations.map((animation) => animation.ready));
+    await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+  })()`;
+}
+
+/** Pads a square screenshot to the Orca frame size, transparent above and below. */
+async function padToFrame(screenshot: Uint8Array): Promise<Uint8Array> {
+  const padded = await sharp(screenshot)
+    .extend({
+      top: FRAME_PADDING,
+      bottom: FRAME_PADDING,
+      background: { r: 0, g: 0, b: 0, alpha: 0 },
+    })
+    .png()
+    .toBuffer();
+  return compressPng(new Uint8Array(padded));
+}
+
+/** Seeks the page animations to `seekMs` when given, then screenshots one padded frame. */
+async function captureFrame(page: Page, seekMs: number | undefined): Promise<Uint8Array> {
+  if (seekMs !== undefined) await page.evaluate(seekScript(seekMs));
+  const screenshot = await page.screenshot({ type: "png", omitBackground: true });
+  return padToFrame(new Uint8Array(screenshot));
+}
+
+/**
+ * Captures the frames of one mascot state in offline headless Chromium.
+ * Animated art is stepped through `document.getAnimations()` `currentTime`,
+ * never the wall clock, so two runs are byte-identical. Throws when the page
+ * asks for anything outside `file:`.
+ */
+export async function captureStateFrames(state: MascotState): Promise<Frame[]> {
+  const source = STATE_SOURCES[state];
+  const browser = await chromium.launch({ headless: true });
+  try {
+    const page = await browser.newPage({
+      viewport: { width: FRAME_WIDTH, height: FRAME_ART_HEIGHT },
+      deviceScaleFactor: 1,
+    });
+    const blocked: string[] = [];
+    await page.route("**/*", async (route) => {
+      const url = route.request().url();
+      if (url.startsWith("file:")) return route.continue();
+      blocked.push(url);
+      return route.abort();
+    });
+    await page.goto(pathToFileURL(join(MASCOT_DIRECTORY, source.file)).href, { waitUntil: "load" });
+    await page.evaluate(FIT_SVG_SCRIPT);
+    const count = source.animated ? ANIMATED_FRAME_COUNT : 1;
+    const durationMs = source.animated ? ANIMATED_FRAME_MS : STILL_FRAME_MS;
+    const frames: Frame[] = [];
+    for (let index = 0; index < count; index++) {
+      const seekMs = source.animated ? index * durationMs : undefined;
+      // oxlint-disable-next-line eslint/no-await-in-loop -- sequential on purpose: one page is seeked and screenshotted frame by frame
+      frames.push({ png: await captureFrame(page, seekMs), durationMs });
+    }
+    if (blocked.length > 0) {
+      throw new Error(`${source.file}: network requests blocked: ${blocked.join(", ")}`);
+    }
+    return frames;
+  } finally {
+    await browser.close();
+  }
+}
+
+/** Exports the Orca pet bundle `docs/brand/pet/emet/{pet.json,spritesheet.webp}`. */
+async function exportPet(): Promise<void> {
+  const [sleep, work, waiting, done, error] = await Promise.all([
+    captureStateFrames("sleep"),
+    captureStateFrames("work"),
+    captureStateFrames("waiting"),
+    captureStateFrames("done"),
+    captureStateFrames("error"),
+  ]);
+  const captured: Record<MascotState, Frame[]> = { sleep, work, waiting, done, error };
+  const rows = await buildRows(captured);
+  const sheet = await composeSheet(rows);
+  const manifest = buildManifest(rows);
+  const problems = validateManifest(manifest, sheet.byteLength);
+  if (problems.length > 0) throw new Error(`pet.json: ${problems.join("; ")}`);
+  mkdirSync(PET_DIRECTORY, { recursive: true });
+  writeFileSync(join(PET_DIRECTORY, "spritesheet.webp"), sheet);
+  writeFileSync(join(PET_DIRECTORY, "pet.json"), `${JSON.stringify(manifest, null, 2)}\n`);
+  console.log(`brand:export wrote pet bundle (spritesheet.webp ${sheet.byteLength} B)`);
+}
+
 /** Renders and checks every raster asset of the brand kit. */
 export async function exportBrand(): Promise<void> {
   await exportMarks();
   await exportOg();
+  await exportPet();
 }
 
 if (import.meta.main) await exportBrand();
