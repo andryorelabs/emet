@@ -4,7 +4,7 @@
  *
  * Historically these were nine separate `scripts/forge-*.ts` files living
  * inside `andryore-dev`, invoked via `bun run forge:<name>` aliases in that
- * repo's own `package.json`. Extracted here so `/forge` can run in *any* git
+ * repo's own `package.json`. Extracted here so `/emet` can run in *any* git
  * repo, not just one with those scripts and aliases already installed — see
  * the README for the full rationale.
  *

@@ -42,11 +42,11 @@ import { listOccupiedSlots, resolveLegacySlotsDirectory } from "./slots";
 /**
  * `emet doctor` — a read-only fleet sweep. `emet preflight` answers "is
  * dispatch safe right now" for one repo you're standing in; this answers
- * "is `/forge` even set up correctly" across every repo you point it at
- * (e.g. `forge doctor ~/code/*`, shell-glob-expanded before this ever sees
+ * "is `/emet` even set up correctly" across every repo you point it at
+ * (e.g. `emet doctor ~/code/*`, shell-glob-expanded before this ever sees
  * argv). Never writes anything, never requires a git repo it's told to
  * check to exist — a path that isn't a repo, or a repo with no
- * `forge.config.json` at all, is a normal, reportable finding, not a crash.
+ * `emet.config.json` at all, is a normal, reportable finding, not a crash.
  *
  * Also reports third-party dependency findings (see `dependencies.ts`): the
  * mattpocock-skills plugin and the `forge-worker`/`forge-reviewer` agents in
@@ -111,7 +111,7 @@ export function isReportClean(report: RepoDoctorReport): boolean {
 }
 
 /**
- * Which of the four `docs/agents/*.md` files `forge init` generates are
+ * Which of the four `docs/agents/*.md` files `emet init` generates are
  * missing at this repo root — order matches {@link REQUIRED_DOCS}, not
  * filesystem order, so a report's list is stable across runs.
  */
@@ -168,7 +168,7 @@ function parsePackageManagerRun(
  * isn't available inside a `Bun.$` template). A command that doesn't parse
  * as either
  * shape is reported as unresolved rather than silently assumed fine —
- * `forge init` never writes anything this check wouldn't recognize, so an
+ * `emet init` never writes anything this check wouldn't recognize, so an
  * unrecognized shape here means a human hand-edited `commands.selfCheck`
  * into something `emet doctor` can't verify, which is itself worth
  * surfacing.
@@ -304,7 +304,7 @@ async function isGitRepo(targetPath: string): Promise<boolean> {
   return result.exitCode === 0;
 }
 
-/** Flags forge shells out with, per external command. Presence of the binary
+/** Flags emet shells out with, per external command. Presence of the binary
  * is not enough: a CLI release that renames or drops one of these breaks a
  * wave mid-flight, so `--help` is the contract being verified. */
 const REQUIRED_CLI_FLAGS: readonly {
@@ -759,10 +759,10 @@ async function formatHostResourcesSummary(): Promise<string> {
 
 /**
  * Advisories on `~/.claude/settings.json` keys that specifically affect
- * `/forge` — never blocking, never written by this CLI (only `install.sh`'s
+ * `/emet` — never blocking, never written by this CLI (only `install.sh`'s
  * guard-hook wiring touches that file). Personal keys (theme, OTEL, IDE
  * integration, other plugins) are deliberately out of scope: this checks
- * only what determines whether an unattended `/forge` run behaves, not the
+ * only what determines whether an unattended `/emet` run behaves, not the
  * user's own preferences.
  *
  * `model: "opusplan"` is what makes Phases 1-4 (plan mode) run on Opus and
@@ -866,9 +866,9 @@ export async function findInstallDrift(homeDirectory: string): Promise<string[]>
 }
 
 /**
- * Warns when forge is installed both as a plugin and by `install.sh` (the
+ * Warns when emet is installed both as a plugin and by `install.sh` (the
  * installer's manifest is present), which would load two copies of the
- * `/forge` command and agents.
+ * `/emet` command and agents.
  */
 export function findDoubleInstall(
   homeDirectory: string,

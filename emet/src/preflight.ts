@@ -58,21 +58,21 @@ import {
 } from "./worktrees";
 
 /**
- * Local git/filesystem hygiene checks that must pass before `/forge`
+ * Local git/filesystem hygiene checks that must pass before `/emet`
  * dispatches its next wave of worktree workers. Read-only — this script
  * makes no changes, it only reports pass/fail per check. Deliberately
  * dependency-light: it never touches the Linear API, since that's a
- * separate, more expensive check `/forge`'s own Phase 0 already does by
+ * separate, more expensive check `/emet`'s own Phase 0 already does by
  * reading the docs.
  *
- * `/forge` worktrees now carry their own liveness signal: `runs.ts`'s
+ * `/emet` worktrees now carry their own liveness signal: `runs.ts`'s
  * {@link classifyRun} walks a worktree's owning run's anchor process (via
  * `resolveWorktreeOwner`'s parse of the `git worktree lock` reason each
- * worker writes at bootstrap, see `docs/agents/forge.md`) to tell a run
+ * worker writes at bootstrap, see `docs/agents/emet.md`) to tell a run
  * that's genuinely still going from one abandoned by a crashed or skipped
- * `forge:cleanup`. Only a worktree with no `/forge` lock reason at all
+ * `emet:cleanup`. Only a worktree with no `/emet` lock reason at all
  * (pre-existing worktrees, or an ordinary interactive worktree unrelated to
- * `/forge`) falls back to `cleanup.ts`'s own merge/equivalence
+ * `/emet`) falls back to `cleanup.ts`'s own merge/equivalence
  * classifier ({@link classifyByContent}).
  *
  * It does gate on third-party dependencies now (`dependencies.ts`): a repo
@@ -82,7 +82,7 @@ import {
  * calls the Linear API itself, only checks what `.mcp.json`/`claude mcp
  * list` declare. `FORGE_SKIP_DEPENDENCY_CHECKS=1` downgrades a blocking
  * finding to a warning for one invocation; it is deliberately not a CLI flag
- * — `preflight` is invoked unattended by the `/forge` coordinator, and a flag
+ * — `preflight` is invoked unattended by the `/emet` coordinator, and a flag
  * is exactly what an agent would learn to add once its own gate turns red.
  */
 
@@ -93,10 +93,10 @@ function readFlagValue(flag: string): string | undefined {
 }
 
 /**
- * Max agents `/forge` dispatches within a single wave — see
- * docs/agents/forge.md's "Concurrency" section. The cap check below fails
+ * Max agents `/emet` dispatches within a single wave — see
+ * docs/agents/emet.md's "Concurrency" section. The cap check below fails
  * unless at least this many slots are free. Sourced from
- * `forge.config.json`'s `concurrency.waveSize` (no env override — none
+ * `emet.config.json`'s `concurrency.waveSize` (no env override — none
  * existed before this config field did).
  */
 function resolveWaveSize(config: ForgeConfig): number {
@@ -105,7 +105,7 @@ function resolveWaveSize(config: ForgeConfig): number {
 
 /**
  * Config fields the schema marks deprecated because no code reads them. They
- * stay valid in existing configs; `forge doctor` warns when one is set.
+ * stay valid in existing configs; `emet doctor` warns when one is set.
  */
 export const DEPRECATED_CONFIG_FIELDS: readonly string[] = [
   "repo.commitTypes",
@@ -243,7 +243,7 @@ export interface ClassifyWorktreeEntryOptions {
 /**
  * Decides what one `.claude/worktrees/` entry means for preflight. A
  * detached worktree (no branch checked out) always needs a human. An
- * unowned entry (no `/forge` lock reason — pre-T1b, or an ordinary
+ * unowned entry (no `/emet` lock reason — pre-T1b, or an ordinary
  * interactive worktree doing unrelated feature work) falls back to
  * `classifyByContent`, decided by the caller since that classification is
  * async and git-backed. An owned entry defers to `classifyOwnerRun` (real
@@ -295,7 +295,7 @@ export function classifyWorktreeEntry(
  * `docs/agents/*.md` file for anything it couldn't infer on its own — a
  * shared singleton resource, schema/migration ownership, a Linear team key
  * (see `src/init.ts`'s templates). A repo that still carries one hasn't
- * finished being set up: dispatching against it would mean `/forge` silently
+ * finished being set up: dispatching against it would mean `/emet` silently
  * guessing at something a human was supposed to fill in, exactly the
  * half-initialized-repo failure mode this check exists to block. Pure over
  * already-read file content so it's testable without touching disk.
@@ -515,7 +515,7 @@ function ticketNumber(ticket: string): string | null {
 }
 
 /**
- * A worker's own branch convention (`docs/agents/forge.md`'s "Ticket ids
+ * A worker's own branch convention (`docs/agents/emet.md`'s "Ticket ids
  * and branches") is `<branchPrefix>-<n>-<slug>` — this checks that a
  * worktree's checked-out branch actually names the same ticket number its
  * own lock declares, so a shell mis-routed to the wrong worktree fails
@@ -745,7 +745,7 @@ export function findMissingTicketsForRun(
 }
 
 /**
- * The four post-dispatch gates from `docs/agents/forge.md` — run once,
+ * The four post-dispatch gates from `docs/agents/emet.md` — run once,
  * immediately after a wave's batch of parallel `Agent` calls returns, before
  * any worker has had a chance to commit. Unlike the default preflight mode
  * above (which only ever warns/informs about a live worktree), every finding
@@ -765,7 +765,7 @@ export function auditPostDispatch(
     readonly maxUnlockedAgeMs: number;
     readonly nowMs: number;
     readonly statMtimeMs: (directory: string) => number | null;
-    /** `ticket.branchPrefix` from `forge.config.json`. Required — see
+    /** `ticket.branchPrefix` from `emet.config.json`. Required — see
      * {@link isBranchMatchingTicket} for why this no longer defaults. */
     readonly branchPrefix: string;
   },
@@ -1300,7 +1300,7 @@ async function main(config: ForgeConfig, repoRoot: string) {
     const worktreeFailLines: string[] = [];
     /**
      * The harness's own `Agent({isolation: "worktree"})` unlocks a worker's
-     * worktree the moment its agent process exits, dropping the `/forge`
+     * worktree the moment its agent process exits, dropping the `/emet`
      * lock reason `resolveWorktreeOwner` needs (see `reference/incidents.md`
      * — "the harness drops the forge lock when an agent exits"). Ticket
      * reservations (`claims.ts`) outlive that lock, so an unlocked worktree
@@ -1451,12 +1451,12 @@ async function main(config: ForgeConfig, repoRoot: string) {
 }
 
 /**
- * Entry point invoked by the `forge` CLI dispatcher (`bin/emet.ts`) for the
+ * Entry point invoked by the `emet` CLI dispatcher (`bin/emet.ts`) for the
  * `preflight` subcommand. See `claims.ts`'s `run()` for why this stages
  * `argv` onto `process.argv` rather than threading it through `main()`/
  * `mainPostDispatch()` directly. Unlike `claims.ts --list`, preflight has no
  * read-only carve-out — it's the dispatch gate itself, so a missing or
- * malformed `forge.config.json` is always fatal (exit 2) here.
+ * malformed `emet.config.json` is always fatal (exit 2) here.
  */
 export async function run(argv: string[]): Promise<void> {
   process.argv = [process.argv[0]!, process.argv[1]!, ...argv];

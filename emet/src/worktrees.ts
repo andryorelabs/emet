@@ -14,7 +14,7 @@ import { LOCK_TOKENS } from "./names";
 
 /**
  * Whether `directory` (an absolute path, as `git worktree list --porcelain`
- * always reports) is one of `/forge`'s own agent worktrees — i.e. lives
+ * always reports) is one of `/emet`'s own agent worktrees — i.e. lives
  * under some checkout's `.claude/worktrees/`, as opposed to the main
  * checkout itself or an ordinary feature-branch worktree a human made by
  * hand.
@@ -24,7 +24,7 @@ import { LOCK_TOKENS } from "./names";
  * rev-parse --show-toplevel`, on the assumption that Claude Code's `Agent`
  * `isolation: "worktree"` always nests a new agent worktree inside the
  * *launching* worktree's own `.claude/worktrees/`. **That assumption is
- * false**: measured across three separate `/forge` runs, each launched from
+ * false**: measured across three separate `/emet` runs, each launched from
  * an Orca-managed secondary worktree
  * (`~/orca/workspaces/<repo>/{urchin,tern,hake}`), every dispatched agent
  * worktree landed under the repo's **main checkout's**
@@ -119,7 +119,7 @@ export type WorktreeEntry = {
   /**
    * The raw text after a `locked` porcelain line — `''` for `git worktree
    * lock` with no reason given, `null` when the worktree isn't locked at
-   * all. See {@link resolveWorktreeOwner} for `/forge`'s own reason format.
+   * all. See {@link resolveWorktreeOwner} for `/emet`'s own reason format.
    */
   readonly lockedReason: string | null;
   /**
@@ -215,7 +215,7 @@ export type WorktreeOwner = {
  * back into structured fields. Returns `null` for anything that isn't this
  * shape: an unlocked worktree (`lockedReason` is `null`), a human's own
  * unrelated `git worktree lock '<reason>'`, or a reason missing one of the
- * four *required* keys — never throws, since encountering a non-`/forge`
+ * four *required* keys — never throws, since encountering a non-`/emet`
  * lock is an expected, normal case. `slug` is optional precisely so a lock
  * reason written before this field existed still parses.
  */
@@ -296,14 +296,14 @@ export function findReservationForBranch(
 
 /**
  * `resolveWorktreeOwner` returns `null` for an entry whose `git worktree
- * lock` reason isn't `/forge`'s own shape — the common case now that the
+ * lock` reason isn't `/emet`'s own shape — the common case now that the
  * harness itself unlocks a worker's worktree the moment its agent process
  * exits (observed across real runs: a worktree locked `forge run=… ticket=…`
  * while its worker was live comes back with `lockedReason: null` shortly
  * after — see `reference/incidents.md`). Losing the lock must not mean
  * losing attribution: `ticket.branchPrefix`-scoped reservations
  * (`claims.ts`, shared host-wide via `--git-common-dir`, released only at
- * wave close-out by `forge cleanup --run`) outlive the lock and still say
+ * wave close-out by `emet cleanup --run`) outlive the lock and still say
  * which run owns this ticket. This tries the lock first, falling back to
  * {@link findReservationForBranch} only when the lock itself gives nothing
  * — a worktree with a *different*, unrelated lock reason (a human's own) is
@@ -356,7 +356,7 @@ export function trunkReference(remote: string, trunk: string, local: boolean): s
 
 /**
  * Resolves `<remote>/<trunk>`'s tree sha (e.g. `origin/main^{tree}`) —
- * `remote`/`trunk` come from a repo's `forge.config.json` (`repo.remote`,
+ * `remote`/`trunk` come from a repo's `emet.config.json` (`repo.remote`,
  * `repo.trunk`; see `config.ts`), replacing what used to be a hardcoded
  * `origin/main` here. Every caller must fetch `remote` first (`cleanup.ts`
  * does, right before calling this) so classification is never made against a
@@ -413,7 +413,7 @@ export function isSafeToDelete(verdict: BranchVerdict): boolean {
 }
 
 /**
- * Whether `branch` has the shape `/forge` gives its own branches: a worker
+ * Whether `branch` has the shape `/emet` gives its own branches: a worker
  * branch `<branchPrefix>-*` or a harness agent branch `worktree-agent-*`.
  */
 export function isForgeShapedBranch(branch: string, branchPrefix: string): boolean {
@@ -421,7 +421,7 @@ export function isForgeShapedBranch(branch: string, branchPrefix: string): boole
 }
 
 /**
- * Whether `entry` belongs to neither a run nor `/forge`: no owner (already
+ * Whether `entry` belongs to neither a run nor `/emet`: no owner (already
  * resolved through any claim fallback by the caller) and a branch that is not
  * forge-shaped. A detached worktree has no forge-shaped branch, so it counts
  * as foreign too.

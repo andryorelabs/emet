@@ -2,7 +2,7 @@ import { errorMessage, isOneOf } from "./narrow";
 import { BINARY, CONFIG_FILE, resolveConfigPath } from "./names";
 
 /**
- * `forge.config.json` — the per-repo config that makes `/forge`'s repo-side
+ * `emet.config.json` — the per-repo config that makes `/emet`'s repo-side
  * machinery (this CLI) work in any git repo instead of only in the one it
  * was extracted from. Strict JSON, not JSONC or YAML frontmatter:
  * see the README for why (in
@@ -15,16 +15,16 @@ import { BINARY, CONFIG_FILE, resolveConfigPath } from "./names";
  * `doctor`) actually read at runtime — `repo`, `ticket`, `concurrency`,
  * `tracker.kind`, `preflight`, `handoff`, `usage`. The rest of the full schema
  * (the remainder of `tracker`, `commands`, `worktree.bootstrap`, `commit`,
- * `schema.ownedPaths`, `design`) is consumed by the `/forge` *command* itself
+ * `schema.ownedPaths`, `design`) is consumed by the `/emet` *command* itself
  * — read directly by the model as instructions to follow, never by this code
  * — so it is type-checked by the JSON Schema at
- * `../schema/forge.config.schema.json` (for editor completion) but not
+ * `../schema/emet.config.schema.json` (for editor completion) but not
  * re-validated here. An unrecognized top-level key is never an error: this
  * file only complains about the keys it actually uses.
  */
 
 /**
- * Which issue tracker `/forge` talks to in a given repo. Lives here rather
+ * Which issue tracker `/emet` talks to in a given repo. Lives here rather
  * than in `init.ts` (which is where it was first needed) because
  * `dependencies.ts` keys its tracker-specific checks off it and `init.ts`
  * already imports from this module — the other direction would be a cycle.
@@ -109,7 +109,7 @@ export interface ForgeConfig {
   };
   readonly ticket: {
     /** Anchored regex *source* (no leading `^`/trailing `$` requirement
-     * enforced, but every built-in default and `forge init` template
+     * enforced, but every built-in default and `emet init` template
      * includes them) a ticket id must match — e.g. `^AO-\\d+$`,
      * `^#?\\d+$` for a `local`/`github`-numbered tracker. */
     readonly idPattern: string;
@@ -123,7 +123,7 @@ export interface ForgeConfig {
     readonly waveSize: number;
     /** Global, host-wide cap shared by every concurrently running
      * coordinator on this machine, across every repo — the slot pool lives
-     * under `~/.local/state/forge/slots` (see `slots.ts`), not under any one
+     * under `~/.local/state/emet/slots` (see `slots.ts`), not under any one
      * repo's `--git-common-dir`. `"auto"` (the default) derives the cap from
      * this host's own cpu/RAM (`resources.ts`'s `computeAutoMaxLiveWorkers`)
      * instead of a fixed number nobody measured. `FORGE_MAX_LIVE_WORKERS` env
@@ -135,16 +135,16 @@ export interface ForgeConfig {
     readonly runIdleThresholdMs: number;
   };
   readonly tracker: {
-    /** Which issue tracker this repo's `/forge` runs against. `null` when the
+    /** Which issue tracker this repo's `/emet` runs against. `null` when the
      * config predates this field: tracker-specific dependency checks (`gh`,
      * the Linear MCP server) are then skipped rather than guessed, since
      * defaulting to any one kind would silently hide the check a repo of
      * another kind actually needs. The rest of the `tracker` section stays
-     * prose for the `/forge` command; only `kind` is read here. */
+     * prose for the `/emet` command; only `kind` is read here. */
     readonly kind: TrackerKind | null;
   };
   readonly preflight: {
-    /** Files `forge preflight` requires to exist at the repo root before a
+    /** Files `emet preflight` requires to exist at the repo root before a
      * wave dispatches, each with a `why` shown in the failure message.
      * Generalizes what used to be a hardcoded `.env.keys` check — empty
      * means no such check runs at all. */
@@ -162,7 +162,7 @@ export interface ForgeConfig {
     readonly maxChars: number;
     /** When true, a wave that closes cleanly with a non-empty frontier
      * launches the next wave itself via `claude --bg` instead of printing
-     * the `/forge --dispatch` command for a human to paste. */
+     * the `/emet --dispatch` command for a human to paste. */
     readonly autoChain: boolean;
     /** Where a chained wave becomes visible: `auto` opens an Orca tab when
      * the session runs inside Orca, `orca` always tries, `bg` never does. */
@@ -186,14 +186,14 @@ export interface ForgeConfig {
   };
   readonly usage: {
     /** A `Read` with no `offset`/`limit` against a file over this many lines
-     * counts as "oversized" in `forge usage`'s report. */
+     * counts as "oversized" in `emet usage`'s report. */
     readonly oversizedReadLines: number;
-    /** Default `--minutes` threshold for `forge usage --stalled`. */
+    /** Default `--minutes` threshold for `emet usage --stalled`. */
     readonly stalledMinutes: number;
   };
   readonly models: {
     readonly worker: ModelChoice;
-    /** Reviewer model per risk tier `forge assess` can return. */
+    /** Reviewer model per risk tier `emet assess` can return. */
     readonly reviewer: { readonly medium: ModelChoice; readonly high: ModelChoice };
     /** Cheap model used for triage and passive-tier review. */
     readonly triage: string;
@@ -202,7 +202,7 @@ export interface ForgeConfig {
   };
   readonly review: {
     /** Extra path tokens (case-insensitive substrings) that force the `high`
-     * tier in `forge assess`, on top of the built-in set. */
+     * tier in `emet assess`, on top of the built-in set. */
     readonly highRiskPaths: readonly string[];
   };
   readonly budgets: {
@@ -243,7 +243,7 @@ export function resolveWorkerModel(config: ForgeConfig, ticketModel?: string): M
 }
 
 /**
- * Thrown for a `forge.config.json` that is absent (when the caller requires
+ * Thrown for a `emet.config.json` that is absent (when the caller requires
  * one) or malformed — never for an ordinary "no findings" result. Every
  * subcommand's `run()` catches this specifically to exit `2` (config/usage
  * error, the tool never actually ran) instead of `3` (internal error) or `1`
@@ -293,8 +293,8 @@ function isPositiveInteger(value: unknown): value is number {
 
 /**
  * Validates only the fields this CLI reads, merging anything absent from
- * `DEFAULT_FORGE_CONFIG` — a repo's `forge.config.json` need not repeat every
- * default (though `forge init` always writes the file fully materialized so
+ * `DEFAULT_FORGE_CONFIG` — a repo's `emet.config.json` need not repeat every
+ * default (though `emet init` always writes the file fully materialized so
  * a human reading it never has to guess an implicit value). Returns a
  * `reason` string, never throws, so `loadForgeConfig` can turn it into an
  * exit-2 `ForgeConfigError` with full context in the caller-chosen tier.
@@ -611,7 +611,7 @@ function validateAndMerge(
 }
 
 /**
- * Reads and validates `<repoRoot>/forge.config.json`. Never throws — callers
+ * Reads and validates `<repoRoot>/emet.config.json`. Never throws — callers
  * pick the tier-appropriate behavior for `'absent'` via
  * {@link requireForgeConfig} (gating/destructive subcommands) or
  * {@link loadForgeConfigWithDefaults} (read-only subcommands); `'malformed'`
@@ -647,7 +647,7 @@ export async function loadForgeConfig(repoRoot: string): Promise<ConfigLoadResul
  * For gating or destructive subcommands (`preflight`, `cleanup`,
  * `claims --reserve`/`--release`/`--prune`, `slots --acquire`/`--release`):
  * absent or malformed are both a hard `ForgeConfigError`. A repo with no
- * config has never declared it's safe to run `/forge` unattended against.
+ * config has never declared it's safe to run `/emet` unattended against.
  */
 export async function requireForgeConfig(repoRoot: string): Promise<ForgeConfig> {
   const result = await loadForgeConfig(repoRoot);
