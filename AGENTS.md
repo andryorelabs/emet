@@ -8,7 +8,7 @@ Guide for coding agents working in emet. Terms follow [GLOSSARY.md](GLOSSARY.md)
 - `commands/run.md`, `agents/*.md`: prompts for the `/emet` plugin command and its worker and reviewer agents. `install.sh` rewrites them and installs `commands/run.md` as `~/.claude/commands/emet.md`. See [ADR-0008](docs/adr/0008-standalone-binaries-and-plugin-distribution.md).
 - `tools/`: dev-only tests and scripts (lint plugin, invariant tests).
 - `docs/agents/`: per-repo `/emet` config prose. `docs/adr/`: architecture decisions.
-- Root: dev tooling config. `forge.config.json` is this repo's `/emet` config, still under its legacy name until `emet migrate` renames it.
+- Root: dev tooling config. `emet.config.json` is this repo's `/emet` config.
 
 ## Running scripts
 

@@ -1,6 +1,6 @@
 # Synced by .github/workflows/labels.yml. The sync never deletes labels missing from this file.
 
-# ── emet triage labels (this repo's legacy forge.config.json: tracker.triageLabels) ─────────────
+# ── emet triage labels (this repo's legacy emet.config.json: tracker.triageLabels) ─────────────
 
 - name: needs-triage
   color: "ededed"
@@ -22,7 +22,7 @@
   color: "cfd3d7"
   description: Will not be worked on
 
-# ── emet state labels (this repo's legacy forge.config.json: tracker.github.stateLabels) ────────
+# ── emet state labels (this repo's legacy emet.config.json: tracker.github.stateLabels) ────────
 
 - name: "status:todo"
   color: "c5def5"
