@@ -1,8 +1,8 @@
-# Use the emet pet and mascot
+# Use the emet mascot (Claude Code mod and Orca pet)
 
 How to show the emet **Mascot** in Claude Code and in Orca. Terms follow [GLOSSARY.md](../../GLOSSARY.md).
 
-There are two independent pieces: the optional `emet-mascot` plugin, which draws the mascot above the Claude Code prompt, and the Orca pet bundle, which gives Orca the same character.
+There are two independent pieces: the optional `emet-mascot` plugin, which draws the mascot in Claude Code, and the Orca pet bundle, which gives Orca the same character.
 
 ## Install the mascot plugin
 
@@ -15,9 +15,10 @@ claude plugin install emet-mascot@emet-marketplace
 
 The mascot follows your session (sleeping, working, waiting, done, error). While a **Run** is active it also reads the **Phase file** and shows a dim label such as `emet · wave 2 · review`.
 
-Two plugin options:
+Plugin options:
 
-- `size`: `small` (16 x 8 cells) or `medium` (24 x 12 cells, the default).
+- `position`: `pane` (the default), `band` or `status`. `pane` docks the mascot beside the transcript, which needs the fullscreen layout from about 110 columns; when it cannot dock, or the terminal narrows later, the mascot shows above the prompt instead. `band` always draws it above the prompt. `status` shows only the text label as the plugin status line, with no mascot art.
+- `size`: `small` (16 x 8 cells, the default) or `medium` (24 x 12 cells).
 - `showLabel`: show or hide the label beside the mascot (default on).
 
 ## The phase file
@@ -28,7 +29,7 @@ The file holds `phase` (`planning`, `dispatch`, `working`, `review`, `checking`,
 
 ## Use the pet in Orca
 
-The pet bundle lives in `docs/brand/pet/emet/`: `pet.json` and `spritesheet.webp`. In Orca's settings, use "Import .codex-pet bundle…" and pick that folder. Regenerate it with `bun run brand:export` after changing a mascot SVG, and commit the result.
+The pet bundle lives in `docs/brand/pet/emet/`: `pet.json` and `spritesheet.webp`. In Orca's settings, use "Import .codex-pet bundle…" and pick that folder. The import needs `docs/brand/pet/emet/` on the machine where the Orca app runs, so copy the folder there if Orca runs elsewhere than this repo. Regenerate it with `bun run brand:export` after changing a mascot SVG, and commit the result.
 
 ## Troubleshooting
 
