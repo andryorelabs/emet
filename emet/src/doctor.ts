@@ -886,7 +886,7 @@ export function findDoubleInstall(
 
 const GUARD_HOOK_PATTERN = /^(\S*\/)?(forge|emet) guard( |$)/;
 const SETTINGS_FILE_SHELL_PATH = '"$HOME/.claude/settings.json"';
-const SETTINGS_BACKUP_SHELL_PATH = '"$HOME/.claude/settings.json.bak"';
+const SETTINGS_BACKUP_SHELL_PATH = '"$HOME/.claude/settings.json.bak-$(date +%Y%m%d%H%M%S)"';
 const SETTINGS_TEMP_SHELL_PATH = '"$HOME/.claude/settings.json.tmp"';
 
 const REMOVE_DEAD_HOOKS_JQ_FILTER =
@@ -945,8 +945,9 @@ export function deadGuardHookFix(hooks: readonly DeadGuardHook[]): string {
   return (
     `cp ${SETTINGS_FILE_SHELL_PATH} ${SETTINGS_BACKUP_SHELL_PATH} && ` +
     `jq --argjson dead ${quoteForShell(deadCommands)} ${quoteForShell(REMOVE_DEAD_HOOKS_JQ_FILTER)} ` +
-    `${SETTINGS_BACKUP_SHELL_PATH} > ${SETTINGS_TEMP_SHELL_PATH} && ` +
-    `mv ${SETTINGS_TEMP_SHELL_PATH} ${SETTINGS_FILE_SHELL_PATH}`
+    `${SETTINGS_FILE_SHELL_PATH} > ${SETTINGS_TEMP_SHELL_PATH} && ` +
+    `cat ${SETTINGS_TEMP_SHELL_PATH} > ${SETTINGS_FILE_SHELL_PATH} && ` +
+    `rm ${SETTINGS_TEMP_SHELL_PATH}`
   );
 }
 

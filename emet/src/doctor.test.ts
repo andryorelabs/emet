@@ -1,6 +1,16 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { createHash } from "node:crypto";
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import {
+  existsSync,
+  lstatSync,
+  mkdirSync,
+  mkdtempSync,
+  readdirSync,
+  readFileSync,
+  rmSync,
+  symlinkSync,
+  writeFileSync,
+} from "node:fs";
 import os from "node:os";
 import path from "node:path";
 
@@ -874,7 +884,60 @@ describe("findDeadGuardHooks", () => {
           Start: [{ matcher: "", hooks: [] }],
         },
       });
-      expect(existsSync(`${settingsPath}.bak`)).toBe(true);
+      expect(
+        readdirSync(path.join(home, ".claude")).some((name) =>
+          name.startsWith("settings.json.bak-"),
+        ),
+      ).toBe(true);
+      expect(existsSync(`${settingsPath}.tmp`)).toBe(false);
+    } finally {
+      rmSync(home, { recursive: true, force: true });
+    }
+  });
+
+  test("fix keeps a symlinked settings.json and an earlier backup intact", () => {
+    const home = mkdtempSync(path.join(os.tmpdir(), "emet-dead-hooks-link-"));
+    try {
+      mkdirSync(path.join(home, ".claude"));
+      const realSettings = path.join(home, "dotfiles-settings.json");
+      const linkedSettings = path.join(home, ".claude", "settings.json");
+      const earlierBackup = path.join(home, ".claude", "settings.json.bak");
+      writeFileSync(earlierBackup, "earlier");
+      writeFileSync(realSettings, JSON.stringify(settingsWith("/gone/forge guard")));
+      symlinkSync(realSettings, linkedSettings);
+      const fix = deadGuardHookFix([{ event: "Stop", command: "/gone/forge guard" }]);
+      const result = Bun.spawnSync(["sh", "-c", fix], { env: { ...process.env, HOME: home } });
+      expect(result.exitCode).toBe(0);
+      expect(lstatSync(linkedSettings).isSymbolicLink()).toBe(true);
+      expect(JSON.parse(readFileSync(realSettings, "utf8"))).toEqual({ hooks: { Stop: [] } });
+      expect(readFileSync(earlierBackup, "utf8")).toBe("earlier");
+    } finally {
+      rmSync(home, { recursive: true, force: true });
+    }
+  });
+
+  test("doctor prints the dead hook warning, keeps its exit code and never writes settings.json", () => {
+    const home = mkdtempSync(path.join(os.tmpdir(), "emet-dead-hooks-run-"));
+    try {
+      mkdirSync(path.join(home, ".claude"));
+      const settingsPath = path.join(home, ".claude", "settings.json");
+      const deadCommand = "/Users/x/.local/bin/forge guard";
+      const runDoctor = (): { exitCode: number; stdout: string } => {
+        const result = Bun.spawnSync(["bun", path.join(import.meta.dir, "doctor.ts"), home], {
+          env: { ...process.env, HOME: home, EMET_SKIP_DEPENDENCY_CHECKS: "1" },
+        });
+        return { exitCode: result.exitCode, stdout: result.stdout.toString() };
+      };
+      const without = runDoctor();
+      writeFileSync(settingsPath, JSON.stringify(settingsWith(deadCommand)));
+      const before = readFileSync(settingsPath, "utf8");
+      const withHook = runDoctor();
+      expect(withHook.exitCode).toBe(without.exitCode);
+      expect(withHook.stdout).toContain("Stop");
+      expect(withHook.stdout).toContain(deadCommand);
+      expect(withHook.stdout).toContain("jq");
+      expect(without.stdout).not.toContain(deadCommand);
+      expect(readFileSync(settingsPath, "utf8")).toBe(before);
     } finally {
       rmSync(home, { recursive: true, force: true });
     }
