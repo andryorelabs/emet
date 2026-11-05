@@ -11,7 +11,7 @@ The full runbook is [docs/how-to/cut-a-release.md](../../../docs/how-to/cut-a-re
 ## Steps
 
 1. Confirm the version `X.Y.Z` with the user (Semantic Versioning) and that `develop` holds everything to ship.
-2. Branch `release/vX.Y.Z` from `develop`.
+2. Branch `chore/release-vX.Y.Z` from `develop`.
 3. Set `version` in `.claude-plugin/plugin.json` to `X.Y.Z`.
 4. In `CHANGELOG.md`, rename `## [Unreleased]` to `## [X.Y.Z] - <today>` and add an empty `## [Unreleased]` above it.
 5. Run `bun run check` and `bun run test`, then commit with the `git-commit` skill and open a PR into `develop`.

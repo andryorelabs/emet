@@ -4,14 +4,15 @@ import * as path from "node:path";
 import { BANNER_ANSI, BANNER_TEXT, renderBanner } from "./banner.ts";
 
 const terminalDir = path.resolve(import.meta.dir, "../../docs/brand/terminal");
+const itWithBrandKit = fs.existsSync(terminalDir) ? it : it.skip;
 
 describe("banner art", () => {
-  it("is byte-identical to docs/brand/terminal/banner.ansi", () => {
+  itWithBrandKit("is byte-identical to docs/brand/terminal/banner.ansi", () => {
     const expected = fs.readFileSync(path.join(terminalDir, "banner.ansi"));
     expect(Buffer.from(BANNER_ANSI, "utf8").equals(expected)).toBe(true);
   });
 
-  it("is byte-identical to docs/brand/terminal/banner.txt", () => {
+  itWithBrandKit("is byte-identical to docs/brand/terminal/banner.txt", () => {
     const expected = fs.readFileSync(path.join(terminalDir, "banner.txt"));
     expect(Buffer.from(BANNER_TEXT, "utf8").equals(expected)).toBe(true);
   });
