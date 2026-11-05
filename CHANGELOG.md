@@ -19,6 +19,9 @@ and this project adheres to
   backup-then-`jq` command to remove them. It never edits the file.
 - Mascot foundations: a phase file, the pet bundle, a mod state machine,
   the remaining phase writers and raster frames.
+- `emet-mascot`, an optional plugin that shows a pixel mascot above the prompt
+  and mirrors the session and the `emet` run phase. It is listed in the
+  marketplace, with a how-to for the Orca pet and ADR-0016.
 
 ### Fixed
 
