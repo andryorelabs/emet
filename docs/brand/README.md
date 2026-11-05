@@ -18,6 +18,7 @@ Research documents:
 - `docs/brand/brandbook/fonts/OFL.md`: licenses of the two brandbook fonts.
 - [`apply-spec.md`](apply-spec.md): maps each kit asset to the repository surface it will feed, with the manual steps (social preview upload, trademark check, rename ticket).
 - Raster exports from `bun run brand:export` (`tools/brand-export.ts`): `logo/png/mark-{16,32,48,128,512}.png`, `logo/png/favicon.ico` and `og/{cover,cover-light,social-preview,social-preview-light}.png`.
+- `docs/brand/mascot/mascot-*.svg`: the mascot states `sleep`, `work`, `waiting`, `done` and `error`, plus `work-animated`, `mono` and `16`. `mascot-waiting.svg` has the lamps looking up and three amber dots; the pet bundle in `docs/brand/pet/emet/` is built from these.
 - [ADR-0014](../adr/0014-brand-kit-in-docs-brand.md): why the kit lives in `docs/brand/` and how the rasters are generated.
 - `docs/brand/naming.md`: the selected name `emet` with its story, availability checks and risks.
 - `docs/brand/competitors.md`: tools that orchestrate coding agents from a spec
