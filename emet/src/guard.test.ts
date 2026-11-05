@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, realpathSync, rmSync, writeFileSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
 
@@ -23,8 +23,10 @@ import {
   evaluateGuard,
   hasLiveSiblingRun,
   readParentPid,
+  run as runGuard,
   type PreToolUseHookInput,
 } from "./guard";
+import { readPhase } from "./phase";
 import type { SlotHolder } from "./slots";
 
 function makeHolder(overrides: Partial<SlotHolder> = {}): SlotHolder {
@@ -502,5 +504,60 @@ describe("evaluateGuard destructive commands", () => {
       process.pid,
     );
     expect(verdict.decision).toBe("allow");
+  });
+});
+
+async function markIn(argv: string[]): Promise<{ root: string; state: string }> {
+  const root = realpathSync(mkdtempSync(path.join(os.tmpdir(), "guard-phase-")));
+  const state = path.join(root, "state");
+  Bun.spawnSync(["git", "init", "-q", root]);
+  const previousDirectory = process.cwd();
+  const previousState = process.env.EMET_STATE_DIR;
+  const originalLog = console.log;
+  process.env.EMET_STATE_DIR = state;
+  console.log = () => undefined;
+  try {
+    process.chdir(root);
+    await runGuard(argv);
+  } finally {
+    console.log = originalLog;
+    process.chdir(previousDirectory);
+    if (previousState === undefined) delete process.env.EMET_STATE_DIR;
+    else process.env.EMET_STATE_DIR = previousState;
+  }
+  return { root, state };
+}
+
+describe("--mark-final-report phase file", () => {
+  test("writes done by default and failed with --failed", async () => {
+    const done = await markIn(["--mark-final-report", "sess-1"]);
+    expect(readPhase(done.root)?.phase).toBe("done");
+    const failed = await markIn(["--mark-final-report", "sess-2", "--failed"]);
+    expect(readPhase(failed.root)?.phase).toBe("failed");
+  });
+
+  test("an unwritable phase file does not change the exit code or the marker", async () => {
+    const root = realpathSync(mkdtempSync(path.join(os.tmpdir(), "guard-phase-")));
+    mkdirSync(path.join(root, ".emet", "phase.json"), { recursive: true });
+    Bun.spawnSync(["git", "init", "-q", root]);
+    const previousDirectory = process.cwd();
+    const previousState = process.env.EMET_STATE_DIR;
+    const previousExit = process.exitCode;
+    const originalLog = console.log;
+    process.env.EMET_STATE_DIR = path.join(root, "state");
+    console.log = () => undefined;
+    try {
+      process.chdir(root);
+      process.exitCode = 0;
+      await runGuard(["--mark-final-report", "sess-3"]);
+      expect(process.exitCode).toBe(0);
+      expect(existsSync(path.join(root, "state", "final-report", "sess-3"))).toBe(true);
+    } finally {
+      console.log = originalLog;
+      process.chdir(previousDirectory);
+      process.exitCode = previousExit ?? 0;
+      if (previousState === undefined) delete process.env.EMET_STATE_DIR;
+      else process.env.EMET_STATE_DIR = previousState;
+    }
   });
 });
