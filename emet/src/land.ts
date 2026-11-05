@@ -13,6 +13,7 @@ import path from "node:path";
 
 import { loadForgeConfigWithDefaults, type ForgeConfig } from "./config";
 import { errorMessage } from "./narrow";
+import { writePhase } from "./phase";
 
 type MergeMethod = ForgeConfig["pr"]["mergeMethod"];
 
@@ -222,7 +223,17 @@ export async function run(argv: string[]): Promise<void> {
     return;
   }
   try {
-    const result = await land({ ...parseLandArguments(argv), cwd: process.cwd() });
+    const options = parseLandArguments(argv);
+    const result = await land({ ...options, cwd: process.cwd() });
+    const phaseRoot = await resolveMainWorktree(process.cwd()).catch(() => null);
+    if (phaseRoot !== null) {
+      writePhase(phaseRoot, {
+        phase: "landing",
+        wave: options.wave ?? null,
+        spec: options.spec,
+        runId: null,
+      });
+    }
     console.log(JSON.stringify(result));
   } catch (error: unknown) {
     if (error instanceof LandUsageError) {

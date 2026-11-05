@@ -151,3 +151,47 @@ describe("gate on a legacy-only run dir", () => {
     }
   });
 });
+
+async function runGateIn(root: string): Promise<void> {
+  const previous = process.cwd();
+  process.chdir(root);
+  const originalLog = console.log;
+  console.log = () => undefined;
+  try {
+    const { run } = await import("./gate");
+    await run(["CLA-1", "--run", "r1"]);
+  } finally {
+    console.log = originalLog;
+    process.chdir(previous);
+  }
+}
+
+async function makeRoot(): Promise<string> {
+  const { mkdtempSync, mkdirSync, realpathSync, writeFileSync } = await import("node:fs");
+  const { tmpdir } = await import("node:os");
+  const path = await import("node:path");
+  const root = realpathSync(mkdtempSync(path.join(tmpdir(), "gate-phase-")));
+  const runDir = path.join(root, ".emet", "runs", "r1");
+  mkdirSync(path.join(runDir, "verify"), { recursive: true });
+  writeFileSync(path.join(runDir, "verify", "CLA-1.json"), JSON.stringify({ ok: false }));
+  return root;
+}
+
+describe("gate phase file", () => {
+  test("writes the checking phase", async () => {
+    const { readPhase } = await import("./phase");
+    const root = await makeRoot();
+    await runGateIn(root);
+    expect(readPhase(root)?.phase).toBe("checking");
+  });
+
+  test("an unwritable phase file does not change the exit code", async () => {
+    const { mkdirSync } = await import("node:fs");
+    const path = await import("node:path");
+    const root = await makeRoot();
+    mkdirSync(path.join(root, ".emet", "phase.json"), { recursive: true });
+    const previousExit = process.exitCode;
+    await runGateIn(root);
+    expect(process.exitCode ?? 0).toBe(previousExit ?? 0);
+  });
+});

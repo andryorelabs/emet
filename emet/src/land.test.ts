@@ -1,9 +1,10 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
-import { mkdtempSync, realpathSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, realpathSync, rmSync, writeFileSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
 
 import { land, parseLandArguments, run } from "./land";
+import { readPhase } from "./phase";
 
 let repo = "";
 
@@ -187,6 +188,42 @@ describe("run", () => {
       await run(["--spec", "s", "--branch", "nope", "--tickets", "s-01"]);
       expect(process.exitCode).toBe(1);
     } finally {
+      process.chdir(original);
+      process.exitCode = previousExit ?? 0;
+    }
+  });
+});
+
+describe("land phase file", () => {
+  test("a successful land writes the landing phase", async () => {
+    setUpIntegrationBranch();
+    const original = process.cwd();
+    const originalLog = console.log;
+    console.log = () => undefined;
+    try {
+      process.chdir(repo);
+      await run(["--spec", "demo", "--branch", "wave-1", "--tickets", "demo-01"]);
+      expect(readPhase(repo)?.phase).toBe("landing");
+    } finally {
+      console.log = originalLog;
+      process.chdir(original);
+    }
+  });
+
+  test("an unwritable phase file does not change the exit code", async () => {
+    setUpIntegrationBranch();
+    mkdirSync(path.join(repo, ".emet", "phase.json"), { recursive: true });
+    const original = process.cwd();
+    const previousExit = process.exitCode;
+    const originalLog = console.log;
+    console.log = () => undefined;
+    try {
+      process.chdir(repo);
+      process.exitCode = 0;
+      await run(["--spec", "demo", "--branch", "wave-1", "--tickets", "demo-01"]);
+      expect(process.exitCode).toBe(0);
+    } finally {
+      console.log = originalLog;
       process.chdir(original);
       process.exitCode = previousExit ?? 0;
     }

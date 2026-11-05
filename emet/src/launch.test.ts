@@ -1,7 +1,11 @@
 import { describe, expect, test } from "bun:test";
+import { mkdtempSync, rmSync } from "node:fs";
+import os from "node:os";
+import path from "node:path";
 
 import { ForgeConfigError } from "./config";
 import { errorMessage } from "./narrow";
+import { readPhase } from "./phase";
 import {
   launchWave,
   waveSessionName,
@@ -101,6 +105,20 @@ describe("launchWave", () => {
     }
   });
 
+  test("writes the dispatch phase once the session is up", async () => {
+    const repoRoot = mkdtempSync(path.join(os.tmpdir(), "emet-launch-phase-"));
+    try {
+      const { runner } = scriptedRunner({ agents: [json([]), STARTED], orcaStatus: REACHABLE });
+      await launchWave({ ...REQUEST, repoRoot }, runner);
+      const record = readPhase(repoRoot);
+      expect(record?.phase).toBe("dispatch");
+      expect(record?.wave).toBe(2);
+      expect(record?.spec).toBe("AO-1880");
+    } finally {
+      rmSync(repoRoot, { recursive: true, force: true });
+    }
+  });
+
   test("launches the wave with the configured permission mode", async () => {
     const { runner, calls } = scriptedRunner({
       agents: [json([]), STARTED],
@@ -116,7 +134,7 @@ describe("launchWave", () => {
       "emet-AO-1880-w2",
       "--permission-mode",
       "acceptEdits",
-      "/emet --dispatch AO-1880",
+      "/emet:run --dispatch AO-1880",
     ]);
   });
 

@@ -4,6 +4,8 @@ Every `emet` subcommand, the gates and records table, exit codes and environment
 
 ## Subcommands
 
+Three slash commands wrap the CLI inside Claude Code: `/emet:run` (the pipeline), `/emet:init` (`emet init`) and `/emet:doctor` (`emet doctor .`). A plain-terminal `emet` needs `install.sh`; otherwise run `! emet <subcommand>` inside a session.
+
 `emet <command> [...args]`. `emet --version` prints the version.
 
 ### Setup and audit
@@ -27,9 +29,9 @@ emet preflight      # confirms the repo is dispatch-ready
 Then, inside Claude Code:
 
 ```text
-/emet <describe the feature>              # interview → wave 1; later waves via --dispatch/autoChain
-/emet --draft <describe the feature>      # stop after tickets are created
-/emet --dispatch <spec-id>                # dispatch a --draft'd spec later
+/emet:run <describe the feature>              # interview → wave 1; later waves via --dispatch/autoChain
+/emet:run --draft <describe the feature>      # stop after tickets are created
+/emet:run --dispatch <spec-id>                # dispatch a --draft'd spec later
 ```
 
 #### Fleet check

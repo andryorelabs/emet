@@ -162,7 +162,7 @@ export interface ForgeConfig {
     readonly maxChars: number;
     /** When true, a wave that closes cleanly with a non-empty frontier
      * launches the next wave itself via `claude --bg` instead of printing
-     * the `/emet --dispatch` command for a human to paste. */
+     * the `/emet:run --dispatch` command for a human to paste. */
     readonly autoChain: boolean;
     /** Where a chained wave becomes visible: `auto` opens an Orca tab when
      * the session runs inside Orca, `orca` always tries, `bg` never does. */

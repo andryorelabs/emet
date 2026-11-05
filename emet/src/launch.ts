@@ -8,6 +8,7 @@ import {
 } from "./config";
 import { errorMessage, isObject } from "./narrow";
 import { BINARY, LEGACY_PRODUCT, PRODUCT } from "./names";
+import { writePhase } from "./phase";
 
 /**
  * Launches one wave of a run as a background `claude --bg` session and, per
@@ -239,7 +240,7 @@ export async function launchWave(
       name,
       "--permission-mode",
       request.permissionMode,
-      `/${BINARY} --dispatch ${request.specId}`,
+      `/${BINARY}:run --dispatch ${request.specId}`,
     ],
     { cwd: request.repoRoot },
   );
@@ -255,6 +256,13 @@ export async function launchWave(
       `${BINARY} launch: \`claude --bg\` exited 0 but no session named ${name} appears in \`claude agents --json\`.`,
     );
   }
+
+  writePhase(request.repoRoot, {
+    phase: "dispatch",
+    wave: request.wave,
+    spec: request.specId,
+    runId: null,
+  });
 
   const decision = await shouldOpenOrcaTab(request.launcher, runner);
   const orcaTab = decision.attempt

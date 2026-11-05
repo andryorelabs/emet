@@ -6,7 +6,11 @@ import { listReservations, type Reservation } from "./claims";
 import { writeCompletionEvent, type CompletionEvent } from "./runs";
 import { listOccupiedSlots, type SlotListEntry } from "./slots";
 import { parseWorktreeEntries, resolveWorktreeOwner } from "./worktrees";
+import { resolveRepoRoot } from "./config";
 import { isObject } from "./narrow";
+import { resolveRunDir } from "./names";
+import { readPhase, writePhase } from "./phase";
+import { readResult } from "./results";
 import { defaultProcessTreeReader, readParent as readProcessParent } from "./proctree";
 import {
   BINARY,
@@ -542,11 +546,52 @@ function readEventFlag(argv: readonly string[]): string | null {
   return index === -1 ? null : (argv[index + 1] ?? null);
 }
 
+/**
+ * Whether any worker result recorded for the run is `BLOCKED` or `NEEDS_CONTEXT`.
+ * Best effort: any read problem counts as no failure.
+ */
+async function runHasUnfinishedTicket(runId: string | null): Promise<boolean> {
+  if (runId === null) return false;
+  try {
+    const output = await Bun.$`git rev-parse --path-format=absolute --git-common-dir`
+      .nothrow()
+      .quiet();
+    const commonDirectory = output.stdout.toString().trim();
+    if (output.exitCode !== 0 || commonDirectory.length === 0) return false;
+    const resultsDirectory = path.join(
+      resolveRunDir(commonDirectory).path,
+      "runs",
+      runId,
+      "results",
+    );
+    if (!existsSync(resultsDirectory)) return false;
+    return readdirSync(resultsDirectory)
+      .filter((name) => name.endsWith(".json"))
+      .some((name) => {
+        const status = readResult(resultsDirectory, name.slice(0, -".json".length))?.status;
+        return status === "BLOCKED" || status === "NEEDS_CONTEXT";
+      });
+  } catch {
+    return false;
+  }
+}
+
 export async function run(argv: readonly string[] = process.argv.slice(2)): Promise<void> {
   const markIndex = argv.indexOf("--mark-final-report");
   if (markIndex !== -1) {
     try {
-      console.log(writeFinalReportMarker(argv[markIndex + 1] ?? ""));
+      const markerPath = writeFinalReportMarker(argv[markIndex + 1] ?? "");
+      const repoRoot = await resolveRepoRoot();
+      if (repoRoot !== null) {
+        const runId = readPhase(repoRoot)?.runId ?? null;
+        writePhase(repoRoot, {
+          phase: (await runHasUnfinishedTicket(runId)) ? "failed" : "done",
+          wave: null,
+          spec: null,
+          runId,
+        });
+      }
+      console.log(markerPath);
     } catch (error) {
       console.error(error instanceof Error ? error.message : String(error));
       process.exitCode = 1;

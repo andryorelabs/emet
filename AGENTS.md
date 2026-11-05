@@ -5,7 +5,7 @@ Guide for coding agents working in emet. Terms follow [GLOSSARY.md](GLOSSARY.md)
 ## Layout
 
 - `emet/`: the runtime `emet` CLI (`bin/`, `src/`, `reference/` prompts, `schema/`, `templates/`). Installed to `~/.claude/emet` by `install.sh`.
-- `commands/run.md`, `agents/*.md`: prompts for the `/emet` plugin command and its worker and reviewer agents. `install.sh` rewrites them and installs `commands/run.md` as `~/.claude/commands/emet.md`. See [ADR-0008](docs/adr/0008-standalone-binaries-and-plugin-distribution.md).
+- `commands/{run,init,doctor}.md`, `agents/*.md`: prompts for the `/emet:run`, `/emet:init` and `/emet:doctor` commands and the worker and reviewer agents. `install.sh` rewrites them and installs the commands under `~/.claude/commands/emet/`. See [ADR-0008](docs/adr/0008-standalone-binaries-and-plugin-distribution.md).
 - `tools/`: dev-only tests and scripts (lint plugin, invariant tests).
 - `docs/agents/`: per-repo `/emet` config prose. `docs/adr/`: architecture decisions.
 - Root: dev tooling config. `emet.config.json` is this repo's `/emet` config.

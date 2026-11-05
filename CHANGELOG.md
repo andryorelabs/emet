@@ -8,11 +8,39 @@ and this project adheres to
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-11-05
+
+### Added
+
+- `/emet:init` and `/emet:doctor` plugin commands run `emet init` and
+  `emet doctor .` inside Claude Code and summarize the result.
+- `emet doctor` warns about `forge guard` and `emet guard` hooks in
+  `~/.claude/settings.json` whose binary no longer exists, and prints a
+  backup-then-`jq` command to remove them. It never edits the file.
+- Mascot foundations: a phase file, the pet bundle, a mod state machine,
+  the remaining phase writers and raster frames.
+- `emet-mascot`, an optional plugin that shows a pixel mascot above the prompt
+  and mirrors the session and the `emet` run phase. It is listed in the
+  marketplace, with a how-to for the Orca pet and ADR-0016.
+
+### Fixed
+
+- The plugin no longer exposes a broken duplicate `/emet:emet` command;
+  `commands/` is pinned to `run.md`, `init.md` and `doctor.md`.
+- The next wave now launches with `/emet:run`, the command the plugin
+  registers.
+
 ### Changed
 
 - The repository moved to the `andryorelabs` GitHub organization. Release
   downloads, the README badges and the clone URL now point at
   `andryorelabs/emet`; the old `AndryOre/emet` URLs keep redirecting.
+- Standalone installs rename `/emet` to `/emet:run`, matching the plugin.
+  `install.sh` now installs `commands/run.md`, `init.md` and `doctor.md` to
+  `~/.claude/commands/emet/`, so `/emet:run`, `/emet:init` and `/emet:doctor`
+  are available without the plugin. The old `~/.claude/commands/emet.md` is
+  removed when unedited; an edited copy is kept and listed in the install
+  summary.
 
 ## [0.2.0] - 2026-11-05
 

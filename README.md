@@ -52,24 +52,32 @@ Requirements: Claude Code, `git`, `gh` (authenticated) and the `mattpocock-skill
    ./install.sh
    ```
 
-2. In your repo, set it up and check it:
+   Optional: a pixel mascot above the prompt, also an Orca pet ([how-to](docs/how-to/orca-pet.md)):
 
    ```bash
-   emet init
-   emet doctor .
+   claude plugin install emet-mascot@emet-marketplace
    ```
+
+2. In your repo, set it up and check it:
+
+   ```
+   /emet:init
+   /emet:doctor
+   ```
+
+   In a plain terminal, `emet init` and `emet doctor .` work only after `install.sh`.
 
 3. Inside Claude Code:
 
    ```
-   /emet <describe the feature>
+   /emet:run <describe the feature>
    ```
 
 More in [Getting started](docs/guide/getting-started.md). If `doctor` reports a problem, see [troubleshooting](docs/troubleshooting.md).
 
 ## How it works
 
-1. You describe a feature; `/emet` interviews you and writes a spec.
+1. You describe a feature; `/emet:run` interviews you and writes a spec.
 2. It splits the spec into tickets and asks for one approval.
 3. Parallel workers implement each ticket in its own git worktree.
 4. A reviewer checks the wave, and CI must be green; anything flagged stops the merge.

@@ -15,6 +15,7 @@ import {
   readLockHolderAs,
   releaseLock,
 } from "./locks";
+import { writePhase } from "./phase";
 import {
   checkMemoryHeadroom,
   computeAutoMaxLiveWorkers,
@@ -409,6 +410,12 @@ async function main(config: ForgeConfig): Promise<void> {
       process.exitCode = 1;
       return;
     }
+    writePhase((await resolveRepoRoot()) ?? process.cwd(), {
+      phase: "working",
+      wave: null,
+      spec: null,
+      runId,
+    });
     console.log(`emet:slots — acquired slot ${index} for ${ticket}.`);
     return;
   }
