@@ -2,7 +2,7 @@
 
 Failures of `emet doctor` and `emet preflight`, grouped by what you see, each with the cause and a fix. Terms follow [GLOSSARY.md](../GLOSSARY.md). For how the checks fit together, see [architecture](architecture.md).
 
-<img src="brand/mascot/combo-error.svg" alt="" width="96">
+<img src="brand/mascot/mascot-error.svg" alt="" width="96">
 
 A repo that still has only `forge.config.json`, `.forge/` or `FORGE_*` variables keeps working: `emet` reads the legacy names, prints one stderr line naming each legacy file, and `emet migrate` renames them.
 
@@ -76,7 +76,7 @@ A repo that still has only `forge.config.json`, `.forge/` or `FORGE_*` variables
 
 ## Expected locked worktrees, found fewer
 
-<img src="brand/mascot/combo-sleep.svg" alt="" width="64">
+<img src="brand/mascot/mascot-sleep.svg" alt="" width="64">
 
 **Symptom:** `Expected N locked worktree(s) for run <id>, found M`.
 
