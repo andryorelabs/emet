@@ -36,17 +36,17 @@ const TRIAGE_LABELS = [
   "wontfix",
 ];
 
-/** Collects every label name the forge tracker config depends on. */
+/** Collects every label name the emet tracker config depends on. */
 function requiredForgeLabels(): string[] {
-  const config: unknown = JSON.parse(readText("forge.config.json"));
+  const config: unknown = JSON.parse(readText("emet.config.json"));
   const tracker = isRecord(config) ? config["tracker"] : undefined;
   const github = isRecord(tracker) ? tracker["github"] : undefined;
   const stateLabels = isRecord(github) ? github["stateLabels"] : undefined;
-  if (!isRecord(stateLabels)) throw new Error("forge.config.json needs tracker.github.stateLabels");
+  if (!isRecord(stateLabels)) throw new Error("emet.config.json needs tracker.github.stateLabels");
   return [...TRIAGE_LABELS, ...Object.values(stateLabels).map(String)];
 }
 
-test("labels.yml declares every label forge.config.json depends on", () => {
+test("labels.yml declares every label emet.config.json depends on", () => {
   const declared = new Set(declaredLabelNames());
   const missing = requiredForgeLabels().filter((name) => !declared.has(name));
   expect(missing).toEqual([]);

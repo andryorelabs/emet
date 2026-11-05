@@ -34,7 +34,7 @@
 - `CONTRIBUTING.md`
 - `docs/` (92 files)
 - `emet/` (113 files)
-- `forge.config.json`
+- `emet.config.json`
 - `GLOSSARY.md`
 - `GOVERNANCE.md`
 - `hooks/` (1 files)
@@ -72,7 +72,7 @@
 - `install.sh` (11 commits)
 - `docs/adr/README.md` (9 commits)
 - `docs/README.md` (9 commits)
-- `forge.config.json` (7 commits)
+- `emet.config.json` (7 commits)
 - `AGENTS.md` (6 commits)
 - `docs/agents/codebase.md` (6 commits)
 - `package.json` (6 commits)

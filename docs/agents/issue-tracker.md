@@ -23,7 +23,7 @@ no adapter layer to keep in sync with `gh`'s own flags.
 ## Priority and workflow-state substitutes
 
 GitHub Issues has no native priority field or workflow states. This repo uses
-label maps instead (`tracker.github` in `forge.config.json`, this repo's legacy-named config):
+label maps instead (`tracker.github` in `emet.config.json`):
 
 - `priorityLabels`: empty — this repo doesn't prioritize, so tickets order by
   `createdAt` ascending only; `emet doctor` reports that explicitly rather than letting

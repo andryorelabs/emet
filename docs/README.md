@@ -61,7 +61,7 @@ Research for the brand kit, run 1. Options and recommendations only; no decision
 
 Prose that `emet init` generates and the coordinator reads.
 
-- [`agents/forge.md`](agents/forge.md): commands, gates and concurrency for this repo, under its legacy name until `emet migrate` renames it.
+- [`agents/emet.md`](agents/emet.md): commands, gates and concurrency for this repo.
 - [`agents/issue-tracker.md`](agents/issue-tracker.md): how the tracker is used.
 - [`agents/triage-labels.md`](agents/triage-labels.md): the label vocabulary.
 - [`agents/domain.md`](agents/domain.md): where the domain docs live.
