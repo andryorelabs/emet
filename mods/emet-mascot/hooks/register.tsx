@@ -14,9 +14,11 @@ import type { MachineState, SessionEvent } from "./state-machine.ts";
 
 const TICK_MS = 100;
 const PHASE_POLL_MS = 2000;
+const PANE_ID = "emet-mascot";
 const PHASE_PATH = ".emet/phase.json";
 const MASCOT_KEY = "mascot";
 const LABEL_RESERVE_COLUMNS = 24;
+const UNASKED_PANE_MIN_COLUMNS = 144;
 
 const machineAtom = atom({ plugin: "emet-mascot", key: "machine" } as const, initialMachineState);
 const phaseAtom = atom(
@@ -26,7 +28,7 @@ const phaseAtom = atom(
 
 const reportedAtom = atom({ plugin: "emet-mascot", key: "reported" } as const, [] as string[]);
 
-type Engine = Pick<EngineInterface, "clock" | "state" | "fs" | "agent" | "session">;
+type Engine = Pick<EngineInterface, "clock" | "state" | "fs" | "agent" | "session" | "ui">;
 
 /** Index of the frame showing `elapsedMs` into a looping animation. */
 function frameIndexAt(frames: readonly { ms: number }[], elapsedMs: number): number {
@@ -95,10 +97,51 @@ async function reportNewFailures($: Engine): Promise<void> {
   await dispatch($, "agent-failed");
 }
 
-const paint = { requestId: null as string | null, startedAt: 0, lastPoll: 0, last: "" };
+type Position = "pane" | "band" | "status";
+
+const paint = {
+  requestId: null as string | null,
+  startedAt: 0,
+  lastPoll: 0,
+  last: "",
+  isDocked: false,
+  wasDocked: false,
+  isPaneOpened: false,
+  bandColumns: 0,
+  blockedColumns: null as number | null,
+  lastStatus: undefined as string | undefined,
+};
 let timer: { cancel: () => void } | null = null;
 
-async function tick($: Engine, size: "small" | "medium"): Promise<void> {
+function positionFrom(value: unknown): Position {
+  return value === "band" || value === "status" ? value : "pane";
+}
+
+async function syncStatus($: Engine, position: Position, now: number): Promise<void> {
+  const text =
+    position === "status"
+      ? labelFor(await read($, machineAtom), await read($, phaseAtom), now)
+      : undefined;
+  if (text === paint.lastStatus) return;
+  paint.lastStatus = text;
+  $.ui.status(text);
+}
+
+async function isPaneDocked($: Engine): Promise<boolean> {
+  if (!paint.isDocked) return false;
+  const panes = await $.ui.panes();
+  return panes.some((pane) => pane.id === PANE_ID && pane.isPlaced);
+}
+
+async function redrawWhenDockFlips($: Engine, position: Position): Promise<void> {
+  if (position !== "pane") return;
+  const isDocked = await isPaneDocked($);
+  if (isDocked === paint.wasDocked) return;
+  paint.wasDocked = isDocked;
+  $.ui.invalidate("ui.render");
+}
+
+async function tick($: Engine, size: "small" | "medium", position: Position): Promise<void> {
   const now = await $.clock.now();
   if (now - paint.lastPoll >= PHASE_POLL_MS) {
     paint.lastPoll = now;
@@ -107,7 +150,9 @@ async function tick($: Engine, size: "small" | "medium"): Promise<void> {
     await reportNewFailures($);
   }
   await dispatch($, "tick");
-  if (paint.requestId === null) return;
+  await syncStatus($, position, now);
+  await redrawWhenDockFlips($, position);
+  if (position === "status" || paint.requestId === null) return;
   const machine = await read($, machineAtom);
   const sheet = FRAMES[machine.state][size];
   const index = frameIndexAt(sheet.frames, now - paint.startedAt);
@@ -119,16 +164,21 @@ async function tick($: Engine, size: "small" | "medium"): Promise<void> {
 }
 
 export const register: Register = (on, options) => {
-  const size = options["size"] === "small" ? "small" : "medium";
+  const size = options["size"] === "medium" ? "medium" : "small";
+  const position = positionFrom(options["position"]);
   const showLabel = options["showLabel"] !== false;
   on("session.start", async ($, e, next) => {
     paint.startedAt = await $.clock.now();
     timer?.cancel();
     timer = $.clock.every(TICK_MS, () => {
-      tick($, size).catch((error: unknown) => {
+      tick($, size, position).catch((error: unknown) => {
         $.ui.log(`emet-mascot tick failed: ${String(error)}`, { to: "debug" });
       });
     });
+    paint.isDocked = false;
+    paint.wasDocked = false;
+    paint.isPaneOpened = false;
+    paint.blockedColumns = null;
     return next(e);
   });
 
@@ -166,8 +216,52 @@ export const register: Register = (on, options) => {
     return result;
   });
 
+  on("ui.render", { component: "Pane", requestId: PANE_ID }, async ($, e, next) => {
+    if (e.surface !== "terminal" || position !== "pane") return next(e);
+    paint.isDocked = e.props.placement === "dock";
+    if (!paint.isDocked) {
+      if (paint.isPaneOpened) {
+        paint.isPaneOpened = false;
+        paint.blockedColumns = paint.bandColumns;
+        void $.ui.close({ id: PANE_ID });
+      }
+      return next(e);
+    }
+    const machine = await read($, machineAtom);
+    const phase = await read($, phaseAtom);
+    const sheet = FRAMES[machine.state][size];
+    const nowMs = await $.clock.now();
+    const index = frameIndexAt(sheet.frames, nowMs - paint.startedAt);
+    const frame = sheet.frames[index];
+    if (frame === undefined) return next(e);
+    paint.requestId = e.requestId;
+    paint.last = `${machine.state}:${String(index)}`;
+    const { Box, Raster, Text } = $.ui.resolve(e);
+    return (
+      <Box flexDirection="column">
+        <Raster key={MASCOT_KEY} columns={sheet.columns} rows={sheet.rows} cells={frame.cells} />
+        {showLabel ? <Text dimColor>{labelFor(machine, phase, nowMs)}</Text> : null}
+      </Box>
+    );
+  });
+
   on("ui.render", { component: "AbovePrompt" }, async ($, e, next) => {
-    if (e.surface !== "terminal" || e.props.hasSurvey) return next(e);
+    if (e.surface !== "terminal" || e.props.hasSurvey || position === "status") return next(e);
+    paint.bandColumns = e.props.bodyColumns;
+    if (paint.blockedColumns !== null && paint.blockedColumns !== e.props.bodyColumns) {
+      paint.blockedColumns = null;
+    }
+    if (
+      position === "pane" &&
+      e.viewport?.isFullscreen === true &&
+      !paint.isPaneOpened &&
+      paint.blockedColumns === null &&
+      e.props.bodyColumns >= UNASKED_PANE_MIN_COLUMNS
+    ) {
+      paint.isPaneOpened = true;
+      void $.ui.open({ id: PANE_ID, title: "emet" });
+    }
+    if (position === "pane" && (await isPaneDocked($))) return next(e);
     const machine = await read($, machineAtom);
     const phase = await read($, phaseAtom);
     const sheet = FRAMES[machine.state][size];

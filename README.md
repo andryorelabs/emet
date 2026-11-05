@@ -52,11 +52,7 @@ Requirements: Claude Code, `git`, `gh` (authenticated) and the `mattpocock-skill
    ./install.sh
    ```
 
-   Optional: a pixel mascot above the prompt, also an Orca pet ([how-to](docs/how-to/orca-pet.md)):
-
-   ```bash
-   claude plugin install emet-mascot@emet-marketplace
-   ```
+   Optional: a pixel mascot, see [Mascot](#mascot-optional).
 
 2. In your repo, set it up and check it:
 
@@ -74,6 +70,15 @@ Requirements: Claude Code, `git`, `gh` (authenticated) and the `mattpocock-skill
    ```
 
 More in [Getting started](docs/guide/getting-started.md). If `doctor` reports a problem, see [troubleshooting](docs/troubleshooting.md).
+
+## Mascot (optional)
+
+<img src="docs/brand/mascot/mascot-work.svg" alt="emet mascot, working" width="96">
+
+- Claude Code mod: `claude plugin install emet-mascot@emet-marketplace` shows a pixel mascot beside the transcript (or above the prompt, or as a status line) that mirrors your session and the run phase.
+- Orca pet: the same character as an Orca pet bundle in `docs/brand/pet/emet/`.
+
+Options and the Orca import are in the [mascot how-to](docs/how-to/mascot.md).
 
 ## How it works
 
