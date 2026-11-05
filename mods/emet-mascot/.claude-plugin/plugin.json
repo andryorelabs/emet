@@ -1,0 +1,22 @@
+{
+  "name": "emet-mascot",
+  "version": "0.1.0",
+  "description": "A pixel mascot above the prompt that mirrors the session and the emet run phase.",
+  "author": { "name": "AndryOre" },
+  "types": "./types/index.d.ts",
+  "userConfig": {
+    "size": {
+      "type": "string",
+      "title": "Mascot size",
+      "description": "small is 16 px (16 x 8 cells), medium is 24 px (24 x 12 cells).",
+      "options": ["small", "medium"],
+      "default": "medium"
+    },
+    "showLabel": {
+      "type": "boolean",
+      "title": "Show label",
+      "description": "Show the dim label beside the mascot, for example emet · wave 2 · review.",
+      "default": true
+    }
+  }
+}
