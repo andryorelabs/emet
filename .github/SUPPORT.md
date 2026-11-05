@@ -3,7 +3,7 @@
 ## Questions and bugs
 
 - **Bug or unexpected behavior:** open an issue with the
-  [bug report form](https://github.com/AndryOre/emet/issues/new/choose).
+  [bug report form](https://github.com/AndryOre/claude-forge/issues/new/choose).
 - **Feature or improvement ideas:** open an issue with the feature or
   enhancement form.
 - **Documentation problems:** open an issue with the documentation form.
