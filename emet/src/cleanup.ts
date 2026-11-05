@@ -78,6 +78,7 @@ import {
   type RunVerdict,
 } from "./runs";
 import { BINARY, CONFIG_FILE } from "./names";
+import { writePhase } from "./phase";
 import { releaseAllSlotsForRun } from "./slots";
 import {
   type BranchEntry,
@@ -956,6 +957,10 @@ export async function run(argv: string[]): Promise<void> {
      */
     configureTicketPattern(config.ticket.idPattern);
     await main(config);
+    const { dryRun, mode, runId } = parseCleanupArguments(argv);
+    if (!dryRun && mode === "run" && !process.exitCode) {
+      writePhase(repoRoot, { phase: "done", wave: null, spec: null, runId });
+    }
   } catch (error: unknown) {
     if (error instanceof ForgeConfigError || error instanceof CleanupUsageError) {
       console.error(error.message);
