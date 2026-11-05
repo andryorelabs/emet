@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { readFileSync, statSync } from "node:fs";
 import { join } from "node:path";
+import { chromium } from "playwright";
 import sharp from "sharp";
 import { captureStateFrames } from "./brand-export.ts";
 import {
@@ -38,6 +39,19 @@ function readManifest(): PetManifest {
   return parsed;
 }
 
+/**
+ * True when headless Chromium can launch. CI installs no Playwright browser,
+ * so the capture tests run on a developer machine (`bun run brand:export`
+ * needs the same browser) and skip elsewhere.
+ */
+const HAS_CHROMIUM = await chromium
+  .launch({ headless: true })
+  .then(async (browser) => {
+    await browser.close();
+    return true;
+  })
+  .catch(() => false);
+
 async function captureTwice(state: "work" | "waiting") {
   const [first, second] = await Promise.all([captureStateFrames(state), captureStateFrames(state)]);
   expect(first.length).toBeGreaterThan(0);
@@ -48,7 +62,7 @@ async function captureTwice(state: "work" | "waiting") {
   });
 }
 
-describe("captureStateFrames", () => {
+describe.skipIf(!HAS_CHROMIUM)("captureStateFrames", () => {
   test("captures byte-identical frames on two runs with no network request", async () => {
     await Promise.all([captureTwice("work"), captureTwice("waiting")]);
   }, 60_000);
