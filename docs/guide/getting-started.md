@@ -51,9 +51,9 @@ emet preflight      # confirms the repo is dispatch-ready
 Then, inside Claude Code:
 
 ```
-/emet <describe the feature>              # interview → wave 1; later waves via --dispatch/autoChain
-/emet --draft <describe the feature>      # stop after tickets are created
-/emet --dispatch <spec-id>                # dispatch a --draft'd spec later
+/emet:run <describe the feature>              # interview → wave 1; later waves via --dispatch/autoChain
+/emet:run --draft <describe the feature>      # stop after tickets are created
+/emet:run --dispatch <spec-id>                # dispatch a --draft'd spec later
 ```
 
 `emet init` leaves a `TODO(emet):` marker in the generated `docs/agents/*.md` files for anything it can't infer on its own (a shared test-database lock, schema ownership, etc.); fill those in. `emet preflight` refuses to dispatch while one remains.

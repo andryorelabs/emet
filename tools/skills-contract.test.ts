@@ -41,7 +41,7 @@ const MATTPOCOCK_CATALOG = [
 ];
 
 function installedPromptFiles(): string[] {
-  const files = [join(REPO_ROOT, "commands", "emet.md")];
+  const files = [join(REPO_ROOT, "commands", "run.md")];
   for (const directory of ["agents", join("emet", "reference")]) {
     for (const entry of readdirSync(join(REPO_ROOT, directory))) {
       if (entry.endsWith(".md")) files.push(join(REPO_ROOT, directory, entry));

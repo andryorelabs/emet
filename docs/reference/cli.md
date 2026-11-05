@@ -27,9 +27,9 @@ emet preflight      # confirms the repo is dispatch-ready
 Then, inside Claude Code:
 
 ```text
-/emet <describe the feature>              # interview → wave 1; later waves via --dispatch/autoChain
-/emet --draft <describe the feature>      # stop after tickets are created
-/emet --dispatch <spec-id>                # dispatch a --draft'd spec later
+/emet:run <describe the feature>              # interview → wave 1; later waves via --dispatch/autoChain
+/emet:run --draft <describe the feature>      # stop after tickets are created
+/emet:run --dispatch <spec-id>                # dispatch a --draft'd spec later
 ```
 
 #### Fleet check

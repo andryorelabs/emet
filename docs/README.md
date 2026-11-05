@@ -86,7 +86,6 @@ Prose that `emet init` generates and the coordinator reads.
 Installed prompt markdown; wording changes only with an explicit ticket (ADR-0001).
 
 - [`commands/run.md`](../commands/run.md): the `/emet:run` router.
-- [`commands/emet.md`](../commands/emet.md): the same router, installed as `/emet`.
 - [`agents/emet-worker.md`](../agents/emet-worker.md): the worker agent.
 - [`agents/emet-reviewer.md`](../agents/emet-reviewer.md): the reviewer agent.
 - [`emet/reference/phases-1-5.md`](../emet/reference/phases-1-5.md): interview to approval.
