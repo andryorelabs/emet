@@ -89,7 +89,7 @@ A pre-rename name (`forge.config.json`, `docs/agents/forge.md`, `.forge/`, `FORG
 _Avoid_: deprecated name, old name
 
 **Mascot**:
-The pixel character of the optional `emet-mascot` plugin, shown above the Claude Code prompt and mirroring the session and the run phase.
+The pixel character of the optional `emet-mascot` plugin, shown beside the transcript, above the Claude Code prompt, or as a status line, and mirroring the session and the run phase.
 _Avoid_: avatar
 
 **Phase file**:
