@@ -1,7 +1,7 @@
 {
   "$schema": "https://unpkg.com/knip@6/schema.json",
-  "entry": ["emet/bin/emet.ts", "emet/src/**/*.test.ts", "tools/**/*.ts"],
-  "project": ["emet/**/*.ts", "tools/**/*.ts"],
+  "entry": ["emet/bin/emet.ts", "emet/src/**/*.test.ts", "tools/**/*.ts", "mods/*/hooks/**/*.ts"],
+  "project": ["emet/**/*.ts", "tools/**/*.ts", "mods/*/hooks/**/*.ts"],
   // typescript7 is only invoked by path (node_modules/typescript7/bin/tsc) in the typecheck script, which knip cannot trace to the package.
   "ignoreDependencies": ["typescript7"]
 }
