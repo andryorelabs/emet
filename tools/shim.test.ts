@@ -158,7 +158,7 @@ describe("bin/emet shim", () => {
     });
     expect(result.code).toBe(1);
     expect(readFileSync(curlLog, "utf8")).toContain(
-      `https://github.com/AndryOre/emet/releases/download/v${version}/${assetName}\n`,
+      `https://github.com/andryorelabs/emet/releases/download/v${version}/${assetName}\n`,
     );
   });
 
