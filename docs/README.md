@@ -4,7 +4,8 @@ An index of every document in this repository. Terms follow [GLOSSARY.md](../GLO
 
 ## Core
 
-- [`README.md`](../README.md): install, requirements, usage and the config reference.
+- [`README.md`](../README.md): the project front page: what emet is, a quickstart and links into the guide and reference.
+- [`llms.txt`](../llms.txt): an llmstxt.org index of the guide, reference and project pages for language models.
 - [`architecture.md`](architecture.md): code map of `emet/src` and how the `/emet` prompts drive the CLI.
 - [`troubleshooting.md`](troubleshooting.md): `emet doctor` and `emet preflight` failures, by symptom.
 - [`CHANGELOG.md`](../CHANGELOG.md): release notes, newest first.
@@ -21,6 +22,19 @@ An index of every document in this repository. Terms follow [GLOSSARY.md](../GLO
 - [`SECURITY.md`](../.github/SECURITY.md): how to report vulnerabilities.
 - [`SUPPORT.md`](../.github/SUPPORT.md): where to ask for help.
 - [`PULL_REQUEST_TEMPLATE.md`](../.github/PULL_REQUEST_TEMPLATE.md): the checklist every PR shows.
+
+## Guide
+
+- [`guide/getting-started.md`](guide/getting-started.md): requirements, both install paths and the first run.
+- [`guide/trackers-and-landing.md`](guide/trackers-and-landing.md): GitHub, Linear and local trackers, `landing.mode`, landing PRs, chaining waves, budgets, living specs, map and metrics.
+- [`guide/models-and-effort.md`](guide/models-and-effort.md): the role, model and effort table, risk-tier routing, Haiku triage and what you set once.
+- [`guide/fleet.md`](guide/fleet.md): audit several repos at once with `emet doctor`.
+
+## Reference
+
+- [`reference/configuration.md`](reference/configuration.md): every `emet.config.json` key with its default and meaning.
+- [`reference/cli.md`](reference/cli.md): every `emet` subcommand, the gates and records table, exit codes and `EMET_*` environment variables.
+- [`reference/dependencies.md`](reference/dependencies.md): what emet needs installed and which of init, doctor and preflight checks each item.
 
 ## How-to guides
 

@@ -50,7 +50,8 @@
     "stalledMinutes": 10
   },
   "commands": {
-    "selfCheck": ["bun run check", "bun run test"]
+    "selfCheck": ["bun run check", "bun run test"],
+    "fullSuite": { "run": "bun run check && bun run test" }
   },
   "worktree": {
     "bootstrap": [

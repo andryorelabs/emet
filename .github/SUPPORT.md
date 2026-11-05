@@ -1,5 +1,9 @@
 # Support
 
+## Before you ask
+
+Start with [Getting started](../docs/guide/getting-started.md), the [troubleshooting](../docs/troubleshooting.md) page and the [CLI reference](../docs/reference/cli.md).
+
 ## Questions and bugs
 
 - **Bug or unexpected behavior:** open an issue with the

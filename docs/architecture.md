@@ -5,6 +5,7 @@ A code map of `emet/src` and how the `/emet` prompts drive it. Terms follow [GLO
 - [Shape](#shape)
 - [How the prompts drive the CLI](#how-the-prompts-drive-the-cli)
 - [Module map](#module-map)
+- [Prompt layout](#prompt-layout)
 - [Distribution](#distribution)
 - [See also](#see-also)
 
@@ -42,11 +43,17 @@ Each module has a `*.test.ts` beside it.
 | Safety          | `guard.ts`, `guard-destructive.ts`                                                                                                                                                                                                                                 |
 | Shared helpers  | `narrow.ts`, `optional.ts`, `assets.ts` (embedded files in compiled binaries)                                                                                                                                                                                      |
 
+## Prompt layout
+
+`commands/run.md` (about 130 lines) is the `/emet` router. Each file in `emet/reference/` is one phase group (`phases-1-5.md`, `phases-6-7-dispatch.md`, `phases-8-closeout.md`, `phases-9-handoff.md`), loaded only when the current run's mode needs it. A test fails if any of them grows past 20,000 bytes, so one file cannot take over the context after compaction. The phases tell the coordinator to re-read the relevant section before each fix or review round. `install.sh` moves an old single `phases-6-9.md` aside as `phases-6-9.md.retired` when you edited it or it predates the install manifest, and deletes it otherwise. `install.sh` also wires `emet guard` into `~/.claude/settings.json` as the `PreToolUse` hook.
+
 ## Distribution
 
 `install.sh` copies `emet/` to `~/.claude/emet` and rewrites the prompts. The plugin path ships a shim that downloads a checksum-verified standalone binary built by `tools/build-binaries.ts`. See [ADR-0008](adr/0008-standalone-binaries-and-plugin-distribution.md).
 
 ## See also
 
+- [Getting started](guide/getting-started.md) and [Trackers and landing](guide/trackers-and-landing.md)
+- [Configuration reference](reference/configuration.md), [CLI reference](reference/cli.md) and [Dependencies](reference/dependencies.md)
 - [AGENTS.md](../AGENTS.md) and [emet/AGENTS.md](../emet/AGENTS.md)
 - [Documentation index](README.md)
