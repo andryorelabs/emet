@@ -52,6 +52,12 @@ Requirements: Claude Code, `git`, `gh` (authenticated) and the `mattpocock-skill
    ./install.sh
    ```
 
+   Optional: a pixel mascot above the prompt, also an Orca pet ([how-to](docs/how-to/orca-pet.md)):
+
+   ```bash
+   claude plugin install emet-mascot@emet-marketplace
+   ```
+
 2. In your repo, set it up and check it:
 
    ```

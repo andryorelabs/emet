@@ -88,6 +88,14 @@ _Avoid_: session, job, pipeline
 A pre-rename name (`forge.config.json`, `docs/agents/forge.md`, `.forge/`, `FORGE_*`, `TODO(forge):`, the `forge` lock token) that emet still reads, with one warning, until `emet migrate` renames it.
 _Avoid_: deprecated name, old name
 
+**Mascot**:
+The pixel character of the optional `emet-mascot` plugin, shown above the Claude Code prompt and mirroring the session and the run phase.
+_Avoid_: avatar
+
+**Phase file**:
+The `.emet/phase.json` record the CLI writes as a run advances, which the mascot polls to label the current phase.
+_Avoid_: status file, progress file
+
 ## Relationships
 
 - A **Spec** yields many **Tickets**; each **Ticket** covers one or more numbered requirements of its **Spec**.
