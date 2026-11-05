@@ -134,7 +134,7 @@ describe("launchWave", () => {
       "emet-AO-1880-w2",
       "--permission-mode",
       "acceptEdits",
-      "/emet --dispatch AO-1880",
+      "/emet:run --dispatch AO-1880",
     ]);
   });
 

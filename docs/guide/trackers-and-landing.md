@@ -38,12 +38,12 @@ Later waves run in their own sessions, never in the one that ran wave 1. Two opt
 ```
 
 - `pr.autoMerge` (default `true`): wait for the PR's checks and merge; with no checks, merge at once. A failing check is fixed and pushed, up to `maxCiFixAttempts` times, then the PR is left open for a human. A wave with anything flagged is never auto-merged.
-- `handoff.autoChain` (default `false`): after a clean, merged wave with more waves left, launch the next one with `claude --bg` instead of printing `/emet --dispatch <spec-id>`. Inspect it with `claude agents` / `claude attach emet-<spec-id>-w<n>`. Requirements:
+- `handoff.autoChain` (default `false`): after a clean, merged wave with more waves left, launch the next one with `claude --bg` instead of printing `/emet:run --dispatch <spec-id>`. Inspect it with `claude agents` / `claude attach emet-<spec-id>-w<n>`. Requirements:
   1. `claude` on PATH, with `--bg` support.
   2. A trusted workspace. `--bg` runs non-interactively, so the trust dialog never shows; open `claude` interactively in the repo once and accept it.
   3. The bypass warning accepted once in an interactive session (`skipDangerousModePermissionPrompt`), since the next wave runs in `handoff.permissionMode` (below), not in the launching session's mode.
 
-  It launches only when the PR merged and nothing was flagged, and it skips if a `emet-<spec-id>-*` session is already live (`claude agents --json`). If the launch fails, it falls back to printing `/emet --dispatch <spec-id>`.
+  It launches only when the PR merged and nothing was flagged, and it skips if a `emet-<spec-id>-*` session is already live (`claude agents --json`). If the launch fails, it falls back to printing `/emet:run --dispatch <spec-id>`.
 
 - `handoff.launcher` (default `auto`): also open the wave in an Orca tab running `claude attach`. `auto` asks the Orca runtime (`orca status`), so it works from `claude --bg` sessions too, which have no `TERM_PROGRAM`; `orca` always tries, `bg` never. The wave runs in the background either way, and a tab that fails to open never stops the chain.
 
