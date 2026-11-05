@@ -240,7 +240,7 @@ export async function launchWave(
       name,
       "--permission-mode",
       request.permissionMode,
-      `/${BINARY} --dispatch ${request.specId}`,
+      `/${BINARY}:run --dispatch ${request.specId}`,
     ],
     { cwd: request.repoRoot },
   );
