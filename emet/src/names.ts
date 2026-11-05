@@ -42,6 +42,11 @@ export function warnLegacy(name: string): void {
   process.stderr.write(`${BINARY}: using legacy ${name}; run \`${BINARY} migrate\`\n`);
 }
 
+/** Forgets which legacy names were already warned about, so tests can assert the warning in any order. */
+export function resetLegacyWarnings(): void {
+  warnedNames.clear();
+}
+
 function resolveFirst(root: string, current: string, legacy: string): ResolvedPath | undefined {
   const currentPath = path.join(root, current);
   if (fs.existsSync(currentPath)) return { path: currentPath, legacy: false };

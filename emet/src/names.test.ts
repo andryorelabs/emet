@@ -21,6 +21,7 @@ import {
   readEnv,
   resolveAgentsDoc,
   resolveConfigPath,
+  resetLegacyWarnings,
   resolveRunDir,
   stateDir,
   warnLegacy,
@@ -31,6 +32,7 @@ let stderrLines: string[];
 let restoreStderr: () => void;
 
 beforeEach(() => {
+  resetLegacyWarnings();
   root = fs.mkdtempSync(path.join(os.tmpdir(), "names-"));
   stderrLines = [];
   const spy = spyOn(process.stderr, "write").mockImplementation((chunk: unknown) => {
