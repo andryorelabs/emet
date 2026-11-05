@@ -1,14 +1,14 @@
 # AGENTS.md
 
-Guide for coding agents working in claude-forge. Terms follow [GLOSSARY.md](GLOSSARY.md).
+Guide for coding agents working in emet. Terms follow [GLOSSARY.md](GLOSSARY.md).
 
 ## Layout
 
-- `emet/`: the runtime `forge` CLI (`bin/`, `src/`, `reference/` prompts, `schema/`, `templates/`). Installed to `~/.claude/forge` by `install.sh`.
-- `commands/run.md`, `agents/*.md`: prompts for the `/forge:run` plugin command and its worker and reviewer agents. `install.sh` rewrites them and installs `commands/run.md` as `~/.claude/commands/forge.md`. See [ADR-0008](docs/adr/0008-standalone-binaries-and-plugin-distribution.md).
+- `emet/`: the runtime `emet` CLI (`bin/`, `src/`, `reference/` prompts, `schema/`, `templates/`). Installed to `~/.claude/emet` by `install.sh`.
+- `commands/run.md`, `agents/*.md`: prompts for the `/emet` plugin command and its worker and reviewer agents. `install.sh` rewrites them and installs `commands/run.md` as `~/.claude/commands/emet.md`. See [ADR-0008](docs/adr/0008-standalone-binaries-and-plugin-distribution.md).
 - `tools/`: dev-only tests and scripts (lint plugin, invariant tests).
-- `docs/agents/`: per-repo `/forge` config prose. `docs/adr/`: architecture decisions.
-- Root: dev tooling config. `forge.config.json` is this repo's `/forge` config.
+- `docs/agents/`: per-repo `/emet` config prose. `docs/adr/`: architecture decisions.
+- Root: dev tooling config. `forge.config.json` is this repo's `/emet` config, still under its legacy name until `emet migrate` renames it.
 
 ## Running scripts
 
@@ -25,7 +25,7 @@ Run from the repo root with bun.
 - Dev dependencies and config live at the root or in `tools/`; `emet/` gains none. See ADR-0001.
 - Never loosen a tsconfig or lint setting to pass a check; fix the code. See [ADR-0002](docs/adr/0002-oxc-toolchain-and-typescript-7-typecheck.md).
 - Typecheck with the aliased `typescript7` by path, never bare `tsc`. See ADR-0002.
-- `install.sh` and the runtime behaviour of the `forge` CLI must not change without an explicit ticket. See ADR-0001.
+- `install.sh` and the runtime behaviour of the `emet` CLI must not change without an explicit ticket. See ADR-0001.
 - Installed prompt markdown (`emet/reference/*.md`, `commands/run.md`, `agents/*.md`): whitespace and wrapping only, never wording. See ADR-0001.
 - Workers commit to local branches; one wave is one dependency layer and lands as one PR, or as one local merge when `landing.mode` is `merge`. See [ADR-0004](docs/adr/0004-one-wave-one-dependency-layer-one-pr.md), amended by [ADR-0010](docs/adr/0010-local-merge-landing.md).
 - Only the coordinator writes the tracker. See [ADR-0005](docs/adr/0005-coordinator-is-the-single-tracker-writer.md).
@@ -50,6 +50,6 @@ JSDoc only (`/** */`). No `//` comments, except tool directives (`eslint-disable
 
 ## Quirks
 
-- `forge selftest` runs `bunx tsc` from the installed copy, so `emet/package.json` keeps `typescript`.
+- `emet selftest` runs `bunx tsc` from the installed copy, so `emet/package.json` keeps `typescript`.
 - A fresh worktree needs both `bun install` at the root and `bun install --cwd emet`.
-- The host-wide worker slot pool lives in `~/.local/state/forge/slots`, not in this repo.
+- The host-wide worker slot pool lives in `~/.local/state/emet/slots`, not in this repo.
