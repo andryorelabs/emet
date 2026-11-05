@@ -14,7 +14,7 @@ permissions:
 jobs:
   check-links:
     name: Check markdown links
-    runs-on: ubuntu-latest
+    runs-on: ${{ github.event.repository.private && vars.CI_RUNNER || 'ubuntu-latest' }}
     timeout-minutes: 5
     permissions:
       contents: read
@@ -33,6 +33,6 @@ jobs:
           # fail: true makes any broken link fail the job.
           args: >-
             --offline --include-fragments=anchor-only --no-progress '*.md'
-            'docs/**/*.md' 'forge/**/*.md' '.github/**/*.md' 'commands/*.md'
+            'docs/**/*.md' 'emet/**/*.md' '.github/**/*.md' 'commands/*.md'
             'agents/*.md'
           fail: true

@@ -230,6 +230,12 @@ describe("ci.yml macOS job", () => {
     expect(Object.keys(ci?.jobs ?? {})).toContain("test-macos");
     expect(neededJobs(ci?.jobs["ci-passed"])).toContain("test-macos");
   });
+
+  test("smoke-runs the emet-darwin-arm64 binary", () => {
+    const raw = workflows.find(({ fileName }) => fileName === "ci.yml")?.raw ?? "";
+    expect(raw).toContain("./dist/emet-darwin-arm64 --version");
+    expect(raw).not.toContain("forge-darwin-arm64");
+  });
 });
 
 describe("ci.yml commitlint and manual runs", () => {
@@ -306,10 +312,10 @@ describe("release.yml", () => {
   test("uploads the four binaries and SHA256SUMS", () => {
     const raw = release?.raw ?? "";
     for (const asset of [
-      "forge-linux-x64",
-      "forge-linux-arm64",
-      "forge-darwin-x64",
-      "forge-darwin-arm64",
+      "emet-linux-x64",
+      "emet-linux-arm64",
+      "emet-darwin-x64",
+      "emet-darwin-arm64",
       "SHA256SUMS",
     ]) {
       expect(raw).toContain(asset);

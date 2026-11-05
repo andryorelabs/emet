@@ -1,0 +1,82 @@
+#!/bin/sh
+# Resolves the emet CLI: source (EMET_FROM_SOURCE=1), cached binary, or a
+# checksum-verified download. Never execs a file whose checksum did not verify.
+# Each EMET_* variable falls back to its legacy FORGE_* name.
+
+set -u
+
+fail() {
+  echo "emet: $1" >&2
+  exit 1
+}
+
+self_path=$0
+while [ -L "$self_path" ]; do
+  link_target=$(readlink "$self_path")
+  case $link_target in
+    /*) self_path=$link_target ;;
+    *) self_path=$(dirname "$self_path")/$link_target ;;
+  esac
+done
+plugin_root=$(cd "$(dirname "$self_path")/.." && pwd) || fail "cannot resolve plugin root"
+
+from_source=${EMET_FROM_SOURCE:-${FORGE_FROM_SOURCE:-}}
+if [ "$from_source" = "1" ] && command -v bun >/dev/null 2>&1; then
+  exec bun "$plugin_root/emet/bin/emet.ts" "$@"
+fi
+
+manifest="$plugin_root/.claude-plugin/plugin.json"
+[ -f "$manifest" ] || fail "missing $manifest"
+version=$(sed -n 's/.*"version"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' "$manifest" | head -n 1)
+[ -n "$version" ] || fail "no version in $manifest"
+
+cache_root=${EMET_CACHE_DIR:-${FORGE_CACHE_DIR:-${XDG_CACHE_HOME:-${HOME:-}/.cache}/emet}}
+cached_binary="$cache_root/$version/emet"
+
+if [ ! -x "$cached_binary" ]; then
+  case $(uname -s) in
+    Linux) os=linux ;;
+    Darwin) os=darwin ;;
+    *) fail "unsupported platform $(uname -s)" ;;
+  esac
+  case $(uname -m) in
+    x86_64 | amd64) arch=x64 ;;
+    arm64 | aarch64) arch=arm64 ;;
+    *) fail "unsupported architecture $(uname -m)" ;;
+  esac
+  asset="emet-$os-$arch"
+  base_url=${EMET_RELEASE_BASE_URL:-${FORGE_RELEASE_BASE_URL:-https://github.com/AndryOre/emet/releases/download}}
+  release_url="$base_url/v$version"
+
+  if command -v sha256sum >/dev/null 2>&1; then
+    checksum_command="sha256sum"
+  elif command -v shasum >/dev/null 2>&1; then
+    checksum_command="shasum -a 256"
+  else
+    fail "no sha256sum or shasum available to verify the download"
+  fi
+  command -v curl >/dev/null 2>&1 || fail "curl is required to download $asset"
+
+  mkdir -p "$cache_root/$version" || fail "cannot create cache directory $cache_root/$version"
+  staging=$(mktemp -d "$cache_root/$version/.download.XXXXXX") || fail "cannot create staging directory"
+  trap 'rm -rf "$staging"' EXIT
+
+  curl -fsL "$release_url/$asset" -o "$staging/$asset" || fail "release asset $asset not found at $release_url"
+  curl -fsL "$release_url/SHA256SUMS" -o "$staging/SHA256SUMS" || fail "SHA256SUMS not found at $release_url"
+
+  expected=$(awk -v name="$asset" '{ file = $2; sub(/^\*/, "", file); if (file == name) { print $1; exit } }' "$staging/SHA256SUMS")
+  [ -n "$expected" ] || fail "no checksum listed for $asset"
+  actual=$($checksum_command "$staging/$asset" | awk '{ print $1 }')
+  [ "$actual" = "$expected" ] || fail "checksum mismatch for $asset"
+
+  chmod +x "$staging/$asset" || fail "cannot mark $asset executable"
+  mv -f "$staging/$asset" "$cached_binary" || fail "cannot cache $asset"
+  rmdir "$staging" 2>/dev/null || true
+  trap - EXIT
+fi
+
+if [ "${EMET_PREFETCH:-${FORGE_PREFETCH:-}}" = "1" ]; then
+  exit 0
+fi
+
+exec "$cached_binary" "$@"

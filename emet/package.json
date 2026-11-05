@@ -1,0 +1,14 @@
+{
+  "name": "emet-cli",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@types/bun": "^1.2.0",
+    "@types/node": "^24.0.0",
+    "typescript": "^5.7.0"
+  },
+  "//": "Standalone tool tree for the global `forge` CLI (`~/.claude/forge`). Not published, not part of any project's dependency graph — just a package root so `bun install` can pull @types/bun + @types/node and `bun test` has somewhere to root itself."
+}

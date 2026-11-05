@@ -13,7 +13,7 @@ export function mapGateExitCode(exitCode: number, output: string): number {
 }
 
 if (import.meta.main) {
-  const result = Bun.spawnSync(["bun", "forge/bin/forge.ts", "map", "--stale"], {
+  const result = Bun.spawnSync(["bun", "emet/bin/emet.ts", "map", "--stale"], {
     stdout: "pipe",
     stderr: "pipe",
   });

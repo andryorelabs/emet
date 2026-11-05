@@ -5,13 +5,13 @@ An index of every document in this repository. Terms follow [GLOSSARY.md](../GLO
 ## Core
 
 - [`README.md`](../README.md): install, requirements, usage and the config reference.
-- [`architecture.md`](architecture.md): code map of `forge/src` and how the `/forge:run` prompts drive the CLI.
-- [`troubleshooting.md`](troubleshooting.md): `forge doctor` and `forge preflight` failures, by symptom.
+- [`architecture.md`](architecture.md): code map of `emet/src` and how the `/emet` prompts drive the CLI.
+- [`troubleshooting.md`](troubleshooting.md): `emet doctor` and `emet preflight` failures, by symptom.
 - [`CHANGELOG.md`](../CHANGELOG.md): release notes, newest first.
 - [`GLOSSARY.md`](../GLOSSARY.md): the domain terms every doc and prompt uses.
 - [`AGENTS.md`](../AGENTS.md): instructions for coding agents.
 - [`CLAUDE.md`](../CLAUDE.md): imports `AGENTS.md` for Claude Code.
-- [`forge/AGENTS.md`](../forge/AGENTS.md): the runtime-only rules for work inside `forge/`.
+- [`emet/AGENTS.md`](../emet/AGENTS.md): the runtime-only rules for work inside `emet/`.
 
 ## Contributing and community
 
@@ -36,6 +36,10 @@ Research for the brand kit, run 1. Options and recommendations only; no decision
 
 - [`brand/README.md`](brand/README.md): index of the brand research and the decisions still pending.
 - [`brand/brief.md`](brand/brief.md): the approved brand brief: position, audience, voice, what to avoid and closed decisions.
+- [`brand/voice.md`](brand/voice.md): the emet voice: we are, we are not, tone by context, terminology and the avoid list.
+- [`brand/apply-spec.md`](brand/apply-spec.md): where each kit asset will be used, how to regenerate the rasters and the manual steps.
+- [`brand/copy.md`](brand/copy.md): approved public copy with the claims checked against the CLI and the open short description.
+- [`brand/tokens.css`](brand/tokens.css): emet design tokens: P2 Moss palette in oklch (light and dark), T2 fonts and type scale.
 - [`brand/naming.md`](brand/naming.md): the selected name `emet`, its story, availability and risks.
 - [`brand/competitors.md`](brand/competitors.md): tools that orchestrate coding agents, with positioning lessons.
 - [`brand/mascot-research.md`](brand/mascot-research.md): developer-tool mascot cases, a checklist and four directions.
@@ -50,13 +54,14 @@ Research for the brand kit, run 1. Options and recommendations only; no decision
 - [`brand/explorations/emet-mascot-r5.html`](brand/explorations/emet-mascot-r5.html): mascot round 5, A1-M and a COMBO beside the r4 originals.
 - [`brand/explorations/emet-palette-r2.html`](brand/explorations/emet-palette-r2.html): palette round 2 for emet, four options from the approved mascot.
 - [`brand/explorations/fonts/OFL.md`](brand/explorations/fonts/OFL.md): licenses of the typography sheet fonts.
+- [`brand/brandbook/fonts/OFL.md`](brand/brandbook/fonts/OFL.md): licenses of the two brandbook fonts, Space Grotesk and JetBrains Mono.
 - [`brand/explorations/emet-logo-r2.html`](brand/explorations/emet-logo-r2.html): logo round 2, five marks derived from the brand parts, with lockups, icon and mocks.
 
-## Per-repo `/forge` config
+## Per-repo `/emet` config
 
-Prose that `forge init` generates and the coordinator reads.
+Prose that `emet init` generates and the coordinator reads.
 
-- [`agents/forge.md`](agents/forge.md): commands, gates and concurrency for this repo.
+- [`agents/emet.md`](agents/emet.md): commands, gates and concurrency for this repo.
 - [`agents/issue-tracker.md`](agents/issue-tracker.md): how the tracker is used.
 - [`agents/triage-labels.md`](agents/triage-labels.md): the label vocabulary.
 - [`agents/domain.md`](agents/domain.md): where the domain docs live.
@@ -66,17 +71,17 @@ Prose that `forge init` generates and the coordinator reads.
 
 Installed prompt markdown; wording changes only with an explicit ticket (ADR-0001).
 
-- [`commands/run.md`](../commands/run.md): the `/forge:run` router.
-- [`commands/forge.md`](../commands/forge.md): the same router, installed as `/forge`.
-- [`agents/forge-worker.md`](../agents/forge-worker.md): the worker agent.
-- [`agents/forge-reviewer.md`](../agents/forge-reviewer.md): the reviewer agent.
-- [`forge/reference/phases-1-5.md`](../forge/reference/phases-1-5.md): interview to approval.
-- [`forge/reference/phases-6-7-dispatch.md`](../forge/reference/phases-6-7-dispatch.md): dispatch and workers.
-- [`forge/reference/phases-8-closeout.md`](../forge/reference/phases-8-closeout.md): review, landing and closeout.
-- [`forge/reference/phases-9-handoff.md`](../forge/reference/phases-9-handoff.md): handoff and chaining.
-- [`forge/reference/worker-prompt.md`](../forge/reference/worker-prompt.md): the worker prompt template.
-- [`forge/reference/reviewer-prompt.md`](../forge/reference/reviewer-prompt.md): the reviewer prompt template.
-- [`forge/reference/incidents.md`](../forge/reference/incidents.md): known harness incidents.
-- [`forge/reference/tracker-github.md`](../forge/reference/tracker-github.md): GitHub Issues tracker steps.
-- [`forge/reference/tracker-linear.md`](../forge/reference/tracker-linear.md): Linear tracker steps.
-- [`forge/reference/tracker-local.md`](../forge/reference/tracker-local.md): local markdown tracker steps.
+- [`commands/run.md`](../commands/run.md): the `/emet:run` router.
+- [`commands/emet.md`](../commands/emet.md): the same router, installed as `/emet`.
+- [`agents/emet-worker.md`](../agents/emet-worker.md): the worker agent.
+- [`agents/emet-reviewer.md`](../agents/emet-reviewer.md): the reviewer agent.
+- [`emet/reference/phases-1-5.md`](../emet/reference/phases-1-5.md): interview to approval.
+- [`emet/reference/phases-6-7-dispatch.md`](../emet/reference/phases-6-7-dispatch.md): dispatch and workers.
+- [`emet/reference/phases-8-closeout.md`](../emet/reference/phases-8-closeout.md): review, landing and closeout.
+- [`emet/reference/phases-9-handoff.md`](../emet/reference/phases-9-handoff.md): handoff and chaining.
+- [`emet/reference/worker-prompt.md`](../emet/reference/worker-prompt.md): the worker prompt template.
+- [`emet/reference/reviewer-prompt.md`](../emet/reference/reviewer-prompt.md): the reviewer prompt template.
+- [`emet/reference/incidents.md`](../emet/reference/incidents.md): known harness incidents.
+- [`emet/reference/tracker-github.md`](../emet/reference/tracker-github.md): GitHub Issues tracker steps.
+- [`emet/reference/tracker-linear.md`](../emet/reference/tracker-linear.md): Linear tracker steps.
+- [`emet/reference/tracker-local.md`](../emet/reference/tracker-local.md): local markdown tracker steps.

@@ -2,7 +2,7 @@ import { describe, expect, test } from "bun:test";
 import { existsSync, readdirSync } from "node:fs";
 import path from "node:path";
 
-const sourceDirectory = path.resolve(import.meta.dir, "../forge/src");
+const sourceDirectory = path.resolve(import.meta.dir, "../emet/src");
 
 /** Source modules with no colocated test, each with the reason it is exempt. */
 const EXEMPTIONS: Readonly<Record<string, string>> = {};
@@ -13,7 +13,7 @@ function sourceModules(): string[] {
     .toSorted();
 }
 
-describe("forge/src coverage manifest", () => {
+describe("emet/src coverage manifest", () => {
   test("every module has a colocated test or a reasoned exemption", () => {
     const uncovered = sourceModules().filter((file) => {
       const colocated = path.join(sourceDirectory, file.replace(/\.ts$/, ".test.ts"));

@@ -2,7 +2,8 @@
 
 Research and exploration for a possible rename and brand kit for claude-forge.
 
-**Status: identity decided; kit pending.** The maintainer approved the name,
+**Status: identity decided; kit applied (runs 3 and 4, spec: issue #174; see
+[`apply-spec.md`](apply-spec.md)).** The maintainer approved the name,
 mascot, typography, palette and logo concept on 2026-11-04 (see "Decisions"
 below). Everything else here is research or a rejected option, kept as a record.
 
@@ -11,6 +12,13 @@ below). Everything else here is research or a rejected option, kept as a record.
 Research documents:
 
 - `docs/brand/brief.md`: the approved brand brief (position, audience, voice, what to avoid, closed decisions), from the maintainer interview of 2026-11-04.
+- `docs/brand/voice.md`: the emet voice, tone by context, terminology and the avoid list.
+- `docs/brand/copy.md`: approved public copy (tagline, intro, features) with the claims checked against the CLI.
+- `docs/brand/tokens.css`: design tokens (P2 Moss in oklch, light and dark, T2 fonts, type scale); fonts in `docs/brand/brandbook/fonts/`.
+- `docs/brand/brandbook/fonts/OFL.md`: licenses of the two brandbook fonts.
+- [`apply-spec.md`](apply-spec.md): maps each kit asset to the repository surface it will feed, with the manual steps (social preview upload, trademark check, rename ticket).
+- Raster exports from `bun run brand:export` (`tools/brand-export.ts`): `logo/png/mark-{16,32,48,128,512}.png`, `logo/png/favicon.ico` and `og/{cover,cover-light,social-preview,social-preview-light}.png`.
+- [ADR-0014](../adr/0014-brand-kit-in-docs-brand.md): why the kit lives in `docs/brand/` and how the rasters are generated.
 - `docs/brand/naming.md`: the selected name `emet` with its story, availability checks and risks.
 - `docs/brand/competitors.md`: tools that orchestrate coding agents from a spec
   or ticket to a merged change, with positioning lessons and territories to
@@ -80,8 +88,10 @@ Still manual: the trademark check for EMET in USPTO and EUIPO classes 9 and 42.
 - Run 1b: logo and mascot concepts, once the name and mascot direction are
   picked.
 - Run 2: the kit, meaning tokens, voice, copy and brand book.
-- Run 3: apply the kit across the repository.
-- Run 4: the rename itself.
+- Run 3: apply the kit across the repository. Applied, see
+  [`apply-spec.md`](apply-spec.md) (spec: issue #174).
+- Run 4: the rename itself. Applied (spec: issue #174,
+  [ADR-0015](../adr/0015-rename-to-emet-with-legacy-name-compatibility.md)).
 
 ## Constraints
 

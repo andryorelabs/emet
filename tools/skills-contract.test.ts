@@ -2,7 +2,7 @@ import { describe, expect, test } from "bun:test";
 import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 
-import { SKILLS_CONTRACT } from "../forge/src/skills";
+import { SKILLS_CONTRACT } from "../emet/src/skills";
 
 const REPO_ROOT = join(import.meta.dir, "..");
 
@@ -41,8 +41,8 @@ const MATTPOCOCK_CATALOG = [
 ];
 
 function installedPromptFiles(): string[] {
-  const files = [join(REPO_ROOT, "commands", "forge.md")];
-  for (const directory of ["agents", join("forge", "reference")]) {
+  const files = [join(REPO_ROOT, "commands", "emet.md")];
+  for (const directory of ["agents", join("emet", "reference")]) {
     for (const entry of readdirSync(join(REPO_ROOT, directory))) {
       if (entry.endsWith(".md")) files.push(join(REPO_ROOT, directory, entry));
     }

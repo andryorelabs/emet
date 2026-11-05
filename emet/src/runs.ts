@@ -1,0 +1,406 @@
+import { existsSync, mkdirSync, readFileSync, renameSync, statSync, writeFileSync } from "node:fs";
+import os from "node:os";
+import path from "node:path";
+import { resolveLockDirectory } from "./locks";
+import { errnoCode, isObject } from "./narrow";
+import { readEnv, resolveRunDir } from "./names";
+import { readParent, type ProcessTreeReader, defaultProcessTreeReader } from "./proctree";
+
+/**
+ * Classifies whether a `/emet` run (coordinator or worker) is still alive
+ * — see PROJ-256. The pid a claim/reservation was written from is a
+ * short-lived `bun` process, so `process.kill(pid, 0)` (the right pattern
+ * for a lock whose holder *is* the process that took it) is meaningless
+ * here: by the time anything reads the pid back, that `bun` process has
+ * already exited. Liveness instead has to
+ * be read off the run's *anchor* — the actual Claude Code process that
+ * spawned every short-lived tool-call process the run will ever make — via
+ * `/proc`, with a soft, best-effort transcript-freshness fallback for the
+ * ambiguous case where the anchor is gone but the run may just be between
+ * tool calls.
+ *
+ * This module only classifies; it never deletes or reclaims anything
+ * itself — that decision (and any `--force` gating around it) belongs to
+ * the caller.
+ */
+
+export type RunVerdict = "live" | "idle" | "dead";
+
+function readPositiveIntEnvironment(name: string, fallback: number): number {
+  const raw = readEnv(name);
+  if (raw === undefined) return fallback;
+  const parsed = Number(raw);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
+}
+
+const RUN_IDLE_THRESHOLD_MS = readPositiveIntEnvironment("RUN_IDLE_THRESHOLD_MS", 90 * 60_000);
+
+/**
+ * `EMET_RUN_IDLE_THRESHOLD_MS` still overrides `emet.config.json`'s
+ * `concurrency.runIdleThresholdMs` when set — same precedence
+ * `preflight.ts`'s `EMET_MAX_LIVE_WORKERS` honors, kept so the existing
+ * escape hatch never breaks. Callers pass the result as `classifyRun`'s
+ * `idleThresholdMs` option; `classifyRun` itself stays config-unaware so its
+ * own tests keep exercising the pure default.
+ */
+export function resolveIdleThresholdMs(config: {
+  readonly concurrency: { readonly runIdleThresholdMs: number };
+}): number {
+  return readPositiveIntEnvironment("RUN_IDLE_THRESHOLD_MS", config.concurrency.runIdleThresholdMs);
+}
+
+/**
+ * Walks `PPid` upward from `startPid` (a tool-call process, e.g. this
+ * script's own `bun`) until it finds an ancestor whose command name (procfs,
+ * or `ps` where `/proc` is absent) reads `claude` — the Claude Code process itself, which outlives every
+ * short-lived process it spawns for the life of the run. Two hops from a
+ * Bash-tool-spawned process (bun → the shell → claude) is the common case;
+ * the walk is bounded to guard against a `/proc` read racing a process
+ * exiting mid-walk and producing a cycle or a dead end.
+ */
+export function resolveAnchorPid(
+  startPid: number = process.pid,
+  reader: ProcessTreeReader = defaultProcessTreeReader,
+): number {
+  let pid = startPid;
+  for (let hop = 0; hop < 32; hop++) {
+    const info = readParent(pid, reader);
+    if (info === null) break;
+    if (info.comm === "claude") return pid;
+    if (info.ppid <= 1) break;
+    pid = info.ppid;
+  }
+  throw new Error(`emet-runs: no ancestor of pid ${startPid} has comm "claude" within 32 hops`);
+}
+
+/**
+ * Field 22 (`starttime`, clock ticks since boot) of `/proc/<pid>/stat`: it
+ * never changes for a process's lifetime and differs for a later process
+ * that reuses the same pid. `comm` may contain spaces and parentheses, so
+ * fields are counted from after the last `)`.
+ */
+export function readProcessStartToken(pid: number): string | undefined {
+  try {
+    const stat = readFileSync(`/proc/${pid}/stat`, "utf8");
+    const fieldsAfterComm = stat.slice(stat.lastIndexOf(")") + 2).split(" ");
+    return fieldsAfterComm[19] || undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+/**
+ * A bare `/proc/<pid>` existence check is not enough — pids get reused, so
+ * an exited anchor whose pid the OS has handed to something else would read
+ * as alive. Requiring `comm` to still read `claude` closes that gap: a
+ * recycled pid now running an unrelated process reads as dead.
+ * `readParent` already returns `null` for a missing process, so no separate
+ * existence pre-check is needed.
+ */
+export function isAnchorAlive(
+  pid: number,
+  startToken?: string,
+  reader: ProcessTreeReader = defaultProcessTreeReader,
+): boolean {
+  if (readParent(pid, reader)?.comm !== "claude") return false;
+  if (startToken === undefined) return true;
+  return readProcessStartToken(pid) === startToken;
+}
+
+/**
+ * Derives the `~/.claude/projects/<slug>` directory name Claude Code itself
+ * uses for a working directory — every path separator and dot replaced with `-`
+ * (observable directly in this repo's own scratchpad path, which is nested
+ * under exactly this slug for the main checkout). Every reservation in this
+ * registry belongs to the same project, so this only ever needs the current
+ * process's own `cwd`, never a value stored per-reservation.
+ */
+export function resolveSessionSlug(cwd: string = process.cwd()): string {
+  return cwd.replaceAll(/[/.]/g, "-");
+}
+
+/**
+ * Best-effort `mtime` of a run's own transcript file. Returns `null` on any
+ * read failure (missing file, unreadable `$HOME`, permissions) rather than
+ * throwing — this is a soft freshness signal layered on top of
+ * {@link isAnchorAlive}, never the primary liveness check, so a transcript
+ * read failing must never itself be mistaken for "the run is dead".
+ */
+function transcriptMtime(sessionSlug: string, runId: string): number | null {
+  try {
+    const transcriptPath = path.join(
+      os.homedir(),
+      ".claude",
+      "projects",
+      sessionSlug,
+      `${runId}.jsonl`,
+    );
+    return statSync(transcriptPath).mtimeMs;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * `'live'`: the anchor process is still running — the strong, primary
+ * signal. `'idle'`: the anchor is gone but the run's transcript was
+ * touched within `idleThresholdMs` (default `EMET_RUN_IDLE_THRESHOLD_MS`,
+ * 90 minutes) — ambiguous (a restart mid-run looks identical to this from
+ * the outside), so callers must report it, never auto-act on it. `'dead'`:
+ * neither signal holds — reclaimable, but still only under whatever
+ * explicit confirmation the caller requires; this function itself never
+ * deletes or reclaims anything.
+ *
+ * `isAnchorAliveFn`/`transcriptMtimeFn` are injectable so tests can exercise
+ * all three verdicts without depending on real `/proc` state or a real
+ * transcript file, the same pure-function-over-injected-data shape
+ * `worktrees.ts` already uses for `git worktree list --porcelain`.
+ */
+export function classifyRun(
+  anchorPid: number,
+  sessionSlug: string,
+  runId: string,
+  options: {
+    readonly now?: number;
+    readonly idleThresholdMs?: number;
+    readonly anchorStartToken?: string;
+    readonly isAnchorAliveFn?: (pid: number, startToken?: string) => boolean;
+    readonly transcriptMtimeFn?: (sessionSlug: string, runId: string) => number | null;
+  } = {},
+): RunVerdict {
+  const {
+    now = Date.now(),
+    anchorStartToken,
+    idleThresholdMs = RUN_IDLE_THRESHOLD_MS,
+    isAnchorAliveFn: isAnchorAliveFunction = isAnchorAlive,
+    transcriptMtimeFn: transcriptMtimeFunction = transcriptMtime,
+  } = options;
+
+  if (isAnchorAliveFunction(anchorPid, anchorStartToken)) return "live";
+
+  const mtime = transcriptMtimeFunction(sessionSlug, runId);
+  if (mtime !== null && now - mtime <= idleThresholdMs) return "idle";
+
+  return "dead";
+}
+
+const SAFE_ID_PATTERN = /^[A-Za-z0-9._-]{1,128}$/;
+
+function assertSafeId(label: string, value: string): void {
+  if (!SAFE_ID_PATTERN.test(value) || value === "." || value === "..") {
+    throw new Error(`emet-runs: unsafe ${label} ${JSON.stringify(value)}`);
+  }
+}
+
+function runDirectory(commonDirectory: string, runId: string): string {
+  assertSafeId("run id", runId);
+  return path.join(resolveRunDir(commonDirectory).path, "runs", runId);
+}
+
+function writeJsonAtomically(filePath: string, value: unknown): void {
+  mkdirSync(path.dirname(filePath), { recursive: true });
+  const temporaryPath = `${filePath}.${process.pid}.tmp`;
+  writeFileSync(temporaryPath, `${JSON.stringify(value, null, 2)}\n`);
+  renameSync(temporaryPath, filePath);
+}
+
+/**
+ * What a `SubagentStop`/`Stop` hook records about a worker's stop. Lives
+ * under the git common dir (shared by every worktree, survives a worktree
+ * reclaim), never inside the worker's own tree. `commits` is `null` when the
+ * commit probe was unavailable — a distinct state from `0`.
+ */
+export type CompletionEvent = {
+  readonly runId: string;
+  readonly ticket: string;
+  readonly event: "SubagentStop" | "Stop";
+  readonly outcome: "allowed" | "blocked";
+  readonly at: string;
+  readonly sessionId: string | null;
+  readonly branch: string | null;
+  readonly commits: number | null;
+  /** The subagent's own transcript (SubagentStop's `agent_transcript_path`); absent for a plain Stop. */
+  readonly agentTranscriptPath?: string;
+};
+
+export function completionEventPath(
+  commonDirectory: string,
+  runId: string,
+  ticket: string,
+): string {
+  assertSafeId("ticket", ticket);
+  return path.join(runDirectory(commonDirectory, runId), "events", `${ticket}.json`);
+}
+
+export function writeCompletionEvent(commonDirectory: string, event: CompletionEvent): string {
+  const filePath = completionEventPath(commonDirectory, event.runId, event.ticket);
+  writeJsonAtomically(filePath, event);
+  return filePath;
+}
+
+/** `null` when the event is missing or unparseable — callers treat both as "no event". */
+export function readCompletionEvent(
+  commonDirectory: string,
+  runId: string,
+  ticket: string,
+): CompletionEvent | null {
+  try {
+    const parsed: unknown = JSON.parse(
+      readFileSync(completionEventPath(commonDirectory, runId, ticket), "utf8"),
+    );
+    if (!isObject(parsed)) return null;
+    if (
+      typeof parsed.runId !== "string" ||
+      typeof parsed.ticket !== "string" ||
+      (parsed.event !== "SubagentStop" && parsed.event !== "Stop") ||
+      (parsed.outcome !== "allowed" && parsed.outcome !== "blocked") ||
+      typeof parsed.at !== "string"
+    ) {
+      return null;
+    }
+    return {
+      runId: parsed.runId,
+      ticket: parsed.ticket,
+      event: parsed.event,
+      outcome: parsed.outcome,
+      at: parsed.at,
+      sessionId: typeof parsed.sessionId === "string" ? parsed.sessionId : null,
+      branch: typeof parsed.branch === "string" ? parsed.branch : null,
+      commits: typeof parsed.commits === "number" ? parsed.commits : null,
+      ...(typeof parsed.agentTranscriptPath === "string"
+        ? { agentTranscriptPath: parsed.agentTranscriptPath }
+        : {}),
+    };
+  } catch {
+    return null;
+  }
+}
+
+function stallNudgePath(commonDirectory: string, runId: string, ticket: string): string {
+  assertSafeId("ticket", ticket);
+  return path.join(runDirectory(commonDirectory, runId), "nudges", `${ticket}.json`);
+}
+
+/** `0` when never nudged; `Infinity` when the counter file is unreadable (fails closed). */
+export function readStallNudgeCount(
+  commonDirectory: string,
+  runId: string,
+  ticket: string,
+): number {
+  let text: string;
+  try {
+    text = readFileSync(stallNudgePath(commonDirectory, runId, ticket), "utf8");
+  } catch (error) {
+    if (errnoCode(error) === "ENOENT") return 0;
+    return Number.POSITIVE_INFINITY;
+  }
+  try {
+    const parsedCounter: unknown = JSON.parse(text);
+    const count = isObject(parsedCounter) ? parsedCounter.count : undefined;
+    return typeof count === "number" && Number.isSafeInteger(count) && count >= 0
+      ? count
+      : Number.POSITIVE_INFINITY;
+  } catch {
+    return Number.POSITIVE_INFINITY;
+  }
+}
+
+export type StallNudgeResult = {
+  readonly granted: boolean;
+  readonly count: number;
+  readonly cap: number;
+};
+
+/**
+ * Spends one stall nudge for a ticket if `budgets.stallNudgeCap` allows. The
+ * counter only ever increases: there is no reset, and an unreadable counter
+ * counts as exhausted, so the cap can never be refilled by accident.
+ */
+export function recordStallNudge(
+  commonDirectory: string,
+  runId: string,
+  ticket: string,
+  cap: number,
+): StallNudgeResult {
+  const current = readStallNudgeCount(commonDirectory, runId, ticket);
+  if (current >= cap) {
+    return { granted: false, count: Math.min(current, cap), cap };
+  }
+  const count = current + 1;
+  writeJsonAtomically(stallNudgePath(commonDirectory, runId, ticket), { count });
+  return { granted: true, count, cap };
+}
+
+const CLOSED_MARKER_FILE = "closed.json";
+
+async function resolveCommonDirectory(explicit: string | undefined): Promise<string> {
+  return explicit ?? (await resolveLockDirectory("."));
+}
+
+/**
+ * Records that a run's cleanup sweep finished with no failures, so every
+ * reclaim rule treats the run as finished even while its anchor is alive.
+ */
+export async function markRunClosed(
+  runId: string,
+  options: { commonDirectory?: string; now?: () => number } = {},
+): Promise<void> {
+  const commonDirectory = await resolveCommonDirectory(options.commonDirectory);
+  const closedAt = (options.now ?? Date.now)();
+  writeJsonAtomically(path.join(runDirectory(commonDirectory, runId), CLOSED_MARKER_FILE), {
+    runId,
+    closedAt,
+  });
+}
+
+/** `true` when {@link markRunClosed} wrote a readable marker for the run. */
+export async function isRunClosed(
+  runId: string,
+  options: { commonDirectory?: string } = {},
+): Promise<boolean> {
+  const commonDirectory = await resolveCommonDirectory(options.commonDirectory);
+  try {
+    const parsed: unknown = JSON.parse(
+      readFileSync(path.join(runDirectory(commonDirectory, runId), CLOSED_MARKER_FILE), "utf8"),
+    );
+    return isObject(parsed);
+  } catch (error) {
+    if (errnoCode(error) === "ENOENT" || error instanceof SyntaxError) return false;
+    throw error;
+  }
+}
+
+async function resolveCommonDirectoryFor(repoRoot: string): Promise<string | null> {
+  try {
+    const output = await Bun.$`git rev-parse --path-format=absolute --git-common-dir`
+      .cwd(repoRoot)
+      .quiet()
+      .text();
+    const resolved = output.trim();
+    return path.isAbsolute(resolved) ? resolved : null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Where a per-run artifact is written and read. Writes go under the
+ * git-common-dir run directory, shared by every worktree of the repo; reads
+ * try that first, then the legacy `<repoRoot>/.emet/runs/<id>/`. When the
+ * repo has no resolvable git-common-dir, the legacy location is used for both.
+ */
+export async function resolveRunArtifactPath(
+  runId: string,
+  fileName: "approval.json" | "tickets.json" | "materialize.json",
+  options: { repoRoot: string; commonDirectory?: string },
+): Promise<{ writePath: string; readPath: string | null }> {
+  const legacyPath = path.join(runDirectory(options.repoRoot, runId), fileName);
+  const commonDirectory =
+    options.commonDirectory ?? (await resolveCommonDirectoryFor(options.repoRoot));
+  const sharedPath =
+    commonDirectory === null
+      ? legacyPath
+      : path.join(runDirectory(commonDirectory, runId), fileName);
+  const readPath = [sharedPath, legacyPath].find((candidate) => existsSync(candidate)) ?? null;
+  return { writePath: sharedPath, readPath };
+}

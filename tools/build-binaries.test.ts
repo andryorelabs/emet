@@ -6,7 +6,7 @@ import { binaryName, buildBinary, parseArguments, readPluginVersion } from "./bu
 
 describe("build-binaries helpers", () => {
   test("binaryName drops the bun- prefix", () => {
-    expect(binaryName("bun-darwin-arm64")).toBe("forge-darwin-arm64");
+    expect(binaryName("bun-darwin-arm64")).toBe("emet-darwin-arm64");
   });
 
   test("parseArguments defaults to all four targets", () => {
@@ -30,7 +30,7 @@ describe("build-binaries helpers", () => {
   });
 
   test("readPluginVersion reads plugin.json and falls back to the dev version", () => {
-    const root = mkdtempSync(path.join(os.tmpdir(), "forge-version-"));
+    const root = mkdtempSync(path.join(os.tmpdir(), "emet-version-"));
     try {
       expect(readPluginVersion(root)).toBe("0.0.0-dev");
       mkdirSync(path.join(root, ".claude-plugin"));
@@ -51,7 +51,7 @@ describe.skipIf(process.platform !== "linux" || process.arch !== "x64")(
     let binary = "";
 
     beforeAll(async () => {
-      workdir = mkdtempSync(path.join(os.tmpdir(), "forge-binary-"));
+      workdir = mkdtempSync(path.join(os.tmpdir(), "emet-binary-"));
       mkdirSync(path.join(workdir, "emptybin"));
       binary = await buildBinary("bun-linux-x64", path.join(workdir, "out"), "0.2.0");
       chmodSync(binary, 0o755);
@@ -74,7 +74,7 @@ describe.skipIf(process.platform !== "linux" || process.arch !== "x64")(
       const result = run("selftest");
       expect(result.exitCode).toBe(1);
       expect(result.stderr.toString()).toContain(
-        "selftest needs a source install; run forge doctor",
+        "selftest needs a source install; run emet doctor",
       );
     });
 

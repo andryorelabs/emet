@@ -1,0 +1,73 @@
+/**
+ * emet design tokens: P2 Moss palette (light and dark), T2 type, scale.
+ * Source of truth: docs/brand/explorations/emet-palette-r2.html (#p2).
+ * Font files resolve relative to this file: brandbook/fonts/.
+ */
+
+@font-face {
+  font-family: "Space Grotesk";
+  src: url("brandbook/fonts/SpaceGrotesk-var.woff2") format("woff2");
+  font-weight: 300 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "JetBrains Mono";
+  src: url("brandbook/fonts/JetBrainsMono-var.woff2") format("woff2");
+  font-weight: 100 800;
+  font-style: normal;
+  font-display: swap;
+}
+
+:root {
+  --bg: oklch(0.985 0.013 150);
+  --surface: oklch(0.965 0.013 150);
+  --border: oklch(0.895 0.013 150);
+  --text: oklch(0.22 0.013 150);
+  --text-muted: oklch(0.45 0.013 150);
+  --accent: oklch(0.7 0.135 135);
+  --accent-text: oklch(0.52 0.135 135);
+  --on-accent: oklch(0.165 0.013 150);
+  --ok: oklch(0.52 0.092 182);
+  --warn: oklch(0.54 0.112 80);
+  --error: oklch(0.555 0.17 22);
+  --info: oklch(0.535 0.12 250);
+  --clay: oklch(0.72 0.022 110);
+  --moss: oklch(0.56 0.13 135);
+  --lamp: oklch(0.84 0.14 95);
+
+  --font-sans: "Space Grotesk", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, monospace;
+
+  --text-xs: 0.75rem;
+  --text-sm: 0.875rem;
+  --text-base: 1rem;
+  --text-lg: 1.125rem;
+  --text-xl: 1.25rem;
+  --text-2xl: 1.5rem;
+  --text-3xl: 1.875rem;
+  --text-4xl: 2.25rem;
+
+  color-scheme: light;
+}
+
+.dark {
+  --bg: oklch(0.165 0.013 150);
+  --surface: oklch(0.22 0.013 150);
+  --border: oklch(0.29 0.013 150);
+  --text: oklch(0.965 0.013 150);
+  --text-muted: oklch(0.835 0.013 150);
+  --accent: oklch(0.8 0.135 135);
+  --accent-text: oklch(0.75 0.135 135);
+  --on-accent: oklch(0.165 0.013 150);
+  --ok: oklch(0.76 0.1 182);
+  --warn: oklch(0.76 0.15 80);
+  --error: oklch(0.76 0.142 22);
+  --info: oklch(0.76 0.12 250);
+  --clay: oklch(0.76 0.022 110);
+  --moss: oklch(0.74 0.13 135);
+  --lamp: oklch(0.9 0.14 95);
+
+  color-scheme: dark;
+}

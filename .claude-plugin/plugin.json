@@ -1,7 +1,7 @@
 {
-  "name": "forge",
-  "version": "0.1.0",
-  "description": "One-shot feature pipeline: interview, spec, tickets, then parallel worktree agents implement, test and merge.",
+  "name": "emet",
+  "version": "0.2.0",
+  "description": "Spec to merge on one approval: parallel workers in isolated worktrees, a review per wave, CI green before merge.",
   "license": "MIT",
   "dependencies": [{ "name": "mattpocock-skills", "marketplace": "claude-plugins-official" }]
 }

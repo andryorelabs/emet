@@ -1,6 +1,6 @@
 # Cut a release
 
-How to publish a version of claude-forge. Terms follow [GLOSSARY.md](../../GLOSSARY.md). The `cut-release` skill (`.claude/skills/cut-release/`) walks an agent through these steps.
+How to publish a version of emet. Terms follow [GLOSSARY.md](../../GLOSSARY.md). The `cut-release` skill (`.claude/skills/cut-release/`) walks an agent through these steps.
 
 A release is a tag on `main`. Pushing a `v*` tag runs `.github/workflows/release.yml`, which verifies the commit and publishes the GitHub release with the standalone binaries.
 
@@ -38,7 +38,7 @@ The `verify` job runs first:
 Then the `release` job:
 
 - checks the tag against `plugin.json`;
-- builds the four standalone binaries (`forge-linux-x64`, `forge-linux-arm64`, `forge-darwin-x64`, `forge-darwin-arm64`) and `SHA256SUMS`;
+- builds the four standalone binaries (`emet-linux-x64`, `emet-linux-arm64`, `emet-darwin-x64`, `emet-darwin-arm64`) and `SHA256SUMS`;
 - extracts the changelog section as release notes;
 - attests build provenance for public repositories;
 - creates the GitHub release, and exits cleanly when a release for the tag already exists.

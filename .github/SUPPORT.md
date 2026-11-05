@@ -15,5 +15,5 @@ Do not open a public issue for vulnerabilities. Follow
 
 ## Response expectations
 
-claude-forge is maintained by a single person. Issues are triaged on a
+emet is maintained by a single person. Issues are triaged on a
 best-effort basis and there is no guaranteed response time.

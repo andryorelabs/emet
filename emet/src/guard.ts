@@ -1,0 +1,592 @@
+import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
+import path from "node:path";
+
+import { checkDestructiveCommand, checkEditSurface } from "./guard-destructive";
+import { listReservations, type Reservation } from "./claims";
+import { writeCompletionEvent, type CompletionEvent } from "./runs";
+import { listOccupiedSlots, type SlotListEntry } from "./slots";
+import { parseWorktreeEntries, resolveWorktreeOwner } from "./worktrees";
+import { isObject } from "./narrow";
+import { defaultProcessTreeReader, readParent as readProcessParent } from "./proctree";
+import {
+  BINARY,
+  LEGACY_PRODUCT,
+  LEGACY_RUN_DIR,
+  PRODUCT,
+  RUN_DIR,
+  legacyStateDir,
+  stateDir,
+} from "./names";
+
+const GUARD_PREFIX = `${BINARY} guard:`;
+const INTERNAL_PREFIX = `${BINARY}:guard —`;
+const SLASH_COMMANDS: readonly string[] = [`/${PRODUCT}`, `/${LEGACY_PRODUCT}`];
+
+/**
+ * `emet guard` — a Claude Code `PreToolUse` hook that blocks the three
+ * harness-level failure modes real `/emet` runs have hit repeatedly (see
+ * `reference/incidents.md`'s bug-report drafts): a worker backgrounding a
+ * `Bash` command it means to wait on (it gets no completion notification,
+ * so it stalls unattended), `ScheduleWakeup` replaying a slash command
+ * while background work is in flight (indistinguishable from a human
+ * re-typing it, risking a restart from Phase 0), and `code-review`'s
+ * finder-roster fan-out hanging when another `/emet` coordinator's wave
+ * is already busy on this host.
+ *
+ * None of these are `/emet`-internal bugs — they're triggers this repo's
+ * own docs (`worker-prompt.md`, `phases-6-7-dispatch.md`) already ask a session not
+ * to pull, restated here as a hook because a prose rule has, measurably,
+ * not been enough (`reference/incidents.md`'s "handoff note's 0-of-4 wave").
+ * A hook makes the same rule structurally true regardless of whether this
+ * turn's context happens to include the doc that states it.
+ *
+ * Reads one `PreToolUse` hook payload from stdin, writes a
+ * `permissionDecision: "deny"` response to stdout when a rule fires, or
+ * nothing at all (implicit "allow" — the harness's own default) otherwise.
+ * Every rule fails open: an internal error here must never block a
+ * session's ordinary work because this hook has a bug of its own.
+ */
+
+export type PreToolUseHookInput = {
+  readonly tool_name?: string;
+  readonly cwd?: string;
+  readonly tool_input?: Record<string, unknown>;
+};
+
+function optionalString(record: Record<string, unknown>, key: string): { [K in string]?: string } {
+  const value = record[key];
+  return typeof value === "string" ? { [key]: value } : {};
+}
+
+function toPreToolUseInput(value: unknown): PreToolUseHookInput {
+  if (!isObject(value)) return {};
+  return {
+    ...optionalString(value, "tool_name"),
+    ...optionalString(value, "cwd"),
+    ...(isObject(value.tool_input) ? { tool_input: value.tool_input } : {}),
+  };
+}
+
+function toStopHookInput(value: unknown): StopHookInput {
+  if (!isObject(value)) return {};
+  return {
+    ...optionalString(value, "hook_event_name"),
+    ...optionalString(value, "session_id"),
+    ...optionalString(value, "cwd"),
+    ...optionalString(value, "agent_transcript_path"),
+    ...(typeof value.stop_hook_active === "boolean"
+      ? { stop_hook_active: value.stop_hook_active }
+      : {}),
+  };
+}
+
+export type GuardVerdict =
+  | { readonly decision: "allow" }
+  | { readonly decision: "deny"; readonly reason: string };
+
+const ALLOW: GuardVerdict = { decision: "allow" };
+
+function deny(reason: string): GuardVerdict {
+  return { decision: "deny", reason };
+}
+
+/**
+ * A worker never gets a completion notification for its own `Bash
+ * run_in_background: true` call — that channel is wired to the top-level
+ * session only. Scoped to an `/emet` agent worktree's own cwd (rather than
+ * every `Bash` call everywhere) since an ordinary interactive session
+ * backgrounding something is a legitimate, supported pattern this hook has
+ * no business blocking.
+ */
+export function checkBackgroundBashInWorktree(input: PreToolUseHookInput): GuardVerdict {
+  if (input.tool_name !== "Bash") return ALLOW;
+  if (input.tool_input?.run_in_background !== true) return ALLOW;
+  if (!input.cwd?.includes(".claude/worktrees/agent-")) return ALLOW;
+
+  return deny(
+    `${GUARD_PREFIX} a /${PRODUCT} worker gets no completion notification for a backgrounded Bash ` +
+      "process (that channel only reaches the top-level session) — run this in the " +
+      "foreground, wrapped in `timeout` if it might hang. See reference/incidents.md.",
+  );
+}
+
+/**
+ * `ScheduleWakeup`'s `prompt` replaying a slash command arrives, on fire, as
+ * a fresh `<command-message>` turn — indistinguishable from a human
+ * re-typing it. For `/emet` (or the legacy `/forge`) specifically that risks restarting the whole
+ * multi-phase run from Phase 0 instead of resuming an in-progress wave (a
+ * real run measured exactly this, three times in a row — see
+ * `reference/incidents.md`).
+ */
+export function checkScheduleWakeupSlashCommand(input: PreToolUseHookInput): GuardVerdict {
+  if (input.tool_name !== "ScheduleWakeup") return ALLOW;
+  const prompt = input.tool_input?.prompt;
+  if (typeof prompt !== "string") return ALLOW;
+  const trimmedPrompt = prompt.trimStart();
+  if (!SLASH_COMMANDS.some((command) => trimmedPrompt.startsWith(command))) return ALLOW;
+
+  return deny(
+    `${GUARD_PREFIX} ScheduleWakeup's prompt must not be a /${PRODUCT} slash command — on fire it ` +
+      "replays as a fresh command turn and can restart the run from Phase 0. Use a short " +
+      'resume note instead (e.g. "resume wave close-out for run <runId>"). See reference/incidents.md.',
+  );
+}
+
+/**
+ * Reads a pid's parent via {@link readParent} (procfs, or `ps` where `/proc`
+ * is absent) — read directly rather than pulling in
+ * a process-tree library for a single integer. Returns `null` for a pid
+ * that's gone, unreadable, or whose `stat` doesn't parse (e.g. a process
+ * name containing a literal `)` throws off naive splitting — this locates
+ * the *last* `)` first, exactly like `ps`/procfs docs recommend, so that
+ * case still parses correctly).
+ */
+export function readParentPid(pid: number, readFile?: (filePath: string) => string): number | null {
+  const reader =
+    readFile === undefined
+      ? defaultProcessTreeReader
+      : { ...defaultProcessTreeReader, hasProcfs: () => true, readFile };
+  return readProcessParent(pid, reader)?.ppid ?? null;
+}
+
+/**
+ * Walks `startPid`'s own ancestry (itself, its parent, its parent's parent,
+ * …) up to `maxDepth` hops, stopping at pid 1 or the first unreadable
+ * `/proc/<pid>/stat`. Used to decide whether a slot's `anchorPid` is *this*
+ * session (the hook process descends from it) or a sibling's.
+ */
+export function collectProcessAncestry(
+  startPid: number,
+  readParent: (pid: number) => number | null = readParentPid,
+  maxDepth = 64,
+): number[] {
+  const ancestry: number[] = [startPid];
+  let current = startPid;
+  for (let hop = 0; hop < maxDepth; hop++) {
+    const parent = readParent(current);
+    if (parent === null || parent === current || parent <= 1) break;
+    ancestry.push(parent);
+    current = parent;
+  }
+  return ancestry;
+}
+
+/**
+ * Whether at least one *other* run (an `anchorPid` outside this hook
+ * process's own ancestry) holds a slot with a `'live'` verdict — the signal
+ * `phases-8-closeout.md`'s Phase 8 uses to skip `code-review`'s finder-roster
+ * fan-out: several real runs measured that roster hanging when multiple
+ * `/emet` coordinators' background work was contending for the same host
+ * at once, unrelated to raw memory/cpu headroom.
+ */
+export function hasLiveSiblingRun(
+  entries: readonly SlotListEntry[],
+  ownAncestry: readonly number[],
+): boolean {
+  const ownPids = new Set(ownAncestry);
+  return entries.some((entry) => entry.verdict === "live" && !ownPids.has(entry.holder.anchorPid));
+}
+
+/**
+ * `code-review`'s own fan-out is what hung repeatedly under host
+ * contention (`reference/incidents.md`) — this only fires for that one
+ * skill, keyed on `tool_input.skill` however the `Skill` tool names it
+ * (`code-review`, or a plugin-scoped `plugin:code-review`).
+ */
+function isCodeReviewSkillInvocation(input: PreToolUseHookInput): boolean {
+  if (input.tool_name !== "Skill") return false;
+  const skill = input.tool_input?.skill;
+  return typeof skill === "string" && (skill === "code-review" || skill.endsWith(":code-review"));
+}
+
+export async function checkCodeReviewFanoutWithSiblingRun(
+  input: PreToolUseHookInput,
+  hookPid: number,
+  listSlots: () => Promise<readonly SlotListEntry[]> = listOccupiedSlots,
+): Promise<GuardVerdict> {
+  if (!isCodeReviewSkillInvocation(input)) return ALLOW;
+
+  const entries = await listSlots();
+  const ownAncestry = collectProcessAncestry(hookPid);
+  if (!hasLiveSiblingRun(entries, ownAncestry)) return ALLOW;
+
+  return deny(
+    `${GUARD_PREFIX} another /${PRODUCT} coordinator has a live worker slot on this host right now ` +
+      `(check "${BINARY} slots") — run code-review in a single pass with no finder-roster fan-out ` +
+      "instead (e.g. --level medium or lower); the fan-out has repeatedly hung under host " +
+      "contention from a sibling wave. See reference/incidents.md.",
+  );
+}
+
+/**
+ * Runs every rule and returns the first `deny`, or `allow` if none fire.
+ * Never throws: an internal error in any rule is caught and treated as
+ * `allow` (with the error on stderr) — this hook must never be the reason
+ * an otherwise-fine tool call gets blocked.
+ */
+export async function evaluateGuard(
+  input: PreToolUseHookInput,
+  hookPid: number,
+): Promise<GuardVerdict> {
+  try {
+    const destructiveVerdict = checkDestructiveCommand(input);
+    if (destructiveVerdict.decision === "deny") return destructiveVerdict;
+
+    const surfaceVerdict = checkEditSurface(input);
+    if (surfaceVerdict.decision === "deny") return surfaceVerdict;
+
+    const backgroundBashVerdict = checkBackgroundBashInWorktree(input);
+    if (backgroundBashVerdict.decision === "deny") return backgroundBashVerdict;
+
+    const scheduleWakeupVerdict = checkScheduleWakeupSlashCommand(input);
+    if (scheduleWakeupVerdict.decision === "deny") return scheduleWakeupVerdict;
+
+    return await checkCodeReviewFanoutWithSiblingRun(input, hookPid);
+  } catch (error) {
+    console.error(`${INTERNAL_PREFIX} internal error, allowing the call:`, error);
+    return ALLOW;
+  }
+}
+
+export type StopHookInput = {
+  readonly hook_event_name?: string;
+  readonly session_id?: string;
+  readonly cwd?: string;
+  readonly stop_hook_active?: boolean;
+  readonly agent_transcript_path?: string;
+};
+
+export type StopVerdict =
+  | { readonly decision: "allow" }
+  | { readonly decision: "block"; readonly reason: string };
+
+const STOP_ALLOW: StopVerdict = { decision: "allow" };
+
+const MAX_STDIN_BYTES = 1024 * 1024;
+const SESSION_ID_PATTERN = /^[A-Za-z0-9_-]{1,128}$/;
+
+export function isValidSessionId(value: unknown): value is string {
+  return typeof value === "string" && SESSION_ID_PATTERN.test(value);
+}
+
+export function finalReportMarkerPath(
+  sessionId: string,
+  stateDirectory: string = stateDir(),
+): string {
+  if (!isValidSessionId(sessionId)) {
+    throw new Error(`${INTERNAL_PREFIX} invalid session id ${JSON.stringify(sessionId)}`);
+  }
+  return path.join(stateDirectory, "final-report", sessionId);
+}
+
+/** Records that this session delivered its final report, so the `Stop` hook
+ * stops blocking. CLI: `emet guard --mark-final-report <session_id>`. */
+function writeFinalReportMarker(sessionId: string, stateDirectory?: string): string {
+  const markerPath = finalReportMarkerPath(sessionId, stateDirectory);
+  mkdirSync(path.dirname(markerPath), { recursive: true });
+  writeFileSync(markerPath, `${new Date().toISOString()}\n`);
+  return markerPath;
+}
+
+function isAgentWorktreeCwd(cwd: string | undefined): cwd is string {
+  return typeof cwd === "string" && cwd.includes(".claude/worktrees/agent-");
+}
+
+async function countNewCommits(cwd: string): Promise<number | null> {
+  for (const base of ["origin/HEAD", "origin/main", "main", "origin/master", "master"]) {
+    // oxlint-disable-next-line eslint/no-await-in-loop -- git and gh calls stay sequential to keep output and side effects ordered
+    const result = await Bun.$`git -C ${cwd} rev-list --count ${base}..HEAD`.nothrow().quiet();
+    if (result.exitCode === 0) {
+      const count = Number(result.stdout.toString().trim());
+      if (Number.isSafeInteger(count)) return count;
+    }
+  }
+  return null;
+}
+
+/** Handoff notes from the worker's `.emet/` and legacy `.forge/` run dirs. */
+export function readHandoffNotes(cwd: string): string[] {
+  return [RUN_DIR, LEGACY_RUN_DIR].flatMap((runDirectory) => {
+    const directory = path.join(cwd, runDirectory);
+    if (!existsSync(directory)) return [];
+    return readdirSync(directory)
+      .filter((name) => /^handoff-.+\.md$/i.test(name))
+      .map((name) => readFileSync(path.join(directory, name), "utf8"));
+  });
+}
+
+function stopBlock(reason: string): StopVerdict {
+  return { decision: "block", reason };
+}
+
+export type SubagentStopDependencies = {
+  readonly countNewCommits: (cwd: string) => Promise<number | null>;
+  readonly readHandoffNotes: (cwd: string) => string[];
+};
+
+const DEFAULT_SUBAGENT_STOP_DEPENDENCIES: SubagentStopDependencies = {
+  countNewCommits,
+  readHandoffNotes,
+};
+
+/**
+ * Blocks a worktree worker's first stop when it has no new commit or its
+ * handoff note carries no `state:` line. `stop_hook_active` means the harness
+ * is already continuing because of a previous block, so that stop is allowed.
+ */
+export async function checkSubagentStop(
+  input: StopHookInput,
+  dependencies: SubagentStopDependencies = DEFAULT_SUBAGENT_STOP_DEPENDENCIES,
+): Promise<StopVerdict> {
+  if (input.stop_hook_active === true) return STOP_ALLOW;
+  if (!isAgentWorktreeCwd(input.cwd)) return STOP_ALLOW;
+
+  const problems: string[] = [];
+  const commits = await dependencies.countNewCommits(input.cwd);
+  if (commits === 0) problems.push("the worktree has no new commit");
+
+  const notes = dependencies.readHandoffNotes(input.cwd);
+  if (!notes.some((note) => /^state:\s*\S/m.test(note))) {
+    problems.push(`the handoff note (${RUN_DIR}/handoff-<ticket>.md) has no "state:" line`);
+  }
+  if (problems.length === 0) return STOP_ALLOW;
+
+  return stopBlock(
+    `${GUARD_PREFIX} do not stop yet — ${problems.join(" and ")}. Commit your work and update the handoff note, then report.`,
+  );
+}
+
+export type SessionStopDependencies = {
+  readonly listSlots: () => Promise<readonly SlotListEntry[]>;
+  readonly listClaims: () => Promise<readonly Reservation[]>;
+  readonly markerExists: (sessionId: string) => boolean;
+};
+
+const DEFAULT_SESSION_STOP_DEPENDENCIES: SessionStopDependencies = {
+  listSlots: () => listOccupiedSlots(),
+  listClaims: () => listReservations(),
+  markerExists: (sessionId) =>
+    existsSync(finalReportMarkerPath(sessionId)) ||
+    existsSync(finalReportMarkerPath(sessionId, legacyStateDir())),
+};
+
+/**
+ * Blocks a coordinator's first stop when a run anchored in this session's
+ * own process ancestry still holds ticket claims, has no worker in flight
+ * (a held slot means the coordinator is legitimately waiting), and no final
+ * report marker exists for the session.
+ */
+export async function checkSessionStop(
+  input: StopHookInput,
+  ownAncestry: readonly number[],
+  dependencies: SessionStopDependencies = DEFAULT_SESSION_STOP_DEPENDENCIES,
+): Promise<StopVerdict> {
+  if (input.stop_hook_active === true) return STOP_ALLOW;
+  if (!isValidSessionId(input.session_id)) return STOP_ALLOW;
+  if (dependencies.markerExists(input.session_id)) return STOP_ALLOW;
+
+  const ownPids = new Set(ownAncestry);
+  const heldSlots = (await dependencies.listSlots()).filter(
+    (entry) => entry.verdict !== "dead" && ownPids.has(entry.holder.anchorPid),
+  );
+  const heldClaims = (await dependencies.listClaims()).filter((claim) =>
+    ownPids.has(claim.anchorPid),
+  );
+  if (heldSlots.length > 0) return STOP_ALLOW;
+  if (heldClaims.length === 0) return STOP_ALLOW;
+
+  return stopBlock(
+    `${GUARD_PREFIX} this run still holds ${heldClaims.length} claim(s), no worker is in flight and no final report was written — finish the wave close-out, post the final report, then run \`${BINARY} guard --mark-final-report ${input.session_id}\`.`,
+  );
+}
+
+type CompletionEventOwner = {
+  readonly runId: string;
+  readonly ticket: string;
+  readonly branch: string | null;
+};
+
+export type CompletionEventDependencies = {
+  readonly resolveOwner: (cwd: string) => Promise<CompletionEventOwner | null>;
+  readonly resolveCommonDirectory: (cwd: string) => Promise<string | null>;
+  readonly countNewCommits: (cwd: string) => Promise<number | null>;
+  readonly writeEvent: (commonDirectory: string, event: CompletionEvent) => void;
+  readonly now: () => Date;
+};
+
+async function gitOutput(cwd: string, ...args: string[]): Promise<string | null> {
+  const result = await Bun.$`git -C ${cwd} ${args}`.nothrow().quiet();
+  return result.exitCode === 0 ? result.stdout.toString().trim() : null;
+}
+
+async function resolveWorktreeEventOwner(cwd: string): Promise<CompletionEventOwner | null> {
+  const topLevel = await gitOutput(cwd, "rev-parse", "--show-toplevel");
+  const listing = await gitOutput(cwd, "worktree", "list", "--porcelain");
+  if (topLevel === null || listing === null) return null;
+  const entry = parseWorktreeEntries(listing).find((candidate) => candidate.directory === topLevel);
+  const owner = entry ? resolveWorktreeOwner(entry) : null;
+  if (!entry || !owner) return null;
+  return {
+    runId: owner.runId,
+    ticket: owner.ticket,
+    branch: entry.branch?.replace(/^refs\/heads\//, "") ?? null,
+  };
+}
+
+const DEFAULT_COMPLETION_EVENT_DEPENDENCIES: CompletionEventDependencies = {
+  resolveOwner: resolveWorktreeEventOwner,
+  resolveCommonDirectory: (cwd) =>
+    gitOutput(cwd, "rev-parse", "--path-format=absolute", "--git-common-dir"),
+  countNewCommits,
+  writeEvent: (commonDirectory, event) => {
+    writeCompletionEvent(commonDirectory, event);
+  },
+  now: () => new Date(),
+};
+
+/**
+ * Writes `<git-common-dir>/<run dir>/runs/<run>/events/<ticket>.json` for a stop
+ * inside an emet-owned worktree, so `emet usage --stalled` and `emet gate`
+ * decide from events plus git state instead of transcript prose. Best
+ * effort: a failure here is logged and never changes the stop verdict.
+ */
+export async function recordCompletionEvent(
+  event: "SubagentStop" | "Stop",
+  input: StopHookInput,
+  verdict: StopVerdict,
+  dependencies: CompletionEventDependencies = DEFAULT_COMPLETION_EVENT_DEPENDENCIES,
+): Promise<void> {
+  try {
+    if (typeof input.cwd !== "string") return;
+    const owner = await dependencies.resolveOwner(input.cwd);
+    if (!owner) return;
+    const commonDirectory = await dependencies.resolveCommonDirectory(input.cwd);
+    if (!commonDirectory) return;
+    dependencies.writeEvent(commonDirectory, {
+      runId: owner.runId,
+      ticket: owner.ticket,
+      event,
+      outcome: verdict.decision === "allow" ? "allowed" : "blocked",
+      at: dependencies.now().toISOString(),
+      sessionId: isValidSessionId(input.session_id) ? input.session_id : null,
+      branch: owner.branch,
+      commits: await dependencies.countNewCommits(input.cwd),
+      ...(typeof input.agent_transcript_path === "string" && input.agent_transcript_path.length > 0
+        ? { agentTranscriptPath: input.agent_transcript_path }
+        : {}),
+    });
+  } catch (error) {
+    console.error(`${INTERNAL_PREFIX} could not record the completion event:`, error);
+  }
+}
+
+export async function evaluateStopGuard(
+  event: "SubagentStop" | "Stop",
+  input: StopHookInput,
+  hookPid: number,
+): Promise<StopVerdict> {
+  let verdict: StopVerdict = STOP_ALLOW;
+  try {
+    verdict =
+      event === "SubagentStop"
+        ? await checkSubagentStop(input)
+        : await checkSessionStop(input, collectProcessAncestry(hookPid));
+  } catch (error) {
+    console.error(`${INTERNAL_PREFIX} internal error, allowing the stop:`, error);
+  }
+  await recordCompletionEvent(event, input, verdict);
+  return verdict;
+}
+
+/** Reads a stream up to `limit` bytes; returns `null` when it exceeds the bound. */
+export async function readBoundedStdin(
+  stream: ReadableStream<Uint8Array> = Bun.stdin.stream(),
+  limit: number = MAX_STDIN_BYTES,
+): Promise<string | null> {
+  const reader = stream.getReader();
+  const chunks: Uint8Array[] = [];
+  let total = 0;
+  for (;;) {
+    // oxlint-disable-next-line eslint/no-await-in-loop -- stream chunks must be read in order
+    const { done, value } = await reader.read();
+    if (done) break;
+    total += value.byteLength;
+    if (total > limit) {
+      // oxlint-disable-next-line eslint/no-await-in-loop -- stream chunks must be read in order
+      await reader.cancel();
+      return null;
+    }
+    chunks.push(value);
+  }
+  return Buffer.concat(chunks).toString("utf8");
+}
+
+function formatHookOutput(verdict: GuardVerdict): string | null {
+  if (verdict.decision === "allow") return null;
+  return JSON.stringify({
+    hookSpecificOutput: {
+      hookEventName: "PreToolUse",
+      permissionDecision: "deny",
+      permissionDecisionReason: verdict.reason,
+    },
+  });
+}
+
+export function formatStopOutput(verdict: StopVerdict): string | null {
+  if (verdict.decision === "allow") return null;
+  return JSON.stringify({ decision: "block", reason: verdict.reason });
+}
+
+function readEventFlag(argv: readonly string[]): string | null {
+  const index = argv.indexOf("--event");
+  return index === -1 ? null : (argv[index + 1] ?? null);
+}
+
+export async function run(argv: readonly string[] = process.argv.slice(2)): Promise<void> {
+  const markIndex = argv.indexOf("--mark-final-report");
+  if (markIndex !== -1) {
+    try {
+      console.log(writeFinalReportMarker(argv[markIndex + 1] ?? ""));
+    } catch (error) {
+      console.error(error instanceof Error ? error.message : String(error));
+      process.exitCode = 1;
+    }
+    return;
+  }
+
+  let raw: string | null;
+  try {
+    raw = await readBoundedStdin();
+  } catch (error) {
+    console.error(`${INTERNAL_PREFIX} could not read stdin, allowing the call:`, error);
+    return;
+  }
+  if (raw === null) {
+    console.error(`${INTERNAL_PREFIX} stdin exceeds 1 MiB, allowing the call`);
+    return;
+  }
+
+  let parsed: unknown;
+  try {
+    parsed = raw.trim().length > 0 ? JSON.parse(raw) : {};
+  } catch (error) {
+    console.error(`${INTERNAL_PREFIX} could not parse hook input, allowing the call:`, error);
+    return;
+  }
+
+  const event = readEventFlag(argv);
+  if (event === "SubagentStop" || event === "Stop") {
+    const stopVerdict = await evaluateStopGuard(event, toStopHookInput(parsed), process.pid);
+    const stopOutput = formatStopOutput(stopVerdict);
+    if (stopOutput) console.log(stopOutput);
+    return;
+  }
+
+  const verdict = await evaluateGuard(toPreToolUseInput(parsed), process.pid);
+  const output = formatHookOutput(verdict);
+  if (output) console.log(output);
+}
+
+if (import.meta.main) {
+  await run();
+}

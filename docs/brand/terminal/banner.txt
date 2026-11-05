@@ -1,0 +1,6 @@
+   ▄▀▄▄
+     █
+ ▄██████████▄   emet  plugin for Claude Code
+ ██ ●    ● ██   Spec to merge, on one approval.
+ ██   ▬▬   ██   interview, spec, tickets, one approval, merge
+ ▀▀████████▀▀   Not affiliated with or endorsed by Anthropic

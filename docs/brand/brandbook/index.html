@@ -1,0 +1,796 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>emet brandbook</title>
+    <link rel="stylesheet" href="../tokens.css" />
+    <link rel="stylesheet" href="brandbook.css" />
+  </head>
+  <body>
+    <header class="top">
+      <span class="top-logo"
+        ><img src="../logo/lockup-horizontal.svg" alt="emet" height="40"
+      /></span>
+      <nav aria-label="Boards">
+        <a href="#mark">Mark</a>
+        <a href="#lockups">Lockups</a>
+        <a href="#mascot">Mascot</a>
+        <a href="#palette">Palette</a>
+        <a href="#contrast">Contrast</a>
+        <a href="#type">Type</a>
+        <a href="#voice">Voice</a>
+        <a href="#banner">Banner</a>
+        <a href="#avoid">Avoid</a>
+      </nav>
+    </header>
+
+    <main>
+      <section class="intro">
+        <p class="eyebrow">Brandbook</p>
+        <h1>emet</h1>
+        <p class="lead">Spec to merge, on one approval.</p>
+        <p class="note">
+          Static and offline. Built only from <code>tokens.css</code>, the logo and mascot SVGs, and
+          two local OFL fonts. Every board shows light and dark side by side.
+        </p>
+      </section>
+
+      <section id="mark" class="board">
+        <h2>Mark</h2>
+        <p class="cap">
+          A rounded capsule with a forehead slot and one lit line. Two colours; mono variants for
+          one-colour use. Legible at 16 px.
+        </p>
+        <div class="two">
+          <div class="panel">
+            <h4>light</h4>
+            <div class="row">
+              <img src="../logo/mark.svg" alt="emet mark" width="128" height="128" />
+              <img src="../logo/mark-black.svg" alt="emet mark, black" width="64" height="64" />
+              <img src="../logo/plugin-icon.svg" alt="plugin icon" width="64" height="64" />
+            </div>
+            <div class="row sizes">
+              <img src="../logo/mark.svg" alt="" width="16" height="16" />
+              <img src="../logo/mark.svg" alt="" width="32" height="32" />
+              <img src="../logo/mark.svg" alt="" width="64" height="64" />
+              <small>16, 32, 64 px</small>
+            </div>
+          </div>
+          <div class="panel dark">
+            <h4>dark</h4>
+            <div class="row">
+              <img src="../logo/mark.svg" alt="emet mark" width="128" height="128" />
+              <img src="../logo/mark-white.svg" alt="emet mark, white" width="64" height="64" />
+              <img
+                src="../logo/plugin-icon-dark.svg"
+                alt="plugin icon, dark"
+                width="64"
+                height="64"
+              />
+            </div>
+            <div class="row sizes">
+              <img src="../logo/mark.svg" alt="" width="16" height="16" />
+              <img src="../logo/mark.svg" alt="" width="32" height="32" />
+              <img src="../logo/mark.svg" alt="" width="64" height="64" />
+              <small>16, 32, 64 px</small>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section id="lockups" class="board">
+        <h2>Lockups</h2>
+        <p class="cap">
+          The wordmark <code>emet</code> is outlined to paths in Space Grotesk 700, tracking
+          -0.045em. No font dependency. Lowercase always.
+        </p>
+        <div class="two">
+          <div class="panel">
+            <h4>light</h4>
+            <div class="row">
+              <img src="../logo/lockup-horizontal.svg" alt="emet horizontal lockup" height="56" />
+            </div>
+            <div class="row">
+              <img src="../logo/lockup-stacked.svg" alt="emet stacked lockup" height="120" />
+            </div>
+          </div>
+          <div class="panel dark">
+            <h4>dark</h4>
+            <div class="row">
+              <img
+                src="../logo/lockup-horizontal-dark.svg"
+                alt="emet horizontal lockup, dark"
+                height="56"
+              />
+            </div>
+            <div class="row">
+              <span class="tile-light"
+                ><img
+                  src="../logo/lockup-stacked.svg"
+                  alt="emet stacked lockup"
+                  height="120" /></span
+              ><small>Stacked ships in one colourway; keep it on a light ground.</small>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section id="mascot" class="board">
+        <h2>Mascot: COMBO</h2>
+        <p class="cap">
+          A companion to the mark, not the logo. The lamp colour is the only variable between
+          states; sleep also closes the eyes.
+        </p>
+        <div class="two">
+          <div class="panel">
+            <h4>light</h4>
+            <div class="row states">
+              <figure>
+                <img
+                  src="../mascot/combo-sleep.svg"
+                  alt="COMBO sleeping"
+                  width="112"
+                  height="112"
+                />
+                <figcaption>sleep</figcaption>
+              </figure>
+              <figure>
+                <img src="../mascot/combo-work.svg" alt="COMBO working" width="112" height="112" />
+                <figcaption>work</figcaption>
+              </figure>
+              <figure>
+                <img src="../mascot/combo-done.svg" alt="COMBO done" width="112" height="112" />
+                <figcaption>done</figcaption>
+              </figure>
+              <figure>
+                <img src="../mascot/combo-error.svg" alt="COMBO error" width="112" height="112" />
+                <figcaption>error</figcaption>
+              </figure>
+            </div>
+            <div class="row states">
+              <figure>
+                <img
+                  src="../mascot/combo-work-animated.svg"
+                  alt="COMBO working, animated"
+                  width="80"
+                  height="80"
+                />
+                <figcaption>work, animated</figcaption>
+              </figure>
+              <figure>
+                <img
+                  src="../mascot/combo-mono.svg"
+                  alt="COMBO, one colour"
+                  width="80"
+                  height="80"
+                />
+                <figcaption>mono</figcaption>
+              </figure>
+              <figure>
+                <img src="../mascot/combo-16.svg" alt="COMBO at 16 px" width="16" height="16" />
+                <figcaption>16 px</figcaption>
+              </figure>
+            </div>
+          </div>
+          <div class="panel dark">
+            <h4>dark</h4>
+            <div class="row states">
+              <figure>
+                <img
+                  src="../mascot/combo-sleep.svg"
+                  alt="COMBO sleeping"
+                  width="112"
+                  height="112"
+                />
+                <figcaption>sleep</figcaption>
+              </figure>
+              <figure>
+                <img src="../mascot/combo-work.svg" alt="COMBO working" width="112" height="112" />
+                <figcaption>work</figcaption>
+              </figure>
+              <figure>
+                <img src="../mascot/combo-done.svg" alt="COMBO done" width="112" height="112" />
+                <figcaption>done</figcaption>
+              </figure>
+              <figure>
+                <img src="../mascot/combo-error.svg" alt="COMBO error" width="112" height="112" />
+                <figcaption>error</figcaption>
+              </figure>
+            </div>
+            <div class="row states">
+              <figure>
+                <img
+                  src="../mascot/combo-work-animated.svg"
+                  alt="COMBO working, animated"
+                  width="80"
+                  height="80"
+                />
+                <figcaption>work, animated</figcaption>
+              </figure>
+              <figure>
+                <span class="tile-light"
+                  ><img
+                    src="../mascot/combo-mono.svg"
+                    alt="COMBO, one colour"
+                    width="80"
+                    height="80"
+                /></span>
+                <figcaption>mono</figcaption>
+              </figure>
+              <figure>
+                <img src="../mascot/combo-16.svg" alt="COMBO at 16 px" width="16" height="16" />
+                <figcaption>16 px</figcaption>
+              </figure>
+            </div>
+          </div>
+        </div>
+        <p class="line">Mascot line: "Lamp on. Still reading the spec."</p>
+      </section>
+
+      <section id="palette" class="board">
+        <h2>Palette: P2 Moss</h2>
+        <p class="cap">
+          Moss green accent on a green-tinted neutral ground. Defined in oklch in
+          <code>tokens.css</code>; hex values are the sRGB rendering.
+        </p>
+        <div class="two">
+          <div class="panel">
+            <h4>light</h4>
+            <ul class="swatches">
+              <li>
+                <span class="chip" style="background: var(--bg)"></span><b>--bg</b
+                ><code>#f4fdf6</code><small>Page ground</small>
+              </li>
+              <li>
+                <span class="chip" style="background: var(--surface)"></span><b>--surface</b
+                ><code>#eef6ef</code><small>Raised surface</small>
+              </li>
+              <li>
+                <span class="chip" style="background: var(--border)"></span><b>--border</b
+                ><code>#d7dfd8</code><small>Hairlines</small>
+              </li>
+              <li>
+                <span class="chip" style="background: var(--text)"></span><b>--text</b
+                ><code>#161c17</code><small>Body text</small>
+              </li>
+              <li>
+                <span class="chip" style="background: var(--text-muted)"></span><b>--text-muted</b
+                ><code>#505751</code><small>Secondary text</small>
+              </li>
+              <li>
+                <span class="chip" style="background: var(--accent)"></span><b>--accent</b
+                ><code>#79b157</code><small>Moss accent fill</small>
+              </li>
+              <li>
+                <span class="chip" style="background: var(--accent-text)"></span><b>--accent-text</b
+                ><code>#44791c</code><small>Accent as text</small>
+              </li>
+              <li>
+                <span class="chip" style="background: var(--on-accent)"></span><b>--on-accent</b
+                ><code>#0a100b</code><small>Text on accent</small>
+              </li>
+              <li>
+                <span class="chip" style="background: var(--ok)"></span><b>--ok</b
+                ><code>#057a6d</code><small>Success (teal)</small>
+              </li>
+              <li>
+                <span class="chip" style="background: var(--warn)"></span><b>--warn</b
+                ><code>#906600</code><small>Warning</small>
+              </li>
+              <li>
+                <span class="chip" style="background: var(--error)"></span><b>--error</b
+                ><code>#c33d43</code><small>Error</small>
+              </li>
+              <li>
+                <span class="chip" style="background: var(--info)"></span><b>--info</b
+                ><code>#2d70b0</code><small>Info</small>
+              </li>
+              <li>
+                <span class="chip" style="background: var(--clay)"></span><b>--clay</b
+                ><code>#a5a696</code><small>Mascot body</small>
+              </li>
+              <li>
+                <span class="chip" style="background: var(--moss)"></span><b>--moss</b
+                ><code>#51852f</code><small>Mascot and mark line</small>
+              </li>
+              <li>
+                <span class="chip" style="background: var(--lamp)"></span><b>--lamp</b
+                ><code>#e7c952</code><small>Mascot lamp</small>
+              </li>
+            </ul>
+          </div>
+          <div class="panel dark">
+            <h4>dark</h4>
+            <ul class="swatches">
+              <li>
+                <span class="chip" style="background: var(--bg)"></span><b>--bg</b
+                ><code>#0a100b</code><small>Page ground</small>
+              </li>
+              <li>
+                <span class="chip" style="background: var(--surface)"></span><b>--surface</b
+                ><code>#161c17</code><small>Raised surface</small>
+              </li>
+              <li>
+                <span class="chip" style="background: var(--border)"></span><b>--border</b
+                ><code>#272d28</code><small>Hairlines</small>
+              </li>
+              <li>
+                <span class="chip" style="background: var(--text)"></span><b>--text</b
+                ><code>#eef6ef</code><small>Body text</small>
+              </li>
+              <li>
+                <span class="chip" style="background: var(--text-muted)"></span><b>--text-muted</b
+                ><code>#c3cbc4</code><small>Secondary text</small>
+              </li>
+              <li>
+                <span class="chip" style="background: var(--accent)"></span><b>--accent</b
+                ><code>#97d176</code><small>Moss accent fill</small>
+              </li>
+              <li>
+                <span class="chip" style="background: var(--accent-text)"></span><b>--accent-text</b
+                ><code>#88c167</code><small>Accent as text</small>
+              </li>
+              <li>
+                <span class="chip" style="background: var(--on-accent)"></span><b>--on-accent</b
+                ><code>#0a100b</code><small>Text on accent</small>
+              </li>
+              <li>
+                <span class="chip" style="background: var(--ok)"></span><b>--ok</b
+                ><code>#5ec6b6</code><small>Success (teal)</small>
+              </li>
+              <li>
+                <span class="chip" style="background: var(--warn)"></span><b>--warn</b
+                ><code>#e2a520</code><small>Warning</small>
+              </li>
+              <li>
+                <span class="chip" style="background: var(--error)"></span><b>--error</b
+                ><code>#fe8a88</code><small>Error</small>
+              </li>
+              <li>
+                <span class="chip" style="background: var(--info)"></span><b>--info</b
+                ><code>#73b6fa</code><small>Info</small>
+              </li>
+              <li>
+                <span class="chip" style="background: var(--clay)"></span><b>--clay</b
+                ><code>#b1b3a3</code><small>Mascot body</small>
+              </li>
+              <li>
+                <span class="chip" style="background: var(--moss)"></span><b>--moss</b
+                ><code>#86bd67</code><small>Mascot and mark line</small>
+              </li>
+              <li>
+                <span class="chip" style="background: var(--lamp)"></span><b>--lamp</b
+                ><code>#fbdd67</code><small>Mascot lamp</small>
+              </li>
+            </ul>
+          </div>
+        </div>
+      </section>
+
+      <section id="contrast" class="board">
+        <h2>Contrast</h2>
+        <p class="cap">
+          WCAG 2.x ratios for each text and background pair. Every pair passes AA (4.5:1).
+        </p>
+        <div class="two">
+          <div class="panel">
+            <h4>light</h4>
+            <table class="contrast">
+              <thead>
+                <tr>
+                  <th>Sample</th>
+                  <th>Pair</th>
+                  <th>Ratio</th>
+                  <th>WCAG</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>
+                    <span class="pair" style="color: var(--text); background: var(--bg)">Aa</span>
+                  </td>
+                  <td><code>--text</code> on <code>--bg</code></td>
+                  <td class="num">16.60:1</td>
+                  <td><span class="grade good">AAA</span></td>
+                </tr>
+                <tr>
+                  <td>
+                    <span class="pair" style="color: var(--text-muted); background: var(--bg)"
+                      >Aa</span
+                    >
+                  </td>
+                  <td><code>--text-muted</code> on <code>--bg</code></td>
+                  <td class="num">7.11:1</td>
+                  <td><span class="grade good">AAA</span></td>
+                </tr>
+                <tr>
+                  <td>
+                    <span class="pair" style="color: var(--accent-text); background: var(--bg)"
+                      >Aa</span
+                    >
+                  </td>
+                  <td><code>--accent-text</code> on <code>--bg</code></td>
+                  <td class="num">5.05:1</td>
+                  <td><span class="grade good">AA</span></td>
+                </tr>
+                <tr>
+                  <td>
+                    <span class="pair" style="color: var(--on-accent); background: var(--accent)"
+                      >Aa</span
+                    >
+                  </td>
+                  <td><code>--on-accent</code> on <code>--accent</code></td>
+                  <td class="num">7.52:1</td>
+                  <td><span class="grade good">AAA</span></td>
+                </tr>
+                <tr>
+                  <td>
+                    <span class="pair" style="color: var(--ok); background: var(--bg)">Aa</span>
+                  </td>
+                  <td><code>--ok</code> on <code>--bg</code></td>
+                  <td class="num">5.05:1</td>
+                  <td><span class="grade good">AA</span></td>
+                </tr>
+                <tr>
+                  <td>
+                    <span class="pair" style="color: var(--warn); background: var(--bg)">Aa</span>
+                  </td>
+                  <td><code>--warn</code> on <code>--bg</code></td>
+                  <td class="num">4.94:1</td>
+                  <td><span class="grade good">AA</span></td>
+                </tr>
+                <tr>
+                  <td>
+                    <span class="pair" style="color: var(--error); background: var(--bg)">Aa</span>
+                  </td>
+                  <td><code>--error</code> on <code>--bg</code></td>
+                  <td class="num">4.99:1</td>
+                  <td><span class="grade good">AA</span></td>
+                </tr>
+                <tr>
+                  <td>
+                    <span class="pair" style="color: var(--info); background: var(--bg)">Aa</span>
+                  </td>
+                  <td><code>--info</code> on <code>--bg</code></td>
+                  <td class="num">4.96:1</td>
+                  <td><span class="grade good">AA</span></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <div class="panel dark">
+            <h4>dark</h4>
+            <table class="contrast">
+              <thead>
+                <tr>
+                  <th>Sample</th>
+                  <th>Pair</th>
+                  <th>Ratio</th>
+                  <th>WCAG</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>
+                    <span class="pair" style="color: var(--text); background: var(--bg)">Aa</span>
+                  </td>
+                  <td><code>--text</code> on <code>--bg</code></td>
+                  <td class="num">17.45:1</td>
+                  <td><span class="grade good">AAA</span></td>
+                </tr>
+                <tr>
+                  <td>
+                    <span class="pair" style="color: var(--text-muted); background: var(--bg)"
+                      >Aa</span
+                    >
+                  </td>
+                  <td><code>--text-muted</code> on <code>--bg</code></td>
+                  <td class="num">11.63:1</td>
+                  <td><span class="grade good">AAA</span></td>
+                </tr>
+                <tr>
+                  <td>
+                    <span class="pair" style="color: var(--accent-text); background: var(--bg)"
+                      >Aa</span
+                    >
+                  </td>
+                  <td><code>--accent-text</code> on <code>--bg</code></td>
+                  <td class="num">9.02:1</td>
+                  <td><span class="grade good">AAA</span></td>
+                </tr>
+                <tr>
+                  <td>
+                    <span class="pair" style="color: var(--on-accent); background: var(--accent)"
+                      >Aa</span
+                    >
+                  </td>
+                  <td><code>--on-accent</code> on <code>--accent</code></td>
+                  <td class="num">10.72:1</td>
+                  <td><span class="grade good">AAA</span></td>
+                </tr>
+                <tr>
+                  <td>
+                    <span class="pair" style="color: var(--ok); background: var(--bg)">Aa</span>
+                  </td>
+                  <td><code>--ok</code> on <code>--bg</code></td>
+                  <td class="num">9.36:1</td>
+                  <td><span class="grade good">AAA</span></td>
+                </tr>
+                <tr>
+                  <td>
+                    <span class="pair" style="color: var(--warn); background: var(--bg)">Aa</span>
+                  </td>
+                  <td><code>--warn</code> on <code>--bg</code></td>
+                  <td class="num">8.81:1</td>
+                  <td><span class="grade good">AAA</span></td>
+                </tr>
+                <tr>
+                  <td>
+                    <span class="pair" style="color: var(--error); background: var(--bg)">Aa</span>
+                  </td>
+                  <td><code>--error</code> on <code>--bg</code></td>
+                  <td class="num">8.43:1</td>
+                  <td><span class="grade good">AAA</span></td>
+                </tr>
+                <tr>
+                  <td>
+                    <span class="pair" style="color: var(--info); background: var(--bg)">Aa</span>
+                  </td>
+                  <td><code>--info</code> on <code>--bg</code></td>
+                  <td class="num">9.01:1</td>
+                  <td><span class="grade good">AAA</span></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <section id="type" class="board">
+        <h2>Type</h2>
+        <p class="cap">
+          Space Grotesk for text, JetBrains Mono for code and terminal. Both SIL OFL, served from
+          <code>brandbook/fonts/</code>.
+        </p>
+        <div class="two">
+          <div class="panel">
+            <h4>Space Grotesk</h4>
+            <p class="specimen sans">Aa Bb Cc 0123456789</p>
+            <p class="sans weights">
+              <span style="font-weight: 300">300 Light</span>
+              <span style="font-weight: 400">400 Regular</span>
+              <span style="font-weight: 500">500 Medium</span>
+              <span style="font-weight: 700">700 Bold</span>
+            </p>
+          </div>
+          <div class="panel">
+            <h4>JetBrains Mono</h4>
+            <p class="specimen mono">Aa Bb Cc 0123456789</p>
+            <p class="mono weights">
+              <span style="font-weight: 400">400 Regular</span>
+              <span style="font-weight: 500">500 Medium</span>
+              <span style="font-weight: 700">700 Bold</span>
+            </p>
+          </div>
+        </div>
+        <div class="panel wide">
+          <h4>Scale</h4>
+          <div class="scale-row">
+            <code>--text-4xl</code><small>2.25rem</small
+            ><span style="font-size: var(--text-4xl)">Spec to merge, on one approval.</span>
+          </div>
+          <div class="scale-row">
+            <code>--text-3xl</code><small>1.875rem</small
+            ><span style="font-size: var(--text-3xl)">Spec to merge, on one approval.</span>
+          </div>
+          <div class="scale-row">
+            <code>--text-2xl</code><small>1.5rem</small
+            ><span style="font-size: var(--text-2xl)">Spec to merge, on one approval.</span>
+          </div>
+          <div class="scale-row">
+            <code>--text-xl</code><small>1.25rem</small
+            ><span style="font-size: var(--text-xl)">Spec to merge, on one approval.</span>
+          </div>
+          <div class="scale-row">
+            <code>--text-lg</code><small>1.125rem</small
+            ><span style="font-size: var(--text-lg)">Spec to merge, on one approval.</span>
+          </div>
+          <div class="scale-row">
+            <code>--text-base</code><small>1rem</small
+            ><span style="font-size: var(--text-base)">Spec to merge, on one approval.</span>
+          </div>
+          <div class="scale-row">
+            <code>--text-sm</code><small>0.875rem</small
+            ><span style="font-size: var(--text-sm)">Spec to merge, on one approval.</span>
+          </div>
+          <div class="scale-row">
+            <code>--text-xs</code><small>0.75rem</small
+            ><span style="font-size: var(--text-xs)">Spec to merge, on one approval.</span>
+          </div>
+        </div>
+      </section>
+
+      <section id="voice" class="board">
+        <h2>Voice</h2>
+        <p class="cap">Control, sober and precise, with dry humour in small places. No hype.</p>
+        <div class="two">
+          <div class="panel">
+            <h4>We are</h4>
+            <ul class="rules yes">
+              <li>Controlled: one approval, then the work runs</li>
+              <li>Sober: plain verbs, short sentences</li>
+              <li>Precise: numbers, file names, exact commands</li>
+              <li>Dry: a small joke in the mascot or a terminal line</li>
+              <li>Honest: claims only what the CLI does today</li>
+              <li>Calm about agents: they run in isolation, nothing merges when flagged</li>
+            </ul>
+          </div>
+          <div class="panel">
+            <h4>We are not</h4>
+            <ul class="rules no">
+              <li>Breathless: no "unleash", no "10x"</li>
+              <li>Grand: no "revolutionary", no "the future of coding"</li>
+              <li>Vague: no "seamless", no "magic"</li>
+              <li>Jokey: no puns in docs, errors or release notes</li>
+              <li>Promissory: no features that are not shipped</li>
+              <li>Anxious or boastful about autonomy</li>
+            </ul>
+          </div>
+        </div>
+        <div class="panel wide">
+          <h4>Tone by context</h4>
+          <table class="tone">
+            <tbody>
+              <tr>
+                <th>README, docs</th>
+                <td>"One approval, then workers implement in isolated worktrees."</td>
+              </tr>
+              <tr>
+                <th>Terminal</th>
+                <td>"Wave 2 held: one ticket flagged. Nothing merged."</td>
+              </tr>
+              <tr>
+                <th>Errors</th>
+                <td>"CI failed on wave 1. PR left open for review."</td>
+              </tr>
+              <tr>
+                <th>Mascot</th>
+                <td>"Lamp on. Still reading the spec."</td>
+              </tr>
+              <tr>
+                <th>Release notes</th>
+                <td>"Adds <code>forge init</code> checks for missing config."</td>
+              </tr>
+              <tr>
+                <th>Social</th>
+                <td>"Spec to merge, on one approval."</td>
+              </tr>
+            </tbody>
+          </table>
+          <p class="notice">Not affiliated with or endorsed by Anthropic</p>
+        </div>
+      </section>
+
+      <section id="banner" class="board">
+        <h2>Terminal banner</h2>
+        <p class="cap">
+          Mark and tagline in plain text, coloured with the P2 ANSI mapping: green accent, bright
+          black body, default foreground for the wordmark. Representative sample; not wired into the
+          CLI.
+        </p>
+        <div class="two">
+          <div class="term">
+            <h4>dark terminal</h4>
+            <pre
+              class="ansi dark-term"
+              aria-label="Terminal banner, dark"
+            ><span class="c8">  ╭──────╮</span>
+<span class="c8">  │ </span><span class="c2">▬▬▬▬</span><span class="c8"> │</span>   <b>emet</b>
+<span class="c8">  │      │</span>   <span class="c8">Spec to merge, on one approval.</span>
+<span class="c8">  ╰──────╯</span>
+
+<span class="c2">$</span> /emet:run
+<span class="c6">ok</span>    wave 1 merged, CI green
+<span class="c3">warn</span>  wave 2 held: one ticket flagged
+<span class="c1">fail</span>  nothing merged</pre>
+          </div>
+          <div class="term">
+            <h4>light terminal</h4>
+            <pre
+              class="ansi light-term"
+              aria-label="Terminal banner, light"
+            ><span class="c8">  ╭──────╮</span>
+<span class="c8">  │ </span><span class="c2">▬▬▬▬</span><span class="c8"> │</span>   <b>emet</b>
+<span class="c8">  │      │</span>   <span class="c8">Spec to merge, on one approval.</span>
+<span class="c8">  ╰──────╯</span>
+
+<span class="c2">$</span> /emet:run
+<span class="c6">ok</span>    wave 1 merged, CI green
+<span class="c3">warn</span>  wave 2 held: one ticket flagged
+<span class="c1">fail</span>  nothing merged</pre>
+          </div>
+        </div>
+        <table class="mapping">
+          <thead>
+            <tr>
+              <th>Role</th>
+              <th>ANSI slot</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>accent</td>
+              <td>2 green, 10 bright green</td>
+            </tr>
+            <tr>
+              <td>ok</td>
+              <td>6 cyan</td>
+            </tr>
+            <tr>
+              <td>warn</td>
+              <td>3 yellow</td>
+            </tr>
+            <tr>
+              <td>error</td>
+              <td>1 red</td>
+            </tr>
+            <tr>
+              <td>info</td>
+              <td>4 blue</td>
+            </tr>
+            <tr>
+              <td>muted</td>
+              <td>8 bright black</td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section id="avoid" class="board">
+        <h2>Avoid</h2>
+        <div class="grid3">
+          <div class="panel">
+            <h4>Hype words</h4>
+            <p>
+              "AI-powered", "autonomous", "revolutionary", "supercharge", "ships while you sleep".
+            </p>
+          </div>
+          <div class="panel">
+            <h4>Claude visual clichés</h4>
+            <p>
+              Terracotta or orange, cream plus charcoal as the identity, a radial spark or
+              starburst, a pixel creature that reads as Clawd.
+            </p>
+          </div>
+          <div class="panel">
+            <h4>Crowded territory</h4>
+            <p>Octopus, ghost and hand mascots, and a purple accent.</p>
+          </div>
+          <div class="panel">
+            <h4>Competitor naming</h4>
+            <p>
+              Vendor or model words in the name, factory, droid, squad, crew, orchestra, conductor,
+              plain first names, and "Forge" as the lead word.
+            </p>
+          </div>
+          <div class="panel">
+            <h4>Unshipped claims</h4>
+            <p>Anything the CLI does not do today.</p>
+          </div>
+          <div class="panel">
+            <h4>Relation to Anthropic</h4>
+            <p>
+              Say "plugin for Claude Code" descriptively. Always carry:
+              <em>Not affiliated with or endorsed by Anthropic</em>
+            </p>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <footer class="foot">
+      <p>emet brandbook. Not affiliated with or endorsed by Anthropic</p>
+    </footer>
+  </body>
+</html>
