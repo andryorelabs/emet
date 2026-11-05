@@ -104,6 +104,8 @@ const paint = {
   lastPoll: 0,
   last: "",
   isDocked: false,
+  wasDocked: false,
+  isPaneOpened: false,
   lastStatus: undefined as string | undefined,
 };
 let timer: { cancel: () => void } | null = null;
@@ -128,6 +130,14 @@ async function isPaneDocked($: Engine): Promise<boolean> {
   return panes.some((pane) => pane.id === PANE_ID && pane.isPlaced);
 }
 
+async function redrawWhenDockFlips($: Engine, position: Position): Promise<void> {
+  if (position !== "pane") return;
+  const isDocked = await isPaneDocked($);
+  if (isDocked === paint.wasDocked) return;
+  paint.wasDocked = isDocked;
+  $.ui.invalidate("ui.render");
+}
+
 async function tick($: Engine, size: "small" | "medium", position: Position): Promise<void> {
   const now = await $.clock.now();
   if (now - paint.lastPoll >= PHASE_POLL_MS) {
@@ -138,6 +148,7 @@ async function tick($: Engine, size: "small" | "medium", position: Position): Pr
   }
   await dispatch($, "tick");
   await syncStatus($, position, now);
+  await redrawWhenDockFlips($, position);
   if (position === "status" || paint.requestId === null) return;
   const machine = await read($, machineAtom);
   const sheet = FRAMES[machine.state][size];
@@ -161,10 +172,9 @@ export const register: Register = (on, options) => {
         $.ui.log(`emet-mascot tick failed: ${String(error)}`, { to: "debug" });
       });
     });
-    if (position === "pane") {
-      paint.isDocked = false;
-      await $.ui.open({ id: PANE_ID, title: "emet" });
-    }
+    paint.isDocked = false;
+    paint.wasDocked = false;
+    paint.isPaneOpened = false;
     return next(e);
   });
 
@@ -205,7 +215,13 @@ export const register: Register = (on, options) => {
   on("ui.render", { component: "Pane", requestId: PANE_ID }, async ($, e, next) => {
     if (e.surface !== "terminal" || position !== "pane") return next(e);
     paint.isDocked = e.props.placement === "dock";
-    if (!paint.isDocked) return next(e);
+    if (!paint.isDocked) {
+      if (paint.isPaneOpened) {
+        paint.isPaneOpened = false;
+        void $.ui.close({ id: PANE_ID });
+      }
+      return next(e);
+    }
     const machine = await read($, machineAtom);
     const phase = await read($, phaseAtom);
     const sheet = FRAMES[machine.state][size];
@@ -226,6 +242,10 @@ export const register: Register = (on, options) => {
 
   on("ui.render", { component: "AbovePrompt" }, async ($, e, next) => {
     if (e.surface !== "terminal" || e.props.hasSurvey || position === "status") return next(e);
+    if (position === "pane" && e.viewport?.isFullscreen === true && !paint.isPaneOpened) {
+      paint.isPaneOpened = true;
+      void $.ui.open({ id: PANE_ID, title: "emet" });
+    }
     if (position === "pane" && (await isPaneDocked($))) return next(e);
     const machine = await read($, machineAtom);
     const phase = await read($, phaseAtom);

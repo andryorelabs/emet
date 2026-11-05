@@ -1,7 +1,7 @@
 {
   "name": "emet-mascot",
   "version": "0.2.0",
-  "description": "A pixel mascot above the prompt that mirrors the session and the emet run phase.",
+  "description": "A pixel mascot beside the transcript (or above the prompt) that mirrors the session and the emet run phase.",
   "author": { "name": "AndryOre" },
   "types": "./types/index.d.ts",
   "userConfig": {

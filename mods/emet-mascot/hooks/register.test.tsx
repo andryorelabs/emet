@@ -191,6 +191,31 @@ test("pane position falls back to the band once the pane is no longer placed", a
   await band.unmount();
 });
 
+test("a pane that turns inline while still placed hands the mascot back to the band", async ($, on) => {
+  on("clock.now", () => ({ value: 1000 }));
+  on("ui.panes", () => ({ value: paneList(true) }));
+  on("ui.render", engineText);
+
+  const docked = await $.ui.mount({ ...PANE, props: paneProps("dock") });
+  await docked.unmount();
+  const inline = await $.ui.mount({ ...PANE, props: paneProps("inline") });
+  await inline.unmount();
+
+  const band = await $.ui.mount({ ...BAND, props: bandProps(false) });
+  expect(await band.find({ type: "Raster", key: "mascot" })).toBeDefined();
+  await band.unmount();
+});
+
+test("with no size configured the band draws the 16 x 8 sheet", async ($, on) => {
+  on("clock.now", () => ({ value: 1000 }));
+  on("ui.render", engineText);
+
+  const band = await $.ui.mount({ ...BAND, props: bandProps(false) });
+  const raster = await band.find({ type: "Raster", key: "mascot" });
+  expect(raster?.props).toMatchObject({ columns: 16, rows: 8 });
+  await band.unmount();
+});
+
 test("an inline pane draws nothing and the band shows the mascot", async ($, on) => {
   on("clock.now", () => ({ value: 1000 }));
   on("ui.panes", () => ({ value: paneList(true) }));
