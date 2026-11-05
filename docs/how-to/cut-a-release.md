@@ -12,7 +12,7 @@ A release is a tag on `main`. Pushing a `v*` tag runs `.github/workflows/release
 
 ## Steps
 
-1. Branch from `develop`: `git switch -c release/vX.Y.Z develop`.
+1. Branch from `develop`: `git switch -c chore/release-vX.Y.Z develop`.
 2. Bump `version` in `.claude-plugin/plugin.json` to `X.Y.Z`. The release job fails when the tag is not `v` plus this version.
 3. In `CHANGELOG.md`, rename `## [Unreleased]` to `## [X.Y.Z] - YYYY-MM-DD` and add a fresh empty `## [Unreleased]` above it. The release notes are the text of the `## [X.Y.Z]` section, and the job fails when that section is missing or empty.
 4. Run `bun run check` and `bun run test`.
