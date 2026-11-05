@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# Installs the global `emet` CLI, the `/emet` Claude Code command, and the
-# emet-worker/emet-reviewer agents it dispatches.
+# Installs the global `emet` CLI, the `/emet:run`, `/emet:init` and `/emet:doctor`
+# Claude Code commands, and the emet-worker/emet-reviewer agents they dispatch.
 # Safe to re-run — it records a SHA-256 manifest of what it installs and never
 # overwrites a file you edited: the new version lands beside it as `<file>.new`.
 set -euo pipefail
@@ -42,10 +42,15 @@ ENTRIES_FILE="$WORK_DIR/entries.tsv"
 KEPT_FILE="$WORK_DIR/kept.txt"
 RETIRED_NOTES_FILE="$WORK_DIR/retired.txt"
 LEGACY_KEPT_FILE="$WORK_DIR/legacy-kept.txt"
+UNSHIPPED_KEPT_FILE="$WORK_DIR/unshipped-kept.txt"
+: > "$UNSHIPPED_KEPT_FILE"
 : > "$ENTRIES_FILE"
 : > "$KEPT_FILE"
 : > "$RETIRED_NOTES_FILE"
 : > "$LEGACY_KEPT_FILE"
+
+# Slash commands installed as ~/.claude/commands/emet/<name>.md, i.e. /emet:<name>.
+COMMAND_NAMES=(run init doctor)
 
 # Files a previous install shipped that emet no longer loads (split or renamed).
 RETIRED_PATHS=(
@@ -63,7 +68,6 @@ is_retired() {
 rewrite_prompt() {
   sed \
     -e 's|[$]{CLAUDE_PLUGIN_ROOT}|$HOME/.claude|g' \
-    -e 's|/emet:run|/emet|g' \
     -e 's|emet:emet-worker|emet-worker|g' \
     -e 's|emet:emet-reviewer|emet-reviewer|g' \
     -e 's|/forge:run|/forge|g' \
@@ -72,15 +76,24 @@ rewrite_prompt() {
     "$1" > "$2"
 }
 
-echo "==> Staging the emet CLI, /emet command, agents and wrapper"
-mkdir -p "$STAGE/.claude/emet" "$STAGE/.claude/commands" "$STAGE/.claude/agents" "$STAGE/.local/bin"
+for command_name in "${COMMAND_NAMES[@]}"; do
+  if [[ ! -f "$SCRIPT_DIR/commands/$command_name.md" ]]; then
+    echo "error: commands/$command_name.md is missing from $SCRIPT_DIR — the checkout is incomplete." >&2
+    exit 1
+  fi
+done
+
+echo "==> Staging the emet CLI, /emet:* commands, agents and wrapper"
+mkdir -p "$STAGE/.claude/emet" "$STAGE/.claude/commands/emet" "$STAGE/.claude/agents" "$STAGE/.local/bin"
 rsync -a --exclude node_modules "$SCRIPT_DIR/emet/" "$STAGE/.claude/emet/"
 for reference_file in "$STAGE/.claude/emet/reference/"*.md; do
   [[ -e "$reference_file" ]] || continue
   rewrite_prompt "$reference_file" "$reference_file.rewritten"
   mv "$reference_file.rewritten" "$reference_file"
 done
-rewrite_prompt "$SCRIPT_DIR/commands/run.md" "$STAGE/.claude/commands/emet.md"
+for command_name in "${COMMAND_NAMES[@]}"; do
+  rewrite_prompt "$SCRIPT_DIR/commands/$command_name.md" "$STAGE/.claude/commands/emet/$command_name.md"
+done
 rewrite_prompt "$SCRIPT_DIR/agents/emet-worker.md" "$STAGE/.claude/agents/emet-worker.md"
 rewrite_prompt "$SCRIPT_DIR/agents/emet-reviewer.md" "$STAGE/.claude/agents/emet-reviewer.md"
 if [[ "$INSTALL_MODE" == "source" ]]; then
@@ -145,7 +158,7 @@ if [[ -f "$MANIFEST" ]]; then
       if [[ "$(file_hash "$HOME/$previous_path")" == "$(manifest_hash "$previous_path")" ]]; then
         rm -f "$HOME/$previous_path" "$HOME/$previous_path.new"
       elif ! is_retired "$previous_path"; then
-        echo "$previous_path (no longer shipped, left in place)" >> "$KEPT_FILE"
+        echo "$previous_path" >> "$UNSHIPPED_KEPT_FILE"
       fi
     fi
   done < <(manifest_paths "$MANIFEST")
@@ -175,6 +188,16 @@ if [[ -s "$KEPT_FILE" ]]; then
     echo "  - ~/$kept  (new version written to ~/$kept.new)"
   done < "$KEPT_FILE"
   echo "  Merge or delete the .new files; \`emet doctor\` keeps reporting the drift."
+  echo
+fi
+
+if [[ -s "$UNSHIPPED_KEPT_FILE" ]]; then
+  echo
+  echo "note: these files are no longer shipped but were edited since the last install, so they were kept:"
+  while IFS= read -r unshipped_kept; do
+    echo "  - ~/$unshipped_kept"
+  done < "$UNSHIPPED_KEPT_FILE"
+  echo "  They may shadow or duplicate the new files; carry your edits over, then delete them."
   echo
 fi
 
@@ -333,11 +356,11 @@ fi
 echo "  emet doctor ."
 echo
 echo "\`emet doctor\` also reports any recommended ~/.claude/settings.json"
-echo "tweaks for running /emet unattended (model: opusplan, an unattended"
+echo "tweaks for running /emet:run unattended (model: opusplan, an unattended"
 echo "permissions.defaultMode, deny rules for pushing to main/force) — see"
 echo "the README's \"Models & effort\" section. It never edits that file."
 echo
 echo "Recommended order: run /setup-matt-pocock-skills in the repo first, then"
 echo "run \`emet init\` once and read what it prints —"
 echo "it tells you about any missing dependency (the mattpocock-skills plugin,"
-echo "gh, Linear) before you use /emet there."
+echo "gh, Linear) before you use /emet:run there."
