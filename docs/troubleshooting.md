@@ -104,3 +104,6 @@ A repo that still has only `forge.config.json`, `.forge/` or `FORGE_*` variables
 
 - [Documentation index](README.md)
 - [README](../README.md)
+- [Getting started](guide/getting-started.md)
+- [Configuration reference](reference/configuration.md)
+- [Dependencies reference](reference/dependencies.md)
