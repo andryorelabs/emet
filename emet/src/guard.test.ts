@@ -26,7 +26,8 @@ import {
   run as runGuard,
   type PreToolUseHookInput,
 } from "./guard";
-import { readPhase } from "./phase";
+import { readPhase, writePhase } from "./phase";
+import { writeResult } from "./results";
 import type { SlotHolder } from "./slots";
 
 function makeHolder(overrides: Partial<SlotHolder> = {}): SlotHolder {
@@ -529,11 +530,39 @@ async function markIn(argv: string[]): Promise<{ root: string; state: string }> 
 }
 
 describe("--mark-final-report phase file", () => {
-  test("writes done by default and failed with --failed", async () => {
+  test("writes done when the run has no recorded blocker", async () => {
     const done = await markIn(["--mark-final-report", "sess-1"]);
     expect(readPhase(done.root)?.phase).toBe("done");
-    const failed = await markIn(["--mark-final-report", "sess-2", "--failed"]);
-    expect(readPhase(failed.root)?.phase).toBe("failed");
+  });
+
+  test.each([
+    ["BLOCKED", "failed"],
+    ["NEEDS_CONTEXT", "failed"],
+    ["DONE", "done"],
+  ] as const)("a %s worker result writes the %s phase", async (status, expected) => {
+    const root = realpathSync(mkdtempSync(path.join(os.tmpdir(), "guard-phase-")));
+    Bun.spawnSync(["git", "init", "-q", root]);
+    writePhase(root, { phase: "working", wave: null, spec: null, runId: "run1" });
+    writeResult(path.join(root, ".git", ".emet", "runs", "run1", "results"), "CLA-1", {
+      status,
+      reportPath: "r.md",
+      risk: "Risk: none",
+    });
+    const previousDirectory = process.cwd();
+    const previousState = process.env.EMET_STATE_DIR;
+    const originalLog = console.log;
+    process.env.EMET_STATE_DIR = path.join(root, "state");
+    console.log = () => undefined;
+    try {
+      process.chdir(root);
+      await runGuard(["--mark-final-report", "sess-4"]);
+    } finally {
+      console.log = originalLog;
+      process.chdir(previousDirectory);
+      if (previousState === undefined) delete process.env.EMET_STATE_DIR;
+      else process.env.EMET_STATE_DIR = previousState;
+    }
+    expect(readPhase(root)).toMatchObject({ phase: expected, runId: "run1" });
   });
 
   test("an unwritable phase file does not change the exit code or the marker", async () => {
