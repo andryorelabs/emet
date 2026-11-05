@@ -7,6 +7,11 @@
       "name": "emet",
       "source": "./",
       "description": "Spec to merge on one approval: parallel workers in isolated worktrees, a review per wave, CI green before merge."
+    },
+    {
+      "name": "emet-mascot",
+      "source": "./mods/emet-mascot",
+      "description": "A pixel mascot above the prompt that mirrors the session and the emet run phase."
     }
   ]
 }
