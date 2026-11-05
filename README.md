@@ -62,14 +62,14 @@ Requirements: Claude Code, `git`, `gh` (authenticated) and the `mattpocock-skill
 3. Inside Claude Code:
 
    ```
-   /emet <describe the feature>
+   /emet:run <describe the feature>
    ```
 
 More in [Getting started](docs/guide/getting-started.md). If `doctor` reports a problem, see [troubleshooting](docs/troubleshooting.md).
 
 ## How it works
 
-1. You describe a feature; `/emet` interviews you and writes a spec.
+1. You describe a feature; `/emet:run` interviews you and writes a spec.
 2. It splits the spec into tickets and asks for one approval.
 3. Parallel workers implement each ticket in its own git worktree.
 4. A reviewer checks the wave, and CI must be green; anything flagged stops the merge.

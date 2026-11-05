@@ -32,9 +32,7 @@ const description =
   "Spec to merge on one approval: parallel workers in isolated worktrees, a review per wave, CI green before merge.";
 
 function promptFiles(): string[] {
-  const files = ["commands/run.md", "commands/emet.md", "commands/forge.md"].filter((file) =>
-    existsSync(path.join(repoRoot, file)),
-  );
+  const files = ["commands/run.md"].filter((file) => existsSync(path.join(repoRoot, file)));
   for (const file of readdirSync(path.join(repoRoot, "agents"))) files.push(`agents/${file}`);
   return files;
 }
