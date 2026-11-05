@@ -107,6 +107,16 @@ describe("committed pet bundle", () => {
     expect(manifest.displayName.length).toBeLessThanOrEqual(120);
     expect(manifest.fps).toBeLessThanOrEqual(60);
   });
+
+  test("animation entries use only Orca's keys and carry one duration per frame", () => {
+    const manifest = readManifest();
+    for (const animation of Object.values(manifest.animations)) {
+      expect(Object.keys(animation).toSorted()).toEqual(["frameDurationsMs", "frames", "row"]);
+      expect(animation.frameDurationsMs).toHaveLength(animation.frames);
+    }
+    const running = manifest.animations.running;
+    expect(Math.max(...(running?.frameDurationsMs ?? [Infinity]))).toBeLessThanOrEqual(250);
+  });
 });
 
 describe("validateManifest", () => {
@@ -132,6 +142,24 @@ describe("validateManifest", () => {
     expect(validateManifest({ ...valid, id: "x".repeat(129) }, 1)).toHaveLength(1);
     expect(validateManifest({ ...valid, displayName: "x".repeat(121) }, 1)).toHaveLength(1);
     expect(validateManifest({ ...valid, fps: 61 }, 1)).toHaveLength(1);
+    expect(
+      validateManifest(
+        {
+          ...valid,
+          animations: { ...valid.animations, idle: { row: 0, frames: 2, frameDurationsMs: [100] } },
+        },
+        1,
+      ),
+    ).toHaveLength(1);
+    expect(
+      validateManifest(
+        {
+          ...valid,
+          animations: { ...valid.animations, idle: { row: 0, frames: 1, frameDurationsMs: [0] } },
+        },
+        1,
+      ),
+    ).toHaveLength(1);
     expect(validateManifest({ ...valid, spritesheetPath: "../a.webp" }, 1)).toHaveLength(1);
     expect(validateManifest({ ...valid, spritesheetPath: "/a.webp" }, 1)).toHaveLength(1);
     expect(validateManifest(valid, MANIFEST_LIMITS.sheetMaxBytes + 1)).toHaveLength(1);

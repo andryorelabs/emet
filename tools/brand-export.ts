@@ -46,8 +46,9 @@ const MASCOT_DIRECTORY = join(BRAND_DIRECTORY, "mascot");
 const PET_DIRECTORY = join(BRAND_DIRECTORY, "pet", "emet");
 const FRAME_ART_HEIGHT = FRAME_WIDTH;
 const FRAME_PADDING = (FRAME_HEIGHT - FRAME_ART_HEIGHT) / 2;
-const ANIMATED_FRAME_COUNT = 24;
-const ANIMATED_FRAME_MS = 500;
+/** One 2 s halo pulse sampled every 250 ms, so the work loop is smooth at Orca's playback rate. */
+const ANIMATED_FRAME_COUNT = 8;
+const ANIMATED_FRAME_MS = 250;
 const STILL_FRAME_MS = 1000;
 const REQUIRED_FONTS = ["Space Grotesk", "JetBrains Mono"];
 const DEFAULT_SVG_DENSITY = 72;

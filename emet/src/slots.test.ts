@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
-import { copyFileSync, mkdtempSync, realpathSync, rmSync } from "node:fs";
+import { copyFileSync, mkdirSync, mkdtempSync, realpathSync, rmSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
 
@@ -355,6 +355,43 @@ describe("slots --acquire CLI", () => {
       const record = readPhase(repo);
       expect(record?.phase).toBe("working");
       expect(record?.runId).toBe("run-phase");
+    } finally {
+      rmSync(repo, { recursive: true, force: true });
+      rmSync(stateDirectory, { recursive: true, force: true });
+    }
+  });
+
+  test("an unwritable phase file does not change the exit code or output", () => {
+    const repo = realpathSync(mkdtempSync(path.join(os.tmpdir(), "emet-slots-blocked-")));
+    const stateDirectory = mkdtempSync(path.join(os.tmpdir(), "emet-slots-state-"));
+    try {
+      Bun.spawnSync(["git", "-C", repo, "init", "-q"]);
+      copyFileSync(
+        path.join(import.meta.dir, "..", "..", "emet.config.json"),
+        path.join(repo, "emet.config.json"),
+      );
+      mkdirSync(path.join(repo, ".emet", "phase.json"), { recursive: true });
+      const result = Bun.spawnSync(
+        [
+          "bun",
+          path.join(import.meta.dir, "slots.ts"),
+          "--acquire",
+          "--run",
+          "run-blocked",
+          "--anchor",
+          String(process.pid),
+          "--ticket",
+          "T-1",
+        ],
+        {
+          cwd: repo,
+          stdout: "pipe",
+          stderr: "pipe",
+          env: { ...process.env, EMET_STATE_DIR: stateDirectory, EMET_MEM_RESERVE_GIB: "0" },
+        },
+      );
+      expect(result.exitCode).toBe(0);
+      expect(result.stdout.toString()).toContain("acquired slot");
     } finally {
       rmSync(repo, { recursive: true, force: true });
       rmSync(stateDirectory, { recursive: true, force: true });

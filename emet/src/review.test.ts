@@ -234,6 +234,13 @@ describe("review ledger round trip through the CLI", () => {
     expect(isObject(phase) && phase.phase).toBe("review");
   });
 
+  test("an unwritable phase file does not change the exit code or output", () => {
+    mkdirSync(path.join(repo, ".emet", "phase.json"), { recursive: true });
+    const result = runReview([finding({ id: "F1", severity: "minor" })]);
+    expect(result.exitCode).toBe(1);
+    expect(readRound(result.stdout)).toBe(1);
+  });
+
   test("a corrupted ledger exits 2", () => {
     mkdirSync(path.join(repo, ".emet", "review"), { recursive: true });
     writeFileSync(

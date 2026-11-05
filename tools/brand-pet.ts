@@ -48,6 +48,10 @@ export const MANIFEST_LIMITS = {
   idMaxLength: 128,
   displayNameMaxLength: 120,
   fpsMax: 60,
+  rowMax: 256,
+  framesMax: 512,
+  frameDurationMaxMs: 60_000,
+  frameSizeMax: 1024,
   manifestMaxBytes: 64 * KB,
   sheetMaxBytes: 64 * MB,
 } as const;
@@ -56,7 +60,7 @@ export const MANIFEST_LIMITS = {
 export interface PetAnimation {
   row: number;
   frames: number;
-  fps: number;
+  frameDurationsMs: number[];
 }
 
 /** The `pet.json` document. */
@@ -80,7 +84,6 @@ const WAVE_ANGLES = [0, -6, 0, 6, 0, -6, 0, 6];
 const RUN_TRAVEL = 10;
 const RUN_BOB = 3;
 const DERIVED_FRAME_MS = 125;
-const MIN_FPS = 1;
 
 /** Moves a frame by whole pixels inside its canvas; the exposed edge stays transparent. */
 async function translateFrame(png: Uint8Array, dx: number, dy: number): Promise<Uint8Array> {
@@ -240,9 +243,11 @@ export function buildManifest(rows: Readonly<Record<PetRow, Frame[]>>): PetManif
   const animations: Record<string, PetAnimation> = {};
   PET_ROWS.forEach((row, index) => {
     const frames = rows[row];
-    const totalMs = frames.reduce((sum, frame) => sum + frame.durationMs, 0);
-    const fps = Math.max(MIN_FPS, Math.round((1000 * frames.length) / totalMs));
-    animations[row] = { row: index, frames: frames.length, fps };
+    animations[row] = {
+      row: index,
+      frames: frames.length,
+      frameDurationsMs: frames.map((frame) => frame.durationMs),
+    };
   });
   return {
     id: "emet",
@@ -255,6 +260,29 @@ export function buildManifest(rows: Readonly<Record<PetRow, Frame[]>>): PetManif
     defaultAnimation: "idle",
     animations,
   };
+}
+
+/** Lists every way one animation entry breaks Orca's per-animation rules. */
+function validateAnimation(name: string, animation: PetAnimation): string[] {
+  const problems: string[] = [];
+  const { row, frames, frameDurationsMs } = animation;
+  if (name.length === 0 || name.length > 64)
+    problems.push(`${name}: name must be 1 to 64 characters`);
+  if (!Number.isInteger(row) || row < 0 || row > MANIFEST_LIMITS.rowMax) {
+    problems.push(`${name}: row must be an integer from 0 to ${MANIFEST_LIMITS.rowMax}`);
+  }
+  if (!Number.isInteger(frames) || frames < 1 || frames > MANIFEST_LIMITS.framesMax) {
+    problems.push(`${name}: frames must be an integer from 1 to ${MANIFEST_LIMITS.framesMax}`);
+  }
+  if (frameDurationsMs.length !== frames) {
+    problems.push(`${name}: frameDurationsMs needs one entry per frame`);
+  }
+  if (frameDurationsMs.some((ms) => !(ms > 0 && ms <= MANIFEST_LIMITS.frameDurationMaxMs))) {
+    problems.push(
+      `${name}: each frame duration must be above 0 and at most ${MANIFEST_LIMITS.frameDurationMaxMs} ms`,
+    );
+  }
+  return problems;
 }
 
 /**
@@ -272,9 +300,22 @@ export function validateManifest(manifest: PetManifest, sheetBytes: number): str
   ) {
     problems.push(`displayName must be 1 to ${MANIFEST_LIMITS.displayNameMaxLength} characters`);
   }
-  const fpsValues = [manifest.fps, ...Object.values(manifest.animations).map((a) => a.fps)];
-  if (fpsValues.some((fps) => !(fps > 0 && fps <= MANIFEST_LIMITS.fpsMax))) {
+  if (!(manifest.fps > 0 && manifest.fps <= MANIFEST_LIMITS.fpsMax)) {
     problems.push(`fps must be above 0 and at most ${MANIFEST_LIMITS.fpsMax}`);
+  }
+  const { width, height } = manifest.frame;
+  if (
+    !Number.isInteger(width) ||
+    !Number.isInteger(height) ||
+    width < 1 ||
+    height < 1 ||
+    width > MANIFEST_LIMITS.frameSizeMax ||
+    height > MANIFEST_LIMITS.frameSizeMax
+  ) {
+    problems.push(`frame must be integers from 1 to ${MANIFEST_LIMITS.frameSizeMax}`);
+  }
+  for (const [name, animation] of Object.entries(manifest.animations)) {
+    problems.push(...validateAnimation(name, animation));
   }
   if (manifest.defaultAnimation !== "idle" || !(manifest.defaultAnimation in manifest.animations)) {
     problems.push("defaultAnimation must be idle and exist in animations");
