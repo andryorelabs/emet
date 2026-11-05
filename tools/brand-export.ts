@@ -25,6 +25,7 @@ import {
   composeSheet,
   validateManifest,
 } from "./brand-pet.ts";
+import { GENERATED_FRAMES_PATH, buildFramesModule } from "./brand-frames.ts";
 import {
   ICO_MAX_BYTES,
   ICO_SIZES,
@@ -298,6 +299,8 @@ async function exportPet(): Promise<void> {
   writeFileSync(join(PET_DIRECTORY, "spritesheet.webp"), sheet);
   writeFileSync(join(PET_DIRECTORY, "pet.json"), `${JSON.stringify(manifest, null, 2)}\n`);
   console.log(`brand:export wrote pet bundle (spritesheet.webp ${sheet.byteLength} B)`);
+  writeFileSync(GENERATED_FRAMES_PATH, await buildFramesModule(captured));
+  console.log("brand:export wrote mod frames (frames.generated.ts)");
 }
 
 /** Renders and checks every raster asset of the brand kit. */
