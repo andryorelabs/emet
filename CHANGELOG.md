@@ -8,6 +8,11 @@ and this project adheres to
 
 ## [Unreleased]
 
+### Added
+
+- `docs/how-to/update-emet.md`: how to update the plugins and turn on
+  marketplace auto-update.
+
 ## [0.4.0] - 2026-11-06
 
 ### Added

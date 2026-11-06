@@ -21,6 +21,17 @@ Plugin options:
 - `size`: `small` (16 x 8 cells, the default) or `medium` (24 x 12 cells).
 - `showLabel`: show or hide the label beside the mascot (default on).
 
+## Update the mascot plugin
+
+Marketplaces other than Anthropic's have auto-update off by default, and a marketplace cannot turn it on for its users. Update by hand:
+
+```bash
+claude plugin marketplace update emet-marketplace
+claude plugin update emet-mascot@emet-marketplace
+```
+
+Restart Claude Code afterwards. To update on its own, run `/plugin`, open the **Marketplaces** tab, select `emet-marketplace` and choose **Enable auto-update**. Each user does this once on their own machine. See [Update emet](update-emet.md) for the main plugin too.
+
 ## The phase file
 
 The emet CLI writes `.emet/phase.json` in the repo as a run moves along, and the mascot polls it about every two seconds. A file older than the freshness window is ignored, so a crashed run does not leave a stale label.
