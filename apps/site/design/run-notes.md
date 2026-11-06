@@ -39,15 +39,18 @@ First dealt: The product performs (seed 1107576801). The maintainer then showed 
 Redraws, each for a stated reason:
 
 - Hero: the dealt blueprint sets two words at 13vw on the top and bottom edges. Replaced by the maintainer's reference: a centred two-line headline over the sky of the painted valley, nav over the picture, one action. It is the page's one centred moment.
-- showcase, "Cards crossing a held photograph", becomes "One control, blown up": the page's live thing is one control and the cards need a photograph per item that does not exist.
+- showcase, "Cards crossing a held photograph", becomes "The valley changes light": the page's live thing is one control, and the same valley is painted by day and at dusk so flagging a ticket turns day into dusk. One paper panel holds the heading, status and control.
 - features, "Rows with margin photographs", becomes "Panel with margin notes": the six claims are six parts of one run report, not six photographs.
-- about, "Wide photo, colour tile, facts", becomes "Founder's letter": the content is the name story, and the facts blueprint wants altitude and local time.
-- cta, "Three photographs, then a field", becomes "The action tile": the action is a button, and there are two pictures of the subject's world, not three.
-- footer, "Photograph half, menu half", becomes "A single quiet line": it must carry the Anthropic notice and the picture credits.
+- about, "Wide photo, colour tile, facts", becomes "Founder's letter" beside a painted portrait of the golem: the content is the name story, and the facts blueprint wants altitude and local time.
+- cta, "Three photographs, then a field", becomes "The closing painting": the morning-mist painting mirrors the hero with the heading and the action centred over its sky.
+- footer, "Photograph half, menu half", becomes "A single quiet line": it must carry the Anthropic notice and the AI disclosure.
+- how it works gains a sticky painted crop (golden hour) beside the exchanges, so the valley is not only the hero.
+
+The rest of the page was adapted to the hero in canvas v8: section headings at weight 400 and `clamp(32px, 3.2vw, 48px)` like the hero, radii 12px on panels and pictures and 10px on buttons and inputs, no flat saturated slabs, sections 120px apart (80px on a phone) with no dead space. Brand tokens are untouched; warmth comes from the paintings.
 
 Settled disagreements: the headline stays Space Grotesk (the brand fixes the type; the reference uses a serif), the action uses the accent colour, and the nav has no dark action button so the first screen has one primary action.
 
-The hero picture, [hero.webp](hero.webp), is a hand-painted style landscape generated with ChatGPT image generation from the prompt in [hero-prompt.md](hero-prompt.md), with the mascot render and a layout sketch as references. It was chosen by the maintainer among three lighting variants (golden hour, morning mist, clear late afternoon); the third was picked. Earlier hand-coded SVG drawings were rejected: the first looked childish, the later ones abstract and not premium enough, and an image from Gemini was too cartoonish. The picture shows the emet golem small on a grassy rise, a valley where three streams join one river, terraced fields and a calm sky for the headline. On phones the crop is centred on the golem (`object-position: 94% 100%`). It is an AI-generated image, so it is not an archival picture and gets no credit line in the footer, but it is listed in the final report. It counts toward the picture floor as a real picture. The build ships it as WebP or AVIF at 1672 px wide, with a lower-resolution variant for phones.
+The hero picture, [hero.webp](hero.webp), is a hand-painted style landscape generated with ChatGPT image generation from the prompt in [hero-prompt.md](hero-prompt.md), with the mascot render and a layout sketch as references. It was chosen by the maintainer among three lighting variants (golden hour, morning mist, clear late afternoon); the third was picked. Four more paintings in the same conversation carry the rest of the page; see Pictures. Earlier hand-coded SVG drawings were rejected: the first looked childish, the later ones abstract and not premium enough, and an image from Gemini was too cartoonish. The picture shows the emet golem small on a grassy rise, a valley where three streams join one river, terraced fields and a calm sky for the headline. On phones the crop is centred on the golem (`object-position: 94% 100%`). It is an AI-generated image: the footer discloses it, there is no per-picture credit ([ADR-0020](../../../docs/adr/0020-website-imagery-is-ai-generated-paintings.md)). It counts toward the picture floor as a real picture. The build ships it as WebP or AVIF at 1672 px wide, with a lower-resolution variant for phones.
 
 The hero headline is Space Grotesk at weight 400 and `clamp(38px, 4vw, 60px)`, which keeps the brand type and reads lighter than the reference's serif.
 
@@ -57,7 +60,7 @@ On this page, **the erased letter of emet** becomes **the control that holds a w
 
 Competitor test: another orchestrator cannot print this sentence, because its name does not stop when a letter is erased.
 
-The one live thing, in the showcase: flag ticket #44 and the wave holds. The "e" of emet fades to "met", the status line reads "Wave 1 held: one ticket flagged. Nothing merged." and the field turns from moss to lamp amber while its heading word goes from "merges" to "waits". It works from the keyboard and on a phone, and without script the status line prints both outcomes as text.
+The one live thing, in the showcase: flag ticket #44 and the wave holds. The painting of the valley cross-fades from day to dusk (opacity only, 600ms), the "e" of emet fades to "met", the status line reads "Wave 1 held: one ticket flagged. Nothing merged.", the switch turns from moss to lamp amber and the heading word goes from "merges" to "waits". It works from the keyboard and on a phone. Without script the day painting stays and the status line prints both outcomes as text; with reduced motion the paintings swap without the fade.
 
 Scenes: none dealt.
 
@@ -75,17 +78,14 @@ Sample content (spec 41, tickets, PR number, branch names) is invented to show t
 - Features, h2: What a run guards. Six notes are the six feature lines of `copy.md`, verbatim.
 - About, h2: Why it is called emet. A four paragraph letter signed AndryOre, Maintainer. A proposal for the maintainer to approve.
 - Close, h2: Try it in one repo. Text: Two commands to install, one to start. Works in any git repo, with Linear, GitHub Issues or no tracker.
-- Footer: Plugin for Claude Code. Not affiliated with or endorsed by Anthropic. Docs, What's new, GitHub. 2026, MIT. Picture credits.
+- Footer: Plugin for Claude Code. Not affiliated with or endorsed by Anthropic. Docs, What's new, GitHub. 2026, MIT. Paintings generated with AI from prompts by the maintainer.
+- 404, h1: This page wandered off. Text: That address does not exist, or the page moved. Start from the home page or the docs.
 
 ## Pictures
 
-Found with `scripts/assets.mjs`, public domain, shown in greyscale, credited in the footer. Download again with `node <skill>/scripts/assets.mjs --get <ref> --to apps/site/src/assets`.
+Five paintings generated with ChatGPT, masters in [pictures/](pictures/), prompts in [pictures-prompts.md](pictures-prompts.md): hero (clear afternoon), dusk (held state), golem portrait, morning mist (closing band and 404) and golden hour (how it works). No archival pictures and no credit lines; the footer says the paintings are AI generated. The build serves them as AVIF and WebP with `srcset` from the same origin, the hero preloaded and the rest lazy.
 
-- `commons:8873104` "Prague-golem-reproduction" by user Thander. The about picture.
-- `commons:5944518` "Golem Weneger 2" by Hanns Lippmann. The close tile.
-- Spare: `commons:148752533` "Poster for The Golem: As He Came Into the World" by Hans Poelzig.
-
-The real interface fragments (banner, spec and tickets, status JSON and PR, the run report) are built in HTML with `data-ui` on their roots. The hero illustration is a drawing and needs no credit.
+The real interface fragments (banner, spec and tickets, status JSON and PR, the run report) are built in HTML with `data-ui` on their roots. They count toward the picture floor together with the paintings.
 
 ## Running the gate
 
