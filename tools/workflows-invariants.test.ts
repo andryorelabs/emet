@@ -13,6 +13,7 @@ interface WorkflowStep {
 
 interface WorkflowJob {
   readonly name?: string;
+  readonly "runs-on"?: unknown;
   readonly uses?: string;
   readonly "timeout-minutes"?: number;
   readonly needs?: string | readonly string[];
@@ -319,6 +320,51 @@ describe("release.yml", () => {
       "SHA256SUMS",
     ]) {
       expect(raw).toContain(asset);
+    }
+  });
+});
+
+const ROUTED_RUNS_ON =
+  "${{ github.event.pull_request.head.repo.fork && 'ubuntu-latest' || vars.BLACKSMITH_RUNNER || 'ubuntu-latest' }}";
+const ROUTED_JOBS = [
+  "ci.yml:check",
+  "ci.yml:test",
+  "ci.yml:commitlint",
+  "ci.yml:ci-passed",
+  "labels.yml:sync",
+  "lint-docs.yml:check-links",
+  "lint-pr.yml:validate-title",
+  "lint-workflows.yml:lint",
+];
+const LITERAL_RUNNERS = new Set(["ubuntu-latest", "macos-latest"]);
+
+describe("runner routing", () => {
+  const jobs = workflows.flatMap(({ fileName, workflow }) =>
+    Object.entries(workflow.jobs).map(([name, job]) => ({ key: `${fileName}:${name}`, job })),
+  );
+
+  test("routed jobs use exactly the BLACKSMITH_RUNNER expression", () => {
+    const wrong = ROUTED_JOBS.filter(
+      (key) => jobs.find((entry) => entry.key === key)?.job["runs-on"] !== ROUTED_RUNS_ON,
+    );
+    expect(wrong).toEqual([]);
+  });
+
+  test("every other job runs on a literal GitHub-hosted runner", () => {
+    const wrong = jobs
+      .filter(({ key }) => !ROUTED_JOBS.includes(key))
+      .filter(({ job }) => !LITERAL_RUNNERS.has(String(job["runs-on"])))
+      .map(({ key }) => key);
+    expect(wrong).toEqual([]);
+  });
+
+  test("no workflow reads BLACKSMITH_RUNNER outside the routed jobs or names a self-hosted runner", () => {
+    const readers = jobs
+      .filter(({ job }) => String(job["runs-on"]).includes("BLACKSMITH_RUNNER"))
+      .map(({ key }) => key);
+    expect(readers.toSorted()).toEqual(ROUTED_JOBS.toSorted());
+    for (const { raw } of workflows) {
+      expect(raw).not.toMatch(/vps-|self-hosted|CI_RUNNER/);
     }
   });
 });
