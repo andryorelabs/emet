@@ -28,6 +28,10 @@ _Avoid_: board, backlog
 How a wave's integration branch reaches trunk: a PR, or a local merge with no PR.
 _Avoid_: ship, deploy, release
 
+**Website**:
+The public site at emet.andryore.dev: the home page and the docs, in every locale.
+_Avoid_: landing, landing page (**Landing** is how a wave reaches trunk)
+
 **Coordinator**:
 The single session that runs the phases, dispatches workers, merges their branches and is the only writer of the tracker.
 _Avoid_: orchestrator, manager, lead
