@@ -16,8 +16,7 @@ concurrency:
 jobs:
   check:
     name: Check
-    runs-on: ${{ github.event.repository.private && vars.CI_RUNNER || 'ubuntu-latest'
-      }}
+    runs-on: ${{ github.event.pull_request.head.repo.fork && 'ubuntu-latest' || vars.BLACKSMITH_RUNNER || 'ubuntu-latest' }}
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -43,8 +42,7 @@ jobs:
 
   test:
     name: Test
-    runs-on: ${{ github.event.repository.private && vars.CI_RUNNER || 'ubuntu-latest'
-      }}
+    runs-on: ${{ github.event.pull_request.head.repo.fork && 'ubuntu-latest' || vars.BLACKSMITH_RUNNER || 'ubuntu-latest' }}
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -96,8 +94,7 @@ jobs:
   commitlint:
     name: Commitlint
     if: github.event_name == 'pull_request'
-    runs-on: ${{ github.event.repository.private && vars.CI_RUNNER || 'ubuntu-latest'
-      }}
+    runs-on: ${{ github.event.pull_request.head.repo.fork && 'ubuntu-latest' || vars.BLACKSMITH_RUNNER || 'ubuntu-latest' }}
     timeout-minutes: 5
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -121,8 +118,7 @@ jobs:
     name: CI passed
     if: always()
     needs: [check, test, test-macos, commitlint]
-    runs-on: ${{ github.event.repository.private && vars.CI_RUNNER || 'ubuntu-latest'
-      }}
+    runs-on: ${{ github.event.pull_request.head.repo.fork && 'ubuntu-latest' || vars.BLACKSMITH_RUNNER || 'ubuntu-latest' }}
     timeout-minutes: 5
     steps:
       - name: Fail on any failed or cancelled job (skipped is fine)

@@ -22,3 +22,4 @@ Decisions that are hard to reverse, surprising without context, and the result o
 | 0014 | [Brand kit lives in docs/brand](0014-brand-kit-in-docs-brand.md)                                                      | Accepted   |                                                                                 |
 | 0015 | [Rename to emet with legacy-name compatibility](0015-rename-to-emet-with-legacy-name-compatibility.md)                | Accepted   |                                                                                 |
 | 0016 | [emet-mascot as an optional plugin](0016-emet-mascot-optional-plugin.md)                                              | Accepted   |                                                                                 |
+| 0017 | [Blacksmith runner routing](0017-blacksmith-runner-routing.md)                                                        | Accepted   |                                                                                 |
