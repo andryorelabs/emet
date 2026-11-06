@@ -34,15 +34,20 @@ What belongs to emet and to no competitor:
 
 ## 3. Direction
 
-Dealt: The product performs (seed 1107576801), hero Column on one line, motion Slow crossfade. Chosen over the quiet instrument and the well-kept board because the product has one control that is the product (the flag that holds a wave) and the direction puts a working fragment in the hero.
+First dealt: The product performs (seed 1107576801). The maintainer then showed a reference with a full-bleed illustrated hero, a centred headline over a calm sky and a plain nav, and asked to redo the direction. Dealt again: The place carries it (seed 341960445), a full-bleed picture is the argument. Its sheet is [direction-sheet.md](direction-sheet.md).
 
-Redraws: none. Settled disagreements, in the sheet's own order:
+Redraws, each for a stated reason:
 
-- Accent colour on the primary action, not a near-black button (palette role).
-- The right half of the first screen is closed by the wave board (columns 4 to 12) instead of left blank, so the frame rule holds.
-- The founder's letter gets a heading ("Why it is called emet") and a picture on its far side.
-- The about portrait is replaced by the clay golem picture.
-- The signature move (slow crossfade) is replaced at build time by the hold transition: the field and the word change when the flag is set. Motion is built in the motion ticket.
+- Hero: the dealt blueprint sets two words at 13vw on the top and bottom edges. Replaced by the maintainer's reference: a centred two-line headline over the sky of the drawn valley, nav over the picture, one action. It is the page's one centred moment.
+- showcase, "Cards crossing a held photograph", becomes "One control, blown up": the page's live thing is one control and the cards need a photograph per item that does not exist.
+- features, "Rows with margin photographs", becomes "Panel with margin notes": the six claims are six parts of one run report, not six photographs.
+- about, "Wide photo, colour tile, facts", becomes "Founder's letter": the content is the name story, and the facts blueprint wants altitude and local time.
+- cta, "Three photographs, then a field", becomes "The action tile": the action is a button, and there are two pictures of the subject's world, not three.
+- footer, "Photograph half, menu half", becomes "A single quiet line": it must carry the Anthropic notice and the picture credits.
+
+Settled disagreements: the headline stays Space Grotesk (the brand fixes the type; the reference uses a serif), the action uses the accent colour, and the nav has no dark action button so the first screen has one primary action.
+
+The illustration is the maintainer's own drawing in flat SVG, [hero-valley.svg](hero-valley.svg): three streams join one river (branches merging), parallel terraces (worktrees), small golems at work, one large golem keeping watch. Flat palette tints only, no gradients. It is made in code, so it does not count toward the picture floor.
 
 ## 4. Idea
 
@@ -50,7 +55,7 @@ On this page, **the erased letter of emet** becomes **the control that holds a w
 
 Competitor test: another orchestrator cannot print this sentence, because its name does not stop when a letter is erased.
 
-The one live thing: flag ticket #44 and the wave holds. The "e" of emet fades to "met", #44 reads "flagged", the status line reads "Wave 1 held: one ticket flagged. Nothing merged." and the showcase field turns from moss to lamp amber while its heading word goes from "merges" to "waits". Board and showcase share one state. It works from the keyboard and on a phone, and without script the board prints both outcomes as text.
+The one live thing, in the showcase: flag ticket #44 and the wave holds. The "e" of emet fades to "met", the status line reads "Wave 1 held: one ticket flagged. Nothing merged." and the field turns from moss to lamp amber while its heading word goes from "merges" to "waits". It works from the keyboard and on a phone, and without script the status line prints both outcomes as text.
 
 Scenes: none dealt.
 
@@ -58,13 +63,13 @@ Scenes: none dealt.
 
 Sample content (spec 41, tickets, PR number, branch names) is invented to show the product at density and must be confirmed. Real strings come from `docs/brand/copy.md`, `docs/brand/terminal/banner.txt` and `emet status --help`.
 
-- Hero h1: Spec to merge, on one approval.
+- Hero h1: Spec to merge, / on one approval. (two authored lines, centred)
 - Hero sentence: emet is a plugin for Claude Code. It takes a feature from idea to merged change, with workers in isolated worktrees.
 - Primary action: Install emet. Text link: Read the docs.
-- Nav: Docs, GitHub, language.
+- Nav over the picture: wordmark, Docs, What's new, GitHub, language.
 - How it works, h2: From idea to merge. Lead: the README intro, verbatim.
 - Exchanges: "First, install it." / "Then describe the feature." / "Then watch the waves land."
-- Showcase, h2: The wave merges (flagged: The wave waits). Sentence: A wave with anything flagged is never auto-merged. Its pull request stays open for you.
+- Showcase, h2: The wave merges (flagged: The wave waits). Status line: Wave 1 reviewed. CI passed. Merged, 4 tickets closed. (flagged: Wave 1 held: one ticket flagged. Nothing merged.) Sentence: A wave with anything flagged is never auto-merged. Its pull request stays open for you.
 - Features, h2: What a run guards. Six notes are the six feature lines of `copy.md`, verbatim.
 - About, h2: Why it is called emet. A four paragraph letter signed AndryOre, Maintainer. A proposal for the maintainer to approve.
 - Close, h2: Try it in one repo. Text: Two commands to install, one to start. Works in any git repo, with Linear, GitHub Issues or no tracker.
@@ -78,7 +83,7 @@ Found with `scripts/assets.mjs`, public domain, shown in greyscale, credited in 
 - `commons:5944518` "Golem Weneger 2" by Hanns Lippmann. The close tile.
 - Spare: `commons:148752533` "Poster for The Golem: As He Came Into the World" by Hans Poelzig.
 
-The real interface fragments (banner, spec and tickets, status JSON and PR, the board, the run report) are built in HTML with `data-ui` on their roots.
+The real interface fragments (banner, spec and tickets, status JSON and PR, the run report) are built in HTML with `data-ui` on their roots. The hero illustration is a drawing and needs no credit.
 
 ## Running the gate
 
