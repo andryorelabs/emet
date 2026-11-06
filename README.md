@@ -54,6 +54,8 @@ Requirements: Claude Code, `git`, `gh` (authenticated) and the `mattpocock-skill
 
    Optional: a pixel mascot, see [Mascot](#mascot-optional).
 
+   To update later, refresh the marketplace and update each plugin, then restart Claude Code. Auto-update is off by default for third-party marketplaces; turn it on in `/plugin`, tab **Marketplaces**, `emet-marketplace`, **Enable auto-update**. See [Update emet](docs/how-to/update-emet.md).
+
 2. In your repo, set it up and check it:
 
    ```
