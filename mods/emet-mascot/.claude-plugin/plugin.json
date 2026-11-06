@@ -1,7 +1,7 @@
 {
   "name": "emet-mascot",
-  "version": "0.1.0",
-  "description": "A pixel mascot above the prompt that mirrors the session and the emet run phase.",
+  "version": "0.2.0",
+  "description": "A pixel mascot beside the transcript (or above the prompt) that mirrors the session and the emet run phase.",
   "author": { "name": "AndryOre" },
   "types": "./types/index.d.ts",
   "userConfig": {
@@ -10,7 +10,14 @@
       "title": "Mascot size",
       "description": "small is 16 px (16 x 8 cells), medium is 24 px (24 x 12 cells).",
       "options": ["small", "medium"],
-      "default": "medium"
+      "default": "small"
+    },
+    "position": {
+      "type": "string",
+      "title": "Mascot position",
+      "description": "pane docks it beside the transcript and falls back to the band when it cannot dock, band draws it above the prompt, status shows only the text label in the status line.",
+      "options": ["pane", "band", "status"],
+      "default": "pane"
     },
     "showLabel": {
       "type": "boolean",

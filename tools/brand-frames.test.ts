@@ -2,7 +2,12 @@ import { describe, expect, test } from "bun:test";
 import sharp from "sharp";
 import { FRAME_HEIGHT, FRAME_WIDTH, type Frame, type MascotState } from "./brand-pet.ts";
 import { FRAMES } from "../mods/emet-mascot/hooks/frames.generated.ts";
-import { buildFramesModule, encodeRasterFrame } from "./brand-frames.ts";
+import {
+  MASCOT_PALETTE,
+  buildFramesModule,
+  downsampleToPalette,
+  encodeRasterFrame,
+} from "./brand-frames.ts";
 
 function decode(cells: string): number[] {
   const bytes = Buffer.from(cells, "base64");
@@ -23,6 +28,64 @@ describe("encodeRasterFrame", () => {
 
   test("rejects a buffer of the wrong size", () => {
     expect(() => encodeRasterFrame(new Uint8Array(3), 1, 1)).toThrow();
+  });
+});
+
+function block(colors: readonly (number | undefined)[]): Uint8Array {
+  const rgba = new Uint8Array(colors.length * 4);
+  colors.forEach((color, index) => {
+    if (color === undefined) return;
+    rgba.set([color >> 16, (color >> 8) & 0xff, color & 0xff, 255], index * 4);
+  });
+  return rgba;
+}
+
+function colorOf(rgba: Uint8Array): number | undefined {
+  if (rgba[3] === 0) return undefined;
+  return ((rgba[0] ?? 0) << 16) | ((rgba[1] ?? 0) << 8) | (rgba[2] ?? 0);
+}
+
+const GRAY = 0xa5a696;
+const GREEN = 0x51852f;
+const INK = 0x161c17;
+
+describe("downsampleToPalette", () => {
+  test("is transparent below 50% opaque coverage and opaque at or above it", () => {
+    expect(colorOf(downsampleToPalette(block([GRAY, undefined, undefined, undefined]), 2, 1))).toBe(
+      undefined,
+    );
+    expect(colorOf(downsampleToPalette(block([GRAY, GRAY, undefined, undefined]), 2, 1))).toBe(
+      GRAY,
+    );
+  });
+
+  test("a feature colour wins at 25% of the opaque pixels", () => {
+    expect(colorOf(downsampleToPalette(block([INK, GREEN, GREEN, GREEN]), 2, 1))).toBe(INK);
+    expect(
+      colorOf(
+        downsampleToPalette(
+          block([INK, INK, GREEN, GREEN, GREEN, GREEN, GREEN, GREEN, GREEN]),
+          3,
+          1,
+        ),
+      ),
+    ).toBe(GREEN);
+  });
+
+  test("otherwise the plurality palette colour wins", () => {
+    expect(
+      colorOf(
+        downsampleToPalette(
+          block([GRAY, GRAY, GRAY, GREEN, GREEN, GREEN, GREEN, undefined, undefined]),
+          3,
+          1,
+        ),
+      ),
+    ).toBe(GREEN);
+  });
+
+  test("snaps off-palette source pixels to the nearest palette colour", () => {
+    expect(colorOf(downsampleToPalette(block([0x52862e]), 1, 1))).toBe(GREEN);
   });
 });
 
@@ -77,6 +140,25 @@ describe("committed frames.generated.ts", () => {
             expect(allowedCodePoints.has(values[index] ?? -1)).toBe(true);
             expect(values[index + 1] ?? 0).toBeLessThanOrEqual(0xffffff);
             expect(values[index + 2] ?? 0).toBeLessThanOrEqual(0xffffff);
+          }
+        }
+      }
+    }
+  });
+
+  test("every opaque colour is in MASCOT_PALETTE", () => {
+    const palette = new Set(MASCOT_PALETTE);
+    for (const sizes of Object.values(FRAMES)) {
+      for (const size of Object.values(sizes)) {
+        for (const frame of size.frames) {
+          const values = decode(frame.cells);
+          for (let index = 0; index < values.length; index += 3) {
+            const codePoint = values[index] ?? 0;
+            if (codePoint === 0x20) continue;
+            expect(palette.has(values[index + 1] ?? -1)).toBe(true);
+            if (codePoint === 0x2580 && values[index + 2] !== 0) {
+              expect(palette.has(values[index + 2] ?? -1)).toBe(true);
+            }
           }
         }
       }

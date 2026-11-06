@@ -2,3 +2,10 @@
 .emet/*
 !.emet/tickets/
 node_modules/
+
+# third-party agent skills installed locally via the skills CLI
+.claude/skills/*
+!.claude/skills/add-adr/
+!.claude/skills/cut-release/
+!.claude/skills/git-commit/
+skills-lock.json

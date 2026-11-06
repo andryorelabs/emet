@@ -8,6 +8,22 @@ and this project adheres to
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-11-06
+
+### Added
+
+- `emet-mascot` `position` option (`pane`, `band` or `status`); `pane` is the
+  default and falls back to the band when it cannot dock.
+- A "Mascot (optional)" section in the README.
+
+### Changed
+
+- `emet-mascot` frames are snapped to the six mascot colours instead of
+  blurred by a resize, so the pixel art is crisp in the terminal.
+- `emet-mascot` 0.2.0: the default `size` is now `small`.
+- `docs/how-to/orca-pet.md` is now `docs/how-to/mascot.md`, covering the mod
+  and the Orca pet.
+
 ## [0.3.0] - 2026-11-05
 
 ### Added

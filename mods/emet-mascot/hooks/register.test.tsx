@@ -133,3 +133,153 @@ test("a stale phase record is not shown in the label", async ($, on) => {
   await clock.advance(2500);
   expect(await shownState($)).toBe("work");
 });
+
+const PANE = {
+  plugin: "emet-mascot",
+  component: "Pane",
+  requestId: "emet-mascot",
+  surface: "terminal",
+} as const;
+
+function paneProps(placement: "dock" | "inline") {
+  return {
+    bodyColumns: 40,
+    placement,
+    scroll: { offset: 0, bodyRows: 20 },
+    view: {},
+  } as const;
+}
+
+function engineText(
+  $: Parameters<Parameters<typeof test>[1]>[0],
+  e: Parameters<typeof $.ui.resolve>[0],
+) {
+  const { Text } = $.ui.resolve(e);
+  return <Text>engine</Text>;
+}
+
+function paneList(isPlaced: boolean) {
+  return [{ id: "emet-mascot", title: "emet", isShown: true, isFocused: false, isPlaced }];
+}
+
+test("pane position draws the Raster in the docked pane and the band yields", async ($, on) => {
+  on("clock.now", () => ({ value: 1000 }));
+  on("ui.panes", () => ({ value: paneList(true) }));
+  on("ui.render", engineText);
+
+  const pane = await $.ui.mount({ ...PANE, props: paneProps("dock") });
+  expect(await pane.find({ type: "Raster", key: "mascot" })).toBeDefined();
+  await pane.unmount();
+
+  const band = await $.ui.mount({ ...BAND, props: bandProps(false) });
+  expect(await band.find({ type: "Raster" })).toBeUndefined();
+  await band.unmount();
+});
+
+test("pane position falls back to the band once the pane is no longer placed", async ($, on) => {
+  on("clock.now", () => ({ value: 1000 }));
+  let isPlaced = true;
+  on("ui.panes", () => ({ value: paneList(isPlaced) }));
+  on("ui.render", engineText);
+
+  const pane = await $.ui.mount({ ...PANE, props: paneProps("dock") });
+  await pane.unmount();
+  isPlaced = false;
+
+  const band = await $.ui.mount({ ...BAND, props: bandProps(false) });
+  expect(await band.find({ type: "Raster", key: "mascot" })).toBeDefined();
+  await band.unmount();
+});
+
+test("a pane closed after seating inline is not reopened by the next band render", async ($, on) => {
+  on("clock.now", () => ({ value: 1000 }));
+  on("ui.panes", () => ({ value: paneList(true) }));
+  on("ui.render", engineText);
+  let opens = 0;
+  on("ui.open", () => {
+    opens += 1;
+    return { value: { isPlaced: true } };
+  });
+  on("ui.close", () => ({ value: undefined }));
+  const wideBand = {
+    ...BAND,
+    props: { ...bandProps(false), bodyColumns: 150 },
+    viewport: { columns: 150, rows: 40, isFullscreen: true },
+  } as const;
+
+  const first = await $.ui.mount(wideBand);
+  await first.unmount();
+  expect(opens).toBe(1);
+
+  const inline = await $.ui.mount({ ...PANE, props: paneProps("inline") });
+  await inline.unmount();
+
+  const second = await $.ui.mount(wideBand);
+  await second.unmount();
+  expect(opens).toBe(1);
+});
+
+test("a pane that turns inline while still placed hands the mascot back to the band", async ($, on) => {
+  on("clock.now", () => ({ value: 1000 }));
+  on("ui.panes", () => ({ value: paneList(true) }));
+  on("ui.render", engineText);
+
+  const docked = await $.ui.mount({ ...PANE, props: paneProps("dock") });
+  await docked.unmount();
+  const inline = await $.ui.mount({ ...PANE, props: paneProps("inline") });
+  await inline.unmount();
+
+  const band = await $.ui.mount({ ...BAND, props: bandProps(false) });
+  expect(await band.find({ type: "Raster", key: "mascot" })).toBeDefined();
+  await band.unmount();
+});
+
+test("with no size configured the band draws the 16 x 8 sheet", async ($, on) => {
+  on("clock.now", () => ({ value: 1000 }));
+  on("ui.render", engineText);
+
+  const band = await $.ui.mount({ ...BAND, props: bandProps(false) });
+  const raster = await band.find({ type: "Raster", key: "mascot" });
+  expect(raster?.props).toMatchObject({ columns: 16, rows: 8 });
+  await band.unmount();
+});
+
+test("an inline pane draws nothing and the band shows the mascot", async ($, on) => {
+  on("clock.now", () => ({ value: 1000 }));
+  on("ui.panes", () => ({ value: paneList(true) }));
+  on("ui.render", engineText);
+
+  const pane = await $.ui.mount({ ...PANE, props: paneProps("inline") });
+  expect(await pane.find({ type: "Raster" })).toBeUndefined();
+  await pane.unmount();
+
+  const band = await $.ui.mount({ ...BAND, props: bandProps(false) });
+  expect(await band.find({ type: "Raster", key: "mascot" })).toBeDefined();
+  await band.unmount();
+});
+
+test(
+  "status position draws no Raster and pins the label as the status line",
+  { options: { position: "status" } },
+  async ($, on) => {
+    const clock = mock.clock(on, { now: 1000 });
+    const lines: (string | undefined)[] = [];
+    on("ui.render", engineText);
+    on("ui.status", (_, e) => {
+      lines.push(e.text);
+      return { value: undefined };
+    });
+    on("agent.list", () => ({ value: [] }));
+    on("session.cwd", () => ({ value: "/repo" }));
+    on("fs.exists", () => ({ value: false }));
+    on("session.start", (_, e) => ({ cwd: e.cwd }));
+
+    await $.session.start({ cwd: "/repo", surface: "terminal", isInteractive: true });
+    await clock.advance(2500);
+    expect(lines.at(-1)).toBe("emet · sleep");
+
+    const band = await $.ui.mount({ ...BAND, props: bandProps(false) });
+    expect(await band.find({ type: "Raster" })).toBeUndefined();
+    await band.unmount();
+  },
+);
