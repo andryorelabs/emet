@@ -170,11 +170,11 @@
 <path d="M1411 930 Q1410 868 1399 826 Q1412 873 1419 930Z" fill="#355a30"/>
 <path d="M511 930 Q513 884 508 854 Q515 888 519 930Z" fill="#5d8645"/>
 </g>
-<ellipse cx="1383" cy="862" rx="309" ry="25" fill="#1f3320" opacity="0.38" filter="url(#soft)"/>
-<g filter="url(#clay)"><g transform="translate(1026.0 396.0) scale(16.5)">
+<ellipse cx="1387" cy="850" rx="191" ry="15" fill="#1f3320" opacity="0.38" filter="url(#soft)"/>
+<g filter="url(#clay)"><g transform="translate(1166.8 560.4) scale(10.2)">
 <path d="M9 28Q5 28 5 24L6 14Q6 7 16 7Q26 7 26 14L27 24Q27 28 23 28Z" fill="url(#claytone)"/>
 </g></g>
-<g transform="translate(1026.0 396.0) scale(16.5)">
+<g transform="translate(1166.8 560.4) scale(10.2)">
 <g clip-path="url(#bodyclip)">
 <rect x="3" y="5" width="26" height="25" fill="url(#shade)"/>
 <path d="M5.4 22Q5.6 14 6.6 11Q7.4 8.4 10 7.6" fill="none" stroke="#f4ead0" stroke-width="0.5" opacity="0.7"/>
