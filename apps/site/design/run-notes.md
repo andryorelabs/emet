@@ -47,7 +47,9 @@ Redraws, each for a stated reason:
 
 Settled disagreements: the headline stays Space Grotesk (the brand fixes the type; the reference uses a serif), the action uses the accent colour, and the nav has no dark action button so the first screen has one primary action.
 
-The illustration is the maintainer's own drawing in flat SVG, [hero-valley.svg](hero-valley.svg): three streams join one river (branches merging), parallel terraces (worktrees), small golems at work, one large golem keeping watch. Flat palette tints only, no gradients. It is made in code, so it does not count toward the picture floor.
+The illustration, [hero-valley.svg](hero-valley.svg), is drawn in code as a painted landscape in the spirit of hand-painted animation backgrounds (inspiration only, no characters or scenes from any film). The first flat version read as childish, so it was redone: five depth layers with atmospheric haze, brush-edged hills through one displacement filter, a grain overlay, muted palette derived from P2 Moss with warm side light, varied tree clumps and poplars, terraces as soft contour bands, three streams joining one river, and one weathered moss-covered clay statue on a distant ridge with no mascot face. Soft gradients live inside this picture only, so a gradient exception is recorded for it (`--allow gradient`); the page itself uses none. It is a drawing, so it does not count toward the picture floor.
+
+The hero headline is Space Grotesk at weight 400 and `clamp(38px, 4vw, 60px)`, which keeps the brand type and reads lighter than the reference's serif.
 
 ## 4. Idea
 
