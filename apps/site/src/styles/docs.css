@@ -1,0 +1,200 @@
+/**
+ * Docs theme: Starlight's colour and type variables mapped onto the brand
+ * tokens, so the docs share the home page's palette in light and dark, plus
+ * the Website header and footer inside Starlight's frame. There is no theme
+ * switch: colour follows the visitor's colour scheme through `light-dark()`.
+ */
+
+@import "./tokens.css";
+
+:root {
+  --gutter: clamp(20px, 4vw, 48px);
+  --radius-panel: 12px;
+  --sl-font: var(--font-sans);
+  --sl-font-mono: var(--font-mono);
+  --sl-nav-height: 4.25rem;
+  --sl-nav-pad-x: 0;
+  --sl-nav-pad-y: 0;
+
+  --sl-color-white: var(--text);
+  --sl-color-gray-1: var(--text);
+  --sl-color-gray-2: var(--text-muted);
+  --sl-color-gray-3: var(--text-muted);
+  --sl-color-gray-4: color-mix(in oklab, var(--text-muted) 55%, var(--bg));
+  --sl-color-gray-5: var(--border);
+  --sl-color-gray-6: var(--surface);
+  --sl-color-gray-7: var(--surface);
+  --sl-color-black: var(--bg);
+  --sl-color-bg: var(--bg);
+  --sl-color-bg-nav: var(--bg);
+  --sl-color-bg-sidebar: var(--bg);
+  --sl-color-bg-inline-code: var(--surface);
+  --sl-color-text: var(--text);
+  --sl-color-text-accent: var(--accent-text);
+  --sl-color-accent-low: var(--surface);
+  --sl-color-accent: var(--accent-text);
+  --sl-color-accent-high: var(--accent-text);
+  --sl-color-hairline: var(--border);
+  --sl-color-hairline-light: var(--border);
+  --sl-color-hairline-shade: var(--border);
+  --sl-color-text-invert: var(--on-accent);
+}
+
+body {
+  background: var(--bg);
+  color: var(--text);
+}
+
+a:focus-visible,
+button:focus-visible,
+summary:focus-visible {
+  outline: 2px solid var(--text);
+  outline-offset: 3px;
+}
+
+.docs-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  height: 100%;
+  padding-inline: var(--gutter);
+}
+
+.docs-header .site-header {
+  position: static;
+  flex: 1;
+  padding: 0;
+}
+
+.docs-header .wordmark {
+  font-size: 22px;
+  font-weight: 500;
+  letter-spacing: -0.02em;
+}
+
+.docs-header .site-header a,
+.docs-header .site-header summary {
+  color: inherit;
+  font-size: 16px;
+  text-decoration: none;
+}
+
+.docs-header .site-header nav {
+  display: flex;
+  align-items: center;
+  gap: 28px;
+}
+
+.docs-header .lang {
+  position: relative;
+}
+
+.docs-header .lang summary {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  list-style: none;
+  cursor: pointer;
+}
+
+.docs-header .lang summary::-webkit-details-marker {
+  display: none;
+}
+
+.docs-header .lang ul {
+  position: absolute;
+  right: 0;
+  top: 100%;
+  z-index: 3;
+  min-width: 200px;
+  margin: 0;
+  padding: 8px;
+  list-style: none;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-panel);
+}
+
+.docs-header .lang li a {
+  display: block;
+  padding: 10px 12px;
+  border-radius: 8px;
+}
+
+.docs-header .lang li a:hover,
+.docs-header .lang li a[aria-current="true"] {
+  background: var(--surface);
+}
+
+@media (max-width: 640px) {
+  .docs-header .site-header nav {
+    gap: 16px;
+  }
+
+  .docs-header .site-header nav a:nth-child(2) {
+    display: none;
+  }
+}
+
+.docs-site-footer .site-footer {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px 32px;
+  margin-top: 3rem;
+  padding: 2rem 0 0;
+  border-top: 1px solid var(--border);
+}
+
+.docs-site-footer .site-footer p {
+  margin: 0;
+  font-size: 16px;
+}
+
+.docs-site-footer .footer-fine {
+  flex-basis: 100%;
+  color: var(--text-muted);
+}
+
+.docs-site-footer .footer-links {
+  display: flex;
+  gap: 24px;
+}
+
+.docs-site-footer .footer-links a {
+  color: var(--text);
+}
+
+.docs-site-footer .footer-line {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 16px;
+}
+
+.docs-notice {
+  margin: 1rem 0 0;
+  padding: 0.75rem 1rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-panel);
+  background: var(--surface);
+  font-size: var(--text-sm);
+}
+
+.docs-notice a {
+  color: var(--accent-text);
+  text-underline-offset: 4px;
+}
+
+site-search kbd {
+  display: none;
+}
+
+site-search dialog {
+  padding: 0;
+}
+
+.expressive-code .ec-line .code span {
+  color: light-dark(var(--0), var(--1));
+}
