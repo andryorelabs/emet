@@ -2,31 +2,8 @@
 /**
  * The English home page of the Website.
  */
-// oxlint-disable-next-line import/no-unassigned-import -- Astro bundles a stylesheet imported for its side effect
-import "../styles/home.css";
-
-import About from "../components/home/About.astro";
-import Closing from "../components/home/Closing.astro";
-import Features from "../components/home/Features.astro";
-import Hero from "../components/home/Hero.astro";
-import HowItWorks from "../components/home/HowItWorks.astro";
-import Showcase from "../components/home/Showcase.astro";
-import SiteFooter from "../components/site/SiteFooter.astro";
-import SiteHeader from "../components/site/SiteHeader.astro";
-import { en as strings } from "../i18n/ui/en";
-import BaseLayout from "../layouts/BaseLayout.astro";
 import { DEFAULT_LOCALE } from "../i18n/locales";
+import HomeDocument from "../seo/HomeDocument.astro";
 ---
 
-<BaseLayout title={strings.meta.title} description={strings.meta.description} locale={DEFAULT_LOCALE}>
-  <SiteHeader locale={DEFAULT_LOCALE} currentPath="/" strings={strings.nav} />
-  <main>
-    <Hero strings={strings} />
-    <HowItWorks strings={strings} />
-    <Showcase strings={strings} />
-    <Features strings={strings} />
-    <About strings={strings} />
-    <Closing strings={strings} />
-  </main>
-  <SiteFooter locale={DEFAULT_LOCALE} strings={strings.footer} />
-</BaseLayout>
+<HomeDocument locale={DEFAULT_LOCALE} />

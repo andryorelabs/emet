@@ -1,0 +1,18 @@
+---
+/**
+ * Head tags that tie a page to its translations: the canonical URL and one
+ * hreflang link per locale plus `x-default`.
+ */
+import type { Locale } from "../i18n/locales";
+import { absoluteUrl, hreflangAlternates } from "./alternates";
+
+interface Props {
+  locale: Locale;
+  path: string;
+}
+
+const { locale, path } = Astro.props;
+---
+
+<link rel="canonical" href={absoluteUrl(locale, path)} />
+{hreflangAlternates(path).map(({ hreflang, href }) => <link rel="alternate" hreflang={hreflang} href={href} />)}
