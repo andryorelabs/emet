@@ -4,7 +4,10 @@ import { defineConfig } from "astro/config";
 
 import { codeColorsPlugin } from "./src/docs/code-colors-plugin";
 import { sharedCodeConfig } from "./src/highlight/code-config";
-import { collectStarlightInlineScriptHashes } from "./src/docs/starlight-inline-hashes";
+import {
+  collectStarlightInlineScriptHashes,
+  collectStarlightInlineStyleHashes,
+} from "./src/docs/starlight-inline-hashes";
 import { buildSidebar } from "./src/docs/sidebar";
 import { sitemapOptOut } from "./src/seo/sitemap-opt-out";
 import {
@@ -40,13 +43,20 @@ export default defineConfig({
         resources: ["'self'", "'wasm-unsafe-eval'"],
         hashes: collectStarlightInlineScriptHashes(),
       },
+      styleDirective: {
+        resources: [{ resource: "'unsafe-hashes'", kind: "attribute" }],
+        hashes: collectStarlightInlineStyleHashes().map((hash) => ({ hash, kind: "attribute" })),
+      },
     },
   },
   integrations: [
     sitemapOptOut,
     starlight({
       title: "emet",
-      head: [{ tag: "link", attrs: { rel: "sitemap", href: "/sitemap.xml" } }],
+      head: [
+        { tag: "link", attrs: { rel: "sitemap", href: "/sitemap.xml" } },
+        { tag: "link", attrs: { rel: "icon", type: "image/svg+xml", href: "/favicon.svg" } },
+      ],
       disable404Route: true,
       defaultLocale: "root",
       locales: starlightLocales,

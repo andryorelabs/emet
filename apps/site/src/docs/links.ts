@@ -20,6 +20,31 @@ export interface LinkContext {
   locale?: Locale;
 }
 
+function resolveRepositoryPath(src: string, context: LinkContext): string | undefined {
+  if (src === "" || src.startsWith("#") || EXTERNAL_HREF.test(src)) return undefined;
+  const resolved = path.posix.normalize(
+    path.posix.join(path.posix.dirname(context.sourcePath), src),
+  );
+  if (resolved === ".." || resolved.startsWith("../")) return undefined;
+  return resolved;
+}
+
+/**
+ * Rewrites one image source found in a published source to the GitHub raw URL
+ * of the repository file, since the site does not serve the repository tree.
+ * Absolute URLs and targets outside the repository stay as written.
+ * @param src - The image source exactly as written in the markdown.
+ * @param context - Source file and locale of the page.
+ * @returns The rewritten source.
+ */
+export function rewriteImageSource(src: string, context: LinkContext): string {
+  const repositoryPath = resolveRepositoryPath(src, context);
+  if (repositoryPath === undefined) return src;
+  return githubViewUrl(repositoryPath)
+    .replace("https://github.com/", "https://raw.githubusercontent.com/")
+    .replace("/blob/", "/");
+}
+
 /**
  * Rewrites one markdown link target found in a published source. Published
  * files become localized site routes, any other repository file becomes a

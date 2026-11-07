@@ -1,5 +1,7 @@
-import { type LinkContext, rewriteLink } from "./links";
+import { type LinkContext, rewriteImageSource, rewriteLink } from "./links";
 
+const HTML_IMAGE_SOURCE = /(<img\b[^>]*?\ssrc=")([^"]+)(")/gi;
+const MARKDOWN_IMAGE = /(!\[[^\]]*\]\()([^)\s]+)((?:\s+"[^"]*")?\))/g;
 const LEADING_H1 = /^\s*# +(.+?) *#*[ \t]*(?:\r?\n+|$)/;
 const INLINE_LINK = /(\]\()([^)\s]+)((?:\s+"[^"]*")?\))/g;
 const REFERENCE_DEFINITION = /^(\s{0,3}\[[^\]]+\]:\s+)(\S+)/;
@@ -23,6 +25,20 @@ export function splitLeadingHeading(markdown: string): {
   };
 }
 
+function rewriteImages(segment: string, context: LinkContext): string {
+  return segment
+    .replaceAll(
+      HTML_IMAGE_SOURCE,
+      (_whole, open: string, src: string, close: string) =>
+        `${open}${rewriteImageSource(src, context)}${close}`,
+    )
+    .replaceAll(
+      MARKDOWN_IMAGE,
+      (_whole, open: string, src: string, close: string) =>
+        `${open}${rewriteImageSource(src, context)}${close}`,
+    );
+}
+
 function rewriteLine(line: string, context: LinkContext): string {
   const definition = REFERENCE_DEFINITION.exec(line);
   if (definition) {
@@ -34,7 +50,7 @@ function rewriteLine(line: string, context: LinkContext): string {
     .map((segment, index) =>
       index % 2 === 1
         ? segment
-        : segment.replaceAll(
+        : rewriteImages(segment, context).replaceAll(
             INLINE_LINK,
             (_whole, open: string, href: string, close: string) =>
               `${open}${rewriteLink(href, context)}${close}`,
