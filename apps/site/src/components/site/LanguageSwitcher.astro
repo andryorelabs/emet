@@ -1,7 +1,7 @@
 ---
 /**
- * Language links for the current page. Plain links, one per locale, each
- * labelled in its own language.
+ * Language pill and menu for the current page. A `details` of plain links, one
+ * per locale, each with its native name and its code; it works without script.
  */
 import { LOCALES, LOCALE_NAMES, localePath, type Locale } from "../../i18n/locales";
 
@@ -15,7 +15,9 @@ const { locale, currentPath, label = "Language" } = Astro.props;
 ---
 
 <details class="lang">
-  <summary aria-label={label}>{locale}</summary>
+  <summary aria-label={`${label}: ${LOCALE_NAMES[locale]}`}>
+    <span>{LOCALE_NAMES[locale]}</span><span class="lang-caret" aria-hidden="true">▾</span>
+  </summary>
   <ul>
     {
       LOCALES.map((target) => (
@@ -26,7 +28,10 @@ const { locale, currentPath, label = "Language" } = Astro.props;
             lang={target}
             aria-current={target === locale ? "true" : undefined}
           >
-            {LOCALE_NAMES[target]}
+            <span>{LOCALE_NAMES[target]}</span>
+            <span class="lang-code" lang="en">
+              {target}
+            </span>
           </a>
         </li>
       ))
