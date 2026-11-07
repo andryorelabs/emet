@@ -66,20 +66,29 @@ Scenes: none dealt.
 
 ## 5. Copy deck (English, source for every locale)
 
+Rule: minimum words, because people do not read. No paragraph over two short lines; the commands and real output carry the story. Verbatim from `docs/brand/copy.md`: the tagline, the notice and the six claim titles. Every other line shortens the "Claims checked" table; no new claims.
+
 Sample content (spec 41, tickets, PR number, branch names) is invented to show the product at density and must be confirmed. Real strings come from `docs/brand/copy.md`, `docs/brand/terminal/banner.txt` and `emet status --help`.
 
-- Hero h1: Spec to merge, / on one approval. (two authored lines, centred)
-- Hero sentence: emet is a plugin for Claude Code. It takes a feature from idea to merged change, with workers in isolated worktrees.
+- Hero h1: Spec to merge, / on one approval. (two authored lines, centred). Sentence: A plugin for Claude Code. Idea to merged change, one approval.
 - Primary action: Install emet. Text link: Read the docs.
 - Nav over the picture: wordmark, Docs, What's new, GitHub, language.
-- How it works, h2: From idea to merge. Lead: the README intro, verbatim.
-- Exchanges: "First, install it." / "Then describe the feature." / "Then watch the waves land."
-- Showcase, h2: The wave merges (flagged: The wave waits). Status line: Wave 1 reviewed. CI passed. Merged, 4 tickets closed. (flagged: Wave 1 held: one ticket flagged. Nothing merged.) Sentence: A wave with anything flagged is never auto-merged. Its pull request stays open for you.
-- Features, h2: What a run guards. Six notes are the six feature lines of `copy.md`, verbatim.
-- About, h2: Why it is called emet. A four paragraph letter signed AndryOre, Maintainer. A proposal for the maintainer to approve.
-- Close, h2: Try it in one repo. Text: Two commands to install, one to start. Works in any git repo, with Linear, GitHub Issues or no tracker.
+- How it works, h2: From idea to merge. No lead. Exchange lines: Install. / Describe it. / Watch it land.
+- Showcase, h2: The wave merges (flagged: The wave waits). Status line: Wave 1 reviewed. CI passed. Merged, 4 tickets closed. (flagged: Wave 1 held: one ticket flagged. Nothing merged.) No other sentence.
+- Features, h2: What a run guards. Six notes: the claim title plus one short line (Spec and tickets, reviewed once. / One git worktree per worker. / A reviewer checks every wave. / A flag holds the whole wave. / Failing checks get a few fixes, then wait for you. / Linear, GitHub Issues or local files.)
+- About, h2: Why it is called emet. Two lines (Hebrew for truth. A golem is clay brought to life by that word. / Erase one letter and it stops. Here, nothing merges when something is flagged.), signed AndryOre, Maintainer. A proposal for the maintainer to approve.
+- Close, h2: Try it in one repo. A button, no sentence.
 - Footer: Plugin for Claude Code. Not affiliated with or endorsed by Anthropic. Docs, What's new, GitHub. 2026, MIT. Paintings generated with AI from prompts by the maintainer.
 - 404, h1: This page wandered off. Text: That address does not exist, or the page moved. Start from the home page or the docs.
+
+## 6. Motion plan
+
+Built by the motion ticket with the `emil-design-eng` skill (installed for Claude Code in `.claude/skills/`, with the animation set `animate`, `choreograph`, `animation-performance`, `review-animations`, `improve-animations`, `find-animation-opportunities`, `remove-animations`, `animation-vocabulary`). Rules: only `transform` and `opacity`; strong ease-out `cubic-bezier(0.23, 1, 0.32, 1)`, never ease-in; UI feedback 100 to 200 ms, page entrances up to 600 ms; never from `scale(0)`; no motion on keyboard-repeated actions; reduced motion shows everything and changes state at once.
+
+- Hero: h1, sentence and button rise 12 px with a fade, 500 ms, 80 ms stagger; paintings settle from scale 1.03 to 1 over 900 ms.
+- Scroll: headings and terminal blocks fade and rise 12 px, 400 ms, once, 60 ms stagger within a section. The how-it-works painting stays still.
+- Showcase: day and dusk cross-fade 600 ms, the switch knob travels in 250 ms, the "e" of emet fades in 400 ms. The dusk picture loads on first interaction or when the browser is idle.
+- Feedback: buttons and copy buttons `scale(0.97)` on press, 160 ms.
 
 ## Pictures
 
