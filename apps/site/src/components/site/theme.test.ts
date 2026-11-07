@@ -1,5 +1,6 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, test } from "bun:test";
 import { createHash } from "node:crypto";
+import { readFileSync } from "node:fs";
 import { GlobalRegistrator } from "@happy-dom/global-registrator";
 
 import { THEME_INIT_HASH, THEME_INIT_SCRIPT } from "./theme";
@@ -76,6 +77,10 @@ beforeEach(() => {
   installMatchMedia();
 });
 
+function read(relative: string): string {
+  return readFileSync(new URL(relative, import.meta.url), "utf8");
+}
+
 describe("THEME_INIT_HASH", () => {
   test("is the sha256 of the exact script string", () => {
     const expected: string = `sha256-${createHash("sha256").update(THEME_INIT_SCRIPT).digest("base64")}`;
@@ -84,6 +89,18 @@ describe("THEME_INIT_HASH", () => {
 
   test("the script has no template placeholder left", () => {
     expect(THEME_INIT_SCRIPT).not.toContain("${");
+  });
+});
+
+describe("shipped theme init script", () => {
+  test("the CSP script-src hashes include THEME_INIT_HASH", () => {
+    expect(read("../../../astro.config.ts")).toMatch(/hashes:\s*\[[^\]]*THEME_INIT_HASH/);
+  });
+
+  test("Home, 404 and docs inline exactly THEME_INIT_SCRIPT, unmodified", () => {
+    const inline = /<script is:inline set:html=\{THEME_INIT_SCRIPT\}><\/script>/;
+    expect(read("../../layouts/BaseLayout.astro")).toMatch(inline);
+    expect(read("../docs/ThemeProvider.astro")).toMatch(inline);
   });
 });
 

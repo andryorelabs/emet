@@ -135,7 +135,7 @@ export const en = {
     builtBy: "Built by AndryOre",
   },
   share: {
-    ogAlt: "emet: spec to merge, on one approval, over a painted valley with a small clay golem.",
+    ogAlt: "emet: spec to merge, on one approval.",
   },
 };
 

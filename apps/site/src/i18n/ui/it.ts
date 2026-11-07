@@ -139,7 +139,6 @@ export const it = {
     builtBy: "Creato da AndryOre",
   },
   share: {
-    ogAlt:
-      "emet: dalla specifica al merge, con una sola approvazione, su una valle dipinta con un piccolo golem d'argilla.",
+    ogAlt: "emet: dalla specifica al merge, con una sola approvazione.",
   },
 } satisfies UiStrings;

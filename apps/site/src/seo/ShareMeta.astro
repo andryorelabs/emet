@@ -6,7 +6,7 @@
  * the home page's address.
  */
 import type { Locale } from "../i18n/locales";
-import { homeJsonLdTag, installLinkTags, shareMetaTags, splitLocalePath } from "./share-meta";
+import { homeJsonLdTag, installLinkTags, shareMetaTags, resolveSharePage } from "./share-meta";
 
 interface Props {
   title: string;
@@ -15,9 +15,7 @@ interface Props {
 }
 
 const { title, description, locale } = Astro.props;
-const { path } = splitLocalePath(Astro.url.pathname);
-const isNotFound = path.startsWith("/404");
-const sharePath = isNotFound ? "/" : path;
+const { path: sharePath, isNotFound } = resolveSharePage(Astro.url.pathname);
 const metaTags = shareMetaTags(locale, sharePath, title, description);
 const linkTags = installLinkTags();
 const jsonLd = sharePath === "/" && !isNotFound ? homeJsonLdTag(locale, title, description) : undefined;

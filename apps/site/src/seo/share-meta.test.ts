@@ -7,6 +7,7 @@ import {
   homeJsonLdTag,
   installLinkTags,
   ogImagePath,
+  resolveSharePage,
   shareMetaTags,
   splitLocalePath,
 } from "./share-meta";
@@ -94,5 +95,21 @@ describe("splitLocalePath", () => {
 describe("ogImagePath", () => {
   test("names the PNG after the locale tag", () => {
     expect(ogImagePath("zh-CN")).toBe("/og/og-zh-CN.png");
+  });
+});
+
+describe("resolveSharePage", () => {
+  test("the 404 page shares its locale's home address", () => {
+    expect(resolveSharePage("/404/")).toEqual({ locale: "en", path: "/", isNotFound: true });
+    expect(resolveSharePage("/es/404/")).toEqual({ locale: "es", path: "/", isNotFound: true });
+  });
+
+  test("other pages keep their path", () => {
+    expect(resolveSharePage("/ja/")).toEqual({ locale: "ja", path: "/", isNotFound: false });
+    expect(resolveSharePage("/docs/guide/")).toEqual({
+      locale: "en",
+      path: "/docs/guide/",
+      isNotFound: false,
+    });
   });
 });

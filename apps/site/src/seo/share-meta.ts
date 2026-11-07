@@ -186,6 +186,27 @@ export function splitLocalePath(pathname: string): LocalizedPath {
 }
 
 /**
+ * The page a request's share metadata describes.
+ */
+export interface SharePage {
+  locale: Locale;
+  path: string;
+  isNotFound: boolean;
+}
+
+/**
+ * Resolves the share page of a request path; the 404 page shares the address
+ * of its locale's home page.
+ * @param pathname - A pathname such as `/es/404/` or `/ja/docs/guide/`.
+ * @returns The locale, the path to describe and whether it is the 404 page.
+ */
+export function resolveSharePage(pathname: string): SharePage {
+  const { locale, path } = splitLocalePath(pathname);
+  const isNotFound = path.startsWith("/404");
+  return { locale, path: isNotFound ? "/" : path, isNotFound };
+}
+
+/**
  * The web app manifest's fields.
  */
 export interface WebManifest {

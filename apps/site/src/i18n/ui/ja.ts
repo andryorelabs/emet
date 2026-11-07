@@ -141,6 +141,6 @@ export const ja = {
     builtBy: "制作 AndryOre",
   },
   share: {
-    ogAlt: "emet: 仕様からマージまで、承認は一度だけ。小さな粘土のゴーレムがいる、描かれた谷。",
+    ogAlt: "emet: 仕様からマージまで、承認は一度だけ。",
   },
 } satisfies UiStrings;
