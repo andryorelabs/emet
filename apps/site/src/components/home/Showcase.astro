@@ -1,10 +1,17 @@
 ---
 /**
- * Placeholder slot for the showcase (the valley changes light when a ticket
- * is flagged). The interactive version replaces this component; until then
- * both outcomes are printed as text.
+ * The page's one live thing: flag ticket #44 and the painted valley changes
+ * from day to dusk. Without script the day painting stays, the switch is
+ * hidden and both outcomes are printed as text.
  */
+import { getImage, Picture } from "astro:assets";
+
+import heroImage from "../../assets/hero.webp";
+import duskImage from "../../../design/pictures/held.webp";
 import type { UiStrings } from "../../i18n/ui/en";
+import { showcaseControl } from "./showcase/strings";
+// oxlint-disable-next-line import/no-unassigned-import -- Astro bundles a stylesheet imported for its side effect
+import "../../styles/showcase.css";
 
 interface Props {
   strings: UiStrings;
@@ -12,12 +19,66 @@ interface Props {
 
 const { strings } = Astro.props;
 const { showcase } = strings;
+const widths = [640, 1024, 1672];
+const duskVariants = await Promise.all(
+  widths.map((width) => getImage({ src: duskImage, width, format: "avif" })),
+);
+const duskSrcset = duskVariants
+  .map((variant) => `${variant.src} ${variant.options.width}w`)
+  .join(", ");
+const copy = JSON.stringify({
+  heading: showcase.heading,
+  headingHeld: showcase.headingHeld,
+  status: showcase.status,
+  statusHeld: showcase.statusHeld,
+});
 ---
 
-<section class="showcase" id="showcase" data-slot="showcase" aria-labelledby="showcase-title">
+<section
+  class="showcase"
+  id="showcase"
+  data-showcase
+  data-state="merged"
+  data-copy={copy}
+  aria-labelledby="showcase-title"
+>
+  <div class="showcase-stage" aria-hidden="true">
+    <Picture
+      class="showcase-day"
+      src={heroImage}
+      formats={["avif", "webp"]}
+      fallbackFormat="webp"
+      widths={widths}
+      sizes="100vw"
+      alt=""
+      loading="lazy"
+      decoding="async"
+    />
+    <img
+      class="showcase-dusk"
+      alt=""
+      data-srcset={duskSrcset}
+      data-sizes="100vw"
+      width={duskVariants[2]?.options.width}
+      height={duskVariants[2]?.options.height}
+      decoding="async"
+    />
+  </div>
   <div class="showcase-panel">
-    <h2 id="showcase-title">{showcase.heading}</h2>
-    <p>{showcase.status}</p>
-    <p>{showcase.statusHeld}</p>
+    <h2 id="showcase-title" data-showcase-heading>{showcase.heading}</h2>
+    <p class="showcase-status" role="status" aria-live="polite" data-showcase-status>
+      {showcase.status}
+    </p>
+    <noscript><p class="showcase-status">{showcase.statusHeld}</p></noscript>
+    <button type="button" class="showcase-flag" aria-pressed="false" data-showcase-flag hidden>
+      <span class="showcase-switch" aria-hidden="true"><span class="showcase-knob"></span></span>
+      <span>{showcaseControl.flag}</span>
+    </button>
+    <p class="showcase-mark" aria-hidden="true"><span class="showcase-letter">e</span>met</p>
   </div>
 </section>
+
+<script>
+  // oxlint-disable-next-line import/no-unassigned-import -- the module wires itself to the page
+  import "./showcase/showcase";
+</script>
