@@ -19,8 +19,8 @@ export const it = {
   },
   hero: {
     name: "emet",
-    lineOne: "Dalla specifica al merge,",
-    lineTwo: "con una sola approvazione.",
+    lineOne: "Dall'idea al merge,",
+    lineTwo: "approvazione unica.",
     sentence:
       "Un plugin per Claude Code. Dall'idea alla modifica integrata, con una sola approvazione.",
     install: "Installa emet",
@@ -34,15 +34,15 @@ export const it = {
     land: "Guardalo arrivare.",
     tabPlugin: "Plugin",
     tabClone: "Da un clone",
-    request: "add dark mode to the settings page",
+    request: "build the Website",
     alt: "Una valle dipinta in luce dorata, un piccolo golem d'argilla su un rialzo erboso sopra campi a terrazze.",
   },
   showcase: {
     heading: "L'ondata viene integrata",
     headingHeld: "L'ondata attende",
-    status: "Ondata 1 revisionata. CI superata. Integrata, 4 ticket chiusi.",
-    statusHeld: "Ondata 1 trattenuta: un ticket segnalato. Nulla è stato integrato.",
-    flag: "Segnala il ticket #44",
+    status: "Ondata 2 revisionata. CI superata. Integrata, 3 ticket chiusi.",
+    statusHeld: "Ondata 2 trattenuta: un ticket segnalato. Nulla è stato integrato.",
+    flag: "Segnala il ticket #255",
   },
   features: {
     heading: "Cosa protegge un'esecuzione",

@@ -19,8 +19,8 @@ export const es = {
   },
   hero: {
     name: "emet",
-    lineOne: "De la especificación al merge,",
-    lineTwo: "con una sola aprobación.",
+    lineOne: "De la idea al merge,",
+    lineTwo: "con una aprobación.",
     sentence:
       "Un plugin para Claude Code. De la idea al cambio integrado, con una sola aprobación.",
     install: "Instalar emet",
@@ -34,15 +34,15 @@ export const es = {
     land: "Míralo integrarse.",
     tabPlugin: "Plugin",
     tabClone: "Desde un clon",
-    request: "add dark mode to the settings page",
+    request: "build the Website",
     alt: "Un valle pintado con luz dorada, un pequeño gólem de arcilla sobre una loma cubierta de hierba por encima de campos en terrazas.",
   },
   showcase: {
     heading: "La oleada se integra",
     headingHeld: "La oleada espera",
-    status: "Oleada 1 revisada. CI superado. Integrada, 4 tickets cerrados.",
-    statusHeld: "Oleada 1 retenida: un ticket marcado. No se integró nada.",
-    flag: "Marcar el ticket #44",
+    status: "Oleada 2 revisada. CI superado. Integrada, 3 tickets cerrados.",
+    statusHeld: "Oleada 2 retenida: un ticket marcado. No se integró nada.",
+    flag: "Marcar el ticket #255",
   },
   features: {
     heading: "Lo que protege una ejecución",

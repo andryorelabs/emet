@@ -1,17 +1,14 @@
-import { LOCALES } from "../i18n/locales";
-import { absoluteUrl, hreflangAlternates } from "../seo/alternates";
+import { PUBLISHED_SOURCES } from "../docs/published";
 import { buildSitemapXml } from "../seo/crawlers";
+import { buildSitemapEntries } from "../seo/sitemap-entries";
 
 /**
- * The sitemap: every locale's home page with its hreflang alternates.
+ * The only sitemap: every locale's home page and every docs page, each with
+ * its hreflang alternates.
  * @returns The XML response.
  */
 export function GET(): Response {
-  const entries = LOCALES.map((locale) => ({
-    loc: absoluteUrl(locale, "/"),
-    alternates: hreflangAlternates("/"),
-  }));
-  return new Response(buildSitemapXml(entries), {
+  return new Response(buildSitemapXml(buildSitemapEntries(PUBLISHED_SOURCES)), {
     headers: { "Content-Type": "application/xml; charset=utf-8" },
   });
 }

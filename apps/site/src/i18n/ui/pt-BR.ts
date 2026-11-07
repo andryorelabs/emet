@@ -20,8 +20,8 @@ export const ptBR = {
   },
   hero: {
     name: "emet",
-    lineOne: "Da especificação ao merge,",
-    lineTwo: "com uma única aprovação.",
+    lineOne: "Da ideia ao merge,",
+    lineTwo: "uma só aprovação.",
     sentence:
       "Um plugin para o Claude Code. Da ideia à mudança integrada, com uma única aprovação.",
     install: "Instalar o emet",
@@ -35,15 +35,15 @@ export const ptBR = {
     land: "Veja ser integrado.",
     tabPlugin: "Plugin",
     tabClone: "A partir de um clone",
-    request: "add dark mode to the settings page",
+    request: "build the Website",
     alt: "Um vale pintado em luz dourada, um pequeno golem de argila em um outeiro gramado acima de campos em terraços.",
   },
   showcase: {
     heading: "A onda é integrada",
     headingHeld: "A onda espera",
-    status: "Onda 1 revisada. CI aprovada. Integrada, 4 tickets fechados.",
-    statusHeld: "Onda 1 retida: um ticket sinalizado. Nada foi integrado.",
-    flag: "Sinalizar o ticket #44",
+    status: "Onda 2 revisada. CI aprovada. Integrada, 3 tickets fechados.",
+    statusHeld: "Onda 2 retida: um ticket sinalizado. Nada foi integrado.",
+    flag: "Sinalizar o ticket #255",
   },
   features: {
     heading: "O que uma execução protege",

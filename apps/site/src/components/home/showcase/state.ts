@@ -1,5 +1,5 @@
 /**
- * Pure state of the showcase: whether ticket #44 is flagged and what each
+ * Pure state of the showcase: whether ticket #255 is flagged and what each
  * state looks like. The DOM wiring lives in `showcase.ts`.
  */
 
@@ -18,7 +18,7 @@ export interface ShowcaseView {
 
 export const initialState: ShowcaseState = { held: false };
 
-/** Flips the flag on ticket #44. */
+/** Flips the flag on ticket #255. */
 export function toggle(state: ShowcaseState): ShowcaseState {
   return { held: !state.held };
 }

@@ -19,8 +19,8 @@ export const fr = {
   },
   hero: {
     name: "emet",
-    lineOne: "De la spécification au merge,",
-    lineTwo: "en une seule approbation.",
+    lineOne: "De l'idée au merge,",
+    lineTwo: "en une approbation.",
     sentence:
       "Un plugin pour Claude Code. De l'idée au changement fusionné, en une seule approbation.",
     install: "Installer emet",
@@ -34,15 +34,15 @@ export const fr = {
     land: "Regardez-le atterrir.",
     tabPlugin: "Plugin",
     tabClone: "Depuis un clone",
-    request: "add dark mode to the settings page",
+    request: "build the Website",
     alt: "Une vallée peinte dans une lumière dorée, un petit golem d'argile sur une butte herbeuse au-dessus de champs en terrasses.",
   },
   showcase: {
     heading: "La vague est fusionnée",
     headingHeld: "La vague attend",
-    status: "Vague 1 relue. CI réussie. Fusionnée, 4 tickets fermés.",
-    statusHeld: "Vague 1 retenue : un ticket signalé. Rien n'a été fusionné.",
-    flag: "Signaler le ticket #44",
+    status: "Vague 2 relue. CI réussie. Fusionnée, 3 tickets fermés.",
+    statusHeld: "Vague 2 retenue : un ticket signalé. Rien n'a été fusionné.",
+    flag: "Signaler le ticket #255",
   },
   features: {
     heading: "Ce qu'une exécution protège",

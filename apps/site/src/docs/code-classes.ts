@@ -1,6 +1,7 @@
 import { renderCodeWithStyles } from "../highlight/render";
 
-const TOKEN_STYLE_ATTRIBUTE = /<span style="--0:\s*#([0-9a-fA-F]+);\s*--1:\s*#([0-9a-fA-F]+)">/g;
+const TOKEN_STYLE_ATTRIBUTE =
+  /<span style="--0:\s*#([0-9a-fA-F]+);\s*--1:\s*#([0-9a-fA-F]+);?\s*">/g;
 const FENCED_BLOCK = /^(?<fence>```|~~~)(?<info>[^\n]*)\n(?<code>[\s\S]*?)\n\k<fence>[ \t]*$/gm;
 
 /**
