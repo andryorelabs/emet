@@ -1,7 +1,13 @@
 ---
 /**
- * Website header: wordmark, a few plain links and the language switcher.
+ * Website header: the mark and wordmark, a few plain links and the language
+ * pill. The `home` variant floats over the hero, `flow` sits in the page flow,
+ * `docs` is the one-row docs header with a search slot.
  */
+// oxlint-disable-next-line import/no-unassigned-import -- Astro bundles a stylesheet imported for its side effect
+import "../../styles/site.css";
+
+import mark from "../../assets/mark.svg";
 import { localePath, type Locale } from "../../i18n/locales";
 import { en } from "../../i18n/ui/en";
 import LanguageSwitcher from "./LanguageSwitcher.astro";
@@ -10,17 +16,28 @@ interface Props {
   locale: Locale;
   currentPath: string;
   strings?: typeof en.nav;
+  variant?: "home" | "flow" | "docs";
 }
 
-const { locale, currentPath, strings = en.nav } = Astro.props;
+const { locale, currentPath, strings = en.nav, variant = "home" } = Astro.props;
+const docsPath = localePath(locale, "/docs/");
+const whatsNewPath = localePath(locale, "/docs/whats-new/");
+const onWhatsNew = currentPath.startsWith("/docs/whats-new/");
+const onDocs = currentPath.startsWith("/docs/") && !onWhatsNew;
 ---
 
-<header class="site-header">
-  <a class="wordmark" href={localePath(locale, "/")} aria-label={strings.home}>emet</a>
+<header class:list={["site-header", `site-header--${variant}`]}>
+  <a class="wordmark" href={localePath(locale, "/")} aria-label={strings.home}>
+    <img src={mark.src} width="30" height="30" alt="" />
+    <span>emet</span>
+  </a>
   <nav aria-label={strings.label}>
-    <a href={localePath(locale, "/docs/")}>{strings.docs}</a>
-    <a href={localePath(locale, "/docs/whats-new/")}>{strings.whatsNew}</a>
+    <a href={docsPath} aria-current={onDocs ? "page" : undefined}>{strings.docs}</a>
+    <a href={whatsNewPath} aria-current={onWhatsNew ? "page" : undefined}>{strings.whatsNew}</a>
     <a href="https://github.com/andryorelabs/emet">{strings.github}</a>
-    <LanguageSwitcher locale={locale} currentPath={currentPath} label={strings.language} />
   </nav>
+  <div class="site-header-end">
+    <slot name="search" />
+    <LanguageSwitcher locale={locale} currentPath={currentPath} label={strings.language} />
+  </div>
 </header>

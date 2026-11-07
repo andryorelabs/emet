@@ -12,7 +12,7 @@
   --radius-panel: 12px;
   --sl-font: var(--font-sans);
   --sl-font-mono: var(--font-mono);
-  --sl-nav-height: 4.25rem;
+  --sl-nav-height: 4rem;
   --sl-nav-pad-x: 0;
   --sl-nav-pad-y: 0;
 
@@ -53,86 +53,74 @@ summary:focus-visible {
 }
 
 .docs-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 16px;
+  width: 100%;
   height: 100%;
-  padding-inline: var(--gutter);
 }
 
 .docs-header .site-header {
-  position: static;
-  flex: 1;
-  padding: 0;
-}
-
-.docs-header .wordmark {
-  font-size: 22px;
-  font-weight: 500;
-  letter-spacing: -0.02em;
-}
-
-.docs-header .site-header a,
-.docs-header .site-header summary {
-  color: inherit;
-  font-size: 16px;
-  text-decoration: none;
-}
-
-.docs-header .site-header nav {
   display: flex;
   align-items: center;
   gap: 28px;
+  height: 100%;
+  padding: 0 var(--gutter);
 }
 
-.docs-header .lang {
-  position: relative;
+.docs-header .site-header-end {
+  flex: 1;
+  gap: 16px;
 }
 
-.docs-header .lang summary {
-  display: inline-flex;
+.docs-header site-search {
+  display: block;
+}
+
+.docs-header site-search button[data-open-modal] {
+  box-sizing: border-box;
+  display: flex;
   align-items: center;
-  min-height: 44px;
-  list-style: none;
+  gap: 8px;
+  width: 220px;
+  height: 36px;
+  padding: 0 10px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface);
+  color: var(--text-muted);
+  font-size: 14px;
   cursor: pointer;
 }
 
-.docs-header .lang summary::-webkit-details-marker {
-  display: none;
-}
-
-.docs-header .lang ul {
-  position: absolute;
-  right: 0;
-  top: 100%;
-  z-index: 3;
-  min-width: 200px;
-  margin: 0;
-  padding: 8px;
-  list-style: none;
-  background: var(--bg);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-panel);
-}
-
-.docs-header .lang li a {
+.docs-header site-search button[data-open-modal] > span {
   display: block;
-  padding: 10px 12px;
-  border-radius: 8px;
+  flex: 1;
+  text-align: start;
 }
 
-.docs-header .lang li a:hover,
-.docs-header .lang li a[aria-current="true"] {
-  background: var(--surface);
+.docs-header site-search button[data-open-modal] kbd {
+  margin-inline-start: auto;
+  color: var(--text-muted);
+  font-family: var(--font-sans);
+  font-size: 12px;
 }
 
-@media (max-width: 640px) {
-  .docs-header .site-header nav {
-    gap: 16px;
+@media (max-width: 700px) {
+  .docs-header .site-header {
+    gap: 12px;
   }
 
-  .docs-header .site-header nav a:nth-child(2) {
+  .docs-header .site-header nav {
+    display: none;
+  }
+
+  .docs-header site-search button[data-open-modal] {
+    justify-content: center;
+    width: 44px;
+    height: 44px;
+    padding: 0;
+  }
+
+  .docs-header site-search button[data-open-modal] > span,
+  .docs-header site-search button[data-open-modal] kbd {
     display: none;
   }
 }
