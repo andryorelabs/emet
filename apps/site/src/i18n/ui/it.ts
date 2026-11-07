@@ -42,6 +42,7 @@ export const it = {
     headingHeld: "L'ondata attende",
     status: "Ondata 1 revisionata. CI superata. Integrata, 4 ticket chiusi.",
     statusHeld: "Ondata 1 trattenuta: un ticket segnalato. Nulla è stato integrato.",
+    flag: "Segnala il ticket #44",
   },
   features: {
     heading: "Cosa protegge un'esecuzione",

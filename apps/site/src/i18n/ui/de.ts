@@ -42,6 +42,7 @@ export const de = {
     headingHeld: "Die Welle wartet",
     status: "Welle 1 geprüft. CI bestanden. Gemergt, 4 Tickets geschlossen.",
     statusHeld: "Welle 1 angehalten: ein Ticket markiert. Nichts gemergt.",
+    flag: "Ticket #44 markieren",
   },
   features: {
     heading: "Was ein Lauf absichert",

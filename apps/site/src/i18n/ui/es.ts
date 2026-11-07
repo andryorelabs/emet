@@ -42,6 +42,7 @@ export const es = {
     headingHeld: "La oleada espera",
     status: "Oleada 1 revisada. CI superado. Integrada, 4 tickets cerrados.",
     statusHeld: "Oleada 1 retenida: un ticket marcado. No se integró nada.",
+    flag: "Marcar el ticket #44",
   },
   features: {
     heading: "Lo que protege una ejecución",

@@ -44,6 +44,7 @@ export default defineConfig({
   integrations: [
     starlight({
       title: "emet",
+      disable404Route: true,
       defaultLocale: "root",
       locales: starlightLocales,
       sidebar: buildSidebar(),

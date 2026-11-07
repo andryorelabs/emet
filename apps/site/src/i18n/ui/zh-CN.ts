@@ -42,6 +42,7 @@ export const zhCN = {
     headingHeld: "这一波在等待",
     status: "第 1 波已评审。CI 通过。已合并，关闭 4 个工单。",
     statusHeld: "第 1 波被拦下：有一个工单被标记。未合并任何内容。",
+    flag: "标记工单 #44",
   },
   features: {
     heading: "一次运行守护什么",

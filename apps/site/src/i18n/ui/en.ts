@@ -41,6 +41,7 @@ export const en = {
     headingHeld: "The wave waits",
     status: "Wave 1 reviewed. CI passed. Merged, 4 tickets closed.",
     statusHeld: "Wave 1 held: one ticket flagged. Nothing merged.",
+    flag: "Flag ticket #44",
   },
   features: {
     heading: "What a run guards",

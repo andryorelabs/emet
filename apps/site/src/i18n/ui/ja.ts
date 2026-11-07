@@ -41,6 +41,7 @@ export const ja = {
     headingHeld: "ウェーブは待機する",
     status: "ウェーブ 1 レビュー済み。CI 成功。マージ済み、チケット 4 件クローズ。",
     statusHeld: "ウェーブ 1 保留: チケット 1 件にフラグ。何もマージされていません。",
+    flag: "チケット #44 にフラグを立てる",
   },
   features: {
     heading: "実行が守るもの",

@@ -42,6 +42,7 @@ export const fr = {
     headingHeld: "La vague attend",
     status: "Vague 1 relue. CI réussie. Fusionnée, 4 tickets fermés.",
     statusHeld: "Vague 1 retenue : un ticket signalé. Rien n'a été fusionné.",
+    flag: "Signaler le ticket #44",
   },
   features: {
     heading: "Ce qu'une exécution protège",

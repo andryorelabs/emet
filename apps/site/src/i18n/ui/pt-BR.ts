@@ -43,6 +43,7 @@ export const ptBR = {
     headingHeld: "A onda espera",
     status: "Onda 1 revisada. CI aprovada. Integrada, 4 tickets fechados.",
     statusHeld: "Onda 1 retida: um ticket sinalizado. Nada foi integrado.",
+    flag: "Sinalizar o ticket #44",
   },
   features: {
     heading: "O que uma execução protege",
