@@ -1,8 +1,29 @@
 {
   "name": "emet-dev",
   "private": true,
+  "workspaces": {
+    "packages": [
+      "apps/*",
+      "packages/*"
+    ],
+    "catalog": {
+      "@astrojs/starlight": "^0.42.8",
+      "@astrojs/ts-content-mapper": "^0.2.0",
+      "@tailwindcss/vite": "^4.3.3",
+      "@types/bun": "^1.2.0",
+      "astro": "^7.4.4",
+      "sharp": "^0.35.5",
+      "tailwindcss": "^4.3.3"
+    }
+  },
   "type": "module",
   "scripts": {
+    "check": "turbo run check check:root",
+    "check:root": "bun run typecheck && bun run lint && bun run format:check && bun run knip && bun run lint:docs && bun run check:map",
+    "test": "turbo run test test:root",
+    "test:root": "bun test ./tools ./mods ./.claude/hooks --path-ignore-patterns 'mods/**/*.tsx' && bun test --cwd emet",
+    "test:coverage": "turbo run test test:coverage:root",
+    "test:coverage:root": "bun test ./tools ./mods ./.claude/hooks --path-ignore-patterns 'mods/**/*.tsx' && bun test --cwd emet --coverage",
     "typecheck": "bun node_modules/typescript7/bin/tsc --noEmit -p emet/tsconfig.json && bun node_modules/typescript7/bin/tsc --noEmit -p tsconfig.json",
     "lint": "oxlint --type-aware --deny-warnings",
     "fix": "bun run format && bun run lint --fix",
@@ -12,16 +33,13 @@
     "lint:docs": "bun tools/lint-docs.ts",
     "check:map": "bun tools/check-map.ts",
     "brand:export": "bun tools/brand-export.ts",
-    "check": "bun run typecheck && bun run lint && bun run format:check && bun run knip && bun run lint:docs && bun run check:map",
-    "test": "bun test ./tools ./mods ./.claude/hooks --path-ignore-patterns 'mods/**/*.tsx' && bun test --cwd emet",
-    "test:coverage": "bun test ./tools ./mods ./.claude/hooks --path-ignore-patterns 'mods/**/*.tsx' && bun test --cwd emet --coverage",
     "ci:local": "bun install --frozen-lockfile && bun install --cwd emet --frozen-lockfile && bun run check && bun run test:coverage && bun x --no-install commitlint --from origin/main --to HEAD",
     "prepare": "husky"
   },
   "devDependencies": {
     "@commitlint/cli": "^21.2.4",
     "@commitlint/config-conventional": "^21.2.4",
-    "@types/bun": "^1.2.0",
+    "@types/bun": "catalog:",
     "@types/node": "^24.0.0",
     "fast-check": "^4.10.2",
     "husky": "^9.1.7",
@@ -31,7 +49,8 @@
     "oxlint": "1.90.0",
     "oxlint-tsgolint": "7.0.2005",
     "playwright": "^1.64.1",
-    "sharp": "^0.35.5",
+    "sharp": "catalog:",
+    "turbo": "^2.11.10",
     "typescript7": "npm:typescript@7.1.0-beta"
   },
   "engines": {

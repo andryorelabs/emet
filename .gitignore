@@ -9,3 +9,11 @@ node_modules/
 !.claude/skills/cut-release/
 !.claude/skills/git-commit/
 skills-lock.json
+
+# turbo cache and Astro generated output
+.turbo/
+apps/*/.astro/
+apps/*/dist/
+
+# design-taste-frontend working files
+.taste-skill/

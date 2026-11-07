@@ -260,6 +260,14 @@ describe("ci.yml commitlint and manual runs", () => {
     expect(ci?.raw).toContain("bun run test:coverage");
   });
 
+  test("test scripts keep the root suites behind turbo", () => {
+    const manifest = readFileSync("package.json", "utf8");
+    expect(manifest).toContain('"test": "turbo run test test:root"');
+    expect(manifest).toContain('"test:coverage": "turbo run test test:coverage:root"');
+    expect(manifest).toContain('&& bun test --cwd emet"');
+    expect(manifest).toContain('&& bun test --cwd emet --coverage"');
+  });
+
   test("macOS smoke writes the binary size to the job summary", () => {
     expect(ci?.raw).toContain("GITHUB_STEP_SUMMARY");
   });
