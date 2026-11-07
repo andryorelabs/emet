@@ -62,9 +62,9 @@ const statusJson = JSON.stringify(
     <Picture
       src={sourceImage}
       formats={["avif", "webp"]}
-    fallbackFormat="webp"
+      fallbackFormat="webp"
       widths={[640, 1024, 1672]}
-      sizes="(min-width: 960px) 40vw, 100vw"
+      sizes="(min-width: 1001px) 360px, 100vw"
       alt={how.alt}
       loading="lazy"
       decoding="async"
@@ -83,14 +83,14 @@ const statusJson = JSON.stringify(
           { label: how.tabClone, code: cloneCommands },
         ]}
       />
+      <div class="fragment" data-ui data-reveal="item">
+        <pre class="terminal">{banner}</pre>
+      </div>
     </article>
 
     <article class="exchange" data-typed>
       <h3>{how.describe}</h3>
       <CodeBlock code={`/emet:run ${how.request}`} lang="bash" />
-      <div class="fragment" data-ui data-reveal="item">
-        <pre class="terminal">{banner}</pre>
-      </div>
       <div class="fragment" data-ui data-reveal="item">
         <pre class="terminal">{tickets}</pre>
         <div class="wave-slot" data-slot="wave-diagram" aria-hidden="true"><WaveDiagram /></div>

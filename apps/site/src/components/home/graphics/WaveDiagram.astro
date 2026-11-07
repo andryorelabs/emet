@@ -7,20 +7,20 @@
 // oxlint-disable-next-line import/no-unassigned-import -- Astro bundles a stylesheet imported for its side effect
 import "../../../styles/graphics.css";
 
-const fanOut = ["M40 55C120 55 120 18 200 18", "M40 55H200", "M40 55C120 55 120 92 200 92"];
-const merge = ["M200 18C320 18 320 55 440 55", "M200 55H440", "M200 92C320 92 320 55 440 55"];
+const fanOut = ["M40 56C180 56 180 16 320 16", "M40 56H320", "M40 56C180 56 180 96 320 96"];
+const merge = ["M320 16C460 16 460 56 600 56", "M320 56H600", "M320 96C460 96 460 56 600 56"];
 ---
 
-<svg class="wave" viewBox="0 0 480 110" aria-hidden="true" focusable="false">
+<svg class="wave" viewBox="0 0 640 112" aria-hidden="true" focusable="false">
   <g class="wave-lines">
     {fanOut.map((d) => <path class="wave-a" d={d} pathLength="1" />)}
     {merge.map((d) => <path class="wave-b" d={d} pathLength="1" />)}
   </g>
-  <circle class="wave-land" cx="40" cy="55" r="7" />
+  <circle class="wave-land" cx="40" cy="56" r="7" />
   <g class="wave-fan">
-    <circle cx="200" cy="18" r="6" />
-    <circle cx="200" cy="55" r="6" />
-    <circle cx="200" cy="92" r="6" />
+    <circle cx="320" cy="16" r="6" />
+    <circle cx="320" cy="56" r="6" />
+    <circle cx="320" cy="96" r="6" />
   </g>
-  <circle class="wave-end" cx="440" cy="55" r="7" />
+  <circle class="wave-end" cx="600" cy="56" r="7" />
 </svg>

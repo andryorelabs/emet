@@ -442,7 +442,7 @@
   display: block;
   pointer-events: none;
   width: 100%;
-  max-width: 480px;
+  max-width: 640px;
   height: auto;
   fill: none;
   stroke: var(--text-muted);
@@ -494,27 +494,27 @@
 
     .wave-a {
       animation-name: wave-draw;
-      animation-range: cover 8% cover 26%;
+      animation-range: cover 6% cover 20%;
     }
 
     .wave-b {
       animation-name: wave-draw;
-      animation-range: cover 32% cover 52%;
+      animation-range: cover 24% cover 38%;
     }
 
     .wave-land {
       animation-name: wave-show;
-      animation-range: cover 4% cover 12%;
+      animation-range: cover 0% cover 8%;
     }
 
     .wave-fan {
       animation-name: wave-show;
-      animation-range: cover 24% cover 34%;
+      animation-range: cover 18% cover 26%;
     }
 
     .wave-end {
       animation-name: wave-show;
-      animation-range: cover 50% cover 58%;
+      animation-range: cover 36% cover 44%;
     }
   }
 }
