@@ -132,5 +132,5 @@ Deviations from the canvas, recorded as built:
 
 - The showcase is full-bleed 16:9 (max 828px, 720px tall at 390px) with the hero painting as day and `held.webp` as dusk, both from the design folder through `astro:assets`; the dusk srcset sits in `data-srcset` and is set on first interaction or idle.
 - The wordmark "emet" sits under the switch, not above the heading, so the inspector does not read it as an eyebrow; its "e" fades to 20% when held.
-- The control label "Flag ticket #44" lives in `showcase/strings.ts` until the strings ticket moves it into `en.ts` and the locales.
+- The control label "Flag ticket #44" is in the `showcase` group of `en.ts` and every locale module.
 - Without script the switch is hidden and a `noscript` line prints the held status next to the merged one.

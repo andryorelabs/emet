@@ -20,7 +20,7 @@ const { strings } = Astro.props;
 const { showcase } = strings;
 const widths = [640, 1024, 1672];
 const duskVariants = await Promise.all(
-  widths.map((width) => getImage({ src: duskImage, width, format: "avif" })),
+  widths.map((width) => getImage({ src: duskImage, width, format: "webp" })),
 );
 const duskSrcset = duskVariants
   .map((variant) => `${variant.src} ${variant.options.width}w`)
