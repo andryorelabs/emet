@@ -1,0 +1,16 @@
+---
+/**
+ * Share metadata of a page head (Open Graph and Twitter). A stub until the
+ * tags are built: it accepts the page's title, description and locale and
+ * renders nothing.
+ */
+import type { Locale } from "../i18n/locales";
+
+interface Props {
+  title: string;
+  description: string;
+  locale: Locale;
+}
+
+Astro.props satisfies Props;
+---
