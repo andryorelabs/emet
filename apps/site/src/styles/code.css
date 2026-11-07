@@ -1,0 +1,192 @@
+/**
+ * Code blocks: the frame, header with pill tabs, copy button and the
+ * highlighted body. Token colours come from Expressive Code's `--0` (light)
+ * and `--1` (dark) custom properties; `light-dark()` picks one by colour scheme.
+ */
+
+.emet-code {
+  position: relative;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--surface);
+  box-shadow: none;
+  font-family: var(--font-mono);
+  font-size: 13px;
+  line-height: 1.5rem;
+  text-align: left;
+}
+
+.emet-code__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 40px;
+  padding-inline: 0.5rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.emet-code__tabs {
+  display: flex;
+  gap: 0.25rem;
+}
+
+.emet-code__tab {
+  height: 28px;
+  padding-inline: 0.75rem;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--text-muted);
+  font-family: var(--font-sans);
+  font-size: var(--text-sm);
+  cursor: pointer;
+  transition:
+    background-color 160ms cubic-bezier(0.23, 1, 0.32, 1),
+    color 160ms cubic-bezier(0.23, 1, 0.32, 1);
+}
+
+.emet-code__tab[aria-selected="true"] {
+  background: var(--border);
+  color: var(--text);
+}
+
+.emet-code__body {
+  position: relative;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+}
+
+.emet-code[data-variant="command"] .emet-code__body {
+  align-items: center;
+  padding-inline-end: 0.5rem;
+}
+
+.emet-code__panel {
+  flex: 1;
+  min-width: 0;
+  overflow-x: auto;
+  scrollbar-width: thin;
+  scrollbar-color: var(--border) transparent;
+}
+
+.emet-code__panel[hidden] {
+  display: none;
+}
+
+.emet-code pre {
+  margin: 0;
+  background: transparent;
+  color: var(--text);
+}
+
+.emet-code code {
+  display: block;
+  width: max-content;
+  min-width: 100%;
+  padding-block: 0.75rem;
+  font-family: inherit;
+}
+
+.emet-code__panel .ec-line {
+  display: flex;
+  min-height: 1.5rem;
+  white-space: pre;
+}
+
+.emet-code__panel .code {
+  padding-inline: 1rem;
+}
+
+.emet-code__panel .code span[style] {
+  color: light-dark(var(--0), var(--1));
+}
+
+.emet-code .expressive-code,
+.emet-code figure {
+  margin: 0;
+}
+
+.emet-code__label {
+  position: absolute;
+  right: 3rem;
+  bottom: 0.5rem;
+  color: var(--text-muted);
+  font-size: var(--text-xs);
+  pointer-events: none;
+  user-select: none;
+}
+
+.emet-code__copy {
+  position: relative;
+  flex: none;
+  width: 32px;
+  height: 32px;
+  margin: 0.25rem;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition:
+    transform 160ms cubic-bezier(0.23, 1, 0.32, 1),
+    color 160ms cubic-bezier(0.23, 1, 0.32, 1);
+}
+
+.emet-code__copy:active {
+  transform: scale(0.97);
+}
+
+.emet-code__copy:hover,
+.emet-code__copy:focus-visible {
+  color: var(--text);
+}
+
+.emet-code__copy[data-state="copied"] {
+  color: var(--ok);
+}
+
+.emet-code__copy[data-state="failed"] {
+  color: var(--error);
+}
+
+.emet-code__icon {
+  position: absolute;
+  inset: 8px;
+  width: 16px;
+  height: 16px;
+  opacity: 0;
+  transition: opacity 160ms cubic-bezier(0.23, 1, 0.32, 1);
+}
+
+.emet-code__copy[data-state="idle"] [data-icon="copy"],
+.emet-code__copy[data-state="copied"] [data-icon="check"],
+.emet-code__copy[data-state="failed"] [data-icon="failed"] {
+  opacity: 1;
+}
+
+.emet-code__status {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.emet-code__tab:focus-visible,
+.emet-code__copy:focus-visible {
+  outline: 2px solid var(--accent-text);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .emet-code__tab,
+  .emet-code__copy,
+  .emet-code__icon {
+    transition: none;
+  }
+
+  .emet-code__copy:active {
+    transform: none;
+  }
+}

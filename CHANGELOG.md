@@ -10,6 +10,8 @@ and this project adheres to
 
 ### Added
 
+- The Website home page: painted hero, how it works, features, about, closing
+  panel, header and footer, with English strings in `apps/site/src/i18n/ui/en.ts`.
 - `docs/how-to/update-emet.md`: how to update the plugins and turn on
   marketplace auto-update.
 

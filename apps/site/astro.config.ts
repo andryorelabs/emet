@@ -2,6 +2,7 @@ import starlight from "@astrojs/starlight";
 import tailwindcss from "@tailwindcss/vite";
 import { defineConfig } from "astro/config";
 
+import { sharedCodeConfig } from "./src/highlight/code-config";
 import { DEFAULT_LOCALE, LOCALE_NAMES, LOCALES, localeSegment } from "./src/i18n/locales";
 
 const starlightLocales = Object.fromEntries(
@@ -24,6 +25,7 @@ export default defineConfig({
       defaultLocale: "root",
       locales: starlightLocales,
       lastUpdated: false,
+      expressiveCode: { ...sharedCodeConfig, themes: [...sharedCodeConfig.themes] },
     }),
   ],
   vite: { plugins: [tailwindcss()] },
