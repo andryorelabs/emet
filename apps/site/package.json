@@ -23,6 +23,7 @@
   },
   "devDependencies": {
     "@astrojs/ts-content-mapper": "catalog:",
+    "@happy-dom/global-registrator": "21.0.4",
     "@tailwindcss/vite": "catalog:",
     "@types/bun": "catalog:"
   }
