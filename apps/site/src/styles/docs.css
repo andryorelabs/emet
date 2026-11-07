@@ -255,6 +255,24 @@ site-search kbd {
   border-top-right-radius: 12px;
 }
 
+.expressive-code .frame:not(.has-title) pre {
+  position: relative;
+}
+
+.expressive-code
+  .frame:not(.has-title)
+  pre[data-language]:not([data-language="plaintext"]):has(.ec-line:nth-child(2))::after {
+  content: attr(data-language);
+  position: absolute;
+  right: 3rem;
+  bottom: 0.5rem;
+  color: var(--text-muted);
+  font-family: var(--font-sans);
+  font-size: 12px;
+  pointer-events: none;
+  user-select: none;
+}
+
 .expressive-code .frame .header {
   box-sizing: border-box;
   height: 40px;
