@@ -1,0 +1,18 @@
+# The Website image (apps/site/Dockerfile) builds from the repo root and needs
+# only the workspace manifests, apps/site and the docs it publishes.
+*
+!package.json
+!bun.lock
+!apps/site
+!docs/guide
+!docs/reference
+!docs/troubleshooting.md
+!docs/architecture.md
+!docs/how-to/update-emet.md
+!docs/how-to/mascot.md
+!CHANGELOG.md
+**/node_modules
+**/.astro
+**/dist
+**/.turbo
+apps/site/docker/smoke.sh
