@@ -33,6 +33,7 @@
     "lint:docs": "bun tools/lint-docs.ts",
     "check:map": "bun tools/check-map.ts",
     "brand:export": "bun tools/brand-export.ts",
+    "brand:og": "bun tools/og-images.ts",
     "ci:local": "bun install --frozen-lockfile && bun install --cwd emet --frozen-lockfile && bun run check && bun run test:coverage && bun x --no-install commitlint --from origin/main --to HEAD",
     "prepare": "husky"
   },

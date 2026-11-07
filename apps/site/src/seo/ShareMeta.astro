@@ -1,10 +1,12 @@
 ---
 /**
- * Share metadata of a page head (Open Graph and Twitter). A stub until the
- * tags are built: it accepts the page's title, description and locale and
- * renders nothing.
+ * Share and install metadata of a Website page head: Open Graph and Twitter
+ * tags, icons, the manifest, the `llms.txt` link and, on the home page, the
+ * JSON-LD graph. The page comes from the request path; the 404 page shares
+ * the home page's address.
  */
 import type { Locale } from "../i18n/locales";
+import { homeJsonLdTag, installLinkTags, shareMetaTags, splitLocalePath } from "./share-meta";
 
 interface Props {
   title: string;
@@ -12,5 +14,15 @@ interface Props {
   locale: Locale;
 }
 
-Astro.props satisfies Props;
+const { title, description, locale } = Astro.props;
+const { path } = splitLocalePath(Astro.url.pathname);
+const isNotFound = path.startsWith("/404");
+const sharePath = isNotFound ? "/" : path;
+const metaTags = shareMetaTags(locale, sharePath, title, description);
+const linkTags = installLinkTags();
+const jsonLd = sharePath === "/" && !isNotFound ? homeJsonLdTag(locale, title, description) : undefined;
 ---
+
+{metaTags.map(({ attrs }) => <meta {...attrs} />)}
+{linkTags.map(({ attrs }) => <link {...attrs} />)}
+{jsonLd && <script type="application/ld+json" is:inline set:html={jsonLd.content} />}

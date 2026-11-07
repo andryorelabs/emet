@@ -2,7 +2,7 @@ import { describe, expect, test } from "bun:test";
 
 import { LOCALES } from "../i18n/locales";
 import { SITE_ORIGIN, absoluteUrl, hreflangAlternates } from "./alternates";
-import { buildRobotsTxt, buildSitemapXml } from "./crawlers";
+import { buildLlmsTxt, buildRobotsTxt, buildSitemapXml } from "./crawlers";
 
 describe("hreflangAlternates", () => {
   test("lists every locale and an x-default pointing at English", () => {
@@ -36,9 +36,28 @@ describe("buildSitemapXml", () => {
 });
 
 describe("buildRobotsTxt", () => {
-  test("allows crawling and names the sitemap", () => {
+  test("allows everyone else and names the sitemap", () => {
     const body = buildRobotsTxt();
-    expect(body).toContain("Allow: /");
+    expect(body).toContain("User-agent: *\nAllow: /\n");
     expect(body).toContain(`Sitemap: ${SITE_ORIGIN}/sitemap.xml`);
+  });
+
+  test("disallows AI-training crawlers and allows search crawlers", () => {
+    const body = buildRobotsTxt();
+    expect(body).toContain("User-agent: GPTBot");
+    expect(body).toContain("User-agent: ClaudeBot");
+    expect(body).toMatch(/User-agent: Bytespider\nDisallow: \/\n/);
+    expect(body).toMatch(/User-agent: Googlebot[\s\S]*?Allow: \//);
+    expect(body).toMatch(/User-agent: GPTBot\n(?:User-agent: [^\n]+\n)*Disallow: \/\n/);
+  });
+});
+
+describe("buildLlmsTxt", () => {
+  test("links every docs page", () => {
+    const body = buildLlmsTxt("A summary.", [
+      { id: "guide/fleet", seoTitle: "Fleet Check", description: "Audit repos." },
+    ]);
+    expect(body).toContain("> A summary.");
+    expect(body).toContain(`- [Fleet Check](${SITE_ORIGIN}/docs/guide/fleet/): Audit repos.`);
   });
 });
