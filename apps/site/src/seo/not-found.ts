@@ -77,3 +77,11 @@ export const NOT_FOUND_STRINGS: Record<Locale, NotFoundStrings> = {
     docsAction: "阅读文档",
   },
 };
+
+/**
+ * The document title of a 404 page: the localized message and the site name,
+ * joined with the separator the docs pages use.
+ */
+export function notFoundTitle(locale: Locale): string {
+  return `${NOT_FOUND_STRINGS[locale].title} | emet`;
+}

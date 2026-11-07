@@ -16,6 +16,15 @@ export const ko = {
     github: "GitHub",
     language: "언어",
     home: "emet, 홈",
+    menu: "메뉴",
+    close: "닫기",
+    skip: "본문으로 건너뛰기",
+  },
+  theme: {
+    label: "테마",
+    light: "라이트",
+    dark: "다크",
+    system: "시스템",
   },
   hero: {
     name: "emet",
@@ -57,6 +66,46 @@ export const ko = {
       { title: "트래커는 선택, 없어도 됨", line: "Linear, GitHub Issues 또는 로컬 파일." },
     ],
   },
+  stats: {
+    label: "숫자로 보기",
+    items: [
+      { value: "3", label: "트래커" },
+      { value: "10", label: "언어" },
+      { value: "1", label: "승인" },
+      { value: "MIT", label: "라이선스" },
+    ],
+  },
+  faq: {
+    heading: "질문",
+    items: [
+      {
+        question: "무엇이 필요한가요?",
+        answer:
+          "Claude Code, git, 인증된 gh, mattpocock-skills 플러그인이 필요하며 Linux 또는 macOS에서 동작합니다.",
+      },
+      {
+        question: "Windows에서 동작하나요?",
+        answer: "WSL을 통해서만 가능합니다. Linux와 macOS에서는 그대로 동작합니다.",
+      },
+      {
+        question: "어떤 트래커를 지원하나요?",
+        answer: "Linear, GitHub Issues 또는 로컬 파일을 지원합니다.",
+      },
+      {
+        question: "CI가 실패하면 어떻게 되나요?",
+        answer: "웨이브는 몇 번 수정을 시도한 뒤 당신의 확인을 기다립니다.",
+      },
+      {
+        question: "웨이브는 어떻게 멈추나요?",
+        answer: "티켓에 플래그를 지정하세요. 플래그가 있는 동안에는 아무것도 병합되지 않습니다.",
+      },
+      {
+        question: "emet은 Anthropic이 만들었나요?",
+        answer: "아니요. emet은 Anthropic과 제휴하거나 Anthropic의 보증을 받지 않았습니다.",
+      },
+    ],
+    more: "더 많은 질문",
+  },
   about: {
     heading: "이름이 emet인 이유",
     lineOne: "히브리어로 진리라는 뜻입니다. 골렘은 그 말로 생명을 얻은 점토입니다.",
@@ -72,11 +121,20 @@ export const ko = {
   },
   footer: {
     description: "Claude Code용 플러그인.",
-    notice: "Not affiliated with or endorsed by Anthropic",
+    notice: "Anthropic과 제휴하거나 Anthropic의 보증을 받지 않았습니다",
     docs: "문서",
     whatsNew: "새 소식",
     github: "GitHub",
     legal: "2026, MIT.",
     paintings: "그림은 메인테이너의 프롬프트로 AI가 생성했습니다.",
+    ci: "CI",
+    openssf: "OpenSSF Best Practices",
+    security: "보안",
+    contributing: "기여하기",
+    languages: "언어",
+    builtBy: "제작 AndryOre",
+  },
+  share: {
+    ogAlt: "emet: 명세에서 병합까지, 승인은 단 한 번.",
   },
 } satisfies UiStrings;

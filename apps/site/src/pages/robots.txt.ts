@@ -1,7 +1,8 @@
 import { buildRobotsTxt } from "../seo/crawlers";
 
 /**
- * The robots file: crawl everything, point at the sitemap.
+ * The robots file: search crawlers allowed, AI-training crawlers disallowed,
+ * the sitemap listed.
  * @returns The plain-text response.
  */
 export function GET(): Response {

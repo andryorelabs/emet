@@ -16,6 +16,15 @@ export const it = {
     github: "GitHub",
     language: "Lingua",
     home: "emet, home",
+    menu: "Menu",
+    close: "Chiudi",
+    skip: "Vai al contenuto",
+  },
+  theme: {
+    label: "Tema",
+    light: "Chiaro",
+    dark: "Scuro",
+    system: "Sistema",
   },
   hero: {
     name: "emet",
@@ -61,6 +70,45 @@ export const it = {
       { title: "Il tuo tracker, o nessuno", line: "Linear, GitHub Issues o file locali." },
     ],
   },
+  stats: {
+    label: "In numeri",
+    items: [
+      { value: "3", label: "tracker" },
+      { value: "10", label: "lingue" },
+      { value: "1", label: "approvazione" },
+      { value: "MIT", label: "licenza" },
+    ],
+  },
+  faq: {
+    heading: "Domande",
+    items: [
+      {
+        question: "Di cosa ho bisogno?",
+        answer: "Claude Code, git, gh autenticato e il plugin mattpocock-skills, su Linux o macOS.",
+      },
+      {
+        question: "Funziona su Windows?",
+        answer: "Solo tramite WSL. Linux e macOS funzionano in modo nativo.",
+      },
+      {
+        question: "Quali tracker supporta?",
+        answer: "Linear, GitHub Issues o semplici file locali.",
+      },
+      {
+        question: "Cosa succede se la CI fallisce?",
+        answer: "L'ondata ha qualche tentativo di correzione, poi aspetta te.",
+      },
+      {
+        question: "Come fermo un'ondata?",
+        answer: "Segnala un ticket. Non viene fuso nulla finché qualcosa è segnalato.",
+      },
+      {
+        question: "emet è fatto da Anthropic?",
+        answer: "No. emet non è affiliato né approvato da Anthropic.",
+      },
+    ],
+    more: "Altre domande",
+  },
   about: {
     heading: "Perché si chiama emet",
     lineOne: "In ebraico significa verità. Un golem è argilla portata in vita da quella parola.",
@@ -77,11 +125,20 @@ export const it = {
   },
   footer: {
     description: "Plugin per Claude Code.",
-    notice: "Not affiliated with or endorsed by Anthropic",
+    notice: "Non affiliato né approvato da Anthropic",
     docs: "Documentazione",
     whatsNew: "Novità",
     github: "GitHub",
     legal: "2026, MIT.",
     paintings: "Dipinti generati con IA a partire da prompt del maintainer.",
+    ci: "CI",
+    openssf: "OpenSSF Best Practices",
+    security: "Sicurezza",
+    contributing: "Contribuire",
+    languages: "Lingue",
+    builtBy: "Creato da AndryOre",
+  },
+  share: {
+    ogAlt: "emet: dalla specifica al merge, con una sola approvazione.",
   },
 } satisfies UiStrings;

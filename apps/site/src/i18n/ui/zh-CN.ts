@@ -17,6 +17,15 @@ export const zhCN = {
     github: "GitHub",
     language: "语言",
     home: "emet，首页",
+    menu: "菜单",
+    close: "关闭",
+    skip: "跳到正文",
+  },
+  theme: {
+    label: "主题",
+    light: "浅色",
+    dark: "深色",
+    system: "跟随系统",
   },
   hero: {
     name: "emet",
@@ -58,6 +67,34 @@ export const zhCN = {
       { title: "用你的追踪器，或不用", line: "Linear、GitHub Issues 或本地文件。" },
     ],
   },
+  stats: {
+    label: "数字一览",
+    items: [
+      { value: "3", label: "个跟踪器" },
+      { value: "10", label: "种语言" },
+      { value: "1", label: "次批准" },
+      { value: "MIT", label: "许可证" },
+    ],
+  },
+  faq: {
+    heading: "常见问题",
+    items: [
+      {
+        question: "我需要什么？",
+        answer:
+          "Claude Code、git、已认证的 gh 和 mattpocock-skills 插件，运行在 Linux 或 macOS 上。",
+      },
+      { question: "能在 Windows 上运行吗？", answer: "只能通过 WSL。Linux 和 macOS 可原生运行。" },
+      { question: "支持哪些跟踪器？", answer: "Linear、GitHub Issues 或普通的本地文件。" },
+      { question: "CI 失败了怎么办？", answer: "这一波会尝试几次修复，然后等你处理。" },
+      { question: "如何停止一波？", answer: "给工单打上标记。只要有标记，就不会合并任何内容。" },
+      {
+        question: "emet 是 Anthropic 做的吗？",
+        answer: "不是。emet 与 Anthropic 无关联，也未获得 Anthropic 认可。",
+      },
+    ],
+    more: "更多问题",
+  },
   about: {
     heading: "为什么叫 emet",
     lineOne: "希伯来语里是“真理”。魔像是被这个词赋予生命的黏土。",
@@ -73,11 +110,20 @@ export const zhCN = {
   },
   footer: {
     description: "Claude Code 的插件。",
-    notice: "Not affiliated with or endorsed by Anthropic",
+    notice: "与 Anthropic 无关联，也未获得 Anthropic 认可",
     docs: "文档",
     whatsNew: "新动态",
     github: "GitHub",
     legal: "2026, MIT.",
     paintings: "画作由维护者的提示词经 AI 生成。",
+    ci: "CI",
+    openssf: "OpenSSF Best Practices",
+    security: "安全",
+    contributing: "参与贡献",
+    languages: "语言",
+    builtBy: "由 AndryOre 构建",
+  },
+  share: {
+    ogAlt: "emet：从规格到合并，只需一次批准。",
   },
 } satisfies UiStrings;

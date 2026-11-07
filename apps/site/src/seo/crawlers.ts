@@ -45,10 +45,81 @@ export function buildSitemapXml(entries: readonly SitemapEntry[]): string {
   ].join("\n");
 }
 
+const SEARCH_AND_ANSWER_CRAWLERS = [
+  "Googlebot",
+  "Bingbot",
+  "OAI-SearchBot",
+  "ChatGPT-User",
+  "Claude-SearchBot",
+  "Claude-User",
+  "PerplexityBot",
+  "Perplexity-User",
+] as const;
+
+const TRAINING_CRAWLERS = [
+  "GPTBot",
+  "ClaudeBot",
+  "CCBot",
+  "Applebot-Extended",
+  "Bytespider",
+] as const;
+
+function group(agents: readonly string[], rule: string): string {
+  return `${agents.map((agent) => `User-agent: ${agent}`).join("\n")}\n${rule}\n`;
+}
+
 /**
- * Renders `robots.txt`: everything is crawlable and the sitemap is listed.
+ * Renders `robots.txt`: search and answer crawlers are allowed, model-training
+ * crawlers are disallowed in their own group, everyone else is allowed, and
+ * the sitemap is listed. `Google-Extended` is not listed: blocking it also
+ * removes Gemini grounding and does not affect Search.
  * @returns The robots.txt body.
  */
 export function buildRobotsTxt(): string {
-  return `User-agent: *\nAllow: /\n\nSitemap: ${SITE_ORIGIN}/sitemap.xml\n`;
+  return [
+    "# Search and answer crawlers: allowed.",
+    group(SEARCH_AND_ANSWER_CRAWLERS, "Allow: /"),
+    "# Model-training crawlers: disallowed.",
+    group(TRAINING_CRAWLERS, "Disallow: /"),
+    group(["*"], "Allow: /"),
+    `Sitemap: ${SITE_ORIGIN}/sitemap.xml\n`,
+  ].join("\n");
+}
+
+/**
+ * One docs page listed in `llms.txt`.
+ */
+export interface LlmsDocsPage {
+  id: string;
+  seoTitle: string;
+  description: string;
+}
+
+/**
+ * Renders `llms.txt`: the project summary and a link to every docs page.
+ * @param summary - One-sentence project description.
+ * @param pages - The published docs pages.
+ * @returns The llms.txt body.
+ */
+export function buildLlmsTxt(summary: string, pages: readonly LlmsDocsPage[]): string {
+  const docs = pages.map(
+    (page) => `- [${page.seoTitle}](${SITE_ORIGIN}/docs/${page.id}/): ${page.description}`,
+  );
+  return [
+    "# emet",
+    "",
+    `> ${summary}`,
+    "",
+    "emet is a Claude Code plugin. It is not affiliated with or endorsed by Anthropic.",
+    "",
+    "## Docs",
+    "",
+    ...docs,
+    "",
+    "## Links",
+    "",
+    "- [Source](https://github.com/andryorelabs/emet)",
+    `- [Sitemap](${SITE_ORIGIN}/sitemap.xml)`,
+    "",
+  ].join("\n");
 }

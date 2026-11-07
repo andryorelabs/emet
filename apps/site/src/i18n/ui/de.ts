@@ -16,6 +16,15 @@ export const de = {
     github: "GitHub",
     language: "Sprache",
     home: "emet, Startseite",
+    menu: "Menü",
+    close: "Schließen",
+    skip: "Zum Inhalt springen",
+  },
+  theme: {
+    label: "Design",
+    light: "Hell",
+    dark: "Dunkel",
+    system: "System",
   },
   hero: {
     name: "emet",
@@ -61,6 +70,47 @@ export const de = {
       { title: "Dein Tracker, oder keiner", line: "Linear, GitHub Issues oder lokale Dateien." },
     ],
   },
+  stats: {
+    label: "In Zahlen",
+    items: [
+      { value: "3", label: "Tracker" },
+      { value: "10", label: "Sprachen" },
+      { value: "1", label: "Freigabe" },
+      { value: "MIT", label: "Lizenz" },
+    ],
+  },
+  faq: {
+    heading: "Fragen",
+    items: [
+      {
+        question: "Was brauche ich?",
+        answer:
+          "Claude Code, git, ein angemeldetes gh und das Plugin mattpocock-skills, unter Linux oder macOS.",
+      },
+      {
+        question: "Läuft es unter Windows?",
+        answer: "Nur über WSL. Linux und macOS laufen nativ.",
+      },
+      {
+        question: "Welche Tracker werden unterstützt?",
+        answer: "Linear, GitHub Issues oder einfache lokale Dateien.",
+      },
+      {
+        question: "Was, wenn die CI fehlschlägt?",
+        answer: "Die Welle bekommt einige Korrekturversuche und wartet dann auf dich.",
+      },
+      {
+        question: "Wie halte ich eine Welle an?",
+        answer: "Markiere ein Ticket. Solange etwas markiert ist, wird nichts gemergt.",
+      },
+      {
+        question: "Stammt emet von Anthropic?",
+        answer:
+          "Nein. emet steht in keiner Verbindung zu Anthropic und wird nicht von Anthropic unterstützt.",
+      },
+    ],
+    more: "Weitere Fragen",
+  },
   about: {
     heading: "Warum es emet heißt",
     lineOne: "Hebräisch für Wahrheit. Ein Golem ist Lehm, den dieses Wort zum Leben erweckt.",
@@ -77,11 +127,20 @@ export const de = {
   },
   footer: {
     description: "Plugin für Claude Code.",
-    notice: "Not affiliated with or endorsed by Anthropic",
+    notice: "Nicht mit Anthropic verbunden und nicht von Anthropic unterstützt",
     docs: "Doku",
     whatsNew: "Neuigkeiten",
     github: "GitHub",
     legal: "2026, MIT.",
     paintings: "Gemälde, mit KI aus Prompts des Maintainers erzeugt.",
+    ci: "CI",
+    openssf: "OpenSSF Best Practices",
+    security: "Sicherheit",
+    contributing: "Mitwirken",
+    languages: "Sprachen",
+    builtBy: "Erstellt von AndryOre",
+  },
+  share: {
+    ogAlt: "emet: von der Spezifikation bis zum Merge, mit einer einzigen Freigabe.",
   },
 } satisfies UiStrings;

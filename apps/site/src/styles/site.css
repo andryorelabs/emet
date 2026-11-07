@@ -263,3 +263,36 @@
     margin-inline: 16px;
   }
 }
+
+.footer-links,
+.footer-langs {
+  flex-basis: 100%;
+  flex-wrap: wrap;
+  gap: 8px 24px;
+}
+
+.footer-langs {
+  display: flex;
+}
+
+.footer-langs a {
+  color: var(--text-muted);
+  font-size: 14px;
+}
+
+.footer-langs a[aria-current="true"] {
+  color: var(--text);
+  font-weight: 600;
+  text-decoration: underline;
+}
+
+.footer-fine a {
+  color: inherit;
+}
+
+@media (max-width: 900px) {
+  .site-footer {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}

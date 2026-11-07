@@ -1,12 +1,18 @@
 ---
 /**
  * The document shell of every Website page outside the docs: `<html lang>`,
- * metadata, the preloaded brand fonts and the global stylesheet.
+ * the blocking theme script, metadata, the preloaded brand fonts, the global
+ * stylesheet and the skip link.
  */
 // oxlint-disable-next-line import/no-unassigned-import -- Astro bundles a stylesheet imported for its side effect
 import "../styles/global.css";
+// oxlint-disable-next-line import/no-unassigned-import -- Astro bundles a stylesheet imported for its side effect
+import "../styles/header-controls.css";
 
 import type { Locale } from "../i18n/locales";
+import { getStrings } from "../i18n/ui";
+import { THEME_INIT_SCRIPT } from "../components/site/theme";
+import ShareMeta from "../seo/ShareMeta.astro";
 
 interface Props {
   title: string;
@@ -15,6 +21,7 @@ interface Props {
 }
 
 const { title, description, locale } = Astro.props;
+const skipLabel = getStrings(locale).nav.skip;
 ---
 
 <!doctype html>
@@ -22,6 +29,10 @@ const { title, description, locale } = Astro.props;
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="color-scheme" content="light dark" />
+    <meta name="theme-color" media="(prefers-color-scheme: light)" content="#f4fdf6" />
+    <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#0a100b" />
+    <script is:inline set:html={THEME_INIT_SCRIPT}></script>
     <title>{title}</title>
     <meta name="description" content={description} />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
@@ -32,9 +43,19 @@ const { title, description, locale } = Astro.props;
       type="font/woff2"
       crossorigin
     />
+    <ShareMeta title={title} description={description} locale={locale} />
     <slot name="head" />
   </head>
   <body class="min-h-dvh bg-bg text-text antialiased">
+    <a class="skip-link" href="#main">{skipLabel}</a>
     <slot />
+    <script>
+      document.querySelector(".skip-link")?.addEventListener("click", () => {
+        const main = document.getElementById("main");
+        if (main === null) return;
+        main.tabIndex = -1;
+        main.focus();
+      });
+    </script>
   </body>
 </html>

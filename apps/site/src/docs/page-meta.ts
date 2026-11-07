@@ -31,3 +31,34 @@ export function applySeoTitle<Entry extends HeadEntry>(
 ): Entry[] {
   return seoTitle ? head.map((entry) => swapTitle(entry, title, seoTitle)) : [...head];
 }
+
+function tagKey(entry: HeadEntry): string | undefined {
+  const attrs = entry.attrs ?? {};
+  if (entry.tag === "meta") {
+    const name = attrs["property"] ?? attrs["name"];
+    return typeof name === "string" ? `meta:${name}` : undefined;
+  }
+  if (entry.tag === "link" && typeof attrs["rel"] === "string") {
+    return `link:${attrs["rel"]}:${attrs["href"] ?? ""}`;
+  }
+  return undefined;
+}
+
+/**
+ * Appends the extra tags the head does not already carry. A meta tag counts as
+ * present by its `property` or `name`, a link by its `rel` and `href`.
+ * @param head - The route's head entries.
+ * @param extra - Tags to add where missing.
+ * @returns A new head array.
+ */
+export function mergeMissingTags<Entry extends HeadEntry>(
+  head: readonly Entry[],
+  extra: readonly Entry[],
+): Entry[] {
+  const present = new Set(head.map(tagKey));
+  const added = extra.filter((entry) => {
+    const key = tagKey(entry);
+    return key === undefined || !present.has(key);
+  });
+  return [...head, ...added];
+}

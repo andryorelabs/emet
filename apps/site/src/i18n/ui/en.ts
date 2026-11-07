@@ -16,6 +16,15 @@ export const en = {
     github: "GitHub",
     language: "Language",
     home: "emet, home",
+    menu: "Menu",
+    close: "Close",
+    skip: "Skip to content",
+  },
+  theme: {
+    label: "Theme",
+    light: "Light",
+    dark: "Dark",
+    system: "System",
   },
   hero: {
     name: "emet",
@@ -57,6 +66,46 @@ export const en = {
       { title: "Your tracker, or none", line: "Linear, GitHub Issues or local files." },
     ],
   },
+  stats: {
+    label: "In numbers",
+    items: [
+      { value: "3", label: "trackers" },
+      { value: "10", label: "languages" },
+      { value: "1", label: "approval" },
+      { value: "MIT", label: "license" },
+    ],
+  },
+  faq: {
+    heading: "Questions",
+    items: [
+      {
+        question: "What do I need?",
+        answer:
+          "Claude Code, git, an authenticated gh and the mattpocock-skills plugin, on Linux or macOS.",
+      },
+      {
+        question: "Does it run on Windows?",
+        answer: "Only through WSL. Linux and macOS run natively.",
+      },
+      {
+        question: "Which trackers does it support?",
+        answer: "Linear, GitHub Issues or plain local files.",
+      },
+      {
+        question: "What if CI fails?",
+        answer: "The wave gets a few fix attempts, then waits for you.",
+      },
+      {
+        question: "How do I stop a wave?",
+        answer: "Flag a ticket. Nothing merges while something is flagged.",
+      },
+      {
+        question: "Is emet made by Anthropic?",
+        answer: "No. emet is not affiliated with or endorsed by Anthropic.",
+      },
+    ],
+    more: "More questions",
+  },
   about: {
     heading: "Why it is called emet",
     lineOne: "Hebrew for truth. A golem is clay brought to life by that word.",
@@ -78,6 +127,15 @@ export const en = {
     github: "GitHub",
     legal: "2026, MIT.",
     paintings: "Paintings generated with AI from prompts by the maintainer.",
+    ci: "CI",
+    openssf: "OpenSSF Best Practices",
+    security: "Security",
+    contributing: "Contributing",
+    languages: "Languages",
+    builtBy: "Built by AndryOre",
+  },
+  share: {
+    ogAlt: "emet: spec to merge, on one approval.",
   },
 };
 

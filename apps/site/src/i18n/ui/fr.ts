@@ -16,6 +16,15 @@ export const fr = {
     github: "GitHub",
     language: "Langue",
     home: "emet, accueil",
+    menu: "Menu",
+    close: "Fermer",
+    skip: "Aller au contenu",
+  },
+  theme: {
+    label: "Thème",
+    light: "Clair",
+    dark: "Sombre",
+    system: "Système",
   },
   hero: {
     name: "emet",
@@ -58,6 +67,46 @@ export const fr = {
       { title: "Votre tracker, ou aucun", line: "Linear, GitHub Issues ou fichiers locaux." },
     ],
   },
+  stats: {
+    label: "En chiffres",
+    items: [
+      { value: "3", label: "trackers" },
+      { value: "10", label: "langues" },
+      { value: "1", label: "validation" },
+      { value: "MIT", label: "licence" },
+    ],
+  },
+  faq: {
+    heading: "Questions",
+    items: [
+      {
+        question: "De quoi ai-je besoin ?",
+        answer:
+          "Claude Code, git, un gh authentifié et le plugin mattpocock-skills, sous Linux ou macOS.",
+      },
+      {
+        question: "Fonctionne-t-il sous Windows ?",
+        answer: "Uniquement via WSL. Linux et macOS fonctionnent en natif.",
+      },
+      {
+        question: "Quels trackers sont pris en charge ?",
+        answer: "Linear, GitHub Issues ou de simples fichiers locaux.",
+      },
+      {
+        question: "Et si la CI échoue ?",
+        answer: "La vague a droit à quelques tentatives de correction, puis elle vous attend.",
+      },
+      {
+        question: "Comment arrêter une vague ?",
+        answer: "Signalez un ticket. Rien n'est fusionné tant qu'un ticket est signalé.",
+      },
+      {
+        question: "emet est-il fait par Anthropic ?",
+        answer: "Non. emet n'est ni affilié à Anthropic ni approuvé par Anthropic.",
+      },
+    ],
+    more: "Plus de questions",
+  },
   about: {
     heading: "Pourquoi il s'appelle emet",
     lineOne: "Vérité en hébreu. Un golem est de l'argile animée par ce mot.",
@@ -74,11 +123,20 @@ export const fr = {
   },
   footer: {
     description: "Plugin pour Claude Code.",
-    notice: "Not affiliated with or endorsed by Anthropic",
+    notice: "Non affilié à Anthropic et non approuvé par Anthropic",
     docs: "Docs",
     whatsNew: "Nouveautés",
     github: "GitHub",
     legal: "2026, MIT.",
     paintings: "Peintures générées par IA à partir de prompts du mainteneur.",
+    ci: "CI",
+    openssf: "OpenSSF Best Practices",
+    security: "Sécurité",
+    contributing: "Contribuer",
+    languages: "Langues",
+    builtBy: "Créé par AndryOre",
+  },
+  share: {
+    ogAlt: "emet : de la spécification au merge, avec une seule approbation.",
   },
 } satisfies UiStrings;

@@ -1,0 +1,26 @@
+---
+/**
+ * Share and install metadata of a Website page head: Open Graph and Twitter
+ * tags, icons, the manifest, the `llms.txt` link and, on the home page, the
+ * JSON-LD graph. The page comes from the request path; the 404 page shares
+ * the home page's address.
+ */
+import type { Locale } from "../i18n/locales";
+import { homeJsonLdTag, installLinkTags, shareMetaTags, resolveSharePage } from "./share-meta";
+
+interface Props {
+  title: string;
+  description: string;
+  locale: Locale;
+}
+
+const { title, description, locale } = Astro.props;
+const { path: sharePath, isNotFound } = resolveSharePage(Astro.url.pathname);
+const metaTags = shareMetaTags(locale, sharePath, title, description);
+const linkTags = installLinkTags();
+const jsonLd = sharePath === "/" && !isNotFound ? homeJsonLdTag(locale, title, description) : undefined;
+---
+
+{metaTags.map(({ attrs }) => <meta {...attrs} />)}
+{linkTags.map(({ attrs }) => <link {...attrs} />)}
+{jsonLd && <script type="application/ld+json" is:inline set:html={jsonLd.content} />}
