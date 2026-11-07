@@ -1,0 +1,91 @@
+---
+/**
+ * Mobile menu of the home and flow headers, shown below 900px where the nav
+ * links hide: a button that opens a full-width panel under the header with the
+ * three links, then the language and theme controls. Hidden until the script
+ * wires it; without script the header keeps its language and theme controls.
+ */
+import type { Locale } from "../../i18n/locales";
+import type { en } from "../../i18n/ui/en";
+import LanguageSwitcher from "./LanguageSwitcher.astro";
+import ThemeSelect from "./ThemeSelect.astro";
+
+interface Props {
+  locale: Locale;
+  currentPath: string;
+  strings: typeof en.nav;
+  theme: typeof en.theme;
+  links: { href: string; label: string; current: boolean }[];
+}
+
+const { locale, currentPath, strings, theme, links } = Astro.props;
+---
+
+<div class="mobile-menu" data-mobile-menu>
+  <button
+    type="button"
+    class="menu-button"
+    aria-expanded="false"
+    aria-controls="mobile-menu-panel"
+    aria-label={strings.menu}
+    hidden
+  >
+    <svg class="menu-icon menu-icon--open" viewBox="0 0 24 24" aria-hidden="true">
+      <path d="M4 7h16M4 12h16M4 17h16"></path>
+    </svg>
+    <svg class="menu-icon menu-icon--close" viewBox="0 0 24 24" aria-hidden="true">
+      <path d="M6 6l12 12M18 6L6 18"></path>
+    </svg>
+  </button>
+  <div class="menu-panel" id="mobile-menu-panel" tabindex="-1" hidden>
+    <nav aria-label={strings.label}>
+      {
+        links.map((link) => (
+          <a href={link.href} aria-current={link.current ? "page" : undefined}>
+            {link.label}
+          </a>
+        ))
+      }
+    </nav>
+    <div class="menu-controls">
+      <LanguageSwitcher locale={locale} currentPath={currentPath} label={strings.language} />
+      <ThemeSelect labels={theme} id="mobile-theme" />
+    </div>
+  </div>
+</div>
+
+<script>
+  const root = document.querySelector<HTMLElement>("[data-mobile-menu]");
+  const button = root?.querySelector<HTMLButtonElement>(".menu-button");
+  const panel = root?.querySelector<HTMLElement>(".menu-panel");
+
+  if (root && button && panel) {
+    const close = (restoreFocus: boolean): void => {
+      panel.hidden = true;
+      button.setAttribute("aria-expanded", "false");
+      if (restoreFocus) button.focus();
+    };
+    const open = (): void => {
+      panel.hidden = false;
+      button.setAttribute("aria-expanded", "true");
+      panel.querySelector<HTMLElement>("nav a")?.focus();
+    };
+
+    button.addEventListener("click", () => (panel.hidden ? open() : close(true)));
+    panel.addEventListener("click", (event) => {
+      if ((event.target as Element).closest("nav a")) close(false);
+    });
+    root.addEventListener("keydown", (event) => {
+      if (event.key !== "Escape" || panel.hidden) return;
+      if ((event.target as Element).closest(".theme-menu")) return;
+      event.preventDefault();
+      close(true);
+    });
+    document.addEventListener("click", (event) => {
+      if (!panel.hidden && !root.contains(event.target as Node)) close(false);
+    });
+
+    button.hidden = false;
+    root.closest(".site-header")?.setAttribute("data-menu-ready", "");
+  }
+</script>
