@@ -52,9 +52,16 @@ describe("locale string parity", () => {
       }
     });
 
-    test(`${locale} keeps the Anthropic notice and product names verbatim`, () => {
+    test(`${locale} translates the notice and keeps product names verbatim`, () => {
       const strings = getStrings(locale);
-      expect(strings.footer.notice).toBe(en.footer.notice);
+      expect(strings.footer.notice).not.toBe(en.footer.notice);
+      expect(strings.footer.notice).toContain("Anthropic");
+      const answers = strings.faq.items.map((item) => item.answer).join("\n");
+      expect(strings.faq.items).toHaveLength(6);
+      for (const name of ["Claude Code", "mattpocock-skills", "WSL", "Anthropic"]) {
+        expect(answers).toContain(name);
+      }
+      expect(strings.footer.builtBy).toContain("AndryOre");
       expect(strings.hero.name).toBe("emet");
       expect(strings.how.request).toBe(en.how.request);
       expect(strings.footer.description).toContain("Claude Code");

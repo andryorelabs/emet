@@ -25,10 +25,10 @@ const strings = getStrings(locale);
 const copy = NOT_FOUND_STRINGS[locale];
 ---
 
-<BaseLayout title={`${copy.title} emet`} description={copy.text} locale={locale}>
+<BaseLayout title={`${copy.title} | emet`} description={copy.text} locale={locale}>
   <meta slot="head" name="robots" content="noindex" />
   <SiteHeader variant="flow" locale={locale} currentPath="/" strings={strings.nav} />
-  <main class="not-found-page">
+  <main id="main" class="not-found-page">
     <section class="not-found" aria-labelledby="not-found-title">
       <Picture
         class="not-found-picture"

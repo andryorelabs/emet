@@ -17,6 +17,15 @@ export const ptBR = {
     github: "GitHub",
     language: "Idioma",
     home: "emet, início",
+    menu: "Menu",
+    close: "Fechar",
+    skip: "Ir para o conteúdo",
+  },
+  theme: {
+    label: "Tema",
+    light: "Claro",
+    dark: "Escuro",
+    system: "Sistema",
   },
   hero: {
     name: "emet",
@@ -59,6 +68,45 @@ export const ptBR = {
       { title: "Seu tracker, ou nenhum", line: "Linear, GitHub Issues ou arquivos locais." },
     ],
   },
+  stats: {
+    label: "Em números",
+    items: [
+      { value: "3", label: "rastreadores" },
+      { value: "10", label: "idiomas" },
+      { value: "1", label: "aprovação" },
+      { value: "MIT", label: "licença" },
+    ],
+  },
+  faq: {
+    heading: "Perguntas",
+    items: [
+      {
+        question: "O que eu preciso?",
+        answer: "Claude Code, git, gh autenticado e o plugin mattpocock-skills, em Linux ou macOS.",
+      },
+      {
+        question: "Funciona no Windows?",
+        answer: "Somente pelo WSL. Linux e macOS funcionam nativamente.",
+      },
+      {
+        question: "Quais rastreadores ele suporta?",
+        answer: "Linear, GitHub Issues ou simples arquivos locais.",
+      },
+      {
+        question: "E se o CI falhar?",
+        answer: "A onda recebe algumas tentativas de correção e depois espera por você.",
+      },
+      {
+        question: "Como paro uma onda?",
+        answer: "Sinalize um ticket. Nada é mesclado enquanto algo estiver sinalizado.",
+      },
+      {
+        question: "O emet é feito pela Anthropic?",
+        answer: "Não. O emet não é afiliado à Anthropic nem endossado por ela.",
+      },
+    ],
+    more: "Mais perguntas",
+  },
   about: {
     heading: "Por que se chama emet",
     lineOne: "Verdade em hebraico. Um golem é argila trazida à vida por essa palavra.",
@@ -74,11 +122,21 @@ export const ptBR = {
   },
   footer: {
     description: "Plugin para o Claude Code.",
-    notice: "Not affiliated with or endorsed by Anthropic",
+    notice: "Sem afiliação com a Anthropic nem endosso dela",
     docs: "Documentação",
     whatsNew: "Novidades",
     github: "GitHub",
     legal: "2026, MIT.",
     paintings: "Pinturas geradas com IA a partir de prompts do mantenedor.",
+    ci: "CI",
+    openssf: "OpenSSF Best Practices",
+    security: "Segurança",
+    contributing: "Contribuir",
+    languages: "Idiomas",
+    builtBy: "Criado por AndryOre",
+  },
+  share: {
+    ogAlt:
+      "emet: da especificação ao merge, com uma única aprovação, sobre um vale pintado com um pequeno golem de argila.",
   },
 } satisfies UiStrings;
