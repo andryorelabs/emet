@@ -62,7 +62,8 @@ export const es = {
     heading: "Por qué se llama emet",
     lineOne: "En hebreo, verdad. Un gólem es arcilla que cobra vida con esa palabra.",
     lineTwo: "Borra una letra y se detiene. Aquí, nada se integra cuando algo está marcado.",
-    signature: "AndryOre, Mantenedor",
+    caption: "El gólem de emet, pintado.",
+    role: "Mantenedor",
     alt: "Un retrato pintado de cerca del gólem emet sobre su loma cubierta de hierba, con luz de hora dorada, textura de musgo y arcilla y un pequeño brote en la cabeza.",
   },
   closing: {
