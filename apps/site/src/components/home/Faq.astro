@@ -1,9 +1,10 @@
 ---
 /**
- * The FAQ between About and the closing panel. A stub until the list is
- * built: it accepts its strings and locale and renders nothing.
+ * The FAQ between About and the closing panel: six native disclosure rows
+ * and a link to the localized troubleshooting page.
  */
 import type { Locale } from "../../i18n/locales";
+import { localePath } from "../../i18n/locales";
 import type { UiStrings } from "../../i18n/ui/en";
 
 interface Props {
@@ -11,5 +12,34 @@ interface Props {
   locale: Locale;
 }
 
-Astro.props satisfies Props;
+const { strings, locale } = Astro.props;
+const { faq } = strings;
+const troubleshootingPath = localePath(locale, "/docs/troubleshooting/");
 ---
+
+<section class="faq" aria-labelledby="faq-title">
+  <h2 id="faq-title" data-reveal="heading"><span class="reveal-line">{faq.heading}</span></h2>
+  <div class="faq-list">
+    {
+      faq.items.map((item) => (
+        <details class="faq-item" data-reveal="item">
+          <summary>
+            <span>{item.question}</span>
+            <svg class="faq-chevron" viewBox="0 0 16 16" width="16" height="16" aria-hidden="true">
+              <path
+                d="M3 6l5 5 5-5"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.5"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              />
+            </svg>
+          </summary>
+          <p>{item.answer}</p>
+        </details>
+      ))
+    }
+  </div>
+  <a class="faq-more" href={troubleshootingPath}>{faq.more}</a>
+</section>
