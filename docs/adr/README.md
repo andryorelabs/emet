@@ -25,3 +25,4 @@ Decisions that are hard to reverse, surprising without context, and the result o
 | 0017 | [Blacksmith runner routing](0017-blacksmith-runner-routing.md)                                                        | Accepted   |                                                                                 |
 | 0018 | [Bun workspaces monorepo with emet/ outside the workspaces](0018-bun-workspaces-monorepo-with-emet-outside.md)        | Accepted   |                                                                                 |
 | 0019 | [Website on Coolify with Astro and Starlight](0019-website-on-coolify-with-astro-and-starlight.md)                    | Accepted   |                                                                                 |
+| 0020 | [Website imagery is AI-generated paintings](0020-website-imagery-is-ai-generated-paintings.md)                        | Accepted   |                                                                                 |

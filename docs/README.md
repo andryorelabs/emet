@@ -73,6 +73,10 @@ Research for the brand kit, run 1. Options and recommendations only; no decision
 - [`brand/brandbook/fonts/OFL.md`](brand/brandbook/fonts/OFL.md): licenses of the two brandbook fonts, Space Grotesk and JetBrains Mono.
 - [`brand/explorations/emet-logo-r2.html`](brand/explorations/emet-logo-r2.html): logo round 2, five marks derived from the brand parts, with lockups, icon and mocks.
 
+## Design
+
+- [`design/README.md`](design/README.md): the design canvases, one per area, and where their build notes live.
+
 ## Per-repo `/emet` config
 
 Prose that `emet init` generates and the coordinator reads.
