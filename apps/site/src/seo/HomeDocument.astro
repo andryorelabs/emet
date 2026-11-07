@@ -9,10 +9,12 @@ import "../styles/home.css";
 
 import About from "../components/home/About.astro";
 import Closing from "../components/home/Closing.astro";
+import Faq from "../components/home/Faq.astro";
 import Features from "../components/home/Features.astro";
 import Hero from "../components/home/Hero.astro";
 import HowItWorks from "../components/home/HowItWorks.astro";
 import Showcase from "../components/home/Showcase.astro";
+import Stats from "../components/home/Stats.astro";
 import SiteFooter from "../components/site/SiteFooter.astro";
 import SiteHeader from "../components/site/SiteHeader.astro";
 import type { Locale } from "../i18n/locales";
@@ -31,12 +33,14 @@ const strings = getStrings(locale);
 <BaseLayout title={strings.meta.title} description={strings.meta.description} locale={locale}>
   <AlternateLinks slot="head" locale={locale} path="/" />
   <SiteHeader locale={locale} currentPath="/" strings={strings.nav} />
-  <main>
+  <main id="main">
     <Hero strings={strings} />
     <HowItWorks strings={strings} />
     <Showcase strings={strings} />
     <Features strings={strings} />
+    <Stats strings={strings} />
     <About strings={strings} />
+    <Faq strings={strings} locale={locale} />
     <Closing strings={strings} />
   </main>
   <SiteFooter locale={locale} strings={strings.footer} />

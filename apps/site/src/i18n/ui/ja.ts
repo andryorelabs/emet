@@ -16,6 +16,15 @@ export const ja = {
     github: "GitHub",
     language: "言語",
     home: "emet、ホーム",
+    menu: "メニュー",
+    close: "閉じる",
+    skip: "本文へスキップ",
+  },
+  theme: {
+    label: "テーマ",
+    light: "ライト",
+    dark: "ダーク",
+    system: "システム",
   },
   hero: {
     name: "emet",
@@ -63,6 +72,46 @@ export const ja = {
       },
     ],
   },
+  stats: {
+    label: "数字で見る",
+    items: [
+      { value: "3", label: "トラッカー" },
+      { value: "10", label: "言語" },
+      { value: "1", label: "承認" },
+      { value: "MIT", label: "ライセンス" },
+    ],
+  },
+  faq: {
+    heading: "よくある質問",
+    items: [
+      {
+        question: "何が必要ですか？",
+        answer:
+          "Claude Code、git、認証済みの gh、mattpocock-skills プラグインが必要です。Linux または macOS で動きます。",
+      },
+      {
+        question: "Windows で動きますか？",
+        answer: "WSL 経由のみです。Linux と macOS ではそのまま動きます。",
+      },
+      {
+        question: "どのトラッカーに対応していますか？",
+        answer: "Linear、GitHub Issues、またはローカルのファイルです。",
+      },
+      {
+        question: "CI が失敗したらどうなりますか？",
+        answer: "ウェーブは数回の修正を試み、その後あなたの判断を待ちます。",
+      },
+      {
+        question: "ウェーブを止めるには？",
+        answer: "チケットにフラグを立てます。フラグがある間は何もマージされません。",
+      },
+      {
+        question: "emet は Anthropic が作っていますか？",
+        answer: "いいえ。emet は Anthropic と提携しておらず、Anthropic の承認も受けていません。",
+      },
+    ],
+    more: "その他の質問",
+  },
   about: {
     heading: "emet という名前の理由",
     lineOne: "ヘブライ語で「真理」。ゴーレムは、その言葉で命を得た粘土です。",
@@ -78,11 +127,20 @@ export const ja = {
   },
   footer: {
     description: "Claude Code のプラグイン。",
-    notice: "Not affiliated with or endorsed by Anthropic",
+    notice: "Anthropic とは提携しておらず、Anthropic の承認も受けていません",
     docs: "ドキュメント",
     whatsNew: "新着情報",
     github: "GitHub",
     legal: "2026, MIT.",
     paintings: "絵はメンテナーのプロンプトから AI で生成しています。",
+    ci: "CI",
+    openssf: "OpenSSF Best Practices",
+    security: "セキュリティ",
+    contributing: "コントリビュート",
+    languages: "言語",
+    builtBy: "制作 AndryOre",
+  },
+  share: {
+    ogAlt: "emet: 仕様からマージまで、承認は一度だけ。小さな粘土のゴーレムがいる、描かれた谷。",
   },
 } satisfies UiStrings;

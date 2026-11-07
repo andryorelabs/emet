@@ -16,6 +16,15 @@ export const ru = {
     github: "GitHub",
     language: "Язык",
     home: "emet, главная",
+    menu: "Меню",
+    close: "Закрыть",
+    skip: "Перейти к содержимому",
+  },
+  theme: {
+    label: "Тема",
+    light: "Светлая",
+    dark: "Тёмная",
+    system: "Системная",
   },
   hero: {
     name: "emet",
@@ -57,6 +66,46 @@ export const ru = {
       { title: "Ваш трекер или никакого", line: "Linear, GitHub Issues или локальные файлы." },
     ],
   },
+  stats: {
+    label: "В цифрах",
+    items: [
+      { value: "3", label: "трекера" },
+      { value: "10", label: "языков" },
+      { value: "1", label: "одобрение" },
+      { value: "MIT", label: "лицензия" },
+    ],
+  },
+  faq: {
+    heading: "Вопросы",
+    items: [
+      {
+        question: "Что мне нужно?",
+        answer:
+          "Claude Code, git, авторизованный gh и плагин mattpocock-skills, на Linux или macOS.",
+      },
+      {
+        question: "Работает ли на Windows?",
+        answer: "Только через WSL. Linux и macOS работают нативно.",
+      },
+      {
+        question: "Какие трекеры поддерживаются?",
+        answer: "Linear, GitHub Issues или обычные локальные файлы.",
+      },
+      {
+        question: "Что, если CI упадёт?",
+        answer: "Волна получает несколько попыток исправления, затем ждёт вас.",
+      },
+      {
+        question: "Как остановить волну?",
+        answer: "Пометьте тикет флагом. Пока есть флаг, ничего не сливается.",
+      },
+      {
+        question: "emet сделан Anthropic?",
+        answer: "Нет. emet не связан с Anthropic и не одобрен Anthropic.",
+      },
+    ],
+    more: "Другие вопросы",
+  },
   about: {
     heading: "Почему он называется emet",
     lineOne: "На иврите это истина. Голем — глина, оживлённая этим словом.",
@@ -72,11 +121,21 @@ export const ru = {
   },
   footer: {
     description: "Плагин для Claude Code.",
-    notice: "Not affiliated with or endorsed by Anthropic",
+    notice: "Не связан с Anthropic и не одобрен Anthropic",
     docs: "Документация",
     whatsNew: "Что нового",
     github: "GitHub",
     legal: "2026, MIT.",
     paintings: "Картины созданы с помощью ИИ по промптам мейнтейнера.",
+    ci: "CI",
+    openssf: "OpenSSF Best Practices",
+    security: "Безопасность",
+    contributing: "Участие в проекте",
+    languages: "Языки",
+    builtBy: "Создал AndryOre",
+  },
+  share: {
+    ogAlt:
+      "emet: от спецификации до слияния с одним одобрением, над нарисованной долиной с маленьким глиняным големом.",
   },
 } satisfies UiStrings;

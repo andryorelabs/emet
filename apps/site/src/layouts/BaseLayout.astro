@@ -7,6 +7,7 @@
 import "../styles/global.css";
 
 import type { Locale } from "../i18n/locales";
+import ShareMeta from "../seo/ShareMeta.astro";
 
 interface Props {
   title: string;
@@ -32,6 +33,7 @@ const { title, description, locale } = Astro.props;
       type="font/woff2"
       crossorigin
     />
+    <ShareMeta title={title} description={description} locale={locale} />
     <slot name="head" />
   </head>
   <body class="min-h-dvh bg-bg text-text antialiased">
