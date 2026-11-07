@@ -8,7 +8,7 @@ export const sharedCodeConfig = {
   themes: ["github-light", "github-dark"],
   themeCssSelector: (theme: { type: string }): string =>
     theme.type === "dark" ? ".dark" : ":root",
-  useDarkModeMediaQuery: false,
+  useDarkModeMediaQuery: true,
   useStarlightDarkModeSwitch: false,
   useStarlightUiThemeColors: false,
   styleOverrides: {

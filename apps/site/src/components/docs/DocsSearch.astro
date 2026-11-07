@@ -1,0 +1,21 @@
+---
+/**
+ * Starlight's Pagefind search, served from the site's own origin, with the
+ * Trusted Types policy that lets only its `<mark>` excerpts and its worker through.
+ */
+import Search from "@astrojs/starlight/components/Search.astro";
+---
+
+<Search />
+
+<script>
+  import {
+    installSearchTrustedTypesPolicy,
+    type TrustedTypesFactory,
+  } from "../../docs/search-trusted-types";
+
+  installSearchTrustedTypesPolicy(
+    (globalThis as { trustedTypes?: TrustedTypesFactory }).trustedTypes,
+    globalThis.location.origin,
+  );
+</script>

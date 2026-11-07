@@ -1,0 +1,17 @@
+import { defineRouteMiddleware } from "@astrojs/starlight/route-data";
+
+import { applySeoTitle } from "./page-meta";
+
+/**
+ * Swaps a page's `<title>` and `og:title` for its SEO title, and marks the
+ * content of a page that renders the English text as English, so the content
+ * wrapper carries `lang="en"` and assistive technology switches voice. The
+ * page chrome keeps the locale of the route.
+ */
+export const onRequest = defineRouteMiddleware((context) => {
+  const route = context.locals.starlightRoute;
+  const { seoTitle, title, translationStatus } = route.entry.data;
+  route.head = applySeoTitle(route.head, title, seoTitle);
+  if (translationStatus === "translated") return;
+  route.entryMeta = { ...route.entryMeta, lang: "en", dir: "ltr" };
+});

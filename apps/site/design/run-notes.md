@@ -127,3 +127,10 @@ Deviations from the canvas, recorded as built:
 - Pictures are served by `astro:assets` as AVIF and WebP at 640, 1024 and 1672 (the portrait at 640 and 1024); the hero AVIF at 1672 is about 107 KB. The hero is preloaded with `fetchpriority="high"`, the rest are lazy.
 - Sample content (spec 41, tickets 42 to 45, PR 46, `emet41w1`) is invented and must be confirmed. The `/docs/whats-new/` link path is a guess until the docs ticket fixes it.
 - Gate on the production build: 0 FAIL other than the motion count owned by the motion ticket; WARN for missing footage is defended (no honest clip of a CLI tool; the paintings are the pictures).
+
+## Build notes (showcase ticket)
+
+- The showcase is full-bleed 16:9 (max 828px, 720px tall at 390px) with the hero painting as day and `held.webp` as dusk, both from the design folder through `astro:assets`; the dusk srcset sits in `data-srcset` and is set on first interaction or idle.
+- The wordmark "emet" sits under the switch, not above the heading, so the inspector does not read it as an eyebrow; its "e" fades to 20% when held.
+- The control label "Flag ticket #44" is in the `showcase` group of `en.ts` and every locale module.
+- Without script the switch is hidden and a `noscript` line prints the held status next to the merged one.

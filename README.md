@@ -17,6 +17,8 @@ emet is a plugin for Claude Code. It takes a feature from idea to merged change:
 
 It runs on your machine, in any git repo, with Linear, GitHub Issues or no tracker.
 
+Read the docs on the Website: [emet.andryore.dev](https://emet.andryore.dev).
+
 - **One approval.** You review the spec and the tickets once, then the run starts.
 - **A review per wave.** A reviewer checks each wave before it lands.
 - **Nothing merges when flagged.** A wave with anything flagged is never auto-merged.
