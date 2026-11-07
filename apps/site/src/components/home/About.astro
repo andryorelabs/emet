@@ -15,9 +15,9 @@ const { strings } = Astro.props;
 const { about } = strings;
 ---
 
-<section class="about" aria-labelledby="about-title">
+<section class="about" data-drift aria-labelledby="about-title">
   <div class="letter">
-    <h2 id="about-title">{about.heading}</h2>
+    <h2 id="about-title" data-reveal="heading"><span class="reveal-line">{about.heading}</span></h2>
     <p>{about.lineOne}</p>
     <p>{about.lineTwo}</p>
     <p class="signature">{about.signature}</p>

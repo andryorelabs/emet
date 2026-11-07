@@ -16,7 +16,7 @@ const { strings } = Astro.props;
 const { closing } = strings;
 ---
 
-<section class="closing" aria-labelledby="closing-title">
+<section class="closing" data-drift aria-labelledby="closing-title">
   <Picture
     class="closing-picture"
     src={bookendImage}
@@ -29,7 +29,9 @@ const { closing } = strings;
     decoding="async"
   />
   <div class="closing-copy">
-    <h2 id="closing-title">{closing.heading}</h2>
+    <h2 id="closing-title" data-reveal="heading">
+      <span class="reveal-line">{closing.heading}</span>
+    </h2>
     <a class="button" href="#install">{closing.action}</a>
   </div>
 </section>
