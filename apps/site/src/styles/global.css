@@ -1,0 +1,44 @@
+/**
+ * Website stylesheet entry: Tailwind 4 with the brand tokens mapped into its
+ * theme, so utilities such as `bg-bg`, `text-muted` or `font-mono` use them.
+ * `--font-sans` and `--font-mono` share Tailwind's names, and the unlayered
+ * tokens override Tailwind's layered defaults, so they need no mapping.
+ */
+
+@import "tailwindcss";
+@import "./tokens.css";
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+@theme inline {
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-border: var(--border);
+  --color-text: var(--text);
+  --color-muted: var(--text-muted);
+  --color-accent: var(--accent);
+  --color-accent-text: var(--accent-text);
+  --color-on-accent: var(--on-accent);
+  --color-ok: var(--ok);
+  --color-warn: var(--warn);
+  --color-error: var(--error);
+  --color-info: var(--info);
+  --color-clay: var(--clay);
+  --color-moss: var(--moss);
+  --color-lamp: var(--lamp);
+}
+
+@layer base {
+  html {
+    background-color: var(--bg);
+    color: var(--text);
+    font-family: var(--font-sans);
+  }
+
+  code,
+  kbd,
+  pre,
+  samp {
+    font-family: var(--font-mono);
+  }
+}

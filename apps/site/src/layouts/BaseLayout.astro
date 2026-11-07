@@ -1,0 +1,38 @@
+---
+/**
+ * The document shell of every Website page outside the docs: `<html lang>`,
+ * metadata, the preloaded brand fonts and the global stylesheet.
+ */
+// oxlint-disable-next-line import/no-unassigned-import -- Astro bundles a stylesheet imported for its side effect
+import "../styles/global.css";
+
+import type { Locale } from "../i18n/locales";
+
+interface Props {
+  title: string;
+  description: string;
+  locale: Locale;
+}
+
+const { title, description, locale } = Astro.props;
+---
+
+<!doctype html>
+<html lang={locale}>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{title}</title>
+    <meta name="description" content={description} />
+    <link
+      rel="preload"
+      href="/fonts/SpaceGrotesk-var.woff2"
+      as="font"
+      type="font/woff2"
+      crossorigin
+    />
+  </head>
+  <body class="min-h-dvh bg-bg text-text antialiased">
+    <slot />
+  </body>
+</html>

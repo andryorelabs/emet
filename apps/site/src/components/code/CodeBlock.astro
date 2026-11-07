@@ -1,0 +1,27 @@
+---
+/**
+ * Stub code block: renders the code, or each tab's code, as plain `<pre>`.
+ * The Expressive Code version with tabs and a copy button replaces it.
+ */
+
+interface Props {
+  code: string;
+  lang?: string;
+  tabs?: { label: string; code: string }[];
+}
+
+const { code, lang, tabs } = Astro.props;
+---
+
+{
+  tabs && tabs.length > 0 ? (
+    tabs.map((tab) => (
+      <figure>
+        <figcaption>{tab.label}</figcaption>
+        <pre data-lang={lang}><code>{tab.code}</code></pre>
+      </figure>
+    ))
+  ) : (
+    <pre data-lang={lang}><code>{code}</code></pre>
+  )
+}

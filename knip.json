@@ -1,8 +1,23 @@
 {
   "$schema": "https://unpkg.com/knip@6/schema.json",
-  "entry": ["emet/bin/emet.ts", "emet/src/**/*.test.ts", "tools/**/*.ts", "mods/*/hooks/**/*.ts"],
-  "project": ["emet/**/*.ts", "tools/**/*.ts", "mods/*/hooks/**/*.ts"],
-  // typescript7 is only invoked by path (node_modules/typescript7/bin/tsc) in the typecheck script, which knip cannot trace to the package.
-  "ignore": ["mods/*/hooks/**/*.tsx"],
-  "ignoreDependencies": ["typescript7"]
+  "workspaces": {
+    ".": {
+      "entry": [
+        "emet/bin/emet.ts",
+        "emet/src/**/*.test.ts",
+        "tools/**/*.ts",
+        "mods/*/hooks/**/*.ts"
+      ],
+      "project": ["emet/**/*.ts", "tools/**/*.ts", "mods/*/hooks/**/*.ts"],
+      // typescript7 is only invoked by path (node_modules/typescript7/bin/tsc) in the typecheck script, which knip cannot trace to the package.
+      "ignore": ["mods/*/hooks/**/*.tsx"],
+      "ignoreDependencies": ["typescript7"]
+    },
+    "apps/site": {
+      // The code block stub and the locale helpers are the scaffold's contract for the home page and i18n tickets, which consume them.
+      "entry": ["src/components/code/CodeBlock.astro", "src/i18n/locales.ts"],
+      // The content mapper is loaded by name from tsconfig.json's contentMappers.
+      "ignoreDependencies": ["@astrojs/ts-content-mapper"]
+    }
+  }
 }
