@@ -1,0 +1,26 @@
+---
+/**
+ * Wave diagram under the ticket tree: wave 1 lands #42, then #43, #44 and
+ * #45 fan out and merge as wave 2. The lines draw in with the scroll through
+ * a view timeline; without support, or with reduced motion, it is complete.
+ */
+// oxlint-disable-next-line import/no-unassigned-import -- Astro bundles a stylesheet imported for its side effect
+import "../../../styles/graphics.css";
+
+const fanOut = ["M40 55C120 55 120 18 200 18", "M40 55H200", "M40 55C120 55 120 92 200 92"];
+const merge = ["M200 18C320 18 320 55 440 55", "M200 55H440", "M200 92C320 92 320 55 440 55"];
+---
+
+<svg class="wave" viewBox="0 0 480 110" aria-hidden="true" focusable="false">
+  <g class="wave-lines">
+    {fanOut.map((d) => <path class="wave-a" d={d} pathLength="1" />)}
+    {merge.map((d) => <path class="wave-b" d={d} pathLength="1" />)}
+  </g>
+  <circle class="wave-land" cx="40" cy="55" r="7" />
+  <g class="wave-fan">
+    <circle cx="200" cy="18" r="6" />
+    <circle cx="200" cy="55" r="6" />
+    <circle cx="200" cy="92" r="6" />
+  </g>
+  <circle class="wave-end" cx="440" cy="55" r="7" />
+</svg>

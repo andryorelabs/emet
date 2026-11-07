@@ -9,6 +9,8 @@ import { getImage, Picture } from "astro:assets";
 import heroImage from "../../assets/hero.webp";
 import duskImage from "../../../design/pictures/held.webp";
 import type { UiStrings } from "../../i18n/ui/en";
+import Fireflies from "./graphics/Fireflies.astro";
+import Valley from "./graphics/Valley.astro";
 // oxlint-disable-next-line import/no-unassigned-import -- Astro bundles a stylesheet imported for its side effect
 import "../../styles/showcase.css";
 
@@ -62,6 +64,7 @@ const copy = JSON.stringify({
       height={duskVariants[2]?.options.height}
       decoding="async"
     />
+    <Valley variant="showcase"><Fireflies /></Valley>
   </div>
   <div class="showcase-panel">
     <h2 id="showcase-title" data-showcase-heading>{showcase.heading}</h2>
