@@ -8,14 +8,15 @@ Guide for coding agents working in emet. Terms follow [GLOSSARY.md](GLOSSARY.md)
 - `commands/{run,init,doctor}.md`, `agents/*.md`: prompts for the `/emet:run`, `/emet:init` and `/emet:doctor` commands and the worker and reviewer agents. `install.sh` rewrites them and installs the commands under `~/.claude/commands/emet/`. See [ADR-0008](docs/adr/0008-standalone-binaries-and-plugin-distribution.md).
 - `tools/`: dev-only tests and scripts (lint plugin, invariant tests).
 - `docs/agents/`: per-repo `/emet` config prose. `docs/adr/`: architecture decisions.
-- Root: dev tooling config. `emet.config.json` is this repo's `/emet` config.
+- `apps/site`: the Website (`@emet/site`, Astro, Starlight, Tailwind). See [apps/site/AGENTS.md](apps/site/AGENTS.md) and [ADR-0019](docs/adr/0019-website-on-coolify-with-astro-and-starlight.md).
+- Root: dev tooling config, a bun workspaces monorepo (`apps/*`, `packages/*`) driven by turbo; `emet/` stays outside the workspaces. See [ADR-0018](docs/adr/0018-bun-workspaces-monorepo-with-emet-outside.md). `emet.config.json` is this repo's `/emet` config.
 
 ## Running scripts
 
 Run from the repo root with bun.
 
-- `bun run check`: typecheck, lint, format check, knip, docs link check.
-- `bun run test`: `tools/` tests, then the `emet/` tests.
+- `bun run check`: turbo runs each workspace's `check` (the Website's typecheck) and the root-only `check:root` (typecheck, lint, format check, knip, docs link check).
+- `bun run test`: turbo runs each workspace's `test` and the root-only `test:root` (`tools/` tests, then the `emet/` tests).
 - `bun run fix`: format and autofix lint.
 - build: do not run unless explicitly asked.
 
