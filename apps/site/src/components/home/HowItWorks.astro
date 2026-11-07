@@ -1,0 +1,112 @@
+---
+/**
+ * Three exchanges beside a sticky crop of the golden-hour painting. The
+ * interface fragments are real emet output with sample content.
+ */
+import { Picture } from "astro:assets";
+
+import sourceImage from "../../assets/source.webp";
+import type { UiStrings } from "../../i18n/ui/en";
+import CodeBlock from "../code/CodeBlock.astro";
+
+interface Props {
+  strings: UiStrings;
+}
+
+const { strings } = Astro.props;
+const { how } = strings;
+
+const pluginCommands = [
+  "claude plugin marketplace add andryorelabs/emet",
+  "claude plugin install emet@emet-marketplace",
+].join("\n");
+const cloneCommands = [
+  "git clone git@github.com:andryorelabs/emet.git",
+  "cd emet",
+  "./install.sh",
+].join("\n");
+
+const banner = [
+  "   ▄▀▄▄",
+  "     █",
+  " ▄██████████▄   emet  plugin for Claude Code",
+  " ██ ●    ● ██   Spec to merge, on one approval.",
+  " ██   ▬▬   ██   interview, spec, tickets, one approval, merge",
+  " ▀▀████████▀▀   Not affiliated with or endorsed by Anthropic",
+].join("\n");
+
+const tickets = [
+  "Spec 41  dark mode for settings",
+  "  S1  theme tokens   S2  settings toggle   S3  persisted choice",
+  "",
+  "  #42  theme tokens         wave 1",
+  "  #43  settings toggle      wave 2  blocked by #42",
+  "  #44  persist the choice   wave 2  blocked by #42",
+  "  #45  docs and captures    wave 2  blocked by #42",
+].join("\n");
+
+const statusJson = JSON.stringify(
+  {
+    state: "ready",
+    spec: "41",
+    waves: [{ runId: "emet41w1", wave: 1, state: "ready", workers: 1 }],
+  },
+  null,
+  2,
+);
+---
+
+<section class="how" aria-labelledby="how-title">
+  <figure class="how-painting" aria-hidden="false">
+    <Picture
+      src={sourceImage}
+      formats={["avif", "webp"]}
+    fallbackFormat="webp"
+      widths={[640, 1024, 1672]}
+      sizes="(min-width: 960px) 40vw, 100vw"
+      alt={how.alt}
+      loading="lazy"
+      decoding="async"
+    />
+  </figure>
+  <div class="how-column">
+    <h2 id="how-title">{how.heading}</h2>
+
+    <article class="exchange" id="install">
+      <h3>{how.install}</h3>
+      <CodeBlock
+        code={pluginCommands}
+        lang="bash"
+        tabs={[
+          { label: how.tabPlugin, code: pluginCommands },
+          { label: how.tabClone, code: cloneCommands },
+        ]}
+      />
+    </article>
+
+    <article class="exchange">
+      <h3>{how.describe}</h3>
+      <CodeBlock code={`/emet:run ${how.request}`} lang="bash" />
+      <div class="fragment" data-ui>
+        <pre class="terminal">{banner}</pre>
+      </div>
+      <div class="fragment" data-ui>
+        <pre class="terminal">{tickets}</pre>
+        <div class="wave-slot" data-slot="wave-diagram" aria-hidden="true"></div>
+      </div>
+    </article>
+
+    <article class="exchange">
+      <h3>{how.land}</h3>
+      <CodeBlock code="emet status" lang="bash" />
+      <CodeBlock code={statusJson} lang="json" />
+      <div class="fragment pr-card" data-ui>
+        <p class="pr-title">
+          <span class="pr-state">Merged</span>
+          Wave 1: theme tokens
+        </p>
+        <p class="pr-meta">Closes #42 &middot; checks passing &middot; reviewed</p>
+      </div>
+    </article>
+  </div>
+</section>

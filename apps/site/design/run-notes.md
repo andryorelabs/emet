@@ -113,3 +113,17 @@ The real interface fragments (banner, spec and tickets, status JSON and PR, the 
 ## Running the gate
 
 The inspector needs a Chromium: `CHROME_PATH=$(ls -d ~/.cache/ms-playwright/chromium-*/chrome-linux*/chrome | head -1)`. Working files go to `.taste-skill/` (ignored).
+
+## Build notes (home layout ticket)
+
+Deviations from the canvas, recorded as built:
+
+- The hero `h1` carries a visually hidden "emet. " before the two authored lines, so it names the product and what it is while the visible copy stays the two-line tagline.
+- The header is absolutely positioned over the hero and is not sticky; the language switcher is a `details` menu of plain links with no shadow, a tone step separates it.
+- The install block is the first exchange of how it works (`#install`); the hero and the closing button both link to it. It uses the stub `CodeBlock.astro` (two plain figures) until the Expressive Code version lands.
+- The showcase is a placeholder panel that prints both status lines as text; the interactive version replaces `components/home/Showcase.astro`.
+- The wave diagram has an empty `data-slot="wave-diagram"` under the ticket tree, filled by the motion ticket.
+- `held.webp` is not copied into the app yet; the showcase owner brings it.
+- Pictures are served by `astro:assets` as AVIF and WebP at 640, 1024 and 1672 (the portrait at 640 and 1024); the hero AVIF at 1672 is about 107 KB. The hero is preloaded with `fetchpriority="high"`, the rest are lazy.
+- Sample content (spec 41, tickets 42 to 45, PR 46, `emet41w1`) is invented and must be confirmed. The `/docs/whats-new/` link path is a guess until the docs ticket fixes it.
+- Gate on the production build: 0 FAIL other than the motion count owned by the motion ticket; WARN for missing footage is defended (no honest clip of a CLI tool; the paintings are the pictures).

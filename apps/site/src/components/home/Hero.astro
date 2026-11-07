@@ -1,0 +1,57 @@
+---
+/**
+ * First screen: the painted valley fills the viewport, the h1 and the one
+ * primary action sit in its calm sky. The picture is preloaded.
+ */
+import { getImage, Picture } from "astro:assets";
+
+import heroImage from "../../assets/hero.webp";
+import type { UiStrings } from "../../i18n/ui/en";
+
+interface Props {
+  strings: UiStrings;
+}
+
+const { strings } = Astro.props;
+const widths = [640, 1024, 1672];
+const variants = await Promise.all(
+  widths.map((width) => getImage({ src: heroImage, width, format: "avif" })),
+);
+const preloadSrcset = variants.map((variant) => `${variant.src} ${variant.options.width}w`).join(", ");
+const { hero } = strings;
+---
+
+<link
+  rel="preload"
+  as="image"
+  type="image/avif"
+  imagesrcset={preloadSrcset}
+  imagesizes="100vw"
+  fetchpriority="high"
+/>
+<section class="hero" aria-labelledby="hero-title">
+  <Picture
+    class="hero-picture"
+    src={heroImage}
+    formats={["avif", "webp"]}
+    fallbackFormat="webp"
+    widths={widths}
+    sizes="100vw"
+    alt={hero.alt}
+    loading="eager"
+    fetchpriority="high"
+    decoding="async"
+  />
+  <div class="hero-copy">
+    <h1 id="hero-title">
+      <span class="sr-only">{hero.name}. </span>
+      <span class="hero-line">{hero.lineOne}</span>
+      <span class="hero-line">{hero.lineTwo}</span>
+    </h1>
+    <p class="hero-sentence">{hero.sentence}</p>
+    <div class="hero-actions">
+      <a class="button" href="#install">{hero.install}</a>
+      <a class="text-link" href="/docs/">{hero.readDocs}</a>
+    </div>
+  </div>
+</section>

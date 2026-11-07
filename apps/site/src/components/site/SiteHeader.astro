@@ -1,0 +1,26 @@
+---
+/**
+ * Website header: wordmark, a few plain links and the language switcher.
+ */
+import { localePath, type Locale } from "../../i18n/locales";
+import { en } from "../../i18n/ui/en";
+import LanguageSwitcher from "./LanguageSwitcher.astro";
+
+interface Props {
+  locale: Locale;
+  currentPath: string;
+  strings?: typeof en.nav;
+}
+
+const { locale, currentPath, strings = en.nav } = Astro.props;
+---
+
+<header class="site-header">
+  <a class="wordmark" href={localePath(locale, "/")} aria-label={strings.home}>emet</a>
+  <nav aria-label={strings.label}>
+    <a href={localePath(locale, "/docs/")}>{strings.docs}</a>
+    <a href={localePath(locale, "/docs/whats-new/")}>{strings.whatsNew}</a>
+    <a href="https://github.com/andryorelabs/emet">{strings.github}</a>
+    <LanguageSwitcher locale={locale} currentPath={currentPath} label={strings.language} />
+  </nav>
+</header>

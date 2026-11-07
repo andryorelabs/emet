@@ -1,0 +1,35 @@
+---
+/**
+ * Language links for the current page. Plain links, one per locale, each
+ * labelled in its own language.
+ */
+import { LOCALES, LOCALE_NAMES, localePath, type Locale } from "../../i18n/locales";
+
+interface Props {
+  locale: Locale;
+  currentPath: string;
+  label?: string;
+}
+
+const { locale, currentPath, label = "Language" } = Astro.props;
+---
+
+<details class="lang">
+  <summary aria-label={label}>{locale}</summary>
+  <ul>
+    {
+      LOCALES.map((target) => (
+        <li>
+          <a
+            href={localePath(target, currentPath)}
+            hreflang={target}
+            lang={target}
+            aria-current={target === locale ? "true" : undefined}
+          >
+            {LOCALE_NAMES[target]}
+          </a>
+        </li>
+      ))
+    }
+  </ul>
+</details>

@@ -1,0 +1,43 @@
+---
+/**
+ * One plate: a run report with six notes in its margin, one per claim.
+ */
+import type { UiStrings } from "../../i18n/ui/en";
+
+interface Props {
+  strings: UiStrings;
+}
+
+const { strings } = Astro.props;
+const { features } = strings;
+
+const report = [
+  "run emet41w1   wave 1 of 2",
+  "",
+  "approval   spec 41, 4 tickets    given once",
+  "workers    4 in 4 worktrees      done",
+  "review     wave 1                clear",
+  "flags      0                     none",
+  "ci         PR #46                passing",
+  "merge      develop               merged",
+].join("\n");
+---
+
+<section class="features" aria-labelledby="features-title">
+  <h2 id="features-title">{features.heading}</h2>
+  <div class="plate">
+    <div class="fragment" data-ui>
+      <pre class="terminal">{report}</pre>
+    </div>
+    <ul class="notes">
+      {
+        features.notes.map((note) => (
+          <li>
+            <h3>{note.title}</h3>
+            <p>{note.line}</p>
+          </li>
+        ))
+      }
+    </ul>
+  </div>
+</section>
