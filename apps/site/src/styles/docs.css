@@ -112,6 +112,13 @@ summary:focus-visible {
     display: none;
   }
 
+  .docs-header .lang summary {
+    max-width: 9.5rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
   .docs-header site-search button[data-open-modal] {
     justify-content: center;
     width: 44px;

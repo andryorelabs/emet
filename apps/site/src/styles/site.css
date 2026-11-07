@@ -192,7 +192,7 @@
   position: relative;
   box-sizing: border-box;
   margin: 0 32px;
-  height: clamp(360px, 31cqw, 440px);
+  min-height: clamp(360px, 31cqw, 440px);
   border-radius: 12px;
   overflow: clip;
 }
@@ -214,13 +214,12 @@
 }
 
 .not-found-copy {
-  position: absolute;
-  inset: 14% 0 auto 0;
+  position: relative;
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 16px;
-  padding: 0 24px;
+  padding: clamp(40px, 4.5cqw, 62px) 24px 32px;
   text-align: center;
   color: oklch(0.22 0.013 150);
 }
