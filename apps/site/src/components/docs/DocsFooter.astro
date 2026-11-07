@@ -1,0 +1,16 @@
+---
+/**
+ * Docs footer: Starlight's edit link and pagination, then the Website footer.
+ */
+import StarlightFooter from "@astrojs/starlight/components/Footer.astro";
+
+import { resolveLocale } from "../../docs/route";
+import SiteFooter from "../site/SiteFooter.astro";
+
+const { lang } = Astro.locals.starlightRoute;
+---
+
+<StarlightFooter />
+<div class="docs-site-footer">
+  <SiteFooter locale={resolveLocale(lang)} />
+</div>

@@ -1,0 +1,24 @@
+---
+/**
+ * Page title, followed by a notice when the page shows English text because
+ * its translation is missing or stale.
+ */
+import StarlightPageTitle from "@astrojs/starlight/components/PageTitle.astro";
+
+// oxlint-disable-next-line import/no-unassigned-import -- Astro bundles a stylesheet imported for its side effect
+import "virtual:emet-code-colors.css";
+
+import { TRANSLATION_NOTICE } from "../../docs/notice";
+
+const { translationStatus, englishPath } = Astro.locals.starlightRoute.entry.data;
+const hasNotice = translationStatus !== "translated";
+---
+
+<StarlightPageTitle />
+{
+  hasNotice && (
+    <p lang="en" dir="ltr" role="note" data-translation-notice={translationStatus} class="docs-notice">
+      {TRANSLATION_NOTICE[translationStatus]} <a href={englishPath} hreflang="en">{TRANSLATION_NOTICE.readEnglish}</a>
+    </p>
+  )
+}
