@@ -114,6 +114,10 @@ summary:focus-visible {
 
   .docs-header .lang summary {
     max-width: 9.5rem;
+  }
+
+  .docs-header .lang summary > span:first-child {
+    min-width: 0;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
