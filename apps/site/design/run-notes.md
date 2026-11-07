@@ -42,7 +42,7 @@ Redraws, each for a stated reason:
 - showcase, "Cards crossing a held photograph", becomes "The valley changes light": the page's live thing is one control, and the same valley is painted by day and at dusk so flagging a ticket turns day into dusk. One paper panel holds the heading, status and control.
 - features, "Rows with margin photographs", becomes "Panel with margin notes": the six claims are six parts of one run report, not six photographs.
 - about, "Wide photo, colour tile, facts", becomes "Founder's letter" beside a painted portrait of the golem: the content is the name story, and the facts blueprint wants altitude and local time.
-- cta, "Three photographs, then a field", becomes "The closing painting": the morning-mist painting mirrors the hero with the heading and the action centred over its sky.
+- cta, "Three photographs, then a field", becomes "The closing panel": the morning-mist painting in a contained panel (32px margins, 12px radius, about 440px tall) with the heading and the action centred over its pale top. A full-bleed band was tried and judged too big and empty. The 404 uses the same panel.
 - footer, "Photograph half, menu half", becomes "A single quiet line": it must carry the Anthropic notice and the AI disclosure.
 - how it works gains a sticky painted crop (golden hour) beside the exchanges, so the valley is not only the hero.
 
@@ -83,12 +83,26 @@ Sample content (spec 41, tickets, PR number, branch names) is invented to show t
 
 ## 6. Motion plan
 
-Built by the motion ticket with the `emil-design-eng` skill (installed for Claude Code in `.claude/skills/`, with the animation set `animate`, `choreograph`, `animation-performance`, `review-animations`, `improve-animations`, `find-animation-opportunities`, `remove-animations`, `animation-vocabulary`). Rules: only `transform` and `opacity`; strong ease-out `cubic-bezier(0.23, 1, 0.32, 1)`, never ease-in; UI feedback 100 to 200 ms, page entrances up to 600 ms; never from `scale(0)`; no motion on keyboard-repeated actions; reduced motion shows everything and changes state at once.
+Built by two motion tickets with the `emil-design-eng` skill (installed for Claude Code in `.claude/skills/`, with the animation set `animate`, `choreograph`, `animation-performance`, `review-animations`, `improve-animations`, `find-animation-opportunities`, `remove-animations`, `animation-vocabulary`) and the taste skill's `references/motion.md`. Rules: only `transform` and `opacity`; strong ease-out `cubic-bezier(0.23, 1, 0.32, 1)`, never ease-in; UI feedback 100 to 200 ms, page entrances up to 600 ms; never from `scale(0)`; no motion on keyboard-repeated actions; reduced motion shows everything and changes state at once.
 
-- Hero: h1, sentence and button rise 12 px with a fade, 500 ms, 80 ms stagger; paintings settle from scale 1.03 to 1 over 900 ms.
-- Scroll: headings and terminal blocks fade and rise 12 px, 400 ms, once, 60 ms stagger within a section. The how-it-works painting stays still.
-- Showcase: day and dusk cross-fade 600 ms, the switch knob travels in 250 ms, the "e" of emet fades in 400 ms. The dusk picture loads on first interaction or when the browser is idle.
+Scroll layer (smooth and premium):
+
+- Lenis smooth scroll bundled locally (lerp 0.1 to 0.12), off on touch and with reduced motion; anchors and keyboard keep working.
+- Scroll-linked with `animation-timeline: view()` (IntersectionObserver fallback), linear: the hero recedes (picture sinks 8% and dims to 35% ink, copy lifts); pictures drift under 8% inside oversized frames; the how-it-works painting drifts under 6%. Frames use `overflow: clip`.
+- Reveals: headings rise by masked line (12 px, 400 ms), terminals and notes stagger 60 ms within a section, once. Page load: h1, sentence and button rise 12 px, 500 ms, 80 ms stagger.
+- Showcase: day and dusk cross-fade 600 ms, knob travel 250 ms, the "e" fades in 400 ms. The dusk picture loads on first interaction or when the browser is idle.
 - Feedback: buttons and copy buttons `scale(0.97)` on press, 160 ms.
+
+Motion graphics (subtle, decorative, `aria-hidden`, SVG and CSS only, under 6 KB, paused when the tab is hidden):
+
+- The valley breathes: slow cloud and mist drifts (60 to 90 s), river shimmer, the golem's lamp eyes pulse (4 to 6 s) and blink about every nine seconds; stronger at dusk.
+- Typed terminal: each exchange types its command and reveals its output line by line on entering the viewport; final state at once without script or with reduced motion.
+- Wave diagram under the ticket tree: wave 1 lands #42, then #43, #44 and #45 fan out and merge as wave 2; the lines draw in with the scroll.
+- Fireflies: 8 to 12 amber dots over the dusk painting, only in the held state.
+
+## 7. Code blocks
+
+Modelled on animated-fluent-emojis (`apps/site/src/components/CodeBlock.tsx`, `src/highlight/code-config.ts`, its ADR 0020): highlighting at build time with Expressive Code, nothing highlights in the browser (CSP). One config shared by the Home and Starlight: `github-light` and `github-dark` token colours, 12 px radius, 1 px border, surface body, 13 px JetBrains Mono, no shadow, no line numbers for shell. The install block has a 40 px header with pill tabs ("Plugin", "From a clone", choice remembered) and an icon copy button; single commands are one row with the button at the right; output blocks carry a muted language label. Copy cross-fades the icon to a check for 2 s with `aria-label` "Copied" and a polite status, and adds a failed state AFE lacks. Highlighted: bash commands and the JSON of `emet status`; the banner and the spec and ticket tree are terminal output and keep plain tonal accents.
 
 ## Pictures
 
