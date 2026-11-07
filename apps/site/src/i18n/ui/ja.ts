@@ -19,7 +19,7 @@ export const ja = {
   },
   hero: {
     name: "emet",
-    lineOne: "仕様からマージまで、",
+    lineOne: "仕様からマージへ、",
     lineTwo: "承認は一度だけ。",
     sentence: "Claude Code のプラグイン。アイデアからマージ済みの変更まで、承認は一度だけ。",
     install: "emet をインストール",

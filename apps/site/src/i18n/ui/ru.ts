@@ -19,8 +19,8 @@ export const ru = {
   },
   hero: {
     name: "emet",
-    lineOne: "От спецификации до мержа",
-    lineTwo: "с одним одобрением.",
+    lineOne: "От идеи до мержа,",
+    lineTwo: "одно одобрение.",
     sentence: "Плагин для Claude Code. От идеи до слитого изменения с одним одобрением.",
     install: "Установить emet",
     readDocs: "Читать документацию",
