@@ -1,17 +1,37 @@
 ---
 /**
- * Website footer: one quiet block with the plugin line, the Anthropic notice
- * and the AI disclosure of the paintings.
+ * Website footer: the quiet plugin line, a row of project links, the language
+ * links, then the fine line with the author credit and the AI disclosure of
+ * the paintings. Language links keep the visitor on the current page.
  */
-import { localePath, type Locale } from "../../i18n/locales";
+// oxlint-disable-next-line import/no-unassigned-import -- Astro bundles a stylesheet imported for its side effect
+import "../../styles/site.css";
+
+import { englishPathOf } from "../../docs/route";
+import { LOCALES, LOCALE_NAMES, localePath, type Locale } from "../../i18n/locales";
 import { en } from "../../i18n/ui/en";
 
 interface Props {
   locale: Locale;
   strings?: typeof en.footer;
+  currentPath?: string;
 }
 
-const { locale, strings = en.footer } = Astro.props;
+const REPOSITORY_URL = "https://github.com/andryorelabs/emet";
+const AUTHOR_URL = "https://github.com/AndryOre";
+
+const { locale, strings = en.footer, currentPath } = Astro.props;
+const pagePath = currentPath ?? englishPathOf(Astro.url.pathname, locale);
+
+const links = [
+  { href: localePath(locale, "/docs/"), label: strings.docs },
+  { href: localePath(locale, "/docs/whats-new/"), label: strings.whatsNew },
+  { href: REPOSITORY_URL, label: strings.github },
+  { href: `${REPOSITORY_URL}/actions/workflows/ci.yml`, label: strings.ci },
+  { href: "https://www.bestpractices.dev/projects/16352", label: strings.openssf },
+  { href: `${REPOSITORY_URL}/blob/main/.github/SECURITY.md`, label: strings.security },
+  { href: `${REPOSITORY_URL}/blob/main/CONTRIBUTING.md`, label: strings.contributing },
+];
 ---
 
 <footer class="site-footer">
@@ -21,9 +41,23 @@ const { locale, strings = en.footer } = Astro.props;
     <span>{strings.notice}</span>
   </p>
   <nav class="footer-links">
-    <a href={localePath(locale, "/docs/")}>{strings.docs}</a>
-    <a href={localePath(locale, "/docs/whats-new/")}>{strings.whatsNew}</a>
-    <a href="https://github.com/andryorelabs/emet">{strings.github}</a>
+    {links.map((link) => <a href={link.href}>{link.label}</a>)}
   </nav>
-  <p class="footer-fine">{strings.legal} {strings.paintings}</p>
+  <nav class="footer-langs" aria-label={strings.languages}>
+    {
+      LOCALES.map((target) => (
+        <a
+          href={localePath(target, pagePath)}
+          hreflang={target}
+          lang={target}
+          aria-current={target === locale ? "true" : undefined}
+        >
+          {LOCALE_NAMES[target]}
+        </a>
+      ))
+    }
+  </nav>
+  <p class="footer-fine">
+    {strings.legal} <a href={AUTHOR_URL} rel="author">{strings.builtBy}</a>. {strings.paintings}
+  </p>
 </footer>
