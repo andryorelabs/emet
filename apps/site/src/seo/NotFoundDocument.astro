@@ -27,11 +27,11 @@ const copy = NOT_FOUND_STRINGS[locale];
 
 <BaseLayout title={`${copy.title} emet`} description={copy.text} locale={locale}>
   <meta slot="head" name="robots" content="noindex" />
-  <SiteHeader locale={locale} currentPath="/" strings={strings.nav} />
-  <main>
-    <section class="closing" aria-labelledby="not-found-title">
+  <SiteHeader variant="flow" locale={locale} currentPath="/" strings={strings.nav} />
+  <main class="not-found-page">
+    <section class="not-found" aria-labelledby="not-found-title">
       <Picture
-        class="closing-picture"
+        class="not-found-picture"
         src={bookendImage}
         formats={["avif", "webp"]}
         fallbackFormat="webp"
@@ -42,11 +42,13 @@ const copy = NOT_FOUND_STRINGS[locale];
         loading="lazy"
         decoding="async"
       />
-      <div class="closing-copy">
+      <div class="not-found-copy">
         <h1 id="not-found-title">{copy.title}</h1>
         <p>{copy.text}</p>
-        <a class="button" href={localePath(locale, "/")}>{copy.homeAction}</a>
-        <a href={localePath(locale, "/docs/")}>{copy.docsAction}</a>
+        <div class="not-found-actions">
+          <a class="button" href={localePath(locale, "/")}>{copy.homeAction}</a>
+          <a href={localePath(locale, "/docs/")}>{copy.docsAction}</a>
+        </div>
       </div>
     </section>
   </main>

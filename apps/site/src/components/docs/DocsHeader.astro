@@ -1,6 +1,7 @@
 ---
 /**
- * Docs header: the Website's own header, then the Pagefind search button.
+ * Docs header: the Website's own header in its docs variant, with the
+ * Pagefind search field before the language pill.
  */
 import { englishPathOf, resolveLocale } from "../../docs/route";
 import { getStrings } from "../../i18n/ui";
@@ -13,6 +14,12 @@ const currentPath = englishPathOf(Astro.url.pathname, locale);
 ---
 
 <div class="docs-header">
-  <SiteHeader locale={locale} currentPath={currentPath} strings={getStrings(locale).nav} />
-  <DocsSearch />
+  <SiteHeader
+    variant="docs"
+    locale={locale}
+    currentPath={currentPath}
+    strings={getStrings(locale).nav}
+  >
+    <DocsSearch slot="search" />
+  </SiteHeader>
 </div>

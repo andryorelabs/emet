@@ -20,7 +20,7 @@ const { about } = strings;
     <h2 id="about-title" data-reveal="heading"><span class="reveal-line">{about.heading}</span></h2>
     <p>{about.lineOne}</p>
     <p>{about.lineTwo}</p>
-    <p class="signature">{about.signature}</p>
+    <p class="signature">AndryOre<small>{about.role}</small></p>
   </div>
   <figure class="portrait">
     <Picture
@@ -33,5 +33,6 @@ const { about } = strings;
       loading="lazy"
       decoding="async"
     />
+    <figcaption>{about.caption}</figcaption>
   </figure>
 </section>

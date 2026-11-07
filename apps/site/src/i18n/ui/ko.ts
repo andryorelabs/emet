@@ -61,7 +61,8 @@ export const ko = {
     heading: "이름이 emet인 이유",
     lineOne: "히브리어로 진리라는 뜻입니다. 골렘은 그 말로 생명을 얻은 점토입니다.",
     lineTwo: "글자 하나를 지우면 멈춥니다. 여기서는 플래그가 있으면 아무것도 머지되지 않습니다.",
-    signature: "AndryOre, 메인테이너",
+    caption: "그려진 emet의 골렘.",
+    role: "메인테이너",
     alt: "풀이 덮인 언덕 위 emet 골렘을 가까이서 그린 그림. 골든아워의 빛, 이끼와 점토의 질감, 머리 위의 작은 새싹.",
   },
   closing: {
