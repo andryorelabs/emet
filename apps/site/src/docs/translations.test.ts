@@ -93,6 +93,14 @@ describe("published translations", () => {
     expect(TRANSLATED_LOCALES.length).toBeGreaterThan(0);
   });
 
+  test("the locales with landed translations keep their folders", () => {
+    const landed: string[] = ["es", "pt-BR", "fr", "de", "it", "ru"];
+    const present: string[] = [...TRANSLATED_LOCALES];
+    for (const locale of landed) {
+      expect(present).toContain(locale);
+    }
+  });
+
   for (const locale of TRANSLATED_LOCALES) {
     for (const source of PUBLISHED_SOURCES) {
       test(`${locale}/${source.id} is translated and current`, () => {

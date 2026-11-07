@@ -16,6 +16,7 @@ import {
 } from "./policy";
 
 const REVEAL_STAGGER_MS = 60;
+const REVEAL_STAGGER_STEPS = 4;
 const REVEAL_CLEANUP_MS = 700;
 const SMOOTH_LERP = 0.1;
 
@@ -38,9 +39,9 @@ function revealNow(target: HTMLElement, delayMs: number): void {
   }
 }
 
-function observeReveals(root: ParentNode): void {
+function observeReveals(root: ParentNode): () => void {
   const targets = [...root.querySelectorAll<HTMLElement>("[data-reveal]")];
-  if (targets.length === 0) return;
+  if (targets.length === 0) return () => undefined;
   const observer = new IntersectionObserver(
     (entries) => {
       let order = 0;
@@ -49,7 +50,10 @@ function observeReveals(root: ParentNode): void {
         if (!(target instanceof HTMLElement)) continue;
         const passed = !entry.isIntersecting && entry.boundingClientRect.bottom < 0;
         if (!entry.isIntersecting && !passed) continue;
-        revealNow(target, passed ? 0 : order * REVEAL_STAGGER_MS);
+        revealNow(
+          target,
+          passed ? 0 : Math.min(order, REVEAL_STAGGER_STEPS - 1) * REVEAL_STAGGER_MS,
+        );
         order += passed ? 0 : 1;
         observer.unobserve(target);
       }
@@ -57,6 +61,7 @@ function observeReveals(root: ParentNode): void {
     { rootMargin: "0px 0px -10% 0px", threshold: 0 },
   );
   for (const target of targets) observer.observe(target);
+  return () => observer.disconnect();
 }
 
 function trackScrollProgress(root: ParentNode): () => void {
@@ -117,7 +122,7 @@ export function initMotion(root: ParentNode): void {
     if (!policy.enabled) return;
     const html = document.documentElement;
     html.dataset.motion = "ready";
-    observeReveals(root);
+    stops.push(observeReveals(root));
     if (policy.scrollFallback) {
       html.dataset.scrollFallback = "";
       stops.push(trackScrollProgress(root));
