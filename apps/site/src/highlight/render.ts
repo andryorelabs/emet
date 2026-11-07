@@ -3,6 +3,20 @@ import { toHtml } from "hast-util-to-html";
 
 import { sharedCodeConfig } from "./code-config";
 
+/** One highlighted block: its markup and the CSS rules its token classes need. */
+export interface RenderedCode {
+  html: string;
+  css: string;
+}
+
+interface TreeNode {
+  type: string;
+  properties?: Record<string, unknown>;
+  children?: TreeNode[];
+}
+
+const TOKEN_STYLE = /^--0:\s*(#[0-9a-fA-F]+);\s*--1:\s*(#[0-9a-fA-F]+);?$/;
+
 let enginePromise: Promise<ExpressiveCode> | undefined;
 
 async function createEngine(): Promise<ExpressiveCode> {
@@ -16,17 +30,61 @@ async function createEngine(): Promise<ExpressiveCode> {
   });
 }
 
+function colourFragment(colour: string): string {
+  return colour.slice(1).toLowerCase();
+}
+
 /**
- * Highlights code at build time with the shared Expressive Code config. The
- * page ships no highlighter; every token carries its light and dark colours as
- * `--0` and `--1` custom properties that `code.css` picks from.
+ * Replaces every token `style` attribute with a class, because the page's
+ * hash-based CSP drops inline style attributes.
+ * @param node - The rendered tree, changed in place.
+ * @param rules - Collects one CSS rule per distinct colour pair, by class name.
+ */
+function classifyTokens(node: TreeNode, rules: Map<string, string>): void {
+  if (node.type === "element" && node.properties) {
+    const style = node.properties["style"];
+    const match = typeof style === "string" ? TOKEN_STYLE.exec(style) : null;
+    if (match?.[1] !== undefined && match[2] !== undefined) {
+      const className = `tk-${colourFragment(match[1])}-${colourFragment(match[2])}`;
+      rules.set(className, `.${className}{color:light-dark(${match[1]},${match[2]})}`);
+      const existing: unknown = node.properties["className"];
+      delete node.properties["style"];
+      node.properties["className"] = [
+        ...(Array.isArray(existing)
+          ? existing.filter((name): name is string => typeof name === "string")
+          : []),
+        className,
+      ];
+    }
+  }
+  if (node.children) {
+    for (const child of node.children) classifyTokens(child, rules);
+  }
+}
+
+/**
+ * Highlights code at build time and returns the markup with the stylesheet its
+ * token classes need. Token colours are classes holding `light-dark()`, never
+ * inline style attributes.
+ * @param code - The plain source text.
+ * @param lang - The language id, such as `bash` or `json`.
+ * @returns The markup of one frameless block and its CSS rules.
+ */
+export async function renderCodeWithStyles(code: string, lang: string): Promise<RenderedCode> {
+  enginePromise ??= createEngine();
+  const engine = await enginePromise;
+  const { renderedGroupAst } = await engine.render({ code, language: lang });
+  const rules = new Map<string, string>();
+  classifyTokens(renderedGroupAst, rules);
+  return { html: toHtml(renderedGroupAst), css: [...rules.values()].join("") };
+}
+
+/**
+ * Highlights code at build time with the shared Expressive Code config.
  * @param code - The plain source text.
  * @param lang - The language id, such as `bash` or `json`; unknown ids render as plain text.
  * @returns The highlighted markup of one code block, without a frame.
  */
 export async function renderCode(code: string, lang: string): Promise<string> {
-  enginePromise ??= createEngine();
-  const engine = await enginePromise;
-  const { renderedGroupAst } = await engine.render({ code, language: lang });
-  return toHtml(renderedGroupAst);
+  return (await renderCodeWithStyles(code, lang)).html;
 }
