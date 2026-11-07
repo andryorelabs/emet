@@ -39,9 +39,9 @@ export const en = {
   showcase: {
     heading: "The wave merges",
     headingHeld: "The wave waits",
-    status: "Wave 1 reviewed. CI passed. Merged, 4 tickets closed.",
-    statusHeld: "Wave 1 held: one ticket flagged. Nothing merged.",
-    flag: "Flag ticket #44",
+    status: "Wave 2 reviewed. CI passed. Merged, 3 tickets closed.",
+    statusHeld: "Wave 2 held: one ticket flagged. Nothing merged.",
+    flag: "Flag ticket #255",
   },
   features: {
     heading: "What a run guards",

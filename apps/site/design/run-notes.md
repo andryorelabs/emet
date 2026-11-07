@@ -60,7 +60,7 @@ On this page, **the erased letter of emet** becomes **the control that holds a w
 
 Competitor test: another orchestrator cannot print this sentence, because its name does not stop when a letter is erased.
 
-The one live thing, in the showcase: flag ticket #44 and the wave holds. The painting of the valley cross-fades from day to dusk (opacity only, 600ms), the "e" of emet fades to "met", the status line reads "Wave 1 held: one ticket flagged. Nothing merged.", the switch turns from moss to lamp amber and the heading word goes from "merges" to "waits". It works from the keyboard and on a phone. Without script the day painting stays and the status line prints both outcomes as text; with reduced motion the paintings swap without the fade.
+The one live thing, in the showcase: flag ticket #255 and the wave holds. The painting of the valley cross-fades from day to dusk (opacity only, 600ms), the "e" of emet fades to "met", the status line reads "Wave 2 held: one ticket flagged. Nothing merged.", the switch turns from moss to lamp amber and the heading word goes from "merges" to "waits". It works from the keyboard and on a phone. Without script the day painting stays and the status line prints both outcomes as text; with reduced motion the paintings swap without the fade.
 
 Scenes: none dealt.
 
@@ -68,7 +68,7 @@ Scenes: none dealt.
 
 Rule: minimum words, because people do not read. No paragraph over two short lines; the commands and real output carry the story. Verbatim from `docs/brand/copy.md`: the tagline, the notice and the six claim titles. Every other line shortens the "Claims checked" table; no new claims.
 
-Sample content (spec 41, tickets, PR number, branch names) is invented to show the product at density and must be confirmed. Real strings come from `docs/brand/copy.md`, `docs/brand/terminal/banner.txt` and `emet status --help`.
+Sample content is real, from the Website run (spec #252, wave 2 tickets #254 to #256, PR #266). Real strings come from `docs/brand/copy.md`, `docs/brand/terminal/banner.txt` and `emet status --help`.
 
 - Hero h1: Spec to merge, / on one approval. (two authored lines, centred). Sentence: A plugin for Claude Code. Idea to merged change, one approval.
 - Primary action: Install emet. Text link: Read the docs.
@@ -97,7 +97,7 @@ Motion graphics (subtle, decorative, `aria-hidden`, SVG and CSS only, under 6 KB
 
 - The valley breathes: slow cloud and mist drifts (60 to 90 s), river shimmer, the golem's lamp eyes pulse (4 to 6 s) and blink about every nine seconds; stronger at dusk.
 - Typed terminal: each exchange types its command and reveals its output line by line on entering the viewport; final state at once without script or with reduced motion.
-- Wave diagram under the ticket tree: wave 1 lands #42, then #43, #44 and #45 fan out and merge as wave 2; the lines draw in with the scroll.
+- Wave diagram under the ticket tree: wave 1 lands #253, then #254, #255 and #256 fan out and merge as wave 2; the lines draw in with the scroll.
 - Fireflies: 8 to 12 amber dots over the dusk painting, only in the held state.
 
 ## 7. Code blocks
@@ -125,12 +125,12 @@ Deviations from the canvas, recorded as built:
 - The wave diagram has an empty `data-slot="wave-diagram"` under the ticket tree, filled by the motion ticket.
 - `held.webp` is not copied into the app yet; the showcase owner brings it.
 - Pictures are served by `astro:assets` as AVIF and WebP at 640, 1024 and 1672 (the portrait at 640 and 1024); the hero AVIF at 1672 is about 107 KB. The hero is preloaded with `fetchpriority="high"`, the rest are lazy.
-- Sample content (spec 41, tickets 42 to 45, PR 46, `emet41w1`) is invented and must be confirmed. The `/docs/whats-new/` link path is a guess until the docs ticket fixes it.
+- Sample content (spec 252, tickets 254 to 256, PR 266, `emet252w2`) is real, from the Website run. The `/docs/whats-new/` link path is a guess until the docs ticket fixes it.
 - Gate on the production build: 0 FAIL other than the motion count owned by the motion ticket; WARN for missing footage is defended (no honest clip of a CLI tool; the paintings are the pictures).
 
 ## Build notes (showcase ticket)
 
 - The showcase is full-bleed 16:9 (max 828px, 720px tall at 390px) with the hero painting as day and `held.webp` as dusk, both from the design folder through `astro:assets`; the dusk srcset sits in `data-srcset` and is set on first interaction or idle.
 - The wordmark "emet" sits under the switch, not above the heading, so the inspector does not read it as an eyebrow; its "e" fades to 20% when held.
-- The control label "Flag ticket #44" is in the `showcase` group of `en.ts` and every locale module.
+- The control label "Flag ticket #255" is in the `showcase` group of `en.ts` and every locale module.
 - Without script the switch is hidden and a `noscript` line prints the held status next to the merged one.

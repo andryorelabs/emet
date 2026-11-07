@@ -39,9 +39,9 @@ export const ko = {
   showcase: {
     heading: "웨이브가 머지됩니다",
     headingHeld: "웨이브가 대기합니다",
-    status: "웨이브 1 리뷰 완료. CI 통과. 머지됨, 티켓 4개 종료.",
-    statusHeld: "웨이브 1 보류: 티켓 1개에 플래그. 머지된 것은 없습니다.",
-    flag: "티켓 #44 표시",
+    status: "웨이브 2 리뷰 완료. CI 통과. 머지됨, 티켓 3개 종료.",
+    statusHeld: "웨이브 2 보류: 티켓 1개에 플래그. 머지된 것은 없습니다.",
+    flag: "티켓 #255 표시",
   },
   features: {
     heading: "실행이 지키는 것",

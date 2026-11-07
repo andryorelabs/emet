@@ -37,20 +37,20 @@ const banner = [
 ].join("\n");
 
 const tickets = [
-  "Spec 41  dark mode for settings",
-  "  S1  theme tokens   S2  settings toggle   S3  persisted choice",
+  "Spec 252  the Website",
+  "  S1  monorepo   S2  site app   S3  home page",
   "",
-  "  #42  theme tokens         wave 1",
-  "  #43  settings toggle      wave 2  blocked by #42",
-  "  #44  persist the choice   wave 2  blocked by #42",
-  "  #45  docs and captures    wave 2  blocked by #42",
+  "  #253  monorepo scaffold   wave 1",
+  "  #254  home layout         wave 2  blocked by #253",
+  "  #255  code blocks         wave 2  blocked by #253",
+  "  #256  docker and deploy   wave 2  blocked by #253",
 ].join("\n");
 
 const statusJson = JSON.stringify(
   {
     state: "ready",
-    spec: "41",
-    waves: [{ runId: "emet41w1", wave: 1, state: "ready", workers: 1 }],
+    spec: "252",
+    waves: [{ runId: "emet252w2", wave: 2, state: "ready", workers: 3 }],
   },
   null,
   2,
@@ -104,9 +104,9 @@ const statusJson = JSON.stringify(
       <div class="fragment pr-card" data-ui data-reveal="item">
         <p class="pr-title">
           <span class="pr-state">Merged</span>
-          Wave 1: theme tokens
+          Wave 2: home layout
         </p>
-        <p class="pr-meta">Closes #42 &middot; checks passing &middot; reviewed</p>
+        <p class="pr-meta">Closes #254 &middot; checks passing &middot; reviewed</p>
       </div>
     </article>
   </div>

@@ -19,7 +19,7 @@ export const de = {
   },
   hero: {
     name: "emet",
-    lineOne: "Von der Spezifikation zum Merge,",
+    lineOne: "Von Idee zu Merge,",
     lineTwo: "mit einer Freigabe.",
     sentence:
       "Ein Plugin für Claude Code. Von der Idee zur gemergten Änderung, mit einer Freigabe.",
@@ -40,9 +40,9 @@ export const de = {
   showcase: {
     heading: "Die Welle wird gemergt",
     headingHeld: "Die Welle wartet",
-    status: "Welle 1 geprüft. CI bestanden. Gemergt, 4 Tickets geschlossen.",
-    statusHeld: "Welle 1 angehalten: ein Ticket markiert. Nichts gemergt.",
-    flag: "Ticket #44 markieren",
+    status: "Welle 2 geprüft. CI bestanden. Gemergt, 3 Tickets geschlossen.",
+    statusHeld: "Welle 2 angehalten: ein Ticket markiert. Nichts gemergt.",
+    flag: "Ticket #255 markieren",
   },
   features: {
     heading: "Was ein Lauf absichert",
