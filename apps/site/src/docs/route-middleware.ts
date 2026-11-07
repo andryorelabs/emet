@@ -15,7 +15,9 @@ export const onRequest = defineRouteMiddleware((context) => {
   const { seoTitle, title, translationStatus } = route.entry.data;
   const { locale, path } = splitLocalePath(context.url.pathname);
   const description = route.entry.data.description ?? "";
-  const swapped = applySeoTitle(route.head, title, seoTitle);
+  const swapped = applySeoTitle(route.head, title, seoTitle).filter(
+    (entry) => entry.attrs?.["property"] !== "og:locale",
+  );
   const share = shareMetaTags(locale, path, seoTitle ?? title, description);
   route.head = mergeMissingTags(swapped, [...share, ...installLinkTags()]);
   if (translationStatus === "translated") return;
