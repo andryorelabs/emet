@@ -6,6 +6,8 @@ import { collectStarlightInlineStyleHashes } from "./starlight-inline-hashes";
 
 const SITE_ROOT = path.resolve(import.meta.dir, "../..");
 const STARTUP_TIMEOUT_MS = 90_000;
+const FETCH_ATTEMPTS = 60;
+const FETCH_RETRY_DELAY_MS = 1_000;
 const DEV_SERVER_URL = /http:\/\/localhost:(?<port>\d+)/;
 const STYLE_ATTRIBUTE = /\sstyle="(?<value>[^"]*)"/g;
 const DOCS_LINK = /href="(?<path>\/docs\/[^"#?]*)"/g;
@@ -29,14 +31,18 @@ async function readOrigin(stream: ReadableStream<Uint8Array>): Promise<string> {
 }
 
 /**
- * Fetches a rendered page of the dev server.
+ * Fetches a rendered page of the dev server, retrying while it is still warming up.
  * @param pagePath - The absolute path of the page.
+ * @param attemptsLeft - How many tries remain before the failure is reported.
  * @returns The page HTML.
  */
-async function fetchPage(pagePath: string): Promise<string> {
-  const response = await fetch(`${origin}${pagePath}`);
-  expect(response.status).toBe(200);
-  return response.text();
+async function fetchPage(pagePath: string, attemptsLeft = FETCH_ATTEMPTS): Promise<string> {
+  const response = await fetch(`${origin}${pagePath}`).catch(() => undefined);
+  if (response?.status === 200) return response.text();
+  if (attemptsLeft <= 1)
+    throw new Error(`${pagePath} answered ${response?.status ?? "no response"}`);
+  await Bun.sleep(FETCH_RETRY_DELAY_MS);
+  return fetchPage(pagePath, attemptsLeft - 1);
 }
 
 /**
@@ -87,5 +93,5 @@ describe("inline style attributes on the docs pages", () => {
         .map((value) => `${page}: ${value}`),
     );
     expect([...new Set(uncovered)]).toEqual([]);
-  }, 120_000);
+  }, 180_000);
 });
