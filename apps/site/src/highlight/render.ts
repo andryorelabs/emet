@@ -2,6 +2,7 @@ import { ExpressiveCode, loadShikiTheme } from "expressive-code";
 import { toHtml } from "hast-util-to-html";
 
 import { sharedCodeConfig } from "./code-config";
+import { parseTokenStyle, tokenClasses } from "./token-style";
 
 /** One highlighted block: its markup and the CSS rules its token classes need. */
 export interface RenderedCode {
@@ -14,8 +15,6 @@ interface TreeNode {
   properties?: Record<string, unknown>;
   children?: TreeNode[];
 }
-
-const TOKEN_STYLE = /^--0:\s*(#[0-9a-fA-F]+);\s*--1:\s*(#[0-9a-fA-F]+);?$/;
 
 let enginePromise: Promise<ExpressiveCode> | undefined;
 
@@ -30,10 +29,6 @@ async function createEngine(): Promise<ExpressiveCode> {
   });
 }
 
-function colourFragment(colour: string): string {
-  return colour.slice(1).toLowerCase();
-}
-
 /**
  * Replaces every token `style` attribute with a class, because the page's
  * hash-based CSP drops inline style attributes.
@@ -43,17 +38,17 @@ function colourFragment(colour: string): string {
 function classifyTokens(node: TreeNode, rules: Map<string, string>): void {
   if (node.type === "element" && node.properties) {
     const style = node.properties["style"];
-    const match = typeof style === "string" ? TOKEN_STYLE.exec(style) : null;
-    if (match?.[1] !== undefined && match[2] !== undefined) {
-      const className = `tk-${colourFragment(match[1])}-${colourFragment(match[2])}`;
-      rules.set(className, `.${className}{color:light-dark(${match[1]},${match[2]})}`);
+    const parsed = typeof style === "string" ? parseTokenStyle(style) : null;
+    if (parsed !== null) {
+      const classes = tokenClasses(parsed);
+      for (const { name, rule } of classes) rules.set(name, rule);
       const existing: unknown = node.properties["className"];
       delete node.properties["style"];
       node.properties["className"] = [
         ...(Array.isArray(existing)
           ? existing.filter((name): name is string => typeof name === "string")
           : []),
-        className,
+        ...classes.map(({ name }) => name),
       ];
     }
   }

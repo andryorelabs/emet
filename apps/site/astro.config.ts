@@ -1,12 +1,12 @@
 import starlight from "@astrojs/starlight";
 import tailwindcss from "@tailwindcss/vite";
-import type { AstroIntegration } from "astro";
 import { defineConfig } from "astro/config";
 
 import { codeColorsPlugin } from "./src/docs/code-colors-plugin";
 import { sharedCodeConfig } from "./src/highlight/code-config";
 import { collectStarlightInlineScriptHashes } from "./src/docs/starlight-inline-hashes";
 import { buildSidebar } from "./src/docs/sidebar";
+import { sitemapOptOut } from "./src/seo/sitemap-opt-out";
 import {
   DEFAULT_LOCALE,
   LOCALE_NAMES,
@@ -28,12 +28,6 @@ const docsRedirects = Object.fromEntries(
     localePath(locale, "/docs/guide/getting-started/"),
   ]),
 );
-
-/**
- * Occupies the `@astrojs/sitemap` slot so Starlight does not add its own
- * integration: `src/pages/sitemap.xml.ts` is the only sitemap.
- */
-const sitemapOptOut: AstroIntegration = { name: "@astrojs/sitemap", hooks: {} };
 
 export default defineConfig({
   site: "https://emet.andryore.dev",

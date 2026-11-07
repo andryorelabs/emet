@@ -1,7 +1,7 @@
 import { renderCodeWithStyles } from "../highlight/render";
+import { parseTokenStyle, tokenClasses } from "../highlight/token-style";
 
-const TOKEN_STYLE_ATTRIBUTE =
-  /<span style="--0:\s*#([0-9a-fA-F]+);\s*--1:\s*#([0-9a-fA-F]+);?\s*">/g;
+const TOKEN_STYLE_ATTRIBUTE = /<span style="([^"]*)">/g;
 const FENCED_BLOCK = /^(?<fence>```|~~~)(?<info>[^\n]*)\n(?<code>[\s\S]*?)\n\k<fence>[ \t]*$/gm;
 
 /**
@@ -14,18 +14,20 @@ interface FencedBlock {
 
 /**
  * Replaces the inline `style="--0:#a;--1:#b"` Expressive Code puts on every
- * token with a `tk-a-b` class, because the site's hash-based CSP drops inline
+ * token with a `tk-a-b` class (plus `tk-fw-*`, `tk-fs-*` and `tk-td-*` for emphasis), because the site's hash-based CSP drops inline
  * style attributes. The class names match `renderCodeWithStyles`, which writes
  * the rules (see `buildCodeColorsCss`).
  * @param html - Rendered markdown containing Expressive Code output.
  * @returns The same markup with no token style attributes.
  */
 export function classifyTokenStyles(html: string): string {
-  return html.replaceAll(
-    TOKEN_STYLE_ATTRIBUTE,
-    (_whole, light: string, dark: string) =>
-      `<span class="tk-${light.toLowerCase()}-${dark.toLowerCase()}">`,
-  );
+  return html.replaceAll(TOKEN_STYLE_ATTRIBUTE, (whole, style: string) => {
+    const parsed = parseTokenStyle(style);
+    if (parsed === null) return whole;
+    return `<span class="${tokenClasses(parsed)
+      .map(({ name }) => name)
+      .join(" ")}">`;
+  });
 }
 
 /**
