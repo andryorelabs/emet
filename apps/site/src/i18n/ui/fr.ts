@@ -63,7 +63,8 @@ export const fr = {
     lineOne: "Vérité en hébreu. Un golem est de l'argile animée par ce mot.",
     lineTwo:
       "Effacez une lettre et il s'arrête. Ici, rien n'est fusionné quand quelque chose est signalé.",
-    signature: "AndryOre, Mainteneur",
+    caption: "Le golem d'emet, peint.",
+    role: "Mainteneur",
     alt: "Un portrait peint en gros plan du golem emet sur sa butte herbeuse à la lumière de l'heure dorée, texture de mousse et d'argile, une petite pousse sur la tête.",
   },
   closing: {

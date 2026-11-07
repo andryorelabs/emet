@@ -63,7 +63,8 @@ export const ptBR = {
     heading: "Por que se chama emet",
     lineOne: "Verdade em hebraico. Um golem é argila trazida à vida por essa palavra.",
     lineTwo: "Apague uma letra e ele para. Aqui, nada é integrado quando algo está sinalizado.",
-    signature: "AndryOre, Mantenedor",
+    caption: "O golem do emet, pintado.",
+    role: "Mantenedor",
     alt: "Um retrato pintado de perto do golem emet em seu outeiro gramado na luz da hora dourada, com textura de musgo e argila e um pequeno broto na cabeça.",
   },
   closing: {

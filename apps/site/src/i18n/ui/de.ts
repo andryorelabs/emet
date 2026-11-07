@@ -66,7 +66,8 @@ export const de = {
     lineOne: "Hebräisch für Wahrheit. Ein Golem ist Lehm, den dieses Wort zum Leben erweckt.",
     lineTwo:
       "Lösche einen Buchstaben und er hält an. Hier wird nichts gemergt, wenn etwas markiert ist.",
-    signature: "AndryOre, Maintainer",
+    caption: "Der emet-Golem, gemalt.",
+    role: "Maintainer",
     alt: "Ein gemaltes Nahporträt des emet-Golems auf seiner grasigen Anhöhe im Licht der goldenen Stunde, mit Moos- und Lehmtextur und einem kleinen Spross auf dem Kopf.",
   },
   closing: {

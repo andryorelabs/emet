@@ -20,18 +20,19 @@ const { about } = strings;
     <h2 id="about-title" data-reveal="heading"><span class="reveal-line">{about.heading}</span></h2>
     <p>{about.lineOne}</p>
     <p>{about.lineTwo}</p>
-    <p class="signature">{about.signature}</p>
+    <p class="signature">AndryOre<small>{about.role}</small></p>
   </div>
   <figure class="portrait">
     <Picture
       src={portraitImage}
       formats={["avif", "webp"]}
-    fallbackFormat="webp"
+      fallbackFormat="webp"
       widths={[640, 1024]}
-      sizes="(min-width: 960px) 40vw, 100vw"
+      sizes="(min-width: 1001px) 420px, 100vw"
       alt={about.alt}
       loading="lazy"
       decoding="async"
     />
+    <figcaption>{about.caption}</figcaption>
   </figure>
 </section>

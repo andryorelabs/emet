@@ -66,7 +66,8 @@ export const it = {
     lineOne: "In ebraico significa verità. Un golem è argilla portata in vita da quella parola.",
     lineTwo:
       "Cancella una lettera e si ferma. Qui nulla viene integrato quando qualcosa è segnalato.",
-    signature: "AndryOre, Maintainer",
+    caption: "Il golem di emet, dipinto.",
+    role: "Maintainer",
     alt: "Un ritratto dipinto ravvicinato del golem emet sul suo rialzo erboso nella luce dell'ora d'oro, con texture di muschio e argilla e un piccolo germoglio sulla testa.",
   },
   closing: {
