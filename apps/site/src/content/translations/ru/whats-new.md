@@ -2,7 +2,7 @@
 title: Что нового
 description: Примечания к выпускам emet: что изменилось в каждой версии.
 seoTitle: "Что нового в emet: примечания к выпускам"
-sourceHash: 72ff2a628f77d8e9
+sourceHash: a633f8ebdf12e2a7
 ---
 
 ## 0.4.0

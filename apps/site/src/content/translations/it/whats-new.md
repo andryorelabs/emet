@@ -2,7 +2,7 @@
 title: Novità
 description: Note di rilascio di emet: cosa è cambiato in ogni versione.
 seoTitle: "Novità di emet: note di rilascio"
-sourceHash: 72ff2a628f77d8e9
+sourceHash: a633f8ebdf12e2a7
 ---
 
 ## 0.4.0

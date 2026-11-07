@@ -2,7 +2,7 @@
 title: Neuigkeiten
 description: Release Notes für emet: was sich in jeder Version geändert hat.
 seoTitle: "Neuigkeiten in emet: Release Notes"
-sourceHash: 72ff2a628f77d8e9
+sourceHash: a633f8ebdf12e2a7
 ---
 
 ## 0.4.0
