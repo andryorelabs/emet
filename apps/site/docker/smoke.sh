@@ -37,6 +37,11 @@ for path in /nope/ /es/nope/ /docs/nope/; do
 done
 grep -q '<html' <<<"$(curl -s "$base/nope/")" || fail "the 404 has no page body"
 [ "$(header_of cache-control "$base/nope/")" = no-cache ] || fail "the 404 lacks no-cache"
+grep -q '<html[^>]*lang="en"' <<<"$(curl -s "$base/nope/")" || fail "/nope/ is not the English 404"
+grep -q '<html[^>]*lang="es"' <<<"$(curl -s "$base/es/nope/")" || fail "/es/nope/ is not the Spanish 404"
+grep -q '<html[^>]*lang="pt-BR"' <<<"$(curl -s "$base/pt-br/nope/")" || fail "/pt-br/nope/ is not the Brazilian Portuguese 404"
+[ "$(status "$base/es/404/")" = 200 ] || fail "/es/404/ is not 200"
+[ "$(header_of cache-control "$base/es/nope/")" = no-cache ] || fail "the locale 404 lacks no-cache"
 
 for pair in "/es:/es/" "/docs:/docs/" "/index.html:/" "/es/index.html:/es/" "/pt-BR/:/pt-br/" "/zh_CN/:/zh-cn/"; do
   from="${pair%%:*}"
