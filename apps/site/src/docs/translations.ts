@@ -48,6 +48,20 @@ export function hashSource(source: string): string {
   return createHash("sha256").update(source.replaceAll("\r\n", "\n")).digest("hex").slice(0, 16);
 }
 
+/**
+ * Hash that a translation of a published source records. A changelog hashes
+ * its rendered release notes, so edits to the unreleased section, which the
+ * page never shows, do not make translations stale.
+ * @param kind - The published source kind.
+ * @param source - The full text of the English source file.
+ * @returns The hash stored in `sourceHash`.
+ */
+export function hashPublishedSource(kind: "markdown" | "changelog", source: string): string {
+  return hashSource(
+    kind === "changelog" ? renderReleaseNotesMarkdown(parseChangelog(source)) : source,
+  );
+}
+
 function unquote(value: string): string {
   const quote = value[0];
   if (!(quote === '"' || quote === "'") || !value.endsWith(quote)) return value;
@@ -198,7 +212,7 @@ export function loadTranslation(
   }
   const text = readTranslation(locale, id);
   const translation = text === undefined ? undefined : parseTranslation(text, `${locale}/${id}.md`);
-  const status = classifyTranslation(translation, hashSource(english));
+  const status = classifyTranslation(translation, hashPublishedSource(source.kind, english));
   if (translation && status === "translated") {
     const { title, description, seoTitle } = translation;
     return {
