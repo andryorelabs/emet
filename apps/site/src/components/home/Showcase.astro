@@ -1,0 +1,23 @@
+---
+/**
+ * Placeholder slot for the showcase (the valley changes light when a ticket
+ * is flagged). The interactive version replaces this component; until then
+ * both outcomes are printed as text.
+ */
+import type { UiStrings } from "../../i18n/ui/en";
+
+interface Props {
+  strings: UiStrings;
+}
+
+const { strings } = Astro.props;
+const { showcase } = strings;
+---
+
+<section class="showcase" id="showcase" data-slot="showcase" aria-labelledby="showcase-title">
+  <div class="showcase-panel">
+    <h2 id="showcase-title">{showcase.heading}</h2>
+    <p>{showcase.status}</p>
+    <p>{showcase.statusHeld}</p>
+  </div>
+</section>
