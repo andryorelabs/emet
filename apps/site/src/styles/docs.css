@@ -396,7 +396,7 @@ site-search dialog {
   padding: 0;
   overflow: hidden;
   border: 1px solid var(--border);
-  border-radius: 12px;
+  border-radius: 10px;
   background: var(--bg);
   color: var(--text);
   box-shadow: 0 16px 48px rgb(0 0 0 / 0.3);

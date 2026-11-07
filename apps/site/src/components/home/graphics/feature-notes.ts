@@ -3,7 +3,7 @@
  * not describe, and on wide screens each note is re-levelled to the measured
  * top of its block so the pairs stay level when the copy changes.
  */
-const WIDE = "(min-width: 901px)";
+const WIDE = "(min-width: 1101px)";
 
 /** Sets each note's `top` from its block's measured offset, or clears it when stacked. */
 function levelNotes(section: Element): void {
