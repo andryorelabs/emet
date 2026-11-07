@@ -38,8 +38,15 @@ done
 grep -q '<html' <<<"$(curl -s "$base/nope/")" || fail "the 404 has no page body"
 [ "$(header_of cache-control "$base/nope/")" = no-cache ] || fail "the 404 lacks no-cache"
 grep -q '<html[^>]*lang="en"' <<<"$(curl -s "$base/nope/")" || fail "/nope/ is not the English 404"
-grep -q '<html[^>]*lang="es"' <<<"$(curl -s "$base/es/nope/")" || fail "/es/nope/ is not the Spanish 404"
-grep -q '<html[^>]*lang="pt-BR"' <<<"$(curl -s "$base/pt-br/nope/")" || fail "/pt-br/nope/ is not the Brazilian Portuguese 404"
+for pair in es:es de:de fr:fr it:it ja:ja ko:ko pt-br:pt-BR ru:ru zh-cn:zh-CN; do
+  segment="${pair%%:*}"
+  lang="${pair##*:}"
+  [ "$(status "$base/$segment/nope/")" = 404 ] || fail "/$segment/nope/ is not 404"
+  grep -q "<html[^>]*lang=\"$lang\"" <<<"$(curl -s "$base/$segment/nope/")" || fail "/$segment/nope/ is not the $lang 404"
+done
+[ "$(status "$base/sitemap-index.xml")" = 404 ] || fail "Starlight's sitemap index is built"
+[ "$(curl -s "$base/docs/guide/getting-started/" | grep -o 'rel="sitemap"[^>]*' | wc -l)" = 1 ] || fail "the docs head does not name exactly one sitemap"
+curl -s "$base/docs/guide/getting-started/" | grep -q 'rel="sitemap"[^>]*href="/sitemap.xml"' || fail "the docs head does not name /sitemap.xml"
 [ "$(status "$base/es/404/")" = 200 ] || fail "/es/404/ is not 200"
 [ "$(header_of cache-control "$base/es/nope/")" = no-cache ] || fail "the locale 404 lacks no-cache"
 
