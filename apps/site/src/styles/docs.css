@@ -198,3 +198,40 @@ site-search dialog {
 .expressive-code .ec-line .code span {
   color: light-dark(var(--0), var(--1));
 }
+
+/**
+ * Starlight writes `--depth` and `--sl-icon-size` as inline style attributes,
+ * which the hash-based CSP drops. These rules restore both from the markup's
+ * structure and classes, so no docs page needs an inline style for layout.
+ */
+:is(starlight-toc, mobile-starlight-toc) ul {
+  --depth: 0;
+}
+
+:is(starlight-toc, mobile-starlight-toc) ul ul {
+  --depth: 1;
+}
+
+:is(starlight-toc, mobile-starlight-toc) ul ul ul {
+  --depth: 2;
+}
+
+:is(starlight-toc, mobile-starlight-toc) ul ul ul ul {
+  --depth: 3;
+}
+
+.sidebar-content summary .caret {
+  font-size: 1.25rem;
+}
+
+mobile-starlight-toc .caret {
+  font-size: 1rem;
+}
+
+.meta a svg {
+  font-size: 1.2em;
+}
+
+.pagination-links a svg {
+  font-size: 1.5rem;
+}
