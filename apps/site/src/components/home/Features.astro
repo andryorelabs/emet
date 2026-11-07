@@ -11,35 +11,45 @@ interface Props {
 const { strings } = Astro.props;
 const { features } = strings;
 
-const report = [
-  "run emet252w2  wave 2 of 2",
-  "",
-  "approval   spec 252, 4 tickets   given once",
-  "workers    3 in 3 worktrees      done",
-  "review     wave 2                clear",
-  "flags      0                     none",
-  "ci         PR #266               passing",
-  "merge      develop               merged",
-].join("\n");
+const blocks = [
+  "approval  spec 252, 4 tickets\n          given once",
+  "workers   3 in 3 worktrees\n          done",
+  "review    wave 2\n          clear",
+  "flags     0\n          none",
+  "ci        PR #266\n          passing",
+  "merge     develop\n          merged",
+];
 ---
 
-<section class="features" aria-labelledby="features-title">
+<section class="features" aria-labelledby="features-title" data-features>
   <h2 id="features-title" data-reveal="heading">
     <span class="reveal-line">{features.heading}</span>
   </h2>
-  <div class="plate">
+  <div class="plate" data-plate>
     <div class="fragment" data-ui data-reveal="item">
-      <pre class="terminal">{report}</pre>
+      {blocks.map((block, index) => <pre class="terminal block" data-block={index}>{block}</pre>)}
     </div>
-    <ul class="notes">
-      {
-        features.notes.map((note) => (
-          <li data-reveal="item">
-            <h3>{note.title}</h3>
-            <p>{note.line}</p>
-          </li>
-        ))
-      }
-    </ul>
   </div>
+  <ul class="notes">
+    {
+      features.notes.map((note, index) => (
+        <li
+          class="note"
+          data-block={index}
+          data-side={index < 3 ? "left" : "right"}
+          data-reveal="item"
+          tabindex="0"
+        >
+          <h3>{note.title}</h3>
+          <p>{note.line}</p>
+        </li>
+      ))
+    }
+  </ul>
 </section>
+
+<script>
+  import { initFeatureNotes } from "./graphics/feature-notes";
+
+  initFeatureNotes(document);
+</script>

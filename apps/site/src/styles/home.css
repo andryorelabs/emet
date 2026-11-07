@@ -4,6 +4,7 @@
  */
 
 :root {
+  --c4: 27%;
   --gutter: 32px;
   --section-gap: 120px;
   --radius-panel: 12px;
@@ -147,9 +148,9 @@ summary:focus-visible {
 
 .how {
   display: grid;
-  grid-template-columns: minmax(0, 5fr) minmax(0, 6fr);
-  gap: 64px;
-  padding: 0 var(--gutter);
+  grid-template-columns: minmax(0, 640px) 360px;
+  gap: 72px;
+  padding: 0 32px 0 var(--c4);
   align-items: start;
 }
 
@@ -157,7 +158,7 @@ summary:focus-visible {
   position: sticky;
   top: 24px;
   margin: 0;
-  height: calc(100svh - 48px);
+  height: min(560px, 80vh);
   border-radius: var(--radius-panel);
   overflow: clip;
 }
@@ -175,10 +176,25 @@ summary:focus-visible {
 }
 
 .how-column {
+  grid-column: 1;
+  grid-row: 1;
   display: flex;
   flex-direction: column;
   gap: 56px;
   min-width: 0;
+}
+
+.how-painting {
+  grid-column: 2;
+  grid-row: 1;
+}
+
+.how h2 {
+  letter-spacing: -0.03em;
+}
+
+.how .exchange > h3 {
+  font-weight: 400;
 }
 
 .exchange {
@@ -191,7 +207,12 @@ summary:focus-visible {
 .exchange h3 {
   margin: 0;
   font-size: 22px;
-  font-weight: 500;
+  font-weight: 400;
+}
+
+.exchange > .fragment,
+.exchange > .emet-code ~ .emet-code {
+  margin-left: 40px;
 }
 
 pre {
@@ -250,17 +271,43 @@ pre {
   color: var(--text-muted);
 }
 
-@media (max-width: 900px) {
+@media (max-width: 1000px) {
   .how {
     grid-template-columns: minmax(0, 1fr);
     gap: 40px;
+    padding: 0 24px;
+  }
+
+  .how-column,
+  .how-painting {
+    grid-column: 1;
   }
 
   .how-painting {
+    grid-row: 1;
     position: relative;
     top: 0;
     height: auto;
-    aspect-ratio: 4 / 3;
+    aspect-ratio: 16 / 10;
+  }
+
+  .how-painting img {
+    object-position: 44% 70%;
+  }
+
+  .how-column {
+    grid-row: 2;
+  }
+
+  .exchange > .fragment,
+  .exchange > .emet-code ~ .emet-code {
+    margin-left: 0;
+  }
+}
+
+@media (max-width: 600px) {
+  .how {
+    padding-top: 80px;
   }
 }
 
@@ -278,53 +325,200 @@ pre {
 }
 
 .features {
-  padding: 0 var(--gutter);
-  display: flex;
-  flex-direction: column;
-  gap: 40px;
+  position: relative;
+  height: 820px;
+  padding: 0 32px;
+}
+
+.features h2 {
+  position: absolute;
+  top: 0;
+  left: 32px;
+  width: calc(33.3% - 48px);
+  text-align: right;
+  letter-spacing: -0.03em;
 }
 
 .plate {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-  gap: 48px;
-  padding: 40px;
+  position: absolute;
+  top: 96px;
+  left: 50%;
+  width: 400px;
+  height: 680px;
+  margin-left: -200px;
+  border: 1px solid var(--border);
   border-radius: var(--radius-panel);
   background: var(--surface);
-  align-items: center;
 }
 
 .plate .fragment {
-  background: var(--bg);
+  position: absolute;
+  inset: 0;
+  border: 0;
+  background: transparent;
+  overflow: visible;
+}
+
+.plate .block {
+  position: absolute;
+  left: 0;
+  right: 0;
+  padding: 0 20px;
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 13px;
+  line-height: 1.9;
+  background: transparent;
+  overflow: visible;
+  transition: opacity 200ms var(--ease-out);
+}
+
+.plate[data-focus="0"] .block:not([data-block="0"]),
+.plate[data-focus="1"] .block:not([data-block="1"]),
+.plate[data-focus="2"] .block:not([data-block="2"]),
+.plate[data-focus="3"] .block:not([data-block="3"]),
+.plate[data-focus="4"] .block:not([data-block="4"]),
+.plate[data-focus="5"] .block:not([data-block="5"]) {
+  opacity: 0.3;
+}
+
+.plate .block[data-block="0"] {
+  top: 16px;
+}
+
+.plate .block[data-block="1"] {
+  top: 140px;
+}
+
+.plate .block[data-block="2"] {
+  top: 276px;
+}
+
+.plate .block[data-block="3"] {
+  top: 340px;
+}
+
+.plate .block[data-block="4"] {
+  top: 460px;
+}
+
+.plate .block[data-block="5"] {
+  top: 604px;
+}
+
+.note[data-block="0"] {
+  --note-top: 112px;
+}
+
+.note[data-block="1"] {
+  --note-top: 236px;
+}
+
+.note[data-block="2"] {
+  --note-top: 372px;
+}
+
+.note[data-block="3"] {
+  --note-top: 436px;
+}
+
+.note[data-block="4"] {
+  --note-top: 556px;
+}
+
+.note[data-block="5"] {
+  --note-top: 700px;
 }
 
 .notes {
   list-style: none;
   margin: 0;
   padding: 0;
-  display: grid;
-  gap: 28px;
+}
+
+.note {
+  position: absolute;
+  top: var(--note-top);
+  width: 28ch;
+  outline-offset: 6px;
+}
+
+.note[data-side="left"] {
+  right: calc(66.6% + 24px);
+  text-align: right;
+}
+
+.note[data-side="right"] {
+  left: calc(66.6% + 24px);
 }
 
 .notes h3 {
-  margin: 0 0 4px;
-  font-size: 22px;
+  margin: 0;
+  font-size: 18px;
   font-weight: 500;
+  line-height: 1.3;
 }
 
-@media (max-width: 900px) {
-  .plate {
-    grid-template-columns: minmax(0, 1fr);
-    padding: 20px;
+.notes p {
+  margin: 4px 0 0;
+  font-size: 16px;
+  line-height: 1.5;
+  color: var(--text-muted);
+}
+
+@media (max-width: 1100px) {
+  .features {
+    height: auto;
+    display: flex;
+    flex-direction: column;
     gap: 32px;
+  }
+
+  .features h2 {
+    position: static;
+    width: auto;
+    text-align: left;
+  }
+
+  .plate {
+    position: relative;
+    top: 0;
+    left: 0;
+    margin: 0;
+    width: 100%;
+    max-width: 400px;
+    height: auto;
+    padding: 12px 0;
+  }
+
+  .plate .fragment {
+    position: static;
+  }
+
+  .plate .block[data-block] {
+    position: static;
+    padding: 8px 20px;
+  }
+
+  .notes {
+    display: grid;
+    gap: 24px;
+  }
+
+  .note,
+  .note[data-side] {
+    position: static;
+    top: auto;
+    width: auto;
+    max-width: 28ch;
+    text-align: left;
   }
 }
 
 .about {
-  padding: 0 var(--gutter);
+  padding: 0 var(--gutter) 0 var(--c4);
   display: grid;
-  grid-template-columns: minmax(0, 6fr) minmax(0, 5fr);
-  gap: 64px;
+  grid-template-columns: minmax(0, 520px) minmax(0, 420px);
+  gap: 80px;
   align-items: center;
 }
 
@@ -332,33 +526,54 @@ pre {
   display: flex;
   flex-direction: column;
   gap: 20px;
-  max-width: 560px;
 }
 
 .signature {
-  color: var(--text-muted);
   margin-top: 8px;
+  font-size: 22px;
+  font-style: italic;
+  line-height: 1.3;
+}
+
+.signature small {
+  display: block;
+  margin-top: 4px;
+  font-size: 14px;
+  font-style: normal;
+  color: var(--text-muted);
 }
 
 .portrait {
   margin: 0;
-  aspect-ratio: 4 / 5;
-  border-radius: var(--radius-panel);
-  overflow: clip;
 }
 
 .portrait picture,
 .portrait img {
   display: block;
   width: 100%;
-  height: 100%;
-  object-fit: cover;
 }
 
-@media (max-width: 900px) {
+.portrait img {
+  aspect-ratio: 4 / 5;
+  object-fit: cover;
+  border-radius: var(--radius-panel);
+}
+
+.portrait figcaption {
+  margin-top: 10px;
+  font-size: 14px;
+  color: var(--text-muted);
+}
+
+@media (max-width: 1000px) {
   .about {
     grid-template-columns: minmax(0, 1fr);
     gap: 40px;
+    padding: 0 24px;
+  }
+
+  .portrait {
+    max-width: 420px;
   }
 }
 
