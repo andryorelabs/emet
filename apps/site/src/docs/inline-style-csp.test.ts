@@ -55,7 +55,7 @@ beforeAll(async () => {
     stdout: "pipe",
     stderr: "pipe",
   });
-  origin = await Promise.race([
+  origin = await Promise.any([
     readOrigin(devServer.stdout),
     readOrigin(devServer.stderr),
     new Promise<never>((_, reject) =>
@@ -64,8 +64,9 @@ beforeAll(async () => {
   ]);
 }, STARTUP_TIMEOUT_MS + 5_000);
 
-afterAll(() => {
+afterAll(async () => {
   devServer?.kill();
+  await Bun.spawn(["bun", "run", "astro", "dev", "stop"], { cwd: SITE_ROOT }).exited;
 });
 
 describe("inline style attributes on the docs pages", () => {
