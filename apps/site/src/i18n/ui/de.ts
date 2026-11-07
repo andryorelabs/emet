@@ -141,7 +141,6 @@ export const de = {
     builtBy: "Erstellt von AndryOre",
   },
   share: {
-    ogAlt:
-      "emet: von der Spezifikation zum Merge, mit einer Freigabe, über einem gemalten Tal mit einem kleinen Lehm-Golem.",
+    ogAlt: "emet: von der Spezifikation bis zum Merge, mit einer einzigen Freigabe.",
   },
 } satisfies UiStrings;

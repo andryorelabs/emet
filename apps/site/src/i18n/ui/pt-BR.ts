@@ -136,7 +136,6 @@ export const ptBR = {
     builtBy: "Criado por AndryOre",
   },
   share: {
-    ogAlt:
-      "emet: da especificação ao merge, com uma única aprovação, sobre um vale pintado com um pequeno golem de argila.",
+    ogAlt: "emet: da especificação ao merge, com uma única aprovação.",
   },
 } satisfies UiStrings;

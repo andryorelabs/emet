@@ -1,7 +1,7 @@
 ---
 /**
- * The stats band between the features and About sections. A stub until the
- * band is built: it accepts its strings and renders nothing.
+ * The stats band between the features and About sections: four short facts
+ * on the 27% axis.
  */
 import type { UiStrings } from "../../i18n/ui/en";
 
@@ -9,5 +9,19 @@ interface Props {
   strings: UiStrings;
 }
 
-Astro.props satisfies Props;
+const { strings } = Astro.props;
+const { stats } = strings;
 ---
+
+<section class="stats" aria-label={stats.label}>
+  <dl class="stats-grid">
+    {
+      stats.items.map((item) => (
+        <div class="stat" data-reveal="item">
+          <dt class="stat-label">{item.label}</dt>
+          <dd class="stat-value">{item.value}</dd>
+        </div>
+      ))
+    }
+  </dl>
+</section>

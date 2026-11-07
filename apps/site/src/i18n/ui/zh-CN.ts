@@ -124,6 +124,6 @@ export const zhCN = {
     builtBy: "由 AndryOre 构建",
   },
   share: {
-    ogAlt: "emet：从规格到合并，只需一次批准。画中的山谷里有一个小小的黏土魔像。",
+    ogAlt: "emet：从规格到合并，只需一次批准。",
   },
 } satisfies UiStrings;

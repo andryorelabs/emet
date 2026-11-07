@@ -1,0 +1,84 @@
+---
+/**
+ * Theme selector: an icon button showing the stored choice and a menu of three
+ * radio rows (Light, Dark, System). Hidden until the script wires it, because
+ * it needs script to store the choice; without script the OS scheme applies.
+ */
+// oxlint-disable-next-line import/no-unassigned-import -- Astro bundles a stylesheet imported for its side effect
+import "../../styles/header-controls.css";
+
+import type { en } from "../../i18n/ui/en";
+
+interface Props {
+  labels: typeof en.theme;
+  id?: string;
+}
+
+const { labels, id = "theme" } = Astro.props;
+const menuId = `${id}-menu`;
+const choices = [
+  { value: "light", label: labels.light },
+  { value: "dark", label: labels.dark },
+  { value: "system", label: labels.system },
+] as const;
+---
+
+<div class="theme-select" data-theme-select hidden>
+  <button
+    type="button"
+    class="theme-button"
+    aria-label={labels.label}
+    aria-haspopup="menu"
+    aria-expanded="false"
+    aria-controls={menuId}
+  >
+    <svg class="theme-icon theme-icon--light" viewBox="0 0 24 24" aria-hidden="true">
+      <circle cx="12" cy="12" r="4"></circle>
+      <path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"
+      ></path>
+    </svg>
+    <svg class="theme-icon theme-icon--dark" viewBox="0 0 24 24" aria-hidden="true">
+      <path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z"></path>
+    </svg>
+    <svg class="theme-icon theme-icon--system" viewBox="0 0 24 24" aria-hidden="true">
+      <rect x="3" y="4" width="18" height="12" rx="2"></rect>
+      <path d="M8 20h8M12 16v4"></path>
+    </svg>
+  </button>
+  <div class="theme-menu" id={menuId} role="menu" aria-label={labels.label} hidden>
+    {
+      choices.map((choice) => (
+        <button
+          type="button"
+          role="menuitemradio"
+          aria-checked="false"
+          data-choice={choice.value}
+          tabindex="-1"
+        >
+          <svg class="theme-icon" viewBox="0 0 24 24" aria-hidden="true">
+            {choice.value === "light" && (
+              <>
+                <circle cx="12" cy="12" r="4" />
+                <path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4" />
+              </>
+            )}
+            {choice.value === "dark" && <path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z" />}
+            {choice.value === "system" && (
+              <>
+                <rect x="3" y="4" width="18" height="12" rx="2" />
+                <path d="M8 20h8M12 16v4" />
+              </>
+            )}
+          </svg>
+          <span>{choice.label}</span>
+        </button>
+      ))
+    }
+  </div>
+</div>
+
+<script>
+  import { initThemeSelects } from "./theme-menu";
+
+  initThemeSelects();
+</script>

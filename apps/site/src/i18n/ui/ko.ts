@@ -135,6 +135,6 @@ export const ko = {
     builtBy: "제작 AndryOre",
   },
   share: {
-    ogAlt: "emet: 명세에서 병합까지, 승인은 단 한 번. 작은 점토 골렘이 있는 그려진 계곡.",
+    ogAlt: "emet: 명세에서 병합까지, 승인은 단 한 번.",
   },
 } satisfies UiStrings;

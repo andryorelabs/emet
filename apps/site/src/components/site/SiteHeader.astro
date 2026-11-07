@@ -1,16 +1,21 @@
 ---
 /**
- * Website header: the mark and wordmark, a few plain links and the language
- * pill. The `home` variant floats over the hero, `flow` sits in the page flow,
+ * Website header: the mark and wordmark, a few plain links, the theme selector
+ * and the language pill; the home and flow variants add the mobile menu. The `home` variant floats over the hero, `flow` sits in the page flow,
  * `docs` is the one-row docs header with a search slot.
  */
 // oxlint-disable-next-line import/no-unassigned-import -- Astro bundles a stylesheet imported for its side effect
 import "../../styles/site.css";
+// oxlint-disable-next-line import/no-unassigned-import -- Astro bundles a stylesheet imported for its side effect
+import "../../styles/header-controls.css";
 
 import mark from "../../assets/mark.svg";
 import { localePath, type Locale } from "../../i18n/locales";
+import { getStrings } from "../../i18n/ui";
 import { en } from "../../i18n/ui/en";
 import LanguageSwitcher from "./LanguageSwitcher.astro";
+import MobileMenu from "./MobileMenu.astro";
+import ThemeSelect from "./ThemeSelect.astro";
 
 interface Props {
   locale: Locale;
@@ -24,6 +29,12 @@ const docsPath = localePath(locale, "/docs/");
 const whatsNewPath = localePath(locale, "/docs/whats-new/");
 const onWhatsNew = currentPath.startsWith("/docs/whats-new/");
 const onDocs = currentPath.startsWith("/docs/") && !onWhatsNew;
+const theme = getStrings(locale).theme;
+const links = [
+  { href: docsPath, label: strings.docs, current: onDocs },
+  { href: whatsNewPath, label: strings.whatsNew, current: onWhatsNew },
+  { href: "https://github.com/andryorelabs/emet", label: strings.github, current: false },
+];
 ---
 
 <header class:list={["site-header", `site-header--${variant}`]}>
@@ -38,6 +49,18 @@ const onDocs = currentPath.startsWith("/docs/") && !onWhatsNew;
   </nav>
   <div class="site-header-end">
     <slot name="search" />
+    <ThemeSelect labels={theme} />
     <LanguageSwitcher locale={locale} currentPath={currentPath} label={strings.language} />
+    {
+      variant !== "docs" && (
+        <MobileMenu
+          locale={locale}
+          currentPath={currentPath}
+          strings={strings}
+          theme={theme}
+          links={links}
+        />
+      )
+    }
   </div>
 </header>

@@ -1,0 +1,10 @@
+---
+/**
+ * Replaces Starlight's theme provider with the Website's own blocking head
+ * script, so docs pages apply the stored choice before first paint exactly as
+ * the home page does. The script is hashed in the CSP by `astro.config.ts`.
+ */
+import { THEME_INIT_SCRIPT } from "../site/theme";
+---
+
+<script is:inline set:html={THEME_INIT_SCRIPT}></script>

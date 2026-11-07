@@ -2,6 +2,7 @@ import starlight from "@astrojs/starlight";
 import tailwindcss from "@tailwindcss/vite";
 import { defineConfig } from "astro/config";
 
+import { THEME_INIT_HASH } from "./src/components/site/theme";
 import { codeColorsPlugin } from "./src/docs/code-colors-plugin";
 import { sharedCodeConfig } from "./src/highlight/code-config";
 import {
@@ -41,7 +42,7 @@ export default defineConfig({
     csp: {
       scriptDirective: {
         resources: ["'self'", "'wasm-unsafe-eval'"],
-        hashes: collectStarlightInlineScriptHashes(),
+        hashes: [...collectStarlightInlineScriptHashes(), THEME_INIT_HASH],
       },
       styleDirective: {
         resources: [{ resource: "'unsafe-hashes'", kind: "attribute" }],
@@ -69,7 +70,7 @@ export default defineConfig({
         Header: "./src/components/docs/DocsHeader.astro",
         Footer: "./src/components/docs/DocsFooter.astro",
         PageTitle: "./src/components/docs/DocsPageTitle.astro",
-        ThemeProvider: "./src/components/docs/Empty.astro",
+        ThemeProvider: "./src/components/docs/ThemeProvider.astro",
         ThemeSelect: "./src/components/docs/Empty.astro",
         LanguageSelect: "./src/components/docs/Empty.astro",
         SocialIcons: "./src/components/docs/Empty.astro",
