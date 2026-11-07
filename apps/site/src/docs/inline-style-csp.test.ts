@@ -1,11 +1,14 @@
 import { afterAll, beforeAll, describe, expect, test } from "bun:test";
 import { createHash } from "node:crypto";
+import os from "node:os";
 import path from "node:path";
 
 import { collectStarlightInlineStyleHashes } from "./starlight-inline-hashes";
 
 const SITE_ROOT = path.resolve(import.meta.dir, "../..");
+const STARTUP_ATTEMPTS = 90;
 const STARTUP_TIMEOUT_MS = 90_000;
+const DEV_SERVER_LOG = path.join(os.tmpdir(), `emet-site-dev-${process.pid}.log`);
 const FETCH_ATTEMPTS = 60;
 const FETCH_RETRY_DELAY_MS = 1_000;
 const DEV_SERVER_URL = /http:\/\/localhost:(?<port>\d+)/;
@@ -13,21 +16,23 @@ const STYLE_ATTRIBUTE = /\sstyle="(?<value>[^"]*)"/g;
 const DOCS_LINK = /href="(?<path>\/docs\/[^"#?]*)"/g;
 const EXTRA_PAGES = ["/pt-br/docs/guide/getting-started/", "/ja/docs/guide/getting-started/"];
 
-let devServer: Bun.Subprocess<"ignore", "pipe", "pipe"> | undefined;
+let devServer: Bun.Subprocess | undefined;
 let origin = "";
 
 /**
- * Resolves with the dev server origin once Astro prints it.
- * @param stream - A readable stream of the dev server output.
+ * Polls the dev server log until Astro prints the address it listens on.
+ * @param attemptsLeft - How many polls remain before giving up.
  * @returns The `http://localhost:<port>` origin.
  */
-async function readOrigin(stream: ReadableStream<Uint8Array>): Promise<string> {
-  const decoder = new TextDecoder();
-  for await (const chunk of stream) {
-    const port = DEV_SERVER_URL.exec(decoder.decode(chunk))?.groups?.["port"];
-    if (port) return `http://localhost:${port}`;
-  }
-  throw new Error("the Astro dev server exited before it printed its address");
+async function readOrigin(attemptsLeft = STARTUP_ATTEMPTS): Promise<string> {
+  const log = await Bun.file(DEV_SERVER_LOG)
+    .text()
+    .catch(() => "");
+  const port = DEV_SERVER_URL.exec(log)?.groups?.["port"];
+  if (port) return `http://localhost:${port}`;
+  if (attemptsLeft <= 1) throw new Error(`the Astro dev server did not start:\n${log}`);
+  await Bun.sleep(FETCH_RETRY_DELAY_MS);
+  return readOrigin(attemptsLeft - 1);
 }
 
 /**
@@ -59,16 +64,10 @@ function hashOf(value: string): `sha256-${string}` {
 beforeAll(async () => {
   devServer = Bun.spawn(["bun", "run", "astro", "dev", "--port", "0"], {
     cwd: SITE_ROOT,
-    stdout: "pipe",
-    stderr: "pipe",
+    stdout: Bun.file(DEV_SERVER_LOG),
+    stderr: Bun.file(DEV_SERVER_LOG),
   });
-  origin = await Promise.any([
-    readOrigin(devServer.stdout),
-    readOrigin(devServer.stderr),
-    new Promise<never>((_, reject) =>
-      setTimeout(() => reject(new Error("the Astro dev server did not start")), STARTUP_TIMEOUT_MS),
-    ),
-  ]);
+  origin = await readOrigin();
 }, STARTUP_TIMEOUT_MS + 5_000);
 
 afterAll(async () => {
