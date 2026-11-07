@@ -1,0 +1,68 @@
+---
+title: Modelos e esforço
+description: Como o emet escolhe um modelo e um esforço de raciocínio para cada papel, e quais chaves de configuração os alteram.
+seoTitle: Modelos e esforço no emet
+sourceHash: 6fe7308bf47a7aac
+---
+
+O `/emet` escolhe automaticamente um modelo e um esforço de raciocínio por papel; não há nada para trocar manualmente no meio de uma execução. Todas as chaves estão na [referência de configuração](../reference/configuration.md#models).
+
+| Papel                                                   | Modelo                 | Esforço             | Definido por                                |
+| ------------------------------------------------------- | ---------------------- | ------------------- | ------------------------------------------- |
+| Planejamento (fases 1–4)                                | Opus, via `opusplan`   | o da sua sessão     | você, uma única vez                         |
+| Coordenador, a partir da fase 5                         | Sonnet, via `opusplan` | o da sua sessão     | você, uma única vez                         |
+| Workers (fase 7)                                        | Sonnet                 | `medium`            | `agents/emet-worker.md`, ou `models.worker` |
+| Revisão, nível `passive` (diff somente de documentação) | nenhum                 | —                   | `emet assess`                               |
+| Revisão, nível `medium` (mudança de código comum)       | Opus                   | `medium`            | `models.reviewer.medium`                    |
+| Revisão, nível `high` (caminhos ou pontos sensíveis)    | Opus                   | `medium` por padrão | `models.reviewer.high`                      |
+| Triagem de logs de CI (fase 8)                          | Haiku                  | —                   | `models.triage`                             |
+
+As duas definições de agente (instaladas pelo `install.sh` em `~/.claude/agents/`) fixam seu próprio `model`/`effort` no frontmatter, de modo que a escolha de modelo/esforço do próprio coordenador nunca vaza para um worker nem para o revisor. O `emet doctor` informa (sem nunca bloquear) se qualquer um dos arquivos estiver ausente. O `emet preflight` bloqueia o despacho quando `emet-worker` ou `emet-reviewer` está ausente, porque a fase 6 e a fase 8 despacham por `subagent_type`.
+
+## Roteamento por nível de risco
+
+A fase 8 executa `emet assess --base <trunk> --head <integration branch>`, que classifica o diff de forma determinística e imprime JSON com o nível, os motivos e o modelo/esforço recomendados para o revisor:
+
+- `passive`: diff somente de documentação; nenhum revisor é despachado.
+- `medium`: o revisor roda em `models.reviewer.medium`.
+- `high`: o diff toca autenticação, segurança, pagamentos, webhooks, CI, o instalador, lockfiles, migrações, um ponto sensível perigoso (SQL bruto, pipe-to-shell e semelhantes) ou um caminho que corresponda a `review.highRiskPaths`. O revisor roda em `models.reviewer.high`, e o auto-merge aterrissa o PR somente com checks verdes e nenhum achado de revisão em aberto.
+
+Um ticket que toca caminhos de alto risco pode carregar uma linha `Model:` (por exemplo `Model: opus` ou `Model: opus/high`), que substitui `models.worker` apenas para aquele worker.
+
+## Triagem com Haiku
+
+O coordenador nunca lê um log de CI inteiro. Um check que falha é entregue a um agente em `models.triage` (padrão `haiku`), que devolve no máximo cerca de 2k tokens com ponteiros `file:line` para a correção.
+
+## Configuração
+
+Todas as chaves são opcionais, e os padrões reproduzem a tabela acima:
+
+```json
+{
+  "models": {
+    "worker": { "model": "sonnet", "effort": "medium" },
+    "reviewer": {
+      "medium": { "model": "opus", "effort": "medium" },
+      "high": { "model": "opus", "effort": "medium" }
+    },
+    "triage": "haiku"
+  },
+  "review": { "highRiskPaths": [] }
+}
+```
+
+`review.highRiskPaths` é uma lista de trechos de caminho adicionais, sem diferenciar maiúsculas de minúsculas, que forçam o nível `high`. Para ter mais rigor em ondas arriscadas, aumente `models.reviewer.high.effort` (por exemplo para `high`).
+
+## Por que um único revisor
+
+Por que um único revisor de contexto limpo em vez de um leque de vários ângulos: nenhum benchmark público compara os dois diretamente, mas um leque relê o diff inteiro uma vez por ângulo e já travou por mais de uma hora neste repositório, enquanto relatos da Anthropic e de terceiros sobre modelos da classe Opus sugerem que a melhoria do modelo rende tanto quanto renderiam os ângulos extras. Para uma onda de alto risco, execute `/code-review ultra` manualmente depois; o `/emet` nunca o despacha por conta própria.
+
+## O que você define uma vez, por conta própria
+
+O `/emet` não consegue trocar isto no meio de uma execução:
+
+- `model: "opusplan"` em `~/.claude/settings.json`: é isso que faz as fases 1–4 rodarem no Opus e da fase 5 em diante no Sonnet, sem precisar de `/model`. O `emet doctor` avisa (sem nunca editar suas configurações) se não estiver definido.
+- Um esforço de sessão `medium` ou `high` em vez de `xhigh`: os workers e o revisor já carregam seu próprio esforço, independentemente do seu, e um padrão global alto principalmente acrescenta custo aos turnos do próprio coordenador (controle de despachos, merges, relatórios) que não precisam dele.
+- Um `permissions.defaultMode` capaz de rodar sem supervisão (`auto`, `acceptEdits` ou `bypassPermissions`), mais regras `permissions.deny` bloqueando `git push * main|master` e `git push --force *`. O `emet doctor` avisa sobre ambos, pois uma onda que trava em um pedido de permissão ou que consegue forçar passagem pela branch tronco anula o objetivo de rodar sem supervisão.
+
+Esses são pontos de partida, não números definitivos. O Opus 5.5 foi lançado em 2026-09-22, e a escolha de esforço e modelo para agentes de programação ainda é uma área ativa; reajuste depois de algumas ondas reais em vez de tratar esta tabela como final.

@@ -1,0 +1,54 @@
+---
+/**
+ * The 404 page in one locale: the contained painted panel of the closing
+ * section with the title, one sentence and two links.
+ */
+// oxlint-disable-next-line import/no-unassigned-import -- Astro bundles a stylesheet imported for its side effect
+import "../styles/home.css";
+
+import { Picture } from "astro:assets";
+
+import bookendImage from "../assets/bookend.webp";
+import SiteFooter from "../components/site/SiteFooter.astro";
+import SiteHeader from "../components/site/SiteHeader.astro";
+import { localePath, type Locale } from "../i18n/locales";
+import { getStrings } from "../i18n/ui";
+import BaseLayout from "../layouts/BaseLayout.astro";
+import { NOT_FOUND_STRINGS } from "./not-found";
+
+interface Props {
+  locale: Locale;
+}
+
+const { locale } = Astro.props;
+const strings = getStrings(locale);
+const copy = NOT_FOUND_STRINGS[locale];
+---
+
+<BaseLayout title={`${copy.title} emet`} description={copy.text} locale={locale}>
+  <meta slot="head" name="robots" content="noindex" />
+  <SiteHeader locale={locale} currentPath="/" strings={strings.nav} />
+  <main>
+    <section class="closing" aria-labelledby="not-found-title">
+      <Picture
+        class="closing-picture"
+        src={bookendImage}
+        formats={["avif", "webp"]}
+        fallbackFormat="webp"
+        widths={[640, 1024, 1672]}
+        sizes="100vw"
+        alt=""
+        aria-hidden="true"
+        loading="lazy"
+        decoding="async"
+      />
+      <div class="closing-copy">
+        <h1 id="not-found-title">{copy.title}</h1>
+        <p>{copy.text}</p>
+        <a class="button" href={localePath(locale, "/")}>{copy.homeAction}</a>
+        <a href={localePath(locale, "/docs/")}>{copy.docsAction}</a>
+      </div>
+    </section>
+  </main>
+  <SiteFooter locale={locale} strings={strings.footer} />
+</BaseLayout>

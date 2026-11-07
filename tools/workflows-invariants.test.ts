@@ -8,7 +8,9 @@ const USES_LINE_PATTERN = /^\s*-?\s*uses:\s*(\S+?)(?:\s+#\s*(.*))?$/;
 
 interface WorkflowStep {
   readonly uses?: string;
+  readonly run?: string;
   readonly with?: Record<string, unknown>;
+  readonly env?: Record<string, unknown>;
 }
 
 interface WorkflowJob {
@@ -260,6 +262,14 @@ describe("ci.yml commitlint and manual runs", () => {
     expect(ci?.raw).toContain("bun run test:coverage");
   });
 
+  test("test scripts keep the root suites behind turbo", () => {
+    const manifest = readFileSync("package.json", "utf8");
+    expect(manifest).toContain('"test": "turbo run test test:root"');
+    expect(manifest).toContain('"test:coverage": "turbo run test test:coverage:root"');
+    expect(manifest).toContain('&& bun test --cwd emet"');
+    expect(manifest).toContain('&& bun test --cwd emet --coverage"');
+  });
+
   test("macOS smoke writes the binary size to the job summary", () => {
     expect(ci?.raw).toContain("GITHUB_STEP_SUMMARY");
   });
@@ -366,5 +376,127 @@ describe("runner routing", () => {
     for (const { raw } of workflows) {
       expect(raw).not.toMatch(/vps-|self-hosted|CI_RUNNER/);
     }
+  });
+});
+
+const DEPLOY_SCRIPT = join(import.meta.dir, "..", ".github", "scripts", "deploy-coolify.sh");
+const DEPLOY_PATHS = [
+  "apps/site/**",
+  "docs/**",
+  "CHANGELOG.md",
+  ".github/scripts/deploy-coolify.sh",
+  ".github/workflows/deploy-site.yml",
+];
+
+/**
+ * Reads one key of a mapping, or `undefined` when the value is not a mapping.
+ */
+function field(value: unknown, key: string): unknown {
+  if (typeof value !== "object" || value === null) {
+    return undefined;
+  }
+  return Object.entries(value).find(([name]) => name === key)?.[1];
+}
+
+describe("deploy-site.yml", () => {
+  const deploy = workflows.find(({ fileName }) => fileName === "deploy-site.yml");
+  const jobs = Object.values(deploy?.workflow.jobs ?? {});
+  const steps = jobs.flatMap((job) => job.steps ?? []);
+
+  test("exists", () => {
+    expect(deploy).toBeDefined();
+    expect(jobs.length).toBeGreaterThan(0);
+  });
+
+  test("runs on push to main, path-filtered, and on workflow_dispatch", () => {
+    const push = field(deploy?.workflow.on, "push");
+    expect(triggerNames(deploy?.workflow).toSorted()).toEqual(["push", "workflow_dispatch"]);
+    expect(field(push, "branches")).toEqual(["main"]);
+    expect(field(push, "paths")).toEqual(DEPLOY_PATHS);
+  });
+
+  test("has contents: read permissions at the top and on every job", () => {
+    expect(deploy?.workflow.permissions).toEqual({ contents: "read" });
+    for (const job of jobs) {
+      expect(job.permissions).toEqual({ contents: "read" });
+    }
+  });
+
+  test("never cancels a deploy in progress", () => {
+    expect(deploy?.workflow.concurrency?.["cancel-in-progress"]).toBe(false);
+  });
+
+  test("smoke-tests the image before deploying it", () => {
+    const runs = steps.map((step) => step.run ?? "");
+    const smoke = runs.findIndex((run) => run.includes("apps/site/docker/smoke.sh"));
+    const ship = runs.findIndex((run) => run.includes(".github/scripts/deploy-coolify.sh"));
+    expect(smoke).toBeGreaterThanOrEqual(0);
+    expect(ship).toBeGreaterThan(smoke);
+  });
+
+  test("hands the token and app UUID only to the deploy step, through env", () => {
+    const withSecret = steps.filter((step) => JSON.stringify(step).includes("secrets."));
+    expect(withSecret).toHaveLength(1);
+    expect(withSecret[0]?.run).toContain(".github/scripts/deploy-coolify.sh");
+    expect(withSecret[0]?.env).toEqual({
+      COOLIFY_API_TOKEN: "${{ secrets.COOLIFY_API_TOKEN }}",
+      COOLIFY_APP_UUID: "${{ vars.SITE_COOLIFY_APP_UUID }}",
+    });
+  });
+});
+
+describe("deploy-coolify.sh", () => {
+  const script = readFileSync(DEPLOY_SCRIPT, "utf8");
+  const fakeToken = "fake-token-never-printed-7f3a";
+
+  /**
+   * Runs the deploy script with a fake token and the given app UUID; it must exit before any request.
+   */
+  function runScript(appUuid: string): { exitCode: number; output: string } {
+    const result = Bun.spawnSync(["bash", DEPLOY_SCRIPT], {
+      env: {
+        PATH: process.env["PATH"] ?? "",
+        COOLIFY_API_TOKEN: fakeToken,
+        COOLIFY_APP_UUID: appUuid,
+      },
+    });
+    return {
+      exitCode: result.exitCode,
+      output: `${result.stdout.toString()}${result.stderr.toString()}`,
+    };
+  }
+
+  test("runs in strict mode and never enables xtrace", () => {
+    expect(script).toContain("set -euo pipefail");
+    expect(script).not.toMatch(/set -[a-z]*x|set -o xtrace|bash -x/);
+  });
+
+  test("reads the token only to write curl's auth header, never into argv or output", () => {
+    const tokenLines = script
+      .split("\n")
+      .filter(
+        (line) => line.includes("${COOLIFY_API_TOKEN") || line.includes("$COOLIFY_API_TOKEN"),
+      );
+    const unexpected = tokenLines.filter(
+      (line) =>
+        !/^\s*if \[\[ -z "\$\{COOLIFY_API_TOKEN:-\}"/.test(line) &&
+        !/printf 'Authorization: Bearer %s\\n' "\$\{COOLIFY_API_TOKEN\}"/.test(line),
+    );
+    expect(unexpected).toEqual([]);
+    expect(script).not.toMatch(/echo[^\n]*COOLIFY_API_TOKEN\}/);
+  });
+
+  test("fails without printing the token when the app UUID is missing", () => {
+    const { exitCode, output } = runScript("");
+    expect(exitCode).toBe(1);
+    expect(output).toContain("::error::");
+    expect(output).not.toContain(fakeToken);
+  });
+
+  test("rejects an app UUID that is not a plain identifier", () => {
+    const { exitCode, output } = runScript("abc/../../teams");
+    expect(exitCode).toBe(1);
+    expect(output).toContain("::error::");
+    expect(output).not.toContain(fakeToken);
   });
 });

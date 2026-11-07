@@ -1,0 +1,39 @@
+---
+/**
+ * Closing panel: the morning-mist painting with the heading and one action
+ * centred over its pale top.
+ */
+import { Picture } from "astro:assets";
+
+import bookendImage from "../../assets/bookend.webp";
+import type { UiStrings } from "../../i18n/ui/en";
+import Valley from "./graphics/Valley.astro";
+
+interface Props {
+  strings: UiStrings;
+}
+
+const { strings } = Astro.props;
+const { closing } = strings;
+---
+
+<section class="closing" data-drift aria-labelledby="closing-title">
+  <Picture
+    class="closing-picture"
+    src={bookendImage}
+    formats={["avif", "webp"]}
+    fallbackFormat="webp"
+    widths={[640, 1024, 1672]}
+    sizes="100vw"
+    alt={closing.alt}
+    loading="lazy"
+    decoding="async"
+  />
+  <Valley variant="closing" />
+  <div class="closing-copy">
+    <h2 id="closing-title" data-reveal="heading">
+      <span class="reveal-line">{closing.heading}</span>
+    </h2>
+    <a class="button" href="#install">{closing.action}</a>
+  </div>
+</section>

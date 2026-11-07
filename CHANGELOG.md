@@ -10,6 +10,12 @@ and this project adheres to
 
 ### Added
 
+- The Website home page: painted hero, how it works, features, about, closing
+  panel, header and footer, with English strings in `apps/site/src/i18n/ui/en.ts`.
+- The Website docs at `/docs/`: Starlight pages built from an allowlist of
+  repository docs and this changelog, with Pagefind search, link rewriting to
+  site pages or GitHub, and an English fallback notice for missing or stale
+  translations.
 - `docs/how-to/update-emet.md`: how to update the plugins and turn on
   marketplace auto-update.
 

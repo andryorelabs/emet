@@ -1,0 +1,63 @@
+/**
+ * emet design tokens for the Website: the P2 Moss palette (light and dark), the
+ * T2 type pair and the type scale, copied from docs/brand/tokens.css.
+ * Each colour is a light-dark() pair: the visitor's colour scheme picks one,
+ * and a `.light` or `.dark` class on <html> forces it.
+ * Fonts are the brand's local woff2 files in public/fonts/.
+ */
+
+@font-face {
+  font-family: "Space Grotesk";
+  src: url("/fonts/SpaceGrotesk-var.woff2") format("woff2");
+  font-weight: 300 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "JetBrains Mono";
+  src: url("/fonts/JetBrainsMono-var.woff2") format("woff2");
+  font-weight: 100 800;
+  font-style: normal;
+  font-display: swap;
+}
+
+:root {
+  color-scheme: light dark;
+
+  --bg: light-dark(oklch(0.985 0.013 150), oklch(0.165 0.013 150));
+  --surface: light-dark(oklch(0.965 0.013 150), oklch(0.22 0.013 150));
+  --border: light-dark(oklch(0.895 0.013 150), oklch(0.29 0.013 150));
+  --text: light-dark(oklch(0.22 0.013 150), oklch(0.965 0.013 150));
+  --text-muted: light-dark(oklch(0.45 0.013 150), oklch(0.835 0.013 150));
+  --accent: light-dark(oklch(0.7 0.135 135), oklch(0.8 0.135 135));
+  --accent-text: light-dark(oklch(0.52 0.135 135), oklch(0.75 0.135 135));
+  --on-accent: light-dark(oklch(0.165 0.013 150), oklch(0.165 0.013 150));
+  --ok: light-dark(oklch(0.52 0.092 182), oklch(0.76 0.1 182));
+  --warn: light-dark(oklch(0.54 0.112 80), oklch(0.76 0.15 80));
+  --error: light-dark(oklch(0.555 0.17 22), oklch(0.76 0.142 22));
+  --info: light-dark(oklch(0.535 0.12 250), oklch(0.76 0.12 250));
+  --clay: light-dark(oklch(0.72 0.022 110), oklch(0.76 0.022 110));
+  --moss: light-dark(oklch(0.56 0.13 135), oklch(0.74 0.13 135));
+  --lamp: light-dark(oklch(0.84 0.14 95), oklch(0.9 0.14 95));
+
+  --font-sans: "Space Grotesk", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, monospace;
+
+  --text-xs: 0.75rem;
+  --text-sm: 0.875rem;
+  --text-base: 1rem;
+  --text-lg: 1.125rem;
+  --text-xl: 1.25rem;
+  --text-2xl: 1.5rem;
+  --text-3xl: 1.875rem;
+  --text-4xl: 2.25rem;
+}
+
+:root.light {
+  color-scheme: light;
+}
+
+:root.dark {
+  color-scheme: dark;
+}

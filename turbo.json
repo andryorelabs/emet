@@ -1,0 +1,36 @@
+{
+  "$schema": "https://turborepo.com/schema.json",
+  "ui": "stream",
+  "envMode": "loose",
+  "globalDependencies": ["bun.lock"],
+  "tasks": {
+    "sync": {
+      "inputs": ["$TURBO_DEFAULT$", "!.astro/**", "!dist/**"],
+      "outputs": [".astro/**"]
+    },
+    "check": {
+      "dependsOn": ["sync"],
+      "inputs": ["$TURBO_DEFAULT$", "!.astro/**", "!dist/**", "!coverage/**"],
+      "outputs": []
+    },
+    "test": {
+      "inputs": ["$TURBO_DEFAULT$", "!.astro/**", "!dist/**", "!coverage/**"],
+      "outputs": []
+    },
+    "build": {
+      "dependsOn": ["sync"],
+      "inputs": ["$TURBO_DEFAULT$", "!.astro/**", "!dist/**", "!coverage/**"],
+      "outputs": ["dist/**", ".astro/**"]
+    },
+    "//#check:root": {
+      "dependsOn": ["@emet/site#sync"],
+      "cache": false
+    },
+    "//#test:root": {
+      "cache": false
+    },
+    "//#test:coverage:root": {
+      "cache": false
+    }
+  }
+}

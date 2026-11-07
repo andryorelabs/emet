@@ -1,0 +1,211 @@
+/**
+ * Scroll motion layer of the home page. Only `transform` and `opacity`, the
+ * strong ease-out of the home tokens, and every state is visible without
+ * script (hidden starting states need `scripting: enabled`, and a 2.5s
+ * failsafe shows them if the script never runs) or with reduced motion.
+ *
+ * Data attributes: `data-reveal="heading|item"` reveals once as it enters,
+ * `data-recede` marks the hero that sinks and dims as it leaves, and
+ * `data-drift` (empty or "6") marks a section whose painting drifts.
+ */
+
+html.lenis,
+html.lenis body {
+  height: auto;
+}
+
+.lenis.lenis-smooth {
+  scroll-behavior: auto !important;
+}
+
+.lenis.lenis-stopped {
+  overflow: clip;
+}
+
+.reveal-line {
+  display: block;
+}
+
+[data-recede] {
+  --recede-sink: 8%;
+  --recede-dim: 0.35;
+  --recede-lift: -6%;
+}
+
+[data-recede]::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: var(--text);
+  opacity: 0;
+  pointer-events: none;
+}
+
+[data-drift] {
+  --drift-shift: 3.5%;
+  --drift-scale: 1.08;
+}
+
+[data-drift="6"] {
+  --drift-shift: 2.5%;
+  --drift-scale: 1.06;
+}
+
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+}
+
+@keyframes reveal-failsafe {
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes recede-sink {
+  to {
+    transform: translateY(var(--recede-sink));
+  }
+}
+
+@keyframes recede-dim {
+  to {
+    opacity: var(--recede-dim);
+  }
+}
+
+@keyframes recede-lift {
+  to {
+    transform: translateY(var(--recede-lift));
+    opacity: 0;
+  }
+}
+
+@keyframes drift {
+  from {
+    transform: translateY(calc(var(--drift-shift) * -1)) scale(var(--drift-scale));
+  }
+
+  to {
+    transform: translateY(var(--drift-shift)) scale(var(--drift-scale));
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .hero h1,
+  .hero-sentence,
+  .hero-actions {
+    animation: rise 500ms var(--ease-out) both;
+  }
+
+  .hero-sentence {
+    animation-delay: 80ms;
+  }
+
+  .hero-actions {
+    animation-delay: 160ms;
+  }
+
+  [data-drift] picture img {
+    transform: scale(var(--drift-scale));
+  }
+}
+
+@media (scripting: enabled) and (prefers-reduced-motion: no-preference) {
+  [data-reveal="heading"] {
+    overflow: clip;
+    padding-block: 0.12em;
+    margin-block: -0.12em;
+  }
+
+  [data-reveal="item"],
+  [data-reveal="heading"] > .reveal-line {
+    transition:
+      opacity 400ms var(--ease-out),
+      transform 400ms var(--ease-out);
+  }
+
+  [data-reveal="item"]:not(.is-in),
+  [data-reveal="heading"]:not(.is-in) > .reveal-line {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+
+  html:not([data-motion]) [data-reveal="item"],
+  html:not([data-motion]) [data-reveal="heading"] > .reveal-line {
+    animation: reveal-failsafe 1ms 2500ms forwards;
+  }
+}
+
+@supports (animation-timeline: view()) {
+  @media (prefers-reduced-motion: no-preference) {
+    [data-recede] {
+      view-timeline: --recede block;
+    }
+
+    [data-recede] picture img {
+      animation-name: recede-sink;
+      animation-timing-function: linear;
+      animation-fill-mode: both;
+      animation-timeline: --recede;
+      animation-range: exit 0% exit 100%;
+    }
+
+    [data-recede]::after {
+      animation-name: recede-dim;
+      animation-timing-function: linear;
+      animation-fill-mode: both;
+      animation-timeline: --recede;
+      animation-range: exit 0% exit 100%;
+    }
+
+    [data-recede] .hero-copy {
+      animation-name: recede-lift;
+      animation-timing-function: linear;
+      animation-fill-mode: both;
+      animation-timeline: --recede;
+      animation-range: exit 0% exit 70%;
+    }
+
+    [data-drift] {
+      view-timeline: --drift block;
+    }
+
+    [data-drift] picture img {
+      animation-name: drift;
+      animation-timing-function: linear;
+      animation-fill-mode: both;
+      animation-timeline: --drift;
+      animation-range: cover 0% cover 100%;
+    }
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  html[data-scroll-fallback] [data-recede] picture img {
+    transform: translateY(calc(var(--p, 0) * var(--recede-sink)));
+  }
+
+  html[data-scroll-fallback] [data-recede]::after {
+    opacity: calc(var(--p, 0) * var(--recede-dim));
+  }
+
+  html[data-scroll-fallback] [data-recede] .hero-copy {
+    transform: translateY(calc(min(var(--p, 0) / 0.7, 1) * var(--recede-lift)));
+    opacity: max(0, calc(1 - var(--p, 0) / 0.7));
+  }
+
+  html[data-scroll-fallback] [data-drift] picture img {
+    transform: translateY(calc((var(--p, 0) * 2 - 1) * var(--drift-shift)))
+      scale(var(--drift-scale));
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .button:active {
+    transform: none;
+  }
+}

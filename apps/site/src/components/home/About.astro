@@ -1,0 +1,37 @@
+---
+/**
+ * Founder's letter beside the painted portrait of the golem.
+ */
+import { Picture } from "astro:assets";
+
+import portraitImage from "../../assets/portrait.webp";
+import type { UiStrings } from "../../i18n/ui/en";
+
+interface Props {
+  strings: UiStrings;
+}
+
+const { strings } = Astro.props;
+const { about } = strings;
+---
+
+<section class="about" data-drift aria-labelledby="about-title">
+  <div class="letter">
+    <h2 id="about-title" data-reveal="heading"><span class="reveal-line">{about.heading}</span></h2>
+    <p>{about.lineOne}</p>
+    <p>{about.lineTwo}</p>
+    <p class="signature">{about.signature}</p>
+  </div>
+  <figure class="portrait">
+    <Picture
+      src={portraitImage}
+      formats={["avif", "webp"]}
+    fallbackFormat="webp"
+      widths={[640, 1024]}
+      sizes="(min-width: 960px) 40vw, 100vw"
+      alt={about.alt}
+      loading="lazy"
+      decoding="async"
+    />
+  </figure>
+</section>

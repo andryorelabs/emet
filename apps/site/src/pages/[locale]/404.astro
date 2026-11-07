@@ -1,0 +1,26 @@
+---
+/**
+ * The 404 page of each non-default locale, at `/<locale>/404/`.
+ */
+import { DEFAULT_LOCALE, LOCALES, localeSegment, type Locale } from "../../i18n/locales";
+import NotFoundDocument from "../../seo/NotFoundDocument.astro";
+
+/**
+ * One path per non-default locale, keyed by its URL segment.
+ * @returns The static paths.
+ */
+export function getStaticPaths() {
+  return LOCALES.filter((locale) => locale !== DEFAULT_LOCALE).map((locale) => ({
+    params: { locale: localeSegment(locale) },
+    props: { locale },
+  }));
+}
+
+interface Props {
+  locale: Locale;
+}
+
+const { locale } = Astro.props;
+---
+
+<NotFoundDocument locale={locale} />

@@ -1,0 +1,30 @@
+{
+  "name": "@emet/site",
+  "private": true,
+  "description": "The emet Website: home page and docs (Astro and Starlight)",
+  "license": "MIT",
+  "type": "module",
+  "scripts": {
+    "dev": "astro dev",
+    "build": "astro build",
+    "preview": "astro preview",
+    "sync": "astro sync",
+    "check": "bun ../../node_modules/typescript7/bin/tsc --noEmit --runExternalCode -p tsconfig.json",
+    "test": "bun test --pass-with-no-tests"
+  },
+  "dependencies": {
+    "@astrojs/starlight": "catalog:",
+    "astro": "catalog:",
+    "expressive-code": "^0.44.3",
+    "hast-util-to-html": "^9.0.6",
+    "lenis": "^1.3.27",
+    "sharp": "catalog:",
+    "tailwindcss": "catalog:"
+  },
+  "devDependencies": {
+    "@astrojs/ts-content-mapper": "catalog:",
+    "@happy-dom/global-registrator": "21.0.4",
+    "@tailwindcss/vite": "catalog:",
+    "@types/bun": "catalog:"
+  }
+}

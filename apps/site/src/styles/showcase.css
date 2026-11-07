@@ -1,0 +1,183 @@
+/**
+ * The showcase: a full-bleed 16:9 painted valley with one paper panel.
+ * Flagging cross-fades day to dusk (opacity only); the switch knob moves with
+ * transform only. Reduced motion swaps at once.
+ */
+
+section.showcase {
+  padding: 0;
+  position: relative;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  max-height: 828px;
+  min-height: 560px;
+  overflow: clip;
+  background: var(--surface);
+}
+
+.showcase-stage,
+.showcase-stage picture,
+.showcase-stage img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.showcase-stage img {
+  object-fit: cover;
+  object-position: 50% 100%;
+}
+
+.showcase-dusk {
+  opacity: 0;
+  transition: opacity 600ms var(--ease-out);
+}
+
+.showcase[data-state="held"] .showcase-dusk {
+  opacity: 1;
+}
+
+section.showcase .showcase-panel {
+  position: absolute;
+  top: var(--gutter);
+  left: var(--gutter);
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 12px;
+  width: min(440px, calc(100% - 2 * var(--gutter)));
+  padding: 32px;
+  border-radius: var(--radius-panel);
+  background: var(--surface);
+  color: var(--text);
+}
+
+.showcase-mark {
+  margin: 8px 0 0;
+  color: var(--text);
+  font-size: 28px;
+  font-weight: 500;
+  letter-spacing: -0.02em;
+}
+
+.showcase-letter {
+  display: inline-block;
+  opacity: 1;
+  transition: opacity 400ms var(--ease-out);
+}
+
+.showcase[data-state="held"] .showcase-letter {
+  opacity: 0.2;
+}
+
+.showcase h2 {
+  margin: 0;
+  font-size: clamp(32px, 3.2vw, 48px);
+  font-weight: 400;
+  line-height: 1.05;
+  letter-spacing: -0.02em;
+}
+
+.showcase-status {
+  margin: 0;
+  font-size: 17px;
+  line-height: 1.4;
+}
+
+.showcase-flag {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 48px;
+  margin-top: 8px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--text);
+  font: inherit;
+  font-size: 17px;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.showcase-flag[hidden] {
+  display: none;
+}
+
+.showcase-flag:focus-visible {
+  outline: 2px solid var(--text);
+  outline-offset: 4px;
+  border-radius: var(--radius-control);
+}
+
+.showcase-switch {
+  position: relative;
+  flex: none;
+  width: 52px;
+  height: 30px;
+  border-radius: 999px;
+  background: var(--moss);
+}
+
+.showcase-switch::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: var(--lamp);
+  opacity: 0;
+  transition: opacity 250ms var(--ease-out);
+}
+
+.showcase-knob {
+  position: absolute;
+  z-index: 1;
+  top: 4px;
+  left: 4px;
+  width: 22px;
+  height: 22px;
+  border-radius: 999px;
+  background: var(--bg);
+  transition: transform 250ms var(--ease-out);
+}
+
+.showcase-flag[aria-pressed="true"] .showcase-switch::after {
+  opacity: 1;
+}
+
+.showcase-flag[aria-pressed="true"] .showcase-knob {
+  transform: translateX(22px);
+}
+
+.showcase-flag:active .showcase-knob {
+  transform: translateX(0) scale(0.97);
+}
+
+.showcase-flag[aria-pressed="true"]:active .showcase-knob {
+  transform: translateX(22px) scale(0.97);
+}
+
+@media (max-width: 640px) {
+  section.showcase {
+    aspect-ratio: auto;
+    height: 720px;
+  }
+
+  .showcase-stage img {
+    object-position: 94% 100%;
+  }
+
+  section.showcase .showcase-panel {
+    padding: 24px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .showcase-dusk,
+  .showcase-letter,
+  .showcase-switch::after,
+  .showcase-knob {
+    transition: none;
+  }
+}

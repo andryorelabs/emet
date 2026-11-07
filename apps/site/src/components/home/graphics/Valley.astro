@@ -1,0 +1,35 @@
+---
+/**
+ * The valley breathes: a scene with the picture's ratio laid over a painting
+ * (hero, showcase or closing). It holds two feathered cloud drifts, a mist
+ * drift, a river shimmer and the golem's lamp eyes. Everything inside is
+ * placed in percentages of the picture, and the scene follows the same
+ * `object-position` as the painting, so the eyes stay on the painted eyes at
+ * any viewport. Decorative CSS shapes with no inline styles (the CSP forbids
+ * them), so every position lives in `graphics.css`; off with reduced motion.
+ */
+// oxlint-disable-next-line import/no-unassigned-import -- Astro bundles a stylesheet imported for its side effect
+import "../../../styles/graphics.css";
+
+interface Props {
+  variant: "hero" | "showcase" | "closing";
+}
+
+const { variant } = Astro.props;
+---
+
+<div class="valley" data-valley={variant} aria-hidden="true">
+  <div class="valley-scene">
+    <span class="v-cloud"></span>
+    <span class="v-cloud"></span>
+    <span class="v-mist"></span>
+    <span class="v-glint"></span>
+    <span class="v-glint"></span>
+    <span class="v-glint"></span>
+    <span class="v-eye v-l"></span>
+    <span class="v-lid v-l"></span>
+    <span class="v-eye v-r"></span>
+    <span class="v-lid v-r"></span>
+    <slot />
+  </div>
+</div>

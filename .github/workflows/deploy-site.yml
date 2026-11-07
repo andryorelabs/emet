@@ -1,0 +1,41 @@
+name: Deploy Website
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - "apps/site/**"
+      - "docs/**"
+      - "CHANGELOG.md"
+      - ".github/scripts/deploy-coolify.sh"
+      - ".github/workflows/deploy-site.yml"
+
+concurrency:
+  group: ${{ github.workflow }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    name: Build image and deploy via Coolify
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Build the image and smoke-test it
+        run: bash apps/site/docker/smoke.sh
+
+      # The token is a GitHub secret (ADR-0019) and the script never echoes it.
+      - name: Deploy via Coolify and wait
+        env:
+          COOLIFY_API_TOKEN: ${{ secrets.COOLIFY_API_TOKEN }}
+          COOLIFY_APP_UUID: ${{ vars.SITE_COOLIFY_APP_UUID }}
+        run: bash .github/scripts/deploy-coolify.sh
