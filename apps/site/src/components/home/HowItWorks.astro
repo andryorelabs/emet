@@ -8,6 +8,7 @@ import { Picture } from "astro:assets";
 import sourceImage from "../../assets/source.webp";
 import type { UiStrings } from "../../i18n/ui/en";
 import CodeBlock from "../code/CodeBlock.astro";
+import WaveDiagram from "./graphics/WaveDiagram.astro";
 
 interface Props {
   strings: UiStrings;
@@ -72,7 +73,7 @@ const statusJson = JSON.stringify(
   <div class="how-column">
     <h2 id="how-title" data-reveal="heading"><span class="reveal-line">{how.heading}</span></h2>
 
-    <article class="exchange" id="install">
+    <article class="exchange" id="install" data-typed>
       <h3>{how.install}</h3>
       <CodeBlock
         code={pluginCommands}
@@ -84,7 +85,7 @@ const statusJson = JSON.stringify(
       />
     </article>
 
-    <article class="exchange">
+    <article class="exchange" data-typed>
       <h3>{how.describe}</h3>
       <CodeBlock code={`/emet:run ${how.request}`} lang="bash" />
       <div class="fragment" data-ui data-reveal="item">
@@ -92,11 +93,11 @@ const statusJson = JSON.stringify(
       </div>
       <div class="fragment" data-ui data-reveal="item">
         <pre class="terminal">{tickets}</pre>
-        <div class="wave-slot" data-slot="wave-diagram" aria-hidden="true"></div>
+        <div class="wave-slot" data-slot="wave-diagram" aria-hidden="true"><WaveDiagram /></div>
       </div>
     </article>
 
-    <article class="exchange">
+    <article class="exchange" data-typed>
       <h3>{how.land}</h3>
       <CodeBlock code="emet status" lang="bash" />
       <CodeBlock code={statusJson} lang="json" />
@@ -110,3 +111,9 @@ const statusJson = JSON.stringify(
     </article>
   </div>
 </section>
+
+<script>
+  import { initTypedTerminal } from "./graphics/typed-terminal";
+
+  initTypedTerminal(document);
+</script>

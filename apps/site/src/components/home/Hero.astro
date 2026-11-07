@@ -7,6 +7,7 @@ import { getImage, Picture } from "astro:assets";
 
 import heroImage from "../../assets/hero.webp";
 import type { UiStrings } from "../../i18n/ui/en";
+import Valley from "./graphics/Valley.astro";
 // oxlint-disable-next-line import/no-unassigned-import -- Astro bundles a stylesheet imported for its side effect
 import "../../styles/motion.css";
 
@@ -44,6 +45,7 @@ const { hero } = strings;
     fetchpriority="high"
     decoding="async"
   />
+  <Valley variant="hero" />
   <div class="hero-copy">
     <h1 id="hero-title">
       <span class="sr-only">{hero.name}. </span>
@@ -59,7 +61,9 @@ const { hero } = strings;
 </section>
 
 <script>
+  import { initAmbient } from "./graphics/ambient";
   import { initMotion } from "./motion/motion";
 
   initMotion(document);
+  initAmbient(document);
 </script>

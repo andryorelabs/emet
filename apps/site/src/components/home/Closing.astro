@@ -7,6 +7,7 @@ import { Picture } from "astro:assets";
 
 import bookendImage from "../../assets/bookend.webp";
 import type { UiStrings } from "../../i18n/ui/en";
+import Valley from "./graphics/Valley.astro";
 
 interface Props {
   strings: UiStrings;
@@ -28,6 +29,7 @@ const { closing } = strings;
     loading="lazy"
     decoding="async"
   />
+  <Valley variant="closing" />
   <div class="closing-copy">
     <h2 id="closing-title" data-reveal="heading">
       <span class="reveal-line">{closing.heading}</span>
