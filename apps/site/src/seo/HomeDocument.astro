@@ -1,0 +1,43 @@
+---
+/**
+ * The home page of the Website in one locale: every section, the header and
+ * the footer, with the canonical and hreflang head tags. Shared by the English
+ * root page and the localized pages.
+ */
+// oxlint-disable-next-line import/no-unassigned-import -- Astro bundles a stylesheet imported for its side effect
+import "../styles/home.css";
+
+import About from "../components/home/About.astro";
+import Closing from "../components/home/Closing.astro";
+import Features from "../components/home/Features.astro";
+import Hero from "../components/home/Hero.astro";
+import HowItWorks from "../components/home/HowItWorks.astro";
+import Showcase from "../components/home/Showcase.astro";
+import SiteFooter from "../components/site/SiteFooter.astro";
+import SiteHeader from "../components/site/SiteHeader.astro";
+import type { Locale } from "../i18n/locales";
+import { getStrings } from "../i18n/ui";
+import BaseLayout from "../layouts/BaseLayout.astro";
+import AlternateLinks from "./AlternateLinks.astro";
+
+interface Props {
+  locale: Locale;
+}
+
+const { locale } = Astro.props;
+const strings = getStrings(locale);
+---
+
+<BaseLayout title={strings.meta.title} description={strings.meta.description} locale={locale}>
+  <AlternateLinks slot="head" locale={locale} path="/" />
+  <SiteHeader locale={locale} currentPath="/" strings={strings.nav} />
+  <main>
+    <Hero strings={strings} />
+    <HowItWorks strings={strings} />
+    <Showcase strings={strings} />
+    <Features strings={strings} />
+    <About strings={strings} />
+    <Closing strings={strings} />
+  </main>
+  <SiteFooter locale={locale} strings={strings.footer} />
+</BaseLayout>
