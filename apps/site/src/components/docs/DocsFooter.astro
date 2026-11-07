@@ -4,14 +4,16 @@
  */
 import StarlightFooter from "@astrojs/starlight/components/Footer.astro";
 
-import { resolveLocale } from "../../docs/route";
+import { englishPathOf, resolveLocale } from "../../docs/route";
 import { getStrings } from "../../i18n/ui";
 import SiteFooter from "../site/SiteFooter.astro";
 
 const { lang } = Astro.locals.starlightRoute;
+const locale = resolveLocale(lang);
+const currentPath = englishPathOf(Astro.url.pathname, locale);
 ---
 
 <StarlightFooter />
 <div class="docs-site-footer">
-  <SiteFooter locale={resolveLocale(lang)} strings={getStrings(resolveLocale(lang)).footer} />
+  <SiteFooter locale={locale} strings={getStrings(locale).footer} currentPath={currentPath} />
 </div>
