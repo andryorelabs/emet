@@ -440,6 +440,7 @@
 
 .wave {
   display: block;
+  pointer-events: none;
   width: 100%;
   max-width: 480px;
   height: auto;
