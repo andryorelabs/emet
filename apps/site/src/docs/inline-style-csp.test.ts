@@ -38,7 +38,8 @@ async function readOrigin(stream: ReadableStream<Uint8Array>): Promise<string> {
  */
 async function fetchPage(pagePath: string, attemptsLeft = FETCH_ATTEMPTS): Promise<string> {
   const response = await fetch(`${origin}${pagePath}`).catch(() => undefined);
-  if (response?.status === 200) return response.text();
+  const body = response?.status === 200 ? await response.text().catch(() => undefined) : undefined;
+  if (body !== undefined) return body;
   if (attemptsLeft <= 1)
     throw new Error(`${pagePath} answered ${response?.status ?? "no response"}`);
   await Bun.sleep(FETCH_RETRY_DELAY_MS);
