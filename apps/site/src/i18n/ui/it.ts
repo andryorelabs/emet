@@ -34,7 +34,7 @@ export const it = {
     land: "Guardalo arrivare.",
     tabPlugin: "Plugin",
     tabClone: "Da un clone",
-    request: "add dark mode to the settings page",
+    request: "build the Website",
     alt: "Una valle dipinta in luce dorata, un piccolo golem d'argilla su un rialzo erboso sopra campi a terrazze.",
   },
   showcase: {

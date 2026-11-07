@@ -34,7 +34,7 @@ export const fr = {
     land: "Regardez-le atterrir.",
     tabPlugin: "Plugin",
     tabClone: "Depuis un clone",
-    request: "add dark mode to the settings page",
+    request: "build the Website",
     alt: "Une vallée peinte dans une lumière dorée, un petit golem d'argile sur une butte herbeuse au-dessus de champs en terrasses.",
   },
   showcase: {

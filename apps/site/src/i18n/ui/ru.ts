@@ -33,7 +33,7 @@ export const ru = {
     land: "Смотрите, как он сливается.",
     tabPlugin: "Плагин",
     tabClone: "Из клона",
-    request: "add dark mode to the settings page",
+    request: "build the Website",
     alt: "Нарисованная долина в золотом свете, маленький глиняный голем на травянистом пригорке над террасными полями.",
   },
   showcase: {

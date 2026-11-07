@@ -35,7 +35,7 @@ export const ptBR = {
     land: "Veja ser integrado.",
     tabPlugin: "Plugin",
     tabClone: "A partir de um clone",
-    request: "add dark mode to the settings page",
+    request: "build the Website",
     alt: "Um vale pintado em luz dourada, um pequeno golem de argila em um outeiro gramado acima de campos em terraços.",
   },
   showcase: {

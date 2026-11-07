@@ -33,7 +33,7 @@ export const en = {
     land: "Watch it land.",
     tabPlugin: "Plugin",
     tabClone: "From a clone",
-    request: "add dark mode to the settings page",
+    request: "build the Website",
     alt: "A painted valley in golden light, a clay golem small on a grassy rise above terraced fields.",
   },
   showcase: {

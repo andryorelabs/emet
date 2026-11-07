@@ -34,7 +34,7 @@ export const de = {
     land: "Zusehen, wie es landet.",
     tabPlugin: "Plugin",
     tabClone: "Aus einem Klon",
-    request: "add dark mode to the settings page",
+    request: "build the Website",
     alt: "Ein gemaltes Tal im goldenen Licht, ein kleiner Lehm-Golem auf einer grasigen Anhöhe über Terrassenfeldern.",
   },
   showcase: {

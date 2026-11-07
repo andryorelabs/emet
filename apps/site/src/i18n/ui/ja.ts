@@ -33,7 +33,7 @@ export const ja = {
     land: "マージを見届ける。",
     tabPlugin: "プラグイン",
     tabClone: "クローンから",
-    request: "add dark mode to the settings page",
+    request: "build the Website",
     alt: "金色の光に包まれた絵の谷。段々畑の上の草の丘に立つ小さな粘土のゴーレム。",
   },
   showcase: {

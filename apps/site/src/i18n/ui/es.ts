@@ -34,7 +34,7 @@ export const es = {
     land: "Míralo integrarse.",
     tabPlugin: "Plugin",
     tabClone: "Desde un clon",
-    request: "add dark mode to the settings page",
+    request: "build the Website",
     alt: "Un valle pintado con luz dorada, un pequeño gólem de arcilla sobre una loma cubierta de hierba por encima de campos en terrazas.",
   },
   showcase: {
