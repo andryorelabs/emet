@@ -17,6 +17,7 @@
     "astro": "catalog:",
     "expressive-code": "^0.44.3",
     "hast-util-to-html": "^9.0.6",
+    "lenis": "^1.3.27",
     "sharp": "catalog:",
     "tailwindcss": "catalog:"
   },

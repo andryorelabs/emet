@@ -7,6 +7,8 @@ import { getImage, Picture } from "astro:assets";
 
 import heroImage from "../../assets/hero.webp";
 import type { UiStrings } from "../../i18n/ui/en";
+// oxlint-disable-next-line import/no-unassigned-import -- Astro bundles a stylesheet imported for its side effect
+import "../../styles/motion.css";
 
 interface Props {
   strings: UiStrings;
@@ -29,7 +31,7 @@ const { hero } = strings;
   imagesizes="100vw"
   fetchpriority="high"
 />
-<section class="hero" aria-labelledby="hero-title">
+<section class="hero" data-recede aria-labelledby="hero-title">
   <Picture
     class="hero-picture"
     src={heroImage}
@@ -55,3 +57,9 @@ const { hero } = strings;
     </div>
   </div>
 </section>
+
+<script>
+  import { initMotion } from "./motion/motion";
+
+  initMotion(document);
+</script>

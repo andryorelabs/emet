@@ -24,15 +24,17 @@ const report = [
 ---
 
 <section class="features" aria-labelledby="features-title">
-  <h2 id="features-title">{features.heading}</h2>
+  <h2 id="features-title" data-reveal="heading">
+    <span class="reveal-line">{features.heading}</span>
+  </h2>
   <div class="plate">
-    <div class="fragment" data-ui>
+    <div class="fragment" data-ui data-reveal="item">
       <pre class="terminal">{report}</pre>
     </div>
     <ul class="notes">
       {
         features.notes.map((note) => (
-          <li>
+          <li data-reveal="item">
             <h3>{note.title}</h3>
             <p>{note.line}</p>
           </li>

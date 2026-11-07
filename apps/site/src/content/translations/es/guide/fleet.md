@@ -1,0 +1,18 @@
+---
+title: Revisión de flota
+description: Audita varios repositorios a la vez con emet doctor, en modo de solo lectura, y mira cuáles necesitan atención.
+seoTitle: Revisión de flota con emet doctor
+sourceHash: 14501ffced8e07f0
+---
+
+¿Ya usas emet en varios repositorios? `emet doctor` audita cualquier cantidad de ellos a la vez, en modo de solo lectura:
+
+```bash
+emet doctor ~/code/*
+```
+
+Informa, por repositorio: un `emet.config.json` válido, los cuatro archivos `docs/agents/*.md` presentes, cero marcadores `TODO(emet):` pendientes, si los comandos de `commands.selfCheck` realmente se resuelven y los hallazgos de dependencias propios del tracker de ese repositorio (`gh`, Linear; consulta la [referencia de dependencias](../reference/dependencies.md)). El plugin mattpocock-skills y las banderas de las CLI externas (`gh`, `claude --bg`, `claude agents --json`, verificadas mediante `--help`) se comprueban una sola vez para todo el barrido, no por repositorio.
+
+`emet doctor` comprueba las banderas mismas, no solo que existan los binarios. Lee `--help` de `gh issue view`/`gh repo view` (`--json`), `gh issue edit` (`--add-label`, `--remove-label`), `claude` (`--bg`) y `claude agents` (`--json`), e informa cualquier bandera que una CLI más nueva o más antigua ya no documente. Una bandera renombrada, de otro modo, haría fallar una oleada a mitad de camino.
+
+Cada sondeo se limita a 5 s para que un `gh auth status` detenido (sin red) no pueda colgar una oleada. El `preflight.requiredCommands` de un repositorio es una lista, propiedad del repositorio, de binarios que `emet preflight` y `emet doctor` exigen en el PATH. Consulta la [referencia de la CLI](../reference/cli.md#revisión-de-flota) y la [referencia de configuración](../reference/configuration.md#preflight).

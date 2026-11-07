@@ -56,7 +56,7 @@ const statusJson = JSON.stringify(
 );
 ---
 
-<section class="how" aria-labelledby="how-title">
+<section class="how" data-drift="6" aria-labelledby="how-title">
   <figure class="how-painting" aria-hidden="false">
     <Picture
       src={sourceImage}
@@ -70,7 +70,7 @@ const statusJson = JSON.stringify(
     />
   </figure>
   <div class="how-column">
-    <h2 id="how-title">{how.heading}</h2>
+    <h2 id="how-title" data-reveal="heading"><span class="reveal-line">{how.heading}</span></h2>
 
     <article class="exchange" id="install">
       <h3>{how.install}</h3>
@@ -87,10 +87,10 @@ const statusJson = JSON.stringify(
     <article class="exchange">
       <h3>{how.describe}</h3>
       <CodeBlock code={`/emet:run ${how.request}`} lang="bash" />
-      <div class="fragment" data-ui>
+      <div class="fragment" data-ui data-reveal="item">
         <pre class="terminal">{banner}</pre>
       </div>
-      <div class="fragment" data-ui>
+      <div class="fragment" data-ui data-reveal="item">
         <pre class="terminal">{tickets}</pre>
         <div class="wave-slot" data-slot="wave-diagram" aria-hidden="true"></div>
       </div>
@@ -100,7 +100,7 @@ const statusJson = JSON.stringify(
       <h3>{how.land}</h3>
       <CodeBlock code="emet status" lang="bash" />
       <CodeBlock code={statusJson} lang="json" />
-      <div class="fragment pr-card" data-ui>
+      <div class="fragment pr-card" data-ui data-reveal="item">
         <p class="pr-title">
           <span class="pr-state">Merged</span>
           Wave 1: theme tokens
