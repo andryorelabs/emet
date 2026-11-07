@@ -1,5 +1,7 @@
 import { copyWithFeedback, FEEDBACK_MS, type CopyResult } from "../../lib/copy-feedback";
 
+import { resolveTabIndex } from "./tab-navigation";
+
 const STORAGE_KEY = "emet:install";
 const LABELS: Record<CopyResult | "idle", string> = {
   idle: "Copy code",
@@ -90,5 +92,24 @@ function handleClick(event: MouseEvent): void {
   }
 }
 
+function handleKeydown(event: KeyboardEvent): void {
+  if (!(event.target instanceof Element)) return;
+  const current = event.target.closest<HTMLElement>("[data-tab]");
+  const block = current?.closest<HTMLElement>("[data-code-block]");
+  if (!current || !block) return;
+  const tabs = [...block.querySelectorAll<HTMLElement>("[data-tab]")];
+  const target = resolveTabIndex(event.key, tabs.indexOf(current), tabs.length);
+  const next = target === null ? undefined : tabs[target];
+  const label = next?.dataset["tab"];
+  if (!next || label === undefined) return;
+  event.preventDefault();
+  next.focus();
+  rememberTab(label);
+  for (const other of document.querySelectorAll<HTMLElement>("[data-code-block]")) {
+    if (other.querySelector(`[data-tab="${CSS.escape(label)}"]`)) selectTab(other, label);
+  }
+}
+
 document.addEventListener("click", handleClick);
+document.addEventListener("keydown", handleKeydown);
 applyRememberedTab();
