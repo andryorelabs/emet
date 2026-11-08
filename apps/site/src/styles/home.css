@@ -4,12 +4,21 @@
  */
 
 :root {
-  --c4: 27%;
+  --container: 1280px;
+  --axis: 160px;
   --gutter: 32px;
+  --edge: max(var(--gutter), (100% - var(--container)) / 2);
   --section-gap: 120px;
   --radius-panel: 12px;
   --radius-control: 10px;
   --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+}
+
+@media (max-width: 1000px) {
+  :root {
+    --axis: 0px;
+    --gutter: 24px;
+  }
 }
 
 @media (max-width: 640px) {
@@ -28,12 +37,11 @@
   white-space: nowrap;
 }
 
-main > section + section {
-  margin-top: var(--section-gap);
-}
-
-main > section:last-child {
-  margin-bottom: var(--section-gap);
+main {
+  display: flex;
+  flex-direction: column;
+  row-gap: var(--section-gap);
+  padding-bottom: var(--section-gap);
 }
 
 main h2 {
@@ -122,6 +130,19 @@ summary:focus-visible {
   padding: clamp(112px, 17svh, 176px) var(--gutter) 0;
 }
 
+.hero-copy::before {
+  content: "";
+  position: absolute;
+  inset: -48px -160px -40px;
+  z-index: -1;
+  pointer-events: none;
+  background: radial-gradient(
+    closest-side,
+    color-mix(in oklch, var(--bg) 62%, transparent),
+    transparent
+  );
+}
+
 .hero h1 {
   margin: 0;
   font-size: clamp(38px, 4vw, 60px);
@@ -136,6 +157,8 @@ summary:focus-visible {
 
 .hero-sentence {
   max-width: 34ch;
+  font-size: 20px;
+  font-weight: 500;
 }
 
 .hero-actions {
@@ -148,9 +171,10 @@ summary:focus-visible {
 
 .how {
   display: grid;
-  grid-template-columns: minmax(0, 640px) 360px;
+  grid-template-columns: minmax(0, 640px) minmax(0, 360px);
+  justify-content: space-between;
   gap: 72px;
-  padding: 0 32px 0 var(--c4);
+  padding-inline: calc(var(--edge) + var(--axis)) var(--edge);
   align-items: start;
 }
 
@@ -208,11 +232,6 @@ summary:focus-visible {
   margin: 0;
   font-size: 22px;
   font-weight: 400;
-}
-
-.exchange > .fragment,
-.exchange > .emet-code ~ .emet-code {
-  margin-left: 40px;
 }
 
 pre {
@@ -275,7 +294,7 @@ pre {
   .how {
     grid-template-columns: minmax(0, 1fr);
     gap: 40px;
-    padding: 0 24px;
+    padding-inline: var(--gutter);
   }
 
   .how-column,
@@ -297,11 +316,6 @@ pre {
 
   .how-column {
     grid-row: 2;
-  }
-
-  .exchange > .fragment,
-  .exchange > .emet-code ~ .emet-code {
-    margin-left: 0;
   }
 }
 
@@ -327,15 +341,14 @@ pre {
 .features {
   position: relative;
   height: 820px;
-  padding: 0 32px;
+  padding-inline: var(--edge);
 }
 
 .features h2 {
   position: absolute;
   top: 0;
-  left: 32px;
-  width: calc(33.3% - 48px);
-  text-align: right;
+  left: calc(var(--edge) + var(--axis));
+  width: calc(50% - 224px - var(--edge) - var(--axis));
   letter-spacing: -0.03em;
 }
 
@@ -476,7 +489,6 @@ pre {
   .features h2 {
     position: static;
     width: auto;
-    text-align: left;
   }
 
   .plate {
@@ -515,7 +527,7 @@ pre {
 }
 
 .about {
-  padding: 0 var(--gutter) 0 var(--c4);
+  padding-inline: calc(var(--edge) + var(--axis)) var(--edge);
   display: grid;
   grid-template-columns: minmax(0, 520px) minmax(0, 420px);
   gap: 80px;
@@ -569,7 +581,7 @@ pre {
   .about {
     grid-template-columns: minmax(0, 1fr);
     gap: 40px;
-    padding: 0 24px;
+    padding-inline: var(--gutter);
   }
 
   .portrait {
@@ -578,7 +590,7 @@ pre {
 }
 
 .stats {
-  padding: 0 var(--gutter) 0 var(--c4);
+  padding-inline: calc(var(--edge) + var(--axis)) var(--edge);
 }
 
 .stats-grid {
@@ -609,7 +621,7 @@ pre {
 }
 
 .faq {
-  padding: 0 var(--gutter) 0 var(--c4);
+  padding-inline: calc(var(--edge) + var(--axis)) var(--edge);
   display: flex;
   flex-direction: column;
   gap: 32px;
@@ -671,20 +683,6 @@ pre {
   }
 }
 
-@media (max-width: 1000px) {
-  .stats,
-  .faq {
-    padding: 0 24px;
-  }
-}
-
-@media (max-width: 640px) {
-  .stats,
-  .faq {
-    padding: 0 var(--gutter);
-  }
-}
-
 @media (max-width: 600px) {
   .stats-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -694,7 +692,7 @@ pre {
 
 .closing {
   position: relative;
-  margin: 0 var(--gutter);
+  margin-inline: var(--edge);
   min-height: 440px;
   border-radius: var(--radius-panel);
   overflow: clip;
@@ -739,7 +737,9 @@ pre {
   align-items: baseline;
   justify-content: space-between;
   gap: 12px 32px;
-  padding: 0 var(--gutter) 32px;
+  margin-inline: var(--edge);
+  padding: 32px 0;
+  border-top: 1px solid var(--border);
 }
 
 .site-footer p {
