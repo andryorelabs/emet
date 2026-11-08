@@ -69,10 +69,10 @@ export const en = {
   stats: {
     label: "In numbers",
     items: [
-      { value: "3", label: "trackers" },
-      { value: "10", label: "languages" },
-      { value: "1", label: "approval" },
-      { value: "MIT", label: "license" },
+      { value: "3", label: "trackers", detail: "Linear, GitHub Issues or local files" },
+      { value: "10", label: "languages", detail: "English plus nine translations" },
+      { value: "1", label: "approval", detail: "Spec and tickets, before any code" },
+      { value: "MIT", label: "license", detail: "Free to use and fork" },
     ],
   },
   faq: {

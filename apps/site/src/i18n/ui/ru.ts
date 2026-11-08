@@ -69,10 +69,10 @@ export const ru = {
   stats: {
     label: "В цифрах",
     items: [
-      { value: "3", label: "трекера" },
-      { value: "10", label: "языков" },
-      { value: "1", label: "одобрение" },
-      { value: "MIT", label: "лицензия" },
+      { value: "3", label: "трекера", detail: "Linear, GitHub Issues или локальные файлы" },
+      { value: "10", label: "языков", detail: "Английский и девять переводов" },
+      { value: "1", label: "одобрение", detail: "Спецификация и тикеты до любого кода" },
+      { value: "MIT", label: "лицензия", detail: "Свободно использовать и форкать" },
     ],
   },
   faq: {

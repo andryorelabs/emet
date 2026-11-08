@@ -17,6 +17,15 @@ describe("Stats band", () => {
     expect(statsSource).toContain('data-reveal="item"');
   });
 
+  it("has a non-empty detail for every item in every locale", () => {
+    for (const locale of LOCALES) {
+      for (const item of getStrings(locale).stats.items) {
+        expect(item.detail.trim().length).toBeGreaterThan(0);
+      }
+    }
+    expect(statsSource).toContain("stat-detail");
+  });
+
   it("falls to two columns under 600px", () => {
     expect(css).toMatch(
       /@media \(max-width: 600px\) \{\s*\.stats-grid \{\s*grid-template-columns: repeat\(2, minmax\(0, 1fr\)\)/,

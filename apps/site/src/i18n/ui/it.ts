@@ -73,10 +73,10 @@ export const it = {
   stats: {
     label: "In numeri",
     items: [
-      { value: "3", label: "tracker" },
-      { value: "10", label: "lingue" },
-      { value: "1", label: "approvazione" },
-      { value: "MIT", label: "licenza" },
+      { value: "3", label: "tracker", detail: "Linear, GitHub Issues o file locali" },
+      { value: "10", label: "lingue", detail: "Inglese più nove traduzioni" },
+      { value: "1", label: "approvazione", detail: "Spec e ticket, prima di ogni riga di codice" },
+      { value: "MIT", label: "licenza", detail: "Libero da usare e fare fork" },
     ],
   },
   faq: {
