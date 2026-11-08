@@ -37,13 +37,7 @@ const keyWidth = 10;
               <p>{note.line}</p>
             </div>
             {report && (
-              <pre class="features-report">
-                <span class="features-key">{report.key.padEnd(keyWidth)}</span>
-                {report.value}
-                {"\n"}
-                {" ".repeat(keyWidth)}
-                {report.result}
-              </pre>
+              <pre class="features-report"><span class="features-key">{report.key.padEnd(keyWidth)}</span>{`${report.value}\n${" ".repeat(keyWidth)}${report.result}`}</pre>
             )}
           </li>
         );
