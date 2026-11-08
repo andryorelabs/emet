@@ -137,39 +137,9 @@ summary:focus-visible {
 }
 
 .docs-site-footer .site-footer {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 12px 32px;
   margin-top: 3rem;
-  padding: 2rem 0 0;
+  padding-top: 2rem;
   border-top: 1px solid var(--border);
-}
-
-.docs-site-footer .site-footer p {
-  margin: 0;
-  font-size: 16px;
-}
-
-.docs-site-footer .footer-fine {
-  flex-basis: 100%;
-  color: var(--text-muted);
-}
-
-.docs-site-footer .footer-links {
-  display: flex;
-  gap: 24px;
-}
-
-.docs-site-footer .footer-links a {
-  color: var(--text);
-}
-
-.docs-site-footer .footer-line {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 4px 16px;
 }
 
 .docs-notice {
