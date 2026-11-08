@@ -35,29 +35,33 @@ const links = [
 ---
 
 <footer class="site-footer">
-  <p class="footer-line">
-    <strong>emet</strong>
-    <span>{strings.description}</span>
-    <span>{strings.notice}</span>
-  </p>
-  <nav class="footer-links">
-    {links.map((link) => <a href={link.href}>{link.label}</a>)}
-  </nav>
-  <nav class="footer-langs" aria-label={strings.languages}>
-    {
-      LOCALES.map((target) => (
-        <a
-          href={localePath(target, pagePath)}
-          hreflang={target}
-          lang={target}
-          aria-current={target === locale ? "true" : undefined}
-        >
-          {LOCALE_NAMES[target]}
-        </a>
-      ))
-    }
-  </nav>
-  <p class="footer-fine">
-    {strings.legal} <a href={AUTHOR_URL} rel="author">{strings.builtBy}</a>. {strings.paintings}
-  </p>
+  <div class="footer-top">
+    <p class="footer-brand">
+      <strong>emet</strong>
+      <span>{strings.description}</span>
+      <span>{strings.notice}</span>
+    </p>
+    <nav class="footer-links">
+      {links.map((link) => <a href={link.href}>{link.label}</a>)}
+    </nav>
+  </div>
+  <div class="footer-bottom">
+    <nav class="footer-langs" aria-label={strings.languages}>
+      {
+        LOCALES.map((target) => (
+          <a
+            href={localePath(target, pagePath)}
+            hreflang={target}
+            lang={target}
+            aria-current={target === locale ? "true" : undefined}
+          >
+            {LOCALE_NAMES[target]}
+          </a>
+        ))
+      }
+    </nav>
+    <p class="footer-fine">
+      {strings.legal} <a href={AUTHOR_URL} rel="author">{strings.builtBy}</a>. {strings.paintings}
+    </p>
+  </div>
 </footer>
