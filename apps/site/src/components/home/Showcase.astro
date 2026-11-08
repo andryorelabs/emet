@@ -27,12 +27,6 @@ const duskVariants = await Promise.all(
 const duskSrcset = duskVariants
   .map((variant) => `${variant.src} ${variant.options.width}w`)
   .join(", ");
-const copy = JSON.stringify({
-  heading: showcase.heading,
-  headingHeld: showcase.headingHeld,
-  status: showcase.status,
-  statusHeld: showcase.statusHeld,
-});
 ---
 
 <section
@@ -40,7 +34,6 @@ const copy = JSON.stringify({
   id="showcase"
   data-showcase
   data-state="merged"
-  data-copy={copy}
   aria-labelledby="showcase-title"
 >
   <div class="showcase-stage" aria-hidden="true">
@@ -67,9 +60,13 @@ const copy = JSON.stringify({
     <Valley variant="showcase"><Fireflies /></Valley>
   </div>
   <div class="showcase-panel">
-    <h2 id="showcase-title" data-showcase-heading>{showcase.heading}</h2>
-    <p class="showcase-status" role="status" aria-live="polite" data-showcase-status>
-      {showcase.status}
+    <h2 id="showcase-title" class="showcase-stack">
+      <span data-variant="merged">{showcase.heading}</span>
+      <span data-variant="held">{showcase.headingHeld}</span>
+    </h2>
+    <p class="showcase-status showcase-stack" data-showcase-status>
+      <span data-variant="merged">{showcase.status}</span>
+      <span data-variant="held">{showcase.statusHeld}</span>
     </p>
     <noscript><p class="showcase-status">{showcase.statusHeld}</p></noscript>
     <button type="button" class="showcase-flag" aria-pressed="false" data-showcase-flag hidden>
