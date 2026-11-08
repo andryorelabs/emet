@@ -19,26 +19,31 @@ describe("SiteFooter", () => {
     expect(source).toContain('<a href={AUTHOR_URL} rel="author">');
   });
 
-  test("lists every locale with hreflang, lang and aria-current", () => {
-    expect(source).toContain("LOCALES.map");
-    expect(source).toContain("hreflang={target}");
-    expect(source).toContain("lang={target}");
-    expect(source).toContain('aria-current={target === locale ? "true" : undefined}');
+  test("uses the language switcher instead of a link row", () => {
+    expect(source).toContain("<LanguageSwitcher");
+    expect(source).toContain("currentPath={pagePath}");
+    expect(source).toContain("label={strings.languages}");
+    expect(source).not.toContain("footer-langs");
   });
 
   test("derives the page path from Astro.url when none is passed", () => {
     expect(source).toContain("currentPath ?? englishPathOf(Astro.url.pathname, locale)");
   });
 
-  test("splits into a top zone and a bottom zone", () => {
+  test("splits into a brand, two headed columns and a bottom row", () => {
     expect(source).toContain('class="footer-top"');
     expect(source).toContain('class="footer-brand"');
-    expect(source).toContain('class="footer-links"');
+    expect(source).toContain('class="footer-wordmark"');
+    expect(source).toContain("<img src={mark.src}");
+    expect(source).toContain('<nav class="footer-column" aria-labelledby={column.id}>');
+    expect(source).toContain('id: "footer-product"');
+    expect(source).toContain('id: "footer-trust"');
+    expect(source).toContain("strings.product");
+    expect(source).toContain("strings.trust");
     expect(source).toContain('class="footer-bottom"');
   });
 
-  test("keeps the language nav label and the fine line", () => {
-    expect(source).toContain("aria-label={strings.languages}");
+  test("keeps the fine line", () => {
     expect(source).toContain('class="footer-fine"');
   });
 });

@@ -41,7 +41,6 @@ main {
   display: flex;
   flex-direction: column;
   row-gap: var(--section-gap);
-  padding-bottom: var(--section-gap);
 }
 
 main h2 {

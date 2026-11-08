@@ -136,6 +136,8 @@ export const it = {
     security: "Sicurezza",
     contributing: "Contribuire",
     languages: "Lingue",
+    product: "Prodotto",
+    trust: "Fiducia",
     builtBy: "Creato da AndryOre",
   },
   share: {
