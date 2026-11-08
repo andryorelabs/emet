@@ -70,10 +70,14 @@ export const es = {
   stats: {
     label: "En cifras",
     items: [
-      { value: "3", label: "gestores de tareas" },
-      { value: "10", label: "idiomas" },
-      { value: "1", label: "aprobación" },
-      { value: "MIT", label: "licencia" },
+      {
+        value: "3",
+        label: "gestores de tareas",
+        detail: "Linear, GitHub Issues o archivos locales",
+      },
+      { value: "10", label: "idiomas", detail: "Inglés y nueve traducciones" },
+      { value: "1", label: "aprobación", detail: "Spec y tickets, antes de escribir código" },
+      { value: "MIT", label: "licencia", detail: "Libre para usar y bifurcar" },
     ],
   },
   faq: {

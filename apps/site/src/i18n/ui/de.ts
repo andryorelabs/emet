@@ -73,10 +73,10 @@ export const de = {
   stats: {
     label: "In Zahlen",
     items: [
-      { value: "3", label: "Tracker" },
-      { value: "10", label: "Sprachen" },
-      { value: "1", label: "Freigabe" },
-      { value: "MIT", label: "Lizenz" },
+      { value: "3", label: "Tracker", detail: "Linear, GitHub Issues oder lokale Dateien" },
+      { value: "10", label: "Sprachen", detail: "Englisch plus neun Übersetzungen" },
+      { value: "1", label: "Freigabe", detail: "Spec und Tickets, bevor Code entsteht" },
+      { value: "MIT", label: "Lizenz", detail: "Frei nutzbar und forkbar" },
     ],
   },
   faq: {

@@ -71,10 +71,10 @@ export const ptBR = {
   stats: {
     label: "Em números",
     items: [
-      { value: "3", label: "rastreadores" },
-      { value: "10", label: "idiomas" },
-      { value: "1", label: "aprovação" },
-      { value: "MIT", label: "licença" },
+      { value: "3", label: "rastreadores", detail: "Linear, GitHub Issues ou arquivos locais" },
+      { value: "10", label: "idiomas", detail: "Inglês e nove traduções" },
+      { value: "1", label: "aprovação", detail: "Spec e tickets, antes de qualquer código" },
+      { value: "MIT", label: "licença", detail: "Livre para usar e fazer fork" },
     ],
   },
   faq: {
