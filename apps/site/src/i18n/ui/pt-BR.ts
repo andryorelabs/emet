@@ -132,7 +132,6 @@ export const ptBR = {
     openssf: "OpenSSF Best Practices",
     security: "Segurança",
     contributing: "Contribuir",
-    languages: "Idiomas",
     product: "Produto",
     trust: "Confiança",
     builtBy: "Criado por AndryOre",

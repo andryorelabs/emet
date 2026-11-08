@@ -19,15 +19,9 @@ describe("SiteFooter", () => {
     expect(source).toContain('<a href={AUTHOR_URL} rel="author">');
   });
 
-  test("uses the language switcher instead of a link row", () => {
-    expect(source).toContain("<LanguageSwitcher");
-    expect(source).toContain("currentPath={pagePath}");
-    expect(source).toContain("label={strings.languages}");
-    expect(source).not.toContain("footer-langs");
-  });
-
-  test("derives the page path from Astro.url when none is passed", () => {
-    expect(source).toContain("currentPath ?? englishPathOf(Astro.url.pathname, locale)");
+  test("has no language switcher", () => {
+    expect(source).not.toContain("LanguageSwitcher");
+    expect(source).not.toContain("strings.languages");
   });
 
   test("splits into a brand, two headed columns and a bottom row", () => {
@@ -43,7 +37,9 @@ describe("SiteFooter", () => {
     expect(source).toContain('class="footer-bottom"');
   });
 
-  test("keeps the fine line", () => {
-    expect(source).toContain('class="footer-fine"');
+  test("stacks two credit lines", () => {
+    expect(source).toContain('<p class="footer-fine">');
+    expect(source).toContain('<p class="footer-fine footer-paintings">{strings.paintings}</p>');
+    expect(source).not.toContain("{strings.builtBy}</a>. {strings.paintings}");
   });
 });
