@@ -15,6 +15,7 @@ section.showcase {
   background: var(--surface);
 }
 
+.showcase-frame,
 .showcase-stage,
 .showcase-stage picture,
 .showcase-stage img {
@@ -194,23 +195,10 @@ section.showcase[data-pinned] {
   max-height: none;
 }
 
-section.showcase[data-pinned] .showcase-stage,
-section.showcase[data-pinned] .showcase-panel {
-  grid-area: 1 / 1;
+section.showcase[data-pinned] .showcase-frame {
   position: sticky;
   top: 0;
-  align-self: start;
-}
-
-section.showcase[data-pinned] .showcase-stage {
   height: 100svh;
-}
-
-section.showcase[data-pinned] .showcase-panel {
-  top: var(--gutter, 32px);
-  left: auto;
-  margin-top: var(--gutter, 32px);
-  margin-left: max(var(--gutter, 32px), (100% - var(--container, 1280px)) / 2);
 }
 
 @media (max-width: 640px) {
