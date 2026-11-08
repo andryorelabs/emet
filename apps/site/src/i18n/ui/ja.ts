@@ -137,7 +137,6 @@ export const ja = {
     openssf: "OpenSSF Best Practices",
     security: "セキュリティ",
     contributing: "コントリビュート",
-    languages: "言語",
     product: "プロダクト",
     trust: "信頼性",
     builtBy: "制作 AndryOre",

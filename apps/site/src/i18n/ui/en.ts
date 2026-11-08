@@ -131,7 +131,6 @@ export const en = {
     openssf: "OpenSSF Best Practices",
     security: "Security",
     contributing: "Contributing",
-    languages: "Languages",
     product: "Product",
     trust: "Trust",
     builtBy: "Built by AndryOre",

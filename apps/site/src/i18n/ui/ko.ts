@@ -131,7 +131,6 @@ export const ko = {
     openssf: "OpenSSF Best Practices",
     security: "보안",
     contributing: "기여하기",
-    languages: "언어",
     product: "제품",
     trust: "신뢰",
     builtBy: "제작 AndryOre",
