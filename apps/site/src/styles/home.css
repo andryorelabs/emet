@@ -402,9 +402,11 @@ pre {
   .features {
     padding-inline: 24px;
   }
-}
 
-@media (max-width: 600px) {
+  .features-rows {
+    margin-left: 0;
+  }
+
   .features-row {
     grid-template-columns: 1fr;
     gap: 12px;

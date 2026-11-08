@@ -56,3 +56,11 @@ describe("Home hero", () => {
     );
   });
 });
+
+describe("Features rows", () => {
+  it("stack the claim above its report below 1100px", () => {
+    expect(css).toMatch(
+      /@media \(max-width: 1100px\) \{[^@]*\.features-row \{\s*grid-template-columns: 1fr;/,
+    );
+  });
+});
