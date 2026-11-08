@@ -132,6 +132,8 @@ export const ru = {
     security: "Безопасность",
     contributing: "Участие в проекте",
     languages: "Языки",
+    product: "Продукт",
+    trust: "Доверие",
     builtBy: "Создал AndryOre",
   },
   share: {

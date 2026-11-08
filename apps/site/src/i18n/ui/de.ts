@@ -138,6 +138,8 @@ export const de = {
     security: "Sicherheit",
     contributing: "Mitwirken",
     languages: "Sprachen",
+    product: "Produkt",
+    trust: "Vertrauen",
     builtBy: "Erstellt von AndryOre",
   },
   share: {

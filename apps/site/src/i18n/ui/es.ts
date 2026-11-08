@@ -136,6 +136,8 @@ export const es = {
     security: "Seguridad",
     contributing: "Cómo contribuir",
     languages: "Idiomas",
+    product: "Producto",
+    trust: "Confianza",
     builtBy: "Creado por AndryOre",
   },
   share: {

@@ -121,6 +121,8 @@ export const zhCN = {
     security: "安全",
     contributing: "参与贡献",
     languages: "语言",
+    product: "产品",
+    trust: "信任",
     builtBy: "由 AndryOre 构建",
   },
   share: {

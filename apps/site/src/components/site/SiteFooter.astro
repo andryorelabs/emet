@@ -1,15 +1,17 @@
 ---
 /**
- * Website footer: the quiet plugin line, a row of project links, the language
- * links, then the fine line with the author credit and the AI disclosure of
- * the paintings. Language links keep the visitor on the current page.
+ * Website footer: the brand block, a Product and a Trust column of links, then
+ * the fine line with the author credit and the AI disclosure of the paintings
+ * beside the language switcher, which keeps the visitor on the current page.
  */
 // oxlint-disable-next-line import/no-unassigned-import -- Astro bundles a stylesheet imported for its side effect
 import "../../styles/site.css";
 
+import mark from "../../assets/mark.svg";
 import { englishPathOf } from "../../docs/route";
-import { LOCALES, LOCALE_NAMES, localePath, type Locale } from "../../i18n/locales";
+import { localePath, type Locale } from "../../i18n/locales";
 import { en } from "../../i18n/ui/en";
+import LanguageSwitcher from "./LanguageSwitcher.astro";
 
 interface Props {
   locale: Locale;
@@ -23,45 +25,60 @@ const AUTHOR_URL = "https://github.com/AndryOre";
 const { locale, strings = en.footer, currentPath } = Astro.props;
 const pagePath = currentPath ?? englishPathOf(Astro.url.pathname, locale);
 
-const links = [
-  { href: localePath(locale, "/docs/"), label: strings.docs },
-  { href: localePath(locale, "/docs/whats-new/"), label: strings.whatsNew },
-  { href: REPOSITORY_URL, label: strings.github },
-  { href: `${REPOSITORY_URL}/actions/workflows/ci.yml`, label: strings.ci },
-  { href: "https://www.bestpractices.dev/projects/16352", label: strings.openssf },
-  { href: `${REPOSITORY_URL}/blob/main/.github/SECURITY.md`, label: strings.security },
-  { href: `${REPOSITORY_URL}/blob/main/CONTRIBUTING.md`, label: strings.contributing },
+const columns = [
+  {
+    id: "footer-product",
+    heading: strings.product,
+    links: [
+      { href: localePath(locale, "/docs/"), label: strings.docs },
+      { href: localePath(locale, "/docs/whats-new/"), label: strings.whatsNew },
+      { href: REPOSITORY_URL, label: strings.github },
+    ],
+  },
+  {
+    id: "footer-trust",
+    heading: strings.trust,
+    links: [
+      { href: `${REPOSITORY_URL}/actions/workflows/ci.yml`, label: strings.ci },
+      { href: "https://www.bestpractices.dev/projects/16352", label: strings.openssf },
+      { href: `${REPOSITORY_URL}/blob/main/.github/SECURITY.md`, label: strings.security },
+      { href: `${REPOSITORY_URL}/blob/main/CONTRIBUTING.md`, label: strings.contributing },
+    ],
+  },
 ];
 ---
 
 <footer class="site-footer">
   <div class="footer-top">
-    <p class="footer-brand">
-      <strong>emet</strong>
-      <span>{strings.description}</span>
-      <span>{strings.notice}</span>
-    </p>
-    <nav class="footer-links">
-      {links.map((link) => <a href={link.href}>{link.label}</a>)}
-    </nav>
+    <div class="footer-brand">
+      <a class="footer-wordmark" href={localePath(locale, "/")}>
+        <img src={mark.src} width="24" height="24" alt="" />
+        <span>emet</span>
+      </a>
+      <p>{strings.description}</p>
+      <p class="footer-notice">{strings.notice}</p>
+    </div>
+    {
+      columns.map((column) => (
+        <nav class="footer-column" aria-labelledby={column.id}>
+          <p class="footer-heading" id={column.id}>
+            {column.heading}
+          </p>
+          <ul>
+            {column.links.map((link) => (
+              <li>
+                <a href={link.href}>{link.label}</a>
+              </li>
+            ))}
+          </ul>
+        </nav>
+      ))
+    }
   </div>
   <div class="footer-bottom">
-    <nav class="footer-langs" aria-label={strings.languages}>
-      {
-        LOCALES.map((target) => (
-          <a
-            href={localePath(target, pagePath)}
-            hreflang={target}
-            lang={target}
-            aria-current={target === locale ? "true" : undefined}
-          >
-            {LOCALE_NAMES[target]}
-          </a>
-        ))
-      }
-    </nav>
     <p class="footer-fine">
       {strings.legal} <a href={AUTHOR_URL} rel="author">{strings.builtBy}</a>. {strings.paintings}
     </p>
+    <LanguageSwitcher locale={locale} currentPath={pagePath} label={strings.languages} />
   </div>
 </footer>

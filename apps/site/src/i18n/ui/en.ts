@@ -132,6 +132,8 @@ export const en = {
     security: "Security",
     contributing: "Contributing",
     languages: "Languages",
+    product: "Product",
+    trust: "Trust",
     builtBy: "Built by AndryOre",
   },
   share: {
