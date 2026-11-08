@@ -11,7 +11,7 @@
   display: grid;
   grid-template-columns: 1fr auto 1fr;
   align-items: center;
-  padding: 20px 32px;
+  padding: 20px max(var(--gutter, 32px), (100% - var(--container, 1280px)) / 2);
   color: var(--text);
 }
 
