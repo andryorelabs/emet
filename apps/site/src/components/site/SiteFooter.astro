@@ -1,17 +1,15 @@
 ---
 /**
  * Website footer: the brand block, a Product and a Trust column of links, then
- * the fine line with the author credit and the AI disclosure of the paintings
- * beside the language switcher, which keeps the visitor on the current page.
+ * two stacked credit lines: the legal line with the author credit, then the AI
+ * disclosure of the paintings.
  */
 // oxlint-disable-next-line import/no-unassigned-import -- Astro bundles a stylesheet imported for its side effect
 import "../../styles/site.css";
 
 import mark from "../../assets/mark.svg";
-import { englishPathOf } from "../../docs/route";
 import { localePath, type Locale } from "../../i18n/locales";
 import { en } from "../../i18n/ui/en";
-import LanguageSwitcher from "./LanguageSwitcher.astro";
 
 interface Props {
   locale: Locale;
@@ -22,8 +20,7 @@ interface Props {
 const REPOSITORY_URL = "https://github.com/andryorelabs/emet";
 const AUTHOR_URL = "https://github.com/AndryOre";
 
-const { locale, strings = en.footer, currentPath } = Astro.props;
-const pagePath = currentPath ?? englishPathOf(Astro.url.pathname, locale);
+const { locale, strings = en.footer } = Astro.props;
 
 const columns = [
   {
@@ -77,8 +74,8 @@ const columns = [
   </div>
   <div class="footer-bottom">
     <p class="footer-fine">
-      {strings.legal} <a href={AUTHOR_URL} rel="author">{strings.builtBy}</a>. {strings.paintings}
+      {strings.legal} <a href={AUTHOR_URL} rel="author">{strings.builtBy}</a>.
     </p>
-    <LanguageSwitcher locale={locale} currentPath={pagePath} label={strings.languages} />
+    <p class="footer-fine footer-paintings">{strings.paintings}</p>
   </div>
 </footer>
