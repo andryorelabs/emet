@@ -70,10 +70,10 @@ export const zhCN = {
   stats: {
     label: "数字一览",
     items: [
-      { value: "3", label: "个跟踪器" },
-      { value: "10", label: "种语言" },
-      { value: "1", label: "次批准" },
-      { value: "MIT", label: "许可证" },
+      { value: "3", label: "个跟踪器", detail: "Linear、GitHub Issues 或本地文件" },
+      { value: "10", label: "种语言", detail: "英语加九种译文" },
+      { value: "1", label: "次批准", detail: "先有规格和工单，再写代码" },
+      { value: "MIT", label: "许可证", detail: "可自由使用和 Fork" },
     ],
   },
   faq: {

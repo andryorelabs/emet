@@ -29,4 +29,16 @@ describe("SiteFooter", () => {
   test("derives the page path from Astro.url when none is passed", () => {
     expect(source).toContain("currentPath ?? englishPathOf(Astro.url.pathname, locale)");
   });
+
+  test("splits into a top zone and a bottom zone", () => {
+    expect(source).toContain('class="footer-top"');
+    expect(source).toContain('class="footer-brand"');
+    expect(source).toContain('class="footer-links"');
+    expect(source).toContain('class="footer-bottom"');
+  });
+
+  test("keeps the language nav label and the fine line", () => {
+    expect(source).toContain("aria-label={strings.languages}");
+    expect(source).toContain('class="footer-fine"');
+  });
 });

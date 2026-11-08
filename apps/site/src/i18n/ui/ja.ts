@@ -75,10 +75,10 @@ export const ja = {
   stats: {
     label: "数字で見る",
     items: [
-      { value: "3", label: "トラッカー" },
-      { value: "10", label: "言語" },
-      { value: "1", label: "承認" },
-      { value: "MIT", label: "ライセンス" },
+      { value: "3", label: "トラッカー", detail: "Linear、GitHub Issues、ローカルファイル" },
+      { value: "10", label: "言語", detail: "英語に加えて9言語の翻訳" },
+      { value: "1", label: "承認", detail: "コードより先に、仕様とチケット" },
+      { value: "MIT", label: "ライセンス", detail: "自由に使えて、フォークも可能" },
     ],
   },
   faq: {

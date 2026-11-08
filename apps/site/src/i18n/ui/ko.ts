@@ -69,10 +69,10 @@ export const ko = {
   stats: {
     label: "숫자로 보기",
     items: [
-      { value: "3", label: "트래커" },
-      { value: "10", label: "언어" },
-      { value: "1", label: "승인" },
-      { value: "MIT", label: "라이선스" },
+      { value: "3", label: "트래커", detail: "Linear, GitHub Issues 또는 로컬 파일" },
+      { value: "10", label: "언어", detail: "영어와 9개 언어 번역" },
+      { value: "1", label: "승인", detail: "코드 작성 전에 스펙과 티켓" },
+      { value: "MIT", label: "라이선스", detail: "자유롭게 사용하고 포크할 수 있음" },
     ],
   },
   faq: {

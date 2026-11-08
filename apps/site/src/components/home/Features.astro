@@ -1,6 +1,6 @@
 ---
 /**
- * One plate: a run report with six notes in its margin, one per claim.
+ * Six claims, each paired with its run-report line, in rows on the Home axis.
  */
 import type { UiStrings } from "../../i18n/ui/en";
 
@@ -11,45 +11,37 @@ interface Props {
 const { strings } = Astro.props;
 const { features } = strings;
 
-const blocks = [
-  "approval  spec 252, 4 tickets\n          given once",
-  "workers   3 in 3 worktrees\n          done",
-  "review    wave 2\n          clear",
-  "flags     0\n          none",
-  "ci        PR #266\n          passing",
-  "merge     develop\n          merged",
+const reports = [
+  { key: "approval", value: "spec 252, 4 tickets", result: "given once" },
+  { key: "review", value: "wave 2", result: "clear" },
+  { key: "flags", value: "0", result: "none" },
+  { key: "ci", value: "PR #266", result: "passing" },
+  { key: "workers", value: "3 in 3 worktrees", result: "done" },
+  { key: "tracker", value: "github", result: "4 closed" },
 ];
+const keyWidth = 10;
 ---
 
 <section class="features" aria-labelledby="features-title" data-features>
   <h2 id="features-title" data-reveal="heading">
     <span class="reveal-line">{features.heading}</span>
   </h2>
-  <div class="plate" data-plate>
-    <div class="fragment" data-ui data-reveal="item">
-      {blocks.map((block, index) => <pre class="terminal block" data-block={index}>{block}</pre>)}
-    </div>
-  </div>
-  <ul class="notes">
+  <ul class="features-rows">
     {
-      features.notes.map((note, index) => (
-        <li
-          class="note"
-          data-block={index}
-          data-side={index < 3 ? "left" : "right"}
-          data-reveal="item"
-          tabindex="0"
-        >
-          <h3>{note.title}</h3>
-          <p>{note.line}</p>
-        </li>
-      ))
+      features.notes.map((note, index) => {
+        const report = reports[index];
+        return (
+          <li class="features-row" data-reveal="item">
+            <div class="features-claim">
+              <h3>{note.title}</h3>
+              <p>{note.line}</p>
+            </div>
+            {report && (
+              <pre class="features-report"><span class="features-key">{report.key.padEnd(keyWidth)}</span>{`${report.value}\n${" ".repeat(keyWidth)}${report.result}`}</pre>
+            )}
+          </li>
+        );
+      })
     }
   </ul>
 </section>
-
-<script>
-  import { initFeatureNotes } from "./graphics/feature-notes";
-
-  initFeatureNotes(document);
-</script>

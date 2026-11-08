@@ -70,10 +70,10 @@ export const fr = {
   stats: {
     label: "En chiffres",
     items: [
-      { value: "3", label: "trackers" },
-      { value: "10", label: "langues" },
-      { value: "1", label: "validation" },
-      { value: "MIT", label: "licence" },
+      { value: "3", label: "trackers", detail: "Linear, GitHub Issues ou fichiers locaux" },
+      { value: "10", label: "langues", detail: "L'anglais et neuf traductions" },
+      { value: "1", label: "validation", detail: "Spec et tickets, avant tout code" },
+      { value: "MIT", label: "licence", detail: "Libre d'utilisation et de fork" },
     ],
   },
   faq: {
