@@ -6,6 +6,7 @@
 
 export const THEME_STORAGE_KEY = "emet:theme";
 export const THEME_CHANGE_EVENT = "emet:theme";
+export const HEADER_MENU_OPEN_EVENT = "emet:header-menu-open";
 const THEME_CHOICES = ["light", "dark", "system"] as const;
 
 export type ThemeChoice = (typeof THEME_CHOICES)[number];
@@ -84,6 +85,7 @@ function initThemeSelect(root: HTMLElement): void {
   };
   const open = (): void => {
     syncChecked();
+    root.ownerDocument.dispatchEvent(new CustomEvent(HEADER_MENU_OPEN_EVENT, { detail: root }));
     menu.hidden = false;
     button.setAttribute("aria-expanded", "true");
     const checked = rows.find((row) => row.getAttribute("aria-checked") === "true");
@@ -124,6 +126,9 @@ function initThemeSelect(root: HTMLElement): void {
       if (choice !== undefined) choose(choice);
     });
   }
+  root.ownerDocument.addEventListener(HEADER_MENU_OPEN_EVENT, (event) => {
+    if (event instanceof CustomEvent && event.detail !== root && isOpen()) close(false);
+  });
   root.ownerDocument.addEventListener("click", (event) => {
     const inside = event.target instanceof Node && root.contains(event.target);
     if (isOpen() && !inside) close(false);

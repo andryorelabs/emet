@@ -55,6 +55,8 @@ const { locale, currentPath, strings, theme, links } = Astro.props;
 </div>
 
 <script>
+  import { HEADER_MENU_OPEN_EVENT } from "./theme-menu";
+
   const root = document.querySelector<HTMLElement>("[data-mobile-menu]");
   const button = root?.querySelector<HTMLButtonElement>(".menu-button");
   const panel = root?.querySelector<HTMLElement>(".menu-panel");
@@ -63,9 +65,11 @@ const { locale, currentPath, strings, theme, links } = Astro.props;
     const close = (restoreFocus: boolean): void => {
       panel.hidden = true;
       button.setAttribute("aria-expanded", "false");
+      document.dispatchEvent(new CustomEvent(HEADER_MENU_OPEN_EVENT, { detail: button }));
       if (restoreFocus) button.focus();
     };
     const open = (): void => {
+      document.dispatchEvent(new CustomEvent(HEADER_MENU_OPEN_EVENT, { detail: panel }));
       panel.hidden = false;
       button.setAttribute("aria-expanded", "true");
       panel.querySelector<HTMLElement>("nav a")?.focus();
@@ -76,7 +80,7 @@ const { locale, currentPath, strings, theme, links } = Astro.props;
       if ((event.target as Element).closest("nav a")) close(false);
     });
     root.addEventListener("keydown", (event) => {
-      if (event.key !== "Escape" || panel.hidden) return;
+      if (event.key !== "Escape" || panel.hidden || event.defaultPrevented) return;
       if ((event.target as Element).closest(".theme-menu")) return;
       event.preventDefault();
       close(true);
