@@ -133,6 +133,8 @@ export const ptBR = {
     security: "Segurança",
     contributing: "Contribuir",
     languages: "Idiomas",
+    product: "Produto",
+    trust: "Confiança",
     builtBy: "Criado por AndryOre",
   },
   share: {

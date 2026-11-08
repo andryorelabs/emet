@@ -24,7 +24,7 @@ describe("Home section spacing", () => {
     expect(body).toContain("display: flex");
     expect(body).toContain("flex-direction: column");
     expect(body).toContain("row-gap: var(--section-gap)");
-    expect(body).toContain("padding-bottom: var(--section-gap)");
+    expect(body).not.toContain("padding-bottom");
   });
 
   it("sets no block margin on the closing panel", () => {
