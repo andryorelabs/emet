@@ -1,5 +1,6 @@
 import { afterAll, beforeAll, describe, expect, test } from "bun:test";
 import { GlobalRegistrator } from "@happy-dom/global-registrator";
+import { readFileSync } from "node:fs";
 
 const MARKUP = `
 <section data-showcase data-state="merged">
@@ -117,5 +118,36 @@ describe("showcase DOM sync", () => {
     expect(parts().state).toBe("held");
     scrollToProgress(0.3);
     expect(parts()).toEqual({ state: "merged", pressed: "false", live: "Merged.", hidden: "true" });
+  });
+});
+
+function read(path: string): string {
+  return readFileSync(new URL(path, import.meta.url), "utf8");
+}
+
+describe("showcase frame and feature rows sources", () => {
+  const showcaseSource = read("../Showcase.astro");
+  const showcaseCss = read("../../../styles/showcase.css");
+  const featuresSource = read("../Features.astro");
+  const homeCss = read("../../../styles/home.css");
+
+  test("the stage and the panel are siblings inside one frame, and only the frame pins", () => {
+    expect(showcaseSource).toMatch(
+      /<div class="showcase-frame">\s*<div class="showcase-stage" aria-hidden="true">[\s\S]*<\/div>\s*<div class="showcase-panel">/,
+    );
+    expect(showcaseCss).toMatch(
+      /\[data-pinned\] \.showcase-frame \{\s*position: sticky;\s*top: 0;\s*height: 100svh;/,
+    );
+    expect(showcaseCss).not.toMatch(/\[data-pinned\] \.showcase-panel/);
+  });
+
+  test("features render revealed rows and no plate or absolute notes", () => {
+    expect(featuresSource).toContain('class="features-rows"');
+    expect(featuresSource).toContain('data-reveal="item"');
+    expect(homeCss).not.toMatch(/\.plate|\.note\b/);
+  });
+
+  test("the portrait picture clips the drift", () => {
+    expect(homeCss).toMatch(/\.portrait picture \{\s*overflow: clip;/);
   });
 });
