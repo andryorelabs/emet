@@ -257,6 +257,11 @@ pre {
   background: transparent;
 }
 
+.exchange > .fragment,
+.exchange > .emet-code ~ .emet-code {
+  background: var(--bg);
+}
+
 .wave-slot {
   min-height: 0;
 }

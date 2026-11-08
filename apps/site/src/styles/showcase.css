@@ -207,7 +207,7 @@ section.showcase[data-pinned] .showcase-stage {
 }
 
 section.showcase[data-pinned] .showcase-panel {
-  top: 0;
+  top: var(--gutter, 32px);
   left: auto;
   margin-top: var(--gutter, 32px);
   margin-left: max(var(--gutter, 32px), (100% - var(--container, 1280px)) / 2);
