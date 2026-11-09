@@ -1,0 +1,11 @@
+{
+  "name": "emet-probe-marketplace",
+  "owner": { "name": "emet probe" },
+  "plugins": [
+    {
+      "name": "emet-probe",
+      "source": "./plugin",
+      "description": "Probe plugin: one skill that answers a nonce and one hook that records its plugin root."
+    }
+  ]
+}

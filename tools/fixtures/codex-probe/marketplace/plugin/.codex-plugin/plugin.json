@@ -1,0 +1,7 @@
+{
+  "name": "emet-probe",
+  "version": "0.0.1",
+  "description": "Probe plugin: one skill that answers a nonce and one hook that records its plugin root.",
+  "skills": "./skills",
+  "hooks": "./hooks.json"
+}
