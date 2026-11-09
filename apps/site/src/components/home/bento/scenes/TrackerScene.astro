@@ -1,7 +1,9 @@
 ---
 /**
- * Static final frame of the tracker card picture: GitHub picked. Decorative
- * and `aria-hidden`.
+ * Looping picture of the tracker card: the selection pill slides between the
+ * trackers while one ticket advances from todo to closed. Its resting state is
+ * the finished frame: GitHub picked and the ticket closed. Decorative and
+ * `aria-hidden`.
  */
 // oxlint-disable-next-line import/no-unassigned-import -- Astro bundles a stylesheet imported for its side effect
 import "../../../../styles/bento/scene.css";
@@ -9,14 +11,34 @@ import "../../../../styles/bento/scene.css";
 import "../../../../styles/bento/tracker.css";
 
 const trackers = ["Linear", "GitHub", "local files"];
+const statuses = [
+  { name: "todo", key: "todo" },
+  { name: "in progress", key: "progress" },
+  { name: "in review", key: "review" },
+  { name: "closed", key: "closed" },
+];
 ---
 
 <div class="scene scene-tracker bento-visual" data-scene aria-hidden="true">
-  <ul class="tracker-chips">
-    {
-      trackers.map((tracker) => (
-        <li class={tracker === "GitHub" ? "tracker-chip is-picked" : "tracker-chip"}>{tracker}</li>
-      ))
-    }
-  </ul>
+  <div class="tracker-stage">
+    <div class="tracker-track">
+      <span class="tracker-pill"></span>
+      <ul class="tracker-chips">
+        {trackers.map((tracker) => <li class="tracker-chip">{tracker}</li>)}
+      </ul>
+    </div>
+    <div class="tracker-ticket">
+      <span class="tracker-id">CLA-254</span>
+      <span class="tracker-state">
+        <span class="tracker-statuses">
+          {
+            statuses.map((status) => (
+              <span class={`tracker-status is-${status.key}`}>{status.name}</span>
+            ))
+          }
+        </span>
+        <span class="tracker-check"></span>
+      </span>
+    </div>
+  </div>
 </div>

@@ -14,16 +14,280 @@
 .trees-branch {
   position: relative;
   padding-left: 20px;
-  overflow-wrap: anywhere;
 }
 
 .trees-branch::before {
   content: "";
   position: absolute;
   left: 4px;
-  top: 0;
+  top: -6px;
   bottom: 50%;
   width: 10px;
   border-left: 1px solid var(--border);
   border-bottom: 1px solid var(--border);
+  transform-origin: top;
+}
+
+.trees-box {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 30px;
+  padding: 0 10px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+}
+
+.trees-name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.trees-typing {
+  position: relative;
+  flex: none;
+  width: 44px;
+  height: 14px;
+  opacity: 0;
+}
+
+.trees-typing i {
+  position: absolute;
+  left: 0;
+  width: 44px;
+  height: 3px;
+  border-radius: 2px;
+  background: var(--text-muted);
+  transform-origin: left;
+}
+
+.trees-typing i:first-child {
+  top: 2px;
+}
+
+.trees-typing i:last-child {
+  top: 9px;
+}
+
+.trees-typing::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 1px;
+  width: 2px;
+  height: 6px;
+  background: var(--text);
+  opacity: 0;
+}
+
+.trees-check {
+  position: relative;
+  flex: none;
+  width: 14px;
+  height: 14px;
+}
+
+.trees-check::after {
+  content: "";
+  position: absolute;
+  left: 2px;
+  top: 2px;
+  width: 9px;
+  height: 5px;
+  border-left: 2px solid var(--moss);
+  border-bottom: 2px solid var(--moss);
+  transform: rotate(-45deg);
+}
+
+@media (scripting: enabled) and (prefers-reduced-motion: no-preference) {
+  .scene-workers .trees-root,
+  .scene-workers .trees-branch::before,
+  .scene-workers .trees-box,
+  .scene-workers .trees-typing,
+  .scene-workers .trees-typing i,
+  .scene-workers .trees-typing::after,
+  .scene-workers .trees-check {
+    animation-duration: var(--scene-cycle);
+    animation-timing-function: var(--ease-out);
+    animation-iteration-count: infinite;
+    animation-fill-mode: both;
+  }
+
+  .scene-workers .trees-root {
+    animation-name: workers-root;
+    animation-delay: calc(var(--scene-offset) * -1);
+  }
+
+  .scene-workers .trees-branch::before {
+    animation-name: workers-line;
+    animation-delay: calc(var(--scene-offset) * -1);
+  }
+
+  .scene-workers .trees-box {
+    animation-name: workers-box;
+    animation-delay: calc(var(--scene-offset) * -1);
+  }
+
+  .scene-workers .trees-typing {
+    animation-name: workers-typing;
+    animation-delay: calc(var(--scene-offset) * -1 + var(--index) * 200ms);
+  }
+
+  .scene-workers .trees-typing i:first-child {
+    animation-name: workers-type-first;
+    animation-delay: calc(var(--scene-offset) * -1 + var(--index) * 200ms);
+  }
+
+  .scene-workers .trees-typing i:last-child {
+    animation-name: workers-type-second;
+    animation-delay: calc(var(--scene-offset) * -1 + var(--index) * 200ms);
+  }
+
+  .scene-workers .trees-typing::after {
+    animation-name: workers-cursor;
+    animation-delay: calc(var(--scene-offset) * -1 + var(--index) * 200ms);
+  }
+
+  .scene-workers .trees-check {
+    animation-name: workers-check;
+    animation-delay: calc(var(--scene-offset) * -1 + var(--index) * 150ms);
+  }
+
+  @keyframes workers-root {
+    0% {
+      opacity: 0;
+    }
+    4%,
+    92% {
+      opacity: 1;
+    }
+    97%,
+    100% {
+      opacity: 0;
+    }
+  }
+
+  @keyframes workers-line {
+    0%,
+    2% {
+      opacity: 1;
+      transform: scaleY(0);
+    }
+    14.3%,
+    92% {
+      opacity: 1;
+      transform: scaleY(1);
+    }
+    97%,
+    100% {
+      opacity: 0;
+      transform: scaleY(1);
+    }
+  }
+
+  @keyframes workers-box {
+    0%,
+    8% {
+      opacity: 0;
+    }
+    14.3%,
+    92% {
+      opacity: 1;
+    }
+    97%,
+    100% {
+      opacity: 0;
+    }
+  }
+
+  @keyframes workers-typing {
+    0%,
+    14.2% {
+      opacity: 0;
+    }
+    14.3%,
+    58% {
+      opacity: 1;
+    }
+    60%,
+    100% {
+      opacity: 0;
+    }
+  }
+
+  @keyframes workers-type-first {
+    0%,
+    14.3% {
+      transform: scaleX(0.02);
+      animation-timing-function: steps(10, end);
+    }
+    34%,
+    100% {
+      transform: scaleX(1);
+    }
+  }
+
+  @keyframes workers-type-second {
+    0%,
+    32% {
+      transform: scaleX(0.02);
+      animation-timing-function: steps(10, end);
+    }
+    54.3%,
+    100% {
+      transform: scaleX(1);
+    }
+  }
+
+  @keyframes workers-cursor {
+    0%,
+    14.2% {
+      opacity: 0;
+      transform: translate(0, 0);
+    }
+    14.3% {
+      opacity: 1;
+      transform: translate(0, 0);
+      animation-timing-function: steps(10, end);
+    }
+    34% {
+      opacity: 1;
+      transform: translate(44px, 0);
+    }
+    34.1% {
+      opacity: 1;
+      transform: translate(0, 7px);
+      animation-timing-function: steps(10, end);
+    }
+    54.3% {
+      opacity: 1;
+      transform: translate(44px, 7px);
+    }
+    55%,
+    100% {
+      opacity: 0;
+      transform: translate(44px, 7px);
+    }
+  }
+
+  @keyframes workers-check {
+    0%,
+    54.3% {
+      opacity: 0;
+      transform: scale(0.6);
+    }
+    58%,
+    90% {
+      opacity: 1;
+      transform: scale(1);
+    }
+    95%,
+    100% {
+      opacity: 0;
+      transform: scale(1);
+    }
+  }
 }

@@ -7,6 +7,7 @@
 }
 
 .review-waves li {
+  position: relative;
   display: grid;
   grid-template-columns: 52px minmax(0, 1fr) 16px;
   align-items: center;
@@ -32,4 +33,258 @@
 
 .review-check {
   color: var(--moss);
+}
+
+.review-diff {
+  position: absolute;
+  inset: 0 26px 0 62px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 3px;
+  overflow: clip;
+  opacity: 0;
+}
+
+.review-line {
+  position: relative;
+  height: 4px;
+  border-radius: 2px;
+  background: color-mix(in oklab, var(--text-muted) 40%, transparent);
+  overflow: clip;
+}
+
+.review-line:nth-child(1) {
+  width: 70%;
+}
+
+.review-line:nth-child(2) {
+  width: 90%;
+}
+
+.review-line:nth-child(3) {
+  width: 55%;
+}
+
+.review-line::before,
+.review-line::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+}
+
+.review-line-flagged::before {
+  background: var(--warn);
+}
+
+.review-line-flagged::after {
+  background: var(--moss);
+}
+
+.review-scan {
+  position: absolute;
+  inset: 0;
+  border-right: 2px solid var(--text-muted);
+  background: linear-gradient(
+    to right,
+    transparent,
+    color-mix(in oklab, var(--moss) 18%, transparent)
+  );
+  opacity: 0;
+  transform: translateX(-100%);
+}
+
+@media (scripting: enabled) and (prefers-reduced-motion: no-preference) {
+  .scene-review {
+    --review-run: var(--scene-cycle) var(--ease-out) calc(var(--scene-offset) * -1) infinite both;
+  }
+
+  .scene-review .review-waves {
+    animation: review-fade var(--review-run);
+  }
+
+  .scene-review .review-waves li:nth-child(1) .review-bar::after {
+    animation: review-fill-1 var(--review-run);
+  }
+
+  .scene-review .review-waves li:nth-child(2) .review-bar::after {
+    animation: review-fill-2 var(--review-run);
+  }
+
+  .scene-review .review-waves li:nth-child(2) .review-bar {
+    animation: review-track-2 var(--review-run);
+  }
+
+  .scene-review .review-waves li:nth-child(1) .review-check {
+    animation: review-check-1 var(--review-run);
+  }
+
+  .scene-review .review-waves li:nth-child(2) .review-check {
+    animation: review-check-2 var(--review-run);
+  }
+
+  .scene-review .review-diff {
+    animation: review-diff var(--review-run);
+  }
+
+  .scene-review .review-scan {
+    animation: review-scan var(--scene-cycle) linear calc(var(--scene-offset) * -1) infinite both;
+  }
+
+  .scene-review .review-line-flagged::before {
+    animation: review-flag var(--review-run);
+  }
+
+  .scene-review .review-line-flagged::after {
+    animation: review-fixed var(--review-run);
+  }
+
+  @keyframes review-fade {
+    0%,
+    91.43% {
+      opacity: 1;
+    }
+
+    100% {
+      opacity: 0;
+    }
+  }
+
+  @keyframes review-fill-1 {
+    0% {
+      transform: scaleX(0);
+    }
+
+    17.14%,
+    100% {
+      transform: scaleX(1);
+    }
+  }
+
+  @keyframes review-fill-2 {
+    0%,
+    45.71% {
+      transform: scaleX(0);
+    }
+
+    56%,
+    100% {
+      transform: scaleX(1);
+    }
+  }
+
+  @keyframes review-track-2 {
+    0%,
+    14.29% {
+      opacity: 1;
+    }
+
+    17.14%,
+    42.86% {
+      opacity: 0;
+    }
+
+    45.71%,
+    100% {
+      opacity: 1;
+    }
+  }
+
+  @keyframes review-diff {
+    0%,
+    14.29% {
+      opacity: 0;
+    }
+
+    17.14%,
+    41.43% {
+      opacity: 1;
+    }
+
+    45.71%,
+    100% {
+      opacity: 0;
+    }
+  }
+
+  @keyframes review-scan {
+    0% {
+      opacity: 0;
+      transform: translateX(-100%);
+    }
+
+    17.14% {
+      opacity: 1;
+      transform: translateX(-100%);
+    }
+
+    34.29% {
+      opacity: 1;
+      transform: translateX(0);
+    }
+
+    36.43%,
+    100% {
+      opacity: 0;
+      transform: translateX(0);
+    }
+  }
+
+  @keyframes review-flag {
+    0%,
+    25.71% {
+      opacity: 0;
+    }
+
+    28.57%,
+    34.29% {
+      opacity: 1;
+    }
+
+    38.57%,
+    100% {
+      opacity: 0;
+    }
+  }
+
+  @keyframes review-fixed {
+    0%,
+    34.29% {
+      opacity: 0;
+    }
+
+    40%,
+    100% {
+      opacity: 1;
+    }
+  }
+
+  @keyframes review-check-1 {
+    0%,
+    34.29% {
+      opacity: 0;
+      transform: scale(0.6);
+    }
+
+    42.86%,
+    100% {
+      opacity: 1;
+      transform: scale(1);
+    }
+  }
+
+  @keyframes review-check-2 {
+    0%,
+    56% {
+      opacity: 0;
+      transform: scale(0.6);
+    }
+
+    62.86%,
+    100% {
+      opacity: 1;
+      transform: scale(1);
+    }
+  }
 }
