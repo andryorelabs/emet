@@ -1,7 +1,8 @@
 ---
 /**
- * Static final frame of the review card picture: both waves reviewed and
- * checked. Decorative and `aria-hidden`.
+ * Review card picture: both waves reviewed and checked. The markup is the
+ * static final frame; the diff lines and scan line are hidden at rest and only
+ * show during the loop in `review.css`. Decorative and `aria-hidden`.
  */
 // oxlint-disable-next-line import/no-unassigned-import -- Astro bundles a stylesheet imported for its side effect
 import "../../../../styles/bento/scene.css";
@@ -14,11 +15,19 @@ const waves = ["wave 1", "wave 2"];
 <div class="scene scene-review bento-visual" data-scene aria-hidden="true">
   <ul class="review-waves">
     {
-      waves.map((wave) => (
+      waves.map((wave, index) => (
         <li>
           <span class="review-name">{wave}</span>
           <span class="review-bar" />
           <span class="review-check">&#10003;</span>
+          {index === 1 && (
+            <span class="review-diff">
+              <span class="review-line" />
+              <span class="review-line review-line-flagged" />
+              <span class="review-line" />
+              <span class="review-scan" />
+            </span>
+          )}
         </li>
       ))
     }

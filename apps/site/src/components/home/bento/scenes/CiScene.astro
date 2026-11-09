@@ -1,7 +1,9 @@
 ---
 /**
- * Static final frame of the CI card picture: all checks green. Decorative and
- * `aria-hidden`.
+ * CI card picture: lint, test and build run, test fails and a fix commit
+ * re-runs it, then a "ready" badge pulses. The static frame (reduced motion or
+ * no script) is the finished state: three green dots and the badge.
+ * Decorative and `aria-hidden`.
  */
 // oxlint-disable-next-line import/no-unassigned-import -- Astro bundles a stylesheet imported for its side effect
 import "../../../../styles/bento/scene.css";
@@ -12,14 +14,24 @@ const checks = ["lint", "test", "build"];
 ---
 
 <div class="scene scene-ci bento-visual" data-scene aria-hidden="true">
-  <ul class="ci-checks">
-    {
-      checks.map((check) => (
-        <li>
-          <span class="ci-dot" />
-          {check}
-        </li>
-      ))
-    }
-  </ul>
+  <div class="ci-pipeline">
+    <ul class="ci-checks">
+      {
+        checks.map((check) => (
+          <li class={`ci-${check}`}>
+            <span class="ci-dot">
+              <span class="ci-layer ci-amber" />
+              <span class="ci-layer ci-red" />
+              <span class="ci-layer ci-green" />
+            </span>
+            {check}
+          </li>
+        ))
+      }
+    </ul>
+    <div class="ci-footer">
+      <span class="ci-chip">fix</span>
+      <span class="ci-badge">ready</span>
+    </div>
+  </div>
 </div>

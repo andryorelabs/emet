@@ -1,27 +1,180 @@
-.flags-run {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  width: 100%;
+.flags-graph {
+  position: relative;
+  width: 260px;
+  max-width: 100%;
+  height: 92px;
 }
 
-.flags-track {
-  position: relative;
-  height: 6px;
-  border-radius: 3px;
+.flags-branch {
+  position: absolute;
+  left: 0;
+  width: calc(100% - 14px);
+  height: 2px;
+  overflow: clip;
+  transform-origin: left;
+}
+
+.flags-branch:nth-child(1) {
+  top: 9px;
+}
+
+.flags-branch:nth-child(2) {
+  top: 45px;
+}
+
+.flags-branch:nth-child(3) {
+  top: 81px;
+}
+
+.flags-dash {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: -72px;
+  width: calc(100% + 72px);
+  background: repeating-linear-gradient(90deg, var(--text-muted) 0 6px, transparent 6px 12px);
+}
+
+.flags-node {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 14px;
+  height: 92px;
+  border-radius: 7px;
   background: var(--border);
   overflow: clip;
 }
 
-.flags-track::after {
-  content: "";
+.flags-node-lit {
   position: absolute;
   inset: 0;
   background: var(--moss);
-  transform-origin: left;
 }
 
 .flags-flag {
-  color: var(--error);
+  position: absolute;
+  top: 24px;
+  left: 150px;
+  width: 14px;
+  height: 20px;
   opacity: 0;
+}
+
+.flags-flag::before {
+  content: "";
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 2px;
+  background: var(--error);
+}
+
+.flags-flag::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 2px;
+  width: 12px;
+  height: 10px;
+  background: var(--error);
+  clip-path: polygon(0 0, 100% 0, 70% 50%, 100% 100%, 0 100%);
+}
+
+@media (scripting: enabled) and (prefers-reduced-motion: no-preference) {
+  .flags-graph {
+    animation: flags-fade var(--scene-cycle) linear calc(var(--scene-offset) * -1) infinite both;
+  }
+
+  .flags-branch {
+    animation: flags-reach var(--scene-cycle) var(--ease-out) calc(var(--scene-offset) * -1)
+      infinite both;
+  }
+
+  .flags-dash {
+    animation: flags-flow var(--scene-cycle) linear calc(var(--scene-offset) * -1) infinite both;
+  }
+
+  .flags-node-lit {
+    animation: flags-node var(--scene-cycle) var(--ease-out) calc(var(--scene-offset) * -1) infinite
+      both;
+  }
+
+  .flags-flag {
+    animation: flags-drop var(--scene-cycle) var(--ease-out) calc(var(--scene-offset) * -1) infinite
+      both;
+  }
+
+  @keyframes flags-fade {
+    0% {
+      opacity: 0;
+    }
+    4%,
+    91.43% {
+      opacity: 1;
+    }
+    97%,
+    100% {
+      opacity: 0;
+    }
+  }
+
+  @keyframes flags-reach {
+    0% {
+      transform: scaleX(0.55);
+    }
+    20% {
+      transform: scaleX(0.9);
+    }
+    31.43%,
+    51.43% {
+      transform: scaleX(0.9675);
+    }
+    58.57%,
+    100% {
+      transform: scaleX(1);
+    }
+  }
+
+  @keyframes flags-flow {
+    0% {
+      transform: translateX(0);
+    }
+    31.43%,
+    51.43% {
+      transform: translateX(48px);
+    }
+    65.71%,
+    100% {
+      transform: translateX(72px);
+    }
+  }
+
+  @keyframes flags-node {
+    0%,
+    51.43% {
+      opacity: 0;
+    }
+    65.71%,
+    100% {
+      opacity: 1;
+    }
+  }
+
+  @keyframes flags-drop {
+    0%,
+    20% {
+      opacity: 0;
+      transform: translateY(-16px);
+    }
+    31.43%,
+    51.43% {
+      opacity: 1;
+      transform: translateY(0);
+    }
+    65.71%,
+    100% {
+      opacity: 0;
+      transform: translateY(-14px);
+    }
+  }
 }
