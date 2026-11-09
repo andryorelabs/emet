@@ -226,6 +226,15 @@ export async function checkCodeReviewFanoutWithSiblingRun(
   );
 }
 
+function evaluateApprovalGateFailClosed(input: PreToolUseHookInput, runsDir: string): GuardVerdict {
+  try {
+    return evaluateApprovalGate(input, runsDir);
+  } catch (error) {
+    console.error(`${INTERNAL_PREFIX} approval gate error, denying the call:`, error);
+    return { decision: "deny", reason: "not approved: the approval gate could not be evaluated" };
+  }
+}
+
 /**
  * Runs every rule and returns the first `deny`, or `allow` if none fire.
  * Never throws: an internal error in any rule is caught and treated as
@@ -240,7 +249,7 @@ export async function evaluateGuard(
   const host = options.host ?? "claude";
   try {
     if (host === "codex" && options.runsDir !== undefined) {
-      const gateVerdict = evaluateApprovalGate(input, options.runsDir);
+      const gateVerdict = evaluateApprovalGateFailClosed(input, options.runsDir);
       if (gateVerdict.decision === "deny") return gateVerdict;
     }
 
@@ -588,7 +597,10 @@ async function runHasUnfinishedTicket(runId: string | null): Promise<boolean> {
   }
 }
 
-/** `<git-common-dir>/.emet/runs` when it exists, else `<cwd>/.emet/runs`. */
+/**
+ * `<git-common-dir>/.emet/runs` when it exists, else the repository root's
+ * `.emet/runs` (never the hook's cwd inside a git repo), else `<cwd>/.emet/runs`.
+ */
 async function resolveRunsDirectory(cwd: string): Promise<string> {
   const output = await Bun.$`git rev-parse --path-format=absolute --git-common-dir`
     .cwd(cwd)
@@ -598,6 +610,9 @@ async function resolveRunsDirectory(cwd: string): Promise<string> {
   if (output.exitCode === 0 && commonDirectory.length > 0) {
     const shared = path.join(resolveRunDir(commonDirectory).path, "runs");
     if (existsSync(shared)) return shared;
+    const repositoryRoot =
+      path.basename(commonDirectory) === ".git" ? path.dirname(commonDirectory) : commonDirectory;
+    return path.join(resolveRunDir(repositoryRoot).path, "runs");
   }
   return path.join(resolveRunDir(cwd).path, "runs");
 }

@@ -29,6 +29,7 @@ const MUTATING_TOOLS = new Set([
 ]);
 const READ_ONLY_COMMANDS = new Set(["ls", "cat", "rg", "grep", "head", "tail", "wc", "pwd"]);
 const READ_ONLY_GIT_SUBCOMMANDS = new Set(["status", "log", "diff", "show", "rev-parse"]);
+const EXECUTING_OPTIONS = /^--(?:pre|output|ext-diff|textconv|exec)(?:=|$)/;
 const SHELL_OPERATORS = /[;&|<>`\n]|\$\(/;
 const APPROVE_LINE = /^approve ([A-Za-z0-9_-]+)$/;
 const WORKTREE_MARKERS: Record<AgentHostName, string> = {
@@ -112,8 +113,10 @@ function isUnderDraft(target: string, input: PreToolUseInput, runsDir: string): 
 
 function isReadOnlyBash(command: unknown): boolean {
   if (typeof command !== "string" || SHELL_OPERATORS.test(command)) return false;
-  const [program, subcommand] = command.trim().split(/\s+/);
+  const words = command.trim().split(/\s+/);
+  const [program, subcommand] = words;
   if (program === undefined) return false;
+  if (words.some((word) => EXECUTING_OPTIONS.test(word))) return false;
   if (READ_ONLY_COMMANDS.has(program)) return true;
   return program === "git" && subcommand !== undefined && READ_ONLY_GIT_SUBCOMMANDS.has(subcommand);
 }
@@ -137,7 +140,11 @@ export function evaluateApprovalGate(input: PreToolUseInput, runsDir: string): G
   if (input.tool_name === "Bash" && isReadOnlyBash(input.tool_input?.["command"])) return ALLOW;
 
   const targets = mutationTargets(input);
-  if (targets !== null && targets.every((target) => isUnderDraft(target, input, runsDir))) {
+  if (
+    targets !== null &&
+    targets.length > 0 &&
+    targets.every((target) => isUnderDraft(target, input, runsDir))
+  ) {
     return ALLOW;
   }
   return { decision: "deny", reason: `not approved: send approve ${pendingId}` };

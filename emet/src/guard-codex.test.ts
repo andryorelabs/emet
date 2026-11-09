@@ -173,6 +173,19 @@ describe("evaluateApprovalGate", () => {
     );
   });
 
+  test("denies a patch with no parsed paths and read-only commands that execute or write", () => {
+    const repo = makeRepo();
+    const runsDir = seedRun(repo, "12");
+    const bash = (command: string) =>
+      evaluateApprovalGate({ tool_name: "Bash", tool_input: { command } }, runsDir).decision;
+    expect(evaluateApprovalGate({ tool_name: "apply_patch", paths: [] }, runsDir).decision).toBe(
+      "deny",
+    );
+    expect(bash("rg --pre touch x")).toBe("deny");
+    expect(bash("git diff --output=x")).toBe("deny");
+    expect(bash("rg needle")).toBe("allow");
+  });
+
   test("allows everything once approved or when no run exists", () => {
     const repo = makeRepo();
     const approved = seedRun(repo, "12", { approved: true });
@@ -243,6 +256,21 @@ describe("emet guard run() through stdin", () => {
     expect(hookOutput(denied.stdout).decision).toBe("deny");
     const allowed = await runCli(GUARD_ENTRY, [], patch("src/a.ts"), codexEnv, repo);
     expect(allowed.stdout).toBe("");
+  });
+
+  test("the gate still denies when the hook cwd is a subdirectory of the repo", async () => {
+    const repo = makeRepo();
+    Bun.spawnSync(["git", "init", "-q"], { cwd: repo });
+    seedRun(repo, "12");
+    const subdirectory = path.join(repo, "src");
+    mkdirSync(subdirectory);
+    const bash = JSON.stringify({
+      tool_name: "Bash",
+      cwd: subdirectory,
+      tool_input: { command: "touch x" },
+    });
+    const closed = await runCli(GUARD_ENTRY, [], bash, codexEnv, subdirectory);
+    expect(hookOutput(closed.stdout).reason).toBe("not approved: send approve 12");
   });
 
   test("the gate denies Bash until a UserPromptSubmit approves", async () => {
