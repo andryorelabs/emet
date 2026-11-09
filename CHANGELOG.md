@@ -18,6 +18,15 @@ and this project adheres to
   translations.
 - `docs/how-to/update-emet.md`: how to update the plugins and turn on
   marketplace auto-update.
+- Codex as an Agent host: `agentHost` in `emet.config.json`, `emet dispatch`
+  and `emet review-run` start each worker and reviewer as a `codex exec`
+  process, the `$emet:run`, `$emet:init` and `$emet:doctor` skills and the
+  Codex plugin manifest, and the opt-in end-to-end test (`EMET_CODEX_E2E=1`).
+- `docs/guide/codex.md`, the Codex guide, published on the Website.
+
+### Fixed
+
+- `emet cleanup` reclaims landed unowned worktrees.
 
 ## [0.4.0] - 2026-11-06
 
