@@ -1,5 +1,5 @@
 import { describe, expect, it } from "bun:test";
-import { readFileSync } from "node:fs";
+import { readFileSync, statSync } from "node:fs";
 
 import { findPublishedSourceById, publishedRoute } from "../../docs/published";
 import { LOCALES, localePath } from "../../i18n/locales";
@@ -8,6 +8,45 @@ import { getStrings } from "../../i18n/ui";
 const statsSource = readFileSync(new URL("Stats.astro", import.meta.url), "utf8");
 const faqSource = readFileSync(new URL("Faq.astro", import.meta.url), "utf8");
 const css = readFileSync(new URL("../../styles/home.css", import.meta.url), "utf8");
+
+const aboutSource = readFileSync(new URL("About.astro", import.meta.url), "utf8");
+const fontUrl = new URL("../../../public/fonts/FrankRuhlLibre-hebrew.woff2", import.meta.url);
+
+describe("About Hebrew word pair", () => {
+  it("marks the pair as right-to-left Hebrew and reveals it as an item", () => {
+    expect(aboutSource).toContain('dir="rtl"');
+    expect(aboutSource).toContain('lang="he"');
+    expect(aboutSource).toMatch(/class="hebrew-pair" data-reveal="item" role="img"/);
+  });
+
+  it("has non-empty translated word strings in every locale", () => {
+    for (const locale of LOCALES) {
+      const { about } = getStrings(locale);
+      expect(about.truth.trim().length).toBeGreaterThan(0);
+      expect(about.dead.trim().length).toBeGreaterThan(0);
+      expect(about.wordLabel.trim().length).toBeGreaterThan(0);
+    }
+  });
+
+  it("fades the aleph only inside a motion guard", () => {
+    expect(css).toMatch(
+      /@media \(prefers-reduced-motion: no-preference\) \{[^@]*html\[data-motion\] \.hebrew-pair\.is-in \.hebrew-aleph \{\s*opacity: 0\.2;/,
+    );
+    expect(css).not.toMatch(/^\.hebrew-pair\.is-in/m);
+    expect(css).not.toMatch(/^\.hebrew-aleph \{[^}]*(opacity|transition)/m);
+  });
+
+  it("ships a Hebrew subset font under 10 KB", () => {
+    expect(statSync(fontUrl).size).toBeLessThan(10 * 1024);
+  });
+
+  it("declares the subset font for exactly the three Hebrew code points", () => {
+    const tokens = readFileSync(new URL("../../styles/tokens.css", import.meta.url), "utf8");
+    const block = tokens.match(/@font-face \{[^}]*"Frank Ruhl Libre"[^}]*\}/)?.[0] ?? "";
+    expect(block).toContain("/fonts/FrankRuhlLibre-hebrew.woff2");
+    expect(block).toContain("unicode-range: U+05D0, U+05DE, U+05EA;");
+  });
+});
 
 describe("Stats band", () => {
   it("has four items in every locale and reveals each one", () => {
