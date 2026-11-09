@@ -1,4 +1,5 @@
 import path from "node:path";
+import { listCodexSessions, resolveSessionRoot, startCodexSession } from "./codex-session";
 import type { AgentHost, HostRegistry, PluginInfo } from "./agenthost";
 
 const SKILLS_PLUGIN_ID = "mattpocock-skills@mattpocock";
@@ -60,10 +61,6 @@ export function parseCodexPluginList(stdout: string): PluginInfo[] {
   return plugins;
 }
 
-function notImplemented(): never {
-  throw new Error("codex host: not implemented");
-}
-
 export const codexHost: AgentHost = {
   name: "codex",
   anchorProcessName: "codex",
@@ -80,8 +77,8 @@ export const codexHost: AgentHost = {
   },
   agentIdFromBranch: (branch) => new RegExp(SCAFFOLD_BRANCH_PATTERN).exec(branch)?.[1],
   sessions: {
-    list: () => Promise.resolve().then(notImplemented),
-    start: () => Promise.resolve().then(notImplemented),
+    list: async (run) => listCodexSessions(await resolveSessionRoot(run)),
+    start: startCodexSession,
     attachCommand: (name) => `codex exec resume ${name}`,
   },
   probes: {
