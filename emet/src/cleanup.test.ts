@@ -118,6 +118,19 @@ describe("planWorktreeRemoval", () => {
     expect(planWorktreeRemoval(lockedEntry(), null, "landed", false)).toBe("protected");
   });
 
+  test("an unowned unlocked worktree is removed only when landed and clean", () => {
+    const entry = lockedEntry({ lockedReason: null, branch: "cla-355-x" });
+    expect(planWorktreeRemoval(entry, null, "landed", false)).toBe("remove");
+    expect(planWorktreeRemoval(entry, null, "landed", true)).toBe("protected");
+    expect(planWorktreeRemoval(entry, null, "not-landed", false)).toBe("protected");
+    expect(planWorktreeRemoval(entry, null, "unknown", false)).toBe("protected");
+  });
+
+  test("an unowned detached worktree is protected", () => {
+    const entry = lockedEntry({ lockedReason: null, branch: null });
+    expect(planWorktreeRemoval(entry, null, "landed", false)).toBe("protected");
+  });
+
   test("a non-forge lock stays protected even when a claim supplied an owner", () => {
     const entry = lockedEntry({ lockedReason: "human lock" });
     expect(planWorktreeRemoval(entry, owner, "landed", false)).toBe("protected");
@@ -676,6 +689,65 @@ describe("reclaim against a real repository", () => {
     expect(await listReservations()).toHaveLength(1);
   });
 
+  async function addUnownedWorktree(agentId: string, branch: string): Promise<string> {
+    const directory = path.join(repo, ".claude", "worktrees", agentId);
+    await git("worktree", "add", "-q", "-b", `worktree-${agentId}`, directory, "main");
+    await git("-C", directory, "checkout", "-q", "-b", branch);
+    return directory;
+  }
+
+  function loggedOutput(): string {
+    return logSpy.mock.calls.map((call: unknown[]) => String(call[0])).join("\n");
+  }
+
+  test("bare cleanup reclaims an unowned clean worktree whose ticket landed", async () => {
+    const directory = await addUnownedWorktree("agent-unowned", "cla-355-x");
+
+    await reclaimOwnedWorktrees(await buildContext("finished", null));
+
+    expect(existsSync(directory)).toBe(false);
+    const branches = await branchNames();
+    expect(branches).not.toContain("cla-355-x");
+    expect(branches).not.toContain("worktree-agent-unowned");
+    expect(process.exitCode).not.toBe(1);
+  });
+
+  test("an unowned dirty worktree stays protected with the manual command", async () => {
+    const directory = await addUnownedWorktree("agent-unowned", "cla-355-x");
+    writeFileSync(path.join(directory, "untracked.txt"), "wip\n");
+
+    await reclaimOwnedWorktrees(await buildContext("finished", null));
+
+    expect(existsSync(directory)).toBe(true);
+    expect(await branchNames()).toContain("cla-355-x");
+    const output = loggedOutput();
+    expect(output).toContain("cla-355-x");
+    expect(output).toContain("protected");
+    expect(output).toContain(`git worktree remove "${directory}"`);
+  });
+
+  test("an unowned worktree whose ticket has not landed stays protected", async () => {
+    const directory = await addUnownedWorktree("agent-unowned", "cla-355-x");
+
+    await reclaimOwnedWorktrees({
+      ...(await buildContext("finished", null)),
+      readTrackerState: () => Promise.resolve("open" as const),
+    });
+
+    expect(existsSync(directory)).toBe(true);
+    expect(await branchNames()).toContain("cla-355-x");
+    expect(loggedOutput()).toContain("protected");
+  });
+
+  test("an unowned worktree is never reclaimed by a run-scoped sweep", async () => {
+    const directory = await addUnownedWorktree("agent-unowned", "cla-355-x");
+
+    await reclaimOwnedWorktrees(await buildContext("run", "run-a"));
+
+    expect(existsSync(directory)).toBe(true);
+    expect(await branchNames()).toContain("cla-355-x");
+  });
+
   test("bare cleanup leaves live and idle runs and foreign worktrees out of units", async () => {
     await addWorktree({
       agentId: "agent-live",
@@ -709,7 +781,7 @@ describe("reclaim against a real repository", () => {
 
     const { units, protectedLines } = await collectUnits(context);
 
-    expect(units.map((unit) => unit.owner.runId)).toEqual(["run-done"]);
+    expect(units.map((unit) => unit.owner?.runId)).toEqual(["run-done"]);
     expect(
       protectedLines.some((line) => line.includes("cla-6-live") && line.includes("live")),
     ).toBe(true);
