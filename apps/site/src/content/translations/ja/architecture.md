@@ -2,7 +2,7 @@
 title: アーキテクチャ
 description: emet/src のコードマップと、/emet のプロンプトがそれをどのように動かすかを説明します。
 seoTitle: emet のアーキテクチャ
-sourceHash: a2f7846ae362b1ae
+sourceHash: 3145bbde94eade03
 ---
 
 `emet/src` のコードマップと、`/emet` のプロンプトがそれをどのように動かすかを説明します。用語は [GLOSSARY.md](../GLOSSARY.md) に従います。この構成の背景にある決定は [docs/adr](adr/README.md) にあります。問題が起きた場合は、[トラブルシューティング](troubleshooting.md)を参照してください。
@@ -47,6 +47,8 @@ sourceHash: a2f7846ae362b1ae
 | レポート               | `metrics.ts`、`usage.ts`                                                                                                                                                                                                                                                                             |
 | 安全性                 | `guard.ts`、`guard-destructive.ts`                                                                                                                                                                                                                                                                   |
 | 共有ヘルパー           | `narrow.ts`、`optional.ts`、`assets.ts`（コンパイル済みバイナリに埋め込まれたファイル）                                                                                                                                                                                                              |
+
+ホスト固有の値は `agenthost.ts` の `AgentHost` インターフェースの背後にあります。`agenthost-claude.ts` が Claude Code 用、`agenthost-codex.ts` が Codex 用のアダプターで、設定の `agentHost` で選ばれます。Codex 側は `codex-models.ts`（モデル解決）、`codex-home.ts`（実行ごとの `CODEX_HOME` オーバーレイ）、`codex-process.ts` と `codex-session.ts`（プロセス実行と引き継ぎ）、`codex-usage.ts`（`exec --json` からの使用量）、`guard-codex.ts`（フック入力と承認ゲート）、`dispatch.ts`、`review-run.ts` を追加します。[Codex ガイド](guide/codex.md)を参照してください。
 
 ## プロンプトの配置
 

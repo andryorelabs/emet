@@ -2,7 +2,7 @@
 title: モデルとエフォート
 description: emet がロールごとにモデルと推論エフォートをどう選ぶか、またそれを変更する設定キーを説明します。
 seoTitle: emet のモデルとエフォート
-sourceHash: 6fe7308bf47a7aac
+sourceHash: 7ab8a2e10ec9cae7
 ---
 
 `/emet` はロールごとにモデルと推論エフォートを自動で選びます。実行中に手動で切り替えるものはありません。すべてのキーは[設定リファレンス](../reference/configuration.md#models)にあります。
@@ -52,6 +52,27 @@ sourceHash: 6fe7308bf47a7aac
 ```
 
 `review.highRiskPaths` は、大文字小文字を区別せずに `high` ティアを強制する追加のパス部分文字列のリストです。リスクの高いウェーブをより厳しく精査したい場合は、`models.reviewer.high.effort` を（たとえば `high` に）引き上げてください。
+
+## Codex ホスト
+
+`agentHost` を `"codex"` にすると、各ワーカーとレビュアーはそれぞれ独立した `codex exec` プロセスになり、ロールごとに `-m` と `model_reasoning_effort` が設定されます。[`codex`](../reference/configuration.md) セクションの既定値は次のとおりです。
+
+| ロール                      | モデル        | エフォート               | フォールバック                |
+| --------------------------- | ------------- | ------------------------ | ----------------------------- |
+| セッション (`$emet:run`)    | `gpt-6.1-sol` | `medium` (`high` 計画中) | なし                          |
+| ワーカー                    | `gpt-6.1-sol` | `medium`                 | `gpt-6.1-terra`, `gpt-6-luna` |
+| `Model:` 行付きのワーカー   | `gpt-6.1-sol` | `xhigh`                  | `gpt-6-astra`                 |
+| レビュアー、`medium` ティア | `gpt-6.1-sol` | `high`                   | なし                          |
+| レビュアー、`high` ティア   | `gpt-6-astra` | `high`                   | `gpt-6.1-sol`                 |
+| トリアージ                  | `gpt-6-luna`  | `medium`                 | `gpt-6.1-terra`               |
+
+`emet dispatch` は各スラッグを Codex のモデルキャッシュと照合します。キャッシュに載っていてエフォートに対応するスラッグはそのまま使い、そうでなければモデルのアップグレード先、次にフォールバックをたどり、最後は `-m` を省略して、すべての置き換えをログに記録します。エフォート `ultra` は送信されません。`passive` ティアではレビュアーは起動しません。
+
+実際のウェーブを何度か回したあと、次の場合に調整し直してください。
+
+- ワーカーが何度も修正ラウンドを必要とする: `codex.models.worker.effort` を上げるか、リスクの高いチケットに `Model:` 行を付ける。
+- `high` ティアのウェーブのレビューが指摘を見逃す: `codex.models.reviewer.high.effort` を上げる。
+- ログに置き換えが表示される: Codex がスラッグの名前を変えたか廃止したので、スラッグを更新する。
 
 ## レビュアーが 1 つである理由
 

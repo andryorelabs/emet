@@ -2,7 +2,7 @@
 title: Справочник по конфигурации
 description: Каждый ключ emet.config.json со значением по умолчанию и смыслом.
 seoTitle: Справочник по конфигурации emet
-sourceHash: 72d2564863187ae0
+sourceHash: f93a93f72cc341b1
 ---
 
 Каждый ключ `emet.config.json` со значением по умолчанию и смыслом. Источник истины — [`emet/schema/emet.config.schema.json`](../../emet/schema/emet.config.schema.json). Термины соответствуют [GLOSSARY.md](../../GLOSSARY.md). Назад к [README](../../README.md).
@@ -80,6 +80,20 @@ sourceHash: 72d2564863187ae0
 - `reviewer.medium` и `reviewer.high` (по умолчанию у каждого `opus`, `medium`): ревьюер для каждого уровня риска, возвращаемого `emet assess`. Повысьте `reviewer.high.effort` (например, до `high`), чтобы усилить проверку рискованных волн.
 - `triage` (по умолчанию `haiku`): недорогая модель для триажа логов CI и ревью уровня passive. Упавшая проверка передаётся агенту на этой модели, который возвращает не более примерно 2k токенов с указателями `file:line`.
 - `escalation` (по умолчанию `{ "sonnet": "opus" }`): следующий уровень модели для каждого имени модели, используется, когда тикет достигает предела исправлений.
+
+## agentHost
+
+`agentHost` (по умолчанию `"claude"`): хост агента, в котором выполняется запуск: `"claude"` или `"codex"`. См. [руководство по Codex](../guide/codex.md).
+
+## codex
+
+Читается только когда `agentHost` равен `"codex"`. Все ключи необязательны. Усилие — одно из `low`, `medium`, `high`, `xhigh`, `max`; `ultra` не принимается никогда.
+
+- `models.worker`, `models.workerOverride`, `models.reviewer.medium`, `models.reviewer.high`, `models.triage`: каждый имеет вид `{ "model", "effort", "fallback" }`. `fallback` перечисляет слаги, которые пробуются по порядку, когда `model` нет в кэше моделей Codex. Значения по умолчанию — в разделе [Модели и усилие](../guide/models-and-effort.md).
+- `models.session`: `{ "model", "effort", "planEffort", "fallback" }` для сессии, которая выполняет `$emet:run`. `planEffort` действует до первого одобрения.
+- `effort`: если задан, заменяет усилие всех ролей.
+- `minVersion` (по умолчанию `0.167.0`): самая старая версия CLI `codex`, которую принимает `emet doctor`.
+- `sandbox` (по умолчанию `workspace-write`): режим песочницы воркеров Codex. `danger-full-access` включается только явно.
 
 ## review
 

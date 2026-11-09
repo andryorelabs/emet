@@ -2,7 +2,7 @@
 title: CLI-Referenz
 description: Jeder emet-Unterbefehl, die Tabelle der Gates und Aufzeichnungen, Exit-Codes und Umgebungsvariablen.
 seoTitle: emet-CLI-Referenz
-sourceHash: 6ac3b40ddcfe5237
+sourceHash: 8bb02104970da0a8
 ---
 
 Jeder `emet`-Unterbefehl, die Tabelle der Gates und Aufzeichnungen, Exit-Codes und Umgebungsvariablen. Die Begriffe folgen [GLOSSARY.md](../../GLOSSARY.md). Zurück zur [README](../../README.md). Jeder Befehl gibt seine Verwendung mit `--help` aus.
@@ -83,6 +83,15 @@ Mit `tracker.kind: "local"` sind Specs und Tickets Markdown-Dateien unter `.scra
 
 Eine Welle ist ein PR. Sein Text enthält für jedes Ticket `Closes #N` (das Schließ-Schlüsselwort des Trackers), und der Koordinator setzt die Tickets auf in-review, sobald er den PR öffnet. Der PR wird dann gemäß `pr.autoMerge` gemergt oder bleibt offen, wenn die Welle markiert wurde, `autoMerge` den Wert `false` hat oder die CI-Korrekturen aufgebraucht sind (der PR erhält dann das Label human-decision). Spätere Wellen laufen in eigenen Sitzungen, nie in der, die Welle 1 ausgeführt hat. Die Abschnitte `pr` und `handoff` steuern, was als Nächstes geschieht; siehe [`pr`](configuration.md#pr) und [`handoff`](configuration.md#handoff).
 
+### Codex-Host
+
+Diese Befehle bedienen den Codex-Agent-Host (`agentHost` `"codex"`); siehe den [Codex-Leitfaden](../guide/codex.md).
+
+- `emet dispatch --role worker --run <id> --ticket <id> --prompt-file <file> [--model <m>] [--effort <e>] [--root <dir>]`: legt nach der Prüfung von Reservierung und Slot `.emet/worktrees/agent-<ticket>` an, baut ein `CODEX_HOME`-Overlay pro Lauf und startet den Worker als abgekoppeltes `codex exec`. `emet dispatch --wait --run <id> --ticket <id> [--timeout <s>]` blockiert bis zum Ende und gibt den aufgezeichneten Ergebnisstatus aus.
+- `emet review-run --run <id> --ticket <id> --package <file> --tier <medium|high|passive>`: führt den Reviewer als schreibgeschütztes `codex exec` über ein Paket von `emet review-package` aus und gibt Befunde-JSON für `emet review --findings` aus. Die Stufe `passive` startet keinen Prozess.
+- `emet launch <spec-id> --wave <n>`: startet auf diesem Host ein abgekoppeltes `codex exec`, das `$emet:run --dispatch <spec>` ausführt, und speichert dessen Thread-ID. Es wird kein Orca-Tab geöffnet, und `codex exec resume <id>` setzt die Sitzung fort.
+- `emet guard`: liest mit `EMET_AGENT_HOST=codex` die Hook-Eingabe von Codex, prüft die Pfade von `apply_patch` gegen `.emet/surface.json` und hält das Freigabe-Tor geschlossen, bis eine Prompt-Zeile `approve <id>` kommt.
+
 ## Gates und Aufzeichnungen
 
 Die Phasen entscheiden nicht selbst, wann ein Ticket fertig, mergebar oder einen weiteren Versuch wert ist. Sie rufen einen CLI-Befehl auf, der eine Aufzeichnung auf der Festplatte liest und die Entscheidung ausgibt. Lauf-Aufzeichnungen liegen unter `.emet/runs/<run-id>/` und das Review-Ledger unter `.emet/review/`, im Haupt-Checkout, nicht im Worktree eines Workers.
@@ -124,5 +133,6 @@ Für Nutzer gedachte Variablen. Eine gesetzte Variable überschreibt den passend
 | `EMET_MEM_RESERVE_GIB`        | Speicherreserve in GiB, die frei bleiben muss; ein Acquire wird abgelehnt, wenn der verfügbare Speicher darunter liegt. Standard 8. Sie fließt auch in die `auto`-Worker-Obergrenze ein.                               |
 | `EMET_MEM_PER_WORKER_GIB`     | Speicher in GiB, der pro Worker angenommen wird, wenn `maxLiveWorkers` den Wert `auto` hat. Standard 2. Erhöhen bei einem schwereren Stack pro Worker, etwa einer browsergesteuerten E2E-Suite pro Worktree.           |
 | `EMET_CPU_OVERSUBSCRIBE`      | CPU-Multiplikator für die `auto`-Worker-Obergrenze. Standard 1.                                                                                                                                                        |
+| `EMET_AGENT_HOST`             | `codex` lässt `emet guard` die Hook-Eingabe von Codex lesen. Wird von den Codex-Hooks gesetzt; unter Claude Code ungesetzt lassen.                                                                                     |
 
 Die `auto`-Obergrenze ist `clamp(min(cpuCount × EMET_CPU_OVERSUBSCRIBE, floor((memTotal − EMET_MEM_RESERVE_GIB) / EMET_MEM_PER_WORKER_GIB)), min, max)`. Die veralteten `FORGE_*`-Namen werden weiterhin gelesen; `EMET_*` hat Vorrang, wenn beide gesetzt sind.

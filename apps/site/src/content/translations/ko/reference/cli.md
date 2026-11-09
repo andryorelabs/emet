@@ -2,7 +2,7 @@
 title: CLI 레퍼런스
 description: 모든 emet 하위 명령, 게이트와 기록 표, 종료 코드, 환경 변수를 설명합니다.
 seoTitle: emet CLI 레퍼런스
-sourceHash: 6ac3b40ddcfe5237
+sourceHash: 8bb02104970da0a8
 ---
 
 모든 `emet` 하위 명령, 게이트와 기록 표, 종료 코드, 환경 변수입니다. 용어는 [GLOSSARY.md](../../GLOSSARY.md)를 따릅니다. [README](../../README.md)로 돌아가기. 모든 명령은 `--help`로 사용법을 출력합니다.
@@ -83,6 +83,15 @@ emet doctor ~/code/*
 
 웨이브 하나는 PR 하나입니다. 본문에는 각 티켓에 대한 `Closes #N`(트래커의 닫기 키워드)이 들어가며, 코디네이터는 PR을 열 때 티켓을 리뷰 중 상태로 옮깁니다. 이후 PR은 `pr.autoMerge`에 따라 병합되며, 웨이브에 플래그가 지정되었거나 `autoMerge`가 `false`이거나 CI 수정 횟수를 모두 소진한 경우에는 열린 채로 남습니다(이 경우 PR에는 사람의 판단이 필요하다는 라벨이 붙습니다). 이후 웨이브는 웨이브 1을 실행한 세션이 아니라 각자의 세션에서 실행됩니다. 다음에 일어나는 일은 `pr`과 `handoff` 섹션이 제어합니다. [`pr`](configuration.md#pr)과 [`handoff`](configuration.md#handoff)를 참고하세요.
 
+### Codex 호스트
+
+이 명령들은 Codex 에이전트 호스트(`agentHost`가 `"codex"`)를 위한 것입니다. [Codex 가이드](../guide/codex.md)를 참고하세요.
+
+- `emet dispatch --role worker --run <id> --ticket <id> --prompt-file <file> [--model <m>] [--effort <e>] [--root <dir>]`: 클레임과 슬롯을 확인한 뒤 `.emet/worktrees/agent-<ticket>`을 만들고, 실행별 `CODEX_HOME` 오버레이를 구성하여 워커를 분리된 `codex exec`로 시작합니다. `emet dispatch --wait --run <id> --ticket <id> [--timeout <s>]`는 종료될 때까지 기다렸다가 기록된 결과 상태를 출력합니다.
+- `emet review-run --run <id> --ticket <id> --package <file> --tier <medium|high|passive>`: `emet review-package`가 만든 패키지에 대해 리뷰어를 읽기 전용 `codex exec`로 실행하고, `emet review --findings`에 넘길 지적 사항 JSON을 출력합니다. `passive` 등급에서는 프로세스를 시작하지 않습니다.
+- `emet launch <spec-id> --wave <n>`: 이 호스트에서는 `$emet:run --dispatch <spec>`을 실행하는 분리된 `codex exec`를 시작하고 그 스레드 ID를 기록합니다. Orca 탭은 열리지 않으며, `codex exec resume <id>`로 세션을 이어갑니다.
+- `emet guard`: `EMET_AGENT_HOST=codex`일 때 Codex 훅 입력을 읽고, `apply_patch` 경로를 `.emet/surface.json`과 대조하며, 프롬프트 줄 `approve <id>`가 올 때까지 승인 게이트를 닫아 둡니다.
+
 ## 게이트와 기록
 
 각 단계는 티켓이 끝났는지, 병합할 수 있는지, 재시도할 가치가 있는지를 스스로 판단하지 않습니다. 디스크의 기록을 읽고 판단을 출력하는 CLI 명령을 호출합니다. 실행 기록은 `.emet/runs/<run-id>/`에, 리뷰 원장은 `.emet/review/`에 있으며, 둘 다 워커의 워크트리가 아니라 메인 체크아웃에 있습니다.
@@ -124,5 +133,6 @@ emet doctor ~/code/*
 | `EMET_MEM_RESERVE_GIB`        | 비워 두어야 하는 메모리 여유분(GiB)입니다. 사용 가능한 메모리가 이보다 적으면 슬롯 획득이 거부됩니다. 기본값은 8입니다. `auto` 워커 상한 계산에도 쓰입니다.                           |
 | `EMET_MEM_PER_WORKER_GIB`     | `maxLiveWorkers`가 `auto`일 때 워커 하나당 가정하는 메모리(GiB)입니다. 기본값은 2입니다. 워크트리마다 브라우저 기반 E2E 스위트를 돌리는 것처럼 워커별 스택이 무거우면 값을 높이세요.  |
 | `EMET_CPU_OVERSUBSCRIBE`      | `auto` 워커 상한에 쓰는 CPU 배수입니다. 기본값은 1입니다.                                                                                                                             |
+| `EMET_AGENT_HOST`             | `codex`로 설정하면 `emet guard`가 Codex 훅 입력을 읽습니다. Codex 훅이 설정하며, Claude Code에서는 설정하지 않은 채로 두세요.                                                         |
 
 `auto` 상한은 `clamp(min(cpuCount × EMET_CPU_OVERSUBSCRIBE, floor((memTotal − EMET_MEM_RESERVE_GIB) / EMET_MEM_PER_WORKER_GIB)), min, max)`입니다. 예전 `FORGE_*` 이름도 여전히 읽으며, 둘 다 설정되어 있으면 `EMET_*`가 우선합니다.

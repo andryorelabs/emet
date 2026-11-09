@@ -2,7 +2,7 @@
 title: 아키텍처
 description: emet/src의 코드 맵과 /emet 프롬프트가 이를 어떻게 구동하는지 설명합니다.
 seoTitle: emet 아키텍처
-sourceHash: a2f7846ae362b1ae
+sourceHash: 3145bbde94eade03
 ---
 
 `emet/src`의 코드 맵과 `/emet` 프롬프트가 이를 어떻게 구동하는지 설명합니다. 용어는 [GLOSSARY.md](../GLOSSARY.md)를 따르며, 이 구조의 배경이 된 결정은 [docs/adr](adr/README.md)에 있습니다. 문제가 생기면 [문제 해결](troubleshooting.md)을 참고하세요.
@@ -47,6 +47,8 @@ sourceHash: a2f7846ae362b1ae
 | 보고          | `metrics.ts`, `usage.ts`                                                                                                                                                                                                                       |
 | 안전          | `guard.ts`, `guard-destructive.ts`                                                                                                                                                                                                             |
 | 공유 헬퍼     | `narrow.ts`, `optional.ts`, `assets.ts`(컴파일된 바이너리에 내장된 파일)                                                                                                                                                                       |
+
+호스트별 값은 `agenthost.ts`의 `AgentHost` 인터페이스 뒤에 있습니다. `agenthost-claude.ts`는 Claude Code 어댑터, `agenthost-codex.ts`는 Codex 어댑터이며 설정의 `agentHost`로 선택됩니다. Codex 쪽에는 `codex-models.ts`(모델 결정), `codex-home.ts`(실행별 `CODEX_HOME` 오버레이), `codex-process.ts`와 `codex-session.ts`(프로세스 실행기와 인계), `codex-usage.ts`(`exec --json`에서 읽는 사용량), `guard-codex.ts`(훅 입력과 승인 게이트), `dispatch.ts`, `review-run.ts`가 추가됩니다. [Codex 가이드](guide/codex.md)를 참고하세요.
 
 ## 프롬프트 배치
 

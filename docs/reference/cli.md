@@ -78,6 +78,15 @@ With `tracker.kind: "local"`, specs and tickets are markdown files under the mai
 
 One wave is one PR. Its body carries `Closes #N` for each ticket (the tracker's closing keyword), and the coordinator moves the tickets to in-review when it opens the PR. The PR is then merged per `pr.autoMerge`, or left open when the wave was flagged, `autoMerge` is `false`, or CI fixes ran out (the PR then gets the human-decision label). Later waves run in their own sessions, never in the one that ran wave 1. The `pr` and `handoff` sections control what happens next; see [`pr`](configuration.md#pr) and [`handoff`](configuration.md#handoff).
 
+### Codex host
+
+These commands serve the Codex Agent host (`agentHost` `"codex"`); see the [Codex guide](../guide/codex.md).
+
+- `emet dispatch --role worker --run <id> --ticket <id> --prompt-file <file> [--model <m>] [--effort <e>] [--root <dir>]`: after checking the claim and the slot, creates `.emet/worktrees/agent-<ticket>`, builds a per-run `CODEX_HOME` overlay and starts the worker as a detached `codex exec`. `emet dispatch --wait --run <id> --ticket <id> [--timeout <s>]` blocks until it exits and prints the recorded result status.
+- `emet review-run --run <id> --ticket <id> --package <file> --tier <medium|high|passive>`: runs the reviewer as a read-only `codex exec` over a package from `emet review-package` and prints findings JSON for `emet review --findings`. The `passive` tier starts no process.
+- `emet launch <spec-id> --wave <n>`: on this host, starts a detached `codex exec` running `$emet:run --dispatch <spec>` and records its thread id. No Orca tab is opened, and `codex exec resume <id>` continues the session.
+- `emet guard`: with `EMET_AGENT_HOST=codex` it reads Codex hook input, checks `apply_patch` paths against `.emet/surface.json` and keeps the approval gate closed until a prompt line `approve <id>`.
+
 ## Gates and records
 
 The phases do not decide on their own when a ticket is done, mergeable or worth retrying. They call a CLI command that reads a record on disk and prints the decision. Run records live under `.emet/runs/<run-id>/` and the review ledger under `.emet/review/`, in the main checkout, not in a worker's worktree.
@@ -119,5 +128,6 @@ User-facing variables. A variable overrides the matching config value when set.
 | `EMET_MEM_RESERVE_GIB`        | Memory headroom in GiB that must stay free; an acquire is denied when available memory is below it. Default 8. It also feeds the `auto` worker cap.                                    |
 | `EMET_MEM_PER_WORKER_GIB`     | Memory in GiB assumed per worker when `maxLiveWorkers` is `auto`. Default 2. Raise it for a heavier per-worker stack, such as a browser-driven E2E suite per worktree.                 |
 | `EMET_CPU_OVERSUBSCRIBE`      | CPU multiplier for the `auto` worker cap. Default 1.                                                                                                                                   |
+| `EMET_AGENT_HOST`             | `codex` makes `emet guard` read Codex hook input. Set by the Codex hooks; leave it unset on Claude Code.                                                                               |
 
 The `auto` cap is `clamp(min(cpuCount × EMET_CPU_OVERSUBSCRIBE, floor((memTotal − EMET_MEM_RESERVE_GIB) / EMET_MEM_PER_WORKER_GIB)), min, max)`. The legacy `FORGE_*` names are still read; `EMET_*` wins when both are set.

@@ -2,7 +2,7 @@
 title: 모델과 추론 강도
 description: emet이 역할마다 모델과 추론 강도를 어떻게 고르는지, 그리고 이를 바꾸는 설정 키를 설명합니다.
 seoTitle: emet의 모델과 추론 강도
-sourceHash: 6fe7308bf47a7aac
+sourceHash: 7ab8a2e10ec9cae7
 ---
 
 `/emet`은 역할마다 모델과 추론 강도(effort)를 자동으로 선택합니다. 실행 중에 수동으로 바꿀 것은 없습니다. 모든 키는 [설정 레퍼런스](../reference/configuration.md#models)에 있습니다.
@@ -52,6 +52,27 @@ sourceHash: 6fe7308bf47a7aac
 ```
 
 `review.highRiskPaths`는 대소문자를 구분하지 않고 `high` 티어를 강제하는 추가 경로 부분 문자열의 목록입니다. 위험한 웨이브를 더 엄격하게 검토하려면 `models.reviewer.high.effort`를 (예를 들어 `high`로) 높이세요.
+
+## Codex 호스트
+
+`agentHost`를 `"codex"`로 설정하면 각 워커와 리뷰어는 역할별로 `-m`과 `model_reasoning_effort`가 지정된 독립적인 `codex exec` 프로세스가 됩니다. [`codex`](../reference/configuration.md) 섹션의 기본값은 다음과 같습니다.
+
+| 역할                    | 모델          | 노력 수준                 | 대체 모델                     |
+| ----------------------- | ------------- | ------------------------- | ----------------------------- |
+| 세션 (`$emet:run`)      | `gpt-6.1-sol` | `medium` (`high` 계획 중) | 없음                          |
+| 워커                    | `gpt-6.1-sol` | `medium`                  | `gpt-6.1-terra`, `gpt-6-luna` |
+| `Model:` 줄이 있는 워커 | `gpt-6.1-sol` | `xhigh`                   | `gpt-6-astra`                 |
+| 리뷰어, `medium` 등급   | `gpt-6.1-sol` | `high`                    | 없음                          |
+| 리뷰어, `high` 등급     | `gpt-6-astra` | `high`                    | `gpt-6.1-sol`                 |
+| 트리아지                | `gpt-6-luna`  | `medium`                  | `gpt-6.1-terra`               |
+
+`emet dispatch`는 각 슬러그를 Codex 모델 캐시와 대조합니다. 캐시에 있고 해당 노력 수준을 지원하는 슬러그는 그대로 쓰고, 아니면 모델의 업그레이드 대상, 그다음 대체 모델을 따르며, 마지막에는 `-m`을 생략하고 모든 대체를 로그에 남깁니다. 노력 수준 `ultra`는 절대 보내지 않습니다. `passive` 등급에서는 리뷰어를 시작하지 않습니다.
+
+실제 웨이브를 몇 번 돌린 뒤 다음과 같은 경우 다시 조정하세요.
+
+- 워커가 수정 라운드를 반복해서 필요로 할 때: `codex.models.worker.effort`를 올리거나 위험한 티켓에 `Model:` 줄을 넣으세요.
+- `high` 등급 웨이브의 리뷰가 지적 사항을 놓칠 때: `codex.models.reviewer.high.effort`를 올리세요.
+- 로그에 대체가 표시될 때: Codex가 슬러그 이름을 바꾸거나 없앴으니 슬러그를 업데이트하세요.
 
 ## 리뷰어가 하나인 이유
 
