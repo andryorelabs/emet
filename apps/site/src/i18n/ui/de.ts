@@ -44,6 +44,8 @@ export const de = {
     tabPlugin: "Plugin",
     tabClone: "Aus einem Klon",
     request: "build the Website",
+    youType: "du tippst",
+    emetReplies: "emet antwortet",
     alt: "Ein gemaltes Tal im goldenen Licht, ein kleiner Lehm-Golem auf einer grasigen Anhöhe über Terrassenfeldern.",
   },
   showcase: {

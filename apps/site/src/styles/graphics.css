@@ -1,8 +1,7 @@
 /**
- * Motion graphics of the home page: the valley breathes, the typed terminal,
- * the wave diagram and the dusk fireflies. Decorative and `aria-hidden`;
- * transform and opacity only (the wave diagram draws with `stroke-dashoffset`
- * by design). Everything ambient is off with reduced motion, and paused when
+ * Motion graphics of the home page: the valley breathes, the typed terminal
+ * and the dusk fireflies. Decorative and `aria-hidden`; transform and opacity
+ * only. Everything ambient is off with reduced motion, and paused when
  * the tab is hidden or the scene is off screen.
  *
  * The valley scene copies `object-fit: cover` with container units, so a
@@ -431,91 +430,6 @@
 @keyframes tt-blink {
   50% {
     opacity: 0;
-  }
-}
-
-.wave-slot {
-  padding: 0 20px 16px;
-}
-
-.wave {
-  display: block;
-  pointer-events: none;
-  width: 100%;
-  max-width: 640px;
-  height: auto;
-  fill: none;
-  stroke: var(--text-muted);
-  stroke-width: 1.5;
-}
-
-.wave-lines path {
-  stroke-dasharray: 1;
-}
-
-.wave-land,
-.wave-end {
-  fill: var(--moss);
-  stroke: none;
-}
-
-.wave-fan circle {
-  fill: var(--surface);
-  stroke: var(--moss);
-  stroke-width: 2;
-}
-
-@keyframes wave-draw {
-  from {
-    stroke-dashoffset: 1;
-  }
-}
-
-@keyframes wave-show {
-  from {
-    opacity: 0;
-  }
-}
-
-@supports (animation-timeline: view()) {
-  @media (prefers-reduced-motion: no-preference) {
-    .wave {
-      view-timeline: --wave block;
-    }
-
-    .wave-lines path,
-    .wave-land,
-    .wave-fan,
-    .wave-end {
-      animation-timing-function: linear;
-      animation-fill-mode: both;
-      animation-timeline: --wave;
-    }
-
-    .wave-a {
-      animation-name: wave-draw;
-      animation-range: cover 6% cover 20%;
-    }
-
-    .wave-b {
-      animation-name: wave-draw;
-      animation-range: cover 24% cover 38%;
-    }
-
-    .wave-land {
-      animation-name: wave-show;
-      animation-range: cover 0% cover 8%;
-    }
-
-    .wave-fan {
-      animation-name: wave-show;
-      animation-range: cover 18% cover 26%;
-    }
-
-    .wave-end {
-      animation-name: wave-show;
-      animation-range: cover 36% cover 44%;
-    }
   }
 }
 

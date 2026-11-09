@@ -1,0 +1,50 @@
+---
+/**
+ * The emet mascot as the terminal shows it: the pixel art of the Claude Code
+ * mod, drawn as SVG rectangles at build time and cropped to the art of all its
+ * frames, so no transparent margin pushes the banner text away. It starts
+ * asleep; `mascot-motion.ts` wakes it when it scrolls into view. Decorative,
+ * so `aria-hidden`.
+ */
+import { MASCOT_FRAMES } from "./mascot-frames.generated";
+import { framePixelRuns, runsBounds } from "./mascot-pixels";
+
+const PIXEL_SIZE = 7;
+
+const frames = [
+  ...MASCOT_FRAMES.sleep.frames.map((frame) => ({ state: "sleep", frame, set: MASCOT_FRAMES.sleep })),
+  ...MASCOT_FRAMES.work.frames.map((frame) => ({ state: "work", frame, set: MASCOT_FRAMES.work })),
+].map(({ state, frame, set }, index) => ({
+  state,
+  ms: frame.ms,
+  isOn: index === 0,
+  runs: framePixelRuns(frame.cells, set.columns, set.rows),
+}));
+const bounds = runsBounds(frames.flatMap((entry) => entry.runs)) ?? {
+  x: 0,
+  y: 0,
+  width: MASCOT_FRAMES.sleep.columns,
+  height: MASCOT_FRAMES.sleep.rows * 2,
+};
+---
+
+<svg
+  class="mascot"
+  viewBox={`${bounds.x} ${bounds.y} ${bounds.width} ${bounds.height}`}
+  width={bounds.width * PIXEL_SIZE}
+  height={bounds.height * PIXEL_SIZE}
+  shape-rendering="crispEdges"
+  aria-hidden="true"
+  focusable="false"
+  data-mascot
+>
+  {
+    frames.map((entry) => (
+      <g class={entry.isOn ? "mascot-frame is-on" : "mascot-frame"} data-state={entry.state} data-ms={entry.ms}>
+        {entry.runs.map((run) => (
+          <rect x={run.x} y={run.y} width={run.width} height="1" fill={run.color} />
+        ))}
+      </g>
+    ))
+  }
+</svg>

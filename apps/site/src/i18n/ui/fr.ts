@@ -44,6 +44,8 @@ export const fr = {
     tabPlugin: "Plugin",
     tabClone: "Depuis un clone",
     request: "build the Website",
+    youType: "vous tapez",
+    emetReplies: "emet répond",
     alt: "Une vallée peinte dans une lumière dorée, un petit golem d'argile sur une butte herbeuse au-dessus de champs en terrasses.",
   },
   showcase: {

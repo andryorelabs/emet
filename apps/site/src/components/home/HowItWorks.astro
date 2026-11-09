@@ -1,14 +1,16 @@
 ---
 /**
  * Three exchanges beside a sticky crop of the golden-hour painting. The
- * interface fragments are real emet output with sample content.
+ * what the user types stays in code blocks, what emet answers is drawn as
+ * output, with sample content; the install banner shows the mascot as the
+ * terminal draws it.
  */
 import { Picture } from "astro:assets";
 
 import sourceImage from "../../assets/source.webp";
 import type { UiStrings } from "../../i18n/ui/en";
 import CodeBlock from "../code/CodeBlock.astro";
-import WaveDiagram from "./graphics/WaveDiagram.astro";
+import PixelMascot from "./graphics/PixelMascot.astro";
 
 interface Props {
   strings: UiStrings;
@@ -28,33 +30,18 @@ const cloneCommands = [
 ].join("\n");
 
 const banner = [
-  "   ▄▀▄▄",
-  "     █",
-  " ▄██████████▄   emet  plugin for Claude Code",
-  " ██ ●    ● ██   Spec to merge, on one approval.",
-  " ██   ▬▬   ██   interview, spec, tickets, one approval, merge",
-  " ▀▀████████▀▀   Not affiliated with or endorsed by Anthropic",
+  "emet  plugin for Claude Code",
+  "Spec to merge, on one approval.",
+  "interview, spec, tickets, one approval, merge",
+  "Not affiliated with or endorsed by Anthropic",
 ].join("\n");
 
-const tickets = [
-  "Spec 252  the Website",
-  "  S1  monorepo   S2  site app   S3  home page",
-  "",
-  "  #253  monorepo scaffold   wave 1",
-  "  #254  home layout         wave 2  blocked by #253",
-  "  #255  code blocks         wave 2  blocked by #253",
-  "  #256  docker and deploy   wave 2  blocked by #253",
-].join("\n");
-
-const statusJson = JSON.stringify(
-  {
-    state: "ready",
-    spec: "252",
-    waves: [{ runId: "emet252w2", wave: 2, state: "ready", workers: 3 }],
-  },
-  null,
-  2,
-);
+const waveOneTickets = [{ id: "#253", name: "monorepo scaffold" }];
+const waveTwoTickets = [
+  { id: "#254", name: "home layout" },
+  { id: "#255", name: "code blocks" },
+  { id: "#256", name: "docker and deploy" },
+];
 ---
 
 <section class="how" data-drift="6" aria-labelledby="how-title">
@@ -75,6 +62,7 @@ const statusJson = JSON.stringify(
 
     <article class="exchange" id="install" data-typed>
       <h3>{how.install}</h3>
+      <p class="io">{how.youType}</p>
       <CodeBlock
         code={pluginCommands}
         lang="bash"
@@ -83,37 +71,89 @@ const statusJson = JSON.stringify(
           { label: how.tabClone, code: cloneCommands },
         ]}
       />
-      <div class="fragment" data-ui data-reveal="item">
+      <p class="io">{how.emetReplies}</p>
+      <div class="fragment banner" data-ui data-reveal="item">
+        <PixelMascot />
         <pre class="terminal">{banner}</pre>
       </div>
     </article>
 
     <article class="exchange" data-typed>
       <h3>{how.describe}</h3>
+      <p class="io">{how.youType}</p>
       <CodeBlock code={`/emet:run ${how.request}`} lang="bash" />
-      <div class="fragment" data-ui data-reveal="item">
-        <pre class="terminal">{tickets}</pre>
-        <div class="wave-slot" data-slot="wave-diagram" aria-hidden="true"><WaveDiagram /></div>
+      <p class="io">{how.emetReplies}</p>
+      <div class="out" data-ui data-reveal="item">
+        <p class="out-head"><b>Spec 252 &middot; the Website</b><span>S1 monorepo &middot; S2 site app &middot; S3 home page</span></p>
+        <section class="out-group">
+          <h4>Wave 1</h4>
+          <ul class="out-rows">
+            {
+              waveOneTickets.map((ticket) => (
+                <li class="out-row">
+                  <span class="out-mark is-open" aria-hidden="true" />
+                  <span class="out-name">{ticket.name}</span>
+                  <span class="out-id">{ticket.id}</span>
+                </li>
+              ))
+            }
+          </ul>
+        </section>
+        <section class="out-group">
+          <h4>Wave 2 <em>starts after #253</em></h4>
+          <ul class="out-rows">
+            {
+              waveTwoTickets.map((ticket) => (
+                <li class="out-row">
+                  <span class="out-mark is-open" aria-hidden="true" />
+                  <span class="out-name">{ticket.name}</span>
+                  <span class="out-id">{ticket.id}</span>
+                </li>
+              ))
+            }
+          </ul>
+        </section>
       </div>
     </article>
 
     <article class="exchange" data-typed>
       <h3>{how.land}</h3>
+      <p class="io">{how.youType}</p>
       <CodeBlock code="emet status" lang="bash" />
-      <CodeBlock code={statusJson} lang="json" />
-      <div class="fragment pr-card" data-ui data-reveal="item">
-        <p class="pr-title">
-          <span class="pr-state">Merged</span>
-          Wave 2: home layout
-        </p>
-        <p class="pr-meta">Closes #254, #255, #256 &middot; checks passing &middot; reviewed</p>
+      <p class="io">{how.emetReplies}</p>
+      <div class="out land" data-ui data-reveal="item" data-land>
+        <ul class="out-rows" aria-label="Closed tickets">
+          {
+            waveTwoTickets.map((ticket) => (
+              <li class="out-row">
+                <span class="out-mark" aria-hidden="true" />
+                <span class="out-name">{ticket.name}</span>
+                <span class="out-id">{ticket.id}</span>
+              </li>
+            ))
+          }
+        </ul>
+        <div class="pr-card">
+          <p class="pr-title">
+            <span class="pr-state">
+              <span class="pr-state-open" aria-hidden="true">Open</span>
+              <span class="pr-state-merged">Merged</span>
+            </span>
+            Wave 2: home layout
+          </p>
+          <p class="pr-meta">Closes #254, #255, #256 &middot; checks passing &middot; reviewed</p>
+        </div>
       </div>
     </article>
   </div>
 </section>
 
 <script>
+  import { initLandCard } from "./graphics/land-card";
+  import { initMascot } from "./graphics/mascot-motion";
   import { initTypedTerminal } from "./graphics/typed-terminal";
 
   initTypedTerminal(document);
+  initMascot(document);
+  initLandCard(document);
 </script>

@@ -43,6 +43,8 @@ export const ja = {
     tabPlugin: "プラグイン",
     tabClone: "クローンから",
     request: "build the Website",
+    youType: "入力",
+    emetReplies: "emet の応答",
     alt: "金色の光に包まれた絵の谷。段々畑の上の草の丘に立つ小さな粘土のゴーレム。",
   },
   showcase: {

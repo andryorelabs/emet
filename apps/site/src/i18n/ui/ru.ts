@@ -43,6 +43,8 @@ export const ru = {
     tabPlugin: "Плагин",
     tabClone: "Из клона",
     request: "build the Website",
+    youType: "вы вводите",
+    emetReplies: "emet отвечает",
     alt: "Нарисованная долина в золотом свете, маленький глиняный голем на травянистом пригорке над террасными полями.",
   },
   showcase: {
