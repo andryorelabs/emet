@@ -1,7 +1,16 @@
 import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
 
+import type { AgentHostName } from "./agenthost";
 import { checkDestructiveCommand, checkEditSurface } from "./guard-destructive";
+import {
+  detectAgentHost,
+  evaluateApprovalGate,
+  formatCodexPreToolUseOutput,
+  handleUserPromptSubmit,
+  isAgentWorktreeFor,
+  normalizeHookInput,
+} from "./guard-codex";
 import { listReservations, type Reservation } from "./claims";
 import { writeCompletionEvent, type CompletionEvent } from "./runs";
 import { listOccupiedSlots, type SlotListEntry } from "./slots";
@@ -55,20 +64,12 @@ export type PreToolUseHookInput = {
   readonly tool_name?: string;
   readonly cwd?: string;
   readonly tool_input?: Record<string, unknown>;
+  readonly paths?: string[];
 };
 
 function optionalString(record: Record<string, unknown>, key: string): { [K in string]?: string } {
   const value = record[key];
   return typeof value === "string" ? { [key]: value } : {};
-}
-
-function toPreToolUseInput(value: unknown): PreToolUseHookInput {
-  if (!isObject(value)) return {};
-  return {
-    ...optionalString(value, "tool_name"),
-    ...optionalString(value, "cwd"),
-    ...(isObject(value.tool_input) ? { tool_input: value.tool_input } : {}),
-  };
 }
 
 function toStopHookInput(value: unknown): StopHookInput {
@@ -102,10 +103,13 @@ function deny(reason: string): GuardVerdict {
  * backgrounding something is a legitimate, supported pattern this hook has
  * no business blocking.
  */
-export function checkBackgroundBashInWorktree(input: PreToolUseHookInput): GuardVerdict {
+export function checkBackgroundBashInWorktree(
+  input: PreToolUseHookInput,
+  host: AgentHostName = "claude",
+): GuardVerdict {
   if (input.tool_name !== "Bash") return ALLOW;
   if (input.tool_input?.run_in_background !== true) return ALLOW;
-  if (!input.cwd?.includes(".claude/worktrees/agent-")) return ALLOW;
+  if (!isAgentWorktreeFor(host, input.cwd)) return ALLOW;
 
   return deny(
     `${GUARD_PREFIX} a /${PRODUCT} worker gets no completion notification for a backgrounded Bash ` +
@@ -231,15 +235,22 @@ export async function checkCodeReviewFanoutWithSiblingRun(
 export async function evaluateGuard(
   input: PreToolUseHookInput,
   hookPid: number,
+  options: { readonly host?: AgentHostName; readonly runsDir?: string } = {},
 ): Promise<GuardVerdict> {
+  const host = options.host ?? "claude";
   try {
+    if (host === "codex" && options.runsDir !== undefined) {
+      const gateVerdict = evaluateApprovalGate(input, options.runsDir);
+      if (gateVerdict.decision === "deny") return gateVerdict;
+    }
+
     const destructiveVerdict = checkDestructiveCommand(input);
     if (destructiveVerdict.decision === "deny") return destructiveVerdict;
 
     const surfaceVerdict = checkEditSurface(input);
     if (surfaceVerdict.decision === "deny") return surfaceVerdict;
 
-    const backgroundBashVerdict = checkBackgroundBashInWorktree(input);
+    const backgroundBashVerdict = checkBackgroundBashInWorktree(input, host);
     if (backgroundBashVerdict.decision === "deny") return backgroundBashVerdict;
 
     const scheduleWakeupVerdict = checkScheduleWakeupSlashCommand(input);
@@ -293,7 +304,7 @@ function writeFinalReportMarker(sessionId: string, stateDirectory?: string): str
 }
 
 function isAgentWorktreeCwd(cwd: string | undefined): cwd is string {
-  return typeof cwd === "string" && cwd.includes(".claude/worktrees/agent-");
+  return typeof cwd === "string" && isAgentWorktreeFor(detectAgentHost(), cwd);
 }
 
 async function countNewCommits(cwd: string): Promise<number | null> {
@@ -525,7 +536,8 @@ export async function readBoundedStdin(
   return Buffer.concat(chunks).toString("utf8");
 }
 
-function formatHookOutput(verdict: GuardVerdict): string | null {
+function formatHookOutput(verdict: GuardVerdict, host: AgentHostName): string | null {
+  if (host === "codex") return formatCodexPreToolUseOutput(verdict);
   if (verdict.decision === "allow") return null;
   return JSON.stringify({
     hookSpecificOutput: {
@@ -576,6 +588,24 @@ async function runHasUnfinishedTicket(runId: string | null): Promise<boolean> {
   }
 }
 
+/** `<git-common-dir>/.emet/runs` when it exists, else `<cwd>/.emet/runs`. */
+async function resolveRunsDirectory(cwd: string): Promise<string> {
+  const output = await Bun.$`git rev-parse --path-format=absolute --git-common-dir`
+    .cwd(cwd)
+    .nothrow()
+    .quiet();
+  const commonDirectory = output.stdout.toString().trim();
+  if (output.exitCode === 0 && commonDirectory.length > 0) {
+    const shared = path.join(resolveRunDir(commonDirectory).path, "runs");
+    if (existsSync(shared)) return shared;
+  }
+  return path.join(resolveRunDir(cwd).path, "runs");
+}
+
+function parsedCwd(parsed: unknown): string {
+  return isObject(parsed) && typeof parsed.cwd === "string" ? parsed.cwd : process.cwd();
+}
+
 export async function run(argv: readonly string[] = process.argv.slice(2)): Promise<void> {
   const markIndex = argv.indexOf("--mark-final-report");
   if (markIndex !== -1) {
@@ -620,6 +650,16 @@ export async function run(argv: readonly string[] = process.argv.slice(2)): Prom
   }
 
   const event = readEventFlag(argv);
+  const host = detectAgentHost();
+  if (event === "UserPromptSubmit") {
+    if (host !== "codex") return;
+    try {
+      handleUserPromptSubmit(parsed, await resolveRunsDirectory(parsedCwd(parsed)));
+    } catch (error) {
+      console.error(`${INTERNAL_PREFIX} could not record approval:`, error);
+    }
+    return;
+  }
   if (event === "SubagentStop" || event === "Stop") {
     const stopVerdict = await evaluateStopGuard(event, toStopHookInput(parsed), process.pid);
     const stopOutput = formatStopOutput(stopVerdict);
@@ -627,8 +667,12 @@ export async function run(argv: readonly string[] = process.argv.slice(2)): Prom
     return;
   }
 
-  const verdict = await evaluateGuard(toPreToolUseInput(parsed), process.pid);
-  const output = formatHookOutput(verdict);
+  const runsDir = host === "codex" ? await resolveRunsDirectory(parsedCwd(parsed)) : undefined;
+  const verdict = await evaluateGuard(normalizeHookInput(parsed, host), process.pid, {
+    host,
+    ...(runsDir === undefined ? {} : { runsDir }),
+  });
+  const output = formatHookOutput(verdict, host);
   if (output) console.log(output);
 }
 

@@ -13,6 +13,7 @@ type ToolHookInput = {
   readonly tool_name?: string;
   readonly cwd?: string;
   readonly tool_input?: Record<string, unknown>;
+  readonly paths?: readonly string[];
 };
 
 const ALLOW: DestructiveVerdict = { decision: "allow" };
@@ -201,31 +202,40 @@ function loadSurfaceFile(cwd: string): SurfaceFile | null {
 
 const EDIT_TOOLS = new Set(["Edit", "Write", "MultiEdit", "NotebookEdit"]);
 
+function editTargets(input: ToolHookInput): readonly string[] | null {
+  if (input.tool_name === "apply_patch") return input.paths ?? null;
+  if (!input.tool_name || !EDIT_TOOLS.has(input.tool_name)) return null;
+  const target = input.tool_input?.file_path ?? input.tool_input?.notebook_path;
+  return typeof target === "string" ? [target] : null;
+}
+
 export function checkEditSurface(
   input: ToolHookInput,
   loadSurface: (cwd: string) => SurfaceFile | null = loadSurfaceFile,
 ): DestructiveVerdict {
-  if (!input.tool_name || !EDIT_TOOLS.has(input.tool_name)) return ALLOW;
-  if (!input.cwd) return ALLOW;
-  const target = input.tool_input?.file_path ?? input.tool_input?.notebook_path;
-  if (typeof target !== "string") return ALLOW;
+  const targets = editTargets(input);
+  if (!targets || !input.cwd) return ALLOW;
 
   const surface = loadSurface(input.cwd);
   if (!surface) return ALLOW;
 
-  const relative = path.relative(surface.root, path.resolve(input.cwd, target));
-  const inside = !relative.startsWith("..") && !path.isAbsolute(relative);
-  const allowed =
-    inside &&
-    (RUN_DIRECTORIES.some((runDirectory) => relative.startsWith(`${runDirectory}${path.sep}`)) ||
-      surface.globs.some((glob) => new Bun.Glob(glob).match(relative)));
-  if (allowed) return ALLOW;
-
-  return {
-    decision: "deny",
-    reason:
-      `${BINARY} guard: ${target} is outside this ticket's allowed edit surfaces ` +
-      `(${surface.globs.join(", ") || "none"}, from ${surface.source ?? `${RUN_DIR}/surface.json`}). Edit only allowed files, ` +
-      "or ask the coordinator to widen the surface.",
-  };
+  const cwd = input.cwd;
+  for (const target of targets) {
+    const relative = path.relative(surface.root, path.resolve(cwd, target));
+    const inside = !relative.startsWith("..") && !path.isAbsolute(relative);
+    const allowed =
+      inside &&
+      (RUN_DIRECTORIES.some((runDirectory) => relative.startsWith(`${runDirectory}${path.sep}`)) ||
+        surface.globs.some((glob) => new Bun.Glob(glob).match(relative)));
+    if (!allowed) {
+      return {
+        decision: "deny",
+        reason:
+          `${BINARY} guard: ${target} is outside this ticket's allowed edit surfaces ` +
+          `(${surface.globs.join(", ") || "none"}, from ${surface.source ?? `${RUN_DIR}/surface.json`}). Edit only allowed files, ` +
+          "or ask the coordinator to widen the surface.",
+      };
+    }
+  }
+  return ALLOW;
 }
