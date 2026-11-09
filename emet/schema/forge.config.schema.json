@@ -5,6 +5,21 @@
   "type": "object",
   "required": ["version", "repo", "ticket"],
   "additionalProperties": true,
+  "definitions": {
+    "codexModelChoice": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "model": { "type": "string", "minLength": 1 },
+        "effort": { "type": "string", "enum": ["low", "medium", "high", "xhigh", "max"] },
+        "fallback": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 },
+          "description": "Slugs tried in order when model is unavailable in the Codex models cache."
+        }
+      }
+    }
+  },
   "properties": {
     "//": {
       "type": "string",
@@ -499,6 +514,77 @@
             "sonnet": "opus"
           },
           "description": "Next model tier per model name, used when a ticket reaches its fix cap."
+        }
+      }
+    },
+    "agentHost": {
+      "type": "string",
+      "enum": ["claude", "codex"],
+      "default": "claude",
+      "description": "The Agent host a run executes in."
+    },
+    "codex": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Codex Agent host settings. Read only when agentHost is codex. Effort `ultra` is never accepted.",
+      "properties": {
+        "models": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "worker": { "$ref": "#/definitions/codexModelChoice" },
+            "workerOverride": { "$ref": "#/definitions/codexModelChoice" },
+            "reviewer": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "medium": { "$ref": "#/definitions/codexModelChoice" },
+                "high": { "$ref": "#/definitions/codexModelChoice" }
+              }
+            },
+            "triage": { "$ref": "#/definitions/codexModelChoice" },
+            "session": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "model": { "type": "string", "minLength": 1, "default": "gpt-6.1-sol" },
+                "effort": {
+                  "type": "string",
+                  "enum": ["low", "medium", "high", "xhigh", "max"],
+                  "default": "medium"
+                },
+                "planEffort": {
+                  "type": "string",
+                  "enum": ["low", "medium", "high", "xhigh", "max"],
+                  "default": "high",
+                  "description": "Effort while the session plans, before the first approval."
+                },
+                "fallback": {
+                  "type": "array",
+                  "items": { "type": "string", "minLength": 1 },
+                  "default": []
+                }
+              }
+            }
+          },
+          "description": "Model, effort and ordered fallback slugs per role."
+        },
+        "effort": {
+          "type": "string",
+          "enum": ["low", "medium", "high", "xhigh", "max"],
+          "description": "When set, replaces the effort of every role."
+        },
+        "minVersion": {
+          "type": "string",
+          "pattern": "^\\d+\\.\\d+\\.\\d+$",
+          "default": "0.167.0",
+          "description": "Oldest codex CLI version `emet doctor` accepts."
+        },
+        "sandbox": {
+          "type": "string",
+          "enum": ["workspace-write", "danger-full-access"],
+          "default": "workspace-write",
+          "description": "Sandbox mode for Codex workers. danger-full-access is an explicit opt-in."
         }
       }
     },

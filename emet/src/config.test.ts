@@ -4,11 +4,14 @@ import os from "node:os";
 import path from "node:path";
 
 import {
+  DEFAULT_CODEX_CONFIG,
   DEFAULT_FORGE_CONFIG,
   ForgeConfigError,
   loadForgeConfig,
   loadForgeConfigWithDefaults,
   requireForgeConfig,
+  resolveAgentHostName,
+  resolveCodexConfig,
   resolveWorkerModel,
   type ForgeConfig,
 } from "./config";
@@ -523,5 +526,58 @@ describe("resolveWorkerModel", () => {
     expect(resolveWorkerModel(DEFAULT_FORGE_CONFIG, "/high")).toEqual(
       DEFAULT_FORGE_CONFIG.models.worker,
     );
+  });
+});
+
+describe("agentHost and codex section", () => {
+  test("defaults to the claude host and the research codex defaults", async () => {
+    await writeConfig({});
+    const config = configOf(await loadForgeConfig(repoRoot));
+    expect(resolveAgentHostName(config)).toBe("claude");
+    const codex = resolveCodexConfig(config);
+    expect(codex).toEqual(DEFAULT_CODEX_CONFIG);
+    expect(codex.minVersion).toBe("0.167.0");
+    expect(codex.sandbox).toBe("workspace-write");
+    expect(codex.models.worker.model).toBe("gpt-6.1-sol");
+    expect(codex.models.session.planEffort).toBe("high");
+    await writeConfig({ codex: {} });
+    expect(configOf(await loadForgeConfig(repoRoot)).codex).toEqual(DEFAULT_CODEX_CONFIG);
+  });
+
+  test("accepts codex as the host and overrides single codex keys", async () => {
+    await writeConfig({
+      agentHost: "codex",
+      codex: {
+        sandbox: "danger-full-access",
+        models: { worker: { model: "gpt-x", fallback: ["gpt-y"] } },
+      },
+    });
+    const config = configOf(await loadForgeConfig(repoRoot));
+    expect(config.agentHost).toBe("codex");
+    expect(config.codex?.sandbox).toBe("danger-full-access");
+    expect(config.codex?.models.worker).toEqual({
+      model: "gpt-x",
+      effort: "medium",
+      fallback: ["gpt-y"],
+    });
+    expect(config.codex?.models.triage).toEqual(DEFAULT_CODEX_CONFIG.models.triage);
+  });
+
+  test("rejects ultra effort anywhere in the codex section", async () => {
+    await writeConfig({ codex: { models: { worker: { effort: "ultra" } } } });
+    expect(reasonOf(await loadForgeConfig(repoRoot))).toContain("codex.models.worker.effort");
+    await writeConfig({ codex: { effort: "ultra" } });
+    expect(reasonOf(await loadForgeConfig(repoRoot))).toContain("codex.effort");
+    await writeConfig({ codex: { models: { session: { planEffort: "ultra" } } } });
+    expect(reasonOf(await loadForgeConfig(repoRoot))).toContain("planEffort");
+  });
+
+  test("rejects an unknown host, sandbox and malformed minVersion", async () => {
+    await writeConfig({ agentHost: "gemini" });
+    expect(reasonOf(await loadForgeConfig(repoRoot))).toContain("agentHost");
+    await writeConfig({ codex: { sandbox: "none" } });
+    expect(reasonOf(await loadForgeConfig(repoRoot))).toContain("codex.sandbox");
+    await writeConfig({ codex: { minVersion: "latest" } });
+    expect(reasonOf(await loadForgeConfig(repoRoot))).toContain("codex.minVersion");
   });
 });
