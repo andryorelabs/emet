@@ -76,6 +76,43 @@ Model and effort per role. Every key is optional; omitting the section keeps wor
 - `triage` (default `haiku`): the cheap model for CI-log triage and passive-tier review. A failing check is handed to an agent on this model, which returns at most about 2k tokens with `file:line` pointers.
 - `escalation` (default `{ "sonnet": "opus" }`): the next model tier per model name, used when a ticket reaches its fix cap.
 
+## agentHost
+
+`claude` (default) or `codex`: the Agent host a run executes in. Leaving it out keeps the Claude Code path unchanged.
+
+## codex
+
+Settings for the Codex Agent host, read only when `agentHost` is `codex`. Every key is optional. Effort is one of `low`, `medium`, `high`, `xhigh`, `max`; `ultra` is rejected.
+
+```json
+{
+  "codex": {
+    "models": {
+      "worker": {
+        "model": "gpt-6.1-sol",
+        "effort": "medium",
+        "fallback": ["gpt-6.1-terra", "gpt-6-luna"]
+      },
+      "workerOverride": { "model": "gpt-6.1-sol", "effort": "xhigh", "fallback": ["gpt-6-astra"] },
+      "reviewer": {
+        "medium": { "model": "gpt-6.1-sol", "effort": "high" },
+        "high": { "model": "gpt-6-astra", "effort": "high", "fallback": ["gpt-6.1-sol"] }
+      },
+      "triage": { "model": "gpt-6-luna", "effort": "medium", "fallback": ["gpt-6.1-terra"] },
+      "session": { "model": "gpt-6.1-sol", "effort": "medium", "planEffort": "high" }
+    },
+    "minVersion": "0.167.0",
+    "sandbox": "workspace-write"
+  }
+}
+```
+
+- `models.<role>` (defaults above): `model`, `effort` and an ordered `fallback` list of slugs for the `worker`, `workerOverride` (a ticket's `Model:` override), `reviewer.medium`, `reviewer.high`, `triage` and `session` roles. `session.planEffort` (default `high`) is the effort while the session plans.
+- Resolution against `~/.codex/models_cache.json` (or `$CODEX_HOME/models_cache.json`): the configured slug is used when the cache lists it with `visibility: "list"` and the effort is in its `supported_reasoning_levels`; otherwise the model's `upgrade.model`, then each `fallback` in order, then no `-m` at all. Each substitution is logged with its reason. With no cache file the configured slug is used unchanged.
+- `effort` (default unset): when set, replaces the effort of every role.
+- `minVersion` (default `0.167.0`): the oldest `codex` CLI version `emet doctor` accepts.
+- `sandbox` (default `workspace-write`): `danger-full-access` is an explicit opt-in.
+
 ## review
 
 ```json
