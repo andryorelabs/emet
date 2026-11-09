@@ -1,8 +1,19 @@
+.ci-pipeline {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  max-width: 300px;
+  height: 66px;
+}
+
 .ci-checks {
   display: flex;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   justify-content: center;
-  gap: 8px 14px;
+  gap: 8px 16px;
+  height: 28px;
 }
 
 .ci-checks li {
@@ -13,8 +24,270 @@
 }
 
 .ci-dot {
+  position: relative;
+  flex: none;
   width: 10px;
   height: 10px;
   border-radius: 50%;
+  background: var(--border);
+}
+
+.ci-layer {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  opacity: 0;
+}
+
+.ci-amber {
+  background: var(--warn);
+}
+
+.ci-red {
+  background: var(--error);
+}
+
+.ci-green {
   background: var(--moss);
+  opacity: 1;
+}
+
+.ci-footer {
+  position: relative;
+  width: 100%;
+  height: 26px;
+}
+
+.ci-chip,
+.ci-badge {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  margin-left: -36px;
+  width: 72px;
+  height: 26px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 13px;
+  font-size: 12px;
+}
+
+.ci-chip {
+  border: 1px solid var(--border);
+  color: var(--text-muted);
+  opacity: 0;
+}
+
+.ci-badge {
+  border: 1.5px solid var(--moss);
+  color: var(--moss);
+  font-weight: 600;
+}
+
+@media (scripting: enabled) and (prefers-reduced-motion: no-preference) {
+  .ci-pipeline {
+    animation: ci-fade var(--scene-cycle) linear var(--scene-offset) infinite both;
+  }
+
+  .ci-lint .ci-amber {
+    animation: ci-lint-amber var(--scene-cycle) linear var(--scene-offset) infinite both;
+  }
+
+  .ci-lint .ci-green {
+    animation: ci-lint-green var(--scene-cycle) linear var(--scene-offset) infinite both;
+  }
+
+  .ci-test .ci-amber {
+    animation: ci-test-amber var(--scene-cycle) linear var(--scene-offset) infinite both;
+  }
+
+  .ci-test .ci-red {
+    animation: ci-test-red var(--scene-cycle) linear var(--scene-offset) infinite both;
+  }
+
+  .ci-test .ci-green {
+    animation: ci-test-green var(--scene-cycle) linear var(--scene-offset) infinite both;
+  }
+
+  .ci-test {
+    animation: ci-shake var(--scene-cycle) var(--ease-out) var(--scene-offset) infinite both;
+  }
+
+  .ci-build .ci-amber {
+    animation: ci-build-amber var(--scene-cycle) linear var(--scene-offset) infinite both;
+  }
+
+  .ci-build .ci-green {
+    animation: ci-build-green var(--scene-cycle) linear var(--scene-offset) infinite both;
+  }
+
+  .ci-chip {
+    animation: ci-chip var(--scene-cycle) var(--ease-out) var(--scene-offset) infinite both;
+  }
+
+  .ci-badge {
+    animation: ci-badge var(--scene-cycle) ease-in-out var(--scene-offset) infinite both;
+  }
+
+  @keyframes ci-fade {
+    0% {
+      opacity: 0;
+    }
+    4%,
+    91.43% {
+      opacity: 1;
+    }
+    97%,
+    100% {
+      opacity: 0;
+    }
+  }
+
+  @keyframes ci-lint-amber {
+    0%,
+    100% {
+      opacity: 0;
+    }
+    2.86%,
+    17.14% {
+      opacity: 1;
+    }
+    20% {
+      opacity: 0;
+    }
+  }
+
+  @keyframes ci-lint-green {
+    0%,
+    17.14% {
+      opacity: 0;
+    }
+    20%,
+    100% {
+      opacity: 1;
+    }
+  }
+
+  @keyframes ci-test-amber {
+    0%,
+    4.29%,
+    20%,
+    34.29%,
+    45.71%,
+    100% {
+      opacity: 0;
+    }
+    7.14%,
+    17.14%,
+    37.14%,
+    42.86% {
+      opacity: 1;
+    }
+  }
+
+  @keyframes ci-test-red {
+    0%,
+    17.14%,
+    37.14%,
+    100% {
+      opacity: 0;
+    }
+    20%,
+    34.29% {
+      opacity: 1;
+    }
+  }
+
+  @keyframes ci-test-green {
+    0%,
+    42.86% {
+      opacity: 0;
+    }
+    45.71%,
+    100% {
+      opacity: 1;
+    }
+  }
+
+  @keyframes ci-shake {
+    0%,
+    20%,
+    25.71%,
+    100% {
+      transform: translateX(0);
+    }
+    21.43% {
+      transform: translateX(-4px);
+    }
+    22.86% {
+      transform: translateX(4px);
+    }
+    24.29% {
+      transform: translateX(-2px);
+    }
+  }
+
+  @keyframes ci-build-amber {
+    0%,
+    8.57%,
+    60%,
+    100% {
+      opacity: 0;
+    }
+    11.43%,
+    54.29% {
+      opacity: 1;
+    }
+  }
+
+  @keyframes ci-build-green {
+    0%,
+    54.29% {
+      opacity: 0;
+    }
+    60%,
+    100% {
+      opacity: 1;
+    }
+  }
+
+  @keyframes ci-chip {
+    0%,
+    28.57% {
+      opacity: 0;
+      transform: translateY(10px);
+    }
+    42.86%,
+    52% {
+      opacity: 1;
+      transform: translateY(0);
+    }
+    60%,
+    100% {
+      opacity: 0;
+      transform: translateY(0);
+    }
+  }
+
+  @keyframes ci-badge {
+    0%,
+    60% {
+      opacity: 0;
+      transform: scale(1);
+    }
+    62.86% {
+      opacity: 1;
+      transform: scale(1);
+    }
+    71.43% {
+      opacity: 1;
+      transform: scale(1.04);
+    }
+    82.86%,
+    100% {
+      opacity: 1;
+      transform: scale(1);
+    }
+  }
 }
