@@ -198,6 +198,24 @@ describe("evaluateApprovalGate", () => {
 
 describe("isGitPushCommand", () => {
   const pushes = [
+    "git push>/dev/null",
+    "git >/dev/null push origin x",
+    "git 2>&1 push origin x",
+    "git $(echo push) origin x",
+    "git $'push' origin",
+    'git "$SUB" origin',
+    "find . -exec git push \\;",
+    "flock /tmp/l git push",
+    "ionice -c3 git push",
+    "doas git push",
+    "su -c 'git push'",
+    "env -S 'git push'",
+    "echo push origin | xargs git",
+    "GIT_CONFIG_COUNT=1 GIT_CONFIG_KEY_0=alias.p GIT_CONFIG_VALUE_0=push git p",
+    "git --config-env alias.p=P p",
+    "git config alias.p push && git p",
+    "git send-pack origin HEAD:refs/heads/x",
+    "git subtree push --prefix=a origin x",
     "git push",
     "git push origin develop",
     "  git   push  ",
@@ -244,6 +262,9 @@ describe("isGitPushCommand", () => {
     "$GIT push",
   ];
   const others = [
+    "git status > out.txt",
+    "git log 2>&1 | head",
+    "git diff --stat 2>/dev/null",
     "git pull",
     "git status",
     'git commit -m "push the button"',

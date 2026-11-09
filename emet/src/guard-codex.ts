@@ -176,8 +176,10 @@ function lexShell(text: string, nested: string[]): ShellWord[][] {
   let words: ShellWord[] = [];
   let current = "";
   let inWord = false;
+  let skipRedirectTarget = false;
   const endWord = () => {
-    if (inWord) words.push({ text: current });
+    if (inWord && skipRedirectTarget) skipRedirectTarget = false;
+    else if (inWord) words.push({ text: current });
     current = "";
     inWord = false;
   };
@@ -232,7 +234,16 @@ function lexShell(text: string, nested: string[]): ShellWord[][] {
       current += "$";
       inWord = true;
       index = close;
+    } else if (character === "<" || character === ">") {
+      if (inWord && /^[0-9]+$/.test(current)) {
+        current = "";
+        inWord = false;
+      } else endWord();
+      while (text[index + 1] === "<" || text[index + 1] === ">") index++;
+      if (text[index + 1] === "&") index++;
+      skipRedirectTarget = true;
     } else if (/[;&|()\n]/.test(character)) {
+      skipRedirectTarget = false;
       endCommand();
     } else if (/\s/.test(character)) {
       endWord();
@@ -269,17 +280,29 @@ function stripCommandPrefix(words: readonly ShellWord[]): ShellWord[] {
   return words.slice(index);
 }
 
+const INERT_PROGRAMS = new Set(["echo", "printf", "rg", "grep", "cat", "ls", "head", "tail", "wc"]);
+const PUSHING_SUBCOMMANDS = new Set(["push", "send-pack", "http-push", "git-push"]);
+
+function subcommandPushes(subcommand: string, rest: readonly ShellWord[]): boolean {
+  if (subcommand.includes("$") || PUSHING_SUBCOMMANDS.has(subcommand)) return true;
+  if (subcommand === "subtree") return rest.some((word) => word.text === "push");
+  if (subcommand === "config") return rest.some((word) => word.text.startsWith("alias."));
+  return false;
+}
+
 /** Whether `git <args>` (global options first) runs the `push` subcommand. */
 function gitArgumentsPush(args: readonly ShellWord[]): boolean {
   let index = 0;
   while (index < args.length) {
     const word = args[index]!.text;
-    if (!word.startsWith("-")) return word === "push";
+    if (!word.startsWith("-")) return subcommandPushes(word, args.slice(index + 1));
     if (GIT_OPTIONS_WITH_VALUE.has(word)) {
       const value = args[index + 1]?.text ?? "";
       if (word === "-c" && /^alias\.[^=]*=.*\bpush\b/i.test(value)) return true;
+      if (word === "--config-env" && value.startsWith("alias.")) return true;
       index += 2;
-    } else index++;
+    } else if (word.startsWith("--config-env=alias.")) return true;
+    else index++;
   }
   return false;
 }
@@ -287,17 +310,31 @@ function gitArgumentsPush(args: readonly ShellWord[]): boolean {
 /** Whether one simple command runs `git push`, directly or through a nested shell. */
 function simpleCommandPushes(words: readonly ShellWord[]): boolean {
   const [program, ...args] = stripCommandPrefix(words);
-  if (program === undefined) return false;
+  if (program === undefined) {
+    return (
+      words.some((word) => /\bgit\b/.test(word.text)) &&
+      words.some((word) => /\b(?:push|send-pack)\b/.test(word.text))
+    );
+  }
   const name = path.basename(program.text);
   if (name === "git-push") return true;
-  if (name === "git") return gitArgumentsPush(args);
+  if (name === "git") {
+    if (words.some((word) => word.text.startsWith("GIT_CONFIG_"))) return true;
+    if (words.some((word) => path.basename(word.text) === "xargs")) {
+      return args.every((word) => word.text.startsWith("-")) || gitArgumentsPush(args);
+    }
+    return gitArgumentsPush(args);
+  }
   if (name === "eval") return isGitPushCommand(args.map((arg) => arg.text).join(" "));
   if (SHELLS.has(name)) {
     const flagIndex = args.findIndex((arg) => /^-[A-Za-z]*c[A-Za-z]*$/.test(arg.text));
     const script = flagIndex === -1 ? undefined : args[flagIndex + 1];
     return script !== undefined && isGitPushCommand(script.text);
   }
-  return program.text.includes("$") && args.some((arg) => arg.text === "push");
+  if (program.text.includes("$") && args.some((arg) => arg.text === "push")) return true;
+  if (INERT_PROGRAMS.has(name)) return false;
+  const mentionsGit = words.some((word) => /\bgit\b/.test(word.text));
+  return mentionsGit && words.some((word) => /\b(?:push|send-pack)\b/.test(word.text));
 }
 
 /**
