@@ -25,7 +25,7 @@ Verdicts: `verified` (the behaviour holds), `failed` (it does not, or the eviden
 
 ## E2E
 
-`EMET_CODEX_E2E=1 bun test tools/codex-e2e.test.ts` (with `CODEX_HOME` pointing at an auth-only copy, so `~/.codex/config.toml` is not written): **failed**. `emet dispatch` started the worker, but `dispatch lands a commit and refuses git push` found 0 commits on the worker branch. The same run inside the full flow shows why: in the `workspace-write` sandbox, `git add` fails with `Unable to create '<repo>/.git/worktrees/agent-<ticket>/index.lock': Read-only file system`, although `emet dispatch` passes `--add-dir <git-common-dir>`. The push assertion was not reached.
+`EMET_CODEX_E2E=1 bun test tools/codex-e2e.test.ts` (with `CODEX_HOME` pointing at an auth-only overlay (`auth.json` symlinked, only `models_cache.json` copied), so `~/.codex/config.toml` is not written): **failed**. `emet dispatch` started the worker, but `dispatch lands a commit and refuses git push` found 0 commits on the worker branch. The same run inside the full flow shows why: in the `workspace-write` sandbox, `git add` fails with `Unable to create '<repo>/.git/worktrees/agent-<ticket>/index.lock': Read-only file system`, although `emet dispatch` passes `--add-dir <git-common-dir>`. The push assertion was not reached.
 
 ## Full flow
 
@@ -60,4 +60,4 @@ Run these on a throwaway repo in a terminal with `codex` signed in and an `emet`
 7. In Codex, send `create test.txt now`. Expected: the tool call is denied with `not approved: send approve <id>` and `test.txt` does not exist. Report: the denial text.
 8. Send the prompt line `approve <id>` exactly. Expected: `.emet/runs/spec<id>/approval.json` exists. Report: `ls .emet/runs/spec<id>`.
 9. Let wave 1 run, then `git -C .emet/worktrees/agent-<ticket> log --oneline -2`. Expected: a ticket commit above `init`. Report: the output, or the `index.lock` error from `.emet/runs/<run>/codex/<ticket>.jsonl` if there is no commit.
-10. `grep -c emet-manual ~/.codex/config.toml`. Expected: `0` (nothing about the run written to your Codex config). Report: the count.
+10. `grep -c "$(pwd)" ~/.codex/config.toml`, run in the repo. Expected: `0`, or `1` only if you accepted the trust prompt for this directory in step 5 (Codex records that itself); nothing else about the run is written. Report: the count and whether you accepted the prompt.
