@@ -95,7 +95,10 @@ export const codexHost: AgentHost = {
   },
 };
 
-/** Registers the Codex adapter so `resolveAgentHost("codex")` returns it. */
+/**
+ * Registers the Codex adapter into an injected registry. The default registry
+ * already holds it, so calling this again is a harmless, idempotent no-op.
+ */
 export function registerCodexHost(registry: HostRegistry): void {
   registry.codex = codexHost;
 }

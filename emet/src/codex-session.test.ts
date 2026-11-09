@@ -101,6 +101,37 @@ describe("startCodexSession", () => {
     expect(argv).toContain("--dangerously-bypass-approvals-and-sandbox");
   });
 
+  test("trusts only the session's own directories and writes the session model", async () => {
+    const repo = tempDir();
+    const home = tempDir();
+    writeFileSync(
+      path.join(home, "config.toml"),
+      '[projects."/elsewhere"]\ntrust_level = "trusted"\n',
+    );
+    const { script, log } = writeFakeScript(tempDir());
+    await startCodexSession(
+      { name: "emet-5-w1", permissionMode: "auto", prompt: "/emet:run 5", cwd: repo },
+      noRunner,
+      {
+        executable: FAKE,
+        env: { FAKE_CODEX_SCRIPT: script, FAKE_CODEX_LOG: log, HOME: home, CODEX_HOME: home },
+        sourceHome: home,
+      },
+    );
+    const overlay = readFileSync(
+      path.join(repo, ".emet/runs/emet-5-w1/codex-home/config.toml"),
+      "utf8",
+    );
+    expect(overlay).toContain(`[projects.${JSON.stringify(repo)}]`);
+    expect(overlay).toContain(
+      `[projects.${JSON.stringify(codexSessionPaths(repo, "emet-5-w1").runDir)}]`,
+    );
+    expect(overlay).not.toContain("/elsewhere");
+    expect(overlay).toMatch(/^model = "[^"]+"$/m);
+    expect(overlay).toMatch(/^model_reasoning_effort = "[^"]+"$/m);
+    expect(overlay).not.toContain("ultra");
+  });
+
   test("records a null thread id when the stream never names one", async () => {
     const repo = tempDir();
     const info = await startCodexSession(

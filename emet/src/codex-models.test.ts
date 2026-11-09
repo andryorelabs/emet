@@ -1,9 +1,9 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
-import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
 
-import { resolveCodexModel } from "./codex-models";
+import { codexModelsCachePaths, listedCodexModels, resolveCodexModel } from "./codex-models";
 import { DEFAULT_CODEX_CONFIG, DEFAULT_FORGE_CONFIG, type ForgeConfig } from "./config";
 
 interface FakeModel {
@@ -27,7 +27,7 @@ afterEach(() => {
   rmSync(directory, { recursive: true, force: true });
 });
 
-function writeCache(models: readonly FakeModel[]): void {
+function writeCache(models: readonly FakeModel[], file: string = cachePath): void {
   const entries = models.map((model) => ({
     slug: model.slug,
     visibility: model.visibility ?? "list",
@@ -37,7 +37,8 @@ function writeCache(models: readonly FakeModel[]): void {
     })),
     upgrade: model.upgrade ? { model: model.upgrade } : null,
   }));
-  writeFileSync(cachePath, JSON.stringify({ models: entries }));
+  mkdirSync(path.dirname(file), { recursive: true });
+  writeFileSync(file, JSON.stringify({ models: entries }));
 }
 
 describe("resolveCodexModel", () => {
@@ -131,5 +132,101 @@ describe("resolveCodexModel", () => {
   test("treats an unreadable cache like a missing one", () => {
     writeFileSync(cachePath, "not json");
     expect(resolveCodexModel("triage", DEFAULT_FORGE_CONFIG, cachePath).model).toBe("gpt-6-luna");
+  });
+});
+
+const terraFallback: ForgeConfig = {
+  ...DEFAULT_FORGE_CONFIG,
+  codex: {
+    ...DEFAULT_CODEX_CONFIG,
+    models: {
+      ...DEFAULT_CODEX_CONFIG.models,
+      reviewer: {
+        ...DEFAULT_CODEX_CONFIG.models.reviewer,
+        medium: { model: "gpt-6.1-sol", effort: "high", fallback: ["gpt-5.6-terra"] },
+      },
+    },
+  },
+};
+
+function homes(): { runHome: string; realHome: string; paths: string[] } {
+  const runHome = path.join(directory, "run-home");
+  const realHome = path.join(directory, "real-home");
+  return { runHome, realHome, paths: codexModelsCachePaths(runHome, realHome) };
+}
+
+describe("Codex models cache lookup", () => {
+  test("looks in the run home first, then the real Codex home", () => {
+    const { runHome, realHome, paths } = homes();
+    expect(paths).toEqual([
+      path.join(runHome, "models_cache.json"),
+      path.join(realHome, "models_cache.json"),
+    ]);
+  });
+
+  test("the real Codex home defaults to CODEX_HOME", () => {
+    const previous = process.env["CODEX_HOME"];
+    process.env["CODEX_HOME"] = path.join(directory, "env-home");
+    try {
+      expect(codexModelsCachePaths(path.join(directory, "run-home"))).toEqual([
+        path.join(directory, "run-home", "models_cache.json"),
+        path.join(directory, "env-home", "models_cache.json"),
+      ]);
+    } finally {
+      if (previous === undefined) delete process.env["CODEX_HOME"];
+      else process.env["CODEX_HOME"] = previous;
+    }
+  });
+
+  test("uses the real cache when the run home has none, and reports the substitution", () => {
+    const { realHome, paths } = homes();
+    writeCache([{ slug: "gpt-5.6-terra" }], path.join(realHome, "models_cache.json"));
+    const result = resolveCodexModel("reviewerMedium", terraFallback, paths);
+    expect(result.model).toBe("gpt-5.6-terra");
+    expect(result.substituted?.from).toBe("gpt-6.1-sol");
+    expect(result.substituted?.reason).toContain("not in the Codex models cache");
+  });
+
+  test("prefers the run-home cache over the real one", () => {
+    const { runHome, realHome, paths } = homes();
+    writeCache([{ slug: "gpt-6.1-sol" }], path.join(runHome, "models_cache.json"));
+    writeCache([{ slug: "gpt-5.6-terra" }], path.join(realHome, "models_cache.json"));
+    expect(resolveCodexModel("reviewerMedium", terraFallback, paths)).toEqual({
+      model: "gpt-6.1-sol",
+      effort: "high",
+    });
+  });
+
+  test("skips an unreadable run-home cache", () => {
+    const { runHome, realHome, paths } = homes();
+    mkdirSync(runHome, { recursive: true });
+    writeFileSync(path.join(runHome, "models_cache.json"), "not json");
+    writeCache([{ slug: "gpt-5.6-terra" }], path.join(realHome, "models_cache.json"));
+    expect(resolveCodexModel("reviewerMedium", terraFallback, paths).model).toBe("gpt-5.6-terra");
+  });
+
+  test("keeps the configured slug when no cache exists anywhere", () => {
+    expect(resolveCodexModel("reviewerMedium", terraFallback, homes().paths)).toEqual({
+      model: "gpt-6.1-sol",
+      effort: "high",
+    });
+  });
+
+  test("lists only the listed slugs of the first readable cache", () => {
+    const { realHome, paths } = homes();
+    expect(listedCodexModels(paths)).toBeUndefined();
+    writeCache(
+      [
+        { slug: "gpt-6-luna" },
+        { slug: "gpt-reserve", visibility: "hide" },
+        { slug: "gpt-5.6-terra" },
+      ],
+      path.join(realHome, "models_cache.json"),
+    );
+    expect(listedCodexModels(paths)).toEqual(["gpt-6-luna", "gpt-5.6-terra"]);
+    expect(listedCodexModels(path.join(realHome, "models_cache.json"))).toEqual([
+      "gpt-6-luna",
+      "gpt-5.6-terra",
+    ]);
   });
 });

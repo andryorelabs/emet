@@ -3,7 +3,9 @@ import path from "node:path";
 
 import type { CommandRunner, SessionInfo, StartSessionRequest } from "./agenthost";
 import { buildRunHome } from "./codex-home";
+import { resolveCodexModel, type CodexModelResolution } from "./codex-models";
 import { refreshThreadId, spawnCodex, type CodexSpawn } from "./codex-process";
+import { loadForgeConfigWithDefaults } from "./config";
 import { errnoCode } from "./narrow";
 
 const SKILL_PREFIX_PATTERN = /^\/(?=[\w-]+:)/;
@@ -62,6 +64,27 @@ export function codexSkillPrompt(prompt: string): string {
   return prompt.replace(SKILL_PREFIX_PATTERN, "$");
 }
 
+/**
+ * The model and effort of a Codex session, resolved from the repo's config
+ * (defaults when absent) against the source home's models cache.
+ */
+async function resolveSessionModel(
+  repoRoot: string,
+  sourceHome: string | undefined,
+): Promise<CodexModelResolution> {
+  const { config } = await loadForgeConfigWithDefaults(repoRoot);
+  const resolved =
+    sourceHome === undefined
+      ? resolveCodexModel("session", config)
+      : resolveCodexModel("session", config, path.join(sourceHome, "models_cache.json"));
+  if (resolved.substituted !== undefined) {
+    console.error(
+      `emet: session model ${resolved.substituted.from} substituted: ${resolved.substituted.reason}`,
+    );
+  }
+  return resolved;
+}
+
 async function waitForThreadId(stateFile: string, remainingMs: number): Promise<string | null> {
   const threadId = refreshThreadId(stateFile)?.threadId ?? null;
   if (threadId !== null || remainingMs <= 0) return threadId;
@@ -81,10 +104,14 @@ export async function startCodexSession(
 ): Promise<SessionInfo> {
   const { sourceHome, ...spawnExtras } = spawnOverrides;
   const paths = codexSessionPaths(req.cwd, req.name);
+  const { model, effort } = await resolveSessionModel(req.cwd, sourceHome);
   const { codexHome } = buildRunHome({
     run: req.name,
     repoRoot: req.cwd,
     ...(sourceHome === undefined ? {} : { sourceHome }),
+    trustedDirectories: [req.cwd, paths.runDir],
+    ...(model === undefined ? {} : { model }),
+    effort,
   });
   const { pid } = spawnCodex({
     args: [

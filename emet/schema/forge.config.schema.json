@@ -583,8 +583,8 @@
         "sandbox": {
           "type": "string",
           "enum": ["workspace-write", "danger-full-access"],
-          "default": "workspace-write",
-          "description": "Sandbox mode for Codex workers. danger-full-access is an explicit opt-in."
+          "default": "danger-full-access",
+          "description": "Sandbox mode for Codex workers, the reviewer's writable steps and launched sessions. The default danger-full-access lets workers commit; the emet guard hook enforces surfaces, the approval and the git push ban. workspace-write keeps the sandbox but workers cannot commit. The read-only reviewer always runs with read-only."
         }
       }
     },

@@ -248,7 +248,7 @@ function readFlagValue(argv: readonly string[], flag: string): string | undefine
 /**
  * Resolves the Agent host and its launch settings from the repo config. On the
  * Codex host no Orca tab is opened and the permission mode is `codex.sandbox`,
- * so `danger-full-access` only happens when the repo configures it.
+ * `danger-full-access` unless the repo configures `workspace-write`.
  */
 export function launchSettingsFor(config: ForgeConfig): {
   host: AgentHost;

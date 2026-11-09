@@ -4,7 +4,14 @@ import path from "node:path";
 import { configureTicketPattern, listReservations } from "./claims";
 import { buildRunHome } from "./codex-home";
 import { resolveCodexModel } from "./codex-models";
-import { readCodexState, refreshThreadId, spawnCodex } from "./codex-process";
+import {
+  codexWorkerLiveness,
+  isPidTrusted,
+  readCodexState,
+  refreshThreadId,
+  spawnCodex,
+  type CodexState,
+} from "./codex-process";
 import {
   loadForgeConfigWithDefaults,
   resolveCodexConfig,
@@ -28,6 +35,8 @@ export const EXIT_WAIT_TIMEOUT = 124;
 const TICKET_PATTERN = /^[A-Za-z0-9][A-Za-z0-9._-]*$/;
 const RUN_PATTERN = /^[A-Za-z0-9][A-Za-z0-9_-]*$/;
 const POLL_INTERVAL_MS = 200;
+const THREAD_ID_TIMEOUT_MS = 3000;
+const THREAD_ID_POLL_MS = 50;
 
 /** Overrides for tests; production callers pass none. */
 export type DispatchDeps = {
@@ -37,6 +46,8 @@ export type DispatchDeps = {
   readonly env?: NodeJS.ProcessEnv;
   readonly sourceHome?: string;
   readonly cachePath?: string;
+  /** How long dispatch waits for `thread.started` before printing `thread pending`. */
+  readonly threadIdTimeoutMs?: number;
 };
 
 /** The JSON schema of the final report a Codex worker returns through `--output-schema`. */
@@ -265,17 +276,52 @@ async function dispatchWorker(
     ...(deps.executable === undefined ? {} : { executable: deps.executable }),
     ...(deps.env === undefined ? {} : { env: deps.env }),
   });
-  console.log(`dispatched ${ticket}: pid ${pid}, worktree ${paths.worktree}`);
+  const threadId = await awaitThreadId(
+    paths.stateFile,
+    deps.threadIdTimeoutMs ?? THREAD_ID_TIMEOUT_MS,
+    config,
+  );
+  console.log(
+    `dispatched ${ticket}: pid ${pid}, worktree ${paths.worktree}, thread ${threadId ?? "pending"}, jsonl ${paths.jsonl}`,
+  );
   return 0;
 }
 
-function isAlive(pid: number): boolean {
-  try {
-    process.kill(pid, 0);
-    return true;
-  } catch (error) {
-    return error instanceof Error && "code" in error && error.code === "EPERM";
+function livenessProbe(config: ForgeConfig): { idleMs: number } {
+  return { idleMs: config.usage.stalledMinutes * 60_000 };
+}
+
+/**
+ * Polls the worker's stream for `thread.started` and records the thread id,
+ * the worker's identity. Gives up at the timeout or once the worker is over.
+ */
+async function awaitThreadId(
+  stateFile: string,
+  timeoutMs: number,
+  config: ForgeConfig,
+): Promise<string | null> {
+  const deadline = Date.now() + timeoutMs;
+  for (;;) {
+    const state = refreshThreadId(stateFile);
+    if (state === undefined || state.threadId !== null) return state?.threadId ?? null;
+    const liveness = codexWorkerLiveness(state, livenessProbe(config));
+    if (liveness === "done" || liveness === "exited" || Date.now() >= deadline) return null;
+    // oxlint-disable-next-line eslint/no-await-in-loop -- polling on purpose
+    await Bun.sleep(THREAD_ID_POLL_MS);
   }
+}
+
+/**
+ * What `--wait` does next: `running` while the stream is live, or quiet
+ * while a pid from this namespace is alive; `over` after a finished turn or
+ * an exited pid; `stalled` for a silent worker from another pid namespace.
+ */
+function workerWaitState(state: CodexState, config: ForgeConfig): "running" | "over" | "stalled" {
+  const probe = livenessProbe(config);
+  const liveness = codexWorkerLiveness(state, probe);
+  if (liveness === "live") return "running";
+  if (liveness === "stalled") return isPidTrusted(state, probe) ? "running" : "stalled";
+  return "over";
 }
 
 async function waitForWorker(argv: readonly string[], root: string): Promise<number> {
@@ -290,11 +336,23 @@ async function waitForWorker(argv: readonly string[], root: string): Promise<num
     throw new DispatchError(`invalid --timeout: ${timeoutRaw}`, 2);
   }
   const paths = pathsFor(root, runId, ticket);
-  const state = readCodexState(paths.stateFile);
-  if (state === undefined) throw new DispatchError(`no dispatched worker for ${ticket}`);
+  if (readCodexState(paths.stateFile) === undefined) {
+    throw new DispatchError(`no dispatched worker for ${ticket}`);
+  }
+  const { config } = await loadForgeConfigWithDefaults(root);
 
   const deadline = timeoutSeconds === undefined ? Infinity : Date.now() + timeoutSeconds * 1000;
-  while (isAlive(state.pid)) {
+  for (;;) {
+    const state = refreshThreadId(paths.stateFile);
+    if (state === undefined) throw new DispatchError(`no dispatched worker for ${ticket}`);
+    const running = workerWaitState(state, config);
+    if (running === "over") break;
+    if (running === "stalled") {
+      console.error(
+        `emet dispatch: ${ticket} stalled: no event in ${config.usage.stalledMinutes} minutes (thread ${state.threadId ?? "pending"})`,
+      );
+      return 1;
+    }
     if (Date.now() >= deadline) {
       console.error(`emet dispatch: timed out waiting for ${ticket}`);
       return EXIT_WAIT_TIMEOUT;
@@ -302,7 +360,6 @@ async function waitForWorker(argv: readonly string[], root: string): Promise<num
     // oxlint-disable-next-line eslint/no-await-in-loop -- polling on purpose
     await Bun.sleep(POLL_INTERVAL_MS);
   }
-  refreshThreadId(paths.stateFile);
   const result = readResult(path.join(paths.runDir, "results"), ticket);
   if (result === null) {
     console.error(`emet dispatch: ${ticket} exited without a recorded result`);

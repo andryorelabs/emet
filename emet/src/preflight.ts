@@ -37,7 +37,7 @@ import { checkApproval, type ApprovalRecord } from "./approve";
 import { isObject } from "./narrow";
 import { readEnv, TODO_MARKER, TODO_MARKERS } from "./names";
 import { listReservations } from "./claims";
-import { resolveLandedVerdict, type LandedVerdict } from "./landed";
+import { resolveLandedVerdict, unownedReclaimVerdict, type LandedVerdict } from "./landed";
 import { checkWorktreeForkBase, createEnvironmentProbes, type EnvironmentProbes } from "./doctor";
 import { checkStale } from "./map";
 import { validatePlan, type PlanTicket } from "./validate";
@@ -408,12 +408,33 @@ export type WorktreeEntryReport = {
   readonly line: string;
 };
 
+export interface DescribeWorktreeEntryOptions {
+  /** Decides whether an unowned branch is worker-shaped; without it the caller's `resolveLanded` alone decides. */
+  readonly branchPrefix?: string;
+  /** Whether the worktree at a directory has no uncommitted or untracked change. */
+  readonly isClean?: (directory: string) => Promise<boolean>;
+  readonly classifyContent?: typeof classifyByContent;
+}
+
+/**
+ * The tree state `emet cleanup` checks before reclaiming an Unowned
+ * worktree: a missing directory counts as clean, and a failed `git status`
+ * as dirty.
+ */
+async function isWorktreeClean(directory: string): Promise<boolean> {
+  if (!existsSync(directory)) return true;
+  const result = await Bun.$`git -C ${directory} status --porcelain`.nothrow().quiet();
+  return result.exitCode === 0 && result.stdout.toString().trim().length === 0;
+}
+
 /**
  * Turns one {@link WorktreeEntryVerdict} into a bucketed, printable line —
  * split out of `main()`'s loop (rather than a `switch` directly inside the
  * `for`) since `unicorn/no-break-in-nested-loop` flags a `break` nested two
  * levels deep as ambiguous. `'fail'` blocks dispatch; `'info'`/`'warn'`
- * never do.
+ * never do. An unowned entry gets "safe to run emet cleanup" exactly when
+ * {@link unownedReclaimVerdict} (the rule cleanup removes by) says so, and
+ * that verdict's reason otherwise.
  */
 export async function describeWorktreeEntryVerdict(
   entry: WorktreeEntry,
@@ -423,6 +444,7 @@ export async function describeWorktreeEntryVerdict(
   trunk: string,
   local: boolean,
   resolveLanded: (branch: string) => Promise<LandedVerdict> = () => Promise.resolve("unknown"),
+  options: DescribeWorktreeEntryOptions = {},
 ): Promise<WorktreeEntryReport> {
   switch (verdict.kind) {
     case "detached": {
@@ -469,20 +491,39 @@ export async function describeWorktreeEntryVerdict(
     }
     case "content-fallback":
     default: {
-      if ((await resolveLanded(verdict.branch)) === "landed") {
+      const landed = await resolveLanded(verdict.branch);
+      const isClean = options.isClean ?? isWorktreeClean;
+      const reclaim = unownedReclaimVerdict({
+        workerTicket:
+          options.branchPrefix === undefined
+            ? verdict.branch
+            : ticketFromWorkerBranch(verdict.branch, options.branchPrefix),
+        landed,
+        clean: await isClean(entry.directory),
+        lockedByOther: entry.lockedReason !== null,
+      });
+      if (reclaim.reclaimable) {
         return {
           bucket: "info",
-          line: `  ${entry.directory} (${verdict.branch}): unowned, but its ticket landed — safe to run "emet cleanup"`,
+          line: `  ${entry.directory} (${verdict.branch}): unowned, but its ticket landed and the tree is clean — safe to run "emet cleanup"`,
         };
       }
-      const contentVerdict = await classifyByContent(verdict.branch, mainTree, remote, trunk, {
+      const keptBecause = `"emet cleanup" leaves it: ${reclaim.reason}`;
+      if (landed === "landed") {
+        return {
+          bucket: "warn",
+          line: `  ${entry.directory} (${verdict.branch}): unowned, its ticket landed, but ${keptBecause} — check it, then git worktree remove "${entry.directory}"`,
+        };
+      }
+      const classifyContent = options.classifyContent ?? classifyByContent;
+      const contentVerdict = await classifyContent(verdict.branch, mainTree, remote, trunk, {
         local,
       });
       const trunkRef = local ? trunk : `${remote}/${trunk}`;
       const safe = isSafeToDelete(contentVerdict);
       const advice = safe
-        ? `looks merged/equivalent to ${trunkRef} — safe to run "emet cleanup"`
-        : `${contentVerdict} from ${trunkRef} — needs human review before cleanup, work could be lost`;
+        ? `looks merged/equivalent to ${trunkRef}, but ${keptBecause}`
+        : `${contentVerdict} from ${trunkRef} — needs human review before cleanup, work could be lost (${keptBecause})`;
       /**
        * Merged/equivalent residue is harmless leftover, never a hazard to a
        * sibling coordinator — only genuinely unclassifiable content (still
@@ -1363,6 +1404,7 @@ async function main(config: ForgeConfig, repoRoot: string) {
         config.repo.trunk,
         local,
         resolveLanded,
+        { branchPrefix: config.ticket.branchPrefix },
       );
       if (report.bucket === "fail") worktreeFailLines.push(report.line);
       else if (report.bucket === "info") infoLines.push(report.line);

@@ -9,7 +9,12 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
 
 import { buildRunHome } from "./codex-home";
-import { resolveCodexModel, type CodexRole } from "./codex-models";
+import {
+  codexModelsCachePaths,
+  listedCodexModels,
+  resolveCodexModel,
+  type CodexRole,
+} from "./codex-models";
 import { spawnCodex } from "./codex-process";
 import { ForgeConfigError, loadForgeConfigWithDefaults, resolveRepoRoot } from "./config";
 import { BINARY } from "./names";
@@ -137,14 +142,33 @@ export function extractFindings(message: string): Finding[] {
   return parseFindings(JSON.stringify(list));
 }
 
-/** Model and effort arguments for the tier; the model flag is omitted when none resolved. */
+/**
+ * Model and effort arguments for the tier. A substitution is logged to
+ * stderr. When a models cache exists but no slug resolves for the role, it
+ * throws naming the role and the listed slugs; the model flag is omitted only
+ * when no cache exists anywhere and nothing is configured.
+ */
 export function modelArguments(
   tier: Exclude<Tier, "passive">,
   config: Parameters<typeof resolveCodexModel>[1],
-  cachePath?: string,
+  cachePaths: string | readonly string[] = codexModelsCachePaths(),
 ): string[] {
   const role: CodexRole = tier === "high" ? "reviewerHigh" : "reviewerMedium";
-  const resolved = resolveCodexModel(role, config, cachePath);
+  const resolved = resolveCodexModel(role, config, cachePaths);
+  if (resolved.model === undefined) {
+    const listed = listedCodexModels(cachePaths);
+    if (listed !== undefined) {
+      throw new ForgeConfigError(
+        `no Codex model resolves for role ${role} (${resolved.substituted?.from ?? "?"}: ${
+          resolved.substituted?.reason ?? "unusable"
+        }); the models cache lists: ${listed.length > 0 ? listed.join(", ") : "(none)"}`,
+      );
+    }
+  } else if (resolved.substituted !== undefined) {
+    console.error(
+      `${BINARY} review-run: model ${resolved.substituted.from} substituted: ${resolved.substituted.reason}`,
+    );
+  }
   return [
     ...(resolved.model === undefined ? [] : ["-m", resolved.model]),
     "-c",
@@ -184,6 +208,11 @@ async function reviewWithCodex(args: ReviewRunArgs, deps: ReviewRunDeps): Promis
     repoRoot,
     ...(deps.sourceHome === undefined ? {} : { sourceHome: deps.sourceHome }),
   });
+  const models = modelArguments(
+    args.tier,
+    config,
+    deps.modelsCachePath ?? codexModelsCachePaths(codexHome, deps.sourceHome),
+  );
   const runDir = path.dirname(codexHome);
   const schemaPath = path.join(runDir, `review-schema-${args.ticket}.json`);
   const jsonlPath = path.join(runDir, `review-${args.ticket}.jsonl`);
@@ -199,7 +228,7 @@ async function reviewWithCodex(args: ReviewRunArgs, deps: ReviewRunDeps): Promis
       "--json",
       "--output-schema",
       schemaPath,
-      ...modelArguments(args.tier, config, deps.modelsCachePath),
+      ...models,
       buildReviewerPrompt(args),
     ],
     cwd: repoRoot,

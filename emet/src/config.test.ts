@@ -537,7 +537,7 @@ describe("agentHost and codex section", () => {
     const codex = resolveCodexConfig(config);
     expect(codex).toEqual(DEFAULT_CODEX_CONFIG);
     expect(codex.minVersion).toBe("0.167.0");
-    expect(codex.sandbox).toBe("workspace-write");
+    expect(codex.sandbox).toBe("danger-full-access");
     expect(codex.models.worker.model).toBe("gpt-6.1-sol");
     expect(codex.models.session.planEffort).toBe("high");
     await writeConfig({ codex: {} });
@@ -548,13 +548,13 @@ describe("agentHost and codex section", () => {
     await writeConfig({
       agentHost: "codex",
       codex: {
-        sandbox: "danger-full-access",
+        sandbox: "workspace-write",
         models: { worker: { model: "gpt-x", fallback: ["gpt-y"] } },
       },
     });
     const config = configOf(await loadForgeConfig(repoRoot));
     expect(config.agentHost).toBe("codex");
-    expect(config.codex?.sandbox).toBe("danger-full-access");
+    expect(config.codex?.sandbox).toBe("workspace-write");
     expect(config.codex?.models.worker).toEqual({
       model: "gpt-x",
       effort: "medium",
