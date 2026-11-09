@@ -192,9 +192,9 @@ describe("review-run helpers", () => {
 
   test("modelArguments throws naming the role and listed slugs when a cache resolves nothing", () => {
     const cache = path.join(tempDir(), "models_cache.json");
-    writeModelsCache(cache, ["gpt-5.6-terra", "gpt-6-luna"]);
+    writeModelsCache(cache, ["gpt-5.6-terra", "gpt-5.5-luna"]);
     expect(() => modelArguments("medium", DEFAULT_FORGE_CONFIG, cache)).toThrow(
-      /reviewerMedium.*gpt-6\.1-sol.*gpt-5\.6-terra, gpt-6-luna/s,
+      /reviewerMedium.*gpt-6\.1-sol.*gpt-5\.6-terra, gpt-5.5-luna/s,
     );
   });
 });
@@ -263,7 +263,7 @@ describe("review-run Codex models cache", () => {
     process.env["FAKE_CODEX_LOG"] = log;
     script([agentMessage("[]")]);
     const sourceHome = tempDir();
-    writeModelsCache(path.join(sourceHome, "models_cache.json"), ["gpt-5.6-terra", "gpt-6-luna"]);
+    writeModelsCache(path.join(sourceHome, "models_cache.json"), ["gpt-5.6-terra", "gpt-5.5-luna"]);
     const err = spyOn(console, "error").mockImplementation(() => {});
     const code = await run(baseArgv("medium"), {
       repoRoot: tempDir(),
@@ -274,7 +274,7 @@ describe("review-run Codex models cache", () => {
     err.mockRestore();
     expect(code).toBe(1);
     expect(messages).toContain("reviewerMedium");
-    expect(messages).toContain("gpt-5.6-terra, gpt-6-luna");
+    expect(messages).toContain("gpt-5.6-terra, gpt-5.5-luna");
     expect(existsSync(log)).toBe(false);
   });
 
