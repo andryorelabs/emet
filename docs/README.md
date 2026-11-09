@@ -28,6 +28,7 @@ An index of every document in this repository. Terms follow [GLOSSARY.md](../GLO
 - [`guide/getting-started.md`](guide/getting-started.md): requirements, both install paths and the first run.
 - [`guide/trackers-and-landing.md`](guide/trackers-and-landing.md): GitHub, Linear and local trackers, `landing.mode`, landing PRs, chaining waves, budgets, living specs, map and metrics.
 - [`guide/models-and-effort.md`](guide/models-and-effort.md): the role, model and effort table, risk-tier routing, Haiku triage and what you set once.
+- [`guide/codex.md`](guide/codex.md): run emet on Codex CLI: install, `agentHost`, the single approval by hook, limits and `unverified` points.
 - [`guide/fleet.md`](guide/fleet.md): audit several repos at once with `emet doctor`.
 
 ## Reference

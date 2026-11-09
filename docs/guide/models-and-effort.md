@@ -48,6 +48,27 @@ Every key is optional, and the defaults reproduce the table above:
 
 `review.highRiskPaths` is a list of extra case-insensitive path substrings that force the `high` tier. To get more scrutiny on risky waves, raise `models.reviewer.high.effort` (for example to `high`).
 
+## Codex host
+
+With `agentHost` set to `"codex"`, each worker and reviewer is its own `codex exec` process with `-m` and `model_reasoning_effort` set per role. The defaults of the [`codex`](../reference/configuration.md) section are:
+
+| Role                        | Model         | Effort                           | Fallbacks                     |
+| --------------------------- | ------------- | -------------------------------- | ----------------------------- |
+| Session (`$emet:run`)       | `gpt-6.1-sol` | `medium` (`high` while planning) | none                          |
+| Worker                      | `gpt-6.1-sol` | `medium`                         | `gpt-6.1-terra`, `gpt-6-luna` |
+| Worker with a `Model:` line | `gpt-6.1-sol` | `xhigh`                          | `gpt-6-astra`                 |
+| Reviewer, `medium` tier     | `gpt-6.1-sol` | `high`                           | none                          |
+| Reviewer, `high` tier       | `gpt-6-astra` | `high`                           | `gpt-6.1-sol`                 |
+| Triage                      | `gpt-6-luna`  | `medium`                         | `gpt-6.1-terra`               |
+
+`emet dispatch` resolves each slug against the Codex models cache. It keeps a slug that is listed there and supports the effort, else follows the model's upgrade, then the fallbacks, then omits `-m`, and it logs every substitution. Effort `ultra` is never sent. The `passive` tier starts no reviewer.
+
+Re-tune after a few real waves when:
+
+- workers need repeated fix rounds: raise `codex.models.worker.effort`, or put a `Model:` line on the risky ticket;
+- reviews of `high`-tier waves miss findings: raise `codex.models.reviewer.high.effort`;
+- the log shows a substitution: Codex renamed or retired a slug, so update the slug.
+
 ## Why a single reviewer
 
 Why a single fresh-context reviewer instead of a multi-angle fan-out: no public benchmark compares the two directly, but a fan-out re-reads the whole diff once per angle and has hung for over an hour in this repo, while Anthropic and third-party reports on Opus-tier models suggest the model upgrade buys as much as the extra angles would. For a high-stakes wave, run `/code-review ultra` by hand afterward; `/emet` never dispatches that on its own.
