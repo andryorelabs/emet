@@ -836,6 +836,23 @@ export type FlowStep = {
 
 const FLOW_SPEC = "probe-flow";
 const FLOW_RUN = "probe-flow-w1";
+const FLOW_SPEC_BODY = `Probe spec: two one-line files, one per wave.
+
+## Specs
+- **S1**: \`a.txt\` holds \`a\`. Scenario: WHEN wave 1 lands THEN \`a.txt\` is \`a\`.
+- **S2**: \`b.txt\` holds \`b\`. Scenario: WHEN wave 2 lands THEN \`b.txt\` is \`b\`.
+`;
+/** The approved plan `emet approve` hashes and preflight validates: one ticket per wave. */
+const FLOW_PLAN = [
+  { id: `${FLOW_SPEC}-01`, covers: ["S1"], surfaces: ["a.txt"], wave: 1, blockedBy: [] },
+  {
+    id: `${FLOW_SPEC}-02`,
+    covers: ["S2"],
+    surfaces: ["b.txt"],
+    wave: 2,
+    blockedBy: [`${FLOW_SPEC}-01`],
+  },
+];
 
 function emet(
   context: ProbeContext,
@@ -860,12 +877,14 @@ async function prepareFlowRepo(
   const repoSection = isObject(config["repo"]) ? config["repo"] : {};
   writeFileSync(
     configPath,
-    `${JSON.stringify({ ...config, repo: { ...repoSection, trunk: "develop" }, agentHost: "codex" }, null, 2)}\n`,
+    `${JSON.stringify({ ...config, repo: { ...repoSection, trunk: "develop" }, agentHost: "codex", ...codexModels(context.model) }, null, 2)}\n`,
   );
+  resolveScaffoldMarkers(repo);
+  await emet(context, repo, ["map", "--refresh"]);
   git(repo, "add", "-A");
   git(repo, "commit", "-q", "-m", "chore: emet init");
   const body = path.join(context.workDir, "flow-body.md");
-  writeFileSync(body, "Probe spec: two one-line files, one per wave.\n");
+  writeFileSync(body, FLOW_SPEC_BODY);
   await emet(context, repo, [
     "tracker",
     "create-spec",
@@ -876,7 +895,7 @@ async function prepareFlowRepo(
     "--body-file",
     body,
   ]);
-  writeFileSync(body, "Create `a.txt` containing `a` and commit it.\n");
+  writeFileSync(body, flowTicketBody("S1", "None", "a"));
   await emet(context, repo, [
     "tracker",
     "create-ticket",
@@ -887,7 +906,7 @@ async function prepareFlowRepo(
     "--body-file",
     body,
   ]);
-  writeFileSync(body, "Create `b.txt` containing `b` and commit it.\n");
+  writeFileSync(body, flowTicketBody("S2", `${FLOW_SPEC}-01 (wave 1)`, "b"));
   await emet(context, repo, [
     "tracker",
     "create-ticket",
@@ -900,7 +919,81 @@ async function prepareFlowRepo(
     "--blocked-by",
     "01",
   ]);
+  await approveFlowSpec(context, repo);
   return { repo, baseline: git(repo, "rev-parse", "HEAD") };
+}
+
+/**
+ * A `models` section naming the resolved Codex model for every role, as a
+ * Codex user configures it: `emet init` writes Claude names (`sonnet`, `opus`),
+ * and `emet dispatch --model <name>` passes a coordinator's flag verbatim.
+ */
+function codexModels(model: string | undefined): Record<string, unknown> {
+  if (model === undefined) return {};
+  const role = { model, effort: PROBE_EFFORT };
+  return {
+    models: {
+      worker: role,
+      reviewer: { medium: role, high: role },
+      triage: model,
+      escalation: {},
+    },
+  };
+}
+
+/** A flow ticket body in the Phase 1-5 shape `$emet:run` dispatches from. */
+function flowTicketBody(covers: string, blockedBy: string, letter: string): string {
+  return `Create \`${letter}.txt\` containing exactly \`${letter}\` and commit it.
+Covers: ${covers}
+Blocked by: ${blockedBy}
+## Interfaces
+Consumes: nothing. Produces: \`${letter}.txt\`.
+## Project skills
+none
+## Allowed edit surfaces
+${letter}.txt
+## Context budget
+Touch set: 1 path, 1 line. PASS.
+`;
+}
+
+/**
+ * A repo a human set up has no `TODO(emet):` scaffold marker left, and
+ * preflight refuses to dispatch while one remains; the probe resolves them.
+ */
+function resolveScaffoldMarkers(repo: string): void {
+  const docs = path.join(repo, "docs", "agents");
+  if (!existsSync(docs)) return;
+  for (const name of readdirSync(docs)) {
+    const file = path.join(docs, name);
+    const text = readFileSync(file, "utf8");
+    if (text.includes("TODO(emet):")) {
+      writeFileSync(file, text.replaceAll("TODO(emet):", "Probe repo, nothing special:"));
+    }
+  }
+}
+
+/**
+ * Records the approval a real run gets at the end of its interview
+ * (`emet approve --run spec<id>`), which `emet launch --wave 2`'s preflight requires.
+ */
+async function approveFlowSpec(context: ProbeContext, repo: string): Promise<void> {
+  const specFile = path.join(context.workDir, `${path.basename(repo)}-spec.md`);
+  const ticketsFile = path.join(context.workDir, `${path.basename(repo)}-tickets.json`);
+  writeFileSync(specFile, FLOW_SPEC_BODY);
+  writeFileSync(ticketsFile, `${JSON.stringify(FLOW_PLAN, null, 2)}\n`);
+  const approved = await emet(context, repo, [
+    "approve",
+    "--run",
+    `spec${FLOW_SPEC}`,
+    "--spec",
+    specFile,
+    "--tickets",
+    ticketsFile,
+  ]);
+  if (approved.exitCode !== 0) {
+    throw new Error(`emet approve failed: ${oneLine(approved.stderr || approved.stdout)}`);
+  }
 }
 
 async function flowWave1(
@@ -1039,6 +1132,7 @@ async function flowReview(
 async function flowLaunch(context: ProbeContext, repo: string, ticket: string): Promise<FlowStep> {
   git(repo, "merge", "--no-ff", "-q", "-m", "chore: land wave 1", `worktree-agent-${ticket}`);
   await emet(context, repo, ["tracker", "close", ticket]);
+  await emet(context, repo, ["cleanup", "--run", FLOW_RUN, "--force"]);
   const pluginHome = authOnlySource(context, "flow-source");
   const install = await installPlugin(
     codex(context, pluginHome),
@@ -1047,6 +1141,12 @@ async function flowLaunch(context: ProbeContext, repo: string, ticket: string): 
     EMET_PLUGIN_ID,
   );
   return launchWave2(context, repo, pluginHome, install.evidence, 1);
+}
+
+/** The trimmed content of `file` at the repo's HEAD, or `undefined` when absent. */
+function trunkFile(repo: string, file: string): string | undefined {
+  const result = Bun.spawnSync(["git", "show", `HEAD:${file}`], { cwd: repo });
+  return result.exitCode === 0 ? result.stdout.toString().trim() : undefined;
 }
 
 /** Finds the wave 2 worker's stream under any run directory of `repo`. */
@@ -1066,6 +1166,7 @@ async function launchWave2(
   pluginEvidence: string,
   attempt: number,
 ): Promise<FlowStep> {
+  const before = git(repo, "rev-parse", "HEAD");
   const launched = await emet(context, repo, ["launch", FLOW_SPEC, "--wave", "2"], {
     CODEX_HOME: pluginHome,
   });
@@ -1085,7 +1186,8 @@ async function launchWave2(
   const stream = detachedVerdict(jsonl);
   const secondTicket = `${FLOW_SPEC}-02`;
   const worktree = path.join(repo, ".emet", "worktrees", `agent-${secondTicket}`);
-  const dispatched = existsSync(worktree);
+  const workerStream = wave2WorkerStream(repo, secondTicket);
+  const dispatched = workerStream !== undefined;
   if (!dispatched && stream.verdict === "blocked-by-plan-limit") {
     if (attempt === 1) return launchWave2(context, repo, pluginHome, pluginEvidence, attempt + 1);
     return {
@@ -1094,17 +1196,19 @@ async function launchWave2(
       evidence: `attempt ${attempt}: ${stream.detail}`,
     };
   }
-  const workerStream = wave2WorkerStream(repo, secondTicket);
   const workerEnded =
     workerStream !== undefined && (await waitForStream(workerStream, undefined, false, deadline));
   const worker = workerStream === undefined ? undefined : detachedVerdict(workerStream);
-  const commits = commitsSince(worktree, git(repo, "rev-parse", "HEAD"));
+  const landedOnTrunk = git(repo, "rev-list", "--count", `${before}..HEAD`);
+  const landedFile = trunkFile(repo, "b.txt");
+  const onWorktree = commitsSince(worktree, before);
   const second = await emet(context, repo, ["tracker", "read", secondTicket]);
   const skill = /emet:run|emet-run/.test(readText(jsonl)) ? "mentions emet:run" : "no emet:run";
+  const landed = landedFile === "b" || onWorktree >= 1;
   return {
     step: "emet launch --wave 2",
-    verdict: dispatched && exited && commits >= 1 ? "verified" : "failed",
-    evidence: `attempt ${attempt}: launch printed ${oneLine(launched.stdout)}; session pid ${pid} ${exited ? "exited" : "still running at timeout"}; ${stream.detail}; session stream ${skill}; wave 2 worker worktree ${dispatched ? "created" : "absent"}, ${commits} commit(s), worker stream ${workerEnded ? "ended" : "open or absent"}${worker === undefined ? "" : ` (${worker.detail})`}; ticket 02: ${oneLine(second.stdout)}; last agent text: ${oneLine(agentMessages(readText(jsonl)))}`,
+    verdict: dispatched && exited && landed ? "verified" : "failed",
+    evidence: `attempt ${attempt}: launch printed ${oneLine(launched.stdout)}; session pid ${pid} ${exited ? "exited" : "still running at timeout"}; ${stream.detail}; session stream ${skill}; wave 2 worker ${dispatched ? "dispatched" : "never dispatched"}, worker stream ${workerEnded ? "ended" : "open or absent"}${worker === undefined ? "" : ` (${worker.detail})`}; ${landedOnTrunk} commit(s) landed on trunk (${oneLine(git(repo, "log", "--format=%h %s", `${before}..HEAD`))}), trunk b.txt ${landedFile === undefined ? "absent" : `= ${JSON.stringify(landedFile)}`}, ${onWorktree} commit(s) left on the worker worktree; ticket 02: ${oneLine(second.stdout)}; last agent text: ${oneLine(agentMessages(readText(jsonl)))}`,
   };
 }
 
