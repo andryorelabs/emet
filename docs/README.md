@@ -46,6 +46,10 @@ An index of every document in this repository. Terms follow [GLOSSARY.md](../GLO
 
 - [`adr/README.md`](adr/README.md): the architecture decision record index, one file per decision (`adr/NNNN-*.md`).
 
+## Research
+
+- [`research/codex-viability.md`](research/codex-viability.md): whether emet can run on Codex CLI: capability matrix, parity table, integration models A, B and C, a ten-experiment spike and a follow-up spec outline.
+
 ## Brand
 
 Research for the brand kit, run 1. Options and recommendations only; no decision is made here.
