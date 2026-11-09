@@ -5,6 +5,37 @@ const css = readFileSync(new URL("../../styles/home.css", import.meta.url), "utf
 const sceneDirectory = new URL("../../styles/bento/", import.meta.url);
 const sceneCss = readFileSync(new URL("scene.css", sceneDirectory), "utf8");
 
+const motionGuard = "@media (scripting: enabled) and (prefers-reduced-motion: no-preference) {";
+
+/**
+ * Returns the offsets of every `@keyframes` in `source` that sits outside the motion guard block.
+ */
+function unguardedKeyframes(source: string): number[] {
+  const guardAt = source.indexOf(motionGuard);
+  let guardEnd = -1;
+  if (guardAt !== -1) {
+    let depth = 0;
+    for (let index = guardAt; index < source.length; index += 1) {
+      if (source[index] === "{") depth += 1;
+      if (source[index] === "}") {
+        depth -= 1;
+        if (depth === 0) {
+          guardEnd = index;
+          break;
+        }
+      }
+    }
+  }
+  const offsets: number[] = [];
+  for (const match of source.matchAll(/@keyframes/g)) {
+    const offset = match.index;
+    if (guardAt === -1 || guardEnd === -1 || offset < guardAt || offset > guardEnd) {
+      offsets.push(offset);
+    }
+  }
+  return offsets;
+}
+
 /**
  * Returns the declaration block of the first rule whose selector is exactly `selector`.
  */
@@ -66,21 +97,25 @@ describe("Features bento", () => {
     );
   });
 
-  it("pauses every scene that is not playing", () => {
-    expect(sceneCss).toContain(".scene:not([data-playing]) * {\n  animation-play-state: paused;");
+  it("pauses every scene that is not playing, pseudo-elements included", () => {
+    expect(sceneCss).toContain(".scene:not([data-playing]) *::before");
+    expect(sceneCss).toContain(".scene:not([data-playing]) *::after");
+    expect(sceneCss).toContain("animation-play-state: paused;");
     expect(sceneCss).toContain("--scene-cycle: 7s");
     expect(css).not.toContain(".bento-card:not(.is-in)");
   });
 
   it("keeps every keyframe inside the motion guard", () => {
-    const guard = "@media (scripting: enabled) and (prefers-reduced-motion: no-preference) {";
     for (const file of readdirSync(sceneDirectory)) {
       const source = readFileSync(new URL(file, sceneDirectory), "utf8");
-      const keyframesAt = source.indexOf("@keyframes");
-      if (keyframesAt === -1) continue;
-      const guardAt = source.indexOf(guard);
-      expect(guardAt).toBeGreaterThan(-1);
-      expect(keyframesAt).toBeGreaterThan(guardAt);
+      expect(unguardedKeyframes(source)).toEqual([]);
     }
+  });
+
+  it("flags a keyframe written outside the motion guard", () => {
+    const guarded = `${motionGuard}\n  @keyframes a {\n    to { opacity: 1; }\n  }\n}\n`;
+    expect(unguardedKeyframes(guarded)).toEqual([]);
+    expect(unguardedKeyframes(`${guarded}@keyframes b { to { opacity: 1; } }`)).toHaveLength(1);
+    expect(unguardedKeyframes("@keyframes c { to { opacity: 1; } }")).toHaveLength(1);
   });
 });
