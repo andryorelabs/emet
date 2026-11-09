@@ -66,6 +66,14 @@ export const PUBLISHED_SOURCES: readonly PublishedSource[] = [
       "Where tickets live, how a wave lands as a pull request or a local merge, and how waves chain.",
   },
   {
+    id: "guide/codex",
+    sourcePath: "docs/guide/codex.md",
+    kind: "markdown",
+    seoTitle: "Run emet with Codex",
+    description:
+      "Use Codex as the Agent host for emet: configure agentHost, dispatch workers and reviewers, and run the opt-in e2e.",
+  },
+  {
     id: "reference/cli",
     sourcePath: "docs/reference/cli.md",
     kind: "markdown",
