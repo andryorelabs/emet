@@ -922,10 +922,19 @@ describe("findDeadGuardHooks", () => {
       mkdirSync(path.join(home, ".claude"));
       const settingsPath = path.join(home, ".claude", "settings.json");
       const deadCommand = "/Users/x/.local/bin/forge guard";
+      /**
+       * `PATH` names only the empty fake home, so doctor never runs the real
+       * `gh`/`claude` `--help` and plugin probes: they cost seconds per run and
+       * made this two-run test time out under `bun run test`'s turbo load.
+       * Both runs share that environment, so the exit codes still compare.
+       */
       const runDoctor = (): { exitCode: number; stdout: string } => {
-        const result = Bun.spawnSync(["bun", path.join(import.meta.dir, "doctor.ts"), home], {
-          env: { ...process.env, HOME: home, EMET_SKIP_DEPENDENCY_CHECKS: "1" },
-        });
+        const result = Bun.spawnSync(
+          [process.execPath, path.join(import.meta.dir, "doctor.ts"), home],
+          {
+            env: { ...process.env, PATH: home, HOME: home, EMET_SKIP_DEPENDENCY_CHECKS: "1" },
+          },
+        );
         return { exitCode: result.exitCode, stdout: result.stdout.toString() };
       };
       const without = runDoctor();
