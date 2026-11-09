@@ -1,5 +1,6 @@
 import { afterAll, beforeAll, describe, expect, test } from "bun:test";
-import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { createHash } from "node:crypto";
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
 
@@ -8,14 +9,18 @@ import { loadForgeConfigWithDefaults } from "../emet/src/config";
 import { resolveCodexModel } from "../emet/src/codex-models";
 import { readCodexState } from "../emet/src/codex-process";
 import { run } from "../emet/src/dispatch";
-import { isObject } from "../emet/src/narrow";
 import { acquireSlot } from "../emet/src/slots";
+import { pushRefusedByRules } from "./codex-probe";
 
 const RUN = "e2e-run";
 const TICKET = "E2E-1";
 const WAIT_LIMIT_MS = 8 * 60 * 1000;
 const TEST_TIMEOUT_MS = 10 * 60 * 1000;
 const PROMPT_FILE = path.resolve(import.meta.dir, "fixtures/codex-e2e/prompt.md");
+const USER_CONFIG = path.join(
+  process.env["CODEX_HOME"] ?? path.join(os.homedir(), ".codex"),
+  "config.toml",
+);
 
 /**
  * The opt-in gate: `EMET_CODEX_E2E=1`, `codex` on PATH and a login that
@@ -51,36 +56,19 @@ async function waitForExit(pid: number): Promise<void> {
   }
 }
 
-function parseEvent(line: string): Record<string, unknown> | undefined {
-  try {
-    const parsed: unknown = JSON.parse(line);
-    return isObject(parsed) ? parsed : undefined;
-  } catch {
-    return undefined;
-  }
+/** The sha256 of `file`, or `absent`; the e2e only ever reads the user's Codex home. */
+function checksum(file: string): string {
+  return existsSync(file)
+    ? createHash("sha256").update(readFileSync(file)).digest("hex")
+    : "absent";
 }
 
-/**
- * UNVERIFIED: relies on the `exec --json` shape of a finished shell call,
- * an `item.completed` event whose item is a `command_execution` with a
- * `command` and either a `declined` status or an `aggregated_output` naming
- * the rules. A bare non-zero exit is not enough: with no reachable remote
- * `git push` fails anyway, which would hide a dropped push rule.
- * If Codex changes the shape, this is the only function to adjust.
- */
-function pushWasRefused(jsonl: string): boolean {
-  return jsonl.split("\n").some((line) => {
-    const item = parseEvent(line)?.["item"];
-    if (!isObject(item)) return false;
-    const command = item["command"];
-    if (item["type"] !== "command_execution" || typeof command !== "string") return false;
-    if (!/\bgit push\b/.test(command)) return false;
-    const output = item["aggregated_output"];
-    return (
-      item["status"] === "declined" ||
-      (typeof output === "string" && /forbidden|prohibited|policy|rules?\b/i.test(output))
-    );
-  });
+/** `rules` with every `git push` rule dropped: the negative control of the rules assertion. */
+function withoutPushRule(rules: string): string {
+  return rules
+    .split("\n")
+    .filter((line) => !line.includes('"push"'))
+    .join("\n");
 }
 
 describe.skipIf(!codexE2eEnabled())("codex e2e", () => {
@@ -88,8 +76,10 @@ describe.skipIf(!codexE2eEnabled())("codex e2e", () => {
   let repo = "";
   let baseline = "";
   let workerPid: number | undefined;
+  let configBefore = "";
 
   beforeAll(() => {
+    configBefore = checksum(USER_CONFIG);
     temp = mkdtempSync(path.join(os.tmpdir(), "emet-codex-e2e-"));
     repo = path.join(temp, "repo");
     mkdirSync(repo);
@@ -109,7 +99,7 @@ describe.skipIf(!codexE2eEnabled())("codex e2e", () => {
   });
 
   test(
-    "dispatch lands a commit and refuses git push",
+    "dispatch lands a commit, its overlay rules forbid git push and the user config is untouched",
     async () => {
       const forgeDirectory = path.join(temp, "forge");
       const slotsDirectory = path.join(temp, "slots");
@@ -152,7 +142,13 @@ describe.skipIf(!codexE2eEnabled())("codex e2e", () => {
       expect(Number(landed)).toBeGreaterThanOrEqual(1);
       expect(git(worktree, "show", "HEAD:hello.txt")).toBe("hello");
 
-      expect(pushWasRefused(readFileSync(state.jsonlPath, "utf8"))).toBe(true);
+      const rules = path.join(repo, ".emet", "runs", RUN, "codex-home", "rules", "default.rules");
+      expect(await pushRefusedByRules(rules)).toBe(true);
+      const dropped = path.join(temp, "without-push.rules");
+      writeFileSync(dropped, withoutPushRule(readFileSync(rules, "utf8")));
+      expect(await pushRefusedByRules(dropped)).toBe(false);
+
+      expect(checksum(USER_CONFIG)).toBe(configBefore);
     },
     TEST_TIMEOUT_MS,
   );

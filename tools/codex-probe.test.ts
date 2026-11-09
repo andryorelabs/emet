@@ -13,14 +13,21 @@ import {
 import os from "node:os";
 import path from "node:path";
 
+import { COMMIT_RULES } from "../emet/src/codex-home";
 import { isObject } from "../emet/src/narrow";
-import { classifyCodexFailure, runProbe, type ProbeResult } from "./codex-probe";
+import {
+  classifyCodexFailure,
+  pushRefusedByRules,
+  runFullFlow,
+  runProbe,
+  type FlowStep,
+  type ProbeResult,
+} from "./codex-probe";
 
 const SCRIPT = path.resolve(import.meta.dir, "codex-probe.ts");
 const FAKE_CODEX = path.resolve(import.meta.dir, "fixtures/codex-probe/codex");
 const REPO = path.resolve(import.meta.dir, "..");
 const MODEL_ITEMS = [
-  "rules-location",
   "hook-trust",
   "forged-approval",
   "plugin-root-alias",
@@ -28,8 +35,8 @@ const MODEL_ITEMS = [
   "nested-dispatch",
   "unattended-supervisor",
 ];
-/** Rules, approval gate, plugin skill, nested dispatch and unattended each make one model run. */
-const MODEL_RUNS = 5;
+/** Approval gate, plugin skill, nested dispatch and unattended each make one model run. */
+const MODEL_RUNS = 4;
 /** The fake answers instantly; the probe's whole fake run stays well under this. */
 const PROBE_TEST_TIMEOUT_MS = 60_000;
 
@@ -136,6 +143,7 @@ describe("runProbe against a fake codex that always hits the usage limit", () =>
     expect(Object.keys(verdicts).toSorted()).toEqual(
       [
         ...MODEL_ITEMS,
+        "rules-location",
         "linked-auth",
         "plugin-list-format",
         "plugin-install-remote",
@@ -164,11 +172,99 @@ describe("runProbe against a fake codex that always hits the usage limit", () =>
     for (const call of calls) expect(call.argv.join(" ")).not.toContain("ultra");
   });
 
+  test("proves the push rule with codex execpolicy check, not a model run", () => {
+    const rules = results.find((result) => result.id === "rules-location");
+    expect(rules?.verdict).toBe("verified");
+    const checks = calls.filter((call) => call.argv[0] === "execpolicy");
+    expect(checks.some((call) => call.argv.includes("push"))).toBe(true);
+  });
+
   test("runs every call under an overlay, links auth and never writes the source home", () => {
     for (const call of calls) expect(call.codexHome).not.toBe(sourceHome);
     expect(snapshot(sourceHome)).toEqual(before);
     const overlay = calls.find((call) => call.argv[0] === "login")?.codexHome ?? "";
     expect(lstatSync(path.join(overlay, "auth.json")).isSymbolicLink()).toBe(true);
     expect(results.find((result) => result.id === "linked-auth")?.verdict).toBe("verified");
+  });
+});
+
+describe("pushRefusedByRules", () => {
+  let temp = "";
+
+  beforeAll(() => {
+    temp = mkdtempSync(path.join(os.tmpdir(), "emet-codex-rules-test-"));
+  });
+
+  afterAll(() => {
+    rmSync(temp, { recursive: true, force: true });
+  });
+
+  test("is true for the overlay rules, whose git push rule is forbidden", async () => {
+    const rules = path.join(temp, "default.rules");
+    writeFileSync(rules, COMMIT_RULES);
+    expect(await pushRefusedByRules(rules, FAKE_CODEX)).toBe(true);
+  });
+
+  test("is false once the push rule is dropped from the overlay rules", async () => {
+    const rules = path.join(temp, "no-push.rules");
+    writeFileSync(
+      rules,
+      COMMIT_RULES.split("\n")
+        .filter((line) => !line.includes('"push"'))
+        .join("\n"),
+    );
+    expect(await pushRefusedByRules(rules, FAKE_CODEX)).toBe(false);
+  });
+
+  test("is false when the rules file is missing", async () => {
+    expect(await pushRefusedByRules(path.join(temp, "absent.rules"), FAKE_CODEX)).toBe(false);
+  });
+});
+
+describe("runFullFlow against a fake codex that always hits the usage limit", () => {
+  let temp = "";
+  let steps: FlowStep[] = [];
+  let calls: FakeCall[] = [];
+
+  beforeAll(async () => {
+    temp = mkdtempSync(path.join(os.tmpdir(), "emet-codex-flow-test-"));
+    const sourceHome = path.join(temp, "source-home");
+    Bun.spawnSync(["mkdir", "-p", sourceHome]);
+    writeFileSync(path.join(sourceHome, "auth.json"), '{"fake":true}\n');
+    const logPath = path.join(temp, "codex.log");
+    process.env["FAKE_CODEX_PROBE_LOG"] = logPath;
+    process.env["FAKE_CODEX_PROBE_MODE"] = "limit";
+    try {
+      steps = await runFullFlow({
+        codexHome: sourceHome,
+        repo: REPO,
+        executable: FAKE_CODEX,
+        workDir: temp,
+        modelTimeoutMs: 20_000,
+      });
+    } finally {
+      delete process.env["FAKE_CODEX_PROBE_LOG"];
+      delete process.env["FAKE_CODEX_PROBE_MODE"];
+    }
+    calls = existsSync(logPath)
+      ? readFileSync(logPath, "utf8")
+          .trim()
+          .split("\n")
+          .map((line) => parseCall(line))
+      : [];
+  }, PROBE_TEST_TIMEOUT_MS);
+
+  afterAll(() => {
+    rmSync(temp, { recursive: true, force: true });
+  });
+
+  test("reports wave 1 as blocked-by-plan-limit, never failed, and stops there", () => {
+    expect(steps.map((step) => step.step)).toEqual(["wave 1: emet dispatch"]);
+    expect(steps[0]?.verdict).toBe("blocked-by-plan-limit");
+  });
+
+  test("dispatches wave 1 exactly twice: the first try and one retry", () => {
+    const workerRuns = calls.filter((call) => call.argv[0] === "exec" && call.argv[1] === "-C");
+    expect(workerRuns.length).toBe(2);
   });
 });
