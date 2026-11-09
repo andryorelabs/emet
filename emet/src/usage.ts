@@ -29,21 +29,18 @@
  * default report, just checked for silence instead of summarized.
  */
 
-import os from "node:os";
-
 import {
   DEFAULT_FORGE_CONFIG,
   loadForgeConfigWithDefaults,
+  resolveAgentHostName,
   resolveRepoRoot,
   type ForgeConfig,
 } from "./config";
+import { claudeHost } from "./agenthost-claude";
+import { resolveAgentHost, type AgentHost } from "./agenthost";
+import { metricsParsers, type MetricsParser, type TranscriptFormat } from "./metrics";
 import { BINARY, LEGACY_RUN_DIR, RUN_DIR } from "./names";
-import {
-  readCompletionEvent,
-  recordStallNudge,
-  resolveSessionSlug,
-  type CompletionEvent,
-} from "./runs";
+import { readCompletionEvent, recordStallNudge, type CompletionEvent } from "./runs";
 import { isObject } from "./narrow";
 import { parseWorktreeEntries, resolveWorktreeOwner } from "./worktrees";
 
@@ -276,13 +273,15 @@ function resolveProjectDirectoryFlag(argv: readonly string[]): string {
   return value ?? process.cwd();
 }
 
-function projectsDirectory(argv: readonly string[] = []): string {
-  const projectDirectory = resolveProjectDirectoryFlag(argv);
-  return `${os.homedir()}/.claude/projects/${resolveSessionSlug(projectDirectory)}`;
+function projectsDirectory(argv: readonly string[], host: AgentHost): string {
+  return host.workerTranscriptRoot(resolveProjectDirectoryFlag(argv));
 }
 
-async function findMostRecentSessionFile(directory: string): Promise<string | null> {
-  const glob = new Bun.Glob("*.jsonl");
+async function findMostRecentSessionFile(
+  directory: string,
+  host: AgentHost,
+): Promise<string | null> {
+  const glob = new Bun.Glob(host.workerTranscriptGlob);
   const entries = glob.scan({ cwd: directory, onlyFiles: true });
   let newest: { path: string; mtimeMs: number } | null = null;
   for await (const entry of entries) {
@@ -295,9 +294,14 @@ async function findMostRecentSessionFile(directory: string): Promise<string | nu
   return newest?.path ?? null;
 }
 
-async function findWorkerTranscripts(directory: string, sessionId: string): Promise<string[]> {
-  const subagentsDirectory = `${directory}/${sessionId}/subagents`;
-  const glob = new Bun.Glob("agent-*.jsonl");
+async function findWorkerTranscripts(
+  directory: string,
+  sessionId: string,
+  host: AgentHost,
+): Promise<string[]> {
+  const claudeLayout = host.transcriptFormat === "claude-jsonl";
+  const subagentsDirectory = claudeLayout ? `${directory}/${sessionId}/subagents` : directory;
+  const glob = new Bun.Glob(claudeLayout ? "agent-*.jsonl" : host.workerTranscriptGlob);
   const paths: string[] = [];
   try {
     const entries = glob.scan({ cwd: subagentsDirectory, onlyFiles: true });
@@ -446,8 +450,28 @@ export function describeLastStep(transcriptText: string): LastTranscriptStep {
   return UNKNOWN_STEP;
 }
 
-async function defaultReadLastStep(path: string): Promise<LastTranscriptStep> {
-  return describeLastStep(await Bun.file(path).text());
+export type TranscriptParser = MetricsParser & {
+  describeLastStep(text: string): LastTranscriptStep;
+};
+
+/**
+ * Transcript parsers by format: the metrics parse and price table from
+ * `metrics.ts` plus the last-step reader. `codex-jsonl` is filled in by the
+ * Codex adapter.
+ */
+export const transcriptParsers: Record<TranscriptFormat, TranscriptParser> = {
+  "claude-jsonl": { ...metricsParsers["claude-jsonl"], describeLastStep },
+  "codex-jsonl": {
+    ...metricsParsers["codex-jsonl"],
+    describeLastStep: () => {
+      throw new Error("no transcript parser registered for codex-jsonl");
+    },
+  },
+};
+
+export function readLastStepFor(host: AgentHost): (path: string) => Promise<LastTranscriptStep> {
+  return async (path) =>
+    transcriptParsers[host.transcriptFormat].describeLastStep(await Bun.file(path).text());
 }
 
 async function defaultStatMtimeMs(path: string): Promise<number | null> {
@@ -473,7 +497,7 @@ export async function findStalledTranscripts(
   nowMs: number,
   thresholds: StalledThresholds,
   statMtimeMs: (path: string) => Promise<number | null> = defaultStatMtimeMs,
-  readLastStep: (path: string) => Promise<LastTranscriptStep> = defaultReadLastStep,
+  readLastStep: (path: string) => Promise<LastTranscriptStep> = readLastStepFor(claudeHost),
 ): Promise<StalledTranscript[]> {
   const stalled: StalledTranscript[] = [];
   for (const path of paths) {
@@ -649,15 +673,15 @@ async function runTicketStalledMode(
  * silent past `staleMinutes`. Exits with code 1 when any are found, so a
  * coordinator can branch on it directly instead of parsing stdout.
  */
-async function runStalledMode(thresholds: StalledThresholds): Promise<void> {
+async function runStalledMode(thresholds: StalledThresholds, host: AgentHost): Promise<void> {
   const cliArguments = process.argv.slice(2);
   const sessionFlagIndex = cliArguments.indexOf("--session");
-  const directory = projectsDirectory(cliArguments);
+  const directory = projectsDirectory(cliArguments, host);
   const sessionId = sessionFlagIndex === -1 ? null : (cliArguments[sessionFlagIndex + 1] ?? null);
 
   const sessionFile = sessionId
     ? `${directory}/${sessionId}.jsonl`
-    : await findMostRecentSessionFile(directory);
+    : await findMostRecentSessionFile(directory, host);
 
   if (!sessionFile) {
     console.error(`no session transcripts found under ${directory}`);
@@ -667,7 +691,7 @@ async function runStalledMode(thresholds: StalledThresholds): Promise<void> {
 
   const resolvedSessionId = sessionId ?? sessionFile.split("/").pop()!.replace(".jsonl", "");
 
-  const workerFiles = await findWorkerTranscripts(directory, resolvedSessionId);
+  const workerFiles = await findWorkerTranscripts(directory, resolvedSessionId, host);
   if (workerFiles.length === 0) {
     console.log(
       `${BINARY}:usage --stalled: no subagent transcripts found for session ${resolvedSessionId}.`,
@@ -675,7 +699,13 @@ async function runStalledMode(thresholds: StalledThresholds): Promise<void> {
     return;
   }
 
-  const stalled = await findStalledTranscripts(workerFiles, Date.now(), thresholds);
+  const stalled = await findStalledTranscripts(
+    workerFiles,
+    Date.now(),
+    thresholds,
+    undefined,
+    readLastStepFor(host),
+  );
 
   if (stalled.length === 0) {
     console.log(
@@ -698,6 +728,7 @@ async function runStalledMode(thresholds: StalledThresholds): Promise<void> {
 async function main(config: ForgeConfig): Promise<void> {
   const cliArguments = process.argv.slice(2);
   const oversizedThreshold = config.usage.oversizedReadLines;
+  const host = resolveAgentHost(resolveAgentHostName(config));
 
   if (cliArguments.includes("--stalled")) {
     const runFlagIndex = cliArguments.indexOf("--run");
@@ -711,14 +742,17 @@ async function main(config: ForgeConfig): Promise<void> {
       );
       return;
     }
-    await runStalledMode({
-      idleMinutes: parseStalledMinutes(cliArguments, config.usage.stalledMinutes),
-      pendingToolMinutes: parseFlagMinutes(
-        cliArguments,
-        "--tool-minutes",
-        DEFAULT_PENDING_TOOL_MINUTES,
-      ),
-    });
+    await runStalledMode(
+      {
+        idleMinutes: parseStalledMinutes(cliArguments, config.usage.stalledMinutes),
+        pendingToolMinutes: parseFlagMinutes(
+          cliArguments,
+          "--tool-minutes",
+          DEFAULT_PENDING_TOOL_MINUTES,
+        ),
+      },
+      host,
+    );
     return;
   }
 
@@ -742,12 +776,12 @@ async function main(config: ForgeConfig): Promise<void> {
     return;
   }
 
-  const directory = projectsDirectory(cliArguments);
+  const directory = projectsDirectory(cliArguments, host);
   const sessionId = sessionFlagIndex === -1 ? null : (cliArguments[sessionFlagIndex + 1] ?? null);
 
   const sessionFile = sessionId
     ? `${directory}/${sessionId}.jsonl`
-    : await findMostRecentSessionFile(directory);
+    : await findMostRecentSessionFile(directory, host);
 
   if (!sessionFile) {
     console.error(`no session transcripts found under ${directory}`);
@@ -766,7 +800,7 @@ async function main(config: ForgeConfig): Promise<void> {
     printStats(coordinatorStats, oversizedThreshold);
   }
 
-  const workerFiles = await findWorkerTranscripts(directory, resolvedSessionId);
+  const workerFiles = await findWorkerTranscripts(directory, resolvedSessionId, host);
   let totalWorkerCacheReadMillion = 0;
   for (const workerFile of workerFiles) {
     const label = workerFile.split("/").pop()!.replace(".jsonl", "");

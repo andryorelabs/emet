@@ -12,19 +12,21 @@
 import { isObject } from "./narrow";
 import { BINARY, LEGACY_PRODUCT, PRODUCT } from "./names";
 import { optionalProperty } from "./optional";
-import os from "node:os";
 import path from "node:path";
 
 import {
   DEFAULT_FORGE_CONFIG,
   loadForgeConfigWithDefaults,
+  resolveAgentHostName,
   resolveRepoRoot,
   type ForgeConfig,
 } from "./config";
+import { claudeHost } from "./agenthost-claude";
+import { resolveAgentHost, type AgentHost } from "./agenthost";
 import { listReservations } from "./claims";
 import { classifyRun, type RunVerdict } from "./runs";
 import { listOccupiedSlots } from "./slots";
-import { findStalledTranscripts } from "./usage";
+import { findStalledTranscripts, readLastStepFor } from "./usage";
 import {
   classifyByContent,
   isSafeToDelete,
@@ -342,14 +344,22 @@ export function groupWorkers(
   }));
 }
 
-async function newestTranscript(directory: string): Promise<string | null> {
+async function newestTranscript(
+  directory: string,
+  host: AgentHost = claudeHost,
+): Promise<string | null> {
   const agentId = /^agent-(.+)$/.exec(path.basename(directory))?.[1];
   if (!agentId) return null;
-  const projectsDirectory = path.join(os.homedir(), ".claude", "projects");
+  const claudeLayout = host.transcriptFormat === "claude-jsonl";
+  const workerRoot = host.workerTranscriptRoot(directory);
+  const projectsDirectory = claudeLayout ? path.dirname(workerRoot) : workerRoot;
   let newest: { file: string; mtimeMs: number } | null = null;
   try {
-    const glob = new Bun.Glob(`*/*/subagents/agent-${agentId}.jsonl`);
+    const glob = new Bun.Glob(
+      claudeLayout ? `*/*/subagents/agent-${agentId}.jsonl` : host.workerTranscriptGlob,
+    );
     for await (const name of glob.scan({ cwd: projectsDirectory, onlyFiles: true })) {
+      if (!claudeLayout && !path.basename(name).includes(agentId)) continue;
       const file = path.join(projectsDirectory, name);
       const mtimeMs = Bun.file(file).lastModified;
       if (!newest || mtimeMs > newest.mtimeMs) newest = { file, mtimeMs };
@@ -425,6 +435,7 @@ export async function run(argv: string[]): Promise<void> {
       return;
     }
     const { config } = await loadForgeConfigWithDefaults(repoRoot);
+    const host = resolveAgentHost(resolveAgentHostName(config));
     const localLanding = config.landing.mode === "merge";
     const [slots, reservations, entries] = await Promise.all([
       listOccupiedSlots(),
@@ -453,10 +464,16 @@ export async function run(argv: string[]): Promise<void> {
     for (const entry of entries) {
       if (!resolveWorktreeOwner(entry)) continue;
       // oxlint-disable-next-line eslint/no-await-in-loop -- sequential on purpose: later iterations depend on earlier ones or on output order
-      const transcript = await newestTranscript(entry.directory);
+      const transcript = await newestTranscript(entry.directory, host);
       if (!transcript) continue;
       // oxlint-disable-next-line eslint/no-await-in-loop -- sequential on purpose: later iterations depend on earlier ones or on output order
-      const stalled = await findStalledTranscripts([transcript], Date.now(), thresholds);
+      const stalled = await findStalledTranscripts(
+        [transcript],
+        Date.now(),
+        thresholds,
+        undefined,
+        readLastStepFor(host),
+      );
       if (stalled.length > 0) stalledDirectories.add(entry.directory);
     }
     const report = buildStatusReport(
