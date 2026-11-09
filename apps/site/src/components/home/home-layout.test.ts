@@ -57,10 +57,14 @@ describe("Home hero", () => {
   });
 });
 
-describe("Features rows", () => {
-  it("stack the claim above its report below 1100px", () => {
+describe("Features bento", () => {
+  it("falls to one column under 760px", () => {
     expect(css).toMatch(
-      /@media \(max-width: 1100px\) \{[^@]*\.features-row \{\s*grid-template-columns: 1fr;/,
+      /@media \(max-width: 760px\) \{\s*\.bento \{\s*grid-template-columns: minmax\(0, 1fr\);/,
     );
+  });
+
+  it("starts its pictures hidden only once the motion layer is ready", () => {
+    expect(css).toContain("html[data-motion] .bento-card:not(.is-in)");
   });
 });

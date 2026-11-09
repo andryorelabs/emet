@@ -1,12 +1,15 @@
 import { describe, expect, test } from "bun:test";
+import { readFileSync } from "node:fs";
 import sharp from "sharp";
 import { FRAME_HEIGHT, FRAME_WIDTH, type Frame, type MascotState } from "./brand-pet.ts";
 import { FRAMES } from "../mods/emet-mascot/hooks/frames.generated.ts";
 import {
   MASCOT_PALETTE,
+  SITE_FRAMES_PATH,
   buildFramesModule,
   downsampleToPalette,
   encodeRasterFrame,
+  formatSiteFramesModule,
 } from "./brand-frames.ts";
 
 function decode(cells: string): number[] {
@@ -163,5 +166,11 @@ describe("committed frames.generated.ts", () => {
         }
       }
     }
+  });
+});
+
+describe("committed mascot-frames.generated.ts", () => {
+  test("is the small sleep, work and done frames of the committed mod frames", () => {
+    expect(readFileSync(SITE_FRAMES_PATH, "utf8")).toBe(formatSiteFramesModule(FRAMES));
   });
 });

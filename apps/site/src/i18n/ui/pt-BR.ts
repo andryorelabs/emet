@@ -45,6 +45,8 @@ export const ptBR = {
     tabPlugin: "Plugin",
     tabClone: "A partir de um clone",
     request: "build the Website",
+    youType: "você digita",
+    emetReplies: "emet responde",
     alt: "Um vale pintado em luz dourada, um pequeno golem de argila em um outeiro gramado acima de campos em terraços.",
   },
   showcase: {
