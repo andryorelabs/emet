@@ -195,7 +195,7 @@ summary:focus-visible {
 
 .how-painting img {
   object-fit: cover;
-  object-position: 44% 78%;
+  object-position: 50% 50%;
 }
 
 .how-column {
@@ -508,10 +508,6 @@ pre {
     top: 0;
     height: auto;
     aspect-ratio: 16 / 10;
-  }
-
-  .how-painting img {
-    object-position: 44% 70%;
   }
 
   .how-column {

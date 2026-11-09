@@ -46,7 +46,8 @@ export const it = {
     request: "build the Website",
     youType: "tu scrivi",
     emetReplies: "emet risponde",
-    alt: "Una valle dipinta in luce dorata, un piccolo golem d'argilla su un rialzo erboso sopra campi a terrazze.",
+    alt: "La valle dove tre ruscelli confluiscono in un fiume.",
+    merged: "Unito",
   },
   showcase: {
     heading: "L'ondata viene integrata",

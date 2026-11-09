@@ -46,7 +46,8 @@ export const es = {
     request: "build the Website",
     youType: "tú escribes",
     emetReplies: "emet responde",
-    alt: "Un valle pintado con luz dorada, un pequeño gólem de arcilla sobre una loma cubierta de hierba por encima de campos en terrazas.",
+    alt: "El valle donde tres arroyos se unen en un río.",
+    merged: "Fusionado",
   },
   showcase: {
     heading: "La oleada se integra",

@@ -47,7 +47,8 @@ export const ptBR = {
     request: "build the Website",
     youType: "você digita",
     emetReplies: "emet responde",
-    alt: "Um vale pintado em luz dourada, um pequeno golem de argila em um outeiro gramado acima de campos em terraços.",
+    alt: "O vale onde três riachos se juntam em um rio.",
+    merged: "Mesclado",
   },
   showcase: {
     heading: "A onda é integrada",

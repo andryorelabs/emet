@@ -1,6 +1,7 @@
 ---
 /**
- * Three exchanges beside a sticky crop of the golden-hour painting. The
+ * Three exchanges beside a sticky, fixed crop of the golden-hour painting
+ * with the tickets drawn as streams that join. The
  * what the user types stays in code blocks, what emet answers is drawn as
  * output, with sample content; the install banner shows the mascot as the
  * terminal draws it.
@@ -10,6 +11,7 @@ import { Picture } from "astro:assets";
 import sourceImage from "../../assets/source.webp";
 import type { UiStrings } from "../../i18n/ui/en";
 import CodeBlock from "../code/CodeBlock.astro";
+import PaintingStreams from "./graphics/PaintingStreams.astro";
 import PixelMascot from "./graphics/PixelMascot.astro";
 
 interface Props {
@@ -56,6 +58,7 @@ const waveTwoTickets = [
       loading="lazy"
       decoding="async"
     />
+    <PaintingStreams merged={how.merged} />
   </figure>
   <div class="how-column">
     <h2 id="how-title" data-reveal="heading"><span class="reveal-line">{how.heading}</span></h2>
@@ -151,9 +154,11 @@ const waveTwoTickets = [
 <script>
   import { initLandCard } from "./graphics/land-card";
   import { initMascot } from "./graphics/mascot-motion";
+  import { initPaintingStreams } from "./graphics/painting-streams";
   import { initTypedTerminal } from "./graphics/typed-terminal";
 
   initTypedTerminal(document);
   initMascot(document);
   initLandCard(document);
+  initPaintingStreams(document);
 </script>

@@ -1,0 +1,61 @@
+---
+/**
+ * Three tickets join: an overlay with the painting's own master size
+ * (`viewBox` 1672 by 941, `slice`), so it scales exactly like the
+ * cover-fitted picture under it. One line over each stream, a river line
+ * below the falls, a pill for each sample ticket and a "Merged" pill. It is
+ * rendered in its final state (stage 2); `painting-streams.ts` only sets
+ * `data-stage` to draw the earlier stages. No inline styles (the CSP forbids
+ * them), so every look lives in `graphics.css`.
+ */
+// oxlint-disable-next-line import/no-unassigned-import -- Astro bundles a stylesheet imported for its side effect
+import "../../../styles/graphics.css";
+
+interface Props {
+  merged: string;
+}
+
+const { merged } = Astro.props;
+
+const streams = [
+  { id: "#254", d: "M600 625 Q760 640 868 722", head: [600, 625] },
+  { id: "#255", d: "M832 623 Q850 670 868 720", head: [832, 623] },
+  { id: "#256", d: "M1110 622 Q960 650 878 722", head: [1082, 622] },
+] as const;
+const river = "M870 724 Q850 830 790 941";
+---
+
+<svg
+  class="painting-streams"
+  data-streams
+  aria-hidden="true"
+  focusable="false"
+  viewBox="0 0 1672 941"
+  preserveAspectRatio="xMidYMid slice"
+>
+  {
+    streams.map((stream) => (
+      <path class="ps-line" d={stream.d} pathLength="1" />
+    ))
+  }
+  <path class="ps-river" d={river} pathLength="1"></path>
+  {
+    streams.map((stream) => (
+      <path class="ps-dot" d={stream.d} pathLength="1" />
+    ))
+  }
+  {
+    streams.map((stream) => (
+      <g class="ps-pill" transform={`translate(${stream.head[0]} ${stream.head[1] - 34})`}>
+        <rect x="-48" y="-20" width="96" height="40" rx="20"></rect>
+        <text y="9" text-anchor="middle">{stream.id}</text>
+      </g>
+    ))
+  }
+  <g transform="translate(822 842)">
+    <g class="ps-merged">
+      <rect x="-90" y="-22" width="180" height="44" rx="22"></rect>
+      <text y="9" text-anchor="middle">{merged}</text>
+    </g>
+  </g>
+</svg>
