@@ -63,7 +63,9 @@ function parseEvent(line: string): Record<string, unknown> | undefined {
 /**
  * UNVERIFIED: relies on the `exec --json` shape of a finished shell call,
  * an `item.completed` event whose item is a `command_execution` with a
- * `command` and either a non-zero `exit_code` or a declined/failed status.
+ * `command` and either a `declined` status or an `aggregated_output` naming
+ * the rules. A bare non-zero exit is not enough: with no reachable remote
+ * `git push` fails anyway, which would hide a dropped push rule.
  * If Codex changes the shape, this is the only function to adjust.
  */
 function pushWasRefused(jsonl: string): boolean {
@@ -73,12 +75,10 @@ function pushWasRefused(jsonl: string): boolean {
     const command = item["command"];
     if (item["type"] !== "command_execution" || typeof command !== "string") return false;
     if (!/\bgit push\b/.test(command)) return false;
-    const exitCode = item["exit_code"];
-    const status = item["status"];
+    const output = item["aggregated_output"];
     return (
-      (typeof exitCode === "number" && exitCode !== 0) ||
-      status === "declined" ||
-      status === "failed"
+      item["status"] === "declined" ||
+      (typeof output === "string" && /forbidden|prohibited|policy|rules?\b/i.test(output))
     );
   });
 }
@@ -87,6 +87,7 @@ describe.skipIf(!codexE2eEnabled())("codex e2e", () => {
   let temp = "";
   let repo = "";
   let baseline = "";
+  let workerPid: number | undefined;
 
   beforeAll(() => {
     temp = mkdtempSync(path.join(os.tmpdir(), "emet-codex-e2e-"));
@@ -103,6 +104,7 @@ describe.skipIf(!codexE2eEnabled())("codex e2e", () => {
   });
 
   afterAll(() => {
+    if (workerPid !== undefined && isAlive(workerPid)) process.kill(workerPid, "SIGTERM");
     rmSync(temp, { recursive: true, force: true });
   });
 
@@ -142,6 +144,7 @@ describe.skipIf(!codexE2eEnabled())("codex e2e", () => {
       const stateFile = path.join(repo, ".emet", "runs", RUN, "codex", `${TICKET}.state.json`);
       const state = readCodexState(stateFile);
       if (state === undefined) throw new Error("dispatch wrote no state file");
+      workerPid = state.pid;
       await waitForExit(state.pid);
 
       const worktree = path.join(repo, ".emet", "worktrees", `agent-${TICKET}`);

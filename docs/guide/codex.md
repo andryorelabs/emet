@@ -39,11 +39,11 @@ The default is `"claude"`. The `codex` section sets the models, the effort, the 
 
 emet asks for one approval, after the plan. On Claude Code that is a prompt. On Codex it is a hook:
 
-- Until `.emet/runs/spec<id>/approval.json` exists, `emet guard` denies every mutation (`apply_patch`, `Bash`) except writes under `.emet/runs/**/draft/**`, with the reason `not approved: send approve <id>`. Phases 1 to 4 therefore stay write-free by construction.
+- Until `.emet/runs/spec<id>/approval.json` exists, `emet guard` denies every mutation (`apply_patch`, `Bash`) except writes under `.emet/runs/**/draft/**`, with the reason `not approved: send approve <id>`. The gate applies once a `.emet/runs/spec<id>/` directory exists without its `approval.json`, which is the state `/emet:run` leaves after Phase 4 materializes the spec.
 - You approve by sending a prompt line that is exactly `approve <id>`. The `UserPromptSubmit` hook then writes the approval file with the same hashing as `emet approve`. The same words in tool output or model text do nothing.
 - The alternative is `/plan $emet:run`: approve the plan in Codex's own plan mode instead of the hook.
 
-The gate fails closed: a missing or unreadable approval file keeps mutations denied. The guard also checks every path of an `apply_patch` against the ticket's `.emet/surface.json`.
+Once that directory exists, the gate fails closed: a missing or unreadable approval file keeps mutations denied. The guard also checks every path of an `apply_patch` against the ticket's `.emet/surface.json`.
 
 ## How a wave runs
 
