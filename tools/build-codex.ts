@@ -94,6 +94,15 @@ const RULES: readonly Rule[] = [
     pattern: /Launch up to `concurrency\.waveSize`[\s\S]*?makes the call fail\./,
     replacement: COORDINATOR_DISPATCH,
   },
+  { pattern: /calling\s+the\s+Skill\s+tool/g, replacement: "invoking the skill" },
+  { pattern: /call\s+the\s+Skill\s+tool/g, replacement: "invoke the skill" },
+  { pattern: /Call\s+the\s+Skill\s+tool/g, replacement: "Invoke the skill" },
+  { pattern: /You're\s+already\s+a\s+subagent;/g, replacement: "You're already a worker;" },
+  {
+    pattern: /have\s+a\s+fresh-context\s+subagent\s+look\s+it\s+up/g,
+    replacement: "look it up yourself with a read-only search",
+  },
+  { pattern: /inside\s+plan\s+mode/g, replacement: "before the approval" },
   {
     pattern: /Just before each `Agent` call/g,
     replacement: "Just before each `emet dispatch` call",

@@ -47,7 +47,7 @@ export function isProcessAlive(pid: number): boolean {
  * sandbox, which the run's rules and hooks guard replaces).
  */
 export function codexPermissionArgs(permissionMode: string): string[] {
-  return permissionMode === "bypassPermissions"
+  return permissionMode === "danger-full-access"
     ? ["--dangerously-bypass-approvals-and-sandbox"]
     : ["--sandbox", "workspace-write"];
 }
@@ -77,10 +77,15 @@ async function waitForThreadId(stateFile: string, remainingMs: number): Promise<
 export async function startCodexSession(
   req: StartSessionRequest,
   _run: CommandRunner,
-  spawnOverrides: Partial<Pick<CodexSpawn, "executable" | "env">> = {},
+  spawnOverrides: Partial<Pick<CodexSpawn, "executable" | "env">> & { sourceHome?: string } = {},
 ): Promise<SessionInfo> {
+  const { sourceHome, ...spawnExtras } = spawnOverrides;
   const paths = codexSessionPaths(req.cwd, req.name);
-  const { codexHome } = buildRunHome({ run: req.name, repoRoot: req.cwd });
+  const { codexHome } = buildRunHome({
+    run: req.name,
+    repoRoot: req.cwd,
+    ...(sourceHome === undefined ? {} : { sourceHome }),
+  });
   const { pid } = spawnCodex({
     args: [
       "exec",
@@ -93,7 +98,7 @@ export async function startCodexSession(
     codexHome,
     jsonlPath: paths.jsonlPath,
     stateFile: paths.stateFile,
-    ...spawnOverrides,
+    ...spawnExtras,
   });
   const threadId = await waitForThreadId(paths.stateFile, THREAD_WAIT_MS);
   mkdirSync(path.dirname(paths.recordFile), { recursive: true });

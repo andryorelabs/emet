@@ -74,7 +74,7 @@ describe("startCodexSession", () => {
     const info = await startCodexSession(
       {
         name: "emet-345-w4",
-        permissionMode: "bypassPermissions",
+        permissionMode: "danger-full-access",
         prompt: "/emet:run --dispatch 345",
         cwd: repo,
       },
@@ -82,6 +82,7 @@ describe("startCodexSession", () => {
       {
         executable: FAKE,
         env: { FAKE_CODEX_SCRIPT: script, FAKE_CODEX_LOG: log, HOME: home, CODEX_HOME: home },
+        sourceHome: home,
       },
     );
     expect(info).toEqual({ id: "th-77", name: "emet-345-w4" });
@@ -105,7 +106,7 @@ describe("startCodexSession", () => {
     const info = await startCodexSession(
       { name: "emet-1-w1", permissionMode: "auto", prompt: "/emet:run --dispatch 1", cwd: repo },
       noRunner,
-      { executable: FAKE },
+      { executable: FAKE, sourceHome: tempDir() },
     );
     expect(info.id).toBeNull();
     expect(readRecord(codexSessionPaths(repo, "emet-1-w1").recordFile)["threadId"]).toBeNull();
@@ -144,7 +145,8 @@ describe("helpers", () => {
 
   test("maps permission modes", () => {
     expect(codexPermissionArgs("auto")).toEqual(["--sandbox", "workspace-write"]);
-    expect(codexPermissionArgs("bypassPermissions")).toEqual([
+    expect(codexPermissionArgs("bypassPermissions")).toEqual(["--sandbox", "workspace-write"]);
+    expect(codexPermissionArgs("danger-full-access")).toEqual([
       "--dangerously-bypass-approvals-and-sandbox",
     ]);
   });

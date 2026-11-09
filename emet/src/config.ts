@@ -146,7 +146,7 @@ export type HandoffLauncher = "auto" | "orca" | "bg";
 
 const HANDOFF_LAUNCHERS: readonly HandoffLauncher[] = ["auto", "orca", "bg"];
 
-export type HandoffPermissionMode = "bypassPermissions" | "auto" | "acceptEdits";
+type HandoffPermissionMode = "bypassPermissions" | "auto" | "acceptEdits";
 
 const HANDOFF_PERMISSION_MODES: readonly HandoffPermissionMode[] = [
   "bypassPermissions",

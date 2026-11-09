@@ -5,7 +5,7 @@ to `phases-6-7-dispatch.md`.
 
 ## Phase 1 — Interview
 
-Reach a shared understanding of the user's arguments by calling the Skill tool twice —
+Reach a shared understanding of the user's arguments by invoking the skill twice —
 `grilling` then `domain-modeling` (terminology per `docs/agents/domain.md`); `grill-with-docs` is
 user-invocable only, so call its two skills directly. Any `GLOSSARY.md`/`docs/adr/` edit `domain-modeling`
 proposes is **not written yet** — note it in the plan file, apply in Phase 5.
@@ -13,14 +13,14 @@ proposes is **not written yet** — note it in the plan file, apply in Phase 5.
 Interview in **frontier rounds**, not one question at a time. Each round asks
 every currently unblocked decision together; each carries a `➡️` recommended
 answer, so the user can reply "yes" to accept all. A decision answerable from
-the repo or docs is not asked: have a fresh-context subagent look it up. Fog
-answerable from primary sources is not asked either: call the Skill tool with
+the repo or docs is not asked: look it up yourself with a read-only search. Fog
+answerable from primary sources is not asked either: invoke the skill with
 `research`, recording findings in the plan file. Answers unblock the next round. Soft cap: after ~4 rounds, or
 once only low-stakes decisions remain, wrap up — list the leftovers with their
 `➡️` defaults and ask one "go with these?".
 
 If the feature touches a screen (judge this yourself), don't publish the
-design here — publishing is a write and this phase is inside plan mode.
+design here — publishing is a write and this phase is before the approval.
 Describe in the plan file one screen description per screen, plus the states
 a worker would otherwise improvise badly (empty, error, loading). Confirm the
 UI/non-UI classification with the user at the end of this phase. The canvas is
@@ -39,7 +39,7 @@ operations" section; loop back to Phase 1 once its map clears.
 Run `emet skill-path to-spec` and read the `SKILL.md` it prints, then follow its synthesis template,
 but write the result **into the plan file**, not to the issue tracker —
 `to-spec` is user-invocable only and its own publish step is a write that
-can't happen inside plan mode. Section it as a spec block per
+can't happen before the approval. Section it as a spec block per
 `docs/agents/issue-tracker.md`'s conventions, ready to be published verbatim
 in Phase 5.
 
@@ -65,7 +65,7 @@ Phase 2. Reinforce two rules on top of the skill's own breakdown:
   must be covered by at least one ticket; a ticket covering none is
   unjustified scope.
 - Every ticket carries `## Interfaces`: `Consumes:` / `Produces:` with
-  signatures, so parallel workers agree on the seams. Call the Skill tool with
+  signatures, so parallel workers agree on the seams. Invoke the skill with
   `codebase-design` when writing them.
 - Fast path: a unit of ≲100 changed lines (`sizing.inlineMaxLines`) that
   passes the resume-from-diff test is folded into a sibling worker's ticket

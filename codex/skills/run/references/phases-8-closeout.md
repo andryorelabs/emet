@@ -112,7 +112,7 @@ The coordinator writes a tracker-state transition only where
 tracker's own PR-linked automation already marks it `automatic` (e.g.
 Linear's GitHub integration). If green and nothing was flagged: push the
 integration branch once, open one PR for this wave (never one per ticket —
-that's what makes running the shared suite once per wave enough). Write its body by calling the Skill tool with `pr` and following
+that's what makes running the shared suite once per wave enough). Write its body by invoking the skill with `pr` and following
 its template. It
 lists "Rulings I made" (`emet review --rulings`) and closes every ticket this wave completed using this repo's tracker's
 closing-keyword convention (`docs/agents/issue-tracker.md` — a plain
