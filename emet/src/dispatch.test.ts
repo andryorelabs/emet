@@ -1,11 +1,13 @@
 import { afterEach, beforeEach, describe, expect, spyOn, test } from "bun:test";
 import {
+  appendFileSync,
   existsSync,
   mkdirSync,
   mkdtempSync,
   readdirSync,
   readFileSync,
   rmSync,
+  utimesSync,
   writeFileSync,
 } from "node:fs";
 import os from "node:os";
@@ -13,7 +15,7 @@ import path from "node:path";
 
 import { isObject } from "./narrow";
 import { didReserveTicket } from "./claims";
-import { readCodexState } from "./codex-process";
+import { currentPidNamespace, readCodexState } from "./codex-process";
 import { EXIT_BASE_CHECK_FAILED, EXIT_WAIT_TIMEOUT, run, type DispatchDeps } from "./dispatch";
 import { writeResult } from "./results";
 import { acquireSlot } from "./slots";
@@ -153,13 +155,45 @@ describe("dispatch worker", () => {
     const argv = logged.argv;
     expect(argv.slice(0, 3)).toEqual(["exec", "-C", worktree]);
     expect(argv).toContain("model_reasoning_effort=medium");
-    expect(argv).toContain("workspace-write");
+    expect(argv[argv.indexOf("-s") + 1]).toBe("danger-full-access");
     expect(argv).toContain("--json");
     expect(argv).toContain("--dangerously-bypass-hook-trust");
     expect(argv.at(-1)).toBe("do the ticket");
     expect(argv).not.toContain("ultra");
     expect(logged.codexHome).toBe(home);
     expect(readdirSync(sourceHome)).toEqual(before);
+  });
+
+  test("records and prints the thread id as the worker identity", async () => {
+    await claimAndSlot();
+    const log = spyOn(console, "log").mockImplementation(() => {});
+    const code = await run(
+      dispatchArguments(),
+      deps({ lines: [{ type: "thread.started", thread_id: "th-7" }] }),
+    );
+    const printed = String(log.mock.calls.at(-1)?.[0]);
+    log.mockRestore();
+    expect(code).toBe(0);
+    expect(printed).toContain(`dispatched ${TICKET}: pid `);
+    expect(printed).toContain("thread th-7");
+    const stateFile = path.join(repo, ".emet", "runs", RUN, "codex", `${TICKET}.state.json`);
+    const state = readCodexState(stateFile);
+    expect(state?.threadId).toBe("th-7");
+    expect(state?.jsonlPath).toBe(
+      path.join(repo, ".emet", "runs", RUN, "codex", `${TICKET}.jsonl`),
+    );
+  });
+
+  test("passes a configured workspace-write sandbox", async () => {
+    writeFileSync(
+      path.join(repo, "emet.config.json"),
+      JSON.stringify({ agentHost: "codex", codex: { sandbox: "workspace-write" } }),
+    );
+    await claimAndSlot();
+    expect(await run(dispatchArguments(), deps())).toBe(0);
+    await waitUntil(() => existsSync(logFile));
+    const { argv } = readFirstInvocation();
+    expect(argv[argv.indexOf("-s") + 1]).toBe("workspace-write");
   });
 
   test("passes --model and --effort overrides and refuses ultra", async () => {
@@ -233,6 +267,56 @@ describe("dispatch --wait", () => {
     errors.mockRestore();
     sleeper.kill();
     expect(code).toBe(EXIT_WAIT_TIMEOUT);
+  });
+
+  function seedForeignWorker(): { jsonlPath: string; stateFile: string } {
+    const codexDir = path.join(repo, ".emet", "runs", RUN, "codex");
+    mkdirSync(codexDir, { recursive: true });
+    const jsonlPath = path.join(codexDir, `${TICKET}.jsonl`);
+    const stateFile = path.join(codexDir, `${TICKET}.state.json`);
+    writeFileSync(jsonlPath, `${JSON.stringify({ type: "thread.started", thread_id: "th-3" })}\n`);
+    const old = Date.now() / 1000 - 3600;
+    utimesSync(jsonlPath, old, old);
+    writeFileSync(
+      stateFile,
+      JSON.stringify({
+        pid: process.pid,
+        threadId: null,
+        startedAt: new Date(0).toISOString(),
+        jsonlPath,
+        cwd: repo,
+        pidNamespace: "pid:[foreign]",
+      }),
+    );
+    return { jsonlPath, stateFile };
+  }
+
+  const waitArguments = ["--wait", "--run", RUN, "--ticket", TICKET, "--timeout", "5", "--root"];
+
+  test.skipIf(currentPidNamespace() === null)(
+    "a silent worker whose pid is from another namespace is stalled, not running",
+    async () => {
+      const { stateFile } = seedForeignWorker();
+      const errors = spyOn(console, "error").mockImplementation(() => {});
+      expect(await run([...waitArguments, repo])).toBe(1);
+      expect(String(errors.mock.calls.at(-1)?.[0])).toContain("stalled");
+      errors.mockRestore();
+      expect(readCodexState(stateFile)?.threadId).toBe("th-3");
+    },
+  );
+
+  test("turn.completed in the jsonl ends the wait whatever the pid", async () => {
+    const { jsonlPath } = seedForeignWorker();
+    appendFileSync(jsonlPath, `${JSON.stringify({ type: "turn.completed" })}\n`);
+    writeResult(path.join(repo, ".emet", "runs", RUN, "results"), TICKET, {
+      status: "DONE",
+      reportPath: "r.md",
+      risk: "Risk: none",
+    });
+    const log = spyOn(console, "log").mockImplementation(() => {});
+    expect(await run([...waitArguments, repo])).toBe(0);
+    expect(log.mock.calls.at(-1)?.[0]).toBe("DONE");
+    log.mockRestore();
   });
 
   test("exits 1 when nothing was dispatched", async () => {
