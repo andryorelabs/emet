@@ -97,7 +97,7 @@
   .scene-tracker .tracker-status,
   .scene-tracker .tracker-check {
     animation-duration: var(--scene-cycle);
-    animation-delay: var(--scene-offset);
+    animation-delay: calc(var(--scene-offset) * -1);
     animation-timing-function: var(--ease-out);
     animation-iteration-count: infinite;
     animation-fill-mode: both;

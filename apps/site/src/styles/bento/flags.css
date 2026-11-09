@@ -8,7 +8,7 @@
 .flags-branch {
   position: absolute;
   left: 0;
-  width: 246px;
+  width: calc(100% - 14px);
   height: 2px;
   overflow: clip;
   transform-origin: left;
@@ -82,23 +82,26 @@
 
 @media (scripting: enabled) and (prefers-reduced-motion: no-preference) {
   .flags-graph {
-    animation: flags-fade var(--scene-cycle) linear var(--scene-offset) infinite both;
+    animation: flags-fade var(--scene-cycle) linear calc(var(--scene-offset) * -1) infinite both;
   }
 
   .flags-branch {
-    animation: flags-reach var(--scene-cycle) var(--ease-out) var(--scene-offset) infinite both;
+    animation: flags-reach var(--scene-cycle) var(--ease-out) calc(var(--scene-offset) * -1)
+      infinite both;
   }
 
   .flags-dash {
-    animation: flags-flow var(--scene-cycle) linear var(--scene-offset) infinite both;
+    animation: flags-flow var(--scene-cycle) linear calc(var(--scene-offset) * -1) infinite both;
   }
 
   .flags-node-lit {
-    animation: flags-node var(--scene-cycle) var(--ease-out) var(--scene-offset) infinite both;
+    animation: flags-node var(--scene-cycle) var(--ease-out) calc(var(--scene-offset) * -1) infinite
+      both;
   }
 
   .flags-flag {
-    animation: flags-drop var(--scene-cycle) var(--ease-out) var(--scene-offset) infinite both;
+    animation: flags-drop var(--scene-cycle) var(--ease-out) calc(var(--scene-offset) * -1) infinite
+      both;
   }
 
   @keyframes flags-fade {

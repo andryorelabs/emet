@@ -56,7 +56,7 @@ describe.each(scenes)("$name scene css", ({ name, prefix, keyframes }) => {
     expect(animations.length).toBeGreaterThan(0);
     for (const animation of animations) {
       expect(animation).toContain("var(--scene-cycle)");
-      expect(animation).toContain("var(--scene-offset)");
+      expect(animation).toContain("calc(var(--scene-offset) * -1)");
       expect(animation).toContain(prefix);
     }
   });

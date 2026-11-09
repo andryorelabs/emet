@@ -118,42 +118,42 @@
 
   .scene-workers .trees-root {
     animation-name: workers-root;
-    animation-delay: var(--scene-offset);
+    animation-delay: calc(var(--scene-offset) * -1);
   }
 
   .scene-workers .trees-branch::before {
     animation-name: workers-line;
-    animation-delay: var(--scene-offset);
+    animation-delay: calc(var(--scene-offset) * -1);
   }
 
   .scene-workers .trees-box {
     animation-name: workers-box;
-    animation-delay: var(--scene-offset);
+    animation-delay: calc(var(--scene-offset) * -1);
   }
 
   .scene-workers .trees-typing {
     animation-name: workers-typing;
-    animation-delay: calc(var(--scene-offset) + var(--index) * 200ms);
+    animation-delay: calc(var(--scene-offset) * -1 + var(--index) * 200ms);
   }
 
   .scene-workers .trees-typing i:first-child {
     animation-name: workers-type-first;
-    animation-delay: calc(var(--scene-offset) + var(--index) * 200ms);
+    animation-delay: calc(var(--scene-offset) * -1 + var(--index) * 200ms);
   }
 
   .scene-workers .trees-typing i:last-child {
     animation-name: workers-type-second;
-    animation-delay: calc(var(--scene-offset) + var(--index) * 200ms);
+    animation-delay: calc(var(--scene-offset) * -1 + var(--index) * 200ms);
   }
 
   .scene-workers .trees-typing::after {
     animation-name: workers-cursor;
-    animation-delay: calc(var(--scene-offset) + var(--index) * 200ms);
+    animation-delay: calc(var(--scene-offset) * -1 + var(--index) * 200ms);
   }
 
   .scene-workers .trees-check {
     animation-name: workers-check;
-    animation-delay: calc(var(--scene-offset) + var(--index) * 150ms);
+    animation-delay: calc(var(--scene-offset) * -1 + var(--index) * 150ms);
   }
 
   @keyframes workers-root {

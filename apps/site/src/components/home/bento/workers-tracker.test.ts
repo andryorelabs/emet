@@ -69,7 +69,8 @@ describe.each(scenes)("$name scene stylesheet", ({ name, prefix, keyframes }) =>
   it("runs on the shared cycle and offset variables", () => {
     const guarded = guardedPart(source);
     expect(guarded).toContain("var(--scene-cycle)");
-    expect(guarded).toContain("var(--scene-offset)");
+    expect(guarded).toContain("calc(var(--scene-offset) * -1");
+    expect(guarded).not.toMatch(/(?<!\* -1 \+ )(?<!\(|\* )var\(--scene-offset\)(?! \* -1)/);
     expect(guarded).toContain("infinite");
   });
 

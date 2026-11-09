@@ -87,47 +87,49 @@
 
 @media (scripting: enabled) and (prefers-reduced-motion: no-preference) {
   .ci-pipeline {
-    animation: ci-fade var(--scene-cycle) linear var(--scene-offset) infinite both;
+    animation: ci-fade var(--scene-cycle) linear calc(var(--scene-offset) * -1) infinite both;
   }
 
   .ci-lint .ci-amber {
-    animation: ci-lint-amber var(--scene-cycle) linear var(--scene-offset) infinite both;
+    animation: ci-lint-amber var(--scene-cycle) linear calc(var(--scene-offset) * -1) infinite both;
   }
 
   .ci-lint .ci-green {
-    animation: ci-lint-green var(--scene-cycle) linear var(--scene-offset) infinite both;
+    animation: ci-lint-green var(--scene-cycle) linear calc(var(--scene-offset) * -1) infinite both;
   }
 
   .ci-test .ci-amber {
-    animation: ci-test-amber var(--scene-cycle) linear var(--scene-offset) infinite both;
+    animation: ci-test-amber var(--scene-cycle) linear calc(var(--scene-offset) * -1) infinite both;
   }
 
   .ci-test .ci-red {
-    animation: ci-test-red var(--scene-cycle) linear var(--scene-offset) infinite both;
+    animation: ci-test-red var(--scene-cycle) linear calc(var(--scene-offset) * -1) infinite both;
   }
 
   .ci-test .ci-green {
-    animation: ci-test-green var(--scene-cycle) linear var(--scene-offset) infinite both;
+    animation: ci-test-green var(--scene-cycle) linear calc(var(--scene-offset) * -1) infinite both;
   }
 
   .ci-test {
-    animation: ci-shake var(--scene-cycle) var(--ease-out) var(--scene-offset) infinite both;
+    animation: ci-shake var(--scene-cycle) var(--ease-out) calc(var(--scene-offset) * -1) infinite
+      both;
   }
 
   .ci-build .ci-amber {
-    animation: ci-build-amber var(--scene-cycle) linear var(--scene-offset) infinite both;
+    animation: ci-build-amber var(--scene-cycle) linear calc(var(--scene-offset) * -1) infinite both;
   }
 
   .ci-build .ci-green {
-    animation: ci-build-green var(--scene-cycle) linear var(--scene-offset) infinite both;
+    animation: ci-build-green var(--scene-cycle) linear calc(var(--scene-offset) * -1) infinite both;
   }
 
   .ci-chip {
-    animation: ci-chip var(--scene-cycle) var(--ease-out) var(--scene-offset) infinite both;
+    animation: ci-chip var(--scene-cycle) var(--ease-out) calc(var(--scene-offset) * -1) infinite
+      both;
   }
 
   .ci-badge {
-    animation: ci-badge var(--scene-cycle) ease-in-out var(--scene-offset) infinite both;
+    animation: ci-badge var(--scene-cycle) ease-in-out calc(var(--scene-offset) * -1) infinite both;
   }
 
   @keyframes ci-fade {

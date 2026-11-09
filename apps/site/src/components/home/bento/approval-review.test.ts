@@ -43,7 +43,7 @@ describe.each(scenes)("$name scene", ({ name, prefix }) => {
 
   it("runs on the scene cycle and offset variables", () => {
     expect(css).toContain("var(--scene-cycle)");
-    expect(css).toContain("var(--scene-offset)");
+    expect(css).toContain("calc(var(--scene-offset) * -1)");
     expect(css).toContain("infinite");
   });
 
