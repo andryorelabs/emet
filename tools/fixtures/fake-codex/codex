@@ -1,0 +1,33 @@
+#!/usr/bin/env bun
+import { appendFileSync, existsSync, readFileSync } from "node:fs";
+
+const argv = process.argv.slice(2);
+const logPath = process.env.FAKE_CODEX_LOG;
+const scriptPath = process.env.FAKE_CODEX_SCRIPT;
+
+const script = scriptPath && existsSync(scriptPath) ? JSON.parse(readFileSync(scriptPath, "utf8")) : {};
+
+if (logPath) {
+  appendFileSync(logPath, `${JSON.stringify({ argv, cwd: process.cwd(), env: Object.fromEntries(Object.entries(process.env).filter(([key]) => /^(FAKE_CODEX_|CODEX_HOME$|EMET_)/.test(key))) })}\n`);
+}
+
+const version = script.version ?? "0.167.0";
+const execHelp =
+  script.execHelp ??
+  "Usage: codex exec [OPTIONS] [PROMPT]\n      --json\n      --output-schema <FILE>\n  -s, --sandbox <MODE>\n";
+const pluginList =
+  script.pluginList ??
+  "Marketplace `fake`\n\nPLUGIN                    STATUS          VERSION   SOURCE\n";
+
+if (argv[0] === "--version") {
+  console.log(`codex-cli ${version}`);
+} else if (argv[0] === "exec" && argv.includes("--help")) {
+  console.log(execHelp);
+} else if (argv[0] === "plugin" && argv[1] === "list") {
+  console.log(pluginList);
+} else {
+  for (const line of script.lines ?? []) {
+    console.log(typeof line === "string" ? line : JSON.stringify(line));
+  }
+  process.exit(script.exitCode ?? 0);
+}

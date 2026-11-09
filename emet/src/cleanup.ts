@@ -66,6 +66,8 @@ import { existsSync } from "node:fs";
 import path from "node:path";
 
 import { configureTicketPattern, listReservations, releaseTicket } from "./claims";
+import { type AgentHost, claudeHost } from "./agenthost";
+import { agentHostOfConfig } from "./dependencies";
 import { ForgeConfigError, requireForgeConfig, resolveRepoRoot, type ForgeConfig } from "./config";
 import { resolveLandedVerdict, type LandedContext, type LandedVerdict } from "./landed";
 import { optionalProperty } from "./optional";
@@ -423,6 +425,7 @@ export function findOrphanedScaffoldBranches(
   agentBranches: readonly BranchEntry[],
   worktreeEntries: readonly WorktreeEntry[],
   liveDirectoryNames: ReadonlySet<string>,
+  host: AgentHost = claudeHost,
 ): string[] {
   const checkedOut = new Set<string>();
   for (const entry of worktreeEntries) {
@@ -433,7 +436,7 @@ export function findOrphanedScaffoldBranches(
       (branch) =>
         branch.worktreePath.length === 0 &&
         !checkedOut.has(branch.name) &&
-        !isWorktreeAgentBranchLive(branch.name, liveDirectoryNames),
+        !isWorktreeAgentBranchLive(branch.name, liveDirectoryNames, host),
     )
     .map((branch) => branch.name);
 }
@@ -631,6 +634,7 @@ export async function reclaimOwnedWorktrees(context: ReclaimContext): Promise<vo
     context.agentBranches,
     context.worktreeEntries,
     context.liveDirectoryNames ?? new Set<string>(),
+    agentHostOfConfig(config),
   ).filter((branch) => !claimedBranches.has(branch));
   const scaffoldPlan = await classifyScaffoldsAgainstTrunk(config, orphanedScaffolds);
 
@@ -731,6 +735,7 @@ export async function reclaimOwnedWorktrees(context: ReclaimContext): Promise<vo
 }
 
 async function main(config: ForgeConfig) {
+  const host = agentHostOfConfig(config);
   const { dryRun, mode, runId, force } = parseCleanupArguments(process.argv.slice(2));
   const { remote, trunk } = config.repo;
   const local = config.landing.mode === "merge";
@@ -771,7 +776,9 @@ async function main(config: ForgeConfig) {
    * next always includes it. The other order could miss a worktree added
    * between the two reads and make its scaffold look orphaned.
    */
-  const worktreeAgentBranches = await listBranches("worktree-agent-*");
+  const worktreeAgentBranches = await listBranches(
+    `worktree-${host.worktreeLayout.agentDirPrefix}*`,
+  );
   const aoBranches = await listBranches(`${branchPrefix}-*`);
   const liveWorktreeDirectoryNames = await listLiveWorktreeDirectoryNames();
   const worktreeEntries = await listWorktreeEntries();
@@ -795,7 +802,7 @@ async function main(config: ForgeConfig) {
 
   const classified: ClassifiedBranch[] = [];
   for (const entry of worktreeAgentBranches) {
-    const isBaselineLive = isWorktreeAgentBranchLive(entry.name, liveWorktreeDirectoryNames);
+    const isBaselineLive = isWorktreeAgentBranchLive(entry.name, liveWorktreeDirectoryNames, host);
     const matchedEntry = findWorktreeEntryForBranch(entry.name, worktreeEntries);
     classified.push(
       // oxlint-disable-next-line eslint/no-await-in-loop -- sequential on purpose: later iterations depend on earlier ones or on output order
