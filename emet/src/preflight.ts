@@ -9,7 +9,9 @@ import {
   type ForgeConfig,
   type LandingMode,
 } from "./config";
+import { type AgentHost } from "./agenthost";
 import {
+  agentHostOfConfig,
   checkDependencies,
   createDependencyProbes,
   formatDependencyCheck,
@@ -130,8 +132,10 @@ export function collectDependencyChecks(
   config: ForgeConfig,
   repoRoot: string,
   probes: DependencyProbes,
+  host?: AgentHost,
 ): Promise<readonly DependencyCheck[]> {
   return checkDependencies({
+    host,
     tracker: config.tracker.kind,
     landingMode: config.landing.mode,
     repoRoot,
@@ -842,15 +846,16 @@ function statDirectoryMtimeMs(directory: string): number | null {
  * scope by.
  */
 async function mainPostDispatch(config: ForgeConfig): Promise<void> {
+  const host = agentHostOfConfig(config);
   const branchPrefix = config.ticket.branchPrefix;
   const currentRunId = readFlagValue("--run");
   const explicitExpectRaw = readFlagValue("--expect");
 
   const allWorktreeEntries = await listWorktreeEntries();
-  const agentEntries = allWorktreeEntries.filter((entry) => isAgentWorktree(entry.directory));
+  const agentEntries = allWorktreeEntries.filter((entry) => isAgentWorktree(entry.directory, host));
   const ticketBranches = await listBranches(`${branchPrefix}-*`);
   const agentTicketBranchNames = ticketBranches
-    .filter((branch) => isAgentWorktree(branch.worktreePath))
+    .filter((branch) => isAgentWorktree(branch.worktreePath, host))
     .map((branch) => branch.name);
 
   const nowMs = Date.now();
@@ -1212,6 +1217,7 @@ async function collectClosedRunIds(
 }
 
 async function main(config: ForgeConfig, repoRoot: string) {
+  const host = agentHostOfConfig(config);
   const currentRunId = readFlagValue("--run");
   const failures: string[] = [];
   const infoLines: string[] = [];
@@ -1227,7 +1233,8 @@ async function main(config: ForgeConfig, repoRoot: string) {
   const dependencyChecksPromise = collectDependencyChecks(
     config,
     repoRoot,
-    createDependencyProbes(),
+    createDependencyProbes(host),
+    host,
   );
 
   for (const required of config.preflight.requiredFiles) {
@@ -1250,7 +1257,7 @@ async function main(config: ForgeConfig, repoRoot: string) {
       repoRoot,
       config.repo.remote,
       config.repo.trunk,
-      createEnvironmentProbes(),
+      createEnvironmentProbes(host),
       config.landing.mode,
     )),
   );
@@ -1259,7 +1266,7 @@ async function main(config: ForgeConfig, repoRoot: string) {
     repoRoot,
     config.repo.remote,
     config.repo.trunk,
-    createEnvironmentProbes(),
+    createEnvironmentProbes(host),
     config.landing.mode,
   );
   if (headTrunkFailure !== null) failures.push(headTrunkFailure);
@@ -1276,9 +1283,11 @@ async function main(config: ForgeConfig, repoRoot: string) {
 
   const liveWorktreeDirectoryNames = await listLiveWorktreeDirectoryNames();
 
-  const worktreeAgentBranches = await listBranches("worktree-agent-*");
+  const worktreeAgentBranches = await listBranches(
+    `worktree-${host.worktreeLayout.agentDirPrefix}*`,
+  );
   const orphanedScaffoldBranches = worktreeAgentBranches.filter(
-    (branch) => !isWorktreeAgentBranchLive(branch.name, liveWorktreeDirectoryNames),
+    (branch) => !isWorktreeAgentBranchLive(branch.name, liveWorktreeDirectoryNames, host),
   );
   if (orphanedScaffoldBranches.length > 0) {
     /**
@@ -1292,7 +1301,9 @@ async function main(config: ForgeConfig, repoRoot: string) {
   }
 
   const allWorktreeEntries = await listWorktreeEntries();
-  const worktreeEntries = allWorktreeEntries.filter((entry) => isAgentWorktree(entry.directory));
+  const worktreeEntries = allWorktreeEntries.filter((entry) =>
+    isAgentWorktree(entry.directory, host),
+  );
   if (worktreeEntries.length > 0) {
     const local = config.landing.mode === "merge";
     const mainTree = await resolveMainTree(config.repo.remote, config.repo.trunk, { local });
