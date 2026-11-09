@@ -100,7 +100,10 @@ export const zhCN = {
   about: {
     heading: "为什么叫 emet",
     lineOne: "希伯来语里是“真理”。魔像是被这个词赋予生命的黏土。",
-    lineTwo: "擦掉一个字母，它就停下。在这里，有标记时什么都不会合并。",
+    lineTwo: "擦掉第一个字母，就读作 met，意为“死”。魔像就此停下。在这里，有标记时什么都不会合并。",
+    truth: "真理",
+    dead: "死",
+    wordLabel: "emet，真理，去掉第一个字母后变成 met，死",
     caption: "绘制的 emet 魔像。",
     role: "维护者",
     alt: "一幅特写画像：emet 魔像站在草坡上，黄金时刻的光线，苔藓与黏土的质感，头上长着一株小芽。",
