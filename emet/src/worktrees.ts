@@ -1,4 +1,5 @@
-import path from "node:path";
+import { claudeHost } from "./agenthost-claude";
+import type { AgentHost } from "./agenthost";
 
 import type { Reservation } from "./claims";
 import { LOCK_TOKENS } from "./names";
@@ -44,8 +45,8 @@ import { LOCK_TOKENS } from "./names";
  * {@link resolveWorktreeOwner}'s `runId`, which is the one signal that
  * actually identifies a run — see `preflight.ts`'s `mainPostDispatch`.
  */
-export function isAgentWorktree(directory: string): boolean {
-  return directory.includes(`${path.sep}.claude${path.sep}worktrees${path.sep}`);
+export function isAgentWorktree(directory: string, host: AgentHost = claudeHost): boolean {
+  return host.isAgentWorktree(directory);
 }
 
 /**
@@ -339,8 +340,9 @@ export function resolveWorktreeOwnerWithReservations(
 export function isWorktreeAgentBranchLive(
   branchName: string,
   liveDirectoryNames: ReadonlySet<string>,
+  host: AgentHost = claudeHost,
 ): boolean {
-  const agentId = branchName.slice("worktree-".length);
+  const agentId = host.agentIdFromBranch(branchName) ?? branchName.slice("worktree-".length);
   return liveDirectoryNames.has(agentId);
 }
 

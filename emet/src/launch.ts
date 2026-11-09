@@ -6,6 +6,8 @@ import {
   type HandoffLauncher,
   type HandoffPermissionMode,
 } from "./config";
+import { claudeHost } from "./agenthost-claude";
+import type { AgentHost, CommandResult, CommandRunner } from "./agenthost";
 import { errorMessage, isObject } from "./narrow";
 import { BINARY, LEGACY_PRODUCT, PRODUCT } from "./names";
 import { writePhase } from "./phase";
@@ -30,16 +32,7 @@ import { writePhase } from "./phase";
  * looking at the environment, for exactly that reason.
  */
 
-export type CommandResult = {
-  readonly exitCode: number;
-  readonly stdout: string;
-  readonly stderr: string;
-};
-
-export type CommandRunner = (
-  command: readonly string[],
-  options?: { readonly cwd?: string },
-) => Promise<CommandResult>;
+export type { CommandResult, CommandRunner };
 
 export type LaunchRequest = {
   readonly specId: string;
@@ -86,37 +79,6 @@ const defaultRunner: CommandRunner = async (command, options) => {
 
 export function waveSessionName(specId: string, wave: number): string {
   return `${PRODUCT}-${specId}-w${wave}`;
-}
-
-function parseAgentRows(stdout: string): AgentRow[] {
-  const parsed: unknown = JSON.parse(stdout);
-  if (!Array.isArray(parsed)) {
-    throw new Error("`claude agents --json` did not return an array");
-  }
-  const rows: unknown[] = parsed;
-  const agentRows: AgentRow[] = [];
-  for (const row of rows) {
-    if (!isObject(row)) {
-      agentRows.push({});
-      continue;
-    }
-    const { id, name } = row;
-    agentRows.push({
-      ...(typeof id === "string" || id === null ? { id } : {}),
-      ...(typeof name === "string" || name === null ? { name } : {}),
-    });
-  }
-  return agentRows;
-}
-
-async function listAgents(runner: CommandRunner): Promise<AgentRow[]> {
-  const result = await runner(["claude", "agents", "--json"]);
-  if (result.exitCode !== 0) {
-    throw new Error(
-      `\`claude agents --json\` failed (exit ${result.exitCode}): ${result.stderr.trim()}`,
-    );
-  }
-  return parseAgentRows(result.stdout);
 }
 
 /**
@@ -190,6 +152,7 @@ async function openOrcaTab(
   request: LaunchRequest,
   name: string,
   runner: CommandRunner,
+  host: AgentHost,
 ): Promise<OrcaTabOutcome> {
   const result = await runner([
     "orca",
@@ -200,7 +163,7 @@ async function openOrcaTab(
     "--title",
     name,
     "--command",
-    `bash -c '${Bun.which("claude") ?? "claude"} attach ${name}'`,
+    `bash -c '${host.sessions.attachCommand(name).replace(/^claude(?= )/, Bun.which("claude") ?? "claude")}'`,
     "--json",
   ]);
   if (result.exitCode !== 0) {
@@ -222,39 +185,34 @@ async function openOrcaTab(
 export async function launchWave(
   request: LaunchRequest,
   runner: CommandRunner = defaultRunner,
+  host: AgentHost = claudeHost,
 ): Promise<LaunchOutcome> {
   const name = waveSessionName(request.specId, request.wave);
 
-  const existing = findBlockingSessions(await listAgents(runner), request.specId, request.wave);
+  const existing = findBlockingSessions(
+    await host.sessions.list(runner),
+    request.specId,
+    request.wave,
+  );
   if (existing.length > 0) {
     throw new ForgeConfigError(
       `${BINARY} launch: a session for spec ${request.specId} already exists (${existing.join(", ")}) — not launching a second one.`,
     );
   }
 
-  const launched = await runner(
-    [
-      "claude",
-      "--bg",
-      "--name",
-      name,
-      "--permission-mode",
-      request.permissionMode,
-      `/${BINARY}:run --dispatch ${request.specId}`,
-    ],
-    { cwd: request.repoRoot },
-  );
-  if (launched.exitCode !== 0) {
-    throw new Error(
-      `${BINARY} launch: \`claude --bg\` failed (exit ${launched.exitCode}): ${(launched.stderr || launched.stdout).trim()}`,
+  let started;
+  try {
+    started = await host.sessions.start(
+      {
+        name,
+        permissionMode: request.permissionMode,
+        prompt: `/${BINARY}:run --dispatch ${request.specId}`,
+        cwd: request.repoRoot,
+      },
+      runner,
     );
-  }
-
-  const started = (await listAgents(runner)).find((row) => row.name === name);
-  if (!started) {
-    throw new Error(
-      `${BINARY} launch: \`claude --bg\` exited 0 but no session named ${name} appears in \`claude agents --json\`.`,
-    );
+  } catch (error: unknown) {
+    throw new Error(`${BINARY} launch: ${errorMessage(error)}`, { cause: error });
   }
 
   writePhase(request.repoRoot, {
@@ -266,10 +224,10 @@ export async function launchWave(
 
   const decision = await shouldOpenOrcaTab(request.launcher, runner);
   const orcaTab = decision.attempt
-    ? await openOrcaTab(request, name, runner)
+    ? await openOrcaTab(request, name, runner, host)
     : { opened: false, reason: `skipped: ${decision.reason}` };
 
-  return { name, id: started.id ?? null, attach: `claude attach ${name}`, orcaTab };
+  return { name, id: started.id ?? null, attach: host.sessions.attachCommand(name), orcaTab };
 }
 
 function readFlagValue(argv: readonly string[], flag: string): string | undefined {
