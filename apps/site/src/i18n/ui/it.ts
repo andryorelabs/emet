@@ -114,8 +114,9 @@ export const it = {
   about: {
     heading: "Perché si chiama emet",
     lineOne: "In ebraico significa verità. Un golem è argilla portata in vita da quella parola.",
-    lineTwo:
-      "Cancella la prima lettera e si legge met, morto. Il golem si ferma. Qui nulla viene integrato quando qualcosa è segnalato.",
+    lineTwoBefore: "Cancella la prima lettera e si legge met, morto. Il golem si ferma. Qui ",
+    flag: "nulla viene integrato quando qualcosa è segnalato",
+    lineTwoAfter: ".",
     truth: "verità",
     dead: "morto",
     wordLabel: "emet, verità, diventa met, morto, senza la prima lettera",

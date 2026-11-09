@@ -115,8 +115,9 @@ export const es = {
   about: {
     heading: "Por qué se llama emet",
     lineOne: "En hebreo, verdad. Un gólem es arcilla que cobra vida con esa palabra.",
-    lineTwo:
-      "Borra la primera letra y se lee met, muerto. El gólem se detiene. Aquí, nada se integra cuando algo está marcado.",
+    lineTwoBefore: "Borra la primera letra y se lee met, muerto. El gólem se detiene. Aquí, ",
+    flag: "nada se integra cuando algo está marcado",
+    lineTwoAfter: ".",
     truth: "verdad",
     dead: "muerto",
     wordLabel: "emet, verdad, se convierte en met, muerto, sin su primera letra",
