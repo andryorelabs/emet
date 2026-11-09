@@ -539,7 +539,7 @@
   }
 
   [data-streams][data-stage="2"] .ps-dot {
-    animation: ps-flow 1600ms ease-in 1 both;
+    animation: ps-flow 1600ms ease-in-out 1 both;
   }
 
   [data-streams][data-stage="2"] .ps-dot:nth-child(6) {

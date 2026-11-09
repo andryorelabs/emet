@@ -12,9 +12,9 @@ const DESKTOP_QUERY = "(min-width: 1001px)";
 const MIDDLE_BAND_MARGIN = "-40% 0px -40% 0px";
 const STAGES: readonly Stage[] = [0, 1, 2];
 
-/** Index of the largest visible ratio, 0 when none is visible; ties go to the earlier one. */
-export function pickStage(ratios: readonly number[]): Stage {
-  let best: Stage = 0;
+/** Index of the largest visible ratio; `previous` (0 by default) when none is visible; ties go to the earlier one. */
+export function pickStage(ratios: readonly number[], previous: Stage = 0): Stage {
+  let best: Stage = previous;
   let bestRatio = 0;
   for (const stage of STAGES) {
     const ratio = ratios[stage] ?? 0;
@@ -34,7 +34,9 @@ export function initPaintingStreams(root: ParentNode): void {
   const exchanges = [...root.querySelectorAll<HTMLElement>(".exchange")];
   if (overlays.length === 0 || exchanges.length === 0) return;
   const ratios = exchanges.map(() => 0);
+  let current: Stage = 0;
   const setStage = (stage: Stage): void => {
+    current = stage;
     for (const overlay of overlays) overlay.dataset["stage"] = String(stage);
   };
   const observer = new IntersectionObserver(
@@ -43,7 +45,7 @@ export function initPaintingStreams(root: ParentNode): void {
         const index = exchanges.findIndex((exchange) => exchange === entry.target);
         if (index >= 0) ratios[index] = !entry.isIntersecting ? 0 : entry.intersectionRatio;
       }
-      setStage(pickStage(ratios));
+      setStage(pickStage(ratios, current));
     },
     { rootMargin: MIDDLE_BAND_MARGIN, threshold: [0, 0.25, 0.5, 0.75, 1] },
   );

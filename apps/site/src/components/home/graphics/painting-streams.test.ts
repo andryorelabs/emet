@@ -63,6 +63,11 @@ describe("pickStage", () => {
   test("breaks ties toward the earlier exchange", () => {
     expect(pickStage([0, 0.5, 0.5])).toBe(1);
   });
+
+  test("keeps the previous stage when nothing is visible", () => {
+    expect(pickStage([0, 0, 0], 2)).toBe(2);
+    expect(pickStage([0, 0.3, 0], 2)).toBe(1);
+  });
 });
 
 describe("initPaintingStreams", () => {
@@ -89,6 +94,14 @@ describe("initPaintingStreams", () => {
     expect(overlay().dataset["stage"]).toBe("2");
     callback?.([entryFor(2, 0), entryFor(1, 0.4)]);
     expect(overlay().dataset["stage"]).toBe("1");
+  });
+
+  test("keeps the last stage when the last exchange leaves the band", () => {
+    install({ reducedMotion: false, wide: true });
+    initPaintingStreams(document);
+    callback?.([entryFor(2, 0.9)]);
+    callback?.([entryFor(2, 0)]);
+    expect(overlay().dataset["stage"]).toBe("2");
   });
 
   test("does nothing with reduced motion", () => {
