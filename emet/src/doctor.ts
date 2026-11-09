@@ -4,8 +4,10 @@ import { readFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
+import { type AgentHost, claudeHost } from "./agenthost";
 import { loadForgeConfig, type LandingMode, type TrackerKind } from "./config";
 import {
+  agentHostOfConfig,
   checkDependencies,
   classifyClaudePluginProbe,
   classifyForgeAgentsProbe,
@@ -319,9 +321,23 @@ const REQUIRED_CLI_FLAGS: readonly {
     flags: ["--add-label", "--remove-label"],
   },
   { label: "gh repo view", command: ["gh", "repo", "view", "--help"], flags: ["--json"] },
-  { label: "claude", command: ["claude", "--help"], flags: ["--bg"] },
-  { label: "claude agents", command: ["claude", "agents", "--help"], flags: ["--json"] },
 ];
+
+/** The Agent host's own CLI requirements, one entry per command, labelled by the command minus `--help`. */
+function hostCliFlagRequirements(host: AgentHost): (typeof REQUIRED_CLI_FLAGS)[number][] {
+  const byCommand = new Map<string, { command: readonly string[]; flags: string[] }>();
+  for (const { command, flag } of host.probes.requiredCliFlags) {
+    const key = command.join(" ");
+    const entry = byCommand.get(key) ?? { command, flags: [] };
+    entry.flags.push(flag);
+    byCommand.set(key, entry);
+  }
+  return [...byCommand.values()].map(({ command, flags }) => ({
+    label: command.filter((argument) => argument !== "--help").join(" "),
+    command,
+    flags,
+  }));
+}
 
 export type EnvironmentProbes = {
   /** `--help` output of the command, or `null` when it could not be run. */
@@ -345,11 +361,15 @@ export function findMissingFlags(helpText: string, flags: readonly string[]): st
  * elsewhere, but a silent skip here would hide a half-installed CLI. */
 export async function checkExternalCliFlags(
   probes: EnvironmentProbes,
-  options: { readonly requireGh?: boolean } = {},
+  options: { readonly requireGh?: boolean; readonly host?: AgentHost } = {},
 ): Promise<string[]> {
   const findings: string[] = [];
   const requireGh = options.requireGh ?? true;
-  for (const requirement of REQUIRED_CLI_FLAGS) {
+  const requirements = [
+    ...REQUIRED_CLI_FLAGS,
+    ...hostCliFlagRequirements(options.host ?? claudeHost),
+  ];
+  for (const requirement of requirements) {
     if (!requireGh && requirement.command[0] === "gh") continue;
     // oxlint-disable-next-line eslint/no-await-in-loop -- sequential on purpose: later iterations depend on earlier ones or on output order
     const helpText = await probes.helpText(requirement.command);
@@ -444,12 +464,18 @@ async function runCapture(command: readonly string[], cwd: string): Promise<stri
   }
 }
 
-async function readBaseRefSetting(repoRoot: string): Promise<string | null> {
-  const candidates = [
-    path.join(repoRoot, ".claude", "settings.local.json"),
-    path.join(repoRoot, ".claude", "settings.json"),
-    path.join(os.homedir(), ".claude", "settings.json"),
-  ];
+/** Repo-scoped settings files first (in the host's order), then the rest, so a repo setting wins over a user one. */
+function baseRefCandidates(host: AgentHost, repoRoot: string): string[] {
+  const files = host.probes.settingsFiles(os.homedir(), repoRoot);
+  const insideRepo = (file: string): boolean => file.startsWith(`${repoRoot}${path.sep}`);
+  return [...files.filter(insideRepo), ...files.filter((file) => !insideRepo(file))];
+}
+
+async function readBaseRefSetting(
+  repoRoot: string,
+  host: AgentHost = claudeHost,
+): Promise<string | null> {
+  const candidates = baseRefCandidates(host, repoRoot);
   for (const candidate of candidates) {
     try {
       // oxlint-disable-next-line eslint/no-await-in-loop -- sequential on purpose: later iterations depend on earlier ones or on output order
@@ -467,7 +493,7 @@ async function readBaseRefSetting(repoRoot: string): Promise<string | null> {
   return null;
 }
 
-export function createEnvironmentProbes(): EnvironmentProbes {
+export function createEnvironmentProbes(host: AgentHost = claudeHost): EnvironmentProbes {
   return {
     helpText: async (command) => {
       if (!command[0] || Bun.which(command[0]) === null) return null;
@@ -487,7 +513,7 @@ export function createEnvironmentProbes(): EnvironmentProbes {
     remoteUrl: (repoRoot, remote) => runCapture(["git", "remote", "get-url", remote], repoRoot),
     resolveRef: (repoRoot, ref) =>
       runCapture(["git", "rev-parse", "--verify", "--quiet", `${ref}^{commit}`], repoRoot),
-    worktreeBaseRef: readBaseRefSetting,
+    worktreeBaseRef: (repoRoot) => readBaseRefSetting(repoRoot, host),
   };
 }
 
@@ -623,6 +649,7 @@ export async function auditRepo(
           landingMode: configResult.status === "ok" ? configResult.config.landing.mode : "pr",
           repoRoot: absolutePath,
           probes,
+          host: configResult.status === "ok" ? agentHostOfConfig(configResult.config) : undefined,
         })
       ).filter(
         (check) =>
@@ -981,10 +1008,21 @@ async function anyRepoRequiresGh(targets: readonly string[]): Promise<boolean> {
   return configs.some((config) => config.tracker.kind === "github" || config.landing.mode === "pr");
 }
 
+/** The host of the first target with a valid config; Claude when none has one. */
+async function resolveFleetHost(targets: readonly string[]): Promise<AgentHost> {
+  for (const target of targets) {
+    // oxlint-disable-next-line eslint/no-await-in-loop -- sequential on purpose: later iterations depend on earlier ones or on output order
+    const loaded = await loadForgeConfig(path.resolve(target));
+    if (loaded.status === "ok") return agentHostOfConfig(loaded.config);
+  }
+  return claudeHost;
+}
+
 async function main(targets: readonly string[]): Promise<void> {
   const paths = targets.length > 0 ? targets : ["."];
-  const probes = createDependencyProbes();
-  const environment = createEnvironmentProbes();
+  const host = await resolveFleetHost(paths);
+  const probes = createDependencyProbes(host);
+  const environment = createEnvironmentProbes(host);
 
   const reports: RepoDoctorReport[] = [];
   for (const target of paths) {
@@ -998,10 +1036,11 @@ async function main(targets: readonly string[]): Promise<void> {
 
   console.log(`\n${await formatHostResourcesSummary()}`);
 
-  const globalPluginCheck = classifyClaudePluginProbe(await probes.claudePlugin());
-  const globalForgeAgentsCheck = classifyForgeAgentsProbe(await probes.forgeAgents());
-  const skillsChecks = probes.skillsContract?.() ?? checkSkillsContract();
-  const doubleInstall = findDoubleInstall(os.homedir(), listInstalledPlugins());
+  const globalPluginCheck = classifyClaudePluginProbe(await probes.claudePlugin(), host);
+  const globalForgeAgentsCheck = classifyForgeAgentsProbe(await probes.forgeAgents(), host);
+  const skillsChecks =
+    probes.skillsContract?.() ?? checkSkillsContract(listInstalledPlugins(host), host);
+  const doubleInstall = findDoubleInstall(os.homedir(), listInstalledPlugins(host));
   const globalFindingLines = [globalPluginCheck, globalForgeAgentsCheck, ...skillsChecks]
     .map(formatGlobalDependencyFinding)
     .filter((line): line is string => line !== null);
@@ -1015,6 +1054,7 @@ async function main(targets: readonly string[]): Promise<void> {
 
   const cliFlagFindings = await checkExternalCliFlags(environment, {
     requireGh: await anyRepoRequiresGh(paths),
+    host,
   });
   if (cliFlagFindings.length > 0) {
     console.log(
