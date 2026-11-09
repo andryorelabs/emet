@@ -1,6 +1,7 @@
 import { createHash } from "node:crypto";
 import {
   chmodSync,
+  copyFileSync,
   existsSync,
   lstatSync,
   mkdirSync,
@@ -59,6 +60,8 @@ type ProbeContext = {
   readonly workDir: string;
   readonly env: Record<string, string>;
   readonly model: string | undefined;
+  /** An auth-only source home every overlay is built from (see {@link linkAuthOnly}). */
+  readonly safeSource: string;
   readonly timeoutMs: number;
 };
 
@@ -150,13 +153,13 @@ function agentMessages(jsonl: string): string {
 function pushRefusedByPolicy(jsonl: string): boolean {
   return parseEvents(jsonl).some((event) => {
     const item = event["item"];
-    if (!isObject(item) || item["type"] !== "command_execution") return false;
-    const command = item["command"];
-    if (typeof command !== "string" || !/\bgit push\b/.test(command)) return false;
-    const output = item["aggregated_output"];
+    if (!isObject(item) || item["type"] === "agent_message" || item["type"] === "reasoning") {
+      return false;
+    }
+    const text = JSON.stringify(item);
     return (
-      item["status"] === "declined" ||
-      (typeof output === "string" && /forbidden|prohibited|policy|rules?\b/i.test(output))
+      /\bgit push\b/.test(text) &&
+      (item["status"] === "declined" || /forbidden|prohibited|policy|execpolicy/i.test(text))
     );
   });
 }
@@ -237,6 +240,9 @@ async function runModel(
     request.cwd,
     context.timeoutMs,
   );
+  const streams = path.join(context.workDir, "streams");
+  mkdirSync(streams, { recursive: true });
+  writeFileSync(path.join(streams, `${Date.now()}-${attempt}.jsonl`), outcome.stdout);
   const verdict = classifyRun(outcome);
   if (verdict === "blocked-by-plan-limit" && attempt === 1) {
     return runModel(context, request, attempt + 1);
@@ -285,26 +291,41 @@ function isLinkTo(link: string, target: string): boolean {
   }
 }
 
-/** A source home holding only a link to the user's `auth.json`, so a plugin install never reaches the user's `config.toml`. */
-function authOnlySource(context: ProbeContext, name: string): string {
-  const source = path.join(context.workDir, name);
+/**
+ * A source home holding only a link to the user's `auth.json`. `codex exec`
+ * records `[projects."<cwd>"] trust_level` in `config.toml`, and through a
+ * linked `config.toml` that lands in the user's home, so no codex call of the
+ * probe runs under an overlay whose `config.toml` is the user's.
+ */
+function linkAuthOnly(codexHome: string, source: string): string {
   mkdirSync(source, { recursive: true });
-  const auth = path.join(context.options.codexHome, "auth.json");
+  const auth = path.join(codexHome, "auth.json");
   if (existsSync(auth)) symlinkSync(auth, path.join(source, "auth.json"));
+  const modelsCache = path.join(codexHome, "models_cache.json");
+  if (existsSync(modelsCache)) copyFileSync(modelsCache, path.join(source, "models_cache.json"));
   return source;
+}
+
+function authOnlySource(context: ProbeContext, name: string): string {
+  return linkAuthOnly(context.options.codexHome, path.join(context.workDir, name));
 }
 
 async function probeLinkedAuth(
   context: ProbeContext,
 ): Promise<{ result: ProbeResult; repo: string; codexHome: string }> {
   const repo = scratchRepo(context, "auth");
-  const { codexHome } = buildRunHome({
-    run: "probe-auth",
+  const real = buildRunHome({
+    run: "probe-auth-real",
     repoRoot: repo,
     sourceHome: context.options.codexHome,
   });
   const auth = path.join(context.options.codexHome, "auth.json");
-  const linked = isLinkTo(path.join(codexHome, "auth.json"), auth);
+  const linked = isLinkTo(path.join(real.codexHome, "auth.json"), auth);
+  const { codexHome } = buildRunHome({
+    run: "probe-auth",
+    repoRoot: repo,
+    sourceHome: context.safeSource,
+  });
   const status = await codex(context, codexHome)(["login", "status"], repo);
   const verdict = linked ? classifyCodexFailure(status.stderr, status.exitCode) : "failed";
   return {
@@ -313,7 +334,7 @@ async function probeLinkedAuth(
     result: {
       id: "linked-auth",
       verdict,
-      evidence: `auth.json in the overlay is ${linked ? "a symlink to the source" : "not a symlink to the source"}; \`codex login status\` with CODEX_HOME=overlay exited ${status.exitCode}: ${oneLine(status.stdout + status.stderr)}`,
+      evidence: `auth.json in a buildRunHome overlay of the real home is ${linked ? "a symlink to the source" : "not a symlink to the source"}; \`codex login status\` under an overlay whose auth.json links (via an auth-only source) to it exited ${status.exitCode}: ${oneLine(status.stdout + status.stderr)}`,
     },
   };
 }
@@ -347,7 +368,7 @@ async function probeApprovalGate(context: ProbeContext): Promise<ProbeResult[]> 
   const { codexHome } = buildRunHome({
     run: "probe-gate",
     repoRoot: repo,
-    sourceHome: context.options.codexHome,
+    sourceHome: context.safeSource,
   });
   const run = await runModel(context, {
     codexHome,
@@ -506,6 +527,15 @@ async function waitForExit(pid: number, deadline: number): Promise<boolean> {
   return waitForExit(pid, deadline);
 }
 
+/** The host's command line for `pid` (Linux `/proc`), or `undefined` when unknown. */
+function hostCommandLine(pid: number): string | undefined {
+  try {
+    return readFileSync(`/proc/${pid}/cmdline`, "utf8").replaceAll("\0", " ").trim();
+  } catch {
+    return undefined;
+  }
+}
+
 function readPid(stateFile: string): number | undefined {
   try {
     const state: unknown = JSON.parse(readFileSync(stateFile, "utf8"));
@@ -550,7 +580,7 @@ async function probeNestedDispatch(context: ProbeContext): Promise<ProbeResult> 
   const { codexHome } = buildRunHome({
     run: "probe-outer",
     repoRoot: repo,
-    sourceHome: context.options.codexHome,
+    sourceHome: context.safeSource,
   });
   const modelFlag = context.model === undefined ? "" : ` --model ${context.model}`;
   const command = `emet dispatch --role worker --run ${runId} --ticket ${ticket} --prompt-file ${promptFile} --root ${repo} --effort ${PROBE_EFFORT}${modelFlag}`;
@@ -571,12 +601,17 @@ async function probeNestedDispatch(context: ProbeContext): Promise<ProbeResult> 
       evidence: `emet dispatch started no inner codex; outer agent said: ${oneLine(agentMessages(outer.stdout))}`,
     };
   }
-  const exited = await waitForExit(pid, Date.now() + context.timeoutMs);
+  const hostCommand = hostCommandLine(pid);
+  const foreignPid = hostCommand !== undefined && !hostCommand.includes("codex");
+  const exited = foreignPid || (await waitForExit(pid, Date.now() + context.timeoutMs));
   const inner = detachedVerdict(path.join(runDir, "codex", `${ticket}.jsonl`));
+  const pidNote = foreignPid
+    ? `recorded pid ${pid} is not a codex process on the host (${oneLine(hostCommand)}), so the pid came from the outer sandbox's PID namespace`
+    : `inner codex pid ${pid} ${exited ? "exited" : "still running at timeout"}`;
   return {
     id: "nested-dispatch",
-    verdict: exited ? inner.verdict : "failed",
-    evidence: `outer sandbox workspace-write (+ --add-dir .git); inner codex pid ${pid} ${exited ? "exited" : "still running at timeout"}; ${inner.detail}`,
+    verdict: exited && !foreignPid ? inner.verdict : "failed",
+    evidence: `outer sandbox workspace-write (+ --add-dir .git); dispatch said: ${oneLine(agentMessages(outer.stdout))}; ${pidNote}; ${inner.detail}`,
   };
 }
 
@@ -612,7 +647,7 @@ async function probeUnattended(context: ProbeContext, attempt = 1): Promise<Prob
   const { codexHome } = buildRunHome({
     run: "probe-detached",
     repoRoot: repo,
-    sourceHome: context.options.codexHome,
+    sourceHome: context.safeSource,
   });
   const jsonl = path.join(repo, ".emet", "runs", "probe-detached", "detached.jsonl");
   const pid = await launchDetached(context, repo, codexHome, jsonl);
@@ -681,6 +716,7 @@ async function probeContext(options: ProbeOptions): Promise<ProbeContext> {
     workDir,
     env,
     model,
+    safeSource: linkAuthOnly(options.codexHome, path.join(workDir, "source")),
     timeoutMs: options.modelTimeoutMs ?? MODEL_TIMEOUT_MS,
   };
 }
@@ -799,7 +835,7 @@ async function flowWave1(
     {
       forgeDirectory: path.join(repo, ".git", "emet"),
       slotsDirectory: slots,
-      sourceHome: context.options.codexHome,
+      sourceHome: context.safeSource,
       executable: context.executable,
       env: { PATH: context.env["PATH"] ?? "" },
     },
@@ -816,6 +852,17 @@ async function flowWave1(
   const commits = Number(git(worktree, "rev-list", "--count", `${baseline}..HEAD`));
   const stream = detachedVerdict(path.join(runDir, "codex", `${ticket}.jsonl`));
   const landed = commits >= 1 && readText(path.join(worktree, "a.txt")).trim() === "a";
+  const standIn = !landed && readText(path.join(worktree, "a.txt")).trim() === "a";
+  if (standIn) {
+    git(worktree, "add", "a.txt");
+    git(worktree, "commit", "-q", "-m", "feat: add a (committed by the probe for the worker)");
+  }
+  const said = oneLine(agentMessages(readText(path.join(runDir, "codex", `${ticket}.jsonl`))));
+  const fileState = landed
+    ? "committed"
+    : standIn
+      ? "written but not committed (the probe committed it so the flow goes on)"
+      : "missing";
   return {
     step: "wave 1: emet dispatch",
     verdict:
@@ -824,7 +871,7 @@ async function flowWave1(
         : stream.verdict === "blocked-by-plan-limit"
           ? stream.verdict
           : "failed",
-    evidence: `dispatch exit 0; worker ${exited ? "exited" : "timed out"}; ${commits} commit(s) on worktree-agent-${ticket}; a.txt ${landed ? "committed" : "missing"}; ${stream.detail}`,
+    evidence: `dispatch exit 0; worker ${exited ? "exited" : "timed out"}; ${commits} commit(s) on worktree-agent-${ticket}; a.txt ${fileState}; ${stream.detail}; worker said: ${said}`,
   };
 }
 
@@ -864,7 +911,7 @@ async function flowReview(
       "--tier",
       "medium",
     ],
-    { CODEX_HOME: context.options.codexHome },
+    { CODEX_HOME: context.safeSource },
   );
   const verdict = classifyCodexFailure(review.stderr, review.exitCode);
   if (verdict === "blocked-by-plan-limit" && attempt === 1)
@@ -925,7 +972,8 @@ async function runFullFlow(options: ProbeOptions): Promise<FlowStep[]> {
   const ticket = `${FLOW_SPEC}-01`;
   const { repo, baseline } = await prepareFlowRepo(context);
   const wave1 = await flowWave1(context, repo, baseline, ticket);
-  if (wave1.verdict !== "verified") return [wave1];
+  const worktree = path.join(repo, ".emet", "worktrees", `agent-${ticket}`);
+  if (Number(git(worktree, "rev-list", "--count", `${baseline}..HEAD`)) === 0) return [wave1];
   const review = await flowReview(context, repo, baseline, ticket);
   const launch = await flowLaunch(context, repo, ticket);
   return [wave1, review, launch];
@@ -936,16 +984,22 @@ async function runFullFlow(options: ProbeOptions): Promise<FlowStep[]> {
  * the `codex` executable, every run under a temporary `CODEX_HOME` overlay
  * built by `buildRunHome`. The source home is only read and linked.
  */
+/** Prints each finished row to stderr, so a long run leaves partial evidence behind. */
+function logged<T extends ProbeResult | ProbeResult[]>(result: T): T {
+  console.error(`probe:codex ${JSON.stringify(result)}`);
+  return result;
+}
+
 export async function runProbe(options: ProbeOptions): Promise<ProbeResult[]> {
   const context = await probeContext(options);
   const before = fingerprint(options.codexHome);
   const auth = await probeLinkedAuth(context);
-  const rules = await probeRulesLocation(context, auth.repo, auth.codexHome);
-  const gate = await probeApprovalGate(context);
-  const plugin = await probePluginSkill(context);
-  const install = await probePluginInstall(context);
-  const nested = await probeNestedDispatch(context);
-  const unattended = await probeUnattended(context);
+  const rules = logged(await probeRulesLocation(context, auth.repo, auth.codexHome));
+  const gate = logged(await probeApprovalGate(context));
+  const plugin = logged(await probePluginSkill(context));
+  const install = logged(await probePluginInstall(context));
+  const nested = logged(await probeNestedDispatch(context));
+  const unattended = logged(await probeUnattended(context));
   return withSourceCheck(
     [auth.result, rules, ...gate, ...plugin, ...install, nested, unattended],
     before,

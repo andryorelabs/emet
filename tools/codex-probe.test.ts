@@ -1,9 +1,11 @@
 import { afterAll, beforeAll, describe, expect, test } from "bun:test";
 import {
+  existsSync,
   lstatSync,
   mkdtempSync,
   readFileSync,
   readdirSync,
+  realpathSync,
   rmSync,
   statSync,
   writeFileSync,
@@ -147,6 +149,15 @@ describe("runProbe against a fake codex that always hits the usage limit", () =>
       (call) => call.argv[0] === "exec" && !call.argv.includes("--help"),
     );
     expect(modelRuns.length).toBe(MODEL_RUNS * 2);
+  });
+
+  test("never runs codex under an overlay whose config.toml is the source's", () => {
+    const sourceConfig = path.join(sourceHome, "config.toml");
+    for (const call of calls) {
+      const config = path.join(call.codexHome, "config.toml");
+      const linked = existsSync(config) && realpathSync(config) === realpathSync(sourceConfig);
+      expect(linked).toBe(false);
+    }
   });
 
   test("never sends effort ultra", () => {
