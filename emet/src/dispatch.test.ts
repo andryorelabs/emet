@@ -153,13 +153,25 @@ describe("dispatch worker", () => {
     const argv = logged.argv;
     expect(argv.slice(0, 3)).toEqual(["exec", "-C", worktree]);
     expect(argv).toContain("model_reasoning_effort=medium");
-    expect(argv).toContain("workspace-write");
+    expect(argv[argv.indexOf("-s") + 1]).toBe("danger-full-access");
     expect(argv).toContain("--json");
     expect(argv).toContain("--dangerously-bypass-hook-trust");
     expect(argv.at(-1)).toBe("do the ticket");
     expect(argv).not.toContain("ultra");
     expect(logged.codexHome).toBe(home);
     expect(readdirSync(sourceHome)).toEqual(before);
+  });
+
+  test("passes a configured workspace-write sandbox", async () => {
+    writeFileSync(
+      path.join(repo, "emet.config.json"),
+      JSON.stringify({ agentHost: "codex", codex: { sandbox: "workspace-write" } }),
+    );
+    await claimAndSlot();
+    expect(await run(dispatchArguments(), deps())).toBe(0);
+    await waitUntil(() => existsSync(logFile));
+    const { argv } = readFirstInvocation();
+    expect(argv[argv.indexOf("-s") + 1]).toBe("workspace-write");
   });
 
   test("passes --model and --effort overrides and refuses ultra", async () => {

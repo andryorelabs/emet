@@ -5,7 +5,7 @@ import path from "node:path";
 
 import { claudeHost } from "./agenthost-claude";
 import { codexHost } from "./agenthost-codex";
-import { DEFAULT_FORGE_CONFIG, ForgeConfigError } from "./config";
+import { DEFAULT_CODEX_CONFIG, DEFAULT_FORGE_CONFIG, ForgeConfigError } from "./config";
 import { errorMessage } from "./narrow";
 import { readPhase } from "./phase";
 import {
@@ -266,6 +266,15 @@ describe("launchSettingsFor", () => {
     const settings = launchSettingsFor({ ...DEFAULT_FORGE_CONFIG, agentHost: "codex" });
     expect(settings.host).toBe(codexHost);
     expect(settings.launcher).toBe("bg");
+    expect(settings.permissionMode).toBe("danger-full-access");
+  });
+
+  test("passes a configured workspace-write sandbox on Codex", () => {
+    const settings = launchSettingsFor({
+      ...DEFAULT_FORGE_CONFIG,
+      agentHost: "codex",
+      codex: { ...DEFAULT_CODEX_CONFIG, sandbox: "workspace-write" },
+    });
     expect(settings.permissionMode).toBe("workspace-write");
   });
 });

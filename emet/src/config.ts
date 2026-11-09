@@ -49,7 +49,7 @@ export const DEFAULT_CODEX_CONFIG: CodexConfig = {
     session: { model: "gpt-6.1-sol", effort: "medium", planEffort: "high", fallback: [] },
   },
   minVersion: "0.167.0",
-  sandbox: "workspace-write",
+  sandbox: "danger-full-access",
 };
 
 /** The Agent host a config selects; `claude` when `agentHost` is absent. */
