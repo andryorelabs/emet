@@ -31,6 +31,37 @@ import { BINARY, CONFIG_FILE, resolveConfigPath } from "./names";
  */
 export type TrackerKind = "linear" | "github" | "local";
 
+const DEFAULT_AGENT_HOST: AgentHostName = "claude";
+
+export const DEFAULT_CODEX_CONFIG: CodexConfig = {
+  models: {
+    worker: {
+      model: "gpt-6.1-sol",
+      effort: "medium",
+      fallback: ["gpt-6.1-terra", "gpt-6-luna"],
+    },
+    workerOverride: { model: "gpt-6.1-sol", effort: "xhigh", fallback: ["gpt-6-astra"] },
+    reviewer: {
+      medium: { model: "gpt-6.1-sol", effort: "high", fallback: [] },
+      high: { model: "gpt-6-astra", effort: "high", fallback: ["gpt-6.1-sol"] },
+    },
+    triage: { model: "gpt-6-luna", effort: "medium", fallback: ["gpt-6.1-terra"] },
+    session: { model: "gpt-6.1-sol", effort: "medium", planEffort: "high", fallback: [] },
+  },
+  minVersion: "0.167.0",
+  sandbox: "workspace-write",
+};
+
+/** The Agent host a config selects; `claude` when `agentHost` is absent. */
+export function resolveAgentHostName(config: ForgeConfig): AgentHostName {
+  return config.agentHost ?? DEFAULT_AGENT_HOST;
+}
+
+/** The Codex section of a config; the research defaults when `codex` is absent. */
+export function resolveCodexConfig(config: ForgeConfig): CodexConfig {
+  return config.codex ?? DEFAULT_CODEX_CONFIG;
+}
+
 export const DEFAULT_FORGE_CONFIG: ForgeConfig = {
   version: 1,
   repo: { trunk: "main", remote: "origin" },
@@ -75,6 +106,40 @@ const MODEL_EFFORTS: readonly ModelEffort[] = ["low", "medium", "high", "xhigh",
 export interface ModelChoice {
   readonly model: string;
   readonly effort: ModelEffort;
+}
+
+export interface CodexModelChoice extends ModelChoice {
+  /** Slugs tried in order when `model` is unavailable in the models cache. */
+  readonly fallback: readonly string[];
+}
+
+interface CodexSessionChoice extends CodexModelChoice {
+  /** Effort used while the session plans, before the first approval. */
+  readonly planEffort: ModelEffort;
+}
+
+export type AgentHostName = "claude" | "codex";
+
+const AGENT_HOSTS: readonly AgentHostName[] = ["claude", "codex"];
+
+type CodexSandbox = "workspace-write" | "danger-full-access";
+
+const CODEX_SANDBOXES: readonly CodexSandbox[] = ["workspace-write", "danger-full-access"];
+
+export interface CodexConfig {
+  readonly models: {
+    readonly worker: CodexModelChoice;
+    /** Worker used when a ticket's `Model:` line asks for the override tier. */
+    readonly workerOverride: CodexModelChoice;
+    readonly reviewer: { readonly medium: CodexModelChoice; readonly high: CodexModelChoice };
+    readonly triage: CodexModelChoice;
+    readonly session: CodexSessionChoice;
+  };
+  /** When set, replaces the effort of every role. */
+  readonly effort?: ModelEffort;
+  /** Oldest `codex` CLI version `emet doctor` accepts. */
+  readonly minVersion: string;
+  readonly sandbox: CodexSandbox;
 }
 
 export type HandoffLauncher = "auto" | "orca" | "bg";
@@ -200,6 +265,10 @@ export interface ForgeConfig {
     /** Next model tier per model name, used when a ticket hits its fix cap. */
     readonly escalation: Readonly<Record<string, string>>;
   };
+  /** The product a run executes in. */
+  readonly agentHost?: AgentHostName;
+  /** Absent means {@link DEFAULT_CODEX_CONFIG}; read it through {@link resolveCodexConfig}. */
+  readonly codex?: CodexConfig;
   readonly review: {
     /** Extra path tokens (case-insensitive substrings) that force the `high`
      * tier in `emet assess`, on top of the built-in set. */
@@ -285,6 +354,117 @@ function mergeModelChoice(
     return { ok: false, reason: `"${field}.effort" must be one of ${MODEL_EFFORTS.join("|")}` };
   }
   return { ok: true, value: { model, effort } };
+}
+
+function mergeCodexChoice(
+  raw: unknown,
+  fallback: CodexModelChoice,
+  field: string,
+): { ok: true; value: CodexModelChoice } | { ok: false; reason: string } {
+  const base = mergeModelChoice(raw, fallback, field);
+  if (!base.ok) return base;
+  if (!isRecord(raw)) return { ok: true, value: fallback };
+  const fallbackRaw = raw.fallback ?? fallback.fallback;
+  if (!Array.isArray(fallbackRaw) || !fallbackRaw.every(isNonEmptyString)) {
+    return { ok: false, reason: `"${field}.fallback" must be an array of non-empty strings` };
+  }
+  return { ok: true, value: { ...base.value, fallback: fallbackRaw } };
+}
+
+function mergeCodexSession(
+  raw: unknown,
+  fallback: CodexSessionChoice,
+  field: string,
+): { ok: true; value: CodexSessionChoice } | { ok: false; reason: string } {
+  const base = mergeCodexChoice(raw, fallback, field);
+  if (!base.ok) return base;
+  if (!isRecord(raw)) return { ok: true, value: fallback };
+  const planEffort = raw.planEffort ?? fallback.planEffort;
+  if (!isOneOf(MODEL_EFFORTS, planEffort)) {
+    return {
+      ok: false,
+      reason: `"${field}.planEffort" must be one of ${MODEL_EFFORTS.join("|")}`,
+    };
+  }
+  return { ok: true, value: { ...base.value, planEffort } };
+}
+
+function mergeCodexSection(
+  raw: unknown,
+): { ok: true; value: CodexConfig } | { ok: false; reason: string } {
+  if (raw !== undefined && !isRecord(raw)) {
+    return { ok: false, reason: '"codex" must be an object' };
+  }
+  const section = raw ?? {};
+  const defaults = DEFAULT_CODEX_CONFIG;
+  const modelsRaw = section.models;
+  if (modelsRaw !== undefined && !isRecord(modelsRaw)) {
+    return { ok: false, reason: '"codex.models" must be an object' };
+  }
+  const models = modelsRaw ?? {};
+  const reviewerRaw = models.reviewer;
+  if (reviewerRaw !== undefined && !isRecord(reviewerRaw)) {
+    return { ok: false, reason: '"codex.models.reviewer" must be an object' };
+  }
+  const reviewer = reviewerRaw ?? {};
+  const worker = mergeCodexChoice(models.worker, defaults.models.worker, "codex.models.worker");
+  if (!worker.ok) return worker;
+  const workerOverride = mergeCodexChoice(
+    models.workerOverride,
+    defaults.models.workerOverride,
+    "codex.models.workerOverride",
+  );
+  if (!workerOverride.ok) return workerOverride;
+  const reviewerMedium = mergeCodexChoice(
+    reviewer.medium,
+    defaults.models.reviewer.medium,
+    "codex.models.reviewer.medium",
+  );
+  if (!reviewerMedium.ok) return reviewerMedium;
+  const reviewerHigh = mergeCodexChoice(
+    reviewer.high,
+    defaults.models.reviewer.high,
+    "codex.models.reviewer.high",
+  );
+  if (!reviewerHigh.ok) return reviewerHigh;
+  const triage = mergeCodexChoice(models.triage, defaults.models.triage, "codex.models.triage");
+  if (!triage.ok) return triage;
+  const session = mergeCodexSession(
+    models.session,
+    defaults.models.session,
+    "codex.models.session",
+  );
+  if (!session.ok) return session;
+  const effort = section.effort;
+  if (effort !== undefined && !isOneOf(MODEL_EFFORTS, effort)) {
+    return { ok: false, reason: `"codex.effort" must be one of ${MODEL_EFFORTS.join("|")}` };
+  }
+  const minVersion = section.minVersion ?? defaults.minVersion;
+  if (typeof minVersion !== "string" || !/^\d+\.\d+\.\d+$/.test(minVersion)) {
+    return { ok: false, reason: '"codex.minVersion" must be a version like 0.167.0' };
+  }
+  const sandbox = section.sandbox ?? defaults.sandbox;
+  if (!isOneOf(CODEX_SANDBOXES, sandbox)) {
+    return {
+      ok: false,
+      reason: '"codex.sandbox" must be one of workspace-write|danger-full-access',
+    };
+  }
+  return {
+    ok: true,
+    value: {
+      models: {
+        worker: worker.value,
+        workerOverride: workerOverride.value,
+        reviewer: { medium: reviewerMedium.value, high: reviewerHigh.value },
+        triage: triage.value,
+        session: session.value,
+      },
+      ...(effort === undefined ? {} : { effort }),
+      minVersion,
+      sandbox,
+    },
+  };
 }
 
 function isPositiveInteger(value: unknown): value is number {
@@ -527,6 +707,13 @@ function validateAndMerge(
     }
   }
 
+  const agentHost = raw.agentHost ?? DEFAULT_AGENT_HOST;
+  if (!isOneOf(AGENT_HOSTS, agentHost)) {
+    return { ok: false, reason: '"agentHost" must be one of claude|codex' };
+  }
+  const codex = mergeCodexSection(raw.codex);
+  if (!codex.ok) return codex;
+
   const reviewSection = isRecord(raw.review) ? raw.review : {};
   const highRiskPathsRaw = reviewSection.highRiskPaths;
   const highRiskPaths: string[] = [];
@@ -601,6 +788,8 @@ function validateAndMerge(
         triage,
         escalation,
       },
+      ...(raw.agentHost === undefined ? {} : { agentHost }),
+      ...(raw.codex === undefined ? {} : { codex: codex.value }),
       review: { highRiskPaths },
       budgets,
       sizing: { inlineMaxLines },
