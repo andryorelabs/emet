@@ -43,6 +43,8 @@ export const en = {
     tabPlugin: "Plugin",
     tabClone: "From a clone",
     request: "build the Website",
+    youType: "you type",
+    emetReplies: "emet replies",
     alt: "A painted valley in golden light, a clay golem small on a grassy rise above terraced fields.",
   },
   showcase: {

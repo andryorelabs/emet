@@ -44,6 +44,8 @@ export const zhCN = {
     tabPlugin: "插件",
     tabClone: "从克隆安装",
     request: "build the Website",
+    youType: "你输入",
+    emetReplies: "emet 回复",
     alt: "一幅金色光线下的山谷画，一个小小的黏土魔像站在梯田上方的草坡上。",
   },
   showcase: {

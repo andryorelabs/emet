@@ -44,6 +44,8 @@ export const es = {
     tabPlugin: "Plugin",
     tabClone: "Desde un clon",
     request: "build the Website",
+    youType: "tú escribes",
+    emetReplies: "emet responde",
     alt: "Un valle pintado con luz dorada, un pequeño gólem de arcilla sobre una loma cubierta de hierba por encima de campos en terrazas.",
   },
   showcase: {

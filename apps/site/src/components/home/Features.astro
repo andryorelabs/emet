@@ -1,6 +1,8 @@
 ---
 /**
- * Six claims, each paired with its run-report line, in rows on the Home axis.
+ * Six claims as a bento: each card pairs its claim with a small picture of
+ * the guard working and the run-report line it leaves behind. The pictures
+ * are CSS, decorative and `aria-hidden`; they play once as the card reveals.
  */
 import type { UiStrings } from "../../i18n/ui/en";
 
@@ -11,7 +13,7 @@ interface Props {
 const { strings } = Astro.props;
 const { features } = strings;
 
-const reports = [
+const cards = [
   { key: "approval", value: "spec 252, 4 tickets", result: "given once" },
   { key: "review", value: "wave 2", result: "clear" },
   { key: "flags", value: "0", result: "none" },
@@ -20,26 +22,86 @@ const reports = [
   { key: "tracker", value: "github", result: "4 closed" },
 ];
 const keyWidth = 10;
+
+const approvedTickets = ["monorepo scaffold", "home layout", "code blocks", "docker and deploy"];
+const reviewedWaves = ["wave 1", "wave 2"];
+const ciChecks = ["lint", "test", "build"];
+const worktrees = ["cla-254-home-layout", "cla-255-code-blocks", "cla-256-docker-deploy"];
+const trackers = ["Linear", "GitHub", "local files"];
 ---
 
 <section class="features" aria-labelledby="features-title" data-features>
   <h2 id="features-title" data-reveal="heading">
     <span class="reveal-line">{features.heading}</span>
   </h2>
-  <ul class="features-rows">
+  <ul class="bento">
     {
       features.notes.map((note, index) => {
-        const report = reports[index];
+        const card = cards[index];
         return (
-          <li class="features-row" data-reveal="item">
-            <div class="features-claim">
-              <h3>{note.title}</h3>
-              <p>{note.line}</p>
-            </div>
-            {report && (
-              <pre class="features-report"><span class="features-key">{report.key.padEnd(keyWidth)}</span>{`${report.value}\n${" ".repeat(keyWidth)}${report.result}`}</pre>
-            )}
-          </li>
+          card && (
+            <li class={`bento-card bento-${card.key}`} data-reveal="item">
+              <div class="bento-claim">
+                <h3>{note.title}</h3>
+                <p>{note.line}</p>
+              </div>
+              <div class="bento-visual" aria-hidden="true">
+                {card.key === "approval" && (
+                  <>
+                    <ul class="approval-tickets">
+                      {approvedTickets.map((ticket) => (
+                        <li>{ticket}</li>
+                      ))}
+                    </ul>
+                    <span class="approval-stamp">Approved</span>
+                  </>
+                )}
+                {card.key === "review" && (
+                  <ul class="review-waves">
+                    {reviewedWaves.map((wave) => (
+                      <li>
+                        <span class="review-name">{wave}</span>
+                        <span class="review-bar" />
+                        <span class="review-check">&#10003;</span>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+                {card.key === "flags" && (
+                  <div class="flags-run">
+                    <span class="flags-track" />
+                    <span class="flags-flag">held</span>
+                  </div>
+                )}
+                {card.key === "ci" && (
+                  <ul class="ci-checks">
+                    {ciChecks.map((check) => (
+                      <li>
+                        <span class="ci-dot" />
+                        {check}
+                      </li>
+                    ))}
+                  </ul>
+                )}
+                {card.key === "workers" && (
+                  <ul class="trees">
+                    <li class="trees-root">repo/</li>
+                    {worktrees.map((tree) => (
+                      <li class="trees-branch">{tree}</li>
+                    ))}
+                  </ul>
+                )}
+                {card.key === "tracker" && (
+                  <ul class="tracker-chips">
+                    {trackers.map((tracker) => (
+                      <li class={tracker === "GitHub" ? "tracker-chip is-picked" : "tracker-chip"}>{tracker}</li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+              <pre class="bento-report"><span class="features-key">{card.key.padEnd(keyWidth)}</span>{`${card.value}\n${" ".repeat(keyWidth)}${card.result}`}</pre>
+            </li>
+          )
         );
       })
     }
