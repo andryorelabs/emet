@@ -52,6 +52,10 @@ _Avoid_: clone, sandbox, workspace
 The branch where the coordinator merges a wave's worker branches before the wave lands.
 _Avoid_: staging branch, release branch
 
+**Unowned worktree**:
+A worker **Worktree** whose lock and **Claim** no longer name a **Run**; it is reclaimable once its ticket is **Landed** and its tree is clean.
+_Avoid_: orphan worktree, stale worktree
+
 **Claim**:
 The recorded reservation of a ticket by one run, preventing a second worker from taking it.
 _Avoid_: lock, assignment
