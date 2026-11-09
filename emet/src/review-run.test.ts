@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, spyOn, test } from "bun:test";
-import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { isObject } from "./narrow";
@@ -188,6 +188,110 @@ describe("review-run helpers", () => {
     const args = modelArguments("high", DEFAULT_FORGE_CONFIG, "/nonexistent/cache.json");
     expect(args.join(" ")).not.toContain("ultra");
     expect(args).toContain("-c");
+  });
+
+  test("modelArguments throws naming the role and listed slugs when a cache resolves nothing", () => {
+    const cache = path.join(tempDir(), "models_cache.json");
+    writeModelsCache(cache, ["gpt-5.6-terra", "gpt-6-luna"]);
+    expect(() => modelArguments("medium", DEFAULT_FORGE_CONFIG, cache)).toThrow(
+      /reviewerMedium.*gpt-6\.1-sol.*gpt-5\.6-terra, gpt-6-luna/s,
+    );
+  });
+});
+
+function writeModelsCache(file: string, slugs: readonly string[]): void {
+  mkdirSync(path.dirname(file), { recursive: true });
+  const models = slugs.map((slug) => ({
+    slug,
+    visibility: "list",
+    supported_reasoning_levels: ["low", "medium", "high", "xhigh"].map((effort) => ({ effort })),
+    upgrade: null,
+  }));
+  writeFileSync(file, JSON.stringify({ models }));
+}
+
+function loggedArgv(log: string): string[] {
+  const call: unknown = JSON.parse(readFileSync(log, "utf8").trim().split("\n")[0] ?? "");
+  if (!isObject(call) || !Array.isArray(call["argv"])) throw new Error("bad log");
+  return call["argv"].map(String);
+}
+
+describe("review-run Codex models cache", () => {
+  test("uses the real Codex home's cache when the run home has none, and logs the substitution", async () => {
+    const log = path.join(tempDir(), "calls.jsonl");
+    process.env["FAKE_CODEX_LOG"] = log;
+    script([agentMessage("[]")]);
+    const sourceHome = tempDir();
+    writeModelsCache(path.join(sourceHome, "models_cache.json"), ["gpt-6.1-sol"]);
+    const err = spyOn(console, "error").mockImplementation(() => {});
+    const out = captureStdout();
+    const code = await run(baseArgv("high"), {
+      repoRoot: tempDir(),
+      sourceHome,
+      executable: FAKE,
+    });
+    out.restore();
+    const messages = err.mock.calls.map((call) => String(call[0]));
+    err.mockRestore();
+    expect(code).toBe(0);
+    const argv = loggedArgv(log);
+    expect(argv[argv.indexOf("-m") + 1]).toBe("gpt-6.1-sol");
+    expect(messages.join("\n")).toContain("gpt-6-astra substituted");
+  });
+
+  test("prefers the run home's cache over the real one", async () => {
+    const log = path.join(tempDir(), "calls.jsonl");
+    process.env["FAKE_CODEX_LOG"] = log;
+    script([agentMessage("[]")]);
+    const repoRoot = tempDir();
+    const sourceHome = tempDir();
+    writeModelsCache(path.join(sourceHome, "models_cache.json"), ["gpt-5.6-terra"]);
+    writeModelsCache(
+      path.join(repoRoot, ".emet", "runs", "r1", "codex-home", "models_cache.json"),
+      ["gpt-6.1-sol"],
+    );
+    const out = captureStdout();
+    const code = await run(baseArgv("medium"), { repoRoot, sourceHome, executable: FAKE });
+    out.restore();
+    expect(code).toBe(0);
+    const argv = loggedArgv(log);
+    expect(argv[argv.indexOf("-m") + 1]).toBe("gpt-6.1-sol");
+  });
+
+  test("fails before spawning codex when a cache exists but no model resolves", async () => {
+    const log = path.join(tempDir(), "calls.jsonl");
+    process.env["FAKE_CODEX_LOG"] = log;
+    script([agentMessage("[]")]);
+    const sourceHome = tempDir();
+    writeModelsCache(path.join(sourceHome, "models_cache.json"), ["gpt-5.6-terra", "gpt-6-luna"]);
+    const err = spyOn(console, "error").mockImplementation(() => {});
+    const code = await run(baseArgv("medium"), {
+      repoRoot: tempDir(),
+      sourceHome,
+      executable: FAKE,
+    });
+    const messages = err.mock.calls.map((call) => String(call[0])).join("\n");
+    err.mockRestore();
+    expect(code).toBe(1);
+    expect(messages).toContain("reviewerMedium");
+    expect(messages).toContain("gpt-5.6-terra, gpt-6-luna");
+    expect(existsSync(log)).toBe(false);
+  });
+
+  test("keeps the configured slug when no cache exists anywhere", async () => {
+    const log = path.join(tempDir(), "calls.jsonl");
+    process.env["FAKE_CODEX_LOG"] = log;
+    script([agentMessage("[]")]);
+    const out = captureStdout();
+    const code = await run(baseArgv("medium"), {
+      repoRoot: tempDir(),
+      sourceHome: tempDir(),
+      executable: FAKE,
+    });
+    out.restore();
+    expect(code).toBe(0);
+    const argv = loggedArgv(log);
+    expect(argv[argv.indexOf("-m") + 1]).toBe("gpt-6.1-sol");
   });
 });
 

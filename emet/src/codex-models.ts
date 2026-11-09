@@ -27,13 +27,26 @@ interface CacheEntry {
 
 const NEVER_SELECTED_EFFORTS: ReadonlySet<string> = new Set(["ultra"]);
 
-/** Default location of Codex's models cache. */
-function defaultCodexModelsCachePath(): string {
-  const codexHome = process.env.CODEX_HOME;
-  return join(
-    codexHome && codexHome.length > 0 ? codexHome : join(homedir(), ".codex"),
-    "models_cache.json",
-  );
+const MODELS_CACHE_FILE = "models_cache.json";
+
+/** The user's own Codex home: `$CODEX_HOME`, else `~/.codex`. Only ever read. */
+function realCodexHome(): string {
+  const codexHome = process.env["CODEX_HOME"];
+  return codexHome !== undefined && codexHome.length > 0 ? codexHome : join(homedir(), ".codex");
+}
+
+/**
+ * Where to look for Codex's models cache, in order: the run's `CODEX_HOME`
+ * overlay (when given), then the real Codex home. Both are only read.
+ */
+export function codexModelsCachePaths(
+  runHome?: string,
+  realHome: string = realCodexHome(),
+): string[] {
+  return [
+    ...(runHome === undefined ? [] : [join(runHome, MODELS_CACHE_FILE)]),
+    join(realHome, MODELS_CACHE_FILE),
+  ];
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -61,8 +74,8 @@ function parseEntry(raw: unknown): CacheEntry | undefined {
   };
 }
 
-/** Reads the models cache; `undefined` when the file is missing or unreadable. */
-function readCache(cachePath: string): Map<string, CacheEntry> | undefined {
+/** Reads one models cache file; `undefined` when it is missing or unreadable. */
+function readCacheFile(cachePath: string): Map<string, CacheEntry> | undefined {
   let parsed: unknown;
   try {
     parsed = JSON.parse(readFileSync(cachePath, "utf8"));
@@ -77,6 +90,29 @@ function readCache(cachePath: string): Map<string, CacheEntry> | undefined {
     if (entry) entries.set(entry.slug, entry);
   }
   return entries;
+}
+
+/** The first readable cache among `cachePaths`; `undefined` when none is. */
+function readCache(cachePaths: string | readonly string[]): Map<string, CacheEntry> | undefined {
+  for (const cachePath of typeof cachePaths === "string" ? [cachePaths] : cachePaths) {
+    const cache = readCacheFile(cachePath);
+    if (cache !== undefined) return cache;
+  }
+  return undefined;
+}
+
+/**
+ * The slugs the first readable cache lists with `visibility: "list"`, in
+ * cache order; `undefined` when no cache exists anywhere.
+ */
+export function listedCodexModels(
+  cachePaths: string | readonly string[] = codexModelsCachePaths(),
+): string[] | undefined {
+  const cache = readCache(cachePaths);
+  if (cache === undefined) return undefined;
+  return [...cache.values()]
+    .filter((entry) => entry.visibility === "list")
+    .map((entry) => entry.slug);
 }
 
 function choiceFor(role: CodexRole, config: ForgeConfig): CodexModelChoice {
@@ -111,17 +147,19 @@ function unusableReason(entry: CacheEntry | undefined, effort: string): string {
  * Picks the model and effort for a Codex role. Order: the configured slug,
  * then its `upgrade.model`, then the role's fallbacks, then no model at all.
  * A slug is usable only when the cache lists it with `visibility: "list"` and
- * the effort is among its `supported_reasoning_levels`. A missing cache keeps
- * the configured slug unchanged. Every substitution is reported.
+ * the effort is among its `supported_reasoning_levels`. The cache is the first
+ * readable one of `cachePaths` (by default the real Codex home's). When no
+ * cache exists anywhere the configured slug is kept unchanged. Every
+ * substitution is reported.
  */
 export function resolveCodexModel(
   role: CodexRole,
   config: ForgeConfig,
-  cachePath: string = defaultCodexModelsCachePath(),
+  cachePaths: string | readonly string[] = codexModelsCachePaths(),
 ): CodexModelResolution {
   const choice = choiceFor(role, config);
   const effort = resolveCodexConfig(config).effort ?? choice.effort;
-  const cache = readCache(cachePath);
+  const cache = readCache(cachePaths);
   if (cache === undefined) return { model: choice.model, effort };
 
   const configured = cache.get(choice.model);
