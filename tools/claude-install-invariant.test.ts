@@ -20,6 +20,8 @@ import path from "node:path";
  * Snapshot of what `install.sh` writes for the Claude Code path: the sorted installed paths and
  * the sha256 of every shipped prompt (`commands/*.md`, `agents/*.md`, `emet/reference/*.md`, as
  * installed). Adding, removing or rewording any of them fails the test and names the file.
+ * Runtime modules under `.claude/emet/src/` are left out of the path list: they are code covered
+ * by their own tests, and every feature adds some.
  *
  * To update the snapshot after an intentional change to the Claude install set, run:
  *
@@ -140,7 +142,10 @@ function sha256Of(filePath: string): string {
 
 /** Records the installed paths (files and symlinks) and the hash of every installed prompt. */
 function captureInstall(): ClaudeInstallSnapshot {
-  const installedPaths = listEntries(homeDir).map(relativeToHome).toSorted();
+  const installedPaths = listEntries(homeDir)
+    .map(relativeToHome)
+    .filter((entry) => !entry.startsWith(".claude/emet/src/"))
+    .toSorted();
   const promptSha256: Record<string, string> = {};
   for (const directory of promptDirectories) {
     const absoluteDirectory = path.join(homeDir, directory);
