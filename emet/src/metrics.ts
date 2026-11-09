@@ -10,6 +10,7 @@ import path from "node:path";
 
 import { claudeHost } from "./agenthost-claude";
 import type { AgentHost } from "./agenthost";
+import { codexCostUsd, parseCodexJsonl } from "./codex-usage";
 import { resolveRepoRoot } from "./config";
 import { isObject } from "./narrow";
 import { resolveRunDir } from "./names";
@@ -149,19 +150,15 @@ export type MetricsParser = {
   costUsd(model: string, tokens: TokenTotals): number;
 };
 
-const unsupportedFormat = (format: TranscriptFormat): never => {
-  throw new Error(`no transcript parser registered for ${format}`);
-};
-
 /**
  * Metrics parsers and price tables by transcript format. `claude-jsonl` is
- * the Claude Code reader; `codex-jsonl` is filled in by the Codex adapter.
+ * the Claude Code reader; `codex-jsonl` is the Codex reader from `codex-usage.ts`.
  */
 export const metricsParsers: Record<TranscriptFormat, MetricsParser> = {
   "claude-jsonl": { parse: parseClaudeJsonlMetrics, costUsd: claudeJsonlCostUsd },
   "codex-jsonl": {
-    parse: () => unsupportedFormat("codex-jsonl"),
-    costUsd: () => unsupportedFormat("codex-jsonl"),
+    parse: parseCodexJsonl,
+    costUsd: codexCostUsd,
   },
 };
 

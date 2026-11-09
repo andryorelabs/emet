@@ -38,6 +38,7 @@ import {
 } from "./config";
 import { claudeHost } from "./agenthost-claude";
 import { resolveAgentHost, type AgentHost } from "./agenthost";
+import { describeCodexLastStep } from "./codex-usage";
 import { metricsParsers, type MetricsParser, type TranscriptFormat } from "./metrics";
 import { BINARY, LEGACY_RUN_DIR, RUN_DIR } from "./names";
 import { readCompletionEvent, recordStallNudge, type CompletionEvent } from "./runs";
@@ -456,16 +457,14 @@ export type TranscriptParser = MetricsParser & {
 
 /**
  * Transcript parsers by format: the metrics parse and price table from
- * `metrics.ts` plus the last-step reader. `codex-jsonl` is filled in by the
- * Codex adapter.
+ * `metrics.ts` plus the last-step reader. `codex-jsonl` is the Codex reader
+ * from `codex-usage.ts`.
  */
 export const transcriptParsers: Record<TranscriptFormat, TranscriptParser> = {
   "claude-jsonl": { ...metricsParsers["claude-jsonl"], describeLastStep },
   "codex-jsonl": {
     ...metricsParsers["codex-jsonl"],
-    describeLastStep: () => {
-      throw new Error("no transcript parser registered for codex-jsonl");
-    },
+    describeLastStep: describeCodexLastStep,
   },
 };
 
