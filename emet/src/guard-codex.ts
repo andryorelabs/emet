@@ -39,8 +39,7 @@ const WORKTREE_MARKERS: Record<AgentHostName, string> = {
 
 /**
  * Whether `directory` is inside an agent worktree of the given Agent host.
- * The Codex adapter is not registered with `resolveAgentHost` yet, so the
- * marker lives here (`unverified` layout until the adapter lands).
+ * The marker lives here so the guard does not import an Agent host adapter.
  */
 export function isAgentWorktreeFor(host: AgentHostName, directory: string | undefined): boolean {
   return typeof directory === "string" && directory.includes(WORKTREE_MARKERS[host]);

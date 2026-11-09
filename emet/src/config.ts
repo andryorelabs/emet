@@ -42,11 +42,16 @@ export const DEFAULT_CODEX_CONFIG: CodexConfig = {
     },
     workerOverride: { model: "gpt-6.1-sol", effort: "xhigh", fallback: ["gpt-6-astra"] },
     reviewer: {
-      medium: { model: "gpt-6.1-sol", effort: "high", fallback: [] },
+      medium: { model: "gpt-6.1-sol", effort: "high", fallback: ["gpt-6.1-terra", "gpt-6-luna"] },
       high: { model: "gpt-6-astra", effort: "high", fallback: ["gpt-6.1-sol"] },
     },
     triage: { model: "gpt-6-luna", effort: "medium", fallback: ["gpt-6.1-terra"] },
-    session: { model: "gpt-6.1-sol", effort: "medium", planEffort: "high", fallback: [] },
+    session: {
+      model: "gpt-6.1-sol",
+      effort: "medium",
+      planEffort: "high",
+      fallback: ["gpt-6.1-terra", "gpt-6-luna"],
+    },
   },
   minVersion: "0.167.0",
   sandbox: "danger-full-access",
