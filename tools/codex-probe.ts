@@ -713,7 +713,10 @@ async function nestedDispatchOnce(
     innerLimited: inner.verdict === "blocked-by-plan-limit",
     result: {
       id: "nested-dispatch",
-      verdict: ended && threadId !== undefined ? inner.verdict : "failed",
+      verdict:
+        inner.verdict === "blocked-by-plan-limit" || (ended && threadId !== undefined)
+          ? inner.verdict
+          : "failed",
       evidence: `attempt ${attempt}; outer sandbox ${context.sandbox}; dispatch said: ${oneLine(agentMessages(outer.stdout))}; thread ${threadId ?? "none"}; ${pidNote}; stream ${ended ? "ended" : "still open at timeout"}; ${inner.detail}; ${committed} commit(s) on the inner worktree`,
     },
   };
