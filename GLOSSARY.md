@@ -1,6 +1,6 @@
 # emet
 
-emet is the `/emet:run` command for Claude Code plus the `emet` CLI that turns a feature request into a spec, tickets, and parallel worktree agents that implement, test and merge it unattended.
+emet is the `/emet:run` command for Claude Code and Codex CLI plus the `emet` CLI that turns a feature request into a spec, tickets, and parallel worktree agents that implement, test and merge it unattended.
 
 ## Language
 
@@ -88,6 +88,10 @@ _Avoid_: status update, summary
 One execution of `/emet` for a spec, identified by a run id shared by its claims, slots, locks and results.
 _Avoid_: session, job, pipeline
 
+**Agent host**:
+The coding-agent product a run executes in: Claude Code or Codex CLI. One adapter per host holds everything specific to it.
+_Avoid_: harness, platform, client
+
 **Legacy name**:
 A pre-rename name (`forge.config.json`, `docs/agents/forge.md`, `.forge/`, `FORGE_*`, `TODO(forge):`, the `forge` lock token) that emet still reads, with one warning, until `emet migrate` renames it.
 _Avoid_: deprecated name, old name
@@ -107,10 +111,10 @@ _Avoid_: status file, progress file
 - A **Worker** holds one **Claim**, one **Slot** and one **Worktree** while live.
 - The **Coordinator** merges **Worker** branches into the **Integration branch**; a **Reviewer** and the **Gates** check it before it lands.
 - A **Worker** may edit only its ticket's **Surfaces** and must keep its **Handoff** current.
-- Everything above belongs to one **Run**.
+- Everything above belongs to one **Run**, which executes in one **Agent host**.
 
 ## Flagged ambiguities
 
 - "Lock" means both the git worktree lock carrying a run's reason and a claim; the lock is the mechanism, the **Claim** is the concept.
 - "Task" is not a **Ticket**: avoid it, since agent tooling uses it for unrelated work items.
-- "Session" is a Claude Code conversation, not a **Run**; a run can span several sessions.
+- "Session" is one conversation in an **Agent host**, not a **Run**; a run can span several sessions.
