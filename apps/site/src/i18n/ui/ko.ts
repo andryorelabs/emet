@@ -45,7 +45,8 @@ export const ko = {
     request: "build the Website",
     youType: "입력",
     emetReplies: "emet 응답",
-    alt: "황금빛 속의 그림 속 계곡. 계단식 밭 위, 풀이 덮인 언덕에 선 작은 점토 골렘.",
+    alt: "세 개울이 하나의 강으로 합쳐지는 계곡.",
+    merged: "병합됨",
   },
   showcase: {
     heading: "웨이브가 머지됩니다",

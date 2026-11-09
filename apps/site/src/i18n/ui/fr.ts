@@ -46,7 +46,8 @@ export const fr = {
     request: "build the Website",
     youType: "vous tapez",
     emetReplies: "emet répond",
-    alt: "Une vallée peinte dans une lumière dorée, un petit golem d'argile sur une butte herbeuse au-dessus de champs en terrasses.",
+    alt: "La vallée où trois ruisseaux se jettent dans une rivière.",
+    merged: "Fusionné",
   },
   showcase: {
     heading: "La vague est fusionnée",

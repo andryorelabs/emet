@@ -46,7 +46,8 @@ export const zhCN = {
     request: "build the Website",
     youType: "你输入",
     emetReplies: "emet 回复",
-    alt: "一幅金色光线下的山谷画，一个小小的黏土魔像站在梯田上方的草坡上。",
+    alt: "三条溪流汇入一条河的山谷.",
+    merged: "已合并",
   },
   showcase: {
     heading: "这一波已合并",

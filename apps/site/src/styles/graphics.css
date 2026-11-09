@@ -438,3 +438,135 @@
     display: none;
   }
 }
+
+.painting-streams {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
+.ps-line,
+.ps-river,
+.ps-dot {
+  fill: none;
+  stroke-linecap: round;
+}
+
+.ps-line {
+  stroke: #f3f9f5;
+  stroke-width: 5;
+  stroke-dasharray: 1;
+}
+
+.ps-river {
+  stroke: var(--lamp);
+  stroke-width: 9;
+  stroke-dasharray: 1;
+}
+
+.ps-dot {
+  stroke: var(--lamp);
+  stroke-width: 16;
+  stroke-dasharray: 0.0001 1;
+  opacity: 0;
+}
+
+.ps-pill rect {
+  fill: #f3f9f5;
+}
+
+.ps-pill text {
+  fill: var(--on-accent);
+  font-family: var(--font-mono);
+  font-size: 26px;
+  font-weight: 600;
+}
+
+.ps-merged rect {
+  fill: color-mix(in oklch, var(--accent) 35%, #f3f9f5);
+}
+
+.ps-merged text {
+  fill: var(--on-accent);
+  font-family: var(--font-sans);
+  font-size: 26px;
+  font-weight: 700;
+}
+
+@media (prefers-reduced-motion: no-preference) and (min-width: 1001px) {
+  .ps-line,
+  .ps-river {
+    transition: stroke-dashoffset 600ms var(--ease-out);
+  }
+
+  .ps-pill {
+    transition: opacity 300ms var(--ease-out);
+  }
+
+  .ps-merged {
+    transform-box: fill-box;
+    transform-origin: center;
+    transition:
+      opacity 300ms var(--ease-out),
+      transform 300ms var(--ease-out);
+  }
+
+  .ps-line:nth-child(2) {
+    transition-delay: 120ms;
+  }
+
+  .ps-line:nth-child(3) {
+    transition-delay: 240ms;
+  }
+
+  [data-streams][data-stage="0"] .ps-line {
+    stroke-dashoffset: 1;
+  }
+
+  [data-streams][data-stage="0"] .ps-pill {
+    opacity: 0;
+  }
+
+  [data-streams]:is([data-stage="0"], [data-stage="1"]) .ps-river {
+    stroke-dashoffset: 1;
+  }
+
+  [data-streams]:is([data-stage="0"], [data-stage="1"]) .ps-merged {
+    opacity: 0;
+    transform: scale(0.92);
+  }
+
+  [data-streams][data-stage="2"] .ps-dot {
+    animation: ps-flow 1600ms ease-in 1 both;
+  }
+
+  [data-streams][data-stage="2"] .ps-dot:nth-child(6) {
+    animation-delay: 120ms;
+  }
+
+  [data-streams][data-stage="2"] .ps-dot:nth-child(7) {
+    animation-delay: 240ms;
+  }
+
+  [data-streams][data-stage="2"] .ps-river {
+    transition-delay: 1200ms;
+  }
+}
+
+@keyframes ps-flow {
+  0% {
+    stroke-dashoffset: 0;
+    opacity: 1;
+  }
+
+  92% {
+    opacity: 1;
+  }
+
+  100% {
+    stroke-dashoffset: -0.99;
+    opacity: 0;
+  }
+}

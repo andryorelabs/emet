@@ -45,7 +45,8 @@ export const en = {
     request: "build the Website",
     youType: "you type",
     emetReplies: "emet replies",
-    alt: "A painted valley in golden light, a clay golem small on a grassy rise above terraced fields.",
+    alt: "The valley where three streams join one river.",
+    merged: "Merged",
   },
   showcase: {
     heading: "The wave merges",
