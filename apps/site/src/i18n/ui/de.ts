@@ -46,7 +46,8 @@ export const de = {
     request: "build the Website",
     youType: "du tippst",
     emetReplies: "emet antwortet",
-    alt: "Ein gemaltes Tal im goldenen Licht, ein kleiner Lehm-Golem auf einer grasigen Anhöhe über Terrassenfeldern.",
+    alt: "Das Tal, in dem drei Bäche in einen Fluss münden.",
+    merged: "Gemergt",
   },
   showcase: {
     heading: "Die Welle wird gemergt",

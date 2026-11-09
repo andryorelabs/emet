@@ -45,7 +45,8 @@ export const ja = {
     request: "build the Website",
     youType: "入力",
     emetReplies: "emet の応答",
-    alt: "金色の光に包まれた絵の谷。段々畑の上の草の丘に立つ小さな粘土のゴーレム。",
+    alt: "三つの小川が一つの川に合流する谷.",
+    merged: "マージ済み",
   },
   showcase: {
     heading: "ウェーブはマージされる",

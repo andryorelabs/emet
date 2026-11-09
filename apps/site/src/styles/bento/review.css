@@ -1,0 +1,35 @@
+.review-waves {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: 100%;
+  max-width: 320px;
+}
+
+.review-waves li {
+  display: grid;
+  grid-template-columns: 52px minmax(0, 1fr) 16px;
+  align-items: center;
+  gap: 10px;
+  color: var(--text-muted);
+}
+
+.review-bar {
+  position: relative;
+  height: 6px;
+  border-radius: 3px;
+  background: var(--border);
+  overflow: clip;
+}
+
+.review-bar::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: var(--moss);
+  transform-origin: left;
+}
+
+.review-check {
+  color: var(--moss);
+}
