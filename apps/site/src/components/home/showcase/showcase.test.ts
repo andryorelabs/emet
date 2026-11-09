@@ -141,8 +141,8 @@ describe("showcase frame and feature rows sources", () => {
     expect(showcaseCss).not.toMatch(/\[data-pinned\] \.showcase-panel/);
   });
 
-  test("features render revealed rows and no plate or absolute notes", () => {
-    expect(featuresSource).toContain('class="features-rows"');
+  test("features render revealed bento cards and no plate or absolute notes", () => {
+    expect(featuresSource).toContain('class="bento"');
     expect(featuresSource).toContain('data-reveal="item"');
     expect(homeCss).not.toMatch(/\.plate|\.note\b/);
   });
