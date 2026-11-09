@@ -278,7 +278,7 @@ describe("evaluateApprovalGate git push", () => {
     const repo = makeRepo();
     const approved = seedRun(repo, "12", { approved: true });
     const pending = seedRun(makeRepo(), "13");
-    const denied = { decision: "deny", reason: "git push is not allowed" };
+    const denied = { decision: "deny" as const, reason: "git push is not allowed" };
     expect(evaluateApprovalGate(bashInput("git -C wt push origin x"), approved)).toEqual(denied);
     expect(evaluateApprovalGate(bashInput("git push"), pending)).toEqual(denied);
     expect(evaluateApprovalGate(bashInput("git push"), path.join(repo, "absent"))).toEqual(denied);

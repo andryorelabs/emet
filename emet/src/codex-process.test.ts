@@ -1,9 +1,20 @@
 import { afterEach, describe, expect, test } from "bun:test";
-import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import {
+  appendFileSync,
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  utimesSync,
+  writeFileSync,
+} from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { isObject } from "./narrow";
 import {
+  codexWorkerLiveness,
+  currentPidNamespace,
   parseThreadId,
   readCodexState,
   refreshThreadId,
@@ -87,6 +98,8 @@ describe("spawnCodex", () => {
     expect(unrefCount()).toBe(1);
     expect(readCodexState(result.stateFile)?.pid).toBe(4242);
     expect(readCodexState(result.stateFile)?.threadId).toBeNull();
+    expect(readCodexState(result.stateFile)?.jsonlPath).toBe(specIn(dir).jsonlPath);
+    expect(readCodexState(result.stateFile)?.pidNamespace).toBe(currentPidNamespace());
   });
 
   test("falls back to a detached spawn without setsid", () => {
@@ -159,5 +172,67 @@ describe("thread id", () => {
     expect(readCodexState(file)).toBeUndefined();
     writeFileSync(file, JSON.stringify({ pid: "x" }));
     expect(readCodexState(file)).toBeUndefined();
+  });
+});
+
+describe("codexWorkerLiveness", () => {
+  const IDLE_MS = 60_000;
+  const NOW = Date.parse("2026-11-09T12:00:00Z");
+
+  function workerIn(dir: string, pidNamespace: string | null) {
+    const jsonlPath = path.join(dir, "codex", "T1.jsonl");
+    mkdirSync(path.dirname(jsonlPath), { recursive: true });
+    writeFileSync(jsonlPath, `${JSON.stringify({ type: "thread.started", thread_id: "th-1" })}\n`);
+    const state = {
+      pid: 36,
+      threadId: "th-1",
+      startedAt: new Date(NOW - 5 * IDLE_MS).toISOString(),
+      jsonlPath,
+      cwd: dir,
+      pidNamespace,
+    };
+    const touch = (ageMs: number) => {
+      const seconds = (NOW - ageMs) / 1000;
+      utimesSync(jsonlPath, seconds, seconds);
+    };
+    return { state, jsonlPath, touch };
+  }
+
+  test("a foreign-namespace worker whose pid looks dead is live while its jsonl grows", () => {
+    const { state, jsonlPath, touch } = workerIn(tempDir(), "pid:[1]");
+    const probe = { now: NOW, idleMs: IDLE_MS, pidNamespace: "pid:[2]", isPidAlive: () => false };
+    appendFileSync(jsonlPath, `${JSON.stringify({ type: "item.started" })}\n`);
+    touch(1000);
+    expect(codexWorkerLiveness(state, probe)).toBe("live");
+    appendFileSync(jsonlPath, `${JSON.stringify({ type: "turn.completed" })}\n`);
+    expect(codexWorkerLiveness(state, probe)).toBe("done");
+  });
+
+  test("a foreign-namespace pid that looks alive does not keep a silent worker live", () => {
+    const { state, touch } = workerIn(tempDir(), "pid:[1]");
+    touch(2 * IDLE_MS);
+    const probe = { now: NOW, idleMs: IDLE_MS, pidNamespace: "pid:[2]", isPidAlive: () => true };
+    expect(codexWorkerLiveness(state, probe)).toBe("stalled");
+  });
+
+  test("in the same namespace a dead pid without turn.completed has exited", () => {
+    const { state, touch } = workerIn(tempDir(), "pid:[1]");
+    touch(0);
+    const probe = { now: NOW, idleMs: IDLE_MS, pidNamespace: "pid:[1]", isPidAlive: () => false };
+    expect(codexWorkerLiveness(state, probe)).toBe("exited");
+    expect(codexWorkerLiveness(state, { ...probe, isPidAlive: () => true })).toBe("live");
+  });
+
+  test("turn.failed is done and a missing stream is judged from startedAt", () => {
+    const dir = tempDir();
+    const { state, jsonlPath } = workerIn(dir, null);
+    const probe = { now: NOW, idleMs: IDLE_MS, pidNamespace: null, isPidAlive: () => true };
+    appendFileSync(jsonlPath, `${JSON.stringify({ type: "turn.failed" })}\n`);
+    expect(codexWorkerLiveness(state, probe)).toBe("done");
+    const missing = { ...state, jsonlPath: path.join(dir, "absent.jsonl") };
+    expect(codexWorkerLiveness(missing, probe)).toBe("stalled");
+    expect(codexWorkerLiveness({ ...missing, startedAt: new Date(NOW).toISOString() }, probe)).toBe(
+      "live",
+    );
   });
 });
