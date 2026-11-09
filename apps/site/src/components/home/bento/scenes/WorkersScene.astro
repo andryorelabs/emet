@@ -1,7 +1,9 @@
 ---
 /**
- * Static final frame of the workers card picture: the trunk and its three
- * worktrees. Decorative and `aria-hidden`.
+ * Looping picture of the workers card: the trunk sprouts three branches into
+ * three worktree boxes, a cursor types in each in parallel and each box marks
+ * a check. Its resting state is the finished frame. Decorative and
+ * `aria-hidden`.
  */
 // oxlint-disable-next-line import/no-unassigned-import -- Astro bundles a stylesheet imported for its side effect
 import "../../../../styles/bento/scene.css";
@@ -14,6 +16,19 @@ const worktrees = ["cla-254-home-layout", "cla-255-code-blocks", "cla-256-docker
 <div class="scene scene-workers bento-visual" data-scene aria-hidden="true">
   <ul class="trees">
     <li class="trees-root">repo/</li>
-    {worktrees.map((tree) => <li class="trees-branch">{tree}</li>)}
+    {
+      worktrees.map((tree, index) => (
+        <li class="trees-branch" style={`--index: ${index}`}>
+          <span class="trees-box">
+            <span class="trees-name">{tree}</span>
+            <span class="trees-typing">
+              <i />
+              <i />
+            </span>
+            <span class="trees-check" />
+          </span>
+        </li>
+      ))
+    }
   </ul>
 </div>
