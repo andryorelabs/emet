@@ -4,7 +4,13 @@ import os from "node:os";
 import path from "node:path";
 
 import { DEFAULT_FORGE_CONFIG } from "./config";
-import { parseGithubIssueState, readGithubIssueState, resolveLandedVerdict } from "./landed";
+import {
+  parseGithubIssueState,
+  readGithubIssueState,
+  resolveLandedVerdict,
+  unownedReclaimVerdict,
+  type LandedVerdict,
+} from "./landed";
 import type { ContentVerdict } from "./worktrees";
 
 const input = { ticket: "CLA-9", branch: "cla-9-thing" };
@@ -197,5 +203,43 @@ describe("resolveLandedVerdict falling back to git", () => {
       readTrackerState: unknownTracker,
     });
     expect(verdict).toBe("unknown");
+  });
+});
+
+describe("unownedReclaimVerdict", () => {
+  const reclaimable = {
+    workerTicket: "CLA-9" as string | null,
+    landed: "landed" as LandedVerdict,
+    clean: true,
+    lockedByOther: false,
+  };
+
+  test("a worker-shaped, landed, clean, unlocked worktree is reclaimable", () => {
+    expect(unownedReclaimVerdict(reclaimable)).toEqual({
+      reclaimable: true,
+      reason: "ticket landed and tree clean",
+    });
+  });
+
+  test.each([
+    [{ clean: false }, "dirty tree"],
+    [{ landed: "not-landed" as const }, "ticket not landed"],
+    [{ landed: "unknown" as const }, "ticket landed state unknown"],
+    [{ lockedByOther: true }, "locked by another tool"],
+    [{ workerTicket: null }, "branch is not worker-shaped"],
+    [
+      { lockedByOther: true, clean: false, landed: "not-landed" as const },
+      "locked by another tool",
+    ],
+    [
+      { workerTicket: null, landed: "unknown" as const, clean: false },
+      "branch is not worker-shaped",
+    ],
+    [{ landed: "not-landed" as const, clean: false }, "ticket not landed"],
+  ])("%o is not reclaimable: %s", (override, reason) => {
+    expect(unownedReclaimVerdict({ ...reclaimable, ...override })).toEqual({
+      reclaimable: false,
+      reason,
+    });
   });
 });
