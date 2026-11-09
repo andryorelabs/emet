@@ -2,12 +2,21 @@ import { optionalProperty } from "./optional";
 import {
   ForgeConfigError,
   loadForgeConfigWithDefaults,
+  resolveAgentHostName,
+  resolveCodexConfig,
   resolveRepoRoot,
+  type ForgeConfig,
   type HandoffLauncher,
-  type HandoffPermissionMode,
 } from "./config";
 import { claudeHost } from "./agenthost-claude";
-import type { AgentHost, CommandResult, CommandRunner } from "./agenthost";
+import { registerCodexHost } from "./agenthost-codex";
+import {
+  resolveAgentHost,
+  type AgentHost,
+  type CommandResult,
+  type CommandRunner,
+  type HostRegistry,
+} from "./agenthost";
 import { errorMessage, isObject } from "./narrow";
 import { BINARY, LEGACY_PRODUCT, PRODUCT } from "./names";
 import { writePhase } from "./phase";
@@ -39,7 +48,7 @@ export type LaunchRequest = {
   readonly wave: number;
   readonly repoRoot: string;
   readonly launcher: HandoffLauncher;
-  readonly permissionMode: HandoffPermissionMode;
+  readonly permissionMode: string;
 };
 
 type OrcaTabOutcome = {
@@ -236,6 +245,25 @@ function readFlagValue(argv: readonly string[], flag: string): string | undefine
   return argv[index + 1];
 }
 
+/**
+ * Resolves the Agent host and its launch settings from the repo config. On the
+ * Codex host no Orca tab is opened and the permission mode is `codex.sandbox`,
+ * so `danger-full-access` only happens when the repo configures it.
+ */
+export function launchSettingsFor(config: ForgeConfig): {
+  host: AgentHost;
+  launcher: HandoffLauncher;
+  permissionMode: string;
+} {
+  const registry: HostRegistry = { claude: claudeHost };
+  registerCodexHost(registry);
+  const hostName = resolveAgentHostName(config);
+  const host = resolveAgentHost(hostName, registry);
+  return hostName === "codex"
+    ? { host, launcher: "bg", permissionMode: resolveCodexConfig(config).sandbox }
+    : { host, launcher: config.handoff.launcher, permissionMode: config.handoff.permissionMode };
+}
+
 const USAGE = `usage: ${BINARY} launch <spec-id> --wave <n>`;
 
 export async function run(argv: string[]): Promise<void> {
@@ -259,13 +287,18 @@ export async function run(argv: string[]): Promise<void> {
     }
     const { config } = await loadForgeConfigWithDefaults(repoRoot);
 
-    const outcome = await launchWave({
-      specId,
-      wave,
-      repoRoot,
-      launcher: config.handoff.launcher,
-      permissionMode: config.handoff.permissionMode,
-    });
+    const settings = launchSettingsFor(config);
+    const outcome = await launchWave(
+      {
+        specId,
+        wave,
+        repoRoot,
+        launcher: settings.launcher,
+        permissionMode: settings.permissionMode,
+      },
+      defaultRunner,
+      settings.host,
+    );
     console.log(JSON.stringify(outcome));
   } catch (error: unknown) {
     if (error instanceof ForgeConfigError) {

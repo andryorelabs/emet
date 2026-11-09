@@ -1,0 +1,35 @@
+{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash|apply_patch",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "EMET_AGENT_HOST=codex emet guard"
+          }
+        ]
+      }
+    ],
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "EMET_AGENT_HOST=codex emet guard --event UserPromptSubmit"
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "EMET_AGENT_HOST=codex emet guard --event Stop"
+          }
+        ]
+      }
+    ]
+  }
+}
