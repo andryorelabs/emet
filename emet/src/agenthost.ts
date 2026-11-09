@@ -1,4 +1,5 @@
 import { claudeHost } from "./agenthost-claude";
+import { codexHost } from "./agenthost-codex";
 
 /**
  * The Agent host seam: the product a run executes in. An adapter holds only
@@ -83,7 +84,8 @@ export interface AgentHost {
 
 export type HostRegistry = Partial<Record<AgentHostName, AgentHost>>;
 
-const DEFAULT_REGISTRY: HostRegistry = { claude: claudeHost };
+/** Every shipped adapter; Claude stays the default host a config selects. */
+const DEFAULT_REGISTRY: HostRegistry = { claude: claudeHost, codex: codexHost };
 
 /** Throws `unknown agent host` for a name with no registered adapter. */
 export function resolveAgentHost(
