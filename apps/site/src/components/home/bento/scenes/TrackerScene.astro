@@ -1,0 +1,22 @@
+---
+/**
+ * Static final frame of the tracker card picture: GitHub picked. Decorative
+ * and `aria-hidden`.
+ */
+// oxlint-disable-next-line import/no-unassigned-import -- Astro bundles a stylesheet imported for its side effect
+import "../../../../styles/bento/scene.css";
+// oxlint-disable-next-line import/no-unassigned-import -- Astro bundles a stylesheet imported for its side effect
+import "../../../../styles/bento/tracker.css";
+
+const trackers = ["Linear", "GitHub", "local files"];
+---
+
+<div class="scene scene-tracker bento-visual" data-scene aria-hidden="true">
+  <ul class="tracker-chips">
+    {
+      trackers.map((tracker) => (
+        <li class={tracker === "GitHub" ? "tracker-chip is-picked" : "tracker-chip"}>{tracker}</li>
+      ))
+    }
+  </ul>
+</div>

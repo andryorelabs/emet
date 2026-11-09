@@ -1,7 +1,9 @@
 import { describe, expect, it } from "bun:test";
-import { readFileSync } from "node:fs";
+import { readdirSync, readFileSync } from "node:fs";
 
 const css = readFileSync(new URL("../../styles/home.css", import.meta.url), "utf8");
+const sceneDirectory = new URL("../../styles/bento/", import.meta.url);
+const sceneCss = readFileSync(new URL("scene.css", sceneDirectory), "utf8");
 
 /**
  * Returns the declaration block of the first rule whose selector is exactly `selector`.
@@ -64,7 +66,21 @@ describe("Features bento", () => {
     );
   });
 
-  it("starts its pictures hidden only once the motion layer is ready", () => {
-    expect(css).toContain("html[data-motion] .bento-card:not(.is-in)");
+  it("pauses every scene that is not playing", () => {
+    expect(sceneCss).toContain(".scene:not([data-playing]) * {\n  animation-play-state: paused;");
+    expect(sceneCss).toContain("--scene-cycle: 7s");
+    expect(css).not.toContain(".bento-card:not(.is-in)");
+  });
+
+  it("keeps every keyframe inside the motion guard", () => {
+    const guard = "@media (scripting: enabled) and (prefers-reduced-motion: no-preference) {";
+    for (const file of readdirSync(sceneDirectory)) {
+      const source = readFileSync(new URL(file, sceneDirectory), "utf8");
+      const keyframesAt = source.indexOf("@keyframes");
+      if (keyframesAt === -1) continue;
+      const guardAt = source.indexOf(guard);
+      expect(guardAt).toBeGreaterThan(-1);
+      expect(keyframesAt).toBeGreaterThan(guardAt);
+    }
   });
 });

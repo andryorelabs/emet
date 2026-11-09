@@ -1,0 +1,19 @@
+---
+/**
+ * Static final frame of the approval card picture: four approved tickets and
+ * the stamp. Decorative and `aria-hidden`.
+ */
+// oxlint-disable-next-line import/no-unassigned-import -- Astro bundles a stylesheet imported for its side effect
+import "../../../../styles/bento/scene.css";
+// oxlint-disable-next-line import/no-unassigned-import -- Astro bundles a stylesheet imported for its side effect
+import "../../../../styles/bento/approval.css";
+
+const tickets = ["monorepo scaffold", "home layout", "code blocks", "docker and deploy"];
+---
+
+<div class="scene scene-approval bento-visual" data-scene aria-hidden="true">
+  <ul class="approval-tickets">
+    {tickets.map((ticket) => <li>{ticket}</li>)}
+  </ul>
+  <span class="approval-stamp">Approved</span>
+</div>
