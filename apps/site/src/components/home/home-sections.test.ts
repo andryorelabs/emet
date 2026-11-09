@@ -39,6 +39,13 @@ describe("About Hebrew word pair", () => {
   it("ships a Hebrew subset font under 10 KB", () => {
     expect(statSync(fontUrl).size).toBeLessThan(10 * 1024);
   });
+
+  it("declares the subset font for exactly the three Hebrew code points", () => {
+    const tokens = readFileSync(new URL("../../styles/tokens.css", import.meta.url), "utf8");
+    const block = tokens.match(/@font-face \{[^}]*"Frank Ruhl Libre"[^}]*\}/)?.[0] ?? "";
+    expect(block).toContain("/fonts/FrankRuhlLibre-hebrew.woff2");
+    expect(block).toContain("unicode-range: U+05D0, U+05DE, U+05EA;");
+  });
 });
 
 describe("Stats band", () => {

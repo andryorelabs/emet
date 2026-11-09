@@ -113,7 +113,7 @@ export const ptBR = {
     heading: "Por que se chama emet",
     lineOne: "Verdade em hebraico. Um golem é argila trazida à vida por essa palavra.",
     lineTwo:
-      "Apague a primeira letra e ele lê met, morto. O golem para. Aqui, nada é integrado quando algo está sinalizado.",
+      "Apague a primeira letra e vira met, morto. O golem para. Aqui, nada é integrado quando algo está sinalizado.",
     truth: "verdade",
     dead: "morto",
     wordLabel: "emet, verdade, vira met, morto, sem a primeira letra",
