@@ -7,7 +7,9 @@ import {
   mkdirSync,
   mkdtempSync,
   readFileSync,
+  readdirSync,
   readlinkSync,
+  rmSync,
   symlinkSync,
   writeFileSync,
 } from "node:fs";
@@ -18,7 +20,7 @@ import { parseCodexPluginList } from "../emet/src/agenthost-codex";
 import { configureTicketPattern, didReserveTicket } from "../emet/src/claims";
 import { buildRunHome } from "../emet/src/codex-home";
 import { resolveCodexModel } from "../emet/src/codex-models";
-import { loadForgeConfigWithDefaults } from "../emet/src/config";
+import { loadForgeConfigWithDefaults, resolveCodexConfig } from "../emet/src/config";
 import { isObject } from "../emet/src/narrow";
 import { acquireSlot } from "../emet/src/slots";
 
@@ -63,6 +65,8 @@ type ProbeContext = {
   /** An auth-only source home every overlay is built from (see {@link linkAuthOnly}). */
   readonly safeSource: string;
   readonly timeoutMs: number;
+  /** The resolved `codex.sandbox` of the emet repo's config (S1 default `danger-full-access`). */
+  readonly sandbox: string;
 };
 
 /** Text Codex prints when the ChatGPT plan's rate or usage limit is hit. */
@@ -145,23 +149,61 @@ function agentMessages(jsonl: string): string {
 }
 
 /**
- * UNVERIFIED shape, mirrored from `tools/codex-e2e.test.ts`: a refused push is
- * a `command_execution` item for `git push` that is `declined` or whose
- * output names the rules. A bare failure does not count, since a repo with no
- * remote fails the push anyway.
+ * The decision `codex execpolicy check` gives `command` under `rulesPath`:
+ * `allow`, `prompt`, `forbidden`, or `undefined` when no rule matches or the
+ * check fails. It runs under a throwaway `CODEX_HOME`, so no Codex home is
+ * read or written. The JSON shape (`{"matchedRules": [...], "decision": ...}`)
+ * was seen with `codex-cli 0.167.0`.
  */
-function pushRefusedByPolicy(jsonl: string): boolean {
-  return parseEvents(jsonl).some((event) => {
-    const item = event["item"];
-    if (!isObject(item) || item["type"] === "agent_message" || item["type"] === "reasoning") {
-      return false;
-    }
-    const text = JSON.stringify(item);
-    return (
-      /\bgit push\b/.test(text) &&
-      (item["status"] === "declined" || /forbidden|prohibited|policy|execpolicy/i.test(text))
+export async function execpolicyDecision(
+  rulesPath: string,
+  command: readonly string[],
+  executable = "codex",
+): Promise<string | undefined> {
+  if (!existsSync(rulesPath)) return undefined;
+  const home = mkdtempSync(path.join(os.tmpdir(), "emet-execpolicy-"));
+  try {
+    const outcome = await runCommand(
+      [executable, "execpolicy", "check", "--rules", rulesPath, ...command],
+      home,
+      { ...environment(), CODEX_HOME: home },
+      COMMAND_TIMEOUT_MS,
     );
-  });
+    if (outcome.exitCode !== 0) return undefined;
+    const parsed: unknown = JSON.parse(outcome.stdout);
+    return isObject(parsed) && typeof parsed["decision"] === "string"
+      ? parsed["decision"]
+      : undefined;
+  } catch {
+    return undefined;
+  } finally {
+    rmSync(home, { recursive: true, force: true });
+  }
+}
+
+/**
+ * Whether the rules file refuses `git push origin develop`, as decided by
+ * `codex execpolicy check` (deterministic, no model run). A refused command
+ * emits no `exec --json` item, so the stream cannot show this.
+ */
+export async function pushRefusedByRules(
+  rulesPath: string,
+  executable = "codex",
+): Promise<boolean> {
+  const decision = await execpolicyDecision(
+    rulesPath,
+    ["git", "push", "origin", "develop"],
+    executable,
+  );
+  return decision === "forbidden";
+}
+
+function environment(): Record<string, string> {
+  return Object.fromEntries(
+    Object.entries(process.env).filter(
+      (entry): entry is [string, string] => entry[1] !== undefined,
+    ),
+  );
 }
 
 async function runCommand(
@@ -222,6 +264,8 @@ async function runModel(
     prompt: string;
     extraArgs?: readonly string[];
     env?: Record<string, string>;
+    /** `workspace-write` when absent. */
+    sandbox?: string;
   },
   attempt = 1,
 ): Promise<ModelRun> {
@@ -229,7 +273,7 @@ async function runModel(
     "exec",
     "--json",
     "-s",
-    "workspace-write",
+    request.sandbox ?? "workspace-write",
     "--dangerously-bypass-hook-trust",
     ...modelFlags(context),
     ...(request.extraArgs ?? []),
@@ -263,6 +307,12 @@ function git(cwd: string, ...args: string[]): string {
   const result = Bun.spawnSync(["git", ...args], { cwd });
   if (result.exitCode !== 0) throw new Error(`git ${args.join(" ")}: ${result.stderr.toString()}`);
   return result.stdout.toString().trim();
+}
+
+/** Commits on `worktree` past `baseline`; 0 when the worktree does not exist. */
+function commitsSince(worktree: string, baseline: string): number {
+  if (!existsSync(worktree)) return 0;
+  return Number(git(worktree, "rev-list", "--count", `${baseline}..HEAD`));
 }
 
 function scratchRepo(context: ProbeContext, name: string): string {
@@ -339,26 +389,22 @@ async function probeLinkedAuth(
   };
 }
 
-async function probeRulesLocation(
-  context: ProbeContext,
-  repo: string,
-  codexHome: string,
-): Promise<ProbeResult> {
+/**
+ * The overlay's `rules/default.rules`, checked with `codex execpolicy check`
+ * instead of a model run: a refused command leaves no `exec --json` item.
+ */
+async function probeRulesLocation(context: ProbeContext, codexHome: string): Promise<ProbeResult> {
   const rulesFile = path.join(codexHome, "rules", "default.rules");
-  const run = await runModel(context, {
-    codexHome,
-    cwd: repo,
-    prompt:
-      "Run the shell command `git push origin develop` exactly once. It is expected to be refused. Do not retry, do not change remotes and do not try any other way to push. Then reply DONE.",
-  });
-  if (run.verdict !== "verified") return runFailure("rules-location", run);
-  const refused = pushRefusedByPolicy(run.stdout);
+  const pushRefused = await pushRefusedByRules(rulesFile, context.executable);
+  const commit = await execpolicyDecision(
+    rulesFile,
+    ["git", "-C", "/w", "commit", "-m", "x"],
+    context.executable,
+  );
   return {
     id: "rules-location",
-    verdict: refused && existsSync(rulesFile) ? "verified" : "failed",
-    evidence: refused
-      ? "`git push` was declined by the rules written to `rules/default.rules` in the overlay"
-      : `no policy refusal of \`git push\` in the event stream; agent said: ${oneLine(agentMessages(run.stdout))}`,
+    verdict: pushRefused && commit === "allow" ? "verified" : "failed",
+    evidence: `\`codex execpolicy check --rules <overlay>/rules/default.rules\`: \`git push origin develop\` is ${pushRefused ? "forbidden" : "NOT forbidden"}, \`git -C /w commit -m x\` is ${commit ?? "unmatched"}`,
   };
 }
 
@@ -558,16 +604,60 @@ function detachedVerdict(jsonl: string): { verdict: ProbeVerdict; detail: string
   return { verdict: limited, detail: `no turn.completed; stderr: ${oneLine(errors)}` };
 }
 
-async function probeNestedDispatch(context: ProbeContext): Promise<ProbeResult> {
-  const repo = scratchRepo(context, "nested");
+/** Whether a detached run's stream has ended: `turn.completed`, or an error line. */
+function streamEnded(jsonl: string): boolean {
+  const stream = readText(jsonl);
+  return completedTurn(stream) || streamErrors(stream).length > 0;
+}
+
+/**
+ * Waits for a detached worker by its identity (the jsonl), not its pid: a pid
+ * recorded inside another pid namespace says nothing here. A local pid that
+ * exited also ends the wait.
+ */
+async function waitForStream(
+  jsonl: string,
+  pid: number | undefined,
+  localPid: boolean,
+  deadline: number,
+): Promise<boolean> {
+  if (streamEnded(jsonl)) return true;
+  if (localPid && pid !== undefined && !isAlive(pid)) return true;
+  if (Date.now() >= deadline) return false;
+  await Bun.sleep(POLL_MS);
+  return waitForStream(jsonl, pid, localPid, deadline);
+}
+
+function readThreadId(stateFile: string): string | undefined {
+  try {
+    const state: unknown = JSON.parse(readFileSync(stateFile, "utf8"));
+    return isObject(state) && typeof state["threadId"] === "string" ? state["threadId"] : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+/** The nested-dispatch probe; an inner run that hits the plan limit is retried once. */
+async function probeNestedDispatch(context: ProbeContext, attempt = 1): Promise<ProbeResult> {
+  const result = await nestedDispatchOnce(context, attempt);
+  if (result.innerLimited && attempt === 1) return probeNestedDispatch(context, attempt + 1);
+  return result.result;
+}
+
+async function nestedDispatchOnce(
+  context: ProbeContext,
+  attempt: number,
+): Promise<{ result: ProbeResult; innerLimited: boolean }> {
+  const repo = scratchRepo(context, `nested-${attempt}`);
   const runId = "probe-nested";
   const ticket = "NEST-1";
-  const stateDir = path.join(context.workDir, "state");
+  const stateDir = path.join(context.workDir, `state-${attempt}`);
   const runDir = path.join(repo, ".emet", "runs", runId);
+  const baseline = git(repo, "rev-parse", "HEAD");
   mkdirSync(path.join(runDir, "dispatch"), { recursive: true });
   writeFileSync(
     path.join(runDir, "dispatch", `${ticket}.json`),
-    JSON.stringify({ baseline: git(repo, "rev-parse", "HEAD"), surfaces: ["nested.txt"] }),
+    JSON.stringify({ baseline, surfaces: ["nested.txt"] }),
   );
   const promptFile = path.join(runDir, "prompt.md");
   writeFileSync(
@@ -588,31 +678,53 @@ async function probeNestedDispatch(context: ProbeContext): Promise<ProbeResult> 
     codexHome,
     cwd: repo,
     prompt: `Run exactly this shell command once and reply with its output, nothing else: \`${command}\``,
-    extraArgs: ["--add-dir", path.join(repo, ".git")],
+    sandbox: context.sandbox,
     env: { EMET_STATE_DIR: stateDir },
   });
-  if (outer.verdict !== "verified") return runFailure("nested-dispatch", outer);
+  if (outer.verdict !== "verified") {
+    return { result: runFailure("nested-dispatch", outer), innerLimited: false };
+  }
   const stateFile = path.join(runDir, "codex", `${ticket}.state.json`);
   const pid = readPid(stateFile);
   if (pid === undefined) {
     return {
-      id: "nested-dispatch",
-      verdict: "failed",
-      evidence: `emet dispatch started no inner codex; outer agent said: ${oneLine(agentMessages(outer.stdout))}`,
+      innerLimited: false,
+      result: {
+        id: "nested-dispatch",
+        verdict: "failed",
+        evidence: `emet dispatch started no inner codex; outer agent said: ${oneLine(agentMessages(outer.stdout))}`,
+      },
     };
   }
   const hostCommand = hostCommandLine(pid);
-  const foreignPid = hostCommand !== undefined && !hostCommand.includes("codex");
-  const exited = foreignPid || (await waitForExit(pid, Date.now() + context.timeoutMs));
-  const inner = detachedVerdict(path.join(runDir, "codex", `${ticket}.jsonl`));
-  const pidNote = foreignPid
-    ? `recorded pid ${pid} is not a codex process on the host (${oneLine(hostCommand)}), so the pid came from the outer sandbox's PID namespace`
-    : `inner codex pid ${pid} ${exited ? "exited" : "still running at timeout"}`;
+  const localPid = hostCommand !== undefined && hostCommand.includes("codex");
+  const jsonl = path.join(runDir, "codex", `${ticket}.jsonl`);
+  const ended = await waitForStream(jsonl, pid, localPid, Date.now() + context.timeoutMs);
+  const inner = detachedVerdict(jsonl);
+  const threadId = readThreadId(stateFile) ?? readThreadIdFromStream(jsonl);
+  const committed = commitsSince(
+    path.join(repo, ".emet", "worktrees", `agent-${ticket}`),
+    baseline,
+  );
+  const pidNote = localPid
+    ? `auxiliary pid ${pid} is the inner codex on the host`
+    : `auxiliary pid ${pid} is not visible as codex on the host (another pid namespace), so the jsonl identity was followed`;
   return {
-    id: "nested-dispatch",
-    verdict: exited && !foreignPid ? inner.verdict : "failed",
-    evidence: `outer sandbox workspace-write (+ --add-dir .git); dispatch said: ${oneLine(agentMessages(outer.stdout))}; ${pidNote}; ${inner.detail}`,
+    innerLimited: inner.verdict === "blocked-by-plan-limit",
+    result: {
+      id: "nested-dispatch",
+      verdict:
+        inner.verdict === "blocked-by-plan-limit" || (ended && threadId !== undefined)
+          ? inner.verdict
+          : "failed",
+      evidence: `attempt ${attempt}; outer sandbox ${context.sandbox}; dispatch said: ${oneLine(agentMessages(outer.stdout))}; thread ${threadId ?? "none"}; ${pidNote}; stream ${ended ? "ended" : "still open at timeout"}; ${inner.detail}; ${committed} commit(s) on the inner worktree`,
+    },
   };
+}
+
+function readThreadIdFromStream(jsonl: string): string | undefined {
+  const started = parseEvents(readText(jsonl)).find((event) => event["type"] === "thread.started");
+  return typeof started?.["thread_id"] === "string" ? started["thread_id"] : undefined;
 }
 
 async function launchDetached(
@@ -702,11 +814,7 @@ async function probeContext(options: ProbeOptions): Promise<ProbeContext> {
     config,
     path.join(options.codexHome, "models_cache.json"),
   ).model;
-  const env = Object.fromEntries(
-    Object.entries(process.env).filter(
-      (entry): entry is [string, string] => entry[1] !== undefined,
-    ),
-  );
+  const env = environment();
   env["PATH"] =
     `${shimDirectory({ workDir, repo: options.repo })}${path.delimiter}${env["PATH"] ?? ""}`;
   delete env["CODEX_HOME"];
@@ -718,10 +826,12 @@ async function probeContext(options: ProbeOptions): Promise<ProbeContext> {
     model,
     safeSource: linkAuthOnly(options.codexHome, path.join(workDir, "source")),
     timeoutMs: options.modelTimeoutMs ?? MODEL_TIMEOUT_MS,
+    sandbox: resolveCodexConfig(config).sandbox,
   };
 }
 
-type FlowStep = {
+/** One step of the full flow: its name, verdict and evidence. */
+export type FlowStep = {
   readonly step: string;
   readonly verdict: ProbeVerdict;
   readonly evidence: string;
@@ -729,6 +839,23 @@ type FlowStep = {
 
 const FLOW_SPEC = "probe-flow";
 const FLOW_RUN = "probe-flow-w1";
+const FLOW_SPEC_BODY = `Probe spec: two one-line files, one per wave.
+
+## Specs
+- **S1**: \`a.txt\` holds \`a\`. Scenario: WHEN wave 1 lands THEN \`a.txt\` is \`a\`.
+- **S2**: \`b.txt\` holds \`b\`. Scenario: WHEN wave 2 lands THEN \`b.txt\` is \`b\`.
+`;
+/** The approved plan `emet approve` hashes and preflight validates: one ticket per wave. */
+const FLOW_PLAN = [
+  { id: `${FLOW_SPEC}-01`, covers: ["S1"], surfaces: ["a.txt"], wave: 1, blockedBy: [] },
+  {
+    id: `${FLOW_SPEC}-02`,
+    covers: ["S2"],
+    surfaces: ["b.txt"],
+    wave: 2,
+    blockedBy: [`${FLOW_SPEC}-01`],
+  },
+];
 
 function emet(
   context: ProbeContext,
@@ -739,8 +866,11 @@ function emet(
   return runCommand(["emet", ...args], cwd, { ...context.env, ...extra }, context.timeoutMs);
 }
 
-async function prepareFlowRepo(context: ProbeContext): Promise<{ repo: string; baseline: string }> {
-  const repo = scratchRepo(context, "flow");
+async function prepareFlowRepo(
+  context: ProbeContext,
+  attempt: number,
+): Promise<{ repo: string; baseline: string }> {
+  const repo = scratchRepo(context, `flow-${attempt}`);
   const init = await emet(context, repo, ["init", "--tracker", "local"]);
   if (init.exitCode !== 0)
     throw new Error(`emet init failed: ${oneLine(init.stderr || init.stdout)}`);
@@ -750,12 +880,14 @@ async function prepareFlowRepo(context: ProbeContext): Promise<{ repo: string; b
   const repoSection = isObject(config["repo"]) ? config["repo"] : {};
   writeFileSync(
     configPath,
-    `${JSON.stringify({ ...config, repo: { ...repoSection, trunk: "develop" }, agentHost: "codex" }, null, 2)}\n`,
+    `${JSON.stringify({ ...config, repo: { ...repoSection, trunk: "develop" }, agentHost: "codex", ...codexModels(context.model) }, null, 2)}\n`,
   );
+  resolveScaffoldMarkers(repo);
+  await emet(context, repo, ["map", "--refresh"]);
   git(repo, "add", "-A");
   git(repo, "commit", "-q", "-m", "chore: emet init");
   const body = path.join(context.workDir, "flow-body.md");
-  writeFileSync(body, "Probe spec: two one-line files, one per wave.\n");
+  writeFileSync(body, FLOW_SPEC_BODY);
   await emet(context, repo, [
     "tracker",
     "create-spec",
@@ -766,7 +898,7 @@ async function prepareFlowRepo(context: ProbeContext): Promise<{ repo: string; b
     "--body-file",
     body,
   ]);
-  writeFileSync(body, "Create `a.txt` containing `a` and commit it.\n");
+  writeFileSync(body, flowTicketBody("S1", "None", "a"));
   await emet(context, repo, [
     "tracker",
     "create-ticket",
@@ -777,7 +909,7 @@ async function prepareFlowRepo(context: ProbeContext): Promise<{ repo: string; b
     "--body-file",
     body,
   ]);
-  writeFileSync(body, "Create `b.txt` containing `b` and commit it.\n");
+  writeFileSync(body, flowTicketBody("S2", `${FLOW_SPEC}-01 (wave 1)`, "b"));
   await emet(context, repo, [
     "tracker",
     "create-ticket",
@@ -790,7 +922,81 @@ async function prepareFlowRepo(context: ProbeContext): Promise<{ repo: string; b
     "--blocked-by",
     "01",
   ]);
+  await approveFlowSpec(context, repo);
   return { repo, baseline: git(repo, "rev-parse", "HEAD") };
+}
+
+/**
+ * A `models` section naming the resolved Codex model for every role, as a
+ * Codex user configures it: `emet init` writes Claude names (`sonnet`, `opus`),
+ * and `emet dispatch --model <name>` passes a coordinator's flag verbatim.
+ */
+function codexModels(model: string | undefined): Record<string, unknown> {
+  if (model === undefined) return {};
+  const role = { model, effort: PROBE_EFFORT };
+  return {
+    models: {
+      worker: role,
+      reviewer: { medium: role, high: role },
+      triage: model,
+      escalation: {},
+    },
+  };
+}
+
+/** A flow ticket body in the Phase 1-5 shape `$emet:run` dispatches from. */
+function flowTicketBody(covers: string, blockedBy: string, letter: string): string {
+  return `Create \`${letter}.txt\` containing exactly \`${letter}\` and commit it.
+Covers: ${covers}
+Blocked by: ${blockedBy}
+## Interfaces
+Consumes: nothing. Produces: \`${letter}.txt\`.
+## Project skills
+none
+## Allowed edit surfaces
+${letter}.txt
+## Context budget
+Touch set: 1 path, 1 line. PASS.
+`;
+}
+
+/**
+ * A repo a human set up has no `TODO(emet):` scaffold marker left, and
+ * preflight refuses to dispatch while one remains; the probe resolves them.
+ */
+function resolveScaffoldMarkers(repo: string): void {
+  const docs = path.join(repo, "docs", "agents");
+  if (!existsSync(docs)) return;
+  for (const name of readdirSync(docs)) {
+    const file = path.join(docs, name);
+    const text = readFileSync(file, "utf8");
+    if (text.includes("TODO(emet):")) {
+      writeFileSync(file, text.replaceAll("TODO(emet):", "Probe repo, nothing special:"));
+    }
+  }
+}
+
+/**
+ * Records the approval a real run gets at the end of its interview
+ * (`emet approve --run spec<id>`), which `emet launch --wave 2`'s preflight requires.
+ */
+async function approveFlowSpec(context: ProbeContext, repo: string): Promise<void> {
+  const specFile = path.join(context.workDir, `${path.basename(repo)}-spec.md`);
+  const ticketsFile = path.join(context.workDir, `${path.basename(repo)}-tickets.json`);
+  writeFileSync(specFile, FLOW_SPEC_BODY);
+  writeFileSync(ticketsFile, `${JSON.stringify(FLOW_PLAN, null, 2)}\n`);
+  const approved = await emet(context, repo, [
+    "approve",
+    "--run",
+    `spec${FLOW_SPEC}`,
+    "--spec",
+    specFile,
+    "--tickets",
+    ticketsFile,
+  ]);
+  if (approved.exitCode !== 0) {
+    throw new Error(`emet approve failed: ${oneLine(approved.stderr || approved.stdout)}`);
+  }
 }
 
 async function flowWave1(
@@ -798,6 +1004,7 @@ async function flowWave1(
   repo: string,
   baseline: string,
   ticket: string,
+  attempt: number,
 ): Promise<FlowStep> {
   const runDir = path.join(repo, ".emet", "runs", FLOW_RUN);
   mkdirSync(path.join(runDir, "dispatch"), { recursive: true });
@@ -810,7 +1017,7 @@ async function flowWave1(
     promptFile,
     'Create `a.txt` containing exactly `a`, then run `git add a.txt` and `git commit -m "feat: add a"`. Reply DONE.\n',
   );
-  const slots = path.join(context.workDir, "flow-state", "slots");
+  const slots = path.join(context.workDir, `flow-state-${attempt}`, "slots");
   mkdirSync(slots, { recursive: true });
   configureTicketPattern((await loadForgeConfigWithDefaults(repo)).config.ticket.idPattern);
   await didReserveTicket(FLOW_RUN, process.pid, ticket, path.join(repo, ".git", "emet"));
@@ -845,12 +1052,19 @@ async function flowWave1(
     return {
       step: "wave 1: emet dispatch",
       verdict: "failed",
-      evidence: `emet dispatch exited ${code}`,
+      evidence: `attempt ${attempt}: emet dispatch exited ${code}`,
     };
   const exited = await waitForExit(pid, Date.now() + context.timeoutMs);
   const worktree = path.join(repo, ".emet", "worktrees", `agent-${ticket}`);
-  const commits = Number(git(worktree, "rev-list", "--count", `${baseline}..HEAD`));
+  const commits = commitsSince(worktree, baseline);
   const stream = detachedVerdict(path.join(runDir, "codex", `${ticket}.jsonl`));
+  if (stream.verdict === "blocked-by-plan-limit" && commits === 0) {
+    return {
+      step: "wave 1: emet dispatch",
+      verdict: "blocked-by-plan-limit",
+      evidence: `attempt ${attempt}: dispatch exit 0; worker ${exited ? "exited" : "timed out"}; ${stream.detail}`,
+    };
+  }
   const landed = commits >= 1 && readText(path.join(worktree, "a.txt")).trim() === "a";
   const standIn = !landed && readText(path.join(worktree, "a.txt")).trim() === "a";
   if (standIn) {
@@ -865,13 +1079,8 @@ async function flowWave1(
       : "missing";
   return {
     step: "wave 1: emet dispatch",
-    verdict:
-      landed && exited
-        ? "verified"
-        : stream.verdict === "blocked-by-plan-limit"
-          ? stream.verdict
-          : "failed",
-    evidence: `dispatch exit 0; worker ${exited ? "exited" : "timed out"}; ${commits} commit(s) on worktree-agent-${ticket}; a.txt ${fileState}; ${stream.detail}; worker said: ${said}`,
+    verdict: landed && exited ? "verified" : "failed",
+    evidence: `attempt ${attempt}: dispatch exit 0; worker ${exited ? "exited" : "timed out"}; ${commits} commit(s) on worktree-agent-${ticket}; a.txt ${fileState}; ${stream.detail}; worker said: ${said}`,
   };
 }
 
@@ -926,6 +1135,7 @@ async function flowReview(
 async function flowLaunch(context: ProbeContext, repo: string, ticket: string): Promise<FlowStep> {
   git(repo, "merge", "--no-ff", "-q", "-m", "chore: land wave 1", `worktree-agent-${ticket}`);
   await emet(context, repo, ["tracker", "close", ticket]);
+  await emet(context, repo, ["cleanup", "--run", FLOW_RUN, "--force"]);
   const pluginHome = authOnlySource(context, "flow-source");
   const install = await installPlugin(
     codex(context, pluginHome),
@@ -933,6 +1143,33 @@ async function flowLaunch(context: ProbeContext, repo: string, ticket: string): 
     context.options.repo,
     EMET_PLUGIN_ID,
   );
+  return launchWave2(context, repo, pluginHome, install.evidence, 1);
+}
+
+/** The trimmed content of `file` at the repo's HEAD, or `undefined` when absent. */
+function trunkFile(repo: string, file: string): string | undefined {
+  const result = Bun.spawnSync(["git", "show", `HEAD:${file}`], { cwd: repo });
+  return result.exitCode === 0 ? result.stdout.toString().trim() : undefined;
+}
+
+/** Finds the wave 2 worker's stream under any run directory of `repo`. */
+function wave2WorkerStream(repo: string, ticket: string): string | undefined {
+  const runs = path.join(repo, ".emet", "runs");
+  if (!existsSync(runs)) return undefined;
+  return readdirSync(runs)
+    .map((run) => path.join(runs, run, "codex", `${ticket}.jsonl`))
+    .find((jsonl) => existsSync(jsonl));
+}
+
+/** `emet launch <spec> --wave 2`; a session that hits the plan limit is launched once more. */
+async function launchWave2(
+  context: ProbeContext,
+  repo: string,
+  pluginHome: string,
+  pluginEvidence: string,
+  attempt: number,
+): Promise<FlowStep> {
+  const before = git(repo, "rev-parse", "HEAD");
   const launched = await emet(context, repo, ["launch", FLOW_SPEC, "--wave", "2"], {
     CODEX_HOME: pluginHome,
   });
@@ -943,23 +1180,38 @@ async function flowLaunch(context: ProbeContext, repo: string, ticket: string): 
     return {
       step: "emet launch --wave 2",
       verdict: "failed",
-      evidence: `launch exit ${launched.exitCode}: ${oneLine(launched.stderr || launched.stdout)}; plugin ${install.evidence}`,
+      evidence: `attempt ${attempt}: launch exit ${launched.exitCode}: ${oneLine(launched.stderr || launched.stdout)}; plugin ${pluginEvidence}`,
     };
   }
-  const exited = await waitForExit(pid, Date.now() + context.timeoutMs);
+  const deadline = Date.now() + context.timeoutMs;
+  const exited = await waitForExit(pid, deadline);
   const jsonl = path.join(sessionDir, `${name}.jsonl`);
   const stream = detachedVerdict(jsonl);
-  const second = await emet(context, repo, ["tracker", "read", `${FLOW_SPEC}-02`]);
-  const dispatched = existsSync(path.join(repo, ".emet", "worktrees", `agent-${FLOW_SPEC}-02`));
+  const secondTicket = `${FLOW_SPEC}-02`;
+  const worktree = path.join(repo, ".emet", "worktrees", `agent-${secondTicket}`);
+  const workerStream = wave2WorkerStream(repo, secondTicket);
+  const dispatched = workerStream !== undefined;
+  if (!dispatched && stream.verdict === "blocked-by-plan-limit") {
+    if (attempt === 1) return launchWave2(context, repo, pluginHome, pluginEvidence, attempt + 1);
+    return {
+      step: "emet launch --wave 2",
+      verdict: "blocked-by-plan-limit",
+      evidence: `attempt ${attempt}: ${stream.detail}`,
+    };
+  }
+  const workerEnded =
+    workerStream !== undefined && (await waitForStream(workerStream, undefined, false, deadline));
+  const worker = workerStream === undefined ? undefined : detachedVerdict(workerStream);
+  const landedOnTrunk = git(repo, "rev-list", "--count", `${before}..HEAD`);
+  const landedFile = trunkFile(repo, "b.txt");
+  const onWorktree = commitsSince(worktree, before);
+  const second = await emet(context, repo, ["tracker", "read", secondTicket]);
+  const skill = /emet:run|emet-run/.test(readText(jsonl)) ? "mentions emet:run" : "no emet:run";
+  const landed = landedFile === "b" || onWorktree >= 1;
   return {
     step: "emet launch --wave 2",
-    verdict:
-      dispatched && exited
-        ? "verified"
-        : stream.verdict === "blocked-by-plan-limit"
-          ? stream.verdict
-          : "failed",
-    evidence: `launch printed ${oneLine(launched.stdout)}; session pid ${pid} ${exited ? "exited" : "still running at timeout"}; ${stream.detail}; wave 2 worker worktree ${dispatched ? "created" : "absent"}; ticket 02: ${oneLine(second.stdout)}; last agent text: ${oneLine(agentMessages(readText(jsonl)))}`,
+    verdict: dispatched && exited && landed ? "verified" : "failed",
+    evidence: `attempt ${attempt}: launch printed ${oneLine(launched.stdout)}; session pid ${pid} ${exited ? "exited" : "still running at timeout"}; ${stream.detail}; session stream ${skill}; wave 2 worker ${dispatched ? "dispatched" : "never dispatched"}, worker stream ${workerEnded ? "ended" : "open or absent"}${worker === undefined ? "" : ` (${worker.detail})`}; ${landedOnTrunk} commit(s) landed on trunk (${oneLine(git(repo, "log", "--format=%h %s", `${before}..HEAD`))}), trunk b.txt ${landedFile === undefined ? "absent" : `= ${JSON.stringify(landedFile)}`}, ${onWorktree} commit(s) left on the worker worktree; ticket 02: ${oneLine(second.stdout)}; last agent text: ${oneLine(agentMessages(readText(jsonl)))}`,
   };
 }
 
@@ -967,13 +1219,16 @@ async function flowLaunch(context: ProbeContext, repo: string, ticket: string): 
  * The automated full flow on a throwaway repo: a 2-ticket spec in 2 waves,
  * `emet dispatch` for wave 1, `emet review-run`, then `emet launch <spec> --wave 2`.
  */
-async function runFullFlow(options: ProbeOptions): Promise<FlowStep[]> {
+export async function runFullFlow(options: ProbeOptions): Promise<FlowStep[]> {
   const context = await probeContext(options);
   const ticket = `${FLOW_SPEC}-01`;
-  const { repo, baseline } = await prepareFlowRepo(context);
-  const wave1 = await flowWave1(context, repo, baseline, ticket);
+  const first = await prepareFlowRepo(context, 1);
+  const firstWave = await flowWave1(context, first.repo, first.baseline, ticket, 1);
+  const retried = firstWave.verdict === "blocked-by-plan-limit";
+  const { repo, baseline } = retried ? await prepareFlowRepo(context, 2) : first;
+  const wave1 = retried ? await flowWave1(context, repo, baseline, ticket, 2) : firstWave;
   const worktree = path.join(repo, ".emet", "worktrees", `agent-${ticket}`);
-  if (Number(git(worktree, "rev-list", "--count", `${baseline}..HEAD`)) === 0) return [wave1];
+  if (commitsSince(worktree, baseline) === 0) return [wave1];
   const review = await flowReview(context, repo, baseline, ticket);
   const launch = await flowLaunch(context, repo, ticket);
   return [wave1, review, launch];
@@ -994,7 +1249,7 @@ export async function runProbe(options: ProbeOptions): Promise<ProbeResult[]> {
   const context = await probeContext(options);
   const before = fingerprint(options.codexHome);
   const auth = await probeLinkedAuth(context);
-  const rules = logged(await probeRulesLocation(context, auth.repo, auth.codexHome));
+  const rules = logged(await probeRulesLocation(context, auth.codexHome));
   const gate = logged(await probeApprovalGate(context));
   const plugin = logged(await probePluginSkill(context));
   const install = logged(await probePluginInstall(context));
