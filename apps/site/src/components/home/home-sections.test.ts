@@ -30,10 +30,33 @@ describe("About Hebrew word pair", () => {
 
   it("fades the aleph only inside a motion guard", () => {
     expect(css).toMatch(
-      /@media \(prefers-reduced-motion: no-preference\) \{[^@]*html\[data-motion\] \.hebrew-pair\.is-in \.hebrew-aleph \{\s*opacity: 0\.2;/,
+      /@media \(prefers-reduced-motion: no-preference\) \{[^@]*html\[data-motion\] \.hebrew-pair\.is-in \.hebrew-aleph \{\s*color: color-mix\(in oklab, var\(--text\) 25%, transparent\);/,
     );
     expect(css).not.toMatch(/^\.hebrew-pair\.is-in/m);
-    expect(css).not.toMatch(/^\.hebrew-aleph \{[^}]*(opacity|transition)/m);
+    expect(css).not.toMatch(/^\.hebrew-aleph \{[^}]*(color|opacity|transition)/m);
+  });
+
+  it("draws the strike only inside the motion guard and without blur", () => {
+    expect(css).toMatch(
+      /@media \(prefers-reduced-motion: no-preference\) \{[^@]*html\[data-motion\] \.hebrew-aleph::after \{/,
+    );
+    expect(css).not.toMatch(/^\.hebrew-aleph::after/m);
+    expect(css).not.toMatch(/\.hebrew-aleph[^{]*\{[^}]*filter:\s*blur/);
+  });
+
+  it("aligns the pair with the letter text instead of centring it", () => {
+    const pairRule = css.match(/^\.hebrew-pair \{[^}]*\}/m)?.[0] ?? "";
+    expect(pairRule).not.toContain("justify-content");
+  });
+
+  it("highlights the flag phrase, which every locale provides", () => {
+    expect(aboutSource).toContain('class="mark"');
+    for (const locale of LOCALES) {
+      const { about } = getStrings(locale);
+      expect(about.flag.trim().length).toBeGreaterThan(0);
+      expect(about.lineTwoBefore.trim().length).toBeGreaterThan(0);
+      expect(about.lineTwoAfter.trim().length).toBeGreaterThan(0);
+    }
   });
 
   it("ships a Hebrew subset font under 10 KB", () => {

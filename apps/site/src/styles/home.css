@@ -986,7 +986,6 @@ pre {
 .hebrew-pair {
   display: flex;
   align-items: flex-end;
-  justify-content: center;
   gap: 24px;
   margin: 8px 0 24px;
 }
@@ -1043,15 +1042,36 @@ pre {
 
 @media (prefers-reduced-motion: no-preference) {
   html[data-motion] .hebrew-aleph {
-    transition:
-      opacity 600ms var(--ease-out) 300ms,
-      filter 600ms var(--ease-out) 300ms;
+    position: relative;
+    transition: color 600ms var(--ease-out) 300ms;
+  }
+
+  html[data-motion] .hebrew-aleph::after {
+    content: "";
+    position: absolute;
+    inset-inline: 0;
+    top: 52%;
+    height: 3px;
+    background: var(--text);
+    transform: scaleX(0);
+    transform-origin: right;
+    transition: transform 300ms var(--ease-out);
   }
 
   html[data-motion] .hebrew-pair.is-in .hebrew-aleph {
-    opacity: 0.2;
-    filter: blur(2px);
+    color: color-mix(in oklab, var(--text) 25%, transparent);
   }
+
+  html[data-motion] .hebrew-pair.is-in .hebrew-aleph::after {
+    transform: scaleX(1);
+  }
+}
+
+.mark {
+  padding: 0 4px;
+  border-radius: 4px;
+  background: var(--lamp);
+  color: var(--on-accent);
 }
 
 .signature {
