@@ -192,7 +192,7 @@ Inside each worktree, in order:
    `docs/agents/emet.md` names for this repo (`commands.selfCheck` in
    `emet.config.json`), **plus `emet handoff --check
    .emet/handoff-<own ticket>.md`** — run them yourself, don't invoke the
-   review of your own. You're already a subagent; a review dispatched from
+   review of your own. You're already a worker; a review dispatched from
    inside a subagent is exactly what caused two workers to hang mid-review
    in the run that prompted this rule (`references/incidents.md`). The
    coordinator reviews once, in Phase 8, over the whole wave's integration

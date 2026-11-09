@@ -234,10 +234,15 @@ async function dispatchWorker(
   mkdirSync(paths.codexDir, { recursive: true });
   writeFileSync(paths.schema, `${JSON.stringify(WORKER_REPORT_SCHEMA, null, 2)}\n`);
 
+  const commonDir = await git(root, ["rev-parse", "--path-format=absolute", "--git-common-dir"]);
+  const sharedWritableArgs =
+    commonDir.ok && commonDir.out.length > 0 ? ["--add-dir", commonDir.out] : [];
+
   const args = [
     "exec",
     "-C",
     paths.worktree,
+    ...sharedWritableArgs,
     ...(model === undefined ? [] : ["-m", model]),
     "-c",
     `model_reasoning_effort=${effort}`,
