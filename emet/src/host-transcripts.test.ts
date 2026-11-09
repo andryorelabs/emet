@@ -32,8 +32,8 @@ describe("transcript parser table", () => {
     expect(entry.describeLastStep("")).toEqual({ step: "unknown", pendingTool: null });
   });
 
-  test("codex-jsonl is not registered yet", () => {
-    expect(() => parseTranscriptMetrics("", "codex-jsonl")).toThrow("codex-jsonl");
+  test("codex-jsonl is registered", () => {
+    expect(parseTranscriptMetrics("", "codex-jsonl")).toBeDefined();
   });
 });
 
