@@ -111,8 +111,9 @@ export const ko = {
   about: {
     heading: "이름이 emet인 이유",
     lineOne: "히브리어로 진리라는 뜻입니다. 골렘은 그 말로 생명을 얻은 점토입니다.",
-    lineTwo:
-      "첫 글자를 지우면 met, 곧 죽음이라고 읽힙니다. 골렘은 멈춥니다. 여기서는 플래그가 있으면 아무것도 머지되지 않습니다.",
+    lineTwoBefore: "첫 글자를 지우면 met, 곧 죽음이라고 읽힙니다. 골렘은 멈춥니다. 여기서는 ",
+    flag: "플래그가 있으면 아무것도 머지되지 않습니다",
+    lineTwoAfter: ".",
     truth: "진리",
     dead: "죽음",
     wordLabel: "emet, 진리, 첫 글자를 지우면 met, 죽음이 됩니다",

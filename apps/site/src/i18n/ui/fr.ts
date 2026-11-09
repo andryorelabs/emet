@@ -112,8 +112,9 @@ export const fr = {
   about: {
     heading: "Pourquoi il s'appelle emet",
     lineOne: "Vérité en hébreu. Un golem est de l'argile animée par ce mot.",
-    lineTwo:
-      "Effacez la première lettre et il se lit met, mort. Le golem s'arrête. Ici, rien n'est fusionné quand quelque chose est signalé.",
+    lineTwoBefore: "Effacez la première lettre et il se lit met, mort. Le golem s'arrête. Ici, ",
+    flag: "rien n'est fusionné quand quelque chose est signalé",
+    lineTwoAfter: ".",
     truth: "vérité",
     dead: "mort",
     wordLabel: "emet, vérité, devient met, mort, sans sa première lettre",
