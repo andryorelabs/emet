@@ -1,0 +1,26 @@
+---
+/**
+ * Static final frame of the review card picture: both waves reviewed and
+ * checked. Decorative and `aria-hidden`.
+ */
+// oxlint-disable-next-line import/no-unassigned-import -- Astro bundles a stylesheet imported for its side effect
+import "../../../../styles/bento/scene.css";
+// oxlint-disable-next-line import/no-unassigned-import -- Astro bundles a stylesheet imported for its side effect
+import "../../../../styles/bento/review.css";
+
+const waves = ["wave 1", "wave 2"];
+---
+
+<div class="scene scene-review bento-visual" data-scene aria-hidden="true">
+  <ul class="review-waves">
+    {
+      waves.map((wave) => (
+        <li>
+          <span class="review-name">{wave}</span>
+          <span class="review-bar" />
+          <span class="review-check">&#10003;</span>
+        </li>
+      ))
+    }
+  </ul>
+</div>

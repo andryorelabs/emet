@@ -1,0 +1,11 @@
+.scene {
+  --scene-cycle: 7s;
+  --scene-offset: 0s;
+}
+
+.scene:not([data-playing]),
+.scene:not([data-playing]) *,
+.scene:not([data-playing]) *::before,
+.scene:not([data-playing]) *::after {
+  animation-play-state: paused;
+}

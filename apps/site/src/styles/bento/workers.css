@@ -1,0 +1,29 @@
+.trees {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  width: 100%;
+  max-width: 340px;
+  color: var(--text-muted);
+}
+
+.trees-root {
+  color: var(--text);
+}
+
+.trees-branch {
+  position: relative;
+  padding-left: 20px;
+  overflow-wrap: anywhere;
+}
+
+.trees-branch::before {
+  content: "";
+  position: absolute;
+  left: 4px;
+  top: 0;
+  bottom: 50%;
+  width: 10px;
+  border-left: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+}

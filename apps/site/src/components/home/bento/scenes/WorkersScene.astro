@@ -1,0 +1,19 @@
+---
+/**
+ * Static final frame of the workers card picture: the trunk and its three
+ * worktrees. Decorative and `aria-hidden`.
+ */
+// oxlint-disable-next-line import/no-unassigned-import -- Astro bundles a stylesheet imported for its side effect
+import "../../../../styles/bento/scene.css";
+// oxlint-disable-next-line import/no-unassigned-import -- Astro bundles a stylesheet imported for its side effect
+import "../../../../styles/bento/workers.css";
+
+const worktrees = ["cla-254-home-layout", "cla-255-code-blocks", "cla-256-docker-deploy"];
+---
+
+<div class="scene scene-workers bento-visual" data-scene aria-hidden="true">
+  <ul class="trees">
+    <li class="trees-root">repo/</li>
+    {worktrees.map((tree) => <li class="trees-branch">{tree}</li>)}
+  </ul>
+</div>

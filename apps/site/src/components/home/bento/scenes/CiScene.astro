@@ -1,0 +1,25 @@
+---
+/**
+ * Static final frame of the CI card picture: all checks green. Decorative and
+ * `aria-hidden`.
+ */
+// oxlint-disable-next-line import/no-unassigned-import -- Astro bundles a stylesheet imported for its side effect
+import "../../../../styles/bento/scene.css";
+// oxlint-disable-next-line import/no-unassigned-import -- Astro bundles a stylesheet imported for its side effect
+import "../../../../styles/bento/ci.css";
+
+const checks = ["lint", "test", "build"];
+---
+
+<div class="scene scene-ci bento-visual" data-scene aria-hidden="true">
+  <ul class="ci-checks">
+    {
+      checks.map((check) => (
+        <li>
+          <span class="ci-dot" />
+          {check}
+        </li>
+      ))
+    }
+  </ul>
+</div>

@@ -2,9 +2,15 @@
 /**
  * Six claims as a bento: each card pairs its claim with a small picture of
  * the guard working and the run-report line it leaves behind. The pictures
- * are CSS, decorative and `aria-hidden`; they play once as the card reveals.
+ * are scene components, decorative and `aria-hidden`; each loops only while on screen.
  */
 import type { UiStrings } from "../../i18n/ui/en";
+import ApprovalScene from "./bento/scenes/ApprovalScene.astro";
+import CiScene from "./bento/scenes/CiScene.astro";
+import FlagsScene from "./bento/scenes/FlagsScene.astro";
+import ReviewScene from "./bento/scenes/ReviewScene.astro";
+import TrackerScene from "./bento/scenes/TrackerScene.astro";
+import WorkersScene from "./bento/scenes/WorkersScene.astro";
 
 interface Props {
   strings: UiStrings;
@@ -23,11 +29,6 @@ const cards = [
 ];
 const keyWidth = 10;
 
-const approvedTickets = ["monorepo scaffold", "home layout", "code blocks", "docker and deploy"];
-const reviewedWaves = ["wave 1", "wave 2"];
-const ciChecks = ["lint", "test", "build"];
-const worktrees = ["cla-254-home-layout", "cla-255-code-blocks", "cla-256-docker-deploy"];
-const trackers = ["Linear", "GitHub", "local files"];
 ---
 
 <section class="features" aria-labelledby="features-title" data-features>
@@ -45,60 +46,12 @@ const trackers = ["Linear", "GitHub", "local files"];
                 <h3>{note.title}</h3>
                 <p>{note.line}</p>
               </div>
-              <div class="bento-visual" aria-hidden="true">
-                {card.key === "approval" && (
-                  <>
-                    <ul class="approval-tickets">
-                      {approvedTickets.map((ticket) => (
-                        <li>{ticket}</li>
-                      ))}
-                    </ul>
-                    <span class="approval-stamp">Approved</span>
-                  </>
-                )}
-                {card.key === "review" && (
-                  <ul class="review-waves">
-                    {reviewedWaves.map((wave) => (
-                      <li>
-                        <span class="review-name">{wave}</span>
-                        <span class="review-bar" />
-                        <span class="review-check">&#10003;</span>
-                      </li>
-                    ))}
-                  </ul>
-                )}
-                {card.key === "flags" && (
-                  <div class="flags-run">
-                    <span class="flags-track" />
-                    <span class="flags-flag">held</span>
-                  </div>
-                )}
-                {card.key === "ci" && (
-                  <ul class="ci-checks">
-                    {ciChecks.map((check) => (
-                      <li>
-                        <span class="ci-dot" />
-                        {check}
-                      </li>
-                    ))}
-                  </ul>
-                )}
-                {card.key === "workers" && (
-                  <ul class="trees">
-                    <li class="trees-root">repo/</li>
-                    {worktrees.map((tree) => (
-                      <li class="trees-branch">{tree}</li>
-                    ))}
-                  </ul>
-                )}
-                {card.key === "tracker" && (
-                  <ul class="tracker-chips">
-                    {trackers.map((tracker) => (
-                      <li class={tracker === "GitHub" ? "tracker-chip is-picked" : "tracker-chip"}>{tracker}</li>
-                    ))}
-                  </ul>
-                )}
-              </div>
+              {card.key === "approval" && <ApprovalScene />}
+              {card.key === "review" && <ReviewScene />}
+              {card.key === "flags" && <FlagsScene />}
+              {card.key === "ci" && <CiScene />}
+              {card.key === "workers" && <WorkersScene />}
+              {card.key === "tracker" && <TrackerScene />}
               <pre class="bento-report"><span class="features-key">{card.key.padEnd(keyWidth)}</span>{`${card.value}\n${" ".repeat(keyWidth)}${card.result}`}</pre>
             </li>
           )
@@ -107,3 +60,9 @@ const trackers = ["Linear", "GitHub", "local files"];
     }
   </ul>
 </section>
+
+<script>
+  import { initBentoScenes } from "./bento/scene-player";
+
+  initBentoScenes(document);
+</script>
