@@ -50,10 +50,15 @@ describe("codexHost data", () => {
     expect(codexHost.workerTranscriptGlob).toBe("*/codex/*.jsonl");
   });
 
-  test("sessions throw until wired", () => {
-    return expect(codexHost.sessions.list(() => Promise.reject(new Error("x")))).rejects.toThrow(
-      "codex host: not implemented",
-    );
+  test("sessions are wired to the Codex session store", async () => {
+    const outcome = await codexHost.sessions
+      .list(() => Promise.reject(new Error("x")))
+      .then(
+        () => "resolved",
+        (error: unknown) => (error instanceof Error ? error.message : String(error)),
+      );
+    expect(outcome).not.toContain("not implemented");
+    expect(codexHost.sessions.attachCommand("run-1")).toBe("codex exec resume run-1");
   });
 
   test("registers and resolves", () => {
