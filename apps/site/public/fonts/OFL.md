@@ -2,18 +2,20 @@
 
 The `.woff2` files in this folder are licensed under the SIL Open Font License,
 Version 1.1. The full license text is reproduced at the end of this file. They
-are variable fonts (Latin subsets) copied from the font bundles of sibling
+are variable fonts (Latin subsets), except `FrankRuhlLibre-hebrew.woff2`, a
+three-glyph Hebrew subset of the weight 400 instance. The variable fonts were copied from the font bundles of sibling
 projects by the same maintainer, which in turn took them from the upstream
 projects below (accessed 2026-11-04).
 
-| File                      | Font           | Copyright                                                        | Upstream                                                                        |
-| ------------------------- | -------------- | ---------------------------------------------------------------- | ------------------------------------------------------------------------------- |
-| `Figtree-var.woff2`       | Figtree        | Copyright 2022 The Figtree Project Authors                       | [erikdkennedy/figtree](https://github.com/erikdkennedy/figtree)                 |
-| `Geist-var.woff2`         | Geist          | Copyright (c) 2023 Vercel, in collaboration with basement.studio | [vercel/geist-font](https://github.com/vercel/geist-font)                       |
-| `GeistMono-var.woff2`     | Geist Mono     | Copyright (c) 2023 Vercel, in collaboration with basement.studio | [vercel/geist-font](https://github.com/vercel/geist-font)                       |
-| `SpaceGrotesk-var.woff2`  | Space Grotesk  | Copyright 2020 The Space Grotesk Project Authors                 | [floriankarsten/space-grotesk](https://github.com/floriankarsten/space-grotesk) |
-| `JetBrainsMono-var.woff2` | JetBrains Mono | Copyright 2020 The JetBrains Mono Project Authors                | [JetBrains/JetBrainsMono](https://github.com/JetBrains/JetBrainsMono)           |
-| `Manrope-var.woff2`       | Manrope        | Copyright 2018 The Manrope Project Authors                       | [googlefonts/manrope](https://github.com/googlefonts/manrope)                   |
+| File                          | Font             | Copyright                                                        | Upstream                                                                                         |
+| ----------------------------- | ---------------- | ---------------------------------------------------------------- | ------------------------------------------------------------------------------------------------ |
+| `Figtree-var.woff2`           | Figtree          | Copyright 2022 The Figtree Project Authors                       | [erikdkennedy/figtree](https://github.com/erikdkennedy/figtree)                                  |
+| `Geist-var.woff2`             | Geist            | Copyright (c) 2023 Vercel, in collaboration with basement.studio | [vercel/geist-font](https://github.com/vercel/geist-font)                                        |
+| `GeistMono-var.woff2`         | Geist Mono       | Copyright (c) 2023 Vercel, in collaboration with basement.studio | [vercel/geist-font](https://github.com/vercel/geist-font)                                        |
+| `SpaceGrotesk-var.woff2`      | Space Grotesk    | Copyright 2020 The Space Grotesk Project Authors                 | [floriankarsten/space-grotesk](https://github.com/floriankarsten/space-grotesk)                  |
+| `JetBrainsMono-var.woff2`     | JetBrains Mono   | Copyright 2020 The JetBrains Mono Project Authors                | [JetBrains/JetBrainsMono](https://github.com/JetBrains/JetBrainsMono)                            |
+| `Manrope-var.woff2`           | Manrope          | Copyright 2018 The Manrope Project Authors                       | [googlefonts/manrope](https://github.com/googlefonts/manrope)                                    |
+| `FrankRuhlLibre-hebrew.woff2` | Frank Ruhl Libre | Copyright 2015 The Frank Ruhl Libre Project Authors              | [google/fonts, ofl/frankruhllibre](https://github.com/google/fonts/tree/main/ofl/frankruhllibre) |
 
 Upstream license files:
 [Figtree](https://github.com/erikdkennedy/figtree),

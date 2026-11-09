@@ -111,7 +111,11 @@ export const en = {
   about: {
     heading: "Why it is called emet",
     lineOne: "Hebrew for truth. A golem is clay brought to life by that word.",
-    lineTwo: "Erase one letter and it stops. Here, nothing merges when something is flagged.",
+    lineTwo:
+      "Erase the first letter and it reads met, dead. The golem stops. Here, nothing merges when something is flagged.",
+    truth: "truth",
+    dead: "dead",
+    wordLabel: "emet, truth, becomes met, dead, without its first letter",
     caption: "The emet golem, painted.",
     role: "Maintainer",
     alt: "A close painted portrait of the emet golem on its grassy rise in golden-hour light, moss and clay texture, a small sprout on its head.",
