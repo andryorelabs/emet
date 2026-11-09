@@ -20,11 +20,18 @@ import {
 } from "./cleanup";
 import { readPhase } from "./phase";
 import { DEFAULT_FORGE_CONFIG, type ForgeConfig } from "./config";
+import { resolveLandedVerdict } from "./landed";
+import {
+  classifyWorktreeEntry,
+  describeWorktreeEntryVerdict,
+  ticketFromWorkerBranch,
+} from "./preflight";
 import { isRunClosed } from "./runs";
 import {
   listBranches,
   listLiveWorktreeDirectoryNames,
   listWorktreeEntries,
+  resolveMainTree,
   type BranchVerdict,
   type WorktreeEntry,
 } from "./worktrees";
@@ -737,6 +744,89 @@ describe("reclaim against a real repository", () => {
     expect(existsSync(directory)).toBe(true);
     expect(await branchNames()).toContain("cla-355-x");
     expect(loggedOutput()).toContain("protected");
+  });
+
+  test("an unowned dirty worktree names the shared reason", async () => {
+    const directory = await addUnownedWorktree("agent-unowned", "cla-355-x");
+    writeFileSync(path.join(directory, "untracked.txt"), "wip\n");
+
+    await reclaimOwnedWorktrees(await buildContext("finished", null));
+
+    expect(loggedOutput()).toContain("cla-355-x — no owner, dirty tree, protected");
+  });
+
+  test("an unowned worker worktree under a non-emet lock stays protected with the shared reason", async () => {
+    const directory = await addUnownedWorktree("agent-unowned", "cla-355-x");
+    await git("worktree", "lock", directory, "--reason", "do not touch, debugging");
+
+    await reclaimOwnedWorktrees(await buildContext("finished", null));
+
+    expect(existsSync(directory)).toBe(true);
+    expect(await lockOf(directory)).toBe("do not touch, debugging");
+    expect(await branchNames()).toContain("cla-355-x");
+    expect(loggedOutput()).toContain("cla-355-x — no owner, locked by another tool, protected");
+  });
+
+  async function preflightAdvice(trackerState: "done" | "open"): Promise<string> {
+    const entry = (await listWorktreeEntries()).find((candidate) =>
+      candidate.directory.endsWith("agent-unowned"),
+    );
+    if (entry === undefined) throw new Error("fixture worktree missing");
+    const verdict = classifyWorktreeEntry(entry, undefined, () => "dead", undefined, {
+      branchPrefix: "cla",
+    });
+    const report = await describeWorktreeEntryVerdict(
+      entry,
+      verdict,
+      await resolveMainTree("origin", "main", { local: true }),
+      "origin",
+      "main",
+      true,
+      (branch) =>
+        resolveLandedVerdict(
+          { ticket: ticketFromWorkerBranch(branch, "cla") ?? "", branch },
+          { config, readTrackerState: () => Promise.resolve(trackerState) },
+        ),
+      { branchPrefix: "cla" },
+    );
+    return report.line;
+  }
+
+  test.each([
+    { name: "landed and clean", tracker: "done" as const, dirty: false, lock: null, acts: true },
+    { name: "landed but dirty", tracker: "done" as const, dirty: true, lock: null, acts: false },
+    {
+      name: "open ticket with content equivalent to trunk",
+      tracker: "open" as const,
+      dirty: false,
+      lock: null,
+      acts: false,
+    },
+    {
+      name: "landed under a non-emet lock",
+      tracker: "done" as const,
+      dirty: false,
+      lock: "do not touch, debugging",
+      acts: false,
+    },
+  ])("preflight and cleanup agree: $name", async ({ tracker, dirty, lock, acts }) => {
+    const directory = await addUnownedWorktree("agent-unowned", "cla-355-x");
+    if (dirty) writeFileSync(path.join(directory, "untracked.txt"), "wip\n");
+    if (lock !== null) await git("worktree", "lock", directory, "--reason", lock);
+
+    const advice = await preflightAdvice(tracker);
+    await reclaimOwnedWorktrees({
+      ...(await buildContext("finished", null)),
+      readTrackerState: () => Promise.resolve(tracker),
+    });
+
+    expect(advice.includes('safe to run "emet cleanup"')).toBe(acts);
+    expect(existsSync(directory)).toBe(!acts);
+    if (!acts) {
+      const reason = /"emet cleanup" leaves it: ([^—(]+?)(?: —|\)|$)/.exec(advice)?.[1];
+      expect(reason).toBeDefined();
+      expect(loggedOutput()).toContain(`cla-355-x — no owner, ${reason}, protected`);
+    }
   });
 
   test("an unowned worktree is never reclaimed by a run-scoped sweep", async () => {
