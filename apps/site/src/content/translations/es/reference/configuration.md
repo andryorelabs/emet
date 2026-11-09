@@ -2,7 +2,7 @@
 title: Referencia de configuración
 description: Cada clave de emet.config.json con su valor por defecto y su significado.
 seoTitle: Referencia de configuración de emet
-sourceHash: 72d2564863187ae0
+sourceHash: f93a93f72cc341b1
 ---
 
 Cada clave de `emet.config.json`, con su valor por defecto y su significado. La fuente de verdad es [`emet/schema/emet.config.schema.json`](../../emet/schema/emet.config.schema.json). Los términos siguen [GLOSSARY.md](../../GLOSSARY.md). Volver al [README](../../README.md).
@@ -80,6 +80,20 @@ Modelo y esfuerzo por rol. Todas las claves son opcionales; omitir la sección m
 - `reviewer.medium` y `reviewer.high` (por defecto `opus`, `medium` cada uno): el revisor para cada nivel de riesgo que devuelve `emet assess`. Sube `reviewer.high.effort` (por ejemplo a `high`) para más escrutinio en las oleadas riesgosas.
 - `triage` (por defecto `haiku`): el modelo económico para el triaje de logs de CI y la revisión de nivel pasivo. Un check que falla se entrega a un agente con este modelo, que devuelve como máximo unos 2k tokens con punteros `file:line`.
 - `escalation` (por defecto `{ "sonnet": "opus" }`): el siguiente nivel de modelo por nombre de modelo, usado cuando un ticket alcanza su tope de correcciones.
+
+## agentHost
+
+`agentHost` (por defecto `"claude"`): el host de agente en el que se ejecuta una ejecución, `"claude"` o `"codex"`. Consulta la [guía de Codex](../guide/codex.md).
+
+## codex
+
+Solo se lee cuando `agentHost` es `"codex"`. Todas las claves son opcionales. El esfuerzo es uno de `low`, `medium`, `high`, `xhigh`, `max`; `ultra` nunca se acepta.
+
+- `models.worker`, `models.workerOverride`, `models.reviewer.medium`, `models.reviewer.high`, `models.triage`: cada una es `{ "model", "effort", "fallback" }`. `fallback` lista los slugs que se prueban en orden cuando `model` no está en la caché de modelos de Codex. Los valores por defecto están en [Modelos y esfuerzo](../guide/models-and-effort.md).
+- `models.session`: `{ "model", "effort", "planEffort", "fallback" }` para la sesión que ejecuta `$emet:run`. `planEffort` se aplica hasta la primera aprobación.
+- `effort`: si se define, reemplaza el esfuerzo de todos los roles.
+- `minVersion` (por defecto `0.167.0`): la versión más antigua de la CLI `codex` que acepta `emet doctor`.
+- `sandbox` (por defecto `workspace-write`): el modo de sandbox de los workers de Codex. `danger-full-access` es una opción explícita.
 
 ## review
 

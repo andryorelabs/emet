@@ -2,7 +2,7 @@
 title: Справочник по CLI
 description: Каждая подкоманда emet, таблица гейтов и записей, коды завершения и переменные окружения.
 seoTitle: Справочник по CLI emet
-sourceHash: 6ac3b40ddcfe5237
+sourceHash: 8bb02104970da0a8
 ---
 
 Каждая подкоманда `emet`, таблица гейтов и записей, коды завершения и переменные окружения. Термины соответствуют [GLOSSARY.md](../../GLOSSARY.md). Назад к [README](../../README.md). Каждая команда выводит справку по использованию с `--help`.
@@ -83,6 +83,15 @@ emet doctor ~/code/*
 
 Одна волна — один PR. В его тексте для каждого тикета есть `Closes #N` (закрывающее ключевое слово трекера), а координатор переводит тикеты в in-review, когда открывает PR. Затем PR сливается согласно `pr.autoMerge` или остаётся открытым, если волна была помечена, `autoMerge` равен `false` или исправления CI закончились (тогда PR получает метку human-decision). Последующие волны выполняются в собственных сессиях, никогда не в той, что выполняла волну 1. Разделы `pr` и `handoff` управляют тем, что происходит дальше; см. [`pr`](configuration.md#pr) и [`handoff`](configuration.md#handoff).
 
+### Хост Codex
+
+Эти команды обслуживают хост агента Codex (`agentHost` `"codex"`); см. [руководство по Codex](../guide/codex.md).
+
+- `emet dispatch --role worker --run <id> --ticket <id> --prompt-file <file> [--model <m>] [--effort <e>] [--root <dir>]`: после проверки резервирования и слота создаёт `.emet/worktrees/agent-<ticket>`, собирает оверлей `CODEX_HOME` для запуска и стартует воркера как отдельный `codex exec`. `emet dispatch --wait --run <id> --ticket <id> [--timeout <s>]` ждёт завершения и печатает записанный статус результата.
+- `emet review-run --run <id> --ticket <id> --package <file> --tier <medium|high|passive>`: запускает ревьюера как `codex exec` только для чтения над пакетом из `emet review-package` и печатает JSON замечаний для `emet review --findings`. Уровень `passive` не запускает процесс.
+- `emet launch <spec-id> --wave <n>`: на этом хосте запускает отдельный `codex exec` с `$emet:run --dispatch <spec>` и записывает id его треда. Вкладка Orca не открывается, а `codex exec resume <id>` продолжает сессию.
+- `emet guard`: при `EMET_AGENT_HOST=codex` читает вход хуков Codex, сверяет пути `apply_patch` с `.emet/surface.json` и держит шлюз одобрения закрытым, пока не придёт строка промпта `approve <id>`.
+
 ## Гейты и записи
 
 Фазы сами не решают, когда тикет готов, пригоден к слиянию или заслуживает повторной попытки. Они вызывают команду CLI, которая читает запись на диске и выводит решение. Записи запусков хранятся в `.emet/runs/<run-id>/`, а журнал ревью — в `.emet/review/`, в основном чекауте, а не в worktree воркера.
@@ -124,5 +133,6 @@ emet doctor ~/code/*
 | `EMET_MEM_RESERVE_GIB`        | Запас памяти в GiB, который должен оставаться свободным; захват слота отклоняется, если доступной памяти меньше. По умолчанию 8. Также влияет на предел воркеров `auto`.                                                 |
 | `EMET_MEM_PER_WORKER_GIB`     | Память в GiB, принимаемая на одного воркера, когда `maxLiveWorkers` равен `auto`. По умолчанию 2. Увеличьте для более тяжёлого стека на воркера, например E2E-набора с браузером на каждый worktree.                     |
 | `EMET_CPU_OVERSUBSCRIBE`      | Множитель CPU для предела воркеров `auto`. По умолчанию 1.                                                                                                                                                               |
+| `EMET_AGENT_HOST`             | `codex` заставляет `emet guard` читать вход хуков Codex. Задаётся хуками Codex; в Claude Code оставьте незаданной.                                                                                                       |
 
 Предел `auto` равен `clamp(min(cpuCount × EMET_CPU_OVERSUBSCRIBE, floor((memTotal − EMET_MEM_RESERVE_GIB) / EMET_MEM_PER_WORKER_GIB)), min, max)`. Устаревшие имена `FORGE_*` по-прежнему читаются; при наличии обоих приоритет у `EMET_*`.

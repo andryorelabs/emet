@@ -20,6 +20,22 @@ What emet needs on the machine, and which command checks each item. Terms follow
 
 None of the above is ever installed or logged in on your behalf. What differs is who checks it and how hard.
 
+## Codex host
+
+Only when `agentHost` is `"codex"`; see the [Codex guide](../guide/codex.md). The `emet-worker` and `emet-reviewer` agents are not used there.
+
+- **The `codex` CLI**, logged in, at `codex.minVersion` (default `0.167.0`) or newer. `emet doctor` reports an older version and checks that `codex exec --help` lists `--json` and `--output-schema`.
+- **The `mattpocock-skills` plugin** in Codex, probed with `codex plugin list`:
+
+  ```bash
+  codex plugin marketplace add mattpocock/skills
+  codex plugin add mattpocock-skills@mattpocock
+  ```
+
+- **The emet Codex plugin** (`.codex-plugin/plugin.json`), which ships the `$emet:run`, `$emet:init` and `$emet:doctor` skills and the approval hook.
+
+emet never writes your `~/.codex`: workers run with a per-run `CODEX_HOME` that links your auth and config.
+
 ## What checks what
 
 |                                                  | `emet init`                | `emet doctor`                 | `emet preflight`                                                         |

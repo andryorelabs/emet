@@ -2,7 +2,7 @@
 title: Modèles et effort
 description: Comment emet choisit un modèle et un effort de raisonnement pour chaque rôle, et quelles clés de configuration les modifient.
 seoTitle: Modèles et effort dans emet
-sourceHash: 6fe7308bf47a7aac
+sourceHash: 7ab8a2e10ec9cae7
 ---
 
 `/emet` choisit automatiquement un modèle et un effort de raisonnement par rôle ; il n'y a rien à changer à la main en cours d'exécution. Toutes les clés figurent dans la [référence de configuration](../reference/configuration.md#models).
@@ -52,6 +52,27 @@ Toutes les clés sont facultatives, et les valeurs par défaut reproduisent le t
 ```
 
 `review.highRiskPaths` est une liste de sous-chaînes de chemin supplémentaires, insensibles à la casse, qui forcent le niveau `high`. Pour obtenir plus de rigueur sur les vagues risquées, augmentez `models.reviewer.high.effort` (par exemple à `high`).
+
+## Hôte Codex
+
+Avec `agentHost` à `"codex"`, chaque worker et chaque reviewer est son propre processus `codex exec`, avec `-m` et `model_reasoning_effort` fixés par rôle. Les valeurs par défaut de la section [`codex`](../reference/configuration.md) sont :
+
+| Rôle                           | Modèle        | Effort                                     | Repli                         |
+| ------------------------------ | ------------- | ------------------------------------------ | ----------------------------- |
+| Session (`$emet:run`)          | `gpt-6.1-sol` | `medium` (`high` pendant la planification) | aucun                         |
+| Worker                         | `gpt-6.1-sol` | `medium`                                   | `gpt-6.1-terra`, `gpt-6-luna` |
+| Worker avec une ligne `Model:` | `gpt-6.1-sol` | `xhigh`                                    | `gpt-6-astra`                 |
+| Reviewer, niveau `medium`      | `gpt-6.1-sol` | `high`                                     | aucun                         |
+| Reviewer, niveau `high`        | `gpt-6-astra` | `high`                                     | `gpt-6.1-sol`                 |
+| Triage                         | `gpt-6-luna`  | `medium`                                   | `gpt-6.1-terra`               |
+
+`emet dispatch` résout chaque slug dans le cache de modèles de Codex. Il garde un slug qui y figure et accepte l'effort, sinon suit la mise à niveau du modèle, puis les replis, puis omet `-m`, et journalise chaque substitution. L'effort `ultra` n'est jamais envoyé. Le niveau `passive` ne lance aucun reviewer.
+
+Réglez de nouveau après quelques vraies vagues quand :
+
+- les workers demandent plusieurs tours de correction : augmentez `codex.models.worker.effort` ou mettez une ligne `Model:` sur le ticket risqué ;
+- les revues de vagues de niveau `high` manquent des constats : augmentez `codex.models.reviewer.high.effort` ;
+- le journal montre une substitution : Codex a renommé ou retiré un slug, mettez-le à jour.
 
 ## Pourquoi un seul relecteur
 

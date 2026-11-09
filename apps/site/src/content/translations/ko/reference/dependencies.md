@@ -2,7 +2,7 @@
 title: 의존성
 description: emet이 머신에서 필요로 하는 것과 각 항목을 확인하는 명령을 설명합니다.
 seoTitle: emet 의존성
-sourceHash: 628a2bb58f655fd5
+sourceHash: 50444429c7883bd3
 ---
 
 emet이 머신에서 필요로 하는 것과 각 항목을 확인하는 명령입니다. 용어는 [GLOSSARY.md](../../GLOSSARY.md)를 따릅니다. [README](../../README.md)로 돌아가기.
@@ -24,6 +24,22 @@ emet이 머신에서 필요로 하는 것과 각 항목을 확인하는 명령�
 - **`.mcp.json`(또는 사용자 범위)에 선언된 Linear MCP 서버**: 리포지토리가 `linear` 트래커를 사용할 때만 필요합니다. emet은 선언이 있는지 확인합니다. 연결이 인증되었는지는 Claude Code 자체의 자격 증명 저장소에 있어 여기서는 확인할 수 없습니다. 실행 중 티켓을 읽지 못하면 Claude Code를 다시 시작하고 연결을 승인하세요.
 
 위의 어떤 것도 사용자를 대신해 설치되거나 로그인되지 않습니다. 다른 점은 누가, 얼마나 엄격하게 확인하느냐입니다.
+
+## Codex 호스트
+
+`agentHost`가 `"codex"`일 때만 필요합니다. [Codex 가이드](../guide/codex.md)를 참고하세요. `emet-worker`와 `emet-reviewer` 에이전트는 여기서 사용하지 않습니다.
+
+- **`codex` CLI**: 로그인된 상태에서 `codex.minVersion`(기본값 `0.167.0`) 이상의 버전. `emet doctor`는 더 오래된 버전을 보고하고 `codex exec --help`에 `--json`과 `--output-schema`가 나오는지 확인합니다.
+- Codex의 **`mattpocock-skills` 플러그인**: `codex plugin list`로 확인합니다.
+
+  ```bash
+  codex plugin marketplace add mattpocock/skills
+  codex plugin add mattpocock-skills@mattpocock
+  ```
+
+- **Codex용 emet 플러그인**(`.codex-plugin/plugin.json`): `$emet:run`, `$emet:init`, `$emet:doctor` 스킬과 승인 훅을 제공합니다.
+
+emet은 `~/.codex`에 절대 쓰지 않습니다. 워커는 인증과 설정을 링크하는 실행별 `CODEX_HOME`으로 동작합니다.
 
 ## 무엇이 무엇을 확인하는가
 

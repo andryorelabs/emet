@@ -2,7 +2,7 @@
 title: Архитектура
 description: Карта кода emet/src и то, как промпты /emet управляют ею.
 seoTitle: Архитектура emet
-sourceHash: a2f7846ae362b1ae
+sourceHash: 3145bbde94eade03
 ---
 
 Карта кода `emet/src` и то, как промпты `/emet` управляют ею. Термины соответствуют [GLOSSARY.md](../GLOSSARY.md); решения, определившие устройство, находятся в [docs/adr](adr/README.md). О проблемах см. [устранение неполадок](troubleshooting.md).
@@ -47,6 +47,8 @@ sourceHash: a2f7846ae362b1ae
 | Отчётность                   | `metrics.ts`, `usage.ts`                                                                                                                                                                                                                                                                          |
 | Безопасность                 | `guard.ts`, `guard-destructive.ts`                                                                                                                                                                                                                                                                |
 | Общие вспомогательные модули | `narrow.ts`, `optional.ts`, `assets.ts` (встроенные файлы в скомпилированных бинарных файлах)                                                                                                                                                                                                     |
+
+Значения, зависящие от хоста, лежат за интерфейсом `AgentHost` в `agenthost.ts`: `agenthost-claude.ts` — адаптер Claude Code, `agenthost-codex.ts` — адаптер Codex; выбираются ключом `agentHost` в конфигурации. Сторона Codex добавляет `codex-models.ts` (выбор моделей), `codex-home.ts` (оверлей `CODEX_HOME` для запуска), `codex-process.ts` и `codex-session.ts` (запуск процессов и передача), `codex-usage.ts` (расход из `exec --json`), `guard-codex.ts` (вход хуков и шлюз одобрения), `dispatch.ts` и `review-run.ts`. См. [руководство по Codex](guide/codex.md).
 
 ## Структура промптов
 
