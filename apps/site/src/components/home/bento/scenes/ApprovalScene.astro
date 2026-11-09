@@ -1,7 +1,9 @@
 ---
 /**
- * Static final frame of the approval card picture: four approved tickets and
- * the stamp. Decorative and `aria-hidden`.
+ * Approval card picture: four tickets, an Approve button with a cursor, and the
+ * stamp. The markup is the static final frame (approved tickets and the
+ * stamp); the loop in `approval.css` starts from skeletons and ends there.
+ * Decorative and `aria-hidden`.
  */
 // oxlint-disable-next-line import/no-unassigned-import -- Astro bundles a stylesheet imported for its side effect
 import "../../../../styles/bento/scene.css";
@@ -13,7 +15,22 @@ const tickets = ["monorepo scaffold", "home layout", "code blocks", "docker and 
 
 <div class="scene scene-approval bento-visual" data-scene aria-hidden="true">
   <ul class="approval-tickets">
-    {tickets.map((ticket) => <li>{ticket}</li>)}
+    {
+      tickets.map((ticket) => (
+        <li>
+          <span class="approval-name">
+            <span class="approval-skeleton" />
+            <span class="approval-text">{ticket}</span>
+          </span>
+        </li>
+      ))
+    }
   </ul>
-  <span class="approval-stamp">Approved</span>
+  <div class="approval-footer">
+    <span class="approval-button">Approve</span>
+    <svg class="approval-cursor" viewBox="0 0 14 14" fill="currentColor">
+      <path d="M1 1l4.5 12 1.8-4.7L12 6.5z"></path>
+    </svg>
+    <span class="approval-stamp">Approved</span>
+  </div>
 </div>
