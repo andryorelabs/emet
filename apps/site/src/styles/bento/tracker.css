@@ -1,19 +1,231 @@
-.tracker-chips {
+.tracker-stage {
   display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
+  flex-direction: column;
+  gap: 14px;
+  width: 100%;
+  max-width: 340px;
+}
+
+.tracker-track {
+  position: relative;
+}
+
+.tracker-chips {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 8px;
 }
 
 .tracker-chip {
-  padding: 5px 12px;
+  position: relative;
+  padding: 5px 4px;
   border: 1px solid var(--border);
   border-radius: 999px;
+  color: var(--text);
+  text-align: center;
+  white-space: nowrap;
+}
+
+.tracker-pill {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: calc((100% - 16px) / 3);
+  border: 1px solid var(--moss);
+  border-radius: 999px;
+  background: color-mix(in oklab, var(--moss) 30%, transparent);
+  transform: translateX(calc(100% + 8px));
+}
+
+.tracker-ticket {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  height: 36px;
+  padding: 0 12px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+}
+
+.tracker-id {
   color: var(--text-muted);
 }
 
-.tracker-chip.is-picked {
-  border-color: var(--moss);
-  background: var(--moss);
-  color: var(--on-accent);
+.tracker-state {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.tracker-statuses {
+  display: grid;
+  justify-items: end;
+}
+
+.tracker-status {
+  grid-area: 1 / 1;
+  opacity: 0;
+}
+
+.tracker-status.is-closed {
+  opacity: 1;
+}
+
+.tracker-check {
+  position: relative;
+  width: 14px;
+  height: 14px;
+}
+
+.tracker-check::after {
+  content: "";
+  position: absolute;
+  left: 2px;
+  top: 2px;
+  width: 9px;
+  height: 5px;
+  border-left: 2px solid var(--moss);
+  border-bottom: 2px solid var(--moss);
+  transform: rotate(-45deg);
+}
+
+@media (scripting: enabled) and (prefers-reduced-motion: no-preference) {
+  .scene-tracker .tracker-stage,
+  .scene-tracker .tracker-pill,
+  .scene-tracker .tracker-status,
+  .scene-tracker .tracker-check {
+    animation-duration: var(--scene-cycle);
+    animation-delay: var(--scene-offset);
+    animation-timing-function: var(--ease-out);
+    animation-iteration-count: infinite;
+    animation-fill-mode: both;
+  }
+
+  .scene-tracker .tracker-stage {
+    animation-name: tracker-stage;
+  }
+
+  .scene-tracker .tracker-pill {
+    animation-name: tracker-pill;
+  }
+
+  .scene-tracker .tracker-status.is-todo {
+    animation-name: tracker-status-todo;
+  }
+
+  .scene-tracker .tracker-status.is-progress {
+    animation-name: tracker-status-progress;
+  }
+
+  .scene-tracker .tracker-status.is-review {
+    animation-name: tracker-status-review;
+  }
+
+  .scene-tracker .tracker-status.is-closed {
+    animation-name: tracker-status-closed;
+  }
+
+  .scene-tracker .tracker-check {
+    animation-name: tracker-check;
+  }
+
+  @keyframes tracker-stage {
+    0% {
+      opacity: 0;
+    }
+    3%,
+    92% {
+      opacity: 1;
+    }
+    97%,
+    100% {
+      opacity: 0;
+    }
+  }
+
+  @keyframes tracker-pill {
+    0%,
+    14.3% {
+      transform: translateX(0);
+    }
+    19.4%,
+    24.3% {
+      transform: translateX(calc(100% + 8px));
+    }
+    29.4%,
+    37.1% {
+      transform: translateX(calc(200% + 16px));
+    }
+    42.3%,
+    100% {
+      transform: translateX(calc(100% + 8px));
+    }
+  }
+
+  @keyframes tracker-status-todo {
+    0%,
+    28.6% {
+      opacity: 1;
+    }
+    30%,
+    100% {
+      opacity: 0;
+    }
+  }
+
+  @keyframes tracker-status-progress {
+    0%,
+    28.6% {
+      opacity: 0;
+    }
+    30%,
+    37.1% {
+      opacity: 1;
+    }
+    38.5%,
+    100% {
+      opacity: 0;
+    }
+  }
+
+  @keyframes tracker-status-review {
+    0%,
+    37.1% {
+      opacity: 0;
+    }
+    38.5%,
+    54.3% {
+      opacity: 1;
+    }
+    55.7%,
+    100% {
+      opacity: 0;
+    }
+  }
+
+  @keyframes tracker-status-closed {
+    0%,
+    54.3% {
+      opacity: 0;
+    }
+    55.7%,
+    100% {
+      opacity: 1;
+    }
+  }
+
+  @keyframes tracker-check {
+    0%,
+    54.3% {
+      opacity: 0;
+      transform: scale(0.6);
+    }
+    58%,
+    100% {
+      opacity: 1;
+      transform: scale(1);
+    }
+  }
 }
