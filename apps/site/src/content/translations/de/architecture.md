@@ -2,7 +2,7 @@
 title: Architektur
 description: Eine Code-Karte von emet/src und wie die /emet-Prompts sie steuern.
 seoTitle: emet-Architektur
-sourceHash: a2f7846ae362b1ae
+sourceHash: 3145bbde94eade03
 ---
 
 Eine Code-Karte von `emet/src` und wie die `/emet`-Prompts sie steuern. Die Begriffe folgen [GLOSSARY.md](../GLOSSARY.md); die Entscheidungen hinter der Form stehen in [docs/adr](adr/README.md). Bei Problemen siehe [Fehlerbehebung](troubleshooting.md).
@@ -47,6 +47,8 @@ Neben jedem Modul liegt eine `*.test.ts`.
 | Berichte                | `metrics.ts`, `usage.ts`                                                                                                                                                                                                                                                                        |
 | Sicherheit              | `guard.ts`, `guard-destructive.ts`                                                                                                                                                                                                                                                              |
 | Gemeinsame Helfer       | `narrow.ts`, `optional.ts`, `assets.ts` (eingebettete Dateien in kompilierten Binärdateien)                                                                                                                                                                                                     |
+
+Hostspezifische Werte liegen hinter der Schnittstelle `AgentHost` in `agenthost.ts`: `agenthost-claude.ts` ist der Adapter für Claude Code und `agenthost-codex.ts` der für Codex, gewählt über `agentHost` in der Konfiguration. Die Codex-Seite ergänzt `codex-models.ts` (Modellauflösung), `codex-home.ts` (`CODEX_HOME`-Overlay pro Lauf), `codex-process.ts` und `codex-session.ts` (Prozess-Runner und Übergabe), `codex-usage.ts` (Nutzung aus `exec --json`), `guard-codex.ts` (Hook-Eingabe und Freigabe-Tor), `dispatch.ts` und `review-run.ts`. Siehe den [Codex-Leitfaden](guide/codex.md).
 
 ## Prompt-Aufbau
 

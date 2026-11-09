@@ -2,7 +2,7 @@
 title: 架构
 description: emet/src 的代码地图，以及 /emet 提示词如何驱动它。
 seoTitle: emet 架构
-sourceHash: a2f7846ae362b1ae
+sourceHash: 3145bbde94eade03
 ---
 
 `emet/src` 的代码地图，以及 `/emet` 提示词如何驱动它。术语遵循 [GLOSSARY.md](../GLOSSARY.md)；这种结构背后的决策见 [docs/adr](adr/README.md)。遇到问题时，参见[故障排除](troubleshooting.md)。
@@ -47,6 +47,8 @@ sourceHash: a2f7846ae362b1ae
 | 报告         | `metrics.ts`、`usage.ts`                                                                                                                                                                                                                 |
 | 安全         | `guard.ts`、`guard-destructive.ts`                                                                                                                                                                                                       |
 | 共享辅助模块 | `narrow.ts`、`optional.ts`、`assets.ts`（嵌入编译后二进制文件中的文件）                                                                                                                                                                  |
+
+与宿主相关的值位于 `agenthost.ts` 中的 `AgentHost` 接口之后：`agenthost-claude.ts` 是 Claude Code 适配器，`agenthost-codex.ts` 是 Codex 适配器，由配置中的 `agentHost` 选择。Codex 一侧新增 `codex-models.ts`（模型解析）、`codex-home.ts`（每次运行的 `CODEX_HOME` 覆盖层）、`codex-process.ts` 和 `codex-session.ts`（进程运行器与交接）、`codex-usage.ts`（从 `exec --json` 读取用量）、`guard-codex.ts`（hook 输入与批准闸门）、`dispatch.ts` 和 `review-run.ts`。参见 [Codex 指南](guide/codex.md)。
 
 ## 提示词布局
 

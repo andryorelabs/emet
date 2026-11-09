@@ -2,7 +2,7 @@
 title: CLI リファレンス
 description: すべての emet サブコマンド、ゲートと記録の表、終了コード、環境変数を説明します。
 seoTitle: emet CLI リファレンス
-sourceHash: 6ac3b40ddcfe5237
+sourceHash: 8bb02104970da0a8
 ---
 
 すべての `emet` サブコマンド、ゲートと記録の表、終了コード、環境変数です。用語は [GLOSSARY.md](../../GLOSSARY.md) に従います。[README](../../README.md) に戻る。すべてのコマンドは `--help` で使い方を表示します。
@@ -83,6 +83,15 @@ emet doctor ~/code/*
 
 1 つのウェーブは 1 つの PR です。本文には各チケットについて `Closes #N`（トラッカーのクローズ用キーワード）が入り、コーディネーターは PR を開く際にチケットをレビュー中に移します。その後、PR は `pr.autoMerge` に従ってマージされます。ウェーブにフラグが立っている場合、`autoMerge` が `false` の場合、または CI の修正回数を使い切った場合は、PR は開いたままになります（その場合、PR には人間の判断が必要であることを示すラベルが付きます）。後続のウェーブは、ウェーブ 1 を実行したセッションではなく、それぞれ独自のセッションで実行されます。次に何が起きるかは `pr` セクションと `handoff` セクションで制御します。[`pr`](configuration.md#pr) と [`handoff`](configuration.md#handoff) を参照してください。
 
+### Codex ホスト
+
+これらのコマンドは Codex エージェントホスト (`agentHost` が `"codex"`) 用です。[Codex ガイド](../guide/codex.md)を参照してください。
+
+- `emet dispatch --role worker --run <id> --ticket <id> --prompt-file <file> [--model <m>] [--effort <e>] [--root <dir>]`: クレームとスロットを確認したあと、`.emet/worktrees/agent-<ticket>` を作り、実行ごとの `CODEX_HOME` オーバーレイを構築して、ワーカーを切り離した `codex exec` として起動します。`emet dispatch --wait --run <id> --ticket <id> [--timeout <s>]` は終了まで待ち、記録された結果ステータスを出力します。
+- `emet review-run --run <id> --ticket <id> --package <file> --tier <medium|high|passive>`: `emet review-package` が作ったパッケージに対して、レビュアーを読み取り専用の `codex exec` として実行し、`emet review --findings` 向けの指摘 JSON を出力します。`passive` ティアではプロセスを起動しません。
+- `emet launch <spec-id> --wave <n>`: このホストでは、`$emet:run --dispatch <spec>` を実行する切り離した `codex exec` を起動し、そのスレッド ID を記録します。Orca のタブは開かず、`codex exec resume <id>` でセッションを再開できます。
+- `emet guard`: `EMET_AGENT_HOST=codex` のとき Codex のフック入力を読み、`apply_patch` のパスを `.emet/surface.json` と照合し、プロンプト行 `approve <id>` が届くまで承認ゲートを閉じたままにします。
+
 ## ゲートと記録
 
 フェーズは、チケットが完了したか、マージ可能か、再試行する価値があるかを自分では判断しません。ディスク上の記録を読み、判断を出力する CLI コマンドを呼び出します。実行記録は `.emet/runs/<run-id>/` に、レビュー台帳は `.emet/review/` にあり、どちらもワーカーのワークツリーではなくメインのチェックアウトにあります。
@@ -124,5 +133,6 @@ emet doctor ~/code/*
 | `EMET_MEM_RESERVE_GIB`        | 空けておく必要があるメモリの余裕（GiB）です。利用可能なメモリがこれを下回ると、取得は拒否されます。既定は 8 です。`auto` のワーカー上限の計算にも使われます。                                                     |
 | `EMET_MEM_PER_WORKER_GIB`     | `maxLiveWorkers` が `auto` のときに、ワーカー 1 つあたりに想定するメモリ（GiB）です。既定は 2 です。ワークツリーごとにブラウザ駆動の E2E スイートを動かすなど、ワーカーごとの構成が重い場合は引き上げてください。 |
 | `EMET_CPU_OVERSUBSCRIBE`      | `auto` のワーカー上限に使う CPU の倍率です。既定は 1 です。                                                                                                                                                       |
+| `EMET_AGENT_HOST`             | `codex` にすると `emet guard` が Codex のフック入力を読みます。Codex のフックが設定します。Claude Code では未設定のままにしてください。                                                                           |
 
 `auto` の上限は `clamp(min(cpuCount × EMET_CPU_OVERSUBSCRIBE, floor((memTotal − EMET_MEM_RESERVE_GIB) / EMET_MEM_PER_WORKER_GIB)), min, max)` です。旧来の `FORGE_*` 名も引き続き読み取られ、両方が設定されている場合は `EMET_*` が優先されます。

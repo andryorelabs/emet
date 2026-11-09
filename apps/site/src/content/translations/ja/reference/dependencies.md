@@ -2,7 +2,7 @@
 title: 依存関係
 description: emet がマシン上で必要とするものと、各項目を確認するコマンドを説明します。
 seoTitle: emet の依存関係
-sourceHash: 628a2bb58f655fd5
+sourceHash: 50444429c7883bd3
 ---
 
 emet がマシン上で必要とするものと、各項目を確認するコマンドです。用語は [GLOSSARY.md](../../GLOSSARY.md) に従います。[README](../../README.md) に戻る。
@@ -24,6 +24,22 @@ emet がマシン上で必要とするものと、各項目を確認するコマ
 - **`.mcp.json`（またはユーザースコープ）で宣言された Linear MCP サーバー**: リポジトリが `linear` トラッカーを使う場合のみ必要です。emet は宣言があることを確認します。接続が認証済みかどうかは Claude Code 自身の認証情報ストアにあり、ここから確認することはできません。実行中にチケットの読み取りに失敗した場合は、Claude Code を再起動して接続を承認してください。
 
 上記のいずれも、ユーザーに代わってインストールやログインが行われることはありません。違いは、誰がどの程度厳密に確認するかです。
+
+## Codex ホスト
+
+`agentHost` が `"codex"` のときだけ必要です。[Codex ガイド](../guide/codex.md)を参照してください。`emet-worker` と `emet-reviewer` エージェントはそこでは使いません。
+
+- **`codex` CLI**。ログイン済みで、`codex.minVersion`（既定 `0.167.0`）以降のバージョン。`emet doctor` は古いバージョンを報告し、`codex exec --help` に `--json` と `--output-schema` が載っているか確認します。
+- Codex の **`mattpocock-skills` プラグイン**。`codex plugin list` で確認します。
+
+  ```bash
+  codex plugin marketplace add mattpocock/skills
+  codex plugin add mattpocock-skills@mattpocock
+  ```
+
+- **Codex 用の emet プラグイン** (`.codex-plugin/plugin.json`)。`$emet:run`、`$emet:init`、`$emet:doctor` スキルと承認フックを含みます。
+
+emet があなたの `~/.codex` に書き込むことはありません。ワーカーは、認証と設定へのリンクを持つ実行ごとの `CODEX_HOME` で動きます。
 
 ## 何が何を確認するか
 

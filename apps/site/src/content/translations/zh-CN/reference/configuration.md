@@ -2,7 +2,7 @@
 title: 配置参考
 description: emet.config.json 中的每个键，包括其默认值和含义。
 seoTitle: emet 配置参考
-sourceHash: 72d2564863187ae0
+sourceHash: f93a93f72cc341b1
 ---
 
 `emet.config.json` 中的每个键，及其默认值和含义。权威来源是 [`emet/schema/emet.config.schema.json`](../../emet/schema/emet.config.schema.json)。术语遵循 [GLOSSARY.md](../../GLOSSARY.md)。返回 [README](../../README.md)。
@@ -80,6 +80,20 @@ sourceHash: 72d2564863187ae0
 - `reviewer.medium` 和 `reviewer.high`（默认均为 `opus`、`medium`）：`emet assess` 返回的每个风险层级所对应的评审者。若想对高风险波次加强审查，可以提高 `reviewer.high.effort`（例如提高到 `high`）。
 - `triage`（默认 `haiku`）：用于 CI 日志分诊和 passive 层级评审的廉价模型。失败的检查会交给使用该模型的代理，它最多返回约 2k 个 token，并附带 `file:line` 指引。
 - `escalation`（默认 `{ "sonnet": "opus" }`）：按模型名称给出的下一个模型层级，在工单达到修复次数上限时使用。
+
+## agentHost
+
+`agentHost` (默认 `"claude"`): 运行所在的 Agent 宿主，`"claude"` 或 `"codex"`。参见 [Codex 指南](../guide/codex.md)。
+
+## codex
+
+仅当 `agentHost` 为 `"codex"` 时才会读取。所有键都是可选的。强度取 `low`、`medium`、`high`、`xhigh`、`max` 之一，永远不接受 `ultra`。
+
+- `models.worker`, `models.workerOverride`, `models.reviewer.medium`, `models.reviewer.high`, `models.triage`: 每项都是 `{ "model", "effort", "fallback" }`。当 `model` 不在 Codex 模型缓存中时，`fallback` 列出按顺序尝试的 slug。默认值见[模型与强度](../guide/models-and-effort.md)。
+- `models.session`: 用于运行 `$emet:run` 的会话：`{ "model", "effort", "planEffort", "fallback" }`。`planEffort` 在首次批准之前生效。
+- `effort`: 设置后会替换所有角色的强度。
+- `minVersion` (默认 `0.167.0`): `emet doctor` 接受的最旧 `codex` CLI 版本。
+- `sandbox` (默认 `workspace-write`): Codex worker 的沙箱模式。`danger-full-access` 需要显式选择。
 
 ## review
 
