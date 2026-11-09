@@ -121,6 +121,206 @@ function isReadOnlyBash(command: unknown): boolean {
   return program === "git" && subcommand !== undefined && READ_ONLY_GIT_SUBCOMMANDS.has(subcommand);
 }
 
+/** A shell word after quote removal. */
+type ShellWord = { readonly text: string };
+
+/** Thrown by the lexer on unbalanced quotes or substitutions. */
+class UnparseableCommand extends Error {}
+
+const CONTROL_KEYWORDS = new Set(["if", "then", "else", "elif", "do", "while", "until", "!", "{"]);
+const SHELLS = new Set(["sh", "bash", "zsh", "dash", "ksh", "ash"]);
+const GIT_OPTIONS_WITH_VALUE = new Set([
+  "-C",
+  "-c",
+  "--git-dir",
+  "--work-tree",
+  "--namespace",
+  "--config-env",
+  "--super-prefix",
+]);
+const WRAPPER_OPTIONS_WITH_VALUE: Record<string, ReadonlySet<string>> = {
+  sudo: new Set(["-u", "-g", "-h", "-p", "-C", "-D", "-r", "-t", "-U"]),
+  env: new Set(["-u", "-C", "-S"]),
+  nice: new Set(["-n"]),
+  timeout: new Set(["-s", "-k", "--signal", "--kill-after"]),
+  xargs: new Set(["-I", "-L", "-n", "-P", "-s", "-d", "-E", "-a"]),
+};
+const POSITIONAL_WRAPPERS = new Set(["timeout"]);
+const PLAIN_WRAPPERS = new Set(["command", "builtin", "exec", "nohup", "time", "stdbuf"]);
+const ASSIGNMENT = /^[A-Za-z_][A-Za-z0-9_]*=/;
+
+/** The index just past the `)` closing a `$(` that opens at `start`. */
+function closingParenthesis(text: string, start: number): number {
+  let depth = 1;
+  let quote: string | null = null;
+  for (let index = start; index < text.length; index++) {
+    const character = text[index];
+    if (quote !== null) {
+      if (character === quote) quote = null;
+      else if (character === "\\" && quote === '"') index++;
+      continue;
+    }
+    if (character === "\\") index++;
+    else if (character === "'" || character === '"') quote = character;
+    else if (character === "(") depth++;
+    else if (character === ")" && --depth === 0) return index + 1;
+  }
+  throw new UnparseableCommand("unbalanced $(");
+}
+
+/**
+ * Splits shell text into simple commands of words, removing quotes. Command
+ * and backtick substitutions are collected into `nested` for a separate pass.
+ */
+function lexShell(text: string, nested: string[]): ShellWord[][] {
+  const commands: ShellWord[][] = [];
+  let words: ShellWord[] = [];
+  let current = "";
+  let inWord = false;
+  const endWord = () => {
+    if (inWord) words.push({ text: current });
+    current = "";
+    inWord = false;
+  };
+  const endCommand = () => {
+    endWord();
+    if (words.length > 0) commands.push(words);
+    words = [];
+  };
+  for (let index = 0; index < text.length; index++) {
+    const character = text[index]!;
+    if (character === "\\") {
+      if (text[index + 1] !== "\n") current += text[index + 1] ?? "";
+      index++;
+      inWord = true;
+    } else if (character === "'") {
+      const end = text.indexOf("'", index + 1);
+      if (end === -1) throw new UnparseableCommand("unbalanced '");
+      current += text.slice(index + 1, end);
+      index = end;
+      inWord = true;
+    } else if (character === '"') {
+      let end = index + 1;
+      for (; end < text.length && text[end] !== '"'; end++) {
+        if (text[end] === "\\") {
+          current += text[end + 1] ?? "";
+          end++;
+        } else if (text.startsWith("$(", end)) {
+          const close = closingParenthesis(text, end + 2);
+          nested.push(text.slice(end + 2, close - 1));
+          current += "$";
+          end = close - 1;
+        } else if (text[end] === "`") {
+          const close = text.indexOf("`", end + 1);
+          if (close === -1) throw new UnparseableCommand("unbalanced `");
+          nested.push(text.slice(end + 1, close));
+          end = close;
+        } else current += text[end];
+      }
+      if (end >= text.length) throw new UnparseableCommand('unbalanced "');
+      index = end;
+      inWord = true;
+    } else if (text.startsWith("$(", index)) {
+      const close = closingParenthesis(text, index + 2);
+      nested.push(text.slice(index + 2, close - 1));
+      current += "$";
+      inWord = true;
+      index = close - 1;
+    } else if (character === "`") {
+      const close = text.indexOf("`", index + 1);
+      if (close === -1) throw new UnparseableCommand("unbalanced `");
+      nested.push(text.slice(index + 1, close));
+      current += "$";
+      inWord = true;
+      index = close;
+    } else if (/[;&|()\n]/.test(character)) {
+      endCommand();
+    } else if (/\s/.test(character)) {
+      endWord();
+    } else {
+      current += character;
+      inWord = true;
+    }
+  }
+  endCommand();
+  return commands;
+}
+
+/** Drops leading assignments, control keywords and wrappers such as `sudo` or `env`. */
+function stripCommandPrefix(words: readonly ShellWord[]): ShellWord[] {
+  let index = 0;
+  while (index < words.length) {
+    const word = words[index]!.text;
+    if (CONTROL_KEYWORDS.has(word) || ASSIGNMENT.test(word)) {
+      index++;
+      continue;
+    }
+    const program = path.basename(word);
+    const valued = WRAPPER_OPTIONS_WITH_VALUE[program];
+    if (!PLAIN_WRAPPERS.has(program) && valued === undefined) break;
+    index++;
+    while (index < words.length && words[index]!.text.startsWith("-")) {
+      index += valued?.has(words[index]!.text) === true ? 2 : 1;
+    }
+    if (program === "env") {
+      while (index < words.length && ASSIGNMENT.test(words[index]!.text)) index++;
+    }
+    if (POSITIONAL_WRAPPERS.has(program)) index++;
+  }
+  return words.slice(index);
+}
+
+/** Whether `git <args>` (global options first) runs the `push` subcommand. */
+function gitArgumentsPush(args: readonly ShellWord[]): boolean {
+  let index = 0;
+  while (index < args.length) {
+    const word = args[index]!.text;
+    if (!word.startsWith("-")) return word === "push";
+    if (GIT_OPTIONS_WITH_VALUE.has(word)) {
+      const value = args[index + 1]?.text ?? "";
+      if (word === "-c" && /^alias\.[^=]*=.*\bpush\b/i.test(value)) return true;
+      index += 2;
+    } else index++;
+  }
+  return false;
+}
+
+/** Whether one simple command runs `git push`, directly or through a nested shell. */
+function simpleCommandPushes(words: readonly ShellWord[]): boolean {
+  const [program, ...args] = stripCommandPrefix(words);
+  if (program === undefined) return false;
+  const name = path.basename(program.text);
+  if (name === "git-push") return true;
+  if (name === "git") return gitArgumentsPush(args);
+  if (name === "eval") return isGitPushCommand(args.map((arg) => arg.text).join(" "));
+  if (SHELLS.has(name)) {
+    const flagIndex = args.findIndex((arg) => /^-[A-Za-z]*c[A-Za-z]*$/.test(arg.text));
+    const script = flagIndex === -1 ? undefined : args[flagIndex + 1];
+    return script !== undefined && isGitPushCommand(script.text);
+  }
+  return program.text.includes("$") && args.some((arg) => arg.text === "push");
+}
+
+/**
+ * Whether a shell command runs `git push` in any argv form: chained with
+ * `&&`, `;`, `|` or newlines, inside `$(...)` or backticks, behind
+ * assignments or wrappers (`env`, `sudo`, `command`, `xargs`, ...), with git
+ * global options (`-C`, `--git-dir`, `-c`) or through `sh -c`/`eval`.
+ * Best effort, and fails closed: text that cannot be lexed is a push when
+ * the words `git` and `push` both appear in it.
+ */
+export function isGitPushCommand(command: string): boolean {
+  const nested: string[] = [];
+  let commands: ShellWord[][];
+  try {
+    commands = lexShell(command, nested);
+  } catch (error) {
+    if (!(error instanceof UnparseableCommand)) throw error;
+    return /\bgit\b/.test(command) && /\bpush\b/.test(command);
+  }
+  return commands.some(simpleCommandPushes) || nested.some(isGitPushCommand);
+}
+
 function mutationTargets(input: PreToolUseInput): string[] | null {
   if (input.tool_name === "apply_patch") return input.paths ?? null;
   if (input.tool_name === "Bash") return null;
@@ -132,8 +332,14 @@ function mutationTargets(input: PreToolUseInput): string[] | null {
  * The single approval gate. While a `spec<id>` run directory under `runsDir`
  * has no `approval.json`, every mutation is denied except writes under
  * `runs/<run>/draft/`. Fails closed: an unparseable mutation is denied.
+ * Before the gate, a Bash call that runs `git push` is denied whatever the
+ * approval state (ADR-0022: the guard is the boundary outside the sandbox).
  */
 export function evaluateApprovalGate(input: PreToolUseInput, runsDir: string): GuardDecision {
+  const command = input.tool_input?.["command"];
+  if (input.tool_name === "Bash" && typeof command === "string" && isGitPushCommand(command)) {
+    return { decision: "deny", reason: "git push is not allowed" };
+  }
   const [pendingId] = pendingApprovalIds(runsDir);
   if (pendingId === undefined) return ALLOW;
   if (input.tool_name === undefined || !MUTATING_TOOLS.has(input.tool_name)) return ALLOW;

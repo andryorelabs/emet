@@ -10,6 +10,7 @@ import {
   formatCodexPreToolUseOutput,
   handleUserPromptSubmit,
   isAgentWorktreeFor,
+  isGitPushCommand,
   normalizeHookInput,
   parseApplyPatchPaths,
 } from "./guard-codex";
@@ -195,6 +196,99 @@ describe("evaluateApprovalGate", () => {
   });
 });
 
+describe("isGitPushCommand", () => {
+  const pushes = [
+    "git push",
+    "git push origin develop",
+    "  git   push  ",
+    "/usr/bin/git push origin x",
+    "git -C wt push origin x",
+    "git -C /tmp/w push",
+    "git --git-dir=/r/.git push",
+    "git --git-dir /r/.git --work-tree /r push",
+    "git -c core.sshCommand=ssh push origin x",
+    "git -c alias.p=push p origin",
+    "git --no-pager -p push",
+    "GIT_SSH_COMMAND=x git push",
+    "A=1 B='two words' git push",
+    "env GIT_TRACE=1 git push",
+    "env -i git push",
+    "command git push",
+    "sudo git push",
+    "sudo -u root -E git push",
+    "exec git push",
+    "nohup git push &",
+    "timeout 10 git push",
+    "nice -n 5 git push",
+    "time git push",
+    '"git" push',
+    "'git' 'push'",
+    "g\\it push",
+    "git commit -m x && git push",
+    "git commit -m x; git push",
+    "git status || git push",
+    "echo origin | xargs git push",
+    "cd wt\ngit push",
+    "(git push)",
+    "{ git push; }",
+    "if true; then git push; fi",
+    "echo $(git push)",
+    "echo `git push`",
+    "x=$(cd wt && git push origin x)",
+    "sh -c 'git push'",
+    'bash -lc "cd wt && git -C . push origin x"',
+    "zsh -c 'sh -c \"git push\"'",
+    "eval 'git push'",
+    "git-push origin",
+    "git push 'unbalanced",
+    "$GIT push",
+  ];
+  const others = [
+    "git pull",
+    "git status",
+    'git commit -m "push the button"',
+    "git commit -m 'git push later'",
+    "echo git push",
+    'echo "git push"',
+    "git log --grep push",
+    "git stash push -m wip",
+    "rg push src",
+    "ls",
+    "",
+  ];
+
+  for (const command of pushes) {
+    test(`detects ${JSON.stringify(command)}`, () => {
+      expect(isGitPushCommand(command)).toBe(true);
+    });
+  }
+  for (const command of others) {
+    test(`allows ${JSON.stringify(command)}`, () => {
+      expect(isGitPushCommand(command)).toBe(false);
+    });
+  }
+});
+
+function bashInput(command: string): { tool_name: string; tool_input: { command: string } } {
+  return { tool_name: "Bash", tool_input: { command } };
+}
+
+describe("evaluateApprovalGate git push", () => {
+  test("denies git push whatever the approval state, allows git pull", () => {
+    const repo = makeRepo();
+    const approved = seedRun(repo, "12", { approved: true });
+    const pending = seedRun(makeRepo(), "13");
+    const denied = { decision: "deny", reason: "git push is not allowed" };
+    expect(evaluateApprovalGate(bashInput("git -C wt push origin x"), approved)).toEqual(denied);
+    expect(evaluateApprovalGate(bashInput("git push"), pending)).toEqual(denied);
+    expect(evaluateApprovalGate(bashInput("git push"), path.join(repo, "absent"))).toEqual(denied);
+    expect(evaluateApprovalGate(bashInput("git pull"), approved).decision).toBe("allow");
+    expect(
+      evaluateApprovalGate(bashInput('git commit -m "push the button"'), approved).decision,
+    ).toBe("allow");
+  });
+});
+
 describe("handleUserPromptSubmit", () => {
   test("approve <id> on its own line writes approval.json", () => {
     const runsDir = seedRun(makeRepo(), "12");
@@ -271,6 +365,20 @@ describe("emet guard run() through stdin", () => {
     });
     const closed = await runCli(GUARD_ENTRY, [], bash, codexEnv, subdirectory);
     expect(hookOutput(closed.stdout).reason).toBe("not approved: send approve 12");
+  });
+
+  test("a Codex Bash git push is denied through the hook, Claude is untouched", async () => {
+    const repo = makeRepo();
+    Bun.spawnSync(["git", "init", "-q"], { cwd: repo });
+    const push = JSON.stringify({
+      tool_name: "Bash",
+      cwd: repo,
+      tool_input: { command: "git -C wt push origin x" },
+    });
+    const denied = await runCli(GUARD_ENTRY, [], push, codexEnv, repo);
+    expect(hookOutput(denied.stdout).reason).toBe("git push is not allowed");
+    const claude = await runCli(GUARD_ENTRY, [], push, { EMET_AGENT_HOST: "" }, repo);
+    expect(claude.stdout).toBe("");
   });
 
   test("the gate denies Bash until a UserPromptSubmit approves", async () => {
