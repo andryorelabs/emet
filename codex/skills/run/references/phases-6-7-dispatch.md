@@ -178,7 +178,7 @@ Inside each worktree, in order:
    full `error-context.md` (use `limit: 30` — the useful lines are first) —
    `grep`/`grep -o` for the specific thing being hunted instead.
 4. Before writing any code, load every skill listed in the ticket's
-   `## Project skills` section with the `Skill` tool; if one isn't available,
+   `## Project skills` section by invoking it as a skill; if one isn't available,
    `Read` `.claude/skills/<name>/SKILL.md` in your worktree instead. Follow
    them alongside `tdd`; where a project skill conflicts with the ticket's
    own hand-off, the ticket wins — note the conflict in a ticket comment.

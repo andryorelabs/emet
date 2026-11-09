@@ -107,7 +107,8 @@ then `Read` with `offset`/`limit`; never `Read` a raw log or full
 error-context file (`limit: 30` or `grep -o`). Do not look for an LSP tool — it never reaches a worker. Batch independent
 tool calls in one message; read each file once.
 
-Load every skill in your ticket's `## Project skills` by name (`$<name>`); follow them alongside `tdd`. If
+Load every skill in your ticket's `## Project skills` by invoking it as a skill
+(or `Read` `.claude/skills/<name>/SKILL.md`); follow them alongside `tdd`. If
 one conflicts with the ticket's own hand-off, the ticket wins — record the
 conflict in your handoff note.
 

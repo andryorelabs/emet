@@ -94,6 +94,7 @@ const RULES: readonly Rule[] = [
     pattern: /Launch up to `concurrency\.waveSize`[\s\S]*?makes the call fail\./,
     replacement: COORDINATOR_DISPATCH,
   },
+  { pattern: /with\s+the\s+`Skill`\s+tool/g, replacement: "by invoking it as a skill" },
   { pattern: /calling\s+the\s+Skill\s+tool/g, replacement: "invoking the skill" },
   { pattern: /call\s+the\s+Skill\s+tool/g, replacement: "invoke the skill" },
   { pattern: /Call\s+the\s+Skill\s+tool/g, replacement: "Invoke the skill" },
