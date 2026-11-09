@@ -1,5 +1,5 @@
 #!/usr/bin/env bun
-import { appendFileSync } from "node:fs";
+import { appendFileSync, readFileSync } from "node:fs";
 
 const argv = process.argv.slice(2);
 const logPath = process.env.FAKE_CODEX_PROBE_LOG;
@@ -11,7 +11,33 @@ if (logPath) {
 
 const isModelRun = argv[0] === "exec" && !argv.includes("--help");
 
-if (argv[0] === "--version") {
+/** A minimal `codex execpolicy check --rules <file> <command...>`: prefix rules only. */
+function execpolicyCheck(args) {
+  const rulesIndex = args.indexOf("--rules");
+  const rules = readFileSync(args[rulesIndex + 1], "utf8");
+  const command = args.slice(rulesIndex + 2);
+  const matchedRules = rules
+    .split("\n")
+    .flatMap((line) => {
+      const match = /prefix_rule\(pattern = (\[.*\]), decision = "(\w+)"\)/.exec(line);
+      return match ? [{ pattern: JSON.parse(match[1]), decision: match[2] }] : [];
+    })
+    .filter(({ pattern }) =>
+      pattern.every((token, index) =>
+        Array.isArray(token) ? token.includes(command[index]) : token === command[index],
+      ),
+    )
+    .map(({ pattern, decision }) => ({
+      prefixRuleMatch: { matchedPrefix: command.slice(0, pattern.length), decision },
+    }));
+  const decisions = matchedRules.map((rule) => rule.prefixRuleMatch.decision);
+  const decision = ["forbidden", "prompt", "allow"].find((name) => decisions.includes(name));
+  console.log(JSON.stringify(decision ? { matchedRules, decision } : { matchedRules }));
+}
+
+if (argv[0] === "execpolicy" && argv[1] === "check") {
+  execpolicyCheck(argv.slice(2));
+} else if (argv[0] === "--version") {
   console.log("codex-cli 0.167.0");
 } else if (argv[0] === "login" && argv[1] === "status") {
   console.log("Logged in using ChatGPT");
