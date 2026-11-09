@@ -1,0 +1,34 @@
+.approval-tickets {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.approval-tickets li {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--text);
+}
+
+.approval-tickets li::before {
+  content: "";
+  flex: none;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  border: 1.5px solid var(--moss);
+  background: var(--moss);
+}
+
+.approval-stamp {
+  padding: 4px 14px;
+  border: 2px solid var(--moss);
+  border-radius: 6px;
+  color: var(--moss);
+  font-size: 17px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  transform: rotate(-6deg);
+}

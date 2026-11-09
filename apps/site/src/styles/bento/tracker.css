@@ -1,0 +1,19 @@
+.tracker-chips {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px;
+}
+
+.tracker-chip {
+  padding: 5px 12px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  color: var(--text-muted);
+}
+
+.tracker-chip.is-picked {
+  border-color: var(--moss);
+  background: var(--moss);
+  color: var(--on-accent);
+}

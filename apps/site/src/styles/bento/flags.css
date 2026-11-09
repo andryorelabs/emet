@@ -1,0 +1,27 @@
+.flags-run {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: 100%;
+}
+
+.flags-track {
+  position: relative;
+  height: 6px;
+  border-radius: 3px;
+  background: var(--border);
+  overflow: clip;
+}
+
+.flags-track::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: var(--moss);
+  transform-origin: left;
+}
+
+.flags-flag {
+  color: var(--error);
+  opacity: 0;
+}
