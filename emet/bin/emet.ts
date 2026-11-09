@@ -44,6 +44,8 @@ commands:
   verify    <ticket>  — post-worker enforcement check
   review-package <base> <head>  — review range package
   review    --ticket <ticket> [--round <n>]
+  dispatch  --role worker --run <id> --ticket <id> --prompt-file <f> [--wait]  — start a Codex worker (Codex host)
+  review-run --package <dir> --tier <tier>  — run a Codex review (Codex host)
   approve   --run <id>
   results   --run <id> [--ticket <ticket>]
   materialize-log --run <id> [--ticket <ticket> --id <tracker-id>]
@@ -189,6 +191,16 @@ async function main(): Promise<void> {
     case "review": {
       const { run } = await import("../src/review");
       await run(rest);
+      return;
+    }
+    case "dispatch": {
+      const { run } = await import("../src/dispatch");
+      process.exitCode = await run(rest);
+      return;
+    }
+    case "review-run": {
+      const { run } = await import("../src/review-run");
+      process.exitCode = await run(rest);
       return;
     }
     case "approve": {
