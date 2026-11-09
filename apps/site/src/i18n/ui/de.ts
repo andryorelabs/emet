@@ -117,7 +117,10 @@ export const de = {
     heading: "Warum es emet heißt",
     lineOne: "Hebräisch für Wahrheit. Ein Golem ist Lehm, den dieses Wort zum Leben erweckt.",
     lineTwo:
-      "Lösche einen Buchstaben und er hält an. Hier wird nichts gemergt, wenn etwas markiert ist.",
+      "Lösche den ersten Buchstaben und es heißt met, tot. Der Golem hält an. Hier wird nichts gemergt, wenn etwas markiert ist.",
+    truth: "Wahrheit",
+    dead: "tot",
+    wordLabel: "emet, Wahrheit, wird ohne den ersten Buchstaben zu met, tot",
     caption: "Der emet-Golem, gemalt.",
     role: "Maintainer",
     alt: "Ein gemaltes Nahporträt des emet-Golems auf seiner grasigen Anhöhe im Licht der goldenen Stunde, mit Moos- und Lehmtextur und einem kleinen Spross auf dem Kopf.",

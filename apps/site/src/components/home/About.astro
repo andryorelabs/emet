@@ -19,6 +19,19 @@ const { about } = strings;
   <div class="letter">
     <h2 id="about-title" data-reveal="heading"><span class="reveal-line">{about.heading}</span></h2>
     <p>{about.lineOne}</p>
+    <div class="hebrew-pair" data-reveal="item" role="img" aria-label={about.wordLabel}>
+      <div class="hebrew-word" aria-hidden="true">
+        <span class="hebrew" lang="he" dir="rtl"><span class="hebrew-aleph">א</span>מת</span>
+        <span class="hebrew-roman">emet</span>
+        <span class="hebrew-gloss">{about.truth}</span>
+      </div>
+      <span class="hebrew-arrow" aria-hidden="true">→</span>
+      <div class="hebrew-word" aria-hidden="true">
+        <span class="hebrew" lang="he" dir="rtl">מת</span>
+        <span class="hebrew-roman">met</span>
+        <span class="hebrew-gloss">{about.dead}</span>
+      </div>
+    </div>
     <p>{about.lineTwo}</p>
     <p class="signature">AndryOre<small>{about.role}</small></p>
   </div>
