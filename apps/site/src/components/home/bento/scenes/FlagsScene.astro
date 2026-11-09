@@ -1,7 +1,9 @@
 ---
 /**
- * Static final frame of the flags card picture: the run track after the flag
- * lifted. Decorative and `aria-hidden`.
+ * Flags card picture: three branches flow toward a merge node, a red flag
+ * holds them back, then lifts and the node turns green. The static frame
+ * (reduced motion or no script) is the finished state. Decorative and
+ * `aria-hidden`.
  */
 // oxlint-disable-next-line import/no-unassigned-import -- Astro bundles a stylesheet imported for its side effect
 import "../../../../styles/bento/scene.css";
@@ -10,8 +12,11 @@ import "../../../../styles/bento/flags.css";
 ---
 
 <div class="scene scene-flags bento-visual" data-scene aria-hidden="true">
-  <div class="flags-run">
-    <span class="flags-track"></span>
-    <span class="flags-flag">held</span>
+  <div class="flags-graph">
+    <span class="flags-branch"><span class="flags-dash"></span></span>
+    <span class="flags-branch"><span class="flags-dash"></span></span>
+    <span class="flags-branch"><span class="flags-dash"></span></span>
+    <span class="flags-node"><span class="flags-node-lit"></span></span>
+    <span class="flags-flag"></span>
   </div>
 </div>
