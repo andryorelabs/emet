@@ -1,7 +1,7 @@
 # 0021. Codex support strategy
 
-Status: Proposed (2026-11-09)
-Spec: #341 (S4)
+Status: Accepted (2026-11-09)
+Spec: #341 (research); the Codex support implementation spec, filed 2026-11-09
 
 ## Context
 
@@ -13,9 +13,14 @@ emet is coupled to Claude Code at about 110 points: the plugin layout, subagent 
 - On Codex, the `emet` CLI owns the processes. Workers run as `codex exec -C <worktree> --json`, the reviewer as `codex exec -s read-only`. Commits go through an exec-policy allow rule for `git add` and `git commit` with `git push` forbidden. `danger-full-access` stays a documented opt-in.
 - The coordinator on Codex is the plugin skill `$emet:run`.
 - The single approval on Codex is hook-emulated: a `PreToolUse` hook denies mutations until a `UserPromptSubmit` hook sees the user prompt `approve <id>` and creates the approval file. The alternative, documented and supported, is `/plan $emet:run` followed by the "Implement this plan?" prompt.
+- `agentHost` in `emet.config.json` selects the host, default `claude`. The interface is data-oriented: adapters hold commands, ids, paths, patterns and a transcript-format tag, and the consuming modules keep their code, so adapters never import usage, metrics, skills or dependencies code.
+- The Claude install stays byte-identical: a test snapshots the installed file list and the hash of every shipped prompt, and existing tests pass unmodified.
+- Codex artefacts live outside `emet/`: `.codex-plugin/plugin.json` (same version as `.claude-plugin/plugin.json`, `skills: ./codex/skills`, `hooks: ./codex/hooks.json`, `commands: []`) and `codex/`, generated from the Claude prompts by a dev-only script in `tools/` and committed, with a test that fails when they are stale or contain Claude-only tokens.
+- `emet dispatch` creates Codex worker worktrees at `.emet/worktrees/agent-<ticket>` on `worktree-agent-<ticket>`, and runs each process under a per-run `CODEX_HOME` overlay that links, never copies, the user's auth and config, so `~/.codex` is never written.
+- Codex models and effort come from `codex.models` and `codex.effort` defaults, resolved at dispatch against the account's `models_cache.json` with `upgrade` and fallbacks, and never `ultra`.
 - Installed prompt wording changes only under explicit tickets (ADR-0001). `install.sh` and the runtime behaviour of the CLI do not change until that spec is approved.
 
-This ADR stays Proposed until the follow-up spec is approved.
+This ADR is accepted with the approval of the implementation spec.
 
 ## Consequences
 
