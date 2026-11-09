@@ -128,4 +128,15 @@ describe("liveness", () => {
       }),
     ).toBe("stalled");
   });
+
+  test("an item without an id is closed by a completion without an id", () => {
+    const text = [
+      JSON.stringify({ type: "item.started", item: { type: "command_execution", command: "ls" } }),
+      JSON.stringify({
+        type: "item.completed",
+        item: { type: "command_execution", command: "ls" },
+      }),
+    ].join("\n");
+    expect(describeCodexLastStep(text).pendingTool).toBeNull();
+  });
 });

@@ -148,6 +148,8 @@ function toolLabel(item: Record<string, unknown>): string {
   return kind === "command_execution" ? "shell" : kind;
 }
 
+const ANONYMOUS_PREFIX = "anonymous-";
+
 /**
  * Describes the last `item.*` or `turn.*` event of a captured run. An
  * `item.started` whose item has no later `item.completed` (and no later
@@ -155,15 +157,20 @@ function toolLabel(item: Record<string, unknown>): string {
  */
 export function describeCodexLastStep(text: string): LastTranscriptStep {
   const open = new Map<string, string>();
+  let anonymousCount = 0;
   let last: LastTranscriptStep = UNKNOWN_STEP;
   for (const event of parseLines(text)) {
     const item = itemOf(event);
     if (event.type === "item.started" && item !== null && item.type !== "agent_message") {
-      const id = typeof item.id === "string" ? item.id : `anonymous-${open.size}`;
+      const id = typeof item.id === "string" ? item.id : `${ANONYMOUS_PREFIX}${anonymousCount++}`;
       open.set(id, toolLabel(item));
       last = { step: `tool_use ${toolLabel(item)}`, pendingTool: toolLabel(item) };
     } else if (event.type === "item.completed" && item !== null) {
-      open.delete(typeof item.id === "string" ? item.id : "");
+      const closedKey =
+        typeof item.id === "string"
+          ? item.id
+          : [...open.keys()].find((key) => key.startsWith(ANONYMOUS_PREFIX));
+      if (closedKey !== undefined) open.delete(closedKey);
       last = {
         step: item.type === "agent_message" ? "agent message" : "tool_result",
         pendingTool: null,

@@ -50,6 +50,15 @@ describe("hooksFileText", () => {
   });
 });
 
+describe("buildRunHome run id validation", () => {
+  test("rejects a run id that would escape the runs directory", () => {
+    const source = tempDir();
+    expect(() => buildRunHome({ run: "../../x", repoRoot: tempDir(), sourceHome: source })).toThrow(
+      "invalid run id",
+    );
+  });
+});
+
 describe("buildRunHome", () => {
   test("links auth and config, writes rules and hooks, never copies secrets", () => {
     const source = sourceHome();

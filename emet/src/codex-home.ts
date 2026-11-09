@@ -48,6 +48,8 @@ function replaceWithSymlink(target: string, linkPath: string): void {
   symlinkSync(target, linkPath);
 }
 
+const RUN_ID_PATTERN = /^[A-Za-z0-9][A-Za-z0-9_-]*$/;
+
 /**
  * Builds the per-run `CODEX_HOME` overlay at `<repoRoot>/.emet/runs/<run>/codex-home/`.
  * The user's `auth.json` and `config.toml` are symlinked in (never copied, so
@@ -57,6 +59,9 @@ function replaceWithSymlink(target: string, linkPath: string): void {
 export function buildRunHome(opts: { run: string; repoRoot: string; sourceHome?: string }): {
   codexHome: string;
 } {
+  if (!RUN_ID_PATTERN.test(opts.run)) {
+    throw new Error(`invalid run id for a Codex home overlay: ${JSON.stringify(opts.run)}`);
+  }
   const codexHome = path.join(opts.repoRoot, ".emet", "runs", opts.run, "codex-home");
   const source = path.resolve(sourceCodexHome(opts.sourceHome));
   const relative = path.relative(source, path.resolve(codexHome));

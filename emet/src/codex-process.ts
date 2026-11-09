@@ -46,13 +46,16 @@ export type CodexState = {
 };
 
 const DEFAULT_IO: ProcessIo = {
-  spawn: (command, args, options) =>
-    nodeSpawn(command, [...args], {
+  spawn: (command, args, options) => {
+    const child = nodeSpawn(command, [...args], {
       cwd: options.cwd,
       env: options.env,
       stdio: [...options.stdio],
       detached: options.detached,
-    }),
+    });
+    child.once("error", () => undefined);
+    return child;
+  },
   hasSetsid: () => Bun.which("setsid") !== null,
 };
 
