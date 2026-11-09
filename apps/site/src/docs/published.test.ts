@@ -12,6 +12,7 @@ const EXPECTED_SOURCES = [
   "docs/guide/fleet.md",
   "docs/guide/models-and-effort.md",
   "docs/guide/trackers-and-landing.md",
+  "docs/guide/codex.md",
   "docs/reference/cli.md",
   "docs/reference/configuration.md",
   "docs/reference/dependencies.md",
