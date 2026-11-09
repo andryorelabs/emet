@@ -198,6 +198,16 @@ describe("evaluateApprovalGate", () => {
 
 describe("isGitPushCommand", () => {
   const pushes = [
+    "git &>/dev/null push",
+    "git >| f push",
+    "sh -c -- 'git push'",
+    "bash <<< 'git push'",
+    "printf 'git push' | sh",
+    "source <(echo git push)",
+    "git -c alias.x=send-pack x origin",
+    "git -c alias.x='!sh x -c \"git push\"' x",
+    "export GIT_CONFIG_COUNT=1 GIT_CONFIG_KEY_0=alias.p GIT_CONFIG_VALUE_0=push; git p",
+    "python3 -c 'import os; os.system(\"git push\")'",
     "git push>/dev/null",
     "git >/dev/null push origin x",
     "git 2>&1 push origin x",
@@ -262,6 +272,11 @@ describe("isGitPushCommand", () => {
     "$GIT push",
   ];
   const others = [
+    'bun test -t "blocks git push"',
+    "sed -i 's/git push/x/' f",
+    "node scripts/git-push-check.js",
+    'gh pr create --title "fix: block git push"',
+    "bash script.sh",
     "git status > out.txt",
     "git log 2>&1 | head",
     "git diff --stat 2>/dev/null",

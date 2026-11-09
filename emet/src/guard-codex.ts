@@ -234,13 +234,23 @@ function lexShell(text: string, nested: string[]): ShellWord[][] {
       current += "$";
       inWord = true;
       index = close;
+    } else if ((character === "<" || character === ">") && text[index + 1] === "(") {
+      const close = closingParenthesis(text, index + 2);
+      nested.push(text.slice(index + 2, close - 1));
+      current += "$";
+      inWord = true;
+      index = close - 1;
     } else if (character === "<" || character === ">") {
       if (inWord && /^[0-9]+$/.test(current)) {
         current = "";
         inWord = false;
       } else endWord();
       while (text[index + 1] === "<" || text[index + 1] === ">") index++;
-      if (text[index + 1] === "&") index++;
+      if (text[index + 1] === "&" || text[index + 1] === "|") index++;
+      skipRedirectTarget = true;
+    } else if (character === "&" && text[index + 1] === ">") {
+      endWord();
+      while (text[index + 1] === ">") index++;
       skipRedirectTarget = true;
     } else if (/[;&|()\n]/.test(character)) {
       skipRedirectTarget = false;
@@ -281,6 +291,24 @@ function stripCommandPrefix(words: readonly ShellWord[]): ShellWord[] {
 }
 
 const INERT_PROGRAMS = new Set(["echo", "printf", "rg", "grep", "cat", "ls", "head", "tail", "wc"]);
+const COMMAND_RUNNERS = new Set([
+  "su",
+  "script",
+  "busybox",
+  "fish",
+  "flock",
+  "ionice",
+  "setsid",
+  "strace",
+  "chroot",
+  "doas",
+  "watch",
+  "parallel",
+  "ssh",
+  "find",
+  "xargs",
+]);
+const SCRIPT_INTERPRETERS = new Set(["python", "python3", "perl", "ruby", "node", "bun", "deno"]);
 const PUSHING_SUBCOMMANDS = new Set(["push", "send-pack", "http-push", "git-push"]);
 
 function subcommandPushes(subcommand: string, rest: readonly ShellWord[]): boolean {
@@ -298,7 +326,7 @@ function gitArgumentsPush(args: readonly ShellWord[]): boolean {
     if (!word.startsWith("-")) return subcommandPushes(word, args.slice(index + 1));
     if (GIT_OPTIONS_WITH_VALUE.has(word)) {
       const value = args[index + 1]?.text ?? "";
-      if (word === "-c" && /^alias\.[^=]*=.*\bpush\b/i.test(value)) return true;
+      if (word === "-c" && /^alias\./i.test(value)) return true;
       if (word === "--config-env" && value.startsWith("alias.")) return true;
       index += 2;
     } else if (word.startsWith("--config-env=alias.")) return true;
@@ -328,13 +356,22 @@ function simpleCommandPushes(words: readonly ShellWord[]): boolean {
   if (name === "eval") return isGitPushCommand(args.map((arg) => arg.text).join(" "));
   if (SHELLS.has(name)) {
     const flagIndex = args.findIndex((arg) => /^-[A-Za-z]*c[A-Za-z]*$/.test(arg.text));
-    const script = flagIndex === -1 ? undefined : args[flagIndex + 1];
+    if (flagIndex === -1) return args.every((arg) => arg.text.startsWith("-"));
+    const rest = args.slice(flagIndex + 1);
+    const script = rest.find((arg) => arg.text !== "--");
     return script !== undefined && isGitPushCommand(script.text);
   }
+  if ((name === "source" || name === ".") && args.some((arg) => arg.text.includes("$")))
+    return true;
   if (program.text.includes("$") && args.some((arg) => arg.text === "push")) return true;
   if (INERT_PROGRAMS.has(name)) return false;
-  const mentionsGit = words.some((word) => /\bgit\b/.test(word.text));
-  return mentionsGit && words.some((word) => /\b(?:push|send-pack)\b/.test(word.text));
+  const standalone = (pattern: RegExp) => words.some((word) => pattern.test(word.text));
+  if (standalone(/^(?:.*\/)?git$/) && standalone(/^(?:push|send-pack)$/)) return true;
+  const runsText =
+    COMMAND_RUNNERS.has(name) ||
+    (SCRIPT_INTERPRETERS.has(name) &&
+      args.some((arg) => /^(?:-[a-z]*[ecp]|--eval)$/.test(arg.text)));
+  return runsText && standalone(/\bgit\s+(?:push|send-pack)\b/);
 }
 
 /**
@@ -346,6 +383,7 @@ function simpleCommandPushes(words: readonly ShellWord[]): boolean {
  * the words `git` and `push` both appear in it.
  */
 export function isGitPushCommand(command: string): boolean {
+  if (/GIT_CONFIG_(?:COUNT|KEY|VALUE|PARAMETERS)/.test(command)) return true;
   const nested: string[] = [];
   let commands: ShellWord[][];
   try {
