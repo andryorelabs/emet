@@ -2,7 +2,7 @@
 title: Codex에서 emet 실행하기
 description: Codex CLI 쪽 설치, 에이전트 호스트 선택, 단일 승인, 알려진 한계를 설명합니다.
 seoTitle: Codex에서 emet 실행하기
-sourceHash: 2941f08113ffa231
+sourceHash: fedf7f4694193076
 ---
 
 emet은 Claude Code뿐 아니라 Codex CLI에서도 실행할 수 있습니다. 용어는 [GLOSSARY.md](../../GLOSSARY.md)를 따르며, 실행이 동작하는 제품을 **에이전트 호스트**라고 부릅니다. 이 페이지는 Codex 쪽 설치, 호스트 선택, 단일 승인, 알려진 한계를 다룹니다. [문서 색인](../README.md)으로 돌아갑니다.
@@ -54,7 +54,9 @@ emet은 계획 이후 단 한 번만 승인을 요청합니다. Claude Code에�
 
 - `emet dispatch --role worker`는 클레임과 슬롯을 확인하고, `.emet/worktrees/agent-<ticket>`을 만들고, `.emet/runs/<run>/codex-home/` 아래에 실행별 `CODEX_HOME` 오버레이를 구성합니다. 그런 다음 확정된 모델과 추론 강도, `codex.sandbox` 모드(기본값 `danger-full-access`), `--json`, `--output-schema`와 함께 `codex exec`를 시작합니다. 이벤트는 `.emet/runs/<run>/codex/<ticket>.jsonl`에 기록됩니다. 워커는 `thread.started` 이벤트의 `threadId`와 그 JSONL 경로로 식별되며, 프로세스 ID는 보조 필드일 뿐입니다.
 - 오버레이는 링크가 아니라 생성됩니다. `auth.json`은 심볼릭 링크로 연결되고(복사되지 않습니다), emet 플러그인 캐시는 Codex 홈에 있으면 거기서 링크되며, 오버레이는 자체 최소 `config.toml`을 씁니다. 내용은 로컬 마켓플레이스와 `[plugins."emet@emet-marketplace"] enabled = true`, 그 실행 자체의 디렉터리에 대해서만 만드는 `trusted` `[projects."<dir>"]` 테이블, 확정된 `model`과 `model_reasoning_effort`입니다. 사용자의 `[projects]` 테이블이나 다른 설정은 복사되지 않으며, `~/.codex`에는 절대 쓰지 않습니다.
-- 오버레이의 `rules/default.rules`는 `git add`, `git commit`, `git status`, `git worktree`, `git -C <dir> ...`, 그리고 `emet` 하위 명령 `dispatch`, `review-run`, `launch`, `claims`, `slots`, `results`, `handoff`를 허용하고 `git push`를 금지합니다. 기본 샌드박스가 더 이상 쓰기를 막지 않으므로, `emet guard`도 argv가 `git push`를 실행하는 `Bash` 명령을 `git -C <dir> push`와 `git --git-dir=<dir> push`를 포함해 샌드박스와 상관없이 거부합니다.
+- 오버레이의 `rules/default.rules`는 `git add`, `git commit`, `git status`, `git worktree`, `git -C <dir> ...`, 그리고 `emet` 하위 명령 `dispatch`, `review-run`, `launch`, `claims`, `slots`, `results`, `handoff`, `ask`를 허용하고 `git push`를 금지합니다. 기본 샌드박스가 더 이상 쓰기를 막지 않으므로, `emet guard`도 argv가 `git push`를 실행하는 `Bash` 명령을 `git -C <dir> push`와 `git --git-dir=<dir> push`를 포함해 샌드박스와 상관없이 거부합니다.
+- 워커는 코디네이터와 별도의 사이드 채널을 갖지 않습니다. 실행별 메일박스를 통해 에스컬레이션합니다. `emet ask --run <run> --ticket <ticket> --body <text>`는 질문을 기록하고 그 id를 출력하며, `emet ask ... --wait <n>`은 답변을 폴링합니다(종료 코드 0은 답변을 출력하고, 3은 대기 구간이 지났다는 뜻이며, 4는 `budgets.askWaitMinutes`를 모두 썼다는 뜻이므로 워커는 BLOCKED 결과를 쓰고 종료합니다). 살아 있는 워커에게 열린 질문이 있는 동안 `emet dispatch --wait`는 결과 상태 대신 `question <ticket> <id>`를 출력하고 그 워커를 정체된 것으로 분류하지 않습니다. 코디네이터는 `emet inbox --run <run>`을 읽고 `emet reply --run <run> --ticket <ticket> --id <n> --body <text>`로 답한 뒤 `emet dispatch --wait`를 재개합니다. 기록된 결과는 항상 열린 질문보다 우선합니다. [ADR-0023](../adr/0023-cli-owned-mailbox-for-codex-workers.md)을 참고하세요.
+- 결과는 `emet results --write`가 쓰는 곳과 같은 `<git-common-dir>/.emet/runs/<run>/results/`에서 읽으므로, 자체 worktree에 있는 워커도 찾을 수 있습니다.
 - `emet review-run`은 `emet review-package`가 만든 패키지에 대해 리뷰어를 읽기 전용으로 실행합니다. `passive` 티어는 프로세스를 시작하지 않습니다.
 - 모델은 실행 홈의 `models_cache.json`, 없으면 실제 Codex 홈의 `models_cache.json`(읽기 전용)에 대해 확정됩니다. 설정된 슬러그가 목록에 없으면 대체되고 그 대체가 기록됩니다. 아무것도 확정되지 않으면 `emet review-run`은 모델 호출 전에 역할과 목록에 있는 슬러그를 밝히며 실패합니다.
 - 사용량 및 정체 감지는 기록된 JSONL을 읽습니다. 토큰 사용량은 `turn.completed` 이벤트에서, 생존 여부는 파일이 계속 커지는지로 얻으므로 다른 pid 네임스페이스의 워커도 살아 있는 것으로 읽힙니다. `emet preflight`와 `emet cleanup`은 회수 가능한 소유자 없는 워크트리(워커 브랜치, 티켓 랜딩 완료, 깨끗한 트리, 다른 주체의 잠금 없음)에 같은 규칙을 공유하므로, preflight는 cleanup이 실제로 동작할 때만 `emet cleanup`을 실행하라고 안내합니다.
