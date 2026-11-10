@@ -2,13 +2,7 @@ import { randomUUID } from "node:crypto";
 import { existsSync } from "node:fs";
 import { mkdir, readFile, rename, writeFile } from "node:fs/promises";
 import path from "node:path";
-import {
-  didAcquireLock,
-  isLockStale,
-  readLockHolder,
-  releaseLock,
-  resolveLockDirectory,
-} from "./locks";
+import { didAcquireLock, didReclaimStaleLock, releaseLock, resolveLockDirectory } from "./locks";
 import { errnoCode, errorMessage } from "./narrow";
 import { PRODUCT } from "./names";
 import {
@@ -42,7 +36,6 @@ const EXIT_USAGE = 2;
 const LOCK_TIMEOUT_MS = 30_000;
 const LOCK_POLL_INTERVAL_MS = 25;
 const LOCK_MAX_AGE_MS = 120_000;
-const STALE_CONFIRM_DELAY_MS = 100;
 const CLOSED_STATUSES: ReadonlySet<TrackerStatus> = new Set(["done", "canceled", "resolved"]);
 
 class TrackerUsageError extends Error {}
@@ -109,28 +102,6 @@ function specFile(root: string, slug: string): string {
   return path.join(root, ".scratch", slug, "spec.md");
 }
 
-/**
- * Reclaims a lock only when the same holder is seen stale twice, a short
- * delay apart. `isLockStale` alone can misread a holder that has just
- * released as dead and then evict the next legitimate holder.
- */
-async function reclaimIfStale(lockDirectory: string): Promise<boolean> {
-  const first = readLockHolder(lockDirectory);
-  if (!isLockStale(lockDirectory, LOCK_MAX_AGE_MS)) {
-    return false;
-  }
-  await Bun.sleep(STALE_CONFIRM_DELAY_MS);
-  const second = readLockHolder(lockDirectory);
-  if (first?.pid !== second?.pid || first?.acquiredAt !== second?.acquiredAt) {
-    return false;
-  }
-  if (!isLockStale(lockDirectory, LOCK_MAX_AGE_MS)) {
-    return false;
-  }
-  releaseLock(lockDirectory);
-  return true;
-}
-
 async function acquireSpecLock(lockDirectory: string): Promise<void> {
   const deadline = Date.now() + LOCK_TIMEOUT_MS;
   for (;;) {
@@ -138,8 +109,7 @@ async function acquireSpecLock(lockDirectory: string): Promise<void> {
     if (didAcquireLock(lockDirectory, holder)) {
       return;
     }
-    // oxlint-disable-next-line eslint/no-await-in-loop -- polling loop
-    if (!(await reclaimIfStale(lockDirectory))) {
+    if (!didReclaimStaleLock(lockDirectory, LOCK_MAX_AGE_MS)) {
       if (Date.now() >= deadline) {
         throw new Error(`emet:tracker: timed out waiting for ${lockDirectory}; retry`);
       }
