@@ -38,20 +38,22 @@ Later waves run in their own sessions, never in the one that ran wave 1. Two opt
 ```
 
 - `pr.autoMerge` (default `true`): wait for the PR's checks and merge; with no checks, merge at once. A failing check is fixed and pushed, up to `maxCiFixAttempts` times, then the PR is left open for a human. A wave with anything flagged is never auto-merged.
-- `handoff.autoChain` (default `false`): after a clean, merged wave with more waves left, launch the next one with `claude --bg` instead of printing `/emet:run --dispatch <spec-id>`. Inspect it with `claude agents` / `claude attach emet-<spec-id>-w<n>`. Requirements:
+- `handoff.autoChain` (default `false`): after a clean, merged wave with more waves left, launch the next one with `claude --bg` instead of printing `/emet:run --dispatch <spec-id>`. Inspect it with `claude agents` / `claude attach emet-<spec-id>-w<n>`. Requirements on Claude Code:
   1. `claude` on PATH, with `--bg` support.
   2. A trusted workspace. `--bg` runs non-interactively, so the trust dialog never shows; open `claude` interactively in the repo once and accept it.
   3. The bypass warning accepted once in an interactive session (`skipDangerousModePermissionPrompt`), since the next wave runs in `handoff.permissionMode` (below), not in the launching session's mode.
 
+  On the Codex host, the next wave starts as a detached `codex exec` instead (see `handoff.launcher` below), so the requirement is `codex` on PATH at `codex.minVersion` or newer, with `--json` and `--output-schema` on `codex exec`; `emet doctor` checks both. Claude's trust dialog and bypass warning do not apply. Whether Codex needs a trusted workspace for a detached run is unverified in this repo's docs.
+
   It launches only when the PR merged and nothing was flagged, and it skips if a `emet-<spec-id>-*` session is already live (`claude agents --json`). If the launch fails, it falls back to printing `/emet:run --dispatch <spec-id>`.
 
-- `handoff.launcher` (default `auto`): also open the wave in an Orca tab running `claude attach`. `auto` asks the Orca runtime (`orca status`), so it works from `claude --bg` sessions too, which have no `TERM_PROGRAM`; `orca` always tries, `bg` never. The wave runs in the background either way, and a tab that fails to open never stops the chain.
+- `handoff.launcher` (default `auto`): also open the wave in an Orca tab running `claude attach`. `auto` asks the Orca runtime (`orca status`), so it works from `claude --bg` sessions too, which have no `TERM_PROGRAM`; `orca` always tries, `bg` never. `launcher` applies to the Claude Code host only; on Codex `emet launch` always behaves as `bg`. The wave runs in the background either way, and a tab that fails to open never stops the chain.
 
   `emet launch <spec-id> --wave <n>` does the whole launch (duplicate-session check, `claude --bg`, tab) and prints `{ name, id, attach, orcaTab: { opened, reason } }`. Use it, not a bare `claude --bg`, whenever you want a wave in another session by hand.
 
   On the Codex Agent host, `emet launch` starts a detached `codex exec` running `$emet:run --dispatch <spec-id>` and records its thread id. It opens no Orca tab, and `codex exec resume <id>` continues the session. See the [CLI reference](../reference/cli.md#codex-host) and [Running emet on Codex](codex.md).
 
-- `handoff.permissionMode` (default `bypassPermissions`): permission mode of the chained session. Not inherited from the launching session, because `auto` mode's classifier can deny a step such as `gh pr merge` and leave a wave half-finished. Your `permissions.deny` rules still apply, but the bypass warning must have been accepted once interactively (`skipDangerousModePermissionPrompt`).
+- `handoff.permissionMode` (default `bypassPermissions`): Claude Code only; permission mode of the chained session. On the Codex host it is ignored and the chained session uses `codex.sandbox` (default `danger-full-access`; see [Running emet on Codex](codex.md)). Not inherited from the launching session, because `auto` mode's classifier can deny a step such as `gh pr merge` and leave a wave half-finished. Your `permissions.deny` rules still apply, but the bypass warning must have been accepted once interactively (`skipDangerousModePermissionPrompt`).
 
 ## Gates, budgets and records
 
