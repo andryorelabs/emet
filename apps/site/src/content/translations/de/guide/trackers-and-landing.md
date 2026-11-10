@@ -2,7 +2,7 @@
 title: Tracker und Landing
 description: Wo Tickets liegen, wie eine Welle als Pull Request oder lokaler Merge landet und wie Wellen verkettet werden.
 seoTitle: Tracker und Landing in emet
-sourceHash: 4e3835764329636c
+sourceHash: c9ae0940af5cfbad
 ---
 
 Wo Tickets liegen, wie eine Welle landet und wie Wellen verkettet werden. Jeder hier genannte Schlüssel steht in der [Konfigurationsreferenz](../reference/configuration.md); jeder Unterbefehl steht in der [CLI-Referenz](../reference/cli.md).
@@ -53,6 +53,8 @@ Spätere Wellen laufen in eigenen Sitzungen, nie in der, die Welle 1 ausgeführt
 - `handoff.launcher` (Standard `auto`): die Welle zusätzlich in einem Orca-Tab öffnen, der `claude attach` ausführt. `auto` fragt die Orca-Runtime (`orca status`) und funktioniert daher auch aus `claude --bg`-Sitzungen, die kein `TERM_PROGRAM` haben; `orca` versucht es immer, `bg` nie. Die Welle läuft in beiden Fällen im Hintergrund, und ein Tab, der sich nicht öffnen lässt, stoppt die Kette nie.
 
   `emet launch <spec-id> --wave <n>` erledigt den gesamten Start (Prüfung auf doppelte Sitzungen, `claude --bg`, Tab) und gibt `{ name, id, attach, orcaTab: { opened, reason } }` aus. Dieses statt eines bloßen `claude --bg` verwenden, wenn eine Welle von Hand in einer anderen Sitzung laufen soll.
+
+  Auf dem Agent host Codex startet `emet launch` ein abgekoppeltes `codex exec`, das `$emet:run --dispatch <spec-id>` ausführt, und speichert dessen Thread-ID. Es öffnet keinen Orca-Tab, und `codex exec resume <id>` setzt die Sitzung fort. Siehe die [CLI-Referenz](../reference/cli.md#codex-host) und [emet mit Codex ausführen](codex.md).
 
 - `handoff.permissionMode` (Standard `bypassPermissions`): Berechtigungsmodus der verketteten Sitzung. Er wird nicht von der startenden Sitzung geerbt, weil der Klassifikator des Modus `auto` einen Schritt wie `gh pr merge` ablehnen und eine Welle halb fertig zurücklassen kann. Deine `permissions.deny`-Regeln gelten weiterhin, aber die Bypass-Warnung muss einmal interaktiv akzeptiert worden sein (`skipDangerousModePermissionPrompt`).
 

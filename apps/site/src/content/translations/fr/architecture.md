@@ -2,7 +2,7 @@
 title: Architecture
 description: Une carte du code de emet/src et la façon dont les prompts de /emet le pilotent.
 seoTitle: Architecture d'emet
-sourceHash: 3145bbde94eade03
+sourceHash: c86098a9614756e9
 ---
 
 Une carte du code de `emet/src` et la façon dont les prompts de `/emet` le pilotent. Les termes suivent [GLOSSARY.md](../GLOSSARY.md) ; les décisions derrière cette forme se trouvent dans [docs/adr](adr/README.md). Pour les problèmes, voir le [dépannage](troubleshooting.md).
@@ -16,7 +16,7 @@ Une carte du code de `emet/src` et la façon dont les prompts de `/emet` le pilo
 
 ## Forme
 
-Il y a deux moitiés. Les prompts (`commands/run.md`, `agents/*.md`, `emet/reference/*.md`) disent à Claude quoi faire à chaque phase. La CLI `emet` (`emet/bin/emet.ts` et `emet/src/`) fait tout ce qui doit être déterministe : vérifications, réservations, slots, gates, écritures dans le tracker et atterrissage. Les prompts ne réimplémentent jamais une vérification que la CLI effectue déjà.
+Il y a deux moitiés. Les prompts (`commands/run.md`, `agents/*.md`, `emet/reference/*.md`) disent à l'agent quoi faire à chaque phase. La CLI `emet` (`emet/bin/emet.ts` et `emet/src/`) fait tout ce qui doit être déterministe : vérifications, réservations, slots, gates, écritures dans le tracker et atterrissage. Les prompts ne réimplémentent jamais une vérification que la CLI effectue déjà.
 
 `emet/bin/emet.ts` est un répartiteur léger : il lit le premier argument et passe la main à un module de sous-commande, qui lit lui-même le reste de `process.argv`. Les codes de sortie ont un sens dans toutes les sous-commandes.
 
