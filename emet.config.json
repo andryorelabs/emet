@@ -20,7 +20,7 @@
     "transitions": {
       "onStart": "worker",
       "onPrOpen": "coordinator",
-      "onPrMerge": "automatic"
+      "onPrMerge": "coordinator"
     },
     "github": {
       "priorityLabels": {},
