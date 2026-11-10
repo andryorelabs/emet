@@ -2,7 +2,7 @@
 title: Ejecutar emet en Codex
 description: Usa Codex como Agent host de emet: instala el plugin, configura agentHost, aprueba una sola vez y conoce los límites.
 seoTitle: Ejecutar emet en Codex
-sourceHash: 689000ce9f0eb961
+sourceHash: 2941f08113ffa231
 ---
 
 emet puede ejecutarse en Codex CLI además de Claude Code. Los términos siguen [GLOSSARY.md](../../GLOSSARY.md); el producto en el que se ejecuta una corrida es el **Agent host**. Esta página cubre la instalación del lado de Codex, la elección del host, la aprobación única y los límites conocidos. Volver al [índice de la documentación](../README.md).
@@ -26,7 +26,7 @@ En el host de Codex el pipeline es el mismo: entrevista, spec, tickets, una apro
    codex plugin add emet@emet-marketplace
    ```
 
-4. Instala la CLI `emet` como se describe en [Primeros pasos](getting-started.md) y luego ejecuta `emet doctor .`. En el host de Codex informa de un `codex` anterior a `codex.minVersion`, de una bandera `--json` o `--output-schema` ausente en `codex exec` y de un `mattpocock-skills` faltante, con los dos comandos anteriores.
+4. Instala la CLI `emet` como se describe en [Primeros pasos](getting-started.md) y luego ejecuta `emet doctor .`. `install.sh` también instala los comandos y agentes de Claude Code bajo `~/.claude`; eso es inofensivo en Codex, y `emet doctor` no avisa de que el plugin de Codex e `install.sh` estén juntos. En el host de Codex informa de un `codex` anterior a `codex.minVersion`, de una bandera `--json` o `--output-schema` ausente en `codex exec` y de un `mattpocock-skills` faltante, con los dos comandos anteriores.
 
 Los dos comandos de plugin del paso 3 se ejecutaron contra el `codex` real (0.167.0): en un `CODEX_HOME` limpio terminan con código 0 y `codex plugin list` muestra `emet@emet-marketplace installed, enabled`. La forma con ruta local, `codex plugin marketplace add <repo>`, da el mismo resultado.
 
@@ -44,7 +44,7 @@ El valor por defecto es `"claude"`. La sección `codex` define los modelos, el e
 
 emet pide una sola aprobación, después del plan. En Claude Code es un prompt. En Codex es un hook:
 
-- Hasta que exista `.emet/runs/spec<id>/approval.json`, `emet guard` deniega toda mutación (`apply_patch`, `Bash`) salvo las escrituras bajo `.emet/runs/**/draft/**`, con el motivo `not approved: send approve <id>`. La compuerta se aplica una vez que existe un directorio `.emet/runs/spec<id>/` sin su `approval.json`, que es el estado en que `/emet:run` deja la corrida tras la Fase 4, cuando materializa el spec.
+- Hasta que exista `.emet/runs/spec<id>/approval.json`, `emet guard` deniega toda mutación (`apply_patch`, `Bash`) salvo las escrituras bajo `.emet/runs/**/draft/**`, con el motivo `not approved: send approve <id>`. La compuerta se aplica una vez que existe un directorio `.emet/runs/spec<id>/` sin su `approval.json`, que es el estado en que `$emet:run` deja la corrida tras la Fase 4, cuando materializa el spec.
 - Apruebas enviando una línea de prompt que sea exactamente `approve <id>`. El hook `UserPromptSubmit` escribe entonces el archivo de aprobación con el mismo hash que `emet approve`. Las mismas palabras en la salida de una herramienta o en el texto del modelo no hacen nada.
 - La alternativa es `/plan $emet:run`: aprueba el plan en el modo de plan propio de Codex en lugar del hook.
 

@@ -2,14 +2,14 @@
 title: Aggiornare emet
 description: Porta un emet installato a una nuova release e attiva l'aggiornamento automatico del marketplace per i plugin.
 seoTitle: Aggiornare emet
-sourceHash: 442bf243cbe7eadb
+sourceHash: e9018d796fe23437
 ---
 
 Come portare un emet installato a una nuova release. I termini seguono [GLOSSARY.md](../../GLOSSARY.md).
 
 emet e il plugin opzionale `emet-mascot` provengono dallo stesso marketplace, `emet-marketplace`. Per impostazione predefinita Claude Code non aggiorna da solo i marketplace di terze parti, e un marketplace non può cambiare questa impostazione per i propri utenti.
 
-## Aggiornare a mano
+## Aggiornare su Claude Code
 
 ```bash
 claude plugin marketplace update emet-marketplace
@@ -32,7 +32,7 @@ codex plugin add emet@emet-marketplace
 
 ## Aggiornare automaticamente
 
-In Claude Code esegui `/plugin`, apri la scheda **Marketplaces**, seleziona `emet-marketplace` e scegli **Enable auto-update**. Claude Code poi aggiorna il marketplace e i due plugin all'avvio di una sessione, e la sessione successiva carica le nuove versioni. Questa impostazione si fa su ogni singola macchina.
+L'aggiornamento automatico è una funzione di Claude Code; su Codex aggiorna a mano. In Claude Code esegui `/plugin`, apri la scheda **Marketplaces**, seleziona `emet-marketplace` e scegli **Enable auto-update**. Claude Code poi aggiorna il marketplace e i due plugin all'avvio di una sessione, e la sessione successiva carica le nuove versioni. Questa impostazione si fa su ogni singola macchina.
 
 ## Installato con install.sh
 

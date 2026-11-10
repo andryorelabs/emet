@@ -2,7 +2,7 @@
 title: Fehlerbehebung
 description: Fehler von emet doctor und emet preflight, nach dem Sichtbaren gruppiert, jeweils mit Ursache und Lösung.
 seoTitle: Fehlerbehebung für emet doctor und preflight
-sourceHash: 2945f96c25af7fb6
+sourceHash: c1ebb76c9250d743
 ---
 
 Fehler von `emet doctor` und `emet preflight`, nach dem Sichtbaren gruppiert, jeweils mit Ursache und Lösung. Die Begriffe folgen [GLOSSARY.md](../GLOSSARY.md). Wie die Prüfungen zusammenspielen, steht in der [Architektur](architecture.md).
@@ -54,7 +54,7 @@ Ein Repo, das noch nur `forge.config.json`, `.forge/` oder `FORGE_*`-Variablen h
 
 **Ursache:** `/emet` braucht `git`, `gh` und das Plugin mattpocock-skills; siehe `emet/src/dependencies.ts` und `emet/src/skills.ts`.
 
-**Lösung:** Das Tool installieren oder anmelden oder `/setup-matt-pocock-skills` ausführen. Ist eine Prüfung für die eigene Umgebung falsch, stuft `EMET_SKIP_DEPENDENCY_CHECKS=1 emet preflight` sie zu einer Warnung herab.
+**Lösung:** Das Tool installieren oder anmelden oder den Skill `setup-matt-pocock-skills` ausführen (`/setup-matt-pocock-skills` unter Claude Code, derselbe Skill mit der `$`-Syntax von Codex unter Codex). Ist eine Prüfung für die eigene Umgebung falsch, stuft `EMET_SKIP_DEPENDENCY_CHECKS=1 emet preflight` sie zu einer Warnung herab.
 
 ## no longer documents a flag in --help
 

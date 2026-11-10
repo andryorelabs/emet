@@ -2,7 +2,7 @@
 title: Architettura
 description: Una mappa del codice di emet/src e di come i prompt di /emet la guidano.
 seoTitle: Architettura di emet
-sourceHash: c86098a9614756e9
+sourceHash: ff28425abc92b5c9
 ---
 
 Una mappa del codice di `emet/src` e di come i prompt di `/emet` la guidano. I termini seguono [GLOSSARY.md](../GLOSSARY.md); le decisioni dietro la struttura sono in [docs/adr](adr/README.md). Per i problemi, vedi la [risoluzione dei problemi](troubleshooting.md).
@@ -16,7 +16,7 @@ Una mappa del codice di `emet/src` e di come i prompt di `/emet` la guidano. I t
 
 ## Struttura
 
-Ci sono due metà. I prompt (`commands/run.md`, `agents/*.md`, `emet/reference/*.md`) dicono all'agente cosa fare in ogni fase. La CLI `emet` (`emet/bin/emet.ts` e `emet/src/`) fa tutto ciò che deve essere deterministico: controlli, claim, slot, gate, scritture sul tracker e landing. I prompt non reimplementano mai un controllo che la CLI già effettua.
+Ci sono due metà. I prompt (`commands/run.md`, `agents/*.md`, `emet/reference/*.md`, e i `codex/skills/**` e `codex/hooks.json` generati per Codex) dicono all'agente cosa fare in ogni fase. La CLI `emet` (`emet/bin/emet.ts` e `emet/src/`) fa tutto ciò che deve essere deterministico: controlli, claim, slot, gate, scritture sul tracker e landing. I prompt non reimplementano mai un controllo che la CLI già effettua.
 
 `emet/bin/emet.ts` è un dispatcher sottile: legge il primo argomento e passa il controllo a un modulo di sottocomando, che legge da sé il resto di `process.argv`. I codici di uscita hanno lo stesso significato in tutti i sottocomandi.
 
@@ -52,11 +52,11 @@ I valori specifici di ogni host stanno dietro l'interfaccia `AgentHost` in `agen
 
 ## Organizzazione dei prompt
 
-`commands/run.md` (circa 130 righe) è il router di `/emet`. Ogni file in `emet/reference/` è un gruppo di fasi (`phases-1-5.md`, `phases-6-7-dispatch.md`, `phases-8-closeout.md`, `phases-9-handoff.md`), caricato solo quando la modalità dell'esecuzione corrente ne ha bisogno. Un test fallisce se uno qualsiasi supera i 20.000 byte, così un file non può occupare tutto il contesto dopo una compattazione. Le fasi dicono al coordinatore di rileggere la sezione pertinente prima di ogni round di correzione o review. `install.sh` mette da parte un vecchio `phases-6-9.md` unico come `phases-6-9.md.retired` quando è stato modificato o è anteriore al manifesto di installazione, e altrimenti lo elimina. `install.sh` collega inoltre `emet guard` in `~/.claude/settings.json` come hook `PreToolUse`.
+`commands/run.md` (circa 130 righe) è il router di `/emet` su Claude Code; su Codex, i `codex/skills/**` e `codex/hooks.json` generati svolgono quel ruolo. Ogni file in `emet/reference/` è un gruppo di fasi (`phases-1-5.md`, `phases-6-7-dispatch.md`, `phases-8-closeout.md`, `phases-9-handoff.md`), caricato solo quando la modalità dell'esecuzione corrente ne ha bisogno. Un test fallisce se uno qualsiasi supera i 20.000 byte, così un file non può occupare tutto il contesto dopo una compattazione. Le fasi dicono al coordinatore di rileggere la sezione pertinente prima di ogni round di correzione o review. `install.sh` mette da parte un vecchio `phases-6-9.md` unico come `phases-6-9.md.retired` quando è stato modificato o è anteriore al manifesto di installazione, e altrimenti lo elimina. `install.sh` collega inoltre `emet guard` in `~/.claude/settings.json` come hook `PreToolUse`.
 
 ## Distribuzione
 
-`install.sh` copia `emet/` in `~/.claude/emet` e riscrive i prompt. Il percorso del plugin distribuisce uno shim che scarica un binario standalone con checksum verificato, costruito da `tools/build-binaries.ts`. Vedi [ADR-0008](adr/0008-standalone-binaries-and-plugin-distribution.md).
+`install.sh` copia `emet/` in `~/.claude/emet` e riscrive i prompt. Il plugin Codex è descritto da `.codex-plugin/plugin.json`, generato con `bun run build:codex` insieme a `codex/skills/**` e `codex/hooks.json`. Il percorso del plugin di Claude Code distribuisce uno shim che scarica un binario standalone con checksum verificato, costruito da `tools/build-binaries.ts`. Vedi [ADR-0008](adr/0008-standalone-binaries-and-plugin-distribution.md).
 
 ## Vedi anche
 

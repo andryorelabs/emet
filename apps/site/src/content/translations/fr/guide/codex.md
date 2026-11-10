@@ -2,7 +2,7 @@
 title: Exécuter emet sur Codex
 description: "Utilisez Codex comme Agent host d'emet : installez le plugin, configurez agentHost, approuvez une seule fois et connaissez les limites."
 seoTitle: Exécuter emet sur Codex
-sourceHash: 689000ce9f0eb961
+sourceHash: 2941f08113ffa231
 ---
 
 emet peut s'exécuter sur Codex CLI comme sur Claude Code. Les termes suivent [GLOSSARY.md](../../GLOSSARY.md) ; le produit dans lequel une exécution tourne est l'**Agent host**. Cette page couvre l'installation côté Codex, le choix de l'hôte, l'approbation unique et les limites connues. Retour à l'[index de la documentation](../README.md).
@@ -26,7 +26,7 @@ Sur l'hôte Codex, le pipeline est le même : entretien, spec, tickets, une appr
    codex plugin add emet@emet-marketplace
    ```
 
-4. Installez la CLI `emet` comme décrit dans [Prise en main](getting-started.md), puis lancez `emet doctor .`. Sur l'hôte Codex, il signale un `codex` plus ancien que `codex.minVersion`, un indicateur `--json` ou `--output-schema` absent de `codex exec`, et un `mattpocock-skills` manquant avec les deux commandes ci-dessus.
+4. Installez la CLI `emet` comme décrit dans [Prise en main](getting-started.md), puis lancez `emet doctor .`. `install.sh` installe aussi les commandes et agents Claude Code sous `~/.claude` ; c'est sans effet sur Codex, et `emet doctor` n'avertit pas que le plugin Codex et `install.sh` sont présents ensemble. Sur l'hôte Codex, il signale un `codex` plus ancien que `codex.minVersion`, un indicateur `--json` ou `--output-schema` absent de `codex exec`, et un `mattpocock-skills` manquant avec les deux commandes ci-dessus.
 
 Les deux commandes de plugin de l'étape 3 ont été exécutées contre le vrai `codex` (0.167.0) : dans un `CODEX_HOME` neuf, elles se terminent avec le code 0 et `codex plugin list` affiche `emet@emet-marketplace installed, enabled`. La forme avec chemin local, `codex plugin marketplace add <repo>`, donne le même résultat.
 
@@ -44,7 +44,7 @@ La valeur par défaut est `"claude"`. La section `codex` règle les modèles, l'
 
 emet demande une seule approbation, après le plan. Sur Claude Code, c'est une invite. Sur Codex, c'est un hook :
 
-- Tant que `.emet/runs/spec<id>/approval.json` n'existe pas, `emet guard` refuse toute mutation (`apply_patch`, `Bash`) sauf les écritures sous `.emet/runs/**/draft/**`, avec le motif `not approved: send approve <id>`. Le verrou s'applique dès qu'un répertoire `.emet/runs/spec<id>/` existe sans son `approval.json`, état dans lequel `/emet:run` laisse l'exécution après la Phase 4, qui matérialise le spec.
+- Tant que `.emet/runs/spec<id>/approval.json` n'existe pas, `emet guard` refuse toute mutation (`apply_patch`, `Bash`) sauf les écritures sous `.emet/runs/**/draft/**`, avec le motif `not approved: send approve <id>`. Le verrou s'applique dès qu'un répertoire `.emet/runs/spec<id>/` existe sans son `approval.json`, état dans lequel `$emet:run` laisse l'exécution après la Phase 4, qui matérialise le spec.
 - Vous approuvez en envoyant une ligne d'invite qui est exactement `approve <id>`. Le hook `UserPromptSubmit` écrit alors le fichier d'approbation avec le même hachage que `emet approve`. Les mêmes mots dans la sortie d'un outil ou dans le texte du modèle n'ont aucun effet.
 - L'alternative est `/plan $emet:run` : approuvez le plan dans le mode plan propre à Codex plutôt que par le hook.
 
