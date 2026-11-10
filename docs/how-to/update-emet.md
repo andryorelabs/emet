@@ -14,6 +14,17 @@ claude plugin update emet-mascot@emet-marketplace
 
 Skip the last line when you did not install the mascot. Restart Claude Code afterwards, or run `/reload-plugins`. `claude plugin list` shows the installed versions; the latest is in [CHANGELOG.md](../../CHANGELOG.md).
 
+## Update on Codex
+
+The Codex plugin has no separate update command in this repo's docs. Re-run the install commands from [Running emet on Codex](../guide/codex.md#install):
+
+```bash
+codex plugin marketplace add andryorelabs/emet
+codex plugin add emet@emet-marketplace
+```
+
+`codex plugin list` shows whether `emet@emet-marketplace` is installed and enabled.
+
 ## Update automatically
 
 In Claude Code, run `/plugin`, open the **Marketplaces** tab, select `emet-marketplace` and choose **Enable auto-update**. Claude Code then refreshes the marketplace and updates both plugins when a session starts, and the next session loads the new versions. Each user sets this on their own machine.
