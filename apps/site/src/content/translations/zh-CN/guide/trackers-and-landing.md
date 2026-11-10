@@ -2,7 +2,7 @@
 title: 跟踪器与落地
 description: 工单存放在哪里，波次如何以拉取请求或本地合并的方式落地，以及波次如何串联。
 seoTitle: emet 的跟踪器与落地
-sourceHash: c9ae0940af5cfbad
+sourceHash: 9aa84264f5f8cc95
 ---
 
 工单存放在哪里、波次如何落地、波次如何串联。此处提到的每个配置键都在[配置参考](../reference/configuration.md)中，每个子命令都在 [CLI 参考](../reference/cli.md)中。
@@ -43,20 +43,22 @@ emet 支持 Linear、GitHub Issues 或本地文件，由 `tracker.kind` 设置�
 ```
 
 - `pr.autoMerge`（默认 `true`）：等待 PR 的检查完成后合并；如果没有检查，则立即合并。检查失败时会修复并推送，最多 `maxCiFixAttempts` 次，之后 PR 保持打开，交给人处理。只要有任何被标记的内容，该波次就不会被自动合并。
-- `handoff.autoChain`（默认 `false`）：在一个干净且已合并的波次之后，如果还有剩余波次，就用 `claude --bg` 启动下一个波次，而不是打印 `/emet:run --dispatch <spec-id>`。可用 `claude agents` / `claude attach emet-<spec-id>-w<n>` 查看。要求：
+- `handoff.autoChain`（默认 `false`）：在一个干净且已合并的波次之后，如果还有剩余波次，就用 `claude --bg` 启动下一个波次，而不是打印 `/emet:run --dispatch <spec-id>`。可用 `claude agents` / `claude attach emet-<spec-id>-w<n>` 查看。在 Claude Code 上的要求：
   1. PATH 中有 `claude`，并且支持 `--bg`。
   2. 受信任的工作区。`--bg` 以非交互方式运行，因此信任对话框不会出现；请在该仓库中以交互方式打开一次 `claude` 并接受。
   3. 在交互会话中已接受一次绕过警告（`skipDangerousModePermissionPrompt`），因为下一个波次运行在 `handoff.permissionMode`（见下文）指定的模式下，而不是启动它的会话的模式。
 
+  在 Codex 宿主上，下一个波次改为作为分离的 `codex exec` 启动（见下面的 `handoff.launcher`），因此要求是 PATH 中有版本不低于 `codex.minVersion` 的 `codex`，且 `codex exec` 带有 `--json` 和 `--output-schema`；`emet doctor` 检查的是标志，而不是版本号。Claude 的信任对话框和绕过警告不适用。分离运行是否需要 Codex 信任该工作区，本仓库的文档中尚未验证。
+
   只有在 PR 已合并且没有任何内容被标记时才会启动；如果已有 `emet-<spec-id>-*` 会话在运行（`claude agents --json`），则会跳过。如果启动失败，则回退为打印 `/emet:run --dispatch <spec-id>`。
 
-- `handoff.launcher`（默认 `auto`）：同时在运行 `claude attach` 的 Orca 标签页中打开该波次。`auto` 会询问 Orca 运行时（`orca status`），因此对没有 `TERM_PROGRAM` 的 `claude --bg` 会话同样有效；`orca` 总是尝试，`bg` 从不尝试。无论哪种方式，波次都在后台运行，标签页打开失败也不会中断串联。
+- `handoff.launcher`（默认 `auto`）：同时在运行 `claude attach` 的 Orca 标签页中打开该波次。`auto` 会询问 Orca 运行时（`orca status`），因此对没有 `TERM_PROGRAM` 的 `claude --bg` 会话同样有效；`orca` 总是尝试，`bg` 从不尝试。`launcher` 仅适用于 Claude Code 宿主；在 Codex 上，`emet launch` 的行为始终等同于 `bg`。无论哪种方式，波次都在后台运行，标签页打开失败也不会中断串联。
 
   `emet launch <spec-id> --wave <n>` 会完成整个启动流程（重复会话检查、`claude --bg`、标签页），并打印 `{ name, id, attach, orcaTab: { opened, reason } }`。每当你想手动在另一个会话中运行某个波次时，请使用它，而不是直接使用 `claude --bg`。
 
   在 Codex Agent 宿主上，`emet launch` 会启动一个分离的 `codex exec`，运行 `$emet:run --dispatch <spec-id>`，并记录其线程 ID。它不会打开 Orca 标签页，`codex exec resume <id>` 可继续该会话。参见 [CLI 参考](../reference/cli.md#codex-宿主)和[在 Codex 上运行 emet](codex.md)。
 
-- `handoff.permissionMode`（默认 `bypassPermissions`）：串联会话的权限模式。它不继承启动会话的模式，因为 `auto` 模式的分类器可能拒绝 `gh pr merge` 之类的步骤，导致波次只完成一半。你的 `permissions.deny` 规则仍然适用，但必须已在交互环境中接受过一次绕过警告（`skipDangerousModePermissionPrompt`）。
+- `handoff.permissionMode`（默认 `bypassPermissions`）：仅限 Claude Code；串联会话的权限模式。在 Codex 宿主上它会被忽略，串联会话使用 `codex.sandbox`（默认 `danger-full-access`；参见[在 Codex 上运行 emet](codex.md)）。它不继承启动会话的模式，因为 `auto` 模式的分类器可能拒绝 `gh pr merge` 之类的步骤，导致波次只完成一半。你的 `permissions.deny` 规则仍然适用，但必须已在交互环境中接受过一次绕过警告（`skipDangerousModePermissionPrompt`）。
 
 ## 关卡、预算与记录
 

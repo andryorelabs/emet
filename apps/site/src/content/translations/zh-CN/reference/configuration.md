@@ -2,12 +2,12 @@
 title: 配置参考
 description: emet.config.json 中的每个键，包括其默认值和含义。
 seoTitle: emet 配置参考
-sourceHash: e234cb9ad3468e98
+sourceHash: ec827dfcb8627f5c
 ---
 
 `emet.config.json` 中的每个键，及其默认值和含义。权威来源是 [`emet/schema/emet.config.schema.json`](../../emet/schema/emet.config.schema.json)。术语遵循 [GLOSSARY.md](../../GLOSSARY.md)。返回 [README](../../README.md)。
 
-`emet init` 会写入该文件，`emet preflight` 和 `emet doctor` 会校验它。标记为 prose-only 的键由 `/emet` 提示词读取，而不是由 CLI 读取。标记为 deprecated 的键仍然被接受。该模式还允许一个用于备注的自由文本 `"//"` 键（任何工具都不会读取它）以及始终为 `1` 的 `"version"`。
+`emet init` 会写入该文件，`emet preflight` 和 `emet doctor` 会校验它。标记为 prose-only 的键由 `/emet` 提示词（Codex 上是 `$emet:*` 技能）读取，而不是由 CLI 读取。标记为 deprecated 的键仍然被接受。该模式还允许一个用于备注的自由文本 `"//"` 键（任何工具都不会读取它）以及始终为 `1` 的 `"version"`。
 
 ## pr
 
@@ -37,15 +37,15 @@ sourceHash: e234cb9ad3468e98
 
 - `maxLines`（默认 `60`）：`.emet/handoff-<ticket>.md` 笔记在被 `emet handoff --check` 判为不通过之前最多可以有的行数。
 - `maxChars`（默认 `8000`，约 2k 个 token）：交接笔记最多可以有的字符数。
-- `autoChain`（默认 `false`）：在一个干净且已合并的波次之后，如果还有剩余波次，就用 `claude --bg` 启动下一个波次，而不是打印 `/emet:run --dispatch <spec-id>`。可用 `claude agents` 或 `claude attach emet-<spec-id>-w<n>` 查看。要求：
+- `autoChain`（默认 `false`）：在一个干净且已合并的波次之后，如果还有剩余波次，就启动下一个波次，而不是打印 `/emet:run --dispatch <spec-id>`（Codex 上是 `$emet:run --dispatch <spec-id>`）。在 Claude Code 上用 `claude --bg` 启动；在 Codex 宿主上是分离的 `codex exec`，需要版本不低于 `codex.minVersion` 的 `codex`。下面的要求是 Claude Code 的要求。可用 `claude agents` 或 `claude attach emet-<spec-id>-w<n>` 查看。要求：
   1. PATH 中有 `claude`，并且支持 `--bg`。
   2. 受信任的工作区。`--bg` 以非交互方式运行，因此信任对话框不会出现；请在该仓库中以交互方式打开一次 `claude` 并接受。
   3. 在交互会话中已接受一次绕过警告（`skipDangerousModePermissionPrompt`），因为下一个波次运行在 `handoff.permissionMode` 指定的模式下，而不是启动它的会话的模式。
 
   只有在 PR 已合并且没有任何内容被标记时才会启动；如果已有 `emet-<spec-id>-*` 会话在运行（`claude agents --json`），则会跳过。如果启动失败，则回退为打印 `/emet:run --dispatch <spec-id>`。
 
-- `launcher`（默认 `auto`，可选 `auto`、`orca`、`bg`）：同时在运行 `claude attach` 的 Orca 标签页中打开该波次。`auto` 会询问 Orca 运行时（`orca status`），因此对没有 `TERM_PROGRAM` 的 `claude --bg` 会话同样有效；`orca` 总是尝试；`bg` 从不尝试。无论哪种方式，波次都在后台运行，标签页打开失败也不会中断串联。`emet launch <spec-id> --wave <n>` 会完成整个启动流程；参见 [`emet launch`](cli.md#运行工作者与槽位)。
-- `permissionMode`（默认 `bypassPermissions`，可选 `bypassPermissions`、`auto`、`acceptEdits`）：串联会话的权限模式。它不继承启动会话的模式，因为 `auto` 模式的分类器可能拒绝 `gh pr merge` 之类的步骤，导致波次只完成一半。你的 `permissions.deny` 规则仍然适用，但必须已在交互环境中接受过一次绕过警告（`skipDangerousModePermissionPrompt`）。
+- `launcher`（默认 `auto`，可选 `auto`、`orca`、`bg`）：仅限 Claude Code；在 Codex 宿主上被忽略，`emet launch` 不会打开 Orca 标签页。同时在运行 `claude attach` 的 Orca 标签页中打开该波次。`auto` 会询问 Orca 运行时（`orca status`），因此对没有 `TERM_PROGRAM` 的 `claude --bg` 会话同样有效；`orca` 总是尝试；`bg` 从不尝试。无论哪种方式，波次都在后台运行，标签页打开失败也不会中断串联。`emet launch <spec-id> --wave <n>` 会完成整个启动流程；参见 [`emet launch`](cli.md#运行工作者与槽位)。
+- `permissionMode`（默认 `bypassPermissions`，可选 `bypassPermissions`、`auto`、`acceptEdits`）：仅限 Claude Code；在 Codex 宿主上被忽略，串联会话使用 [`codex.sandbox`](#codex)。串联会话的权限模式。它不继承启动会话的模式，因为 `auto` 模式的分类器可能拒绝 `gh pr merge` 之类的步骤，导致波次只完成一半。你的 `permissions.deny` 规则仍然适用，但必须已在交互环境中接受过一次绕过警告（`skipDangerousModePermissionPrompt`）。
 
 ## budgets
 
@@ -61,7 +61,7 @@ sourceHash: e234cb9ad3468e98
 
 ## models
 
-每个角色的模型和推理强度。每个键都是可选的；省略该部分时，工作者保持 `sonnet`/`medium`，评审者保持 `opus`/`medium`。推理强度可取 `low`、`medium`、`high`、`xhigh`、`max` 之一。
+Claude Code 宿主上每个角色的模型和推理强度；Codex 宿主改为读取 [`codex.models`](#codex)。每个键都是可选的；省略该部分时，工作者保持 `sonnet`/`medium`，评审者保持 `opus`/`medium`。推理强度可取 `low`、`medium`、`high`、`xhigh`、`max` 之一。
 
 ```json
 {
@@ -92,7 +92,7 @@ sourceHash: e234cb9ad3468e98
 - `models.worker`, `models.workerOverride`, `models.reviewer.medium`, `models.reviewer.high`, `models.triage`: 每项都是 `{ "model", "effort", "fallback" }`。当 `model` 不在 Codex 模型缓存中时，`fallback` 列出按顺序尝试的 slug。默认值见[模型与强度](../guide/models-and-effort.md)。
 - `models.session`: 用于运行 `$emet:run` 的会话：`{ "model", "effort", "planEffort", "fallback" }`。`planEffort` 在首次批准之前生效。
 - `effort`: 设置后会替换所有角色的强度。
-- `minVersion` (默认 `0.167.0`): `emet doctor` 接受的最旧 `codex` CLI 版本。
+- `minVersion` (默认 `0.167.0`): emet 支持的最旧 `codex` CLI 版本。`emet doctor` 不会将已安装的版本与它比较。
 - `sandbox` (默认 `danger-full-access`): `emet dispatch`、`emet review-run` 以及 Codex 的 `emet launch` 以 `-s` 传入的沙箱模式。也接受 `workspace-write`，但它会让 `.git` 变为只读，worker 因而无法提交。无论取何值，`emet guard` 都会在 Codex 上拒绝 `git push`，生成的覆盖层 `config.toml` 只包含 emet 市场和插件、针对本次运行自身目录的 trusted 表，以及解析出的模型和强度（绝不包含你自己的表）。参见 [Codex 指南](../guide/codex.md)和 [ADR-0022](../adr/0022-codex-workers-run-unsandboxed-by-default.md)。
 
 ## review
@@ -109,7 +109,7 @@ sourceHash: e234cb9ad3468e98
 
 ## tracker
 
-`/emet` 与哪个问题跟踪器交互。CLI 读取 `kind` 来决定适用哪些依赖检查；其余部分描述 `/emet` 命令所遵循的适配器（参见 [`docs/agents/issue-tracker.md`](../agents/issue-tracker.md)）。
+`/emet`（Codex 上是 `$emet`）与哪个问题跟踪器交互。CLI 读取 `kind` 来决定适用哪些依赖检查；其余部分描述 `/emet` 命令所遵循的适配器（参见 [`docs/agents/issue-tracker.md`](../agents/issue-tracker.md)）。
 
 - `kind`（必填）：`linear`、`github` 或 `local`。关于 `local`，参见[本地跟踪器](cli.md#本地跟踪器)和 [ADR-0011](../adr/0011-local-tracker-scratch-convention.md)。
 - `transitions.onStart`、`transitions.onPrOpen`、`transitions.onPrMerge`：由谁写入每个工单状态转换，取值为 `worker`、`coordinator` 或 `automatic`（由跟踪器集成自动完成，例如 Linear 在 PR 打开或合并时的 GitHub 集成）。协调者从不写入标记为 `automatic` 的转换。

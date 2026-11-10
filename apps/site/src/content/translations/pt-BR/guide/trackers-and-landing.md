@@ -2,7 +2,7 @@
 title: Trackers e aterrissagem
 description: Onde ficam os tickets, como uma onda aterrissa como pull request ou merge local, e como as ondas se encadeiam.
 seoTitle: Trackers e aterrissagem no emet
-sourceHash: c9ae0940af5cfbad
+sourceHash: 9aa84264f5f8cc95
 ---
 
 Onde ficam os tickets, como uma onda aterrissa e como as ondas se encadeiam. Toda chave citada aqui está na [referência de configuração](../reference/configuration.md); todo subcomando está na [referência da CLI](../reference/cli.md).
@@ -43,20 +43,22 @@ As ondas seguintes rodam em suas próprias sessões, nunca na que executou a ond
 ```
 
 - `pr.autoMerge` (padrão `true`): espera os checks do PR e faz o merge; sem checks, faz o merge na hora. Um check que falha é corrigido e enviado, até `maxCiFixAttempts` vezes, e depois o PR é deixado aberto para uma pessoa. Uma onda com qualquer coisa sinalizada nunca recebe merge automático.
-- `handoff.autoChain` (padrão `false`): depois de uma onda limpa e mesclada, com mais ondas pendentes, lança a próxima com `claude --bg` em vez de imprimir `/emet:run --dispatch <spec-id>`. Inspecione-a com `claude agents` / `claude attach emet-<spec-id>-w<n>`. Requisitos:
+- `handoff.autoChain` (padrão `false`): depois de uma onda limpa e mesclada, com mais ondas pendentes, lança a próxima com `claude --bg` em vez de imprimir `/emet:run --dispatch <spec-id>`. Inspecione-a com `claude agents` / `claude attach emet-<spec-id>-w<n>`. Requisitos no Claude Code:
   1. `claude` no PATH, com suporte a `--bg`.
   2. Um workspace confiável. O `--bg` roda de forma não interativa, então o diálogo de confiança nunca aparece; abra o `claude` interativamente no repositório uma vez e aceite.
   3. O aviso de bypass aceito uma vez em uma sessão interativa (`skipDangerousModePermissionPrompt`), já que a próxima onda roda em `handoff.permissionMode` (abaixo), e não no modo da sessão que a lança.
 
+  No host Codex, a próxima onda começa como um `codex exec` desacoplado (veja `handoff.launcher` abaixo), então o requisito é `codex` no PATH em `codex.minVersion` ou mais recente, com `--json` e `--output-schema` no `codex exec`; o `emet doctor` verifica as flags, não o número da versão. O diálogo de confiança e o aviso de bypass do Claude não se aplicam. Se o Codex precisa de um workspace confiável para uma execução desacoplada é algo não verificado na documentação deste repositório.
+
   Ela só é lançada quando o PR foi mesclado e nada foi sinalizado, e é ignorada se já houver uma sessão `emet-<spec-id>-*` ativa (`claude agents --json`). Se o lançamento falhar, recorre a imprimir `/emet:run --dispatch <spec-id>`.
 
-- `handoff.launcher` (padrão `auto`): abre também a onda em uma aba do Orca executando `claude attach`. O `auto` consulta o runtime do Orca (`orca status`), portanto funciona também a partir de sessões `claude --bg`, que não têm `TERM_PROGRAM`; `orca` sempre tenta, `bg` nunca. A onda roda em segundo plano de qualquer forma, e uma aba que falha ao abrir nunca interrompe a cadeia.
+- `handoff.launcher` (padrão `auto`): abre também a onda em uma aba do Orca executando `claude attach`. O `auto` consulta o runtime do Orca (`orca status`), portanto funciona também a partir de sessões `claude --bg`, que não têm `TERM_PROGRAM`; `orca` sempre tenta, `bg` nunca. O `launcher` se aplica apenas ao host Claude Code; no Codex, `emet launch` sempre se comporta como `bg`. A onda roda em segundo plano de qualquer forma, e uma aba que falha ao abrir nunca interrompe a cadeia.
 
   `emet launch <spec-id> --wave <n>` faz o lançamento completo (verificação de sessão duplicada, `claude --bg`, aba) e imprime `{ name, id, attach, orcaTab: { opened, reason } }`. Use-o, e não um `claude --bg` solto, sempre que quiser uma onda em outra sessão manualmente.
 
   No host de agente Codex, `emet launch` inicia um `codex exec` desacoplado que executa `$emet:run --dispatch <spec-id>` e registra o id da thread dele. Não abre aba do Orca, e `codex exec resume <id>` continua a sessão. Veja a [referência da CLI](../reference/cli.md#host-codex) e [Executando o emet no Codex](codex.md).
 
-- `handoff.permissionMode` (padrão `bypassPermissions`): modo de permissão da sessão encadeada. Não é herdado da sessão que a lança, porque o classificador do modo `auto` pode negar um passo como `gh pr merge` e deixar uma onda pela metade. Suas regras `permissions.deny` continuam valendo, mas o aviso de bypass precisa ter sido aceito uma vez de forma interativa (`skipDangerousModePermissionPrompt`).
+- `handoff.permissionMode` (padrão `bypassPermissions`): somente Claude Code; modo de permissão da sessão encadeada. No host Codex ele é ignorado e a sessão encadeada usa `codex.sandbox` (padrão `danger-full-access`; veja [Executando o emet no Codex](codex.md)). Não é herdado da sessão que a lança, porque o classificador do modo `auto` pode negar um passo como `gh pr merge` e deixar uma onda pela metade. Suas regras `permissions.deny` continuam valendo, mas o aviso de bypass precisa ter sido aceito uma vez de forma interativa (`skipDangerousModePermissionPrompt`).
 
 ## Gates, orçamentos e registros
 
