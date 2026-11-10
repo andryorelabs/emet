@@ -2,8 +2,47 @@
 title: 새로운 소식
 description: emet 릴리스 노트. 각 버전에서 무엇이 바뀌었는지 정리합니다.
 seoTitle: "emet 새로운 소식: 릴리스 노트"
-sourceHash: a633f8ebdf12e2a7
+sourceHash: 6a4ab9853722f86c
 ---
+
+## 0.5.0
+
+2026-11-10
+
+### 추가됨
+
+- Website 홈 페이지: 그려 낸 히어로, 작동 방식, 기능, 소개, 마무리 패널, 헤더, 푸터.
+  영어 문자열은 `apps/site/src/i18n/ui/en.ts`에 있습니다.
+- `/docs/`의 Website 문서: 저장소 문서의 허용 목록과 이 변경 로그로 만든 Starlight
+  페이지. Pagefind 검색, 사이트 페이지 또는 GitHub로의 링크 재작성, 번역이 없거나
+  오래된 경우의 영어 대체 안내를 갖췄습니다.
+- `docs/how-to/update-emet.md`: 플러그인을 업데이트하고 마켓플레이스 자동
+  업데이트를 켜는 방법.
+- Agent 호스트로서의 Codex: `emet.config.json`의 `agentHost`. `emet dispatch`와
+  `emet review-run`은 각 워커와 리뷰어를 `codex exec` 프로세스로 시작합니다.
+  `$emet:run`, `$emet:init`, `$emet:doctor` 스킬, Codex 플러그인 매니페스트,
+  선택형 엔드투엔드 테스트(`EMET_CODEX_E2E=1`)도 추가되었습니다.
+- `docs/guide/codex.md`: Website에 게시되는 Codex 가이드.
+
+### 변경됨
+
+- Codex의 `codex.sandbox` 기본값은 `danger-full-access`입니다(`workspace-write`도
+  계속 사용할 수 있습니다). `emet dispatch`, `emet review-run`, Codex의 `emet launch`가
+  이를 전달하며, Codex에서 `emet guard`는 모든 push 형태를 거부합니다.
+- 실행별 Codex 오버레이는 사용자의 `config.toml`을 연결하는 대신 자체 최소
+  `config.toml`을 작성합니다. 규칙은 `-C` 형태와 조정용 하위 명령을 허용하며,
+  push는 계속 금지됩니다.
+- Codex 워커는 pid가 아니라 `threadId`와 JSONL 경로로 식별됩니다.
+- Codex 가이드에 실제 Codex 결과를 기록했습니다. 이전의 모든 `failed` 행은
+  `verified`가 되었고, `unverified` 목록은 무인 감독만 남도록 줄었으며, 프로브 보고서에
+  남은 후속 작업이 나열되어 있습니다.
+
+### 수정됨
+
+- `emet cleanup`이 병합된 소유자 없는 worktree를 회수합니다.
+- Codex Agent 호스트가 기본적으로 확인되므로 `emet preflight`, `doctor`,
+  `cleanup`, `status`, `usage`가 `agentHost: "codex"`를 받아들입니다.
+- Codex 모델 확인은 실행 홈 또는 실제 Codex 홈에서 `models_cache.json`을 읽습니다.
 
 ## 0.4.0
 
