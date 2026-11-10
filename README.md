@@ -31,7 +31,7 @@ Pronounced "EH-met".
 In folklore a golem is a clay figure brought to life by the word _emet_, "truth", written on its forehead.
 Erase one letter and it stops; here, nothing merges when something is flagged.
 
-Not affiliated with or endorsed by Anthropic
+Not affiliated with or endorsed by Anthropic or OpenAI
 
 ## Quickstart
 
@@ -39,14 +39,14 @@ Not affiliated with or endorsed by Anthropic
 
 Requirements: Claude Code or the Codex CLI, `git`, `gh` (authenticated) and the `mattpocock-skills` plugin, on Linux or macOS. Bun is needed only for a source install.
 
-1. Install the plugin (no Bun needed):
+1. On Claude Code (no Bun needed):
 
    ```bash
    claude plugin marketplace add andryorelabs/emet
    claude plugin install emet@emet-marketplace
    ```
 
-   Or from a clone, with `./install.sh`:
+   Or from a clone, with `./install.sh`, which also installs the terminal `emet` that the Codex host needs:
 
    ```bash
    git clone git@github.com:andryorelabs/emet.git
@@ -56,20 +56,27 @@ Requirements: Claude Code or the Codex CLI, `git`, `gh` (authenticated) and the 
 
    Optional: a pixel mascot, see [Mascot](#mascot-optional).
 
-   On Codex, install the plugin instead (needs `mattpocock-skills` too; the full steps are in [Codex](docs/guide/codex.md)):
+   On Codex, install the plugin instead, then install the terminal `emet` as in [Getting started](docs/guide/getting-started.md) (needs `mattpocock-skills` too; the full steps are in [Codex](docs/guide/codex.md)):
 
    ```bash
    codex plugin marketplace add andryorelabs/emet
    codex plugin add emet@emet-marketplace
    ```
 
-   To update later, refresh the marketplace and update each plugin, then restart Claude Code. Auto-update is off by default for third-party marketplaces; turn it on in `/plugin`, tab **Marketplaces**, `emet-marketplace`, **Enable auto-update**. See [Update emet](docs/how-to/update-emet.md).
+   To update later on Claude Code, refresh the marketplace and update each plugin, then restart Claude Code. On Codex, run `codex plugin marketplace upgrade emet-marketplace`, then `codex plugin add emet@emet-marketplace`. Auto-update is off by default for third-party marketplaces; turn it on in Claude Code in `/plugin`, tab **Marketplaces**, `emet-marketplace`, **Enable auto-update**. See [Update emet](docs/how-to/update-emet.md).
 
-2. In your repo, set it up and check it:
+2. In your repo, set it up and check it. On Claude Code:
 
    ```
    /emet:init
    /emet:doctor
+   ```
+
+   On Codex:
+
+   ```
+   $emet:init
+   $emet:doctor
    ```
 
    In a plain terminal, `emet init` and `emet doctor .` work only after `install.sh`.
@@ -80,7 +87,7 @@ Requirements: Claude Code or the Codex CLI, `git`, `gh` (authenticated) and the 
    /emet:run <describe the feature>
    ```
 
-   On Codex, the same three are the skills `$emet:init`, `$emet:doctor` and `$emet:run <describe the feature>`.
+   On Codex, run the skill `$emet:run <describe the feature>`.
 
 More in [Getting started](docs/guide/getting-started.md). If `doctor` reports a problem, see [troubleshooting](docs/troubleshooting.md).
 
@@ -95,7 +102,7 @@ Options and the Orca import are in the [mascot how-to](docs/how-to/mascot.md).
 
 ## How it works
 
-1. You describe a feature; `/emet:run` interviews you and writes a spec.
+1. You describe a feature; `/emet:run` (`$emet:run` on Codex) interviews you and writes a spec.
 2. It splits the spec into tickets and asks for one approval.
 3. Parallel workers implement each ticket in its own git worktree.
 4. A reviewer checks the wave, and CI must be green; anything flagged stops the merge.
@@ -103,7 +110,7 @@ Options and the Orca import are in the [mascot how-to](docs/how-to/mascot.md).
 
 ## Models & effort
 
-`/emet` picks a model and a reasoning effort per role automatically: Opus plans, Sonnet coordinates and implements, Opus reviews by risk tier, and Haiku triages CI logs. On Codex, the models come from the `codex.models` defaults instead. The role table, the `review.highRiskPaths` rule and what you set once are in [Models and effort](docs/guide/models-and-effort.md).
+On Claude Code, emet picks a model and a reasoning effort per role automatically: Opus plans, Sonnet coordinates and implements, Opus reviews by risk tier, and Haiku triages CI logs. On Codex, it uses the `codex.models` defaults instead. The role table, the `review.highRiskPaths` rule and what you set once are in [Models and effort](docs/guide/models-and-effort.md).
 
 ## Documentation
 

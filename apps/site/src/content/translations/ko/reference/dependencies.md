@@ -2,26 +2,29 @@
 title: 의존성
 description: emet이 머신에서 필요로 하는 것과 각 항목을 확인하는 명령을 설명합니다.
 seoTitle: emet 의존성
-sourceHash: 50444429c7883bd3
+sourceHash: 1c97a7ccd5572ab4
 ---
 
 emet이 머신에서 필요로 하는 것과 각 항목을 확인하는 명령입니다. 용어는 [GLOSSARY.md](../../GLOSSARY.md)를 따릅니다. [README](../../README.md)로 돌아가기.
 
 ## 필수
 
+먼저 두 에이전트 호스트가 공통으로 필요로 하는 것을, 그다음 각 호스트가 추가하는 것을 나열합니다.
+
 - **[bun](https://bun.sh)**: 소스 설치에만 필요합니다. 독립 실행형 바이너리에는 런타임이 필요 없습니다.
 - **`rsync`** 및 **`sha256sum` 또는 `shasum`**: `install.sh`가 필요로 합니다.
 - **`git`**: 실행 시 필수입니다. 거의 모든 하위 명령이 git을 호출합니다.
 - **인증된 `gh` CLI**: 트래커가 `github`이거나 랜딩이 `pr`일 때 필수입니다. PR은 항상 이것을 사용합니다. `tracker.kind: "local"`이고 `landing.mode: "merge"`이면 `gh`는 필요 없습니다.
-- **`mattpocock-skills` 플러그인**(`claude-plugins-official` 마켓플레이스): `/emet`의 인터뷰, 스펙, 티켓 단계는 그곳에 있는 스킬을 호출합니다.
+- **`mattpocock-skills` 플러그인**: 인터뷰, 스펙, 티켓 단계는 그곳에 있는 스킬을 호출합니다. Claude Code에서는 `claude-plugins-official` 마켓플레이스에서 받으며, Codex는 [Codex 호스트](#codex-호스트)를 참고하세요.
 
   ```bash
   claude plugin marketplace add anthropics/claude-plugins-official
   claude plugin install mattpocock-skills@claude-plugins-official
   ```
 
-- **`~/.claude/agents/`의 `emet-worker` 및 `emet-reviewer` 에이전트**: `install.sh`가 설치합니다. 6단계와 8단계는 `subagent_type`으로 디스패치하므로 둘 중 하나라도 없으면 디스패치가 동작하지 않습니다. [모델과 추론 강도](../../README.md#models--effort)를 참고하세요.
-- **`.mcp.json`(또는 사용자 범위)에 선언된 Linear MCP 서버**: 리포지토리가 `linear` 트래커를 사용할 때만 필요합니다. emet은 선언이 있는지 확인합니다. 연결이 인증되었는지는 Claude Code 자체의 자격 증명 저장소에 있어 여기서는 확인할 수 없습니다. 실행 중 티켓을 읽지 못하면 Claude Code를 다시 시작하고 연결을 승인하세요.
+- **`claude` CLI와 emet 플러그인 명령**(`/emet:run`, `/emet:init`, `/emet:doctor`): Claude Code 호스트 전용입니다.
+- **`~/.claude/agents/`의 `emet-worker` 및 `emet-reviewer` 에이전트**: Claude Code 호스트 전용이며 `install.sh`가 설치합니다. 6단계와 8단계는 `subagent_type`으로 디스패치하므로 둘 중 하나라도 없으면 디스패치가 동작하지 않습니다. [모델과 추론 강도](../../README.md#models--effort)를 참고하세요.
+- **`.mcp.json`(또는 사용자 범위)에 선언된 Linear MCP 서버**: 리포지토리가 `linear` 트래커를 사용할 때만 필요합니다. emet은 선언이 있는지 확인합니다. 연결이 인증되었는지는 에이전트 호스트 자체의 자격 증명 저장소에 있어 여기서는 확인할 수 없습니다. Claude Code에서 실행 중 티켓을 읽지 못하면 Claude Code를 다시 시작하고 연결을 승인하세요. Codex에서의 동등한 절차는 확인되지 않았습니다.
 
 위의 어떤 것도 사용자를 대신해 설치되거나 로그인되지 않습니다. 다른 점은 누가, 얼마나 엄격하게 확인하느냐입니다.
 
@@ -29,7 +32,7 @@ emet이 머신에서 필요로 하는 것과 각 항목을 확인하는 명령�
 
 `agentHost`가 `"codex"`일 때만 필요합니다. [Codex 가이드](../guide/codex.md)를 참고하세요. `emet-worker`와 `emet-reviewer` 에이전트는 여기서 사용하지 않습니다.
 
-- **`codex` CLI**: 로그인된 상태에서 `codex.minVersion`(기본값 `0.167.0`) 이상의 버전. `emet doctor`는 더 오래된 버전을 보고하고 `codex exec --help`에 `--json`과 `--output-schema`가 나오는지 확인합니다.
+- **`codex` CLI**: 로그인된 상태에서 `codex.minVersion`(기본값 `0.167.0`) 이상의 버전. `emet doctor`는 `codex exec --help`에 `--json`과 `--output-schema`가 나오는지 확인합니다.
 - Codex의 **`mattpocock-skills` 플러그인**: `codex plugin list`로 확인합니다.
 
   ```bash
@@ -43,18 +46,18 @@ emet은 `~/.codex`에 절대 쓰지 않습니다. 워커는 인증과 설정을 
 
 ## 무엇이 무엇을 확인하는가
 
-|                                               | `emet init`        | `emet doctor`             | `emet preflight`                                                                             |
-| --------------------------------------------- | ------------------ | ------------------------- | -------------------------------------------------------------------------------------------- |
-| 플러그인이 없거나 비활성화됨                  | 설치 명령을 출력   | 보고(플릿 전체에서 한 번) | **디스패치를 차단**                                                                          |
-| `emet-worker`/`emet-reviewer` 에이전트가 없음 | —                  | 보고(플릿 전체에서 한 번) | **디스패치를 차단**                                                                          |
-| `gh`가 없거나 인증되지 않음(트래커: `github`) | 실행할 명령을 출력 | 보고                      | **디스패치를 차단**                                                                          |
-| Linear 서버가 선언되지 않음(트래커: `linear`) | 안내 문구를 출력   | 보고                      | **디스패치를 차단**                                                                          |
-| `claude`가 PATH에 없거나 프로브가 시간 초과   | 안내 문구를 출력   | 보고                      | **경고만 하고 차단하지 않음**: "확인하지 못했다"는 뜻이지 "망가진 것을 확인했다"는 뜻이 아님 |
-| emet이 의존하는 플래그가 `--help`에 없음      | —                  | 보고                      | —                                                                                            |
+|                                                                           | `emet init`        | `emet doctor`             | `emet preflight`                                                                             |
+| ------------------------------------------------------------------------- | ------------------ | ------------------------- | -------------------------------------------------------------------------------------------- |
+| 플러그인이 없거나 비활성화됨                                              | 설치 명령을 출력   | 보고(플릿 전체에서 한 번) | **디스패치를 차단**                                                                          |
+| `emet-worker`/`emet-reviewer` 에이전트가 없음(Claude Code 호스트 전용)    | —                  | 보고(플릿 전체에서 한 번) | **디스패치를 차단**                                                                          |
+| `gh`가 없거나 인증되지 않음(트래커: `github`)                             | 실행할 명령을 출력 | 보고                      | **디스패치를 차단**                                                                          |
+| Linear 서버가 선언되지 않음(트래커: `linear`)                             | 안내 문구를 출력   | 보고                      | **디스패치를 차단**                                                                          |
+| 호스트 CLI(Claude Code에서는 `claude`)가 PATH에 없거나 프로브가 시간 초과 | 안내 문구를 출력   | 보고                      | **경고만 하고 차단하지 않음**: "확인하지 못했다"는 뜻이지 "망가진 것을 확인했다"는 뜻이 아님 |
+| emet이 의존하는 플래그가 `--help`에 없음                                  | —                  | 보고                      | —                                                                                            |
 
 ### 플래그 점검
 
-`emet doctor`는 바이너리가 있는지만이 아니라 플래그 자체를 확인합니다. `gh issue view`와 `gh repo view`(`--json`), `gh issue edit`(`--add-label`, `--remove-label`), `claude`(`--bg`), `claude agents`(`--json`)의 `--help`를 읽고, 더 새롭거나 오래된 CLI가 더 이상 문서화하지 않는 플래그를 보고합니다. 플래그 이름이 바뀌면 웨이브가 중간에 실패할 수 있기 때문입니다.
+`emet doctor`는 바이너리가 있는지만이 아니라 플래그 자체를 확인합니다. `gh issue view`와 `gh repo view`(`--json`), `gh issue edit`(`--add-label`, `--remove-label`), 그리고 호스트별로 에이전트 호스트 자체 CLI의 `--help`를 읽습니다. Claude Code에서는 `claude`(`--bg`)와 `claude agents`(`--json`), Codex에서는 대신 `codex exec`(`--json`, `--output-schema`)입니다. 또한 더 새롭거나 오래된 CLI가 더 이상 문서화하지 않는 플래그를 보고합니다. 플래그 이름이 바뀌면 웨이브가 중간에 실패할 수 있기 때문입니다.
 
 ### 시간 제한과 차단 건너뛰기
 

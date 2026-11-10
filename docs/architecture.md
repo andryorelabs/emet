@@ -11,7 +11,7 @@ A code map of `emet/src` and how the `/emet` prompts drive it. Terms follow [GLO
 
 ## Shape
 
-There are two halves. The prompts (`commands/run.md`, `agents/*.md`, `emet/reference/*.md`) tell the agent what to do in each phase. The `emet` CLI (`emet/bin/emet.ts` and `emet/src/`) does everything that must be deterministic: checks, claims, slots, gates, tracker writes and landing. The prompts never re-implement a check the CLI already makes.
+There are two halves. The prompts (`commands/run.md`, `agents/*.md`, `emet/reference/*.md`, and the generated `codex/skills/**` and `codex/hooks.json` for Codex) tell the agent what to do in each phase. The `emet` CLI (`emet/bin/emet.ts` and `emet/src/`) does everything that must be deterministic: checks, claims, slots, gates, tracker writes and landing. The prompts never re-implement a check the CLI already makes.
 
 `emet/bin/emet.ts` is a thin dispatcher: it reads the first argument and hands off to one subcommand module, which reads the rest of `process.argv` itself. Exit codes are meaningful across subcommands.
 
@@ -47,11 +47,11 @@ Host-specific values sit behind the `AgentHost` interface in `agenthost.ts`: `ag
 
 ## Prompt layout
 
-`commands/run.md` (about 130 lines) is the `/emet` router. Each file in `emet/reference/` is one phase group (`phases-1-5.md`, `phases-6-7-dispatch.md`, `phases-8-closeout.md`, `phases-9-handoff.md`), loaded only when the current run's mode needs it. A test fails if any of them grows past 20,000 bytes, so one file cannot take over the context after compaction. The phases tell the coordinator to re-read the relevant section before each fix or review round. `install.sh` moves an old single `phases-6-9.md` aside as `phases-6-9.md.retired` when you edited it or it predates the install manifest, and deletes it otherwise. `install.sh` also wires `emet guard` into `~/.claude/settings.json` as the `PreToolUse` hook.
+`commands/run.md` (about 130 lines) is the `/emet` router on Claude Code; on Codex the generated `codex/skills/**` and `codex/hooks.json` play that role. Each file in `emet/reference/` is one phase group (`phases-1-5.md`, `phases-6-7-dispatch.md`, `phases-8-closeout.md`, `phases-9-handoff.md`), loaded only when the current run's mode needs it. A test fails if any of them grows past 20,000 bytes, so one file cannot take over the context after compaction. The phases tell the coordinator to re-read the relevant section before each fix or review round. `install.sh` moves an old single `phases-6-9.md` aside as `phases-6-9.md.retired` when you edited it or it predates the install manifest, and deletes it otherwise. `install.sh` also wires `emet guard` into `~/.claude/settings.json` as the `PreToolUse` hook.
 
 ## Distribution
 
-`install.sh` copies `emet/` to `~/.claude/emet` and rewrites the prompts. The plugin path ships a shim that downloads a checksum-verified standalone binary built by `tools/build-binaries.ts`. See [ADR-0008](adr/0008-standalone-binaries-and-plugin-distribution.md).
+`install.sh` copies `emet/` to `~/.claude/emet` and rewrites the prompts. The Codex plugin is described by `.codex-plugin/plugin.json`, generated with `bun run build:codex` together with `codex/skills/**` and `codex/hooks.json`. The Claude Code plugin path ships a shim that downloads a checksum-verified standalone binary built by `tools/build-binaries.ts`. See [ADR-0008](adr/0008-standalone-binaries-and-plugin-distribution.md).
 
 ## See also
 

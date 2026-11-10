@@ -2,14 +2,14 @@
 title: CLI 参考
 description: 每个 emet 子命令、关卡与记录表、退出码和环境变量。
 seoTitle: emet CLI 参考
-sourceHash: 8bb02104970da0a8
+sourceHash: b89b785c057b008c
 ---
 
 每个 `emet` 子命令、关卡与记录表、退出码和环境变量。术语遵循 [GLOSSARY.md](../../GLOSSARY.md)。返回 [README](../../README.md)。每个命令都可以用 `--help` 打印其用法。
 
 ## 子命令
 
-在 Claude Code 内，有三个斜杠命令封装了 CLI：`/emet:run`（流水线）、`/emet:init`（`emet init`）和 `/emet:doctor`（`emet doctor .`）。在普通终端中使用 `emet` 需要 `install.sh`；否则请在会话中运行 `! emet <subcommand>`。
+在 Claude Code 内，有三个斜杠命令封装了 CLI：`/emet:run`（流水线）、`/emet:init`（`emet init`）和 `/emet:doctor`（`emet doctor .`）。在 Codex 上它们是 `$emet:run`、`$emet:init` 和 `$emet:doctor` 技能。在普通终端中使用 `emet` 需要 `install.sh`；否则请在会话中运行 `! emet <subcommand>`。
 
 `emet <command> [...args]`。`emet --version` 打印版本号。
 
@@ -31,7 +31,7 @@ emet preflight      # confirms the repo is dispatch-ready
 
 对于 `emet init` 无法自行推断的内容（共享测试数据库锁、模式归属等），它会在生成的 `docs/agents/*.md` 文件中留下 `TODO(emet):` 标记；请把这些内容补全。只要还有标记残留，`emet preflight` 就会拒绝派发。
 
-然后，在 Claude Code 中：
+然后，在 Claude Code 中（在 Codex 上，使用 `$emet:run` 并传入相同参数）：
 
 ```text
 /emet:run <describe the feature>              # interview → wave 1; later waves via --dispatch/autoChain
@@ -47,7 +47,7 @@ emet preflight      # confirms the repo is dispatch-ready
 emet doctor ~/code/*
 ```
 
-它会逐个仓库报告：`emet.config.json` 是否有效、四个 `docs/agents/*.md` 文件是否齐全、是否没有遗留的 `TODO(emet):` 标记、`commands.selfCheck` 中的命令是否真的可以解析，以及该仓库与跟踪器相关的依赖检查结果（`gh`、Linear，参见[依赖](dependencies.md#谁检查什么)）。mattpocock-skills 插件和外部 CLI 的标志（`gh`、`claude --bg`、`claude agents --json`，通过 `--help` 检查）在整次扫描中只检查一次，而不是每个仓库检查一次。
+它会逐个仓库报告：`emet.config.json` 是否有效、四个 `docs/agents/*.md` 文件是否齐全、是否没有遗留的 `TODO(emet):` 标记、`commands.selfCheck` 中的命令是否真的可以解析，以及该仓库与跟踪器相关的依赖检查结果（`gh`、Linear，参见[依赖](dependencies.md#谁检查什么)）。mattpocock-skills 插件和外部 CLI 的标志（`gh`，以及代理宿主的标志：Claude Code 上是 `claude --bg` 和 `claude agents --json`，Codex 上是 `codex exec --json` 和 `--output-schema`，通过 `--help` 检查）在整次扫描中只检查一次，而不是每个仓库检查一次。
 
 ### 运行、工作者与槽位
 
@@ -55,7 +55,7 @@ emet doctor ~/code/*
 - `emet slots --acquire --run <id> --anchor <pid> --ticket <ticket>`：从 `~/.local/state/emet/slots` 中的主机级池获取一个工作者槽位。`--release --run <id>`、`--release-index <index>` 和 `--list` 用于释放或列出槽位。
 - `emet cleanup [--run <id> | --all] [--dry-run] [--force]`：不带参数时，回收其工作已落地的已关闭或已终止的运行；`--run` 清理该次运行；`--all` 是对整个仓库的分支清扫。合并之后，`emet cleanup --run <runId>` 会释放该波次的分支、工单认领和工作者槽位。
 - `emet lock-reason --run <id> --ticket <ticket> [--anchor <pid>]`：打印工作者在引导阶段写入的 `git worktree lock` 原因。
-- `emet launch <spec-id> --wave <n>`：以 `claude --bg` 会话启动一个波次，并按 `handoff.launcher` 打开它的 Orca 标签页。它会完成整个启动流程（重复会话检查、`claude --bg`、标签页），并打印 `{ name, id, attach, orcaTab: { opened, reason } }`。每当你想手动在另一个会话中运行某个波次时，请使用它，而不是直接使用 `claude --bg`。
+- `emet launch <spec-id> --wave <n>`：在 Claude Code 上，以 `claude --bg` 会话启动一个波次，并按 `handoff.launcher` 打开它的 Orca 标签页（Codex 参见 [Codex 宿主](#codex-宿主)）。它会完成整个启动流程（重复会话检查、`claude --bg`、标签页），并打印 `{ name, id, attach, orcaTab: { opened, reason } }`。每当你想手动在另一个会话中运行某个波次时，请使用它，而不是直接使用 `claude --bg`。
 - `emet status [--spec <id>]`：以 JSON 加一行摘要的形式给出每个波次的 Working / Checking / Ready / Needs-decision 状态。`emet status --help` 说明了该 JSON。
 - `emet usage [--session <id> | --file <path>] [--stalled [--minutes N]] [--project-dir <path>]`：报告会话用量；`--stalled` 列出停滞的工作者。
 - `emet handoff --check <path> | --render <path>`：校验或渲染工作者的 `.emet/handoff-<ticket>.md` 笔记。
@@ -71,7 +71,7 @@ emet doctor ~/code/*
 - `emet spec-merge --spec <id>`：波次自动合并之后，将规格中 `ADDED`/`MODIFIED`/`REMOVED` 的需求增量合并到 `docs/specs/<area>.md`（`specs.dir`）。它会在写入任何内容之前检查所有区域。如果出现冲突，或者某个需求会丢失一个场景，则以退出码 1 退出，并且不改动任何文件。
 - `emet map [--refresh]`：把现有代码库的概览（技术栈、结构、约定、测试、热点）写入 `docs/agents/codebase.md`（`map.path`），并标注生成它所用的提交 SHA。同一个提交总是生成同一个文件。一旦 HEAD 越过该标注，`emet map --stale` 就以退出码 1 退出，此时 `emet preflight` 会发出警告。`emet map --for <globs>` 只打印与工单编辑范围相匹配的部分；该输出是地图中唯一会包含在工作者简报里的部分。
 - `emet tracker create-spec|create-ticket|read|frontier|set-state|comment|close`：基于 `.scratch/` 的本地跟踪器，标准输出为 JSON。参见[本地跟踪器](#本地跟踪器)。
-- `emet guard`：Claude Code 的 `PreToolUse` 钩子；从标准输入读取钩子 JSON。`install.sh` 会把它接入 `~/.claude/settings.json`。它会阻止少数已知会导致无人值守运行失败的操作（参见 `emet/src/guard.ts`）。
+- `emet guard`：Claude Code 的 `PreToolUse` 钩子；从标准输入读取钩子 JSON（Codex 的形式见 [Codex 宿主](#codex-宿主)）。`install.sh` 会把它接入 `~/.claude/settings.json`。它会阻止少数已知会导致无人值守运行失败的操作（参见 `emet/src/guard.ts`）。
 
 ### 本地跟踪器
 

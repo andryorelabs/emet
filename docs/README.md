@@ -6,7 +6,7 @@ An index of every document in this repository. Terms follow [GLOSSARY.md](../GLO
 
 - [`README.md`](../README.md): the project front page: what emet is, a quickstart and links into the guide and reference.
 - [`llms.txt`](../llms.txt): an llmstxt.org index of the guide, reference and project pages for language models.
-- [`architecture.md`](architecture.md): code map of `emet/src` and how the `/emet` prompts drive the CLI.
+- [`architecture.md`](architecture.md): code map of `emet/src` and how the `/emet:run` and `$emet:run` prompts drive the CLI.
 - [`troubleshooting.md`](troubleshooting.md): `emet doctor` and `emet preflight` failures, by symptom.
 - [`CHANGELOG.md`](../CHANGELOG.md): release notes, newest first.
 - [`GLOSSARY.md`](../GLOSSARY.md): the domain terms every doc and prompt uses.
@@ -83,7 +83,7 @@ Research for the brand kit, run 1. Options and recommendations only; no decision
 
 - [`design/README.md`](design/README.md): the design canvases, one per area, and where their build notes live.
 
-## Per-repo `/emet` config
+## Per-repo emet config
 
 Prose that `emet init` generates and the coordinator reads.
 

@@ -4,19 +4,22 @@ What emet needs on the machine, and which command checks each item. Terms follow
 
 ## Required
 
+Shared by both Agent hosts first, then what each host adds.
+
 - **[bun](https://bun.sh)**: only for source installs. The standalone binary needs no runtime.
 - **`rsync`** and **`sha256sum` or `shasum`**: required by `install.sh`.
 - **`git`**: required at runtime. Nearly every subcommand shells out to it.
 - **`gh` CLI, authenticated**: required when the tracker is `github` or landing is `pr`. PRs always use it. With `tracker.kind: "local"` and `landing.mode: "merge"`, `gh` is not required.
-- **The `mattpocock-skills` plugin** (`claude-plugins-official` marketplace): the interview, spec and ticket phases of `/emet` call skills that live there.
+- **The `mattpocock-skills` plugin**: the interview, spec and ticket phases call skills that live there. On Claude Code it comes from the `claude-plugins-official` marketplace; on Codex see [Codex host](#codex-host).
 
   ```bash
   claude plugin marketplace add anthropics/claude-plugins-official
   claude plugin install mattpocock-skills@claude-plugins-official
   ```
 
-- **The `emet-worker` and `emet-reviewer` agents** in `~/.claude/agents/`: installed by `install.sh`. Phase 6 and Phase 8 dispatch by `subagent_type`, so either one missing breaks dispatch. See [Models & effort](../../README.md#models--effort).
-- **A Linear MCP server declared in `.mcp.json` (or at user scope)**: only if the repo uses the `linear` tracker. emet verifies the declaration. Whether the connection is authenticated lives in Claude Code's own credential store and cannot be checked from here. If a run fails to read tickets, restart Claude Code and approve the connection.
+- **The `claude` CLI and the emet plugin commands** (`/emet:run`, `/emet:init`, `/emet:doctor`): Claude Code host only.
+- **The `emet-worker` and `emet-reviewer` agents** in `~/.claude/agents/`: Claude Code host only, installed by `install.sh`. Phase 6 and Phase 8 dispatch by `subagent_type`, so either one missing breaks dispatch. See [Models & effort](../../README.md#models--effort).
+- **A Linear MCP server declared in `.mcp.json` (or at user scope)**: only if the repo uses the `linear` tracker. emet verifies the declaration. Whether the connection is authenticated lives in the Agent host's own credential store and cannot be checked from here. On Claude Code, if a run fails to read tickets, restart Claude Code and approve the connection. The equivalent step on Codex is unverified.
 
 None of the above is ever installed or logged in on your behalf. What differs is who checks it and how hard.
 
@@ -24,7 +27,7 @@ None of the above is ever installed or logged in on your behalf. What differs is
 
 Only when `agentHost` is `"codex"`; see the [Codex guide](../guide/codex.md). The `emet-worker` and `emet-reviewer` agents are not used there.
 
-- **The `codex` CLI**, logged in, at `codex.minVersion` (default `0.167.0`) or newer. `emet doctor` reports an older version and checks that `codex exec --help` lists `--json` and `--output-schema`.
+- **The `codex` CLI**, logged in, at `codex.minVersion` (default `0.167.0`) or newer. `emet doctor` checks that `codex exec --help` lists `--json` and `--output-schema`.
 - **The `mattpocock-skills` plugin** in Codex, probed with `codex plugin list`:
 
   ```bash
@@ -38,18 +41,18 @@ emet never writes your `~/.codex`: workers run with a per-run `CODEX_HOME` that 
 
 ## What checks what
 
-|                                                  | `emet init`                | `emet doctor`                 | `emet preflight`                                                         |
-| ------------------------------------------------ | -------------------------- | ----------------------------- | ------------------------------------------------------------------------ |
-| plugin missing/disabled                          | prints the install command | reports it (once, fleet-wide) | **blocks dispatch**                                                      |
-| `emet-worker`/`emet-reviewer` agent missing      | —                          | reports it (once, fleet-wide) | **blocks dispatch**                                                      |
-| `gh` missing/unauthenticated (tracker: `github`) | prints what to run         | reports it                    | **blocks dispatch**                                                      |
-| Linear server undeclared (tracker: `linear`)     | prints a note              | reports it                    | **blocks dispatch**                                                      |
-| `claude` not on PATH, or a probe timing out      | prints a note              | reports it                    | **warns, never blocks**: this is "couldn't check", not "verified broken" |
-| a flag emet relies on missing from `--help`      | —                          | reports it                    | —                                                                        |
+|                                                                           | `emet init`                | `emet doctor`                 | `emet preflight`                                                         |
+| ------------------------------------------------------------------------- | -------------------------- | ----------------------------- | ------------------------------------------------------------------------ |
+| plugin missing/disabled                                                   | prints the install command | reports it (once, fleet-wide) | **blocks dispatch**                                                      |
+| `emet-worker`/`emet-reviewer` agent missing (Claude Code host only)       | —                          | reports it (once, fleet-wide) | **blocks dispatch**                                                      |
+| `gh` missing/unauthenticated (tracker: `github`)                          | prints what to run         | reports it                    | **blocks dispatch**                                                      |
+| Linear server undeclared (tracker: `linear`)                              | prints a note              | reports it                    | **blocks dispatch**                                                      |
+| the host CLI (`claude` on Claude Code) not on PATH, or a probe timing out | prints a note              | reports it                    | **warns, never blocks**: this is "couldn't check", not "verified broken" |
+| a flag emet relies on missing from `--help`                               | —                          | reports it                    | —                                                                        |
 
 ### Flag checks
 
-`emet doctor` checks the flags themselves, not only that the binaries exist. It reads `--help` for `gh issue view` and `gh repo view` (`--json`), `gh issue edit` (`--add-label`, `--remove-label`), `claude` (`--bg`) and `claude agents` (`--json`), and reports any flag a newer or older CLI no longer documents. A renamed flag would otherwise fail a wave midway.
+`emet doctor` checks the flags themselves, not only that the binaries exist. It reads `--help` for `gh issue view` and `gh repo view` (`--json`), `gh issue edit` (`--add-label`, `--remove-label`) and, per host, the Agent host's own CLI: on Claude Code `claude` (`--bg`) and `claude agents` (`--json`), on Codex `codex exec` (`--json`, `--output-schema`) instead. It reports any flag a newer or older CLI no longer documents. A renamed flag would otherwise fail a wave midway.
 
 ### Timeouts and skipping a block
 

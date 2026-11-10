@@ -2,7 +2,7 @@
 title: はじめに
 description: emet を Claude Code プラグインとしてインストールし、emet doctor で動作を確認して、初めて実行します。
 seoTitle: emet をはじめよう
-sourceHash: 381754ac3b3a0479
+sourceHash: 7a918962dca60c10
 ---
 
 emet をインストールし、動作を確認して、初めて実行します。
@@ -17,14 +17,14 @@ Claude Code または Codex CLI、`git`、`gh`（認証済み）、`mattpocock-s
 
 インストール方法は 2 つあります。
 
-**プラグイン**（Bun は不要）。このリポジトリをマーケットプレイスとして追加し、`emet` プラグインをインストールします。これにより `/emet:run`、エージェント、ガードフック、そして初回使用時にチェックサム検証済みのスタンドアロンバイナリをダウンロードする `emet` シムが導入されます。
+**プラグイン**（Bun は不要）。このリポジトリをマーケットプレイスとして追加し、`emet` プラグインをインストールします。何が含まれるかはエージェントホストによって異なります。Claude Code では `/emet:run`、エージェント、ガードフック、そして初回使用時にチェックサム検証済みのスタンドアロンバイナリをダウンロードする `emet` シムが導入されます。
 
 ```bash
 claude plugin marketplace add andryorelabs/emet
 claude plugin install emet@emet-marketplace
 ```
 
-Codex では `codex plugin` でプラグインをインストールします。手順は [Codex で emet を実行する](codex.md#インストール)にあります。
+Codex では `codex plugin` でプラグインをインストールします。手順は [Codex で emet を実行する](codex.md#インストール)にあります。Codex プラグインには `$emet:run`、`$emet:init`、`$emet:doctor` スキルとフックが含まれますが、エージェントと `emet` シムは含まれないため、ターミナルの `emet` は `install.sh` から入手します。
 
 **`install.sh`**（Bun の有無を問わず動作します）:
 
@@ -36,9 +36,9 @@ cd emet
 
 `bun` が PATH にある場合は、CLI のソースを `~/.claude/emet` に、`emet` ラッパーを `~/.local/bin/emet` にコピーします。`bun` がない場合は、代わりにスタンドアロンバイナリのシム（`~/.local/bin/emet`、`~/.claude/emet/bin/emet` にリンク）をインストールします。このシムは初回実行時にバイナリをダウンロードしてチェックサムを検証します（`curl` が必要です）。どちらの場合も、コマンドは `~/.claude/commands/emet/` に、エージェントは `~/.claude/agents/` に配置され、プロンプト内のプラグインのプレースホルダーは通常の `~/.claude` パスに書き換えられます。再実行しても安全で、編集したファイルはそのまま残り、新しいバージョンは `<file>.new` として隣に書き出されます。
 
-どちらのインストールでも、3 つのスラッシュコマンド `/emet:run`、`/emet:init`、`/emet:doctor` が使えるようになります。通常のターミナルで `emet` コマンドが使えるのは `install.sh` を実行した後だけです。それ以外の場合は、スラッシュコマンドを使うか、Claude Code または Codex セッション内で `! emet <subcommand>` を使ってください。エージェント名は異なり、プラグインでは `emet:emet-worker`、スタンドアロンでは `emet-worker` です。
+どちらのインストールでも、3 つのエントリポイントが使えるようになります。Claude Code ではスラッシュコマンド `/emet:run`、`/emet:init`、`/emet:doctor`、Codex では `$emet:run`、`$emet:init`、`$emet:doctor` スキルです。後者は Codex プラグインだけが提供します（`install.sh` がインストールするのは Claude Code のコマンドです）。通常のターミナルで `emet` コマンドが使えるのは `install.sh` を実行した後だけです。それ以外の場合は、スラッシュコマンドを使うか、Claude Code または Codex セッション内で `! emet <subcommand>` を使ってください。Claude Code ではエージェント名は異なり、プラグインでは `emet:emet-worker`、スタンドアロンでは `emet-worker` です。Codex には emet のエージェントはありません。各ワーカーが独立した `codex exec` プロセスだからです。
 
-各リポジトリでの推奨順序は、まず `/setup-matt-pocock-skills` を実行し、次に `emet init` を実行することです。
+各リポジトリでの推奨順序は、まず `setup-matt-pocock-skills` スキルを実行し（Claude Code では `/setup-matt-pocock-skills`、Codex では `mattpocock-skills` プラグインの同じスキルを Codex の `$` 構文で実行します）、次に `emet init` を実行することです。
 
 動作の確認は、Claude Code 内で `/emet:doctor`（Codex では `$emet:doctor`）を実行するか、`install.sh` の後にターミナルで `emet doctor .` を実行します（`selftest` にはソースからのインストールが必要です）。
 

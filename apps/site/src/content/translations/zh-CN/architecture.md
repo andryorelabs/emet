@@ -2,7 +2,7 @@
 title: 架构
 description: emet/src 的代码地图，以及 /emet 提示词如何驱动它。
 seoTitle: emet 架构
-sourceHash: c86098a9614756e9
+sourceHash: ff28425abc92b5c9
 ---
 
 `emet/src` 的代码地图，以及 `/emet` 提示词如何驱动它。术语遵循 [GLOSSARY.md](../GLOSSARY.md)；这种结构背后的决策见 [docs/adr](adr/README.md)。遇到问题时，参见[故障排除](troubleshooting.md)。
@@ -16,7 +16,7 @@ sourceHash: c86098a9614756e9
 
 ## 结构
 
-整体分为两部分。提示词（`commands/run.md`、`agents/*.md`、`emet/reference/*.md`）告诉代理在每个阶段要做什么。`emet` CLI（`emet/bin/emet.ts` 和 `emet/src/`）负责所有必须具有确定性的事情：检查、认领、槽位、关卡、跟踪器写入和落地。提示词不会重新实现 CLI 已经做过的检查。
+整体分为两部分。提示词（`commands/run.md`、`agents/*.md`、`emet/reference/*.md`，以及为 Codex 生成的 `codex/skills/**` 和 `codex/hooks.json`）告诉代理在每个阶段要做什么。`emet` CLI（`emet/bin/emet.ts` 和 `emet/src/`）负责所有必须具有确定性的事情：检查、认领、槽位、关卡、跟踪器写入和落地。提示词不会重新实现 CLI 已经做过的检查。
 
 `emet/bin/emet.ts` 是一个很薄的分发器：它读取第一个参数，并把控制权交给某一个子命令模块，由该模块自己读取 `process.argv` 的其余部分。退出码在各个子命令之间含义一致。
 
@@ -52,11 +52,11 @@ sourceHash: c86098a9614756e9
 
 ## 提示词布局
 
-`commands/run.md`（约 130 行）是 `/emet` 的路由器。`emet/reference/` 中的每个文件是一个阶段组（`phases-1-5.md`、`phases-6-7-dispatch.md`、`phases-8-closeout.md`、`phases-9-handoff.md`），只在当前运行的模式需要时才加载。只要其中任何一个超过 20,000 字节，测试就会失败，因此不会有单个文件在压缩上下文之后占满上下文。各阶段会告诉协调者在每一轮修复或评审之前重新阅读相关章节。`install.sh` 会把旧的单个 `phases-6-9.md` 移到一旁并命名为 `phases-6-9.md.retired`（当你编辑过它，或它早于安装清单时），否则就删除它。`install.sh` 还会把 `emet guard` 作为 `PreToolUse` 钩子接入 `~/.claude/settings.json`。
+`commands/run.md`（约 130 行）是 Claude Code 上 `/emet` 的路由器；在 Codex 上，由生成的 `codex/skills/**` 和 `codex/hooks.json` 承担这一角色。`emet/reference/` 中的每个文件是一个阶段组（`phases-1-5.md`、`phases-6-7-dispatch.md`、`phases-8-closeout.md`、`phases-9-handoff.md`），只在当前运行的模式需要时才加载。只要其中任何一个超过 20,000 字节，测试就会失败，因此不会有单个文件在压缩上下文之后占满上下文。各阶段会告诉协调者在每一轮修复或评审之前重新阅读相关章节。`install.sh` 会把旧的单个 `phases-6-9.md` 移到一旁并命名为 `phases-6-9.md.retired`（当你编辑过它，或它早于安装清单时），否则就删除它。`install.sh` 还会把 `emet guard` 作为 `PreToolUse` 钩子接入 `~/.claude/settings.json`。
 
 ## 分发
 
-`install.sh` 会把 `emet/` 复制到 `~/.claude/emet` 并改写提示词。插件路径则提供一个 shim，它会下载由 `tools/build-binaries.ts` 构建、经过校验和验证的独立二进制文件。参见 [ADR-0008](adr/0008-standalone-binaries-and-plugin-distribution.md)。
+`install.sh` 会把 `emet/` 复制到 `~/.claude/emet` 并改写提示词。Codex 插件由 `.codex-plugin/plugin.json` 描述，它与 `codex/skills/**` 和 `codex/hooks.json` 一起通过 `bun run build:codex` 生成。Claude Code 插件路径则提供一个 shim，它会下载由 `tools/build-binaries.ts` 构建、经过校验和验证的独立二进制文件。参见 [ADR-0008](adr/0008-standalone-binaries-and-plugin-distribution.md)。
 
 ## 另请参阅
 

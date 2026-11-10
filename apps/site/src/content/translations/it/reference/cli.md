@@ -2,14 +2,14 @@
 title: Riferimento della CLI
 description: Ogni sottocomando di emet, la tabella di gate e registri, i codici di uscita e le variabili d'ambiente.
 seoTitle: Riferimento della CLI di emet
-sourceHash: 8bb02104970da0a8
+sourceHash: b89b785c057b008c
 ---
 
 Ogni sottocomando di `emet`, la tabella di gate e registri, i codici di uscita e le variabili d'ambiente. I termini seguono [GLOSSARY.md](../../GLOSSARY.md). Torna al [README](../../README.md). Ogni comando stampa il proprio utilizzo con `--help`.
 
 ## Sottocomandi
 
-Tre comandi slash racchiudono la CLI dentro Claude Code: `/emet:run` (la pipeline), `/emet:init` (`emet init`) e `/emet:doctor` (`emet doctor .`). Un `emet` in un normale terminale richiede `install.sh`; altrimenti esegui `! emet <subcommand>` all'interno di una sessione.
+Tre comandi slash racchiudono la CLI dentro Claude Code: `/emet:run` (la pipeline), `/emet:init` (`emet init`) e `/emet:doctor` (`emet doctor .`). Su Codex sono le skill `$emet:run`, `$emet:init` e `$emet:doctor`. Un `emet` in un normale terminale richiede `install.sh`; altrimenti esegui `! emet <subcommand>` all'interno di una sessione.
 
 `emet <command> [...args]`. `emet --version` stampa la versione.
 
@@ -31,7 +31,7 @@ emet preflight      # confirms the repo is dispatch-ready
 
 `emet init` lascia un marcatore `TODO(emet):` nei file `docs/agents/*.md` generati per tutto ciò che non riesce a dedurre da solo (un lock condiviso del database di test, la proprietà dello schema e così via). Compilali; `emet preflight` rifiuta il dispatch finché ne resta uno.
 
-Poi, dentro Claude Code:
+Poi, dentro Claude Code (su Codex usa `$emet:run` con gli stessi argomenti):
 
 ```text
 /emet:run <describe the feature>              # interview → wave 1; later waves via --dispatch/autoChain
@@ -47,7 +47,7 @@ Poi, dentro Claude Code:
 emet doctor ~/code/*
 ```
 
-Per ogni repo il report indica: un `emet.config.json` valido, tutti e quattro i file `docs/agents/*.md` presenti, nessun marcatore `TODO(emet):` rimasto, se i comandi in `commands.selfCheck` si risolvono davvero e i risultati sulle dipendenze specifiche del tracker del repo (`gh`, Linear; vedi [dipendenze](dependencies.md#cosa-controlla-cosa)). Il plugin mattpocock-skills e i flag delle CLI esterne (`gh`, `claude --bg`, `claude agents --json`, verificati tramite `--help`) vengono controllati una sola volta per l'intera scansione, non per ogni repo.
+Per ogni repo il report indica: un `emet.config.json` valido, tutti e quattro i file `docs/agents/*.md` presenti, nessun marcatore `TODO(emet):` rimasto, se i comandi in `commands.selfCheck` si risolvono davvero e i risultati sulle dipendenze specifiche del tracker del repo (`gh`, Linear; vedi [dipendenze](dependencies.md#cosa-controlla-cosa)). Il plugin mattpocock-skills e i flag delle CLI esterne (`gh`, più quelli dell'Agent host: `claude --bg` e `claude agents --json` su Claude Code, `codex exec --json` e `--output-schema` su Codex, verificati tramite `--help`) vengono controllati una sola volta per l'intera scansione, non per ogni repo.
 
 ### Esecuzioni, worker e slot
 
@@ -55,7 +55,7 @@ Per ogni repo il report indica: un `emet.config.json` valido, tutti e quattro i 
 - `emet slots --acquire --run <id> --anchor <pid> --ticket <ticket>`: prende uno slot worker dal pool dell'host in `~/.local/state/emet/slots`. `--release --run <id>`, `--release-index <index>` e `--list` liberano gli slot o li elencano.
 - `emet cleanup [--run <id> | --all] [--dry-run] [--force]`: senza argomenti, recupera le esecuzioni chiuse o morte il cui lavoro è atterrato; `--run` pulisce questa esecuzione; `--all` è una scansione dei branch su tutto il repo. Dopo un merge, `emet cleanup --run <runId>` libera i branch, i claim dei ticket e gli slot dei worker dell'ondata.
 - `emet lock-reason --run <id> --ticket <ticket> [--anchor <pid>]`: stampa il motivo del `git worktree lock` che un worker scrive al bootstrap.
-- `emet launch <spec-id> --wave <n>`: avvia un'ondata come sessione `claude --bg` e ne apre la scheda di Orca secondo `handoff.launcher`. Esegue l'intero avvio (controllo delle sessioni duplicate, `claude --bg`, scheda) e stampa `{ name, id, attach, orcaTab: { opened, reason } }`. Usalo, e non un semplice `claude --bg`, ogni volta che vuoi un'ondata in un'altra sessione a mano.
+- `emet launch <spec-id> --wave <n>`: su Claude Code, avvia un'ondata come sessione `claude --bg` e ne apre la scheda di Orca secondo `handoff.launcher` (su Codex vedi [Host Codex](#host-codex)). Esegue l'intero avvio (controllo delle sessioni duplicate, `claude --bg`, scheda) e stampa `{ name, id, attach, orcaTab: { opened, reason } }`. Usalo, e non un semplice `claude --bg`, ogni volta che vuoi un'ondata in un'altra sessione a mano.
 - `emet status [--spec <id>]`: Working / Checking / Ready / Needs-decision per ondata come JSON più una riga di riepilogo. `emet status --help` documenta il JSON.
 - `emet usage [--session <id> | --file <path>] [--stalled [--minutes N]] [--project-dir <path>]`: riporta l'uso della sessione; `--stalled` elenca i worker bloccati.
 - `emet handoff --check <path> | --render <path>`: valida o rende la nota `.emet/handoff-<ticket>.md` di un worker.
@@ -71,7 +71,7 @@ Per ogni repo il report indica: un `emet.config.json` valido, tutti e quattro i 
 - `emet spec-merge --spec <id>`: dopo che un'ondata viene unita automaticamente, fonde i delta dei requisiti `ADDED`/`MODIFIED`/`REMOVED` della spec in `docs/specs/<area>.md` (`specs.dir`). Controlla ogni area prima di scrivere qualcosa. Un conflitto, o un requisito che perderebbe uno scenario, esce con 1 e lascia ogni file intatto.
 - `emet map [--refresh]`: scrive una sintesi di un codebase esistente (stack, struttura, convenzioni, test, hotspot) in `docs/agents/codebase.md` (`map.path`), marcata con lo SHA del commit da cui è stata costruita. Lo stesso commit produce sempre lo stesso file. `emet map --stale` esce con 1 quando HEAD ha superato il marcatore, e in tal caso `emet preflight` avvisa. `emet map --for <globs>` stampa solo le sezioni che corrispondono alle superfici di modifica di un ticket; quell'output è l'unica parte della mappa inclusa nel brief di un worker.
 - `emet tracker create-spec|create-ticket|read|frontier|set-state|comment|close`: il tracker locale su `.scratch/`, JSON su stdout. Vedi [Tracker locale](#tracker-locale).
-- `emet guard`: l'hook `PreToolUse` di Claude Code; legge il JSON dell'hook da stdin. `install.sh` lo collega in `~/.claude/settings.json`. Blocca una manciata di inneschi noti di fallimenti nelle esecuzioni senza supervisione (vedi `emet/src/guard.ts`).
+- `emet guard`: l'hook `PreToolUse` di Claude Code; legge il JSON dell'hook da stdin (la forma Codex è sotto [Host Codex](#host-codex)). `install.sh` lo collega in `~/.claude/settings.json`. Blocca una manciata di inneschi noti di fallimenti nelle esecuzioni senza supervisione (vedi `emet/src/guard.ts`).
 
 ### Tracker locale
 

@@ -2,7 +2,7 @@
 title: Tracker und Landing
 description: Wo Tickets liegen, wie eine Welle als Pull Request oder lokaler Merge landet und wie Wellen verkettet werden.
 seoTitle: Tracker und Landing in emet
-sourceHash: c9ae0940af5cfbad
+sourceHash: 9aa84264f5f8cc95
 ---
 
 Wo Tickets liegen, wie eine Welle landet und wie Wellen verkettet werden. Jeder hier genannte Schlüssel steht in der [Konfigurationsreferenz](../reference/configuration.md); jeder Unterbefehl steht in der [CLI-Referenz](../reference/cli.md).
@@ -43,20 +43,22 @@ Spätere Wellen laufen in eigenen Sitzungen, nie in der, die Welle 1 ausgeführt
 ```
 
 - `pr.autoMerge` (Standard `true`): auf die Prüfungen des PR warten und mergen; ohne Prüfungen sofort mergen. Eine fehlgeschlagene Prüfung wird korrigiert und gepusht, bis zu `maxCiFixAttempts`-mal, danach bleibt der PR für einen Menschen offen. Eine Welle mit irgendeiner Markierung wird nie automatisch gemergt.
-- `handoff.autoChain` (Standard `false`): Nach einer sauberen, gemergten Welle mit weiteren offenen Wellen die nächste mit `claude --bg` starten, statt `/emet:run --dispatch <spec-id>` auszugeben. Mit `claude agents` / `claude attach emet-<spec-id>-w<n>` einsehbar. Voraussetzungen:
+- `handoff.autoChain` (Standard `false`): Nach einer sauberen, gemergten Welle mit weiteren offenen Wellen die nächste mit `claude --bg` starten, statt `/emet:run --dispatch <spec-id>` auszugeben. Mit `claude agents` / `claude attach emet-<spec-id>-w<n>` einsehbar. Voraussetzungen unter Claude Code:
   1. `claude` im PATH, mit `--bg`-Unterstützung.
   2. Ein vertrauenswürdiger Arbeitsbereich. `--bg` läuft nicht interaktiv, daher erscheint der Vertrauensdialog nie; `claude` einmal interaktiv im Repo öffnen und bestätigen.
   3. Die Bypass-Warnung einmal in einer interaktiven Sitzung akzeptiert (`skipDangerousModePermissionPrompt`), da die nächste Welle im `handoff.permissionMode` (unten) läuft, nicht im Modus der startenden Sitzung.
 
+  Auf dem Codex-Host startet die nächste Welle stattdessen als abgekoppeltes `codex exec` (siehe `handoff.launcher` unten); Voraussetzung ist daher `codex` im PATH in Version `codex.minVersion` oder neuer, mit `--json` und `--output-schema` bei `codex exec`; `emet doctor` prüft die Flags, nicht die Versionsnummer. Der Vertrauensdialog und die Bypass-Warnung von Claude gelten nicht. Ob Codex für einen abgekoppelten Lauf einen vertrauenswürdigen Workspace braucht, ist in der Dokumentation dieses Repos nicht verifiziert.
+
   Der Start erfolgt nur, wenn der PR gemergt wurde und nichts markiert war, und wird übersprungen, wenn bereits eine Sitzung `emet-<spec-id>-*` läuft (`claude agents --json`). Schlägt der Start fehl, wird stattdessen `/emet:run --dispatch <spec-id>` ausgegeben.
 
-- `handoff.launcher` (Standard `auto`): die Welle zusätzlich in einem Orca-Tab öffnen, der `claude attach` ausführt. `auto` fragt die Orca-Runtime (`orca status`) und funktioniert daher auch aus `claude --bg`-Sitzungen, die kein `TERM_PROGRAM` haben; `orca` versucht es immer, `bg` nie. Die Welle läuft in beiden Fällen im Hintergrund, und ein Tab, der sich nicht öffnen lässt, stoppt die Kette nie.
+- `handoff.launcher` (Standard `auto`): die Welle zusätzlich in einem Orca-Tab öffnen, der `claude attach` ausführt. `auto` fragt die Orca-Runtime (`orca status`) und funktioniert daher auch aus `claude --bg`-Sitzungen, die kein `TERM_PROGRAM` haben; `orca` versucht es immer, `bg` nie. `launcher` gilt nur für den Claude-Code-Host; unter Codex verhält sich `emet launch` immer wie `bg`. Die Welle läuft in beiden Fällen im Hintergrund, und ein Tab, der sich nicht öffnen lässt, stoppt die Kette nie.
 
   `emet launch <spec-id> --wave <n>` erledigt den gesamten Start (Prüfung auf doppelte Sitzungen, `claude --bg`, Tab) und gibt `{ name, id, attach, orcaTab: { opened, reason } }` aus. Dieses statt eines bloßen `claude --bg` verwenden, wenn eine Welle von Hand in einer anderen Sitzung laufen soll.
 
   Auf dem Agent host Codex startet `emet launch` ein abgekoppeltes `codex exec`, das `$emet:run --dispatch <spec-id>` ausführt, und speichert dessen Thread-ID. Es öffnet keinen Orca-Tab, und `codex exec resume <id>` setzt die Sitzung fort. Siehe die [CLI-Referenz](../reference/cli.md#codex-host) und [emet mit Codex ausführen](codex.md).
 
-- `handoff.permissionMode` (Standard `bypassPermissions`): Berechtigungsmodus der verketteten Sitzung. Er wird nicht von der startenden Sitzung geerbt, weil der Klassifikator des Modus `auto` einen Schritt wie `gh pr merge` ablehnen und eine Welle halb fertig zurücklassen kann. Deine `permissions.deny`-Regeln gelten weiterhin, aber die Bypass-Warnung muss einmal interaktiv akzeptiert worden sein (`skipDangerousModePermissionPrompt`).
+- `handoff.permissionMode` (Standard `bypassPermissions`): nur Claude Code; Berechtigungsmodus der verketteten Sitzung. Auf dem Codex-Host wird er ignoriert, und die verkettete Sitzung nutzt `codex.sandbox` (Standard `danger-full-access`; siehe [emet mit Codex ausführen](codex.md)). Er wird nicht von der startenden Sitzung geerbt, weil der Klassifikator des Modus `auto` einen Schritt wie `gh pr merge` ablehnen und eine Welle halb fertig zurücklassen kann. Deine `permissions.deny`-Regeln gelten weiterhin, aber die Bypass-Warnung muss einmal interaktiv akzeptiert worden sein (`skipDangerousModePermissionPrompt`).
 
 ## Gates, Budgets und Aufzeichnungen
 

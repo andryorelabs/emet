@@ -2,7 +2,7 @@
 title: 트래커와 랜딩
 description: 티켓이 있는 곳, 웨이브가 풀 리퀘스트나 로컬 병합으로 랜딩하는 방식, 웨이브를 이어 붙이는 방법을 설명합니다.
 seoTitle: emet의 트래커와 랜딩
-sourceHash: c9ae0940af5cfbad
+sourceHash: 9aa84264f5f8cc95
 ---
 
 티켓이 있는 곳, 웨이브가 랜딩하는 방식, 웨이브를 이어 붙이는 방법을 설명합니다. 여기서 언급하는 모든 키는 [설정 레퍼런스](../reference/configuration.md)에, 모든 하위 명령은 [CLI 레퍼런스](../reference/cli.md)에 있습니다.
@@ -43,20 +43,22 @@ emet은 Linear, GitHub Issues 또는 로컬 파일과 함께 동작하며 `track
 ```
 
 - `pr.autoMerge`(기본값 `true`): PR의 체크를 기다렸다가 병합합니다. 체크가 없으면 즉시 병합합니다. 실패한 체크는 수정해 푸시하며 최대 `maxCiFixAttempts`번 반복하고, 그래도 안 되면 사람이 처리하도록 PR을 열어 둡니다. 플래그가 지정된 항목이 있는 웨이브는 자동 병합되지 않습니다.
-- `handoff.autoChain`(기본값 `false`): 깔끔하게 병합된 웨이브 뒤에 남은 웨이브가 있으면 `/emet:run --dispatch <spec-id>`를 출력하는 대신 `claude --bg`로 다음 웨이브를 시작합니다. `claude agents` / `claude attach emet-<spec-id>-w<n>`으로 확인할 수 있습니다. 요구 사항:
+- `handoff.autoChain`(기본값 `false`): 깔끔하게 병합된 웨이브 뒤에 남은 웨이브가 있으면 `/emet:run --dispatch <spec-id>`를 출력하는 대신 `claude --bg`로 다음 웨이브를 시작합니다. `claude agents` / `claude attach emet-<spec-id>-w<n>`으로 확인할 수 있습니다. Claude Code에서의 요구 사항:
   1. `claude`가 PATH에 있고 `--bg`를 지원할 것.
   2. 신뢰할 수 있는 작업 공간일 것. `--bg`는 비대화형으로 실행되므로 신뢰 대화상자가 나타나지 않습니다. 리포지토리에서 `claude`를 대화형으로 한 번 열어 수락하세요.
   3. 대화형 세션에서 우회 경고를 한 번 수락했을 것(`skipDangerousModePermissionPrompt`). 다음 웨이브는 시작한 세션의 모드가 아니라 `handoff.permissionMode`(아래 참고)로 실행되기 때문입니다.
 
+  Codex 호스트에서는 다음 웨이브가 대신 분리된 `codex exec`로 시작되므로(아래 `handoff.launcher` 참고), 요구 사항은 PATH에 `codex`가 있고 `codex.minVersion` 이상이며 `codex exec`에 `--json`과 `--output-schema`가 있는 것입니다. `emet doctor`는 버전 번호가 아니라 플래그를 확인합니다. Claude의 신뢰 대화상자와 우회 경고는 적용되지 않습니다. 분리된 실행에 Codex가 신뢰할 수 있는 작업 공간을 요구하는지는 이 리포지토리의 문서에서 확인되지 않았습니다.
+
   PR이 병합되었고 플래그가 지정된 항목이 없을 때만 시작하며, `emet-<spec-id>-*` 세션이 이미 실행 중이면(`claude agents --json`) 건너뜁니다. 시작에 실패하면 `/emet:run --dispatch <spec-id>`를 출력하는 방식으로 되돌아갑니다.
 
-- `handoff.launcher`(기본값 `auto`): `claude attach`를 실행하는 Orca 탭에서도 웨이브를 엽니다. `auto`는 Orca 런타임(`orca status`)에 물어보므로 `TERM_PROGRAM`이 없는 `claude --bg` 세션에서도 동작합니다. `orca`는 항상 시도하고 `bg`는 시도하지 않습니다. 어느 쪽이든 웨이브는 백그라운드에서 실행되며, 탭을 열지 못해도 체인이 멈추지 않습니다.
+- `handoff.launcher`(기본값 `auto`): `claude attach`를 실행하는 Orca 탭에서도 웨이브를 엽니다. `auto`는 Orca 런타임(`orca status`)에 물어보므로 `TERM_PROGRAM`이 없는 `claude --bg` 세션에서도 동작합니다. `orca`는 항상 시도하고 `bg`는 시도하지 않습니다. `launcher`는 Claude Code 호스트에만 적용되며, Codex에서 `emet launch`는 항상 `bg`처럼 동작합니다. 어느 쪽이든 웨이브는 백그라운드에서 실행되며, 탭을 열지 못해도 체인이 멈추지 않습니다.
 
   `emet launch <spec-id> --wave <n>`은 시작 전체(중복 세션 확인, `claude --bg`, 탭)를 수행하고 `{ name, id, attach, orcaTab: { opened, reason } }`를 출력합니다. 다른 세션에서 웨이브를 직접 실행하고 싶을 때는 단순한 `claude --bg` 대신 이것을 사용하세요.
 
   Codex 에이전트 호스트에서 `emet launch`는 `$emet:run --dispatch <spec-id>`를 실행하는 분리된 `codex exec`를 시작하고 그 스레드 ID를 기록합니다. Orca 탭은 열지 않으며, `codex exec resume <id>`로 세션을 이어 갈 수 있습니다. [CLI 레퍼런스](../reference/cli.md#codex-호스트)와 [Codex에서 emet 실행하기](codex.md)를 참고하세요.
 
-- `handoff.permissionMode`(기본값 `bypassPermissions`): 이어 붙인 세션의 권한 모드입니다. 시작한 세션에서 상속되지 않습니다. `auto` 모드의 분류기가 `gh pr merge` 같은 단계를 거부해 웨이브가 반쯤 끝난 상태로 남을 수 있기 때문입니다. `permissions.deny` 규칙은 계속 적용되지만, 우회 경고를 대화형으로 한 번 수락해 두어야 합니다(`skipDangerousModePermissionPrompt`).
+- `handoff.permissionMode`(기본값 `bypassPermissions`): Claude Code 전용이며, 이어 붙인 세션의 권한 모드입니다. Codex 호스트에서는 무시되며 이어 붙인 세션은 `codex.sandbox`(기본값 `danger-full-access`. [Codex에서 emet 실행하기](codex.md) 참고)를 사용합니다. 시작한 세션에서 상속되지 않습니다. `auto` 모드의 분류기가 `gh pr merge` 같은 단계를 거부해 웨이브가 반쯤 끝난 상태로 남을 수 있기 때문입니다. `permissions.deny` 규칙은 계속 적용되지만, 우회 경고를 대화형으로 한 번 수락해 두어야 합니다(`skipDangerousModePermissionPrompt`).
 
 ## 게이트, 예산, 기록
 

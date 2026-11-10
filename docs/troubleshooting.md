@@ -49,7 +49,7 @@ A repo that still has only `forge.config.json`, `.forge/` or `FORGE_*` variables
 
 **Cause:** `/emet` needs `git`, `gh` and the mattpocock-skills plugin; see `emet/src/dependencies.ts` and `emet/src/skills.ts`.
 
-**Fix:** Install or authenticate the tool, or run `/setup-matt-pocock-skills`. If a check is wrong for your environment, `EMET_SKIP_DEPENDENCY_CHECKS=1 emet preflight` downgrades it to a warning.
+**Fix:** Install or authenticate the tool, or run the `setup-matt-pocock-skills` skill (`/setup-matt-pocock-skills` on Claude Code, the same skill via Codex's `$` syntax on Codex). If a check is wrong for your environment, `EMET_SKIP_DEPENDENCY_CHECKS=1 emet preflight` downgrades it to a warning.
 
 ## no longer documents a flag in --help
 

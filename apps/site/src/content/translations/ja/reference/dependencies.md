@@ -2,26 +2,29 @@
 title: 依存関係
 description: emet がマシン上で必要とするものと、各項目を確認するコマンドを説明します。
 seoTitle: emet の依存関係
-sourceHash: 50444429c7883bd3
+sourceHash: 1c97a7ccd5572ab4
 ---
 
 emet がマシン上で必要とするものと、各項目を確認するコマンドです。用語は [GLOSSARY.md](../../GLOSSARY.md) に従います。[README](../../README.md) に戻る。
 
 ## 必須
 
+最初に両方のエージェントホストに共通のもの、その後に各ホストが追加するものを示します。
+
 - **[bun](https://bun.sh)**: ソースからのインストールの場合のみ必要です。スタンドアロンバイナリにはランタイムは不要です。
 - **`rsync`** と **`sha256sum` または `shasum`**: `install.sh` が必要とします。
 - **`git`**: 実行時に必須です。ほぼすべてのサブコマンドが git を呼び出します。
 - **認証済みの `gh` CLI**: トラッカーが `github` の場合、またはランディングが `pr` の場合に必須です。PR では常に使用されます。`tracker.kind: "local"` かつ `landing.mode: "merge"` の場合、`gh` は不要です。
-- **`mattpocock-skills` プラグイン**（`claude-plugins-official` マーケットプレイス）: `/emet` のインタビュー、スペック、チケットの各フェーズは、そこにあるスキルを呼び出します。
+- **`mattpocock-skills` プラグイン**: インタビュー、スペック、チケットの各フェーズは、そこにあるスキルを呼び出します。Claude Code では `claude-plugins-official` マーケットプレイスから入手し、Codex については [Codex ホスト](#codex-ホスト)を参照してください。
 
   ```bash
   claude plugin marketplace add anthropics/claude-plugins-official
   claude plugin install mattpocock-skills@claude-plugins-official
   ```
 
-- **`~/.claude/agents/` にある `emet-worker` と `emet-reviewer` エージェント**: `install.sh` がインストールします。フェーズ 6 とフェーズ 8 は `subagent_type` でディスパッチするため、どちらかが欠けるとディスパッチが機能しません。[モデルとエフォート](../../README.md#models--effort)を参照してください。
-- **`.mcp.json`（またはユーザースコープ）で宣言された Linear MCP サーバー**: リポジトリが `linear` トラッカーを使う場合のみ必要です。emet は宣言があることを確認します。接続が認証済みかどうかは Claude Code 自身の認証情報ストアにあり、ここから確認することはできません。実行中にチケットの読み取りに失敗した場合は、Claude Code を再起動して接続を承認してください。
+- **`claude` CLI と emet プラグインのコマンド**（`/emet:run`、`/emet:init`、`/emet:doctor`）: Claude Code ホストのみです。
+- **`~/.claude/agents/` にある `emet-worker` と `emet-reviewer` エージェント**: Claude Code ホストのみで、`install.sh` がインストールします。フェーズ 6 とフェーズ 8 は `subagent_type` でディスパッチするため、どちらかが欠けるとディスパッチが機能しません。[モデルとエフォート](../../README.md#models--effort)を参照してください。
+- **`.mcp.json`（またはユーザースコープ）で宣言された Linear MCP サーバー**: リポジトリが `linear` トラッカーを使う場合のみ必要です。emet は宣言があることを確認します。接続が認証済みかどうかはエージェントホスト自身の認証情報ストアにあり、ここから確認することはできません。Claude Code では、実行中にチケットの読み取りに失敗した場合、Claude Code を再起動して接続を承認してください。Codex での同等の手順は未検証です。
 
 上記のいずれも、ユーザーに代わってインストールやログインが行われることはありません。違いは、誰がどの程度厳密に確認するかです。
 
@@ -29,7 +32,7 @@ emet がマシン上で必要とするものと、各項目を確認するコマ
 
 `agentHost` が `"codex"` のときだけ必要です。[Codex ガイド](../guide/codex.md)を参照してください。`emet-worker` と `emet-reviewer` エージェントはそこでは使いません。
 
-- **`codex` CLI**。ログイン済みで、`codex.minVersion`（既定 `0.167.0`）以降のバージョン。`emet doctor` は古いバージョンを報告し、`codex exec --help` に `--json` と `--output-schema` が載っているか確認します。
+- **`codex` CLI**。ログイン済みで、`codex.minVersion`（既定 `0.167.0`）以降のバージョン。`emet doctor` は、`codex exec --help` に `--json` と `--output-schema` が載っているか確認します。
 - Codex の **`mattpocock-skills` プラグイン**。`codex plugin list` で確認します。
 
   ```bash
@@ -43,18 +46,18 @@ emet があなたの `~/.codex` に書き込むことはありません。ワー
 
 ## 何が何を確認するか
 
-|                                                       | `emet init`                | `emet doctor`                   | `emet preflight`                                                                           |
-| ----------------------------------------------------- | -------------------------- | ------------------------------- | ------------------------------------------------------------------------------------------ |
-| プラグインがない、または無効                          | インストールコマンドを表示 | 報告する（フリート全体で 1 回） | **ディスパッチをブロックする**                                                             |
-| `emet-worker`/`emet-reviewer` エージェントがない      | —                          | 報告する（フリート全体で 1 回） | **ディスパッチをブロックする**                                                             |
-| `gh` がない、または未認証（トラッカー: `github`）     | 実行すべきコマンドを表示   | 報告する                        | **ディスパッチをブロックする**                                                             |
-| Linear サーバーが未宣言（トラッカー: `linear`）       | 注意書きを表示             | 報告する                        | **ディスパッチをブロックする**                                                             |
-| `claude` が PATH にない、またはプローブがタイムアウト | 注意書きを表示             | 報告する                        | **警告するがブロックしない**: 「確認できなかった」であり、「壊れていると確認した」ではない |
-| emet が依存するフラグが `--help` にない               | —                          | 報告する                        | —                                                                                          |
+|                                                                                       | `emet init`                | `emet doctor`                   | `emet preflight`                                                                           |
+| ------------------------------------------------------------------------------------- | -------------------------- | ------------------------------- | ------------------------------------------------------------------------------------------ |
+| プラグインがない、または無効                                                          | インストールコマンドを表示 | 報告する（フリート全体で 1 回） | **ディスパッチをブロックする**                                                             |
+| `emet-worker`/`emet-reviewer` エージェントがない（Claude Code ホストのみ）            | —                          | 報告する（フリート全体で 1 回） | **ディスパッチをブロックする**                                                             |
+| `gh` がない、または未認証（トラッカー: `github`）                                     | 実行すべきコマンドを表示   | 報告する                        | **ディスパッチをブロックする**                                                             |
+| Linear サーバーが未宣言（トラッカー: `linear`）                                       | 注意書きを表示             | 報告する                        | **ディスパッチをブロックする**                                                             |
+| ホストの CLI（Claude Code では `claude`）が PATH にない、またはプローブがタイムアウト | 注意書きを表示             | 報告する                        | **警告するがブロックしない**: 「確認できなかった」であり、「壊れていると確認した」ではない |
+| emet が依存するフラグが `--help` にない                                               | —                          | 報告する                        | —                                                                                          |
 
 ### フラグのチェック
 
-`emet doctor` は、バイナリが存在するかどうかだけでなく、フラグそのものを確認します。`gh issue view` と `gh repo view`（`--json`）、`gh issue edit`（`--add-label`、`--remove-label`）、`claude`（`--bg`）、`claude agents`（`--json`）の `--help` を読み取り、新しい、または古い CLI が文書化しなくなったフラグを報告します。フラグ名が変わっていると、ウェーブが途中で失敗するおそれがあるためです。
+`emet doctor` は、バイナリが存在するかどうかだけでなく、フラグそのものを確認します。`gh issue view` と `gh repo view`（`--json`）、`gh issue edit`（`--add-label`、`--remove-label`）、そしてホストごとに、エージェントホスト自身の CLI の `--help` を読み取ります。Claude Code では `claude`（`--bg`）と `claude agents`（`--json`）、Codex では代わりに `codex exec`（`--json`、`--output-schema`）です。新しい、または古い CLI が文書化しなくなったフラグを報告します。フラグ名が変わっていると、ウェーブが途中で失敗するおそれがあるためです。
 
 ### タイムアウトとブロックの回避
 

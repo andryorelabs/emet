@@ -2,7 +2,7 @@
 title: Architecture
 description: Une carte du code de emet/src et la façon dont les prompts de /emet le pilotent.
 seoTitle: Architecture d'emet
-sourceHash: c86098a9614756e9
+sourceHash: ff28425abc92b5c9
 ---
 
 Une carte du code de `emet/src` et la façon dont les prompts de `/emet` le pilotent. Les termes suivent [GLOSSARY.md](../GLOSSARY.md) ; les décisions derrière cette forme se trouvent dans [docs/adr](adr/README.md). Pour les problèmes, voir le [dépannage](troubleshooting.md).
@@ -16,7 +16,7 @@ Une carte du code de `emet/src` et la façon dont les prompts de `/emet` le pilo
 
 ## Forme
 
-Il y a deux moitiés. Les prompts (`commands/run.md`, `agents/*.md`, `emet/reference/*.md`) disent à l'agent quoi faire à chaque phase. La CLI `emet` (`emet/bin/emet.ts` et `emet/src/`) fait tout ce qui doit être déterministe : vérifications, réservations, slots, gates, écritures dans le tracker et atterrissage. Les prompts ne réimplémentent jamais une vérification que la CLI effectue déjà.
+Il y a deux moitiés. Les prompts (`commands/run.md`, `agents/*.md`, `emet/reference/*.md`, et les `codex/skills/**` et `codex/hooks.json` générés pour Codex) disent à l'agent quoi faire à chaque phase. La CLI `emet` (`emet/bin/emet.ts` et `emet/src/`) fait tout ce qui doit être déterministe : vérifications, réservations, slots, gates, écritures dans le tracker et atterrissage. Les prompts ne réimplémentent jamais une vérification que la CLI effectue déjà.
 
 `emet/bin/emet.ts` est un répartiteur léger : il lit le premier argument et passe la main à un module de sous-commande, qui lit lui-même le reste de `process.argv`. Les codes de sortie ont un sens dans toutes les sous-commandes.
 
@@ -52,11 +52,11 @@ Les valeurs propres à chaque hôte se trouvent derrière l'interface `AgentHost
 
 ## Organisation des prompts
 
-`commands/run.md` (environ 130 lignes) est le routeur de `/emet`. Chaque fichier de `emet/reference/` est un groupe de phases (`phases-1-5.md`, `phases-6-7-dispatch.md`, `phases-8-closeout.md`, `phases-9-handoff.md`), chargé seulement quand le mode de l'exécution en cours en a besoin. Un test échoue si l'un d'eux dépasse 20 000 octets, afin qu'un seul fichier ne puisse pas envahir le contexte après une compaction. Les phases demandent au coordinateur de relire la section concernée avant chaque tour de correction ou de revue. `install.sh` met de côté un ancien `phases-6-9.md` unique sous le nom `phases-6-9.md.retired` lorsque vous l'avez modifié ou qu'il est antérieur au manifeste d'installation, et le supprime sinon. `install.sh` branche aussi `emet guard` dans `~/.claude/settings.json` comme hook `PreToolUse`.
+`commands/run.md` (environ 130 lignes) est le routeur de `/emet` sur Claude Code ; sur Codex, les `codex/skills/**` et `codex/hooks.json` générés jouent ce rôle. Chaque fichier de `emet/reference/` est un groupe de phases (`phases-1-5.md`, `phases-6-7-dispatch.md`, `phases-8-closeout.md`, `phases-9-handoff.md`), chargé seulement quand le mode de l'exécution en cours en a besoin. Un test échoue si l'un d'eux dépasse 20 000 octets, afin qu'un seul fichier ne puisse pas envahir le contexte après une compaction. Les phases demandent au coordinateur de relire la section concernée avant chaque tour de correction ou de revue. `install.sh` met de côté un ancien `phases-6-9.md` unique sous le nom `phases-6-9.md.retired` lorsque vous l'avez modifié ou qu'il est antérieur au manifeste d'installation, et le supprime sinon. `install.sh` branche aussi `emet guard` dans `~/.claude/settings.json` comme hook `PreToolUse`.
 
 ## Distribution
 
-`install.sh` copie `emet/` dans `~/.claude/emet` et réécrit les prompts. La voie par plugin fournit un shim qui télécharge un binaire autonome à somme de contrôle vérifiée, construit par `tools/build-binaries.ts`. Voir l'[ADR-0008](adr/0008-standalone-binaries-and-plugin-distribution.md).
+`install.sh` copie `emet/` dans `~/.claude/emet` et réécrit les prompts. Le plugin Codex est décrit par `.codex-plugin/plugin.json`, généré avec `bun run build:codex` en même temps que `codex/skills/**` et `codex/hooks.json`. La voie par plugin de Claude Code fournit un shim qui télécharge un binaire autonome à somme de contrôle vérifiée, construit par `tools/build-binaries.ts`. Voir l'[ADR-0008](adr/0008-standalone-binaries-and-plugin-distribution.md).
 
 ## Voir aussi
 

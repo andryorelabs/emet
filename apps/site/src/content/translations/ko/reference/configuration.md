@@ -2,12 +2,12 @@
 title: 설정 레퍼런스
 description: emet.config.json의 모든 키를 기본값과 의미와 함께 설명합니다.
 seoTitle: emet 설정 레퍼런스
-sourceHash: e234cb9ad3468e98
+sourceHash: ec827dfcb8627f5c
 ---
 
 `emet.config.json`의 모든 키를 기본값과 의미와 함께 정리했습니다. 기준이 되는 원본은 [`emet/schema/emet.config.schema.json`](../../emet/schema/emet.config.schema.json)입니다. 용어는 [GLOSSARY.md](../../GLOSSARY.md)를 따릅니다. [README](../../README.md)로 돌아가기.
 
-`emet init`이 이 파일을 작성하고, `emet preflight`와 `emet doctor`가 검증합니다. prose-only로 표시된 키는 CLI가 아니라 `/emet` 프롬프트가 읽습니다. deprecated로 표시된 키도 계속 허용됩니다. 스키마는 메모용 자유 형식 `"//"` 키(어떤 도구도 읽지 않음)와 항상 `1`인 `"version"`도 허용합니다.
+`emet init`이 이 파일을 작성하고, `emet preflight`와 `emet doctor`가 검증합니다. prose-only로 표시된 키는 CLI가 아니라 `/emet` 프롬프트(Codex에서는 `$emet:*` 스킬)가 읽습니다. deprecated로 표시된 키도 계속 허용됩니다. 스키마는 메모용 자유 형식 `"//"` 키(어떤 도구도 읽지 않음)와 항상 `1`인 `"version"`도 허용합니다.
 
 ## pr
 
@@ -37,15 +37,15 @@ sourceHash: e234cb9ad3468e98
 
 - `maxLines`(기본값 `60`): `.emet/handoff-<ticket>.md` 노트가 `emet handoff --check`에서 실패하기 전까지 가질 수 있는 최대 줄 수입니다.
 - `maxChars`(기본값 `8000`, 약 2k 토큰): 핸드오프 노트가 가질 수 있는 최대 문자 수입니다.
-- `autoChain`(기본값 `false`): 깔끔하게 병합된 웨이브 뒤에 남은 웨이브가 있으면 `/emet:run --dispatch <spec-id>`를 출력하는 대신 `claude --bg`로 다음 웨이브를 시작합니다. `claude agents` 또는 `claude attach emet-<spec-id>-w<n>`으로 확인할 수 있습니다. 요구 사항:
+- `autoChain`(기본값 `false`): 깔끔하게 병합된 웨이브 뒤에 남은 웨이브가 있으면 `/emet:run --dispatch <spec-id>`(Codex에서는 `$emet:run --dispatch <spec-id>`)를 출력하는 대신 다음 웨이브를 시작합니다. Claude Code에서는 `claude --bg`로 시작하고, Codex 호스트에서는 분리된 `codex exec`로 시작하며 이때는 `codex.minVersion` 이상의 `codex`가 필요합니다. 아래 요구 사항은 Claude Code의 것입니다. `claude agents` 또는 `claude attach emet-<spec-id>-w<n>`으로 확인할 수 있습니다. 요구 사항:
   1. `claude`가 PATH에 있고 `--bg`를 지원할 것.
   2. 신뢰할 수 있는 작업 공간일 것. `--bg`는 비대화형으로 실행되므로 신뢰 대화상자가 나타나지 않습니다. 리포지토리에서 `claude`를 대화형으로 한 번 열어 수락하세요.
   3. 대화형 세션에서 우회 경고를 한 번 수락했을 것(`skipDangerousModePermissionPrompt`). 다음 웨이브는 시작한 세션의 모드가 아니라 `handoff.permissionMode`로 실행되기 때문입니다.
 
   PR이 병합되었고 플래그가 지정된 항목이 없을 때만 시작하며, `emet-<spec-id>-*` 세션이 이미 실행 중이면(`claude agents --json`) 건너뜁니다. 시작에 실패하면 `/emet:run --dispatch <spec-id>`를 출력하는 방식으로 되돌아갑니다.
 
-- `launcher`(기본값 `auto`, `auto`, `orca`, `bg` 중 하나): `claude attach`를 실행하는 Orca 탭에서도 웨이브를 엽니다. `auto`는 Orca 런타임(`orca status`)에 물어보므로 `TERM_PROGRAM`이 없는 `claude --bg` 세션에서도 동작합니다. `orca`는 항상 시도하고 `bg`는 시도하지 않습니다. 어느 쪽이든 웨이브는 백그라운드에서 실행되며, 탭을 열지 못해도 체인이 멈추지 않습니다. `emet launch <spec-id> --wave <n>`이 시작 전체를 수행합니다. [`emet launch`](cli.md#실행-워커-슬롯)를 참고하세요.
-- `permissionMode`(기본값 `bypassPermissions`, `bypassPermissions`, `auto`, `acceptEdits` 중 하나): 이어 붙인 세션의 권한 모드입니다. 시작한 세션에서 상속되지 않습니다. `auto` 모드의 분류기가 `gh pr merge` 같은 단계를 거부해 웨이브가 반쯤 끝난 상태로 남을 수 있기 때문입니다. `permissions.deny` 규칙은 계속 적용되지만, 우회 경고를 대화형으로 한 번 수락해 두어야 합니다(`skipDangerousModePermissionPrompt`).
+- `launcher`(기본값 `auto`, `auto`, `orca`, `bg` 중 하나): Claude Code 전용이며, Codex 호스트에서는 무시되고 `emet launch`는 Orca 탭을 열지 않습니다. `claude attach`를 실행하는 Orca 탭에서도 웨이브를 엽니다. `auto`는 Orca 런타임(`orca status`)에 물어보므로 `TERM_PROGRAM`이 없는 `claude --bg` 세션에서도 동작합니다. `orca`는 항상 시도하고 `bg`는 시도하지 않습니다. 어느 쪽이든 웨이브는 백그라운드에서 실행되며, 탭을 열지 못해도 체인이 멈추지 않습니다. `emet launch <spec-id> --wave <n>`이 시작 전체를 수행합니다. [`emet launch`](cli.md#실행-워커-슬롯)를 참고하세요.
+- `permissionMode`(기본값 `bypassPermissions`, `bypassPermissions`, `auto`, `acceptEdits` 중 하나): Claude Code 전용이며, Codex 호스트에서는 무시되고 이어 붙인 세션은 [`codex.sandbox`](#codex)를 사용합니다. 이어 붙인 세션의 권한 모드입니다. 시작한 세션에서 상속되지 않습니다. `auto` 모드의 분류기가 `gh pr merge` 같은 단계를 거부해 웨이브가 반쯤 끝난 상태로 남을 수 있기 때문입니다. `permissions.deny` 규칙은 계속 적용되지만, 우회 경고를 대화형으로 한 번 수락해 두어야 합니다(`skipDangerousModePermissionPrompt`).
 
 ## budgets
 
@@ -61,7 +61,7 @@ sourceHash: e234cb9ad3468e98
 
 ## models
 
-역할별 모델과 추론 강도입니다. 모든 키는 선택 사항이며, 이 섹션을 생략하면 워커는 `sonnet`/`medium`, 리뷰어는 `opus`/`medium`이 유지됩니다. 추론 강도(effort)는 `low`, `medium`, `high`, `xhigh`, `max` 중 하나입니다.
+Claude Code 호스트의 역할별 모델과 추론 강도이며, Codex 호스트는 대신 [`codex.models`](#codex)를 읽습니다. 모든 키는 선택 사항이며, 이 섹션을 생략하면 워커는 `sonnet`/`medium`, 리뷰어는 `opus`/`medium`이 유지됩니다. 추론 강도(effort)는 `low`, `medium`, `high`, `xhigh`, `max` 중 하나입니다.
 
 ```json
 {
@@ -92,7 +92,7 @@ sourceHash: e234cb9ad3468e98
 - `models.worker`, `models.workerOverride`, `models.reviewer.medium`, `models.reviewer.high`, `models.triage`: 각각 `{ "model", "effort", "fallback" }` 형태입니다. `fallback`은 `model`이 Codex 모델 캐시에 없을 때 순서대로 시도할 슬러그 목록입니다. 기본값은 [모델과 노력 수준](../guide/models-and-effort.md)에 있습니다.
 - `models.session`: `$emet:run`을 실행하는 세션용 `{ "model", "effort", "planEffort", "fallback" }`. `planEffort`는 첫 승인 전까지 적용됩니다.
 - `effort`: 설정하면 모든 역할의 노력 수준을 대체합니다.
-- `minVersion` (기본값 `0.167.0`): `emet doctor`가 허용하는 가장 오래된 `codex` CLI 버전입니다.
+- `minVersion` (기본값 `0.167.0`): emet이 지원하는 가장 오래된 `codex` CLI 버전입니다. `emet doctor`는 설치된 버전을 이 값과 비교하지 않습니다.
 - `sandbox` (기본값 `danger-full-access`): `emet dispatch`, `emet review-run`, Codex의 `emet launch`가 `-s`로 전달하는 샌드박스 모드입니다. `workspace-write`도 허용되지만 `.git`이 읽기 전용이 되어 워커가 커밋할 수 없습니다. 값과 상관없이 `emet guard`는 Codex에서 `git push`를 거부하며, 생성되는 오버레이 `config.toml`에는 emet 마켓플레이스와 플러그인, 그 실행 자체의 디렉터리에 대한 trusted 테이블, 확정된 모델과 추론 강도만 들어갑니다(사용자 자신의 테이블은 들어가지 않습니다). [Codex 가이드](../guide/codex.md)와 [ADR-0022](../adr/0022-codex-workers-run-unsandboxed-by-default.md)를 참고하세요.
 
 ## review
@@ -109,7 +109,7 @@ sourceHash: e234cb9ad3468e98
 
 ## tracker
 
-`/emet`이 어떤 이슈 트래커와 연동할지 정합니다. CLI는 `kind`를 읽어 어떤 의존성 점검을 적용할지 결정하며, 나머지는 `/emet` 명령이 따르는 어댑터를 설명합니다([`docs/agents/issue-tracker.md`](../agents/issue-tracker.md) 참고).
+`/emet`(Codex에서는 `$emet`)이 어떤 이슈 트래커와 연동할지 정합니다. CLI는 `kind`를 읽어 어떤 의존성 점검을 적용할지 결정하며, 나머지는 `/emet` 명령이 따르는 어댑터를 설명합니다([`docs/agents/issue-tracker.md`](../agents/issue-tracker.md) 참고).
 
 - `kind`(필수): `linear`, `github`, `local` 중 하나입니다. `local`은 [로컬 트래커](cli.md#로컬-트래커)와 [ADR-0011](../adr/0011-local-tracker-scratch-convention.md)을 참고하세요.
 - `transitions.onStart`, `transitions.onPrOpen`, `transitions.onPrMerge`: 각 티켓 상태 전환을 누가 기록하는지를 `worker`, `coordinator`, `automatic` 중 하나로 지정합니다. `automatic`은 트래커 연동이 처리한다는 뜻입니다(예: PR을 열거나 병합할 때의 Linear GitHub 연동). 코디네이터는 `automatic`으로 지정된 전환을 기록하지 않습니다.

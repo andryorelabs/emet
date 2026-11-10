@@ -2,10 +2,12 @@
 title: Modelos e esforço
 description: Como o emet escolhe um modelo e um esforço de raciocínio para cada papel, e quais chaves de configuração os alteram.
 seoTitle: Modelos e esforço no emet
-sourceHash: a46d2e68a403f4f9
+sourceHash: 482995e2b98c659b
 ---
 
-O `/emet` escolhe automaticamente um modelo e um esforço de raciocínio por papel; não há nada para trocar manualmente no meio de uma execução. Todas as chaves estão na [referência de configuração](../reference/configuration.md#models).
+O `/emet` escolhe automaticamente um modelo e um esforço de raciocínio por papel; não há nada para trocar manualmente no meio de uma execução. As primeiras seções descrevem o host Claude Code; o [host Codex](#host-codex) tem seus próprios padrões. Todas as chaves do Claude Code estão na [referência de configuração](../reference/configuration.md#models).
+
+## Host Claude Code
 
 | Papel                                                   | Modelo                 | Esforço             | Definido por                                |
 | ------------------------------------------------------- | ---------------------- | ------------------- | ------------------------------------------- |
@@ -17,7 +19,7 @@ O `/emet` escolhe automaticamente um modelo e um esforço de raciocínio por pap
 | Revisão, nível `high` (caminhos ou pontos sensíveis)    | Opus                   | `medium` por padrão | `models.reviewer.high`                      |
 | Triagem de logs de CI (fase 8)                          | Haiku                  | —                   | `models.triage`                             |
 
-As duas definições de agente (instaladas pelo `install.sh` em `~/.claude/agents/`) fixam seu próprio `model`/`effort` no frontmatter, de modo que a escolha de modelo/esforço do próprio coordenador nunca vaza para um worker nem para o revisor. O `emet doctor` informa (sem nunca bloquear) se qualquer um dos arquivos estiver ausente. O `emet preflight` bloqueia o despacho quando `emet-worker` ou `emet-reviewer` está ausente, porque a fase 6 e a fase 8 despacham por `subagent_type`.
+No Claude Code, as duas definições de agente (instaladas pelo `install.sh` em `~/.claude/agents/`) fixam seu próprio `model`/`effort` no frontmatter, de modo que a escolha de modelo/esforço do próprio coordenador nunca vaza para um worker nem para o revisor. O `emet doctor` informa (sem nunca bloquear) se qualquer um dos arquivos estiver ausente. O `emet preflight` bloqueia o despacho quando `emet-worker` ou `emet-reviewer` está ausente, porque a fase 6 e a fase 8 despacham por `subagent_type`.
 
 ## Roteamento por nível de risco
 
@@ -31,11 +33,11 @@ Um ticket que toca caminhos de alto risco pode carregar uma linha `Model:` (por 
 
 ## Triagem com Haiku
 
-O coordenador nunca lê um log de CI inteiro. Um check que falha é entregue a um agente em `models.triage` (padrão `haiku`), que devolve no máximo cerca de 2k tokens com ponteiros `file:line` para a correção.
+No Claude Code, o coordenador nunca lê um log de CI inteiro. Um check que falha é entregue a um agente em `models.triage` (padrão `haiku`), que devolve no máximo cerca de 2k tokens com ponteiros `file:line` para a correção.
 
 ## Configuração
 
-Todas as chaves são opcionais, e os padrões reproduzem a tabela acima:
+Estas são as chaves `models` do Claude Code. Todas as chaves são opcionais, e os padrões reproduzem a tabela do Claude Code acima:
 
 ```json
 {
@@ -78,11 +80,11 @@ A execução real no Codex do [relatório de sondagem](../research/codex-probe-r
 
 ## Por que um único revisor
 
-Por que um único revisor de contexto limpo em vez de um leque de vários ângulos: nenhum benchmark público compara os dois diretamente, mas um leque relê o diff inteiro uma vez por ângulo e já travou por mais de uma hora neste repositório, enquanto relatos da Anthropic e de terceiros sobre modelos da classe Opus sugerem que a melhoria do modelo rende tanto quanto renderiam os ângulos extras. Para uma onda de alto risco, execute `/code-review ultra` manualmente depois; o `/emet` nunca o despacha por conta própria.
+Por que um único revisor de contexto limpo em vez de um leque de vários ângulos: nenhum benchmark público compara os dois diretamente, mas um leque relê o diff inteiro uma vez por ângulo e já travou por mais de uma hora neste repositório, enquanto relatos da Anthropic e de terceiros sobre modelos da classe Opus sugerem que a melhoria do modelo rende tanto quanto renderiam os ângulos extras. Para uma onda de alto risco no Claude Code, execute `/code-review ultra` manualmente depois; o `/emet` nunca o despacha por conta própria. O `/code-review ultra` é um comando do Claude Code; esta página não documenta nenhum equivalente no Codex.
 
-## O que você define uma vez, por conta própria
+## O que você define uma vez, por conta própria (Claude Code)
 
-O `/emet` não consegue trocar isto no meio de uma execução:
+No host Claude Code, o `/emet` não consegue trocar isto no meio de uma execução. Isto fica no `~/.claude/settings.json` do Claude Code; o host Codex não lê esse arquivo, e seus modelos vêm da seção `codex` acima:
 
 - `model: "opusplan"` em `~/.claude/settings.json`: é isso que faz as fases 1–4 rodarem no Opus e da fase 5 em diante no Sonnet, sem precisar de `/model`. O `emet doctor` avisa (sem nunca editar suas configurações) se não estiver definido.
 - Um esforço de sessão `medium` ou `high` em vez de `xhigh`: os workers e o revisor já carregam seu próprio esforço, independentemente do seu, e um padrão global alto principalmente acrescenta custo aos turnos do próprio coordenador (controle de despachos, merges, relatórios) que não precisam dele.

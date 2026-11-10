@@ -2,7 +2,7 @@
 title: トラッカーとランディング
 description: チケットの置き場所、ウェーブがプルリクエストまたはローカルマージとしてランディングする仕組み、ウェーブの連鎖を説明します。
 seoTitle: emet のトラッカーとランディング
-sourceHash: c9ae0940af5cfbad
+sourceHash: 9aa84264f5f8cc95
 ---
 
 チケットの置き場所、ウェーブがランディングする仕組み、ウェーブの連鎖について説明します。ここで挙げるキーはすべて[設定リファレンス](../reference/configuration.md)に、サブコマンドはすべて [CLI リファレンス](../reference/cli.md)にあります。
@@ -43,20 +43,22 @@ emet は Linear、GitHub Issues、ローカルファイルに対応しており�
 ```
 
 - `pr.autoMerge`（既定は `true`）: PR のチェックを待ってマージします。チェックがなければ即座にマージします。失敗したチェックは修正してプッシュされ、最大 `maxCiFixAttempts` 回まで繰り返し、それでもだめなら PR は人間のために開いたままになります。フラグが立っているものがあるウェーブは、自動マージされません。
-- `handoff.autoChain`（既定は `false`）: クリーンでマージ済みのウェーブの後にまだウェーブが残っている場合、`/emet:run --dispatch <spec-id>` を表示する代わりに、`claude --bg` で次のウェーブを起動します。`claude agents` / `claude attach emet-<spec-id>-w<n>` で確認できます。要件:
+- `handoff.autoChain`（既定は `false`）: クリーンでマージ済みのウェーブの後にまだウェーブが残っている場合、`/emet:run --dispatch <spec-id>` を表示する代わりに、`claude --bg` で次のウェーブを起動します。`claude agents` / `claude attach emet-<spec-id>-w<n>` で確認できます。Claude Code での要件:
   1. `claude` が PATH にあり、`--bg` に対応していること。
   2. 信頼されたワークスペースであること。`--bg` は非対話で実行されるため、信頼ダイアログは表示されません。リポジトリで一度 `claude` を対話的に開き、承認してください。
   3. 対話セッションでバイパスの警告を一度承認していること（`skipDangerousModePermissionPrompt`）。次のウェーブは、起動元のセッションのモードではなく、`handoff.permissionMode`（後述）で動作するためです。
 
+  Codex ホストでは、次のウェーブは代わりに切り離された `codex exec` として起動します（後述の `handoff.launcher` を参照）。そのため要件は、`codex` が PATH にあり、`codex.minVersion` 以上であること、そして `codex exec` に `--json` と `--output-schema` があることです。`emet doctor` が確認するのはフラグであり、バージョン番号ではありません。Claude の信頼ダイアログとバイパスの警告は適用されません。切り離された実行に Codex が信頼されたワークスペースを必要とするかどうかは、このリポジトリのドキュメントでは未検証です。
+
   起動するのは、PR がマージされ、フラグが立っているものがない場合だけで、`emet-<spec-id>-*` セッションがすでに動作中（`claude agents --json`）であればスキップします。起動に失敗した場合は、`/emet:run --dispatch <spec-id>` を表示する動作にフォールバックします。
 
-- `handoff.launcher`（既定は `auto`）: `claude attach` を実行する Orca タブでもウェーブを開きます。`auto` は Orca ランタイム（`orca status`）に問い合わせるため、`TERM_PROGRAM` のない `claude --bg` セッションからも動作します。`orca` は常に試行し、`bg` は一切試行しません。どちらの場合もウェーブはバックグラウンドで動作し、タブを開けなくてもチェーンが止まることはありません。
+- `handoff.launcher`（既定は `auto`）: `claude attach` を実行する Orca タブでもウェーブを開きます。`auto` は Orca ランタイム（`orca status`）に問い合わせるため、`TERM_PROGRAM` のない `claude --bg` セッションからも動作します。`orca` は常に試行し、`bg` は一切試行しません。`launcher` は Claude Code ホストにのみ適用されます。Codex では `emet launch` は常に `bg` として動作します。どちらの場合もウェーブはバックグラウンドで動作し、タブを開けなくてもチェーンが止まることはありません。
 
   `emet launch <spec-id> --wave <n>` は起動の全体（重複セッションの確認、`claude --bg`、タブ）を行い、`{ name, id, attach, orcaTab: { opened, reason } }` を出力します。別のセッションで手動でウェーブを動かしたいときは、素の `claude --bg` ではなくこちらを使ってください。
 
   Codex のエージェントホストでは、`emet launch` は `$emet:run --dispatch <spec-id>` を実行する切り離された `codex exec` を起動し、そのスレッド ID を記録します。Orca タブは開かず、`codex exec resume <id>` でセッションを再開できます。[CLI リファレンス](../reference/cli.md#codex-ホスト)と [Codex で emet を実行する](codex.md)を参照してください。
 
-- `handoff.permissionMode`（既定は `bypassPermissions`）: チェーンされたセッションの権限モードです。起動元のセッションからは継承されません。`auto` モードの分類器が `gh pr merge` のようなステップを拒否し、ウェーブが中途半端な状態で終わるおそれがあるためです。`permissions.deny` のルールは引き続き適用されますが、バイパスの警告を対話的に一度承認しておく必要があります（`skipDangerousModePermissionPrompt`）。
+- `handoff.permissionMode`（既定は `bypassPermissions`）: Claude Code のみです。チェーンされたセッションの権限モードです。Codex ホストでは無視され、チェーンされたセッションは `codex.sandbox`（既定は `danger-full-access`。[Codex で emet を実行する](codex.md)を参照）を使います。起動元のセッションからは継承されません。`auto` モードの分類器が `gh pr merge` のようなステップを拒否し、ウェーブが中途半端な状態で終わるおそれがあるためです。`permissions.deny` のルールは引き続き適用されますが、バイパスの警告を対話的に一度承認しておく必要があります（`skipDangerousModePermissionPrompt`）。
 
 ## ゲート、予算、記録
 

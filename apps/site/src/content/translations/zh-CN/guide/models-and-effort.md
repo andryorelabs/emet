@@ -2,10 +2,12 @@
 title: 模型与推理强度
 description: emet 如何为每个角色选择模型和推理强度，以及哪些配置键可以修改它们。
 seoTitle: emet 的模型与推理强度
-sourceHash: a46d2e68a403f4f9
+sourceHash: 482995e2b98c659b
 ---
 
-`/emet` 会自动为每个角色选择模型和推理强度；运行中无需手动切换任何设置。所有配置键都在[配置参考](../reference/configuration.md#models)中。
+`/emet` 会自动为每个角色选择模型和推理强度；运行中无需手动切换任何设置。前面的部分描述 Claude Code 宿主；[Codex 宿主](#codex-宿主)有自己的默认值。Claude Code 的所有配置键都在[配置参考](../reference/configuration.md#models)中。
+
+## Claude Code 宿主
 
 | 角色                                      | 模型                    | 推理强度        | 设置位置                                   |
 | ----------------------------------------- | ----------------------- | --------------- | ------------------------------------------ |
@@ -17,7 +19,7 @@ sourceHash: a46d2e68a403f4f9
 | 评审，`high` 层级（高风险路径或敏感调用） | Opus                    | 默认为 `medium` | `models.reviewer.high`                     |
 | CI 日志分诊（阶段 8）                     | Haiku                   | —               | `models.triage`                            |
 
-两个代理定义文件（由 `install.sh` 安装到 `~/.claude/agents/`）在 frontmatter 中固定了各自的 `model`/`effort`，因此协调者自己选择的模型和推理强度不会影响工作者或评审者。如果其中任一文件丢失，`emet doctor` 只会报告，不会阻止。而 `emet preflight` 在 `emet-worker` 或 `emet-reviewer` 缺失时会阻止派发，因为阶段 6 和阶段 8 是通过 `subagent_type` 进行派发的。
+在 Claude Code 上，两个代理定义文件（由 `install.sh` 安装到 `~/.claude/agents/`）在 frontmatter 中固定了各自的 `model`/`effort`，因此协调者自己选择的模型和推理强度不会影响工作者或评审者。如果其中任一文件丢失，`emet doctor` 只会报告，不会阻止。而 `emet preflight` 在 `emet-worker` 或 `emet-reviewer` 缺失时会阻止派发，因为阶段 6 和阶段 8 是通过 `subagent_type` 进行派发的。
 
 ## 按风险层级路由
 
@@ -31,11 +33,11 @@ sourceHash: a46d2e68a403f4f9
 
 ## Haiku 分诊
 
-协调者从不完整读取 CI 日志。失败的检查会交给使用 `models.triage`（默认 `haiku`）的代理，它最多返回约 2k 个 token，并附带用于修复的 `file:line` 指引。
+在 Claude Code 上，协调者从不完整读取 CI 日志。失败的检查会交给使用 `models.triage`（默认 `haiku`）的代理，它最多返回约 2k 个 token，并附带用于修复的 `file:line` 指引。
 
 ## 配置
 
-所有键都是可选的，默认值与上表一致：
+以下是 Claude Code 的 `models` 键。所有键都是可选的，默认值与上面的 Claude Code 表一致：
 
 ```json
 {
@@ -78,11 +80,11 @@ sourceHash: a46d2e68a403f4f9
 
 ## 为什么只用一个评审者
 
-为什么使用一个上下文全新的评审者，而不是多角度并行：目前没有公开基准直接比较两者，但并行方案会按角度把整个 diff 重读一遍，并且在这个仓库中曾挂起超过一个小时；而 Anthropic 和第三方关于 Opus 级模型的报告表明，升级模型带来的收益与增加角度相当。对于高风险的波次，请在之后手动运行 `/code-review ultra`；`/emet` 不会自行派发它。
+为什么使用一个上下文全新的评审者，而不是多角度并行：目前没有公开基准直接比较两者，但并行方案会按角度把整个 diff 重读一遍，并且在这个仓库中曾挂起超过一个小时；而 Anthropic 和第三方关于 Opus 级模型的报告表明，升级模型带来的收益与增加角度相当。对于 Claude Code 上的高风险波次，请在之后手动运行 `/code-review ultra`；`/emet` 不会自行派发它。`/code-review ultra` 是 Claude Code 的命令；本页没有记录 Codex 上的等效命令。
 
-## 需要你自己设置一次的内容
+## 需要你自己设置一次的内容（Claude Code）
 
-`/emet` 无法在运行中切换这些设置：
+在 Claude Code 宿主上，`/emet` 无法在运行中切换这些设置。它们位于 Claude Code 的 `~/.claude/settings.json` 中；Codex 宿主不读取该文件，其模型来自上面的 `codex` 部分：
 
 - `~/.claude/settings.json` 中的 `model: "opusplan"`：这使阶段 1–4 使用 Opus，阶段 5 起使用 Sonnet，无需 `/model`。如果未设置，`emet doctor` 会发出警告（不会修改你的设置）。
 - 会话的推理强度设为 `medium` 或 `high`，而不是 `xhigh`：无论你如何设置，工作者和评审者都有各自的推理强度；而全局默认值设得过高，只会增加协调者自身轮次（派发管理、合并、报告）的成本，这些轮次并不需要。

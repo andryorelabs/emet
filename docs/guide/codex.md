@@ -21,7 +21,7 @@ On the Codex host the pipeline is the same: interview, spec, tickets, one approv
    codex plugin add emet@emet-marketplace
    ```
 
-4. Install the `emet` CLI as described in [Getting started](getting-started.md), then run `emet doctor .`. On the Codex host it reports a `codex` older than `codex.minVersion`, a missing `--json` or `--output-schema` flag on `codex exec`, and a missing `mattpocock-skills` with the two commands above.
+4. Install the `emet` CLI as described in [Getting started](getting-started.md), then run `emet doctor .`. `install.sh` also installs the Claude Code commands and agents under `~/.claude`; that is harmless on Codex, and `emet doctor` does not warn about the Codex plugin and `install.sh` together. On the Codex host it reports a `codex` older than `codex.minVersion`, a missing `--json` or `--output-schema` flag on `codex exec`, and a missing `mattpocock-skills` with the two commands above.
 
 Both plugin commands in step 3 were run against the real `codex` (0.167.0): in a fresh `CODEX_HOME` they exit 0 and `codex plugin list` shows `emet@emet-marketplace installed, enabled`. The local-path form, `codex plugin marketplace add <repo>`, gives the same result.
 
@@ -39,7 +39,7 @@ The default is `"claude"`. The `codex` section sets the models, the effort, the 
 
 emet asks for one approval, after the plan. On Claude Code that is a prompt. On Codex it is a hook:
 
-- Until `.emet/runs/spec<id>/approval.json` exists, `emet guard` denies every mutation (`apply_patch`, `Bash`) except writes under `.emet/runs/**/draft/**`, with the reason `not approved: send approve <id>`. The gate applies once a `.emet/runs/spec<id>/` directory exists without its `approval.json`, which is the state `/emet:run` leaves after Phase 4 materializes the spec.
+- Until `.emet/runs/spec<id>/approval.json` exists, `emet guard` denies every mutation (`apply_patch`, `Bash`) except writes under `.emet/runs/**/draft/**`, with the reason `not approved: send approve <id>`. The gate applies once a `.emet/runs/spec<id>/` directory exists without its `approval.json`, which is the state `$emet:run` leaves after Phase 4 materializes the spec.
 - You approve by sending a prompt line that is exactly `approve <id>`. The `UserPromptSubmit` hook then writes the approval file with the same hashing as `emet approve`. The same words in tool output or model text do nothing.
 - The alternative is `/plan $emet:run`: approve the plan in Codex's own plan mode instead of the hook.
 

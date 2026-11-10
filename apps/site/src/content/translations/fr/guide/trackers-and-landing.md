@@ -2,7 +2,7 @@
 title: Trackers et atterrissage
 description: Où vivent les tickets, comment une vague atterrit en pull request ou en merge local, et comment les vagues s'enchaînent.
 seoTitle: Trackers et atterrissage dans emet
-sourceHash: c9ae0940af5cfbad
+sourceHash: 9aa84264f5f8cc95
 ---
 
 Où vivent les tickets, comment une vague atterrit et comment les vagues s'enchaînent. Chaque clé citée ici figure dans la [référence de configuration](../reference/configuration.md) ; chaque sous-commande figure dans la [référence de la CLI](../reference/cli.md).
@@ -43,20 +43,22 @@ Les vagues suivantes s'exécutent dans leurs propres sessions, jamais dans celle
 ```
 
 - `pr.autoMerge` (par défaut `true`) : attend les checks de la PR puis fusionne ; sans checks, fusionne immédiatement. Un check en échec est corrigé et poussé, jusqu'à `maxCiFixAttempts` fois, puis la PR est laissée ouverte à un humain. Une vague avec quoi que ce soit de signalé n'est jamais fusionnée automatiquement.
-- `handoff.autoChain` (par défaut `false`) : après une vague propre et fusionnée, s'il reste des vagues, lance la suivante avec `claude --bg` au lieu d'afficher `/emet:run --dispatch <spec-id>`. Inspectez-la avec `claude agents` / `claude attach emet-<spec-id>-w<n>`. Prérequis :
+- `handoff.autoChain` (par défaut `false`) : après une vague propre et fusionnée, s'il reste des vagues, lance la suivante avec `claude --bg` au lieu d'afficher `/emet:run --dispatch <spec-id>`. Inspectez-la avec `claude agents` / `claude attach emet-<spec-id>-w<n>`. Prérequis sur Claude Code :
   1. `claude` dans le PATH, avec la prise en charge de `--bg`.
   2. Un espace de travail de confiance. `--bg` s'exécute de façon non interactive, donc la boîte de dialogue de confiance ne s'affiche jamais ; ouvrez `claude` en mode interactif dans le dépôt une fois et acceptez-la.
   3. L'avertissement de contournement accepté une fois dans une session interactive (`skipDangerousModePermissionPrompt`), puisque la vague suivante s'exécute dans `handoff.permissionMode` (ci-dessous), et non dans le mode de la session qui la lance.
 
+  Sur l'hôte Codex, la vague suivante démarre plutôt comme un `codex exec` détaché (voir `handoff.launcher` ci-dessous) ; le prérequis est donc `codex` dans le PATH en version `codex.minVersion` ou plus récente, avec `--json` et `--output-schema` sur `codex exec` ; `emet doctor` vérifie les options, pas le numéro de version. La boîte de dialogue de confiance et l'avertissement de contournement de Claude ne s'appliquent pas. Que Codex exige un espace de travail de confiance pour une exécution détachée n'est pas vérifié dans la documentation de ce dépôt.
+
   Elle ne se lance que lorsque la PR a été fusionnée et que rien n'a été signalé, et elle est ignorée si une session `emet-<spec-id>-*` est déjà active (`claude agents --json`). Si le lancement échoue, elle se rabat sur l'affichage de `/emet:run --dispatch <spec-id>`.
 
-- `handoff.launcher` (par défaut `auto`) : ouvre aussi la vague dans un onglet Orca exécutant `claude attach`. `auto` interroge le runtime d'Orca (`orca status`), donc cela fonctionne aussi depuis des sessions `claude --bg`, qui n'ont pas de `TERM_PROGRAM` ; `orca` essaie toujours, `bg` jamais. La vague s'exécute en arrière-plan dans tous les cas, et un onglet qui ne s'ouvre pas n'arrête jamais la chaîne.
+- `handoff.launcher` (par défaut `auto`) : ouvre aussi la vague dans un onglet Orca exécutant `claude attach`. `auto` interroge le runtime d'Orca (`orca status`), donc cela fonctionne aussi depuis des sessions `claude --bg`, qui n'ont pas de `TERM_PROGRAM` ; `orca` essaie toujours, `bg` jamais. `launcher` ne s'applique qu'à l'hôte Claude Code ; sur Codex, `emet launch` se comporte toujours comme `bg`. La vague s'exécute en arrière-plan dans tous les cas, et un onglet qui ne s'ouvre pas n'arrête jamais la chaîne.
 
   `emet launch <spec-id> --wave <n>` fait tout le lancement (vérification de session en double, `claude --bg`, onglet) et affiche `{ name, id, attach, orcaTab: { opened, reason } }`. Utilisez-le, plutôt qu'un simple `claude --bg`, chaque fois que vous voulez une vague dans une autre session à la main.
 
   Sur l'Agent host Codex, `emet launch` démarre un `codex exec` détaché qui exécute `$emet:run --dispatch <spec-id>` et enregistre son identifiant de fil. Il n'ouvre aucun onglet Orca, et `codex exec resume <id>` reprend la session. Voir la [référence de la CLI](../reference/cli.md#hôte-codex) et [Exécuter emet sur Codex](codex.md).
 
-- `handoff.permissionMode` (par défaut `bypassPermissions`) : mode d'autorisation de la session chaînée. Il n'est pas hérité de la session qui la lance, car le classificateur du mode `auto` peut refuser une étape comme `gh pr merge` et laisser une vague à moitié terminée. Vos règles `permissions.deny` s'appliquent toujours, mais l'avertissement de contournement doit avoir été accepté une fois en mode interactif (`skipDangerousModePermissionPrompt`).
+- `handoff.permissionMode` (par défaut `bypassPermissions`) : Claude Code uniquement ; mode d'autorisation de la session chaînée. Sur l'hôte Codex il est ignoré et la session chaînée utilise `codex.sandbox` (par défaut `danger-full-access` ; voir [Exécuter emet sur Codex](codex.md)). Il n'est pas hérité de la session qui la lance, car le classificateur du mode `auto` peut refuser une étape comme `gh pr merge` et laisser une vague à moitié terminée. Vos règles `permissions.deny` s'appliquent toujours, mais l'avertissement de contournement doit avoir été accepté une fois en mode interactif (`skipDangerousModePermissionPrompt`).
 
 ## Gates, budgets et enregistrements
 

@@ -2,7 +2,7 @@
 
 Every key in `emet.config.json`, with its default and meaning. The source of truth is [`emet/schema/emet.config.schema.json`](../../emet/schema/emet.config.schema.json). Terms follow [GLOSSARY.md](../../GLOSSARY.md). Back to the [README](../../README.md).
 
-`emet init` writes the file. `emet preflight` and `emet doctor` validate it. A key marked prose-only is read by the `/emet` prompts, not by the CLI. A key marked deprecated is still accepted. The schema also allows a free-text `"//"` key for notes (never read by any tool) and `"version"`, which is always `1`.
+`emet init` writes the file. `emet preflight` and `emet doctor` validate it. A key marked prose-only is read by the `/emet` prompts (the `$emet:*` skills on Codex), not by the CLI. A key marked deprecated is still accepted. The schema also allows a free-text `"//"` key for notes (never read by any tool) and `"version"`, which is always `1`.
 
 ## pr
 
@@ -32,15 +32,15 @@ What happens after a wave closes, and the size limits of a worker's handoff note
 
 - `maxLines` (default `60`): most lines a `.emet/handoff-<ticket>.md` note may have before `emet handoff --check` fails it.
 - `maxChars` (default `8000`, about 2k tokens): most characters a handoff note may have.
-- `autoChain` (default `false`): after a clean, merged wave with more waves left, launch the next one with `claude --bg` instead of printing `/emet:run --dispatch <spec-id>`. Inspect it with `claude agents` or `claude attach emet-<spec-id>-w<n>`. Requirements:
+- `autoChain` (default `false`): after a clean, merged wave with more waves left, launch the next one instead of printing `/emet:run --dispatch <spec-id>` (`$emet:run --dispatch <spec-id>` on Codex). On Claude Code the launch is `claude --bg`; on the Codex host it is a detached `codex exec`, which needs `codex` at `codex.minVersion` or newer. The requirements below are those of Claude Code. Inspect it with `claude agents` or `claude attach emet-<spec-id>-w<n>`. Requirements:
   1. `claude` on PATH, with `--bg` support.
   2. A trusted workspace. `--bg` runs non-interactively, so the trust dialog never shows; open `claude` interactively in the repo once and accept it.
   3. The bypass warning accepted once in an interactive session (`skipDangerousModePermissionPrompt`), since the next wave runs in `handoff.permissionMode`, not in the launching session's mode.
 
   It launches only when the PR merged and nothing was flagged, and it skips if an `emet-<spec-id>-*` session is already live (`claude agents --json`). If the launch fails, it falls back to printing `/emet:run --dispatch <spec-id>`.
 
-- `launcher` (default `auto`, one of `auto`, `orca`, `bg`): also open the wave in an Orca tab running `claude attach`. `auto` asks the Orca runtime (`orca status`), so it works from `claude --bg` sessions too, which have no `TERM_PROGRAM`; `orca` always tries; `bg` never. The wave runs in the background either way, and a tab that fails to open never stops the chain. `emet launch <spec-id> --wave <n>` does the whole launch; see [`emet launch`](cli.md#runs-workers-and-slots).
-- `permissionMode` (default `bypassPermissions`, one of `bypassPermissions`, `auto`, `acceptEdits`): permission mode of the chained session. It is not inherited from the launching session, because `auto` mode's classifier can deny a step such as `gh pr merge` and leave a wave half-finished. Your `permissions.deny` rules still apply, but the bypass warning must have been accepted once interactively (`skipDangerousModePermissionPrompt`).
+- `launcher` (default `auto`, one of `auto`, `orca`, `bg`): Claude Code only; ignored on the Codex host, where `emet launch` opens no Orca tab. Also open the wave in an Orca tab running `claude attach`. `auto` asks the Orca runtime (`orca status`), so it works from `claude --bg` sessions too, which have no `TERM_PROGRAM`; `orca` always tries; `bg` never. The wave runs in the background either way, and a tab that fails to open never stops the chain. `emet launch <spec-id> --wave <n>` does the whole launch; see [`emet launch`](cli.md#runs-workers-and-slots).
+- `permissionMode` (default `bypassPermissions`, one of `bypassPermissions`, `auto`, `acceptEdits`): Claude Code only; ignored on the Codex host, where the chained session uses [`codex.sandbox`](#codex). Permission mode of the chained session. It is not inherited from the launching session, because `auto` mode's classifier can deny a step such as `gh pr merge` and leave a wave half-finished. Your `permissions.deny` rules still apply, but the bypass warning must have been accepted once interactively (`skipDangerousModePermissionPrompt`).
 
 ## budgets
 
@@ -56,7 +56,7 @@ All optional.
 
 ## models
 
-Model and effort per role. Every key is optional; omitting the section keeps worker `sonnet`/`medium` and reviewer `opus`/`medium`. Effort is one of `low`, `medium`, `high`, `xhigh`, `max`.
+Model and effort per role for the Claude Code host; the Codex host reads [`codex.models`](#codex) instead. Every key is optional; omitting the section keeps worker `sonnet`/`medium` and reviewer `opus`/`medium`. Effort is one of `low`, `medium`, `high`, `xhigh`, `max`.
 
 ```json
 {
@@ -87,7 +87,7 @@ Read only when `agentHost` is `"codex"`. Every key is optional. Effort is one of
 - `models.worker`, `models.workerOverride`, `models.reviewer.medium`, `models.reviewer.high`, `models.triage`: each is `{ "model", "effort", "fallback" }`. `fallback` lists the slugs tried in order when `model` is missing from the Codex models cache. The defaults are in [Models and effort](../guide/models-and-effort.md).
 - `models.session`: `{ "model", "effort", "planEffort", "fallback" }` for the session that runs `$emet:run`. `planEffort` applies until the first approval.
 - `effort`: when set, replaces the effort of every role.
-- `minVersion` (default `0.167.0`): the oldest `codex` CLI version `emet doctor` accepts.
+- `minVersion` (default `0.167.0`): the oldest `codex` CLI version emet supports. `emet doctor` does not compare the installed version against it.
 - `sandbox` (default `danger-full-access`): the sandbox mode passed as `-s` by `emet dispatch`, `emet review-run` and a Codex `emet launch`. `workspace-write` is also accepted but makes `.git` read-only, so workers cannot commit. Whatever the value, `emet guard` denies `git push` on Codex, and the generated overlay `config.toml` holds only the emet marketplace and plugin, trusted tables for the run's own directories, and the resolved model and effort (never your own tables). See the [Codex guide](../guide/codex.md) and [ADR-0022](../adr/0022-codex-workers-run-unsandboxed-by-default.md).
 
 ## review
@@ -104,7 +104,7 @@ Read only when `agentHost` is `"codex"`. Every key is optional. Effort is one of
 
 ## tracker
 
-Which issue tracker `/emet` talks to. The CLI reads `kind` to decide which dependency checks apply; the rest documents the adapter the `/emet` command follows (see [`docs/agents/issue-tracker.md`](../agents/issue-tracker.md)).
+Which issue tracker `/emet` (or `$emet` on Codex) talks to. The CLI reads `kind` to decide which dependency checks apply; the rest documents the adapter the `/emet` command follows (see [`docs/agents/issue-tracker.md`](../agents/issue-tracker.md)).
 
 - `kind` (required): `linear`, `github` or `local`. For `local`, see [Local tracker](cli.md#local-tracker) and [ADR-0011](../adr/0011-local-tracker-scratch-convention.md).
 - `transitions.onStart`, `transitions.onPrOpen`, `transitions.onPrMerge`: who writes each ticket-state transition: `worker`, `coordinator` or `automatic` (the tracker integration does it, for example Linear's GitHub integration on PR open or merge). The coordinator never writes a transition marked `automatic`.

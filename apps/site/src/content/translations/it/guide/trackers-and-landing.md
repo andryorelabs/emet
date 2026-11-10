@@ -2,7 +2,7 @@
 title: Tracker e landing
 description: Dove vivono i ticket, come un'ondata atterra come pull request o merge locale e come si concatenano le ondate.
 seoTitle: Tracker e landing in emet
-sourceHash: c9ae0940af5cfbad
+sourceHash: 9aa84264f5f8cc95
 ---
 
 Dove vivono i ticket, come atterra un'ondata e come si concatenano le ondate. Ogni chiave citata qui è nel [riferimento della configurazione](../reference/configuration.md); ogni sottocomando è nel [riferimento della CLI](../reference/cli.md).
@@ -43,20 +43,22 @@ Le ondate successive girano in sessioni proprie, mai in quella che ha eseguito l
 ```
 
 - `pr.autoMerge` (predefinito `true`): attende i controlli della PR e la unisce; senza controlli, la unisce subito. Un controllo fallito viene corretto e inviato, fino a `maxCiFixAttempts` volte, poi la PR resta aperta per una persona. Un'ondata con qualcosa di segnalato non viene mai unita automaticamente.
-- `handoff.autoChain` (predefinito `false`): dopo un'ondata pulita e unita, con altre ondate ancora da fare, avvia la successiva con `claude --bg` invece di stampare `/emet:run --dispatch <spec-id>`. Si ispeziona con `claude agents` / `claude attach emet-<spec-id>-w<n>`. Requisiti:
+- `handoff.autoChain` (predefinito `false`): dopo un'ondata pulita e unita, con altre ondate ancora da fare, avvia la successiva con `claude --bg` invece di stampare `/emet:run --dispatch <spec-id>`. Si ispeziona con `claude agents` / `claude attach emet-<spec-id>-w<n>`. Requisiti su Claude Code:
   1. `claude` nel PATH, con supporto a `--bg`.
   2. Un workspace fidato. `--bg` gira in modo non interattivo, quindi la finestra di fiducia non compare mai; apri `claude` in modo interattivo nel repo una volta e accettala.
   3. L'avviso di bypass accettato una volta in una sessione interattiva (`skipDangerousModePermissionPrompt`), dato che l'ondata successiva gira nel `handoff.permissionMode` (sotto), non nella modalità della sessione che la avvia.
 
+  Sull'host Codex, l'ondata successiva parte invece come `codex exec` scollegato (vedi `handoff.launcher` sotto); il requisito è quindi `codex` nel PATH alla versione `codex.minVersion` o successiva, con `--json` e `--output-schema` su `codex exec`; `emet doctor` controlla i flag, non il numero di versione. La finestra di fiducia e l'avviso di bypass di Claude non si applicano. Se Codex richieda un workspace attendibile per un'esecuzione scollegata non è verificato nella documentazione di questo repo.
+
   L'avvio avviene solo se la PR è stata unita e nulla era segnalato, e viene saltato se una sessione `emet-<spec-id>-*` è già attiva (`claude agents --json`). Se l'avvio fallisce, ripiega sulla stampa di `/emet:run --dispatch <spec-id>`.
 
-- `handoff.launcher` (predefinito `auto`): apre anche l'ondata in una scheda di Orca che esegue `claude attach`. `auto` interroga il runtime di Orca (`orca status`), quindi funziona anche da sessioni `claude --bg`, che non hanno `TERM_PROGRAM`; `orca` ci prova sempre, `bg` mai. L'ondata gira comunque in background, e una scheda che non si apre non ferma mai la catena.
+- `handoff.launcher` (predefinito `auto`): apre anche l'ondata in una scheda di Orca che esegue `claude attach`. `auto` interroga il runtime di Orca (`orca status`), quindi funziona anche da sessioni `claude --bg`, che non hanno `TERM_PROGRAM`; `orca` ci prova sempre, `bg` mai. `launcher` vale solo per l'host Claude Code; su Codex `emet launch` si comporta sempre come `bg`. L'ondata gira comunque in background, e una scheda che non si apre non ferma mai la catena.
 
   `emet launch <spec-id> --wave <n>` esegue l'intero avvio (controllo delle sessioni duplicate, `claude --bg`, scheda) e stampa `{ name, id, attach, orcaTab: { opened, reason } }`. Usalo, e non un semplice `claude --bg`, ogni volta che vuoi un'ondata in un'altra sessione a mano.
 
   Sull'Agent host Codex, `emet launch` avvia un `codex exec` staccato che esegue `$emet:run --dispatch <spec-id>` e registra il suo id di thread. Non apre nessuna scheda di Orca, e `codex exec resume <id>` riprende la sessione. Vedi il [riferimento della CLI](../reference/cli.md#host-codex) e [Eseguire emet su Codex](codex.md).
 
-- `handoff.permissionMode` (predefinito `bypassPermissions`): modalità di permesso della sessione concatenata. Non è ereditata dalla sessione che la avvia, perché il classificatore della modalità `auto` può negare un passaggio come `gh pr merge` e lasciare un'ondata a metà. Le tue regole `permissions.deny` continuano ad applicarsi, ma l'avviso di bypass deve essere stato accettato una volta in modo interattivo (`skipDangerousModePermissionPrompt`).
+- `handoff.permissionMode` (predefinito `bypassPermissions`): solo Claude Code; modalità di permesso della sessione concatenata. Sull'host Codex viene ignorato e la sessione concatenata usa `codex.sandbox` (predefinito `danger-full-access`; vedi [Eseguire emet su Codex](codex.md)). Non è ereditata dalla sessione che la avvia, perché il classificatore della modalità `auto` può negare un passaggio come `gh pr merge` e lasciare un'ondata a metà. Le tue regole `permissions.deny` continuano ad applicarsi, ma l'avviso di bypass deve essere stato accettato una volta in modo interattivo (`skipDangerousModePermissionPrompt`).
 
 ## Gate, budget e registri
 

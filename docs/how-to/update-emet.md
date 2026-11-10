@@ -4,7 +4,7 @@ How to move an installed emet to a new release. Terms follow [GLOSSARY.md](../..
 
 emet and the optional `emet-mascot` plugin come from the same marketplace, `emet-marketplace`. Claude Code does not update third-party marketplaces on its own by default, and a marketplace cannot change that default for its users.
 
-## Update by hand
+## Update on Claude Code
 
 ```bash
 claude plugin marketplace update emet-marketplace
@@ -27,7 +27,7 @@ codex plugin add emet@emet-marketplace
 
 ## Update automatically
 
-In Claude Code, run `/plugin`, open the **Marketplaces** tab, select `emet-marketplace` and choose **Enable auto-update**. Claude Code then refreshes the marketplace and updates both plugins when a session starts, and the next session loads the new versions. Each user sets this on their own machine.
+Auto-update is a Claude Code feature; on Codex, upgrade by hand. In Claude Code, run `/plugin`, open the **Marketplaces** tab, select `emet-marketplace` and choose **Enable auto-update**. Claude Code then refreshes the marketplace and updates both plugins when a session starts, and the next session loads the new versions. Each user sets this on their own machine.
 
 ## Installed with install.sh
 

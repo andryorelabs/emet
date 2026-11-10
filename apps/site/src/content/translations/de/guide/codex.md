@@ -2,7 +2,7 @@
 title: emet mit Codex ausführen
 description: "Codex als Agent host für emet nutzen: Plugin installieren, agentHost setzen, einmal freigeben und die Grenzen kennen."
 seoTitle: emet mit Codex ausführen
-sourceHash: 689000ce9f0eb961
+sourceHash: 2941f08113ffa231
 ---
 
 emet läuft neben Claude Code auch auf der Codex CLI. Die Begriffe folgen [GLOSSARY.md](../../GLOSSARY.md); das Produkt, in dem ein Lauf ausgeführt wird, ist der **Agent host**. Diese Seite behandelt die Installation auf der Codex-Seite, die Wahl des Hosts, die einmalige Freigabe und die bekannten Grenzen. Zurück zum [Dokumentationsindex](../README.md).
@@ -26,7 +26,7 @@ Auf dem Codex-Host bleibt die Pipeline dieselbe: Interview, Spec, Tickets, eine 
    codex plugin add emet@emet-marketplace
    ```
 
-4. Installiere die `emet` CLI wie in [Erste Schritte](getting-started.md) beschrieben und führe dann `emet doctor .` aus. Auf dem Codex-Host meldet es ein `codex`, das älter als `codex.minVersion` ist, ein fehlendes Flag `--json` oder `--output-schema` bei `codex exec` und ein fehlendes `mattpocock-skills` samt den beiden Befehlen oben.
+4. Installiere die `emet` CLI wie in [Erste Schritte](getting-started.md) beschrieben und führe dann `emet doctor .` aus. `install.sh` installiert außerdem die Claude-Code-Befehle und -Agents unter `~/.claude`; das ist unter Codex harmlos, und `emet doctor` warnt nicht davor, dass das Codex-Plugin und `install.sh` zusammen vorhanden sind. Auf dem Codex-Host meldet es ein `codex`, das älter als `codex.minVersion` ist, ein fehlendes Flag `--json` oder `--output-schema` bei `codex exec` und ein fehlendes `mattpocock-skills` samt den beiden Befehlen oben.
 
 Beide Plugin-Befehle aus Schritt 3 wurden gegen das echte `codex` (0.167.0) ausgeführt: In einem frischen `CODEX_HOME` enden sie mit Exit-Code 0, und `codex plugin list` zeigt `emet@emet-marketplace installed, enabled`. Die Form mit lokalem Pfad, `codex plugin marketplace add <repo>`, liefert dasselbe Ergebnis.
 
@@ -44,7 +44,7 @@ Der Standard ist `"claude"`. Der Abschnitt `codex` legt Modelle, Aufwand, Mindes
 
 emet verlangt eine einzige Freigabe, nach dem Plan. In Claude Code ist das ein Prompt. In Codex ist es ein Hook:
 
-- Solange `.emet/runs/spec<id>/approval.json` nicht existiert, verweigert `emet guard` jede Änderung (`apply_patch`, `Bash`), außer Schreibzugriffen unter `.emet/runs/**/draft/**`, mit der Begründung `not approved: send approve <id>`. Das Gate greift, sobald ein Verzeichnis `.emet/runs/spec<id>/` ohne `approval.json` existiert; in diesem Zustand hinterlässt `/emet:run` den Lauf, nachdem Phase 4 den Spec materialisiert hat.
+- Solange `.emet/runs/spec<id>/approval.json` nicht existiert, verweigert `emet guard` jede Änderung (`apply_patch`, `Bash`), außer Schreibzugriffen unter `.emet/runs/**/draft/**`, mit der Begründung `not approved: send approve <id>`. Das Gate greift, sobald ein Verzeichnis `.emet/runs/spec<id>/` ohne `approval.json` existiert; in diesem Zustand hinterlässt `$emet:run` den Lauf, nachdem Phase 4 den Spec materialisiert hat.
 - Du gibst frei, indem du eine Prompt-Zeile sendest, die genau `approve <id>` lautet. Der `UserPromptSubmit`-Hook schreibt dann die Freigabedatei mit demselben Hashing wie `emet approve`. Dieselben Worte in Tool-Ausgaben oder Modelltext bewirken nichts.
 - Die Alternative ist `/plan $emet:run`: Gib den Plan im eigenen Plan-Modus von Codex frei statt über den Hook.
 

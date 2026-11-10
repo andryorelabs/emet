@@ -2,12 +2,12 @@
 title: Riferimento della configurazione
 description: Ogni chiave di emet.config.json con il suo valore predefinito e il suo significato.
 seoTitle: Riferimento della configurazione di emet
-sourceHash: e234cb9ad3468e98
+sourceHash: ec827dfcb8627f5c
 ---
 
 Ogni chiave di `emet.config.json`, con il suo valore predefinito e il suo significato. La fonte di verità è [`emet/schema/emet.config.schema.json`](../../emet/schema/emet.config.schema.json). I termini seguono [GLOSSARY.md](../../GLOSSARY.md). Torna al [README](../../README.md).
 
-`emet init` scrive il file. `emet preflight` e `emet doctor` lo validano. Una chiave contrassegnata come prose-only è letta dai prompt di `/emet`, non dalla CLI. Una chiave contrassegnata come deprecated è ancora accettata. Lo schema consente inoltre una chiave di testo libero `"//"` per le note (mai letta da alcuno strumento) e `"version"`, che è sempre `1`.
+`emet init` scrive il file. `emet preflight` e `emet doctor` lo validano. Una chiave contrassegnata come prose-only è letta dai prompt di `/emet` (le skill `$emet:*` su Codex), non dalla CLI. Una chiave contrassegnata come deprecated è ancora accettata. Lo schema consente inoltre una chiave di testo libero `"//"` per le note (mai letta da alcuno strumento) e `"version"`, che è sempre `1`.
 
 ## pr
 
@@ -37,15 +37,15 @@ Cosa accade dopo la chiusura di un'ondata e i limiti di dimensione della nota di
 
 - `maxLines` (predefinito `60`): numero massimo di righe che una nota `.emet/handoff-<ticket>.md` può avere prima che `emet handoff --check` la respinga.
 - `maxChars` (predefinito `8000`, circa 2k token): numero massimo di caratteri di una nota di handoff.
-- `autoChain` (predefinito `false`): dopo un'ondata pulita e unita, con altre ondate ancora da fare, avvia la successiva con `claude --bg` invece di stampare `/emet:run --dispatch <spec-id>`. Si ispeziona con `claude agents` o `claude attach emet-<spec-id>-w<n>`. Requisiti:
+- `autoChain` (predefinito `false`): dopo un'ondata pulita e unita, con altre ondate ancora da fare, avvia la successiva invece di stampare `/emet:run --dispatch <spec-id>` (`$emet:run --dispatch <spec-id>` su Codex). Su Claude Code l'avvio è `claude --bg`; sull'host Codex è un `codex exec` scollegato, che richiede `codex` alla versione `codex.minVersion` o successiva. I requisiti qui sotto sono quelli di Claude Code. Si ispeziona con `claude agents` o `claude attach emet-<spec-id>-w<n>`. Requisiti:
   1. `claude` nel PATH, con supporto a `--bg`.
   2. Un workspace fidato. `--bg` gira in modo non interattivo, quindi la finestra di fiducia non compare mai; apri `claude` in modo interattivo nel repo una volta e accettala.
   3. L'avviso di bypass accettato una volta in una sessione interattiva (`skipDangerousModePermissionPrompt`), dato che l'ondata successiva gira nel `handoff.permissionMode`, non nella modalità della sessione che la avvia.
 
   L'avvio avviene solo se la PR è stata unita e nulla era segnalato, e viene saltato se una sessione `emet-<spec-id>-*` è già attiva (`claude agents --json`). Se l'avvio fallisce, ripiega sulla stampa di `/emet:run --dispatch <spec-id>`.
 
-- `launcher` (predefinito `auto`, uno tra `auto`, `orca`, `bg`): apre anche l'ondata in una scheda di Orca che esegue `claude attach`. `auto` interroga il runtime di Orca (`orca status`), quindi funziona anche da sessioni `claude --bg`, che non hanno `TERM_PROGRAM`; `orca` ci prova sempre; `bg` mai. L'ondata gira comunque in background, e una scheda che non si apre non ferma mai la catena. `emet launch <spec-id> --wave <n>` esegue l'intero avvio; vedi [`emet launch`](cli.md#esecuzioni-worker-e-slot).
-- `permissionMode` (predefinito `bypassPermissions`, uno tra `bypassPermissions`, `auto`, `acceptEdits`): modalità di permesso della sessione concatenata. Non è ereditata dalla sessione che la avvia, perché il classificatore della modalità `auto` può negare un passaggio come `gh pr merge` e lasciare un'ondata a metà. Le tue regole `permissions.deny` continuano ad applicarsi, ma l'avviso di bypass deve essere stato accettato una volta in modo interattivo (`skipDangerousModePermissionPrompt`).
+- `launcher` (predefinito `auto`, uno tra `auto`, `orca`, `bg`): solo Claude Code; ignorato sull'host Codex, dove `emet launch` non apre alcuna scheda di Orca. Apre anche l'ondata in una scheda di Orca che esegue `claude attach`. `auto` interroga il runtime di Orca (`orca status`), quindi funziona anche da sessioni `claude --bg`, che non hanno `TERM_PROGRAM`; `orca` ci prova sempre; `bg` mai. L'ondata gira comunque in background, e una scheda che non si apre non ferma mai la catena. `emet launch <spec-id> --wave <n>` esegue l'intero avvio; vedi [`emet launch`](cli.md#esecuzioni-worker-e-slot).
+- `permissionMode` (predefinito `bypassPermissions`, uno tra `bypassPermissions`, `auto`, `acceptEdits`): solo Claude Code; ignorato sull'host Codex, dove la sessione concatenata usa [`codex.sandbox`](#codex). Modalità di permesso della sessione concatenata. Non è ereditata dalla sessione che la avvia, perché il classificatore della modalità `auto` può negare un passaggio come `gh pr merge` e lasciare un'ondata a metà. Le tue regole `permissions.deny` continuano ad applicarsi, ma l'avviso di bypass deve essere stato accettato una volta in modo interattivo (`skipDangerousModePermissionPrompt`).
 
 ## budgets
 
@@ -61,7 +61,7 @@ Tutti facoltativi.
 
 ## models
 
-Modello e impegno per ruolo. Ogni chiave è facoltativa; omettendo la sezione restano worker `sonnet`/`medium` e reviewer `opus`/`medium`. L'impegno è uno tra `low`, `medium`, `high`, `xhigh`, `max`.
+Modello e impegno per ruolo per l'host Claude Code; l'host Codex legge invece [`codex.models`](#codex). Ogni chiave è facoltativa; omettendo la sezione restano worker `sonnet`/`medium` e reviewer `opus`/`medium`. L'impegno è uno tra `low`, `medium`, `high`, `xhigh`, `max`.
 
 ```json
 {
@@ -92,7 +92,7 @@ Letto solo quando `agentHost` è `"codex"`. Tutte le chiavi sono facoltative. Lo
 - `models.worker`, `models.workerOverride`, `models.reviewer.medium`, `models.reviewer.high`, `models.triage`: ognuna è `{ "model", "effort", "fallback" }`. `fallback` elenca gli slug provati in ordine quando `model` manca dalla cache dei modelli di Codex. I valori predefiniti sono in [Modelli e sforzo](../guide/models-and-effort.md).
 - `models.session`: `{ "model", "effort", "planEffort", "fallback" }` per la sessione che esegue `$emet:run`. `planEffort` vale fino alla prima approvazione.
 - `effort`: se impostato, sostituisce lo sforzo di tutti i ruoli.
-- `minVersion` (predefinito `0.167.0`): la versione più vecchia della CLI `codex` accettata da `emet doctor`.
+- `minVersion` (predefinito `0.167.0`): la versione più vecchia della CLI `codex` supportata da emet. `emet doctor` non confronta con essa la versione installata.
 - `sandbox` (predefinito `danger-full-access`): la modalità sandbox passata come `-s` da `emet dispatch`, `emet review-run` e da un `emet launch` Codex. Anche `workspace-write` è accettato, ma rende `.git` di sola lettura, quindi i worker non possono fare commit. Qualunque sia il valore, `emet guard` nega `git push` su Codex, e il `config.toml` dell'overlay generato contiene solo il marketplace e il plugin emet, tabelle trusted per le directory proprie del run e il modello e lo sforzo risolti (mai le tue tabelle). Vedi la [guida a Codex](../guide/codex.md) e [ADR-0022](../adr/0022-codex-workers-run-unsandboxed-by-default.md).
 
 ## review
@@ -109,7 +109,7 @@ Letto solo quando `agentHost` è `"codex"`. Tutte le chiavi sono facoltative. Lo
 
 ## tracker
 
-Con quale issue tracker parla `/emet`. La CLI legge `kind` per decidere quali controlli sulle dipendenze si applicano; il resto documenta l'adattatore seguito dal comando `/emet` (vedi [`docs/agents/issue-tracker.md`](../agents/issue-tracker.md)).
+Con quale issue tracker parla `/emet` (o `$emet` su Codex). La CLI legge `kind` per decidere quali controlli sulle dipendenze si applicano; il resto documenta l'adattatore seguito dal comando `/emet` (vedi [`docs/agents/issue-tracker.md`](../agents/issue-tracker.md)).
 
 - `kind` (obbligatorio): `linear`, `github` o `local`. Per `local`, vedi [Tracker locale](cli.md#tracker-locale) e [ADR-0011](../adr/0011-local-tracker-scratch-convention.md).
 - `transitions.onStart`, `transitions.onPrOpen`, `transitions.onPrMerge`: chi scrive ogni transizione di stato del ticket: `worker`, `coordinator` o `automatic` (lo fa l'integrazione del tracker, per esempio l'integrazione GitHub di Linear all'apertura o al merge di una PR). Il coordinatore non scrive mai una transizione contrassegnata come `automatic`.

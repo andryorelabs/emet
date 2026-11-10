@@ -2,7 +2,7 @@
 title: Codex で emet を実行する
 description: Codex CLI 側のインストール、エージェントホストの選択、単一の承認、既知の制限を説明します。
 seoTitle: Codex で emet を実行する
-sourceHash: 689000ce9f0eb961
+sourceHash: 2941f08113ffa231
 ---
 
 emet は Claude Code だけでなく Codex CLI でも実行できます。用語は [GLOSSARY.md](../../GLOSSARY.md) に従います。実行が動作する製品を**エージェントホスト**と呼びます。このページでは、Codex 側のインストール、ホストの選択、単一の承認、既知の制限を説明します。[ドキュメント索引](../README.md)に戻ります。
@@ -26,7 +26,7 @@ Codex ホストでもパイプラインは同じです。インタビュー、�
    codex plugin add emet@emet-marketplace
    ```
 
-4. [はじめに](getting-started.md)の手順で `emet` CLI をインストールし、`emet doctor .` を実行します。Codex ホストでは、`codex.minVersion` より古い `codex`、`codex exec` の `--json` または `--output-schema` フラグの欠落、`mattpocock-skills` の欠落（上記の 2 つのコマンドを案内）を報告します。
+4. [はじめに](getting-started.md)の手順で `emet` CLI をインストールし、`emet doctor .` を実行します。`install.sh` は `~/.claude` 配下に Claude Code のコマンドとエージェントもインストールしますが、Codex では無害であり、`emet doctor` は Codex プラグインと `install.sh` の併用について警告しません。Codex ホストでは、`codex.minVersion` より古い `codex`、`codex exec` の `--json` または `--output-schema` フラグの欠落、`mattpocock-skills` の欠落（上記の 2 つのコマンドを案内）を報告します。
 
 手順 3 の 2 つのプラグインコマンドは、実際の `codex`（0.167.0）に対して実行されました。新しい `CODEX_HOME` では終了コード 0 で終わり、`codex plugin list` に `emet@emet-marketplace installed, enabled` と表示されます。ローカルパス形式の `codex plugin marketplace add <repo>` でも同じ結果になります。
 
@@ -44,7 +44,7 @@ Codex ホストでもパイプラインは同じです。インタビュー、�
 
 emet が求める承認は、計画の後の 1 回だけです。Claude Code ではプロンプトです。Codex ではフックです。
 
-- `.emet/runs/spec<id>/approval.json` が存在するまで、`emet guard` は `.emet/runs/**/draft/**` 配下への書き込みを除くすべての変更（`apply_patch`、`Bash`）を、理由 `not approved: send approve <id>` で拒否します。このゲートは、`.emet/runs/spec<id>/` ディレクトリが `approval.json` なしで存在する時点から適用されます。これは、`/emet:run` がフェーズ 4 で仕様を具体化した後に残す状態です。
+- `.emet/runs/spec<id>/approval.json` が存在するまで、`emet guard` は `.emet/runs/**/draft/**` 配下への書き込みを除くすべての変更（`apply_patch`、`Bash`）を、理由 `not approved: send approve <id>` で拒否します。このゲートは、`.emet/runs/spec<id>/` ディレクトリが `approval.json` なしで存在する時点から適用されます。これは、`$emet:run` がフェーズ 4 で仕様を具体化した後に残す状態です。
 - 承認するには、ちょうど `approve <id>` という行のプロンプトを送ります。すると `UserPromptSubmit` フックが、`emet approve` と同じハッシュ方式で承認ファイルを書き込みます。ツールの出力やモデルのテキストに同じ言葉があっても何も起こりません。
 - 代替手段は `/plan $emet:run` です。フックの代わりに、Codex 自身のプランモードで計画を承認します。
 

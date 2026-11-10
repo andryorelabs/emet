@@ -2,10 +2,12 @@
 title: Modelli e impegno
 description: Come emet sceglie un modello e un livello di ragionamento per ogni ruolo e quali chiavi di configurazione li modificano.
 seoTitle: Modelli e impegno in emet
-sourceHash: a46d2e68a403f4f9
+sourceHash: 482995e2b98c659b
 ---
 
-`/emet` sceglie automaticamente un modello e un livello di ragionamento per ogni ruolo; non c'è nulla da cambiare a mano durante l'esecuzione. Ogni chiave è nel [riferimento della configurazione](../reference/configuration.md#models).
+`/emet` sceglie automaticamente un modello e un livello di ragionamento per ogni ruolo; non c'è nulla da cambiare a mano durante l'esecuzione. Le prime sezioni descrivono l'host Claude Code; l'[host Codex](#host-codex) ha i propri valori predefiniti. Ogni chiave di Claude Code è nel [riferimento della configurazione](../reference/configuration.md#models).
+
+## Host Claude Code
 
 | Ruolo                                                   | Modello                    | Impegno                               | Impostato da                               |
 | ------------------------------------------------------- | -------------------------- | ------------------------------------- | ------------------------------------------ |
@@ -17,7 +19,7 @@ sourceHash: a46d2e68a403f4f9
 | Review, livello `high` (percorsi o sink a rischio)      | Opus                       | `medium` per impostazione predefinita | `models.reviewer.high`                     |
 | Triage dei log di CI (fase 8)                           | Haiku                      | —                                     | `models.triage`                            |
 
-Le due definizioni di agente (installate da `install.sh` in `~/.claude/agents/`) fissano da sole `model`/`effort` nel frontmatter, così la scelta di modello e impegno del coordinatore non si trasmette mai a un worker o al reviewer. `emet doctor` segnala (senza mai bloccare) la scomparsa di uno dei due file. `emet preflight` blocca invece il dispatch quando manca `emet-worker` o `emet-reviewer`, perché la fase 6 e la fase 8 fanno il dispatch tramite `subagent_type`.
+Su Claude Code, le due definizioni di agente (installate da `install.sh` in `~/.claude/agents/`) fissano da sole `model`/`effort` nel frontmatter, così la scelta di modello e impegno del coordinatore non si trasmette mai a un worker o al reviewer. `emet doctor` segnala (senza mai bloccare) la scomparsa di uno dei due file. `emet preflight` blocca invece il dispatch quando manca `emet-worker` o `emet-reviewer`, perché la fase 6 e la fase 8 fanno il dispatch tramite `subagent_type`.
 
 ## Instradamento per livello di rischio
 
@@ -31,11 +33,11 @@ Un ticket che tocca percorsi ad alto rischio può avere una riga `Model:` (per e
 
 ## Triage con Haiku
 
-Il coordinatore non legge mai un log di CI per intero. Un controllo fallito viene passato a un agente su `models.triage` (predefinito `haiku`), che restituisce al massimo circa 2k token con riferimenti `file:line` per la correzione.
+Su Claude Code, il coordinatore non legge mai un log di CI per intero. Un controllo fallito viene passato a un agente su `models.triage` (predefinito `haiku`), che restituisce al massimo circa 2k token con riferimenti `file:line` per la correzione.
 
 ## Configurazione
 
-Ogni chiave è facoltativa, e i valori predefiniti riproducono la tabella qui sopra:
+Queste sono le chiavi `models` di Claude Code. Ogni chiave è facoltativa, e i valori predefiniti riproducono la tabella di Claude Code qui sopra:
 
 ```json
 {
@@ -78,11 +80,11 @@ Il run Codex reale nel [report della sonda](../research/codex-probe-report.md) h
 
 ## Perché un solo reviewer
 
-Perché un solo reviewer a contesto pulito invece di una ventola di più punti di vista: nessun benchmark pubblico confronta direttamente le due soluzioni, ma una ventola rilegge l'intero diff una volta per ogni punto di vista e in questo repo è rimasta bloccata per oltre un'ora, mentre i resoconti di Anthropic e di terze parti sui modelli di classe Opus suggeriscono che l'aggiornamento del modello valga quanto i punti di vista aggiuntivi. Per un'ondata ad alta posta in gioco, esegui poi `/code-review ultra` a mano; `/emet` non lo invia mai da solo.
+Perché un solo reviewer a contesto pulito invece di una ventola di più punti di vista: nessun benchmark pubblico confronta direttamente le due soluzioni, ma una ventola rilegge l'intero diff una volta per ogni punto di vista e in questo repo è rimasta bloccata per oltre un'ora, mentre i resoconti di Anthropic e di terze parti sui modelli di classe Opus suggeriscono che l'aggiornamento del modello valga quanto i punti di vista aggiuntivi. Per un'ondata ad alta posta in gioco su Claude Code, esegui poi `/code-review ultra` a mano; `/emet` non lo invia mai da solo. `/code-review ultra` è un comando di Claude Code; questa pagina non documenta alcun equivalente per Codex.
 
-## Cosa imposti una volta, di persona
+## Cosa imposti una volta, di persona (Claude Code)
 
-`/emet` non può cambiare queste impostazioni durante l'esecuzione:
+Sull'host Claude Code, `/emet` non può cambiare queste impostazioni durante l'esecuzione. Vivono nel `~/.claude/settings.json` di Claude Code; l'host Codex non legge quel file, e i suoi modelli provengono dalla sezione `codex` qui sopra.
 
 - `model: "opusplan"` in `~/.claude/settings.json`: è ciò che fa girare le fasi 1–4 su Opus e dalla fase 5 in poi su Sonnet, senza bisogno di `/model`. `emet doctor` avvisa (senza mai modificare le tue impostazioni) se non è impostato.
 - Un impegno di sessione `medium` o `high` anziché `xhigh`: i worker e il reviewer hanno già il proprio impegno a prescindere dal tuo, e un valore globale alto aggiunge per lo più costi ai turni del coordinatore (contabilità del dispatch, merge, report) che non ne hanno bisogno.
