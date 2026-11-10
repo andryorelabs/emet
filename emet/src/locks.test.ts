@@ -153,36 +153,69 @@ describe("emet-locks", () => {
       expect(existsSync(lockDirectory)).toBe(true);
     });
 
+    test("clears an old guard even when its pid is alive, then reclaims", async () => {
+      await plantDeadHolder(temporaryRoot, lockDirectory);
+      const guardDirectory = `${lockDirectory}.reclaim`;
+      didAcquireLock(
+        guardDirectory,
+        buildHolder({ acquiredAt: Date.now() - HOLDERLESS_LOCK_GRACE_MS - 1000 }),
+      );
+      expect(didReclaimStaleLock(lockDirectory, 999_999_999)).toBe(false);
+      expect(existsSync(guardDirectory)).toBe(false);
+      expect(didReclaimStaleLock(lockDirectory, 999_999_999)).toBe(true);
+    });
+
+    test("never removes a guard another reclaimer acquired in the meantime", async () => {
+      await plantDeadHolder(temporaryRoot, lockDirectory);
+      const guardDirectory = `${lockDirectory}.reclaim`;
+      didAcquireLock(guardDirectory, buildHolder());
+      expect(didReclaimStaleLock(lockDirectory, 999_999_999)).toBe(false);
+      expect(readLockHolder(guardDirectory)?.pid).toBe(process.pid);
+    });
+
     test("concurrent acquirers of a crashed lock never lose an update", async () => {
       await plantDeadHolder(temporaryRoot, lockDirectory);
       const counterPath = path.join(temporaryRoot, "counter.txt");
+      const readyDirectory = path.join(temporaryRoot, "ready");
+      const goPath = path.join(temporaryRoot, "go");
       writeFileSync(counterPath, "0");
+      mkdirSync(readyDirectory);
       const workerSource = `
+        const { existsSync, readFileSync, writeFileSync } = await import("node:fs");
         const { acquireLock, releaseLock } = await import(process.env.LOCKS_PATH);
-        const { readFileSync, writeFileSync } = await import("node:fs");
+        writeFileSync(process.env.READY_DIRECTORY + "/" + process.pid, "");
+        while (!existsSync(process.env.GO_PATH)) await Bun.sleep(1);
         await acquireLock(process.env.LOCK_PATH, () => ({
           pid: process.pid, worktree: process.cwd(), acquiredAt: Date.now(),
-        }), { timeoutMs: 15000, pollIntervalMs: 5, maxAgeMs: 999999999, logLabel: "worker" });
+        }), { timeoutMs: 15000, pollIntervalMs: 1, maxAgeMs: 999999999, logLabel: "worker" });
         const current = Number(readFileSync(process.env.COUNTER_PATH, "utf8"));
         await Bun.sleep(10);
         writeFileSync(process.env.COUNTER_PATH, String(current + 1));
         releaseLock(process.env.LOCK_PATH);
       `;
-      const workers = Array.from({ length: 8 }, () =>
+      const workerCount = 8;
+      const workers = Array.from({ length: workerCount }, () =>
         Bun.spawn([process.execPath, "-e", workerSource], {
           env: {
             ...process.env,
             LOCKS_PATH: path.resolve(import.meta.dir, "locks.ts"),
             LOCK_PATH: lockDirectory,
             COUNTER_PATH: counterPath,
+            READY_DIRECTORY: readyDirectory,
+            GO_PATH: goPath,
           },
           stdout: "ignore",
           stderr: "ignore",
         }),
       );
+      while (readdirSync(readyDirectory).length < workerCount) {
+        // oxlint-disable-next-line eslint/no-await-in-loop -- barrier: wait until every worker is loaded
+        await Bun.sleep(10);
+      }
+      writeFileSync(goPath, "");
       const exitCodes = await Promise.all(workers.map((worker) => worker.exited));
       expect(exitCodes.every((code) => code === 0)).toBe(true);
-      expect(readFileSync(counterPath, "utf8")).toBe("8");
+      expect(readFileSync(counterPath, "utf8")).toBe(String(workerCount));
     });
   });
 

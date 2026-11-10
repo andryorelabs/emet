@@ -186,17 +186,56 @@ export function didAcquireLock(lockDirectory: string, holder: LockHolder): boole
   }
 }
 
+function isSameHolder(left: LockHolder | undefined, right: LockHolder | undefined): boolean {
+  return left?.pid === right?.pid && left?.acquiredAt === right?.acquiredAt;
+}
+
+/**
+ * Removes `lockDirectory` only if the holder inside it is the one `observed`.
+ * The directory is renamed away first, atomically, and the renamed holder is
+ * checked afterwards, so a lock acquired by someone else after `observed` was
+ * read is put back instead of deleted. Returns `true` only when the observed
+ * lock was removed.
+ */
+function didReleaseObservedLock(lockDirectory: string, observed: LockHolder | undefined): boolean {
+  const trashDirectory = `${lockDirectory}.released-${process.pid}-${randomUUID()}`;
+  try {
+    renameSync(lockDirectory, trashDirectory);
+  } catch (error) {
+    if (errnoCode(error) === "ENOENT") return false;
+    throw error;
+  }
+  if (isSameHolder(readLockHolder(trashDirectory), observed)) {
+    rmSync(trashDirectory, { recursive: true, force: true });
+    return true;
+  }
+  try {
+    renameSync(trashDirectory, lockDirectory);
+  } catch {
+    rmSync(trashDirectory, { recursive: true, force: true });
+  }
+  return false;
+}
+
+function isGuardStale(guardDirectory: string): boolean {
+  const holder = readLockHolder(guardDirectory);
+  if (!holder) return isLockStale(guardDirectory, HOLDERLESS_LOCK_GRACE_MS);
+  return Date.now() - holder.acquiredAt > HOLDERLESS_LOCK_GRACE_MS;
+}
+
 /**
  * Releases a stale lock without letting two reclaimers both win. Reclaimers
  * are serialized through a short-lived `<lock>.reclaim` guard; inside it the
- * lock must still exist with the same holder and still be stale, so a lock
+ * lock must still exist with the same holder and still be stale, and it is
+ * removed only if the holder found on removal is still that one. A lock
  * another process just acquired (or one that is simply gone) is never taken
- * over. A lock that exists can only change through a reclaimer or its own
- * holder, and a stale holder is dead, so the check and the release cannot be
- * interleaved by anyone else. Returns `true` when this call released the
- * stale lock; the caller then retries its normal acquire. Returns `false`
- * when the lock is not stale, another reclaimer holds the guard, or the lock
- * changed, and the caller keeps polling.
+ * over. The guard is held for microseconds, so one older than
+ * {@link HOLDERLESS_LOCK_GRACE_MS} is stale whether or not its pid is alive
+ * (a recycled pid must not wedge reclaiming forever) and is cleared the same
+ * rename-and-verify way. Returns `true` when this call released the stale
+ * lock; the caller then retries its normal acquire. Returns `false` when the
+ * lock is not stale, another reclaimer holds the guard, or the lock changed,
+ * and the caller keeps polling.
  */
 export function didReclaimStaleLock(lockDirectory: string, maxAgeMs: number): boolean {
   if (!existsSync(lockDirectory) || !isLockStale(lockDirectory, maxAgeMs)) return false;
@@ -208,20 +247,19 @@ export function didReclaimStaleLock(lockDirectory: string, maxAgeMs: number): bo
     acquiredAt: Date.now(),
   };
   if (!didAcquireLock(guardDirectory, guardHolder)) {
-    if (isLockStale(guardDirectory, HOLDERLESS_LOCK_GRACE_MS)) releaseLock(guardDirectory);
+    if (isGuardStale(guardDirectory)) {
+      didReleaseObservedLock(guardDirectory, readLockHolder(guardDirectory));
+    }
     return false;
   }
   try {
     if (!existsSync(lockDirectory)) return false;
     const current = readLockHolder(lockDirectory);
-    if (current?.pid !== observed?.pid || current?.acquiredAt !== observed?.acquiredAt) {
-      return false;
-    }
+    if (!isSameHolder(current, observed)) return false;
     if (!isLockStale(lockDirectory, maxAgeMs)) return false;
-    releaseLock(lockDirectory);
-    return true;
+    return didReleaseObservedLock(lockDirectory, observed);
   } finally {
-    releaseLock(guardDirectory);
+    didReleaseObservedLock(guardDirectory, guardHolder);
   }
 }
 
