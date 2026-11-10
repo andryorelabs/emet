@@ -23,7 +23,7 @@ It runs on your machine, in any git repo, with Linear, GitHub Issues or no track
 
 ## Non-affiliation notice
 
-Not affiliated with or endorsed by Anthropic
+Not affiliated with or endorsed by Anthropic or OpenAI
 
 ## Claims checked
 
