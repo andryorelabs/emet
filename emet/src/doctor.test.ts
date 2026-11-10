@@ -14,6 +14,8 @@ import {
 import os from "node:os";
 import path from "node:path";
 
+import { claudeHost } from "./agenthost";
+import { codexHost } from "./agenthost-codex";
 import type { DependencyProbes } from "./dependencies";
 import {
   auditRepo,
@@ -38,6 +40,7 @@ import {
   isReportClean,
   parseDoctorArguments,
   type RepoDoctorReport,
+  userSettingsFile,
 } from "./doctor";
 
 const cleanReport: RepoDoctorReport = {
@@ -559,6 +562,12 @@ describe("checkWorktreeForkBase", () => {
   test("unresolvable refs are not a finding", () => {
     expect(checkWorktreeForkBase({ ...base, harnessBase: null })).toEqual([]);
   });
+  test("the Codex host never gets the Claude baseRef advice", () => {
+    expect(checkWorktreeForkBase({ ...base, host: codexHost })).toEqual([]);
+  });
+  test("the Claude host still reports divergence when named explicitly", () => {
+    expect(checkWorktreeForkBase({ ...base, host: claudeHost })).toHaveLength(1);
+  });
 });
 
 describe("auditRepo environment findings", () => {
@@ -953,6 +962,16 @@ describe("findDeadGuardHooks", () => {
   });
 });
 
+describe("userSettingsFile", () => {
+  test("is the Claude user settings.json on the Claude host", () => {
+    expect(userSettingsFile(claudeHost, "/h")).toBe(path.join("/h", ".claude", "settings.json"));
+  });
+
+  test("is absent on the Codex host, which declares no settings files", () => {
+    expect(userSettingsFile(codexHost, "/h")).toBeUndefined();
+  });
+});
+
 describe("findDoubleInstall", () => {
   let home: string;
   beforeEach(() => {
@@ -975,6 +994,16 @@ describe("findDoubleInstall", () => {
     writeManifest();
     const [message] = findDoubleInstall(home, forgePlugin);
     expect(message).toContain("~/.claude/commands/emet/");
+  });
+
+  test("is silent on the Codex host even with the plugin and the install manifest", () => {
+    writeManifest();
+    expect(findDoubleInstall(home, forgePlugin, codexHost)).toEqual([]);
+  });
+
+  test("still warns on the Claude host when named explicitly", () => {
+    writeManifest();
+    expect(findDoubleInstall(home, forgePlugin, claudeHost)).toHaveLength(1);
   });
 
   test("is silent with only one install route", () => {
