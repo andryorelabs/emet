@@ -142,10 +142,13 @@ function sha256Of(filePath: string): string {
 
 /** Records the installed paths (files and symlinks) and the hash of every installed prompt. */
 function captureInstall(): ClaudeInstallSnapshot {
-  const installedPaths = listEntries(homeDir)
-    .map(relativeToHome)
-    .filter((entry) => !entry.startsWith(".claude/emet/src/"))
-    .toSorted();
+  const installedPaths = [
+    ...new Set(
+      listEntries(homeDir)
+        .map(relativeToHome)
+        .filter((entry) => !entry.startsWith(".claude/emet/src/")),
+    ),
+  ].toSorted();
   const promptSha256: Record<string, string> = {};
   for (const directory of promptDirectories) {
     const absoluteDirectory = path.join(homeDir, directory);

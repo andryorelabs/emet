@@ -19,7 +19,7 @@ import {
 } from "./config";
 import {
   didAcquireLock,
-  isLockStale,
+  didReclaimStaleLock,
   type LockHolder,
   releaseLock,
   resolveLockDirectory,
@@ -294,7 +294,7 @@ function buildReservationLockHolder(): LockHolder {
 }
 
 /**
- * Atomic acquire via `locks.ts`'s `didAcquireLock`/`isLockStale` —
+ * Atomic acquire via `locks.ts`'s `didAcquireLock`/`didReclaimStaleLock` —
  * unlike a bare `mkdirSync`, this reclaims immediately if the process that
  * held the lock died mid-reservation (killed between acquiring this lock
  * and its `finally` release below), rather than leaving `<ticket>.lock`
@@ -303,8 +303,7 @@ function buildReservationLockHolder(): LockHolder {
  */
 function didAcquireReservationLock(lockPath: string): boolean {
   if (didAcquireLock(lockPath, buildReservationLockHolder())) return true;
-  if (isLockStale(lockPath, RESERVATION_LOCK_MAX_AGE_MS)) {
-    releaseLock(lockPath);
+  if (didReclaimStaleLock(lockPath, RESERVATION_LOCK_MAX_AGE_MS)) {
     return didAcquireLock(lockPath, buildReservationLockHolder());
   }
   return false;
