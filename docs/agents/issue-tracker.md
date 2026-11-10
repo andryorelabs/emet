@@ -42,9 +42,11 @@ for a repo that just wants `/emet` to work.
 
 `tracker.transitions`: `onStart: worker` (apply the `status:in-progress` label
 on its own ticket), `onPrOpen: coordinator` (apply `status:in-review` when
-opening the wave's PR), `onPrMerge: automatic` — a `Closes #N` line in the PR
-body uses GitHub's own closing keywords, which close the issue on merge with
-no `/emet`-side write needed.
+opening the wave's PR), `onPrMerge: coordinator` — wave PRs target `develop`,
+not the default branch `main`, so a `Closes #N` line in the PR body does not
+close anything. After the merge the coordinator closes each ticket itself
+(`gh issue close <n> --reason completed`); until then `emet cleanup` keeps the
+worker worktrees as not landed.
 
 ## Spec and ticket blocks
 

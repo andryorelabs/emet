@@ -4,6 +4,7 @@ import {
   mkdirSync,
   mkdtempSync,
   readdirSync,
+  readFileSync,
   rmSync,
   utimesSync,
   writeFileSync,
@@ -14,6 +15,7 @@ import path from "node:path";
 import {
   acquireLock,
   didAcquireLock,
+  didReclaimStaleLock,
   HOLDERLESS_LOCK_GRACE_MS,
   isLockStale,
   type LockHolder,
@@ -35,6 +37,19 @@ function buildHolder(overrides: Partial<LockHolder> = {}): LockHolder {
     acquiredAt: Date.now(),
     ...overrides,
   };
+}
+
+async function plantDeadHolder(root: string, lockDirectory: string): Promise<LockHolder> {
+  const deadProcess = Bun.spawn(["true"]);
+  await deadProcess.exited;
+  const staleHolder: LockHolder = {
+    pid: deadProcess.pid,
+    worktree: path.join(root, "gone-worktree"),
+    acquiredAt: 1,
+  };
+  mkdirSync(lockDirectory);
+  writeFileSync(path.join(lockDirectory, "holder.json"), JSON.stringify(staleHolder));
+  return staleHolder;
 }
 
 describe("emet-locks", () => {
@@ -109,6 +124,98 @@ describe("emet-locks", () => {
     test("a lock held by a live pid, well within maxAgeMs, is not stale", () => {
       didAcquireLock(lockDirectory, buildHolder());
       expect(isLockStale(lockDirectory, 999_999_999)).toBe(false);
+    });
+  });
+
+  describe("didReclaimStaleLock", () => {
+    test("releases a lock whose holder is dead and leaves no guard behind", async () => {
+      await plantDeadHolder(temporaryRoot, lockDirectory);
+      expect(didReclaimStaleLock(lockDirectory, 999_999_999)).toBe(true);
+      expect(existsSync(lockDirectory)).toBe(false);
+      expect(existsSync(`${lockDirectory}.reclaim`)).toBe(false);
+    });
+
+    test("never releases a lock held by a live, fresh holder", () => {
+      didAcquireLock(lockDirectory, buildHolder());
+      expect(didReclaimStaleLock(lockDirectory, 999_999_999)).toBe(false);
+      expect(readLockHolder(lockDirectory)?.pid).toBe(process.pid);
+    });
+
+    test("does nothing when the lock is vacant", () => {
+      expect(didReclaimStaleLock(lockDirectory, 999_999_999)).toBe(false);
+      expect(existsSync(`${lockDirectory}.reclaim`)).toBe(false);
+    });
+
+    test("yields while another reclaimer holds the guard", async () => {
+      await plantDeadHolder(temporaryRoot, lockDirectory);
+      didAcquireLock(`${lockDirectory}.reclaim`, buildHolder());
+      expect(didReclaimStaleLock(lockDirectory, 999_999_999)).toBe(false);
+      expect(existsSync(lockDirectory)).toBe(true);
+    });
+
+    test("clears an old guard even when its pid is alive, then reclaims", async () => {
+      await plantDeadHolder(temporaryRoot, lockDirectory);
+      const guardDirectory = `${lockDirectory}.reclaim`;
+      didAcquireLock(
+        guardDirectory,
+        buildHolder({ acquiredAt: Date.now() - HOLDERLESS_LOCK_GRACE_MS - 1000 }),
+      );
+      expect(didReclaimStaleLock(lockDirectory, 999_999_999)).toBe(false);
+      expect(existsSync(guardDirectory)).toBe(false);
+      expect(didReclaimStaleLock(lockDirectory, 999_999_999)).toBe(true);
+    });
+
+    test("never removes a guard another reclaimer acquired in the meantime", async () => {
+      await plantDeadHolder(temporaryRoot, lockDirectory);
+      const guardDirectory = `${lockDirectory}.reclaim`;
+      didAcquireLock(guardDirectory, buildHolder());
+      expect(didReclaimStaleLock(lockDirectory, 999_999_999)).toBe(false);
+      expect(readLockHolder(guardDirectory)?.pid).toBe(process.pid);
+    });
+
+    test("concurrent acquirers of a crashed lock never lose an update", async () => {
+      await plantDeadHolder(temporaryRoot, lockDirectory);
+      const counterPath = path.join(temporaryRoot, "counter.txt");
+      const readyDirectory = path.join(temporaryRoot, "ready");
+      const goPath = path.join(temporaryRoot, "go");
+      writeFileSync(counterPath, "0");
+      mkdirSync(readyDirectory);
+      const workerSource = `
+        const { existsSync, readFileSync, writeFileSync } = await import("node:fs");
+        const { acquireLock, releaseLock } = await import(process.env.LOCKS_PATH);
+        writeFileSync(process.env.READY_DIRECTORY + "/" + process.pid, "");
+        while (!existsSync(process.env.GO_PATH)) await Bun.sleep(1);
+        await acquireLock(process.env.LOCK_PATH, () => ({
+          pid: process.pid, worktree: process.cwd(), acquiredAt: Date.now(),
+        }), { timeoutMs: 15000, pollIntervalMs: 1, maxAgeMs: 999999999, logLabel: "worker" });
+        const current = Number(readFileSync(process.env.COUNTER_PATH, "utf8"));
+        await Bun.sleep(10);
+        writeFileSync(process.env.COUNTER_PATH, String(current + 1));
+        releaseLock(process.env.LOCK_PATH);
+      `;
+      const workerCount = 8;
+      const workers = Array.from({ length: workerCount }, () =>
+        Bun.spawn([process.execPath, "-e", workerSource], {
+          env: {
+            ...process.env,
+            LOCKS_PATH: path.resolve(import.meta.dir, "locks.ts"),
+            LOCK_PATH: lockDirectory,
+            COUNTER_PATH: counterPath,
+            READY_DIRECTORY: readyDirectory,
+            GO_PATH: goPath,
+          },
+          stdout: "ignore",
+          stderr: "ignore",
+        }),
+      );
+      while (readdirSync(readyDirectory).length < workerCount) {
+        // oxlint-disable-next-line eslint/no-await-in-loop -- barrier: wait until every worker is loaded
+        await Bun.sleep(10);
+      }
+      writeFileSync(goPath, "");
+      const exitCodes = await Promise.all(workers.map((worker) => worker.exited));
+      expect(exitCodes.every((code) => code === 0)).toBe(true);
+      expect(readFileSync(counterPath, "utf8")).toBe(String(workerCount));
     });
   });
 

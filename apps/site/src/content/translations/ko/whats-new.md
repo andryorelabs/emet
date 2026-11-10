@@ -2,8 +2,17 @@
 title: 새로운 소식
 description: emet 릴리스 노트. 각 버전에서 무엇이 바뀌었는지 정리합니다.
 seoTitle: "emet 새로운 소식: 릴리스 노트"
-sourceHash: ffd419a534a47352
+sourceHash: 9ac94745afe83a53
 ---
+
+## 0.6.1
+
+2026-11-10
+
+### 수정됨
+
+- 같은 오래된 락을 동시에 회수하는 두 프로세스가 더 이상 둘 다 임계 구역에 들어가지 않습니다. claim, Mailbox, tracker, `acquireLock`이 보호된 하나의 회수 로직을 공유합니다.
+- `emet tracker create-ticket`을 동시에 호출해도 더 이상 간헐적으로 실패하지 않습니다.
 
 ## 0.6.0
 

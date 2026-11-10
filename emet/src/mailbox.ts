@@ -2,7 +2,7 @@ import { existsSync, mkdirSync, readdirSync, readFileSync } from "node:fs";
 import path from "node:path";
 
 import { loadForgeConfig } from "./config";
-import { didAcquireLock, isLockStale, readLockHolder, releaseLock } from "./locks";
+import { didAcquireLock, didReclaimStaleLock, releaseLock } from "./locks";
 import { errorMessage, isObject } from "./narrow";
 import { assertSafeId, runDirectory, writeJsonAtomically } from "./runs";
 
@@ -97,19 +97,6 @@ function readBody(filePath: string): string {
   return body;
 }
 
-/**
- * Releases the counter lock only when its holder is readable, stale and unchanged
- * on a second read, so a lock another process just acquired is never taken over.
- */
-function didReclaimStaleCounterLock(lockDirectory: string): boolean {
-  const holder = readLockHolder(lockDirectory);
-  if (!holder || !isLockStale(lockDirectory, COUNTER_LOCK_STALE_MS)) return false;
-  const again = readLockHolder(lockDirectory);
-  if (again?.pid !== holder.pid || again.acquiredAt !== holder.acquiredAt) return false;
-  releaseLock(lockDirectory);
-  return true;
-}
-
 function withCounterLock<T>(
   directory: string,
   sleep: (milliseconds: number) => void,
@@ -126,7 +113,7 @@ function withCounterLock<T>(
         releaseLock(lockDirectory);
       }
     }
-    if (didReclaimStaleCounterLock(lockDirectory)) continue;
+    if (didReclaimStaleLock(lockDirectory, COUNTER_LOCK_STALE_MS)) continue;
     sleep(COUNTER_LOCK_RETRY_MS);
   }
   throw new Error(`timed out waiting for the question id lock in ${directory}`);

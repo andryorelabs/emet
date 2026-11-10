@@ -2,8 +2,17 @@
 title: Novedades
 description: Notas de versión de emet: qué cambió en cada versión.
 seoTitle: Novedades de emet: notas de versión
-sourceHash: ffd419a534a47352
+sourceHash: 9ac94745afe83a53
 ---
+
+## 0.6.1
+
+2026-11-10
+
+### Corregido
+
+- Dos procesos que recuperan a la vez el mismo lock caducado ya no pueden entrar ambos en la sección crítica; los claims, el Mailbox, el tracker y `acquireLock` comparten una única recuperación protegida.
+- Las llamadas concurrentes a `emet tracker create-ticket` ya no fallan de forma intermitente.
 
 ## 0.6.0
 

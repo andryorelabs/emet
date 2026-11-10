@@ -186,6 +186,91 @@ export function didAcquireLock(lockDirectory: string, holder: LockHolder): boole
   }
 }
 
+function isSameHolder(left: LockHolder | undefined, right: LockHolder | undefined): boolean {
+  return left?.pid === right?.pid && left?.acquiredAt === right?.acquiredAt;
+}
+
+/**
+ * Removes `lockDirectory` only if the holder inside it is the one `observed`.
+ * The directory is renamed away first, atomically, and the renamed holder is
+ * checked afterwards, so a lock acquired by someone else after `observed` was
+ * read is put back instead of deleted. If it cannot be put back because
+ * another process took the lock in the meantime, the renamed directory is left
+ * in place rather than deleted. Returns `true` only when the observed lock was
+ * removed.
+ */
+function didReleaseObservedLock(lockDirectory: string, observed: LockHolder | undefined): boolean {
+  const trashDirectory = `${lockDirectory}.released-${process.pid}-${randomUUID()}`;
+  try {
+    renameSync(lockDirectory, trashDirectory);
+  } catch (error) {
+    if (errnoCode(error) === "ENOENT") return false;
+    throw error;
+  }
+  if (isSameHolder(readLockHolder(trashDirectory), observed)) {
+    rmSync(trashDirectory, { recursive: true, force: true });
+    return true;
+  }
+  try {
+    renameSync(trashDirectory, lockDirectory);
+  } catch (error) {
+    const code = errnoCode(error);
+    if (code !== "EEXIST" && code !== "ENOTEMPTY") throw error;
+  }
+  return false;
+}
+
+function judgeStaleGuard(guardDirectory: string): {
+  readonly stale: boolean;
+  readonly holder: LockHolder | undefined;
+} {
+  if (!existsSync(guardDirectory)) return { stale: false, holder: undefined };
+  const holder = readLockHolder(guardDirectory);
+  const stale = holder
+    ? Date.now() - holder.acquiredAt > HOLDERLESS_LOCK_GRACE_MS
+    : isLockStale(guardDirectory, HOLDERLESS_LOCK_GRACE_MS);
+  return { stale, holder };
+}
+
+/**
+ * Releases a stale lock without letting two reclaimers both win. Reclaimers
+ * are serialized through a short-lived `<lock>.reclaim` guard; inside it the
+ * lock must still exist with the same holder and still be stale, and it is
+ * removed only if the holder found on removal is still that one. A lock
+ * another process just acquired (or one that is simply gone) is never taken
+ * over. The guard is held for microseconds, so one older than
+ * {@link HOLDERLESS_LOCK_GRACE_MS} is stale whether or not its pid is alive
+ * (a recycled pid must not wedge reclaiming forever) and is cleared the same
+ * rename-and-verify way, using the holder that was judged stale. Returns `true` when this call released the stale
+ * lock; the caller then retries its normal acquire. Returns `false` when the
+ * lock is not stale, another reclaimer holds the guard, or the lock changed,
+ * and the caller keeps polling.
+ */
+export function didReclaimStaleLock(lockDirectory: string, maxAgeMs: number): boolean {
+  if (!existsSync(lockDirectory) || !isLockStale(lockDirectory, maxAgeMs)) return false;
+  const observed = readLockHolder(lockDirectory);
+  const guardDirectory = `${lockDirectory}.reclaim`;
+  const guardHolder: LockHolder = {
+    pid: process.pid,
+    worktree: process.cwd(),
+    acquiredAt: Date.now(),
+  };
+  if (!didAcquireLock(guardDirectory, guardHolder)) {
+    const verdict = judgeStaleGuard(guardDirectory);
+    if (verdict.stale) didReleaseObservedLock(guardDirectory, verdict.holder);
+    return false;
+  }
+  try {
+    if (!existsSync(lockDirectory)) return false;
+    const current = readLockHolder(lockDirectory);
+    if (!isSameHolder(current, observed)) return false;
+    if (!isLockStale(lockDirectory, maxAgeMs)) return false;
+    return didReleaseObservedLock(lockDirectory, observed);
+  } finally {
+    didReleaseObservedLock(guardDirectory, guardHolder);
+  }
+}
+
 export function releaseLock(lockDirectory: string): void {
   const trashDirectory = `${lockDirectory}.released-${process.pid}-${randomUUID()}`;
   try {
@@ -236,11 +321,12 @@ export async function acquireLock(
     if (didAcquireLock(lockDirectory, buildHolder())) return;
     if (existsSync(lockDirectory) && isLockStale(lockDirectory, maxAgeMs)) {
       const holder = readLockHolder(lockDirectory);
-      console.log(
-        `${logLabel}: reclaiming a stale lock${holder ? ` (pid ${holder.pid} is no longer alive, or the lock is too old)` : " (unreadable holder metadata)"}...`,
-      );
-      releaseLock(lockDirectory);
-      continue;
+      if (didReclaimStaleLock(lockDirectory, maxAgeMs)) {
+        console.log(
+          `${logLabel}: reclaimed a stale lock${holder ? ` (pid ${holder.pid} is no longer alive, or the lock is too old)` : " (unreadable holder metadata)"}...`,
+        );
+        continue;
+      }
     }
     if (Date.now() >= deadline) {
       const holder = readLockHolder(lockDirectory);
