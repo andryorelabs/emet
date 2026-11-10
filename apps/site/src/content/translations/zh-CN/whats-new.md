@@ -2,8 +2,17 @@
 title: 新功能
 description: emet 的发布说明：每个版本都有哪些变化。
 seoTitle: "emet 新功能：发布说明"
-sourceHash: ffd419a534a47352
+sourceHash: 9ac94745afe83a53
 ---
+
+## 0.6.1
+
+2026-11-10
+
+### 已修复
+
+- 两个进程同时回收同一个过期锁时，不再可能同时进入临界区；claim、Mailbox、tracker 和 `acquireLock` 共用一个受保护的回收流程。
+- 并发调用 `emet tracker create-ticket` 不再间歇性失败。
 
 ## 0.6.0
 

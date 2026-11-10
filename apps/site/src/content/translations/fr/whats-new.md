@@ -2,8 +2,17 @@
 title: Nouveautés
 description: Notes de version d'emet : ce qui a changé dans chaque version.
 seoTitle: Nouveautés d'emet : notes de version
-sourceHash: ffd419a534a47352
+sourceHash: 9ac94745afe83a53
 ---
+
+## 0.6.1
+
+2026-11-10
+
+### Corrigé
+
+- Deux processus qui reprennent en même temps le même verrou périmé ne peuvent plus entrer tous deux dans la section critique ; les claims, la Mailbox, le tracker et `acquireLock` partagent une même reprise protégée.
+- Les appels concurrents à `emet tracker create-ticket` n'échouent plus de façon intermittente.
 
 ## 0.6.0
 
