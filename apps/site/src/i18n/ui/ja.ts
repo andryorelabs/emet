@@ -30,7 +30,8 @@ export const ja = {
     name: "emet",
     lineOne: "仕様からマージへ、",
     lineTwo: "承認は一度だけ。",
-    sentence: "Claude Code のプラグイン。アイデアからマージ済みの変更まで、承認は一度だけ。",
+    sentence:
+      "Claude Code と Codex のプラグイン。アイデアからマージ済みの変更まで、承認は一度だけ。",
     install: "emet をインストール",
     readDocs: "ドキュメントを読む",
     alt: "三本の小川が一つの川に合流する絵の谷。段々畑と、穏やかな空の下の草の丘に立つ小さな粘土のゴーレム。",
@@ -90,7 +91,7 @@ export const ja = {
       {
         question: "何が必要ですか？",
         answer:
-          "Claude Code、git、認証済みの gh、mattpocock-skills プラグインが必要です。Linux または macOS で動きます。",
+          "Claude Code または Codex CLI、git、認証済みの gh、mattpocock-skills プラグインが必要です。Linux または macOS で動きます。",
       },
       {
         question: "Windows で動きますか？",
@@ -135,7 +136,7 @@ export const ja = {
     alt: "低い朝霧に包まれた谷。淡い太陽とパステルの空。",
   },
   footer: {
-    description: "Claude Code のプラグイン。",
+    description: "Claude Code と Codex のプラグイン。",
     notice: "Anthropic とは提携しておらず、Anthropic の承認も受けていません",
     docs: "ドキュメント",
     whatsNew: "新着情報",

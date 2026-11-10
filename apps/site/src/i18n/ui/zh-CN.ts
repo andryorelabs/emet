@@ -31,7 +31,7 @@ export const zhCN = {
     name: "emet",
     lineOne: "从规格到合并，",
     lineTwo: "只需一次批准。",
-    sentence: "Claude Code 的插件。从想法到已合并的改动，只需一次批准。",
+    sentence: "Claude Code 和 Codex 的插件。从想法到已合并的改动，只需一次批准。",
     install: "安装 emet",
     readDocs: "阅读文档",
     alt: "一幅画出的山谷，三条溪流汇成一条河，有梯田，一个小小的黏土魔像站在平静天空下的草坡上。",
@@ -85,7 +85,7 @@ export const zhCN = {
       {
         question: "我需要什么？",
         answer:
-          "Claude Code、git、已认证的 gh 和 mattpocock-skills 插件，运行在 Linux 或 macOS 上。",
+          "Claude Code 或 Codex CLI、git、已认证的 gh 和 mattpocock-skills 插件，运行在 Linux 或 macOS 上。",
       },
       { question: "能在 Windows 上运行吗？", answer: "只能通过 WSL。Linux 和 macOS 可原生运行。" },
       { question: "支持哪些跟踪器？", answer: "Linear、GitHub Issues 或普通的本地文件。" },
@@ -117,7 +117,7 @@ export const zhCN = {
     alt: "低垂晨雾下的山谷，淡淡的太阳和粉彩色的天空。",
   },
   footer: {
-    description: "Claude Code 的插件。",
+    description: "Claude Code 和 Codex 的插件。",
     notice: "与 Anthropic 无关联，也未获得 Anthropic 认可",
     docs: "文档",
     whatsNew: "新动态",
