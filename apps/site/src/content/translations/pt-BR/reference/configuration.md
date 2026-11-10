@@ -2,7 +2,7 @@
 title: Referência de configuração
 description: Cada chave do emet.config.json com seu valor padrão e seu significado.
 seoTitle: Referência de configuração do emet
-sourceHash: f93a93f72cc341b1
+sourceHash: e234cb9ad3468e98
 ---
 
 Cada chave do `emet.config.json`, com seu valor padrão e seu significado. A fonte da verdade é [`emet/schema/emet.config.schema.json`](../../emet/schema/emet.config.schema.json). Os termos seguem o [GLOSSARY.md](../../GLOSSARY.md). Voltar ao [README](../../README.md).
@@ -93,7 +93,7 @@ Lido apenas quando `agentHost` é `"codex"`. Todas as chaves são opcionais. O e
 - `models.session`: `{ "model", "effort", "planEffort", "fallback" }` para a sessão que executa `$emet:run`. `planEffort` vale até a primeira aprovação.
 - `effort`: quando definido, substitui o esforço de todos os papéis.
 - `minVersion` (padrão `0.167.0`): a versão mais antiga da CLI `codex` que o `emet doctor` aceita.
-- `sandbox` (padrão `workspace-write`): o modo de sandbox dos workers do Codex. `danger-full-access` é uma opção explícita.
+- `sandbox` (padrão `danger-full-access`): o modo de sandbox passado como `-s` por `emet dispatch`, `emet review-run` e por um `emet launch` do Codex. `workspace-write` também é aceito, mas deixa `.git` somente leitura, então os workers não conseguem fazer commit. Seja qual for o valor, `emet guard` nega `git push` no Codex, e o `config.toml` do overlay gerado contém apenas o marketplace e o plugin do emet, tabelas trusted para os diretórios da própria execução e o modelo e o esforço resolvidos (nunca as suas próprias tabelas). Veja o [guia do Codex](../guide/codex.md) e o [ADR-0022](../adr/0022-codex-workers-run-unsandboxed-by-default.md).
 
 ## review
 

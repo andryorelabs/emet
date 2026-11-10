@@ -2,7 +2,7 @@
 title: 配置参考
 description: emet.config.json 中的每个键，包括其默认值和含义。
 seoTitle: emet 配置参考
-sourceHash: f93a93f72cc341b1
+sourceHash: e234cb9ad3468e98
 ---
 
 `emet.config.json` 中的每个键，及其默认值和含义。权威来源是 [`emet/schema/emet.config.schema.json`](../../emet/schema/emet.config.schema.json)。术语遵循 [GLOSSARY.md](../../GLOSSARY.md)。返回 [README](../../README.md)。
@@ -93,7 +93,7 @@ sourceHash: f93a93f72cc341b1
 - `models.session`: 用于运行 `$emet:run` 的会话：`{ "model", "effort", "planEffort", "fallback" }`。`planEffort` 在首次批准之前生效。
 - `effort`: 设置后会替换所有角色的强度。
 - `minVersion` (默认 `0.167.0`): `emet doctor` 接受的最旧 `codex` CLI 版本。
-- `sandbox` (默认 `workspace-write`): Codex worker 的沙箱模式。`danger-full-access` 需要显式选择。
+- `sandbox` (默认 `danger-full-access`): `emet dispatch`、`emet review-run` 以及 Codex 的 `emet launch` 以 `-s` 传入的沙箱模式。也接受 `workspace-write`，但它会让 `.git` 变为只读，worker 因而无法提交。无论取何值，`emet guard` 都会在 Codex 上拒绝 `git push`，生成的覆盖层 `config.toml` 只包含 emet 市场和插件、针对本次运行自身目录的 trusted 表，以及解析出的模型和强度（绝不包含你自己的表）。参见 [Codex 指南](../guide/codex.md)和 [ADR-0022](../adr/0022-codex-workers-run-unsandboxed-by-default.md)。
 
 ## review
 

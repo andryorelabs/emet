@@ -2,7 +2,7 @@
 title: 模型与推理强度
 description: emet 如何为每个角色选择模型和推理强度，以及哪些配置键可以修改它们。
 seoTitle: emet 的模型与推理强度
-sourceHash: 7ab8a2e10ec9cae7
+sourceHash: a46d2e68a403f4f9
 ---
 
 `/emet` 会自动为每个角色选择模型和推理强度；运行中无需手动切换任何设置。所有配置键都在[配置参考](../reference/configuration.md#models)中。
@@ -66,13 +66,15 @@ sourceHash: 7ab8a2e10ec9cae7
 | Reviewer，`high` 档     | `gpt-6-astra` | `high`                     | `gpt-6.1-sol`                 |
 | 分诊                    | `gpt-6-luna`  | `medium`                   | `gpt-6.1-terra`               |
 
-`emet dispatch` 会把每个 slug 与 Codex 模型缓存对照。缓存中列出且支持该强度的 slug 会保留；否则依次采用模型的升级目标、备选项，最后省略 `-m`，并记录每一次替换。永远不会发送强度 `ultra`。`passive` 档不会启动 reviewer。
+`emet dispatch` 和 `emet review-run` 会把每个 slug 与 `models_cache.json` 对照，该文件优先从运行的覆盖层主目录读取，否则从你真实的 Codex 主目录读取（只读）。缓存中列出且支持该强度的 slug 会保留；否则依次采用模型的升级目标、备选项，最后省略 `-m`，并记录每一次替换；当什么都解析不出时，`emet review-run` 会在调用模型之前失败，并指出角色和已列出的 slug。运行生成的覆盖层 `config.toml` 也带有解析出的 `model` 和 `model_reasoning_effort`。永远不会发送强度 `ultra`。`passive` 档不会启动 reviewer。
 
 在实际跑过几个波次之后，遇到下列情况时重新调整：
 
 - worker 需要反复多轮修复：提高 `codex.models.worker.effort`，或在高风险工单上写一行 `Model:`；
 - `high` 档波次的评审漏掉问题：提高 `codex.models.reviewer.high.effort`；
 - 日志显示发生了替换：Codex 重命名或下线了某个 slug，请更新该 slug。
+
+[探测报告](../research/codex-probe-report.md)中的真实 Codex 运行使用了强度 `low` 和解析出的最便宜模型（`gpt-6-luna`），reviewer 模型也是通过缓存解析的。
 
 ## 为什么只用一个评审者
 
