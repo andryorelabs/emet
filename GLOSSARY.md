@@ -80,6 +80,10 @@ _Avoid_: checkpoint, approval
 A glob of files a ticket is allowed to edit, enforced by the edit guard.
 _Avoid_: scope, allowlist
 
+**Mailbox**:
+The per-run record of a worker's questions to its coordinator and the coordinator's replies; the escalation channel for workers whose **Agent host** has no live messaging.
+_Avoid_: chat, inbox
+
 **Context budget**:
 The estimate in a ticket of how much a worker must read and write, used as a tripwire against oversized tickets.
 _Avoid_: token limit, size estimate
@@ -115,6 +119,7 @@ _Avoid_: status file, progress file
 - A **Worker** holds one **Claim**, one **Slot** and one **Worktree** while live.
 - The **Coordinator** merges **Worker** branches into the **Integration branch**; a **Reviewer** and the **Gates** check it before it lands.
 - A **Worker** may edit only its ticket's **Surfaces** and must keep its **Handoff** current.
+- A **Claim** carries its ticket's **Surfaces**; two live **Claims** of different **Runs** never have overlapping **Surfaces**.
 - Everything above belongs to one **Run**, which executes in one **Agent host**.
 
 ## Flagged ambiguities

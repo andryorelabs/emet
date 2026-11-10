@@ -2,8 +2,22 @@
 title: 新機能
 description: emet のリリースノート。各バージョンでの変更点をまとめています。
 seoTitle: "emet の新機能: リリースノート"
-sourceHash: e658e982cb203285
+sourceHash: ffd419a534a47352
 ---
+
+## 0.6.0
+
+2026-11-10
+
+### 追加
+
+- Codex worker 向けの Mailbox: `emet ask` が質問を記録し(`--wait` で返信をポーリング)、`emet inbox` が未解決の質問を一覧し、`emet reply` が質問に回答します。これにより worker は引き継ぎメモ経由でエスカレーションする必要がなくなります。
+- `emet dispatch --wait` は、稼働中の worker に未解決の質問がある間 `question <ticket> <id>` を出力し、その worker を停止状態と判定することはありません。
+- `emet claims --reserve` はチケットの編集対象を保存し、他の実行の編集対象と重なる予約を拒否します。
+
+### 修正
+
+- `emet dispatch --wait` は、`emet results --write` が結果を書き込む git-common-dir の実行ディレクトリから結果を読み取ります。
 
 ## 0.5.2
 

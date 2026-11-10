@@ -2,8 +2,22 @@
 title: Neuigkeiten
 description: Release Notes für emet: was sich in jeder Version geändert hat.
 seoTitle: "Neuigkeiten in emet: Release Notes"
-sourceHash: e658e982cb203285
+sourceHash: ffd419a534a47352
 ---
+
+## 0.6.0
+
+2026-11-10
+
+### Hinzugefügt
+
+- Eine Mailbox für Codex-Worker: `emet ask` zeichnet eine Frage auf (und fragt mit `--wait` die Antwort ab), `emet inbox` listet offene Fragen auf und `emet reply` beantwortet eine, sodass ein Worker nicht mehr über eine Übergabenotiz eskalieren muss.
+- `emet dispatch --wait` gibt `question <ticket> <id>` aus, solange ein laufender Worker eine offene Frage hat, und stuft diesen Worker nie als hängend ein.
+- `emet claims --reserve` speichert die Bearbeitungsflächen des Tickets und lehnt eine Reservierung ab, die sich mit den Flächen eines anderen Laufs überschneidet.
+
+### Behoben
+
+- `emet dispatch --wait` liest Ergebnisse aus dem Laufverzeichnis im git-common-dir, wo `emet results --write` sie schreibt.
 
 ## 0.5.2
 

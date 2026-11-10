@@ -184,18 +184,18 @@ export function classifyRun(
 
 const SAFE_ID_PATTERN = /^[A-Za-z0-9._-]{1,128}$/;
 
-function assertSafeId(label: string, value: string): void {
+export function assertSafeId(label: string, value: string): void {
   if (!SAFE_ID_PATTERN.test(value) || value === "." || value === "..") {
     throw new Error(`emet-runs: unsafe ${label} ${JSON.stringify(value)}`);
   }
 }
 
-function runDirectory(commonDirectory: string, runId: string): string {
+export function runDirectory(commonDirectory: string, runId: string): string {
   assertSafeId("run id", runId);
   return path.join(resolveRunDir(commonDirectory).path, "runs", runId);
 }
 
-function writeJsonAtomically(filePath: string, value: unknown): void {
+export function writeJsonAtomically(filePath: string, value: unknown): void {
   mkdirSync(path.dirname(filePath), { recursive: true });
   const temporaryPath = `${filePath}.${process.pid}.tmp`;
   writeFileSync(temporaryPath, `${JSON.stringify(value, null, 2)}\n`);

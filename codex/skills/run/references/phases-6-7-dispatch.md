@@ -52,8 +52,10 @@ narrow the globs or serialize one into a later wave (add a blocking edge)
 before dispatching. Exit 2 is a malformed input — fix it.
 
 Immediately before each survivor's `emet dispatch` call, reserve it with
-`emet claims --reserve <ticket> --run <runId> --anchor <anchorPid>` (the
-real dispatch mutex — see `references/incidents.md` §INC-285),
+`emet claims --reserve <ticket> --run <runId> --anchor <anchorPid> --surfaces
+<glob>[,<glob>...]`, passing the ticket's `## Allowed edit surfaces` (the
+real dispatch mutex — see `references/incidents.md` §INC-285;
+it also denies surfaces that overlap a live or idle claim of another run),
 then take a worker slot with `emet slots --acquire --run <runId> --anchor
 <anchorPid> --ticket <ticket>` (the `concurrency.maxLiveWorkers` cap — a
 single pool shared **host-wide**, by every coordinator on this machine across
@@ -84,7 +86,7 @@ running in _your_ cwd can get right. `emet lock-reason` honors this repo's
 `worktree.lockReason` override if it has one, and refuses to emit a reason
 this CLI's own parser can't read back.
 
-For each ticket, after its claim, slot and dispatch record exist, write the filled worker prompt to a file and start the worker with `emet dispatch --role worker --run <runId> --ticket <ticket> --prompt-file <file> [--model <model>] [--effort <effort>]`; start up to `concurrency.waveSize` of them in parallel, each as its own background shell command. The model is `resolveWorkerModel(config, <ticket's Model: line>)`: the ticket's `Model:` wins, else the `codex` section's worker model; pass it as `--model` (and `--effort` where the ticket sets one), otherwise `emet dispatch` resolves it itself. `emet dispatch` creates the worktree, locks it, builds the run's Codex home and starts the worker. Collect each result with `emet dispatch --wait --run <runId> --ticket <ticket> [--timeout <seconds>]`, which prints the recorded result status.
+For each ticket, after its claim, slot and dispatch record exist, write the filled worker prompt to a file and start the worker with `emet dispatch --role worker --run <runId> --ticket <ticket> --prompt-file <file> [--model <model>] [--effort <effort>]`; start up to `concurrency.waveSize` of them in parallel, each as its own background shell command. The model is `resolveWorkerModel(config, <ticket's Model: line>)`: the ticket's `Model:` wins, else the `codex` section's worker model; pass it as `--model` (and `--effort` where the ticket sets one), otherwise `emet dispatch` resolves it itself. `emet dispatch` creates the worktree, locks it, builds the run's Codex home and starts the worker. Collect each result with `emet dispatch --wait --run <runId> --ticket <ticket> [--timeout <seconds>]`, which prints the recorded result status. `emet dispatch --wait` prints `question <ticket> <id>` instead of a result status while a live worker has an open question: read `emet inbox --run <runId>`, answer with `emet reply --run <runId> --ticket <ticket> --id <n> --body <text>`, then resume `emet dispatch --wait` for that ticket.
 
 Just before each `emet dispatch` call, write the dispatch record
 `.emet/runs/<runId>/dispatch/<ticket>.json` = `{"baseline": "<trunk sha>",
@@ -127,7 +129,7 @@ all fell back to `grep` + full `Read` and blew past the context-budget
 targets above when this was left as a "prefer grep" aside instead of a named
 command — see `references/incidents.md`).
 
-Do **not** instruct workers to use `LSP`: it is not available to a Codex worker. A worker that needs a real `findReferences` states the question in its handoff note and the coordinator answers it.
+Do **not** instruct workers to use `LSP`: it is not available to a Codex worker. A worker that needs a real `findReferences` asks the coordinator with `emet ask`.
 
 Include, too: **a worker never dispatches agents of its own** — no spawned agents, no forks, not even for a quick read-only lookup. Phase 7 step 6's
 `code-review`-nesting prohibition below is the specific incident this came

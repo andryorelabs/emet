@@ -14,7 +14,7 @@ const BYTE_CEILINGS: Readonly<Record<string, number>> = {
   "commands/run.md": 8270,
   "emet/reference/incidents.md": 12950,
   "emet/reference/phases-1-5.md": 11300,
-  "emet/reference/phases-6-7-dispatch.md": 16310,
+  "emet/reference/phases-6-7-dispatch.md": 16810,
   "emet/reference/phases-8-closeout.md": 13350,
   "emet/reference/phases-9-handoff.md": 4980,
   "emet/reference/reviewer-prompt.md": 2550,

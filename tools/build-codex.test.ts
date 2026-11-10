@@ -25,6 +25,28 @@ function dig(value: unknown, ...keys: string[]): unknown {
   return current;
 }
 
+describe("mailbox escalation", () => {
+  test("the Codex worker prompt escalates with emet ask, not the handoff note", () => {
+    const worker = readFileSync(
+      path.join(repoRoot, "codex/skills/run/references/worker-prompt.md"),
+      "utf8",
+    );
+    expect(worker).toContain("emet ask --run <runId> --ticket <ticket>");
+    expect(worker).toContain("--wait <n>");
+    expect(worker).toContain("BLOCKED");
+  });
+
+  test("the coordinator reads the inbox and replies on a question status", () => {
+    const dispatch = readFileSync(
+      path.join(repoRoot, "codex/skills/run/references/phases-6-7-dispatch.md"),
+      "utf8",
+    );
+    expect(dispatch).toContain("emet inbox --run <runId>");
+    expect(dispatch).toContain("emet reply --run <runId>");
+    expect(dispatch).not.toContain("states the question in its handoff note");
+  });
+});
+
 describe("transformPrompt", () => {
   test("rewrites plugin-root paths to skill-relative references", () => {
     expect(transformPrompt("see `${CLAUDE_PLUGIN_ROOT}/emet/reference/worker-prompt.md`")).toBe(

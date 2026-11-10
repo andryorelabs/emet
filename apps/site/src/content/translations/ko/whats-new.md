@@ -2,8 +2,22 @@
 title: 새로운 소식
 description: emet 릴리스 노트. 각 버전에서 무엇이 바뀌었는지 정리합니다.
 seoTitle: "emet 새로운 소식: 릴리스 노트"
-sourceHash: e658e982cb203285
+sourceHash: ffd419a534a47352
 ---
+
+## 0.6.0
+
+2026-11-10
+
+### 추가됨
+
+- Codex worker용 Mailbox: `emet ask`는 질문을 기록하고(`--wait`로 답변을 폴링), `emet inbox`는 열린 질문을 나열하며, `emet reply`는 질문에 답합니다. 이제 worker가 인수인계 메모로 에스컬레이션할 필요가 없습니다.
+- `emet dispatch --wait`는 실행 중인 worker에게 열린 질문이 있는 동안 `question <ticket> <id>`를 출력하며, 그 worker를 정체된 것으로 분류하지 않습니다.
+- `emet claims --reserve`는 티켓의 편집 대상 범위를 저장하고, 다른 실행의 범위와 겹치는 예약을 거부합니다.
+
+### 수정됨
+
+- `emet dispatch --wait`는 `emet results --write`가 결과를 쓰는 git-common-dir의 실행 디렉터리에서 결과를 읽습니다.
 
 ## 0.5.2
 

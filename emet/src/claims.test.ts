@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import {
+  copyFileSync,
   existsSync,
   mkdirSync,
   mkdtempSync,
@@ -15,11 +16,13 @@ import path from "node:path";
 import {
   didReserveTicket,
   listReservations,
+  parseSurfacesFlag,
   pruneDeadReservations,
   releaseTicket,
   type Reservation,
   shouldWriteReservation,
 } from "./claims";
+import { resolveSessionSlug } from "./runs";
 
 /**
  * A pid outside the kernel's pid range (`pid_max` is 4194304 even on a
@@ -348,5 +351,170 @@ describe("legacy claims directory fallback", () => {
   test("an empty emet directory appearing next to it does not hide the legacy reservation", async () => {
     mkdirSync(path.join(repositoryRoot, ".git", "emet"));
     expect(await listReservations()).toMatchObject([{ runId: "run-legacy", ticket: "AO-777" }]);
+  });
+});
+
+describe("cross-run surface overlap on reserve", () => {
+  let forgeDirectory: string;
+  const LIVE = {
+    isAnchorAliveFn: (pid: number) => pid === LIVE_MARKER_PID,
+    transcriptMtimeFn: () => null,
+  };
+  const IDLE = { isAnchorAliveFn: () => false, transcriptMtimeFn: () => Date.now() };
+
+  beforeEach(() => {
+    forgeDirectory = mkdtempSync(path.join(os.tmpdir(), "emet-claims-surfaces-"));
+  });
+
+  afterEach(() => {
+    rmSync(forgeDirectory, { recursive: true, force: true });
+  });
+
+  function reserve(
+    runId: string,
+    anchorPid: number,
+    ticket: string,
+    surfaces?: readonly string[],
+    options: Parameters<typeof didReserveTicket>[4] = LIVE,
+  ): ReturnType<typeof didReserveTicket> {
+    return didReserveTicket(runId, anchorPid, ticket, forgeDirectory, options, surfaces);
+  }
+
+  test("stores the surfaces on the claim", async () => {
+    expect(await reserve("run-a", LIVE_MARKER_PID, "AO-1", ["emet/src/a.ts"])).toBe(true);
+    expect(await listReservations(forgeDirectory)).toMatchObject([
+      { runId: "run-a", ticket: "AO-1", surfaces: ["emet/src/a.ts"] },
+    ]);
+  });
+
+  test("denies a reserve whose surfaces overlap a live claim of another run", async () => {
+    await reserve("run-a", LIVE_MARKER_PID, "AO-1", ["emet/src/a.ts"]);
+    expect(await reserve("run-b", LIVE_MARKER_PID, "AO-9", ["emet/src/**"])).toEqual({
+      otherRun: "run-a",
+      otherTicket: "AO-1",
+      globA: "emet/src/**",
+      globB: "emet/src/a.ts",
+    });
+    expect((await listReservations(forgeDirectory)).map((entry) => entry.ticket)).toEqual(["AO-1"]);
+  });
+
+  test("an idle claim of another run blocks too", async () => {
+    await reserve("run-a", IMPOSSIBLE_PID, "AO-1", ["docs/**"]);
+    expect(await reserve("run-b", process.pid, "AO-9", ["docs/x.md"], IDLE)).toMatchObject({
+      otherRun: "run-a",
+      otherTicket: "AO-1",
+    });
+  });
+
+  test("ignores a dead claim of another run", async () => {
+    await reserve("run-a", IMPOSSIBLE_PID, "AO-1", ["emet/src/a.ts"]);
+    expect(await reserve("run-b", LIVE_MARKER_PID, "AO-9", ["emet/src/**"])).toBe(true);
+  });
+
+  test("ignores claims of the same run", async () => {
+    await reserve("run-a", LIVE_MARKER_PID, "AO-1", ["emet/src/a.ts"]);
+    expect(await reserve("run-a", LIVE_MARKER_PID, "AO-2", ["emet/src/**"])).toBe(true);
+  });
+
+  test("disjoint surfaces of another live run do not block", async () => {
+    await reserve("run-a", LIVE_MARKER_PID, "AO-1", ["docs/**"]);
+    expect(await reserve("run-b", LIVE_MARKER_PID, "AO-9", ["emet/src/**"])).toBe(true);
+  });
+
+  test("a reserve without surfaces behaves as before and stores none", async () => {
+    await reserve("run-a", LIVE_MARKER_PID, "AO-1", ["emet/**"]);
+    expect(await reserve("run-b", LIVE_MARKER_PID, "AO-9")).toBe(true);
+    const stored = (await listReservations(forgeDirectory)).find(
+      (entry) => entry.ticket === "AO-9",
+    );
+    expect(stored?.surfaces).toBeUndefined();
+  });
+
+  test("a stored claim without surfaces never blocks a later reserve with surfaces", async () => {
+    await reserve("run-a", LIVE_MARKER_PID, "AO-1");
+    expect(await reserve("run-b", LIVE_MARKER_PID, "AO-9", ["**"])).toBe(true);
+  });
+
+  test("rejects an empty surface list before writing anything", async () => {
+    expect(reserve("run-a", LIVE_MARKER_PID, "AO-1", [])).rejects.toThrow(/surfaces/);
+    expect(await listReservations(forgeDirectory)).toEqual([]);
+  });
+});
+
+describe("parseSurfacesFlag", () => {
+  test("splits on commas outside braces", () => {
+    expect(parseSurfacesFlag("emet/src/{a,b}.ts,docs/**")).toEqual([
+      "emet/src/{a,b}.ts",
+      "docs/**",
+    ]);
+  });
+
+  test("trims entries and rejects an empty list", () => {
+    expect(parseSurfacesFlag(" a.ts , b/** ")).toEqual(["a.ts", "b/**"]);
+    expect(() => parseSurfacesFlag(" , ")).toThrow(/--surfaces/);
+  });
+});
+
+describe("claims --reserve --surfaces CLI", () => {
+  let repo: string;
+  let home: string;
+
+  /** Touching r1's transcript under the fake `HOME` makes its claim idle. */
+  function transcriptOf(runId: string): string {
+    return path.join(home, ".claude", "projects", resolveSessionSlug(repo), `${runId}.jsonl`);
+  }
+
+  beforeEach(() => {
+    repo = realpathSync(mkdtempSync(path.join(os.tmpdir(), "emet-claims-cli-")));
+    home = realpathSync(mkdtempSync(path.join(os.tmpdir(), "emet-claims-home-")));
+    Bun.spawnSync(["git", "-C", repo, "init", "-q"]);
+    copyFileSync(
+      path.join(import.meta.dir, "..", "..", "emet.config.json"),
+      path.join(repo, "emet.config.json"),
+    );
+  });
+
+  afterEach(() => {
+    rmSync(repo, { recursive: true, force: true });
+    rmSync(home, { recursive: true, force: true });
+  });
+
+  function reserveCli(
+    runId: string,
+    ticket: string,
+    surfaces: string,
+  ): { exitCode: number; stderr: string } {
+    const result = Bun.spawnSync(
+      [
+        "bun",
+        path.join(import.meta.dir, "claims.ts"),
+        "--reserve",
+        ticket,
+        "--run",
+        runId,
+        "--anchor",
+        String(IMPOSSIBLE_PID),
+        "--surfaces",
+        surfaces,
+      ],
+      { cwd: repo, stdout: "pipe", stderr: "pipe", env: { ...process.env, HOME: home } },
+    );
+    return { exitCode: result.exitCode, stderr: result.stderr.toString() };
+  }
+
+  test("exits 1 naming the other run, ticket and both globs; succeeds once it is dead", () => {
+    expect(reserveCli("r1", "CLA-1", "emet/src/a.ts").exitCode).toBe(0);
+    mkdirSync(path.dirname(transcriptOf("r1")), { recursive: true });
+    writeFileSync(transcriptOf("r1"), "{}\n");
+
+    const denied = reserveCli("r2", "CLA-9", "emet/src/**");
+    expect(denied.exitCode).toBe(1);
+    expect(denied.stderr).toContain("run r1");
+    expect(denied.stderr).toContain("CLA-1");
+    expect(denied.stderr).toContain("emet/src/**");
+    expect(denied.stderr).toContain("emet/src/a.ts");
+
+    rmSync(transcriptOf("r1"));
+    expect(reserveCli("r2", "CLA-9", "emet/src/**").exitCode).toBe(0);
   });
 });

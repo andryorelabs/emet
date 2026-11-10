@@ -46,6 +46,9 @@ commands:
   review    --ticket <ticket> [--round <n>]
   dispatch  --role worker --run <id> --ticket <id> --prompt-file <f> [--wait]  — start a Codex worker (Codex host)
   review-run --package <dir> --tier <tier>  — run a Codex review (Codex host)
+  ask       --run <id> --ticket <ticket> (--body <text> | --wait <n> [--slice <seconds>])  — worker mailbox: ask the coordinator, or wait for the reply (exit 0 reply, 3 slice timeout, 4 expired)
+  inbox     --run <id>  — open worker questions as JSON
+  reply     --run <id> --ticket <ticket> --id <n> --body <text>  — answer a worker question
   approve   --run <id>
   results   --run <id> [--ticket <ticket>]
   materialize-log --run <id> [--ticket <ticket> --id <tracker-id>]
@@ -201,6 +204,13 @@ async function main(): Promise<void> {
     case "review-run": {
       const { run } = await import("../src/review-run");
       process.exitCode = await run(rest);
+      return;
+    }
+    case "ask":
+    case "inbox":
+    case "reply": {
+      const { run } = await import("../src/mailbox");
+      await run(command, rest);
       return;
     }
     case "approve": {

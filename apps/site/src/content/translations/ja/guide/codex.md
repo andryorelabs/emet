@@ -2,7 +2,7 @@
 title: Codex で emet を実行する
 description: Codex CLI 側のインストール、エージェントホストの選択、単一の承認、既知の制限を説明します。
 seoTitle: Codex で emet を実行する
-sourceHash: 2941f08113ffa231
+sourceHash: fedf7f4694193076
 ---
 
 emet は Claude Code だけでなく Codex CLI でも実行できます。用語は [GLOSSARY.md](../../GLOSSARY.md) に従います。実行が動作する製品を**エージェントホスト**と呼びます。このページでは、Codex 側のインストール、ホストの選択、単一の承認、既知の制限を説明します。[ドキュメント索引](../README.md)に戻ります。
@@ -54,7 +54,9 @@ emet が求める承認は、計画の後の 1 回だけです。Claude Code で
 
 - `emet dispatch --role worker` は、クレームとスロットを確認し、`.emet/worktrees/agent-<ticket>` を作成し、`.emet/runs/<run>/codex-home/` の下に実行ごとの `CODEX_HOME` オーバーレイを構築します。続いて、解決済みのモデルとエフォート、`codex.sandbox` モード（既定は `danger-full-access`）、`--json`、`--output-schema` を付けて `codex exec` を起動します。イベントは `.emet/runs/<run>/codex/<ticket>.jsonl` に記録されます。ワーカーは `thread.started` イベントの `threadId` とその JSONL パスで識別され、プロセス ID は補助的なフィールドにすぎません。
 - オーバーレイはリンクではなく生成されます。`auth.json` はシンボリックリンクされ（コピーされることはありません）、emet プラグインのキャッシュは存在すれば Codex ホームからリンクされ、オーバーレイは独自の最小限の `config.toml` を書き出します。内容は、ローカルマーケットプレイスと `[plugins."emet@emet-marketplace"] enabled = true`、その実行自身のディレクトリに対してのみの `trusted` な `[projects."<dir>"]` テーブル、解決済みの `model` と `model_reasoning_effort` です。あなたの `[projects]` テーブルやその他の設定はコピーされず、`~/.codex` に書き込まれることもありません。
-- オーバーレイの `rules/default.rules` は、`git add`、`git commit`、`git status`、`git worktree`、`git -C <dir> ...`、および `emet` のサブコマンド `dispatch`、`review-run`、`launch`、`claims`、`slots`、`results`、`handoff` を許可し、`git push` を禁止します。既定のサンドボックスはもう書き込みを妨げないため、`emet guard` も、argv が `git push` を実行する `Bash` コマンドを、`git -C <dir> push` や `git --git-dir=<dir> push` を含めて、サンドボックスに関係なく拒否します。
+- オーバーレイの `rules/default.rules` は、`git add`、`git commit`、`git status`、`git worktree`、`git -C <dir> ...`、および `emet` のサブコマンド `dispatch`、`review-run`、`launch`、`claims`、`slots`、`results`、`handoff`、`ask` を許可し、`git push` を禁止します。既定のサンドボックスはもう書き込みを妨げないため、`emet guard` も、argv が `git push` を実行する `Bash` コマンドを、`git -C <dir> push` や `git --git-dir=<dir> push` を含めて、サンドボックスに関係なく拒否します。
+- ワーカーがコーディネーターへのサイドチャネルを持つことはありません。ワーカーは実行ごとのメールボックスを通じてエスカレーションします。`emet ask --run <run> --ticket <ticket> --body <text>` は質問を記録してその id を出力し、`emet ask ... --wait <n>` は返信をポーリングします（終了コード 0 は返信を出力し、3 は待機枠が経過したこと、4 は `budgets.askWaitMinutes` を使い切ったことを意味し、その場合ワーカーは BLOCKED の結果を書いて終了します）。稼働中のワーカーに未回答の質問がある間、`emet dispatch --wait` は結果ステータスの代わりに `question <ticket> <id>` を出力し、そのワーカーを停止と分類することはありません。コーディネーターは `emet inbox --run <run>` を読み、`emet reply --run <run> --ticket <ticket> --id <n> --body <text>` で回答し、`emet dispatch --wait` を再開します。記録された結果は、未回答の質問より常に優先されます。[ADR-0023](../adr/0023-cli-owned-mailbox-for-codex-workers.md) を参照してください。
+- 結果は `<git-common-dir>/.emet/runs/<run>/results/` から読み取られます。これは `emet results --write` の書き込み先と同じ場所なので、独自の worktree にいるワーカーも見つかります。
 - `emet review-run` は、`emet review-package` が作るパッケージに対して、レビュアーを読み取り専用で実行します。`passive` ティアではプロセスを起動しません。
 - モデルは、実行ホーム内の `models_cache.json`、なければ実際の Codex ホーム内の `models_cache.json`（読み取り専用）に対して解決されます。設定されたスラッグが一覧にない場合は置き換えられ、その置き換えが記録されます。何も解決できない場合、`emet review-run` はモデル呼び出しの前に、ロールと一覧にあるスラッグを示して失敗します。
 - 使用量とストールの検出は、記録された JSONL を読みます。トークン使用量は `turn.completed` イベントから、生存確認はファイルが増え続けているかどうかから得るため、別の pid 名前空間にあるワーカーも生存していると判定されます。`emet preflight` と `emet cleanup` は、回収可能な所有者のいないワークツリー（ワーカーブランチ、チケットがランディング済み、クリーンなツリー、他者のロックなし）について同じ規則を共有しているため、preflight が `emet cleanup` の実行を促すのは、cleanup が実際に動作する場合だけです。

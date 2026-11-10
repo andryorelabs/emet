@@ -64,6 +64,8 @@ comment, on any ticket. The coordinator is the single writer; your channel is
 the handoff note and the result file below. Never dispatch an `emet dispatch` of your
 own — no forks, not even for a quick read-only lookup.
 
+When you need a decision only the coordinator can make, ask it with (`<runId>` and `<ticket>` are the run id and your ticket id from this prompt) `emet ask --run <runId> --ticket <ticket> --body "<question>"`, which prints `{"id":<n>}`. Then poll `emet ask --run <runId> --ticket <ticket> --wait <n>` until it exits 0 with the reply on stdout: exit 3 means the slice elapsed with no reply yet, so run it again; exit 4 means the wait budget is spent, so write a BLOCKED result with `emet results --write` and exit.
+
 Bootstrap this worktree, in this order:
 
 0. Claim it, as the very first thing you do:

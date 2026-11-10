@@ -2,8 +2,22 @@
 title: 新功能
 description: emet 的发布说明：每个版本都有哪些变化。
 seoTitle: "emet 新功能：发布说明"
-sourceHash: e658e982cb203285
+sourceHash: ffd419a534a47352
 ---
+
+## 0.6.0
+
+2026-11-10
+
+### 新增
+
+- 面向 Codex worker 的 Mailbox:`emet ask` 记录一个问题(并可用 `--wait` 轮询回复),`emet inbox` 列出未解决的问题,`emet reply` 回答其中一个,这样 worker 不再需要通过交接说明来上报。
+- 当运行中的 worker 有未解决的问题时,`emet dispatch --wait` 会输出 `question <ticket> <id>`,并且绝不会将该 worker 判定为停滞。
+- `emet claims --reserve` 会保存工单的编辑范围,并拒绝与其他运行的范围重叠的预留。
+
+### 修复
+
+- `emet dispatch --wait` 从 git-common-dir 的运行目录读取结果,`emet results --write` 正是把结果写到那里。
 
 ## 0.5.2
 

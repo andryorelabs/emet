@@ -2,7 +2,7 @@
 title: 在 Codex 上运行 emet
 description: 介绍如何安装 Codex 一侧、选择 Agent 宿主、唯一的一次批准以及已知限制。
 seoTitle: 在 Codex 上运行 emet
-sourceHash: 2941f08113ffa231
+sourceHash: fedf7f4694193076
 ---
 
 emet 既可以在 Claude Code 上运行，也可以在 Codex CLI 上运行。术语遵循 [GLOSSARY.md](../../GLOSSARY.md)；运行所在的产品称为 **Agent 宿主**。本页介绍 Codex 一侧的安装、宿主的选择、唯一的一次批准以及已知限制。返回[文档索引](../README.md)。
@@ -54,7 +54,9 @@ emet 只在计划之后请求一次批准。在 Claude Code 上这是一个提�
 
 - `emet dispatch --role worker` 会检查认领和槽位，创建 `.emet/worktrees/agent-<ticket>`，在 `.emet/runs/<run>/codex-home/` 下构建每次运行专用的 `CODEX_HOME` 覆盖层，并使用解析出的模型和推理强度、`codex.sandbox` 模式（默认 `danger-full-access`）、`--json` 和 `--output-schema` 启动 `codex exec`。事件被捕获到 `.emet/runs/<run>/codex/<ticket>.jsonl`。worker 通过其 `thread.started` 事件的 `threadId` 和该 JSONL 路径来识别；进程 id 只是辅助字段。
 - 覆盖层是生成的，而不是链接的。你的 `auth.json` 会以符号链接方式接入（绝不复制），emet 插件缓存在你的 Codex 主目录中存在时会被链接，覆盖层会写入它自己的最小 `config.toml`：本地市场和 `[plugins."emet@emet-marketplace"] enabled = true`、仅针对本次运行自身目录的 `trusted` `[projects."<dir>"]` 表，以及解析出的 `model` 和 `model_reasoning_effort`。你的 `[projects]` 表和其他设置都不会被复制，你的 `~/.codex` 也绝不会被写入。
-- 覆盖层的 `rules/default.rules` 允许 `git add`、`git commit`、`git status`、`git worktree`、`git -C <dir> ...` 以及 `emet` 的子命令 `dispatch`、`review-run`、`launch`、`claims`、`slots`、`results` 和 `handoff`，并禁止 `git push`。由于默认沙箱不再阻止写入，`emet guard` 还会拒绝任何 argv 运行 `git push` 的 `Bash` 命令，包括 `git -C <dir> push` 和 `git --git-dir=<dir> push`，无论沙箱如何。
+- 覆盖层的 `rules/default.rules` 允许 `git add`、`git commit`、`git status`、`git worktree`、`git -C <dir> ...` 以及 `emet` 的子命令 `dispatch`、`review-run`、`launch`、`claims`、`slots`、`results`、`handoff` 和 `ask`，并禁止 `git push`。由于默认沙箱不再阻止写入，`emet guard` 还会拒绝任何 argv 运行 `git push` 的 `Bash` 命令，包括 `git -C <dir> push` 和 `git --git-dir=<dir> push`，无论沙箱如何。
+- worker 从不拥有通往协调者的旁路通道。它通过本次运行的邮箱进行上报：`emet ask --run <run> --ticket <ticket> --body <text>` 记录一个问题并打印其 id，`emet ask ... --wait <n>` 轮询回复（退出码 0 表示打印回复，3 表示等待时间片已过，4 表示 `budgets.askWaitMinutes` 已用尽，此时 worker 写入 BLOCKED 结果并退出）。只要存活的 worker 有未解决的问题，`emet dispatch --wait` 就会打印 `question <ticket> <id>` 而不是结果状态，并且绝不会将该 worker 归类为停滞；协调者读取 `emet inbox --run <run>`，用 `emet reply --run <run> --ticket <ticket> --id <n> --body <text>` 回复，然后继续 `emet dispatch --wait`。已记录的结果始终优先于未解决的问题。参见 [ADR-0023](../adr/0023-cli-owned-mailbox-for-codex-workers.md)。
+- 结果从 `<git-common-dir>/.emet/runs/<run>/results/` 读取，与 `emet results --write` 写入的位置相同，因此位于自己 worktree 中的 worker 也能被找到。
 - `emet review-run` 以只读方式对 `emet review-package` 生成的包运行 reviewer；`passive` 层级不会启动任何进程。
 - 模型会依据运行主目录中的 `models_cache.json` 解析，否则依据你真实 Codex 主目录中的该文件（只读）。已配置但未列出的 slug 会被替换，并记录这次替换；如果什么都解析不出，`emet review-run` 会在调用模型之前失败，并指出角色和已列出的 slug。
 - 用量和停滞检测读取捕获的 JSONL：token 用量来自 `turn.completed` 事件，存活状态来自文件是否在增长，因此位于另一个 pid 命名空间中的 worker 仍会被视为存活。`emet preflight` 和 `emet cleanup` 对可回收的无主 worktree 使用同一条规则（worker 分支、工单已合入、工作区干净、没有他人的锁），因此只有在 cleanup 真的会动手时，preflight 才会提示运行 `emet cleanup`。

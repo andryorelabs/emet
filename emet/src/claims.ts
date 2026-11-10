@@ -26,6 +26,7 @@ import {
 } from "./locks";
 import { LEGACY_PRODUCT, PRODUCT } from "./names";
 import { classifyRun, readProcessStartToken, resolveSessionSlug, type RunVerdict } from "./runs";
+import { findSurfaceOverlaps } from "./surfaces";
 import { errnoCode, isObject } from "./narrow";
 
 /**
@@ -71,6 +72,23 @@ export type Reservation = {
   transcript lookup only finds the right file under the *owner's* slug.
   */
   readonly sessionSlug: string;
+  /**
+   * The ticket's allowed edit surfaces (globs), set by `--surfaces`. A
+   * reserve whose surfaces overlap a live or idle claim of another run is
+   * denied with a {@link SurfaceDenial}.
+   */
+  readonly surfaces?: readonly string[];
+};
+
+/**
+ * Why {@link didReserveTicket} refused a reserve over surfaces: `globA` is the
+ * requester's glob, `globB` the glob of `otherTicket`, held by `otherRun`.
+ */
+export type SurfaceDenial = {
+  readonly otherRun: string;
+  readonly otherTicket: string;
+  readonly globA: string;
+  readonly globB: string;
 };
 
 /**
@@ -152,6 +170,90 @@ function reservationFilePath(forgeDirectory: string, ticket: string): string {
 
 function reservationLockPath(forgeDirectory: string, ticket: string): string {
   return path.join(ticketsDirectory(forgeDirectory), `${ticket}.lock`);
+}
+
+/**
+ * One lock for every reserve that carries surfaces, so two runs reserving
+ * different tickets with overlapping surfaces cannot both pass the check.
+ */
+function surfacesLockPath(forgeDirectory: string): string {
+  return path.join(ticketsDirectory(forgeDirectory), ".surfaces.lock");
+}
+
+function assertValidSurfaces(surfaces: readonly string[] | undefined): void {
+  if (surfaces === undefined) return;
+  if (
+    !Array.isArray(surfaces) ||
+    surfaces.length === 0 ||
+    !surfaces.every((glob) => typeof glob === "string" && glob.length > 0)
+  ) {
+    throw new TypeError(
+      `emet-claims: surfaces must be a non-empty list of globs, got ${JSON.stringify(surfaces)}.`,
+    );
+  }
+}
+
+/**
+ * Splits a `--surfaces` value on commas outside `{...}` braces, so a brace glob
+ * such as `src/{a,b}.ts` stays one entry. Throws when no glob remains.
+ */
+export function parseSurfacesFlag(value: string): string[] {
+  const globs: string[] = [];
+  let depth = 0;
+  let current = "";
+  for (const character of value) {
+    if (character === "{") depth++;
+    if (character === "}") depth = Math.max(0, depth - 1);
+    if (character === "," && depth === 0) {
+      globs.push(current);
+      current = "";
+      continue;
+    }
+    current += character;
+  }
+  globs.push(current);
+  const trimmed = globs.map((glob) => glob.trim()).filter((glob) => glob.length > 0);
+  if (trimmed.length === 0) {
+    throw new Error("emet:claims — --surfaces needs at least one glob");
+  }
+  return trimmed;
+}
+
+/**
+ * The first overlap between `surfaces` and a claim of another run that is
+ * live or idle. Claims of `runId`, claims of `ticket` itself, claims without
+ * surfaces and dead claims are ignored.
+ */
+function findCrossRunSurfaceDenial(
+  runId: string,
+  ticket: string,
+  surfaces: readonly string[],
+  reservations: readonly Reservation[],
+  classifyRunOptions: Parameters<typeof classifyRun>[3],
+): SurfaceDenial | undefined {
+  for (const other of reservations) {
+    if (other.runId === runId || other.ticket === ticket) continue;
+    if (other.surfaces === undefined || other.surfaces.length === 0) continue;
+    const [overlap] = findSurfaceOverlaps([
+      { ticket, surfaces },
+      { ticket: other.ticket, surfaces: other.surfaces },
+    ]);
+    if (overlap === undefined) continue;
+    const verdict = classifyRun(
+      other.anchorPid,
+      other.sessionSlug,
+      other.runId,
+      withAnchorStartToken(classifyRunOptions, other),
+    );
+    if (verdict === "dead") continue;
+    return {
+      otherRun: other.runId,
+      otherTicket: other.ticket,
+      globA: overlap.globA,
+      globB: overlap.globB,
+    };
+  }
+  return undefined;
 }
 
 function readJsonFile(filePath: string): unknown {
@@ -239,6 +341,11 @@ export function shouldWriteReservation(
  * a fake `isAnchorAliveFn`/`transcriptMtimeFn` instead of depending on a
  * real `claude`-ancestor process, which does not exist on a plain CI
  * runner. Production callers never pass this.
+ *
+ * With `surfaces`, the claim stores them, and the reserve is denied with a
+ * {@link SurfaceDenial} (never `true`, so compare the result with `=== true`)
+ * when they overlap the surfaces of a live or idle claim held by another run.
+ * Without `surfaces` the result is always a boolean, as before.
  */
 export async function didReserveTicket(
   runId: string,
@@ -246,8 +353,10 @@ export async function didReserveTicket(
   ticket: string,
   forgeDirectory?: string,
   classifyRunOptions?: Parameters<typeof classifyRun>[3],
-): Promise<boolean> {
+  surfaces?: readonly string[],
+): Promise<boolean | SurfaceDenial> {
   assertValidReservationArguments(runId, anchorPid, ticket);
+  assertValidSurfaces(surfaces);
   const resolvedForgeDirectory = forgeDirectory ?? (await resolveForgeDirectory());
   mkdirSync(ticketsDirectory(resolvedForgeDirectory), { recursive: true });
 
@@ -255,32 +364,75 @@ export async function didReserveTicket(
   if (!didAcquireReservationLock(lockPath)) return false;
 
   try {
-    const filePath = reservationFilePath(resolvedForgeDirectory, ticket);
-    const existing = readReservationFile(filePath);
-    const existingOwnerVerdict = existing
-      ? classifyRun(
-          existing.anchorPid,
-          existing.sessionSlug,
-          existing.runId,
-          withAnchorStartToken(classifyRunOptions, existing),
-        )
-      : "dead";
-
-    if (!shouldWriteReservation(runId, existing, existingOwnerVerdict)) return false;
-
-    const reservation: Reservation = {
-      runId,
-      anchorPid,
-      ...optionalProperty("anchorStartToken", readProcessStartToken(anchorPid)),
-      ticket,
-      reservedAt: Date.now(),
-      sessionSlug: resolveSessionSlug(),
-    };
-    writeJsonAtomically(filePath, reservation);
-    return true;
+    if (surfaces === undefined) {
+      return writeReservationIfFree(
+        runId,
+        anchorPid,
+        ticket,
+        resolvedForgeDirectory,
+        classifyRunOptions,
+      );
+    }
+    const surfacesLock = surfacesLockPath(resolvedForgeDirectory);
+    if (!didAcquireReservationLock(surfacesLock)) return false;
+    try {
+      const denial = findCrossRunSurfaceDenial(
+        runId,
+        ticket,
+        surfaces,
+        listReservationFiles(ticketsDirectory(resolvedForgeDirectory)),
+        classifyRunOptions,
+      );
+      if (denial !== undefined) return denial;
+      return writeReservationIfFree(
+        runId,
+        anchorPid,
+        ticket,
+        resolvedForgeDirectory,
+        classifyRunOptions,
+        surfaces,
+      );
+    } finally {
+      releaseLock(surfacesLock);
+    }
   } finally {
     releaseLock(lockPath);
   }
+}
+
+/** The write step of {@link didReserveTicket}, run under the ticket's lock. */
+function writeReservationIfFree(
+  runId: string,
+  anchorPid: number,
+  ticket: string,
+  resolvedForgeDirectory: string,
+  classifyRunOptions: Parameters<typeof classifyRun>[3],
+  surfaces?: readonly string[],
+): boolean {
+  const filePath = reservationFilePath(resolvedForgeDirectory, ticket);
+  const existing = readReservationFile(filePath);
+  const existingOwnerVerdict = existing
+    ? classifyRun(
+        existing.anchorPid,
+        existing.sessionSlug,
+        existing.runId,
+        withAnchorStartToken(classifyRunOptions, existing),
+      )
+    : "dead";
+
+  if (!shouldWriteReservation(runId, existing, existingOwnerVerdict)) return false;
+
+  const reservation: Reservation = {
+    runId,
+    anchorPid,
+    ...optionalProperty("anchorStartToken", readProcessStartToken(anchorPid)),
+    ticket,
+    reservedAt: Date.now(),
+    sessionSlug: resolveSessionSlug(),
+    ...optionalProperty("surfaces", surfaces),
+  };
+  writeJsonAtomically(filePath, reservation);
+  return true;
 }
 
 export type ReleaseTicketResult =
@@ -355,7 +507,9 @@ function isValidReservationShape(value: unknown): value is Reservation {
     typeof record.ticket === "string" &&
     TICKET_PATTERN.test(record.ticket) &&
     typeof record.reservedAt === "number" &&
-    typeof record.sessionSlug === "string"
+    typeof record.sessionSlug === "string" &&
+    (record.surfaces === undefined ||
+      (Array.isArray(record.surfaces) && record.surfaces.every((glob) => typeof glob === "string")))
   );
 }
 
@@ -441,7 +595,7 @@ function requireFlagValue(argv: readonly string[], flag: string): string {
  * file-level doc comment for why an inline `bun -e` snippet is not).
  *
  * ```
- * emet claims --reserve PROJ-321 --run <runId> --anchor <pid>
+ * emet claims --reserve PROJ-321 --run <runId> --anchor <pid> [--surfaces <glob>[,<glob>...]]
  * emet claims --release PROJ-321 --run <runId> [--force]
  * emet claims --list
  * emet claims --prune [--dry-run]
@@ -454,13 +608,20 @@ async function main(): Promise<void> {
     const ticket = requireFlagValue(argv, "--reserve");
     const runId = requireFlagValue(argv, "--run");
     const anchorPid = Number(requireFlagValue(argv, "--anchor"));
-    const isReserved = await didReserveTicket(runId, anchorPid, ticket);
-    if (!isReserved) {
-      console.error(`emet:claims — ${ticket} is already reserved by a live or idle run.`);
-      process.exitCode = 1;
+    const surfaces = argv.includes("--surfaces")
+      ? parseSurfacesFlag(requireFlagValue(argv, "--surfaces"))
+      : undefined;
+    const result = await didReserveTicket(runId, anchorPid, ticket, undefined, undefined, surfaces);
+    if (result === true) {
+      console.log(`emet:claims — reserved ${ticket} for run ${runId}.`);
       return;
     }
-    console.log(`emet:claims — reserved ${ticket} for run ${runId}.`);
+    console.error(
+      result === false
+        ? `emet:claims — ${ticket} is already reserved by a live or idle run.`
+        : `emet:claims — ${ticket} surface ${result.globA} overlaps ${result.globB} of ${result.otherTicket}, held by run ${result.otherRun}.`,
+    );
+    process.exitCode = 1;
     return;
   }
 
@@ -513,7 +674,7 @@ async function main(): Promise<void> {
   }
 
   console.error(
-    "usage: emet claims --reserve <ticket> --run <runId> --anchor <pid> | --release <ticket> --run <runId> [--force] | --list | --prune [--dry-run]",
+    "usage: emet claims --reserve <ticket> --run <runId> --anchor <pid> [--surfaces <glob>[,<glob>...]] | --release <ticket> --run <runId> [--force] | --list | --prune [--dry-run]",
   );
   process.exitCode = 1;
 }
