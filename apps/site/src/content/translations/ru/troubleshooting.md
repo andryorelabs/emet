@@ -2,7 +2,7 @@
 title: Устранение неполадок
 description: Сбои emet doctor и emet preflight, сгруппированные по тому, что вы видите, каждый с причиной и исправлением.
 seoTitle: Устранение неполадок emet doctor и preflight
-sourceHash: 2945f96c25af7fb6
+sourceHash: c1ebb76c9250d743
 ---
 
 Сбои `emet doctor` и `emet preflight`, сгруппированные по тому, что вы видите, каждый с причиной и исправлением. Термины соответствуют [GLOSSARY.md](../GLOSSARY.md). О том, как проверки связаны между собой, см. [архитектуру](architecture.md).
@@ -54,7 +54,7 @@ sourceHash: 2945f96c25af7fb6
 
 **Причина:** `/emet` нужны `git`, `gh` и плагин mattpocock-skills; см. `emet/src/dependencies.ts` и `emet/src/skills.ts`.
 
-**Исправление:** Установите инструмент или выполните авторизацию, либо запустите `/setup-matt-pocock-skills`. Если проверка неверна для вашего окружения, `EMET_SKIP_DEPENDENCY_CHECKS=1 emet preflight` понижает её до предупреждения.
+**Исправление:** Установите инструмент или выполните авторизацию, либо запустите навык `setup-matt-pocock-skills` (`/setup-matt-pocock-skills` в Claude Code, тот же навык через синтаксис `$` в Codex). Если проверка неверна для вашего окружения, `EMET_SKIP_DEPENDENCY_CHECKS=1 emet preflight` понижает её до предупреждения.
 
 ## no longer documents a flag in --help
 

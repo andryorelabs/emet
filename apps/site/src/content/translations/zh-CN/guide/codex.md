@@ -2,7 +2,7 @@
 title: 在 Codex 上运行 emet
 description: 介绍如何安装 Codex 一侧、选择 Agent 宿主、唯一的一次批准以及已知限制。
 seoTitle: 在 Codex 上运行 emet
-sourceHash: 689000ce9f0eb961
+sourceHash: 2941f08113ffa231
 ---
 
 emet 既可以在 Claude Code 上运行，也可以在 Codex CLI 上运行。术语遵循 [GLOSSARY.md](../../GLOSSARY.md)；运行所在的产品称为 **Agent 宿主**。本页介绍 Codex 一侧的安装、宿主的选择、唯一的一次批准以及已知限制。返回[文档索引](../README.md)。
@@ -26,7 +26,7 @@ emet 既可以在 Claude Code 上运行，也可以在 Codex CLI 上运行。术
    codex plugin add emet@emet-marketplace
    ```
 
-4. 按照[快速开始](getting-started.md)安装 `emet` CLI，然后运行 `emet doctor .`。在 Codex 宿主上，它会报告早于 `codex.minVersion` 的 `codex`、`codex exec` 缺少 `--json` 或 `--output-schema` 标志，以及缺少 `mattpocock-skills`（并给出上面的两条命令）。
+4. 按照[快速开始](getting-started.md)安装 `emet` CLI，然后运行 `emet doctor .`。`install.sh` 还会在 `~/.claude` 下安装 Claude Code 的命令和代理；这在 Codex 上无害，`emet doctor` 也不会对同时使用 Codex 插件和 `install.sh` 发出警告。在 Codex 宿主上，它会报告早于 `codex.minVersion` 的 `codex`、`codex exec` 缺少 `--json` 或 `--output-schema` 标志，以及缺少 `mattpocock-skills`（并给出上面的两条命令）。
 
 第 3 步中的两条插件命令已在真实的 `codex`（0.167.0）上运行过：在全新的 `CODEX_HOME` 中它们退出码为 0，`codex plugin list` 显示 `emet@emet-marketplace installed, enabled`。本地路径形式 `codex plugin marketplace add <repo>` 的结果相同。
 
@@ -44,7 +44,7 @@ emet 既可以在 Claude Code 上运行，也可以在 Codex CLI 上运行。术
 
 emet 只在计划之后请求一次批准。在 Claude Code 上这是一个提示；在 Codex 上则是一个钩子：
 
-- 在 `.emet/runs/spec<id>/approval.json` 存在之前，`emet guard` 会拒绝所有变更（`apply_patch`、`Bash`），写入 `.emet/runs/**/draft/**` 下的除外，原因为 `not approved: send approve <id>`。只要存在没有 `approval.json` 的 `.emet/runs/spec<id>/` 目录，这道关卡就会生效，这正是 `/emet:run` 在第 4 阶段落实规格之后留下的状态。
+- 在 `.emet/runs/spec<id>/approval.json` 存在之前，`emet guard` 会拒绝所有变更（`apply_patch`、`Bash`），写入 `.emet/runs/**/draft/**` 下的除外，原因为 `not approved: send approve <id>`。只要存在没有 `approval.json` 的 `.emet/runs/spec<id>/` 目录，这道关卡就会生效，这正是 `$emet:run` 在第 4 阶段落实规格之后留下的状态。
 - 发送内容恰好是 `approve <id>` 的一行提示即可批准。随后 `UserPromptSubmit` 钩子会用与 `emet approve` 相同的哈希方式写入批准文件。工具输出或模型文本中出现同样的文字不会产生任何效果。
 - 另一种方式是 `/plan $emet:run`：在 Codex 自己的计划模式中批准计划，而不使用钩子。
 

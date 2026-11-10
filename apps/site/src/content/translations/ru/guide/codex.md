@@ -2,7 +2,7 @@
 title: Запуск emet в Codex
 description: Как установить часть для Codex, выбрать хост агента, единственное подтверждение и известные ограничения.
 seoTitle: Запуск emet в Codex
-sourceHash: 689000ce9f0eb961
+sourceHash: 2941f08113ffa231
 ---
 
 emet может работать в Codex CLI так же, как и в Claude Code. Термины соответствуют [GLOSSARY.md](../../GLOSSARY.md); продукт, в котором выполняется запуск, называется **хостом агента**. На этой странице описаны установка части для Codex, выбор хоста, единственное подтверждение и известные ограничения. Вернуться к [оглавлению документации](../README.md).
@@ -26,7 +26,7 @@ emet может работать в Codex CLI так же, как и в Claude C
    codex plugin add emet@emet-marketplace
    ```
 
-4. Установите CLI `emet`, как описано в разделе [Начало работы](getting-started.md), затем выполните `emet doctor .`. На хосте Codex он сообщает о `codex` старее `codex.minVersion`, об отсутствии флага `--json` или `--output-schema` у `codex exec` и об отсутствии `mattpocock-skills`, указывая две команды выше.
+4. Установите CLI `emet`, как описано в разделе [Начало работы](getting-started.md), затем выполните `emet doctor .`. `install.sh` также устанавливает команды и агенты Claude Code в `~/.claude`; в Codex это безвредно, и `emet doctor` не предупреждает об одновременном использовании плагина Codex и `install.sh`. На хосте Codex он сообщает о `codex` старее `codex.minVersion`, об отсутствии флага `--json` или `--output-schema` у `codex exec` и об отсутствии `mattpocock-skills`, указывая две команды выше.
 
 Обе команды плагина из шага 3 были запущены на настоящем `codex` (0.167.0): в чистом `CODEX_HOME` они завершаются с кодом 0, а `codex plugin list` показывает `emet@emet-marketplace installed, enabled`. Форма с локальным путём, `codex plugin marketplace add <repo>`, даёт тот же результат.
 
@@ -44,7 +44,7 @@ emet может работать в Codex CLI так же, как и в Claude C
 
 emet запрашивает одно подтверждение, после плана. В Claude Code это запрос. В Codex это хук:
 
-- Пока не существует `.emet/runs/spec<id>/approval.json`, `emet guard` отклоняет любые изменения (`apply_patch`, `Bash`), кроме записи в `.emet/runs/**/draft/**`, с причиной `not approved: send approve <id>`. Барьер действует, как только существует каталог `.emet/runs/spec<id>/` без `approval.json`, а именно в состоянии, которое `/emet:run` оставляет после того, как фаза 4 материализует спецификацию.
+- Пока не существует `.emet/runs/spec<id>/approval.json`, `emet guard` отклоняет любые изменения (`apply_patch`, `Bash`), кроме записи в `.emet/runs/**/draft/**`, с причиной `not approved: send approve <id>`. Барьер действует, как только существует каталог `.emet/runs/spec<id>/` без `approval.json`, а именно в состоянии, которое `$emet:run` оставляет после того, как фаза 4 материализует спецификацию.
 - Вы подтверждаете, отправив строку промпта, которая в точности равна `approve <id>`. После этого хук `UserPromptSubmit` записывает файл подтверждения с тем же хешированием, что и `emet approve`. Те же слова в выводе инструмента или в тексте модели ничего не делают.
 - Альтернатива: `/plan $emet:run`. Подтвердите план в собственном режиме планирования Codex вместо хука.
 

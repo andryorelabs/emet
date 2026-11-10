@@ -2,7 +2,7 @@
 title: トラブルシューティング
 description: emet doctor と emet preflight の失敗を、見える症状ごとに分類し、それぞれの原因と対処を説明します。
 seoTitle: emet doctor と preflight のトラブルシューティング
-sourceHash: 2945f96c25af7fb6
+sourceHash: c1ebb76c9250d743
 ---
 
 `emet doctor` と `emet preflight` の失敗を、見える症状ごとに分類し、それぞれの原因と対処を示します。用語は [GLOSSARY.md](../GLOSSARY.md) に従います。各チェックがどう組み合わさっているかは、[アーキテクチャ](architecture.md)を参照してください。
@@ -54,7 +54,7 @@ sourceHash: 2945f96c25af7fb6
 
 **原因:** `/emet` には `git`、`gh`、mattpocock-skills プラグインが必要です。`emet/src/dependencies.ts` と `emet/src/skills.ts` を参照してください。
 
-**対処:** ツールをインストールまたは認証するか、`/setup-matt-pocock-skills` を実行してください。お使いの環境でチェックが誤っている場合は、`EMET_SKIP_DEPENDENCY_CHECKS=1 emet preflight` で警告に格下げできます。
+**対処:** ツールをインストールまたは認証するか、`setup-matt-pocock-skills` スキルを実行してください（Claude Code では `/setup-matt-pocock-skills`、Codex では Codex の `$` 構文で同じスキルを呼び出します）。お使いの環境でチェックが誤っている場合は、`EMET_SKIP_DEPENDENCY_CHECKS=1 emet preflight` で警告に格下げできます。
 
 ## no longer documents a flag in --help
 

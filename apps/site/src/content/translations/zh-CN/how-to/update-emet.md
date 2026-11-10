@@ -2,14 +2,14 @@
 title: 更新 emet
 description: 将已安装的 emet 升级到新版本，并为插件开启市场自动更新。
 seoTitle: 更新 emet
-sourceHash: 442bf243cbe7eadb
+sourceHash: e9018d796fe23437
 ---
 
 如何将已安装的 emet 升级到新版本。术语遵循 [GLOSSARY.md](../../GLOSSARY.md)。
 
 emet 和可选的 `emet-mascot` 插件来自同一个市场 `emet-marketplace`。Claude Code 默认不会自行更新第三方市场，而市场也无法为其用户更改这一默认设置。
 
-## 手动更新
+## 在 Claude Code 上更新
 
 ```bash
 claude plugin marketplace update emet-marketplace
@@ -32,7 +32,7 @@ codex plugin add emet@emet-marketplace
 
 ## 自动更新
 
-在 Claude Code 中运行 `/plugin`，打开 **Marketplaces** 标签页，选择 `emet-marketplace`，然后选择 **Enable auto-update**。此后，Claude Code 会在会话启动时刷新市场并更新这两个插件，下一个会话会加载新版本。每位用户需要在自己的机器上进行此设置。
+自动更新是 Claude Code 的功能；在 Codex 上请手动升级。在 Claude Code 中运行 `/plugin`，打开 **Marketplaces** 标签页，选择 `emet-marketplace`，然后选择 **Enable auto-update**。此后，Claude Code 会在会话启动时刷新市场并更新这两个插件，下一个会话会加载新版本。每位用户需要在自己的机器上进行此设置。
 
 ## 通过 install.sh 安装的情况
 

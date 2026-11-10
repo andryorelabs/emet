@@ -2,7 +2,7 @@
 title: 故障排除
 description: 按你看到的现象归类 emet doctor 和 emet preflight 的失败，并给出各自的原因与修复方法。
 seoTitle: emet doctor 与 preflight 故障排除
-sourceHash: 2945f96c25af7fb6
+sourceHash: c1ebb76c9250d743
 ---
 
 按你看到的现象归类 `emet doctor` 和 `emet preflight` 的失败，并给出各自的原因与修复方法。术语遵循 [GLOSSARY.md](../GLOSSARY.md)。各项检查如何配合，参见[架构](architecture.md)。
@@ -54,7 +54,7 @@ sourceHash: 2945f96c25af7fb6
 
 **原因：** `/emet` 需要 `git`、`gh` 和 mattpocock-skills 插件；参见 `emet/src/dependencies.ts` 和 `emet/src/skills.ts`。
 
-**修复：** 安装或认证该工具，或运行 `/setup-matt-pocock-skills`。如果某项检查对你的环境来说是错误的，`EMET_SKIP_DEPENDENCY_CHECKS=1 emet preflight` 会将其降级为警告。
+**修复：** 安装或认证该工具，或运行 `setup-matt-pocock-skills` 技能（在 Claude Code 上是 `/setup-matt-pocock-skills`，在 Codex 上通过 Codex 的 `$` 语法调用同一技能）。如果某项检查对你的环境来说是错误的，`EMET_SKIP_DEPENDENCY_CHECKS=1 emet preflight` 会将其降级为警告。
 
 ## no longer documents a flag in --help
 

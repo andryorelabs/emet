@@ -2,7 +2,7 @@
 title: 문제 해결
 description: emet doctor와 emet preflight의 실패를 눈에 보이는 증상별로 묶어, 각각의 원인과 해결 방법을 설명합니다.
 seoTitle: emet doctor와 preflight 문제 해결
-sourceHash: 2945f96c25af7fb6
+sourceHash: c1ebb76c9250d743
 ---
 
 `emet doctor`와 `emet preflight`의 실패를 눈에 보이는 증상별로 묶어, 각각의 원인과 해결 방법을 정리했습니다. 용어는 [GLOSSARY.md](../GLOSSARY.md)를 따릅니다. 점검들이 어떻게 맞물리는지는 [아키텍처](architecture.md)를 참고하세요.
@@ -54,7 +54,7 @@ sourceHash: 2945f96c25af7fb6
 
 **원인:** `/emet`에는 `git`, `gh`, mattpocock-skills 플러그인이 필요합니다. `emet/src/dependencies.ts`와 `emet/src/skills.ts`를 참고하세요.
 
-**해결:** 도구를 설치하거나 인증하거나 `/setup-matt-pocock-skills`를 실행하세요. 사용 환경에서 점검이 잘못된 경우 `EMET_SKIP_DEPENDENCY_CHECKS=1 emet preflight`로 경고로 낮출 수 있습니다.
+**해결:** 도구를 설치하거나 인증하거나 `setup-matt-pocock-skills` 스킬을 실행하세요(Claude Code에서는 `/setup-matt-pocock-skills`, Codex에서는 Codex의 `$` 구문으로 같은 스킬을 호출합니다). 사용 환경에서 점검이 잘못된 경우 `EMET_SKIP_DEPENDENCY_CHECKS=1 emet preflight`로 경고로 낮출 수 있습니다.
 
 ## no longer documents a flag in --help
 
