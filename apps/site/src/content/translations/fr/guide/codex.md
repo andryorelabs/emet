@@ -2,7 +2,7 @@
 title: Exécuter emet sur Codex
 description: "Utilisez Codex comme Agent host d'emet : installez le plugin, configurez agentHost, approuvez une seule fois et connaissez les limites."
 seoTitle: Exécuter emet sur Codex
-sourceHash: a64f64be24588f52
+sourceHash: 689000ce9f0eb961
 ---
 
 emet peut s'exécuter sur Codex CLI comme sur Claude Code. Les termes suivent [GLOSSARY.md](../../GLOSSARY.md) ; le produit dans lequel une exécution tourne est l'**Agent host**. Cette page couvre l'installation côté Codex, le choix de l'hôte, l'approbation unique et les limites connues. Retour à l'[index de la documentation](../README.md).
@@ -28,7 +28,7 @@ Sur l'hôte Codex, le pipeline est le même : entretien, spec, tickets, une appr
 
 4. Installez la CLI `emet` comme décrit dans [Prise en main](getting-started.md), puis lancez `emet doctor .`. Sur l'hôte Codex, il signale un `codex` plus ancien que `codex.minVersion`, un indicateur `--json` ou `--output-schema` absent de `codex exec`, et un `mattpocock-skills` manquant avec les deux commandes ci-dessus.
 
-Les deux commandes de plugin de l'étape 3 suivent le schéma que le spike a vérifié pour un marketplace local ; leur graphie exacte pour ce dépôt reste `unverified` jusqu'à la première version.
+Les deux commandes de plugin de l'étape 3 ont été exécutées contre le vrai `codex` (0.167.0) : dans un `CODEX_HOME` neuf, elles se terminent avec le code 0 et `codex plugin list` affiche `emet@emet-marketplace installed, enabled`. La forme avec chemin local, `codex plugin marketplace add <repo>`, donne le même résultat.
 
 ## Choisir l'Agent host
 
@@ -52,18 +52,28 @@ Dès que ce répertoire existe, le verrou échoue en mode fermé : un fichier d'
 
 ## Comment se déroule une vague
 
-- `emet dispatch --role worker` vérifie le claim et le slot, crée `.emet/worktrees/agent-<ticket>`, construit une surcouche `CODEX_HOME` par exécution sous `.emet/runs/<run>/codex-home/` qui lie votre authentification et votre configuration au lieu de les copier, et lance `codex exec` avec le modèle et l'effort résolus, le mode `codex.sandbox` (`workspace-write` par défaut), `--json` et `--output-schema`. Les événements sont capturés dans `.emet/runs/<run>/codex/<ticket>.jsonl`.
-- Les règles de la surcouche autorisent `git add` et `git commit` et interdisent `git push`. Votre `~/.codex` n'est jamais modifié.
+- `emet dispatch --role worker` vérifie le claim et le slot, crée `.emet/worktrees/agent-<ticket>`, construit une surcouche `CODEX_HOME` par exécution sous `.emet/runs/<run>/codex-home/`, et lance `codex exec` avec le modèle et l'effort résolus, le mode `codex.sandbox` (`danger-full-access` par défaut), `--json` et `--output-schema`. Les événements sont capturés dans `.emet/runs/<run>/codex/<ticket>.jsonl`. Le worker est identifié par le `threadId` de son événement `thread.started` et par ce chemin JSONL ; l'identifiant de processus n'est qu'un champ auxiliaire.
+- La surcouche est générée, pas liée. Votre `auth.json` est lié par un lien symbolique (jamais copié), le cache du plugin emet est lié depuis votre home Codex quand il existe, et la surcouche écrit son propre `config.toml` minimal : le marketplace local et `[plugins."emet@emet-marketplace"] enabled = true`, une table `[projects."<dir>"]` marquée `trusted` uniquement pour les répertoires propres à l'exécution, ainsi que le `model` et le `model_reasoning_effort` résolus. Aucune de vos tables `[projects]` ni aucun autre réglage n'est copié, et votre `~/.codex` n'est jamais modifié.
+- Le `rules/default.rules` de la surcouche autorise `git add`, `git commit`, `git status`, `git worktree`, `git -C <dir> ...` et les sous-commandes `emet` `dispatch`, `review-run`, `launch`, `claims`, `slots`, `results` et `handoff`, et interdit `git push`. Comme le sandbox par défaut ne bloque plus les écritures, `emet guard` refuse aussi toute commande `Bash` dont l'argv exécute `git push`, y compris `git -C <dir> push` et `git --git-dir=<dir> push`, quel que soit le sandbox.
 - `emet review-run` exécute le relecteur en lecture seule sur un paquet issu de `emet review-package` ; le niveau `passive` ne lance aucun processus.
-- L'usage et la détection de blocage lisent le JSONL capturé : l'usage de tokens depuis les événements `turn.completed`, la vivacité depuis le processus `codex` et l'heure de modification du fichier.
+- Les modèles sont résolus dans `models_cache.json` du home de l'exécution, sinon de votre vrai home Codex (en lecture seule). Un slug configuré qui n'est pas listé est remplacé et la substitution est journalisée ; si rien ne se résout, `emet review-run` échoue avant l'appel au modèle et nomme le rôle et les slugs listés.
+- L'usage et la détection de blocage lisent le JSONL capturé : l'usage de tokens depuis les événements `turn.completed` et la vivacité depuis la croissance du fichier, si bien qu'un worker dans un autre espace de noms de pid reste considéré comme vivant. `emet preflight` et `emet cleanup` partagent une seule règle pour un worktree sans propriétaire récupérable (branche de worker, ticket atterri, arbre propre, aucun verrou étranger), de sorte que preflight ne recommande `emet cleanup` que lorsque cleanup agirait.
+
+## Ce qu'a montré l'exécution réelle de Codex
+
+Le [rapport de sonde](../research/codex-probe-report.md) a relancé chaque vérification avec `codex-cli 0.167.0` (offre gratuite ChatGPT, Linux) après ces changements. Toutes les lignes `failed` précédentes sont maintenant `verified` :
+
+- Un flux de 2 vagues a fait atterrir de vrais commits de workers Codex sur le trunk : la vague 1 depuis `emet dispatch`, la vague 2 depuis une session lancée par `emet launch <spec> --wave 2` qui a chargé `$emet:run` depuis le cache du plugin de la surcouche. `emet review-run` s'est exécuté dans chaque flux.
+- Le e2e optionnel (`EMET_CODEX_E2E=1`) passe : le worker committe sous `danger-full-access`, et `codex execpolicy check` répond `forbidden` pour `git push origin develop` et `allow` pour `git -C <dir> commit`.
+- `~/.codex/config.toml` a gardé le même sha256 pendant la sonde, le e2e et sept flux.
 
 ## Limites et points `unverified`
 
 - L'effort `ultra` n'est jamais envoyé et il est rejeté dans la configuration.
-- `danger-full-access` n'est disponible qu'en réglant `codex.sandbox` sur cette valeur ; rien ne l'active par défaut.
+- `danger-full-access` est la valeur par défaut de `codex.sandbox` pour les workers Codex et `emet launch`, parce que le sandbox `workspace-write` met `.git` en lecture seule et qu'un worker ne pourrait pas committer. Réglez `codex.sandbox` sur `"workspace-write"` pour garder le sandbox ; les workers ne peuvent alors pas committer. [ADR-0022](../adr/0022-codex-workers-run-unsandboxed-by-default.md) consigne ce compromis. Le chemin Claude ne l'utilise jamais. Sans sandbox, le refus de push dans `emet guard` et le fichier de règles sont les garde-fous.
 - Il n'existe pas d'équivalents de `ScheduleWakeup`, `TaskStop` ni `LSP`. emet interroge plutôt sa propre CLI.
 - Les fichiers rollout sous `~/.codex/sessions` n'ont pas de format stable ; emet lit donc la sortie de `exec --json` qu'il a lui-même capturée.
-- La recherche marque ces comportements comme `unverified`, et chacun se trouve derrière une petite fonction pour qu'un changement dans Codex ne touche qu'un endroit : un `CODEX_HOME` par exécution avec authentification liée, l'emplacement du fichier de règles dans la surcouche, `--dangerously-bypass-hook-trust`, l'alias `CLAUDE_PLUGIN_ROOT` dans les commandes de hook, le format de sortie de `codex plugin list`, un modèle qui charge une skill par son nom, et `emet dispatch` dans un sandbox imbriqué. Voir [la recherche de viabilité](../research/codex-viability.md).
-- Aucune tentative d'un modèle de falsifier `approval.json` n'a été observée. Le verrou refuserait la tentative, mais cela reste `unverified`.
-- Exécuter Codex depuis un superviseur non surveillé (systemd, conteneur) après la fin de la session qui l'a lancé est `unverified`.
+- Vérifié contre la vraie CLI, et toujours derrière de petites fonctions pour qu'un changement dans Codex ne touche qu'un endroit : un `CODEX_HOME` par exécution avec authentification liée, le fichier de règles à `rules/default.rules`, `--dangerously-bypass-hook-trust`, l'alias `CLAUDE_PLUGIN_ROOT` dans les commandes de hook, le format de sortie de `codex plugin list`, un modèle qui charge une skill par son nom, `emet dispatch` dans une session imbriquée, un modèle qui tente de falsifier `approval.json` (refusé) et les deux formes de `codex plugin marketplace add`. Voir [la recherche de viabilité](../research/codex-viability.md).
+- Toujours `unverified` : exécuter Codex depuis un superviseur non surveillé sous systemd ou dans un conteneur (seul un processus détaché a été testé).
+- Suites connues du rapport de sonde : `emet init` écrit des noms de modèles Claude dans `models` pour `agentHost: "codex"`, un `emet dispatch --model` explicite n'est pas résolu dans le cache, `emet lock-reason` cherche un ancêtre `claude`, et un ticket dont le worker est mort ne peut pas être redispatché dans le même worktree.
 - Les noms et les prix des modèles Codex changent ; la table des prix devra être revérifiée une fois de vraies vagues exécutées.

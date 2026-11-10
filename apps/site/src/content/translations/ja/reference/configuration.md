@@ -2,7 +2,7 @@
 title: 設定リファレンス
 description: emet.config.json のすべてのキーについて、既定値と意味を説明します。
 seoTitle: emet の設定リファレンス
-sourceHash: f93a93f72cc341b1
+sourceHash: e234cb9ad3468e98
 ---
 
 `emet.config.json` のすべてのキーを、既定値と意味とともに示します。信頼できる情報源は [`emet/schema/emet.config.schema.json`](../../emet/schema/emet.config.schema.json) です。用語は [GLOSSARY.md](../../GLOSSARY.md) に従います。[README](../../README.md) に戻る。
@@ -93,7 +93,7 @@ sourceHash: f93a93f72cc341b1
 - `models.session`: `$emet:run` を実行するセッション用の `{ "model", "effort", "planEffort", "fallback" }`。`planEffort` は最初の承認まで適用されます。
 - `effort`: 設定すると、すべてのロールのエフォートを置き換えます。
 - `minVersion` (既定 `0.167.0`): `emet doctor` が受け入れる `codex` CLI の最も古いバージョン。
-- `sandbox` (既定 `workspace-write`): Codex ワーカーのサンドボックスモード。`danger-full-access` は明示的なオプトインです。
+- `sandbox` (既定 `danger-full-access`): `emet dispatch`、`emet review-run`、および Codex の `emet launch` が `-s` として渡すサンドボックスモード。`workspace-write` も指定できますが、`.git` が読み取り専用になるため、ワーカーはコミットできません。値にかかわらず、`emet guard` は Codex で `git push` を拒否し、生成されるオーバーレイの `config.toml` には、emet のマーケットプレイスとプラグイン、その実行自身のディレクトリに対する trusted テーブル、解決済みのモデルとエフォートだけが入ります（あなた自身のテーブルは入りません）。[Codex ガイド](../guide/codex.md)と [ADR-0022](../adr/0022-codex-workers-run-unsandboxed-by-default.md) を参照してください。
 
 ## review
 

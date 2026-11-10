@@ -2,7 +2,7 @@
 title: Référence de configuration
 description: Chaque clé de emet.config.json avec sa valeur par défaut et sa signification.
 seoTitle: Référence de configuration d'emet
-sourceHash: f93a93f72cc341b1
+sourceHash: e234cb9ad3468e98
 ---
 
 Chaque clé de `emet.config.json`, avec sa valeur par défaut et sa signification. La source de vérité est [`emet/schema/emet.config.schema.json`](../../emet/schema/emet.config.schema.json). Les termes suivent [GLOSSARY.md](../../GLOSSARY.md). Retour au [README](../../README.md).
@@ -93,7 +93,7 @@ Lu uniquement quand `agentHost` vaut `"codex"`. Toutes les clés sont facultativ
 - `models.session`: `{ "model", "effort", "planEffort", "fallback" }` pour la session qui exécute `$emet:run`. `planEffort` s'applique jusqu'à la première approbation.
 - `effort`: s'il est défini, remplace l'effort de tous les rôles.
 - `minVersion` (par défaut `0.167.0`): la plus ancienne version de la CLI `codex` qu'accepte `emet doctor`.
-- `sandbox` (par défaut `workspace-write`): le mode de sandbox des workers Codex. `danger-full-access` est un choix explicite.
+- `sandbox` (par défaut `danger-full-access`): le mode de sandbox transmis comme `-s` par `emet dispatch`, `emet review-run` et un `emet launch` Codex. `workspace-write` est aussi accepté, mais il rend `.git` en lecture seule, si bien que les workers ne peuvent pas committer. Quelle que soit la valeur, `emet guard` refuse `git push` sur Codex, et le `config.toml` de la surcouche générée ne contient que le marketplace et le plugin emet, des tables de confiance pour les répertoires propres à l'exécution, ainsi que le modèle et l'effort résolus (jamais vos propres tables). Voir le [guide Codex](../guide/codex.md) et [ADR-0022](../adr/0022-codex-workers-run-unsandboxed-by-default.md).
 
 ## review
 

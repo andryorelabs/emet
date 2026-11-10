@@ -2,7 +2,7 @@
 title: Справочник по конфигурации
 description: Каждый ключ emet.config.json со значением по умолчанию и смыслом.
 seoTitle: Справочник по конфигурации emet
-sourceHash: f93a93f72cc341b1
+sourceHash: e234cb9ad3468e98
 ---
 
 Каждый ключ `emet.config.json` со значением по умолчанию и смыслом. Источник истины — [`emet/schema/emet.config.schema.json`](../../emet/schema/emet.config.schema.json). Термины соответствуют [GLOSSARY.md](../../GLOSSARY.md). Назад к [README](../../README.md).
@@ -93,7 +93,7 @@ sourceHash: f93a93f72cc341b1
 - `models.session`: `{ "model", "effort", "planEffort", "fallback" }` для сессии, которая выполняет `$emet:run`. `planEffort` действует до первого одобрения.
 - `effort`: если задан, заменяет усилие всех ролей.
 - `minVersion` (по умолчанию `0.167.0`): самая старая версия CLI `codex`, которую принимает `emet doctor`.
-- `sandbox` (по умолчанию `workspace-write`): режим песочницы воркеров Codex. `danger-full-access` включается только явно.
+- `sandbox` (по умолчанию `danger-full-access`): режим песочницы, который передают как `-s` команды `emet dispatch`, `emet review-run` и `emet launch` для Codex. `workspace-write` тоже допустим, но делает `.git` доступным только для чтения, поэтому воркеры не могут делать коммиты. При любом значении `emet guard` отклоняет `git push` на Codex, а генерируемый `config.toml` оверлея содержит только маркетплейс и плагин emet, таблицы trusted для собственных каталогов прогона и выбранные модель и усилие (но не ваши собственные таблицы). См. [руководство по Codex](../guide/codex.md) и [ADR-0022](../adr/0022-codex-workers-run-unsandboxed-by-default.md).
 
 ## review
 

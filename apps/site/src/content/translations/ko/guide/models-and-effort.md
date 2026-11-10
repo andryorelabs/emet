@@ -2,7 +2,7 @@
 title: 모델과 추론 강도
 description: emet이 역할마다 모델과 추론 강도를 어떻게 고르는지, 그리고 이를 바꾸는 설정 키를 설명합니다.
 seoTitle: emet의 모델과 추론 강도
-sourceHash: 7ab8a2e10ec9cae7
+sourceHash: a46d2e68a403f4f9
 ---
 
 `/emet`은 역할마다 모델과 추론 강도(effort)를 자동으로 선택합니다. 실행 중에 수동으로 바꿀 것은 없습니다. 모든 키는 [설정 레퍼런스](../reference/configuration.md#models)에 있습니다.
@@ -66,13 +66,15 @@ sourceHash: 7ab8a2e10ec9cae7
 | 리뷰어, `high` 등급     | `gpt-6-astra` | `high`                    | `gpt-6.1-sol`                 |
 | 트리아지                | `gpt-6-luna`  | `medium`                  | `gpt-6.1-terra`               |
 
-`emet dispatch`는 각 슬러그를 Codex 모델 캐시와 대조합니다. 캐시에 있고 해당 노력 수준을 지원하는 슬러그는 그대로 쓰고, 아니면 모델의 업그레이드 대상, 그다음 대체 모델을 따르며, 마지막에는 `-m`을 생략하고 모든 대체를 로그에 남깁니다. 노력 수준 `ultra`는 절대 보내지 않습니다. `passive` 등급에서는 리뷰어를 시작하지 않습니다.
+`emet dispatch`와 `emet review-run`은 각 슬러그를 `models_cache.json`과 대조합니다. 이 파일은 실행의 오버레이 홈에서, 없으면 실제 Codex 홈에서(읽기 전용으로) 읽습니다. 캐시에 있고 해당 추론 강도를 지원하는 슬러그는 그대로 쓰고, 아니면 모델의 업그레이드 대상, 그다음 대체 모델을 따르고, 마지막에는 `-m`을 생략하며, 모든 대체를 기록합니다. 아무것도 확정되지 않으면 `emet review-run`은 모델 호출 전에 역할과 목록에 있는 슬러그를 밝히며 실패합니다. 실행이 생성하는 오버레이 `config.toml`에도 확정된 `model`과 `model_reasoning_effort`가 들어갑니다. 추론 강도 `ultra`는 전송되지 않습니다. `passive` 등급은 리뷰어를 시작하지 않습니다.
 
 실제 웨이브를 몇 번 돌린 뒤 다음과 같은 경우 다시 조정하세요.
 
 - 워커가 수정 라운드를 반복해서 필요로 할 때: `codex.models.worker.effort`를 올리거나 위험한 티켓에 `Model:` 줄을 넣으세요.
 - `high` 등급 웨이브의 리뷰가 지적 사항을 놓칠 때: `codex.models.reviewer.high.effort`를 올리세요.
 - 로그에 대체가 표시될 때: Codex가 슬러그 이름을 바꾸거나 없앴으니 슬러그를 업데이트하세요.
+
+[프로브 보고서](../research/codex-probe-report.md)의 실제 Codex 실행은 추론 강도 `low`와 확정된 가장 저렴한 모델(`gpt-6-luna`)을 사용했고, 리뷰어 모델도 캐시를 통해 확정되었습니다.
 
 ## 리뷰어가 하나인 이유
 

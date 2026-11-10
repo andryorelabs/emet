@@ -2,7 +2,7 @@
 title: 설정 레퍼런스
 description: emet.config.json의 모든 키를 기본값과 의미와 함께 설명합니다.
 seoTitle: emet 설정 레퍼런스
-sourceHash: f93a93f72cc341b1
+sourceHash: e234cb9ad3468e98
 ---
 
 `emet.config.json`의 모든 키를 기본값과 의미와 함께 정리했습니다. 기준이 되는 원본은 [`emet/schema/emet.config.schema.json`](../../emet/schema/emet.config.schema.json)입니다. 용어는 [GLOSSARY.md](../../GLOSSARY.md)를 따릅니다. [README](../../README.md)로 돌아가기.
@@ -93,7 +93,7 @@ sourceHash: f93a93f72cc341b1
 - `models.session`: `$emet:run`을 실행하는 세션용 `{ "model", "effort", "planEffort", "fallback" }`. `planEffort`는 첫 승인 전까지 적용됩니다.
 - `effort`: 설정하면 모든 역할의 노력 수준을 대체합니다.
 - `minVersion` (기본값 `0.167.0`): `emet doctor`가 허용하는 가장 오래된 `codex` CLI 버전입니다.
-- `sandbox` (기본값 `workspace-write`): Codex 워커의 샌드박스 모드입니다. `danger-full-access`는 명시적으로 선택해야 합니다.
+- `sandbox` (기본값 `danger-full-access`): `emet dispatch`, `emet review-run`, Codex의 `emet launch`가 `-s`로 전달하는 샌드박스 모드입니다. `workspace-write`도 허용되지만 `.git`이 읽기 전용이 되어 워커가 커밋할 수 없습니다. 값과 상관없이 `emet guard`는 Codex에서 `git push`를 거부하며, 생성되는 오버레이 `config.toml`에는 emet 마켓플레이스와 플러그인, 그 실행 자체의 디렉터리에 대한 trusted 테이블, 확정된 모델과 추론 강도만 들어갑니다(사용자 자신의 테이블은 들어가지 않습니다). [Codex 가이드](../guide/codex.md)와 [ADR-0022](../adr/0022-codex-workers-run-unsandboxed-by-default.md)를 참고하세요.
 
 ## review
 
