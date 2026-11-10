@@ -25,6 +25,7 @@ const LIVE_PID = 424_242;
 const RUN = "run-a";
 const TICKET = "AO-1";
 const ALIVE = { isAnchorAliveFn: (pid: number) => pid === LIVE_PID };
+const SURFACES = ["src/**"];
 
 let temp: string;
 let repo: string;
@@ -60,7 +61,7 @@ function writeDispatchRecord(commit: string): void {
 }
 
 async function claimAndSlot(): Promise<void> {
-  await didReserveTicket(RUN, LIVE_PID, TICKET, forgeDirectory, ALIVE);
+  await didReserveTicket(RUN, LIVE_PID, TICKET, forgeDirectory, ALIVE, SURFACES);
   await acquireSlot(2, RUN, LIVE_PID, TICKET, slotsDirectory, ALIVE);
 }
 
@@ -218,6 +219,17 @@ describe("dispatch worker", () => {
     errors.mockRestore();
     expect(existsSync(path.join(repo, ".emet", "worktrees"))).toBe(false);
     expect(existsSync(path.join(repo, ".emet", "runs", RUN, "codex-home"))).toBe(false);
+  });
+
+  test("exits 1 and creates nothing when the claim has no surfaces", async () => {
+    await didReserveTicket(RUN, LIVE_PID, TICKET, forgeDirectory, ALIVE);
+    await acquireSlot(2, RUN, LIVE_PID, TICKET, slotsDirectory, ALIVE);
+    const errors = spyOn(console, "error").mockImplementation(() => {});
+    expect(await run(dispatchArguments(), deps())).toBe(1);
+    const message = String(errors.mock.calls.at(-1)?.[0]);
+    errors.mockRestore();
+    expect(message).toContain("--surfaces");
+    expect(existsSync(path.join(repo, ".emet", "worktrees"))).toBe(false);
   });
 
   test("exits 42 when the baseline is not a commit", async () => {

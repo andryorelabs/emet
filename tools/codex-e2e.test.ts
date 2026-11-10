@@ -104,7 +104,7 @@ describe.skipIf(!codexE2eEnabled())("codex e2e", () => {
       const forgeDirectory = path.join(temp, "forge");
       const slotsDirectory = path.join(temp, "slots");
       mkdirSync(slotsDirectory);
-      await didReserveTicket(RUN, process.pid, TICKET, forgeDirectory);
+      await didReserveTicket(RUN, process.pid, TICKET, forgeDirectory, undefined, ["**"]);
       await acquireSlot(2, RUN, process.pid, TICKET, slotsDirectory);
 
       const { config } = await loadForgeConfigWithDefaults(repo);

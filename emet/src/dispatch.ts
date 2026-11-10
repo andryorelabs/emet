@@ -137,6 +137,11 @@ async function requireClaimAndSlot(
   const reservations = await listReservations(deps.forgeDirectory);
   const claim = reservations.find((entry) => entry.ticket === ticket && entry.runId === runId);
   if (claim === undefined) throw new DispatchError(`no claim for ${ticket} under runId ${runId}`);
+  if (claim.surfaces === undefined || claim.surfaces.length === 0) {
+    throw new DispatchError(
+      `claim for ${ticket} under runId ${runId} has no surfaces; reserve it with --surfaces`,
+    );
+  }
   const slots = await listOccupiedSlots(deps.slotsDirectory);
   const slot = slots.find(
     (entry) => entry.holder.ticket === ticket && entry.holder.runId === runId,
