@@ -2,8 +2,53 @@
 title: Novità
 description: Note di rilascio di emet: cosa è cambiato in ogni versione.
 seoTitle: "Novità di emet: note di rilascio"
-sourceHash: a633f8ebdf12e2a7
+sourceHash: 6a4ab9853722f86c
 ---
+
+## 0.5.0
+
+2026-11-10
+
+### Aggiunto
+
+- La home page del Website: hero dipinto, come funziona, funzionalità, chi
+  siamo, pannello di chiusura, header e footer, con i testi in inglese in
+  `apps/site/src/i18n/ui/en.ts`.
+- La documentazione del Website in `/docs/`: pagine Starlight generate da una
+  allowlist di documenti del repository e da questo changelog, con ricerca
+  Pagefind, riscrittura dei link verso pagine del sito o GitHub e un avviso di
+  ripiego in inglese per le traduzioni mancanti o obsolete.
+- `docs/how-to/update-emet.md`: come aggiornare i plugin e attivare
+  l'aggiornamento automatico del marketplace.
+- Codex come Agent host: `agentHost` in `emet.config.json`, `emet dispatch` e
+  `emet review-run` avviano ogni worker e reviewer come processo `codex exec`,
+  le skill `$emet:run`, `$emet:init` e `$emet:doctor` e il manifest del plugin
+  Codex, e il test end-to-end opzionale (`EMET_CODEX_E2E=1`).
+- `docs/guide/codex.md`, la guida a Codex, pubblicata sul Website.
+
+### Modificato
+
+- Il valore predefinito di `codex.sandbox` è `danger-full-access`
+  (`workspace-write` è ancora accettato), passato da `emet dispatch`,
+  `emet review-run` e da un `emet launch` Codex; `emet guard` su Codex nega
+  ogni forma di push.
+- L'overlay Codex di ogni esecuzione scrive un proprio `config.toml` minimale
+  invece di collegare il tuo, e le sue regole consentono le forme `-C` e i
+  sottocomandi di coordinamento mentre il push resta vietato.
+- I worker Codex sono identificati dal loro `threadId` e dal percorso del
+  JSONL, non dal pid.
+- La guida a Codex riporta i risultati reali con Codex: ogni riga `failed`
+  precedente è `verified`, l'elenco `unverified` si riduce alla supervisione
+  non presidiata e il report della sonda elenca i seguiti rimanenti.
+
+### Corretto
+
+- `emet cleanup` recupera i worktree atterrati senza proprietario.
+- L'Agent host Codex si risolve per impostazione predefinita, quindi
+  `emet preflight`, `doctor`, `cleanup`, `status` e `usage` accettano
+  `agentHost: "codex"`.
+- La risoluzione dei modelli Codex legge `models_cache.json` dalla home
+  dell'esecuzione o dalla tua vera home Codex.
 
 ## 0.4.0
 

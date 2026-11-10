@@ -2,8 +2,44 @@
 title: 新功能
 description: emet 的发布说明：每个版本都有哪些变化。
 seoTitle: "emet 新功能：发布说明"
-sourceHash: a633f8ebdf12e2a7
+sourceHash: 6a4ab9853722f86c
 ---
+
+## 0.5.0
+
+2026-11-10
+
+### 新增
+
+- Website 首页：手绘主视觉、工作原理、功能、关于、收尾面板、页眉和页脚，英文字符串位于
+  `apps/site/src/i18n/ui/en.ts`。
+- `/docs/` 下的 Website 文档：由仓库文档白名单和本更新日志构建的 Starlight 页面，
+  带有 Pagefind 搜索、指向站点页面或 GitHub 的链接重写，以及译文缺失或过期时的
+  英文回退提示。
+- `docs/how-to/update-emet.md`：如何更新插件并开启市场自动更新。
+- 将 Codex 作为 Agent 宿主：`emet.config.json` 中的 `agentHost`；`emet dispatch` 和
+  `emet review-run` 将每个 worker 和 reviewer 作为 `codex exec` 进程启动，另有
+  `$emet:run`、`$emet:init` 和 `$emet:doctor` 技能、Codex 插件清单，以及可选启用的
+  端到端测试（`EMET_CODEX_E2E=1`）。
+- `docs/guide/codex.md`，即 Codex 指南，已发布到 Website。
+
+### 变更
+
+- Codex 的 `codex.sandbox` 默认值为 `danger-full-access`（仍接受 `workspace-write`），
+  由 `emet dispatch`、`emet review-run` 以及 Codex 的 `emet launch` 传入；Codex 上的
+  `emet guard` 会拒绝所有 push 形式。
+- 每次运行的 Codex 覆盖层会写入自己的最小 `config.toml`，而不是链接你的配置，其规则
+  允许 `-C` 形式和协调子命令，同时仍禁止 push。
+- Codex worker 通过其 `threadId` 和 JSONL 路径来识别，而不是 pid。
+- Codex 指南报告了真实 Codex 的结果：之前每个 `failed` 行现在都是 `verified`，
+  `unverified` 列表缩减为无人值守的监督，探测报告列出了剩余的后续事项。
+
+### 修复
+
+- `emet cleanup` 会回收已合并且无归属的 worktree。
+- Codex Agent 宿主现在默认可解析，因此 `emet preflight`、`doctor`、`cleanup`、
+  `status` 和 `usage` 接受 `agentHost: "codex"`。
+- Codex 模型解析会从运行主目录或你真实的 Codex 主目录读取 `models_cache.json`。
 
 ## 0.4.0
 

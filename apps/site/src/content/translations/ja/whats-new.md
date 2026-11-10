@@ -2,8 +2,48 @@
 title: 新機能
 description: emet のリリースノート。各バージョンでの変更点をまとめています。
 seoTitle: "emet の新機能: リリースノート"
-sourceHash: a633f8ebdf12e2a7
+sourceHash: 6a4ab9853722f86c
 ---
+
+## 0.5.0
+
+2026-11-10
+
+### 追加
+
+- Website のホームページ: 描き下ろしのヒーロー、仕組み、機能、概要、締めのパネル、
+  ヘッダー、フッター。英語の文字列は `apps/site/src/i18n/ui/en.ts` にあります。
+- `/docs/` の Website ドキュメント: リポジトリのドキュメントの許可リストとこの
+  変更履歴から作られる Starlight ページ。Pagefind 検索、サイトページまたは GitHub への
+  リンク書き換え、翻訳がない、または古い場合の英語フォールバック通知を備えます。
+- `docs/how-to/update-emet.md`: プラグインの更新方法と、マーケットプレイスの
+  自動更新を有効にする方法。
+- Agent ホストとしての Codex: `emet.config.json` の `agentHost`。`emet dispatch` と
+  `emet review-run` は各ワーカーとレビュアーを `codex exec` プロセスとして起動します。
+  `$emet:run`、`$emet:init`、`$emet:doctor` スキル、Codex プラグインのマニフェスト、
+  オプトインのエンドツーエンドテスト（`EMET_CODEX_E2E=1`）も加わりました。
+- `docs/guide/codex.md`: Website で公開される Codex ガイド。
+
+### 変更
+
+- Codex の `codex.sandbox` の既定値は `danger-full-access` です（`workspace-write` も
+  引き続き指定できます）。`emet dispatch`、`emet review-run`、Codex の `emet launch` が
+  これを渡し、Codex 上の `emet guard` はすべての push 形式を拒否します。
+- 実行ごとの Codex オーバーレイは、あなたの `config.toml` をリンクする代わりに、
+  独自の最小限の `config.toml` を書き出します。そのルールは `-C` 形式と調整用の
+  サブコマンドを許可し、push は引き続き禁止です。
+- Codex ワーカーは pid ではなく `threadId` と JSONL パスで識別されます。
+- Codex ガイドに実際の Codex での結果を記載しました。以前の `failed` 行はすべて
+  `verified` になり、`unverified` の一覧は無人での監督のみに縮小され、プローブレポートに
+  残りのフォローアップが載っています。
+
+### 修正
+
+- `emet cleanup` が、マージ済みで所有者のいない worktree を回収するようになりました。
+- Codex の Agent ホストが既定で解決されるようになり、`emet preflight`、`doctor`、
+  `cleanup`、`status`、`usage` が `agentHost: "codex"` を受け付けます。
+- Codex のモデル解決は、実行ホームまたは実際の Codex ホームから `models_cache.json` を
+  読み込みます。
 
 ## 0.4.0
 
