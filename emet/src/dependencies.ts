@@ -388,6 +388,15 @@ export function classifyGithubCliProbe(probe: GithubCliProbe): DependencyCheck {
   }
 }
 
+function notDeclaredSummary(searchedAllScopes: boolean, isClaude: boolean): string {
+  if (!isClaude) {
+    return "tracker: linear — no Linear MCP server in .mcp.json, and emet cannot list user-level MCP servers on Codex. If yours is configured at user level this is fine.";
+  }
+  return searchedAllScopes
+    ? "tracker: linear — no Linear MCP server found in .mcp.json or in `claude mcp list`. /emet cannot read or move tickets without it."
+    : "tracker: linear — no Linear MCP server in .mcp.json, and `claude` is not on PATH to check user-level scopes. If yours is configured at user level this is fine.";
+}
+
 /**
  * The one thing emet deliberately does not try to verify is whether the
  * Linear MCP *connection* is authorized. That token lives in Claude Code's
@@ -396,11 +405,17 @@ export function classifyGithubCliProbe(probe: GithubCliProbe): DependencyCheck {
  * declared, well-formed server is `satisfied` with the gap stated out loud in
  * `limitation` rather than silently treated as proof of a working tracker.
  */
-export function classifyLinearMcpProbe(probe: LinearMcpProbe): DependencyCheck {
+export function classifyLinearMcpProbe(
+  probe: LinearMcpProbe,
+  host: AgentHost = claudeHost,
+): DependencyCheck {
   const base = { dependency: "linear-mcp-server" as const, remedy: [] };
+  const isClaude = host.name === "claude";
   const authLimitation =
     "emet can verify the Linear MCP server is declared, not that the connection is authenticated — " +
-    "if Phase 0 fails to read tickets, restart Claude Code and approve the connection.";
+    (isClaude
+      ? "if Phase 0 fails to read tickets, restart Claude Code and approve the connection."
+      : "if Phase 0 fails to read tickets, check the Linear MCP connection in Codex.");
 
   switch (probe.kind) {
     case "declared":
@@ -423,9 +438,7 @@ export function classifyLinearMcpProbe(probe: LinearMcpProbe): DependencyCheck {
       return {
         ...base,
         status: probe.searchedAllScopes ? "unsatisfied" : "indeterminate",
-        summary: probe.searchedAllScopes
-          ? "tracker: linear — no Linear MCP server found in .mcp.json or in `claude mcp list`. /emet cannot read or move tickets without it."
-          : "tracker: linear — no Linear MCP server in .mcp.json, and `claude` is not on PATH to check user-level scopes. If yours is configured at user level this is fine.",
+        summary: notDeclaredSummary(probe.searchedAllScopes, isClaude),
         limitation: null,
       };
     case "mcp-json-unreadable":
@@ -473,7 +486,7 @@ export async function checkDependencies(input: {
     checks.push(classifyGithubCliProbe(await input.probes.githubCli()));
   }
   if (input.tracker === "linear") {
-    checks.push(classifyLinearMcpProbe(await input.probes.linearMcpServer(input.repoRoot)));
+    checks.push(classifyLinearMcpProbe(await input.probes.linearMcpServer(input.repoRoot), host));
   }
   return checks;
 }

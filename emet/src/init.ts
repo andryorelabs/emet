@@ -2,14 +2,17 @@ import { existsSync } from "node:fs";
 import { stat } from "node:fs/promises";
 import path from "node:path";
 
+import type { AgentHost } from "./agenthost";
 import {
   DEFAULT_FORGE_CONFIG,
+  loadForgeConfig,
   resolveRepoRoot,
   type ForgeConfig,
   type TrackerKind,
 } from "./config";
 import { BINARY, CONFIG_FILE, LEGACY_CONFIG_FILE, LEGACY_PRODUCT, PRODUCT, RUN_DIR } from "./names";
 import {
+  agentHostOfConfig,
   checkDependencies,
   createDependencyProbes,
   findLinearMcpEntry,
@@ -746,6 +749,15 @@ export function parseInitArguments(argv: readonly string[]): InitOptions {
   return { force, trackerOverride: trackerValue ?? null };
 }
 
+/**
+ * The Agent host an existing config selects, read before `--force` rewrites
+ * it; Claude Code when there is no readable config yet.
+ */
+async function resolveInitAgentHost(repoRoot: string): Promise<AgentHost> {
+  const loaded = await loadForgeConfig(repoRoot);
+  return agentHostOfConfig(loaded.status === "ok" ? loaded.config : DEFAULT_FORGE_CONFIG);
+}
+
 async function main(options: InitOptions): Promise<void> {
   const repoRoot = await resolveRepoRoot();
   if (!repoRoot) {
@@ -766,6 +778,7 @@ async function main(options: InitOptions): Promise<void> {
     return;
   }
 
+  const agentHost = await resolveInitAgentHost(repoRoot);
   const repoBasename = path.basename(repoRoot);
   const packageManager = await detectPackageManager(repoRoot);
   const detectedTrunk = await detectTrunk(repoRoot);
@@ -869,7 +882,8 @@ async function main(options: InitOptions): Promise<void> {
   const dependencyChecks = await checkDependencies({
     tracker,
     repoRoot,
-    probes: createDependencyProbes(),
+    host: agentHost,
+    probes: createDependencyProbes(agentHost),
   });
 
   console.log(`emet init — ${repoRoot}`);

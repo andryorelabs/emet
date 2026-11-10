@@ -1,3 +1,4 @@
+import { codexHost } from "./agenthost-codex";
 import { describe, expect, test } from "bun:test";
 import { execFileSync } from "node:child_process";
 import { mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
@@ -31,6 +32,9 @@ import {
   findWorktreesMissingLockPastDeadline,
   isBranchMatchingTicket,
   resolveApprovalDirectory,
+  worktreeAttentionMessage,
+  worktreeDirectoryLabel,
+  preflightOkSummary,
 } from "./preflight";
 import type { LandedVerdict } from "./landed";
 import type { ContentVerdict, WorktreeEntry, WorktreeOwner } from "./worktrees";
@@ -140,6 +144,19 @@ describe("collectForkBaseFailures (S2)", () => {
     expect(refs).not.toContain("origin/main");
     expect(failures.join("\n")).toContain("main");
     expect(failures.join("\n")).not.toContain("origin/main");
+  });
+
+  test("reports nothing on the Codex host, which has no harness base setting", async () => {
+    expect(
+      await collectForkBaseFailures(
+        "/r",
+        "origin",
+        "main",
+        probesFor("aaaaaaa1", "bbbbbbb2", null),
+        "pr",
+        codexHost,
+      ),
+    ).toEqual([]);
   });
 
   test("passes when baseRef is head", async () => {
@@ -1127,5 +1144,31 @@ describe("checkHeadDescendsFromTrunk (S11)", () => {
     runGit(directory, "commit", "-q", "--allow-empty", "-m", "trunk moves");
     const verdict = await inside(directory, () => checkHeadDescendsFromTrunk(head, "main"));
     expect(verdict.ok).toBe(false);
+  });
+});
+
+describe("worktreeDirectoryLabel (S5)", () => {
+  test("names .claude/worktrees/ on the Claude host", () => {
+    expect(worktreeDirectoryLabel("claude")).toBe(".claude/worktrees/");
+  });
+
+  test("names .emet/worktrees/ on the Codex host", () => {
+    expect(worktreeDirectoryLabel("codex")).toBe(".emet/worktrees/");
+  });
+
+  test("worktreeAttentionMessage cites the host directory", () => {
+    expect(worktreeAttentionMessage("codex", "  x")).toBe(
+      ".emet/worktrees/ has entries needing attention:\n  x",
+    );
+    expect(worktreeAttentionMessage("claude", "  x")).toBe(
+      ".claude/worktrees/ has entries needing attention:\n  x",
+    );
+  });
+
+  test("preflightOkSummary cites the host directory", () => {
+    const codex = preflightOkSummary("codex", "a", "b", "c");
+    expect(codex).toContain(".emet/worktrees/ clean");
+    expect(codex).not.toContain(".claude");
+    expect(preflightOkSummary("claude", "a", "b", "c")).toContain(".claude/worktrees/ clean");
   });
 });
