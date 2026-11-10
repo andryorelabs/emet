@@ -30,7 +30,7 @@ export const ru = {
     name: "emet",
     lineOne: "От идеи до мержа,",
     lineTwo: "одно одобрение.",
-    sentence: "Плагин для Claude Code. От идеи до слитого изменения с одним одобрением.",
+    sentence: "Плагин для Claude Code и Codex. От идеи до слитого изменения с одним одобрением.",
     install: "Установить emet",
     readDocs: "Читать документацию",
     alt: "Нарисованная долина, где три ручья сливаются в одну реку, с террасными полями и маленьким глиняным големом на травянистом пригорке под спокойным небом.",
@@ -84,7 +84,7 @@ export const ru = {
       {
         question: "Что мне нужно?",
         answer:
-          "Claude Code, git, авторизованный gh и плагин mattpocock-skills, на Linux или macOS.",
+          "Claude Code или Codex CLI, git, авторизованный gh и плагин mattpocock-skills, на Linux или macOS.",
       },
       {
         question: "Работает ли на Windows?",
@@ -128,7 +128,7 @@ export const ru = {
     alt: "Долина в низком утреннем тумане с бледным солнцем и пастельным небом.",
   },
   footer: {
-    description: "Плагин для Claude Code.",
+    description: "Плагин для Claude Code и Codex.",
     notice: "Не связан с Anthropic и не одобрен Anthropic",
     docs: "Документация",
     whatsNew: "Что нового",
