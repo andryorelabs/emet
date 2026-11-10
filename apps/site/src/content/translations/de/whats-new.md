@@ -2,8 +2,17 @@
 title: Neuigkeiten
 description: Release Notes für emet: was sich in jeder Version geändert hat.
 seoTitle: "Neuigkeiten in emet: Release Notes"
-sourceHash: ffd419a534a47352
+sourceHash: 9ac94745afe83a53
 ---
+
+## 0.6.1
+
+2026-11-10
+
+### Behoben
+
+- Zwei Prozesse, die gleichzeitig denselben veralteten Lock übernehmen, können nicht mehr beide in den kritischen Abschnitt eintreten; Claims, die Mailbox, der Tracker und `acquireLock` nutzen eine gemeinsame, abgesicherte Übernahme.
+- Gleichzeitige Aufrufe von `emet tracker create-ticket` schlagen nicht mehr sporadisch fehl.
 
 ## 0.6.0
 

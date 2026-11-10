@@ -2,8 +2,17 @@
 title: 新機能
 description: emet のリリースノート。各バージョンでの変更点をまとめています。
 seoTitle: "emet の新機能: リリースノート"
-sourceHash: ffd419a534a47352
+sourceHash: 9ac94745afe83a53
 ---
+
+## 0.6.1
+
+2026-11-10
+
+### 修正
+
+- 同じ古いロックを同時に回収する 2 つのプロセスが、両方とも臨界区間に入ることはなくなりました。claim、Mailbox、tracker、`acquireLock` は保護された 1 つの回収処理を共有します。
+- `emet tracker create-ticket` を同時に呼び出しても、断続的に失敗することはなくなりました。
 
 ## 0.6.0
 

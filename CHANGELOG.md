@@ -8,6 +8,15 @@ and this project adheres to
 
 ## [Unreleased]
 
+## [0.6.1] - 2026-11-10
+
+### Fixed
+
+- Two processes reclaiming the same stale lock at once can no longer both enter
+  the critical section; claims, the Mailbox, the tracker and `acquireLock` share
+  one guarded reclaim.
+- Concurrent `emet tracker create-ticket` calls no longer fail intermittently.
+
 ## [0.6.0] - 2026-11-10
 
 ### Added

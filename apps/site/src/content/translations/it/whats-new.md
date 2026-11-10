@@ -2,8 +2,17 @@
 title: Novità
 description: Note di rilascio di emet: cosa è cambiato in ogni versione.
 seoTitle: "Novità di emet: note di rilascio"
-sourceHash: ffd419a534a47352
+sourceHash: 9ac94745afe83a53
 ---
+
+## 0.6.1
+
+2026-11-10
+
+### Corretto
+
+- Due processi che recuperano contemporaneamente lo stesso lock scaduto non possono più entrare entrambi nella sezione critica; i claim, la Mailbox, il tracker e `acquireLock` condividono un unico recupero protetto.
+- Le chiamate concorrenti a `emet tracker create-ticket` non falliscono più in modo intermittente.
 
 ## 0.6.0
 
