@@ -8,6 +8,23 @@ and this project adheres to
 
 ## [Unreleased]
 
+## [0.6.0] - 2026-11-10
+
+### Added
+
+- A Mailbox for Codex workers: `emet ask` records a question (and polls with
+  `--wait`), `emet inbox` lists open questions and `emet reply` answers one, so
+  a worker no longer escalates through a handoff note.
+- `emet dispatch --wait` prints `question <ticket> <id>` while a live worker has
+  an open question, and never classifies that worker as stalled.
+- `emet claims --reserve` stores the ticket's edit surfaces and denies a
+  reservation that overlaps another run's surfaces.
+
+### Fixed
+
+- `emet dispatch --wait` reads results from the git-common-dir run directory,
+  where `emet results --write` writes them.
+
 ## [0.5.2] - 2026-11-10
 
 ### Changed

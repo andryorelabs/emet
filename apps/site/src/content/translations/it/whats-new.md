@@ -2,8 +2,22 @@
 title: Novità
 description: Note di rilascio di emet: cosa è cambiato in ogni versione.
 seoTitle: "Novità di emet: note di rilascio"
-sourceHash: e658e982cb203285
+sourceHash: ffd419a534a47352
 ---
+
+## 0.6.0
+
+2026-11-10
+
+### Aggiunto
+
+- Una Mailbox per i worker Codex: `emet ask` registra una domanda (e controlla la risposta con `--wait`), `emet inbox` elenca le domande aperte e `emet reply` ne risponde a una, così un worker non deve più passare da una nota di passaggio.
+- `emet dispatch --wait` stampa `question <ticket> <id>` finché un worker attivo ha una domanda aperta, e non classifica mai quel worker come bloccato.
+- `emet claims --reserve` memorizza le superfici di modifica del ticket e rifiuta una prenotazione che si sovrappone alle superfici di un'altra esecuzione.
+
+### Corretto
+
+- `emet dispatch --wait` legge i risultati dalla directory di esecuzione del git-common-dir, dove `emet results --write` li scrive.
 
 ## 0.5.2
 
