@@ -2,7 +2,7 @@
 title: emet を更新する
 description: インストール済みの emet を新しいリリースに更新し、プラグインのマーケットプレイス自動更新を有効にします。
 seoTitle: emet を更新する
-sourceHash: 584eafb89175d6c7
+sourceHash: 442bf243cbe7eadb
 ---
 
 インストール済みの emet を新しいリリースに移行する方法です。用語は [GLOSSARY.md](../../GLOSSARY.md) に従います。
@@ -21,10 +21,10 @@ claude plugin update emet-mascot@emet-marketplace
 
 ## Codex で更新する
 
-このリポジトリのドキュメントには、Codex プラグイン用の個別の更新コマンドはありません。[Codex で emet を実行する](../guide/codex.md#インストール)のインストールコマンドをもう一度実行してください。
+マーケットプレイスのスナップショットを更新してから、プラグインをもう一度追加してください。`codex plugin marketplace add` をもう一度実行しても更新されません。
 
 ```bash
-codex plugin marketplace add andryorelabs/emet
+codex plugin marketplace upgrade emet-marketplace
 codex plugin add emet@emet-marketplace
 ```
 

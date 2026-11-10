@@ -2,7 +2,7 @@
 title: emet aktualisieren
 description: Ein installiertes emet auf ein neues Release bringen und die automatische Marketplace-Aktualisierung für die Plugins einschalten.
 seoTitle: emet aktualisieren
-sourceHash: 584eafb89175d6c7
+sourceHash: 442bf243cbe7eadb
 ---
 
 So wird ein installiertes emet auf ein neues Release gebracht. Die Begriffe folgen [GLOSSARY.md](../../GLOSSARY.md).
@@ -21,10 +21,10 @@ Die letzte Zeile entfällt, wenn das Maskottchen nicht installiert wurde. Anschl
 
 ## Unter Codex aktualisieren
 
-Das Codex-Plugin hat in den Dokumenten dieses Repos keinen eigenen Update-Befehl. Die Installationsbefehle aus [emet mit Codex ausführen](../guide/codex.md#installation) erneut ausführen:
+Die Marketplace-Momentaufnahme aktualisieren und das Plugin erneut hinzufügen. Ein zweites `codex plugin marketplace add` aktualisiert sie nicht:
 
 ```bash
-codex plugin marketplace add andryorelabs/emet
+codex plugin marketplace upgrade emet-marketplace
 codex plugin add emet@emet-marketplace
 ```
 

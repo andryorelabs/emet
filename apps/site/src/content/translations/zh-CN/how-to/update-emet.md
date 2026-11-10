@@ -2,7 +2,7 @@
 title: 更新 emet
 description: 将已安装的 emet 升级到新版本，并为插件开启市场自动更新。
 seoTitle: 更新 emet
-sourceHash: 584eafb89175d6c7
+sourceHash: 442bf243cbe7eadb
 ---
 
 如何将已安装的 emet 升级到新版本。术语遵循 [GLOSSARY.md](../../GLOSSARY.md)。
@@ -21,10 +21,10 @@ claude plugin update emet-mascot@emet-marketplace
 
 ## 在 Codex 上更新
 
-本仓库的文档中没有单独的 Codex 插件更新命令。请重新运行[在 Codex 上运行 emet](../guide/codex.md#安装)中的安装命令：
+先刷新 marketplace 快照，再重新添加插件。再次运行 `codex plugin marketplace add` 不会刷新它：
 
 ```bash
-codex plugin marketplace add andryorelabs/emet
+codex plugin marketplace upgrade emet-marketplace
 codex plugin add emet@emet-marketplace
 ```
 

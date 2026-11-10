@@ -16,10 +16,10 @@ Skip the last line when you did not install the mascot. Restart Claude Code afte
 
 ## Update on Codex
 
-The Codex plugin has no separate update command in this repo's docs. Re-run the install commands from [Running emet on Codex](../guide/codex.md#install):
+Refresh the marketplace snapshot, then add the plugin again. Running `codex plugin marketplace add` a second time does not refresh it:
 
 ```bash
-codex plugin marketplace add andryorelabs/emet
+codex plugin marketplace upgrade emet-marketplace
 codex plugin add emet@emet-marketplace
 ```
 
