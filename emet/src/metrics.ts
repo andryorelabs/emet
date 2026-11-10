@@ -8,6 +8,9 @@
 import { existsSync, readFileSync } from "node:fs";
 import path from "node:path";
 
+import { claudeHost } from "./agenthost-claude";
+import type { AgentHost } from "./agenthost";
+import { codexCostUsd, parseCodexJsonl } from "./codex-usage";
 import { resolveRepoRoot } from "./config";
 import { isObject } from "./narrow";
 import { resolveRunDir } from "./names";
@@ -53,7 +56,7 @@ function ratesForModel(model: string): Rates {
   return RATES_BY_MODEL_MARKER.find(([marker]) => model.includes(marker))?.[1] ?? FALLBACK_RATES;
 }
 
-export function costUsd(model: string, tokens: TokenTotals): number {
+function claudeJsonlCostUsd(model: string, tokens: TokenTotals): number {
   const rates = ratesForModel(model);
   const cacheReadRate = rates.cacheRead ?? rates.input * 0.1;
   return (
@@ -69,7 +72,7 @@ function numberOr0(value: unknown): number {
   return typeof value === "number" ? value : 0;
 }
 
-export function parseTranscriptMetrics(text: string): TranscriptMetrics {
+function parseClaudeJsonlMetrics(text: string): TranscriptMetrics {
   let inputTokens = 0;
   let outputTokens = 0;
   let cacheReadTokens = 0;
@@ -124,7 +127,7 @@ export function parseTranscriptMetrics(text: string): TranscriptMetrics {
       peakContext,
       turn.inputTokens + turn.cacheReadTokens + turn.cacheCreationTokens,
     );
-    cost += costUsd(modelName, turn);
+    cost += claudeJsonlCostUsd(modelName, turn);
   }
 
   return {
@@ -138,6 +141,40 @@ export function parseTranscriptMetrics(text: string): TranscriptMetrics {
     wallMs: Number.isFinite(firstMs) ? lastMs - firstMs : 0,
     models: [...models].toSorted(),
   };
+}
+
+export type TranscriptFormat = AgentHost["transcriptFormat"];
+
+export type MetricsParser = {
+  parse(text: string): TranscriptMetrics;
+  costUsd(model: string, tokens: TokenTotals): number;
+};
+
+/**
+ * Metrics parsers and price tables by transcript format. `claude-jsonl` is
+ * the Claude Code reader; `codex-jsonl` is the Codex reader from `codex-usage.ts`.
+ */
+export const metricsParsers: Record<TranscriptFormat, MetricsParser> = {
+  "claude-jsonl": { parse: parseClaudeJsonlMetrics, costUsd: claudeJsonlCostUsd },
+  "codex-jsonl": {
+    parse: parseCodexJsonl,
+    costUsd: codexCostUsd,
+  },
+};
+
+export function costUsd(
+  model: string,
+  tokens: TokenTotals,
+  format: TranscriptFormat = "claude-jsonl",
+): number {
+  return metricsParsers[format].costUsd(model, tokens);
+}
+
+export function parseTranscriptMetrics(
+  text: string,
+  format: TranscriptFormat = "claude-jsonl",
+): TranscriptMetrics {
+  return metricsParsers[format].parse(text);
 }
 
 export type TicketMetrics = TranscriptMetrics & {
@@ -277,7 +314,7 @@ function readFlag(argv: string[], name: string): string | undefined {
   return index === -1 ? undefined : argv[index + 1];
 }
 
-export async function run(argv: string[]): Promise<void> {
+export async function run(argv: string[], host: AgentHost = claudeHost): Promise<void> {
   const runId = readFlag(argv, "--run") ?? argv.find((argument) => !argument.startsWith("--"));
   if (!runId || /[\\/]|^\.\.?$/.test(runId)) {
     console.error(USAGE);
@@ -314,7 +351,7 @@ export async function run(argv: string[]): Promise<void> {
       continue;
     }
     tickets.push({
-      ...parseTranscriptMetrics(readFileSync(transcript, "utf8")),
+      ...parseTranscriptMetrics(readFileSync(transcript, "utf8"), host.transcriptFormat),
       ticket: entry.id,
       wave: entry.wave,
       estimatedPeakTokens: entry.estimatedPeakTokens,

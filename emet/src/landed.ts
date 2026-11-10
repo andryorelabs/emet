@@ -113,3 +113,37 @@ export async function resolveLandedVerdict(
     return "unknown";
   }
 }
+
+export interface UnownedReclaimInput {
+  /** The ticket its worker-shaped branch names, or `null` when the branch is not worker-shaped. */
+  readonly workerTicket: string | null;
+  readonly landed: LandedVerdict;
+  readonly clean: boolean;
+  /** A lock reason that is not emet's: some other tool or a human holds the worktree. */
+  readonly lockedByOther: boolean;
+}
+
+export interface UnownedReclaimVerdict {
+  readonly reclaimable: boolean;
+  /** The first failing condition, or why it is reclaimable; printed by both preflight and cleanup. */
+  readonly reason: string;
+}
+
+/**
+ * The one rule for an Unowned worktree, shared by `emet preflight`'s advice
+ * and `emet cleanup`'s removal: reclaimable only when no other tool locks it,
+ * its branch is worker-shaped, its ticket landed and its tree is clean. The
+ * reason names the first failing condition, checked in that order.
+ */
+export function unownedReclaimVerdict(input: UnownedReclaimInput): UnownedReclaimVerdict {
+  if (input.lockedByOther) return { reclaimable: false, reason: "locked by another tool" };
+  if (input.workerTicket === null) {
+    return { reclaimable: false, reason: "branch is not worker-shaped" };
+  }
+  if (input.landed === "not-landed") return { reclaimable: false, reason: "ticket not landed" };
+  if (input.landed === "unknown") {
+    return { reclaimable: false, reason: "ticket landed state unknown" };
+  }
+  if (!input.clean) return { reclaimable: false, reason: "dirty tree" };
+  return { reclaimable: true, reason: "ticket landed and tree clean" };
+}

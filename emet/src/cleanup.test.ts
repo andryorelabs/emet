@@ -20,11 +20,18 @@ import {
 } from "./cleanup";
 import { readPhase } from "./phase";
 import { DEFAULT_FORGE_CONFIG, type ForgeConfig } from "./config";
+import { resolveLandedVerdict } from "./landed";
+import {
+  classifyWorktreeEntry,
+  describeWorktreeEntryVerdict,
+  ticketFromWorkerBranch,
+} from "./preflight";
 import { isRunClosed } from "./runs";
 import {
   listBranches,
   listLiveWorktreeDirectoryNames,
   listWorktreeEntries,
+  resolveMainTree,
   type BranchVerdict,
   type WorktreeEntry,
 } from "./worktrees";
@@ -116,6 +123,19 @@ describe("planWorktreeRemoval", () => {
 
   test("no owner is protected", () => {
     expect(planWorktreeRemoval(lockedEntry(), null, "landed", false)).toBe("protected");
+  });
+
+  test("an unowned unlocked worktree is removed only when landed and clean", () => {
+    const entry = lockedEntry({ lockedReason: null, branch: "cla-355-x" });
+    expect(planWorktreeRemoval(entry, null, "landed", false)).toBe("remove");
+    expect(planWorktreeRemoval(entry, null, "landed", true)).toBe("protected");
+    expect(planWorktreeRemoval(entry, null, "not-landed", false)).toBe("protected");
+    expect(planWorktreeRemoval(entry, null, "unknown", false)).toBe("protected");
+  });
+
+  test("an unowned detached worktree is protected", () => {
+    const entry = lockedEntry({ lockedReason: null, branch: null });
+    expect(planWorktreeRemoval(entry, null, "landed", false)).toBe("protected");
   });
 
   test("a non-forge lock stays protected even when a claim supplied an owner", () => {
@@ -676,6 +696,148 @@ describe("reclaim against a real repository", () => {
     expect(await listReservations()).toHaveLength(1);
   });
 
+  async function addUnownedWorktree(agentId: string, branch: string): Promise<string> {
+    const directory = path.join(repo, ".claude", "worktrees", agentId);
+    await git("worktree", "add", "-q", "-b", `worktree-${agentId}`, directory, "main");
+    await git("-C", directory, "checkout", "-q", "-b", branch);
+    return directory;
+  }
+
+  function loggedOutput(): string {
+    return logSpy.mock.calls.map((call: unknown[]) => String(call[0])).join("\n");
+  }
+
+  test("bare cleanup reclaims an unowned clean worktree whose ticket landed", async () => {
+    const directory = await addUnownedWorktree("agent-unowned", "cla-355-x");
+
+    await reclaimOwnedWorktrees(await buildContext("finished", null));
+
+    expect(existsSync(directory)).toBe(false);
+    const branches = await branchNames();
+    expect(branches).not.toContain("cla-355-x");
+    expect(branches).not.toContain("worktree-agent-unowned");
+    expect(process.exitCode).not.toBe(1);
+  });
+
+  test("an unowned dirty worktree stays protected with the manual command", async () => {
+    const directory = await addUnownedWorktree("agent-unowned", "cla-355-x");
+    writeFileSync(path.join(directory, "untracked.txt"), "wip\n");
+
+    await reclaimOwnedWorktrees(await buildContext("finished", null));
+
+    expect(existsSync(directory)).toBe(true);
+    expect(await branchNames()).toContain("cla-355-x");
+    const output = loggedOutput();
+    expect(output).toContain("cla-355-x");
+    expect(output).toContain("protected");
+    expect(output).toContain(`git worktree remove "${directory}"`);
+  });
+
+  test("an unowned worktree whose ticket has not landed stays protected", async () => {
+    const directory = await addUnownedWorktree("agent-unowned", "cla-355-x");
+
+    await reclaimOwnedWorktrees({
+      ...(await buildContext("finished", null)),
+      readTrackerState: () => Promise.resolve("open" as const),
+    });
+
+    expect(existsSync(directory)).toBe(true);
+    expect(await branchNames()).toContain("cla-355-x");
+    expect(loggedOutput()).toContain("protected");
+  });
+
+  test("an unowned dirty worktree names the shared reason", async () => {
+    const directory = await addUnownedWorktree("agent-unowned", "cla-355-x");
+    writeFileSync(path.join(directory, "untracked.txt"), "wip\n");
+
+    await reclaimOwnedWorktrees(await buildContext("finished", null));
+
+    expect(loggedOutput()).toContain("cla-355-x — no owner, dirty tree, protected");
+  });
+
+  test("an unowned worker worktree under a non-emet lock stays protected with the shared reason", async () => {
+    const directory = await addUnownedWorktree("agent-unowned", "cla-355-x");
+    await git("worktree", "lock", directory, "--reason", "do not touch, debugging");
+
+    await reclaimOwnedWorktrees(await buildContext("finished", null));
+
+    expect(existsSync(directory)).toBe(true);
+    expect(await lockOf(directory)).toBe("do not touch, debugging");
+    expect(await branchNames()).toContain("cla-355-x");
+    expect(loggedOutput()).toContain("cla-355-x — no owner, locked by another tool, protected");
+  });
+
+  async function preflightAdvice(trackerState: "done" | "open"): Promise<string> {
+    const entry = (await listWorktreeEntries()).find((candidate) =>
+      candidate.directory.endsWith("agent-unowned"),
+    );
+    if (entry === undefined) throw new Error("fixture worktree missing");
+    const verdict = classifyWorktreeEntry(entry, undefined, () => "dead", undefined, {
+      branchPrefix: "cla",
+    });
+    const report = await describeWorktreeEntryVerdict(
+      entry,
+      verdict,
+      await resolveMainTree("origin", "main", { local: true }),
+      "origin",
+      "main",
+      true,
+      (branch) =>
+        resolveLandedVerdict(
+          { ticket: ticketFromWorkerBranch(branch, "cla") ?? "", branch },
+          { config, readTrackerState: () => Promise.resolve(trackerState) },
+        ),
+      { branchPrefix: "cla" },
+    );
+    return report.line;
+  }
+
+  test.each([
+    { name: "landed and clean", tracker: "done" as const, dirty: false, lock: null, acts: true },
+    { name: "landed but dirty", tracker: "done" as const, dirty: true, lock: null, acts: false },
+    {
+      name: "open ticket with content equivalent to trunk",
+      tracker: "open" as const,
+      dirty: false,
+      lock: null,
+      acts: false,
+    },
+    {
+      name: "landed under a non-emet lock",
+      tracker: "done" as const,
+      dirty: false,
+      lock: "do not touch, debugging",
+      acts: false,
+    },
+  ])("preflight and cleanup agree: $name", async ({ tracker, dirty, lock, acts }) => {
+    const directory = await addUnownedWorktree("agent-unowned", "cla-355-x");
+    if (dirty) writeFileSync(path.join(directory, "untracked.txt"), "wip\n");
+    if (lock !== null) await git("worktree", "lock", directory, "--reason", lock);
+
+    const advice = await preflightAdvice(tracker);
+    await reclaimOwnedWorktrees({
+      ...(await buildContext("finished", null)),
+      readTrackerState: () => Promise.resolve(tracker),
+    });
+
+    expect(advice.includes('safe to run "emet cleanup"')).toBe(acts);
+    expect(existsSync(directory)).toBe(!acts);
+    if (!acts) {
+      const reason = /"emet cleanup" leaves it: ([^—(]+?)(?: —|\)|$)/.exec(advice)?.[1];
+      expect(reason).toBeDefined();
+      expect(loggedOutput()).toContain(`cla-355-x — no owner, ${reason}, protected`);
+    }
+  });
+
+  test("an unowned worktree is never reclaimed by a run-scoped sweep", async () => {
+    const directory = await addUnownedWorktree("agent-unowned", "cla-355-x");
+
+    await reclaimOwnedWorktrees(await buildContext("run", "run-a"));
+
+    expect(existsSync(directory)).toBe(true);
+    expect(await branchNames()).toContain("cla-355-x");
+  });
+
   test("bare cleanup leaves live and idle runs and foreign worktrees out of units", async () => {
     await addWorktree({
       agentId: "agent-live",
@@ -709,7 +871,7 @@ describe("reclaim against a real repository", () => {
 
     const { units, protectedLines } = await collectUnits(context);
 
-    expect(units.map((unit) => unit.owner.runId)).toEqual(["run-done"]);
+    expect(units.map((unit) => unit.owner?.runId)).toEqual(["run-done"]);
     expect(
       protectedLines.some((line) => line.includes("cla-6-live") && line.includes("live")),
     ).toBe(true);

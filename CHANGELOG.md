@@ -8,6 +8,8 @@ and this project adheres to
 
 ## [Unreleased]
 
+## [0.5.0] - 2026-11-10
+
 ### Added
 
 - The Website home page: painted hero, how it works, features, about, closing
@@ -18,6 +20,32 @@ and this project adheres to
   translations.
 - `docs/how-to/update-emet.md`: how to update the plugins and turn on
   marketplace auto-update.
+- Codex as an Agent host: `agentHost` in `emet.config.json`, `emet dispatch`
+  and `emet review-run` start each worker and reviewer as a `codex exec`
+  process, the `$emet:run`, `$emet:init` and `$emet:doctor` skills and the
+  Codex plugin manifest, and the opt-in end-to-end test (`EMET_CODEX_E2E=1`).
+- `docs/guide/codex.md`, the Codex guide, published on the Website.
+
+### Changed
+
+- The Codex `codex.sandbox` default is `danger-full-access` (`workspace-write` is
+  still accepted), passed by `emet dispatch`, `emet review-run` and a Codex
+  `emet launch`; `emet guard` on Codex denies every push form.
+- The per-run Codex overlay writes its own minimal `config.toml` instead of
+  linking yours, and its rules allow the `-C` forms and the coordination
+  subcommands while pushing stays forbidden.
+- Codex workers are identified by their `threadId` and JSONL path, not their pid.
+- The Codex guide reports the real-Codex results: every previous `failed` row is
+  `verified`, the `unverified` list shrinks to unattended supervision, and the
+  probe report lists the remaining follow-ups.
+
+### Fixed
+
+- `emet cleanup` reclaims landed unowned worktrees.
+- The Codex Agent host resolves by default, so `emet preflight`, `doctor`,
+  `cleanup`, `status` and `usage` accept `agentHost: "codex"`.
+- Codex model resolution reads `models_cache.json` from the run home or your
+  real Codex home.
 
 ## [0.4.0] - 2026-11-06
 

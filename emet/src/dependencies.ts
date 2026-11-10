@@ -2,7 +2,13 @@ import { existsSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
 
-import type { LandingMode, TrackerKind } from "./config";
+import { type AgentHost, claudeHost, resolveAgentHost } from "./agenthost";
+import {
+  type ForgeConfig,
+  type LandingMode,
+  resolveAgentHostName,
+  type TrackerKind,
+} from "./config";
 import { isObject } from "./narrow";
 import {
   LEGACY_PRODUCT,
@@ -248,23 +254,49 @@ export function findLinearMcpEntry(parsed: unknown): LinearEntryLookup {
   return { kind: "absent" };
 }
 
-export function classifyClaudePluginProbe(probe: ClaudePluginProbe): DependencyCheck {
+/** The Agent host a config selects; Claude when `agentHost` is unset. */
+export function agentHostOfConfig(config: ForgeConfig): AgentHost {
+  return resolveAgentHost(resolveAgentHostName(config));
+}
+
+/** The host's plugin list command as the human-readable probe runs it: no `--json`. */
+function textPluginListCommand(host: AgentHost): string[] {
+  return host.probes.pluginListCommand.filter((argument) => argument !== "--json");
+}
+
+/** The install remedy lines for a missing plugin; Claude keeps its marketplace pair. */
+function pluginInstallRemedy(host: AgentHost): string[] {
+  if (host.name === "claude") {
+    return [
+      "claude plugin marketplace add anthropics/claude-plugins-official",
+      `claude plugin install ${MATTPOCOCK_SKILLS_PLUGIN_ID}`,
+    ];
+  }
+  return [host.probes.pluginRemedy(host.probes.skillsPluginId)];
+}
+
+export function classifyClaudePluginProbe(
+  probe: ClaudePluginProbe,
+  host: AgentHost = claudeHost,
+): DependencyCheck {
   const base = { dependency: "claude-plugin" as const, limitation: null };
+  const binary = host.probes.pluginListCommand[0] ?? host.name;
+  const pluginId = host.probes.skillsPluginId;
   switch (probe.kind) {
     case "claude-not-on-path":
       return {
         ...base,
         status: "indeterminate",
         summary:
-          "could not verify the mattpocock-skills plugin — the `claude` binary is not on this shell's PATH. " +
-          "/emet's interview/spec/ticket phases (1-5) need that plugin; check it from a shell where `claude` resolves.",
+          `could not verify the mattpocock-skills plugin — the \`${binary}\` binary is not on this shell's PATH. ` +
+          `/emet's interview/spec/ticket phases (1-5) need that plugin; check it from a shell where \`${binary}\` resolves.`,
         remedy: [],
       };
     case "claude-failed":
       return {
         ...base,
         status: "indeterminate",
-        summary: `could not verify the mattpocock-skills plugin — \`claude plugin list\` failed: ${probe.detail}`,
+        summary: `could not verify the mattpocock-skills plugin — \`${textPluginListCommand(host).join(" ")}\` failed: ${probe.detail}`,
         remedy: [],
       };
     case "listed":
@@ -283,7 +315,7 @@ export function classifyClaudePluginProbe(probe: ClaudePluginProbe): DependencyC
           status: "unsatisfied",
           summary:
             "mattpocock-skills plugin is installed but disabled — run " +
-            `\`claude plugin enable ${MATTPOCOCK_SKILLS_PLUGIN_ID}\`.`,
+            `\`${binary} plugin enable ${pluginId}\`.`,
           remedy: [],
         };
       }
@@ -292,15 +324,22 @@ export function classifyClaudePluginProbe(probe: ClaudePluginProbe): DependencyC
         status: "unsatisfied",
         summary:
           "mattpocock-skills plugin not found — /emet's interview/spec/ticket phases (1-5) need it. Run:",
-        remedy: [
-          "claude plugin marketplace add anthropics/claude-plugins-official",
-          `claude plugin install ${MATTPOCOCK_SKILLS_PLUGIN_ID}`,
-        ],
+        remedy: pluginInstallRemedy(host),
       };
   }
 }
 
-export function classifyForgeAgentsProbe(probe: ForgeAgentsProbe): DependencyCheck {
+/** `~/.claude/agents/`-style display path of the host's agents directory. */
+function displayAgentsDirectory(host: AgentHost): string {
+  const home = os.homedir();
+  const directory = host.probes.agentsDir(home) ?? "the agents directory";
+  return `${directory.startsWith(home) ? `~${directory.slice(home.length)}` : directory}/`;
+}
+
+export function classifyForgeAgentsProbe(
+  probe: ForgeAgentsProbe,
+  host: AgentHost = claudeHost,
+): DependencyCheck {
   const base = { dependency: "forge-agents" as const, limitation: null };
   if (probe.kind === "present") {
     return {
@@ -314,7 +353,7 @@ export function classifyForgeAgentsProbe(probe: ForgeAgentsProbe): DependencyChe
     ...base,
     status: "unsatisfied",
     summary:
-      `~/.claude/agents/ is missing ${probe.missing.join(", ")} — Phase 6/8 dispatch will fail to resolve ` +
+      `${displayAgentsDirectory(host)} is missing ${probe.missing.join(", ")} — Phase 6/8 dispatch will fail to resolve ` +
       "the subagent_type. Re-run:",
     remedy: ["./install.sh"],
   };
@@ -417,10 +456,12 @@ export async function checkDependencies(input: {
   readonly landingMode?: LandingMode;
   readonly repoRoot: string;
   readonly probes: DependencyProbes;
+  readonly host?: AgentHost | undefined;
 }): Promise<readonly DependencyCheck[]> {
+  const host = input.host ?? claudeHost;
   const checks: DependencyCheck[] = [
-    classifyClaudePluginProbe(await input.probes.claudePlugin()),
-    classifyForgeAgentsProbe(await input.probes.forgeAgents()),
+    classifyClaudePluginProbe(await input.probes.claudePlugin(), host),
+    classifyForgeAgentsProbe(await input.probes.forgeAgents(), host),
     ...(input.probes.skillsContract?.() ?? []),
   ];
 
@@ -458,9 +499,26 @@ export function indeterminateChecks(
   return checks.filter((check) => check.status === "indeterminate");
 }
 
-async function probeClaudePlugin(): Promise<ClaudePluginProbe> {
-  if (!(await resolveBinaryOnPath("claude"))) return { kind: "claude-not-on-path" };
-  const result = await runProbeCommand(["claude", "plugin", "list"]);
+/** Text output keeps the Claude block parser; a JSON list goes through the host's parser. */
+function pluginStatusFromOutput(
+  stdout: string,
+  host: AgentHost,
+): "installed" | "disabled" | "missing" {
+  const listed = host.probes.parsePluginList(stdout);
+  if (listed.length === 0) {
+    return parsePluginListOutput(stdout, host.probes.skillsPluginId);
+  }
+  const entries = listed.filter((plugin) => plugin.id === host.probes.skillsPluginId);
+  if (entries.length === 0) return "missing";
+  return entries.some((plugin) => plugin.enabled) ? "installed" : "disabled";
+}
+
+async function probeClaudePlugin(host: AgentHost = claudeHost): Promise<ClaudePluginProbe> {
+  const command = textPluginListCommand(host);
+  if (!(await resolveBinaryOnPath(command[0] ?? host.name))) {
+    return { kind: "claude-not-on-path" };
+  }
+  const result = await runProbeCommand(command);
   if (result.kind === "timed-out") {
     return { kind: "claude-failed", detail: `timed out after ${DEPENDENCY_PROBE_TIMEOUT_MS}ms` };
   }
@@ -469,7 +527,7 @@ async function probeClaudePlugin(): Promise<ClaudePluginProbe> {
     return { kind: "claude-failed", detail: `exit code ${result.exitCode}` };
   return {
     kind: "listed",
-    status: parsePluginListOutput(result.stdout, MATTPOCOCK_SKILLS_PLUGIN_ID),
+    status: pluginStatusFromOutput(result.stdout, host),
   };
 }
 
@@ -502,7 +560,10 @@ async function probeGithubCli(): Promise<GithubCliProbe> {
   return result.exitCode === 0 ? { kind: "authenticated" } : { kind: "unauthenticated" };
 }
 
-export async function probeLinearMcpServer(repoRoot: string): Promise<LinearMcpProbe> {
+export async function probeLinearMcpServer(
+  repoRoot: string,
+  host: AgentHost = claudeHost,
+): Promise<LinearMcpProbe> {
   const file = Bun.file(path.join(repoRoot, ".mcp.json"));
   if (await file.exists()) {
     let parsed: unknown;
@@ -521,10 +582,14 @@ export async function probeLinearMcpServer(repoRoot: string): Promise<LinearMcpP
     }
   }
 
-  if (!(await resolveBinaryOnPath("claude"))) {
+  const mcpListCommand = host.probes.mcpListCommand;
+  if (
+    mcpListCommand === undefined ||
+    !(await resolveBinaryOnPath(mcpListCommand[0] ?? host.name))
+  ) {
     return { kind: "not-declared", searchedAllScopes: false };
   }
-  const result = await runProbeCommand(["claude", "mcp", "list"]);
+  const result = await runProbeCommand(mcpListCommand);
   if (result.kind !== "ran" || result.exitCode !== 0) {
     return { kind: "not-declared", searchedAllScopes: false };
   }
@@ -545,7 +610,7 @@ export function agentPluginInstallPaths(plugins: Parameters<typeof findPluginByN
 
 /** Memoizes the two repo-independent probes so a fleet sweep shells out once
  * rather than once per repo. */
-export function createDependencyProbes(): DependencyProbes {
+export function createDependencyProbes(host: AgentHost = claudeHost): DependencyProbes {
   let claudePluginResult: Promise<ClaudePluginProbe> | null = null;
   let githubCliResult: Promise<GithubCliProbe> | null = null;
 
@@ -553,17 +618,20 @@ export function createDependencyProbes(): DependencyProbes {
   let skillsContractResult: readonly DependencyCheck[] | null = null;
 
   return {
-    claudePlugin: () => (claudePluginResult ??= probeClaudePlugin()),
+    claudePlugin: () => (claudePluginResult ??= probeClaudePlugin(host)),
     githubCli: () => (githubCliResult ??= probeGithubCli()),
-    linearMcpServer: probeLinearMcpServer,
-    forgeAgents: () =>
-      (forgeAgentsResult ??= Promise.resolve(
-        probeForgeAgents(
-          path.join(os.homedir(), ".claude", "agents"),
-          agentPluginInstallPaths(listInstalledPlugins()),
-        ),
-      )),
-    skillsContract: () => (skillsContractResult ??= checkSkillsContract()),
+    linearMcpServer: (repoRoot) => probeLinearMcpServer(repoRoot, host),
+    forgeAgents: () => {
+      const agentsDirectory = host.probes.agentsDir(os.homedir());
+      forgeAgentsResult ??= Promise.resolve(
+        agentsDirectory === undefined
+          ? { kind: "present" }
+          : probeForgeAgents(agentsDirectory, agentPluginInstallPaths(listInstalledPlugins(host))),
+      );
+      return forgeAgentsResult;
+    },
+    skillsContract: () =>
+      (skillsContractResult ??= checkSkillsContract(listInstalledPlugins(host), host)),
   };
 }
 

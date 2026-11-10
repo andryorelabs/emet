@@ -2,7 +2,7 @@
 title: モデルとエフォート
 description: emet がロールごとにモデルと推論エフォートをどう選ぶか、またそれを変更する設定キーを説明します。
 seoTitle: emet のモデルとエフォート
-sourceHash: 6fe7308bf47a7aac
+sourceHash: a46d2e68a403f4f9
 ---
 
 `/emet` はロールごとにモデルと推論エフォートを自動で選びます。実行中に手動で切り替えるものはありません。すべてのキーは[設定リファレンス](../reference/configuration.md#models)にあります。
@@ -52,6 +52,29 @@ sourceHash: 6fe7308bf47a7aac
 ```
 
 `review.highRiskPaths` は、大文字小文字を区別せずに `high` ティアを強制する追加のパス部分文字列のリストです。リスクの高いウェーブをより厳しく精査したい場合は、`models.reviewer.high.effort` を（たとえば `high` に）引き上げてください。
+
+## Codex ホスト
+
+`agentHost` を `"codex"` にすると、各ワーカーとレビュアーはそれぞれ独立した `codex exec` プロセスになり、ロールごとに `-m` と `model_reasoning_effort` が設定されます。[`codex`](../reference/configuration.md) セクションの既定値は次のとおりです。
+
+| ロール                      | モデル        | エフォート               | フォールバック                |
+| --------------------------- | ------------- | ------------------------ | ----------------------------- |
+| セッション (`$emet:run`)    | `gpt-6.1-sol` | `medium` (`high` 計画中) | なし                          |
+| ワーカー                    | `gpt-6.1-sol` | `medium`                 | `gpt-6.1-terra`, `gpt-6-luna` |
+| `Model:` 行付きのワーカー   | `gpt-6.1-sol` | `xhigh`                  | `gpt-6-astra`                 |
+| レビュアー、`medium` ティア | `gpt-6.1-sol` | `high`                   | なし                          |
+| レビュアー、`high` ティア   | `gpt-6-astra` | `high`                   | `gpt-6.1-sol`                 |
+| トリアージ                  | `gpt-6-luna`  | `medium`                 | `gpt-6.1-terra`               |
+
+`emet dispatch` と `emet review-run` は、各スラッグを `models_cache.json` と照合します。このファイルは、実行のオーバーレイホームから、なければ実際の Codex ホームから（読み取り専用で）読み込まれます。キャッシュに載っていてエフォートに対応するスラッグはそのまま使い、そうでなければモデルのアップグレード先、次にフォールバックをたどり、最後は `-m` を省略し、置き換えはすべて記録します。何も解決できない場合、`emet review-run` はモデル呼び出しの前に、ロールと一覧にあるスラッグを示して失敗します。実行が生成するオーバーレイの `config.toml` にも、解決済みの `model` と `model_reasoning_effort` が入ります。エフォート `ultra` は送信されません。`passive` ティアではレビュアーを起動しません。
+
+実際のウェーブを何度か回したあと、次の場合に調整し直してください。
+
+- ワーカーが何度も修正ラウンドを必要とする: `codex.models.worker.effort` を上げるか、リスクの高いチケットに `Model:` 行を付ける。
+- `high` ティアのウェーブのレビューが指摘を見逃す: `codex.models.reviewer.high.effort` を上げる。
+- ログに置き換えが表示される: Codex がスラッグの名前を変えたか廃止したので、スラッグを更新する。
+
+[プローブレポート](../research/codex-probe-report.md)の実際の Codex 実行では、エフォート `low` と、解決された最も安価なモデル（`gpt-6-luna`）を使い、レビュアーのモデルもキャッシュ経由で解決されました。
 
 ## レビュアーが 1 つである理由
 

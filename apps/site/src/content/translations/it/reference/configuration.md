@@ -2,7 +2,7 @@
 title: Riferimento della configurazione
 description: Ogni chiave di emet.config.json con il suo valore predefinito e il suo significato.
 seoTitle: Riferimento della configurazione di emet
-sourceHash: 72d2564863187ae0
+sourceHash: e234cb9ad3468e98
 ---
 
 Ogni chiave di `emet.config.json`, con il suo valore predefinito e il suo significato. La fonte di verità è [`emet/schema/emet.config.schema.json`](../../emet/schema/emet.config.schema.json). I termini seguono [GLOSSARY.md](../../GLOSSARY.md). Torna al [README](../../README.md).
@@ -80,6 +80,20 @@ Modello e impegno per ruolo. Ogni chiave è facoltativa; omettendo la sezione re
 - `reviewer.medium` e `reviewer.high` (predefiniti `opus`, `medium` ciascuno): il reviewer per ogni livello di rischio restituito da `emet assess`. Alza `reviewer.high.effort` (per esempio a `high`) per maggiore attenzione sulle ondate rischiose.
 - `triage` (predefinito `haiku`): il modello economico per il triage dei log di CI e per la review di livello passive. Un controllo fallito viene passato a un agente su questo modello, che restituisce al massimo circa 2k token con riferimenti `file:line`.
 - `escalation` (predefinito `{ "sonnet": "opus" }`): il livello di modello successivo per ogni nome di modello, usato quando un ticket raggiunge il suo limite di correzioni.
+
+## agentHost
+
+`agentHost` (predefinito `"claude"`): l'host dell'agente in cui gira un'esecuzione, `"claude"` o `"codex"`. Vedi la [guida a Codex](../guide/codex.md).
+
+## codex
+
+Letto solo quando `agentHost` è `"codex"`. Tutte le chiavi sono facoltative. Lo sforzo è uno tra `low`, `medium`, `high`, `xhigh`, `max`; `ultra` non è mai accettato.
+
+- `models.worker`, `models.workerOverride`, `models.reviewer.medium`, `models.reviewer.high`, `models.triage`: ognuna è `{ "model", "effort", "fallback" }`. `fallback` elenca gli slug provati in ordine quando `model` manca dalla cache dei modelli di Codex. I valori predefiniti sono in [Modelli e sforzo](../guide/models-and-effort.md).
+- `models.session`: `{ "model", "effort", "planEffort", "fallback" }` per la sessione che esegue `$emet:run`. `planEffort` vale fino alla prima approvazione.
+- `effort`: se impostato, sostituisce lo sforzo di tutti i ruoli.
+- `minVersion` (predefinito `0.167.0`): la versione più vecchia della CLI `codex` accettata da `emet doctor`.
+- `sandbox` (predefinito `danger-full-access`): la modalità sandbox passata come `-s` da `emet dispatch`, `emet review-run` e da un `emet launch` Codex. Anche `workspace-write` è accettato, ma rende `.git` di sola lettura, quindi i worker non possono fare commit. Qualunque sia il valore, `emet guard` nega `git push` su Codex, e il `config.toml` dell'overlay generato contiene solo il marketplace e il plugin emet, tabelle trusted per le directory proprie del run e il modello e lo sforzo risolti (mai le tue tabelle). Vedi la [guida a Codex](../guide/codex.md) e [ADR-0022](../adr/0022-codex-workers-run-unsandboxed-by-default.md).
 
 ## review
 

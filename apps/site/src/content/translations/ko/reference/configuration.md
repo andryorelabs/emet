@@ -2,7 +2,7 @@
 title: 설정 레퍼런스
 description: emet.config.json의 모든 키를 기본값과 의미와 함께 설명합니다.
 seoTitle: emet 설정 레퍼런스
-sourceHash: 72d2564863187ae0
+sourceHash: e234cb9ad3468e98
 ---
 
 `emet.config.json`의 모든 키를 기본값과 의미와 함께 정리했습니다. 기준이 되는 원본은 [`emet/schema/emet.config.schema.json`](../../emet/schema/emet.config.schema.json)입니다. 용어는 [GLOSSARY.md](../../GLOSSARY.md)를 따릅니다. [README](../../README.md)로 돌아가기.
@@ -80,6 +80,20 @@ sourceHash: 72d2564863187ae0
 - `reviewer.medium`과 `reviewer.high`(기본값은 각각 `opus`, `medium`): `emet assess`가 반환하는 위험 티어별 리뷰어입니다. 위험한 웨이브를 더 엄격하게 검토하려면 `reviewer.high.effort`를 (예를 들어 `high`로) 높이세요.
 - `triage`(기본값 `haiku`): CI 로그 분류와 passive 티어 리뷰에 쓰는 저렴한 모델입니다. 실패한 체크는 이 모델의 에이전트에 넘겨지며, 이 에이전트는 `file:line` 포인터와 함께 최대 약 2k 토큰을 반환합니다.
 - `escalation`(기본값 `{ "sonnet": "opus" }`): 티켓이 수정 횟수 상한에 도달했을 때 쓰는, 모델 이름별 다음 모델 티어입니다.
+
+## agentHost
+
+`agentHost` (기본값 `"claude"`): 실행이 동작하는 에이전트 호스트입니다. `"claude"` 또는 `"codex"`. [Codex 가이드](../guide/codex.md)를 참고하세요.
+
+## codex
+
+`agentHost`가 `"codex"`일 때만 읽습니다. 모든 키는 선택 사항입니다. 노력 수준은 `low`, `medium`, `high`, `xhigh`, `max` 중 하나이며 `ultra`는 허용되지 않습니다.
+
+- `models.worker`, `models.workerOverride`, `models.reviewer.medium`, `models.reviewer.high`, `models.triage`: 각각 `{ "model", "effort", "fallback" }` 형태입니다. `fallback`은 `model`이 Codex 모델 캐시에 없을 때 순서대로 시도할 슬러그 목록입니다. 기본값은 [모델과 노력 수준](../guide/models-and-effort.md)에 있습니다.
+- `models.session`: `$emet:run`을 실행하는 세션용 `{ "model", "effort", "planEffort", "fallback" }`. `planEffort`는 첫 승인 전까지 적용됩니다.
+- `effort`: 설정하면 모든 역할의 노력 수준을 대체합니다.
+- `minVersion` (기본값 `0.167.0`): `emet doctor`가 허용하는 가장 오래된 `codex` CLI 버전입니다.
+- `sandbox` (기본값 `danger-full-access`): `emet dispatch`, `emet review-run`, Codex의 `emet launch`가 `-s`로 전달하는 샌드박스 모드입니다. `workspace-write`도 허용되지만 `.git`이 읽기 전용이 되어 워커가 커밋할 수 없습니다. 값과 상관없이 `emet guard`는 Codex에서 `git push`를 거부하며, 생성되는 오버레이 `config.toml`에는 emet 마켓플레이스와 플러그인, 그 실행 자체의 디렉터리에 대한 trusted 테이블, 확정된 모델과 추론 강도만 들어갑니다(사용자 자신의 테이블은 들어가지 않습니다). [Codex 가이드](../guide/codex.md)와 [ADR-0022](../adr/0022-codex-workers-run-unsandboxed-by-default.md)를 참고하세요.
 
 ## review
 

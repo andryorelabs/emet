@@ -32,7 +32,8 @@ import {
   isBranchMatchingTicket,
   resolveApprovalDirectory,
 } from "./preflight";
-import type { WorktreeEntry, WorktreeOwner } from "./worktrees";
+import type { LandedVerdict } from "./landed";
+import type { ContentVerdict, WorktreeEntry, WorktreeOwner } from "./worktrees";
 
 function approvalIn(root: string, runId: string): string {
   const directory = path.join(root, ".forge", "runs", runId);
@@ -287,6 +288,29 @@ describe("classifyWorktreeEntry", () => {
   });
 });
 
+/** Preflight's advice for an unowned worker worktree, with tree and content state stubbed. */
+async function advise(
+  entry: WorktreeEntry,
+  landed: LandedVerdict,
+  clean: boolean,
+  content: ContentVerdict = "diverged",
+) {
+  return describeWorktreeEntryVerdict(
+    entry,
+    { kind: "content-fallback", entry, branch: entry.branch! },
+    "tree",
+    "origin",
+    "main",
+    false,
+    () => Promise.resolve(landed),
+    {
+      branchPrefix: "cla",
+      isClean: () => Promise.resolve(clean),
+      classifyContent: () => Promise.resolve(content),
+    },
+  );
+}
+
 describe("classifyWorktreeEntry foreign and closed (S6, S7)", () => {
   const foreignEntry: WorktreeEntry = {
     directory: "/repo/.claude/worktrees/chore-wave2-integration",
@@ -372,6 +396,57 @@ describe("classifyWorktreeEntry foreign and closed (S6, S7)", () => {
       () => Promise.resolve("landed"),
     );
     expect(report.bucket).toBe("info");
+  });
+
+  describe("unowned advice follows the shared reclaim predicate", () => {
+    const unowned: WorktreeEntry = {
+      directory: "/repo/.claude/worktrees/agent-q",
+      branch: "cla-9-orphaned-work",
+      lockedReason: null,
+    };
+
+    test("landed and clean is safe to run emet cleanup", async () => {
+      const report = await advise(unowned, "landed", true);
+      expect(report.bucket).toBe("info");
+      expect(report.line).toContain('safe to run "emet cleanup"');
+    });
+
+    test("landed but dirty never says safe and names the dirty tree", async () => {
+      const report = await advise(unowned, "landed", false);
+      expect(report.line).not.toContain("safe to run");
+      expect(report.line).toContain("dirty tree");
+      expect(report.bucket).not.toBe("fail");
+    });
+
+    test("an open ticket with equivalent content never says safe", async () => {
+      const report = await advise(unowned, "not-landed", true, "equivalent");
+      expect(report.line).not.toContain("safe to run");
+      expect(report.line).toContain("ticket not landed");
+      expect(report.bucket).toBe("info");
+    });
+
+    test("an unreadable tracker with merged content never says safe", async () => {
+      const report = await advise(unowned, "unknown", true, "merged");
+      expect(report.line).not.toContain("safe to run");
+      expect(report.line).toContain("ticket landed state unknown");
+    });
+
+    test("a non-emet lock never says safe and names the lock", async () => {
+      const report = await advise(
+        { ...unowned, lockedReason: "do not touch, debugging" },
+        "landed",
+        true,
+      );
+      expect(report.line).not.toContain("safe to run");
+      expect(report.line).toContain("locked by another tool");
+      expect(report.bucket).not.toBe("fail");
+    });
+
+    test("diverged content on an open ticket still fails with the reason", async () => {
+      const report = await advise(unowned, "not-landed", true, "diverged");
+      expect(report.bucket).toBe("fail");
+      expect(report.line).toContain("ticket not landed");
+    });
   });
 
   test("an owner whose run is closed is closed even when its anchor is live", () => {

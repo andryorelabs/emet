@@ -2,7 +2,7 @@
 title: Abhängigkeiten
 description: Was emet auf dem Rechner braucht und welcher Befehl jeden Eintrag prüft.
 seoTitle: Abhängigkeiten von emet
-sourceHash: 628a2bb58f655fd5
+sourceHash: 50444429c7883bd3
 ---
 
 Was emet auf dem Rechner braucht und welcher Befehl jeden Eintrag prüft. Die Begriffe folgen [GLOSSARY.md](../../GLOSSARY.md). Zurück zur [README](../../README.md).
@@ -24,6 +24,22 @@ Was emet auf dem Rechner braucht und welcher Befehl jeden Eintrag prüft. Die Be
 - **Ein in `.mcp.json` (oder im Nutzerbereich) deklarierter Linear-MCP-Server**: nur, wenn das Repo den Tracker `linear` verwendet. emet prüft die Deklaration. Ob die Verbindung angemeldet ist, steht im eigenen Credential-Speicher von Claude Code und lässt sich von hier aus nicht prüfen. Schlägt ein Lauf beim Lesen von Tickets fehl, Claude Code neu starten und die Verbindung freigeben.
 
 Nichts davon wird jemals im Auftrag des Nutzers installiert oder angemeldet. Unterschiedlich ist, wer es prüft und wie streng.
+
+## Codex-Host
+
+Nur wenn `agentHost` `"codex"` ist; siehe den [Codex-Leitfaden](../guide/codex.md). Die Agents `emet-worker` und `emet-reviewer` werden dort nicht verwendet.
+
+- **Die `codex`-CLI**, angemeldet, in Version `codex.minVersion` (Standard `0.167.0`) oder neuer. `emet doctor` meldet eine ältere Version und prüft, dass `codex exec --help` `--json` und `--output-schema` aufführt.
+- **Das Plugin `mattpocock-skills`** in Codex, geprüft mit `codex plugin list`:
+
+  ```bash
+  codex plugin marketplace add mattpocock/skills
+  codex plugin add mattpocock-skills@mattpocock
+  ```
+
+- **Das emet-Plugin für Codex** (`.codex-plugin/plugin.json`), das die Skills `$emet:run`, `$emet:init` und `$emet:doctor` sowie den Freigabe-Hook mitbringt.
+
+emet schreibt nie in dein `~/.codex`: Worker laufen mit einem `CODEX_HOME` pro Lauf, das deine Anmeldung und Konfiguration verlinkt.
 
 ## Was was prüft
 

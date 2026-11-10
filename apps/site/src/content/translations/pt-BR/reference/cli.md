@@ -2,7 +2,7 @@
 title: Referência da CLI
 description: Cada subcomando do emet, a tabela de gates e registros, os códigos de saída e as variáveis de ambiente.
 seoTitle: Referência da CLI do emet
-sourceHash: 6ac3b40ddcfe5237
+sourceHash: 8bb02104970da0a8
 ---
 
 Cada subcomando do `emet`, a tabela de gates e registros, os códigos de saída e as variáveis de ambiente. Os termos seguem o [GLOSSARY.md](../../GLOSSARY.md). Voltar ao [README](../../README.md). Todo comando imprime seu uso com `--help`.
@@ -83,6 +83,15 @@ Com `tracker.kind: "local"`, specs e tickets são arquivos markdown em `.scratch
 
 Uma onda é um PR. Seu corpo traz `Closes #N` para cada ticket (a palavra-chave de fechamento do tracker), e o coordenador move os tickets para em revisão ao abrir o PR. Em seguida o PR é mesclado conforme `pr.autoMerge`, ou deixado aberto quando a onda foi sinalizada, `autoMerge` é `false` ou as correções de CI se esgotaram (o PR então recebe o rótulo de decisão humana). As ondas seguintes rodam em suas próprias sessões, nunca na que executou a onda 1. As seções `pr` e `handoff` controlam o que acontece em seguida; veja [`pr`](configuration.md#pr) e [`handoff`](configuration.md#handoff).
 
+### Host Codex
+
+Estes comandos atendem o host de agente Codex (`agentHost` `"codex"`); veja o [guia do Codex](../guide/codex.md).
+
+- `emet dispatch --role worker --run <id> --ticket <id> --prompt-file <file> [--model <m>] [--effort <e>] [--root <dir>]`: depois de verificar a reserva e o slot, cria `.emet/worktrees/agent-<ticket>`, monta uma camada `CODEX_HOME` por execução e inicia o worker como um `codex exec` desacoplado. `emet dispatch --wait --run <id> --ticket <id> [--timeout <s>]` espera o término e imprime o status de resultado registrado.
+- `emet review-run --run <id> --ticket <id> --package <file> --tier <medium|high|passive>`: executa o revisor como um `codex exec` somente leitura sobre um pacote do `emet review-package` e imprime o JSON de achados para `emet review --findings`. O nível `passive` não inicia nenhum processo.
+- `emet launch <spec-id> --wave <n>`: neste host, inicia um `codex exec` desacoplado que executa `$emet:run --dispatch <spec>` e registra seu id de thread. Nenhuma aba do Orca é aberta, e `codex exec resume <id>` continua a sessão.
+- `emet guard`: com `EMET_AGENT_HOST=codex` lê a entrada de hooks do Codex, confere os caminhos de `apply_patch` contra `.emet/surface.json` e mantém o portão de aprovação fechado até uma linha de prompt `approve <id>`.
+
 ## Gates e registros
 
 As fases não decidem sozinhas quando um ticket está pronto, é mesclável ou vale a pena tentar de novo. Elas chamam um comando da CLI que lê um registro em disco e imprime a decisão. Os registros de execução ficam em `.emet/runs/<run-id>/` e o livro de revisão em `.emet/review/`, no checkout principal, não no worktree de um worker.
@@ -124,5 +133,6 @@ Variáveis voltadas ao usuário. Uma variável, quando definida, substitui o val
 | `EMET_MEM_RESERVE_GIB`        | Folga de memória em GiB que deve continuar livre; uma aquisição é negada quando a memória disponível está abaixo disso. Padrão 8. Também alimenta o limite `auto` de workers.                                |
 | `EMET_MEM_PER_WORKER_GIB`     | Memória em GiB presumida por worker quando `maxLiveWorkers` é `auto`. Padrão 2. Aumente para um stack mais pesado por worker, como uma suíte E2E com navegador por worktree.                                 |
 | `EMET_CPU_OVERSUBSCRIBE`      | Multiplicador de CPU para o limite `auto` de workers. Padrão 1.                                                                                                                                              |
+| `EMET_AGENT_HOST`             | `codex` faz o `emet guard` ler a entrada de hooks do Codex. É definida pelos hooks do Codex; deixe sem definir no Claude Code.                                                                               |
 
 O limite `auto` é `clamp(min(cpuCount × EMET_CPU_OVERSUBSCRIBE, floor((memTotal − EMET_MEM_RESERVE_GIB) / EMET_MEM_PER_WORKER_GIB)), min, max)`. Os nomes legados `FORGE_*` ainda são lidos; `EMET_*` vence quando ambos estão definidos.

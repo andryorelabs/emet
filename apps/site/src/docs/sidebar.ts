@@ -72,6 +72,7 @@ export function buildSidebar(): SidebarEntry[] {
       "docs/guide/fleet",
       "docs/guide/models-and-effort",
       "docs/guide/trackers-and-landing",
+      "docs/guide/codex",
     ]),
     group(GROUP_LABELS.reference, [
       "docs/reference/cli",

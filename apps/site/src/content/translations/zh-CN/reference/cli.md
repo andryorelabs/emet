@@ -2,7 +2,7 @@
 title: CLI 参考
 description: 每个 emet 子命令、关卡与记录表、退出码和环境变量。
 seoTitle: emet CLI 参考
-sourceHash: 6ac3b40ddcfe5237
+sourceHash: 8bb02104970da0a8
 ---
 
 每个 `emet` 子命令、关卡与记录表、退出码和环境变量。术语遵循 [GLOSSARY.md](../../GLOSSARY.md)。返回 [README](../../README.md)。每个命令都可以用 `--help` 打印其用法。
@@ -83,6 +83,15 @@ emet doctor ~/code/*
 
 一个波次对应一个 PR。其正文为每个工单带有 `Closes #N`（跟踪器的关闭关键字），协调者在打开 PR 时会把工单移到评审中。随后，PR 按 `pr.autoMerge` 合并；如果该波次被标记、`autoMerge` 为 `false`，或 CI 修复次数已用尽，则 PR 保持打开（此时 PR 会带上需要人工决定的标签）。后续波次在各自的会话中运行，绝不会在运行波次 1 的那个会话中运行。接下来会发生什么，由 `pr` 和 `handoff` 部分控制；参见 [`pr`](configuration.md#pr) 和 [`handoff`](configuration.md#handoff)。
 
+### Codex 宿主
+
+这些命令服务于 Codex Agent 宿主（`agentHost` 为 `"codex"`）；参见 [Codex 指南](../guide/codex.md)。
+
+- `emet dispatch --role worker --run <id> --ticket <id> --prompt-file <file> [--model <m>] [--effort <e>] [--root <dir>]`: 在检查认领和槽位之后，创建 `.emet/worktrees/agent-<ticket>`，构建每次运行的 `CODEX_HOME` 覆盖层，并把 worker 作为分离的 `codex exec` 启动。`emet dispatch --wait --run <id> --ticket <id> [--timeout <s>]` 会阻塞到它退出，并输出记录的结果状态。
+- `emet review-run --run <id> --ticket <id> --package <file> --tier <medium|high|passive>`: 对 `emet review-package` 生成的包，以只读的 `codex exec` 运行 reviewer，并输出供 `emet review --findings` 使用的问题 JSON。`passive` 档不会启动进程。
+- `emet launch <spec-id> --wave <n>`: 在此宿主上，启动一个运行 `$emet:run --dispatch <spec>` 的分离 `codex exec`，并记录其线程 ID。不会打开 Orca 标签页，`codex exec resume <id>` 可继续该会话。
+- `emet guard`: 在 `EMET_AGENT_HOST=codex` 下读取 Codex 的 hook 输入，对照 `.emet/surface.json` 检查 `apply_patch` 的路径，并在收到提示行 `approve <id>` 之前保持批准闸门关闭。
+
 ## 关卡与记录
 
 各阶段不会自行判断工单是否完成、是否可以合并，或是否值得重试。它们会调用一个 CLI 命令，该命令读取磁盘上的记录并打印决定。运行记录位于 `.emet/runs/<run-id>/`，评审台账位于 `.emet/review/`，都在主检出目录中，而不在工作者的工作树中。
@@ -124,5 +133,6 @@ emet doctor ~/code/*
 | `EMET_MEM_RESERVE_GIB`        | 必须保持空闲的内存余量（GiB）；可用内存低于该值时，获取槽位会被拒绝。默认为 8。它也参与 `auto` 工作者上限的计算。                                                       |
 | `EMET_MEM_PER_WORKER_GIB`     | 当 `maxLiveWorkers` 为 `auto` 时，假定每个工作者占用的内存（GiB）。默认为 2。如果每个工作者的技术栈更重，例如每个工作树都运行由浏览器驱动的端到端测试套件，请调高该值。 |
 | `EMET_CPU_OVERSUBSCRIBE`      | `auto` 工作者上限所用的 CPU 倍数。默认为 1。                                                                                                                            |
+| `EMET_AGENT_HOST`             | 设为 `codex` 时，`emet guard` 读取 Codex 的 hook 输入。由 Codex 的 hook 设置；在 Claude Code 上请保持未设置。                                                           |
 
 `auto` 上限为 `clamp(min(cpuCount × EMET_CPU_OVERSUBSCRIBE, floor((memTotal − EMET_MEM_RESERVE_GIB) / EMET_MEM_PER_WORKER_GIB)), min, max)`。旧版的 `FORGE_*` 名称仍然会被读取；两者同时设置时，`EMET_*` 优先。

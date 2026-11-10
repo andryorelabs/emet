@@ -6,25 +6,36 @@
  * wave: `working | checking | ready | needs-decision`. A host with no wave at
  * all reports `idle`. Prints a JSON report, then a one-line human summary.
  *
- * Stalled workers (the `usage` stalled signal) force `needs-decision`.
+ * Stalled workers (the `usage` stalled signal) force `needs-decision`. A
+ * Codex worker is judged from its JSONL stream (`threadId` + `jsonlPath`),
+ * never from its pid alone, which may come from another pid namespace.
  */
 
 import { isObject } from "./narrow";
-import { BINARY, LEGACY_PRODUCT, PRODUCT } from "./names";
+import { BINARY, LEGACY_PRODUCT, PRODUCT, resolveRunDir } from "./names";
 import { optionalProperty } from "./optional";
-import os from "node:os";
 import path from "node:path";
 
 import {
   DEFAULT_FORGE_CONFIG,
   loadForgeConfigWithDefaults,
+  resolveAgentHostName,
   resolveRepoRoot,
   type ForgeConfig,
 } from "./config";
+import { claudeHost } from "./agenthost-claude";
+import {
+  codexWorkerLiveness,
+  readCodexState,
+  refreshThreadId,
+  type CodexWorkerLiveness,
+  type LivenessProbe,
+} from "./codex-process";
+import { resolveAgentHost, type AgentHost } from "./agenthost";
 import { listReservations } from "./claims";
 import { classifyRun, type RunVerdict } from "./runs";
 import { listOccupiedSlots } from "./slots";
-import { findStalledTranscripts } from "./usage";
+import { findStalledTranscripts, readLastStepFor } from "./usage";
 import {
   classifyByContent,
   isSafeToDelete,
@@ -50,6 +61,16 @@ export type WorkerSignal = {
   readonly branch: string | null;
   readonly pullRequest: PullRequestStatus | null;
   readonly stalled: boolean;
+  /** Codex workers only: the liveness read from the JSONL stream. */
+  readonly liveness?: CodexWorkerLiveness;
+  /** Codex workers only: the thread id, `null` until `thread.started`. */
+  readonly threadId?: string | null;
+};
+
+/** A Codex worker's identity and liveness, keyed by worktree directory. */
+export type CodexWorkerView = {
+  readonly liveness: CodexWorkerLiveness;
+  readonly threadId: string | null;
 };
 
 export type WaveInput = {
@@ -99,7 +120,8 @@ JSON shape:
         "pullRequest": null | { "number", "state": "open"|"merged"|"closed",
           "checks": "passing"|"failing"|"pending"|"none",
           "mergeable": boolean | null, "changesRequested": boolean },
-        "stalled": boolean, "state": <wave state>, "reason": string
+        "stalled": boolean, "state": <wave state>, "reason": string,
+        "liveness"?: "live"|"done"|"exited"|"stalled", "threadId"?: string | null
       }]
     }]
   }
@@ -310,6 +332,7 @@ export function groupWorkers(
   pullRequests: ReadonlyMap<string, PullRequestStatus>,
   stalledDirectories: ReadonlySet<string>,
   runVerdicts: ReadonlyMap<string, RunVerdict>,
+  codexWorkers: ReadonlyMap<string, CodexWorkerView> = new Map(),
 ): WaveInput[] {
   const byRun = new Map<string, Map<string, WorkerSignal>>();
   const add = (runId: string, signal: WorkerSignal) => {
@@ -328,11 +351,16 @@ export function groupWorkers(
   for (const entry of entries) {
     const owner = resolveWorktreeOwner(entry);
     if (!owner) continue;
+    const codex = codexWorkers.get(entry.directory);
     add(owner.runId, {
       ticket: owner.ticket,
       branch: entry.branch,
       pullRequest: findPullRequest(pullRequests, entry.branch, owner.ticket),
-      stalled: stalledDirectories.has(entry.directory),
+      stalled:
+        codex === undefined
+          ? stalledDirectories.has(entry.directory)
+          : codex.liveness === "stalled",
+      ...(codex === undefined ? {} : { liveness: codex.liveness, threadId: codex.threadId }),
     });
   }
   return [...byRun].map(([runId, tickets]) => ({
@@ -342,14 +370,46 @@ export function groupWorkers(
   }));
 }
 
-async function newestTranscript(directory: string): Promise<string | null> {
+/**
+ * Reads each owned worktree's Codex state under `runsRoot/<run>/codex/` and
+ * judges it from its JSONL stream. Worktrees with no state are left out.
+ */
+export function readCodexWorkers(
+  entries: readonly WorktreeEntry[],
+  runsRoot: string,
+  probe: LivenessProbe,
+): Map<string, CodexWorkerView> {
+  const workers = new Map<string, CodexWorkerView>();
+  for (const entry of entries) {
+    const owner = resolveWorktreeOwner(entry);
+    if (!owner) continue;
+    const stateFile = path.join(runsRoot, owner.runId, "codex", `${owner.ticket}.state.json`);
+    const state = readCodexState(stateFile);
+    if (state === undefined) continue;
+    workers.set(entry.directory, {
+      liveness: codexWorkerLiveness(state, probe),
+      threadId: refreshThreadId(stateFile)?.threadId ?? state.threadId,
+    });
+  }
+  return workers;
+}
+
+async function newestTranscript(
+  directory: string,
+  host: AgentHost = claudeHost,
+): Promise<string | null> {
   const agentId = /^agent-(.+)$/.exec(path.basename(directory))?.[1];
   if (!agentId) return null;
-  const projectsDirectory = path.join(os.homedir(), ".claude", "projects");
+  const claudeLayout = host.transcriptFormat === "claude-jsonl";
+  const workerRoot = host.workerTranscriptRoot(directory);
+  const projectsDirectory = claudeLayout ? path.dirname(workerRoot) : workerRoot;
   let newest: { file: string; mtimeMs: number } | null = null;
   try {
-    const glob = new Bun.Glob(`*/*/subagents/agent-${agentId}.jsonl`);
+    const glob = new Bun.Glob(
+      claudeLayout ? `*/*/subagents/agent-${agentId}.jsonl` : host.workerTranscriptGlob,
+    );
     for await (const name of glob.scan({ cwd: projectsDirectory, onlyFiles: true })) {
+      if (!claudeLayout && !path.basename(name).includes(agentId)) continue;
       const file = path.join(projectsDirectory, name);
       const mtimeMs = Bun.file(file).lastModified;
       if (!newest || mtimeMs > newest.mtimeMs) newest = { file, mtimeMs };
@@ -425,6 +485,7 @@ export async function run(argv: string[]): Promise<void> {
       return;
     }
     const { config } = await loadForgeConfigWithDefaults(repoRoot);
+    const host = resolveAgentHost(resolveAgentHostName(config));
     const localLanding = config.landing.mode === "merge";
     const [slots, reservations, entries] = await Promise.all([
       listOccupiedSlots(),
@@ -449,18 +510,37 @@ export async function run(argv: string[]): Promise<void> {
       idleMinutes: DEFAULT_FORGE_CONFIG.usage.stalledMinutes,
       pendingToolMinutes: 30,
     };
+    const codexWorkers =
+      resolveAgentHostName(config) === "codex"
+        ? readCodexWorkers(entries, path.join(resolveRunDir(repoRoot).path, "runs"), {
+            idleMs: config.usage.stalledMinutes * 60_000,
+          })
+        : new Map<string, CodexWorkerView>();
     const stalledDirectories = new Set<string>();
     for (const entry of entries) {
-      if (!resolveWorktreeOwner(entry)) continue;
+      if (!resolveWorktreeOwner(entry) || codexWorkers.has(entry.directory)) continue;
       // oxlint-disable-next-line eslint/no-await-in-loop -- sequential on purpose: later iterations depend on earlier ones or on output order
-      const transcript = await newestTranscript(entry.directory);
+      const transcript = await newestTranscript(entry.directory, host);
       if (!transcript) continue;
       // oxlint-disable-next-line eslint/no-await-in-loop -- sequential on purpose: later iterations depend on earlier ones or on output order
-      const stalled = await findStalledTranscripts([transcript], Date.now(), thresholds);
+      const stalled = await findStalledTranscripts(
+        [transcript],
+        Date.now(),
+        thresholds,
+        undefined,
+        readLastStepFor(host),
+      );
       if (stalled.length > 0) stalledDirectories.add(entry.directory);
     }
     const report = buildStatusReport(
-      groupWorkers(entries, reservations, pullRequests, stalledDirectories, runVerdicts),
+      groupWorkers(
+        entries,
+        reservations,
+        pullRequests,
+        stalledDirectories,
+        runVerdicts,
+        codexWorkers,
+      ),
       spec,
     );
     console.log(JSON.stringify(report, null, 2));

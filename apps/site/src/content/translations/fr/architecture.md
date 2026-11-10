@@ -2,7 +2,7 @@
 title: Architecture
 description: Une carte du code de emet/src et la façon dont les prompts de /emet le pilotent.
 seoTitle: Architecture d'emet
-sourceHash: a2f7846ae362b1ae
+sourceHash: 3145bbde94eade03
 ---
 
 Une carte du code de `emet/src` et la façon dont les prompts de `/emet` le pilotent. Les termes suivent [GLOSSARY.md](../GLOSSARY.md) ; les décisions derrière cette forme se trouvent dans [docs/adr](adr/README.md). Pour les problèmes, voir le [dépannage](troubleshooting.md).
@@ -47,6 +47,8 @@ Chaque module a un `*.test.ts` à ses côtés.
 | Rapports               | `metrics.ts`, `usage.ts`                                                                                                                                                                                                                                                                                  |
 | Sécurité               | `guard.ts`, `guard-destructive.ts`                                                                                                                                                                                                                                                                        |
 | Utilitaires partagés   | `narrow.ts`, `optional.ts`, `assets.ts` (fichiers embarqués dans les binaires compilés)                                                                                                                                                                                                                   |
+
+Les valeurs propres à chaque hôte se trouvent derrière l'interface `AgentHost` de `agenthost.ts` : `agenthost-claude.ts` est l'adaptateur Claude Code et `agenthost-codex.ts` celui de Codex, choisis par `agentHost` dans la configuration. Le côté Codex ajoute `codex-models.ts` (résolution des modèles), `codex-home.ts` (surcouche `CODEX_HOME` par run), `codex-process.ts` et `codex-session.ts` (exécuteur de processus et passation), `codex-usage.ts` (usage depuis `exec --json`), `guard-codex.ts` (entrée de hooks et porte d'approbation), `dispatch.ts` et `review-run.ts`. Voir le [guide Codex](guide/codex.md).
 
 ## Organisation des prompts
 

@@ -1,6 +1,7 @@
 import { existsSync, mkdirSync, readFileSync, renameSync, statSync, writeFileSync } from "node:fs";
-import os from "node:os";
 import path from "node:path";
+import { claudeHost } from "./agenthost-claude";
+import type { AgentHost } from "./agenthost";
 import { resolveLockDirectory } from "./locks";
 import { errnoCode, isObject } from "./narrow";
 import { readEnv, resolveRunDir } from "./names";
@@ -61,16 +62,19 @@ export function resolveIdleThresholdMs(config: {
 export function resolveAnchorPid(
   startPid: number = process.pid,
   reader: ProcessTreeReader = defaultProcessTreeReader,
+  host: AgentHost = claudeHost,
 ): number {
   let pid = startPid;
   for (let hop = 0; hop < 32; hop++) {
     const info = readParent(pid, reader);
     if (info === null) break;
-    if (info.comm === "claude") return pid;
+    if (info.comm === host.anchorProcessName) return pid;
     if (info.ppid <= 1) break;
     pid = info.ppid;
   }
-  throw new Error(`emet-runs: no ancestor of pid ${startPid} has comm "claude" within 32 hops`);
+  throw new Error(
+    `emet-runs: no ancestor of pid ${startPid} has comm "${host.anchorProcessName}" within 32 hops`,
+  );
 }
 
 /**
@@ -101,8 +105,9 @@ export function isAnchorAlive(
   pid: number,
   startToken?: string,
   reader: ProcessTreeReader = defaultProcessTreeReader,
+  host: AgentHost = claudeHost,
 ): boolean {
-  if (readParent(pid, reader)?.comm !== "claude") return false;
+  if (readParent(pid, reader)?.comm !== host.anchorProcessName) return false;
   if (startToken === undefined) return true;
   return readProcessStartToken(pid) === startToken;
 }
@@ -116,7 +121,7 @@ export function isAnchorAlive(
  * process's own `cwd`, never a value stored per-reservation.
  */
 export function resolveSessionSlug(cwd: string = process.cwd()): string {
-  return cwd.replaceAll(/[/.]/g, "-");
+  return claudeHost.sessionSlug(cwd);
 }
 
 /**
@@ -128,14 +133,7 @@ export function resolveSessionSlug(cwd: string = process.cwd()): string {
  */
 function transcriptMtime(sessionSlug: string, runId: string): number | null {
   try {
-    const transcriptPath = path.join(
-      os.homedir(),
-      ".claude",
-      "projects",
-      sessionSlug,
-      `${runId}.jsonl`,
-    );
-    return statSync(transcriptPath).mtimeMs;
+    return statSync(claudeHost.sessionTranscriptPath(sessionSlug, runId)).mtimeMs;
   } catch {
     return null;
   }

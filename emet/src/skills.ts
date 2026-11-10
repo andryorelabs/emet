@@ -1,6 +1,7 @@
 import { existsSync, readdirSync } from "node:fs";
 import path from "node:path";
 
+import { type AgentHost, claudeHost } from "./agenthost";
 import type { DependencyCheck } from "./dependencies";
 import { isObject } from "./narrow";
 
@@ -66,16 +67,16 @@ export function parsePluginListJson(output: string): readonly InstalledPlugin[] 
   return plugins;
 }
 
-/** An unusable or absent `claude` yields an empty list. */
-export function listInstalledPlugins(): readonly InstalledPlugin[] {
+/** An unusable or absent host CLI yields an empty list. */
+export function listInstalledPlugins(host: AgentHost = claudeHost): readonly InstalledPlugin[] {
   try {
-    const result = Bun.spawnSync(["claude", "plugin", "list", "--json"], {
+    const result = Bun.spawnSync([...host.probes.pluginListCommand], {
       stdout: "pipe",
       stderr: "pipe",
       timeout: PLUGIN_LIST_TIMEOUT_MS,
     });
     if (result.exitCode !== 0) return [];
-    return parsePluginListJson(result.stdout.toString());
+    return host.probes.parsePluginList(result.stdout.toString());
   } catch {
     return [];
   }
@@ -121,6 +122,7 @@ export function resolveSkillPath(
  */
 export function checkSkillsContract(
   plugins: readonly InstalledPlugin[] = listInstalledPlugins(),
+  host: AgentHost = claudeHost,
 ): DependencyCheck[] {
   const plugin = findPluginByName(plugins, SKILLS_PLUGIN_NAME);
   if (plugin === null) return [];
@@ -134,7 +136,7 @@ export function checkSkillsContract(
       dependency: "skills-contract",
       status: "unsatisfied",
       summary: `mattpocock-skills ${plugin.version} is missing skills emet uses: ${missing.join(", ")}. Update the plugin:`,
-      remedy: ["claude plugin update mattpocock-skills@claude-plugins-official"],
+      remedy: [host.probes.pluginRemedy(host.probes.skillsPluginId)],
       limitation: null,
     });
   }

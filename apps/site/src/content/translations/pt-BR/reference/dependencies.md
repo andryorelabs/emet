@@ -2,7 +2,7 @@
 title: Dependências
 description: O que o emet precisa na máquina e qual comando verifica cada item.
 seoTitle: Dependências do emet
-sourceHash: 628a2bb58f655fd5
+sourceHash: 50444429c7883bd3
 ---
 
 O que o emet precisa na máquina e qual comando verifica cada item. Os termos seguem o [GLOSSARY.md](../../GLOSSARY.md). Voltar ao [README](../../README.md).
@@ -24,6 +24,22 @@ O que o emet precisa na máquina e qual comando verifica cada item. Os termos se
 - **Um servidor MCP do Linear declarado em `.mcp.json` (ou no escopo de usuário)**: somente se o repositório usa o tracker `linear`. O emet verifica a declaração. Se a conexão está autenticada é algo que fica no armazenamento de credenciais do próprio Claude Code e não pode ser verificado daqui. Se uma execução falhar ao ler os tickets, reinicie o Claude Code e aprove a conexão.
 
 Nada do acima é instalado nem autenticado em seu nome. O que muda é quem verifica e com que rigor.
+
+## Host Codex
+
+Apenas quando `agentHost` é `"codex"`; veja o [guia do Codex](../guide/codex.md). Os agentes `emet-worker` e `emet-reviewer` não são usados ali.
+
+- **A CLI `codex`**, com login feito, na versão `codex.minVersion` (padrão `0.167.0`) ou mais nova. O `emet doctor` reporta uma versão mais antiga e verifica se `codex exec --help` lista `--json` e `--output-schema`.
+- **O plugin `mattpocock-skills`** no Codex, verificado com `codex plugin list`:
+
+  ```bash
+  codex plugin marketplace add mattpocock/skills
+  codex plugin add mattpocock-skills@mattpocock
+  ```
+
+- **O plugin do emet para Codex** (`.codex-plugin/plugin.json`), que traz as skills `$emet:run`, `$emet:init` e `$emet:doctor` e o hook de aprovação.
+
+O emet nunca escreve em seu `~/.codex`: os workers rodam com um `CODEX_HOME` por execução que vincula sua autenticação e configuração.
 
 ## O que verifica o quê
 

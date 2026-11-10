@@ -3,10 +3,13 @@ import { mkdtempSync, rmSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
 
-import { ForgeConfigError } from "./config";
+import { claudeHost } from "./agenthost-claude";
+import { codexHost } from "./agenthost-codex";
+import { DEFAULT_CODEX_CONFIG, DEFAULT_FORGE_CONFIG, ForgeConfigError } from "./config";
 import { errorMessage } from "./narrow";
 import { readPhase } from "./phase";
 import {
+  launchSettingsFor,
   launchWave,
   waveSessionName,
   type CommandResult,
@@ -248,5 +251,30 @@ describe("launchWave", () => {
     expect(errorMessage(await rejectionOf(launchWave(REQUEST, runner)))).toContain(
       "no session named",
     );
+  });
+});
+
+describe("launchSettingsFor", () => {
+  test("uses the Claude host and the handoff settings by default", () => {
+    const settings = launchSettingsFor(DEFAULT_FORGE_CONFIG);
+    expect(settings.host).toBe(claudeHost);
+    expect(settings.launcher).toBe(DEFAULT_FORGE_CONFIG.handoff.launcher);
+    expect(settings.permissionMode).toBe(DEFAULT_FORGE_CONFIG.handoff.permissionMode);
+  });
+
+  test("uses the Codex host, no Orca tab and the configured sandbox on Codex", () => {
+    const settings = launchSettingsFor({ ...DEFAULT_FORGE_CONFIG, agentHost: "codex" });
+    expect(settings.host).toBe(codexHost);
+    expect(settings.launcher).toBe("bg");
+    expect(settings.permissionMode).toBe("danger-full-access");
+  });
+
+  test("passes a configured workspace-write sandbox on Codex", () => {
+    const settings = launchSettingsFor({
+      ...DEFAULT_FORGE_CONFIG,
+      agentHost: "codex",
+      codex: { ...DEFAULT_CODEX_CONFIG, sandbox: "workspace-write" },
+    });
+    expect(settings.permissionMode).toBe("workspace-write");
   });
 });

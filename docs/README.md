@@ -28,6 +28,7 @@ An index of every document in this repository. Terms follow [GLOSSARY.md](../GLO
 - [`guide/getting-started.md`](guide/getting-started.md): requirements, both install paths and the first run.
 - [`guide/trackers-and-landing.md`](guide/trackers-and-landing.md): GitHub, Linear and local trackers, `landing.mode`, landing PRs, chaining waves, budgets, living specs, map and metrics.
 - [`guide/models-and-effort.md`](guide/models-and-effort.md): the role, model and effort table, risk-tier routing, Haiku triage and what you set once.
+- [`guide/codex.md`](guide/codex.md): run emet on Codex CLI: install, `agentHost`, the single approval by hook, limits and `unverified` points.
 - [`guide/fleet.md`](guide/fleet.md): audit several repos at once with `emet doctor`.
 
 ## Reference
@@ -45,6 +46,11 @@ An index of every document in this repository. Terms follow [GLOSSARY.md](../GLO
 ## Decisions
 
 - [`adr/README.md`](adr/README.md): the architecture decision record index, one file per decision (`adr/NNNN-*.md`).
+
+## Research
+
+- [`research/codex-viability.md`](research/codex-viability.md): whether emet can run on Codex CLI: capability matrix, parity table, integration models A, B and C, a ten-experiment spike and a follow-up spec outline.
+- [`research/codex-probe-report.md`](research/codex-probe-report.md): the real-Codex check of each `unverified` point in the Codex guide, the e2e and full-flow results, follow-ups and a manual check.
 
 ## Brand
 

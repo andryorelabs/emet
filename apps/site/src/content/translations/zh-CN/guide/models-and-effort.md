@@ -2,7 +2,7 @@
 title: 模型与推理强度
 description: emet 如何为每个角色选择模型和推理强度，以及哪些配置键可以修改它们。
 seoTitle: emet 的模型与推理强度
-sourceHash: 6fe7308bf47a7aac
+sourceHash: a46d2e68a403f4f9
 ---
 
 `/emet` 会自动为每个角色选择模型和推理强度；运行中无需手动切换任何设置。所有配置键都在[配置参考](../reference/configuration.md#models)中。
@@ -52,6 +52,29 @@ sourceHash: 6fe7308bf47a7aac
 ```
 
 `review.highRiskPaths` 是一组额外的、不区分大小写的路径子串，用于强制进入 `high` 层级。若想对高风险波次加强审查，可以提高 `models.reviewer.high.effort`（例如提高到 `high`）。
+
+## Codex 宿主
+
+当 `agentHost` 为 `"codex"` 时，每个 worker 和 reviewer 都是各自独立的 `codex exec` 进程，按角色设置 `-m` 和 `model_reasoning_effort`。[`codex`](../reference/configuration.md) 部分的默认值如下：
+
+| 角色                    | 模型          | 强度                       | 备选                          |
+| ----------------------- | ------------- | -------------------------- | ----------------------------- |
+| 会话（`$emet:run`）     | `gpt-6.1-sol` | `medium` (`high` 规划期间) | 无                            |
+| Worker                  | `gpt-6.1-sol` | `medium`                   | `gpt-6.1-terra`, `gpt-6-luna` |
+| 带 `Model:` 行的 worker | `gpt-6.1-sol` | `xhigh`                    | `gpt-6-astra`                 |
+| Reviewer，`medium` 档   | `gpt-6.1-sol` | `high`                     | 无                            |
+| Reviewer，`high` 档     | `gpt-6-astra` | `high`                     | `gpt-6.1-sol`                 |
+| 分诊                    | `gpt-6-luna`  | `medium`                   | `gpt-6.1-terra`               |
+
+`emet dispatch` 和 `emet review-run` 会把每个 slug 与 `models_cache.json` 对照，该文件优先从运行的覆盖层主目录读取，否则从你真实的 Codex 主目录读取（只读）。缓存中列出且支持该强度的 slug 会保留；否则依次采用模型的升级目标、备选项，最后省略 `-m`，并记录每一次替换；当什么都解析不出时，`emet review-run` 会在调用模型之前失败，并指出角色和已列出的 slug。运行生成的覆盖层 `config.toml` 也带有解析出的 `model` 和 `model_reasoning_effort`。永远不会发送强度 `ultra`。`passive` 档不会启动 reviewer。
+
+在实际跑过几个波次之后，遇到下列情况时重新调整：
+
+- worker 需要反复多轮修复：提高 `codex.models.worker.effort`，或在高风险工单上写一行 `Model:`；
+- `high` 档波次的评审漏掉问题：提高 `codex.models.reviewer.high.effort`；
+- 日志显示发生了替换：Codex 重命名或下线了某个 slug，请更新该 slug。
+
+[探测报告](../research/codex-probe-report.md)中的真实 Codex 运行使用了强度 `low` 和解析出的最便宜模型（`gpt-6-luna`），reviewer 模型也是通过缓存解析的。
 
 ## 为什么只用一个评审者
 

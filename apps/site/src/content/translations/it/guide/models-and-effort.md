@@ -2,7 +2,7 @@
 title: Modelli e impegno
 description: Come emet sceglie un modello e un livello di ragionamento per ogni ruolo e quali chiavi di configurazione li modificano.
 seoTitle: Modelli e impegno in emet
-sourceHash: 6fe7308bf47a7aac
+sourceHash: a46d2e68a403f4f9
 ---
 
 `/emet` sceglie automaticamente un modello e un livello di ragionamento per ogni ruolo; non c'è nulla da cambiare a mano durante l'esecuzione. Ogni chiave è nel [riferimento della configurazione](../reference/configuration.md#models).
@@ -52,6 +52,29 @@ Ogni chiave è facoltativa, e i valori predefiniti riproducono la tabella qui so
 ```
 
 `review.highRiskPaths` è un elenco di sottostringhe di percorso aggiuntive, senza distinzione tra maiuscole e minuscole, che impongono il livello `high`. Per maggiore attenzione sulle ondate rischiose, alza `models.reviewer.high.effort` (per esempio a `high`).
+
+## Host Codex
+
+Con `agentHost` su `"codex"`, ogni worker e reviewer è un proprio processo `codex exec`, con `-m` e `model_reasoning_effort` impostati per ruolo. I valori predefiniti della sezione [`codex`](../reference/configuration.md) sono:
+
+| Ruolo                        | Modello       | Sforzo                                      | Alternative                   |
+| ---------------------------- | ------------- | ------------------------------------------- | ----------------------------- |
+| Sessione (`$emet:run`)       | `gpt-6.1-sol` | `medium` (`high` durante la pianificazione) | nessuna                       |
+| Worker                       | `gpt-6.1-sol` | `medium`                                    | `gpt-6.1-terra`, `gpt-6-luna` |
+| Worker con una riga `Model:` | `gpt-6.1-sol` | `xhigh`                                     | `gpt-6-astra`                 |
+| Reviewer, livello `medium`   | `gpt-6.1-sol` | `high`                                      | nessuna                       |
+| Reviewer, livello `high`     | `gpt-6-astra` | `high`                                      | `gpt-6.1-sol`                 |
+| Triage                       | `gpt-6-luna`  | `medium`                                    | `gpt-6.1-terra`               |
+
+`emet dispatch` e `emet review-run` risolvono ogni slug rispetto a `models_cache.json`, letto dalla home dell'overlay del run e altrimenti dalla tua home Codex reale (sola lettura). Mantengono uno slug elencato lì che supporta lo sforzo; altrimenti seguono l'aggiornamento del modello, poi le alternative, poi omettono `-m`, e registrano ogni sostituzione; quando nulla si risolve, `emet review-run` fallisce prima della chiamata al modello e nomina il ruolo e gli slug elencati. Il `config.toml` dell'overlay che il run genera porta anche il `model` e il `model_reasoning_effort` risolti. Lo sforzo `ultra` non viene mai inviato. Il livello `passive` non avvia alcun reviewer.
+
+Ritara dopo alcune ondate reali quando:
+
+- i worker richiedono più cicli di correzione: alza `codex.models.worker.effort` o metti una riga `Model:` sul ticket rischioso;
+- le revisioni delle ondate di livello `high` perdono rilievi: alza `codex.models.reviewer.high.effort`;
+- il log mostra una sostituzione: Codex ha rinominato o ritirato uno slug, quindi aggiornalo.
+
+Il run Codex reale nel [report della sonda](../research/codex-probe-report.md) ha usato lo sforzo `low` e il modello risolto più economico (`gpt-6-luna`), e il modello del reviewer è stato risolto tramite la cache.
 
 ## Perché un solo reviewer
 

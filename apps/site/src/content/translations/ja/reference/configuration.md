@@ -2,7 +2,7 @@
 title: 設定リファレンス
 description: emet.config.json のすべてのキーについて、既定値と意味を説明します。
 seoTitle: emet の設定リファレンス
-sourceHash: 72d2564863187ae0
+sourceHash: e234cb9ad3468e98
 ---
 
 `emet.config.json` のすべてのキーを、既定値と意味とともに示します。信頼できる情報源は [`emet/schema/emet.config.schema.json`](../../emet/schema/emet.config.schema.json) です。用語は [GLOSSARY.md](../../GLOSSARY.md) に従います。[README](../../README.md) に戻る。
@@ -80,6 +80,20 @@ sourceHash: 72d2564863187ae0
 - `reviewer.medium` と `reviewer.high`（既定はそれぞれ `opus`、`medium`）: `emet assess` が返すリスクティアごとのレビュアーです。リスクの高いウェーブをより厳しく精査したい場合は、`reviewer.high.effort` を（たとえば `high` に）引き上げてください。
 - `triage`（既定は `haiku`）: CI ログのトリアージと passive ティアのレビューに使う低コストのモデルです。失敗したチェックはこのモデルのエージェントに渡され、`file:line` ポインターを添えて、最大でおよそ 2k トークンを返します。
 - `escalation`（既定は `{ "sonnet": "opus" }`）: チケットが修正回数の上限に達したときに使う、モデル名ごとの次のモデルティアです。
+
+## agentHost
+
+`agentHost` (既定 `"claude"`): 実行が動作するエージェントホスト。`"claude"` または `"codex"`。[Codex ガイド](../guide/codex.md)を参照してください。
+
+## codex
+
+`agentHost` が `"codex"` のときだけ読まれます。すべてのキーは任意です。エフォートは `low`、`medium`、`high`、`xhigh`、`max` のいずれかで、`ultra` は受け付けません。
+
+- `models.worker`, `models.workerOverride`, `models.reviewer.medium`, `models.reviewer.high`, `models.triage`: それぞれ `{ "model", "effort", "fallback" }` の形です。`fallback` は、`model` が Codex のモデルキャッシュにないときに順に試すスラッグの一覧です。既定値は[モデルとエフォート](../guide/models-and-effort.md)にあります。
+- `models.session`: `$emet:run` を実行するセッション用の `{ "model", "effort", "planEffort", "fallback" }`。`planEffort` は最初の承認まで適用されます。
+- `effort`: 設定すると、すべてのロールのエフォートを置き換えます。
+- `minVersion` (既定 `0.167.0`): `emet doctor` が受け入れる `codex` CLI の最も古いバージョン。
+- `sandbox` (既定 `danger-full-access`): `emet dispatch`、`emet review-run`、および Codex の `emet launch` が `-s` として渡すサンドボックスモード。`workspace-write` も指定できますが、`.git` が読み取り専用になるため、ワーカーはコミットできません。値にかかわらず、`emet guard` は Codex で `git push` を拒否し、生成されるオーバーレイの `config.toml` には、emet のマーケットプレイスとプラグイン、その実行自身のディレクトリに対する trusted テーブル、解決済みのモデルとエフォートだけが入ります（あなた自身のテーブルは入りません）。[Codex ガイド](../guide/codex.md)と [ADR-0022](../adr/0022-codex-workers-run-unsandboxed-by-default.md) を参照してください。
 
 ## review
 

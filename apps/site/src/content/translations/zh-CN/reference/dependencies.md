@@ -2,7 +2,7 @@
 title: 依赖
 description: emet 在机器上需要什么，以及用哪个命令检查每一项。
 seoTitle: emet 依赖
-sourceHash: 628a2bb58f655fd5
+sourceHash: 50444429c7883bd3
 ---
 
 emet 在机器上需要什么，以及用哪个命令检查每一项。术语遵循 [GLOSSARY.md](../../GLOSSARY.md)。返回 [README](../../README.md)。
@@ -24,6 +24,22 @@ emet 在机器上需要什么，以及用哪个命令检查每一项。术语遵
 - **在 `.mcp.json`（或用户范围）中声明的 Linear MCP 服务器**：仅当仓库使用 `linear` 跟踪器时需要。emet 会验证该声明。连接是否已认证存放在 Claude Code 自己的凭据存储中，无法在这里检查。如果运行时读取工单失败，请重启 Claude Code 并批准该连接。
 
 以上任何一项都不会替你安装或登录。区别在于由谁检查，以及检查的严格程度。
+
+## Codex 宿主
+
+仅当 `agentHost` 为 `"codex"` 时需要；参见 [Codex 指南](../guide/codex.md)。那里不使用 `emet-worker` 和 `emet-reviewer` 代理。
+
+- **`codex` CLI**，已登录，版本为 `codex.minVersion`（默认 `0.167.0`）或更新。`emet doctor` 会报告更旧的版本，并检查 `codex exec --help` 是否列出 `--json` 和 `--output-schema`。
+- Codex 中的 **`mattpocock-skills` 插件**，通过 `codex plugin list` 探测：
+
+  ```bash
+  codex plugin marketplace add mattpocock/skills
+  codex plugin add mattpocock-skills@mattpocock
+  ```
+
+- **面向 Codex 的 emet 插件**（`.codex-plugin/plugin.json`），提供 `$emet:run`、`$emet:init`、`$emet:doctor` 技能和批准 hook。
+
+emet 从不写入你的 `~/.codex`：worker 使用每次运行专属的 `CODEX_HOME`，其中链接你的认证和配置。
 
 ## 谁检查什么
 

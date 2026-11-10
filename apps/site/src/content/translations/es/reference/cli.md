@@ -2,7 +2,7 @@
 title: Referencia de la CLI
 description: Cada subcomando de emet, la tabla de compuertas y registros, los códigos de salida y las variables de entorno.
 seoTitle: Referencia de la CLI de emet
-sourceHash: 6ac3b40ddcfe5237
+sourceHash: 8bb02104970da0a8
 ---
 
 Cada subcomando de `emet`, la tabla de compuertas y registros, los códigos de salida y las variables de entorno. Los términos siguen [GLOSSARY.md](../../GLOSSARY.md). Volver al [README](../../README.md). Cada comando imprime su uso con `--help`.
@@ -83,6 +83,15 @@ Con `tracker.kind: "local"`, las specs y los tickets son archivos markdown bajo 
 
 Una oleada es un PR. Su cuerpo lleva `Closes #N` por cada ticket (la palabra clave de cierre del tracker), y el coordinador mueve los tickets a en revisión cuando abre el PR. Después el PR se fusiona según `pr.autoMerge`, o se deja abierto cuando la oleada fue marcada, `autoMerge` es `false` o se agotaron las correcciones de CI (entonces el PR recibe la etiqueta de decisión humana). Las oleadas posteriores se ejecutan en sus propias sesiones, nunca en la que ejecutó la oleada 1. Las secciones `pr` y `handoff` controlan lo que ocurre después; consulta [`pr`](configuration.md#pr) y [`handoff`](configuration.md#handoff).
 
+### Host de Codex
+
+Estos comandos sirven al host de agente Codex (`agentHost` `"codex"`); consulta la [guía de Codex](../guide/codex.md).
+
+- `emet dispatch --role worker --run <id> --ticket <id> --prompt-file <file> [--model <m>] [--effort <e>] [--root <dir>]`: tras comprobar la reserva y el slot, crea `.emet/worktrees/agent-<ticket>`, construye una capa `CODEX_HOME` por ejecución e inicia el worker como un `codex exec` desacoplado. `emet dispatch --wait --run <id> --ticket <id> [--timeout <s>]` espera a que termine e imprime el estado de resultado registrado.
+- `emet review-run --run <id> --ticket <id> --package <file> --tier <medium|high|passive>`: ejecuta el revisor como un `codex exec` de solo lectura sobre un paquete de `emet review-package` e imprime el JSON de hallazgos para `emet review --findings`. El nivel `passive` no inicia ningún proceso.
+- `emet launch <spec-id> --wave <n>`: en este host, inicia un `codex exec` desacoplado que ejecuta `$emet:run --dispatch <spec>` y registra su id de hilo. No se abre ninguna pestaña de Orca, y `codex exec resume <id>` continúa la sesión.
+- `emet guard`: con `EMET_AGENT_HOST=codex` lee la entrada de hooks de Codex, comprueba las rutas de `apply_patch` contra `.emet/surface.json` y mantiene cerrada la puerta de aprobación hasta una línea de prompt `approve <id>`.
+
 ## Compuertas y registros
 
 Las fases no deciden por sí solas cuándo un ticket está terminado, es fusionable o vale la pena reintentarlo. Llaman a un comando de la CLI que lee un registro en disco e imprime la decisión. Los registros de ejecución viven en `.emet/runs/<run-id>/` y el libro de revisión en `.emet/review/`, en el checkout principal, no en el worktree de un worker.
@@ -124,5 +133,6 @@ Variables de cara al usuario. Una variable, cuando está definida, reemplaza el 
 | `EMET_MEM_RESERVE_GIB`        | Margen de memoria en GiB que debe seguir libre; una adquisición se deniega cuando la memoria disponible está por debajo. Por defecto 8. También alimenta el tope `auto` de workers.                             |
 | `EMET_MEM_PER_WORKER_GIB`     | Memoria en GiB que se supone por worker cuando `maxLiveWorkers` es `auto`. Por defecto 2. Súbela para un stack más pesado por worker, como una suite E2E con navegador por worktree.                            |
 | `EMET_CPU_OVERSUBSCRIBE`      | Multiplicador de CPU para el tope `auto` de workers. Por defecto 1.                                                                                                                                             |
+| `EMET_AGENT_HOST`             | `codex` hace que `emet guard` lea la entrada de hooks de Codex. Lo definen los hooks de Codex; déjala sin definir en Claude Code.                                                                               |
 
 El tope `auto` es `clamp(min(cpuCount × EMET_CPU_OVERSUBSCRIBE, floor((memTotal − EMET_MEM_RESERVE_GIB) / EMET_MEM_PER_WORKER_GIB)), min, max)`. Los nombres heredados `FORGE_*` aún se leen; `EMET_*` gana cuando ambos están definidos.

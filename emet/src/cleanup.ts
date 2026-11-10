@@ -66,9 +66,17 @@ import { existsSync } from "node:fs";
 import path from "node:path";
 
 import { configureTicketPattern, listReservations, releaseTicket } from "./claims";
+import { type AgentHost, claudeHost } from "./agenthost";
+import { agentHostOfConfig } from "./dependencies";
 import { ForgeConfigError, requireForgeConfig, resolveRepoRoot, type ForgeConfig } from "./config";
-import { resolveLandedVerdict, type LandedContext, type LandedVerdict } from "./landed";
+import {
+  resolveLandedVerdict,
+  unownedReclaimVerdict,
+  type LandedContext,
+  type LandedVerdict,
+} from "./landed";
 import { optionalProperty } from "./optional";
+import { ticketFromWorkerBranch } from "./preflight";
 import {
   classifyRun,
   isRunClosed,
@@ -355,18 +363,32 @@ export async function deleteAndReleaseTicket(
 export type RemovalPlan = "remove" | "keep-dirty" | "keep-not-landed" | "protected";
 
 /**
- * What to do with one worktree. `protected` wins over everything: no owner
- * (a foreign worktree, or a worktree whose lock is not emet's, even when a
- * claim matches its branch). Otherwise the ticket must have landed, and the
- * tree must be clean, before the worktree may be removed.
+ * What to do with one worktree. `protected` wins over everything for a
+ * worktree whose lock is not emet's, even when a claim matches its branch.
+ * Otherwise the ticket must have landed, and the tree must be clean, before
+ * the worktree may be removed. An unowned worktree (no claim, no emet lock)
+ * is the Unowned worktree case, decided by {@link unownedReclaimVerdict}:
+ * `remove` only when it says reclaimable, `protected` otherwise.
+ * `workerTicket` is the ticket its worker-shaped branch names; it defaults
+ * to the branch itself because {@link collectUnits} only lets worker-shaped
+ * unowned worktrees reach here.
  */
 export function planWorktreeRemoval(
   entry: WorktreeEntry,
   owner: WorktreeOwner | null,
   landed: LandedVerdict,
   isDirty: boolean,
+  workerTicket: string | null = entry.branch,
 ): RemovalPlan {
-  if (owner === null) return "protected";
+  if (owner === null) {
+    const verdict = unownedReclaimVerdict({
+      workerTicket,
+      landed,
+      clean: !isDirty,
+      lockedByOther: entry.lockedReason !== null,
+    });
+    return verdict.reclaimable ? "remove" : "protected";
+  }
   if (entry.lockedReason !== null && resolveWorktreeOwner(entry) === null) return "protected";
   if (landed !== "landed") return "keep-not-landed";
   if (isDirty) return "keep-dirty";
@@ -375,9 +397,15 @@ export function planWorktreeRemoval(
 
 type RunState = RunVerdict | "closed";
 
+/**
+ * One worktree (or worktree-less branch) a sweep may reclaim. `owner` is
+ * `null` for an Unowned worktree: its `ticket` then comes from its
+ * worker-shaped branch, and there is no claim to release.
+ */
 type ReclaimUnit = {
   readonly entry: WorktreeEntry;
-  readonly owner: WorktreeOwner;
+  readonly owner: WorktreeOwner | null;
+  readonly ticket: string;
   readonly branches: readonly string[];
   readonly directoryExists: boolean;
 };
@@ -423,6 +451,7 @@ export function findOrphanedScaffoldBranches(
   agentBranches: readonly BranchEntry[],
   worktreeEntries: readonly WorktreeEntry[],
   liveDirectoryNames: ReadonlySet<string>,
+  host: AgentHost = claudeHost,
 ): string[] {
   const checkedOut = new Set<string>();
   for (const entry of worktreeEntries) {
@@ -433,7 +462,7 @@ export function findOrphanedScaffoldBranches(
       (branch) =>
         branch.worktreePath.length === 0 &&
         !checkedOut.has(branch.name) &&
-        !isWorktreeAgentBranchLive(branch.name, liveDirectoryNames),
+        !isWorktreeAgentBranchLive(branch.name, liveDirectoryNames, host),
     )
     .map((branch) => branch.name);
 }
@@ -512,8 +541,12 @@ function branchesOfEntry(entry: WorktreeEntry, agentBranchNames: ReadonlySet<str
  * First pass of `run`/`finished` mode: attributes every non-main worktree,
  * and every worker branch whose worktree directory is gone, to a run through
  * the lock then the claim, and keeps the ones this invocation may reclaim.
- * Everything else lands in `protectedLines` (active or unattributable) or is
- * silently out of scope. No mutations.
+ * In `finished` mode an Unowned worktree (no claim, no emet lock) whose
+ * branch is worker-shaped (`<branchPrefix>-<n>-…`) is a unit too, even under
+ * another tool's lock, so {@link unownedReclaimVerdict} (the rule `emet
+ * preflight` advises with) decides it and names why it stays. Everything else
+ * lands in `protectedLines` (active or unattributable) or is silently out of
+ * scope; a foreign worktree is never a unit. No mutations.
  */
 export async function collectUnits(
   context: ReclaimContext,
@@ -529,9 +562,28 @@ export async function collectUnits(
   const consider = async (entry: WorktreeEntry, directoryExists: boolean): Promise<void> => {
     const owner = resolveWorktreeOwnerWithReservations(entry, reservations, branchPrefix);
     if (owner === null) {
-      if (!isForeignWorktree(entry, owner, branchPrefix)) {
-        protectedLines.push(`${entry.branch ?? entry.directory} — no owner, protected`);
+      if (isForeignWorktree(entry, owner, branchPrefix)) return;
+      const workerTicket = entry.branch ? ticketFromWorkerBranch(entry.branch, branchPrefix) : null;
+      const unownedTicket = mode === "finished" && directoryExists ? workerTicket : null;
+      if (unownedTicket === null) {
+        const where = entry.branch ?? entry.directory;
+        protectedLines.push(
+          workerTicket === null
+            ? `${where} — no owner, ${describeUnreclaimableShape(entry)}, protected`
+            : `${where} — no owner, protected`,
+        );
+        return;
       }
+      const unownedBranches = branchesOfEntry(entry, agentBranchNames).filter((branch) =>
+        isForgeShapedBranch(branch, branchPrefix),
+      );
+      units.push({
+        entry,
+        owner: null,
+        ticket: unownedTicket,
+        branches: unownedBranches,
+        directoryExists,
+      });
       return;
     }
     if (mode === "run" && owner.runId !== runId) {
@@ -551,7 +603,7 @@ export async function collectUnits(
         return;
       }
     }
-    units.push({ entry, owner, branches, directoryExists });
+    units.push({ entry, owner, ticket: owner.ticket, branches, directoryExists });
   };
 
   const [, ...otherEntries] = worktreeEntries;
@@ -598,10 +650,44 @@ async function reclaimUnit(unit: ReclaimUnit): Promise<string[]> {
     const result = await deleteBranch(branch);
     if (!result.ok) failures.push(result.message);
   }
-  if (failures.length === 0) {
+  if (failures.length === 0 && unit.owner !== null) {
     await releaseTicket(unit.owner.ticket, unit.owner.runId);
   }
   return failures;
+}
+
+/**
+ * Why an unowned entry whose branch names no ticket is never reclaimed, in
+ * {@link unownedReclaimVerdict}'s words: a foreign lock first, else its
+ * branch shape. Landed state and tree state are never reached for it.
+ */
+function describeUnreclaimableShape(entry: WorktreeEntry): string {
+  return unownedReclaimVerdict({
+    workerTicket: null,
+    landed: "unknown",
+    clean: false,
+    lockedByOther: entry.lockedReason !== null,
+  }).reason;
+}
+
+/**
+ * The protected line for an Unowned worktree that stays: why, in
+ * {@link unownedReclaimVerdict}'s words (the same reason `emet preflight`
+ * prints), and the manual command that removes it once a human has checked it.
+ */
+function describeProtectedUnownedUnit(
+  unit: ReclaimUnit,
+  landed: LandedVerdict,
+  isDirty: boolean,
+): string {
+  const { reason } = unownedReclaimVerdict({
+    workerTicket: unit.ticket,
+    landed,
+    clean: !isDirty,
+    lockedByOther: unit.entry.lockedReason !== null,
+  });
+  const where = unit.branches[0] ?? unit.entry.directory;
+  return `${where} — no owner, ${reason}, protected — git worktree remove "${unit.entry.directory}"`;
 }
 
 export async function reclaimOwnedWorktrees(context: ReclaimContext): Promise<void> {
@@ -617,12 +703,16 @@ export async function reclaimOwnedWorktrees(context: ReclaimContext): Promise<vo
   for (const unit of units) {
     // oxlint-disable-next-line eslint/no-await-in-loop -- sequential on purpose: later iterations depend on earlier ones or on output order
     const landed = await resolveLandedVerdict(
-      { ticket: unit.owner.ticket, branch: unit.branches[0]! },
+      { ticket: unit.ticket, branch: unit.branches[0]! },
       { config, ...optionalProperty("readTrackerState", context.readTrackerState) },
     );
     // oxlint-disable-next-line eslint/no-await-in-loop -- sequential on purpose: later iterations depend on earlier ones or on output order
     const isDirty = await isWorktreeDirty(unit.entry.directory);
-    const plan = planWorktreeRemoval(unit.entry, unit.owner, landed, isDirty);
+    const plan = planWorktreeRemoval(unit.entry, unit.owner, landed, isDirty, unit.ticket);
+    if (unit.owner === null && plan === "protected") {
+      protectedLines.push(describeProtectedUnownedUnit(unit, landed, isDirty));
+      continue;
+    }
     planned.push({ unit, landed, plan });
   }
 
@@ -631,6 +721,7 @@ export async function reclaimOwnedWorktrees(context: ReclaimContext): Promise<vo
     context.agentBranches,
     context.worktreeEntries,
     context.liveDirectoryNames ?? new Set<string>(),
+    agentHostOfConfig(config),
   ).filter((branch) => !claimedBranches.has(branch));
   const scaffoldPlan = await classifyScaffoldsAgainstTrunk(config, orphanedScaffolds);
 
@@ -650,7 +741,7 @@ export async function reclaimOwnedWorktrees(context: ReclaimContext): Promise<vo
     const unitFailures = await reclaimUnit(unit);
     if (unitFailures.length === 0) {
       removed.push(label);
-      reclaimedRuns.add(unit.owner.runId);
+      if (unit.owner !== null) reclaimedRuns.add(unit.owner.runId);
     } else {
       failures.push(...unitFailures);
     }
@@ -731,6 +822,7 @@ export async function reclaimOwnedWorktrees(context: ReclaimContext): Promise<vo
 }
 
 async function main(config: ForgeConfig) {
+  const host = agentHostOfConfig(config);
   const { dryRun, mode, runId, force } = parseCleanupArguments(process.argv.slice(2));
   const { remote, trunk } = config.repo;
   const local = config.landing.mode === "merge";
@@ -771,7 +863,9 @@ async function main(config: ForgeConfig) {
    * next always includes it. The other order could miss a worktree added
    * between the two reads and make its scaffold look orphaned.
    */
-  const worktreeAgentBranches = await listBranches("worktree-agent-*");
+  const worktreeAgentBranches = await listBranches(
+    `worktree-${host.worktreeLayout.agentDirPrefix}*`,
+  );
   const aoBranches = await listBranches(`${branchPrefix}-*`);
   const liveWorktreeDirectoryNames = await listLiveWorktreeDirectoryNames();
   const worktreeEntries = await listWorktreeEntries();
@@ -795,7 +889,7 @@ async function main(config: ForgeConfig) {
 
   const classified: ClassifiedBranch[] = [];
   for (const entry of worktreeAgentBranches) {
-    const isBaselineLive = isWorktreeAgentBranchLive(entry.name, liveWorktreeDirectoryNames);
+    const isBaselineLive = isWorktreeAgentBranchLive(entry.name, liveWorktreeDirectoryNames, host);
     const matchedEntry = findWorktreeEntryForBranch(entry.name, worktreeEntries);
     classified.push(
       // oxlint-disable-next-line eslint/no-await-in-loop -- sequential on purpose: later iterations depend on earlier ones or on output order

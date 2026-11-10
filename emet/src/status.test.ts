@@ -1,5 +1,14 @@
 import { describe, expect, test } from "bun:test";
-import { chmodSync, existsSync, mkdtempSync, realpathSync, rmSync, writeFileSync } from "node:fs";
+import {
+  appendFileSync,
+  chmodSync,
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  realpathSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
 import os from "node:os";
 import path from "node:path";
 
@@ -10,6 +19,7 @@ import {
   localLandedBranches,
   parsePullRequests,
   parseRunIdentity,
+  readCodexWorkers,
   run,
   summarize,
   type PullRequestStatus,
@@ -302,5 +312,83 @@ describe("wave PR lookup", () => {
     );
     expect(group!.workers[0]!.pullRequest?.number).toBe(99);
     expect(group!.workers[0]!.pullRequest?.checks).toBe("pending");
+  });
+});
+
+describe("Codex workers judged by their jsonl", () => {
+  const RUN_ID = "emet20w2042651";
+  const entry = {
+    directory: "/w/agent-CLA-9",
+    branch: "worktree-agent-CLA-9",
+    lockedReason: `emet run=${RUN_ID} ticket=CLA-9 anchor=1 at=x`,
+  };
+
+  function seedWorker(runsRoot: string): string {
+    const codexDir = path.join(runsRoot, RUN_ID, "codex");
+    mkdirSync(codexDir, { recursive: true });
+    const jsonlPath = path.join(codexDir, "CLA-9.jsonl");
+    writeFileSync(jsonlPath, `${JSON.stringify({ type: "thread.started", thread_id: "th-9" })}\n`);
+    writeFileSync(
+      path.join(codexDir, "CLA-9.state.json"),
+      JSON.stringify({
+        pid: 36,
+        threadId: null,
+        startedAt: new Date().toISOString(),
+        jsonlPath,
+        cwd: entry.directory,
+        pidNamespace: "pid:[sandbox]",
+      }),
+    );
+    return jsonlPath;
+  }
+
+  test("a worker in another pid namespace is live while its jsonl grows, done on turn.completed", () => {
+    const runsRoot = realpathSync(mkdtempSync(path.join(os.tmpdir(), "status-codex-")));
+    try {
+      const jsonlPath = seedWorker(runsRoot);
+      const probe = { idleMs: 60_000, pidNamespace: "pid:[host]", isPidAlive: () => false };
+      appendFileSync(jsonlPath, `${JSON.stringify({ type: "item.started" })}\n`);
+      const live = readCodexWorkers([entry], runsRoot, probe);
+      expect(live.get(entry.directory)).toEqual({ liveness: "live", threadId: "th-9" });
+
+      const [liveWave] = groupWorkers(
+        [entry],
+        [],
+        new Map(),
+        new Set(),
+        new Map([[RUN_ID, "live"]]),
+        live,
+      );
+      expect(liveWave!.workers[0]).toMatchObject({
+        liveness: "live",
+        threadId: "th-9",
+        stalled: false,
+      });
+      expect(buildStatusReport([liveWave!], null).waves[0]!.workers[0]!.state).toBe("working");
+
+      appendFileSync(jsonlPath, `${JSON.stringify({ type: "turn.completed" })}\n`);
+      const done = readCodexWorkers([entry], runsRoot, probe);
+      expect(done.get(entry.directory)?.liveness).toBe("done");
+
+      const stale = readCodexWorkers([entry], runsRoot, { ...probe, idleMs: -1 });
+      expect(stale.get(entry.directory)?.liveness).toBe("done");
+    } finally {
+      rmSync(runsRoot, { recursive: true, force: true });
+    }
+  });
+
+  test("a silent worker is stalled from the jsonl and unknown workers are skipped", () => {
+    const runsRoot = realpathSync(mkdtempSync(path.join(os.tmpdir(), "status-codex-")));
+    try {
+      seedWorker(runsRoot);
+      const probe = { idleMs: -1, pidNamespace: "pid:[host]", isPidAlive: () => true };
+      const unowned = { directory: "/w/x", branch: "x", lockedReason: null };
+      const workers = readCodexWorkers([entry, unowned], runsRoot, probe);
+      expect([...workers.keys()]).toEqual([entry.directory]);
+      const [stalledWave] = groupWorkers([entry], [], new Map(), new Set(), new Map(), workers);
+      expect(stalledWave!.workers[0]).toMatchObject({ liveness: "stalled", stalled: true });
+    } finally {
+      rmSync(runsRoot, { recursive: true, force: true });
+    }
   });
 });
