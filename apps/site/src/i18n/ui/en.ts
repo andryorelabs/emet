@@ -40,7 +40,6 @@ export const en = {
     install: "Install.",
     describe: "Describe it.",
     land: "Watch it land.",
-    tabPlugin: "Plugin",
     tabClone: "From a clone",
     request: "build the Website",
     youType: "you type",
@@ -103,8 +102,8 @@ export const en = {
         answer: "Flag a ticket. Nothing merges while something is flagged.",
       },
       {
-        question: "Is emet made by Anthropic?",
-        answer: "No. emet is not affiliated with or endorsed by Anthropic.",
+        question: "Is emet made by Anthropic or OpenAI?",
+        answer: "No. emet is not affiliated with or endorsed by Anthropic or OpenAI.",
       },
     ],
     more: "More questions",
@@ -129,7 +128,7 @@ export const en = {
   },
   footer: {
     description: "Plugin for Claude Code and Codex.",
-    notice: "Not affiliated with or endorsed by Anthropic",
+    notice: "Not affiliated with or endorsed by Anthropic or OpenAI",
     docs: "Docs",
     whatsNew: "What's new",
     github: "GitHub",

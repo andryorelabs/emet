@@ -41,7 +41,6 @@ export const ja = {
     install: "インストール。",
     describe: "伝える。",
     land: "マージを見届ける。",
-    tabPlugin: "プラグイン",
     tabClone: "クローンから",
     request: "build the Website",
     youType: "入力",
@@ -110,8 +109,9 @@ export const ja = {
         answer: "チケットにフラグを立てます。フラグがある間は何もマージされません。",
       },
       {
-        question: "emet は Anthropic が作っていますか？",
-        answer: "いいえ。emet は Anthropic と提携しておらず、Anthropic の承認も受けていません。",
+        question: "emet は Anthropic または OpenAI が作っていますか？",
+        answer:
+          "いいえ。emet は Anthropic または OpenAI と提携しておらず、Anthropic または OpenAI の承認も受けていません。",
       },
     ],
     more: "その他の質問",
@@ -137,7 +137,7 @@ export const ja = {
   },
   footer: {
     description: "Claude Code と Codex のプラグイン。",
-    notice: "Anthropic とは提携しておらず、Anthropic の承認も受けていません",
+    notice: "Anthropic または OpenAI とは提携しておらず、その承認も受けていません",
     docs: "ドキュメント",
     whatsNew: "新着情報",
     github: "GitHub",

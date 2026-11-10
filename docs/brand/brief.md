@@ -52,8 +52,8 @@ mascot, terminal messages). No hype and no "AI-powered".
 
 ## Relation to Anthropic and Claude Code
 
-Copy may say, descriptively, "plugin for Claude Code", always with the notice
-"Not affiliated with or endorsed by Anthropic". The name, logo, palette and
+Copy may say, descriptively, "plugin for Claude Code and Codex", always with the notice
+"Not affiliated with or endorsed by Anthropic or OpenAI". The name, logo, palette and
 mascot are fully separate from Claude's identity.
 
 ## Name and command

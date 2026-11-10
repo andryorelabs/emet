@@ -65,4 +65,9 @@ describe("buildLlmsTxt", () => {
     const body = buildLlmsTxt("A summary.", []);
     expect(body).toContain("emet is a plugin for Claude Code and Codex.");
   });
+
+  test("names both vendors in the notice", () => {
+    const body = buildLlmsTxt("A summary.", []);
+    expect(body).toContain("endorsed by Anthropic or OpenAI.");
+  });
 });

@@ -21,7 +21,7 @@ interface Props {
 const { strings } = Astro.props;
 const { how } = strings;
 
-const pluginCommands = [
+const claudeCommands = [
   "claude plugin marketplace add andryorelabs/emet",
   "claude plugin install emet@emet-marketplace",
 ].join("\n");
@@ -39,7 +39,7 @@ const banner = [
   "emet  plugin for Claude Code and Codex",
   "Spec to merge, on one approval.",
   "interview, spec, tickets, one approval, merge",
-  "Not affiliated with or endorsed by Anthropic",
+  "Not affiliated with or endorsed by Anthropic or OpenAI",
 ].join("\n");
 
 const waveOneTickets = [{ id: "#253", name: "monorepo scaffold" }];
@@ -71,10 +71,10 @@ const waveTwoTickets = [
       <h3>{how.install}</h3>
       <p class="io">{how.youType}</p>
       <CodeBlock
-        code={pluginCommands}
+        code={claudeCommands}
         lang="bash"
         tabs={[
-          { label: how.tabPlugin, code: pluginCommands },
+          { label: "Claude Code", code: claudeCommands },
           { label: "Codex", code: codexCommands },
           { label: how.tabClone, code: cloneCommands },
         ]}
@@ -89,7 +89,14 @@ const waveTwoTickets = [
     <article class="exchange" data-typed>
       <h3>{how.describe}</h3>
       <p class="io">{how.youType}</p>
-      <CodeBlock code={`/emet:run ${how.request}`} lang="bash" />
+      <CodeBlock
+        code={`/emet:run ${how.request}`}
+        lang="bash"
+        tabs={[
+          { label: "Claude Code", code: `/emet:run ${how.request}` },
+          { label: "Codex", code: `$emet:run ${how.request}` },
+        ]}
+      />
       <p class="io">{how.emetReplies}</p>
       <div class="out" data-ui data-reveal="item">
         <p class="out-head"><b>Spec 252 &middot; the Website</b><span>S1 monorepo &middot; S2 site app &middot; S3 home page</span></p>

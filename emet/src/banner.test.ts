@@ -21,8 +21,8 @@ describe("banner art", () => {
     expect(BANNER_TEXT).toContain("emet  plugin for Claude Code and Codex");
   });
 
-  it("carries the Anthropic notice verbatim", () => {
-    expect(BANNER_TEXT).toContain("Not affiliated with or endorsed by Anthropic");
+  it("carries the Anthropic and OpenAI notice verbatim", () => {
+    expect(BANNER_TEXT).toContain("Not affiliated with or endorsed by Anthropic or OpenAI");
   });
 });
 

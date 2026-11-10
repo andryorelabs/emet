@@ -8,7 +8,7 @@ const BANNER_ANSI_LINES: readonly string[] = [
   "\u001b[37m ▄██████████▄\u001b[0m   \u001b[97memet\u001b[0m\u001b[90m  plugin for Claude Code and Codex\u001b[0m",
   "\u001b[37m ██ \u001b[0m\u001b[33m●\u001b[0m\u001b[37m    \u001b[0m\u001b[33m●\u001b[0m\u001b[37m ██\u001b[0m   \u001b[32mSpec to merge, on one approval.\u001b[0m",
   "\u001b[37m ██\u001b[0m\u001b[90m   ▬▬   \u001b[0m\u001b[37m██\u001b[0m   \u001b[90minterview, spec, tickets, one approval, merge\u001b[0m",
-  "\u001b[32m ▀▀████████▀▀\u001b[0m   \u001b[90mNot affiliated with or endorsed by Anthropic\u001b[0m",
+  "\u001b[32m ▀▀████████▀▀\u001b[0m   \u001b[90mNot affiliated with or endorsed by Anthropic or OpenAI\u001b[0m",
 ];
 
 const BANNER_TEXT_LINES: readonly string[] = [
@@ -17,7 +17,7 @@ const BANNER_TEXT_LINES: readonly string[] = [
   " ▄██████████▄   emet  plugin for Claude Code and Codex",
   " ██ ●    ● ██   Spec to merge, on one approval.",
   " ██   ▬▬   ██   interview, spec, tickets, one approval, merge",
-  " ▀▀████████▀▀   Not affiliated with or endorsed by Anthropic",
+  " ▀▀████████▀▀   Not affiliated with or endorsed by Anthropic or OpenAI",
 ];
 
 export const BANNER_ANSI = BANNER_ANSI_LINES.join("\n") + "\n";
