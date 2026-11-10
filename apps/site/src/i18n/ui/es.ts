@@ -41,7 +41,6 @@ export const es = {
     install: "Instálalo.",
     describe: "Descríbelo.",
     land: "Míralo integrarse.",
-    tabPlugin: "Plugin",
     tabClone: "Desde un clon",
     request: "build the Website",
     youType: "tú escribes",
@@ -108,8 +107,8 @@ export const es = {
         answer: "Marca un ticket. Nada se fusiona mientras haya algo marcado.",
       },
       {
-        question: "¿emet lo hace Anthropic?",
-        answer: "No. emet no está afiliado a Anthropic ni cuenta con su respaldo.",
+        question: "¿emet lo hace Anthropic u OpenAI?",
+        answer: "No. emet no está afiliado a Anthropic ni a OpenAI, ni cuenta con su respaldo.",
       },
     ],
     more: "Más preguntas",
@@ -134,7 +133,7 @@ export const es = {
   },
   footer: {
     description: "Plugin para Claude Code y Codex.",
-    notice: "Sin afiliación ni respaldo de Anthropic",
+    notice: "Sin afiliación ni respaldo de Anthropic u OpenAI",
     docs: "Documentación",
     whatsNew: "Novedades",
     github: "GitHub",

@@ -42,7 +42,6 @@ export const ptBR = {
     install: "Instale.",
     describe: "Descreva.",
     land: "Veja ser integrado.",
-    tabPlugin: "Plugin",
     tabClone: "A partir de um clone",
     request: "build the Website",
     youType: "você digita",
@@ -105,8 +104,8 @@ export const ptBR = {
         answer: "Sinalize um ticket. Nada é mesclado enquanto algo estiver sinalizado.",
       },
       {
-        question: "O emet é feito pela Anthropic?",
-        answer: "Não. O emet não é afiliado à Anthropic nem endossado por ela.",
+        question: "O emet é feito pela Anthropic ou pela OpenAI?",
+        answer: "Não. O emet não é afiliado à Anthropic nem à OpenAI, nem endossado por elas.",
       },
     ],
     more: "Mais perguntas",
@@ -131,7 +130,7 @@ export const ptBR = {
   },
   footer: {
     description: "Plugin para o Claude Code e o Codex.",
-    notice: "Sem afiliação com a Anthropic nem endosso dela",
+    notice: "Sem afiliação com a Anthropic ou a OpenAI nem endosso delas",
     docs: "Documentação",
     whatsNew: "Novidades",
     github: "GitHub",
