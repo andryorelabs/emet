@@ -58,7 +58,7 @@ const COORDINATOR_DISPATCH =
   COORDINATOR_MAILBOX;
 
 const WORKER_ESCALATION =
-  "When you need a decision only the coordinator can make, ask it with " +
+  "When you need a decision only the coordinator can make, ask it with (`<runId>` and `<ticket>` are the run id and your ticket id from this prompt) " +
   '`emet ask --run <runId> --ticket <ticket> --body "<question>"`, which prints `{"id":<n>}`. Then poll ' +
   "`emet ask --run <runId> --ticket <ticket> --wait <n>` until it exits 0 with the reply on stdout: exit 3 means " +
   "the slice elapsed with no reply yet, so run it again; exit 4 means the wait budget is spent, so write a BLOCKED " +
