@@ -8,6 +8,13 @@ and this project adheres to
 
 ## [Unreleased]
 
+## [0.5.1] - 2026-11-10
+
+### Changed
+
+- The README, landing, banner, guides and share images name Codex alongside
+  Claude Code.
+
 ## [0.5.0] - 2026-11-10
 
 ### Added

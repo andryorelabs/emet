@@ -60,4 +60,9 @@ describe("buildLlmsTxt", () => {
     expect(body).toContain("> A summary.");
     expect(body).toContain(`- [Fleet Check](${SITE_ORIGIN}/docs/guide/fleet/): Audit repos.`);
   });
+
+  test("names both Agent hosts", () => {
+    const body = buildLlmsTxt("A summary.", []);
+    expect(body).toContain("emet is a plugin for Claude Code and Codex.");
+  });
 });

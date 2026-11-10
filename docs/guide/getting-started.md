@@ -6,7 +6,7 @@ Install emet, check that it works and run it for the first time.
 
 ## Requirements
 
-Claude Code, `git`, `gh` (authenticated) and the `mattpocock-skills` plugin, on Linux or macOS. Bun is needed only for a source install; native Windows is unsupported (use WSL). The full list, with what checks each item, is in the [dependencies reference](../reference/dependencies.md).
+Claude Code or the Codex CLI, `git`, `gh` (authenticated) and the `mattpocock-skills` plugin, on Linux or macOS. Bun is needed only for a source install; native Windows is unsupported (use WSL). The full list, with what checks each item, is in the [dependencies reference](../reference/dependencies.md).
 
 ## Install
 
@@ -19,6 +19,8 @@ claude plugin marketplace add andryorelabs/emet
 claude plugin install emet@emet-marketplace
 ```
 
+On Codex, install the plugin with `codex plugin`; the steps are in [Running emet on Codex](codex.md#install).
+
 **`install.sh`** (works with or without Bun):
 
 ```bash
@@ -29,11 +31,11 @@ cd emet
 
 With `bun` on PATH it copies the CLI source to `~/.claude/emet` and an `emet` wrapper to `~/.local/bin/emet`. Without `bun` it installs the standalone-binary shim instead (`~/.local/bin/emet`, linked to `~/.claude/emet/bin/emet`), which downloads and checksum-verifies the binary on first run (needs `curl`). Either way the commands land in `~/.claude/commands/emet/` and the agents in `~/.claude/agents/`; plugin placeholders in the prompts are rewritten to plain `~/.claude` paths. Re-running it is safe, and a file you edited is kept with the new version written beside it as `<file>.new`.
 
-Both installs give you three slash commands: `/emet:run`, `/emet:init` and `/emet:doctor`. The `emet` command in a plain terminal works only after `install.sh`; otherwise use the slash commands, or `! emet <subcommand>` inside a Claude Code session. The agent names differ: `emet:emet-worker` in the plugin, `emet-worker` standalone.
+Both installs give you three slash commands: `/emet:run`, `/emet:init` and `/emet:doctor`. The `emet` command in a plain terminal works only after `install.sh`; otherwise use the slash commands, or `! emet <subcommand>` inside a Claude Code or Codex session. The agent names differ: `emet:emet-worker` in the plugin, `emet-worker` standalone.
 
 Recommended order, in each repo: run `/setup-matt-pocock-skills` first, then `emet init`.
 
-Verify it worked with `/emet:doctor` inside Claude Code, or `emet doctor .` in a terminal after `install.sh` (`selftest` needs a source install).
+Verify it worked with `/emet:doctor` inside Claude Code (`$emet:doctor` on Codex), or `emet doctor .` in a terminal after `install.sh` (`selftest` needs a source install).
 
 If `doctor` or `preflight` reports a problem, see [troubleshooting](../troubleshooting.md). Nothing is ever installed or logged in on your behalf; see the [dependencies reference](../reference/dependencies.md) for who checks what and for `EMET_SKIP_DEPENDENCY_CHECKS`.
 
@@ -46,7 +48,7 @@ emet init          # autodetects package manager, trunk branch, tracker kind
 emet preflight      # confirms the repo is dispatch-ready
 ```
 
-Inside a session, `/emet:init` does the same as `emet init`. Then, inside Claude Code:
+Inside a session, `/emet:init` does the same as `emet init`. Then, inside Claude Code (on Codex, use `$emet:run` instead of `/emet:run`):
 
 ```
 /emet:run <describe the feature>              # interview → wave 1; later waves via --dispatch/autoChain
@@ -59,6 +61,7 @@ Inside a session, `/emet:init` does the same as `emet init`. Then, inside Claude
 ## Next
 
 - [Trackers and landing](trackers-and-landing.md): GitHub, Linear or local tickets, and how a wave lands.
+- [Running emet on Codex](codex.md): install, the single approval and the limits on the Codex Agent host.
 - [Models and effort](models-and-effort.md): which model and effort each role uses.
 - [Fleet check](fleet.md): audit several repos at once.
 - [Configuration reference](../reference/configuration.md) and [CLI reference](../reference/cli.md): every key and subcommand.

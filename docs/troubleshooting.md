@@ -109,6 +109,16 @@ A repo that still has only `forge.config.json`, `.forge/` or `FORGE_*` variables
 
 **Fix:** Install the named binaries, or remove them from the config if they are no longer needed.
 
+## Codex host
+
+These apply when `agentHost` is `"codex"`. See [Running emet on Codex](guide/codex.md).
+
+**A `codex` older than `codex.minVersion`.** `emet doctor .` reports it. Install the `codex` CLI at the version in `codex.minVersion` (default `0.167.0`) or newer, then run `emet doctor .` again.
+
+**A missing `--json` or `--output-schema` flag.** `emet doctor .` reports a `codex exec` that does not document either flag, and emet relies on both to start workers and reviewers. Install a `codex` version that still documents them.
+
+**A configured model is not listed.** emet resolves models against `models_cache.json` in the run home, else in your real Codex home (read only). A slug that is not listed is substituted and the substitution is logged. If nothing resolves, `emet review-run` fails before the model call, naming the role and the listed slugs. Set a listed slug in `codex.models`; see the [configuration reference](reference/configuration.md#codex).
+
 ## See also
 
 - [Documentation index](README.md)

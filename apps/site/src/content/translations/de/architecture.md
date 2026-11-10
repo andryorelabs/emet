@@ -2,7 +2,7 @@
 title: Architektur
 description: Eine Code-Karte von emet/src und wie die /emet-Prompts sie steuern.
 seoTitle: emet-Architektur
-sourceHash: 3145bbde94eade03
+sourceHash: c86098a9614756e9
 ---
 
 Eine Code-Karte von `emet/src` und wie die `/emet`-Prompts sie steuern. Die Begriffe folgen [GLOSSARY.md](../GLOSSARY.md); die Entscheidungen hinter der Form stehen in [docs/adr](adr/README.md). Bei Problemen siehe [Fehlerbehebung](troubleshooting.md).
@@ -16,7 +16,7 @@ Eine Code-Karte von `emet/src` und wie die `/emet`-Prompts sie steuern. Die Begr
 
 ## Aufbau
 
-Es gibt zwei Hälften. Die Prompts (`commands/run.md`, `agents/*.md`, `emet/reference/*.md`) sagen Claude, was in jeder Phase zu tun ist. Die `emet`-CLI (`emet/bin/emet.ts` und `emet/src/`) erledigt alles, was deterministisch sein muss: Prüfungen, Claims, Slots, Gates, Tracker-Schreibvorgänge und Landing. Die Prompts implementieren nie eine Prüfung neu, die die CLI bereits durchführt.
+Es gibt zwei Hälften. Die Prompts (`commands/run.md`, `agents/*.md`, `emet/reference/*.md`) sagen dem Agenten, was in jeder Phase zu tun ist. Die `emet`-CLI (`emet/bin/emet.ts` und `emet/src/`) erledigt alles, was deterministisch sein muss: Prüfungen, Claims, Slots, Gates, Tracker-Schreibvorgänge und Landing. Die Prompts implementieren nie eine Prüfung neu, die die CLI bereits durchführt.
 
 `emet/bin/emet.ts` ist ein dünner Dispatcher: Er liest das erste Argument und übergibt an ein Unterbefehlsmodul, das den Rest von `process.argv` selbst liest. Exit-Codes sind über alle Unterbefehle hinweg aussagekräftig.
 

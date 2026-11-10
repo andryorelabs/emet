@@ -2,7 +2,7 @@
 title: Atualizar o emet
 description: Leve um emet instalado para uma nova versão e ative a atualização automática do marketplace para os plugins.
 seoTitle: Atualizar o emet
-sourceHash: 22d272d767c29646
+sourceHash: 442bf243cbe7eadb
 ---
 
 Como levar um emet instalado para uma nova versão. Os termos seguem o [GLOSSARY.md](../../GLOSSARY.md).
@@ -18,6 +18,17 @@ claude plugin update emet-mascot@emet-marketplace
 ```
 
 Pule a última linha se você não instalou o mascote. Reinicie o Claude Code depois, ou execute `/reload-plugins`. `claude plugin list` mostra as versões instaladas; a mais recente está no [CHANGELOG.md](../../CHANGELOG.md).
+
+## Atualizar no Codex
+
+Atualize o snapshot do marketplace e adicione o plugin de novo. Executar `codex plugin marketplace add` uma segunda vez não o atualiza:
+
+```bash
+codex plugin marketplace upgrade emet-marketplace
+codex plugin add emet@emet-marketplace
+```
+
+`codex plugin list` mostra se `emet@emet-marketplace` está instalado e habilitado.
 
 ## Atualizar automaticamente
 

@@ -39,7 +39,7 @@ export const PUBLISHED_SOURCES: readonly PublishedSource[] = [
     kind: "markdown",
     seoTitle: "Getting Started with emet",
     description:
-      "Install emet as a Claude Code plugin, check that it works with emet doctor and run it for the first time.",
+      "Install emet as a plugin for Claude Code or Codex, check that it works with emet doctor and run it for the first time.",
   },
   {
     id: "guide/fleet",

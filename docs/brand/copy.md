@@ -8,7 +8,7 @@ Approved public copy. Every claim is limited to what the CLI does today and is b
 
 ## README intro
 
-emet is a plugin for Claude Code. It takes a feature from idea to merged change: interview, spec, tickets, one approval, then parallel workers implement and test in isolated worktrees. Each wave gets a review, CI must be green before merge, and nothing merges when something is flagged.
+emet is a plugin for Claude Code and Codex. It takes a feature from idea to merged change: interview, spec, tickets, one approval, then parallel workers implement and test in isolated worktrees. Each wave gets a review, CI must be green before merge, and nothing merges when something is flagged.
 
 It runs on your machine, in any git repo, with Linear, GitHub Issues or no tracker.
 

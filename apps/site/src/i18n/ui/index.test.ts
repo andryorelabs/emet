@@ -41,6 +41,23 @@ describe("getStrings", () => {
   });
 });
 
+const HOST_NAMES = ["Claude Code", "Codex"] as const;
+
+/**
+ * Asserts the footer description, hero sentence and FAQ answers each name both
+ * Agent hosts.
+ * @param strings - One locale's strings.
+ * @returns Nothing.
+ */
+function expectNamesBothHosts(strings: ReturnType<typeof getStrings>): void {
+  const faqAnswers = strings.faq.items.map((item) => item.answer).join("\n");
+  for (const name of HOST_NAMES) {
+    expect(strings.footer.description).toContain(name);
+    expect(strings.hero.sentence).toContain(name);
+    expect(faqAnswers).toContain(name);
+  }
+}
+
 describe("locale string parity", () => {
   for (const locale of translated) {
     test(`${locale} has exactly the English keys and no empty string`, () => {
@@ -64,8 +81,42 @@ describe("locale string parity", () => {
       expect(strings.footer.builtBy).toContain("AndryOre");
       expect(strings.hero.name).toBe("emet");
       expect(strings.how.request).toBe(en.how.request);
-      expect(strings.footer.description).toContain("Claude Code");
-      expect(strings.hero.sentence).toContain("Claude Code");
+    });
+
+    test(`${locale} names both Agent hosts in the footer, hero and FAQ`, () => {
+      expectNamesBothHosts(getStrings(locale));
     });
   }
+});
+
+/**
+ * Removes every "Codex" from a string, as a locale that dropped the host would.
+ * @param text - A locale string.
+ * @returns The string without "Codex".
+ */
+function stripCodex(text: string): string {
+  return text.replaceAll("Codex", "");
+}
+
+describe("host naming guard", () => {
+  test("fails when a locale drops Codex from any of the three strings", () => {
+    const base = getStrings("es");
+    const dropped = [
+      { ...base, footer: { ...base.footer, description: stripCodex(base.footer.description) } },
+      { ...base, hero: { ...base.hero, sentence: stripCodex(base.hero.sentence) } },
+      {
+        ...base,
+        faq: {
+          ...base.faq,
+          items: base.faq.items.map((item) => ({
+            question: item.question,
+            answer: stripCodex(item.answer),
+          })),
+        },
+      },
+    ];
+    for (const mutated of dropped) {
+      expect(() => expectNamesBothHosts(mutated)).toThrow();
+    }
+  });
 });

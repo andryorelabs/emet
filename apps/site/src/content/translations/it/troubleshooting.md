@@ -2,7 +2,7 @@
 title: Risoluzione dei problemi
 description: Errori di emet doctor ed emet preflight, raggruppati per ciò che si vede, ciascuno con causa e soluzione.
 seoTitle: Risoluzione dei problemi di emet doctor e preflight
-sourceHash: dd82e980da9568d5
+sourceHash: 2945f96c25af7fb6
 ---
 
 Errori di `emet doctor` ed `emet preflight`, raggruppati per ciò che si vede, ciascuno con causa e soluzione. I termini seguono [GLOSSARY.md](../GLOSSARY.md). Per come i controlli si combinano, vedi l'[architettura](architecture.md).
@@ -113,6 +113,16 @@ Un repo che ha ancora solo `forge.config.json`, `.forge/` o variabili `FORGE_*` 
 **Causa:** `preflight.requiredCommands` in `emet.config.json` elenca i binari di cui il repo ha bisogno.
 
 **Soluzione:** Installa i binari indicati, oppure rimuovili dalla configurazione se non servono più.
+
+## Host Codex
+
+Questi casi valgono quando `agentHost` è `"codex"`. Vedi [Eseguire emet su Codex](guide/codex.md).
+
+**Un `codex` più vecchio di `codex.minVersion`.** `emet doctor .` lo segnala. Installa la CLI `codex` alla versione indicata da `codex.minVersion` (predefinita `0.167.0`) o successiva, poi riesegui `emet doctor .`.
+
+**Un flag `--json` o `--output-schema` mancante.** `emet doctor .` segnala un `codex exec` che non documenta uno dei due flag; emet si affida a entrambi per avviare worker e revisori. Installa una versione di `codex` che li documenti ancora.
+
+**Un modello configurato non è elencato.** emet risolve i modelli rispetto a `models_cache.json` nella home dell'esecuzione, altrimenti nella tua vera home di Codex (sola lettura). Uno slug non elencato viene sostituito e la sostituzione viene registrata. Se non si risolve nulla, `emet review-run` fallisce prima della chiamata al modello, indicando il ruolo e gli slug elencati. Imposta uno slug elencato in `codex.models`; vedi il [riferimento della configurazione](reference/configuration.md#codex).
 
 ## Vedi anche
 

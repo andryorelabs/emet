@@ -25,6 +25,10 @@ const pluginCommands = [
   "claude plugin marketplace add andryorelabs/emet",
   "claude plugin install emet@emet-marketplace",
 ].join("\n");
+const codexCommands = [
+  "codex plugin marketplace add andryorelabs/emet",
+  "codex plugin add emet@emet-marketplace",
+].join("\n");
 const cloneCommands = [
   "git clone git@github.com:andryorelabs/emet.git",
   "cd emet",
@@ -32,7 +36,7 @@ const cloneCommands = [
 ].join("\n");
 
 const banner = [
-  "emet  plugin for Claude Code",
+  "emet  plugin for Claude Code and Codex",
   "Spec to merge, on one approval.",
   "interview, spec, tickets, one approval, merge",
   "Not affiliated with or endorsed by Anthropic",
@@ -71,6 +75,7 @@ const waveTwoTickets = [
         lang="bash"
         tabs={[
           { label: how.tabPlugin, code: pluginCommands },
+          { label: "Codex", code: codexCommands },
           { label: how.tabClone, code: cloneCommands },
         ]}
       />

@@ -2,7 +2,7 @@
 
 > Spec to merge, on one approval.
 
-emet is a plugin for Claude Code that takes a feature from idea to merged change: interview, spec, tickets, one approval, then parallel workers in isolated worktrees, a review per wave and CI green before merge.
+emet is a plugin for Claude Code and Codex that takes a feature from idea to merged change: interview, spec, tickets, one approval, then parallel workers in isolated worktrees, a review per wave and CI green before merge.
 
 ## Guide
 

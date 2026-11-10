@@ -2,7 +2,7 @@
 title: 架构
 description: emet/src 的代码地图，以及 /emet 提示词如何驱动它。
 seoTitle: emet 架构
-sourceHash: 3145bbde94eade03
+sourceHash: c86098a9614756e9
 ---
 
 `emet/src` 的代码地图，以及 `/emet` 提示词如何驱动它。术语遵循 [GLOSSARY.md](../GLOSSARY.md)；这种结构背后的决策见 [docs/adr](adr/README.md)。遇到问题时，参见[故障排除](troubleshooting.md)。
@@ -16,7 +16,7 @@ sourceHash: 3145bbde94eade03
 
 ## 结构
 
-整体分为两部分。提示词（`commands/run.md`、`agents/*.md`、`emet/reference/*.md`）告诉 Claude 在每个阶段要做什么。`emet` CLI（`emet/bin/emet.ts` 和 `emet/src/`）负责所有必须具有确定性的事情：检查、认领、槽位、关卡、跟踪器写入和落地。提示词不会重新实现 CLI 已经做过的检查。
+整体分为两部分。提示词（`commands/run.md`、`agents/*.md`、`emet/reference/*.md`）告诉代理在每个阶段要做什么。`emet` CLI（`emet/bin/emet.ts` 和 `emet/src/`）负责所有必须具有确定性的事情：检查、认领、槽位、关卡、跟踪器写入和落地。提示词不会重新实现 CLI 已经做过的检查。
 
 `emet/bin/emet.ts` 是一个很薄的分发器：它读取第一个参数，并把控制权交给某一个子命令模块，由该模块自己读取 `process.argv` 的其余部分。退出码在各个子命令之间含义一致。
 

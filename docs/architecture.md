@@ -11,7 +11,7 @@ A code map of `emet/src` and how the `/emet` prompts drive it. Terms follow [GLO
 
 ## Shape
 
-There are two halves. The prompts (`commands/run.md`, `agents/*.md`, `emet/reference/*.md`) tell Claude what to do in each phase. The `emet` CLI (`emet/bin/emet.ts` and `emet/src/`) does everything that must be deterministic: checks, claims, slots, gates, tracker writes and landing. The prompts never re-implement a check the CLI already makes.
+There are two halves. The prompts (`commands/run.md`, `agents/*.md`, `emet/reference/*.md`) tell the agent what to do in each phase. The `emet` CLI (`emet/bin/emet.ts` and `emet/src/`) does everything that must be deterministic: checks, claims, slots, gates, tracker writes and landing. The prompts never re-implement a check the CLI already makes.
 
 `emet/bin/emet.ts` is a thin dispatcher: it reads the first argument and hands off to one subcommand module, which reads the rest of `process.argv` itself. Exit codes are meaningful across subcommands.
 

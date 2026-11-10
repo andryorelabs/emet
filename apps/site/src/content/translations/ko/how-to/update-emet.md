@@ -2,7 +2,7 @@
 title: emet 업데이트하기
 description: 설치된 emet을 새 릴리스로 옮기고, 플러그인의 마켓플레이스 자동 업데이트를 켭니다.
 seoTitle: emet 업데이트하기
-sourceHash: 22d272d767c29646
+sourceHash: 442bf243cbe7eadb
 ---
 
 설치된 emet을 새 릴리스로 옮기는 방법입니다. 용어는 [GLOSSARY.md](../../GLOSSARY.md)를 따릅니다.
@@ -18,6 +18,17 @@ claude plugin update emet-mascot@emet-marketplace
 ```
 
 마스코트를 설치하지 않았다면 마지막 줄은 건너뛰세요. 그런 다음 Claude Code를 다시 시작하거나 `/reload-plugins`를 실행합니다. `claude plugin list`로 설치된 버전을 볼 수 있고, 최신 버전은 [CHANGELOG.md](../../CHANGELOG.md)에 있습니다.
+
+## Codex에서 업데이트하기
+
+마켓플레이스 스냅샷을 새로 고친 다음 플러그인을 다시 추가하세요. `codex plugin marketplace add`를 한 번 더 실행해도 새로 고쳐지지 않습니다.
+
+```bash
+codex plugin marketplace upgrade emet-marketplace
+codex plugin add emet@emet-marketplace
+```
+
+`codex plugin list`로 `emet@emet-marketplace`가 설치되어 활성화되어 있는지 볼 수 있습니다.
 
 ## 자동으로 업데이트하기
 

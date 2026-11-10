@@ -110,7 +110,7 @@ export function buildLlmsTxt(summary: string, pages: readonly LlmsDocsPage[]): s
     "",
     `> ${summary}`,
     "",
-    "emet is a Claude Code plugin. It is not affiliated with or endorsed by Anthropic.",
+    "emet is a plugin for Claude Code and Codex. It is not affiliated with or endorsed by Anthropic.",
     "",
     "## Docs",
     "",

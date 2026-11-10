@@ -2,7 +2,7 @@
 title: 故障排除
 description: 按你看到的现象归类 emet doctor 和 emet preflight 的失败，并给出各自的原因与修复方法。
 seoTitle: emet doctor 与 preflight 故障排除
-sourceHash: dd82e980da9568d5
+sourceHash: 2945f96c25af7fb6
 ---
 
 按你看到的现象归类 `emet doctor` 和 `emet preflight` 的失败，并给出各自的原因与修复方法。术语遵循 [GLOSSARY.md](../GLOSSARY.md)。各项检查如何配合，参见[架构](architecture.md)。
@@ -113,6 +113,16 @@ sourceHash: dd82e980da9568d5
 **原因：** `emet.config.json` 中的 `preflight.requiredCommands` 列出了仓库所需的二进制文件。
 
 **修复：** 安装所指明的二进制文件，如果不再需要，则从配置中移除它们。
+
+## Codex 宿主
+
+这些情况适用于 `agentHost` 为 `"codex"` 时。参见[在 Codex 上运行 emet](guide/codex.md)。
+
+**`codex` 比 `codex.minVersion` 旧。** `emet doctor .` 会报告。请安装版本不低于 `codex.minVersion`（默认 `0.167.0`）的 `codex` CLI，然后再次运行 `emet doctor .`。
+
+**缺少 `--json` 或 `--output-schema` 标志。** `emet doctor .` 会报告未记录这两个标志之一的 `codex exec`，而 emet 启动 worker 和评审都依赖这两个标志。请安装仍记录它们的 `codex` 版本。
+
+**配置的模型不在列表中。** emet 会根据运行主目录中的 `models_cache.json` 解析模型，否则根据你真实 Codex 主目录中的该文件（只读）。不在列表中的 slug 会被替换，并记录这次替换。如果什么都解析不出，`emet review-run` 会在调用模型之前失败，并指出角色和已列出的 slug。请在 `codex.models` 中设置列表中的 slug；参见[配置参考](reference/configuration.md#codex)。
 
 ## 另请参阅
 

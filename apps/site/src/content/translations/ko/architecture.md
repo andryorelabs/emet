@@ -2,7 +2,7 @@
 title: 아키텍처
 description: emet/src의 코드 맵과 /emet 프롬프트가 이를 어떻게 구동하는지 설명합니다.
 seoTitle: emet 아키텍처
-sourceHash: 3145bbde94eade03
+sourceHash: c86098a9614756e9
 ---
 
 `emet/src`의 코드 맵과 `/emet` 프롬프트가 이를 어떻게 구동하는지 설명합니다. 용어는 [GLOSSARY.md](../GLOSSARY.md)를 따르며, 이 구조의 배경이 된 결정은 [docs/adr](adr/README.md)에 있습니다. 문제가 생기면 [문제 해결](troubleshooting.md)을 참고하세요.
@@ -16,7 +16,7 @@ sourceHash: 3145bbde94eade03
 
 ## 구조
 
-두 부분으로 이루어져 있습니다. 프롬프트(`commands/run.md`, `agents/*.md`, `emet/reference/*.md`)는 각 단계에서 Claude가 무엇을 해야 하는지 알려 줍니다. `emet` CLI(`emet/bin/emet.ts`와 `emet/src/`)는 결정적이어야 하는 모든 일, 즉 점검, 클레임, 슬롯, 게이트, 트래커 쓰기, 랜딩을 처리합니다. 프롬프트는 CLI가 이미 수행하는 점검을 다시 구현하지 않습니다.
+두 부분으로 이루어져 있습니다. 프롬프트(`commands/run.md`, `agents/*.md`, `emet/reference/*.md`)는 각 단계에서 에이전트가 무엇을 해야 하는지 알려 줍니다. `emet` CLI(`emet/bin/emet.ts`와 `emet/src/`)는 결정적이어야 하는 모든 일, 즉 점검, 클레임, 슬롯, 게이트, 트래커 쓰기, 랜딩을 처리합니다. 프롬프트는 CLI가 이미 수행하는 점검을 다시 구현하지 않습니다.
 
 `emet/bin/emet.ts`는 얇은 디스패처입니다. 첫 번째 인자를 읽고 하위 명령 모듈 하나에 넘기며, 그 모듈이 나머지 `process.argv`를 직접 읽습니다. 종료 코드는 모든 하위 명령에서 같은 의미를 가집니다.
 

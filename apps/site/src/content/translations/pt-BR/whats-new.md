@@ -2,8 +2,16 @@
 title: Novidades
 description: Notas de versão do emet: o que mudou em cada versão.
 seoTitle: Novidades do emet: notas de versão
-sourceHash: 6a4ab9853722f86c
+sourceHash: 865aee0375b56c7a
 ---
+
+## 0.5.1
+
+2026-11-10
+
+### Alterado
+
+- O README, a landing, o banner, os guias e as imagens de compartilhamento citam o Codex ao lado do Claude Code.
 
 ## 0.5.0
 

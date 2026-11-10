@@ -2,8 +2,16 @@
 title: 새로운 소식
 description: emet 릴리스 노트. 각 버전에서 무엇이 바뀌었는지 정리합니다.
 seoTitle: "emet 새로운 소식: 릴리스 노트"
-sourceHash: 6a4ab9853722f86c
+sourceHash: 865aee0375b56c7a
 ---
+
+## 0.5.1
+
+2026-11-10
+
+### 변경됨
+
+- README, 랜딩, 배너, 가이드, 공유 이미지가 Claude Code와 함께 Codex를 명시합니다.
 
 ## 0.5.0
 
