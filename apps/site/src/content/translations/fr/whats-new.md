@@ -2,8 +2,22 @@
 title: Nouveautés
 description: Notes de version d'emet : ce qui a changé dans chaque version.
 seoTitle: Nouveautés d'emet : notes de version
-sourceHash: e658e982cb203285
+sourceHash: ffd419a534a47352
 ---
+
+## 0.6.0
+
+2026-11-10
+
+### Ajouté
+
+- Une Mailbox pour les workers Codex : `emet ask` enregistre une question (et interroge la réponse avec `--wait`), `emet inbox` liste les questions ouvertes et `emet reply` en répond une, de sorte qu'un worker ne remonte plus par une note de passation.
+- `emet dispatch --wait` affiche `question <ticket> <id>` tant qu'un worker actif a une question ouverte, et ne classe jamais ce worker comme bloqué.
+- `emet claims --reserve` enregistre les surfaces d'édition du ticket et refuse une réservation qui chevauche les surfaces d'une autre exécution.
+
+### Corrigé
+
+- `emet dispatch --wait` lit les résultats dans le répertoire d'exécution du git-common-dir, là où `emet results --write` les écrit.
 
 ## 0.5.2
 
