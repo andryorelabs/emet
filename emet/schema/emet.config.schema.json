@@ -624,6 +624,12 @@
           "minimum": 1,
           "default": 6,
           "description": "Stall nudges per worker; never refills."
+        },
+        "askWaitMinutes": {
+          "type": "integer",
+          "minimum": 1,
+          "default": 30,
+          "description": "Minutes a worker waits on an unanswered `emet ask` before it gives up."
         }
       }
     },

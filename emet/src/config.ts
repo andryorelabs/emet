@@ -98,7 +98,7 @@ export const DEFAULT_FORGE_CONFIG: ForgeConfig = {
     escalation: { sonnet: "opus" },
   },
   review: { highRiskPaths: [] },
-  budgets: { workerAttempts: 2, reviewRounds: 2, stallNudgeCap: 6 },
+  budgets: { workerAttempts: 2, reviewRounds: 2, stallNudgeCap: 6, askWaitMinutes: 30 },
   sizing: { inlineMaxLines: 100 },
   map: { path: "docs/agents/codebase.md" },
   specs: { dir: "docs/specs" },
@@ -286,6 +286,8 @@ export interface ForgeConfig {
     readonly reviewRounds: number;
     /** Stall nudges per worker; never refills. */
     readonly stallNudgeCap: number;
+    /** Minutes a worker waits on an unanswered `emet ask` before it gives up. */
+    readonly askWaitMinutes: number;
   };
   readonly sizing: {
     /** Largest ticket body (lines) kept inline in a worker prompt. */
@@ -739,7 +741,7 @@ function validateAndMerge(
     return { ok: false, reason: '"budgets" must be an object' };
   }
   const budgetsRecord = budgetsSection ?? {};
-  const budgetKeys = ["workerAttempts", "reviewRounds", "stallNudgeCap"] as const;
+  const budgetKeys = ["workerAttempts", "reviewRounds", "stallNudgeCap", "askWaitMinutes"] as const;
   const budgets = { ...DEFAULT_FORGE_CONFIG.budgets };
   for (const key of budgetKeys) {
     const value = budgetsRecord[key];
