@@ -664,7 +664,9 @@ async function nestedDispatchOnce(
     promptFile,
     'Create `nested.txt` containing `nested`, then run `git add nested.txt` and `git commit -m "test: nested"`. Reply DONE.\n',
   );
-  await didReserveTicket(runId, process.pid, ticket, path.join(repo, ".git", "emet"));
+  await didReserveTicket(runId, process.pid, ticket, path.join(repo, ".git", "emet"), undefined, [
+    "nested.txt",
+  ]);
   mkdirSync(path.join(stateDir, "slots"), { recursive: true });
   await acquireSlot(2, runId, process.pid, ticket, path.join(stateDir, "slots"));
   const { codexHome } = buildRunHome({
@@ -1020,7 +1022,14 @@ async function flowWave1(
   const slots = path.join(context.workDir, `flow-state-${attempt}`, "slots");
   mkdirSync(slots, { recursive: true });
   configureTicketPattern((await loadForgeConfigWithDefaults(repo)).config.ticket.idPattern);
-  await didReserveTicket(FLOW_RUN, process.pid, ticket, path.join(repo, ".git", "emet"));
+  await didReserveTicket(
+    FLOW_RUN,
+    process.pid,
+    ticket,
+    path.join(repo, ".git", "emet"),
+    undefined,
+    ["a.txt"],
+  );
   await acquireSlot(2, FLOW_RUN, process.pid, ticket, slots);
   const { run } = await import("../emet/src/dispatch");
   const code = await run(

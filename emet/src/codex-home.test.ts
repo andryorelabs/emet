@@ -46,7 +46,7 @@ describe("COMMIT_RULES", () => {
     expect(COMMIT_RULES).toContain('pattern = ["git", "status"], decision = "allow"');
     expect(COMMIT_RULES).toContain('pattern = ["git", "worktree"], decision = "allow"');
     expect(COMMIT_RULES).toContain(
-      'pattern = ["emet", ["dispatch", "review-run", "launch", "claims", "slots", "results", "handoff"]], decision = "allow"',
+      'pattern = ["emet", ["dispatch", "review-run", "launch", "claims", "slots", "results", "handoff", "ask"]], decision = "allow"',
     );
   });
 

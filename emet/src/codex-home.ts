@@ -24,7 +24,7 @@ prefix_rule(pattern = ["git", "commit"], decision = "allow")
 prefix_rule(pattern = ["git", "status"], decision = "allow")
 prefix_rule(pattern = ["git", "worktree"], decision = "allow")
 prefix_rule(pattern = ["git", "-C"], decision = "allow")
-prefix_rule(pattern = ["emet", ["dispatch", "review-run", "launch", "claims", "slots", "results", "handoff"]], decision = "allow")
+prefix_rule(pattern = ["emet", ["dispatch", "review-run", "launch", "claims", "slots", "results", "handoff", "ask"]], decision = "allow")
 prefix_rule(pattern = ["git", "push"], decision = "forbidden")
 `;
 
