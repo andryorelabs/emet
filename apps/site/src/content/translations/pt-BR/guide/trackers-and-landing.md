@@ -2,7 +2,7 @@
 title: Trackers e aterrissagem
 description: Onde ficam os tickets, como uma onda aterrissa como pull request ou merge local, e como as ondas se encadeiam.
 seoTitle: Trackers e aterrissagem no emet
-sourceHash: 4e3835764329636c
+sourceHash: c9ae0940af5cfbad
 ---
 
 Onde ficam os tickets, como uma onda aterrissa e como as ondas se encadeiam. Toda chave citada aqui está na [referência de configuração](../reference/configuration.md); todo subcomando está na [referência da CLI](../reference/cli.md).
@@ -53,6 +53,8 @@ As ondas seguintes rodam em suas próprias sessões, nunca na que executou a ond
 - `handoff.launcher` (padrão `auto`): abre também a onda em uma aba do Orca executando `claude attach`. O `auto` consulta o runtime do Orca (`orca status`), portanto funciona também a partir de sessões `claude --bg`, que não têm `TERM_PROGRAM`; `orca` sempre tenta, `bg` nunca. A onda roda em segundo plano de qualquer forma, e uma aba que falha ao abrir nunca interrompe a cadeia.
 
   `emet launch <spec-id> --wave <n>` faz o lançamento completo (verificação de sessão duplicada, `claude --bg`, aba) e imprime `{ name, id, attach, orcaTab: { opened, reason } }`. Use-o, e não um `claude --bg` solto, sempre que quiser uma onda em outra sessão manualmente.
+
+  No host de agente Codex, `emet launch` inicia um `codex exec` desacoplado que executa `$emet:run --dispatch <spec-id>` e registra o id da thread dele. Não abre aba do Orca, e `codex exec resume <id>` continua a sessão. Veja a [referência da CLI](../reference/cli.md#host-codex) e [Executando o emet no Codex](codex.md).
 
 - `handoff.permissionMode` (padrão `bypassPermissions`): modo de permissão da sessão encadeada. Não é herdado da sessão que a lança, porque o classificador do modo `auto` pode negar um passo como `gh pr merge` e deixar uma onda pela metade. Suas regras `permissions.deny` continuam valendo, mas o aviso de bypass precisa ter sido aceito uma vez de forma interativa (`skipDangerousModePermissionPrompt`).
 

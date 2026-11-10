@@ -2,7 +2,7 @@
 title: Trackers y aterrizaje
 description: Dónde viven los tickets, cómo aterriza una oleada como pull request o como merge local, y cómo se encadenan las oleadas.
 seoTitle: Trackers y aterrizaje en emet
-sourceHash: 4e3835764329636c
+sourceHash: c9ae0940af5cfbad
 ---
 
 Dónde viven los tickets, cómo aterriza una oleada y cómo se encadenan las oleadas. Cada clave mencionada aquí está en la [referencia de configuración](../reference/configuration.md); cada subcomando está en la [referencia de la CLI](../reference/cli.md).
@@ -53,6 +53,8 @@ Las oleadas posteriores se ejecutan en sus propias sesiones, nunca en la que eje
 - `handoff.launcher` (por defecto `auto`): abre además la oleada en una pestaña de Orca que ejecuta `claude attach`. `auto` consulta el runtime de Orca (`orca status`), por lo que también funciona desde sesiones `claude --bg`, que no tienen `TERM_PROGRAM`; `orca` siempre lo intenta, `bg` nunca. La oleada se ejecuta en segundo plano de cualquier forma, y una pestaña que no logra abrirse nunca detiene la cadena.
 
   `emet launch <spec-id> --wave <n>` hace todo el lanzamiento (comprobación de sesión duplicada, `claude --bg`, pestaña) e imprime `{ name, id, attach, orcaTab: { opened, reason } }`. Úsalo, y no un `claude --bg` a secas, siempre que quieras una oleada en otra sesión a mano.
+
+  En el Agent host de Codex, `emet launch` inicia un `codex exec` desacoplado que ejecuta `$emet:run --dispatch <spec-id>` y registra su id de hilo. No abre ninguna pestaña de Orca, y `codex exec resume <id>` continúa la sesión. Consulta la [referencia de la CLI](../reference/cli.md#host-de-codex) y [Ejecutar emet en Codex](codex.md).
 
 - `handoff.permissionMode` (por defecto `bypassPermissions`): modo de permisos de la sesión encadenada. No se hereda de la sesión que la lanza, porque el clasificador del modo `auto` puede denegar un paso como `gh pr merge` y dejar una oleada a medias. Tus reglas `permissions.deny` siguen aplicándose, pero la advertencia de bypass debe haberse aceptado una vez de forma interactiva (`skipDangerousModePermissionPrompt`).
 

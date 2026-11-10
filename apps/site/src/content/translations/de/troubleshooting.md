@@ -2,7 +2,7 @@
 title: Fehlerbehebung
 description: Fehler von emet doctor und emet preflight, nach dem Sichtbaren gruppiert, jeweils mit Ursache und Lösung.
 seoTitle: Fehlerbehebung für emet doctor und preflight
-sourceHash: dd82e980da9568d5
+sourceHash: 2945f96c25af7fb6
 ---
 
 Fehler von `emet doctor` und `emet preflight`, nach dem Sichtbaren gruppiert, jeweils mit Ursache und Lösung. Die Begriffe folgen [GLOSSARY.md](../GLOSSARY.md). Wie die Prüfungen zusammenspielen, steht in der [Architektur](architecture.md).
@@ -113,6 +113,16 @@ Ein Repo, das noch nur `forge.config.json`, `.forge/` oder `FORGE_*`-Variablen h
 **Ursache:** `preflight.requiredCommands` in `emet.config.json` listet Binärdateien auf, die das Repo braucht.
 
 **Lösung:** Die genannten Binärdateien installieren oder aus der Konfiguration entfernen, wenn sie nicht mehr gebraucht werden.
+
+## Codex-Host
+
+Diese Hinweise gelten, wenn `agentHost` `"codex"` ist. Siehe [emet mit Codex ausführen](guide/codex.md).
+
+**Ein `codex`, das älter als `codex.minVersion` ist.** `emet doctor .` meldet es. Die `codex`-CLI in der Version aus `codex.minVersion` (Standard `0.167.0`) oder neuer installieren und dann `emet doctor .` erneut ausführen.
+
+**Ein fehlendes Flag `--json` oder `--output-schema`.** `emet doctor .` meldet ein `codex exec`, das eines der beiden Flags nicht dokumentiert; emet braucht beide, um Worker und Reviewer zu starten. Eine `codex`-Version installieren, die sie weiterhin dokumentiert.
+
+**Ein konfiguriertes Modell ist nicht aufgeführt.** emet löst Modelle gegen `models_cache.json` im Run-Home auf, sonst im echten Codex-Home (nur lesend). Ein nicht aufgeführter Slug wird ersetzt, und die Ersetzung wird protokolliert. Wenn nichts aufgelöst wird, schlägt `emet review-run` vor dem Modellaufruf fehl und nennt die Rolle sowie die aufgeführten Slugs. Einen aufgeführten Slug in `codex.models` setzen; siehe die [Konfigurationsreferenz](reference/configuration.md#codex).
 
 ## Siehe auch
 

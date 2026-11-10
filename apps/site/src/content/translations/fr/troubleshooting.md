@@ -2,7 +2,7 @@
 title: Dépannage
 description: Échecs de emet doctor et emet preflight, regroupés selon ce que vous voyez, chacun avec sa cause et un correctif.
 seoTitle: Dépannage de emet doctor et preflight
-sourceHash: dd82e980da9568d5
+sourceHash: 2945f96c25af7fb6
 ---
 
 Échecs de `emet doctor` et `emet preflight`, regroupés selon ce que vous voyez, chacun avec sa cause et un correctif. Les termes suivent [GLOSSARY.md](../GLOSSARY.md). Pour comprendre comment les vérifications s'articulent, voir l'[architecture](architecture.md).
@@ -113,6 +113,16 @@ Un dépôt qui n'a encore que `forge.config.json`, `.forge/` ou des variables `F
 **Cause :** `preflight.requiredCommands` dans `emet.config.json` liste des binaires dont le dépôt a besoin.
 
 **Correctif :** Installez les binaires nommés, ou retirez-les de la configuration s'ils ne sont plus nécessaires.
+
+## Hôte Codex
+
+Ces cas s'appliquent quand `agentHost` vaut `"codex"`. Voir [Exécuter emet sur Codex](guide/codex.md).
+
+**Un `codex` plus ancien que `codex.minVersion`.** `emet doctor .` le signale. Installez la CLI `codex` à la version indiquée par `codex.minVersion` (`0.167.0` par défaut) ou plus récente, puis relancez `emet doctor .`.
+
+**Une option `--json` ou `--output-schema` manquante.** `emet doctor .` signale un `codex exec` qui ne documente pas l'une de ces options ; emet s'appuie sur les deux pour démarrer workers et reviewers. Installez une version de `codex` qui les documente encore.
+
+**Un modèle configuré n'est pas listé.** emet résout les modèles d'après `models_cache.json` dans le home de l'exécution, sinon dans votre vrai home Codex (en lecture seule). Un slug non listé est remplacé et le remplacement est journalisé. Si rien ne se résout, `emet review-run` échoue avant l'appel au modèle, en nommant le rôle et les slugs listés. Définissez un slug listé dans `codex.models` ; voir la [référence de configuration](reference/configuration.md#codex).
 
 ## Voir aussi
 

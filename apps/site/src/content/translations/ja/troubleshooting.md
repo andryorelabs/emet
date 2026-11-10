@@ -2,7 +2,7 @@
 title: トラブルシューティング
 description: emet doctor と emet preflight の失敗を、見える症状ごとに分類し、それぞれの原因と対処を説明します。
 seoTitle: emet doctor と preflight のトラブルシューティング
-sourceHash: dd82e980da9568d5
+sourceHash: 2945f96c25af7fb6
 ---
 
 `emet doctor` と `emet preflight` の失敗を、見える症状ごとに分類し、それぞれの原因と対処を示します。用語は [GLOSSARY.md](../GLOSSARY.md) に従います。各チェックがどう組み合わさっているかは、[アーキテクチャ](architecture.md)を参照してください。
@@ -113,6 +113,16 @@ sourceHash: dd82e980da9568d5
 **原因:** `emet.config.json` の `preflight.requiredCommands` に、リポジトリが必要とするバイナリが記載されています。
 
 **対処:** 指定されたバイナリをインストールするか、不要になった場合は設定から削除してください。
+
+## Codex ホスト
+
+以下は `agentHost` が `"codex"` のときに当てはまります。[Codex で emet を実行する](guide/codex.md)を参照してください。
+
+**`codex.minVersion` より古い `codex`。** `emet doctor .` が報告します。`codex.minVersion`（既定は `0.167.0`）以上のバージョンの `codex` CLI をインストールしてから、もう一度 `emet doctor .` を実行してください。
+
+**`--json` または `--output-schema` フラグがない。** `emet doctor .` は、どちらかのフラグを文書化していない `codex exec` を報告します。emet はワーカーとレビュアーの起動にその両方を使います。両方を文書化している `codex` のバージョンをインストールしてください。
+
+**設定したモデルが一覧にない。** emet はモデルを、実行ホーム内の `models_cache.json`、なければ実際の Codex ホーム内の `models_cache.json`（読み取り専用）に対して解決します。一覧にないスラッグは置き換えられ、その置き換えが記録されます。何も解決できない場合、`emet review-run` はモデル呼び出しの前に、ロールと一覧にあるスラッグを示して失敗します。`codex.models` には一覧にあるスラッグを設定してください。[設定リファレンス](reference/configuration.md#codex)を参照してください。
 
 ## 関連項目
 

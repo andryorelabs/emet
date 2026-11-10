@@ -2,7 +2,7 @@
 title: アーキテクチャ
 description: emet/src のコードマップと、/emet のプロンプトがそれをどのように動かすかを説明します。
 seoTitle: emet のアーキテクチャ
-sourceHash: 3145bbde94eade03
+sourceHash: c86098a9614756e9
 ---
 
 `emet/src` のコードマップと、`/emet` のプロンプトがそれをどのように動かすかを説明します。用語は [GLOSSARY.md](../GLOSSARY.md) に従います。この構成の背景にある決定は [docs/adr](adr/README.md) にあります。問題が起きた場合は、[トラブルシューティング](troubleshooting.md)を参照してください。
@@ -16,7 +16,7 @@ sourceHash: 3145bbde94eade03
 
 ## 構成
 
-構成は 2 つの部分からなります。プロンプト（`commands/run.md`、`agents/*.md`、`emet/reference/*.md`）は、各フェーズで Claude が何をすべきかを伝えます。`emet` CLI（`emet/bin/emet.ts` と `emet/src/`）は、決定的でなければならないすべてのこと、つまりチェック、クレーム、スロット、ゲート、トラッカーへの書き込み、ランディングを担います。プロンプトが、CLI がすでに行っているチェックを再実装することはありません。
+構成は 2 つの部分からなります。プロンプト（`commands/run.md`、`agents/*.md`、`emet/reference/*.md`）は、各フェーズでエージェントが何をすべきかを伝えます。`emet` CLI（`emet/bin/emet.ts` と `emet/src/`）は、決定的でなければならないすべてのこと、つまりチェック、クレーム、スロット、ゲート、トラッカーへの書き込み、ランディングを担います。プロンプトが、CLI がすでに行っているチェックを再実装することはありません。
 
 `emet/bin/emet.ts` は薄いディスパッチャーです。最初の引数を読み取り、1 つのサブコマンドモジュールに処理を渡し、そのモジュールが残りの `process.argv` を自分で読み取ります。終了コードは、サブコマンド全体で意味が共通です。
 

@@ -2,7 +2,7 @@
 title: Arquitectura
 description: Un mapa del código de emet/src y cómo lo dirigen los prompts de /emet.
 seoTitle: Arquitectura de emet
-sourceHash: 3145bbde94eade03
+sourceHash: c86098a9614756e9
 ---
 
 Un mapa del código de `emet/src` y cómo lo dirigen los prompts de `/emet`. Los términos siguen [GLOSSARY.md](../GLOSSARY.md); las decisiones detrás de esta forma viven en [docs/adr](adr/README.md). Para los problemas, consulta la [solución de problemas](troubleshooting.md).
@@ -16,7 +16,7 @@ Un mapa del código de `emet/src` y cómo lo dirigen los prompts de `/emet`. Los
 
 ## Forma
 
-Hay dos mitades. Los prompts (`commands/run.md`, `agents/*.md`, `emet/reference/*.md`) le dicen a Claude qué hacer en cada fase. La CLI `emet` (`emet/bin/emet.ts` y `emet/src/`) hace todo lo que debe ser determinista: comprobaciones, reclamaciones, slots, compuertas, escrituras en el tracker y aterrizaje. Los prompts nunca reimplementan una comprobación que la CLI ya realiza.
+Hay dos mitades. Los prompts (`commands/run.md`, `agents/*.md`, `emet/reference/*.md`) le dicen al agente qué hacer en cada fase. La CLI `emet` (`emet/bin/emet.ts` y `emet/src/`) hace todo lo que debe ser determinista: comprobaciones, reclamaciones, slots, compuertas, escrituras en el tracker y aterrizaje. Los prompts nunca reimplementan una comprobación que la CLI ya realiza.
 
 `emet/bin/emet.ts` es un despachador delgado: lee el primer argumento y delega en un módulo de subcomando, que lee por sí mismo el resto de `process.argv`. Los códigos de salida tienen significado en todos los subcomandos.
 

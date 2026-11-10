@@ -2,7 +2,7 @@
 title: Tracker e landing
 description: Dove vivono i ticket, come un'ondata atterra come pull request o merge locale e come si concatenano le ondate.
 seoTitle: Tracker e landing in emet
-sourceHash: 4e3835764329636c
+sourceHash: c9ae0940af5cfbad
 ---
 
 Dove vivono i ticket, come atterra un'ondata e come si concatenano le ondate. Ogni chiave citata qui è nel [riferimento della configurazione](../reference/configuration.md); ogni sottocomando è nel [riferimento della CLI](../reference/cli.md).
@@ -53,6 +53,8 @@ Le ondate successive girano in sessioni proprie, mai in quella che ha eseguito l
 - `handoff.launcher` (predefinito `auto`): apre anche l'ondata in una scheda di Orca che esegue `claude attach`. `auto` interroga il runtime di Orca (`orca status`), quindi funziona anche da sessioni `claude --bg`, che non hanno `TERM_PROGRAM`; `orca` ci prova sempre, `bg` mai. L'ondata gira comunque in background, e una scheda che non si apre non ferma mai la catena.
 
   `emet launch <spec-id> --wave <n>` esegue l'intero avvio (controllo delle sessioni duplicate, `claude --bg`, scheda) e stampa `{ name, id, attach, orcaTab: { opened, reason } }`. Usalo, e non un semplice `claude --bg`, ogni volta che vuoi un'ondata in un'altra sessione a mano.
+
+  Sull'Agent host Codex, `emet launch` avvia un `codex exec` staccato che esegue `$emet:run --dispatch <spec-id>` e registra il suo id di thread. Non apre nessuna scheda di Orca, e `codex exec resume <id>` riprende la sessione. Vedi il [riferimento della CLI](../reference/cli.md#host-codex) e [Eseguire emet su Codex](codex.md).
 
 - `handoff.permissionMode` (predefinito `bypassPermissions`): modalità di permesso della sessione concatenata. Non è ereditata dalla sessione che la avvia, perché il classificatore della modalità `auto` può negare un passaggio come `gh pr merge` e lasciare un'ondata a metà. Le tue regole `permissions.deny` continuano ad applicarsi, ma l'avviso di bypass deve essere stato accettato una volta in modo interattivo (`skipDangerousModePermissionPrompt`).
 

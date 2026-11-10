@@ -2,7 +2,7 @@
 title: 트래커와 랜딩
 description: 티켓이 있는 곳, 웨이브가 풀 리퀘스트나 로컬 병합으로 랜딩하는 방식, 웨이브를 이어 붙이는 방법을 설명합니다.
 seoTitle: emet의 트래커와 랜딩
-sourceHash: 4e3835764329636c
+sourceHash: c9ae0940af5cfbad
 ---
 
 티켓이 있는 곳, 웨이브가 랜딩하는 방식, 웨이브를 이어 붙이는 방법을 설명합니다. 여기서 언급하는 모든 키는 [설정 레퍼런스](../reference/configuration.md)에, 모든 하위 명령은 [CLI 레퍼런스](../reference/cli.md)에 있습니다.
@@ -53,6 +53,8 @@ emet은 Linear, GitHub Issues 또는 로컬 파일과 함께 동작하며 `track
 - `handoff.launcher`(기본값 `auto`): `claude attach`를 실행하는 Orca 탭에서도 웨이브를 엽니다. `auto`는 Orca 런타임(`orca status`)에 물어보므로 `TERM_PROGRAM`이 없는 `claude --bg` 세션에서도 동작합니다. `orca`는 항상 시도하고 `bg`는 시도하지 않습니다. 어느 쪽이든 웨이브는 백그라운드에서 실행되며, 탭을 열지 못해도 체인이 멈추지 않습니다.
 
   `emet launch <spec-id> --wave <n>`은 시작 전체(중복 세션 확인, `claude --bg`, 탭)를 수행하고 `{ name, id, attach, orcaTab: { opened, reason } }`를 출력합니다. 다른 세션에서 웨이브를 직접 실행하고 싶을 때는 단순한 `claude --bg` 대신 이것을 사용하세요.
+
+  Codex 에이전트 호스트에서 `emet launch`는 `$emet:run --dispatch <spec-id>`를 실행하는 분리된 `codex exec`를 시작하고 그 스레드 ID를 기록합니다. Orca 탭은 열지 않으며, `codex exec resume <id>`로 세션을 이어 갈 수 있습니다. [CLI 레퍼런스](../reference/cli.md#codex-호스트)와 [Codex에서 emet 실행하기](codex.md)를 참고하세요.
 
 - `handoff.permissionMode`(기본값 `bypassPermissions`): 이어 붙인 세션의 권한 모드입니다. 시작한 세션에서 상속되지 않습니다. `auto` 모드의 분류기가 `gh pr merge` 같은 단계를 거부해 웨이브가 반쯤 끝난 상태로 남을 수 있기 때문입니다. `permissions.deny` 규칙은 계속 적용되지만, 우회 경고를 대화형으로 한 번 수락해 두어야 합니다(`skipDangerousModePermissionPrompt`).
 
