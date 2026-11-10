@@ -52,8 +52,10 @@ narrow the globs or serialize one into a later wave (add a blocking edge)
 before dispatching. Exit 2 is a malformed input — fix it.
 
 Immediately before each survivor's `Agent` call, reserve it with
-`emet claims --reserve <ticket> --run <runId> --anchor <anchorPid>` (the
-real dispatch mutex — see `${CLAUDE_PLUGIN_ROOT}/emet/reference/incidents.md` §INC-285),
+`emet claims --reserve <ticket> --run <runId> --anchor <anchorPid> --surfaces
+<glob>[,<glob>...]`, passing the ticket's `## Allowed edit surfaces` (the
+real dispatch mutex — see `${CLAUDE_PLUGIN_ROOT}/emet/reference/incidents.md` §INC-285;
+it also denies surfaces that overlap a live or idle claim of another run),
 then take a worker slot with `emet slots --acquire --run <runId> --anchor
 <anchorPid> --ticket <ticket>` (the `concurrency.maxLiveWorkers` cap — a
 single pool shared **host-wide**, by every coordinator on this machine across
