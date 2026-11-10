@@ -610,6 +610,27 @@ describe("emet init --tracker local end to end", () => {
     expect(stdout.toLowerCase()).not.toContain("claude plugin");
   });
 
+  test("--force keeps agentHost and the codex section of an existing Codex config", async () => {
+    writeFileSync(
+      path.join(repoRoot, "emet.config.json"),
+      `${JSON.stringify({ version: 1, agentHost: "codex", codex: { sandbox: "read-only" } })}\n`,
+    );
+    const result = await Bun.$`bun ${entry} --tracker local --force`
+      .cwd(repoRoot)
+      .nothrow()
+      .quiet();
+    expect(result.exitCode).toBe(0);
+    const config: unknown = await Bun.file(path.join(repoRoot, "emet.config.json")).json();
+    expect(config).toMatchObject({ agentHost: "codex", codex: { sandbox: "read-only" } });
+  });
+
+  test("--force on a Claude config writes no agentHost key", async () => {
+    writeFileSync(path.join(repoRoot, "emet.config.json"), `${JSON.stringify({ version: 1 })}\n`);
+    await Bun.$`bun ${entry} --tracker local --force`.cwd(repoRoot).nothrow().quiet();
+    const text = await Bun.file(path.join(repoRoot, "emet.config.json")).text();
+    expect(text).not.toContain('"agentHost"');
+  });
+
   test("an existing Claude config still probes claude plugin list", async () => {
     const { claudeCalls, codexCalls } = await runInitWithFakeHosts("claude");
     expect(claudeCalls).toContain("plugin list");
