@@ -12,14 +12,14 @@ Claude Code or the Codex CLI, `git`, `gh` (authenticated) and the `mattpocock-sk
 
 There are two install paths.
 
-**Plugin** (no Bun needed). Add this repo as a marketplace and install the `emet` plugin; it brings `/emet:run`, the agents, the guard hooks and an `emet` shim that downloads a checksum-verified standalone binary on first use.
+**Plugin** (no Bun needed). Add this repo as a marketplace and install the `emet` plugin. What it ships depends on the Agent host. On Claude Code it brings `/emet:run`, the agents, the guard hooks and an `emet` shim that downloads a checksum-verified standalone binary on first use.
 
 ```bash
 claude plugin marketplace add andryorelabs/emet
 claude plugin install emet@emet-marketplace
 ```
 
-On Codex, install the plugin with `codex plugin`; the steps are in [Running emet on Codex](codex.md#install).
+On Codex, install the plugin with `codex plugin`; the steps are in [Running emet on Codex](codex.md#install). The Codex plugin ships the `$emet:run`, `$emet:init` and `$emet:doctor` skills and a hook, but no agents and no `emet` shim, so the terminal `emet` comes from `install.sh`.
 
 **`install.sh`** (works with or without Bun):
 
@@ -31,9 +31,9 @@ cd emet
 
 With `bun` on PATH it copies the CLI source to `~/.claude/emet` and an `emet` wrapper to `~/.local/bin/emet`. Without `bun` it installs the standalone-binary shim instead (`~/.local/bin/emet`, linked to `~/.claude/emet/bin/emet`), which downloads and checksum-verifies the binary on first run (needs `curl`). Either way the commands land in `~/.claude/commands/emet/` and the agents in `~/.claude/agents/`; plugin placeholders in the prompts are rewritten to plain `~/.claude` paths. Re-running it is safe, and a file you edited is kept with the new version written beside it as `<file>.new`.
 
-Both installs give you three slash commands: `/emet:run`, `/emet:init` and `/emet:doctor`. The `emet` command in a plain terminal works only after `install.sh`; otherwise use the slash commands, or `! emet <subcommand>` inside a Claude Code or Codex session. The agent names differ: `emet:emet-worker` in the plugin, `emet-worker` standalone.
+Both installs give you three entry points. On Claude Code they are the slash commands `/emet:run`, `/emet:init` and `/emet:doctor`; on Codex they are the `$emet:run`, `$emet:init` and `$emet:doctor` skills. The `emet` command in a plain terminal works only after `install.sh`; otherwise use the slash commands, or `! emet <subcommand>` inside a Claude Code or Codex session. On Claude Code the agent names differ: `emet:emet-worker` in the plugin, `emet-worker` standalone; Codex has no emet agents, because each worker is its own `codex exec` process.
 
-Recommended order, in each repo: run `/setup-matt-pocock-skills` first, then `emet init`.
+Recommended order, in each repo: run the `setup-matt-pocock-skills` skill first (`/setup-matt-pocock-skills` on Claude Code; on Codex, the same skill from the `mattpocock-skills` plugin with Codex's `$` skill syntax), then `emet init`.
 
 Verify it worked with `/emet:doctor` inside Claude Code (`$emet:doctor` on Codex), or `emet doctor .` in a terminal after `install.sh` (`selftest` needs a source install).
 

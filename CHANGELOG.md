@@ -8,6 +8,21 @@ and this project adheres to
 
 ## [Unreleased]
 
+### Changed
+
+- The not-affiliated notice names OpenAI as well as Anthropic.
+- The home page install tabs say Claude Code, and the run command has a Codex
+  tab with `$emet:run`.
+- The guides label host-specific steps: what each plugin ships, the
+  `/emet:*` commands versus the `$emet:*` skills, `/setup-matt-pocock-skills`,
+  updating and auto-update, and the generated `codex/` files.
+
+### Fixed
+
+- `emet doctor`, `emet init`, `emet dependencies` and `emet preflight` no
+  longer give Claude-only advice on the Codex host, and doctor no longer warns
+  about the Codex plugin and `install.sh` together.
+
 ## [0.5.1] - 2026-11-10
 
 ### Changed
