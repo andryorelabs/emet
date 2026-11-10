@@ -1136,6 +1136,7 @@ export async function collectForkBaseFailures(
   trunk: string,
   probes: EnvironmentProbes,
   landingMode: LandingMode = "pr",
+  host?: AgentHost,
 ): Promise<string[]> {
   const harnessBaseRef = landingMode === "merge" ? trunk : `${remote}/${trunk}`;
   return checkWorktreeForkBase({
@@ -1143,6 +1144,7 @@ export async function collectForkBaseFailures(
     harnessBase: await probes.resolveRef(repoRoot, harnessBaseRef),
     baseRefSetting: await probes.worktreeBaseRef(repoRoot),
     harnessBaseRef,
+    ...(host === undefined ? {} : { host }),
   });
 }
 
@@ -1326,6 +1328,7 @@ async function main(config: ForgeConfig, repoRoot: string) {
       config.repo.trunk,
       createEnvironmentProbes(host),
       config.landing.mode,
+      host,
     )),
   );
 

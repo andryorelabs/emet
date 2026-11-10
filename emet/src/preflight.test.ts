@@ -1,3 +1,4 @@
+import { codexHost } from "./agenthost-codex";
 import { describe, expect, test } from "bun:test";
 import { execFileSync } from "node:child_process";
 import { mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
@@ -143,6 +144,19 @@ describe("collectForkBaseFailures (S2)", () => {
     expect(refs).not.toContain("origin/main");
     expect(failures.join("\n")).toContain("main");
     expect(failures.join("\n")).not.toContain("origin/main");
+  });
+
+  test("reports nothing on the Codex host, which has no harness base setting", async () => {
+    expect(
+      await collectForkBaseFailures(
+        "/r",
+        "origin",
+        "main",
+        probesFor("aaaaaaa1", "bbbbbbb2", null),
+        "pr",
+        codexHost,
+      ),
+    ).toEqual([]);
   });
 
   test("passes when baseRef is head", async () => {
