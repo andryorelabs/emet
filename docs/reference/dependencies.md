@@ -27,7 +27,7 @@ None of the above is ever installed or logged in on your behalf. What differs is
 
 Only when `agentHost` is `"codex"`; see the [Codex guide](../guide/codex.md). The `emet-worker` and `emet-reviewer` agents are not used there.
 
-- **The `codex` CLI**, logged in, at `codex.minVersion` (default `0.167.0`) or newer. `emet doctor` reports an older version and checks that `codex exec --help` lists `--json` and `--output-schema`.
+- **The `codex` CLI**, logged in, at `codex.minVersion` (default `0.167.0`) or newer. `emet doctor` checks that `codex exec --help` lists `--json` and `--output-schema`.
 - **The `mattpocock-skills` plugin** in Codex, probed with `codex plugin list`:
 
   ```bash
@@ -44,7 +44,7 @@ emet never writes your `~/.codex`: workers run with a per-run `CODEX_HOME` that 
 |                                                                           | `emet init`                | `emet doctor`                 | `emet preflight`                                                         |
 | ------------------------------------------------------------------------- | -------------------------- | ----------------------------- | ------------------------------------------------------------------------ |
 | plugin missing/disabled                                                   | prints the install command | reports it (once, fleet-wide) | **blocks dispatch**                                                      |
-| `emet-worker`/`emet-reviewer` agent missing                               | —                          | reports it (once, fleet-wide) | **blocks dispatch**                                                      |
+| `emet-worker`/`emet-reviewer` agent missing (Claude Code host only)       | —                          | reports it (once, fleet-wide) | **blocks dispatch**                                                      |
 | `gh` missing/unauthenticated (tracker: `github`)                          | prints what to run         | reports it                    | **blocks dispatch**                                                      |
 | Linear server undeclared (tracker: `linear`)                              | prints a note              | reports it                    | **blocks dispatch**                                                      |
 | the host CLI (`claude` on Claude Code) not on PATH, or a probe timing out | prints a note              | reports it                    | **warns, never blocks**: this is "couldn't check", not "verified broken" |

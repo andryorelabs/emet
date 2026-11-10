@@ -43,7 +43,7 @@ Later waves run in their own sessions, never in the one that ran wave 1. Two opt
   2. A trusted workspace. `--bg` runs non-interactively, so the trust dialog never shows; open `claude` interactively in the repo once and accept it.
   3. The bypass warning accepted once in an interactive session (`skipDangerousModePermissionPrompt`), since the next wave runs in `handoff.permissionMode` (below), not in the launching session's mode.
 
-  On the Codex host, the next wave starts as a detached `codex exec` instead (see `handoff.launcher` below), so the requirement is `codex` on PATH at `codex.minVersion` or newer, with `--json` and `--output-schema` on `codex exec`; `emet doctor` checks both. Claude's trust dialog and bypass warning do not apply. Whether Codex needs a trusted workspace for a detached run is unverified in this repo's docs.
+  On the Codex host, the next wave starts as a detached `codex exec` instead (see `handoff.launcher` below), so the requirement is `codex` on PATH at `codex.minVersion` or newer, with `--json` and `--output-schema` on `codex exec`; `emet doctor` checks the flags, not the version number. Claude's trust dialog and bypass warning do not apply. Whether Codex needs a trusted workspace for a detached run is unverified in this repo's docs.
 
   It launches only when the PR merged and nothing was flagged, and it skips if a `emet-<spec-id>-*` session is already live (`claude agents --json`). If the launch fails, it falls back to printing `/emet:run --dispatch <spec-id>`.
 
