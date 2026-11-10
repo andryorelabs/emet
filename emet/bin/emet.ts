@@ -36,7 +36,7 @@ commands:
   cleanup   [--run <id> | --all] [--dry-run] [--force]  — bare: reclaim closed or dead runs whose work landed; --run: this run; --all: repo-wide branch sweep
   usage     [--session <id> | --file <path>] [--stalled [--minutes N]] [--project-dir <path>]
   handoff   --check <path> | --render <path>
-  launch    <spec-id> --wave <n>  — start a wave as a \`claude --bg\` session and open its Orca tab per handoff.launcher
+  launch    <spec-id> --wave <n>  — start a wave as a detached session (\`claude --bg\` on Claude Code, \`codex exec\` on Codex) and open its Orca tab per handoff.launcher
   lock-reason --run <id> --ticket <ticket> [--anchor <pid>]  — the \`git worktree lock\` reason a worker writes at bootstrap
   assess    --base <ref> --head <ref>  — classify a diff as passive|medium|high and pick the reviewer model
   status    [--spec <id>]  — Working / Checking / Ready / Needs-decision per wave as JSON + a summary line (\`emet status --help\` documents the JSON)
