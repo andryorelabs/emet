@@ -35,7 +35,7 @@ Control, sober and precise, with dry humour in small places. No hype.
 - "review" means the reviewer pass per wave.
 - "worktree" is one word, lowercase.
 - The product is written `emet` in lowercase, in prose and in the wordmark. The command is `/emet:run` once the rename lands.
-- Write "plugin for Claude Code" when naming the host, descriptively and never as a product name.
+- Write "plugin for Claude Code and Codex" when naming the hosts, descriptively and never as a product name.
 
 ## Language to avoid
 
@@ -52,4 +52,4 @@ Every public surface that names Claude Code carries this notice, verbatim:
 
 > Not affiliated with or endorsed by Anthropic
 
-Copy may say "plugin for Claude Code" descriptively. The name, logo, palette and mascot stay fully separate from Claude's identity: no Claude orange or clay, no spark, no Clawd likeness.
+Copy may say "plugin for Claude Code and Codex" descriptively. The name, logo, palette and mascot stay fully separate from Claude's identity: no Claude orange or clay, no spark, no Clawd likeness.

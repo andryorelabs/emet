@@ -17,6 +17,10 @@ describe("banner art", () => {
     expect(Buffer.from(BANNER_TEXT, "utf8").equals(expected)).toBe(true);
   });
 
+  it("names both Agent hosts in the tagline", () => {
+    expect(BANNER_TEXT).toContain("emet  plugin for Claude Code and Codex");
+  });
+
   it("carries the Anthropic notice verbatim", () => {
     expect(BANNER_TEXT).toContain("Not affiliated with or endorsed by Anthropic");
   });
