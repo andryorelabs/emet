@@ -61,13 +61,15 @@ With `agentHost` set to `"codex"`, each worker and reviewer is its own `codex ex
 | Reviewer, `high` tier       | `gpt-6-astra` | `high`                           | `gpt-6.1-sol`                 |
 | Triage                      | `gpt-6-luna`  | `medium`                         | `gpt-6.1-terra`               |
 
-`emet dispatch` resolves each slug against the Codex models cache. It keeps a slug that is listed there and supports the effort, else follows the model's upgrade, then the fallbacks, then omits `-m`, and it logs every substitution. Effort `ultra` is never sent. The `passive` tier starts no reviewer.
+`emet dispatch` and `emet review-run` resolve each slug against `models_cache.json`, read from the run's overlay home and else from your real Codex home (read only). They keep a slug that is listed there and supports the effort, else follow the model's upgrade, then the fallbacks, then omit `-m`, and log every substitution; when nothing resolves, `emet review-run` fails before the model call and names the role and the listed slugs. The overlay `config.toml` the run generates also carries the resolved `model` and `model_reasoning_effort`. Effort `ultra` is never sent. The `passive` tier starts no reviewer.
 
 Re-tune after a few real waves when:
 
 - workers need repeated fix rounds: raise `codex.models.worker.effort`, or put a `Model:` line on the risky ticket;
 - reviews of `high`-tier waves miss findings: raise `codex.models.reviewer.high.effort`;
 - the log shows a substitution: Codex renamed or retired a slug, so update the slug.
+
+The real-Codex run in the [probe report](../research/codex-probe-report.md) used effort `low` and the cheapest resolved model (`gpt-6-luna`), and the reviewer model resolved through the cache.
 
 ## Why a single reviewer
 
