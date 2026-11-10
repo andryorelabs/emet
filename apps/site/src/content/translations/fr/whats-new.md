@@ -2,8 +2,23 @@
 title: Nouveautés
 description: Notes de version d'emet : ce qui a changé dans chaque version.
 seoTitle: Nouveautés d'emet : notes de version
-sourceHash: 865aee0375b56c7a
+sourceHash: e658e982cb203285
 ---
+
+## 0.5.2
+
+2026-11-10
+
+### Modifié
+
+- L'avis de non-affiliation nomme OpenAI en plus d'Anthropic.
+- Les onglets d'installation de la page d'accueil indiquent Claude Code, et la commande d'exécution a un onglet Codex avec `$emet:run`.
+- Les guides indiquent quelles étapes relèvent de chaque Agent host : Claude Code ou Codex.
+
+### Corrigé
+
+- `emet doctor`, `emet init`, `emet dependencies` et `emet preflight` ne donnent plus de conseils propres à Claude Code sur l'hôte Codex.
+- `emet init --force` conserve `agentHost` et la section `codex` de la configuration existante.
 
 ## 0.5.1
 

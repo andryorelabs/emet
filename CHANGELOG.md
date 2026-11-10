@@ -8,6 +8,8 @@ and this project adheres to
 
 ## [Unreleased]
 
+## [0.5.2] - 2026-11-10
+
 ### Changed
 
 - The not-affiliated notice names OpenAI as well as Anthropic.
@@ -22,6 +24,8 @@ and this project adheres to
 - `emet doctor`, `emet init`, `emet dependencies` and `emet preflight` no
   longer give Claude-only advice on the Codex host, and doctor no longer warns
   about the Codex plugin and `install.sh` together.
+- `emet init --force` keeps `agentHost` and the `codex` section of the existing
+  config instead of turning a Codex repo into a Claude Code one.
 
 ## [0.5.1] - 2026-11-10
 

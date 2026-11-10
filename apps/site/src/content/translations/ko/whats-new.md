@@ -2,8 +2,23 @@
 title: 새로운 소식
 description: emet 릴리스 노트. 각 버전에서 무엇이 바뀌었는지 정리합니다.
 seoTitle: "emet 새로운 소식: 릴리스 노트"
-sourceHash: 865aee0375b56c7a
+sourceHash: e658e982cb203285
 ---
+
+## 0.5.2
+
+2026-11-10
+
+### 변경됨
+
+- 제휴 관계가 없다는 고지에 Anthropic과 함께 OpenAI도 명시했습니다.
+- 홈페이지 설치 탭이 Claude Code로 표시되고, 실행 명령에 `$emet:run`을 보여 주는 Codex 탭이 생겼습니다.
+- 가이드가 각 단계가 Claude Code와 Codex 중 어느 Agent host용인지 표시합니다.
+
+### 수정됨
+
+- Codex 호스트에서 `emet doctor`, `emet init`, `emet dependencies`, `emet preflight`가 더 이상 Claude Code 전용 안내를 하지 않습니다.
+- `emet init --force`가 기존 설정의 `agentHost`와 `codex` 섹션을 유지합니다.
 
 ## 0.5.1
 

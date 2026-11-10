@@ -2,8 +2,23 @@
 title: Neuigkeiten
 description: Release Notes für emet: was sich in jeder Version geändert hat.
 seoTitle: "Neuigkeiten in emet: Release Notes"
-sourceHash: 865aee0375b56c7a
+sourceHash: e658e982cb203285
 ---
+
+## 0.5.2
+
+2026-11-10
+
+### Geändert
+
+- Der Hinweis zur fehlenden Verbindung nennt neben Anthropic jetzt auch OpenAI.
+- Die Installations-Tabs der Startseite heißen Claude Code, und der Run-Befehl hat einen Codex-Tab mit `$emet:run`.
+- Die Anleitungen kennzeichnen, welche Schritte für welchen Agent-Host gelten: Claude Code oder Codex.
+
+### Behoben
+
+- `emet doctor`, `emet init`, `emet dependencies` und `emet preflight` geben auf dem Codex-Host keine reinen Claude-Code-Hinweise mehr aus.
+- `emet init --force` behält `agentHost` und den Abschnitt `codex` der bestehenden Konfiguration.
 
 ## 0.5.1
 
