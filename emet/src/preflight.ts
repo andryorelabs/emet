@@ -9,7 +9,7 @@ import {
   type ForgeConfig,
   type LandingMode,
 } from "./config";
-import { type AgentHost } from "./agenthost";
+import { type AgentHost, type AgentHostName } from "./agenthost";
 import {
   agentHostOfConfig,
   checkDependencies,
@@ -1257,6 +1257,32 @@ async function collectClosedRunIds(
   return closed;
 }
 
+/** The directory each Agent host places `/emet` agent worktrees in, as preflight messages cite it. */
+const WORKTREE_DIRECTORY_LABELS: Record<AgentHostName, string> = {
+  claude: ".claude/worktrees/",
+  codex: ".emet/worktrees/",
+};
+
+/** The agent worktree directory of `host`, with a trailing slash. */
+export function worktreeDirectoryLabel(host: AgentHostName): string {
+  return WORKTREE_DIRECTORY_LABELS[host];
+}
+
+/** The failure message for worktree entries needing attention on `host`. */
+export function worktreeAttentionMessage(host: AgentHostName, lines: string): string {
+  return `${worktreeDirectoryLabel(host)} has entries needing attention:\n${lines}`;
+}
+
+/** The success line of `emet preflight`, citing `host`'s worktree directory. */
+export function preflightOkSummary(
+  host: AgentHostName,
+  requiredFilesSummary: string,
+  slotsSummary: string,
+  dependenciesSummary: string,
+): string {
+  return `emet preflight OK — ${requiredFilesSummary}, ${worktreeDirectoryLabel(host)} clean (or owned by a live/reclaimable /emet run; see any warnings above for leftover worktree-agent-* branches), ${slotsSummary}, ${dependenciesSummary}.`;
+}
+
 async function main(config: ForgeConfig, repoRoot: string) {
   const host = agentHostOfConfig(config);
   const currentRunId = readFlagValue("--run");
@@ -1412,9 +1438,7 @@ async function main(config: ForgeConfig, repoRoot: string) {
     }
 
     if (worktreeFailLines.length > 0) {
-      failures.push(
-        `.claude/worktrees/ has entries needing attention:\n${worktreeFailLines.join("\n")}`,
-      );
+      failures.push(worktreeAttentionMessage(host.name, worktreeFailLines.join("\n")));
     }
   }
 
@@ -1499,7 +1523,12 @@ async function main(config: ForgeConfig, repoRoot: string) {
   const dependenciesSummary = `${satisfiedDependencyCount}/${dependencyChecks.length} dependency check(s) satisfied`;
 
   console.log(
-    `emet preflight OK — ${requiredFilesSummary}, .claude/worktrees/ clean (or owned by a live/reclaimable /emet run; see any warnings above for leftover worktree-agent-* branches), ${capacityCheck.freeCount}/${capacityCheck.cap} worker slots free, ${dependenciesSummary}.`,
+    preflightOkSummary(
+      host.name,
+      requiredFilesSummary,
+      `${capacityCheck.freeCount}/${capacityCheck.cap} worker slots free`,
+      dependenciesSummary,
+    ),
   );
 }
 
