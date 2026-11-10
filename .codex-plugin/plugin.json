@@ -1,6 +1,6 @@
 {
   "name": "emet",
-  "version": "0.5.2",
+  "version": "0.6.0",
   "description": "Spec to merge on one approval: parallel workers in isolated worktrees, a review per wave, CI green before merge.",
   "license": "MIT",
   "skills": "./codex/skills",
