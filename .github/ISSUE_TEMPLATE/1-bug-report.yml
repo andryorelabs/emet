@@ -31,6 +31,24 @@ body:
     validations:
       required: true
 
+  - type: dropdown
+    id: agent-host
+    attributes:
+      label: Agent host
+      description: Which Agent host were you running emet on?
+      options:
+        - Claude Code
+        - Codex
+    validations:
+      required: true
+
+  - type: input
+    id: host-cli-version
+    attributes:
+      label: Host CLI version
+      description: Output of `claude --version` or `codex --version`.
+      placeholder: "2.1.0 or 0.167.0"
+
   - type: textarea
     id: environment
     attributes:

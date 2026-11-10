@@ -8,7 +8,7 @@ emet is a plugin for Claude Code and Codex that takes a feature from idea to mer
 
 - [Getting started](docs/guide/getting-started.md): requirements, both install paths and the first run
 - [Trackers and landing](docs/guide/trackers-and-landing.md): GitHub, Linear and local trackers, landing modes, chaining waves
-- [Models and effort](docs/guide/models-and-effort.md): the model and effort per role, risk-tier routing and Haiku triage
+- [Models and effort](docs/guide/models-and-effort.md): the model and effort per role, risk-tier routing and, on the Claude Code default, Haiku triage
 - [Running on Codex](docs/guide/codex.md): install, `agentHost`, the single approval by hook, limits and unverified points
 - [Fleet check](docs/guide/fleet.md): audit several repos at once with `emet doctor`
 

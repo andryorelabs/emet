@@ -11,7 +11,7 @@
     {
       "name": "emet-mascot",
       "source": "./mods/emet-mascot",
-      "description": "A pixel mascot above the prompt that mirrors the session and the emet run phase."
+      "description": "A Claude Code mod: a pixel mascot beside the transcript that mirrors the session and the emet run phase."
     }
   ]
 }
