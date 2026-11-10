@@ -2,7 +2,7 @@
 title: Modelos y esfuerzo
 description: Cómo emet elige un modelo y un esfuerzo de razonamiento para cada rol, y qué claves de configuración los cambian.
 seoTitle: Modelos y esfuerzo en emet
-sourceHash: 7ab8a2e10ec9cae7
+sourceHash: a46d2e68a403f4f9
 ---
 
 `/emet` elige automáticamente un modelo y un esfuerzo de razonamiento por rol; no hay nada que cambiar a mano durante una ejecución. Todas las claves están en la [referencia de configuración](../reference/configuration.md#models).
@@ -66,13 +66,15 @@ Con `agentHost` en `"codex"`, cada worker y revisor es su propio proceso `codex 
 | Revisor, nivel `high`         | `gpt-6-astra` | `high`                               | `gpt-6.1-sol`                 |
 | Triaje                        | `gpt-6-luna`  | `medium`                             | `gpt-6.1-terra`               |
 
-`emet dispatch` resuelve cada slug contra la caché de modelos de Codex. Conserva un slug que aparece ahí y admite el esfuerzo; si no, sigue la actualización del modelo, luego las alternativas, luego omite `-m`, y registra cada sustitución. El esfuerzo `ultra` nunca se envía. El nivel `passive` no inicia ningún revisor.
+`emet dispatch` y `emet review-run` resuelven cada slug contra `models_cache.json`, que se lee del home de la superposición de la corrida y, si no está ahí, de tu home real de Codex (solo lectura). Conservan un slug que aparece ahí y admite el esfuerzo; si no, siguen la actualización del modelo, luego las alternativas, luego omiten `-m`, y registran cada sustitución; cuando nada se resuelve, `emet review-run` falla antes de la llamada al modelo y nombra el rol y los slugs listados. El `config.toml` de la superposición que genera la corrida también lleva el `model` y el `model_reasoning_effort` resueltos. El esfuerzo `ultra` nunca se envía. El nivel `passive` no inicia ningún revisor.
 
 Reajusta tras unas cuantas olas reales cuando:
 
 - los workers necesitan varias rondas de corrección: sube `codex.models.worker.effort` o pon una línea `Model:` en el ticket riesgoso;
 - las revisiones de olas de nivel `high` pasan por alto hallazgos: sube `codex.models.reviewer.high.effort`;
 - el registro muestra una sustitución: Codex renombró o retiró un slug, así que actualízalo.
+
+La ejecución real de Codex del [informe de la sonda](../research/codex-probe-report.md) usó el esfuerzo `low` y el modelo resuelto más económico (`gpt-6-luna`), y el modelo del revisor se resolvió a través de la caché.
 
 ## Por qué un solo revisor
 

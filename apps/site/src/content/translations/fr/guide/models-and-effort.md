@@ -2,7 +2,7 @@
 title: Modèles et effort
 description: Comment emet choisit un modèle et un effort de raisonnement pour chaque rôle, et quelles clés de configuration les modifient.
 seoTitle: Modèles et effort dans emet
-sourceHash: 7ab8a2e10ec9cae7
+sourceHash: a46d2e68a403f4f9
 ---
 
 `/emet` choisit automatiquement un modèle et un effort de raisonnement par rôle ; il n'y a rien à changer à la main en cours d'exécution. Toutes les clés figurent dans la [référence de configuration](../reference/configuration.md#models).
@@ -66,13 +66,15 @@ Avec `agentHost` à `"codex"`, chaque worker et chaque reviewer est son propre p
 | Reviewer, niveau `high`        | `gpt-6-astra` | `high`                                     | `gpt-6.1-sol`                 |
 | Triage                         | `gpt-6-luna`  | `medium`                                   | `gpt-6.1-terra`               |
 
-`emet dispatch` résout chaque slug dans le cache de modèles de Codex. Il garde un slug qui y figure et accepte l'effort, sinon suit la mise à niveau du modèle, puis les replis, puis omet `-m`, et journalise chaque substitution. L'effort `ultra` n'est jamais envoyé. Le niveau `passive` ne lance aucun reviewer.
+`emet dispatch` et `emet review-run` résolvent chaque slug dans `models_cache.json`, lu depuis le home de la surcouche de l'exécution, sinon depuis votre vrai home Codex (en lecture seule). Ils gardent un slug qui y figure et accepte l'effort, sinon suivent la mise à niveau du modèle, puis les replis, puis omettent `-m`, et journalisent chaque substitution ; quand rien ne se résout, `emet review-run` échoue avant l'appel au modèle et nomme le rôle et les slugs listés. Le `config.toml` de la surcouche que génère l'exécution porte aussi le `model` et le `model_reasoning_effort` résolus. L'effort `ultra` n'est jamais envoyé. Le niveau `passive` ne lance aucun reviewer.
 
 Réglez de nouveau après quelques vraies vagues quand :
 
 - les workers demandent plusieurs tours de correction : augmentez `codex.models.worker.effort` ou mettez une ligne `Model:` sur le ticket risqué ;
 - les revues de vagues de niveau `high` manquent des constats : augmentez `codex.models.reviewer.high.effort` ;
 - le journal montre une substitution : Codex a renommé ou retiré un slug, mettez-le à jour.
+
+L'exécution réelle de Codex du [rapport de sonde](../research/codex-probe-report.md) a utilisé l'effort `low` et le modèle résolu le moins cher (`gpt-6-luna`), et le modèle du reviewer s'est résolu via le cache.
 
 ## Pourquoi un seul relecteur
 

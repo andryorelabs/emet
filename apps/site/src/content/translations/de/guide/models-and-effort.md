@@ -2,7 +2,7 @@
 title: Modelle und Aufwand
 description: Wie emet für jede Rolle ein Modell und einen Denkaufwand wählt und welche Konfigurationsschlüssel sie ändern.
 seoTitle: Modelle und Aufwand in emet
-sourceHash: 7ab8a2e10ec9cae7
+sourceHash: a46d2e68a403f4f9
 ---
 
 `/emet` wählt für jede Rolle automatisch ein Modell und einen Denkaufwand; mitten im Lauf muss nichts von Hand umgestellt werden. Jeder Schlüssel steht in der [Konfigurationsreferenz](../reference/configuration.md#models).
@@ -66,13 +66,15 @@ Mit `agentHost` auf `"codex"` ist jeder Worker und Reviewer ein eigener `codex e
 | Reviewer, Stufe `high`          | `gpt-6-astra` | `high`                                | `gpt-6.1-sol`                 |
 | Triage                          | `gpt-6-luna`  | `medium`                              | `gpt-6.1-terra`               |
 
-`emet dispatch` löst jeden Slug gegen den Modell-Cache von Codex auf. Er behält einen Slug, der dort gelistet ist und den Aufwand unterstützt, folgt sonst dem Upgrade des Modells, dann den Ausweichmodellen, lässt dann `-m` weg und protokolliert jede Ersetzung. Der Aufwand `ultra` wird nie gesendet. Die Stufe `passive` startet keinen Reviewer.
+`emet dispatch` und `emet review-run` lösen jeden Slug gegen `models_cache.json` auf, gelesen aus dem Overlay-Home des Laufs und sonst aus deinem echten Codex-Home (nur lesend). Sie behalten einen Slug, der dort gelistet ist und den Aufwand unterstützt, folgen sonst dem Upgrade des Modells, dann den Ausweichmodellen, lassen dann `-m` weg und protokollieren jede Ersetzung; löst sich nichts auf, schlägt `emet review-run` vor dem Modellaufruf fehl und nennt die Rolle und die gelisteten Slugs. Die `config.toml` des Overlays, die der Lauf erzeugt, trägt außerdem das aufgelöste `model` und `model_reasoning_effort`. Der Aufwand `ultra` wird nie gesendet. Die Stufe `passive` startet keinen Reviewer.
 
 Stelle nach einigen echten Wellen neu ein, wenn:
 
 - Worker wiederholt Korrekturrunden brauchen: erhöhe `codex.models.worker.effort` oder setze eine `Model:`-Zeile auf das riskante Ticket;
 - Reviews von Wellen der Stufe `high` Befunde übersehen: erhöhe `codex.models.reviewer.high.effort`;
 - das Protokoll eine Ersetzung zeigt: Codex hat einen Slug umbenannt oder abgeschafft, also aktualisiere den Slug.
+
+Der echte Codex-Lauf im [Probe-Bericht](../research/codex-probe-report.md) nutzte den Aufwand `low` und das günstigste aufgelöste Modell (`gpt-6-luna`), und das Reviewer-Modell wurde über den Cache aufgelöst.
 
 ## Warum ein einzelner Reviewer
 
