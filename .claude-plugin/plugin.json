@@ -1,6 +1,6 @@
 {
   "name": "emet",
-  "version": "0.5.0",
+  "version": "0.5.1",
   "description": "Spec to merge on one approval: parallel workers in isolated worktrees, a review per wave, CI green before merge.",
   "license": "MIT",
   "dependencies": [{ "name": "mattpocock-skills", "marketplace": "claude-plugins-official" }]

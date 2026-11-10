@@ -2,8 +2,16 @@
 title: 新功能
 description: emet 的发布说明：每个版本都有哪些变化。
 seoTitle: "emet 新功能：发布说明"
-sourceHash: 6a4ab9853722f86c
+sourceHash: 865aee0375b56c7a
 ---
+
+## 0.5.1
+
+2026-11-10
+
+### 变更
+
+- README、落地页、横幅、指南和分享图片现在在 Claude Code 之外也提到 Codex。
 
 ## 0.5.0
 
