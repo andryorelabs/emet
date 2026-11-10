@@ -130,7 +130,7 @@ describe("loadForgeConfig", () => {
         escalation: { sonnet: "opus", haiku: "sonnet" },
       },
       review: { highRiskPaths: ["billing"] },
-      budgets: { workerAttempts: 3, reviewRounds: 4, stallNudgeCap: 9 },
+      budgets: { workerAttempts: 3, reviewRounds: 4, stallNudgeCap: 9, askWaitMinutes: 12 },
       sizing: { inlineMaxLines: 50 },
       map: { path: "docs/map.md" },
       specs: { dir: "docs/s" },
@@ -471,6 +471,7 @@ describe("new scaffold defaults", () => {
       workerAttempts: 2,
       reviewRounds: 2,
       stallNudgeCap: 6,
+      askWaitMinutes: 30,
     });
     expect(DEFAULT_FORGE_CONFIG.models.escalation).toEqual({ sonnet: "opus" });
     expect(DEFAULT_FORGE_CONFIG.sizing.inlineMaxLines).toBe(100);
@@ -481,7 +482,12 @@ describe("new scaffold defaults", () => {
   test("a partial budgets section keeps the other defaults", async () => {
     await writeConfig({ budgets: { reviewRounds: 5 } });
     const config = configOf(await loadForgeConfig(repoRoot));
-    expect(config.budgets).toEqual({ workerAttempts: 2, reviewRounds: 5, stallNudgeCap: 6 });
+    expect(config.budgets).toEqual({
+      workerAttempts: 2,
+      reviewRounds: 5,
+      stallNudgeCap: 6,
+      askWaitMinutes: 30,
+    });
   });
 
   test("a user escalation map replaces the default map", async () => {
