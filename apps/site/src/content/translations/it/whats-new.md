@@ -2,8 +2,16 @@
 title: Novità
 description: Note di rilascio di emet: cosa è cambiato in ogni versione.
 seoTitle: "Novità di emet: note di rilascio"
-sourceHash: 6a4ab9853722f86c
+sourceHash: 865aee0375b56c7a
 ---
+
+## 0.5.1
+
+2026-11-10
+
+### Modificato
+
+- Il README, la home page, il banner, le guide e le immagini di condivisione nominano Codex accanto a Claude Code.
 
 ## 0.5.0
 

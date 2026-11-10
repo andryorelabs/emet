@@ -2,8 +2,16 @@
 title: 新機能
 description: emet のリリースノート。各バージョンでの変更点をまとめています。
 seoTitle: "emet の新機能: リリースノート"
-sourceHash: 6a4ab9853722f86c
+sourceHash: 865aee0375b56c7a
 ---
+
+## 0.5.1
+
+2026-11-10
+
+### 変更
+
+- README、ランディング、バナー、ガイド、共有画像で、Claude Code と並んで Codex を明記しました。
 
 ## 0.5.0
 

@@ -2,8 +2,16 @@
 title: Novedades
 description: Notas de versión de emet: qué cambió en cada versión.
 seoTitle: Novedades de emet: notas de versión
-sourceHash: 6a4ab9853722f86c
+sourceHash: 865aee0375b56c7a
 ---
+
+## 0.5.1
+
+2026-11-10
+
+### Cambiado
+
+- El README, la página de inicio, el banner, las guías y las imágenes para compartir nombran a Codex junto a Claude Code.
 
 ## 0.5.0
 
