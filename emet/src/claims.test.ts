@@ -430,6 +430,11 @@ describe("cross-run surface overlap on reserve", () => {
     expect(stored?.surfaces).toBeUndefined();
   });
 
+  test("a stored claim without surfaces never blocks a later reserve with surfaces", async () => {
+    await reserve("run-a", LIVE_MARKER_PID, "AO-1");
+    expect(await reserve("run-b", LIVE_MARKER_PID, "AO-9", ["**"])).toBe(true);
+  });
+
   test("rejects an empty surface list before writing anything", async () => {
     expect(reserve("run-a", LIVE_MARKER_PID, "AO-1", [])).rejects.toThrow(/surfaces/);
     expect(await listReservations(forgeDirectory)).toEqual([]);

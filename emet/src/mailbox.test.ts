@@ -1,9 +1,11 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
-import { existsSync, mkdtempSync, rmSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
+import { spawnSync } from "node:child_process";
 
 import { askQuestion, listOpenQuestions, waitForReply, writeReply } from "./mailbox";
+import { isObject } from "./narrow";
 import { runDirectory } from "./runs";
 
 let commonDirectory: string;
@@ -93,5 +95,93 @@ describe("inbox and reply", () => {
     writeReply("r1", "CLA-7", 1, "ok", options());
     expect(() => writeReply("r1", "CLA-7", 1, "again", options())).toThrow(/already has a reply/);
     expect(() => writeReply("r1", "CLA-7", 9, "x", options())).toThrow(/does not exist/);
+  });
+});
+
+const EMET_BIN = path.resolve(import.meta.dir, "../bin/emet.ts");
+
+function initRepo(): string {
+  const repo = mkdtempSync(path.join(tmpdir(), "emet-mailbox-repo-"));
+  const result = spawnSync("git", ["init", "-q", repo]);
+  if (result.status !== 0) throw new Error("git init failed");
+  return repo;
+}
+
+async function runEmet(repo: string, args: readonly string[]) {
+  const child = Bun.spawn([process.execPath, EMET_BIN, ...args], {
+    cwd: repo,
+    stdout: "pipe",
+    stderr: "pipe",
+  });
+  const [stdout, exitCode] = await Promise.all([new Response(child.stdout).text(), child.exited]);
+  return { stdout: stdout.trim(), exitCode };
+}
+
+describe("concurrency", () => {
+  test("concurrent asks for one ticket never reuse an id", async () => {
+    const repo = initRepo();
+    try {
+      const results = await Promise.all(
+        Array.from({ length: 6 }, (_, index) =>
+          runEmet(repo, ["ask", "--run", "r1", "--ticket", "CLA-7", "--body", `q${String(index)}`]),
+        ),
+      );
+      expect(results.every((result) => result.exitCode === 0)).toBe(true);
+      const ids = results.map((result) => {
+        const parsed: unknown = JSON.parse(result.stdout);
+        if (!isObject(parsed) || typeof parsed["id"] !== "number") {
+          throw new Error(`unexpected ask output: ${result.stdout}`);
+        }
+        return parsed["id"];
+      });
+      expect(new Set(ids).size).toBe(6);
+    } finally {
+      rmSync(repo, { recursive: true, force: true });
+    }
+  });
+
+  test("concurrent replies to one question leave exactly one winner", async () => {
+    const repo = initRepo();
+    try {
+      await runEmet(repo, ["ask", "--run", "r1", "--ticket", "CLA-7", "--body", "q"]);
+      const results = await Promise.all(
+        Array.from({ length: 4 }, (_, index) =>
+          runEmet(repo, [
+            "reply",
+            "--run",
+            "r1",
+            "--ticket",
+            "CLA-7",
+            "--id",
+            "1",
+            "--body",
+            `a${String(index)}`,
+          ]),
+        ),
+      );
+      expect(results.filter((result) => result.exitCode === 0)).toHaveLength(1);
+      expect(results.filter((result) => result.exitCode === 1)).toHaveLength(3);
+    } finally {
+      rmSync(repo, { recursive: true, force: true });
+    }
+  });
+});
+
+describe("hardening", () => {
+  test("a reply cannot target another run's question or a traversal ticket", () => {
+    askQuestion("r1", "CLA-7", "q", options());
+    expect(() => writeReply("r2", "CLA-7", 1, "x", options())).toThrow();
+    expect(() => writeReply("r1", "../x", 1, "x", options())).toThrow();
+  });
+
+  test("a stale counter lock left by a dead process is reclaimed", () => {
+    const directory = path.join(runDirectory(commonDirectory, "r1"), "mailbox", "CLA-7");
+    const lockDirectory = path.join(directory, ".id.lock");
+    mkdirSync(lockDirectory, { recursive: true });
+    writeFileSync(
+      path.join(lockDirectory, "holder.json"),
+      JSON.stringify({ pid: 999_999_999, worktree: directory, acquiredAt: 0 }),
+    );
+    expect(askQuestion("r1", "CLA-7", "q", options())).toEqual({ id: 1 });
   });
 });

@@ -2,7 +2,7 @@ import { existsSync, mkdirSync, readdirSync, readFileSync } from "node:fs";
 import path from "node:path";
 
 import { loadForgeConfig } from "./config";
-import { didAcquireLock, releaseLock } from "./locks";
+import { didAcquireLock, isLockStale, readLockHolder, releaseLock } from "./locks";
 import { errorMessage, isObject } from "./narrow";
 import { assertSafeId, runDirectory, writeJsonAtomically } from "./runs";
 
@@ -21,6 +21,7 @@ const DEFAULT_ASK_WAIT_MINUTES = 30;
 const POLL_INTERVAL_MS = 1000;
 const COUNTER_LOCK_ATTEMPTS = 200;
 const COUNTER_LOCK_RETRY_MS = 25;
+const COUNTER_LOCK_STALE_MS = 30_000;
 
 export interface OpenQuestion {
   readonly ticket: string;
@@ -96,6 +97,19 @@ function readBody(filePath: string): string {
   return body;
 }
 
+/**
+ * Releases the counter lock only when its holder is readable, stale and unchanged
+ * on a second read, so a lock another process just acquired is never taken over.
+ */
+function didReclaimStaleCounterLock(lockDirectory: string): boolean {
+  const holder = readLockHolder(lockDirectory);
+  if (!holder || !isLockStale(lockDirectory, COUNTER_LOCK_STALE_MS)) return false;
+  const again = readLockHolder(lockDirectory);
+  if (again?.pid !== holder.pid || again.acquiredAt !== holder.acquiredAt) return false;
+  releaseLock(lockDirectory);
+  return true;
+}
+
 function withCounterLock<T>(
   directory: string,
   sleep: (milliseconds: number) => void,
@@ -112,6 +126,7 @@ function withCounterLock<T>(
         releaseLock(lockDirectory);
       }
     }
+    if (didReclaimStaleCounterLock(lockDirectory)) continue;
     sleep(COUNTER_LOCK_RETRY_MS);
   }
   throw new Error(`timed out waiting for the question id lock in ${directory}`);
@@ -197,15 +212,17 @@ export function writeReply(
   if (!existsSync(questionPath(directory, id))) {
     throw new Error(`question ${String(id)} of ${ticket} does not exist`);
   }
-  if (existsSync(replyPath(directory, id))) {
-    throw new Error(`question ${String(id)} of ${ticket} already has a reply`);
-  }
   const now = options?.now ?? Date.now;
-  writeJsonAtomically(replyPath(directory, id), {
-    id,
-    ticket,
-    body,
-    repliedAt: new Date(now()).toISOString(),
+  withCounterLock(directory, options?.sleep ?? defaultSleep, () => {
+    if (existsSync(replyPath(directory, id))) {
+      throw new Error(`question ${String(id)} of ${ticket} already has a reply`);
+    }
+    writeJsonAtomically(replyPath(directory, id), {
+      id,
+      ticket,
+      body,
+      repliedAt: new Date(now()).toISOString(),
+    });
   });
 }
 
