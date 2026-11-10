@@ -2,10 +2,12 @@
 title: Modèles et effort
 description: Comment emet choisit un modèle et un effort de raisonnement pour chaque rôle, et quelles clés de configuration les modifient.
 seoTitle: Modèles et effort dans emet
-sourceHash: a46d2e68a403f4f9
+sourceHash: 482995e2b98c659b
 ---
 
-`/emet` choisit automatiquement un modèle et un effort de raisonnement par rôle ; il n'y a rien à changer à la main en cours d'exécution. Toutes les clés figurent dans la [référence de configuration](../reference/configuration.md#models).
+`/emet` choisit automatiquement un modèle et un effort de raisonnement par rôle ; il n'y a rien à changer à la main en cours d'exécution. Les premières sections décrivent l'hôte Claude Code ; l'[hôte Codex](#hôte-codex) a ses propres valeurs par défaut. Toutes les clés de Claude Code figurent dans la [référence de configuration](../reference/configuration.md#models).
+
+## Hôte Claude Code
 
 | Rôle                                                       | Modèle                 | Effort                 | Défini par                                  |
 | ---------------------------------------------------------- | ---------------------- | ---------------------- | ------------------------------------------- |
@@ -17,7 +19,7 @@ sourceHash: a46d2e68a403f4f9
 | Revue, niveau `high` (chemins ou points sensibles)         | Opus                   | `medium` par défaut    | `models.reviewer.high`                      |
 | Triage des logs de CI (phase 8)                            | Haiku                  | —                      | `models.triage`                             |
 
-Les deux définitions d'agent (installées par `install.sh` dans `~/.claude/agents/`) fixent leur propre `model`/`effort` dans le frontmatter, si bien que le choix de modèle/effort du coordinateur ne déborde jamais sur un worker ou sur le relecteur. `emet doctor` signale (sans jamais bloquer) l'absence de l'un ou l'autre fichier. `emet preflight` bloque en revanche la distribution lorsque `emet-worker` ou `emet-reviewer` est absent, car la phase 6 et la phase 8 distribuent par `subagent_type`.
+Sur Claude Code, les deux définitions d'agent (installées par `install.sh` dans `~/.claude/agents/`) fixent leur propre `model`/`effort` dans le frontmatter, si bien que le choix de modèle/effort du coordinateur ne déborde jamais sur un worker ou sur le relecteur. `emet doctor` signale (sans jamais bloquer) l'absence de l'un ou l'autre fichier. `emet preflight` bloque en revanche la distribution lorsque `emet-worker` ou `emet-reviewer` est absent, car la phase 6 et la phase 8 distribuent par `subagent_type`.
 
 ## Routage par niveau de risque
 
@@ -31,11 +33,11 @@ Un ticket qui touche des chemins à haut risque peut porter une ligne `Model:` (
 
 ## Triage avec Haiku
 
-Le coordinateur ne lit jamais un log de CI en entier. Un check en échec est confié à un agent sur `models.triage` (par défaut `haiku`), qui renvoie au plus environ 2k tokens avec des pointeurs `file:line` pour la correction.
+Sur Claude Code, le coordinateur ne lit jamais un log de CI en entier. Un check en échec est confié à un agent sur `models.triage` (par défaut `haiku`), qui renvoie au plus environ 2k tokens avec des pointeurs `file:line` pour la correction.
 
 ## Configuration
 
-Toutes les clés sont facultatives, et les valeurs par défaut reproduisent le tableau ci-dessus :
+Ce sont les clés `models` de Claude Code. Toutes les clés sont facultatives, et les valeurs par défaut reproduisent le tableau Claude Code ci-dessus :
 
 ```json
 {
@@ -78,11 +80,11 @@ L'exécution réelle de Codex du [rapport de sonde](../research/codex-probe-repo
 
 ## Pourquoi un seul relecteur
 
-Pourquoi un seul relecteur à contexte neuf plutôt qu'un éventail de plusieurs angles : aucun benchmark public ne compare directement les deux, mais un éventail relit tout le diff une fois par angle et s'est bloqué pendant plus d'une heure dans ce dépôt, tandis que des rapports d'Anthropic et de tiers sur les modèles de classe Opus suggèrent que la montée en gamme du modèle apporte autant que les angles supplémentaires. Pour une vague à forts enjeux, lancez ensuite `/code-review ultra` à la main ; `/emet` ne le distribue jamais de lui-même.
+Pourquoi un seul relecteur à contexte neuf plutôt qu'un éventail de plusieurs angles : aucun benchmark public ne compare directement les deux, mais un éventail relit tout le diff une fois par angle et s'est bloqué pendant plus d'une heure dans ce dépôt, tandis que des rapports d'Anthropic et de tiers sur les modèles de classe Opus suggèrent que la montée en gamme du modèle apporte autant que les angles supplémentaires. Pour une vague à forts enjeux sur Claude Code, lancez ensuite `/code-review ultra` à la main ; `/emet` ne le distribue jamais de lui-même. `/code-review ultra` est une commande de Claude Code ; cette page ne documente aucun équivalent Codex.
 
-## Ce que vous définissez une fois, vous-même
+## Ce que vous définissez une fois, vous-même (Claude Code)
 
-`/emet` ne peut pas changer ceci en cours d'exécution :
+Sur l'hôte Claude Code, `/emet` ne peut pas changer ceci en cours d'exécution. Cela se trouve dans le `~/.claude/settings.json` de Claude Code ; l'hôte Codex ne lit pas ce fichier, et ses modèles viennent de la section `codex` ci-dessus.
 
 - `model: "opusplan"` dans `~/.claude/settings.json` : c'est ce qui fait tourner les phases 1–4 sur Opus et la phase 5 et suivantes sur Sonnet, sans `/model`. `emet doctor` avertit (sans jamais modifier vos réglages) s'il n'est pas défini.
 - Un effort de session `medium` ou `high` plutôt que `xhigh` : les workers et le relecteur portent déjà leur propre effort quel que soit le vôtre, et une valeur globale élevée par défaut ajoute surtout du coût aux tours du coordinateur lui-même (suivi des distributions, merges, rapports) qui n'en ont pas besoin.

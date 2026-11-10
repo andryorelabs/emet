@@ -2,10 +2,12 @@
 title: Modelle und Aufwand
 description: Wie emet für jede Rolle ein Modell und einen Denkaufwand wählt und welche Konfigurationsschlüssel sie ändern.
 seoTitle: Modelle und Aufwand in emet
-sourceHash: a46d2e68a403f4f9
+sourceHash: 482995e2b98c659b
 ---
 
-`/emet` wählt für jede Rolle automatisch ein Modell und einen Denkaufwand; mitten im Lauf muss nichts von Hand umgestellt werden. Jeder Schlüssel steht in der [Konfigurationsreferenz](../reference/configuration.md#models).
+`/emet` wählt für jede Rolle automatisch ein Modell und einen Denkaufwand; mitten im Lauf muss nichts von Hand umgestellt werden. Die ersten Abschnitte beschreiben den Claude-Code-Host; der [Codex-Host](#codex-host) hat eigene Standardwerte. Jeder Claude-Code-Schlüssel steht in der [Konfigurationsreferenz](../reference/configuration.md#models).
+
+## Claude-Code-Host
 
 | Rolle                                              | Modell                  | Aufwand                | Festgelegt durch                             |
 | -------------------------------------------------- | ----------------------- | ---------------------- | -------------------------------------------- |
@@ -17,7 +19,7 @@ sourceHash: a46d2e68a403f4f9
 | Review, Stufe `high` (riskante Pfade oder Senken)  | Opus                    | standardmäßig `medium` | `models.reviewer.high`                       |
 | CI-Log-Triage (Phase 8)                            | Haiku                   | —                      | `models.triage`                              |
 
-Die beiden Agent-Definitionen (von `install.sh` nach `~/.claude/agents/` installiert) legen `model`/`effort` selbst im Frontmatter fest, sodass die Modell- und Aufwandswahl des Koordinators nie in einen Worker oder den Reviewer durchsickert. `emet doctor` meldet (blockiert aber nie), wenn eine der beiden Dateien fehlt. `emet preflight` blockiert den Dispatch, wenn `emet-worker` oder `emet-reviewer` fehlt, weil Phase 6 und Phase 8 über `subagent_type` dispatchen.
+Unter Claude Code legen die beiden Agent-Definitionen (von `install.sh` nach `~/.claude/agents/` installiert) `model`/`effort` selbst im Frontmatter fest, sodass die Modell- und Aufwandswahl des Koordinators nie in einen Worker oder den Reviewer durchsickert. `emet doctor` meldet (blockiert aber nie), wenn eine der beiden Dateien fehlt. `emet preflight` blockiert den Dispatch, wenn `emet-worker` oder `emet-reviewer` fehlt, weil Phase 6 und Phase 8 über `subagent_type` dispatchen.
 
 ## Routing nach Risikostufe
 
@@ -31,11 +33,11 @@ Ein Ticket, das riskante Pfade berührt, kann eine `Model:`-Zeile tragen (zum Be
 
 ## Haiku-Triage
 
-Der Koordinator liest nie ein vollständiges CI-Log. Eine fehlgeschlagene Prüfung geht an einen Agent mit `models.triage` (Standard `haiku`), der höchstens etwa 2k Tokens mit `file:line`-Verweisen für die Korrektur zurückgibt.
+Unter Claude Code liest der Koordinator nie ein vollständiges CI-Log. Eine fehlgeschlagene Prüfung geht an einen Agent mit `models.triage` (Standard `haiku`), der höchstens etwa 2k Tokens mit `file:line`-Verweisen für die Korrektur zurückgibt.
 
 ## Konfiguration
 
-Jeder Schlüssel ist optional, und die Standardwerte entsprechen der Tabelle oben:
+Das sind die `models`-Schlüssel von Claude Code. Jeder Schlüssel ist optional, und die Standardwerte entsprechen der Claude-Code-Tabelle oben:
 
 ```json
 {
@@ -78,11 +80,11 @@ Der echte Codex-Lauf im [Probe-Bericht](../research/codex-probe-report.md) nutzt
 
 ## Warum ein einzelner Reviewer
 
-Warum ein einzelner Reviewer mit frischem Kontext statt eines Fächers aus mehreren Blickwinkeln: Kein öffentlicher Benchmark vergleicht beide direkt, aber ein Fächer liest den gesamten Diff einmal pro Blickwinkel neu und hat in diesem Repo über eine Stunde lang gehangen, während Berichte von Anthropic und Dritten zu Modellen der Opus-Klasse nahelegen, dass das Modell-Upgrade so viel bringt wie die zusätzlichen Blickwinkel. Für eine Welle mit hohem Einsatz danach `/code-review ultra` von Hand ausführen; `/emet` dispatcht das nie von sich aus.
+Warum ein einzelner Reviewer mit frischem Kontext statt eines Fächers aus mehreren Blickwinkeln: Kein öffentlicher Benchmark vergleicht beide direkt, aber ein Fächer liest den gesamten Diff einmal pro Blickwinkel neu und hat in diesem Repo über eine Stunde lang gehangen, während Berichte von Anthropic und Dritten zu Modellen der Opus-Klasse nahelegen, dass das Modell-Upgrade so viel bringt wie die zusätzlichen Blickwinkel. Für eine Welle mit hohem Einsatz unter Claude Code danach `/code-review ultra` von Hand ausführen; `/emet` dispatcht das nie von sich aus. `/code-review ultra` ist ein Claude-Code-Befehl; diese Seite dokumentiert kein Codex-Pendant.
 
-## Was du einmalig selbst festlegst
+## Was du einmalig selbst festlegst (Claude Code)
 
-`/emet` kann diese Einstellungen nicht mitten im Lauf umstellen:
+Auf dem Claude-Code-Host kann `/emet` diese Einstellungen nicht mitten im Lauf umstellen. Sie liegen in der `~/.claude/settings.json` von Claude Code; der Codex-Host liest diese Datei nicht, und seine Modelle stammen aus dem Abschnitt `codex` oben.
 
 - `model: "opusplan"` in `~/.claude/settings.json`: Damit laufen die Phasen 1–4 auf Opus und ab Phase 5 auf Sonnet, ohne dass `/model` nötig wäre. `emet doctor` warnt (und ändert nie deine Einstellungen), wenn es nicht gesetzt ist.
 - Ein Sitzungsaufwand von `medium` oder `high` statt `xhigh`: Die Worker und der Reviewer tragen ihren eigenen Aufwand unabhängig von deinem, und ein hoher globaler Standard verursacht vor allem Kosten bei den eigenen Zügen des Koordinators (Dispatch-Buchhaltung, Merges, Berichte), die ihn nicht brauchen.
