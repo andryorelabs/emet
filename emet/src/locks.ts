@@ -194,8 +194,10 @@ function isSameHolder(left: LockHolder | undefined, right: LockHolder | undefine
  * Removes `lockDirectory` only if the holder inside it is the one `observed`.
  * The directory is renamed away first, atomically, and the renamed holder is
  * checked afterwards, so a lock acquired by someone else after `observed` was
- * read is put back instead of deleted. Returns `true` only when the observed
- * lock was removed.
+ * read is put back instead of deleted. If it cannot be put back because
+ * another process took the lock in the meantime, the renamed directory is left
+ * in place rather than deleted. Returns `true` only when the observed lock was
+ * removed.
  */
 function didReleaseObservedLock(lockDirectory: string, observed: LockHolder | undefined): boolean {
   const trashDirectory = `${lockDirectory}.released-${process.pid}-${randomUUID()}`;
@@ -211,16 +213,23 @@ function didReleaseObservedLock(lockDirectory: string, observed: LockHolder | un
   }
   try {
     renameSync(trashDirectory, lockDirectory);
-  } catch {
-    rmSync(trashDirectory, { recursive: true, force: true });
+  } catch (error) {
+    const code = errnoCode(error);
+    if (code !== "EEXIST" && code !== "ENOTEMPTY") throw error;
   }
   return false;
 }
 
-function isGuardStale(guardDirectory: string): boolean {
+function judgeStaleGuard(guardDirectory: string): {
+  readonly stale: boolean;
+  readonly holder: LockHolder | undefined;
+} {
+  if (!existsSync(guardDirectory)) return { stale: false, holder: undefined };
   const holder = readLockHolder(guardDirectory);
-  if (!holder) return isLockStale(guardDirectory, HOLDERLESS_LOCK_GRACE_MS);
-  return Date.now() - holder.acquiredAt > HOLDERLESS_LOCK_GRACE_MS;
+  const stale = holder
+    ? Date.now() - holder.acquiredAt > HOLDERLESS_LOCK_GRACE_MS
+    : isLockStale(guardDirectory, HOLDERLESS_LOCK_GRACE_MS);
+  return { stale, holder };
 }
 
 /**
@@ -232,7 +241,7 @@ function isGuardStale(guardDirectory: string): boolean {
  * over. The guard is held for microseconds, so one older than
  * {@link HOLDERLESS_LOCK_GRACE_MS} is stale whether or not its pid is alive
  * (a recycled pid must not wedge reclaiming forever) and is cleared the same
- * rename-and-verify way. Returns `true` when this call released the stale
+ * rename-and-verify way, using the holder that was judged stale. Returns `true` when this call released the stale
  * lock; the caller then retries its normal acquire. Returns `false` when the
  * lock is not stale, another reclaimer holds the guard, or the lock changed,
  * and the caller keeps polling.
@@ -247,9 +256,8 @@ export function didReclaimStaleLock(lockDirectory: string, maxAgeMs: number): bo
     acquiredAt: Date.now(),
   };
   if (!didAcquireLock(guardDirectory, guardHolder)) {
-    if (isGuardStale(guardDirectory)) {
-      didReleaseObservedLock(guardDirectory, readLockHolder(guardDirectory));
-    }
+    const verdict = judgeStaleGuard(guardDirectory);
+    if (verdict.stale) didReleaseObservedLock(guardDirectory, verdict.holder);
     return false;
   }
   try {
