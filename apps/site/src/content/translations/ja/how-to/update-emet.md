@@ -2,7 +2,7 @@
 title: emet を更新する
 description: インストール済みの emet を新しいリリースに更新し、プラグインのマーケットプレイス自動更新を有効にします。
 seoTitle: emet を更新する
-sourceHash: 22d272d767c29646
+sourceHash: 584eafb89175d6c7
 ---
 
 インストール済みの emet を新しいリリースに移行する方法です。用語は [GLOSSARY.md](../../GLOSSARY.md) に従います。
@@ -18,6 +18,17 @@ claude plugin update emet-mascot@emet-marketplace
 ```
 
 マスコットをインストールしていない場合は、最後の行を省略してください。その後、Claude Code を再起動するか、`/reload-plugins` を実行します。`claude plugin list` でインストール済みのバージョンを確認でき、最新のバージョンは [CHANGELOG.md](../../CHANGELOG.md) にあります。
+
+## Codex で更新する
+
+このリポジトリのドキュメントには、Codex プラグイン用の個別の更新コマンドはありません。[Codex で emet を実行する](../guide/codex.md#インストール)のインストールコマンドをもう一度実行してください。
+
+```bash
+codex plugin marketplace add andryorelabs/emet
+codex plugin add emet@emet-marketplace
+```
+
+`codex plugin list` で、`emet@emet-marketplace` がインストールされ有効になっているかを確認できます。
 
 ## 自動で更新する
 

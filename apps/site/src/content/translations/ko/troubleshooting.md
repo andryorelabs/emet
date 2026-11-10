@@ -2,7 +2,7 @@
 title: 문제 해결
 description: emet doctor와 emet preflight의 실패를 눈에 보이는 증상별로 묶어, 각각의 원인과 해결 방법을 설명합니다.
 seoTitle: emet doctor와 preflight 문제 해결
-sourceHash: dd82e980da9568d5
+sourceHash: 2945f96c25af7fb6
 ---
 
 `emet doctor`와 `emet preflight`의 실패를 눈에 보이는 증상별로 묶어, 각각의 원인과 해결 방법을 정리했습니다. 용어는 [GLOSSARY.md](../GLOSSARY.md)를 따릅니다. 점검들이 어떻게 맞물리는지는 [아키텍처](architecture.md)를 참고하세요.
@@ -113,6 +113,16 @@ sourceHash: dd82e980da9568d5
 **원인:** `emet.config.json`의 `preflight.requiredCommands`에 리포지토리가 필요로 하는 바이너리가 나열되어 있습니다.
 
 **해결:** 지정된 바이너리를 설치하거나, 더 이상 필요하지 않다면 설정에서 제거하세요.
+
+## Codex 호스트
+
+`agentHost`가 `"codex"`일 때 해당합니다. [Codex에서 emet 실행하기](guide/codex.md)를 참고하세요.
+
+**`codex.minVersion`보다 오래된 `codex`.** `emet doctor .`가 보고합니다. `codex.minVersion`(기본값 `0.167.0`) 이상 버전의 `codex` CLI를 설치한 뒤 `emet doctor .`를 다시 실행하세요.
+
+**`--json` 또는 `--output-schema` 플래그 없음.** `emet doctor .`는 두 플래그 중 하나라도 문서화하지 않는 `codex exec`를 보고하며, emet은 워커와 리뷰어를 시작하는 데 둘 다 사용합니다. 두 플래그를 여전히 문서화하는 `codex` 버전을 설치하세요.
+
+**설정한 모델이 목록에 없음.** emet은 모델을 실행 홈의 `models_cache.json`, 없으면 실제 Codex 홈의 `models_cache.json`(읽기 전용)에서 확정합니다. 목록에 없는 슬러그는 대체되며 그 대체는 기록됩니다. 아무것도 확정되지 않으면 `emet review-run`은 모델 호출 전에 역할과 목록에 있는 슬러그를 밝히며 실패합니다. `codex.models`에는 목록에 있는 슬러그를 설정하세요. [설정 레퍼런스](reference/configuration.md#codex)를 참고하세요.
 
 ## 함께 보기
 

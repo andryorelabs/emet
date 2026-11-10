@@ -2,7 +2,7 @@
 title: 跟踪器与落地
 description: 工单存放在哪里，波次如何以拉取请求或本地合并的方式落地，以及波次如何串联。
 seoTitle: emet 的跟踪器与落地
-sourceHash: 4e3835764329636c
+sourceHash: c9ae0940af5cfbad
 ---
 
 工单存放在哪里、波次如何落地、波次如何串联。此处提到的每个配置键都在[配置参考](../reference/configuration.md)中，每个子命令都在 [CLI 参考](../reference/cli.md)中。
@@ -53,6 +53,8 @@ emet 支持 Linear、GitHub Issues 或本地文件，由 `tracker.kind` 设置�
 - `handoff.launcher`（默认 `auto`）：同时在运行 `claude attach` 的 Orca 标签页中打开该波次。`auto` 会询问 Orca 运行时（`orca status`），因此对没有 `TERM_PROGRAM` 的 `claude --bg` 会话同样有效；`orca` 总是尝试，`bg` 从不尝试。无论哪种方式，波次都在后台运行，标签页打开失败也不会中断串联。
 
   `emet launch <spec-id> --wave <n>` 会完成整个启动流程（重复会话检查、`claude --bg`、标签页），并打印 `{ name, id, attach, orcaTab: { opened, reason } }`。每当你想手动在另一个会话中运行某个波次时，请使用它，而不是直接使用 `claude --bg`。
+
+  在 Codex Agent 宿主上，`emet launch` 会启动一个分离的 `codex exec`，运行 `$emet:run --dispatch <spec-id>`，并记录其线程 ID。它不会打开 Orca 标签页，`codex exec resume <id>` 可继续该会话。参见 [CLI 参考](../reference/cli.md#codex-宿主)和[在 Codex 上运行 emet](codex.md)。
 
 - `handoff.permissionMode`（默认 `bypassPermissions`）：串联会话的权限模式。它不继承启动会话的模式，因为 `auto` 模式的分类器可能拒绝 `gh pr merge` 之类的步骤，导致波次只完成一半。你的 `permissions.deny` 规则仍然适用，但必须已在交互环境中接受过一次绕过警告（`skipDangerousModePermissionPrompt`）。
 

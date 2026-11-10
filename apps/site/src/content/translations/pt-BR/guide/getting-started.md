@@ -2,7 +2,7 @@
 title: Primeiros passos
 description: Instale o emet como plugin do Claude Code, confirme que ele funciona com emet doctor e execute-o pela primeira vez.
 seoTitle: Primeiros passos com o emet
-sourceHash: 0f92cdb1a20904a3
+sourceHash: 381754ac3b3a0479
 ---
 
 Instale o emet, confirme que ele funciona e execute-o pela primeira vez.
@@ -11,7 +11,7 @@ Instale o emet, confirme que ele funciona e execute-o pela primeira vez.
 
 ## Requisitos
 
-Claude Code, `git`, `gh` (autenticado) e o plugin `mattpocock-skills`, em Linux ou macOS. O Bun só é necessário para uma instalação a partir do código-fonte; o Windows nativo não é suportado (use o WSL). A lista completa, com o que verifica cada item, está na [referência de dependências](../reference/dependencies.md).
+Claude Code ou a CLI do Codex, `git`, `gh` (autenticado) e o plugin `mattpocock-skills`, em Linux ou macOS. O Bun só é necessário para uma instalação a partir do código-fonte; o Windows nativo não é suportado (use o WSL). A lista completa, com o que verifica cada item, está na [referência de dependências](../reference/dependencies.md).
 
 ## Instalar
 
@@ -24,6 +24,8 @@ claude plugin marketplace add andryorelabs/emet
 claude plugin install emet@emet-marketplace
 ```
 
+No Codex, instale o plugin com `codex plugin`; os passos estão em [Executando o emet no Codex](codex.md#instalação).
+
 **`install.sh`** (funciona com ou sem Bun):
 
 ```bash
@@ -34,11 +36,11 @@ cd emet
 
 Com o `bun` no PATH, ele copia o código-fonte da CLI para `~/.claude/emet` e um wrapper `emet` para `~/.local/bin/emet`. Sem o `bun`, instala em vez disso o shim do binário independente (`~/.local/bin/emet`, ligado a `~/.claude/emet/bin/emet`), que baixa e verifica o checksum do binário na primeira execução (precisa do `curl`). Em ambos os casos os comandos vão para `~/.claude/commands/emet/` e os agentes para `~/.claude/agents/`; os marcadores de posição do plugin nos prompts são reescritos como caminhos simples de `~/.claude`. Executá-lo de novo é seguro, e um arquivo que você editou é mantido, com a nova versão gravada ao lado como `<file>.new`.
 
-As duas instalações dão a você três comandos de barra: `/emet:run`, `/emet:init` e `/emet:doctor`. O comando `emet` em um terminal comum só funciona depois do `install.sh`; caso contrário, use os comandos de barra, ou `! emet <subcommand>` dentro de uma sessão do Claude Code. Os nomes dos agentes diferem: `emet:emet-worker` no plugin, `emet-worker` na instalação independente.
+As duas instalações dão a você três comandos de barra: `/emet:run`, `/emet:init` e `/emet:doctor`. O comando `emet` em um terminal comum só funciona depois do `install.sh`; caso contrário, use os comandos de barra, ou `! emet <subcommand>` dentro de uma sessão do Claude Code ou do Codex. Os nomes dos agentes diferem: `emet:emet-worker` no plugin, `emet-worker` na instalação independente.
 
 Ordem recomendada, em cada repositório: execute primeiro `/setup-matt-pocock-skills` e depois `emet init`.
 
-Verifique se funcionou com `/emet:doctor` dentro do Claude Code, ou `emet doctor .` em um terminal depois do `install.sh` (o `selftest` precisa de uma instalação a partir do código-fonte).
+Verifique se funcionou com `/emet:doctor` dentro do Claude Code (`$emet:doctor` no Codex), ou `emet doctor .` em um terminal depois do `install.sh` (o `selftest` precisa de uma instalação a partir do código-fonte).
 
 Se o `doctor` ou o `preflight` relatar um problema, veja a [solução de problemas](../troubleshooting.md). Nada é instalado nem autenticado em seu nome; veja a [referência de dependências](../reference/dependencies.md) para saber quem verifica o quê e para `EMET_SKIP_DEPENDENCY_CHECKS`.
 
@@ -51,7 +53,7 @@ emet init          # autodetects package manager, trunk branch, tracker kind
 emet preflight      # confirms the repo is dispatch-ready
 ```
 
-Dentro de uma sessão, `/emet:init` faz o mesmo que `emet init`. Depois, dentro do Claude Code:
+Dentro de uma sessão, `/emet:init` faz o mesmo que `emet init`. Depois, dentro do Claude Code (no Codex, use `$emet:run` em vez de `/emet:run`):
 
 ```
 /emet:run <describe the feature>              # interview → wave 1; later waves via --dispatch/autoChain
@@ -64,6 +66,7 @@ O `emet init` deixa um marcador `TODO(emet):` nos arquivos `docs/agents/*.md` ge
 ## Próximos passos
 
 - [Trackers e aterrissagem](trackers-and-landing.md): tickets do GitHub, do Linear ou locais, e como uma onda aterrissa.
+- [Executando o emet no Codex](codex.md): instalação, a aprovação única e os limites do host de agente Codex.
 - [Modelos e esforço](models-and-effort.md): qual modelo e qual esforço cada papel usa.
 - [Verificação de frota](fleet.md): audite vários repositórios de uma só vez.
 - [Referência de configuração](../reference/configuration.md) e [referência da CLI](../reference/cli.md): cada chave e subcomando.

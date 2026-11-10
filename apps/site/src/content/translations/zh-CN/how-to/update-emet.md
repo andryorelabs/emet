@@ -2,7 +2,7 @@
 title: 更新 emet
 description: 将已安装的 emet 升级到新版本，并为插件开启市场自动更新。
 seoTitle: 更新 emet
-sourceHash: 22d272d767c29646
+sourceHash: 584eafb89175d6c7
 ---
 
 如何将已安装的 emet 升级到新版本。术语遵循 [GLOSSARY.md](../../GLOSSARY.md)。
@@ -18,6 +18,17 @@ claude plugin update emet-mascot@emet-marketplace
 ```
 
 如果你没有安装吉祥物，请跳过最后一行。之后重启 Claude Code，或运行 `/reload-plugins`。`claude plugin list` 会显示已安装的版本；最新版本见 [CHANGELOG.md](../../CHANGELOG.md)。
+
+## 在 Codex 上更新
+
+本仓库的文档中没有单独的 Codex 插件更新命令。请重新运行[在 Codex 上运行 emet](../guide/codex.md#安装)中的安装命令：
+
+```bash
+codex plugin marketplace add andryorelabs/emet
+codex plugin add emet@emet-marketplace
+```
+
+`codex plugin list` 会显示 `emet@emet-marketplace` 是否已安装并启用。
 
 ## 自动更新
 

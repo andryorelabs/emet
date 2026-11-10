@@ -2,7 +2,7 @@
 title: Обновление emet
 description: Как перейти с установленного emet на новый релиз и включить автообновление маркетплейса для плагинов.
 seoTitle: Обновление emet
-sourceHash: 22d272d767c29646
+sourceHash: 584eafb89175d6c7
 ---
 
 Как перевести установленный emet на новый релиз. Термины соответствуют [GLOSSARY.md](../../GLOSSARY.md).
@@ -18,6 +18,17 @@ claude plugin update emet-mascot@emet-marketplace
 ```
 
 Пропустите последнюю строку, если вы не устанавливали маскота. После этого перезапустите Claude Code или выполните `/reload-plugins`. `claude plugin list` показывает установленные версии; последняя указана в [CHANGELOG.md](../../CHANGELOG.md).
+
+## Обновление в Codex
+
+В документации этого репозитория для плагина Codex нет отдельной команды обновления. Выполните заново команды установки из раздела [Запуск emet в Codex](../guide/codex.md#установка):
+
+```bash
+codex plugin marketplace add andryorelabs/emet
+codex plugin add emet@emet-marketplace
+```
+
+`codex plugin list` показывает, установлен ли и включён ли `emet@emet-marketplace`.
 
 ## Автоматическое обновление
 
