@@ -31,7 +31,7 @@ export const it = {
     lineOne: "Dall'idea al merge,",
     lineTwo: "approvazione unica.",
     sentence:
-      "Un plugin per Claude Code. Dall'idea alla modifica integrata, con una sola approvazione.",
+      "Un plugin per Claude Code e Codex. Dall'idea alla modifica integrata, con una sola approvazione.",
     install: "Installa emet",
     readDocs: "Leggi la documentazione",
     alt: "Una valle dipinta dove tre ruscelli si uniscono in un fiume, con campi a terrazze e un piccolo golem d'argilla su un rialzo erboso sotto un cielo calmo.",
@@ -87,7 +87,8 @@ export const it = {
     items: [
       {
         question: "Di cosa ho bisogno?",
-        answer: "Claude Code, git, gh autenticato e il plugin mattpocock-skills, su Linux o macOS.",
+        answer:
+          "Claude Code o la CLI di Codex, git, gh autenticato e il plugin mattpocock-skills, su Linux o macOS.",
       },
       {
         question: "Funziona su Windows?",
@@ -131,7 +132,7 @@ export const it = {
     alt: "Una valle sotto una bassa foschia mattutina, con un sole pallido e un cielo pastello.",
   },
   footer: {
-    description: "Plugin per Claude Code.",
+    description: "Plugin per Claude Code e Codex.",
     notice: "Non affiliato né approvato da Anthropic",
     docs: "Documentazione",
     whatsNew: "Novità",

@@ -31,7 +31,7 @@ export const de = {
     lineOne: "Von Idee zu Merge,",
     lineTwo: "mit einer Freigabe.",
     sentence:
-      "Ein Plugin für Claude Code. Von der Idee zur gemergten Änderung, mit einer Freigabe.",
+      "Ein Plugin für Claude Code und Codex. Von der Idee zur gemergten Änderung, mit einer Freigabe.",
     install: "emet installieren",
     readDocs: "Doku lesen",
     alt: "Ein gemaltes Tal, in dem drei Bäche in einen Fluss münden, mit Terrassenfeldern und einem kleinen Lehm-Golem auf einer grasigen Anhöhe unter ruhigem Himmel.",
@@ -88,7 +88,7 @@ export const de = {
       {
         question: "Was brauche ich?",
         answer:
-          "Claude Code, git, ein angemeldetes gh und das Plugin mattpocock-skills, unter Linux oder macOS.",
+          "Claude Code oder die Codex CLI, git, ein angemeldetes gh und das Plugin mattpocock-skills, unter Linux oder macOS.",
       },
       {
         question: "Läuft es unter Windows?",
@@ -133,7 +133,7 @@ export const de = {
     alt: "Ein Tal unter tiefem Morgennebel mit blasser Sonne und Pastellhimmel.",
   },
   footer: {
-    description: "Plugin für Claude Code.",
+    description: "Plugin für Claude Code und Codex.",
     notice: "Nicht mit Anthropic verbunden und nicht von Anthropic unterstützt",
     docs: "Doku",
     whatsNew: "Neuigkeiten",
