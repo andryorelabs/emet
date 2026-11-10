@@ -18,10 +18,12 @@ import {
   resolveRepoRoot,
   type ForgeConfig,
 } from "./config";
+import { listOpenQuestions } from "./mailbox";
 import { buildLockReason, readLockReasonTemplate } from "./lockreason";
 import { errorMessage } from "./narrow";
 import { resolveRunDir } from "./names";
 import { readResult } from "./results";
+import { runDirectory } from "./runs";
 import { listOccupiedSlots } from "./slots";
 
 const USAGE = `usage: emet dispatch --role worker --run <id> --ticket <id> --prompt-file <f> [--model <m>] [--effort <e>] [--root <dir>]
@@ -329,6 +331,19 @@ function workerWaitState(state: CodexState, config: ForgeConfig): "running" | "o
   return "over";
 }
 
+async function resolveCommonDirectory(root: string): Promise<string> {
+  const resolved = await git(root, ["rev-parse", "--path-format=absolute", "--git-common-dir"]);
+  return resolved.ok && resolved.out.length > 0 ? resolved.out : root;
+}
+
+function firstOpenQuestion(
+  commonDirectory: string,
+  runId: string,
+  ticket: string,
+): { id: number } | undefined {
+  return listOpenQuestions(runId, { commonDirectory }).find((entry) => entry.ticket === ticket);
+}
+
 async function waitForWorker(argv: readonly string[], root: string): Promise<number> {
   const runId = requireFlag(argv, "--run");
   const ticket = requireFlag(argv, "--ticket");
@@ -345,6 +360,8 @@ async function waitForWorker(argv: readonly string[], root: string): Promise<num
     throw new DispatchError(`no dispatched worker for ${ticket}`);
   }
   const { config } = await loadForgeConfigWithDefaults(root);
+  const commonDirectory = await resolveCommonDirectory(root);
+  const resultsDirectory = path.join(runDirectory(commonDirectory, runId), "results");
 
   const deadline = timeoutSeconds === undefined ? Infinity : Date.now() + timeoutSeconds * 1000;
   for (;;) {
@@ -352,6 +369,12 @@ async function waitForWorker(argv: readonly string[], root: string): Promise<num
     if (state === undefined) throw new DispatchError(`no dispatched worker for ${ticket}`);
     const running = workerWaitState(state, config);
     if (running === "over") break;
+    if (readResult(resultsDirectory, ticket) !== null) break;
+    const question = firstOpenQuestion(commonDirectory, runId, ticket);
+    if (question !== undefined) {
+      console.log(`question ${ticket} ${String(question.id)}`);
+      return 0;
+    }
     if (running === "stalled") {
       console.error(
         `emet dispatch: ${ticket} stalled: no event in ${config.usage.stalledMinutes} minutes (thread ${state.threadId ?? "pending"})`,
@@ -365,7 +388,7 @@ async function waitForWorker(argv: readonly string[], root: string): Promise<num
     // oxlint-disable-next-line eslint/no-await-in-loop -- polling on purpose
     await Bun.sleep(POLL_INTERVAL_MS);
   }
-  const result = readResult(path.join(paths.runDir, "results"), ticket);
+  const result = readResult(resultsDirectory, ticket);
   if (result === null) {
     console.error(`emet dispatch: ${ticket} exited without a recorded result`);
     return 1;

@@ -17,6 +17,7 @@ import { isObject } from "./narrow";
 import { didReserveTicket } from "./claims";
 import { currentPidNamespace, readCodexState } from "./codex-process";
 import { EXIT_BASE_CHECK_FAILED, EXIT_WAIT_TIMEOUT, run, type DispatchDeps } from "./dispatch";
+import { askQuestion } from "./mailbox";
 import { writeResult } from "./results";
 import { acquireSlot } from "./slots";
 
@@ -246,7 +247,7 @@ describe("dispatch --wait", () => {
   test("prints the recorded result status once the worker exits", async () => {
     await claimAndSlot();
     expect(await run(dispatchArguments(), deps())).toBe(0);
-    writeResult(path.join(repo, ".emet", "runs", RUN, "results"), TICKET, {
+    writeResult(path.join(repo, ".git", ".emet", "runs", RUN, "results"), TICKET, {
       status: "DONE",
       reportPath: "r.md",
       risk: "Risk: none",
@@ -320,7 +321,7 @@ describe("dispatch --wait", () => {
   test("turn.completed in the jsonl ends the wait whatever the pid", async () => {
     const { jsonlPath } = seedForeignWorker();
     appendFileSync(jsonlPath, `${JSON.stringify({ type: "turn.completed" })}\n`);
-    writeResult(path.join(repo, ".emet", "runs", RUN, "results"), TICKET, {
+    writeResult(path.join(repo, ".git", ".emet", "runs", RUN, "results"), TICKET, {
       status: "DONE",
       reportPath: "r.md",
       risk: "Risk: none",
@@ -330,6 +331,55 @@ describe("dispatch --wait", () => {
     expect(log.mock.calls.at(-1)?.[0]).toBe("DONE");
     log.mockRestore();
   });
+
+  function seedLiveWorker(): { sleeper: Bun.Subprocess } {
+    const sleeper = Bun.spawn(["sleep", "30"]);
+    const stateFile = path.join(repo, ".emet", "runs", RUN, "codex", `${TICKET}.state.json`);
+    mkdirSync(path.dirname(stateFile), { recursive: true });
+    writeFileSync(stateFile, JSON.stringify({ pid: sleeper.pid }));
+    return { sleeper };
+  }
+
+  test("reports a question from a live worker instead of waiting or stalling", async () => {
+    const { sleeper } = seedLiveWorker();
+    askQuestion(RUN, TICKET, "which shape?", { commonDirectory: path.join(repo, ".git") });
+    const log = spyOn(console, "log").mockImplementation(() => {});
+    const code = await run([...waitArguments, repo]);
+    const printed = String(log.mock.calls.at(-1)?.[0]);
+    log.mockRestore();
+    sleeper.kill();
+    expect(code).toBe(0);
+    expect(printed).toBe(`question ${TICKET} 1`);
+  });
+
+  test("a done result wins over an open question", async () => {
+    const { sleeper } = seedLiveWorker();
+    askQuestion(RUN, TICKET, "which shape?", { commonDirectory: path.join(repo, ".git") });
+    writeResult(path.join(repo, ".git", ".emet", "runs", RUN, "results"), TICKET, {
+      status: "DONE",
+      reportPath: "r.md",
+      risk: "Risk: none",
+    });
+    const log = spyOn(console, "log").mockImplementation(() => {});
+    const code = await run([...waitArguments, repo]);
+    const printed = String(log.mock.calls.at(-1)?.[0]);
+    log.mockRestore();
+    sleeper.kill();
+    expect(code).toBe(0);
+    expect(printed).toBe("DONE");
+  });
+
+  test.skipIf(currentPidNamespace() === null)(
+    "a silent foreign-namespace worker with an open question is not stalled",
+    async () => {
+      seedForeignWorker();
+      askQuestion(RUN, TICKET, "q", { commonDirectory: path.join(repo, ".git") });
+      const log = spyOn(console, "log").mockImplementation(() => {});
+      expect(await run([...waitArguments, repo])).toBe(0);
+      expect(String(log.mock.calls.at(-1)?.[0])).toBe(`question ${TICKET} 1`);
+      log.mockRestore();
+    },
+  );
 
   test("exits 1 when nothing was dispatched", async () => {
     const errors = spyOn(console, "error").mockImplementation(() => {});

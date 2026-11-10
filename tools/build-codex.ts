@@ -42,6 +42,11 @@ interface Rule {
 
 const SKILLS = ["run", "init", "doctor"] as const;
 
+const COORDINATOR_MAILBOX =
+  " `emet dispatch --wait` prints `question <ticket> <id>` instead of a result status while a live worker has an open " +
+  "question: read `emet inbox --run <runId>`, answer with `emet reply --run <runId> --ticket <ticket> --id <n> --body <text>`, " +
+  "then resume `emet dispatch --wait` for that ticket.";
+
 const COORDINATOR_DISPATCH =
   "For each ticket, after its claim, slot and dispatch record exist, write the filled worker prompt to a file and start the worker with " +
   "`emet dispatch --role worker --run <runId> --ticket <ticket> --prompt-file <file> [--model <model>] [--effort <effort>]`; " +
@@ -49,7 +54,15 @@ const COORDINATOR_DISPATCH =
   "`resolveWorkerModel(config, <ticket's Model: line>)`: the ticket's `Model:` wins, else the `codex` section's worker model; " +
   "pass it as `--model` (and `--effort` where the ticket sets one), otherwise `emet dispatch` resolves it itself. " +
   "`emet dispatch` creates the worktree, locks it, builds the run's Codex home and starts the worker. " +
-  "Collect each result with `emet dispatch --wait --run <runId> --ticket <ticket> [--timeout <seconds>]`, which prints the recorded result status.";
+  "Collect each result with `emet dispatch --wait --run <runId> --ticket <ticket> [--timeout <seconds>]`, which prints the recorded result status." +
+  COORDINATOR_MAILBOX;
+
+const WORKER_ESCALATION =
+  "When you need a decision only the coordinator can make, ask it with " +
+  '`emet ask --run <runId> --ticket <ticket> --body "<question>"`, which prints `{"id":<n>}`. Then poll ' +
+  "`emet ask --run <runId> --ticket <ticket> --wait <n>` until it exits 0 with the reply on stdout: exit 3 means " +
+  "the slice elapsed with no reply yet, so run it again; exit 4 means the wait budget is spent, so write a BLOCKED " +
+  "result with `emet results --write` and exit.";
 
 const PLAN_GATE =
   "`$emet:run` has one approval, enforced by a hook: until `.emet/runs/spec<id>/approval.json` exists, the guard denies every " +
@@ -111,7 +124,7 @@ const RULES: readonly Rule[] = [
   {
     pattern: /Do \*\*not\*\* instruct workers to use `LSP`[\s\S]*?does\s+have `LSP`\./,
     replacement:
-      "Do **not** instruct workers to use `LSP`: it is not available to a Codex worker. A worker that needs a real `findReferences` states the question in its handoff note and the coordinator answers it.",
+      "Do **not** instruct workers to use `LSP`: it is not available to a Codex worker. A worker that needs a real `findReferences` asks the coordinator with `emet ask`.",
   },
   {
     pattern: /The coordinator's own forks[\s\S]*?retry loop on `ListAgents`\./,
@@ -152,7 +165,13 @@ const RULES: readonly Rule[] = [
   { pattern: /`ToolSearch\("select:LSP"\)`/g, replacement: "a tool search for LSP" },
   {
     pattern: /`SendMessage`\s+the coordinator/g,
-    replacement: "ask the coordinator in the handoff note",
+    replacement: "ask the coordinator with `emet ask`",
+  },
+  {
+    pattern: /own\s+—\s+no forks, not even for a quick read-only lookup\./,
+    replacement: `own — no forks, not even for a quick read-only lookup.
+
+${WORKER_ESCALATION}`,
   },
   { pattern: /`TaskStop`'d/g, replacement: "stopped" },
   {

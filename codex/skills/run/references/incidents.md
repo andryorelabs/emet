@@ -84,7 +84,7 @@ worker regardless of the way it is dispatched — it's a
 tool wired into the _main_ (coordinator) session only, and
 a tool search for LSP returns "No matching deferred tools found" from
 inside every worker, every time. This is why workers are told not to call
-a tool search for LSP at all, and to ask the coordinator in the handoff note
+a tool search for LSP at all, and to ask the coordinator with `emet ask`
 instead for a real `findReferences`.
 
 ## The handoff note's 0-of-4 wave
