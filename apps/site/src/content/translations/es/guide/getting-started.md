@@ -2,7 +2,7 @@
 title: Primeros pasos
 description: Instala emet como plugin de Claude Code, comprueba que funciona con emet doctor y ejecútalo por primera vez.
 seoTitle: Primeros pasos con emet
-sourceHash: 381754ac3b3a0479
+sourceHash: 7a918962dca60c10
 ---
 
 Instala emet, comprueba que funciona y ejecútalo por primera vez.
@@ -17,14 +17,14 @@ Claude Code o la CLI de Codex, `git`, `gh` (autenticado) y el plugin `mattpocock
 
 Hay dos formas de instalar.
 
-**Plugin** (sin Bun). Agrega este repositorio como marketplace e instala el plugin `emet`; trae `/emet:run`, los agentes, los hooks de protección y un shim `emet` que descarga un binario independiente con suma de verificación en el primer uso.
+**Plugin** (sin Bun). Agrega este repositorio como marketplace e instala el plugin `emet`. Lo que incluye depende del host del agente. En Claude Code trae `/emet:run`, los agentes, los hooks de protección y un shim `emet` que descarga un binario independiente con suma de verificación en el primer uso.
 
 ```bash
 claude plugin marketplace add andryorelabs/emet
 claude plugin install emet@emet-marketplace
 ```
 
-En Codex, instala el plugin con `codex plugin`; los pasos están en [Ejecutar emet en Codex](codex.md#instalación).
+En Codex, instala el plugin con `codex plugin`; los pasos están en [Ejecutar emet en Codex](codex.md#instalación). El plugin de Codex incluye las skills `$emet:run`, `$emet:init` y `$emet:doctor` y un hook, pero ningún agente ni shim `emet`, así que el `emet` de la terminal proviene de `install.sh`.
 
 **`install.sh`** (funciona con o sin Bun):
 
@@ -36,9 +36,9 @@ cd emet
 
 Con `bun` en el PATH copia el código fuente de la CLI a `~/.claude/emet` y un contenedor `emet` a `~/.local/bin/emet`. Sin `bun` instala en su lugar el shim del binario independiente (`~/.local/bin/emet`, enlazado a `~/.claude/emet/bin/emet`), que descarga y verifica la suma del binario en la primera ejecución (requiere `curl`). En ambos casos los comandos quedan en `~/.claude/commands/emet/` y los agentes en `~/.claude/agents/`; los marcadores de posición del plugin en los prompts se reescriben como rutas simples de `~/.claude`. Volver a ejecutarlo es seguro, y un archivo que hayas editado se conserva, con la nueva versión escrita al lado como `<file>.new`.
 
-Ambas instalaciones te dan tres comandos de barra: `/emet:run`, `/emet:init` y `/emet:doctor`. El comando `emet` en una terminal normal funciona solo después de `install.sh`; de lo contrario, usa los comandos de barra, o `! emet <subcommand>` dentro de una sesión de Claude Code o de Codex. Los nombres de los agentes difieren: `emet:emet-worker` en el plugin, `emet-worker` en la instalación independiente.
+Ambas instalaciones te dan tres puntos de entrada. En Claude Code son los comandos de barra `/emet:run`, `/emet:init` y `/emet:doctor`; en Codex son las skills `$emet:run`, `$emet:init` y `$emet:doctor`, que solo incluye el plugin de Codex (`install.sh` instala los comandos de Claude Code). El comando `emet` en una terminal normal funciona solo después de `install.sh`; de lo contrario, usa los comandos de barra, o `! emet <subcommand>` dentro de una sesión de Claude Code o de Codex. En Claude Code los nombres de los agentes difieren: `emet:emet-worker` en el plugin, `emet-worker` en la instalación independiente; Codex no tiene agentes de emet, porque cada worker es su propio proceso `codex exec`.
 
-Orden recomendado, en cada repositorio: ejecuta primero `/setup-matt-pocock-skills` y luego `emet init`.
+Orden recomendado, en cada repositorio: ejecuta primero la skill `setup-matt-pocock-skills` (`/setup-matt-pocock-skills` en Claude Code; en Codex, la misma skill del plugin `mattpocock-skills` con la sintaxis `$` de Codex) y luego `emet init`.
 
 Verifica que funcionó con `/emet:doctor` dentro de Claude Code (`$emet:doctor` en Codex), o con `emet doctor .` en una terminal después de `install.sh` (`selftest` requiere una instalación desde el código fuente).
 

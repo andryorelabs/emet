@@ -41,7 +41,6 @@ export const zhCN = {
     install: "安装。",
     describe: "描述。",
     land: "看它合并。",
-    tabPlugin: "插件",
     tabClone: "从克隆安装",
     request: "build the Website",
     youType: "你输入",
@@ -92,8 +91,8 @@ export const zhCN = {
       { question: "CI 失败了怎么办？", answer: "这一波会尝试几次修复，然后等你处理。" },
       { question: "如何停止一波？", answer: "给工单打上标记。只要有标记，就不会合并任何内容。" },
       {
-        question: "emet 是 Anthropic 做的吗？",
-        answer: "不是。emet 与 Anthropic 无关联，也未获得 Anthropic 认可。",
+        question: "emet 是 Anthropic 或 OpenAI 做的吗？",
+        answer: "不是。emet 与 Anthropic 或 OpenAI 无关联，也未获得 Anthropic 或 OpenAI 认可。",
       },
     ],
     more: "更多问题",
@@ -118,7 +117,7 @@ export const zhCN = {
   },
   footer: {
     description: "Claude Code 和 Codex 的插件。",
-    notice: "与 Anthropic 无关联，也未获得 Anthropic 认可",
+    notice: "与 Anthropic 或 OpenAI 无关联，也未获得 Anthropic 或 OpenAI 认可",
     docs: "文档",
     whatsNew: "新动态",
     github: "GitHub",

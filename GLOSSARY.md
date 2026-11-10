@@ -1,6 +1,6 @@
 # emet
 
-emet is the `/emet:run` command for Claude Code and Codex CLI plus the `emet` CLI that turns a feature request into a spec, tickets, and parallel worktree agents that implement, test and merge it unattended.
+emet is the `/emet:run` command for Claude Code (`$emet:run` on Codex CLI) plus the `emet` CLI that turns a feature request into a spec, tickets, and parallel worktree agents that implement, test and merge it unattended.
 
 ## Language
 

@@ -2,14 +2,17 @@ import { existsSync } from "node:fs";
 import { stat } from "node:fs/promises";
 import path from "node:path";
 
+import type { AgentHost } from "./agenthost";
 import {
   DEFAULT_FORGE_CONFIG,
+  loadForgeConfig,
   resolveRepoRoot,
   type ForgeConfig,
   type TrackerKind,
 } from "./config";
 import { BINARY, CONFIG_FILE, LEGACY_CONFIG_FILE, LEGACY_PRODUCT, PRODUCT, RUN_DIR } from "./names";
 import {
+  agentHostOfConfig,
   checkDependencies,
   createDependencyProbes,
   findLinearMcpEntry,
@@ -746,6 +749,37 @@ export function parseInitArguments(argv: readonly string[]): InitOptions {
   return { force, trackerOverride: trackerValue ?? null };
 }
 
+/**
+ * The Agent host an existing config selects, read before `--force` rewrites
+ * it; Claude Code when there is no readable config yet.
+ */
+async function resolveInitAgentHost(repoRoot: string): Promise<AgentHost> {
+  const loaded = await loadForgeConfig(repoRoot);
+  return agentHostOfConfig(loaded.status === "ok" ? loaded.config : DEFAULT_FORGE_CONFIG);
+}
+
+/**
+ * The `agentHost` and `codex` keys of an existing config, read raw so
+ * `--force` carries the user's Agent host choice into the rewritten file
+ * instead of silently reverting the repo to Claude Code.
+ */
+async function readPreservedHostKeys(configPath: string): Promise<Record<string, unknown>> {
+  const file = Bun.file(configPath);
+  if (!(await file.exists())) return {};
+  try {
+    const parsed: unknown = await file.json();
+    if (typeof parsed !== "object" || parsed === null) return {};
+    const preserved: Record<string, unknown> = {};
+    for (const key of ["agentHost", "codex"] as const) {
+      const value: unknown = Reflect.get(parsed, key);
+      if (value !== undefined) preserved[key] = value;
+    }
+    return preserved;
+  } catch {
+    return {};
+  }
+}
+
 async function main(options: InitOptions): Promise<void> {
   const repoRoot = await resolveRepoRoot();
   if (!repoRoot) {
@@ -766,6 +800,7 @@ async function main(options: InitOptions): Promise<void> {
     return;
   }
 
+  const agentHost = await resolveInitAgentHost(repoRoot);
   const repoBasename = path.basename(repoRoot);
   const packageManager = await detectPackageManager(repoRoot);
   const detectedTrunk = await detectTrunk(repoRoot);
@@ -798,6 +833,7 @@ async function main(options: InitOptions): Promise<void> {
       "the summary this command printed). `commands` is prose-only (see the " +
       "schema) — the /emet command reads it directly, this CLI never does.",
     ...config,
+    ...(await readPreservedHostKeys(configPath)),
     tracker: buildTrackerConfig(detected),
     commands: { selfCheck: detected.selfCheck },
     worktree: { bootstrap: defaultBootstrap(packageManager) },
@@ -869,7 +905,8 @@ async function main(options: InitOptions): Promise<void> {
   const dependencyChecks = await checkDependencies({
     tracker,
     repoRoot,
-    probes: createDependencyProbes(),
+    host: agentHost,
+    probes: createDependencyProbes(agentHost),
   });
 
   console.log(`emet init — ${repoRoot}`);

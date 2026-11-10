@@ -2,7 +2,7 @@
 title: 快速开始
 description: 将 emet 安装为 Claude Code 插件，用 emet doctor 确认其可用，并首次运行。
 seoTitle: emet 快速开始
-sourceHash: 381754ac3b3a0479
+sourceHash: 7a918962dca60c10
 ---
 
 安装 emet，确认其可以正常工作，并首次运行。
@@ -17,14 +17,14 @@ sourceHash: 381754ac3b3a0479
 
 有两种安装方式。
 
-**插件**（无需 Bun）。将本仓库添加为市场，然后安装 `emet` 插件；它会带来 `/emet:run`、各个代理、守卫钩子，以及一个 `emet` shim，该 shim 会在首次使用时下载经过校验和验证的独立二进制文件。
+**插件**（无需 Bun）。将本仓库添加为市场，然后安装 `emet` 插件。它包含什么取决于 Agent 宿主。在 Claude Code 上，它会带来 `/emet:run`、各个代理、守卫钩子，以及一个 `emet` shim，该 shim 会在首次使用时下载经过校验和验证的独立二进制文件。
 
 ```bash
 claude plugin marketplace add andryorelabs/emet
 claude plugin install emet@emet-marketplace
 ```
 
-在 Codex 上，用 `codex plugin` 安装插件；步骤见[在 Codex 上运行 emet](codex.md#安装)。
+在 Codex 上，用 `codex plugin` 安装插件；步骤见[在 Codex 上运行 emet](codex.md#安装)。Codex 插件提供 `$emet:run`、`$emet:init` 和 `$emet:doctor` 技能以及一个钩子，但没有代理，也没有 `emet` shim，因此终端里的 `emet` 来自 `install.sh`。
 
 **`install.sh`**（有无 Bun 均可使用）：
 
@@ -36,9 +36,9 @@ cd emet
 
 如果 PATH 中有 `bun`，它会把 CLI 源码复制到 `~/.claude/emet`，并把 `emet` 包装脚本复制到 `~/.local/bin/emet`。如果没有 `bun`，则改为安装独立二进制文件的 shim（`~/.local/bin/emet`，链接到 `~/.claude/emet/bin/emet`），它会在首次运行时下载二进制文件并验证校验和（需要 `curl`）。无论哪种方式，命令都会放到 `~/.claude/commands/emet/`，代理放到 `~/.claude/agents/`；提示词中的插件占位符会被改写为普通的 `~/.claude` 路径。重复运行是安全的，你编辑过的文件会被保留，新版本则写在旁边，命名为 `<file>.new`。
 
-两种安装方式都会提供三个斜杠命令：`/emet:run`、`/emet:init` 和 `/emet:doctor`。普通终端中的 `emet` 命令只有在运行 `install.sh` 之后才可用；否则请使用斜杠命令，或在 Claude Code 或 Codex 会话中使用 `! emet <subcommand>`。代理名称不同：插件中是 `emet:emet-worker`，独立安装中是 `emet-worker`。
+两种安装方式都会提供三个入口。在 Claude Code 上是斜杠命令 `/emet:run`、`/emet:init` 和 `/emet:doctor`；在 Codex 上是 `$emet:run`、`$emet:init` 和 `$emet:doctor` 技能，只有 Codex 插件才提供它们（`install.sh` 安装的是 Claude Code 命令）。普通终端中的 `emet` 命令只有在运行 `install.sh` 之后才可用；否则请使用斜杠命令，或在 Claude Code 或 Codex 会话中使用 `! emet <subcommand>`。在 Claude Code 上，代理名称不同：插件中是 `emet:emet-worker`，独立安装中是 `emet-worker`。Codex 没有 emet 代理，因为每个 worker 都是各自独立的 `codex exec` 进程。
 
-建议在每个仓库中按此顺序操作：先运行 `/setup-matt-pocock-skills`，再运行 `emet init`。
+建议在每个仓库中按此顺序操作：先运行 `setup-matt-pocock-skills` 技能（在 Claude Code 上是 `/setup-matt-pocock-skills`；在 Codex 上，用 Codex 的 `$` 语法运行 `mattpocock-skills` 插件中的同一技能），再运行 `emet init`。
 
 可以在 Claude Code 中用 `/emet:doctor`（Codex 上用 `$emet:doctor`）验证，或在 `install.sh` 之后在终端中运行 `emet doctor .`（`selftest` 需要源码安装）。
 

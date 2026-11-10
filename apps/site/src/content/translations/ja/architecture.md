@@ -2,7 +2,7 @@
 title: アーキテクチャ
 description: emet/src のコードマップと、/emet のプロンプトがそれをどのように動かすかを説明します。
 seoTitle: emet のアーキテクチャ
-sourceHash: c86098a9614756e9
+sourceHash: ff28425abc92b5c9
 ---
 
 `emet/src` のコードマップと、`/emet` のプロンプトがそれをどのように動かすかを説明します。用語は [GLOSSARY.md](../GLOSSARY.md) に従います。この構成の背景にある決定は [docs/adr](adr/README.md) にあります。問題が起きた場合は、[トラブルシューティング](troubleshooting.md)を参照してください。
@@ -16,7 +16,7 @@ sourceHash: c86098a9614756e9
 
 ## 構成
 
-構成は 2 つの部分からなります。プロンプト（`commands/run.md`、`agents/*.md`、`emet/reference/*.md`）は、各フェーズでエージェントが何をすべきかを伝えます。`emet` CLI（`emet/bin/emet.ts` と `emet/src/`）は、決定的でなければならないすべてのこと、つまりチェック、クレーム、スロット、ゲート、トラッカーへの書き込み、ランディングを担います。プロンプトが、CLI がすでに行っているチェックを再実装することはありません。
+構成は 2 つの部分からなります。プロンプト（`commands/run.md`、`agents/*.md`、`emet/reference/*.md`、および Codex 向けに生成される `codex/skills/**` と `codex/hooks.json`）は、各フェーズでエージェントが何をすべきかを伝えます。`emet` CLI（`emet/bin/emet.ts` と `emet/src/`）は、決定的でなければならないすべてのこと、つまりチェック、クレーム、スロット、ゲート、トラッカーへの書き込み、ランディングを担います。プロンプトが、CLI がすでに行っているチェックを再実装することはありません。
 
 `emet/bin/emet.ts` は薄いディスパッチャーです。最初の引数を読み取り、1 つのサブコマンドモジュールに処理を渡し、そのモジュールが残りの `process.argv` を自分で読み取ります。終了コードは、サブコマンド全体で意味が共通です。
 
@@ -52,11 +52,11 @@ sourceHash: c86098a9614756e9
 
 ## プロンプトの配置
 
-`commands/run.md`（約 130 行）が `/emet` のルーターです。`emet/reference/` の各ファイルは 1 つのフェーズグループ（`phases-1-5.md`、`phases-6-7-dispatch.md`、`phases-8-closeout.md`、`phases-9-handoff.md`）で、現在の実行のモードが必要とするときにだけ読み込まれます。いずれかが 20,000 バイトを超えるとテストが失敗するため、1 つのファイルがコンパクション後のコンテキストを占有することはありません。フェーズは、修正やレビューの各ラウンドの前に、該当するセクションを読み直すようコーディネーターに指示します。`install.sh` は、古い単一の `phases-6-9.md` を、編集されている場合やインストールマニフェストより前のものである場合は `phases-6-9.md.retired` として脇に移し、そうでなければ削除します。また `install.sh` は、`emet guard` を `PreToolUse` フックとして `~/.claude/settings.json` に組み込みます。
+`commands/run.md`（約 130 行）が Claude Code での `/emet` のルーターで、Codex ではその役割を生成された `codex/skills/**` と `codex/hooks.json` が担います。`emet/reference/` の各ファイルは 1 つのフェーズグループ（`phases-1-5.md`、`phases-6-7-dispatch.md`、`phases-8-closeout.md`、`phases-9-handoff.md`）で、現在の実行のモードが必要とするときにだけ読み込まれます。いずれかが 20,000 バイトを超えるとテストが失敗するため、1 つのファイルがコンパクション後のコンテキストを占有することはありません。フェーズは、修正やレビューの各ラウンドの前に、該当するセクションを読み直すようコーディネーターに指示します。`install.sh` は、古い単一の `phases-6-9.md` を、編集されている場合やインストールマニフェストより前のものである場合は `phases-6-9.md.retired` として脇に移し、そうでなければ削除します。また `install.sh` は、`emet guard` を `PreToolUse` フックとして `~/.claude/settings.json` に組み込みます。
 
 ## 配布
 
-`install.sh` は `emet/` を `~/.claude/emet` にコピーし、プロンプトを書き換えます。プラグインの経路では、`tools/build-binaries.ts` がビルドしたチェックサム検証済みのスタンドアロンバイナリをダウンロードするシムが提供されます。[ADR-0008](adr/0008-standalone-binaries-and-plugin-distribution.md) を参照してください。
+`install.sh` は `emet/` を `~/.claude/emet` にコピーし、プロンプトを書き換えます。Codex プラグインは `.codex-plugin/plugin.json` で記述され、`codex/skills/**` および `codex/hooks.json` とともに `bun run build:codex` で生成されます。Claude Code のプラグインの経路では、`tools/build-binaries.ts` がビルドしたチェックサム検証済みのスタンドアロンバイナリをダウンロードするシムが提供されます。[ADR-0008](adr/0008-standalone-binaries-and-plugin-distribution.md) を参照してください。
 
 ## 関連項目
 

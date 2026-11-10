@@ -2,7 +2,7 @@
 title: 아키텍처
 description: emet/src의 코드 맵과 /emet 프롬프트가 이를 어떻게 구동하는지 설명합니다.
 seoTitle: emet 아키텍처
-sourceHash: c86098a9614756e9
+sourceHash: ff28425abc92b5c9
 ---
 
 `emet/src`의 코드 맵과 `/emet` 프롬프트가 이를 어떻게 구동하는지 설명합니다. 용어는 [GLOSSARY.md](../GLOSSARY.md)를 따르며, 이 구조의 배경이 된 결정은 [docs/adr](adr/README.md)에 있습니다. 문제가 생기면 [문제 해결](troubleshooting.md)을 참고하세요.
@@ -16,7 +16,7 @@ sourceHash: c86098a9614756e9
 
 ## 구조
 
-두 부분으로 이루어져 있습니다. 프롬프트(`commands/run.md`, `agents/*.md`, `emet/reference/*.md`)는 각 단계에서 에이전트가 무엇을 해야 하는지 알려 줍니다. `emet` CLI(`emet/bin/emet.ts`와 `emet/src/`)는 결정적이어야 하는 모든 일, 즉 점검, 클레임, 슬롯, 게이트, 트래커 쓰기, 랜딩을 처리합니다. 프롬프트는 CLI가 이미 수행하는 점검을 다시 구현하지 않습니다.
+두 부분으로 이루어져 있습니다. 프롬프트(`commands/run.md`, `agents/*.md`, `emet/reference/*.md`, 그리고 Codex용으로 생성되는 `codex/skills/**`와 `codex/hooks.json`)는 각 단계에서 에이전트가 무엇을 해야 하는지 알려 줍니다. `emet` CLI(`emet/bin/emet.ts`와 `emet/src/`)는 결정적이어야 하는 모든 일, 즉 점검, 클레임, 슬롯, 게이트, 트래커 쓰기, 랜딩을 처리합니다. 프롬프트는 CLI가 이미 수행하는 점검을 다시 구현하지 않습니다.
 
 `emet/bin/emet.ts`는 얇은 디스패처입니다. 첫 번째 인자를 읽고 하위 명령 모듈 하나에 넘기며, 그 모듈이 나머지 `process.argv`를 직접 읽습니다. 종료 코드는 모든 하위 명령에서 같은 의미를 가집니다.
 
@@ -52,11 +52,11 @@ sourceHash: c86098a9614756e9
 
 ## 프롬프트 배치
 
-`commands/run.md`(약 130줄)가 `/emet` 라우터입니다. `emet/reference/`의 각 파일은 단계 그룹 하나(`phases-1-5.md`, `phases-6-7-dispatch.md`, `phases-8-closeout.md`, `phases-9-handoff.md`)이며, 현재 실행의 모드가 필요로 할 때만 불러옵니다. 어느 하나라도 20,000바이트를 넘으면 테스트가 실패하므로, 파일 하나가 컴팩션 이후의 컨텍스트를 차지할 수 없습니다. 각 단계는 수정이나 리뷰 라운드 전에 코디네이터가 관련 섹션을 다시 읽도록 안내합니다. `install.sh`는 예전의 단일 `phases-6-9.md`를, 직접 수정했거나 설치 매니페스트보다 오래된 경우에는 `phases-6-9.md.retired`로 옆에 옮겨 두고, 그렇지 않으면 삭제합니다. 또한 `install.sh`는 `emet guard`를 `PreToolUse` 훅으로 `~/.claude/settings.json`에 연결합니다.
+`commands/run.md`(약 130줄)가 Claude Code에서 `/emet` 라우터이며, Codex에서는 생성된 `codex/skills/**`와 `codex/hooks.json`이 그 역할을 합니다. `emet/reference/`의 각 파일은 단계 그룹 하나(`phases-1-5.md`, `phases-6-7-dispatch.md`, `phases-8-closeout.md`, `phases-9-handoff.md`)이며, 현재 실행의 모드가 필요로 할 때만 불러옵니다. 어느 하나라도 20,000바이트를 넘으면 테스트가 실패하므로, 파일 하나가 컴팩션 이후의 컨텍스트를 차지할 수 없습니다. 각 단계는 수정이나 리뷰 라운드 전에 코디네이터가 관련 섹션을 다시 읽도록 안내합니다. `install.sh`는 예전의 단일 `phases-6-9.md`를, 직접 수정했거나 설치 매니페스트보다 오래된 경우에는 `phases-6-9.md.retired`로 옆에 옮겨 두고, 그렇지 않으면 삭제합니다. 또한 `install.sh`는 `emet guard`를 `PreToolUse` 훅으로 `~/.claude/settings.json`에 연결합니다.
 
 ## 배포
 
-`install.sh`는 `emet/`를 `~/.claude/emet`에 복사하고 프롬프트를 다시 씁니다. 플러그인 경로는 `tools/build-binaries.ts`가 빌드한 체크섬 검증 독립 실행형 바이너리를 내려받는 심을 제공합니다. [ADR-0008](adr/0008-standalone-binaries-and-plugin-distribution.md)을 참고하세요.
+`install.sh`는 `emet/`를 `~/.claude/emet`에 복사하고 프롬프트를 다시 씁니다. Codex 플러그인은 `.codex-plugin/plugin.json`으로 기술되며, `codex/skills/**`, `codex/hooks.json`과 함께 `bun run build:codex`로 생성됩니다. Claude Code 플러그인 경로는 `tools/build-binaries.ts`가 빌드한 체크섬 검증 독립 실행형 바이너리를 내려받는 심을 제공합니다. [ADR-0008](adr/0008-standalone-binaries-and-plugin-distribution.md)을 참고하세요.
 
 ## 함께 보기
 

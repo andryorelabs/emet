@@ -2,12 +2,12 @@
 title: Справочник по конфигурации
 description: Каждый ключ emet.config.json со значением по умолчанию и смыслом.
 seoTitle: Справочник по конфигурации emet
-sourceHash: e234cb9ad3468e98
+sourceHash: ec827dfcb8627f5c
 ---
 
 Каждый ключ `emet.config.json` со значением по умолчанию и смыслом. Источник истины — [`emet/schema/emet.config.schema.json`](../../emet/schema/emet.config.schema.json). Термины соответствуют [GLOSSARY.md](../../GLOSSARY.md). Назад к [README](../../README.md).
 
-`emet init` записывает файл. `emet preflight` и `emet doctor` проверяют его. Ключ с пометкой prose-only читают промпты `/emet`, а не CLI. Ключ с пометкой deprecated по-прежнему принимается. Схема также допускает свободный текстовый ключ `"//"` для заметок (его не читает ни один инструмент) и `"version"`, который всегда равен `1`.
+`emet init` записывает файл. `emet preflight` и `emet doctor` проверяют его. Ключ с пометкой prose-only читают промпты `/emet` (в Codex — навыки `$emet:*`), а не CLI. Ключ с пометкой deprecated по-прежнему принимается. Схема также допускает свободный текстовый ключ `"//"` для заметок (его не читает ни один инструмент) и `"version"`, который всегда равен `1`.
 
 ## pr
 
@@ -37,15 +37,15 @@ sourceHash: e234cb9ad3468e98
 
 - `maxLines` (по умолчанию `60`): наибольшее число строк в заметке `.emet/handoff-<ticket>.md`, после которого `emet handoff --check` её отклоняет.
 - `maxChars` (по умолчанию `8000`, около 2k токенов): наибольшее число символов в заметке передачи.
-- `autoChain` (по умолчанию `false`): после чистой, слитой волны, если остались ещё волны, запустить следующую через `claude --bg` вместо вывода `/emet:run --dispatch <spec-id>`. Посмотреть её можно через `claude agents` или `claude attach emet-<spec-id>-w<n>`. Требования:
+- `autoChain` (по умолчанию `false`): после чистой, слитой волны, если остались ещё волны, запустить следующую вместо вывода `/emet:run --dispatch <spec-id>` (`$emet:run --dispatch <spec-id>` в Codex). В Claude Code запуск выполняется через `claude --bg`; на хосте Codex это отсоединённый `codex exec`, которому нужен `codex` версии `codex.minVersion` или новее. Требования ниже относятся к Claude Code. Посмотреть её можно через `claude agents` или `claude attach emet-<spec-id>-w<n>`. Требования:
   1. `claude` в PATH с поддержкой `--bg`.
   2. Доверенное рабочее пространство. `--bg` работает неинтерактивно, поэтому диалог доверия не показывается; один раз откройте `claude` интерактивно в репозитории и подтвердите его.
   3. Предупреждение об обходе, один раз принятое в интерактивной сессии (`skipDangerousModePermissionPrompt`), поскольку следующая волна выполняется в `handoff.permissionMode`, а не в режиме запускающей сессии.
 
   Запуск происходит, только если PR слит и ничего не помечено, и пропускается, если сессия `emet-<spec-id>-*` уже активна (`claude agents --json`). Если запуск не удался, выводится `/emet:run --dispatch <spec-id>`.
 
-- `launcher` (по умолчанию `auto`, одно из `auto`, `orca`, `bg`): дополнительно открыть волну во вкладке Orca, выполняющей `claude attach`. `auto` опрашивает среду выполнения Orca (`orca status`), поэтому работает и из сессий `claude --bg`, у которых нет `TERM_PROGRAM`; `orca` пробует всегда; `bg` — никогда. В любом случае волна работает в фоне, а вкладка, которую не удалось открыть, никогда не останавливает цепочку. `emet launch <spec-id> --wave <n>` выполняет запуск целиком; см. [`emet launch`](cli.md#запуски-воркеры-и-слоты).
-- `permissionMode` (по умолчанию `bypassPermissions`, одно из `bypassPermissions`, `auto`, `acceptEdits`): режим разрешений цепочечной сессии. Он не наследуется от запускающей сессии, потому что классификатор режима `auto` может отклонить шаг вроде `gh pr merge` и оставить волну недоделанной. Ваши правила `permissions.deny` по-прежнему действуют, но предупреждение об обходе нужно один раз принять интерактивно (`skipDangerousModePermissionPrompt`).
+- `launcher` (по умолчанию `auto`, одно из `auto`, `orca`, `bg`): только для Claude Code; на хосте Codex игнорируется, `emet launch` там не открывает вкладку Orca. Дополнительно открыть волну во вкладке Orca, выполняющей `claude attach`. `auto` опрашивает среду выполнения Orca (`orca status`), поэтому работает и из сессий `claude --bg`, у которых нет `TERM_PROGRAM`; `orca` пробует всегда; `bg` — никогда. В любом случае волна работает в фоне, а вкладка, которую не удалось открыть, никогда не останавливает цепочку. `emet launch <spec-id> --wave <n>` выполняет запуск целиком; см. [`emet launch`](cli.md#запуски-воркеры-и-слоты).
+- `permissionMode` (по умолчанию `bypassPermissions`, одно из `bypassPermissions`, `auto`, `acceptEdits`): только для Claude Code; на хосте Codex игнорируется, цепочечная сессия использует [`codex.sandbox`](#codex). Режим разрешений цепочечной сессии. Он не наследуется от запускающей сессии, потому что классификатор режима `auto` может отклонить шаг вроде `gh pr merge` и оставить волну недоделанной. Ваши правила `permissions.deny` по-прежнему действуют, но предупреждение об обходе нужно один раз принять интерактивно (`skipDangerousModePermissionPrompt`).
 
 ## budgets
 
@@ -61,7 +61,7 @@ sourceHash: e234cb9ad3468e98
 
 ## models
 
-Модель и усилие для каждой роли. Каждый ключ необязателен; если раздел опущен, остаются воркер `sonnet`/`medium` и ревьюер `opus`/`medium`. Усилие — одно из `low`, `medium`, `high`, `xhigh`, `max`.
+Модель и усилие для каждой роли на хосте Claude Code; хост Codex вместо этого читает [`codex.models`](#codex). Каждый ключ необязателен; если раздел опущен, остаются воркер `sonnet`/`medium` и ревьюер `opus`/`medium`. Усилие — одно из `low`, `medium`, `high`, `xhigh`, `max`.
 
 ```json
 {
@@ -92,7 +92,7 @@ sourceHash: e234cb9ad3468e98
 - `models.worker`, `models.workerOverride`, `models.reviewer.medium`, `models.reviewer.high`, `models.triage`: каждый имеет вид `{ "model", "effort", "fallback" }`. `fallback` перечисляет слаги, которые пробуются по порядку, когда `model` нет в кэше моделей Codex. Значения по умолчанию — в разделе [Модели и усилие](../guide/models-and-effort.md).
 - `models.session`: `{ "model", "effort", "planEffort", "fallback" }` для сессии, которая выполняет `$emet:run`. `planEffort` действует до первого одобрения.
 - `effort`: если задан, заменяет усилие всех ролей.
-- `minVersion` (по умолчанию `0.167.0`): самая старая версия CLI `codex`, которую принимает `emet doctor`.
+- `minVersion` (по умолчанию `0.167.0`): самая старая версия CLI `codex`, которую поддерживает emet. `emet doctor` не сравнивает с ней установленную версию.
 - `sandbox` (по умолчанию `danger-full-access`): режим песочницы, который передают как `-s` команды `emet dispatch`, `emet review-run` и `emet launch` для Codex. `workspace-write` тоже допустим, но делает `.git` доступным только для чтения, поэтому воркеры не могут делать коммиты. При любом значении `emet guard` отклоняет `git push` на Codex, а генерируемый `config.toml` оверлея содержит только маркетплейс и плагин emet, таблицы trusted для собственных каталогов прогона и выбранные модель и усилие (но не ваши собственные таблицы). См. [руководство по Codex](../guide/codex.md) и [ADR-0022](../adr/0022-codex-workers-run-unsandboxed-by-default.md).
 
 ## review
@@ -109,7 +109,7 @@ sourceHash: e234cb9ad3468e98
 
 ## tracker
 
-С каким трекером задач работает `/emet`. CLI читает `kind`, чтобы решить, какие проверки зависимостей применимы; остальное описывает адаптер, которому следует команда `/emet` (см. [`docs/agents/issue-tracker.md`](../agents/issue-tracker.md)).
+С каким трекером задач работает `/emet` (или `$emet` в Codex). CLI читает `kind`, чтобы решить, какие проверки зависимостей применимы; остальное описывает адаптер, которому следует команда `/emet` (см. [`docs/agents/issue-tracker.md`](../agents/issue-tracker.md)).
 
 - `kind` (обязателен): `linear`, `github` или `local`. Для `local` см. [Локальный трекер](cli.md#локальный-трекер) и [ADR-0011](../adr/0011-local-tracker-scratch-convention.md).
 - `transitions.onStart`, `transitions.onPrOpen`, `transitions.onPrMerge`: кто записывает каждый переход состояния тикета: `worker`, `coordinator` или `automatic` (это делает интеграция трекера, например интеграция Linear с GitHub при открытии или слиянии PR). Координатор никогда не записывает переход с пометкой `automatic`.

@@ -1,6 +1,8 @@
 # Models and effort
 
-`/emet` picks a model and a reasoning effort per role automatically; there is nothing to switch by hand mid-run. Every key is in the [configuration reference](../reference/configuration.md#models).
+`/emet` picks a model and a reasoning effort per role automatically; there is nothing to switch by hand mid-run. The first sections describe the Claude Code host; the [Codex host](#codex-host) has its own defaults. Every Claude Code key is in the [configuration reference](../reference/configuration.md#models).
+
+## Claude Code host
 
 | Role                                           | Model                  | Effort              | Set by                                      |
 | ---------------------------------------------- | ---------------------- | ------------------- | ------------------------------------------- |
@@ -12,7 +14,7 @@
 | Review, `high` tier (risky paths or sinks)     | Opus                   | `medium` by default | `models.reviewer.high`                      |
 | CI-log triage (Phase 8)                        | Haiku                  | —                   | `models.triage`                             |
 
-The two agent definitions (installed by `install.sh` to `~/.claude/agents/`) pin their own `model`/`effort` in frontmatter, so the coordinator's own model/effort choice never leaks into a worker or the reviewer. `emet doctor` reports (never blocks on) either file going missing. `emet preflight` does block dispatch when `emet-worker` or `emet-reviewer` is missing, because Phase 6 and Phase 8 dispatch by `subagent_type`.
+On Claude Code, the two agent definitions (installed by `install.sh` to `~/.claude/agents/`) pin their own `model`/`effort` in frontmatter, so the coordinator's own model/effort choice never leaks into a worker or the reviewer. `emet doctor` reports (never blocks on) either file going missing. `emet preflight` does block dispatch when `emet-worker` or `emet-reviewer` is missing, because Phase 6 and Phase 8 dispatch by `subagent_type`.
 
 ## Risk-tier routing
 
@@ -26,11 +28,11 @@ A ticket that touches high-risk paths can carry a `Model:` line (for example `Mo
 
 ## Haiku triage
 
-The coordinator never reads a CI log whole. A failing check is handed to an agent on `models.triage` (default `haiku`), which returns at most about 2k tokens with `file:line` pointers for the fix.
+On Claude Code, the coordinator never reads a CI log whole. A failing check is handed to an agent on `models.triage` (default `haiku`), which returns at most about 2k tokens with `file:line` pointers for the fix.
 
 ## Config
 
-Every key is optional, and the defaults reproduce the table above:
+These are the Claude Code `models` keys. Every key is optional, and the defaults reproduce the Claude Code table above:
 
 ```json
 {
@@ -73,11 +75,11 @@ The real-Codex run in the [probe report](../research/codex-probe-report.md) used
 
 ## Why a single reviewer
 
-Why a single fresh-context reviewer instead of a multi-angle fan-out: no public benchmark compares the two directly, but a fan-out re-reads the whole diff once per angle and has hung for over an hour in this repo, while Anthropic and third-party reports on Opus-tier models suggest the model upgrade buys as much as the extra angles would. For a high-stakes wave, run `/code-review ultra` by hand afterward; `/emet` never dispatches that on its own.
+Why a single fresh-context reviewer instead of a multi-angle fan-out: no public benchmark compares the two directly, but a fan-out re-reads the whole diff once per angle and has hung for over an hour in this repo, while Anthropic and third-party reports on Opus-tier models suggest the model upgrade buys as much as the extra angles would. For a high-stakes wave on Claude Code, run `/code-review ultra` by hand afterward; `/emet` never dispatches that on its own. `/code-review ultra` is a Claude Code command; this page documents no Codex equivalent.
 
-## What you set once, yourself
+## What you set once, yourself (Claude Code)
 
-`/emet` can't switch these mid-run:
+On the Claude Code host, `/emet` can't switch these mid-run. They live in Claude Code's `~/.claude/settings.json`; the Codex host does not read that file, and its models come from the `codex` section above.
 
 - `model: "opusplan"` in `~/.claude/settings.json`: this is what makes Phases 1–4 run on Opus and Phase 5 onward run on Sonnet, with no `/model` needed. `emet doctor` warns (never edits your settings) if it's unset.
 - A session effort of `medium` or `high` rather than `xhigh`: the workers and reviewer already carry their own effort regardless of yours, and a high global default mostly adds cost to the coordinator's own turns (dispatch bookkeeping, merges, reports) that don't need it.

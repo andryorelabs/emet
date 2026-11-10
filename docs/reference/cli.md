@@ -4,7 +4,7 @@ Every `emet` subcommand, the gates and records table, exit codes and environment
 
 ## Subcommands
 
-Three slash commands wrap the CLI inside Claude Code: `/emet:run` (the pipeline), `/emet:init` (`emet init`) and `/emet:doctor` (`emet doctor .`). A plain-terminal `emet` needs `install.sh`; otherwise run `! emet <subcommand>` inside a session.
+Three slash commands wrap the CLI inside Claude Code: `/emet:run` (the pipeline), `/emet:init` (`emet init`) and `/emet:doctor` (`emet doctor .`). On Codex they are the `$emet:run`, `$emet:init` and `$emet:doctor` skills. A plain-terminal `emet` needs `install.sh`; otherwise run `! emet <subcommand>` inside a session.
 
 `emet <command> [...args]`. `emet --version` prints the version.
 
@@ -26,7 +26,7 @@ emet preflight      # confirms the repo is dispatch-ready
 
 `emet init` leaves a `TODO(emet):` marker in the generated `docs/agents/*.md` files for anything it cannot infer on its own (a shared test-database lock, schema ownership, and so on). Fill those in; `emet preflight` refuses to dispatch while one remains.
 
-Then, inside Claude Code:
+Then, inside Claude Code (on Codex, use `$emet:run` with the same arguments):
 
 ```text
 /emet:run <describe the feature>              # interview → wave 1; later waves via --dispatch/autoChain
@@ -42,7 +42,7 @@ Then, inside Claude Code:
 emet doctor ~/code/*
 ```
 
-It reports, per repo: a valid `emet.config.json`, all four `docs/agents/*.md` files present, zero leftover `TODO(emet):` markers, whether the commands in `commands.selfCheck` actually resolve, and that repo's tracker-specific dependency findings (`gh`, Linear; see [dependencies](dependencies.md#what-checks-what)). The mattpocock-skills plugin and the external CLI flags (`gh`, `claude --bg`, `claude agents --json`, checked via `--help`) are checked once for the whole sweep, not per repo.
+It reports, per repo: a valid `emet.config.json`, all four `docs/agents/*.md` files present, zero leftover `TODO(emet):` markers, whether the commands in `commands.selfCheck` actually resolve, and that repo's tracker-specific dependency findings (`gh`, Linear; see [dependencies](dependencies.md#what-checks-what)). The mattpocock-skills plugin and the external CLI flags (`gh`, plus the Agent host's: `claude --bg` and `claude agents --json` on Claude Code, `codex exec --json` and `--output-schema` on Codex, checked via `--help`) are checked once for the whole sweep, not per repo.
 
 ### Runs, workers and slots
 
@@ -50,7 +50,7 @@ It reports, per repo: a valid `emet.config.json`, all four `docs/agents/*.md` fi
 - `emet slots --acquire --run <id> --anchor <pid> --ticket <ticket>`: takes a worker slot from the host-wide pool in `~/.local/state/emet/slots`. `--release --run <id>`, `--release-index <index>` and `--list` free slots or list them.
 - `emet cleanup [--run <id> | --all] [--dry-run] [--force]`: bare, reclaims closed or dead runs whose work landed; `--run` cleans this run; `--all` is a repo-wide branch sweep. After a merge, `emet cleanup --run <runId>` frees the wave's branches, ticket claims and worker slots.
 - `emet lock-reason --run <id> --ticket <ticket> [--anchor <pid>]`: prints the `git worktree lock` reason a worker writes at bootstrap.
-- `emet launch <spec-id> --wave <n>`: starts a wave as a `claude --bg` session and opens its Orca tab per `handoff.launcher`. It does the whole launch (duplicate-session check, `claude --bg`, tab) and prints `{ name, id, attach, orcaTab: { opened, reason } }`. Use it, not a bare `claude --bg`, whenever you want a wave in another session by hand.
+- `emet launch <spec-id> --wave <n>`: on Claude Code, starts a wave as a `claude --bg` session and opens its Orca tab per `handoff.launcher` (on Codex see [Codex host](#codex-host)). It does the whole launch (duplicate-session check, `claude --bg`, tab) and prints `{ name, id, attach, orcaTab: { opened, reason } }`. Use it, not a bare `claude --bg`, whenever you want a wave in another session by hand.
 - `emet status [--spec <id>]`: Working / Checking / Ready / Needs-decision per wave as JSON plus a summary line. `emet status --help` documents the JSON.
 - `emet usage [--session <id> | --file <path>] [--stalled [--minutes N]] [--project-dir <path>]`: reports session usage; `--stalled` lists stalled workers.
 - `emet handoff --check <path> | --render <path>`: validates or renders a worker's `.emet/handoff-<ticket>.md` note.
@@ -66,7 +66,7 @@ It reports, per repo: a valid `emet.config.json`, all four `docs/agents/*.md` fi
 - `emet spec-merge --spec <id>`: after a wave auto-merges, merges the spec's `ADDED`/`MODIFIED`/`REMOVED` requirement deltas into `docs/specs/<area>.md` (`specs.dir`). It checks every area before writing anything. A conflict, or a requirement that would lose a scenario, exits 1 and leaves every file untouched.
 - `emet map [--refresh]`: writes a brief of an existing codebase (stack, structure, conventions, testing, hotspots) to `docs/agents/codebase.md` (`map.path`), stamped with the commit SHA it was built from. The same commit always produces the same file. `emet map --stale` exits 1 once HEAD has moved past the stamp, and `emet preflight` warns in that case. `emet map --for <globs>` prints only the sections that match a ticket's edit surfaces; that output is the only part of the map a worker brief includes.
 - `emet tracker create-spec|create-ticket|read|frontier|set-state|comment|close`: the local tracker over `.scratch/`, JSON on stdout. See [Local tracker](#local-tracker).
-- `emet guard`: the Claude Code `PreToolUse` hook; reads hook JSON on stdin. `install.sh` wires it into `~/.claude/settings.json`. It blocks a handful of known, unattended-run failure triggers (see `emet/src/guard.ts`).
+- `emet guard`: the Claude Code `PreToolUse` hook; reads hook JSON on stdin (the Codex form is under [Codex host](#codex-host)). `install.sh` wires it into `~/.claude/settings.json`. It blocks a handful of known, unattended-run failure triggers (see `emet/src/guard.ts`).
 
 ### Local tracker
 

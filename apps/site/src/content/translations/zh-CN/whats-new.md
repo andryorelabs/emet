@@ -2,8 +2,23 @@
 title: 新功能
 description: emet 的发布说明：每个版本都有哪些变化。
 seoTitle: "emet 新功能：发布说明"
-sourceHash: 865aee0375b56c7a
+sourceHash: e658e982cb203285
 ---
+
+## 0.5.2
+
+2026-11-10
+
+### 变更
+
+- 不隶属声明现在除 Anthropic 外也写明了 OpenAI。
+- 主页的安装标签页改称 Claude Code，运行命令新增了显示 `$emet:run` 的 Codex 标签页。
+- 指南标明了每个步骤适用于哪个 Agent host：Claude Code 或 Codex。
+
+### 修复
+
+- 在 Codex 主机上，`emet doctor`、`emet init`、`emet dependencies` 和 `emet preflight` 不再给出仅适用于 Claude Code 的建议。
+- `emet init --force` 会保留现有配置中的 `agentHost` 和 `codex` 部分。
 
 ## 0.5.1
 

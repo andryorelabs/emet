@@ -40,7 +40,6 @@ export const ko = {
     install: "설치하세요.",
     describe: "설명하세요.",
     land: "머지되는 것을 지켜보세요.",
-    tabPlugin: "플러그인",
     tabClone: "클론에서",
     request: "build the Website",
     youType: "입력",
@@ -103,8 +102,9 @@ export const ko = {
         answer: "티켓에 플래그를 지정하세요. 플래그가 있는 동안에는 아무것도 병합되지 않습니다.",
       },
       {
-        question: "emet은 Anthropic이 만들었나요?",
-        answer: "아니요. emet은 Anthropic과 제휴하거나 Anthropic의 보증을 받지 않았습니다.",
+        question: "emet은 Anthropic 또는 OpenAI가 만들었나요?",
+        answer:
+          "아니요. emet은 Anthropic 또는 OpenAI와 제휴하거나 Anthropic 또는 OpenAI의 보증을 받지 않았습니다.",
       },
     ],
     more: "더 많은 질문",
@@ -129,7 +129,7 @@ export const ko = {
   },
   footer: {
     description: "Claude Code와 Codex용 플러그인.",
-    notice: "Anthropic과 제휴하거나 Anthropic의 보증을 받지 않았습니다",
+    notice: "Anthropic 또는 OpenAI와 제휴하거나 Anthropic 또는 OpenAI의 보증을 받지 않았습니다",
     docs: "문서",
     whatsNew: "새 소식",
     github: "GitHub",

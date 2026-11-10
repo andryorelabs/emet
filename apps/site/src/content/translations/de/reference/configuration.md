@@ -2,12 +2,12 @@
 title: Konfigurationsreferenz
 description: Jeder Schlüssel in emet.config.json mit Standardwert und Bedeutung.
 seoTitle: emet-Konfigurationsreferenz
-sourceHash: e234cb9ad3468e98
+sourceHash: ec827dfcb8627f5c
 ---
 
 Jeder Schlüssel in `emet.config.json` mit Standardwert und Bedeutung. Die maßgebliche Quelle ist [`emet/schema/emet.config.schema.json`](../../emet/schema/emet.config.schema.json). Die Begriffe folgen [GLOSSARY.md](../../GLOSSARY.md). Zurück zur [README](../../README.md).
 
-`emet init` schreibt die Datei. `emet preflight` und `emet doctor` validieren sie. Ein als prose-only gekennzeichneter Schlüssel wird von den `/emet`-Prompts gelesen, nicht von der CLI. Ein als deprecated gekennzeichneter Schlüssel wird weiterhin akzeptiert. Das Schema erlaubt außerdem einen freien Text-Schlüssel `"//"` für Notizen (von keinem Tool gelesen) und `"version"`, der immer `1` ist.
+`emet init` schreibt die Datei. `emet preflight` und `emet doctor` validieren sie. Ein als prose-only gekennzeichneter Schlüssel wird von den `/emet`-Prompts (unter Codex den `$emet:*`-Skills) gelesen, nicht von der CLI. Ein als deprecated gekennzeichneter Schlüssel wird weiterhin akzeptiert. Das Schema erlaubt außerdem einen freien Text-Schlüssel `"//"` für Notizen (von keinem Tool gelesen) und `"version"`, der immer `1` ist.
 
 ## pr
 
@@ -37,15 +37,15 @@ Was geschieht, nachdem eine Welle abgeschlossen ist, und die Größenlimits der 
 
 - `maxLines` (Standard `60`): die höchste Zeilenzahl, die eine Notiz `.emet/handoff-<ticket>.md` haben darf, bevor `emet handoff --check` sie ablehnt.
 - `maxChars` (Standard `8000`, etwa 2k Tokens): die höchste Zeichenzahl einer Handoff-Notiz.
-- `autoChain` (Standard `false`): Nach einer sauberen, gemergten Welle mit weiteren offenen Wellen die nächste mit `claude --bg` starten, statt `/emet:run --dispatch <spec-id>` auszugeben. Mit `claude agents` oder `claude attach emet-<spec-id>-w<n>` einsehbar. Voraussetzungen:
+- `autoChain` (Standard `false`): Nach einer sauberen, gemergten Welle mit weiteren offenen Wellen die nächste starten, statt `/emet:run --dispatch <spec-id>` auszugeben (unter Codex `$emet:run --dispatch <spec-id>`). Unter Claude Code ist der Start `claude --bg`; auf dem Codex-Host ist es ein abgekoppeltes `codex exec`, das `codex` in Version `codex.minVersion` oder neuer braucht. Die folgenden Voraussetzungen gelten für Claude Code. Mit `claude agents` oder `claude attach emet-<spec-id>-w<n>` einsehbar. Voraussetzungen:
   1. `claude` im PATH, mit `--bg`-Unterstützung.
   2. Ein vertrauenswürdiger Arbeitsbereich. `--bg` läuft nicht interaktiv, daher erscheint der Vertrauensdialog nie; `claude` einmal interaktiv im Repo öffnen und bestätigen.
   3. Die Bypass-Warnung einmal in einer interaktiven Sitzung akzeptiert (`skipDangerousModePermissionPrompt`), da die nächste Welle im `handoff.permissionMode` läuft, nicht im Modus der startenden Sitzung.
 
   Der Start erfolgt nur, wenn der PR gemergt wurde und nichts markiert war, und wird übersprungen, wenn bereits eine Sitzung `emet-<spec-id>-*` läuft (`claude agents --json`). Schlägt der Start fehl, wird stattdessen `/emet:run --dispatch <spec-id>` ausgegeben.
 
-- `launcher` (Standard `auto`, eines von `auto`, `orca`, `bg`): die Welle zusätzlich in einem Orca-Tab öffnen, der `claude attach` ausführt. `auto` fragt die Orca-Runtime (`orca status`) und funktioniert daher auch aus `claude --bg`-Sitzungen, die kein `TERM_PROGRAM` haben; `orca` versucht es immer; `bg` nie. Die Welle läuft in beiden Fällen im Hintergrund, und ein Tab, der sich nicht öffnen lässt, stoppt die Kette nie. `emet launch <spec-id> --wave <n>` erledigt den gesamten Start; siehe [`emet launch`](cli.md#läufe-worker-und-slots).
-- `permissionMode` (Standard `bypassPermissions`, eines von `bypassPermissions`, `auto`, `acceptEdits`): Berechtigungsmodus der verketteten Sitzung. Er wird nicht von der startenden Sitzung geerbt, weil der Klassifikator des Modus `auto` einen Schritt wie `gh pr merge` ablehnen und eine Welle halb fertig zurücklassen kann. Deine `permissions.deny`-Regeln gelten weiterhin, aber die Bypass-Warnung muss einmal interaktiv akzeptiert worden sein (`skipDangerousModePermissionPrompt`).
+- `launcher` (Standard `auto`, eines von `auto`, `orca`, `bg`): nur Claude Code; auf dem Codex-Host ignoriert, wo `emet launch` keinen Orca-Tab öffnet. Die Welle zusätzlich in einem Orca-Tab öffnen, der `claude attach` ausführt. `auto` fragt die Orca-Runtime (`orca status`) und funktioniert daher auch aus `claude --bg`-Sitzungen, die kein `TERM_PROGRAM` haben; `orca` versucht es immer; `bg` nie. Die Welle läuft in beiden Fällen im Hintergrund, und ein Tab, der sich nicht öffnen lässt, stoppt die Kette nie. `emet launch <spec-id> --wave <n>` erledigt den gesamten Start; siehe [`emet launch`](cli.md#läufe-worker-und-slots).
+- `permissionMode` (Standard `bypassPermissions`, eines von `bypassPermissions`, `auto`, `acceptEdits`): nur Claude Code; auf dem Codex-Host ignoriert, wo die verkettete Sitzung [`codex.sandbox`](#codex) nutzt. Berechtigungsmodus der verketteten Sitzung. Er wird nicht von der startenden Sitzung geerbt, weil der Klassifikator des Modus `auto` einen Schritt wie `gh pr merge` ablehnen und eine Welle halb fertig zurücklassen kann. Deine `permissions.deny`-Regeln gelten weiterhin, aber die Bypass-Warnung muss einmal interaktiv akzeptiert worden sein (`skipDangerousModePermissionPrompt`).
 
 ## budgets
 
@@ -61,7 +61,7 @@ Alle optional.
 
 ## models
 
-Modell und Aufwand pro Rolle. Jeder Schlüssel ist optional; wird der Abschnitt weggelassen, bleiben Worker `sonnet`/`medium` und Reviewer `opus`/`medium`. Der Aufwand ist einer von `low`, `medium`, `high`, `xhigh`, `max`.
+Modell und Aufwand pro Rolle für den Claude-Code-Host; der Codex-Host liest stattdessen [`codex.models`](#codex). Jeder Schlüssel ist optional; wird der Abschnitt weggelassen, bleiben Worker `sonnet`/`medium` und Reviewer `opus`/`medium`. Der Aufwand ist einer von `low`, `medium`, `high`, `xhigh`, `max`.
 
 ```json
 {
@@ -92,7 +92,7 @@ Wird nur gelesen, wenn `agentHost` `"codex"` ist. Alle Schlüssel sind optional.
 - `models.worker`, `models.workerOverride`, `models.reviewer.medium`, `models.reviewer.high`, `models.triage`: jeweils `{ "model", "effort", "fallback" }`. `fallback` listet die Slugs, die der Reihe nach versucht werden, wenn `model` im Modell-Cache von Codex fehlt. Die Standardwerte stehen unter [Modelle und Aufwand](../guide/models-and-effort.md).
 - `models.session`: `{ "model", "effort", "planEffort", "fallback" }` für die Sitzung, die `$emet:run` ausführt. `planEffort` gilt bis zur ersten Freigabe.
 - `effort`: wenn gesetzt, ersetzt er den Aufwand aller Rollen.
-- `minVersion` (Standard `0.167.0`): die älteste Version der `codex`-CLI, die `emet doctor` akzeptiert.
+- `minVersion` (Standard `0.167.0`): die älteste Version der `codex`-CLI, die emet unterstützt. `emet doctor` vergleicht die installierte Version nicht damit.
 - `sandbox` (Standard `danger-full-access`): der Sandbox-Modus, den `emet dispatch`, `emet review-run` und ein Codex-`emet launch` als `-s` übergeben. `workspace-write` wird ebenfalls akzeptiert, macht aber `.git` schreibgeschützt, sodass Worker nicht committen können. Unabhängig vom Wert verweigert `emet guard` `git push` auf Codex, und die erzeugte Overlay-`config.toml` enthält nur den emet-Marketplace und das Plugin, vertrauenswürdige Tabellen für die eigenen Verzeichnisse des Laufs sowie das aufgelöste Modell und den aufgelösten Aufwand (nie deine eigenen Tabellen). Siehe den [Codex-Leitfaden](../guide/codex.md) und [ADR-0022](../adr/0022-codex-workers-run-unsandboxed-by-default.md).
 
 ## review
@@ -109,7 +109,7 @@ Wird nur gelesen, wenn `agentHost` `"codex"` ist. Alle Schlüssel sind optional.
 
 ## tracker
 
-Mit welchem Issue-Tracker `/emet` spricht. Die CLI liest `kind`, um zu entscheiden, welche Abhängigkeitsprüfungen gelten; der Rest dokumentiert den Adapter, dem der Befehl `/emet` folgt (siehe [`docs/agents/issue-tracker.md`](../agents/issue-tracker.md)).
+Mit welchem Issue-Tracker `/emet` (unter Codex `$emet`) spricht. Die CLI liest `kind`, um zu entscheiden, welche Abhängigkeitsprüfungen gelten; der Rest dokumentiert den Adapter, dem der Befehl `/emet` folgt (siehe [`docs/agents/issue-tracker.md`](../agents/issue-tracker.md)).
 
 - `kind` (erforderlich): `linear`, `github` oder `local`. Für `local` siehe [Lokaler Tracker](cli.md#lokaler-tracker) und [ADR-0011](../adr/0011-local-tracker-scratch-convention.md).
 - `transitions.onStart`, `transitions.onPrOpen`, `transitions.onPrMerge`: wer jeden Ticket-Statusübergang schreibt: `worker`, `coordinator` oder `automatic` (die Tracker-Integration übernimmt das, zum Beispiel die GitHub-Integration von Linear beim Öffnen oder Mergen eines PR). Der Koordinator schreibt nie einen als `automatic` gekennzeichneten Übergang.

@@ -34,7 +34,7 @@ Control, sober and precise, with dry humour in small places. No hype.
 - "approval" means the single human approval before materialize. Do not call it a "review" or a "sign-off".
 - "review" means the reviewer pass per wave.
 - "worktree" is one word, lowercase.
-- The product is written `emet` in lowercase, in prose and in the wordmark. The command is `/emet:run` once the rename lands.
+- The product is written `emet` in lowercase, in prose and in the wordmark. The command is `/emet:run` on Claude Code and `$emet:run` on Codex.
 - Write "plugin for Claude Code and Codex" when naming the hosts, descriptively and never as a product name.
 
 ## Language to avoid
@@ -48,8 +48,8 @@ Control, sober and precise, with dry humour in small places. No hype.
 
 ## Relation to Anthropic
 
-Every public surface that names Claude Code carries this notice, verbatim:
+Every public surface that names Claude Code or Codex carries this notice, verbatim:
 
-> Not affiliated with or endorsed by Anthropic
+> Not affiliated with or endorsed by Anthropic or OpenAI
 
 Copy may say "plugin for Claude Code and Codex" descriptively. The name, logo, palette and mascot stay fully separate from Claude's identity: no Claude orange or clay, no spark, no Clawd likeness.

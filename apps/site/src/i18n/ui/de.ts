@@ -41,7 +41,6 @@ export const de = {
     install: "Installieren.",
     describe: "Beschreiben.",
     land: "Zusehen, wie es landet.",
-    tabPlugin: "Plugin",
     tabClone: "Aus einem Klon",
     request: "build the Website",
     youType: "du tippst",
@@ -107,9 +106,9 @@ export const de = {
         answer: "Markiere ein Ticket. Solange etwas markiert ist, wird nichts gemergt.",
       },
       {
-        question: "Stammt emet von Anthropic?",
+        question: "Stammt emet von Anthropic oder OpenAI?",
         answer:
-          "Nein. emet steht in keiner Verbindung zu Anthropic und wird nicht von Anthropic unterstützt.",
+          "Nein. emet steht in keiner Verbindung zu Anthropic oder OpenAI und wird nicht von Anthropic oder OpenAI unterstützt.",
       },
     ],
     more: "Weitere Fragen",
@@ -134,7 +133,8 @@ export const de = {
   },
   footer: {
     description: "Plugin für Claude Code und Codex.",
-    notice: "Nicht mit Anthropic verbunden und nicht von Anthropic unterstützt",
+    notice:
+      "Nicht mit Anthropic oder OpenAI verbunden und nicht von Anthropic oder OpenAI unterstützt",
     docs: "Doku",
     whatsNew: "Neuigkeiten",
     github: "GitHub",

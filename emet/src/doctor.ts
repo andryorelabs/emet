@@ -429,12 +429,15 @@ export type ForkBaseInput = {
   readonly harnessBase: string | null;
   readonly baseRefSetting: string | null;
   readonly harnessBaseRef: string;
+  readonly host?: AgentHost;
 };
 
 /** The harness forks agent worktrees from `worktree.baseRef` (default: the
  * remote trunk), not from the coordinator's HEAD. A worker forked from a stale
- * base cannot see the ticket's predecessors and merges garbage. */
+ * base cannot see the ticket's predecessors and merges garbage. Claude-only:
+ * the Codex host creates its worktrees itself, so no harness setting applies. */
 export function checkWorktreeForkBase(input: ForkBaseInput): string[] {
+  if ((input.host ?? claudeHost).name === "codex") return [];
   if (input.baseRefSetting === "head") return [];
   if (input.coordinatorHead === null || input.harnessBase === null) return [];
   if (input.coordinatorHead === input.harnessBase) return [];
@@ -524,6 +527,7 @@ async function auditEnvironment(
     readonly remote: string;
     readonly kind: TrackerKind | null;
     readonly landingMode: LandingMode;
+    readonly host: AgentHost;
   },
   probes: EnvironmentProbes,
 ): Promise<string[]> {
@@ -546,6 +550,7 @@ async function auditEnvironment(
       harnessBase: await probes.resolveRef(repoRoot, harnessBaseRef),
       baseRefSetting: await probes.worktreeBaseRef(repoRoot),
       harnessBaseRef,
+      host: config.host,
     }),
   );
   return findings;
@@ -610,6 +615,7 @@ export async function auditRepo(
             ...configResult.config.repo,
             kind: trackerKind,
             landingMode: configResult.config.landing.mode,
+            host: agentHostOfConfig(configResult.config),
           },
           environment,
         )
@@ -895,12 +901,15 @@ export async function findInstallDrift(homeDirectory: string): Promise<string[]>
 /**
  * Warns when emet is installed both as a plugin and by `install.sh` (the
  * installer's manifest is present), which would load two copies of the
- * `/emet` command and agents.
+ * `/emet` command and agents. Claude-only: on Codex the plugin plus
+ * `install.sh` (for the terminal `emet`) is the documented setup.
  */
 export function findDoubleInstall(
   homeDirectory: string,
   plugins: readonly InstalledPlugin[],
+  host: AgentHost = claudeHost,
 ): string[] {
+  if (host.name === "codex") return [];
   const installedByScript = findInstallManifestPath(homeDirectory) !== undefined;
   const pluginInstalled =
     findPluginByName(plugins, PRODUCT) !== null ||
@@ -990,8 +999,13 @@ function guardBinaryExists(binary: string): boolean {
   return existsSync(expandHomePrefix(binary));
 }
 
-async function readUserSettings(): Promise<unknown> {
-  const file = Bun.file(path.join(os.homedir(), ".claude", "settings.json"));
+/** The host's user-level settings file (the first it declares), or `undefined` when it has none. */
+export function userSettingsFile(host: AgentHost, home: string = os.homedir()): string | undefined {
+  return host.probes.settingsFiles(home)[0];
+}
+
+async function readUserSettings(settingsFile: string): Promise<unknown> {
+  const file = Bun.file(settingsFile);
   if (!(await file.exists())) return null;
   try {
     return await file.json();
@@ -1040,7 +1054,7 @@ async function main(targets: readonly string[]): Promise<void> {
   const globalForgeAgentsCheck = classifyForgeAgentsProbe(await probes.forgeAgents(), host);
   const skillsChecks =
     probes.skillsContract?.() ?? checkSkillsContract(listInstalledPlugins(host), host);
-  const doubleInstall = findDoubleInstall(os.homedir(), listInstalledPlugins(host));
+  const doubleInstall = findDoubleInstall(os.homedir(), listInstalledPlugins(host), host);
   const globalFindingLines = [globalPluginCheck, globalForgeAgentsCheck, ...skillsChecks]
     .map(formatGlobalDependencyFinding)
     .filter((line): line is string => line !== null);
@@ -1062,8 +1076,10 @@ async function main(targets: readonly string[]): Promise<void> {
     );
   }
 
-  const userSettings = await readUserSettings();
-  const settingsAdvisories = checkSettingsAdvisories(userSettings);
+  const settingsFile = userSettingsFile(host);
+  const userSettings = settingsFile === undefined ? null : await readUserSettings(settingsFile);
+  const settingsAdvisories =
+    settingsFile === undefined ? [] : checkSettingsAdvisories(userSettings);
   if (settingsAdvisories.length > 0) {
     console.log(
       `\nSettings advisories (~/.claude/settings.json, never auto-fixed):\n${settingsAdvisories

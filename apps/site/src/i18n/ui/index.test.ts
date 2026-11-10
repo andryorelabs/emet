@@ -58,6 +58,24 @@ function expectNamesBothHosts(strings: ReturnType<typeof getStrings>): void {
   }
 }
 
+/**
+ * Asserts the footer notice and every FAQ answer that names Anthropic also name
+ * OpenAI, and that at least one such answer exists.
+ * @param strings - One locale's strings.
+ * @returns Nothing.
+ */
+function expectNamesBothVendors(strings: ReturnType<typeof getStrings>): void {
+  expect(strings.footer.notice).toContain("Anthropic");
+  expect(strings.footer.notice).toContain("OpenAI");
+  const vendorAnswers = strings.faq.items
+    .map((item) => item.answer)
+    .filter((answer) => answer.includes("Anthropic"));
+  expect(vendorAnswers.length).toBeGreaterThan(0);
+  for (const answer of vendorAnswers) {
+    expect(answer).toContain("OpenAI");
+  }
+}
+
 describe("locale string parity", () => {
   for (const locale of translated) {
     test(`${locale} has exactly the English keys and no empty string`, () => {
@@ -83,6 +101,14 @@ describe("locale string parity", () => {
       expect(strings.how.request).toBe(en.how.request);
     });
 
+    test(`${locale} names Anthropic and OpenAI in the notice and FAQ answer`, () => {
+      expectNamesBothVendors(getStrings(locale));
+    });
+
+    test(`${locale} has no how.tabPlugin key`, () => {
+      expect(leaves(getStrings(locale)).map(([path]) => path)).not.toContain("how.tabPlugin");
+    });
+
     test(`${locale} names both Agent hosts in the footer, hero and FAQ`, () => {
       expectNamesBothHosts(getStrings(locale));
     });
@@ -97,6 +123,37 @@ describe("locale string parity", () => {
 function stripCodex(text: string): string {
   return text.replaceAll("Codex", "");
 }
+
+/**
+ * Removes every "OpenAI" from a string, as a locale that dropped the vendor would.
+ * @param text - A locale string.
+ * @returns The string without "OpenAI".
+ */
+function dropOpenAi(text: string): string {
+  return text.replaceAll("OpenAI", "");
+}
+
+describe("vendor naming guard", () => {
+  test("fails when a locale drops OpenAI from the notice or the FAQ answer", () => {
+    const base = getStrings("es");
+    const dropped = [
+      { ...base, footer: { ...base.footer, notice: dropOpenAi(base.footer.notice) } },
+      {
+        ...base,
+        faq: {
+          ...base.faq,
+          items: base.faq.items.map((item) => ({
+            question: item.question,
+            answer: dropOpenAi(item.answer),
+          })),
+        },
+      },
+    ];
+    for (const mutated of dropped) {
+      expect(() => expectNamesBothVendors(mutated)).toThrow();
+    }
+  });
+});
 
 describe("host naming guard", () => {
   test("fails when a locale drops Codex from any of the three strings", () => {

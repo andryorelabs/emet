@@ -2,10 +2,12 @@
 title: 모델과 추론 강도
 description: emet이 역할마다 모델과 추론 강도를 어떻게 고르는지, 그리고 이를 바꾸는 설정 키를 설명합니다.
 seoTitle: emet의 모델과 추론 강도
-sourceHash: a46d2e68a403f4f9
+sourceHash: 482995e2b98c659b
 ---
 
-`/emet`은 역할마다 모델과 추론 강도(effort)를 자동으로 선택합니다. 실행 중에 수동으로 바꿀 것은 없습니다. 모든 키는 [설정 레퍼런스](../reference/configuration.md#models)에 있습니다.
+`/emet`은 역할마다 모델과 추론 강도(effort)를 자동으로 선택합니다. 실행 중에 수동으로 바꿀 것은 없습니다. 첫 번째 섹션들은 Claude Code 호스트를 설명하며, [Codex 호스트](#codex-호스트)에는 별도의 기본값이 있습니다. Claude Code의 모든 키는 [설정 레퍼런스](../reference/configuration.md#models)에 있습니다.
+
+## Claude Code 호스트
 
 | 역할                                   | 모델                    | 추론 강도         | 설정 위치                                    |
 | -------------------------------------- | ----------------------- | ----------------- | -------------------------------------------- |
@@ -17,7 +19,7 @@ sourceHash: a46d2e68a403f4f9
 | 리뷰, `high` 티어(위험한 경로나 싱크)  | Opus                    | 기본값은 `medium` | `models.reviewer.high`                       |
 | CI 로그 분류(8단계)                    | Haiku                   | —                 | `models.triage`                              |
 
-두 에이전트 정의(`install.sh`가 `~/.claude/agents/`에 설치합니다)는 프런트매터에 자체 `model`/`effort`를 고정해 두므로, 코디네이터의 모델이나 추론 강도 선택이 워커나 리뷰어에게 새어 들어가지 않습니다. `emet doctor`는 두 파일 중 하나가 없어져도 보고만 하며 차단하지 않습니다. `emet preflight`는 `emet-worker` 또는 `emet-reviewer`가 없으면 디스패치를 차단합니다. 6단계와 8단계가 `subagent_type`으로 디스패치하기 때문입니다.
+Claude Code에서는 두 에이전트 정의(`install.sh`가 `~/.claude/agents/`에 설치합니다)는 프런트매터에 자체 `model`/`effort`를 고정해 두므로, 코디네이터의 모델이나 추론 강도 선택이 워커나 리뷰어에게 새어 들어가지 않습니다. `emet doctor`는 두 파일 중 하나가 없어져도 보고만 하며 차단하지 않습니다. `emet preflight`는 `emet-worker` 또는 `emet-reviewer`가 없으면 디스패치를 차단합니다. 6단계와 8단계가 `subagent_type`으로 디스패치하기 때문입니다.
 
 ## 위험 티어 라우팅
 
@@ -31,11 +33,11 @@ sourceHash: a46d2e68a403f4f9
 
 ## Haiku 분류
 
-코디네이터는 CI 로그를 통째로 읽지 않습니다. 실패한 체크는 `models.triage`(기본값 `haiku`)의 에이전트에 넘겨지며, 이 에이전트는 수정을 위한 `file:line` 포인터와 함께 최대 약 2k 토큰을 반환합니다.
+Claude Code에서 코디네이터는 CI 로그를 통째로 읽지 않습니다. 실패한 체크는 `models.triage`(기본값 `haiku`)의 에이전트에 넘겨지며, 이 에이전트는 수정을 위한 `file:line` 포인터와 함께 최대 약 2k 토큰을 반환합니다.
 
 ## 설정
 
-모든 키는 선택 사항이며, 기본값은 위 표와 같습니다.
+이것은 Claude Code의 `models` 키입니다. 모든 키는 선택 사항이며, 기본값은 위 Claude Code 표와 같습니다.
 
 ```json
 {
@@ -78,11 +80,11 @@ sourceHash: a46d2e68a403f4f9
 
 ## 리뷰어가 하나인 이유
 
-여러 관점으로 나누지 않고 컨텍스트가 새로운 단일 리뷰어를 쓰는 이유는 다음과 같습니다. 둘을 직접 비교한 공개 벤치마크는 없지만, 관점별 분산 방식은 관점마다 diff 전체를 다시 읽기 때문에 이 리포지토리에서 한 시간 넘게 멈춘 적이 있습니다. 또한 Anthropic과 제3자의 Opus 급 모델 보고서에 따르면 모델 업그레이드가 관점을 늘린 것과 비슷한 효과를 냅니다. 중요도가 높은 웨이브는 이후에 직접 `/code-review ultra`를 실행하세요. `/emet`은 이를 스스로 디스패치하지 않습니다.
+여러 관점으로 나누지 않고 컨텍스트가 새로운 단일 리뷰어를 쓰는 이유는 다음과 같습니다. 둘을 직접 비교한 공개 벤치마크는 없지만, 관점별 분산 방식은 관점마다 diff 전체를 다시 읽기 때문에 이 리포지토리에서 한 시간 넘게 멈춘 적이 있습니다. 또한 Anthropic과 제3자의 Opus 급 모델 보고서에 따르면 모델 업그레이드가 관점을 늘린 것과 비슷한 효과를 냅니다. Claude Code에서 중요도가 높은 웨이브는 이후에 직접 `/code-review ultra`를 실행하세요. `/emet`은 이를 스스로 디스패치하지 않습니다. `/code-review ultra`는 Claude Code 명령이며, 이 페이지는 Codex 대응 기능을 문서화하지 않습니다.
 
-## 직접 한 번만 설정하는 것
+## 직접 한 번만 설정하는 것(Claude Code)
 
-`/emet`은 실행 중에 다음을 바꿀 수 없습니다.
+Claude Code 호스트에서 `/emet`은 실행 중에 다음을 바꿀 수 없습니다. 이것들은 Claude Code의 `~/.claude/settings.json`에 있습니다. Codex 호스트는 이 파일을 읽지 않으며, 모델은 위의 `codex` 섹션에서 정해집니다.
 
 - `~/.claude/settings.json`의 `model: "opusplan"`: 이 설정 덕분에 1~4단계는 Opus로, 5단계부터는 Sonnet으로 실행되며 `/model`이 필요 없습니다. 설정되어 있지 않으면 `emet doctor`가 경고합니다(설정을 직접 수정하지는 않습니다).
 - 세션 추론 강도는 `xhigh`가 아니라 `medium` 또는 `high`로 합니다. 워커와 리뷰어는 사용자의 설정과 관계없이 이미 자체 추론 강도를 갖고 있으며, 전역 기본값을 높여도 디스패치 관리, 병합, 보고서처럼 그럴 필요가 없는 코디네이터 자신의 턴에 비용만 늘어납니다.

@@ -2,8 +2,23 @@
 title: 新機能
 description: emet のリリースノート。各バージョンでの変更点をまとめています。
 seoTitle: "emet の新機能: リリースノート"
-sourceHash: 865aee0375b56c7a
+sourceHash: e658e982cb203285
 ---
+
+## 0.5.2
+
+2026-11-10
+
+### 変更
+
+- 非提携の注記に、Anthropic に加えて OpenAI も明記しました。
+- トップページのインストールタブを Claude Code と表記し、実行コマンドに `$emet:run` の Codex タブを追加しました。
+- ガイドで、各手順が Claude Code と Codex のどちらの Agent host 向けかを明示しました。
+
+### 修正
+
+- Codex ホストで、`emet doctor`、`emet init`、`emet dependencies`、`emet preflight` が Claude Code 専用の案内を出さなくなりました。
+- `emet init --force` が、既存の設定の `agentHost` と `codex` セクションを保持します。
 
 ## 0.5.1
 

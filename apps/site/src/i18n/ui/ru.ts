@@ -40,7 +40,6 @@ export const ru = {
     install: "Установите.",
     describe: "Опишите.",
     land: "Смотрите, как он сливается.",
-    tabPlugin: "Плагин",
     tabClone: "Из клона",
     request: "build the Website",
     youType: "вы вводите",
@@ -103,8 +102,8 @@ export const ru = {
         answer: "Пометьте тикет флагом. Пока есть флаг, ничего не сливается.",
       },
       {
-        question: "emet сделан Anthropic?",
-        answer: "Нет. emet не связан с Anthropic и не одобрен Anthropic.",
+        question: "emet сделан Anthropic или OpenAI?",
+        answer: "Нет. emet не связан с Anthropic или OpenAI и не одобрен Anthropic или OpenAI.",
       },
     ],
     more: "Другие вопросы",
@@ -129,7 +128,7 @@ export const ru = {
   },
   footer: {
     description: "Плагин для Claude Code и Codex.",
-    notice: "Не связан с Anthropic и не одобрен Anthropic",
+    notice: "Не связан с Anthropic или OpenAI и не одобрен Anthropic или OpenAI",
     docs: "Документация",
     whatsNew: "Что нового",
     github: "GitHub",

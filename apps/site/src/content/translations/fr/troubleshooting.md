@@ -2,7 +2,7 @@
 title: Dépannage
 description: Échecs de emet doctor et emet preflight, regroupés selon ce que vous voyez, chacun avec sa cause et un correctif.
 seoTitle: Dépannage de emet doctor et preflight
-sourceHash: 2945f96c25af7fb6
+sourceHash: c1ebb76c9250d743
 ---
 
 Échecs de `emet doctor` et `emet preflight`, regroupés selon ce que vous voyez, chacun avec sa cause et un correctif. Les termes suivent [GLOSSARY.md](../GLOSSARY.md). Pour comprendre comment les vérifications s'articulent, voir l'[architecture](architecture.md).
@@ -54,7 +54,7 @@ Un dépôt qui n'a encore que `forge.config.json`, `.forge/` ou des variables `F
 
 **Cause :** `/emet` a besoin de `git`, de `gh` et du plugin mattpocock-skills ; voir `emet/src/dependencies.ts` et `emet/src/skills.ts`.
 
-**Correctif :** Installez ou authentifiez l'outil, ou exécutez `/setup-matt-pocock-skills`. Si une vérification est erronée pour votre environnement, `EMET_SKIP_DEPENDENCY_CHECKS=1 emet preflight` la rétrograde en avertissement.
+**Correctif :** Installez ou authentifiez l'outil, ou exécutez la skill `setup-matt-pocock-skills` (`/setup-matt-pocock-skills` sur Claude Code, la même skill avec la syntaxe `$` de Codex sur Codex). Si une vérification est erronée pour votre environnement, `EMET_SKIP_DEPENDENCY_CHECKS=1 emet preflight` la rétrograde en avertissement.
 
 ## ne documente plus une option dans --help
 

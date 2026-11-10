@@ -2,14 +2,14 @@
 title: CLI 레퍼런스
 description: 모든 emet 하위 명령, 게이트와 기록 표, 종료 코드, 환경 변수를 설명합니다.
 seoTitle: emet CLI 레퍼런스
-sourceHash: 8bb02104970da0a8
+sourceHash: b89b785c057b008c
 ---
 
 모든 `emet` 하위 명령, 게이트와 기록 표, 종료 코드, 환경 변수입니다. 용어는 [GLOSSARY.md](../../GLOSSARY.md)를 따릅니다. [README](../../README.md)로 돌아가기. 모든 명령은 `--help`로 사용법을 출력합니다.
 
 ## 하위 명령
 
-Claude Code 안에서는 슬래시 명령 세 가지가 CLI를 감쌉니다. `/emet:run`(파이프라인), `/emet:init`(`emet init`), `/emet:doctor`(`emet doctor .`)입니다. 일반 터미널에서 `emet`을 쓰려면 `install.sh`가 필요합니다. 그렇지 않으면 세션 안에서 `! emet <subcommand>`를 실행하세요.
+Claude Code 안에서는 슬래시 명령 세 가지가 CLI를 감쌉니다. `/emet:run`(파이프라인), `/emet:init`(`emet init`), `/emet:doctor`(`emet doctor .`)입니다. Codex에서는 `$emet:run`, `$emet:init`, `$emet:doctor` 스킬입니다. 일반 터미널에서 `emet`을 쓰려면 `install.sh`가 필요합니다. 그렇지 않으면 세션 안에서 `! emet <subcommand>`를 실행하세요.
 
 `emet <command> [...args]`. `emet --version`은 버전을 출력합니다.
 
@@ -31,7 +31,7 @@ emet preflight      # confirms the repo is dispatch-ready
 
 `emet init`은 스스로 추론할 수 없는 항목(공유 테스트 데이터베이스 락, 스키마 소유권 등)에 대해 생성된 `docs/agents/*.md` 파일에 `TODO(emet):` 마커를 남깁니다. 이 부분을 채워 주세요. 마커가 하나라도 남아 있으면 `emet preflight`는 디스패치를 거부합니다.
 
-그런 다음 Claude Code 안에서:
+그런 다음 Claude Code 안에서(Codex에서는 같은 인자로 `$emet:run`을 사용합니다):
 
 ```text
 /emet:run <describe the feature>              # interview → wave 1; later waves via --dispatch/autoChain
@@ -47,7 +47,7 @@ emet preflight      # confirms the repo is dispatch-ready
 emet doctor ~/code/*
 ```
 
-리포지토리마다 다음 항목을 보고합니다. 유효한 `emet.config.json`, 네 개의 `docs/agents/*.md` 파일이 모두 있는지, 남아 있는 `TODO(emet):` 마커가 없는지, `commands.selfCheck`의 명령이 실제로 해석되는지, 그리고 해당 리포지토리의 트래커별 의존성 점검 결과(`gh`, Linear. [의존성](dependencies.md#무엇이-무엇을-확인하는가) 참고)입니다. mattpocock-skills 플러그인과 외부 CLI 플래그(`gh`, `claude --bg`, `claude agents --json`. `--help`로 확인)는 리포지토리마다가 아니라 전체 스윕에서 한 번만 확인합니다.
+리포지토리마다 다음 항목을 보고합니다. 유효한 `emet.config.json`, 네 개의 `docs/agents/*.md` 파일이 모두 있는지, 남아 있는 `TODO(emet):` 마커가 없는지, `commands.selfCheck`의 명령이 실제로 해석되는지, 그리고 해당 리포지토리의 트래커별 의존성 점검 결과(`gh`, Linear. [의존성](dependencies.md#무엇이-무엇을-확인하는가) 참고)입니다. mattpocock-skills 플러그인과 외부 CLI 플래그(`gh`와 에이전트 호스트의 플래그. Claude Code에서는 `claude --bg`와 `claude agents --json`, Codex에서는 `codex exec --json`과 `--output-schema`이며, `--help`로 확인)는 리포지토리마다가 아니라 전체 스윕에서 한 번만 확인합니다.
 
 ### 실행, 워커, 슬롯
 
@@ -55,7 +55,7 @@ emet doctor ~/code/*
 - `emet slots --acquire --run <id> --anchor <pid> --ticket <ticket>`: `~/.local/state/emet/slots`에 있는 호스트 전체 풀에서 워커 슬롯을 가져옵니다. `--release --run <id>`, `--release-index <index>`, `--list`는 슬롯을 해제하거나 나열합니다.
 - `emet cleanup [--run <id> | --all] [--dry-run] [--force]`: 인자 없이 실행하면 작업이 랜딩된 종료되었거나 죽은 실행을 회수합니다. `--run`은 해당 실행을 정리하고, `--all`은 리포지토리 전체의 브랜치 정리입니다. 병합 후 `emet cleanup --run <runId>`를 실행하면 웨이브의 브랜치, 티켓 클레임, 워커 슬롯이 해제됩니다.
 - `emet lock-reason --run <id> --ticket <ticket> [--anchor <pid>]`: 워커가 부트스트랩 때 기록하는 `git worktree lock` 사유를 출력합니다.
-- `emet launch <spec-id> --wave <n>`: 웨이브를 `claude --bg` 세션으로 시작하고 `handoff.launcher`에 따라 Orca 탭을 엽니다. 시작 전체(중복 세션 확인, `claude --bg`, 탭)를 수행하고 `{ name, id, attach, orcaTab: { opened, reason } }`를 출력합니다. 다른 세션에서 웨이브를 직접 실행하고 싶을 때는 단순한 `claude --bg` 대신 이것을 사용하세요.
+- `emet launch <spec-id> --wave <n>`: Claude Code에서는 웨이브를 `claude --bg` 세션으로 시작하고 `handoff.launcher`에 따라 Orca 탭을 엽니다(Codex는 [Codex 호스트](#codex-호스트) 참고). 시작 전체(중복 세션 확인, `claude --bg`, 탭)를 수행하고 `{ name, id, attach, orcaTab: { opened, reason } }`를 출력합니다. 다른 세션에서 웨이브를 직접 실행하고 싶을 때는 단순한 `claude --bg` 대신 이것을 사용하세요.
 - `emet status [--spec <id>]`: 웨이브별 Working / Checking / Ready / Needs-decision을 JSON과 요약 줄로 출력합니다. `emet status --help`에 JSON 설명이 있습니다.
 - `emet usage [--session <id> | --file <path>] [--stalled [--minutes N]] [--project-dir <path>]`: 세션 사용량을 보고합니다. `--stalled`는 멈춘 워커를 나열합니다.
 - `emet handoff --check <path> | --render <path>`: 워커의 `.emet/handoff-<ticket>.md` 노트를 검증하거나 렌더링합니다.
@@ -71,7 +71,7 @@ emet doctor ~/code/*
 - `emet spec-merge --spec <id>`: 웨이브가 자동 병합된 뒤 스펙의 `ADDED`/`MODIFIED`/`REMOVED` 요구 사항 델타를 `docs/specs/<area>.md`(`specs.dir`)에 병합합니다. 아무것도 쓰기 전에 모든 영역을 검사합니다. 충돌이 있거나 시나리오를 잃게 되는 요구 사항이 있으면 종료 코드 1로 끝나며 어떤 파일도 건드리지 않습니다.
 - `emet map [--refresh]`: 기존 코드베이스의 개요(스택, 구조, 규약, 테스트, 핫스팟)를 `docs/agents/codebase.md`(`map.path`)에 작성하고, 생성에 사용한 커밋 SHA를 찍어 둡니다. 같은 커밋에서는 항상 같은 파일이 만들어집니다. `emet map --stale`은 HEAD가 찍어 둔 값보다 앞서 나가면 종료 코드 1로 끝나며, 이 경우 `emet preflight`가 경고합니다. `emet map --for <globs>`는 티켓의 편집 대상과 일치하는 섹션만 출력합니다. 이 출력이 워커 브리프에 포함되는 맵의 유일한 부분입니다.
 - `emet tracker create-spec|create-ticket|read|frontier|set-state|comment|close`: `.scratch/` 위의 로컬 트래커이며 표준 출력은 JSON입니다. [로컬 트래커](#로컬-트래커)를 참고하세요.
-- `emet guard`: Claude Code의 `PreToolUse` 훅으로, 표준 입력에서 훅 JSON을 읽습니다. `install.sh`가 `~/.claude/settings.json`에 연결합니다. 무인 실행에서 실패를 일으키는 것으로 알려진 몇 가지 동작을 차단합니다(`emet/src/guard.ts` 참고).
+- `emet guard`: Claude Code의 `PreToolUse` 훅으로, 표준 입력에서 훅 JSON을 읽습니다(Codex 형식은 [Codex 호스트](#codex-호스트) 아래에 있습니다). `install.sh`가 `~/.claude/settings.json`에 연결합니다. 무인 실행에서 실패를 일으키는 것으로 알려진 몇 가지 동작을 차단합니다(`emet/src/guard.ts` 참고).
 
 ### 로컬 트래커
 

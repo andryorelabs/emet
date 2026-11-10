@@ -2,8 +2,23 @@
 title: Что нового
 description: Примечания к выпускам emet: что изменилось в каждой версии.
 seoTitle: "Что нового в emet: примечания к выпускам"
-sourceHash: 865aee0375b56c7a
+sourceHash: e658e982cb203285
 ---
+
+## 0.5.2
+
+2026-11-10
+
+### Изменено
+
+- В уведомлении об отсутствии связи теперь указана и OpenAI, а не только Anthropic.
+- Вкладки установки на главной называются Claude Code, а у команды запуска появилась вкладка Codex с `$emet:run`.
+- В руководствах указано, какие шаги относятся к какому Agent host: Claude Code или Codex.
+
+### Исправлено
+
+- `emet doctor`, `emet init`, `emet dependencies` и `emet preflight` больше не дают советов только для Claude Code на хосте Codex.
+- `emet init --force` сохраняет `agentHost` и раздел `codex` существующей конфигурации.
 
 ## 0.5.1
 

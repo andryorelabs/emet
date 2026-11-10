@@ -41,7 +41,6 @@ export const fr = {
     install: "Installez.",
     describe: "Décrivez.",
     land: "Regardez-le atterrir.",
-    tabPlugin: "Plugin",
     tabClone: "Depuis un clone",
     request: "build the Website",
     youType: "vous tapez",
@@ -104,8 +103,9 @@ export const fr = {
         answer: "Signalez un ticket. Rien n'est fusionné tant qu'un ticket est signalé.",
       },
       {
-        question: "emet est-il fait par Anthropic ?",
-        answer: "Non. emet n'est ni affilié à Anthropic ni approuvé par Anthropic.",
+        question: "emet est-il fait par Anthropic ou OpenAI ?",
+        answer:
+          "Non. emet n'est ni affilié à Anthropic ou OpenAI ni approuvé par Anthropic ou OpenAI.",
       },
     ],
     more: "Plus de questions",
@@ -130,7 +130,7 @@ export const fr = {
   },
   footer: {
     description: "Plugin pour Claude Code et Codex.",
-    notice: "Non affilié à Anthropic et non approuvé par Anthropic",
+    notice: "Non affilié à Anthropic ou OpenAI et non approuvé par Anthropic ou OpenAI",
     docs: "Docs",
     whatsNew: "Nouveautés",
     github: "GitHub",

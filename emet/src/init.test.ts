@@ -1,5 +1,13 @@
 import { afterEach, beforeEach, describe, expect, setDefaultTimeout, test } from "bun:test";
-import { existsSync, mkdtempSync, readdirSync, readFileSync, rmSync } from "node:fs";
+import {
+  chmodSync,
+  existsSync,
+  mkdtempSync,
+  readdirSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
 import os from "node:os";
 import path from "node:path";
 
@@ -467,6 +475,10 @@ describe("upsertEmetSection", () => {
   });
 });
 
+function readIfPresent(file: string): string {
+  return existsSync(file) ? readFileSync(file, "utf8") : "";
+}
+
 describe("emet init --tracker local end to end", () => {
   let repoRoot = "";
   const entry = path.resolve(import.meta.dir, "init.ts");
@@ -554,6 +566,75 @@ describe("emet init --tracker local end to end", () => {
     await runInit();
     const config: unknown = await Bun.file(path.join(repoRoot, "emet.config.json")).json();
     expect(config).toMatchObject({ landing: { mode: "pr" } });
+  });
+
+  async function runInitWithFakeHosts(
+    agentHost: "codex" | "claude",
+  ): Promise<{ stdout: string; claudeCalls: string; codexCalls: string }> {
+    const fakeBin = mkdtempSync(path.join(os.tmpdir(), "emet-init-fakebin-"));
+    const claudeLog = path.join(fakeBin, "claude.log");
+    const codexLog = path.join(fakeBin, "codex.log");
+    for (const [name, log] of [
+      ["claude", claudeLog],
+      ["codex", codexLog],
+    ] as const) {
+      const script = path.join(fakeBin, name);
+      writeFileSync(script, `#!/bin/sh\necho "$@" >> "${log}"\nexit 0\n`);
+      chmodSync(script, 0o755);
+    }
+    writeFileSync(
+      path.join(repoRoot, "emet.config.json"),
+      `${JSON.stringify({ version: 1, agentHost })}\n`,
+    );
+    try {
+      const result = await Bun.$`bun ${entry} --tracker local --force`
+        .cwd(repoRoot)
+        .env({ ...process.env, PATH: `${fakeBin}:${process.env["PATH"] ?? ""}` })
+        .nothrow()
+        .quiet();
+      expect(result.exitCode).toBe(0);
+      return {
+        stdout: result.stdout.toString(),
+        claudeCalls: readIfPresent(claudeLog),
+        codexCalls: readIfPresent(codexLog),
+      };
+    } finally {
+      rmSync(fakeBin, { recursive: true, force: true });
+    }
+  }
+
+  test("an existing Codex config probes codex and never calls or names claude", async () => {
+    const { stdout, claudeCalls, codexCalls } = await runInitWithFakeHosts("codex");
+    expect(claudeCalls).toBe("");
+    expect(codexCalls).toContain("plugin list");
+    expect(stdout.toLowerCase()).not.toContain("claude plugin");
+  });
+
+  test("--force keeps agentHost and the codex section of an existing Codex config", async () => {
+    writeFileSync(
+      path.join(repoRoot, "emet.config.json"),
+      `${JSON.stringify({ version: 1, agentHost: "codex", codex: { sandbox: "read-only" } })}\n`,
+    );
+    const result = await Bun.$`bun ${entry} --tracker local --force`
+      .cwd(repoRoot)
+      .nothrow()
+      .quiet();
+    expect(result.exitCode).toBe(0);
+    const config: unknown = await Bun.file(path.join(repoRoot, "emet.config.json")).json();
+    expect(config).toMatchObject({ agentHost: "codex", codex: { sandbox: "read-only" } });
+  });
+
+  test("--force on a Claude config writes no agentHost key", async () => {
+    writeFileSync(path.join(repoRoot, "emet.config.json"), `${JSON.stringify({ version: 1 })}\n`);
+    await Bun.$`bun ${entry} --tracker local --force`.cwd(repoRoot).nothrow().quiet();
+    const text = await Bun.file(path.join(repoRoot, "emet.config.json")).text();
+    expect(text).not.toContain('"agentHost"');
+  });
+
+  test("an existing Claude config still probes claude plugin list", async () => {
+    const { claudeCalls, codexCalls } = await runInitWithFakeHosts("claude");
+    expect(claudeCalls).toContain("plugin list");
+    expect(codexCalls).toBe("");
   });
 
   test("re-running does not duplicate .scratch/ in .gitignore", async () => {

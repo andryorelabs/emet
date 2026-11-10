@@ -3,6 +3,8 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
 
+import { claudeHost } from "./agenthost";
+import { codexHost } from "./agenthost-codex";
 import {
   type TicketNode,
   analyzeTicketGraph,
@@ -330,6 +332,41 @@ describe("classifyLinearMcpProbe", () => {
     expect(
       classifyLinearMcpProbe({ kind: "mcp-json-unreadable", detail: "Unexpected token" }).status,
     ).toBe("unsatisfied");
+  });
+
+  test("the Claude host keeps its restart and `claude mcp list` wording", () => {
+    const declared = classifyLinearMcpProbe({ kind: "declared", source: "mcp-json" }, claudeHost);
+    expect(declared.limitation).toContain("restart Claude Code and approve the connection");
+    const missing = classifyLinearMcpProbe(
+      { kind: "not-declared", searchedAllScopes: true },
+      claudeHost,
+    );
+    expect(missing.summary).toContain("`claude mcp list`");
+    const unchecked = classifyLinearMcpProbe(
+      { kind: "not-declared", searchedAllScopes: false },
+      claudeHost,
+    );
+    expect(unchecked.summary).toContain("`claude` is not on PATH");
+  });
+
+  test("the Codex host never mentions claude", () => {
+    const probes: readonly LinearMcpProbe[] = [
+      { kind: "declared", source: "mcp-json" },
+      { kind: "not-declared", searchedAllScopes: true },
+      { kind: "not-declared", searchedAllScopes: false },
+    ];
+    for (const probe of probes) {
+      const check = classifyLinearMcpProbe(probe, codexHost);
+      expect(`${check.summary} ${check.limitation ?? ""}`.toLowerCase()).not.toContain("claude");
+    }
+    const declared = classifyLinearMcpProbe({ kind: "declared", source: "mcp-json" }, codexHost);
+    expect(declared.limitation).toContain("Codex");
+    const unchecked = classifyLinearMcpProbe(
+      { kind: "not-declared", searchedAllScopes: false },
+      codexHost,
+    );
+    expect(unchecked.status).toBe("indeterminate");
+    expect(unchecked.summary).toContain("Codex");
   });
 });
 
