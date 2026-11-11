@@ -2,8 +2,24 @@
 title: Novedades
 description: Notas de versión de emet: qué cambió en cada versión.
 seoTitle: Novedades de emet: notas de versión
-sourceHash: 9ac94745afe83a53
+sourceHash: 1d62be10d080cc24
 ---
+
+## 0.7.0
+
+2026-11-11
+
+### Añadido
+
+- El Website sirve el esquema de configuración en `https://emet.andryore.dev/schema/emet.config.schema.json`.
+- `docs/development.md` y `docs/security.md`.
+- Un piso de cobertura por workspace que `bun run test` hace cumplir.
+
+### Cambiado
+
+- `emet init` escribe la URL pública de `$schema` en `emet.config.json` en lugar de una ruta local.
+- Los tags de versión van firmados, y el workflow Release falla cuando la sección del CHANGELOG para el tag falta o está vacía.
+- El repositorio sigue el estándar andryorelabs v1: rulesets como código, archivos de comunidad, estructura del README y nombres de scripts estándar (`format:write`, `lint:commits`).
 
 ## 0.6.1
 

@@ -2,8 +2,24 @@
 title: 新功能
 description: emet 的发布说明：每个版本都有哪些变化。
 seoTitle: "emet 新功能：发布说明"
-sourceHash: 9ac94745afe83a53
+sourceHash: 1d62be10d080cc24
 ---
+
+## 0.7.0
+
+2026-11-11
+
+### 新增
+
+- Website 在 `https://emet.andryore.dev/schema/emet.config.schema.json` 提供配置 schema。
+- `docs/development.md` 和 `docs/security.md`。
+- 每个 workspace 的覆盖率下限，由 `bun run test` 强制执行。
+
+### 变更
+
+- `emet init` 在 `emet.config.json` 中写入公开的 `$schema` URL，而不是本地路径。
+- 发布标签带有签名；当该标签对应的 CHANGELOG 章节缺失或为空时，Release 工作流会失败。
+- 仓库遵循 andryorelabs 标准 v1：以代码管理的 ruleset、社区文件、README 结构和标准脚本名（`format:write`、`lint:commits`）。
 
 ## 0.6.1
 
