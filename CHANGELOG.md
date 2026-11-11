@@ -8,6 +8,17 @@ and this project adheres to
 
 ## [Unreleased]
 
+### Added
+
+- `emet cleanup` deletes the `worktree-<name>` scaffold branches the Agent host
+  leaves behind, when nothing has them checked out and trunk already contains
+  their tip.
+
+### Fixed
+
+- The guard denies a forced branch delete in every spelling that pairs a
+  delete flag with a force flag, not only the capital flag.
+
 ## [0.8.0] - 2026-11-11
 
 ### Added

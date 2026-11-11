@@ -18,7 +18,15 @@ import { isForgeShapedBranch, listWorktreeEntries, type WorktreeEntry } from "./
 export type LocalBranch = {
   readonly name: string;
   readonly sha: string;
+  /** The branch's upstream, or `null` when it tracks nothing. */
+  readonly upstream: string | null;
 };
+
+/**
+ * The name the Agent host gives the branch it creates for a named worktree.
+ * `worktree-agent-<id>` branches share the prefix but belong to a worker.
+ */
+const SCAFFOLD_PREFIX = "worktree-";
 
 export type MergedPullRequestRunner = (
   branch: string,
@@ -76,20 +84,27 @@ export async function findMergedPullRequest(
 }
 
 /**
- * Parses `git for-each-ref refs/heads '--format=%(refname:short)%09%(objectname)'`.
+ * Parses `git for-each-ref refs/heads` output with the format
+ * `%(refname:short)%09%(objectname)%09%(upstream:short)`.
  */
 export function parseLocalBranches(output: string): LocalBranch[] {
   const branches: LocalBranch[] = [];
   for (const line of output.split("\n")) {
-    const [name, sha] = line.split("\t");
-    if (name && sha) branches.push({ name: name.trim(), sha: sha.trim() });
+    const [name, sha, upstream] = line.split("\t");
+    if (!name || !sha) continue;
+    const tracked = upstream?.trim() ?? "";
+    branches.push({
+      name: name.trim(),
+      sha: sha.trim(),
+      upstream: tracked.length > 0 ? tracked : null,
+    });
   }
   return branches;
 }
 
 async function listLocalBranches(): Promise<LocalBranch[]> {
   const output =
-    await Bun.$`git for-each-ref refs/heads '--format=%(refname:short)%09%(objectname)'`.text();
+    await Bun.$`git for-each-ref refs/heads '--format=%(refname:short)%09%(objectname)%09%(upstream:short)'`.text();
   return parseLocalBranches(output);
 }
 
@@ -196,9 +211,71 @@ export type MergedSweepContext = {
 
 export type MergedSweepResult = {
   readonly deleted: readonly string[];
+  /** Host scaffold branches deleted because trunk already holds their tip. */
+  readonly scaffolds: readonly string[];
   readonly kept: readonly string[];
   readonly failures: readonly string[];
 };
+
+type SweepCandidates = {
+  readonly entries: readonly WorktreeEntry[];
+  readonly branches: readonly LocalBranch[];
+};
+
+/**
+ * The local branches a sweep may look at: every one except the protected
+ * names and the worker and `worktree-agent-*` branches.
+ */
+async function listSweepCandidates(config: ForgeConfig): Promise<SweepCandidates> {
+  const entries = await listWorktreeEntries();
+  const currentBranch = await readTrimmed(
+    Bun.$`git symbolic-ref --short -q HEAD`.nothrow().quiet(),
+  );
+  const skipped = protectedBranchNames(
+    config.repo.trunk,
+    await resolveDefaultBranch(config.repo.remote),
+    entries[0]?.branch ?? null,
+    currentBranch,
+  );
+  const branches = (await listLocalBranches()).filter(
+    (branch) =>
+      !skipped.has(branch.name) && !isForgeShapedBranch(branch.name, config.ticket.branchPrefix),
+  );
+  return { entries, branches };
+}
+
+async function isInTrunk(sha: string, config: ForgeConfig): Promise<boolean> {
+  const references = [
+    `refs/remotes/${config.repo.remote}/${config.repo.trunk}`,
+    `refs/heads/${config.repo.trunk}`,
+  ];
+  for (const reference of references) {
+    // oxlint-disable-next-line eslint/no-await-in-loop -- sequential on purpose: the second reference is only a fallback
+    const result = await Bun.$`git merge-base --is-ancestor ${sha} ${reference}`.nothrow().quiet();
+    if (result.exitCode === 0) return true;
+  }
+  return false;
+}
+
+/**
+ * The host scaffold branches that hold nothing: named `worktree-<name>`,
+ * checked out nowhere, tracking no upstream, and with a tip trunk already
+ * contains. The Agent host creates one per named worktree and the session
+ * then works on another branch, so the scaffold never gets a commit or a
+ * pull request. Runs in every landing mode. No mutations.
+ */
+async function planScaffoldBranchSweep(context: MergedSweepContext): Promise<string[]> {
+  const { config } = context;
+  const { entries, branches } = await listSweepCandidates(config);
+  const scaffolds: string[] = [];
+  for (const branch of branches) {
+    if (!branch.name.startsWith(SCAFFOLD_PREFIX) || branch.upstream !== null) continue;
+    if (entries.some((entry) => entry.branch === branch.name)) continue;
+    // oxlint-disable-next-line eslint/no-await-in-loop -- sequential on purpose: output in branch order
+    if (await isInTrunk(branch.sha, config)) scaffolds.push(branch.name);
+  }
+  return scaffolds;
+}
 
 /**
  * Plans every local branch that names no ticket against its merged pull
@@ -212,20 +289,9 @@ export async function planMergedBranchSweep(
   const { config, host } = context;
   if (config.landing.mode === "merge") return [];
   const lookup = context.findMergedPullRequest ?? findMergedPullRequest;
-  const entries = await listWorktreeEntries();
-  const currentBranch = await readTrimmed(
-    Bun.$`git symbolic-ref --short -q HEAD`.nothrow().quiet(),
-  );
-  const skipped = protectedBranchNames(
-    config.repo.trunk,
-    await resolveDefaultBranch(config.repo.remote),
-    entries[0]?.branch ?? null,
-    currentBranch,
-  );
+  const { entries, branches } = await listSweepCandidates(config);
   const plans: MergedBranchPlan[] = [];
-  for (const branch of await listLocalBranches()) {
-    if (skipped.has(branch.name)) continue;
-    if (isForgeShapedBranch(branch.name, config.ticket.branchPrefix)) continue;
+  for (const branch of branches) {
     // oxlint-disable-next-line eslint/no-await-in-loop -- sequential on purpose: one gh call at a time, output in branch order
     const pullRequest = await lookup(branch.name, branch.sha);
     if (pullRequest === null) continue;
@@ -288,10 +354,24 @@ export async function sweepMergedBranches(context: MergedSweepContext): Promise<
     console.log(`\nKept ${kept.length} merged branch(es) still checked out:`);
     for (const line of kept) console.log(`  - ${line}`);
   }
+  const scaffolds: string[] = [];
+  for (const branch of await planScaffoldBranchSweep(context)) {
+    if (deleted.some((line) => line.startsWith(`${branch} (`))) continue;
+    // oxlint-disable-next-line eslint/no-await-in-loop -- sequential on purpose: output in branch order
+    const failure = context.dryRun ? null : await deleteLocalBranch(branch);
+    if (failure === null) scaffolds.push(branch);
+    else failures.push(failure);
+  }
+  if (scaffolds.length > 0) {
+    console.log(
+      `\n${context.dryRun ? "Would delete" : "Deleted"} ${scaffolds.length} host scaffold branch(es) already in ${context.config.repo.trunk}:`,
+    );
+    for (const line of scaffolds) console.log(`  - ${line}`);
+  }
   if (failures.length > 0) {
-    console.log(`\n${BINARY}:cleanup — failed to delete ${failures.length} merged branch(es):`);
+    console.log(`\n${BINARY}:cleanup — failed to delete ${failures.length} branch(es):`);
     for (const line of failures) console.log(`  - ${line}`);
     process.exitCode = 1;
   }
-  return { deleted, kept, failures };
+  return { deleted, scaffolds, kept, failures };
 }
