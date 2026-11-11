@@ -71,6 +71,24 @@ describe("destructive commands", () => {
     });
     expect(verdict.decision === "deny" ? verdict.reason : "").toMatch(/^emet guard: /);
   });
+  test("points a denied forced branch delete at emet cleanup", () => {
+    const verdict = checkDestructiveCommand({
+      tool_name: "Bash",
+      tool_input: { command: ["git", "branch", "-D", "fix/landed"].join(" ") },
+    });
+    expect(verdict.decision === "deny" ? verdict.reason : "").toContain(
+      "`emet cleanup` deletes the branches whose pull request merged",
+    );
+  });
+  test("offers no alternative for a rule that has none", () => {
+    const verdict = checkDestructiveCommand({
+      tool_name: "Bash",
+      tool_input: { command: "git clean -fd" },
+    });
+    expect(verdict.decision === "deny" ? verdict.reason : "").toEndWith(
+      "Use a non-destructive alternative, or ask the user to run it.",
+    );
+  });
   test("ignores non-Bash tools", () => {
     expect(
       checkDestructiveCommand({ tool_name: "Read", tool_input: { command: "rm -rf /" } }).decision,
