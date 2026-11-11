@@ -2,8 +2,16 @@
 title: 새로운 소식
 description: emet 릴리스 노트. 각 버전에서 무엇이 바뀌었는지 정리합니다.
 seoTitle: "emet 새로운 소식: 릴리스 노트"
-sourceHash: d97698d1a2df9b05
+sourceHash: a55d1df0b3a69e9e
 ---
+
+## 0.8.2
+
+2026-11-11
+
+### 수정됨
+
+- `emet cleanup`이 워크트리 `<name>`이 아직 존재하는 동안에는 `worktree-<name>` 스캐폴드 브랜치를 유지하므로, 그곳에서 다른 브랜치로 작업 중인 세션이 호스트가 기대하는 브랜치를 그대로 갖습니다.
 
 ## 0.8.1
 

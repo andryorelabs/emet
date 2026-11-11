@@ -2,8 +2,16 @@
 title: 新功能
 description: emet 的发布说明：每个版本都有哪些变化。
 seoTitle: "emet 新功能：发布说明"
-sourceHash: d97698d1a2df9b05
+sourceHash: a55d1df0b3a69e9e
 ---
+
+## 0.8.2
+
+2026-11-11
+
+### 修复
+
+- 只要工作树 `<name>` 仍然存在，`emet cleanup` 就会保留 `worktree-<name>` 脚手架分支，这样在其中另一个分支上工作的会话仍保有其宿主所需的分支。
 
 ## 0.8.1
 
