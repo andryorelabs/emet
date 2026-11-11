@@ -23,9 +23,12 @@ A release is a tag on `main`. Pushing a `v*` tag runs `.github/workflows/release
    ```sh
    git switch main
    git pull --ff-only
-   git tag -a vX.Y.Z -m "vX.Y.Z"
+   git tag -s vX.Y.Z -m "vX.Y.Z"
+   git tag -v vX.Y.Z
    git push origin vX.Y.Z
    ```
+
+   The tag is signed, so Git needs a signing key (`user.signingkey`, or `gpg.format ssh` with an SSH key). `git tag -v` must report a good signature before you push.
 
 ## What the release workflow checks
 
@@ -45,6 +48,7 @@ Then the `release` job:
 
 ## When it fails
 
+- **Tag not signed**: `git tag -v vX.Y.Z` fails. Delete the local tag, fix the signing key and tag again with `git tag -s`.
 - **Tag not on main**: delete the tag (`git push --delete origin vX.Y.Z`, `git tag -d vX.Y.Z`), merge the PR, tag again.
 - **CI passed failed**: re-run the failed CI job on `main`, then re-run the Release workflow.
 - **Tag does not match `plugin.json`** or **no changelog section**: fix on `develop`, merge to `main`, delete the tag and tag the new commit.

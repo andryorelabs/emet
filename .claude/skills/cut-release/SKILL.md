@@ -16,6 +16,6 @@ The full runbook is [docs/how-to/cut-a-release.md](../../../docs/how-to/cut-a-re
 4. In `CHANGELOG.md`, rename `## [Unreleased]` to `## [X.Y.Z] - <today>` and add an empty `## [Unreleased]` above it.
 5. Run `bun run check` and `bun run test`, then commit with the `git-commit` skill and open a PR into `develop`.
 6. Open the `develop` to `main` PR and merge it with a merge commit once `CI passed` is green. Never squash or rebase it.
-7. Tag the merge commit on `main` as `vX.Y.Z` and push the tag. The Release workflow verifies CI and publishes.
+7. Tag the merge commit on `main` with a signed tag, `git tag -s vX.Y.Z -m "vX.Y.Z"`, check it with `git tag -v vX.Y.Z` and push the tag. The Release workflow verifies CI and publishes.
 
 Ask the user before pushing the tag or merging the PR. Never push to `main` or `develop` directly.
