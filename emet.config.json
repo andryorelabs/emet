@@ -49,6 +49,15 @@
     "oversizedReadLines": 400,
     "stalledMinutes": 10
   },
+  "models": {
+    "worker": { "model": "sonnet", "effort": "medium" },
+    "reviewer": {
+      "medium": { "model": "fable", "effort": "medium" },
+      "high": { "model": "fable", "effort": "medium" }
+    },
+    "triage": "haiku",
+    "escalation": { "sonnet": "fable" }
+  },
   "commands": {
     "selfCheck": ["bun run check", "bun run test"],
     "fullSuite": { "run": "bun run check && bun run test" }
