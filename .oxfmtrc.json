@@ -6,7 +6,6 @@
     "LICENSE",
     "CODE_OF_CONDUCT.md",
     "**/node_modules/**",
-    ".claude/**",
-    ".forge/**"
+    ".claude/**"
   ]
 }

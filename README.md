@@ -1,3 +1,5 @@
+<div align="center">
+
 # emet
 
 <picture>
@@ -9,15 +11,17 @@
 **Spec to merge, on one approval.**
 
 [![CI](https://github.com/andryorelabs/emet/actions/workflows/ci.yml/badge.svg)](https://github.com/andryorelabs/emet/actions/workflows/ci.yml)
-[![License: MIT](https://img.shields.io/github/license/andryorelabs/emet)](LICENSE)
 [![Release](https://img.shields.io/github/v/release/andryorelabs/emet)](https://github.com/andryorelabs/emet/releases)
+[![License: MIT](https://img.shields.io/github/license/andryorelabs/emet)](LICENSE)
 [![OpenSSF Scorecard](https://api.scorecard.dev/projects/github.com/andryorelabs/emet/badge)](https://scorecard.dev/viewer/?uri=github.com/andryorelabs/emet)
+
+[Website](https://emet.andryore.dev) · [Documentation](docs/README.md)
+
+</div>
 
 emet is a plugin for Claude Code and Codex. It takes a feature from idea to merged change: interview, spec, tickets, one approval, then parallel workers implement and test in isolated worktrees. Each wave gets a review, CI must be green before merge, and nothing merges when something is flagged.
 
 It runs on your machine, in any git repo, with Linear, GitHub Issues or no tracker.
-
-Read the docs on the Website: [emet.andryore.dev](https://emet.andryore.dev).
 
 - **One approval.** You review the spec and the tickets once, then the run starts.
 - **A review per wave.** A reviewer checks each wave before it lands.
@@ -30,8 +34,6 @@ Pronounced "EH-met".
 
 In folklore a golem is a clay figure brought to life by the word _emet_, "truth", written on its forehead.
 Erase one letter and it stops; here, nothing merges when something is flagged.
-
-Not affiliated with or endorsed by Anthropic or OpenAI
 
 ## Quickstart
 
@@ -125,3 +127,9 @@ See [CONTRIBUTING.md](CONTRIBUTING.md). Questions go through [SUPPORT.md](.githu
 ## License
 
 [MIT](LICENSE)
+
+---
+
+Built by [AndryOre](https://andryore.dev)
+
+Not affiliated with or endorsed by Anthropic or OpenAI.

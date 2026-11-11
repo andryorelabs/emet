@@ -2,12 +2,12 @@
 title: 설정 레퍼런스
 description: emet.config.json의 모든 키를 기본값과 의미와 함께 설명합니다.
 seoTitle: emet 설정 레퍼런스
-sourceHash: ec827dfcb8627f5c
+sourceHash: eb2611cf0c7e09b4
 ---
 
 `emet.config.json`의 모든 키를 기본값과 의미와 함께 정리했습니다. 기준이 되는 원본은 [`emet/schema/emet.config.schema.json`](../../emet/schema/emet.config.schema.json)입니다. 용어는 [GLOSSARY.md](../../GLOSSARY.md)를 따릅니다. [README](../../README.md)로 돌아가기.
 
-`emet init`이 이 파일을 작성하고, `emet preflight`와 `emet doctor`가 검증합니다. prose-only로 표시된 키는 CLI가 아니라 `/emet` 프롬프트(Codex에서는 `$emet:*` 스킬)가 읽습니다. deprecated로 표시된 키도 계속 허용됩니다. 스키마는 메모용 자유 형식 `"//"` 키(어떤 도구도 읽지 않음)와 항상 `1`인 `"version"`도 허용합니다.
+`emet init`이 이 파일을 작성하며 `$schema`를 공개 URL `https://emet.andryore.dev/schema/emet.config.schema.json`로 설정합니다. 웹사이트는 이 파일을 원본과 바이트 단위로 동일하게 제공하므로 에디터는 어디서나 자동 완성을 제공합니다. `emet preflight`와 `emet doctor`가 검증합니다. prose-only로 표시된 키는 CLI가 아니라 `/emet` 프롬프트(Codex에서는 `$emet:*` 스킬)가 읽습니다. deprecated로 표시된 키도 계속 허용됩니다. 스키마는 메모용 자유 형식 `"//"` 키(어떤 도구도 읽지 않음)와 항상 `1`인 `"version"`도 허용합니다.
 
 ## pr
 

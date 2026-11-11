@@ -4,7 +4,7 @@
       "Bash(bun run check)",
       "Bash(bun run test)",
       "Bash(bun run fix)",
-      "Bash(bun run format)",
+      "Bash(bun run format:write)",
       "Bash(bun run format:check)",
       "Bash(bun run lint)",
       "Bash(bun run lint:docs)",
@@ -18,7 +18,7 @@
       "Bash(gh pr diff:*)",
       "Bash(gh run view:*)",
       "Bash(gh run list:*)",
-      "Bash(forge:*)"
+      "Bash(emet:*)"
     ],
     "deny": [
       "Bash(git push origin main:*)",

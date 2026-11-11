@@ -1,12 +1,44 @@
 import { describe, expect, test } from "bun:test";
-import { readdirSync, readFileSync } from "node:fs";
+import { existsSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
 import { join } from "node:path";
 
-const WORKFLOW_DIRECTORY = join(import.meta.dir, "..", ".github", "workflows");
+const REPOSITORY_ROOT = join(import.meta.dir, "..");
+const WORKFLOW_DIRECTORY = join(REPOSITORY_ROOT, ".github", "workflows");
+const STALE_SCRIPT_CALL_PATTERN = /bun run (?:format(?![:\w-])|test:coverage)/;
+const SCRIPT_CALLER_FILES = [
+  "package.json",
+  "AGENTS.md",
+  "CONTRIBUTING.md",
+  "docs/development.md",
+  ".husky/commit-msg",
+  ".husky/pre-commit",
+  ".husky/pre-push",
+  ".github/workflows/ci.yml",
+  ".github/workflows/release.yml",
+];
+const CHANGELOG_GATE_STEP = "Require a CHANGELOG section for the tag";
+const CHANGELOG_FIXTURE = `# Changelog
+
+## [Unreleased]
+
+## [1.2.0] - 2026-01-03
+
+### Added
+
+- A real entry.
+
+## [1.1.0] - 2026-01-02
+
+## [1.0.0] - 2026-01-01
+
+[1.2.0]: https://github.com/andryorelabs/emet/compare/v1.1.0...v1.2.0
+`;
 const FULL_SHA_PATTERN = /^[0-9a-f]{40}$/;
 const USES_LINE_PATTERN = /^\s*-?\s*uses:\s*(\S+?)(?:\s+#\s*(.*))?$/;
 
 interface WorkflowStep {
+  readonly name?: string;
   readonly uses?: string;
   readonly run?: string;
   readonly with?: Record<string, unknown>;
@@ -258,16 +290,49 @@ describe("ci.yml commitlint and manual runs", () => {
     expect(raw).not.toContain('!= "success"');
   });
 
-  test("the Test job runs test:coverage", () => {
-    expect(ci?.raw).toContain("bun run test:coverage");
+  test("the Test job runs the coverage-gated test script", () => {
+    const steps = ci?.workflow.jobs["test"]?.steps ?? [];
+    expect(steps.map((step) => step.run)).toContain("bun run test");
   });
 
-  test("test scripts keep the root suites behind turbo", () => {
-    const manifest = readFileSync("package.json", "utf8");
-    expect(manifest).toContain('"test": "turbo run test test:root"');
-    expect(manifest).toContain('"test:coverage": "turbo run test test:coverage:root"');
-    expect(manifest).toContain('&& bun test --cwd emet"');
-    expect(manifest).toContain('&& bun test --cwd emet --coverage"');
+  test("test keeps the root suites behind turbo and gates emet on coverage", () => {
+    const scripts = readRootScripts();
+    expect(scripts["test"]).toBe("turbo run test test:root");
+    expect(scripts["test:root"]).toEndWith(
+      "&& bun test --cwd emet --coverage --coverage-reporter=text --coverage-reporter=lcov --coverage-dir ../coverage/emet && bun tools/coverage-gate.ts emet coverage/emet/lcov.info",
+    );
+    expect(scripts["test:coverage"]).toBeUndefined();
+    expect(scripts["test:coverage:root"]).toBeUndefined();
+  });
+
+  test("format:write replaces format, and fix calls it", () => {
+    const scripts = readRootScripts();
+    expect(scripts["format"]).toBeUndefined();
+    expect(scripts["format:write"]).toBe("oxfmt");
+    expect(scripts["fix"]).toStartWith("bun run format:write && ");
+  });
+
+  test("lint:commits lints the range from the merge base with origin/develop", () => {
+    const lintCommits = readRootScripts()["lint:commits"] ?? "";
+    expect(lintCommits).toContain("commitlint");
+    expect(lintCommits).toContain("git merge-base origin/develop HEAD");
+    expect(lintCommits).toContain("--to HEAD");
+  });
+
+  test("ci:local runs check, the gated test and lint:commits", () => {
+    expect(readRootScripts()["ci:local"]).toEndWith(
+      "&& bun run check && bun run test && bun run lint:commits",
+    );
+  });
+
+  test("no caller references a renamed or removed script", () => {
+    const staleCalls = SCRIPT_CALLER_FILES.flatMap((path) =>
+      readFileSync(join(REPOSITORY_ROOT, path), "utf8")
+        .split("\n")
+        .filter((line) => STALE_SCRIPT_CALL_PATTERN.test(line))
+        .map((line) => `${path}: ${line.trim()}`),
+    );
+    expect(staleCalls).toEqual([]);
   });
 
   test("macOS smoke writes the binary size to the job summary", () => {
@@ -332,7 +397,77 @@ describe("release.yml", () => {
       expect(raw).toContain(asset);
     }
   });
+
+  describe("CHANGELOG gate", () => {
+    const steps = release?.workflow.jobs["release"]?.steps ?? [];
+    const gateIndex = steps.findIndex((step) => step.name === CHANGELOG_GATE_STEP);
+    const gateScript = steps[gateIndex]?.run ?? "exit 0";
+
+    test("runs before the binaries are built and the release is created", () => {
+      const buildIndex = steps.findIndex((step) => step.run?.includes("build-binaries.ts"));
+      const publishIndex = steps.findIndex((step) => step.run?.includes("gh release create"));
+      expect(gateIndex).toBeGreaterThan(-1);
+      expect(gateIndex).toBeLessThan(buildIndex);
+      expect(gateIndex).toBeLessThan(publishIndex);
+    });
+
+    test("fails when the CHANGELOG has no section for the tag", () => {
+      const result = runChangelogGate(gateScript, "v9.9.9");
+      expect(result.exitCode).not.toBe(0);
+      expect(result.output).toContain("9.9.9");
+    });
+
+    test("fails when the section for the tag is empty", () => {
+      expect(runChangelogGate(gateScript, "v1.1.0").exitCode).not.toBe(0);
+      expect(runChangelogGate(gateScript, "v1.0.0").exitCode).not.toBe(0);
+    });
+
+    test("writes the section as the release notes when it has content", () => {
+      const result = runChangelogGate(gateScript, "v1.2.0");
+      expect(result.exitCode).toBe(0);
+      expect(result.releaseNotes.trim()).toBe("### Added\n\n- A real entry.");
+    });
+  });
 });
+
+/**
+ * Reads the `scripts` map of the root `package.json`.
+ */
+function readRootScripts(): Record<string, string | undefined> {
+  const manifest: unknown = JSON.parse(readFileSync(join(REPOSITORY_ROOT, "package.json"), "utf8"));
+  if (typeof manifest !== "object" || manifest === null || !("scripts" in manifest)) {
+    throw new Error("package.json has no scripts");
+  }
+  return Object.fromEntries(
+    Object.entries(manifest.scripts ?? {}).map(([name, command]) => [name, String(command)]),
+  );
+}
+
+/**
+ * Runs the release workflow's CHANGELOG gate script for `tag` against the
+ * fixture changelog, the way the runner does (`bash -e`), in a scratch directory.
+ */
+function runChangelogGate(
+  script: string,
+  tag: string,
+): { exitCode: number; output: string; releaseNotes: string } {
+  const directory = mkdtempSync(join(tmpdir(), "emet-changelog-gate-"));
+  try {
+    writeFileSync(join(directory, "CHANGELOG.md"), CHANGELOG_FIXTURE);
+    const result = Bun.spawnSync(["bash", "-e", "-c", script], {
+      cwd: directory,
+      env: { PATH: process.env["PATH"] ?? "", GITHUB_REF_NAME: tag },
+    });
+    const notesPath = join(directory, "release-notes.md");
+    return {
+      exitCode: result.exitCode,
+      output: `${result.stdout.toString()}${result.stderr.toString()}`,
+      releaseNotes: existsSync(notesPath) ? readFileSync(notesPath, "utf8") : "",
+    };
+  } finally {
+    rmSync(directory, { recursive: true, force: true });
+  }
+}
 
 const ROUTED_RUNS_ON =
   "${{ github.event.pull_request.head.repo.fork && 'ubuntu-latest' || vars.BLACKSMITH_RUNNER || 'ubuntu-latest' }}";
@@ -384,6 +519,7 @@ const DEPLOY_PATHS = [
   "apps/site/**",
   "docs/**",
   "CHANGELOG.md",
+  "emet/schema/**",
   ".github/scripts/deploy-coolify.sh",
   ".github/workflows/deploy-site.yml",
 ];

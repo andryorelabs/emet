@@ -2,8 +2,24 @@
 title: 新機能
 description: emet のリリースノート。各バージョンでの変更点をまとめています。
 seoTitle: "emet の新機能: リリースノート"
-sourceHash: 9ac94745afe83a53
+sourceHash: 1d62be10d080cc24
 ---
+
+## 0.7.0
+
+2026-11-11
+
+### 追加
+
+- Website が設定スキーマを `https://emet.andryore.dev/schema/emet.config.schema.json` で配信するようになりました。
+- `docs/development.md` と `docs/security.md`。
+- workspace ごとのカバレッジ下限。`bun run test` がこれを強制します。
+
+### 変更
+
+- `emet init` は、ローカルパスではなく公開された `$schema` の URL を `emet.config.json` に書き込みます。
+- リリースタグは署名され、タグに対応する CHANGELOG のセクションが存在しないか空の場合、Release ワークフローは失敗します。
+- リポジトリは andryorelabs 標準 v1 に従います。コードとしての ruleset、コミュニティファイル、README の構成、標準のスクリプト名（`format:write`、`lint:commits`）です。
 
 ## 0.6.1
 

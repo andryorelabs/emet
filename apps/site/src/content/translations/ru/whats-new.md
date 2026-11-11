@@ -2,8 +2,24 @@
 title: Что нового
 description: Примечания к выпускам emet: что изменилось в каждой версии.
 seoTitle: "Что нового в emet: примечания к выпускам"
-sourceHash: 9ac94745afe83a53
+sourceHash: 1d62be10d080cc24
 ---
+
+## 0.7.0
+
+2026-11-11
+
+### Добавлено
+
+- Website отдаёт схему конфигурации по адресу `https://emet.andryore.dev/schema/emet.config.schema.json`.
+- `docs/development.md` и `docs/security.md`.
+- Нижний порог покрытия для каждого workspace, который проверяет `bun run test`.
+
+### Изменено
+
+- `emet init` записывает в `emet.config.json` публичный URL `$schema` вместо локального пути.
+- Теги релизов подписываются, а workflow Release завершается ошибкой, если раздел CHANGELOG для тега отсутствует или пуст.
+- Репозиторий следует стандарту andryorelabs v1: rulesets как код, файлы сообщества, структура README и стандартные имена скриптов (`format:write`, `lint:commits`).
 
 ## 0.6.1
 

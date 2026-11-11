@@ -1,0 +1,38 @@
+{
+  // Editor and tooling hint for validating this file against the knip 6 schema.
+  "$schema": "https://unpkg.com/knip@6/schema.json",
+  "workspaces": {
+    // The root workspace holds the emet CLI, the dev tools and the mods hooks. The Website is its own workspace below.
+    ".": {
+      "entry": [
+        // The CLI binary is the runtime entry point of everything under emet/.
+        "emet/bin/emet.ts",
+        // Test files are entries because nothing imports them.
+        "emet/src/**/*.test.ts",
+        // Dev scripts and their tests are run by bun directly, never imported.
+        "tools/**/*.ts",
+        // Mod hooks are run by Claude Code, never imported.
+        "mods/*/hooks/**/*.ts",
+      ],
+      // The files knip analyzes for unused exports and dead code.
+      "project": ["emet/**/*.ts", "tools/**/*.ts", "mods/*/hooks/**/*.ts"],
+      // The hook .tsx files are loaded by the mod runtime, so knip must not report them as unused.
+      "ignore": ["mods/*/hooks/**/*.tsx"],
+      // typescript7 is only invoked by path (node_modules/typescript7/bin/tsc) in the typecheck script, which knip cannot trace to the package.
+      "ignoreDependencies": ["typescript7"],
+    },
+    // The Astro and Starlight Website.
+    "apps/site": {
+      "entry": [
+        // The code block stub is the scaffold's contract for the home page ticket, which consumes it.
+        "src/components/code/CodeBlock.astro",
+        // The locale helpers are the scaffold's contract for the i18n ticket, which consumes them.
+        "src/i18n/locales.ts",
+        // Starlight loads the route middleware by name from the Astro config, not by import.
+        "src/docs/route-middleware.ts",
+      ],
+      // The content mapper is loaded by name from tsconfig.json's contentMappers.
+      "ignoreDependencies": ["@astrojs/ts-content-mapper"],
+    },
+  },
+}

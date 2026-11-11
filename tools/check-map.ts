@@ -1,7 +1,7 @@
 const UNKNOWN_STAMP_MARKER = "not in history";
 
 /**
- * Decides the exit code of the map freshness gate from the `forge map --stale`
+ * Decides the exit code of the map freshness gate from the `emet map --stale`
  * result. A stamp that is missing from history is tolerated, because a squash
  * merge rewrites the stamped branch commit, so trunk can never contain it.
  */

@@ -28,6 +28,18 @@ describe("parseChangelog", () => {
     expect(parseChangelog(SAMPLE).map((note) => note.version)).toEqual(["0.10.0", "0.2.0"]);
   });
 
+  test("leaves the compare link references out of the last release body", () => {
+    const withLinkReferences = [
+      SAMPLE,
+      "[Unreleased]: https://github.com/andryorelabs/emet/compare/v0.10.0...HEAD",
+      "[0.10.0]: https://github.com/andryorelabs/emet/compare/v0.2.0...v0.10.0",
+      "[0.2.0]: https://github.com/andryorelabs/emet/releases/tag/v0.2.0",
+      "",
+    ].join("\n");
+    expect(parseChangelog(withLinkReferences)).toEqual(parseChangelog(SAMPLE));
+    expect(parseChangelog(withLinkReferences)[0]?.body).toBe("- Ten.");
+  });
+
   test("rejects a malformed release heading", () => {
     expect(() => parseChangelog("## [1.0] - 2026-01-01")).toThrow(/line 1/);
   });

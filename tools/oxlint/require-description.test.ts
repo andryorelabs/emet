@@ -12,7 +12,7 @@ let scratchDirectory = "";
 let fixtureCounter = 0;
 
 beforeAll(async () => {
-  scratchDirectory = await mkdtemp(join(tmpdir(), "forge-require-description-"));
+  scratchDirectory = await mkdtemp(join(tmpdir(), "emet-require-description-"));
   await Bun.write(
     join(scratchDirectory, ".oxlintrc.json"),
     JSON.stringify({

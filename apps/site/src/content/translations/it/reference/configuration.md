@@ -2,12 +2,12 @@
 title: Riferimento della configurazione
 description: Ogni chiave di emet.config.json con il suo valore predefinito e il suo significato.
 seoTitle: Riferimento della configurazione di emet
-sourceHash: ec827dfcb8627f5c
+sourceHash: eb2611cf0c7e09b4
 ---
 
 Ogni chiave di `emet.config.json`, con il suo valore predefinito e il suo significato. La fonte di verità è [`emet/schema/emet.config.schema.json`](../../emet/schema/emet.config.schema.json). I termini seguono [GLOSSARY.md](../../GLOSSARY.md). Torna al [README](../../README.md).
 
-`emet init` scrive il file. `emet preflight` e `emet doctor` lo validano. Una chiave contrassegnata come prose-only è letta dai prompt di `/emet` (le skill `$emet:*` su Codex), non dalla CLI. Una chiave contrassegnata come deprecated è ancora accettata. Lo schema consente inoltre una chiave di testo libero `"//"` per le note (mai letta da alcuno strumento) e `"version"`, che è sempre `1`.
+`emet init` scrive il file con `$schema` impostato sull'URL pubblico `https://emet.andryore.dev/schema/emet.config.schema.json`, che il sito web serve identico byte per byte alla fonte di verità, così gli editor offrono il completamento ovunque. `emet preflight` e `emet doctor` lo validano. Una chiave contrassegnata come prose-only è letta dai prompt di `/emet` (le skill `$emet:*` su Codex), non dalla CLI. Una chiave contrassegnata come deprecated è ancora accettata. Lo schema consente inoltre una chiave di testo libero `"//"` per le note (mai letta da alcuno strumento) e `"version"`, che è sempre `1`.
 
 ## pr
 

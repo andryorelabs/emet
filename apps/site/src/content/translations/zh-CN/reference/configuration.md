@@ -2,12 +2,12 @@
 title: 配置参考
 description: emet.config.json 中的每个键，包括其默认值和含义。
 seoTitle: emet 配置参考
-sourceHash: ec827dfcb8627f5c
+sourceHash: eb2611cf0c7e09b4
 ---
 
 `emet.config.json` 中的每个键，及其默认值和含义。权威来源是 [`emet/schema/emet.config.schema.json`](../../emet/schema/emet.config.schema.json)。术语遵循 [GLOSSARY.md](../../GLOSSARY.md)。返回 [README](../../README.md)。
 
-`emet init` 会写入该文件，`emet preflight` 和 `emet doctor` 会校验它。标记为 prose-only 的键由 `/emet` 提示词（Codex 上是 `$emet:*` 技能）读取，而不是由 CLI 读取。标记为 deprecated 的键仍然被接受。该模式还允许一个用于备注的自由文本 `"//"` 键（任何工具都不会读取它）以及始终为 `1` 的 `"version"`。
+`emet init` 会写入该文件，并将 `$schema` 设为公开 URL `https://emet.andryore.dev/schema/emet.config.schema.json`，网站提供的该文件与权威来源逐字节一致，因此编辑器在任何位置都能提供补全。`emet preflight` 和 `emet doctor` 会校验它。标记为 prose-only 的键由 `/emet` 提示词（Codex 上是 `$emet:*` 技能）读取，而不是由 CLI 读取。标记为 deprecated 的键仍然被接受。该模式还允许一个用于备注的自由文本 `"//"` 键（任何工具都不会读取它）以及始终为 `1` 的 `"version"`。
 
 ## pr
 

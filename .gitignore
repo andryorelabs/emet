@@ -1,4 +1,4 @@
-# forge: runtime state is not versioned; tickets are (local tracker).
+# emet: runtime state is not versioned; tickets are (local tracker).
 .emet/*
 !.emet/tickets/
 node_modules/
@@ -14,6 +14,9 @@ skills-lock.json
 .turbo/
 apps/*/.astro/
 apps/*/dist/
+
+# coverage reports written by `bun run test`
+coverage/
 
 # design-taste-frontend working files
 .taste-skill/
