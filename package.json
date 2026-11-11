@@ -21,7 +21,7 @@
     "check": "turbo run check check:root",
     "check:root": "bun run typecheck && bun run lint && bun run format:check && bun run knip && bun run lint:docs && bun run check:map",
     "test": "turbo run test test:root",
-    "test:root": "bun test ./tools ./mods ./.claude/hooks --path-ignore-patterns 'mods/**/*.tsx' && bun test --cwd emet --coverage",
+    "test:root": "bun test ./tools ./mods ./.claude/hooks --path-ignore-patterns 'mods/**/*.tsx' && bun test --cwd emet --coverage --coverage-reporter=text --coverage-reporter=lcov --coverage-dir ../coverage/emet && bun tools/coverage-gate.ts emet coverage/emet/lcov.info",
     "typecheck": "bun node_modules/typescript7/bin/tsc --noEmit -p emet/tsconfig.json && bun node_modules/typescript7/bin/tsc --noEmit -p tsconfig.json",
     "lint": "oxlint --type-aware --deny-warnings",
     "lint:commits": "bun x --no-install commitlint --from \"$(git merge-base origin/develop HEAD)\" --to HEAD",

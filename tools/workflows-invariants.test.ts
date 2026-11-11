@@ -298,7 +298,9 @@ describe("ci.yml commitlint and manual runs", () => {
   test("test keeps the root suites behind turbo and gates emet on coverage", () => {
     const scripts = readRootScripts();
     expect(scripts["test"]).toBe("turbo run test test:root");
-    expect(scripts["test:root"]).toEndWith("&& bun test --cwd emet --coverage");
+    expect(scripts["test:root"]).toEndWith(
+      "&& bun test --cwd emet --coverage --coverage-reporter=text --coverage-reporter=lcov --coverage-dir ../coverage/emet && bun tools/coverage-gate.ts emet coverage/emet/lcov.info",
+    );
     expect(scripts["test:coverage"]).toBeUndefined();
     expect(scripts["test:coverage:root"]).toBeUndefined();
   });

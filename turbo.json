@@ -28,9 +28,6 @@
     },
     "//#test:root": {
       "cache": false
-    },
-    "//#test:coverage:root": {
-      "cache": false
     }
   }
 }
