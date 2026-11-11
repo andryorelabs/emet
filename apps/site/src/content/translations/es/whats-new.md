@@ -2,8 +2,16 @@
 title: Novedades
 description: Notas de versión de emet: qué cambió en cada versión.
 seoTitle: Novedades de emet: notas de versión
-sourceHash: d97698d1a2df9b05
+sourceHash: a55d1df0b3a69e9e
 ---
+
+## 0.8.2
+
+2026-11-11
+
+### Corregido
+
+- `emet cleanup` conserva una rama scaffold `worktree-<name>` mientras el worktree `<name>` siga existiendo, de modo que una sesión que trabaja ahí en otra rama mantiene la rama que su host espera.
 
 ## 0.8.1
 

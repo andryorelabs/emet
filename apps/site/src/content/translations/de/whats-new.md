@@ -2,8 +2,16 @@
 title: Neuigkeiten
 description: Release Notes für emet: was sich in jeder Version geändert hat.
 seoTitle: "Neuigkeiten in emet: Release Notes"
-sourceHash: d97698d1a2df9b05
+sourceHash: a55d1df0b3a69e9e
 ---
+
+## 0.8.2
+
+2026-11-11
+
+### Behoben
+
+- `emet cleanup` behält einen Scaffold-Branch `worktree-<name>`, solange der Worktree `<name>` noch existiert, sodass eine Sitzung, die dort auf einem anderen Branch arbeitet, den Branch behält, den ihr Host erwartet.
 
 ## 0.8.1
 
