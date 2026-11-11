@@ -59,7 +59,7 @@ const RULES: readonly DestructiveRule[] = [
   {
     label: "git branch -D",
     pattern:
-      /\bgit\b[^\n]*\bbranch\b[^\n]*(\s-[a-zA-Z]*D[a-zA-Z]*(?=[\s"'`)]|$)|\s--delete\s+--force)/,
+      /\bgit\b[^\n]*\bbranch\b(?:[^\n]*\s-[a-zA-Z]*D[a-zA-Z]*(?=[\s"'`)]|$)|(?=[^\n]*\s(?:-[a-zA-Z]*d[a-zA-Z]*|--delete)(?=[\s"'`)]|$))(?=[^\n]*\s(?:-[a-zA-Z]*f[a-zA-Z]*|--force)(?=[\s"'`)]|$)))/,
     alternative: `\`${BINARY} cleanup\` deletes the branches whose pull request merged`,
   },
   {

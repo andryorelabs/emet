@@ -2,8 +2,20 @@
 title: Novedades
 description: Notas de versión de emet: qué cambió en cada versión.
 seoTitle: Novedades de emet: notas de versión
-sourceHash: cc2e3db248e1bdc0
+sourceHash: d97698d1a2df9b05
 ---
+
+## 0.8.1
+
+2026-11-11
+
+### Añadido
+
+- `emet cleanup` elimina las ramas scaffold `worktree-<name>` que deja el Agent host, cuando nada las tiene en uso y trunk ya contiene su punta.
+
+### Corregido
+
+- El guard rechaza un borrado forzado de rama en cualquier forma que combine un flag de borrado con un flag de fuerza, no solo con el flag en mayúscula.
 
 ## 0.8.0
 

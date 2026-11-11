@@ -2,8 +2,20 @@
 title: Novità
 description: Note di rilascio di emet: cosa è cambiato in ogni versione.
 seoTitle: "Novità di emet: note di rilascio"
-sourceHash: cc2e3db248e1bdc0
+sourceHash: d97698d1a2df9b05
 ---
+
+## 0.8.1
+
+2026-11-11
+
+### Aggiunto
+
+- `emet cleanup` elimina i branch scaffold `worktree-<name>` che l'Agent host lascia indietro, quando nessuno li ha in uso e trunk contiene già la loro testa.
+
+### Corretto
+
+- Il guard rifiuta un'eliminazione forzata di un branch in ogni forma che abbina un flag di eliminazione a un flag di forzatura, non solo con il flag maiuscolo.
 
 ## 0.8.0
 

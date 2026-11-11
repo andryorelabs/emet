@@ -8,6 +8,19 @@ and this project adheres to
 
 ## [Unreleased]
 
+## [0.8.1] - 2026-11-11
+
+### Added
+
+- `emet cleanup` deletes the `worktree-<name>` scaffold branches the Agent host
+  leaves behind, when nothing has them checked out and trunk already contains
+  their tip.
+
+### Fixed
+
+- The guard denies a forced branch delete in every spelling that pairs a
+  delete flag with a force flag, not only the capital flag.
+
 ## [0.8.0] - 2026-11-11
 
 ### Added
@@ -240,7 +253,8 @@ and this project adheres to
 - Per-repo configuration through `forge.config.json`.
 - `install.sh`, which installs the CLI, command and agents.
 
-[Unreleased]: https://github.com/andryorelabs/emet/compare/v0.8.0...HEAD
+[Unreleased]: https://github.com/andryorelabs/emet/compare/v0.8.1...HEAD
+[0.8.1]: https://github.com/andryorelabs/emet/compare/v0.8.0...v0.8.1
 [0.8.0]: https://github.com/andryorelabs/emet/compare/v0.7.0...v0.8.0
 [0.7.0]: https://github.com/andryorelabs/emet/compare/v0.6.1...v0.7.0
 [0.6.1]: https://github.com/andryorelabs/emet/compare/v0.6.0...v0.6.1
