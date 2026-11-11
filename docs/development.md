@@ -18,13 +18,12 @@ Use bun only. `emet selftest` runs `bunx tsc` from the installed copy, so `emet/
 Run these from the repo root.
 
 - `bun run check`: turbo runs each workspace's `check` and the root-only `check:root` (typecheck, lint, format check, knip, docs link check, map freshness).
-- `bun run test`: turbo runs each workspace's `test` and the root-only `test:root` (`tools/` tests, then the `emet/` tests).
-- `bun run test:coverage`: the same tests with coverage.
+- `bun run test`: turbo runs each workspace's `test` and the root-only `test:root` (`tools/` tests, then the `emet/` tests with coverage). It fails when coverage drops below the thresholds in `emet/bunfig.toml`.
 - `bun run fix`: format and autofix lint.
 - `bun run format:write`: format only. `bun run format:check` verifies.
-- `bun run lint:commits`: commitlint over the commits since `origin/main`.
+- `bun run lint:commits`: commitlint over the commits since the merge base with `origin/develop`.
 - `bun run build:codex`: regenerate `codex/` and `.codex-plugin/`; `bun run check:codex` verifies them. Never hand-edit those paths.
-- `bun run ci:local`: install, check, coverage tests and commitlint, as CI does.
+- `bun run ci:local`: install, `check`, `test` and `lint:commits`, as CI does.
 
 Do not run a build unless asked. Never loosen a tsconfig or lint setting to pass a check; fix the code ([ADR-0002](adr/0002-oxc-toolchain-and-typescript-7-typecheck.md)). Typecheck with the aliased `typescript7` by path, never bare `tsc`.
 
@@ -54,7 +53,7 @@ Locally, the host-wide worker slot pool lives in `~/.local/state/emet/slots`, no
 
 ## Releases
 
-A release is a signed tag on `main`. The runbook is [how-to/cut-a-release.md](how-to/cut-a-release.md): bump `.claude-plugin/plugin.json`, run `bun run build:codex`, move the `CHANGELOG.md` section, land the release PR in `develop`, merge `develop` into `main` with a merge commit, then create the tag with `git tag -s` and verify it with `git tag -v`. Pushing the tag runs the Release workflow, which checks CI and publishes the standalone binaries. The `cut-release` skill walks an agent through the same steps.
+A release is a signed tag on `main`. The runbook is [how-to/cut-a-release.md](how-to/cut-a-release.md): bump `.claude-plugin/plugin.json`, run `bun run build:codex`, move the `CHANGELOG.md` section, land the release PR in `develop`, merge `develop` into `main` with a merge commit, then create the tag with `git tag -s` and verify it with `git tag -v`. Pushing the tag runs the Release workflow, which checks CI, fails when `CHANGELOG.md` has no section, or an empty one, for the tag, and publishes the standalone binaries. The `cut-release` skill walks an agent through the same steps.
 
 ## Rulesets
 

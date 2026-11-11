@@ -95,6 +95,23 @@ jobs:
             exit 1
           fi
 
+      - name: Require a CHANGELOG section for the tag
+        run: |
+          tag_version="${GITHUB_REF_NAME#v}"
+          awk -v ver="${tag_version}" '
+            /^\[[^]]+\]: / { if (found) exit }
+            /^## \[/ {
+              if (found) exit
+              if (index($0, "## [" ver "]") == 1) { found = 1 }
+              next
+            }
+            found { print }
+          ' CHANGELOG.md > release-notes.md
+          if ! grep -q '[^[:space:]]' release-notes.md; then
+            echo "CHANGELOG.md has no section, or an empty one, for version ${tag_version}"
+            exit 1
+          fi
+
       - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
         with:
           bun-version-file: package.json
@@ -126,23 +143,6 @@ jobs:
             cat dist/SHA256SUMS
             echo '```'
           } >> "${GITHUB_STEP_SUMMARY}"
-
-      - name: Extract changelog section
-        run: |
-          tag_version="${GITHUB_REF_NAME#v}"
-          awk -v ver="${tag_version}" '
-            /^\[[^]]+\]: / { if (found) exit }
-            /^## \[/ {
-              if (found) exit
-              if (index($0, "## [" ver "]") == 1) { found = 1 }
-              next
-            }
-            found { print }
-          ' CHANGELOG.md > release-notes.md
-          if ! grep -q '[^[:space:]]' release-notes.md; then
-            echo "No CHANGELOG.md section found for version ${tag_version}"
-            exit 1
-          fi
 
       - name: Attest build provenance
         id: attest
