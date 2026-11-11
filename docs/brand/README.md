@@ -1,6 +1,6 @@
 # Brand kit: run 1 index
 
-Research and exploration for a possible rename and brand kit for claude-forge.
+Research and exploration for a possible rename and brand kit for emet.
 
 **Status: identity decided; kit applied (runs 3 and 4, spec: issue #174; see
 [`apply-spec.md`](apply-spec.md)).** The maintainer approved the name,
