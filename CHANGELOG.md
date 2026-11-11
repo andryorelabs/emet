@@ -8,6 +8,25 @@ and this project adheres to
 
 ## [Unreleased]
 
+## [0.7.0] - 2026-11-11
+
+### Added
+
+- The Website serves the config schema at
+  `https://emet.andryore.dev/schema/emet.config.schema.json`.
+- `docs/development.md` and `docs/security.md`.
+- A coverage floor per workspace that `bun run test` enforces.
+
+### Changed
+
+- `emet init` writes the public `$schema` URL into `emet.config.json` instead of
+  a local path.
+- Release tags are signed, and the Release workflow fails when the CHANGELOG
+  section for the tag is missing or empty.
+- The repo follows the andryorelabs standard v1: rulesets as code, community
+  files, README layout and standard script names (`format:write`,
+  `lint:commits`).
+
 ## [0.6.1] - 2026-11-10
 
 ### Fixed
@@ -205,7 +224,8 @@ and this project adheres to
 - Per-repo configuration through `forge.config.json`.
 - `install.sh`, which installs the CLI, command and agents.
 
-[Unreleased]: https://github.com/andryorelabs/emet/compare/v0.6.1...HEAD
+[Unreleased]: https://github.com/andryorelabs/emet/compare/v0.7.0...HEAD
+[0.7.0]: https://github.com/andryorelabs/emet/compare/v0.6.1...v0.7.0
 [0.6.1]: https://github.com/andryorelabs/emet/compare/v0.6.0...v0.6.1
 [0.6.0]: https://github.com/andryorelabs/emet/compare/v0.5.2...v0.6.0
 [0.5.2]: https://github.com/andryorelabs/emet/compare/v0.5.1...v0.5.2
