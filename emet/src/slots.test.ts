@@ -347,7 +347,7 @@ describe("slots --acquire CLI", () => {
           cwd: repo,
           stdout: "pipe",
           stderr: "pipe",
-          env: { ...process.env, EMET_STATE_DIR: stateDirectory, EMET_MEM_RESERVE_GIB: "0" },
+          env: { ...process.env, EMET_STATE_DIR: stateDirectory, EMET_MEM_RESERVE_GIB: "0.001" },
         },
       );
       expect(result.stderr.toString()).toBe("");
@@ -387,7 +387,7 @@ describe("slots --acquire CLI", () => {
           cwd: repo,
           stdout: "pipe",
           stderr: "pipe",
-          env: { ...process.env, EMET_STATE_DIR: stateDirectory, EMET_MEM_RESERVE_GIB: "0" },
+          env: { ...process.env, EMET_STATE_DIR: stateDirectory, EMET_MEM_RESERVE_GIB: "0.001" },
         },
       );
       expect(result.exitCode).toBe(0);
