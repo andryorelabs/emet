@@ -9,8 +9,6 @@ const PRINT_COMMANDS = new Set(["echo", "printf"]);
 
 const UNRESOLVABLE_TARGET = /[$`~]/;
 
-const SCRATCH_DIRECTORY_NAME = ".forge";
-
 /**
  * Splits one shell segment into words, honouring single and double quotes.
  * Quote characters are dropped; no expansion is performed.
@@ -49,10 +47,10 @@ function tokenize(segment: string): string[] {
 
 /**
  * Absolute directories a recursive force-delete may target below: the system
- * temp directories and the repo's own `.forge` runtime-state directory.
+ * temp directories only. Nothing inside the repo is on the list.
  */
-function scratchRoots(cwd: string): string[] {
-  return [...new Set(["/tmp", os.tmpdir(), path.resolve(cwd, SCRATCH_DIRECTORY_NAME)])];
+function scratchRoots(): string[] {
+  return [...new Set(["/tmp", os.tmpdir()])];
 }
 
 /**
@@ -65,7 +63,7 @@ function isInsideScratch(target: string, cwd: string): boolean {
     return false;
   }
   const resolved = path.resolve(cwd, target);
-  return scratchRoots(cwd).some((root) => resolved.startsWith(`${root}/`));
+  return scratchRoots().some((root) => resolved.startsWith(`${root}/`));
 }
 
 /**
@@ -154,9 +152,8 @@ function isSegmentAllowed(segment: string, cwd: string): boolean {
  * scratch area. Every `;`, `&&`, `||`, pipe and newline separated segment is
  * checked, including `rm` behind `sudo`, `xargs`, `env` and `sh -c`. A
  * recursive force `rm` is allowed only when every target resolves strictly
- * below `/tmp`, the OS temp directory, or `<cwd>/.forge`. Commands that are
- * not `rm` (including `git rm`) and `rm` without both recursion and force
- * pass through.
+ * below `/tmp` or the OS temp directory. Commands that are not `rm`
+ * (including `git rm`) and `rm` without both recursion and force pass through.
  */
 export function isAllowedRemoval(command: string, cwd: string): boolean {
   return command.split(SEGMENT_SEPARATOR).every((segment) => isSegmentAllowed(segment, cwd));
@@ -190,7 +187,7 @@ export function decideRemovalGuard(hookInput: string): string | null {
       hookEventName: "PreToolUse",
       permissionDecision: "deny",
       permissionDecisionReason:
-        "recursive force-delete outside the scratch area (/tmp, the OS temp dir, .forge) is blocked; delete specific paths or ask the user",
+        "recursive force-delete outside the scratch area (/tmp, the OS temp dir) is blocked; delete specific paths or ask the user",
     },
   });
 }
