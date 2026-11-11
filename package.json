@@ -32,6 +32,7 @@
     "knip": "knip",
     "lint:docs": "bun tools/lint-docs.ts",
     "check:map": "bun tools/check-map.ts",
+    "repo-settings:check": "bun tools/repo-settings-check.ts",
     "brand:export": "bun tools/brand-export.ts",
     "brand:og": "bun tools/og-images.ts",
     "build:codex": "bun tools/build-codex.ts",
