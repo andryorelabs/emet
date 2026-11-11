@@ -9,6 +9,7 @@
  * branch holds nothing else.
  */
 import { existsSync } from "node:fs";
+import path from "node:path";
 
 import type { AgentHost } from "./agenthost";
 import type { ForgeConfig } from "./config";
@@ -259,8 +260,10 @@ async function isInTrunk(sha: string, config: ForgeConfig): Promise<boolean> {
 
 /**
  * The host scaffold branches that hold nothing: named `worktree-<name>`,
- * checked out nowhere, tracking no upstream, and with a tip trunk already
- * contains. The Agent host creates one per named worktree and the session
+ * checked out nowhere, tracking no upstream, with a tip trunk already
+ * contains, and whose worktree `<name>` is gone. A session still working in
+ * that worktree sits on another branch, and the host expects the scaffold
+ * when the session leaves. The Agent host creates one per named worktree and the session
  * then works on another branch, so the scaffold never gets a commit or a
  * pull request. Runs in every landing mode. No mutations.
  */
@@ -271,6 +274,8 @@ async function planScaffoldBranchSweep(context: MergedSweepContext): Promise<str
   for (const branch of branches) {
     if (!branch.name.startsWith(SCAFFOLD_PREFIX) || branch.upstream !== null) continue;
     if (entries.some((entry) => entry.branch === branch.name)) continue;
+    const worktreeName = branch.name.slice(SCAFFOLD_PREFIX.length);
+    if (entries.some((entry) => path.basename(entry.directory) === worktreeName)) continue;
     // oxlint-disable-next-line eslint/no-await-in-loop -- sequential on purpose: output in branch order
     if (await isInTrunk(branch.sha, config)) scaffolds.push(branch.name);
   }

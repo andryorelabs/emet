@@ -299,6 +299,23 @@ describe("merged branch sweep against a real repository", () => {
     ]);
   });
 
+  test("keeps the scaffold branch of a worktree that is still alive on another branch", async () => {
+    git("branch", "worktree-release-notes");
+    commitOn("docs/release-notes", "a.txt");
+    const directory = path.join(repo, ".claude", "worktrees", "release-notes");
+    git("worktree", "add", "-q", directory, "docs/release-notes");
+
+    const result = await sweepMergedBranches({
+      config,
+      host: claudeHost,
+      dryRun: false,
+      findMergedPullRequest: () => Promise.resolve(null),
+    });
+
+    expect(result.scaffolds).toEqual([]);
+    expect(branchNames()).toEqual(["develop", "docs/release-notes", "worktree-release-notes"]);
+  });
+
   test("a dry run reports the scaffold branch and leaves it", async () => {
     git("branch", "worktree-release-notes");
     const result = await sweepMergedBranches({
