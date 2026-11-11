@@ -14,8 +14,9 @@ The full runbook is [docs/how-to/cut-a-release.md](../../../docs/how-to/cut-a-re
 2. Branch `chore/release-vX.Y.Z` from `develop`.
 3. Set `version` in `.claude-plugin/plugin.json` to `X.Y.Z`, then run `bun run build:codex` to bump `.codex-plugin/plugin.json` (`tools/build-codex.test.ts` fails otherwise).
 4. In `CHANGELOG.md`, rename `## [Unreleased]` to `## [X.Y.Z] - <today>` and add an empty `## [Unreleased]` above it. In the link refs at the end of the file, add `[X.Y.Z]: https://github.com/andryorelabs/emet/compare/vPREV...vX.Y.Z` and point `[Unreleased]` at `vX.Y.Z...HEAD` (`tools/changelog-links.test.ts` fails otherwise).
-5. Run `bun run check` and `bun run test`, then commit with the `git-commit` skill and open a PR into `develop`.
-6. Open the `develop` to `main` PR and merge it with a merge commit once `CI passed` is green. Never squash or rebase it.
-7. Tag the merge commit on `main` with a signed tag, `git tag -s vX.Y.Z -m "vX.Y.Z"`, check it with `git tag -v vX.Y.Z` and push the tag. The Release workflow verifies CI and publishes.
+5. Add the `## X.Y.Z` section, translated, to the nine `apps/site/src/content/translations/<locale>/whats-new.md` files. Run `bun run translations:status` and set the `sourceHash` it prints in each file until it reports `translations: all current` (the `Test` job fails on a stale translation otherwise).
+6. Run `bun run check` and `bun run test`, then commit with the `git-commit` skill and open a PR into `develop`.
+7. Open the `develop` to `main` PR and merge it with a merge commit once `CI passed` is green. Never squash or rebase it.
+8. Tag the merge commit on `main` with a signed tag, `git tag -s vX.Y.Z -m "vX.Y.Z"`, check it with `git tag -v vX.Y.Z` and push the tag. The Release workflow verifies CI and publishes.
 
 Ask the user before pushing the tag or merging the PR. Never push to `main` or `develop` directly.

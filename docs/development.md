@@ -23,6 +23,7 @@ Run these from the repo root.
 - `bun run format:write`: format only. `bun run format:check` verifies.
 - `bun run lint:commits`: commitlint over the commits since the merge base with `origin/develop`.
 - `bun run build:codex`: regenerate `codex/` and `.codex-plugin/`; `bun run check:codex` verifies them. Never hand-edit those paths.
+- `bun run translations:status`: list the Website translations that are stale or missing, with the `sourceHash` each must carry.
 - `bun run ci:local`: install, `check`, `test` and `lint:commits`, as CI does.
 
 Do not run a build unless asked. Never loosen a tsconfig or lint setting to pass a check; fix the code ([ADR-0002](adr/0002-oxc-toolchain-and-typescript-7-typecheck.md)). Typecheck with the aliased `typescript7` by path, never bare `tsc`.
