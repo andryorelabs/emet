@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { decideRemovalGuard, isAllowedRemoval } from "./rm-guard.ts";
 
-const repo = "/home/dev/claude-forge";
+const repo = "/home/dev/emet";
 
 describe("isAllowedRemoval", () => {
   test("denies a recursive force-delete of the repo root", () => {
@@ -35,9 +35,15 @@ describe("isAllowedRemoval", () => {
 
   test("denies escapes out of the scratch area", () => {
     expect(isAllowedRemoval("rm -rf /tmp/../etc", repo)).toBe(false);
-    expect(isAllowedRemoval("rm -rf .forge/../src", repo)).toBe(false);
+    expect(isAllowedRemoval("rm -rf /tmp/x/../../src", repo)).toBe(false);
     expect(isAllowedRemoval("rm -rf /tmp", repo)).toBe(false);
-    expect(isAllowedRemoval("rm -rf .forge", repo)).toBe(false);
+  });
+
+  test("denies recursive force-deletes inside the repo, run directory included", () => {
+    expect(isAllowedRemoval("rm -rf .emet", repo)).toBe(false);
+    expect(isAllowedRemoval("rm -rf .emet/runs/x", repo)).toBe(false);
+    expect(isAllowedRemoval("rm -rf .emet/tickets", repo)).toBe(false);
+    expect(isAllowedRemoval(`rm -rf ${repo}/.emet/tmp`, repo)).toBe(false);
   });
 
   test("denies when one segment of a chain is unsafe", () => {
@@ -47,10 +53,8 @@ describe("isAllowedRemoval", () => {
   });
 
   test("allows recursive force-deletes inside scratch", () => {
-    expect(isAllowedRemoval("rm -rf /tmp/forge-e2e", repo)).toBe(true);
+    expect(isAllowedRemoval("rm -rf /tmp/emet-e2e", repo)).toBe(true);
     expect(isAllowedRemoval("rm -rf /tmp/a /tmp/b/c", repo)).toBe(true);
-    expect(isAllowedRemoval("rm -rf .forge/worktrees/x", repo)).toBe(true);
-    expect(isAllowedRemoval(`rm -rf ${repo}/.forge/tmp`, repo)).toBe(true);
     expect(isAllowedRemoval('rm -rf "/tmp/with space"', repo)).toBe(true);
   });
 
