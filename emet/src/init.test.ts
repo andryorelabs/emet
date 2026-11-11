@@ -12,6 +12,7 @@ import os from "node:os";
 import path from "node:path";
 
 import {
+  CONFIG_SCHEMA_URL,
   buildForgeConfig,
   buildTrackerConfig,
   deriveIdPrefix,
@@ -532,7 +533,7 @@ describe("emet init --tracker local end to end", () => {
     }
     const config: unknown = await Bun.file(path.join(repoRoot, "emet.config.json")).json();
     expect(config).toMatchObject({
-      $schema: "~/.claude/emet/schema/emet.config.schema.json",
+      $schema: CONFIG_SCHEMA_URL,
     });
   });
 
