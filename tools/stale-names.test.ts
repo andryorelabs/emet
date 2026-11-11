@@ -23,8 +23,6 @@ export const STALE_NAME_ALLOW_LIST: readonly string[] = [
   "emet/",
   "codex/skills/run/references/incidents.md",
   "docs/brand/",
-  ".claude/hooks/rm-guard.ts",
-  ".claude/hooks/rm-guard.test.ts",
   "tools/install.test.ts",
   "tools/workflows-invariants.test.ts",
   "tools/plugin.test.ts",
@@ -33,7 +31,6 @@ export const STALE_NAME_ALLOW_LIST: readonly string[] = [
   "GLOSSARY.md",
   "docs/troubleshooting.md",
   "docs/architecture.md",
-  "docs/security.md",
   "apps/site/src/content/translations/",
 ];
 
