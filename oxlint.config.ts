@@ -1,16 +1,17 @@
-{
-  "$schema": "./node_modules/oxlint/configuration_schema.json",
-  "plugins": ["typescript", "unicorn", "oxc", "import", "jsdoc", "promise", "node", "jest"],
-  "jsPlugins": ["./tools/oxlint/local-plugin.ts"],
-  "categories": {
-    "correctness": "error",
-    "suspicious": "error",
-    "perf": "error"
+import { defineConfig } from "oxlint";
+
+export default defineConfig({
+  plugins: ["typescript", "unicorn", "oxc", "import", "jsdoc", "promise", "node", "jest"],
+  jsPlugins: ["./tools/oxlint/local-plugin.ts"],
+  categories: {
+    correctness: "error",
+    suspicious: "error",
+    perf: "error",
   },
-  "options": {
-    "reportUnusedDisableDirectives": "error"
+  options: {
+    reportUnusedDisableDirectives: "error",
   },
-  "rules": {
+  rules: {
     "local/no-non-doc-comments": "error",
     "local/require-description": "error",
     "typescript/no-floating-promises": "error",
@@ -29,23 +30,23 @@
     "typescript/no-deprecated": "error",
     "typescript/no-unnecessary-type-assertion": "error",
     "typescript/prefer-promise-reject-errors": "error",
-    "typescript/switch-exhaustiveness-check": "error"
+    "typescript/switch-exhaustiveness-check": "error",
   },
-  "overrides": [
+  overrides: [
     {
-      "files": ["**/*.test.ts", "**/*.spec.ts"],
-      "rules": {
+      files: ["**/*.test.ts", "**/*.spec.ts"],
+      rules: {
         "jest/no-focused-tests": "error",
         "jest/no-identical-title": "error",
-        "jest/no-disabled-tests": "error"
-      }
-    }
+        "jest/no-disabled-tests": "error",
+      },
+    },
   ],
-  "ignorePatterns": [
+  ignorePatterns: [
     ".claude/**",
     "**/node_modules/**",
     "coverage/**",
     "dist/**",
-    "mods/*/hooks/**/*.tsx"
-  ]
-}
+    "mods/*/hooks/**/*.tsx",
+  ],
+});
