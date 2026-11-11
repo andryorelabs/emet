@@ -17,8 +17,9 @@ Guide for coding agents working in emet. Terms follow [GLOSSARY.md](GLOSSARY.md)
 Run from the repo root with bun.
 
 - `bun run check`: turbo runs each workspace's `check` (the Website's typecheck) and the root-only `check:root` (typecheck, lint, format check, knip, docs link check).
-- `bun run test`: turbo runs each workspace's `test` and the root-only `test:root` (`tools/` tests, then the `emet/` tests).
-- `bun run fix`: format and autofix lint.
+- `bun run test`: turbo runs each workspace's `test` and the root-only `test:root` (`tools/` tests, then the `emet/` tests with the coverage gate).
+- `bun run fix`: format and autofix lint. `bun run format:write` formats only.
+- `bun run lint:commits`: commitlint over the commits since the merge base with `origin/develop`.
 - build: do not run unless explicitly asked.
 
 ## Rules

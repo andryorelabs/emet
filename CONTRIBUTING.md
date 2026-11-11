@@ -53,7 +53,9 @@ job `name:` values; `bun run test` enforces it.
 
 The `CI passed` check must be green before a pull request can be merged. Run
 `bun run check` and `bun run test` locally before opening a PR to catch issues
-early.
+early; `bun run test` includes the coverage gate. `bun run format:write` formats
+the tree, `bun run lint:commits` lints your commits against `origin/develop`,
+and `bun run ci:local` runs all of it the way CI does.
 
 ## Tests
 
