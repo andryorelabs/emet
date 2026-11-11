@@ -2,8 +2,20 @@
 title: Neuigkeiten
 description: Release Notes für emet: was sich in jeder Version geändert hat.
 seoTitle: "Neuigkeiten in emet: Release Notes"
-sourceHash: cc2e3db248e1bdc0
+sourceHash: d97698d1a2df9b05
 ---
+
+## 0.8.1
+
+2026-11-11
+
+### Hinzugefügt
+
+- `emet cleanup` löscht die Scaffold-Branches `worktree-<name>`, die der Agent host zurücklässt, wenn sie nirgends ausgecheckt sind und Trunk ihren Tip bereits enthält.
+
+### Behoben
+
+- Der Guard lehnt ein erzwungenes Branch-Löschen in jeder Schreibweise ab, die ein Lösch-Flag mit einem Force-Flag kombiniert, nicht nur mit dem großgeschriebenen Flag.
 
 ## 0.8.0
 
