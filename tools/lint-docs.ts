@@ -5,7 +5,7 @@
  *
  * `LYCHEE_VERSION` mirrors the default `lycheeVersion` of the pinned
  * `lycheeverse/lychee-action`. The binary is cached at
- * `<git-common-dir>/lychee/<version>/lychee`, so every `/forge` worktree
+ * `<git-common-dir>/lychee/<version>/lychee`, so every `/emet` worktree
  * shares one download. `tools/lint-docs.test.ts` asserts that
  * {@link LYCHEE_ARGS} matches the workflow's `args` byte for byte.
  */

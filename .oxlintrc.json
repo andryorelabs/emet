@@ -43,7 +43,6 @@
   ],
   "ignorePatterns": [
     ".claude/**",
-    ".forge/**",
     "**/node_modules/**",
     "coverage/**",
     "dist/**",

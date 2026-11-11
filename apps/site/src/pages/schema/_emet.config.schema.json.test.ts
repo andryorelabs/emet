@@ -13,4 +13,19 @@ describe("schema route", () => {
     expect(served.equals(source)).toBe(true);
     expect(response.headers.get("Content-Type")).toContain("json");
   });
+
+  test("the Website image build context carries the schema", () => {
+    const dockerignore = readFileSync(path.join(REPOSITORY_ROOT, ".dockerignore"), "utf8");
+    const dockerfile = readFileSync(path.join(REPOSITORY_ROOT, "apps/site/Dockerfile"), "utf8");
+    expect(dockerignore.split("\n")).toContain("!emet/schema/emet.config.schema.json");
+    expect(dockerfile).toContain("COPY emet/schema emet/schema");
+  });
+
+  test("a schema change redeploys the Website", () => {
+    const workflow = readFileSync(
+      path.join(REPOSITORY_ROOT, ".github/workflows/deploy-site.yml"),
+      "utf8",
+    );
+    expect(workflow).toContain('- "emet/schema/**"');
+  });
 });

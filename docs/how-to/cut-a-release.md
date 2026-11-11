@@ -14,7 +14,7 @@ A release is a tag on `main`. Pushing a `v*` tag runs `.github/workflows/release
 
 1. Branch from `develop`: `git switch -c chore/release-vX.Y.Z develop`.
 2. Bump `version` in `.claude-plugin/plugin.json` to `X.Y.Z`. The release job fails when the tag is not `v` plus this version. Then run `bun run build:codex` so `.codex-plugin/plugin.json` carries the same version; `tools/build-codex.test.ts` fails otherwise.
-3. In `CHANGELOG.md`, rename `## [Unreleased]` to `## [X.Y.Z] - YYYY-MM-DD` and add a fresh empty `## [Unreleased]` above it. The release notes are the text of the `## [X.Y.Z]` section, and the job fails when that section is missing or empty.
+3. In `CHANGELOG.md`, rename `## [Unreleased]` to `## [X.Y.Z] - YYYY-MM-DD` and add a fresh empty `## [Unreleased]` above it. In the link refs at the end of the file, add `[X.Y.Z]: https://github.com/andryorelabs/emet/compare/vPREV...vX.Y.Z` and point `[Unreleased]` at `vX.Y.Z...HEAD`; `tools/changelog-links.test.ts` fails when a released heading has no ref. The release notes are the text of the `## [X.Y.Z]` section, and the job fails when that section is missing or empty.
 4. Run `bun run check` and `bun run test`.
 5. Commit with `chore: 🔖 release vX.Y.Z` and open a PR into `develop`. It lands as a squash.
 6. Open a PR from `develop` into `main`. Merge it with a merge commit, never a squash or rebase, so `main` keeps the `develop` history. Wait for the `CI passed` check to be green on it.

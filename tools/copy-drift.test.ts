@@ -70,4 +70,19 @@ describe("copy drift", () => {
       expect(description, `${file} description differs from docs/brand/copy.md`).toBe(expected);
     }
   });
+
+  test("the Claude manifests carry the owner identity", () => {
+    const identity = {
+      author: { name: "Andry Orellana" },
+      homepage: "https://emet.andryore.dev",
+      repository: "https://github.com/andryorelabs/emet",
+    };
+    const plugin: unknown = JSON.parse(read(".claude-plugin/plugin.json"));
+    const marketplace: unknown = JSON.parse(read(".claude-plugin/marketplace.json"));
+    expect(plugin).toMatchObject(identity);
+    expect(marketplace).toMatchObject({
+      owner: { name: "andryorelabs" },
+      plugins: [identity, {}],
+    });
+  });
 });

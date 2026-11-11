@@ -26,7 +26,7 @@ Only the coordinator writes the tracker ([ADR-0005](adr/0005-coordinator-is-the-
 
 **`emet guard`** (`emet/src/guard-destructive.ts`) is a PreToolUse hook installed on the host. It denies destructive shell commands and SQL clients, looking through wrappers such as `env`, `sudo`, `timeout` and `xargs`, and it protects the run directory.
 
-**`rm-guard`** (`.claude/hooks/rm-guard.ts`) is this repo's own PreToolUse hook on Bash. It splits a command on `;`, `&&`, `||`, pipes and newlines, including text inside `sh -c`, and denies any recursive force `rm` (`-rf`, `-fr`, `-r -f`, `--recursive --force`) unless every target resolves strictly below `/tmp`, the OS temp directory or the repo's run-state directory. Targets that use `$`, backticks or `~` are denied because they cannot be resolved.
+**`rm-guard`** (`.claude/hooks/rm-guard.ts`) is this repo's own PreToolUse hook on Bash. It splits a command on `;`, `&&`, `||`, pipes and newlines, including text inside `sh -c`, and denies any recursive force `rm` (`-rf`, `-fr`, `-r -f`, `--recursive --force`) unless every target resolves strictly below `/tmp`, the OS temp directory or `<repo>/.forge`. That is the run directory's legacy name: a recursive force delete under `.emet/` is denied, and moving the guard to `.emet` is tracked as a follow-up. Targets that use `$`, backticks or `~` are denied because they cannot be resolved.
 
 **Push denies** in `.claude/settings.json` block `git push origin main` and `git push origin develop`, and the `HEAD:main` and `HEAD:develop` forms. The `pre-push` Git hook refuses the same refs and any branch name outside the allowed patterns. Tag pushes are allowed.
 
