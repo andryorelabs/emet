@@ -2,12 +2,12 @@
 title: Konfigurationsreferenz
 description: Jeder Schlüssel in emet.config.json mit Standardwert und Bedeutung.
 seoTitle: emet-Konfigurationsreferenz
-sourceHash: ec827dfcb8627f5c
+sourceHash: eb2611cf0c7e09b4
 ---
 
 Jeder Schlüssel in `emet.config.json` mit Standardwert und Bedeutung. Die maßgebliche Quelle ist [`emet/schema/emet.config.schema.json`](../../emet/schema/emet.config.schema.json). Die Begriffe folgen [GLOSSARY.md](../../GLOSSARY.md). Zurück zur [README](../../README.md).
 
-`emet init` schreibt die Datei. `emet preflight` und `emet doctor` validieren sie. Ein als prose-only gekennzeichneter Schlüssel wird von den `/emet`-Prompts (unter Codex den `$emet:*`-Skills) gelesen, nicht von der CLI. Ein als deprecated gekennzeichneter Schlüssel wird weiterhin akzeptiert. Das Schema erlaubt außerdem einen freien Text-Schlüssel `"//"` für Notizen (von keinem Tool gelesen) und `"version"`, der immer `1` ist.
+`emet init` schreibt die Datei und setzt `$schema` auf die öffentliche URL `https://emet.andryore.dev/schema/emet.config.schema.json`, die die Website bytegenau identisch zur maßgeblichen Quelle ausliefert, sodass Editoren überall Vervollständigung bieten. `emet preflight` und `emet doctor` validieren sie. Ein als prose-only gekennzeichneter Schlüssel wird von den `/emet`-Prompts (unter Codex den `$emet:*`-Skills) gelesen, nicht von der CLI. Ein als deprecated gekennzeichneter Schlüssel wird weiterhin akzeptiert. Das Schema erlaubt außerdem einen freien Text-Schlüssel `"//"` für Notizen (von keinem Tool gelesen) und `"version"`, der immer `1` ist.
 
 ## pr
 

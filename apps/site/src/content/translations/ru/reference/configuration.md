@@ -2,12 +2,12 @@
 title: Справочник по конфигурации
 description: Каждый ключ emet.config.json со значением по умолчанию и смыслом.
 seoTitle: Справочник по конфигурации emet
-sourceHash: ec827dfcb8627f5c
+sourceHash: eb2611cf0c7e09b4
 ---
 
 Каждый ключ `emet.config.json` со значением по умолчанию и смыслом. Источник истины — [`emet/schema/emet.config.schema.json`](../../emet/schema/emet.config.schema.json). Термины соответствуют [GLOSSARY.md](../../GLOSSARY.md). Назад к [README](../../README.md).
 
-`emet init` записывает файл. `emet preflight` и `emet doctor` проверяют его. Ключ с пометкой prose-only читают промпты `/emet` (в Codex — навыки `$emet:*`), а не CLI. Ключ с пометкой deprecated по-прежнему принимается. Схема также допускает свободный текстовый ключ `"//"` для заметок (его не читает ни один инструмент) и `"version"`, который всегда равен `1`.
+`emet init` записывает файл и задаёт в `$schema` публичный URL `https://emet.andryore.dev/schema/emet.config.schema.json`, по которому сайт отдаёт файл, побайтно совпадающий с источником истины, поэтому редакторы предлагают автодополнение где угодно. `emet preflight` и `emet doctor` проверяют его. Ключ с пометкой prose-only читают промпты `/emet` (в Codex — навыки `$emet:*`), а не CLI. Ключ с пометкой deprecated по-прежнему принимается. Схема также допускает свободный текстовый ключ `"//"` для заметок (его не читает ни один инструмент) и `"version"`, который всегда равен `1`.
 
 ## pr
 
