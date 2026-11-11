@@ -1,4 +1,4 @@
 {
-  "emet": { "lines": 0.74, "functions": 0.83 },
+  "emet": { "lines": 0.81, "functions": 0.89 },
   "apps/site": { "lines": 0.99, "functions": 0.97 }
 }
