@@ -30,7 +30,7 @@ beforeEach(() => {
   );
   process.env["EMET_STATE_DIR"] = stateDirectory;
   process.env["EMET_MAX_LIVE_WORKERS"] = "2";
-  process.env["EMET_MEM_RESERVE_GIB"] = "0";
+  process.env["EMET_MEM_RESERVE_GIB"] = "0.001";
 });
 
 afterEach(() => {
