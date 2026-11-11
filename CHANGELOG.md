@@ -8,6 +8,12 @@ and this project adheres to
 
 ## [Unreleased]
 
+### Fixed
+
+- `emet cleanup` keeps a `worktree-<name>` scaffold branch while the worktree
+  `<name>` still exists, so a session working there on another branch keeps
+  the branch its host expects.
+
 ## [0.8.1] - 2026-11-11
 
 ### Added
