@@ -29,3 +29,4 @@ Decisions that are hard to reverse, surprising without context, and the result o
 | 0021 | [Codex support strategy](0021-codex-support-strategy.md)                                                              | Accepted   | [0022](0022-codex-workers-run-unsandboxed-by-default.md)                        |
 | 0022 | [Codex workers run unsandboxed by default](0022-codex-workers-run-unsandboxed-by-default.md)                          | Accepted   |                                                                                 |
 | 0023 | [CLI-owned mailbox for Codex workers](0023-cli-owned-mailbox-for-codex-workers.md)                                    | Accepted   |                                                                                 |
+| 0024 | [Adopt the andryorelabs standard](0024-adopt-the-andryorelabs-standard.md)                                            | Accepted   |                                                                                 |
