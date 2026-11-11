@@ -8,6 +8,20 @@ and this project adheres to
 
 ## [Unreleased]
 
+### Added
+
+- `emet cleanup` deletes each local branch whose pull request merged at the
+  branch's tip commit, in every mode, together with the clean, unlocked agent
+  worktree that holds it. Integration, release and fix branches no longer wait
+  for a manual delete.
+- `bun run translations:status` lists the Website translations that are behind
+  their source.
+
+### Changed
+
+- The guard's denial of a forced branch delete points at `emet cleanup`.
+- The release runbook covers the `whats-new` translations.
+
 ## [0.7.0] - 2026-11-11
 
 ### Added

@@ -2,7 +2,7 @@
 title: Tracker und Landing
 description: Wo Tickets liegen, wie eine Welle als Pull Request oder lokaler Merge landet und wie Wellen verkettet werden.
 seoTitle: Tracker und Landing in emet
-sourceHash: 9aa84264f5f8cc95
+sourceHash: a8b11b49ae9e48ab
 ---
 
 Wo Tickets liegen, wie eine Welle landet und wie Wellen verkettet werden. Jeder hier genannte Schlüssel steht in der [Konfigurationsreferenz](../reference/configuration.md); jeder Unterbefehl steht in der [CLI-Referenz](../reference/cli.md).
@@ -23,7 +23,7 @@ Mit `tracker.kind: "local"` sind Specs und Tickets Markdown-Dateien unter `.scra
 
 ### Landing-PRs
 
-Eine Welle ist ein PR. Sein Text enthält für jedes Ticket `Closes #N` (das Schließ-Schlüsselwort des Trackers), und der Koordinator setzt die Tickets auf in-review, sobald er den PR öffnet. Der PR wird dann gemäß `pr.autoMerge` gemergt oder bleibt offen, wenn die Welle markiert wurde, `autoMerge` den Wert `false` hat oder die CI-Korrekturen aufgebraucht sind (der PR erhält dann das Label human-decision). Nach einem Merge gibt `emet cleanup --run <runId>` die Branches, Ticket-Claims und Worker-Slots der Welle frei.
+Eine Welle ist ein PR. Sein Text enthält für jedes Ticket `Closes #N` (das Schließ-Schlüsselwort des Trackers), und der Koordinator setzt die Tickets auf in-review, sobald er den PR öffnet. Der PR wird dann gemäß `pr.autoMerge` gemergt oder bleibt offen, wenn die Welle markiert wurde, `autoMerge` den Wert `false` hat oder die CI-Korrekturen aufgebraucht sind (der PR erhält dann das Label human-decision). Nach einem Merge gibt `emet cleanup --run <runId>` die Branches, Ticket-Claims und Worker-Slots der Welle frei. Außerdem löscht es jeden lokalen Branch, dessen PR am Tip-Commit des Branches gemergt wurde, einschließlich des Integrations-Branches.
 
 Nachdem die Branches einer Welle zusammengeführt wurden, läuft `commands.fullSuite` einmal auf dem Integrationsbranch. Ein roter Lauf blockiert den PR und `autoChain`. Das Gate erhält das Ergebnis als `--integration`.
 

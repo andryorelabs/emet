@@ -2,7 +2,7 @@
 title: Tracker e landing
 description: Dove vivono i ticket, come un'ondata atterra come pull request o merge locale e come si concatenano le ondate.
 seoTitle: Tracker e landing in emet
-sourceHash: 9aa84264f5f8cc95
+sourceHash: a8b11b49ae9e48ab
 ---
 
 Dove vivono i ticket, come atterra un'ondata e come si concatenano le ondate. Ogni chiave citata qui è nel [riferimento della configurazione](../reference/configuration.md); ogni sottocomando è nel [riferimento della CLI](../reference/cli.md).
@@ -23,7 +23,7 @@ Con `tracker.kind: "local"`, spec e ticket sono file markdown sotto `.scratch/` 
 
 ### PR di landing
 
-Un'ondata è una PR. Il suo corpo contiene `Closes #N` per ogni ticket (la parola chiave di chiusura del tracker), e il coordinatore sposta i ticket in in-review quando apre la PR. La PR viene poi unita secondo `pr.autoMerge`, oppure resta aperta quando l'ondata è stata segnalata, `autoMerge` è `false` o le correzioni di CI sono esaurite (la PR riceve allora l'etichetta human-decision). Dopo un merge, `emet cleanup --run <runId>` libera i branch, i claim dei ticket e gli slot dei worker dell'ondata.
+Un'ondata è una PR. Il suo corpo contiene `Closes #N` per ogni ticket (la parola chiave di chiusura del tracker), e il coordinatore sposta i ticket in in-review quando apre la PR. La PR viene poi unita secondo `pr.autoMerge`, oppure resta aperta quando l'ondata è stata segnalata, `autoMerge` è `false` o le correzioni di CI sono esaurite (la PR riceve allora l'etichetta human-decision). Dopo un merge, `emet cleanup --run <runId>` libera i branch, i claim dei ticket e gli slot dei worker dell'ondata. Elimina anche ogni branch locale la cui PR è stata unita al commit di testa del branch, compreso il branch di integrazione.
 
 Dopo che i branch di un'ondata sono stati uniti, `commands.fullSuite` viene eseguito una volta sul branch di integrazione. Un'esecuzione rossa blocca la PR e `autoChain`. Il gate riceve il risultato come `--integration`.
 

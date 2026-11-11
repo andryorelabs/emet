@@ -2,7 +2,7 @@
 title: Trackers e aterrissagem
 description: Onde ficam os tickets, como uma onda aterrissa como pull request ou merge local, e como as ondas se encadeiam.
 seoTitle: Trackers e aterrissagem no emet
-sourceHash: 9aa84264f5f8cc95
+sourceHash: a8b11b49ae9e48ab
 ---
 
 Onde ficam os tickets, como uma onda aterrissa e como as ondas se encadeiam. Toda chave citada aqui está na [referência de configuração](../reference/configuration.md); todo subcomando está na [referência da CLI](../reference/cli.md).
@@ -23,7 +23,7 @@ Com `tracker.kind: "local"`, specs e tickets são arquivos markdown em `.scratch
 
 ### PRs de aterrissagem
 
-Uma onda é um PR. Seu corpo traz `Closes #N` para cada ticket (a palavra-chave de fechamento do tracker), e o coordenador move os tickets para em revisão ao abrir o PR. Em seguida o PR é mesclado conforme `pr.autoMerge`, ou deixado aberto quando a onda foi sinalizada, `autoMerge` é `false` ou as correções de CI se esgotaram (o PR então recebe o rótulo de decisão humana). Depois de um merge, `emet cleanup --run <runId>` libera as branches, as reivindicações de tickets e os slots de workers da onda.
+Uma onda é um PR. Seu corpo traz `Closes #N` para cada ticket (a palavra-chave de fechamento do tracker), e o coordenador move os tickets para em revisão ao abrir o PR. Em seguida o PR é mesclado conforme `pr.autoMerge`, ou deixado aberto quando a onda foi sinalizada, `autoMerge` é `false` ou as correções de CI se esgotaram (o PR então recebe o rótulo de decisão humana). Depois de um merge, `emet cleanup --run <runId>` libera as branches, as reivindicações de tickets e os slots de workers da onda. Ele também exclui cada branch local cujo PR foi mesclado no commit da ponta da branch, incluindo a branch de integração.
 
 Depois que as branches de uma onda são mescladas, `commands.fullSuite` roda uma vez na branch de integração. Uma execução vermelha bloqueia o PR e o `autoChain`. O gate recebe o resultado como `--integration`.
 
