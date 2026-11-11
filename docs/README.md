@@ -17,6 +17,8 @@ An index of every document in this repository. Terms follow [GLOSSARY.md](../GLO
 ## Contributing and community
 
 - [`CONTRIBUTING.md`](../CONTRIBUTING.md): setup, branch and commit format, and CI.
+- [`development.md`](development.md): setup with both installs, scripts, branches and commits, hooks, runners, releases and rulesets.
+- [`security.md`](security.md): the threat model of an unattended run, permission modes, and what the rm-guard and push denies cover.
 - [`CODE_OF_CONDUCT.md`](../CODE_OF_CONDUCT.md): community standards.
 - [`GOVERNANCE.md`](../GOVERNANCE.md): decision process.
 - [`SECURITY.md`](../.github/SECURITY.md): how to report vulnerabilities.

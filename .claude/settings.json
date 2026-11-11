@@ -18,7 +18,7 @@
       "Bash(gh pr diff:*)",
       "Bash(gh run view:*)",
       "Bash(gh run list:*)",
-      "Bash(forge:*)"
+      "Bash(emet:*)"
     ],
     "deny": [
       "Bash(git push origin main:*)",

@@ -1,5 +1,6 @@
 # The Website image (apps/site/Dockerfile) builds from the repo root and needs
-# only the workspace manifests, apps/site and the docs it publishes.
+# only the workspace manifests, apps/site, the docs it publishes and the config
+# schema it serves.
 *
 !package.json
 !bun.lock
@@ -11,6 +12,7 @@
 !docs/how-to/update-emet.md
 !docs/how-to/mascot.md
 !CHANGELOG.md
+!emet/schema/emet.config.schema.json
 **/node_modules
 **/.astro
 **/dist

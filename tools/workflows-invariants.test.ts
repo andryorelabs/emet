@@ -384,6 +384,7 @@ const DEPLOY_PATHS = [
   "apps/site/**",
   "docs/**",
   "CHANGELOG.md",
+  "emet/schema/**",
   ".github/scripts/deploy-coolify.sh",
   ".github/workflows/deploy-site.yml",
 ];

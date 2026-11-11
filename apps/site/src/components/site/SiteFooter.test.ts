@@ -15,7 +15,7 @@ describe("SiteFooter", () => {
   });
 
   test("credits the author with rel=author", () => {
-    expect(source).toContain('const AUTHOR_URL = "https://github.com/AndryOre"');
+    expect(source).toContain('const AUTHOR_URL = "https://andryore.dev"');
     expect(source).toContain('<a href={AUTHOR_URL} rel="author">');
   });
 

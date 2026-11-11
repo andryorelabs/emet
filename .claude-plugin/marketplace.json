@@ -1,11 +1,14 @@
 {
   "name": "emet-marketplace",
-  "owner": { "name": "AndryOre" },
+  "owner": { "name": "andryorelabs" },
   "allowCrossMarketplaceDependenciesOn": ["claude-plugins-official"],
   "plugins": [
     {
       "name": "emet",
       "source": "./",
+      "author": { "name": "Andry Orellana" },
+      "homepage": "https://emet.andryore.dev",
+      "repository": "https://github.com/andryorelabs/emet",
       "description": "Spec to merge on one approval: parallel workers in isolated worktrees, a review per wave, CI green before merge."
     },
     {

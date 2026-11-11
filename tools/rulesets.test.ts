@@ -10,6 +10,7 @@ interface Rule {
   type: string;
   parameters?: {
     allowed_merge_methods?: string[];
+    required_review_thread_resolution?: boolean;
     required_status_checks?: { context: string }[];
   };
 }
@@ -20,6 +21,7 @@ interface Ruleset {
   enforcement: string;
   conditions: { ref_name: { include: string[] } };
   rules: Rule[];
+  bypass_actors: unknown[];
 }
 
 /** Whether `value` is a parsed ruleset with a `rules` list. */
@@ -29,7 +31,9 @@ function isRuleset(value: unknown): value is Ruleset {
     value !== null &&
     "rules" in value &&
     Array.isArray(value.rules) &&
-    "conditions" in value
+    "conditions" in value &&
+    "bypass_actors" in value &&
+    Array.isArray(value.bypass_actors)
   );
 }
 
@@ -86,29 +90,39 @@ describe("rulesets", () => {
     }
   });
 
-  test("develop allows squash only with linear history", () => {
+  test("develop allows squash only with linear history and resolved threads", () => {
     const ruleset = readRuleset("develop");
     expect(ruleset.conditions.ref_name.include).toEqual(["refs/heads/develop"]);
-    expect(findRule(ruleset, "pull_request")?.parameters?.allowed_merge_methods).toEqual([
-      "squash",
-    ]);
+    const pullRequest = findRule(ruleset, "pull_request")?.parameters;
+    expect(pullRequest?.allowed_merge_methods).toEqual(["squash"]);
+    expect(pullRequest?.required_review_thread_resolution).toBe(true);
     for (const type of ["required_linear_history", "deletion", "non_fast_forward"]) {
       expect(findRule(ruleset, type)).toBeDefined();
     }
   });
 
-  test("tags protects v* from update and deletion", () => {
+  test("main and develop require the CI gate and the PR title check", () => {
+    for (const name of ["main", "develop"]) {
+      expect(requiredContexts(readRuleset(name)).toSorted()).toEqual([
+        "CI passed",
+        "Validate PR title",
+      ]);
+    }
+  });
+
+  test("tags protects v* from update, deletion and force push", () => {
     const ruleset = readRuleset("tags");
     expect(ruleset.target).toBe("tag");
     expect(ruleset.conditions.ref_name.include).toEqual(["refs/tags/v*"]);
-    for (const type of ["update", "deletion"]) {
+    for (const type of ["update", "deletion", "non_fast_forward"]) {
       expect(findRule(ruleset, type)).toBeDefined();
     }
   });
 
-  test("every ruleset is active", () => {
+  test("every ruleset is active and has no bypass actors", () => {
     for (const name of ["main", "develop", "tags"]) {
       expect(readRuleset(name).enforcement).toBe("active");
+      expect(readRuleset(name).bypass_actors).toEqual([]);
     }
   });
 });

@@ -2,12 +2,12 @@
 title: Referencia de configuración
 description: Cada clave de emet.config.json con su valor por defecto y su significado.
 seoTitle: Referencia de configuración de emet
-sourceHash: ec827dfcb8627f5c
+sourceHash: eb2611cf0c7e09b4
 ---
 
 Cada clave de `emet.config.json`, con su valor por defecto y su significado. La fuente de verdad es [`emet/schema/emet.config.schema.json`](../../emet/schema/emet.config.schema.json). Los términos siguen [GLOSSARY.md](../../GLOSSARY.md). Volver al [README](../../README.md).
 
-`emet init` escribe el archivo. `emet preflight` y `emet doctor` lo validan. Una clave marcada como solo prosa la leen los prompts de `/emet` (las skills `$emet:*` en Codex), no la CLI. Una clave marcada como obsoleta aún se acepta. El esquema también permite una clave de texto libre `"//"` para notas (nunca leída por ninguna herramienta) y `"version"`, que siempre es `1`.
+`emet init` escribe el archivo con `$schema` apuntando a la URL pública `https://emet.andryore.dev/schema/emet.config.schema.json`, que el sitio web sirve idéntica byte a byte a la fuente de verdad, de modo que los editores ofrecen autocompletado en cualquier lugar. `emet preflight` y `emet doctor` lo validan. Una clave marcada como solo prosa la leen los prompts de `/emet` (las skills `$emet:*` en Codex), no la CLI. Una clave marcada como obsoleta aún se acepta. El esquema también permite una clave de texto libre `"//"` para notas (nunca leída por ninguna herramienta) y `"version"`, que siempre es `1`.
 
 ## pr
 
