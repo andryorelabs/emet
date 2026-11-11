@@ -2,8 +2,24 @@
 title: 새로운 소식
 description: emet 릴리스 노트. 각 버전에서 무엇이 바뀌었는지 정리합니다.
 seoTitle: "emet 새로운 소식: 릴리스 노트"
-sourceHash: 9ac94745afe83a53
+sourceHash: 1d62be10d080cc24
 ---
+
+## 0.7.0
+
+2026-11-11
+
+### 추가됨
+
+- Website가 설정 스키마를 `https://emet.andryore.dev/schema/emet.config.schema.json` 에서 제공합니다.
+- `docs/development.md`와 `docs/security.md`.
+- workspace별 커버리지 하한. `bun run test`가 이를 강제합니다.
+
+### 변경됨
+
+- `emet init`이 로컬 경로 대신 공개 `$schema` URL을 `emet.config.json`에 기록합니다.
+- 릴리스 태그는 서명되며, 태그에 해당하는 CHANGELOG 섹션이 없거나 비어 있으면 Release 워크플로가 실패합니다.
+- 저장소가 andryorelabs 표준 v1을 따릅니다. 코드로 관리하는 ruleset, 커뮤니티 파일, README 구성, 표준 스크립트 이름(`format:write`, `lint:commits`)입니다.
 
 ## 0.6.1
 

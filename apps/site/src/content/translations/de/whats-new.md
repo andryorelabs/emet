@@ -2,8 +2,24 @@
 title: Neuigkeiten
 description: Release Notes für emet: was sich in jeder Version geändert hat.
 seoTitle: "Neuigkeiten in emet: Release Notes"
-sourceHash: 9ac94745afe83a53
+sourceHash: 1d62be10d080cc24
 ---
+
+## 0.7.0
+
+2026-11-11
+
+### Hinzugefügt
+
+- Die Website liefert das Konfigurationsschema unter `https://emet.andryore.dev/schema/emet.config.schema.json` aus.
+- `docs/development.md` und `docs/security.md`.
+- Eine Coverage-Untergrenze pro Workspace, die `bun run test` durchsetzt.
+
+### Geändert
+
+- `emet init` schreibt die öffentliche `$schema`-URL statt eines lokalen Pfads in `emet.config.json`.
+- Release-Tags sind signiert, und der Release-Workflow schlägt fehl, wenn der CHANGELOG-Abschnitt für den Tag fehlt oder leer ist.
+- Das Repository folgt dem andryorelabs-Standard v1: Rulesets als Code, Community-Dateien, README-Aufbau und Standard-Skriptnamen (`format:write`, `lint:commits`).
 
 ## 0.6.1
 

@@ -2,8 +2,24 @@
 title: Novità
 description: Note di rilascio di emet: cosa è cambiato in ogni versione.
 seoTitle: "Novità di emet: note di rilascio"
-sourceHash: 9ac94745afe83a53
+sourceHash: 1d62be10d080cc24
 ---
+
+## 0.7.0
+
+2026-11-11
+
+### Aggiunto
+
+- Il Website serve lo schema di configurazione all'indirizzo `https://emet.andryore.dev/schema/emet.config.schema.json`.
+- `docs/development.md` e `docs/security.md`.
+- Una soglia minima di copertura per workspace, fatta rispettare da `bun run test`.
+
+### Modificato
+
+- `emet init` scrive l'URL pubblico di `$schema` in `emet.config.json` invece di un percorso locale.
+- I tag di rilascio sono firmati, e il workflow Release fallisce quando la sezione del CHANGELOG per il tag manca o è vuota.
+- Il repository segue lo standard andryorelabs v1: ruleset come codice, file di comunità, struttura del README e nomi di script standard (`format:write`, `lint:commits`).
 
 ## 0.6.1
 
