@@ -67,10 +67,12 @@ describe("findMergedPullRequest", () => {
 
 describe("parseLocalBranches", () => {
   test("reads name and commit per line and skips blanks", () => {
-    expect(parseLocalBranches(`main\t${TIP}\nfix/x\t${"b".repeat(40)}\n\n`)).toEqual([
-      { name: "main", sha: TIP },
-      { name: "fix/x", sha: "b".repeat(40) },
-    ]);
+    expect(parseLocalBranches(`main\t${TIP}\torigin/main\nfix/x\t${"b".repeat(40)}\t\n\n`)).toEqual(
+      [
+        { name: "main", sha: TIP, upstream: "origin/main" },
+        { name: "fix/x", sha: "b".repeat(40), upstream: null },
+      ],
+    );
   });
 });
 
@@ -250,8 +252,64 @@ describe("merged branch sweep against a real repository", () => {
       findMergedPullRequest: () => Promise.resolve(null),
     });
     expect(branchNames()).toEqual(["chore/open-pr", "develop"]);
-    expect(result).toEqual({ deleted: [], kept: [], failures: [] });
+    expect(result).toEqual({ deleted: [], scaffolds: [], kept: [], failures: [] });
     expect(printed()).toBe("");
+  });
+
+  test("deletes a host scaffold branch that trunk already contains", async () => {
+    git("branch", "worktree-release-notes");
+    git("branch", "feature-without-commits");
+    writeFileSync(path.join(repo, "a.txt"), "trunk moved on\n");
+    git("add", ".");
+    git("commit", "-q", "-m", "more work on trunk");
+
+    const result = await sweepMergedBranches({
+      config: { ...config, landing: { mode: "merge" } },
+      host: claudeHost,
+      dryRun: false,
+      findMergedPullRequest: () => Promise.resolve(null),
+    });
+
+    expect(branchNames()).toEqual(["develop", "feature-without-commits"]);
+    expect(result.scaffolds).toEqual(["worktree-release-notes"]);
+    expect(printed()).toContain("Deleted 1 host scaffold branch(es) already in develop:");
+  });
+
+  test("keeps a scaffold branch that holds a commit, is checked out or tracks an upstream", async () => {
+    commitOn("worktree-with-work", "a.txt");
+    git("branch", "worktree-checked-out");
+    const directory = path.join(repo, ".claude", "worktrees", "checked-out");
+    git("worktree", "add", "-q", directory, "worktree-checked-out");
+    git("branch", "worktree-tracking");
+    git("branch", "-q", "--set-upstream-to", "develop", "worktree-tracking");
+
+    const result = await sweepMergedBranches({
+      config,
+      host: claudeHost,
+      dryRun: false,
+      findMergedPullRequest: () => Promise.resolve(null),
+    });
+
+    expect(result.scaffolds).toEqual([]);
+    expect(branchNames()).toEqual([
+      "develop",
+      "worktree-checked-out",
+      "worktree-tracking",
+      "worktree-with-work",
+    ]);
+  });
+
+  test("a dry run reports the scaffold branch and leaves it", async () => {
+    git("branch", "worktree-release-notes");
+    const result = await sweepMergedBranches({
+      config,
+      host: claudeHost,
+      dryRun: true,
+      findMergedPullRequest: () => Promise.resolve(null),
+    });
+    expect(result.scaffolds).toEqual(["worktree-release-notes"]);
+    expect(branchNames()).toEqual(["develop", "worktree-release-notes"]);
+    expect(printed()).toContain("Would delete 1 host scaffold branch(es) already in develop:");
   });
 
   test("never considers trunk, the current branch, or worker and scaffold branches", async () => {
