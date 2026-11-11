@@ -2,6 +2,9 @@
   "name": "emet",
   "version": "0.6.1",
   "description": "Spec to merge on one approval: parallel workers in isolated worktrees, a review per wave, CI green before merge.",
+  "author": { "name": "Andry Orellana" },
+  "homepage": "https://emet.andryore.dev",
+  "repository": "https://github.com/andryorelabs/emet",
   "license": "MIT",
   "dependencies": [{ "name": "mattpocock-skills", "marketplace": "claude-plugins-official" }]
 }
