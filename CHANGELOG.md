@@ -8,6 +8,8 @@ and this project adheres to
 
 ## [Unreleased]
 
+## [0.8.0] - 2026-11-11
+
 ### Added
 
 - `emet cleanup` deletes each local branch whose pull request merged at the
@@ -238,7 +240,8 @@ and this project adheres to
 - Per-repo configuration through `forge.config.json`.
 - `install.sh`, which installs the CLI, command and agents.
 
-[Unreleased]: https://github.com/andryorelabs/emet/compare/v0.7.0...HEAD
+[Unreleased]: https://github.com/andryorelabs/emet/compare/v0.8.0...HEAD
+[0.8.0]: https://github.com/andryorelabs/emet/compare/v0.7.0...v0.8.0
 [0.7.0]: https://github.com/andryorelabs/emet/compare/v0.6.1...v0.7.0
 [0.6.1]: https://github.com/andryorelabs/emet/compare/v0.6.0...v0.6.1
 [0.6.0]: https://github.com/andryorelabs/emet/compare/v0.5.2...v0.6.0

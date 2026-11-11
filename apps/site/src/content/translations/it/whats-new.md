@@ -2,8 +2,22 @@
 title: Novità
 description: Note di rilascio di emet: cosa è cambiato in ogni versione.
 seoTitle: "Novità di emet: note di rilascio"
-sourceHash: 1d62be10d080cc24
+sourceHash: cc2e3db248e1bdc0
 ---
+
+## 0.8.0
+
+2026-11-11
+
+### Aggiunto
+
+- `emet cleanup` elimina, in ogni modalità, ogni branch locale la cui pull request è stata unita al commit di testa del branch, insieme al worktree dell'agente pulito e non bloccato che lo contiene. I branch di integrazione, di release e di fix non aspettano più un'eliminazione manuale.
+- `bun run translations:status` elenca le traduzioni del Website rimaste indietro rispetto alla fonte.
+
+### Modificato
+
+- Il rifiuto del guard a un'eliminazione forzata di un branch rimanda a `emet cleanup`.
+- Il runbook di release copre le traduzioni di `whats-new`.
 
 ## 0.7.0
 
