@@ -18,7 +18,7 @@ With `tracker.kind: "local"`, specs and tickets are markdown files under the mai
 
 ### Landing PRs
 
-One wave is one PR. Its body carries `Closes #N` for each ticket (the tracker's closing keyword), and the coordinator moves the tickets to in-review when it opens the PR. The PR is then merged per `pr.autoMerge`, or left open when the wave was flagged, `autoMerge` is `false`, or CI fixes ran out (the PR then gets the human-decision label). After a merge, `emet cleanup --run <runId>` frees the wave's branches, ticket claims, and worker slots.
+One wave is one PR. Its body carries `Closes #N` for each ticket (the tracker's closing keyword), and the coordinator moves the tickets to in-review when it opens the PR. The PR is then merged per `pr.autoMerge`, or left open when the wave was flagged, `autoMerge` is `false`, or CI fixes ran out (the PR then gets the human-decision label). After a merge, `emet cleanup --run <runId>` frees the wave's branches, ticket claims, and worker slots. It also deletes each local branch whose PR merged at the branch's tip commit, the integration branch included.
 
 After a wave's branches are merged together, `commands.fullSuite` runs once on the integration branch. A red run blocks the PR and `autoChain`. The gate receives the result as `--integration`.
 

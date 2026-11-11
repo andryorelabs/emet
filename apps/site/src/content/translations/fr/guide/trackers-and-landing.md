@@ -2,7 +2,7 @@
 title: Trackers et atterrissage
 description: Où vivent les tickets, comment une vague atterrit en pull request ou en merge local, et comment les vagues s'enchaînent.
 seoTitle: Trackers et atterrissage dans emet
-sourceHash: 9aa84264f5f8cc95
+sourceHash: a8b11b49ae9e48ab
 ---
 
 Où vivent les tickets, comment une vague atterrit et comment les vagues s'enchaînent. Chaque clé citée ici figure dans la [référence de configuration](../reference/configuration.md) ; chaque sous-commande figure dans la [référence de la CLI](../reference/cli.md).
@@ -23,7 +23,7 @@ Avec `tracker.kind: "local"`, les specs et les tickets sont des fichiers markdow
 
 ### PR d'atterrissage
 
-Une vague est une PR. Son corps porte `Closes #N` pour chaque ticket (le mot-clé de fermeture du tracker), et le coordinateur passe les tickets en revue à l'ouverture de la PR. La PR est ensuite fusionnée selon `pr.autoMerge`, ou laissée ouverte lorsque la vague a été signalée, que `autoMerge` vaut `false` ou que les corrections de CI sont épuisées (la PR reçoit alors le label de décision humaine). Après un merge, `emet cleanup --run <runId>` libère les branches, les réservations de tickets et les emplacements de workers de la vague.
+Une vague est une PR. Son corps porte `Closes #N` pour chaque ticket (le mot-clé de fermeture du tracker), et le coordinateur passe les tickets en revue à l'ouverture de la PR. La PR est ensuite fusionnée selon `pr.autoMerge`, ou laissée ouverte lorsque la vague a été signalée, que `autoMerge` vaut `false` ou que les corrections de CI sont épuisées (la PR reçoit alors le label de décision humaine). Après un merge, `emet cleanup --run <runId>` libère les branches, les réservations de tickets et les emplacements de workers de la vague. Il supprime aussi chaque branche locale dont la PR a été fusionnée au commit de tête de la branche, y compris la branche d'intégration.
 
 Une fois les branches d'une vague fusionnées ensemble, `commands.fullSuite` s'exécute une fois sur la branche d'intégration. Une exécution au rouge bloque la PR et `autoChain`. Le gate reçoit le résultat sous la forme `--integration`.
 

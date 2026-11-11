@@ -2,7 +2,7 @@
 title: CLI 레퍼런스
 description: 모든 emet 하위 명령, 게이트와 기록 표, 종료 코드, 환경 변수를 설명합니다.
 seoTitle: emet CLI 레퍼런스
-sourceHash: b89b785c057b008c
+sourceHash: a8d3bf074f04de8e
 ---
 
 모든 `emet` 하위 명령, 게이트와 기록 표, 종료 코드, 환경 변수입니다. 용어는 [GLOSSARY.md](../../GLOSSARY.md)를 따릅니다. [README](../../README.md)로 돌아가기. 모든 명령은 `--help`로 사용법을 출력합니다.
@@ -53,7 +53,7 @@ emet doctor ~/code/*
 
 - `emet claims --reserve <ticket> --run <id> --anchor <pid>`: 실행을 위해 티켓을 예약합니다. `--release <ticket>`, `--list`, `--prune [--dry-run]`은 각각 클레임을 해제하고, 클레임을 나열하고, 오래된 클레임을 정리합니다.
 - `emet slots --acquire --run <id> --anchor <pid> --ticket <ticket>`: `~/.local/state/emet/slots`에 있는 호스트 전체 풀에서 워커 슬롯을 가져옵니다. `--release --run <id>`, `--release-index <index>`, `--list`는 슬롯을 해제하거나 나열합니다.
-- `emet cleanup [--run <id> | --all] [--dry-run] [--force]`: 인자 없이 실행하면 작업이 랜딩된 종료되었거나 죽은 실행을 회수합니다. `--run`은 해당 실행을 정리하고, `--all`은 리포지토리 전체의 브랜치 정리입니다. 병합 후 `emet cleanup --run <runId>`를 실행하면 웨이브의 브랜치, 티켓 클레임, 워커 슬롯이 해제됩니다.
+- `emet cleanup [--run <id> | --all] [--dry-run] [--force]`: 인자 없이 실행하면 작업이 랜딩된 종료되었거나 죽은 실행을 회수합니다. `--run`은 해당 실행을 정리하고, `--all`은 리포지토리 전체의 브랜치 정리입니다. 병합 후 `emet cleanup --run <runId>`를 실행하면 웨이브의 브랜치, 티켓 클레임, 워커 슬롯이 해제됩니다. 모든 모드에서 PR이 브랜치의 최신 커밋에서 병합된 로컬 브랜치도, 그 브랜치를 담고 있는 깨끗하고 잠기지 않은 에이전트 워크트리와 함께 삭제합니다.
 - `emet lock-reason --run <id> --ticket <ticket> [--anchor <pid>]`: 워커가 부트스트랩 때 기록하는 `git worktree lock` 사유를 출력합니다.
 - `emet launch <spec-id> --wave <n>`: Claude Code에서는 웨이브를 `claude --bg` 세션으로 시작하고 `handoff.launcher`에 따라 Orca 탭을 엽니다(Codex는 [Codex 호스트](#codex-호스트) 참고). 시작 전체(중복 세션 확인, `claude --bg`, 탭)를 수행하고 `{ name, id, attach, orcaTab: { opened, reason } }`를 출력합니다. 다른 세션에서 웨이브를 직접 실행하고 싶을 때는 단순한 `claude --bg` 대신 이것을 사용하세요.
 - `emet status [--spec <id>]`: 웨이브별 Working / Checking / Ready / Needs-decision을 JSON과 요약 줄로 출력합니다. `emet status --help`에 JSON 설명이 있습니다.

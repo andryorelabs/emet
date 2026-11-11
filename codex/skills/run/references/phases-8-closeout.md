@@ -184,6 +184,11 @@ has no failures it marks the run closed, so every later reclaim treats the run
 as finished even while your session stays open. Don't leave any of this for the
 next wave or the final report to discover.
 
+Every mode also deletes each local branch whose PR merged at the branch's tip
+commit (the integration branch included), with the clean, unlocked agent
+worktree holding it; the current branch is kept. So never hand the user a
+`git branch -D`: run `emet cleanup` from the main worktree.
+
 The bare `emet cleanup` is the safe reclaim: it removes the same things for
 every run that is closed or dead and whose ticket landed, and never touches a
 live or idle run, a worktree it cannot attribute to a run, or a foreign

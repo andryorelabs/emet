@@ -2,7 +2,7 @@
 title: CLI-Referenz
 description: Jeder emet-Unterbefehl, die Tabelle der Gates und Aufzeichnungen, Exit-Codes und Umgebungsvariablen.
 seoTitle: emet-CLI-Referenz
-sourceHash: b89b785c057b008c
+sourceHash: a8d3bf074f04de8e
 ---
 
 Jeder `emet`-Unterbefehl, die Tabelle der Gates und Aufzeichnungen, Exit-Codes und Umgebungsvariablen. Die Begriffe folgen [GLOSSARY.md](../../GLOSSARY.md). Zurück zur [README](../../README.md). Jeder Befehl gibt seine Verwendung mit `--help` aus.
@@ -53,7 +53,7 @@ Der Bericht enthält pro Repo: eine gültige `emet.config.json`, alle vier vorha
 
 - `emet claims --reserve <ticket> --run <id> --anchor <pid>`: reserviert ein Ticket für einen Lauf. `--release <ticket>`, `--list` und `--prune [--dry-run]` geben einen Claim frei, listen Claims auf oder entfernen veraltete.
 - `emet slots --acquire --run <id> --anchor <pid> --ticket <ticket>`: nimmt einen Worker-Slot aus dem hostweiten Pool in `~/.local/state/emet/slots`. `--release --run <id>`, `--release-index <index>` und `--list` geben Slots frei oder listen sie auf.
-- `emet cleanup [--run <id> | --all] [--dry-run] [--force]`: ohne Argumente werden abgeschlossene oder tote Läufe zurückgewonnen, deren Arbeit gelandet ist; `--run` räumt diesen Lauf auf; `--all` ist ein repoweiter Branch-Durchlauf. Nach einem Merge gibt `emet cleanup --run <runId>` die Branches, Ticket-Claims und Worker-Slots der Welle frei.
+- `emet cleanup [--run <id> | --all] [--dry-run] [--force]`: ohne Argumente werden abgeschlossene oder tote Läufe zurückgewonnen, deren Arbeit gelandet ist; `--run` räumt diesen Lauf auf; `--all` ist ein repoweiter Branch-Durchlauf. Nach einem Merge gibt `emet cleanup --run <runId>` die Branches, Ticket-Claims und Worker-Slots der Welle frei. In jedem Modus löscht es außerdem jeden lokalen Branch, dessen PR am Tip-Commit des Branches gemergt wurde, zusammen mit dem sauberen, nicht gesperrten Agent-Worktree, der ihn enthält.
 - `emet lock-reason --run <id> --ticket <ticket> [--anchor <pid>]`: gibt den `git worktree lock`-Grund aus, den ein Worker beim Bootstrap schreibt.
 - `emet launch <spec-id> --wave <n>`: startet unter Claude Code eine Welle als `claude --bg`-Sitzung und öffnet ihren Orca-Tab gemäß `handoff.launcher` (unter Codex siehe [Codex-Host](#codex-host)). Es erledigt den gesamten Start (Prüfung auf doppelte Sitzungen, `claude --bg`, Tab) und gibt `{ name, id, attach, orcaTab: { opened, reason } }` aus. Dieses statt eines bloßen `claude --bg` verwenden, wenn eine Welle von Hand in einer anderen Sitzung laufen soll.
 - `emet status [--spec <id>]`: Working / Checking / Ready / Needs-decision pro Welle als JSON plus eine Zusammenfassungszeile. `emet status --help` dokumentiert das JSON.
