@@ -2,7 +2,7 @@
 
 Every key in `emet.config.json`, with its default and meaning. The source of truth is [`emet/schema/emet.config.schema.json`](../../emet/schema/emet.config.schema.json). Terms follow [GLOSSARY.md](../../GLOSSARY.md). Back to the [README](../../README.md).
 
-`emet init` writes the file. `emet preflight` and `emet doctor` validate it. A key marked prose-only is read by the `/emet` prompts (the `$emet:*` skills on Codex), not by the CLI. A key marked deprecated is still accepted. The schema also allows a free-text `"//"` key for notes (never read by any tool) and `"version"`, which is always `1`.
+`emet init` writes the file with `$schema` set to the public URL `https://emet.andryore.dev/schema/emet.config.schema.json`, which the Website serves byte-identical to the source of truth, so editors get completion anywhere. `emet preflight` and `emet doctor` validate it. A key marked prose-only is read by the `/emet` prompts (the `$emet:*` skills on Codex), not by the CLI. A key marked deprecated is still accepted. The schema also allows a free-text `"//"` key for notes (never read by any tool) and `"version"`, which is always `1`.
 
 ## pr
 
