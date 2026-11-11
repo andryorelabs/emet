@@ -2,8 +2,22 @@
 title: Novedades
 description: Notas de versión de emet: qué cambió en cada versión.
 seoTitle: Novedades de emet: notas de versión
-sourceHash: 1d62be10d080cc24
+sourceHash: cc2e3db248e1bdc0
 ---
+
+## 0.8.0
+
+2026-11-11
+
+### Añadido
+
+- `emet cleanup` elimina cada rama local cuyo pull request se fusionó en el commit de la punta de la rama, en todos los modos, junto con el worktree de agente limpio y sin bloqueo que la contiene. Las ramas de integración, de release y de corrección ya no esperan un borrado manual.
+- `bun run translations:status` lista las traducciones del Website que están atrasadas respecto a su fuente.
+
+### Cambiado
+
+- El rechazo del guard a un borrado forzado de rama apunta a `emet cleanup`.
+- El runbook de release cubre las traducciones de `whats-new`.
 
 ## 0.7.0
 

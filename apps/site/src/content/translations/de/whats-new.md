@@ -2,8 +2,22 @@
 title: Neuigkeiten
 description: Release Notes für emet: was sich in jeder Version geändert hat.
 seoTitle: "Neuigkeiten in emet: Release Notes"
-sourceHash: 1d62be10d080cc24
+sourceHash: cc2e3db248e1bdc0
 ---
+
+## 0.8.0
+
+2026-11-11
+
+### Hinzugefügt
+
+- `emet cleanup` löscht in jedem Modus jeden lokalen Branch, dessen Pull Request am Tip-Commit des Branches gemergt wurde, zusammen mit dem sauberen, nicht gesperrten Agent-Worktree, der ihn enthält. Integrations-, Release- und Fix-Branches warten nicht mehr auf ein manuelles Löschen.
+- `bun run translations:status` listet die Übersetzungen der Website auf, die hinter ihrer Quelle zurückliegen.
+
+### Geändert
+
+- Die Ablehnung eines erzwungenen Branch-Löschens durch den Guard verweist auf `emet cleanup`.
+- Das Release-Runbook deckt die `whats-new`-Übersetzungen ab.
 
 ## 0.7.0
 

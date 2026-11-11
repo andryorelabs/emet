@@ -1,6 +1,6 @@
 {
   "name": "emet",
-  "version": "0.7.0",
+  "version": "0.8.0",
   "description": "Spec to merge on one approval: parallel workers in isolated worktrees, a review per wave, CI green before merge.",
   "author": { "name": "Andry Orellana" },
   "homepage": "https://emet.andryore.dev",
