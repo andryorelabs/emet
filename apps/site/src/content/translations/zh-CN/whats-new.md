@@ -2,8 +2,20 @@
 title: 新功能
 description: emet 的发布说明：每个版本都有哪些变化。
 seoTitle: "emet 新功能：发布说明"
-sourceHash: cc2e3db248e1bdc0
+sourceHash: d97698d1a2df9b05
 ---
+
+## 0.8.1
+
+2026-11-11
+
+### 新增
+
+- `emet cleanup` 会删除 Agent host 留下的 `worktree-<name>` 脚手架分支，前提是它没有在任何地方被检出，并且主干已包含其顶端提交。
+
+### 修复
+
+- guard 会拒绝任何将删除标志与强制标志组合的强制删除分支写法，而不仅仅是大写标志。
 
 ## 0.8.0
 

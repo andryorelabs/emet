@@ -2,8 +2,20 @@
 title: Nouveautés
 description: Notes de version d'emet : ce qui a changé dans chaque version.
 seoTitle: Nouveautés d'emet : notes de version
-sourceHash: cc2e3db248e1bdc0
+sourceHash: d97698d1a2df9b05
 ---
+
+## 0.8.1
+
+2026-11-11
+
+### Ajouté
+
+- `emet cleanup` supprime les branches d'amorçage `worktree-<name>` que l'Agent host laisse derrière lui, quand rien ne les a extraites et que trunk contient déjà leur tête.
+
+### Corrigé
+
+- Le guard refuse une suppression forcée de branche dans toute écriture qui associe une option de suppression à une option de force, et pas seulement avec l'option en majuscule.
 
 ## 0.8.0
 

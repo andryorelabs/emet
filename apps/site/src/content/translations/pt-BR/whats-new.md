@@ -2,8 +2,20 @@
 title: Novidades
 description: Notas de versão do emet: o que mudou em cada versão.
 seoTitle: Novidades do emet: notas de versão
-sourceHash: cc2e3db248e1bdc0
+sourceHash: d97698d1a2df9b05
 ---
+
+## 0.8.1
+
+2026-11-11
+
+### Adicionado
+
+- `emet cleanup` exclui as branches scaffold `worktree-<name>` que o Agent host deixa para trás, quando nada as tem em uso e o trunk já contém a ponta delas.
+
+### Corrigido
+
+- O guard recusa uma exclusão forçada de branch em qualquer forma que combine um flag de exclusão com um flag de força, não só com o flag em maiúscula.
 
 ## 0.8.0
 
