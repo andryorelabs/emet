@@ -1,16 +1,12 @@
 import { describe, expect, test } from "bun:test";
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import path from "node:path";
+import { parseFloors } from "./coverage-gate";
 
 const repositoryRoot = path.resolve(import.meta.dir, "..");
 const WORKSPACE_PARENTS = ["apps", "packages"];
 const TEST_FILE = /\.test\.tsx?$/;
-const IGNORED_DIRECTORIES = new Set(["node_modules", "dist", ".astro", ".turbo"]);
-
-interface Threshold {
-  readonly lines: number;
-  readonly functions: number;
-}
+const IGNORED_DIRECTORIES = new Set(["node_modules", "dist", ".astro", ".turbo", "coverage"]);
 
 function hasTests(directory: string): boolean {
   return readdirSync(directory, { withFileTypes: true }).some((entry) => {
@@ -32,37 +28,26 @@ function workspaceDirectories(): string[] {
   return [path.join(repositoryRoot, "emet"), ...nested];
 }
 
-function thresholdFor(directory: string): Threshold | undefined {
-  const bunfig = path.join(directory, "bunfig.toml");
-  if (!existsSync(bunfig)) return undefined;
-  const parsed = Bun.TOML.parse(readFileSync(bunfig, "utf8")) as {
-    test?: { coverage?: boolean; coverageThreshold?: { lines?: number; functions?: number } };
-  };
-  const threshold = parsed.test?.coverageThreshold;
-  if (!parsed.test?.coverage || !threshold) return undefined;
-  if (typeof threshold.lines !== "number" || typeof threshold.functions !== "number") {
-    return undefined;
-  }
-  return { lines: threshold.lines, functions: threshold.functions };
-}
+const floors = parseFloors(
+  readFileSync(path.join(repositoryRoot, "tools/coverage-floors.json"), "utf8"),
+);
 
 describe("workspace coverage floors", () => {
-  const tested = workspaceDirectories().filter(
-    (directory) => existsSync(directory) && hasTests(directory),
-  );
+  const tested = workspaceDirectories()
+    .filter((directory) => existsSync(directory) && hasTests(directory))
+    .map((directory) => path.relative(repositoryRoot, directory));
 
   test("emet and the site are recognised as tested workspaces", () => {
-    const names = tested.map((directory) => path.relative(repositoryRoot, directory));
-    expect(names).toContain("emet");
-    expect(names).toContain(path.join("apps", "site"));
+    expect(tested).toContain("emet");
+    expect(tested).toContain(path.join("apps", "site"));
   });
 
-  for (const directory of tested) {
-    test(`${path.relative(repositoryRoot, directory)} enforces a line and function floor`, () => {
-      const threshold = thresholdFor(directory);
-      expect(threshold).toBeDefined();
-      expect(threshold?.lines).toBeGreaterThanOrEqual(0);
-      expect(threshold?.functions).toBeGreaterThanOrEqual(0);
+  for (const workspace of tested) {
+    test(`${workspace} has a positive line and function floor`, () => {
+      const floor = floors[workspace];
+      expect(floor).toBeDefined();
+      expect(floor?.lines ?? 0).toBeGreaterThan(0);
+      expect(floor?.functions ?? 0).toBeGreaterThan(0);
     });
   }
 });
