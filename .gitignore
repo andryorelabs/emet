@@ -15,5 +15,8 @@ skills-lock.json
 apps/*/.astro/
 apps/*/dist/
 
+# coverage reports written by `bun run test`
+coverage/
+
 # design-taste-frontend working files
 .taste-skill/

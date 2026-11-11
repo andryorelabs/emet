@@ -63,7 +63,7 @@ jobs:
 
       - run: bun install --cwd emet --frozen-lockfile
 
-      - run: bun run test:coverage
+      - run: bun run test
 
   test-macos:
     name: Test (macOS)
