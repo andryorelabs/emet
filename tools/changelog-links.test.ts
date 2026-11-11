@@ -40,6 +40,41 @@ function localTags(): string[] {
   return output.split("\n").filter((tag) => tag !== "");
 }
 
+/**
+ * Reads the version the plugin manifest declares.
+ * @returns The `version` of `.claude-plugin/plugin.json`.
+ */
+function pluginVersion(): string {
+  const manifest: unknown = JSON.parse(
+    readFileSync(path.join(REPO_ROOT, ".claude-plugin/plugin.json"), "utf8"),
+  );
+  const version =
+    typeof manifest === "object" && manifest !== null && "version" in manifest
+      ? manifest.version
+      : undefined;
+  return typeof version === "string" ? version : "";
+}
+
+/**
+ * Finds the released versions whose tag is absent. The newest release is
+ * exempt while it is in flight: the release branch adds its heading and ref
+ * before the tag is created on `main`, and the manifest already names it.
+ * @param versions The tagged releases of the CHANGELOG, newest first.
+ * @param tags The tags of the checkout.
+ * @param manifestVersion The version the plugin manifest declares.
+ * @returns The missing tag names.
+ */
+function missingTags(
+  versions: readonly string[],
+  tags: readonly string[],
+  manifestVersion: string,
+): string[] {
+  return versions
+    .filter((version, index) => !(index === 0 && version === manifestVersion))
+    .map((version) => `v${version}`)
+    .filter((tag) => !tags.includes(tag));
+}
+
 describe("CHANGELOG link refs", () => {
   const tagged = releasedVersions().filter((version) => !UNTAGGED_VERSIONS.includes(version));
   const refs = linkRefs();
@@ -71,8 +106,12 @@ describe("CHANGELOG link refs", () => {
   test("every referenced tag exists when the checkout has tags", () => {
     const tags = localTags();
     if (tags.length === 0) return;
-    for (const version of tagged) {
-      expect(tags, `tag v${version} named by a CHANGELOG link ref`).toContain(`v${version}`);
-    }
+    expect(missingTags(tagged, tags, pluginVersion())).toEqual([]);
+  });
+
+  test("a release in flight is exempt until its tag exists", () => {
+    expect(missingTags(["1.1.0", "1.0.0"], ["v1.0.0"], "1.1.0")).toEqual([]);
+    expect(missingTags(["1.1.0", "1.0.0"], ["v1.0.0"], "1.0.0")).toEqual(["v1.1.0"]);
+    expect(missingTags(["1.1.0", "1.0.0"], ["v1.1.0"], "1.1.0")).toEqual(["v1.0.0"]);
   });
 });
