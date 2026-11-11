@@ -14,7 +14,14 @@
       "outputs": []
     },
     "test": {
-      "inputs": ["$TURBO_DEFAULT$", "!.astro/**", "!dist/**", "!coverage/**"],
+      "inputs": [
+        "$TURBO_DEFAULT$",
+        "!.astro/**",
+        "!dist/**",
+        "!coverage/**",
+        "$TURBO_ROOT$/tools/coverage-gate.ts",
+        "$TURBO_ROOT$/tools/coverage-floors.json"
+      ],
       "outputs": []
     },
     "build": {

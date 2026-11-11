@@ -18,7 +18,7 @@ Use bun only. `emet selftest` runs `bunx tsc` from the installed copy, so `emet/
 Run these from the repo root.
 
 - `bun run check`: turbo runs each workspace's `check` and the root-only `check:root` (typecheck, lint, format check, knip, docs link check, map freshness).
-- `bun run test`: turbo runs each workspace's `test` and the root-only `test:root` (`tools/` tests, then the `emet/` tests with coverage). It fails when coverage drops below the thresholds in `emet/bunfig.toml`.
+- `bun run test`: turbo runs each workspace's `test` and the root-only `test:root` (`tools/` tests, then the `emet/` tests with coverage). It fails when the line or function coverage of `emet/` or `apps/site` drops below its floor in `tools/coverage-floors.json`, which `tools/coverage-gate.ts` enforces.
 - `bun run fix`: format and autofix lint.
 - `bun run format:write`: format only. `bun run format:check` verifies.
 - `bun run lint:commits`: commitlint over the commits since the merge base with `origin/develop`.

@@ -42,6 +42,18 @@ describe("workspace coverage floors", () => {
     expect(tested).toContain(path.join("apps", "site"));
   });
 
+  test("the site test script reports lcov and ends with its coverage gate", () => {
+    const manifest = readFileSync(
+      path.join(repositoryRoot, "apps", "site", "package.json"),
+      "utf8",
+    );
+    const script = manifest.split("\n").find((line) => line.trimStart().startsWith('"test":'));
+    expect(script).toContain("--coverage-reporter=lcov");
+    expect(script?.trimEnd()).toEndWith(
+      '&& bun ../../tools/coverage-gate.ts apps/site coverage/lcov.info"',
+    );
+  });
+
   for (const workspace of tested) {
     test(`${workspace} has a positive line and function floor`, () => {
       const floor = floors[workspace];
