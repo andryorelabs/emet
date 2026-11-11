@@ -116,12 +116,17 @@ describe("skill and manifest builders", () => {
 
   test("buildPluginManifest mirrors the Claude version", () => {
     const manifest: unknown = JSON.parse(
-      buildPluginManifest('{"name":"emet","version":"1.2.3","description":"d","license":"MIT"}'),
+      buildPluginManifest(
+        '{"name":"emet","version":"1.2.3","description":"d","author":{"name":"A"},"homepage":"https://h.test","repository":"https://r.test","license":"MIT"}',
+      ),
     );
     expect(manifest).toEqual({
       name: "emet",
       version: "1.2.3",
       description: "d",
+      author: { name: "A" },
+      homepage: "https://h.test",
+      repository: "https://r.test",
       license: "MIT",
       skills: "./codex/skills",
       hooks: "./codex/hooks.json",

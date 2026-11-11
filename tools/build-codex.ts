@@ -307,6 +307,9 @@ export function buildPluginManifest(claudeManifestText: string): string {
   const version: unknown = Object.getOwnPropertyDescriptor(manifest, "version")?.value;
   const description: unknown = Object.getOwnPropertyDescriptor(manifest, "description")?.value;
   const license: unknown = Object.getOwnPropertyDescriptor(manifest, "license")?.value;
+  const author: unknown = Object.getOwnPropertyDescriptor(manifest, "author")?.value;
+  const homepage: unknown = Object.getOwnPropertyDescriptor(manifest, "homepage")?.value;
+  const repository: unknown = Object.getOwnPropertyDescriptor(manifest, "repository")?.value;
   if (typeof version !== "string" || typeof description !== "string") {
     throw new Error(".claude-plugin/plugin.json needs a string version and description");
   }
@@ -314,6 +317,9 @@ export function buildPluginManifest(claudeManifestText: string): string {
     name: "emet",
     version,
     description,
+    author,
+    homepage,
+    repository,
     license: typeof license === "string" ? license : undefined,
     skills: "./codex/skills",
     hooks: "./codex/hooks.json",
