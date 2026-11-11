@@ -2,8 +2,16 @@
 title: Novidades
 description: Notas de versão do emet: o que mudou em cada versão.
 seoTitle: Novidades do emet: notas de versão
-sourceHash: d97698d1a2df9b05
+sourceHash: a55d1df0b3a69e9e
 ---
+
+## 0.8.2
+
+2026-11-11
+
+### Corrigido
+
+- `emet cleanup` mantém uma branch scaffold `worktree-<name>` enquanto o worktree `<name>` ainda existir, para que uma sessão que trabalha ali em outra branch conserve a branch que o host dela espera.
 
 ## 0.8.1
 

@@ -2,8 +2,16 @@
 title: 新機能
 description: emet のリリースノート。各バージョンでの変更点をまとめています。
 seoTitle: "emet の新機能: リリースノート"
-sourceHash: d97698d1a2df9b05
+sourceHash: a55d1df0b3a69e9e
 ---
+
+## 0.8.2
+
+2026-11-11
+
+### 修正
+
+- `emet cleanup` は、ワークツリー `<name>` がまだ存在する間は `worktree-<name>` のスキャフォールドブランチを残します。そこで別のブランチで作業しているセッションは、ホストが想定するブランチを保持できます。
 
 ## 0.8.1
 

@@ -2,8 +2,16 @@
 title: Nouveautés
 description: Notes de version d'emet : ce qui a changé dans chaque version.
 seoTitle: Nouveautés d'emet : notes de version
-sourceHash: d97698d1a2df9b05
+sourceHash: a55d1df0b3a69e9e
 ---
+
+## 0.8.2
+
+2026-11-11
+
+### Corrigé
+
+- `emet cleanup` conserve une branche d'amorçage `worktree-<name>` tant que le worktree `<name>` existe encore, pour qu'une session qui y travaille sur une autre branche garde la branche que son hôte attend.
 
 ## 0.8.1
 
