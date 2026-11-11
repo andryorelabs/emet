@@ -20,7 +20,9 @@
         "!dist/**",
         "!coverage/**",
         "$TURBO_ROOT$/tools/coverage-gate.ts",
-        "$TURBO_ROOT$/tools/coverage-floors.json"
+        "$TURBO_ROOT$/tools/coverage-floors.json",
+        "$TURBO_ROOT$/CHANGELOG.md",
+        "$TURBO_ROOT$/docs/**"
       ],
       "outputs": []
     },

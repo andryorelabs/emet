@@ -61,6 +61,11 @@
  * starts once every branch has a verdict, so a `git` error midway through
  * never leaves the repo in a half-cleaned state. Pass `--dry-run` to print
  * the plan without deleting anything.
+ *
+ * Every mode ends with the merged pull request sweep (`mergedpr.ts`): a local
+ * branch that names no ticket, such as a wave's integration branch or a
+ * release branch, is deleted when GitHub holds a merged pull request whose
+ * head commit is the branch's tip.
  */
 import { existsSync } from "node:fs";
 import path from "node:path";
@@ -85,6 +90,7 @@ import {
   resolveSessionSlug,
   type RunVerdict,
 } from "./runs";
+import { sweepMergedBranches } from "./mergedpr";
 import { BINARY, CONFIG_FILE } from "./names";
 import { writePhase } from "./phase";
 import { releaseAllSlotsForRun } from "./slots";
@@ -884,6 +890,7 @@ async function main(config: ForgeConfig) {
       workerBranches: aoBranches,
       liveDirectoryNames: liveWorktreeDirectoryNames,
     });
+    await sweepMergedBranches({ config, host, dryRun });
     return;
   }
 
@@ -1011,6 +1018,8 @@ async function main(config: ForgeConfig) {
   if (outOfScope.length > 0) {
     console.log(`\n${outOfScope.length} branch(es) out of scope — not touched.`);
   }
+
+  await sweepMergedBranches({ config, host, dryRun });
 
   console.log(dryRun ? "\nDry run — nothing was deleted." : "\ngit worktree prune complete.");
 }

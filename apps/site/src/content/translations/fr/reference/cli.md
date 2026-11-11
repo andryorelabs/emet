@@ -2,7 +2,7 @@
 title: Référence de la CLI
 description: Chaque sous-commande d'emet, le tableau des gates et enregistrements, les codes de sortie et les variables d'environnement.
 seoTitle: Référence de la CLI d'emet
-sourceHash: b89b785c057b008c
+sourceHash: a8d3bf074f04de8e
 ---
 
 Chaque sous-commande d'`emet`, le tableau des gates et enregistrements, les codes de sortie et les variables d'environnement. Les termes suivent [GLOSSARY.md](../../GLOSSARY.md). Retour au [README](../../README.md). Chaque commande affiche son usage avec `--help`.
@@ -53,7 +53,7 @@ Il indique, pour chaque dépôt : un `emet.config.json` valide, les quatre fichi
 
 - `emet claims --reserve <ticket> --run <id> --anchor <pid>` : réserve un ticket pour une exécution. `--release <ticket>`, `--list` et `--prune [--dry-run]` libèrent une réservation, listent les réservations ou élaguent les périmées.
 - `emet slots --acquire --run <id> --anchor <pid> --ticket <ticket>` : prend un slot de worker dans le pool commun à l'hôte, situé dans `~/.local/state/emet/slots`. `--release --run <id>`, `--release-index <index>` et `--list` libèrent des slots ou les listent.
-- `emet cleanup [--run <id> | --all] [--dry-run] [--force]` : sans argument, récupère les exécutions terminées ou mortes dont le travail a atterri ; `--run` nettoie cette exécution ; `--all` est un balayage de branches sur tout le dépôt. Après un merge, `emet cleanup --run <runId>` libère les branches, les réservations de tickets et les slots de workers de la vague.
+- `emet cleanup [--run <id> | --all] [--dry-run] [--force]` : sans argument, récupère les exécutions terminées ou mortes dont le travail a atterri ; `--run` nettoie cette exécution ; `--all` est un balayage de branches sur tout le dépôt. Après un merge, `emet cleanup --run <runId>` libère les branches, les réservations de tickets et les slots de workers de la vague. Dans tous les modes, il supprime aussi chaque branche locale dont la PR a été fusionnée au commit de tête de la branche, avec le worktree d'agent propre et non verrouillé qui la contient.
 - `emet lock-reason --run <id> --ticket <ticket> [--anchor <pid>]` : affiche la raison du `git worktree lock` qu'un worker écrit au démarrage.
 - `emet launch <spec-id> --wave <n>` : sur Claude Code, démarre une vague comme une session `claude --bg` et ouvre son onglet Orca selon `handoff.launcher` (sur Codex, voir [Hôte Codex](#hôte-codex)). Il fait tout le lancement (vérification de session en double, `claude --bg`, onglet) et affiche `{ name, id, attach, orcaTab: { opened, reason } }`. Utilisez-le, plutôt qu'un simple `claude --bg`, chaque fois que vous voulez une vague dans une autre session à la main.
 - `emet status [--spec <id>]` : Working / Checking / Ready / Needs-decision par vague en JSON, plus une ligne de résumé. `emet status --help` documente le JSON.

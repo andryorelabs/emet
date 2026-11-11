@@ -2,7 +2,7 @@
 title: Referência da CLI
 description: Cada subcomando do emet, a tabela de gates e registros, os códigos de saída e as variáveis de ambiente.
 seoTitle: Referência da CLI do emet
-sourceHash: b89b785c057b008c
+sourceHash: a8d3bf074f04de8e
 ---
 
 Cada subcomando do `emet`, a tabela de gates e registros, os códigos de saída e as variáveis de ambiente. Os termos seguem o [GLOSSARY.md](../../GLOSSARY.md). Voltar ao [README](../../README.md). Todo comando imprime seu uso com `--help`.
@@ -53,7 +53,7 @@ Informa, por repositório: um `emet.config.json` válido, os quatro arquivos `do
 
 - `emet claims --reserve <ticket> --run <id> --anchor <pid>`: reserva um ticket para uma execução. `--release <ticket>`, `--list` e `--prune [--dry-run]` liberam uma reivindicação, listam as reivindicações ou removem as obsoletas.
 - `emet slots --acquire --run <id> --anchor <pid> --ticket <ticket>`: pega um slot de worker do pool de todo o host em `~/.local/state/emet/slots`. `--release --run <id>`, `--release-index <index>` e `--list` liberam slots ou os listam.
-- `emet cleanup [--run <id> | --all] [--dry-run] [--force]`: sem argumentos, recupera execuções encerradas ou mortas cujo trabalho já aterrissou; `--run` limpa esta execução; `--all` é uma varredura de branches em todo o repositório. Depois de um merge, `emet cleanup --run <runId>` libera as branches, as reivindicações de tickets e os slots de workers da onda.
+- `emet cleanup [--run <id> | --all] [--dry-run] [--force]`: sem argumentos, recupera execuções encerradas ou mortas cujo trabalho já aterrissou; `--run` limpa esta execução; `--all` é uma varredura de branches em todo o repositório. Depois de um merge, `emet cleanup --run <runId>` libera as branches, as reivindicações de tickets e os slots de workers da onda. Em todos os modos ele também exclui cada branch local cujo PR foi mesclado no commit da ponta da branch, junto com o worktree de agente limpo e desbloqueado que a contém.
 - `emet lock-reason --run <id> --ticket <ticket> [--anchor <pid>]`: imprime o motivo do `git worktree lock` que um worker escreve no bootstrap.
 - `emet launch <spec-id> --wave <n>`: no Claude Code, inicia uma onda como uma sessão `claude --bg` e abre sua aba do Orca conforme `handoff.launcher` (no Codex, veja [Host Codex](#host-codex)). Faz o lançamento completo (verificação de sessão duplicada, `claude --bg`, aba) e imprime `{ name, id, attach, orcaTab: { opened, reason } }`. Use-o, e não um `claude --bg` solto, sempre que quiser uma onda em outra sessão manualmente.
 - `emet status [--spec <id>]`: Working / Checking / Ready / Needs-decision por onda como JSON mais uma linha de resumo. `emet status --help` documenta o JSON.

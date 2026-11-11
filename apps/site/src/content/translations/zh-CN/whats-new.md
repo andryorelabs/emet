@@ -2,8 +2,22 @@
 title: 新功能
 description: emet 的发布说明：每个版本都有哪些变化。
 seoTitle: "emet 新功能：发布说明"
-sourceHash: 1d62be10d080cc24
+sourceHash: cc2e3db248e1bdc0
 ---
+
+## 0.8.0
+
+2026-11-11
+
+### 新增
+
+- `emet cleanup` 在所有模式下都会删除其 pull request 已在分支顶端提交处合并的每个本地分支，以及持有该分支的干净且未锁定的代理工作树。集成分支、发布分支和修复分支不再需要手动删除。
+- `bun run translations:status` 列出落后于源文件的 Website 翻译。
+
+### 变更
+
+- guard 拒绝强制删除分支时会指向 `emet cleanup`。
+- 发布手册涵盖了 `whats-new` 的翻译。
 
 ## 0.7.0
 

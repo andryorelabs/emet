@@ -2,7 +2,7 @@
 title: CLI 参考
 description: 每个 emet 子命令、关卡与记录表、退出码和环境变量。
 seoTitle: emet CLI 参考
-sourceHash: b89b785c057b008c
+sourceHash: a8d3bf074f04de8e
 ---
 
 每个 `emet` 子命令、关卡与记录表、退出码和环境变量。术语遵循 [GLOSSARY.md](../../GLOSSARY.md)。返回 [README](../../README.md)。每个命令都可以用 `--help` 打印其用法。
@@ -53,7 +53,7 @@ emet doctor ~/code/*
 
 - `emet claims --reserve <ticket> --run <id> --anchor <pid>`：为某次运行预留一个工单。`--release <ticket>`、`--list` 和 `--prune [--dry-run]` 分别用于释放认领、列出认领，或清理过期的认领。
 - `emet slots --acquire --run <id> --anchor <pid> --ticket <ticket>`：从 `~/.local/state/emet/slots` 中的主机级池获取一个工作者槽位。`--release --run <id>`、`--release-index <index>` 和 `--list` 用于释放或列出槽位。
-- `emet cleanup [--run <id> | --all] [--dry-run] [--force]`：不带参数时，回收其工作已落地的已关闭或已终止的运行；`--run` 清理该次运行；`--all` 是对整个仓库的分支清扫。合并之后，`emet cleanup --run <runId>` 会释放该波次的分支、工单认领和工作者槽位。
+- `emet cleanup [--run <id> | --all] [--dry-run] [--force]`：不带参数时，回收其工作已落地的已关闭或已终止的运行；`--run` 清理该次运行；`--all` 是对整个仓库的分支清扫。合并之后，`emet cleanup --run <runId>` 会释放该波次的分支、工单认领和工作者槽位。在所有模式下，它还会删除其 PR 已在分支顶端提交处合并的每个本地分支，以及持有该分支的干净且未锁定的代理工作树。
 - `emet lock-reason --run <id> --ticket <ticket> [--anchor <pid>]`：打印工作者在引导阶段写入的 `git worktree lock` 原因。
 - `emet launch <spec-id> --wave <n>`：在 Claude Code 上，以 `claude --bg` 会话启动一个波次，并按 `handoff.launcher` 打开它的 Orca 标签页（Codex 参见 [Codex 宿主](#codex-宿主)）。它会完成整个启动流程（重复会话检查、`claude --bg`、标签页），并打印 `{ name, id, attach, orcaTab: { opened, reason } }`。每当你想手动在另一个会话中运行某个波次时，请使用它，而不是直接使用 `claude --bg`。
 - `emet status [--spec <id>]`：以 JSON 加一行摘要的形式给出每个波次的 Working / Checking / Ready / Needs-decision 状态。`emet status --help` 说明了该 JSON。

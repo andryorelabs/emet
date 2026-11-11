@@ -38,7 +38,12 @@ const WRAPPER_COMMANDS = new Set([
 ]);
 const SQL_CLIENTS = /\b(psql|mysql|mariadb|sqlite3|sqlcmd|duckdb|clickhouse-client)\b/;
 
-type DestructiveRule = { readonly label: string; readonly pattern: RegExp };
+type DestructiveRule = {
+  readonly label: string;
+  readonly pattern: RegExp;
+  /** A safe command that does the same job, appended to the deny reason. */
+  readonly alternative?: string;
+};
 
 const RULES: readonly DestructiveRule[] = [
   { label: "git reset --hard", pattern: /\bgit\b[^\n]*\breset\b[^\n]*--hard\b/ },
@@ -55,6 +60,7 @@ const RULES: readonly DestructiveRule[] = [
     label: "git branch -D",
     pattern:
       /\bgit\b[^\n]*\bbranch\b[^\n]*(\s-[a-zA-Z]*D[a-zA-Z]*(?=[\s"'`)]|$)|\s--delete\s+--force)/,
+    alternative: `\`${BINARY} cleanup\` deletes the branches whose pull request merged`,
   },
   {
     label: "rm -r",
@@ -145,11 +151,16 @@ export function checkDestructiveCommand(input: ToolHookInput): DestructiveVerdic
   if (typeof command !== "string") return ALLOW;
   const label = findDestructiveOperation(command);
   if (label === null) return ALLOW;
+  const alternative = RULES.find((rule) => rule.label === label)?.alternative;
+  const advice =
+    alternative === undefined
+      ? "Use a non-destructive alternative, or ask the user to run it."
+      : `Use a non-destructive alternative (${alternative}), or ask the user to run it.`;
   return {
     decision: "deny",
     reason:
       `${BINARY} guard: \`${label}\` is a destructive operation and is denied (also when wrapped in ` +
-      "env/sudo/timeout/xargs/sh -c/heredoc). Use a non-destructive alternative, or ask the user to run it.",
+      `env/sudo/timeout/xargs/sh -c/heredoc). ${advice}`,
   };
 }
 
