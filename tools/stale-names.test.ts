@@ -4,6 +4,8 @@ import path from "node:path";
 
 const REPO_ROOT = path.join(import.meta.dir, "..");
 
+const THIS_FILE = "tools/stale-names.test.ts";
+
 const STALE_NAME = /claude-forge|andryore-starter|(?<!to )\bforge\b/i;
 
 /**
@@ -74,7 +76,7 @@ function staleLocations(file: string): string[] {
 describe("stale product names", () => {
   test("appear only in allow-listed paths", () => {
     const offenders = trackedFiles()
-      .filter((file) => !isAllowed(file))
+      .filter((file) => file !== THIS_FILE && !isAllowed(file))
       .flatMap(staleLocations);
     expect(offenders).toEqual([]);
   });
