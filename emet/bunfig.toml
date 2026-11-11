@@ -4,5 +4,6 @@
 # subcommand (see that file's own comment for why).
 [test]
 root = "src"
+coverage = true
 coverageSkipTestFiles = true
-coverageThreshold = { lines = 0.2, functions = 0.33 }
+coverageThreshold = { lines = 0.23, functions = 0.41 }
