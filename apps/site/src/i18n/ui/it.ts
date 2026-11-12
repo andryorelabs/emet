@@ -146,6 +146,9 @@ export const it = {
     trust: "Fiducia",
     builtBy: "Creato da AndryOre",
   },
+  links: {
+    newTab: "(si apre in una nuova scheda)",
+  },
   share: {
     ogAlt: "emet: dalla specifica al merge, con una sola approvazione.",
   },

@@ -151,6 +151,9 @@ export const ja = {
     trust: "信頼性",
     builtBy: "制作 AndryOre",
   },
+  links: {
+    newTab: "(新しいタブで開きます)",
+  },
   share: {
     ogAlt: "emet: 仕様からマージまで、承認は一度だけ。",
   },

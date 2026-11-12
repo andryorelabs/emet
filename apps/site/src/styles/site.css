@@ -4,6 +4,15 @@
  * hero the text is dark ink in both themes because the sky stays light.
  */
 
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
 .site-header {
   --header-ink: oklch(0.22 0.013 150);
   position: relative;

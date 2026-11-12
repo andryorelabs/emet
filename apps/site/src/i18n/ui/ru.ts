@@ -142,6 +142,9 @@ export const ru = {
     trust: "Доверие",
     builtBy: "Создал AndryOre",
   },
+  links: {
+    newTab: "(откроется в новой вкладке)",
+  },
   share: {
     ogAlt: "emet: от спецификации до слияния, с одним подтверждением.",
   },

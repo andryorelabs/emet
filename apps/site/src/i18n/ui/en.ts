@@ -142,6 +142,9 @@ export const en = {
     trust: "Trust",
     builtBy: "Built by AndryOre",
   },
+  links: {
+    newTab: "(opens in a new tab)",
+  },
   share: {
     ogAlt: "emet: spec to merge, on one approval.",
   },

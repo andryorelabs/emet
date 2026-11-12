@@ -148,6 +148,9 @@ export const de = {
     trust: "Vertrauen",
     builtBy: "Erstellt von AndryOre",
   },
+  links: {
+    newTab: "(öffnet in einem neuen Tab)",
+  },
   share: {
     ogAlt: "emet: von der Spezifikation bis zum Merge, mit einer einzigen Freigabe.",
   },

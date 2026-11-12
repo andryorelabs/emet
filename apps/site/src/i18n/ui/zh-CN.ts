@@ -131,6 +131,9 @@ export const zhCN = {
     trust: "信任",
     builtBy: "由 AndryOre 构建",
   },
+  links: {
+    newTab: "(在新标签页中打开)",
+  },
   share: {
     ogAlt: "emet：从规格到合并，只需一次批准。",
   },
