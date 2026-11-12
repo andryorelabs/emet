@@ -8,6 +8,12 @@ and this project adheres to
 
 ## [Unreleased]
 
+### Fixed
+
+- `/docs/` and each locale's `/docs/` now answer with a 301 to the
+  getting-started page instead of a meta-refresh stub that flashed an unstyled
+  page.
+
 ## [0.8.2] - 2026-11-11
 
 ### Fixed
