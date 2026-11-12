@@ -29,7 +29,7 @@ status() { curl -s -o /dev/null -w '%{http_code}' "$1"; }
 location() { curl -s -o /dev/null -D - "$1" | tr -d '\r' | awk 'tolower($1)=="location:"{print $2}'; }
 header_of() { curl -s -o /dev/null -D - -H 'Accept-Encoding: gzip' "$2" | tr -d '\r' | awk -v name="$1:" 'tolower($1)==name{sub(/^[^ ]+ /,""); print}'; }
 
-for path in / /es/ /docs/; do
+for path in / /es/; do
   [ "$(status "$base$path")" = 200 ] || fail "$path is not 200"
 done
 for path in /nope/ /es/nope/ /docs/nope/; do
@@ -50,7 +50,7 @@ curl -s "$base/docs/guide/getting-started/" | grep -q 'rel="sitemap"[^>]*href="/
 [ "$(status "$base/es/404/")" = 200 ] || fail "/es/404/ is not 200"
 [ "$(header_of cache-control "$base/es/nope/")" = no-cache ] || fail "the locale 404 lacks no-cache"
 
-for pair in "/es:/es/" "/docs:/docs/" "/index.html:/" "/es/index.html:/es/" "/pt-BR/:/pt-br/" "/zh_CN/:/zh-cn/"; do
+for pair in "/es:/es/" "/docs:/docs/" "/docs/:/docs/guide/getting-started/" "/es/docs/:/es/docs/guide/getting-started/" "/index.html:/" "/es/index.html:/es/" "/pt-BR/:/pt-br/" "/zh_CN/:/zh-cn/"; do
   from="${pair%%:*}"
   to="${pair##*:}"
   [ "$(status "$base$from")" = 301 ] || fail "$from is not 301"
