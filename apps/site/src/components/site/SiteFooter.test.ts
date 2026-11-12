@@ -16,7 +16,12 @@ describe("SiteFooter", () => {
 
   test("credits the author with rel=author", () => {
     expect(source).toContain('const AUTHOR_URL = "https://andryore.dev"');
-    expect(source).toContain('<a href={AUTHOR_URL} rel="author">');
+    expect(source).toContain('externalLinkAttributes(AUTHOR_URL, "author")');
+  });
+
+  test("opens external links in a new tab with a hidden label", () => {
+    expect(source).toContain("externalLinkAttributes(link.href)");
+    expect(source).toContain('<span class="sr-only">{newTab}</span>');
   });
 
   test("has no language switcher", () => {

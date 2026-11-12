@@ -144,6 +144,9 @@ export const ptBR = {
     trust: "Confiança",
     builtBy: "Criado por AndryOre",
   },
+  links: {
+    newTab: "(abre em uma nova aba)",
+  },
   share: {
     ogAlt: "emet: da especificação ao merge, com uma única aprovação.",
   },

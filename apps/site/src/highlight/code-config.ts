@@ -2,12 +2,14 @@
  * The Expressive Code options shared by the home page's code blocks and by
  * Starlight, so a block looks the same everywhere. Colours come from the brand
  * tokens through CSS variables. No block shows line numbers, so the
- * line-number plugin is not loaded.
+ * line-number plugin is not loaded. The theme selectors are the `.light` and
+ * `.dark` classes the theme script sets on `<html>`; with System, neither is
+ * set, so the OS dark media query applies to `:root:not(.light)`.
  */
 export const sharedCodeConfig = {
   themes: ["github-light", "github-dark"],
-  themeCssSelector: (theme: { type: string }): string =>
-    theme.type === "dark" ? ".dark" : ":root",
+  themeCssSelector: (theme: { type: string }): ".dark" | ".light" =>
+    theme.type === "dark" ? ".dark" : ".light",
   useDarkModeMediaQuery: true,
   useStarlightDarkModeSwitch: false,
   useStarlightUiThemeColors: false,
