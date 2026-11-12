@@ -12,7 +12,7 @@ The six andryorelabs repos (animated-fluent-emojis, snug, emet, andryore-web, jo
 - emet adopts the andryorelabs standard v1. A gap against a rule marked MUST is closed here, in emet's own run; no repo edits another.
 - The standard does not replace emet's ADRs. Where a rule and an ADR disagree, the exemptions below apply.
 - Names: "Andry Orellana" is the person (LICENSE, manifest author), "AndryOre" is the brand (credit line, linked to `https://andryore.dev`), and `andryorelabs` is the GitHub org.
-- The Claude Code roles that default to Opus (reviewer tiers, fix-cap escalation) are set to `fable` in this repo's `emet.config.json`. The shipped defaults do not change.
+- The Claude Code roles that default to Opus (reviewer tiers, fix-cap escalation) run on `opus` in this repo's `emet.config.json`, the same as the shipped defaults. They were set to `fable` at first and moved back to `opus` in #479.
 
 Exemptions and rules that do not apply:
 
