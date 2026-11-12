@@ -9,7 +9,9 @@ import "../../styles/site.css";
 
 import mark from "../../assets/mark.svg";
 import { localePath, type Locale } from "../../i18n/locales";
+import { getStrings } from "../../i18n/ui";
 import { en } from "../../i18n/ui/en";
+import { externalLinkAttributes, isExternalHref } from "../../lib/external-links";
 
 interface Props {
   locale: Locale;
@@ -21,6 +23,7 @@ const REPOSITORY_URL = "https://github.com/andryorelabs/emet";
 const AUTHOR_URL = "https://andryore.dev";
 
 const { locale, strings = en.footer } = Astro.props;
+const { newTab } = getStrings(locale).links;
 
 const columns = [
   {
@@ -64,7 +67,10 @@ const columns = [
           <ul>
             {column.links.map((link) => (
               <li>
-                <a href={link.href}>{link.label}</a>
+                <a href={link.href} {...externalLinkAttributes(link.href)}>
+                  {link.label}
+                  {isExternalHref(link.href) && <span class="sr-only">{newTab}</span>}
+                </a>
               </li>
             ))}
           </ul>
@@ -74,7 +80,9 @@ const columns = [
   </div>
   <div class="footer-bottom">
     <p class="footer-fine">
-      {strings.legal} <a href={AUTHOR_URL} rel="author">{strings.builtBy}</a>.
+      {strings.legal} <a href={AUTHOR_URL} {...externalLinkAttributes(AUTHOR_URL, "author")}>
+        {strings.builtBy}<span class="sr-only">{newTab}</span>
+      </a>.
     </p>
     <p class="footer-fine footer-paintings">{strings.paintings}</p>
   </div>

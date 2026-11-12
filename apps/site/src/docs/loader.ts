@@ -4,6 +4,9 @@ import path from "node:path";
 import { loadLocalizedCatalog } from "./catalog";
 import { classifyTokenStyles } from "./code-classes";
 import { REPOSITORY_ROOT, TRANSLATIONS_DIRECTORY } from "./paths";
+import { getStrings } from "../i18n/ui";
+import type { Locale } from "../i18n/locales";
+import { markExternalLinks } from "../lib/external-links";
 import { PUBLISHED_SOURCES } from "./published";
 
 const DOCS_DIRECTORY = path.join(REPOSITORY_ROOT, "docs");
@@ -11,9 +14,13 @@ const WATCHED_FILES = new Set(
   PUBLISHED_SOURCES.map((source) => path.join(REPOSITORY_ROOT, source.sourcePath)),
 );
 
-async function renderPage(context: LoaderContext, body: string) {
+async function renderPage(context: LoaderContext, body: string, locale: Locale) {
   const rendered = await context.renderMarkdown(body);
-  return { ...rendered, html: classifyTokenStyles(rendered.html) };
+  const html = markExternalLinks(
+    classifyTokenStyles(rendered.html),
+    getStrings(locale).links.newTab,
+  );
+  return { ...rendered, html };
 }
 
 async function fillStore(context: LoaderContext): Promise<void> {
@@ -31,7 +38,7 @@ async function fillStore(context: LoaderContext): Promise<void> {
           englishPath: page.englishPath,
         },
       }),
-      rendered: await renderPage(context, page.body),
+      rendered: await renderPage(context, page.body, page.locale),
     })),
   );
   context.store.clear();

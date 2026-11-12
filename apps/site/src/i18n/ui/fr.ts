@@ -144,6 +144,9 @@ export const fr = {
     trust: "Confiance",
     builtBy: "Créé par AndryOre",
   },
+  links: {
+    newTab: "(s'ouvre dans un nouvel onglet)",
+  },
   share: {
     ogAlt: "emet : de la spécification au merge, avec une seule approbation.",
   },

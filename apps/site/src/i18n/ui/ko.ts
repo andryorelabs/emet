@@ -143,6 +143,9 @@ export const ko = {
     trust: "신뢰",
     builtBy: "제작 AndryOre",
   },
+  links: {
+    newTab: "(새 탭에서 열림)",
+  },
   share: {
     ogAlt: "emet: 명세에서 병합까지, 승인은 단 한 번.",
   },

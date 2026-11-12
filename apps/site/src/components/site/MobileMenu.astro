@@ -6,7 +6,9 @@
  * wires it; without script the header keeps its language and theme controls.
  */
 import type { Locale } from "../../i18n/locales";
+import { getStrings } from "../../i18n/ui";
 import type { en } from "../../i18n/ui/en";
+import { externalLinkAttributes, isExternalHref } from "../../lib/external-links";
 import LanguageSwitcher from "./LanguageSwitcher.astro";
 import ThemeSelect from "./ThemeSelect.astro";
 
@@ -19,6 +21,7 @@ interface Props {
 }
 
 const { locale, currentPath, strings, theme, links } = Astro.props;
+const { newTab } = getStrings(locale).links;
 ---
 
 <div class="mobile-menu" data-mobile-menu>
@@ -41,8 +44,13 @@ const { locale, currentPath, strings, theme, links } = Astro.props;
     <nav aria-label={strings.label}>
       {
         links.map((link) => (
-          <a href={link.href} aria-current={link.current ? "page" : undefined}>
+          <a
+            href={link.href}
+            aria-current={link.current ? "page" : undefined}
+            {...externalLinkAttributes(link.href)}
+          >
             {link.label}
+            {isExternalHref(link.href) && <span class="sr-only">{newTab}</span>}
           </a>
         ))
       }
