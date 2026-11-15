@@ -103,7 +103,8 @@ export interface LlmsDocsPage {
  */
 export function buildLlmsTxt(summary: string, pages: readonly LlmsDocsPage[]): string {
   const docs = pages.map(
-    (page) => `- [${page.seoTitle}](${SITE_ORIGIN}/docs/${page.id}/): ${page.description}`,
+    (page) =>
+      `- [${page.seoTitle}](${SITE_ORIGIN}/docs/${page.id}/): ${page.description} ([Markdown](${SITE_ORIGIN}/docs/${page.id}.md))`,
   );
   return [
     "# emet",
