@@ -1,6 +1,6 @@
 import { describe, expect, it } from "bun:test";
 
-import { clamp01, coverProgress, exitProgress, motionPolicy } from "./policy";
+import { clamp01, coverProgress, exitProgress, isSmoothScrollExempt, motionPolicy } from "./policy";
 
 describe("motionPolicy", () => {
   it("turns everything off with reduced motion", () => {
@@ -39,5 +39,26 @@ describe("scroll progress", () => {
     expect(exitProgress({ top: 0, height: 800 })).toBe(0);
     expect(exitProgress({ top: -400, height: 800 })).toBe(0.5);
     expect(exitProgress({ top: 100, height: 800 })).toBe(0);
+  });
+});
+
+/**
+ * Builds a minimal element stand-in carrying only a tag name.
+ * @param tagName - The upper-case tag name.
+ * @returns A tag-name-only element stand-in.
+ */
+function elementNamed(tagName: string): Pick<Element, "tagName"> {
+  return { tagName };
+}
+
+describe("isSmoothScrollExempt", () => {
+  it("exempts a dialog", () => {
+    expect(isSmoothScrollExempt(elementNamed("DIALOG"))).toBe(true);
+  });
+
+  it("does not exempt page-level elements", () => {
+    for (const tag of ["html", "body", "main", "section", "div"]) {
+      expect(isSmoothScrollExempt(elementNamed(tag.toUpperCase()))).toBe(false);
+    }
   });
 });
