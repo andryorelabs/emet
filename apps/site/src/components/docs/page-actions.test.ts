@@ -44,6 +44,20 @@ describe("shouldHandleArrowKey", () => {
     expect(shouldHandleArrowKey(bare, { tagName: "SPAN", closest: () => null })).toBe(true);
   });
 
+  test("ignores tabs, menus, dialogs and code blocks that own the arrow keys", () => {
+    const selectors: string[] = [];
+    shouldHandleArrowKey(bare, {
+      tagName: "BUTTON",
+      closest: (selector) => {
+        selectors.push(selector);
+        return null;
+      },
+    });
+    for (const owner of ["[role=tab]", "[role=menuitem]", "dialog", "pre"]) {
+      expect(selectors[0]).toContain(owner);
+    }
+  });
+
   test("ignores any modifier", () => {
     for (const modifier of ["ctrlKey", "metaKey", "altKey", "shiftKey"] as const) {
       expect(shouldHandleArrowKey({ ...bare, [modifier]: true }, {})).toBe(false);

@@ -24,7 +24,8 @@ export interface EventTargetLike {
 export type OpenInTarget = "chatgpt" | "claude";
 
 const EDITABLE_TAGS = new Set(["INPUT", "TEXTAREA", "SELECT"]);
-const EDITABLE_SELECTOR = "input, textarea, select, [contenteditable]";
+const EDITABLE_SELECTOR =
+  "input, textarea, select, [contenteditable], [role=tab], [role=tablist], [role=menu], [role=menuitem], dialog, pre";
 
 /**
  * The prompt Open in ChatGPT and Open in Claude carry. Always English.

@@ -14,6 +14,7 @@ export interface PageActionsStrings {
   openInClaude: string;
   previousPage: string;
   nextPage: string;
+  pagination: string;
 }
 
 /**
@@ -30,6 +31,7 @@ export const PAGE_ACTIONS_STRINGS: Record<Locale, PageActionsStrings> = {
     openInClaude: "Open in Claude",
     previousPage: "Previous page",
     nextPage: "Next page",
+    pagination: "Pagination",
   },
   es: {
     copyPage: "Copiar página",
@@ -41,6 +43,7 @@ export const PAGE_ACTIONS_STRINGS: Record<Locale, PageActionsStrings> = {
     openInClaude: "Abrir en Claude",
     previousPage: "Página anterior",
     nextPage: "Página siguiente",
+    pagination: "Paginación",
   },
   de: {
     copyPage: "Seite kopieren",
@@ -52,6 +55,7 @@ export const PAGE_ACTIONS_STRINGS: Record<Locale, PageActionsStrings> = {
     openInClaude: "In Claude öffnen",
     previousPage: "Vorherige Seite",
     nextPage: "Nächste Seite",
+    pagination: "Seitennavigation",
   },
   fr: {
     copyPage: "Copier la page",
@@ -63,6 +67,7 @@ export const PAGE_ACTIONS_STRINGS: Record<Locale, PageActionsStrings> = {
     openInClaude: "Ouvrir dans Claude",
     previousPage: "Page précédente",
     nextPage: "Page suivante",
+    pagination: "Pagination",
   },
   it: {
     copyPage: "Copia pagina",
@@ -74,6 +79,7 @@ export const PAGE_ACTIONS_STRINGS: Record<Locale, PageActionsStrings> = {
     openInClaude: "Apri in Claude",
     previousPage: "Pagina precedente",
     nextPage: "Pagina successiva",
+    pagination: "Paginazione",
   },
   ja: {
     copyPage: "ページをコピー",
@@ -85,6 +91,7 @@ export const PAGE_ACTIONS_STRINGS: Record<Locale, PageActionsStrings> = {
     openInClaude: "Claude で開く",
     previousPage: "前のページ",
     nextPage: "次のページ",
+    pagination: "ページ送り",
   },
   ko: {
     copyPage: "페이지 복사",
@@ -96,6 +103,7 @@ export const PAGE_ACTIONS_STRINGS: Record<Locale, PageActionsStrings> = {
     openInClaude: "Claude에서 열기",
     previousPage: "이전 페이지",
     nextPage: "다음 페이지",
+    pagination: "페이지 이동",
   },
   "pt-BR": {
     copyPage: "Copiar página",
@@ -107,6 +115,7 @@ export const PAGE_ACTIONS_STRINGS: Record<Locale, PageActionsStrings> = {
     openInClaude: "Abrir no Claude",
     previousPage: "Página anterior",
     nextPage: "Próxima página",
+    pagination: "Paginação",
   },
   ru: {
     copyPage: "Копировать страницу",
@@ -118,6 +127,7 @@ export const PAGE_ACTIONS_STRINGS: Record<Locale, PageActionsStrings> = {
     openInClaude: "Открыть в Claude",
     previousPage: "Предыдущая страница",
     nextPage: "Следующая страница",
+    pagination: "Навигация по страницам",
   },
   "zh-CN": {
     copyPage: "复制页面",
@@ -129,5 +139,6 @@ export const PAGE_ACTIONS_STRINGS: Record<Locale, PageActionsStrings> = {
     openInClaude: "在 Claude 中打开",
     previousPage: "上一页",
     nextPage: "下一页",
+    pagination: "分页",
   },
 };

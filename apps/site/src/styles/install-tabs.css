@@ -37,7 +37,12 @@
   cursor: pointer;
   transition:
     background-color 160ms cubic-bezier(0.23, 1, 0.32, 1),
-    color 160ms cubic-bezier(0.23, 1, 0.32, 1);
+    color 160ms cubic-bezier(0.23, 1, 0.32, 1),
+    transform 160ms cubic-bezier(0.23, 1, 0.32, 1);
+}
+
+.sl-markdown-content .emet-install-tabs__tab:active {
+  transform: scale(0.97);
 }
 
 .sl-markdown-content .emet-install-tabs__tab[aria-selected="true"] {
@@ -78,5 +83,9 @@
 @media (prefers-reduced-motion: reduce) {
   .sl-markdown-content .emet-install-tabs__tab {
     transition: none;
+  }
+
+  .sl-markdown-content .emet-install-tabs__tab:active {
+    transform: none;
   }
 }
