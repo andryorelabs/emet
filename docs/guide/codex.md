@@ -6,6 +6,8 @@ On the Codex host the pipeline is the same: interview, spec, tickets, one approv
 
 ## Install
 
+:::steps
+
 1. Install the `codex` CLI at the version in `codex.minVersion` (default `0.167.0`) or newer, and log in.
 2. Install the `mattpocock-skills` plugin in Codex:
 
@@ -22,6 +24,8 @@ On the Codex host the pipeline is the same: interview, spec, tickets, one approv
    ```
 
 4. Install the `emet` CLI as described in [Getting started](getting-started.md), then run `emet doctor .`. `install.sh` also installs the Claude Code commands and agents under `~/.claude`; that is harmless on Codex, and `emet doctor` does not warn about the Codex plugin and `install.sh` together. On the Codex host it reports a `codex` older than `codex.minVersion`, a missing `--json` or `--output-schema` flag on `codex exec`, and a missing `mattpocock-skills` with the two commands above.
+
+:::
 
 Both plugin commands in step 3 were run against the real `codex` (0.167.0): in a fresh `CODEX_HOME` they exit 0 and `codex plugin list` shows `emet@emet-marketplace installed, enabled`. The local-path form, `codex plugin marketplace add <repo>`, gives the same result.
 

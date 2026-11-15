@@ -2,7 +2,7 @@
 title: Ejecutar emet en Codex
 description: Usa Codex como Agent host de emet: instala el plugin, configura agentHost, aprueba una sola vez y conoce los límites.
 seoTitle: Ejecutar emet en Codex
-sourceHash: fedf7f4694193076
+sourceHash: 38d79f32b248565e
 ---
 
 emet puede ejecutarse en Codex CLI además de Claude Code. Los términos siguen [GLOSSARY.md](../../GLOSSARY.md); el producto en el que se ejecuta una corrida es el **Agent host**. Esta página cubre la instalación del lado de Codex, la elección del host, la aprobación única y los límites conocidos. Volver al [índice de la documentación](../README.md).
@@ -10,6 +10,8 @@ emet puede ejecutarse en Codex CLI además de Claude Code. Los términos siguen 
 En el host de Codex el pipeline es el mismo: entrevista, spec, tickets, una aprobación, workers paralelos en worktrees, una revisión por oleada y, al final, el aterrizaje. Lo que cambia es la fontanería. Cada worker y cada revisor es su propio proceso `codex exec`, iniciado por `emet dispatch` y `emet review-run`, y los comandos slash pasan a ser las skills `$emet:run`, `$emet:init` y `$emet:doctor`. La ruta de Claude Code no se toca.
 
 ## Instalación
+
+:::steps
 
 1. Instala la CLI `codex` en la versión indicada por `codex.minVersion` (por defecto `0.167.0`) o una más nueva, e inicia sesión.
 2. Instala el plugin `mattpocock-skills` en Codex:
@@ -27,6 +29,8 @@ En el host de Codex el pipeline es el mismo: entrevista, spec, tickets, una apro
    ```
 
 4. Instala la CLI `emet` como se describe en [Primeros pasos](getting-started.md) y luego ejecuta `emet doctor .`. `install.sh` también instala los comandos y agentes de Claude Code bajo `~/.claude`; eso es inofensivo en Codex, y `emet doctor` no avisa de que el plugin de Codex e `install.sh` estén juntos. En el host de Codex informa de un `codex` anterior a `codex.minVersion`, de una bandera `--json` o `--output-schema` ausente en `codex exec` y de un `mattpocock-skills` faltante, con los dos comandos anteriores.
+
+:::
 
 Los dos comandos de plugin del paso 3 se ejecutaron contra el `codex` real (0.167.0): en un `CODEX_HOME` limpio terminan con código 0 y `codex plugin list` muestra `emet@emet-marketplace installed, enabled`. La forma con ruta local, `codex plugin marketplace add <repo>`, da el mismo resultado.
 
