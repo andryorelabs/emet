@@ -1,0 +1,40 @@
+---
+/**
+ * Pale pill above the hero headline: the newest CHANGELOG version and the
+ * localized "What's new" label, linking to that entry. Renders nothing when
+ * the changelog has no entry.
+ */
+import { readFileSync } from "node:fs";
+import path from "node:path";
+
+import { REPOSITORY_ROOT } from "../../docs/paths";
+import { LOCALES, DEFAULT_LOCALE, localeSegment } from "../../i18n/locales";
+import type { Locale } from "../../i18n/locales";
+import { latestRelease } from "./announcement";
+
+interface Props {
+  label: string;
+}
+
+const { label } = Astro.props;
+const firstSegment = Astro.url.pathname.split("/")[1] ?? "";
+const locale: Locale =
+  LOCALES.find((candidate) => candidate !== DEFAULT_LOCALE && localeSegment(candidate) === firstSegment) ??
+  DEFAULT_LOCALE;
+const release = latestRelease(readFileSync(path.join(REPOSITORY_ROOT, "CHANGELOG.md"), "utf8"), locale);
+---
+
+{
+  release && (
+    <a class="announcement" href={release.href}>
+      <span class="announcement-version">v{release.version}</span>
+      <span class="announcement-divider" aria-hidden="true" />
+      <span class="announcement-label">{label}</span>
+      <span class="announcement-arrow" aria-hidden="true">
+        <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M5 12h14M13 6l6 6-6 6" />
+        </svg>
+      </span>
+    </a>
+  )
+}

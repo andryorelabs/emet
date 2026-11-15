@@ -3,6 +3,7 @@ import tailwindcss from "@tailwindcss/vite";
 import { defineConfig } from "astro/config";
 
 import { THEME_INIT_HASH } from "./src/components/site/theme";
+import { emetDirectives } from "./src/docs/directives";
 import { codeColorsPlugin } from "./src/docs/code-colors-plugin";
 import { sharedCodeConfig } from "./src/highlight/code-config";
 import {
@@ -52,6 +53,7 @@ export default defineConfig({
   },
   integrations: [
     sitemapOptOut,
+    emetDirectives(),
     starlight({
       title: "emet",
       head: [
@@ -62,7 +64,7 @@ export default defineConfig({
       defaultLocale: "root",
       locales: starlightLocales,
       sidebar: buildSidebar(),
-      customCss: ["./src/styles/docs.css"],
+      customCss: ["./src/styles/docs.css", "./src/styles/docs-steps.css"],
       routeMiddleware: "./src/docs/route-middleware.ts",
       lastUpdated: false,
       expressiveCode: { ...sharedCodeConfig, themes: [...sharedCodeConfig.themes] },

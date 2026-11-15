@@ -2,7 +2,7 @@
 title: 在 Codex 上运行 emet
 description: 介绍如何安装 Codex 一侧、选择 Agent 宿主、唯一的一次批准以及已知限制。
 seoTitle: 在 Codex 上运行 emet
-sourceHash: fedf7f4694193076
+sourceHash: 38d79f32b248565e
 ---
 
 emet 既可以在 Claude Code 上运行，也可以在 Codex CLI 上运行。术语遵循 [GLOSSARY.md](../../GLOSSARY.md)；运行所在的产品称为 **Agent 宿主**。本页介绍 Codex 一侧的安装、宿主的选择、唯一的一次批准以及已知限制。返回[文档索引](../README.md)。
@@ -10,6 +10,8 @@ emet 既可以在 Claude Code 上运行，也可以在 Codex CLI 上运行。术
 在 Codex 宿主上，流水线保持不变：访谈、规格、工单、一次批准、在 worktree 中并行的 worker、每个波次一次评审，然后落地。变化的只是底层机制。每个 worker 和每个 reviewer 都是由 `emet dispatch` 和 `emet review-run` 启动的独立 `codex exec` 进程，斜杠命令则变成 `$emet:run`、`$emet:init` 和 `$emet:doctor` 技能。Claude Code 路径保持不变。
 
 ## 安装
+
+:::steps
 
 1. 安装版本为 `codex.minVersion`（默认 `0.167.0`）或更新的 `codex` CLI，并登录。
 2. 在 Codex 中安装 `mattpocock-skills` 插件：
@@ -27,6 +29,8 @@ emet 既可以在 Claude Code 上运行，也可以在 Codex CLI 上运行。术
    ```
 
 4. 按照[快速开始](getting-started.md)安装 `emet` CLI，然后运行 `emet doctor .`。`install.sh` 还会在 `~/.claude` 下安装 Claude Code 的命令和代理；这在 Codex 上无害，`emet doctor` 也不会对同时使用 Codex 插件和 `install.sh` 发出警告。在 Codex 宿主上，它会报告早于 `codex.minVersion` 的 `codex`、`codex exec` 缺少 `--json` 或 `--output-schema` 标志，以及缺少 `mattpocock-skills`（并给出上面的两条命令）。
+
+:::
 
 第 3 步中的两条插件命令已在真实的 `codex`（0.167.0）上运行过：在全新的 `CODEX_HOME` 中它们退出码为 0，`codex plugin list` 显示 `emet@emet-marketplace installed, enabled`。本地路径形式 `codex plugin marketplace add <repo>` 的结果相同。
 
