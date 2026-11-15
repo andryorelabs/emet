@@ -1,0 +1,75 @@
+/**
+ * The `:::steps` docs block: an ordered list on a vertical rule, each step
+ * with a numbered badge sitting on the line. The markup stays a real `<ol>`,
+ * so without this sheet it is a plain numbered list in reading order.
+ */
+
+.sl-markdown-content ol.emet-steps {
+  --steps-badge: 32px;
+  --steps-gap: 20px;
+  list-style: none;
+  counter-reset: emet-step;
+  margin: var(--steps-gap) 0;
+  padding: 0;
+}
+
+.sl-markdown-content ol.emet-steps > li {
+  position: relative;
+  counter-increment: emet-step;
+  margin: 0;
+  padding-inline-start: calc(var(--steps-badge) + 16px);
+  min-height: var(--steps-badge);
+  font-size: 16px;
+}
+
+.sl-markdown-content ol.emet-steps > li + li {
+  margin-top: var(--steps-gap);
+}
+
+.sl-markdown-content ol.emet-steps > li::before {
+  content: counter(emet-step);
+  position: absolute;
+  inset-block-start: 0;
+  inset-inline-start: 0;
+  z-index: 1;
+  box-sizing: border-box;
+  display: grid;
+  place-items: center;
+  width: var(--steps-badge);
+  height: var(--steps-badge);
+  border-radius: 50%;
+  background: var(--surface);
+  box-shadow: 0 0 0 4px var(--bg);
+  color: var(--text);
+  font-family: var(--font-mono);
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1;
+}
+
+.sl-markdown-content ol.emet-steps > li:not(:last-child)::after {
+  content: "";
+  position: absolute;
+  inset-block: 0 calc(var(--steps-gap) * -1);
+  inset-inline-start: calc(var(--steps-badge) / 2);
+  width: 1px;
+  background: var(--border);
+}
+
+.sl-markdown-content ol.emet-steps > li > :first-child {
+  margin-block-start: 0;
+}
+
+.sl-markdown-content ol.emet-steps > li > p:first-child {
+  padding-block-start: 2px;
+}
+
+.sl-markdown-content ol.emet-steps > li > p:first-child {
+  font-size: 18px;
+  font-weight: 500;
+  line-height: 1.5;
+}
+
+.sl-markdown-content ol.emet-steps > li > p:first-child:not(:only-child) {
+  margin-block-end: 12px;
+}

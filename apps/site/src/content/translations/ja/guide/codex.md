@@ -2,7 +2,7 @@
 title: Codex で emet を実行する
 description: Codex CLI 側のインストール、エージェントホストの選択、単一の承認、既知の制限を説明します。
 seoTitle: Codex で emet を実行する
-sourceHash: fedf7f4694193076
+sourceHash: 38d79f32b248565e
 ---
 
 emet は Claude Code だけでなく Codex CLI でも実行できます。用語は [GLOSSARY.md](../../GLOSSARY.md) に従います。実行が動作する製品を**エージェントホスト**と呼びます。このページでは、Codex 側のインストール、ホストの選択、単一の承認、既知の制限を説明します。[ドキュメント索引](../README.md)に戻ります。
@@ -10,6 +10,8 @@ emet は Claude Code だけでなく Codex CLI でも実行できます。用語
 Codex ホストでもパイプラインは同じです。インタビュー、仕様、チケット、1 回の承認、ワークツリーでの並列ワーカー、ウェーブごとのレビュー、そしてランディングです。変わるのは内部の仕組みです。各ワーカーと各レビュアーは、`emet dispatch` と `emet review-run` が起動するそれぞれ独立した `codex exec` プロセスになり、スラッシュコマンドは `$emet:run`、`$emet:init`、`$emet:doctor` スキルになります。Claude Code のパスは変更されません。
 
 ## インストール
+
+:::steps
 
 1. `codex.minVersion`（既定は `0.167.0`）以上のバージョンの `codex` CLI をインストールし、ログインします。
 2. Codex に `mattpocock-skills` プラグインをインストールします。
@@ -27,6 +29,8 @@ Codex ホストでもパイプラインは同じです。インタビュー、�
    ```
 
 4. [はじめに](getting-started.md)の手順で `emet` CLI をインストールし、`emet doctor .` を実行します。`install.sh` は `~/.claude` 配下に Claude Code のコマンドとエージェントもインストールしますが、Codex では無害であり、`emet doctor` は Codex プラグインと `install.sh` の併用について警告しません。Codex ホストでは、`codex.minVersion` より古い `codex`、`codex exec` の `--json` または `--output-schema` フラグの欠落、`mattpocock-skills` の欠落（上記の 2 つのコマンドを案内）を報告します。
+
+:::
 
 手順 3 の 2 つのプラグインコマンドは、実際の `codex`（0.167.0）に対して実行されました。新しい `CODEX_HOME` では終了コード 0 で終わり、`codex plugin list` に `emet@emet-marketplace installed, enabled` と表示されます。ローカルパス形式の `codex plugin marketplace add <repo>` でも同じ結果になります。
 
