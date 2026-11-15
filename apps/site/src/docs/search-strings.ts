@@ -17,6 +17,10 @@ export interface SearchStrings {
   escapeKey: string;
   copy: string;
   copied: string;
+  searchButton: string;
+  searchButtonShort: string;
+  searchButtonLabel: string;
+  cancel: string;
 }
 
 /**
@@ -32,6 +36,10 @@ export const SEARCH_STRINGS: Record<Locale, SearchStrings> = {
     escapeKey: "Esc",
     copy: "Copy",
     copied: "Copied",
+    searchButton: "Search documentation…",
+    searchButtonShort: "Search…",
+    searchButtonLabel: "Search documentation",
+    cancel: "Cancel",
   },
   es: {
     placeholder: "Buscar en la documentación",
@@ -42,6 +50,10 @@ export const SEARCH_STRINGS: Record<Locale, SearchStrings> = {
     escapeKey: "Esc",
     copy: "Copiar",
     copied: "Copiado",
+    searchButton: "Buscar en la documentación…",
+    searchButtonShort: "Buscar…",
+    searchButtonLabel: "Buscar en la documentación",
+    cancel: "Cancelar",
   },
   de: {
     placeholder: "In der Dokumentation suchen",
@@ -52,6 +64,10 @@ export const SEARCH_STRINGS: Record<Locale, SearchStrings> = {
     escapeKey: "Esc",
     copy: "Kopieren",
     copied: "Kopiert",
+    searchButton: "Dokumentation durchsuchen…",
+    searchButtonShort: "Suchen…",
+    searchButtonLabel: "Dokumentation durchsuchen",
+    cancel: "Abbrechen",
   },
   fr: {
     placeholder: "Rechercher dans la documentation",
@@ -62,6 +78,10 @@ export const SEARCH_STRINGS: Record<Locale, SearchStrings> = {
     escapeKey: "Échap",
     copy: "Copier",
     copied: "Copié",
+    searchButton: "Rechercher dans la documentation…",
+    searchButtonShort: "Rechercher…",
+    searchButtonLabel: "Rechercher dans la documentation",
+    cancel: "Annuler",
   },
   it: {
     placeholder: "Cerca nella documentazione",
@@ -72,6 +92,10 @@ export const SEARCH_STRINGS: Record<Locale, SearchStrings> = {
     escapeKey: "Esc",
     copy: "Copia",
     copied: "Copiato",
+    searchButton: "Cerca nella documentazione…",
+    searchButtonShort: "Cerca…",
+    searchButtonLabel: "Cerca nella documentazione",
+    cancel: "Annulla",
   },
   ja: {
     placeholder: "ドキュメントを検索",
@@ -82,6 +106,10 @@ export const SEARCH_STRINGS: Record<Locale, SearchStrings> = {
     escapeKey: "Esc",
     copy: "コピー",
     copied: "コピーしました",
+    searchButton: "ドキュメントを検索…",
+    searchButtonShort: "検索…",
+    searchButtonLabel: "ドキュメントを検索",
+    cancel: "キャンセル",
   },
   ko: {
     placeholder: "문서 검색",
@@ -92,6 +120,10 @@ export const SEARCH_STRINGS: Record<Locale, SearchStrings> = {
     escapeKey: "Esc",
     copy: "복사",
     copied: "복사됨",
+    searchButton: "문서 검색…",
+    searchButtonShort: "검색…",
+    searchButtonLabel: "문서 검색",
+    cancel: "취소",
   },
   "pt-BR": {
     placeholder: "Pesquisar na documentação",
@@ -102,6 +134,10 @@ export const SEARCH_STRINGS: Record<Locale, SearchStrings> = {
     escapeKey: "Esc",
     copy: "Copiar",
     copied: "Copiado",
+    searchButton: "Pesquisar na documentação…",
+    searchButtonShort: "Pesquisar…",
+    searchButtonLabel: "Pesquisar na documentação",
+    cancel: "Cancelar",
   },
   ru: {
     placeholder: "Поиск по документации",
@@ -112,6 +148,10 @@ export const SEARCH_STRINGS: Record<Locale, SearchStrings> = {
     escapeKey: "Esc",
     copy: "Копировать",
     copied: "Скопировано",
+    searchButton: "Поиск по документации…",
+    searchButtonShort: "Поиск…",
+    searchButtonLabel: "Поиск по документации",
+    cancel: "Отмена",
   },
   "zh-CN": {
     placeholder: "搜索文档",
@@ -122,5 +162,9 @@ export const SEARCH_STRINGS: Record<Locale, SearchStrings> = {
     escapeKey: "Esc",
     copy: "复制",
     copied: "已复制",
+    searchButton: "搜索文档…",
+    searchButtonShort: "搜索…",
+    searchButtonLabel: "搜索文档",
+    cancel: "取消",
   },
 };
