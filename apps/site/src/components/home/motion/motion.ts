@@ -10,6 +10,7 @@ import Lenis from "lenis";
 import {
   coverProgress,
   exitProgress,
+  isSmoothScrollExempt,
   motionPolicy,
   type MotionEnvironment,
   type MotionPolicy,
@@ -105,7 +106,12 @@ function trackScrollProgress(root: ParentNode): () => void {
 }
 
 function startSmoothScroll(): () => void {
-  const lenis = new Lenis({ lerp: SMOOTH_LERP, anchors: true, autoRaf: true });
+  const lenis = new Lenis({
+    lerp: SMOOTH_LERP,
+    anchors: true,
+    autoRaf: true,
+    prevent: isSmoothScrollExempt,
+  });
   return () => lenis.destroy();
 }
 
