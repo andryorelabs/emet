@@ -20,6 +20,6 @@ const currentPath = englishPathOf(Astro.url.pathname, locale);
     currentPath={currentPath}
     strings={getStrings(locale).nav}
   >
-    <DocsSearch slot="search" />
+    <DocsSearch slot="search" locale={locale} />
   </SiteHeader>
 </div>

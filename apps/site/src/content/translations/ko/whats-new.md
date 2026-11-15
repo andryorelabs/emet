@@ -2,8 +2,16 @@
 title: 새로운 소식
 description: emet 릴리스 노트. 각 버전에서 무엇이 바뀌었는지 정리합니다.
 seoTitle: "emet 새로운 소식: 릴리스 노트"
-sourceHash: a55d1df0b3a69e9e
+sourceHash: 5bfcf40177848b56
 ---
+
+## 0.8.3
+
+2026-11-15
+
+### 수정
+
+- `/docs/`와 각 로캘의 `/docs/`가 스타일 없는 페이지가 잠깐 보이던 meta-refresh 스텁 대신 시작하기 페이지로 301 응답을 보냅니다.
 
 ## 0.8.2
 

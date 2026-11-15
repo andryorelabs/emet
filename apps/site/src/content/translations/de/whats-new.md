@@ -2,8 +2,16 @@
 title: Neuigkeiten
 description: Release Notes für emet: was sich in jeder Version geändert hat.
 seoTitle: "Neuigkeiten in emet: Release Notes"
-sourceHash: a55d1df0b3a69e9e
+sourceHash: 5bfcf40177848b56
 ---
+
+## 0.8.3
+
+2026-11-15
+
+### Behoben
+
+- `/docs/` und das `/docs/` jeder Sprache antworten jetzt mit einem 301 auf die Seite „Erste Schritte“, statt mit einer Meta-Refresh-Seite, die kurz ungestylt aufblitzte.
 
 ## 0.8.2
 
