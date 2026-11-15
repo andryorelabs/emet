@@ -2,8 +2,16 @@
 title: Novità
 description: Note di rilascio di emet: cosa è cambiato in ogni versione.
 seoTitle: "Novità di emet: note di rilascio"
-sourceHash: 5bfcf40177848b56
+sourceHash: 5fa0e7574374a363
 ---
+
+## 0.8.4
+
+2026-11-15
+
+### Modificato
+
+- L'header della home ora è composto da due gruppi ai bordi: logo e Docs a sinistra; ricerca, stelle GitHub, tema e lingua a destra. I suoi controlli e il badge della versione sono in vetro traslucido sopra il cielo, e il link duplicato a Novità non compare più nell'header e nel menu della home.
 
 ## 0.8.3
 
