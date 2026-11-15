@@ -2,8 +2,16 @@
 title: Novidades
 description: Notas de versão do emet: o que mudou em cada versão.
 seoTitle: Novidades do emet: notas de versão
-sourceHash: 5bfcf40177848b56
+sourceHash: 5fa0e7574374a363
 ---
+
+## 0.8.4
+
+2026-11-15
+
+### Alterado
+
+- O cabeçalho da página inicial agora tem dois grupos nas extremidades: a marca e Docs à esquerda; busca, estrelas do GitHub, tema e idioma à direita. Seus controles e a etiqueta de versão são de vidro translúcido sobre o céu, e o link duplicado para Novidades saiu do cabeçalho e do menu da página inicial.
 
 ## 0.8.3
 
