@@ -66,6 +66,7 @@ export default defineConfig({
       sidebar: buildSidebar(),
       customCss: [
         "./src/styles/docs.css",
+        "./src/styles/search-dialog.css",
         "./src/styles/docs-steps.css",
         "./src/styles/install-tabs.css",
       ],
