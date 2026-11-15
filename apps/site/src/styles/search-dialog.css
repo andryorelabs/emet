@@ -54,6 +54,7 @@ site-search .search-container {
   flex: 1;
   min-height: 0;
   overflow-y: auto;
+  overscroll-behavior: contain;
 }
 
 site-search button[data-close-modal] {
