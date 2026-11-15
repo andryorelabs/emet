@@ -1,0 +1,156 @@
+/**
+ * The docs title row's page actions: the Copy Page split button and its menu,
+ * and the previous/next icon buttons. Motion is transform and opacity only,
+ * eased out, and off under reduced motion.
+ */
+
+.page-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-block: 12px 4px;
+}
+
+.page-actions-split {
+  position: relative;
+  display: inline-flex;
+}
+
+.page-actions-copy,
+.page-actions-toggle,
+.page-actions-step {
+  box-sizing: border-box;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  height: 36px;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--text);
+  font: inherit;
+  font-size: 0.875rem;
+  cursor: pointer;
+  text-decoration: none;
+  transition:
+    background-color 160ms cubic-bezier(0.23, 1, 0.32, 1),
+    transform 160ms cubic-bezier(0.23, 1, 0.32, 1);
+}
+
+.page-actions-copy {
+  padding-inline: 14px;
+  border-radius: 10px 0 0 10px;
+}
+
+.page-actions-toggle {
+  width: 36px;
+  margin-inline-start: -1px;
+  border-radius: 0 10px 10px 0;
+}
+
+.page-actions-step {
+  width: 36px;
+  border-radius: 10px;
+}
+
+.page-actions-copy:hover,
+.page-actions-toggle:hover,
+a.page-actions-step:hover {
+  background: var(--surface);
+}
+
+.page-actions-copy:active,
+.page-actions-toggle:active,
+a.page-actions-step:active {
+  transform: scale(0.97);
+}
+
+.page-actions-copy:focus-visible,
+.page-actions-toggle:focus-visible,
+.page-actions-step:focus-visible {
+  outline: 2px solid var(--text);
+  outline-offset: 2px;
+}
+
+.page-actions-step[aria-disabled="true"] {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.page-actions-pager {
+  display: inline-flex;
+  gap: 8px;
+  margin-inline-start: auto;
+}
+
+.page-actions-status {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.page-actions-menu {
+  position: absolute;
+  inset-block-start: calc(100% + 6px);
+  inset-inline-start: 0;
+  z-index: 20;
+  display: flex;
+  flex-direction: column;
+  min-width: 220px;
+  padding: 4px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--bg);
+  box-shadow: 0 8px 24px rgb(0 0 0 / 0.12);
+  transform-origin: top left;
+  animation: page-actions-menu-in 160ms cubic-bezier(0.23, 1, 0.32, 1);
+}
+
+.page-actions-menu[hidden] {
+  display: none;
+}
+
+.page-actions-menu a {
+  display: block;
+  padding: 8px 12px;
+  border-radius: 8px;
+  color: var(--text);
+  font-size: 0.875rem;
+  text-decoration: none;
+}
+
+.page-actions-menu a:hover,
+.page-actions-menu a:focus-visible {
+  background: var(--surface);
+  outline: none;
+}
+
+@keyframes page-actions-menu-in {
+  from {
+    opacity: 0;
+    transform: scale(0.97);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .page-actions-menu {
+    animation: none;
+  }
+
+  .page-actions-copy,
+  .page-actions-toggle,
+  .page-actions-step {
+    transition: none;
+  }
+
+  .page-actions-copy:active,
+  .page-actions-toggle:active,
+  a.page-actions-step:active {
+    transform: none;
+  }
+}

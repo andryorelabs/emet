@@ -9,12 +9,17 @@ import StarlightPageTitle from "@astrojs/starlight/components/PageTitle.astro";
 import "virtual:emet-code-colors.css";
 
 import { TRANSLATION_NOTICE } from "../../docs/notice";
+import { resolveLocale } from "../../docs/route";
+import PageActions from "./PageActions.astro";
 
-const { translationStatus, englishPath } = Astro.locals.starlightRoute.entry.data;
+const { entry, lang, pagination } = Astro.locals.starlightRoute;
+const { translationStatus, englishPath } = entry.data;
+const locale = resolveLocale(lang);
 const hasNotice = translationStatus !== "translated";
 ---
 
 <StarlightPageTitle />
+<PageActions pageId={entry.id} locale={locale} prev={pagination.prev} next={pagination.next} />
 {
   hasNotice && (
     <p lang="en" dir="ltr" role="note" data-translation-notice={translationStatus} class="docs-notice">
