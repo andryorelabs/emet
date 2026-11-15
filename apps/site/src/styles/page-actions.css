@@ -116,7 +116,9 @@ a.page-actions-step:active {
 }
 
 .page-actions-menu a {
-  display: block;
+  display: flex;
+  align-items: center;
+  gap: 8px;
   padding: 8px 12px;
   border-radius: 8px;
   color: var(--text);
@@ -124,10 +126,20 @@ a.page-actions-step:active {
   text-decoration: none;
 }
 
+.page-actions-menu-icon {
+  flex: none;
+  color: var(--text-muted);
+}
+
 .page-actions-menu a:hover,
 .page-actions-menu a:focus-visible {
   background: var(--surface);
   outline: none;
+}
+
+.page-actions-menu a:hover .page-actions-menu-icon,
+.page-actions-menu a:focus-visible .page-actions-menu-icon {
+  color: var(--text);
 }
 
 @keyframes page-actions-menu-in {
