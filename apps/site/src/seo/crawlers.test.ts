@@ -61,6 +61,13 @@ describe("buildLlmsTxt", () => {
     expect(body).toContain(`- [Fleet Check](${SITE_ORIGIN}/docs/guide/fleet/): Audit repos.`);
   });
 
+  test("links each page's Markdown twin", () => {
+    const body = buildLlmsTxt("A summary.", [
+      { id: "guide/fleet", seoTitle: "Fleet Check", description: "Audit repos." },
+    ]);
+    expect(body).toContain(`(${SITE_ORIGIN}/docs/guide/fleet.md)`);
+  });
+
   test("names both Agent hosts", () => {
     const body = buildLlmsTxt("A summary.", []);
     expect(body).toContain("emet is a plugin for Claude Code and Codex.");

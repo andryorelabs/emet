@@ -72,6 +72,11 @@ done
 page="$(curl -s "$base/")"
 grep -qi 'http-equiv="content-security-policy"' <<<"$page" || fail "/ has no CSP meta tag"
 grep -q "'sha256-" <<<"$page" || fail "the CSP meta tag has no hashes"
+for path in /es/docs/guide/fleet.md /llms-full.txt; do
+  [ "$(status "$base$path")" = 200 ] || fail "$path is not 200"
+done
+[ "$(header_of content-type "$base/es/docs/guide/fleet.md")" = "text/markdown; charset=utf-8" ] || fail "the Markdown twin is not text/markdown; charset=utf-8"
+[ "$(header_of content-encoding "$base/es/docs/guide/fleet.md")" = gzip ] || fail "the Markdown twin is not gzipped"
 [ "$(header_of content-encoding "$base/")" = gzip ] || fail "/ is not gzipped"
 
 logs="$(docker logs "$name" 2>&1)"
