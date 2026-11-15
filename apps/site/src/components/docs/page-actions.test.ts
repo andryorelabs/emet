@@ -1,4 +1,5 @@
 import { describe, expect, test } from "bun:test";
+import { readFileSync } from "node:fs";
 
 import { LOCALES } from "../../i18n/locales";
 import { PAGE_ACTIONS_STRINGS } from "../../docs/page-actions-strings";
@@ -74,5 +75,29 @@ describe("PAGE_ACTIONS_STRINGS", () => {
         expect(value.trim().length, `${locale}.${key}`).toBeGreaterThan(0);
       }
     }
+  });
+});
+
+describe("menu item icons", () => {
+  const source = readFileSync(new URL("./PageActions.astro", import.meta.url), "utf8");
+  const menuItems = source.match(/<a role="menuitem"[\s\S]*?<\/a>/g) ?? [];
+
+  test("renders three menu items", () => {
+    expect(menuItems).toHaveLength(3);
+  });
+
+  test("gives each menu item an inline decorative currentColor icon", () => {
+    for (const item of menuItems) {
+      expect(item).toContain(`<svg class="page-actions-menu-icon" aria-hidden="true"`);
+      expect(item).toContain(`focusable="false"`);
+      expect(item).toContain(`fill="currentColor"`);
+    }
+  });
+
+  test("loads no icon from an external source", () => {
+    expect(source).not.toContain("<img");
+    expect(source).not.toMatch(/<svg[^>]*href="http/);
+    expect(source).not.toMatch(/<use[^>]*href="http/);
+    expect(source).not.toMatch(/url\(\s*["']?https?:/);
   });
 });
