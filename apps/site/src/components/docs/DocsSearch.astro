@@ -14,6 +14,8 @@ import Search from "@astrojs/starlight/components/Search.astro";
 import { SEARCH_STRINGS, SEARCH_TERM_TOKEN } from "../../docs/search-strings";
 import type { Locale } from "../../i18n/locales";
 import SearchButton from "../site/SearchButton.astro";
+// oxlint-disable-next-line import/no-unassigned-import -- Astro bundles a stylesheet imported for its side effect
+import "../../styles/search-dialog.css";
 
 interface Props {
   locale: Locale;
