@@ -47,14 +47,15 @@
 
 .site-header--home .theme-button,
 .site-header--home .menu-button {
-  border-color: transparent;
-  background: #f3f9f5;
+  border-color: var(--glass-border);
+  background: var(--glass-fill);
+  backdrop-filter: var(--glass-blur);
   color: var(--header-ink);
 }
 
 .site-header--home .theme-button:hover,
 .site-header--home .menu-button:hover {
-  background: #fff;
+  background: var(--glass-fill-hover);
 }
 
 .theme-icon,
@@ -359,14 +360,15 @@
 }
 
 .site-header--home .search-button {
-  border-color: transparent;
-  background: #f3f9f5;
-  color: oklch(0.45 0.013 150);
+  border-color: var(--glass-border);
+  background: var(--glass-fill);
+  backdrop-filter: var(--glass-blur);
+  color: oklch(0.3 0.013 150);
 }
 
 .site-header--home .search-button:hover,
 .site-header--home .search-button:focus-visible {
-  background: #fff;
+  background: var(--glass-fill-hover);
   color: var(--header-ink);
 }
 
@@ -794,7 +796,7 @@
   }
 }
 
-.site-header nav a.github-pill {
+.site-header a.github-pill {
   box-sizing: border-box;
   display: inline-flex;
   align-items: center;
@@ -811,32 +813,39 @@
     transform 160ms cubic-bezier(0.23, 1, 0.32, 1);
 }
 
-.site-header nav a.github-pill:hover,
-.site-header nav a.github-pill:focus-visible {
+.site-header a.github-pill:hover,
+.site-header a.github-pill:focus-visible {
   background: var(--bg);
   color: var(--text);
   opacity: 1;
 }
 
-.site-header nav a.github-pill:focus-visible {
+.site-header a.github-pill:focus-visible {
   outline: 3px solid var(--accent);
   outline-offset: 0;
 }
 
-.site-header nav a.github-pill:active {
+.site-header a.github-pill:active {
   transform: scale(0.97);
 }
 
-.site-header--home nav a.github-pill {
-  border-color: transparent;
-  background: #f3f9f5;
-  color: oklch(0.45 0.013 150);
+.site-header--home a.github-pill {
+  border-color: var(--glass-border);
+  background: var(--glass-fill);
+  backdrop-filter: var(--glass-blur);
+  color: oklch(0.3 0.013 150);
 }
 
-.site-header--home nav a.github-pill:hover,
-.site-header--home nav a.github-pill:focus-visible {
-  background: #fff;
+.site-header--home a.github-pill:hover,
+.site-header--home a.github-pill:focus-visible {
+  background: var(--glass-fill-hover);
   color: var(--header-ink);
+}
+
+@media (max-width: 900px) {
+  .site-header--home .site-header-end > a.github-pill {
+    display: none;
+  }
 }
 
 .github-stars--header {
@@ -874,11 +883,11 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .site-header nav a.github-pill {
+  .site-header a.github-pill {
     transition: none;
   }
 
-  .site-header nav a.github-pill:active {
+  .site-header a.github-pill:active {
     transform: none;
   }
 }

@@ -90,9 +90,7 @@ describe("external links wiring", () => {
     expect(header).toContain("{...externalLinkAttributes(githubUrl)}");
     expect(header).toContain('<span class="sr-only">{linkStrings.newTab}</span>');
     expect(header).toContain('<a href={docsPath} aria-current={onDocs ? "page" : undefined}>');
-    expect(header).toContain(
-      '<a href={whatsNewPath} aria-current={onWhatsNew ? "page" : undefined}>',
-    );
+    expect(header).toContain('<a class="github-pill" href={githubUrl}');
   });
 
   test("the mobile menu marks external links from the shared helper", async () => {
