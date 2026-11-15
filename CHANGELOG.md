@@ -8,6 +8,15 @@ and this project adheres to
 
 ## [Unreleased]
 
+## [0.8.4] - 2026-11-15
+
+### Changed
+
+- The home page header is now two edge groups, with the wordmark and Docs on
+  the left and search, GitHub stars, theme and language on the right. Its
+  controls and the release pill are translucent glass over the sky, and the
+  duplicate What's new link is gone from the home header and menu.
+
 ## [0.8.3] - 2026-11-15
 
 ### Fixed
@@ -269,7 +278,8 @@ and this project adheres to
 - Per-repo configuration through `forge.config.json`.
 - `install.sh`, which installs the CLI, command and agents.
 
-[Unreleased]: https://github.com/andryorelabs/emet/compare/v0.8.3...HEAD
+[Unreleased]: https://github.com/andryorelabs/emet/compare/v0.8.4...HEAD
+[0.8.4]: https://github.com/andryorelabs/emet/compare/v0.8.3...v0.8.4
 [0.8.3]: https://github.com/andryorelabs/emet/compare/v0.8.2...v0.8.3
 [0.8.2]: https://github.com/andryorelabs/emet/compare/v0.8.1...v0.8.2
 [0.8.1]: https://github.com/andryorelabs/emet/compare/v0.8.0...v0.8.1

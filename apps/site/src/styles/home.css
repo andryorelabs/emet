@@ -144,8 +144,10 @@ summary:focus-visible {
   height: 32px;
   margin-bottom: -4px;
   padding: 0 5px 0 14px;
+  border: 1px solid var(--glass-border);
   border-radius: 999px;
-  background: #f3f9f5;
+  background: var(--glass-fill);
+  backdrop-filter: var(--glass-blur);
   color: oklch(0.22 0.013 150);
   font-size: 14px;
   line-height: 1;
@@ -154,7 +156,7 @@ summary:focus-visible {
 }
 
 .announcement:hover {
-  background: #fff;
+  background: var(--glass-fill-hover);
 }
 
 .announcement:focus-visible {

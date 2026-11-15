@@ -2,8 +2,16 @@
 title: Nouveautés
 description: Notes de version d'emet : ce qui a changé dans chaque version.
 seoTitle: Nouveautés d'emet : notes de version
-sourceHash: 5bfcf40177848b56
+sourceHash: 5fa0e7574374a363
 ---
+
+## 0.8.4
+
+2026-11-15
+
+### Modifié
+
+- L'en-tête de la page d'accueil se compose désormais de deux groupes aux extrémités : le logo et Docs à gauche ; recherche, étoiles GitHub, thème et langue à droite. Ses contrôles et la pastille de version sont en verre translucide sur le ciel, et le lien en double vers Nouveautés a disparu de l'en-tête et du menu de la page d'accueil.
 
 ## 0.8.3
 

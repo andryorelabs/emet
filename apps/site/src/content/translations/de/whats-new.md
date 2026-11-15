@@ -2,8 +2,16 @@
 title: Neuigkeiten
 description: Release Notes für emet: was sich in jeder Version geändert hat.
 seoTitle: "Neuigkeiten in emet: Release Notes"
-sourceHash: 5bfcf40177848b56
+sourceHash: 5fa0e7574374a363
 ---
+
+## 0.8.4
+
+2026-11-15
+
+### Geändert
+
+- Der Header der Startseite besteht jetzt aus zwei Gruppen an den Rändern: links Wortmarke und Docs, rechts Suche, GitHub-Sterne, Design und Sprache. Seine Bedienelemente und das Release-Pill sind durchscheinendes Glas über dem Himmel, und der doppelte Link zu „Neuigkeiten“ entfällt im Header und im Menü der Startseite.
 
 ## 0.8.3
 
