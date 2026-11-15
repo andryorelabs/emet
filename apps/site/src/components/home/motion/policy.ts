@@ -45,3 +45,8 @@ export function coverProgress(box: BoxMetrics, viewportHeight: number): number {
 export function exitProgress(box: BoxMetrics): number {
   return clamp01(-box.top / box.height);
 }
+
+/** Lenis `prevent` hook: nested dialogs such as the search dialog scroll natively. */
+export function isSmoothScrollExempt(node: Pick<Element, "tagName">): boolean {
+  return node.tagName === "DIALOG";
+}

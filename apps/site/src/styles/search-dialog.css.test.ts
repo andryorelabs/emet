@@ -23,6 +23,12 @@ describe("search dialog stylesheet", () => {
     expect(dialogCss).toMatch(/site-search dialog \{[^}]*max-height: calc\(100dvh - 192px\);/);
   });
 
+  it("contains overscroll inside the results container", () => {
+    expect(dialogCss).toMatch(
+      /site-search \.search-container \{[^}]*overscroll-behavior: contain;/,
+    );
+  });
+
   it("is shared by the docs and the home page", () => {
     expect(astroConfig).toContain('"./src/styles/search-dialog.css"');
     expect(docsSearch).toContain('import "../../styles/search-dialog.css";');
