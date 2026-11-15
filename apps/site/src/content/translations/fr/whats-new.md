@@ -2,8 +2,16 @@
 title: Nouveautés
 description: Notes de version d'emet : ce qui a changé dans chaque version.
 seoTitle: Nouveautés d'emet : notes de version
-sourceHash: a55d1df0b3a69e9e
+sourceHash: 5bfcf40177848b56
 ---
+
+## 0.8.3
+
+2026-11-15
+
+### Corrigé
+
+- `/docs/` et le `/docs/` de chaque langue répondent désormais par une redirection 301 vers la page de prise en main, au lieu d’une page meta-refresh qui s’affichait brièvement sans style.
 
 ## 0.8.2
 

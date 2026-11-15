@@ -2,8 +2,16 @@
 title: 新功能
 description: emet 的发布说明：每个版本都有哪些变化。
 seoTitle: "emet 新功能：发布说明"
-sourceHash: a55d1df0b3a69e9e
+sourceHash: 5bfcf40177848b56
 ---
+
+## 0.8.3
+
+2026-11-15
+
+### 已修复
+
+- `/docs/` 以及各语言的 `/docs/` 现在通过 301 重定向到快速开始页面，而不是先闪现一个无样式的 meta-refresh 页面。
 
 ## 0.8.2
 
