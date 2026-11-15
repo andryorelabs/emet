@@ -1,0 +1,224 @@
+---
+/**
+ * The docs title row's actions: a Copy Page split button, whose menu views the
+ * page's Markdown twin or opens it in ChatGPT or Claude, and previous/next
+ * icon buttons. A bundled script copies the twin, runs the menu and binds the
+ * arrow keys to the previous/next page.
+ */
+import { markdownTwinPath } from "../../docs/markdown-twin";
+import { PAGE_ACTIONS_STRINGS } from "../../docs/page-actions-strings";
+import type { Locale } from "../../i18n/locales";
+import { buildOpenInUrl } from "./page-actions";
+
+// oxlint-disable-next-line import/no-unassigned-import -- Astro bundles a stylesheet imported for its side effect
+import "../../styles/page-actions.css";
+
+interface Link {
+  href: string;
+  label: string;
+}
+
+interface Props {
+  pageId: string;
+  locale: Locale;
+  prev?: Link | undefined;
+  next?: Link | undefined;
+}
+
+const { pageId, locale, prev, next } = Astro.props;
+const strings = PAGE_ACTIONS_STRINGS[locale];
+const twinPath = markdownTwinPath(pageId);
+const pageUrl = new URL(Astro.url.pathname, Astro.site ?? Astro.url).href;
+const clientStrings = { copyPage: strings.copyPage, copied: strings.copied, copyFailed: strings.copyFailed };
+---
+
+<div class="page-actions" data-page-actions={JSON.stringify(clientStrings)} data-twin={twinPath}>
+  <div class="page-actions-split">
+    <button type="button" class="page-actions-copy" data-copy>
+      <svg aria-hidden="true" viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="5.5" y="5.5" width="8" height="8" rx="1.5"></rect><path d="M10.5 3.5v-.5a1.5 1.5 0 0 0-1.5-1.5H4A1.5 1.5 0 0 0 2.5 3v5A1.5 1.5 0 0 0 4 9.5h.5"></path></svg>
+      <span data-copy-label>{strings.copyPage}</span>
+    </button>
+    <button
+      type="button"
+      class="page-actions-toggle"
+      data-menu-toggle
+      aria-haspopup="menu"
+      aria-expanded="false"
+      aria-controls="page-actions-menu"
+      aria-label={strings.moreActions}
+    >
+      <svg aria-hidden="true" viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="m4 6 4 4 4-4"></path></svg>
+    </button>
+    <div class="page-actions-menu" id="page-actions-menu" role="menu" data-menu hidden>
+      <a role="menuitem" href={twinPath} target="_blank" rel="noopener noreferrer">{strings.viewAsMarkdown}</a>
+      <a role="menuitem" href={buildOpenInUrl("chatgpt", pageUrl)} target="_blank" rel="noopener noreferrer">{strings.openInChatGpt}</a>
+      <a role="menuitem" href={buildOpenInUrl("claude", pageUrl)} target="_blank" rel="noopener noreferrer">{strings.openInClaude}</a>
+    </div>
+  </div>
+  <p class="page-actions-status" role="status" aria-live="polite" data-copy-status></p>
+  <nav class="page-actions-pager" aria-label={strings.pagination}>
+    {
+      prev ? (
+        <a class="page-actions-step" href={prev.href} rel="prev" aria-label={strings.previousPage} title={prev.label} data-prev>
+          <svg aria-hidden="true" viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10 3 5 8l5 5"></path></svg>
+        </a>
+      ) : (
+        <span class="page-actions-step" role="link" aria-disabled="true" aria-label={strings.previousPage}>
+          <svg aria-hidden="true" viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10 3 5 8l5 5"></path></svg>
+        </span>
+      )
+    }
+    {
+      next ? (
+        <a class="page-actions-step" href={next.href} rel="next" aria-label={strings.nextPage} title={next.label} data-next>
+          <svg aria-hidden="true" viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="m6 3 5 5-5 5"></path></svg>
+        </a>
+      ) : (
+        <span class="page-actions-step" role="link" aria-disabled="true" aria-label={strings.nextPage}>
+          <svg aria-hidden="true" viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="m6 3 5 5-5 5"></path></svg>
+        </span>
+      )
+    }
+  </nav>
+</div>
+
+<script>
+  import { shouldHandleArrowKey } from "./page-actions";
+
+  interface ClientStrings {
+    copyPage: string;
+    copied: string;
+    copyFailed: string;
+  }
+
+  const CONFIRM_MS = 2000;
+
+  function menuItems(menu: HTMLElement): HTMLElement[] {
+    return [...menu.querySelectorAll<HTMLElement>("[role=menuitem]")];
+  }
+
+  function bindMenu(root: HTMLElement): void {
+    const toggle = root.querySelector<HTMLButtonElement>("[data-menu-toggle]");
+    const menu = root.querySelector<HTMLElement>("[data-menu]");
+    if (toggle === null || menu === null) {
+      return;
+    }
+    const setOpen = (open: boolean, focusTarget?: "first" | "last" | "toggle"): void => {
+      menu.hidden = !open;
+      toggle.setAttribute("aria-expanded", String(open));
+      const items = menuItems(menu);
+      if (focusTarget === "first") {
+        items[0]?.focus();
+      } else if (focusTarget === "last") {
+        items.at(-1)?.focus();
+      } else if (focusTarget === "toggle") {
+        toggle.focus();
+      }
+    };
+    toggle.addEventListener("click", () => {
+      const wasClosed = menu.matches("[hidden]");
+      setOpen(wasClosed, wasClosed ? "first" : undefined);
+    });
+    toggle.addEventListener("keydown", (event) => {
+      if (event.key === "ArrowDown") {
+        event.preventDefault();
+        setOpen(true, "first");
+      } else if (event.key === "ArrowUp") {
+        event.preventDefault();
+        setOpen(true, "last");
+      }
+    });
+    menu.addEventListener("keydown", (event) => {
+      const items = menuItems(menu);
+      const index = items.indexOf(document.activeElement as HTMLElement);
+      if (event.key === "Escape") {
+        event.preventDefault();
+        setOpen(false, "toggle");
+      } else if (event.key === "Tab") {
+        setOpen(false);
+      } else if (event.key === "ArrowDown") {
+        event.preventDefault();
+        items[(index + 1) % items.length]?.focus();
+      } else if (event.key === "ArrowUp") {
+        event.preventDefault();
+        items[(index - 1 + items.length) % items.length]?.focus();
+      } else if (event.key === "Home") {
+        event.preventDefault();
+        items[0]?.focus();
+      } else if (event.key === "End") {
+        event.preventDefault();
+        items.at(-1)?.focus();
+      }
+    });
+    menu.addEventListener("click", () => setOpen(false));
+    document.addEventListener("pointerdown", (event) => {
+      if (!menu.hidden && !root.contains(event.target as Node)) {
+        setOpen(false);
+      }
+    });
+  }
+
+  function bindCopy(root: HTMLElement, strings: ClientStrings): void {
+    const button = root.querySelector<HTMLButtonElement>("[data-copy]");
+    const label = root.querySelector<HTMLElement>("[data-copy-label]");
+    const status = root.querySelector<HTMLElement>("[data-copy-status]");
+    const twin = root.dataset["twin"];
+    if (button === null || label === null || status === null || twin === undefined) {
+      return;
+    }
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const show = (text: string, state: string): void => {
+      label.textContent = text;
+      status.textContent = text;
+      button.dataset["state"] = state;
+      clearTimeout(timer);
+      timer = setTimeout(() => {
+        label.textContent = strings.copyPage;
+        status.textContent = "";
+        delete button.dataset["state"];
+      }, CONFIRM_MS);
+    };
+    button.addEventListener("click", async () => {
+      try {
+        const request = fetch(twin).then((response) => {
+          if (!response.ok) {
+            throw new Error(`Twin request failed with ${response.status}`);
+          }
+          return response.text();
+        });
+        if (typeof ClipboardItem === "undefined" || typeof navigator.clipboard.write !== "function") {
+          await navigator.clipboard.writeText(await request);
+        } else {
+          await navigator.clipboard.write([
+            new ClipboardItem({ "text/plain": request.then((text) => new Blob([text], { type: "text/plain" })) }),
+          ]);
+        }
+        show(strings.copied, "copied");
+      } catch {
+        show(strings.copyFailed, "failed");
+      }
+    });
+  }
+
+  function bindArrowKeys(root: HTMLElement): void {
+    document.addEventListener("keydown", (event) => {
+      if (event.defaultPrevented || !shouldHandleArrowKey(event, event.target as Element)) {
+        return;
+      }
+      const link = root.querySelector<HTMLAnchorElement>(
+        event.key === "ArrowRight" ? "[data-next]" : "[data-prev]",
+      );
+      if (link !== null) {
+        globalThis.location.assign(link.href);
+      }
+    });
+  }
+
+  const root = document.querySelector<HTMLElement>("[data-page-actions]");
+  if (root !== null) {
+    const strings = JSON.parse(root.dataset["pageActions"] ?? "{}") as ClientStrings;
+    bindMenu(root);
+    bindCopy(root, strings);
+    bindArrowKeys(root);
+  }
+</script>

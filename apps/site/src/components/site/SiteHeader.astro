@@ -14,6 +14,7 @@ import { localePath, type Locale } from "../../i18n/locales";
 import { getStrings } from "../../i18n/ui";
 import { en } from "../../i18n/ui/en";
 import { externalLinkAttributes } from "../../lib/external-links";
+import GithubStars from "./GithubStars.astro";
 import LanguageSwitcher from "./LanguageSwitcher.astro";
 import MobileMenu from "./MobileMenu.astro";
 import ThemeSelect from "./ThemeSelect.astro";
@@ -35,7 +36,7 @@ const githubUrl = "https://github.com/andryorelabs/emet";
 const links = [
   { href: docsPath, label: strings.docs, current: onDocs },
   { href: whatsNewPath, label: strings.whatsNew, current: onWhatsNew },
-  { href: githubUrl, label: strings.github, current: false },
+  { href: githubUrl, label: strings.github, current: false, stars: true },
 ];
 ---
 
@@ -47,8 +48,9 @@ const links = [
   <nav aria-label={strings.label}>
     <a href={docsPath} aria-current={onDocs ? "page" : undefined}>{strings.docs}</a>
     <a href={whatsNewPath} aria-current={onWhatsNew ? "page" : undefined}>{strings.whatsNew}</a>
-    <a href={githubUrl} {...externalLinkAttributes(githubUrl)}>
-      {strings.github}<span class="sr-only">{linkStrings.newTab}</span>
+    <a class="github-pill" href={githubUrl} {...externalLinkAttributes(githubUrl)}>
+      <GithubStars locale={locale} label={strings.github} placement="header" />
+      <span class="sr-only">{linkStrings.newTab}</span>
     </a>
   </nav>
   <div class="site-header-end">

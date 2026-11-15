@@ -79,6 +79,14 @@ done
 [ "$(header_of content-encoding "$base/es/docs/guide/fleet.md")" = gzip ] || fail "the Markdown twin is not gzipped"
 [ "$(header_of content-encoding "$base/")" = gzip ] || fail "/ is not gzipped"
 
+stars_status="$(status "$base/api/github-stars")"
+if [ "$stars_status" = 200 ]; then
+  [[ "$(header_of content-type "$base/api/github-stars")" == application/json* ]] || fail "/api/github-stars is not JSON"
+  curl -s "$base/api/github-stars" | grep -q '"stargazers_count"' || fail "/api/github-stars has no stargazers_count"
+else
+  echo "NOTE: /api/github-stars returned $stars_status (GitHub unreachable); skipped"
+fi
+
 logs="$(docker logs "$name" 2>&1)"
 grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+\.0 ' <<<"$logs" || fail "the access log is not masked"
 if grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+\.[1-9][0-9]* ' <<<"$logs"; then fail "the access log has a full IP"; fi

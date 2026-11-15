@@ -2,7 +2,7 @@
 title: Premiers pas
 description: Installez emet comme plugin Claude Code, vérifiez qu'il fonctionne avec emet doctor et lancez-le pour la première fois.
 seoTitle: Premiers pas avec emet
-sourceHash: 7a918962dca60c10
+sourceHash: d4ead33048071526
 ---
 
 Installez emet, vérifiez qu'il fonctionne et lancez-le pour la première fois.
@@ -19,20 +19,29 @@ Il y a deux méthodes d'installation.
 
 **Plugin** (sans Bun). Ajoutez ce dépôt comme marketplace et installez le plugin `emet`. Ce qu'il fournit dépend de l'hôte d'agent. Sur Claude Code, il apporte `/emet:run`, les agents, les hooks de garde et un shim `emet` qui télécharge un binaire autonome à somme de contrôle vérifiée lors de la première utilisation.
 
-```bash
+:::install-tabs
+
+```bash tab="Claude Code"
 claude plugin marketplace add andryorelabs/emet
 claude plugin install emet@emet-marketplace
 ```
 
-Sur Codex, installez le plugin avec `codex plugin` ; les étapes sont dans [Exécuter emet sur Codex](codex.md#installation). Le plugin Codex fournit les skills `$emet:run`, `$emet:init` et `$emet:doctor` et un hook, mais aucun agent et aucun shim `emet` ; le `emet` du terminal provient donc de `install.sh`.
+```bash tab="Codex"
+codex plugin marketplace add andryorelabs/emet
+codex plugin add emet@emet-marketplace
+```
 
-**`install.sh`** (fonctionne avec ou sans Bun) :
-
-```bash
+```bash tab="Terminal"
 git clone git@github.com:andryorelabs/emet.git
 cd emet
 ./install.sh
 ```
+
+:::
+
+Sur Codex, installez le plugin avec `codex plugin` ; les étapes sont dans [Exécuter emet sur Codex](codex.md#installation). Le plugin Codex fournit les skills `$emet:run`, `$emet:init` et `$emet:doctor` et un hook, mais aucun agent et aucun shim `emet` ; le `emet` du terminal provient donc de `install.sh`.
+
+**`install.sh`** (fonctionne avec ou sans Bun) :
 
 Avec `bun` dans le PATH, il copie les sources de la CLI dans `~/.claude/emet` et un wrapper `emet` dans `~/.local/bin/emet`. Sans `bun`, il installe à la place le shim du binaire autonome (`~/.local/bin/emet`, lié à `~/.claude/emet/bin/emet`), qui télécharge et vérifie la somme de contrôle du binaire au premier lancement (nécessite `curl`). Dans les deux cas, les commandes sont placées dans `~/.claude/commands/emet/` et les agents dans `~/.claude/agents/` ; les espaces réservés du plugin dans les prompts sont réécrits en chemins simples `~/.claude`. Le relancer est sans risque, et un fichier que vous avez modifié est conservé, la nouvelle version étant écrite à côté sous le nom `<file>.new`.
 
