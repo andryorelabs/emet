@@ -2,7 +2,7 @@
 title: Начало работы
 description: Установите emet как плагин Claude Code, проверьте его работу командой emet doctor и запустите в первый раз.
 seoTitle: Начало работы с emet
-sourceHash: 7a918962dca60c10
+sourceHash: d4ead33048071526
 ---
 
 Установите emet, проверьте, что он работает, и запустите его в первый раз.
@@ -19,20 +19,29 @@ Claude Code или Codex CLI, `git`, `gh` (с авторизацией) и пл�
 
 **Плагин** (Bun не нужен). Добавьте этот репозиторий как маркетплейс и установите плагин `emet`. Что именно он поставляет, зависит от хоста агента. В Claude Code он приносит `/emet:run`, агентов, защитные хуки и шим `emet`, который при первом использовании скачивает автономный бинарный файл с проверкой контрольной суммы.
 
-```bash
+:::install-tabs
+
+```bash tab="Claude Code"
 claude plugin marketplace add andryorelabs/emet
 claude plugin install emet@emet-marketplace
 ```
 
-В Codex плагин устанавливается командой `codex plugin`; шаги описаны в разделе [Запуск emet в Codex](codex.md#установка). Плагин Codex поставляет навыки `$emet:run`, `$emet:init` и `$emet:doctor` и хук, но без агентов и без шима `emet`, поэтому терминальный `emet` берётся из `install.sh`.
+```bash tab="Codex"
+codex plugin marketplace add andryorelabs/emet
+codex plugin add emet@emet-marketplace
+```
 
-**`install.sh`** (работает с Bun и без него):
-
-```bash
+```bash tab="Terminal"
 git clone git@github.com:andryorelabs/emet.git
 cd emet
 ./install.sh
 ```
+
+:::
+
+В Codex плагин устанавливается командой `codex plugin`; шаги описаны в разделе [Запуск emet в Codex](codex.md#установка). Плагин Codex поставляет навыки `$emet:run`, `$emet:init` и `$emet:doctor` и хук, но без агентов и без шима `emet`, поэтому терминальный `emet` берётся из `install.sh`.
+
+**`install.sh`** (работает с Bun и без него):
 
 Если `bun` есть в PATH, скрипт копирует исходники CLI в `~/.claude/emet`, а обёртку `emet` — в `~/.local/bin/emet`. Без `bun` он устанавливает шим автономного бинарного файла (`~/.local/bin/emet`, ссылка на `~/.claude/emet/bin/emet`), который при первом запуске скачивает бинарный файл и проверяет его контрольную сумму (нужен `curl`). В обоих случаях команды попадают в `~/.claude/commands/emet/`, а агенты — в `~/.claude/agents/`; плейсхолдеры плагина в промптах заменяются обычными путями `~/.claude`. Повторный запуск безопасен: изменённый файл сохраняется, а новая версия записывается рядом как `<file>.new`.
 

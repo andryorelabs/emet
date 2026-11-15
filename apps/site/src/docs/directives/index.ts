@@ -1,3 +1,6 @@
+import { fileURLToPath } from "node:url";
+
+import { installTabs } from "./install-tabs";
 import { steps } from "./steps";
 
 /** A node of the markdown tree a directive handler reads or returns. */
@@ -33,6 +36,7 @@ export function registerDirective(name: string, handler: DirectiveHandler): void
 }
 
 registerDirective("steps", steps);
+registerDirective("install-tabs", installTabs);
 
 /**
  * Markdown plugin that applies the registered docs directives. A directive
@@ -49,7 +53,12 @@ export const remarkEmetDirectives = {
 /** The slice of Astro's `astro:config:setup` options the integration reads. */
 interface ConfigSetupOptions {
   config: { markdown?: { processor?: { options?: { mdastPlugins?: unknown[] } } } };
+  injectScript?: (stage: "page", content: string) => void;
 }
+
+const INSTALL_TABS_CLIENT = fileURLToPath(
+  new URL("../../components/code/install-tabs-client.ts", import.meta.url),
+);
 
 /**
  * Astro integration that adds {@link remarkEmetDirectives} to the Markdown
@@ -64,12 +73,13 @@ export function emetDirectives(): {
   return {
     name: "emet-directives",
     hooks: {
-      "astro:config:setup": ({ config }) => {
+      "astro:config:setup": ({ config, injectScript }) => {
         const mdastPlugins = config.markdown?.processor?.options?.mdastPlugins;
         if (!mdastPlugins) {
           throw new Error("emet-directives needs the Satteri Markdown processor.");
         }
         mdastPlugins.push(remarkEmetDirectives);
+        injectScript?.("page", `import ${JSON.stringify(INSTALL_TABS_CLIENT)};`);
       },
     },
   };

@@ -2,7 +2,7 @@
 title: Erste Schritte
 description: emet als Claude-Code-Plugin installieren, mit emet doctor prüfen, ob es funktioniert, und zum ersten Mal ausführen.
 seoTitle: Erste Schritte mit emet
-sourceHash: 7a918962dca60c10
+sourceHash: d4ead33048071526
 ---
 
 emet installieren, prüfen, ob es funktioniert, und zum ersten Mal ausführen.
@@ -19,20 +19,29 @@ Es gibt zwei Installationswege.
 
 **Plugin** (ohne Bun). Dieses Repo als Marketplace hinzufügen und das Plugin `emet` installieren. Was es mitbringt, hängt vom Agent-Host ab. Unter Claude Code bringt es `/emet:run`, die Agents, die Guard-Hooks und einen `emet`-Shim mit, der beim ersten Gebrauch eine per Prüfsumme verifizierte eigenständige Binärdatei herunterlädt.
 
-```bash
+:::install-tabs
+
+```bash tab="Claude Code"
 claude plugin marketplace add andryorelabs/emet
 claude plugin install emet@emet-marketplace
 ```
 
-Unter Codex das Plugin mit `codex plugin` installieren; die Schritte stehen in [emet mit Codex ausführen](codex.md#installation). Das Codex-Plugin liefert die Skills `$emet:run`, `$emet:init` und `$emet:doctor` und einen Hook, aber keine Agents und keinen `emet`-Shim; das `emet` im Terminal kommt daher aus `install.sh`.
+```bash tab="Codex"
+codex plugin marketplace add andryorelabs/emet
+codex plugin add emet@emet-marketplace
+```
 
-**`install.sh`** (funktioniert mit oder ohne Bun):
-
-```bash
+```bash tab="Terminal"
 git clone git@github.com:andryorelabs/emet.git
 cd emet
 ./install.sh
 ```
+
+:::
+
+Unter Codex das Plugin mit `codex plugin` installieren; die Schritte stehen in [emet mit Codex ausführen](codex.md#installation). Das Codex-Plugin liefert die Skills `$emet:run`, `$emet:init` und `$emet:doctor` und einen Hook, aber keine Agents und keinen `emet`-Shim; das `emet` im Terminal kommt daher aus `install.sh`.
+
+**`install.sh`** (funktioniert mit oder ohne Bun):
 
 Mit `bun` im PATH kopiert es den CLI-Quellcode nach `~/.claude/emet` und einen `emet`-Wrapper nach `~/.local/bin/emet`. Ohne `bun` installiert es stattdessen den Shim für die eigenständige Binärdatei (`~/.local/bin/emet`, verlinkt auf `~/.claude/emet/bin/emet`), der die Binärdatei beim ersten Start herunterlädt und per Prüfsumme verifiziert (benötigt `curl`). In beiden Fällen landen die Befehle in `~/.claude/commands/emet/` und die Agents in `~/.claude/agents/`; Plugin-Platzhalter in den Prompts werden zu einfachen `~/.claude`-Pfaden umgeschrieben. Der erneute Aufruf ist unbedenklich, und eine bearbeitete Datei bleibt erhalten, während die neue Version daneben als `<file>.new` abgelegt wird.
 
