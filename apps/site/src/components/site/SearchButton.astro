@@ -1,0 +1,60 @@
+---
+/**
+ * The header's search bar: a button styled as an input with a magnifier, the
+ * label and the Ctrl K hint. It opens the Pagefind dialog of `DocsSearch`,
+ * shows Command K on macOS and iOS, shortens its label at tablet width and
+ * becomes an icon-only square on a phone.
+ */
+import type { Locale } from "../../i18n/locales";
+import { SEARCH_STRINGS } from "../../docs/search-strings";
+
+interface Props {
+  locale: Locale;
+}
+
+const { locale } = Astro.props;
+const strings = SEARCH_STRINGS[locale];
+---
+
+<button
+  type="button"
+  class="search-button"
+  data-search-trigger
+  aria-label={strings.searchButtonLabel}
+  aria-keyshortcuts="Control+K"
+>
+  <svg class="search-button-icon" viewBox="0 0 24 24" aria-hidden="true">
+    <circle cx="11" cy="11" r="6.5"></circle>
+    <path d="m16 16 4.5 4.5"></path>
+  </svg>
+  <span class="search-button-label search-button-label--full" aria-hidden="true">
+    {strings.searchButton}
+  </span>
+  <span class="search-button-label search-button-label--short" aria-hidden="true">
+    {strings.searchButtonShort}
+  </span>
+  <span class="search-button-keys" aria-hidden="true">
+    <kbd data-search-modifier>Ctrl</kbd><kbd>K</kbd>
+  </span>
+</button>
+
+<script>
+  import { isApplePlatform } from "./search-shortcut";
+
+  const OPEN_SELECTOR = "site-search button[data-open-modal]";
+
+  const triggers = document.querySelectorAll<HTMLButtonElement>("[data-search-trigger]");
+  const apple = isApplePlatform(navigator);
+
+  for (const trigger of triggers) {
+    if (apple) {
+      const modifier = trigger.querySelector("[data-search-modifier]");
+      if (modifier) modifier.textContent = "⌘";
+      trigger.setAttribute("aria-keyshortcuts", "Meta+K");
+    }
+    trigger.addEventListener("click", (event) => {
+      event.stopPropagation();
+      document.querySelector<HTMLButtonElement>(OPEN_SELECTOR)?.click();
+    });
+  }
+</script>

@@ -5,13 +5,35 @@
  * through, the localized strings of the canvas dialog, and the small script
  * that adds the dialog's footer, Esc key, states and keyboard handling. The
  * same script localizes and animates the copy button of every code block.
+ * It takes the locale as a prop and, with `standalone`, fills in the
+ * translator Starlight's `Search` reads, so it also works on the home page.
+ * The header's search bar opens it; Starlight's own button stays hidden.
  */
 import Search from "@astrojs/starlight/components/Search.astro";
 
-import { resolveLocale } from "../../docs/route";
 import { SEARCH_STRINGS, SEARCH_TERM_TOKEN } from "../../docs/search-strings";
+import type { Locale } from "../../i18n/locales";
+import SearchButton from "../site/SearchButton.astro";
 
-const strings = SEARCH_STRINGS[resolveLocale(Astro.locals.starlightRoute.lang)];
+interface Props {
+  locale: Locale;
+  standalone?: boolean;
+}
+
+const { locale, standalone = false } = Astro.props;
+const strings = SEARCH_STRINGS[locale];
+if (standalone) {
+  const standaloneMessages: Record<string, string> = {
+    "search.label": strings.searchButtonLabel,
+    "search.ctrlKey": "Ctrl",
+    "search.cancelLabel": strings.cancel,
+    "search.devWarning": "Search is only available in production builds.",
+  };
+  const translate = Object.assign((key: string): string => standaloneMessages[key] ?? key, {
+    all: (): Record<string, string> => ({}),
+  });
+  Astro.locals.t = translate as unknown as typeof Astro.locals.t;
+}
 const pagefindOverrides = {
   "pagefind.placeholder": strings.placeholder,
   "pagefind.searching": strings.searching,
@@ -32,7 +54,11 @@ const clientStrings = {
 };
 ---
 
-<div class="docs-search" data-docs-search={JSON.stringify(clientStrings)}>
+<SearchButton locale={locale} />
+<div
+  class:list={["docs-search", standalone && "docs-search--standalone"]}
+  data-docs-search={JSON.stringify(clientStrings)}
+>
   <Search />
 </div>
 
@@ -135,7 +161,8 @@ const clientStrings = {
       openButton.click();
     });
     dialog.addEventListener("close", () => {
-      openButton.focus();
+      const visibleTrigger = document.querySelector<HTMLElement>("[data-search-trigger]");
+      (visibleTrigger ?? openButton).focus();
     });
   }
 

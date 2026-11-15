@@ -7,6 +7,7 @@
 // oxlint-disable-next-line import/no-unassigned-import -- Astro bundles a stylesheet imported for its side effect
 import "../styles/home.css";
 
+import DocsSearch from "../components/docs/DocsSearch.astro";
 import About from "../components/home/About.astro";
 import Closing from "../components/home/Closing.astro";
 import Faq from "../components/home/Faq.astro";
@@ -32,7 +33,9 @@ const strings = getStrings(locale);
 
 <BaseLayout title={strings.meta.title} description={strings.meta.description} locale={locale}>
   <AlternateLinks slot="head" locale={locale} path="/" />
-  <SiteHeader locale={locale} currentPath="/" strings={strings.nav} />
+  <SiteHeader locale={locale} currentPath="/" strings={strings.nav}>
+    <DocsSearch slot="search" locale={locale} standalone />
+  </SiteHeader>
   <main id="main">
     <Hero strings={strings} />
     <HowItWorks strings={strings} />
