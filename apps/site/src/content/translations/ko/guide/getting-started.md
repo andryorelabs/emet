@@ -2,7 +2,7 @@
 title: 시작하기
 description: emet을 Claude Code 플러그인으로 설치하고, emet doctor로 동작을 확인한 뒤 처음으로 실행합니다.
 seoTitle: emet 시작하기
-sourceHash: 7a918962dca60c10
+sourceHash: d4ead33048071526
 ---
 
 emet을 설치하고, 동작하는지 확인한 뒤, 처음으로 실행합니다.
@@ -19,20 +19,29 @@ Claude Code 또는 Codex CLI, `git`, `gh`(인증 완료), `mattpocock-skills` �
 
 **플러그인**(Bun 불필요). 이 리포지토리를 마켓플레이스로 추가하고 `emet` 플러그인을 설치합니다. 무엇이 포함되는지는 에이전트 호스트에 따라 다릅니다. Claude Code에서는 `/emet:run`, 에이전트, 가드 훅, 그리고 처음 사용할 때 체크섬이 검증된 독립 실행형 바이너리를 내려받는 `emet` 심(shim)이 함께 설치됩니다.
 
-```bash
+:::install-tabs
+
+```bash tab="Claude Code"
 claude plugin marketplace add andryorelabs/emet
 claude plugin install emet@emet-marketplace
 ```
 
-Codex에서는 `codex plugin`으로 플러그인을 설치합니다. 절차는 [Codex에서 emet 실행하기](codex.md#설치)에 있습니다. Codex 플러그인은 `$emet:run`, `$emet:init`, `$emet:doctor` 스킬과 훅을 제공하지만 에이전트와 `emet` 심은 없으므로, 터미널의 `emet`은 `install.sh`로 설치합니다.
+```bash tab="Codex"
+codex plugin marketplace add andryorelabs/emet
+codex plugin add emet@emet-marketplace
+```
 
-**`install.sh`**(Bun이 있든 없든 동작합니다):
-
-```bash
+```bash tab="Terminal"
 git clone git@github.com:andryorelabs/emet.git
 cd emet
 ./install.sh
 ```
+
+:::
+
+Codex에서는 `codex plugin`으로 플러그인을 설치합니다. 절차는 [Codex에서 emet 실행하기](codex.md#설치)에 있습니다. Codex 플러그인은 `$emet:run`, `$emet:init`, `$emet:doctor` 스킬과 훅을 제공하지만 에이전트와 `emet` 심은 없으므로, 터미널의 `emet`은 `install.sh`로 설치합니다.
+
+**`install.sh`**(Bun이 있든 없든 동작합니다):
 
 `bun`이 PATH에 있으면 CLI 소스를 `~/.claude/emet`에, `emet` 래퍼를 `~/.local/bin/emet`에 복사합니다. `bun`이 없으면 대신 독립 실행형 바이너리 심(`~/.local/bin/emet`, `~/.claude/emet/bin/emet`으로 링크됨)을 설치하며, 이 심은 처음 실행할 때 바이너리를 내려받고 체크섬을 검증합니다(`curl`이 필요합니다). 어느 쪽이든 명령은 `~/.claude/commands/emet/`에, 에이전트는 `~/.claude/agents/`에 놓이고, 프롬프트 안의 플러그인 자리표시자는 일반 `~/.claude` 경로로 다시 쓰입니다. 다시 실행해도 안전하며, 직접 수정한 파일은 그대로 유지되고 새 버전은 `<file>.new`로 옆에 기록됩니다.
 

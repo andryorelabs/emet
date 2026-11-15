@@ -64,7 +64,11 @@ export default defineConfig({
       defaultLocale: "root",
       locales: starlightLocales,
       sidebar: buildSidebar(),
-      customCss: ["./src/styles/docs.css", "./src/styles/docs-steps.css"],
+      customCss: [
+        "./src/styles/docs.css",
+        "./src/styles/docs-steps.css",
+        "./src/styles/install-tabs.css",
+      ],
       routeMiddleware: "./src/docs/route-middleware.ts",
       lastUpdated: false,
       expressiveCode: { ...sharedCodeConfig, themes: [...sharedCodeConfig.themes] },

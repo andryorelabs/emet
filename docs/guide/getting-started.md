@@ -14,20 +14,29 @@ There are two install paths.
 
 **Plugin** (no Bun needed). Add this repo as a marketplace and install the `emet` plugin. What it ships depends on the Agent host. On Claude Code it brings `/emet:run`, the agents, the guard hooks and an `emet` shim that downloads a checksum-verified standalone binary on first use.
 
-```bash
+:::install-tabs
+
+```bash tab="Claude Code"
 claude plugin marketplace add andryorelabs/emet
 claude plugin install emet@emet-marketplace
 ```
 
-On Codex, install the plugin with `codex plugin`; the steps are in [Running emet on Codex](codex.md#install). The Codex plugin ships the `$emet:run`, `$emet:init` and `$emet:doctor` skills and a hook, but no agents and no `emet` shim, so the terminal `emet` comes from `install.sh`.
+```bash tab="Codex"
+codex plugin marketplace add andryorelabs/emet
+codex plugin add emet@emet-marketplace
+```
 
-**`install.sh`** (works with or without Bun):
-
-```bash
+```bash tab="Terminal"
 git clone git@github.com:andryorelabs/emet.git
 cd emet
 ./install.sh
 ```
+
+:::
+
+On Codex, install the plugin with `codex plugin`; the steps are in [Running emet on Codex](codex.md#install). The Codex plugin ships the `$emet:run`, `$emet:init` and `$emet:doctor` skills and a hook, but no agents and no `emet` shim, so the terminal `emet` comes from `install.sh`.
+
+**`install.sh`** (works with or without Bun):
 
 With `bun` on PATH it copies the CLI source to `~/.claude/emet` and an `emet` wrapper to `~/.local/bin/emet`. Without `bun` it installs the standalone-binary shim instead (`~/.local/bin/emet`, linked to `~/.claude/emet/bin/emet`), which downloads and checksum-verifies the binary on first run (needs `curl`). Either way the commands land in `~/.claude/commands/emet/` and the agents in `~/.claude/agents/`; plugin placeholders in the prompts are rewritten to plain `~/.claude` paths. Re-running it is safe, and a file you edited is kept with the new version written beside it as `<file>.new`.
 

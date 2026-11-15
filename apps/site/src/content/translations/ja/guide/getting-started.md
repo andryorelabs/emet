@@ -2,7 +2,7 @@
 title: はじめに
 description: emet を Claude Code プラグインとしてインストールし、emet doctor で動作を確認して、初めて実行します。
 seoTitle: emet をはじめよう
-sourceHash: 7a918962dca60c10
+sourceHash: d4ead33048071526
 ---
 
 emet をインストールし、動作を確認して、初めて実行します。
@@ -19,20 +19,29 @@ Claude Code または Codex CLI、`git`、`gh`（認証済み）、`mattpocock-s
 
 **プラグイン**（Bun は不要）。このリポジトリをマーケットプレイスとして追加し、`emet` プラグインをインストールします。何が含まれるかはエージェントホストによって異なります。Claude Code では `/emet:run`、エージェント、ガードフック、そして初回使用時にチェックサム検証済みのスタンドアロンバイナリをダウンロードする `emet` シムが導入されます。
 
-```bash
+:::install-tabs
+
+```bash tab="Claude Code"
 claude plugin marketplace add andryorelabs/emet
 claude plugin install emet@emet-marketplace
 ```
 
-Codex では `codex plugin` でプラグインをインストールします。手順は [Codex で emet を実行する](codex.md#インストール)にあります。Codex プラグインには `$emet:run`、`$emet:init`、`$emet:doctor` スキルとフックが含まれますが、エージェントと `emet` シムは含まれないため、ターミナルの `emet` は `install.sh` から入手します。
+```bash tab="Codex"
+codex plugin marketplace add andryorelabs/emet
+codex plugin add emet@emet-marketplace
+```
 
-**`install.sh`**（Bun の有無を問わず動作します）:
-
-```bash
+```bash tab="Terminal"
 git clone git@github.com:andryorelabs/emet.git
 cd emet
 ./install.sh
 ```
+
+:::
+
+Codex では `codex plugin` でプラグインをインストールします。手順は [Codex で emet を実行する](codex.md#インストール)にあります。Codex プラグインには `$emet:run`、`$emet:init`、`$emet:doctor` スキルとフックが含まれますが、エージェントと `emet` シムは含まれないため、ターミナルの `emet` は `install.sh` から入手します。
+
+**`install.sh`**（Bun の有無を問わず動作します）:
 
 `bun` が PATH にある場合は、CLI のソースを `~/.claude/emet` に、`emet` ラッパーを `~/.local/bin/emet` にコピーします。`bun` がない場合は、代わりにスタンドアロンバイナリのシム（`~/.local/bin/emet`、`~/.claude/emet/bin/emet` にリンク）をインストールします。このシムは初回実行時にバイナリをダウンロードしてチェックサムを検証します（`curl` が必要です）。どちらの場合も、コマンドは `~/.claude/commands/emet/` に、エージェントは `~/.claude/agents/` に配置され、プロンプト内のプラグインのプレースホルダーは通常の `~/.claude` パスに書き換えられます。再実行しても安全で、編集したファイルはそのまま残り、新しいバージョンは `<file>.new` として隣に書き出されます。
 

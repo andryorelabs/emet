@@ -1,0 +1,82 @@
+/**
+ * The `:::install-tabs` docs block: the Home install block's frame with pill
+ * tabs. Without script each panel is a plain block under its label; the client
+ * marks the block `data-ready`, shows the tab list and hides the other panels.
+ */
+
+.sl-markdown-content .emet-install-tabs {
+  margin: 1.25rem 0;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--surface);
+  overflow: hidden;
+}
+
+.sl-markdown-content .emet-install-tabs__list {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  height: 40px;
+  padding-inline: 0.5rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.sl-markdown-content .emet-install-tabs__list[hidden] {
+  display: none;
+}
+
+.sl-markdown-content .emet-install-tabs__tab {
+  height: 28px;
+  padding-inline: 0.75rem;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--text-muted);
+  font-family: var(--font-sans);
+  font-size: var(--text-sm);
+  cursor: pointer;
+  transition:
+    background-color 160ms cubic-bezier(0.23, 1, 0.32, 1),
+    color 160ms cubic-bezier(0.23, 1, 0.32, 1);
+}
+
+.sl-markdown-content .emet-install-tabs__tab[aria-selected="true"] {
+  background: var(--border);
+  color: var(--text);
+}
+
+.sl-markdown-content .emet-install-tabs__tab:focus-visible {
+  outline: 2px solid var(--text);
+  outline-offset: 2px;
+}
+
+.sl-markdown-content .emet-install-tabs__panel[hidden] {
+  display: none;
+}
+
+.sl-markdown-content .emet-install-tabs__label {
+  margin: 0;
+  padding: 0.5rem 1rem 0;
+  color: var(--text-muted);
+  font-family: var(--font-sans);
+  font-size: var(--text-sm);
+}
+
+.sl-markdown-content .emet-install-tabs[data-ready] .emet-install-tabs__label {
+  display: none;
+}
+
+.sl-markdown-content .emet-install-tabs .expressive-code {
+  margin: 0;
+}
+
+.sl-markdown-content .emet-install-tabs .expressive-code figure {
+  border: 0;
+  border-radius: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sl-markdown-content .emet-install-tabs__tab {
+    transition: none;
+  }
+}
