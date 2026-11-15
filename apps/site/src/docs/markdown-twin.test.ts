@@ -1,7 +1,12 @@
 import { describe, expect, test } from "bun:test";
 
 import { buildLocalizedPage } from "./catalog";
-import { buildLlmsFullTxt, markdownTwinPath, renderMarkdownTwin } from "./markdown-twin";
+import {
+  buildLlmsFullTxt,
+  markdownTwinPath,
+  renderMarkdownTwin,
+  sidebarSlugOrder,
+} from "./markdown-twin";
 import { PUBLISHED_SOURCES } from "./published";
 
 const fleet = PUBLISHED_SOURCES.find((source) => source.id === "guide/fleet");
@@ -49,16 +54,17 @@ describe("renderMarkdownTwin", () => {
 });
 
 describe("buildLlmsFullTxt", () => {
-  test("concatenates English twins in the given order, each from its H1", () => {
+  test("concatenates English twins in sidebar order, each from its H1", () => {
     const pages = PUBLISHED_SOURCES.map((source) =>
       buildLocalizedPage(source, "en", {
         readSource: (path) => `# Title of ${path}\n\nBody of ${path}.\n`,
       }),
     );
     const text = buildLlmsFullTxt(pages);
-    const positions = pages.map((page) => text.indexOf(`# ${page.title}\n`));
-    expect(positions.every((position) => position >= 0)).toBe(true);
-    expect(positions.toSorted((a, b) => a - b)).toEqual(positions);
+    const sidebarOrder = sidebarSlugOrder();
+    const expected = sidebarOrder.map((id) => pages.find((page) => page.id === id)!.title);
+    const titles = [...text.matchAll(/^# (.+)$/gm)].map((match) => match[1]);
+    expect(titles).toEqual(expected);
     expect(text.startsWith("# ")).toBe(true);
   });
 
