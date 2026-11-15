@@ -39,3 +39,12 @@ describe("SiteHeader GitHub pill position on home", () => {
     expect(theme).toBeGreaterThan(pill);
   });
 });
+
+describe("SiteHeader home grid", () => {
+  test("has one column track per direct child above 900px", async () => {
+    const css = await Bun.file(path.join(import.meta.dir, "../../styles/site.css")).text();
+    const rule = css.slice(css.indexOf(".site-header--home {\n  position: absolute;"));
+    const tracks = /grid-template-columns:\s*([^;]+);/.exec(rule)?.[1] ?? "";
+    expect(tracks.trim().split(/\s+/)).toHaveLength(3);
+  });
+});

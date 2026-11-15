@@ -62,8 +62,7 @@
 .site-header--home {
   position: absolute;
   inset: 0 0 auto 0;
-  grid-template-columns: auto auto;
-  justify-content: space-between;
+  grid-template-columns: auto 1fr auto;
   color: var(--header-ink);
 }
 
