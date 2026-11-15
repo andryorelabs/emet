@@ -9,6 +9,7 @@ import type { Locale } from "../../i18n/locales";
 import { getStrings } from "../../i18n/ui";
 import type { en } from "../../i18n/ui/en";
 import { externalLinkAttributes, isExternalHref } from "../../lib/external-links";
+import GithubStars from "./GithubStars.astro";
 import LanguageSwitcher from "./LanguageSwitcher.astro";
 import ThemeSelect from "./ThemeSelect.astro";
 
@@ -17,7 +18,7 @@ interface Props {
   currentPath: string;
   strings: typeof en.nav;
   theme: typeof en.theme;
-  links: { href: string; label: string; current: boolean }[];
+  links: { href: string; label: string; current: boolean; stars?: boolean }[];
 }
 
 const { locale, currentPath, strings, theme, links } = Astro.props;
@@ -49,7 +50,7 @@ const { newTab } = getStrings(locale).links;
             aria-current={link.current ? "page" : undefined}
             {...externalLinkAttributes(link.href)}
           >
-            {link.label}
+            {link.stars ? <GithubStars locale={locale} label={link.label} placement="menu" /> : link.label}
             {isExternalHref(link.href) && <span class="sr-only">{newTab}</span>}
           </a>
         ))
