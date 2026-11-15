@@ -2,8 +2,16 @@
 title: Novità
 description: Note di rilascio di emet: cosa è cambiato in ogni versione.
 seoTitle: "Novità di emet: note di rilascio"
-sourceHash: a55d1df0b3a69e9e
+sourceHash: 5bfcf40177848b56
 ---
+
+## 0.8.3
+
+2026-11-15
+
+### Corretto
+
+- `/docs/` e il `/docs/` di ogni lingua ora rispondono con un 301 verso la pagina di introduzione, invece di una pagina meta-refresh che lampeggiava senza stili.
 
 ## 0.8.2
 
