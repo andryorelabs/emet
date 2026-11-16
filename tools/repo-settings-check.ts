@@ -455,9 +455,17 @@ export function ghApiArgs(endpoint: string): string[] {
   return ["gh", "api", "--method", "GET", endpoint];
 }
 
-/** Runs `gh api` for real as a GET. */
-function readGitHubApi(endpoint: string): GhResult {
-  const result = Bun.spawnSync(ghApiArgs(endpoint), { stdout: "pipe", stderr: "pipe" });
+/**
+ * Runs `gh api` as a GET.
+ * @param endpoint - The API endpoint to read.
+ * @param command - The argv to run instead of `gh api`; defaults to {@link ghApiArgs}.
+ * @returns Whether the call succeeded, with its stdout and stderr.
+ */
+export function readGitHubApi(
+  endpoint: string,
+  command: readonly string[] = ghApiArgs(endpoint),
+): GhResult {
+  const result = Bun.spawnSync([...command], { stdout: "pipe", stderr: "pipe" });
   return {
     ok: result.exitCode === 0,
     stdout: result.stdout.toString(),
@@ -465,12 +473,31 @@ function readGitHubApi(endpoint: string): GhResult {
   };
 }
 
-if (import.meta.main) {
-  const rulesetsDir = path.join(import.meta.dir, "..", ".github", "rulesets");
-  const drift = checkRepoSettings(readGitHubApi, rulesetsDir);
-  if (drift.length > 0) {
-    process.stderr.write(`${drift.join("\n")}\n`);
-    process.exit(1);
-  }
-  process.stdout.write("Repository settings match .github/repo-settings.json and the rulesets.\n");
+/** Where `runRepoSettingsCheck` writes its messages. */
+interface CheckStreams {
+  readonly stdout: { write(text: string): unknown };
+  readonly stderr: { write(text: string): unknown };
 }
+
+/**
+ * Compares the live repository with the settings file and the ruleset files and reports drift.
+ * @param callGh - Reads a `gh api` endpoint; defaults to the real GitHub API.
+ * @param rulesetsDir - The directory of ruleset files; defaults to `.github/rulesets`.
+ * @param streams - Where messages go; defaults to the process streams.
+ * @returns 1 when anything drifted, otherwise 0.
+ */
+export function runRepoSettingsCheck(
+  callGh: GhApi = readGitHubApi,
+  rulesetsDir: string = path.join(import.meta.dir, "..", ".github", "rulesets"),
+  streams: CheckStreams = process,
+): number {
+  const drift = checkRepoSettings(callGh, rulesetsDir);
+  if (drift.length > 0) {
+    streams.stderr.write(`${drift.join("\n")}\n`);
+    return 1;
+  }
+  streams.stdout.write("Repository settings match .github/repo-settings.json and the rulesets.\n");
+  return 0;
+}
+
+if (import.meta.main) process.exit(runRepoSettingsCheck());

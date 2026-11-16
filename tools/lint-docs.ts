@@ -115,11 +115,15 @@ export function buildLycheeCacheRelativePath(version: string): string {
 
 /**
  * Resolves the absolute git common directory shared by all worktrees.
+ * @param workingDirectory The directory git runs in and relative output resolves against.
  * @returns The absolute git common directory path.
  */
-async function resolveGitCommonDirectory(): Promise<string> {
+export async function resolveGitCommonDirectory(
+  workingDirectory: string = process.cwd(),
+): Promise<string> {
   const child = Bun.spawn({
     cmd: ["git", "rev-parse", "--git-common-dir"],
+    cwd: workingDirectory,
     stdout: "pipe",
     stderr: "pipe",
   });
@@ -131,7 +135,7 @@ async function resolveGitCommonDirectory(): Promise<string> {
   if (exitCode !== 0) {
     throw new Error(`lint-docs: git rev-parse --git-common-dir failed: ${stderr.trim()}`);
   }
-  return path.resolve(process.cwd(), stdout.trim());
+  return path.resolve(workingDirectory, stdout.trim());
 }
 
 /**
@@ -140,7 +144,7 @@ async function resolveGitCommonDirectory(): Promise<string> {
  * @param maxDepth How many nested levels to descend into.
  * @returns The binary path, or `undefined` when absent.
  */
-function findBinaryRecursively(rootDirectory: string, maxDepth: number): string | undefined {
+export function findBinaryRecursively(rootDirectory: string, maxDepth: number): string | undefined {
   for (const entry of readdirSync(rootDirectory, { withFileTypes: true })) {
     const entryPath = path.join(rootDirectory, entry.name);
     if (entry.isFile() && entry.name === "lychee") return entryPath;
@@ -155,12 +159,25 @@ function findBinaryRecursively(rootDirectory: string, maxDepth: number): string 
  * Downloads the pinned lychee release and atomically installs its binary.
  * @param version The lychee release version.
  * @param destinationPath Where the binary is installed.
+ * @param overrides Replaces the network fetch, the architecture or the checksum check.
  * @returns Resolves once the binary is in place.
  */
-async function downloadLycheeBinary(version: string, destinationPath: string): Promise<void> {
-  const arch = resolveLycheeArch();
+export async function downloadLycheeBinary(
+  version: string,
+  destinationPath: string,
+  overrides: {
+    fetchUrl?: (url: string) => Promise<Response>;
+    arch?: "aarch64" | "x86_64";
+    isChecksumValid?: (archive: Uint8Array, arch: "aarch64" | "x86_64") => boolean;
+  } = {},
+): Promise<void> {
+  const {
+    fetchUrl = fetch,
+    arch = resolveLycheeArch(),
+    isChecksumValid = matchesLycheeChecksum,
+  } = overrides;
   const url = buildLycheeDownloadUrl(version, arch);
-  const response = await fetch(url);
+  const response = await fetchUrl(url);
   if (!response.ok) {
     throw new Error(`lint-docs: failed to download lychee from ${url} (HTTP ${response.status}).`);
   }
@@ -169,7 +186,7 @@ async function downloadLycheeBinary(version: string, destinationPath: string): P
   try {
     const archivePath = path.join(workingDirectory, "lychee.tar.gz");
     const archive = new Uint8Array(await response.arrayBuffer());
-    if (!matchesLycheeChecksum(archive, arch)) {
+    if (!isChecksumValid(archive, arch)) {
       throw new Error(`lint-docs: SHA-256 mismatch for ${url}; refusing to run the download.`);
     }
     await Bun.write(archivePath, archive);
@@ -206,35 +223,48 @@ async function downloadLycheeBinary(version: string, destinationPath: string): P
 /**
  * Returns a cached lychee binary path, downloading it on first use.
  * @param version The lychee release version.
+ * @param overrides Replaces the git common directory lookup or the download.
  * @returns The absolute binary path.
  */
-async function ensureLycheeBinary(version: string): Promise<string> {
-  const commonDirectory = await resolveGitCommonDirectory();
+export async function ensureLycheeBinary(
+  version: string,
+  overrides: {
+    resolveCommonDirectory?: () => Promise<string>;
+    download?: (version: string, destinationPath: string) => Promise<void>;
+  } = {},
+): Promise<string> {
+  const { resolveCommonDirectory = resolveGitCommonDirectory, download = downloadLycheeBinary } =
+    overrides;
+  const commonDirectory = await resolveCommonDirectory();
   const binaryPath = path.join(commonDirectory, buildLycheeCacheRelativePath(version));
   if (existsSync(binaryPath)) return binaryPath;
   console.log(`lint-docs: lychee ${version} not cached, downloading...`);
-  await downloadLycheeBinary(version, binaryPath);
+  await download(version, binaryPath);
   return binaryPath;
 }
 
 /**
- * Runs lychee over the documentation globs and propagates its exit code.
- * @returns Resolves once lychee exits.
+ * Runs lychee over the documentation globs and returns its exit code. Any
+ * failure to obtain or start the binary is reported and returns 1.
+ * @param extraArguments Arguments appended after {@link LYCHEE_ARGS}.
+ * @param ensureBinary Resolves the lychee binary path.
+ * @returns The process exit code.
  */
-async function main(): Promise<void> {
-  const binaryPath = await ensureLycheeBinary(LYCHEE_VERSION);
-  const child = Bun.spawn({
-    cmd: [binaryPath, ...LYCHEE_ARGS, ...process.argv.slice(2)],
-    stdio: ["inherit", "inherit", "inherit"],
-  });
-  process.exitCode = await child.exited;
-}
-
-if (import.meta.main) {
+export async function runLintDocs(
+  extraArguments: readonly string[],
+  ensureBinary: (version: string) => Promise<string> = ensureLycheeBinary,
+): Promise<number> {
   try {
-    await main();
+    const binaryPath = await ensureBinary(LYCHEE_VERSION);
+    const child = Bun.spawn({
+      cmd: [binaryPath, ...LYCHEE_ARGS, ...extraArguments],
+      stdio: ["inherit", "inherit", "inherit"],
+    });
+    return await child.exited;
   } catch (error: unknown) {
     console.error(error instanceof Error ? error.message : error);
-    process.exitCode = 1;
+    return 1;
   }
 }
+
+if (import.meta.main) process.exitCode = await runLintDocs(process.argv.slice(2));

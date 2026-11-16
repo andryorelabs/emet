@@ -407,16 +407,35 @@ export function writeArtefacts(files: readonly GeneratedFile[], root: string = r
   }
 }
 
-if (import.meta.main) {
-  const files = generateArtefacts();
-  if (process.argv.includes("--check")) {
-    const stale = findStaleFiles(files);
+/**
+ * Entry point: writes the artefacts, or with `--check` reports stale ones.
+ * @param argv The command-line arguments.
+ * @param root The repository root.
+ * @param log Receives the success line.
+ * @param error Receives the stale-files report.
+ * @returns The process exit code: 1 when `--check` finds stale files, else 0.
+ */
+export function main(
+  argv: readonly string[],
+  root: string = repoRoot,
+  log: (message: string) => void = console.log,
+  error: (message: string) => void = console.error,
+): number {
+  const files = generateArtefacts(root);
+  if (argv.includes("--check")) {
+    const stale = findStaleFiles(files, root);
     if (stale.length > 0) {
-      console.error(`stale Codex artefacts (run bun run build:codex):\n${stale.join("\n")}`);
-      process.exit(1);
+      error(`stale Codex artefacts (run bun run build:codex):\n${stale.join("\n")}`);
+      return 1;
     }
-  } else {
-    writeArtefacts(files);
-    console.log(`wrote ${files.length} Codex artefacts`);
+    return 0;
   }
+  writeArtefacts(files, root);
+  log(`wrote ${files.length} Codex artefacts`);
+  return 0;
+}
+
+if (import.meta.main) {
+  const exitCode = main(process.argv.slice(2));
+  if (exitCode !== 0) process.exit(exitCode);
 }

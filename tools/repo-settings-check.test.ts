@@ -10,7 +10,9 @@ import {
   diffSettings,
   ghApiArgs,
   loadExpectedSettings,
+  readGitHubApi,
   readLiveSettings,
+  runRepoSettingsCheck,
 } from "./repo-settings-check";
 
 const repoRoot = path.join(import.meta.dir, "..");
@@ -354,6 +356,149 @@ describe("checkRepoSettings", () => {
     expect(checkRepoSettings(fakeApi(matchingResponses()), rulesetsDir, file)).toEqual([
       "settings.has_discussions: expected true, live false",
     ]);
+  });
+});
+
+describe("loadExpectedSettings validation", () => {
+  test("rejects a settings file that is not a JSON object", () => {
+    const file = writeTemporarySettings(["a"]);
+    expect(() => loadExpectedSettings(file)).toThrow(`${file} is not a JSON object`);
+  });
+
+  test("names every unknown, missing and mistyped key", () => {
+    const { topics: _topics, ...rest } = loadExpectedSettings();
+    const file = writeTemporarySettings({ ...rest, extra: 1, has_wiki: "no" });
+    expect(() => loadExpectedSettings(file)).toThrow(
+      /extra: unknown key\ntopics: missing\nhas_wiki: expected boolean/,
+    );
+  });
+
+  test("rejects topics that are not a list of strings", () => {
+    const file = writeTemporarySettings({ ...loadExpectedSettings(), topics: ["ok", 3] });
+    expect(() => loadExpectedSettings(file)).toThrow("topics: expected a list of strings");
+  });
+
+  test("rejects a value outside an enumerated setting", () => {
+    const file = writeTemporarySettings({
+      ...loadExpectedSettings(),
+      secret_scanning: "maybe",
+    });
+    expect(() => loadExpectedSettings(file)).toThrow(/secret_scanning: expected one of/);
+  });
+});
+
+describe("gh api failures", () => {
+  test("names the endpoint and stderr when the repository call fails", () => {
+    const responses = matchingResponses();
+    responses[base] = failed("gh: Forbidden (HTTP 403)\n");
+    expect(() => readLiveSettings(fakeApi(responses))).toThrow(
+      `gh api ${base} failed: gh: Forbidden (HTTP 403)`,
+    );
+  });
+
+  test("says there was no output when a failed call printed nothing", () => {
+    const responses = matchingResponses();
+    responses[base] = failed("");
+    expect(() => readLiveSettings(fakeApi(responses))).toThrow(`gh api ${base} failed: no output`);
+  });
+
+  test("rejects a successful call whose body is not JSON", () => {
+    const responses = matchingResponses();
+    responses[base] = { ok: true, stdout: "<html>", stderr: "" };
+    expect(() => readLiveSettings(fakeApi(responses))).toThrow(
+      `gh api ${base} did not return JSON`,
+    );
+  });
+
+  test("rejects a repository answer that is not an object", () => {
+    const responses = matchingResponses();
+    responses[base] = ok(["x"]);
+    expect(() => readLiveSettings(fakeApi(responses))).toThrow(
+      `gh api ${base} did not return an object`,
+    );
+  });
+
+  test("rejects a ruleset listing that is not a list", () => {
+    const responses = matchingResponses();
+    responses[`${base}/rulesets`] = ok({ id: 1 });
+    expect(() => checkRepoSettings(fakeApi(responses), rulesetsDir)).toThrow(
+      `gh api ${base}/rulesets did not return a list`,
+    );
+  });
+
+  test("ignores listing entries without a name and an id", () => {
+    const responses = matchingResponses();
+    responses[`${base}/rulesets`] = ok([
+      { id: 11, name: "main" },
+      { id: 12, name: "develop" },
+      { id: 13, name: "tags" },
+      { name: "no-id" },
+      { id: 5 },
+      "text",
+    ]);
+    expect(checkRepoSettings(fakeApi(responses), rulesetsDir)).toEqual([]);
+  });
+});
+
+describe("readGitHubApi", () => {
+  test("returns stdout of a successful call", () => {
+    expect(readGitHubApi("ignored", ["sh", "-c", "printf '{\"a\":1}'"])).toEqual({
+      ok: true,
+      stdout: '{"a":1}',
+      stderr: "",
+    });
+  });
+
+  test("returns stderr of a failed call", () => {
+    expect(readGitHubApi("ignored", ["sh", "-c", "echo boom >&2; exit 4"])).toEqual({
+      ok: false,
+      stdout: "",
+      stderr: "boom\n",
+    });
+  });
+});
+
+/** Streams that collect what the check writes. */
+function streams(): {
+  out: string;
+  err: string;
+  stdout: { write(text: string): void };
+  stderr: { write(text: string): void };
+} {
+  const collected = {
+    out: "",
+    err: "",
+    stdout: {
+      write(text: string): void {
+        collected.out += text;
+      },
+    },
+    stderr: {
+      write(text: string): void {
+        collected.err += text;
+      },
+    },
+  };
+  return collected;
+}
+
+describe("runRepoSettingsCheck", () => {
+  test("reports a match and returns 0", () => {
+    const collected = streams();
+    expect(runRepoSettingsCheck(fakeApi(matchingResponses()), rulesetsDir, collected)).toBe(0);
+    expect(collected.out).toBe(
+      "Repository settings match .github/repo-settings.json and the rulesets.\n",
+    );
+    expect(collected.err).toBe("");
+  });
+
+  test("prints every drift line and returns 1", () => {
+    const responses = matchingResponses();
+    responses[base] = ok({ ...repositoryPayload(loadExpectedSettings()), has_wiki: true });
+    const collected = streams();
+    expect(runRepoSettingsCheck(fakeApi(responses), rulesetsDir, collected)).toBe(1);
+    expect(collected.err).toBe("settings.has_wiki: expected false, live true\n");
+    expect(collected.out).toBe("");
   });
 });
 

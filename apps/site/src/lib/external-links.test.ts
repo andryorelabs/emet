@@ -28,6 +28,12 @@ describe("isExternalHref", () => {
   });
 });
 
+describe("isExternalHref with an unparsable href", () => {
+  test.each(["http://", "https://[bad"])("%s is not external", (href) => {
+    expect(isExternalHref(href)).toBe(false);
+  });
+});
+
 describe("externalLinkAttributes", () => {
   test("opens an external link in a new tab", () => {
     expect(externalLinkAttributes("https://github.com/x")).toEqual({
