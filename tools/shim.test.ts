@@ -129,6 +129,29 @@ describe("bin/emet shim", () => {
     expect(result.stderr).toContain("claude plugin disable emet");
   });
 
+  test("the guard falls back to the newest cached binary when the release asset is missing", () => {
+    const older = path.join(cacheDir, "0.0.1");
+    mkdirSync(older, { recursive: true });
+    writeFileSync(path.join(older, "emet"), '#!/bin/sh\necho "older $*"\n');
+    chmodSync(path.join(older, "emet"), 0o755);
+    const result = runShim(["guard"]);
+    expect(result.code).toBe(0);
+    expect(result.stdout).toBe("older guard\n");
+    expect(result.stderr).toContain("cached v0.0.1");
+  });
+
+  test("the guard never falls back to a cached binary on a checksum mismatch", () => {
+    const older = path.join(cacheDir, "0.0.1");
+    mkdirSync(older, { recursive: true });
+    writeFileSync(path.join(older, "emet"), '#!/bin/sh\necho "older $*"\n');
+    chmodSync(path.join(older, "emet"), 0o755);
+    publishRelease({ checksum: "0".repeat(64) });
+    const result = runShim(["guard"]);
+    expect(result.code).toBe(2);
+    expect(result.stdout).toBe("");
+    expect(result.stderr).toContain("checksum mismatch");
+  });
+
   test("the guard fails closed when the manifest has no version", () => {
     writeFileSync(path.join(pluginRoot, ".claude-plugin/plugin.json"), "{}");
     const result = runShim(["guard"]);
