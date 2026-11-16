@@ -87,6 +87,18 @@ describe("inbox and reply", () => {
     expect(open[0]?.askedAt).toBe("2026-01-01T00:00:00.000Z");
   });
 
+  test("sorts open questions by ticket, then by id", () => {
+    askQuestion("r1", "CLA-9", "c", options());
+    askQuestion("r1", "CLA-7", "a", options());
+    askQuestion("r1", "CLA-7", "b", options());
+    const open = listOpenQuestions("r1", options());
+    expect(open.map(({ ticket, id }) => `${ticket}#${String(id)}`)).toEqual([
+      "CLA-7#1",
+      "CLA-7#2",
+      "CLA-9#1",
+    ]);
+  });
+
   test("is empty without a mailbox", () => {
     expect(listOpenQuestions("r1", options())).toEqual([]);
   });
