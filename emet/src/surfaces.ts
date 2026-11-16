@@ -1,5 +1,6 @@
-import { isObject } from "./narrow";
 import { readFileSync } from "node:fs";
+
+import { isObject } from "./narrow";
 
 export type TicketSurfaces = { readonly ticket: string; readonly surfaces: readonly string[] };
 export type SurfaceOverlap = {

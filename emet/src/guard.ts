@@ -2,7 +2,8 @@ import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from 
 import path from "node:path";
 
 import type { AgentHostName } from "./agenthost";
-import { checkDestructiveCommand, checkEditSurface } from "./guard-destructive";
+import { listReservations, type Reservation } from "./claims";
+import { resolveRepoRoot } from "./config";
 import {
   detectAgentHost,
   evaluateApprovalGate,
@@ -11,16 +12,8 @@ import {
   isAgentWorktreeFor,
   normalizeHookInput,
 } from "./guard-codex";
-import { listReservations, type Reservation } from "./claims";
-import { writeCompletionEvent, type CompletionEvent } from "./runs";
-import { listOccupiedSlots, type SlotListEntry } from "./slots";
-import { parseWorktreeEntries, resolveWorktreeOwner } from "./worktrees";
-import { resolveRepoRoot } from "./config";
-import { isObject } from "./narrow";
+import { checkDestructiveCommand, checkEditSurface } from "./guard-destructive";
 import { resolveRunDir } from "./names";
-import { readPhase, writePhase } from "./phase";
-import { readResult } from "./results";
-import { defaultProcessTreeReader, readParent as readProcessParent } from "./proctree";
 import {
   BINARY,
   LEGACY_PRODUCT,
@@ -30,6 +23,13 @@ import {
   legacyStateDir,
   stateDir,
 } from "./names";
+import { isObject } from "./narrow";
+import { readPhase, writePhase } from "./phase";
+import { defaultProcessTreeReader, readParent as readProcessParent } from "./proctree";
+import { readResult } from "./results";
+import { writeCompletionEvent, type CompletionEvent } from "./runs";
+import { listOccupiedSlots, type SlotListEntry } from "./slots";
+import { parseWorktreeEntries, resolveWorktreeOwner } from "./worktrees";
 
 const GUARD_PREFIX = `${BINARY} guard:`;
 const INTERNAL_PREFIX = `${BINARY}:guard —`;

@@ -1,12 +1,12 @@
 import { describe, expect, test } from "bun:test";
 
-import { parseTranscriptMetrics } from "./metrics";
 import {
   classifyCodexLiveness,
   codexCostUsd,
   describeCodexLastStep,
   parseCodexJsonl,
 } from "./codex-usage";
+import { parseTranscriptMetrics } from "./metrics";
 import { findStalledTranscripts, transcriptParsers } from "./usage";
 
 const lines = (...events: object[]): string =>

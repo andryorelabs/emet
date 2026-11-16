@@ -9,7 +9,6 @@ import {
   resolveAgentHostName,
   type TrackerKind,
 } from "./config";
-import { isObject } from "./narrow";
 import {
   LEGACY_PRODUCT,
   LEGACY_REVIEWER_AGENT,
@@ -18,6 +17,7 @@ import {
   REVIEWER_AGENT,
   WORKER_AGENT,
 } from "./names";
+import { isObject } from "./narrow";
 import {
   checkSkillsContract,
   findPluginAgentFile,

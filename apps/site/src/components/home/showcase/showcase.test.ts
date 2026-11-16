@@ -1,6 +1,6 @@
 import { afterAll, beforeAll, describe, expect, test } from "bun:test";
-import { GlobalRegistrator } from "@happy-dom/global-registrator";
 import { readFileSync } from "node:fs";
+import { GlobalRegistrator } from "@happy-dom/global-registrator";
 
 const MARKUP = `
 <section data-showcase data-state="merged">

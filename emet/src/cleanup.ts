@@ -70,17 +70,20 @@
 import { existsSync } from "node:fs";
 import path from "node:path";
 
-import { configureTicketPattern, listReservations, releaseTicket } from "./claims";
 import { type AgentHost, claudeHost } from "./agenthost";
-import { agentHostOfConfig } from "./dependencies";
+import { configureTicketPattern, listReservations, releaseTicket } from "./claims";
 import { ForgeConfigError, requireForgeConfig, resolveRepoRoot, type ForgeConfig } from "./config";
+import { agentHostOfConfig } from "./dependencies";
 import {
   resolveLandedVerdict,
   unownedReclaimVerdict,
   type LandedContext,
   type LandedVerdict,
 } from "./landed";
+import { sweepMergedBranches } from "./mergedpr";
+import { BINARY, CONFIG_FILE } from "./names";
 import { optionalProperty } from "./optional";
+import { writePhase } from "./phase";
 import { ticketFromWorkerBranch } from "./preflight";
 import {
   classifyRun,
@@ -90,9 +93,6 @@ import {
   resolveSessionSlug,
   type RunVerdict,
 } from "./runs";
-import { sweepMergedBranches } from "./mergedpr";
-import { BINARY, CONFIG_FILE } from "./names";
-import { writePhase } from "./phase";
 import { releaseAllSlotsForRun } from "./slots";
 import {
   type BranchEntry,

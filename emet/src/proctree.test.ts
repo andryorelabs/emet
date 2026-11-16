@@ -1,4 +1,5 @@
 import { describe, expect, test } from "bun:test";
+
 import { readParent, type ProcessTreeReader } from "./proctree";
 
 function procfsReader(stats: Record<number, string>): ProcessTreeReader {

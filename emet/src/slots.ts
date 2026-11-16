@@ -15,6 +15,7 @@ import {
   readLockHolderAs,
   releaseLock,
 } from "./locks";
+import { CONFIG_FILE, LEGACY_PRODUCT, readEnv, stateDir } from "./names";
 import { writePhase } from "./phase";
 import {
   checkMemoryHeadroom,
@@ -24,7 +25,6 @@ import {
   resolveMemReserveBytesFromEnvironment,
 } from "./resources";
 import { classifyRun, resolveSessionSlug, type RunVerdict } from "./runs";
-import { CONFIG_FILE, LEGACY_PRODUCT, readEnv, stateDir } from "./names";
 
 /**
  * Concurrency-cap slots under `~/.local/state/emet/slots/<index>` — the

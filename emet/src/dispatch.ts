@@ -18,10 +18,10 @@ import {
   resolveRepoRoot,
   type ForgeConfig,
 } from "./config";
-import { listOpenQuestions } from "./mailbox";
 import { buildLockReason, readLockReasonTemplate } from "./lockreason";
-import { errorMessage } from "./narrow";
+import { listOpenQuestions } from "./mailbox";
 import { resolveRunDir } from "./names";
+import { errorMessage } from "./narrow";
 import { readResult } from "./results";
 import { runDirectory } from "./runs";
 import { listOccupiedSlots } from "./slots";

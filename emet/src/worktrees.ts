@@ -1,6 +1,5 @@
-import { claudeHost } from "./agenthost-claude";
 import type { AgentHost } from "./agenthost";
-
+import { claudeHost } from "./agenthost-claude";
 import type { Reservation } from "./claims";
 import { LOCK_TOKENS } from "./names";
 

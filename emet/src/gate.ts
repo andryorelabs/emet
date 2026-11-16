@@ -14,8 +14,8 @@ import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from 
 import path from "node:path";
 
 import { loadForgeConfigWithDefaults, resolveRepoRoot } from "./config";
-import { isObject, isOneOf } from "./narrow";
 import { resolveRunDir } from "./names";
+import { isObject, isOneOf } from "./narrow";
 import { writePhase } from "./phase";
 
 const USAGE = `usage: emet gate <ticket> [--run <id>] [--tier passive|medium|high]

@@ -2,6 +2,7 @@ import { afterAll, beforeAll, describe, expect, test } from "bun:test";
 import { chmodSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
+
 import { binaryName, buildBinary, parseArguments, readPluginVersion } from "./build-binaries";
 
 describe("build-binaries helpers", () => {

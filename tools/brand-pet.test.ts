@@ -3,6 +3,7 @@ import { readFileSync, statSync } from "node:fs";
 import { join } from "node:path";
 import { chromium } from "playwright";
 import sharp from "sharp";
+
 import { captureStateFrames } from "./brand-export.ts";
 import {
   FRAME_HEIGHT,

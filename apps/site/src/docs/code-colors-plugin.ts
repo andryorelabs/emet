@@ -1,5 +1,5 @@
-import { buildCodeColorsCss } from "./code-classes";
 import { loadLocalizedCatalog } from "./catalog";
+import { buildCodeColorsCss } from "./code-classes";
 
 /**
  * Id a component imports to get the token colour classes of the docs' code.

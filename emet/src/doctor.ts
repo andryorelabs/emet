@@ -17,7 +17,6 @@ import {
   type DependencyCheck,
   type DependencyProbes,
 } from "./dependencies";
-import { isObject } from "./narrow";
 import {
   AGENTS_DOC,
   BINARY,
@@ -31,6 +30,7 @@ import {
   resolveConfigPath,
   stateDir,
 } from "./names";
+import { isObject } from "./narrow";
 import { DEPRECATED_CONFIG_FIELDS, findTodoMarkersInDocsAgents } from "./preflight";
 import { computeAutoMaxLiveWorkers, readHostResources } from "./resources";
 import {

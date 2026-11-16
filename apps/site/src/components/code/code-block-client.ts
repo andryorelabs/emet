@@ -1,5 +1,4 @@
 import { copyWithFeedback, FEEDBACK_MS, type CopyResult } from "../../lib/copy-feedback";
-
 import { resolveTabIndex } from "./tab-navigation";
 
 const STORAGE_KEY = "emet:install";

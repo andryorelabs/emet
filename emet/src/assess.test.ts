@@ -3,8 +3,6 @@ import { mkdtempSync, rmSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
 
-import { isObject } from "./narrow";
-
 import {
   applyRiskLine,
   classifyDiff,
@@ -13,6 +11,7 @@ import {
   type DiffInput,
 } from "./assess";
 import { DEFAULT_FORGE_CONFIG, type ForgeConfig } from "./config";
+import { isObject } from "./narrow";
 
 function diffOf(paths: string[], added: string[] = []): DiffInput {
   return { paths, addedLines: added.map((line) => ({ path: paths[0] ?? "", line })) };

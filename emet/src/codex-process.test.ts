@@ -11,7 +11,7 @@ import {
 } from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { isObject } from "./narrow";
+
 import {
   codexWorkerLiveness,
   currentPidNamespace,
@@ -21,6 +21,7 @@ import {
   spawnCodex,
   type ProcessIo,
 } from "./codex-process";
+import { isObject } from "./narrow";
 
 const FAKE = path.resolve(import.meta.dir, "../../tools/fixtures/fake-codex/codex");
 const scratch: string[] = [];
