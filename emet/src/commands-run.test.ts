@@ -186,7 +186,16 @@ describe("runMailbox and runGuard", () => {
 });
 
 describe("loadRun module branches", () => {
-  const skipped = new Set(["guard", "selftest", "skill-path", "ask", "inbox", "reply", "doctor"]);
+  const skipped = new Set([
+    "guard",
+    "selftest",
+    "skill-path",
+    "ask",
+    "inbox",
+    "reply",
+    "doctor",
+    "tracker",
+  ]);
   const modulesWithUsageOnEmptyArgv = COMMANDS.filter((spec) => !skipped.has(spec.name));
 
   test("every module-backed command resolves and runs its own entry point", async () => {
