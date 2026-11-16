@@ -148,6 +148,7 @@ describe("preflight run (full gate)", () => {
   const fixture = useFixture();
 
   test("passes on a clean trunk checkout and reports slot and dependency counts", async () => {
+    fixture.writeConfig({ concurrency: { maxLiveWorkers: 16 } });
     await run([]);
     expect(process.exitCode).toBe(0);
     expect(fixture.errors).toEqual([]);
