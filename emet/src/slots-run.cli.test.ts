@@ -148,13 +148,16 @@ describe("slots run in-process", () => {
     expect(result.out[0]).toContain("released 0 slot(s) for run ghost.");
   });
 
-  test("--acquire is denied by the memory brake when the reserve exceeds host memory", async () => {
-    process.env.EMET_MEM_RESERVE_GIB = "100000000";
-    const result = await invoke(acquireArguments("run-x", "CLA-1"));
-    expect(result.code).toBe(1);
-    expect(result.err.join("\n")).toContain("denied by the memory brake");
-    expect((await invoke(["--list"])).out[0]).toContain("no slots occupied");
-  });
+  test.skipIf(process.platform !== "linux")(
+    "--acquire is denied by the memory brake when the reserve exceeds host memory",
+    async () => {
+      process.env.EMET_MEM_RESERVE_GIB = "100000000";
+      const result = await invoke(acquireArguments("run-x", "CLA-1"));
+      expect(result.code).toBe(1);
+      expect(result.err.join("\n")).toContain("denied by the memory brake");
+      expect((await invoke(["--list"])).out[0]).toContain("no slots occupied");
+    },
+  );
 
   test("--acquire reports a full pool when the holder run is live and leaves it in place", async () => {
     process.env.EMET_MAX_LIVE_WORKERS = "1";
