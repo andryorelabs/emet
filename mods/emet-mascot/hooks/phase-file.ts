@@ -8,14 +8,14 @@ export type PhaseName =
   | "done"
   | "failed";
 
-export type PhaseRecord = {
+export interface PhaseRecord {
   phase: PhaseName;
   wave: number | null;
   spec: string | null;
   runId: string | null;
   updatedAt: string;
   outcome?: string;
-};
+}
 
 const PHASE_NAMES: ReadonlySet<string> = new Set([
   "planning",

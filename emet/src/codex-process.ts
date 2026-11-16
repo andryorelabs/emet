@@ -13,7 +13,7 @@ import path from "node:path";
 import { isObject } from "./narrow";
 
 /** What `spawnCodex` starts: a `codex` invocation whose events are captured as JSONL. */
-export type CodexSpawn = {
+export interface CodexSpawn {
   /** The `codex` arguments, starting at the subcommand (`exec`, ...). */
   readonly args: readonly string[];
   readonly cwd: string;
@@ -26,11 +26,14 @@ export type CodexSpawn = {
   readonly env?: NodeJS.ProcessEnv;
   /** The executable to start; `codex` when absent. */
   readonly executable?: string;
-};
+}
 
-type SpawnedProcess = { readonly pid?: number | undefined; unref(): void };
+interface SpawnedProcess {
+  readonly pid?: number | undefined;
+  unref(): void;
+}
 
-export type ProcessIo = {
+export interface ProcessIo {
   spawn(
     command: string,
     args: readonly string[],
@@ -43,14 +46,14 @@ export type ProcessIo = {
   ): SpawnedProcess;
   /** Whether a `setsid` binary is available to start the process in its own session. */
   hasSetsid(): boolean;
-};
+}
 
 /**
  * A Codex worker's recorded state. Its identity is `threadId` (from the
  * `thread.started` event) plus `jsonlPath`; `pid` is auxiliary and only
  * meaningful from the pid namespace recorded in `pidNamespace`.
  */
-export type CodexState = {
+export interface CodexState {
   readonly pid: number;
   readonly threadId: string | null;
   readonly startedAt: string;
@@ -58,7 +61,7 @@ export type CodexState = {
   readonly cwd: string;
   /** The spawner's pid namespace; `null` when unknown (no `/proc`, older state). */
   readonly pidNamespace: string | null;
-};
+}
 
 /**
  * `done`: the stream holds `turn.completed` or `turn.failed`. `live`: the
@@ -68,12 +71,12 @@ export type CodexState = {
 export type CodexWorkerLiveness = "done" | "live" | "exited" | "stalled";
 
 /** What {@link codexWorkerLiveness} judges against; tests inject the clock and pid probe. */
-export type LivenessProbe = {
+export interface LivenessProbe {
   readonly idleMs: number;
   readonly now?: number;
   readonly pidNamespace?: string | null;
   readonly isPidAlive?: (pid: number) => boolean;
-};
+}
 
 const TERMINAL_EVENTS = new Set(["turn.completed", "turn.failed"]);
 
@@ -173,14 +176,14 @@ export function spawnCodex(
 export function readCodexState(stateFile: string): CodexState | undefined {
   try {
     const raw: unknown = JSON.parse(readFileSync(stateFile, "utf8"));
-    if (!isObject(raw) || typeof raw["pid"] !== "number") return undefined;
+    if (!isObject(raw) || typeof raw.pid !== "number") return undefined;
     return {
-      pid: raw["pid"],
-      threadId: typeof raw["threadId"] === "string" ? raw["threadId"] : null,
-      startedAt: typeof raw["startedAt"] === "string" ? raw["startedAt"] : "",
-      jsonlPath: typeof raw["jsonlPath"] === "string" ? raw["jsonlPath"] : "",
-      cwd: typeof raw["cwd"] === "string" ? raw["cwd"] : "",
-      pidNamespace: typeof raw["pidNamespace"] === "string" ? raw["pidNamespace"] : null,
+      pid: raw.pid,
+      threadId: typeof raw.threadId === "string" ? raw.threadId : null,
+      startedAt: typeof raw.startedAt === "string" ? raw.startedAt : "",
+      jsonlPath: typeof raw.jsonlPath === "string" ? raw.jsonlPath : "",
+      cwd: typeof raw.cwd === "string" ? raw.cwd : "",
+      pidNamespace: typeof raw.pidNamespace === "string" ? raw.pidNamespace : null,
     };
   } catch {
     return undefined;
@@ -193,8 +196,8 @@ export function parseThreadId(jsonl: string): string | undefined {
     if (!line.includes("thread.started")) continue;
     try {
       const event: unknown = JSON.parse(line);
-      if (isObject(event) && event["type"] === "thread.started") {
-        const id = event["thread_id"];
+      if (isObject(event) && event.type === "thread.started") {
+        const id = event.thread_id;
         if (typeof id === "string" && id.length > 0) return id;
       }
     } catch {
@@ -229,7 +232,7 @@ function hasTerminalEvent(jsonl: string): boolean {
     if (!line.includes("turn.")) continue;
     try {
       const event: unknown = JSON.parse(line);
-      const type = isObject(event) ? event["type"] : undefined;
+      const type = isObject(event) ? event.type : undefined;
       if (typeof type === "string" && TERMINAL_EVENTS.has(type)) return true;
     } catch {
       continue;

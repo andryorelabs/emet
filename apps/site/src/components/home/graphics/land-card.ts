@@ -21,14 +21,14 @@ export function initLandCard(root: ParentNode): void {
         const card = entry.target;
         if (!entry.isIntersecting || !(card instanceof HTMLElement)) continue;
         observer.unobserve(card);
-        globalThis.setTimeout(() => (card.dataset["land"] = "ticking"), TICK_DELAY_MS);
-        globalThis.setTimeout(() => (card.dataset["land"] = "landed"), LAND_DELAY_MS);
+        globalThis.setTimeout(() => (card.dataset.land = "ticking"), TICK_DELAY_MS);
+        globalThis.setTimeout(() => (card.dataset.land = "landed"), LAND_DELAY_MS);
       }
     },
     { threshold: VIEW_THRESHOLD },
   );
   for (const card of cards) {
-    card.dataset["land"] = "armed";
+    card.dataset.land = "armed";
     observer.observe(card);
   }
 }

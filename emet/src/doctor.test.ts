@@ -752,7 +752,9 @@ describe("findInstallDrift", () => {
     mkdirSync(path.join(home, ".claude/forge"), { recursive: true });
     mkdirSync(path.join(home, ".claude/agents"), { recursive: true });
   });
-  afterEach(() => rmSync(home, { recursive: true, force: true }));
+  afterEach(() => {
+    rmSync(home, { recursive: true, force: true });
+  });
 
   function writeManifest(entries: Record<string, string>) {
     writeFileSync(path.join(home, ".claude/forge/.install-manifest.json"), JSON.stringify(entries));

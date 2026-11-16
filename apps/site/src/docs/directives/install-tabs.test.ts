@@ -17,7 +17,7 @@ describe(":::install-tabs", () => {
     );
     expect(result?.data?.hProperties?.["data-install-tabs"]).toBe("");
     const [list, first, second] = result?.children ?? [];
-    expect(list?.data?.hProperties?.["role"]).toBe("tablist");
+    expect(list?.data?.hProperties?.role).toBe("tablist");
     expect(first?.data?.hProperties?.["data-tab-label"]).toBe("Claude Code");
     expect(second?.data?.hProperties?.["data-tab-label"]).toBe("Codex");
     expect(first?.children?.[1]).toMatchObject({ type: "code", value: "a", meta: "frame=none" });

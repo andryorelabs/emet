@@ -113,7 +113,7 @@ describe("gate attempt persistence", () => {
     try {
       const { run } = await import("./gate");
       await run(["CLA-1", "--run", "r1"]);
-      expect(JSON.parse(logs[0]!)).toMatchObject({ decision: "hold" });
+      expect(JSON.parse(logs[0] ?? "")).toMatchObject({ decision: "hold" });
       expect(
         JSON.parse(readFileSync(path.join(runDir, "attempts", "CLA-1.json"), "utf8")),
       ).toMatchObject({ count: 1 });
@@ -141,7 +141,7 @@ describe("gate on a legacy-only run dir", () => {
     try {
       const { run } = await import("./gate");
       await run(["CLA-1", "--run", "r1"]);
-      expect(JSON.parse(logs[0]!)).toMatchObject({ decision: "hold" });
+      expect(JSON.parse(logs[0] ?? "")).toMatchObject({ decision: "hold" });
       expect(
         JSON.parse(readFileSync(path.join(runDir, "attempts", "CLA-1.json"), "utf8")),
       ).toMatchObject({ count: 1 });

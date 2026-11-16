@@ -27,7 +27,7 @@ export function collectStarlightInlineScriptHashes(): `sha256-${string}`[] {
       .map(
         ({ groups }) =>
           `sha256-${createHash("sha256")
-            .update(groups?.["body"] ?? "")
+            .update(groups?.body ?? "")
             .digest("base64")}` as const,
       )
       .toArray();
@@ -63,14 +63,14 @@ function listAstroSources(directory: string): string[] {
 export function collectStarlightInlineStyleHashes(): `sha256-${string}`[] {
   const searchPath = requireFromHere.resolve(SEARCH_COMPONENT);
   const searchValues = [...readFileSync(searchPath, "utf8").matchAll(STATIC_STYLE_ATTRIBUTE)].map(
-    ({ groups }) => groups?.["value"] ?? "",
+    ({ groups }) => groups?.value ?? "",
   );
 
   const distRoot = path.dirname(path.dirname(searchPath));
   const iconSizes = new Set([DEFAULT_ICON_SIZE]);
   for (const file of listAstroSources(distRoot)) {
     for (const { groups } of readFileSync(file, "utf8").matchAll(ICON_SIZE)) {
-      iconSizes.add(groups?.["size"] ?? DEFAULT_ICON_SIZE);
+      iconSizes.add(groups?.size ?? DEFAULT_ICON_SIZE);
     }
   }
   const iconValues = [...iconSizes].map((size) => `--sl-icon-size: ${size};`);

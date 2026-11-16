@@ -46,7 +46,7 @@ beforeEach(() => {
   media = { matches: false };
   fakeDocument = { hidden: false };
   for (const key of ["IntersectionObserver", "matchMedia", "document"]) saved[key] = globals[key];
-  globals["IntersectionObserver"] = class {
+  globals.IntersectionObserver = class {
     record: (typeof observers)[number];
     constructor(callback: ObserverCallback) {
       this.record = { callback, observed: [], disconnected: false };
@@ -59,7 +59,7 @@ beforeEach(() => {
       this.record.disconnected = true;
     }
   };
-  globals["matchMedia"] = () => ({
+  globals.matchMedia = () => ({
     get matches() {
       return media.matches;
     },
@@ -68,7 +68,7 @@ beforeEach(() => {
       mediaListeners = mediaListeners.filter((entry) => entry !== listener);
     },
   });
-  globals["document"] = Object.assign(fakeDocument, {
+  globals.document = Object.assign(fakeDocument, {
     addEventListener: (type: string, listener: () => void) => documentListeners.set(type, listener),
     removeEventListener: (type: string) => documentListeners.delete(type),
   });
@@ -82,11 +82,11 @@ describe("initBentoScenes", () => {
   it("plays a scene only while it is on screen", () => {
     const scene = makeScene();
     initBentoScenes(makeRoot([scene]));
-    expect(scene.dataset["playing"]).toBeUndefined();
+    expect(scene.dataset.playing).toBeUndefined();
     intersect(scene, true);
-    expect(scene.dataset["playing"]).toBe("");
+    expect(scene.dataset.playing).toBe("");
     intersect(scene, false);
-    expect(scene.dataset["playing"]).toBeUndefined();
+    expect(scene.dataset.playing).toBeUndefined();
   });
 
   it("phases each scene by its index", () => {
@@ -105,10 +105,10 @@ describe("initBentoScenes", () => {
     intersect(scene, true);
     fakeDocument.hidden = true;
     documentListeners.get("visibilitychange")?.();
-    expect(scene.dataset["playing"]).toBeUndefined();
+    expect(scene.dataset.playing).toBeUndefined();
     fakeDocument.hidden = false;
     documentListeners.get("visibilitychange")?.();
-    expect(scene.dataset["playing"]).toBe("");
+    expect(scene.dataset.playing).toBe("");
   });
 
   it("does nothing under reduced motion", () => {
@@ -116,7 +116,7 @@ describe("initBentoScenes", () => {
     const scene = makeScene();
     initBentoScenes(makeRoot([scene]));
     expect(observers).toHaveLength(0);
-    expect(scene.dataset["playing"]).toBeUndefined();
+    expect(scene.dataset.playing).toBeUndefined();
   });
 
   it("follows preference changes", () => {
@@ -125,7 +125,7 @@ describe("initBentoScenes", () => {
     intersect(scene, true);
     media.matches = true;
     for (const listener of mediaListeners) listener();
-    expect(scene.dataset["playing"]).toBeUndefined();
+    expect(scene.dataset.playing).toBeUndefined();
     expect(observers[0]?.disconnected).toBe(true);
     media.matches = false;
     for (const listener of mediaListeners) listener();
@@ -137,7 +137,7 @@ describe("initBentoScenes", () => {
     const stop = initBentoScenes(makeRoot([scene]));
     intersect(scene, true);
     stop();
-    expect(scene.dataset["playing"]).toBeUndefined();
+    expect(scene.dataset.playing).toBeUndefined();
     expect(observers[0]?.disconnected).toBe(true);
     expect(mediaListeners).toHaveLength(0);
   });

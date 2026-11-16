@@ -91,9 +91,9 @@ describe("findForbiddenTokens and assertNoForbiddenTokens", () => {
   });
 
   test("throws naming the file and the token", () => {
-    expect(() => assertNoForbiddenTokens({ path: "codex/x.md", content: "ToolSearch" })).toThrow(
-      "codex/x.md still contains Claude-only tokens: ToolSearch",
-    );
+    expect(() => {
+      assertNoForbiddenTokens({ path: "codex/x.md", content: "ToolSearch" });
+    }).toThrow("codex/x.md still contains Claude-only tokens: ToolSearch");
   });
 });
 

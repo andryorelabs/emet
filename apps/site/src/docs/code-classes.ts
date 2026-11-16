@@ -37,8 +37,8 @@ export function classifyTokenStyles(html: string): string {
  */
 function findFencedBlocks(markdown: string): FencedBlock[] {
   return [...markdown.matchAll(FENCED_BLOCK)].map((match) => ({
-    lang: (match.groups?.["info"] ?? "").trim().split(/\s+/)[0] ?? "",
-    code: match.groups?.["code"] ?? "",
+    lang: (match.groups?.info ?? "").trim().split(/\s+/)[0] ?? "",
+    code: match.groups?.code ?? "",
   }));
 }
 

@@ -8,7 +8,10 @@ const GATES: readonly (readonly string[])[] = [
   ["bun", "run", "format:check"],
 ];
 
-export type PushVerdict = { ok: boolean; reason?: string };
+export interface PushVerdict {
+  ok: boolean;
+  reason?: string;
+}
 
 /** Decides whether pushing `localBranch` to `remoteRef` is allowed. */
 export function checkPush(remoteRef: string, localBranch: string): PushVerdict {
@@ -38,10 +41,16 @@ function branchName(ref: string): string {
   return ref.startsWith(BRANCH_PREFIX) ? ref.slice(BRANCH_PREFIX.length) : ref;
 }
 
+/** Maps a finished gate to a push-blocking code; a signal-killed gate reports a null exit code at runtime, so it blocks with 1. */
+export function gateFailureCode(result: { success: boolean; exitCode: number }): number {
+  return result.success ? 0 : result.exitCode || 1;
+}
+
 function runGates(): number {
   for (const command of GATES) {
     const result = Bun.spawnSync([...command], { stdout: "inherit", stderr: "inherit" });
-    if (result.exitCode !== 0) return result.exitCode ?? 1;
+    const code = gateFailureCode(result);
+    if (code !== 0) return code;
   }
   return 0;
 }

@@ -13,12 +13,12 @@ const THREAD_WAIT_MS = 2000;
 const THREAD_POLL_MS = 50;
 
 /** The files that describe one Codex session of a run. */
-export type CodexSessionPaths = {
+export interface CodexSessionPaths {
   readonly runDir: string;
   readonly recordFile: string;
   readonly jsonlPath: string;
   readonly stateFile: string;
-};
+}
 
 /** Where a session's record, event stream and process state live under the repo. */
 export function codexSessionPaths(repoRoot: string, name: string): CodexSessionPaths {

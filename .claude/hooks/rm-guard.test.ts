@@ -97,16 +97,16 @@ describe("isAllowedRemoval", () => {
   });
 });
 
-describe("decideRemovalGuard", () => {
-  const input = (command: string) =>
-    JSON.stringify({ tool_name: "Bash", cwd: repo, tool_input: { command } });
+const input = (command: string) =>
+  JSON.stringify({ tool_name: "Bash", cwd: repo, tool_input: { command } });
 
+describe("decideRemovalGuard", () => {
   test("emits a deny decision for an unsafe removal", () => {
     const output = decideRemovalGuard(input("rm -rf ."));
     expect(output).not.toBeNull();
-    const parsed = JSON.parse(output ?? "{}");
-    expect(parsed.hookSpecificOutput.permissionDecision).toBe("deny");
-    expect(parsed.hookSpecificOutput.hookEventName).toBe("PreToolUse");
+    expect(JSON.parse(output ?? "{}")).toMatchObject({
+      hookSpecificOutput: { permissionDecision: "deny", hookEventName: "PreToolUse" },
+    });
   });
 
   test("stays silent for a safe command", () => {

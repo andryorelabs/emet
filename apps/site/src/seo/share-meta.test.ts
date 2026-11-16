@@ -13,9 +13,7 @@ import {
 } from "./share-meta";
 
 function content(tags: ReturnType<typeof shareMetaTags>, key: string): string | undefined {
-  return tags.find((tag) => tag.attrs["property"] === key || tag.attrs["name"] === key)?.attrs[
-    "content"
-  ];
+  return tags.find((tag) => tag.attrs.property === key || tag.attrs.name === key)?.attrs.content;
 }
 
 describe("shareMetaTags", () => {
@@ -39,22 +37,22 @@ describe("shareMetaTags", () => {
   });
 
   test("lists every other locale as an alternate", () => {
-    const alternates = tags.filter((tag) => tag.attrs["property"] === "og:locale:alternate");
+    const alternates = tags.filter((tag) => tag.attrs.property === "og:locale:alternate");
     expect(alternates).toHaveLength(LOCALES.length - 1);
-    expect(alternates.map((tag) => tag.attrs["content"])).not.toContain("ja_JP");
+    expect(alternates.map((tag) => tag.attrs.content)).not.toContain("ja_JP");
   });
 });
 
 describe("installLinkTags", () => {
   test("links icons, manifest and llms.txt", () => {
-    const hrefs = installLinkTags().map((tag) => tag.attrs["href"]);
+    const hrefs = installLinkTags().map((tag) => tag.attrs.href);
     expect(hrefs).toEqual([
       "/favicon.ico",
       "/apple-touch-icon.png",
       "/manifest.webmanifest",
       "/llms.txt",
     ]);
-    expect(installLinkTags().at(-1)?.attrs["rel"]).toBe("describedby");
+    expect(installLinkTags().at(-1)?.attrs.rel).toBe("describedby");
   });
 });
 
@@ -66,7 +64,7 @@ describe("homeJsonLdTag", () => {
 
   test("serialises into a JSON-LD script tag", () => {
     const tag = homeJsonLdTag("en", "A </script> title", "Description");
-    expect(tag.attrs["type"]).toBe("application/ld+json");
+    expect(tag.attrs.type).toBe("application/ld+json");
     expect(tag.content).not.toContain("</script>");
   });
 });

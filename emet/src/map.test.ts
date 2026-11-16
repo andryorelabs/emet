@@ -71,7 +71,7 @@ describe("generateMap", () => {
     expect(map).toContain("- `src/app.ts` (2 commits)");
   });
 
-  const ecosystems: ReadonlyArray<readonly [string, readonly string[], string, string]> = [
+  const ecosystems: readonly (readonly [string, readonly string[], string, string])[] = [
     ["go", ["go.mod"], "go test ./...", "Package manager: go"],
     ["cargo", ["Cargo.toml"], "cargo test", "Package manager: cargo"],
     ["uv", ["pyproject.toml", "uv.lock"], "uv run pytest", "Package manager: uv"],

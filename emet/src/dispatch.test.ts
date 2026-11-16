@@ -86,9 +86,9 @@ function dispatchArguments(extra: string[] = []): string[] {
 
 function readFirstInvocation(): { argv: string[]; codexHome: unknown } {
   const parsed: unknown = JSON.parse(readFileSync(logFile, "utf8").trim().split("\n")[0] ?? "{}");
-  if (!isObject(parsed) || !Array.isArray(parsed["argv"])) throw new Error("bad fake log");
-  const env = isObject(parsed["env"]) ? parsed["env"] : {};
-  return { argv: parsed["argv"].map(String), codexHome: env["CODEX_HOME"] };
+  if (!isObject(parsed) || !Array.isArray(parsed.argv)) throw new Error("bad fake log");
+  const env = isObject(parsed.env) ? parsed.env : {};
+  return { argv: parsed.argv.map(String), codexHome: env.CODEX_HOME };
 }
 
 async function waitUntil(condition: () => boolean): Promise<void> {

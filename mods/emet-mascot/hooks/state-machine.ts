@@ -2,7 +2,7 @@ import type { PhaseRecord } from "./phase-file.ts";
 
 export type MascotState = "sleep" | "work" | "waiting" | "done" | "error";
 
-export type SessionEvent = {
+export interface SessionEvent {
   kind:
     | "turn-start"
     | "turn-complete"
@@ -13,15 +13,15 @@ export type SessionEvent = {
     | "agent-failed"
     | "tick";
   at: number;
-};
+}
 
-export type MachineState = {
+export interface MachineState {
   state: MascotState;
   working: boolean;
   waiting: boolean;
   transient: "done" | "error" | null;
   transientSince: number;
-};
+}
 
 export const TRANSIENT_DECAY_MS = 20_000;
 export const PHASE_FRESH_MS = 15 * 60_000;

@@ -37,6 +37,7 @@ import {
   worktreeDirectoryLabel,
   preflightOkSummary,
 } from "./preflight";
+import { present } from "./present";
 import type { ContentVerdict, WorktreeEntry, WorktreeOwner } from "./worktrees";
 
 function approvalIn(root: string, runId: string): string {
@@ -314,7 +315,7 @@ async function advise(
 ) {
   return describeWorktreeEntryVerdict(
     entry,
-    { kind: "content-fallback", entry, branch: entry.branch! },
+    { kind: "content-fallback", entry, branch: present(entry.branch) },
     "tree",
     "origin",
     "main",

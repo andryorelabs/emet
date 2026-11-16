@@ -32,7 +32,7 @@ const MODELS_CACHE_FILE = "models_cache.json";
 
 /** The user's own Codex home: `$CODEX_HOME`, else `~/.codex`. Only ever read. */
 function realCodexHome(): string {
-  const codexHome = process.env["CODEX_HOME"];
+  const codexHome = process.env.CODEX_HOME;
   return codexHome !== undefined && codexHome.length > 0 ? codexHome : join(homedir(), ".codex");
 }
 
@@ -131,8 +131,7 @@ function choiceFor(role: CodexRole, config: ForgeConfig): CodexModelChoice {
 
 function usable(entry: CacheEntry | undefined, effort: string): boolean {
   return (
-    entry !== undefined &&
-    entry.visibility === "list" &&
+    entry?.visibility === "list" &&
     !NEVER_SELECTED_EFFORTS.has(effort) &&
     entry.efforts.includes(effort)
   );

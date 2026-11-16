@@ -3,6 +3,7 @@ import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
 
+import { currentExitCode } from "./exit-code";
 import { lookupTicket, recordTicket, run } from "./materializelog";
 
 let root: string;
@@ -28,7 +29,7 @@ async function invoke(argv: string[]): Promise<{ out: string[]; err: string[]; c
   process.exitCode = 0;
   try {
     await run(argv);
-    return { out, err, code: process.exitCode ?? 0 };
+    return { out, err, code: currentExitCode() };
   } finally {
     logSpy.mockRestore();
     errorSpy.mockRestore();

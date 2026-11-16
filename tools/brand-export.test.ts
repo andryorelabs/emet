@@ -81,27 +81,33 @@ describe("assertSpec", () => {
   const spec = { width: 32, height: 32, maxBytes: 100 };
 
   test("passes when size and budget match", () => {
-    expect(() => assertSpec("mark-32.png", fakePng(32, 32, 100), spec)).not.toThrow();
+    expect(() => {
+      assertSpec("mark-32.png", fakePng(32, 32, 100), spec);
+    }).not.toThrow();
   });
 
   test("throws naming the asset when the width is wrong", () => {
-    expect(() => assertSpec("mark-32.png", fakePng(33, 32), spec)).toThrow(
-      /mark-32\.png.*33x32.*32x32/,
-    );
+    expect(() => {
+      assertSpec("mark-32.png", fakePng(33, 32), spec);
+    }).toThrow(/mark-32\.png.*33x32.*32x32/);
   });
 
   test("throws when the height is wrong", () => {
-    expect(() => assertSpec("mark-32.png", fakePng(32, 31), spec)).toThrow(/32x31/);
+    expect(() => {
+      assertSpec("mark-32.png", fakePng(32, 31), spec);
+    }).toThrow(/32x31/);
   });
 
   test("throws when the byte budget is exceeded", () => {
-    expect(() => assertSpec("mark-32.png", fakePng(32, 32, 101), spec)).toThrow(
-      /mark-32\.png.*101 bytes.*100/,
-    );
+    expect(() => {
+      assertSpec("mark-32.png", fakePng(32, 32, 101), spec);
+    }).toThrow(/mark-32\.png.*101 bytes.*100/);
   });
 
   test("throws when the buffer is not a PNG", () => {
-    expect(() => assertSpec("mark-32.png", new Uint8Array(50), spec)).toThrow(/not a PNG/);
+    expect(() => {
+      assertSpec("mark-32.png", new Uint8Array(50), spec);
+    }).toThrow(/not a PNG/);
   });
 });
 

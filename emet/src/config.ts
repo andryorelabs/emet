@@ -218,10 +218,10 @@ export interface ForgeConfig {
      * wave dispatches, each with a `why` shown in the failure message.
      * Generalizes what used to be a hardcoded `.env.keys` check — empty
      * means no such check runs at all. */
-    readonly requiredFiles: ReadonlyArray<{
+    readonly requiredFiles: readonly {
       readonly path: string;
       readonly why: string;
-    }>;
+    }[];
     /** Binaries that must resolve on `PATH` before a wave dispatches — the
      * repo's own list (`rg`, `sg`, a linter), separate from the dependency
      * checks that `tracker.kind` drives. Empty means no such check runs. */
@@ -560,7 +560,7 @@ function validateAndMerge(
 
   const preflightSection = isRecord(raw.preflight) ? raw.preflight : {};
   const requiredFilesRaw = preflightSection.requiredFiles;
-  const requiredFiles: Array<{ path: string; why: string }> = [];
+  const requiredFiles: { path: string; why: string }[] = [];
   if (requiredFilesRaw !== undefined) {
     if (!Array.isArray(requiredFilesRaw)) {
       return { ok: false, reason: '"preflight.requiredFiles" must be an array' };

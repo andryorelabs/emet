@@ -33,7 +33,7 @@ const DEFAULT_COMMIT_TYPE = "feat";
 class LandUsageError extends Error {}
 class LandRefusedError extends Error {}
 
-export type LandOptions = {
+export interface LandOptions {
   readonly cwd: string;
   readonly spec: string;
   readonly branch: string;
@@ -41,14 +41,18 @@ export type LandOptions = {
   readonly summary?: string;
   readonly type?: string;
   readonly wave?: number;
-};
+}
 
-export type LandResult = {
+export interface LandResult {
   readonly trunk: string;
   readonly tickets: readonly string[];
-};
+}
 
-type GitResult = { readonly exitCode: number; readonly stdout: string; readonly stderr: string };
+interface GitResult {
+  readonly exitCode: number;
+  readonly stdout: string;
+  readonly stderr: string;
+}
 
 async function git(cwd: string, ...args: string[]): Promise<GitResult> {
   const result = await Bun.$`git -C ${cwd} ${args}`.nothrow().quiet();

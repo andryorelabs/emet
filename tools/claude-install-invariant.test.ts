@@ -37,7 +37,7 @@ interface ClaudeInstallSnapshot {
 
 const repoRoot = path.resolve(import.meta.dir, "..");
 const snapshotPath = path.join(import.meta.dir, "fixtures/claude-install-snapshot.json");
-const updateRequested = process.env["EMET_UPDATE_CLAUDE_INSTALL_SNAPSHOT"] === "1";
+const updateRequested = process.env.EMET_UPDATE_CLAUDE_INSTALL_SNAPSHOT === "1";
 const bashPath = Bun.which("bash") ?? "/bin/bash";
 const installerTools = [
   "awk",
@@ -182,7 +182,7 @@ function parseSnapshot(text: string): ClaudeInstallSnapshot {
   const parsed: unknown = JSON.parse(text);
   if (typeof parsed !== "object" || parsed === null) throw new Error("snapshot is not an object");
   const { paths, promptSha256 } = parsed as Partial<ClaudeInstallSnapshot>;
-  if (!Array.isArray(paths) || typeof promptSha256 !== "object" || promptSha256 === null) {
+  if (!Array.isArray(paths) || !promptSha256 || typeof promptSha256 !== "object") {
     throw new Error("snapshot must have `paths` and `promptSha256`");
   }
   return { paths, promptSha256 };

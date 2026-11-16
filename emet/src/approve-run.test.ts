@@ -4,6 +4,7 @@ import os from "node:os";
 import path from "node:path";
 
 import { checkApproval, run } from "./approve";
+import { currentExitCode } from "./exit-code";
 import { resolveRunArtifactPath } from "./runs";
 
 let root: string;
@@ -32,7 +33,7 @@ async function runApprove(
   process.exitCode = 0;
   try {
     await run(argv);
-    return { logs, errors, code: process.exitCode ?? 0 };
+    return { logs, errors, code: currentExitCode() };
   } finally {
     console.log = originalLog;
     console.error = originalError;
@@ -53,7 +54,7 @@ describe("approve run()", () => {
   test("--check with no record reports not ok and exits 1", async () => {
     const result = await runApprove(["--run", "r1", "--root", root, "--check"]);
     expect(result.code).toBe(1);
-    expect(JSON.parse(result.logs[0]!)).toMatchObject({
+    expect(JSON.parse(result.logs[0] ?? "")).toMatchObject({
       ok: false,
       reasons: [expect.stringContaining("no approval record")],
     });
@@ -79,19 +80,19 @@ describe("approve run()", () => {
       ticketsPath,
     ]);
     expect(approved.code).toBe(0);
-    const record: unknown = JSON.parse(approved.logs[0]!);
+    const record: unknown = JSON.parse(approved.logs[0] ?? "");
     expect(record).toMatchObject({ specPath });
     const { writePath } = await resolveRunArtifactPath("r1", "approval.json", { repoRoot: root });
     expect(JSON.parse(readFileSync(writePath, "utf8"))).toEqual(record);
 
     const ok = await runApprove(["--run", "r1", "--root", root, "--check"]);
     expect(ok.code).toBe(0);
-    expect(JSON.parse(ok.logs[0]!)).toEqual({ ok: true, reasons: [] });
+    expect(JSON.parse(ok.logs[0] ?? "")).toEqual({ ok: true, reasons: [] });
 
     writeFileSync(specPath, "changed");
     const stale = await runApprove(["--run", "r1", "--root", root, "--check"]);
     expect(stale.code).toBe(1);
-    expect(JSON.parse(stale.logs[0]!)).toMatchObject({
+    expect(JSON.parse(stale.logs[0] ?? "")).toMatchObject({
       ok: false,
       reasons: [expect.stringContaining("spec changed since approval")],
     });

@@ -75,7 +75,7 @@ describe("verifyTicket", () => {
       fakeDependencies({ changedPaths: () => Promise.resolve(["src/a.ts", "README.md"]) }),
     );
     expect(failed(record)).toEqual(["surfaces"]);
-    expect(record.checks.find((c) => c.name === "surfaces")!.detail).toContain("README.md");
+    expect(record.checks.find((c) => c.name === "surfaces")?.detail).toContain("README.md");
   });
 
   test("fails when handoff --check fails", async () => {
@@ -129,7 +129,9 @@ describe("against a real git worktree", () => {
     git("add", "-A");
     git("commit", "-q", "-m", "seed");
   });
-  afterAll(() => rmSync(repo, { recursive: true, force: true }));
+  afterAll(() => {
+    rmSync(repo, { recursive: true, force: true });
+  });
 
   test("counts commits and lists changed paths past the baseline", async () => {
     const baseline = git("rev-parse", "HEAD");

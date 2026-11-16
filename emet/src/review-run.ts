@@ -30,21 +30,21 @@ const DEFAULT_TIMEOUT_MS = 30 * 60 * 1000;
 const DEFAULT_POLL_MS = 100;
 
 /** Injection points for tests; production callers pass none. */
-export type ReviewRunDeps = {
+export interface ReviewRunDeps {
   readonly repoRoot?: string;
   readonly executable?: string;
   readonly sourceHome?: string;
   readonly modelsCachePath?: string;
   readonly timeoutMs?: number;
   readonly pollMs?: number;
-};
+}
 
-type ReviewRunArgs = {
+interface ReviewRunArgs {
   readonly run: string;
   readonly ticket: string;
   readonly packagePath: string;
   readonly tier: Tier;
-};
+}
 
 const SEVERITY_VALUES = ["blocker", "critical", "major", "minor", "nit"];
 const KIND_VALUES = ["intent_gap", "bad_plan", "patch", "defer"];
@@ -118,10 +118,10 @@ export function lastAgentMessage(jsonl: string): string | undefined {
     if (!line.includes("agent_message")) continue;
     try {
       const event: unknown = JSON.parse(line);
-      if (!isObject(event) || event["type"] !== "item.completed") continue;
-      const item = event["item"];
-      if (isObject(item) && item["type"] === "agent_message" && typeof item["text"] === "string") {
-        last = item["text"];
+      if (!isObject(event) || event.type !== "item.completed") continue;
+      const item = event.item;
+      if (isObject(item) && item.type === "agent_message" && typeof item.text === "string") {
+        last = item.text;
       }
     } catch {
       continue;
@@ -138,7 +138,7 @@ export function extractFindings(message: string): Finding[] {
   } catch {
     throw new ForgeConfigError("the reviewer's final message is not valid JSON");
   }
-  const list = isObject(parsed) && !Array.isArray(parsed) ? parsed["findings"] : parsed;
+  const list = isObject(parsed) && !Array.isArray(parsed) ? parsed.findings : parsed;
   return parseFindings(JSON.stringify(list));
 }
 

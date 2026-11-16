@@ -3,7 +3,7 @@
  * `tools/toolchain-drift.test.ts` fails when a manifest, `.node-version` or a workflow
  * drifts from it. Renovate moves the pins, and this table moves with them in the same PR.
  */
-export const TOOLCHAIN: { readonly [tool: string]: string } = {
+export const TOOLCHAIN: Readonly<Record<string, string>> = {
   oxlint: "1.92.0",
   "@oxlint/plugins": "1.92.0",
   oxfmt: "0.75.0",

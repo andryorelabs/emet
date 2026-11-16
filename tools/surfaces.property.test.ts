@@ -141,7 +141,9 @@ describe("findSurfaceOverlaps properties", () => {
       fc.property(ticketSurfacesList, (tickets) => {
         const position = new Map(tickets.map((entry, index) => [entry.ticket, index]));
         for (const overlap of findSurfaceOverlaps(tickets)) {
-          expect(position.get(overlap.ticketA)!).toBeLessThan(position.get(overlap.ticketB)!);
+          expect(position.get(overlap.ticketA) ?? Number.NaN).toBeLessThan(
+            position.get(overlap.ticketB) ?? Number.NaN,
+          );
         }
       }),
     );

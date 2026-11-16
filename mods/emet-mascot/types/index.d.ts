@@ -1,12 +1,12 @@
-export type MascotMachine = {
+export interface MascotMachine {
   state: "sleep" | "work" | "waiting" | "done" | "error";
   working: boolean;
   waiting: boolean;
   transient: "done" | "error" | null;
   transientSince: number;
-};
+}
 
-export type MascotPhase = {
+export interface MascotPhase {
   phase:
     | "planning"
     | "dispatch"
@@ -21,7 +21,7 @@ export type MascotPhase = {
   runId: string | null;
   updatedAt: string;
   outcome?: string;
-};
+}
 
 declare module "claude-code" {
   interface PluginState {

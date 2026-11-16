@@ -52,13 +52,13 @@ const SCHEMA_FILE = CONFIG_FILE.replace(/\.json$/, ".schema.json");
  */
 export const DEFAULT_LOCK_REASON_TEMPLATE = `${LOCK_TOKEN} run={runId} ticket={ticket} anchor={anchorPid} slug={coordinatorSlug} at={iso}`;
 
-export type LockReasonFields = {
+export interface LockReasonFields {
   readonly runId: string;
   readonly ticket: string;
   readonly anchorPid: number;
   readonly coordinatorSlug: string;
   readonly iso: string;
-};
+}
 
 /**
  * Every value is interpolated into a whitespace-separated `key=value` string

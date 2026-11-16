@@ -134,7 +134,7 @@ describe("resolveAutoCapOptionsFromEnvironment", () => {
   afterEach(() => {
     keys.forEach((key, index) => {
       const value = saved[index];
-      if (value === undefined) delete process.env[key];
+      if (value === undefined) Reflect.deleteProperty(process.env, key);
       else process.env[key] = value;
     });
   });
