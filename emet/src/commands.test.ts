@@ -73,7 +73,6 @@ const SAFE_TO_RUN_BARE = [
   "gate",
   "validate",
   "spec-merge",
-  "tracker",
   "approve",
   "review",
 ];
