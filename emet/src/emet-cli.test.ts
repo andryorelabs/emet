@@ -75,4 +75,26 @@ describe("emet CLI", () => {
     expect(result.exitCode).toBe(1);
     expect(parseEnvelope(result.stdout)).toMatchObject({ ok: false, error: { code: "findings" } });
   });
+
+  test("SIGINT during a blocking command exits 130", async () => {
+    const child = Bun.spawn(["bun", entry, "guard"], {
+      env: { ...process.env, NO_COLOR: "1" },
+      stdin: "pipe",
+      stdout: "pipe",
+      stderr: "pipe",
+    });
+    const killTimer = setTimeout(() => {
+      child.kill("SIGKILL");
+    }, 15_000);
+    try {
+      await Bun.sleep(1500);
+      expect(child.killed).toBe(false);
+      child.kill("SIGINT");
+      const exitCode = await child.exited;
+      expect(exitCode).toBe(130);
+    } finally {
+      clearTimeout(killTimer);
+      child.kill("SIGKILL");
+    }
+  }, 20_000);
 });
