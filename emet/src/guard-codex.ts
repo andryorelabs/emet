@@ -3,6 +3,7 @@ import path from "node:path";
 
 import type { AgentHostName } from "./agenthost";
 import { writeApproval } from "./approve";
+import { readEnv, type Env } from "./env";
 import { isObject } from "./narrow";
 import { present } from "./present";
 
@@ -47,8 +48,8 @@ export function isAgentWorktreeFor(host: AgentHostName, directory: string | unde
 }
 
 /** Resolves the Agent host from `EMET_AGENT_HOST`; anything but `codex` is Claude. */
-export function detectAgentHost(env: NodeJS.ProcessEnv = process.env): AgentHostName {
-  return env.EMET_AGENT_HOST === "codex" ? "codex" : "claude";
+export function detectAgentHost(env?: Env): AgentHostName {
+  return readEnv("EMET_AGENT_HOST", env) === "codex" ? "codex" : "claude";
 }
 
 /** The file paths named by `*** Add/Update/Delete File:` (and `Move to:`) patch headers. */

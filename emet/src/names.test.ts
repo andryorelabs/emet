@@ -135,15 +135,17 @@ describe("readEnv", () => {
   });
 
   it("lets EMET_ win over FORGE_ without warning", () => {
-    expect(readEnv("X_WIN", { EMET_X_WIN: "a", FORGE_X_WIN: "b" })).toBe("a");
+    expect(
+      readEnv("CPU_OVERSUBSCRIBE", { EMET_CPU_OVERSUBSCRIBE: "a", FORGE_CPU_OVERSUBSCRIBE: "b" }),
+    ).toBe("a");
     expect(stderrLines).toEqual([]);
   });
 
   it("falls back to FORGE_ and warns once", () => {
-    const env = { FORGE_X_ONLY: "2" };
-    expect(readEnv("X_ONLY", env)).toBe("2");
-    expect(readEnv("X_ONLY", env)).toBe("2");
-    expect(stderrLines).toEqual(["emet: using legacy FORGE_X_ONLY; run `emet migrate`\n"]);
+    const env = { FORGE_MEM_RESERVE_GIB: "2" };
+    expect(readEnv("MEM_RESERVE_GIB", env)).toBe("2");
+    expect(readEnv("MEM_RESERVE_GIB", env)).toBe("2");
+    expect(stderrLines).toEqual(["emet: using legacy FORGE_MEM_RESERVE_GIB; run `emet migrate`\n"]);
   });
 });
 
