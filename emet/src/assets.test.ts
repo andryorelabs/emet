@@ -2,7 +2,7 @@ import { describe, expect, test } from "bun:test";
 import { readdirSync, readFileSync } from "node:fs";
 import path from "node:path";
 
-import { FORGE_VERSION, isCompiledBinary, readSchema, readTemplate } from "./assets";
+import { EMET_VERSION, isCompiledBinary, readSchema, readTemplate } from "./assets";
 
 const templatesDirectory = path.join(import.meta.dir, "..", "templates");
 
@@ -43,7 +43,7 @@ describe("assets", () => {
   });
 
   test("source runs report the dev version and are not compiled", () => {
-    expect(FORGE_VERSION).toBe("0.0.0-dev");
+    expect(EMET_VERSION).toBe("0.0.0-dev");
     expect(isCompiledBinary()).toBe(false);
   });
 });
