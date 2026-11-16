@@ -1,7 +1,7 @@
 name: Documentation Bug
 description: Report missing, incorrect, or unclear documentation
 title: "docs: "
-labels: ["documentation", "needs-triage"]
+labels: ["Type: Docs", "needs-triage"]
 
 body:
   - type: checkboxes

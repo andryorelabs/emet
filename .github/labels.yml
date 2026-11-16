@@ -1,73 +1,169 @@
 # Synced by .github/workflows/labels.yml. The sync never deletes labels missing from this file.
 
-# ── emet triage labels (this repo's legacy emet.config.json: tracker.triageLabels) ─────────────
+# ── emet triage labels ──
 
-- name: needs-triage
+- name: "needs-triage"
   color: "ededed"
-  description: Maintainer has not evaluated this yet
+  description: "Maintainer has not evaluated this yet"
 
-- name: needs-info
+- name: "needs-info"
   color: "d876e3"
-  description: Waiting for more information from the reporter
+  description: "Waiting for more information from the reporter"
 
-- name: ready-for-agent
+- name: "ready-for-agent"
   color: "0e8a16"
-  description: Fully specified, ready for an AI agent to pick up
+  description: "Fully specified, ready for an AI agent to pick up"
 
-- name: ready-for-human
+- name: "ready-for-human"
   color: "1d76db"
-  description: Needs human implementation
+  description: "Needs human implementation"
 
-- name: wontfix
+- name: "wontfix"
   color: "cfd3d7"
-  description: Will not be worked on
+  description: "Will not be worked on"
 
-# ── emet state labels (this repo's legacy emet.config.json: tracker.github.stateLabels) ────────
+# ── emet state labels ──
 
 - name: "status:todo"
   color: "c5def5"
-  description: Ticket is queued for work
+  description: "Ticket is queued for work"
 
 - name: "status:in-progress"
   color: "fbca04"
-  description: Ticket is being worked on
+  description: "Ticket is being worked on"
 
 - name: "status:in-review"
   color: "5319e7"
-  description: Ticket has an open pull request
+  description: "Ticket has an open pull request"
 
-# ── Type ──────────────────────────────────────────────────────────────────────
+# ── Type ──
 
-- name: bug
+- name: "Type: Bug"
   color: "d73a4a"
-  description: Something isn't working correctly
+  description: "Something isn't working correctly"
 
-- name: enhancement
+- name: "Type: Feature"
+  color: "a2eeef"
+  description: "A brand-new feature or capability"
+
+- name: "Type: Enhancement"
   color: "54aeff"
-  description: New feature or improvement to an existing one
+  description: "Improvement to an existing feature"
 
-- name: documentation
+- name: "Type: Docs"
   color: "0052cc"
-  description: Documentation additions, corrections, or improvements
+  description: "Documentation additions, corrections, or improvements"
 
-- name: security
+- name: "Type: Security"
   color: "b60205"
-  description: Security vulnerability or hardening
+  description: "Security vulnerability or hardening"
 
-- name: breaking-change
+# ── Status ──
+
+- name: "Status: Needs Info"
+  color: "d876e3"
+  description: "Waiting for more information"
+
+- name: "Status: Needs Decision"
+  color: "fef2c0"
+  description: "Waiting for a maintainer decision"
+
+- name: "Status: Blocked"
+  color: "e11d21"
+  description: "Blocked by another issue or external factor"
+
+- name: "Status: In Progress"
+  color: "fbca04"
+  description: "Work is underway"
+
+# ── Priority ──
+
+- name: "Priority: Critical"
   color: "b60205"
-  description: Changes behavior in a backwards-incompatible way
+  description: "Drop everything"
 
-# ── Tooling ───────────────────────────────────────────────────────────────────
+- name: "Priority: High"
+  color: "d93f0b"
+  description: "Do next"
 
-- name: dependencies
-  color: "0366d6"
-  description: Dependency updates
+- name: "Priority: Medium"
+  color: "fbca04"
+  description: "Do soon"
 
-- name: github-actions
-  color: "2088ff"
-  description: GitHub Actions workflow changes
+- name: "Priority: Low"
+  color: "0e8a16"
+  description: "Do when convenient"
 
-- name: duplicate
+# ── Resolution ──
+
+- name: "Resolution: Duplicate"
   color: "cfd3d7"
-  description: This issue or pull request already exists
+  description: "This issue or pull request already exists"
+
+- name: "Resolution: Won't Fix"
+  color: "cfd3d7"
+  description: "Deliberately not going to be worked on"
+
+- name: "Resolution: Invalid"
+  color: "cfd3d7"
+  description: "Not a valid issue"
+
+# ── Area ──
+
+- name: "Area: CLI"
+  color: "bfdadc"
+  description: "The emet CLI"
+
+- name: "Area: Guard"
+  color: "bfdadc"
+  description: "Guard hooks and edit guard"
+
+- name: "Area: Plugin"
+  color: "bfdadc"
+  description: "The Claude Code plugin, commands and agents"
+
+- name: "Area: Codex"
+  color: "bfdadc"
+  description: "The Codex plugin"
+
+- name: "Area: Site"
+  color: "bfdadc"
+  description: "The Website"
+
+- name: "Area: Docs"
+  color: "bfdadc"
+  description: "Documentation, ADRs and guides"
+
+- name: "Area: Tooling"
+  color: "bfdadc"
+  description: "Dev tooling, lint and tests"
+
+- name: "Area: CI"
+  color: "bfdadc"
+  description: "CI workflows and releases"
+
+# ── Other ──
+
+- name: "dependencies"
+  color: "0366d6"
+  description: "Dependency updates"
+
+- name: "github-actions"
+  color: "2088ff"
+  description: "GitHub Actions workflow changes"
+
+- name: "security"
+  color: "b60205"
+  description: "Security vulnerability or hardening"
+
+- name: "breaking-change"
+  color: "b60205"
+  description: "Changes behavior in a backwards-incompatible way"
+
+- name: "good first issue"
+  color: "7057ff"
+  description: "Good for newcomers"
+
+- name: "help wanted"
+  color: "008672"
+  description: "Extra attention is needed"

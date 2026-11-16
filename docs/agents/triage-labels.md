@@ -10,7 +10,11 @@ The five canonical triage roles map to GitHub Issues labels:
 | `ready-for-human` | Needs a human decision or judgment call before continuing    |
 | `wontfix`         | Reviewed and deliberately not going to be worked on          |
 
-The five labels exist in this repo (created with `gh label create`).
+The five labels are declared in `.github/labels.yml`, alongside the Type, Status,
+Priority, Resolution and Area label families, and synced by the labels workflow.
+`tracker.github.priorityLabels` maps levels 1 to 4 to `Priority: Critical`,
+`Priority: High`, `Priority: Medium` and `Priority: Low`.
+The issue forms apply a `Type:` label plus `needs-triage`.
 `/emet` itself never creates a triage label (it does create the three
 workflow-state labels in `tracker.github.stateLabels`, see
 [issue-tracker.md](issue-tracker.md)).
