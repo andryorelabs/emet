@@ -1,6 +1,63 @@
-import { describe, expect, test } from "bun:test";
+import { afterEach, describe, expect, spyOn, test } from "bun:test";
+import { mkdtempSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 
-import { findSurfaceOverlaps, globsOverlap, parseTicketSurfaces } from "./surfaces";
+import { findSurfaceOverlaps, globsOverlap, parseTicketSurfaces, run } from "./surfaces";
+
+describe("parseTicketSurfaces errors", () => {
+  test("rejects malformed array entries and glob lists", () => {
+    expect(() => parseTicketSurfaces([{ ticket: "A", surfaces: [1] }])).toThrow("entry 0");
+    expect(() => parseTicketSurfaces(["x"])).toThrow("entry 0");
+    expect(() => parseTicketSurfaces({ A: "x" })).toThrow("A needs string[] globs");
+    expect(() => parseTicketSurfaces(null)).toThrow("expected an object or array");
+  });
+});
+
+function fixture(content: string): string {
+  const file = join(mkdtempSync(join(tmpdir(), "surfaces-")), "in.json");
+  writeFileSync(file, content);
+  return file;
+}
+
+describe("run", () => {
+  afterEach(() => {
+    process.exitCode = 0;
+  });
+  test("prints usage and exits 2 without --check", async () => {
+    const error = spyOn(console, "error").mockImplementation(() => undefined);
+    await run([]);
+    expect(error).toHaveBeenCalledWith("usage: emet surfaces --check <file.json | ->");
+    expect(process.exitCode).toBe(2);
+    error.mockRestore();
+  });
+  test("reports ok for disjoint surfaces", async () => {
+    const log = spyOn(console, "log").mockImplementation(() => undefined);
+    await run(["--check", fixture('{"A":["a/*.ts"],"B":["b/*.ts"]}')]);
+    expect(log).toHaveBeenCalledWith(JSON.stringify({ ok: true, overlaps: [] }));
+    expect(process.exitCode).toBe(0);
+    log.mockRestore();
+  });
+  test("reports overlaps and exits 1", async () => {
+    const log = spyOn(console, "log").mockImplementation(() => undefined);
+    const error = spyOn(console, "error").mockImplementation(() => undefined);
+    await run(["--check", fixture('{"A":["a/**"],"B":["a/x.ts"]}')]);
+    expect(error).toHaveBeenCalledWith("overlap: A (a/**) <-> B (a/x.ts)");
+    expect(String(log.mock.calls[0]?.[0])).toContain('"ok":false');
+    expect(process.exitCode).toBe(1);
+    log.mockRestore();
+    error.mockRestore();
+  });
+  test("exits 2 on invalid JSON and unreadable files", async () => {
+    const error = spyOn(console, "error").mockImplementation(() => undefined);
+    await run(["--check", fixture("not json")]);
+    expect(process.exitCode).toBe(2);
+    await run(["--check", "/nonexistent/file.json"]);
+    expect(process.exitCode).toBe(2);
+    expect(error).toHaveBeenCalledTimes(2);
+    error.mockRestore();
+  });
+});
 
 describe("globsOverlap", () => {
   test("detects overlaps", () => {

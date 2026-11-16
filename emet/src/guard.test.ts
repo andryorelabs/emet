@@ -591,3 +591,37 @@ describe("--mark-final-report phase file", () => {
     }
   });
 });
+
+function throwingInput(): PreToolUseHookInput {
+  return {
+    tool_name: "Bash",
+    get tool_input(): never {
+      throw new Error("boom");
+    },
+  };
+}
+
+function silenced<T>(action: () => Promise<T>): Promise<T> {
+  const original = console.error;
+  console.error = () => undefined;
+  return action().finally(() => {
+    console.error = original;
+  });
+}
+
+describe("evaluateGuard internal failures", () => {
+  test("allows the call when a rule throws on the claude host", async () => {
+    const verdict = await silenced(() => evaluateGuard(throwingInput(), process.pid));
+    expect(verdict.decision).toBe("allow");
+  });
+
+  test("denies the call when the codex approval gate throws", async () => {
+    const verdict = await silenced(() =>
+      evaluateGuard(throwingInput(), process.pid, { host: "codex", runsDir: "/nonexistent" }),
+    );
+    expect(verdict).toEqual({
+      decision: "deny",
+      reason: "not approved: the approval gate could not be evaluated",
+    });
+  });
+});

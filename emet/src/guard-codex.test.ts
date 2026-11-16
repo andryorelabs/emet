@@ -325,6 +325,45 @@ describe("evaluateApprovalGate git push", () => {
   });
 });
 
+describe("isGitPushCommand quoting inside substitutions", () => {
+  const pushes = [
+    "git $(echo ')' x) push",
+    'git $(echo "a\\")" x) push',
+    "git $(echo a\\)b) push",
+    "git $(echo push",
+    'git -C "a\\"b" push',
+    'git -C "$(echo x)" push',
+    'git -C "`echo x`" push',
+    'git "`echo push',
+    "git --config-env=alias.p=P p",
+  ];
+  for (const command of pushes) {
+    test(`detects ${JSON.stringify(command)}`, () => {
+      expect(isGitPushCommand(command)).toBe(true);
+    });
+  }
+});
+
+describe("evaluateApprovalGate mutation targets", () => {
+  test("denies a non-read-only Bash call and an apply_patch without paths while pending", () => {
+    const runsDir = seedRun(makeRepo(), "14");
+    const denied = { decision: "deny" as const, reason: "not approved: send approve 14" };
+    expect(evaluateApprovalGate(bashInput("touch x"), runsDir)).toEqual(denied);
+    expect(evaluateApprovalGate({ tool_name: "apply_patch" }, runsDir)).toEqual(denied);
+  });
+  test("allows apply_patch whose paths all sit under a draft directory", () => {
+    const runsDir = seedRun(makeRepo(), "14");
+    const draftFile = path.join(runsDir, "spec14", "draft", "notes.md");
+    expect(
+      evaluateApprovalGate({ tool_name: "apply_patch", paths: [draftFile] }, runsDir).decision,
+    ).toBe("allow");
+    expect(
+      evaluateApprovalGate({ tool_name: "apply_patch", paths: [draftFile, "/etc/x"] }, runsDir)
+        .decision,
+    ).toBe("deny");
+  });
+});
+
 describe("handleUserPromptSubmit", () => {
   test("approve <id> on its own line writes approval.json", () => {
     const runsDir = seedRun(makeRepo(), "12");
