@@ -1,22 +1,14 @@
 ---
 name: cut-release
-description: 'Cut an emet release: bump plugin.json, move CHANGELOG [Unreleased], open the develop to main merge-commit PR and tag main. Use when asked to release, cut a version or publish a tag.'
-allowed-tools: Bash, Read, Edit
+description: Cut a release of this project. Use when the user asks to release, tag or publish a new version.
 ---
 
-# Cut a release
+# Cutting a release
 
-The full runbook is [docs/how-to/cut-a-release.md](../../../docs/how-to/cut-a-release.md). Read it first; this skill is the short form.
-
-## Steps
-
-1. Confirm the version `X.Y.Z` with the user (Semantic Versioning) and that `develop` holds everything to ship.
-2. Branch `chore/release-vX.Y.Z` from `develop`.
-3. Set `version` in `.claude-plugin/plugin.json` to `X.Y.Z`, then run `bun run build:codex` to bump `.codex-plugin/plugin.json` (`tools/build-codex.test.ts` fails otherwise).
-4. In `CHANGELOG.md`, rename `## [Unreleased]` to `## [X.Y.Z] - <today>` and add an empty `## [Unreleased]` above it. In the link refs at the end of the file, add `[X.Y.Z]: https://github.com/andryorelabs/emet/compare/vPREV...vX.Y.Z` and point `[Unreleased]` at `vX.Y.Z...HEAD` (`tools/changelog-links.test.ts` fails otherwise).
-5. Add the `## X.Y.Z` section, translated, to the nine `apps/site/src/content/translations/<locale>/whats-new.md` files. Run `bun run translations:status` and set the `sourceHash` it prints in each file until it reports `translations: all current` (the `Test` job fails on a stale translation otherwise).
-6. Run `bun run check` and `bun run test`, then commit with the `git-commit` skill and open a PR into `develop`.
-7. Open the `develop` to `main` PR and merge it with a merge commit once `CI passed` is green. Never squash or rebase it.
-8. Tag the merge commit on `main` with a signed tag, `git tag -s vX.Y.Z -m "vX.Y.Z"`, check it with `git tag -v vX.Y.Z` and push the tag. The Release workflow verifies CI and publishes.
-
-Ask the user before pushing the tag or merging the PR. Never push to `main` or `develop` directly.
+1. Read the release runbook (`docs/how-to/cut-a-release.md` when it exists) and follow it; this skill only orders the steps.
+2. Confirm the working tree is clean and you are on the trunk branch, up to date with the remote.
+3. Run the full local check script (`bun run ci:local` when it exists, otherwise `check` and `test`) and stop on any failure.
+4. Check that `[Unreleased]` in `CHANGELOG.md` has entries. If the project's release script moves them into a dated section for the new version, leave that to the script; otherwise move them by hand.
+5. Bump the version with the project's release script, never by hand, and open the release pull request.
+6. After the pull request merges, tag the merge commit as `v<version>` and push the tag. Never move or reuse a tag.
+7. Verify the published artifacts against their checksums, then report the version and the links.
