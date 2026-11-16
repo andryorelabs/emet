@@ -4,3 +4,6 @@ contact_links:
   - name: Security Vulnerability
     url: https://github.com/andryorelabs/emet/security/advisories/new
     about: Report vulnerabilities privately via GitHub Security Advisories.
+  - name: Support and Docs
+    url: https://github.com/andryorelabs/emet/blob/main/.github/SUPPORT.md
+    about: Read the documentation and find where to get help with using emet.
