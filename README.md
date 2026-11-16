@@ -17,6 +17,8 @@
 
 [Website](https://emet.andryore.dev) · [Documentation](docs/README.md)
 
+[Changelog](CHANGELOG.md) · [Contributing](CONTRIBUTING.md) · [Security](.github/SECURITY.md) · [Support](.github/SUPPORT.md)
+
 </div>
 
 emet is a plugin for Claude Code and Codex. It takes a feature from idea to merged change: interview, spec, tickets, one approval, then parallel workers implement and test in isolated worktrees. Each wave gets a review, CI must be green before merge, and nothing merges when something is flagged.
@@ -39,7 +41,7 @@ Erase one letter and it stops; here, nothing merges when something is flagged.
 
 <img src="docs/brand/mascot/mascot-work.svg" alt="emet mascot, working" width="96" align="right">
 
-Requirements: Claude Code or the Codex CLI, `git`, `gh` (authenticated) and the `mattpocock-skills` plugin, on Linux or macOS. Bun is needed only for a source install.
+Requirements: Claude Code or the Codex CLI, `git`, `gh` (authenticated) and the `mattpocock-skills` plugin. Bun is needed only for a source install. See [Requirements](#requirements).
 
 1. On Claude Code (no Bun needed):
 
@@ -93,6 +95,12 @@ Requirements: Claude Code or the Codex CLI, `git`, `gh` (authenticated) and the 
 
 More in [Getting started](docs/guide/getting-started.md). If `doctor` reports a problem, see [troubleshooting](docs/troubleshooting.md).
 
+## Requirements
+
+### Supported platforms
+
+Linux and macOS. Windows is supported only through WSL. See [ADR-0007](docs/adr/0007-macos-support.md) and the [dependencies reference](docs/reference/dependencies.md).
+
 ## Mascot (optional)
 
 <img src="docs/brand/mascot/mascot-work.svg" alt="emet mascot, working" width="96">
@@ -114,11 +122,26 @@ Options and the Orca import are in the [mascot how-to](docs/how-to/mascot.md).
 
 On Claude Code, emet picks a model and a reasoning effort per role automatically: Opus plans, Sonnet coordinates and implements, Opus reviews by risk tier, and Haiku triages CI logs. On Codex, it uses the `codex.models` defaults instead. The role table, the `review.highRiskPaths` rule and what you set once are in [Models and effort](docs/guide/models-and-effort.md).
 
+## Safety
+
+emet registers a `PreToolUse` guard in [`hooks/hooks.json`](hooks/hooks.json). It runs `emet guard` before every Bash, Skill, ScheduleWakeup and file-edit tool call, and blocks the ones that break the run's rules. See [Security](docs/security.md) for the threat model.
+
+## Verify a release
+
+Each release publishes the `emet-*` binaries and a `SHA256SUMS` file with build provenance. Download the binary and `SHA256SUMS` from the [release](https://github.com/andryorelabs/emet/releases), then:
+
+```bash
+sha256sum -c SHA256SUMS --ignore-missing
+gh attestation verify emet-linux-x64 --repo andryorelabs/emet
+```
+
+Use the file name of your platform: `emet-linux-x64`, `emet-linux-arm64`, `emet-darwin-x64` or `emet-darwin-arm64`. On macOS use `shasum -a 256 -c SHA256SUMS --ignore-missing`.
+
 ## Documentation
 
 - Guide: [getting started](docs/guide/getting-started.md), [trackers and landing](docs/guide/trackers-and-landing.md), [models and effort](docs/guide/models-and-effort.md), [fleet check](docs/guide/fleet.md), [Codex](docs/guide/codex.md)
 - Reference: [configuration](docs/reference/configuration.md), [CLI](docs/reference/cli.md), [dependencies](docs/reference/dependencies.md)
-- Project: [architecture](docs/architecture.md), [troubleshooting](docs/troubleshooting.md), [documentation index](docs/README.md), [changelog](CHANGELOG.md)
+- Project: [architecture](docs/architecture.md), [troubleshooting](docs/troubleshooting.md), [documentation index](docs/README.md), [changelog](CHANGELOG.md), [product](PRODUCT.md), [roadmap](ROADMAP.md), [design](DESIGN.md), [accessibility](ACCESSIBILITY.md)
 
 ## Contributing
 
