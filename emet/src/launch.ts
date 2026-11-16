@@ -70,7 +70,7 @@ interface AgentRow {
 
 const LAUNCH_TIMEOUT_MS = 15_000;
 
-const defaultRunner: CommandRunner = async (command, options) => {
+export const defaultRunner: CommandRunner = async (command, options) => {
   try {
     const child = Bun.spawn([...command], {
       ...optionalProperty("cwd", options?.cwd),
@@ -269,7 +269,7 @@ export function launchSettingsFor(config: ForgeConfig): {
 
 const USAGE = `usage: ${BINARY} launch <spec-id> --wave <n>`;
 
-export async function run(argv: string[]): Promise<void> {
+export async function run(argv: string[], runner: CommandRunner = defaultRunner): Promise<void> {
   try {
     if (argv.length === 0 || argv.includes("--help")) {
       console.error(USAGE);
@@ -299,7 +299,7 @@ export async function run(argv: string[]): Promise<void> {
         launcher: settings.launcher,
         permissionMode: settings.permissionMode,
       },
-      defaultRunner,
+      runner,
       settings.host,
     );
     console.log(JSON.stringify(outcome));

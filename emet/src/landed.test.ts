@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
-import { mkdtempSync, realpathSync, rmSync, writeFileSync } from "node:fs";
+import { chmodSync, mkdirSync, mkdtempSync, realpathSync, rmSync, writeFileSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
 
@@ -195,6 +195,98 @@ describe("resolveLandedVerdict falling back to git", () => {
       readTrackerState: () => Promise.resolve("done" as const),
     });
     expect(verdict).toBe("landed");
+  });
+
+  function writeTicket(file: string, text: string): void {
+    const directory = path.join(repo, ".scratch", "feat", "issues");
+    mkdirSync(directory, { recursive: true });
+    writeFileSync(path.join(directory, file), text);
+  }
+
+  function installFakeGh(script: string): () => void {
+    const binDirectory = path.join(repo, "fakebin");
+    mkdirSync(binDirectory);
+    const ghPath = path.join(binDirectory, "gh");
+    writeFileSync(ghPath, script);
+    chmodSync(ghPath, 0o755);
+    const previousPath = process.env.PATH;
+    process.env.PATH = `${binDirectory}:${previousPath ?? ""}`;
+    return () => {
+      process.env.PATH = previousPath;
+    };
+  }
+
+  const localConfig = { ...gitConfig, tracker: { kind: "local" as const } };
+  const githubConfig = { ...gitConfig, tracker: { kind: "github" as const } };
+
+  test("a local ticket with status done is landed", async () => {
+    writeTicket("01-first.md", "# First\n\nStatus: done\n\nbody\n");
+    const verdict = await resolveLandedVerdict(
+      { ticket: "feat-01", branch: "x" },
+      { config: localConfig },
+    );
+    expect(verdict).toBe("landed");
+  });
+
+  test("a local ticket with any other status is not landed", async () => {
+    writeTicket("02-second.md", "# Second\n\nStatus: in-progress\n\nbody\n");
+    const verdict = await resolveLandedVerdict(
+      { ticket: "feat-02", branch: "x" },
+      { config: localConfig },
+    );
+    expect(verdict).toBe("not-landed");
+  });
+
+  test("a local ticket that is missing or has no status falls back to the branch", async () => {
+    writeTicket("03-third.md", "# Third\n\nbody only\n");
+    git("checkout", "-q", "-b", "feat-03");
+    commitFile("a.txt", "a\n");
+    git("checkout", "-q", "main");
+    const statusless = await resolveLandedVerdict(
+      { ticket: "feat-03", branch: "feat-03" },
+      { config: localConfig },
+    );
+    const missing = await resolveLandedVerdict(
+      { ticket: "feat-09", branch: "feat-03" },
+      { config: localConfig },
+    );
+    expect(statusless).toBe("not-landed");
+    expect(missing).toBe("not-landed");
+  });
+
+  test("a local ticket id that is not slug-nn falls back to the branch", async () => {
+    git("checkout", "-q", "-b", "cla-9-thing");
+    commitFile("a.txt", "a\n");
+    git("checkout", "-q", "main");
+    git("merge", "-q", "--ff-only", "cla-9-thing");
+    expect(await resolveLandedVerdict(input, { config: localConfig })).toBe("landed");
+  });
+
+  test("a tracker kind without a reader falls back to the branch", async () => {
+    const verdict = await resolveLandedVerdict(input, {
+      config: { ...gitConfig, tracker: { kind: "linear" as const } },
+    });
+    expect(verdict).toBe("not-landed");
+  });
+
+  test("the github tracker reads the issue through gh on PATH", async () => {
+    const restore = installFakeGh(
+      `#!/bin/sh\necho '{"state":"CLOSED","stateReason":"COMPLETED"}'\n`,
+    );
+    try {
+      expect(await resolveLandedVerdict(input, { config: githubConfig })).toBe("landed");
+    } finally {
+      restore();
+    }
+  });
+
+  test("a failing gh binary makes the github tracker verdict unknown", async () => {
+    const restore = installFakeGh("#!/bin/sh\nexit 4\n");
+    try {
+      expect(await resolveLandedVerdict(input, { config: githubConfig })).toBe("unknown");
+    } finally {
+      restore();
+    }
   });
 
   test("an unresolvable trunk yields unknown", async () => {

@@ -472,7 +472,29 @@ function readSpecFlag(argv: readonly string[]): string | null {
   return value && !value.startsWith("--") ? value : null;
 }
 
-export async function run(argv: string[]): Promise<void> {
+/** Collaborators of {@link run}; each default keeps today's behaviour. */
+export interface StatusDeps {
+  readonly resolveRepoRoot: typeof resolveRepoRoot;
+  readonly listOccupiedSlots: typeof listOccupiedSlots;
+  readonly listReservations: typeof listReservations;
+  readonly listWorktreeEntries: typeof listWorktreeEntries;
+  readonly fetchPullRequests: typeof fetchPullRequests;
+  readonly resolveAgentHost: typeof resolveAgentHost;
+  readonly findStalledTranscripts: typeof findStalledTranscripts;
+}
+
+const DEFAULT_STATUS_DEPS: StatusDeps = {
+  resolveRepoRoot,
+  listOccupiedSlots,
+  listReservations,
+  listWorktreeEntries,
+  fetchPullRequests,
+  resolveAgentHost,
+  findStalledTranscripts,
+};
+
+export async function run(argv: string[], overrides: Partial<StatusDeps> = {}): Promise<void> {
+  const deps: StatusDeps = { ...DEFAULT_STATUS_DEPS, ...overrides };
   if (argv.includes("--help") || argv.includes("-h")) {
     console.log(STATUS_USAGE);
     return;
@@ -484,23 +506,23 @@ export async function run(argv: string[]): Promise<void> {
       return;
     }
     const spec = readSpecFlag(argv);
-    const repoRoot = await resolveRepoRoot();
+    const repoRoot = await deps.resolveRepoRoot();
     if (!repoRoot) {
       console.error(`${BINARY} status: not inside a git repository`);
       process.exitCode = 2;
       return;
     }
     const { config } = await loadForgeConfigWithDefaults(repoRoot);
-    const host = resolveAgentHost(resolveAgentHostName(config));
+    const host = deps.resolveAgentHost(resolveAgentHostName(config));
     const localLanding = config.landing.mode === "merge";
     const [slots, reservations, entries] = await Promise.all([
-      listOccupiedSlots(),
-      listReservations(),
-      listWorktreeEntries(),
+      deps.listOccupiedSlots(),
+      deps.listReservations(),
+      deps.listWorktreeEntries(),
     ]);
     const pullRequests = localLanding
       ? await localLandedBranches(entries, config)
-      : await fetchPullRequests();
+      : await deps.fetchPullRequests();
     const runVerdicts = new Map<string, RunVerdict>();
     for (const slot of slots) runVerdicts.set(slot.holder.runId, slot.verdict);
     for (const reservation of reservations) {
@@ -529,7 +551,7 @@ export async function run(argv: string[]): Promise<void> {
       const transcript = await newestTranscript(entry.directory, host);
       if (!transcript) continue;
       // oxlint-disable-next-line eslint/no-await-in-loop -- sequential on purpose: later iterations depend on earlier ones or on output order
-      const stalled = await findStalledTranscripts(
+      const stalled = await deps.findStalledTranscripts(
         [transcript],
         Date.now(),
         thresholds,
