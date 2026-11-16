@@ -11,7 +11,7 @@ function swapTitle<Entry extends HeadEntry>(entry: Entry, title: string, seoTitl
   if (entry.tag === "title" && entry.content?.startsWith(title)) {
     return { ...entry, content: seoTitle + entry.content.slice(title.length) };
   }
-  const isOpenGraphTitle = entry.tag === "meta" && entry.attrs?.["property"] === "og:title";
+  const isOpenGraphTitle = entry.tag === "meta" && entry.attrs?.property === "og:title";
   return isOpenGraphTitle ? { ...entry, attrs: { ...entry.attrs, content: seoTitle } } : entry;
 }
 
@@ -35,11 +35,11 @@ export function applySeoTitle<Entry extends HeadEntry>(
 function tagKey(entry: HeadEntry): string | undefined {
   const attrs = entry.attrs ?? {};
   if (entry.tag === "meta") {
-    const name = attrs["property"] ?? attrs["name"];
+    const name = attrs.property ?? attrs.name;
     return typeof name === "string" ? `meta:${name}` : undefined;
   }
-  if (entry.tag === "link" && typeof attrs["rel"] === "string") {
-    return `link:${attrs["rel"]}:${attrs["href"] ?? ""}`;
+  if (entry.tag === "link" && typeof attrs.rel === "string") {
+    return `link:${attrs.rel}:${attrs.href ?? ""}`;
   }
   return undefined;
 }

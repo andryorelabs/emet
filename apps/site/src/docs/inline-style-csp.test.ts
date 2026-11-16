@@ -28,7 +28,7 @@ async function readOrigin(attemptsLeft = STARTUP_ATTEMPTS): Promise<string> {
   const log = await Bun.file(DEV_SERVER_LOG)
     .text()
     .catch(() => "");
-  const port = DEV_SERVER_URL.exec(log)?.groups?.["port"];
+  const port = DEV_SERVER_URL.exec(log)?.groups?.port;
   if (port) return `http://localhost:${port}`;
   if (attemptsLeft <= 1) throw new Error(`the Astro dev server did not start:\n${log}`);
   await Bun.sleep(FETCH_RETRY_DELAY_MS);
@@ -78,7 +78,7 @@ afterAll(async () => {
 describe("inline style attributes on the docs pages", () => {
   test("every one is covered by the style-src-attr hashes", async () => {
     const entry = await fetchPage("/docs/guide/getting-started/");
-    const linked = [...entry.matchAll(DOCS_LINK)].map(({ groups }) => groups?.["path"] ?? "");
+    const linked = [...entry.matchAll(DOCS_LINK)].map(({ groups }) => groups?.path ?? "");
     const pages = [...new Set([...linked, ...EXTRA_PAGES])].filter((page) => page.length > 0);
     expect(pages.length).toBeGreaterThan(3);
 
@@ -88,7 +88,7 @@ describe("inline style attributes on the docs pages", () => {
     );
     const uncovered = rendered.flatMap(({ page, html }) =>
       [...html.matchAll(STYLE_ATTRIBUTE)]
-        .map(({ groups }) => groups?.["value"] ?? "")
+        .map(({ groups }) => groups?.value ?? "")
         .filter((value) => !allowed.has(hashOf(value)))
         .map((value) => `${page}: ${value}`),
     );

@@ -12,7 +12,7 @@ describe("applySeoTitle", () => {
   test("swaps the title and og:title but keeps the site suffix", () => {
     const result = applySeoTitle(HEAD, "Fleet check", "Fleet Check: Audit Several Repos");
     expect(result[0]?.content).toBe("Fleet Check: Audit Several Repos | emet");
-    expect(result[1]?.attrs?.["content"]).toBe("Fleet Check: Audit Several Repos");
+    expect(result[1]?.attrs?.content).toBe("Fleet Check: Audit Several Repos");
     expect(result[2]).toEqual(HEAD[2]);
   });
 
@@ -30,8 +30,8 @@ describe("mergeMissingTags", () => {
     ];
     const result = mergeMissingTags<HeadEntry>(HEAD, extra);
     expect(result).toHaveLength(HEAD.length + 2);
-    expect(result.filter((entry) => entry.attrs?.["property"] === "og:title")).toHaveLength(1);
-    expect(result.some((entry) => entry.attrs?.["property"] === "og:image")).toBe(true);
-    expect(result.some((entry) => entry.attrs?.["rel"] === "manifest")).toBe(true);
+    expect(result.filter((entry) => entry.attrs?.property === "og:title")).toHaveLength(1);
+    expect(result.some((entry) => entry.attrs?.property === "og:image")).toBe(true);
+    expect(result.some((entry) => entry.attrs?.rel === "manifest")).toBe(true);
   });
 });

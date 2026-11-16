@@ -74,7 +74,7 @@ function renderCommand(command: TypedCommand, chars: number): void {
 
 function linesOf(block: Element): HTMLElement[] {
   if (block instanceof HTMLPreElement) {
-    const lines = (block.textContent ?? "").split("\n");
+    const lines = block.textContent.split("\n");
     block.textContent = "";
     return lines.map((line, index) => {
       const element = document.createElement("span");
@@ -90,7 +90,7 @@ function prepareExchange(exchange: Element): TypedExchange | undefined {
   const blocks = [...exchange.querySelectorAll(".emet-code, .fragment pre.terminal")];
   const first = blocks[0];
   const hasCommand = first?.classList.contains("emet-code") === true;
-  const command = hasCommand && first ? prepareCommand(first) : undefined;
+  const command = hasCommand ? prepareCommand(first) : undefined;
   const outputs = blocks.slice(hasCommand ? 1 : 0).map((block) => linesOf(block));
   if (!command && outputs.length === 0) return undefined;
   const commandChars = command ? command.texts.join("").length : 0;

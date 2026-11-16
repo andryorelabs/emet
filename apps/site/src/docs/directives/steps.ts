@@ -7,7 +7,7 @@ import type { ContainerDirectiveNode, MdastNode } from "./index";
  * @returns The `<ol>` node, or `undefined` when there is no ordered list.
  */
 export function steps(node: ContainerDirectiveNode): MdastNode | undefined {
-  const list = node.children.find((child) => child.type === "list" && child["ordered"] === true);
+  const list = node.children.find((child) => child.type === "list" && child.ordered === true);
   if (!list) return undefined;
   return {
     type: "paragraph",

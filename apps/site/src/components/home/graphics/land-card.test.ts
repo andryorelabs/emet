@@ -19,8 +19,14 @@ class ImmediateObserver {
   observe(target: Element): void {
     this.callback([{ target, isIntersecting: true }]);
   }
-  unobserve(): void {}
-  disconnect(): void {}
+  readonly unobserved: Element[] = [];
+  disconnected = false;
+  unobserve(target: Element): void {
+    this.unobserved.push(target);
+  }
+  disconnect(): void {
+    this.disconnected = true;
+  }
 }
 
 function install(reducedMotion: boolean): void {
@@ -52,18 +58,18 @@ describe("landing card", () => {
   test("arms the card, ticks the tickets, then lands", () => {
     install(false);
     initLandCard(document);
-    expect(card().dataset["land"]).toBe("armed");
+    expect(card().dataset.land).toBe("armed");
     const [tick, land] = timers.toSorted((first, second) => first.ms - second.ms);
     tick?.callback();
-    expect(card().dataset["land"]).toBe("ticking");
+    expect(card().dataset.land).toBe("ticking");
     land?.callback();
-    expect(card().dataset["land"]).toBe("landed");
+    expect(card().dataset.land).toBe("landed");
   });
 
   test("leaves the markup untouched with reduced motion", () => {
     install(true);
     initLandCard(document);
-    expect(card().dataset["land"]).toBe("");
+    expect(card().dataset.land).toBe("");
     expect(timers).toHaveLength(0);
   });
 });

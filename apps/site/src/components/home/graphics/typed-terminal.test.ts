@@ -42,8 +42,14 @@ class ImmediateObserver {
   observe(target: Element): void {
     this.callback([{ target, isIntersecting: true }]);
   }
-  unobserve(): void {}
-  disconnect(): void {}
+  readonly unobserved: Element[] = [];
+  disconnected = false;
+  unobserve(target: Element): void {
+    this.unobserved.push(target);
+  }
+  disconnect(): void {
+    this.disconnected = true;
+  }
 }
 
 function install(reducedMotion: boolean): void {
