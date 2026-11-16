@@ -8,6 +8,7 @@ import {
   resolveRepoRoot,
   type ForgeConfig,
 } from "./config";
+import { activeEnvName, readEnv } from "./env";
 import {
   didAcquireLock,
   type LockHolder,
@@ -15,7 +16,7 @@ import {
   readLockHolderAs,
   releaseLock,
 } from "./locks";
-import { CONFIG_FILE, LEGACY_PRODUCT, readEnv, stateDir } from "./names";
+import { CONFIG_FILE, LEGACY_PRODUCT, stateDir } from "./names";
 import { writePhase } from "./phase";
 import {
   checkMemoryHeadroom,
@@ -349,7 +350,7 @@ function requireFlagValue(argv: readonly string[], flag: string): string {
  * var is unset.
  */
 export function resolveMaxLiveWorkers(config: ForgeConfig): number {
-  const raw = readEnv("MAX_LIVE_WORKERS");
+  const raw = readEnv("EMET_MAX_LIVE_WORKERS");
   if (raw !== undefined) {
     if (raw === "auto") {
       return computeAutoMaxLiveWorkers(readHostResources(), resolveAutoCapOptionsFromEnvironment());
@@ -450,10 +451,8 @@ async function main(config: ForgeConfig): Promise<void> {
   if (argv.includes("--list")) {
     const maxLiveWorkers = resolveMaxLiveWorkers(config);
     const capSource =
-      readEnv("MAX_LIVE_WORKERS") !== undefined
-        ? process.env.EMET_MAX_LIVE_WORKERS
-          ? "EMET_MAX_LIVE_WORKERS"
-          : "FORGE_MAX_LIVE_WORKERS"
+      readEnv("EMET_MAX_LIVE_WORKERS") !== undefined
+        ? activeEnvName("EMET_MAX_LIVE_WORKERS")
         : config.concurrency.maxLiveWorkers === "auto"
           ? "auto"
           : CONFIG_FILE;

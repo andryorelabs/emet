@@ -10,6 +10,7 @@ import {
 } from "node:fs";
 import path from "node:path";
 
+import { snapshotEnv, type Env } from "./env";
 import { isObject } from "./narrow";
 
 /** What `spawnCodex` starts: a `codex` invocation whose events are captured as JSONL. */
@@ -23,7 +24,7 @@ export interface CodexSpawn {
   readonly jsonlPath: string;
   /** Where the identity (thread id, JSONL path) and the auxiliary pid are recorded. */
   readonly stateFile: string;
-  readonly env?: NodeJS.ProcessEnv;
+  readonly env?: Env;
   /** The executable to start; `codex` when absent. */
   readonly executable?: string;
 }
@@ -39,7 +40,7 @@ export interface ProcessIo {
     args: readonly string[],
     options: {
       readonly cwd: string;
-      readonly env: NodeJS.ProcessEnv;
+      readonly env: Env;
       readonly stdio: readonly ["ignore", number, number];
       readonly detached: boolean;
     },
@@ -145,7 +146,7 @@ export function spawnCodex(
       {
         cwd: spec.cwd,
         env: {
-          ...process.env,
+          ...snapshotEnv(),
           ...spec.env,
           CODEX_HOME: spec.codexHome,
           EMET_AGENT_HOST: "codex",
