@@ -1,27 +1,88 @@
 import { readdirSync, readFileSync } from "node:fs";
 import path from "node:path";
 
-/**
- * Repository settings the standard requires, in the shape `gh api
- * repos/{owner}/{repo}` returns them.
- */
-export const EXPECTED_REPO_SETTINGS = {
-  allow_squash_merge: true,
-  allow_merge_commit: true,
-  allow_rebase_merge: false,
-  delete_branch_on_merge: true,
-  allow_auto_merge: true,
-  allow_update_branch: true,
-  squash_merge_commit_title: "PR_TITLE",
-  squash_merge_commit_message: "PR_BODY",
-  has_wiki: false,
-  has_projects: false,
-  security_and_analysis: {
-    secret_scanning: { status: "enabled" },
-    secret_scanning_push_protection: { status: "enabled" },
-  },
-} as const;
+type FeatureStatus = "enabled" | "disabled";
 
+/**
+ * The repository settings kept as code in `.github/repo-settings.json`. Each
+ * key is a setting a maintainer applies by hand; `repo-settings:check` only
+ * reads the live value and reports drift.
+ */
+export interface RepoSettings {
+  description: string;
+  homepage: string;
+  default_branch: string;
+  topics: string[];
+  allow_squash_merge: boolean;
+  allow_merge_commit: boolean;
+  allow_rebase_merge: boolean;
+  squash_merge_commit_title: string;
+  squash_merge_commit_message: string;
+  merge_commit_title: string;
+  merge_commit_message: string;
+  delete_branch_on_merge: boolean;
+  allow_auto_merge: boolean;
+  allow_update_branch: boolean;
+  has_wiki: boolean;
+  has_projects: boolean;
+  has_discussions: boolean;
+  secret_scanning: FeatureStatus;
+  secret_scanning_push_protection: FeatureStatus;
+  dependabot_alerts: boolean;
+  dependabot_security_updates: FeatureStatus;
+  private_vulnerability_reporting: boolean;
+  default_workflow_permissions: "read" | "write";
+  can_approve_pull_request_reviews: boolean;
+  fork_pr_contributor_approval: string;
+  code_scanning_default_setup: "configured" | "not-configured";
+}
+
+/** The outcome of one `gh api` call. */
+export interface GhResult {
+  ok: boolean;
+  stdout: string;
+  stderr: string;
+}
+
+/** Runs `gh api <endpoint>` as a read; injected so tests never touch the network. */
+type GhApi = (endpoint: string) => GhResult;
+
+/** The type a settings key must hold: a primitive, a string list, or one of fixed strings. */
+type SettingKind = "string" | "boolean" | "string[]" | readonly string[];
+
+const FEATURE_STATUSES = ["enabled", "disabled"] as const;
+
+/** The kind of every key of `RepoSettings`, used to validate the settings file. */
+const SETTING_KINDS: Record<keyof RepoSettings, SettingKind> = {
+  description: "string",
+  homepage: "string",
+  default_branch: "string",
+  topics: "string[]",
+  allow_squash_merge: "boolean",
+  allow_merge_commit: "boolean",
+  allow_rebase_merge: "boolean",
+  squash_merge_commit_title: "string",
+  squash_merge_commit_message: "string",
+  merge_commit_title: "string",
+  merge_commit_message: "string",
+  delete_branch_on_merge: "boolean",
+  allow_auto_merge: "boolean",
+  allow_update_branch: "boolean",
+  has_wiki: "boolean",
+  has_projects: "boolean",
+  has_discussions: "boolean",
+  secret_scanning: FEATURE_STATUSES,
+  secret_scanning_push_protection: FEATURE_STATUSES,
+  dependabot_alerts: "boolean",
+  dependabot_security_updates: FEATURE_STATUSES,
+  private_vulnerability_reporting: "boolean",
+  default_workflow_permissions: ["read", "write"],
+  can_approve_pull_request_reviews: "boolean",
+  fork_pr_contributor_approval: "string",
+  code_scanning_default_setup: ["configured", "not-configured"],
+};
+
+const DEFAULT_SETTINGS_FILE = path.join(import.meta.dir, "..", ".github", "repo-settings.json");
 const REPO_ENDPOINT = "repos/{owner}/{repo}";
 const RULESETS_ENDPOINT = `${REPO_ENDPOINT}/rulesets`;
 
@@ -33,6 +94,68 @@ type JsonRecord = Record<string, unknown>;
 /** Whether `value` is a plain JSON object. */
 function isRecord(value: unknown): value is JsonRecord {
   return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+/** Whether `key` names a setting of `RepoSettings`. */
+function isSettingKey(key: string): key is keyof RepoSettings {
+  return Object.hasOwn(SETTING_KINDS, key);
+}
+
+/** Why `value` does not fit `kind`, or `undefined` when it does. */
+function kindMismatch(value: unknown, kind: SettingKind): string | undefined {
+  if (typeof kind !== "string") {
+    return typeof value === "string" && kind.includes(value)
+      ? undefined
+      : `expected one of ${kind.map((option) => JSON.stringify(option)).join(", ")}`;
+  }
+  if (kind === "string[]") {
+    return Array.isArray(value) && value.every((item) => typeof item === "string")
+      ? undefined
+      : "expected a list of strings";
+  }
+  return typeof value === kind ? undefined : `expected ${kind}`;
+}
+
+/** Every problem with `parsed` as a settings file, one line per key. */
+function settingsProblems(parsed: JsonRecord): string[] {
+  const problems: string[] = [];
+  for (const key of Object.keys(parsed)) {
+    if (!isSettingKey(key)) {
+      problems.push(`${key}: unknown key`);
+    }
+  }
+  for (const [key, kind] of Object.entries(SETTING_KINDS)) {
+    if (!(key in parsed)) {
+      problems.push(`${key}: missing`);
+      continue;
+    }
+    const mismatch = kindMismatch(parsed[key], kind);
+    if (mismatch !== undefined) {
+      problems.push(`${key}: ${mismatch}`);
+    }
+  }
+  return problems;
+}
+
+/** Whether `parsed` holds exactly the keys of `RepoSettings`, each of the right kind. */
+function isRepoSettings(parsed: JsonRecord): parsed is JsonRecord & RepoSettings {
+  return settingsProblems(parsed).length === 0;
+}
+
+/**
+ * Reads and validates the expected repository settings from `file`, which
+ * defaults to `.github/repo-settings.json`. Throws naming every unknown,
+ * missing or mistyped key.
+ */
+export function loadExpectedSettings(file: string = DEFAULT_SETTINGS_FILE): RepoSettings {
+  const parsed: unknown = JSON.parse(readFileSync(file, "utf8"));
+  if (!isRecord(parsed)) {
+    throw new TypeError(`${file} is not a JSON object`);
+  }
+  if (!isRepoSettings(parsed)) {
+    throw new TypeError(`${file} is not valid:\n${settingsProblems(parsed).join("\n")}`);
+  }
+  return parsed;
 }
 
 /** The identity of a list element: its `type`, `context` or `name`. */
@@ -131,14 +254,134 @@ function diffAt(location: string, live: unknown, expected: unknown): string[] {
 }
 
 /**
- * Compares live settings with the expected ones and returns one line per
- * differing key. Every expected key must be present in `live` with the same
- * value; keys only `live` has are ignored. Lists of objects are matched by
- * their `type`, `context` or `name`, so order is not drift, but an element
- * missing from or added to the live list is.
+ * Compares live repository settings, as `readLiveSettings` returns them, with
+ * the expected ones and returns one line per differing key. Keys only `live`
+ * has are ignored, and the order of `topics` is not drift.
  */
-export function diffSettings(live: unknown, expected: unknown): string[] {
+export function diffSettings(expected: RepoSettings, live: unknown): readonly string[] {
   return diffAt("", live, expected);
+}
+
+/**
+ * Compares a live ruleset with its file and returns one line per differing
+ * key. Keys only `live` has are ignored. Lists of objects are matched by their
+ * `type`, `context` or `name`, so order is not drift, but an element missing
+ * from or added to the live list is.
+ */
+export function diffRuleset(expected: unknown, live: unknown): readonly string[] {
+  return diffAt("", live, expected);
+}
+
+/** Whether a failed call answered 404, which some endpoints use to mean "off". */
+function isNotFound(result: GhResult): boolean {
+  return /\b404\b|Not Found/i.test(result.stderr);
+}
+
+/** Parses the output of a successful call, failing with the endpoint named. */
+function parseResult(endpoint: string, result: GhResult): unknown {
+  if (!result.ok) {
+    throw new Error(`gh api ${endpoint} failed: ${result.stderr.trim() || "no output"}`);
+  }
+  try {
+    const parsed: unknown = JSON.parse(result.stdout);
+    return parsed;
+  } catch {
+    throw new Error(`gh api ${endpoint} did not return JSON`);
+  }
+}
+
+/** Calls `endpoint` and returns its JSON object. */
+function readObject(callGh: GhApi, endpoint: string): JsonRecord {
+  const parsed = parseResult(endpoint, callGh(endpoint));
+  if (!isRecord(parsed)) {
+    throw new TypeError(`gh api ${endpoint} did not return an object`);
+  }
+  return parsed;
+}
+
+/** `security_and_analysis.<feature>.status` of the repository payload, if present. */
+function featureStatus(repository: JsonRecord, feature: string): unknown {
+  const analysis = repository.security_and_analysis;
+  const entry = isRecord(analysis) ? analysis[feature] : undefined;
+  return isRecord(entry) ? entry.status : undefined;
+}
+
+/**
+ * Whether Dependabot alerts are on. The endpoint answers 204 when they are and
+ * 404 when they are not; any other failure is unreadable, not "off".
+ */
+function readDependabotAlerts(callGh: GhApi): boolean {
+  const endpoint = `${REPO_ENDPOINT}/vulnerability-alerts`;
+  const result = callGh(endpoint);
+  if (result.ok) {
+    return true;
+  }
+  if (isNotFound(result)) {
+    return false;
+  }
+  throw new Error(`gh api ${endpoint} failed: ${result.stderr.trim() || "no output"}`);
+}
+
+/** Whether Dependabot security updates are on, read from `automated-security-fixes`. */
+function readDependabotSecurityUpdates(callGh: GhApi): FeatureStatus {
+  const fixes = readObject(callGh, `${REPO_ENDPOINT}/automated-security-fixes`);
+  return fixes.enabled === true ? "enabled" : "disabled";
+}
+
+/**
+ * The code scanning default setup state. A 404 means code scanning was never
+ * configured; any other failure is unreadable, not "not configured".
+ */
+function readCodeScanningSetup(callGh: GhApi): unknown {
+  const endpoint = `${REPO_ENDPOINT}/code-scanning/default-setup`;
+  const result = callGh(endpoint);
+  if (!result.ok && isNotFound(result)) {
+    return "not-configured";
+  }
+  return readObject(() => result, endpoint).state;
+}
+
+/**
+ * Reads the live repository settings through `callGh`, under the keys of
+ * `RepoSettings`. A value the API does not return stays `undefined`, so
+ * `diffSettings` reports it as missing. It only reads.
+ */
+export function readLiveSettings(callGh: GhApi): Record<keyof RepoSettings, unknown> {
+  const repository = readObject(callGh, REPO_ENDPOINT);
+  const reporting = readObject(callGh, `${REPO_ENDPOINT}/private-vulnerability-reporting`);
+  const workflow = readObject(callGh, `${REPO_ENDPOINT}/actions/permissions/workflow`);
+  const approval = readObject(
+    callGh,
+    `${REPO_ENDPOINT}/actions/permissions/fork-pr-contributor-approval`,
+  );
+  return {
+    description: repository.description,
+    homepage: repository.homepage,
+    default_branch: repository.default_branch,
+    topics: repository.topics,
+    allow_squash_merge: repository.allow_squash_merge,
+    allow_merge_commit: repository.allow_merge_commit,
+    allow_rebase_merge: repository.allow_rebase_merge,
+    squash_merge_commit_title: repository.squash_merge_commit_title,
+    squash_merge_commit_message: repository.squash_merge_commit_message,
+    merge_commit_title: repository.merge_commit_title,
+    merge_commit_message: repository.merge_commit_message,
+    delete_branch_on_merge: repository.delete_branch_on_merge,
+    allow_auto_merge: repository.allow_auto_merge,
+    allow_update_branch: repository.allow_update_branch,
+    has_wiki: repository.has_wiki,
+    has_projects: repository.has_projects,
+    has_discussions: repository.has_discussions,
+    secret_scanning: featureStatus(repository, "secret_scanning"),
+    secret_scanning_push_protection: featureStatus(repository, "secret_scanning_push_protection"),
+    dependabot_alerts: readDependabotAlerts(callGh),
+    dependabot_security_updates: readDependabotSecurityUpdates(callGh),
+    private_vulnerability_reporting: reporting.enabled,
+    default_workflow_permissions: workflow.default_workflow_permissions,
+    can_approve_pull_request_reviews: workflow.can_approve_pull_request_reviews,
+    fork_pr_contributor_approval: approval.approval_policy,
+    code_scanning_default_setup: readCodeScanningSetup(callGh),
+  };
 }
 
 /** The rulesets stored as code in `rulesetsDir`, keyed by file name. */
@@ -154,10 +397,10 @@ function readExpectedRulesets(rulesetsDir: string): JsonRecord {
 }
 
 /** The id of each live ruleset, keyed by its name. */
-function readLiveRulesetIds(readApi: (endpoint: string) => unknown): Map<string, number> {
-  const listing = readApi(RULESETS_ENDPOINT);
+function readLiveRulesetIds(callGh: GhApi): Map<string, number> {
+  const listing = parseResult(RULESETS_ENDPOINT, callGh(RULESETS_ENDPOINT));
   if (!Array.isArray(listing)) {
-    throw new TypeError(`${RULESETS_ENDPOINT} did not return a list`);
+    throw new TypeError(`gh api ${RULESETS_ENDPOINT} did not return a list`);
   }
   const ids = new Map<string, number>();
   for (const entry of listing) {
@@ -168,29 +411,20 @@ function readLiveRulesetIds(readApi: (endpoint: string) => unknown): Map<string,
   return ids;
 }
 
-/**
- * Reads the live repository settings and rulesets through `readApi` and
- * returns one line per key that differs from `EXPECTED_REPO_SETTINGS` or from
- * the ruleset files in `rulesetsDir`. It only reads; applying is the
- * maintainer's job.
- */
-export function checkRepoSettings(
-  readApi: (endpoint: string) => unknown,
-  rulesetsDir: string,
-): string[] {
+/** Drift between the ruleset files in `rulesetsDir` and the live rulesets. */
+function checkRulesets(callGh: GhApi, rulesetsDir: string): string[] {
   const expectedRulesets = readExpectedRulesets(rulesetsDir);
-  const liveRulesetIds = readLiveRulesetIds(readApi);
-  const liveRulesets: JsonRecord = {};
-  for (const name of Object.keys(expectedRulesets)) {
+  const liveRulesetIds = readLiveRulesetIds(callGh);
+  const drift: string[] = [];
+  for (const [name, expected] of Object.entries(expectedRulesets)) {
     const id = liveRulesetIds.get(name);
-    if (id !== undefined) {
-      liveRulesets[name] = readApi(`${RULESETS_ENDPOINT}/${id}`);
+    if (id === undefined) {
+      drift.push(`rulesets.${name}: missing`);
+      continue;
     }
+    const live = readObject(callGh, `${RULESETS_ENDPOINT}/${id}`);
+    drift.push(...diffRuleset(expected, live).map((line) => `rulesets.${name}.${line}`));
   }
-  const drift = diffSettings(
-    { settings: readApi(REPO_ENDPOINT), rulesets: liveRulesets },
-    { settings: EXPECTED_REPO_SETTINGS, rulesets: expectedRulesets },
-  );
   for (const name of liveRulesetIds.keys()) {
     if (!(name in expectedRulesets)) {
       drift.push(`rulesets.${name}: unexpected`);
@@ -199,14 +433,36 @@ export function checkRepoSettings(
   return drift;
 }
 
-/** Runs `gh api <endpoint>` and parses its JSON output. */
-function readGitHubApi(endpoint: string): unknown {
-  const result = Bun.spawnSync(["gh", "api", endpoint], { stdout: "pipe", stderr: "pipe" });
-  if (result.exitCode !== 0) {
-    throw new Error(`gh api ${endpoint} failed: ${result.stderr.toString().trim()}`);
-  }
-  const parsed: unknown = JSON.parse(result.stdout.toString());
-  return parsed;
+/**
+ * Reads the live repository settings and rulesets through `callGh` and returns
+ * one line per key that differs from `settingsFile` or from the ruleset files
+ * in `rulesetsDir`. It only reads; applying is the maintainer's job.
+ */
+export function checkRepoSettings(
+  callGh: GhApi,
+  rulesetsDir: string,
+  settingsFile: string = DEFAULT_SETTINGS_FILE,
+): string[] {
+  const expected = loadExpectedSettings(settingsFile);
+  const settingsDrift = diffSettings(expected, readLiveSettings(callGh)).map(
+    (line) => `settings.${line}`,
+  );
+  return [...settingsDrift, ...checkRulesets(callGh, rulesetsDir)];
+}
+
+/** The `gh` argv that reads `endpoint`. The method is pinned to GET so it never writes. */
+export function ghApiArgs(endpoint: string): string[] {
+  return ["gh", "api", "--method", "GET", endpoint];
+}
+
+/** Runs `gh api` for real as a GET. */
+function readGitHubApi(endpoint: string): GhResult {
+  const result = Bun.spawnSync(ghApiArgs(endpoint), { stdout: "pipe", stderr: "pipe" });
+  return {
+    ok: result.exitCode === 0,
+    stdout: result.stdout.toString(),
+    stderr: result.stderr.toString(),
+  };
 }
 
 if (import.meta.main) {
@@ -216,5 +472,5 @@ if (import.meta.main) {
     process.stderr.write(`${drift.join("\n")}\n`);
     process.exit(1);
   }
-  process.stdout.write("Repository settings match the rulesets and the settings list.\n");
+  process.stdout.write("Repository settings match .github/repo-settings.json and the rulesets.\n");
 }
