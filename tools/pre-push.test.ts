@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 
-import { checkPush, parsePushLines } from "./pre-push";
+import { checkPush, gateFailureCode, parsePushLines } from "./pre-push";
 
 describe("checkPush", () => {
   test.each(["refs/heads/main", "refs/heads/develop"])("blocks pushes to %s", (remoteRef) => {
@@ -52,5 +52,20 @@ describe("parsePushLines", () => {
 
   test("ignores blank input", () => {
     expect(parsePushLines("")).toEqual([]);
+  });
+});
+
+describe("gateFailureCode", () => {
+  test("passes a successful gate", () => {
+    expect(gateFailureCode({ success: true, exitCode: 0 })).toBe(0);
+  });
+
+  test("keeps the gate's own failing code", () => {
+    expect(gateFailureCode({ success: false, exitCode: 2 })).toBe(2);
+  });
+
+  test("blocks a signal-killed gate whose exit code is null at runtime", () => {
+    const killed = Bun.spawnSync(["sh", "-c", "kill -TERM $$"]);
+    expect(gateFailureCode(killed)).toBe(1);
   });
 });
