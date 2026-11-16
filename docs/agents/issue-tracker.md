@@ -25,9 +25,8 @@ no adapter layer to keep in sync with `gh`'s own flags.
 GitHub Issues has no native priority field or workflow states. This repo uses
 label maps instead (`tracker.github` in `emet.config.json`):
 
-- `priorityLabels`: empty — this repo doesn't prioritize, so tickets order by
-  `createdAt` ascending only; `emet doctor` reports that explicitly rather than letting
-  the coordinator assume it honors priority it doesn't have.
+- `priorityLabels`: `{"1":"Priority: Critical","2":"Priority: High","3":"Priority: Medium","4":"Priority: Low"}`
+  — tickets order by priority (1 first), then `createdAt` ascending.
 - `stateLabels`: `{"todo":"status:todo","in-progress":"status:in-progress","in-review":"status:in-review"}`
   — `emet init` created these three labels in this repo (`gh label create
   --force`, idempotent) if they didn't already exist. `done`/`canceled` are
