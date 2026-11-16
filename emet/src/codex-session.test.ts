@@ -132,6 +132,28 @@ describe("startCodexSession", () => {
     expect(overlay).not.toContain("ultra");
   });
 
+  test("reports a substituted session model when the models cache lacks it", async () => {
+    const repo = tempDir();
+    const home = tempDir();
+    writeFileSync(path.join(home, "models_cache.json"), JSON.stringify({ models: [] }));
+    const messages: string[] = [];
+    const original = console.error;
+    console.error = (...args: unknown[]) => {
+      messages.push(args.map(String).join(" "));
+    };
+    try {
+      await startCodexSession(
+        { name: "emet-2-w1", permissionMode: "auto", prompt: "/emet:run 2", cwd: repo },
+        noRunner,
+        { executable: FAKE, sourceHome: home },
+      );
+    } finally {
+      console.error = original;
+    }
+    expect(messages.some((message) => message.includes("session model"))).toBe(true);
+    expect(messages.some((message) => message.includes("substituted"))).toBe(true);
+  }, 10_000);
+
   test("records a null thread id when the stream never names one", async () => {
     const repo = tempDir();
     const info = await startCodexSession(
