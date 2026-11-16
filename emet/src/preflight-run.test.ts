@@ -71,7 +71,9 @@ function useFixture(): Fixture {
       const binDirectory = path.join(fixture.home, "bin");
       mkdirSync(binDirectory, { recursive: true });
       const link = path.join(binDirectory, "claude");
-      if (!existsSync(link)) copyFileSync("/usr/bin/bash", link);
+      const bashPath = Bun.which("bash");
+      if (bashPath === null) throw new Error("bash is not on PATH");
+      if (!existsSync(link)) copyFileSync(bashPath, link);
       const child = Bun.spawn([link, "-c", "while :; do sleep 1; done"], {
         stdout: "ignore",
         stderr: "ignore",
