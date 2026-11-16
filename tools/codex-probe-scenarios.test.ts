@@ -559,10 +559,17 @@ describe("main", () => {
     "prints the item rows as JSON and no flow steps by default",
     async () => {
       const lines: string[] = [];
-      const code = await withFake(setup, "", () =>
-        main([], { EMET_CODEX_PROBE: "1", EMET_CODEX_PROBE_EXECUTABLE: setup.fake }, home, (line) =>
-          lines.push(line),
-        ),
+      const code = await withFake(
+        setup,
+        "",
+        () =>
+          main(
+            [],
+            { EMET_CODEX_PROBE: "1", EMET_CODEX_PROBE_EXECUTABLE: setup.fake },
+            home,
+            (line) => lines.push(line),
+          ),
+        { TMPDIR: setup.temp },
       );
       expect(code).toBe(0);
       const printed: unknown = JSON.parse(lines.at(-1) ?? "null");
@@ -576,13 +583,17 @@ describe("main", () => {
     "--flow-only prints the flow steps and no item rows",
     async () => {
       const lines: string[] = [];
-      await withFake(setup, "", () =>
-        main(
-          ["--flow-only"],
-          { EMET_CODEX_PROBE: "1", EMET_CODEX_PROBE_EXECUTABLE: setup.fake },
-          home,
-          (line) => lines.push(line),
-        ),
+      await withFake(
+        setup,
+        "",
+        () =>
+          main(
+            ["--flow-only"],
+            { EMET_CODEX_PROBE: "1", EMET_CODEX_PROBE_EXECUTABLE: setup.fake },
+            home,
+            (line) => lines.push(line),
+          ),
+        { TMPDIR: setup.temp },
       );
       configureTicketPattern(DEFAULT_FORGE_CONFIG.ticket.idPattern);
       const printed: unknown = JSON.parse(lines.at(-1) ?? "null");
