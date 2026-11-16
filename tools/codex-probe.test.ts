@@ -48,14 +48,17 @@ function environmentWithout(name: string): Record<string, string> {
   );
 }
 
-type FakeCall = { argv: string[]; codexHome: string };
+interface FakeCall {
+  argv: string[];
+  codexHome: string;
+}
 
 function parseCall(line: string): FakeCall {
   const parsed: unknown = JSON.parse(line);
-  if (!isObject(parsed) || !Array.isArray(parsed["argv"])) throw new Error(`bad log line ${line}`);
+  if (!isObject(parsed) || !Array.isArray(parsed.argv)) throw new Error(`bad log line ${line}`);
   return {
-    argv: parsed["argv"].map(String),
-    codexHome: typeof parsed["codexHome"] === "string" ? parsed["codexHome"] : "",
+    argv: parsed.argv.map(String),
+    codexHome: typeof parsed.codexHome === "string" ? parsed.codexHome : "",
   };
 }
 
@@ -114,10 +117,10 @@ describe("runProbe against a fake codex that always hits the usage limit", () =>
     writeFileSync(path.join(sourceHome, "config.toml"), "# fake\n");
     logPath = path.join(temp, "codex.log");
     before = snapshot(sourceHome);
-    process.env["FAKE_CODEX_PROBE_LOG"] = logPath;
-    process.env["FAKE_CODEX_PROBE_MODE"] = "limit";
-    const previousCodexHome = process.env["CODEX_HOME"];
-    process.env["CODEX_HOME"] = sourceHome;
+    process.env.FAKE_CODEX_PROBE_LOG = logPath;
+    process.env.FAKE_CODEX_PROBE_MODE = "limit";
+    const previousCodexHome = process.env.CODEX_HOME;
+    process.env.CODEX_HOME = sourceHome;
     try {
       results = await runProbe({
         codexHome: sourceHome,
@@ -126,10 +129,10 @@ describe("runProbe against a fake codex that always hits the usage limit", () =>
         workDir: temp,
       });
     } finally {
-      delete process.env["FAKE_CODEX_PROBE_LOG"];
-      delete process.env["FAKE_CODEX_PROBE_MODE"];
-      if (previousCodexHome === undefined) delete process.env["CODEX_HOME"];
-      else process.env["CODEX_HOME"] = previousCodexHome;
+      delete process.env.FAKE_CODEX_PROBE_LOG;
+      delete process.env.FAKE_CODEX_PROBE_MODE;
+      if (previousCodexHome === undefined) delete process.env.CODEX_HOME;
+      else process.env.CODEX_HOME = previousCodexHome;
     }
     calls = readFileSync(logPath, "utf8")
       .trim()
@@ -236,10 +239,10 @@ describe("runFullFlow against a fake codex that always hits the usage limit", ()
     Bun.spawnSync(["mkdir", "-p", sourceHome]);
     writeFileSync(path.join(sourceHome, "auth.json"), '{"fake":true}\n');
     const logPath = path.join(temp, "codex.log");
-    process.env["FAKE_CODEX_PROBE_LOG"] = logPath;
-    process.env["FAKE_CODEX_PROBE_MODE"] = "limit";
-    const previousCodexHome = process.env["CODEX_HOME"];
-    process.env["CODEX_HOME"] = sourceHome;
+    process.env.FAKE_CODEX_PROBE_LOG = logPath;
+    process.env.FAKE_CODEX_PROBE_MODE = "limit";
+    const previousCodexHome = process.env.CODEX_HOME;
+    process.env.CODEX_HOME = sourceHome;
     try {
       steps = await runFullFlow({
         codexHome: sourceHome,
@@ -249,10 +252,10 @@ describe("runFullFlow against a fake codex that always hits the usage limit", ()
         modelTimeoutMs: 20_000,
       });
     } finally {
-      delete process.env["FAKE_CODEX_PROBE_LOG"];
-      delete process.env["FAKE_CODEX_PROBE_MODE"];
-      if (previousCodexHome === undefined) delete process.env["CODEX_HOME"];
-      else process.env["CODEX_HOME"] = previousCodexHome;
+      delete process.env.FAKE_CODEX_PROBE_LOG;
+      delete process.env.FAKE_CODEX_PROBE_MODE;
+      if (previousCodexHome === undefined) delete process.env.CODEX_HOME;
+      else process.env.CODEX_HOME = previousCodexHome;
     }
     calls = existsSync(logPath)
       ? readFileSync(logPath, "utf8")

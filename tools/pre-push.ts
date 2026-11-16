@@ -8,7 +8,10 @@ const GATES: readonly (readonly string[])[] = [
   ["bun", "run", "format:check"],
 ];
 
-export type PushVerdict = { ok: boolean; reason?: string };
+export interface PushVerdict {
+  ok: boolean;
+  reason?: string;
+}
 
 /** Decides whether pushing `localBranch` to `remoteRef` is allowed. */
 export function checkPush(remoteRef: string, localBranch: string): PushVerdict {
@@ -41,7 +44,7 @@ function branchName(ref: string): string {
 function runGates(): number {
   for (const command of GATES) {
     const result = Bun.spawnSync([...command], { stdout: "inherit", stderr: "inherit" });
-    if (result.exitCode !== 0) return result.exitCode ?? 1;
+    if (result.exitCode !== 0) return result.exitCode;
   }
   return 0;
 }

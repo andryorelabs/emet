@@ -318,7 +318,7 @@ export function validateManifest(manifest: PetManifest, sheetBytes: number): str
   for (const [name, animation] of Object.entries(manifest.animations)) {
     problems.push(...validateAnimation(name, animation));
   }
-  if (manifest.defaultAnimation !== "idle" || !(manifest.defaultAnimation in manifest.animations)) {
+  if (!(manifest.defaultAnimation in manifest.animations)) {
     problems.push("defaultAnimation must be idle and exist in animations");
   }
   if (manifest.spritesheetPath.includes("..") || manifest.spritesheetPath.startsWith("/")) {

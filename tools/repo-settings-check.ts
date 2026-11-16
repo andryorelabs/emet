@@ -161,8 +161,8 @@ function readLiveRulesetIds(readApi: (endpoint: string) => unknown): Map<string,
   }
   const ids = new Map<string, number>();
   for (const entry of listing) {
-    if (isRecord(entry) && typeof entry["name"] === "string" && typeof entry["id"] === "number") {
-      ids.set(entry["name"], entry["id"]);
+    if (isRecord(entry) && typeof entry.name === "string" && typeof entry.id === "number") {
+      ids.set(entry.name, entry.id);
     }
   }
   return ids;

@@ -20,7 +20,7 @@ function declaredLabelNames(): string[] {
   if (!Array.isArray(labels)) throw new Error("labels.yml must be a list");
   const entries: unknown[] = labels;
   return entries.map((label): string => {
-    const name = isRecord(label) ? label["name"] : undefined;
+    const name = isRecord(label) ? label.name : undefined;
     if (typeof name !== "string") {
       throw new Error("every labels.yml entry needs a string name");
     }
@@ -39,9 +39,9 @@ const TRIAGE_LABELS = [
 /** Collects every label name the emet tracker config depends on. */
 function requiredForgeLabels(): string[] {
   const config: unknown = JSON.parse(readText("emet.config.json"));
-  const tracker = isRecord(config) ? config["tracker"] : undefined;
-  const github = isRecord(tracker) ? tracker["github"] : undefined;
-  const stateLabels = isRecord(github) ? github["stateLabels"] : undefined;
+  const tracker = isRecord(config) ? config.tracker : undefined;
+  const github = isRecord(tracker) ? tracker.github : undefined;
+  const stateLabels = isRecord(github) ? github.stateLabels : undefined;
   if (!isRecord(stateLabels)) throw new Error("emet.config.json needs tracker.github.stateLabels");
   return [...TRIAGE_LABELS, ...Object.values(stateLabels).map(String)];
 }

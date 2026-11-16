@@ -38,7 +38,11 @@ function publishRelease(options: { checksum?: string; listAsset?: boolean } = {}
   writeFileSync(path.join(releaseDir, "SHA256SUMS"), line);
 }
 
-type ShimResult = { code: number; stdout: string; stderr: string };
+interface ShimResult {
+  code: number;
+  stdout: string;
+  stderr: string;
+}
 
 function runShim(args: string[], env: Record<string, string> = {}): ShimResult {
   return runShimWithEnv(args, {
@@ -51,7 +55,7 @@ function runShim(args: string[], env: Record<string, string> = {}): ShimResult {
 /** Runs the shim with only PATH, HOME and `env`: no default cache or release URL. */
 function runShimWithEnv(args: string[], env: Record<string, string>): ShimResult {
   const result = Bun.spawnSync(["sh", path.join(pluginRoot, "bin/emet"), ...args], {
-    env: { PATH: process.env["PATH"] ?? "", HOME: workDir, ...env },
+    env: { PATH: process.env.PATH ?? "", HOME: workDir, ...env },
   });
   return {
     code: result.exitCode,
@@ -137,7 +141,7 @@ describe("bin/emet shim", () => {
     const bunDirectory = path.dirname(process.execPath);
     const result = runShim(["init"], {
       EMET_FROM_SOURCE: "1",
-      PATH: `${bunDirectory}:${process.env["PATH"] ?? ""}`,
+      PATH: `${bunDirectory}:${process.env.PATH ?? ""}`,
     });
     expect(result.code).toBe(0);
     expect(result.stdout).toBe("from-source init\n");
@@ -154,7 +158,7 @@ describe("bin/emet shim", () => {
     chmodSync(path.join(fakeBin, "curl"), 0o755);
     const result = runShimWithEnv(["--version"], {
       EMET_CACHE_DIR: cacheDir,
-      PATH: `${fakeBin}:${process.env["PATH"] ?? ""}`,
+      PATH: `${fakeBin}:${process.env.PATH ?? ""}`,
     });
     expect(result.code).toBe(1);
     expect(readFileSync(curlLog, "utf8")).toContain(
@@ -201,7 +205,7 @@ describe("bin/emet shim legacy FORGE_* fallback", () => {
     const bunDirectory = path.dirname(process.execPath);
     const result = runShim(["doctor"], {
       FORGE_FROM_SOURCE: "1",
-      PATH: `${bunDirectory}:${process.env["PATH"] ?? ""}`,
+      PATH: `${bunDirectory}:${process.env.PATH ?? ""}`,
     });
     expect(result.code).toBe(0);
     expect(result.stdout).toBe("from-source doctor\n");

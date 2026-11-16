@@ -15,7 +15,7 @@ describe("oxlint.config.ts", () => {
   });
 
   test("reports unused disable directives as errors", () => {
-    expect(config.options?.reportUnusedDisableDirectives).toBe("error");
+    expect(config.options.reportUnusedDisableDirectives).toBe("error");
   });
 
   test("keeps the type-aware rules on as errors", () => {
@@ -30,7 +30,7 @@ describe("oxlint.config.ts", () => {
       "typescript/no-unsafe-return",
       "typescript/switch-exhaustiveness-check",
     ];
-    const rules: Record<string, unknown> = config.rules ?? {};
+    const rules: Record<string, unknown> = config.rules;
     for (const rule of typeAwareRules) {
       expect(rules[rule]).toBe("error");
     }
@@ -38,16 +38,16 @@ describe("oxlint.config.ts", () => {
 
   test("loads the local plugin and enables its rules", () => {
     expect(config.jsPlugins).toEqual(["./tools/oxlint/local-plugin.ts"]);
-    expect(config.rules?.["local/no-non-doc-comments"]).toBe("error");
-    expect(config.rules?.["local/require-description"]).toBe("error");
+    expect(config.rules["local/no-non-doc-comments"]).toBe("error");
+    expect(config.rules["local/require-description"]).toBe("error");
   });
 
   test("keeps the jest guards on for test files", () => {
-    const testOverride = config.overrides?.find((override) =>
+    const testOverride = config.overrides.find((override) =>
       override.files.includes("**/*.test.ts"),
     );
-    expect(testOverride?.rules?.["jest/no-focused-tests"]).toBe("error");
-    expect(testOverride?.rules?.["jest/no-disabled-tests"]).toBe("error");
+    expect(testOverride?.rules["jest/no-focused-tests"]).toBe("error");
+    expect(testOverride?.rules["jest/no-disabled-tests"]).toBe("error");
   });
 
   test("runs lint type-aware with warnings denied", async () => {
