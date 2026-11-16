@@ -3,19 +3,20 @@ import { copyFileSync, mkdtempSync, realpathSync, rmSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
 
+import { currentExitCode } from "./exit-code";
 import { run } from "./slots";
 
 let repo: string;
 let stateDirectory: string;
 const originalCwd = process.cwd();
 const originalEnvironment = {
-  stateDir: process.env["EMET_STATE_DIR"],
-  maxLive: process.env["EMET_MAX_LIVE_WORKERS"],
-  reserve: process.env["EMET_MEM_RESERVE_GIB"],
+  stateDir: process.env.EMET_STATE_DIR,
+  maxLive: process.env.EMET_MAX_LIVE_WORKERS,
+  reserve: process.env.EMET_MEM_RESERVE_GIB,
 };
 
 function restoreEnvironment(key: string, value: string | undefined): void {
-  if (value === undefined) delete process.env[key];
+  if (value === undefined) Reflect.deleteProperty(process.env, key);
   else process.env[key] = value;
 }
 
@@ -28,9 +29,9 @@ beforeEach(() => {
     path.join(import.meta.dir, "..", "..", "emet.config.json"),
     path.join(repo, "emet.config.json"),
   );
-  process.env["EMET_STATE_DIR"] = stateDirectory;
-  process.env["EMET_MAX_LIVE_WORKERS"] = "2";
-  process.env["EMET_MEM_RESERVE_GIB"] = "0.001";
+  process.env.EMET_STATE_DIR = stateDirectory;
+  process.env.EMET_MAX_LIVE_WORKERS = "2";
+  process.env.EMET_MEM_RESERVE_GIB = "0.001";
 });
 
 afterEach(() => {
@@ -56,7 +57,7 @@ async function invoke(argv: string[]): Promise<{ out: string[]; err: string[]; c
   process.chdir(repo);
   try {
     await run(argv);
-    return { out, err, code: process.exitCode ?? 0 };
+    return { out, err, code: currentExitCode() };
   } finally {
     process.chdir(originalCwd);
     logSpy.mockRestore();

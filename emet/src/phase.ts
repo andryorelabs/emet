@@ -14,14 +14,14 @@ export type Phase =
   | "done"
   | "failed";
 
-export type PhaseRecord = {
+export interface PhaseRecord {
   phase: Phase;
   wave: number | null;
   spec: string | null;
   runId: string | null;
   updatedAt: string;
   outcome?: string;
-};
+}
 
 const PHASES: ReadonlySet<string> = new Set([
   "planning",

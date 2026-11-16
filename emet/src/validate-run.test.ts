@@ -3,6 +3,7 @@ import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
 
+import { currentExitCode } from "./exit-code";
 import { run } from "./validate";
 
 let directory: string;
@@ -28,7 +29,7 @@ async function invoke(argv: string[]): Promise<{ out: string[]; err: string[]; c
   process.exitCode = 0;
   try {
     await run(argv);
-    return { out, err, code: process.exitCode ?? 0 };
+    return { out, err, code: currentExitCode() };
   } finally {
     logSpy.mockRestore();
     errorSpy.mockRestore();
@@ -57,14 +58,14 @@ describe("validate run", () => {
     });
     const result = await invoke(["--file", file]);
     expect(result.code).toBe(0);
-    expect(JSON.parse(result.out[0]!)).toEqual({ ok: true, findings: [] });
+    expect(JSON.parse(result.out[0] ?? "")).toEqual({ ok: true, findings: [] });
   });
 
   test("an uncovered spec item exits 1 and reports the finding", async () => {
     const file = writePlan({ spec: SPEC, tickets: [] });
     const result = await invoke(["--file", file]);
     expect(result.code).toBe(1);
-    expect(JSON.parse(result.out[0]!)).toMatchObject({
+    expect(JSON.parse(result.out[0] ?? "")).toMatchObject({
       findings: [{ code: "uncovered-spec-item" }],
     });
     expect(result.err[0]).toStartWith("error:");
@@ -114,7 +115,7 @@ describe("validate run", () => {
     });
     const result = await invoke(["--file", file]);
     expect(result.code).toBe(0);
-    expect(JSON.parse(result.out[0]!)).toMatchObject({ ok: true });
+    expect(JSON.parse(result.out[0] ?? "")).toMatchObject({ ok: true });
   });
 
   test("an unreadable plan file exits 2", async () => {

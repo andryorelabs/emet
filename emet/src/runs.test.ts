@@ -193,7 +193,7 @@ describe("process start token", () => {
   });
 
   test("classifyRun forwards the token to the liveness check", () => {
-    const received: Array<string | undefined> = [];
+    const received: (string | undefined)[] = [];
     classifyRun(4242, "slug", "run-a", {
       anchorStartToken: "777",
       isAnchorAliveFn: (_pid, token) => {
@@ -205,7 +205,7 @@ describe("process start token", () => {
   });
 
   test("a legacy run without a token is classified by the injected check with no token", () => {
-    const received: Array<string | undefined> = [];
+    const received: (string | undefined)[] = [];
     classifyRun(4242, "slug", "run-a", {
       isAnchorAliveFn: (_pid, token) => {
         received.push(token);

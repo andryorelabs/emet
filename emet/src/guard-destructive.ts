@@ -9,12 +9,12 @@ export type DestructiveVerdict =
   | { readonly decision: "allow" }
   | { readonly decision: "deny"; readonly reason: string };
 
-type ToolHookInput = {
+interface ToolHookInput {
   readonly tool_name?: string;
   readonly cwd?: string;
   readonly tool_input?: Record<string, unknown>;
   readonly paths?: readonly string[];
-};
+}
 
 const ALLOW: DestructiveVerdict = { decision: "allow" };
 
@@ -38,12 +38,12 @@ const WRAPPER_COMMANDS = new Set([
 ]);
 const SQL_CLIENTS = /\b(psql|mysql|mariadb|sqlite3|sqlcmd|duckdb|clickhouse-client)\b/;
 
-type DestructiveRule = {
+interface DestructiveRule {
   readonly label: string;
   readonly pattern: RegExp;
   /** A safe command that does the same job, appended to the deny reason. */
   readonly alternative?: string;
-};
+}
 
 const RULES: readonly DestructiveRule[] = [
   { label: "git reset --hard", pattern: /\bgit\b[^\n]*\breset\b[^\n]*--hard\b/ },
@@ -164,12 +164,12 @@ export function checkDestructiveCommand(input: ToolHookInput): DestructiveVerdic
   };
 }
 
-export type SurfaceFile = {
+export interface SurfaceFile {
   readonly root: string;
   readonly globs: readonly string[];
   /** Where the globs came from, relative to `root`; defaults to `.emet/surface.json`. */
   readonly source?: string;
-};
+}
 
 function parseSurfaceGlobs(raw: unknown): string[] | null {
   const list = Array.isArray(raw)

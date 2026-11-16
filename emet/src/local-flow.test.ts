@@ -17,7 +17,11 @@ let repo = "";
 let emptyBin = "";
 let scratchDir = "";
 
-type CliResult = { readonly exitCode: number; readonly stdout: string; readonly stderr: string };
+interface CliResult {
+  readonly exitCode: number;
+  readonly stdout: string;
+  readonly stderr: string;
+}
 
 function git(cwd: string, ...args: string[]): string {
   const result = Bun.spawnSync(["git", "-C", cwd, ...args], { stdout: "pipe", stderr: "pipe" });
@@ -36,7 +40,7 @@ function childEnv(): Record<string, string | undefined> {
     HOME: path.join(scratchDir, "home"),
   };
   for (const key of Object.keys(env)) {
-    if (key.startsWith("GH_") || key.startsWith("GITHUB_")) delete env[key];
+    if (key.startsWith("GH_") || key.startsWith("GITHUB_")) Reflect.deleteProperty(env, key);
   }
   return env;
 }

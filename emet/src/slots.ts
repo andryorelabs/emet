@@ -295,11 +295,11 @@ export async function releaseAllSlotsForRun(
   return released;
 }
 
-export type SlotListEntry = {
+export interface SlotListEntry {
   readonly index: number;
   readonly holder: SlotHolder;
   readonly verdict: RunVerdict;
-};
+}
 
 export async function listOccupiedSlots(
   slotsDirectory?: string,
@@ -451,7 +451,7 @@ async function main(config: ForgeConfig): Promise<void> {
     const maxLiveWorkers = resolveMaxLiveWorkers(config);
     const capSource =
       readEnv("MAX_LIVE_WORKERS") !== undefined
-        ? process.env["EMET_MAX_LIVE_WORKERS"]
+        ? process.env.EMET_MAX_LIVE_WORKERS
           ? "EMET_MAX_LIVE_WORKERS"
           : "FORGE_MAX_LIVE_WORKERS"
         : config.concurrency.maxLiveWorkers === "auto"
@@ -493,7 +493,7 @@ async function main(config: ForgeConfig): Promise<void> {
  * (`--acquire`/`--release`/`--release-index`) requires a real one.
  */
 export async function run(argv: string[]): Promise<void> {
-  process.argv = [process.argv[0]!, process.argv[1]!, ...argv];
+  process.argv = [...process.argv.slice(0, 2), ...argv];
   try {
     const repoRoot = await resolveRepoRoot();
     if (!repoRoot) {

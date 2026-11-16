@@ -16,12 +16,12 @@ import type { ForgeConfig } from "./config";
 import { BINARY } from "./names";
 import { isForgeShapedBranch, listWorktreeEntries, type WorktreeEntry } from "./worktrees";
 
-export type LocalBranch = {
+export interface LocalBranch {
   readonly name: string;
   readonly sha: string;
   /** The branch's upstream, or `null` when it tracks nothing. */
   readonly upstream: string | null;
-};
+}
 
 /**
  * The name the Agent host gives the branch it creates for a named worktree.
@@ -124,14 +124,14 @@ export type MergedBranchPlan =
       readonly reason: string;
     };
 
-export type MergedBranchInput = {
+export interface MergedBranchInput {
   readonly branch: string;
   readonly pullRequest: number;
   /** The worktree that has the branch checked out, if any. */
   readonly entry: WorktreeEntry | undefined;
   readonly isAgentWorktree: boolean;
   readonly isDirty: boolean;
-};
+}
 
 /**
  * What to do with one branch whose pull request merged. A branch nothing has
@@ -203,25 +203,25 @@ async function deleteLocalBranch(branch: string): Promise<string | null> {
   return result.exitCode === 0 ? null : `${branch} — ${result.stderr.toString().trim()}`;
 }
 
-export type MergedSweepContext = {
+export interface MergedSweepContext {
   readonly config: ForgeConfig;
   readonly host: AgentHost;
   readonly dryRun: boolean;
   readonly findMergedPullRequest?: (branch: string, tipSha: string) => Promise<number | null>;
-};
+}
 
-export type MergedSweepResult = {
+export interface MergedSweepResult {
   readonly deleted: readonly string[];
   /** Host scaffold branches deleted because trunk already holds their tip. */
   readonly scaffolds: readonly string[];
   readonly kept: readonly string[];
   readonly failures: readonly string[];
-};
+}
 
-type SweepCandidates = {
+interface SweepCandidates {
   readonly entries: readonly WorktreeEntry[];
   readonly branches: readonly LocalBranch[];
-};
+}
 
 /**
  * The local branches a sweep may look at: every one except the protected

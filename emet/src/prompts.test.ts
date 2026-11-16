@@ -2,6 +2,8 @@ import { describe, expect, test } from "bun:test";
 import { readdirSync, readFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 
+import { present } from "./present";
+
 const REPO_ROOT = resolve(import.meta.dir, "..", "..");
 
 /**
@@ -63,7 +65,7 @@ describe("prompt byte budget", () => {
       const size = readFileSync(join(REPO_ROOT, relativePath)).byteLength;
       const ceiling = BYTE_CEILINGS[relativePath];
       expect(ceiling).toBeDefined();
-      expect(size).toBeLessThanOrEqual(ceiling!);
+      expect(size).toBeLessThanOrEqual(present(ceiling));
     });
   }
 });
@@ -98,13 +100,13 @@ describe("retired phrases", () => {
 
   test("the ban patterns still catch what they target", () => {
     const [inlineSnippet, placeholder] = BANNED_PHRASES;
-    expect(inlineSnippet!.pattern.test("run bun -e \"import { reserve } from './claims'\"")).toBe(
-      true,
-    );
-    expect(inlineSnippet!.pattern.test("```\nbun -e console.log(1)\n```")).toBe(true);
-    expect(inlineSnippet!.pattern.test("never call it through an inline `bun -e` snippet")).toBe(
-      false,
-    );
-    expect(placeholder!.pattern.test("{{spec_summary_15_lines}}")).toBe(true);
+    expect(
+      present(inlineSnippet).pattern.test("run bun -e \"import { reserve } from './claims'\""),
+    ).toBe(true);
+    expect(present(inlineSnippet).pattern.test("```\nbun -e console.log(1)\n```")).toBe(true);
+    expect(
+      present(inlineSnippet).pattern.test("never call it through an inline `bun -e` snippet"),
+    ).toBe(false);
+    expect(present(placeholder).pattern.test("{{spec_summary_15_lines}}")).toBe(true);
   });
 });

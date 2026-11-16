@@ -3,6 +3,7 @@ import { mkdtempSync, readFileSync, rmSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
 
+import { currentExitCode } from "./exit-code";
 import { run } from "./results";
 
 let root: string;
@@ -28,7 +29,7 @@ async function invoke(argv: string[]): Promise<{ out: string[]; err: string[]; c
   process.exitCode = 0;
   try {
     await run(argv);
-    return { out, err, code: process.exitCode ?? 0 };
+    return { out, err, code: currentExitCode() };
   } finally {
     logSpy.mockRestore();
     errorSpy.mockRestore();
@@ -73,7 +74,7 @@ describe("emet results run", () => {
     expect(written.code).toBe(0);
     const read = await invoke(["--run", "r1", "--root", root, "--read", "CLA-1"]);
     expect(read.code).toBe(0);
-    expect(JSON.parse(read.out[0]!)).toEqual({
+    expect(JSON.parse(read.out[0] ?? "")).toEqual({
       status: "DONE",
       reportPath: "report.md",
       risk: "Risk: none",

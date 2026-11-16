@@ -335,7 +335,7 @@ export async function findTodoMarkersInDocsAgents(repoRoot: string): Promise<str
   return markers;
 }
 
-export type SlotCapacityCheck = {
+export interface SlotCapacityCheck {
   readonly freeCount: number;
   readonly cap: number;
   readonly waveSize: number;
@@ -348,7 +348,7 @@ export type SlotCapacityCheck = {
    * `true` when `ok` is `false` (0 free is reported via `ok` alone, not as
    * "degraded"). */
   readonly degraded: boolean;
-};
+}
 
 /**
  * Can this wave dispatch *at all* right now — not "a full wave", just at
@@ -403,10 +403,10 @@ export function ticketFromWorkerBranch(branch: string, branchPrefix: string): st
   return match?.[1] === undefined ? null : `${branchPrefix.toUpperCase()}-${match[1]}`;
 }
 
-export type WorktreeEntryReport = {
+export interface WorktreeEntryReport {
   readonly bucket: "fail" | "info" | "warn";
   readonly line: string;
-};
+}
 
 export interface DescribeWorktreeEntryOptions {
   /** Decides whether an unowned branch is worker-shaped; without it the caller's `resolveLanded` alone decides. */
@@ -538,7 +538,7 @@ export async function describeWorktreeEntryVerdict(
   }
 }
 
-export type PostDispatchFailure = {
+export interface PostDispatchFailure {
   readonly kind:
     | "duplicate-ticket-worktree"
     | "duplicate-ticket-branch-number"
@@ -546,7 +546,7 @@ export type PostDispatchFailure = {
     | "branch-ticket-mismatch"
     | "missing-worktrees";
   readonly message: string;
-};
+}
 
 /**
  * Extracts a ticket's numeric suffix (`PROJ-321` → `321`, `NFK-42` → `42`) —
@@ -1018,10 +1018,10 @@ async function mainPostDispatch(config: ForgeConfig): Promise<void> {
   );
 }
 
-export type RunGateFindings = {
+export interface RunGateFindings {
   readonly failures: readonly string[];
   readonly warnings: readonly string[];
-};
+}
 
 function readApprovalRecord(approvalPath: string): ApprovalRecord | null {
   try {
@@ -1168,7 +1168,7 @@ export async function checkHeadDescendsFromTrunk(
   headSha: string,
   trunkRef: string,
   localTrunk: string = trunkRef,
-  remote: string = "origin",
+  remote = "origin",
 ): Promise<HeadDescendsFromTrunkResult> {
   const ancestry = await Bun.$`git merge-base --is-ancestor ${trunkRef} ${headSha}`
     .quiet()
@@ -1544,7 +1544,7 @@ async function main(config: ForgeConfig, repoRoot: string) {
  * malformed `emet.config.json` is always fatal (exit 2) here.
  */
 export async function run(argv: string[]): Promise<void> {
-  process.argv = [process.argv[0]!, process.argv[1]!, ...argv];
+  process.argv = [...process.argv.slice(0, 2), ...argv];
   try {
     const repoRoot = await resolveRepoRoot();
     if (!repoRoot) {

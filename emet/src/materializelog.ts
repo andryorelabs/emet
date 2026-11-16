@@ -3,6 +3,7 @@ import path from "node:path";
 
 import { resolveRepoRoot } from "./config";
 import { errorMessage, isObject } from "./narrow";
+import { present } from "./present";
 import { resolveRunArtifactPath } from "./runs";
 
 const USAGE = `usage: emet materialize-log --run <id> --record <localKey> <trackerId> [--root <dir>]
@@ -37,7 +38,7 @@ function readLog(logPath: string): MaterializeLog {
 
 export function lookupTicket(logPath: string, localKey: string): string | null {
   const log = readLog(logPath);
-  return Object.hasOwn(log, localKey) ? log[localKey]! : null;
+  return Object.hasOwn(log, localKey) ? present(log[localKey]) : null;
 }
 
 export function recordTicket(

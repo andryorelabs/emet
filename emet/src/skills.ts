@@ -36,12 +36,12 @@ export const SKILLS_CONTRACT: {
 const SKILLS_PLUGIN_NAME = "mattpocock-skills";
 const PLUGIN_LIST_TIMEOUT_MS = 5_000;
 
-export type InstalledPlugin = {
+export interface InstalledPlugin {
   readonly id: string;
   readonly version: string;
   readonly enabled: boolean;
   readonly installPath: string;
-};
+}
 
 /** Reads `claude plugin list --json`; unparseable output yields an empty list. */
 export function parsePluginListJson(output: string): readonly InstalledPlugin[] {

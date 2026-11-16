@@ -33,6 +33,7 @@ import {
 import { BINARY, LEGACY_PRODUCT, PRODUCT, resolveRunDir } from "./names";
 import { isObject } from "./narrow";
 import { optionalProperty } from "./optional";
+import { present } from "./present";
 import { classifyRun, type RunVerdict } from "./runs";
 import { listOccupiedSlots } from "./slots";
 import { findStalledTranscripts, readLastStepFor } from "./usage";
@@ -48,15 +49,15 @@ import {
 type WaveState = "working" | "checking" | "ready" | "needs-decision";
 type OverallState = WaveState | "idle";
 type ChecksState = "passing" | "failing" | "pending" | "none";
-export type PullRequestStatus = {
+export interface PullRequestStatus {
   readonly number: number;
   readonly state: "open" | "merged" | "closed";
   readonly checks: ChecksState;
   readonly mergeable: boolean | null;
   readonly changesRequested: boolean;
-};
+}
 
-export type WorkerSignal = {
+export interface WorkerSignal {
   readonly ticket: string;
   readonly branch: string | null;
   readonly pullRequest: PullRequestStatus | null;
@@ -65,39 +66,39 @@ export type WorkerSignal = {
   readonly liveness?: CodexWorkerLiveness;
   /** Codex workers only: the thread id, `null` until `thread.started`. */
   readonly threadId?: string | null;
-};
+}
 
 /** A Codex worker's identity and liveness, keyed by worktree directory. */
-export type CodexWorkerView = {
+export interface CodexWorkerView {
   readonly liveness: CodexWorkerLiveness;
   readonly threadId: string | null;
-};
+}
 
-export type WaveInput = {
+export interface WaveInput {
   readonly runId: string;
   readonly runVerdict: RunVerdict;
   readonly workers: readonly WorkerSignal[];
-};
+}
 
 type WorkerReport = WorkerSignal & {
   readonly state: WaveState;
   readonly reason: string;
 };
 
-type WaveReport = {
+interface WaveReport {
   readonly runId: string;
   readonly spec: string | null;
   readonly wave: number | null;
   readonly runVerdict: RunVerdict;
   readonly state: WaveState;
   readonly workers: readonly WorkerReport[];
-};
+}
 
-export type StatusReport = {
+export interface StatusReport {
   readonly state: OverallState;
   readonly spec: string | null;
   readonly waves: readonly WaveReport[];
-};
+}
 
 const RUN_ID_PATTERN = new RegExp(
   `^(?:${PRODUCT}|${LEGACY_PRODUCT})([a-z0-9][a-z0-9-]*)w(\\d+?)(\\d{6})$`,
@@ -138,7 +139,7 @@ export function parseRunIdentity(runId: string): {
 } {
   const match = RUN_ID_PATTERN.exec(runId);
   if (!match) return { spec: null, wave: null };
-  return { spec: match[1]!, wave: Number(match[2]) };
+  return { spec: present(match[1]), wave: Number(match[2]) };
 }
 
 function classifyWorker(
@@ -218,7 +219,7 @@ export function summarize(report: StatusReport): string {
   return `${BINARY} status: ${report.state} — ${parts.join("; ")}`;
 }
 
-type RawPullRequest = {
+interface RawPullRequest {
   number: number;
   state: string;
   headRefName: string;
@@ -226,7 +227,7 @@ type RawPullRequest = {
   mergeable?: string;
   reviewDecision?: string | null;
   statusCheckRollup?: { conclusion?: string | null; status?: string; state?: string }[] | null;
-};
+}
 
 const FAILED_CONCLUSIONS = new Set([
   "FAILURE",
@@ -236,7 +237,11 @@ const FAILED_CONCLUSIONS = new Set([
   "STARTUP_FAILURE",
 ]);
 
-type RawCheck = { conclusion?: string | null; status?: string; state?: string };
+interface RawCheck {
+  conclusion?: string | null;
+  status?: string;
+  state?: string;
+}
 
 function toRawCheck(raw: unknown): RawCheck {
   if (!isObject(raw)) return {};
@@ -310,7 +315,8 @@ export function closingIssueNumbers(body: string): string[] {
   for (const line of body.split("\n")) {
     const match = /^\s*(?:close[sd]?|fix(?:e[sd])?|resolve[sd]?)\s*:?\s+(.*)$/i.exec(line);
     if (!match) continue;
-    for (const reference of match[1]!.matchAll(/#(\d+)/g)) numbers.push(reference[1]!);
+    for (const reference of present(match[1]).matchAll(/#(\d+)/g))
+      numbers.push(present(reference[1]));
   }
   return numbers;
 }

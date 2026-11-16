@@ -165,16 +165,16 @@ describe("Codex models cache lookup", () => {
   });
 
   test("the real Codex home defaults to CODEX_HOME", () => {
-    const previous = process.env["CODEX_HOME"];
-    process.env["CODEX_HOME"] = path.join(directory, "env-home");
+    const previous = process.env.CODEX_HOME;
+    process.env.CODEX_HOME = path.join(directory, "env-home");
     try {
       expect(codexModelsCachePaths(path.join(directory, "run-home"))).toEqual([
         path.join(directory, "run-home", "models_cache.json"),
         path.join(directory, "env-home", "models_cache.json"),
       ]);
     } finally {
-      if (previous === undefined) delete process.env["CODEX_HOME"];
-      else process.env["CODEX_HOME"] = previous;
+      if (previous === undefined) delete process.env.CODEX_HOME;
+      else process.env.CODEX_HOME = previous;
     }
   });
 

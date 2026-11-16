@@ -13,7 +13,9 @@ import path from "node:path";
 
 import { run } from "./claims";
 import { DEFAULT_FORGE_CONFIG } from "./config";
+import { currentExitCode } from "./exit-code";
 import { isObject } from "./narrow";
+import { present } from "./present";
 
 const IMPOSSIBLE_PID = 999_999_999;
 
@@ -71,7 +73,7 @@ async function runClaims(
   process.exitCode = 0;
   try {
     await run(argv);
-    return { logs, errors, code: process.exitCode ?? 0 };
+    return { logs, errors, code: currentExitCode() };
   } finally {
     console.log = originalLog;
     console.error = originalError;
@@ -170,9 +172,11 @@ describe("claims run()", () => {
   test("--prune releases dead reservations, honours --dry-run and reports malformed files", async () => {
     await runClaims(reserveArgs("AO-5", "dead-run", IMPOSSIBLE_PID));
     await runClaims(reserveArgs("AO-6", "live-run", startLiveAnchor()));
-    const ticketFile = Array.from(
-      new Bun.Glob("**/AO-5.json").scanSync({ cwd: path.join(repo, ".git"), dot: true }),
-    )[0]!;
+    const ticketFile = present(
+      Array.from(
+        new Bun.Glob("**/AO-5.json").scanSync({ cwd: path.join(repo, ".git"), dot: true }),
+      )[0],
+    );
     const ticketsDirectory = path.dirname(path.join(repo, ".git", ticketFile));
     writeFileSync(path.join(ticketsDirectory, "AO-7.json"), JSON.stringify({ bogus: true }));
 

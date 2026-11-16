@@ -65,10 +65,10 @@ export type ContentVerdict = "merged" | "equivalent" | "diverged" | "conflicted"
  */
 export type BranchVerdict = ContentVerdict | "in-use";
 
-export type BranchEntry = {
+export interface BranchEntry {
   readonly name: string;
   readonly worktreePath: string;
-};
+}
 
 /**
  * Parses `git branch --list <pattern> '--format=%(refname:short)%09%(worktreepath)'`
@@ -113,7 +113,7 @@ export async function listLiveWorktreeDirectoryNames(): Promise<Set<string>> {
   return parseWorktreeDirectoryNames(output);
 }
 
-export type WorktreeEntry = {
+export interface WorktreeEntry {
   readonly directory: string;
   readonly branch: string | null;
   /**
@@ -131,7 +131,7 @@ export type WorktreeEntry = {
    * by hand without it.
    */
   readonly head?: string | null;
-};
+}
 
 /**
  * Parses `git worktree list --porcelain` into `{directory, branch,
@@ -184,7 +184,7 @@ export function parseWorktreeEntries(output: string): WorktreeEntry[] {
   return entries;
 }
 
-export type WorktreeOwner = {
+export interface WorktreeOwner {
   readonly runId: string;
   readonly ticket: string;
   readonly anchorPid: number;
@@ -203,7 +203,7 @@ export type WorktreeOwner = {
    * with a lock reason written before this field existed.
    */
   readonly coordinatorSlug?: string;
-};
+}
 
 /**
  * Parses the `git worktree lock` reason `/emet` writes at worker bootstrap

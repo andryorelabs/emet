@@ -3,6 +3,7 @@ import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync
 import os from "node:os";
 import path from "node:path";
 
+import { present } from "./present";
 import { applyDelta, mergeSpecDeltas, parseRequirements } from "./specmerge";
 
 const BASE = `# Auth
@@ -35,7 +36,7 @@ describe("parseRequirements", () => {
     const parsed = parseRequirements(BASE);
     expect(parsed.preamble).toContain("Intro text.");
     expect(parsed.requirements.map((r) => r.name)).toEqual(["Login", "Logout"]);
-    expect(parsed.requirements[0]!.scenarios).toEqual(["valid password", "bad password"]);
+    expect(present(parsed.requirements[0]).scenarios).toEqual(["valid password", "bad password"]);
   });
 });
 
@@ -108,7 +109,9 @@ describe("mergeSpecDeltas", () => {
     directory = mkdtempSync(path.join(os.tmpdir(), "forge-specmerge-"));
     mkdirSync(path.join(directory, "specs"));
   });
-  afterEach(() => rmSync(directory, { recursive: true, force: true }));
+  afterEach(() => {
+    rmSync(directory, { recursive: true, force: true });
+  });
 
   test("writes nothing when any area conflicts", () => {
     const authPath = path.join(directory, "specs", "auth.md");

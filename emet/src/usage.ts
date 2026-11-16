@@ -42,21 +42,22 @@ import {
 import { metricsParsers, type MetricsParser, type TranscriptFormat } from "./metrics";
 import { BINARY, LEGACY_RUN_DIR, RUN_DIR } from "./names";
 import { isObject } from "./narrow";
+import { present } from "./present";
 import { readCompletionEvent, recordStallNudge, type CompletionEvent } from "./runs";
 import { parseWorktreeEntries, resolveWorktreeOwner } from "./worktrees";
 
-type UsageEntry = {
+interface UsageEntry {
   readonly inputTokens: number;
   readonly cacheReadTokens: number;
   readonly cacheCreationTokens: number;
-};
+}
 
-type ToolResultSample = {
+interface ToolResultSample {
   readonly name: string;
   readonly chars: number;
-};
+}
 
-type TranscriptStats = {
+interface TranscriptStats {
   readonly label: string;
   readonly turns: number;
   readonly cacheReadMillionTokens: number;
@@ -66,7 +67,7 @@ type TranscriptStats = {
   readonly compactBoundaries: number;
   readonly topToolResults: ToolResultSample[];
   readonly oversizedFullReads: number;
-};
+}
 
 function contextSize(entry: UsageEntry): number {
   return entry.inputTokens + entry.cacheReadTokens + entry.cacheCreationTokens;
@@ -231,9 +232,9 @@ async function analyzeTranscript(
     label,
     turns: usageEntries.length,
     cacheReadMillionTokens: cacheReadTotal / 1e6,
-    floorContext: contextSize(usageEntries[0]!),
+    floorContext: contextSize(present(usageEntries[0])),
     peakContext,
-    finalContext: contextSize(usageEntries.at(-1)!),
+    finalContext: contextSize(present(usageEntries.at(-1))),
     oversizedFullReads,
     compactBoundaries,
     topToolResults,
@@ -341,23 +342,23 @@ const DEFAULT_STALLED_MINUTES = 10;
 
 const DEFAULT_PENDING_TOOL_MINUTES = 30;
 
-export type StalledThresholds = {
+export interface StalledThresholds {
   readonly idleMinutes: number;
   readonly pendingToolMinutes: number;
-};
+}
 
-export type LastTranscriptStep = {
+export interface LastTranscriptStep {
   readonly step: string;
   readonly pendingTool: string | null;
-};
+}
 
-export type StalledTranscript = {
+export interface StalledTranscript {
   readonly taskId: string;
   readonly path: string;
   readonly minutesSinceLastWrite: number;
   readonly lastStep: string;
   readonly pendingTool: string | null;
-};
+}
 
 const UNKNOWN_STEP: LastTranscriptStep = { step: "unknown", pendingTool: null };
 
@@ -388,7 +389,7 @@ function parseFlagMinutes(cliArguments: string[], flag: string, defaultMinutes: 
 }
 
 export function taskIdFromTranscriptPath(path: string): string {
-  return path.split("/").pop()!.replace(".jsonl", "");
+  return (path.split("/").at(-1) ?? "").replace(".jsonl", "");
 }
 
 function isStalled(mtimeMs: number, nowMs: number, staleMinutes: number): boolean {
@@ -419,7 +420,7 @@ function messageBlocks(event: unknown): { role: string; blocks: unknown[] } | nu
 export function describeLastStep(transcriptText: string): LastTranscriptStep {
   const lines = transcriptText.split("\n");
   for (let index = lines.length - 1; index >= 0; index--) {
-    const line = lines[index]!.trim();
+    const line = present(lines[index]).trim();
     if (!line) {
       continue;
     }
@@ -688,7 +689,8 @@ async function runStalledMode(thresholds: StalledThresholds, host: AgentHost): P
     return;
   }
 
-  const resolvedSessionId = sessionId ?? sessionFile.split("/").pop()!.replace(".jsonl", "");
+  const resolvedSessionId =
+    sessionId ?? (sessionFile.split("/").at(-1) ?? "").replace(".jsonl", "");
 
   const workerFiles = await findWorkerTranscripts(directory, resolvedSessionId, host);
   if (workerFiles.length === 0) {
@@ -788,7 +790,8 @@ async function main(config: ForgeConfig): Promise<void> {
     return;
   }
 
-  const resolvedSessionId = sessionId ?? sessionFile.split("/").pop()!.replace(".jsonl", "");
+  const resolvedSessionId =
+    sessionId ?? (sessionFile.split("/").at(-1) ?? "").replace(".jsonl", "");
 
   const coordinatorStats = await analyzeTranscript(
     sessionFile,
@@ -802,7 +805,7 @@ async function main(config: ForgeConfig): Promise<void> {
   const workerFiles = await findWorkerTranscripts(directory, resolvedSessionId, host);
   let totalWorkerCacheReadMillion = 0;
   for (const workerFile of workerFiles) {
-    const label = workerFile.split("/").pop()!.replace(".jsonl", "");
+    const label = (workerFile.split("/").at(-1) ?? "").replace(".jsonl", "");
     // oxlint-disable-next-line eslint/no-await-in-loop -- sequential on purpose: later iterations depend on earlier ones or on output order
     const stats = await analyzeTranscript(workerFile, `worker ${label}`, oversizedThreshold);
     if (stats) {
@@ -825,7 +828,7 @@ async function main(config: ForgeConfig): Promise<void> {
  * {@link DEFAULT_FORGE_CONFIG} with a printed note rather than exiting 2.
  */
 export async function run(argv: string[]): Promise<void> {
-  process.argv = [process.argv[0]!, process.argv[1]!, ...argv];
+  process.argv = [...process.argv.slice(0, 2), ...argv];
   try {
     const repoRoot = await resolveRepoRoot();
     const { config, note } = repoRoot
