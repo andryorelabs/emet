@@ -2,7 +2,7 @@
 title: 配置参考
 description: emet.config.json 中的每个键，包括其默认值和含义。
 seoTitle: emet 配置参考
-sourceHash: eb2611cf0c7e09b4
+sourceHash: ac6552b22848c9eb
 ---
 
 `emet.config.json` 中的每个键，及其默认值和含义。权威来源是 [`emet/schema/emet.config.schema.json`](../../emet/schema/emet.config.schema.json)。术语遵循 [GLOSSARY.md](../../GLOSSARY.md)。返回 [README](../../README.md)。
@@ -199,3 +199,21 @@ Claude Code 宿主上每个角色的模型和推理强度；Codex 宿主改为�
 可选，prose-only。设为 `null` 或省略时，将跳过设计/UI 评审步骤。
 
 - `canvasIndex`（deprecated）：设计画布文件的路径，工作者在进行 UI 变更之前会查看它。
+
+## 环境变量
+
+CLI 会读取这些变量，全部通过 `emet/src/env.ts` 完成。采用 `FORGE_` 拼写的变量仍可作为对应 `EMET_` 名称的回退使用，并会打印一次警告。空值视为未设置。`tools/env-docs.test.ts` 使该表与代码保持一致。
+
+| 变量                          | 旧版回退                       | 含义                                                                                              |
+| ----------------------------- | ------------------------------ | ------------------------------------------------------------------------------------------------- |
+| `EMET_MAX_LIVE_WORKERS`       | `FORGE_MAX_LIVE_WORKERS`       | 同时存活的工作者数量上限：正数或 `auto`。会覆盖 `concurrency.maxLiveWorkers`。                    |
+| `EMET_STATE_DIR`              | `FORGE_STATE_DIR`              | 整个宿主范围的状态目录，其中包含工作者槽位池。                                                    |
+| `EMET_SKIP_DEPENDENCY_CHECKS` | `FORGE_SKIP_DEPENDENCY_CHECKS` | 设为 `1` 可在 `emet preflight` 中将阻塞性的依赖检查降级为警告。                                   |
+| `EMET_RUN_IDLE_THRESHOLD_MS`  | `FORGE_RUN_IDLE_THRESHOLD_MS`  | 一次运行的转录内容可保持静默多少毫秒，超过后即视为空闲。会覆盖 `concurrency.runIdleThresholdMs`。 |
+| `EMET_CPU_OVERSUBSCRIBE`      | `FORGE_CPU_OVERSUBSCRIBE`      | 自动工作者上限所用的 CPU 超订系数。                                                               |
+| `EMET_MEM_RESERVE_GIB`        | `FORGE_MEM_RESERVE_GIB`        | 授予工作者槽位之前保持空闲的内存 GiB 数。                                                         |
+| `EMET_MEM_PER_WORKER_GIB`     | `FORGE_MEM_PER_WORKER_GIB`     | 自动工作者上限为每个工作者假定的内存 GiB 数。                                                     |
+| `EMET_AGENT_HOST`             |                                | 在 Codex 智能体宿主下运行时设为 `codex`；其他任何值都表示 Claude。                                |
+| `CODEX_HOME`                  |                                | Codex 的主目录；默认为 `~/.codex`。只会被读取。                                                   |
+| `XDG_STATE_HOME`              |                                | 未设置 `EMET_STATE_DIR` 时，状态目录的基准。                                                      |
+| `NO_COLOR`                    |                                | 设置后，横幅将不带颜色输出。                                                                      |

@@ -2,7 +2,7 @@
 title: Referência de configuração
 description: Cada chave do emet.config.json com seu valor padrão e seu significado.
 seoTitle: Referência de configuração do emet
-sourceHash: eb2611cf0c7e09b4
+sourceHash: ac6552b22848c9eb
 ---
 
 Cada chave do `emet.config.json`, com seu valor padrão e seu significado. A fonte da verdade é [`emet/schema/emet.config.schema.json`](../../emet/schema/emet.config.schema.json). Os termos seguem o [GLOSSARY.md](../../GLOSSARY.md). Voltar ao [README](../../README.md).
@@ -199,3 +199,21 @@ Somente prosa.
 Opcional, somente prosa. `null` ou omitido ignora a etapa de design/revisão de UI.
 
 - `canvasIndex` (obsoleto): caminho para um arquivo de canvas de design que os workers consultam antes de mudanças de UI.
+
+## Variáveis de ambiente
+
+A CLI lê estas variáveis, todas por meio de `emet/src/env.ts`. Uma variável com grafia `FORGE_` ainda funciona como alternativa ao seu nome `EMET_` e imprime um aviso uma única vez. Valores vazios contam como não definidos. `tools/env-docs.test.ts` mantém esta tabela e o código em sincronia.
+
+| Variável                      | Alternativa legada             | Significado                                                                                                                                         |
+| ----------------------------- | ------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `EMET_MAX_LIVE_WORKERS`       | `FORGE_MAX_LIVE_WORKERS`       | Limite de workers ativos ao mesmo tempo: um número positivo ou `auto`. Substitui `concurrency.maxLiveWorkers`.                                      |
+| `EMET_STATE_DIR`              | `FORGE_STATE_DIR`              | Diretório de estado de todo o host, que contém o pool de slots de workers.                                                                          |
+| `EMET_SKIP_DEPENDENCY_CHECKS` | `FORGE_SKIP_DEPENDENCY_CHECKS` | Defina como `1` para rebaixar a avisos as verificações de dependências bloqueantes no `emet preflight`.                                             |
+| `EMET_RUN_IDLE_THRESHOLD_MS`  | `FORGE_RUN_IDLE_THRESHOLD_MS`  | Milissegundos que a transcrição de uma execução pode ficar em silêncio antes de ser considerada ociosa. Substitui `concurrency.runIdleThresholdMs`. |
+| `EMET_CPU_OVERSUBSCRIBE`      | `FORGE_CPU_OVERSUBSCRIBE`      | Fator de sobreassinatura de CPU para o limite automático de workers.                                                                                |
+| `EMET_MEM_RESERVE_GIB`        | `FORGE_MEM_RESERVE_GIB`        | GiB de memória mantidos livres antes de conceder um slot de worker.                                                                                 |
+| `EMET_MEM_PER_WORKER_GIB`     | `FORGE_MEM_PER_WORKER_GIB`     | GiB de memória presumidos por worker pelo limite automático de workers.                                                                             |
+| `EMET_AGENT_HOST`             |                                | Defina como `codex` ao executar sob o host de agente Codex; qualquer outro valor significa Claude.                                                  |
+| `CODEX_HOME`                  |                                | O diretório home do Codex; o padrão é `~/.codex`. Apenas lido.                                                                                      |
+| `XDG_STATE_HOME`              |                                | Base do diretório de estado quando `EMET_STATE_DIR` não está definida.                                                                              |
+| `NO_COLOR`                    |                                | Quando definida, o banner é impresso sem cor.                                                                                                       |
