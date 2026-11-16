@@ -1,13 +1,17 @@
 name: Lint Workflows
 
 on:
+  push:
+    branches: [main, develop]
+    paths:
+      - ".github/**"
   pull_request:
     paths:
       - ".github/**"
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' && github.ref != 'refs/heads/develop' }}
 
 permissions:
   contents: read
@@ -20,6 +24,10 @@ jobs:
     permissions:
       contents: read
     steps:
+      - uses: step-security/harden-runner@1d88384fd173af6ecb012dfd0264a306b711241a # v2.22.4
+        with:
+          egress-policy: audit
+
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
