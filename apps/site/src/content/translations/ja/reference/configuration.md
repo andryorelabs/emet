@@ -2,7 +2,7 @@
 title: 設定リファレンス
 description: emet.config.json のすべてのキーについて、既定値と意味を説明します。
 seoTitle: emet の設定リファレンス
-sourceHash: ac6552b22848c9eb
+sourceHash: f643569c960d5e35
 ---
 
 `emet.config.json` のすべてのキーを、既定値と意味とともに示します。信頼できる情報源は [`emet/schema/emet.config.schema.json`](../../emet/schema/emet.config.schema.json) です。用語は [GLOSSARY.md](../../GLOSSARY.md) に従います。[README](../../README.md) に戻る。
@@ -217,3 +217,5 @@ CLI はこれらの変数を、すべて `emet/src/env.ts` 経由で読み取り
 | `CODEX_HOME`                  |                                | Codex のホームディレクトリで、既定は `~/.codex` です。読み取りのみ行われます。                                                                        |
 | `XDG_STATE_HOME`              |                                | `EMET_STATE_DIR` が未設定のときの、状態ディレクトリの基準です。                                                                                       |
 | `NO_COLOR`                    |                                | 設定すると、バナーが色なしで出力されます。                                                                                                            |
+| `FORCE_COLOR`                 |                                | 空または `0` 以外の値を設定すると、TTY がなくてもバナーを色付きで出力します。                                                                         |
+| `TERM`                        |                                | `dumb` を設定すると、バナーの色が無効になります。                                                                                                     |

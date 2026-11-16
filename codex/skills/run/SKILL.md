@@ -1,6 +1,6 @@
 ---
 name: run
-description: "One-shot feature pipeline — interview, spec, tickets, one OK, then parallel worktree agents implement, test, and merge unattended"
+description: "One-shot feature pipeline — interview, spec, tickets, one OK, then parallel worktree agents implement, test, and merge unattended. Use when the user wants a feature taken from an idea to merged code in one approved run."
 ---
 
 FEATURE: the text the user gave after `$emet:run`

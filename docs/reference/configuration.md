@@ -212,3 +212,5 @@ The CLI reads these variables, all through `emet/src/env.ts`. A variable with a 
 | `CODEX_HOME`                  |                                | The Codex home directory; defaults to `~/.codex`. Only ever read.                                                    |
 | `XDG_STATE_HOME`              |                                | Base for the state directory when `EMET_STATE_DIR` is unset.                                                         |
 | `NO_COLOR`                    |                                | When set, the banner is printed without color.                                                                       |
+| `FORCE_COLOR`                 |                                | Any value but empty or `0` forces a colored banner, even without a TTY.                                              |
+| `TERM`                        |                                | `dumb` turns the banner color off.                                                                                   |

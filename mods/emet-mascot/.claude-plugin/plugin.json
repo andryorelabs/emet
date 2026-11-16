@@ -2,7 +2,11 @@
   "name": "emet-mascot",
   "version": "0.2.0",
   "description": "A pixel mascot beside the transcript (or above the prompt) that mirrors the session and the emet run phase.",
-  "author": { "name": "Andry Orellana" },
+  "author": { "name": "Andry Orellana", "email": "hello@andryore.dev" },
+  "homepage": "https://emet.andryore.dev",
+  "repository": "https://github.com/andryorelabs/emet",
+  "bugs": "https://github.com/andryorelabs/emet/issues",
+  "license": "MIT",
   "types": "./types/index.d.ts",
   "userConfig": {
     "size": {

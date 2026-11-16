@@ -16,14 +16,49 @@ export const ROUTED_JOBS: readonly { key: string; reason: string }[] = [
   { key: "ci.yml:commitlint", reason: "lints commit messages; seconds of Linux time" },
   { key: "ci.yml:ci-passed", reason: "aggregates job results; no checkout" },
   { key: "codeql.yml:analyze", reason: "build-mode none needs no toolchain, only a Linux runner" },
+  {
+    key: "dependency-review.yml:review",
+    reason: "diffs the PR's dependency graph through the API; seconds of Linux time",
+  },
   { key: "labels.yml:sync", reason: "syncs labels through the API; seconds of Linux time" },
   { key: "lint-docs.yml:check-links", reason: "offline lychee link check; light and frequent" },
   { key: "lint-pr.yml:validate-title", reason: "validates the PR title through the API" },
   { key: "lint-workflows.yml:lint", reason: "actionlint and zizmor on Linux; light" },
+  {
+    key: "site-quality.yml:image",
+    reason: "builds the Website image once for the later jobs; Linux docker",
+  },
+  { key: "site-quality.yml:smoke", reason: "nginx smoke of the image via smoke.sh; Linux docker" },
+  {
+    key: "site-quality.yml:audit",
+    reason: "third-party audit of the built dist; seconds of Linux time",
+  },
+  {
+    key: "site-quality.yml:e2e",
+    reason: "Playwright and axe against the image; headless Chromium on Linux",
+  },
+  {
+    key: "site-quality.yml:lighthouse",
+    reason: "Lighthouse budget against the image; headless Chromium on Linux",
+  },
+  {
+    key: "site-quality.yml:summary",
+    reason: "aggregates job results and the flaky summary; no checkout",
+  },
 ];
 
-/** Jobs pinned to a literal GitHub-hosted runner, keyed `file:job`, each with why they must not be routed. */
-export const LITERAL_JOBS: readonly { key: string; runner: string; reason: string }[] = [
+/** The `runs-on` of a matrix job whose runners come from `strategy.matrix.include[].runner`. */
+export const MATRIX_RUNS_ON = "${{ matrix.runner }}";
+
+/**
+ * Jobs pinned to literal GitHub-hosted runners, keyed `file:job`, each with why they must not be routed.
+ * A `runner` list marks a matrix job: it runs on `MATRIX_RUNS_ON` and its matrix lists exactly those runners.
+ */
+export const LITERAL_JOBS: readonly {
+  key: string;
+  runner: string | readonly string[];
+  reason: string;
+}[] = [
   {
     key: "ci.yml:test-macos",
     runner: "macos-latest",
@@ -42,6 +77,16 @@ export const LITERAL_JOBS: readonly { key: string; runner: string; reason: strin
   {
     key: "release.yml:release",
     runner: "ubuntu-latest",
+    reason: "builds the release binaries; provenance needs GitHub-hosted runners",
+  },
+  {
+    key: "release.yml:binary",
+    runner: ["ubuntu-latest", "ubuntu-24.04-arm", "macos-latest", "macos-15-intel"],
+    reason: "smoke-runs each release binary on its native OS and architecture",
+  },
+  {
+    key: "release.yml:publish",
+    runner: "ubuntu-latest",
     reason: "release provenance and attestation need GitHub-hosted runners",
   },
   {
@@ -59,11 +104,7 @@ interface PendingRule {
 }
 
 /** Rules waiting on the ticket that owns the target file. Remove an entry when that ticket lands. */
-export const PENDING_RULES: readonly PendingRule[] = [
-  { target: "release.yml", rule: "concurrency", reason: "release.yml belongs to T15 (#538)" },
-  { target: "release.yml:verify", rule: "harden-runner", reason: "T15 (#538) hardens release" },
-  { target: "release.yml:release", rule: "harden-runner", reason: "T15 (#538) hardens release" },
-];
+export const PENDING_RULES: readonly PendingRule[] = [];
 
 const MAIN_GUARD = "github.ref == 'refs/heads/main'";
 const BUN_RUN_PATTERN = /\bbun run ([^\s;&|)]+)/g;
@@ -75,6 +116,7 @@ interface JobShape {
   readonly uses?: unknown;
   readonly if?: unknown;
   readonly steps?: unknown;
+  readonly strategy?: unknown;
 }
 
 /**
@@ -123,9 +165,30 @@ function runnerViolations(key: string, job: JobShape): string[] {
   if (literal === undefined) {
     return [`${key}: job is in neither ROUTED_JOBS nor LITERAL_JOBS`];
   }
+  if (typeof literal.runner !== "string") {
+    return matrixRunnerViolations(key, job, literal.runner);
+  }
   return job["runs-on"] === literal.runner
     ? []
     : [`${key}: literal job must run on ${literal.runner}`];
+}
+
+/**
+ * Checks that a matrix job runs on `MATRIX_RUNS_ON` and its matrix lists exactly `runners`.
+ */
+function matrixRunnerViolations(key: string, job: JobShape, runners: readonly string[]): string[] {
+  if (job["runs-on"] !== MATRIX_RUNS_ON) {
+    return [`${key}: matrix job must run on ${MATRIX_RUNS_ON}`];
+  }
+  const include = asRecord(asRecord(job.strategy)?.matrix)?.include;
+  const listed: unknown[] = Array.isArray(include)
+    ? include.map((entry: unknown) => asRecord(entry)?.runner)
+    : [];
+  const expected = runners.toSorted();
+  const actual = listed.map(String).toSorted();
+  return JSON.stringify(actual) === JSON.stringify(expected)
+    ? []
+    : [`${key}: matrix runners must be exactly ${expected.join(", ")}`];
 }
 
 /**

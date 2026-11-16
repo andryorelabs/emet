@@ -62,6 +62,14 @@ export const ENV_VARS = [
     name: "NO_COLOR",
     summary: "When set, the banner is printed without color.",
   },
+  {
+    name: "FORCE_COLOR",
+    summary: "Any value but empty or `0` forces a colored banner, even without a TTY.",
+  },
+  {
+    name: "TERM",
+    summary: "`dumb` turns the banner color off.",
+  },
 ] as const satisfies readonly EnvVarDefinition[];
 
 /** The name of a variable in {@link ENV_VARS}. */

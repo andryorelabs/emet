@@ -8,6 +8,14 @@ and this project adheres to
 
 ## [Unreleased]
 
+### Changed
+
+- The PreToolUse guard fails closed: when `bin/emet` cannot resolve the emet
+  binary, the hook exits 2 and blocks the tool call, with a message that says
+  how to recover. The Stop and SubagentStop hooks still exit 1.
+- The plugin manifests carry an author email, license, homepage, repository and
+  bugs URL, and the Codex skill descriptions say when to use each skill.
+
 ## [0.8.4] - 2026-11-15
 
 ### Changed
@@ -288,7 +296,9 @@ and this project adheres to
 [0.6.1]: https://github.com/andryorelabs/emet/compare/v0.6.0...v0.6.1
 [0.6.0]: https://github.com/andryorelabs/emet/compare/v0.5.2...v0.6.0
 [0.5.2]: https://github.com/andryorelabs/emet/compare/v0.5.1...v0.5.2
-[0.5.1]: https://github.com/andryorelabs/emet/compare/v0.4.0...v0.5.1
+[0.5.1]: https://github.com/andryorelabs/emet/compare/20c1d29f407842ea6f26eab3338f883ee3701258...v0.5.1
+[0.5.0]: https://github.com/andryorelabs/emet/compare/v0.4.0...20c1d29f407842ea6f26eab3338f883ee3701258
 [0.4.0]: https://github.com/andryorelabs/emet/compare/v0.3.0...v0.4.0
 [0.3.0]: https://github.com/andryorelabs/emet/compare/v0.2.0...v0.3.0
-[0.2.0]: https://github.com/andryorelabs/emet/releases/tag/v0.2.0
+[0.2.0]: https://github.com/andryorelabs/emet/compare/9360b4ff9d22c1de31f1f0a18350023b29e0425c...v0.2.0
+[0.1.0]: https://github.com/andryorelabs/emet/tree/9360b4ff9d22c1de31f1f0a18350023b29e0425c
