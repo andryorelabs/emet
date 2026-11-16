@@ -7,6 +7,10 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
+
 jobs:
   verify:
     name: Verify tagged commit
@@ -16,10 +20,48 @@ jobs:
       contents: read
       checks: read
     steps:
+      - uses: step-security/harden-runner@1d88384fd173af6ecb012dfd0264a306b711241a # v2.22.4
+        with:
+          egress-policy: audit
+
+      - name: Check the tag is annotated and signed
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if ! ref_json=$(gh api "repos/${GITHUB_REPOSITORY}/git/ref/tags/${GITHUB_REF_NAME}"); then
+            echo "Could not read tag ${GITHUB_REF_NAME} from the GitHub API"
+            exit 1
+          fi
+          object_type=$(jq -r '.object.type // empty' <<< "${ref_json}")
+          if [[ "${object_type}" != "tag" ]]; then
+            echo "Tag ${GITHUB_REF_NAME} is lightweight. Delete it and push an annotated, signed tag made with git tag -s."
+            exit 1
+          fi
+          tag_sha=$(jq -r '.object.sha' <<< "${ref_json}")
+          if ! tag_json=$(gh api "repos/${GITHUB_REPOSITORY}/git/tags/${tag_sha}"); then
+            echo "Could not read the tag object ${tag_sha} of ${GITHUB_REF_NAME}"
+            exit 1
+          fi
+          verified=$(jq -r '.verification.verified // false' <<< "${tag_json}")
+          reason=$(jq -r '.verification.reason // "unknown"' <<< "${tag_json}")
+          if [[ "${verified}" != "true" ]]; then
+            echo "Tag ${GITHUB_REF_NAME} has no verified signature (${reason}). Sign it with git tag -s and a key on your GitHub account."
+            exit 1
+          fi
+          echo "Tag ${GITHUB_REF_NAME} is annotated and signed"
+
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
           fetch-depth: 0
+
+      - name: Check the tag matches plugin.json
+        run: |
+          plugin_version="$(jq -r '.version' .claude-plugin/plugin.json)"
+          if [ "${GITHUB_REF_NAME}" != "v${plugin_version}" ]; then
+            echo "Tag ${GITHUB_REF_NAME} does not match plugin.json version v${plugin_version}"
+            exit 1
+          fi
 
       - name: Check the tagged commit is on main
         run: |
@@ -74,26 +116,20 @@ jobs:
         run: bun run test
 
   release:
-    name: Create GitHub release
+    name: Build release binaries
     needs: verify
     runs-on: ubuntu-latest
     timeout-minutes: 20
     permissions:
-      contents: write
-      id-token: write
-      attestations: write
+      contents: read
     steps:
+      - uses: step-security/harden-runner@1d88384fd173af6ecb012dfd0264a306b711241a # v2.22.4
+        with:
+          egress-policy: audit
+
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-
-      - name: Check the tag matches plugin.json
-        run: |
-          plugin_version="$(jq -r '.version' .claude-plugin/plugin.json)"
-          if [ "${GITHUB_REF_NAME}" != "v${plugin_version}" ]; then
-            echo "Tag ${GITHUB_REF_NAME} does not match plugin.json version v${plugin_version}"
-            exit 1
-          fi
 
       - name: Require a CHANGELOG section for the tag
         run: |
@@ -124,25 +160,111 @@ jobs:
       - name: Build the standalone binaries
         run: bun tools/build-binaries.ts --outdir dist
 
-      - name: Smoke-run the linux binary
-        run: ./dist/emet-linux-x64 --version
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: release-build
+          path: |
+            dist/emet-linux-x64
+            dist/emet-linux-arm64
+            dist/emet-darwin-x64
+            dist/emet-darwin-arm64
+            release-notes.md
+          if-no-files-found: error
+          retention-days: 7
+
+  binary:
+    name: Smoke-run ${{ matrix.target }}
+    needs: release
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - target: linux-x64
+            runner: ubuntu-latest
+          - target: linux-arm64
+            runner: ubuntu-24.04-arm
+          - target: darwin-arm64
+            runner: macos-latest
+          - target: darwin-x64
+            runner: macos-15-intel
+    steps:
+      - uses: step-security/harden-runner@1d88384fd173af6ecb012dfd0264a306b711241a # v2.22.4
+        with:
+          egress-policy: audit
+
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: release-build
+
+      - name: Smoke-run the binary and record its size
+        env:
+          TARGET: ${{ matrix.target }}
+          RUNNER: ${{ matrix.runner }}
+        run: |
+          binary="dist/emet-${TARGET}"
+          chmod +x "${binary}"
+          printed_version="$("./${binary}" --version)"
+          expected_version="${GITHUB_REF_NAME#v}"
+          if [[ "${printed_version}" != "${expected_version}" ]]; then
+            echo "emet-${TARGET} --version printed ${printed_version}, expected ${expected_version}"
+            exit 1
+          fi
+          size_bytes="$(wc -c < "${binary}" | tr -d '[:space:]')"
+          {
+            echo "| Binary | Runner | Size | Version |"
+            echo "| --- | --- | --- | --- |"
+            echo "| emet-${TARGET} | ${RUNNER} | ${size_bytes} bytes | ${printed_version} |"
+          } >> "${GITHUB_STEP_SUMMARY}"
+
+  publish:
+    name: Publish GitHub release
+    needs: [release, binary]
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: write
+      id-token: write
+      attestations: write
+    steps:
+      - uses: step-security/harden-runner@1d88384fd173af6ecb012dfd0264a306b711241a # v2.22.4
+        with:
+          egress-policy: audit
+
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: release-build
 
       - name: Write SHA256SUMS
         working-directory: dist
         run: |
           sha256sum emet-linux-x64 emet-linux-arm64 emet-darwin-x64 emet-darwin-arm64 > SHA256SUMS
 
-      - name: Write sizes and checksums to the job summary
+      - name: Write checksums to the job summary
         run: |
           {
-            echo "### Release binaries"
+            echo "### Release checksums"
             echo
             echo '```'
-            ls -l dist/emet-linux-x64 dist/emet-linux-arm64 dist/emet-darwin-x64 dist/emet-darwin-arm64
-            echo
             cat dist/SHA256SUMS
             echo '```'
           } >> "${GITHUB_STEP_SUMMARY}"
+
+      - name: Generate the CycloneDX SBOM
+        uses: anchore/sbom-action@66cbf4bc1f1c0d2edc94016e65bc221b6bb0ad6c # v0.24.3
+        with:
+          path: .
+          format: cyclonedx-json
+          output-file: dist/emet.cdx.json
+          upload-artifact: false
+          upload-release-assets: false
 
       - name: Attest build provenance
         id: attest
@@ -183,4 +305,5 @@ jobs:
             dist/emet-darwin-x64 \
             dist/emet-darwin-arm64 \
             dist/SHA256SUMS \
+            dist/emet.cdx.json \
             "${provenance_assets[@]}"

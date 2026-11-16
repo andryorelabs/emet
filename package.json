@@ -46,6 +46,7 @@
     "check:map": "bun tools/check-map.ts",
     "repo-settings:check": "bun tools/repo-settings-check.ts",
     "i18n:status": "bun tools/translations-status.ts",
+    "release:prep": "bun tools/release-prep.ts",
     "brand:export": "bun tools/brand-export.ts",
     "brand:og": "bun tools/og-images.ts",
     "build:codex": "bun tools/build-codex.ts",
