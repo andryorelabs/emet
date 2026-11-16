@@ -218,7 +218,12 @@ export function runCoverageGate(
   (totals.passed ? console.log : console.error)(totals.message);
   const root = WORKSPACE_ROOTS[workspace];
   if (root === undefined) return totals.passed ? 0 : 1;
-  const scoped = exceptions.filter((exception) => exception.file.startsWith(root));
+  const knownRoots = Object.values(WORKSPACE_ROOTS);
+  const scoped = exceptions.filter(
+    (exception) =>
+      exception.file.startsWith(root) ||
+      !knownRoots.some((knownRoot) => exception.file.startsWith(knownRoot)),
+  );
   const perFile = evaluatePerFile(workspaceFiles(workspace, lcov), scoped);
   (perFile.passed ? console.log : console.error)(perFile.message);
   return totals.passed && perFile.passed ? 0 : 1;

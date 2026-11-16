@@ -176,6 +176,13 @@ describe("runCoverageGate per-file enforcement", () => {
     expect(runCoverageGate(["tools", lcovPath], floorsPath, exceptions)).toBe(0);
   });
 
+  test("fails an exception whose path sits under no workspace root", () => {
+    writeFileSync(lcovPath, [record("tools/a.ts", 10)].join("\n"));
+    const exceptions = [{ file: "src/typo.ts", reason: "typo", lines: 0.8, functions: 0.8 }];
+    expect(runCoverageGate(["tools", lcovPath], floorsPath, exceptions)).toBe(1);
+    expect(error).toHaveBeenCalledWith(expect.stringContaining("src/typo.ts"));
+  });
+
   test("prefixes workspace-relative paths so exceptions use repository paths", () => {
     writeFileSync(lcovPath, record("src/x.ts", 8));
     const exceptions = [

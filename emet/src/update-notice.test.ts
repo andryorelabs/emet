@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, it } from "bun:test";
+import { afterEach, beforeEach, describe, expect, it, spyOn } from "bun:test";
 import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
@@ -20,6 +20,27 @@ function countingFetch(latest: string): { fetchLatest: FetchLatest; calls: () =>
 
 const failingFetch: FetchLatest = () => Promise.reject(new Error("offline"));
 const hangingFetch: FetchLatest = () => new Promise(() => undefined);
+
+function stubFetch(response: Response): () => void {
+  const spy = spyOn(globalThis, "fetch").mockResolvedValue(response);
+  return () => {
+    spy.mockRestore();
+  };
+}
+
+async function settle(): Promise<void> {
+  await Bun.sleep(30);
+}
+
+async function runWithStub(response: Response, run: () => Promise<unknown>): Promise<void> {
+  const restore = stubFetch(response);
+  try {
+    await run();
+    await settle();
+  } finally {
+    restore();
+  }
+}
 
 describe("updateNotice", () => {
   let dir: string;
@@ -99,5 +120,52 @@ describe("updateNotice", () => {
     const started = Date.now();
     expect(await updateNotice(input({ fetchLatest: hangingFetch }))).toBeNull();
     expect(Date.now() - started).toBeLessThan(500);
+  });
+
+  describe("default fetcher and cache faults", () => {
+    it("caches the tag of the latest release without its v prefix", async () => {
+      await runWithStub(Response.json({ tag_name: "v9.9.9" }), () => updateNotice(input()));
+      const cached: unknown = JSON.parse(fs.readFileSync(cacheFile, "utf8"));
+      expect(cached).toMatchObject({ latest: "9.9.9" });
+    });
+
+    it("caches nothing when the release response is not ok", async () => {
+      await runWithStub(new Response("nope", { status: 500 }), () => updateNotice(input()));
+      expect(fs.existsSync(cacheFile)).toBe(false);
+    });
+
+    it("caches nothing when the body is null", async () => {
+      await runWithStub(Response.json(null), () => updateNotice(input()));
+      expect(fs.existsSync(cacheFile)).toBe(false);
+    });
+
+    it("caches nothing when the body has no tag_name", async () => {
+      await runWithStub(Response.json({ other: 1 }), () => updateNotice(input()));
+      expect(fs.existsSync(cacheFile)).toBe(false);
+    });
+
+    it("caches nothing when tag_name is not a string", async () => {
+      await runWithStub(Response.json({ tag_name: 7 }), () => updateNotice(input()));
+      expect(fs.existsSync(cacheFile)).toBe(false);
+    });
+
+    it("treats a cache file holding a non-object as cold", async () => {
+      fs.mkdirSync(path.dirname(cacheFile), { recursive: true });
+      fs.writeFileSync(cacheFile, "null");
+      expect(await updateNotice(input({ fetchLatest: failingFetch }))).toBeNull();
+    });
+
+    it("survives a cache path that cannot be created", async () => {
+      const blocker = path.join(dir, "blocker");
+      fs.writeFileSync(blocker, "x");
+      const fetcher = countingFetch("2.0.0");
+      const unwritable = path.join(blocker, "update.json");
+      expect(
+        await updateNotice(input({ cacheFile: unwritable, fetchLatest: fetcher.fetchLatest })),
+      ).toBeNull();
+      await settle();
+      expect(fetcher.calls()).toBe(1);
+      expect(fs.existsSync(unwritable)).toBe(false);
+    });
   });
 });
