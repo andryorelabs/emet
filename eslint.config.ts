@@ -7,7 +7,13 @@ import unicorn from "eslint-plugin-unicorn";
 import { defineConfig, globalIgnores } from "eslint/config";
 import tseslint from "typescript-eslint";
 
-import localPlugin from "./tools/oxlint/local-plugin.ts";
+import {
+  findMissingDescriptions,
+  findNonDocComments,
+  missingDescriptionMessage,
+  nonDocMessage,
+} from "./tools/oxlint/local-plugin.ts";
+import { lintPolicy, ruleOptions } from "./tools/oxlint/policy.ts";
 
 /**
  * ESLint is the companion linter for `.astro` files only. Oxlint
@@ -126,39 +132,89 @@ const unicornRules = {
 } satisfies Linter.RulesRecord;
 
 /**
- * The S4 baseline rules that need no type information: explicit `any` is
- * banned and type-only imports are written as `import type`.
+ * The rules an ESLint plugin carries, or none when it has no `rules` map.
  */
-const untypedBaselineRules = {
-  "@typescript-eslint/consistent-type-imports": "error",
-  "@typescript-eslint/no-explicit-any": "error",
-} satisfies Linter.RulesRecord;
+function rulesOf(plugin: object): Readonly<Record<string, unknown>> {
+  return "rules" in plugin && typeof plugin.rules === "object" && plugin.rules !== null
+    ? Object.fromEntries(Object.entries(plugin.rules))
+    : {};
+}
 
 /**
- * The type-aware S4 baseline rules beyond the `strictTypeChecked` and
- * `stylisticTypeChecked` presets.
+ * Maps the policy's rules in one Oxlint scope onto the ESLint plugin that
+ * carries them, dropping the rules the plugin does not have.
  */
-const typedBaselineRules = {
-  "@typescript-eslint/switch-exhaustiveness-check": "error",
-  "@typescript-eslint/return-await": ["error", "in-try-catch"],
-  "@typescript-eslint/no-unnecessary-condition": "error",
-} satisfies Linter.RulesRecord;
+function mapPolicyRules(
+  scope: string,
+  eslintScope: string,
+  pluginRules: Readonly<Record<string, unknown>>,
+  include: (ruleName: string) => boolean = () => true,
+): Linter.RulesRecord {
+  const mapped: Linter.RulesRecord = {};
+  for (const ruleName of Object.keys(lintPolicy.rules)) {
+    const [ruleScope, shortName] = ruleName.split("/");
+    if (
+      ruleScope === scope &&
+      shortName !== undefined &&
+      shortName in pluginRules &&
+      include(shortName)
+    ) {
+      mapped[`${eslintScope}/${shortName}`] = "error";
+    }
+  }
+  return mapped;
+}
+
+const untypedTypescriptRules: ReadonlySet<string> = new Set([
+  "consistent-type-imports",
+  "no-explicit-any",
+]);
 
 /**
- * The project-local rules shared with Oxlint: comments are JSDoc blocks or tool
- * directives, and every disable directive gives a reason.
+ * The policy's TypeScript rules that need no type information.
  */
-const localRules = {
-  "local/no-non-doc-comments": "error",
-  "local/require-description": "error",
+const untypedBaselineRules = mapPolicyRules(
+  "typescript",
+  "@typescript-eslint",
+  rulesOf(tseslint.plugin),
+  (ruleName) => untypedTypescriptRules.has(ruleName),
+);
+
+/**
+ * The policy's type-aware TypeScript rules, with the options Oxlint applies.
+ */
+const typedBaselineRules: Linter.RulesRecord = {
+  ...mapPolicyRules(
+    "typescript",
+    "@typescript-eslint",
+    rulesOf(tseslint.plugin),
+    (ruleName) => !untypedTypescriptRules.has(ruleName),
+  ),
+  "@typescript-eslint/return-await": ["error", ...ruleOptions["typescript/return-await"].slice(1)],
+};
+
+/**
+ * The policy's JSDoc content rules.
+ */
+const policyJsdocRules = mapPolicyRules("jsdoc", "jsdoc", rulesOf(jsdocPlugin));
+
+/**
+ * The policy's unicorn rules.
+ */
+const policyUnicornRules = mapPolicyRules("unicorn", "unicorn", rulesOf(unicorn));
+
+/**
+ * The project-local comment rules of the policy, plus the unlimited-disable
+ * ban from the eslint-comments hygiene set.
+ */
+const localRules: Linter.RulesRecord = {
+  ...Object.fromEntries(
+    Object.keys(lintPolicy.rules)
+      .filter((ruleName) => ruleName.startsWith("local/"))
+      .map((ruleName) => [ruleName, "error"]),
+  ),
   "@eslint-community/eslint-comments/no-unlimited-disable": "error",
-} satisfies Linter.RulesRecord;
-
-/**
- * A rule of the Oxlint local plugin, written against the slice of the rule
- * context that Oxlint and ESLint share.
- */
-type LocalRule = (typeof localPlugin.rules)[keyof typeof localPlugin.rules];
+};
 
 /**
  * The location a reported comment is shown at when the parser gave it none,
@@ -167,34 +223,41 @@ type LocalRule = (typeof localPlugin.rules)[keyof typeof localPlugin.rules];
 const fileStart = { start: { line: 1, column: 0 }, end: { line: 1, column: 0 } };
 
 /**
- * Runs an Oxlint local rule under ESLint. The rule reads ESLint's own comment
- * objects, and each report is placed at the reported comment's location.
+ * Builds an ESLint rule that reports each comment the shared finder returns.
  */
-function toEslintRule(localRule: LocalRule): Rule.RuleModule {
+function commentRule(
+  messageId: string,
+  message: string,
+  findComments: typeof findNonDocComments,
+): Rule.RuleModule {
   return {
-    meta: localRule.meta,
+    meta: { type: "suggestion", schema: [], messages: { [messageId]: message } },
     create(context) {
-      const comments = context.sourceCode.getAllComments();
-      return localRule.create({
-        sourceCode: { getAllComments: () => comments },
-        report({ node, messageId }) {
-          const comment = comments.find((candidate) => candidate === node);
-          context.report({ loc: comment?.loc ?? fileStart, messageId });
+      return {
+        Program() {
+          for (const comment of findComments(context.sourceCode.getAllComments())) {
+            context.report({ loc: comment.loc ?? fileStart, messageId });
+          }
         },
-      });
+      };
     },
   };
 }
 
 /**
- * The Oxlint local plugin, adapted to ESLint so `.astro` files get the same
- * comment rules as every other file.
+ * The comment rules of the Oxlint local plugin, run under ESLint so `.astro`
+ * files get the same comment rules as every other file.
  */
 const eslintLocalPlugin = {
-  meta: localPlugin.meta,
-  rules: Object.fromEntries(
-    Object.entries(localPlugin.rules).map(([name, localRule]) => [name, toEslintRule(localRule)]),
-  ),
+  meta: { name: "local" },
+  rules: {
+    "no-non-doc-comments": commentRule("nonDocComment", nonDocMessage, findNonDocComments),
+    "require-description": commentRule(
+      "missingDescription",
+      missingDescriptionMessage,
+      findMissingDescriptions,
+    ),
+  },
 } satisfies ESLint.Plugin;
 
 export default defineConfig([
@@ -243,6 +306,8 @@ export default defineConfig([
     rules: {
       ...untypedBaselineRules,
       ...jsdocRules,
+      ...policyJsdocRules,
+      ...policyUnicornRules,
       ...unicornRules,
       ...localRules,
     },

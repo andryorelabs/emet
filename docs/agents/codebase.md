@@ -8,7 +8,7 @@
 - Node/TypeScript package `emet-dev`, package manager: bun
 - TypeScript (tsconfig.json present)
 - Dependencies: @commitlint/cli, @commitlint/config-conventional, @oxlint/plugins, @types/bun, @types/node, fast-check, husky, knip, lint-staged, oxfmt, oxlint, oxlint-tsgolint, playwright, sharp, turbo, ...
-- Scripts: `brand:export`, `brand:og`, `build:codex`, `check`, `check:codex`, `check:map`, `check:root`, `ci:local`, `fix`, `format:check`, `format:write`, `knip`, `lint`, `lint:commits`, `lint:docs`, `prepare`, `probe:codex`, `repo-settings:check`, `test`, `test:root`, `translations:status`, `typecheck`
+- Scripts: `brand:export`, `brand:og`, `build:codex`, `check`, `check:codex`, `check:map`, `check:root`, `ci:local`, `fix`, `format:check`, `format:write`, `knip`, `lint`, `lint:commits`, `lint:docs`, `prepare`, `probe:codex`, `repo-settings:check`, `test`, `test:root`, `i18n:status`, `typecheck`
 
 ## Structure
 

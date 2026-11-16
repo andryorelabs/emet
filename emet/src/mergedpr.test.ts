@@ -195,7 +195,7 @@ describe("merged branch sweep against a real repository", () => {
     mkdirSync(path.join(repo, ".claude", "worktrees"), { recursive: true });
     process.chdir(repo);
     process.exitCode = 0;
-    logSpy = spyOn(console, "log").mockImplementation(() => {});
+    logSpy = spyOn(console, "log").mockReturnValue(undefined);
   });
 
   afterEach(() => {
