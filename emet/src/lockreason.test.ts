@@ -1,5 +1,5 @@
-import { afterEach, beforeEach, describe, expect, test } from "bun:test";
-import { mkdtempSync, rmSync } from "node:fs";
+import { afterEach, beforeEach, describe, expect, mock, spyOn, test } from "bun:test";
+import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
 
@@ -8,6 +8,7 @@ import {
   DEFAULT_LOCK_REASON_TEMPLATE,
   buildLockReason,
   readLockReasonTemplate,
+  run,
   type LockReasonFields,
 } from "./lockreason";
 import { errorMessage } from "./narrow";
@@ -201,5 +202,119 @@ describe("readLockReasonTemplate", () => {
     await writeConfig({ worktree: { lockReason: 42 } });
     const error = await captureRejection(readLockReasonTemplate(repoRoot));
     expect(errorMessage(error)).toMatch(/must be a non-empty string/);
+  });
+});
+
+describe("run", () => {
+  let workdir: string;
+  let originalCwd: string;
+  let logged: string[];
+  let errored: unknown[];
+  let originalExitCode: typeof process.exitCode;
+
+  beforeEach(() => {
+    originalCwd = process.cwd();
+    originalExitCode = process.exitCode;
+    process.exitCode = 0;
+    workdir = mkdtempSync(path.join(os.tmpdir(), "emet-lockreason-run-"));
+    logged = [];
+    errored = [];
+    spyOn(console, "log").mockImplementation((...args: unknown[]) => {
+      logged.push(args.join(" "));
+    });
+    spyOn(console, "error").mockImplementation((...args: unknown[]) => {
+      errored.push(args[0]);
+    });
+  });
+
+  afterEach(() => {
+    process.chdir(originalCwd);
+    process.exitCode = originalExitCode;
+    rmSync(workdir, { recursive: true, force: true });
+    mock.restore();
+  });
+
+  function initRepo(): void {
+    Bun.spawnSync(["git", "init", "-q", workdir]);
+    process.chdir(workdir);
+  }
+
+  test("prints usage and exits 2 without arguments or with --help", async () => {
+    await run([]);
+    expect(process.exitCode).toBe(2);
+    expect(String(errored[0])).toContain("usage: emet lock-reason --run");
+    process.exitCode = 0;
+    await run(["--help"]);
+    expect(process.exitCode).toBe(2);
+  });
+
+  test("exits 2 outside a git repository", async () => {
+    process.chdir(workdir);
+    await run(["--run", "r1", "--ticket", "T-1"]);
+    expect(process.exitCode).toBe(2);
+    expect(String(errored[0])).toContain("not inside a git repository");
+  });
+
+  test("exits 2 when --run or --ticket is missing or lacks a value", async () => {
+    initRepo();
+    await run(["--ticket", "T-1"]);
+    expect(process.exitCode).toBe(2);
+    expect(String(errored[0])).toContain("--run requires a value");
+    process.exitCode = 0;
+    await run(["--run", "r1", "--ticket", "--anchor"]);
+    expect(process.exitCode).toBe(2);
+    expect(String(errored[1])).toContain("--ticket requires a value");
+  });
+
+  test("prints a reason that round-trips, using an explicit anchor", async () => {
+    initRepo();
+    await run(["--run", "r1", "--ticket", "T-1", "--anchor", "4242"]);
+    expect(process.exitCode).toBe(0);
+    expect(logged).toHaveLength(1);
+    const owner = parse(logged[0] ?? "");
+    expect(owner?.runId).toBe("r1");
+    expect(owner?.ticket).toBe("T-1");
+    expect(owner?.anchorPid).toBe(4242);
+  });
+
+  test("defaults the anchor to a positive pid and honours a config template", async () => {
+    initRepo();
+    writeFileSync(
+      path.join(workdir, "emet.config.json"),
+      JSON.stringify({
+        worktree: {
+          lockReason:
+            "emet ticket={ticket} run={runId} anchor={anchorPid} slug={coordinatorSlug} at={iso}",
+        },
+      }),
+    );
+    await run(["--run", "r1", "--ticket", "T-1"]);
+    expect(process.exitCode).toBe(0);
+    expect(logged[0]?.startsWith("emet ticket=T-1 run=r1 anchor=")).toBe(true);
+    expect(parse(logged[0] ?? "")?.anchorPid).toBeGreaterThan(0);
+  });
+
+  test("exits 2 for an invalid anchor pid", async () => {
+    initRepo();
+    await run(["--run", "r1", "--ticket", "T-1", "--anchor", "abc"]);
+    expect(process.exitCode).toBe(2);
+    expect(String(errored[0])).toContain("--anchor must be a positive integer pid");
+    expect(logged).toHaveLength(0);
+  });
+
+  test("exits 1 and logs the raw error for an unexpected failure", async () => {
+    initRepo();
+    writeFileSync(path.join(workdir, "emet.config.json"), "{}");
+    const boom = new Error("disk exploded");
+    const fileSpy = spyOn(Bun, "file").mockImplementation(() => {
+      throw boom;
+    });
+    try {
+      await run(["--run", "r1", "--ticket", "T-1", "--anchor", "7"]);
+    } finally {
+      fileSpy.mockRestore();
+    }
+    expect(process.exitCode).toBe(1);
+    expect(errored[0]).toBe(boom);
   });
 });
