@@ -14,6 +14,7 @@ import path from "node:path";
 
 import { checkSelfCheckCommand, createEnvironmentProbes, run } from "./doctor";
 import { computeAutoMaxLiveWorkers, readHostResources } from "./resources";
+import * as skills from "./skills";
 
 let root: string;
 let home: string;
@@ -109,13 +110,12 @@ describe("doctor run() home-level sections", () => {
 
   test("reports a double install when the plugin and the manifest both exist", async () => {
     writeHomeFile(".claude/emet/.install-manifest.json", "{}");
-    writeExecutable(
-      "claude",
-      `echo '[{"id":"emet@market","version":"1.0.0","enabled":true,"installPath":"${root}/plugin"}]'`,
-    );
-    process.env.PATH = `${binDirectory}:${process.env.PATH}`;
+    const pluginSpy = spyOn(skills, "listInstalledPlugins").mockReturnValue([
+      { id: "emet@market", version: "1.0.0", enabled: true, installPath: `${root}/plugin` },
+    ]);
 
     const output = await runDoctor([makePlainDirectory()]);
+    pluginSpy.mockRestore();
 
     expect(output).toContain("Double install:");
     expect(output).toContain("installed both as a plugin and by install.sh");

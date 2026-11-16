@@ -12,6 +12,7 @@ import {
   type LockReasonFields,
 } from "./lockreason";
 import { errorMessage } from "./narrow";
+import * as runs from "./runs";
 import { resolveWorktreeOwner } from "./worktrees";
 
 /**
@@ -288,6 +289,7 @@ describe("run", () => {
         },
       }),
     );
+    spyOn(runs, "resolveAnchorPid").mockReturnValue(4242);
     await run(["--run", "r1", "--ticket", "T-1"]);
     expect(process.exitCode).toBe(0);
     expect(logged[0]?.startsWith("emet ticket=T-1 run=r1 anchor=")).toBe(true);
