@@ -1,4 +1,5 @@
 import { describe, expect, test } from "bun:test";
+
 import { errnoCode, errorMessage, isObject, isOneOf } from "./narrow";
 
 describe("isObject", () => {

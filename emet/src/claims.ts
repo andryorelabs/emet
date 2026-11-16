@@ -1,4 +1,3 @@
-import { optionalProperty } from "./optional";
 import {
   existsSync,
   mkdirSync,
@@ -25,9 +24,10 @@ import {
   resolveLockDirectory,
 } from "./locks";
 import { LEGACY_PRODUCT, PRODUCT } from "./names";
+import { errnoCode, isObject } from "./narrow";
+import { optionalProperty } from "./optional";
 import { classifyRun, readProcessStartToken, resolveSessionSlug, type RunVerdict } from "./runs";
 import { findSurfaceOverlaps } from "./surfaces";
-import { errnoCode, isObject } from "./narrow";
 
 /**
  * Per-ticket reservations under `<git-common-dir>/emet/tickets/` — the

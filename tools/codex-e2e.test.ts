@@ -5,9 +5,9 @@ import os from "node:os";
 import path from "node:path";
 
 import { didReserveTicket } from "../emet/src/claims";
-import { loadForgeConfigWithDefaults } from "../emet/src/config";
 import { resolveCodexModel } from "../emet/src/codex-models";
 import { readCodexState } from "../emet/src/codex-process";
+import { loadForgeConfigWithDefaults } from "../emet/src/config";
 import { run } from "../emet/src/dispatch";
 import { acquireSlot } from "../emet/src/slots";
 import { pushRefusedByRules } from "./codex-probe";

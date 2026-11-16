@@ -1,9 +1,10 @@
 import { readFileSync } from "node:fs";
 import path from "node:path";
+
 import { DEFAULT_FORGE_CONFIG, loadForgeConfigWithDefaults, resolveRepoRoot } from "./config";
 import { analyzeTicketGraph } from "./dependencies";
-import { findSurfaceOverlaps } from "./surfaces";
 import { isObject } from "./narrow";
+import { findSurfaceOverlaps } from "./surfaces";
 import { resolveTrackerRoot } from "./tracker-files";
 
 const USAGE = `usage: emet validate --file <plan.json | -> | --spec <id> --tickets <tickets.json | ->

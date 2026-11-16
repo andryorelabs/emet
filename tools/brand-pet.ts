@@ -6,6 +6,7 @@
  */
 
 import sharp from "sharp";
+
 import { KB, MB } from "./brand-export-spec.ts";
 
 /** The five mascot states that have source art. */

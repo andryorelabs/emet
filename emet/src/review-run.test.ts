@@ -2,6 +2,8 @@ import { afterEach, describe, expect, spyOn, test } from "bun:test";
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
+
+import { DEFAULT_FORGE_CONFIG } from "./config";
 import { isObject } from "./narrow";
 import { parseFindings, type Finding } from "./review";
 import {
@@ -12,7 +14,6 @@ import {
   modelArguments,
   run,
 } from "./review-run";
-import { DEFAULT_FORGE_CONFIG } from "./config";
 
 const FAKE = path.resolve(import.meta.dir, "../../tools/fixtures/fake-codex/codex");
 const scratch: string[] = [];

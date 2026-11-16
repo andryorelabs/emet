@@ -3,6 +3,7 @@ import { stat } from "node:fs/promises";
 import path from "node:path";
 
 import type { AgentHost } from "./agenthost";
+import { readTemplate } from "./assets";
 import {
   DEFAULT_FORGE_CONFIG,
   loadForgeConfig,
@@ -10,7 +11,6 @@ import {
   type ForgeConfig,
   type TrackerKind,
 } from "./config";
-import { BINARY, CONFIG_FILE, LEGACY_CONFIG_FILE, LEGACY_PRODUCT, PRODUCT, RUN_DIR } from "./names";
 import {
   agentHostOfConfig,
   checkDependencies,
@@ -18,8 +18,8 @@ import {
   findLinearMcpEntry,
   formatDependencyCheck,
 } from "./dependencies";
+import { BINARY, CONFIG_FILE, LEGACY_CONFIG_FILE, LEGACY_PRODUCT, PRODUCT, RUN_DIR } from "./names";
 import { isObject } from "./narrow";
-import { readTemplate } from "./assets";
 
 /**
  * `emet init` — generates a repo's `emet.config.json` plus its

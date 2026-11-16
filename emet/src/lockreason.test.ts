@@ -10,8 +10,8 @@ import {
   readLockReasonTemplate,
   type LockReasonFields,
 } from "./lockreason";
-import { resolveWorktreeOwner } from "./worktrees";
 import { errorMessage } from "./narrow";
+import { resolveWorktreeOwner } from "./worktrees";
 
 /**
  * The contract under test is a round trip, not a string: whatever

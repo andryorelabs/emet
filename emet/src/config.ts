@@ -1,5 +1,5 @@
-import { errorMessage, isOneOf } from "./narrow";
 import { BINARY, CONFIG_FILE, resolveConfigPath } from "./names";
+import { errorMessage, isOneOf } from "./narrow";
 
 /**
  * `emet.config.json` — the per-repo config that makes `/emet`'s repo-side

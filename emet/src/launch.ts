@@ -1,4 +1,12 @@
-import { optionalProperty } from "./optional";
+import {
+  resolveAgentHost,
+  type AgentHost,
+  type CommandResult,
+  type CommandRunner,
+  type HostRegistry,
+} from "./agenthost";
+import { claudeHost } from "./agenthost-claude";
+import { registerCodexHost } from "./agenthost-codex";
 import {
   ForgeConfigError,
   loadForgeConfigWithDefaults,
@@ -8,17 +16,9 @@ import {
   type ForgeConfig,
   type HandoffLauncher,
 } from "./config";
-import { claudeHost } from "./agenthost-claude";
-import { registerCodexHost } from "./agenthost-codex";
-import {
-  resolveAgentHost,
-  type AgentHost,
-  type CommandResult,
-  type CommandRunner,
-  type HostRegistry,
-} from "./agenthost";
-import { errorMessage, isObject } from "./narrow";
 import { BINARY, LEGACY_PRODUCT, PRODUCT } from "./names";
+import { errorMessage, isObject } from "./narrow";
+import { optionalProperty } from "./optional";
 import { writePhase } from "./phase";
 
 /**

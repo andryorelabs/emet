@@ -1,17 +1,16 @@
+import { defineConfig } from "astro/config";
 import starlight from "@astrojs/starlight";
 import tailwindcss from "@tailwindcss/vite";
-import { defineConfig } from "astro/config";
 
 import { THEME_INIT_HASH } from "./src/components/site/theme";
-import { emetDirectives } from "./src/docs/directives";
 import { codeColorsPlugin } from "./src/docs/code-colors-plugin";
-import { sharedCodeConfig } from "./src/highlight/code-config";
+import { emetDirectives } from "./src/docs/directives";
+import { buildSidebar } from "./src/docs/sidebar";
 import {
   collectStarlightInlineScriptHashes,
   collectStarlightInlineStyleHashes,
 } from "./src/docs/starlight-inline-hashes";
-import { buildSidebar } from "./src/docs/sidebar";
-import { sitemapOptOut } from "./src/seo/sitemap-opt-out";
+import { sharedCodeConfig } from "./src/highlight/code-config";
 import {
   DEFAULT_LOCALE,
   LOCALE_NAMES,
@@ -19,6 +18,7 @@ import {
   localePath,
   localeSegment,
 } from "./src/i18n/locales";
+import { sitemapOptOut } from "./src/seo/sitemap-opt-out";
 
 const starlightLocales = Object.fromEntries(
   LOCALES.map((locale) => [

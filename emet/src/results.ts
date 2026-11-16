@@ -2,8 +2,8 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
 
 import { resolveRepoRoot } from "./config";
-import { errorMessage, isObject, isOneOf } from "./narrow";
 import { resolveRunDir } from "./names";
+import { errorMessage, isObject, isOneOf } from "./narrow";
 
 async function resolveSharedRoot(): Promise<string> {
   const output = await Bun.$`git rev-parse --path-format=absolute --git-common-dir`

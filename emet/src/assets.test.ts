@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { readdirSync, readFileSync } from "node:fs";
 import path from "node:path";
+
 import { FORGE_VERSION, isCompiledBinary, readSchema, readTemplate } from "./assets";
 
 const templatesDirectory = path.join(import.meta.dir, "..", "templates");

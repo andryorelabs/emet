@@ -1,8 +1,8 @@
 import { describe, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
 
-import { LOCALES } from "../../i18n/locales";
 import { PAGE_ACTIONS_STRINGS } from "../../docs/page-actions-strings";
+import { LOCALES } from "../../i18n/locales";
 import { buildOpenInPrompt, buildOpenInUrl, shouldHandleArrowKey } from "./page-actions";
 
 const bare = { key: "ArrowRight", ctrlKey: false, metaKey: false, altKey: false, shiftKey: false };

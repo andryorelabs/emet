@@ -6,6 +6,7 @@
 
 import { join } from "node:path";
 import sharp from "sharp";
+
 import { FRAME_HEIGHT, FRAME_WIDTH, type Frame, type MascotState } from "./brand-pet.ts";
 
 export const GENERATED_FRAMES_PATH = join(

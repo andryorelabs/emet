@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import path from "node:path";
+
 import { parseFloors } from "./coverage-gate";
 
 const repositoryRoot = path.resolve(import.meta.dir, "..");

@@ -6,10 +6,11 @@
  * be the worker's actual output.
  */
 
-import { resolveRunDir } from "./names";
-import { optionalProperty } from "./optional";
 import { mkdirSync, writeFileSync } from "node:fs";
 import path from "node:path";
+
+import { resolveRunDir } from "./names";
+import { optionalProperty } from "./optional";
 
 const USAGE = `usage: emet review-package <base> <head> [--out <file>]`;
 

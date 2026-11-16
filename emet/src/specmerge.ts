@@ -10,8 +10,8 @@ import {
 import path from "node:path";
 
 import { loadForgeConfigWithDefaults, resolveRepoRoot } from "./config";
-import { errorMessage, isOneOf } from "./narrow";
 import { resolveRunDir } from "./names";
+import { errorMessage, isOneOf } from "./narrow";
 
 const USAGE = `usage: emet spec-merge --spec <id> [--root <dir>]
 

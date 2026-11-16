@@ -1,10 +1,11 @@
 import { existsSync, mkdirSync, readFileSync, renameSync, statSync, writeFileSync } from "node:fs";
 import path from "node:path";
-import { claudeHost } from "./agenthost-claude";
+
 import type { AgentHost } from "./agenthost";
+import { claudeHost } from "./agenthost-claude";
 import { resolveLockDirectory } from "./locks";
-import { errnoCode, isObject } from "./narrow";
 import { readEnv, resolveRunDir } from "./names";
+import { errnoCode, isObject } from "./narrow";
 import { readParent, type ProcessTreeReader, defaultProcessTreeReader } from "./proctree";
 
 /**

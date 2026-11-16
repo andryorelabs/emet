@@ -2,7 +2,17 @@
   "name": "@emet/site",
   "private": true,
   "description": "The emet Website: home page and docs (Astro and Starlight)",
+  "homepage": "https://emet.andryore.dev",
+  "bugs": {
+    "url": "https://github.com/andryorelabs/emet/issues"
+  },
   "license": "MIT",
+  "author": "Andry Orellana <hello@andryore.dev>",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/andryorelabs/emet.git",
+    "directory": "apps/site"
+  },
   "type": "module",
   "scripts": {
     "dev": "astro dev",

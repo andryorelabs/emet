@@ -2,6 +2,9 @@ import { existsSync, readFileSync, statSync } from "node:fs";
 import { readdir } from "node:fs/promises";
 import path from "node:path";
 
+import { type AgentHost, type AgentHostName } from "./agenthost";
+import { checkApproval, type ApprovalRecord } from "./approve";
+import { listReservations } from "./claims";
 import {
   ForgeConfigError,
   requireForgeConfig,
@@ -9,7 +12,6 @@ import {
   type ForgeConfig,
   type LandingMode,
 } from "./config";
-import { type AgentHost, type AgentHostName } from "./agenthost";
 import {
   agentHostOfConfig,
   checkDependencies,
@@ -19,6 +21,11 @@ import {
   type DependencyCheck,
   type DependencyProbes,
 } from "./dependencies";
+import { checkWorktreeForkBase, createEnvironmentProbes, type EnvironmentProbes } from "./doctor";
+import { resolveLandedVerdict, unownedReclaimVerdict, type LandedVerdict } from "./landed";
+import { checkStale } from "./map";
+import { readEnv, TODO_MARKER, TODO_MARKERS } from "./names";
+import { isObject } from "./narrow";
 import {
   classifyRun,
   isRunClosed,
@@ -33,13 +40,6 @@ import {
   resolveMaxLiveWorkers,
   resolveSlotsDirectory,
 } from "./slots";
-import { checkApproval, type ApprovalRecord } from "./approve";
-import { isObject } from "./narrow";
-import { readEnv, TODO_MARKER, TODO_MARKERS } from "./names";
-import { listReservations } from "./claims";
-import { resolveLandedVerdict, unownedReclaimVerdict, type LandedVerdict } from "./landed";
-import { checkWorktreeForkBase, createEnvironmentProbes, type EnvironmentProbes } from "./doctor";
-import { checkStale } from "./map";
 import { validatePlan, type PlanTicket } from "./validate";
 import {
   classifyByContent,

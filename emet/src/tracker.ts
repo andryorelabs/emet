@@ -2,9 +2,10 @@ import { randomUUID } from "node:crypto";
 import { existsSync } from "node:fs";
 import { mkdir, readFile, rename, writeFile } from "node:fs/promises";
 import path from "node:path";
+
 import { didAcquireLock, didReclaimStaleLock, releaseLock, resolveLockDirectory } from "./locks";
-import { errnoCode, errorMessage } from "./narrow";
 import { PRODUCT } from "./names";
+import { errnoCode, errorMessage } from "./narrow";
 import {
   appendComment,
   computeFrontier,

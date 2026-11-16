@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
 import sharp from "sharp";
-import { FRAME_HEIGHT, FRAME_WIDTH, type Frame, type MascotState } from "./brand-pet.ts";
+
 import { FRAMES } from "../mods/emet-mascot/hooks/frames.generated.ts";
 import {
   MASCOT_PALETTE,
@@ -11,6 +11,7 @@ import {
   encodeRasterFrame,
   formatSiteFramesModule,
 } from "./brand-frames.ts";
+import { FRAME_HEIGHT, FRAME_WIDTH, type Frame, type MascotState } from "./brand-pet.ts";
 
 function decode(cells: string): number[] {
   const bytes = Buffer.from(cells, "base64");

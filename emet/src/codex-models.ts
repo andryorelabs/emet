@@ -1,6 +1,7 @@
+import { readFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { join } from "node:path";
-import { readFileSync } from "node:fs";
+
 import { resolveCodexConfig, type CodexModelChoice, type ForgeConfig } from "./config";
 
 export type CodexRole =

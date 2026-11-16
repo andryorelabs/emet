@@ -11,19 +11,11 @@
  * never from its pid alone, which may come from another pid namespace.
  */
 
-import { isObject } from "./narrow";
-import { BINARY, LEGACY_PRODUCT, PRODUCT, resolveRunDir } from "./names";
-import { optionalProperty } from "./optional";
 import path from "node:path";
 
-import {
-  DEFAULT_FORGE_CONFIG,
-  loadForgeConfigWithDefaults,
-  resolveAgentHostName,
-  resolveRepoRoot,
-  type ForgeConfig,
-} from "./config";
+import { resolveAgentHost, type AgentHost } from "./agenthost";
 import { claudeHost } from "./agenthost-claude";
+import { listReservations } from "./claims";
 import {
   codexWorkerLiveness,
   readCodexState,
@@ -31,8 +23,16 @@ import {
   type CodexWorkerLiveness,
   type LivenessProbe,
 } from "./codex-process";
-import { resolveAgentHost, type AgentHost } from "./agenthost";
-import { listReservations } from "./claims";
+import {
+  DEFAULT_FORGE_CONFIG,
+  loadForgeConfigWithDefaults,
+  resolveAgentHostName,
+  resolveRepoRoot,
+  type ForgeConfig,
+} from "./config";
+import { BINARY, LEGACY_PRODUCT, PRODUCT, resolveRunDir } from "./names";
+import { isObject } from "./narrow";
+import { optionalProperty } from "./optional";
 import { classifyRun, type RunVerdict } from "./runs";
 import { listOccupiedSlots } from "./slots";
 import { findStalledTranscripts, readLastStepFor } from "./usage";
