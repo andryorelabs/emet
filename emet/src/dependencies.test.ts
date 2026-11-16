@@ -1,18 +1,21 @@
-import { describe, expect, test } from "bun:test";
+import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
 
-import { claudeHost } from "./agenthost";
+import { claudeHost, type PluginInfo } from "./agenthost";
 import { codexHost } from "./agenthost-codex";
+import { DEFAULT_FORGE_CONFIG } from "./config";
 import {
   type TicketNode,
   analyzeTicketGraph,
   formatTicketGraphJson,
   AGENT_NAMES,
+  agentHostOfConfig,
   agentPluginInstallPaths,
   MATTPOCOCK_SKILLS_PLUGIN_ID,
   checkDependencies,
+  createDependencyProbes,
   classifyClaudePluginProbe,
   classifyForgeAgentsProbe,
   classifyGithubCliProbe,
@@ -23,6 +26,7 @@ import {
   mcpListMentionsLinear,
   parsePluginListOutput,
   probeForgeAgents,
+  probeGithubCli,
   probeLinearMcpServer,
   unsatisfiedChecks,
   type ClaudePluginProbe,
@@ -689,5 +693,195 @@ describe("analyzeTicketGraph", () => {
       ready: ["A"],
       blocked: [{ id: "B", blockers: ["A"] }],
     });
+  });
+});
+
+function hostWithProbes(overrides: Partial<(typeof claudeHost)["probes"]>): typeof claudeHost {
+  return { ...claudeHost, probes: { ...claudeHost.probes, ...overrides } };
+}
+
+async function statusFor(command: string, parsed: PluginInfo[]): Promise<ClaudePluginProbe> {
+  return createDependencyProbes(
+    hostWithProbes({
+      pluginListCommand: [command, "plugin", "list"],
+      parsePluginList: () => parsed,
+    }),
+  ).claudePlugin();
+}
+
+function pluginInfo(id: string, enabled: boolean): PluginInfo {
+  return { id, version: "1.0.0", enabled, installPath: "/unused" };
+}
+
+describe("probes that shell out", () => {
+  let binDirectory = "";
+  let fakeCli = "";
+  const brokenInterpreter = "#!/nonexistent/interpreter\n";
+
+  function installFakeBinary(name: string, body: string): void {
+    writeFileSync(path.join(binDirectory, path.basename(name)), `#!/bin/sh\n${body}\n`, {
+      mode: 0o755,
+    });
+  }
+
+  function pluginHost(parsed?: PluginInfo[]): typeof claudeHost {
+    return hostWithProbes({
+      pluginListCommand: [fakeCli, "plugin", "list"],
+      ...(parsed === undefined ? {} : { parsePluginList: () => parsed }),
+    });
+  }
+
+  beforeEach(() => {
+    binDirectory = mkdtempSync(path.join(os.tmpdir(), "emet-fakebin-"));
+    fakeCli = path.join(binDirectory, "emet-fake-cli");
+  });
+
+  afterEach(() => {
+    rmSync(binDirectory, { recursive: true, force: true });
+  });
+
+  test("claude plugin probe reports a missing binary", async () => {
+    const host = hostWithProbes({ pluginListCommand: ["emet-no-such-cli", "plugin", "list"] });
+    expect(await createDependencyProbes(host).claudePlugin()).toEqual({
+      kind: "claude-not-on-path",
+    });
+  });
+
+  test("claude plugin probe parses a text listing and memoizes the result", async () => {
+    installFakeBinary(
+      path.basename(fakeCli),
+      `printf '  ❯ ${PLUGIN_ID}\\n    Status: ✔ enabled\\n'`,
+    );
+    const probes = createDependencyProbes(pluginHost());
+    const first = await probes.claudePlugin();
+    expect(first).toEqual({ kind: "listed", status: "installed" });
+    expect(await probes.claudePlugin()).toBe(first);
+  });
+
+  test("claude plugin probe reads a JSON listing through the host parser", async () => {
+    installFakeBinary(path.basename(fakeCli), "echo '[]'");
+    const id = claudeHost.probes.skillsPluginId;
+    expect(await statusFor(fakeCli, [pluginInfo("other", true)])).toEqual({
+      kind: "listed",
+      status: "missing",
+    });
+    expect(await statusFor(fakeCli, [pluginInfo(id, true)])).toEqual({
+      kind: "listed",
+      status: "installed",
+    });
+    expect(await statusFor(fakeCli, [pluginInfo(id, false)])).toEqual({
+      kind: "listed",
+      status: "disabled",
+    });
+  });
+
+  test("claude plugin probe reports a non-zero exit code", async () => {
+    installFakeBinary(path.basename(fakeCli), "exit 3");
+    expect(await createDependencyProbes(pluginHost()).claudePlugin()).toEqual({
+      kind: "claude-failed",
+      detail: "exit code 3",
+    });
+  });
+
+  test("claude plugin probe reports a binary that cannot be spawned", async () => {
+    writeFileSync(fakeCli, brokenInterpreter, { mode: 0o755 });
+    const probe = await createDependencyProbes(pluginHost()).claudePlugin();
+    expect(probe.kind).toBe("claude-failed");
+  });
+
+  test("claude plugin probe reports a timeout", async () => {
+    installFakeBinary(path.basename(fakeCli), "exec sleep 30");
+    expect(await createDependencyProbes(pluginHost()).claudePlugin()).toEqual({
+      kind: "claude-failed",
+      detail: "timed out after 5000ms",
+    });
+  }, 20_000);
+
+  test("gh probe maps absent, authenticated, unauthenticated and spawn failure", async () => {
+    const binary = path.join(binDirectory, "gh");
+    expect(await probeGithubCli("emet-no-such-cli")).toEqual({ kind: "not-on-path" });
+    installFakeBinary("gh", "exit 0");
+    expect(await probeGithubCli(binary)).toEqual({ kind: "authenticated" });
+    installFakeBinary("gh", "exit 1");
+    expect(await probeGithubCli(binary)).toEqual({ kind: "unauthenticated" });
+    writeFileSync(binary, brokenInterpreter, { mode: 0o755 });
+    expect(await probeGithubCli(binary)).toEqual({ kind: "not-on-path" });
+  });
+
+  test("gh probe reports a timeout", async () => {
+    installFakeBinary("gh", "exec sleep 30");
+    expect(await probeGithubCli(path.join(binDirectory, "gh"))).toEqual({ kind: "timed-out" });
+  }, 20_000);
+
+  test("linear probe falls back to the host mcp list", async () => {
+    const repo = mkdtempSync(path.join(os.tmpdir(), "emet-deps-repo-"));
+    try {
+      expect(await probeLinearMcpServer(repo, codexHost)).toEqual({
+        kind: "not-declared",
+        searchedAllScopes: false,
+      });
+      const missingBinaryHost = hostWithProbes({ mcpListCommand: ["emet-no-such-cli", "mcp"] });
+      expect(await probeLinearMcpServer(repo, missingBinaryHost)).toEqual({
+        kind: "not-declared",
+        searchedAllScopes: false,
+      });
+      const host = hostWithProbes({ mcpListCommand: [fakeCli, "mcp", "list"] });
+      installFakeBinary(path.basename(fakeCli), "exit 2");
+      expect(await probeLinearMcpServer(repo, host)).toEqual({
+        kind: "not-declared",
+        searchedAllScopes: false,
+      });
+      installFakeBinary(path.basename(fakeCli), "echo 'other-server: https://example.com'");
+      expect(await probeLinearMcpServer(repo, host)).toEqual({
+        kind: "not-declared",
+        searchedAllScopes: true,
+      });
+      installFakeBinary(path.basename(fakeCli), "echo 'linear-server: https://mcp.linear.app/mcp'");
+      expect(await createDependencyProbes(host).linearMcpServer(repo)).toEqual({
+        kind: "declared",
+        source: "claude-mcp-list",
+      });
+    } finally {
+      rmSync(repo, { recursive: true, force: true });
+    }
+  });
+
+  test("agents probe is satisfied for a host without an agents directory", async () => {
+    const host = hostWithProbes({ agentsDir: () => undefined });
+    expect(await createDependencyProbes(host).forgeAgents()).toEqual({ kind: "present" });
+  });
+
+  test("agents probe looks in the host agents directory and memoizes", async () => {
+    const agentsDirectory = path.join(binDirectory, "agents");
+    mkdirSync(agentsDirectory);
+    installFakeBinary(path.basename(fakeCli), "exit 0");
+    const probes = createDependencyProbes(
+      hostWithProbes({ agentsDir: () => agentsDirectory, pluginListCommand: [fakeCli] }),
+    );
+    const probe = await probes.forgeAgents();
+    expect(probe.kind).toBe("missing");
+    expect(await probes.forgeAgents()).toBe(probe);
+  });
+});
+
+describe("host selection and remedies", () => {
+  test("agentHostOfConfig defaults to claude and honours an explicit host", () => {
+    expect(agentHostOfConfig(DEFAULT_FORGE_CONFIG).name).toBe("claude");
+    expect(agentHostOfConfig({ ...DEFAULT_FORGE_CONFIG, agentHost: "codex" }).name).toBe("codex");
+  });
+
+  test("a non-claude host installs the plugin through its own remedy", () => {
+    const check = classifyClaudePluginProbe({ kind: "listed", status: "missing" }, codexHost);
+    expect(check.remedy).toEqual([codexHost.probes.pluginRemedy(codexHost.probes.skillsPluginId)]);
+  });
+
+  test("the skills contract probe is memoized per probe set", () => {
+    const probes = createDependencyProbes({
+      ...claudeHost,
+      probes: { ...claudeHost.probes, pluginListCommand: ["true"] },
+    });
+    const first = probes.skillsContract?.();
+    expect(first).toBeDefined();
+    expect(probes.skillsContract?.()).toBe(first);
   });
 });
