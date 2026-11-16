@@ -1,6 +1,6 @@
 ---
 name: doctor
-description: "Check this repo and install for emet problems with `emet doctor`, failures first"
+description: "Check this repo and install for emet problems with `emet doctor`, failures first. Use when emet misbehaves or before a first run, to find config, install and skill problems."
 ---
 
 Run `emet doctor .` in the shell from the repository root. `emet` is on

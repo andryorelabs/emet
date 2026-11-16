@@ -1,6 +1,6 @@
 ---
 name: init
-description: "Scaffold emet config and docs in this repo with `emet init`, then summarize what was written"
+description: "Scaffold emet config and docs in this repo with `emet init`, then summarize what was written. Use when setting up emet in a repository for the first time, or refreshing its config and docs."
 ---
 
 Run `emet init` in the shell from the repository root. `emet` is on PATH

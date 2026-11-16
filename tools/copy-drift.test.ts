@@ -4,6 +4,15 @@ import path from "node:path";
 
 const repoRoot = path.join(import.meta.dir, "..");
 
+/** The B4 fields every plugin manifest carries besides its description. */
+const OWNER_IDENTITY = {
+  author: { name: "Andry Orellana", email: "hello@andryore.dev" },
+  license: "MIT",
+  homepage: "https://emet.andryore.dev",
+  repository: "https://github.com/andryorelabs/emet",
+  bugs: "https://github.com/andryorelabs/emet/issues",
+} as const;
+
 function read(relativePath: string): string {
   return readFileSync(path.join(repoRoot, relativePath), "utf8");
 }
@@ -71,18 +80,40 @@ describe("copy drift", () => {
     }
   });
 
-  test("the Claude manifests carry the owner identity", () => {
-    const identity = {
-      author: { name: "Andry Orellana" },
-      homepage: "https://emet.andryore.dev",
-      repository: "https://github.com/andryorelabs/emet",
-    };
-    const plugin: unknown = JSON.parse(read(".claude-plugin/plugin.json"));
+  test("every plugin manifest carries the B4 identity fields", () => {
     const marketplace: unknown = JSON.parse(read(".claude-plugin/marketplace.json"));
-    expect(plugin).toMatchObject(identity);
+    const plugins: unknown = field(marketplace, "plugins");
+    const entries: unknown[] = Array.isArray(plugins) ? (plugins as unknown[]) : [];
+    const manifests: { file: string; manifest: unknown }[] = [
+      {
+        file: ".claude-plugin/plugin.json",
+        manifest: JSON.parse(read(".claude-plugin/plugin.json")),
+      },
+      {
+        file: ".codex-plugin/plugin.json",
+        manifest: JSON.parse(read(".codex-plugin/plugin.json")),
+      },
+      {
+        file: "mods/emet-mascot/.claude-plugin/plugin.json",
+        manifest: JSON.parse(read("mods/emet-mascot/.claude-plugin/plugin.json")),
+      },
+      ...entries.map((entry) => ({
+        file: `.claude-plugin/marketplace.json plugins[${String(field(entry, "name"))}]`,
+        manifest: entry,
+      })),
+    ];
+    expect(entries).toHaveLength(2);
+    for (const { file, manifest } of manifests) {
+      expect(manifest, `${file} lacks a B4 identity field`).toMatchObject(OWNER_IDENTITY);
+      expect(typeof field(manifest, "description"), `${file} has no description`).toBe("string");
+    }
+  });
+
+  test("the marketplace carries its owner and metadata description", () => {
+    const marketplace: unknown = JSON.parse(read(".claude-plugin/marketplace.json"));
     expect(marketplace).toMatchObject({
       owner: { name: "andryorelabs" },
-      plugins: [identity, {}],
+      metadata: { description: copyShortDescription() },
     });
   });
 });
