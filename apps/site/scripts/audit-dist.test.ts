@@ -70,6 +70,11 @@ describe("thirdPartyOrigins", () => {
     expect(thirdPartyOrigins(html, NO_ALLOW)).toEqual([]);
   });
 
+  test("keeps stripping comments when a removal joins the text around it into a new one", () => {
+    const html = `<!<!-- a -->-- <img src="https://nested.example.com/a.png"> -->`;
+    expect(thirdPartyOrigins(html, NO_ALLOW)).toEqual([]);
+  });
+
   test("flags url() in a style element and in a style attribute", () => {
     const html = `<style>@font-face { src: url("https://fonts.example.com/f.woff2") }</style>
       <div style="background: url(https://img.example.com/bg.png)"></div>`;

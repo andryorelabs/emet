@@ -144,11 +144,24 @@ function scriptUrls(body: string): readonly string[] {
 }
 
 /**
+ * Removes HTML comments until none are left, so a removal cannot join the text around it into a new comment.
+ */
+function stripComments(html: string): string {
+  let current = html;
+  let previous: string;
+  do {
+    previous = current;
+    current = previous.replaceAll(COMMENT_PATTERN, "");
+  } while (current !== previous);
+  return current;
+}
+
+/**
  * Returns the sorted, unique origins outside `allow` that a page's HTML loads resources from.
  */
 export function thirdPartyOrigins(html: string, allow: readonly string[]): readonly string[] {
   const urls: string[] = [];
-  const withoutComments = html.replaceAll(COMMENT_PATTERN, "");
+  const withoutComments = stripComments(html);
   const withoutBodies = withoutComments.replaceAll(
     RAW_TEXT_PATTERN,
     (_whole, tag: string, attributes: string, body: string) => {
