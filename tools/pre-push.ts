@@ -1,6 +1,8 @@
 const PROTECTED_REFS: ReadonlySet<string> = new Set(["refs/heads/main", "refs/heads/develop"]);
-const BRANCH_PATTERN =
-  /^(cla-\d+-.+|(feat|fix|docs|refactor|chore|test|ci|perf|build|style|revert)\/.+|renovate\/.+|worktree-.+)$/;
+const SLUG = "[a-z0-9._-]+";
+const BRANCH_PATTERN = new RegExp(
+  `^(cla-\\d+-${SLUG}|(feat|fix|docs|refactor|chore|test|ci|perf|build|style|revert|renovate)/${SLUG}(/${SLUG})*|worktree-${SLUG})$`,
+);
 const TAG_PREFIX = "refs/tags/";
 const BRANCH_PREFIX = "refs/heads/";
 const GATES: readonly (readonly string[])[] = [
@@ -37,6 +39,13 @@ export function parsePushLines(input: string): { localRef: string; remoteRef: st
     .map(([localRef = "", , remoteRef = ""]) => ({ localRef, remoteRef }));
 }
 
+/** True when at least one pushed line updates a branch; delete-only and tag-only pushes need no gates. */
+export function pushNeedsGates(lines: readonly { localRef: string; remoteRef: string }[]): boolean {
+  return lines.some(
+    ({ localRef, remoteRef }) => remoteRef.startsWith(BRANCH_PREFIX) && localRef !== "(delete)",
+  );
+}
+
 function branchName(ref: string): string {
   return ref.startsWith(BRANCH_PREFIX) ? ref.slice(BRANCH_PREFIX.length) : ref;
 }
@@ -65,7 +74,7 @@ async function main(): Promise<number> {
       return 1;
     }
   }
-  return runGates();
+  return pushNeedsGates(pushes) ? runGates() : 0;
 }
 
 if (import.meta.main) {

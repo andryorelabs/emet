@@ -24,6 +24,7 @@ export const STALE_NAME_ALLOW_LIST: readonly string[] = [
   "codex/skills/run/references/incidents.md",
   "docs/brand/",
   "tools/install.test.ts",
+  "tools/standard-invariants.test.ts",
   "tools/workflows-invariants.test.ts",
   "tools/plugin.test.ts",
   "tools/codex-e2e.test.ts",

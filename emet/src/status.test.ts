@@ -217,7 +217,7 @@ describe("parsing and merging", () => {
       process.env.PATH = `${stubDirectory}:${originalPath ?? ""}`;
       process.chdir(repo);
       process.exitCode = undefined;
-      console.log = () => {};
+      console.log = (): undefined => undefined;
       await run([]);
       console.log = originalLog;
       expect(existsSync(marker)).toBe(false);

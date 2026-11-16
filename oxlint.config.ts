@@ -1,7 +1,52 @@
 import { defineConfig } from "oxlint";
 
+import { lintPolicy, ruleOptions } from "./tools/oxlint/policy.ts";
+
+export {
+  apiHygieneRules,
+  exhaustivenessRules,
+  jsdocContentRules,
+  lintPolicy,
+  noUnsafeAnyRules,
+  promiseSafetyRules,
+  strictRules,
+  stylisticRules,
+  suppressionRules,
+  testIntegrityRules,
+} from "./tools/oxlint/policy.ts";
+
+/**
+ * Globs of test files. The test-integrity rules apply to these files only.
+ */
+export const testFileGlobs = ["**/*.test.ts", "**/*.spec.ts"];
+
+/**
+ * Paths Oxlint never reads: agent worktrees and state, dependencies, coverage
+ * output, build output and the mod hook components it cannot parse.
+ */
+export const ignoredPaths = [
+  ".claude/**",
+  ".emet/**",
+  "**/node_modules/**",
+  "coverage/**",
+  "dist/**",
+  "mods/*/hooks/**/*.tsx",
+];
+
+/**
+ * The emet repo lint policy.
+ *
+ * - `plugins`: the built-in Rust plugins that cover TypeScript, unicorn, oxc,
+ *   import, jsdoc, promise and node rules; `jest` is added for test files only.
+ * - `categories`: correctness, suspicious and perf are errors, so a new rule
+ *   in those categories fails CI instead of being silently adopted as a
+ *   warning.
+ * - `options`: type-aware linting and warnings-as-errors are part of the
+ *   config, and an unused disable directive is an error so suppressions that
+ *   stop being needed are deleted.
+ */
 export default defineConfig({
-  plugins: ["typescript", "unicorn", "oxc", "import", "jsdoc", "promise", "node", "jest"],
+  plugins: ["typescript", "unicorn", "oxc", "import", "jsdoc", "promise", "node"],
   jsPlugins: ["./tools/oxlint/local-plugin.ts"],
   categories: {
     correctness: "error",
@@ -9,44 +54,20 @@ export default defineConfig({
     perf: "error",
   },
   options: {
+    typeAware: true,
+    denyWarnings: true,
     reportUnusedDisableDirectives: "error",
   },
   rules: {
-    "local/no-non-doc-comments": "error",
-    "local/require-description": "error",
-    "typescript/no-floating-promises": "error",
-    "typescript/no-misused-promises": "error",
-    "typescript/await-thenable": "error",
-    "typescript/no-unsafe-argument": "error",
-    "typescript/no-unsafe-assignment": "error",
-    "typescript/no-unsafe-call": "error",
-    "typescript/no-unsafe-member-access": "error",
-    "typescript/no-unsafe-return": "error",
-    "typescript/return-await": ["error", "error-handling-correctness-only"],
-    "typescript/unbound-method": "error",
-    "typescript/only-throw-error": "error",
-    "typescript/require-await": "error",
-    "typescript/restrict-template-expressions": "error",
-    "typescript/no-deprecated": "error",
-    "typescript/no-unnecessary-type-assertion": "error",
-    "typescript/prefer-promise-reject-errors": "error",
-    "typescript/switch-exhaustiveness-check": "error",
+    ...lintPolicy.rules,
+    ...ruleOptions,
   },
   overrides: [
     {
-      files: ["**/*.test.ts", "**/*.spec.ts"],
-      rules: {
-        "jest/no-focused-tests": "error",
-        "jest/no-identical-title": "error",
-        "jest/no-disabled-tests": "error",
-      },
+      files: testFileGlobs,
+      plugins: ["jest"],
+      rules: lintPolicy.testRules,
     },
   ],
-  ignorePatterns: [
-    ".claude/**",
-    "**/node_modules/**",
-    "coverage/**",
-    "dist/**",
-    "mods/*/hooks/**/*.tsx",
-  ],
+  ignorePatterns: ignoredPaths,
 });

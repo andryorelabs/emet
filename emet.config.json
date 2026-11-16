@@ -23,7 +23,12 @@
       "onPrMerge": "coordinator"
     },
     "github": {
-      "priorityLabels": {},
+      "priorityLabels": {
+        "1": "Priority: Critical",
+        "2": "Priority: High",
+        "3": "Priority: Medium",
+        "4": "Priority: Low"
+      },
       "stateLabels": {
         "todo": "status:todo",
         "in-progress": "status:in-progress",

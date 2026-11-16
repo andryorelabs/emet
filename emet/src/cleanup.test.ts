@@ -574,7 +574,7 @@ describe("reclaim against a real repository", () => {
     await git("commit", "-q", "-m", "base");
     mkdirSync(path.join(repo, ".claude", "worktrees"), { recursive: true });
     process.chdir(repo);
-    logSpy = spyOn(console, "log").mockImplementation(() => {});
+    logSpy = spyOn(console, "log").mockReturnValue(undefined);
   });
 
   afterEach(() => {

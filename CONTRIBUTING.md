@@ -39,19 +39,20 @@ final PR title does, since it becomes the squashed commit message.
 A release is a pull request from `develop` to `main`, merged with a **merge
 commit** only. Tags are cut from `main`.
 
-## Rulesets
+## Rulesets and repository settings
 
 Branch and tag rulesets are stored as code in `.github/rulesets/` (`main.json`,
-`develop.json`, `tags.json`). A maintainer applies one with:
+`develop.json`, `tags.json`), and the repository settings in
+`.github/repo-settings.json`. [`.github/rulesets/README.md`](.github/rulesets/README.md)
+explains each file and how a maintainer applies it. `bun run repo-settings:check`
+only reads the live settings and reports drift; it never writes to GitHub.
 
-```sh
-gh api -X POST repos/{owner}/{repo}/rulesets --input .github/rulesets/main.json
-```
-
-To update an existing ruleset, find its id with
-`gh api repos/{owner}/{repo}/rulesets` and use `-X PUT
-repos/{owner}/{repo}/rulesets/<id>` instead. Required check names must match
-job `name:` values; `bun run test` enforces it.
+Both `develop` and `main` require signed commits, resolved review threads and
+these checks: `CI passed`, `Validate PR title` and `Check markdown links`.
+`develop` also requires the branch to be up to date before merging. GitHub signs
+the squash and merge commits it creates, so your own commits need not be signed.
+Required
+check names must match job `name:` values; `bun run test` enforces it.
 
 ## CI
 

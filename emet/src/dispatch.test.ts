@@ -168,7 +168,7 @@ describe("dispatch worker", () => {
 
   test("records and prints the thread id as the worker identity", async () => {
     await claimAndSlot();
-    const log = spyOn(console, "log").mockImplementation(() => {});
+    const log = spyOn(console, "log").mockReturnValue(undefined);
     const code = await run(
       dispatchArguments(),
       deps({ lines: [{ type: "thread.started", thread_id: "th-7" }] }),
@@ -200,7 +200,7 @@ describe("dispatch worker", () => {
 
   test("passes --model and --effort overrides and refuses ultra", async () => {
     await claimAndSlot();
-    const errors = spyOn(console, "error").mockImplementation(() => {});
+    const errors = spyOn(console, "error").mockReturnValue(undefined);
     expect(await run(dispatchArguments(["--effort", "ultra"]), deps())).toBe(2);
     errors.mockRestore();
     expect(existsSync(path.join(repo, ".emet", "worktrees"))).toBe(false);
@@ -213,7 +213,7 @@ describe("dispatch worker", () => {
   });
 
   test("exits 1 and creates nothing without a claim or a slot", async () => {
-    const errors = spyOn(console, "error").mockImplementation(() => {});
+    const errors = spyOn(console, "error").mockReturnValue(undefined);
     expect(await run(dispatchArguments(), deps())).toBe(1);
     await didReserveTicket(RUN, LIVE_PID, TICKET, forgeDirectory, ALIVE);
     expect(await run(dispatchArguments(), deps())).toBe(1);
@@ -225,7 +225,7 @@ describe("dispatch worker", () => {
   test("exits 1 and creates nothing when the claim has no surfaces", async () => {
     await didReserveTicket(RUN, LIVE_PID, TICKET, forgeDirectory, ALIVE);
     await acquireSlot(2, RUN, LIVE_PID, TICKET, slotsDirectory, ALIVE);
-    const errors = spyOn(console, "error").mockImplementation(() => {});
+    const errors = spyOn(console, "error").mockReturnValue(undefined);
     expect(await run(dispatchArguments(), deps())).toBe(1);
     const message = String(errors.mock.calls.at(-1)?.[0]);
     errors.mockRestore();
@@ -236,7 +236,7 @@ describe("dispatch worker", () => {
   test("exits 42 when the baseline is not a commit", async () => {
     await claimAndSlot();
     writeDispatchRecord("0".repeat(40));
-    const errors = spyOn(console, "error").mockImplementation(() => {});
+    const errors = spyOn(console, "error").mockReturnValue(undefined);
     expect(await run(dispatchArguments(), deps())).toBe(EXIT_BASE_CHECK_FAILED);
     errors.mockRestore();
     expect(existsSync(path.join(repo, ".emet", "worktrees"))).toBe(false);
@@ -252,7 +252,7 @@ describe("dispatch --wait", () => {
       reportPath: "r.md",
       risk: "Risk: none",
     });
-    const log = spyOn(console, "log").mockImplementation(() => {});
+    const log = spyOn(console, "log").mockReturnValue(undefined);
     const code = await run(["--wait", "--run", RUN, "--ticket", TICKET, "--root", repo]);
     expect(code).toBe(0);
     expect(log.mock.calls.at(-1)?.[0]).toBe("DONE");
@@ -265,7 +265,7 @@ describe("dispatch --wait", () => {
     const stateFile = path.join(repo, ".emet", "runs", RUN, "codex", `${TICKET}.state.json`);
     mkdirSync(path.dirname(stateFile), { recursive: true });
     writeFileSync(stateFile, JSON.stringify({ pid: sleeper.pid }));
-    const errors = spyOn(console, "error").mockImplementation(() => {});
+    const errors = spyOn(console, "error").mockReturnValue(undefined);
     const code = await run([
       "--wait",
       "--run",
@@ -310,7 +310,7 @@ describe("dispatch --wait", () => {
     "a silent worker whose pid is from another namespace is stalled, not running",
     async () => {
       const { stateFile } = seedForeignWorker();
-      const errors = spyOn(console, "error").mockImplementation(() => {});
+      const errors = spyOn(console, "error").mockReturnValue(undefined);
       expect(await run([...waitArguments, repo])).toBe(1);
       expect(String(errors.mock.calls.at(-1)?.[0])).toContain("stalled");
       errors.mockRestore();
@@ -326,7 +326,7 @@ describe("dispatch --wait", () => {
       reportPath: "r.md",
       risk: "Risk: none",
     });
-    const log = spyOn(console, "log").mockImplementation(() => {});
+    const log = spyOn(console, "log").mockReturnValue(undefined);
     expect(await run([...waitArguments, repo])).toBe(0);
     expect(log.mock.calls.at(-1)?.[0]).toBe("DONE");
     log.mockRestore();
@@ -343,7 +343,7 @@ describe("dispatch --wait", () => {
   test("reports a question from a live worker instead of waiting or stalling", async () => {
     const { sleeper } = seedLiveWorker();
     askQuestion(RUN, TICKET, "which shape?", { commonDirectory: path.join(repo, ".git") });
-    const log = spyOn(console, "log").mockImplementation(() => {});
+    const log = spyOn(console, "log").mockReturnValue(undefined);
     const code = await run([...waitArguments, repo]);
     const printed = String(log.mock.calls.at(-1)?.[0]);
     log.mockRestore();
@@ -360,7 +360,7 @@ describe("dispatch --wait", () => {
       reportPath: "r.md",
       risk: "Risk: none",
     });
-    const log = spyOn(console, "log").mockImplementation(() => {});
+    const log = spyOn(console, "log").mockReturnValue(undefined);
     const code = await run([...waitArguments, repo]);
     const printed = String(log.mock.calls.at(-1)?.[0]);
     log.mockRestore();
@@ -374,7 +374,7 @@ describe("dispatch --wait", () => {
     async () => {
       seedForeignWorker();
       askQuestion(RUN, TICKET, "q", { commonDirectory: path.join(repo, ".git") });
-      const log = spyOn(console, "log").mockImplementation(() => {});
+      const log = spyOn(console, "log").mockReturnValue(undefined);
       expect(await run([...waitArguments, repo])).toBe(0);
       expect(String(log.mock.calls.at(-1)?.[0])).toBe(`question ${TICKET} 1`);
       log.mockRestore();
@@ -382,7 +382,7 @@ describe("dispatch --wait", () => {
   );
 
   test("exits 1 when nothing was dispatched", async () => {
-    const errors = spyOn(console, "error").mockImplementation(() => {});
+    const errors = spyOn(console, "error").mockReturnValue(undefined);
     expect(await run(["--wait", "--run", RUN, "--ticket", TICKET, "--root", repo])).toBe(1);
     errors.mockRestore();
   });
@@ -390,7 +390,7 @@ describe("dispatch --wait", () => {
 
 describe("dispatch stub", () => {
   test("prints usage and exits 2", async () => {
-    const spy = spyOn(console, "error").mockImplementation(() => {});
+    const spy = spyOn(console, "error").mockReturnValue(undefined);
     expect(await run([])).toBe(2);
     expect(spy.mock.calls[0]?.[0]).toContain("usage: emet dispatch");
     spy.mockRestore();
