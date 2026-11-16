@@ -5,6 +5,10 @@ import { SITE_ORIGIN, type HreflangAlternate } from "./alternates";
  */
 export interface SitemapEntry {
   loc: string;
+  /**
+   * `YYYY-MM-DD` date of the last commit to the page's sources, omitted when unknown.
+   */
+  lastmod?: string;
   alternates: readonly HreflangAlternate[];
 }
 
@@ -22,7 +26,8 @@ function escapeXml(value: string): string {
 }
 
 /**
- * Renders a sitemap with hreflang alternates on every entry.
+ * Renders a sitemap with hreflang alternates on every entry and `lastmod`
+ * where the entry has one.
  * @param entries - The pages to list.
  * @returns The sitemap XML.
  */
@@ -34,7 +39,9 @@ export function buildSitemapXml(entries: readonly SitemapEntry[]): string {
           `    <xhtml:link rel="alternate" hreflang="${escapeXml(hreflang)}" href="${escapeXml(href)}" />`,
       )
       .join("\n");
-    return `  <url>\n    <loc>${escapeXml(entry.loc)}</loc>\n${links}\n  </url>`;
+    const lastmod =
+      entry.lastmod === undefined ? "" : `    <lastmod>${escapeXml(entry.lastmod)}</lastmod>\n`;
+    return `  <url>\n    <loc>${escapeXml(entry.loc)}</loc>\n${lastmod}${links}\n  </url>`;
   });
   return [
     '<?xml version="1.0" encoding="UTF-8"?>',
