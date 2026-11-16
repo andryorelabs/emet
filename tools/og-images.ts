@@ -33,7 +33,7 @@ const REPOSITORY_ROOT = join(import.meta.dir, "..");
 const SITE_PUBLIC = join(REPOSITORY_ROOT, "apps", "site", "public");
 const MARK_SOURCE = join(REPOSITORY_ROOT, "docs", "brand", "logo", "mark.svg");
 const ICO_SOURCE = join(REPOSITORY_ROOT, "docs", "brand", "logo", "png", "favicon.ico");
-const FONT_SOURCE = join(SITE_PUBLIC, "fonts", "SpaceGrotesk-var.woff2");
+const FONT_URL = pathToFileURL(join(SITE_PUBLIC, "fonts", "SpaceGrotesk-var.woff2")).href;
 const ICON_BACKGROUND = "#f4fdf6";
 const INSTALL_ICONS = [
   { path: "apple-touch-icon.png", size: 180 },
@@ -132,6 +132,7 @@ p { font-size: 30px; line-height: 1.4; color: oklch(0.78 0.02 150); max-width: 9
  * @param markSvg - The brand mark's SVG source.
  * @param workDirectory - Scratch directory for the HTML source.
  * @param outputDirectory - Where the PNG goes.
+ * @param fontUrl - URL of the Space Grotesk woff2; anything but `file:` fails the render.
  * @returns Nothing; throws on a blocked request, a wrong size or an oversize file.
  */
 async function renderShareImage(
@@ -140,6 +141,7 @@ async function renderShareImage(
   markSvg: string,
   workDirectory: string,
   outputDirectory: string,
+  fontUrl: string,
 ): Promise<void> {
   const page = await browser.newPage({
     viewport: { width: OG_WIDTH, height: OG_HEIGHT },
@@ -154,7 +156,7 @@ async function renderShareImage(
       return route.abort();
     });
     const source = join(workDirectory, `og-${locale}.html`);
-    writeFileSync(source, buildOgHtml(ogCopy(locale), markSvg, pathToFileURL(FONT_SOURCE).href));
+    writeFileSync(source, buildOgHtml(ogCopy(locale), markSvg, fontUrl));
     await page.goto(pathToFileURL(source).href, { waitUntil: "load" });
     await page.evaluate("document.fonts.ready.then(() => undefined)");
     if (blocked.length > 0) throw new Error(`og-${locale}: blocked ${blocked.join(", ")}`);
@@ -172,11 +174,16 @@ async function renderShareImage(
 }
 
 /**
- * Renders every locale's share image into `apps/site/public/og/`.
+ * Renders every locale's share image into `og/` below the public directory.
+ * @param publicDirectory - Website public directory; defaults to `apps/site/public`.
+ * @param fontUrl - URL of the Space Grotesk woff2; defaults to the Website's local copy.
  * @returns Nothing.
  */
-async function renderShareImages(): Promise<void> {
-  const outputDirectory = join(SITE_PUBLIC, "og");
+export async function renderShareImages(
+  publicDirectory: string = SITE_PUBLIC,
+  fontUrl: string = FONT_URL,
+): Promise<void> {
+  const outputDirectory = join(publicDirectory, "og");
   mkdirSync(outputDirectory, { recursive: true });
   const markSvg = readFileSync(MARK_SOURCE, "utf8");
   const workDirectory = mkdtempSync(join(tmpdir(), "emet-og-"));
@@ -184,7 +191,7 @@ async function renderShareImages(): Promise<void> {
   try {
     await Promise.all(
       LOCALES.map((locale) =>
-        renderShareImage(browser, locale, markSvg, workDirectory, outputDirectory),
+        renderShareImage(browser, locale, markSvg, workDirectory, outputDirectory, fontUrl),
       ),
     );
   } finally {
@@ -198,9 +205,15 @@ async function renderShareImages(): Promise<void> {
  * @param markSvg - The brand mark's SVG source.
  * @param path - Output path below `apps/site/public/`.
  * @param size - Side in pixels.
+ * @param publicDirectory - Website public directory.
  * @returns Nothing.
  */
-async function renderInstallIcon(markSvg: Buffer, path: string, size: number): Promise<void> {
+async function renderInstallIcon(
+  markSvg: Buffer,
+  path: string,
+  size: number,
+  publicDirectory: string,
+): Promise<void> {
   const markSize = Math.round(size * 0.62);
   const mark = await sharp(markSvg, { density: (72 * markSize) / 32 })
     .resize(markSize, markSize)
@@ -215,19 +228,22 @@ async function renderInstallIcon(markSvg: Buffer, path: string, size: number): P
       .toBuffer(),
   );
   assertSpec(path, png, { width: size, height: size, maxBytes: 64 * KB });
-  writeFileSync(join(SITE_PUBLIC, path), png);
+  writeFileSync(join(publicDirectory, path), png);
   console.log(`brand:og wrote ${path} (${size}x${size}, ${png.byteLength} B)`);
 }
 
 /**
  * Writes the install icons and copies the brand `favicon.ico`.
+ * @param publicDirectory - Website public directory; defaults to `apps/site/public`.
  * @returns Nothing.
  */
-async function renderInstallIcons(): Promise<void> {
+export async function renderInstallIcons(publicDirectory: string = SITE_PUBLIC): Promise<void> {
   const markSvg = readFileSync(MARK_SOURCE);
-  mkdirSync(join(SITE_PUBLIC, "icons"), { recursive: true });
-  await Promise.all(INSTALL_ICONS.map(({ path, size }) => renderInstallIcon(markSvg, path, size)));
-  copyFileSync(ICO_SOURCE, join(SITE_PUBLIC, "favicon.ico"));
+  mkdirSync(join(publicDirectory, "icons"), { recursive: true });
+  await Promise.all(
+    INSTALL_ICONS.map(({ path, size }) => renderInstallIcon(markSvg, path, size, publicDirectory)),
+  );
+  copyFileSync(ICO_SOURCE, join(publicDirectory, "favicon.ico"));
   console.log("brand:og copied favicon.ico");
 }
 
