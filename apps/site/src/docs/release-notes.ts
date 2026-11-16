@@ -9,7 +9,6 @@ export interface ReleaseNote {
 
 const RELEASE_HEADING = /^## \[(\d+\.\d+\.\d+)\] - (\d{4}-\d{2}-\d{2})$/;
 const UNRELEASED_HEADING = /^## \[Unreleased\]\s*$/i;
-const SECOND_LEVEL_HEADING = /^## /;
 const VERSION_LINK_REFERENCE = /^\[(?:Unreleased|\d+\.\d+\.\d+)\]: \S+$/i;
 
 function compareVersionsDescending(left: string, right: string): number {
@@ -61,7 +60,7 @@ export function parseChangelog(markdown: string): ReleaseNote[] {
 
   for (const [index, line] of markdown.split(/\r?\n/).entries()) {
     if (VERSION_LINK_REFERENCE.test(line)) continue;
-    if (!SECOND_LEVEL_HEADING.test(line)) {
+    if (!line.startsWith("## ")) {
       current?.lines.push(line);
       continue;
     }

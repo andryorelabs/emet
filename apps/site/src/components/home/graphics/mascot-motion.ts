@@ -28,7 +28,7 @@ function wakeMascot(sprite: Element): void {
     showOnly(asleep, undefined);
     showOnly(working, frame);
     index += 1;
-    globalThis.setTimeout(step, Number(frame?.dataset["ms"] ?? 0) || FALLBACK_FRAME_MS);
+    globalThis.setTimeout(step, Number(frame?.dataset.ms ?? 0) || FALLBACK_FRAME_MS);
   };
   if (working.length > 0) step();
 }
@@ -41,7 +41,9 @@ export function initMascot(root: ParentNode): void {
       for (const entry of entries) {
         if (!entry.isIntersecting) continue;
         observer.unobserve(entry.target);
-        globalThis.setTimeout(() => wakeMascot(entry.target), WAKE_DELAY_MS);
+        globalThis.setTimeout(() => {
+          wakeMascot(entry.target);
+        }, WAKE_DELAY_MS);
       }
     },
     { threshold: VIEW_THRESHOLD },

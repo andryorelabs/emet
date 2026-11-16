@@ -37,7 +37,7 @@ export function initPaintingStreams(root: ParentNode): void {
   let current: Stage = 0;
   const setStage = (stage: Stage): void => {
     current = stage;
-    for (const overlay of overlays) overlay.dataset["stage"] = String(stage);
+    for (const overlay of overlays) overlay.dataset.stage = String(stage);
   };
   const observer = new IntersectionObserver(
     (entries) => {

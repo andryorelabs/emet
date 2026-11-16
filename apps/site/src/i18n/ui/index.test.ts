@@ -150,7 +150,9 @@ describe("vendor naming guard", () => {
       },
     ];
     for (const mutated of dropped) {
-      expect(() => expectNamesBothVendors(mutated)).toThrow();
+      expect(() => {
+        expectNamesBothVendors(mutated);
+      }).toThrow();
     }
   });
 });
@@ -173,7 +175,9 @@ describe("host naming guard", () => {
       },
     ];
     for (const mutated of dropped) {
-      expect(() => expectNamesBothHosts(mutated)).toThrow();
+      expect(() => {
+        expectNamesBothHosts(mutated);
+      }).toThrow();
     }
   });
 });

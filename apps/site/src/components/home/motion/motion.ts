@@ -62,7 +62,9 @@ function observeReveals(root: ParentNode): () => void {
     { rootMargin: "0px 0px -10% 0px", threshold: 0 },
   );
   for (const target of targets) observer.observe(target);
-  return () => observer.disconnect();
+  return () => {
+    observer.disconnect();
+  };
 }
 
 function trackScrollProgress(root: ParentNode): () => void {
@@ -112,7 +114,9 @@ function startSmoothScroll(): () => void {
     autoRaf: true,
     prevent: isSmoothScrollExempt,
   });
-  return () => lenis.destroy();
+  return () => {
+    lenis.destroy();
+  };
 }
 
 /**

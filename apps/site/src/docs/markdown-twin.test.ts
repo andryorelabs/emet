@@ -62,7 +62,7 @@ describe("buildLlmsFullTxt", () => {
     );
     const text = buildLlmsFullTxt(pages);
     const sidebarOrder = sidebarSlugOrder();
-    const expected = sidebarOrder.map((id) => pages.find((page) => page.id === id)!.title);
+    const expected = sidebarOrder.map((id) => pages.find((page) => page.id === id)?.title);
     const titles = [...text.matchAll(/^# (.+)$/gm)].map((match) => match[1]);
     expect(titles).toEqual(expected);
     expect(text.startsWith("# ")).toBe(true);

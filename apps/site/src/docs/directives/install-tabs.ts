@@ -11,7 +11,7 @@ function element(
 }
 
 function tabLabel(code: MdastNode): string | undefined {
-  const meta = typeof code["meta"] === "string" ? code["meta"] : "";
+  const meta = typeof code.meta === "string" ? code.meta : "";
   const match = TAB_META.exec(meta);
   return match?.[1] ?? match?.[2];
 }
