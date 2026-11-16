@@ -127,6 +127,71 @@ describe("showcase DOM sync", () => {
   });
 });
 
+const DUSK_MARKUP = `
+<section data-showcase data-state="merged">
+  <img data-srcset="dusk.avif 1x" data-sizes="50vw" alt="">
+  <p data-showcase-status><span data-variant="merged">Merged.</span><span data-variant="held">Held.</span></p>
+  <button type="button" aria-pressed="false" data-showcase-flag hidden></button>
+</section>`;
+
+describe("showcase without idle callbacks and with reduced motion", () => {
+  const timeouts: { callback: () => void; delay: number | undefined }[] = [];
+  const changeListeners: (() => void)[] = [];
+  const motion = { matches: true };
+  const originalSetTimeout = globalThis.setTimeout;
+
+  beforeAll(async () => {
+    GlobalRegistrator.register();
+    document.body.innerHTML = DUSK_MARKUP;
+    define("CSS", { supports: () => true });
+    define("matchMedia", () => ({
+      get matches() {
+        return motion.matches;
+      },
+      addEventListener: (_type: string, listener: () => void) => {
+        changeListeners.push(listener);
+      },
+    }));
+    define("requestAnimationFrame", () => 1);
+    define("IntersectionObserver", ImmediateObserver);
+    Reflect.deleteProperty(globalThis, "requestIdleCallback");
+    define("setTimeout", (callback: () => void, delay?: number) => {
+      timeouts.push({ callback, delay });
+      return 0;
+    });
+    const root = document.querySelector<HTMLElement>("[data-showcase]");
+    if (!root) throw new Error("missing root");
+    root.getBoundingClientRect = () => new DOMRect(0, 0, 0, RUNWAY);
+    const specifier = "./showcase?no-idle";
+    await import(specifier);
+  });
+
+  afterAll(async () => {
+    define("setTimeout", originalSetTimeout);
+    await GlobalRegistrator.unregister();
+  });
+
+  test("falls back to a two second timeout that loads the dusk painting", () => {
+    const dusk = document.querySelector<HTMLImageElement>("img[data-srcset]");
+    expect(timeouts.map(({ delay }) => delay)).toEqual([2000]);
+    expect(dusk?.srcset).toBeFalsy();
+    timeouts[0]?.callback();
+    expect(dusk?.srcset).toBe("dusk.avif 1x");
+    expect(dusk?.sizes).toBe("50vw");
+  });
+
+  test("does not pin under reduced motion and pins once it is allowed", () => {
+    const root = document.querySelector<HTMLElement>("[data-showcase]");
+    expect(root && "pinned" in root.dataset).toBe(false);
+    motion.matches = false;
+    for (const listener of changeListeners) listener();
+    expect(root && "pinned" in root.dataset).toBe(true);
+    motion.matches = true;
+    for (const listener of changeListeners) listener();
+    expect(root && "pinned" in root.dataset).toBe(false);
+  });
+});
+
 function read(path: string): string {
   return readFileSync(new URL(path, import.meta.url), "utf8");
 }

@@ -180,6 +180,13 @@ describe("workflowViolations", () => {
     ).toEqual([`release.yml:binary: matrix job must run on ${MATRIX_RUNS_ON}`]);
   });
 
+  test("flags a matrix job whose matrix lists no include entries", () => {
+    const workflow = binaryWorkflow({ strategy: { matrix: {} } });
+    expect(workflowViolations("release.yml", workflow)).toEqual([
+      "release.yml:binary: matrix runners must be exactly macos-15-intel, macos-latest, ubuntu-24.04-arm, ubuntu-latest",
+    ]);
+  });
+
   test("flags a matrix job that drops a native runner", () => {
     const workflow = binaryWorkflow({
       strategy: { matrix: { include: [{ runner: "ubuntu-latest" }] } },
