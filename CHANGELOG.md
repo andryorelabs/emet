@@ -10,6 +10,11 @@ and this project adheres to
 
 ### Changed
 
+- The coverage gate enforces a per-file floor of 97% lines and 98% functions
+  for `emet/`, `apps/site` and `tools/`, with reasoned exceptions in
+  `tools/coverage-exceptions.ts`. The coverage manifest walks `emet/src`
+  recursively, `tools/` is gated, the totals in `tools/coverage-floors.json`
+  rise to the measured values.
 - The PreToolUse guard fails closed: when `bin/emet` cannot resolve the emet
   binary, the hook exits 2 and blocks the tool call, with a message that says
   how to recover. The Stop and SubagentStop hooks still exit 1.
