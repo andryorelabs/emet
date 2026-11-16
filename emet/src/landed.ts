@@ -65,7 +65,7 @@ async function readLocalTicketState(ticket: string): Promise<TrackerState> {
   const root = await resolveTrackerRoot();
   const tickets = await listTickets(root, parsed.slug);
   const match = tickets.find((candidate) => candidate.nn === parsed.nn);
-  if (match === undefined || match.status === null) return "unknown";
+  if (match?.status === undefined || match.status === null) return "unknown";
   return match.status === "done" ? "done" : "open";
 }
 

@@ -27,6 +27,7 @@ import {
   type PreToolUseHookInput,
 } from "./guard";
 import { readPhase, writePhase } from "./phase";
+import { present } from "./present";
 import { writeResult } from "./results";
 import type { SlotHolder } from "./slots";
 
@@ -487,7 +488,7 @@ describe("stop hooks", () => {
   test("formatStopOutput emits a block payload only on block", () => {
     expect(formatStopOutput({ decision: "allow" })).toBeNull();
     const output = formatStopOutput({ decision: "block", reason: "r" });
-    expect(JSON.parse(output!)).toEqual({ decision: "block", reason: "r" });
+    expect(JSON.parse(present(output))).toEqual({ decision: "block", reason: "r" });
   });
 });
 

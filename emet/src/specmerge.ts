@@ -12,6 +12,7 @@ import path from "node:path";
 import { loadForgeConfigWithDefaults, resolveRepoRoot } from "./config";
 import { resolveRunDir } from "./names";
 import { errorMessage, isOneOf } from "./narrow";
+import { present } from "./present";
 
 const USAGE = `usage: emet spec-merge --spec <id> [--root <dir>]
 
@@ -46,7 +47,7 @@ const BOUNDARY_HEADING = /^#{1,3} /;
 function buildRequirement(name: string, lines: string[]): Requirement {
   const scenarios = lines.flatMap((line) => {
     const match = SCENARIO_HEADING.exec(line);
-    return match ? [match[1]!] : [];
+    return match ? [present(match[1])] : [];
   });
   return { name, scenarios, raw: lines.join("\n").trimEnd() };
 }
@@ -67,7 +68,7 @@ export function parseRequirements(text: string): ParsedSpec {
     const heading = REQUIREMENT_HEADING.exec(line);
     if (heading) {
       flush();
-      currentName = heading[1]!;
+      currentName = present(heading[1]);
       currentLines = [line];
     } else if (currentName !== null && BOUNDARY_HEADING.test(line)) {
       flush();

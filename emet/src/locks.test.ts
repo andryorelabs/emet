@@ -98,7 +98,9 @@ describe("emet-locks", () => {
       didAcquireLock(lockDirectory, buildHolder());
       releaseLock(lockDirectory);
       expect(existsSync(lockDirectory)).toBe(false);
-      expect(() => releaseLock(lockDirectory)).not.toThrow();
+      expect(() => {
+        releaseLock(lockDirectory);
+      }).not.toThrow();
     });
 
     test("releaseLock leaves no trash directory behind", () => {

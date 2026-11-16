@@ -35,7 +35,9 @@ beforeAll(() => {
   sideBranchHead = commitFile("c.txt", "three\n");
 });
 
-afterAll(() => rmSync(repo, { recursive: true, force: true }));
+afterAll(() => {
+  rmSync(repo, { recursive: true, force: true });
+});
 
 describe("buildReviewPackage", () => {
   test("packages commits, stat and diff for a descendant range", async () => {

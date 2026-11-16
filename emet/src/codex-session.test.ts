@@ -45,7 +45,7 @@ function writeFakeScript(dir: string): { script: string; log: string } {
 
 function readArgv(line: string): string[] {
   const parsed: unknown = JSON.parse(line);
-  const argv = isObject(parsed) ? parsed["argv"] : undefined;
+  const argv = isObject(parsed) ? parsed.argv : undefined;
   if (!Array.isArray(argv)) throw new Error("expected argv");
   return argv.map(String);
 }
@@ -91,9 +91,9 @@ describe("startCodexSession", () => {
       path.join(repo, ".emet/runs/emet-345-w4/sessions/emet-345-w4.json"),
     );
     const record = readRecord(paths.recordFile);
-    expect(record["threadId"]).toBe("th-77");
-    expect(record["name"]).toBe("emet-345-w4");
-    expect(typeof record["pid"]).toBe("number");
+    expect(record.threadId).toBe("th-77");
+    expect(record.name).toBe("emet-345-w4");
+    expect(typeof record.pid).toBe("number");
     const logged = readFileSync(log, "utf8").trim().split("\n")[0] ?? "{}";
     const argv = readArgv(logged);
     expect(argv.slice(0, 2)).toEqual(["exec", "--json"]);
@@ -140,7 +140,7 @@ describe("startCodexSession", () => {
       { executable: FAKE, sourceHome: tempDir() },
     );
     expect(info.id).toBeNull();
-    expect(readRecord(codexSessionPaths(repo, "emet-1-w1").recordFile)["threadId"]).toBeNull();
+    expect(readRecord(codexSessionPaths(repo, "emet-1-w1").recordFile).threadId).toBeNull();
   }, 10_000);
 });
 

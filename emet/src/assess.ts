@@ -33,7 +33,7 @@ export interface AssessResult {
 
 export interface DiffInput {
   readonly paths: readonly string[];
-  readonly addedLines: ReadonlyArray<{ readonly path: string; readonly line: string }>;
+  readonly addedLines: readonly { readonly path: string; readonly line: string }[];
 }
 
 const USAGE = "usage: emet assess --base <ref> --head <ref> [--risk-line <text>]";
@@ -42,7 +42,7 @@ const DOC_EXTENSIONS = /\.(md|mdx|markdown|txt|rst|adoc)$/i;
 const DOC_DIRECTORIES = /(^|\/)(docs?|documentation)\//i;
 const DOC_FILES = /(^|\/)(LICENSE|CHANGELOG|CONTRIBUTING|AUTHORS)(\.[a-z]+)?$/i;
 
-const HIGH_RISK_PATH_RULES: ReadonlyArray<{ readonly label: string; readonly pattern: RegExp }> = [
+const HIGH_RISK_PATH_RULES: readonly { readonly label: string; readonly pattern: RegExp }[] = [
   {
     label: "auth",
     pattern: /(^|[^a-z])(auth|oauth|authn|authz|authenticat\w*|authoriz\w*)([^a-z]|$)/i,
@@ -63,7 +63,7 @@ const HIGH_RISK_PATH_RULES: ReadonlyArray<{ readonly label: string; readonly pat
   { label: "migration", pattern: /(^|[^a-z])migrations?([^a-z]|$)/i },
 ];
 
-const DANGEROUS_SINKS: ReadonlyArray<{ readonly label: string; readonly pattern: RegExp }> = [
+const DANGEROUS_SINKS: readonly { readonly label: string; readonly pattern: RegExp }[] = [
   { label: "eval()", pattern: /\beval\s*\(/ },
   { label: "new Function()", pattern: /\bnew\s+Function\s*\(/ },
   { label: "child_process exec", pattern: /\b(exec|execSync|spawnSync)\s*\(|child_process/ },
@@ -144,7 +144,7 @@ export function applyRiskLine(
 
 export function parseDiffInput(nameOnlyOutput: string, patch: string): DiffInput {
   const paths = nameOnlyOutput.split("\0").filter((entry) => entry.length > 0);
-  const addedLines: Array<{ path: string; line: string }> = [];
+  const addedLines: { path: string; line: string }[] = [];
   let currentPath = "";
   for (const line of patch.split("\n")) {
     if (line.startsWith("+++ ")) {

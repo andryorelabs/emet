@@ -43,27 +43,30 @@ import { writePhase } from "./phase";
 
 export type { CommandResult, CommandRunner };
 
-export type LaunchRequest = {
+export interface LaunchRequest {
   readonly specId: string;
   readonly wave: number;
   readonly repoRoot: string;
   readonly launcher: HandoffLauncher;
   readonly permissionMode: string;
-};
+}
 
-type OrcaTabOutcome = {
+interface OrcaTabOutcome {
   readonly opened: boolean;
   readonly reason: string;
-};
+}
 
-export type LaunchOutcome = {
+export interface LaunchOutcome {
   readonly name: string;
   readonly id: string | null;
   readonly attach: string;
   readonly orcaTab: OrcaTabOutcome;
-};
+}
 
-type AgentRow = { readonly id?: string | null; readonly name?: string | null };
+interface AgentRow {
+  readonly id?: string | null;
+  readonly name?: string | null;
+}
 
 const LAUNCH_TIMEOUT_MS = 15_000;
 

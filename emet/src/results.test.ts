@@ -11,7 +11,9 @@ beforeEach(() => {
   directory = mkdtempSync(path.join(os.tmpdir(), "forge-results-"));
 });
 
-afterEach(() => rmSync(directory, { recursive: true, force: true }));
+afterEach(() => {
+  rmSync(directory, { recursive: true, force: true });
+});
 
 describe("worker results", () => {
   test("round-trips a result", () => {
@@ -28,20 +30,20 @@ describe("worker results", () => {
   });
 
   test("rejects an unknown status", () => {
-    expect(() =>
+    expect(() => {
       writeResult(directory, "CLA-1", {
         // @ts-expect-error deliberately invalid status
         status: "FINE",
         reportPath: "r.md",
         risk: "Risk: none",
-      }),
-    ).toThrow(/status/);
+      });
+    }).toThrow(/status/);
   });
 
   test("rejects a risk line that does not start with Risk:", () => {
-    expect(() =>
-      writeResult(directory, "CLA-1", { status: "DONE", reportPath: "r.md", risk: "none" }),
-    ).toThrow(/risk/i);
+    expect(() => {
+      writeResult(directory, "CLA-1", { status: "DONE", reportPath: "r.md", risk: "none" });
+    }).toThrow(/risk/i);
   });
 
   test("reading a missing result returns null", () => {

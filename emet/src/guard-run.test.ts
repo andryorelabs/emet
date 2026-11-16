@@ -86,7 +86,7 @@ describe("guard run() hook entry", () => {
     });
     const { logs } = await runWithInput([payload]);
     expect(logs).toHaveLength(1);
-    expect(JSON.parse(logs[0]!)).toMatchObject({
+    expect(JSON.parse(logs[0] ?? "")).toMatchObject({
       hookSpecificOutput: {
         hookEventName: "PreToolUse",
         permissionDecision: "deny",
@@ -261,7 +261,7 @@ describe("recordCompletionEvent", () => {
   });
 
   test("a blocked verdict is recorded as blocked without a transcript path", async () => {
-    const written: Array<Record<string, unknown>> = [];
+    const written: Record<string, unknown>[] = [];
     await recordCompletionEvent(
       "Stop",
       { cwd: "/wt" },

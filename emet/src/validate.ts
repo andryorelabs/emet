@@ -4,6 +4,7 @@ import path from "node:path";
 import { DEFAULT_FORGE_CONFIG, loadForgeConfigWithDefaults, resolveRepoRoot } from "./config";
 import { analyzeTicketGraph } from "./dependencies";
 import { isObject } from "./narrow";
+import { present } from "./present";
 import { findSurfaceOverlaps } from "./surfaces";
 import { resolveTrackerRoot } from "./tracker-files";
 
@@ -13,7 +14,7 @@ plan.json: { "spec": "<markdown with S# items>", "sizing"?: { "inlineMaxLines": 
              "tickets": [{ "id", "covers": ["S1"], "surfaces": ["glob"], "wave"?: n,
                            "blockedBy"?: ["id"], "newSurfaceLines"?: n, "estimatedPeakTokens"?: n, "folded"?: bool }] }`;
 
-export type PlanTicket = {
+export interface PlanTicket {
   readonly id: string;
   readonly covers: readonly string[];
   readonly surfaces: readonly string[];
@@ -22,9 +23,9 @@ export type PlanTicket = {
   readonly newSurfaceLines?: number;
   readonly estimatedPeakTokens?: number;
   readonly folded: boolean;
-};
+}
 
-type ValidationFinding = {
+interface ValidationFinding {
   readonly severity: "error" | "warn";
   readonly code:
     | "uncovered-spec-item"
@@ -36,9 +37,12 @@ type ValidationFinding = {
     | "unknown-blocker"
     | "undersized-ticket";
   readonly message: string;
-};
+}
 
-export type ValidationResult = { readonly ok: boolean; readonly findings: ValidationFinding[] };
+export interface ValidationResult {
+  readonly ok: boolean;
+  readonly findings: ValidationFinding[];
+}
 
 const SPEC_ITEM_START = /^\s*[-*]\s+\*\*(S\d+)\*\*/;
 const SCENARIO_MARKER = /\bscenario\b|\bwhen\b[\s\S]*\bthen\b/i;
@@ -50,7 +54,7 @@ export function parseSpecItems(specMarkdown: string): Map<string, string> {
   for (const line of specMarkdown.split("\n")) {
     const start = SPEC_ITEM_START.exec(line);
     if (start) {
-      currentId = start[1]!;
+      currentId = present(start[1]);
       items.set(currentId, line);
     } else if (/^#{1,6}\s/.test(line)) {
       currentId = null;

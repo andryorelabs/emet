@@ -11,35 +11,35 @@ import { codexHost } from "./agenthost-codex";
 
 export type AgentHostName = "claude" | "codex";
 
-export type CommandResult = {
+export interface CommandResult {
   readonly exitCode: number;
   readonly stdout: string;
   readonly stderr: string;
-};
+}
 
 export type CommandRunner = (
   command: readonly string[],
   options?: { readonly cwd?: string },
 ) => Promise<CommandResult>;
 
-export type SessionInfo = {
+export interface SessionInfo {
   readonly id: string | null;
   readonly name: string | null;
-};
+}
 
-export type StartSessionRequest = {
+export interface StartSessionRequest {
   readonly name: string;
   readonly permissionMode: string;
   readonly prompt: string;
   readonly cwd: string;
-};
+}
 
-export type PluginInfo = {
+export interface PluginInfo {
   readonly id: string;
   readonly version: string;
   readonly enabled: boolean;
   readonly installPath: string;
-};
+}
 
 type TranscriptFormat = "claude-jsonl" | "codex-jsonl";
 
@@ -76,7 +76,7 @@ export interface AgentHost {
     readonly skillsPluginId: string;
     pluginRemedy(id: string): string;
     readonly mcpListCommand?: string[];
-    readonly requiredCliFlags: Array<{ command: string[]; flag: string }>;
+    readonly requiredCliFlags: { command: string[]; flag: string }[];
     agentsDir(home?: string): string | undefined;
     settingsFiles(home?: string, cwd?: string): string[];
   };

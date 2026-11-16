@@ -11,6 +11,7 @@ import {
   run,
   type TicketMetrics,
 } from "./metrics";
+import { present } from "./present";
 
 function turn(timestamp: string, model: string, usage: Record<string, number>): string {
   return JSON.stringify({ type: "assistant", timestamp, message: { model, usage } });
@@ -99,8 +100,8 @@ describe("aggregateRun", () => {
     const metrics = aggregateRun("r1", tickets);
     expect(metrics.run.costUsd).toBeCloseTo(4.5);
     expect(metrics.run.cacheReadTokens).toBe(300);
-    expect(metrics.waves.get(1)!.wallMs).toBe(90_000);
-    expect(metrics.waves.get(1)!.costUsd).toBeCloseTo(3);
+    expect(present(metrics.waves.get(1)).wallMs).toBe(90_000);
+    expect(present(metrics.waves.get(1)).costUsd).toBeCloseTo(3);
     expect(metrics.run.wallMs).toBe(120_000);
   });
 

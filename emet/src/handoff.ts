@@ -19,6 +19,7 @@ import {
   resolveRepoRoot,
   type ForgeConfig,
 } from "./config";
+import { present } from "./present";
 
 const REQUIRED_SECTIONS = [
   "state",
@@ -59,7 +60,8 @@ function parseSections(content: string): Sections {
     if (key && (REQUIRED_SECTIONS as readonly string[]).includes(key)) {
       flush();
       currentKey = key;
-      currentLines = match![2] ? [match![2]] : [];
+      const firstLine = match?.[2];
+      currentLines = firstLine ? [firstLine] : [];
     } else if (currentKey) {
       currentLines.push(line);
     }
@@ -92,7 +94,7 @@ function checkHandoff(
   const sections = parseSections(content);
 
   for (const key of REQUIRED_SECTIONS) {
-    if (!sections.has(key) || sections.get(key)!.length === 0) {
+    if (!sections.has(key) || present(sections.get(key)).length === 0) {
       problems.push(`${path}: missing or empty required section "${key}:"`);
     }
   }
@@ -180,7 +182,7 @@ async function main(config: ForgeConfig): Promise<void> {
  * modules that had this gap, and the only one still lacking a test file.
  */
 export async function run(argv: string[]): Promise<void> {
-  process.argv = [process.argv[0]!, process.argv[1]!, ...argv];
+  process.argv = [...process.argv.slice(0, 2), ...argv];
   try {
     const repoRoot = await resolveRepoRoot();
     const { config, note } = repoRoot

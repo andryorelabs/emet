@@ -3,6 +3,7 @@ import { mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSy
 import os from "node:os";
 import path from "node:path";
 
+import { currentExitCode } from "./exit-code";
 import { gitDependencies, handoffCheckCommand, parseDispatchRecord, run } from "./verify";
 
 let repo: string;
@@ -45,7 +46,7 @@ async function invoke(argv: string[]): Promise<{ out: string[]; err: string[]; c
   process.chdir(repo);
   try {
     await run(argv);
-    return { out, err, code: process.exitCode ?? 0 };
+    return { out, err, code: currentExitCode() };
   } finally {
     process.chdir(originalCwd);
     logSpy.mockRestore();
@@ -108,7 +109,7 @@ describe("verify run in-process", () => {
     writeDispatch("r1", "T-1", { baseline, surfaces: ["src/**"] });
     const result = await invoke(["T-1", "--worktree", repo]);
     expect(result.code).toBe(1);
-    expect(JSON.parse(result.out[0]!)).toMatchObject({ ok: false });
+    expect(JSON.parse(result.out[0] ?? "")).toMatchObject({ ok: false });
     expect(result.out[0]).toContain('"name":"commits","ok":false');
     const saved: unknown = JSON.parse(
       readFileSync(path.join(repo, ".emet", "runs", "r1", "verify", "T-1.json"), "utf8"),

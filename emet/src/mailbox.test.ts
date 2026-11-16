@@ -93,8 +93,12 @@ describe("inbox and reply", () => {
   test("replying twice or to a missing question fails", () => {
     askQuestion("r1", "CLA-7", "one", options());
     writeReply("r1", "CLA-7", 1, "ok", options());
-    expect(() => writeReply("r1", "CLA-7", 1, "again", options())).toThrow(/already has a reply/);
-    expect(() => writeReply("r1", "CLA-7", 9, "x", options())).toThrow(/does not exist/);
+    expect(() => {
+      writeReply("r1", "CLA-7", 1, "again", options());
+    }).toThrow(/already has a reply/);
+    expect(() => {
+      writeReply("r1", "CLA-7", 9, "x", options());
+    }).toThrow(/does not exist/);
   });
 });
 
@@ -129,10 +133,10 @@ describe("concurrency", () => {
       expect(results.every((result) => result.exitCode === 0)).toBe(true);
       const ids = results.map((result) => {
         const parsed: unknown = JSON.parse(result.stdout);
-        if (!isObject(parsed) || typeof parsed["id"] !== "number") {
+        if (!isObject(parsed) || typeof parsed.id !== "number") {
           throw new Error(`unexpected ask output: ${result.stdout}`);
         }
-        return parsed["id"];
+        return parsed.id;
       });
       expect(new Set(ids).size).toBe(6);
     } finally {
@@ -170,8 +174,12 @@ describe("concurrency", () => {
 describe("hardening", () => {
   test("a reply cannot target another run's question or a traversal ticket", () => {
     askQuestion("r1", "CLA-7", "q", options());
-    expect(() => writeReply("r2", "CLA-7", 1, "x", options())).toThrow();
-    expect(() => writeReply("r1", "../x", 1, "x", options())).toThrow();
+    expect(() => {
+      writeReply("r2", "CLA-7", 1, "x", options());
+    }).toThrow();
+    expect(() => {
+      writeReply("r1", "../x", 1, "x", options());
+    }).toThrow();
   });
 
   test("a stale counter lock left by a dead process is reclaimed", () => {

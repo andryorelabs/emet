@@ -85,6 +85,7 @@ import { BINARY, CONFIG_FILE } from "./names";
 import { optionalProperty } from "./optional";
 import { writePhase } from "./phase";
 import { ticketFromWorkerBranch } from "./preflight";
+import { present } from "./present";
 import {
   classifyRun,
   isRunClosed,
@@ -121,23 +122,23 @@ type CleanupCategory =
   | "live-or-idle-protected"
   | "out-of-scope";
 
-type ClassifiedBranch = {
+interface ClassifiedBranch {
   readonly name: string;
   readonly category: CleanupCategory;
   readonly contentVerdict?: BranchVerdict;
   readonly ownerRunId?: string;
   readonly ownerTicket?: string;
   readonly runVerdict?: RunVerdict;
-};
+}
 
 type CleanupMode = "run" | "finished" | "all";
 
-export type CleanupOptions = {
+export interface CleanupOptions {
   readonly dryRun: boolean;
   readonly mode: CleanupMode;
   readonly runId: string | null;
   readonly force: boolean;
-};
+}
 
 /** A malformed `emet cleanup` command line: reported as a plain message with exit code 2. */
 export class CleanupUsageError extends Error {
@@ -259,7 +260,7 @@ export function guardBranch(
   const owner = resolveWorktreeOwner(matchedEntry);
 
   if (runId !== null) {
-    return owner && owner.runId === runId
+    return owner?.runId === runId
       ? { done: false, owner }
       : { done: true, category: "out-of-scope" };
   }
@@ -408,15 +409,15 @@ type RunState = RunVerdict | "closed";
  * `null` for an Unowned worktree: its `ticket` then comes from its
  * worker-shaped branch, and there is no claim to release.
  */
-type ReclaimUnit = {
+interface ReclaimUnit {
   readonly entry: WorktreeEntry;
   readonly owner: WorktreeOwner | null;
   readonly ticket: string;
   readonly branches: readonly string[];
   readonly directoryExists: boolean;
-};
+}
 
-type ReclaimContext = {
+interface ReclaimContext {
   readonly config: ForgeConfig;
   readonly mode: Exclude<CleanupMode, "all">;
   readonly runId: string | null;
@@ -430,7 +431,7 @@ type ReclaimContext = {
   readonly liveDirectoryNames?: ReadonlySet<string>;
   readonly resolveState?: (owner: WorktreeOwner, entry: WorktreeEntry) => Promise<RunState>;
   readonly readTrackerState?: LandedContext["readTrackerState"];
-};
+}
 
 /**
  * Whether a reclaim may stamp the run closed: only a real `--run` sweep that
@@ -473,10 +474,10 @@ export function findOrphanedScaffoldBranches(
     .map((branch) => branch.name);
 }
 
-export type OrphanedScaffoldPlan = {
+export interface OrphanedScaffoldPlan {
   readonly deletable: readonly string[];
   readonly kept: readonly { readonly name: string; readonly verdict: BranchVerdict }[];
-};
+}
 
 /**
  * Splits orphaned scaffold branches by content, with no mutations. A branch
@@ -709,7 +710,7 @@ export async function reclaimOwnedWorktrees(context: ReclaimContext): Promise<vo
   for (const unit of units) {
     // oxlint-disable-next-line eslint/no-await-in-loop -- sequential on purpose: later iterations depend on earlier ones or on output order
     const landed = await resolveLandedVerdict(
-      { ticket: unit.ticket, branch: unit.branches[0]! },
+      { ticket: unit.ticket, branch: present(unit.branches[0]) },
       { config, ...optionalProperty("readTrackerState", context.readTrackerState) },
     );
     // oxlint-disable-next-line eslint/no-await-in-loop -- sequential on purpose: later iterations depend on earlier ones or on output order
@@ -1040,7 +1041,7 @@ async function main(config: ForgeConfig) {
  * `git branch -D` sweep as a side effect.
  */
 export async function run(argv: string[]): Promise<void> {
-  process.argv = [process.argv[0]!, process.argv[1]!, ...argv];
+  process.argv = [...process.argv.slice(0, 2), ...argv];
   try {
     const repoRoot = await resolveRepoRoot();
     if (!repoRoot) {

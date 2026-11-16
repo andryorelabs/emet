@@ -22,6 +22,8 @@ import {
   type Reservation,
   shouldWriteReservation,
 } from "./claims";
+import { expectRejection } from "./expect-rejection";
+import { present } from "./present";
 import { resolveSessionSlug } from "./runs";
 
 /**
@@ -68,7 +70,7 @@ describe("didReserveTicket / listReservations / releaseTicket", () => {
     expect(existsSync(ticketsDirectory)).toBe(true);
     const names = readdirSync(ticketsDirectory);
     expect(names.some((name) => name.endsWith(".tmp"))).toBe(false);
-    const file = names.find((name) => name.endsWith(".json"))!;
+    const file = present(names.find((name) => name.endsWith(".json")));
     const parsed: unknown = JSON.parse(readFileSync(path.join(ticketsDirectory, file), "utf8"));
     expect(parsed).toMatchObject({ runId: "run-a" });
   });
@@ -152,8 +154,8 @@ describe("didReserveTicket / listReservations / releaseTicket", () => {
   disk with no error, leaving that ticket permanently unreserved.
   */
   describe("argument validation (AO-285 regression)", () => {
-    test("rejects the exact AO-285 swapped call shape (ticket, runId, anchorPid)", () => {
-      expect(
+    test("rejects the exact AO-285 swapped call shape (ticket, runId, anchorPid)", async () => {
+      await expectRejection(
         didReserveTicket(
           "AO-285",
           // @ts-expect-error deliberately mistyped argument
@@ -161,11 +163,12 @@ describe("didReserveTicket / listReservations / releaseTicket", () => {
           1_090_684,
           forgeDirectory,
         ),
-      ).rejects.toThrow(/anchorPid must be a positive integer/);
+        /anchorPid must be a positive integer/,
+      );
     });
 
-    test("rejects a numeric ticket", () => {
-      expect(
+    test("rejects a numeric ticket", async () => {
+      await expectRejection(
         didReserveTicket(
           "run-a",
           process.pid,
@@ -173,11 +176,12 @@ describe("didReserveTicket / listReservations / releaseTicket", () => {
           1_090_684,
           forgeDirectory,
         ),
-      ).rejects.toThrow(/ticket must match/);
+        /ticket must match/,
+      );
     });
 
-    test("rejects a non-integer anchorPid", () => {
-      expect(
+    test("rejects a non-integer anchorPid", async () => {
+      await expectRejection(
         didReserveTicket(
           "run-a",
           // @ts-expect-error deliberately mistyped argument
@@ -185,28 +189,32 @@ describe("didReserveTicket / listReservations / releaseTicket", () => {
           "AO-1",
           forgeDirectory,
         ),
-      ).rejects.toThrow(/anchorPid must be a positive integer/);
+        /anchorPid must be a positive integer/,
+      );
     });
 
-    test("rejects an empty runId", () => {
-      expect(didReserveTicket("", process.pid, "AO-1", forgeDirectory)).rejects.toThrow(
+    test("rejects an empty runId", async () => {
+      await expectRejection(
+        didReserveTicket("", process.pid, "AO-1", forgeDirectory),
         /runId must be a non-empty string/,
       );
     });
 
-    test("rejects a ticket that does not match AO-<digits>", () => {
-      expect(
+    test("rejects a ticket that does not match AO-<digits>", async () => {
+      await expectRejection(
         didReserveTicket("run-a", process.pid, "not-a-ticket", forgeDirectory),
-      ).rejects.toThrow(/ticket must match/);
+        /ticket must match/,
+      );
     });
 
     test("a rejected call never writes a reservation file", async () => {
-      expect(didReserveTicket("", process.pid, "AO-1", forgeDirectory)).rejects.toThrow();
+      await expectRejection(didReserveTicket("", process.pid, "AO-1", forgeDirectory));
       expect(await listReservations(forgeDirectory)).toEqual([]);
     });
 
-    test("releaseTicket also rejects a malformed ticket", () => {
-      expect(releaseTicket("1090684", "run-a", { forgeDirectory })).rejects.toThrow(
+    test("releaseTicket also rejects a malformed ticket", async () => {
+      await expectRejection(
+        releaseTicket("1090684", "run-a", { forgeDirectory }),
         /ticket must match/,
       );
     });
@@ -436,7 +444,7 @@ describe("cross-run surface overlap on reserve", () => {
   });
 
   test("rejects an empty surface list before writing anything", async () => {
-    expect(reserve("run-a", LIVE_MARKER_PID, "AO-1", [])).rejects.toThrow(/surfaces/);
+    await expectRejection(reserve("run-a", LIVE_MARKER_PID, "AO-1", []), /surfaces/);
     expect(await listReservations(forgeDirectory)).toEqual([]);
   });
 });

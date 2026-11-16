@@ -13,7 +13,9 @@ beforeEach(() => {
   logPath = path.join(directory, "run", "materialize.json");
 });
 
-afterEach(() => rmSync(directory, { recursive: true, force: true }));
+afterEach(() => {
+  rmSync(directory, { recursive: true, force: true });
+});
 
 describe("materialize log", () => {
   test("an unreadable or non-map log throws instead of looking empty", () => {
@@ -42,7 +44,9 @@ describe("materialize log", () => {
 
   test("re-recording a key with a different id throws instead of duplicating", () => {
     recordTicket(logPath, "a", "#10");
-    expect(() => recordTicket(logPath, "a", "#12")).toThrow(/already recorded/);
+    expect(() => {
+      recordTicket(logPath, "a", "#12");
+    }).toThrow(/already recorded/);
   });
 
   test("re-recording the same pair is idempotent", () => {

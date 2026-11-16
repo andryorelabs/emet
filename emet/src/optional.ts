@@ -6,8 +6,8 @@
 export function optionalProperty<Key extends string, Value>(
   key: Key,
   value: Value | undefined,
-): { [Property in Key]?: Value } {
-  const fragment: { [Property in Key]?: Value } = {};
+): Partial<Record<Key, Value>> {
+  const fragment: Partial<Record<Key, Value>> = {};
   if (value !== undefined) fragment[key] = value;
   return fragment;
 }

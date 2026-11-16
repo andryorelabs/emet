@@ -17,6 +17,7 @@ import { loadForgeConfigWithDefaults, resolveRepoRoot } from "./config";
 import { resolveRunDir } from "./names";
 import { isObject, isOneOf } from "./narrow";
 import { writePhase } from "./phase";
+import { present } from "./present";
 
 const USAGE = `usage: emet gate <ticket> [--run <id>] [--tier passive|medium|high]
        [--ci pass|fail|pending|none] [--integration pass|fail|pending|none]
@@ -178,7 +179,7 @@ function resolveRunId(runsDir: string, ticket: string, explicit: string | undefi
       )
     : [];
   if (candidates.length !== 1) throw new Error(`cannot infer run for ${ticket}; pass --run <id>`);
-  return candidates[0]!;
+  return present(candidates[0]);
 }
 
 export async function run(argv: string[]): Promise<void> {

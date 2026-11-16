@@ -19,7 +19,9 @@ beforeEach(() => {
   writeFileSync(ticketsPath, '["CLA-1"]');
 });
 
-afterEach(() => rmSync(directory, { recursive: true, force: true }));
+afterEach(() => {
+  rmSync(directory, { recursive: true, force: true });
+});
 
 describe("approval record", () => {
   test("writes spec hash, tickets hash and timestamp", () => {

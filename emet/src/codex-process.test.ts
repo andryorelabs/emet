@@ -94,8 +94,8 @@ describe("spawnCodex", () => {
     expect(command).toBe("setsid");
     expect(args).toEqual(["codex", "exec", "--json"]);
     expect(options.detached).toBe(false);
-    expect(options.env["CODEX_HOME"]).toBe(path.join(dir, "home"));
-    expect(options.env["EMET_AGENT_HOST"]).toBe("codex");
+    expect(options.env.CODEX_HOME).toBe(path.join(dir, "home"));
+    expect(options.env.EMET_AGENT_HOST).toBe("codex");
     expect(unrefCount()).toBe(1);
     expect(readCodexState(result.stateFile)?.pid).toBe(4242);
     expect(readCodexState(result.stateFile)?.threadId).toBeNull();
@@ -138,8 +138,10 @@ describe("spawnCodex", () => {
     await waitUntil(() => readFileSync(spec.jsonlPath, "utf8").includes("th-9"));
     expect(pid).toBeGreaterThan(0);
     const logged = parseRecord(readFileSync(logFile, "utf8").trim().split("\n")[0] ?? "{}");
-    expect(logged["argv"]).toEqual(["exec", "--json"]);
-    expect(isObject(logged["env"]) ? logged["env"]["CODEX_HOME"] : undefined).toBe(spec.codexHome);
+    expect(logged.argv).toEqual(["exec", "--json"]);
+    expect(isObject(logged.env) ? Reflect.get(logged.env, "CODEX_HOME") : undefined).toBe(
+      spec.codexHome,
+    );
     expect(refreshThreadId(stateFile)?.threadId).toBe("th-9");
     expect(readCodexState(stateFile)?.threadId).toBe("th-9");
   });

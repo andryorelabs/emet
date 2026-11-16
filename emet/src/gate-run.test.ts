@@ -96,7 +96,7 @@ describe("gate run()", () => {
     writeJson(path.join(runDirectory, "dispatch", "CLA-1.json"), {});
     writeJson(path.join(runDirectory, "verify", "CLA-1.json"), { ok: true });
     const result = await runGate(["CLA-1", "--ci", "pass"]);
-    expect(JSON.parse(result.logs[0]!)).toMatchObject({ decision: "merge" });
+    expect(JSON.parse(result.logs[0] ?? "")).toMatchObject({ decision: "merge" });
   });
 
   test("an unsafe run id is rejected", async () => {
@@ -108,7 +108,10 @@ describe("gate run()", () => {
   test("green verify and ci merge", async () => {
     writeJson(path.join(runDirectory, "verify", "CLA-1.json"), { ok: true });
     const result = await runGate(["CLA-1", "--run", "r1", "--ci", "pass"]);
-    expect(JSON.parse(result.logs[0]!)).toMatchObject({ decision: "merge", chargeAttempt: false });
+    expect(JSON.parse(result.logs[0] ?? "")).toMatchObject({
+      decision: "merge",
+      chargeAttempt: false,
+    });
   });
 
   test("an open blocker in the review ledger holds the ticket", async () => {
@@ -123,7 +126,7 @@ describe("gate run()", () => {
       ],
     });
     const result = await runGate(["CLA-1", "--run", "r1", "--ci", "pass"]);
-    expect(JSON.parse(result.logs[0]!)).toMatchObject({
+    expect(JSON.parse(result.logs[0] ?? "")).toMatchObject({
       decision: "hold",
       reasons: [expect.stringContaining("1 open")],
     });
@@ -133,7 +136,7 @@ describe("gate run()", () => {
     writeJson(path.join(runDirectory, "verify", "CLA-1.json"), { ok: true });
     writeJson(path.join(root, ".emet", "review", "CLA-1.json"), { rounds: "x" });
     const result = await runGate(["CLA-1", "--run", "r1", "--ci", "pass"]);
-    expect(JSON.parse(result.logs[0]!)).toMatchObject({ decision: "merge" });
+    expect(JSON.parse(result.logs[0] ?? "")).toMatchObject({ decision: "merge" });
   });
 
   test("an env output file with an outage pattern holds without charging", async () => {
@@ -149,7 +152,10 @@ describe("gate run()", () => {
       "--env-output",
       envOutput,
     ]);
-    expect(JSON.parse(result.logs[0]!)).toMatchObject({ decision: "hold", chargeAttempt: false });
+    expect(JSON.parse(result.logs[0] ?? "")).toMatchObject({
+      decision: "hold",
+      chargeAttempt: false,
+    });
     expect(existsSync(path.join(runDirectory, "attempts", "CLA-1.json"))).toBe(false);
   });
 
@@ -157,20 +163,23 @@ describe("gate run()", () => {
     writeJson(path.join(runDirectory, "verify", "CLA-1.json"), { ok: false });
     writeJson(path.join(runDirectory, "attempts", "CLA-1.json"), { count: 99 });
     const result = await runGate(["CLA-1", "--run", "r1"]);
-    expect(JSON.parse(result.logs[0]!)).toMatchObject({ decision: "defer" });
+    expect(JSON.parse(result.logs[0] ?? "")).toMatchObject({ decision: "defer" });
   });
 
   test("a stored attempt record without a count is treated as zero", async () => {
     writeJson(path.join(runDirectory, "verify", "CLA-1.json"), { ok: false });
     writeJson(path.join(runDirectory, "attempts", "CLA-1.json"), { other: true });
     const result = await runGate(["CLA-1", "--run", "r1"]);
-    expect(JSON.parse(result.logs[0]!)).toMatchObject({ decision: "hold", chargeAttempt: true });
+    expect(JSON.parse(result.logs[0] ?? "")).toMatchObject({
+      decision: "hold",
+      chargeAttempt: true,
+    });
   });
 
   test("--no-record leaves the attempt counter untouched", async () => {
     writeJson(path.join(runDirectory, "verify", "CLA-1.json"), { ok: false });
     const result = await runGate(["CLA-1", "--run", "r1", "--no-record"]);
-    expect(JSON.parse(result.logs[0]!)).toMatchObject({ chargeAttempt: true });
+    expect(JSON.parse(result.logs[0] ?? "")).toMatchObject({ chargeAttempt: true });
     expect(existsSync(path.join(runDirectory, "attempts", "CLA-1.json"))).toBe(false);
   });
 

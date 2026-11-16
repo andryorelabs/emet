@@ -4,6 +4,7 @@ import os from "node:os";
 import path from "node:path";
 
 import { run } from "./assess";
+import { currentExitCode } from "./exit-code";
 
 let repo: string;
 let previousDirectory: string;
@@ -42,7 +43,7 @@ async function runAssess(
   process.exitCode = 0;
   try {
     await run(argv);
-    return { logs, errors, code: process.exitCode ?? 0 };
+    return { logs, errors, code: currentExitCode() };
   } finally {
     console.log = originalLog;
     console.error = originalError;
@@ -67,13 +68,13 @@ describe("assess run()", () => {
     await commitFile("README.md", "changed\n");
     const result = await runAssess(["--base", "HEAD~1", "--head", "HEAD"]);
     expect(result.code).toBe(0);
-    expect(JSON.parse(result.logs[0]!)).toMatchObject({ tier: "passive", reviewer: null });
+    expect(JSON.parse(result.logs[0] ?? "")).toMatchObject({ tier: "passive", reviewer: null });
   });
 
   test("a source diff classifies as medium and --risk-line raises it to high", async () => {
     await commitFile("src/app.ts", "export const a = 1\n");
     const plain = await runAssess(["--base", "HEAD~1", "--head", "HEAD"]);
-    expect(JSON.parse(plain.logs[0]!)).toMatchObject({ tier: "medium" });
+    expect(JSON.parse(plain.logs[0] ?? "")).toMatchObject({ tier: "medium" });
     const raised = await runAssess([
       "--base",
       "HEAD~1",
@@ -82,7 +83,7 @@ describe("assess run()", () => {
       "--risk-line",
       "Risk: item 1 (shared caller)",
     ]);
-    expect(JSON.parse(raised.logs[0]!)).toMatchObject({ tier: "high" });
+    expect(JSON.parse(raised.logs[0] ?? "")).toMatchObject({ tier: "high" });
   });
 
   test("Risk: none leaves the tier unchanged", async () => {
@@ -95,7 +96,7 @@ describe("assess run()", () => {
       "--risk-line",
       "Risk: none",
     ]);
-    expect(JSON.parse(result.logs[0]!)).toMatchObject({ tier: "medium" });
+    expect(JSON.parse(result.logs[0] ?? "")).toMatchObject({ tier: "medium" });
   });
 
   test("an unknown ref reports the git failure and exits 2", async () => {

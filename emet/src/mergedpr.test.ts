@@ -138,7 +138,7 @@ describe("planMergedBranch", () => {
 function mergedPullRequests(known: Record<string, { number: number; sha: string }>) {
   return (branch: string, tipSha: string): Promise<number | null> => {
     const match = known[branch];
-    return Promise.resolve(match !== undefined && match.sha === tipSha ? match.number : null);
+    return Promise.resolve(match?.sha === tipSha ? match.number : null);
   };
 }
 

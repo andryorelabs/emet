@@ -12,6 +12,8 @@ import {
 import os from "node:os";
 import path from "node:path";
 
+import { currentExitCode } from "./exit-code";
+import { present } from "./present";
 import {
   buildStatusReport,
   closingIssueNumbers,
@@ -46,7 +48,7 @@ function wave(workers: WorkerSignal[], runVerdict: WaveInput["runVerdict"] = "li
 const lockedReason = (ticket: string) =>
   `emet run=emet1w1000000 ticket=${ticket} anchor=1 at=2026-01-01T00:00:00Z`;
 
-const stateOf = (input: WaveInput) => buildStatusReport([input], null).waves[0]!.state;
+const stateOf = (input: WaveInput) => present(buildStatusReport([input], null).waves[0]).state;
 
 describe("wave states", () => {
   test("working: a worker has no PR yet", () => {
@@ -104,7 +106,7 @@ describe("report", () => {
   test("JSON shape is stable", () => {
     const report = buildStatusReport([wave([worker({ pullRequest: greenPullRequest })])], "20");
     expect(Object.keys(report)).toEqual(["state", "spec", "waves"]);
-    expect(Object.keys(report.waves[0]!)).toEqual([
+    expect(Object.keys(present(report.waves[0]))).toEqual([
       "runId",
       "spec",
       "wave",
@@ -112,7 +114,7 @@ describe("report", () => {
       "state",
       "workers",
     ]);
-    expect(Object.keys(report.waves[0]!.workers[0]!)).toEqual([
+    expect(Object.keys(present(present(report.waves[0]).workers[0]))).toEqual([
       "ticket",
       "branch",
       "pullRequest",
@@ -219,7 +221,7 @@ describe("parsing and merging", () => {
       await run([]);
       console.log = originalLog;
       expect(existsSync(marker)).toBe(false);
-      expect(process.exitCode ?? 0).toBe(0);
+      expect(currentExitCode()).toBe(0);
     } finally {
       console.log = originalLog;
       process.exitCode = originalExitCode;
@@ -277,7 +279,7 @@ describe("parsing and merging", () => {
       new Map([["emet20w2042651", "live"]]),
     );
     expect(waves).toHaveLength(1);
-    expect(waves[0]!.workers).toEqual([
+    expect(present(waves[0]).workers).toEqual([
       { ticket: "CLA-1", branch: "br", pullRequest: greenPullRequest, stalled: true },
       { ticket: "CLA-2", branch: null, pullRequest: null, stalled: false },
     ]);
@@ -310,8 +312,8 @@ describe("wave PR lookup", () => {
       new Set(),
       new Map([["emet20w2111111", "live"]]),
     );
-    expect(group!.workers[0]!.pullRequest?.number).toBe(99);
-    expect(group!.workers[0]!.pullRequest?.checks).toBe("pending");
+    expect(present(present(group).workers[0]).pullRequest?.number).toBe(99);
+    expect(present(present(group).workers[0]).pullRequest?.checks).toBe("pending");
   });
 });
 
@@ -359,12 +361,14 @@ describe("Codex workers judged by their jsonl", () => {
         new Map([[RUN_ID, "live"]]),
         live,
       );
-      expect(liveWave!.workers[0]).toMatchObject({
+      expect(present(liveWave).workers[0]).toMatchObject({
         liveness: "live",
         threadId: "th-9",
         stalled: false,
       });
-      expect(buildStatusReport([liveWave!], null).waves[0]!.workers[0]!.state).toBe("working");
+      expect(
+        present(present(buildStatusReport([present(liveWave)], null).waves[0]).workers[0]).state,
+      ).toBe("working");
 
       appendFileSync(jsonlPath, `${JSON.stringify({ type: "turn.completed" })}\n`);
       const done = readCodexWorkers([entry], runsRoot, probe);
@@ -386,7 +390,7 @@ describe("Codex workers judged by their jsonl", () => {
       const workers = readCodexWorkers([entry, unowned], runsRoot, probe);
       expect([...workers.keys()]).toEqual([entry.directory]);
       const [stalledWave] = groupWorkers([entry], [], new Map(), new Set(), new Map(), workers);
-      expect(stalledWave!.workers[0]).toMatchObject({ liveness: "stalled", stalled: true });
+      expect(present(stalledWave).workers[0]).toMatchObject({ liveness: "stalled", stalled: true });
     } finally {
       rmSync(runsRoot, { recursive: true, force: true });
     }
