@@ -8,6 +8,7 @@ import {
   ROUTED_JOBS,
   ROUTED_RUNS_ON,
   workflowViolations,
+  type PendingRule,
 } from "./workflow-rules.ts";
 
 const HARDEN_STEP = {
@@ -15,6 +16,11 @@ const HARDEN_STEP = {
   with: { "egress-policy": "audit" },
 };
 const CONCURRENCY = { group: "${{ github.workflow }}-${{ github.ref }}" };
+
+/** A pending rule exempting `target` from `rule`. */
+function pending(target: string, rule: PendingRule["rule"]): PendingRule {
+  return { target, rule, reason: "owned by another ticket" };
+}
 
 /**
  * Builds a workflow whose one job, `check`, is routed in `ci.yml` and passes every rule.
@@ -156,6 +162,47 @@ describe("workflowViolations", () => {
     expect(workflowViolations("deploy-other.yml", workflow)).toContain(
       "deploy-other.yml:ship: deploy job must be guarded with if: github.ref == 'refs/heads/main'",
     );
+  });
+
+  describe("pending rules", () => {
+    test("a pending concurrency rule excuses the missing concurrency", () => {
+      const { concurrency: _dropped, ...workflow } = routedWorkflow();
+      expect(workflowViolations("ci.yml", workflow, [pending("ci.yml", "concurrency")])).toEqual(
+        [],
+      );
+    });
+
+    test("a pending harden-runner rule excuses a job that does not start with it", () => {
+      const workflow = routedWorkflow({ steps: [{ run: "bun run check" }] });
+      expect(workflowViolations("ci.yml", workflow)).toHaveLength(1);
+      expect(
+        workflowViolations("ci.yml", workflow, [pending("ci.yml:check", "harden-runner")]),
+      ).toEqual([]);
+    });
+
+    test("a pending main-guard rule excuses an unguarded deploy job", () => {
+      const workflow = {
+        concurrency: CONCURRENCY,
+        jobs: { ship: { "runs-on": "ubuntu-latest", steps: [HARDEN_STEP] } },
+      };
+      expect(
+        workflowViolations("deploy-other.yml", workflow, [
+          pending("deploy-other.yml:ship", "main-guard"),
+        ]),
+      ).not.toContain(
+        "deploy-other.yml:ship: deploy job must be guarded with if: github.ref == 'refs/heads/main'",
+      );
+    });
+
+    test("a pending rule for another target or rule excuses nothing", () => {
+      const { concurrency: _dropped, ...workflow } = routedWorkflow();
+      expect(
+        workflowViolations("ci.yml", workflow, [
+          pending("other.yml", "concurrency"),
+          pending("ci.yml", "main-guard"),
+        ]),
+      ).toEqual(["ci.yml: declares no concurrency"]);
+    });
   });
 
   test("skips the runner check for a job that calls a reusable workflow", () => {

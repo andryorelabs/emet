@@ -158,19 +158,31 @@ function repositoryUrl(manifest: string): string {
   throw new ReleasePrepError('the plugin manifest has no "repository" URL');
 }
 
+/** Where `runReleasePrep` writes its messages. */
+interface ReleasePrepStreams {
+  readonly stdout: { write(text: string): unknown };
+  readonly stderr: { write(text: string): unknown };
+}
+
 /**
- * Runs `bun run release:prep <version>` against the CHANGELOG and plugin manifest of the working directory.
+ * Runs `bun run release:prep <version>` against the CHANGELOG and plugin manifest of a directory.
  * @param argv - The arguments after the script path.
+ * @param directory - The repository root; defaults to the working directory.
+ * @param streams - Where messages go; defaults to the process streams.
  * @returns The process exit code.
  */
-function main(argv: readonly string[]): number {
+export function runReleasePrep(
+  argv: readonly string[],
+  directory: string = process.cwd(),
+  streams: ReleasePrepStreams = process,
+): number {
   const [version] = argv;
   if (version === undefined || argv.length !== 1) {
-    process.stderr.write(`${USAGE}\n`);
+    streams.stderr.write(`${USAGE}\n`);
     return 1;
   }
-  const changelogPath = join(process.cwd(), "CHANGELOG.md");
-  const manifestPath = join(process.cwd(), ".claude-plugin", "plugin.json");
+  const changelogPath = join(directory, "CHANGELOG.md");
+  const manifestPath = join(directory, ".claude-plugin", "plugin.json");
   try {
     const manifest = readFileSync(manifestPath, "utf8");
     const result = prepareRelease({
@@ -184,15 +196,13 @@ function main(argv: readonly string[]): number {
     writeFileSync(changelogPath, result.changelog);
   } catch (error) {
     if (!(error instanceof ReleasePrepError)) throw error;
-    process.stderr.write(`release:prep: ${error.message}\n`);
+    streams.stderr.write(`release:prep: ${error.message}\n`);
     return 1;
   }
-  process.stdout.write(
+  streams.stdout.write(
     `Prepared ${version}: .claude-plugin/plugin.json and CHANGELOG.md. Next run bun run build:codex.\n`,
   );
   return 0;
 }
 
-if (import.meta.main) {
-  process.exit(main(process.argv.slice(2)));
-}
+if (import.meta.main) process.exit(runReleasePrep(process.argv.slice(2)));

@@ -97,7 +97,7 @@ export const LITERAL_JOBS: readonly {
 ];
 
 /** A rule that a target (`file` or `file:job`) does not meet yet, because another ticket owns that file. */
-interface PendingRule {
+export interface PendingRule {
   readonly target: string;
   readonly rule: "concurrency" | "harden-runner" | "main-guard";
   readonly reason: string;
@@ -145,8 +145,12 @@ function asRecord(value: unknown): Record<string, unknown> | undefined {
 /**
  * Whether `target` has a pending exemption for `rule`.
  */
-function isPending(target: string, rule: PendingRule["rule"]): boolean {
-  return PENDING_RULES.some((pending) => pending.target === target && pending.rule === rule);
+function isPending(
+  pendingRules: readonly PendingRule[],
+  target: string,
+  rule: PendingRule["rule"],
+): boolean {
+  return pendingRules.some((pending) => pending.target === target && pending.rule === rule);
 }
 
 /**
@@ -206,8 +210,12 @@ function jobSteps(job: JobShape): Record<string, unknown>[] {
 /**
  * Checks that a job with steps starts with harden-runner.
  */
-function hardenViolations(key: string, steps: readonly Record<string, unknown>[]): string[] {
-  if (steps.length === 0 || isPending(key, "harden-runner")) {
+function hardenViolations(
+  key: string,
+  steps: readonly Record<string, unknown>[],
+  pendingRules: readonly PendingRule[],
+): string[] {
+  if (steps.length === 0 || isPending(pendingRules, key, "harden-runner")) {
     return [];
   }
   const firstUses = steps[0]?.uses;
@@ -239,8 +247,13 @@ function runViolations(key: string, steps: readonly Record<string, unknown>[]): 
 /**
  * Checks that a job in a `deploy*.yml` workflow only runs on `main`.
  */
-function mainGuardViolations(file: string, key: string, job: JobShape): string[] {
-  if (!file.startsWith("deploy") || isPending(key, "main-guard")) {
+function mainGuardViolations(
+  file: string,
+  key: string,
+  job: JobShape,
+  pendingRules: readonly PendingRule[],
+): string[] {
+  if (!file.startsWith("deploy") || isPending(pendingRules, key, "main-guard")) {
     return [];
   }
   return typeof job.if === "string" && job.if.includes(MAIN_GUARD)
@@ -251,14 +264,18 @@ function mainGuardViolations(file: string, key: string, job: JobShape): string[]
 /**
  * Lists every rule a parsed workflow breaks, as `file: message` or `file:job: message` lines.
  */
-export function workflowViolations(file: string, workflow: unknown): readonly string[] {
+export function workflowViolations(
+  file: string,
+  workflow: unknown,
+  pendingRules: readonly PendingRule[] = PENDING_RULES,
+): readonly string[] {
   const document = asRecord(workflow);
   const jobs = asRecord(document?.jobs);
   if (document === undefined || jobs === undefined) {
     return [`${file}: has no jobs mapping`];
   }
   const concurrency =
-    document.concurrency === undefined && !isPending(file, "concurrency")
+    document.concurrency === undefined && !isPending(pendingRules, file, "concurrency")
       ? [`${file}: declares no concurrency`]
       : [];
   const jobViolations = Object.entries(jobs).flatMap(([name, value]) => {
@@ -266,9 +283,9 @@ export function workflowViolations(file: string, workflow: unknown): readonly st
     const job: JobShape = asRecord(value) ?? {};
     const steps = jobSteps(job);
     return runnerViolations(key, job).concat(
-      hardenViolations(key, steps),
+      hardenViolations(key, steps, pendingRules),
       runViolations(key, steps),
-      mainGuardViolations(file, key, job),
+      mainGuardViolations(file, key, job, pendingRules),
     );
   });
   return concurrency.concat(jobViolations);
