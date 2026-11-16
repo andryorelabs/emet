@@ -1,9 +1,10 @@
-import { afterEach, describe, expect, test } from "bun:test";
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { afterEach, beforeEach, describe, expect, spyOn, test } from "bun:test";
+import { mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
 
-import { checkStale, filterMapForGlobs, generateMap, mappedAreas, parseStamp } from "./map";
+import { currentExitCode } from "./exit-code";
+import { checkStale, filterMapForGlobs, generateMap, mappedAreas, parseStamp, run } from "./map";
 
 const roots: string[] = [];
 
@@ -150,5 +151,163 @@ describe("checkStale", () => {
     const verdict = await checkStale(root, "map.md", 10);
     expect(verdict.stale).toBe(true);
     expect(verdict.reason).toContain("not in history");
+  });
+});
+
+describe("generateMap on sparse repositories", () => {
+  test.each([
+    ["unparseable package.json", "{not json"],
+    ["package.json holding a scalar", "3"],
+  ])("%s is ignored instead of failing", async (_name, manifest) => {
+    const root = mkdtempSync(path.join(os.tmpdir(), "forge-map-"));
+    roots.push(root);
+    await sh(root, "init", "-q");
+    write(root, "package.json", manifest);
+    write(root, "README.md", "# hi");
+    await commit(root, "feat: init");
+    const map = await generateMap(root);
+    expect(map).not.toContain("Test command");
+    expect(map).toContain("- No test files found");
+  });
+
+  test("test directories are listed sorted, with root-level tests as `*`", async () => {
+    const root = mkdtempSync(path.join(os.tmpdir(), "forge-map-"));
+    roots.push(root);
+    await sh(root, "init", "-q");
+    write(root, "src/b.test.ts", "export {}");
+    write(root, "lib/a.test.ts", "export {}");
+    write(root, "top.test.ts", "export {}");
+    await commit(root, "feat: init");
+    const map = await generateMap(root);
+    const listed = ["- `*` (1 test files)", "- `lib/` (1 test files)", "- `src/` (1 test files)"];
+    const positions = listed.map((line) => map.indexOf(line));
+    expect(positions.every((position) => position >= 0)).toBe(true);
+    expect(positions).toEqual(positions.toSorted((a, b) => a - b));
+  });
+
+  test("a history of only lockfiles reports no hotspots", async () => {
+    const root = mkdtempSync(path.join(os.tmpdir(), "forge-map-"));
+    roots.push(root);
+    await sh(root, "init", "-q");
+    write(root, "bun.lock", "");
+    await commit(root, "chore: lock");
+    expect(await generateMap(root)).toContain("- No history available");
+  });
+});
+
+describe("run", () => {
+  const originalCwd = process.cwd();
+  const originalExitCode = process.exitCode;
+  let logs: string[] = [];
+  let errors: string[] = [];
+  let written = "";
+  let restoreFns: (() => void)[] = [];
+
+  beforeEach(() => {
+    logs = [];
+    errors = [];
+    written = "";
+    process.exitCode = 0;
+    const log = spyOn(console, "log").mockImplementation((line: unknown) => {
+      logs.push(String(line));
+    });
+    const error = spyOn(console, "error").mockImplementation((line: unknown) => {
+      errors.push(String(line));
+    });
+    const stdoutWrite = spyOn(process.stdout, "write").mockImplementation((chunk: unknown) => {
+      written += String(chunk);
+      return true;
+    });
+    restoreFns = [
+      () => {
+        log.mockRestore();
+      },
+      () => {
+        error.mockRestore();
+      },
+      () => {
+        stdoutWrite.mockRestore();
+      },
+    ];
+  });
+
+  afterEach(() => {
+    for (const restore of restoreFns) restore();
+    process.chdir(originalCwd);
+    process.exitCode = originalExitCode ?? 0;
+  });
+
+  test("--help prints usage", async () => {
+    await run(["-h"]);
+    expect(logs[0]).toContain("--stale");
+    expect(currentExitCode()).toBe(0);
+  });
+
+  test("outside a git repository exits 2", async () => {
+    const outside = mkdtempSync(path.join(os.tmpdir(), "forge-map-outside-"));
+    roots.push(outside);
+    process.chdir(realpathSync(outside));
+    await run([]);
+    expect(errors[0]).toContain("not inside a git repository");
+    expect(currentExitCode()).toBe(2);
+  });
+
+  test("writes the map at the configured path, then --for filters it", async () => {
+    const root = realpathSync(await fixtureRepo());
+    process.chdir(root);
+    await run([]);
+    expect(logs[0]).toMatch(/^wrote docs\/agents\/codebase\.md \(commit [0-9a-f]{7}\)$/);
+    const mapFile = path.join(root, "docs/agents/codebase.md");
+    expect(parseStamp(readFileSync(mapFile, "utf8"))).not.toBeNull();
+
+    await run(["--for", "src/*"]);
+    expect(written).toContain("src");
+    expect(written).not.toContain("docs/");
+  });
+
+  test("--for without globs exits 2 and --for without a map exits 1", async () => {
+    const root = realpathSync(await fixtureRepo());
+    process.chdir(root);
+    await run(["--for", " , "]);
+    expect(errors[0]).toContain("--for needs at least one glob");
+    expect(currentExitCode()).toBe(2);
+    process.exitCode = 0;
+    await run(["--for", "src/*"]);
+    expect(errors[1]).toContain("no map at docs/agents/codebase.md");
+    expect(currentExitCode()).toBe(1);
+  });
+
+  test("--stale reports a missing map as stale (exit 1) and a fresh one as fresh (exit 0)", async () => {
+    const root = realpathSync(await fixtureRepo());
+    process.chdir(root);
+    await run(["--stale"]);
+    expect(logs[0]).toBe("stale: no map at docs/agents/codebase.md");
+    expect(currentExitCode()).toBe(1);
+
+    process.exitCode = 0;
+    await run([]);
+    await commit(root, "docs: add map");
+    await run(["--stale", "--max", "5"]);
+    expect(logs.at(-1)).toMatch(
+      /^fresh: 0 commits touching mapped areas since [0-9a-f]{7} \(max 5\)$/,
+    );
+    expect(currentExitCode()).toBe(0);
+  });
+
+  test.each(["-1", "abc"])("--stale --max %s exits 2", async (rawMax) => {
+    const root = realpathSync(await fixtureRepo());
+    process.chdir(root);
+    await run(["--stale", "--max", rawMax]);
+    expect(errors[0]).toContain("--max must be a non-negative integer");
+    expect(currentExitCode()).toBe(2);
+  });
+
+  test("--stale without --max uses the default budget", async () => {
+    const root = realpathSync(await fixtureRepo());
+    process.chdir(root);
+    await run([]);
+    await commit(root, "docs: add map");
+    await run(["--stale"]);
+    expect(logs.at(-1)).toMatch(/^fresh: .*\(max \d+\)$/);
   });
 });

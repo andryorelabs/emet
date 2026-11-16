@@ -1,4 +1,4 @@
-import { describe, expect, test } from "bun:test";
+import { afterEach, beforeEach, describe, expect, spyOn, test } from "bun:test";
 import {
   appendFileSync,
   chmodSync,
@@ -7,12 +7,16 @@ import {
   mkdtempSync,
   realpathSync,
   rmSync,
+  utimesSync,
   writeFileSync,
 } from "node:fs";
 import os from "node:os";
 import path from "node:path";
 
+import { claudeHost } from "./agenthost-claude";
+import { codexHost } from "./agenthost-codex";
 import { currentExitCode } from "./exit-code";
+import { isObject } from "./narrow";
 import { present } from "./present";
 import {
   buildStatusReport,
@@ -25,6 +29,7 @@ import {
   run,
   summarize,
   type PullRequestStatus,
+  type StatusDeps,
   type WaveInput,
   type WorkerSignal,
 } from "./status";
@@ -394,5 +399,336 @@ describe("Codex workers judged by their jsonl", () => {
     } finally {
       rmSync(runsRoot, { recursive: true, force: true });
     }
+  });
+});
+
+describe("run", () => {
+  const RUN_ID = "emet523w7172506";
+  const ownedEntry = (directory: string, ticket: string, branch: string) => ({
+    directory,
+    branch,
+    lockedReason: `emet run=${RUN_ID} ticket=${ticket} anchor=1 at=2026-01-01T00:00:00Z`,
+  });
+  let repo = "";
+  let scratch = "";
+  let stdout: string[] = [];
+  let stderr: string[] = [];
+  let restoreFns: (() => void)[] = [];
+  const originalExitCode = process.exitCode;
+  const originalPath = process.env.PATH;
+
+  function makeRepo(config: Record<string, unknown> = { version: 1 }): void {
+    writeFileSync(path.join(repo, "emet.config.json"), JSON.stringify(config));
+  }
+
+  function deps(overrides: Partial<StatusDeps> = {}): Partial<StatusDeps> {
+    return {
+      resolveRepoRoot: () => Promise.resolve(repo),
+      listOccupiedSlots: () => Promise.resolve([]),
+      listReservations: () => Promise.resolve([]),
+      listWorktreeEntries: () => Promise.resolve([]),
+      fetchPullRequests: () => Promise.resolve(new Map()),
+      findStalledTranscripts: () => Promise.resolve([]),
+      ...overrides,
+    };
+  }
+
+  function parsedReport(): unknown {
+    const parsed: unknown = JSON.parse(present(stdout[0]));
+    return parsed;
+  }
+
+  function workersOf(): Record<string, unknown>[] {
+    const parsed = parsedReport();
+    if (!isObject(parsed) || !Array.isArray(parsed.waves)) throw new Error("malformed report");
+    const waves: unknown[] = parsed.waves;
+    return waves.flatMap((item) => {
+      if (!isObject(item) || !Array.isArray(item.workers)) return [];
+      const workers: unknown[] = item.workers;
+      return workers.filter(isObject);
+    });
+  }
+
+  const missingTranscripts = (): Partial<StatusDeps> => ({
+    resolveAgentHost: () => ({
+      ...claudeHost,
+      workerTranscriptRoot: () => path.join(scratch, "missing", "slug"),
+    }),
+  });
+
+  function stubGh(script: string): void {
+    const stub = path.join(scratch, "gh");
+    writeFileSync(stub, `#!/bin/sh\n${script}\n`);
+    chmodSync(stub, 0o755);
+    process.env.PATH = `${scratch}:${originalPath ?? ""}`;
+  }
+
+  function withRealFetch(ticket: string, branch: string): Partial<StatusDeps> {
+    const { fetchPullRequests: _unused, ...rest } = deps(missingTranscripts());
+    return {
+      ...rest,
+      listWorktreeEntries: () =>
+        Promise.resolve([ownedEntry(path.join(scratch, "wt", `agent-${ticket}`), ticket, branch)]),
+    };
+  }
+
+  beforeEach(() => {
+    repo = realpathSync(mkdtempSync(path.join(os.tmpdir(), "emet-status-repo-")));
+    scratch = realpathSync(mkdtempSync(path.join(os.tmpdir(), "emet-status-scratch-")));
+    stdout = [];
+    stderr = [];
+    process.exitCode = 0;
+    const log = spyOn(console, "log").mockImplementation((line: unknown) => {
+      stdout.push(String(line));
+    });
+    const error = spyOn(console, "error").mockImplementation((line: unknown) => {
+      stderr.push(String(line));
+    });
+    restoreFns = [
+      () => {
+        log.mockRestore();
+      },
+      () => {
+        error.mockRestore();
+      },
+    ];
+  });
+
+  afterEach(() => {
+    for (const restore of restoreFns) restore();
+    process.exitCode = originalExitCode ?? 0;
+    process.env.PATH = originalPath;
+    rmSync(repo, { recursive: true, force: true });
+    rmSync(scratch, { recursive: true, force: true });
+  });
+
+  test("--help prints usage and does nothing else", async () => {
+    await run(["--help"], deps());
+    expect(stdout[0]).toContain("status [--spec <id>]");
+    expect(currentExitCode()).toBe(0);
+  });
+
+  test("--spec without a value exits 2", async () => {
+    await run(["--spec"], deps());
+    expect(stderr[0]).toContain("--spec requires a value");
+    expect(currentExitCode()).toBe(2);
+    expect(stdout).toEqual([]);
+  });
+
+  test("outside a repository exits 2", async () => {
+    await run([], deps({ resolveRepoRoot: () => Promise.resolve(null) }));
+    expect(stderr[0]).toContain("not inside a git repository");
+    expect(currentExitCode()).toBe(2);
+  });
+
+  test("an unexpected failure exits 3 and is reported", async () => {
+    makeRepo();
+    const failure = new Error("slots unreadable");
+    await run([], deps({ listOccupiedSlots: () => Promise.reject(failure) }));
+    expect(stderr[0]).toBe(String(failure));
+    expect(currentExitCode()).toBe(3);
+  });
+
+  test("an idle host reports idle", async () => {
+    makeRepo();
+    await run([], deps());
+    expect(stderr).toEqual([]);
+    expect(parsedReport()).toMatchObject({ state: "idle" });
+    expect(stdout[1]).toContain("idle");
+    expect(currentExitCode()).toBe(0);
+  });
+
+  test("merges slots, reservations and a stalled transcript into one report", async () => {
+    makeRepo();
+    const worktree = path.join(scratch, "wt", "agent-abc");
+    const projects = path.join(scratch, "projects");
+    const newerDirectory = path.join(projects, "slug", "session", "subagents");
+    mkdirSync(newerDirectory, { recursive: true });
+    const newer = path.join(newerDirectory, "agent-abc.jsonl");
+    writeFileSync(newer, "{}\n");
+    const olderDirectory = path.join(projects, "slug", "older", "subagents");
+    mkdirSync(olderDirectory, { recursive: true });
+    const older = path.join(olderDirectory, "agent-abc.jsonl");
+    writeFileSync(older, "{}\n");
+    utimesSync(older, new Date(2020, 0, 1), new Date(2020, 0, 1));
+    const seen: string[][] = [];
+    await run(
+      [],
+      deps({
+        listOccupiedSlots: () =>
+          Promise.resolve([
+            {
+              index: 1,
+              verdict: "live",
+              holder: {
+                runId: RUN_ID,
+                anchorPid: 1,
+                ticket: "CLA-1",
+                sessionSlug: "s",
+                repoRoot: repo,
+                pid: 1,
+                worktree: repo,
+                acquiredAt: 1,
+              },
+            },
+          ]),
+        listReservations: () =>
+          Promise.resolve([
+            {
+              runId: RUN_ID,
+              anchorPid: 999_999_999,
+              ticket: "CLA-1",
+              reservedAt: 1,
+              sessionSlug: "s",
+            },
+            {
+              runId: "emet9w9000000",
+              anchorPid: 999_999_999,
+              anchorStartToken: "token",
+              ticket: "CLA-2",
+              reservedAt: 1,
+              sessionSlug: "s",
+            },
+          ]),
+        listWorktreeEntries: () =>
+          Promise.resolve([
+            ownedEntry(worktree, "CLA-3", "cla-3-x"),
+            { directory: "/elsewhere", branch: "b", lockedReason: null },
+          ]),
+        resolveAgentHost: () => ({
+          ...claudeHost,
+          workerTranscriptRoot: () => path.join(projects, "slug"),
+        }),
+        findStalledTranscripts: (paths) => {
+          seen.push([...paths]);
+          return Promise.resolve([
+            {
+              taskId: "agent-abc",
+              path: present(paths[0]),
+              minutesSinceLastWrite: 99,
+              lastStep: "tool_use",
+              pendingTool: null,
+            },
+          ]);
+        },
+      }),
+    );
+    expect(seen).toEqual([[newer]]);
+    expect(parsedReport()).toMatchObject({ state: "needs-decision" });
+    expect(JSON.stringify(parsedReport())).toContain('"runVerdict":"dead"');
+    const workers = workersOf();
+    expect(workers.find((w) => w.ticket === "CLA-3")).toMatchObject({ stalled: true });
+    expect(workers.map((w) => String(w.ticket)).toSorted((a, b) => a.localeCompare(b))).toEqual([
+      "CLA-1",
+      "CLA-2",
+      "CLA-3",
+    ]);
+  });
+
+  test("a worktree with no transcript is not stalled", async () => {
+    makeRepo();
+    await run(
+      [],
+      deps({
+        ...missingTranscripts(),
+        listWorktreeEntries: () =>
+          Promise.resolve([ownedEntry(path.join(scratch, "wt", "agent-zzz"), "CLA-4", "cla-4-x")]),
+        findStalledTranscripts: () => Promise.reject(new Error("must not be called")),
+      }),
+    );
+    expect(currentExitCode()).toBe(0);
+    expect(workersOf()[0]).toMatchObject({ ticket: "CLA-4", stalled: false });
+  });
+
+  test("a directory that is not an agent worktree has no transcript", async () => {
+    makeRepo();
+    await run(
+      [],
+      deps({
+        listWorktreeEntries: () =>
+          Promise.resolve([ownedEntry(path.join(scratch, "plain"), "CLA-5", "cla-5-x")]),
+        findStalledTranscripts: () => Promise.reject(new Error("must not be called")),
+      }),
+    );
+    expect(currentExitCode()).toBe(0);
+    expect(workersOf()[0]).toMatchObject({ stalled: false });
+  });
+
+  test("codex host: workers come from their jsonl state and other transcripts match by agent id", async () => {
+    makeRepo({ version: 1, agentHost: "codex" });
+    const codexDirectory = path.join(repo, ".emet", "runs", RUN_ID, "codex");
+    mkdirSync(codexDirectory, { recursive: true });
+    const codexWorktree = path.join(scratch, "wt", "agent-cdx");
+    const jsonlPath = path.join(codexDirectory, "CLA-6.jsonl");
+    writeFileSync(jsonlPath, `${JSON.stringify({ type: "thread.started", thread_id: "th-6" })}\n`);
+    writeFileSync(
+      path.join(codexDirectory, "CLA-6.state.json"),
+      JSON.stringify({
+        pid: 36,
+        threadId: null,
+        startedAt: new Date().toISOString(),
+        jsonlPath,
+        cwd: codexWorktree,
+        pidNamespace: "pid:[sandbox]",
+      }),
+    );
+    const transcriptRoot = path.join(scratch, "runs");
+    mkdirSync(path.join(transcriptRoot, "r", "codex"), { recursive: true });
+    writeFileSync(path.join(transcriptRoot, "r", "codex", "unrelated.jsonl"), "{}\n");
+    const matching = path.join(transcriptRoot, "r", "codex", "run-oth.jsonl");
+    writeFileSync(matching, "{}\n");
+    const earlier = path.join(transcriptRoot, "s", "codex", "run-oth.jsonl");
+    mkdirSync(path.dirname(earlier), { recursive: true });
+    writeFileSync(earlier, "{}\n");
+    utimesSync(earlier, new Date(2020, 0, 1), new Date(2020, 0, 1));
+    const seen: string[][] = [];
+    await run(
+      [],
+      deps({
+        listWorktreeEntries: () =>
+          Promise.resolve([
+            ownedEntry(codexWorktree, "CLA-6", "cla-6-x"),
+            ownedEntry(path.join(scratch, "wt", "agent-oth"), "CLA-7", "cla-7-x"),
+          ]),
+        resolveAgentHost: () => ({ ...codexHost, workerTranscriptRoot: () => transcriptRoot }),
+        findStalledTranscripts: (paths) => {
+          seen.push([...paths]);
+          return Promise.resolve([]);
+        },
+      }),
+    );
+    expect(seen).toEqual([[matching]]);
+    const workers = workersOf();
+    expect(workers.find((w) => w.ticket === "CLA-6")).toMatchObject({ threadId: "th-6" });
+    expect(workers.find((w) => w.ticket === "CLA-7")).toMatchObject({ stalled: false });
+  });
+
+  describe("pull requests through gh", () => {
+    test("reads the open pull request of a worker branch", async () => {
+      makeRepo();
+      const prs = JSON.stringify([
+        {
+          number: 7,
+          state: "OPEN",
+          headRefName: "cla-8-x",
+          mergeable: "MERGEABLE",
+          statusCheckRollup: [{ status: "COMPLETED", conclusion: "SUCCESS" }],
+        },
+      ]);
+      stubGh(`cat <<'JSON'\n${prs}\nJSON`);
+      await run([], withRealFetch("CLA-8", "cla-8-x"));
+      expect(workersOf()[0]).toMatchObject({
+        ticket: "CLA-8",
+        pullRequest: { number: 7, state: "open", checks: "passing", mergeable: true },
+      });
+    });
+
+    test("a failing gh yields no pull requests instead of an error", async () => {
+      makeRepo();
+      stubGh("exit 1");
+      await run([], withRealFetch("CLA-9", "cla-9-x"));
+      expect(currentExitCode()).toBe(0);
+      expect(workersOf()[0]).toMatchObject({ pullRequest: null });
+    });
   });
 });
