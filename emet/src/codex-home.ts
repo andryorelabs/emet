@@ -10,6 +10,7 @@ import {
 import { homedir } from "node:os";
 import path from "node:path";
 
+import { readEnv } from "./env";
 import { isObject } from "./narrow";
 
 /**
@@ -100,7 +101,7 @@ export function renderOverlayConfig(options: OverlayConfigOptions): string {
 
 function sourceCodexHome(sourceHome: string | undefined): string {
   if (sourceHome !== undefined) return sourceHome;
-  const fromEnv = process.env.CODEX_HOME;
+  const fromEnv = readEnv("CODEX_HOME");
   return fromEnv !== undefined && fromEnv.length > 0 ? fromEnv : path.join(homedir(), ".codex");
 }
 

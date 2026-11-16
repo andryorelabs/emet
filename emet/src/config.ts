@@ -1,3 +1,5 @@
+import { EmetError } from "./errors";
+import { exitCodes } from "./exit-codes";
 import { BINARY, CONFIG_FILE, resolveConfigPath } from "./names";
 import { errorMessage, isOneOf } from "./narrow";
 
@@ -325,12 +327,15 @@ export function resolveWorkerModel(config: ForgeConfig, ticketModel?: string): M
  * error, the tool never actually ran) instead of `3` (internal error) or `1`
  * (findings to act on) — see `bin/emet.ts`'s exit-code table.
  */
-export class ForgeConfigError extends Error {
+export class EmetConfigError extends EmetError {
   constructor(message: string) {
-    super(message);
-    this.name = "ForgeConfigError";
+    super("config-invalid", message, "fix or create emet.config.json", exitCodes.usage);
   }
 }
+
+/** @alias Kept for callers that still use the old name. */
+export const ForgeConfigError = EmetConfigError;
+export type ForgeConfigError = EmetConfigError;
 
 type ConfigLoadResult =
   | { readonly status: "absent" }

@@ -5,7 +5,7 @@
 FROM oven/bun:1.4.4-alpine@sha256:4cf82f5686b196504fe119db3fcd9185b191f82ece82c40680e597228ec6070a AS build
 WORKDIR /repo
 
-COPY package.json bun.lock ./
+COPY package.json bun.lock tsconfig.base.json ./
 COPY apps/site/package.json apps/site/package.json
 RUN bun install --frozen-lockfile --filter @emet/site --ignore-scripts
 
@@ -13,12 +13,19 @@ COPY apps/site apps/site
 COPY docs docs
 COPY CHANGELOG.md CHANGELOG.md
 COPY emet/schema emet/schema
+# JSON map from docker/last-modified.sh: the sitemap's lastmod dates, since the
+# build context has no git history. Empty omits lastmod.
+ARG LAST_MODIFIED_DATES=""
+ENV LAST_MODIFIED_DATES=${LAST_MODIFIED_DATES}
 RUN bun run --cwd apps/site build
+# Hashes every inline script in dist into the Content-Security-Policy header.
+RUN bun apps/site/src/security/render-security-headers.ts apps/site/dist \
+  apps/site/docker/security-headers.conf /repo/security-headers.conf
 
 FROM nginx:1.31-alpine@sha256:713fc2ebfd92e8217db451477182ee91944b123d2b1ee9fd5a8c6e91ca6c3a11
 RUN rm -f /etc/nginx/conf.d/default.conf
 COPY apps/site/docker/nginx.conf /etc/nginx/nginx.conf
-COPY apps/site/docker/security-headers.conf /etc/nginx/snippets/security-headers.conf
+COPY --from=build /repo/security-headers.conf /etc/nginx/snippets/security-headers.conf
 COPY apps/site/docker/site.conf /etc/nginx/conf.d/site.conf
 COPY --from=build /repo/apps/site/dist /usr/share/nginx/html
 EXPOSE 80

@@ -1,0 +1,27 @@
+{
+  "prefetch": [
+    {
+      "where": {
+        "and": [
+          { "href_matches": "/*" },
+          {
+            "not": {
+              "href_matches": [
+                "/api/*",
+                "/og/*",
+                "/pagefind/*",
+                "/schema/*",
+                "/*.md",
+                "/*.txt",
+                "/*.xml",
+                "/*.json",
+                "/*.webmanifest"
+              ]
+            }
+          }
+        ]
+      },
+      "eagerness": "moderate"
+    }
+  ]
+}

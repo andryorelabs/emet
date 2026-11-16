@@ -2,6 +2,16 @@ import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
 
+import {
+  ENV_VARS,
+  readEnv as readEnvVariable,
+  resetLegacyWarnings,
+  warnLegacy,
+  type Env,
+} from "./env";
+
+export { resetLegacyWarnings, warnLegacy };
+
 export const PRODUCT = "emet";
 export const BINARY = "emet";
 export const CONFIG_FILE = "emet.config.json";
@@ -21,30 +31,11 @@ export const REVIEWER_AGENT = "emet-reviewer";
 export const LEGACY_WORKER_AGENT = "forge-worker";
 export const LEGACY_REVIEWER_AGENT = "forge-reviewer";
 export const LEGACY_PRODUCT = "forge";
-const ENV_PREFIX = "EMET_";
-const LEGACY_ENV_PREFIX = "FORGE_";
 
 /** A name resolved on disk and whether it was the legacy spelling. */
 export interface ResolvedPath {
   readonly path: string;
   readonly legacy: boolean;
-}
-
-const warnedNames = new Set<string>();
-
-/**
- * Prints `emet: using legacy <name>; run \`emet migrate\`` to stderr, once per
- * name per process.
- */
-export function warnLegacy(name: string): void {
-  if (warnedNames.has(name)) return;
-  warnedNames.add(name);
-  process.stderr.write(`${BINARY}: using legacy ${name}; run \`${BINARY} migrate\`\n`);
-}
-
-/** Forgets which legacy names were already warned about, so tests can assert the warning in any order. */
-export function resetLegacyWarnings(): void {
-  warnedNames.clear();
 }
 
 function resolveFirst(root: string, current: string, legacy: string): ResolvedPath | undefined {
@@ -79,33 +70,26 @@ export function resolveAgentsDoc(root: string): ResolvedPath | undefined {
 }
 
 /**
- * Reads `EMET_<key>`, then `FORGE_<key>` (warning once). Empty values count as
- * unset.
+ * Reads the documented variable `EMET_<key>`, then its `FORGE_` fallback
+ * (warning once). A key missing from `ENV_VARS` reads as unset.
  */
-export function readEnv(key: string, env: NodeJS.ProcessEnv = process.env): string | undefined {
-  const current = env[`${ENV_PREFIX}${key}`];
-  if (current) return current;
-  const legacyName = `${LEGACY_ENV_PREFIX}${key}`;
-  const legacy = env[legacyName];
-  if (legacy) {
-    warnLegacy(legacyName);
-    return legacy;
-  }
-  return undefined;
+export function readEnv(key: string, env?: Env): string | undefined {
+  const definition = ENV_VARS.find((variable) => variable.name === `EMET_${key}`);
+  return definition === undefined ? undefined : readEnvVariable(definition.name, env);
 }
 
 /** `$EMET_STATE_DIR`, then `$XDG_STATE_HOME/emet`, then `~/.local/state/emet`. */
-export function stateDir(env: NodeJS.ProcessEnv = process.env): string {
-  const explicit = readEnv("STATE_DIR", env);
+export function stateDir(env?: Env): string {
+  const explicit = readEnvVariable("EMET_STATE_DIR", env);
   if (explicit) return explicit;
-  const xdgStateHome = env.XDG_STATE_HOME;
+  const xdgStateHome = readEnvVariable("XDG_STATE_HOME", env);
   if (xdgStateHome) return path.join(xdgStateHome, PRODUCT);
   return path.join(os.homedir(), ".local", "state", PRODUCT);
 }
 
 /** The pre-rename state dir, `$XDG_STATE_HOME/forge` or `~/.local/state/forge`. */
-export function legacyStateDir(env: NodeJS.ProcessEnv = process.env): string {
-  const xdgStateHome = env.XDG_STATE_HOME;
+export function legacyStateDir(env?: Env): string {
+  const xdgStateHome = readEnvVariable("XDG_STATE_HOME", env);
   if (xdgStateHome) return path.join(xdgStateHome, LEGACY_LOCK_TOKEN);
   return path.join(os.homedir(), ".local", "state", LEGACY_LOCK_TOKEN);
 }

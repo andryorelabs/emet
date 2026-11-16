@@ -18,6 +18,8 @@ import {
   resolveRepoRoot,
   type ForgeConfig,
 } from "./config";
+import { EmetError } from "./errors";
+import { exitCodes } from "./exit-codes";
 import { buildLockReason, readLockReasonTemplate } from "./lockreason";
 import { listOpenQuestions } from "./mailbox";
 import { resolveRunDir } from "./names";
@@ -64,11 +66,9 @@ const WORKER_REPORT_SCHEMA = {
   },
 } as const;
 
-class DispatchError extends Error {
-  readonly exitCode: number;
-  constructor(message: string, exitCode = 1) {
-    super(message);
-    this.exitCode = exitCode;
+class DispatchError extends EmetError {
+  constructor(message: string, exitCode: number = exitCodes.findings) {
+    super("dispatch-failed", message, "fix the dispatch input or state and rerun", exitCode);
   }
 }
 

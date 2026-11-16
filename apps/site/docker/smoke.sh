@@ -1,14 +1,17 @@
 #!/usr/bin/env bash
 # Builds the Website image from the repo root, runs it, and checks pages,
-# redirects, the 404, security headers and masked logs. Not part of
-# `bun run check`: run it by hand or from deploy-site.yml.
+# redirects, the 404, security headers, the well-known public files and masked
+# logs. Not part of `bun run check`: run it by hand or from deploy-site.yml.
+# LAST_MODIFIED_DATES (the output of last-modified.sh), when set, is passed to
+# the build and the sitemap must then carry lastmod dates.
 set -euo pipefail
 
 root="$(git rev-parse --show-toplevel)"
 image="emet-site-smoke"
 name="emet-site-smoke-$$"
 
-docker build -f "$root/apps/site/Dockerfile" -t "$image" "$root"
+docker build -f "$root/apps/site/Dockerfile" \
+  --build-arg LAST_MODIFIED_DATES="${LAST_MODIFIED_DATES:-}" -t "$image" "$root"
 docker run -d --rm --name "$name" -p 127.0.0.1:0:80 "$image" >/dev/null
 trap 'docker rm -f "$name" >/dev/null 2>&1 || true' EXIT
 port="$(docker port "$name" 80/tcp | head -n1 | sed 's/.*://')"
@@ -64,6 +67,9 @@ for header in content-security-policy x-content-type-options referrer-policy per
   grep -qi "^$header:" <<<"$headers" || fail "/ lacks $header"
 done
 grep -qi "^content-security-policy:.*frame-ancestors 'none'" <<<"$headers" || fail "CSP header lacks frame-ancestors 'none'"
+grep -qi "^content-security-policy:.*script-src 'self' 'wasm-unsafe-eval' 'sha256-" <<<"$headers" || fail "CSP header has no script hashes"
+if grep -q '__CONTENT_SECURITY_POLICY__' <<<"$headers"; then fail "CSP header is the unrendered template"; fi
+[ "$(header_of speculation-rules "$base/")" = '"/speculation-rules.json"' ] || fail "/ lacks the Speculation-Rules header"
 if grep -qi '^server:.*[0-9]' <<<"$headers"; then fail "the Server header leaks the nginx version"; fi
 for path in /nope/ /es; do
   grep -qi '^x-content-type-options:' <<<"$(curl -s -o /dev/null -D - "$base$path")" || fail "$path lacks the security headers"
@@ -78,6 +84,20 @@ done
 [ "$(header_of content-type "$base/es/docs/guide/fleet.md")" = "text/markdown; charset=utf-8" ] || fail "the Markdown twin is not text/markdown; charset=utf-8"
 [ "$(header_of content-encoding "$base/es/docs/guide/fleet.md")" = gzip ] || fail "the Markdown twin is not gzipped"
 [ "$(header_of content-encoding "$base/")" = gzip ] || fail "/ is not gzipped"
+
+for path in /robots.txt /sitemap.xml /llms.txt /llms-full.txt /manifest.webmanifest \
+  /.well-known/security.txt /speculation-rules.json /favicon.ico /favicon.svg /apple-touch-icon.png; do
+  [ "$(status "$base$path")" = 200 ] || fail "$path is not 200"
+done
+[[ "$(header_of content-type "$base/.well-known/security.txt")" == text/plain* ]] || fail "security.txt is not text/plain"
+security_txt="$(curl -s "$base/.well-known/security.txt")"
+for field in Contact: Expires: Policy: Canonical:; do
+  grep -q "^$field " <<<"$security_txt" || fail "security.txt lacks $field"
+done
+[ "$(header_of content-type "$base/speculation-rules.json")" = application/speculationrules+json ] || fail "the speculation rules have the wrong content-type"
+if [ -n "${LAST_MODIFIED_DATES:-}" ]; then
+  grep -q '<lastmod>[0-9]\{4\}-[0-9]\{2\}-[0-9]\{2\}</lastmod>' <<<"$(curl -s "$base/sitemap.xml")" || fail "the sitemap has no lastmod dates"
+fi
 
 stars_status="$(status "$base/api/github-stars")"
 if [ "$stars_status" = 200 ]; then

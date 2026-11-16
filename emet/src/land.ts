@@ -12,6 +12,8 @@ import { realpath } from "node:fs/promises";
 import path from "node:path";
 
 import { loadForgeConfigWithDefaults, type ForgeConfig } from "./config";
+import { EmetError } from "./errors";
+import { exitCodes } from "./exit-codes";
 import { errorMessage } from "./narrow";
 import { writePhase } from "./phase";
 
@@ -25,13 +27,22 @@ Merges <integration> into local trunk (landing.mode "merge"), per pr.mergeMethod
   rebase  a fast-forward; refused unless the branch already sits on trunk
 Never pushes. Prints {"trunk": "<sha>", "tickets": [...]}. Exit 1 on refusal.`;
 
-const EXIT_REFUSED = 1;
-const EXIT_USAGE = 2;
-const EXIT_INTERNAL = 3;
+const EXIT_REFUSED = exitCodes.findings;
+const EXIT_USAGE = exitCodes.usage;
+const EXIT_INTERNAL = exitCodes.internal;
 const DEFAULT_COMMIT_TYPE = "feat";
 
-class LandUsageError extends Error {}
-class LandRefusedError extends Error {}
+class LandUsageError extends EmetError {
+  constructor(message: string) {
+    super("land-usage", message, "see `emet land --help`", exitCodes.usage);
+  }
+}
+
+class LandRefusedError extends EmetError {
+  constructor(message: string) {
+    super("land-refused", message, "resolve the refusal and rerun `emet land`", exitCodes.findings);
+  }
+}
 
 export interface LandOptions {
   readonly cwd: string;

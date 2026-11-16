@@ -3,6 +3,7 @@ import { homedir } from "node:os";
 import { join } from "node:path";
 
 import { resolveCodexConfig, type CodexModelChoice, type ForgeConfig } from "./config";
+import { readEnv } from "./env";
 
 export type CodexRole =
   | "worker"
@@ -32,7 +33,7 @@ const MODELS_CACHE_FILE = "models_cache.json";
 
 /** The user's own Codex home: `$CODEX_HOME`, else `~/.codex`. Only ever read. */
 function realCodexHome(): string {
-  const codexHome = process.env.CODEX_HOME;
+  const codexHome = readEnv("CODEX_HOME");
   return codexHome !== undefined && codexHome.length > 0 ? codexHome : join(homedir(), ".codex");
 }
 

@@ -3,6 +3,8 @@ import { existsSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSy
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
+import { LITERAL_JOBS, ROUTED_JOBS, workflowViolations } from "./workflow-rules.ts";
+
 const REPOSITORY_ROOT = join(import.meta.dir, "..");
 const WORKFLOW_DIRECTORY = join(REPOSITORY_ROOT, ".github", "workflows");
 const STALE_SCRIPT_CALL_PATTERN = /bun run (?:format(?![:\w-])|test:coverage)/;
@@ -39,6 +41,7 @@ const USES_LINE_PATTERN = /^\s*-?\s*uses:\s*(\S+?)(?:\s+#\s*(.*))?$/;
 
 interface WorkflowStep {
   readonly name?: string;
+  readonly if?: string;
   readonly uses?: string;
   readonly run?: string;
   readonly with?: Record<string, unknown>;
@@ -248,10 +251,10 @@ describe("ci.yml", () => {
     expect(Object.keys(ci?.jobs ?? {})).toContain("test");
   });
 
-  test("ci-passed needs every other job and always runs", () => {
+  test("ci-passed needs every other job but the non-required Bun canary, and always runs", () => {
     const jobs = ci?.jobs ?? {};
     const others = Object.keys(jobs)
-      .filter((name) => name !== "ci-passed")
+      .filter((name) => name !== "ci-passed" && name !== "bun-canary")
       .toSorted();
     expect(neededJobs(jobs["ci-passed"])).toEqual(others);
     expect(jobs["ci-passed"]?.if).toContain("always()");
@@ -339,11 +342,34 @@ describe("ci.yml commitlint and manual runs", () => {
     expect(ci?.raw).toContain("GITHUB_STEP_SUMMARY");
   });
 
-  test("ci.yml and labels.yml allow workflow_dispatch", () => {
-    for (const fileName of ["ci.yml", "labels.yml"]) {
+  test("ci.yml, labels.yml, codeql.yml and lint-docs.yml allow workflow_dispatch", () => {
+    for (const fileName of ["ci.yml", "labels.yml", "codeql.yml", "lint-docs.yml"]) {
       const file = workflows.find((entry) => entry.fileName === fileName);
       expect(triggerNames(file?.workflow)).toContain("workflow_dispatch");
     }
+  });
+
+  test("commitlint is skipped on the develop-to-main promotion PR", () => {
+    const condition = ci?.workflow.jobs.commitlint?.if ?? "";
+    expect(condition).toContain("github.base_ref == 'main'");
+    expect(condition).toContain("github.head_ref == 'develop'");
+    expect(condition).toMatch(/!\s*\(/);
+  });
+
+  test("the Test job uploads coverage only on failure", () => {
+    const steps = ci?.workflow.jobs.test?.steps ?? [];
+    const upload = steps.find((step) => step.uses?.startsWith("actions/upload-artifact@") === true);
+    expect(upload?.if).toBe("failure()");
+    expect(upload?.with?.path).toBe("coverage/");
+  });
+
+  test("a Bun canary job runs the tests on the latest Bun and is not required", () => {
+    const canary = ci?.workflow.jobs["bun-canary"];
+    const setup = canary?.steps?.find((step) => step.uses?.startsWith("oven-sh/setup-bun@"));
+    expect(setup?.with?.["bun-version"]).toBe("latest");
+    expect(canary?.steps?.map((step) => step.run)).toContain("bun run test");
+    expect(neededJobs(ci?.workflow.jobs["ci-passed"])).not.toContain("bun-canary");
+    expect(JSON.stringify(readRequiredContexts())).not.toContain(canary?.name ?? "bun-canary");
   });
 });
 
@@ -358,6 +384,15 @@ describe("codeql.yml and scorecard.yml", () => {
     expect(job?.strategy?.matrix?.language).toEqual(["javascript-typescript", "actions"]);
   });
 
+  test("CodeQL runs build-mode none on PRs and on develop push", () => {
+    expect(triggerNames(codeql?.workflow)).toContain("pull_request");
+    expect(field(field(codeql?.workflow.on, "push"), "branches")).toContain("develop");
+    const init = codeql?.workflow.jobs.analyze?.steps?.find((step) =>
+      step.uses?.startsWith("github/codeql-action/init@"),
+    );
+    expect(init?.with?.["build-mode"]).toBe("none");
+  });
+
   test("Scorecard runs weekly with empty top-level permissions and a guarded job", () => {
     const job = scorecard?.workflow.jobs.analysis;
     expect(job?.name).toBe("Scorecard");
@@ -365,6 +400,23 @@ describe("codeql.yml and scorecard.yml", () => {
     expect(job?.if).toContain("!github.event.repository.private");
     expect(job?.permissions).toMatchObject({ "security-events": "write" });
     expect(triggerNames(scorecard?.workflow)).toContain("schedule");
+  });
+
+  test("Scorecard runs on main push and branch_protection_rule and keeps the SARIF", () => {
+    expect(triggerNames(scorecard?.workflow)).toContain("branch_protection_rule");
+    expect(field(field(scorecard?.workflow.on, "push"), "branches")).toEqual(["main"]);
+    const upload = scorecard?.workflow.jobs.analysis?.steps?.find((step) =>
+      step.uses?.startsWith("actions/upload-artifact@"),
+    );
+    expect(upload?.with?.path).toBe("results.sarif");
+  });
+});
+
+describe("lint-workflows.yml", () => {
+  test("runs actionlint and zizmor on trunk push", () => {
+    const lint = workflows.find(({ fileName }) => fileName === "lint-workflows.yml");
+    const branches = field(field(lint?.workflow.on, "push"), "branches");
+    expect(branches).toEqual(["main", "develop"]);
   });
 });
 
@@ -444,6 +496,22 @@ function readRootScripts(): Record<string, string | undefined> {
 }
 
 /**
+ * Reads every `required_status_checks` entry of the committed rulesets.
+ */
+function readRequiredContexts(): unknown[] {
+  const rulesetDirectory = join(REPOSITORY_ROOT, ".github", "rulesets");
+  return readdirSync(rulesetDirectory)
+    .filter((fileName) => fileName.endsWith(".json"))
+    .flatMap((fileName) => {
+      const ruleset: unknown = JSON.parse(readFileSync(join(rulesetDirectory, fileName), "utf8"));
+      const rules = field(ruleset, "rules");
+      return Array.isArray(rules) ? rules.map((rule: unknown) => rule) : [];
+    })
+    .filter((rule: unknown) => field(rule, "type") === "required_status_checks")
+    .map((rule: unknown) => field(field(rule, "parameters"), "required_status_checks"));
+}
+
+/**
  * Runs the release workflow's CHANGELOG gate script for `tag` against the
  * fixture changelog, the way the runner does (`bash -e`), in a scratch directory.
  */
@@ -469,45 +537,32 @@ function runChangelogGate(
   }
 }
 
-const ROUTED_RUNS_ON =
-  "${{ github.event.pull_request.head.repo.fork && 'ubuntu-latest' || vars.BLACKSMITH_RUNNER || 'ubuntu-latest' }}";
-const ROUTED_JOBS = [
-  "ci.yml:check",
-  "ci.yml:test",
-  "ci.yml:commitlint",
-  "ci.yml:ci-passed",
-  "labels.yml:sync",
-  "lint-docs.yml:check-links",
-  "lint-pr.yml:validate-title",
-  "lint-workflows.yml:lint",
-];
-const LITERAL_RUNNERS = new Set(["ubuntu-latest", "macos-latest"]);
-
-describe("runner routing", () => {
+describe("runner routing and workflow rules", () => {
   const jobs = workflows.flatMap(({ fileName, workflow }) =>
     Object.entries(workflow.jobs).map(([name, job]) => ({ key: `${fileName}:${name}`, job })),
   );
+  const routedKeys = ROUTED_JOBS.map(({ key }) => key);
 
-  test("routed jobs use exactly the BLACKSMITH_RUNNER expression", () => {
-    const wrong = ROUTED_JOBS.filter(
-      (key) => jobs.find((entry) => entry.key === key)?.job["runs-on"] !== ROUTED_RUNS_ON,
+  test("every workflow passes workflowViolations", () => {
+    const violations = workflows.flatMap(({ fileName, workflow }) =>
+      workflowViolations(fileName, workflow),
     );
-    expect(wrong).toEqual([]);
+    expect(violations).toEqual([]);
   });
 
-  test("every other job runs on a literal GitHub-hosted runner", () => {
-    const wrong = jobs
-      .filter(({ key }) => !ROUTED_JOBS.includes(key))
-      .filter(({ job }) => !LITERAL_RUNNERS.has(String(job["runs-on"])))
-      .map(({ key }) => key);
-    expect(wrong).toEqual([]);
+  test("every routed and literal job exists in a workflow", () => {
+    const keys = new Set(jobs.map(({ key }) => key));
+    const stale = [...routedKeys, ...LITERAL_JOBS.map(({ key }) => key)].filter(
+      (key) => !keys.has(key),
+    );
+    expect(stale).toEqual([]);
   });
 
   test("no workflow reads BLACKSMITH_RUNNER outside the routed jobs or names a self-hosted runner", () => {
     const readers = jobs
       .filter(({ job }) => String(job["runs-on"]).includes("BLACKSMITH_RUNNER"))
       .map(({ key }) => key);
-    expect(readers.toSorted()).toEqual(ROUTED_JOBS.toSorted());
+    expect(readers.toSorted()).toEqual(routedKeys.toSorted());
     for (const { raw } of workflows) {
       expect(raw).not.toMatch(/vps-|self-hosted|CI_RUNNER/);
     }

@@ -17,6 +17,7 @@ import {
   type DependencyCheck,
   type DependencyProbes,
 } from "./dependencies";
+import type { Env } from "./env";
 import {
   AGENTS_DOC,
   BINARY,
@@ -270,7 +271,7 @@ export function findLegacyNameWarnings(repoRoot: string): string[] {
 }
 
 /** A finding when the pre-rename state dir still exists next to (or instead of) the new one. */
-export function findLegacyStateDirFindings(env: NodeJS.ProcessEnv = process.env): string[] {
+export function findLegacyStateDirFindings(env?: Env): string[] {
   const legacy = legacyStateDir(env);
   if (legacy === stateDir(env) || !existsSync(legacy)) return [];
   return [

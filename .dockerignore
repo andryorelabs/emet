@@ -4,6 +4,7 @@
 *
 !package.json
 !bun.lock
+!tsconfig.base.json
 !apps/site
 !docs/guide
 !docs/reference
