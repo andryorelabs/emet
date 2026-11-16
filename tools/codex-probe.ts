@@ -1264,20 +1264,37 @@ export async function runProbe(options: ProbeOptions): Promise<ProbeResult[]> {
   );
 }
 
-if (import.meta.main) {
-  if (process.env.EMET_CODEX_PROBE !== "1") {
-    console.log("probe:codex skipped (set EMET_CODEX_PROBE=1 to run it against the real codex)");
-    process.exit(0);
+/**
+ * The command-line entry: skips unless `EMET_CODEX_PROBE=1`, otherwise prints
+ * the item rows and, with `--flow` or `--flow-only`, the full-flow steps as JSON.
+ * @param argv The command-line arguments.
+ * @param env The environment (`EMET_CODEX_PROBE`, `EMET_CODEX_PROBE_EXECUTABLE`).
+ * @param homeDirectory The home whose `.codex` is the source Codex home.
+ * @param log Receives the stdout lines.
+ * @returns The process exit code.
+ */
+export async function main(
+  argv: readonly string[],
+  env: Record<string, string | undefined> = process.env,
+  homeDirectory: string = os.homedir(),
+  log: (message: string) => void = console.log,
+): Promise<number> {
+  if (env.EMET_CODEX_PROBE !== "1") {
+    log("probe:codex skipped (set EMET_CODEX_PROBE=1 to run it against the real codex)");
+    return 0;
   }
   const options: ProbeOptions = {
-    codexHome: path.join(os.homedir(), ".codex"),
+    codexHome: path.join(homeDirectory, ".codex"),
     repo: path.resolve(import.meta.dir, ".."),
-    ...(process.env.EMET_CODEX_PROBE_EXECUTABLE
-      ? { executable: process.env.EMET_CODEX_PROBE_EXECUTABLE }
-      : {}),
+    ...(env.EMET_CODEX_PROBE_EXECUTABLE ? { executable: env.EMET_CODEX_PROBE_EXECUTABLE } : {}),
   };
-  const flowOnly = process.argv.includes("--flow-only");
+  const flowOnly = argv.includes("--flow-only");
   const items = flowOnly ? [] : await runProbe(options);
-  const flow = flowOnly || process.argv.includes("--flow") ? await runFullFlow(options) : [];
-  console.log(JSON.stringify({ items, flow }, null, 2));
+  const flow = flowOnly || argv.includes("--flow") ? await runFullFlow(options) : [];
+  log(JSON.stringify({ items, flow }, null, 2));
+  return 0;
+}
+
+if (import.meta.main) {
+  process.exitCode = await main(process.argv.slice(2));
 }
