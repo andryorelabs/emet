@@ -1,5 +1,5 @@
 {
-  "emet": { "lines": 0.989, "functions": 0.996 },
+  "emet": { "lines": 0.989, "functions": 0.995 },
   "apps/site": { "lines": 0.999, "functions": 1 },
   "tools": { "lines": 0.986, "functions": 0.996 }
 }

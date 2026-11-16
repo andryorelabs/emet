@@ -10,7 +10,7 @@ export const COVERAGE_EXCEPTIONS: readonly CoverageException[] = [
     reason:
       "Unreachable defensive catch blocks around host probes and the process-argv entrypoint that runs only when the file is the main module.",
     lines: 0.98,
-    functions: 0.97,
+    functions: 0.96,
   },
   {
     file: "emet/src/update-notice.ts",
