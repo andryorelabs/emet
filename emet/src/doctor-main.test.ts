@@ -154,21 +154,24 @@ function writeAllDocs(repo: string): void {
 }
 
 describe("doctor run() repo reports", () => {
-  test("a clean repo prints OK with the pinned worker note and warnings as notes", async () => {
-    const autoCap = computeAutoMaxLiveWorkers(readHostResources());
-    if (autoCap < 2) return;
-    const repo = makeGitRepo("clean", { ...baseConfig, concurrency: { maxLiveWorkers: 1 } });
-    writeAllDocs(repo);
-    writeFileSync(path.join(repo, "CONTEXT.md"), "legacy");
-    writeFileSync(path.join(repo, "package.json"), "{}");
+  const autoCap = computeAutoMaxLiveWorkers(readHostResources());
+  test.skipIf(autoCap < 2)(
+    "a clean repo prints OK with the pinned worker note and warnings as notes",
+    async () => {
+      const repo = makeGitRepo("clean", { ...baseConfig, concurrency: { maxLiveWorkers: 1 } });
+      writeAllDocs(repo);
+      writeFileSync(path.join(repo, "CONTEXT.md"), "legacy");
+      writeFileSync(path.join(repo, "package.json"), "{}");
 
-    const output = await runDoctor([repo]);
+      const output = await runDoctor([repo]);
 
-    expect(output).toContain(`${repo}: OK`);
-    expect(output).toContain("note: concurrency.maxLiveWorkers is pinned at 1");
-    expect(output).toContain("note: rename CONTEXT.md to GLOSSARY.md");
-    expect(output).toContain("1/1 repos clean");
-  }, 60_000);
+      expect(output).toContain(`${repo}: OK`);
+      expect(output).toContain("note: concurrency.maxLiveWorkers is pinned at 1");
+      expect(output).toContain("note: rename CONTEXT.md to GLOSSARY.md");
+      expect(output).toContain("1/1 repos clean");
+    },
+    60_000,
+  );
 
   test("a dirty repo lists every kind of finding", async () => {
     const repo = makeGitRepo("dirty", {
@@ -245,7 +248,7 @@ describe("doctor run() repo reports", () => {
 });
 
 describe("doctor run() error handling", () => {
-  test("an unexpected failure is logged and sets exit code 3", async () => {
+  test("an unexpected failure is logged", async () => {
     const originalError = console.error;
     const logged: unknown[] = [];
     console.error = (value: unknown) => void logged.push(value);

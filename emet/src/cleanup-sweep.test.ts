@@ -35,6 +35,8 @@ describe("cleanup run against a real repository", () => {
   const transcriptSlug = `-cleanup-sweep-test-${process.pid}`;
   let repo: string;
   let stateDirectory: string;
+  let fakeHome: string;
+  let homedirSpy: LogSpy;
   let logSpy: LogSpy;
   let errorSpy: LogSpy;
 
@@ -84,6 +86,8 @@ describe("cleanup run against a real repository", () => {
     repo = realpathSync(mkdtempSync(path.join(os.tmpdir(), "cleanup-sweep-")));
     stateDirectory = mkdtempSync(path.join(os.tmpdir(), "cleanup-sweep-state-"));
     process.env.EMET_STATE_DIR = stateDirectory;
+    fakeHome = mkdtempSync(path.join(os.tmpdir(), "cleanup-sweep-home-"));
+    homedirSpy = spyOn(os, "homedir").mockReturnValue(fakeHome);
     await git("init", "-q", "-b", "main");
     await git("config", "user.email", "test@example.com");
     await git("config", "user.name", "Test");
@@ -109,10 +113,8 @@ describe("cleanup run against a real repository", () => {
     process.exitCode = 0;
     if (originalStateDirectory === undefined) delete process.env.EMET_STATE_DIR;
     else process.env.EMET_STATE_DIR = originalStateDirectory;
-    rmSync(path.join(os.homedir(), ".claude", "projects", transcriptSlug), {
-      recursive: true,
-      force: true,
-    });
+    homedirSpy.mockRestore();
+    rmSync(fakeHome, { recursive: true, force: true });
     chmodSync(path.join(repo, ".claude", "worktrees"), 0o755);
     rmSync(repo, { recursive: true, force: true });
     rmSync(stateDirectory, { recursive: true, force: true });
