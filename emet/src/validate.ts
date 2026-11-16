@@ -183,8 +183,8 @@ function readSource(source: string): Promise<string> {
   return source === "-" ? Bun.stdin.text() : Promise.resolve(readFileSync(source, "utf8"));
 }
 
-async function fetchSpecBody(specId: string): Promise<string> {
-  const child = Bun.spawn(["gh", "issue", "view", specId, "--json", "body", "-q", ".body"], {
+async function fetchSpecBody(specId: string, ghCommand: string): Promise<string> {
+  const child = Bun.spawn([ghCommand, "issue", "view", specId, "--json", "body", "-q", ".body"], {
     stdout: "pipe",
     stderr: "pipe",
   });
@@ -212,7 +212,12 @@ async function readLocalSpecBody(specId: string): Promise<string> {
   }
 }
 
-export async function run(argv: string[]): Promise<void> {
+/** Test seam: `ghCommand` overrides the `gh` executable used to read a spec issue. */
+interface ValidateDeps {
+  readonly ghCommand?: string;
+}
+
+export async function run(argv: string[], deps: ValidateDeps = {}): Promise<void> {
   try {
     const file = flagValue(argv, "--file");
     const specId = flagValue(argv, "--spec");
@@ -233,7 +238,7 @@ export async function run(argv: string[]): Promise<void> {
     } else if (specId !== undefined && ticketsSource !== undefined) {
       specMarkdown = (await isLocalTracker())
         ? await readLocalSpecBody(specId)
-        : await fetchSpecBody(specId);
+        : await fetchSpecBody(specId, deps.ghCommand ?? "gh");
       rawTickets = JSON.parse(await readSource(ticketsSource));
     } else {
       console.error(USAGE);
