@@ -3,6 +3,7 @@ import { readFileSync } from "node:fs";
 import path from "node:path";
 
 import {
+  CODEX_USE_WHEN,
   FORBIDDEN_TOKENS,
   assertNoForbiddenTokens,
   buildHooks,
@@ -109,16 +110,28 @@ describe("skill and manifest builders", () => {
     expect(() => splitCommand("no frontmatter")).toThrow("no frontmatter description");
   });
 
-  test("buildSkill writes name and description frontmatter", () => {
+  test("buildSkill writes name and description frontmatter with its Use when clause", () => {
     expect(buildSkill("init", "---\ndescription: Do it\n---\nRun `emet init`\n")).toBe(
-      '---\nname: init\ndescription: "Do it"\n---\nRun `emet init`\n',
+      `---\nname: init\ndescription: ${JSON.stringify(`Do it. ${CODEX_USE_WHEN.init}`)}\n---\nRun \`emet init\`\n`,
     );
+  });
+
+  test("buildSkill does not double a description's closing period", () => {
+    expect(buildSkill("doctor", "---\ndescription: Check it.\n---\nBody\n")).toContain(
+      `description: ${JSON.stringify(`Check it. ${CODEX_USE_WHEN.doctor}`)}\n`,
+    );
+  });
+
+  test("every Codex Use when clause starts with Use when and ends with a period", () => {
+    for (const clause of Object.values(CODEX_USE_WHEN)) {
+      expect(clause).toMatch(/^Use when .+\.$/);
+    }
   });
 
   test("buildPluginManifest mirrors the Claude version", () => {
     const manifest: unknown = JSON.parse(
       buildPluginManifest(
-        '{"name":"emet","version":"1.2.3","description":"d","author":{"name":"A"},"homepage":"https://h.test","repository":"https://r.test","license":"MIT"}',
+        '{"name":"emet","version":"1.2.3","description":"d","author":{"name":"A"},"homepage":"https://h.test","repository":"https://r.test","bugs":"https://r.test/issues","license":"MIT"}',
       ),
     );
     expect(manifest).toEqual({
@@ -128,6 +141,7 @@ describe("skill and manifest builders", () => {
       author: { name: "A" },
       homepage: "https://h.test",
       repository: "https://r.test",
+      bugs: "https://r.test/issues",
       license: "MIT",
       skills: "./codex/skills",
       hooks: "./codex/hooks.json",

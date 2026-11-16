@@ -2,11 +2,26 @@
 # Resolves the emet CLI: source (EMET_FROM_SOURCE=1), cached binary, or a
 # checksum-verified download. Never execs a file whose checksum did not verify.
 # Each EMET_* variable falls back to its legacy FORGE_* name.
+# The PreToolUse guard (`emet guard` without --event) fails closed: when the
+# binary cannot be resolved it exits 2, which blocks the tool call, and says how
+# to recover. Other commands and the Stop events exit 1, which does not block.
 
 set -u
 
+guard_fails_closed=0
+if [ "${1:-}" = "guard" ]; then
+  guard_fails_closed=1
+  for argument in "$@"; do
+    [ "$argument" = "--event" ] && guard_fails_closed=0
+  done
+fi
+
 fail() {
   echo "emet: $1" >&2
+  if [ "$guard_fails_closed" = "1" ]; then
+    echo "emet: the guard blocked this tool call because the emet binary could not be resolved. To recover, run 'EMET_PREFETCH=1 ${0}' once the release is reachable, set EMET_FROM_SOURCE=1 with bun on PATH, or turn the guard off with 'claude plugin disable emet'." >&2
+    exit 2
+  fi
   exit 1
 }
 
