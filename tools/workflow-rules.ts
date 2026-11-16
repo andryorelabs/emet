@@ -63,16 +63,6 @@ export const PENDING_RULES: readonly PendingRule[] = [
   { target: "release.yml", rule: "concurrency", reason: "release.yml belongs to T15 (#538)" },
   { target: "release.yml:verify", rule: "harden-runner", reason: "T15 (#538) hardens release" },
   { target: "release.yml:release", rule: "harden-runner", reason: "T15 (#538) hardens release" },
-  {
-    target: "deploy-site.yml:deploy",
-    rule: "harden-runner",
-    reason: "deploy-site.yml belongs to the site hardening ticket (#534)",
-  },
-  {
-    target: "deploy-site.yml:deploy",
-    rule: "main-guard",
-    reason: "deploy-site.yml belongs to the site hardening ticket (#534)",
-  },
 ];
 
 const MAIN_GUARD = "github.ref == 'refs/heads/main'";

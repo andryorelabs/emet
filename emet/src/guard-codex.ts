@@ -4,6 +4,7 @@ import path from "node:path";
 import type { AgentHostName } from "./agenthost";
 import { writeApproval } from "./approve";
 import { readEnv, type Env } from "./env";
+import { EmetError } from "./errors";
 import { isObject } from "./narrow";
 import { present } from "./present";
 
@@ -131,7 +132,11 @@ interface ShellWord {
 }
 
 /** Thrown by the lexer on unbalanced quotes or substitutions. */
-class UnparseableCommand extends Error {}
+class UnparseableCommand extends EmetError {
+  constructor(message: string) {
+    super("internal", message, "Balance the quotes and substitutions in the command.");
+  }
+}
 
 const CONTROL_KEYWORDS = new Set(["if", "then", "else", "elif", "do", "while", "until", "!", "{"]);
 const SHELLS = new Set(["sh", "bash", "zsh", "dash", "ksh", "ash"]);
