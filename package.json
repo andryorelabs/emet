@@ -60,7 +60,7 @@
     "@eslint-community/eslint-plugin-eslint-comments": "4.8.1",
     "@oxlint/plugins": "1.92.0",
     "@types/bun": "catalog:",
-    "@types/node": "^24.0.0",
+    "@types/node": "^26.0.0",
     "@typescript-eslint/parser": "8.72.1",
     "eslint": "10.14.0",
     "eslint-plugin-astro": "3.2.1",
