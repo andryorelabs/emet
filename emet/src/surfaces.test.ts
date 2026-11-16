@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, spyOn, test } from "bun:test";
-import { mkdtempSync, writeFileSync } from "node:fs";
+import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
@@ -14,8 +14,12 @@ describe("parseTicketSurfaces errors", () => {
   });
 });
 
+const fixtureDirectories: string[] = [];
+
 function fixture(content: string): string {
-  const file = join(mkdtempSync(join(tmpdir(), "surfaces-")), "in.json");
+  const directory = mkdtempSync(join(tmpdir(), "surfaces-"));
+  fixtureDirectories.push(directory);
+  const file = join(directory, "in.json");
   writeFileSync(file, content);
   return file;
 }
@@ -23,6 +27,9 @@ function fixture(content: string): string {
 describe("run", () => {
   afterEach(() => {
     process.exitCode = 0;
+    for (const directory of fixtureDirectories.splice(0)) {
+      rmSync(directory, { recursive: true, force: true });
+    }
   });
   test("prints usage and exits 2 without --check", async () => {
     const error = spyOn(console, "error").mockImplementation(() => undefined);
