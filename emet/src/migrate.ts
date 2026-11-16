@@ -2,6 +2,8 @@ import { execFileSync } from "node:child_process";
 import * as fs from "node:fs";
 import * as path from "node:path";
 
+import { EmetError } from "./errors";
+import { exitCodes } from "./exit-codes";
 import {
   AGENTS_DOC,
   BINARY,
@@ -38,16 +40,18 @@ export interface MigrationResult {
 }
 
 /** A legacy path whose new-name target already exists with different content. */
-export class MigrationConflictError extends Error {
+export class MigrationConflictError extends EmetError {
   readonly legacyPath: string;
   readonly targetPath: string;
 
   constructor(legacyPath: string, targetPath: string) {
     super(
+      "migration-conflict",
       `cannot migrate ${legacyPath} to ${targetPath}: both exist with different content; ` +
         "merge them by hand and rerun",
+      "merge the two files by hand and rerun the migration",
+      exitCodes.findings,
     );
-    this.name = "MigrationConflictError";
     this.legacyPath = legacyPath;
     this.targetPath = targetPath;
   }

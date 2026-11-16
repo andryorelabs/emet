@@ -74,6 +74,8 @@ import { type AgentHost, claudeHost } from "./agenthost";
 import { configureTicketPattern, listReservations, releaseTicket } from "./claims";
 import { ForgeConfigError, requireForgeConfig, resolveRepoRoot, type ForgeConfig } from "./config";
 import { agentHostOfConfig } from "./dependencies";
+import { EmetError } from "./errors";
+import { exitCodes } from "./exit-codes";
 import {
   resolveLandedVerdict,
   unownedReclaimVerdict,
@@ -141,10 +143,9 @@ export interface CleanupOptions {
 }
 
 /** A malformed `emet cleanup` command line: reported as a plain message with exit code 2. */
-export class CleanupUsageError extends Error {
+export class CleanupUsageError extends EmetError {
   constructor(message: string) {
-    super(message);
-    this.name = "CleanupUsageError";
+    super("cleanup-usage", message, "see `emet cleanup --help`", exitCodes.usage);
   }
 }
 
