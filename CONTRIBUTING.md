@@ -16,6 +16,10 @@ asked.
 
 To try the tool itself, see [Getting started](docs/guide/getting-started.md); the config keys are in the [configuration reference](docs/reference/configuration.md).
 
+## Where to start
+
+Look for issues labeled `good first issue` or `help wanted`. For anything larger than a small fix, open an issue first so the approach is agreed before you write code. Documentation fixes and translations are welcome too: see [Translate the docs](docs/how-to/translate.md). Before relying on an interface, check [what is stable](docs/stability.md).
+
 ## Branch naming and commit format
 
 Work happens on feature branches, never by pushing directly to `main` or
@@ -60,6 +64,14 @@ and `bun run ci:local` runs all of it the way CI does.
 ## Tests
 
 New functionality and bug fixes must add or update tests in the same PR.
+
+## Review process
+
+A maintainer reviews every pull request. Expect a first response within a few days; ping the PR after a week of silence. Review comments are about correctness, tests and fit with the [decision records](docs/adr/README.md). Push follow-up commits to the same branch and resolve threads as you address them. A maintainer merges once `CI passed` is green and the review is approved.
+
+## Questions
+
+For usage questions, see [`.github/SUPPORT.md`](.github/SUPPORT.md). For a proposal or a design question, open an issue. Do not use issues for security reports; see below.
 
 ## Reporting security issues
 
