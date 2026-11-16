@@ -64,7 +64,13 @@ export function parseFloors(json: string): CoverageFloors {
   return floors;
 }
 
-function main(argv: readonly string[]): number {
+/**
+ * Runs the gate for a workspace against an lcov file.
+ * @param argv - The workspace name and the lcov path.
+ * @param floorsPath - The floors file; defaults to `tools/coverage-floors.json`.
+ * @returns 0 when coverage meets the floor, otherwise 1.
+ */
+export function runCoverageGate(argv: readonly string[], floorsPath: string = FLOORS_PATH): number {
   const [workspace, lcovPath] = argv;
   if (!workspace || !lcovPath) {
     console.error("usage: bun tools/coverage-gate.ts <workspace> <lcov path>");
@@ -74,7 +80,7 @@ function main(argv: readonly string[]): number {
     console.error(`lcov file not found: ${lcovPath}`);
     return 1;
   }
-  const floors = parseFloors(readFileSync(FLOORS_PATH, "utf8"));
+  const floors = parseFloors(readFileSync(floorsPath, "utf8"));
   const result = evaluateCoverage(
     workspace,
     parseLcovTotals(readFileSync(lcovPath, "utf8")),
@@ -84,4 +90,4 @@ function main(argv: readonly string[]): number {
   return result.passed ? 0 : 1;
 }
 
-if (import.meta.main) process.exit(main(process.argv.slice(2)));
+if (import.meta.main) process.exit(runCoverageGate(process.argv.slice(2)));

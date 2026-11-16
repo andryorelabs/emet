@@ -29,6 +29,35 @@ function hasDiagnostics(report: unknown): report is { diagnostics: ReportedDiagn
 }
 
 /**
+ * Extracts the messages one rule reported from oxlint's JSON output.
+ * @param standardOutput - oxlint's stdout, expected to be a JSON report.
+ * @param standardError - oxlint's stderr, quoted when the report is unusable.
+ * @param ruleName - Only diagnostics whose code includes this name are kept.
+ * @returns The reported messages.
+ */
+export function parseDiagnosticMessages(
+  standardOutput: string,
+  standardError: string,
+  ruleName: string,
+): string[] {
+  let report: unknown;
+  try {
+    report = JSON.parse(standardOutput);
+  } catch (parseError) {
+    throw new Error(
+      `oxlint printed no JSON report.\nstdout: ${standardOutput}\nstderr: ${standardError}`,
+      { cause: parseError },
+    );
+  }
+  if (!hasDiagnostics(report)) {
+    throw new Error(`oxlint report has no diagnostics.\nstdout: ${standardOutput}`);
+  }
+  return report.diagnostics
+    .filter((diagnostic) => diagnostic.code.includes(ruleName))
+    .map((diagnostic) => diagnostic.message);
+}
+
+/**
  * Creates a linter for one `local/<ruleName>` rule. `lint` returns the
  * messages that rule reported for the source text.
  */
@@ -66,21 +95,7 @@ export async function createLocalRuleLinter(ruleName: string): Promise<LocalRule
         new Response(lintProcess.stderr).text(),
       ]);
       await lintProcess.exited;
-      let report: unknown;
-      try {
-        report = JSON.parse(standardOutput);
-      } catch (parseError) {
-        throw new Error(
-          `oxlint printed no JSON report.\nstdout: ${standardOutput}\nstderr: ${standardError}`,
-          { cause: parseError },
-        );
-      }
-      if (!hasDiagnostics(report)) {
-        throw new Error(`oxlint report has no diagnostics.\nstdout: ${standardOutput}`);
-      }
-      return report.diagnostics
-        .filter((diagnostic) => diagnostic.code.includes(ruleName))
-        .map((diagnostic) => diagnostic.message);
+      return parseDiagnosticMessages(standardOutput, standardError, ruleName);
     },
     async dispose() {
       await rm(scratchDirectory, { recursive: true, force: true });

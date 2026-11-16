@@ -55,8 +55,9 @@ export function gateFailureCode(result: { success: boolean; exitCode: number }):
   return result.success ? 0 : result.exitCode || 1;
 }
 
-function runGates(): number {
-  for (const command of GATES) {
+/** Runs each gate in order and returns the first failing code, or 0 when all pass. */
+export function runGates(gates: readonly (readonly string[])[] = GATES): number {
+  for (const command of gates) {
     const result = Bun.spawnSync([...command], { stdout: "inherit", stderr: "inherit" });
     const code = gateFailureCode(result);
     if (code !== 0) return code;
@@ -64,8 +65,14 @@ function runGates(): number {
   return 0;
 }
 
-async function main(): Promise<number> {
-  const pushes = parsePushLines(await Bun.stdin.text());
+/**
+ * Decides a push from the lines git feeds the hook, then runs the gates when a branch is updated.
+ * @param input - The hook's stdin text.
+ * @param gates - The gate commands to run; defaults to typecheck and format check.
+ * @returns The hook's exit code.
+ */
+export function runPrePush(input: string, gates: readonly (readonly string[])[] = GATES): number {
+  const pushes = parsePushLines(input);
   for (const { localRef, remoteRef } of pushes) {
     const subject = localRef === "(delete)" ? branchName(remoteRef) : branchName(localRef);
     const verdict = checkPush(remoteRef, subject);
@@ -74,9 +81,7 @@ async function main(): Promise<number> {
       return 1;
     }
   }
-  return pushNeedsGates(pushes) ? runGates() : 0;
+  return pushNeedsGates(pushes) ? runGates(gates) : 0;
 }
 
-if (import.meta.main) {
-  process.exitCode = await main();
-}
+if (import.meta.main) process.exitCode = runPrePush(await Bun.stdin.text());
