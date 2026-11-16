@@ -457,10 +457,14 @@ describe("release.yml", () => {
 
     test("runs before the binaries are built and the release is created", () => {
       const buildIndex = steps.findIndex((step) => step.run?.includes("build-binaries.ts"));
-      const publishIndex = steps.findIndex((step) => step.run?.includes("gh release create"));
+      const publish = release?.workflow.jobs.publish;
+      const publishIndex = (publish?.steps ?? []).findIndex((step) =>
+        step.run?.includes("gh release create"),
+      );
       expect(gateIndex).toBeGreaterThan(-1);
       expect(gateIndex).toBeLessThan(buildIndex);
-      expect(gateIndex).toBeLessThan(publishIndex);
+      expect(publishIndex).toBeGreaterThan(-1);
+      expect([publish?.needs ?? []].flat()).toContain("release");
     });
 
     test("fails when the CHANGELOG has no section for the tag", () => {

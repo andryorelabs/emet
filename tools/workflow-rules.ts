@@ -24,6 +24,27 @@ export const ROUTED_JOBS: readonly { key: string; reason: string }[] = [
   { key: "lint-docs.yml:check-links", reason: "offline lychee link check; light and frequent" },
   { key: "lint-pr.yml:validate-title", reason: "validates the PR title through the API" },
   { key: "lint-workflows.yml:lint", reason: "actionlint and zizmor on Linux; light" },
+  {
+    key: "site-quality.yml:image",
+    reason: "builds the Website image once for the later jobs; Linux docker",
+  },
+  { key: "site-quality.yml:smoke", reason: "nginx smoke of the image via smoke.sh; Linux docker" },
+  {
+    key: "site-quality.yml:audit",
+    reason: "third-party audit of the built dist; seconds of Linux time",
+  },
+  {
+    key: "site-quality.yml:e2e",
+    reason: "Playwright and axe against the image; headless Chromium on Linux",
+  },
+  {
+    key: "site-quality.yml:lighthouse",
+    reason: "Lighthouse budget against the image; headless Chromium on Linux",
+  },
+  {
+    key: "site-quality.yml:summary",
+    reason: "aggregates job results and the flaky summary; no checkout",
+  },
 ];
 
 /** The `runs-on` of a matrix job whose runners come from `strategy.matrix.include[].runner`. */
