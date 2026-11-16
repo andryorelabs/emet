@@ -92,7 +92,7 @@ describe("command entry points", () => {
   afterEach(() => {
     process.chdir(originalCwd);
     process.argv = originalArgv;
-    process.exitCode = originalExitCode;
+    process.exitCode = originalExitCode ?? 0;
     rmSync(workingDirectory, { recursive: true, force: true });
   });
 

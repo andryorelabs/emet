@@ -51,7 +51,7 @@ beforeEach(() => {
 
 afterEach(() => {
   process.chdir(originalCwd);
-  process.exitCode = originalExitCode;
+  process.exitCode = originalExitCode ?? 0;
   rmSync(workDirectory, { recursive: true, force: true });
 });
 
