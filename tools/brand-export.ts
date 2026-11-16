@@ -15,22 +15,7 @@ import { join } from "node:path";
 import { pathToFileURL } from "node:url";
 import { chromium, type Browser, type Page } from "playwright";
 import sharp from "sharp";
-import {
-  FRAME_HEIGHT,
-  FRAME_WIDTH,
-  type Frame,
-  type MascotState,
-  buildManifest,
-  buildRows,
-  composeSheet,
-  validateManifest,
-} from "./brand-pet.ts";
-import {
-  GENERATED_FRAMES_PATH,
-  SITE_FRAMES_PATH,
-  buildFramesModule,
-  buildSiteFramesModule,
-} from "./brand-frames.ts";
+
 import {
   ICO_MAX_BYTES,
   ICO_SIZES,
@@ -41,6 +26,22 @@ import {
   assertSpec,
   encodeIco,
 } from "./brand-export-spec.ts";
+import {
+  GENERATED_FRAMES_PATH,
+  SITE_FRAMES_PATH,
+  buildFramesModule,
+  buildSiteFramesModule,
+} from "./brand-frames.ts";
+import {
+  FRAME_HEIGHT,
+  FRAME_WIDTH,
+  type Frame,
+  type MascotState,
+  buildManifest,
+  buildRows,
+  composeSheet,
+  validateManifest,
+} from "./brand-pet.ts";
 
 export type { Frame, MascotState };
 

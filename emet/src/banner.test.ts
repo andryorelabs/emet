@@ -1,6 +1,7 @@
 import { describe, expect, it } from "bun:test";
 import * as fs from "node:fs";
 import * as path from "node:path";
+
 import { BANNER_ANSI, BANNER_TEXT, renderBanner } from "./banner.ts";
 
 const terminalDir = path.resolve(import.meta.dir, "../../docs/brand/terminal");

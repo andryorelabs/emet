@@ -1,4 +1,5 @@
 import { expect, test } from "bun:test";
+
 import { optionalProperty } from "./optional";
 
 test("omits the key when the value is undefined", () => {

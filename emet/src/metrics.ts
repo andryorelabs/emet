@@ -8,12 +8,12 @@
 import { existsSync, readFileSync } from "node:fs";
 import path from "node:path";
 
-import { claudeHost } from "./agenthost-claude";
 import type { AgentHost } from "./agenthost";
+import { claudeHost } from "./agenthost-claude";
 import { codexCostUsd, parseCodexJsonl } from "./codex-usage";
 import { resolveRepoRoot } from "./config";
-import { isObject } from "./narrow";
 import { resolveRunDir } from "./names";
+import { isObject } from "./narrow";
 import { readCompletionEvent } from "./runs";
 
 const USAGE = `usage: emet metrics --run <id> [--root <dir>] [--json]`;

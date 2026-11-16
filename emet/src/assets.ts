@@ -1,4 +1,3 @@
-import { BINARY } from "./names";
 import configSchema from "../schema/emet.config.schema.json" with { type: "text" };
 import domainTemplate from "../templates/domain.md.tpl" with { type: "text" };
 import emetTemplate from "../templates/emet.md.tpl" with { type: "text" };
@@ -8,6 +7,7 @@ import issueTrackerLocalTemplate from "../templates/issue-tracker-local.md.tpl" 
 import triageLabelsGithubTemplate from "../templates/triage-labels-github.md.tpl" with { type: "text" };
 import triageLabelsLinearTemplate from "../templates/triage-labels-linear.md.tpl" with { type: "text" };
 import triageLabelsLocalTemplate from "../templates/triage-labels-local.md.tpl" with { type: "text" };
+import { BINARY } from "./names";
 
 /**
  * Replaced by `bun build --define` in compiled binaries (see

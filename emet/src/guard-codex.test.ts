@@ -3,7 +3,6 @@ import { existsSync, mkdirSync, mkdtempSync, realpathSync, rmSync, writeFileSync
 import os from "node:os";
 import path from "node:path";
 
-import { isObject } from "./narrow";
 import {
   detectAgentHost,
   evaluateApprovalGate,
@@ -14,6 +13,7 @@ import {
   normalizeHookInput,
   parseApplyPatchPaths,
 } from "./guard-codex";
+import { isObject } from "./narrow";
 
 const GUARD_ENTRY = path.join(import.meta.dir, "guard.ts");
 const APPROVE_ENTRY = path.join(import.meta.dir, "approve.ts");

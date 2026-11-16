@@ -1,7 +1,6 @@
 import { existsSync, readFileSync } from "node:fs";
 import path from "node:path";
 
-import { DEFAULT_LOCALE, LOCALES } from "../apps/site/src/i18n/locales.ts";
 import { TRANSLATIONS_REPOSITORY_PATH } from "../apps/site/src/docs/paths.ts";
 import { PUBLISHED_SOURCES } from "../apps/site/src/docs/published.ts";
 import {
@@ -10,6 +9,7 @@ import {
   type SourceReader,
   type TranslationReader,
 } from "../apps/site/src/docs/translations.ts";
+import { DEFAULT_LOCALE, LOCALES } from "../apps/site/src/i18n/locales.ts";
 
 const REPO_ROOT = path.join(import.meta.dir, "..");
 

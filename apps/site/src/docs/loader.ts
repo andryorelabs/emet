@@ -1,12 +1,12 @@
-import type { Loader, LoaderContext } from "astro/loaders";
 import path from "node:path";
+import type { Loader, LoaderContext } from "astro/loaders";
 
+import type { Locale } from "../i18n/locales";
+import { getStrings } from "../i18n/ui";
+import { markExternalLinks } from "../lib/external-links";
 import { loadLocalizedCatalog } from "./catalog";
 import { classifyTokenStyles } from "./code-classes";
 import { REPOSITORY_ROOT, TRANSLATIONS_DIRECTORY } from "./paths";
-import { getStrings } from "../i18n/ui";
-import type { Locale } from "../i18n/locales";
-import { markExternalLinks } from "../lib/external-links";
 import { PUBLISHED_SOURCES } from "./published";
 
 const DOCS_DIRECTORY = path.join(REPOSITORY_ROOT, "docs");

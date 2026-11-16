@@ -15,6 +15,7 @@ import { join } from "node:path";
 import { pathToFileURL } from "node:url";
 import { chromium, type Browser } from "playwright";
 import sharp from "sharp";
+
 import { LOCALES, type Locale } from "../apps/site/src/i18n/locales.ts";
 import { getStrings } from "../apps/site/src/i18n/ui/index.ts";
 import { KB, assertSpec } from "./brand-export-spec.ts";

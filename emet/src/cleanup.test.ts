@@ -18,9 +18,9 @@ import {
   run as runCleanup,
   shouldMarkRunClosed,
 } from "./cleanup";
-import { readPhase } from "./phase";
 import { DEFAULT_FORGE_CONFIG, type ForgeConfig } from "./config";
 import { resolveLandedVerdict } from "./landed";
+import { readPhase } from "./phase";
 import {
   classifyWorktreeEntry,
   describeWorktreeEntryVerdict,

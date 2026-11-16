@@ -13,11 +13,11 @@ import {
 import os from "node:os";
 import path from "node:path";
 
-import { isObject } from "./narrow";
 import { didReserveTicket } from "./claims";
 import { currentPidNamespace, readCodexState } from "./codex-process";
 import { EXIT_BASE_CHECK_FAILED, EXIT_WAIT_TIMEOUT, run, type DispatchDeps } from "./dispatch";
 import { askQuestion } from "./mailbox";
+import { isObject } from "./narrow";
 import { writeResult } from "./results";
 import { acquireSlot } from "./slots";
 

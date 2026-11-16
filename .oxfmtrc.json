@@ -1,5 +1,23 @@
 {
   "$schema": "./node_modules/oxfmt/configuration_schema.json",
+  "sortImports": {
+    "groups": [
+      "builtin",
+      { "newlinesBetween": false },
+      "astro",
+      { "newlinesBetween": false },
+      "external",
+      "internal",
+      ["parent", "sibling", "index"],
+      "unknown"
+    ],
+    "customGroups": [
+      { "groupName": "astro", "elementNamePattern": ["astro", "astro/**", "astro:*"] }
+    ],
+    "internalPattern": ["@/"],
+    "ignoreCase": true,
+    "newlinesBetween": true
+  },
   "ignorePatterns": [
     "bun.lock",
     "**/bun.lock",

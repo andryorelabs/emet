@@ -1,6 +1,6 @@
 import os from "node:os";
 import path from "node:path";
-import { isObject } from "./narrow";
+
 import type {
   AgentHost,
   CommandRunner,
@@ -8,6 +8,7 @@ import type {
   SessionInfo,
   StartSessionRequest,
 } from "./agenthost";
+import { isObject } from "./narrow";
 
 const SKILLS_PLUGIN_ID = "mattpocock-skills@claude-plugins-official";
 const SCAFFOLD_BRANCH_PATTERN = "^worktree-(agent-.+)$";

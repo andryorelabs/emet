@@ -1,14 +1,26 @@
 {
   "name": "emet-cli",
   "private": true,
+  "description": "The emet CLI runtime, installed to ~/.claude/emet",
+  "homepage": "https://emet.andryore.dev",
+  "bugs": {
+    "url": "https://github.com/andryorelabs/emet/issues"
+  },
+  "license": "MIT",
+  "author": "Andry Orellana <hello@andryore.dev>",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/andryorelabs/emet.git",
+    "directory": "emet"
+  },
   "type": "module",
   "scripts": {
     "typecheck": "tsc --noEmit"
   },
   "devDependencies": {
-    "@types/bun": "^1.2.0",
+    "@types/bun": "1.4.4",
     "@types/node": "^24.0.0",
-    "typescript": "^5.7.0"
+    "typescript": "npm:@typescript/typescript6@6.0.2"
   },
   "//": "Standalone tool tree for the global `emet` CLI (`~/.claude/emet`). Not published, not part of any project's dependency graph — just a package root so `bun install` can pull @types/bun + @types/node and `bun test` has somewhere to root itself."
 }

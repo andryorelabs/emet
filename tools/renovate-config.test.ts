@@ -11,6 +11,7 @@ interface PackageRule {
   matchManagers?: string[];
   rangeStrategy?: string;
   automerge?: boolean;
+  enabled?: boolean;
 }
 
 interface RenovateConfig {
@@ -50,7 +51,15 @@ function readRenovateConfig(): RenovateConfig {
 
 const config = readRenovateConfig();
 
-const exactPinnedPackages = ["oxlint", "oxlint-tsgolint", "oxfmt", "typescript7"];
+const oxcPackages = ["oxlint", "@oxlint/plugins", "oxlint-tsgolint", "oxfmt"];
+const typescriptPackages = ["typescript7", "typescript"];
+const bunPackages = ["bun", "@types/bun"];
+const exactPinnedPackages = [...oxcPackages, "typescript7"];
+const pinGroups = [
+  { groupName: "oxc", packages: oxcPackages },
+  { groupName: "typescript7", packages: typescriptPackages },
+  { groupName: "bun", packages: bunPackages },
+];
 
 describe("renovate.json5 policy", () => {
   test("extends best-practices and pins GitHub Action digests", () => {
@@ -84,18 +93,30 @@ describe("renovate.json5 policy", () => {
     expect(JSON.stringify(rule)).not.toContain("major");
   });
 
-  test("pins oxc and typescript7 exactly without automerge", () => {
-    const rule = config.packageRules.find((candidate) => candidate.groupName === "oxc");
-    expect(rule?.matchDepNames).toEqual(exactPinnedPackages);
+  test.each(pinGroups)("pins the $groupName group exactly without automerge", (group) => {
+    const rule = config.packageRules.find((candidate) => candidate.groupName === group.groupName);
+    expect(rule?.matchDepNames).toEqual(group.packages);
     expect(rule?.rangeStrategy).toBe("pin");
     expect(rule?.automerge).toBe(false);
   });
 
-  test("declares the oxc rule after every automerge rule so it wins", () => {
-    const oxcIndex = config.packageRules.findIndex((rule) => rule.groupName === "oxc");
-    const lastAutomergeIndex = config.packageRules.findLastIndex((rule) => rule.automerge === true);
-    expect(lastAutomergeIndex).toBeGreaterThanOrEqual(0);
-    expect(oxcIndex).toBeGreaterThan(lastAutomergeIndex);
+  test.each(pinGroups)(
+    "declares the $groupName rule after every automerge rule so it wins",
+    (group) => {
+      const groupIndex = config.packageRules.findIndex(
+        (rule) => rule.groupName === group.groupName,
+      );
+      const lastAutomergeIndex = config.packageRules.findLastIndex(
+        (rule) => rule.automerge === true,
+      );
+      expect(lastAutomergeIndex).toBeGreaterThanOrEqual(0);
+      expect(groupIndex).toBeGreaterThan(lastAutomergeIndex);
+    },
+  );
+
+  test("never disables a toolchain pin", () => {
+    const disabled = config.packageRules.filter((rule) => rule.enabled === false);
+    expect(disabled).toEqual([]);
   });
 });
 

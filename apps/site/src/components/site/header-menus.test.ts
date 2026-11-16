@@ -1,8 +1,8 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, test } from "bun:test";
 import { GlobalRegistrator } from "@happy-dom/global-registrator";
 
-import { HEADER_MENU_OPEN_EVENT, initThemeSelects } from "./theme-menu";
 import { initHeaderMenus } from "./header-menus";
+import { HEADER_MENU_OPEN_EVENT, initThemeSelects } from "./theme-menu";
 
 const MARKUP = `
 <div id="outside"></div>

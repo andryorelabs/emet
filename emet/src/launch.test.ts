@@ -6,8 +6,6 @@ import path from "node:path";
 import { claudeHost } from "./agenthost-claude";
 import { codexHost } from "./agenthost-codex";
 import { DEFAULT_CODEX_CONFIG, DEFAULT_FORGE_CONFIG, ForgeConfigError } from "./config";
-import { errorMessage } from "./narrow";
-import { readPhase } from "./phase";
 import {
   launchSettingsFor,
   launchWave,
@@ -16,6 +14,8 @@ import {
   type CommandRunner,
   type LaunchRequest,
 } from "./launch";
+import { errorMessage } from "./narrow";
+import { readPhase } from "./phase";
 
 async function rejectionOf(promise: Promise<unknown>): Promise<unknown> {
   try {

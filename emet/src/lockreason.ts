@@ -1,10 +1,10 @@
 import path from "node:path";
 
-import { resolveAnchorPid, resolveSessionSlug } from "./runs";
 import { ForgeConfigError, resolveRepoRoot } from "./config";
-import { resolveWorktreeOwner } from "./worktrees";
-import { errorMessage, isObject } from "./narrow";
 import { BINARY, CONFIG_FILE, LOCK_TOKEN, resolveConfigPath } from "./names";
+import { errorMessage, isObject } from "./narrow";
+import { resolveAnchorPid, resolveSessionSlug } from "./runs";
+import { resolveWorktreeOwner } from "./worktrees";
 
 const COMMAND_PREFIX = `${BINARY} lock-reason:`;
 const SCHEMA_FILE = CONFIG_FILE.replace(/\.json$/, ".schema.json");

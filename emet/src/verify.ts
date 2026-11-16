@@ -15,10 +15,10 @@
  * missing-input errors.
  */
 
-import { isCompiledBinary } from "./assets";
-import { optionalProperty } from "./optional";
 import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
+
+import { isCompiledBinary } from "./assets";
 import { resolveRepoRoot } from "./config";
 import {
   BINARY,
@@ -28,8 +28,9 @@ import {
   RUN_DIR,
   resolveRunDir,
 } from "./names";
-import { globsOverlap } from "./surfaces";
 import { isObject } from "./narrow";
+import { optionalProperty } from "./optional";
+import { globsOverlap } from "./surfaces";
 
 const USAGE = `usage: ${BINARY} verify <ticket> [--run <id>] [--worktree <path>]`;
 

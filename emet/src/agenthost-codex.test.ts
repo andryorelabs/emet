@@ -2,7 +2,7 @@ import { afterEach, describe, expect, test } from "bun:test";
 import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { isObject } from "./narrow";
+
 import { resolveAgentHost, type HostRegistry } from "./agenthost";
 import {
   CODEX_SKILLS_INSTALL_COMMANDS,
@@ -12,6 +12,7 @@ import {
   parseCodexVersion,
   registerCodexHost,
 } from "./agenthost-codex";
+import { isObject } from "./narrow";
 
 const FAKE = path.resolve(import.meta.dir, "../../tools/fixtures/fake-codex/codex");
 const scratch: string[] = [];

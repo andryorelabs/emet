@@ -1,8 +1,8 @@
 import { mkdirSync, readFileSync, renameSync, writeFileSync } from "node:fs";
 import path from "node:path";
 
-import { isObject } from "./narrow";
 import { resolveRunDir } from "./names";
+import { isObject } from "./narrow";
 
 export type Phase =
   | "planning"

@@ -1,26 +1,8 @@
 {
+  "extends": "./tsconfig.base.json",
   "compilerOptions": {
-    "target": "ESNext",
-    "module": "ESNext",
-    "moduleResolution": "bundler",
     "lib": ["ESNext"],
-    "types": ["bun", "node"],
-    "strict": true,
-    "skipLibCheck": true,
-    "noEmit": true,
-    "allowImportingTsExtensions": true,
-    "verbatimModuleSyntax": true,
-    "noUncheckedIndexedAccess": true,
-    "exactOptionalPropertyTypes": true,
-    "noImplicitOverride": true,
-    "noImplicitReturns": true,
-    "noFallthroughCasesInSwitch": true,
-    "noUnusedLocals": true,
-    "noUnusedParameters": true,
-    "isolatedModules": true,
-    "moduleDetection": "force",
-    "forceConsistentCasingInFileNames": true,
-    "erasableSyntaxOnly": true
+    "types": ["bun", "node"]
   },
-  "include": ["tools/**/*.ts", "mods/*/hooks/**/*.ts"]
+  "include": ["*.ts", "*.mts", ".claude/hooks/*.ts", "tools/**/*.ts", "mods/*/hooks/**/*.ts"]
 }

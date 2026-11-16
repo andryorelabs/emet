@@ -29,6 +29,9 @@
  * default report, just checked for silence instead of summarized.
  */
 
+import { resolveAgentHost, type AgentHost } from "./agenthost";
+import { claudeHost } from "./agenthost-claude";
+import { describeCodexLastStep } from "./codex-usage";
 import {
   DEFAULT_FORGE_CONFIG,
   loadForgeConfigWithDefaults,
@@ -36,13 +39,10 @@ import {
   resolveRepoRoot,
   type ForgeConfig,
 } from "./config";
-import { claudeHost } from "./agenthost-claude";
-import { resolveAgentHost, type AgentHost } from "./agenthost";
-import { describeCodexLastStep } from "./codex-usage";
 import { metricsParsers, type MetricsParser, type TranscriptFormat } from "./metrics";
 import { BINARY, LEGACY_RUN_DIR, RUN_DIR } from "./names";
-import { readCompletionEvent, recordStallNudge, type CompletionEvent } from "./runs";
 import { isObject } from "./narrow";
+import { readCompletionEvent, recordStallNudge, type CompletionEvent } from "./runs";
 import { parseWorktreeEntries, resolveWorktreeOwner } from "./worktrees";
 
 type UsageEntry = {
