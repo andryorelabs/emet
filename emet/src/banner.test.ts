@@ -36,6 +36,14 @@ describe("renderBanner", () => {
     expect(renderBanner({ isTTY: true }, { NO_COLOR: "1" })).toBe(BANNER_TEXT);
   });
 
+  it("returns the plain art when TERM is dumb", () => {
+    expect(renderBanner({ isTTY: true }, { TERM: "dumb" })).toBe(BANNER_TEXT);
+  });
+
+  it("returns the colored art off a TTY when FORCE_COLOR is set", () => {
+    expect(renderBanner({ isTTY: false }, { FORCE_COLOR: "1" })).toBe(BANNER_ANSI);
+  });
+
   it("returns the plain art when the stream is not a TTY", () => {
     expect(renderBanner({ isTTY: false }, {})).toBe(BANNER_TEXT);
     expect(renderBanner({}, {})).toBe(BANNER_TEXT);
