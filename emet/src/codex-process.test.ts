@@ -120,6 +120,22 @@ describe("spawnCodex", () => {
     expect(existsSync(specIn(dir).stateFile)).toBe(false);
   });
 
+  test("without setsid on PATH a missing executable fails and the error event is swallowed", async () => {
+    const dir = tempDir();
+    const originalPath = process.env.PATH;
+    process.env.PATH = path.join(dir, "empty");
+    try {
+      expect(() =>
+        spawnCodex({ ...specIn(dir), executable: path.join(dir, "no-such-codex") }),
+      ).toThrow("failed to start");
+      await Bun.sleep(50);
+    } finally {
+      if (originalPath === undefined) delete process.env.PATH;
+      else process.env.PATH = originalPath;
+    }
+    expect(existsSync(specIn(dir).stateFile)).toBe(false);
+  });
+
   test("captures the fake codex events in the JSONL file", async () => {
     const dir = tempDir();
     const scriptFile = path.join(dir, "script.json");
@@ -224,6 +240,23 @@ describe("codexWorkerLiveness", () => {
     const probe = { now: NOW, idleMs: IDLE_MS, pidNamespace: "pid:[1]", isPidAlive: () => false };
     expect(codexWorkerLiveness(state, probe)).toBe("exited");
     expect(codexWorkerLiveness(state, { ...probe, isPidAlive: () => true })).toBe("live");
+  });
+
+  test("a malformed line mentioning turn. is skipped when looking for a terminal event", () => {
+    const { state, jsonlPath } = workerIn(tempDir(), null);
+    const probe = { now: NOW, idleMs: IDLE_MS, pidNamespace: null, isPidAlive: () => true };
+    appendFileSync(jsonlPath, `{"type": "turn.compl\n`);
+    expect(codexWorkerLiveness(state, probe)).toBe("live");
+    appendFileSync(jsonlPath, `${JSON.stringify({ type: "turn.completed" })}\n`);
+    expect(codexWorkerLiveness(state, probe)).toBe("done");
+  });
+
+  test("the default pid probe tells a live process from a dead one", () => {
+    const { state, touch } = workerIn(tempDir(), null);
+    touch(0);
+    const probe = { now: NOW, idleMs: IDLE_MS, pidNamespace: null };
+    expect(codexWorkerLiveness({ ...state, pid: process.pid }, probe)).toBe("live");
+    expect(codexWorkerLiveness({ ...state, pid: 2_147_483_646 }, probe)).toBe("exited");
   });
 
   test("turn.failed is done and a missing stream is judged from startedAt", () => {

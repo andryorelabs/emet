@@ -565,9 +565,9 @@ export function probeForgeAgents(
   return missing.length === 0 ? { kind: "present" } : { kind: "missing", missing };
 }
 
-async function probeGithubCli(): Promise<GithubCliProbe> {
-  if (!(await resolveBinaryOnPath("gh"))) return { kind: "not-on-path" };
-  const result = await runProbeCommand(["gh", "auth", "status"]);
+export async function probeGithubCli(binary = "gh"): Promise<GithubCliProbe> {
+  if (!(await resolveBinaryOnPath(binary))) return { kind: "not-on-path" };
+  const result = await runProbeCommand([binary, "auth", "status"]);
   if (result.kind === "timed-out") return { kind: "timed-out" };
   if (result.kind === "spawn-failed") return { kind: "not-on-path" };
   return result.exitCode === 0 ? { kind: "authenticated" } : { kind: "unauthenticated" };

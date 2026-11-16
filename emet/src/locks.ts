@@ -200,7 +200,10 @@ function isSameHolder(left: LockHolder | undefined, right: LockHolder | undefine
  * in place rather than deleted. Returns `true` only when the observed lock was
  * removed.
  */
-function didReleaseObservedLock(lockDirectory: string, observed: LockHolder | undefined): boolean {
+export function didReleaseObservedLock(
+  lockDirectory: string,
+  observed: LockHolder | undefined,
+): boolean {
   const trashDirectory = `${lockDirectory}.released-${process.pid}-${randomUUID()}`;
   try {
     renameSync(lockDirectory, trashDirectory);

@@ -104,6 +104,20 @@ describe("destructive commands", () => {
   });
 });
 
+function withSurfaceFile(content: string, run: (root: string) => void): void {
+  const root = mkdtempSync(path.join(os.tmpdir(), "emet-surface-file-"));
+  try {
+    mkdirSync(path.join(root, ".emet"));
+    writeFileSync(path.join(root, ".emet", "surface.json"), content);
+    run(root);
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+}
+
+const decideIn = (cwd: string, file_path: string) =>
+  checkEditSurface({ tool_name: "Write", cwd, tool_input: { file_path } }).decision;
+
 describe("edit surfaces", () => {
   const surface = { root: "/repo", globs: ["emet/src/guard*.ts", "emet/bin/emet.ts"] };
   const load = () => surface;
@@ -152,6 +166,42 @@ describe("edit surfaces", () => {
   }
   test("no surface file means no restriction", () => {
     expect(edit("/repo/anything.ts", () => null)).toBe("allow");
+  });
+  describe("surface file discovery", () => {
+    test("accepts a bare array of globs", () => {
+      withSurfaceFile(JSON.stringify(["only.ts", 7]), (root) => {
+        expect(decideIn(root, "only.ts")).toBe("allow");
+        expect(decideIn(root, "other.ts")).toBe("deny");
+      });
+    });
+    test("treats unreadable or malformed files as no restriction", () => {
+      withSurfaceFile("{not json", (root) => {
+        expect(decideIn(root, "anything.ts")).toBe("allow");
+      });
+      withSurfaceFile(JSON.stringify({ surfaces: "nope" }), (root) => {
+        expect(decideIn(root, "anything.ts")).toBe("allow");
+      });
+      withSurfaceFile(JSON.stringify("text"), (root) => {
+        expect(decideIn(root, "anything.ts")).toBe("allow");
+      });
+    });
+    test("walks up from a nested directory to find the file", () => {
+      withSurfaceFile(JSON.stringify({ surfaces: ["sub/ok.ts"] }), (root) => {
+        const nested = path.join(root, "sub", "deeper");
+        mkdirSync(nested, { recursive: true });
+        expect(decideIn(nested, path.join(root, "sub", "ok.ts"))).toBe("allow");
+        expect(decideIn(nested, path.join(root, "sub", "no.ts"))).toBe("deny");
+      });
+    });
+    test("stops at the filesystem root when no surface file exists", () => {
+      expect(decideIn("/", "x.ts")).toBe("allow");
+    });
+  });
+});
+
+describe("leading command word", () => {
+  test("a command made only of wrappers and assignments is not destructive", () => {
+    expect(findDestructiveOperation("FOO=1 sudo -u root")).toBeNull();
   });
 });
 

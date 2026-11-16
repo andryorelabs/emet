@@ -156,7 +156,97 @@ describe("land", () => {
   });
 });
 
+describe("land edge cases", () => {
+  test("rebase method fast-forwards a branch that sits on trunk", async () => {
+    writeConfig({ landing: { mode: "merge" }, pr: { mergeMethod: "rebase" } });
+    setUpIntegrationBranch();
+    const result = await land({ ...baseOptions, cwd: repo });
+    expect(result.trunk).toBe(git(repo, "rev-parse", "wave-1"));
+    expect(git(repo, "rev-list", "--count", "main")).toBe("5");
+  });
+
+  test("rebase method refuses a diverged branch and restores trunk", async () => {
+    writeConfig({ landing: { mode: "merge" }, pr: { mergeMethod: "rebase" } });
+    setUpIntegrationBranch();
+    commitFile(repo, "c.txt", "c\n", "trunk moves on");
+    const before = git(repo, "rev-parse", "main");
+    expect(await refusalOf()).toContain("not a fast-forward");
+    expect(git(repo, "rev-parse", "main")).toBe(before);
+    expect(git(repo, "status", "--porcelain")).toBe("");
+  });
+
+  test("squash refuses a branch that adds no changes and restores trunk", async () => {
+    git(repo, "checkout", "-q", "-b", "wave-1");
+    commitFile(repo, "a.txt", "a\n", "add a");
+    git(repo, "rm", "-q", "a.txt");
+    git(repo, "commit", "-q", "-m", "remove a");
+    git(repo, "checkout", "-q", "main");
+    const before = git(repo, "rev-parse", "main");
+    expect(await refusalOf()).toContain("adds no changes");
+    expect(git(repo, "rev-parse", "main")).toBe(before);
+    expect(git(repo, "status", "--porcelain")).toBe("");
+  });
+
+  test("uses the default type and summary when none is given", async () => {
+    setUpIntegrationBranch();
+    await land({ cwd: repo, spec: "demo", branch: "wave-1", tickets: ["demo-01"] });
+    expect(git(repo, "log", "-1", "--format=%s", "main")).toBe("feat: land wave-1 (demo)");
+  });
+
+  test("honours an explicit commit type", async () => {
+    setUpIntegrationBranch();
+    await land({ ...baseOptions, cwd: repo, type: "fix" });
+    expect(git(repo, "log", "-1", "--format=%s", "main")).toBe("fix: add things (wave 1 of demo)");
+  });
+
+  test("refuses outside a git repository", async () => {
+    const outside = realpathSync(mkdtempSync(path.join(os.tmpdir(), "forge-land-nogit-")));
+    try {
+      let message = "";
+      try {
+        await land({ ...baseOptions, cwd: outside });
+      } catch (error: unknown) {
+        message = error instanceof Error ? error.message : String(error);
+      }
+      expect(message).toContain("not inside a git repository");
+    } finally {
+      rmSync(outside, { recursive: true, force: true });
+    }
+  });
+});
+
 describe("parseLandArguments", () => {
+  const required = ["--spec", "s", "--branch", "b", "--tickets", "s-01"];
+
+  test("keeps summary and type when given", () => {
+    expect(parseLandArguments([...required, "--summary", "sum", "--type", "fix"])).toEqual({
+      spec: "s",
+      branch: "b",
+      tickets: ["s-01"],
+      summary: "sum",
+      type: "fix",
+    });
+  });
+
+  test("a flag without a value is a usage error", () => {
+    expect(() => parseLandArguments(["--spec", "s", "--branch", "--tickets", "x"])).toThrow(
+      "--branch requires a value",
+    );
+    expect(() => parseLandArguments([...required, "--wave"])).toThrow("--wave requires a value");
+  });
+
+  test("an empty ticket list is a usage error", () => {
+    expect(() => parseLandArguments(["--spec", "s", "--branch", "b", "--tickets", " , "])).toThrow(
+      "lists no ticket",
+    );
+  });
+
+  test("a non-numeric wave is a usage error", () => {
+    expect(() => parseLandArguments([...required, "--wave", "x"])).toThrow(
+      "--wave must be a number",
+    );
+  });
+
   test("parses flags and splits tickets", () => {
     expect(
       parseLandArguments([
@@ -191,6 +281,73 @@ describe("run", () => {
       process.chdir(original);
       process.exitCode = previousExit ?? 0;
     }
+  });
+});
+
+describe("run output", () => {
+  test("prints usage for --help and -h without touching the exit code", async () => {
+    const originalLog = console.log;
+    const printed: string[] = [];
+    console.log = (text: string) => void printed.push(text);
+    try {
+      await run(["--help"]);
+      await run(["-h"]);
+    } finally {
+      console.log = originalLog;
+    }
+    expect(printed).toHaveLength(2);
+    expect(printed[0]).toContain("usage: emet land");
+  });
+
+  test("an unexpected failure exits with the internal code", async () => {
+    writeFileSync(path.join(repo, "forge.config.json"), "{ not json");
+    git(repo, "add", "forge.config.json");
+    git(repo, "commit", "-q", "-m", "break config");
+    const original = process.cwd();
+    const previousExit = process.exitCode;
+    const originalError = console.error;
+    console.error = () => undefined;
+    try {
+      process.chdir(repo);
+      await run(["--spec", "s", "--branch", "b", "--tickets", "s-01"]);
+      expect(process.exitCode).toBe(3);
+    } finally {
+      console.error = originalError;
+      process.chdir(original);
+      process.exitCode = previousExit ?? 0;
+    }
+  });
+});
+
+describe("land phase file when the worktree link breaks", () => {
+  test("skips the phase file but still lands and prints the result", async () => {
+    setUpIntegrationBranch();
+    const linked = path.join(repo, "linked");
+    git(repo, "worktree", "add", "-q", "-b", "other", linked);
+    const hook = path.join(repo, ".git", "hooks", "post-commit");
+    writeFileSync(hook, `#!/bin/sh\nrm -f "${repo}/.git/worktrees/linked/commondir"\n`, {
+      mode: 0o755,
+    });
+    const original = process.cwd();
+    const previousExit = process.exitCode;
+    const originalLog = console.log;
+    const printed: string[] = [];
+    console.log = (text: string) => void printed.push(text);
+    try {
+      process.chdir(linked);
+      process.exitCode = 0;
+      await run(["--spec", "demo", "--branch", "wave-1", "--tickets", "demo-01"]);
+      expect(process.exitCode).toBe(0);
+    } finally {
+      console.log = originalLog;
+      process.chdir(original);
+      process.exitCode = previousExit ?? 0;
+    }
+    expect(JSON.parse(printed[0] ?? "{}")).toEqual({
+      trunk: git(repo, "rev-parse", "main"),
+      tickets: ["demo-01"],
+    });
+    expect(readPhase(repo)).toBeNull();
   });
 });
 

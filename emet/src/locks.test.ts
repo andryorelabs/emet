@@ -16,11 +16,13 @@ import {
   acquireLock,
   didAcquireLock,
   didReclaimStaleLock,
+  didReleaseObservedLock,
   HOLDERLESS_LOCK_GRACE_MS,
   isLockStale,
   type LockHolder,
   readLockHolder,
   releaseLock,
+  resolveLockDirectory,
 } from "./locks";
 import { errorMessage } from "./narrow";
 
@@ -286,6 +288,120 @@ describe("emet-locks", () => {
 
       expect(thrownError).toBeInstanceOf(Error);
       expect(errorMessage(thrownError)).toMatch(/timed out/);
+    });
+
+    describe("edge cases", () => {
+      test("a missing lock directory counts as an old holder-less lock", () => {
+        expect(isLockStale(path.join(temporaryRoot, "absent.lock"), 1000)).toBe(true);
+      });
+
+      test("didAcquireLock rethrows an unexpected filesystem error", () => {
+        writeFileSync(lockDirectory, "not a directory");
+        expect(() => didAcquireLock(lockDirectory, buildHolder())).toThrow();
+        expect(readdirSync(temporaryRoot).filter((name) => name.includes("staging"))).toEqual([]);
+      });
+
+      test("releaseLock rethrows an unexpected filesystem error", () => {
+        writeFileSync(path.join(temporaryRoot, "blocker"), "file");
+        expect(() => {
+          releaseLock(path.join(temporaryRoot, "blocker", "child.lock"));
+        }).toThrow();
+      });
+
+      test("didReleaseObservedLock removes the observed holder and reports it", () => {
+        const holder = buildHolder();
+        didAcquireLock(lockDirectory, holder);
+        expect(didReleaseObservedLock(lockDirectory, holder)).toBe(true);
+        expect(existsSync(lockDirectory)).toBe(false);
+      });
+
+      test("didReleaseObservedLock reports a vacant lock as not released", () => {
+        expect(didReleaseObservedLock(lockDirectory, buildHolder())).toBe(false);
+      });
+
+      test("didReleaseObservedLock puts back a lock held by someone else", () => {
+        const newcomer = buildHolder({ acquiredAt: 42 });
+        didAcquireLock(lockDirectory, newcomer);
+        expect(didReleaseObservedLock(lockDirectory, buildHolder({ acquiredAt: 7 }))).toBe(false);
+        expect(readLockHolder(lockDirectory)).toEqual(newcomer);
+        expect(readdirSync(temporaryRoot).filter((name) => name.includes("released"))).toEqual([]);
+      });
+
+      test("didReleaseObservedLock rethrows an unexpected filesystem error", () => {
+        writeFileSync(path.join(temporaryRoot, "blocker"), "file");
+        expect(() =>
+          didReleaseObservedLock(path.join(temporaryRoot, "blocker", "child.lock"), undefined),
+        ).toThrow();
+      });
+
+      test("an old holder-less reclaim guard is cleared and the stale lock reclaimed on retry", async () => {
+        await plantDeadHolder(temporaryRoot, lockDirectory);
+        const guardDirectory = `${lockDirectory}.reclaim`;
+        mkdirSync(guardDirectory);
+        writeFileSync(path.join(guardDirectory, "stray"), "x");
+        const longAgo = new Date(Date.now() - 2 * HOLDERLESS_LOCK_GRACE_MS);
+        utimesSync(guardDirectory, longAgo, longAgo);
+        expect(didReclaimStaleLock(lockDirectory, 999_999_999)).toBe(false);
+        expect(existsSync(guardDirectory)).toBe(false);
+        expect(didReclaimStaleLock(lockDirectory, 999_999_999)).toBe(true);
+      });
+
+      test("a fresh holder-less reclaim guard is left alone", async () => {
+        await plantDeadHolder(temporaryRoot, lockDirectory);
+        const guardDirectory = `${lockDirectory}.reclaim`;
+        mkdirSync(guardDirectory);
+        writeFileSync(path.join(guardDirectory, "stray"), "x");
+        expect(didReclaimStaleLock(lockDirectory, 999_999_999)).toBe(false);
+        expect(existsSync(guardDirectory)).toBe(true);
+      });
+    });
+
+    describe("resolveLockDirectory", () => {
+      const originalPath = process.env.PATH;
+      const originalDirectory = process.cwd();
+      let binDirectory = "";
+
+      function installFakeGit(output: string): void {
+        const fake = path.join(binDirectory, "git");
+        writeFileSync(fake, `#!/bin/sh\nprintf '%s' '${output}'\n`, { mode: 0o755 });
+      }
+
+      beforeEach(() => {
+        binDirectory = mkdtempSync(path.join(temporaryRoot, "bin-"));
+        process.env.PATH = `${binDirectory}:${originalPath ?? ""}`;
+      });
+
+      afterEach(() => {
+        process.env.PATH = originalPath;
+        process.chdir(originalDirectory);
+      });
+
+      test("joins the lock name onto the absolute common directory", async () => {
+        installFakeGit("/abs/repo/.git");
+        expect(await resolveLockDirectory("tickets.lock")).toBe("/abs/repo/.git/tickets.lock");
+      });
+
+      test("refuses when git prints nothing", async () => {
+        installFakeGit("");
+        let message = "";
+        try {
+          await resolveLockDirectory("tickets.lock");
+        } catch (error) {
+          message = errorMessage(error);
+        }
+        expect(message).toContain("could not resolve --git-common-dir");
+      });
+
+      test("refuses a relative common directory", async () => {
+        installFakeGit(".git");
+        let message = "";
+        try {
+          await resolveLockDirectory("tickets.lock");
+        } catch (error) {
+          message = errorMessage(error);
+        }
+        expect(message).toContain("non-absolute path");
+      });
     });
   });
 });
