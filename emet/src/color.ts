@@ -14,8 +14,8 @@ export interface ColorInput {
 export function isColorEnabled(input: ColorInput): boolean {
   if (input.noColorFlag) return false;
   if (readEnv("NO_COLOR", input.env)) return false;
-  const forced = input.env.FORCE_COLOR;
-  if (forced !== undefined && forced !== "" && forced !== "0") return true;
-  if (input.env.TERM === "dumb") return false;
+  const forced = readEnv("FORCE_COLOR", input.env);
+  if (forced !== undefined && forced !== "0") return true;
+  if (readEnv("TERM", input.env) === "dumb") return false;
   return input.isTTY;
 }

@@ -9,6 +9,7 @@ const SOURCE_DIRECTORY = join(REPO_ROOT, "emet", "src");
 const ENV_MODULE = join(SOURCE_DIRECTORY, "env.ts");
 const DOCS_FILE = join(REPO_ROOT, "docs", "reference", "configuration.md");
 const DIRECT_ENV_ACCESS = /\b(?:process|Bun)\.env\b/;
+const DIRECT_ENV_PROPERTY = /\benv\.[A-Z][A-Z0-9_]*\b/;
 const TABLE_HEADING = "## Environment variables";
 
 /** Lists every non-test TypeScript source file under `directory`. */
@@ -36,6 +37,14 @@ describe("environment variables", () => {
     const offenders = listSourceFiles(SOURCE_DIRECTORY)
       .filter((file) => file !== ENV_MODULE)
       .filter((file) => DIRECT_ENV_ACCESS.test(readFileSync(file, "utf8")))
+      .map((file) => relative(REPO_ROOT, file));
+    expect(offenders).toEqual([]);
+  });
+
+  test("no source file reads a variable as a property of an env object", () => {
+    const offenders = listSourceFiles(SOURCE_DIRECTORY)
+      .filter((file) => file !== ENV_MODULE)
+      .filter((file) => DIRECT_ENV_PROPERTY.test(readFileSync(file, "utf8")))
       .map((file) => relative(REPO_ROOT, file));
     expect(offenders).toEqual([]);
   });
