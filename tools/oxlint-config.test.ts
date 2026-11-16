@@ -55,6 +55,10 @@ describe("oxlint.config.ts", () => {
     }
   });
 
+  test("keeps every rule group exactly as pinned", () => {
+    expect(ruleGroups).toMatchSnapshot();
+  });
+
   test("keeps the return-await option and the S4 rules the ticket names", () => {
     const rules: Record<string, unknown> = config.rules ?? {};
     expect(rules["typescript/return-await"]).toEqual(["error", "in-try-catch"]);
