@@ -1,5 +1,5 @@
-import { describe, expect, test } from "bun:test";
-import { mkdtempSync, rmSync } from "node:fs";
+import { afterEach, beforeEach, describe, expect, test } from "bun:test";
+import { mkdtempSync, realpathSync, rmSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
 
@@ -7,7 +7,9 @@ import { claudeHost } from "./agenthost-claude";
 import { codexHost } from "./agenthost-codex";
 import { DEFAULT_CODEX_CONFIG, DEFAULT_FORGE_CONFIG, ForgeConfigError } from "./config";
 import {
+  defaultRunner,
   launchSettingsFor,
+  run,
   launchWave,
   waveSessionName,
   type CommandResult,
@@ -276,5 +278,167 @@ describe("launchSettingsFor", () => {
       codex: { ...DEFAULT_CODEX_CONFIG, sandbox: "workspace-write" },
     });
     expect(settings.permissionMode).toBe("workspace-write");
+  });
+});
+
+describe("orca decisions on unreadable output", () => {
+  test("auto skips the tab when orca status is not JSON", async () => {
+    const { runner } = scriptedRunner({
+      agents: [json([]), STARTED],
+      orcaStatus: { exitCode: 0, stdout: "not json", stderr: "" },
+    });
+    const outcome = await launchWave(REQUEST, runner);
+    expect(outcome.orcaTab.opened).toBe(false);
+    expect(outcome.orcaTab.reason).toContain("not JSON");
+  });
+
+  test("auto skips the tab when orca status has no runtime object", async () => {
+    const { runner } = scriptedRunner({
+      agents: [json([]), STARTED],
+      orcaStatus: json({ ok: true }),
+    });
+    const outcome = await launchWave(REQUEST, runner);
+    expect(outcome.orcaTab.opened).toBe(false);
+    expect(outcome.orcaTab.reason).toContain("not reachable");
+  });
+
+  test("a tab whose create output is not JSON is reported as not opened", async () => {
+    const { runner } = scriptedRunner({
+      agents: [json([]), STARTED],
+      orcaStatus: REACHABLE,
+      orcaCreate: { exitCode: 0, stdout: "oops", stderr: "" },
+    });
+    const outcome = await launchWave(REQUEST, runner);
+    expect(outcome.orcaTab).toEqual({
+      opened: false,
+      reason: "orca terminal create output was not JSON",
+    });
+  });
+
+  test("a tab whose create output has ok=false is reported as not opened", async () => {
+    const { runner } = scriptedRunner({
+      agents: [json([]), STARTED],
+      orcaStatus: REACHABLE,
+      orcaCreate: json({ ok: false }),
+    });
+    const outcome = await launchWave(REQUEST, runner);
+    expect(outcome.orcaTab).toEqual({
+      opened: false,
+      reason: "orca terminal create returned ok=false",
+    });
+  });
+});
+
+describe("defaultRunner", () => {
+  test("captures stdout, stderr and the exit code", async () => {
+    const result = await defaultRunner(["sh", "-c", "echo out; echo err >&2; exit 3"]);
+    expect(result).toEqual({ exitCode: 3, stdout: "out\n", stderr: "err\n" });
+  });
+
+  test("runs in the requested directory", async () => {
+    const directory = realpathSync(mkdtempSync(path.join(os.tmpdir(), "emet-launch-cwd-")));
+    try {
+      const result = await defaultRunner(["pwd"], { cwd: directory });
+      expect(result.stdout.trim()).toBe(directory);
+    } finally {
+      rmSync(directory, { recursive: true, force: true });
+    }
+  });
+
+  test("reports exit 127 when the binary does not exist", async () => {
+    const result = await defaultRunner(["emet-no-such-binary-xyz"]);
+    expect(result.exitCode).toBe(127);
+    expect(result.stderr.length).toBeGreaterThan(0);
+  });
+});
+
+describe("run", () => {
+  const originalCwd = process.cwd();
+  const originalExitCode = process.exitCode;
+  const originalLog = console.log;
+  const originalError = console.error;
+  let logs: string[];
+  let errors: string[];
+  let directory = "";
+
+  beforeEach(() => {
+    logs = [];
+    errors = [];
+    console.log = (...parts: unknown[]) => {
+      logs.push(parts.join(" "));
+    };
+    console.error = (...parts: unknown[]) => {
+      errors.push(parts.join(" "));
+    };
+    process.exitCode = 0;
+    directory = realpathSync(mkdtempSync(path.join(os.tmpdir(), "emet-launch-run-")));
+  });
+
+  afterEach(() => {
+    process.chdir(originalCwd);
+    console.log = originalLog;
+    console.error = originalError;
+    process.exitCode = originalExitCode;
+    rmSync(directory, { recursive: true, force: true });
+  });
+
+  function enterRepo(): void {
+    const result = Bun.spawnSync(["git", "init", "-q", directory]);
+    if (result.exitCode !== 0) throw new Error("git init failed");
+    process.chdir(directory);
+  }
+
+  test.each([[[]], [["AO-1880", "--help"]]])("%j prints the usage and exits 2", async (argv) => {
+    await run(argv);
+    expect(process.exitCode).toBe(2);
+    expect(errors.join("\n")).toContain("usage: emet launch");
+  });
+
+  test.each([
+    [["--wave", "2"]],
+    [["AO-1880"]],
+    [["AO-1880", "--wave", "0"]],
+    [["AO-1880", "--wave", "1.5"]],
+    [["AO-1880", "--wave", "x"]],
+  ])("%j is rejected as a usage error with exit 2", async (argv) => {
+    await run(argv);
+    expect(process.exitCode).toBe(2);
+    expect(errors.join("\n")).toContain("usage: emet launch");
+  });
+
+  test("exits 2 outside a git repository", async () => {
+    process.chdir(directory);
+    await run(["AO-1880", "--wave", "2"]);
+    expect(process.exitCode).toBe(2);
+    expect(errors.join("\n")).toContain("not inside a git repository");
+  });
+
+  test("launches the wave and prints the outcome as JSON", async () => {
+    enterRepo();
+    const { runner, calls } = scriptedRunner({ agents: [json([]), STARTED] });
+    await run(["AO-1880", "--wave", "2"], runner);
+    expect(process.exitCode).toBe(0);
+    const printed: unknown = JSON.parse(logs.join("\n"));
+    expect(printed).toMatchObject({ name: "emet-AO-1880-w2", id: "abc12345" });
+    expect(calls.some((c) => c[0] === "claude" && c[1] === "--bg")).toBe(true);
+  });
+
+  test("exits 2 when a session for the spec already exists", async () => {
+    enterRepo();
+    const { runner } = scriptedRunner({ agents: [json([{ id: "o", name: "emet-AO-1880-w2" }])] });
+    await run(["AO-1880", "--wave", "2"], runner);
+    expect(process.exitCode).toBe(2);
+    expect(errors.join("\n")).toContain("already exists");
+  });
+
+  test("exits 1 when claude fails to start", async () => {
+    enterRepo();
+    const { runner } = scriptedRunner({
+      agents: [json([])],
+      launch: { exitCode: 1, stdout: "", stderr: "workspace not trusted" },
+    });
+    await run(["AO-1880", "--wave", "2"], runner);
+    expect(process.exitCode).toBe(1);
+    expect(errors.join("\n")).toContain("workspace not trusted");
   });
 });
