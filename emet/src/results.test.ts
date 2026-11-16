@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
-import { mkdtempSync, rmSync } from "node:fs";
+import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
 
@@ -48,6 +48,33 @@ describe("worker results", () => {
 
   test("reading a missing result returns null", () => {
     expect(readResult(directory, "CLA-9")).toBeNull();
+  });
+
+  test("rejects a stored file that is not a JSON object", () => {
+    writeFileSync(path.join(directory, "CLA-2.json"), "5");
+    expect(() => readResult(directory, "CLA-2")).toThrow(/not a JSON object/);
+  });
+
+  test("rejects a stored file with an unknown status", () => {
+    writeFileSync(
+      path.join(directory, "CLA-3.json"),
+      JSON.stringify({ status: "FINE", reportPath: "r.md", risk: "Risk: none" }),
+    );
+    expect(() => readResult(directory, "CLA-3")).toThrow(/invalid status "FINE"/);
+  });
+
+  test("rejects a stored file whose report path or risk is not a string", () => {
+    writeFileSync(
+      path.join(directory, "CLA-4.json"),
+      JSON.stringify({ status: "DONE", reportPath: 1, risk: "Risk: none" }),
+    );
+    expect(() => readResult(directory, "CLA-4")).toThrow(/must be strings/);
+  });
+
+  test("rejects an empty report path", () => {
+    expect(() => {
+      writeResult(directory, "CLA-5", { status: "DONE", reportPath: "  ", risk: "Risk: none" });
+    }).toThrow(/report path is empty/);
   });
 
   test("rejects ticket ids that escape the directory", () => {

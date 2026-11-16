@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, spyOn, test } from "bun:test";
-import { mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { execFileSync } from "node:child_process";
+import { mkdtempSync, readFileSync, realpathSync, rmSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
 
@@ -109,6 +110,45 @@ describe("emet results run", () => {
     const result = await invoke(["--run", "r1", "--root", root, "--read", "CLA-9"]);
     expect(result.code).toBe(1);
     expect(result.err.join("\n")).toContain("no result for CLA-9");
+  });
+
+  test("without --root it stores results under the git common dir of the cwd", async () => {
+    const repo = mkdtempSync(path.join(os.tmpdir(), "emet-results-repo-"));
+    const originalCwd = process.cwd();
+    try {
+      execFileSync("git", ["init", "-q", "-b", "main"], { cwd: repo });
+      process.chdir(repo);
+      const args = writeArgs("DONE").filter((_, index) => index !== 2 && index !== 3);
+      const written = await invoke(args);
+      expect(written.code).toBe(0);
+      const file = path.join(
+        realpathSync(repo),
+        ".git",
+        ".emet",
+        "runs",
+        "r1",
+        "results",
+        "CLA-1.json",
+      );
+      expect(JSON.parse(readFileSync(file, "utf8"))).toMatchObject({ status: "DONE" });
+    } finally {
+      process.chdir(originalCwd);
+      rmSync(repo, { recursive: true, force: true });
+    }
+  });
+
+  test("without --root outside a repo it falls back to the cwd", async () => {
+    const originalCwd = process.cwd();
+    try {
+      process.chdir(root);
+      const args = writeArgs("DONE").filter((_, index) => index !== 2 && index !== 3);
+      const written = await invoke(args);
+      expect(written.code).toBe(0);
+      const file = path.join(realpathSync(root), ".emet", "runs", "r1", "results", "CLA-1.json");
+      expect(readFileSync(file, "utf8")).toContain('"DONE"');
+    } finally {
+      process.chdir(originalCwd);
+    }
   });
 
   test("read with an invalid ticket id exits 1", async () => {

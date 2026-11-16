@@ -1,10 +1,10 @@
-import { afterEach, beforeEach, describe, expect, it } from "bun:test";
+import { afterEach, beforeEach, describe, expect, it, spyOn } from "bun:test";
 import { execFileSync } from "node:child_process";
 import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
 
-import { MigrationConflictError, planMigration, runMigration } from "./migrate.ts";
+import { MigrationConflictError, planMigration, run, runMigration } from "./migrate.ts";
 
 let root: string;
 
@@ -147,5 +147,155 @@ describe("runMigration", () => {
     write(".forge/a.txt", "different\n");
     expect(() => planMigration(root)).toThrow(MigrationConflictError);
     expect(read(".emet/a.txt")).toBe("a\n");
+  });
+});
+
+describe("tracked duplicates", () => {
+  it("removes a tracked legacy file whose target is identical with git rm", () => {
+    write("forge.config.json", "{}\n");
+    write("emet.config.json", "{}\n");
+    git("add", "forge.config.json", "emet.config.json");
+    git("commit", "-q", "-m", "seed");
+    const result = runMigration(root, { dryRun: false });
+    expect(result.steps).toContainEqual({
+      kind: "remove",
+      path: "forge.config.json",
+      tracked: true,
+      duplicateOf: "emet.config.json",
+    });
+    expect(exists("forge.config.json")).toBe(false);
+    expect(git("ls-files")).not.toContain("forge.config.json");
+  });
+
+  it("treats paths as untracked outside a git repo", () => {
+    const plain = fs.mkdtempSync(path.join(os.tmpdir(), "emet-migrate-plain-"));
+    try {
+      fs.writeFileSync(path.join(plain, "forge.config.json"), "{}\n");
+      const steps = planMigration(plain);
+      expect(steps[0]).toMatchObject({ kind: "rename", tracked: false });
+    } finally {
+      fs.rmSync(plain, { recursive: true, force: true });
+    }
+  });
+
+  it("rewrites anchored and negated legacy .gitignore entries", () => {
+    write(".gitignore", "/.forge/cache\n!/.forge\nother\n");
+    runMigration(root, { dryRun: false });
+    expect(read(".gitignore")).toBe("/.emet/cache\n!/.emet\nother\n");
+  });
+});
+
+describe("migrate run", () => {
+  let originalCwd: string;
+  let output: string[];
+  let errors: string[];
+
+  function capture(): () => void {
+    output = [];
+    errors = [];
+    const logSpy = spyOn(console, "log").mockImplementation(
+      (...args) => void output.push(args.join(" ")),
+    );
+    const errorSpy = spyOn(console, "error").mockImplementation(
+      (...args) => void errors.push(args.join(" ")),
+    );
+    return () => {
+      logSpy.mockRestore();
+      errorSpy.mockRestore();
+    };
+  }
+
+  beforeEach(() => {
+    originalCwd = process.cwd();
+    process.exitCode = 0;
+  });
+
+  afterEach(() => {
+    process.chdir(originalCwd);
+    process.exitCode = 0;
+  });
+
+  it("rejects unknown arguments with usage and exit code 2", () => {
+    const restore = capture();
+    run(["--bogus"]);
+    restore();
+    expect(errors.join("\n")).toContain("usage:");
+    expect(process.exitCode).toBe(2);
+  });
+
+  it("reports nothing to migrate for a clean repo", () => {
+    write("emet.config.json", "{}\n");
+    process.chdir(root);
+    const restore = capture();
+    run([]);
+    restore();
+    expect(output).toEqual(["nothing to migrate"]);
+  });
+
+  it("lists planned steps under --dry-run without touching files", () => {
+    seedLegacyRepo();
+    process.chdir(root);
+    const restore = capture();
+    run(["--dry-run"]);
+    restore();
+    const text = output.join("\n");
+    expect(text).toContain("would migrate:");
+    expect(text).toContain("git mv forge.config.json -> emet.config.json");
+    expect(text).toContain("rewrite emet.config.json:");
+    expect(exists("forge.config.json")).toBe(true);
+  });
+
+  it("applies the migration and describes untracked moves and duplicate removals", () => {
+    write("forge.config.json", "{}\n");
+    write("docs/agents/forge.md", "x\n");
+    write("docs/agents/emet.md", "x\n");
+    process.chdir(root);
+    const restore = capture();
+    run([]);
+    restore();
+    const text = output.join("\n");
+    expect(text).toContain("migrated:");
+    expect(text).toContain("mv forge.config.json -> emet.config.json");
+    expect(text).toContain("remove docs/agents/forge.md (same as docs/agents/emet.md)");
+    expect(exists("emet.config.json")).toBe(true);
+  });
+
+  it("exits 1 with the conflict message", () => {
+    write("forge.config.json", '{"a":1}\n');
+    write("emet.config.json", '{"a":2}\n');
+    process.chdir(root);
+    const restore = capture();
+    run([]);
+    restore();
+    expect(process.exitCode).toBe(1);
+    expect(errors.join("\n")).toContain("both exist with different content");
+  });
+
+  it("rethrows unexpected errors", () => {
+    write("forge.config.json", "{}\n");
+    fs.mkdirSync(path.join(root, "emet.config.json"));
+    process.chdir(root);
+    const restore = capture();
+    try {
+      expect(() => {
+        run([]);
+      }).toThrow();
+    } finally {
+      restore();
+    }
+  });
+
+  it("falls back to the cwd outside a git repo", () => {
+    const plain = fs.mkdtempSync(path.join(os.tmpdir(), "emet-migrate-cwd-"));
+    try {
+      process.chdir(plain);
+      const restore = capture();
+      run([]);
+      restore();
+      expect(output).toEqual(["nothing to migrate"]);
+    } finally {
+      process.chdir(originalCwd);
+      fs.rmSync(plain, { recursive: true, force: true });
+    }
   });
 });
