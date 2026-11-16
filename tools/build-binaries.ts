@@ -55,7 +55,11 @@ export function parseArguments(argv: readonly string[]): {
   return { targets: [target], outdir };
 }
 
-/** Compiles the emet CLI for one target into `<outdir>/emet-<os>-<arch>`; returns the path. */
+/**
+ * Compiles the emet CLI for one target into `<outdir>/emet-<os>-<arch>`; returns the path.
+ * The binary never auto-loads the working directory's `.env`: emet runs inside other
+ * repos, and their secrets (an encrypted `GITHUB_TOKEN`, for example) must not reach `gh`.
+ */
 export async function buildBinary(
   target: BuildTarget,
   outdir: string,
@@ -64,7 +68,7 @@ export async function buildBinary(
   const outfile = path.resolve(outdir, binaryName(target));
   const result = await Bun.build({
     entrypoints: [path.join(repoRoot, "emet", "bin", "emet.ts")],
-    compile: { target, outfile },
+    compile: { target, outfile, autoloadDotenv: false },
     define: { FORGE_BUILD_VERSION: JSON.stringify(version) },
   });
   if (!result.success) {

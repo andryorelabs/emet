@@ -1,5 +1,13 @@
 import { afterAll, beforeAll, describe, expect, test } from "bun:test";
-import { chmodSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import {
+  chmodSync,
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
 import os from "node:os";
 import path from "node:path";
 
@@ -79,6 +87,24 @@ describe.skipIf(process.platform !== "linux" || process.arch !== "x64")(
       expect(result.stderr.toString()).toContain(
         "selftest needs a source install; run emet doctor",
       );
+    });
+
+    test("never loads the working directory's .env into the environment", () => {
+      const stubBin = path.join(workdir, "stubbin");
+      const probeFile = path.join(workdir, "gh-saw-token");
+      mkdirSync(stubBin, { recursive: true });
+      writeFileSync(
+        path.join(stubBin, "gh"),
+        `#!/bin/sh\nprintf '%s' "\${GITHUB_TOKEN:-unset}" > "${probeFile}"\nexit 0\n`,
+      );
+      chmodSync(path.join(stubBin, "gh"), 0o755);
+      writeFileSync(path.join(workdir, ".env"), "GITHUB_TOKEN=from-dotenv\n");
+      Bun.spawnSync([binary, "doctor"], {
+        cwd: workdir,
+        env: { HOME: workdir, PATH: `${stubBin}:${path.join(workdir, "emptybin")}` },
+      });
+      expect(existsSync(probeFile)).toBe(true);
+      expect(readFileSync(probeFile, "utf8")).toBe("unset");
     });
 
     test("init, validate --help and doctor never crash with no bun on PATH", () => {
