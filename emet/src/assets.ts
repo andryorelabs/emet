@@ -34,7 +34,7 @@ const TEMPLATES: Readonly<Record<string, string>> = {
 };
 
 /** The version embedded at build time, or `0.0.0-dev` when running from source. */
-export const FORGE_VERSION: string =
+export const EMET_VERSION: string =
   typeof FORGE_BUILD_VERSION === "string" ? FORGE_BUILD_VERSION : DEV_VERSION;
 
 /** Returns the embedded `emet/templates/<name>` text; throws for an unknown name. */

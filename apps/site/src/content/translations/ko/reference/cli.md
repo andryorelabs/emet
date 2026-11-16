@@ -2,7 +2,7 @@
 title: CLI 레퍼런스
 description: 모든 emet 하위 명령, 게이트와 기록 표, 종료 코드, 환경 변수를 설명합니다.
 seoTitle: emet CLI 레퍼런스
-sourceHash: a8d3bf074f04de8e
+sourceHash: b065107f632830b7
 ---
 
 모든 `emet` 하위 명령, 게이트와 기록 표, 종료 코드, 환경 변수입니다. 용어는 [GLOSSARY.md](../../GLOSSARY.md)를 따릅니다. [README](../../README.md)로 돌아가기. 모든 명령은 `--help`로 사용법을 출력합니다.
@@ -119,6 +119,23 @@ emet doctor ~/code/*
 | `1`  | 조치가 필요한 지적이 있습니다.                                                            |
 | `2`  | 설정 또는 사용법 오류로, 도구가 실제로 실행되지 않았습니다. 알 수 없는 명령도 포함합니다. |
 | `3`  | 내부 오류.                                                                                |
+
+알 수 없는 플래그도 `2`로 종료하며 해당 플래그를 알려 줍니다. Ctrl-C는 `130`으로 종료합니다.
+
+## 전역 플래그
+
+모든 명령이 이 플래그를 받습니다. 각 명령 고유의 플래그는 `emet <command> --help`로 확인할 수 있습니다.
+
+| 플래그       | 효과                                                                                                           |
+| ------------ | -------------------------------------------------------------------------------------------------------------- |
+| `--json`     | `--help`와 `--version`을 포함해 envelope `{ok, data, error: {code, message, fix}}` 하나를 stdout에 출력합니다. |
+| `--no-color` | ANSI 색상을 끕니다. 색상은 `NO_COLOR`, `FORCE_COLOR`, `TERM=dumb`, 출력이 TTY인지 여부도 따릅니다.             |
+| `--verbose`  | 예기치 않은 오류의 스택을 출력합니다. 지정하지 않으면 최상위 catch가 한 줄짜리 오류를 출력합니다.              |
+| `--help`     | 명령의 사용법을 출력합니다.                                                                                    |
+
+`emet --version`은 버전을 출력하고, `emet --version --json`은 `{"ok": true, "data": {"version": ...}, "error": null}`을 출력합니다. `--json`에서 실패한 명령은 평소의 종료 코드로 종료하며 `ok: false`와 함께 `findings`, `usage`, `internal`, `slice-timeout`, `expired`, `bad-range`, `exit-<n>` 중 하나의 오류 `code`를 출력합니다. 명령이 stdout에 출력한 내용은 envelope의 `data`가 됩니다.
+
+TTY에서는 더 새로운 릴리스가 알려져 있으면 `emet`이 stderr에 한 줄짜리 알림을 출력합니다. 하루에 최대 한 번만 확인하고, 결과를 캐시하며, 네트워크를 기다리지 않고, `--json`이거나 TTY가 아니면 아무것도 출력하지 않습니다.
 
 ## 환경 변수
 
