@@ -132,6 +132,13 @@ describe("initBentoScenes", () => {
     expect(observers).toHaveLength(2);
   });
 
+  it("returns a harmless stop and observes nothing without scenes", () => {
+    const stop = initBentoScenes(makeRoot([]));
+    stop();
+    expect(observers).toHaveLength(0);
+    expect(mediaListeners).toHaveLength(0);
+  });
+
   it("stops and clears playing state", () => {
     const scene = makeScene();
     const stop = initBentoScenes(makeRoot([scene]));
