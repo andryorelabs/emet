@@ -2,7 +2,7 @@
 title: Справочник по конфигурации
 description: Каждый ключ emet.config.json со значением по умолчанию и смыслом.
 seoTitle: Справочник по конфигурации emet
-sourceHash: ac6552b22848c9eb
+sourceHash: f643569c960d5e35
 ---
 
 Каждый ключ `emet.config.json` со значением по умолчанию и смыслом. Источник истины — [`emet/schema/emet.config.schema.json`](../../emet/schema/emet.config.schema.json). Термины соответствуют [GLOSSARY.md](../../GLOSSARY.md). Назад к [README](../../README.md).
@@ -217,3 +217,5 @@ CLI читает эти переменные, все через `emet/src/env.ts
 | `CODEX_HOME`                  |                                | Домашний каталог Codex; по умолчанию `~/.codex`. Только читается.                                                                                       |
 | `XDG_STATE_HOME`              |                                | Основа каталога состояния, когда `EMET_STATE_DIR` не задана.                                                                                            |
 | `NO_COLOR`                    |                                | Если задана, баннер выводится без цвета.                                                                                                                |
+| `FORCE_COLOR`                 |                                | Любое значение, кроме пустого и `0`, включает цветной баннер даже без TTY.                                                                              |
+| `TERM`                        |                                | `dumb` отключает цвет баннера.                                                                                                                          |

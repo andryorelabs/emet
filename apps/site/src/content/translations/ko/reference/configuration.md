@@ -2,7 +2,7 @@
 title: 설정 레퍼런스
 description: emet.config.json의 모든 키를 기본값과 의미와 함께 설명합니다.
 seoTitle: emet 설정 레퍼런스
-sourceHash: ac6552b22848c9eb
+sourceHash: f643569c960d5e35
 ---
 
 `emet.config.json`의 모든 키를 기본값과 의미와 함께 정리했습니다. 기준이 되는 원본은 [`emet/schema/emet.config.schema.json`](../../emet/schema/emet.config.schema.json)입니다. 용어는 [GLOSSARY.md](../../GLOSSARY.md)를 따릅니다. [README](../../README.md)로 돌아가기.
@@ -217,3 +217,5 @@ CLI는 이 변수들을 모두 `emet/src/env.ts`를 통해 읽습니다. `FORGE_
 | `CODEX_HOME`                  |                                | Codex 홈 디렉터리이며 기본값은 `~/.codex`입니다. 읽기만 합니다.                                                                                  |
 | `XDG_STATE_HOME`              |                                | `EMET_STATE_DIR`가 설정되지 않았을 때 상태 디렉터리의 기준입니다.                                                                                |
 | `NO_COLOR`                    |                                | 설정하면 배너를 색 없이 출력합니다.                                                                                                              |
+| `FORCE_COLOR`                 |                                | 비어 있거나 `0`이 아닌 값을 설정하면 TTY가 없어도 배너를 색상과 함께 출력합니다.                                                                 |
+| `TERM`                        |                                | `dumb`이면 배너 색상이 꺼집니다.                                                                                                                 |
