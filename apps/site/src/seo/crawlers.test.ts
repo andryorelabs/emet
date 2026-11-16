@@ -32,6 +32,14 @@ describe("buildSitemapXml", () => {
     expect(xml).toContain(`<loc>${SITE_ORIGIN}/es/</loc>`);
     expect(xml).toContain('hreflang="zh-CN" href="https://emet.andryore.dev/zh-cn/"');
     expect(xml).toContain('hreflang="x-default"');
+    expect(xml).not.toContain("<lastmod>");
+  });
+
+  test("renders lastmod right after loc when the entry has one", () => {
+    const xml = buildSitemapXml([
+      { loc: absoluteUrl("en", "/"), lastmod: "2026-09-01", alternates: hreflangAlternates("/") },
+    ]);
+    expect(xml).toContain(`<loc>${SITE_ORIGIN}/</loc>\n    <lastmod>2026-09-01</lastmod>\n`);
   });
 });
 
