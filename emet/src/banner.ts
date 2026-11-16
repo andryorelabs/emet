@@ -1,3 +1,5 @@
+import { isColorEnabled } from "./color";
+
 /**
  * Terminal banner art. The constants are byte-identical to
  * docs/brand/terminal/banner.ansi and banner.txt; banner.test.ts enforces it.
@@ -29,6 +31,6 @@ export const BANNER_TEXT = BANNER_TEXT_LINES.join("\n") + "\n";
  * or empty, the plain art otherwise.
  */
 export function renderBanner(stream: { isTTY?: boolean }, env: NodeJS.ProcessEnv): string {
-  const colored = stream.isTTY === true && !env.NO_COLOR;
+  const colored = isColorEnabled({ env, isTTY: stream.isTTY === true, noColorFlag: false });
   return colored ? BANNER_ANSI : BANNER_TEXT;
 }
