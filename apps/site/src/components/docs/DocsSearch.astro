@@ -123,7 +123,7 @@ const clientStrings = {
       const message = container.querySelector(".pagefind-ui__message")?.textContent ?? "";
       const hasResults = container.querySelector(".pagefind-ui__result") !== null;
       const state = classifySearchState({ message, hasResults }, strings);
-      dialog.dataset["searchState"] = state;
+      dialog.dataset.searchState = state;
       const announcement = state === "idle" ? "" : message.trim();
       if (status.textContent !== announcement) status.textContent = announcement;
     };
@@ -186,19 +186,19 @@ const clientStrings = {
     for (const button of document.querySelectorAll<HTMLElement>(".expressive-code .copy button")) {
       button.setAttribute("aria-label", strings.copy);
       button.setAttribute("title", strings.copy);
-      button.dataset["copied"] = strings.copied;
+      button.dataset.copied = strings.copied;
     }
     document.addEventListener("click", (event) => {
       const target = event.target instanceof Element ? event.target : null;
       const button = target?.closest<HTMLElement>(".expressive-code .copy button");
       if (!button) return;
-      button.dataset["state"] = "copied";
+      button.dataset.state = "copied";
       button.setAttribute("aria-label", strings.copied);
       clearTimeout(copiedTimers.get(button));
       copiedTimers.set(
         button,
         setTimeout(() => {
-          delete button.dataset["state"];
+          delete button.dataset.state;
           button.setAttribute("aria-label", strings.copy);
         }, COPIED_STATE_MS),
       );
@@ -206,8 +206,8 @@ const clientStrings = {
   }
 
   const root = document.querySelector<HTMLElement>("[data-docs-search]");
-  if (root?.dataset["docsSearch"]) {
-    const strings = JSON.parse(root.dataset["docsSearch"]) as ClientStrings;
+  if (root?.dataset.docsSearch) {
+    const strings = JSON.parse(root.dataset.docsSearch) as ClientStrings;
     enhanceSearch(root, strings);
     enhanceCopyButtons(strings);
   }
