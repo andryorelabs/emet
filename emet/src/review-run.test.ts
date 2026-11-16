@@ -50,7 +50,7 @@ function script(lines: unknown[], exitCode = 0): string {
 }
 
 function captureStdout(): { lines: () => string[]; restore: () => void } {
-  const spy = spyOn(console, "log").mockImplementation(() => {});
+  const spy = spyOn(console, "log").mockReturnValue(undefined);
   const captured: string[] = [];
   return {
     lines: () => captured,
@@ -67,14 +67,14 @@ function baseArgv(tier: string, packagePath = "/tmp/pkg.md"): string[] {
 
 describe("review-run usage", () => {
   test("prints usage and exits 2 without arguments", async () => {
-    const spy = spyOn(console, "error").mockImplementation(() => {});
+    const spy = spyOn(console, "error").mockReturnValue(undefined);
     expect(await run([])).toBe(2);
     expect(spy.mock.calls[0]?.[0]).toContain("usage: emet review-run");
     spy.mockRestore();
   });
 
   test("rejects an unknown tier", async () => {
-    const spy = spyOn(console, "error").mockImplementation(() => {});
+    const spy = spyOn(console, "error").mockReturnValue(undefined);
     expect(await run(baseArgv("extreme"))).toBe(2);
     spy.mockRestore();
   });
@@ -147,7 +147,7 @@ describe("review-run with the fake codex", () => {
 
   test("exits 1 when codex produces no final message", async () => {
     script([{ type: "thread.started", thread_id: "t1" }], 1);
-    const err = spyOn(console, "error").mockImplementation(() => {});
+    const err = spyOn(console, "error").mockReturnValue(undefined);
     const code = await run(baseArgv("medium"), {
       repoRoot: tempDir(),
       sourceHome: tempDir(),
@@ -160,7 +160,7 @@ describe("review-run with the fake codex", () => {
 
   test("exits 1 when the final message holds invalid findings", async () => {
     script([agentMessage(JSON.stringify({ findings: [{ id: "x" }] }))]);
-    const err = spyOn(console, "error").mockImplementation(() => {});
+    const err = spyOn(console, "error").mockReturnValue(undefined);
     const code = await run(baseArgv("medium"), {
       repoRoot: tempDir(),
       sourceHome: tempDir(),
@@ -224,7 +224,7 @@ describe("review-run Codex models cache", () => {
     script([agentMessage("[]")]);
     const sourceHome = tempDir();
     writeModelsCache(path.join(sourceHome, "models_cache.json"), ["gpt-6.1-sol"]);
-    const err = spyOn(console, "error").mockImplementation(() => {});
+    const err = spyOn(console, "error").mockReturnValue(undefined);
     const out = captureStdout();
     const code = await run(baseArgv("high"), {
       repoRoot: tempDir(),
@@ -265,7 +265,7 @@ describe("review-run Codex models cache", () => {
     script([agentMessage("[]")]);
     const sourceHome = tempDir();
     writeModelsCache(path.join(sourceHome, "models_cache.json"), ["gpt-5.6-terra", "gpt-5.5-luna"]);
-    const err = spyOn(console, "error").mockImplementation(() => {});
+    const err = spyOn(console, "error").mockReturnValue(undefined);
     const code = await run(baseArgv("medium"), {
       repoRoot: tempDir(),
       sourceHome,
