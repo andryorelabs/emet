@@ -57,7 +57,9 @@ describe.skipIf(process.platform !== "linux" || process.arch !== "x64")(
       binary = await buildBinary("bun-linux-x64", path.join(workdir, "out"), "0.2.0");
       chmodSync(binary, 0o755);
     }, 120_000);
-    afterAll(() => rmSync(workdir, { recursive: true, force: true }));
+    afterAll(() => {
+      rmSync(workdir, { recursive: true, force: true });
+    });
 
     const run = (...args: string[]) =>
       Bun.spawnSync([binary, ...args], {

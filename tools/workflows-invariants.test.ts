@@ -277,7 +277,7 @@ describe("ci.yml commitlint and manual runs", () => {
   const ci = workflows.find(({ fileName }) => fileName === "ci.yml");
 
   test("has a Commitlint job on pull requests that ci-passed needs", () => {
-    const job = ci?.workflow.jobs["commitlint"];
+    const job = ci?.workflow.jobs.commitlint;
     expect(job?.name).toBe("Commitlint");
     expect(job?.if).toContain("pull_request");
     expect(neededJobs(ci?.workflow.jobs["ci-passed"])).toContain("commitlint");
@@ -291,13 +291,13 @@ describe("ci.yml commitlint and manual runs", () => {
   });
 
   test("the Test job runs the coverage-gated test script", () => {
-    const steps = ci?.workflow.jobs["test"]?.steps ?? [];
+    const steps = ci?.workflow.jobs.test?.steps ?? [];
     expect(steps.map((step) => step.run)).toContain("bun run test");
   });
 
   test("test keeps the root suites behind turbo and gates emet on coverage", () => {
     const scripts = readRootScripts();
-    expect(scripts["test"]).toBe("turbo run test test:root");
+    expect(scripts.test).toBe("turbo run test test:root");
     expect(scripts["test:root"]).toEndWith(
       "&& bun test --cwd emet --coverage --coverage-reporter=text --coverage-reporter=lcov --coverage-dir ../coverage/emet && bun tools/coverage-gate.ts emet coverage/emet/lcov.info",
     );
@@ -307,9 +307,9 @@ describe("ci.yml commitlint and manual runs", () => {
 
   test("format:write replaces format, and fix calls it", () => {
     const scripts = readRootScripts();
-    expect(scripts["format"]).toBeUndefined();
+    expect(scripts.format).toBeUndefined();
     expect(scripts["format:write"]).toBe("oxfmt");
-    expect(scripts["fix"]).toStartWith("bun run format:write && ");
+    expect(scripts.fix).toStartWith("bun run format:write && ");
   });
 
   test("lint:commits lints the range from the merge base with origin/develop", () => {
@@ -352,14 +352,14 @@ describe("codeql.yml and scorecard.yml", () => {
   const scorecard = workflows.find(({ fileName }) => fileName === "scorecard.yml");
 
   test("CodeQL job is named, private-guarded and scans both languages", () => {
-    const job = codeql?.workflow.jobs["analyze"];
+    const job = codeql?.workflow.jobs.analyze;
     expect(job?.name).toBe("CodeQL");
     expect(job?.if).toContain("!github.event.repository.private");
-    expect(job?.strategy?.matrix?.["language"]).toEqual(["javascript-typescript", "actions"]);
+    expect(job?.strategy?.matrix?.language).toEqual(["javascript-typescript", "actions"]);
   });
 
   test("Scorecard runs weekly with empty top-level permissions and a guarded job", () => {
-    const job = scorecard?.workflow.jobs["analysis"];
+    const job = scorecard?.workflow.jobs.analysis;
     expect(job?.name).toBe("Scorecard");
     expect(scorecard?.workflow.permissions).toEqual({});
     expect(job?.if).toContain("!github.event.repository.private");
@@ -399,7 +399,7 @@ describe("release.yml", () => {
   });
 
   describe("CHANGELOG gate", () => {
-    const steps = release?.workflow.jobs["release"]?.steps ?? [];
+    const steps = release?.workflow.jobs.release?.steps ?? [];
     const gateIndex = steps.findIndex((step) => step.name === CHANGELOG_GATE_STEP);
     const gateScript = steps[gateIndex]?.run ?? "exit 0";
 
@@ -456,7 +456,7 @@ function runChangelogGate(
     writeFileSync(join(directory, "CHANGELOG.md"), CHANGELOG_FIXTURE);
     const result = Bun.spawnSync(["bash", "-e", "-c", script], {
       cwd: directory,
-      env: { PATH: process.env["PATH"] ?? "", GITHUB_REF_NAME: tag },
+      env: { PATH: process.env.PATH ?? "", GITHUB_REF_NAME: tag },
     });
     const notesPath = join(directory, "release-notes.md");
     return {
@@ -591,7 +591,7 @@ describe("deploy-coolify.sh", () => {
   function runScript(appUuid: string): { exitCode: number; output: string } {
     const result = Bun.spawnSync(["bash", DEPLOY_SCRIPT], {
       env: {
-        PATH: process.env["PATH"] ?? "",
+        PATH: process.env.PATH ?? "",
         COOLIFY_API_TOKEN: fakeToken,
         COOLIFY_APP_UUID: appUuid,
       },
@@ -616,7 +616,7 @@ describe("deploy-coolify.sh", () => {
     const unexpected = tokenLines.filter(
       (line) =>
         !/^\s*if \[\[ -z "\$\{COOLIFY_API_TOKEN:-\}"/.test(line) &&
-        !/printf 'Authorization: Bearer %s\\n' "\$\{COOLIFY_API_TOKEN\}"/.test(line),
+        !line.includes("printf 'Authorization: Bearer %s\\n' \"${COOLIFY_API_TOKEN}\""),
     );
     expect(unexpected).toEqual([]);
     expect(script).not.toMatch(/echo[^\n]*COOLIFY_API_TOKEN\}/);

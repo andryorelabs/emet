@@ -20,13 +20,13 @@ function readTsconfig(relativePath: string): Record<string, unknown> {
 
 /** Returns the `compilerOptions` object of a parsed tsconfig, or an empty object. */
 function compilerOptionsOf(tsconfig: Record<string, unknown>): Record<string, unknown> {
-  const options = tsconfig["compilerOptions"];
+  const options = tsconfig.compilerOptions;
   return isRecord(options) ? options : {};
 }
 
 /** Returns the `extends` entries of a parsed tsconfig as a list. */
 function extendsOf(tsconfig: Record<string, unknown>): unknown[] {
-  const extended = tsconfig["extends"];
+  const extended = tsconfig.extends;
   if (extended === undefined) {
     return [];
   }
@@ -68,7 +68,7 @@ describe("tsconfig.base.json", () => {
   });
 
   test("the root include covers the root configs and the Claude hooks", () => {
-    const include = readTsconfig("tsconfig.json")["include"];
+    const include = readTsconfig("tsconfig.json").include;
     expect(include).toEqual(expect.arrayContaining(["*.ts", "*.mts", ".claude/hooks/*.ts"]));
   });
 });

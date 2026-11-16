@@ -15,7 +15,7 @@ function readJson(relativePath: string): Record<string, unknown> {
 
 /** Reads the root `package.json` scripts as command strings. */
 function readRootScripts(): Record<string, string> {
-  const scripts = readJson("package.json")["scripts"];
+  const scripts = readJson("package.json").scripts;
   if (typeof scripts !== "object" || scripts === null) {
     throw new Error("package.json has no scripts object");
   }
@@ -26,7 +26,7 @@ function readRootScripts(): Record<string, string> {
 
 test("the typescript7 alias resolves to a 7.x compiler", () => {
   const manifest = readJson("node_modules/typescript7/package.json");
-  expect(String(manifest["version"])).toMatch(/^7\./);
+  expect(String(manifest.version)).toMatch(/^7\./);
 });
 
 test("no root script calls bare tsc", () => {

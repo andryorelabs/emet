@@ -26,9 +26,9 @@ function readRuntimeManifest(): {
   }
   const manifest = Object.fromEntries(Object.entries(parsed));
   return {
-    ...(isStringRecord(manifest["dependencies"]) ? { dependencies: manifest["dependencies"] } : {}),
-    ...(isStringRecord(manifest["devDependencies"])
-      ? { devDependencies: manifest["devDependencies"] }
+    ...(isStringRecord(manifest.dependencies) ? { dependencies: manifest.dependencies } : {}),
+    ...(isStringRecord(manifest.devDependencies)
+      ? { devDependencies: manifest.devDependencies }
       : {}),
   };
 }
