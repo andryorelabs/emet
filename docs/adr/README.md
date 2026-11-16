@@ -32,3 +32,4 @@ Decisions that are hard to reverse, surprising without context, and the result o
 | 0024 | [Adopt the andryorelabs standard](0024-adopt-the-andryorelabs-standard.md)                                            | Accepted   |                                                                                 |
 | 0025 | [Cleanup deletes branches whose pull request merged](0025-cleanup-deletes-branches-whose-pull-request-merged.md)      | Accepted   |                                                                                 |
 | 0026 | [GitHub stars via a same-origin nginx proxy](0026-github-stars-via-same-origin-nginx-proxy.md)                        | Accepted   |                                                                                 |
+| 0027 | [CLI runtime contract](0027-cli-runtime-contract.md)                                                                  | Accepted   |                                                                                 |
