@@ -3,6 +3,7 @@ import { afterEach, describe, expect, test } from "bun:test";
 import {
   checkMemoryHeadroom,
   computeAutoMaxLiveWorkers,
+  readHostResources,
   resolveAutoCapOptionsFromEnvironment,
   type HostResources,
 } from "./resources";
@@ -149,5 +150,71 @@ describe("resolveAutoCapOptionsFromEnvironment", () => {
     delete process.env.EMET_MEM_RESERVE_GIB;
     process.env.FORGE_MEM_RESERVE_GIB = "9";
     expect(resolveAutoCapOptionsFromEnvironment().memReserveBytes).toBe(9 * GIB);
+  });
+});
+
+function fakeHost(files: Record<string, string>, cores = 16, totalBytes = 64 * GIB) {
+  return {
+    readText: (filePath: string) => {
+      const content = files[filePath];
+      if (content === undefined) throw new Error(`ENOENT ${filePath}`);
+      return content;
+    },
+    availableParallelism: () => cores,
+    totalmem: () => totalBytes,
+  };
+}
+
+describe("readHostResources", () => {
+  const MEMINFO = "MemTotal: 16000000 kB\nMemAvailable: 8388608 kB\n";
+
+  test("reads the real host without throwing", () => {
+    const resources = readHostResources();
+    expect(resources.cpuCount).toBeGreaterThanOrEqual(1);
+    expect(resources.memTotalBytes).toBeGreaterThan(0);
+  });
+
+  test("with no cgroup limits it reports the host cores, memory and MemAvailable", () => {
+    const resources = readHostResources(fakeHost({ "/proc/meminfo": MEMINFO }));
+    expect(resources).toEqual({
+      cpuCount: 16,
+      memTotalBytes: 64 * GIB,
+      memAvailableBytes: 8 * GIB,
+    });
+  });
+
+  test("a cgroup cpu quota and memory cap narrow the host numbers", () => {
+    const resources = readHostResources(
+      fakeHost({
+        "/sys/fs/cgroup/cpu.max": "400000 100000\n",
+        "/sys/fs/cgroup/memory.max": `${4 * GIB}\n`,
+        "/proc/meminfo": MEMINFO,
+      }),
+    );
+    expect(resources).toEqual({ cpuCount: 4, memTotalBytes: 4 * GIB, memAvailableBytes: 4 * GIB });
+  });
+
+  test("an unlimited or malformed cgroup is ignored", () => {
+    const unlimited = readHostResources(
+      fakeHost({ "/sys/fs/cgroup/cpu.max": "max 100000", "/sys/fs/cgroup/memory.max": "max" }),
+    );
+    expect(unlimited).toEqual({ cpuCount: 16, memTotalBytes: 64 * GIB, memAvailableBytes: null });
+    const malformed = readHostResources(
+      fakeHost({ "/sys/fs/cgroup/cpu.max": "abc 100000", "/sys/fs/cgroup/memory.max": "oops" }),
+    );
+    expect(malformed.cpuCount).toBe(16);
+    expect(malformed.memTotalBytes).toBe(64 * GIB);
+    const zeroPeriod = readHostResources(fakeHost({ "/sys/fs/cgroup/cpu.max": "100 0" }));
+    expect(zeroPeriod.cpuCount).toBe(16);
+  });
+
+  test("a fractional cpu quota still yields at least one core", () => {
+    const resources = readHostResources(fakeHost({ "/sys/fs/cgroup/cpu.max": "50000 100000" }));
+    expect(resources.cpuCount).toBe(1);
+  });
+
+  test("a meminfo without MemAvailable reports null", () => {
+    const resources = readHostResources(fakeHost({ "/proc/meminfo": "MemTotal: 1 kB\n" }));
+    expect(resources.memAvailableBytes).toBeNull();
   });
 });

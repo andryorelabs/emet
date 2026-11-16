@@ -103,6 +103,11 @@ describe("codexHost probes", () => {
     expect(plugins[1]?.enabled).toBe(false);
   });
 
+  test("has no agents directory and no settings files", () => {
+    expect(codexHost.probes.agentsDir("/home/user")).toBeUndefined();
+    expect(codexHost.probes.settingsFiles("/repo", "/home/user")).toEqual([]);
+  });
+
   test("version parsing and comparison", () => {
     expect(parseCodexVersion("codex-cli 0.167.0")).toBe("0.167.0");
     expect(parseCodexVersion("nothing")).toBeUndefined();
