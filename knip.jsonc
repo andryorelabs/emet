@@ -19,7 +19,8 @@
       // The hook .tsx files are loaded by the mod runtime, so knip must not report them as unused.
       "ignore": ["mods/*/hooks/**/*.tsx"],
       // typescript7 is only invoked by path (node_modules/typescript7/bin/tsc) in the typecheck script, which knip cannot trace to the package.
-      "ignoreDependencies": ["typescript7"],
+      // @oxlint/plugins is pinned with oxlint (S1) ahead of tools/oxlint/local-plugin.ts importing its types (S5); drop it from this list once that import lands.
+      "ignoreDependencies": ["typescript7", "@oxlint/plugins"],
     },
     // The Astro and Starlight Website.
     "apps/site": {
