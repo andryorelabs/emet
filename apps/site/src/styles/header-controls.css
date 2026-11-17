@@ -339,6 +339,10 @@
   display: none;
 }
 
+.search-button-name {
+  display: none;
+}
+
 .search-button-keys {
   display: inline-flex;
   flex: none;
@@ -406,6 +410,10 @@
   .search-button-label,
   .search-button-keys {
     display: none;
+  }
+
+  .search-button-name {
+    display: block;
   }
 }
 
