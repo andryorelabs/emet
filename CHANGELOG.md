@@ -8,6 +8,15 @@ and this project adheres to
 
 ## [Unreleased]
 
+## [0.8.6] - 2026-11-17
+
+### Fixed
+
+- The release workflow installs Chromium before it re-runs the checks on the
+  tag, as the CI test job does, so the verification no longer stops at the
+  `tools/` coverage floor. v0.8.5 was tagged but never published because of
+  this; its changes ship in this release.
+
 ## [0.8.5] - 2026-11-17
 
 ### Changed
@@ -313,7 +322,8 @@ and this project adheres to
 - Per-repo configuration through `forge.config.json`.
 - `install.sh`, which installs the CLI, command and agents.
 
-[Unreleased]: https://github.com/andryorelabs/emet/compare/v0.8.5...HEAD
+[Unreleased]: https://github.com/andryorelabs/emet/compare/v0.8.6...HEAD
+[0.8.6]: https://github.com/andryorelabs/emet/compare/v0.8.5...v0.8.6
 [0.8.5]: https://github.com/andryorelabs/emet/compare/v0.8.4...v0.8.5
 [0.8.4]: https://github.com/andryorelabs/emet/compare/v0.8.3...v0.8.4
 [0.8.3]: https://github.com/andryorelabs/emet/compare/v0.8.2...v0.8.3
