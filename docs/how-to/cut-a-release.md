@@ -45,7 +45,7 @@ Every job starts with `step-security/harden-runner`. The `verify` job runs first
 - The tag must equal `v` plus the `plugin.json` version.
 - The tagged commit must be an ancestor of `origin/main`.
 - The `CI passed` check run on that commit must conclude `success`. The job polls it for up to 70 minutes, so tag right after the merge instead of waiting for CI.
-- `bun run check` and `bun run test` run again on the tag.
+- `bun run check` and `bun run test` run again on the tag, after `bunx playwright install --with-deps chromium`, because the `tools/` tests drive a browser and fall below the coverage floor without it.
 
 Then the `release` job extracts the changelog section as release notes, failing when it is missing or empty, and builds the four standalone binaries (`emet-linux-x64`, `emet-linux-arm64`, `emet-darwin-x64`, `emet-darwin-arm64`).
 

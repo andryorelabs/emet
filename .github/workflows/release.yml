@@ -109,6 +109,8 @@ jobs:
 
       - run: bun install --cwd emet --frozen-lockfile
 
+      - run: bunx playwright install --with-deps chromium
+
       - name: Check
         run: bun run check
 
