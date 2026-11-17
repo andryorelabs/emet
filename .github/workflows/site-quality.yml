@@ -1,0 +1,268 @@
+name: Site Quality
+
+on:
+  pull_request:
+    paths:
+      - "apps/site/**"
+      - ".github/workflows/site-quality.yml"
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+# image -> smoke -> dist third-party audit -> Playwright + axe -> Lighthouse budget -> summary.
+# No visual regression.
+jobs:
+  image:
+    name: Build the Website image
+    runs-on: ${{ github.event.pull_request.head.repo.fork && 'ubuntu-latest' || vars.BLACKSMITH_RUNNER || 'ubuntu-latest' }}
+    timeout-minutes: 20
+    permissions:
+      contents: read
+    steps:
+      - uses: step-security/harden-runner@1d88384fd173af6ecb012dfd0264a306b711241a # v2.22.4
+        with:
+          egress-policy: audit
+
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Build the image
+        run: docker build -f apps/site/Dockerfile -t emet-site-smoke .
+
+      - name: Save the image and its built dist
+        run: |
+          mkdir -p site-image
+          docker save emet-site-smoke | gzip > site-image/image.tar.gz
+          container="$(docker create emet-site-smoke)"
+          docker cp "$container:/usr/share/nginx/html" site-dist
+          docker rm "$container"
+
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: site-image
+          path: site-image/
+          retention-days: 1
+
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: site-dist
+          path: site-dist/
+          retention-days: 1
+
+  smoke:
+    name: Smoke-test the image
+    needs: image
+    runs-on: ${{ github.event.pull_request.head.repo.fork && 'ubuntu-latest' || vars.BLACKSMITH_RUNNER || 'ubuntu-latest' }}
+    timeout-minutes: 20
+    permissions:
+      contents: read
+    steps:
+      - uses: step-security/harden-runner@1d88384fd173af6ecb012dfd0264a306b711241a # v2.22.4
+        with:
+          egress-policy: audit
+
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      # smoke.sh builds the image itself, so it checks exactly what deploy-site.yml ships.
+      - name: Run the nginx smoke checks
+        run: bash apps/site/docker/smoke.sh
+
+  audit:
+    name: Audit the dist for third-party requests
+    needs: image
+    runs-on: ${{ github.event.pull_request.head.repo.fork && 'ubuntu-latest' || vars.BLACKSMITH_RUNNER || 'ubuntu-latest' }}
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    steps:
+      - uses: step-security/harden-runner@1d88384fd173af6ecb012dfd0264a306b711241a # v2.22.4
+        with:
+          egress-policy: audit
+
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
+        with:
+          bun-version-file: package.json
+
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: site-dist
+          path: apps/site/dist
+
+      - name: Fail on any third-party origin
+        run: bun --filter @emet/site test:dist
+
+  e2e:
+    name: Playwright and axe
+    needs: image
+    runs-on: ${{ github.event.pull_request.head.repo.fork && 'ubuntu-latest' || vars.BLACKSMITH_RUNNER || 'ubuntu-latest' }}
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    env:
+      CI: "true"
+      SITE_URL: http://127.0.0.1:8080
+    steps:
+      - uses: step-security/harden-runner@1d88384fd173af6ecb012dfd0264a306b711241a # v2.22.4
+        with:
+          egress-policy: audit
+
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
+        with:
+          bun-version-file: package.json
+
+      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.bun/install/cache
+          key: bun-${{ runner.os }}-${{ hashFiles('bun.lock', 'emet/bun.lock') }}
+          restore-keys: bun-${{ runner.os }}-
+
+      - run: bun install --frozen-lockfile
+
+      - name: Install Chromium
+        working-directory: apps/site
+        run: bun x playwright install --with-deps chromium
+
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: site-image
+          path: site-image
+
+      - name: Start the image
+        run: |
+          gunzip -c site-image/image.tar.gz | docker load
+          docker run -d --name emet-site -p 127.0.0.1:8080:80 emet-site-smoke
+          for _ in $(seq 1 30); do curl -fs -o /dev/null "$SITE_URL/" && break; sleep 0.5; done
+
+      - name: Run the accessibility spec
+        run: bun --filter @emet/site test:e2e
+
+      - name: Summarize flaky-on-retry tests
+        if: always()
+        run: |
+          results=apps/site/e2e/.output/results.json
+          if [ ! -f "$results" ]; then
+            echo "No Playwright results to summarize."
+            exit 0
+          fi
+          flaky="$(jq -r '[.. | objects | select(has("specs")) | .specs[]
+            | select(any(.tests[]; .status == "flaky")) | "- \(.file):\(.line) \(.title)"] | .[]' "$results")"
+          {
+            echo "### Flaky on retry"
+            if [ -n "$flaky" ]; then echo "$flaky"; else echo "None."; fi
+          } | tee -a "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload the Playwright report
+        if: failure()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: playwright-report
+          path: apps/site/e2e/.output/
+          if-no-files-found: ignore
+          retention-days: 7
+
+  lighthouse:
+    name: Lighthouse budget
+    needs: image
+    runs-on: ${{ github.event.pull_request.head.repo.fork && 'ubuntu-latest' || vars.BLACKSMITH_RUNNER || 'ubuntu-latest' }}
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    steps:
+      - uses: step-security/harden-runner@1d88384fd173af6ecb012dfd0264a306b711241a # v2.22.4
+        with:
+          egress-policy: audit
+
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
+        with:
+          bun-version-file: package.json
+
+      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.bun/install/cache
+          key: bun-${{ runner.os }}-${{ hashFiles('bun.lock', 'emet/bun.lock') }}
+          restore-keys: bun-${{ runner.os }}-
+
+      - run: bun install --frozen-lockfile
+
+      - name: Install Chromium
+        working-directory: apps/site
+        run: bun x playwright install --with-deps chromium
+
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: site-image
+          path: site-image
+
+      - name: Start the image
+        run: |
+          gunzip -c site-image/image.tar.gz | docker load
+          docker run -d --name emet-site -p 127.0.0.1:8080:80 emet-site-smoke
+          for _ in $(seq 1 30); do curl -fs -o /dev/null http://127.0.0.1:8080/ && break; sleep 0.5; done
+
+      - name: Check the Lighthouse budget
+        run: bash apps/site/scripts/lighthouse-budget.sh http://127.0.0.1:8080 apps/site/e2e/.output/lighthouse
+
+      - name: Upload the Lighthouse reports
+        if: failure()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: lighthouse-report
+          path: apps/site/e2e/.output/lighthouse/
+          if-no-files-found: ignore
+          retention-days: 7
+
+  summary:
+    name: Site quality passed
+    needs: [image, smoke, audit, e2e, lighthouse]
+    if: always()
+    runs-on: ${{ github.event.pull_request.head.repo.fork && 'ubuntu-latest' || vars.BLACKSMITH_RUNNER || 'ubuntu-latest' }}
+    timeout-minutes: 5
+    permissions: {}
+    steps:
+      - uses: step-security/harden-runner@1d88384fd173af6ecb012dfd0264a306b711241a # v2.22.4
+        with:
+          egress-policy: audit
+
+      - name: Summarize and fail on any failed or cancelled job
+        env:
+          IMAGE: ${{ needs.image.result }}
+          SMOKE: ${{ needs.smoke.result }}
+          AUDIT: ${{ needs.audit.result }}
+          E2E: ${{ needs.e2e.result }}
+          LIGHTHOUSE: ${{ needs.lighthouse.result }}
+        run: |
+          {
+            echo "### Site quality"
+            echo "| Job | Result |"
+            echo "| --- | --- |"
+            echo "| Image build | $IMAGE |"
+            echo "| nginx smoke | $SMOKE |"
+            echo "| Third-party audit | $AUDIT |"
+            echo "| Playwright + axe | $E2E |"
+            echo "| Lighthouse budget | $LIGHTHOUSE |"
+          } | tee -a "$GITHUB_STEP_SUMMARY"
+          for result in "$IMAGE" "$SMOKE" "$AUDIT" "$E2E" "$LIGHTHOUSE"; do
+            if [ "$result" = failure ] || [ "$result" = cancelled ]; then
+              exit 1
+            fi
+          done

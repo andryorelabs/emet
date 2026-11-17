@@ -2,7 +2,7 @@
 title: CLI 参考
 description: 每个 emet 子命令、关卡与记录表、退出码和环境变量。
 seoTitle: emet CLI 参考
-sourceHash: a8d3bf074f04de8e
+sourceHash: b065107f632830b7
 ---
 
 每个 `emet` 子命令、关卡与记录表、退出码和环境变量。术语遵循 [GLOSSARY.md](../../GLOSSARY.md)。返回 [README](../../README.md)。每个命令都可以用 `--help` 打印其用法。
@@ -119,6 +119,23 @@ emet doctor ~/code/*
 | `1`  | 存在需要处理的问题。                                   |
 | `2`  | 配置或用法错误；工具实际上并未运行。未知命令也属此类。 |
 | `3`  | 内部错误。                                             |
+
+未知标志同样以 `2` 退出，并指出该标志。Ctrl-C 以 `130` 退出。
+
+## 全局标志
+
+每个命令都接受这些标志；各命令自己的标志可用 `emet <command> --help` 查看。
+
+| 标志         | 作用                                                                                                   |
+| ------------ | ------------------------------------------------------------------------------------------------------ |
+| `--json`     | 在 stdout 上输出一个信封 `{ok, data, error: {code, message, fix}}`，`--help` 和 `--version` 也是如此。 |
+| `--no-color` | 禁用 ANSI 颜色。颜色还遵循 `NO_COLOR`、`FORCE_COLOR`、`TERM=dumb` 以及输出是否为 TTY。                 |
+| `--verbose`  | 输出意外错误的堆栈。不加此标志时，顶层 catch 只输出一行错误。                                          |
+| `--help`     | 输出该命令的用法。                                                                                     |
+
+`emet --version` 输出版本；`emet --version --json` 输出 `{"ok": true, "data": {"version": ...}, "error": null}`。在 `--json` 下，失败的命令以其通常的退出码退出，并输出 `ok: false`，错误 `code` 为 `findings`、`usage`、`internal`、`slice-timeout`、`expired`、`bad-range` 或 `exit-<n>` 之一；命令在 stdout 上输出的内容即为信封的 `data`。
+
+在 TTY 上，当已知有更新的版本时，`emet` 会在 stderr 上输出一行通知。它每天最多检查一次，缓存结果，从不等待网络，并且在 `--json` 下或没有 TTY 时保持静默。
 
 ## 环境变量
 

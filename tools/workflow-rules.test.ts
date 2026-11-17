@@ -3,10 +3,12 @@ import { describe, expect, test } from "bun:test";
 import {
   HARDEN_RUNNER_ACTION,
   LITERAL_JOBS,
+  MATRIX_RUNS_ON,
   PENDING_RULES,
   ROUTED_JOBS,
   ROUTED_RUNS_ON,
   workflowViolations,
+  type PendingRule,
 } from "./workflow-rules.ts";
 
 const HARDEN_STEP = {
@@ -14,6 +16,11 @@ const HARDEN_STEP = {
   with: { "egress-policy": "audit" },
 };
 const CONCURRENCY = { group: "${{ github.workflow }}-${{ github.ref }}" };
+
+/** A pending rule exempting `target` from `rule`. */
+function pending(target: string, rule: PendingRule["rule"]): PendingRule {
+  return { target, rule, reason: "owned by another ticket" };
+}
 
 /**
  * Builds a workflow whose one job, `check`, is routed in `ci.yml` and passes every rule.
@@ -55,12 +62,25 @@ describe("job tables", () => {
     const expected = [
       "release.yml:verify",
       "release.yml:release",
+      "release.yml:binary",
+      "release.yml:publish",
       "scorecard.yml:analysis",
       "deploy-site.yml:deploy",
       "ci.yml:test-macos",
     ];
     expect(expected.filter((key) => !literalKeys.includes(key))).toEqual([]);
-    expect(LITERAL_JOBS.filter(({ runner }) => !/^(ubuntu|macos)-/.test(runner))).toEqual([]);
+    const runners = LITERAL_JOBS.flatMap(({ runner }) => runner);
+    expect(runners.filter((runner) => !/^(ubuntu|macos)-/.test(runner))).toEqual([]);
+  });
+
+  test("the release binary matrix covers the four native targets", () => {
+    const binary = LITERAL_JOBS.find(({ key }) => key === "release.yml:binary");
+    expect(binary?.runner).toEqual([
+      "ubuntu-latest",
+      "ubuntu-24.04-arm",
+      "macos-latest",
+      "macos-15-intel",
+    ]);
   });
 
   test("every pending rule names a job or workflow and a reason", () => {
@@ -144,6 +164,47 @@ describe("workflowViolations", () => {
     );
   });
 
+  describe("pending rules", () => {
+    test("a pending concurrency rule excuses the missing concurrency", () => {
+      const { concurrency: _dropped, ...workflow } = routedWorkflow();
+      expect(workflowViolations("ci.yml", workflow, [pending("ci.yml", "concurrency")])).toEqual(
+        [],
+      );
+    });
+
+    test("a pending harden-runner rule excuses a job that does not start with it", () => {
+      const workflow = routedWorkflow({ steps: [{ run: "bun run check" }] });
+      expect(workflowViolations("ci.yml", workflow)).toHaveLength(1);
+      expect(
+        workflowViolations("ci.yml", workflow, [pending("ci.yml:check", "harden-runner")]),
+      ).toEqual([]);
+    });
+
+    test("a pending main-guard rule excuses an unguarded deploy job", () => {
+      const workflow = {
+        concurrency: CONCURRENCY,
+        jobs: { ship: { "runs-on": "ubuntu-latest", steps: [HARDEN_STEP] } },
+      };
+      expect(
+        workflowViolations("deploy-other.yml", workflow, [
+          pending("deploy-other.yml:ship", "main-guard"),
+        ]),
+      ).not.toContain(
+        "deploy-other.yml:ship: deploy job must be guarded with if: github.ref == 'refs/heads/main'",
+      );
+    });
+
+    test("a pending rule for another target or rule excuses nothing", () => {
+      const { concurrency: _dropped, ...workflow } = routedWorkflow();
+      expect(
+        workflowViolations("ci.yml", workflow, [
+          pending("other.yml", "concurrency"),
+          pending("ci.yml", "main-guard"),
+        ]),
+      ).toEqual(["ci.yml: declares no concurrency"]);
+    });
+  });
+
   test("skips the runner check for a job that calls a reusable workflow", () => {
     const workflow = {
       concurrency: CONCURRENCY,
@@ -152,14 +213,53 @@ describe("workflowViolations", () => {
     expect(workflowViolations("ci.yml", workflow)).toEqual([]);
   });
 
-  test("a pending rule suppresses only its own violation", () => {
-    const pending = PENDING_RULES.find(({ rule }) => rule === "concurrency");
-    expect(pending).toBeDefined();
-    const workflow = {
-      jobs: { verify: { "runs-on": "ubuntu-latest", steps: [{ run: "bun run nope" }] } },
-    };
-    expect(workflowViolations(pending?.target ?? "", workflow)).toEqual([
-      `${pending?.target}:verify: "bun run nope" names no root package.json script`,
+  test("release.yml has no pending rule left", () => {
+    expect(PENDING_RULES.filter(({ target }) => target.startsWith("release.yml"))).toEqual([]);
+  });
+
+  test("accepts a matrix job on the matrix runner with exactly its listed runners", () => {
+    expect(workflowViolations("release.yml", binaryWorkflow())).toEqual([]);
+  });
+
+  test("flags a matrix job that does not run on the matrix runner", () => {
+    expect(
+      workflowViolations("release.yml", binaryWorkflow({ "runs-on": "ubuntu-latest" })),
+    ).toEqual([`release.yml:binary: matrix job must run on ${MATRIX_RUNS_ON}`]);
+  });
+
+  test("flags a matrix job whose matrix lists no include entries", () => {
+    const workflow = binaryWorkflow({ strategy: { matrix: {} } });
+    expect(workflowViolations("release.yml", workflow)).toEqual([
+      "release.yml:binary: matrix runners must be exactly macos-15-intel, macos-latest, ubuntu-24.04-arm, ubuntu-latest",
+    ]);
+  });
+
+  test("flags a matrix job that drops a native runner", () => {
+    const workflow = binaryWorkflow({
+      strategy: { matrix: { include: [{ runner: "ubuntu-latest" }] } },
+    });
+    expect(workflowViolations("release.yml", workflow)).toEqual([
+      "release.yml:binary: matrix runners must be exactly macos-15-intel, macos-latest, ubuntu-24.04-arm, ubuntu-latest",
     ]);
   });
 });
+
+/**
+ * Builds a release workflow whose one job, `binary`, is the native smoke matrix and passes every rule.
+ */
+function binaryWorkflow(overrides: Record<string, unknown> = {}): Record<string, unknown> {
+  const include = ["ubuntu-latest", "ubuntu-24.04-arm", "macos-latest", "macos-15-intel"].map(
+    (runner) => ({ runner }),
+  );
+  return {
+    concurrency: CONCURRENCY,
+    jobs: {
+      binary: {
+        "runs-on": MATRIX_RUNS_ON,
+        strategy: { matrix: { include } },
+        steps: [HARDEN_STEP],
+        ...overrides,
+      },
+    },
+  };
+}

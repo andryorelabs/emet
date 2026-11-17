@@ -2,7 +2,7 @@
 title: 配置参考
 description: emet.config.json 中的每个键，包括其默认值和含义。
 seoTitle: emet 配置参考
-sourceHash: ac6552b22848c9eb
+sourceHash: f643569c960d5e35
 ---
 
 `emet.config.json` 中的每个键，及其默认值和含义。权威来源是 [`emet/schema/emet.config.schema.json`](../../emet/schema/emet.config.schema.json)。术语遵循 [GLOSSARY.md](../../GLOSSARY.md)。返回 [README](../../README.md)。
@@ -217,3 +217,5 @@ CLI 会读取这些变量，全部通过 `emet/src/env.ts` 完成。采用 `FORG
 | `CODEX_HOME`                  |                                | Codex 的主目录；默认为 `~/.codex`。只会被读取。                                                   |
 | `XDG_STATE_HOME`              |                                | 未设置 `EMET_STATE_DIR` 时，状态目录的基准。                                                      |
 | `NO_COLOR`                    |                                | 设置后，横幅将不带颜色输出。                                                                      |
+| `FORCE_COLOR`                 |                                | 设置为空或 `0` 以外的任何值时，即使没有 TTY 也会输出带颜色的横幅。                                |
+| `TERM`                        |                                | 设置为 `dumb` 时，横幅不带颜色。                                                                  |

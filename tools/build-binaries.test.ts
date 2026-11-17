@@ -11,7 +11,83 @@ import {
 import os from "node:os";
 import path from "node:path";
 
-import { binaryName, buildBinary, parseArguments, readPluginVersion } from "./build-binaries";
+import { binaryName, buildBinary, main, parseArguments, readPluginVersion } from "./build-binaries";
+
+const SCRIPT = path.resolve(import.meta.dir, "build-binaries.ts");
+
+function failingBuild(): Promise<Bun.BuildOutput> {
+  return Promise.resolve({ success: false, outputs: [], logs: [] });
+}
+
+describe("build-binaries buildBinary and entry point", () => {
+  test("buildBinary passes the target and version to the build and returns the outfile", async () => {
+    const calls: Bun.BuildConfig[] = [];
+    const outfile = await buildBinary("bun-linux-arm64", "out-dir", "1.2.3", (config) => {
+      calls.push(config);
+      return Promise.resolve({ success: true, outputs: [], logs: [] });
+    });
+    expect(outfile).toBe(path.resolve("out-dir", "emet-linux-arm64"));
+    expect(calls).toHaveLength(1);
+    expect(calls[0]?.define).toEqual({ FORGE_BUILD_VERSION: '"1.2.3"' });
+  });
+
+  test("buildBinary throws with the build logs when the build fails", async () => {
+    const error = await buildBinary("bun-linux-x64", "out", "1.0.0", failingBuild).catch(
+      (caught: unknown) => caught,
+    );
+    expect(error).toBeInstanceOf(Error);
+    expect(String(error)).toContain("build failed for bun-linux-x64");
+  });
+
+  test("main builds each requested target in order and logs the paths", async () => {
+    const built: string[] = [];
+    const logged: string[] = [];
+    await main(
+      ["--outdir", "o"],
+      (target, outdir, version) => {
+        built.push(`${target}|${outdir}|${version}`);
+        return Promise.resolve(`${outdir}/${binaryName(target)}`);
+      },
+      (message) => logged.push(message),
+    );
+    expect(built).toHaveLength(4);
+    expect(built[0]).toStartWith("bun-linux-x64|o|");
+    expect(logged).toEqual([
+      "o/emet-linux-x64",
+      "o/emet-linux-arm64",
+      "o/emet-darwin-x64",
+      "o/emet-darwin-arm64",
+    ]);
+  });
+
+  test("the entry point exits 1 on an unsupported target", () => {
+    const result = Bun.spawnSync(["bun", SCRIPT, "--target", "bun-windows-x64"]);
+    expect(result.exitCode).toBe(1);
+    expect(result.stderr.toString()).toContain("unsupported target");
+  });
+
+  test.skipIf(process.platform !== "linux" || process.arch !== "x64")(
+    "the entry point compiles one target and prints its path",
+    () => {
+      const outdir = mkdtempSync(path.join(os.tmpdir(), "emet-main-"));
+      try {
+        const result = Bun.spawnSync([
+          "bun",
+          SCRIPT,
+          "--target",
+          "bun-linux-x64",
+          "--outdir",
+          outdir,
+        ]);
+        expect(result.exitCode).toBe(0);
+        expect(result.stdout.toString().trim()).toBe(path.join(outdir, "emet-linux-x64"));
+      } finally {
+        rmSync(outdir, { recursive: true, force: true });
+      }
+    },
+    120_000,
+  );
+});
 
 describe("build-binaries helpers", () => {
   test("binaryName drops the bun- prefix", () => {
@@ -44,6 +120,10 @@ describe("build-binaries helpers", () => {
       expect(readPluginVersion(root)).toBe("0.0.0-dev");
       mkdirSync(path.join(root, ".claude-plugin"));
       writeFileSync(path.join(root, ".claude-plugin", "plugin.json"), "{}");
+      expect(readPluginVersion(root)).toBe("0.0.0-dev");
+      writeFileSync(path.join(root, ".claude-plugin", "plugin.json"), '{"version":""}');
+      expect(readPluginVersion(root)).toBe("0.0.0-dev");
+      writeFileSync(path.join(root, ".claude-plugin", "plugin.json"), "null");
       expect(readPluginVersion(root)).toBe("0.0.0-dev");
       writeFileSync(path.join(root, ".claude-plugin", "plugin.json"), '{"version":"0.2.0"}');
       expect(readPluginVersion(root)).toBe("0.2.0");

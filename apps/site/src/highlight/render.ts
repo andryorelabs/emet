@@ -10,7 +10,7 @@ export interface RenderedCode {
   css: string;
 }
 
-interface TreeNode {
+export interface TreeNode {
   type: string;
   properties?: Record<string, unknown>;
   children?: TreeNode[];
@@ -35,7 +35,7 @@ async function createEngine(): Promise<ExpressiveCode> {
  * @param node - The rendered tree, changed in place.
  * @param rules - Collects one CSS rule per distinct colour pair, by class name.
  */
-function classifyTokens(node: TreeNode, rules: Map<string, string>): void {
+export function classifyTokens(node: TreeNode, rules: Map<string, string>): void {
   if (node.type === "element" && node.properties) {
     const style = node.properties.style;
     const parsed = typeof style === "string" ? parseTokenStyle(style) : null;

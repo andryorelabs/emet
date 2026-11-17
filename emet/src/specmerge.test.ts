@@ -4,7 +4,7 @@ import os from "node:os";
 import path from "node:path";
 
 import { present } from "./present";
-import { applyDelta, mergeSpecDeltas, parseRequirements } from "./specmerge";
+import { applyDelta, mergeSpecDeltas, parseRequirements, run } from "./specmerge";
 
 const BASE = `# Auth
 
@@ -142,5 +142,170 @@ describe("mergeSpecDeltas", () => {
     ]);
     expect(result.ok).toBe(false);
     expect(existsSync(path.join(directory, "evil.md"))).toBe(false);
+  });
+});
+
+describe("parseRequirements boundaries", () => {
+  test("a heading after a requirement closes it and joins the preamble", () => {
+    const parsed = parseRequirements(
+      "### Requirement: A\nbody a\n\n## Notes\nafter\n\n### Requirement: B\nbody b\n",
+    );
+    expect(parsed.requirements.map((r) => r.name)).toEqual(["A", "B"]);
+    expect(present(parsed.requirements[0]).raw).toBe("### Requirement: A\nbody a");
+    expect(parsed.preamble).toContain("## Notes");
+  });
+});
+
+describe("applyDelta conflicts", () => {
+  test("a duplicate name inside one section conflicts", () => {
+    const delta = `## ADDED Requirements\n\n### Requirement: Dup\nx\n\n### Requirement: Dup\ny\n`;
+    const result = applyDelta("", delta);
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.conflicts.join()).toContain("appears in both");
+  });
+
+  test("a delta ignores unrelated second-level sections", () => {
+    const delta = `## Notes\nignored\n\n## REMOVED Requirements\n\n### Requirement: Logout\n`;
+    const text = expectOk(applyDelta(BASE, delta));
+    expect(parseRequirements(text).requirements.map((r) => r.name)).toEqual(["Login"]);
+  });
+});
+
+describe("mergeSpecDeltas edge cases", () => {
+  let directory: string;
+
+  beforeEach(() => {
+    directory = mkdtempSync(path.join(os.tmpdir(), "emet-specmerge-edge-"));
+  });
+  afterEach(() => {
+    rmSync(directory, { recursive: true, force: true });
+  });
+
+  test("an area given twice conflicts and writes nothing", () => {
+    const delta = `## ADDED Requirements\n\n### Requirement: X\nx\n`;
+    const result = mergeSpecDeltas(path.join(directory, "specs"), [
+      { area: "a", delta },
+      { area: "a", delta },
+    ]);
+    expect(result).toEqual({ ok: false, conflicts: ["a: given more than once"] });
+    expect(existsSync(path.join(directory, "specs"))).toBe(false);
+  });
+
+  test("a conflict is prefixed with its area", () => {
+    const result = mergeSpecDeltas(path.join(directory, "specs"), [
+      { area: "auth", delta: "no sections" },
+    ]);
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.conflicts[0]).toStartWith("auth: ");
+  });
+
+  test("creates the specs directory when it is missing", () => {
+    const specs = path.join(directory, "nested", "specs");
+    const result = mergeSpecDeltas(specs, [
+      { area: "a", delta: `## ADDED Requirements\n\n### Requirement: X\nx\n` },
+    ]);
+    expect(result).toEqual({ ok: true, written: [path.join(specs, "a.md")] });
+  });
+
+  test("a staging failure removes already staged files and rethrows", () => {
+    const specs = path.join(directory, "specs");
+    mkdirSync(specs);
+    mkdirSync(path.join(specs, `b.md.${String(process.pid)}.tmp`));
+    const delta = `## ADDED Requirements\n\n### Requirement: X\nx\n`;
+    expect(() =>
+      mergeSpecDeltas(specs, [
+        { area: "a", delta },
+        { area: "b", delta },
+      ]),
+    ).toThrow();
+    expect(existsSync(path.join(specs, `a.md.${String(process.pid)}.tmp`))).toBe(false);
+    expect(existsSync(path.join(specs, "a.md"))).toBe(false);
+  });
+});
+
+describe("run", () => {
+  let root: string;
+  let logs: string[];
+  let errors: string[];
+  const originalLog = console.log;
+  const originalError = console.error;
+  const originalExitCode = process.exitCode;
+
+  beforeEach(() => {
+    root = mkdtempSync(path.join(os.tmpdir(), "emet-specmerge-run-"));
+    logs = [];
+    errors = [];
+    console.log = (...parts: unknown[]) => {
+      logs.push(parts.join(" "));
+    };
+    console.error = (...parts: unknown[]) => {
+      errors.push(parts.join(" "));
+    };
+    process.exitCode = 0;
+  });
+  afterEach(() => {
+    console.log = originalLog;
+    console.error = originalError;
+    process.exitCode = originalExitCode;
+    rmSync(root, { recursive: true, force: true });
+  });
+
+  function writeDelta(specId: string, file: string, text: string): void {
+    const deltaDirectory = path.join(root, ".emet", "runs", specId, "spec-deltas");
+    mkdirSync(deltaDirectory, { recursive: true });
+    writeFileSync(path.join(deltaDirectory, file), text);
+  }
+
+  test.each([
+    [[]],
+    [["--spec", ""]],
+    [["--spec", "../x"]],
+    [["--spec", "a/b"]],
+    [["--spec", ".."]],
+  ])("%j prints the usage and exits 2", async (argv: string[]) => {
+    await run(argv);
+    expect(process.exitCode).toBe(2);
+    expect(errors.join("\n")).toContain("usage: emet spec-merge");
+  });
+
+  test("exits 2 when the run has no deltas directory", async () => {
+    await run(["--spec", "s1", "--root", root]);
+    expect(process.exitCode).toBe(2);
+    expect(errors.join("\n")).toContain("no deltas at");
+  });
+
+  test("merges every delta and prints the written paths", async () => {
+    writeDelta("s1", "auth.md", `## ADDED Requirements\n\n### Requirement: Login\nx\n`);
+    writeDelta("s1", "billing.md", `## ADDED Requirements\n\n### Requirement: Pay\ny\n`);
+    writeDelta("s1", "notes.txt", "ignored");
+    await run(["--spec", "s1", "--root", root]);
+    expect(process.exitCode).toBe(0);
+    expect(logs).toEqual([
+      path.join("docs", "specs", "auth.md"),
+      path.join("docs", "specs", "billing.md"),
+    ]);
+    expect(readFileSync(path.join(root, "docs", "specs", "auth.md"), "utf8")).toContain("Login");
+  });
+
+  test("exits 1 and prints each conflict when a delta does not apply", async () => {
+    writeDelta("s1", "auth.md", `## REMOVED Requirements\n\n### Requirement: Nope\n`);
+    await run(["--spec", "s1", "--root", root]);
+    expect(process.exitCode).toBe(1);
+    expect(errors).toEqual(['conflict: auth: REMOVED "Nope" does not exist']);
+    expect(existsSync(path.join(root, "docs", "specs"))).toBe(false);
+  });
+
+  test("exits 2 when a delta cannot be read", async () => {
+    const deltaDirectory = path.join(root, ".emet", "runs", "s1", "spec-deltas");
+    mkdirSync(path.join(deltaDirectory, "broken.md"), { recursive: true });
+    await run(["--spec", "s1", "--root", root]);
+    expect(process.exitCode).toBe(2);
+    expect(errors.join("\n")).toContain("emet spec-merge:");
+  });
+
+  test("resolves the repository root when --root is absent", async () => {
+    await run(["--spec", "definitely-not-a-run-xyz"]);
+    expect(process.exitCode).toBe(2);
+    expect(errors.join("\n")).toContain("no deltas at");
   });
 });

@@ -64,6 +64,30 @@ describe("loadTranslation", () => {
     );
   });
 
+  test("folds an indented continuation line into the previous field and skips blanks", () => {
+    const hash = hashSource(ENGLISH);
+    const text = `---\ntitle: 'Flota ''A'''\n\ndescription: Primera parte\n  segunda parte\nsourceHash: ${hash}\n---\n\nCuerpo\n`;
+    const result = loadTranslation("es", "guide/fleet", readers(text));
+    expect(result.fields?.title).toBe("Flota 'A'");
+    expect(result.fields?.description).toBe("Primera parte segunda parte");
+  });
+
+  test("rejects a frontmatter line that is not key: value", () => {
+    const text = "---\ntitle: Flota\nnot a field\n---\n\nCuerpo\n";
+    expect(() => loadTranslation("es", "guide/fleet", readers(text))).toThrow(
+      MalformedTranslationError,
+    );
+  });
+
+  test("rejects a translation missing its title or sourceHash", () => {
+    expect(() =>
+      loadTranslation("es", "guide/fleet", readers("---\nsourceHash: abc\n---\n\nCuerpo\n")),
+    ).toThrow(/missing title/);
+    expect(() =>
+      loadTranslation("es", "guide/fleet", readers("---\ntitle: Flota\n---\n\nCuerpo\n")),
+    ).toThrow(/missing sourceHash/);
+  });
+
   test("rejects an id that is not published", () => {
     expect(() => loadTranslation("es", "adr/0001", readers(undefined))).toThrow();
   });

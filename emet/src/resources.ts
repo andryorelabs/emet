@@ -29,6 +29,21 @@ export interface HostResources {
   readonly memAvailableBytes: number | null;
 }
 
+type ReadText = (filePath: string) => string;
+
+/** The host reads {@link readHostResources} makes; tests inject fakes, the default reads the real host. */
+interface HostResourceDeps {
+  readonly readText: ReadText;
+  readonly availableParallelism: () => number;
+  readonly totalmem: () => number;
+}
+
+const DEFAULT_HOST_DEPS: HostResourceDeps = {
+  readText: (filePath) => readFileSync(filePath, "utf8"),
+  availableParallelism: () => os.availableParallelism(),
+  totalmem: () => os.totalmem(),
+};
+
 function readProcMeminfoField(content: string, field: string): number | null {
   const match = new RegExp(`^${field}:\\s+(\\d+)\\s*kB`, "m").exec(content);
   if (!match) return null;
@@ -45,9 +60,9 @@ function readProcMeminfoField(content: string, field: string): number | null {
  * `Math.min` them in with a plain `??`/ignore rather than special-casing
  * "no limit".
  */
-function readCgroupCpuLimit(): number | null {
+function readCgroupCpuLimit(readText: ReadText): number | null {
   try {
-    const raw = readFileSync("/sys/fs/cgroup/cpu.max", "utf8").trim();
+    const raw = readText("/sys/fs/cgroup/cpu.max").trim();
     const [quotaRaw, periodRaw] = raw.split(/\s+/);
     if (quotaRaw === "max" || !quotaRaw || !periodRaw) return null;
     const quota = Number(quotaRaw);
@@ -59,9 +74,9 @@ function readCgroupCpuLimit(): number | null {
   }
 }
 
-function readCgroupMemoryLimit(): number | null {
+function readCgroupMemoryLimit(readText: ReadText): number | null {
   try {
-    const raw = readFileSync("/sys/fs/cgroup/memory.max", "utf8").trim();
+    const raw = readText("/sys/fs/cgroup/memory.max").trim();
     if (raw === "max") return null;
     const bytes = Number(raw);
     return Number.isFinite(bytes) ? bytes : null;
@@ -80,24 +95,24 @@ function readCgroupMemoryLimit(): number | null {
  * cache). Never throws: a host with no `/proc/meminfo` (non-Linux) reports
  * `memAvailableBytes: null` rather than failing the caller.
  */
-export function readHostResources(): HostResources {
-  const cgroupCpuLimit = readCgroupCpuLimit();
+export function readHostResources(deps: HostResourceDeps = DEFAULT_HOST_DEPS): HostResources {
+  const cgroupCpuLimit = readCgroupCpuLimit(deps.readText);
   const cpuCount = Math.max(
     1,
     Math.floor(
       cgroupCpuLimit !== null
-        ? Math.min(os.availableParallelism(), cgroupCpuLimit)
-        : os.availableParallelism(),
+        ? Math.min(deps.availableParallelism(), cgroupCpuLimit)
+        : deps.availableParallelism(),
     ),
   );
 
-  const cgroupMemoryLimit = readCgroupMemoryLimit();
+  const cgroupMemoryLimit = readCgroupMemoryLimit(deps.readText);
   const memTotalBytes =
-    cgroupMemoryLimit !== null ? Math.min(os.totalmem(), cgroupMemoryLimit) : os.totalmem();
+    cgroupMemoryLimit !== null ? Math.min(deps.totalmem(), cgroupMemoryLimit) : deps.totalmem();
 
   let memAvailableBytes: number | null = null;
   try {
-    const meminfo = readFileSync("/proc/meminfo", "utf8");
+    const meminfo = deps.readText("/proc/meminfo");
     memAvailableBytes = readProcMeminfoField(meminfo, "MemAvailable");
   } catch {
     memAvailableBytes = null;

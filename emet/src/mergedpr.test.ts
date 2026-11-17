@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, spyOn, test } from "bun:test";
-import { mkdirSync, mkdtempSync, realpathSync, rmSync, writeFileSync } from "node:fs";
+import { chmodSync, mkdirSync, mkdtempSync, realpathSync, rmSync, writeFileSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
 
@@ -62,6 +62,24 @@ describe("findMergedPullRequest", () => {
       Promise.reject(new Error("gh missing")),
     );
     expect(throwing).toBeNull();
+  });
+});
+
+describe("findMergedPullRequest with the real gh runner", () => {
+  test("asks the gh on PATH and matches the tip", async () => {
+    const binDirectory = mkdtempSync(path.join(os.tmpdir(), "mergedpr-gh-"));
+    const fakeGh = path.join(binDirectory, "gh");
+    writeFileSync(fakeGh, `#!/bin/sh\necho '[{"number": 77, "headRefOid": "${TIP}"}]'\n`);
+    chmodSync(fakeGh, 0o755);
+    const originalPath = process.env.PATH;
+    process.env.PATH = `${binDirectory}:${originalPath ?? ""}`;
+    try {
+      expect(await findMergedPullRequest("fix/x", TIP)).toBe(77);
+      expect(await findMergedPullRequest("fix/x", "b".repeat(40))).toBeNull();
+    } finally {
+      process.env.PATH = originalPath;
+      rmSync(binDirectory, { recursive: true, force: true });
+    }
   });
 });
 
@@ -405,6 +423,43 @@ describe("merged branch sweep against a real repository", () => {
       `test/outside (PR #3 merged) — ${outside}: checked out outside the agent worktree directory`,
     ]);
     git("worktree", "unlock", locked);
+  });
+
+  test("reports a branch it cannot delete as a failure and sets the exit code", async () => {
+    const sha = commitOn("chore/stuck", "a.txt");
+    git("branch", "worktree-stuck");
+    writeFileSync(path.join(repo, ".git", "refs", "heads", "chore", "stuck.lock"), "");
+    writeFileSync(path.join(repo, ".git", "refs", "heads", "worktree-stuck.lock"), "");
+
+    const result = await sweepMergedBranches({
+      config,
+      host: claudeHost,
+      dryRun: false,
+      findMergedPullRequest: mergedPullRequests({ "chore/stuck": { number: 9, sha } }),
+    });
+
+    expect(result.deleted).toEqual([]);
+    expect(result.scaffolds).toEqual([]);
+    expect(result.failures).toHaveLength(2);
+    expect(result.failures.some((failure) => failure.startsWith("chore/stuck"))).toBe(true);
+    expect(result.failures.some((failure) => failure.startsWith("worktree-stuck"))).toBe(true);
+    expect(printed()).toContain("failed to delete 2 branch(es)");
+    expect(process.exitCode).toBe(1);
+  });
+
+  test("a scaffold branch the sweep already deleted is not reported twice", async () => {
+    git("branch", "worktree-docs");
+    const sha = git("rev-parse", "worktree-docs");
+
+    const result = await sweepMergedBranches({
+      config,
+      host: claudeHost,
+      dryRun: true,
+      findMergedPullRequest: mergedPullRequests({ "worktree-docs": { number: 5, sha } }),
+    });
+
+    expect(result.deleted).toEqual(["worktree-docs (PR #5 merged)"]);
+    expect(result.scaffolds).toEqual([]);
   });
 
   test("a dry run reports the branch and deletes nothing", async () => {

@@ -158,6 +158,37 @@ describe("emet handoff --check", () => {
     expect(errors.join("\n")).toMatch(/exceeds the 60-line budget/);
   });
 
+  test("fails a note over the configured character budget", async () => {
+    const wide = "x".repeat(8100);
+    const filePath = await writeHandoff("AO-328", `${VALID_HANDOFF}\nfiles: ${wide}`);
+    await run(["--check", filePath]);
+    expect(process.exitCode).toBe(1);
+    expect(errors.join("\n")).toMatch(/chars exceeds the ~8000-char/);
+  });
+
+  test("logs the error and exits 1 when the command throws", async () => {
+    const filePath = await writeHandoff("AO-329", VALID_HANDOFF);
+    console.log = () => {
+      throw new Error("stdout closed");
+    };
+    await run(["--check", filePath]);
+    expect(process.exitCode).toBe(1);
+    expect(errors.join("\n")).toContain("stdout closed");
+  });
+
+  test("falls back to the default config outside a git repository", async () => {
+    const filePath = await writeHandoff("AO-330", VALID_HANDOFF);
+    const originalCwd = process.cwd();
+    process.chdir(directory);
+    try {
+      await run(["--check", filePath]);
+    } finally {
+      process.chdir(originalCwd);
+    }
+    expect(process.exitCode).toBe(0);
+    expect(logs.join("\n")).toContain("--check OK");
+  });
+
   test("reports every violation at once, not just the first", async () => {
     const filePath = await writeHandoff("AO-328", "state: bogus\n");
     await run(["--check", filePath]);

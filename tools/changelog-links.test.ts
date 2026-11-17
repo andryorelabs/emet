@@ -1,13 +1,13 @@
 import { describe, expect, test } from "bun:test";
-import { execFileSync } from "node:child_process";
+import { execFileSync, spawnSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 import path from "node:path";
 
 const REPO_ROOT = path.join(import.meta.dir, "..");
 const REPOSITORY_URL = "https://github.com/andryorelabs/emet";
 
-/** Released versions that never got a tag, so they carry no link ref. */
-const UNTAGGED_VERSIONS: readonly string[] = ["0.5.0", "0.1.0"];
+/** A full commit SHA, the endpoint of a release that never got a tag. */
+const PINNED_SHA = /^[0-9a-f]{40}$/;
 
 const changelog = readFileSync(path.join(REPO_ROOT, "CHANGELOG.md"), "utf8");
 
@@ -31,6 +31,70 @@ function linkRefs(): Map<string, string> {
   return refs;
 }
 
+/** The two git revisions a release ref spans; `from` is absent for the first release. */
+interface RefRange {
+  readonly from?: string;
+  readonly to: string;
+}
+
+/**
+ * Parses a release link ref: a compare between two revisions, the tag page of
+ * the first release, or the tree of a pinned SHA for an untagged first release.
+ * @param url The link ref URL.
+ * @returns The revisions it spans, or undefined when the URL has another shape.
+ */
+function parseRef(url: string): RefRange | undefined {
+  const compare = new RegExp(`^${REPOSITORY_URL}/compare/([^/]+?)\\.\\.\\.([^/]+)$`).exec(url);
+  if (compare) return { from: compare[1] ?? "", to: compare[2] ?? "" };
+  const tag = new RegExp(`^${REPOSITORY_URL}/releases/tag/(v[^/]+)$`).exec(url);
+  if (tag) return { to: tag[1] ?? "" };
+  const tree = new RegExp(`^${REPOSITORY_URL}/tree/([0-9a-f]{40})$`).exec(url);
+  if (tree) return { to: tree[1] ?? "" };
+  return undefined;
+}
+
+/**
+ * Names the revision a release ends at: its tag, or a pinned SHA when the
+ * release never got one.
+ * @param version The released version.
+ * @param endpoint The `to` revision of its link ref.
+ * @returns An error message, or undefined when the endpoint is valid.
+ */
+function endpointProblem(version: string, endpoint: string): string | undefined {
+  if (endpoint === `v${version}` || PINNED_SHA.test(endpoint)) return undefined;
+  return `[${version}] ends at ${endpoint}, not v${version} or a pinned SHA`;
+}
+
+/**
+ * Checks that every released version has a ref that chains from the previous
+ * release's endpoint.
+ * @param versions The released versions, newest first.
+ * @param refs The link refs by label.
+ * @returns The problems found.
+ */
+function chainProblems(versions: readonly string[], refs: ReadonlyMap<string, string>): string[] {
+  const problems: string[] = [];
+  for (const [index, version] of versions.entries()) {
+    const url = refs.get(version);
+    const range = url === undefined ? undefined : parseRef(url);
+    if (range === undefined) {
+      problems.push(`CHANGELOG.md has no valid link ref for [${version}]`);
+      continue;
+    }
+    const endpoint = endpointProblem(version, range.to);
+    if (endpoint !== undefined) problems.push(endpoint);
+    const previous = versions[index + 1];
+    const previousRange = previous === undefined ? undefined : parseRef(refs.get(previous) ?? "");
+    if (previous === undefined && range.from !== undefined) {
+      problems.push(`[${version}] is the first release and must not compare from ${range.from}`);
+    }
+    if (previous !== undefined && range.from !== previousRange?.to) {
+      problems.push(`[${version}] compares from ${String(range.from)}, not [${previous}]'s end`);
+    }
+  }
+  return problems;
+}
+
 /**
  * Lists the tags of this checkout.
  * @returns The tag names, or an empty list when the checkout has none (a shallow CI clone).
@@ -38,6 +102,15 @@ function linkRefs(): Map<string, string> {
 function localTags(): string[] {
   const output = execFileSync("git", ["tag", "--list"], { cwd: REPO_ROOT, encoding: "utf8" });
   return output.split("\n").filter((tag) => tag !== "");
+}
+
+/**
+ * Tells whether a commit exists in this checkout.
+ * @param sha The full commit SHA.
+ * @returns True when git can read the commit.
+ */
+function commitExists(sha: string): boolean {
+  return spawnSync("git", ["cat-file", "-e", `${sha}^{commit}`], { cwd: REPO_ROOT }).status === 0;
 }
 
 /**
@@ -56,10 +129,10 @@ function pluginVersion(): string {
 }
 
 /**
- * Finds the released versions whose tag is absent. The newest release is
- * exempt while it is in flight: the release branch adds its heading and ref
- * before the tag is created on `main`, and the manifest already names it.
- * @param versions The tagged releases of the CHANGELOG, newest first.
+ * Finds the tag endpoints whose tag is absent. The newest release is exempt
+ * while it is in flight: the release branch adds its heading and ref before
+ * the tag is created on `main`, and the manifest already names it.
+ * @param versions The releases whose ref ends at their tag, newest first.
  * @param tags The tags of the checkout.
  * @param manifestVersion The version the plugin manifest declares.
  * @returns The missing tag names.
@@ -76,37 +149,51 @@ function missingTags(
 }
 
 describe("CHANGELOG link refs", () => {
-  const tagged = releasedVersions().filter((version) => !UNTAGGED_VERSIONS.includes(version));
+  const versions = releasedVersions();
   const refs = linkRefs();
 
-  test("every tagged release has a ref and no untagged release has one", () => {
-    for (const version of tagged) {
-      expect(refs.has(version), `CHANGELOG.md has no link ref for [${version}]`).toBe(true);
-    }
-    for (const version of UNTAGGED_VERSIONS) {
-      expect(refs.has(version), `[${version}] has no tag and must not carry a ref`).toBe(false);
-    }
-  });
-
-  test("each ref compares from the previous tagged release", () => {
-    for (const [index, version] of tagged.entries()) {
-      const previous = tagged[index + 1];
-      const expected =
-        previous === undefined
-          ? `${REPOSITORY_URL}/releases/tag/v${version}`
-          : `${REPOSITORY_URL}/compare/v${previous}...v${version}`;
-      expect(refs.get(version), `link ref of [${version}]`).toBe(expected);
-    }
+  test("every release has a ref that chains from the previous release", () => {
+    expect(chainProblems(versions, refs)).toEqual([]);
   });
 
   test("[Unreleased] compares from the newest release", () => {
-    expect(refs.get("Unreleased")).toBe(`${REPOSITORY_URL}/compare/v${tagged[0] ?? ""}...HEAD`);
+    const newest = parseRef(refs.get(versions[0] ?? "") ?? "");
+    expect(refs.get("Unreleased")).toBe(`${REPOSITORY_URL}/compare/${newest?.to ?? ""}...HEAD`);
   });
 
-  test("every referenced tag exists when the checkout has tags", () => {
+  test("every referenced tag exists and every pinned SHA is an untagged commit, when the checkout has tags", () => {
     const tags = localTags();
     if (tags.length === 0) return;
+    const ends = versions.map((version) => ({
+      version,
+      to: parseRef(refs.get(version) ?? "")?.to ?? "",
+    }));
+    const tagged = ends.filter(({ to }) => !PINNED_SHA.test(to)).map(({ version }) => version);
     expect(missingTags(tagged, tags, pluginVersion())).toEqual([]);
+    for (const { version, to } of ends.filter(({ to: end }) => PINNED_SHA.test(end))) {
+      expect(commitExists(to), `[${version}] pins ${to}, which is not a commit`).toBe(true);
+      expect(tags, `[${version}] has a tag, so its ref must use it`).not.toContain(`v${version}`);
+    }
+  });
+
+  test("a ref chain accepts a tag or a pinned SHA and rejects a gap", () => {
+    const sha = "a".repeat(40);
+    const chained = new Map([
+      ["1.2.0", `${REPOSITORY_URL}/compare/${sha}...v1.2.0`],
+      ["1.1.0", `${REPOSITORY_URL}/compare/v1.0.0...${sha}`],
+      ["1.0.0", `${REPOSITORY_URL}/releases/tag/v1.0.0`],
+    ]);
+    expect(chainProblems(["1.2.0", "1.1.0", "1.0.0"], chained)).toEqual([]);
+    expect(chainProblems(["1.0.0"], new Map([["1.0.0", `${REPOSITORY_URL}/tree/${sha}`]]))).toEqual(
+      [],
+    );
+    expect(
+      chainProblems(["1.1.0", "1.0.0"], new Map([["1.1.0", chained.get("1.2.0") ?? ""]])),
+    ).toEqual([
+      "[1.1.0] ends at v1.2.0, not v1.1.0 or a pinned SHA",
+      "[1.1.0] compares from aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa, not [1.0.0]'s end",
+      "CHANGELOG.md has no valid link ref for [1.0.0]",
+    ]);
   });
 
   test("a release in flight is exempt until its tag exists", () => {

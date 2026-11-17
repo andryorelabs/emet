@@ -57,16 +57,18 @@ export function parseArguments(argv: readonly string[]): {
 
 /**
  * Compiles the emet CLI for one target into `<outdir>/emet-<os>-<arch>`; returns the path.
- * The binary never auto-loads the working directory's `.env`: emet runs inside other
- * repos, and their secrets (an encrypted `GITHUB_TOKEN`, for example) must not reach `gh`.
+ * `build` defaults to `Bun.build`. The binary never auto-loads the working directory's `.env`:
+ * emet runs inside other repos, and their secrets (an encrypted `GITHUB_TOKEN`, for example)
+ * must not reach `gh`.
  */
 export async function buildBinary(
   target: BuildTarget,
   outdir: string,
   version: string,
+  build: (config: Bun.BuildConfig) => Promise<Bun.BuildOutput> = Bun.build,
 ): Promise<string> {
   const outfile = path.resolve(outdir, binaryName(target));
-  const result = await Bun.build({
+  const result = await build({
     entrypoints: [path.join(repoRoot, "emet", "bin", "emet.ts")],
     compile: { target, outfile, autoloadDotenv: false },
     define: { FORGE_BUILD_VERSION: JSON.stringify(version) },
@@ -77,11 +79,20 @@ export async function buildBinary(
   return outfile;
 }
 
-if (import.meta.main) {
-  const { targets, outdir } = parseArguments(process.argv.slice(2));
+/** Entry point: builds every requested target in turn and logs each output path. `build` and `log` default to the real compile and `console.log`. */
+export async function main(
+  argv: readonly string[],
+  build: typeof buildBinary = buildBinary,
+  log: (message: string) => void = console.log,
+): Promise<void> {
+  const { targets, outdir } = parseArguments(argv);
   const version = readPluginVersion();
   for (const target of targets) {
     // oxlint-disable-next-line eslint/no-await-in-loop -- sequential on purpose: one compile at a time keeps memory bounded
-    console.log(await buildBinary(target, outdir, version));
+    log(await build(target, outdir, version));
   }
+}
+
+if (import.meta.main) {
+  await main(process.argv.slice(2));
 }

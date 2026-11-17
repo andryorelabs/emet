@@ -2,7 +2,7 @@
 title: Konfigurationsreferenz
 description: Jeder Schlüssel in emet.config.json mit Standardwert und Bedeutung.
 seoTitle: emet-Konfigurationsreferenz
-sourceHash: ac6552b22848c9eb
+sourceHash: f643569c960d5e35
 ---
 
 Jeder Schlüssel in `emet.config.json` mit Standardwert und Bedeutung. Die maßgebliche Quelle ist [`emet/schema/emet.config.schema.json`](../../emet/schema/emet.config.schema.json). Die Begriffe folgen [GLOSSARY.md](../../GLOSSARY.md). Zurück zur [README](../../README.md).
@@ -217,3 +217,5 @@ Die CLI liest diese Variablen, alle über `emet/src/env.ts`. Eine Variable mit `
 | `CODEX_HOME`                  |                                | Das Codex-Home-Verzeichnis; Standard `~/.codex`. Wird nur gelesen.                                                                          |
 | `XDG_STATE_HOME`              |                                | Basis des Zustandsverzeichnisses, wenn `EMET_STATE_DIR` nicht gesetzt ist.                                                                  |
 | `NO_COLOR`                    |                                | Wenn gesetzt, wird das Banner ohne Farbe ausgegeben.                                                                                        |
+| `FORCE_COLOR`                 |                                | Jeder Wert außer leer oder `0` erzwingt ein farbiges Banner, auch ohne TTY.                                                                 |
+| `TERM`                        |                                | `dumb` schaltet die Farbe des Banners aus.                                                                                                  |

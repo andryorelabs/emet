@@ -2,7 +2,7 @@
 title: Referencia de configuración
 description: Cada clave de emet.config.json con su valor por defecto y su significado.
 seoTitle: Referencia de configuración de emet
-sourceHash: ac6552b22848c9eb
+sourceHash: f643569c960d5e35
 ---
 
 Cada clave de `emet.config.json`, con su valor por defecto y su significado. La fuente de verdad es [`emet/schema/emet.config.schema.json`](../../emet/schema/emet.config.schema.json). Los términos siguen [GLOSSARY.md](../../GLOSSARY.md). Volver al [README](../../README.md).
@@ -217,3 +217,5 @@ La CLI lee estas variables, todas a través de `emet/src/env.ts`. Una variable c
 | `CODEX_HOME`                  |                                | El directorio home de Codex; por defecto `~/.codex`. Solo se lee.                                                                                             |
 | `XDG_STATE_HOME`              |                                | Base del directorio de estado cuando `EMET_STATE_DIR` no está definida.                                                                                       |
 | `NO_COLOR`                    |                                | Si está definida, el banner se imprime sin color.                                                                                                             |
+| `FORCE_COLOR`                 |                                | Cualquier valor salvo vacío o `0` fuerza un banner con color, incluso sin TTY.                                                                                |
+| `TERM`                        |                                | `dumb` desactiva el color del banner.                                                                                                                         |

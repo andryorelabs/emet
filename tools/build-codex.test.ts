@@ -1,8 +1,10 @@
 import { describe, expect, test } from "bun:test";
-import { readFileSync } from "node:fs";
+import { cpSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import os from "node:os";
 import path from "node:path";
 
 import {
+  CODEX_USE_WHEN,
   FORBIDDEN_TOKENS,
   assertNoForbiddenTokens,
   buildHooks,
@@ -11,6 +13,7 @@ import {
   findForbiddenTokens,
   findStaleFiles,
   generateArtefacts,
+  main,
   splitCommand,
   transformPrompt,
 } from "./build-codex";
@@ -109,16 +112,28 @@ describe("skill and manifest builders", () => {
     expect(() => splitCommand("no frontmatter")).toThrow("no frontmatter description");
   });
 
-  test("buildSkill writes name and description frontmatter", () => {
+  test("buildSkill writes name and description frontmatter with its Use when clause", () => {
     expect(buildSkill("init", "---\ndescription: Do it\n---\nRun `emet init`\n")).toBe(
-      '---\nname: init\ndescription: "Do it"\n---\nRun `emet init`\n',
+      `---\nname: init\ndescription: ${JSON.stringify(`Do it. ${CODEX_USE_WHEN.init}`)}\n---\nRun \`emet init\`\n`,
     );
+  });
+
+  test("buildSkill does not double a description's closing period", () => {
+    expect(buildSkill("doctor", "---\ndescription: Check it.\n---\nBody\n")).toContain(
+      `description: ${JSON.stringify(`Check it. ${CODEX_USE_WHEN.doctor}`)}\n`,
+    );
+  });
+
+  test("every Codex Use when clause starts with Use when and ends with a period", () => {
+    for (const clause of Object.values(CODEX_USE_WHEN)) {
+      expect(clause).toMatch(/^Use when .+\.$/);
+    }
   });
 
   test("buildPluginManifest mirrors the Claude version", () => {
     const manifest: unknown = JSON.parse(
       buildPluginManifest(
-        '{"name":"emet","version":"1.2.3","description":"d","author":{"name":"A"},"homepage":"https://h.test","repository":"https://r.test","license":"MIT"}',
+        '{"name":"emet","version":"1.2.3","description":"d","author":{"name":"A"},"homepage":"https://h.test","repository":"https://r.test","bugs":"https://r.test/issues","license":"MIT"}',
       ),
     );
     expect(manifest).toEqual({
@@ -128,6 +143,7 @@ describe("skill and manifest builders", () => {
       author: { name: "A" },
       homepage: "https://h.test",
       repository: "https://r.test",
+      bugs: "https://r.test/issues",
       license: "MIT",
       skills: "./codex/skills",
       hooks: "./codex/hooks.json",
@@ -202,5 +218,100 @@ describe("committed Codex artefacts", () => {
     expect(findStaleFiles([{ path: "codex/missing.md", content: "x" }], repoRoot)).toEqual([
       "codex/missing.md",
     ]);
+  });
+});
+
+describe("buildPluginManifest validation", () => {
+  test("rejects a manifest that is not an object", () => {
+    expect(() => buildPluginManifest("null")).toThrow("is not an object");
+  });
+
+  test("rejects a manifest without a string version and description", () => {
+    expect(() => buildPluginManifest('{"version":"1.0.0"}')).toThrow(
+      "needs a string version and description",
+    );
+  });
+
+  test("omits a non-string license", () => {
+    const text = buildPluginManifest('{"version":"1.0.0","description":"d","license":7}');
+    expect(dig(JSON.parse(text), "license")).toBeUndefined();
+  });
+});
+
+function sandbox(): string {
+  const root = mkdtempSync(path.join(os.tmpdir(), "emet-build-codex-"));
+  mkdirSync(path.join(root, "tools"));
+  cpSync(
+    path.join(repoRoot, "tools", "build-codex.ts"),
+    path.join(root, "tools", "build-codex.ts"),
+  );
+  for (const directory of ["commands", path.join("emet", "reference"), ".claude-plugin"]) {
+    cpSync(path.join(repoRoot, directory), path.join(root, directory), { recursive: true });
+  }
+  return root;
+}
+
+function run(root: string, ...args: string[]) {
+  return Bun.spawnSync(["bun", path.join(root, "tools", "build-codex.ts"), ...args]);
+}
+
+describe("build-codex entry point", () => {
+  test("main writes, passes --check, then returns 1 naming the stale file", () => {
+    const root = sandbox();
+    try {
+      const logs: string[] = [];
+      const errors: string[] = [];
+      expect(
+        main(
+          [],
+          root,
+          (m) => logs.push(m),
+          (m) => errors.push(m),
+        ),
+      ).toBe(0);
+      expect(logs[0]).toMatch(/^wrote \d+ Codex artefacts$/);
+      expect(
+        main(
+          ["--check"],
+          root,
+          (m) => logs.push(m),
+          (m) => errors.push(m),
+        ),
+      ).toBe(0);
+      expect(errors).toEqual([]);
+
+      writeFileSync(path.join(root, "codex", "hooks.json"), "{}");
+      expect(
+        main(
+          ["--check"],
+          root,
+          (m) => logs.push(m),
+          (m) => errors.push(m),
+        ),
+      ).toBe(1);
+      expect(errors[0]).toContain("codex/hooks.json");
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  test("writes the artefacts, then passes --check, then fails --check once one is edited", () => {
+    const root = sandbox();
+    try {
+      const written = run(root);
+      expect(written.exitCode).toBe(0);
+      expect(written.stdout.toString()).toMatch(/^wrote \d+ Codex artefacts/);
+      expect(readFileSync(path.join(root, "codex", "hooks.json"), "utf8")).toBe(buildHooks());
+
+      expect(run(root, "--check").exitCode).toBe(0);
+
+      writeFileSync(path.join(root, "codex", "hooks.json"), "{}");
+      const stale = run(root, "--check");
+      expect(stale.exitCode).toBe(1);
+      expect(stale.stderr.toString()).toContain("stale Codex artefacts");
+      expect(stale.stderr.toString()).toContain("codex/hooks.json");
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
   });
 });

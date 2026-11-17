@@ -7,7 +7,7 @@ import { LITERAL_JOBS, ROUTED_JOBS, workflowViolations } from "./workflow-rules.
 
 const REPOSITORY_ROOT = join(import.meta.dir, "..");
 const WORKFLOW_DIRECTORY = join(REPOSITORY_ROOT, ".github", "workflows");
-const STALE_SCRIPT_CALL_PATTERN = /bun run (?:format(?![:\w-])|test:coverage)/;
+const STALE_SCRIPT_CALL_PATTERN = /bun run format(?![:\w-])/;
 const SCRIPT_CALLER_FILES = [
   "package.json",
   "AGENTS.md",
@@ -304,7 +304,7 @@ describe("ci.yml commitlint and manual runs", () => {
     expect(scripts["test:root"]).toEndWith(
       "&& bun test --cwd emet --coverage --coverage-reporter=text --coverage-reporter=lcov --coverage-dir ../coverage/emet && bun tools/coverage-gate.ts emet coverage/emet/lcov.info",
     );
-    expect(scripts["test:coverage"]).toBeUndefined();
+    expect(scripts["test:coverage"]).toBe("bun run test");
     expect(scripts["test:coverage:root"]).toBeUndefined();
   });
 
@@ -457,10 +457,14 @@ describe("release.yml", () => {
 
     test("runs before the binaries are built and the release is created", () => {
       const buildIndex = steps.findIndex((step) => step.run?.includes("build-binaries.ts"));
-      const publishIndex = steps.findIndex((step) => step.run?.includes("gh release create"));
+      const publish = release?.workflow.jobs.publish;
+      const publishIndex = (publish?.steps ?? []).findIndex((step) =>
+        step.run?.includes("gh release create"),
+      );
       expect(gateIndex).toBeGreaterThan(-1);
       expect(gateIndex).toBeLessThan(buildIndex);
-      expect(gateIndex).toBeLessThan(publishIndex);
+      expect(publishIndex).toBeGreaterThan(-1);
+      expect([publish?.needs ?? []].flat()).toContain("release");
     });
 
     test("fails when the CHANGELOG has no section for the tag", () => {
@@ -633,6 +637,85 @@ describe("deploy-site.yml", () => {
       COOLIFY_API_TOKEN: "${{ secrets.COOLIFY_API_TOKEN }}",
       COOLIFY_APP_UUID: "${{ vars.SITE_COOLIFY_APP_UUID }}",
     });
+  });
+});
+
+const SITE_QUALITY_JOBS = ["image", "smoke", "audit", "e2e", "lighthouse", "summary"];
+
+describe("site-quality.yml", () => {
+  const siteQuality = workflows.find(({ fileName }) => fileName === "site-quality.yml");
+  const jobs = siteQuality?.workflow.jobs ?? {};
+
+  /**
+   * Joins the `run:` text of every step of one job.
+   */
+  function jobRuns(name: string): string {
+    return (jobs[name]?.steps ?? []).map((step) => step.run ?? "").join("\n");
+  }
+
+  test("runs on pull requests that touch apps/site, and on workflow_dispatch", () => {
+    const pullRequest = field(siteQuality?.workflow.on, "pull_request");
+    expect(triggerNames(siteQuality?.workflow).toSorted()).toEqual([
+      "pull_request",
+      "workflow_dispatch",
+    ]);
+    expect(field(pullRequest, "paths")).toContain("apps/site/**");
+  });
+
+  test("has the image, smoke, audit, e2e, lighthouse and summary jobs, all routed", () => {
+    expect(Object.keys(jobs).toSorted()).toEqual(SITE_QUALITY_JOBS.toSorted());
+    const routed = new Set(ROUTED_JOBS.map(({ key }) => key));
+    const unrouted = SITE_QUALITY_JOBS.map((name) => `site-quality.yml:${name}`).filter(
+      (key) => !routed.has(key),
+    );
+    expect(unrouted).toEqual([]);
+  });
+
+  test("builds the image first and gates every check on it", () => {
+    expect(jobRuns("image")).toContain("docker build -f apps/site/Dockerfile");
+    for (const name of ["smoke", "audit", "e2e", "lighthouse"]) {
+      expect(neededJobs(jobs[name])).toEqual(["image"]);
+    }
+  });
+
+  test("runs the nginx smoke, the dist audit, Playwright + axe and the Lighthouse budget", () => {
+    expect(jobRuns("smoke")).toContain("bash apps/site/docker/smoke.sh");
+    expect(jobRuns("audit")).toContain("bun --filter @emet/site test:dist");
+    expect(jobRuns("e2e")).toContain("bun --filter @emet/site test:e2e");
+    expect(jobRuns("lighthouse")).toContain("bash apps/site/scripts/lighthouse-budget.sh");
+  });
+
+  test("prints a flaky-on-retry summary even when the spec fails", () => {
+    const step = jobs.e2e?.steps?.find((candidate) => candidate.run?.includes('"flaky"'));
+    expect(step?.if).toBe("always()");
+    expect(step?.run).toContain("GITHUB_STEP_SUMMARY");
+  });
+
+  test("uploads reports only on failure", () => {
+    const reportUploads = Object.entries(jobs)
+      .filter(([name]) => name !== "image")
+      .flatMap(([, job]) => job.steps ?? [])
+      .filter((step) => step.uses?.startsWith("actions/upload-artifact@") === true);
+    expect(reportUploads.length).toBeGreaterThan(0);
+    for (const step of reportUploads) {
+      expect(step.if).toBe("failure()");
+    }
+  });
+
+  test("summary needs every other job, always runs and has no checkout", () => {
+    const others = SITE_QUALITY_JOBS.filter((name) => name !== "summary").toSorted();
+    expect(neededJobs(jobs.summary)).toEqual(others);
+    expect(jobs.summary?.if).toBe("always()");
+    expect(JSON.stringify(jobs.summary)).not.toContain("actions/checkout");
+  });
+
+  test("has no visual regression", () => {
+    const spec = readFileSync(
+      join(REPOSITORY_ROOT, "apps", "site", "e2e", "accessibility.spec.ts"),
+      "utf8",
+    );
+    expect(spec).not.toMatch(/toHaveScreenshot|toMatchSnapshot/);
+    expect(siteQuality?.raw).not.toMatch(/update-snapshots|screenshot/i);
   });
 });
 

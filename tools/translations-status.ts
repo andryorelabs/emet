@@ -72,8 +72,19 @@ export function formatTranslationsStatus(outdated: readonly OutdatedTranslation[
   return [`translations: ${outdated.length} outdated`, ...lines].join("\n");
 }
 
-if (import.meta.main) {
-  const outdated = findOutdatedTranslations();
-  console.log(formatTranslationsStatus(outdated));
-  process.exit(outdated.length === 0 ? 0 : 1);
+/**
+ * Prints the translations report.
+ * @param readers - Where to read sources and translations; defaults to this checkout.
+ * @param log - Where the report goes.
+ * @returns 0 when every translation is current, otherwise 1.
+ */
+export function runTranslationsStatus(
+  readers: { readSource?: SourceReader; readTranslation?: TranslationReader } = {},
+  log: (message: string) => void = console.log,
+): number {
+  const outdated = findOutdatedTranslations(readers);
+  log(formatTranslationsStatus(outdated));
+  return outdated.length === 0 ? 0 : 1;
 }
+
+if (import.meta.main) process.exit(runTranslationsStatus());
