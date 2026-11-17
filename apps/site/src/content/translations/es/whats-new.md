@@ -2,8 +2,16 @@
 title: Novedades
 description: Notas de versión de emet: qué cambió en cada versión.
 seoTitle: Novedades de emet: notas de versión
-sourceHash: 184d0da238c95000
+sourceHash: b893c45d52d54eda
 ---
+
+## 0.8.6
+
+2026-11-17
+
+### Corregido
+
+- El workflow de release instala Chromium antes de volver a ejecutar las comprobaciones sobre el tag, como hace el job de pruebas de CI, de modo que la verificación ya no se detiene en el mínimo de cobertura de `tools/`. v0.8.5 se etiquetó pero nunca se publicó por esto; sus cambios se publican en esta versión.
 
 ## 0.8.5
 
