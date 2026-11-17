@@ -31,20 +31,7 @@ const WCAG_TAGS = ["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "wcag22aa"];
 const COLOR_SCHEMES = ["light", "dark"] as const;
 
 /** Each waiver covers one rule on one selector, never a whole page or rule. */
-const KNOWN_AXE_ISSUES: readonly KnownAxeIssue[] = [
-  {
-    rule: "color-contrast",
-    target: /(?:^|[\s>])\.io\b/,
-    reason:
-      "known Website defect: home .io labels lack contrast in light mode; pending a follow-up ticket",
-  },
-  {
-    rule: "label-content-name-mismatch",
-    target: /^\.search-button$/,
-    reason:
-      "known Website defect: Starlight's search button label differs from its text; pending a follow-up ticket",
-  },
-];
+const KNOWN_AXE_ISSUES: readonly KnownAxeIssue[] = [];
 
 /** The routes whose inline `style` attributes the style-src policy blocks. */
 const STYLE_ATTRIBUTE_CSP_ROUTES = ["/", "/es/"];
@@ -113,10 +100,6 @@ for (const keyPage of KEY_PAGES) {
 
 for (const path of STYLE_ATTRIBUTE_CSP_ROUTES) {
   test(`${path} has no style CSP violations`, async ({ page }) => {
-    test.fixme(
-      true,
-      'known Website defect: inline style="--index: N" attributes break style-src-attr; pending a follow-up ticket',
-    );
     await recordCspViolations(page);
     await page.goto(path);
     expect(await cspViolations(page)).toEqual([]);
