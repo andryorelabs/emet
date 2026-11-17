@@ -53,7 +53,6 @@ const clientStrings = {
   escapeKey: strings.escapeKey,
   copy: strings.copy,
   copied: strings.copied,
-  searchButton: strings.searchButton,
 };
 ---
 
@@ -81,7 +80,6 @@ const clientStrings = {
     escapeKey: string;
     copy: string;
     copied: string;
-    searchButton: string;
   }
 
   const COPIED_STATE_MS = 2000;
@@ -182,13 +180,6 @@ const clientStrings = {
     handleShortcuts(openButton, dialog);
   }
 
-  function nameSearchTriggers(strings: ClientStrings): void {
-    for (const trigger of document.querySelectorAll<HTMLElement>("[data-search-trigger]")) {
-      const keys = [...trigger.querySelectorAll("kbd")].map((key) => key.textContent).join("");
-      trigger.setAttribute("aria-label", `${strings.searchButton} ${keys}`.trim());
-    }
-  }
-
   const copiedTimers = new WeakMap<HTMLElement, ReturnType<typeof setTimeout>>();
 
   function enhanceCopyButtons(strings: ClientStrings): void {
@@ -218,7 +209,6 @@ const clientStrings = {
   if (root?.dataset.docsSearch) {
     const strings = JSON.parse(root.dataset.docsSearch) as ClientStrings;
     enhanceSearch(root, strings);
-    nameSearchTriggers(strings);
     enhanceCopyButtons(strings);
   }
 </script>
