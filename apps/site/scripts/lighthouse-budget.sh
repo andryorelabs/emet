@@ -57,15 +57,35 @@ fail() {
 # below <value> <minimum>: true when value < minimum.
 below() { awk -v value="$1" -v minimum="$2" 'BEGIN { exit !(value < minimum) }'; }
 
+# run_lighthouse <url> <report> <page> <run>: one Lighthouse run, retried up to
+# max_attempts times when it fails at runtime (non-zero exit, no report or a
+# report with a runtimeError). A budget breach is not a runtime error.
+max_attempts=3
+run_lighthouse() {
+  local url="$1" report="$2" page="$3" run="$4" attempt
+  for attempt in $(seq 1 "$max_attempts"); do
+    rm -f "$report"
+    if bun x "lighthouse@$lighthouse_version" "$url" --quiet --preset=desktop \
+      --only-categories=performance,accessibility,best-practices,seo \
+      --chrome-flags="--headless=new --no-sandbox" \
+      --output=json --output-path="$report" &&
+      [ -s "$report" ] && ! jq -e '.runtimeError' "$report" >/dev/null 2>&1; then
+      return 0
+    fi
+    if [ "$attempt" -lt "$max_attempts" ]; then
+      echo "retrying $page run $run (attempt $attempt of $max_attempts failed)" >&2
+    fi
+  done
+  echo "FAIL: $page run $run failed after $max_attempts attempts" >&2
+  return 1
+}
+
 for page in "${pages[@]}"; do
   slug="$(tr -c 'a-z0-9\n' '-' <<<"$page" | sed 's/^-*//; s/-*$//')"
   run_reports=()
   for run in $(seq 1 "$runs"); do
     report="$reports/${slug:-home}-$run.json"
-    bun x "lighthouse@$lighthouse_version" "$base$page" --quiet --preset=desktop \
-      --only-categories=performance,accessibility,best-practices,seo \
-      --chrome-flags="--headless=new --no-sandbox" \
-      --output=json --output-path="$report"
+    run_lighthouse "$base$page" "$report" "$page" "$run" || exit 1
     run_reports+=("$report")
   done
 

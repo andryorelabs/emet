@@ -98,6 +98,48 @@ for (const keyPage of KEY_PAGES) {
   }
 }
 
+for (const keyPage of KEY_PAGES) {
+  test(`${keyPage.name} (${keyPage.path}) has no axe violations at a 768px viewport`, async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 768, height: 1024 });
+    const response = await page.goto(keyPage.path);
+    expect(response?.status()).toBe(keyPage.status);
+    await expect(page.locator("h1").first()).toBeVisible();
+
+    const results = await new AxeBuilder({ page }).withTags(WCAG_TAGS).analyze();
+    const violations = results.violations.flatMap(({ id, impact, nodes }) =>
+      nodes.map(({ target }) => `${id} (${impact ?? "unknown"}): ${target.join(" ")}`),
+    );
+    expect(violations).toEqual([]);
+  });
+}
+
+const SEARCH_BUTTON_NAMES = [
+  { width: 1280, name: "Search documentation… Ctrl K" },
+  { width: 768, name: "Search… Ctrl K" },
+  { width: 375, name: "Search documentation" },
+] as const;
+
+for (const { width, name } of SEARCH_BUTTON_NAMES) {
+  test(`the search button is named "${name}" at ${width}px`, async ({ page }) => {
+    await page.setViewportSize({ width, height: 1024 });
+    await page.goto("/");
+    await expect(page.locator("[data-search-trigger]").first()).toHaveAccessibleName(name);
+  });
+}
+
+test("the search button keeps a Command K swap on Apple platforms", async ({ page }) => {
+  await page.addInitScript(() => {
+    Object.defineProperty(navigator, "platform", { value: "MacIntel" });
+  });
+  await page.setViewportSize({ width: 1280, height: 1024 });
+  await page.goto("/");
+  const trigger = page.locator("[data-search-trigger]").first();
+  await expect(trigger.locator("[data-search-modifier]")).toHaveText("⌘");
+  await expect(trigger).toHaveAccessibleName("Search documentation… ⌘ K");
+});
+
 for (const path of STYLE_ATTRIBUTE_CSP_ROUTES) {
   test(`${path} has no style CSP violations`, async ({ page }) => {
     await recordCspViolations(page);
