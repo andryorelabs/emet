@@ -1133,7 +1133,8 @@ export async function run(argv: string[]): Promise<void> {
     await main(targets);
   } catch (error: unknown) {
     console.error(error);
-    process.exitCode = process.exitCode ?? 3;
+    const previousExitCode = Number(process.exitCode ?? 0);
+    process.exitCode = previousExitCode === 0 ? 3 : previousExitCode;
   }
 }
 
