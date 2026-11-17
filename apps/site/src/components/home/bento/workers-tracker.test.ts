@@ -89,6 +89,20 @@ describe("workers beats", () => {
     expect(source).toContain("var(--index) * 150ms");
   });
 
+  it("assigns each branch its index in the stylesheet, not an inline style", () => {
+    for (const [child, index] of [
+      [2, 0],
+      [3, 1],
+      [4, 2],
+    ] as const) {
+      expect(source).toMatch(
+        new RegExp(`\\.trees-branch:nth-child\\(${child}\\) \\{\\s+--index: ${index};`),
+      );
+    }
+    const scene = readFileSync(new URL("scenes/WorkersScene.astro", import.meta.url), "utf8");
+    expect(scene).not.toContain("style=");
+  });
+
   it("grows the branch lines with scaleY", () => {
     expect(source).toMatch(/@keyframes workers-line \{[\s\S]*?scaleY/);
   });

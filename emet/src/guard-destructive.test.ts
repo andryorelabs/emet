@@ -164,6 +164,34 @@ describe("edit surfaces", () => {
       }
     });
   }
+  describe("literal paths with route-segment brackets and parentheses", () => {
+    const routeSurface = {
+      root: "/repo",
+      globs: [
+        "src/app/[locale]/admin/(dashboard)/x.tsx",
+        "src/app/[[...slug]]/page.tsx",
+        "src/routes/\\[id\\]/**",
+        "lib/**",
+      ],
+    };
+    const editRoute = (file_path: string) => edit(file_path, () => routeSurface);
+
+    test("allows a write to a surface path listed literally", () => {
+      expect(editRoute("src/app/[locale]/admin/(dashboard)/x.tsx")).toBe("allow");
+      expect(editRoute("/repo/src/app/[[...slug]]/page.tsx")).toBe("allow");
+    });
+    test("does not widen a bracket segment into a character class", () => {
+      expect(editRoute("src/app/l/admin/(dashboard)/x.tsx")).toBe("deny");
+      expect(editRoute("src/app/e/admin/(dashboard)/x.tsx")).toBe("deny");
+      expect(editRoute("src/app/[locale]/admin/dashboard/x.tsx")).toBe("deny");
+      expect(editRoute("src/app/s/page.tsx")).toBe("deny");
+    });
+    test("keeps real globs working, including already escaped brackets", () => {
+      expect(editRoute("lib/deep/nested/file.ts")).toBe("allow");
+      expect(editRoute("src/routes/[id]/page.svelte")).toBe("allow");
+      expect(editRoute("src/routes/i/page.svelte")).toBe("deny");
+    });
+  });
   test("no surface file means no restriction", () => {
     expect(edit("/repo/anything.ts", () => null)).toBe("allow");
   });

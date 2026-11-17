@@ -12,6 +12,7 @@
 !docs/architecture.md
 !docs/how-to/update-emet.md
 !docs/how-to/mascot.md
+!docs/brand/mascot
 !CHANGELOG.md
 !emet/schema/emet.config.schema.json
 **/node_modules

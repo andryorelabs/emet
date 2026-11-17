@@ -16,6 +16,18 @@
   padding-left: 20px;
 }
 
+.trees-branch:nth-child(2) {
+  --index: 0;
+}
+
+.trees-branch:nth-child(3) {
+  --index: 1;
+}
+
+.trees-branch:nth-child(4) {
+  --index: 2;
+}
+
 .trees-branch::before {
   content: "";
   position: absolute;

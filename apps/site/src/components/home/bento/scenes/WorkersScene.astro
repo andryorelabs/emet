@@ -17,8 +17,8 @@ const worktrees = ["cla-254-home-layout", "cla-255-code-blocks", "cla-256-docker
   <ul class="trees">
     <li class="trees-root">repo/</li>
     {
-      worktrees.map((tree, index) => (
-        <li class="trees-branch" style={`--index: ${index}`}>
+      worktrees.map((tree) => (
+        <li class="trees-branch">
           <span class="trees-box">
             <span class="trees-name">{tree}</span>
             <span class="trees-typing">
