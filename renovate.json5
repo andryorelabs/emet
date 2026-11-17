@@ -94,6 +94,7 @@
     {
       groupName: "typescript7",
       matchDepNames: ["typescript7", "typescript"],
+      allowedVersions: "!/-dev\\./",
       rangeStrategy: "pin",
       automerge: false,
     },
