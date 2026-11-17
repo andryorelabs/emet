@@ -143,13 +143,15 @@ describe("auditDist and main", () => {
     ]);
   });
 
-  test("allows the docs' GitHub raw images", () => {
+  test("flags GitHub raw images", () => {
     writeFileSync(
       join(directory, "docs", "guide", "index.html"),
       `<img src="https://raw.githubusercontent.com/andryorelabs/emet/main/docs/brand/logo/mark.svg">`,
     );
-    expect(auditDist(directory, ALLOWED_ORIGINS)).toEqual([]);
-    expect(main([directory], () => undefined)).toBe(0);
+    expect(auditDist(directory, ALLOWED_ORIGINS)).toEqual([
+      { file: join("docs", "guide", "index.html"), origin: "https://raw.githubusercontent.com" },
+    ]);
+    expect(main([directory], () => undefined)).toBe(1);
   });
 
   test("fails with a message when the directory does not exist", () => {

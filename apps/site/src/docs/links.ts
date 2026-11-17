@@ -3,6 +3,7 @@ import path from "node:path";
 import { DEFAULT_LOCALE, type Locale } from "../i18n/locales";
 import { githubViewUrl } from "./paths";
 import { findPublishedSource, publishedRoute } from "./published";
+import { REPO_ASSETS_PREFIX, repoAssetPath } from "./repo-assets";
 
 const EXTERNAL_HREF = /^(?:[a-z][a-z0-9+.-]*:|\/\/)/i;
 
@@ -30,8 +31,8 @@ function resolveRepositoryPath(src: string, context: LinkContext): string | unde
 }
 
 /**
- * Rewrites one image source found in a published source to the GitHub raw URL
- * of the repository file, since the site does not serve the repository tree.
+ * Rewrites one image source found in a published source to the same-origin
+ * path under which the build serves the repository file.
  * Absolute URLs and targets outside the repository stay as written.
  * @param src - The image source exactly as written in the markdown.
  * @param context - Source file and locale of the page.
@@ -40,9 +41,7 @@ function resolveRepositoryPath(src: string, context: LinkContext): string | unde
 export function rewriteImageSource(src: string, context: LinkContext): string {
   const repositoryPath = resolveRepositoryPath(src, context);
   if (repositoryPath === undefined) return src;
-  return githubViewUrl(repositoryPath)
-    .replace("https://github.com/", "https://raw.githubusercontent.com/")
-    .replace("/blob/", "/");
+  return repoAssetPath(repositoryPath);
 }
 
 /**
@@ -55,7 +54,12 @@ export function rewriteImageSource(src: string, context: LinkContext): string {
  * @returns The rewritten target.
  */
 export function rewriteLink(href: string, context: LinkContext): string {
-  if (href === "" || href.startsWith("#") || EXTERNAL_HREF.test(href)) {
+  if (
+    href === "" ||
+    href.startsWith("#") ||
+    href.startsWith(REPO_ASSETS_PREFIX) ||
+    EXTERNAL_HREF.test(href)
+  ) {
     return href;
   }
   const hashIndex = href.indexOf("#");

@@ -13,14 +13,10 @@ import { join, relative, sep } from "node:path";
 export const SITE_ORIGIN = "https://emet.andryore.dev";
 
 /**
- * The origins the built site may load from. Besides its own origin, the docs
- * load the repository images that `src/docs/links.ts` rewrites to GitHub raw
- * URLs, because the site does not serve the repository tree.
+ * The origins the built site may load from: only its own. The docs' repository
+ * images are copied into the build under `/repo-assets/`.
  */
-export const ALLOWED_ORIGINS: readonly string[] = [
-  SITE_ORIGIN,
-  "https://raw.githubusercontent.com",
-];
+export const ALLOWED_ORIGINS: readonly string[] = [SITE_ORIGIN];
 
 /** A third-party origin and the page, relative to the dist directory, that references it. */
 export interface AuditFinding {
