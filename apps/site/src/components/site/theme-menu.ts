@@ -74,7 +74,7 @@ function initThemeSelect(root: HTMLElement): void {
   const syncChecked = (): void => {
     const current = readStoredTheme();
     for (const row of rows) {
-      row.setAttribute("aria-checked", String(row.dataset["choice"] === current));
+      row.setAttribute("aria-checked", String(row.dataset.choice === current));
     }
   };
   const isOpen = (): boolean => !menu.hidden;
@@ -98,7 +98,10 @@ function initThemeSelect(root: HTMLElement): void {
     close(true);
   };
 
-  button.addEventListener("click", () => (isOpen() ? close(true) : open()));
+  button.addEventListener("click", () => {
+    if (isOpen()) close(true);
+    else open();
+  });
   button.addEventListener("keydown", (event) => {
     if (!OPEN_KEYS.has(event.key)) return;
     event.preventDefault();
@@ -122,7 +125,7 @@ function initThemeSelect(root: HTMLElement): void {
   });
   for (const row of rows) {
     row.addEventListener("click", () => {
-      const choice = parseThemeChoice(row.dataset["choice"]);
+      const choice = parseThemeChoice(row.dataset.choice);
       if (choice !== undefined) choose(choice);
     });
   }

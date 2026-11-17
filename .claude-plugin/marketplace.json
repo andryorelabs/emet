@@ -1,19 +1,29 @@
 {
   "name": "emet-marketplace",
   "owner": { "name": "andryorelabs" },
+  "metadata": {
+    "description": "Spec to merge on one approval: parallel workers in isolated worktrees, a review per wave, CI green before merge."
+  },
   "allowCrossMarketplaceDependenciesOn": ["claude-plugins-official"],
   "plugins": [
     {
       "name": "emet",
       "source": "./",
-      "author": { "name": "Andry Orellana" },
+      "author": { "name": "Andry Orellana", "email": "hello@andryore.dev" },
       "homepage": "https://emet.andryore.dev",
       "repository": "https://github.com/andryorelabs/emet",
+      "bugs": "https://github.com/andryorelabs/emet/issues",
+      "license": "MIT",
       "description": "Spec to merge on one approval: parallel workers in isolated worktrees, a review per wave, CI green before merge."
     },
     {
       "name": "emet-mascot",
       "source": "./mods/emet-mascot",
+      "author": { "name": "Andry Orellana", "email": "hello@andryore.dev" },
+      "homepage": "https://emet.andryore.dev",
+      "repository": "https://github.com/andryorelabs/emet",
+      "bugs": "https://github.com/andryorelabs/emet/issues",
+      "license": "MIT",
       "description": "A Claude Code mod: a pixel mascot beside the transcript that mirrors the session and the emet run phase."
     }
   ]

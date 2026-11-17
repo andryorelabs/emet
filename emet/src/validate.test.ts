@@ -2,6 +2,8 @@ import { describe, expect, test } from "bun:test";
 import { mkdirSync, mkdtempSync, realpathSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
+
+import { present } from "./present";
 import { type PlanTicket, parseSpecItems, validatePlan } from "./validate";
 
 const SPEC = `## Specs
@@ -65,7 +67,7 @@ describe("validatePlan", () => {
       ticket({ id: "B", covers: ["S2"], surfaces: ["src/x.ts"] }),
     ];
     expect(codes(validatePlan({ specMarkdown: SPEC, tickets }))).toEqual(["surface-overlap"]);
-    const split = [tickets[0]!, { ...tickets[1]!, wave: 2 }];
+    const split = [present(tickets[0]), { ...present(tickets[1]), wave: 2 }];
     expect(validatePlan({ specMarkdown: SPEC, tickets: split }).ok).toBe(true);
   });
 

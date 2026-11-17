@@ -194,3 +194,23 @@ Prose-only.
 Optional, prose-only. `null` or omitted skips the design/UI-review step.
 
 - `canvasIndex` (deprecated): path to a design canvas file workers check before UI changes.
+
+## Environment variables
+
+The CLI reads these variables, all through `emet/src/env.ts`. A variable with a `FORGE_` spelling still works as a fallback to its `EMET_` name and prints a one-time warning. Empty values count as unset. `tools/env-docs.test.ts` keeps this table and the code in step.
+
+| Variable                      | Legacy fallback                | Meaning                                                                                                              |
+| ----------------------------- | ------------------------------ | -------------------------------------------------------------------------------------------------------------------- |
+| `EMET_MAX_LIVE_WORKERS`       | `FORGE_MAX_LIVE_WORKERS`       | Cap on concurrently live workers: a positive number or `auto`. Overrides `concurrency.maxLiveWorkers`.               |
+| `EMET_STATE_DIR`              | `FORGE_STATE_DIR`              | Host-wide state directory, which holds the worker slot pool.                                                         |
+| `EMET_SKIP_DEPENDENCY_CHECKS` | `FORGE_SKIP_DEPENDENCY_CHECKS` | Set to `1` to downgrade blocking dependency checks to warnings in `emet preflight`.                                  |
+| `EMET_RUN_IDLE_THRESHOLD_MS`  | `FORGE_RUN_IDLE_THRESHOLD_MS`  | Milliseconds a run's transcript may stay quiet before it counts as idle. Overrides `concurrency.runIdleThresholdMs`. |
+| `EMET_CPU_OVERSUBSCRIBE`      | `FORGE_CPU_OVERSUBSCRIBE`      | CPU oversubscription factor for the automatic worker cap.                                                            |
+| `EMET_MEM_RESERVE_GIB`        | `FORGE_MEM_RESERVE_GIB`        | GiB of memory kept free before a worker slot is granted.                                                             |
+| `EMET_MEM_PER_WORKER_GIB`     | `FORGE_MEM_PER_WORKER_GIB`     | GiB of memory assumed per worker by the automatic worker cap.                                                        |
+| `EMET_AGENT_HOST`             |                                | Set to `codex` when running under the Codex Agent host; anything else means Claude.                                  |
+| `CODEX_HOME`                  |                                | The Codex home directory; defaults to `~/.codex`. Only ever read.                                                    |
+| `XDG_STATE_HOME`              |                                | Base for the state directory when `EMET_STATE_DIR` is unset.                                                         |
+| `NO_COLOR`                    |                                | When set, the banner is printed without color.                                                                       |
+| `FORCE_COLOR`                 |                                | Any value but empty or `0` forces a colored banner, even without a TTY.                                              |
+| `TERM`                        |                                | `dumb` turns the banner color off.                                                                                   |

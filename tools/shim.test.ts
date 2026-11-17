@@ -38,7 +38,11 @@ function publishRelease(options: { checksum?: string; listAsset?: boolean } = {}
   writeFileSync(path.join(releaseDir, "SHA256SUMS"), line);
 }
 
-type ShimResult = { code: number; stdout: string; stderr: string };
+interface ShimResult {
+  code: number;
+  stdout: string;
+  stderr: string;
+}
 
 function runShim(args: string[], env: Record<string, string> = {}): ShimResult {
   return runShimWithEnv(args, {
@@ -51,7 +55,7 @@ function runShim(args: string[], env: Record<string, string> = {}): ShimResult {
 /** Runs the shim with only PATH, HOME and `env`: no default cache or release URL. */
 function runShimWithEnv(args: string[], env: Record<string, string>): ShimResult {
   const result = Bun.spawnSync(["sh", path.join(pluginRoot, "bin/emet"), ...args], {
-    env: { PATH: process.env["PATH"] ?? "", HOME: workDir, ...env },
+    env: { PATH: process.env.PATH ?? "", HOME: workDir, ...env },
   });
   return {
     code: result.exitCode,
@@ -115,6 +119,60 @@ describe("bin/emet shim", () => {
     expect(existsSync(path.join(cacheDir, version, "emet"))).toBe(false);
   });
 
+  test("the PreToolUse guard fails closed with exit 2 and a recovery message", () => {
+    const result = runShim(["guard"]);
+    expect(result.code).toBe(2);
+    expect(result.stdout).toBe("");
+    expect(result.stderr).toContain("not found");
+    expect(result.stderr).toContain("blocked");
+    expect(result.stderr).toContain("EMET_PREFETCH=1");
+    expect(result.stderr).toContain("claude plugin disable emet");
+  });
+
+  test("the guard falls back to the newest cached binary when the release asset is missing", () => {
+    const older = path.join(cacheDir, "0.0.1");
+    mkdirSync(older, { recursive: true });
+    writeFileSync(path.join(older, "emet"), '#!/bin/sh\necho "older $*"\n');
+    chmodSync(path.join(older, "emet"), 0o755);
+    const result = runShim(["guard"]);
+    expect(result.code).toBe(0);
+    expect(result.stdout).toBe("older guard\n");
+    expect(result.stderr).toContain("cached v0.0.1");
+  });
+
+  test("the guard never falls back to a cached binary on a checksum mismatch", () => {
+    const older = path.join(cacheDir, "0.0.1");
+    mkdirSync(older, { recursive: true });
+    writeFileSync(path.join(older, "emet"), '#!/bin/sh\necho "older $*"\n');
+    chmodSync(path.join(older, "emet"), 0o755);
+    publishRelease({ checksum: "0".repeat(64) });
+    const result = runShim(["guard"]);
+    expect(result.code).toBe(2);
+    expect(result.stdout).toBe("");
+    expect(result.stderr).toContain("checksum mismatch");
+  });
+
+  test("the guard fails closed when the manifest has no version", () => {
+    writeFileSync(path.join(pluginRoot, ".claude-plugin/plugin.json"), "{}");
+    const result = runShim(["guard"]);
+    expect(result.code).toBe(2);
+    expect(result.stderr).toContain("no version");
+  });
+
+  test("Stop and SubagentStop guard events fail open with exit 1, so a session can still end", () => {
+    for (const event of ["Stop", "SubagentStop"]) {
+      const result = runShim(["guard", "--event", event]);
+      expect(result.code).toBe(1);
+      expect(result.stderr).not.toContain("blocked");
+    }
+  });
+
+  test("a non-guard command that cannot resolve the binary still exits 1", () => {
+    const result = runShim(["status"]);
+    expect(result.code).toBe(1);
+    expect(result.stderr).not.toContain("blocked");
+  });
+
   test("a missing release exits non-zero with a one-line reason", () => {
     const result = runShim(["--version"]);
     expect(result.code).not.toBe(0);
@@ -137,7 +195,7 @@ describe("bin/emet shim", () => {
     const bunDirectory = path.dirname(process.execPath);
     const result = runShim(["init"], {
       EMET_FROM_SOURCE: "1",
-      PATH: `${bunDirectory}:${process.env["PATH"] ?? ""}`,
+      PATH: `${bunDirectory}:${process.env.PATH ?? ""}`,
     });
     expect(result.code).toBe(0);
     expect(result.stdout).toBe("from-source init\n");
@@ -154,7 +212,7 @@ describe("bin/emet shim", () => {
     chmodSync(path.join(fakeBin, "curl"), 0o755);
     const result = runShimWithEnv(["--version"], {
       EMET_CACHE_DIR: cacheDir,
-      PATH: `${fakeBin}:${process.env["PATH"] ?? ""}`,
+      PATH: `${fakeBin}:${process.env.PATH ?? ""}`,
     });
     expect(result.code).toBe(1);
     expect(readFileSync(curlLog, "utf8")).toContain(
@@ -201,7 +259,7 @@ describe("bin/emet shim legacy FORGE_* fallback", () => {
     const bunDirectory = path.dirname(process.execPath);
     const result = runShim(["doctor"], {
       FORGE_FROM_SOURCE: "1",
-      PATH: `${bunDirectory}:${process.env["PATH"] ?? ""}`,
+      PATH: `${bunDirectory}:${process.env.PATH ?? ""}`,
     });
     expect(result.code).toBe(0);
     expect(result.stdout).toBe("from-source doctor\n");

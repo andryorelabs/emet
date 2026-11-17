@@ -2,8 +2,27 @@
 title: Nouveautés
 description: Notes de version d'emet : ce qui a changé dans chaque version.
 seoTitle: Nouveautés d'emet : notes de version
-sourceHash: 5fa0e7574374a363
+sourceHash: 184d0da238c95000
 ---
+
+## 0.8.5
+
+2026-11-17
+
+### Modifié
+
+- Le gate de couverture impose un plancher par fichier de 97 % des lignes et 98 % des fonctions pour `emet/`, `apps/site` et `tools/`, avec des exceptions motivées dans `tools/coverage-exceptions.ts`. Le manifeste de couverture parcourt `emet/src` récursivement, `tools/` est contrôlé, et les totaux de `tools/coverage-floors.json` montent aux valeurs mesurées.
+- Le guard PreToolUse échoue en mode fermé : quand `bin/emet` ne peut pas résoudre le binaire emet, le hook sort avec 2 et bloque l'appel d'outil, avec un message qui explique comment se rétablir. Les hooks Stop et SubagentStop sortent toujours avec 1.
+- Les manifestes du plugin portent l'e-mail de l'auteur, la licence, la page d'accueil, le dépôt et l'URL des bugs, et les descriptions des skills Codex indiquent quand utiliser chacune.
+
+### Corrigé
+
+- `emet doctor` sort avec le code 3 quand une erreur inattendue s'échappe, au lieu de 0. Un code de sortie non nul défini plus tôt est conservé.
+- `emet cleanup --all --force` récupère le worktree et les branches du worker d'une exécution morte, y compris les worktrees sous `.claude/worktrees/`. Un propriétaire vivant ou inactif, et un verrou qui ne nomme aucune exécution, restent protégés.
+- Le guard d'édition reconnaît une surface écrite littéralement, comme `src/app/[locale]/page.tsx`. `[` et `]` dans une surface ne forment plus une classe de caractères.
+- `emet preflight --post-dispatch` échoue quand un ticket qui détient encore une réservation ou un slot a perdu son worktree de worker, et indique au coordinateur de le re-dispatcher au lieu de le reprendre.
+- Le binaire compilé `emet` ne charge plus de fichier `.env` du répertoire courant.
+- Le site web retire les attributs de style en ligne de la page d'accueil, donne aux libellés de l'accueil un contraste AA en mode clair et nomme le bouton de recherche avec son texte visible dès le premier rendu. Les images de la documentation sont servies depuis l'origine propre du site sous `repo-assets` au lieu de `raw.githubusercontent.com`, et `astro dev` les sert aussi.
 
 ## 0.8.4
 

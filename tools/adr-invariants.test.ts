@@ -3,6 +3,7 @@ import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 
 const ADR_DIRECTORY = join(import.meta.dir, "..", "docs", "adr");
+const TEMPLATE_FILE = "0000-template.md";
 const ADR_FILE_PATTERN = /^(\d{4})-[a-z0-9]+(?:-[a-z0-9]+)*\.md$/;
 const REQUIRED_SECTIONS = [
   "## Context",
@@ -43,7 +44,7 @@ interface IndexRow {
  */
 function readAdrFiles(): AdrFile[] {
   return readdirSync(ADR_DIRECTORY)
-    .filter((fileName) => fileName !== "README.md")
+    .filter((fileName) => fileName !== "README.md" && fileName !== TEMPLATE_FILE)
     .toSorted()
     .map((fileName) => {
       const match = ADR_FILE_PATTERN.exec(fileName);
@@ -100,6 +101,17 @@ describe("ADR invariants", () => {
   test("every file name is NNNN-kebab-title.md", () => {
     const invalid = adrs.filter((adr) => Number.isNaN(adr.number)).map((adr) => adr.fileName);
     expect(invalid).toEqual([]);
+  });
+
+  test("the template exists and its Revised lines are well formed", () => {
+    const template = readFileSync(join(ADR_DIRECTORY, TEMPLATE_FILE), "utf8");
+    expect(template.startsWith("# 0000. ")).toBe(true);
+    const header = template.split("\n## ")[0] ?? "";
+    const invalid = header
+      .split("\n")
+      .filter((line) => line.startsWith("Revised:") && !REVISED_LINE_PATTERN.test(line));
+    expect(invalid).toEqual([]);
+    for (const section of REQUIRED_SECTIONS) expect(template).toContain(section);
   });
 
   test("numbering is unique and contiguous from 0001", () => {

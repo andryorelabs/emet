@@ -1,6 +1,7 @@
 import { describe, expect, it } from "bun:test";
 import * as fs from "node:fs";
 import * as path from "node:path";
+
 import { BANNER_ANSI, BANNER_TEXT, renderBanner } from "./banner.ts";
 
 const terminalDir = path.resolve(import.meta.dir, "../../docs/brand/terminal");
@@ -33,6 +34,14 @@ describe("renderBanner", () => {
 
   it("returns the plain art when NO_COLOR is set", () => {
     expect(renderBanner({ isTTY: true }, { NO_COLOR: "1" })).toBe(BANNER_TEXT);
+  });
+
+  it("returns the plain art when TERM is dumb", () => {
+    expect(renderBanner({ isTTY: true }, { TERM: "dumb" })).toBe(BANNER_TEXT);
+  });
+
+  it("returns the colored art off a TTY when FORCE_COLOR is set", () => {
+    expect(renderBanner({ isTTY: false }, { FORCE_COLOR: "1" })).toBe(BANNER_ANSI);
   });
 
   it("returns the plain art when the stream is not a TTY", () => {

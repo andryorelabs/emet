@@ -8,22 +8,23 @@
 import { existsSync, readFileSync } from "node:fs";
 import path from "node:path";
 
-import { claudeHost } from "./agenthost-claude";
 import type { AgentHost } from "./agenthost";
+import { claudeHost } from "./agenthost-claude";
 import { codexCostUsd, parseCodexJsonl } from "./codex-usage";
 import { resolveRepoRoot } from "./config";
-import { isObject } from "./narrow";
 import { resolveRunDir } from "./names";
+import { isObject } from "./narrow";
+import { present } from "./present";
 import { readCompletionEvent } from "./runs";
 
 const USAGE = `usage: emet metrics --run <id> [--root <dir>] [--json]`;
 
-export type TokenTotals = {
+export interface TokenTotals {
   readonly inputTokens: number;
   readonly outputTokens: number;
   readonly cacheReadTokens: number;
   readonly cacheCreationTokens: number;
-};
+}
 
 export type TranscriptMetrics = TokenTotals & {
   readonly turns: number;
@@ -33,7 +34,11 @@ export type TranscriptMetrics = TokenTotals & {
   readonly models: readonly string[];
 };
 
-type Rates = { readonly input: number; readonly output: number; readonly cacheRead?: number };
+interface Rates {
+  readonly input: number;
+  readonly output: number;
+  readonly cacheRead?: number;
+}
 
 /**
  * USD per million tokens, first-party API rates (claude-api skill, cached 2026-10-06).
@@ -145,10 +150,10 @@ function parseClaudeJsonlMetrics(text: string): TranscriptMetrics {
 
 export type TranscriptFormat = AgentHost["transcriptFormat"];
 
-export type MetricsParser = {
+export interface MetricsParser {
   parse(text: string): TranscriptMetrics;
   costUsd(model: string, tokens: TokenTotals): number;
-};
+}
 
 /**
  * Metrics parsers and price tables by transcript format. `claude-jsonl` is
@@ -189,12 +194,12 @@ type GroupMetrics = TokenTotals & {
   readonly turns: number;
 };
 
-export type RunMetrics = {
+export interface RunMetrics {
   readonly runId: string;
   readonly tickets: readonly TicketMetrics[];
   readonly waves: ReadonlyMap<number, GroupMetrics>;
   readonly run: GroupMetrics;
-};
+}
 
 function sumGroup(members: readonly TranscriptMetrics[]): GroupMetrics {
   const total = {
@@ -225,7 +230,7 @@ export function aggregateRun(runId: string, tickets: readonly TicketMetrics[]): 
     byWave.set(ticket.wave, [...(byWave.get(ticket.wave) ?? []), ticket]);
   const waves = new Map<number, GroupMetrics>();
   for (const wave of [...byWave.keys()].toSorted((a, b) => a - b)) {
-    const members = byWave.get(wave)!;
+    const members = present(byWave.get(wave));
     waves.set(wave, {
       ...sumGroup(members),
       wallMs: Math.max(...members.map((member) => member.wallMs)),
@@ -284,11 +289,11 @@ export function formatMetricsSummary(metrics: RunMetrics): string {
   return lines.join("\n");
 }
 
-type PlanEntry = {
+interface PlanEntry {
   readonly id: string;
   readonly wave: number;
   readonly estimatedPeakTokens: number | null;
-};
+}
 
 function readPlanEntries(ticketsPath: string): PlanEntry[] {
   const parsed: unknown = JSON.parse(readFileSync(ticketsPath, "utf8"));

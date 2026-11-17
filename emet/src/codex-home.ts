@@ -10,6 +10,7 @@ import {
 import { homedir } from "node:os";
 import path from "node:path";
 
+import { readEnv } from "./env";
 import { isObject } from "./narrow";
 
 /**
@@ -60,12 +61,12 @@ function tomlString(value: string): string {
 }
 
 /** What the overlay `config.toml` carries for one run. */
-type OverlayConfigOptions = {
+interface OverlayConfigOptions {
   readonly marketplacePath?: string;
   readonly trustedDirectories: readonly string[];
   readonly model?: string;
   readonly effort?: string;
-};
+}
 
 /**
  * The overlay `config.toml` text: the resolved model and effort, the local
@@ -100,7 +101,7 @@ export function renderOverlayConfig(options: OverlayConfigOptions): string {
 
 function sourceCodexHome(sourceHome: string | undefined): string {
   if (sourceHome !== undefined) return sourceHome;
-  const fromEnv = process.env["CODEX_HOME"];
+  const fromEnv = readEnv("CODEX_HOME");
   return fromEnv !== undefined && fromEnv.length > 0 ? fromEnv : path.join(homedir(), ".codex");
 }
 
@@ -118,10 +119,10 @@ function sourceMarketplacePath(source: string): string | undefined {
   } catch {
     return undefined;
   }
-  const marketplaces = isObject(parsed) ? parsed["marketplaces"] : undefined;
+  const marketplaces = isObject(parsed) ? parsed.marketplaces : undefined;
   const entry = isObject(marketplaces) ? marketplaces[MARKETPLACE_NAME] : undefined;
-  if (!isObject(entry) || entry["source_type"] !== "local") return undefined;
-  const marketplaceSource = entry["source"];
+  if (!isObject(entry) || entry.source_type !== "local") return undefined;
+  const marketplaceSource = entry.source;
   return typeof marketplaceSource === "string" ? marketplaceSource : undefined;
 }
 
@@ -144,14 +145,14 @@ function replaceWithSymlink(target: string, linkPath: string): void {
 const RUN_ID_PATTERN = /^[A-Za-z0-9][A-Za-z0-9_-]*$/;
 
 /** What {@link buildRunHome} needs; every field past `repoRoot` is optional. */
-type RunHomeOptions = {
+interface RunHomeOptions {
   readonly run: string;
   readonly repoRoot: string;
   readonly sourceHome?: string;
   readonly trustedDirectories?: readonly string[];
   readonly model?: string;
   readonly effort?: string;
-};
+}
 
 /**
  * Builds the per-run `CODEX_HOME` overlay at `<repoRoot>/.emet/runs/<run>/codex-home/`.

@@ -1,6 +1,7 @@
 # 0024. Adopt the andryorelabs standard
 
 Status: Accepted (2026-11-11)
+Revised: 2026-11-15, adopt standard v2 ([aokit `docs/standards`](https://github.com/andryorelabs/aokit/tree/main/docs/standards)); V10, V17 and V38 are N-A; the `skills-lock.json` exemption narrows to third-party skills; see [ADR-0027](0027-cli-runtime-contract.md)
 Spec: the andryorelabs standard v1 adoption spec, filed 2026-11-11
 
 ## Context
@@ -19,7 +20,8 @@ Exemptions and rules that do not apply:
 - **Merge methods on `main`**: `main` takes merge commits from `develop` and has no linear-history rule ([ADR-0012](0012-develop-development-branch.md)). `develop` follows the trunk rules (squash only).
 - **npm fields and trusted publishing**: emet publishes no npm package. The same fields go on the plugin manifests.
 - **Stale-name check**: "forge" stays in the legacy-name compatibility layer ([ADR-0015](0015-rename-to-emet-with-legacy-name-compatibility.md)), in ADRs and in CHANGELOG history.
-- **`skills-lock.json`**: stays untracked, because the third-party skills under `.claude/skills/` are untracked too.
+- **`skills-lock.json`**: lists the two Module skills (`add-adr`, `cut-release`) and is tracked. The exemption covers only the third-party skills under `.claude/skills/`, which stay untracked and out of the lock.
+- **V10, V17 and V38 (standard v2)**: not applicable. V10 (a `PRIVACY_POLICY.md`) applies where a project handles user data, and emet collects none. V17 (the `lint:parity` differential gate) applies while Oxlint and ESLint coexist as full linters, and here ESLint only covers `.astro` files. V38 (`publint` and `attw` on a published package) does not apply because emet publishes no npm package.
 - **`FUNDING.yml`**: only andryore-web carries one.
 
 ## Consequences

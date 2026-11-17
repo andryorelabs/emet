@@ -8,6 +8,7 @@ import {
   resolveRepoRoot,
   type ForgeConfig,
 } from "./config";
+import { activeEnvName, readEnv } from "./env";
 import {
   didAcquireLock,
   type LockHolder,
@@ -15,6 +16,7 @@ import {
   readLockHolderAs,
   releaseLock,
 } from "./locks";
+import { CONFIG_FILE, LEGACY_PRODUCT, stateDir } from "./names";
 import { writePhase } from "./phase";
 import {
   checkMemoryHeadroom,
@@ -24,7 +26,6 @@ import {
   resolveMemReserveBytesFromEnvironment,
 } from "./resources";
 import { classifyRun, resolveSessionSlug, type RunVerdict } from "./runs";
-import { CONFIG_FILE, LEGACY_PRODUCT, readEnv, stateDir } from "./names";
 
 /**
  * Concurrency-cap slots under `~/.local/state/emet/slots/<index>` — the
@@ -295,11 +296,11 @@ export async function releaseAllSlotsForRun(
   return released;
 }
 
-export type SlotListEntry = {
+export interface SlotListEntry {
   readonly index: number;
   readonly holder: SlotHolder;
   readonly verdict: RunVerdict;
-};
+}
 
 export async function listOccupiedSlots(
   slotsDirectory?: string,
@@ -349,7 +350,7 @@ function requireFlagValue(argv: readonly string[], flag: string): string {
  * var is unset.
  */
 export function resolveMaxLiveWorkers(config: ForgeConfig): number {
-  const raw = readEnv("MAX_LIVE_WORKERS");
+  const raw = readEnv("EMET_MAX_LIVE_WORKERS");
   if (raw !== undefined) {
     if (raw === "auto") {
       return computeAutoMaxLiveWorkers(readHostResources(), resolveAutoCapOptionsFromEnvironment());
@@ -363,6 +364,11 @@ export function resolveMaxLiveWorkers(config: ForgeConfig): number {
   return config.concurrency.maxLiveWorkers;
 }
 
+/** Optional seam for tests; the defaults keep the real liveness checks. */
+export interface SlotsRunDeps {
+  readonly classifyRunOptions?: Parameters<typeof classifyRun>[3];
+}
+
 /**
  * CLI entry point — the only supported calling convention (see the
  * file-level doc comment for why an inline `bun -e` snippet is not).
@@ -374,7 +380,7 @@ export function resolveMaxLiveWorkers(config: ForgeConfig): number {
  * emet slots --list
  * ```
  */
-async function main(config: ForgeConfig): Promise<void> {
+async function main(config: ForgeConfig, deps: SlotsRunDeps): Promise<void> {
   const argv = process.argv.slice(2);
 
   if (argv.includes("--acquire")) {
@@ -402,7 +408,14 @@ async function main(config: ForgeConfig): Promise<void> {
       return;
     }
 
-    const index = await acquireSlot(maxLiveWorkers, runId, anchorPid, ticket);
+    const index = await acquireSlot(
+      maxLiveWorkers,
+      runId,
+      anchorPid,
+      ticket,
+      undefined,
+      deps.classifyRunOptions,
+    );
     if (index === null) {
       console.error(
         `emet:slots — no free slot (all ${maxLiveWorkers} occupied by a live or idle run).`,
@@ -450,10 +463,8 @@ async function main(config: ForgeConfig): Promise<void> {
   if (argv.includes("--list")) {
     const maxLiveWorkers = resolveMaxLiveWorkers(config);
     const capSource =
-      readEnv("MAX_LIVE_WORKERS") !== undefined
-        ? process.env["EMET_MAX_LIVE_WORKERS"]
-          ? "EMET_MAX_LIVE_WORKERS"
-          : "FORGE_MAX_LIVE_WORKERS"
+      readEnv("EMET_MAX_LIVE_WORKERS") !== undefined
+        ? activeEnvName("EMET_MAX_LIVE_WORKERS")
         : config.concurrency.maxLiveWorkers === "auto"
           ? "auto"
           : CONFIG_FILE;
@@ -492,8 +503,8 @@ async function main(config: ForgeConfig): Promise<void> {
  * to {@link DEFAULT_FORGE_CONFIG}) while every mutating mode
  * (`--acquire`/`--release`/`--release-index`) requires a real one.
  */
-export async function run(argv: string[]): Promise<void> {
-  process.argv = [process.argv[0]!, process.argv[1]!, ...argv];
+export async function run(argv: string[], deps: SlotsRunDeps = {}): Promise<void> {
+  process.argv = [...process.argv.slice(0, 2), ...argv];
   try {
     const repoRoot = await resolveRepoRoot();
     if (!repoRoot) {
@@ -502,7 +513,7 @@ export async function run(argv: string[]): Promise<void> {
     const config = argv.includes("--list")
       ? (await loadForgeConfigWithDefaults(repoRoot)).config
       : await requireForgeConfig(repoRoot);
-    await main(config);
+    await main(config, deps);
   } catch (error: unknown) {
     if (error instanceof ForgeConfigError) {
       console.error(error.message);

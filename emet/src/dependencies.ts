@@ -9,7 +9,6 @@ import {
   resolveAgentHostName,
   type TrackerKind,
 } from "./config";
-import { isObject } from "./narrow";
 import {
   LEGACY_PRODUCT,
   LEGACY_REVIEWER_AGENT,
@@ -18,6 +17,7 @@ import {
   REVIEWER_AGENT,
   WORKER_AGENT,
 } from "./names";
+import { isObject } from "./narrow";
 import {
   checkSkillsContract,
   findPluginAgentFile,
@@ -90,7 +90,7 @@ type DependencyStatus =
    * merely unusual rather than broken. */
   | "indeterminate";
 
-export type DependencyCheck = {
+export interface DependencyCheck {
   readonly dependency: DependencyName;
   readonly status: DependencyStatus;
   /** One line, no newlines: what is wrong and why it matters. */
@@ -101,7 +101,7 @@ export type DependencyCheck = {
   /** What could *not* be verified, when the check passed but only partly —
    * today just the Linear MCP server's authentication. */
   readonly limitation: string | null;
-};
+}
 
 export type ClaudePluginProbe =
   | { readonly kind: "listed"; readonly status: "installed" | "disabled" | "missing" }
@@ -127,7 +127,7 @@ export type LinearMcpProbe =
   | { readonly kind: "not-declared"; readonly searchedAllScopes: boolean }
   | { readonly kind: "mcp-json-unreadable"; readonly detail: string };
 
-export type DependencyProbes = {
+export interface DependencyProbes {
   /** Memoized by {@link createDependencyProbes} — the plugin list is global,
    * so a fleet sweep over 30 repos must still shell out exactly once. */
   readonly claudePlugin: () => Promise<ClaudePluginProbe>;
@@ -138,7 +138,7 @@ export type DependencyProbes = {
   readonly forgeAgents: () => Promise<ForgeAgentsProbe>;
   /** Optional so existing stubs stay valid; absent means the contract is not checked. */
   readonly skillsContract?: () => readonly DependencyCheck[];
-};
+}
 
 type ProbeRun =
   | { readonly kind: "ran"; readonly exitCode: number; readonly stdout: string }
@@ -565,9 +565,9 @@ export function probeForgeAgents(
   return missing.length === 0 ? { kind: "present" } : { kind: "missing", missing };
 }
 
-async function probeGithubCli(): Promise<GithubCliProbe> {
-  if (!(await resolveBinaryOnPath("gh"))) return { kind: "not-on-path" };
-  const result = await runProbeCommand(["gh", "auth", "status"]);
+export async function probeGithubCli(binary = "gh"): Promise<GithubCliProbe> {
+  if (!(await resolveBinaryOnPath(binary))) return { kind: "not-on-path" };
+  const result = await runProbeCommand([binary, "auth", "status"]);
   if (result.kind === "timed-out") return { kind: "timed-out" };
   if (result.kind === "spawn-failed") return { kind: "not-on-path" };
   return result.exitCode === 0 ? { kind: "authenticated" } : { kind: "unauthenticated" };
@@ -650,20 +650,20 @@ export function createDependencyProbes(host: AgentHost = claudeHost): Dependency
 
 type TicketStatus = "todo" | "in-progress" | "done" | "cancelled" | "dropped";
 
-export type TicketNode = {
+export interface TicketNode {
   id: string;
   status: TicketStatus;
   priority: number;
   createdAt: string;
   blockedBy: readonly string[];
-};
+}
 
-export type TicketGraphResult = {
+export interface TicketGraphResult {
   exitCode: 0 | 1;
   cycle: string[] | null;
   ready: TicketNode[];
   blocked: { id: string; blockers: string[] }[];
-};
+}
 
 function findDependencyCycle(nodesById: Map<string, TicketNode>): string[] | null {
   const finished = new Set<string>();

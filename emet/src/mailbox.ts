@@ -2,6 +2,7 @@ import { existsSync, mkdirSync, readdirSync, readFileSync } from "node:fs";
 import path from "node:path";
 
 import { loadForgeConfig } from "./config";
+import { commandOutcomes } from "./exit-codes";
 import { didAcquireLock, didReclaimStaleLock, releaseLock } from "./locks";
 import { errorMessage, isObject } from "./narrow";
 import { assertSafeId, runDirectory, writeJsonAtomically } from "./runs";
@@ -14,8 +15,8 @@ const USAGE = `usage: emet ask --run <id> --ticket <ticket> --body <text>
 Questions and replies live in <git-common-dir>/.emet/runs/<id>/mailbox/<ticket>/<n>.{question,reply}.json.
 ask --wait exits 0 with the reply body, 3 when the slice elapses, 4 when the wait budget is spent.`;
 
-const EXIT_SLICE_TIMEOUT = 3;
-const EXIT_EXPIRED = 4;
+const EXIT_SLICE_TIMEOUT = commandOutcomes.ask.sliceTimeout;
+const EXIT_EXPIRED = commandOutcomes.ask.expired;
 const DEFAULT_SLICE_SECONDS = 60;
 const DEFAULT_ASK_WAIT_MINUTES = 30;
 const POLL_INTERVAL_MS = 1000;

@@ -2,7 +2,7 @@
 title: Riferimento della configurazione
 description: Ogni chiave di emet.config.json con il suo valore predefinito e il suo significato.
 seoTitle: Riferimento della configurazione di emet
-sourceHash: eb2611cf0c7e09b4
+sourceHash: f643569c960d5e35
 ---
 
 Ogni chiave di `emet.config.json`, con il suo valore predefinito e il suo significato. La fonte di verità è [`emet/schema/emet.config.schema.json`](../../emet/schema/emet.config.schema.json). I termini seguono [GLOSSARY.md](../../GLOSSARY.md). Torna al [README](../../README.md).
@@ -199,3 +199,23 @@ Prose-only.
 Facoltativo, prose-only. `null` od omesso salta il passaggio di review di design/UI.
 
 - `canvasIndex` (deprecated): percorso di un file canvas di design che i worker controllano prima delle modifiche all'interfaccia.
+
+## Variabili d'ambiente
+
+La CLI legge queste variabili, tutte tramite `emet/src/env.ts`. Una variabile con grafia `FORGE_` funziona ancora come ripiego per il suo nome `EMET_` e stampa un avviso una sola volta. I valori vuoti contano come non impostati. `tools/env-docs.test.ts` mantiene allineati questa tabella e il codice.
+
+| Variabile                     | Ripiego legacy                 | Significato                                                                                                                                                      |
+| ----------------------------- | ------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `EMET_MAX_LIVE_WORKERS`       | `FORGE_MAX_LIVE_WORKERS`       | Limite di worker attivi contemporaneamente: un numero positivo o `auto`. Sostituisce `concurrency.maxLiveWorkers`.                                               |
+| `EMET_STATE_DIR`              | `FORGE_STATE_DIR`              | Directory di stato a livello di host, che contiene il pool di slot dei worker.                                                                                   |
+| `EMET_SKIP_DEPENDENCY_CHECKS` | `FORGE_SKIP_DEPENDENCY_CHECKS` | Impostala a `1` per declassare ad avvisi i controlli di dipendenze bloccanti in `emet preflight`.                                                                |
+| `EMET_RUN_IDLE_THRESHOLD_MS`  | `FORGE_RUN_IDLE_THRESHOLD_MS`  | Millisecondi per cui la trascrizione di un'esecuzione può restare silenziosa prima di essere considerata inattiva. Sostituisce `concurrency.runIdleThresholdMs`. |
+| `EMET_CPU_OVERSUBSCRIBE`      | `FORGE_CPU_OVERSUBSCRIBE`      | Fattore di sovrasottoscrizione della CPU per il limite automatico di worker.                                                                                     |
+| `EMET_MEM_RESERVE_GIB`        | `FORGE_MEM_RESERVE_GIB`        | GiB di memoria mantenuti liberi prima di concedere uno slot di worker.                                                                                           |
+| `EMET_MEM_PER_WORKER_GIB`     | `FORGE_MEM_PER_WORKER_GIB`     | GiB di memoria presunti per worker dal limite automatico di worker.                                                                                              |
+| `EMET_AGENT_HOST`             |                                | Impostala a `codex` quando si esegue sotto l'host agente Codex; qualsiasi altro valore indica Claude.                                                            |
+| `CODEX_HOME`                  |                                | La home directory di Codex; predefinita `~/.codex`. Viene solo letta.                                                                                            |
+| `XDG_STATE_HOME`              |                                | Base della directory di stato quando `EMET_STATE_DIR` non è impostata.                                                                                           |
+| `NO_COLOR`                    |                                | Se impostata, il banner viene stampato senza colore.                                                                                                             |
+| `FORCE_COLOR`                 |                                | Qualsiasi valore tranne vuoto o `0` forza un banner a colori, anche senza TTY.                                                                                   |
+| `TERM`                        |                                | `dumb` disattiva il colore del banner.                                                                                                                           |

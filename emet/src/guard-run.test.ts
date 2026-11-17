@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, spyOn, test } from "bun:test";
-import { mkdtempSync, realpathSync, rmSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, realpathSync, rmSync, writeFileSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
 
@@ -9,6 +9,7 @@ import {
   run,
   type CompletionEventDependencies,
 } from "./guard";
+import { readCompletionEvent } from "./runs";
 
 let stdinSpy: { mockRestore: () => void } | null = null;
 
@@ -86,7 +87,7 @@ describe("guard run() hook entry", () => {
     });
     const { logs } = await runWithInput([payload]);
     expect(logs).toHaveLength(1);
-    expect(JSON.parse(logs[0]!)).toMatchObject({
+    expect(JSON.parse(logs[0] ?? "")).toMatchObject({
       hookSpecificOutput: {
         hookEventName: "PreToolUse",
         permissionDecision: "deny",
@@ -261,7 +262,7 @@ describe("recordCompletionEvent", () => {
   });
 
   test("a blocked verdict is recorded as blocked without a transcript path", async () => {
-    const written: Array<Record<string, unknown>> = [];
+    const written: Record<string, unknown>[] = [];
     await recordCompletionEvent(
       "Stop",
       { cwd: "/wt" },
@@ -311,5 +312,93 @@ describe("recordCompletionEvent", () => {
       console.error = originalError;
     }
     expect(errors[0]).toContain("could not record the completion event");
+  });
+});
+
+function git(cwd: string, ...args: string[]): void {
+  const result = Bun.spawnSync(
+    ["git", "-c", "user.name=t", "-c", "user.email=t@example.com", "-C", cwd, ...args],
+    { stdout: "pipe", stderr: "pipe" },
+  );
+  if (result.exitCode !== 0) throw new Error(result.stderr.toString());
+}
+
+function makeRepoWithCommit(): string {
+  const repo = path.join(workingDirectory, "repo");
+  mkdirSync(repo);
+  git(repo, "init", "-q", "-b", "main");
+  git(repo, "commit", "-q", "--allow-empty", "-m", "base");
+  return repo;
+}
+
+describe("recordCompletionEvent with real git state", () => {
+  test("records the owner, branch and new commit count of a locked worker worktree", async () => {
+    const repo = makeRepoWithCommit();
+    const worktree = path.join(workingDirectory, "wt");
+    git(repo, "worktree", "add", "-q", "-b", "cla-1-x", worktree);
+    git(worktree, "commit", "-q", "--allow-empty", "-m", "work");
+    git(
+      repo,
+      "worktree",
+      "lock",
+      worktree,
+      "--reason",
+      "emet run=r1 ticket=CLA-1 anchor=1 at=2026",
+    );
+    await recordCompletionEvent("Stop", { cwd: worktree }, { decision: "allow" });
+    const event = readCompletionEvent(path.join(repo, ".git"), "r1", "CLA-1");
+    expect(event).toMatchObject({
+      runId: "r1",
+      ticket: "CLA-1",
+      event: "Stop",
+      outcome: "allowed",
+      branch: "cla-1-x",
+      commits: 1,
+    });
+  });
+
+  test("writes nothing for a worktree that no run owns", async () => {
+    const repo = makeRepoWithCommit();
+    await recordCompletionEvent("Stop", { cwd: repo }, { decision: "allow" });
+    expect(existsSync(path.join(repo, ".git", ".emet"))).toBe(false);
+  });
+});
+
+function seedSpecRun(runDirectory: string): void {
+  mkdirSync(runDirectory, { recursive: true });
+  writeFileSync(path.join(runDirectory, "spec.md"), "# spec\n");
+  writeFileSync(path.join(runDirectory, "tickets.json"), "[]\n");
+}
+
+describe("guard run() argument handling", () => {
+  test("--mark-final-report with an invalid session id fails with exit code 1", async () => {
+    const { errors } = await runWithInput([], ["--mark-final-report", "../bad id"]);
+    expect(errors[0]).toContain("invalid session id");
+    expect(process.exitCode).toBe(1);
+    process.exitCode = 0;
+  });
+
+  test("codex UserPromptSubmit approves a spec run found at the repository root", async () => {
+    process.env.EMET_AGENT_HOST = "codex";
+    const repo = makeRepoWithCommit();
+    const runDirectory = path.join(repo, ".emet", "runs", "spec12");
+    seedSpecRun(runDirectory);
+    await runWithInput(
+      [JSON.stringify({ prompt: "approve 12", cwd: repo })],
+      ["--event", "UserPromptSubmit"],
+    );
+    expect(existsSync(path.join(runDirectory, "approval.json"))).toBe(true);
+  });
+
+  test("codex UserPromptSubmit prefers runs shared under the git common directory", async () => {
+    process.env.EMET_AGENT_HOST = "codex";
+    const repo = makeRepoWithCommit();
+    const runDirectory = path.join(repo, ".git", ".emet", "runs", "spec7");
+    seedSpecRun(runDirectory);
+    await runWithInput(
+      [JSON.stringify({ prompt: "approve 7", cwd: repo })],
+      ["--event", "UserPromptSubmit"],
+    );
+    expect(existsSync(path.join(runDirectory, "approval.json"))).toBe(true);
   });
 });

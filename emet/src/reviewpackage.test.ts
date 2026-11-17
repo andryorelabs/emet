@@ -2,6 +2,7 @@ import { afterAll, beforeAll, describe, expect, test } from "bun:test";
 import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
+
 import { buildReviewPackage } from "./reviewpackage";
 
 let repo: string;
@@ -34,7 +35,9 @@ beforeAll(() => {
   sideBranchHead = commitFile("c.txt", "three\n");
 });
 
-afterAll(() => rmSync(repo, { recursive: true, force: true }));
+afterAll(() => {
+  rmSync(repo, { recursive: true, force: true });
+});
 
 describe("buildReviewPackage", () => {
   test("packages commits, stat and diff for a descendant range", async () => {

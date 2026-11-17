@@ -15,10 +15,10 @@
  * missing-input errors.
  */
 
-import { isCompiledBinary } from "./assets";
-import { optionalProperty } from "./optional";
 import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
+
+import { isCompiledBinary } from "./assets";
 import { resolveRepoRoot } from "./config";
 import {
   BINARY,
@@ -28,43 +28,48 @@ import {
   RUN_DIR,
   resolveRunDir,
 } from "./names";
-import { globsOverlap } from "./surfaces";
 import { isObject } from "./narrow";
+import { optionalProperty } from "./optional";
+import { present } from "./present";
+import { globsOverlap } from "./surfaces";
 
 const USAGE = `usage: ${BINARY} verify <ticket> [--run <id>] [--worktree <path>]`;
 
 const BOOKKEEPING_PREFIXES: readonly string[] = [`${RUN_DIR}/`, `${LEGACY_RUN_DIR}/`];
 
-export type DispatchRecord = {
+export interface DispatchRecord {
   readonly baseline: string;
   readonly surfaces: readonly string[];
-};
+}
 
-type CheckResult = {
+interface CheckResult {
   readonly name: "commits" | "surfaces" | "handoff" | "suite";
   readonly ok: boolean;
   readonly detail: string;
-};
+}
 
-export type VerifyRecord = {
+export interface VerifyRecord {
   readonly ticket: string;
   readonly ok: boolean;
   readonly baseline: string;
   readonly head: string;
   readonly checks: readonly CheckResult[];
   readonly at: string;
-};
+}
 
-type CommandOutcome = { readonly exitCode: number; readonly output: string };
+interface CommandOutcome {
+  readonly exitCode: number;
+  readonly output: string;
+}
 
-export type VerifyDependencies = {
+export interface VerifyDependencies {
   readonly head: () => Promise<string>;
   readonly commitCount: (baseline: string) => Promise<number>;
   readonly changedPaths: (baseline: string) => Promise<string[]>;
   readonly handoffCheck: () => Promise<CommandOutcome>;
   readonly workerScopedSuite: string | undefined;
   readonly runSuite: (command: string) => Promise<CommandOutcome>;
-};
+}
 
 export function isBookkeepingPath(changedPath: string): boolean {
   return BOOKKEEPING_PREFIXES.some((prefix) => changedPath.startsWith(prefix));
@@ -224,7 +229,7 @@ function resolveRunId(repoRoot: string, ticket: string, explicit: string | undef
         : `${ticket} has dispatch records in several runs (${candidates.join(", ")}) — pass --run <id>`,
     );
   }
-  return candidates[0]!;
+  return present(candidates[0]);
 }
 
 async function showBaselineConfig(workTree: string, baseline: string): Promise<string | undefined> {
@@ -263,7 +268,7 @@ function parseArguments(argv: readonly string[]): {
   const options: Record<string, string | undefined> = {};
   let bad = false;
   for (let index = 0; index < argv.length; index++) {
-    const argument = argv[index]!;
+    const argument = present(argv[index]);
     if (argument === "--run" || argument === "--worktree") {
       const value = argv[++index];
       if (!value) bad = true;

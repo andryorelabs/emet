@@ -45,7 +45,7 @@ describe("About Hebrew word pair", () => {
   });
 
   it("aligns the pair with the letter text instead of centring it", () => {
-    const pairRule = css.match(/^\.hebrew-pair \{[^}]*\}/m)?.[0] ?? "";
+    const pairRule = /^\.hebrew-pair \{[^}]*\}/m.exec(css)?.[0] ?? "";
     expect(pairRule).not.toContain("justify-content");
   });
 
@@ -65,7 +65,7 @@ describe("About Hebrew word pair", () => {
 
   it("declares the subset font for exactly the three Hebrew code points", () => {
     const tokens = readFileSync(new URL("../../styles/tokens.css", import.meta.url), "utf8");
-    const block = tokens.match(/@font-face \{[^}]*"Frank Ruhl Libre"[^}]*\}/)?.[0] ?? "";
+    const block = /@font-face \{[^}]*"Frank Ruhl Libre"[^}]*\}/.exec(tokens)?.[0] ?? "";
     expect(block).toContain("/fonts/FrankRuhlLibre-hebrew.woff2");
     expect(block).toContain("unicode-range: U+05D0, U+05DE, U+05EA;");
   });

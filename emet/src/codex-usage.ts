@@ -5,11 +5,15 @@
  * summary the stall check uses, and the Codex price table.
  */
 
-import { isObject } from "./narrow";
 import type { TokenTotals, TranscriptMetrics } from "./metrics";
+import { isObject } from "./narrow";
 import type { LastTranscriptStep } from "./usage";
 
-type CodexRates = { readonly input: number; readonly output: number; readonly cachedInput: number };
+interface CodexRates {
+  readonly input: number;
+  readonly output: number;
+  readonly cachedInput: number;
+}
 
 /**
  * USD per million tokens by model-name marker, matched in order. Every price

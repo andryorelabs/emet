@@ -2,7 +2,8 @@ import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from 
 import path from "node:path";
 
 import type { AgentHostName } from "./agenthost";
-import { checkDestructiveCommand, checkEditSurface } from "./guard-destructive";
+import { listReservations, type Reservation } from "./claims";
+import { resolveRepoRoot } from "./config";
 import {
   detectAgentHost,
   evaluateApprovalGate,
@@ -11,16 +12,8 @@ import {
   isAgentWorktreeFor,
   normalizeHookInput,
 } from "./guard-codex";
-import { listReservations, type Reservation } from "./claims";
-import { writeCompletionEvent, type CompletionEvent } from "./runs";
-import { listOccupiedSlots, type SlotListEntry } from "./slots";
-import { parseWorktreeEntries, resolveWorktreeOwner } from "./worktrees";
-import { resolveRepoRoot } from "./config";
-import { isObject } from "./narrow";
+import { checkDestructiveCommand, checkEditSurface } from "./guard-destructive";
 import { resolveRunDir } from "./names";
-import { readPhase, writePhase } from "./phase";
-import { readResult } from "./results";
-import { defaultProcessTreeReader, readParent as readProcessParent } from "./proctree";
 import {
   BINARY,
   LEGACY_PRODUCT,
@@ -30,6 +23,13 @@ import {
   legacyStateDir,
   stateDir,
 } from "./names";
+import { isObject } from "./narrow";
+import { readPhase, writePhase } from "./phase";
+import { defaultProcessTreeReader, readParent as readProcessParent } from "./proctree";
+import { readResult } from "./results";
+import { writeCompletionEvent, type CompletionEvent } from "./runs";
+import { listOccupiedSlots, type SlotListEntry } from "./slots";
+import { parseWorktreeEntries, resolveWorktreeOwner } from "./worktrees";
 
 const GUARD_PREFIX = `${BINARY} guard:`;
 const INTERNAL_PREFIX = `${BINARY}:guard —`;
@@ -60,14 +60,17 @@ const SLASH_COMMANDS: readonly string[] = [`/${PRODUCT}`, `/${LEGACY_PRODUCT}`];
  * session's ordinary work because this hook has a bug of its own.
  */
 
-export type PreToolUseHookInput = {
+export interface PreToolUseHookInput {
   readonly tool_name?: string;
   readonly cwd?: string;
   readonly tool_input?: Record<string, unknown>;
   readonly paths?: string[];
-};
+}
 
-function optionalString(record: Record<string, unknown>, key: string): { [K in string]?: string } {
+function optionalString(
+  record: Record<string, unknown>,
+  key: string,
+): Partial<Record<string, string>> {
   const value = record[key];
   return typeof value === "string" ? { [key]: value } : {};
 }
@@ -272,13 +275,13 @@ export async function evaluateGuard(
   }
 }
 
-export type StopHookInput = {
+export interface StopHookInput {
   readonly hook_event_name?: string;
   readonly session_id?: string;
   readonly cwd?: string;
   readonly stop_hook_active?: boolean;
   readonly agent_transcript_path?: string;
-};
+}
 
 export type StopVerdict =
   | { readonly decision: "allow" }
@@ -343,10 +346,10 @@ function stopBlock(reason: string): StopVerdict {
   return { decision: "block", reason };
 }
 
-export type SubagentStopDependencies = {
+export interface SubagentStopDependencies {
   readonly countNewCommits: (cwd: string) => Promise<number | null>;
   readonly readHandoffNotes: (cwd: string) => string[];
-};
+}
 
 const DEFAULT_SUBAGENT_STOP_DEPENDENCIES: SubagentStopDependencies = {
   countNewCommits,
@@ -380,11 +383,11 @@ export async function checkSubagentStop(
   );
 }
 
-export type SessionStopDependencies = {
+export interface SessionStopDependencies {
   readonly listSlots: () => Promise<readonly SlotListEntry[]>;
   readonly listClaims: () => Promise<readonly Reservation[]>;
   readonly markerExists: (sessionId: string) => boolean;
-};
+}
 
 const DEFAULT_SESSION_STOP_DEPENDENCIES: SessionStopDependencies = {
   listSlots: () => listOccupiedSlots(),
@@ -424,19 +427,19 @@ export async function checkSessionStop(
   );
 }
 
-type CompletionEventOwner = {
+interface CompletionEventOwner {
   readonly runId: string;
   readonly ticket: string;
   readonly branch: string | null;
-};
+}
 
-export type CompletionEventDependencies = {
+export interface CompletionEventDependencies {
   readonly resolveOwner: (cwd: string) => Promise<CompletionEventOwner | null>;
   readonly resolveCommonDirectory: (cwd: string) => Promise<string | null>;
   readonly countNewCommits: (cwd: string) => Promise<number | null>;
   readonly writeEvent: (commonDirectory: string, event: CompletionEvent) => void;
   readonly now: () => Date;
-};
+}
 
 async function gitOutput(cwd: string, ...args: string[]): Promise<string | null> {
   const result = await Bun.$`git -C ${cwd} ${args}`.nothrow().quiet();

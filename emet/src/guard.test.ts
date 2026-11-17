@@ -27,6 +27,7 @@ import {
   type PreToolUseHookInput,
 } from "./guard";
 import { readPhase, writePhase } from "./phase";
+import { present } from "./present";
 import { writeResult } from "./results";
 import type { SlotHolder } from "./slots";
 
@@ -487,7 +488,7 @@ describe("stop hooks", () => {
   test("formatStopOutput emits a block payload only on block", () => {
     expect(formatStopOutput({ decision: "allow" })).toBeNull();
     const output = formatStopOutput({ decision: "block", reason: "r" });
-    expect(JSON.parse(output!)).toEqual({ decision: "block", reason: "r" });
+    expect(JSON.parse(present(output))).toEqual({ decision: "block", reason: "r" });
   });
 });
 
@@ -588,5 +589,39 @@ describe("--mark-final-report phase file", () => {
       if (previousState === undefined) delete process.env.EMET_STATE_DIR;
       else process.env.EMET_STATE_DIR = previousState;
     }
+  });
+});
+
+function throwingInput(): PreToolUseHookInput {
+  return {
+    tool_name: "Bash",
+    get tool_input(): never {
+      throw new Error("boom");
+    },
+  };
+}
+
+function silenced<T>(action: () => Promise<T>): Promise<T> {
+  const original = console.error;
+  console.error = () => undefined;
+  return action().finally(() => {
+    console.error = original;
+  });
+}
+
+describe("evaluateGuard internal failures", () => {
+  test("allows the call when a rule throws on the claude host", async () => {
+    const verdict = await silenced(() => evaluateGuard(throwingInput(), process.pid));
+    expect(verdict.decision).toBe("allow");
+  });
+
+  test("denies the call when the codex approval gate throws", async () => {
+    const verdict = await silenced(() =>
+      evaluateGuard(throwingInput(), process.pid, { host: "codex", runsDir: "/nonexistent" }),
+    );
+    expect(verdict).toEqual({
+      decision: "deny",
+      reason: "not approved: the approval gate could not be evaluated",
+    });
   });
 });

@@ -5,9 +5,9 @@ import os from "node:os";
 import path from "node:path";
 
 import { didReserveTicket } from "../emet/src/claims";
-import { loadForgeConfigWithDefaults } from "../emet/src/config";
 import { resolveCodexModel } from "../emet/src/codex-models";
 import { readCodexState } from "../emet/src/codex-process";
+import { loadForgeConfigWithDefaults } from "../emet/src/config";
 import { run } from "../emet/src/dispatch";
 import { acquireSlot } from "../emet/src/slots";
 import { pushRefusedByRules } from "./codex-probe";
@@ -18,7 +18,7 @@ const WAIT_LIMIT_MS = 8 * 60 * 1000;
 const TEST_TIMEOUT_MS = 10 * 60 * 1000;
 const PROMPT_FILE = path.resolve(import.meta.dir, "fixtures/codex-e2e/prompt.md");
 const USER_CONFIG = path.join(
-  process.env["CODEX_HOME"] ?? path.join(os.homedir(), ".codex"),
+  process.env.CODEX_HOME ?? path.join(os.homedir(), ".codex"),
   "config.toml",
 );
 
@@ -27,7 +27,7 @@ const USER_CONFIG = path.join(
  * `codex login status` accepts. The status probe makes no model call.
  */
 function codexE2eEnabled(): boolean {
-  if (process.env["EMET_CODEX_E2E"] !== "1") return false;
+  if (process.env.EMET_CODEX_E2E !== "1") return false;
   if (Bun.which("codex") === null) return false;
   return Bun.spawnSync(["codex", "login", "status"]).exitCode === 0;
 }

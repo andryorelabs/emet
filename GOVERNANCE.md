@@ -42,6 +42,10 @@ is a contributor. Contributors are expected to follow
 [`CONTRIBUTING.md`](CONTRIBUTING.md)'s conventions and the
 [Code of Conduct](CODE_OF_CONDUCT.md).
 
+## Becoming a maintainer
+
+There are no other maintainers today. A contributor who has made sustained, good-quality contributions (merged pull requests, careful reviews and help for other contributors) can be invited by the current maintainer. A maintainer is expected to follow [`CONTRIBUTING.md`](CONTRIBUTING.md), the [Code of Conduct](CODE_OF_CONDUCT.md) and the [stability policy](docs/stability.md). The invitation, and any later removal for inactivity or a Code of Conduct breach, is the current maintainer's decision. Adding a maintainer is recorded in this file.
+
 ## Continuity
 
 There is currently no backup maintainer. If @AndryOre becomes unavailable for an

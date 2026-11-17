@@ -2,7 +2,7 @@
 title: 設定リファレンス
 description: emet.config.json のすべてのキーについて、既定値と意味を説明します。
 seoTitle: emet の設定リファレンス
-sourceHash: eb2611cf0c7e09b4
+sourceHash: f643569c960d5e35
 ---
 
 `emet.config.json` のすべてのキーを、既定値と意味とともに示します。信頼できる情報源は [`emet/schema/emet.config.schema.json`](../../emet/schema/emet.config.schema.json) です。用語は [GLOSSARY.md](../../GLOSSARY.md) に従います。[README](../../README.md) に戻る。
@@ -199,3 +199,23 @@ prose-only です。
 任意かつ prose-only です。`null` または省略した場合、デザインや UI のレビューのステップはスキップされます。
 
 - `canvasIndex`（deprecated）: ワーカーが UI の変更の前に確認する、デザインキャンバスファイルへのパスです。
+
+## 環境変数
+
+CLI はこれらの変数を、すべて `emet/src/env.ts` 経由で読み取ります。`FORGE_` 表記の変数は、対応する `EMET_` 名のフォールバックとして引き続き動作し、一度だけ警告を表示します。空の値は未設定として扱われます。`tools/env-docs.test.ts` が、この表とコードの整合を保ちます。
+
+| 変数                          | 従来のフォールバック           | 意味                                                                                                                                                  |
+| ----------------------------- | ------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `EMET_MAX_LIVE_WORKERS`       | `FORGE_MAX_LIVE_WORKERS`       | 同時に稼働するワーカー数の上限: 正の数または `auto`。`concurrency.maxLiveWorkers` を上書きします。                                                    |
+| `EMET_STATE_DIR`              | `FORGE_STATE_DIR`              | ホスト全体の状態ディレクトリで、ワーカースロットのプールを保持します。                                                                                |
+| `EMET_SKIP_DEPENDENCY_CHECKS` | `FORGE_SKIP_DEPENDENCY_CHECKS` | `1` に設定すると、`emet preflight` で実行をブロックする依存関係チェックが警告に格下げされます。                                                       |
+| `EMET_RUN_IDLE_THRESHOLD_MS`  | `FORGE_RUN_IDLE_THRESHOLD_MS`  | 実行のトランスクリプトが無音のままでいられる時間（ミリ秒）で、これを超えるとアイドルと見なされます。`concurrency.runIdleThresholdMs` を上書きします。 |
+| `EMET_CPU_OVERSUBSCRIBE`      | `FORGE_CPU_OVERSUBSCRIBE`      | 自動ワーカー上限に使う CPU オーバーサブスクリプション係数です。                                                                                       |
+| `EMET_MEM_RESERVE_GIB`        | `FORGE_MEM_RESERVE_GIB`        | ワーカースロットを付与する前に空けておくメモリの GiB 数です。                                                                                         |
+| `EMET_MEM_PER_WORKER_GIB`     | `FORGE_MEM_PER_WORKER_GIB`     | 自動ワーカー上限がワーカー 1 つあたりに見込むメモリの GiB 数です。                                                                                    |
+| `EMET_AGENT_HOST`             |                                | Codex エージェントホストで実行している場合は `codex` に設定します。それ以外の値は Claude を意味します。                                               |
+| `CODEX_HOME`                  |                                | Codex のホームディレクトリで、既定は `~/.codex` です。読み取りのみ行われます。                                                                        |
+| `XDG_STATE_HOME`              |                                | `EMET_STATE_DIR` が未設定のときの、状態ディレクトリの基準です。                                                                                       |
+| `NO_COLOR`                    |                                | 設定すると、バナーが色なしで出力されます。                                                                                                            |
+| `FORCE_COLOR`                 |                                | 空または `0` 以外の値を設定すると、TTY がなくてもバナーを色付きで出力します。                                                                         |
+| `TERM`                        |                                | `dumb` を設定すると、バナーの色が無効になります。                                                                                                     |

@@ -2,7 +2,7 @@
 title: CLI-Referenz
 description: Jeder emet-Unterbefehl, die Tabelle der Gates und Aufzeichnungen, Exit-Codes und Umgebungsvariablen.
 seoTitle: emet-CLI-Referenz
-sourceHash: a8d3bf074f04de8e
+sourceHash: b065107f632830b7
 ---
 
 Jeder `emet`-Unterbefehl, die Tabelle der Gates und Aufzeichnungen, Exit-Codes und Umgebungsvariablen. Die Begriffe folgen [GLOSSARY.md](../../GLOSSARY.md). Zurück zur [README](../../README.md). Jeder Befehl gibt seine Verwendung mit `--help` aus.
@@ -119,6 +119,23 @@ Exit-Codes sind bei jedem Unterbefehl aussagekräftig.
 | `1`  | Befunde, auf die reagiert werden muss.                                                                      |
 | `2`  | Konfigurations- oder Verwendungsfehler; das Tool ist nie tatsächlich gelaufen. Auch ein unbekannter Befehl. |
 | `3`  | Interner Fehler.                                                                                            |
+
+Ein unbekanntes Flag beendet ebenfalls mit `2` und nennt das Flag. Strg-C beendet mit `130`.
+
+## Globale Flags
+
+Jeder Befehl akzeptiert diese; die eigenen Flags jedes Befehls listet `emet <command> --help` auf.
+
+| Flag         | Wirkung                                                                                                                           |
+| ------------ | --------------------------------------------------------------------------------------------------------------------------------- |
+| `--json`     | Gibt ein Envelope `{ok, data, error: {code, message, fix}}` auf stdout aus, auch für `--help` und `--version`.                    |
+| `--no-color` | Deaktiviert ANSI-Farben. Die Farbe berücksichtigt außerdem `NO_COLOR`, `FORCE_COLOR`, `TERM=dumb` und ob die Ausgabe ein TTY ist. |
+| `--verbose`  | Gibt den Stack eines unerwarteten Fehlers aus. Ohne es gibt der Catch auf oberster Ebene eine einzeilige Fehlermeldung aus.       |
+| `--help`     | Gibt die Verwendung des Befehls aus.                                                                                              |
+
+`emet --version` gibt die Version aus; `emet --version --json` gibt `{"ok": true, "data": {"version": ...}, "error": null}` aus. Unter `--json` beendet ein fehlschlagender Befehl mit seinem üblichen Exit-Code und gibt `ok: false` aus, mit einem Fehler-`code` aus `findings`, `usage`, `internal`, `slice-timeout`, `expired`, `bad-range` oder `exit-<n>`; was der Befehl auf stdout ausgegeben hat, ist das `data` des Envelopes.
+
+Auf einem TTY gibt `emet` eine einzeilige Meldung auf stderr aus, wenn ein neueres Release bekannt ist. Es prüft höchstens einmal täglich, speichert die Antwort zwischen, wartet nie auf das Netzwerk und bleibt unter `--json` oder ohne TTY stumm.
 
 ## Umgebungsvariablen
 

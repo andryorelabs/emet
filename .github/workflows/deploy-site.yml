@@ -22,16 +22,28 @@ permissions:
 jobs:
   deploy:
     name: Build image and deploy via Coolify
+    if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     timeout-minutes: 25
     permissions:
       contents: read
     steps:
+      - uses: step-security/harden-runner@1d88384fd173af6ecb012dfd0264a306b711241a # v2.22.4
+        with:
+          egress-policy: audit
+
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
+          fetch-depth: 0
+
+      - name: Compute the sitemap's last-modified dates
+        id: dates
+        run: echo "map=$(bash apps/site/docker/last-modified.sh)" >> "$GITHUB_OUTPUT"
 
       - name: Build the image and smoke-test it
+        env:
+          LAST_MODIFIED_DATES: ${{ steps.dates.outputs.map }}
         run: bash apps/site/docker/smoke.sh
 
       # The token is a GitHub secret (ADR-0019) and the script never echoes it.

@@ -6,14 +6,17 @@
  * be the worker's actual output.
  */
 
-import { resolveRunDir } from "./names";
-import { optionalProperty } from "./optional";
 import { mkdirSync, writeFileSync } from "node:fs";
 import path from "node:path";
 
+import { commandOutcomes } from "./exit-codes";
+import { resolveRunDir } from "./names";
+import { optionalProperty } from "./optional";
+import { present } from "./present";
+
 const USAGE = `usage: emet review-package <base> <head> [--out <file>]`;
 
-const EXIT_BAD_RANGE = 3;
+const EXIT_BAD_RANGE = commandOutcomes["review-package"].badRange;
 
 type RangeProblem = "unresolvable" | "not-descendant" | "empty";
 
@@ -21,7 +24,10 @@ export type ReviewPackage =
   | { readonly ok: true; readonly content: string; readonly commitCount: number }
   | { readonly ok: false; readonly problem: RangeProblem; readonly detail: string };
 
-type GitResult = { readonly exitCode: number; readonly stdout: string };
+interface GitResult {
+  readonly exitCode: number;
+  readonly stdout: string;
+}
 
 async function runGit(args: readonly string[], cwd: string): Promise<GitResult> {
   const proc = Bun.spawn(["git", ...args], { cwd, stdout: "pipe", stderr: "pipe" });
@@ -86,7 +92,7 @@ function parseArguments(argv: readonly string[]): {
       out = argv[++index];
       if (!out) bad = true;
     } else {
-      positional.push(argv[index]!);
+      positional.push(present(argv[index]));
     }
   }
   return {

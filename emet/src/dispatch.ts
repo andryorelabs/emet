@@ -18,10 +18,12 @@ import {
   resolveRepoRoot,
   type ForgeConfig,
 } from "./config";
-import { listOpenQuestions } from "./mailbox";
+import { EmetError } from "./errors";
+import { exitCodes } from "./exit-codes";
 import { buildLockReason, readLockReasonTemplate } from "./lockreason";
-import { errorMessage } from "./narrow";
+import { listOpenQuestions } from "./mailbox";
 import { resolveRunDir } from "./names";
+import { errorMessage } from "./narrow";
 import { readResult } from "./results";
 import { runDirectory } from "./runs";
 import { listOccupiedSlots } from "./slots";
@@ -41,7 +43,7 @@ const THREAD_ID_TIMEOUT_MS = 3000;
 const THREAD_ID_POLL_MS = 50;
 
 /** Overrides for tests; production callers pass none. */
-export type DispatchDeps = {
+export interface DispatchDeps {
   readonly forgeDirectory?: string;
   readonly slotsDirectory?: string;
   readonly executable?: string;
@@ -50,7 +52,7 @@ export type DispatchDeps = {
   readonly cachePath?: string;
   /** How long dispatch waits for `thread.started` before printing `thread pending`. */
   readonly threadIdTimeoutMs?: number;
-};
+}
 
 /** The JSON schema of the final report a Codex worker returns through `--output-schema`. */
 const WORKER_REPORT_SCHEMA = {
@@ -64,11 +66,9 @@ const WORKER_REPORT_SCHEMA = {
   },
 } as const;
 
-class DispatchError extends Error {
-  readonly exitCode: number;
-  constructor(message: string, exitCode = 1) {
-    super(message);
-    this.exitCode = exitCode;
+class DispatchError extends EmetError {
+  constructor(message: string, exitCode: number = exitCodes.findings) {
+    super("dispatch-failed", message, "fix the dispatch input or state and rerun", exitCode);
   }
 }
 
@@ -85,7 +85,7 @@ function requireFlag(argv: readonly string[], flag: string): string {
   return value;
 }
 
-type Paths = {
+interface Paths {
   readonly runDir: string;
   readonly codexDir: string;
   readonly worktree: string;
@@ -94,7 +94,7 @@ type Paths = {
   readonly report: string;
   readonly schema: string;
   readonly dispatchRecord: string;
-};
+}
 
 function pathsFor(root: string, runId: string, ticket: string): Paths {
   const runDir = path.join(resolveRunDir(root).path, "runs", runId);

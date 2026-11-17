@@ -1,8 +1,8 @@
 import { mkdirSync, readFileSync, renameSync, writeFileSync } from "node:fs";
 import path from "node:path";
 
-import { isObject } from "./narrow";
 import { resolveRunDir } from "./names";
+import { isObject } from "./narrow";
 
 export type Phase =
   | "planning"
@@ -14,14 +14,14 @@ export type Phase =
   | "done"
   | "failed";
 
-export type PhaseRecord = {
+export interface PhaseRecord {
   phase: Phase;
   wave: number | null;
   spec: string | null;
   runId: string | null;
   updatedAt: string;
   outcome?: string;
-};
+}
 
 const PHASES: ReadonlySet<string> = new Set([
   "planning",

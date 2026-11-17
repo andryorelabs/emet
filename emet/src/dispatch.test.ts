@@ -13,11 +13,11 @@ import {
 import os from "node:os";
 import path from "node:path";
 
-import { isObject } from "./narrow";
 import { didReserveTicket } from "./claims";
 import { currentPidNamespace, readCodexState } from "./codex-process";
 import { EXIT_BASE_CHECK_FAILED, EXIT_WAIT_TIMEOUT, run, type DispatchDeps } from "./dispatch";
 import { askQuestion } from "./mailbox";
+import { isObject } from "./narrow";
 import { writeResult } from "./results";
 import { acquireSlot } from "./slots";
 
@@ -86,9 +86,9 @@ function dispatchArguments(extra: string[] = []): string[] {
 
 function readFirstInvocation(): { argv: string[]; codexHome: unknown } {
   const parsed: unknown = JSON.parse(readFileSync(logFile, "utf8").trim().split("\n")[0] ?? "{}");
-  if (!isObject(parsed) || !Array.isArray(parsed["argv"])) throw new Error("bad fake log");
-  const env = isObject(parsed["env"]) ? parsed["env"] : {};
-  return { argv: parsed["argv"].map(String), codexHome: env["CODEX_HOME"] };
+  if (!isObject(parsed) || !Array.isArray(parsed.argv)) throw new Error("bad fake log");
+  const env = isObject(parsed.env) ? parsed.env : {};
+  return { argv: parsed.argv.map(String), codexHome: env.CODEX_HOME };
 }
 
 async function waitUntil(condition: () => boolean): Promise<void> {
@@ -168,7 +168,7 @@ describe("dispatch worker", () => {
 
   test("records and prints the thread id as the worker identity", async () => {
     await claimAndSlot();
-    const log = spyOn(console, "log").mockImplementation(() => {});
+    const log = spyOn(console, "log").mockReturnValue(undefined);
     const code = await run(
       dispatchArguments(),
       deps({ lines: [{ type: "thread.started", thread_id: "th-7" }] }),
@@ -200,7 +200,7 @@ describe("dispatch worker", () => {
 
   test("passes --model and --effort overrides and refuses ultra", async () => {
     await claimAndSlot();
-    const errors = spyOn(console, "error").mockImplementation(() => {});
+    const errors = spyOn(console, "error").mockReturnValue(undefined);
     expect(await run(dispatchArguments(["--effort", "ultra"]), deps())).toBe(2);
     errors.mockRestore();
     expect(existsSync(path.join(repo, ".emet", "worktrees"))).toBe(false);
@@ -213,7 +213,7 @@ describe("dispatch worker", () => {
   });
 
   test("exits 1 and creates nothing without a claim or a slot", async () => {
-    const errors = spyOn(console, "error").mockImplementation(() => {});
+    const errors = spyOn(console, "error").mockReturnValue(undefined);
     expect(await run(dispatchArguments(), deps())).toBe(1);
     await didReserveTicket(RUN, LIVE_PID, TICKET, forgeDirectory, ALIVE);
     expect(await run(dispatchArguments(), deps())).toBe(1);
@@ -225,7 +225,7 @@ describe("dispatch worker", () => {
   test("exits 1 and creates nothing when the claim has no surfaces", async () => {
     await didReserveTicket(RUN, LIVE_PID, TICKET, forgeDirectory, ALIVE);
     await acquireSlot(2, RUN, LIVE_PID, TICKET, slotsDirectory, ALIVE);
-    const errors = spyOn(console, "error").mockImplementation(() => {});
+    const errors = spyOn(console, "error").mockReturnValue(undefined);
     expect(await run(dispatchArguments(), deps())).toBe(1);
     const message = String(errors.mock.calls.at(-1)?.[0]);
     errors.mockRestore();
@@ -236,7 +236,7 @@ describe("dispatch worker", () => {
   test("exits 42 when the baseline is not a commit", async () => {
     await claimAndSlot();
     writeDispatchRecord("0".repeat(40));
-    const errors = spyOn(console, "error").mockImplementation(() => {});
+    const errors = spyOn(console, "error").mockReturnValue(undefined);
     expect(await run(dispatchArguments(), deps())).toBe(EXIT_BASE_CHECK_FAILED);
     errors.mockRestore();
     expect(existsSync(path.join(repo, ".emet", "worktrees"))).toBe(false);
@@ -252,7 +252,7 @@ describe("dispatch --wait", () => {
       reportPath: "r.md",
       risk: "Risk: none",
     });
-    const log = spyOn(console, "log").mockImplementation(() => {});
+    const log = spyOn(console, "log").mockReturnValue(undefined);
     const code = await run(["--wait", "--run", RUN, "--ticket", TICKET, "--root", repo]);
     expect(code).toBe(0);
     expect(log.mock.calls.at(-1)?.[0]).toBe("DONE");
@@ -265,7 +265,7 @@ describe("dispatch --wait", () => {
     const stateFile = path.join(repo, ".emet", "runs", RUN, "codex", `${TICKET}.state.json`);
     mkdirSync(path.dirname(stateFile), { recursive: true });
     writeFileSync(stateFile, JSON.stringify({ pid: sleeper.pid }));
-    const errors = spyOn(console, "error").mockImplementation(() => {});
+    const errors = spyOn(console, "error").mockReturnValue(undefined);
     const code = await run([
       "--wait",
       "--run",
@@ -310,7 +310,7 @@ describe("dispatch --wait", () => {
     "a silent worker whose pid is from another namespace is stalled, not running",
     async () => {
       const { stateFile } = seedForeignWorker();
-      const errors = spyOn(console, "error").mockImplementation(() => {});
+      const errors = spyOn(console, "error").mockReturnValue(undefined);
       expect(await run([...waitArguments, repo])).toBe(1);
       expect(String(errors.mock.calls.at(-1)?.[0])).toContain("stalled");
       errors.mockRestore();
@@ -326,7 +326,7 @@ describe("dispatch --wait", () => {
       reportPath: "r.md",
       risk: "Risk: none",
     });
-    const log = spyOn(console, "log").mockImplementation(() => {});
+    const log = spyOn(console, "log").mockReturnValue(undefined);
     expect(await run([...waitArguments, repo])).toBe(0);
     expect(log.mock.calls.at(-1)?.[0]).toBe("DONE");
     log.mockRestore();
@@ -343,7 +343,7 @@ describe("dispatch --wait", () => {
   test("reports a question from a live worker instead of waiting or stalling", async () => {
     const { sleeper } = seedLiveWorker();
     askQuestion(RUN, TICKET, "which shape?", { commonDirectory: path.join(repo, ".git") });
-    const log = spyOn(console, "log").mockImplementation(() => {});
+    const log = spyOn(console, "log").mockReturnValue(undefined);
     const code = await run([...waitArguments, repo]);
     const printed = String(log.mock.calls.at(-1)?.[0]);
     log.mockRestore();
@@ -360,7 +360,7 @@ describe("dispatch --wait", () => {
       reportPath: "r.md",
       risk: "Risk: none",
     });
-    const log = spyOn(console, "log").mockImplementation(() => {});
+    const log = spyOn(console, "log").mockReturnValue(undefined);
     const code = await run([...waitArguments, repo]);
     const printed = String(log.mock.calls.at(-1)?.[0]);
     log.mockRestore();
@@ -374,7 +374,7 @@ describe("dispatch --wait", () => {
     async () => {
       seedForeignWorker();
       askQuestion(RUN, TICKET, "q", { commonDirectory: path.join(repo, ".git") });
-      const log = spyOn(console, "log").mockImplementation(() => {});
+      const log = spyOn(console, "log").mockReturnValue(undefined);
       expect(await run([...waitArguments, repo])).toBe(0);
       expect(String(log.mock.calls.at(-1)?.[0])).toBe(`question ${TICKET} 1`);
       log.mockRestore();
@@ -382,15 +382,162 @@ describe("dispatch --wait", () => {
   );
 
   test("exits 1 when nothing was dispatched", async () => {
-    const errors = spyOn(console, "error").mockImplementation(() => {});
+    const errors = spyOn(console, "error").mockReturnValue(undefined);
     expect(await run(["--wait", "--run", RUN, "--ticket", TICKET, "--root", repo])).toBe(1);
     errors.mockRestore();
   });
 });
 
+async function failure(argv: string[], dispatchDeps?: DispatchDeps) {
+  const errors = spyOn(console, "error").mockReturnValue(undefined);
+  const code = await run(argv, dispatchDeps ?? deps());
+  const messages = errors.mock.calls.map((call) => String(call[0])).join("\n");
+  errors.mockRestore();
+  return { code, messages };
+}
+
+function seedState(pid: number): void {
+  const stateFile = path.join(repo, ".emet", "runs", RUN, "codex", `${TICKET}.state.json`);
+  mkdirSync(path.dirname(stateFile), { recursive: true });
+  writeFileSync(stateFile, JSON.stringify({ pid }));
+}
+
+describe("dispatch worker refusals", () => {
+  test("rejects a run or ticket id that is not a plain identifier with exit 2", async () => {
+    const { code, messages } = await failure(
+      dispatchArguments().map((value) => (value === TICKET ? "AO-1/../x" : value)),
+    );
+    expect(code).toBe(2);
+    expect(messages).toContain("invalid run or ticket id");
+  });
+
+  test("rejects a role other than worker with exit 2", async () => {
+    const { code, messages } = await failure(
+      dispatchArguments().map((value) => (value === "worker" ? "reviewer" : value)),
+    );
+    expect(code).toBe(2);
+    expect(messages).toContain("--role must be worker");
+  });
+
+  test("exits 1 without a slot held for a claimed ticket", async () => {
+    await didReserveTicket(RUN, LIVE_PID, TICKET, forgeDirectory, ALIVE, SURFACES);
+    const { code, messages } = await failure(dispatchArguments());
+    expect(code).toBe(1);
+    expect(messages).toContain(`no slot held for ${TICKET}`);
+  });
+
+  test("exits 1 when the dispatch record is missing", async () => {
+    await claimAndSlot();
+    rmSync(path.join(repo, ".emet", "runs", RUN, "dispatch", `${TICKET}.json`));
+    const { code, messages } = await failure(dispatchArguments());
+    expect(code).toBe(1);
+    expect(messages).toContain("no dispatch record");
+    expect(existsSync(path.join(repo, ".emet", "worktrees"))).toBe(false);
+  });
+
+  test("exits 1 when the dispatch record has no baseline", async () => {
+    await claimAndSlot();
+    writeFileSync(
+      path.join(repo, ".emet", "runs", RUN, "dispatch", `${TICKET}.json`),
+      JSON.stringify({ surfaces: [] }),
+    );
+    const { code, messages } = await failure(dispatchArguments());
+    expect(code).toBe(1);
+    expect(messages).toContain("has no baseline");
+  });
+
+  test("exits 1 when the worktree directory already exists", async () => {
+    await claimAndSlot();
+    mkdirSync(path.join(repo, ".emet", "worktrees", `agent-${TICKET}`), { recursive: true });
+    const { code, messages } = await failure(dispatchArguments());
+    expect(code).toBe(1);
+    expect(messages).toContain("worktree already exists");
+  });
+
+  test("reports a substituted model when the models cache lacks the configured one", async () => {
+    await claimAndSlot();
+    const cachePath = path.join(temp, "empty-models-cache.json");
+    writeFileSync(cachePath, JSON.stringify({ models: [] }));
+    const { code, messages } = await failure(dispatchArguments(), { ...deps(), cachePath });
+    expect(code).toBe(0);
+    expect(messages).toContain("substituted");
+  });
+
+  test("an unexpected failure exits 1 with its message", async () => {
+    await claimAndSlot();
+    const { code, messages } = await failure(dispatchArguments(), {
+      ...deps(),
+      sourceHome: repo,
+    });
+    expect(code).toBe(1);
+    expect(messages).toContain("refusing to build a run home inside the source Codex home");
+  });
+});
+
+describe("dispatch --wait refusals and polling", () => {
+  test("rejects an invalid run or ticket id with exit 2", async () => {
+    const { code, messages } = await failure([
+      "--wait",
+      "--run",
+      "bad run",
+      "--ticket",
+      TICKET,
+      "--root",
+      repo,
+    ]);
+    expect(code).toBe(2);
+    expect(messages).toContain("invalid run or ticket id");
+  });
+
+  test("rejects a negative or non-numeric timeout with exit 2", async () => {
+    const base = ["--wait", "--run", RUN, "--ticket", TICKET, "--root", repo, "--timeout"];
+    const negative = await failure([...base, "-5"]);
+    expect(negative.code).toBe(2);
+    expect(negative.messages).toContain("invalid --timeout");
+    const text = await failure([...base, "soon"]);
+    expect(text.code).toBe(2);
+  });
+
+  test("a worker that exited without recording a result exits 1", async () => {
+    seedState(2_147_483_646);
+    const { code, messages } = await failure([
+      "--wait",
+      "--run",
+      RUN,
+      "--ticket",
+      TICKET,
+      "--root",
+      repo,
+    ]);
+    expect(code).toBe(1);
+    expect(messages).toContain("exited without a recorded result");
+  });
+
+  test("keeps polling a live worker until the timeout", async () => {
+    const sleeper = Bun.spawn(["sleep", "30"]);
+    seedState(sleeper.pid);
+    const startedAt = Date.now();
+    const { code, messages } = await failure([
+      "--wait",
+      "--run",
+      RUN,
+      "--ticket",
+      TICKET,
+      "--timeout",
+      "1",
+      "--root",
+      repo,
+    ]);
+    sleeper.kill();
+    expect(code).toBe(EXIT_WAIT_TIMEOUT);
+    expect(messages).toContain("timed out");
+    expect(Date.now() - startedAt).toBeGreaterThanOrEqual(900);
+  });
+});
+
 describe("dispatch stub", () => {
   test("prints usage and exits 2", async () => {
-    const spy = spyOn(console, "error").mockImplementation(() => {});
+    const spy = spyOn(console, "error").mockReturnValue(undefined);
     expect(await run([])).toBe(2);
     expect(spy.mock.calls[0]?.[0]).toContain("usage: emet dispatch");
     spy.mockRestore();

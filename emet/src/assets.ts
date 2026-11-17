@@ -1,4 +1,3 @@
-import { BINARY } from "./names";
 import configSchema from "../schema/emet.config.schema.json" with { type: "text" };
 import domainTemplate from "../templates/domain.md.tpl" with { type: "text" };
 import emetTemplate from "../templates/emet.md.tpl" with { type: "text" };
@@ -8,6 +7,7 @@ import issueTrackerLocalTemplate from "../templates/issue-tracker-local.md.tpl" 
 import triageLabelsGithubTemplate from "../templates/triage-labels-github.md.tpl" with { type: "text" };
 import triageLabelsLinearTemplate from "../templates/triage-labels-linear.md.tpl" with { type: "text" };
 import triageLabelsLocalTemplate from "../templates/triage-labels-local.md.tpl" with { type: "text" };
+import { BINARY } from "./names";
 
 /**
  * Replaced by `bun build --define` in compiled binaries (see
@@ -34,7 +34,7 @@ const TEMPLATES: Readonly<Record<string, string>> = {
 };
 
 /** The version embedded at build time, or `0.0.0-dev` when running from source. */
-export const FORGE_VERSION: string =
+export const EMET_VERSION: string =
   typeof FORGE_BUILD_VERSION === "string" ? FORGE_BUILD_VERSION : DEV_VERSION;
 
 /** Returns the embedded `emet/templates/<name>` text; throws for an unknown name. */

@@ -1,4 +1,4 @@
-import { describe, expect, test } from "bun:test";
+import { afterEach, beforeEach, describe, expect, spyOn, test } from "bun:test";
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
@@ -11,6 +11,7 @@ import {
   run,
   type TicketMetrics,
 } from "./metrics";
+import { present } from "./present";
 
 function turn(timestamp: string, model: string, usage: Record<string, number>): string {
   return JSON.stringify({ type: "assistant", timestamp, message: { model, usage } });
@@ -99,8 +100,8 @@ describe("aggregateRun", () => {
     const metrics = aggregateRun("r1", tickets);
     expect(metrics.run.costUsd).toBeCloseTo(4.5);
     expect(metrics.run.cacheReadTokens).toBe(300);
-    expect(metrics.waves.get(1)!.wallMs).toBe(90_000);
-    expect(metrics.waves.get(1)!.costUsd).toBeCloseTo(3);
+    expect(present(metrics.waves.get(1)).wallMs).toBe(90_000);
+    expect(present(metrics.waves.get(1)).costUsd).toBeCloseTo(3);
     expect(metrics.run.wallMs).toBe(120_000);
   });
 
@@ -184,5 +185,95 @@ describe("run", () => {
     } finally {
       rmSync(root, { recursive: true, force: true });
     }
+  });
+});
+
+describe("run edge cases", () => {
+  let root: string;
+  let lines: string[];
+  let errors: string[];
+  let restoreConsole: () => void;
+
+  beforeEach(() => {
+    root = mkdtempSync(path.join(os.tmpdir(), "emet-metrics-edge-"));
+    lines = [];
+    errors = [];
+    process.exitCode = 0;
+    const logSpy = spyOn(console, "log").mockImplementation(
+      (...args) => void lines.push(args.join(" ")),
+    );
+    const errorSpy = spyOn(console, "error").mockImplementation(
+      (...args) => void errors.push(args.join(" ")),
+    );
+    restoreConsole = () => {
+      logSpy.mockRestore();
+      errorSpy.mockRestore();
+    };
+  });
+
+  afterEach(() => {
+    restoreConsole();
+    rmSync(root, { recursive: true, force: true });
+    process.exitCode = 0;
+  });
+
+  function seedRun(tickets: unknown, event?: Record<string, unknown>): void {
+    const runDirectory = path.join(root, ".emet", "runs", "r1");
+    mkdirSync(path.join(runDirectory, "events"), { recursive: true });
+    writeFileSync(path.join(runDirectory, "tickets.json"), JSON.stringify(tickets));
+    if (event !== undefined) {
+      writeFileSync(path.join(runDirectory, "events", "CLA-1.json"), JSON.stringify(event));
+    }
+  }
+
+  test("prints usage and exits 2 without a run id", async () => {
+    await run([]);
+    expect(errors.join("\n")).toContain("usage");
+    expect(process.exitCode).toBe(2);
+  });
+
+  test("rejects a run id containing a path separator", async () => {
+    await run(["--run", "a/b"]);
+    expect(process.exitCode).toBe(2);
+  });
+
+  test("exits 1 when the run has no tickets.json", async () => {
+    await run(["--run", "r1", "--root", root]);
+    expect(errors.join("\n")).toContain("no tickets.json");
+    expect(process.exitCode).toBe(1);
+  });
+
+  test("reports tickets without a transcript and prints the markdown summary", async () => {
+    seedRun({ tickets: [{ id: "CLA-1", wave: 1 }, { id: 7 }, "x"] });
+    await run(["r1", "--root", root]);
+    expect(lines.join("\n")).toContain("## Metrics — run r1");
+    expect(errors.join("\n")).toContain("no transcript found for CLA-1");
+  });
+
+  test("treats an event whose transcript file is gone as missing", async () => {
+    seedRun([{ id: "CLA-1" }], {
+      runId: "r1",
+      ticket: "CLA-1",
+      event: "SubagentStop",
+      outcome: "allowed",
+      at: "2026-01-01T00:02:00Z",
+      sessionId: "s",
+      branch: null,
+      commits: 0,
+      agentTranscriptPath: path.join(root, "gone.jsonl"),
+    });
+    await run(["--run", "r1", "--root", root, "--json"]);
+    expect(JSON.parse(lines.join("\n"))).toMatchObject({ missing: ["CLA-1"] });
+  });
+
+  test("rejects a tickets file that is not an array", async () => {
+    seedRun({ nope: true });
+    let message = "";
+    try {
+      await run(["--run", "r1", "--root", root]);
+    } catch (error) {
+      message = error instanceof Error ? error.message : String(error);
+    }
+    expect(message).toContain("expected a tickets array");
   });
 });

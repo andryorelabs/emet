@@ -9,5 +9,6 @@ const APPLE_PLATFORM = /(Mac|iPhone|iPod|iPad)/i;
  */
 export function isApplePlatform(navigatorLike: { platform?: string; userAgent?: string }): boolean {
   const { platform, userAgent } = navigatorLike;
-  return APPLE_PLATFORM.test(platform || userAgent || "");
+  const described = [platform, userAgent].find((value) => value !== undefined && value !== "");
+  return APPLE_PLATFORM.test(described ?? "");
 }

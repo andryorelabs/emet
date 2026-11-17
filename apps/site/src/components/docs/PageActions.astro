@@ -150,7 +150,7 @@ const clientStrings = { copyPage: strings.copyPage, copied: strings.copied, copy
         items.at(-1)?.focus();
       }
     });
-    menu.addEventListener("click", () => setOpen(false));
+    menu.addEventListener("click", () => { setOpen(false); });
     document.addEventListener("pointerdown", (event) => {
       if (!menu.hidden && !root.contains(event.target as Node)) {
         setOpen(false);
@@ -162,7 +162,7 @@ const clientStrings = { copyPage: strings.copyPage, copied: strings.copied, copy
     const button = root.querySelector<HTMLButtonElement>("[data-copy]");
     const label = root.querySelector<HTMLElement>("[data-copy-label]");
     const status = root.querySelector<HTMLElement>("[data-copy-status]");
-    const twin = root.dataset["twin"];
+    const twin = root.dataset.twin;
     if (button === null || label === null || status === null || twin === undefined) {
       return;
     }
@@ -170,34 +170,46 @@ const clientStrings = { copyPage: strings.copyPage, copied: strings.copied, copy
     const show = (text: string, state: string): void => {
       label.textContent = text;
       status.textContent = text;
-      button.dataset["state"] = state;
+      button.dataset.state = state;
       clearTimeout(timer);
       timer = setTimeout(() => {
         label.textContent = strings.copyPage;
         status.textContent = "";
-        delete button.dataset["state"];
+        delete button.dataset.state;
       }, CONFIRM_MS);
     };
-    button.addEventListener("click", async () => {
+    const copyAndShow = async (): Promise<void> => {
       try {
-        const request = fetch(twin).then((response) => {
-          if (!response.ok) {
-            throw new Error(`Twin request failed with ${response.status}`);
-          }
-          return response.text();
-        });
-        if (typeof ClipboardItem === "undefined" || typeof navigator.clipboard.write !== "function") {
-          await navigator.clipboard.writeText(await request);
-        } else {
-          await navigator.clipboard.write([
-            new ClipboardItem({ "text/plain": request.then((text) => new Blob([text], { type: "text/plain" })) }),
-          ]);
-        }
+        await copyTwin(twin);
         show(strings.copied, "copied");
       } catch {
         show(strings.copyFailed, "failed");
       }
+    };
+    button.addEventListener("click", () => {
+      void copyAndShow();
     });
+  }
+
+  /**
+   * Copies the Markdown twin at `twin` to the clipboard. Where the browser
+   * supports `ClipboardItem`, the pending fetch goes to the clipboard as is,
+   * so the write still runs inside the click's user activation.
+   */
+  async function copyTwin(twin: string): Promise<void> {
+    const request = fetch(twin).then((response) => {
+      if (!response.ok) {
+        throw new Error(`Twin request failed with ${String(response.status)}`);
+      }
+      return response.text();
+    });
+    if (typeof ClipboardItem === "undefined" || typeof navigator.clipboard.write !== "function") {
+      await navigator.clipboard.writeText(await request);
+      return;
+    }
+    await navigator.clipboard.write([
+      new ClipboardItem({ "text/plain": request.then((text) => new Blob([text], { type: "text/plain" })) }),
+    ]);
   }
 
   function bindArrowKeys(root: HTMLElement): void {
@@ -216,7 +228,7 @@ const clientStrings = { copyPage: strings.copyPage, copied: strings.copied, copy
 
   const root = document.querySelector<HTMLElement>("[data-page-actions]");
   if (root !== null) {
-    const strings = JSON.parse(root.dataset["pageActions"] ?? "{}") as ClientStrings;
+    const strings = JSON.parse(root.dataset.pageActions ?? "{}") as ClientStrings;
     bindMenu(root);
     bindCopy(root, strings);
     bindArrowKeys(root);

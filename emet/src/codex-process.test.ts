@@ -11,7 +11,7 @@ import {
 } from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { isObject } from "./narrow";
+
 import {
   codexWorkerLiveness,
   currentPidNamespace,
@@ -21,6 +21,7 @@ import {
   spawnCodex,
   type ProcessIo,
 } from "./codex-process";
+import { isObject } from "./narrow";
 
 const FAKE = path.resolve(import.meta.dir, "../../tools/fixtures/fake-codex/codex");
 const scratch: string[] = [];
@@ -93,8 +94,8 @@ describe("spawnCodex", () => {
     expect(command).toBe("setsid");
     expect(args).toEqual(["codex", "exec", "--json"]);
     expect(options.detached).toBe(false);
-    expect(options.env["CODEX_HOME"]).toBe(path.join(dir, "home"));
-    expect(options.env["EMET_AGENT_HOST"]).toBe("codex");
+    expect(options.env.CODEX_HOME).toBe(path.join(dir, "home"));
+    expect(options.env.EMET_AGENT_HOST).toBe("codex");
     expect(unrefCount()).toBe(1);
     expect(readCodexState(result.stateFile)?.pid).toBe(4242);
     expect(readCodexState(result.stateFile)?.threadId).toBeNull();
@@ -119,6 +120,22 @@ describe("spawnCodex", () => {
     expect(existsSync(specIn(dir).stateFile)).toBe(false);
   });
 
+  test("without setsid on PATH a missing executable fails and the error event is swallowed", async () => {
+    const dir = tempDir();
+    const originalPath = process.env.PATH;
+    process.env.PATH = path.join(dir, "empty");
+    try {
+      expect(() =>
+        spawnCodex({ ...specIn(dir), executable: path.join(dir, "no-such-codex") }),
+      ).toThrow("failed to start");
+      await Bun.sleep(50);
+    } finally {
+      if (originalPath === undefined) delete process.env.PATH;
+      else process.env.PATH = originalPath;
+    }
+    expect(existsSync(specIn(dir).stateFile)).toBe(false);
+  });
+
   test("captures the fake codex events in the JSONL file", async () => {
     const dir = tempDir();
     const scriptFile = path.join(dir, "script.json");
@@ -137,8 +154,10 @@ describe("spawnCodex", () => {
     await waitUntil(() => readFileSync(spec.jsonlPath, "utf8").includes("th-9"));
     expect(pid).toBeGreaterThan(0);
     const logged = parseRecord(readFileSync(logFile, "utf8").trim().split("\n")[0] ?? "{}");
-    expect(logged["argv"]).toEqual(["exec", "--json"]);
-    expect(isObject(logged["env"]) ? logged["env"]["CODEX_HOME"] : undefined).toBe(spec.codexHome);
+    expect(logged.argv).toEqual(["exec", "--json"]);
+    expect(isObject(logged.env) ? Reflect.get(logged.env, "CODEX_HOME") : undefined).toBe(
+      spec.codexHome,
+    );
     expect(refreshThreadId(stateFile)?.threadId).toBe("th-9");
     expect(readCodexState(stateFile)?.threadId).toBe("th-9");
   });
@@ -221,6 +240,23 @@ describe("codexWorkerLiveness", () => {
     const probe = { now: NOW, idleMs: IDLE_MS, pidNamespace: "pid:[1]", isPidAlive: () => false };
     expect(codexWorkerLiveness(state, probe)).toBe("exited");
     expect(codexWorkerLiveness(state, { ...probe, isPidAlive: () => true })).toBe("live");
+  });
+
+  test("a malformed line mentioning turn. is skipped when looking for a terminal event", () => {
+    const { state, jsonlPath } = workerIn(tempDir(), null);
+    const probe = { now: NOW, idleMs: IDLE_MS, pidNamespace: null, isPidAlive: () => true };
+    appendFileSync(jsonlPath, `{"type": "turn.compl\n`);
+    expect(codexWorkerLiveness(state, probe)).toBe("live");
+    appendFileSync(jsonlPath, `${JSON.stringify({ type: "turn.completed" })}\n`);
+    expect(codexWorkerLiveness(state, probe)).toBe("done");
+  });
+
+  test("the default pid probe tells a live process from a dead one", () => {
+    const { state, touch } = workerIn(tempDir(), null);
+    touch(0);
+    const probe = { now: NOW, idleMs: IDLE_MS, pidNamespace: null };
+    expect(codexWorkerLiveness({ ...state, pid: process.pid }, probe)).toBe("live");
+    expect(codexWorkerLiveness({ ...state, pid: 2_147_483_646 }, probe)).toBe("exited");
   });
 
   test("turn.failed is done and a missing stream is judged from startedAt", () => {

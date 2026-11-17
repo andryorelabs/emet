@@ -1,14 +1,15 @@
-import { codexHost } from "./agenthost-codex";
 import { describe, expect, test } from "bun:test";
 import { execFileSync } from "node:child_process";
 import { mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 
+import { codexHost } from "./agenthost-codex";
 import { writeApproval } from "./approve";
 import { DEFAULT_FORGE_CONFIG } from "./config";
 import type { DependencyCheck, DependencyProbes } from "./dependencies";
 import type { EnvironmentProbes } from "./doctor";
+import type { LandedVerdict } from "./landed";
 import {
   auditPostDispatch,
   checkHeadDescendsFromTrunk,
@@ -29,6 +30,7 @@ import {
   findMissingRequiredCommands,
   findMissingTicketsForRun,
   findTodoMarkers,
+  findVanishedTicketWorktrees,
   findWorktreesMissingLockPastDeadline,
   isBranchMatchingTicket,
   resolveApprovalDirectory,
@@ -36,7 +38,7 @@ import {
   worktreeDirectoryLabel,
   preflightOkSummary,
 } from "./preflight";
-import type { LandedVerdict } from "./landed";
+import { present } from "./present";
 import type { ContentVerdict, WorktreeEntry, WorktreeOwner } from "./worktrees";
 
 function approvalIn(root: string, runId: string): string {
@@ -314,7 +316,7 @@ async function advise(
 ) {
   return describeWorktreeEntryVerdict(
     entry,
-    { kind: "content-fallback", entry, branch: entry.branch! },
+    { kind: "content-fallback", entry, branch: present(entry.branch) },
     "tree",
     "origin",
     "main",
@@ -850,6 +852,63 @@ describe("findMissingTicketsForRun", () => {
 
   test("reports every expected ticket when no entries are attributed at all", () => {
     expect(findMissingTicketsForRun([], ["AO-1", "AO-2"])).toEqual(["AO-1", "AO-2"]);
+  });
+});
+
+describe("findVanishedTicketWorktrees", () => {
+  const gone = new Set(["/repo/.claude/worktrees/agent-gone", "/repo/.claude/worktrees/agent-old"]);
+  const directoryExists = (directory: string) => !gone.has(directory);
+
+  test("fails a held ticket whose worktree directory no longer exists", () => {
+    const failures = findVanishedTicketWorktrees(
+      [
+        { directory: "/repo/.claude/worktrees/agent-gone", ticket: "AO-1" },
+        { directory: "/repo/.claude/worktrees/agent-here", ticket: "AO-2" },
+      ],
+      ["AO-1", "AO-2"],
+      directoryExists,
+    );
+    expect(failures).toHaveLength(1);
+    expect(failures[0]?.kind).toBe("vanished-worktrees");
+    expect(failures[0]?.message).toContain("AO-1");
+    expect(failures[0]?.message).toContain("/repo/.claude/worktrees/agent-gone");
+    expect(failures[0]?.message).toContain("re-dispatch");
+    expect(failures[0]?.message).toContain("never resume");
+  });
+
+  test("names each vanished ticket in its own failure", () => {
+    const failures = findVanishedTicketWorktrees(
+      [
+        { directory: "/repo/.claude/worktrees/agent-gone", ticket: "AO-1" },
+        { directory: "/repo/.claude/worktrees/agent-old", ticket: "AO-3" },
+      ],
+      ["AO-1", "AO-3"],
+      directoryExists,
+    );
+    expect(failures.map((failure) => failure.message.split(" ")[0])).toEqual(["AO-1", "AO-3"]);
+  });
+
+  test("ignores a vanished worktree whose ticket no longer holds a claim or slot", () => {
+    expect(
+      findVanishedTicketWorktrees(
+        [{ directory: "/repo/.claude/worktrees/agent-gone", ticket: "AO-1" }],
+        ["AO-2"],
+        directoryExists,
+      ),
+    ).toEqual([]);
+  });
+
+  test("ignores a ticket that still has another worktree on disk", () => {
+    expect(
+      findVanishedTicketWorktrees(
+        [
+          { directory: "/repo/.claude/worktrees/agent-gone", ticket: "AO-1" },
+          { directory: "/repo/.claude/worktrees/agent-here", ticket: "AO-1" },
+        ],
+        ["AO-1"],
+        directoryExists,
+      ),
+    ).toEqual([]);
   });
 });
 

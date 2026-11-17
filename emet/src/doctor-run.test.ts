@@ -35,6 +35,28 @@ async function runDoctor(argv: string[]): Promise<string> {
   return lines.join("\n");
 }
 
+/** Runs doctor with a `console.log` that throws, so an error escapes `main`,
+ * and returns the exit code `run()` leaves behind. */
+async function runDoctorThatThrows(
+  argv: string[],
+  presetExitCode: number | undefined,
+): Promise<number | string | undefined> {
+  const originalLog = console.log;
+  const originalError = console.error;
+  console.log = () => {
+    throw new Error("unexpected doctor failure");
+  };
+  console.error = () => undefined;
+  process.exitCode = presetExitCode;
+  try {
+    await run(argv);
+    return process.exitCode;
+  } finally {
+    console.log = originalLog;
+    console.error = originalError;
+  }
+}
+
 describe("doctor run()", () => {
   test("a directory that is not a git repository is skipped", async () => {
     const plain = path.join(root, "plain");
@@ -60,6 +82,20 @@ describe("doctor run()", () => {
     const output = await runDoctor([repo]);
     expect(output).toContain("emet.config.json is malformed:");
     expect(output).toContain("0/1 repos clean");
+  }, 60_000);
+
+  test("an unexpected error escaping main sets exit code 3", async () => {
+    const plain = path.join(root, "plain");
+    mkdirSync(plain);
+    const exitCode = await runDoctorThatThrows([plain], undefined);
+    expect(exitCode).toBe(3);
+  }, 60_000);
+
+  test("an unexpected error keeps a non-zero exit code already set", async () => {
+    const plain = path.join(root, "plain");
+    mkdirSync(plain);
+    const exitCode = await runDoctorThatThrows([plain], 1);
+    expect(exitCode).toBe(1);
   }, 60_000);
 
   test("--all is ignored and several targets are each reported", async () => {

@@ -2,6 +2,9 @@ import { existsSync, readFileSync, statSync } from "node:fs";
 import { readdir } from "node:fs/promises";
 import path from "node:path";
 
+import { type AgentHost, type AgentHostName } from "./agenthost";
+import { checkApproval, type ApprovalRecord } from "./approve";
+import { listReservations } from "./claims";
 import {
   ForgeConfigError,
   requireForgeConfig,
@@ -9,7 +12,6 @@ import {
   type ForgeConfig,
   type LandingMode,
 } from "./config";
-import { type AgentHost, type AgentHostName } from "./agenthost";
 import {
   agentHostOfConfig,
   checkDependencies,
@@ -19,6 +21,11 @@ import {
   type DependencyCheck,
   type DependencyProbes,
 } from "./dependencies";
+import { checkWorktreeForkBase, createEnvironmentProbes, type EnvironmentProbes } from "./doctor";
+import { resolveLandedVerdict, unownedReclaimVerdict, type LandedVerdict } from "./landed";
+import { checkStale } from "./map";
+import { readEnv, TODO_MARKER, TODO_MARKERS } from "./names";
+import { isObject } from "./narrow";
 import {
   classifyRun,
   isRunClosed,
@@ -33,13 +40,6 @@ import {
   resolveMaxLiveWorkers,
   resolveSlotsDirectory,
 } from "./slots";
-import { checkApproval, type ApprovalRecord } from "./approve";
-import { isObject } from "./narrow";
-import { readEnv, TODO_MARKER, TODO_MARKERS } from "./names";
-import { listReservations } from "./claims";
-import { resolveLandedVerdict, unownedReclaimVerdict, type LandedVerdict } from "./landed";
-import { checkWorktreeForkBase, createEnvironmentProbes, type EnvironmentProbes } from "./doctor";
-import { checkStale } from "./map";
 import { validatePlan, type PlanTicket } from "./validate";
 import {
   classifyByContent,
@@ -335,7 +335,7 @@ export async function findTodoMarkersInDocsAgents(repoRoot: string): Promise<str
   return markers;
 }
 
-export type SlotCapacityCheck = {
+export interface SlotCapacityCheck {
   readonly freeCount: number;
   readonly cap: number;
   readonly waveSize: number;
@@ -348,7 +348,7 @@ export type SlotCapacityCheck = {
    * `true` when `ok` is `false` (0 free is reported via `ok` alone, not as
    * "degraded"). */
   readonly degraded: boolean;
-};
+}
 
 /**
  * Can this wave dispatch *at all* right now — not "a full wave", just at
@@ -403,10 +403,10 @@ export function ticketFromWorkerBranch(branch: string, branchPrefix: string): st
   return match?.[1] === undefined ? null : `${branchPrefix.toUpperCase()}-${match[1]}`;
 }
 
-export type WorktreeEntryReport = {
+export interface WorktreeEntryReport {
   readonly bucket: "fail" | "info" | "warn";
   readonly line: string;
-};
+}
 
 export interface DescribeWorktreeEntryOptions {
   /** Decides whether an unowned branch is worker-shaped; without it the caller's `resolveLanded` alone decides. */
@@ -538,15 +538,16 @@ export async function describeWorktreeEntryVerdict(
   }
 }
 
-export type PostDispatchFailure = {
+export interface PostDispatchFailure {
   readonly kind:
     | "duplicate-ticket-worktree"
     | "duplicate-ticket-branch-number"
     | "unlocked-past-deadline"
     | "branch-ticket-mismatch"
-    | "missing-worktrees";
+    | "missing-worktrees"
+    | "vanished-worktrees";
   readonly message: string;
-};
+}
 
 /**
  * Extracts a ticket's numeric suffix (`PROJ-321` → `321`, `NFK-42` → `42`) —
@@ -790,6 +791,43 @@ export function findMissingTicketsForRun(
 }
 
 /**
+ * Tickets that still hold this run's claim or slot (`heldTickets`) while
+ * every worktree attributed to them (`owned`) is gone from disk. git keeps
+ * listing a locked worktree after its directory is deleted, which is what
+ * happens when the harness removes the worktree of a worker whose first run
+ * ended BLOCKED with no changes. Resuming that worker runs it in a deleted
+ * directory and loses its work, so the only safe recovery is a fresh
+ * dispatch. A ticket with another worktree still on disk is left to the
+ * duplicate checks.
+ */
+export function findVanishedTicketWorktrees(
+  owned: readonly { readonly directory: string; readonly ticket: string }[],
+  heldTickets: readonly string[],
+  directoryExists: (directory: string) => boolean,
+): PostDispatchFailure[] {
+  const held = new Set(heldTickets);
+  const vanishedByTicket = new Map<string, string[]>();
+  const presentTickets = new Set<string>();
+  for (const { directory, ticket } of owned) {
+    if (!held.has(ticket)) continue;
+    if (directoryExists(directory)) {
+      presentTickets.add(ticket);
+      continue;
+    }
+    vanishedByTicket.set(ticket, [...(vanishedByTicket.get(ticket) ?? []), directory]);
+  }
+  const failures: PostDispatchFailure[] = [];
+  for (const [ticket, directories] of vanishedByTicket) {
+    if (presentTickets.has(ticket)) continue;
+    failures.push({
+      kind: "vanished-worktrees",
+      message: `${ticket} still holds this run's claim or slot, but its worker worktree no longer exists on disk (${directories.join(", ")}): re-dispatch ${ticket} in a fresh worktree, and never resume that worker, since it would run in a deleted directory and lose its work.`,
+    });
+  }
+  return failures;
+}
+
+/**
  * The four post-dispatch gates from `docs/agents/emet.md` — run once,
  * immediately after a wave's batch of parallel `Agent` calls returns, before
  * any worker has had a chance to commit. Unlike the default preflight mode
@@ -943,12 +981,21 @@ async function mainPostDispatch(config: ForgeConfig): Promise<void> {
     }),
   );
 
-  const expectedTickets =
-    explicitExpectRaw === undefined
-      ? (await listOccupiedSlots())
-          .filter((entry) => entry.holder.runId === currentRunId)
-          .map((entry) => entry.holder.ticket)
-      : [];
+  const slotTickets = (await listOccupiedSlots())
+    .filter((entry) => entry.holder.runId === currentRunId)
+    .map((entry) => entry.holder.ticket);
+  const claimTickets = reservations
+    .filter((reservation) => reservation.runId === currentRunId)
+    .map((reservation) => reservation.ticket);
+  const ownedWorktrees = mineEntries.flatMap((entry) => {
+    const ticket = resolveWorktreeOwnerWithReservations(entry, reservations, branchPrefix)?.ticket;
+    return ticket ? [{ directory: entry.directory, ticket }] : [];
+  });
+  failures.push(
+    ...findVanishedTicketWorktrees(ownedWorktrees, [...slotTickets, ...claimTickets], existsSync),
+  );
+
+  const expectedTickets = explicitExpectRaw === undefined ? slotTickets : [];
   const explicitExpectedCount =
     explicitExpectRaw !== undefined ? Number(explicitExpectRaw) : undefined;
   const expectationKnown =
@@ -1018,10 +1065,10 @@ async function mainPostDispatch(config: ForgeConfig): Promise<void> {
   );
 }
 
-export type RunGateFindings = {
+export interface RunGateFindings {
   readonly failures: readonly string[];
   readonly warnings: readonly string[];
-};
+}
 
 function readApprovalRecord(approvalPath: string): ApprovalRecord | null {
   try {
@@ -1168,7 +1215,7 @@ export async function checkHeadDescendsFromTrunk(
   headSha: string,
   trunkRef: string,
   localTrunk: string = trunkRef,
-  remote: string = "origin",
+  remote = "origin",
 ): Promise<HeadDescendsFromTrunkResult> {
   const ancestry = await Bun.$`git merge-base --is-ancestor ${trunkRef} ${headSha}`
     .quiet()
@@ -1544,7 +1591,7 @@ async function main(config: ForgeConfig, repoRoot: string) {
  * malformed `emet.config.json` is always fatal (exit 2) here.
  */
 export async function run(argv: string[]): Promise<void> {
-  process.argv = [process.argv[0]!, process.argv[1]!, ...argv];
+  process.argv = [...process.argv.slice(0, 2), ...argv];
   try {
     const repoRoot = await resolveRepoRoot();
     if (!repoRoot) {

@@ -2,7 +2,17 @@
   "name": "@emet/site",
   "private": true,
   "description": "The emet Website: home page and docs (Astro and Starlight)",
+  "homepage": "https://emet.andryore.dev",
+  "bugs": {
+    "url": "https://github.com/andryorelabs/emet/issues"
+  },
   "license": "MIT",
+  "author": "Andry Orellana <hello@andryore.dev>",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/andryorelabs/emet.git",
+    "directory": "apps/site"
+  },
   "type": "module",
   "scripts": {
     "dev": "astro dev",
@@ -10,7 +20,9 @@
     "preview": "astro preview",
     "sync": "astro sync",
     "check": "bun ../../node_modules/typescript7/bin/tsc --noEmit --runExternalCode -p tsconfig.json",
-    "test": "bun test --pass-with-no-tests --coverage --coverage-reporter=text --coverage-reporter=lcov && bun ../../tools/coverage-gate.ts apps/site coverage/lcov.info"
+    "test:dist": "bun scripts/audit-dist.ts dist",
+    "test:e2e": "playwright test",
+    "test": "bun test --pass-with-no-tests --path-ignore-patterns 'e2e/**' --coverage --coverage-reporter=text --coverage-reporter=lcov && bun ../../tools/coverage-gate.ts apps/site coverage/lcov.info"
   },
   "dependencies": {
     "@astrojs/starlight": "catalog:",
@@ -23,7 +35,9 @@
   },
   "devDependencies": {
     "@astrojs/ts-content-mapper": "catalog:",
+    "@axe-core/playwright": "4.14.0",
     "@happy-dom/global-registrator": "21.0.4",
+    "@playwright/test": "1.65.1",
     "@tailwindcss/vite": "catalog:",
     "@types/bun": "catalog:"
   }

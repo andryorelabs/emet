@@ -1,10 +1,11 @@
 import { existsSync, mkdirSync, readFileSync, renameSync, statSync, writeFileSync } from "node:fs";
 import path from "node:path";
-import { claudeHost } from "./agenthost-claude";
+
 import type { AgentHost } from "./agenthost";
+import { claudeHost } from "./agenthost-claude";
 import { resolveLockDirectory } from "./locks";
-import { errnoCode, isObject } from "./narrow";
 import { readEnv, resolveRunDir } from "./names";
+import { errnoCode, isObject } from "./narrow";
 import { readParent, type ProcessTreeReader, defaultProcessTreeReader } from "./proctree";
 
 /**
@@ -87,7 +88,8 @@ export function readProcessStartToken(pid: number): string | undefined {
   try {
     const stat = readFileSync(`/proc/${pid}/stat`, "utf8");
     const fieldsAfterComm = stat.slice(stat.lastIndexOf(")") + 2).split(" ");
-    return fieldsAfterComm[19] || undefined;
+    const startTime = fieldsAfterComm[19];
+    return startTime === "" ? undefined : startTime;
   } catch {
     return undefined;
   }
@@ -208,7 +210,7 @@ export function writeJsonAtomically(filePath: string, value: unknown): void {
  * reclaim), never inside the worker's own tree. `commits` is `null` when the
  * commit probe was unavailable — a distinct state from `0`.
  */
-export type CompletionEvent = {
+export interface CompletionEvent {
   readonly runId: string;
   readonly ticket: string;
   readonly event: "SubagentStop" | "Stop";
@@ -219,7 +221,7 @@ export type CompletionEvent = {
   readonly commits: number | null;
   /** The subagent's own transcript (SubagentStop's `agent_transcript_path`); absent for a plain Stop. */
   readonly agentTranscriptPath?: string;
-};
+}
 
 export function completionEventPath(
   commonDirectory: string,
@@ -303,11 +305,11 @@ export function readStallNudgeCount(
   }
 }
 
-export type StallNudgeResult = {
+export interface StallNudgeResult {
   readonly granted: boolean;
   readonly count: number;
   readonly cap: number;
-};
+}
 
 /**
  * Spends one stall nudge for a ticket if `budgets.stallNudgeCap` allows. The

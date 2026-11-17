@@ -22,6 +22,26 @@
  * (the tool never actually ran), `3` internal error.
  */
 
+import path from "node:path";
+import { format } from "node:util";
+
+import { EMET_VERSION } from "../src/assets";
+import {
+  COMMANDS_WITH_BANNER,
+  COMMANDS_WITH_OWN_HELP,
+  commandHelp,
+  findCommand,
+  outcomeCode,
+  type CommandSpec,
+} from "../src/commands";
+import { failureEnvelope, stringifySorted, successEnvelope, type Envelope } from "../src/envelope";
+import { exitCodeFor } from "../src/errors";
+import { currentExitCode } from "../src/exit-code";
+import { exitCodes } from "../src/exit-codes";
+import { parseGlobalFlags, unknownFlags, type GlobalFlags } from "../src/flags";
+import { stateDir } from "../src/names";
+import { updateNotice } from "../src/update-notice";
+
 const USAGE = `usage: emet <command> [...args]
 
 commands:
@@ -63,263 +83,207 @@ commands:
   --version — print the emet version
 `;
 
-const EXIT_CONFIG_OR_USAGE_ERROR = 2;
-const EXIT_INTERNAL_ERROR = 3;
+/** What a command run left behind: its exit code and, under `--json`, the stdout it printed. */
+interface CommandOutcome {
+  readonly exitCode: number;
+  readonly stdout: string;
+}
 
 /**
  * Writes the brand banner to stdout. Skipped when the invocation asks for
  * machine-readable output with `--json`.
  */
-async function printBanner(args: readonly string[]): Promise<void> {
-  if (args.includes("--json")) return;
+async function printBanner(json: boolean): Promise<void> {
+  if (json) return;
   const { renderBanner } = await import("../src/banner");
   process.stdout.write(renderBanner(process.stdout, process.env));
 }
 
-async function main(): Promise<void> {
-  const [command, ...rest] = process.argv.slice(2);
+function emitEnvelope(envelope: Envelope): void {
+  process.stdout.write(`${stringifySorted(envelope)}\n`);
+}
 
-  if (!command) {
-    await printBanner([]);
-    console.error(USAGE);
-    process.exitCode = EXIT_CONFIG_OR_USAGE_ERROR;
+function parseCaptured(text: string): unknown {
+  const trimmed = text.trim();
+  if (trimmed.length === 0) return null;
+  try {
+    return JSON.parse(trimmed) as unknown;
+  } catch {
+    return trimmed;
+  }
+}
+
+/**
+ * Runs `body` with stdout captured and returns what it printed. Stdout is
+ * restored before this returns or throws, so the caller can print the envelope.
+ */
+async function withCapturedStdout(body: () => Promise<void>): Promise<string> {
+  const chunks: string[] = [];
+  const originalWrite = process.stdout.write.bind(process.stdout);
+  const originalLog = console.log;
+  process.stdout.write = (chunk: string | Uint8Array): boolean => {
+    chunks.push(typeof chunk === "string" ? chunk : Buffer.from(chunk).toString("utf8"));
+    return true;
+  };
+  console.log = (...parts: unknown[]): void => {
+    chunks.push(`${format(...parts)}\n`);
+  };
+  try {
+    await body();
+  } finally {
+    process.stdout.write = originalWrite;
+    console.log = originalLog;
+  }
+  return chunks.join("");
+}
+
+async function runCommand(
+  spec: CommandSpec,
+  commandArgs: string[],
+  json: boolean,
+): Promise<CommandOutcome> {
+  let returned: number | undefined;
+  const execute = async (): Promise<void> => {
+    const result = await spec.run(commandArgs);
+    returned = typeof result === "number" ? result : undefined;
+  };
+  let stdout = "";
+  if (json) stdout = await withCapturedStdout(execute);
+  else await execute();
+  return { exitCode: typeof returned === "number" ? returned : currentExitCode(), stdout };
+}
+
+function reportOutcome(spec: CommandSpec, outcome: CommandOutcome): void {
+  process.exitCode = outcome.exitCode;
+  const data = parseCaptured(outcome.stdout);
+  if (outcome.exitCode === exitCodes.success) {
+    emitEnvelope(successEnvelope(data));
+    return;
+  }
+  emitEnvelope({
+    ok: false,
+    data,
+    error: {
+      code: outcomeCode(spec.name, outcome.exitCode),
+      message: `emet ${spec.name} exited with code ${outcome.exitCode}`,
+      fix: "Re-run without --json to read the full output.",
+    },
+  });
+}
+
+function reportUsageError(json: boolean, message: string, fix: string, plain: string): void {
+  process.exitCode = exitCodes.usage;
+  if (json) emitEnvelope({ ok: false, data: null, error: { code: "usage", message, fix } });
+  else console.error(plain);
+}
+
+async function printUpdateNotice(json: boolean): Promise<void> {
+  const notice = await updateNotice({
+    current: EMET_VERSION,
+    isTTY: process.stderr.isTTY,
+    json,
+    now: new Date(),
+    cacheFile: path.join(stateDir(), "update-check.json"),
+  });
+  if (notice !== null) console.error(notice);
+}
+
+/** Handles the invocations that name no command; true when it fully handled `head`. */
+async function handleTopLevel(head: string | undefined, flags: GlobalFlags): Promise<boolean> {
+  if (head === undefined) {
+    await printBanner(flags.json);
+    reportUsageError(flags.json, "no command given", "Run `emet --help`.", USAGE);
+    return true;
+  }
+  if (head === "--version" || head === "-v") {
+    if (flags.json) emitEnvelope(successEnvelope({ version: EMET_VERSION }));
+    else console.log(EMET_VERSION);
+    return true;
+  }
+  if (head === "--help" || head === "-h" || head === "help") {
+    await printBanner(flags.json);
+    if (flags.json) emitEnvelope(successEnvelope({ usage: USAGE }));
+    else console.log(USAGE);
+    return true;
+  }
+  return false;
+}
+
+async function runHelp(spec: CommandSpec, commandArgs: string[], json: boolean): Promise<void> {
+  if (COMMANDS_WITH_OWN_HELP.has(spec.name) && !json) {
+    const outcome = await runCommand(spec, commandArgs, false);
+    process.exitCode = outcome.exitCode;
+    return;
+  }
+  const help = commandHelp(spec);
+  if (json) emitEnvelope(successEnvelope({ usage: help }));
+  else process.stdout.write(help);
+}
+
+async function main(): Promise<void> {
+  const { flags, rest } = parseGlobalFlags(process.argv.slice(2));
+  if (flags.noColor) process.env.NO_COLOR = "1";
+  const head = rest.find((token) => token !== "--json");
+
+  if (await handleTopLevel(head, flags)) return;
+  const spec = head === undefined ? undefined : findCommand(head);
+  if (head === undefined || spec === undefined) {
+    reportUsageError(
+      flags.json,
+      `unknown command "${head}"`,
+      "Run `emet --help`.",
+      `emet: unknown command "${head}"\n\n${USAGE}`,
+    );
     return;
   }
 
-  switch (command) {
-    case "migrate": {
-      const { run } = await import("../src/migrate");
-      run(rest);
-      return;
-    }
-    case "init": {
-      await printBanner(rest);
-      const { run } = await import("../src/init");
-      await run(rest);
-      return;
-    }
-    case "doctor": {
-      await printBanner(rest);
-      const { run } = await import("../src/doctor");
-      await run(rest);
-      return;
-    }
-    case "preflight": {
-      const { run } = await import("../src/preflight");
-      await run(rest);
-      return;
-    }
-    case "skill-path": {
-      const skillName = rest[0];
-      if (skillName === undefined) {
-        console.error("usage: emet skill-path <name>");
-        process.exitCode = EXIT_CONFIG_OR_USAGE_ERROR;
-        return;
-      }
-      const { resolveSkillPath } = await import("../src/skills");
-      const skillPath = resolveSkillPath(skillName);
-      if (skillPath === null) {
-        console.error(`skill not found: ${skillName}`);
-        process.exitCode = 1;
-        return;
-      }
-      console.log(skillPath);
-      return;
-    }
-    case "claims": {
-      const { run } = await import("../src/claims");
-      await run(rest);
-      return;
-    }
-    case "slots": {
-      const { run } = await import("../src/slots");
-      await run(rest);
-      return;
-    }
-    case "cleanup": {
-      const { run } = await import("../src/cleanup");
-      await run(rest);
-      return;
-    }
-    case "land": {
-      const { run } = await import("../src/land");
-      await run(rest);
-      return;
-    }
-    case "usage": {
-      const { run } = await import("../src/usage");
-      await run(rest);
-      return;
-    }
-    case "handoff": {
-      const { run } = await import("../src/handoff");
-      await run(rest);
-      return;
-    }
-    case "launch": {
-      const { run } = await import("../src/launch");
-      await run(rest);
-      return;
-    }
-    case "lock-reason": {
-      const { run } = await import("../src/lockreason");
-      await run(rest);
-      return;
-    }
-    case "assess": {
-      const { run } = await import("../src/assess");
-      await run(rest);
-      return;
-    }
-    case "status": {
-      const { run } = await import("../src/status");
-      await run(rest);
-      return;
-    }
-    case "surfaces": {
-      const { run } = await import("../src/surfaces");
-      await run(rest);
-      return;
-    }
-    case "verify": {
-      const { run } = await import("../src/verify");
-      await run(rest);
-      return;
-    }
-    case "review-package": {
-      const { run } = await import("../src/reviewpackage");
-      await run(rest);
-      return;
-    }
-    case "review": {
-      const { run } = await import("../src/review");
-      await run(rest);
-      return;
-    }
-    case "dispatch": {
-      const { run } = await import("../src/dispatch");
-      process.exitCode = await run(rest);
-      return;
-    }
-    case "review-run": {
-      const { run } = await import("../src/review-run");
-      process.exitCode = await run(rest);
-      return;
-    }
-    case "ask":
-    case "inbox":
-    case "reply": {
-      const { run } = await import("../src/mailbox");
-      await run(command, rest);
-      return;
-    }
-    case "approve": {
-      const { run } = await import("../src/approve");
-      await run(rest);
-      return;
-    }
-    case "results": {
-      const { run } = await import("../src/results");
-      await run(rest);
-      return;
-    }
-    case "materialize-log": {
-      const { run } = await import("../src/materializelog");
-      await run(rest);
-      return;
-    }
-    case "gate": {
-      const { run } = await import("../src/gate");
-      await run(rest);
-      return;
-    }
-    case "validate": {
-      const { run } = await import("../src/validate");
-      await run(rest);
-      return;
-    }
-    case "tracker": {
-      const { run } = await import("../src/tracker");
-      await run(rest);
-      return;
-    }
-    case "spec-merge": {
-      const { run } = await import("../src/specmerge");
-      await run(rest);
-      return;
-    }
-    case "map": {
-      const { run } = await import("../src/map");
-      await run(rest);
-      return;
-    }
-    case "metrics": {
-      const { run } = await import("../src/metrics");
-      await run(rest);
-      return;
-    }
-    case "guard": {
-      const { run } = await import("../src/guard");
-      await run();
-      return;
-    }
-    case "--version":
-    case "-v": {
-      const { FORGE_VERSION } = await import("../src/assets");
-      console.log(FORGE_VERSION);
-      return;
-    }
-    case "selftest": {
-      const { isCompiledBinary } = await import("../src/assets");
-      if (isCompiledBinary()) {
-        console.error("selftest needs a source install; run emet doctor");
-        process.exitCode = 1;
-        return;
-      }
-      const cliRoot = new URL("..", import.meta.url).pathname;
-      const tsconfigPath = new URL("../tsconfig.json", import.meta.url).pathname;
-      const bunfigPath = new URL("../bunfig.toml", import.meta.url).pathname;
-      const testRoot = new URL("../src", import.meta.url).pathname;
+  const headIndex = rest.indexOf(head);
+  const acceptsJson = spec.flags.some((flag) => flag.name === "--json");
+  const commandArgs = rest.filter(
+    (token, index) => index !== headIndex && (token !== "--json" || acceptsJson),
+  );
 
-      /**
-       * `tsc --noEmit` first — this CLI's own tsconfig sets `strict: true`,
-       * and AO-285 (the incident that made claims.ts/slots.ts require going
-       * through this dispatcher instead of an inline `bun -e` snippet) was
-       * exactly a type error no runtime test caught. `bunx` resolves to the
-       * `typescript` devDependency `bun install` puts in this tree's own
-       * node_modules rather than requiring a global `tsc`.
-       */
-      const typecheck = Bun.spawn(["bunx", "tsc", "--noEmit", "-p", tsconfigPath], {
-        cwd: cliRoot,
-        stdio: ["inherit", "inherit", "inherit"],
-      });
-      const typecheckExitCode = await typecheck.exited;
-
-      const test = Bun.spawn(["bun", "test", "--config", bunfigPath, testRoot], {
-        stdio: ["inherit", "inherit", "inherit"],
-      });
-      const testExitCode = await test.exited;
-
-      process.exitCode = typecheckExitCode !== 0 ? typecheckExitCode : testExitCode;
-      return;
-    }
-    case "--help":
-    case "-h":
-    case "help": {
-      await printBanner(rest);
-      console.log(USAGE);
-      return;
-    }
-    default: {
-      console.error(`emet: unknown command "${command}"\n\n${USAGE}`);
-      process.exitCode = EXIT_CONFIG_OR_USAGE_ERROR;
-    }
+  if (flags.help) {
+    await runHelp(spec, commandArgs, flags.json);
+    return;
   }
+
+  const unknown = unknownFlags(spec, commandArgs);
+  if (unknown.length > 0) {
+    const named = unknown.join(", ");
+    const fix = `Run \`emet ${spec.name} --help\` for the accepted flags.`;
+    reportUsageError(
+      flags.json,
+      `unknown flag ${named}`,
+      fix,
+      `emet ${spec.name}: unknown flag ${named}\n${fix}`,
+    );
+    return;
+  }
+
+  if (COMMANDS_WITH_BANNER.has(spec.name)) await printBanner(flags.json);
+  const outcome = await runCommand(spec, commandArgs, flags.json);
+  if (flags.json) reportOutcome(spec, outcome);
+  else process.exitCode = outcome.exitCode;
+  if (spec.name !== "guard") await printUpdateNotice(flags.json);
 }
+
+process.once("SIGINT", () => {
+  process.exit(exitCodes.interrupted);
+});
 
 try {
   await main();
 } catch (error: unknown) {
-  console.error(error);
-  process.exitCode = EXIT_INTERNAL_ERROR;
+  const { flags } = parseGlobalFlags(process.argv.slice(2));
+  process.exitCode = exitCodeFor(error);
+  if (flags.json) {
+    emitEnvelope(failureEnvelope(error));
+  } else {
+    const message = error instanceof Error ? error.message : String(error);
+    console.error(`emet: ${message}`);
+    if (flags.verbose && error instanceof Error && error.stack !== undefined) {
+      console.error(error.stack);
+    }
+  }
 }

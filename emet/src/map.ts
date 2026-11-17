@@ -42,21 +42,21 @@ const TEST_FILE =
   /(\.(test|spec)\.[cm]?[jt]sx?$|_test\.go$|(^|\/)test_[^/]+\.py$|_test\.py$|_spec\.rb$)/;
 const TEST_DIR = /(^|\/)(tests?|__tests__|spec|e2e)\//;
 
-type MapInputs = {
+interface MapInputs {
   readonly commit: string;
   readonly files: readonly string[];
   readonly manifests: ReadonlyMap<string, string>;
   readonly churn: ReadonlyMap<string, number>;
   readonly commitSubjects: readonly string[];
-};
+}
 
-type PackageJson = {
+interface PackageJson {
   name?: string;
   packageManager?: string;
   scripts?: Record<string, string>;
   dependencies?: Record<string, string>;
   devDependencies?: Record<string, string>;
-};
+}
 
 function parsePackageJson(raw: string | undefined): PackageJson | null {
   if (raw === undefined) return null;
@@ -76,7 +76,7 @@ function detectPackageManager(
   return detected === "unknown" ? null : detected;
 }
 
-const NON_JS_TEST_COMMANDS: ReadonlyArray<readonly [PackageManager, string]> = [
+const NON_JS_TEST_COMMANDS: readonly (readonly [PackageManager, string])[] = [
   ["go", "go test ./..."],
   ["cargo", "cargo test"],
   ["uv", "uv run pytest"],
@@ -107,7 +107,7 @@ function stackSection(inputs: MapInputs): string[] {
     const manager = detectPackageManager(fileSet, null);
     if (manager && manager !== "npm") lines.push(`- Package manager: ${manager}`);
   }
-  const otherManifests: ReadonlyArray<readonly [string, string]> = [
+  const otherManifests: readonly (readonly [string, string])[] = [
     ["go.mod", "Go module"],
     ["Cargo.toml", "Rust crate"],
     ["pyproject.toml", "Python project"],
@@ -144,7 +144,7 @@ function structureSection(inputs: MapInputs): string[] {
 function conventionsSection(inputs: MapInputs): string[] {
   const fileSet = new Set(inputs.files);
   const lines: string[] = [];
-  const tools: ReadonlyArray<readonly [RegExp, string]> = [
+  const tools: readonly (readonly [RegExp, string])[] = [
     [/^(\.?biome\.jsonc?)$/, "Biome"],
     [/^\.eslintrc|^eslint\.config\./, "ESLint"],
     [/^\.prettierrc|^prettier\.config\./, "Prettier"],
@@ -213,7 +213,7 @@ function hotspotsSection(inputs: MapInputs): string[] {
 }
 
 function renderMap(inputs: MapInputs): string {
-  const sections: ReadonlyArray<readonly [string, string[]]> = [
+  const sections: readonly (readonly [string, string[]])[] = [
     ["Stack", stackSection(inputs)],
     ["Structure", structureSection(inputs)],
     ["Conventions", conventionsSection(inputs)],
@@ -310,7 +310,10 @@ export async function generateMap(root: string): Promise<string> {
   return renderMap(await collectInputs(root));
 }
 
-export type StaleVerdict = { readonly stale: boolean; readonly reason: string };
+export interface StaleVerdict {
+  readonly stale: boolean;
+  readonly reason: string;
+}
 
 export async function checkStale(
   root: string,

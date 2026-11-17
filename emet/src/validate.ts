@@ -1,9 +1,11 @@
 import { readFileSync } from "node:fs";
 import path from "node:path";
+
 import { DEFAULT_FORGE_CONFIG, loadForgeConfigWithDefaults, resolveRepoRoot } from "./config";
 import { analyzeTicketGraph } from "./dependencies";
-import { findSurfaceOverlaps } from "./surfaces";
 import { isObject } from "./narrow";
+import { present } from "./present";
+import { findSurfaceOverlaps } from "./surfaces";
 import { resolveTrackerRoot } from "./tracker-files";
 
 const USAGE = `usage: emet validate --file <plan.json | -> | --spec <id> --tickets <tickets.json | ->
@@ -12,7 +14,7 @@ plan.json: { "spec": "<markdown with S# items>", "sizing"?: { "inlineMaxLines": 
              "tickets": [{ "id", "covers": ["S1"], "surfaces": ["glob"], "wave"?: n,
                            "blockedBy"?: ["id"], "newSurfaceLines"?: n, "estimatedPeakTokens"?: n, "folded"?: bool }] }`;
 
-export type PlanTicket = {
+export interface PlanTicket {
   readonly id: string;
   readonly covers: readonly string[];
   readonly surfaces: readonly string[];
@@ -21,9 +23,9 @@ export type PlanTicket = {
   readonly newSurfaceLines?: number;
   readonly estimatedPeakTokens?: number;
   readonly folded: boolean;
-};
+}
 
-type ValidationFinding = {
+interface ValidationFinding {
   readonly severity: "error" | "warn";
   readonly code:
     | "uncovered-spec-item"
@@ -35,9 +37,12 @@ type ValidationFinding = {
     | "unknown-blocker"
     | "undersized-ticket";
   readonly message: string;
-};
+}
 
-export type ValidationResult = { readonly ok: boolean; readonly findings: ValidationFinding[] };
+export interface ValidationResult {
+  readonly ok: boolean;
+  readonly findings: ValidationFinding[];
+}
 
 const SPEC_ITEM_START = /^\s*[-*]\s+\*\*(S\d+)\*\*/;
 const SCENARIO_MARKER = /\bscenario\b|\bwhen\b[\s\S]*\bthen\b/i;
@@ -49,7 +54,7 @@ export function parseSpecItems(specMarkdown: string): Map<string, string> {
   for (const line of specMarkdown.split("\n")) {
     const start = SPEC_ITEM_START.exec(line);
     if (start) {
-      currentId = start[1]!;
+      currentId = present(start[1]);
       items.set(currentId, line);
     } else if (/^#{1,6}\s/.test(line)) {
       currentId = null;
@@ -178,8 +183,8 @@ function readSource(source: string): Promise<string> {
   return source === "-" ? Bun.stdin.text() : Promise.resolve(readFileSync(source, "utf8"));
 }
 
-async function fetchSpecBody(specId: string): Promise<string> {
-  const child = Bun.spawn(["gh", "issue", "view", specId, "--json", "body", "-q", ".body"], {
+async function fetchSpecBody(specId: string, ghCommand: string): Promise<string> {
+  const child = Bun.spawn([ghCommand, "issue", "view", specId, "--json", "body", "-q", ".body"], {
     stdout: "pipe",
     stderr: "pipe",
   });
@@ -207,7 +212,12 @@ async function readLocalSpecBody(specId: string): Promise<string> {
   }
 }
 
-export async function run(argv: string[]): Promise<void> {
+/** Test seam: `ghCommand` overrides the `gh` executable used to read a spec issue. */
+interface ValidateDeps {
+  readonly ghCommand?: string;
+}
+
+export async function run(argv: string[], deps: ValidateDeps = {}): Promise<void> {
   try {
     const file = flagValue(argv, "--file");
     const specId = flagValue(argv, "--spec");
@@ -228,7 +238,7 @@ export async function run(argv: string[]): Promise<void> {
     } else if (specId !== undefined && ticketsSource !== undefined) {
       specMarkdown = (await isLocalTracker())
         ? await readLocalSpecBody(specId)
-        : await fetchSpecBody(specId);
+        : await fetchSpecBody(specId, deps.ghCommand ?? "gh");
       rawTickets = JSON.parse(await readSource(ticketsSource));
     } else {
       console.error(USAGE);

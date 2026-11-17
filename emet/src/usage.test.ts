@@ -1,5 +1,6 @@
 import { describe, expect, test } from "bun:test";
 
+import type { CompletionEvent } from "./runs";
 import {
   classifyTicketStall,
   describeLastStep,
@@ -7,7 +8,6 @@ import {
   parseStalledMinutes,
   taskIdFromTranscriptPath,
 } from "./usage";
-import type { CompletionEvent } from "./runs";
 
 const stoppedEvent = (overrides: Partial<CompletionEvent> = {}): CompletionEvent => ({
   runId: "run-a",

@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, test } from "bun:test";
+import { afterEach, beforeEach, describe, expect, spyOn, test } from "bun:test";
 import { createHash } from "node:crypto";
 import {
   existsSync,
@@ -82,6 +82,13 @@ const healthyEnvironment: EnvironmentProbes = {
   resolveRef: () => Promise.resolve("a".repeat(40)),
   worktreeBaseRef: () => Promise.resolve(null),
 };
+
+type BunFileHandle = ReturnType<typeof Bun.file>;
+const originalBunFile = Bun.file.bind(Bun);
+
+function realFile(target: string): BunFileHandle {
+  return originalBunFile(target);
+}
 
 describe("isReportClean", () => {
   test("clean when every check is empty", () => {
@@ -310,6 +317,63 @@ describe("auditRepo", () => {
     expect(report.todoMarkers).toEqual([]);
     expect(report.selfCheckIssues).toEqual([]);
     expect(isReportClean(report)).toBe(true);
+  });
+
+  test("a config that becomes unreadable after validation degrades instead of throwing", async () => {
+    await Bun.$`git -C ${repoRoot} init --quiet`.quiet();
+    await Bun.write(
+      path.join(repoRoot, "forge.config.json"),
+      JSON.stringify({
+        version: 1,
+        repo: { trunk: "main", remote: "origin" },
+        ticket: { idPattern: "^X-\\d+$", branchPrefix: "x" },
+        tracker: { kind: "linear" },
+        commands: { selfCheck: ["bun run check"] },
+      }),
+    );
+    let configReads = 0;
+    // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- the stub serves string paths only, narrower than Bun.file's overloads
+    const spy = spyOn(Bun, "file").mockImplementation(((target: string) => {
+      const file = realFile(target);
+      if (!target.endsWith("forge.config.json")) return file;
+      return new Proxy(file, {
+        get(source, key) {
+          if (key === "json") {
+            return () => {
+              configReads += 1;
+              if (configReads === 1) {
+                const parsed: Promise<unknown> = source.json();
+                return parsed;
+              }
+              return Promise.reject(new Error("read race"));
+            };
+          }
+          const value: unknown = Reflect.get(source, key);
+          if (typeof value !== "function") return value;
+          const bound: unknown = value.bind(source);
+          return bound;
+        },
+      });
+    }) as typeof Bun.file);
+    try {
+      const report = await auditRepo(repoRoot, healthyProbes, healthyEnvironment);
+      expect(report.hasConfig).toBe(true);
+      expect(report.selfCheckIssues).toEqual([]);
+    } finally {
+      spy.mockRestore();
+    }
+  });
+
+  test("helpText yields null when the command cannot be spawned", async () => {
+    // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- Bun.$ carries static members a throwing stub cannot satisfy
+    const shell = spyOn(Bun, "$").mockImplementation((() => {
+      throw new Error("spawn failed");
+    }) as unknown as typeof Bun.$);
+    try {
+      expect(await createEnvironmentProbes().helpText(["bun", "--help"])).toBeNull();
+    } finally {
+      shell.mockRestore();
+    }
   });
 
   test("surfaces glossary and deprecated-field warnings without dirtying a clean repo", async () => {
@@ -752,7 +816,9 @@ describe("findInstallDrift", () => {
     mkdirSync(path.join(home, ".claude/forge"), { recursive: true });
     mkdirSync(path.join(home, ".claude/agents"), { recursive: true });
   });
-  afterEach(() => rmSync(home, { recursive: true, force: true }));
+  afterEach(() => {
+    rmSync(home, { recursive: true, force: true });
+  });
 
   function writeManifest(entries: Record<string, string>) {
     writeFileSync(path.join(home, ".claude/forge/.install-manifest.json"), JSON.stringify(entries));

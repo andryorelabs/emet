@@ -17,7 +17,7 @@ import {
   type DependencyCheck,
   type DependencyProbes,
 } from "./dependencies";
-import { isObject } from "./narrow";
+import type { Env } from "./env";
 import {
   AGENTS_DOC,
   BINARY,
@@ -31,7 +31,9 @@ import {
   resolveConfigPath,
   stateDir,
 } from "./names";
+import { isObject } from "./narrow";
 import { DEPRECATED_CONFIG_FIELDS, findTodoMarkersInDocsAgents } from "./preflight";
+import { present } from "./present";
 import { computeAutoMaxLiveWorkers, readHostResources } from "./resources";
 import {
   checkSkillsContract,
@@ -63,7 +65,7 @@ const AGENTS_DOC_NAME = path.basename(AGENTS_DOC);
 const LEGACY_AGENTS_DOC_NAME = path.basename(LEGACY_AGENTS_DOC);
 const REQUIRED_DOCS = [AGENTS_DOC_NAME, "issue-tracker.md", "triage-labels.md", "domain.md"];
 
-export type RepoDoctorReport = {
+export interface RepoDoctorReport {
   readonly path: string;
   readonly isGitRepo: boolean;
   readonly hasConfig: boolean;
@@ -92,7 +94,7 @@ export type RepoDoctorReport = {
    * `CONTEXT.md` without `GLOSSARY.md`, or a deprecated config field that is
    * still set. */
   readonly warnings: readonly string[];
-};
+}
 
 /** A repo is clean if every check came back empty/false-negative — used both
  * to decide the process exit code and to print a one-line "OK" per repo
@@ -143,10 +145,10 @@ function parsePackageManagerRun(
   let directory: string | null = null;
   let sawRun = false;
   for (let index = 0; index < tokens.length; index++) {
-    const token = tokens[index]!;
+    const token = present(tokens[index]);
     const inlineDirectory = /^(?:--cwd|--prefix|--dir)=(.+)$/.exec(token);
     if (inlineDirectory) {
-      directory = inlineDirectory[1]!;
+      directory = present(inlineDirectory[1]);
     } else if (DIRECTORY_OPTIONS.has(token)) {
       directory = tokens[++index] ?? null;
     } else if (token.startsWith("-")) {
@@ -269,7 +271,7 @@ export function findLegacyNameWarnings(repoRoot: string): string[] {
 }
 
 /** A finding when the pre-rename state dir still exists next to (or instead of) the new one. */
-export function findLegacyStateDirFindings(env: NodeJS.ProcessEnv = process.env): string[] {
+export function findLegacyStateDirFindings(env?: Env): string[] {
   const legacy = legacyStateDir(env);
   if (legacy === stateDir(env) || !existsSync(legacy)) return [];
   return [
@@ -339,7 +341,7 @@ function hostCliFlagRequirements(host: AgentHost): (typeof REQUIRED_CLI_FLAGS)[n
   }));
 }
 
-export type EnvironmentProbes = {
+export interface EnvironmentProbes {
   /** `--help` output of the command, or `null` when it could not be run. */
   readonly helpText: (command: readonly string[]) => Promise<string | null>;
   /** `owner/name` per `gh repo view`, or `null` when unavailable. */
@@ -350,7 +352,7 @@ export type EnvironmentProbes = {
   readonly resolveRef: (repoRoot: string, ref: string) => Promise<string | null>;
   /** `worktree.baseRef` from the first of repo-local/user settings that sets it. */
   readonly worktreeBaseRef: (repoRoot: string) => Promise<string | null>;
-};
+}
 
 export function findMissingFlags(helpText: string, flags: readonly string[]): string[] {
   return flags.filter((flag) => !new RegExp(`(^|[\\s,\\[])${flag}(?![\\w-])`).test(helpText));
@@ -394,12 +396,12 @@ export function normalizeGithubSlug(remoteUrl: string): string | null {
   return match ? `${match[1]}/${match[2]}`.toLowerCase() : null;
 }
 
-export type TrackerTargetInput = {
+export interface TrackerTargetInput {
   readonly kind: TrackerKind | null;
   readonly ghRepo: string | null;
   readonly remoteUrl: string | null;
   readonly linearTeam: unknown;
-};
+}
 
 /** github: the repo `gh` resolves must be the repo the configured remote points
  * at, else tickets get written to the wrong tracker. linear: a team must be
@@ -424,13 +426,13 @@ export function checkTrackerTarget(input: TrackerTargetInput): string[] {
   return [];
 }
 
-export type ForkBaseInput = {
+export interface ForkBaseInput {
   readonly coordinatorHead: string | null;
   readonly harnessBase: string | null;
   readonly baseRefSetting: string | null;
   readonly harnessBaseRef: string;
   readonly host?: AgentHost;
-};
+}
 
 /** The harness forks agent worktrees from `worktree.baseRef` (default: the
  * remote trunk), not from the coordinator's HEAD. A worker forked from a stale
@@ -652,10 +654,10 @@ export async function auditRepo(
     ? (
         await checkDependencies({
           tracker: trackerKind,
-          landingMode: configResult.status === "ok" ? configResult.config.landing.mode : "pr",
+          landingMode: configResult.config.landing.mode,
           repoRoot: absolutePath,
           probes,
-          host: configResult.status === "ok" ? agentHostOfConfig(configResult.config) : undefined,
+          host: agentHostOfConfig(configResult.config),
         })
       ).filter(
         (check) =>
@@ -1131,7 +1133,8 @@ export async function run(argv: string[]): Promise<void> {
     await main(targets);
   } catch (error: unknown) {
     console.error(error);
-    process.exitCode = process.exitCode ?? 3;
+    const previousExitCode = Number(process.exitCode ?? 0);
+    process.exitCode = previousExitCode === 0 ? 3 : previousExitCode;
   }
 }
 

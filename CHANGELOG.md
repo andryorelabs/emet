@@ -8,6 +8,41 @@ and this project adheres to
 
 ## [Unreleased]
 
+## [0.8.5] - 2026-11-17
+
+### Changed
+
+- The coverage gate enforces a per-file floor of 97% lines and 98% functions
+  for `emet/`, `apps/site` and `tools/`, with reasoned exceptions in
+  `tools/coverage-exceptions.ts`. The coverage manifest walks `emet/src`
+  recursively, `tools/` is gated, the totals in `tools/coverage-floors.json`
+  rise to the measured values.
+- The PreToolUse guard fails closed: when `bin/emet` cannot resolve the emet
+  binary, the hook exits 2 and blocks the tool call, with a message that says
+  how to recover. The Stop and SubagentStop hooks still exit 1.
+- The plugin manifests carry an author email, license, homepage, repository and
+  bugs URL, and the Codex skill descriptions say when to use each skill.
+
+### Fixed
+
+- `emet doctor` exits with code 3 when an unexpected error escapes, instead of 0. A non-zero exit code set earlier is kept.
+- `emet cleanup --all --force` reclaims the worktree and the branches of a dead
+  run's worker, including the worktrees under `.claude/worktrees/`. A live or
+  idle owner, and a lock that names no run, stay protected.
+- The edit guard matches a surface written literally, such as
+  `src/app/[locale]/page.tsx`. `[` and `]` in a surface are no longer a
+  character class.
+- `emet preflight --post-dispatch` fails when a ticket that still holds a claim
+  or a slot has lost its worker worktree, and tells the coordinator to
+  re-dispatch it instead of resuming it.
+- The compiled `emet` binary no longer loads a `.env` file from the current
+  directory.
+- The Website drops the inline style attributes on the home page, gives the
+  home labels AA contrast in light mode, and names the search button with its
+  visible text from the first paint. The docs images are served from the
+  site's own origin under `repo-assets` instead of
+  `raw.githubusercontent.com`, and `astro dev` serves them too.
+
 ## [0.8.4] - 2026-11-15
 
 ### Changed
@@ -278,7 +313,8 @@ and this project adheres to
 - Per-repo configuration through `forge.config.json`.
 - `install.sh`, which installs the CLI, command and agents.
 
-[Unreleased]: https://github.com/andryorelabs/emet/compare/v0.8.4...HEAD
+[Unreleased]: https://github.com/andryorelabs/emet/compare/v0.8.5...HEAD
+[0.8.5]: https://github.com/andryorelabs/emet/compare/v0.8.4...v0.8.5
 [0.8.4]: https://github.com/andryorelabs/emet/compare/v0.8.3...v0.8.4
 [0.8.3]: https://github.com/andryorelabs/emet/compare/v0.8.2...v0.8.3
 [0.8.2]: https://github.com/andryorelabs/emet/compare/v0.8.1...v0.8.2
@@ -288,7 +324,9 @@ and this project adheres to
 [0.6.1]: https://github.com/andryorelabs/emet/compare/v0.6.0...v0.6.1
 [0.6.0]: https://github.com/andryorelabs/emet/compare/v0.5.2...v0.6.0
 [0.5.2]: https://github.com/andryorelabs/emet/compare/v0.5.1...v0.5.2
-[0.5.1]: https://github.com/andryorelabs/emet/compare/v0.4.0...v0.5.1
+[0.5.1]: https://github.com/andryorelabs/emet/compare/20c1d29f407842ea6f26eab3338f883ee3701258...v0.5.1
+[0.5.0]: https://github.com/andryorelabs/emet/compare/v0.4.0...20c1d29f407842ea6f26eab3338f883ee3701258
 [0.4.0]: https://github.com/andryorelabs/emet/compare/v0.3.0...v0.4.0
 [0.3.0]: https://github.com/andryorelabs/emet/compare/v0.2.0...v0.3.0
-[0.2.0]: https://github.com/andryorelabs/emet/releases/tag/v0.2.0
+[0.2.0]: https://github.com/andryorelabs/emet/compare/9360b4ff9d22c1de31f1f0a18350023b29e0425c...v0.2.0
+[0.1.0]: https://github.com/andryorelabs/emet/tree/9360b4ff9d22c1de31f1f0a18350023b29e0425c

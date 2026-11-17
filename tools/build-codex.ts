@@ -42,6 +42,21 @@ interface Rule {
 
 const SKILLS = ["run", "init", "doctor"] as const;
 
+/** A generated Codex skill name. */
+type CodexSkill = (typeof SKILLS)[number];
+
+/**
+ * The "Use when" clause appended to each Codex skill description, so Codex
+ * knows when to invoke the skill. The Claude commands' frontmatter keeps its
+ * own description unchanged.
+ */
+export const CODEX_USE_WHEN: Readonly<Record<CodexSkill, string>> = {
+  run: "Use when the user wants a feature taken from an idea to merged code in one approved run.",
+  init: "Use when setting up emet in a repository for the first time, or refreshing its config and docs.",
+  doctor:
+    "Use when emet misbehaves or before a first run, to find config, install and skill problems.",
+};
+
 const COORDINATOR_MAILBOX =
   " `emet dispatch --wait` prints `question <ticket> <id>` instead of a result status while a live worker has an open " +
   "question: read `emet inbox --run <runId>`, answer with `emet reply --run <runId> --ticket <ticket> --id <n> --body <text>`, " +
@@ -263,9 +278,10 @@ export function splitCommand(source: string): { description: string; body: strin
  * @param source The command file text.
  * @returns The `SKILL.md` text.
  */
-export function buildSkill(name: string, source: string): string {
+export function buildSkill(name: CodexSkill, source: string): string {
   const { description, body } = splitCommand(source);
-  const quoted = JSON.stringify(transformPrompt(description));
+  const summary = transformPrompt(description).replace(/\.$/, "");
+  const quoted = JSON.stringify(`${summary}. ${CODEX_USE_WHEN[name]}`);
   return `---\nname: ${name}\ndescription: ${quoted}\n---\n${transformPrompt(body)}`;
 }
 
@@ -310,6 +326,7 @@ export function buildPluginManifest(claudeManifestText: string): string {
   const author: unknown = Object.getOwnPropertyDescriptor(manifest, "author")?.value;
   const homepage: unknown = Object.getOwnPropertyDescriptor(manifest, "homepage")?.value;
   const repository: unknown = Object.getOwnPropertyDescriptor(manifest, "repository")?.value;
+  const bugs: unknown = Object.getOwnPropertyDescriptor(manifest, "bugs")?.value;
   if (typeof version !== "string" || typeof description !== "string") {
     throw new Error(".claude-plugin/plugin.json needs a string version and description");
   }
@@ -320,6 +337,7 @@ export function buildPluginManifest(claudeManifestText: string): string {
     author,
     homepage,
     repository,
+    bugs,
     license: typeof license === "string" ? license : undefined,
     skills: "./codex/skills",
     hooks: "./codex/hooks.json",
@@ -389,16 +407,35 @@ export function writeArtefacts(files: readonly GeneratedFile[], root: string = r
   }
 }
 
-if (import.meta.main) {
-  const files = generateArtefacts();
-  if (process.argv.includes("--check")) {
-    const stale = findStaleFiles(files);
+/**
+ * Entry point: writes the artefacts, or with `--check` reports stale ones.
+ * @param argv The command-line arguments.
+ * @param root The repository root.
+ * @param log Receives the success line.
+ * @param error Receives the stale-files report.
+ * @returns The process exit code: 1 when `--check` finds stale files, else 0.
+ */
+export function main(
+  argv: readonly string[],
+  root: string = repoRoot,
+  log: (message: string) => void = console.log,
+  error: (message: string) => void = console.error,
+): number {
+  const files = generateArtefacts(root);
+  if (argv.includes("--check")) {
+    const stale = findStaleFiles(files, root);
     if (stale.length > 0) {
-      console.error(`stale Codex artefacts (run bun run build:codex):\n${stale.join("\n")}`);
-      process.exit(1);
+      error(`stale Codex artefacts (run bun run build:codex):\n${stale.join("\n")}`);
+      return 1;
     }
-  } else {
-    writeArtefacts(files);
-    console.log(`wrote ${files.length} Codex artefacts`);
+    return 0;
   }
+  writeArtefacts(files, root);
+  log(`wrote ${files.length} Codex artefacts`);
+  return 0;
+}
+
+if (import.meta.main) {
+  const exitCode = main(process.argv.slice(2));
+  if (exitCode !== 0) process.exit(exitCode);
 }

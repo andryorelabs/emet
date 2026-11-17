@@ -1,20 +1,27 @@
-import { isObject } from "./narrow";
 import { readFileSync } from "node:fs";
 
-export type TicketSurfaces = { readonly ticket: string; readonly surfaces: readonly string[] };
-export type SurfaceOverlap = {
+import { isObject } from "./narrow";
+import { present } from "./present";
+
+export interface TicketSurfaces {
+  readonly ticket: string;
+  readonly surfaces: readonly string[];
+}
+export interface SurfaceOverlap {
   readonly ticketA: string;
   readonly globA: string;
   readonly ticketB: string;
   readonly globB: string;
-};
+}
 
 function expandBraces(glob: string): string[] {
   const match = /\{([^{}]*)\}/.exec(glob);
   if (!match) return [glob];
   const before = glob.slice(0, match.index);
   const after = glob.slice(match.index + match[0].length);
-  return match[1]!.split(",").flatMap((option) => expandBraces(before + option + after));
+  return present(match[1])
+    .split(",")
+    .flatMap((option) => expandBraces(before + option + after));
 }
 
 function segmentsOverlap(left: string, right: string): boolean {
@@ -37,7 +44,7 @@ function pathsOverlap(left: readonly string[], right: readonly string[]): boolea
     if (right[j] === "**" && (visit(i, j + 1) || (i < left.length && visit(i + 1, j)))) return true;
     if (i === left.length || j === right.length) return false;
     if (left[i] === "**" || right[j] === "**") return false;
-    return segmentsOverlap(left[i]!, right[j]!) && visit(i + 1, j + 1);
+    return segmentsOverlap(present(left[i]), present(right[j])) && visit(i + 1, j + 1);
   };
   return visit(0, 0);
 }
@@ -60,8 +67,8 @@ export function findSurfaceOverlaps(tickets: readonly TicketSurfaces[]): Surface
   const overlaps: SurfaceOverlap[] = [];
   for (let first = 0; first < tickets.length; first++) {
     for (let second = first + 1; second < tickets.length; second++) {
-      const a = tickets[first]!;
-      const b = tickets[second]!;
+      const a = present(tickets[first]);
+      const b = present(tickets[second]);
       for (const globA of a.surfaces) {
         for (const globB of b.surfaces) {
           if (globsOverlap(globA, globB)) {

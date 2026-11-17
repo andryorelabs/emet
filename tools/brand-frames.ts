@@ -6,6 +6,7 @@
 
 import { join } from "node:path";
 import sharp from "sharp";
+
 import { FRAME_HEIGHT, FRAME_WIDTH, type Frame, type MascotState } from "./brand-pet.ts";
 
 export const GENERATED_FRAMES_PATH = join(
@@ -97,9 +98,9 @@ export function encodeRasterFrame(rgba: Uint8Array, columns: number, rows: numbe
       const top = readPixel(rgba, (row * 2 * columns + column) * BYTES_PER_PIXEL);
       const bottom = readPixel(rgba, ((row * 2 + 1) * columns + column) * BYTES_PER_PIXEL);
       const offset = (row * columns + column) * 12;
-      toCell(top, bottom).forEach((value, index) =>
-        view.setUint32(offset + index * 4, value, true),
-      );
+      toCell(top, bottom).forEach((value, index) => {
+        view.setUint32(offset + index * 4, value, true);
+      });
     }
   }
   return Buffer.from(bytes).toString("base64");

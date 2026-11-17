@@ -2,7 +2,7 @@
 title: Riferimento della CLI
 description: Ogni sottocomando di emet, la tabella di gate e registri, i codici di uscita e le variabili d'ambiente.
 seoTitle: Riferimento della CLI di emet
-sourceHash: a8d3bf074f04de8e
+sourceHash: b065107f632830b7
 ---
 
 Ogni sottocomando di `emet`, la tabella di gate e registri, i codici di uscita e le variabili d'ambiente. I termini seguono [GLOSSARY.md](../../GLOSSARY.md). Torna al [README](../../README.md). Ogni comando stampa il proprio utilizzo con `--help`.
@@ -119,6 +119,23 @@ I codici di uscita hanno lo stesso significato in ogni sottocomando.
 | `1`    | Rilievi su cui agire.                                                                                        |
 | `2`    | Errore di configurazione o di utilizzo; lo strumento non è mai stato eseguito. Anche un comando sconosciuto. |
 | `3`    | Errore interno.                                                                                              |
+
+Anche un flag sconosciuto termina con `2` e nomina il flag. Ctrl-C termina con `130`.
+
+## Flag globali
+
+Ogni comando li accetta; i flag propri di ciascun comando sono elencati da `emet <command> --help`.
+
+| Flag         | Effetto                                                                                                             |
+| ------------ | ------------------------------------------------------------------------------------------------------------------- |
+| `--json`     | Stampa un'unica envelope `{ok, data, error: {code, message, fix}}` su stdout, anche per `--help` e `--version`.     |
+| `--no-color` | Disattiva il colore ANSI. Il colore rispetta anche `NO_COLOR`, `FORCE_COLOR`, `TERM=dumb` e se l'output è un TTY.   |
+| `--verbose`  | Stampa lo stack di un errore imprevisto. Senza di esso, il catch di livello superiore stampa un errore di una riga. |
+| `--help`     | Stampa l'uso del comando.                                                                                           |
+
+`emet --version` stampa la versione; `emet --version --json` stampa `{"ok": true, "data": {"version": ...}, "error": null}`. Con `--json`, un comando che fallisce termina con il suo codice abituale e stampa `ok: false` con un `code` di errore tra `findings`, `usage`, `internal`, `slice-timeout`, `expired`, `bad-range` o `exit-<n>`; ciò che il comando ha stampato su stdout è il `data` dell'envelope.
+
+Su un TTY, `emet` stampa un avviso di una riga su stderr quando è nota una release più recente. Controlla al massimo una volta al giorno, mette in cache la risposta, non attende mai la rete e resta silenzioso con `--json` o senza TTY.
 
 ## Variabili d'ambiente
 

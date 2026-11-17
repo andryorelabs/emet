@@ -11,19 +11,11 @@
  * never from its pid alone, which may come from another pid namespace.
  */
 
-import { isObject } from "./narrow";
-import { BINARY, LEGACY_PRODUCT, PRODUCT, resolveRunDir } from "./names";
-import { optionalProperty } from "./optional";
 import path from "node:path";
 
-import {
-  DEFAULT_FORGE_CONFIG,
-  loadForgeConfigWithDefaults,
-  resolveAgentHostName,
-  resolveRepoRoot,
-  type ForgeConfig,
-} from "./config";
+import { resolveAgentHost, type AgentHost } from "./agenthost";
 import { claudeHost } from "./agenthost-claude";
+import { listReservations } from "./claims";
 import {
   codexWorkerLiveness,
   readCodexState,
@@ -31,8 +23,17 @@ import {
   type CodexWorkerLiveness,
   type LivenessProbe,
 } from "./codex-process";
-import { resolveAgentHost, type AgentHost } from "./agenthost";
-import { listReservations } from "./claims";
+import {
+  DEFAULT_FORGE_CONFIG,
+  loadForgeConfigWithDefaults,
+  resolveAgentHostName,
+  resolveRepoRoot,
+  type ForgeConfig,
+} from "./config";
+import { BINARY, LEGACY_PRODUCT, PRODUCT, resolveRunDir } from "./names";
+import { isObject } from "./narrow";
+import { optionalProperty } from "./optional";
+import { present } from "./present";
 import { classifyRun, type RunVerdict } from "./runs";
 import { listOccupiedSlots } from "./slots";
 import { findStalledTranscripts, readLastStepFor } from "./usage";
@@ -48,15 +49,15 @@ import {
 type WaveState = "working" | "checking" | "ready" | "needs-decision";
 type OverallState = WaveState | "idle";
 type ChecksState = "passing" | "failing" | "pending" | "none";
-export type PullRequestStatus = {
+export interface PullRequestStatus {
   readonly number: number;
   readonly state: "open" | "merged" | "closed";
   readonly checks: ChecksState;
   readonly mergeable: boolean | null;
   readonly changesRequested: boolean;
-};
+}
 
-export type WorkerSignal = {
+export interface WorkerSignal {
   readonly ticket: string;
   readonly branch: string | null;
   readonly pullRequest: PullRequestStatus | null;
@@ -65,39 +66,39 @@ export type WorkerSignal = {
   readonly liveness?: CodexWorkerLiveness;
   /** Codex workers only: the thread id, `null` until `thread.started`. */
   readonly threadId?: string | null;
-};
+}
 
 /** A Codex worker's identity and liveness, keyed by worktree directory. */
-export type CodexWorkerView = {
+export interface CodexWorkerView {
   readonly liveness: CodexWorkerLiveness;
   readonly threadId: string | null;
-};
+}
 
-export type WaveInput = {
+export interface WaveInput {
   readonly runId: string;
   readonly runVerdict: RunVerdict;
   readonly workers: readonly WorkerSignal[];
-};
+}
 
 type WorkerReport = WorkerSignal & {
   readonly state: WaveState;
   readonly reason: string;
 };
 
-type WaveReport = {
+interface WaveReport {
   readonly runId: string;
   readonly spec: string | null;
   readonly wave: number | null;
   readonly runVerdict: RunVerdict;
   readonly state: WaveState;
   readonly workers: readonly WorkerReport[];
-};
+}
 
-export type StatusReport = {
+export interface StatusReport {
   readonly state: OverallState;
   readonly spec: string | null;
   readonly waves: readonly WaveReport[];
-};
+}
 
 const RUN_ID_PATTERN = new RegExp(
   `^(?:${PRODUCT}|${LEGACY_PRODUCT})([a-z0-9][a-z0-9-]*)w(\\d+?)(\\d{6})$`,
@@ -138,7 +139,7 @@ export function parseRunIdentity(runId: string): {
 } {
   const match = RUN_ID_PATTERN.exec(runId);
   if (!match) return { spec: null, wave: null };
-  return { spec: match[1]!, wave: Number(match[2]) };
+  return { spec: present(match[1]), wave: Number(match[2]) };
 }
 
 function classifyWorker(
@@ -218,7 +219,7 @@ export function summarize(report: StatusReport): string {
   return `${BINARY} status: ${report.state} — ${parts.join("; ")}`;
 }
 
-type RawPullRequest = {
+interface RawPullRequest {
   number: number;
   state: string;
   headRefName: string;
@@ -226,7 +227,7 @@ type RawPullRequest = {
   mergeable?: string;
   reviewDecision?: string | null;
   statusCheckRollup?: { conclusion?: string | null; status?: string; state?: string }[] | null;
-};
+}
 
 const FAILED_CONCLUSIONS = new Set([
   "FAILURE",
@@ -236,7 +237,11 @@ const FAILED_CONCLUSIONS = new Set([
   "STARTUP_FAILURE",
 ]);
 
-type RawCheck = { conclusion?: string | null; status?: string; state?: string };
+interface RawCheck {
+  conclusion?: string | null;
+  status?: string;
+  state?: string;
+}
 
 function toRawCheck(raw: unknown): RawCheck {
   if (!isObject(raw)) return {};
@@ -310,7 +315,8 @@ export function closingIssueNumbers(body: string): string[] {
   for (const line of body.split("\n")) {
     const match = /^\s*(?:close[sd]?|fix(?:e[sd])?|resolve[sd]?)\s*:?\s+(.*)$/i.exec(line);
     if (!match) continue;
-    for (const reference of match[1]!.matchAll(/#(\d+)/g)) numbers.push(reference[1]!);
+    for (const reference of present(match[1]).matchAll(/#(\d+)/g))
+      numbers.push(present(reference[1]));
   }
   return numbers;
 }
@@ -466,7 +472,29 @@ function readSpecFlag(argv: readonly string[]): string | null {
   return value && !value.startsWith("--") ? value : null;
 }
 
-export async function run(argv: string[]): Promise<void> {
+/** Collaborators of {@link run}; each default keeps today's behaviour. */
+export interface StatusDeps {
+  readonly resolveRepoRoot: typeof resolveRepoRoot;
+  readonly listOccupiedSlots: typeof listOccupiedSlots;
+  readonly listReservations: typeof listReservations;
+  readonly listWorktreeEntries: typeof listWorktreeEntries;
+  readonly fetchPullRequests: typeof fetchPullRequests;
+  readonly resolveAgentHost: typeof resolveAgentHost;
+  readonly findStalledTranscripts: typeof findStalledTranscripts;
+}
+
+const DEFAULT_STATUS_DEPS: StatusDeps = {
+  resolveRepoRoot,
+  listOccupiedSlots,
+  listReservations,
+  listWorktreeEntries,
+  fetchPullRequests,
+  resolveAgentHost,
+  findStalledTranscripts,
+};
+
+export async function run(argv: string[], overrides: Partial<StatusDeps> = {}): Promise<void> {
+  const deps: StatusDeps = { ...DEFAULT_STATUS_DEPS, ...overrides };
   if (argv.includes("--help") || argv.includes("-h")) {
     console.log(STATUS_USAGE);
     return;
@@ -478,23 +506,23 @@ export async function run(argv: string[]): Promise<void> {
       return;
     }
     const spec = readSpecFlag(argv);
-    const repoRoot = await resolveRepoRoot();
+    const repoRoot = await deps.resolveRepoRoot();
     if (!repoRoot) {
       console.error(`${BINARY} status: not inside a git repository`);
       process.exitCode = 2;
       return;
     }
     const { config } = await loadForgeConfigWithDefaults(repoRoot);
-    const host = resolveAgentHost(resolveAgentHostName(config));
+    const host = deps.resolveAgentHost(resolveAgentHostName(config));
     const localLanding = config.landing.mode === "merge";
     const [slots, reservations, entries] = await Promise.all([
-      listOccupiedSlots(),
-      listReservations(),
-      listWorktreeEntries(),
+      deps.listOccupiedSlots(),
+      deps.listReservations(),
+      deps.listWorktreeEntries(),
     ]);
     const pullRequests = localLanding
       ? await localLandedBranches(entries, config)
-      : await fetchPullRequests();
+      : await deps.fetchPullRequests();
     const runVerdicts = new Map<string, RunVerdict>();
     for (const slot of slots) runVerdicts.set(slot.holder.runId, slot.verdict);
     for (const reservation of reservations) {
@@ -523,7 +551,7 @@ export async function run(argv: string[]): Promise<void> {
       const transcript = await newestTranscript(entry.directory, host);
       if (!transcript) continue;
       // oxlint-disable-next-line eslint/no-await-in-loop -- sequential on purpose: later iterations depend on earlier ones or on output order
-      const stalled = await findStalledTranscripts(
+      const stalled = await deps.findStalledTranscripts(
         [transcript],
         Date.now(),
         thresholds,

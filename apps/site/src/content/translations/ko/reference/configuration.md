@@ -2,7 +2,7 @@
 title: 설정 레퍼런스
 description: emet.config.json의 모든 키를 기본값과 의미와 함께 설명합니다.
 seoTitle: emet 설정 레퍼런스
-sourceHash: eb2611cf0c7e09b4
+sourceHash: f643569c960d5e35
 ---
 
 `emet.config.json`의 모든 키를 기본값과 의미와 함께 정리했습니다. 기준이 되는 원본은 [`emet/schema/emet.config.schema.json`](../../emet/schema/emet.config.schema.json)입니다. 용어는 [GLOSSARY.md](../../GLOSSARY.md)를 따릅니다. [README](../../README.md)로 돌아가기.
@@ -199,3 +199,23 @@ prose-only입니다.
 선택 사항이며 prose-only입니다. `null`이거나 생략하면 디자인/UI 리뷰 단계를 건너뜁니다.
 
 - `canvasIndex`(deprecated): 워커가 UI 변경 전에 확인하는 디자인 캔버스 파일의 경로입니다.
+
+## 환경 변수
+
+CLI는 이 변수들을 모두 `emet/src/env.ts`를 통해 읽습니다. `FORGE_` 표기의 변수는 해당 `EMET_` 이름의 폴백으로 여전히 동작하며 경고를 한 번 출력합니다. 빈 값은 설정되지 않은 것으로 간주합니다. `tools/env-docs.test.ts`가 이 표와 코드를 일치시킵니다.
+
+| 변수                          | 레거시 폴백                    | 의미                                                                                                                                             |
+| ----------------------------- | ------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `EMET_MAX_LIVE_WORKERS`       | `FORGE_MAX_LIVE_WORKERS`       | 동시에 살아 있는 워커 수의 상한: 양수 또는 `auto`. `concurrency.maxLiveWorkers`를 덮어씁니다.                                                    |
+| `EMET_STATE_DIR`              | `FORGE_STATE_DIR`              | 호스트 전체 상태 디렉터리로, 워커 슬롯 풀을 보관합니다.                                                                                          |
+| `EMET_SKIP_DEPENDENCY_CHECKS` | `FORGE_SKIP_DEPENDENCY_CHECKS` | `1`로 설정하면 `emet preflight`에서 실행을 막는 의존성 검사를 경고로 낮춥니다.                                                                   |
+| `EMET_RUN_IDLE_THRESHOLD_MS`  | `FORGE_RUN_IDLE_THRESHOLD_MS`  | 실행의 트랜스크립트가 조용한 상태로 있을 수 있는 시간(밀리초)이며, 이를 넘으면 유휴로 간주합니다. `concurrency.runIdleThresholdMs`를 덮어씁니다. |
+| `EMET_CPU_OVERSUBSCRIBE`      | `FORGE_CPU_OVERSUBSCRIBE`      | 자동 워커 상한에 쓰이는 CPU 오버서브스크립션 계수입니다.                                                                                         |
+| `EMET_MEM_RESERVE_GIB`        | `FORGE_MEM_RESERVE_GIB`        | 워커 슬롯을 부여하기 전에 비워 두는 메모리의 GiB 수입니다.                                                                                       |
+| `EMET_MEM_PER_WORKER_GIB`     | `FORGE_MEM_PER_WORKER_GIB`     | 자동 워커 상한이 워커 하나당 가정하는 메모리의 GiB 수입니다.                                                                                     |
+| `EMET_AGENT_HOST`             |                                | Codex 에이전트 호스트에서 실행할 때 `codex`로 설정합니다. 그 외의 값은 Claude를 의미합니다.                                                      |
+| `CODEX_HOME`                  |                                | Codex 홈 디렉터리이며 기본값은 `~/.codex`입니다. 읽기만 합니다.                                                                                  |
+| `XDG_STATE_HOME`              |                                | `EMET_STATE_DIR`가 설정되지 않았을 때 상태 디렉터리의 기준입니다.                                                                                |
+| `NO_COLOR`                    |                                | 설정하면 배너를 색 없이 출력합니다.                                                                                                              |
+| `FORCE_COLOR`                 |                                | 비어 있거나 `0`이 아닌 값을 설정하면 TTY가 없어도 배너를 색상과 함께 출력합니다.                                                                 |
+| `TERM`                        |                                | `dumb`이면 배너 색상이 꺼집니다.                                                                                                                 |

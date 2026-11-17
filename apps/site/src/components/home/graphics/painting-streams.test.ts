@@ -25,8 +25,14 @@ class RecordingObserver {
   observe(target: Element): void {
     observed.push(target);
   }
-  unobserve(): void {}
-  disconnect(): void {}
+  readonly unobserved: Element[] = [];
+  disconnected = false;
+  unobserve(target: Element): void {
+    this.unobserved.push(target);
+  }
+  disconnect(): void {
+    this.disconnected = true;
+  }
 }
 
 function install(options: { reducedMotion: boolean; wide: boolean }): void {
@@ -88,12 +94,12 @@ describe("initPaintingStreams", () => {
   test("sets the stage from the exchange in view", () => {
     install({ reducedMotion: false, wide: true });
     initPaintingStreams(document);
-    expect(overlay().dataset["stage"]).toBe("0");
+    expect(overlay().dataset.stage).toBe("0");
     expect(observed).toHaveLength(3);
     callback?.([entryFor(2, 0.9)]);
-    expect(overlay().dataset["stage"]).toBe("2");
+    expect(overlay().dataset.stage).toBe("2");
     callback?.([entryFor(2, 0), entryFor(1, 0.4)]);
-    expect(overlay().dataset["stage"]).toBe("1");
+    expect(overlay().dataset.stage).toBe("1");
   });
 
   test("keeps the last stage when the last exchange leaves the band", () => {
@@ -101,20 +107,20 @@ describe("initPaintingStreams", () => {
     initPaintingStreams(document);
     callback?.([entryFor(2, 0.9)]);
     callback?.([entryFor(2, 0)]);
-    expect(overlay().dataset["stage"]).toBe("2");
+    expect(overlay().dataset.stage).toBe("2");
   });
 
   test("does nothing with reduced motion", () => {
     install({ reducedMotion: true, wide: true });
     initPaintingStreams(document);
     expect(observed).toHaveLength(0);
-    expect(overlay().dataset["stage"]).toBeUndefined();
+    expect(overlay().dataset.stage).toBeUndefined();
   });
 
   test("does nothing at 1000px and below", () => {
     install({ reducedMotion: false, wide: false });
     initPaintingStreams(document);
     expect(observed).toHaveLength(0);
-    expect(overlay().dataset["stage"]).toBeUndefined();
+    expect(overlay().dataset.stage).toBeUndefined();
   });
 });

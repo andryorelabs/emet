@@ -25,7 +25,9 @@ function loadDusk(root: HTMLElement): void {
 }
 
 function schedulePreload(root: HTMLElement): void {
-  const load = (): void => loadDusk(root);
+  const load = (): void => {
+    loadDusk(root);
+  };
   root.addEventListener("pointerenter", load, { once: true });
   root.addEventListener("focusin", load, { once: true });
   if ("requestIdleCallback" in window) {
@@ -48,7 +50,7 @@ function createLiveRegion(status: HTMLElement): HTMLElement {
 
 function activeText(status: HTMLElement, held: boolean): string {
   const variant = held ? "held" : "merged";
-  return status.querySelector(`[data-variant="${variant}"]`)?.textContent?.trim() ?? "";
+  return status.querySelector(`[data-variant="${variant}"]`)?.textContent.trim() ?? "";
 }
 
 function mount(root: HTMLElement): void {

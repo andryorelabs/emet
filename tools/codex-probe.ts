@@ -28,13 +28,13 @@ import { acquireSlot } from "../emet/src/slots";
 export type ProbeVerdict = "verified" | "failed" | "blocked-by-plan-limit" | "not-applicable";
 
 /** One row of the probe report: the item, its verdict and the evidence behind it. */
-export type ProbeResult = {
+export interface ProbeResult {
   readonly id: string;
   readonly verdict: ProbeVerdict;
   readonly evidence: string;
-};
+}
 
-type ProbeOptions = {
+interface ProbeOptions {
   /** The user's Codex home: only read, and linked into overlays, never written. */
   readonly codexHome: string;
   /** The emet repository root (the plugin source and the `emet` CLI). */
@@ -45,18 +45,18 @@ type ProbeOptions = {
   readonly modelTimeoutMs?: number;
   /** Where the throwaway repos and overlays go; the system temp dir when absent. */
   readonly workDir?: string;
-};
+}
 
-type CommandOutcome = {
+interface CommandOutcome {
   readonly exitCode: number;
   readonly stdout: string;
   readonly stderr: string;
   readonly timedOut: boolean;
-};
+}
 
 type ModelRun = CommandOutcome & { readonly verdict: ProbeVerdict; readonly attempts: number };
 
-type ProbeContext = {
+interface ProbeContext {
   readonly options: ProbeOptions;
   readonly executable: string;
   readonly workDir: string;
@@ -67,7 +67,7 @@ type ProbeContext = {
   readonly timeoutMs: number;
   /** The resolved `codex.sandbox` of the emet repo's config (S1 default `danger-full-access`). */
   readonly sandbox: string;
-};
+}
 
 /** Text Codex prints when the ChatGPT plan's rate or usage limit is hit. */
 const PLAN_LIMIT_PATTERN =
@@ -114,16 +114,12 @@ function parseEvents(jsonl: string): Record<string, unknown>[] {
 function streamErrors(jsonl: string): string {
   return parseEvents(jsonl)
     .flatMap((event) => {
-      if (event["type"] === "error" && typeof event["message"] === "string") {
-        return [event["message"]];
+      if (event.type === "error" && typeof event.message === "string") {
+        return [event.message];
       }
-      const error = event["error"];
-      if (
-        event["type"] === "turn.failed" &&
-        isObject(error) &&
-        typeof error["message"] === "string"
-      ) {
-        return [error["message"]];
+      const error = event.error;
+      if (event.type === "turn.failed" && isObject(error) && typeof error.message === "string") {
+        return [error.message];
       }
       return [];
     })
@@ -131,18 +127,18 @@ function streamErrors(jsonl: string): string {
 }
 
 function completedTurn(jsonl: string): boolean {
-  return parseEvents(jsonl).some((event) => event["type"] === "turn.completed");
+  return parseEvents(jsonl).some((event) => event.type === "turn.completed");
 }
 
 function agentMessages(jsonl: string): string {
   return parseEvents(jsonl)
     .flatMap((event) => {
-      const item = event["item"];
-      return event["type"] === "item.completed" &&
+      const item = event.item;
+      return event.type === "item.completed" &&
         isObject(item) &&
-        item["type"] === "agent_message" &&
-        typeof item["text"] === "string"
-        ? [item["text"]]
+        item.type === "agent_message" &&
+        typeof item.text === "string"
+        ? [item.text]
         : [];
     })
     .join("\n");
@@ -171,9 +167,7 @@ export async function execpolicyDecision(
     );
     if (outcome.exitCode !== 0) return undefined;
     const parsed: unknown = JSON.parse(outcome.stdout);
-    return isObject(parsed) && typeof parsed["decision"] === "string"
-      ? parsed["decision"]
-      : undefined;
+    return isObject(parsed) && typeof parsed.decision === "string" ? parsed.decision : undefined;
   } catch {
     return undefined;
   } finally {
@@ -585,7 +579,7 @@ function hostCommandLine(pid: number): string | undefined {
 function readPid(stateFile: string): number | undefined {
   try {
     const state: unknown = JSON.parse(readFileSync(stateFile, "utf8"));
-    return isObject(state) && typeof state["pid"] === "number" ? state["pid"] : undefined;
+    return isObject(state) && typeof state.pid === "number" ? state.pid : undefined;
   } catch {
     return undefined;
   }
@@ -631,7 +625,7 @@ async function waitForStream(
 function readThreadId(stateFile: string): string | undefined {
   try {
     const state: unknown = JSON.parse(readFileSync(stateFile, "utf8"));
-    return isObject(state) && typeof state["threadId"] === "string" ? state["threadId"] : undefined;
+    return isObject(state) && typeof state.threadId === "string" ? state.threadId : undefined;
   } catch {
     return undefined;
   }
@@ -699,7 +693,7 @@ async function nestedDispatchOnce(
     };
   }
   const hostCommand = hostCommandLine(pid);
-  const localPid = hostCommand !== undefined && hostCommand.includes("codex");
+  const localPid = hostCommand?.includes("codex") === true;
   const jsonl = path.join(runDir, "codex", `${ticket}.jsonl`);
   const ended = await waitForStream(jsonl, pid, localPid, Date.now() + context.timeoutMs);
   const inner = detachedVerdict(jsonl);
@@ -725,8 +719,8 @@ async function nestedDispatchOnce(
 }
 
 function readThreadIdFromStream(jsonl: string): string | undefined {
-  const started = parseEvents(readText(jsonl)).find((event) => event["type"] === "thread.started");
-  return typeof started?.["thread_id"] === "string" ? started["thread_id"] : undefined;
+  const started = parseEvents(readText(jsonl)).find((event) => event.type === "thread.started");
+  return typeof started?.thread_id === "string" ? started.thread_id : undefined;
 }
 
 async function launchDetached(
@@ -817,9 +811,8 @@ async function probeContext(options: ProbeOptions): Promise<ProbeContext> {
     path.join(options.codexHome, "models_cache.json"),
   ).model;
   const env = environment();
-  env["PATH"] =
-    `${shimDirectory({ workDir, repo: options.repo })}${path.delimiter}${env["PATH"] ?? ""}`;
-  delete env["CODEX_HOME"];
+  env.PATH = `${shimDirectory({ workDir, repo: options.repo })}${path.delimiter}${env.PATH ?? ""}`;
+  delete env.CODEX_HOME;
   return {
     options,
     executable: options.executable ?? "codex",
@@ -833,11 +826,11 @@ async function probeContext(options: ProbeOptions): Promise<ProbeContext> {
 }
 
 /** One step of the full flow: its name, verdict and evidence. */
-export type FlowStep = {
+export interface FlowStep {
   readonly step: string;
   readonly verdict: ProbeVerdict;
   readonly evidence: string;
-};
+}
 
 const FLOW_SPEC = "probe-flow";
 const FLOW_RUN = "probe-flow-w1";
@@ -879,7 +872,7 @@ async function prepareFlowRepo(
   const configPath = path.join(repo, "emet.config.json");
   const parsed: unknown = JSON.parse(readFileSync(configPath, "utf8"));
   const config = isObject(parsed) ? parsed : {};
-  const repoSection = isObject(config["repo"]) ? config["repo"] : {};
+  const repoSection = isObject(config.repo) ? config.repo : {};
   writeFileSync(
     configPath,
     `${JSON.stringify({ ...config, repo: { ...repoSection, trunk: "develop" }, agentHost: "codex", ...codexModels(context.model) }, null, 2)}\n`,
@@ -1053,7 +1046,7 @@ async function flowWave1(
       slotsDirectory: slots,
       sourceHome: context.safeSource,
       executable: context.executable,
-      env: { PATH: context.env["PATH"] ?? "" },
+      env: { PATH: context.env.PATH ?? "" },
     },
   );
   const pid = readPid(path.join(runDir, "codex", `${ticket}.state.json`));
@@ -1271,20 +1264,37 @@ export async function runProbe(options: ProbeOptions): Promise<ProbeResult[]> {
   );
 }
 
-if (import.meta.main) {
-  if (process.env["EMET_CODEX_PROBE"] !== "1") {
-    console.log("probe:codex skipped (set EMET_CODEX_PROBE=1 to run it against the real codex)");
-    process.exit(0);
+/**
+ * The command-line entry: skips unless `EMET_CODEX_PROBE=1`, otherwise prints
+ * the item rows and, with `--flow` or `--flow-only`, the full-flow steps as JSON.
+ * @param argv The command-line arguments.
+ * @param env The environment (`EMET_CODEX_PROBE`, `EMET_CODEX_PROBE_EXECUTABLE`).
+ * @param homeDirectory The home whose `.codex` is the source Codex home.
+ * @param log Receives the stdout lines.
+ * @returns The process exit code.
+ */
+export async function main(
+  argv: readonly string[],
+  env: Record<string, string | undefined> = process.env,
+  homeDirectory: string = os.homedir(),
+  log: (message: string) => void = console.log,
+): Promise<number> {
+  if (env.EMET_CODEX_PROBE !== "1") {
+    log("probe:codex skipped (set EMET_CODEX_PROBE=1 to run it against the real codex)");
+    return 0;
   }
   const options: ProbeOptions = {
-    codexHome: path.join(os.homedir(), ".codex"),
+    codexHome: path.join(homeDirectory, ".codex"),
     repo: path.resolve(import.meta.dir, ".."),
-    ...(process.env["EMET_CODEX_PROBE_EXECUTABLE"]
-      ? { executable: process.env["EMET_CODEX_PROBE_EXECUTABLE"] }
-      : {}),
+    ...(env.EMET_CODEX_PROBE_EXECUTABLE ? { executable: env.EMET_CODEX_PROBE_EXECUTABLE } : {}),
   };
-  const flowOnly = process.argv.includes("--flow-only");
+  const flowOnly = argv.includes("--flow-only");
   const items = flowOnly ? [] : await runProbe(options);
-  const flow = flowOnly || process.argv.includes("--flow") ? await runFullFlow(options) : [];
-  console.log(JSON.stringify({ items, flow }, null, 2));
+  const flow = flowOnly || argv.includes("--flow") ? await runFullFlow(options) : [];
+  log(JSON.stringify({ items, flow }, null, 2));
+  return 0;
+}
+
+if (import.meta.main) {
+  process.exitCode = await main(process.argv.slice(2));
 }

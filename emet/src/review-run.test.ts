@@ -2,6 +2,8 @@ import { afterEach, describe, expect, spyOn, test } from "bun:test";
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
+
+import { DEFAULT_FORGE_CONFIG } from "./config";
 import { isObject } from "./narrow";
 import { parseFindings, type Finding } from "./review";
 import {
@@ -12,7 +14,6 @@ import {
   modelArguments,
   run,
 } from "./review-run";
-import { DEFAULT_FORGE_CONFIG } from "./config";
 
 const FAKE = path.resolve(import.meta.dir, "../../tools/fixtures/fake-codex/codex");
 const scratch: string[] = [];
@@ -27,8 +28,8 @@ const FINDING: Finding = {
 
 afterEach(() => {
   for (const dir of scratch.splice(0)) rmSync(dir, { recursive: true, force: true });
-  delete process.env["FAKE_CODEX_SCRIPT"];
-  delete process.env["FAKE_CODEX_LOG"];
+  delete process.env.FAKE_CODEX_SCRIPT;
+  delete process.env.FAKE_CODEX_LOG;
 });
 
 function tempDir(): string {
@@ -44,12 +45,12 @@ function agentMessage(text: string): Record<string, unknown> {
 function script(lines: unknown[], exitCode = 0): string {
   const file = path.join(tempDir(), "script.json");
   writeFileSync(file, JSON.stringify({ lines, exitCode }));
-  process.env["FAKE_CODEX_SCRIPT"] = file;
+  process.env.FAKE_CODEX_SCRIPT = file;
   return file;
 }
 
 function captureStdout(): { lines: () => string[]; restore: () => void } {
-  const spy = spyOn(console, "log").mockImplementation(() => {});
+  const spy = spyOn(console, "log").mockReturnValue(undefined);
   const captured: string[] = [];
   return {
     lines: () => captured,
@@ -66,14 +67,14 @@ function baseArgv(tier: string, packagePath = "/tmp/pkg.md"): string[] {
 
 describe("review-run usage", () => {
   test("prints usage and exits 2 without arguments", async () => {
-    const spy = spyOn(console, "error").mockImplementation(() => {});
+    const spy = spyOn(console, "error").mockReturnValue(undefined);
     expect(await run([])).toBe(2);
     expect(spy.mock.calls[0]?.[0]).toContain("usage: emet review-run");
     spy.mockRestore();
   });
 
   test("rejects an unknown tier", async () => {
-    const spy = spyOn(console, "error").mockImplementation(() => {});
+    const spy = spyOn(console, "error").mockReturnValue(undefined);
     expect(await run(baseArgv("extreme"))).toBe(2);
     spy.mockRestore();
   });
@@ -82,7 +83,7 @@ describe("review-run usage", () => {
 describe("review-run passive tier", () => {
   test("prints an empty findings array and starts no process", async () => {
     const log = path.join(tempDir(), "calls.jsonl");
-    process.env["FAKE_CODEX_LOG"] = log;
+    process.env.FAKE_CODEX_LOG = log;
     const out = captureStdout();
     const repoRoot = tempDir();
     const code = await run(baseArgv("passive"), { repoRoot, executable: FAKE });
@@ -97,7 +98,7 @@ describe("review-run passive tier", () => {
 describe("review-run with the fake codex", () => {
   test("emits findings that `emet review --findings` parses, and invokes codex read-only", async () => {
     const log = path.join(tempDir(), "calls.jsonl");
-    process.env["FAKE_CODEX_LOG"] = log;
+    process.env.FAKE_CODEX_LOG = log;
     script([
       { type: "thread.started", thread_id: "t1" },
       agentMessage(JSON.stringify({ findings: [FINDING] })),
@@ -116,8 +117,8 @@ describe("review-run with the fake codex", () => {
     expect(parseFindings(out.lines().join("\n"))).toEqual([FINDING]);
 
     const call: unknown = JSON.parse(readFileSync(log, "utf8").trim().split("\n")[0] ?? "");
-    if (!isObject(call) || !Array.isArray(call["argv"])) throw new Error("bad log");
-    const argv = call["argv"].map(String);
+    if (!isObject(call) || !Array.isArray(call.argv)) throw new Error("bad log");
+    const argv = call.argv.map(String);
     expect(argv.slice(0, 4)).toEqual(["exec", "-s", "read-only", "--ephemeral"]);
     expect(argv).toContain("--output-schema");
     expect(argv).toContain("-m");
@@ -130,7 +131,7 @@ describe("review-run with the fake codex", () => {
 
   test("high tier adds the security lens and uses the high reviewer model", async () => {
     const log = path.join(tempDir(), "calls.jsonl");
-    process.env["FAKE_CODEX_LOG"] = log;
+    process.env.FAKE_CODEX_LOG = log;
     script([agentMessage("[]")]);
     const out = captureStdout();
     const code = await run(baseArgv("high"), {
@@ -146,7 +147,7 @@ describe("review-run with the fake codex", () => {
 
   test("exits 1 when codex produces no final message", async () => {
     script([{ type: "thread.started", thread_id: "t1" }], 1);
-    const err = spyOn(console, "error").mockImplementation(() => {});
+    const err = spyOn(console, "error").mockReturnValue(undefined);
     const code = await run(baseArgv("medium"), {
       repoRoot: tempDir(),
       sourceHome: tempDir(),
@@ -159,7 +160,7 @@ describe("review-run with the fake codex", () => {
 
   test("exits 1 when the final message holds invalid findings", async () => {
     script([agentMessage(JSON.stringify({ findings: [{ id: "x" }] }))]);
-    const err = spyOn(console, "error").mockImplementation(() => {});
+    const err = spyOn(console, "error").mockReturnValue(undefined);
     const code = await run(baseArgv("medium"), {
       repoRoot: tempDir(),
       sourceHome: tempDir(),
@@ -212,18 +213,18 @@ function writeModelsCache(file: string, slugs: readonly string[]): void {
 
 function loggedArgv(log: string): string[] {
   const call: unknown = JSON.parse(readFileSync(log, "utf8").trim().split("\n")[0] ?? "");
-  if (!isObject(call) || !Array.isArray(call["argv"])) throw new Error("bad log");
-  return call["argv"].map(String);
+  if (!isObject(call) || !Array.isArray(call.argv)) throw new Error("bad log");
+  return call.argv.map(String);
 }
 
 describe("review-run Codex models cache", () => {
   test("uses the real Codex home's cache when the run home has none, and logs the substitution", async () => {
     const log = path.join(tempDir(), "calls.jsonl");
-    process.env["FAKE_CODEX_LOG"] = log;
+    process.env.FAKE_CODEX_LOG = log;
     script([agentMessage("[]")]);
     const sourceHome = tempDir();
     writeModelsCache(path.join(sourceHome, "models_cache.json"), ["gpt-6.1-sol"]);
-    const err = spyOn(console, "error").mockImplementation(() => {});
+    const err = spyOn(console, "error").mockReturnValue(undefined);
     const out = captureStdout();
     const code = await run(baseArgv("high"), {
       repoRoot: tempDir(),
@@ -241,7 +242,7 @@ describe("review-run Codex models cache", () => {
 
   test("prefers the run home's cache over the real one", async () => {
     const log = path.join(tempDir(), "calls.jsonl");
-    process.env["FAKE_CODEX_LOG"] = log;
+    process.env.FAKE_CODEX_LOG = log;
     script([agentMessage("[]")]);
     const repoRoot = tempDir();
     const sourceHome = tempDir();
@@ -260,11 +261,11 @@ describe("review-run Codex models cache", () => {
 
   test("fails before spawning codex when a cache exists but no model resolves", async () => {
     const log = path.join(tempDir(), "calls.jsonl");
-    process.env["FAKE_CODEX_LOG"] = log;
+    process.env.FAKE_CODEX_LOG = log;
     script([agentMessage("[]")]);
     const sourceHome = tempDir();
     writeModelsCache(path.join(sourceHome, "models_cache.json"), ["gpt-5.6-terra", "gpt-5.5-luna"]);
-    const err = spyOn(console, "error").mockImplementation(() => {});
+    const err = spyOn(console, "error").mockReturnValue(undefined);
     const code = await run(baseArgv("medium"), {
       repoRoot: tempDir(),
       sourceHome,
@@ -280,7 +281,7 @@ describe("review-run Codex models cache", () => {
 
   test("keeps the configured slug when no cache exists anywhere", async () => {
     const log = path.join(tempDir(), "calls.jsonl");
-    process.env["FAKE_CODEX_LOG"] = log;
+    process.env.FAKE_CODEX_LOG = log;
     script([agentMessage("[]")]);
     const out = captureStdout();
     const code = await run(baseArgv("medium"), {

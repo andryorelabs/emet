@@ -1,4 +1,12 @@
-import { optionalProperty } from "./optional";
+import {
+  resolveAgentHost,
+  type AgentHost,
+  type CommandResult,
+  type CommandRunner,
+  type HostRegistry,
+} from "./agenthost";
+import { claudeHost } from "./agenthost-claude";
+import { registerCodexHost } from "./agenthost-codex";
 import {
   ForgeConfigError,
   loadForgeConfigWithDefaults,
@@ -8,17 +16,9 @@ import {
   type ForgeConfig,
   type HandoffLauncher,
 } from "./config";
-import { claudeHost } from "./agenthost-claude";
-import { registerCodexHost } from "./agenthost-codex";
-import {
-  resolveAgentHost,
-  type AgentHost,
-  type CommandResult,
-  type CommandRunner,
-  type HostRegistry,
-} from "./agenthost";
-import { errorMessage, isObject } from "./narrow";
 import { BINARY, LEGACY_PRODUCT, PRODUCT } from "./names";
+import { errorMessage, isObject } from "./narrow";
+import { optionalProperty } from "./optional";
 import { writePhase } from "./phase";
 
 /**
@@ -43,31 +43,34 @@ import { writePhase } from "./phase";
 
 export type { CommandResult, CommandRunner };
 
-export type LaunchRequest = {
+export interface LaunchRequest {
   readonly specId: string;
   readonly wave: number;
   readonly repoRoot: string;
   readonly launcher: HandoffLauncher;
   readonly permissionMode: string;
-};
+}
 
-type OrcaTabOutcome = {
+interface OrcaTabOutcome {
   readonly opened: boolean;
   readonly reason: string;
-};
+}
 
-export type LaunchOutcome = {
+export interface LaunchOutcome {
   readonly name: string;
   readonly id: string | null;
   readonly attach: string;
   readonly orcaTab: OrcaTabOutcome;
-};
+}
 
-type AgentRow = { readonly id?: string | null; readonly name?: string | null };
+interface AgentRow {
+  readonly id?: string | null;
+  readonly name?: string | null;
+}
 
 const LAUNCH_TIMEOUT_MS = 15_000;
 
-const defaultRunner: CommandRunner = async (command, options) => {
+export const defaultRunner: CommandRunner = async (command, options) => {
   try {
     const child = Bun.spawn([...command], {
       ...optionalProperty("cwd", options?.cwd),
@@ -266,7 +269,7 @@ export function launchSettingsFor(config: ForgeConfig): {
 
 const USAGE = `usage: ${BINARY} launch <spec-id> --wave <n>`;
 
-export async function run(argv: string[]): Promise<void> {
+export async function run(argv: string[], runner: CommandRunner = defaultRunner): Promise<void> {
   try {
     if (argv.length === 0 || argv.includes("--help")) {
       console.error(USAGE);
@@ -296,7 +299,7 @@ export async function run(argv: string[]): Promise<void> {
         launcher: settings.launcher,
         permissionMode: settings.permissionMode,
       },
-      defaultRunner,
+      runner,
       settings.host,
     );
     console.log(JSON.stringify(outcome));

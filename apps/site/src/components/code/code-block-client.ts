@@ -1,5 +1,4 @@
 import { copyWithFeedback, FEEDBACK_MS, type CopyResult } from "../../lib/copy-feedback";
-
 import { resolveTabIndex } from "./tab-navigation";
 
 const STORAGE_KEY = "emet:install";
@@ -28,7 +27,7 @@ function rememberTab(label: string): void {
 }
 
 function showState(block: HTMLElement, button: HTMLElement, state: CopyResult | "idle"): void {
-  button.dataset["state"] = state;
+  button.dataset.state = state;
   button.setAttribute("aria-label", LABELS[state]);
   const status = block.querySelector<HTMLElement>(".emet-code__status");
   if (status) status.textContent = state === "idle" ? "" : LABELS[state];
@@ -36,7 +35,7 @@ function showState(block: HTMLElement, button: HTMLElement, state: CopyResult | 
 
 function activePanelCode(block: HTMLElement): string {
   const panel = block.querySelector<HTMLElement>(".emet-code__panel:not([hidden])");
-  return panel?.dataset["code"] ?? "";
+  return panel?.dataset.code ?? "";
 }
 
 async function handleCopy(block: HTMLElement, button: HTMLElement): Promise<void> {
@@ -55,12 +54,12 @@ async function handleCopy(block: HTMLElement, button: HTMLElement): Promise<void
 
 function selectTab(block: HTMLElement, label: string): void {
   for (const tab of block.querySelectorAll<HTMLElement>("[data-tab]")) {
-    const selected = tab.dataset["tab"] === label;
+    const selected = tab.dataset.tab === label;
     tab.setAttribute("aria-selected", String(selected));
     tab.tabIndex = selected ? 0 : -1;
   }
   for (const panel of block.querySelectorAll<HTMLElement>("[data-panel]")) {
-    panel.hidden = panel.dataset["panel"] !== label;
+    panel.hidden = panel.dataset.panel !== label;
   }
 }
 
@@ -84,7 +83,7 @@ function handleClick(event: MouseEvent): void {
     return;
   }
   const tab = event.target.closest<HTMLElement>("[data-tab]");
-  const label = tab?.dataset["tab"];
+  const label = tab?.dataset.tab;
   if (label === undefined) return;
   rememberTab(label);
   for (const other of document.querySelectorAll<HTMLElement>("[data-code-block]")) {
@@ -100,7 +99,7 @@ function handleKeydown(event: KeyboardEvent): void {
   const tabs = [...block.querySelectorAll<HTMLElement>("[data-tab]")];
   const target = resolveTabIndex(event.key, tabs.indexOf(current), tabs.length);
   const next = target === null ? undefined : tabs[target];
-  const label = next?.dataset["tab"];
+  const label = next?.dataset.tab;
   if (!next || label === undefined) return;
   event.preventDefault();
   next.focus();

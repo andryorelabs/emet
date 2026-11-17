@@ -2,8 +2,8 @@ import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { isObject } from "./narrow";
 
+import { isObject } from "./narrow";
 import {
   type Ledger,
   addRuling,
@@ -12,6 +12,7 @@ import {
   nextEscalationModel,
   parseFindings,
   recordRound,
+  run,
   triageOrder,
 } from "./review";
 
@@ -253,5 +254,186 @@ describe("review ledger round trip through the CLI", () => {
       }),
     );
     expect(runReview([finding()]).exitCode).toBe(2);
+  });
+});
+
+describe("review run in process", () => {
+  const originalDirectory = process.cwd();
+  const originalExitCode = process.exitCode;
+  let repo = "";
+  let logs: string[] = [];
+  let errors: string[] = [];
+  let originalLog: typeof console.log;
+  let originalError: typeof console.error;
+
+  beforeEach(() => {
+    repo = realpathSync(mkdtempSync(path.join(os.tmpdir(), "emet-review-run-")));
+    Bun.spawnSync(["git", "-C", repo, "init", "-q"]);
+    process.chdir(repo);
+    process.exitCode = 0;
+    logs = [];
+    errors = [];
+    originalLog = console.log;
+    originalError = console.error;
+    console.log = (...args: unknown[]) => {
+      logs.push(args.map(String).join(" "));
+    };
+    console.error = (...args: unknown[]) => {
+      errors.push(args.map(String).join(" "));
+    };
+  });
+
+  afterEach(() => {
+    console.log = originalLog;
+    console.error = originalError;
+    process.chdir(originalDirectory);
+    process.exitCode = originalExitCode ?? 0;
+    rmSync(repo, { recursive: true, force: true });
+  });
+
+  function writeLedger(content: unknown): void {
+    mkdirSync(path.join(repo, ".emet", "review"), { recursive: true });
+    writeFileSync(path.join(repo, ".emet", "review", "T-1.json"), JSON.stringify(content));
+  }
+
+  function writeFindingsFile(items: readonly Record<string, unknown>[]): string {
+    const file = path.join(repo, "findings.json");
+    writeFileSync(file, JSON.stringify(items));
+    return file;
+  }
+
+  test("a missing ticket prints usage and exits 2", async () => {
+    await run([]);
+    expect(process.exitCode).toBe(2);
+    expect(errors.join("\n")).toContain("--ticket");
+  });
+
+  test("a ticket id with path characters is refused", async () => {
+    await run(["--ticket", "../x"]);
+    expect(process.exitCode).toBe(2);
+    expect(errors.join("\n")).toContain("invalid ticket id");
+  });
+
+  test("outside a git repository it exits 2", async () => {
+    const plain = realpathSync(mkdtempSync(path.join(os.tmpdir(), "emet-review-plain-")));
+    process.chdir(plain);
+    try {
+      await run(["--ticket", "T-1", "--rulings"]);
+    } finally {
+      process.chdir(repo);
+      rmSync(plain, { recursive: true, force: true });
+    }
+    expect(process.exitCode).toBe(2);
+    expect(errors.join("\n")).toContain("not inside a git repository");
+  });
+
+  test("a rule is saved and then printed by --rulings", async () => {
+    await run(["--ticket", "T-1", "--rule", "ship", "--why", "low risk", "--cost", "rework"]);
+    expect(process.exitCode).toBe(0);
+    await run(["--ticket", "T-1", "--rulings"]);
+    expect(logs).toEqual(["Ruling: ship — low risk — rework if wrong"]);
+  });
+
+  test("a rule without --why and --cost exits 2", async () => {
+    await run(["--ticket", "T-1", "--rule", "ship"]);
+    expect(process.exitCode).toBe(2);
+    expect(errors.join("\n")).toContain("--rule needs --why and --cost");
+  });
+
+  test("--escalate prints the next tier, and fails without a model or a tier", async () => {
+    await run(["--ticket", "T-1", "--escalate", "--model", "sonnet"]);
+    expect(logs).toEqual(["opus"]);
+    await run(["--ticket", "T-1", "--escalate"]);
+    expect(process.exitCode).toBe(2);
+    expect(errors.join("\n")).toContain("--escalate needs --model");
+    process.exitCode = 0;
+    await run(["--ticket", "T-1", "--escalate", "--model", "opus"]);
+    expect(process.exitCode).toBe(1);
+    expect(errors.join("\n")).toContain('no escalation tier above "opus"');
+  });
+
+  test("a findings run without --findings prints usage and exits 2", async () => {
+    await run(["--ticket", "T-1"]);
+    expect(process.exitCode).toBe(2);
+    expect(errors.join("\n")).toContain("--ticket");
+  });
+
+  test("a round with open findings prints them and exits 1, a clean round exits 0", async () => {
+    const file = writeFindingsFile([finding({ id: "F1" })]);
+    await run(["--ticket", "T-1", "--findings", file, "--changed", "a.ts"]);
+    expect(process.exitCode).toBe(1);
+    expect(readRound(logs.join("\n"))).toBe(1);
+    const clean = writeFindingsFile([]);
+    process.exitCode = 0;
+    logs = [];
+    await run(["--ticket", "T-1", "--findings", clean]);
+    expect(process.exitCode).toBe(0);
+    expect(readRound(logs.join("\n"))).toBe(2);
+  });
+
+  test("a round past the cap exits 1 with the reason", async () => {
+    writeLedger({ ticket: "T-1", rounds: 99, findings: [], rulings: [] });
+    await run(["--ticket", "T-1", "--findings", writeFindingsFile([])]);
+    expect(process.exitCode).toBe(1);
+    expect(errors.length).toBeGreaterThan(0);
+  });
+
+  test("an unreadable findings file is an unexpected error and exits 3", async () => {
+    await run(["--ticket", "T-1", "--findings", path.join(repo, "absent.json")]);
+    expect(process.exitCode).toBe(3);
+  });
+
+  test("malformed findings exit 2", async () => {
+    const file = path.join(repo, "findings.json");
+    writeFileSync(file, "not json");
+    await run(["--ticket", "T-1", "--findings", file]);
+    expect(process.exitCode).toBe(2);
+  });
+
+  test("ledgers with a bad shape exit 2 with a specific message", async () => {
+    const cases: [unknown, string][] = [
+      [[], "ledger must be a JSON object"],
+      [{ ticket: 1, rounds: 0, findings: [], rulings: [] }, "string ticket and a numeric rounds"],
+      [{ ticket: "T-1", rounds: 0, findings: {}, rulings: [] }, "must be arrays"],
+      [
+        { ticket: "T-1", rounds: 0, findings: [], rulings: [1] },
+        "ledger ruling 0 must be an object",
+      ],
+      [
+        { ticket: "T-1", rounds: 0, findings: [], rulings: [{ what: "a", why: 2, cost: "c" }] },
+        "what, why and cost must be strings",
+      ],
+      [{ ticket: "T-1", rounds: 0, findings: [1], rulings: [] }, "finding 0 must be an object"],
+    ];
+    for (const [ledger, message] of cases) {
+      writeLedger(ledger);
+      errors = [];
+      process.exitCode = 0;
+      // oxlint-disable-next-line eslint/no-await-in-loop -- sequential on purpose: each case shares the process exit code and the ledger file
+      await run(["--ticket", "T-1", "--rulings"]);
+      expect(process.exitCode).toBe(2);
+      expect(errors.join("\n")).toContain(message);
+    }
+  });
+
+  test("a ledger finding carries its defer reason through a reload", async () => {
+    writeLedger({
+      ticket: "T-1",
+      rounds: 1,
+      findings: [{ ...finding(), status: "deferred", round: 1, deferReason: "later" }],
+      rulings: [],
+    });
+    await run(["--ticket", "T-1", "--rule", "x", "--why", "y", "--cost", "z"]);
+    const saved = readFileSync(path.join(repo, ".emet", "review", "T-1.json"), "utf8");
+    expect(saved).toContain('"deferReason": "later"');
+  });
+});
+
+describe("parseFindings shapes", () => {
+  test("rejects a non-object finding, a missing id, a non-string file and a non-string claim", () => {
+    expect(() => parseFindings(JSON.stringify([1]))).toThrow(/finding 0 must be an object/);
+    expect(() => parseFindings(JSON.stringify([finding({ id: "" })]))).toThrow(/id must be/);
+    expect(() => parseFindings(JSON.stringify([finding({ file: 3 })]))).toThrow(/file must be/);
+    expect(() => parseFindings(JSON.stringify([finding({ claim: 3 })]))).toThrow(/claim must be/);
   });
 });

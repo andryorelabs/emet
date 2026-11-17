@@ -3,15 +3,18 @@ import path from "node:path";
 
 import type { AgentHostName } from "./agenthost";
 import { writeApproval } from "./approve";
+import { readEnv, type Env } from "./env";
+import { EmetError } from "./errors";
 import { isObject } from "./narrow";
+import { present } from "./present";
 
 /** The tool input `emet guard` evaluates; `paths` lists the files a patch touches. */
-export type PreToolUseInput = {
+export interface PreToolUseInput {
   readonly tool_name?: string;
   readonly cwd?: string;
   readonly tool_input?: Record<string, unknown>;
   readonly paths?: string[];
-};
+}
 
 export type GuardDecision =
   | { readonly decision: "allow" }
@@ -46,8 +49,8 @@ export function isAgentWorktreeFor(host: AgentHostName, directory: string | unde
 }
 
 /** Resolves the Agent host from `EMET_AGENT_HOST`; anything but `codex` is Claude. */
-export function detectAgentHost(env: NodeJS.ProcessEnv = process.env): AgentHostName {
-  return env["EMET_AGENT_HOST"] === "codex" ? "codex" : "claude";
+export function detectAgentHost(env?: Env): AgentHostName {
+  return readEnv("EMET_AGENT_HOST", env) === "codex" ? "codex" : "claude";
 }
 
 /** The file paths named by `*** Add/Update/Delete File:` (and `Move to:`) patch headers. */
@@ -60,7 +63,10 @@ export function parseApplyPatchPaths(patch: string): string[] {
   return found;
 }
 
-function optionalString(record: Record<string, unknown>, key: string): { [K in string]?: string } {
+function optionalString(
+  record: Record<string, unknown>,
+  key: string,
+): Partial<Record<string, string>> {
   const value = record[key];
   return typeof value === "string" ? { [key]: value } : {};
 }
@@ -77,7 +83,7 @@ export function normalizeHookInput(raw: unknown, host: AgentHostName): PreToolUs
     ...(isObject(raw.tool_input) ? { tool_input: raw.tool_input } : {}),
   };
   if (host !== "codex" || base.tool_name !== "apply_patch") return base;
-  const patch = base.tool_input?.["command"];
+  const patch = base.tool_input?.command;
   return typeof patch === "string" ? { ...base, paths: parseApplyPatchPaths(patch) } : base;
 }
 
@@ -121,10 +127,16 @@ function isReadOnlyBash(command: unknown): boolean {
 }
 
 /** A shell word after quote removal. */
-type ShellWord = { readonly text: string };
+interface ShellWord {
+  readonly text: string;
+}
 
 /** Thrown by the lexer on unbalanced quotes or substitutions. */
-class UnparseableCommand extends Error {}
+class UnparseableCommand extends EmetError {
+  constructor(message: string) {
+    super("internal", message, "Balance the quotes and substitutions in the command.");
+  }
+}
 
 const CONTROL_KEYWORDS = new Set(["if", "then", "else", "elif", "do", "while", "until", "!", "{"]);
 const SHELLS = new Set(["sh", "bash", "zsh", "dash", "ksh", "ash"]);
@@ -189,7 +201,7 @@ function lexShell(text: string, nested: string[]): ShellWord[][] {
     words = [];
   };
   for (let index = 0; index < text.length; index++) {
-    const character = text[index]!;
+    const character = present(text[index]);
     if (character === "\\") {
       if (text[index + 1] !== "\n") current += text[index + 1] ?? "";
       index++;
@@ -270,7 +282,7 @@ function lexShell(text: string, nested: string[]): ShellWord[][] {
 function stripCommandPrefix(words: readonly ShellWord[]): ShellWord[] {
   let index = 0;
   while (index < words.length) {
-    const word = words[index]!.text;
+    const word = present(words[index]).text;
     if (CONTROL_KEYWORDS.has(word) || ASSIGNMENT.test(word)) {
       index++;
       continue;
@@ -279,11 +291,11 @@ function stripCommandPrefix(words: readonly ShellWord[]): ShellWord[] {
     const valued = WRAPPER_OPTIONS_WITH_VALUE[program];
     if (!PLAIN_WRAPPERS.has(program) && valued === undefined) break;
     index++;
-    while (index < words.length && words[index]!.text.startsWith("-")) {
-      index += valued?.has(words[index]!.text) === true ? 2 : 1;
+    while (index < words.length && present(words[index]).text.startsWith("-")) {
+      index += valued?.has(present(words[index]).text) === true ? 2 : 1;
     }
     if (program === "env") {
-      while (index < words.length && ASSIGNMENT.test(words[index]!.text)) index++;
+      while (index < words.length && ASSIGNMENT.test(present(words[index]).text)) index++;
     }
     if (POSITIONAL_WRAPPERS.has(program)) index++;
   }
@@ -322,7 +334,7 @@ function subcommandPushes(subcommand: string, rest: readonly ShellWord[]): boole
 function gitArgumentsPush(args: readonly ShellWord[]): boolean {
   let index = 0;
   while (index < args.length) {
-    const word = args[index]!.text;
+    const word = present(args[index]).text;
     if (!word.startsWith("-")) return subcommandPushes(word, args.slice(index + 1));
     if (GIT_OPTIONS_WITH_VALUE.has(word)) {
       const value = args[index + 1]?.text ?? "";
@@ -398,7 +410,7 @@ export function isGitPushCommand(command: string): boolean {
 function mutationTargets(input: PreToolUseInput): string[] | null {
   if (input.tool_name === "apply_patch") return input.paths ?? null;
   if (input.tool_name === "Bash") return null;
-  const target = input.tool_input?.["file_path"] ?? input.tool_input?.["notebook_path"];
+  const target = input.tool_input?.file_path ?? input.tool_input?.notebook_path;
   return typeof target === "string" ? [target] : null;
 }
 
@@ -410,14 +422,14 @@ function mutationTargets(input: PreToolUseInput): string[] | null {
  * approval state (ADR-0022: the guard is the boundary outside the sandbox).
  */
 export function evaluateApprovalGate(input: PreToolUseInput, runsDir: string): GuardDecision {
-  const command = input.tool_input?.["command"];
+  const command = input.tool_input?.command;
   if (input.tool_name === "Bash" && typeof command === "string" && isGitPushCommand(command)) {
     return { decision: "deny", reason: "git push is not allowed" };
   }
   const [pendingId] = pendingApprovalIds(runsDir);
   if (pendingId === undefined) return ALLOW;
   if (input.tool_name === undefined || !MUTATING_TOOLS.has(input.tool_name)) return ALLOW;
-  if (input.tool_name === "Bash" && isReadOnlyBash(input.tool_input?.["command"])) return ALLOW;
+  if (input.tool_name === "Bash" && isReadOnlyBash(input.tool_input?.command)) return ALLOW;
 
   const targets = mutationTargets(input);
   if (
@@ -441,7 +453,7 @@ function firstExisting(candidates: string[]): string | undefined {
  * the gate closed.
  */
 export function handleUserPromptSubmit(input: unknown, runsDir: string): { approved: boolean } {
-  const prompt = isObject(input) ? input["prompt"] : undefined;
+  const prompt = isObject(input) ? input.prompt : undefined;
   if (typeof prompt !== "string") return { approved: false };
   for (const line of prompt.split("\n")) {
     const id = APPROVE_LINE.exec(line.trim())?.[1];

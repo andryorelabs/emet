@@ -15,22 +15,7 @@ import { join } from "node:path";
 import { pathToFileURL } from "node:url";
 import { chromium, type Browser, type Page } from "playwright";
 import sharp from "sharp";
-import {
-  FRAME_HEIGHT,
-  FRAME_WIDTH,
-  type Frame,
-  type MascotState,
-  buildManifest,
-  buildRows,
-  composeSheet,
-  validateManifest,
-} from "./brand-pet.ts";
-import {
-  GENERATED_FRAMES_PATH,
-  SITE_FRAMES_PATH,
-  buildFramesModule,
-  buildSiteFramesModule,
-} from "./brand-frames.ts";
+
 import {
   ICO_MAX_BYTES,
   ICO_SIZES,
@@ -41,15 +26,50 @@ import {
   assertSpec,
   encodeIco,
 } from "./brand-export-spec.ts";
+import {
+  GENERATED_FRAMES_PATH,
+  SITE_FRAMES_PATH,
+  buildFramesModule,
+  buildSiteFramesModule,
+} from "./brand-frames.ts";
+import {
+  FRAME_HEIGHT,
+  FRAME_WIDTH,
+  type Frame,
+  type MascotState,
+  buildManifest,
+  buildRows,
+  composeSheet,
+  validateManifest,
+} from "./brand-pet.ts";
 
 export type { Frame, MascotState };
 
 const BRAND_DIRECTORY = join(import.meta.dir, "..", "docs", "brand");
-const MARK_SOURCE = join(BRAND_DIRECTORY, "logo", "mark.svg");
-const PNG_DIRECTORY = join(BRAND_DIRECTORY, "logo", "png");
-const OG_DIRECTORY = join(BRAND_DIRECTORY, "og");
-const MASCOT_DIRECTORY = join(BRAND_DIRECTORY, "mascot");
-const PET_DIRECTORY = join(BRAND_DIRECTORY, "pet", "emet");
+
+/** Where the export reads its sources and writes its outputs. */
+export interface BrandPaths {
+  markSource: string;
+  pngDirectory: string;
+  ogSourceDirectory: string;
+  ogDirectory: string;
+  mascotDirectory: string;
+  petDirectory: string;
+  framesPath: string;
+  siteFramesPath: string;
+}
+
+/** The committed brand kit locations. */
+export const DEFAULT_BRAND_PATHS: BrandPaths = {
+  markSource: join(BRAND_DIRECTORY, "logo", "mark.svg"),
+  pngDirectory: join(BRAND_DIRECTORY, "logo", "png"),
+  ogSourceDirectory: join(BRAND_DIRECTORY, "og"),
+  ogDirectory: join(BRAND_DIRECTORY, "og"),
+  mascotDirectory: join(BRAND_DIRECTORY, "mascot"),
+  petDirectory: join(BRAND_DIRECTORY, "pet", "emet"),
+  framesPath: GENERATED_FRAMES_PATH,
+  siteFramesPath: SITE_FRAMES_PATH,
+};
 const FRAME_ART_HEIGHT = FRAME_WIDTH;
 const FRAME_PADDING = (FRAME_HEIGHT - FRAME_ART_HEIGHT) / 2;
 /** One 2 s halo pulse sampled every 250 ms, so the work loop is smooth at Orca's playback rate. */
@@ -104,11 +124,12 @@ function writeChecked(
 }
 
 /** Exports the square mark PNGs and the favicon ICO built from them. */
-async function exportMarks(): Promise<void> {
-  const svg = readFileSync(MARK_SOURCE);
+export async function exportMarks(paths: BrandPaths = DEFAULT_BRAND_PATHS): Promise<void> {
+  const { markSource, pngDirectory } = paths;
+  const svg = readFileSync(markSource);
   const { width } = await sharp(svg).metadata();
-  if (!width) throw new Error(`${MARK_SOURCE}: cannot read the SVG width`);
-  mkdirSync(PNG_DIRECTORY, { recursive: true });
+  if (!width) throw new Error(`${markSource}: cannot read the SVG width`);
+  mkdirSync(pngDirectory, { recursive: true });
   const sizes = [...new Set<number>([...MARK_SIZES, ...ICO_SIZES])];
   const pngs = await Promise.all(sizes.map(async (size) => rasteriseSquare(svg, width, size)));
   const rendered = new Map(sizes.map((size, index) => [size, pngs[index]]));
@@ -116,7 +137,7 @@ async function exportMarks(): Promise<void> {
     const name = `mark-${size}.png`;
     const png = rendered.get(size);
     if (!png) throw new Error(`${name}: not rendered`);
-    writeChecked(join(PNG_DIRECTORY, name), name, png, {
+    writeChecked(join(pngDirectory, name), name, png, {
       width: size,
       height: size,
       maxBytes: MARK_MAX_BYTES,
@@ -136,7 +157,7 @@ async function exportMarks(): Promise<void> {
   if (ico.byteLength > ICO_MAX_BYTES) {
     throw new Error(`favicon.ico: ${ico.byteLength} bytes exceeds ${ICO_MAX_BYTES} bytes`);
   }
-  writeFileSync(join(PNG_DIRECTORY, "favicon.ico"), ico);
+  writeFileSync(join(pngDirectory, "favicon.ico"), ico);
   console.log(`brand:export wrote favicon.ico (${ICO_SIZES.join(", ")} px, ${ico.byteLength} B)`);
 }
 
@@ -144,7 +165,11 @@ async function exportMarks(): Promise<void> {
  * Renders one OG HTML source at its exact target size. Throws when the page
  * asks for anything outside `file:`, or when a brand font failed to load.
  */
-async function renderOg(browser: Browser, target: OgTarget): Promise<Uint8Array> {
+export async function renderOg(
+  browser: Browser,
+  target: OgTarget,
+  sourceDirectory: string = DEFAULT_BRAND_PATHS.ogSourceDirectory,
+): Promise<Uint8Array> {
   const { width, height } = target.spec;
   const page = await browser.newPage({ viewport: { width, height }, deviceScaleFactor: 1 });
   const blocked: string[] = [];
@@ -155,7 +180,7 @@ async function renderOg(browser: Browser, target: OgTarget): Promise<Uint8Array>
       blocked.push(url);
       return route.abort();
     });
-    const source = join(OG_DIRECTORY, `${target.name}.html`);
+    const source = join(sourceDirectory, `${target.name}.html`);
     await page.goto(pathToFileURL(source).href, { waitUntil: "load" });
     const loadedFonts = parseFontFamilies(await page.evaluate(LOADED_FONTS_PROBE));
     const missingFonts = REQUIRED_FONTS.filter(
@@ -175,15 +200,17 @@ async function renderOg(browser: Browser, target: OgTarget): Promise<Uint8Array>
 }
 
 /** Exports the README covers and GitHub social previews. */
-async function exportOg(): Promise<void> {
+export async function exportOg(paths: BrandPaths = DEFAULT_BRAND_PATHS): Promise<void> {
   const browser = await chromium.launch({ headless: true });
   try {
-    const pngs = await Promise.all(OG_TARGETS.map(async (target) => renderOg(browser, target)));
+    const pngs = await Promise.all(
+      OG_TARGETS.map(async (target) => renderOg(browser, target, paths.ogSourceDirectory)),
+    );
     OG_TARGETS.forEach((target, index) => {
       const name = `${target.name}.png`;
       const png = pngs[index];
       if (!png) throw new Error(`${name}: not rendered`);
-      writeChecked(join(OG_DIRECTORY, name), name, png, target.spec);
+      writeChecked(join(paths.ogDirectory, name), name, png, target.spec);
     });
   } finally {
     await browser.close();
@@ -251,7 +278,10 @@ async function captureFrame(page: Page, seekMs: number | undefined): Promise<Uin
  * never the wall clock, so two runs are byte-identical. Throws when the page
  * asks for anything outside `file:`.
  */
-export async function captureStateFrames(state: MascotState): Promise<Frame[]> {
+export async function captureStateFrames(
+  state: MascotState,
+  mascotDirectory: string = DEFAULT_BRAND_PATHS.mascotDirectory,
+): Promise<Frame[]> {
   const source = STATE_SOURCES[state];
   const browser = await chromium.launch({ headless: true });
   try {
@@ -266,7 +296,7 @@ export async function captureStateFrames(state: MascotState): Promise<Frame[]> {
       blocked.push(url);
       return route.abort();
     });
-    await page.goto(pathToFileURL(join(MASCOT_DIRECTORY, source.file)).href, { waitUntil: "load" });
+    await page.goto(pathToFileURL(join(mascotDirectory, source.file)).href, { waitUntil: "load" });
     await page.evaluate(FIT_SVG_SCRIPT);
     const count = source.animated ? ANIMATED_FRAME_COUNT : 1;
     const durationMs = source.animated ? ANIMATED_FRAME_MS : STILL_FRAME_MS;
@@ -286,13 +316,13 @@ export async function captureStateFrames(state: MascotState): Promise<Frame[]> {
 }
 
 /** Exports the Orca pet bundle `docs/brand/pet/emet/{pet.json,spritesheet.webp}`. */
-async function exportPet(): Promise<void> {
+export async function exportPet(paths: BrandPaths = DEFAULT_BRAND_PATHS): Promise<void> {
   const [sleep, work, waiting, done, error] = await Promise.all([
-    captureStateFrames("sleep"),
-    captureStateFrames("work"),
-    captureStateFrames("waiting"),
-    captureStateFrames("done"),
-    captureStateFrames("error"),
+    captureStateFrames("sleep", paths.mascotDirectory),
+    captureStateFrames("work", paths.mascotDirectory),
+    captureStateFrames("waiting", paths.mascotDirectory),
+    captureStateFrames("done", paths.mascotDirectory),
+    captureStateFrames("error", paths.mascotDirectory),
   ]);
   const captured: Record<MascotState, Frame[]> = { sleep, work, waiting, done, error };
   const rows = await buildRows(captured);
@@ -300,21 +330,21 @@ async function exportPet(): Promise<void> {
   const manifest = buildManifest(rows);
   const problems = validateManifest(manifest, sheet.byteLength);
   if (problems.length > 0) throw new Error(`pet.json: ${problems.join("; ")}`);
-  mkdirSync(PET_DIRECTORY, { recursive: true });
-  writeFileSync(join(PET_DIRECTORY, "spritesheet.webp"), sheet);
-  writeFileSync(join(PET_DIRECTORY, "pet.json"), `${JSON.stringify(manifest, null, 2)}\n`);
+  mkdirSync(paths.petDirectory, { recursive: true });
+  writeFileSync(join(paths.petDirectory, "spritesheet.webp"), sheet);
+  writeFileSync(join(paths.petDirectory, "pet.json"), `${JSON.stringify(manifest, null, 2)}\n`);
   console.log(`brand:export wrote pet bundle (spritesheet.webp ${sheet.byteLength} B)`);
-  writeFileSync(GENERATED_FRAMES_PATH, await buildFramesModule(captured));
+  writeFileSync(paths.framesPath, await buildFramesModule(captured));
   console.log("brand:export wrote mod frames (frames.generated.ts)");
-  writeFileSync(SITE_FRAMES_PATH, await buildSiteFramesModule(captured));
+  writeFileSync(paths.siteFramesPath, await buildSiteFramesModule(captured));
   console.log("brand:export wrote Website frames (mascot-frames.generated.ts)");
 }
 
 /** Renders and checks every raster asset of the brand kit. */
-export async function exportBrand(): Promise<void> {
-  await exportMarks();
-  await exportOg();
-  await exportPet();
+export async function exportBrand(paths: BrandPaths = DEFAULT_BRAND_PATHS): Promise<void> {
+  await exportMarks(paths);
+  await exportOg(paths);
+  await exportPet(paths);
 }
 
 if (import.meta.main) await exportBrand();

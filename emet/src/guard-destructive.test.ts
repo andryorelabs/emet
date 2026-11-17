@@ -104,6 +104,20 @@ describe("destructive commands", () => {
   });
 });
 
+function withSurfaceFile(content: string, run: (root: string) => void): void {
+  const root = mkdtempSync(path.join(os.tmpdir(), "emet-surface-file-"));
+  try {
+    mkdirSync(path.join(root, ".emet"));
+    writeFileSync(path.join(root, ".emet", "surface.json"), content);
+    run(root);
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+}
+
+const decideIn = (cwd: string, file_path: string) =>
+  checkEditSurface({ tool_name: "Write", cwd, tool_input: { file_path } }).decision;
+
 describe("edit surfaces", () => {
   const surface = { root: "/repo", globs: ["emet/src/guard*.ts", "emet/bin/emet.ts"] };
   const load = () => surface;
@@ -150,8 +164,72 @@ describe("edit surfaces", () => {
       }
     });
   }
+  describe("literal paths with route-segment brackets and parentheses", () => {
+    const routeSurface = {
+      root: "/repo",
+      globs: [
+        "src/app/[locale]/admin/(dashboard)/x.tsx",
+        "src/app/[[...slug]]/page.tsx",
+        "src/routes/\\[id\\]/**",
+        "lib/**",
+      ],
+    };
+    const editRoute = (file_path: string) => edit(file_path, () => routeSurface);
+
+    test("allows a write to a surface path listed literally", () => {
+      expect(editRoute("src/app/[locale]/admin/(dashboard)/x.tsx")).toBe("allow");
+      expect(editRoute("/repo/src/app/[[...slug]]/page.tsx")).toBe("allow");
+    });
+    test("does not widen a bracket segment into a character class", () => {
+      expect(editRoute("src/app/l/admin/(dashboard)/x.tsx")).toBe("deny");
+      expect(editRoute("src/app/e/admin/(dashboard)/x.tsx")).toBe("deny");
+      expect(editRoute("src/app/[locale]/admin/dashboard/x.tsx")).toBe("deny");
+      expect(editRoute("src/app/s/page.tsx")).toBe("deny");
+    });
+    test("keeps real globs working, including already escaped brackets", () => {
+      expect(editRoute("lib/deep/nested/file.ts")).toBe("allow");
+      expect(editRoute("src/routes/[id]/page.svelte")).toBe("allow");
+      expect(editRoute("src/routes/i/page.svelte")).toBe("deny");
+    });
+  });
   test("no surface file means no restriction", () => {
     expect(edit("/repo/anything.ts", () => null)).toBe("allow");
+  });
+  describe("surface file discovery", () => {
+    test("accepts a bare array of globs", () => {
+      withSurfaceFile(JSON.stringify(["only.ts", 7]), (root) => {
+        expect(decideIn(root, "only.ts")).toBe("allow");
+        expect(decideIn(root, "other.ts")).toBe("deny");
+      });
+    });
+    test("treats unreadable or malformed files as no restriction", () => {
+      withSurfaceFile("{not json", (root) => {
+        expect(decideIn(root, "anything.ts")).toBe("allow");
+      });
+      withSurfaceFile(JSON.stringify({ surfaces: "nope" }), (root) => {
+        expect(decideIn(root, "anything.ts")).toBe("allow");
+      });
+      withSurfaceFile(JSON.stringify("text"), (root) => {
+        expect(decideIn(root, "anything.ts")).toBe("allow");
+      });
+    });
+    test("walks up from a nested directory to find the file", () => {
+      withSurfaceFile(JSON.stringify({ surfaces: ["sub/ok.ts"] }), (root) => {
+        const nested = path.join(root, "sub", "deeper");
+        mkdirSync(nested, { recursive: true });
+        expect(decideIn(nested, path.join(root, "sub", "ok.ts"))).toBe("allow");
+        expect(decideIn(nested, path.join(root, "sub", "no.ts"))).toBe("deny");
+      });
+    });
+    test("stops at the filesystem root when no surface file exists", () => {
+      expect(decideIn("/", "x.ts")).toBe("allow");
+    });
+  });
+});
+
+describe("leading command word", () => {
+  test("a command made only of wrappers and assignments is not destructive", () => {
+    expect(findDestructiveOperation("FOO=1 sudo -u root")).toBeNull();
   });
 });
 

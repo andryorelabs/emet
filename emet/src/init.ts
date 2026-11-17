@@ -3,6 +3,7 @@ import { stat } from "node:fs/promises";
 import path from "node:path";
 
 import type { AgentHost } from "./agenthost";
+import { readTemplate } from "./assets";
 import {
   DEFAULT_FORGE_CONFIG,
   loadForgeConfig,
@@ -10,7 +11,6 @@ import {
   type ForgeConfig,
   type TrackerKind,
 } from "./config";
-import { BINARY, CONFIG_FILE, LEGACY_CONFIG_FILE, LEGACY_PRODUCT, PRODUCT, RUN_DIR } from "./names";
 import {
   agentHostOfConfig,
   checkDependencies,
@@ -18,8 +18,9 @@ import {
   findLinearMcpEntry,
   formatDependencyCheck,
 } from "./dependencies";
+import { BINARY, CONFIG_FILE, LEGACY_CONFIG_FILE, LEGACY_PRODUCT, PRODUCT, RUN_DIR } from "./names";
 import { isObject } from "./narrow";
-import { readTemplate } from "./assets";
+import { present } from "./present";
 
 /**
  * `emet init` — generates a repo's `emet.config.json` plus its
@@ -118,14 +119,14 @@ async function readPackageManagerField(repoRoot: string): Promise<string | null>
 }
 
 export async function detectPackageManager(repoRoot: string): Promise<PackageManager> {
-  const present = new Set<string>();
+  const presentFiles = new Set<string>();
   for (const fileName of PACKAGE_MANAGER_PROBE_FILES) {
     // oxlint-disable-next-line eslint/no-await-in-loop -- sequential probe, cheap
-    if (await Bun.file(path.join(repoRoot, fileName)).exists()) present.add(fileName);
+    if (await Bun.file(path.join(repoRoot, fileName)).exists()) presentFiles.add(fileName);
   }
   return classifyPackageManager(
-    (fileName) => present.has(fileName),
-    present.has("package.json") ? await readPackageManagerField(repoRoot) : null,
+    (fileName) => presentFiles.has(fileName),
+    presentFiles.has("package.json") ? await readPackageManagerField(repoRoot) : null,
   );
 }
 
@@ -401,7 +402,7 @@ export function deriveIdPrefix(repoBasename: string): string {
   return letters.slice(0, 3);
 }
 
-export type DetectedRepoInfo = {
+export interface DetectedRepoInfo {
   readonly repoName: string;
   readonly packageManager: PackageManager;
   readonly trunk: string;
@@ -411,7 +412,7 @@ export type DetectedRepoInfo = {
   readonly selfCheck: readonly string[];
   /** When `false` and the tracker is `local`, landing defaults to `merge`. */
   readonly hasRemote?: boolean;
-};
+}
 
 const LOCAL_ID_PATTERN = String.raw`^[a-z0-9-]+-\d{2,}$`;
 
@@ -523,7 +524,7 @@ export function substituteTemplate(
     if (!(token in vars)) {
       throw new Error(`init: template references unknown placeholder {{${token}}}`);
     }
-    return vars[token]!;
+    return present(vars[token]);
   });
 }
 
@@ -702,7 +703,7 @@ async function ensureEmetStateGitignore(repoRoot: string, tracker: TrackerKind):
  * authenticated, insufficient permissions) are reported, never fatal to the
  * rest of `init`. */
 async function ensureGithubStateLabels(repoRoot: string): Promise<string[]> {
-  const labels: Array<{ name: string; color: string; description: string }> = [
+  const labels: { name: string; color: string; description: string }[] = [
     { name: "status:todo", color: "ededed", description: "emet: not started" },
     {
       name: "status:in-progress",
@@ -730,10 +731,10 @@ async function ensureGithubStateLabels(repoRoot: string): Promise<string[]> {
   return failures;
 }
 
-export type InitOptions = {
+export interface InitOptions {
   readonly force: boolean;
   readonly trackerOverride: TrackerKind | null;
-};
+}
 
 export function parseInitArguments(argv: readonly string[]): InitOptions {
   const force = argv.includes("--force");
@@ -858,7 +859,7 @@ async function main(options: InitOptions): Promise<void> {
   const docsAgentsDirectory = path.join(repoRoot, "docs", "agents");
   await Bun.$`mkdir -p ${docsAgentsDirectory}`.quiet();
 
-  const writes: Array<{ template: string; target: string; shared: boolean; note: string }> = [
+  const writes: { template: string; target: string; shared: boolean; note: string }[] = [
     { template: "emet.md.tpl", target: "emet.md", shared: false, note: "" },
     {
       template: `issue-tracker-${detected.tracker}.md.tpl`,

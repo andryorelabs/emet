@@ -2,8 +2,27 @@
 title: 新功能
 description: emet 的发布说明：每个版本都有哪些变化。
 seoTitle: "emet 新功能：发布说明"
-sourceHash: 5fa0e7574374a363
+sourceHash: 184d0da238c95000
 ---
+
+## 0.8.5
+
+2026-11-17
+
+### 变更
+
+- 覆盖率门禁对 `emet/`、`apps/site` 和 `tools/` 按文件要求行覆盖率不低于 97 %、函数覆盖率不低于 98 %，有理由的例外记录在 `tools/coverage-exceptions.ts`。覆盖率清单会递归遍历 `emet/src`，`tools/` 也纳入门禁，`tools/coverage-floors.json` 中的总计升至实测值。
+- PreToolUse 守卫改为失败即关闭：当 `bin/emet` 无法解析 emet 二进制文件时，钩子以退出码 2 结束并阻止工具调用，同时给出说明如何恢复的消息。Stop 和 SubagentStop 钩子仍以退出码 1 结束。
+- 插件清单现在包含作者邮箱、许可证、主页、仓库和问题反馈 URL，Codex 技能的描述也说明了每个技能何时使用。
+
+### 已修复
+
+- `emet doctor` 在出现意外错误时以退出码 3 结束，而不是 0。之前设置的非零退出码会被保留。
+- `emet cleanup --all --force` 会回收已失效运行的 worker 的 worktree 和分支，包括 `.claude/worktrees/` 下的 worktree。存活或空闲的所有者，以及没有指明任何运行的锁，仍受保护。
+- 编辑守卫能匹配按字面书写的范围，例如 `src/app/[locale]/page.tsx`。范围中的 `[` 和 `]` 不再是字符类。
+- 当仍持有预留或槽位的工单丢失了其 worker worktree 时，`emet preflight --post-dispatch` 会失败，并提示协调者重新派发而不是恢复它。
+- 编译后的 `emet` 二进制文件不再加载当前目录中的 `.env` 文件。
+- 网站移除了首页的内联样式属性，让浅色模式下的首页标签达到 AA 对比度，并从首次渲染起就用可见文本为搜索按钮命名。文档图片改由网站自身源的 `repo-assets` 提供，而不是 `raw.githubusercontent.com`，`astro dev` 也会提供它们。
 
 ## 0.8.4
 

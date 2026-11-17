@@ -13,6 +13,7 @@ import {
 } from "node:fs";
 import os from "node:os";
 import path from "node:path";
+
 import { COMMIT_RULES, buildRunHome, hooksFileText, renderOverlayConfig } from "./codex-home";
 
 const scratch: string[] = [];
@@ -239,6 +240,28 @@ describe("buildRunHome", () => {
       sourceHome: sourceHome(),
     });
     expect(existsSync(path.join(codexHome, "plugins"))).toBe(false);
+  });
+
+  test("reads the source home from CODEX_HOME when none is given", () => {
+    const source = sourceHome();
+    const original = process.env.CODEX_HOME;
+    process.env.CODEX_HOME = source;
+    try {
+      const { codexHome } = buildRunHome({ run: "r1", repoRoot: tempDir() });
+      expect(readlinkSync(path.join(codexHome, "auth.json"))).toBe(path.join(source, "auth.json"));
+    } finally {
+      if (original === undefined) delete process.env.CODEX_HOME;
+      else process.env.CODEX_HOME = original;
+    }
+  });
+
+  test("ignores an unparsable source config.toml when looking for the marketplace", () => {
+    const source = sourceHome();
+    writeFileSync(path.join(source, "config.toml"), "this is = = not toml [[\n");
+    const { codexHome } = buildRunHome({ run: "r1", repoRoot: tempDir(), sourceHome: source });
+    expect(readFileSync(path.join(codexHome, "config.toml"), "utf8")).not.toContain(
+      "[marketplaces",
+    );
   });
 
   test("refuses to build inside the source home", () => {

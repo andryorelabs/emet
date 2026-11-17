@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import path from "node:path";
+
 import { parseFloors } from "./coverage-gate";
 
 const repositoryRoot = path.resolve(import.meta.dir, "..");
@@ -52,6 +53,18 @@ describe("workspace coverage floors", () => {
     expect(script?.trimEnd()).toEndWith(
       '&& bun ../../tools/coverage-gate.ts apps/site coverage/lcov.info"',
     );
+  });
+
+  test("test:root measures tools/ into coverage/tools and gates it", () => {
+    const manifest: unknown = JSON.parse(
+      readFileSync(path.join(repositoryRoot, "package.json"), "utf8"),
+    );
+    const scripts: unknown = Reflect.get(Object(manifest), "scripts");
+    const testRoot = String(Reflect.get(Object(scripts), "test:root"));
+    expect(testRoot).toContain("--coverage-dir coverage/tools");
+    expect(testRoot).toContain("bun tools/coverage-gate.ts tools coverage/tools/lcov.info");
+    expect(floors.tools?.lines ?? 0).toBeGreaterThan(0);
+    expect(floors.tools?.functions ?? 0).toBeGreaterThan(0);
   });
 
   for (const workspace of tested) {

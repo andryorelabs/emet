@@ -2,9 +2,12 @@ import { randomUUID } from "node:crypto";
 import { existsSync } from "node:fs";
 import { mkdir, readFile, rename, writeFile } from "node:fs/promises";
 import path from "node:path";
+
+import { EmetError } from "./errors";
+import { exitCodes } from "./exit-codes";
 import { didAcquireLock, didReclaimStaleLock, releaseLock, resolveLockDirectory } from "./locks";
-import { errnoCode, errorMessage } from "./narrow";
 import { PRODUCT } from "./names";
+import { errnoCode, errorMessage } from "./narrow";
 import {
   appendComment,
   computeFrontier,
@@ -38,8 +41,17 @@ const LOCK_POLL_INTERVAL_MS = 25;
 const LOCK_MAX_AGE_MS = 120_000;
 const CLOSED_STATUSES: ReadonlySet<TrackerStatus> = new Set(["done", "canceled", "resolved"]);
 
-class TrackerUsageError extends Error {}
-class TrackerRefusedError extends Error {}
+class TrackerUsageError extends EmetError {
+  constructor(message: string) {
+    super("tracker-usage", message, "see `emet tracker --help`", exitCodes.usage);
+  }
+}
+
+class TrackerRefusedError extends EmetError {
+  constructor(message: string) {
+    super("tracker-refused", message, "fix the tracker state and rerun", exitCodes.findings);
+  }
+}
 
 function flagValue(argv: readonly string[], flag: string): string | undefined {
   const index = argv.indexOf(flag);

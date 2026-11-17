@@ -8,7 +8,9 @@ function memoryStorage(): Storage {
     get length() {
       return data.size;
     },
-    clear: () => data.clear(),
+    clear: () => {
+      data.clear();
+    },
     getItem: (key) => data.get(key) ?? null,
     key: (index) => [...data.keys()][index] ?? null,
     removeItem: (key) => void data.delete(key),
@@ -39,11 +41,15 @@ describe("install target storage", () => {
 
   test("swallows storage errors", () => {
     expect(readInstallTarget(throwingStorage)).toBe(null);
-    expect(() => writeInstallTarget(throwingStorage, "Codex")).not.toThrow();
+    expect(() => {
+      writeInstallTarget(throwingStorage, "Codex");
+    }).not.toThrow();
   });
 
   test("tolerates missing storage", () => {
     expect(readInstallTarget(null)).toBe(null);
-    expect(() => writeInstallTarget(null, "Codex")).not.toThrow();
+    expect(() => {
+      writeInstallTarget(null, "Codex");
+    }).not.toThrow();
   });
 });

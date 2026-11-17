@@ -27,7 +27,7 @@ function readJson(relativePath: string): Record<string, unknown> {
 const plugin = readJson(".claude-plugin/plugin.json");
 const marketplace = readJson(".claude-plugin/marketplace.json");
 const hooks = readJson("hooks/hooks.json");
-const pluginName = String(plugin["name"]);
+const pluginName = String(plugin.name);
 const description =
   "Spec to merge on one approval: parallel workers in isolated worktrees, a review per wave, CI green before merge.";
 
@@ -41,21 +41,21 @@ function promptFiles(): string[] {
 describe("plugin manifests", () => {
   test("plugin.json names the plugin, a version and the unconstrained skills dependency", () => {
     expect(pluginName).toBe("emet");
-    expect(plugin["description"]).toBe(description);
-    expect(plugin["version"]).toMatch(/^\d+\.\d+\.\d+/);
-    expect(plugin["dependencies"]).toEqual([
+    expect(plugin.description).toBe(description);
+    expect(plugin.version).toMatch(/^\d+\.\d+\.\d+/);
+    expect(plugin.dependencies).toEqual([
       { name: "mattpocock-skills", marketplace: "claude-plugins-official" },
     ]);
   });
 
   test("marketplace.json allows the cross-marketplace dependency and lists the plugin", () => {
-    expect(marketplace["name"]).toBe("emet-marketplace");
-    expect(marketplace["allowCrossMarketplaceDependenciesOn"]).toEqual(["claude-plugins-official"]);
-    const entries = asRecordArray(marketplace["plugins"]);
-    expect(entries.map((entry) => entry["name"])).toEqual([pluginName, "emet-mascot"]);
-    expect(entries[1]?.["source"]).toBe("./mods/emet-mascot");
-    expect(entries[0]?.["source"]).toBe("./");
-    expect(entries[0]?.["description"]).toBe(description);
+    expect(marketplace.name).toBe("emet-marketplace");
+    expect(marketplace.allowCrossMarketplaceDependenciesOn).toEqual(["claude-plugins-official"]);
+    const entries = asRecordArray(marketplace.plugins);
+    expect(entries.map((entry) => entry.name)).toEqual([pluginName, "emet-mascot"]);
+    expect(entries[1]?.source).toBe("./mods/emet-mascot");
+    expect(entries[0]?.source).toBe("./");
+    expect(entries[0]?.description).toBe(description);
   });
 
   test("ships the emet-worker and emet-reviewer agents", () => {
@@ -115,18 +115,18 @@ describe("plugin manifests", () => {
 });
 
 describe("hooks.json", () => {
-  const events = asRecord(hooks["hooks"]);
+  const events = asRecord(hooks.hooks);
 
   function firstEntry(event: string): Record<string, unknown> {
     return asRecordArray(events[event])[0] ?? {};
   }
 
   function firstCommand(event: string): unknown {
-    return asRecordArray(firstEntry(event)["hooks"])[0]?.["command"];
+    return asRecordArray(firstEntry(event).hooks)[0]?.command;
   }
 
   test("registers the guard on PreToolUse, SubagentStop and Stop", () => {
-    expect(firstEntry("PreToolUse")["matcher"]).toBe(
+    expect(firstEntry("PreToolUse").matcher).toBe(
       "Bash|ScheduleWakeup|Skill|Edit|Write|MultiEdit|NotebookEdit",
     );
     expect(firstCommand("PreToolUse")).toBe('"${CLAUDE_PLUGIN_ROOT}/bin/emet" guard');

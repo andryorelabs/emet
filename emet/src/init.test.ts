@@ -590,7 +590,7 @@ describe("emet init --tracker local end to end", () => {
     try {
       const result = await Bun.$`bun ${entry} --tracker local --force`
         .cwd(repoRoot)
-        .env({ ...process.env, PATH: `${fakeBin}:${process.env["PATH"] ?? ""}` })
+        .env({ ...process.env, PATH: `${fakeBin}:${process.env.PATH ?? ""}` })
         .nothrow()
         .quiet();
       expect(result.exitCode).toBe(0);

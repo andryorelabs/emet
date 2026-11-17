@@ -18,9 +18,9 @@ import {
   run as runCleanup,
   shouldMarkRunClosed,
 } from "./cleanup";
-import { readPhase } from "./phase";
 import { DEFAULT_FORGE_CONFIG, type ForgeConfig } from "./config";
 import { resolveLandedVerdict } from "./landed";
+import { readPhase } from "./phase";
 import {
   classifyWorktreeEntry,
   describeWorktreeEntryVerdict,
@@ -248,6 +248,40 @@ describe("guardBranch", () => {
           at: "2026-09-07T00:00:00Z",
         },
       });
+    });
+
+    test("--force reads the lock of a still-listed worktree before the in-use short-circuit", () => {
+      const outcome = guardBranch(true, lockedEntry(), null, () => "dead", true);
+      expect(outcome).toEqual({
+        done: false,
+        owner: {
+          runId: "session-a",
+          ticket: "AO-260",
+          anchorPid: 4242,
+          at: "2026-09-07T00:00:00Z",
+        },
+      });
+    });
+
+    test("--force keeps a still-listed worktree of an idle owner protected", () => {
+      const outcome = guardBranch(true, lockedEntry(), null, () => "idle", true);
+      expect(outcome).toEqual({
+        done: true,
+        category: "live-or-idle-protected",
+        ownerRunId: "session-a",
+        runVerdict: "idle",
+      });
+    });
+
+    test("--force leaves an unlocked live checkout in-use", () => {
+      const outcome = guardBranch(
+        true,
+        lockedEntry({ lockedReason: null }),
+        null,
+        () => "dead",
+        true,
+      );
+      expect(outcome).toEqual({ done: true, category: "in-use" });
     });
 
     test("--force does not lift protection on a live or idle owner", () => {
@@ -574,7 +608,7 @@ describe("reclaim against a real repository", () => {
     await git("commit", "-q", "-m", "base");
     mkdirSync(path.join(repo, ".claude", "worktrees"), { recursive: true });
     process.chdir(repo);
-    logSpy = spyOn(console, "log").mockImplementation(() => {});
+    logSpy = spyOn(console, "log").mockReturnValue(undefined);
   });
 
   afterEach(() => {
@@ -883,8 +917,11 @@ describe("reclaim against a real repository", () => {
   });
 });
 
+const cleanupPhaseRoots: string[] = [];
+
 async function cleanupIn(argv: string[], unwritable: boolean): Promise<string> {
   const root = realpathSync(mkdtempSync(path.join(os.tmpdir(), "cleanup-phase-")));
+  cleanupPhaseRoots.push(root);
   const git = (...args: string[]) => Bun.spawnSync(["git", "-C", root, ...args]);
   git("init", "-q", "-b", "main");
   git("config", "user.email", "t@example.com");
@@ -912,6 +949,22 @@ async function cleanupIn(argv: string[], unwritable: boolean): Promise<string> {
 }
 
 describe("cleanup phase file", () => {
+  afterEach(() => {
+    for (const root of cleanupPhaseRoots.splice(0)) rmSync(root, { recursive: true, force: true });
+  });
+
+  let previousTestRoot = "";
+
+  test("creates a cleanup-phase directory for the sweep", async () => {
+    previousTestRoot = await cleanupIn([], false);
+    expect(existsSync(previousTestRoot)).toBe(true);
+  });
+
+  test("the previous test's cleanup-phase directory is removed", () => {
+    expect(previousTestRoot).not.toBe("");
+    expect(existsSync(previousTestRoot)).toBe(false);
+  });
+
   test("writes the done phase with the run id for a run sweep", async () => {
     const root = await cleanupIn(["--run", "emet1w1"], false);
     expect(readPhase(root)).toMatchObject({ phase: "done", runId: "emet1w1" });

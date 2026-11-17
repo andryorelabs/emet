@@ -17,9 +17,15 @@ export interface ProcessTreeReader {
   readonly runPs: (pid: number) => string | null;
 }
 
-function runPsForPid(pid: number): string | null {
+export type SpawnPs = (
+  command: string,
+  args: string[],
+  options: { encoding: "utf8"; timeout: number },
+) => { status: number | null; stdout: unknown };
+
+export function runPsForPid(pid: number, spawn: SpawnPs = spawnSync): string | null {
   try {
-    const result = spawnSync("ps", ["-o", "ppid=,comm=", "-p", String(pid)], {
+    const result = spawn("ps", ["-o", "ppid=,comm=", "-p", String(pid)], {
       encoding: "utf8",
       timeout: 5000,
     });

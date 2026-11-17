@@ -3,9 +3,11 @@ import { existsSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSy
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
+import { LITERAL_JOBS, ROUTED_JOBS, workflowViolations } from "./workflow-rules.ts";
+
 const REPOSITORY_ROOT = join(import.meta.dir, "..");
 const WORKFLOW_DIRECTORY = join(REPOSITORY_ROOT, ".github", "workflows");
-const STALE_SCRIPT_CALL_PATTERN = /bun run (?:format(?![:\w-])|test:coverage)/;
+const STALE_SCRIPT_CALL_PATTERN = /bun run format(?![:\w-])/;
 const SCRIPT_CALLER_FILES = [
   "package.json",
   "AGENTS.md",
@@ -39,6 +41,7 @@ const USES_LINE_PATTERN = /^\s*-?\s*uses:\s*(\S+?)(?:\s+#\s*(.*))?$/;
 
 interface WorkflowStep {
   readonly name?: string;
+  readonly if?: string;
   readonly uses?: string;
   readonly run?: string;
   readonly with?: Record<string, unknown>;
@@ -248,10 +251,10 @@ describe("ci.yml", () => {
     expect(Object.keys(ci?.jobs ?? {})).toContain("test");
   });
 
-  test("ci-passed needs every other job and always runs", () => {
+  test("ci-passed needs every other job but the non-required Bun canary, and always runs", () => {
     const jobs = ci?.jobs ?? {};
     const others = Object.keys(jobs)
-      .filter((name) => name !== "ci-passed")
+      .filter((name) => name !== "ci-passed" && name !== "bun-canary")
       .toSorted();
     expect(neededJobs(jobs["ci-passed"])).toEqual(others);
     expect(jobs["ci-passed"]?.if).toContain("always()");
@@ -277,7 +280,7 @@ describe("ci.yml commitlint and manual runs", () => {
   const ci = workflows.find(({ fileName }) => fileName === "ci.yml");
 
   test("has a Commitlint job on pull requests that ci-passed needs", () => {
-    const job = ci?.workflow.jobs["commitlint"];
+    const job = ci?.workflow.jobs.commitlint;
     expect(job?.name).toBe("Commitlint");
     expect(job?.if).toContain("pull_request");
     expect(neededJobs(ci?.workflow.jobs["ci-passed"])).toContain("commitlint");
@@ -291,25 +294,25 @@ describe("ci.yml commitlint and manual runs", () => {
   });
 
   test("the Test job runs the coverage-gated test script", () => {
-    const steps = ci?.workflow.jobs["test"]?.steps ?? [];
+    const steps = ci?.workflow.jobs.test?.steps ?? [];
     expect(steps.map((step) => step.run)).toContain("bun run test");
   });
 
   test("test keeps the root suites behind turbo and gates emet on coverage", () => {
     const scripts = readRootScripts();
-    expect(scripts["test"]).toBe("turbo run test test:root");
+    expect(scripts.test).toBe("turbo run test test:root");
     expect(scripts["test:root"]).toEndWith(
       "&& bun test --cwd emet --coverage --coverage-reporter=text --coverage-reporter=lcov --coverage-dir ../coverage/emet && bun tools/coverage-gate.ts emet coverage/emet/lcov.info",
     );
-    expect(scripts["test:coverage"]).toBeUndefined();
+    expect(scripts["test:coverage"]).toBe("bun run test");
     expect(scripts["test:coverage:root"]).toBeUndefined();
   });
 
   test("format:write replaces format, and fix calls it", () => {
     const scripts = readRootScripts();
-    expect(scripts["format"]).toBeUndefined();
+    expect(scripts.format).toBeUndefined();
     expect(scripts["format:write"]).toBe("oxfmt");
-    expect(scripts["fix"]).toStartWith("bun run format:write && ");
+    expect(scripts.fix).toStartWith("bun run format:write && ");
   });
 
   test("lint:commits lints the range from the merge base with origin/develop", () => {
@@ -339,11 +342,34 @@ describe("ci.yml commitlint and manual runs", () => {
     expect(ci?.raw).toContain("GITHUB_STEP_SUMMARY");
   });
 
-  test("ci.yml and labels.yml allow workflow_dispatch", () => {
-    for (const fileName of ["ci.yml", "labels.yml"]) {
+  test("ci.yml, labels.yml, codeql.yml and lint-docs.yml allow workflow_dispatch", () => {
+    for (const fileName of ["ci.yml", "labels.yml", "codeql.yml", "lint-docs.yml"]) {
       const file = workflows.find((entry) => entry.fileName === fileName);
       expect(triggerNames(file?.workflow)).toContain("workflow_dispatch");
     }
+  });
+
+  test("commitlint is skipped on the develop-to-main promotion PR", () => {
+    const condition = ci?.workflow.jobs.commitlint?.if ?? "";
+    expect(condition).toContain("github.base_ref == 'main'");
+    expect(condition).toContain("github.head_ref == 'develop'");
+    expect(condition).toMatch(/!\s*\(/);
+  });
+
+  test("the Test job uploads coverage only on failure", () => {
+    const steps = ci?.workflow.jobs.test?.steps ?? [];
+    const upload = steps.find((step) => step.uses?.startsWith("actions/upload-artifact@") === true);
+    expect(upload?.if).toBe("failure()");
+    expect(upload?.with?.path).toBe("coverage/");
+  });
+
+  test("a Bun canary job runs the tests on the latest Bun and is not required", () => {
+    const canary = ci?.workflow.jobs["bun-canary"];
+    const setup = canary?.steps?.find((step) => step.uses?.startsWith("oven-sh/setup-bun@"));
+    expect(setup?.with?.["bun-version"]).toBe("latest");
+    expect(canary?.steps?.map((step) => step.run)).toContain("bun run test");
+    expect(neededJobs(ci?.workflow.jobs["ci-passed"])).not.toContain("bun-canary");
+    expect(JSON.stringify(readRequiredContexts())).not.toContain(canary?.name ?? "bun-canary");
   });
 });
 
@@ -352,19 +378,45 @@ describe("codeql.yml and scorecard.yml", () => {
   const scorecard = workflows.find(({ fileName }) => fileName === "scorecard.yml");
 
   test("CodeQL job is named, private-guarded and scans both languages", () => {
-    const job = codeql?.workflow.jobs["analyze"];
+    const job = codeql?.workflow.jobs.analyze;
     expect(job?.name).toBe("CodeQL");
     expect(job?.if).toContain("!github.event.repository.private");
-    expect(job?.strategy?.matrix?.["language"]).toEqual(["javascript-typescript", "actions"]);
+    expect(job?.strategy?.matrix?.language).toEqual(["javascript-typescript", "actions"]);
+  });
+
+  test("CodeQL runs build-mode none on PRs and on develop push", () => {
+    expect(triggerNames(codeql?.workflow)).toContain("pull_request");
+    expect(field(field(codeql?.workflow.on, "push"), "branches")).toContain("develop");
+    const init = codeql?.workflow.jobs.analyze?.steps?.find((step) =>
+      step.uses?.startsWith("github/codeql-action/init@"),
+    );
+    expect(init?.with?.["build-mode"]).toBe("none");
   });
 
   test("Scorecard runs weekly with empty top-level permissions and a guarded job", () => {
-    const job = scorecard?.workflow.jobs["analysis"];
+    const job = scorecard?.workflow.jobs.analysis;
     expect(job?.name).toBe("Scorecard");
     expect(scorecard?.workflow.permissions).toEqual({});
     expect(job?.if).toContain("!github.event.repository.private");
     expect(job?.permissions).toMatchObject({ "security-events": "write" });
     expect(triggerNames(scorecard?.workflow)).toContain("schedule");
+  });
+
+  test("Scorecard runs on main push and branch_protection_rule and keeps the SARIF", () => {
+    expect(triggerNames(scorecard?.workflow)).toContain("branch_protection_rule");
+    expect(field(field(scorecard?.workflow.on, "push"), "branches")).toEqual(["main"]);
+    const upload = scorecard?.workflow.jobs.analysis?.steps?.find((step) =>
+      step.uses?.startsWith("actions/upload-artifact@"),
+    );
+    expect(upload?.with?.path).toBe("results.sarif");
+  });
+});
+
+describe("lint-workflows.yml", () => {
+  test("runs actionlint and zizmor on trunk push", () => {
+    const lint = workflows.find(({ fileName }) => fileName === "lint-workflows.yml");
+    const branches = field(field(lint?.workflow.on, "push"), "branches");
+    expect(branches).toEqual(["main", "develop"]);
   });
 });
 
@@ -399,16 +451,20 @@ describe("release.yml", () => {
   });
 
   describe("CHANGELOG gate", () => {
-    const steps = release?.workflow.jobs["release"]?.steps ?? [];
+    const steps = release?.workflow.jobs.release?.steps ?? [];
     const gateIndex = steps.findIndex((step) => step.name === CHANGELOG_GATE_STEP);
     const gateScript = steps[gateIndex]?.run ?? "exit 0";
 
     test("runs before the binaries are built and the release is created", () => {
       const buildIndex = steps.findIndex((step) => step.run?.includes("build-binaries.ts"));
-      const publishIndex = steps.findIndex((step) => step.run?.includes("gh release create"));
+      const publish = release?.workflow.jobs.publish;
+      const publishIndex = (publish?.steps ?? []).findIndex((step) =>
+        step.run?.includes("gh release create"),
+      );
       expect(gateIndex).toBeGreaterThan(-1);
       expect(gateIndex).toBeLessThan(buildIndex);
-      expect(gateIndex).toBeLessThan(publishIndex);
+      expect(publishIndex).toBeGreaterThan(-1);
+      expect([publish?.needs ?? []].flat()).toContain("release");
     });
 
     test("fails when the CHANGELOG has no section for the tag", () => {
@@ -444,6 +500,22 @@ function readRootScripts(): Record<string, string | undefined> {
 }
 
 /**
+ * Reads every `required_status_checks` entry of the committed rulesets.
+ */
+function readRequiredContexts(): unknown[] {
+  const rulesetDirectory = join(REPOSITORY_ROOT, ".github", "rulesets");
+  return readdirSync(rulesetDirectory)
+    .filter((fileName) => fileName.endsWith(".json"))
+    .flatMap((fileName) => {
+      const ruleset: unknown = JSON.parse(readFileSync(join(rulesetDirectory, fileName), "utf8"));
+      const rules = field(ruleset, "rules");
+      return Array.isArray(rules) ? rules.map((rule: unknown) => rule) : [];
+    })
+    .filter((rule: unknown) => field(rule, "type") === "required_status_checks")
+    .map((rule: unknown) => field(field(rule, "parameters"), "required_status_checks"));
+}
+
+/**
  * Runs the release workflow's CHANGELOG gate script for `tag` against the
  * fixture changelog, the way the runner does (`bash -e`), in a scratch directory.
  */
@@ -456,7 +528,7 @@ function runChangelogGate(
     writeFileSync(join(directory, "CHANGELOG.md"), CHANGELOG_FIXTURE);
     const result = Bun.spawnSync(["bash", "-e", "-c", script], {
       cwd: directory,
-      env: { PATH: process.env["PATH"] ?? "", GITHUB_REF_NAME: tag },
+      env: { PATH: process.env.PATH ?? "", GITHUB_REF_NAME: tag },
     });
     const notesPath = join(directory, "release-notes.md");
     return {
@@ -469,45 +541,32 @@ function runChangelogGate(
   }
 }
 
-const ROUTED_RUNS_ON =
-  "${{ github.event.pull_request.head.repo.fork && 'ubuntu-latest' || vars.BLACKSMITH_RUNNER || 'ubuntu-latest' }}";
-const ROUTED_JOBS = [
-  "ci.yml:check",
-  "ci.yml:test",
-  "ci.yml:commitlint",
-  "ci.yml:ci-passed",
-  "labels.yml:sync",
-  "lint-docs.yml:check-links",
-  "lint-pr.yml:validate-title",
-  "lint-workflows.yml:lint",
-];
-const LITERAL_RUNNERS = new Set(["ubuntu-latest", "macos-latest"]);
-
-describe("runner routing", () => {
+describe("runner routing and workflow rules", () => {
   const jobs = workflows.flatMap(({ fileName, workflow }) =>
     Object.entries(workflow.jobs).map(([name, job]) => ({ key: `${fileName}:${name}`, job })),
   );
+  const routedKeys = ROUTED_JOBS.map(({ key }) => key);
 
-  test("routed jobs use exactly the BLACKSMITH_RUNNER expression", () => {
-    const wrong = ROUTED_JOBS.filter(
-      (key) => jobs.find((entry) => entry.key === key)?.job["runs-on"] !== ROUTED_RUNS_ON,
+  test("every workflow passes workflowViolations", () => {
+    const violations = workflows.flatMap(({ fileName, workflow }) =>
+      workflowViolations(fileName, workflow),
     );
-    expect(wrong).toEqual([]);
+    expect(violations).toEqual([]);
   });
 
-  test("every other job runs on a literal GitHub-hosted runner", () => {
-    const wrong = jobs
-      .filter(({ key }) => !ROUTED_JOBS.includes(key))
-      .filter(({ job }) => !LITERAL_RUNNERS.has(String(job["runs-on"])))
-      .map(({ key }) => key);
-    expect(wrong).toEqual([]);
+  test("every routed and literal job exists in a workflow", () => {
+    const keys = new Set(jobs.map(({ key }) => key));
+    const stale = [...routedKeys, ...LITERAL_JOBS.map(({ key }) => key)].filter(
+      (key) => !keys.has(key),
+    );
+    expect(stale).toEqual([]);
   });
 
   test("no workflow reads BLACKSMITH_RUNNER outside the routed jobs or names a self-hosted runner", () => {
     const readers = jobs
       .filter(({ job }) => String(job["runs-on"]).includes("BLACKSMITH_RUNNER"))
       .map(({ key }) => key);
-    expect(readers.toSorted()).toEqual(ROUTED_JOBS.toSorted());
+    expect(readers.toSorted()).toEqual(routedKeys.toSorted());
     for (const { raw } of workflows) {
       expect(raw).not.toMatch(/vps-|self-hosted|CI_RUNNER/);
     }
@@ -581,6 +640,85 @@ describe("deploy-site.yml", () => {
   });
 });
 
+const SITE_QUALITY_JOBS = ["image", "smoke", "audit", "e2e", "lighthouse", "summary"];
+
+describe("site-quality.yml", () => {
+  const siteQuality = workflows.find(({ fileName }) => fileName === "site-quality.yml");
+  const jobs = siteQuality?.workflow.jobs ?? {};
+
+  /**
+   * Joins the `run:` text of every step of one job.
+   */
+  function jobRuns(name: string): string {
+    return (jobs[name]?.steps ?? []).map((step) => step.run ?? "").join("\n");
+  }
+
+  test("runs on pull requests that touch apps/site, and on workflow_dispatch", () => {
+    const pullRequest = field(siteQuality?.workflow.on, "pull_request");
+    expect(triggerNames(siteQuality?.workflow).toSorted()).toEqual([
+      "pull_request",
+      "workflow_dispatch",
+    ]);
+    expect(field(pullRequest, "paths")).toContain("apps/site/**");
+  });
+
+  test("has the image, smoke, audit, e2e, lighthouse and summary jobs, all routed", () => {
+    expect(Object.keys(jobs).toSorted()).toEqual(SITE_QUALITY_JOBS.toSorted());
+    const routed = new Set(ROUTED_JOBS.map(({ key }) => key));
+    const unrouted = SITE_QUALITY_JOBS.map((name) => `site-quality.yml:${name}`).filter(
+      (key) => !routed.has(key),
+    );
+    expect(unrouted).toEqual([]);
+  });
+
+  test("builds the image first and gates every check on it", () => {
+    expect(jobRuns("image")).toContain("docker build -f apps/site/Dockerfile");
+    for (const name of ["smoke", "audit", "e2e", "lighthouse"]) {
+      expect(neededJobs(jobs[name])).toEqual(["image"]);
+    }
+  });
+
+  test("runs the nginx smoke, the dist audit, Playwright + axe and the Lighthouse budget", () => {
+    expect(jobRuns("smoke")).toContain("bash apps/site/docker/smoke.sh");
+    expect(jobRuns("audit")).toContain("bun --filter @emet/site test:dist");
+    expect(jobRuns("e2e")).toContain("bun --filter @emet/site test:e2e");
+    expect(jobRuns("lighthouse")).toContain("bash apps/site/scripts/lighthouse-budget.sh");
+  });
+
+  test("prints a flaky-on-retry summary even when the spec fails", () => {
+    const step = jobs.e2e?.steps?.find((candidate) => candidate.run?.includes('"flaky"'));
+    expect(step?.if).toBe("always()");
+    expect(step?.run).toContain("GITHUB_STEP_SUMMARY");
+  });
+
+  test("uploads reports only on failure", () => {
+    const reportUploads = Object.entries(jobs)
+      .filter(([name]) => name !== "image")
+      .flatMap(([, job]) => job.steps ?? [])
+      .filter((step) => step.uses?.startsWith("actions/upload-artifact@") === true);
+    expect(reportUploads.length).toBeGreaterThan(0);
+    for (const step of reportUploads) {
+      expect(step.if).toBe("failure()");
+    }
+  });
+
+  test("summary needs every other job, always runs and has no checkout", () => {
+    const others = SITE_QUALITY_JOBS.filter((name) => name !== "summary").toSorted();
+    expect(neededJobs(jobs.summary)).toEqual(others);
+    expect(jobs.summary?.if).toBe("always()");
+    expect(JSON.stringify(jobs.summary)).not.toContain("actions/checkout");
+  });
+
+  test("has no visual regression", () => {
+    const spec = readFileSync(
+      join(REPOSITORY_ROOT, "apps", "site", "e2e", "accessibility.spec.ts"),
+      "utf8",
+    );
+    expect(spec).not.toMatch(/toHaveScreenshot|toMatchSnapshot/);
+    expect(siteQuality?.raw).not.toMatch(/update-snapshots|screenshot/i);
+  });
+});
+
 describe("deploy-coolify.sh", () => {
   const script = readFileSync(DEPLOY_SCRIPT, "utf8");
   const fakeToken = "fake-token-never-printed-7f3a";
@@ -591,7 +729,7 @@ describe("deploy-coolify.sh", () => {
   function runScript(appUuid: string): { exitCode: number; output: string } {
     const result = Bun.spawnSync(["bash", DEPLOY_SCRIPT], {
       env: {
-        PATH: process.env["PATH"] ?? "",
+        PATH: process.env.PATH ?? "",
         COOLIFY_API_TOKEN: fakeToken,
         COOLIFY_APP_UUID: appUuid,
       },
@@ -616,7 +754,7 @@ describe("deploy-coolify.sh", () => {
     const unexpected = tokenLines.filter(
       (line) =>
         !/^\s*if \[\[ -z "\$\{COOLIFY_API_TOKEN:-\}"/.test(line) &&
-        !/printf 'Authorization: Bearer %s\\n' "\$\{COOLIFY_API_TOKEN\}"/.test(line),
+        !line.includes("printf 'Authorization: Bearer %s\\n' \"${COOLIFY_API_TOKEN}\""),
     );
     expect(unexpected).toEqual([]);
     expect(script).not.toMatch(/echo[^\n]*COOLIFY_API_TOKEN\}/);

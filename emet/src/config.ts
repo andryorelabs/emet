@@ -1,5 +1,7 @@
-import { errorMessage, isOneOf } from "./narrow";
+import { EmetError } from "./errors";
+import { exitCodes } from "./exit-codes";
 import { BINARY, CONFIG_FILE, resolveConfigPath } from "./names";
+import { errorMessage, isOneOf } from "./narrow";
 
 /**
  * `emet.config.json` — the per-repo config that makes `/emet`'s repo-side
@@ -218,10 +220,10 @@ export interface ForgeConfig {
      * wave dispatches, each with a `why` shown in the failure message.
      * Generalizes what used to be a hardcoded `.env.keys` check — empty
      * means no such check runs at all. */
-    readonly requiredFiles: ReadonlyArray<{
+    readonly requiredFiles: readonly {
       readonly path: string;
       readonly why: string;
-    }>;
+    }[];
     /** Binaries that must resolve on `PATH` before a wave dispatches — the
      * repo's own list (`rg`, `sg`, a linter), separate from the dependency
      * checks that `tracker.kind` drives. Empty means no such check runs. */
@@ -325,12 +327,15 @@ export function resolveWorkerModel(config: ForgeConfig, ticketModel?: string): M
  * error, the tool never actually ran) instead of `3` (internal error) or `1`
  * (findings to act on) — see `bin/emet.ts`'s exit-code table.
  */
-export class ForgeConfigError extends Error {
+export class EmetConfigError extends EmetError {
   constructor(message: string) {
-    super(message);
-    this.name = "ForgeConfigError";
+    super("config-invalid", message, "fix or create emet.config.json", exitCodes.usage);
   }
 }
+
+/** @alias Kept for callers that still use the old name. */
+export const ForgeConfigError = EmetConfigError;
+export type ForgeConfigError = EmetConfigError;
 
 type ConfigLoadResult =
   | { readonly status: "absent" }
@@ -560,7 +565,7 @@ function validateAndMerge(
 
   const preflightSection = isRecord(raw.preflight) ? raw.preflight : {};
   const requiredFilesRaw = preflightSection.requiredFiles;
-  const requiredFiles: Array<{ path: string; why: string }> = [];
+  const requiredFiles: { path: string; why: string }[] = [];
   if (requiredFilesRaw !== undefined) {
     if (!Array.isArray(requiredFilesRaw)) {
       return { ok: false, reason: '"preflight.requiredFiles" must be an array' };

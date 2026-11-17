@@ -7,14 +7,22 @@ const sourceDirectory = path.resolve(import.meta.dir, "../emet/src");
 /** Source modules with no colocated test, each with the reason it is exempt. */
 const EXEMPTIONS: Readonly<Record<string, string>> = {};
 
+function walk(directory: string): string[] {
+  return readdirSync(directory, { withFileTypes: true }).flatMap((entry) => {
+    const entryPath = path.join(directory, entry.name);
+    return entry.isDirectory() ? walk(entryPath) : [entryPath];
+  });
+}
+
 function sourceModules(): string[] {
-  return readdirSync(sourceDirectory)
+  return walk(sourceDirectory)
+    .map((file) => path.relative(sourceDirectory, file).split(path.sep).join("/"))
     .filter((file) => file.endsWith(".ts") && !file.endsWith(".test.ts"))
     .toSorted();
 }
 
 describe("emet/src coverage manifest", () => {
-  test("every module has a colocated test or a reasoned exemption", () => {
+  test("every module, nested ones included, has a colocated test or a reasoned exemption", () => {
     const uncovered = sourceModules().filter((file) => {
       const colocated = path.join(sourceDirectory, file.replace(/\.ts$/, ".test.ts"));
       return !existsSync(colocated) && !(file in EXEMPTIONS);

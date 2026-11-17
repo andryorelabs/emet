@@ -3,6 +3,7 @@ import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
 
+import { currentExitCode } from "./exit-code";
 import { run } from "./reviewpackage";
 
 let repo: string;
@@ -54,7 +55,7 @@ async function invoke(argv: string[]): Promise<{ out: string[]; err: string[]; c
   process.chdir(repo);
   try {
     await run(argv);
-    return { out, err, code: process.exitCode ?? 0 };
+    return { out, err, code: currentExitCode() };
   } finally {
     process.chdir(originalCwd);
     logSpy.mockRestore();
@@ -87,8 +88,8 @@ describe("review-package run", () => {
   test("defaults the output under the run directory, named by head", async () => {
     const result = await invoke([base, head]);
     expect(result.code).toBe(0);
-    expect(path.basename(result.out[0]!)).toBe(`review-package-${head}.md`);
-    expect(readFileSync(result.out[0]!, "utf8")).toContain("# Review package");
+    expect(path.basename(result.out[0] ?? "")).toBe(`review-package-${head}.md`);
+    expect(readFileSync(result.out[0] ?? "", "utf8")).toContain("# Review package");
   });
 
   test("a non-descendant range exits 3 with the problem on stderr", async () => {

@@ -83,7 +83,7 @@ function read(relative: string): string {
 
 describe("THEME_INIT_HASH", () => {
   test("is the sha256 of the exact script string", () => {
-    const expected: string = `sha256-${createHash("sha256").update(THEME_INIT_SCRIPT).digest("base64")}`;
+    const expected = `sha256-${createHash("sha256").update(THEME_INIT_SCRIPT).digest("base64")}`;
     expect<string>(THEME_INIT_HASH).toBe(expected);
   });
 
@@ -109,7 +109,7 @@ describe("the init script", () => {
     localStorage.setItem(THEME_STORAGE_KEY, "dark");
     runInitScript();
     expect(document.documentElement.classList.contains("dark")).toBe(true);
-    expect(document.documentElement.dataset["theme"]).toBe("dark");
+    expect(document.documentElement.dataset.theme).toBe("dark");
   });
 
   test("a stored light choice wins over a dark OS", () => {
@@ -119,7 +119,7 @@ describe("the init script", () => {
     const root = document.documentElement;
     expect(root.classList.contains("light")).toBe(true);
     expect(root.classList.contains("dark")).toBe(false);
-    expect(root.dataset["theme"]).toBe("light");
+    expect(root.dataset.theme).toBe("light");
     const colors = [...document.querySelectorAll('meta[name="theme-color"]')].map((meta) =>
       meta.getAttribute("content"),
     );
@@ -133,11 +133,11 @@ describe("the init script", () => {
     runInitScript();
     const root = document.documentElement;
     expect(root.className).toBe("");
-    expect(root.dataset["theme"]).toBe("light");
-    expect(root.dataset["themeChoice"]).toBe("system");
+    expect(root.dataset.theme).toBe("light");
+    expect(root.dataset.themeChoice).toBe("system");
     osDark = true;
     for (const listener of osListeners) listener();
-    expect(root.dataset["theme"]).toBe("dark");
+    expect(root.dataset.theme).toBe("dark");
     expect(document.querySelector('meta[name="color-scheme"]')?.getAttribute("content")).toBe(
       "light dark",
     );
@@ -160,7 +160,7 @@ describe("the init script", () => {
     });
     runInitScript();
     if (original !== undefined) Object.defineProperty(window, "localStorage", original);
-    expect(document.documentElement.dataset["themeChoice"]).toBe("system");
+    expect(document.documentElement.dataset.themeChoice).toBe("system");
   });
 });
 
@@ -197,7 +197,7 @@ describe("the theme menu", () => {
     const button = themeButton();
     expect(root?.hidden).toBe(false);
     key(button, "ArrowDown");
-    expect(button?.getAttribute("aria-expanded")).toBe("true");
+    expect(button.getAttribute("aria-expanded")).toBe("true");
     expect(document.activeElement).toBe(rowOf("system"));
     expect(rowOf("system").getAttribute("aria-checked")).toBe("true");
   });
@@ -211,7 +211,7 @@ describe("the theme menu", () => {
     expect(localStorage.getItem(THEME_STORAGE_KEY)).toBe("light");
     expect(document.documentElement.classList.contains("light")).toBe(true);
     expect(document.activeElement).toBe(button);
-    expect(button?.getAttribute("aria-expanded")).toBe("false");
+    expect(button.getAttribute("aria-expanded")).toBe("false");
   });
 
   test("Escape closes and returns focus to the button", () => {

@@ -16,6 +16,10 @@ asked.
 
 To try the tool itself, see [Getting started](docs/guide/getting-started.md); the config keys are in the [configuration reference](docs/reference/configuration.md).
 
+## Where to start
+
+Look for issues labeled `good first issue` or `help wanted`. For anything larger than a small fix, open an issue first so the approach is agreed before you write code. Documentation fixes and translations are welcome too: see [Translate the docs](docs/how-to/translate.md). Before relying on an interface, check [what is stable](docs/stability.md).
+
 ## Branch naming and commit format
 
 Work happens on feature branches, never by pushing directly to `main` or
@@ -35,19 +39,20 @@ final PR title does, since it becomes the squashed commit message.
 A release is a pull request from `develop` to `main`, merged with a **merge
 commit** only. Tags are cut from `main`.
 
-## Rulesets
+## Rulesets and repository settings
 
 Branch and tag rulesets are stored as code in `.github/rulesets/` (`main.json`,
-`develop.json`, `tags.json`). A maintainer applies one with:
+`develop.json`, `tags.json`), and the repository settings in
+`.github/repo-settings.json`. [`.github/rulesets/README.md`](.github/rulesets/README.md)
+explains each file and how a maintainer applies it. `bun run repo-settings:check`
+only reads the live settings and reports drift; it never writes to GitHub.
 
-```sh
-gh api -X POST repos/{owner}/{repo}/rulesets --input .github/rulesets/main.json
-```
-
-To update an existing ruleset, find its id with
-`gh api repos/{owner}/{repo}/rulesets` and use `-X PUT
-repos/{owner}/{repo}/rulesets/<id>` instead. Required check names must match
-job `name:` values; `bun run test` enforces it.
+Both `develop` and `main` require signed commits, resolved review threads and
+these checks: `CI passed`, `Validate PR title` and `Check markdown links`.
+`develop` also requires the branch to be up to date before merging. GitHub signs
+the squash and merge commits it creates, so your own commits need not be signed.
+Required
+check names must match job `name:` values; `bun run test` enforces it.
 
 ## CI
 
@@ -60,6 +65,14 @@ and `bun run ci:local` runs all of it the way CI does.
 ## Tests
 
 New functionality and bug fixes must add or update tests in the same PR.
+
+## Review process
+
+A maintainer reviews every pull request. Expect a first response within a few days; ping the PR after a week of silence. Review comments are about correctness, tests and fit with the [decision records](docs/adr/README.md). Push follow-up commits to the same branch and resolve threads as you address them. A maintainer merges once `CI passed` is green and the review is approved.
+
+## Questions
+
+For usage questions, see [`.github/SUPPORT.md`](.github/SUPPORT.md). For a proposal or a design question, open an issue. Do not use issues for security reports; see below.
 
 ## Reporting security issues
 

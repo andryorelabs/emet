@@ -115,6 +115,23 @@ Exit codes are meaningful across every subcommand.
 | `2`  | Config or usage error; the tool never actually ran. Also an unknown command. |
 | `3`  | Internal error.                                                              |
 
+An unknown flag also exits `2` and names the flag. Ctrl-C exits `130`.
+
+## Global flags
+
+Every command accepts these; each command's own flags are listed by `emet <command> --help`.
+
+| Flag         | Effect                                                                                                          |
+| ------------ | --------------------------------------------------------------------------------------------------------------- |
+| `--json`     | Prints one envelope `{ok, data, error: {code, message, fix}}` on stdout, for `--help` and `--version` too.      |
+| `--no-color` | Disables ANSI color. Color also honours `NO_COLOR`, `FORCE_COLOR`, `TERM=dumb` and whether the output is a TTY. |
+| `--verbose`  | Prints the stack of an unexpected error. Without it the top-level catch prints a one-line error.                |
+| `--help`     | Prints the command's usage.                                                                                     |
+
+`emet --version` prints the version; `emet --version --json` prints `{"ok": true, "data": {"version": ...}, "error": null}`. Under `--json` a failing command exits with its usual code and prints `ok: false` with an error `code` of `findings`, `usage`, `internal`, `slice-timeout`, `expired`, `bad-range` or `exit-<n>`; whatever the command printed on stdout is the envelope's `data`.
+
+On a TTY, `emet` prints a one-line notice on stderr when a newer release is known. It checks at most once a day, caches the answer, never waits on the network, and stays silent under `--json` or without a TTY.
+
 ## Environment variables
 
 User-facing variables. A variable overrides the matching config value when set.

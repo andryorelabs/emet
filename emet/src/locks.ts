@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import {
   existsSync,
   mkdtempSync,
@@ -7,8 +8,8 @@ import {
   statSync,
   writeFileSync,
 } from "node:fs";
-import { randomUUID } from "node:crypto";
 import path from "node:path";
+
 import { errnoCode, isObject } from "./narrow";
 
 /**
@@ -199,7 +200,10 @@ function isSameHolder(left: LockHolder | undefined, right: LockHolder | undefine
  * in place rather than deleted. Returns `true` only when the observed lock was
  * removed.
  */
-function didReleaseObservedLock(lockDirectory: string, observed: LockHolder | undefined): boolean {
+export function didReleaseObservedLock(
+  lockDirectory: string,
+  observed: LockHolder | undefined,
+): boolean {
   const trashDirectory = `${lockDirectory}.released-${process.pid}-${randomUUID()}`;
   try {
     renameSync(lockDirectory, trashDirectory);

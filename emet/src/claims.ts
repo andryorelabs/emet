@@ -1,4 +1,3 @@
-import { optionalProperty } from "./optional";
 import {
   existsSync,
   mkdirSync,
@@ -25,9 +24,10 @@ import {
   resolveLockDirectory,
 } from "./locks";
 import { LEGACY_PRODUCT, PRODUCT } from "./names";
+import { errnoCode, isObject } from "./narrow";
+import { optionalProperty } from "./optional";
 import { classifyRun, readProcessStartToken, resolveSessionSlug, type RunVerdict } from "./runs";
 import { findSurfaceOverlaps } from "./surfaces";
-import { errnoCode, isObject } from "./narrow";
 
 /**
  * Per-ticket reservations under `<git-common-dir>/emet/tickets/` — the
@@ -58,7 +58,7 @@ import { errnoCode, isObject } from "./narrow";
  * calling convention.
  */
 
-export type Reservation = {
+export interface Reservation {
   readonly runId: string;
   readonly anchorPid: number;
   readonly anchorStartToken?: string;
@@ -78,18 +78,18 @@ export type Reservation = {
    * denied with a {@link SurfaceDenial}.
    */
   readonly surfaces?: readonly string[];
-};
+}
 
 /**
  * Why {@link didReserveTicket} refused a reserve over surfaces: `globA` is the
  * requester's glob, `globB` the glob of `otherTicket`, held by `otherRun`.
  */
-export type SurfaceDenial = {
+export interface SurfaceDenial {
   readonly otherRun: string;
   readonly otherTicket: string;
   readonly globA: string;
   readonly globB: string;
-};
+}
 
 /**
  * The ticket-id shape this module enforces — historically hardcoded to
@@ -512,7 +512,7 @@ function isValidReservationShape(value: unknown): value is Reservation {
   );
 }
 
-export type PruneResult = {
+export interface PruneResult {
   readonly releasedTickets: string[];
   /**
   Files whose content doesn't pass {@link isValidReservationShape} — e.g. a
@@ -523,7 +523,7 @@ export type PruneResult = {
   remove. Reported by name so a human can inspect and delete it by hand.
   */
   readonly malformedFiles: string[];
-};
+}
 
 /**
  * Sweeps every reservation file directly (not through {@link listReservations
@@ -691,7 +691,7 @@ async function main(): Promise<void> {
  * `config.ts`'s two loader tiers.
  */
 export async function run(argv: string[]): Promise<void> {
-  process.argv = [process.argv[0]!, process.argv[1]!, ...argv];
+  process.argv = [...process.argv.slice(0, 2), ...argv];
   try {
     const repoRoot = await resolveRepoRoot();
     if (!repoRoot) {

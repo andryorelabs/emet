@@ -18,12 +18,12 @@ Use bun only. `emet selftest` runs `bunx tsc` from the installed copy, so `emet/
 Run these from the repo root.
 
 - `bun run check`: turbo runs each workspace's `check` and the root-only `check:root` (typecheck, lint, format check, knip, docs link check, map freshness).
-- `bun run test`: turbo runs each workspace's `test` and the root-only `test:root` (`tools/` tests, then the `emet/` tests with coverage). It fails when the line or function coverage of `emet/` or `apps/site` drops below its floor in `tools/coverage-floors.json`, which `tools/coverage-gate.ts` enforces.
+- `bun run test`: turbo runs each workspace's `test` and the root-only `test:root` (`mods/` and hook tests, the `tools/` tests with coverage into `coverage/tools`, then the `emet/` tests with coverage). It fails when the line or function coverage of `emet/`, `apps/site` or `tools/` drops below its total floor in `tools/coverage-floors.json`, or when any single file is under 97% lines or 98% functions. `tools/coverage-gate.ts` enforces both. A file that a test cannot reach may be listed in `tools/coverage-exceptions.ts` with a reason and its measured floor (repository-relative path). An exception fails when its file has no coverage, when it is stale (the file now meets the per-file floor), when its reason is empty, or when the file is under the exception's own floor.
 - `bun run fix`: format and autofix lint.
 - `bun run format:write`: format only. `bun run format:check` verifies.
 - `bun run lint:commits`: commitlint over the commits since the merge base with `origin/develop`.
 - `bun run build:codex`: regenerate `codex/` and `.codex-plugin/`; `bun run check:codex` verifies them. Never hand-edit those paths.
-- `bun run translations:status`: list the Website translations that are stale or missing, with the `sourceHash` each must carry.
+- `bun run i18n:status`: list the Website translations that are stale or missing, with the `sourceHash` each must carry.
 - `bun run ci:local`: install, `check`, `test` and `lint:commits`, as CI does.
 
 Do not run a build unless asked. Never loosen a tsconfig or lint setting to pass a check; fix the code ([ADR-0002](adr/0002-oxc-toolchain-and-typescript-7-typecheck.md)). Typecheck with the aliased `typescript7` by path, never bare `tsc`.

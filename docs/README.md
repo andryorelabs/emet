@@ -16,11 +16,12 @@ An index of every document in this repository. Terms follow [GLOSSARY.md](../GLO
 
 ## Contributing and community
 
-- [`CONTRIBUTING.md`](../CONTRIBUTING.md): setup, branch and commit format, and CI.
+- [`CONTRIBUTING.md`](../CONTRIBUTING.md): setup, where to start, branch and commit format, CI and review.
 - [`development.md`](development.md): setup with both installs, scripts, branches and commits, hooks, runners, releases and rulesets.
 - [`security.md`](security.md): the threat model of an unattended run, permission modes, and what the rm-guard and push denies cover.
 - [`CODE_OF_CONDUCT.md`](../CODE_OF_CONDUCT.md): community standards.
 - [`GOVERNANCE.md`](../GOVERNANCE.md): decision process.
+- [`stability.md`](stability.md): which surfaces are stable (CLI flags, exit codes, config schema, `--json` envelope) and which are internal.
 - [`SECURITY.md`](../.github/SECURITY.md): how to report vulnerabilities.
 - [`SUPPORT.md`](../.github/SUPPORT.md): where to ask for help.
 - [`PULL_REQUEST_TEMPLATE.md`](../.github/PULL_REQUEST_TEMPLATE.md): the checklist every PR shows.
@@ -41,6 +42,8 @@ An index of every document in this repository. Terms follow [GLOSSARY.md](../GLO
 
 ## How-to guides
 
+- [`how-to/README.md`](how-to/README.md): the index of the how-to guides.
+- [`how-to/translate.md`](how-to/translate.md): find stale or missing Website translations with `bun run i18n:status` and refresh them.
 - [`how-to/mascot.md`](how-to/mascot.md): install the optional `emet-mascot` plugin, read the phase file it follows and import the Orca pet bundle.
 - [`how-to/update-emet.md`](how-to/update-emet.md): update the emet and emet-mascot plugins by hand or turn on marketplace auto-update.
 - [`how-to/cut-a-release.md`](how-to/cut-a-release.md): the release runbook: version bump, changelog, develop to main PR, tag and the CI-gated release.

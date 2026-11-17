@@ -66,6 +66,8 @@ describe("emetDirectives", () => {
   });
 
   test("throws when the processor has no mdast plugin list", () => {
-    expect(() => emetDirectives().hooks["astro:config:setup"]({ config: {} })).toThrow("Satteri");
+    expect(() => {
+      emetDirectives().hooks["astro:config:setup"]({ config: {} });
+    }).toThrow("Satteri");
   });
 });

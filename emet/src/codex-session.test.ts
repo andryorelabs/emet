@@ -45,7 +45,7 @@ function writeFakeScript(dir: string): { script: string; log: string } {
 
 function readArgv(line: string): string[] {
   const parsed: unknown = JSON.parse(line);
-  const argv = isObject(parsed) ? parsed["argv"] : undefined;
+  const argv = isObject(parsed) ? parsed.argv : undefined;
   if (!Array.isArray(argv)) throw new Error("expected argv");
   return argv.map(String);
 }
@@ -91,9 +91,9 @@ describe("startCodexSession", () => {
       path.join(repo, ".emet/runs/emet-345-w4/sessions/emet-345-w4.json"),
     );
     const record = readRecord(paths.recordFile);
-    expect(record["threadId"]).toBe("th-77");
-    expect(record["name"]).toBe("emet-345-w4");
-    expect(typeof record["pid"]).toBe("number");
+    expect(record.threadId).toBe("th-77");
+    expect(record.name).toBe("emet-345-w4");
+    expect(typeof record.pid).toBe("number");
     const logged = readFileSync(log, "utf8").trim().split("\n")[0] ?? "{}";
     const argv = readArgv(logged);
     expect(argv.slice(0, 2)).toEqual(["exec", "--json"]);
@@ -132,6 +132,28 @@ describe("startCodexSession", () => {
     expect(overlay).not.toContain("ultra");
   });
 
+  test("reports a substituted session model when the models cache lacks it", async () => {
+    const repo = tempDir();
+    const home = tempDir();
+    writeFileSync(path.join(home, "models_cache.json"), JSON.stringify({ models: [] }));
+    const messages: string[] = [];
+    const original = console.error;
+    console.error = (...args: unknown[]) => {
+      messages.push(args.map(String).join(" "));
+    };
+    try {
+      await startCodexSession(
+        { name: "emet-2-w1", permissionMode: "auto", prompt: "/emet:run 2", cwd: repo },
+        noRunner,
+        { executable: FAKE, sourceHome: home },
+      );
+    } finally {
+      console.error = original;
+    }
+    expect(messages.some((message) => message.includes("session model"))).toBe(true);
+    expect(messages.some((message) => message.includes("substituted"))).toBe(true);
+  }, 10_000);
+
   test("records a null thread id when the stream never names one", async () => {
     const repo = tempDir();
     const info = await startCodexSession(
@@ -140,7 +162,7 @@ describe("startCodexSession", () => {
       { executable: FAKE, sourceHome: tempDir() },
     );
     expect(info.id).toBeNull();
-    expect(readRecord(codexSessionPaths(repo, "emet-1-w1").recordFile)["threadId"]).toBeNull();
+    expect(readRecord(codexSessionPaths(repo, "emet-1-w1").recordFile).threadId).toBeNull();
   }, 10_000);
 });
 

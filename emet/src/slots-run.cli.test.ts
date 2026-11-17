@@ -1,21 +1,23 @@
 import { afterEach, beforeEach, describe, expect, spyOn, test } from "bun:test";
-import { copyFileSync, mkdtempSync, realpathSync, rmSync } from "node:fs";
+import { copyFileSync, mkdirSync, mkdtempSync, realpathSync, rmSync, writeFileSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
 
-import { run } from "./slots";
+import { currentExitCode } from "./exit-code";
+import { LEGACY_PRODUCT } from "./names";
+import { run, type SlotsRunDeps } from "./slots";
 
 let repo: string;
 let stateDirectory: string;
 const originalCwd = process.cwd();
 const originalEnvironment = {
-  stateDir: process.env["EMET_STATE_DIR"],
-  maxLive: process.env["EMET_MAX_LIVE_WORKERS"],
-  reserve: process.env["EMET_MEM_RESERVE_GIB"],
+  stateDir: process.env.EMET_STATE_DIR,
+  maxLive: process.env.EMET_MAX_LIVE_WORKERS,
+  reserve: process.env.EMET_MEM_RESERVE_GIB,
 };
 
 function restoreEnvironment(key: string, value: string | undefined): void {
-  if (value === undefined) delete process.env[key];
+  if (value === undefined) Reflect.deleteProperty(process.env, key);
   else process.env[key] = value;
 }
 
@@ -28,9 +30,9 @@ beforeEach(() => {
     path.join(import.meta.dir, "..", "..", "emet.config.json"),
     path.join(repo, "emet.config.json"),
   );
-  process.env["EMET_STATE_DIR"] = stateDirectory;
-  process.env["EMET_MAX_LIVE_WORKERS"] = "2";
-  process.env["EMET_MEM_RESERVE_GIB"] = "0.001";
+  process.env.EMET_STATE_DIR = stateDirectory;
+  process.env.EMET_MAX_LIVE_WORKERS = "2";
+  process.env.EMET_MEM_RESERVE_GIB = "0.001";
 });
 
 afterEach(() => {
@@ -43,7 +45,10 @@ afterEach(() => {
   process.exitCode = 0;
 });
 
-async function invoke(argv: string[]): Promise<{ out: string[]; err: string[]; code: number }> {
+async function invoke(
+  argv: string[],
+  deps?: SlotsRunDeps,
+): Promise<{ out: string[]; err: string[]; code: number }> {
   const out: string[] = [];
   const err: string[] = [];
   const logSpy = spyOn(console, "log").mockImplementation(
@@ -55,14 +60,24 @@ async function invoke(argv: string[]): Promise<{ out: string[]; err: string[]; c
   process.exitCode = 0;
   process.chdir(repo);
   try {
-    await run(argv);
-    return { out, err, code: process.exitCode ?? 0 };
+    await run(argv, deps);
+    return { out, err, code: currentExitCode() };
   } finally {
     process.chdir(originalCwd);
     logSpy.mockRestore();
     errorSpy.mockRestore();
   }
 }
+
+const acquireArguments = (runId: string, ticket: string): string[] => [
+  "--acquire",
+  "--run",
+  runId,
+  "--anchor",
+  String(process.pid),
+  "--ticket",
+  ticket,
+];
 
 describe("slots run in-process", () => {
   test("--list on an empty pool reports none occupied against the env cap", async () => {
@@ -131,5 +146,64 @@ describe("slots run in-process", () => {
   test("--release of an unknown run releases nothing", async () => {
     const result = await invoke(["--release", "--run", "ghost"]);
     expect(result.out[0]).toContain("released 0 slot(s) for run ghost.");
+  });
+
+  test.skipIf(process.platform !== "linux")(
+    "--acquire is denied by the memory brake when the reserve exceeds host memory",
+    async () => {
+      process.env.EMET_MEM_RESERVE_GIB = "100000000";
+      const result = await invoke(acquireArguments("run-x", "CLA-1"));
+      expect(result.code).toBe(1);
+      expect(result.err.join("\n")).toContain("denied by the memory brake");
+      expect((await invoke(["--list"])).out[0]).toContain("no slots occupied");
+    },
+  );
+
+  test("--acquire reports a full pool when the holder run is live and leaves it in place", async () => {
+    process.env.EMET_MAX_LIVE_WORKERS = "1";
+    expect((await invoke(acquireArguments("run-x", "CLA-1"))).code).toBe(0);
+    const denied = await invoke(acquireArguments("run-y", "CLA-2"), {
+      classifyRunOptions: { isAnchorAliveFn: () => true },
+    });
+    expect(denied.code).toBe(1);
+    expect(denied.err.join("\n")).toContain("no free slot (all 1 occupied");
+    expect((await invoke(["--list"])).out.join("\n")).toContain("run=run-x");
+  });
+
+  test("--list notes leftover entries of the legacy per-repo pool", async () => {
+    const legacySlots = path.join(repo, ".git", LEGACY_PRODUCT, "slots");
+    mkdirSync(path.join(legacySlots, "0"), { recursive: true });
+    const result = await invoke(["--list"]);
+    expect(result.out.join("\n")).toContain("leftover from the pre-host-wide per-repo pool");
+  });
+
+  test("--list is silent about an empty legacy pool", async () => {
+    mkdirSync(path.join(repo, ".git", LEGACY_PRODUCT, "slots"), { recursive: true });
+    const result = await invoke(["--list"]);
+    expect(result.out.join("\n")).not.toContain("leftover");
+  });
+
+  test("an unexpected failure is logged and exits 1", async () => {
+    const blocker = path.join(stateDirectory, "blocker");
+    writeFileSync(blocker, "file");
+    process.env.EMET_STATE_DIR = blocker;
+    const result = await invoke(acquireArguments("run-x", "CLA-1"));
+    expect(result.code).toBe(1);
+    expect(result.err.length).toBeGreaterThan(0);
+  });
+
+  test("outside a git repository it exits 2", async () => {
+    const outside = realpathSync(mkdtempSync(path.join(os.tmpdir(), "emet-slots-nogit-")));
+    const originalLog = spyOn(console, "error").mockImplementation(() => undefined);
+    try {
+      process.chdir(outside);
+      process.exitCode = 0;
+      await run(["--list"]);
+      expect(currentExitCode()).toBe(2);
+    } finally {
+      process.chdir(originalCwd);
+      originalLog.mockRestore();
+      rmSync(outside, { recursive: true, force: true });
+    }
   });
 });
