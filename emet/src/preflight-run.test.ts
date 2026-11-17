@@ -23,6 +23,7 @@ import {
 import { tmpdir } from "node:os";
 import path from "node:path";
 
+import { didReserveTicket } from "./claims";
 import { run } from "./preflight";
 import { markRunClosed } from "./runs";
 import { acquireSlot } from "./slots";
@@ -433,5 +434,49 @@ describe("preflight run --post-dispatch", () => {
     const output = fixture.errors.join("\n");
     expect(output).toContain("(tickets: CLA-9; missing: CLA-9)");
     expect(output).toContain("Expected 1 locked worktree(s) for run run-me");
+  });
+
+  test("fails when a claimed ticket's worktree directory was removed", async () => {
+    const anchor = fixture.claudePid();
+    expect(await didReserveTicket("run-me", anchor, "CLA-10")).toBe(true);
+    const directory = fixture.addWorktree(
+      "gone",
+      "ticket-10-gone",
+      fixture.lockReason("run-me", "CLA-10", anchor),
+    );
+    rmSync(directory, { recursive: true, force: true });
+    await run(["--post-dispatch", "--run", "run-me"]);
+    expect(process.exitCode).toBe(1);
+    const output = fixture.errors.join("\n");
+    expect(output).toContain("CLA-10");
+    expect(output).toContain(directory);
+    expect(output).toContain("re-dispatch");
+  });
+
+  test("fails when a slot-holding ticket's worktree directory was removed", async () => {
+    const anchor = fixture.claudePid();
+    expect(await acquireSlot(4, "run-me", anchor, "CLA-11")).toBe(0);
+    const directory = fixture.addWorktree(
+      "vanished",
+      "ticket-11-vanished",
+      fixture.lockReason("run-me", "CLA-11", anchor),
+    );
+    rmSync(directory, { recursive: true, force: true });
+    await run(["--post-dispatch", "--run", "run-me"]);
+    expect(process.exitCode).toBe(1);
+    expect(fixture.errors.join("\n")).toMatch(/CLA-11 .*re-dispatch/);
+  });
+
+  test("ignores a removed worktree whose ticket holds no claim or slot", async () => {
+    const anchor = fixture.claudePid();
+    const directory = fixture.addWorktree(
+      "landed",
+      "ticket-12-landed",
+      fixture.lockReason("run-me", "CLA-12", anchor),
+    );
+    rmSync(directory, { recursive: true, force: true });
+    await run(["--post-dispatch", "--run", "run-me"]);
+    expect(process.exitCode).toBe(0);
+    expect(fixture.errors.join("\n")).not.toContain("re-dispatch");
   });
 });
