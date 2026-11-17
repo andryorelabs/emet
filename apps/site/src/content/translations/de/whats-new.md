@@ -2,8 +2,16 @@
 title: Neuigkeiten
 description: Release Notes für emet: was sich in jeder Version geändert hat.
 seoTitle: "Neuigkeiten in emet: Release Notes"
-sourceHash: 184d0da238c95000
+sourceHash: b893c45d52d54eda
 ---
+
+## 0.8.6
+
+2026-11-17
+
+### Behoben
+
+- Der Release-Workflow installiert Chromium, bevor er die Prüfungen auf dem Tag erneut ausführt, wie es der CI-Test-Job tut. Die Verifikation bleibt damit nicht mehr an der Coverage-Untergrenze von `tools/` hängen. v0.8.5 wurde deshalb getaggt, aber nie veröffentlicht; seine Änderungen erscheinen in dieser Version.
 
 ## 0.8.5
 
