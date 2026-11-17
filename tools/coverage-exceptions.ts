@@ -8,8 +8,8 @@ export const COVERAGE_EXCEPTIONS: readonly CoverageException[] = [
   {
     file: "emet/src/doctor.ts",
     reason:
-      "The config-read catch blocks run only after the config validated, so they need a read race; the helpText spawn-failure catch and the missing-MemAvailable branch depend on the host; and the process-argv entrypoint runs only when the file is the main module.",
-    lines: 0.98,
+      "The missing-MemAvailable branch exists only on non-Linux hosts and the process-argv entrypoint runs only when the file is the main module; Bun reports no per-function data, so three function gaps cannot be located.",
+    lines: 0.99,
     functions: 0.96,
   },
 ];
