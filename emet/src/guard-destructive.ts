@@ -220,6 +220,20 @@ function editTargets(input: ToolHookInput): readonly string[] | null {
   return typeof target === "string" ? [target] : null;
 }
 
+const UNESCAPED_BRACKET = /(?<!\\)[[\]]/g;
+
+/**
+ * Whether `relative` falls inside one surface entry. A literal path matches
+ * itself first, so a route segment such as `[locale]` or `(dashboard)` never
+ * depends on glob parsing. The glob fallback reads unescaped `[` and `]` as
+ * literal characters: surfaces name file paths, and a character class there
+ * would widen `[locale]` to the sibling directories `l`, `o`, `c`, `a`, `e`.
+ */
+function matchesSurface(surface: string, relative: string): boolean {
+  if (surface === relative) return true;
+  return new Bun.Glob(surface.replace(UNESCAPED_BRACKET, "\\$&")).match(relative);
+}
+
 export function checkEditSurface(
   input: ToolHookInput,
   loadSurface: (cwd: string) => SurfaceFile | null = loadSurfaceFile,
@@ -237,7 +251,7 @@ export function checkEditSurface(
     const allowed =
       inside &&
       (RUN_DIRECTORIES.some((runDirectory) => relative.startsWith(`${runDirectory}${path.sep}`)) ||
-        surface.globs.some((glob) => new Bun.Glob(glob).match(relative)));
+        surface.globs.some((glob) => matchesSurface(glob, relative)));
     if (!allowed) {
       return {
         decision: "deny",
