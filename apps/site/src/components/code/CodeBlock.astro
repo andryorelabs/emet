@@ -65,6 +65,7 @@ const showLabel = variant === "output" && lang !== "text";
       panels.map((panel, index) => (
         <div
           class="emet-code__panel"
+          tabindex="0"
           role={hasTabs ? "tabpanel" : undefined}
           data-panel={panel.label}
           data-code={panel.code}
