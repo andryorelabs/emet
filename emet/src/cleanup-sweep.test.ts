@@ -11,7 +11,7 @@ import {
 import os from "node:os";
 import path from "node:path";
 
-import { run as runCleanup } from "./cleanup";
+import { reclaimDeadWorktree, run as runCleanup } from "./cleanup";
 import { markRunClosed } from "./runs";
 import { acquireSlot } from "./slots";
 
@@ -335,13 +335,81 @@ describe("cleanup run against a real repository", () => {
     expect(logged).toContain("  - worktree-agent-foreign");
 
     logSpy.mockClear();
+    await runCleanup(["--all", "--force", "--dry-run"]);
+
+    logged = output();
+    expect(logged).toContain(`Would delete: worktree-agent-dead (merged) — would remove ${dead}`);
+    expect(existsSync(dead)).toBe(true);
+    expect(await branchNames()).toContain("worktree-agent-dead");
+    expect(await git("worktree", "list", "--porcelain")).toContain("locked emet run=run-dead");
+
+    logSpy.mockClear();
     await runCleanup(["--all", "--force"]);
 
     logged = output();
-    expect(logged).toContain("Failed to delete 1 branch(es):");
-    expect(logged).toContain("worktree-agent-dead");
+    expect(logged).toContain("Deleted 1 branch(es):");
+    expect(logged).toContain("  - worktree-agent-dead (merged)");
+    expect(logged).toContain("worktree-agent-idle (run run-idle, idle)");
     expect(logged).toContain("  - worktree-agent-foreign");
-    expect(process.exitCode).toBe(1);
+    expect(process.exitCode).toBe(0);
+    expect(existsSync(dead)).toBe(false);
+    expect(existsSync(idle)).toBe(true);
+    expect(existsSync(foreign)).toBe(true);
+    const branches = await branchNames();
+    expect(branches).not.toContain("worktree-agent-dead");
+    expect(branches).toContain("worktree-agent-idle");
+    expect(branches).toContain("worktree-agent-foreign");
+  });
+
+  test("--all --force keeps a dead owner's worktree whose branch has unmerged work", async () => {
+    const dead = path.join(repo, "outside-dead");
+    await git("worktree", "add", "-q", "-b", "worktree-agent-dead", dead, "main");
+    writeFileSync(path.join(dead, "file.txt"), "unmerged\n");
+    await git("-C", dead, "commit", "-q", "-am", "unmerged work");
+    await git("worktree", "lock", dead, "--reason", ownedLock("run-dead", "CLA-62", "-dead-slug"));
+
+    await runCleanup(["--all", "--force"]);
+
+    expect(output()).toContain("worktree-agent-dead (diverged)");
+    expect(existsSync(dead)).toBe(true);
     expect(await branchNames()).toContain("worktree-agent-dead");
+  });
+
+  test("a failed dead worktree removal keeps its branch and fails the run", async () => {
+    const parent = path.join(repo, "locked-parent");
+    mkdirSync(parent);
+    const dead = path.join(parent, "outside-dead");
+    await git("worktree", "add", "-q", "-b", "worktree-agent-dead", dead, "main");
+    await git("worktree", "lock", dead, "--reason", ownedLock("run-dead", "CLA-63", "-dead-slug"));
+    chmodSync(parent, 0o555);
+
+    try {
+      await runCleanup(["--all", "--force"]);
+    } finally {
+      chmodSync(parent, 0o755);
+    }
+
+    expect(process.exitCode).toBe(1);
+    expect(output()).toContain("Failed to delete 1 branch(es):");
+    expect(existsSync(dead)).toBe(true);
+    expect(await branchNames()).toContain("worktree-agent-dead");
+  });
+
+  test("reclaimDeadWorktree prunes a locked worktree whose directory is already gone", async () => {
+    const dead = path.join(repo, "outside-dead");
+    await git("worktree", "add", "-q", "-b", "worktree-agent-dead", dead, "main");
+    const reason = ownedLock("run-dead", "CLA-64", "-dead-slug");
+    await git("worktree", "lock", dead, "--reason", reason);
+    rmSync(dead, { recursive: true, force: true });
+
+    const result = await reclaimDeadWorktree({
+      directory: dead,
+      branch: "worktree-agent-dead",
+      lockedReason: reason,
+    });
+
+    expect(result).toEqual({ ok: true, message: dead });
+    expect(await git("worktree", "list", "--porcelain")).not.toContain(dead);
+    await git("branch", "-D", "worktree-agent-dead");
   });
 });

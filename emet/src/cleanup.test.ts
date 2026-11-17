@@ -883,8 +883,11 @@ describe("reclaim against a real repository", () => {
   });
 });
 
+const cleanupPhaseRoots: string[] = [];
+
 async function cleanupIn(argv: string[], unwritable: boolean): Promise<string> {
   const root = realpathSync(mkdtempSync(path.join(os.tmpdir(), "cleanup-phase-")));
+  cleanupPhaseRoots.push(root);
   const git = (...args: string[]) => Bun.spawnSync(["git", "-C", root, ...args]);
   git("init", "-q", "-b", "main");
   git("config", "user.email", "t@example.com");
@@ -912,6 +915,22 @@ async function cleanupIn(argv: string[], unwritable: boolean): Promise<string> {
 }
 
 describe("cleanup phase file", () => {
+  afterEach(() => {
+    for (const root of cleanupPhaseRoots.splice(0)) rmSync(root, { recursive: true, force: true });
+  });
+
+  let previousTestRoot = "";
+
+  test("creates a cleanup-phase directory for the sweep", async () => {
+    previousTestRoot = await cleanupIn([], false);
+    expect(existsSync(previousTestRoot)).toBe(true);
+  });
+
+  test("the previous test's cleanup-phase directory is removed", () => {
+    expect(previousTestRoot).not.toBe("");
+    expect(existsSync(previousTestRoot)).toBe(false);
+  });
+
   test("writes the done phase with the run id for a run sweep", async () => {
     const root = await cleanupIn(["--run", "emet1w1"], false);
     expect(readPhase(root)).toMatchObject({ phase: "done", runId: "emet1w1" });

@@ -131,6 +131,9 @@ interface ClassifiedBranch {
   readonly ownerRunId?: string;
   readonly ownerTicket?: string;
   readonly runVerdict?: RunVerdict;
+  /** Set only for a `--force` reclaim of a dead owner's locked worktree:
+   * the worktree {@link reclaimDeadWorktree} removes before the branch goes. */
+  readonly deadWorktree?: WorktreeEntry;
 }
 
 type CleanupMode = "run" | "finished" | "all";
@@ -319,13 +322,57 @@ async function classifyOneBranch(
     };
   }
   const contentVerdict = await classifyByContent(name, mainTree, remote, trunk, { local });
+  const isSafe = isSafeToDelete(contentVerdict);
+  const isForcedDeadOwner =
+    runId === null && guard.owner !== null && matchedEntry?.lockedReason != null;
   return {
     name,
-    category: isSafeToDelete(contentVerdict) ? "to-delete" : "needs-review",
+    category: isSafe ? "to-delete" : "needs-review",
     contentVerdict,
     ...optionalProperty("ownerTicket", guard.owner?.ticket),
     ...optionalProperty("ownerRunId", guard.owner?.runId),
+    ...optionalProperty("deadWorktree", isSafe && isForcedDeadOwner ? matchedEntry : undefined),
   };
+}
+
+/**
+ * Clears the way for deleting a branch that `--all --force` reclaimed from a
+ * dead owner: git refuses `git branch -D` on a branch still checked out in a
+ * worktree, so the worktree goes first. Unlocks it, then
+ * `git worktree remove --force`. A directory that is already gone is only
+ * unlocked and pruned. On a failed removal the original lock is restored, so
+ * the worktree stays protected exactly as before.
+ */
+export async function reclaimDeadWorktree(
+  entry: WorktreeEntry,
+): Promise<{ ok: boolean; message: string }> {
+  await Bun.$`git worktree unlock ${entry.directory}`.nothrow().quiet();
+  const result = existsSync(entry.directory)
+    ? await Bun.$`git worktree remove --force ${entry.directory}`.nothrow().quiet()
+    : await Bun.$`git worktree prune`.nothrow().quiet();
+  if (result.exitCode === 0) return { ok: true, message: entry.directory };
+  if (entry.lockedReason !== null) {
+    await Bun.$`git worktree lock ${entry.directory} --reason ${entry.lockedReason}`
+      .nothrow()
+      .quiet();
+  }
+  return { ok: false, message: `${entry.directory} — ${result.stderr.toString().trim()}` };
+}
+
+async function deleteClassifiedBranch(
+  branch: ClassifiedBranch,
+): Promise<{ ok: boolean; message: string }> {
+  if (branch.deadWorktree) {
+    const reclaimed = await reclaimDeadWorktree(branch.deadWorktree);
+    if (!reclaimed.ok) return { ok: false, message: `${branch.name} — ${reclaimed.message}` };
+  }
+  return deleteAndReleaseTicket(
+    branch.name,
+    branch.ownerTicket,
+    branch.ownerRunId,
+    deleteBranch,
+    releaseTicket,
+  );
 }
 
 async function deleteBranch(branch: string): Promise<{ ok: boolean; message: string }> {
@@ -952,20 +999,17 @@ async function main(config: ForgeConfig) {
 
   if (dryRun) {
     for (const branch of toDelete) {
-      console.log(`Would delete: ${branch.name} (${branch.contentVerdict})`);
+      const worktreeNote = branch.deadWorktree
+        ? ` — would remove ${branch.deadWorktree.directory}`
+        : "";
+      console.log(`Would delete: ${branch.name} (${branch.contentVerdict})${worktreeNote}`);
     }
   } else {
     const deleted: string[] = [];
     const failed: string[] = [];
     for (const branch of toDelete) {
       // oxlint-disable-next-line eslint/no-await-in-loop -- sequential on purpose: later iterations depend on earlier ones or on output order
-      const result = await deleteAndReleaseTicket(
-        branch.name,
-        branch.ownerTicket,
-        branch.ownerRunId,
-        deleteBranch,
-        releaseTicket,
-      );
+      const result = await deleteClassifiedBranch(branch);
       if (result.ok) {
         deleted.push(`${result.message} (${branch.contentVerdict})`);
       } else {
