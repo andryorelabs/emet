@@ -2,8 +2,27 @@
 title: Novedades
 description: Notas de versión de emet: qué cambió en cada versión.
 seoTitle: Novedades de emet: notas de versión
-sourceHash: 5fa0e7574374a363
+sourceHash: 184d0da238c95000
 ---
+
+## 0.8.5
+
+2026-11-17
+
+### Cambiado
+
+- El gate de cobertura exige un mínimo por archivo del 97 % de líneas y el 98 % de funciones para `emet/`, `apps/site` y `tools/`, con excepciones razonadas en `tools/coverage-exceptions.ts`. El manifiesto de cobertura recorre `emet/src` de forma recursiva, `tools/` pasa por el gate y los totales de `tools/coverage-floors.json` suben a los valores medidos.
+- El guard de PreToolUse falla en cerrado: cuando `bin/emet` no puede resolver el binario de emet, el hook sale con 2 y bloquea la llamada a la herramienta, con un mensaje que explica cómo recuperarse. Los hooks Stop y SubagentStop siguen saliendo con 1.
+- Los manifiestos del plugin incluyen correo del autor, licencia, página de inicio, repositorio y URL de incidencias, y las descripciones de las skills de Codex indican cuándo usar cada una.
+
+### Corregido
+
+- `emet doctor` sale con el código 3 cuando se escapa un error inesperado, en lugar de 0. Un código de salida distinto de cero fijado antes se conserva.
+- `emet cleanup --all --force` recupera el worktree y las ramas del worker de una ejecución muerta, incluidos los worktrees bajo `.claude/worktrees/`. Un dueño vivo o inactivo, y un bloqueo que no nombra ninguna ejecución, siguen protegidos.
+- El guard de edición reconoce una superficie escrita de forma literal, como `src/app/[locale]/page.tsx`. `[` y `]` en una superficie ya no son una clase de caracteres.
+- `emet preflight --post-dispatch` falla cuando un ticket que aún tiene una reserva o un slot ha perdido su worktree de worker, e indica al coordinador que lo vuelva a despachar en lugar de reanudarlo.
+- El binario compilado de `emet` ya no carga un archivo `.env` del directorio actual.
+- El sitio web elimina los atributos de estilo en línea de la página de inicio, da contraste AA a las etiquetas de inicio en modo claro y nombra el botón de búsqueda con su texto visible desde el primer render. Las imágenes de la documentación se sirven desde el origen propio del sitio bajo `repo-assets` en lugar de `raw.githubusercontent.com`, y `astro dev` también las sirve.
 
 ## 0.8.4
 

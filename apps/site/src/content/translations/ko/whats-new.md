@@ -2,8 +2,27 @@
 title: 새로운 소식
 description: emet 릴리스 노트. 각 버전에서 무엇이 바뀌었는지 정리합니다.
 seoTitle: "emet 새로운 소식: 릴리스 노트"
-sourceHash: 5fa0e7574374a363
+sourceHash: 184d0da238c95000
 ---
+
+## 0.8.5
+
+2026-11-17
+
+### 변경됨
+
+- 커버리지 게이트는 `emet/`, `apps/site`, `tools/`에 파일별 최소 기준으로 줄 97 %와 함수 98 %를 요구하며, 근거가 있는 예외는 `tools/coverage-exceptions.ts`에 둡니다. 커버리지 매니페스트는 `emet/src`를 재귀적으로 탐색하고, `tools/`도 게이트 대상이 되며, `tools/coverage-floors.json`의 합계는 측정값으로 올라갑니다.
+- PreToolUse 가드는 닫힌 방식으로 실패합니다. `bin/emet`이 emet 바이너리를 찾지 못하면 훅이 종료 코드 2로 끝나며 도구 호출을 차단하고, 복구 방법을 알려 주는 메시지를 보여 줍니다. Stop과 SubagentStop 훅은 여전히 종료 코드 1로 끝납니다.
+- 플러그인 매니페스트에 작성자 이메일, 라이선스, 홈페이지, 저장소, 버그 URL이 들어가고, Codex 스킬 설명은 각 스킬을 언제 쓰는지 알려 줍니다.
+
+### 수정됨
+
+- `emet doctor`는 예기치 않은 오류가 새어 나오면 0 대신 종료 코드 3으로 끝납니다. 앞서 설정된 0이 아닌 종료 코드는 유지됩니다.
+- `emet cleanup --all --force`는 죽은 실행의 워커 worktree와 브랜치를 회수합니다. `.claude/worktrees/` 아래의 worktree도 포함합니다. 살아 있거나 유휴 상태인 소유자와, 실행을 가리키지 않는 잠금은 계속 보호됩니다.
+- 편집 가드는 `src/app/[locale]/page.tsx`처럼 문자 그대로 쓴 서피스와 일치합니다. 서피스 안의 `[`와 `]`는 더 이상 문자 클래스가 아닙니다.
+- `emet preflight --post-dispatch`는 예약이나 슬롯을 아직 가진 티켓이 워커 worktree를 잃었을 때 실패하며, 재개하지 말고 다시 디스패치하라고 코디네이터에게 알려 줍니다.
+- 컴파일된 `emet` 바이너리는 더 이상 현재 디렉터리의 `.env` 파일을 불러오지 않습니다.
+- 웹사이트는 홈페이지의 인라인 style 속성을 없애고, 라이트 모드에서 홈 라벨에 AA 대비를 주며, 검색 버튼에 첫 렌더링부터 보이는 텍스트로 이름을 붙입니다. 문서 이미지는 `raw.githubusercontent.com` 대신 사이트 자체 오리진의 `repo-assets`에서 제공되며, `astro dev`에서도 제공됩니다.
 
 ## 0.8.4
 

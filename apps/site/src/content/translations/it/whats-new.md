@@ -2,8 +2,27 @@
 title: Novità
 description: Note di rilascio di emet: cosa è cambiato in ogni versione.
 seoTitle: "Novità di emet: note di rilascio"
-sourceHash: 5fa0e7574374a363
+sourceHash: 184d0da238c95000
 ---
+
+## 0.8.5
+
+2026-11-17
+
+### Modificato
+
+- Il gate di copertura impone una soglia per file del 97 % delle righe e del 98 % delle funzioni per `emet/`, `apps/site` e `tools/`, con eccezioni motivate in `tools/coverage-exceptions.ts`. Il manifest di copertura percorre `emet/src` ricorsivamente, `tools/` è controllato e i totali di `tools/coverage-floors.json` salgono ai valori misurati.
+- La guard PreToolUse fallisce in modo chiuso: quando `bin/emet` non riesce a risolvere il binario di emet, l'hook esce con 2 e blocca la chiamata allo strumento, con un messaggio che spiega come ripristinare. Gli hook Stop e SubagentStop escono ancora con 1.
+- I manifest del plugin riportano l'email dell'autore, la licenza, la home page, il repository e l'URL dei bug, e le descrizioni delle skill di Codex indicano quando usare ciascuna.
+
+### Corretto
+
+- `emet doctor` esce con il codice 3 quando sfugge un errore inatteso, invece di 0. Un codice di uscita diverso da zero impostato prima viene mantenuto.
+- `emet cleanup --all --force` recupera il worktree e i branch del worker di un'esecuzione morta, inclusi i worktree sotto `.claude/worktrees/`. Un proprietario vivo o inattivo, e un blocco che non nomina nessuna esecuzione, restano protetti.
+- La guard di modifica riconosce una superficie scritta in modo letterale, come `src/app/[locale]/page.tsx`. `[` e `]` in una superficie non sono più una classe di caratteri.
+- `emet preflight --post-dispatch` fallisce quando un ticket che detiene ancora una prenotazione o uno slot ha perso il suo worktree di worker, e dice al coordinatore di ri-dispatcharlo invece di riprenderlo.
+- Il binario compilato di `emet` non carica più un file `.env` dalla directory corrente.
+- Il sito web elimina gli attributi di stile inline della home page, dà alle etichette della home un contrasto AA in modalità chiara e nomina il pulsante di ricerca con il suo testo visibile fin dal primo rendering. Le immagini della documentazione sono servite dall'origine propria del sito sotto `repo-assets` invece che da `raw.githubusercontent.com`, e anche `astro dev` le serve.
 
 ## 0.8.4
 
