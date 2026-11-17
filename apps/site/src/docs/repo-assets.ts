@@ -1,4 +1,4 @@
-import { copyFileSync, existsSync, mkdirSync } from "node:fs";
+import { copyFileSync, existsSync, mkdirSync, readFileSync, statSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import type { AstroIntegration } from "astro";
@@ -86,13 +86,134 @@ export function copyReferencedImages({ dir }: { dir: URL }): void {
 }
 
 /**
+ * Content types of the image files the dev server serves under `/repo-assets/`,
+ * keyed by lowercase extension.
+ */
+const REPO_ASSET_CONTENT_TYPES: Readonly<Record<string, string>> = {
+  ".svg": "image/svg+xml",
+  ".png": "image/png",
+  ".jpg": "image/jpeg",
+  ".jpeg": "image/jpeg",
+  ".gif": "image/gif",
+  ".webp": "image/webp",
+  ".avif": "image/avif",
+  ".ico": "image/x-icon",
+};
+
+/** A repository image resolved for serving. */
+interface ResolvedRepoAsset {
+  filePath: string;
+  contentType: string;
+}
+
+function decodeRepositoryPath(urlPath: string): string | undefined {
+  if (!urlPath.startsWith(REPO_ASSETS_PREFIX)) return undefined;
+  const encoded = urlPath.slice(REPO_ASSETS_PREFIX.length).split(/[?#]/, 1)[0] ?? "";
+  try {
+    return decodeURIComponent(encoded);
+  } catch {
+    return undefined;
+  }
+}
+
+function isSafeRepositoryPath(repositoryPath: string): boolean {
+  if (repositoryPath === "" || repositoryPath.includes("\\") || repositoryPath.includes("\0")) {
+    return false;
+  }
+  if (repositoryPath.startsWith("/") || path.isAbsolute(repositoryPath)) return false;
+  return !repositoryPath.split("/").includes("..");
+}
+
+/**
+ * Maps a dev-server URL to a repository image, applying the same image
+ * allowlist as the build and a path-traversal guard.
+ * @param urlPath - Request URL, such as `/repo-assets/docs/brand/logo/mark.svg`.
+ * @param repositoryRoot - Absolute repository root.
+ * @returns The file and content type, or `undefined` when the URL is not an
+ * existing allowed image inside the repository.
+ */
+export function resolveRepoAsset(
+  urlPath: string,
+  repositoryRoot: string,
+): ResolvedRepoAsset | undefined {
+  const repositoryPath = decodeRepositoryPath(urlPath);
+  if (repositoryPath === undefined || !isSafeRepositoryPath(repositoryPath)) return undefined;
+  const contentType = REPO_ASSET_CONTENT_TYPES[path.extname(repositoryPath).toLowerCase()];
+  if (contentType === undefined) return undefined;
+  const root = path.resolve(repositoryRoot);
+  const filePath = path.resolve(root, repositoryPath);
+  const relative = path.relative(root, filePath);
+  if (relative === "" || relative.startsWith("..") || path.isAbsolute(relative)) return undefined;
+  if (!existsSync(filePath) || !statSync(filePath).isFile()) return undefined;
+  return { filePath, contentType };
+}
+
+interface DevRequest {
+  url?: string | undefined;
+  method?: string | undefined;
+}
+
+interface DevResponse {
+  statusCode: number;
+  setHeader(name: string, value: string): unknown;
+  end(body?: string | Uint8Array): unknown;
+}
+
+/**
+ * Builds the dev-server middleware that serves `GET /repo-assets/<path>` from
+ * the repository root and answers 404 to anything it refuses.
+ * @param repositoryRoot - Absolute repository root.
+ * @returns A connect-style middleware.
+ */
+export function repoAssetsMiddleware(
+  repositoryRoot: string,
+): (request: DevRequest, response: DevResponse, next: () => void) => void {
+  return (request, response, next) => {
+    const url = request.url ?? "";
+    if (request.method !== "GET" || !url.startsWith(REPO_ASSETS_PREFIX)) {
+      next();
+      return;
+    }
+    const asset = resolveRepoAsset(url, repositoryRoot);
+    if (asset === undefined) {
+      response.statusCode = 404;
+      response.end("Not found");
+      return;
+    }
+    response.statusCode = 200;
+    response.setHeader("Content-Type", asset.contentType);
+    response.end(readFileSync(asset.filePath));
+  };
+}
+
+/**
+ * The `astro:server:setup` hook: registers the `/repo-assets/` middleware on
+ * the dev server.
+ * @param options - The hook options; only the dev server's connect stack is used.
+ * @param options.server - The dev server.
+ * @param options.server.middlewares - The connect middleware stack.
+ * @param options.server.middlewares.use - Adds a middleware to the stack.
+ */
+export function serveRepoAssets({
+  server,
+}: {
+  server: { middlewares: { use: (handler: ReturnType<typeof repoAssetsMiddleware>) => unknown } };
+}): void {
+  server.middlewares.use(repoAssetsMiddleware(REPOSITORY_ROOT));
+}
+
+/**
  * Astro integration that copies every repository image the published docs
- * reference into the build output, so the site serves them same-origin.
+ * reference into the build output, so the site serves them same-origin, and
+ * serves them from the repository root under `astro dev`.
  * @returns The integration.
  */
 export function repoAssets(): AstroIntegration {
   return {
     name: "emet-repo-assets",
-    hooks: { "astro:build:done": copyReferencedImages },
+    hooks: {
+      "astro:build:done": copyReferencedImages,
+      "astro:server:setup": serveRepoAssets,
+    },
   };
 }

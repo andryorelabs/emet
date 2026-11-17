@@ -14,13 +14,14 @@ interface Props {
 
 const { locale } = Astro.props;
 const strings = SEARCH_STRINGS[locale];
+const accessibleName = `${strings.searchButton} Ctrl K`;
 ---
 
 <button
   type="button"
   class="search-button"
   data-search-trigger
-  aria-label={strings.searchButtonLabel}
+  aria-label={accessibleName}
   aria-keyshortcuts="Control+K"
 >
   <svg class="search-button-icon" viewBox="0 0 24 24" aria-hidden="true">
@@ -50,6 +51,8 @@ const strings = SEARCH_STRINGS[locale];
     if (apple) {
       const modifier = trigger.querySelector("[data-search-modifier]");
       if (modifier) modifier.textContent = "⌘";
+      const name = trigger.getAttribute("aria-label");
+      if (name) trigger.setAttribute("aria-label", name.replace(/Ctrl K$/, "⌘ K"));
       trigger.setAttribute("aria-keyshortcuts", "Meta+K");
     }
     trigger.addEventListener("click", (event) => {
