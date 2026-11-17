@@ -250,6 +250,40 @@ describe("guardBranch", () => {
       });
     });
 
+    test("--force reads the lock of a still-listed worktree before the in-use short-circuit", () => {
+      const outcome = guardBranch(true, lockedEntry(), null, () => "dead", true);
+      expect(outcome).toEqual({
+        done: false,
+        owner: {
+          runId: "session-a",
+          ticket: "AO-260",
+          anchorPid: 4242,
+          at: "2026-09-07T00:00:00Z",
+        },
+      });
+    });
+
+    test("--force keeps a still-listed worktree of an idle owner protected", () => {
+      const outcome = guardBranch(true, lockedEntry(), null, () => "idle", true);
+      expect(outcome).toEqual({
+        done: true,
+        category: "live-or-idle-protected",
+        ownerRunId: "session-a",
+        runVerdict: "idle",
+      });
+    });
+
+    test("--force leaves an unlocked live checkout in-use", () => {
+      const outcome = guardBranch(
+        true,
+        lockedEntry({ lockedReason: null }),
+        null,
+        () => "dead",
+        true,
+      );
+      expect(outcome).toEqual({ done: true, category: "in-use" });
+    });
+
     test("--force does not lift protection on a live or idle owner", () => {
       const outcome = guardBranch(false, lockedEntry(), null, () => "live", true);
       expect(outcome).toEqual({

@@ -395,6 +395,92 @@ describe("cleanup run against a real repository", () => {
     expect(await branchNames()).toContain("worktree-agent-dead");
   });
 
+  async function addWorkerLayout(
+    agentId: string,
+    branch: string,
+    runId: string,
+    ticket: string,
+  ): Promise<string> {
+    await git("branch", `worktree-${agentId}`, "main");
+    return addOwnedWorktree(agentId, branch, runId, ticket);
+  }
+
+  test("--all --force reclaims a dead owner's locked worker worktree at the real layout", async () => {
+    const dead = await addWorkerLayout("agent-d1", "cla-70-dead", "run-dead", "CLA-70");
+
+    await runCleanup(["--all", "--force"]);
+
+    expect(process.exitCode).toBe(0);
+    expect(existsSync(dead)).toBe(false);
+    expect(await git("worktree", "list", "--porcelain")).not.toContain(dead);
+    const branches = await branchNames();
+    expect(branches).not.toContain("cla-70-dead");
+    expect(branches).not.toContain("worktree-agent-d1");
+  });
+
+  test("--all --force reclaims a dead owner whose worker directory is already gone", async () => {
+    const dead = await addWorkerLayout("agent-d2", "cla-71-dead", "run-dead", "CLA-71");
+    rmSync(dead, { recursive: true, force: true });
+
+    await runCleanup(["--all", "--force"]);
+
+    expect(process.exitCode).toBe(0);
+    expect(await git("worktree", "list", "--porcelain")).not.toContain(dead);
+    const branches = await branchNames();
+    expect(branches).not.toContain("cla-71-dead");
+    expect(branches).not.toContain("worktree-agent-d2");
+  });
+
+  test("--all --force protects idle and unowned worker worktrees at the real layout", async () => {
+    const idle = await addWorkerLayout("agent-i1", "cla-72-idle", "run-idle", "CLA-72");
+    touchTranscript(transcriptSlug, "run-idle");
+    const foreign = path.join(repo, ".claude", "worktrees", "agent-f1");
+    await git("branch", "worktree-agent-f1", "main");
+    await git("worktree", "add", "-q", "-b", "cla-73-foreign", foreign, "main");
+    await git("worktree", "lock", foreign, "--reason", "do not touch");
+
+    await runCleanup(["--all", "--force"]);
+
+    expect(process.exitCode).toBe(0);
+    expect(existsSync(idle)).toBe(true);
+    expect(existsSync(foreign)).toBe(true);
+    expect(output()).toContain("cla-72-idle (run run-idle, idle)");
+    const listing = await git("worktree", "list", "--porcelain");
+    expect(listing).toContain("locked emet run=run-idle");
+    expect(listing).toContain("locked do not touch");
+    const branches = await branchNames();
+    expect(branches).toContain("cla-72-idle");
+    expect(branches).toContain("worktree-agent-i1");
+    expect(branches).toContain("cla-73-foreign");
+    expect(branches).toContain("worktree-agent-f1");
+  });
+
+  test("--all --force never removes a dead owner's worktree whose worker branch is unmerged", async () => {
+    const dead = await addWorkerLayout("agent-u1", "cla-74-open", "run-dead", "CLA-74");
+    writeFileSync(path.join(dead, "file.txt"), "unmerged\n");
+    await git("-C", dead, "commit", "-q", "-am", "unmerged work");
+
+    await runCleanup(["--all", "--force"]);
+
+    expect(existsSync(dead)).toBe(true);
+    expect(output()).toContain("cla-74-open (diverged)");
+    expect(await git("worktree", "list", "--porcelain")).toContain("locked emet run=run-dead");
+    expect(await branchNames()).toContain("cla-74-open");
+  });
+
+  test("--dry-run --all --force at the real layout reports the plan and removes nothing", async () => {
+    const dead = await addWorkerLayout("agent-d3", "cla-75-dead", "run-dead", "CLA-75");
+
+    await runCleanup(["--all", "--force", "--dry-run"]);
+
+    expect(output()).toContain(`Would delete: cla-75-dead (merged) — would remove ${dead}`);
+    expect(existsSync(dead)).toBe(true);
+    expect(await git("worktree", "list", "--porcelain")).toContain("locked emet run=run-dead");
+    const branches = await branchNames();
+    expect(branches).toContain("cla-75-dead");
+    expect(branches).toContain("worktree-agent-d3");
+  });
+
   test("reclaimDeadWorktree prunes a locked worktree whose directory is already gone", async () => {
     const dead = path.join(repo, "outside-dead");
     await git("worktree", "add", "-q", "-b", "worktree-agent-dead", dead, "main");

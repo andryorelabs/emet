@@ -247,6 +247,11 @@ export type GuardOutcome =
  * `--force` doc above) — that one case proceeds to classification instead of
  * being protected. `force` never lifts protection for `'live'`/`'idle'`
  * owners or for a lock this parser can't attribute to any run at all.
+ *
+ * In that `--all --force` sweep a locked worktree is judged by its lock
+ * before `isBaselineLive`: a dead worker's locked worktree is still listed
+ * by git (prune skips locked entries), so the baseline check alone would
+ * always call it in use and the dead-owner reclaim could never run.
  */
 export function guardBranch(
   isBaselineLive: boolean,
@@ -255,7 +260,8 @@ export function guardBranch(
   classifyRunFunction: typeof classifyRun = classifyRun,
   force = false,
 ): GuardOutcome {
-  if (isBaselineLive) return { done: true, category: "in-use" };
+  const isForcedSweepOfLock = force && runId === null && matchedEntry?.lockedReason != null;
+  if (isBaselineLive && !isForcedSweepOfLock) return { done: true, category: "in-use" };
 
   if (!matchedEntry || matchedEntry.lockedReason === null) {
     return runId === null ? { done: false, owner: null } : { done: true, category: "out-of-scope" };
@@ -323,15 +329,25 @@ async function classifyOneBranch(
   }
   const contentVerdict = await classifyByContent(name, mainTree, remote, trunk, { local });
   const isSafe = isSafeToDelete(contentVerdict);
-  const isForcedDeadOwner =
-    runId === null && guard.owner !== null && matchedEntry?.lockedReason != null;
+  /**
+   * A `--force` reclaim only removes the worktree for the branch it actually
+   * holds: a scaffold branch matched by directory basename must never take
+   * down a worktree whose real (worker) branch may be unmerged, and deleting
+   * that scaffold alone does not release the ticket's claim either.
+   */
+  const isForcedDeadOwner = runId === null && guard.owner !== null;
+  const holdsWorktree = matchedEntry?.branch === name;
+  const owner = !isForcedDeadOwner || holdsWorktree ? guard.owner : null;
   return {
     name,
     category: isSafe ? "to-delete" : "needs-review",
     contentVerdict,
-    ...optionalProperty("ownerTicket", guard.owner?.ticket),
-    ...optionalProperty("ownerRunId", guard.owner?.runId),
-    ...optionalProperty("deadWorktree", isSafe && isForcedDeadOwner ? matchedEntry : undefined),
+    ...optionalProperty("ownerTicket", owner?.ticket),
+    ...optionalProperty("ownerRunId", owner?.runId),
+    ...optionalProperty(
+      "deadWorktree",
+      isSafe && isForcedDeadOwner && holdsWorktree ? matchedEntry : undefined,
+    ),
   };
 }
 
