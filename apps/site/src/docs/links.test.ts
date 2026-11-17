@@ -45,9 +45,9 @@ describe("rewriteLink", () => {
 });
 
 describe("rewriteImageSource", () => {
-  const raw = "https://raw.githubusercontent.com/andryorelabs/emet/main";
+  const raw = "/repo-assets";
 
-  test("turns a repository image into a GitHub raw URL", () => {
+  test("turns a repository image into a same-origin path", () => {
     expect(rewriteImageSource("../brand/mascot/mascot-done.svg", guide)).toBe(
       `${raw}/docs/brand/mascot/mascot-done.svg`,
     );
@@ -61,6 +61,14 @@ describe("rewriteImageSource", () => {
   });
 });
 
+describe("rewriteLink on repo assets", () => {
+  test("leaves an already rewritten image path alone", () => {
+    expect(rewriteLink("/repo-assets/docs/brand/logo/mark.svg", guide)).toBe(
+      "/repo-assets/docs/brand/logo/mark.svg",
+    );
+  });
+});
+
 describe("rewriteMarkdownImages", () => {
   test("rewrites html and markdown image sources but not code", () => {
     const markdown = [
@@ -69,8 +77,8 @@ describe("rewriteMarkdownImages", () => {
       '`<img src="../brand/logo/mark.svg">`',
     ].join("\n");
     expect(rewriteMarkdownLinks(markdown, guide).split("\n")).toEqual([
-      '<img src="https://raw.githubusercontent.com/andryorelabs/emet/main/docs/brand/mascot/mascot-done.svg" alt="done" width="96">',
-      "![logo](https://raw.githubusercontent.com/andryorelabs/emet/main/docs/brand/logo/mark.svg)",
+      '<img src="/repo-assets/docs/brand/mascot/mascot-done.svg" alt="done" width="96">',
+      "![logo](/repo-assets/docs/brand/logo/mark.svg)",
       '`<img src="../brand/logo/mark.svg">`',
     ]);
   });

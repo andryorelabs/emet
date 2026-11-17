@@ -5,6 +5,7 @@ import tailwindcss from "@tailwindcss/vite";
 import { THEME_INIT_HASH } from "./src/components/site/theme";
 import { codeColorsPlugin } from "./src/docs/code-colors-plugin";
 import { emetDirectives } from "./src/docs/directives";
+import { repoAssets } from "./src/docs/repo-assets";
 import { buildSidebar } from "./src/docs/sidebar";
 import {
   collectStarlightInlineScriptHashes,
@@ -54,6 +55,7 @@ export default defineConfig({
   integrations: [
     sitemapOptOut,
     emetDirectives(),
+    repoAssets(),
     starlight({
       title: "emet",
       head: [
