@@ -7,7 +7,7 @@ import { LITERAL_JOBS, ROUTED_JOBS, workflowViolations } from "./workflow-rules.
 
 const REPOSITORY_ROOT = join(import.meta.dir, "..");
 const WORKFLOW_DIRECTORY = join(REPOSITORY_ROOT, ".github", "workflows");
-const STALE_SCRIPT_CALL_PATTERN = /bun run (?:format(?![:\w-])|test:coverage)/;
+const STALE_SCRIPT_CALL_PATTERN = /bun run format(?![:\w-])/;
 const SCRIPT_CALLER_FILES = [
   "package.json",
   "AGENTS.md",
@@ -304,7 +304,7 @@ describe("ci.yml commitlint and manual runs", () => {
     expect(scripts["test:root"]).toEndWith(
       "&& bun test --cwd emet --coverage --coverage-reporter=text --coverage-reporter=lcov --coverage-dir ../coverage/emet && bun tools/coverage-gate.ts emet coverage/emet/lcov.info",
     );
-    expect(scripts["test:coverage"]).toBeUndefined();
+    expect(scripts["test:coverage"]).toBe("bun run test");
     expect(scripts["test:coverage:root"]).toBeUndefined();
   });
 

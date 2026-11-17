@@ -71,6 +71,8 @@ jobs:
 
       - run: bun install --cwd emet --frozen-lockfile
 
+      - run: bunx playwright install --with-deps chromium
+
       - run: bun run test
 
       - name: Upload coverage reports
@@ -102,6 +104,8 @@ jobs:
       - run: bun install --frozen-lockfile
 
       - run: bun install --cwd emet --frozen-lockfile
+
+      - run: bunx playwright install --with-deps chromium
 
       - run: bun run test
 

@@ -55,6 +55,18 @@ describe("workspace coverage floors", () => {
     );
   });
 
+  test("test:root measures tools/ into coverage/tools and gates it", () => {
+    const manifest: unknown = JSON.parse(
+      readFileSync(path.join(repositoryRoot, "package.json"), "utf8"),
+    );
+    const scripts: unknown = Reflect.get(Object(manifest), "scripts");
+    const testRoot = String(Reflect.get(Object(scripts), "test:root"));
+    expect(testRoot).toContain("--coverage-dir coverage/tools");
+    expect(testRoot).toContain("bun tools/coverage-gate.ts tools coverage/tools/lcov.info");
+    expect(floors.tools?.lines ?? 0).toBeGreaterThan(0);
+    expect(floors.tools?.functions ?? 0).toBeGreaterThan(0);
+  });
+
   for (const workspace of tested) {
     test(`${workspace} has a positive line and function floor`, () => {
       const floor = floors[workspace];
