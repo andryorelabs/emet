@@ -2,8 +2,27 @@
 title: Neuigkeiten
 description: Release Notes für emet: was sich in jeder Version geändert hat.
 seoTitle: "Neuigkeiten in emet: Release Notes"
-sourceHash: 5fa0e7574374a363
+sourceHash: 184d0da238c95000
 ---
+
+## 0.8.5
+
+2026-11-17
+
+### Geändert
+
+- Das Coverage-Gate verlangt pro Datei mindestens 97 % der Zeilen und 98 % der Funktionen für `emet/`, `apps/site` und `tools/`, mit begründeten Ausnahmen in `tools/coverage-exceptions.ts`. Das Coverage-Manifest durchläuft `emet/src` rekursiv, `tools/` wird geprüft, und die Summen in `tools/coverage-floors.json` steigen auf die gemessenen Werte.
+- Der PreToolUse-Guard schlägt geschlossen fehl: Wenn `bin/emet` das emet-Binary nicht auflösen kann, beendet sich der Hook mit 2 und blockiert den Tool-Aufruf, mit einer Meldung, die die Wiederherstellung erklärt. Die Hooks Stop und SubagentStop beenden sich weiterhin mit 1.
+- Die Plugin-Manifeste enthalten E-Mail des Autors, Lizenz, Homepage, Repository und Bugs-URL, und die Beschreibungen der Codex-Skills sagen, wann welcher Skill zu verwenden ist.
+
+### Behoben
+
+- `emet doctor` beendet sich mit dem Code 3, wenn ein unerwarteter Fehler durchschlägt, statt mit 0. Ein zuvor gesetzter Exit-Code ungleich null bleibt erhalten.
+- `emet cleanup --all --force` räumt den Worktree und die Branches des Workers eines toten Laufs auf, auch die Worktrees unter `.claude/worktrees/`. Ein lebender oder inaktiver Besitzer und eine Sperre ohne Laufbezug bleiben geschützt.
+- Der Edit-Guard erkennt eine wörtlich geschriebene Oberfläche wie `src/app/[locale]/page.tsx`. `[` und `]` in einer Oberfläche sind keine Zeichenklasse mehr.
+- `emet preflight --post-dispatch` schlägt fehl, wenn ein Ticket, das noch eine Reservierung oder einen Slot hält, seinen Worker-Worktree verloren hat, und weist den Koordinator an, es neu zu dispatchen, statt es fortzusetzen.
+- Das kompilierte `emet`-Binary lädt keine `.env`-Datei mehr aus dem aktuellen Verzeichnis.
+- Die Website entfernt die Inline-Style-Attribute der Startseite, gibt den Startseiten-Labels im hellen Modus AA-Kontrast und benennt die Suchschaltfläche ab dem ersten Rendern mit ihrem sichtbaren Text. Die Bilder der Dokumentation kommen aus dem eigenen Ursprung der Website unter `repo-assets` statt von `raw.githubusercontent.com`, und `astro dev` liefert sie ebenfalls aus.
 
 ## 0.8.4
 

@@ -2,8 +2,27 @@
 title: Novidades
 description: Notas de versão do emet: o que mudou em cada versão.
 seoTitle: Novidades do emet: notas de versão
-sourceHash: 5fa0e7574374a363
+sourceHash: 184d0da238c95000
 ---
+
+## 0.8.5
+
+2026-11-17
+
+### Alterado
+
+- O gate de cobertura exige um mínimo por arquivo de 97 % das linhas e 98 % das funções para `emet/`, `apps/site` e `tools/`, com exceções justificadas em `tools/coverage-exceptions.ts`. O manifesto de cobertura percorre `emet/src` de forma recursiva, `tools/` passa pelo gate e os totais de `tools/coverage-floors.json` sobem para os valores medidos.
+- O guard de PreToolUse falha fechado: quando `bin/emet` não consegue resolver o binário do emet, o hook sai com 2 e bloqueia a chamada da ferramenta, com uma mensagem que explica como se recuperar. Os hooks Stop e SubagentStop continuam saindo com 1.
+- Os manifestos do plugin trazem e-mail do autor, licença, página inicial, repositório e URL de bugs, e as descrições das skills do Codex dizem quando usar cada uma.
+
+### Corrigido
+
+- `emet doctor` sai com o código 3 quando um erro inesperado escapa, em vez de 0. Um código de saída diferente de zero definido antes é mantido.
+- `emet cleanup --all --force` recupera o worktree e as branches do worker de uma execução morta, inclusive os worktrees em `.claude/worktrees/`. Um dono vivo ou ocioso, e um bloqueio que não nomeia nenhuma execução, continuam protegidos.
+- O guard de edição reconhece uma superfície escrita de forma literal, como `src/app/[locale]/page.tsx`. `[` e `]` em uma superfície deixam de ser uma classe de caracteres.
+- `emet preflight --post-dispatch` falha quando um ticket que ainda mantém uma reserva ou um slot perdeu o seu worktree de worker, e orienta o coordenador a redespachá-lo em vez de retomá-lo.
+- O binário compilado do `emet` não carrega mais um arquivo `.env` do diretório atual.
+- O site remove os atributos de estilo inline da página inicial, dá contraste AA aos rótulos da página inicial no modo claro e nomeia o botão de busca com o seu texto visível desde a primeira renderização. As imagens da documentação são servidas da origem própria do site em `repo-assets` em vez de `raw.githubusercontent.com`, e o `astro dev` também as serve.
 
 ## 0.8.4
 

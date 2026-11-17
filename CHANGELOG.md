@@ -8,6 +8,8 @@ and this project adheres to
 
 ## [Unreleased]
 
+## [0.8.5] - 2026-11-17
+
 ### Changed
 
 - The coverage gate enforces a per-file floor of 97% lines and 98% functions
@@ -20,6 +22,26 @@ and this project adheres to
   how to recover. The Stop and SubagentStop hooks still exit 1.
 - The plugin manifests carry an author email, license, homepage, repository and
   bugs URL, and the Codex skill descriptions say when to use each skill.
+
+### Fixed
+
+- `emet doctor` exits with code 3 when an unexpected error escapes, instead of 0. A non-zero exit code set earlier is kept.
+- `emet cleanup --all --force` reclaims the worktree and the branches of a dead
+  run's worker, including the worktrees under `.claude/worktrees/`. A live or
+  idle owner, and a lock that names no run, stay protected.
+- The edit guard matches a surface written literally, such as
+  `src/app/[locale]/page.tsx`. `[` and `]` in a surface are no longer a
+  character class.
+- `emet preflight --post-dispatch` fails when a ticket that still holds a claim
+  or a slot has lost its worker worktree, and tells the coordinator to
+  re-dispatch it instead of resuming it.
+- The compiled `emet` binary no longer loads a `.env` file from the current
+  directory.
+- The Website drops the inline style attributes on the home page, gives the
+  home labels AA contrast in light mode, and names the search button with its
+  visible text from the first paint. The docs images are served from the
+  site's own origin under `repo-assets` instead of
+  `raw.githubusercontent.com`, and `astro dev` serves them too.
 
 ## [0.8.4] - 2026-11-15
 
@@ -291,7 +313,8 @@ and this project adheres to
 - Per-repo configuration through `forge.config.json`.
 - `install.sh`, which installs the CLI, command and agents.
 
-[Unreleased]: https://github.com/andryorelabs/emet/compare/v0.8.4...HEAD
+[Unreleased]: https://github.com/andryorelabs/emet/compare/v0.8.5...HEAD
+[0.8.5]: https://github.com/andryorelabs/emet/compare/v0.8.4...v0.8.5
 [0.8.4]: https://github.com/andryorelabs/emet/compare/v0.8.3...v0.8.4
 [0.8.3]: https://github.com/andryorelabs/emet/compare/v0.8.2...v0.8.3
 [0.8.2]: https://github.com/andryorelabs/emet/compare/v0.8.1...v0.8.2
