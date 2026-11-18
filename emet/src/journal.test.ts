@@ -100,6 +100,36 @@ describe("appendEvent", () => {
     expect(parsed?.truncated).toBe(true);
   });
 
+  test("measures the 2 KiB limit in bytes, not characters", () => {
+    appendEvent(event({ blob: "é".repeat(1100) }), deps);
+    const [parsed] = stored();
+    expect(parsed?.truncated).toBe(true);
+    expect(parsed?.data).toEqual({});
+  });
+
+  test("writes nothing when even the truncated line is over the limit", () => {
+    appendEvent({ ...event(), repo: "r".repeat(3000) }, deps);
+    expect(existsSync(path.join(directory, "events.jsonl"))).toBe(false);
+  });
+
+  test("two processes appending at once leave only valid lines", async () => {
+    const script = [
+      'import { appendEvent } from "' + path.resolve(import.meta.dir, "journal.ts") + '";',
+      'for (let index = 0; index < 150; index += 1) appendEvent({ kind: "cleanup", repo: "r", origin: "auto", data: { index } });',
+    ].join("\n");
+    const children = [0, 1].map(() =>
+      Bun.spawn(["bun", "-e", script], {
+        env: { ...process.env, EMET_STATE_DIR: root },
+        stdout: "ignore",
+        stderr: "ignore",
+      }),
+    );
+    await Promise.all(children.map((child) => child.exited));
+    const { events, skippedLines } = readJournalSegments({ directory: path.join(root, "journal") });
+    expect(skippedLines).toBe(0);
+    expect(events).toHaveLength(300);
+  });
+
   test("does not throw when the directory is not writable", () => {
     const blocker = path.join(root, "file");
     writeFileSync(blocker, "");
@@ -141,6 +171,18 @@ describe("rotation", () => {
     appendEvent(event({ n: 2 }), deps);
     expect(existsSync(path.join(directory, "events.1.jsonl"))).toBe(false);
     expect(currentLines()).toHaveLength(2);
+  });
+
+  test("does not rotate a file another process already rotated", () => {
+    mkdirSync(directory, { recursive: true });
+    const current = path.join(directory, "events.jsonl");
+    writeFileSync(current, "x".repeat(200));
+    const tight = { ...deps, rotateAtBytes: 100, keepSegments: 5 };
+    rotateIfNeeded(tight);
+    writeFileSync(current, "fresh\n");
+    rotateIfNeeded(tight);
+    expect(readFileSync(current, "utf8")).toBe("fresh\n");
+    expect(existsSync(path.join(directory, "events.2.jsonl"))).toBe(false);
   });
 
   test("removes a stale lock and rotates", () => {

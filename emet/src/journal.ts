@@ -85,10 +85,11 @@ function clampReason(data: Record<string, unknown>): Record<string, unknown> {
   return { ...data, reason: reason.slice(0, MAX_REASON_LENGTH) };
 }
 
-function serialize(event: JournalEvent, maxBytes: number): string {
+function serialize(event: JournalEvent, maxBytes: number): string | null {
   const line = JSON.stringify(event);
   if (Buffer.byteLength(line) + 1 <= maxBytes) return `${line}\n`;
-  return `${JSON.stringify({ ...event, data: {}, truncated: true })}\n`;
+  const trimmed = `${JSON.stringify({ ...event, data: {}, truncated: true })}\n`;
+  return Buffer.byteLength(trimmed) <= maxBytes ? trimmed : null;
 }
 
 function segmentNumbers(directory: string): number[] {
@@ -138,7 +139,9 @@ export function rotateIfNeeded(deps?: JournalDeps): void {
     const holder = { pid: process.pid, worktree: directory, acquiredAt: Date.now() };
     if (!didAcquireLock(lockDirectory, holder)) return;
     try {
-      shiftSegments(directory, deps?.keepSegments ?? KEEP_SEGMENTS);
+      if (statSync(current).size >= (deps?.rotateAtBytes ?? ROTATE_AT_BYTES)) {
+        shiftSegments(directory, deps?.keepSegments ?? KEEP_SEGMENTS);
+      }
     } finally {
       rmSync(lockDirectory, { recursive: true, force: true });
     }
@@ -162,10 +165,9 @@ export function appendEvent(event: JournalEventInput, deps?: JournalDeps): void 
       pid: process.pid,
       data: clampReason(event.data),
     };
-    appendFileSync(
-      path.join(directory, CURRENT_FILE),
-      serialize(full, deps?.maxEventBytes ?? MAX_EVENT_BYTES),
-    );
+    const line = serialize(full, deps?.maxEventBytes ?? MAX_EVENT_BYTES);
+    if (line === null) return;
+    appendFileSync(path.join(directory, CURRENT_FILE), line);
   } catch {
     return;
   }
