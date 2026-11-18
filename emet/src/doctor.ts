@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import { existsSync, readdirSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { readFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
@@ -277,6 +277,69 @@ export function findLegacyStateDirFindings(env?: Env): string[] {
   return [
     `leftover legacy state dir ${legacy}; move its contents to ${stateDir(env)} and delete it`,
   ];
+}
+
+const NETWORK_FILESYSTEM_TYPES: ReadonlySet<string> = new Set([
+  "nfs",
+  "nfs4",
+  "cifs",
+  "smb3",
+  "smbfs",
+  "afs",
+  "9p",
+  "fuse.sshfs",
+  "ceph",
+  "glusterfs",
+  "fuse.glusterfs",
+]);
+
+/** The filesystem type of the longest mount point covering `target`, from `/proc/mounts` text. */
+export function filesystemTypeOf(target: string, mountsText: string): string | null {
+  let best: { mountPoint: string; type: string } | null = null;
+  for (const line of mountsText.split("\n")) {
+    const [, rawMountPoint, type] = line.split(" ");
+    if (rawMountPoint === undefined || type === undefined) continue;
+    const mountPoint = rawMountPoint.replaceAll("\\040", " ");
+    const covers =
+      mountPoint === "/" ||
+      target === mountPoint ||
+      target.startsWith(mountPoint.endsWith("/") ? mountPoint : `${mountPoint}/`);
+    if (covers && (best === null || mountPoint.length >= best.mountPoint.length)) {
+      best = { mountPoint, type };
+    }
+  }
+  return best?.type ?? null;
+}
+
+/** Reads the mount table; `null` where it does not exist, as on macOS. */
+export function readMountsText(file = "/proc/mounts"): string | null {
+  try {
+    return readFileSync(file, "utf8");
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * A warning when `stateDir()` sits on a network filesystem, where the
+ * journal's single `appendFileSync` is not atomic across hosts. Never part of
+ * {@link isReportClean}; other platforms report nothing.
+ */
+export function findJournalFilesystemFindings(env?: Env, mountsText?: string | null): string[] {
+  const mounts = mountsText === undefined ? readMountsText() : mountsText;
+  if (mounts === null) return [];
+  const directory = stateDir(env);
+  const type = filesystemTypeOf(directory, mounts);
+  if (type === null || !NETWORK_FILESYSTEM_TYPES.has(type)) return [];
+  return [
+    `state dir ${directory} is on a network filesystem (${type}); journal appends may interleave or be lost`,
+  ];
+}
+
+/** The `Journal (warning only)` block, or an empty string when there is nothing to warn about. */
+export function formatJournalFindings(findings: readonly string[]): string {
+  if (findings.length === 0) return "";
+  return `\nJournal (warning only):\n${findings.map((line) => `  - ${line}`).join("\n")}`;
 }
 
 async function readRawConfig(repoRoot: string): Promise<unknown> {
@@ -1102,6 +1165,9 @@ async function main(targets: readonly string[]): Promise<void> {
   if (legacyStateFindings.length > 0) {
     console.log(`\nLegacy state:\n${legacyStateFindings.map((line) => `  - ${line}`).join("\n")}`);
   }
+
+  const journalBlock = formatJournalFindings(findJournalFilesystemFindings());
+  if (journalBlock !== "") console.log(journalBlock);
 
   const installDrift = await findInstallDrift(os.homedir());
   if (installDrift.length > 0) {

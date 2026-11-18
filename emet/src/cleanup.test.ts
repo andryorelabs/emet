@@ -1,5 +1,13 @@
 import { afterEach, beforeEach, describe, expect, spyOn, test } from "bun:test";
-import { existsSync, mkdirSync, mkdtempSync, realpathSync, rmSync, writeFileSync } from "node:fs";
+import {
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  realpathSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
 import os from "node:os";
 import path from "node:path";
 
@@ -15,6 +23,7 @@ import {
   planOrphanedScaffolds,
   planWorktreeRemoval,
   reclaimOwnedWorktrees,
+  recordCleanupEvent,
   run as runCleanup,
   shouldMarkRunClosed,
 } from "./cleanup";
@@ -472,6 +481,49 @@ describe("deleteAndReleaseTicket", () => {
   });
 });
 
+function parseUnknown(text: string): unknown {
+  return JSON.parse(text);
+}
+
+describe("recordCleanupEvent", () => {
+  test("appends a cleanup event with the counts and the run id", () => {
+    const directory = mkdtempSync(path.join(os.tmpdir(), "emet-cleanup-journal-"));
+    try {
+      recordCleanupEvent("/repo", "run-a", { reclaimed: 2, kept: 1, failures: 0 }, { directory });
+      const lines = readFileSync(path.join(directory, "events.jsonl"), "utf8").trim().split("\n");
+      expect(lines).toHaveLength(1);
+      const event = parseUnknown(lines[0] ?? "{}");
+      expect(event).toMatchObject({
+        kind: "cleanup",
+        runId: "run-a",
+        data: { reclaimed: 2, kept: 1, failures: 0 },
+      });
+    } finally {
+      rmSync(directory, { recursive: true, force: true });
+    }
+  });
+
+  test("omits runId when the sweep is not run-scoped and survives an unwritable directory", () => {
+    const directory = mkdtempSync(path.join(os.tmpdir(), "emet-cleanup-journal-"));
+    try {
+      recordCleanupEvent("/repo", null, { reclaimed: 0, kept: 0, failures: 0 }, { directory });
+      const raw = readFileSync(path.join(directory, "events.jsonl"), "utf8");
+      expect(raw).not.toContain("runId");
+      const blocker = path.join(directory, "events.jsonl");
+      expect(() => {
+        recordCleanupEvent(
+          "/repo",
+          null,
+          { reclaimed: 0, kept: 0, failures: 0 },
+          { directory: path.join(blocker, "nested") },
+        );
+      }).not.toThrow();
+    } finally {
+      rmSync(directory, { recursive: true, force: true });
+    }
+  });
+});
+
 describe("shouldMarkRunClosed", () => {
   test("a clean --run sweep marks the run closed", () => {
     expect(shouldMarkRunClosed("run", "run-a", false, 0)).toBe(true);
@@ -546,6 +598,7 @@ describe("planOrphanedScaffolds", () => {
 describe("reclaim against a real repository", () => {
   const originalDirectory = process.cwd();
   let repo: string;
+  let previousStateDirectory: string | undefined;
   let logSpy: { mockRestore: () => void; mock: { calls: unknown[][] } };
 
   const config: ForgeConfig = {
@@ -608,11 +661,15 @@ describe("reclaim against a real repository", () => {
     await git("commit", "-q", "-m", "base");
     mkdirSync(path.join(repo, ".claude", "worktrees"), { recursive: true });
     process.chdir(repo);
+    previousStateDirectory = process.env.EMET_STATE_DIR;
+    process.env.EMET_STATE_DIR = path.join(repo, ".state");
     logSpy = spyOn(console, "log").mockReturnValue(undefined);
   });
 
   afterEach(() => {
     logSpy.mockRestore();
+    if (previousStateDirectory === undefined) delete process.env.EMET_STATE_DIR;
+    else process.env.EMET_STATE_DIR = previousStateDirectory;
     process.chdir(originalDirectory);
     process.exitCode = 0;
     rmSync(repo, { recursive: true, force: true });

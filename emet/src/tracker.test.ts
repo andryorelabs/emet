@@ -1,5 +1,13 @@
 import { afterEach, describe, expect, test } from "bun:test";
-import { mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSync } from "node:fs";
+import {
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  realpathSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 
@@ -259,7 +267,12 @@ async function githubTracker(
   writeFileSync(gh, FAKE_GH, { mode: 0o755 });
   const child = Bun.spawn([process.execPath, TRACKER_ENTRY, ...args], {
     cwd: repo,
-    env: { ...process.env, PATH: `${bin}:${process.env.PATH ?? ""}`, FAKE_GH_DIR: bin },
+    env: {
+      ...process.env,
+      PATH: `${bin}:${process.env.PATH ?? ""}`,
+      FAKE_GH_DIR: bin,
+      EMET_STATE_DIR: process.env.EMET_STATE_DIR ?? path.join(bin, "state"),
+    },
     stdout: "pipe",
     stderr: "pipe",
   });
@@ -333,5 +346,53 @@ describe("emet tracker close with tracker.kind github", () => {
     const result = await tracker(repo, "close", "feat-01");
     expect(result.code).toBe(0);
     expect(stringField(parseJson(result.stdout), "status")).toBe("done");
+  });
+});
+
+function readJournalLines(stateDirectory: string): Record<string, unknown>[] {
+  const file = path.join(stateDirectory, "journal", "events.jsonl");
+  if (!existsSync(file)) return [];
+  return readFileSync(file, "utf8")
+    .split("\n")
+    .filter((line) => line.length > 0)
+    .map((line) => {
+      const parsed: unknown = JSON.parse(line);
+      return isObject(parsed) ? parsed : {};
+    });
+}
+
+async function withStateDirectory<T>(stateDirectory: string, action: () => Promise<T>): Promise<T> {
+  const previous = process.env.EMET_STATE_DIR;
+  process.env.EMET_STATE_DIR = stateDirectory;
+  try {
+    return await action();
+  } finally {
+    if (previous === undefined) delete process.env.EMET_STATE_DIR;
+    else process.env.EMET_STATE_DIR = previous;
+  }
+}
+
+describe("emet tracker close journal events", () => {
+  test("writes one ticket.close event per closed ticket, none for already-closed or failed", async () => {
+    const repo = await makeRepo();
+    writeConfig(repo, JSON.stringify({ version: 1, tracker: { kind: "github" } }));
+    const stateDirectory = makeTemporaryDirectory();
+    await withStateDirectory(stateDirectory, () =>
+      githubTracker(repo, "close", "CLA-12", "12", "99", "--pr", "7"),
+    );
+    const events = readJournalLines(stateDirectory);
+    expect(events).toHaveLength(1);
+    expect(events[0]?.kind).toBe("ticket.close");
+    expect(events[0]?.data).toEqual({ ticket: "CLA-12", issue: 12, pr: 7, reason: "completed" });
+  });
+
+  test("an unwritable journal leaves the exit code and output unchanged", async () => {
+    const repo = await makeRepo();
+    writeConfig(repo, JSON.stringify({ version: 1, tracker: { kind: "github" } }));
+    const blocker = path.join(makeTemporaryDirectory(), "file");
+    writeFileSync(blocker, "x");
+    const result = await withStateDirectory(blocker, () => githubTracker(repo, "close", "CLA-12"));
+    expect(result.code).toBe(0);
+    expect(result.stdout).toContain("closed");
   });
 });
