@@ -87,6 +87,9 @@ describe("env-fault checks", () => {
   test("a queued check with an invalid or missing start stays pending", () => {
     expect(classifyChecks([{ status: "QUEUED", startedAt: "nope" }], options)).toBe("pending");
     expect(classifyChecks([{ status: "QUEUED" }], options)).toBe("pending");
+    expect(classifyChecks([{ status: "QUEUED", startedAt: "0001-01-01T00:00:00Z" }], options)).toBe(
+      "pending",
+    );
   });
 
   test("classifies none and passing", () => {

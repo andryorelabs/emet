@@ -48,6 +48,14 @@ function failedRunIds(checks: readonly RawCheck[]): string[] {
   return [...ids];
 }
 
+function failureSignature(checks: readonly RawCheck[]): string {
+  return checks
+    .filter(isCodeFailure)
+    .map((check) => `${check.name ?? ""}|${check.detailsUrl ?? ""}|${check.startedAt ?? ""}`)
+    .toSorted()
+    .join("\n");
+}
+
 async function rerunFailed(gh: GhRunner, checks: readonly RawCheck[]): Promise<void> {
   await Promise.all(failedRunIds(checks).map((id) => gh(["run", "rerun", id, "--failed"])));
 }
@@ -65,6 +73,7 @@ export async function waitForChecks(
   let flakeReruns = 0;
   let rerunDone = false;
   let skipEvaluation = false;
+  let staleSignature: string | undefined;
   for (;;) {
     if (!skipEvaluation) {
       const viewArgs = ["pr", "view", String(options.pr), "--json", "statusCheckRollup"];
@@ -84,11 +93,18 @@ export async function waitForChecks(
       if (state === "env-fault") {
         return { state: "env-fault", failedChecks: [], flakeReruns, noChecks: false };
       }
-      if (state === "failing" && !unfinished) {
+      if (
+        staleSignature !== undefined &&
+        (unfinished || failureSignature(checks) !== staleSignature)
+      ) {
+        staleSignature = undefined;
+      }
+      if (state === "failing" && !unfinished && staleSignature === undefined) {
         if (options.rerunFlakes && !rerunDone) {
           // oxlint-disable-next-line eslint/no-await-in-loop -- sequential on purpose: polling depends on the rerun having been requested
           await rerunFailed(deps.gh, checks);
           flakeReruns = failedCheckNames(checks).length;
+          staleSignature = failureSignature(checks);
           rerunDone = true;
           skipEvaluation = true;
         } else {
@@ -119,8 +135,85 @@ export async function waitForChecks(
   }
 }
 
-export function run(_argv: string[]): Promise<void> {
-  console.error(`${BINARY} ci: not implemented`);
-  process.exitCode = 2;
-  return Promise.resolve();
+const DEFAULT_TIMEOUT_MINUTES = 30;
+const DEFAULT_POLL_SECONDS = 30;
+const EXIT_FAILED = 1;
+const EXIT_USAGE = 2;
+const EXIT_TIMEOUT = 3;
+const USAGE = `usage: ${BINARY} ci --pr <n> --wait [--rerun-flakes] [--timeout-minutes <n>] [--poll-seconds <n>]`;
+const KNOWN_FLAGS: ReadonlySet<string> = new Set([
+  "--pr",
+  "--wait",
+  "--rerun-flakes",
+  "--timeout-minutes",
+  "--poll-seconds",
+  "--json",
+]);
+const VALUE_FLAGS: ReadonlySet<string> = new Set(["--pr", "--timeout-minutes", "--poll-seconds"]);
+
+class CiUsageError extends Error {}
+
+function positiveNumber(argv: readonly string[], flag: string, fallback: number): number {
+  const index = argv.indexOf(flag);
+  if (index === -1) return fallback;
+  const raw = argv[index + 1];
+  const value = raw === undefined ? Number.NaN : Number(raw);
+  if (!Number.isFinite(value) || value <= 0) throw new CiUsageError(`invalid ${flag}\n${USAGE}`);
+  return value;
+}
+
+function parseCiArguments(argv: readonly string[]): {
+  options: WaitForChecksOptions;
+  pollMs: number;
+} {
+  for (let index = 0; index < argv.length; index += 1) {
+    const token = argv[index] ?? "";
+    if (!KNOWN_FLAGS.has(token)) throw new CiUsageError(`unknown argument "${token}"\n${USAGE}`);
+    if (VALUE_FLAGS.has(token)) index += 1;
+  }
+  const pr = positiveNumber(argv, "--pr", Number.NaN);
+  if (!Number.isInteger(pr) || !argv.includes("--wait")) throw new CiUsageError(USAGE);
+  const pollMs = positiveNumber(argv, "--poll-seconds", DEFAULT_POLL_SECONDS) * 1000;
+  const timeoutMs = positiveNumber(argv, "--timeout-minutes", DEFAULT_TIMEOUT_MINUTES) * 60_000;
+  return {
+    options: { pr, timeoutMs, pollMs, rerunFlakes: argv.includes("--rerun-flakes") },
+    pollMs,
+  };
+}
+
+/** Runs `gh` for real and resolves with its stdout, rejecting with its stderr on a non-zero exit. */
+export const realGh: GhRunner = async (args) => {
+  const result = await Bun.$`gh ${args}`.nothrow().quiet();
+  if (result.exitCode !== 0) {
+    throw new Error(result.stderr.toString().trim() || `gh exited ${result.exitCode}`);
+  }
+  return result.stdout.toString();
+};
+
+function exitCodeFor(state: CiOutcome["state"]): number {
+  if (state === "pass") return 0;
+  return state === "timeout" ? EXIT_TIMEOUT : EXIT_FAILED;
+}
+
+/**
+ * Entry point of `emet ci --pr <n> --wait`: prints the outcome as JSON and
+ * exits 0 on pass, 1 on fail or env-fault, 3 on timeout, 2 on bad arguments.
+ */
+export async function run(
+  argv: string[],
+  deps: WaitForChecksDeps = {
+    gh: realGh,
+    sleep: (ms) => new Promise((resolve) => setTimeout(resolve, ms)),
+    now: Date.now,
+  },
+): Promise<void> {
+  try {
+    const { options } = parseCiArguments(argv);
+    const outcome = await waitForChecks(options, deps);
+    console.log(JSON.stringify(outcome));
+    process.exitCode = exitCodeFor(outcome.state);
+  } catch (error: unknown) {
+    console.error(error instanceof Error ? error.message : String(error));
+    process.exitCode = error instanceof CiUsageError ? EXIT_USAGE : EXIT_FAILED;
+  }
 }

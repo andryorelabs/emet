@@ -15,6 +15,7 @@ import {
   type ChainRequest,
   type DiskStats,
 } from "./chain";
+import { ForgeConfigError } from "./config";
 
 async function rejectionMessage(promise: Promise<unknown>): Promise<string> {
   try {
@@ -164,6 +165,19 @@ describe("emet chain", () => {
     const outcome = await chainNextWave(REQUEST, depsFor(gateReply("chain")));
     expect(outcome.launched).toBe(false);
     expect(outcome.name).toBe("forge-609-w2");
+  });
+
+  test("a launch refusal for a later-wave session is not a usage error and names the session", async () => {
+    recorder.sessionNames = ["emet-609-w3"];
+    let thrown: unknown;
+    try {
+      await chainNextWave(REQUEST, depsFor(gateReply("chain")));
+    } catch (error: unknown) {
+      thrown = error;
+    }
+    expect(thrown).toBeInstanceOf(Error);
+    expect(thrown instanceof ForgeConfigError).toBe(false);
+    expect(thrown instanceof Error ? thrown.message : "").toContain("emet-609-w3");
   });
 
   test("a non-blocking orca issue does not stop the launch", async () => {

@@ -230,6 +230,14 @@ describe("gate run()", () => {
     expect(JSON.parse(readFileSync(counters, "utf8"))).toMatchObject({ ciEnvFaults: 0 });
   });
 
+  test("a pending run between two env-faults does not reset the counter", async () => {
+    writeJson(path.join(runDirectory, "verify", "CLA-1.json"), { ok: true });
+    await runGate(["CLA-1", "--run", "r1", "--ci", "env-fault"]);
+    await runGate(["CLA-1", "--run", "r1", "--ci", "pending"]);
+    const third = await runGate(["CLA-1", "--run", "r1", "--ci", "env-fault"]);
+    expect(JSON.parse(third.logs[0] ?? "")).toMatchObject({ next: "report-infrastructure" });
+  });
+
   test("integration fails twice then stops, a pass resets, --no-record skips", async () => {
     writeJson(path.join(runDirectory, "verify", "CLA-1.json"), { ok: true });
     const counters = path.join(runDirectory, "checks", "CLA-1.json");

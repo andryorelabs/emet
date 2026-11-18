@@ -268,7 +268,9 @@ function readCounters(file: string): CheckCounters {
 }
 
 function nextCounters(before: CheckCounters, ci: CiState, integration: CheckState): CheckCounters {
-  const ciEnvFaults = ci === "env-fault" ? before.ciEnvFaults + 1 : 0;
+  let ciEnvFaults = before.ciEnvFaults;
+  if (ci === "env-fault") ciEnvFaults += 1;
+  else if (ci === "pass" || ci === "fail") ciEnvFaults = 0;
   let integrationFailures = before.integrationFailures;
   if (integration === "fail") integrationFailures += 1;
   else if (integration === "pass") integrationFailures = 0;

@@ -287,7 +287,7 @@ export function isUnfinished(check: RawCheck): boolean {
 function isStaleQueued(check: RawCheck, nowMs: number, queuedStaleMs: number): boolean {
   if (check.status !== "QUEUED" || check.startedAt === undefined) return false;
   const startedMs = Date.parse(check.startedAt);
-  return !Number.isNaN(startedMs) && nowMs - startedMs >= queuedStaleMs;
+  return !Number.isNaN(startedMs) && startedMs > 0 && nowMs - startedMs >= queuedStaleMs;
 }
 
 /**

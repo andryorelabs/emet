@@ -315,10 +315,14 @@ describe("emet tracker close with tracker.kind github", () => {
     expect((await githubTracker(repo, "close", "1", "--pr", "x")).code).toBe(2);
   });
 
-  test("a malformed config is refused with exit 1", async () => {
+  test("a malformed config keeps the file-based close", async () => {
     const repo = await makeRepo();
     writeConfig(repo, "{not json");
-    expect((await githubTracker(repo, "close", "1")).code).toBe(1);
+    await seedSpec(repo);
+    await seedTicket(repo, "One");
+    const result = await githubTracker(repo, "close", "feat-01");
+    expect(result.code).toBe(0);
+    expect(stringField(parseJson(result.stdout), "status")).toBe("done");
   });
 
   test("tracker.kind local keeps the file-based close", async () => {

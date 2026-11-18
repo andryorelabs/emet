@@ -193,7 +193,9 @@ export async function chainNextWave(request: ChainRequest, deps: ChainDeps): Pro
     },
     deps.runner,
     deps.host,
-  );
+  ).catch((error: unknown) => {
+    throw error instanceof ForgeConfigError ? new Error(error.message, { cause: error }) : error;
+  });
   const listed = await deps.host.sessions.list(deps.runner);
   const verified = listed.some((row) => row.name === outcome.name);
   return { launched: true, verified, name: outcome.name, gate, issues };

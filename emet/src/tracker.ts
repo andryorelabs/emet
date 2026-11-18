@@ -352,7 +352,6 @@ async function isGithubTracker(): Promise<boolean> {
   const repoRoot = await resolveRepoRoot();
   if (repoRoot === null) return false;
   const loaded = await loadForgeConfig(repoRoot);
-  if (loaded.status === "malformed") throw new TrackerRefusedError(loaded.reason);
   return loaded.status === "ok" && loaded.config.tracker.kind === "github";
 }
 
