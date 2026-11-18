@@ -108,7 +108,9 @@ type ModuleName =
   | "ci"
   | "chain"
   | "map"
-  | "metrics";
+  | "metrics"
+  | "insights"
+  | "runcurrent";
 
 type ModuleRun = CommandSpec["run"];
 
@@ -182,6 +184,10 @@ async function loadRun(name: ModuleName): Promise<ModuleRun> {
       return (await import("./map")).run;
     case "metrics":
       return (await import("./metrics")).run;
+    case "insights":
+      return (await import("./insights")).run;
+    case "runcurrent":
+      return (await import("./runcurrent")).run;
   }
   throw new Error(`unknown command module "${String(name)}"`);
 }
@@ -326,7 +332,7 @@ export const COMMANDS: readonly CommandSpec[] = [
   {
     name: "status",
     summary: "per-wave Working, Checking, Ready or Needs-decision as JSON plus a summary line",
-    flags: [val("--spec")],
+    flags: [val("--spec"), bool("--brief")],
     run: runModule("status"),
   },
   {
@@ -517,6 +523,18 @@ export const COMMANDS: readonly CommandSpec[] = [
     summary: "token and cost metrics for a run",
     flags: [val("--run"), val("--root"), bool("--json")],
     run: runModule("metrics"),
+  },
+  {
+    name: "insights",
+    summary: "report on the journal: runs by origin, gate decisions, interventions, launches",
+    flags: [val("--since"), val("--repo"), bool("--json"), bool("--all"), bool("--mark-baseline")],
+    run: runModule("insights"),
+  },
+  {
+    name: "run",
+    summary: "run subcommands; `current` prints the active run",
+    flags: [bool("--json")],
+    run: runModule("runcurrent"),
   },
   {
     name: "guard",
