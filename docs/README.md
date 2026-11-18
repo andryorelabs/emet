@@ -34,6 +34,7 @@ An index of every document in this repository. Terms follow [GLOSSARY.md](../GLO
 - [`guide/models-and-effort.md`](guide/models-and-effort.md): the role, model and effort table, risk-tier routing, Haiku triage and what you set once.
 - [`guide/codex.md`](guide/codex.md): run emet on Codex CLI: install, `agentHost`, the single approval by hook, limits and `unverified` points.
 - [`guide/fleet.md`](guide/fleet.md): audit several repos at once with `emet doctor`.
+- [`guide/journal.md`](guide/journal.md): the event journal and `emet insights`.
 
 ## Reference
 
