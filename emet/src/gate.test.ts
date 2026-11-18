@@ -10,6 +10,11 @@ const clean: GateInput = {
   reviewRoundsCap: 2,
   ci: "pass",
   integration: "none",
+  onHold: "fix-and-continue",
+  fixRoundsUsed: 0,
+  fixRoundsCap: 2,
+  integrationFailures: 0,
+  ciEnvFaults: 0,
   attemptsUsed: 1,
   workerAttempts: 2,
   envFault: false,
@@ -60,13 +65,15 @@ describe("decide", () => {
   });
 
   test("open blocker holds while rounds remain, stops at the cap", () => {
-    const open = [{ severity: "blocker" as const }];
-    expect(decide({ ...clean, openFindings: open }).decision).toBe("hold");
-    expect(decide({ ...clean, openFindings: open, reviewRoundsUsed: 2 }).decision).toBe("stop");
+    const open = [{ severity: "blocker" as const, kind: "patch" as const }];
+    const stopMode = { ...clean, onHold: "stop" as const, openFindings: open };
+    expect(decide(stopMode).decision).toBe("hold");
+    expect(decide(stopMode).next).toBeUndefined();
+    expect(decide({ ...stopMode, reviewRoundsUsed: 2 }).decision).toBe("stop");
   });
 
   test("open major blocks high tier only", () => {
-    const open = [{ severity: "major" as const }];
+    const open = [{ severity: "major" as const, kind: "patch" as const }];
     expect(decide({ ...clean, openFindings: open }).decision).toBe("merge");
     expect(decide({ ...clean, tier: "high", openFindings: open }).decision).toBe("hold");
   });
@@ -78,7 +85,13 @@ describe("decide", () => {
   });
 
   test("red integration suite never merges or chains", () => {
-    const result = decide({ ...clean, integration: "fail", autoChain: true, wavesRemaining: 2 });
+    const result = decide({
+      ...clean,
+      integration: "fail",
+      integrationFailures: 2,
+      autoChain: true,
+      wavesRemaining: 2,
+    });
     expect(result.decision).toBe("stop");
     expect(result.reasons.join(" ")).toContain("integration");
   });
@@ -89,6 +102,55 @@ describe("decide", () => {
     expect(decide({ ...base, integration: "none" }).decision).toBe("merge");
     expect(decide({ ...base, integration: "pass", wavesRemaining: 0 }).decision).toBe("merge");
     expect(decide({ ...base, integration: "pass", autoChain: false }).decision).toBe("merge");
+  });
+
+  test("open patch findings hold for a fix round while rounds remain", () => {
+    const openFindings = [
+      { severity: "blocker" as const, kind: "patch" as const },
+      { severity: "critical" as const, kind: "patch" as const },
+    ];
+    const result = decide({ ...clean, openFindings });
+    expect(result).toMatchObject({ decision: "hold", next: "fix-findings", chargeAttempt: false });
+    expect(decide({ ...clean, openFindings, fixRoundsUsed: 1 }).next).toBe("fix-findings");
+  });
+
+  test("an open intent_gap finding stops", () => {
+    const openFindings = [{ severity: "minor" as const, kind: "intent_gap" as const }];
+    expect(decide({ ...clean, openFindings }).decision).toBe("stop");
+  });
+
+  test("exhausted fix rounds with a blocking finding stop", () => {
+    const openFindings = [{ severity: "blocker" as const, kind: "patch" as const }];
+    const result = decide({ ...clean, openFindings, fixRoundsUsed: 2 });
+    expect(result.decision).toBe("stop");
+    expect(result.reasons.join(" ")).toContain("fix rounds exhausted");
+  });
+
+  test("first integration failure reruns failed specs, second stops", () => {
+    const first = decide({ ...clean, integration: "fail", integrationFailures: 1 });
+    expect(first).toMatchObject({ decision: "hold", next: "rerun-failed-specs" });
+    expect(decide({ ...clean, integration: "fail", integrationFailures: 2 }).decision).toBe("stop");
+  });
+
+  test("integration failure stops at once under onHold stop", () => {
+    const result = decide({
+      ...clean,
+      onHold: "stop",
+      integration: "fail",
+      integrationFailures: 1,
+    });
+    expect(result.decision).toBe("stop");
+  });
+
+  test("a CI env-fault holds for a rerun, twice in a row reports infrastructure", () => {
+    const first = decide({ ...clean, ci: "env-fault", ciEnvFaults: 1 });
+    expect(first).toMatchObject({ decision: "hold", next: "rerun-ci", chargeAttempt: false });
+    const second = decide({ ...clean, ci: "env-fault", ciEnvFaults: 2 });
+    expect(second).toMatchObject({
+      decision: "hold",
+      next: "report-infrastructure",
+      chargeAttempt: false,
+    });
   });
 
   test("pending integration suite holds", () => {
