@@ -100,7 +100,7 @@ export async function waitForChecks(
         staleSignature = undefined;
       }
       if (state === "failing" && !unfinished && staleSignature === undefined) {
-        if (options.rerunFlakes && !rerunDone) {
+        if (options.rerunFlakes && !rerunDone && failedRunIds(checks).length > 0) {
           // oxlint-disable-next-line eslint/no-await-in-loop -- sequential on purpose: polling depends on the rerun having been requested
           await rerunFailed(deps.gh, checks);
           flakeReruns = failedCheckNames(checks).length;

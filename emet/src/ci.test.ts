@@ -134,7 +134,11 @@ describe("waitForChecks", () => {
       rollup([{ status: "COMPLETED", conclusion: "FAILURE", detailsUrl: "https://x/y" }]),
     ]);
     const outcome = await waitForChecks({ ...baseOptions, rerunFlakes: true }, deps);
-    expect(outcome.failedChecks).toEqual(["unnamed check"]);
+    expect(outcome).toMatchObject({
+      state: "fail",
+      failedChecks: ["unnamed check"],
+      flakeReruns: 0,
+    });
     expect(calls.some((call) => call[0] === "run")).toBe(false);
   });
 });
