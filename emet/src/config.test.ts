@@ -119,6 +119,7 @@ describe("loadForgeConfig", () => {
       },
       landing: { mode: "merge" },
       gate: { onHold: "stop" },
+      language: { conversation: "es", artifacts: "fr" },
       pr: { autoMerge: false, mergeMethod: "merge", maxCiFixAttempts: 3 },
       usage: { oversizedReadLines: 200, stalledMinutes: 5 },
       models: {
@@ -205,6 +206,16 @@ describe("loadForgeConfig", () => {
       { gate: { onHold: "continue" } },
       /"gate.onHold" must be one of fix-and-continue\|stop/,
     ],
+    [
+      "language.conversation",
+      { language: { conversation: "" } },
+      /"language.conversation" must be a non-empty string/,
+    ],
+    [
+      "language.artifacts",
+      { language: { artifacts: 3 } },
+      /"language.artifacts" must be a non-empty string/,
+    ],
     ["pr.autoMerge", { pr: { autoMerge: 1 } }, /"pr.autoMerge" must be a boolean/],
     ["pr.mergeMethod", { pr: { mergeMethod: "fast-forward" } }, /"pr.mergeMethod" must be one of/],
     [
@@ -231,6 +242,19 @@ describe("loadForgeConfig", () => {
     expect(configOf(await loadForgeConfig(repoRoot)).gate).toEqual({ onHold: "fix-and-continue" });
     await writeConfig({ gate: { onHold: "stop" } });
     expect(configOf(await loadForgeConfig(repoRoot)).gate).toEqual({ onHold: "stop" });
+  });
+
+  test("language defaults to en and accepts overrides", async () => {
+    await writeConfig({});
+    expect(configOf(await loadForgeConfig(repoRoot)).language).toEqual({
+      conversation: "en",
+      artifacts: "en",
+    });
+    await writeConfig({ language: { conversation: "es" } });
+    expect(configOf(await loadForgeConfig(repoRoot)).language).toEqual({
+      conversation: "es",
+      artifacts: "en",
+    });
   });
 
   test("accepts pr and handoff.autoChain overrides, including maxCiFixAttempts 0", async () => {

@@ -31,6 +31,22 @@ describe("COMMANDS", () => {
   });
 });
 
+describe("journal commands", () => {
+  test("insights declares its flags", () => {
+    const flags = findCommand("insights")?.flags ?? [];
+    expect(flags).toContainEqual({ name: "--since", value: true });
+    expect(flags).toContainEqual({ name: "--repo", value: true });
+    expect(flags).toContainEqual({ name: "--json", value: false });
+    expect(flags).toContainEqual({ name: "--all", value: false });
+    expect(flags).toContainEqual({ name: "--mark-baseline", value: false });
+  });
+
+  test("run declares --json and status declares --brief", () => {
+    expect(findCommand("run")?.flags).toContainEqual({ name: "--json", value: false });
+    expect(findCommand("status")?.flags).toContainEqual({ name: "--brief", value: false });
+  });
+});
+
 describe("outcomeCode", () => {
   test("maps documented per-command outcomes", () => {
     expect(outcomeCode("ask", 3)).toBe("slice-timeout");
