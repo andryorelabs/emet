@@ -2,7 +2,7 @@
 title: Referência de configuração
 description: Cada chave do emet.config.json com seu valor padrão e seu significado.
 seoTitle: Referência de configuração do emet
-sourceHash: f643569c960d5e35
+sourceHash: 5a9c5814c4711e31
 ---
 
 Cada chave do `emet.config.json`, com seu valor padrão e seu significado. A fonte da verdade é [`emet/schema/emet.config.schema.json`](../../emet/schema/emet.config.schema.json). Os termos seguem o [GLOSSARY.md](../../GLOSSARY.md). Voltar ao [README](../../README.md).
@@ -47,16 +47,27 @@ O que acontece depois que uma onda se fecha, e os limites de tamanho da nota de 
 - `launcher` (padrão `auto`, um entre `auto`, `orca`, `bg`): somente Claude Code; ignorado no host Codex, onde `emet launch` não abre aba do Orca. Abre também a onda em uma aba do Orca executando `claude attach`. O `auto` consulta o runtime do Orca (`orca status`), portanto funciona também a partir de sessões `claude --bg`, que não têm `TERM_PROGRAM`; `orca` sempre tenta; `bg` nunca. A onda roda em segundo plano de qualquer forma, e uma aba que falha ao abrir nunca interrompe a cadeia. `emet launch <spec-id> --wave <n>` faz o lançamento completo; veja [`emet launch`](cli.md#execuções-workers-e-slots).
 - `permissionMode` (padrão `bypassPermissions`, um entre `bypassPermissions`, `auto`, `acceptEdits`): somente Claude Code; ignorado no host Codex, onde a sessão encadeada usa [`codex.sandbox`](#codex). Modo de permissão da sessão encadeada. Não é herdado da sessão que a lança, porque o classificador do modo `auto` pode negar um passo como `gh pr merge` e deixar uma onda pela metade. Suas regras `permissions.deny` continuam valendo, mas o aviso de bypass precisa ter sido aceito uma vez de forma interativa (`skipDangerousModePermissionPrompt`).
 
+## gate
+
+O que `emet gate` faz com achados bloqueantes em aberto.
+
+```json
+{ "gate": { "onHold": "fix-and-continue" } }
+```
+
+- `onHold` (padrão `fix-and-continue`): com `fix-and-continue`, achados bloqueantes em aberto respondem `hold` com `next: "fix-findings"` enquanto [`budgets.fixRounds`](#budgets) ainda tiver rodadas. O gate responde `stop` apenas quando um achado em aberto é do tipo `intent_gap`, as rodadas de correção se esgotam com achados em aberto, ou a suíte de integração falha pela segunda vez depois de suas specs com falha serem reexecutadas (uma primeira falha responde `hold` com `next: "rerun-failed-specs"`). `stop` mantém o comportamento anterior. Uma CI que nunca rodou (`--ci env-fault`) responde `hold` com `next: "rerun-ci"` sem consumir `pr.maxCiFixAttempts`, e depois `next: "report-infrastructure"` na segunda vez seguida.
+
 ## budgets
 
 Todos opcionais.
 
 ```json
-{ "budgets": { "workerAttempts": 2, "reviewRounds": 2, "stallNudgeCap": 6 } }
+{ "budgets": { "workerAttempts": 2, "reviewRounds": 2, "fixRounds": 2, "stallNudgeCap": 6 } }
 ```
 
 - `workerAttempts` (padrão `2`, mínimo `1`): quantas vezes um ticket pode falhar no `verify` antes de o gate responder `defer`. O ticket recebe o rótulo de adiado e o restante da onda continua. Uma falha de ambiente, como o comando de testes terminar com 126/127 ou uma queda do provedor, pausa a execução sem gastar uma tentativa.
 - `reviewRounds` (padrão `2`, mínimo `1`): quantas rodadas de revisão/correção um ticket recebe antes de uma escalada para o próximo nível de modelo. O que ainda estiver em aberto depois disso recebe um parecer.
+- `fixRounds` (padrão `2`): quantas rodadas de correção uma onda recebe sob [`gate.onHold`](#gate) `fix-and-continue`. Cada uma termina com `emet review --recheck` e conta aqui, nunca contra `reviewRounds`. Sem rodadas restantes e com um achado bloqueante em aberto, o gate responde `stop`. Um ledger escrito sem este campo é lido como `0` usadas.
 - `stallNudgeCap` (padrão `6`, mínimo `1`): quantas vezes um worker travado é cutucado. A contagem nunca é reiniciada.
 
 ## models

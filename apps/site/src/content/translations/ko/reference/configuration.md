@@ -2,7 +2,7 @@
 title: 설정 레퍼런스
 description: emet.config.json의 모든 키를 기본값과 의미와 함께 설명합니다.
 seoTitle: emet 설정 레퍼런스
-sourceHash: f643569c960d5e35
+sourceHash: 5a9c5814c4711e31
 ---
 
 `emet.config.json`의 모든 키를 기본값과 의미와 함께 정리했습니다. 기준이 되는 원본은 [`emet/schema/emet.config.schema.json`](../../emet/schema/emet.config.schema.json)입니다. 용어는 [GLOSSARY.md](../../GLOSSARY.md)를 따릅니다. [README](../../README.md)로 돌아가기.
@@ -47,16 +47,27 @@ sourceHash: f643569c960d5e35
 - `launcher`(기본값 `auto`, `auto`, `orca`, `bg` 중 하나): Claude Code 전용이며, Codex 호스트에서는 무시되고 `emet launch`는 Orca 탭을 열지 않습니다. `claude attach`를 실행하는 Orca 탭에서도 웨이브를 엽니다. `auto`는 Orca 런타임(`orca status`)에 물어보므로 `TERM_PROGRAM`이 없는 `claude --bg` 세션에서도 동작합니다. `orca`는 항상 시도하고 `bg`는 시도하지 않습니다. 어느 쪽이든 웨이브는 백그라운드에서 실행되며, 탭을 열지 못해도 체인이 멈추지 않습니다. `emet launch <spec-id> --wave <n>`이 시작 전체를 수행합니다. [`emet launch`](cli.md#실행-워커-슬롯)를 참고하세요.
 - `permissionMode`(기본값 `bypassPermissions`, `bypassPermissions`, `auto`, `acceptEdits` 중 하나): Claude Code 전용이며, Codex 호스트에서는 무시되고 이어 붙인 세션은 [`codex.sandbox`](#codex)를 사용합니다. 이어 붙인 세션의 권한 모드입니다. 시작한 세션에서 상속되지 않습니다. `auto` 모드의 분류기가 `gh pr merge` 같은 단계를 거부해 웨이브가 반쯤 끝난 상태로 남을 수 있기 때문입니다. `permissions.deny` 규칙은 계속 적용되지만, 우회 경고를 대화형으로 한 번 수락해 두어야 합니다(`skipDangerousModePermissionPrompt`).
 
+## gate
+
+`emet gate`가 열린 차단 지적을 어떻게 처리하는지 정합니다.
+
+```json
+{ "gate": { "onHold": "fix-and-continue" } }
+```
+
+- `onHold`(기본값 `fix-and-continue`): `fix-and-continue`에서는 [`budgets.fixRounds`](#budgets)에 라운드가 남아 있는 동안 열린 차단 지적에 `hold`와 `next: "fix-findings"`로 응답합니다. 게이트가 `stop`으로 응답하는 경우는 열린 지적의 종류가 `intent_gap`일 때, 지적이 열린 채로 수정 라운드가 소진되었을 때, 또는 실패한 스펙을 다시 실행한 뒤 통합 스위트가 두 번째로 실패할 때뿐입니다(첫 실패는 `hold`와 `next: "rerun-failed-specs"`로 응답). `stop`은 이전 동작을 유지합니다. CI가 한 번도 실행되지 않은 경우(`--ci env-fault`)에는 `pr.maxCiFixAttempts`를 차감하지 않고 `hold`와 `next: "rerun-ci"`로 응답하고, 연속 두 번째에는 `next: "report-infrastructure"`로 응답합니다.
+
 ## budgets
 
 모두 선택 사항입니다.
 
 ```json
-{ "budgets": { "workerAttempts": 2, "reviewRounds": 2, "stallNudgeCap": 6 } }
+{ "budgets": { "workerAttempts": 2, "reviewRounds": 2, "fixRounds": 2, "stallNudgeCap": 6 } }
 ```
 
 - `workerAttempts`(기본값 `2`, 최솟값 `1`): 티켓이 `verify`에 실패할 수 있는 횟수이며, 이를 넘으면 게이트가 `defer`로 답합니다. 티켓에는 보류 라벨이 붙고 웨이브의 나머지는 계속됩니다. 테스트 명령이 126/127로 종료되거나 제공자 장애가 발생하는 등의 환경 문제는 시도 횟수를 소모하지 않고 실행을 일시 중지합니다.
 - `reviewRounds`(기본값 `2`, 최솟값 `1`): 티켓이 다음 모델 티어로 한 번 에스컬레이션되기 전에 받을 수 있는 리뷰/수정 라운드 수입니다. 그 뒤에도 남아 있는 항목에는 판정이 내려집니다.
+- `fixRounds`(기본값 `2`): [`gate.onHold`](#gate)가 `fix-and-continue`일 때 웨이브가 받는 수정 라운드 수. 각 라운드는 `emet review --recheck`로 끝나며 여기에 포함되고 `reviewRounds`에는 포함되지 않습니다. 남은 라운드가 없고 차단 지적이 열려 있으면 게이트는 `stop`으로 응답합니다. 이 필드 없이 작성된 원장은 사용 `0`으로 읽습니다.
 - `stallNudgeCap`(기본값 `6`, 최솟값 `1`): 멈춘 워커를 재촉하는 횟수입니다. 이 횟수는 초기화되지 않습니다.
 
 ## models

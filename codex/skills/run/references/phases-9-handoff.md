@@ -45,8 +45,16 @@ instead of one session accumulating every wave in the run (see
    folds in `handoff.autoChain`, the merged PR, the green integration suite,
    and nothing flagged); anything else — `merge` without `chain`, `hold`,
    `stop`, `defer` — is a human step. To chain, launch it yourself:
-   - Run `emet launch <spec-id> --wave <n+1>` from the repo root, as its
-     own Bash call. It refuses when a live `emet-<spec-id>-*` session
+   - Run `emet chain --spec <spec-id> --wave <n+1> --ticket <ticket> --tier
+     … --ci … --integration … --waves-remaining <n>` from the repo root, as
+     its own Bash call, with the same gate flags as Phase 8. It runs `emet
+     gate`, and only on `chain` checks readiness (host memory, free disk and
+     inodes in the repo and `/tmp`, the `orca` CLI) and launches like `emet
+     launch <spec-id> --wave <n+1>`. Any other decision, a blocking readiness
+     problem (`low-memory`, `low-disk`, `low-inodes`, `orca-unavailable`) or an
+     existing session for that spec and wave exits 1 with the reasons and
+     launches nothing: report them and use the manual path below. The launch
+     refuses when a live `emet-<spec-id>-*` session
      already exists, starts a detached `codex exec` running `$emet:run --dispatch <spec-id>` and records its thread id, so `codex exec resume <id>` continues it. It prints one JSON line. It prints one JSON line:
      `{ name, id, attach, orcaTab: { opened, reason } }`.
    - The permission mode comes from the config (default

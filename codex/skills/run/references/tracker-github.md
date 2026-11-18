@@ -41,10 +41,24 @@ wants prioritized dispatch (an empty `priorityLabels` degrades to
   priorityLabels` to an integer, sort descending, `createdAt` ascending as
   the tiebreaker; with no `priorityLabels` configured, sort by `createdAt`
   ascending only.
+- **ticket.close**: `emet tracker close <ticket>... [--pr <n>]` runs `gh issue
+  close <n> --reason completed` per ticket (`CLA-<n>`, `#<n>` or a bare
+  number), verifies the state, and reports `closed` or `already-closed`.
 - **state.isClosed**: `state == "closed"` (`stateReason` distinguishes
   `completed` from `not_planned`/canceled).
-- **pr.referenceLines**: closing keyword `Closes #24, #25, #26` (GitHub's
-  own multi-issue syntax) in the PR body; a bare `Refs: #24` commit trailer
+- **pr.referenceLines**: closing keyword, one `Closes #<n>` per line and one
+  line per ticket, in the PR body:
+
+  ```
+  Closes #24
+  Closes #25
+  Closes #26
+  ```
+
+  Phase 8 counts the lines with `grep -c '^Closes'` against the wave's
+  tickets, so never a comma list. After the merge, `emet tracker close
+  <ticket>... --pr <n>` closes any ticket the keyword missed; a bare `Refs: #24` commit trailer
   for a ticket touched but not finished by that commit.
+
 - **branch.nameFor**: `<branchPrefix>-<issue number>-<slug>` — same
   derivation regardless of tracker.

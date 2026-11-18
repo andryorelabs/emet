@@ -54,9 +54,25 @@ rounds, no other fields; `[]` = nothing blocks.
 Refuter: once, over all blocker/critical findings together, try to refute them;
 drop or downgrade what you refute.
 
-## Recheck variant
+## Recheck variant: fix round
 
-Give the reviewer only the findings file and the fix diff:
+Used under `gate.onHold: fix-and-continue`. Give the reviewer only the findings
+file and the fix diff:
+
+```
+Recheck round {{round}} of {{fix_rounds}} on `{{integration_branch}}`. Findings:
+`.emet/review-{{run_id}}.json`; fix diff: `{{diff_path}}`
+(`git diff {{reviewed_sha}}..HEAD`). Emit a JSON array of `{id, resolved}`, one entry per
+finding in the file (`resolved: true` only if the fix diff fixes it). Do not
+re-emit findings; new issues are not part of a recheck.
+```
+
+Recorded with `emet review --recheck --verdicts`.
+
+## Recheck variant: stop-mode re-review
+
+Used under `gate.onHold: stop`. Give the reviewer only the findings file and
+the fix diff:
 
 ```
 Recheck round {{round}} of 2 on `{{integration_branch}}`. Findings:
@@ -65,3 +81,5 @@ Recheck round {{round}} of 2 on `{{integration_branch}}`. Findings:
 new blocker/critical must cite a prior id or a file in the fix diff, else
 `kind: "defer"`.
 ```
+
+Recorded with `emet review --findings`.

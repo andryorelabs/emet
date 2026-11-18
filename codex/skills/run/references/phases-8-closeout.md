@@ -89,22 +89,46 @@ Record the reviewer's findings JSON per ticket: `emet review --ticket
 <ticket> --findings <file|-> [--changed <files since the last round>]`. The
 CLI enforces triage order (intent_gap, bad_plan, patch, defer) and the
 `budgets.reviewRounds` cap, and exits 1 while findings are open. Fix, then
-re-dispatch `emet:emet-reviewer` in `recheck` mode (ledger plus the diff from the
-reviewed sha only; "Recheck variant") and record again, also after any CI fix.
+with `gate.onHold: stop` (or when no fix round applies) re-dispatch
+`emet:emet-reviewer` with the "Recheck variant: stop-mode re-review" (ledger
+plus the diff from the reviewed sha only) and record again through `review
+--findings`, also after any CI fix. Under `fix-and-continue`, use the fix round
+below instead.
 At the cap, escalate once: `emet review --ticket <ticket> --escalate --model
 <current>` prints the next tier (exit 1 if none); run one fresh worker on it.
 Anything still open you rule on: `emet review --ticket <ticket> --rule
 "<what>" --why "<why>" --cost "<cost if wrong>"`. `--rulings` prints them
 for "Rulings I made" in the final report and PR body.
 
+**Fix round.** With `gate.onHold: fix-and-continue` (the default) open blocking
+findings do not end the wave: `emet gate` answers `hold` with `next:
+"fix-findings"` while `budgets.fixRounds` (default 2) has rounds left. Fix the
+open findings, then end the round with a recheck: re-dispatch
+`emet:emet-reviewer` with the "Recheck variant: fix round" over only the findings that were open
+when the round began and the fix diff. The reviewer emits a JSON array of
+`{id, resolved}` with one entry per finding open at round start (not the
+findings array minus the fixed ones); record those verdicts with `emet
+review --ticket <ticket> --recheck --verdicts <file|->` (a JSON array of
+`{id, resolved}`). A finding becomes `resolved` only through a recheck verdict.
+A recheck costs one fix round, never a review round, and exits 1 naming the
+cap once `budgets.fixRounds` is used. `emet gate` answers `stop` when an open
+finding has kind `intent_gap`, or when the fix rounds are exhausted with
+findings still open. `gate.onHold: stop` keeps the older behavior: `hold` and
+`stop` leave the PR open for a human.
+
 Then run `commands.fullSuite` exactly once over the merged result (the
-Phase 7 singleton, if any). Red blocks the PR and `autoChain`. Finally ask
+Phase 7 singleton, if any). Red blocks the PR and `autoChain`; a first red answers `hold` with `next:
+"rerun-failed-specs"`: rerun only the failed specs in isolation and pass the
+result again as `--integration`, and a second red answers `stop`. Finally ask
 the one decision: `emet gate <ticket> --tier <assess tier> --ci
 <pass|fail|pending|none> --integration <pass|fail|pending|none>
 --waves-remaining <n>` prints
 `{decision, reasons}` as JSON — `merge`, `hold`, `chain`, `stop`, or `defer`
-(label `emet:deferred`; the wave continues). `hold` and `stop` leave the PR
-open with the human-decision label; don't re-derive the rules in prose.
+(label `emet:deferred`; the wave continues). A `hold` carries a `next` value
+and you act on it instead of stopping: `fix-findings` (fix round above),
+`rerun-failed-specs` (integration suite), `rerun-ci` or `report-infrastructure`
+(CI environment fault, below). A `hold` without `next` and every `stop` leave
+the PR open with the human-decision label; don't re-derive the rules in prose.
 
 The coordinator writes a tracker-state transition only where
 `emet.config.json`'s `tracker.transitions` names it `coordinator` for
@@ -123,8 +147,9 @@ touches but doesn't finish).
 anything else** — a markdown formatter reflowing the blank line that
 separates it from the rest of the PR body silently breaks the tracker's
 keyword parsing (see `references/tracker-<kind>.md`'s `pr.referenceLines`):
-`gh pr view <n> --json body -q .body | grep -c '^Closes'` must return `1`+;
-if it doesn't, fix it with `gh pr edit <n> --body-file …` before reporting
+`gh pr view <n> --json body -q .body | grep -c '^Closes'` must equal the
+number of tickets this wave completed, since the body carries one `Closes #<n>`
+line per ticket; if it is lower, fix it with `gh pr edit <n> --body-file …` before reporting
 the wave done. This has no cheap fix later — the merge webhook that would
 have closed those tickets doesn't retry, so a PR that already merged without
 this line needs a manual per-ticket state write instead.
@@ -134,15 +159,34 @@ this line needs a manual per-ticket state write instead.
 
 1. `pr.autoMerge: false` → leave the PR open, skip cleanup of this wave's
    branches, and say so in the report.
-2. No checks at all (`gh pr checks <n> --json bucket -q length` returns `0`,
-   or `gh` says none are reported) → CI counts as `pass`: go to the gate.
-3. Checks exist → `gh pr checks <n> --watch --fail-fast`. All green → the gate.
-   Run `emet gate <ticket> --ci pass …` per ticket (above); merge only if
-   every ticket answers `merge` or `chain`: `gh pr merge <n> --<mergeMethod>
-   --delete-branch`. Then, as its own call, `emet spec-merge --spec <spec-id>`
-   folds the spec's `.emet/runs/<spec-id>/spec-deltas/` into `specs.dir`
-   (exit 1 = conflict or scenario loss, nothing written: report it).
-4. A check failed → never read the CI log yourself (no `--log-failed` into
+2. Wait for CI with `emet ci --pr <n> --wait --rerun-flakes` (add
+   `--timeout-minutes <m>`, default 30). It polls the checks, reruns each failed
+   check once through `gh run rerun --failed` (a check that then passes is a
+   Flake), never merges, and prints `state: pass | fail | env-fault | timeout`,
+   the failed checks and `flakeReruns`. A PR with no checks at all is `pass`
+   with `noChecks: true`. Exit 0 pass, 1 fail or env-fault, 3 timeout.
+3. `state: pass` → the gate. Run `emet gate <ticket> --ci pass …` per ticket
+   (above); merge only if every ticket answers `merge` or `chain`: `gh pr merge
+   <n> --<mergeMethod> --delete-branch`. Then, as its own call, `emet
+   spec-merge --spec <spec-id>` folds the spec's
+   `.emet/runs/<spec-id>/spec-deltas/` into `specs.dir` (exit 1 = conflict or
+   scenario loss, nothing written: report it). Then close the tickets: with
+   `tracker.kind` `github`, `emet tracker close <ticket>... --pr <n>` closes
+   each with `gh issue close --reason completed`, verifies its state and adds
+   "Landed in #<n>" (idempotent: an already closed ticket reports
+   `already-closed`; exit 1 if any ticket failed, the rest are still
+   processed). Linear tickets are not closed by the CLI: confirm each is Done
+   through the Linear MCP.
+   `state: timeout` → CI did run but has not finished: pass `--ci pending`,
+   rerun `emet ci --wait` once, and if it still times out leave the PR open
+   and report.
+   `state: env-fault` → a CI that never ran, e.g.
+   `STARTUP_FAILURE`, is an Environment fault, not a code failure: pass
+   `--ci env-fault` to the gate. The first answers `hold` with `next:
+   "rerun-ci"` and charges no `pr.maxCiFixAttempts`; rerun and run `emet ci`
+   again. A second consecutive one answers `next: "report-infrastructure"`:
+   leave the PR open with the human-decision label and report it.
+4. `state: fail` → never read the CI log yourself (no `--log-failed` into
    your own context). Run a read-only `codex exec` on `models.triage` (default
    `haiku`) to fetch and read it (`gh run view <run-id> --log-failed`) and
    return at most ~2k tokens: the failing check, the root-cause error, and

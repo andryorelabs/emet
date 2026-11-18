@@ -2,7 +2,7 @@
 title: 設定リファレンス
 description: emet.config.json のすべてのキーについて、既定値と意味を説明します。
 seoTitle: emet の設定リファレンス
-sourceHash: f643569c960d5e35
+sourceHash: 5a9c5814c4711e31
 ---
 
 `emet.config.json` のすべてのキーを、既定値と意味とともに示します。信頼できる情報源は [`emet/schema/emet.config.schema.json`](../../emet/schema/emet.config.schema.json) です。用語は [GLOSSARY.md](../../GLOSSARY.md) に従います。[README](../../README.md) に戻る。
@@ -47,16 +47,27 @@ sourceHash: f643569c960d5e35
 - `launcher`（既定は `auto`、`auto`、`orca`、`bg` のいずれか）: Claude Code のみです。Codex ホストでは無視され、`emet launch` は Orca タブを開きません。`claude attach` を実行する Orca タブでもウェーブを開きます。`auto` は Orca ランタイム（`orca status`）に問い合わせるため、`TERM_PROGRAM` のない `claude --bg` セッションからも動作します。`orca` は常に試行し、`bg` は一切試行しません。どちらの場合もウェーブはバックグラウンドで動作し、タブを開けなくてもチェーンが止まることはありません。`emet launch <spec-id> --wave <n>` が起動の全体を行います。[`emet launch`](cli.md#実行ワーカースロット) を参照してください。
 - `permissionMode`（既定は `bypassPermissions`、`bypassPermissions`、`auto`、`acceptEdits` のいずれか）: Claude Code のみです。Codex ホストでは無視され、チェーンされたセッションは [`codex.sandbox`](#codex) を使います。チェーンされたセッションの権限モードです。起動元のセッションからは継承されません。`auto` モードの分類器が `gh pr merge` のようなステップを拒否し、ウェーブが中途半端な状態で終わるおそれがあるためです。`permissions.deny` のルールは引き続き適用されますが、バイパスの警告を対話的に一度承認しておく必要があります（`skipDangerousModePermissionPrompt`）。
 
+## gate
+
+`emet gate` が未解決のブロッキング指摘をどう扱うかを定めます。
+
+```json
+{ "gate": { "onHold": "fix-and-continue" } }
+```
+
+- `onHold`（デフォルト `fix-and-continue`）: `fix-and-continue` では、[`budgets.fixRounds`](#budgets) にラウンドが残っている間、未解決のブロッキング指摘に対して `hold` と `next: "fix-findings"` を返します。ゲートが `stop` を返すのは、未解決の指摘に種別 `intent_gap` がある場合、指摘が未解決のまま修正ラウンドを使い切った場合、または失敗したスペックを再実行したあとで統合スイートが 2 回目も失敗した場合だけです（最初の失敗は `hold` と `next: "rerun-failed-specs"` を返します）。`stop` は従来の動作を維持します。CI が一度も実行されなかった場合（`--ci env-fault`）は、`pr.maxCiFixAttempts` を消費せずに `hold` と `next: "rerun-ci"` を返し、2 回連続したときは `next: "report-infrastructure"` を返します。
+
 ## budgets
 
 すべて任意です。
 
 ```json
-{ "budgets": { "workerAttempts": 2, "reviewRounds": 2, "stallNudgeCap": 6 } }
+{ "budgets": { "workerAttempts": 2, "reviewRounds": 2, "fixRounds": 2, "stallNudgeCap": 6 } }
 ```
 
 - `workerAttempts`（既定は `2`、最小は `1`）: チケットが `verify` に失敗できる回数で、これを超えるとゲートは `defer` と答えます。チケットには保留ラベルが付き、ウェーブの残りは続行されます。テストコマンドが 126/127 で終了する、プロバイダー障害が起きるといった環境上の障害は、試行回数を消費せずに実行を一時停止します。
 - `reviewRounds`（既定は `2`、最小は `1`）: 次のモデルティアへ 1 回エスカレーションするまでに、チケットが受けられるレビューと修正のラウンド数です。それでも未解決のものには裁定が下されます。
+- `fixRounds`（デフォルト `2`）: [`gate.onHold`](#gate) が `fix-and-continue` のとき、ウェーブが得られる修正ラウンドの数。各ラウンドは `emet review --recheck` で終わり、ここに数えられ、`reviewRounds` には数えられません。ラウンドが残っておらずブロッキング指摘が未解決の場合、ゲートは `stop` を返します。これなしで書かれた台帳は使用済み `0` として読まれます。
 - `stallNudgeCap`（既定は `6`、最小は `1`）: 停滞したワーカーを促す回数です。カウントはリセットされません。
 
 ## models
