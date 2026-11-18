@@ -52,8 +52,7 @@ async function capture(argv: string[]): Promise<string> {
 
 function parseData(output: string): Record<string, unknown> {
   const parsed: unknown = JSON.parse(output);
-  const payload = isObject(parsed) ? parsed.data : undefined;
-  return isObject(payload) ? payload : {};
+  return isObject(parsed) ? parsed : {};
 }
 
 describe("summarizeJournal", () => {
@@ -145,6 +144,27 @@ describe("emet insights", () => {
     const data = parseData(await capture(["--json", "--all"]));
     expect(data.ticketsClosed).toBe(2);
     expect(data.skippedLines).toBe(1);
+  });
+
+  test("a baseline in an older segment excludes only events before it", async () => {
+    writeFileSync(
+      path.join(directory, "events.2.jsonl"),
+      lines(event("ticket.close"), event("baseline")),
+    );
+    writeFileSync(path.join(directory, "events.1.jsonl"), lines(event("ticket.close")));
+    const data = parseData(await capture(["--json"]));
+    expect(data.ticketsClosed).toBe(1);
+  });
+
+  test("unverified launches count as failed", () => {
+    const report = summarizeJournal(
+      [
+        event("launch.result", { outcome: "started" }, { origin: "auto" }),
+        event("launch.result", { outcome: "unverified" }, { origin: "auto" }),
+      ],
+      { all: true },
+    );
+    expect(report.launches).toEqual({ ok: 1, failed: 1 });
   });
 
   test("pretty output is the default", async () => {

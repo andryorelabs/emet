@@ -100,6 +100,21 @@ describe("gate run() journal", () => {
     expect(kinds).toEqual(["launch.result", "gate.decision"]);
   });
 
+  test("a later wave continued by hand still records an intervention", async () => {
+    appendEvent({
+      kind: "launch.result",
+      repo: root,
+      origin: "auto",
+      data: { spec: "700", wave: 1, name: "emet-700-w1", outcome: "started" },
+    });
+    writeJson(path.join(root, ".emet", "runs", "emet700w2111111", "verify", "CLA-1.json"), {
+      ok: true,
+    });
+    await runGate(["CLA-1", "--run", "emet700w2111111", "--ci", "pass"]);
+    const kinds = readJournalSegments().events.map((event) => event.kind);
+    expect(kinds).toEqual(["launch.result", "gate.decision", "intervention"]);
+  });
+
   test("--no-record writes no event", async () => {
     writeJson(path.join(runDirectory, "verify", "CLA-1.json"), { ok: true });
     await runGate(["CLA-1", "--run", "r1", "--ci", "pass", "--no-record"]);

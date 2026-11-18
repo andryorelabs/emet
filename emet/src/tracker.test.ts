@@ -267,7 +267,12 @@ async function githubTracker(
   writeFileSync(gh, FAKE_GH, { mode: 0o755 });
   const child = Bun.spawn([process.execPath, TRACKER_ENTRY, ...args], {
     cwd: repo,
-    env: { ...process.env, PATH: `${bin}:${process.env.PATH ?? ""}`, FAKE_GH_DIR: bin },
+    env: {
+      ...process.env,
+      PATH: `${bin}:${process.env.PATH ?? ""}`,
+      FAKE_GH_DIR: bin,
+      EMET_STATE_DIR: process.env.EMET_STATE_DIR ?? path.join(bin, "state"),
+    },
     stdout: "pipe",
     stderr: "pipe",
   });

@@ -311,9 +311,10 @@ export function filesystemTypeOf(target: string, mountsText: string): string | n
   return best?.type ?? null;
 }
 
-function readMountsText(): string | null {
+/** Reads the mount table; `null` where it does not exist, as on macOS. */
+export function readMountsText(file = "/proc/mounts"): string | null {
   try {
-    return readFileSync("/proc/mounts", "utf8");
+    return readFileSync(file, "utf8");
   } catch {
     return null;
   }
@@ -333,6 +334,12 @@ export function findJournalFilesystemFindings(env?: Env, mountsText?: string | n
   return [
     `state dir ${directory} is on a network filesystem (${type}); journal appends may interleave or be lost`,
   ];
+}
+
+/** The `Journal (warning only)` block, or an empty string when there is nothing to warn about. */
+export function formatJournalFindings(findings: readonly string[]): string {
+  if (findings.length === 0) return "";
+  return `\nJournal (warning only):\n${findings.map((line) => `  - ${line}`).join("\n")}`;
 }
 
 async function readRawConfig(repoRoot: string): Promise<unknown> {
@@ -1159,12 +1166,8 @@ async function main(targets: readonly string[]): Promise<void> {
     console.log(`\nLegacy state:\n${legacyStateFindings.map((line) => `  - ${line}`).join("\n")}`);
   }
 
-  const journalFindings = findJournalFilesystemFindings();
-  if (journalFindings.length > 0) {
-    console.log(
-      `\nJournal (warning only):\n${journalFindings.map((line) => `  - ${line}`).join("\n")}`,
-    );
-  }
+  const journalBlock = formatJournalFindings(findJournalFilesystemFindings());
+  if (journalBlock !== "") console.log(journalBlock);
 
   const installDrift = await findInstallDrift(os.homedir());
   if (installDrift.length > 0) {

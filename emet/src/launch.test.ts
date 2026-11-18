@@ -143,10 +143,33 @@ describe("launch journal", () => {
     expect(hasLaunchResult({ spec: null, wave: null })).toBe(false);
   });
 
-  test("resolveWaveContext reads the spec from the run id when no phase exists", () => {
-    expect(resolveWaveContext(journalRoot, "emet621w2233041")).toEqual({ spec: "621", wave: null });
-    expect(resolveWaveContext(journalRoot, "r1")).toEqual({ spec: null, wave: null });
-    expect(resolveWaveContext(journalRoot)).toEqual({ spec: null, wave: null });
+  test("hasLaunchResult ignores a launch.result from another repo", () => {
+    appendEvent({
+      kind: "launch.result",
+      repo: "/repo-a",
+      origin: "auto",
+      data: { spec: "7", wave: 2 },
+    });
+    expect(hasLaunchResult({ spec: "7", wave: 2, repo: "/repo-a" })).toBe(true);
+    expect(hasLaunchResult({ spec: "7", wave: 2, repo: "/repo-b" })).toBe(false);
+  });
+
+  test("resolveWaveContext reads spec and wave from the run id when no phase exists", () => {
+    expect(resolveWaveContext(journalRoot, "emet621w2233041")).toEqual({
+      spec: "621",
+      wave: 2,
+      repo: journalRoot,
+    });
+    expect(resolveWaveContext(journalRoot, "r1")).toEqual({
+      spec: null,
+      wave: null,
+      repo: journalRoot,
+    });
+    expect(resolveWaveContext(journalRoot)).toEqual({
+      spec: null,
+      wave: null,
+      repo: journalRoot,
+    });
   });
 });
 

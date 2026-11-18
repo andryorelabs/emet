@@ -199,9 +199,11 @@ async function openOrcaTab(
 export interface WaveContext {
   readonly spec: string | null;
   readonly wave: number | null;
+  readonly repo?: string;
 }
 
-const RUN_ID_SPEC_PATTERN = /^[A-Za-z]+(\d+)w\d+$/;
+const RUN_ID_PATTERN = /^[A-Za-z]+(\d+)w(\d+)$/;
+const RUN_ID_TIME_DIGITS = 6;
 
 /**
  * Reads the spec and wave of the current run from the phase file, falling back
@@ -209,8 +211,14 @@ const RUN_ID_SPEC_PATTERN = /^[A-Za-z]+(\d+)w\d+$/;
  */
 export function resolveWaveContext(repoRoot: string, runId?: string): WaveContext {
   const phase = readPhase(repoRoot);
-  const fromRunId = runId === undefined ? undefined : RUN_ID_SPEC_PATTERN.exec(runId)?.[1];
-  return { spec: phase?.spec ?? fromRunId ?? null, wave: phase?.wave ?? null };
+  const match = runId === undefined ? null : RUN_ID_PATTERN.exec(runId);
+  const waveDigits = match?.[2]?.slice(0, -RUN_ID_TIME_DIGITS) ?? "";
+  const fromRunId = waveDigits === "" ? null : Number(waveDigits);
+  return {
+    spec: phase?.spec ?? match?.[1] ?? null,
+    wave: phase?.wave ?? fromRunId,
+    repo: repoRoot,
+  };
 }
 
 /**
@@ -222,6 +230,7 @@ export function hasLaunchResult(context: WaveContext): boolean {
   return readJournalSegments().events.some(
     (event) =>
       event.kind === "launch.result" &&
+      (context.repo === undefined || event.repo === context.repo) &&
       event.data.spec === context.spec &&
       (context.wave === null || event.data.wave === context.wave),
   );
@@ -280,6 +289,14 @@ export async function launchWave(
       runner,
     );
   } catch (error: unknown) {
+    if (recordResult) {
+      appendEvent({
+        kind: "launch.result",
+        repo: request.repoRoot,
+        origin: "auto",
+        data: { spec: request.specId, wave: request.wave, name, outcome: "failed", via: "launch" },
+      });
+    }
     throw new Error(`${BINARY} launch: ${errorMessage(error)}`, { cause: error });
   }
 

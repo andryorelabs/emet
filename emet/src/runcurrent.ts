@@ -33,14 +33,24 @@ const NO_RUN: CurrentRun = {
   state: "none",
 };
 
+const RUN_ID_PATTERN = /^[A-Za-z]+(\d+)w(\d+)$/;
+const RUN_ID_TIME_DIGITS = 6;
+
+function parseRunId(runId: string | null): { spec: string | null; wave: number | null } {
+  const match = runId === null ? null : RUN_ID_PATTERN.exec(runId);
+  const waveDigits = match?.[2]?.slice(0, -RUN_ID_TIME_DIGITS) ?? "";
+  return { spec: match?.[1] ?? null, wave: waveDigits === "" ? null : Number(waveDigits) };
+}
+
 /** Describes the active run; a missing, malformed or finished phase record is `none`. */
 export function describeCurrentRun(root: string, deps: Partial<DescribeDeps> = {}): CurrentRun {
   const record = (deps.readPhase ?? readPhase)(root);
   if (record === null || record.phase === "done" || record.phase === "failed") return NO_RUN;
+  const fromRunId = parseRunId(record.runId);
   return {
     runId: record.runId,
-    spec: record.spec,
-    wave: record.wave,
+    spec: record.spec ?? fromRunId.spec,
+    wave: record.wave ?? fromRunId.wave,
     phase: record.phase,
     updatedAt: record.updatedAt,
     state: "active",

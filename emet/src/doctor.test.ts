@@ -37,6 +37,8 @@ import {
   findLegacyNameWarnings,
   filesystemTypeOf,
   findJournalFilesystemFindings,
+  formatJournalFindings,
+  readMountsText,
   findLegacyStateDirFindings,
   findMissingDocs,
   isReportClean,
@@ -1150,6 +1152,15 @@ describe("legacy name findings", () => {
     expect(filesystemTypeOf("/mnt/my disk/state", mounts)).toBe("cifs");
     expect(filesystemTypeOf("/mnt/my diskette", mounts)).toBe("ext4");
     expect(filesystemTypeOf("/x", "")).toBeNull();
+  });
+
+  test("the journal block is empty without findings and lists each one otherwise", () => {
+    expect(formatJournalFindings([])).toBe("");
+    expect(formatJournalFindings(["a", "b"])).toBe("\nJournal (warning only):\n  - a\n  - b");
+  });
+
+  test("a missing mount table reads as null", () => {
+    expect(readMountsText("/nonexistent/mounts")).toBeNull();
   });
 
   test("the real /proc/mounts read does not throw", () => {

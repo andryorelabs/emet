@@ -598,6 +598,7 @@ describe("planOrphanedScaffolds", () => {
 describe("reclaim against a real repository", () => {
   const originalDirectory = process.cwd();
   let repo: string;
+  let previousStateDirectory: string | undefined;
   let logSpy: { mockRestore: () => void; mock: { calls: unknown[][] } };
 
   const config: ForgeConfig = {
@@ -660,11 +661,15 @@ describe("reclaim against a real repository", () => {
     await git("commit", "-q", "-m", "base");
     mkdirSync(path.join(repo, ".claude", "worktrees"), { recursive: true });
     process.chdir(repo);
+    previousStateDirectory = process.env.EMET_STATE_DIR;
+    process.env.EMET_STATE_DIR = path.join(repo, ".state");
     logSpy = spyOn(console, "log").mockReturnValue(undefined);
   });
 
   afterEach(() => {
     logSpy.mockRestore();
+    if (previousStateDirectory === undefined) delete process.env.EMET_STATE_DIR;
+    else process.env.EMET_STATE_DIR = previousStateDirectory;
     process.chdir(originalDirectory);
     process.exitCode = 0;
     rmSync(repo, { recursive: true, force: true });

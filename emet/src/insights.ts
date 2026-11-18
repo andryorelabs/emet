@@ -8,7 +8,7 @@
 import path from "node:path";
 
 import { resolveRepoRoot } from "./config";
-import { stringifySorted, successEnvelope } from "./envelope";
+import { stringifySorted } from "./envelope";
 import { exitCodes } from "./exit-codes";
 import { appendEvent, readJournalSegments, type JournalDeps, type JournalEvent } from "./journal";
 
@@ -34,7 +34,7 @@ const USAGE =
   "usage: emet insights [--since <iso|7d|30d>] [--repo <path>] [--all] [--json] [--mark-baseline]";
 const TOP_REASON_LIMIT = 5;
 const DAY_MS = 86_400_000;
-const FAILED_OUTCOMES = new Set(["failed", "failure", "error", "timeout"]);
+const FAILED_OUTCOMES = new Set(["failed", "failure", "error", "timeout", "unverified"]);
 const KNOWN_FLAGS = new Set(["--since", "--repo", "--json", "--all", "--mark-baseline"]);
 
 function text(value: unknown): string | undefined {
@@ -178,9 +178,7 @@ export async function run(argv: string[], deps?: JournalDeps): Promise<void> {
   if (args.markBaseline) {
     const repo = (await resolveRepoRoot()) ?? process.cwd();
     appendEvent({ kind: "baseline", repo, origin: "human", data: {} }, deps);
-    console.log(
-      args.json ? stringifySorted(successEnvelope({ baseline: true })) : "baseline recorded",
-    );
+    console.log(args.json ? stringifySorted({ baseline: true }) : "baseline recorded");
     return;
   }
   const since = args.since === undefined ? undefined : parseSince(args.since, Date.now());
@@ -196,7 +194,7 @@ export async function run(argv: string[], deps?: JournalDeps): Promise<void> {
     ...summarizeJournal(events, options),
     skippedLines,
   };
-  console.log(args.json ? stringifySorted(successEnvelope(report)) : formatReport(report));
+  console.log(args.json ? stringifySorted(report) : formatReport(report));
 }
 
 if (import.meta.main) {

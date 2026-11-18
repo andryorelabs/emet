@@ -53,6 +53,25 @@ describe("describeCurrentRun", () => {
     });
   });
 
+  test("fills spec and wave from the run id when the phase record has none", () => {
+    const partial: PhaseRecord = {
+      ...reviewRecord,
+      runId: "emet621w2233041",
+      spec: null,
+      wave: null,
+    };
+    const current = describeCurrentRun("/repo", { readPhase: () => partial });
+    expect(current.spec).toBe("621");
+    expect(current.wave).toBe(2);
+  });
+
+  test("leaves spec and wave empty when the run id is not parseable", () => {
+    const partial: PhaseRecord = { ...reviewRecord, runId: null, spec: null, wave: null };
+    const current = describeCurrentRun("/repo", { readPhase: () => partial });
+    expect(current.spec).toBeNull();
+    expect(current.wave).toBeNull();
+  });
+
   test("reports none for a finished run", () => {
     const finished: PhaseRecord = { ...reviewRecord, phase: "done" };
     expect(describeCurrentRun("/repo", { readPhase: () => finished }).state).toBe("none");
