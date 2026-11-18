@@ -104,9 +104,10 @@ const RUN_ID_PATTERN = new RegExp(
   `^(?:${PRODUCT}|${LEGACY_PRODUCT})([a-z0-9][a-z0-9-]*)w(\\d+?)(\\d{6})$`,
 );
 
-const STATUS_USAGE = `usage: ${BINARY} status [--spec <id>]
+const STATUS_USAGE = `usage: ${BINARY} status [--spec <id>] [--brief]
 
-Prints one JSON object, then a one-line summary.
+Prints one JSON object, then a one-line summary. --brief prints at most three
+lines instead: state, what waits on a person, next action.
 
 JSON shape:
   {
@@ -220,6 +221,33 @@ export function summarize(report: StatusReport): string {
     return `${label} ${wave.state} (${wave.workers.length} worker(s)${reasons.length ? `: ${reasons.join(", ")}` : ""})`;
   });
   return `${BINARY} status: ${report.state} — ${parts.join("; ")}`;
+}
+
+const BRIEF_NEXT_ACTION: Readonly<Record<OverallState, string>> = {
+  idle: `next: start a run with /${PRODUCT}:run`,
+  working: "next: wait for the workers to open their PRs",
+  checking: "next: wait for the checks to finish",
+  ready: "next: land the wave",
+  "needs-decision": "next: decide on the flagged tickets, then re-run status",
+};
+
+function waitingLine(report: StatusReport): string | null {
+  const waiting = report.waves.find((wave) => wave.state === report.state);
+  if (report.state !== "needs-decision" && report.state !== "ready") return null;
+  if (!waiting) return null;
+  const label = waiting.wave === null ? waiting.runId : `wave ${waiting.wave}`;
+  const reasons = [
+    ...new Set(waiting.workers.filter((w) => w.state === waiting.state).map((w) => w.reason)),
+  ];
+  const what = report.state === "ready" ? "ready to land" : "needs a decision";
+  return `waiting on you: ${label} ${what}${reasons.length ? ` (${reasons.join(", ")})` : ""}`;
+}
+
+/** At most three lines for `status --brief`: overall state, what waits on a person, next action. */
+export function briefLines(report: StatusReport): string[] {
+  const state = `state: ${report.state}${report.spec ? ` (spec ${report.spec})` : ""}`;
+  const waiting = waitingLine(report);
+  return [state, ...(waiting ? [waiting] : []), BRIEF_NEXT_ACTION[report.state]];
 }
 
 interface RawPullRequest {
@@ -623,6 +651,10 @@ export async function run(argv: string[], overrides: Partial<StatusDeps> = {}): 
       ),
       spec,
     );
+    if (argv.includes("--brief")) {
+      for (const line of briefLines(report)) console.log(line);
+      return;
+    }
     console.log(JSON.stringify(report, null, 2));
     console.log(summarize(report));
   } catch (error: unknown) {
