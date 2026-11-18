@@ -89,8 +89,10 @@ Record the reviewer's findings JSON per ticket: `emet review --ticket
 <ticket> --findings <file|-> [--changed <files since the last round>]`. The
 CLI enforces triage order (intent_gap, bad_plan, patch, defer) and the
 `budgets.reviewRounds` cap, and exits 1 while findings are open. Fix, then
-re-dispatch `emet:emet-reviewer` in `recheck` mode (ledger plus the diff from the
-reviewed sha only; "Recheck variant") and record again, also after any CI fix.
+with `gate.onHold: stop` (or when no fix round applies) re-dispatch
+`emet:emet-reviewer` in `recheck` mode (ledger plus the diff from the reviewed
+sha only; "Recheck variant") and record again through `review --findings`, also
+after any CI fix. Under `fix-and-continue`, use the fix round below instead.
 At the cap, escalate once: `emet review --ticket <ticket> --escalate --model
 <current>` prints the next tier (exit 1 if none); run one fresh worker on it.
 Anything still open you rule on: `emet review --ticket <ticket> --rule
@@ -102,7 +104,9 @@ findings do not end the wave: `emet gate` answers `hold` with `next:
 "fix-findings"` while `budgets.fixRounds` (default 2) has rounds left. Fix the
 open findings, then end the round with a recheck: re-dispatch
 `emet:emet-reviewer` in `recheck` mode over only the findings that were open
-when the round began and the fix diff, and record its verdicts with `emet
+when the round began and the fix diff. The reviewer emits a JSON array of
+`{id, resolved}` with one entry per finding open at round start (not the
+findings array minus the fixed ones); record those verdicts with `emet
 review --ticket <ticket> --recheck --verdicts <file|->` (a JSON array of
 `{id, resolved}`). A finding becomes `resolved` only through a recheck verdict.
 A recheck costs one fix round, never a review round, and exits 1 naming the
@@ -172,7 +176,10 @@ this line needs a manual per-ticket state write instead.
    `already-closed`; exit 1 if any ticket failed, the rest are still
    processed). Linear tickets are not closed by the CLI: confirm each is Done
    through the Linear MCP.
-   `state: env-fault` (or `timeout`) → a CI that never ran, e.g.
+   `state: timeout` → CI did run but has not finished: pass `--ci pending`,
+   rerun `emet ci --wait` once, and if it still times out leave the PR open
+   and report.
+   `state: env-fault` → a CI that never ran, e.g.
    `STARTUP_FAILURE`, is an Environment fault, not a code failure: pass
    `--ci env-fault` to the gate. The first answers `hold` with `next:
    "rerun-ci"` and charges no `pr.maxCiFixAttempts`; rerun and run `emet ci`

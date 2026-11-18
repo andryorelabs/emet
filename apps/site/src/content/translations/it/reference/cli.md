@@ -2,7 +2,7 @@
 title: Riferimento della CLI
 description: Ogni sottocomando di emet, la tabella di gate e registri, i codici di uscita e le variabili d'ambiente.
 seoTitle: Riferimento della CLI di emet
-sourceHash: 3fca8dc9e7066a8b
+sourceHash: d485585e0e29f0f9
 ---
 
 Ogni sottocomando di `emet`, la tabella di gate e registri, i codici di uscita e le variabili d'ambiente. I termini seguono [GLOSSARY.md](../../GLOSSARY.md). Torna al [README](../../README.md). Ogni comando stampa il proprio utilizzo con `--help`.
@@ -56,7 +56,7 @@ Per ogni repo il report indica: un `emet.config.json` valido, tutti e quattro i 
 - `emet cleanup [--run <id> | --all] [--dry-run] [--force]`: senza argomenti, recupera le esecuzioni chiuse o morte il cui lavoro è atterrato; `--run` pulisce questa esecuzione; `--all` è una scansione dei branch su tutto il repo. Dopo un merge, `emet cleanup --run <runId>` libera i branch, i claim dei ticket e gli slot dei worker dell'ondata. In ogni modalità elimina anche ogni branch locale la cui PR è stata unita al commit di testa del branch, insieme al worktree dell'agente pulito e non bloccato che lo contiene.
 - `emet lock-reason --run <id> --ticket <ticket> [--anchor <pid>]`: stampa il motivo del `git worktree lock` che un worker scrive al bootstrap.
 - `emet launch <spec-id> --wave <n>`: su Claude Code, avvia un'ondata come sessione `claude --bg` e ne apre la scheda di Orca secondo `handoff.launcher` (su Codex vedi [Host Codex](#host-codex)). Esegue l'intero avvio (controllo delle sessioni duplicate, `claude --bg`, scheda) e stampa `{ name, id, attach, orcaTab: { opened, reason } }`. Usalo, e non un semplice `claude --bg`, ogni volta che vuoi un'ondata in un'altra sessione a mano.
-- `emet chain --spec <id> --wave <n> [gate flags]`: esegue `emet gate` con i flag del gate ricevuti e avvia l'ondata successiva solo quando la decisione è `chain`. Prima del lancio controlla la prontezza (margine di memoria dell'host, disco e inode liberi nel repo e in `/tmp`, la CLI `orca`) e poi conferma che la sessione figlia sia elencata. Qualsiasi altra decisione, un problema di prontezza bloccante (`low-memory`, `low-disk`, `low-inodes`, `orca-unavailable`) o una sessione già esistente per la stessa specifica e ondata termina con codice 1 indicando i motivi e non lancia nulla.
+- `emet chain --ticket <id> --spec <id> --wave <n> [gate flags]`: esegue `emet gate` con i flag del gate ricevuti e avvia l'ondata successiva solo quando la decisione è `chain`. Prima del lancio controlla la prontezza (margine di memoria dell'host, disco e inode liberi nel repo e in `/tmp`, la CLI `orca`) e poi conferma che la sessione figlia sia elencata. Qualsiasi altra decisione, un problema di prontezza bloccante (`low-memory`, `low-disk`, `low-inodes`, `orca-unavailable`) o una sessione già esistente per la stessa specifica e ondata termina con codice 1 indicando i motivi e non lancia nulla.
 - `emet status [--spec <id>]`: Working / Checking / Ready / Needs-decision per ondata come JSON più una riga di riepilogo. `emet status --help` documenta il JSON.
 - `emet usage [--session <id> | --file <path>] [--stalled [--minutes N]] [--project-dir <path>]`: riporta l'uso della sessione; `--stalled` elenca i worker bloccati.
 - `emet handoff --check <path> | --render <path>`: valida o rende la nota `.emet/handoff-<ticket>.md` di un worker.

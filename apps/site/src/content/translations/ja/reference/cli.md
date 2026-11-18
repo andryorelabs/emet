@@ -2,7 +2,7 @@
 title: CLI リファレンス
 description: すべての emet サブコマンド、ゲートと記録の表、終了コード、環境変数を説明します。
 seoTitle: emet CLI リファレンス
-sourceHash: 3fca8dc9e7066a8b
+sourceHash: d485585e0e29f0f9
 ---
 
 すべての `emet` サブコマンド、ゲートと記録の表、終了コード、環境変数です。用語は [GLOSSARY.md](../../GLOSSARY.md) に従います。[README](../../README.md) に戻る。すべてのコマンドは `--help` で使い方を表示します。
@@ -56,7 +56,7 @@ emet doctor ~/code/*
 - `emet cleanup [--run <id> | --all] [--dry-run] [--force]`: 引数なしの場合は、作業がランディング済みの完了した実行または終了した実行を回収します。`--run` はこの実行を片付け、`--all` はリポジトリ全体のブランチ整理です。マージ後に `emet cleanup --run <runId>` を実行すると、ウェーブのブランチ、チケットのクレーム、ワーカースロットが解放されます。どのモードでも、PR がブランチの先端コミットでマージされたローカルブランチを、それを保持するクリーンでロックされていないエージェントのワークツリーとともに削除します。
 - `emet lock-reason --run <id> --ticket <ticket> [--anchor <pid>]`: ワーカーがブートストラップ時に書き込む `git worktree lock` の理由を表示します。
 - `emet launch <spec-id> --wave <n>`: Claude Code では、ウェーブを `claude --bg` セッションとして開始し、`handoff.launcher` に従って Orca タブを開きます（Codex については [Codex ホスト](#codex-ホスト)を参照）。起動の全体（重複セッションの確認、`claude --bg`、タブ）を行い、`{ name, id, attach, orcaTab: { opened, reason } }` を出力します。別のセッションで手動でウェーブを動かしたいときは、素の `claude --bg` ではなくこちらを使ってください。
-- `emet chain --spec <id> --wave <n> [gate flags]`: 受け取ったゲートのフラグで `emet gate` を実行し、判定が `chain` のときだけ次のウェーブを開始します。起動前に準備状況（ホストのメモリ余裕、リポジトリと `/tmp` の空きディスクと inode、`orca` CLI）を確認し、起動後に子セッションが一覧に表示されることを確かめます。それ以外の判定、ブロックとなる準備上の問題（`low-memory`、`low-disk`、`low-inodes`、`orca-unavailable`）、または同じ仕様とウェーブの既存セッションがある場合は、理由とともに終了コード 1 で終了し、何も起動しません。
+- `emet chain --ticket <id> --spec <id> --wave <n> [gate flags]`: 受け取ったゲートのフラグで `emet gate` を実行し、判定が `chain` のときだけ次のウェーブを開始します。起動前に準備状況（ホストのメモリ余裕、リポジトリと `/tmp` の空きディスクと inode、`orca` CLI）を確認し、起動後に子セッションが一覧に表示されることを確かめます。それ以外の判定、ブロックとなる準備上の問題（`low-memory`、`low-disk`、`low-inodes`、`orca-unavailable`）、または同じ仕様とウェーブの既存セッションがある場合は、理由とともに終了コード 1 で終了し、何も起動しません。
 - `emet status [--spec <id>]`: ウェーブごとの Working / Checking / Ready / Needs-decision を JSON とサマリー行で表示します。`emet status --help` に JSON の説明があります。
 - `emet usage [--session <id> | --file <path>] [--stalled [--minutes N]] [--project-dir <path>]`: セッションの使用状況を報告します。`--stalled` は停滞したワーカーを一覧表示します。
 - `emet handoff --check <path> | --render <path>`: ワーカーの `.emet/handoff-<ticket>.md` ノートを検証または表示します。

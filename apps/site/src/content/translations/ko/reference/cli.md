@@ -2,7 +2,7 @@
 title: CLI 레퍼런스
 description: 모든 emet 하위 명령, 게이트와 기록 표, 종료 코드, 환경 변수를 설명합니다.
 seoTitle: emet CLI 레퍼런스
-sourceHash: 3fca8dc9e7066a8b
+sourceHash: d485585e0e29f0f9
 ---
 
 모든 `emet` 하위 명령, 게이트와 기록 표, 종료 코드, 환경 변수입니다. 용어는 [GLOSSARY.md](../../GLOSSARY.md)를 따릅니다. [README](../../README.md)로 돌아가기. 모든 명령은 `--help`로 사용법을 출력합니다.
@@ -56,7 +56,7 @@ emet doctor ~/code/*
 - `emet cleanup [--run <id> | --all] [--dry-run] [--force]`: 인자 없이 실행하면 작업이 랜딩된 종료되었거나 죽은 실행을 회수합니다. `--run`은 해당 실행을 정리하고, `--all`은 리포지토리 전체의 브랜치 정리입니다. 병합 후 `emet cleanup --run <runId>`를 실행하면 웨이브의 브랜치, 티켓 클레임, 워커 슬롯이 해제됩니다. 모든 모드에서 PR이 브랜치의 최신 커밋에서 병합된 로컬 브랜치도, 그 브랜치를 담고 있는 깨끗하고 잠기지 않은 에이전트 워크트리와 함께 삭제합니다.
 - `emet lock-reason --run <id> --ticket <ticket> [--anchor <pid>]`: 워커가 부트스트랩 때 기록하는 `git worktree lock` 사유를 출력합니다.
 - `emet launch <spec-id> --wave <n>`: Claude Code에서는 웨이브를 `claude --bg` 세션으로 시작하고 `handoff.launcher`에 따라 Orca 탭을 엽니다(Codex는 [Codex 호스트](#codex-호스트) 참고). 시작 전체(중복 세션 확인, `claude --bg`, 탭)를 수행하고 `{ name, id, attach, orcaTab: { opened, reason } }`를 출력합니다. 다른 세션에서 웨이브를 직접 실행하고 싶을 때는 단순한 `claude --bg` 대신 이것을 사용하세요.
-- `emet chain --spec <id> --wave <n> [gate flags]`: 전달받은 게이트 플래그로 `emet gate`를 실행하고, 결정이 `chain`일 때만 다음 웨이브를 시작합니다. 실행 전에 준비 상태(호스트 메모리 여유, 리포지토리와 `/tmp`의 여유 디스크 및 inode, `orca` CLI)를 확인하고, 실행 후에는 자식 세션이 목록에 있는지 확인합니다. 그 외의 결정, 차단하는 준비 문제(`low-memory`, `low-disk`, `low-inodes`, `orca-unavailable`), 또는 같은 스펙과 웨이브에 이미 세션이 있으면 이유와 함께 종료 코드 1로 끝나며 아무것도 실행하지 않습니다.
+- `emet chain --ticket <id> --spec <id> --wave <n> [gate flags]`: 전달받은 게이트 플래그로 `emet gate`를 실행하고, 결정이 `chain`일 때만 다음 웨이브를 시작합니다. 실행 전에 준비 상태(호스트 메모리 여유, 리포지토리와 `/tmp`의 여유 디스크 및 inode, `orca` CLI)를 확인하고, 실행 후에는 자식 세션이 목록에 있는지 확인합니다. 그 외의 결정, 차단하는 준비 문제(`low-memory`, `low-disk`, `low-inodes`, `orca-unavailable`), 또는 같은 스펙과 웨이브에 이미 세션이 있으면 이유와 함께 종료 코드 1로 끝나며 아무것도 실행하지 않습니다.
 - `emet status [--spec <id>]`: 웨이브별 Working / Checking / Ready / Needs-decision을 JSON과 요약 줄로 출력합니다. `emet status --help`에 JSON 설명이 있습니다.
 - `emet usage [--session <id> | --file <path>] [--stalled [--minutes N]] [--project-dir <path>]`: 세션 사용량을 보고합니다. `--stalled`는 멈춘 워커를 나열합니다.
 - `emet handoff --check <path> | --render <path>`: 워커의 `.emet/handoff-<ticket>.md` 노트를 검증하거나 렌더링합니다.

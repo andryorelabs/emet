@@ -2,7 +2,7 @@
 title: CLI 参考
 description: 每个 emet 子命令、关卡与记录表、退出码和环境变量。
 seoTitle: emet CLI 参考
-sourceHash: 3fca8dc9e7066a8b
+sourceHash: d485585e0e29f0f9
 ---
 
 每个 `emet` 子命令、关卡与记录表、退出码和环境变量。术语遵循 [GLOSSARY.md](../../GLOSSARY.md)。返回 [README](../../README.md)。每个命令都可以用 `--help` 打印其用法。
@@ -56,7 +56,7 @@ emet doctor ~/code/*
 - `emet cleanup [--run <id> | --all] [--dry-run] [--force]`：不带参数时，回收其工作已落地的已关闭或已终止的运行；`--run` 清理该次运行；`--all` 是对整个仓库的分支清扫。合并之后，`emet cleanup --run <runId>` 会释放该波次的分支、工单认领和工作者槽位。在所有模式下，它还会删除其 PR 已在分支顶端提交处合并的每个本地分支，以及持有该分支的干净且未锁定的代理工作树。
 - `emet lock-reason --run <id> --ticket <ticket> [--anchor <pid>]`：打印工作者在引导阶段写入的 `git worktree lock` 原因。
 - `emet launch <spec-id> --wave <n>`：在 Claude Code 上，以 `claude --bg` 会话启动一个波次，并按 `handoff.launcher` 打开它的 Orca 标签页（Codex 参见 [Codex 宿主](#codex-宿主)）。它会完成整个启动流程（重复会话检查、`claude --bg`、标签页），并打印 `{ name, id, attach, orcaTab: { opened, reason } }`。每当你想手动在另一个会话中运行某个波次时，请使用它，而不是直接使用 `claude --bg`。
-- `emet chain --spec <id> --wave <n> [gate flags]`：用收到的关卡标志运行 `emet gate`，仅当决定为 `chain` 时才启动下一个波次。启动前它会检查就绪情况（主机内存余量、仓库和 `/tmp` 的可用磁盘与 inode、`orca` CLI），之后确认子会话已列出。任何其他决定、阻塞性的就绪问题（`low-memory`、`low-disk`、`low-inodes`、`orca-unavailable`）或同一规格和波次已有会话时，会连同原因以退出码 1 结束，且不启动任何内容。
+- `emet chain --ticket <id> --spec <id> --wave <n> [gate flags]`：用收到的关卡标志运行 `emet gate`，仅当决定为 `chain` 时才启动下一个波次。启动前它会检查就绪情况（主机内存余量、仓库和 `/tmp` 的可用磁盘与 inode、`orca` CLI），之后确认子会话已列出。任何其他决定、阻塞性的就绪问题（`low-memory`、`low-disk`、`low-inodes`、`orca-unavailable`）或同一规格和波次已有会话时，会连同原因以退出码 1 结束，且不启动任何内容。
 - `emet status [--spec <id>]`：以 JSON 加一行摘要的形式给出每个波次的 Working / Checking / Ready / Needs-decision 状态。`emet status --help` 说明了该 JSON。
 - `emet usage [--session <id> | --file <path>] [--stalled [--minutes N]] [--project-dir <path>]`：报告会话用量；`--stalled` 列出停滞的工作者。
 - `emet handoff --check <path> | --render <path>`：校验或渲染工作者的 `.emet/handoff-<ticket>.md` 笔记。

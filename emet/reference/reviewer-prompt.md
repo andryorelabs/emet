@@ -59,9 +59,9 @@ drop or downgrade what you refute.
 Give the reviewer only the findings file and the fix diff:
 
 ```
-Recheck round {{round}} of 2 on `{{integration_branch}}`. Findings:
+Recheck round {{round}} of {{fix_rounds}} on `{{integration_branch}}`. Findings:
 `.emet/review-{{run_id}}.json`; fix diff: `{{diff_path}}`
-(`git diff {{reviewed_sha}}..HEAD`). Re-emit the array minus fixed findings. A
-new blocker/critical must cite a prior id or a file in the fix diff, else
-`kind: "defer"`.
+(`git diff {{reviewed_sha}}..HEAD`). Emit a JSON array of `{id, resolved}`, one entry per
+finding in the file (`resolved: true` only if the fix diff fixes it). Do not
+re-emit findings; new issues are not part of a recheck.
 ```
