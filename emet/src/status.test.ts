@@ -19,6 +19,7 @@ import { currentExitCode } from "./exit-code";
 import { isObject } from "./narrow";
 import { present } from "./present";
 import {
+  briefLines,
   buildStatusReport,
   classifyChecks,
   closingIssueNumbers,
@@ -475,6 +476,35 @@ describe("Codex workers judged by their jsonl", () => {
   });
 });
 
+describe("briefLines", () => {
+  test("idle prints one state line and how to start", () => {
+    const lines = briefLines(buildStatusReport([], null));
+    expect(lines).toHaveLength(2);
+    expect(lines[0]).toContain("idle");
+  });
+
+  test("needs-decision names what waits on a person and the next action", () => {
+    const lines = briefLines(buildStatusReport([wave([worker({ stalled: true })])], null));
+    expect(lines).toHaveLength(3);
+    expect(lines[1]).toContain("worker stalled");
+    expect(lines[2]).toContain("decide");
+  });
+
+  test("ready waits on a person to land", () => {
+    const lines = briefLines(
+      buildStatusReport([wave([worker({ pullRequest: greenPullRequest })])], null),
+    );
+    expect(lines).toHaveLength(3);
+    expect(lines[1]).toContain("ready");
+  });
+
+  test("working has no waiting line and never exceeds three lines", () => {
+    const lines = briefLines(buildStatusReport([wave([worker()])], null));
+    expect(lines).toHaveLength(2);
+    expect(lines.length).toBeLessThanOrEqual(3);
+  });
+});
+
 describe("run", () => {
   const RUN_ID = "emet523w7172506";
   const ownedEntry = (directory: string, ticket: string, branch: string) => ({
@@ -774,6 +804,15 @@ describe("run", () => {
     const workers = workersOf();
     expect(workers.find((w) => w.ticket === "CLA-6")).toMatchObject({ threadId: "th-6" });
     expect(workers.find((w) => w.ticket === "CLA-7")).toMatchObject({ stalled: false });
+  });
+
+  test("--brief prints at most three lines and no JSON", async () => {
+    makeRepo();
+    await run(["--brief"], deps());
+    expect(stdout.length).toBeGreaterThan(0);
+    expect(stdout.length).toBeLessThanOrEqual(3);
+    expect(stdout[0]).toContain("idle");
+    expect(stdout.join("\n")).not.toContain("{");
   });
 
   describe("pull requests through gh", () => {
