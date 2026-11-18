@@ -156,6 +156,19 @@ describe("emet insights", () => {
     expect(data.ticketsClosed).toBe(1);
   });
 
+  test("a failed launch or one from another repo does not make a run auto", () => {
+    const report = summarizeJournal(
+      [
+        event("launch.result", { spec: "5", wave: 1, outcome: "failed" }, { origin: "auto" }),
+        event("launch.result", { spec: "6", wave: 1, outcome: "started" }, { repo: "/other" }),
+        event("run.start", { spec: "5", wave: 1 }),
+        event("run.start", { spec: "6", wave: 1 }),
+      ],
+      { all: true },
+    );
+    expect(report.runsByOrigin).toEqual({ human: 2, auto: 0 });
+  });
+
   test("unverified launches count as failed", () => {
     const report = summarizeJournal(
       [

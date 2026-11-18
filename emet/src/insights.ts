@@ -42,7 +42,7 @@ function text(value: unknown): string | undefined {
 }
 
 function waveKey(event: JournalEvent): string {
-  return `${String(event.data.spec)}#${String(event.data.wave)}`;
+  return `${event.repo}#${String(event.data.spec)}#${String(event.data.wave)}`;
 }
 
 function increment(counts: Record<string, number>, key: string): void {
@@ -72,7 +72,9 @@ export function summarizeJournal(
 ): InsightsReport {
   const selected = selectEvents(events, options);
   const launchedWaves = new Set(
-    selected.filter((event) => event.kind === "launch.result").map(waveKey),
+    selected
+      .filter((event) => event.kind === "launch.result" && event.data.outcome !== "failed")
+      .map(waveKey),
   );
   const report: InsightsReport = {
     runsByOrigin: { human: 0, auto: 0 },

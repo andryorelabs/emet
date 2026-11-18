@@ -230,6 +230,7 @@ export function hasLaunchResult(context: WaveContext): boolean {
   return readJournalSegments().events.some(
     (event) =>
       event.kind === "launch.result" &&
+      event.data.outcome !== "failed" &&
       (context.repo === undefined || event.repo === context.repo) &&
       event.data.spec === context.spec &&
       (context.wave === null || event.data.wave === context.wave),

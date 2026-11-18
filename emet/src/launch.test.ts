@@ -143,6 +143,16 @@ describe("launch journal", () => {
     expect(hasLaunchResult({ spec: null, wave: null })).toBe(false);
   });
 
+  test("hasLaunchResult ignores a failed launch", () => {
+    appendEvent({
+      kind: "launch.result",
+      repo: "/repo",
+      origin: "auto",
+      data: { spec: "9", wave: 1, outcome: "failed" },
+    });
+    expect(hasLaunchResult({ spec: "9", wave: 1 })).toBe(false);
+  });
+
   test("hasLaunchResult ignores a launch.result from another repo", () => {
     appendEvent({
       kind: "launch.result",
