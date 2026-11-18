@@ -105,6 +105,8 @@ type ModuleName =
   | "validate"
   | "specmerge"
   | "tracker"
+  | "ci"
+  | "chain"
   | "map"
   | "metrics";
 
@@ -172,6 +174,10 @@ async function loadRun(name: ModuleName): Promise<ModuleRun> {
       return (await import("./specmerge")).run;
     case "tracker":
       return (await import("./tracker")).run;
+    case "ci":
+      return (await import("./ci")).run;
+    case "chain":
+      return (await import("./chain")).run;
     case "map":
       return (await import("./map")).run;
     case "metrics":
@@ -353,8 +359,10 @@ export const COMMANDS: readonly CommandSpec[] = [
       val("--rule"),
       val("--why"),
       val("--cost"),
+      val("--verdicts"),
       bool("--rulings"),
       bool("--escalate"),
+      bool("--recheck"),
     ],
     run: runModule("review"),
   },
@@ -462,9 +470,41 @@ export const COMMANDS: readonly CommandSpec[] = [
       val("--author"),
       val("--blocked-by"),
       val("--body-file"),
+      val("--pr"),
+      val("--reason"),
       bool("--canceled"),
     ],
     run: runModule("tracker"),
+  },
+  {
+    name: "ci",
+    summary: "wait for a PR's checks and rerun flakes",
+    flags: [
+      val("--pr"),
+      val("--timeout-minutes"),
+      val("--poll-seconds"),
+      bool("--wait"),
+      bool("--rerun-flakes"),
+    ],
+    run: runModule("ci"),
+  },
+  {
+    name: "chain",
+    summary: "gate a wave and launch the next one",
+    flags: [
+      val("--spec"),
+      val("--wave"),
+      val("--run"),
+      val("--ticket"),
+      val("--tier"),
+      val("--ci"),
+      val("--integration"),
+      val("--env-exit"),
+      val("--env-output"),
+      val("--attempts"),
+      val("--waves-remaining"),
+    ],
+    run: runModule("chain"),
   },
   {
     name: "map",

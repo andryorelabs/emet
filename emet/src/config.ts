@@ -88,6 +88,7 @@ export const DEFAULT_FORGE_CONFIG: ForgeConfig = {
     permissionMode: "bypassPermissions",
   },
   landing: { mode: "pr" },
+  gate: { onHold: "fix-and-continue" },
   pr: { autoMerge: true, mergeMethod: "squash", maxCiFixAttempts: 2 },
   usage: { oversizedReadLines: 400, stalledMinutes: 10 },
   models: {
@@ -100,7 +101,13 @@ export const DEFAULT_FORGE_CONFIG: ForgeConfig = {
     escalation: { sonnet: "opus" },
   },
   review: { highRiskPaths: [] },
-  budgets: { workerAttempts: 2, reviewRounds: 2, stallNudgeCap: 6, askWaitMinutes: 30 },
+  budgets: {
+    workerAttempts: 2,
+    reviewRounds: 2,
+    stallNudgeCap: 6,
+    askWaitMinutes: 30,
+    fixRounds: 2,
+  },
   sizing: { inlineMaxLines: 100 },
   map: { path: "docs/agents/codebase.md" },
   specs: { dir: "docs/specs" },
@@ -167,7 +174,11 @@ const MERGE_METHODS: readonly MergeMethod[] = ["squash", "merge", "rebase"];
 
 export type LandingMode = "pr" | "merge";
 
+/** What `emet gate` does with open blocking findings. */
+type GateOnHold = "fix-and-continue" | "stop";
+
 const LANDING_MODES: readonly LandingMode[] = ["pr", "merge"];
+const GATE_ON_HOLD_POLICIES: readonly GateOnHold[] = ["fix-and-continue", "stop"];
 
 export interface ForgeConfig {
   readonly version: 1;
@@ -248,6 +259,12 @@ export interface ForgeConfig {
      * tracker. */
     readonly mode: LandingMode;
   };
+  readonly gate: {
+    /** What `emet gate` does with open blocking findings: `fix-and-continue`
+     * holds for a fix round while `budgets.fixRounds` has rounds left; `stop`
+     * stops as soon as review rounds are exhausted. */
+    readonly onHold: GateOnHold;
+  };
   readonly pr: {
     /** When true, Phase 8 waits for the wave PR's checks and merges it. */
     readonly autoMerge: boolean;
@@ -290,6 +307,8 @@ export interface ForgeConfig {
     readonly stallNudgeCap: number;
     /** Minutes a worker waits on an unanswered `emet ask` before it gives up. */
     readonly askWaitMinutes: number;
+    /** Fix rounds (each ends with a recheck) per wave before the gate stops. */
+    readonly fixRounds: number;
   };
   readonly sizing: {
     /** Largest ticket body (lines) kept inline in a worker prompt. */
@@ -645,6 +664,12 @@ function validateAndMerge(
     return { ok: false, reason: '"landing.mode" must be one of pr|merge' };
   }
 
+  const gateSection = isRecord(raw.gate) ? raw.gate : {};
+  const gateOnHold = gateSection.onHold ?? DEFAULT_FORGE_CONFIG.gate.onHold;
+  if (!isOneOf(GATE_ON_HOLD_POLICIES, gateOnHold)) {
+    return { ok: false, reason: '"gate.onHold" must be one of fix-and-continue|stop' };
+  }
+
   const prSection = isRecord(raw.pr) ? raw.pr : {};
   const autoMerge = prSection.autoMerge ?? DEFAULT_FORGE_CONFIG.pr.autoMerge;
   const mergeMethod = prSection.mergeMethod ?? DEFAULT_FORGE_CONFIG.pr.mergeMethod;
@@ -746,7 +771,13 @@ function validateAndMerge(
     return { ok: false, reason: '"budgets" must be an object' };
   }
   const budgetsRecord = budgetsSection ?? {};
-  const budgetKeys = ["workerAttempts", "reviewRounds", "stallNudgeCap", "askWaitMinutes"] as const;
+  const budgetKeys = [
+    "workerAttempts",
+    "reviewRounds",
+    "stallNudgeCap",
+    "askWaitMinutes",
+    "fixRounds",
+  ] as const;
   const budgets = { ...DEFAULT_FORGE_CONFIG.budgets };
   for (const key of budgetKeys) {
     const value = budgetsRecord[key];
@@ -792,6 +823,7 @@ function validateAndMerge(
         permissionMode,
       },
       landing: { mode: landingMode },
+      gate: { onHold: gateOnHold },
       pr: { autoMerge, mergeMethod, maxCiFixAttempts },
       usage: { oversizedReadLines, stalledMinutes },
       models: {

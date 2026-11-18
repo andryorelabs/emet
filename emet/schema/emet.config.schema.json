@@ -394,6 +394,18 @@
         }
       }
     },
+    "gate": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "onHold": {
+          "type": "string",
+          "enum": ["fix-and-continue", "stop"],
+          "default": "fix-and-continue",
+          "description": "What `emet gate` does with open blocking findings. `fix-and-continue` holds for a fix round while `budgets.fixRounds` has rounds left and stops only on an intent gap, exhausted fix rounds or a repeated integration failure; `stop` stops as soon as review rounds are exhausted."
+        }
+      }
+    },
     "pr": {
       "type": "object",
       "additionalProperties": false,
@@ -630,6 +642,12 @@
           "minimum": 1,
           "default": 30,
           "description": "Minutes a worker waits on an unanswered `emet ask` before it gives up."
+        },
+        "fixRounds": {
+          "type": "integer",
+          "minimum": 1,
+          "default": 2,
+          "description": "Fix rounds per wave, each ending with an `emet review --recheck`, before the gate stops."
         }
       }
     },
