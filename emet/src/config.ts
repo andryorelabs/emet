@@ -175,7 +175,7 @@ const MERGE_METHODS: readonly MergeMethod[] = ["squash", "merge", "rebase"];
 export type LandingMode = "pr" | "merge";
 
 /** What `emet gate` does with open blocking findings. */
-export type GateOnHold = "fix-and-continue" | "stop";
+type GateOnHold = "fix-and-continue" | "stop";
 
 const LANDING_MODES: readonly LandingMode[] = ["pr", "merge"];
 const GATE_ON_HOLD_POLICIES: readonly GateOnHold[] = ["fix-and-continue", "stop"];
