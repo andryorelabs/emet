@@ -16,6 +16,7 @@ import {
   type DiskStats,
 } from "./chain";
 import { ForgeConfigError } from "./config";
+import { readJournalSegments } from "./journal";
 
 async function rejectionMessage(promise: Promise<unknown>): Promise<string> {
   try {
@@ -84,12 +85,18 @@ describe("emet chain", () => {
   let repoRoot: string;
   let recorder: Recorder;
 
+  let previousStateDir: string | undefined;
+
   beforeEach(() => {
+    previousStateDir = process.env.EMET_STATE_DIR;
     repoRoot = mkdtempSync(path.join(os.tmpdir(), "emet-chain-"));
+    process.env.EMET_STATE_DIR = path.join(repoRoot, "state");
     recorder = { commands: [], started: [], sessionNames: [] };
   });
 
   afterEach(() => {
+    if (previousStateDir === undefined) Reflect.deleteProperty(process.env, "EMET_STATE_DIR");
+    else process.env.EMET_STATE_DIR = previousStateDir;
     rmSync(repoRoot, { recursive: true, force: true });
   });
 
@@ -113,6 +120,24 @@ describe("emet chain", () => {
       ...overrides,
     };
   }
+
+  test("journals one launch.result per chained launch and none when nothing launches", async () => {
+    await chainNextWave(REQUEST, depsFor(gateReply("hold")));
+    expect(readJournalSegments().events).toEqual([]);
+    await chainNextWave(REQUEST, depsFor(gateReply("chain")));
+    const events = readJournalSegments().events;
+    expect(events).toHaveLength(1);
+    expect(events[0]).toMatchObject({
+      kind: "launch.result",
+      origin: "auto",
+      data: { spec: "609", wave: 2, name: "emet-609-w2", outcome: "started", via: "chain" },
+    });
+  });
+
+  test("an unlisted child session is journaled as unverified", async () => {
+    await chainNextWave(REQUEST, depsFor(gateReply("chain"), {}, false));
+    expect(readJournalSegments().events[0]?.data.outcome).toBe("unverified");
+  });
 
   test("launches the wave and verifies the session when the gate says chain", async () => {
     const outcome = await chainNextWave(REQUEST, depsFor(gateReply("chain")));

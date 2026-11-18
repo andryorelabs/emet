@@ -12,6 +12,7 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 
 import { run } from "./gate";
+import { appendEvent, readJournalSegments } from "./journal";
 
 interface Captured {
   logs: string[];
@@ -22,8 +23,14 @@ interface Captured {
 let root: string;
 let runDirectory: string;
 let previousDirectory: string;
+let previousStateDir: string | undefined;
 
 beforeEach(() => {
+  previousStateDir = process.env.EMET_STATE_DIR;
+  process.env.EMET_STATE_DIR = path.join(
+    realpathSync(mkdtempSync(path.join(tmpdir(), "gate-state-"))),
+    "state",
+  );
   root = realpathSync(mkdtempSync(path.join(tmpdir(), "gate-run-")));
   runDirectory = path.join(root, ".emet", "runs", "r1");
   mkdirSync(path.join(runDirectory, "verify"), { recursive: true });
@@ -32,6 +39,10 @@ beforeEach(() => {
 });
 
 afterEach(() => {
+  const stateRoot = path.dirname(process.env.EMET_STATE_DIR ?? "");
+  if (previousStateDir === undefined) Reflect.deleteProperty(process.env, "EMET_STATE_DIR");
+  else process.env.EMET_STATE_DIR = previousStateDir;
+  if (stateRoot.includes("gate-state-")) rmSync(stateRoot, { recursive: true, force: true });
   process.chdir(previousDirectory);
   process.exitCode = 0;
   rmSync(root, { recursive: true, force: true });
@@ -59,6 +70,52 @@ async function runGate(argv: string[]): Promise<Captured> {
   }
   return captured;
 }
+
+describe("gate run() journal", () => {
+  test("a printed decision is journaled with an intervention when nothing launched the wave", async () => {
+    writeJson(path.join(root, ".emet", "runs", "emet700w1111111", "verify", "CLA-1.json"), {
+      ok: true,
+    });
+    const result = await runGate(["CLA-1", "--run", "emet700w1111111", "--ci", "pass"]);
+    expect(JSON.parse(result.logs[0] ?? "")).toMatchObject({ decision: "merge" });
+    const events = readJournalSegments().events;
+    expect(events.map((event) => event.kind)).toEqual(["gate.decision", "intervention"]);
+    expect(events[0]?.data).toMatchObject({ ticket: "CLA-1", decision: "merge", tier: "medium" });
+    expect(events[0]?.runId).toBe("emet700w1111111");
+    expect(events[1]?.origin).toBe("human");
+  });
+
+  test("no intervention is written once a launch.result exists for the spec", async () => {
+    appendEvent({
+      kind: "launch.result",
+      repo: root,
+      origin: "auto",
+      data: { spec: "700", wave: 1, name: "emet-700-w1", outcome: "started" },
+    });
+    writeJson(path.join(root, ".emet", "runs", "emet700w1111111", "verify", "CLA-1.json"), {
+      ok: true,
+    });
+    await runGate(["CLA-1", "--run", "emet700w1111111", "--ci", "pass"]);
+    const kinds = readJournalSegments().events.map((event) => event.kind);
+    expect(kinds).toEqual(["launch.result", "gate.decision"]);
+  });
+
+  test("--no-record writes no event", async () => {
+    writeJson(path.join(runDirectory, "verify", "CLA-1.json"), { ok: true });
+    await runGate(["CLA-1", "--run", "r1", "--ci", "pass", "--no-record"]);
+    expect(readJournalSegments().events).toEqual([]);
+  });
+
+  test("an unwritable journal leaves the output and exit code unchanged", async () => {
+    writeJson(path.join(runDirectory, "verify", "CLA-1.json"), { ok: true });
+    const blocker = path.join(root, "blocker");
+    writeFileSync(blocker, "file");
+    process.env.EMET_STATE_DIR = blocker;
+    const result = await runGate(["CLA-1", "--run", "r1", "--ci", "pass"]);
+    expect(result.exitCode).toBe(0);
+    expect(JSON.parse(result.logs[0] ?? "")).toMatchObject({ decision: "merge" });
+  });
+});
 
 describe("gate run()", () => {
   test("a missing ticket prints usage and exits 2", async () => {
@@ -224,8 +281,8 @@ describe("gate run()", () => {
     const first = await runGate(["CLA-1", "--run", "r1", "--ci", "env-fault"]);
     expect(JSON.parse(first.logs[0] ?? "")).toMatchObject({ next: "rerun-ci" });
     expect(JSON.parse(readFileSync(counters, "utf8"))).toMatchObject({ ciEnvFaults: 1 });
-    const second = await runGate(["CLA-1", "--run", "r1", "--ci", "env-fault"]);
-    expect(JSON.parse(second.logs[0] ?? "")).toMatchObject({ next: "report-infrastructure" });
+    const result = await runGate(["CLA-1", "--run", "r1", "--ci", "env-fault"]);
+    expect(JSON.parse(result.logs[0] ?? "")).toMatchObject({ next: "report-infrastructure" });
     await runGate(["CLA-1", "--run", "r1", "--ci", "pass"]);
     expect(JSON.parse(readFileSync(counters, "utf8"))).toMatchObject({ ciEnvFaults: 0 });
   });
@@ -244,8 +301,8 @@ describe("gate run()", () => {
     const args = ["CLA-1", "--run", "r1", "--ci", "pass", "--integration"];
     const first = await runGate([...args, "fail"]);
     expect(JSON.parse(first.logs[0] ?? "")).toMatchObject({ next: "rerun-failed-specs" });
-    const second = await runGate([...args, "fail"]);
-    expect(JSON.parse(second.logs[0] ?? "")).toMatchObject({ decision: "stop" });
+    const result = await runGate([...args, "fail"]);
+    expect(JSON.parse(result.logs[0] ?? "")).toMatchObject({ decision: "stop" });
     await runGate([...args, "pass"]);
     expect(JSON.parse(readFileSync(counters, "utf8"))).toMatchObject({ integrationFailures: 0 });
     rmSync(counters);

@@ -9,7 +9,13 @@ import {
   type HandoffLauncher,
 } from "./config";
 import type { GateResult } from "./gate";
-import { defaultRunner, launchSettingsFor, launchWave, type CommandRunner } from "./launch";
+import {
+  defaultRunner,
+  launchSettingsFor,
+  launchWave,
+  recordLaunchResult,
+  type CommandRunner,
+} from "./launch";
 import { BINARY, LEGACY_PRODUCT, PRODUCT } from "./names";
 import { errorMessage, isObject } from "./narrow";
 import {
@@ -183,21 +189,21 @@ export async function chainNextWave(request: ChainRequest, deps: ChainDeps): Pro
   if (existing !== undefined) {
     return { launched: false, verified: false, name: existing, gate, issues };
   }
-  const outcome = await launchWave(
-    {
-      specId: request.specId,
-      wave: request.wave,
-      repoRoot: deps.repoRoot,
-      launcher: deps.launcher,
-      permissionMode: deps.permissionMode,
+  const launchRequest = {
+    specId: request.specId,
+    wave: request.wave,
+    repoRoot: deps.repoRoot,
+    launcher: deps.launcher,
+    permissionMode: deps.permissionMode,
+  };
+  const outcome = await launchWave(launchRequest, deps.runner, deps.host, false).catch(
+    (error: unknown) => {
+      throw error instanceof ForgeConfigError ? new Error(error.message, { cause: error }) : error;
     },
-    deps.runner,
-    deps.host,
-  ).catch((error: unknown) => {
-    throw error instanceof ForgeConfigError ? new Error(error.message, { cause: error }) : error;
-  });
+  );
   const listed = await deps.host.sessions.list(deps.runner);
   const verified = listed.some((row) => row.name === outcome.name);
+  recordLaunchResult(launchRequest, outcome, "chain", verified);
   return { launched: true, verified, name: outcome.name, gate, issues };
 }
 

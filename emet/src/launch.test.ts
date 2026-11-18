@@ -1,14 +1,17 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
-import { mkdtempSync, realpathSync, rmSync } from "node:fs";
+import { mkdtempSync, realpathSync, rmSync, writeFileSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
 
 import { claudeHost } from "./agenthost-claude";
 import { codexHost } from "./agenthost-codex";
 import { DEFAULT_CODEX_CONFIG, DEFAULT_FORGE_CONFIG, ForgeConfigError } from "./config";
+import { appendEvent, readJournalSegments } from "./journal";
 import {
   defaultRunner,
+  hasLaunchResult,
   launchSettingsFor,
+  resolveWaveContext,
   run,
   launchWave,
   waveSessionName,
@@ -76,6 +79,76 @@ function scriptedRunner(script: {
   };
   return { runner, calls };
 }
+
+let journalRoot: string;
+let previousStateDir: string | undefined;
+
+beforeEach(() => {
+  previousStateDir = process.env.EMET_STATE_DIR;
+  journalRoot = mkdtempSync(path.join(os.tmpdir(), "emet-launch-journal-"));
+  process.env.EMET_STATE_DIR = path.join(journalRoot, "state");
+});
+
+afterEach(() => {
+  if (previousStateDir === undefined) Reflect.deleteProperty(process.env, "EMET_STATE_DIR");
+  else process.env.EMET_STATE_DIR = previousStateDir;
+  rmSync(journalRoot, { recursive: true, force: true });
+});
+
+describe("launch journal", () => {
+  test("a confirmed launch writes an auto launch.result", async () => {
+    const { runner } = scriptedRunner({ agents: [json([]), STARTED] });
+    await launchWave({ ...REQUEST, launcher: "bg" }, runner);
+    const events = readJournalSegments().events;
+    expect(events).toHaveLength(1);
+    expect(events[0]).toMatchObject({
+      kind: "launch.result",
+      origin: "auto",
+      data: {
+        spec: "AO-1880",
+        wave: 2,
+        name: "emet-AO-1880-w2",
+        outcome: "started",
+        via: "launch",
+      },
+    });
+  });
+
+  test("a refused launch writes nothing", async () => {
+    const { runner } = scriptedRunner({ agents: [json([{ name: "emet-AO-1880-w2" }])] });
+    await rejectionOf(launchWave(REQUEST, runner));
+    expect(readJournalSegments().events).toEqual([]);
+  });
+
+  test("an unwritable journal does not fail the launch", async () => {
+    const blocker = path.join(journalRoot, "blocker");
+    writeFileSync(blocker, "file");
+    process.env.EMET_STATE_DIR = blocker;
+    const { runner } = scriptedRunner({ agents: [json([]), STARTED] });
+    const outcome = await launchWave({ ...REQUEST, launcher: "bg" }, runner);
+    expect(outcome.name).toBe("emet-AO-1880-w2");
+  });
+
+  test("hasLaunchResult matches on spec and, when known, wave", () => {
+    appendEvent({
+      kind: "launch.result",
+      repo: "/repo",
+      origin: "auto",
+      data: { spec: "7", wave: 2 },
+    });
+    expect(hasLaunchResult({ spec: "7", wave: 2 })).toBe(true);
+    expect(hasLaunchResult({ spec: "7", wave: null })).toBe(true);
+    expect(hasLaunchResult({ spec: "7", wave: 3 })).toBe(false);
+    expect(hasLaunchResult({ spec: "8", wave: 2 })).toBe(false);
+    expect(hasLaunchResult({ spec: null, wave: null })).toBe(false);
+  });
+
+  test("resolveWaveContext reads the spec from the run id when no phase exists", () => {
+    expect(resolveWaveContext(journalRoot, "emet621w2233041")).toEqual({ spec: "621", wave: null });
+    expect(resolveWaveContext(journalRoot, "r1")).toEqual({ spec: null, wave: null });
+    expect(resolveWaveContext(journalRoot)).toEqual({ spec: null, wave: null });
+  });
+});
 
 const STARTED = json([{ id: "abc12345", name: "emet-AO-1880-w2" }]);
 const REACHABLE = json({ ok: true, result: { runtime: { reachable: true } } });
