@@ -2,7 +2,7 @@
 title: CLI リファレンス
 description: すべての emet サブコマンド、ゲートと記録の表、終了コード、環境変数を説明します。
 seoTitle: emet CLI リファレンス
-sourceHash: d485585e0e29f0f9
+sourceHash: 3f581ec5b9773165
 ---
 
 すべての `emet` サブコマンド、ゲートと記録の表、終了コード、環境変数です。用語は [GLOSSARY.md](../../GLOSSARY.md) に従います。[README](../../README.md) に戻る。すべてのコマンドは `--help` で使い方を表示します。
@@ -57,7 +57,9 @@ emet doctor ~/code/*
 - `emet lock-reason --run <id> --ticket <ticket> [--anchor <pid>]`: ワーカーがブートストラップ時に書き込む `git worktree lock` の理由を表示します。
 - `emet launch <spec-id> --wave <n>`: Claude Code では、ウェーブを `claude --bg` セッションとして開始し、`handoff.launcher` に従って Orca タブを開きます（Codex については [Codex ホスト](#codex-ホスト)を参照）。起動の全体（重複セッションの確認、`claude --bg`、タブ）を行い、`{ name, id, attach, orcaTab: { opened, reason } }` を出力します。別のセッションで手動でウェーブを動かしたいときは、素の `claude --bg` ではなくこちらを使ってください。
 - `emet chain --ticket <id> --spec <id> --wave <n> [gate flags]`: 受け取ったゲートのフラグで `emet gate` を実行し、判定が `chain` のときだけ次のウェーブを開始します。起動前に準備状況（ホストのメモリ余裕、リポジトリと `/tmp` の空きディスクと inode、`orca` CLI）を確認し、起動後に子セッションが一覧に表示されることを確かめます。それ以外の判定、ブロックとなる準備上の問題（`low-memory`、`low-disk`、`low-inodes`、`orca-unavailable`）、または同じ仕様とウェーブの既存セッションがある場合は、理由とともに終了コード 1 で終了し、何も起動しません。
-- `emet status [--spec <id>]`: ウェーブごとの Working / Checking / Ready / Needs-decision を JSON とサマリー行で表示します。`emet status --help` に JSON の説明があります。
+- `emet status [--spec <id>] [--brief]`: ウェーブごとの Working / Checking / Ready / Needs-decision を JSON とサマリー行で表示します。`--brief` を指定すると、代わりに最大 3 行を表示します。全体の状態、人の対応待ちがあればその内容、次のアクションです。`emet status --help` に JSON の説明があります。
+- `emet run current [--json]`: リポジトリのアクティブな実行 (実行 ID、スペック、ウェーブ、フェーズ、最終更新) を `.emet/phase.json` から読み取って表示します。アクティブな実行がない場合は `no active run` を表示して 0 で終了します。
+- `emet insights [--since <iso|7d|30d>] [--repo <path>] [--all] [--json] [--mark-baseline]`: [イベントジャーナル](../guide/journal.md)を読み取り、起点 (人間または自動) ごとの実行、判断と理由ごとのゲート判断、実行ごとの人間の介入、起動結果、クローズしたチケットを報告します。読み取れない行はスキップして数えます。`--mark-baseline` はベースラインを追記し、以降のレポートは `--all` を指定しない限りそれより後のイベントのみを対象にします。ジャーナルが空または存在しない場合は、ゼロのレポートを表示して 0 で終了します。
 - `emet usage [--session <id> | --file <path>] [--stalled [--minutes N]] [--project-dir <path>]`: セッションの使用状況を報告します。`--stalled` は停滞したワーカーを一覧表示します。
 - `emet handoff --check <path> | --render <path>`: ワーカーの `.emet/handoff-<ticket>.md` ノートを検証または表示します。
 - `emet metrics [--run <id>]`: セッションのトランスクリプトから、チケットごと、ウェーブごと、実行ごとのトークン、API 換算コスト、経過時間を報告します。また、チケットごとに見積もったコンテキスト予算と、各ワーカーが実際に使った量も比較します。その要約は、実行の最終レポートの末尾に入ります。
@@ -110,7 +112,7 @@ emet doctor ~/code/*
 | 各ワーカーの後       | `emet verify <ticket> --run <id>`                    | ディスパッチ時の基準点より後にコミットがあること、変更されたすべてのパスがチケットの編集サーフェス内にあること、ハンドオフノートが `handoff --check` に合格すること、`commands.workerScopedSuite` が成功することを確認します。レビューとマージは、合格記録のないチケットを拒否します。                                                                                                                                                                                                                       |
 | レビューの入力       | `emet review-package <base> <head> --out <file>`     | レビュアー向けに差分をまとめます。レビュアーはファイルパスとして受け取ります。範囲が空の場合や、base の子孫でない場合は終了コード 3 で終了します。                                                                                                                                                                                                                                                                                                                                                           |
 | レビュー             | `emet review --ticket <t> --findings <file>`         | 指摘の台帳を管理し、トリアージの順序（`intent_gap` → `bad_plan` → `patch` → `defer`）とラウンド数の上限を強制します。`--recheck --verdicts <file>` は修正ラウンドを終了させます。開始時に未解決だった指摘だけが評価され、指摘が `resolved` になるのは判定を通じてのみで、recheck は `budgets.fixRounds` に数えられます（使い切った場合は上限を示して終了コード 1）。`--escalate` は次のモデルティアに移ります。`--rule`/`--rulings` は、レポートと PR 本文のための「下した裁定」を記録および一覧表示します。 |
-| マージまたはチェーン | `emet gate <ticket> --tier … --ci … --integration …` | `merge`、`hold`、`chain`、`stop`、`defer` のいずれかを、理由とともに JSON で出力します。verify の記録、未解決の指摘、リスクティア、CI、統合スイート、予算を読み取ります。`hold` には `next` が付きます: `fix-findings`、`rerun-failed-specs`、`rerun-ci`、`report-infrastructure`。[`gate`](configuration.md#gate) を参照してください。                                                                                                                                                                      |
+| マージまたはチェーン | `emet gate <ticket> --tier … --ci … --integration …` | `merge`、`hold`、`chain`、`stop`、`defer` のいずれかを、理由とともに JSON で出力します。verify の記録、未解決の指摘、リスクティア、CI、統合スイート、予算を読み取ります。`hold` には `next` が付きます: `fix-findings`、`rerun-failed-specs`、`rerun-ci`、`report-infrastructure`。`--no-record` は判断をジャーナルに記録しません。[`gate`](configuration.md#gate) を参照してください。                                                                                                                      |
 
 ウェーブのブランチがまとめてマージされた後、`commands.fullSuite` が統合ブランチで 1 回実行されます。失敗すると、PR と `autoChain` がブロックされます。ゲートはその結果を `--integration` として受け取ります。ゲートが読み取る予算については、[`budgets`](configuration.md#budgets) を参照してください。
 

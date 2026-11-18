@@ -2,12 +2,19 @@
 title: 설정 레퍼런스
 description: emet.config.json의 모든 키를 기본값과 의미와 함께 설명합니다.
 seoTitle: emet 설정 레퍼런스
-sourceHash: 5a9c5814c4711e31
+sourceHash: d333cfa0ad463263
 ---
 
 `emet.config.json`의 모든 키를 기본값과 의미와 함께 정리했습니다. 기준이 되는 원본은 [`emet/schema/emet.config.schema.json`](../../emet/schema/emet.config.schema.json)입니다. 용어는 [GLOSSARY.md](../../GLOSSARY.md)를 따릅니다. [README](../../README.md)로 돌아가기.
 
 `emet init`이 이 파일을 작성하며 `$schema`를 공개 URL `https://emet.andryore.dev/schema/emet.config.schema.json`로 설정합니다. 웹사이트는 이 파일을 원본과 바이트 단위로 동일하게 제공하므로 에디터는 어디서나 자동 완성을 제공합니다. `emet preflight`와 `emet doctor`가 검증합니다. prose-only로 표시된 키는 CLI가 아니라 `/emet` 프롬프트(Codex에서는 `$emet:*` 스킬)가 읽습니다. deprecated로 표시된 키도 계속 허용됩니다. 스키마는 메모용 자유 형식 `"//"` 키(어떤 도구도 읽지 않음)와 항상 `1`인 `"version"`도 허용합니다.
+
+## language
+
+- `conversation` (기본값 `"en"`): 에이전트가 사용자에게 답하는 언어의 BCP 47 태그.
+- `artifacts` (기본값 `"en"`): 코드, 주석, 커밋 메시지, PR 본문, 티켓, 문서의 언어의 BCP 47 태그.
+
+둘 다 비어 있지 않은 문자열이어야 합니다. `language` 섹션이 없는 설정은 둘 다 `"en"`으로 로드되며, `emet init`은 둘 다 기록합니다. 설치된 프롬프트가 이를 읽습니다.
 
 ## pr
 
