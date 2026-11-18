@@ -17,7 +17,7 @@ import {
 import os from "node:os";
 import path from "node:path";
 
-import { PROJECT_SKILLS } from "./standard-invariants.test";
+import { MODULE_SKILLS } from "./standard-invariants.test";
 
 const REPO_ROOT = path.join(import.meta.dir, "..");
 
@@ -78,7 +78,7 @@ function dig(value: unknown, ...keys: string[]): unknown {
  * @returns Each skill's directory name and `SKILL.md` path.
  */
 function skillFiles(): { directory: string; file: string }[] {
-  const project = PROJECT_SKILLS.map((name) => ({
+  const project = MODULE_SKILLS.map((name) => ({
     directory: name,
     file: `.claude/skills/${name}/SKILL.md`,
   }));
@@ -95,7 +95,7 @@ describe("skills", () => {
       skillFiles()
         .map(({ directory }) => directory)
         .toSorted(),
-    ).toEqual([...PROJECT_SKILLS, "doctor", "init", "run"].toSorted());
+    ).toEqual([...MODULE_SKILLS, "doctor", "init", "run"].toSorted());
   });
 
   test("each skill's name equals its directory and its description says Use when", () => {
