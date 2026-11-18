@@ -274,11 +274,20 @@ async function git(root: string, ...args: string[]): Promise<{ ok: boolean; out:
   return { ok: result.exitCode === 0, out: result.stdout.toString() };
 }
 
+const UNMAPPED_PREFIXES = [".claude/skills/"] as const;
+
+/**
+ * Whether a tracked path belongs in the map; vendored skill folders are left out.
+ */
+function isMappedFile(file: string): boolean {
+  return file.length > 0 && !UNMAPPED_PREFIXES.some((prefix) => file.startsWith(prefix));
+}
+
 async function collectInputs(root: string): Promise<MapInputs> {
   const head = await git(root, "rev-parse", "HEAD");
   if (!head.ok) throw new Error("emet map: not a git repository with at least one commit");
   const listed = await git(root, "ls-files");
-  const files = listed.out.split("\n").filter((file) => file.length > 0);
+  const files = listed.out.split("\n").filter(isMappedFile);
   const manifestNames = ["package.json", "tsconfig.json"];
   const manifests = new Map<string, string>();
   for (const name of manifestNames) {
@@ -294,7 +303,7 @@ async function collectInputs(root: string): Promise<MapInputs> {
   );
   const churn = new Map<string, number>();
   for (const file of history.out.split("\n")) {
-    if (file.length > 0) churn.set(file, (churn.get(file) ?? 0) + 1);
+    if (isMappedFile(file)) churn.set(file, (churn.get(file) ?? 0) + 1);
   }
   const subjects = await git(root, "log", "-n20", "--pretty=format:%s");
   return {
