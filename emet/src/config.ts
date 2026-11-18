@@ -89,6 +89,7 @@ export const DEFAULT_FORGE_CONFIG: ForgeConfig = {
   },
   landing: { mode: "pr" },
   gate: { onHold: "fix-and-continue" },
+  language: { conversation: "en", artifacts: "en" },
   pr: { autoMerge: true, mergeMethod: "squash", maxCiFixAttempts: 2 },
   usage: { oversizedReadLines: 400, stalledMinutes: 10 },
   models: {
@@ -264,6 +265,12 @@ export interface ForgeConfig {
      * holds for a fix round while `budgets.fixRounds` has rounds left; `stop`
      * stops as soon as review rounds are exhausted. */
     readonly onHold: GateOnHold;
+  };
+  readonly language: {
+    /** Language of the text addressed to the person (replies, questions, reports). */
+    readonly conversation: string;
+    /** Language of written artifacts: code, comments, docs, commit messages, PR text. */
+    readonly artifacts: string;
   };
   readonly pr: {
     /** When true, Phase 8 waits for the wave PR's checks and merges it. */
@@ -670,6 +677,17 @@ function validateAndMerge(
     return { ok: false, reason: '"gate.onHold" must be one of fix-and-continue|stop' };
   }
 
+  const languageSection = isRecord(raw.language) ? raw.language : {};
+  const languageConversation =
+    languageSection.conversation ?? DEFAULT_FORGE_CONFIG.language.conversation;
+  if (!isNonEmptyString(languageConversation)) {
+    return { ok: false, reason: '"language.conversation" must be a non-empty string' };
+  }
+  const languageArtifacts = languageSection.artifacts ?? DEFAULT_FORGE_CONFIG.language.artifacts;
+  if (!isNonEmptyString(languageArtifacts)) {
+    return { ok: false, reason: '"language.artifacts" must be a non-empty string' };
+  }
+
   const prSection = isRecord(raw.pr) ? raw.pr : {};
   const autoMerge = prSection.autoMerge ?? DEFAULT_FORGE_CONFIG.pr.autoMerge;
   const mergeMethod = prSection.mergeMethod ?? DEFAULT_FORGE_CONFIG.pr.mergeMethod;
@@ -824,6 +842,7 @@ function validateAndMerge(
       },
       landing: { mode: landingMode },
       gate: { onHold: gateOnHold },
+      language: { conversation: languageConversation, artifacts: languageArtifacts },
       pr: { autoMerge, mergeMethod, maxCiFixAttempts },
       usage: { oversizedReadLines, stalledMinutes },
       models: {

@@ -105,6 +105,7 @@ describe("buildForgeConfig", () => {
     expect(config.concurrency.waveSize).toBeGreaterThan(0);
     expect(config.tracker).toEqual({ kind: "local" });
     expect(config.preflight.requiredCommands).toEqual([]);
+    expect(config.language).toEqual({ conversation: "en", artifacts: "en" });
   });
 
   test("local with no remote defaults landing.mode to merge", () => {
