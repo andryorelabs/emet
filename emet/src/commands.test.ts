@@ -46,6 +46,26 @@ describe("outcomeCode", () => {
   });
 });
 
+const flagNames = (name: string): string[] =>
+  findCommand(name)?.flags.map((flag) => flag.name) ?? [];
+
+describe("ci, chain and the new flags", () => {
+  test("registers ci and chain with their flags", () => {
+    for (const flag of ["--pr", "--wait", "--rerun-flakes", "--timeout-minutes"]) {
+      expect(flagNames("ci")).toContain(flag);
+    }
+    for (const flag of ["--spec", "--wave", "--ci", "--waves-remaining"]) {
+      expect(flagNames("chain")).toContain(flag);
+    }
+  });
+
+  test("review takes --recheck and tracker takes --pr and --reason", () => {
+    expect(flagNames("review")).toContain("--recheck");
+    expect(flagNames("tracker")).toContain("--pr");
+    expect(flagNames("tracker")).toContain("--reason");
+  });
+});
+
 describe("commandHelp", () => {
   test("lists the command flags and the global flags", () => {
     const spec = findCommand("handoff");

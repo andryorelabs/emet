@@ -6,6 +6,7 @@
  *   emet review --ticket <ticket> --escalate --model <model>
  *   emet review --ticket <ticket> --rule <what> --why <why> --cost <cost>
  *   emet review --ticket <ticket> --rulings
+ *   emet review --ticket <ticket> --recheck --verdicts <file|->
  *
  * The ledger lives at `<repo>/.emet/review/<ticket>.json`.
  */
@@ -21,7 +22,8 @@ import { writePhase } from "./phase";
 const USAGE = `usage: ${BINARY} review --ticket <ticket> --findings <file|-> [--changed <a,b>]
        ${BINARY} review --ticket <ticket> --escalate --model <model>
        ${BINARY} review --ticket <ticket> --rule <what> --why <why> --cost <cost>
-       ${BINARY} review --ticket <ticket> --rulings`;
+       ${BINARY} review --ticket <ticket> --rulings
+       ${BINARY} review --ticket <ticket> --recheck --verdicts <file|->`;
 
 const KINDS = ["intent_gap", "bad_plan", "patch", "defer"] as const;
 const SEVERITIES = ["blocker", "critical", "major", "minor", "nit"] as const;
@@ -52,12 +54,13 @@ export interface Ruling {
 export interface Ledger {
   readonly ticket: string;
   readonly rounds: number;
+  readonly fixRounds: number;
   readonly findings: readonly LedgerFinding[];
   readonly rulings: readonly Ruling[];
 }
 
 export function emptyLedger(ticket: string): Ledger {
-  return { ticket, rounds: 0, findings: [], rulings: [] };
+  return { ticket, rounds: 0, fixRounds: 0, findings: [], rulings: [] };
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -158,6 +161,64 @@ export function recordRound(
   return { ok: true, ledger: { ...ledger, rounds: round, findings: [...carried, ...added] } };
 }
 
+export interface RecheckVerdict {
+  readonly id: string;
+  readonly resolved: boolean;
+}
+
+export interface RecheckOptions {
+  readonly fixRounds: number;
+}
+
+/** Closes a fix round: only a recheck verdict resolves an open finding, and it costs a fix round. */
+export function recordRecheck(
+  ledger: Ledger,
+  verdicts: readonly RecheckVerdict[],
+  options: RecheckOptions,
+): RoundResult {
+  if (ledger.fixRounds >= options.fixRounds) {
+    return {
+      ok: false,
+      reason: `fix round cap reached (${ledger.fixRounds}/${options.fixRounds}); rule on the open findings or stop`,
+    };
+  }
+  const openIds = new Set(
+    ledger.findings.filter((entry) => entry.status === "open").map((entry) => entry.id),
+  );
+  const unknown = verdicts.filter((verdict) => !openIds.has(verdict.id));
+  if (unknown.length > 0) {
+    return {
+      ok: false,
+      reason: `recheck verdict for a finding that is not open: ${unknown.map((verdict) => verdict.id).join(", ")}`,
+    };
+  }
+  const resolvedIds = new Set(
+    verdicts.filter((verdict) => verdict.resolved).map((verdict) => verdict.id),
+  );
+  const findings = ledger.findings.map((entry) =>
+    resolvedIds.has(entry.id) ? { ...entry, status: "resolved" as const } : entry,
+  );
+  return { ok: true, ledger: { ...ledger, fixRounds: ledger.fixRounds + 1, findings } };
+}
+
+export function parseVerdicts(text: string): RecheckVerdict[] {
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(text);
+  } catch {
+    throw new ForgeConfigError("verdicts are not valid JSON");
+  }
+  if (!Array.isArray(parsed)) throw new ForgeConfigError("verdicts must be a JSON array");
+  return parsed.map((raw: unknown, index) => {
+    if (!isRecord(raw)) throw new ForgeConfigError(`verdict ${index} must be an object`);
+    const { id, resolved } = raw;
+    if (typeof id !== "string" || !id || typeof resolved !== "boolean") {
+      throw new ForgeConfigError(`verdict ${index}: id must be a string and resolved a boolean`);
+    }
+    return { id, resolved };
+  });
+}
+
 export function nextEscalationModel(
   escalation: Readonly<Record<string, string>>,
   model: string,
@@ -207,7 +268,7 @@ function parseRuling(raw: unknown, index: number): Ruling {
 
 function parseLedger(parsed: unknown): Ledger {
   if (!isRecord(parsed)) throw new ForgeConfigError("ledger must be a JSON object");
-  const { ticket, rounds, findings, rulings } = parsed;
+  const { ticket, rounds, findings, rulings, fixRounds } = parsed;
   if (typeof ticket !== "string" || typeof rounds !== "number") {
     throw new ForgeConfigError("ledger needs a string ticket and a numeric rounds");
   }
@@ -217,6 +278,7 @@ function parseLedger(parsed: unknown): Ledger {
   return {
     ticket,
     rounds,
+    fixRounds: typeof fixRounds === "number" ? fixRounds : 0,
     findings: findings.map(parseLedgerFinding),
     rulings: rulings.map(parseRuling),
   };
@@ -233,6 +295,13 @@ function saveLedger(repoRoot: string, ledger: Ledger): void {
   const file = ledgerPath(repoRoot, ledger.ticket);
   mkdirSync(path.dirname(file), { recursive: true });
   writeFileSync(file, `${JSON.stringify(ledger, null, 2)}\n`);
+}
+
+const DEFAULT_FIX_ROUNDS = 2;
+
+function fixRoundsCap(budgets: object): number {
+  const cap = "fixRounds" in budgets ? budgets.fixRounds : undefined;
+  return typeof cap === "number" ? cap : DEFAULT_FIX_ROUNDS;
 }
 
 function readFlagValue(argv: readonly string[], flag: string): string | undefined {
@@ -288,6 +357,33 @@ export async function run(argv: string[]): Promise<void> {
       if (!why || !cost)
         throw new ForgeConfigError(`${BINARY} review: --rule needs --why and --cost`);
       saveLedger(repoRoot, addRuling(ledger, { what, why, cost }));
+      return;
+    }
+
+    if (argv.includes("--recheck")) {
+      const verdictSource = readFlagValue(argv, "--verdicts");
+      if (!verdictSource) {
+        console.error(USAGE);
+        process.exitCode = 2;
+        return;
+      }
+      const verdicts = parseVerdicts(await readFindingsInput(verdictSource));
+      const rechecked = recordRecheck(ledger, verdicts, {
+        fixRounds: fixRoundsCap(config.budgets),
+      });
+      if (!rechecked.ok) {
+        console.error(rechecked.reason);
+        process.exitCode = 1;
+        return;
+      }
+      saveLedger(repoRoot, rechecked.ledger);
+      const stillOpen = triageOrder(
+        rechecked.ledger.findings.filter((entry) => entry.status === "open"),
+      );
+      console.log(
+        JSON.stringify({ fixRounds: rechecked.ledger.fixRounds, open: stillOpen }, null, 2),
+      );
+      process.exitCode = stillOpen.length > 0 ? 1 : 0;
       return;
     }
 

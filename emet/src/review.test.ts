@@ -11,6 +11,8 @@ import {
   formatRulings,
   nextEscalationModel,
   parseFindings,
+  parseVerdicts,
+  recordRecheck,
   recordRound,
   run,
   triageOrder,
@@ -128,6 +130,54 @@ describe("recordRound resolution", () => {
     const third = recordRound(second.ledger, [], options);
     if (!third.ok) throw new Error("round 3 failed");
     expect(third.ledger.findings.some((entry) => entry.status === "open")).toBe(false);
+  });
+});
+
+const base = (): Ledger => {
+  const seeded = recordRound(emptyLedger("T-1"), parseItems([finding(), finding({ id: "F2" })]), {
+    changedFiles: [],
+    reviewRounds: 3,
+  });
+  if (!seeded.ok) throw new Error(seeded.reason);
+  return seeded.ledger;
+};
+
+describe("recordRecheck", () => {
+  test("resolves a verdict-resolved finding and charges a fix round, not a review round", () => {
+    const result = recordRecheck(base(), [{ id: "F1", resolved: true }], { fixRounds: 2 });
+    if (!result.ok) throw new Error(result.reason);
+    expect(result.ledger.fixRounds).toBe(1);
+    expect(result.ledger.rounds).toBe(1);
+    expect(result.ledger.findings.map((entry) => entry.status)).toEqual(["resolved", "open"]);
+  });
+
+  test("a finding without a resolved verdict stays open", () => {
+    const result = recordRecheck(base(), [{ id: "F1", resolved: false }], { fixRounds: 2 });
+    if (!result.ok) throw new Error(result.reason);
+    expect(result.ledger.findings.map((entry) => entry.status)).toEqual(["open", "open"]);
+  });
+
+  test("refuses at the cap and names it", () => {
+    const result = recordRecheck({ ...base(), fixRounds: 2 }, [], { fixRounds: 2 });
+    if (result.ok) throw new Error("expected a refusal");
+    expect(result.reason).toContain("(2/2)");
+  });
+
+  test("refuses a verdict for a finding that is not open", () => {
+    const result = recordRecheck(base(), [{ id: "F9", resolved: true }], { fixRounds: 2 });
+    expect(result.ok).toBe(false);
+  });
+
+  test("parseVerdicts validates shape", () => {
+    expect(parseVerdicts('[{"id":"F1","resolved":true}]')).toEqual([{ id: "F1", resolved: true }]);
+    expect(() => parseVerdicts("nope")).toThrow("not valid JSON");
+    expect(() => parseVerdicts("{}")).toThrow("JSON array");
+    expect(() => parseVerdicts("[1]")).toThrow("must be an object");
+    expect(() => parseVerdicts('[{"id":"F1"}]')).toThrow("resolved a boolean");
+  });
+
+  test("a ledger from an older emet reads with fixRounds 0", () => {
+    expect(emptyLedger("T-1").fixRounds).toBe(0);
   });
 });
 
@@ -369,6 +419,34 @@ describe("review run in process", () => {
     await run(["--ticket", "T-1", "--findings", clean]);
     expect(process.exitCode).toBe(0);
     expect(readRound(logs.join("\n"))).toBe(2);
+  });
+
+  test("recheck resolves a finding through the CLI and refuses at the cap", async () => {
+    const entry = { ...finding(), status: "open", round: 1 };
+    writeLedger({ ticket: "T-1", rounds: 1, findings: [entry], rulings: [] });
+    const verdicts = path.join(repo, "verdicts.json");
+    writeFileSync(verdicts, JSON.stringify([{ id: "F1", resolved: true }]));
+    await run(["--ticket", "T-1", "--recheck", "--verdicts", verdicts]);
+    expect(process.exitCode).toBe(0);
+    const saved: unknown = JSON.parse(
+      readFileSync(path.join(repo, ".emet", "review", "T-1.json"), "utf8"),
+    );
+    expect(saved).toMatchObject({ rounds: 1, fixRounds: 1, findings: [{ status: "resolved" }] });
+    writeLedger({ ticket: "T-1", rounds: 1, fixRounds: 2, findings: [], rulings: [] });
+    await run(["--ticket", "T-1", "--recheck", "--verdicts", verdicts]);
+    expect(process.exitCode).toBe(1);
+    expect(errors.join("\n")).toContain("(2/2)");
+  });
+
+  test("recheck without verdicts exits 2; findings still open exit 1", async () => {
+    await run(["--ticket", "T-1", "--recheck"]);
+    expect(process.exitCode).toBe(2);
+    const entry = { ...finding(), status: "open", round: 1 };
+    writeLedger({ ticket: "T-1", rounds: 1, findings: [entry], rulings: [] });
+    const verdicts = path.join(repo, "verdicts.json");
+    writeFileSync(verdicts, "[]");
+    await run(["--ticket", "T-1", "--recheck", "--verdicts", verdicts]);
+    expect(process.exitCode).toBe(1);
   });
 
   test("a round past the cap exits 1 with the reason", async () => {
