@@ -3,10 +3,7 @@
 !.emet/tickets/
 node_modules/
 
-# third-party agent skills installed locally via the skills CLI; only the two Module skills are tracked (skills-lock.json)
-.claude/skills/*
-!.claude/skills/add-adr/
-!.claude/skills/cut-release/
+# local-only skills stay ignored; every other skill under .claude/skills/ is tracked and locked (skills-lock.json, ADR 0028)
 .claude/skills/git-commit/
 .claude/worktrees/
 

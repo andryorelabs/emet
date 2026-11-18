@@ -46,6 +46,23 @@ Husky wires three Git hooks:
 
 For agents, `.claude/settings.json` adds the `rm-guard` PreToolUse hook and push denies; see [security.md](security.md).
 
+## Skills install and update
+
+Third-party skills under `.claude/skills/` are tracked and locked ([ADR-0028](adr/0028-third-party-skills-are-tracked-and-locked.md)). Install or update one, always pinned to a commit:
+
+```sh
+bunx skills add <owner>/<repo>#<commit> -s <skill> -a claude-code
+```
+
+The CLI rewrites `skills-lock.json` to version 2 and blanks the hashes. Afterwards:
+
+1. Restore the file with `git checkout -- skills-lock.json`.
+2. Edit the entry by hand in the version-1 shape: `source`, `ref` (the full commit SHA), `sourceType: "github"`, `skillPath` and `computedHash`.
+3. Compute `computedHash` as the folder hash: sha256 over the folder's files sorted by path, each path then its content.
+4. Read every `SKILL.md` and bundled script (`.mjs`, `.js`) before committing, and report anything that fetches, executes or exfiltrates.
+
+Never edit a vendored skill file. Run the modern-web-guidance CLI as the rule in [AGENTS.md](../AGENTS.md) says.
+
 ## Runners
 
 CI runs on Linux and macOS ([ADR-0007](adr/0007-macos-support.md)); Windows is unsupported except through WSL. Most jobs run on the runner named by the `BLACKSMITH_RUNNER` repository variable and fall back to `ubuntu-latest`; a pull request from a fork always uses `ubuntu-latest`. The macOS job uses `macos-latest`. The release, site deploy, CodeQL and Scorecard workflows use `ubuntu-latest`.

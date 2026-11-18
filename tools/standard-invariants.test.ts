@@ -1,19 +1,26 @@
 import { describe, expect, test } from "bun:test";
 import { createHash } from "node:crypto";
-import { readdirSync, readFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
 import path from "node:path";
 
 import { isAllowed } from "./stale-names.test";
 
-export const PROJECT_SKILLS = ["add-adr", "cut-release"] as const;
+export const MODULE_SKILLS = ["add-adr", "cut-release"] as const;
 
 const REPO_ROOT = path.join(import.meta.dir, "..");
 const STALE_SLUG = /claude-forge|andryore-starter/i;
 const MANIFEST_PATHS = [".claude-plugin/plugin.json", ".codex-plugin/plugin.json"] as const;
 
+type SkillKind = "local" | "github";
+
 interface LockEntry {
   readonly computedHash?: unknown;
+  readonly sourceType?: unknown;
 }
+
+const SLUG_SCAN_SKIPPED_PREFIXES: readonly { readonly prefix: string; readonly reason: string }[] =
+  [];
 
 function readText(relativePath: string): string {
   return readFileSync(path.join(REPO_ROOT, relativePath), "utf8");
@@ -28,34 +35,56 @@ function trackedFiles(): string[] {
 }
 
 /**
- * Compares lock entries with the hashes of the tracked Module skills, in both directions.
+ * Compares lock entries with the hashes of the tracked skills, in both directions.
+ * A `local` entry is hashed from its SKILL.md, a `github` entry from its whole folder.
  */
 export function checkSkillsLock(
   lockEntries: Readonly<Record<string, LockEntry>>,
-  expectedHashes: Readonly<Record<string, string>>,
+  hashes: Readonly<Record<string, string>>,
+  kinds: Readonly<Record<string, SkillKind>>,
 ): string[] {
   const problems: string[] = [];
   for (const [name, entry] of Object.entries(lockEntries)) {
-    const skillHash = expectedHashes[name];
-    if (skillHash === undefined) {
-      problems.push(`skills-lock.json lists ${name} but no tracked Module skill backs it`);
+    const skillHash = hashes[name];
+    const kind = kinds[name];
+    if (skillHash === undefined || kind === undefined) {
+      problems.push(`skills-lock.json lists ${name} but no tracked skill backs it`);
+    } else if (entry.sourceType !== kind) {
+      problems.push(`skills-lock.json sourceType for ${name} is not ${kind}`);
     } else if (entry.computedHash !== skillHash) {
-      problems.push(`skills-lock.json hash for ${name} differs from its SKILL.md`);
+      const source = kind === "local" ? "SKILL.md" : "folder";
+      problems.push(`skills-lock.json hash for ${name} differs from its ${source}`);
     }
   }
-  for (const name of Object.keys(expectedHashes)) {
+  for (const name of Object.keys(hashes)) {
     if (!(name in lockEntries)) {
-      problems.push(`Module skill ${name} has no entry in skills-lock.json`);
+      problems.push(`tracked skill ${name} has no entry in skills-lock.json`);
     }
   }
   return problems;
 }
 
+function skillFolderFiles(directory: string, base: string): string[] {
+  return readdirSync(directory, { withFileTypes: true }).flatMap((entry) => {
+    const full = path.join(directory, entry.name);
+    return entry.isDirectory()
+      ? skillFolderFiles(full, base)
+      : [path.relative(base, full).split(path.sep).join("/")];
+  });
+}
+
 /**
- * Returns the project skill names that are not add-adr or cut-release.
+ * Hashes a skill folder with the lock's method: sha256 over files sorted by path
+ * (locale order), each path then its content.
  */
-export function findForeignSkills(names: readonly string[]): string[] {
-  return names.filter((name) => !(PROJECT_SKILLS as readonly string[]).includes(name));
+export function hashSkillFolder(directory: string): string {
+  const hash = createHash("sha256");
+  const files = skillFolderFiles(directory, directory).toSorted((a, b) => a.localeCompare(b));
+  for (const file of files) {
+    hash.update(file);
+    hash.update(readFileSync(path.join(directory, file)));
+  }
+  return hash.digest("hex");
 }
 
 /**
@@ -103,7 +132,10 @@ function readLockEntries(): Record<string, LockEntry> {
   return Object.fromEntries(
     Object.entries(skills).map(([name, entry]): [string, LockEntry] => [
       name,
-      { computedHash: Reflect.get(Object(entry), "computedHash") as unknown },
+      {
+        computedHash: Reflect.get(Object(entry), "computedHash") as unknown,
+        sourceType: Reflect.get(Object(entry), "sourceType") as unknown,
+      },
     ]),
   );
 }
@@ -119,14 +151,31 @@ function trackedSkillNames(): string[] {
   ];
 }
 
-function skillHashes(): Record<string, string> {
+/**
+ * A Module skill is `local` and hashed from its SKILL.md; every other tracked skill is third-party and hashed as a folder.
+ */
+export function skillKindOf(name: string): SkillKind {
+  return (MODULE_SKILLS as readonly string[]).includes(name) ? "local" : "github";
+}
+
+function skillKinds(): Record<string, SkillKind> {
   return Object.fromEntries(
-    PROJECT_SKILLS.map((name) => [
-      name,
-      createHash("sha256")
-        .update(readFileSync(path.join(REPO_ROOT, ".claude", "skills", name, "SKILL.md")))
-        .digest("hex"),
-    ]),
+    trackedSkillNames().map((name): [string, SkillKind] => [name, skillKindOf(name)]),
+  );
+}
+
+function skillHashes(kinds: Readonly<Record<string, SkillKind>>): Record<string, string> {
+  return Object.fromEntries(
+    Object.entries(kinds).map(([name, kind]) => {
+      const directory = path.join(REPO_ROOT, ".claude", "skills", name);
+      const hash =
+        kind === "local"
+          ? createHash("sha256")
+              .update(readFileSync(path.join(directory, "SKILL.md")))
+              .digest("hex")
+          : hashSkillFolder(directory);
+      return [name, hash];
+    }),
   );
 }
 
@@ -154,7 +203,8 @@ describe("standard invariants", () => {
         (file) =>
           file !== "tools/standard-invariants.test.ts" &&
           file !== "tools/stale-names.test.ts" &&
-          !isAllowed(file),
+          !isAllowed(file) &&
+          !SLUG_SCAN_SKIPPED_PREFIXES.some(({ prefix }) => file.startsWith(prefix)),
       )
       .filter((file) => {
         try {
@@ -196,33 +246,77 @@ describe("standard invariants", () => {
     expect(missing).toEqual([]);
   });
 
-  test("the tracked project skills are exactly add-adr and cut-release", () => {
-    expect(trackedSkillNames().toSorted()).toEqual([...PROJECT_SKILLS]);
+  test("tracked skill directories equal the lock keys in both directions", () => {
+    expect(trackedSkillNames().toSorted()).toEqual(Object.keys(readLockEntries()).toSorted());
   });
 
-  test("a foreign skill is reported", () => {
-    expect(findForeignSkills(["add-adr", "git-commit"])).toEqual(["git-commit"]);
-  });
-
-  test("skills-lock.json agrees with the tracked Module skills in both directions", () => {
-    expect(checkSkillsLock(readLockEntries(), skillHashes())).toEqual([]);
+  test("skills-lock.json hashes match the tracked skills", () => {
+    const lock = readLockEntries();
+    const kinds = skillKinds();
+    expect(checkSkillsLock(lock, skillHashes(kinds), kinds)).toEqual([]);
   });
 
   test("a lock entry without a skill fails", () => {
-    expect(
-      checkSkillsLock({ a: { computedHash: "x" }, b: { computedHash: "y" } }, { a: "x" }),
-    ).toEqual(["skills-lock.json lists b but no tracked Module skill backs it"]);
+    const lock = {
+      a: { computedHash: "x", sourceType: "local" },
+      b: { computedHash: "y", sourceType: "github" },
+    };
+    expect(checkSkillsLock(lock, { a: "x" }, { a: "local" })).toEqual([
+      "skills-lock.json lists b but no tracked skill backs it",
+    ]);
   });
 
-  test("a stale hash fails", () => {
-    expect(checkSkillsLock({ a: { computedHash: "x" } }, { a: "z" })).toEqual([
+  test("a tracked skill without a lock entry fails", () => {
+    expect(checkSkillsLock({}, { a: "x" }, { a: "github" })).toEqual([
+      "tracked skill a has no entry in skills-lock.json",
+    ]);
+  });
+
+  test("a stale Module hash fails", () => {
+    const lock = { a: { computedHash: "x", sourceType: "local" } };
+    expect(checkSkillsLock(lock, { a: "z" }, { a: "local" })).toEqual([
       "skills-lock.json hash for a differs from its SKILL.md",
     ]);
   });
 
-  test("a Module skill without a lock entry fails", () => {
-    expect(checkSkillsLock({}, { a: "x" })).toEqual([
-      "Module skill a has no entry in skills-lock.json",
+  test("a stale third-party hash fails", () => {
+    const lock = { a: { computedHash: "x", sourceType: "github" } };
+    expect(checkSkillsLock(lock, { a: "z" }, { a: "github" })).toEqual([
+      "skills-lock.json hash for a differs from its folder",
     ]);
+  });
+
+  test("only Module skills are local; a third-party name is hashed as a folder whatever its lock says", () => {
+    expect(skillKindOf("add-adr")).toBe("local");
+    expect(skillKindOf("animate")).toBe("github");
+    const lock = { animate: { computedHash: "x", sourceType: "local" } };
+    expect(checkSkillsLock(lock, { animate: "x" }, { animate: skillKindOf("animate") })).toEqual([
+      "skills-lock.json sourceType for animate is not github",
+    ]);
+  });
+
+  test("a sourceType that disagrees with the tracked kind fails", () => {
+    const lock = { a: { computedHash: "x", sourceType: "github" } };
+    expect(checkSkillsLock(lock, { a: "x" }, { a: "local" })).toEqual([
+      "skills-lock.json sourceType for a is not local",
+    ]);
+  });
+
+  test("the folder hash is sha256 over locale-sorted paths, each path then its content", () => {
+    const directory = mkdtempSync(path.join(tmpdir(), "skill-hash-"));
+    try {
+      mkdirSync(path.join(directory, "references"));
+      writeFileSync(path.join(directory, "SKILL.md"), "body");
+      writeFileSync(path.join(directory, "references", "a.md"), "ref");
+      const expected = createHash("sha256")
+        .update("references/a.md")
+        .update("ref")
+        .update("SKILL.md")
+        .update("body")
+        .digest("hex");
+      expect(hashSkillFolder(directory)).toBe(expected);
+    } finally {
+      rmSync(directory, { recursive: true, force: true });
+    }
   });
 });
