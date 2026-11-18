@@ -14,6 +14,8 @@ import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from 
 import path from "node:path";
 
 import { loadForgeConfigWithDefaults, resolveRepoRoot } from "./config";
+import { appendEvent } from "./journal";
+import { hasLaunchResult, resolveWaveContext, type WaveContext } from "./launch";
 import { resolveRunDir } from "./names";
 import { isObject, isOneOf } from "./narrow";
 import { writePhase } from "./phase";
@@ -288,6 +290,46 @@ function resolveRunId(runsDir: string, ticket: string, explicit: string | undefi
   return present(candidates[0]);
 }
 
+interface GateEventInput {
+  readonly repoRoot: string;
+  readonly runId: string;
+  readonly ticket: string;
+  readonly tier: GateTier;
+  readonly result: GateResult;
+  readonly waveContext: WaveContext;
+}
+
+/**
+ * Journals the decision, plus an `intervention` when no `launch.result` exists
+ * for the run's wave, meaning the coordinator session continued it by hand.
+ */
+function recordGateEvents(input: GateEventInput): void {
+  const { repoRoot, runId, ticket, tier, result, waveContext } = input;
+  const launched = hasLaunchResult(waveContext);
+  appendEvent({
+    kind: "gate.decision",
+    runId,
+    repo: repoRoot,
+    origin: launched ? "auto" : "human",
+    data: {
+      ticket,
+      tier,
+      decision: result.decision,
+      reasonCount: result.reasons.length,
+      reason: result.reasons.join("; "),
+      chargeAttempt: result.chargeAttempt,
+    },
+  });
+  if (launched) return;
+  appendEvent({
+    kind: "intervention",
+    runId,
+    repo: repoRoot,
+    origin: "human",
+    data: { ticket, source: "gate", spec: waveContext.spec, wave: waveContext.wave },
+  });
+}
+
 export async function run(argv: string[]): Promise<void> {
   const ticket = argv[0];
   if (!ticket || ticket.startsWith("--")) {
@@ -353,8 +395,12 @@ export async function run(argv: string[]): Promise<void> {
       mkdirSync(path.dirname(countersFile), { recursive: true });
       writeFileSync(countersFile, JSON.stringify(counters));
     }
+    const waveContext = resolveWaveContext(repoRoot, runId);
     writePhase(repoRoot, { phase: "checking", wave: null, spec: null, runId });
     console.log(JSON.stringify(result));
+    if (!argv.includes("--no-record")) {
+      recordGateEvents({ repoRoot, runId, ticket, tier, result, waveContext });
+    }
   } catch (error) {
     console.error(`emet gate: ${error instanceof Error ? error.message : String(error)}`);
     process.exitCode = 2;
