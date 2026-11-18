@@ -151,14 +151,16 @@ function trackedSkillNames(): string[] {
   ];
 }
 
-function skillKinds(lock: Readonly<Record<string, LockEntry>>): Record<string, SkillKind> {
+/**
+ * A Module skill is `local` and hashed from its SKILL.md; every other tracked skill is third-party and hashed as a folder.
+ */
+export function skillKindOf(name: string): SkillKind {
+  return (MODULE_SKILLS as readonly string[]).includes(name) ? "local" : "github";
+}
+
+function skillKinds(): Record<string, SkillKind> {
   return Object.fromEntries(
-    trackedSkillNames().map((name): [string, SkillKind] => {
-      const sourceType = lock[name]?.sourceType;
-      if (sourceType === "local" || sourceType === "github") return [name, sourceType];
-      const isModule = (MODULE_SKILLS as readonly string[]).includes(name);
-      return [name, isModule ? "local" : "github"];
-    }),
+    trackedSkillNames().map((name): [string, SkillKind] => [name, skillKindOf(name)]),
   );
 }
 
@@ -250,7 +252,7 @@ describe("standard invariants", () => {
 
   test("skills-lock.json hashes match the tracked skills", () => {
     const lock = readLockEntries();
-    const kinds = skillKinds(lock);
+    const kinds = skillKinds();
     expect(checkSkillsLock(lock, skillHashes(kinds), kinds)).toEqual([]);
   });
 
@@ -281,6 +283,15 @@ describe("standard invariants", () => {
     const lock = { a: { computedHash: "x", sourceType: "github" } };
     expect(checkSkillsLock(lock, { a: "z" }, { a: "github" })).toEqual([
       "skills-lock.json hash for a differs from its folder",
+    ]);
+  });
+
+  test("only Module skills are local; a third-party name is hashed as a folder whatever its lock says", () => {
+    expect(skillKindOf("add-adr")).toBe("local");
+    expect(skillKindOf("animate")).toBe("github");
+    const lock = { animate: { computedHash: "x", sourceType: "local" } };
+    expect(checkSkillsLock(lock, { animate: "x" }, { animate: skillKindOf("animate") })).toEqual([
+      "skills-lock.json sourceType for animate is not github",
     ]);
   });
 
