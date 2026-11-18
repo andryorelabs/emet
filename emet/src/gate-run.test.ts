@@ -83,7 +83,7 @@ describe("gate run()", () => {
     writeJson(path.join(runDirectory, "verify", "CLA-1.json"), { ok: true });
     const result = await runGate(["CLA-1", "--run", "r1", "--ci", "maybe"]);
     expect(result.exitCode).toBe(2);
-    expect(result.errors[0]).toContain("--ci must be pass|fail|pending|none");
+    expect(result.errors[0]).toContain("--ci must be pass|fail|pending|none|env-fault");
   });
 
   test("a run that cannot be inferred asks for --run", async () => {
@@ -189,5 +189,70 @@ describe("gate run()", () => {
     expect(
       JSON.parse(readFileSync(path.join(runDirectory, "attempts", "CLA-1.json"), "utf8")),
     ).toEqual({ count: 1 });
+  });
+
+  test("open patch findings hold with next fix-findings by default", async () => {
+    writeJson(path.join(runDirectory, "verify", "CLA-1.json"), { ok: true });
+    writeJson(path.join(root, ".emet", "review", "CLA-1.json"), {
+      rounds: 0,
+      findings: [
+        { status: "open", severity: "blocker", kind: "patch" },
+        { status: "open", severity: "critical" },
+      ],
+    });
+    const result = await runGate(["CLA-1", "--run", "r1", "--ci", "pass"]);
+    expect(JSON.parse(result.logs[0] ?? "")).toMatchObject({
+      decision: "hold",
+      next: "fix-findings",
+    });
+  });
+
+  test("a ledger fixRounds at the cap stops, an unknown kind reads as patch", async () => {
+    writeJson(path.join(runDirectory, "verify", "CLA-1.json"), { ok: true });
+    writeJson(path.join(root, ".emet", "review", "CLA-1.json"), {
+      rounds: 0,
+      fixRounds: 2,
+      findings: [{ status: "open", severity: "blocker", kind: "weird" }],
+    });
+    const result = await runGate(["CLA-1", "--run", "r1", "--ci", "pass"]);
+    expect(JSON.parse(result.logs[0] ?? "")).toMatchObject({ decision: "stop" });
+  });
+
+  test("two env-fault runs escalate, and a pass resets the counter", async () => {
+    writeJson(path.join(runDirectory, "verify", "CLA-1.json"), { ok: true });
+    const counters = path.join(runDirectory, "checks", "CLA-1.json");
+    const first = await runGate(["CLA-1", "--run", "r1", "--ci", "env-fault"]);
+    expect(JSON.parse(first.logs[0] ?? "")).toMatchObject({ next: "rerun-ci" });
+    expect(JSON.parse(readFileSync(counters, "utf8"))).toMatchObject({ ciEnvFaults: 1 });
+    const second = await runGate(["CLA-1", "--run", "r1", "--ci", "env-fault"]);
+    expect(JSON.parse(second.logs[0] ?? "")).toMatchObject({ next: "report-infrastructure" });
+    await runGate(["CLA-1", "--run", "r1", "--ci", "pass"]);
+    expect(JSON.parse(readFileSync(counters, "utf8"))).toMatchObject({ ciEnvFaults: 0 });
+  });
+
+  test("integration fails twice then stops, a pass resets, --no-record skips", async () => {
+    writeJson(path.join(runDirectory, "verify", "CLA-1.json"), { ok: true });
+    const counters = path.join(runDirectory, "checks", "CLA-1.json");
+    const args = ["CLA-1", "--run", "r1", "--ci", "pass", "--integration"];
+    const first = await runGate([...args, "fail"]);
+    expect(JSON.parse(first.logs[0] ?? "")).toMatchObject({ next: "rerun-failed-specs" });
+    const second = await runGate([...args, "fail"]);
+    expect(JSON.parse(second.logs[0] ?? "")).toMatchObject({ decision: "stop" });
+    await runGate([...args, "pass"]);
+    expect(JSON.parse(readFileSync(counters, "utf8"))).toMatchObject({ integrationFailures: 0 });
+    rmSync(counters);
+    await runGate([...args, "fail", "--no-record"]);
+    expect(existsSync(counters)).toBe(false);
+  });
+
+  test("gate.onHold stop in the config restores the review-rounds behavior", async () => {
+    writeJson(path.join(runDirectory, "verify", "CLA-1.json"), { ok: true });
+    writeJson(path.join(root, ".emet", "review", "CLA-1.json"), {
+      rounds: 5,
+      findings: [{ status: "open", severity: "blocker", kind: "patch" }],
+    });
+    writeJson(path.join(root, "emet.config.json"), { gate: { onHold: "stop" } });
+    const result = await runGate(["CLA-1", "--run", "r1", "--ci", "pass"]);
+    expect(JSON.parse(result.logs[0] ?? "")).toMatchObject({ decision: "stop" });
   });
 });
