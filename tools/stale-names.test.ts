@@ -13,7 +13,9 @@ const STALE_NAME = /claude-forge|andryore-starter|(?<!to )\bforge\b/i;
  * A trailing slash marks a directory prefix. History lives in the ADRs, the
  * CHANGELOG and the research notes; every other entry is part of the legacy
  * compatibility layer of ADR-0015 (the legacy names `emet` still reads, the
- * code that reads them, and the tests and docs that describe them).
+ * code that reads them, and the tests and docs that describe them). The
+ * vendored third-party skills under `.claude/skills/` are byte-identical to
+ * upstream (ADR-0028) and use the English word "forge" in prose.
  */
 export const STALE_NAME_ALLOW_LIST: readonly string[] = [
   "docs/adr/",
@@ -33,6 +35,7 @@ export const STALE_NAME_ALLOW_LIST: readonly string[] = [
   "docs/troubleshooting.md",
   "docs/architecture.md",
   "apps/site/src/content/translations/",
+  ".claude/skills/",
 ];
 
 /** Whether a path is covered by one allow-list entry. */

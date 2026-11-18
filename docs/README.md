@@ -18,6 +18,7 @@ An index of every document in this repository. Terms follow [GLOSSARY.md](../GLO
 
 - [`CONTRIBUTING.md`](../CONTRIBUTING.md): setup, where to start, branch and commit format, CI and review.
 - [`development.md`](development.md): setup with both installs, scripts, branches and commits, hooks, runners, releases and rulesets.
+- [`third-party-skills.md`](third-party-skills.md): the tracked third-party skills under `.claude/skills/`, each with its upstream source, pinned commit, license and copyright holder.
 - [`security.md`](security.md): the threat model of an unattended run, permission modes, and what the rm-guard and push denies cover.
 - [`CODE_OF_CONDUCT.md`](../CODE_OF_CONDUCT.md): community standards.
 - [`GOVERNANCE.md`](../GOVERNANCE.md): decision process.
