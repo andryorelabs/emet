@@ -2,7 +2,7 @@
 title: Référence de configuration
 description: Chaque clé de emet.config.json avec sa valeur par défaut et sa signification.
 seoTitle: Référence de configuration d'emet
-sourceHash: f643569c960d5e35
+sourceHash: 5a9c5814c4711e31
 ---
 
 Chaque clé de `emet.config.json`, avec sa valeur par défaut et sa signification. La source de vérité est [`emet/schema/emet.config.schema.json`](../../emet/schema/emet.config.schema.json). Les termes suivent [GLOSSARY.md](../../GLOSSARY.md). Retour au [README](../../README.md).
@@ -47,16 +47,27 @@ Ce qui se passe après la clôture d'une vague, et les limites de taille de la n
 - `launcher` (par défaut `auto`, parmi `auto`, `orca`, `bg`) : Claude Code uniquement ; ignoré sur l'hôte Codex, où `emet launch` n'ouvre aucun onglet Orca. Ouvre aussi la vague dans un onglet Orca exécutant `claude attach`. `auto` interroge le runtime d'Orca (`orca status`), donc cela fonctionne aussi depuis des sessions `claude --bg`, qui n'ont pas de `TERM_PROGRAM` ; `orca` essaie toujours ; `bg` jamais. La vague s'exécute en arrière-plan dans tous les cas, et un onglet qui ne s'ouvre pas n'arrête jamais la chaîne. `emet launch <spec-id> --wave <n>` fait tout le lancement ; voir [`emet launch`](cli.md#exécutions-workers-et-slots).
 - `permissionMode` (par défaut `bypassPermissions`, parmi `bypassPermissions`, `auto`, `acceptEdits`) : Claude Code uniquement ; ignoré sur l'hôte Codex, où la session chaînée utilise [`codex.sandbox`](#codex). Mode d'autorisation de la session chaînée. Il n'est pas hérité de la session qui la lance, car le classificateur du mode `auto` peut refuser une étape comme `gh pr merge` et laisser une vague à moitié terminée. Vos règles `permissions.deny` s'appliquent toujours, mais l'avertissement de contournement doit avoir été accepté une fois en mode interactif (`skipDangerousModePermissionPrompt`).
 
+## gate
+
+Ce que fait `emet gate` des constats bloquants ouverts.
+
+```json
+{ "gate": { "onHold": "fix-and-continue" } }
+```
+
+- `onHold` (par défaut `fix-and-continue`) : avec `fix-and-continue`, les constats bloquants ouverts répondent `hold` avec `next: "fix-findings"` tant que [`budgets.fixRounds`](#budgets) a encore des tours. La porte ne répond `stop` que lorsqu'un constat ouvert est de type `intent_gap`, que les tours de correction sont épuisés avec des constats ouverts, ou que la suite d'intégration échoue une seconde fois après la relance de ses specs en échec (un premier échec répond `hold` avec `next: "rerun-failed-specs"`). `stop` conserve le comportement précédent. Une CI qui ne s'est jamais exécutée (`--ci env-fault`) répond `hold` avec `next: "rerun-ci"` sans entamer `pr.maxCiFixAttempts`, puis `next: "report-infrastructure"` la deuxième fois de suite.
+
 ## budgets
 
 Tous facultatifs.
 
 ```json
-{ "budgets": { "workerAttempts": 2, "reviewRounds": 2, "stallNudgeCap": 6 } }
+{ "budgets": { "workerAttempts": 2, "reviewRounds": 2, "fixRounds": 2, "stallNudgeCap": 6 } }
 ```
 
 - `workerAttempts` (par défaut `2`, minimum `1`) : combien de fois un ticket peut échouer à `verify` avant que le gate réponde `defer`. Le ticket reçoit le label différé et le reste de la vague continue. Un défaut d'environnement, comme la commande de tests qui se termine avec 126/127 ou une panne du fournisseur, met l'exécution en pause sans consommer de tentative.
 - `reviewRounds` (par défaut `2`, minimum `1`) : combien de tours de revue/correction un ticket reçoit avant une escalade vers le niveau de modèle suivant. Tout ce qui reste ouvert après cela reçoit une décision.
+- `fixRounds` (par défaut `2`) : combien de tours de correction reçoit une vague sous [`gate.onHold`](#gate) `fix-and-continue`. Chacun se termine par `emet review --recheck` et compte ici, jamais contre `reviewRounds`. Sans tour restant et avec un constat bloquant ouvert, la porte répond `stop`. Un registre écrit sans ce champ compte `0` tour utilisé.
 - `stallNudgeCap` (par défaut `6`, minimum `1`) : combien de fois un worker bloqué est relancé. Le compteur n'est jamais remis à zéro.
 
 ## models

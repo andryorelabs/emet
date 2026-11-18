@@ -2,7 +2,7 @@
 title: 配置参考
 description: emet.config.json 中的每个键，包括其默认值和含义。
 seoTitle: emet 配置参考
-sourceHash: f643569c960d5e35
+sourceHash: 5a9c5814c4711e31
 ---
 
 `emet.config.json` 中的每个键，及其默认值和含义。权威来源是 [`emet/schema/emet.config.schema.json`](../../emet/schema/emet.config.schema.json)。术语遵循 [GLOSSARY.md](../../GLOSSARY.md)。返回 [README](../../README.md)。
@@ -47,16 +47,27 @@ sourceHash: f643569c960d5e35
 - `launcher`（默认 `auto`，可选 `auto`、`orca`、`bg`）：仅限 Claude Code；在 Codex 宿主上被忽略，`emet launch` 不会打开 Orca 标签页。同时在运行 `claude attach` 的 Orca 标签页中打开该波次。`auto` 会询问 Orca 运行时（`orca status`），因此对没有 `TERM_PROGRAM` 的 `claude --bg` 会话同样有效；`orca` 总是尝试；`bg` 从不尝试。无论哪种方式，波次都在后台运行，标签页打开失败也不会中断串联。`emet launch <spec-id> --wave <n>` 会完成整个启动流程；参见 [`emet launch`](cli.md#运行工作者与槽位)。
 - `permissionMode`（默认 `bypassPermissions`，可选 `bypassPermissions`、`auto`、`acceptEdits`）：仅限 Claude Code；在 Codex 宿主上被忽略，串联会话使用 [`codex.sandbox`](#codex)。串联会话的权限模式。它不继承启动会话的模式，因为 `auto` 模式的分类器可能拒绝 `gh pr merge` 之类的步骤，导致波次只完成一半。你的 `permissions.deny` 规则仍然适用，但必须已在交互环境中接受过一次绕过警告（`skipDangerousModePermissionPrompt`）。
 
+## gate
+
+`emet gate` 如何处理未处理的阻塞性问题。
+
+```json
+{ "gate": { "onHold": "fix-and-continue" } }
+```
+
+- `onHold`（默认 `fix-and-continue`）：使用 `fix-and-continue` 时，只要 [`budgets.fixRounds`](#budgets) 还有剩余轮数，未处理的阻塞性问题就会返回 `hold` 和 `next: "fix-findings"`。只有在未处理问题的类型为 `intent_gap`、修复轮数用尽而仍有问题未处理，或集成套件在重跑其失败的 spec 之后第二次失败时，关卡才返回 `stop`（第一次失败返回 `hold` 和 `next: "rerun-failed-specs"`）。`stop` 保持原有行为。从未运行的 CI（`--ci env-fault`）返回 `hold` 和 `next: "rerun-ci"`，且不消耗 `pr.maxCiFixAttempts`，连续第二次则返回 `next: "report-infrastructure"`。
+
 ## budgets
 
 全部可选。
 
 ```json
-{ "budgets": { "workerAttempts": 2, "reviewRounds": 2, "stallNudgeCap": 6 } }
+{ "budgets": { "workerAttempts": 2, "reviewRounds": 2, "fixRounds": 2, "stallNudgeCap": 6 } }
 ```
 
 - `workerAttempts`（默认 `2`，最小 `1`）：工单在关卡回答 `defer` 之前可以让 `verify` 失败的次数。该工单会被加上延后标签，波次的其余部分继续进行。环境故障（例如测试命令以 126/127 退出，或服务提供方中断）会暂停运行，且不消耗一次尝试。
 - `reviewRounds`（默认 `2`，最小 `1`）：工单在升级到下一个模型层级之前可以获得的评审/修复轮数。此后仍然未解决的问题会得到裁定。
+- `fixRounds`（默认 `2`）：在 [`gate.onHold`](#gate) 为 `fix-and-continue` 时，一个波次获得的修复轮数。每轮以 `emet review --recheck` 结束并计入此处，从不计入 `reviewRounds`。没有剩余轮数且仍有阻塞性问题未处理时，关卡返回 `stop`。不带此字段写入的台账按已用 `0` 读取。
 - `stallNudgeCap`（默认 `6`，最小 `1`）：对停滞的工作者催促的次数。该计数不会重置。
 
 ## models
