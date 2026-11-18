@@ -4,9 +4,6 @@
 node_modules/
 
 # third-party agent skills installed locally via the skills CLI; only the two Module skills are tracked (skills-lock.json)
-.claude/skills/*
-!.claude/skills/add-adr/
-!.claude/skills/cut-release/
 .claude/skills/git-commit/
 .claude/worktrees/
 
