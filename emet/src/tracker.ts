@@ -6,10 +6,11 @@ import path from "node:path";
 import { loadForgeConfig, resolveRepoRoot } from "./config";
 import { EmetError } from "./errors";
 import { exitCodes } from "./exit-codes";
+import { appendEvent } from "./journal";
 import { didAcquireLock, didReclaimStaleLock, releaseLock, resolveLockDirectory } from "./locks";
 import { PRODUCT } from "./names";
 import { errnoCode, errorMessage } from "./narrow";
-import { closeGithubTickets, runGh, type CloseReason } from "./ticketclose";
+import { closeGithubTickets, runGh, type CloseReason, type TicketCloseResult } from "./ticketclose";
 import {
   appendComment,
   computeFrontier,
@@ -355,21 +356,45 @@ async function isGithubTracker(): Promise<boolean> {
   return loaded.status === "ok" && loaded.config.tracker.kind === "github";
 }
 
-async function closeGithub(argv: readonly string[]): Promise<unknown> {
+function recordTicketCloses(
+  root: string,
+  results: readonly TicketCloseResult[],
+  pr: number | undefined,
+  reason: CloseReason,
+): void {
+  for (const result of results) {
+    if (result.outcome !== "closed") continue;
+    appendEvent({
+      kind: "ticket.close",
+      repo: root,
+      origin: "human",
+      data: {
+        ticket: result.ticket,
+        issue: result.issue,
+        ...(pr === undefined ? {} : { pr }),
+        reason,
+      },
+    });
+  }
+}
+
+async function closeGithub(root: string, argv: readonly string[]): Promise<unknown> {
   const tickets = positionalTickets(argv);
   if (tickets.length === 0) throw new TrackerUsageError(`missing <ticket>\n\n${USAGE}`);
   const pr = closePullRequest(argv);
+  const reason = closeReason(argv);
   const results = await closeGithubTickets(
     tickets,
-    { ...(pr === undefined ? {} : { pr }), reason: closeReason(argv) },
+    { ...(pr === undefined ? {} : { pr }), reason },
     runGh,
   );
+  recordTicketCloses(root, results, pr, reason);
   if (results.some((result) => result.outcome === "failed")) process.exitCode = EXIT_REFUSED;
   return { results };
 }
 
 async function close(root: string, argv: readonly string[]): Promise<unknown> {
-  if (await isGithubTracker()) return closeGithub(argv);
+  if (await isGithubTracker()) return closeGithub(root, argv);
   const id = requirePositional(argv, "id");
   return mutateStatus(root, id, argv.includes("--canceled") ? "canceled" : "done", true);
 }

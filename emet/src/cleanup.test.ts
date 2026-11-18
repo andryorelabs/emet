@@ -1,5 +1,13 @@
 import { afterEach, beforeEach, describe, expect, spyOn, test } from "bun:test";
-import { existsSync, mkdirSync, mkdtempSync, realpathSync, rmSync, writeFileSync } from "node:fs";
+import {
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  realpathSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
 import os from "node:os";
 import path from "node:path";
 
@@ -15,6 +23,7 @@ import {
   planOrphanedScaffolds,
   planWorktreeRemoval,
   reclaimOwnedWorktrees,
+  recordCleanupEvent,
   run as runCleanup,
   shouldMarkRunClosed,
 } from "./cleanup";
@@ -469,6 +478,49 @@ describe("deleteAndReleaseTicket", () => {
     expect(await listReservations(forgeDirectory)).toMatchObject([
       { runId: "session-other", ticket: "AO-260" },
     ]);
+  });
+});
+
+function parseUnknown(text: string): unknown {
+  return JSON.parse(text);
+}
+
+describe("recordCleanupEvent", () => {
+  test("appends a cleanup event with the counts and the run id", () => {
+    const directory = mkdtempSync(path.join(os.tmpdir(), "emet-cleanup-journal-"));
+    try {
+      recordCleanupEvent("/repo", "run-a", { reclaimed: 2, kept: 1, failures: 0 }, { directory });
+      const lines = readFileSync(path.join(directory, "events.jsonl"), "utf8").trim().split("\n");
+      expect(lines).toHaveLength(1);
+      const event = parseUnknown(lines[0] ?? "{}");
+      expect(event).toMatchObject({
+        kind: "cleanup",
+        runId: "run-a",
+        data: { reclaimed: 2, kept: 1, failures: 0 },
+      });
+    } finally {
+      rmSync(directory, { recursive: true, force: true });
+    }
+  });
+
+  test("omits runId when the sweep is not run-scoped and survives an unwritable directory", () => {
+    const directory = mkdtempSync(path.join(os.tmpdir(), "emet-cleanup-journal-"));
+    try {
+      recordCleanupEvent("/repo", null, { reclaimed: 0, kept: 0, failures: 0 }, { directory });
+      const raw = readFileSync(path.join(directory, "events.jsonl"), "utf8");
+      expect(raw).not.toContain("runId");
+      const blocker = path.join(directory, "events.jsonl");
+      expect(() => {
+        recordCleanupEvent(
+          "/repo",
+          null,
+          { reclaimed: 0, kept: 0, failures: 0 },
+          { directory: path.join(blocker, "nested") },
+        );
+      }).not.toThrow();
+    } finally {
+      rmSync(directory, { recursive: true, force: true });
+    }
   });
 });
 
