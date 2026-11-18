@@ -104,6 +104,26 @@ _Avoid_: intermittent failure
 To start a run's next **Wave** in a new session once the **Gate** allows it.
 _Avoid_: handoff, relaunch
 
+**Journal**:
+The global append-only file in which emet records what it decides and does on a host, so a later report can tell launched runs from typed ones.
+_Avoid_: log, audit trail, telemetry
+
+**Baseline**:
+The journal event that marks the start of a clean history; reports count only what comes after the latest one.
+_Avoid_: reset, checkpoint
+
+**After-spec step**:
+What a repo does once a spec's last wave has landed: a **Release**, a **Promote**, or nothing.
+_Avoid_: post-merge, cleanup
+
+**Promote**:
+Merging `develop` into `main` with a merge commit and no version tag, so a deployed application ships.
+_Avoid_: deploy, publish
+
+**Release**:
+A deliberate `develop` to `main` merge-commit pull request that carries a version tag.
+_Avoid_: publish, ship (a **Landing** is how a wave reaches trunk)
+
 **Surface**:
 A glob of files a ticket is allowed to edit, enforced by the edit guard.
 _Avoid_: scope, allowlist
@@ -147,6 +167,7 @@ _Avoid_: status file, progress file
 - A **Worker** holds one **Claim**, one **Slot** and one **Worktree** while live.
 - The **Coordinator** merges **Worker** branches into the **Integration branch**; a **Reviewer** and the **Gates** check it before it lands.
 - The **Gate** answers a wave with merge, **Hold**, **Chain**, **Stop** or defer; a **Hold** over findings leads to a **Fix round**, and a **Hold** over an **Environment fault** never spends a fix attempt.
+- When a spec's last wave has landed, the **After-spec step** is a **Release**, a **Promote** or nothing, chosen per repository; the **Journal** records each step, and a **Baseline** marks where its clean history starts.
 - A **Worker** may edit only its ticket's **Surfaces** and must keep its **Handoff** current.
 - A **Claim** carries its ticket's **Surfaces**; two live **Claims** of different **Runs** never have overlapping **Surfaces**.
 - Everything above belongs to one **Run**, which executes in one **Agent host**.
