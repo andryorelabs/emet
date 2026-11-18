@@ -92,6 +92,16 @@ describe("generateMap", () => {
     });
   }
 
+  test("omits tracked skill folders from structure and hotspots", async () => {
+    const root = await fixtureRepo();
+    write(root, ".claude/skills/demo/SKILL.md", "# demo");
+    write(root, ".claude/skills/demo/scripts/run.test.ts", "export {}");
+    await commit(root, "feat: track a skill");
+    const map = await generateMap(root);
+    expect(map).not.toContain(".claude/skills");
+    expect(map).toContain("- `src/` (2 files)");
+  });
+
   test("is deterministic for the same commit", async () => {
     const root = await fixtureRepo();
     expect(await generateMap(root)).toBe(await generateMap(root));
