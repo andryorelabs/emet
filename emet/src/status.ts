@@ -48,7 +48,7 @@ import {
 
 type WaveState = "working" | "checking" | "ready" | "needs-decision";
 type OverallState = WaveState | "idle";
-type ChecksState = "passing" | "failing" | "pending" | "none";
+export type ChecksState = "passing" | "failing" | "pending" | "none" | "env-fault";
 export interface PullRequestStatus {
   readonly number: number;
   readonly state: "open" | "merged" | "closed";
@@ -119,7 +119,7 @@ JSON shape:
       "workers": [{
         "ticket": string, "branch": string | null,
         "pullRequest": null | { "number", "state": "open"|"merged"|"closed",
-          "checks": "passing"|"failing"|"pending"|"none",
+          "checks": "passing"|"failing"|"pending"|"none"|"env-fault",
           "mergeable": boolean | null, "changesRequested": boolean },
         "stalled": boolean, "state": <wave state>, "reason": string,
         "liveness"?: "live"|"done"|"exited"|"stalled", "threadId"?: string | null
@@ -158,6 +158,9 @@ function classifyWorker(
     }
     if (pullRequest.checks === "failing") {
       return { state: "needs-decision", reason: "checks failing" };
+    }
+    if (pullRequest.checks === "env-fault") {
+      return { state: "needs-decision", reason: "checks never ran (environment fault)" };
     }
     if (pullRequest.mergeable === false) {
       return { state: "needs-decision", reason: "merge conflict" };
@@ -226,31 +229,85 @@ interface RawPullRequest {
   body?: string | null;
   mergeable?: string;
   reviewDecision?: string | null;
-  statusCheckRollup?: { conclusion?: string | null; status?: string; state?: string }[] | null;
+  statusCheckRollup?: RawCheck[] | null;
 }
 
-const FAILED_CONCLUSIONS = new Set([
-  "FAILURE",
-  "ERROR",
-  "TIMED_OUT",
-  "CANCELLED",
-  "STARTUP_FAILURE",
-]);
+const FAILED_CONCLUSIONS = new Set(["FAILURE", "ERROR", "TIMED_OUT", "CANCELLED"]);
+const STARTUP_FAILURE = "STARTUP_FAILURE";
+const DEFAULT_QUEUED_STALE_MS = 30 * 60 * 1000;
 
-interface RawCheck {
+export interface RawCheck {
   conclusion?: string | null;
   status?: string;
   state?: string;
+  name?: string;
+  detailsUrl?: string;
+  startedAt?: string;
 }
 
 function toRawCheck(raw: unknown): RawCheck {
   if (!isObject(raw)) return {};
-  const { conclusion, status, state } = raw;
+  const { conclusion, status, state, name, context, detailsUrl, targetUrl, startedAt } = raw;
+  const label = typeof name === "string" ? name : context;
+  const url = typeof detailsUrl === "string" ? detailsUrl : targetUrl;
   return {
     ...(typeof conclusion === "string" || conclusion === null ? { conclusion } : {}),
     ...(typeof status === "string" ? { status } : {}),
     ...(typeof state === "string" ? { state } : {}),
+    ...(typeof label === "string" ? { name: label } : {}),
+    ...(typeof url === "string" ? { detailsUrl: url } : {}),
+    ...(typeof startedAt === "string" ? { startedAt } : {}),
   };
+}
+
+/** Parses the `statusCheckRollup` of `gh pr view --json statusCheckRollup` output. */
+export function parseCheckRollup(json: string): RawCheck[] {
+  const parsed: unknown = JSON.parse(json);
+  if (!isObject(parsed)) return [];
+  const { statusCheckRollup } = parsed;
+  return Array.isArray(statusCheckRollup) ? statusCheckRollup.map(toRawCheck) : [];
+}
+
+function conclusionOf(check: RawCheck): string {
+  return check.conclusion ?? check.state ?? "";
+}
+
+/** True for a check that failed on its own merits. */
+export function isCodeFailure(check: RawCheck): boolean {
+  return FAILED_CONCLUSIONS.has(conclusionOf(check));
+}
+
+/** True when a check has not completed yet. */
+export function isUnfinished(check: RawCheck): boolean {
+  return check.status !== undefined
+    ? check.status !== "COMPLETED"
+    : check.state === "PENDING" || check.state === "EXPECTED";
+}
+
+function isStaleQueued(check: RawCheck, nowMs: number, queuedStaleMs: number): boolean {
+  if (check.status !== "QUEUED" || check.startedAt === undefined) return false;
+  const startedMs = Date.parse(check.startedAt);
+  return !Number.isNaN(startedMs) && nowMs - startedMs >= queuedStaleMs;
+}
+
+/**
+ * Classifies a PR's checks. A code failure wins; otherwise a check that ended
+ * `STARTUP_FAILURE`, or stayed queued past `queuedStaleMs`, is an `env-fault`
+ * because the CI never ran.
+ */
+export function classifyChecks(
+  checks: readonly RawCheck[],
+  options: { nowMs: number; queuedStaleMs: number },
+): ChecksState {
+  if (checks.length === 0) return "none";
+  if (checks.some(isCodeFailure)) return "failing";
+  const neverRan = checks.some(
+    (check) =>
+      conclusionOf(check) === STARTUP_FAILURE ||
+      isStaleQueued(check, options.nowMs, options.queuedStaleMs),
+  );
+  if (neverRan) return "env-fault";
+  return checks.some(isUnfinished) ? "pending" : "passing";
 }
 
 function toRawPullRequest(raw: unknown): RawPullRequest | null {
@@ -279,15 +336,10 @@ export function parsePullRequests(json: string): Map<string, PullRequestStatus> 
   if (!Array.isArray(parsed)) throw new TypeError("gh pr list output was not a JSON array");
   const rawItems: unknown[] = parsed;
   for (const item of rawItems.flatMap((raw) => toRawPullRequest(raw) ?? [])) {
-    const checks = item.statusCheckRollup ?? [];
-    const failed = checks.some((c) => FAILED_CONCLUSIONS.has(c.conclusion ?? c.state ?? ""));
-    const pending = checks.some((c) =>
-      c.status !== undefined
-        ? c.status !== "COMPLETED"
-        : c.state === "PENDING" || c.state === "EXPECTED",
-    );
-    const checksState: ChecksState =
-      checks.length === 0 ? "none" : failed ? "failing" : pending ? "pending" : "passing";
+    const checksState = classifyChecks(item.statusCheckRollup ?? [], {
+      nowMs: Date.now(),
+      queuedStaleMs: DEFAULT_QUEUED_STALE_MS,
+    });
     const status: PullRequestStatus = {
       number: item.number,
       state: item.state === "MERGED" ? "merged" : item.state === "CLOSED" ? "closed" : "open",

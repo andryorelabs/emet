@@ -20,9 +20,11 @@ import { isObject } from "./narrow";
 import { present } from "./present";
 import {
   buildStatusReport,
+  classifyChecks,
   closingIssueNumbers,
   groupWorkers,
   localLandedBranches,
+  parseCheckRollup,
   parsePullRequests,
   parseRunIdentity,
   readCodexWorkers,
@@ -54,6 +56,74 @@ const lockedReason = (ticket: string) =>
   `emet run=emet1w1000000 ticket=${ticket} anchor=1 at=2026-01-01T00:00:00Z`;
 
 const stateOf = (input: WaveInput) => present(buildStatusReport([input], null).waves[0]).state;
+
+describe("env-fault checks", () => {
+  const nowMs = Date.parse("2026-01-01T12:00:00Z");
+  const options = { nowMs, queuedStaleMs: 30 * 60 * 1000 };
+
+  test("every failed check STARTUP_FAILURE is env-fault", () => {
+    const checks = [{ status: "COMPLETED", conclusion: "STARTUP_FAILURE" }];
+    expect(classifyChecks(checks, options)).toBe("env-fault");
+  });
+
+  test("a code failure wins over a startup failure", () => {
+    const checks = [
+      { status: "COMPLETED", conclusion: "STARTUP_FAILURE" },
+      { status: "COMPLETED", conclusion: "FAILURE" },
+    ];
+    expect(classifyChecks(checks, options)).toBe("failing");
+  });
+
+  test("a check queued past the threshold is env-fault", () => {
+    const checks = [{ status: "QUEUED", startedAt: "2026-01-01T11:00:00Z" }];
+    expect(classifyChecks(checks, options)).toBe("env-fault");
+  });
+
+  test("a recently queued check is pending", () => {
+    const checks = [{ status: "QUEUED", startedAt: "2026-01-01T11:55:00Z" }];
+    expect(classifyChecks(checks, options)).toBe("pending");
+  });
+
+  test("a queued check with an invalid or missing start stays pending", () => {
+    expect(classifyChecks([{ status: "QUEUED", startedAt: "nope" }], options)).toBe("pending");
+    expect(classifyChecks([{ status: "QUEUED" }], options)).toBe("pending");
+  });
+
+  test("classifies none and passing", () => {
+    expect(classifyChecks([], options)).toBe("none");
+    expect(classifyChecks([{ status: "COMPLETED", conclusion: "SUCCESS" }], options)).toBe(
+      "passing",
+    );
+  });
+
+  test("parsePullRequests reports env-fault and the wave needs a decision", () => {
+    const map = parsePullRequests(
+      JSON.stringify([
+        {
+          number: 1,
+          state: "OPEN",
+          headRefName: "a",
+          statusCheckRollup: [{ status: "COMPLETED", conclusion: "STARTUP_FAILURE" }],
+        },
+      ]),
+    );
+    expect(map.get("a")).toMatchObject({ checks: "env-fault" });
+    expect(
+      stateOf(wave([worker({ pullRequest: { ...greenPullRequest, checks: "env-fault" } })])),
+    ).toBe("needs-decision");
+  });
+
+  test("parseCheckRollup handles status contexts and malformed input", () => {
+    const json = JSON.stringify({
+      statusCheckRollup: [{ context: "ci/x", state: "FAILURE", targetUrl: "https://t" }],
+    });
+    expect(parseCheckRollup(json)).toEqual([
+      { state: "FAILURE", name: "ci/x", detailsUrl: "https://t" },
+    ]);
+    expect(parseCheckRollup("[]")).toEqual([]);
+    expect(parseCheckRollup("{}")).toEqual([]);
+  });
+});
 
 describe("wave states", () => {
   test("working: a worker has no PR yet", () => {
