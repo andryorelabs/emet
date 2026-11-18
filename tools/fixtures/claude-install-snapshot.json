@@ -38,7 +38,7 @@
     ".local/bin/emet"
   ],
   "promptSha256": {
-    ".claude/agents/emet-reviewer.md": "718e62653a8df3d20b4a7b4bf4bd78b19cb656fd60b98740e51c134364f6b61e",
+    ".claude/agents/emet-reviewer.md": "96d9c1f7066851958d557fca2c7b3cb19318d0160ee7b3aa2d673551a44e5ad2",
     ".claude/agents/emet-worker.md": "7d7bc682ba90c94fa8bf136f31b9b077363bad091bc46bac50c8ae7673043ede",
     ".claude/commands/emet/doctor.md": "a62ce541794106f945e3aa7320481206d77666b16d68127e2459e2ba96aa9780",
     ".claude/commands/emet/init.md": "ed6c7ad476641a7329169fe91b43f36b289610d6ad12545f51393b8953a2cf9d",
@@ -46,9 +46,9 @@
     ".claude/emet/reference/incidents.md": "6437b96cd07e41709f425fa4fa9418e2e45311daea956ccd9159e4816f9d09fa",
     ".claude/emet/reference/phases-1-5.md": "244976ece8a5f75170df29c51bab7acfff5d89db19c6d10ebd4cb18cfd5d89ef",
     ".claude/emet/reference/phases-6-7-dispatch.md": "c26723a5fc1a52b5acd57306d07f8d74bfccb15af85a89b6e84cf2994311a3aa",
-    ".claude/emet/reference/phases-8-closeout.md": "a28b05a9596c9a2f9fbeab2dfceec0b3e395515fb16662ccde810cda2810f962",
+    ".claude/emet/reference/phases-8-closeout.md": "5079fccc83544a0abf89f6b0276cb1b2f932e59ad5d698d114883423a680e673",
     ".claude/emet/reference/phases-9-handoff.md": "4d54c7b1b20775c79071c59163f450156825e3fa5acb2b537358fe0a913ee934",
-    ".claude/emet/reference/reviewer-prompt.md": "07edc414cc2b74ef5ad7a24b6813f478486ada0282c319b1ad2e7888b4dddcb7",
+    ".claude/emet/reference/reviewer-prompt.md": "07136194ae86601ada0e501d14c512ff0ee8f0444dc05a1e8f4ff33c20053336",
     ".claude/emet/reference/tracker-github.md": "73b296f699ad03f29679f61440ca1946601b292b69ad5268a94a0b78a6bd6788",
     ".claude/emet/reference/tracker-linear.md": "12c364cb69b0dfc430faaa3520d4620c2cf633f40ef6779c655b20399aec4614",
     ".claude/emet/reference/tracker-local.md": "431c496589d5d516bda1fab9f0972d0c6c29d1bfba67c9aa08fcb3b095698406",

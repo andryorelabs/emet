@@ -91,9 +91,10 @@ Record the reviewer's findings JSON per ticket: `emet review --ticket
 CLI enforces triage order (intent_gap, bad_plan, patch, defer) and the
 `budgets.reviewRounds` cap, and exits 1 while findings are open. Fix, then
 with `gate.onHold: stop` (or when no fix round applies) re-dispatch
-`emet:emet-reviewer` in `recheck` mode (ledger plus the diff from the reviewed
-sha only; "Recheck variant") and record again through `review --findings`, also
-after any CI fix. Under `fix-and-continue`, use the fix round below instead.
+`emet:emet-reviewer` with the "Recheck variant: stop-mode re-review" (ledger
+plus the diff from the reviewed sha only) and record again through `review
+--findings`, also after any CI fix. Under `fix-and-continue`, use the fix round
+below instead.
 At the cap, escalate once: `emet review --ticket <ticket> --escalate --model
 <current>` prints the next tier (exit 1 if none); run one fresh worker on it.
 Anything still open you rule on: `emet review --ticket <ticket> --rule
@@ -104,7 +105,7 @@ for "Rulings I made" in the final report and PR body.
 findings do not end the wave: `emet gate` answers `hold` with `next:
 "fix-findings"` while `budgets.fixRounds` (default 2) has rounds left. Fix the
 open findings, then end the round with a recheck: re-dispatch
-`emet:emet-reviewer` in `recheck` mode over only the findings that were open
+`emet:emet-reviewer` with the "Recheck variant: fix round" over only the findings that were open
 when the round began and the fix diff. The reviewer emits a JSON array of
 `{id, resolved}` with one entry per finding open at round start (not the
 findings array minus the fixed ones); record those verdicts with `emet
