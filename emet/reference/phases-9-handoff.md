@@ -21,7 +21,14 @@ what shipped, what got flagged and why, and what's still waiting on a human
 decision. This is the terminal case regardless of which mode started this
 session (default, `--draft`+`--dispatch`, or a chained `--dispatch`).
 Append `emet metrics --run <run id>` output (tokens, $, wall time per
-run/wave/ticket; peak context vs estimate) to the final report, and suggest the user run `/retro` on the run.
+run/wave/ticket; peak context vs estimate) to the final report, and point the
+user to `emet insights` for how the run compares with earlier ones.
+
+**Every wave's final report starts with a three-line TL;DR**: what landed,
+what needs a person, and the next step. Take the second and third lines from
+`emet status --brief`, which prints at most those three lines (overall state,
+what waits on a person, next action). Right after posting the report, send one
+push notification whose text is that same TL;DR.
 
 Whenever this session ends a wave — frontier empty or not — right after
 posting its report, run `emet guard --mark-final-report <session id>` (the

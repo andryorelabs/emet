@@ -118,6 +118,12 @@ unless the run continues from Phase 5 straight into Phase 6.
   below (real run failures, with what broke and how). Never loaded during a
   normal run; read it only when someone asks why a rule exists.
 
+## Language
+
+Read `language.conversation` and `language.artifacts` from `emet.config.json`
+(both default to `en`). Answer the user in `language.conversation`. Write code,
+comments, commit messages, PR text, tickets and docs in `language.artifacts`.
+
 ## Five non-negotiables
 
 These apply in every mode, can't be paraphrased away by a reference file,
