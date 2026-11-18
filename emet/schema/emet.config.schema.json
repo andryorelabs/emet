@@ -406,6 +406,24 @@
         }
       }
     },
+    "language": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "conversation": {
+          "type": "string",
+          "minLength": 1,
+          "default": "en",
+          "description": "Language of the text addressed to the person: replies, questions and reports. A language tag such as `en` or `es`."
+        },
+        "artifacts": {
+          "type": "string",
+          "minLength": 1,
+          "default": "en",
+          "description": "Language of written artifacts: code, comments, docs, commit messages and PR text. A language tag such as `en` or `es`."
+        }
+      }
+    },
     "pr": {
       "type": "object",
       "additionalProperties": false,
