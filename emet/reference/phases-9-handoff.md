@@ -25,9 +25,10 @@ run/wave/ticket; peak context vs estimate) to the final report, and point the
 user to `emet insights` for how the run compares with earlier ones.
 
 **Every wave's final report starts with a three-line TL;DR**: what landed,
-what needs a person, and the next step. Take the second and third lines from
-`emet status --brief`, which prints at most those three lines (overall state,
-what waits on a person, next action). Right after posting the report, send one
+what needs a person, and the next step. Take them from `emet status --brief`, which
+prints at most three lines (overall state, what waits on a person if anything,
+next action); when nothing waits on a person it prints two, and the "needs a
+person" line says `nothing`. Right after posting the report, send one
 push notification whose text is that same TL;DR.
 
 Whenever this session ends a wave — frontier empty or not — right after

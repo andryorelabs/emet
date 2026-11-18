@@ -155,6 +155,10 @@ the wave done. This has no cheap fix later — the merge webhook that would
 have closed those tickets doesn't retry, so a PR that already merged without
 this line needs a manual per-ticket state write instead.
 
+With a Linear tracker, run `ticket.reconcile` (`tracker-linear.md`) for each
+wave ticket right after the PR opens and again after it merges, and list what
+it fixed in the final report.
+
 **Land the PR** per `emet.config.json`'s `pr` section (`autoMerge` default
 `true`, `mergeMethod` default `squash`, `maxCiFixAttempts` default `2`):
 
