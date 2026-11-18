@@ -34,3 +34,4 @@ Decisions that are hard to reverse, surprising without context, and the result o
 | 0026 | [GitHub stars via a same-origin nginx proxy](0026-github-stars-via-same-origin-nginx-proxy.md)                        | Accepted   |                                                                                 |
 | 0027 | [CLI runtime contract](0027-cli-runtime-contract.md)                                                                  | Accepted   |                                                                                 |
 | 0028 | [Third-party skills are tracked and locked](0028-third-party-skills-are-tracked-and-locked.md)                        | Accepted   |                                                                                 |
+| 0029 | [The gate fixes findings and continues instead of stopping](0029-gate-fixes-findings-and-continues.md)                | Accepted   |                                                                                 |
