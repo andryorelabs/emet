@@ -42,16 +42,27 @@ What happens after a wave closes, and the size limits of a worker's handoff note
 - `launcher` (default `auto`, one of `auto`, `orca`, `bg`): Claude Code only; ignored on the Codex host, where `emet launch` opens no Orca tab. Also open the wave in an Orca tab running `claude attach`. `auto` asks the Orca runtime (`orca status`), so it works from `claude --bg` sessions too, which have no `TERM_PROGRAM`; `orca` always tries; `bg` never. The wave runs in the background either way, and a tab that fails to open never stops the chain. `emet launch <spec-id> --wave <n>` does the whole launch; see [`emet launch`](cli.md#runs-workers-and-slots).
 - `permissionMode` (default `bypassPermissions`, one of `bypassPermissions`, `auto`, `acceptEdits`): Claude Code only; ignored on the Codex host, where the chained session uses [`codex.sandbox`](#codex). Permission mode of the chained session. It is not inherited from the launching session, because `auto` mode's classifier can deny a step such as `gh pr merge` and leave a wave half-finished. Your `permissions.deny` rules still apply, but the bypass warning must have been accepted once interactively (`skipDangerousModePermissionPrompt`).
 
+## gate
+
+What `emet gate` does with open blocking findings.
+
+```json
+{ "gate": { "onHold": "fix-and-continue" } }
+```
+
+- `onHold` (default `fix-and-continue`): with `fix-and-continue`, open blocking findings answer `hold` with `next: "fix-findings"` while [`budgets.fixRounds`](#budgets) has rounds left. The gate answers `stop` only when an open finding has kind `intent_gap`, the fix rounds are exhausted with findings open, or the integration suite fails a second time after its failed specs were rerun (a first failure answers `hold` with `next: "rerun-failed-specs"`). `stop` keeps the previous behavior. A CI that never ran (`--ci env-fault`) answers `hold` with `next: "rerun-ci"` without charging `pr.maxCiFixAttempts`, then `next: "report-infrastructure"` the second time in a row.
+
 ## budgets
 
 All optional.
 
 ```json
-{ "budgets": { "workerAttempts": 2, "reviewRounds": 2, "stallNudgeCap": 6 } }
+{ "budgets": { "workerAttempts": 2, "reviewRounds": 2, "fixRounds": 2, "stallNudgeCap": 6 } }
 ```
 
 - `workerAttempts` (default `2`, minimum `1`): how many times a ticket can fail `verify` before the gate answers `defer`. The ticket gets the deferred label and the rest of the wave continues. An environment fault, such as the test command exiting 126/127 or a provider outage, pauses the run without spending an attempt.
 - `reviewRounds` (default `2`, minimum `1`): how many review/fix rounds a ticket gets before one escalation to the next model tier. Whatever is still open after that gets a ruling.
+- `fixRounds` (default `2`): how many fix rounds a wave gets under [`gate.onHold`](#gate) `fix-and-continue`. Each ends with `emet review --recheck` and counts here, never against `reviewRounds`. With none left and a blocking finding open, the gate answers `stop`. A ledger written without it reads as `0` used.
 - `stallNudgeCap` (default `6`, minimum `1`): how many times a stalled worker gets nudged. The count never resets.
 
 ## models
