@@ -118,6 +118,7 @@ describe("loadForgeConfig", () => {
         permissionMode: "acceptEdits",
       },
       landing: { mode: "merge" },
+      gate: { onHold: "stop" },
       pr: { autoMerge: false, mergeMethod: "merge", maxCiFixAttempts: 3 },
       usage: { oversizedReadLines: 200, stalledMinutes: 5 },
       models: {
@@ -130,7 +131,13 @@ describe("loadForgeConfig", () => {
         escalation: { sonnet: "opus", haiku: "sonnet" },
       },
       review: { highRiskPaths: ["billing"] },
-      budgets: { workerAttempts: 3, reviewRounds: 4, stallNudgeCap: 9, askWaitMinutes: 12 },
+      budgets: {
+        workerAttempts: 3,
+        reviewRounds: 4,
+        stallNudgeCap: 9,
+        askWaitMinutes: 12,
+        fixRounds: 3,
+      },
       sizing: { inlineMaxLines: 50 },
       map: { path: "docs/map.md" },
       specs: { dir: "docs/s" },
@@ -193,6 +200,11 @@ describe("loadForgeConfig", () => {
       /"handoff.permissionMode" must be one of/,
     ],
     ["landing.mode", { landing: { mode: "push" } }, /"landing.mode" must be one of pr\|merge/],
+    [
+      "gate.onHold",
+      { gate: { onHold: "continue" } },
+      /"gate.onHold" must be one of fix-and-continue\|stop/,
+    ],
     ["pr.autoMerge", { pr: { autoMerge: 1 } }, /"pr.autoMerge" must be a boolean/],
     ["pr.mergeMethod", { pr: { mergeMethod: "fast-forward" } }, /"pr.mergeMethod" must be one of/],
     [
@@ -212,6 +224,13 @@ describe("loadForgeConfig", () => {
     expect(configOf(await loadForgeConfig(repoRoot)).landing).toEqual({ mode: "pr" });
     await writeConfig({ landing: { mode: "merge" } });
     expect(configOf(await loadForgeConfig(repoRoot)).landing).toEqual({ mode: "merge" });
+  });
+
+  test("gate.onHold defaults to fix-and-continue and accepts stop", async () => {
+    await writeConfig({});
+    expect(configOf(await loadForgeConfig(repoRoot)).gate).toEqual({ onHold: "fix-and-continue" });
+    await writeConfig({ gate: { onHold: "stop" } });
+    expect(configOf(await loadForgeConfig(repoRoot)).gate).toEqual({ onHold: "stop" });
   });
 
   test("accepts pr and handoff.autoChain overrides, including maxCiFixAttempts 0", async () => {
@@ -440,6 +459,7 @@ describe("models and review sections", () => {
     [{ budgets: "x" }, /"budgets" must be an object/],
     [{ budgets: { workerAttempts: 0 } }, /"budgets.workerAttempts" must be a positive integer/],
     [{ budgets: { reviewRounds: 1.5 } }, /"budgets.reviewRounds" must be a positive integer/],
+    [{ budgets: { fixRounds: 0 } }, /"budgets.fixRounds" must be a positive integer/],
     [{ budgets: { stallNudgeCap: -1 } }, /"budgets.stallNudgeCap" must be a positive integer/],
     [{ models: { escalation: [] } }, /"models.escalation" must be an object/],
     [
@@ -472,6 +492,7 @@ describe("new scaffold defaults", () => {
       reviewRounds: 2,
       stallNudgeCap: 6,
       askWaitMinutes: 30,
+      fixRounds: 2,
     });
     expect(DEFAULT_FORGE_CONFIG.models.escalation).toEqual({ sonnet: "opus" });
     expect(DEFAULT_FORGE_CONFIG.sizing.inlineMaxLines).toBe(100);
@@ -487,6 +508,7 @@ describe("new scaffold defaults", () => {
       reviewRounds: 5,
       stallNudgeCap: 6,
       askWaitMinutes: 30,
+      fixRounds: 2,
     });
   });
 
