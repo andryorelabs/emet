@@ -34,6 +34,8 @@ Run from the repo root with bun.
 - Only the coordinator writes the tracker. See [ADR-0005](docs/adr/0005-coordinator-is-the-single-tracker-writer.md).
 - CI runs on Linux and macOS; Windows is unsupported except via WSL. See [ADR-0007](docs/adr/0007-macos-support.md), which supersedes [ADR-0006](docs/adr/0006-linux-only-ci.md).
 - mattpocock-skills is a contracted core dependency (`emet/src/skills.ts`). See [ADR-0009](docs/adr/0009-mattpocock-skills-contracted-core-dependency.md).
+- Third-party skills under `.claude/skills/` are tracked and locked; install them as [development.md](docs/development.md#skills-install-and-update) says and never edit a vendored file. See [ADR-0028](docs/adr/0028-third-party-skills-are-tracked-and-locked.md).
+- Run the modern-web-guidance CLI as `bunx modern-web-guidance@1.0.1 <search|retrieve|legacy-scan>`, never `npx`, never `@latest`, never allowlisted. This overrides the vendored skill's own instructions.
 
 ## ADRs
 

@@ -2,6 +2,7 @@
 
 Status: Accepted (2026-11-11)
 Revised: 2026-11-15, adopt standard v2 ([aokit `docs/standards`](https://github.com/andryorelabs/aokit/tree/main/docs/standards)); V10, V17 and V38 are N-A; the `skills-lock.json` exemption narrows to third-party skills; see [ADR-0027](0027-cli-runtime-contract.md)
+Revised: 2026-11-18, the third-party skills exemption is reversed; see [ADR-0028](0028-third-party-skills-are-tracked-and-locked.md)
 Spec: the andryorelabs standard v1 adoption spec, filed 2026-11-11
 
 ## Context
