@@ -35,6 +35,8 @@ import {
   findGlossaryWarnings,
   findInstallDrift,
   findLegacyNameWarnings,
+  filesystemTypeOf,
+  findJournalFilesystemFindings,
   findLegacyStateDirFindings,
   findMissingDocs,
   isReportClean,
@@ -1127,6 +1129,31 @@ describe("legacy name findings", () => {
     } finally {
       rmSync(xdg, { recursive: true, force: true });
     }
+  });
+
+  test("a state dir on NFS yields a warning, a local one does not", () => {
+    const mounts = [
+      "/dev/sda1 / ext4 rw 0 0",
+      "server:/export /mnt/shared nfs4 rw 0 0",
+      "tmpfs /run tmpfs rw 0 0",
+    ].join("\n");
+    const nfs = { EMET_STATE_DIR: "/mnt/shared/emet" };
+    const findings = findJournalFilesystemFindings(nfs, mounts);
+    expect(findings).toHaveLength(1);
+    expect(findings[0]).toContain("nfs4");
+    expect(findJournalFilesystemFindings({ EMET_STATE_DIR: "/home/x/state" }, mounts)).toEqual([]);
+    expect(findJournalFilesystemFindings(nfs, null)).toEqual([]);
+  });
+
+  test("filesystemTypeOf picks the longest mount and decodes spaces", () => {
+    const mounts = "a / ext4 rw\nb /mnt/my\\040disk cifs rw\nbroken\n";
+    expect(filesystemTypeOf("/mnt/my disk/state", mounts)).toBe("cifs");
+    expect(filesystemTypeOf("/mnt/my diskette", mounts)).toBe("ext4");
+    expect(filesystemTypeOf("/x", "")).toBeNull();
+  });
+
+  test("the real /proc/mounts read does not throw", () => {
+    expect(Array.isArray(findJournalFilesystemFindings())).toBe(true);
   });
 
   test("a legacy-only repo audits with a legacy warning and no missing agents doc", async () => {
