@@ -2,12 +2,19 @@
 title: Konfigurationsreferenz
 description: Jeder Schlüssel in emet.config.json mit Standardwert und Bedeutung.
 seoTitle: emet-Konfigurationsreferenz
-sourceHash: 5a9c5814c4711e31
+sourceHash: d333cfa0ad463263
 ---
 
 Jeder Schlüssel in `emet.config.json` mit Standardwert und Bedeutung. Die maßgebliche Quelle ist [`emet/schema/emet.config.schema.json`](../../emet/schema/emet.config.schema.json). Die Begriffe folgen [GLOSSARY.md](../../GLOSSARY.md). Zurück zur [README](../../README.md).
 
 `emet init` schreibt die Datei und setzt `$schema` auf die öffentliche URL `https://emet.andryore.dev/schema/emet.config.schema.json`, die die Website bytegenau identisch zur maßgeblichen Quelle ausliefert, sodass Editoren überall Vervollständigung bieten. `emet preflight` und `emet doctor` validieren sie. Ein als prose-only gekennzeichneter Schlüssel wird von den `/emet`-Prompts (unter Codex den `$emet:*`-Skills) gelesen, nicht von der CLI. Ein als deprecated gekennzeichneter Schlüssel wird weiterhin akzeptiert. Das Schema erlaubt außerdem einen freien Text-Schlüssel `"//"` für Notizen (von keinem Tool gelesen) und `"version"`, der immer `1` ist.
+
+## language
+
+- `conversation` (Standard `"en"`): BCP-47-Tag der Sprache, in der der Agent dem Nutzer antwortet.
+- `artifacts` (Standard `"en"`): BCP-47-Tag der Sprache von Code, Kommentaren, Commit-Nachrichten, PR-Texten, Tickets und Dokumentation.
+
+Beide müssen nicht-leere Strings sein. Eine Konfiguration ohne Abschnitt `language` wird mit beiden auf `"en"` geladen, und `emet init` schreibt beide. Die installierten Prompts lesen sie.
 
 ## pr
 

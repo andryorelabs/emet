@@ -154,6 +154,10 @@ the wave done. This has no cheap fix later — the merge webhook that would
 have closed those tickets doesn't retry, so a PR that already merged without
 this line needs a manual per-ticket state write instead.
 
+With a Linear tracker, run `ticket.reconcile` (`tracker-linear.md`) for each
+wave ticket right after the PR opens and again after it merges, and list what
+it fixed in the final report.
+
 **Land the PR** per `emet.config.json`'s `pr` section (`autoMerge` default
 `true`, `mergeMethod` default `squash`, `maxCiFixAttempts` default `2`):
 
@@ -241,6 +245,13 @@ worktree. Run it to sweep up after a crashed or abandoned wave. `emet cleanup
 while `emet slots` shows a live run other than your own, since it reaches
 every branch in the repo. Worktrees are removed only through `emet cleanup`,
 never by hand with `git worktree remove` or `rm`.
+
+**Tool-exhaustion check, before `ready for human`.** Before you hand any
+task, step or decision back to the user as `ready for human`, list the CLIs
+(`gh`, `git`, `emet`, `jq`, `bun`, …) and the MCP servers this session has,
+and try them first: a status read, a merge, a tracker write that is yours to
+make, a log fetch. Hand back only what none of them can do, and name in the
+report which tools you tried and what each returned.
 
 If anything was flagged (a ticket failed twice, produced a
 needs-a-human-decision, or a conflict got resolved by judgment rather than

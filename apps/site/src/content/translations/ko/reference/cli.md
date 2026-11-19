@@ -2,7 +2,7 @@
 title: CLI 레퍼런스
 description: 모든 emet 하위 명령, 게이트와 기록 표, 종료 코드, 환경 변수를 설명합니다.
 seoTitle: emet CLI 레퍼런스
-sourceHash: d485585e0e29f0f9
+sourceHash: 3f581ec5b9773165
 ---
 
 모든 `emet` 하위 명령, 게이트와 기록 표, 종료 코드, 환경 변수입니다. 용어는 [GLOSSARY.md](../../GLOSSARY.md)를 따릅니다. [README](../../README.md)로 돌아가기. 모든 명령은 `--help`로 사용법을 출력합니다.
@@ -57,7 +57,9 @@ emet doctor ~/code/*
 - `emet lock-reason --run <id> --ticket <ticket> [--anchor <pid>]`: 워커가 부트스트랩 때 기록하는 `git worktree lock` 사유를 출력합니다.
 - `emet launch <spec-id> --wave <n>`: Claude Code에서는 웨이브를 `claude --bg` 세션으로 시작하고 `handoff.launcher`에 따라 Orca 탭을 엽니다(Codex는 [Codex 호스트](#codex-호스트) 참고). 시작 전체(중복 세션 확인, `claude --bg`, 탭)를 수행하고 `{ name, id, attach, orcaTab: { opened, reason } }`를 출력합니다. 다른 세션에서 웨이브를 직접 실행하고 싶을 때는 단순한 `claude --bg` 대신 이것을 사용하세요.
 - `emet chain --ticket <id> --spec <id> --wave <n> [gate flags]`: 전달받은 게이트 플래그로 `emet gate`를 실행하고, 결정이 `chain`일 때만 다음 웨이브를 시작합니다. 실행 전에 준비 상태(호스트 메모리 여유, 리포지토리와 `/tmp`의 여유 디스크 및 inode, `orca` CLI)를 확인하고, 실행 후에는 자식 세션이 목록에 있는지 확인합니다. 그 외의 결정, 차단하는 준비 문제(`low-memory`, `low-disk`, `low-inodes`, `orca-unavailable`), 또는 같은 스펙과 웨이브에 이미 세션이 있으면 이유와 함께 종료 코드 1로 끝나며 아무것도 실행하지 않습니다.
-- `emet status [--spec <id>]`: 웨이브별 Working / Checking / Ready / Needs-decision을 JSON과 요약 줄로 출력합니다. `emet status --help`에 JSON 설명이 있습니다.
+- `emet status [--spec <id>] [--brief]`: 웨이브별 Working / Checking / Ready / Needs-decision을 JSON과 요약 줄로 출력합니다. `--brief`는 대신 최대 세 줄을 출력합니다. 전체 상태, 사람을 기다리는 항목(있다면), 다음 동작입니다. `emet status --help`에 JSON 설명이 있습니다.
+- `emet run current [--json]`: 저장소의 활성 실행(실행 id, 스펙, 웨이브, 단계, 마지막 업데이트)을 `.emet/phase.json`에서 읽어 출력합니다. 활성 실행이 없으면 `no active run`을 출력하고 0으로 종료합니다.
+- `emet insights [--since <iso|7d|30d>] [--repo <path>] [--all] [--json] [--mark-baseline]`: [이벤트 저널](../guide/journal.md)을 읽어 출처(사람 또는 자동)별 실행, 결정과 사유별 게이트 결정, 실행별 사람의 개입, 실행 시작 결과, 닫힌 티켓을 보고합니다. 읽을 수 없는 줄은 건너뛰고 개수를 셉니다. `--mark-baseline`은 기준선을 추가하며, 이후 보고서는 `--all`을 지정하지 않는 한 그 이후의 이벤트만 다룹니다. 저널이 비어 있거나 없으면 0 보고서를 출력하고 0으로 종료합니다.
 - `emet usage [--session <id> | --file <path>] [--stalled [--minutes N]] [--project-dir <path>]`: 세션 사용량을 보고합니다. `--stalled`는 멈춘 워커를 나열합니다.
 - `emet handoff --check <path> | --render <path>`: 워커의 `.emet/handoff-<ticket>.md` 노트를 검증하거나 렌더링합니다.
 - `emet metrics [--run <id>]`: 세션 트랜스크립트를 바탕으로 티켓별, 웨이브별, 실행별 토큰, API 환산 비용, 경과 시간을 보고합니다. 또한 티켓별로 추정한 컨텍스트 예산과 각 워커가 실제로 사용한 양을 비교합니다. 이 요약은 실행의 최종 보고서 끝에 들어갑니다.
@@ -110,7 +112,7 @@ emet doctor ~/code/*
 | 각 워커 이후   | `emet verify <ticket> --run <id>`                    | 디스패치 기준선 이후에 커밋이 있는지, 변경된 모든 경로가 티켓의 편집 범위 안에 있는지, 핸드오프 노트가 `handoff --check`를 통과하는지, `commands.workerScopedSuite`가 통과하는지 확인합니다. 리뷰와 병합은 통과 기록이 없는 티켓을 거부합니다.                                                                                                                                                                                                                            |
 | 리뷰 입력      | `emet review-package <base> <head> --out <file>`     | 리뷰어에게 줄 diff를 하나로 묶습니다. 리뷰어는 파일 경로로 받습니다. 범위가 비어 있거나 base의 후손이 아니면 종료 코드 3으로 끝납니다.                                                                                                                                                                                                                                                                                                                                    |
 | 리뷰           | `emet review --ticket <t> --findings <file>`         | 지적 원장을 관리하고 분류 순서(`intent_gap` → `bad_plan` → `patch` → `defer`)와 라운드 상한을 강제합니다. `--recheck --verdicts <file>`은 수정 라운드를 끝냅니다. 시작 시점에 열려 있던 지적만 평가되고, 지적은 판정을 통해서만 `resolved`가 되며, recheck는 `budgets.fixRounds`에 포함됩니다(소진되면 상한을 명시하며 종료 코드 1). `--escalate`는 다음 모델 티어로 넘어갑니다. `--rule`/`--rulings`는 보고서와 PR 본문에 들어갈 "내가 내린 판정"을 기록하고 나열합니다. |
-| 병합 또는 체인 | `emet gate <ticket> --tier … --ci … --integration …` | `merge`, `hold`, `chain`, `stop`, `defer` 중 하나를 이유와 함께 JSON으로 출력합니다. verify 기록, 열린 지적, 위험 티어, CI, 통합 스위트, 예산을 읽습니다. `hold`에는 `next`가 포함됩니다: `fix-findings`, `rerun-failed-specs`, `rerun-ci`, `report-infrastructure`. [`gate`](configuration.md#gate)를 참고하세요.                                                                                                                                                        |
+| 병합 또는 체인 | `emet gate <ticket> --tier … --ci … --integration …` | `merge`, `hold`, `chain`, `stop`, `defer` 중 하나를 이유와 함께 JSON으로 출력합니다. verify 기록, 열린 지적, 위험 티어, CI, 통합 스위트, 예산을 읽습니다. `hold`에는 `next`가 포함됩니다: `fix-findings`, `rerun-failed-specs`, `rerun-ci`, `report-infrastructure`. `--no-record`는 결정을 저널에 기록하지 않습니다. [`gate`](configuration.md#gate)를 참고하세요.                                                                                                       |
 
 웨이브의 브랜치들이 함께 병합된 뒤에는 통합 브랜치에서 `commands.fullSuite`가 한 번 실행됩니다. 실패하면 PR과 `autoChain`이 차단됩니다. 게이트는 그 결과를 `--integration`으로 받습니다. 게이트가 읽는 예산은 [`budgets`](configuration.md#budgets)를 참고하세요.
 

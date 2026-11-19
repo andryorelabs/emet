@@ -122,6 +122,9 @@ Write/update `{{handoff_path}}` at its three fixed triggers: first green
 test, each closed dead-end, before each E2E run. Continuous, not once at the
 end. Real decisions go there too; the coordinator posts them to the tracker.
 
+Write code, comments, commit messages and docs in the language
+`language.artifacts` of `emet.config.json` names.
+
 Self-check before you're done:
 {{self_check_commands}}
 

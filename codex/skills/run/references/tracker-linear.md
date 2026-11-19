@@ -41,6 +41,12 @@ for every Linear-tracker repo.
   on that PR — the merge webhook doesn't retry, so the one-time fix is a
   manual `save_issue({ id, state: "Done" })` per affected ticket, not a
   repeat of the automation.
+- **ticket.reconcile** (Phase 8, Linear only): after the PR is open or
+  merged, `get_issue({ id })` for each wave ticket and compare it with its PR.
+  The state must be `In Review` while the PR is open and `Done` once it has
+  merged, and never `Canceled`; the `project` must be set. Fix any mismatch
+  with `save_issue({ id, state: "<name>", project: "<project>" })` and list
+  every ticket you fixed, with what changed, in the final report.
 - **ticket.setLabels**: `save_issue({ id, labels: [...] })` (full replace —
   read current labels first if only adding one).
 - **ticket.comment**: `save_comment({ issueId: id, body })`.

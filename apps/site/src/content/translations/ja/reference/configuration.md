@@ -2,12 +2,19 @@
 title: 設定リファレンス
 description: emet.config.json のすべてのキーについて、既定値と意味を説明します。
 seoTitle: emet の設定リファレンス
-sourceHash: 5a9c5814c4711e31
+sourceHash: d333cfa0ad463263
 ---
 
 `emet.config.json` のすべてのキーを、既定値と意味とともに示します。信頼できる情報源は [`emet/schema/emet.config.schema.json`](../../emet/schema/emet.config.schema.json) です。用語は [GLOSSARY.md](../../GLOSSARY.md) に従います。[README](../../README.md) に戻る。
 
 `emet init` がこのファイルを書き出します。`$schema` には公開 URL `https://emet.andryore.dev/schema/emet.config.schema.json` が設定され、ウェブサイトは信頼できる情報源とバイト単位で同一のファイルを配信するため、エディタはどこでも補完を利用できます。`emet preflight` と `emet doctor` が検証します。prose-only と記載されたキーは、CLI ではなく `/emet` のプロンプト（Codex では `$emet:*` スキル）が読み取ります。deprecated と記載されたキーは、引き続き受け付けられます。スキーマでは、メモ用の自由記述の `"//"` キー（どのツールも読み取りません）と、常に `1` である `"version"` も許可されています。
+
+## language
+
+- `conversation` (デフォルト `"en"`): エージェントがユーザーに返答する言語の BCP 47 タグ。
+- `artifacts` (デフォルト `"en"`): コード、コメント、コミットメッセージ、PR の文面、チケット、ドキュメントの言語の BCP 47 タグ。
+
+どちらも空でない文字列である必要があります。`language` セクションのない設定は、両方とも `"en"` として読み込まれ、`emet init` は両方を書き込みます。インストールされたプロンプトがこれらを読み取ります。
 
 ## pr
 

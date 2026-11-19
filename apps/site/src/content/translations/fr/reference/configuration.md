@@ -2,12 +2,19 @@
 title: Référence de configuration
 description: Chaque clé de emet.config.json avec sa valeur par défaut et sa signification.
 seoTitle: Référence de configuration d'emet
-sourceHash: 5a9c5814c4711e31
+sourceHash: d333cfa0ad463263
 ---
 
 Chaque clé de `emet.config.json`, avec sa valeur par défaut et sa signification. La source de vérité est [`emet/schema/emet.config.schema.json`](../../emet/schema/emet.config.schema.json). Les termes suivent [GLOSSARY.md](../../GLOSSARY.md). Retour au [README](../../README.md).
 
 `emet init` écrit le fichier avec `$schema` défini sur l'URL publique `https://emet.andryore.dev/schema/emet.config.schema.json`, que le site web sert à l'octet près identique à la source de vérité, afin que les éditeurs proposent la complétion partout. `emet preflight` et `emet doctor` le valident. Une clé marquée « prose uniquement » est lue par les prompts de `/emet` (les skills `$emet:*` sur Codex), pas par la CLI. Une clé marquée obsolète est toujours acceptée. Le schéma autorise aussi une clé de texte libre `"//"` pour des notes (jamais lue par aucun outil) et `"version"`, qui vaut toujours `1`.
+
+## language
+
+- `conversation` (par défaut `"en"`): balise BCP 47 de la langue dans laquelle l'agent répond à l'utilisateur.
+- `artifacts` (par défaut `"en"`): balise BCP 47 de la langue du code, des commentaires, des messages de commit, du texte des PR, des tickets et de la documentation.
+
+Les deux doivent être des chaînes non vides. Une configuration sans section `language` se charge avec les deux à `"en"`, et `emet init` écrit les deux. Les prompts installés les lisent.
 
 ## pr
 
