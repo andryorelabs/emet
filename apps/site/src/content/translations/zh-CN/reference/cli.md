@@ -2,7 +2,7 @@
 title: CLI 参考
 description: 每个 emet 子命令、关卡与记录表、退出码和环境变量。
 seoTitle: emet CLI 参考
-sourceHash: 3f581ec5b9773165
+sourceHash: 00afab0462e7fd07
 ---
 
 每个 `emet` 子命令、关卡与记录表、退出码和环境变量。术语遵循 [GLOSSARY.md](../../GLOSSARY.md)。返回 [README](../../README.md)。每个命令都可以用 `--help` 打印其用法。
@@ -16,8 +16,10 @@ sourceHash: 3f581ec5b9773165
 ### 设置与审计
 
 - `emet migrate [--dry-run]`：将旧版仓库重命名为 emet 的名称。
-- `emet init [--tracker linear|github|local] [--force]`：自动检测包管理器、主干分支和跟踪器类型，并写入 `emet.config.json` 和 `docs/agents/*.md` 文件。`--tracker local` 会设置本地跟踪器。
+- `emet init [--tracker linear|github|local] [--after-spec release|promote|none] [--force]`：自动检测包管理器、主干分支、跟踪器类型和 after-spec 模式（参见 [`handoff.afterSpec`](configuration.md#handoff)），并写入 `emet.config.json` 和 `docs/agents/*.md` 文件。`--tracker local` 会设置本地跟踪器。
 - `emet doctor [--all] [<path> ...]`：以只读方式一次审计任意数量的仓库；默认为当前目录。
+- `emet setup [--yes] [--with <ids>] [--list] [--json]`：通过 readline 提示提供可选安装项：`mattpocock-skills`（默认开启）、`engram`、`mascot`、`orca-pet`、`gh-auth` 以及推荐的 Claude Code 设置（`claude-settings`，仅在被选中时应用，并先对 `settings.json` 做带时间戳的备份）。没有 TTY，或使用 `--yes` 或 `--with` 时，它不会询问任何内容，只安装指定的项目；没有 TTY 且没有 `--with` 时，它什么都不安装，并打印 `--list` 目录。每一步都会报告 `installed`、`already-present`、`skipped` 或 `failed`；一个失败不会阻止其他步骤，只要有失败，退出码就是 1。`/emet:setup` 是插件入口，通过 `AskUserQuestion` 询问相同的选项。
+- `emet fleet list [--root <dir>] [--json]`：列出 `--root`（默认 `~/code`）下一层、带有 `emet.config.json` 的 git 仓库，并显示 `tracker.kind`、`handoff.autoChain` 和 `models.worker`。`emet fleet set <key> <value> [--root <dir>] [--dry-run]` 会在每个列出的仓库中修改一个配置键，并先通过配置加载器校验（无效值不会改动任何内容，并以退出码 1 结束）。`emet fleet launch --feature <text> [--root <dir>] [--repos <a,b>]` 在通过 `emet chain` 的就绪检查后，在每个仓库中打开一个 `/emet:run --draft <text>` 会话。参见 [fleet 指南](../guide/fleet.md)。
 - `emet preflight [--run <id>] [--post-dispatch]`：确认仓库已具备派发条件。
 - `emet skill-path <name>`：打印某个 mattpocock-skills 技能的 `SKILL.md` 绝对路径。如果找不到该技能，则以退出码 1 退出。
 - `emet selftest`：运行 CLI 自身的单元测试。仅限源码安装；已编译的二进制文件会以退出码 1 退出，并提示你运行 `emet doctor`。
@@ -66,6 +68,8 @@ emet doctor ~/code/*
 
 ### 规划、评审与落地
 
+- `emet promote --spec <id> [--dry-run] [--no-promote]`：after-spec 步骤，依据 [`handoff.afterSpec`](configuration.md#handoff)。在 `promote` 模式下，它会打开一个标题为 `chore: 🔖 promote develop` 的从 `develop` 到 `main` 的拉取请求，用 `emet ci --pr <n> --wait` 等待，仅当状态为 `pass` 时才以合并提交的方式合并，然后仅在 `develop` 落后于 `main` 时，打开并合并一个从 `main` 到 `develop` 的同步拉取请求。它会向日志追加一条带有拉取请求编号和 `merged` 的 `promote` 事件。在 `release` 模式下，它不合并任何内容，发布拉取请求留给人来处理。当 `afterSpec` 为 `none`、使用 `--no-promote`，或规范的最后一个波次被保持打开或被标记时，它以退出码 0 结束并附带 `skipped` 说明。CI 不是 `pass` 时不合并任何内容，并以退出码 1 结束。`--dry-run` 不会打开拉取请求。
+- `emet deploy-check [--json]`：运行 `deploy.check.command`，直到它以 0 退出，最多尝试 `retries` 次或 `timeoutSeconds` 秒，每次之间等待 `intervalSeconds` 秒，并打印 `state: ok | failed | timeout` 以及 `attempts`。退出码 `0` 为 ok，`1` 为 failed，`3` 为 timeout。未配置 `deploy.check` 时，它以退出码 0 结束并输出 `skipped: "no deploy check configured"`。after-spec 的 `promote` 步骤会在合并之后运行它。参见 [`deploy`](configuration.md#deploy)。
 - `emet validate --spec <id> | --file <path>`：计划校验；参见[关卡与记录](#关卡与记录)。
 - `emet surfaces --check <file.json | ->`：如果同一波次的工单之间，允许编辑范围的 glob 存在重叠，则予以拒绝。
 - `emet approve --run <id>`、`emet materialize-log`、`emet results`、`emet verify`、`emet review-package`、`emet review`、`emet gate`：参见[关卡与记录](#关卡与记录)。

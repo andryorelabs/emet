@@ -2,7 +2,7 @@
 title: Référence de la CLI
 description: Chaque sous-commande d'emet, le tableau des gates et enregistrements, les codes de sortie et les variables d'environnement.
 seoTitle: Référence de la CLI d'emet
-sourceHash: 3f581ec5b9773165
+sourceHash: 00afab0462e7fd07
 ---
 
 Chaque sous-commande d'`emet`, le tableau des gates et enregistrements, les codes de sortie et les variables d'environnement. Les termes suivent [GLOSSARY.md](../../GLOSSARY.md). Retour au [README](../../README.md). Chaque commande affiche son usage avec `--help`.
@@ -16,8 +16,10 @@ Trois commandes slash enveloppent la CLI dans Claude Code : `/emet:run` (le pipe
 ### Configuration et audit
 
 - `emet migrate [--dry-run]` : renomme un dépôt hérité vers les noms d'emet.
-- `emet init [--tracker linear|github|local] [--force]` : détecte automatiquement le gestionnaire de paquets, la branche principale et le type de tracker, puis écrit `emet.config.json` et les fichiers `docs/agents/*.md`. `--tracker local` met en place le tracker local.
+- `emet init [--tracker linear|github|local] [--after-spec release|promote|none] [--force]` : détecte automatiquement le gestionnaire de paquets, la branche principale, le type de tracker et le mode after-spec (voir [`handoff.afterSpec`](configuration.md#handoff)), puis écrit `emet.config.json` et les fichiers `docs/agents/*.md`. `--tracker local` met en place le tracker local.
 - `emet doctor [--all] [<path> ...]` : audit en lecture seule d'autant de dépôts que vous voulez à la fois ; par défaut, le répertoire courant.
+- `emet setup [--yes] [--with <ids>] [--list] [--json]` : propose les installations facultatives avec des invites readline : `mattpocock-skills` (activé par défaut), `engram`, `mascot`, `orca-pet`, `gh-auth` et les réglages recommandés de Claude Code (`claude-settings`, appliqués seulement s'ils sont choisis, après une sauvegarde horodatée de `settings.json`). Sans TTY, ou avec `--yes` ou `--with`, il ne demande rien et installe exactement les éléments nommés ; sans TTY et sans `--with`, il n'installe rien et affiche le catalogue `--list`. Chaque étape indique `installed`, `already-present`, `skipped` ou `failed` ; un échec n'arrête pas les autres, et le code de sortie est 1 si l'une a échoué. `/emet:setup` est le point d'entrée du plugin et pose les mêmes choix avec `AskUserQuestion`.
+- `emet fleet list [--root <dir>] [--json]` : liste les dépôts git contenant un `emet.config.json` un niveau sous `--root` (par défaut `~/code`), avec `tracker.kind`, `handoff.autoChain` et `models.worker`. `emet fleet set <key> <value> [--root <dir>] [--dry-run]` modifie une clé de configuration dans chaque dépôt listé, en validant d'abord via le chargeur de configuration (une valeur invalide ne change rien et sort avec 1). `emet fleet launch --feature <text> [--root <dir>] [--repos <a,b>]` ouvre une session `/emet:run --draft <text>` dans chaque dépôt après les vérifications de disponibilité de `emet chain`. Voir le [guide fleet](../guide/fleet.md).
 - `emet preflight [--run <id>] [--post-dispatch]` : confirme que le dépôt est prêt pour la distribution.
 - `emet skill-path <name>` : affiche le chemin absolu du `SKILL.md` d'une skill de mattpocock-skills. Se termine avec le code 1 si la skill est introuvable.
 - `emet selftest` : exécute les tests unitaires propres à la CLI. Installations depuis les sources uniquement ; un binaire compilé se termine avec le code 1 et vous demande d'exécuter `emet doctor`.
@@ -66,6 +68,8 @@ Il indique, pour chaque dépôt : un `emet.config.json` valide, les quatre fichi
 
 ### Planification, revue et atterrissage
 
+- `emet promote --spec <id> [--dry-run] [--no-promote]` : l'étape after-spec, selon [`handoff.afterSpec`](configuration.md#handoff). En mode `promote`, elle ouvre une pull request de `develop` vers `main` intitulée `chore: 🔖 promote develop`, attend avec `emet ci --pr <n> --wait`, la fusionne avec un commit de fusion uniquement quand l'état est `pass`, puis ouvre et fusionne une pull request de synchronisation de `main` vers `develop` seulement si `develop` est en retard sur `main`. Elle ajoute au journal un événement `promote` avec le numéro de la pull request et `merged`. En mode `release`, elle ne fusionne rien et laisse la pull request de release à une personne. Avec `afterSpec` `none`, avec `--no-promote`, ou quand la dernière vague de la spec a été laissée ouverte ou signalée, elle sort avec 0 et une note `skipped`. Une CI qui n'est pas `pass` ne fusionne rien et sort avec 1. `--dry-run` n'ouvre aucune pull request.
+- `emet deploy-check [--json]` : exécute `deploy.check.command` jusqu'à ce qu'elle sorte avec 0, dans la limite de `retries` tentatives ou de `timeoutSeconds`, en attendant `intervalSeconds` entre elles, et affiche `state: ok | failed | timeout` avec `attempts`. Sortie `0` ok, `1` failed, `3` timeout. Sans `deploy.check` configuré, elle sort avec 0 et `skipped: "no deploy check configured"`. L'étape after-spec `promote` l'exécute après la fusion. Voir [`deploy`](configuration.md#deploy).
 - `emet validate --spec <id> | --file <path>` : validation du plan ; voir [Gates et enregistrements](#gates-et-enregistrements).
 - `emet surfaces --check <file.json | ->` : rejette les globs de surfaces autorisées qui se chevauchent entre les tickets d'une vague.
 - `emet approve --run <id>`, `emet materialize-log`, `emet results`, `emet verify`, `emet review-package`, `emet review`, `emet gate` : voir [Gates et enregistrements](#gates-et-enregistrements).
