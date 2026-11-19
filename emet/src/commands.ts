@@ -231,7 +231,7 @@ export const COMMANDS: readonly CommandSpec[] = [
   {
     name: "init",
     summary: "write emet.config.json and the docs/agents files for this repo",
-    flags: [val("--tracker"), bool("--force")],
+    flags: [val("--tracker"), val("--after-spec"), bool("--force")],
     run: runModule("init"),
   },
   {

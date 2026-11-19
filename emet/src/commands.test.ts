@@ -27,6 +27,7 @@ describe("COMMANDS", () => {
 
   test("claims and slots declare --release with their own arity", () => {
     expect(findCommand("claims")?.flags).toContainEqual({ name: "--release", value: true });
+    expect(findCommand("init")?.flags).toContainEqual({ name: "--after-spec", value: true });
     expect(findCommand("slots")?.flags).toContainEqual({ name: "--release", value: false });
   });
 });
