@@ -43,7 +43,10 @@
     "maxLines": 60,
     "maxChars": 8000,
     "autoChain": true,
-    "afterSpec": "release"
+    "afterSpec": [
+      { "paths": ["apps/site/**", "docs/**"], "mode": "promote" },
+      { "mode": "release" }
+    ]
   },
   "pr": {
     "autoMerge": true,
@@ -76,5 +79,14 @@
   "language": {
     "conversation": "es",
     "artifacts": "en"
+  },
+  "deploy": {
+    "check": {
+      "command": "curl -fsS https://emet.andryore.dev/",
+      "retries": 20,
+      "intervalSeconds": 15,
+      "timeoutSeconds": 360,
+      "paths": ["apps/site/**", "docs/**"]
+    }
   }
 }
