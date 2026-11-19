@@ -10,6 +10,7 @@ import {
   agentHostOfConfig,
   checkDependencies,
   classifyClaudePluginProbe,
+  classifyEngram,
   classifyForgeAgentsProbe,
   createDependencyProbes,
   formatDependencyCheck,
@@ -1120,7 +1121,14 @@ async function main(targets: readonly string[]): Promise<void> {
   const skillsChecks =
     probes.skillsContract?.() ?? checkSkillsContract(listInstalledPlugins(host), host);
   const doubleInstall = findDoubleInstall(os.homedir(), listInstalledPlugins(host), host);
-  const globalFindingLines = [globalPluginCheck, globalForgeAgentsCheck, ...skillsChecks]
+  const engramProbe = await probes.engram?.();
+  const engramChecks = engramProbe === undefined ? [] : [classifyEngram(engramProbe)];
+  const globalFindingLines = [
+    globalPluginCheck,
+    globalForgeAgentsCheck,
+    ...skillsChecks,
+    ...engramChecks,
+  ]
     .map(formatGlobalDependencyFinding)
     .filter((line): line is string => line !== null);
   if (globalFindingLines.length > 0) {

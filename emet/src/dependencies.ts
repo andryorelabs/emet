@@ -74,6 +74,7 @@ const DEPENDENCY_PROBE_TIMEOUT_MS = 5_000;
 
 type DependencyName =
   | "claude-plugin"
+  | "engram"
   | "forge-agents"
   | "github-cli"
   | "linear-mcp-server"
@@ -127,6 +128,11 @@ export type LinearMcpProbe =
   | { readonly kind: "not-declared"; readonly searchedAllScopes: boolean }
   | { readonly kind: "mcp-json-unreadable"; readonly detail: string };
 
+export interface EngramProbe {
+  readonly binary: boolean;
+  readonly plugin: ClaudePluginProbe;
+}
+
 export interface DependencyProbes {
   /** Memoized by {@link createDependencyProbes} — the plugin list is global,
    * so a fleet sweep over 30 repos must still shell out exactly once. */
@@ -136,6 +142,8 @@ export interface DependencyProbes {
   readonly linearMcpServer: (repoRoot: string) => Promise<LinearMcpProbe>;
   /** Memoized: `~/.claude/agents/` is a fixed, user-scoped path, not per repo. */
   readonly forgeAgents: () => Promise<ForgeAgentsProbe>;
+  /** Optional so existing stubs stay valid; absent means Engram is not checked. */
+  readonly engram?: () => Promise<EngramProbe>;
   /** Optional so existing stubs stay valid; absent means the contract is not checked. */
   readonly skillsContract?: () => readonly DependencyCheck[];
 }
@@ -516,17 +524,21 @@ export function indeterminateChecks(
 function pluginStatusFromOutput(
   stdout: string,
   host: AgentHost,
+  pluginId: string,
 ): "installed" | "disabled" | "missing" {
   const listed = host.probes.parsePluginList(stdout);
   if (listed.length === 0) {
-    return parsePluginListOutput(stdout, host.probes.skillsPluginId);
+    return parsePluginListOutput(stdout, pluginId);
   }
-  const entries = listed.filter((plugin) => plugin.id === host.probes.skillsPluginId);
+  const entries = listed.filter((plugin) => plugin.id === pluginId);
   if (entries.length === 0) return "missing";
   return entries.some((plugin) => plugin.enabled) ? "installed" : "disabled";
 }
 
-async function probeClaudePlugin(host: AgentHost = claudeHost): Promise<ClaudePluginProbe> {
+async function probeClaudePlugin(
+  host: AgentHost = claudeHost,
+  pluginId: string = host.probes.skillsPluginId,
+): Promise<ClaudePluginProbe> {
   const command = textPluginListCommand(host);
   if (!(await resolveBinaryOnPath(command[0] ?? host.name))) {
     return { kind: "claude-not-on-path" };
@@ -540,7 +552,49 @@ async function probeClaudePlugin(host: AgentHost = claudeHost): Promise<ClaudePl
     return { kind: "claude-failed", detail: `exit code ${result.exitCode}` };
   return {
     kind: "listed",
-    status: pluginStatusFromOutput(result.stdout, host),
+    status: pluginStatusFromOutput(result.stdout, host, pluginId),
+  };
+}
+
+const ENGRAM_PLUGIN_ID = "engram@engram";
+
+export const ENGRAM_INSTALL_REMEDY: readonly string[] = [
+  "brew install gentleman-programming/tap/engram",
+  "engram setup",
+];
+
+/**
+ * Engram is optional persistent memory, so this never reports `unsatisfied`:
+ * a missing binary or plugin is a recommendation, not a blocker.
+ */
+export function classifyEngram(probe: EngramProbe): DependencyCheck {
+  const pluginInstalled = probe.plugin.kind === "listed" && probe.plugin.status === "installed";
+  if (probe.binary && pluginInstalled) {
+    return {
+      dependency: "engram",
+      status: "satisfied",
+      summary: "engram binary and plugin are installed",
+      remedy: [],
+      limitation: null,
+    };
+  }
+  const missing = [
+    ...(probe.binary ? [] : ["the `engram` binary is not on PATH"]),
+    ...(pluginInstalled ? [] : [`the \`${ENGRAM_PLUGIN_ID}\` Claude Code plugin was not found`]),
+  ];
+  return {
+    dependency: "engram",
+    status: "indeterminate",
+    summary: `optional: Engram persistent memory is recommended but ${missing.join(" and ")}. Install it (see https://github.com/Gentleman-Programming/engram):`,
+    remedy: ENGRAM_INSTALL_REMEDY,
+    limitation: null,
+  };
+}
+
+async function probeEngram(host: AgentHost): Promise<EngramProbe> {
+  return {
+    binary: await resolveBinaryOnPath("engram"),
+    plugin: await probeClaudePlugin(host, ENGRAM_PLUGIN_ID),
   };
 }
 
@@ -626,6 +680,7 @@ export function agentPluginInstallPaths(plugins: Parameters<typeof findPluginByN
 export function createDependencyProbes(host: AgentHost = claudeHost): DependencyProbes {
   let claudePluginResult: Promise<ClaudePluginProbe> | null = null;
   let githubCliResult: Promise<GithubCliProbe> | null = null;
+  let engramResult: Promise<EngramProbe> | null = null;
 
   let forgeAgentsResult: Promise<ForgeAgentsProbe> | null = null;
   let skillsContractResult: readonly DependencyCheck[] | null = null;
@@ -633,6 +688,7 @@ export function createDependencyProbes(host: AgentHost = claudeHost): Dependency
   return {
     claudePlugin: () => (claudePluginResult ??= probeClaudePlugin(host)),
     githubCli: () => (githubCliResult ??= probeGithubCli()),
+    engram: () => (engramResult ??= probeEngram(host)),
     linearMcpServer: (repoRoot) => probeLinearMcpServer(repoRoot, host),
     forgeAgents: () => {
       const agentsDirectory = host.probes.agentsDir(os.homedir());

@@ -17,6 +17,7 @@ import {
   checkDependencies,
   createDependencyProbes,
   findLinearMcpEntry,
+  classifyEngram,
   formatDependencyCheck,
 } from "./dependencies";
 import { BINARY, CONFIG_FILE, LEGACY_CONFIG_FILE, LEGACY_PRODUCT, PRODUCT, RUN_DIR } from "./names";
@@ -953,12 +954,15 @@ async function main(options: InitOptions): Promise<void> {
     }
   }
 
+  const dependencyProbes = createDependencyProbes(agentHost);
   const dependencyChecks = await checkDependencies({
     tracker,
     repoRoot,
     host: agentHost,
-    probes: createDependencyProbes(agentHost),
+    probes: dependencyProbes,
   });
+  const engramProbe = await dependencyProbes.engram?.();
+  const engramCheck = engramProbe === undefined ? null : classifyEngram(engramProbe);
 
   console.log(`emet init — ${repoRoot}`);
   console.log(`  package manager: ${packageManager}`);
@@ -981,6 +985,9 @@ async function main(options: InitOptions): Promise<void> {
       console.log(`  - ${formatDependencyCheck(check, "      ")}`);
     }
     for (const limitation of limitations) console.log(`  - note: ${limitation}`);
+  }
+  if (engramCheck !== null && engramCheck.status !== "satisfied") {
+    console.log(`\nRecommended:\n  - ${formatDependencyCheck(engramCheck, "      ")}`);
   }
   console.log(
     "\nNext: fill in every TODO(emet): marker under docs/agents/ — `emet preflight` refuses to dispatch while one remains.",
