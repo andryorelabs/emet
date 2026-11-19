@@ -306,11 +306,12 @@ function parseWithList(argv: readonly string[]): string[] {
     .filter((name) => name !== "");
 }
 
-/** The directory the one-time notice marker lives in: `CLAUDE_PLUGIN_DATA`, else `~/.emet`. */
-export function noticeMarkerPath(env: NodeJS.ProcessEnv, homeDir: string): string {
-  const pluginData = env.CLAUDE_PLUGIN_DATA;
+/** The one-time notice marker path: under `dataDirectory` (the plugin data directory) when given, else `~/.emet`. */
+export function noticeMarkerPath(dataDirectory: string | undefined, homeDir: string): string {
   const directory =
-    pluginData !== undefined && pluginData !== "" ? pluginData : path.join(homeDir, ".emet");
+    dataDirectory !== undefined && dataDirectory !== ""
+      ? dataDirectory
+      : path.join(homeDir, ".emet");
   return path.join(directory, NOTICE_MARKER);
 }
 
@@ -367,7 +368,10 @@ export async function run(argv: string[]): Promise<void> {
   const json = argv.includes("--json");
   try {
     if (argv.includes("--notice")) {
-      showNoticeOnce(noticeMarkerPath(process.env, realSetupEnv.homeDir), realSetupEnv.log);
+      showNoticeOnce(
+        noticeMarkerPath(flagValue(argv, "--data-dir"), realSetupEnv.homeDir),
+        realSetupEnv.log,
+      );
       return;
     }
     const withList = parseWithList(argv);

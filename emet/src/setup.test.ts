@@ -353,14 +353,10 @@ describe("createPrompter", () => {
 });
 
 describe("notice", () => {
-  test("marker lives under CLAUDE_PLUGIN_DATA, falling back to ~/.emet", () => {
-    expect(noticeMarkerPath({ CLAUDE_PLUGIN_DATA: "/data" }, "/home/x")).toBe(
-      "/data/setup-notice-shown",
-    );
-    expect(noticeMarkerPath({ CLAUDE_PLUGIN_DATA: "" }, "/home/x")).toBe(
-      "/home/x/.emet/setup-notice-shown",
-    );
-    expect(noticeMarkerPath({}, "/home/x")).toBe("/home/x/.emet/setup-notice-shown");
+  test("marker lives under the data directory, falling back to ~/.emet", () => {
+    expect(noticeMarkerPath("/data", "/home/x")).toBe("/data/setup-notice-shown");
+    expect(noticeMarkerPath("", "/home/x")).toBe("/home/x/.emet/setup-notice-shown");
+    expect(noticeMarkerPath(undefined, "/home/x")).toBe("/home/x/.emet/setup-notice-shown");
   });
 
   test("prints once, writes the marker and stays quiet afterwards", () => {
@@ -485,17 +481,13 @@ describe("run", () => {
     expect(output.out.join("\n")).toContain('"detail": "unknown item"');
   });
 
-  test("--notice prints the notice once under CLAUDE_PLUGIN_DATA", async () => {
-    const previous = process.env.CLAUDE_PLUGIN_DATA;
-    process.env.CLAUDE_PLUGIN_DATA = directory;
+  test("--notice prints the notice once under --data-dir", async () => {
     const output = capture();
     try {
-      await run(["--notice"]);
-      await run(["--notice"]);
+      await run(["--notice", "--data-dir", directory]);
+      await run(["--notice", "--data-dir", directory]);
     } finally {
       output.restore();
-      if (previous === undefined) delete process.env.CLAUDE_PLUGIN_DATA;
-      else process.env.CLAUDE_PLUGIN_DATA = previous;
     }
     expect(output.out).toHaveLength(1);
     expect(existsSync(path.join(directory, "setup-notice-shown"))).toBe(true);
@@ -504,17 +496,14 @@ describe("run", () => {
   test("an unexpected error exits 2 and reports on stderr, also under --json", async () => {
     const blocker = path.join(directory, "file");
     writeFileSync(blocker, "x");
-    const previous = process.env.CLAUDE_PLUGIN_DATA;
-    process.env.CLAUDE_PLUGIN_DATA = path.join(blocker, "child");
+    const dataDirectory = path.join(blocker, "child");
     const output = capture();
     try {
-      await run(["--notice"]);
+      await run(["--notice", "--data-dir", dataDirectory]);
       expect(process.exitCode).toBe(2);
-      await run(["--notice", "--json"]);
+      await run(["--notice", "--data-dir", dataDirectory, "--json"]);
     } finally {
       output.restore();
-      if (previous === undefined) delete process.env.CLAUDE_PLUGIN_DATA;
-      else process.env.CLAUDE_PLUGIN_DATA = previous;
     }
     expect(output.errors).toHaveLength(2);
     expect(output.out.every((line) => !line.startsWith("{"))).toBe(true);
