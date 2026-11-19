@@ -2,8 +2,33 @@
 title: 新功能
 description: emet 的发布说明：每个版本都有哪些变化。
 seoTitle: "emet 新功能：发布说明"
-sourceHash: b893c45d52d54eda
+sourceHash: b47ea0e52bb41632
 ---
+
+## 0.9.0
+
+2026-11-19
+
+### 新增
+
+- `emet gate` 采用“修复后继续”策略：被搁置的 wave 会运行修复轮次，直到问题解决或 `budgets.fixRounds`（默认 2）用尽，然后停止。`gate.onHold` 可选 `fix-and-continue`（默认）或 `stop`。`emet review --recheck` 只通过评审者的裁定来解决问题。
+- `emet ci --wait` 轮询拉取请求的检查，重跑不稳定的作业，并报告 `pass`、`fail`、`env-fault` 或 `timeout`。`emet tracker close` 以幂等方式关闭 GitHub 工单，`emet chain` 将 gate、readiness、launch 和 verify 作为一步执行。
+- 事件日志记录 gate 决策、干预、启动、工单关闭和清理，并按大小轮转。`emet insights` 对其进行汇总（`--mark-baseline` 重置基线），`emet run current` 显示当前的 spec 和 wave，`emet status --brief` 以一行输出状态。
+- 配置键 `language.conversation` 和 `language.artifacts`。
+- 配置键 `handoff.afterSpec`（`release`、`promote` 或 `none`，由 `emet init` 检测，或用 `emet init --after-spec` 设置）、`deploy.check` 和 `interview.research`。
+- `emet promote` 在最后一个 wave 空闲时打开从 `develop` 到 `main` 的拉取请求，检查通过后合并，并在 `develop` 落后时把 `main` 同步回来。`--no-promote` 会在 spec 的所有会话中搁置它。
+- `emet deploy-check` 会重试部署检查命令，并终止挂起的命令。
+- `emet fleet list | set | launch` 可跨多个仓库运行 spec。
+- `emet setup` 和 `/emet:setup` 在备份 Claude 设置后，从目录中安装可选的配套组件。SessionStart 钩子只显示一次提示，`install.sh` 在 TTY 中运行 setup。
+- `emet doctor` 和 `emet init` 会推荐 Engram，但绝不把它算作未满足的依赖。
+
+### 变更
+
+- 安装的提示词和文档现在说明了 gate 策略、`emet ci`、`emet chain`、日志、spec 之后的步骤、fleet 和 setup。第 8 阶段新增 wave 摘要和推送通知，`emet insights` 取代了对 `/retro` 的指引。
+
+### 已修复
+
+- `--no-promote` 现在以标记形式保存在 git 公共目录下，因此针对最后一个 wave 的链式 `/emet:run --dispatch` 会话不会再把 `develop` 提升到 `main`。
 
 ## 0.8.6
 

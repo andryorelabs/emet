@@ -2,8 +2,33 @@
 title: Neuigkeiten
 description: Release Notes für emet: was sich in jeder Version geändert hat.
 seoTitle: "Neuigkeiten in emet: Release Notes"
-sourceHash: b893c45d52d54eda
+sourceHash: b47ea0e52bb41632
 ---
+
+## 0.9.0
+
+2026-11-19
+
+### Hinzugefügt
+
+- `emet gate` wendet eine Fix-and-continue-Richtlinie an: Eine angehaltene Wave führt Korrekturrunden aus, bis die Befunde gelöst sind oder `budgets.fixRounds` (Standard 2) aufgebraucht ist, und stoppt dann. `gate.onHold` wählt `fix-and-continue` (Standard) oder `stop`. `emet review --recheck` löst einen Befund nur über das Urteil eines Reviewers auf.
+- `emet ci --wait` fragt die Prüfungen eines Pull Requests ab, startet instabile Jobs neu und meldet `pass`, `fail`, `env-fault` oder `timeout`. `emet tracker close` schließt GitHub-Tickets idempotent, und `emet chain` führt Gate, Readiness, Launch und Verify als einen Schritt aus.
+- Ein Ereignisjournal erfasst Gate-Entscheidungen, Eingriffe, Starts, Ticket-Schließungen und Bereinigungen, mit größenbasierter Rotation. `emet insights` fasst es zusammen (`--mark-baseline` setzt die Baseline zurück), `emet run current` zeigt das aktive Spec und die aktive Wave, und `emet status --brief` gibt den Zustand in einer Zeile aus.
+- Die Konfigurationsschlüssel `language.conversation` und `language.artifacts`.
+- Die Konfigurationsschlüssel `handoff.afterSpec` (`release`, `promote` oder `none`, von `emet init` erkannt oder mit `emet init --after-spec` gesetzt), `deploy.check` und `interview.research`.
+- `emet promote` öffnet den Pull Request von `develop` nach `main`, sobald die letzte Wave im Leerlauf ist, führt ihn zusammen, wenn die Prüfungen bestehen, und synchronisiert `main` zurück, wenn `develop` zurückliegt. `--no-promote` hält ein Spec über alle seine Sitzungen zurück.
+- `emet deploy-check` wiederholt einen Deploy-Prüfbefehl und beendet hängende Befehle.
+- `emet fleet list | set | launch` führt Specs über mehrere Repos aus.
+- `emet setup` und `/emet:setup` installieren optionale Begleiter aus einem Katalog, nachdem die Claude-Einstellungen gesichert wurden. Ein SessionStart-Hook zeigt einmalig einen Hinweis, und `install.sh` führt Setup in einem TTY aus.
+- `emet doctor` und `emet init` empfehlen Engram, ohne es je als unerfüllte Abhängigkeit zu zählen.
+
+### Geändert
+
+- Die installierten Prompts und Dokumente beschreiben die Gate-Richtlinie, `emet ci`, `emet chain`, das Journal, den After-Spec-Schritt, Fleet und Setup. Phase 8 ergänzt eine Wave-Zusammenfassung und eine Push-Benachrichtigung, und `emet insights` ersetzt den Verweis auf `/retro`.
+
+### Behoben
+
+- `--no-promote` wird als Marker im gemeinsamen Git-Verzeichnis gespeichert, sodass eine verkettete `/emet:run --dispatch`-Sitzung für die letzte Wave `develop` nicht mehr nach `main` befördert.
 
 ## 0.8.6
 
