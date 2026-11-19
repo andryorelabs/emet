@@ -2,8 +2,33 @@
 title: 새로운 소식
 description: emet 릴리스 노트. 각 버전에서 무엇이 바뀌었는지 정리합니다.
 seoTitle: "emet 새로운 소식: 릴리스 노트"
-sourceHash: b893c45d52d54eda
+sourceHash: b47ea0e52bb41632
 ---
+
+## 0.9.0
+
+2026-11-19
+
+### 추가됨
+
+- `emet gate`가 수정 후 계속 진행하는 정책을 적용합니다. 보류된 wave는 지적 사항이 해결되거나 `budgets.fixRounds`(기본값 2)가 소진될 때까지 수정 라운드를 실행한 뒤 멈춥니다. `gate.onHold`로 `fix-and-continue`(기본값) 또는 `stop`을 선택합니다. `emet review --recheck`는 리뷰어의 판정을 통해서만 지적 사항을 해결합니다.
+- `emet ci --wait`는 풀 리퀘스트의 검사를 폴링하고, 불안정한 작업을 다시 실행하며, `pass`, `fail`, `env-fault`, `timeout` 중 하나를 보고합니다. `emet tracker close`는 GitHub 티켓을 멱등하게 닫고, `emet chain`은 gate, readiness, launch, verify를 한 단계로 실행합니다.
+- 이벤트 저널이 gate 결정, 개입, 실행, 티켓 닫기, 정리를 기록하며 크기에 따라 순환됩니다. `emet insights`가 이를 요약하고(`--mark-baseline`으로 기준선 초기화), `emet run current`가 활성 spec과 wave를 보여 주며, `emet status --brief`가 상태를 한 줄로 출력합니다.
+- 설정 키 `language.conversation` 및 `language.artifacts`.
+- 설정 키 `handoff.afterSpec`(`release`, `promote`, `none`. `emet init`이 감지하거나 `emet init --after-spec`으로 설정), `deploy.check`, `interview.research`.
+- `emet promote`는 마지막 wave가 유휴 상태가 되면 `develop`에서 `main`으로 풀 리퀘스트를 열고, 검사가 통과하면 병합하며, `develop`이 뒤처지면 `main`을 다시 동기화합니다. `--no-promote`는 spec을 모든 세션에서 보류합니다.
+- `emet deploy-check`는 배포 확인 명령을 재시도하고 멈춘 명령을 종료합니다.
+- `emet fleet list | set | launch`는 여러 저장소에 걸쳐 spec을 실행합니다.
+- `emet setup`과 `/emet:setup`은 Claude 설정을 백업한 뒤 카탈로그에서 선택 사항 구성 요소를 설치합니다. SessionStart 훅이 안내를 한 번만 표시하며, `install.sh`는 TTY에서 setup을 실행합니다.
+- `emet doctor`와 `emet init`은 Engram을 권장하되 충족되지 않은 의존성으로 세지 않습니다.
+
+### 변경됨
+
+- 설치된 프롬프트와 문서가 gate 정책, `emet ci`, `emet chain`, 저널, spec 이후 단계, fleet, setup을 설명합니다. 8단계에 wave 요약과 푸시 알림이 추가되고, `emet insights`가 `/retro` 안내를 대체합니다.
+
+### 수정됨
+
+- `--no-promote`가 git 공통 디렉터리 아래의 마커로 유지되므로, 마지막 wave를 위한 연쇄 `/emet:run --dispatch` 세션이 더 이상 `develop`을 `main`으로 승격하지 않습니다.
 
 ## 0.8.6
 

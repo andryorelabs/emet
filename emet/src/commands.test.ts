@@ -27,7 +27,24 @@ describe("COMMANDS", () => {
 
   test("claims and slots declare --release with their own arity", () => {
     expect(findCommand("claims")?.flags).toContainEqual({ name: "--release", value: true });
+    expect(findCommand("init")?.flags).toContainEqual({ name: "--after-spec", value: true });
     expect(findCommand("slots")?.flags).toContainEqual({ name: "--release", value: false });
+  });
+});
+
+describe("journal commands", () => {
+  test("insights declares its flags", () => {
+    const flags = findCommand("insights")?.flags ?? [];
+    expect(flags).toContainEqual({ name: "--since", value: true });
+    expect(flags).toContainEqual({ name: "--repo", value: true });
+    expect(flags).toContainEqual({ name: "--json", value: false });
+    expect(flags).toContainEqual({ name: "--all", value: false });
+    expect(flags).toContainEqual({ name: "--mark-baseline", value: false });
+  });
+
+  test("run declares --json and status declares --brief", () => {
+    expect(findCommand("run")?.flags).toContainEqual({ name: "--json", value: false });
+    expect(findCommand("status")?.flags).toContainEqual({ name: "--brief", value: false });
   });
 });
 
@@ -43,6 +60,57 @@ describe("outcomeCode", () => {
     expect(outcomeCode("status", 2)).toBe("usage");
     expect(outcomeCode("status", 3)).toBe("internal");
     expect(outcomeCode("status", 9)).toBe("exit-9");
+  });
+});
+
+const flagNames = (name: string): string[] =>
+  findCommand(name)?.flags.map((flag) => flag.name) ?? [];
+
+describe("promote, deploy-check, fleet and setup", () => {
+  test("promote declares its flags", () => {
+    expect(findCommand("promote")?.flags).toEqual([
+      { name: "--spec", value: true },
+      { name: "--dry-run", value: false },
+      { name: "--no-promote", value: false },
+      { name: "--hold", value: false },
+    ]);
+  });
+
+  test("deploy-check takes no flags", () => {
+    expect(findCommand("deploy-check")?.flags).toEqual([]);
+  });
+
+  test("fleet declares its flags", () => {
+    expect(flagNames("fleet")).toEqual(["--root", "--repos", "--feature", "--dry-run", "--json"]);
+    expect(findCommand("fleet")?.flags).toContainEqual({ name: "--root", value: true });
+    expect(findCommand("fleet")?.flags).toContainEqual({ name: "--dry-run", value: false });
+  });
+
+  test("setup declares its flags", () => {
+    expect(findCommand("setup")?.flags).toEqual([
+      { name: "--yes", value: false },
+      { name: "--with", value: true },
+      { name: "--list", value: false },
+      { name: "--notice", value: false },
+      { name: "--json", value: false },
+    ]);
+  });
+});
+
+describe("ci, chain and the new flags", () => {
+  test("registers ci and chain with their flags", () => {
+    for (const flag of ["--pr", "--wait", "--rerun-flakes", "--timeout-minutes"]) {
+      expect(flagNames("ci")).toContain(flag);
+    }
+    for (const flag of ["--spec", "--wave", "--ci", "--waves-remaining"]) {
+      expect(flagNames("chain")).toContain(flag);
+    }
+  });
+
+  test("review takes --recheck and tracker takes --pr and --reason", () => {
+    expect(flagNames("review")).toContain("--recheck");
+    expect(flagNames("tracker")).toContain("--pr");
+    expect(flagNames("tracker")).toContain("--reason");
   });
 });
 

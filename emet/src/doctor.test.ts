@@ -16,8 +16,9 @@ import path from "node:path";
 
 import { claudeHost } from "./agenthost";
 import { codexHost } from "./agenthost-codex";
-import type { DependencyProbes } from "./dependencies";
+import { classifyEngram, type DependencyProbes } from "./dependencies";
 import {
+  formatGlobalDependencyFinding,
   auditRepo,
   checkExternalCliFlags,
   checkTrackerTarget,
@@ -35,6 +36,10 @@ import {
   findGlossaryWarnings,
   findInstallDrift,
   findLegacyNameWarnings,
+  filesystemTypeOf,
+  findJournalFilesystemFindings,
+  formatJournalFindings,
+  readMountsText,
   findLegacyStateDirFindings,
   findMissingDocs,
   isReportClean,
@@ -1079,6 +1084,24 @@ describe("findDoubleInstall", () => {
   });
 });
 
+describe("Engram note", () => {
+  test("a missing binary and plugin print one note with the README install commands", () => {
+    const line = formatGlobalDependencyFinding(
+      classifyEngram({ binary: false, plugin: { kind: "listed", status: "missing" } }),
+    );
+    expect(line).toContain("note:");
+    expect(line).toContain("brew install gentleman-programming/tap/engram");
+    expect(line).toContain("engram setup claude-code");
+  });
+
+  test("a present binary and plugin print nothing", () => {
+    const line = formatGlobalDependencyFinding(
+      classifyEngram({ binary: true, plugin: { kind: "listed", status: "installed" } }),
+    );
+    expect(line).toBeNull();
+  });
+});
+
 describe("checkSelfCheckCommand ecosystems", () => {
   test("resolves yarn run against package.json scripts", async () => {
     expect(await checkSelfCheckCommand("/nowhere", "yarn run test", new Set(["test"]))).toBeNull();
@@ -1127,6 +1150,40 @@ describe("legacy name findings", () => {
     } finally {
       rmSync(xdg, { recursive: true, force: true });
     }
+  });
+
+  test("a state dir on NFS yields a warning, a local one does not", () => {
+    const mounts = [
+      "/dev/sda1 / ext4 rw 0 0",
+      "server:/export /mnt/shared nfs4 rw 0 0",
+      "tmpfs /run tmpfs rw 0 0",
+    ].join("\n");
+    const nfs = { EMET_STATE_DIR: "/mnt/shared/emet" };
+    const findings = findJournalFilesystemFindings(nfs, mounts);
+    expect(findings).toHaveLength(1);
+    expect(findings[0]).toContain("nfs4");
+    expect(findJournalFilesystemFindings({ EMET_STATE_DIR: "/home/x/state" }, mounts)).toEqual([]);
+    expect(findJournalFilesystemFindings(nfs, null)).toEqual([]);
+  });
+
+  test("filesystemTypeOf picks the longest mount and decodes spaces", () => {
+    const mounts = "a / ext4 rw\nb /mnt/my\\040disk cifs rw\nbroken\n";
+    expect(filesystemTypeOf("/mnt/my disk/state", mounts)).toBe("cifs");
+    expect(filesystemTypeOf("/mnt/my diskette", mounts)).toBe("ext4");
+    expect(filesystemTypeOf("/x", "")).toBeNull();
+  });
+
+  test("the journal block is empty without findings and lists each one otherwise", () => {
+    expect(formatJournalFindings([])).toBe("");
+    expect(formatJournalFindings(["a", "b"])).toBe("\nJournal (warning only):\n  - a\n  - b");
+  });
+
+  test("a missing mount table reads as null", () => {
+    expect(readMountsText("/nonexistent/mounts")).toBeNull();
+  });
+
+  test("the real /proc/mounts read does not throw", () => {
+    expect(Array.isArray(findJournalFilesystemFindings())).toBe(true);
   });
 
   test("a legacy-only repo audits with a legacy warning and no missing agents doc", async () => {

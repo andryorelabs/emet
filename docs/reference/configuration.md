@@ -4,6 +4,13 @@ Every key in `emet.config.json`, with its default and meaning. The source of tru
 
 `emet init` writes the file with `$schema` set to the public URL `https://emet.andryore.dev/schema/emet.config.schema.json`, which the Website serves byte-identical to the source of truth, so editors get completion anywhere. `emet preflight` and `emet doctor` validate it. A key marked prose-only is read by the `/emet` prompts (the `$emet:*` skills on Codex), not by the CLI. A key marked deprecated is still accepted. The schema also allows a free-text `"//"` key for notes (never read by any tool) and `"version"`, which is always `1`.
 
+## language
+
+- `conversation` (default `"en"`): BCP 47 tag of the language the agent answers the user in.
+- `artifacts` (default `"en"`): BCP 47 tag of the language of code, comments, commit messages, PR text, tickets and docs.
+
+Both must be non-empty strings. A config with no `language` section loads with both set to `"en"`, and `emet init` writes both. The installed prompts read them.
+
 ## pr
 
 How a wave's PR is merged.
@@ -39,19 +46,55 @@ What happens after a wave closes, and the size limits of a worker's handoff note
 
   It launches only when the PR merged and nothing was flagged, and it skips if an `emet-<spec-id>-*` session is already live (`claude agents --json`). If the launch fails, it falls back to printing `/emet:run --dispatch <spec-id>`.
 
+- `afterSpec` (default `"none"`, one of `release`, `promote`, `none`): what `/emet:run` does once a spec's last wave has merged clean. `promote` runs `emet promote`: a `develop` to `main` pull request merged with a merge commit once CI is `pass`, then a sync pull request back only if `develop` is behind `main`. `release` opens the release pull request through the `cut-release` skill's steps and stops for a person. `none` does nothing. `emet init` detects it (`release` with a `v*` tag and a workflow file whose name contains `release`; `promote` with a `develop` branch and no such tag; otherwise `none`), and `emet init --after-spec <mode>` forces it. A config without it loads as `none`. `--no-promote`, given to `/emet:run` or `emet promote`, makes the step `none` for that run.
 - `launcher` (default `auto`, one of `auto`, `orca`, `bg`): Claude Code only; ignored on the Codex host, where `emet launch` opens no Orca tab. Also open the wave in an Orca tab running `claude attach`. `auto` asks the Orca runtime (`orca status`), so it works from `claude --bg` sessions too, which have no `TERM_PROGRAM`; `orca` always tries; `bg` never. The wave runs in the background either way, and a tab that fails to open never stops the chain. `emet launch <spec-id> --wave <n>` does the whole launch; see [`emet launch`](cli.md#runs-workers-and-slots).
 - `permissionMode` (default `bypassPermissions`, one of `bypassPermissions`, `auto`, `acceptEdits`): Claude Code only; ignored on the Codex host, where the chained session uses [`codex.sandbox`](#codex). Permission mode of the chained session. It is not inherited from the launching session, because `auto` mode's classifier can deny a step such as `gh pr merge` and leave a wave half-finished. Your `permissions.deny` rules still apply, but the bypass warning must have been accepted once interactively (`skipDangerousModePermissionPrompt`).
+
+## deploy
+
+Optional. Absent means no deploy check.
+
+```json
+{
+  "deploy": {
+    "check": {
+      "command": "curl -fsS https://example.com/health",
+      "retries": 10,
+      "intervalSeconds": 15,
+      "timeoutSeconds": 300
+    }
+  }
+}
+```
+
+- `check.command`: shell command that exits 0 when the deploy is healthy.
+- `check.retries`, `check.intervalSeconds`, `check.timeoutSeconds`: positive integers; the most attempts, the wait between them and the overall time cap. `emet deploy-check` prints `ok`, `failed` or `timeout` and exits 0, 1 or 3. The after-spec `promote` step runs it after the merge.
+
+## interview
+
+- `research` (default `true`): when `true`, Phase 1 of `/emet:run` has the agent look up the answer in the repo, docs or primary sources, and explain why it recommends an option, before asking a technical question that offers options. The user still answers. `false` turns it off.
+
+## gate
+
+What `emet gate` does with open blocking findings.
+
+```json
+{ "gate": { "onHold": "fix-and-continue" } }
+```
+
+- `onHold` (default `fix-and-continue`): with `fix-and-continue`, open blocking findings answer `hold` with `next: "fix-findings"` while [`budgets.fixRounds`](#budgets) has rounds left. The gate answers `stop` only when an open finding has kind `intent_gap`, the fix rounds are exhausted with findings open, or the integration suite fails a second time after its failed specs were rerun (a first failure answers `hold` with `next: "rerun-failed-specs"`). `stop` keeps the previous behavior. A CI that never ran (`--ci env-fault`) answers `hold` with `next: "rerun-ci"` without charging `pr.maxCiFixAttempts`, then `next: "report-infrastructure"` the second time in a row.
 
 ## budgets
 
 All optional.
 
 ```json
-{ "budgets": { "workerAttempts": 2, "reviewRounds": 2, "stallNudgeCap": 6 } }
+{ "budgets": { "workerAttempts": 2, "reviewRounds": 2, "fixRounds": 2, "stallNudgeCap": 6 } }
 ```
 
 - `workerAttempts` (default `2`, minimum `1`): how many times a ticket can fail `verify` before the gate answers `defer`. The ticket gets the deferred label and the rest of the wave continues. An environment fault, such as the test command exiting 126/127 or a provider outage, pauses the run without spending an attempt.
 - `reviewRounds` (default `2`, minimum `1`): how many review/fix rounds a ticket gets before one escalation to the next model tier. Whatever is still open after that gets a ruling.
+- `fixRounds` (default `2`): how many fix rounds a wave gets under [`gate.onHold`](#gate) `fix-and-continue`. Each ends with `emet review --recheck` and counts here, never against `reviewRounds`. With none left and a blocking finding open, the gate answers `stop`. A ledger written without it reads as `0` used.
 - `stallNudgeCap` (default `6`, minimum `1`): how many times a stalled worker gets nudged. The count never resets.
 
 ## models

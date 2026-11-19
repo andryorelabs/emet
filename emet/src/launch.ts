@@ -16,10 +16,11 @@ import {
   type ForgeConfig,
   type HandoffLauncher,
 } from "./config";
+import { appendEvent, readJournalSegments } from "./journal";
 import { BINARY, LEGACY_PRODUCT, PRODUCT } from "./names";
 import { errorMessage, isObject } from "./narrow";
 import { optionalProperty } from "./optional";
-import { writePhase } from "./phase";
+import { readPhase, writePhase } from "./phase";
 
 /**
  * Launches one wave of a run as a background `claude --bg` session and, per
@@ -194,10 +195,75 @@ async function openOrcaTab(
   }
 }
 
+/** The spec and wave a run belongs to; `null` where neither phase file nor run id says. */
+export interface WaveContext {
+  readonly spec: string | null;
+  readonly wave: number | null;
+  readonly repo?: string;
+}
+
+const RUN_ID_PATTERN = /^[A-Za-z]+(\d+)w(\d+)$/;
+const RUN_ID_TIME_DIGITS = 6;
+
+/**
+ * Reads the spec and wave of the current run from the phase file, falling back
+ * to the spec digits embedded in a run id such as `emet621w2233041`.
+ */
+export function resolveWaveContext(repoRoot: string, runId?: string): WaveContext {
+  const phase = readPhase(repoRoot);
+  const match = runId === undefined ? null : RUN_ID_PATTERN.exec(runId);
+  const waveDigits = match?.[2]?.slice(0, -RUN_ID_TIME_DIGITS) ?? "";
+  const fromRunId = waveDigits === "" ? null : Number(waveDigits);
+  return {
+    spec: phase?.spec ?? match?.[1] ?? null,
+    wave: phase?.wave ?? fromRunId,
+    repo: repoRoot,
+  };
+}
+
+/**
+ * Whether the journal holds a `launch.result` for the spec (and the wave, when
+ * known). A journal that cannot be read counts as no launch.
+ */
+export function hasLaunchResult(context: WaveContext): boolean {
+  if (context.spec === null) return false;
+  return readJournalSegments().events.some(
+    (event) =>
+      event.kind === "launch.result" &&
+      event.data.outcome !== "failed" &&
+      (context.repo === undefined || event.repo === context.repo) &&
+      event.data.spec === context.spec &&
+      (context.wave === null || event.data.wave === context.wave),
+  );
+}
+
+/** Appends the `launch.result` event for a wave launched by `emet launch` or `emet chain`. */
+export function recordLaunchResult(
+  request: LaunchRequest,
+  outcome: LaunchOutcome,
+  via: "launch" | "chain",
+  verified: boolean,
+): void {
+  appendEvent({
+    kind: "launch.result",
+    repo: request.repoRoot,
+    origin: "auto",
+    data: {
+      spec: request.specId,
+      wave: request.wave,
+      name: outcome.name,
+      outcome: verified ? "started" : "unverified",
+      via,
+      orcaTabOpened: outcome.orcaTab.opened,
+    },
+  });
+}
+
 export async function launchWave(
   request: LaunchRequest,
   runner: CommandRunner = defaultRunner,
   host: AgentHost = claudeHost,
+  recordResult = true,
 ): Promise<LaunchOutcome> {
   const name = waveSessionName(request.specId, request.wave);
 
@@ -224,6 +290,14 @@ export async function launchWave(
       runner,
     );
   } catch (error: unknown) {
+    if (recordResult) {
+      appendEvent({
+        kind: "launch.result",
+        repo: request.repoRoot,
+        origin: "auto",
+        data: { spec: request.specId, wave: request.wave, name, outcome: "failed", via: "launch" },
+      });
+    }
     throw new Error(`${BINARY} launch: ${errorMessage(error)}`, { cause: error });
   }
 
@@ -239,7 +313,14 @@ export async function launchWave(
     ? await openOrcaTab(request, name, runner, host)
     : { opened: false, reason: `skipped: ${decision.reason}` };
 
-  return { name, id: started.id ?? null, attach: host.sessions.attachCommand(name), orcaTab };
+  const outcome = {
+    name,
+    id: started.id ?? null,
+    attach: host.sessions.attachCommand(name),
+    orcaTab,
+  };
+  if (recordResult) recordLaunchResult(request, outcome, "launch", true);
+  return outcome;
 }
 
 function readFlagValue(argv: readonly string[], flag: string): string | undefined {

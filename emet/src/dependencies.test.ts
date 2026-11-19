@@ -17,6 +17,8 @@ import {
   checkDependencies,
   createDependencyProbes,
   classifyClaudePluginProbe,
+  classifyEngram,
+  ENGRAM_INSTALL_REMEDY,
   classifyForgeAgentsProbe,
   classifyGithubCliProbe,
   classifyLinearMcpProbe,
@@ -144,6 +146,34 @@ describe("parsePluginListOutput", () => {
 
   test("missing on empty output", () => {
     expect(parsePluginListOutput("", PLUGIN_ID)).toBe("missing");
+  });
+});
+
+describe("classifyEngram", () => {
+  const pluginInstalled = { kind: "listed", status: "installed" } as const;
+
+  test("both binary and plugin present is satisfied and prints nothing", () => {
+    const check = classifyEngram({ binary: true, plugin: pluginInstalled });
+    expect(check.status).toBe("satisfied");
+  });
+
+  test("neither present is one indeterminate note with the install remedy", () => {
+    const check = classifyEngram({ binary: false, plugin: { kind: "listed", status: "missing" } });
+    expect(check.status).toBe("indeterminate");
+    expect(check.remedy).toEqual(ENGRAM_INSTALL_REMEDY);
+    expect(check.summary).toContain("binary");
+    expect(check.summary).toContain("engram@engram");
+  });
+
+  test("only the plugin missing names just the plugin", () => {
+    const check = classifyEngram({ binary: true, plugin: { kind: "listed", status: "disabled" } });
+    expect(check.status).toBe("indeterminate");
+    expect(check.summary).not.toContain("binary is not on PATH");
+  });
+
+  test("an unverifiable plugin list is never unsatisfied", () => {
+    const check = classifyEngram({ binary: false, plugin: { kind: "claude-not-on-path" } });
+    expect(check.status).toBe("indeterminate");
   });
 });
 

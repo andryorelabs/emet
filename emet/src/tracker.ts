@@ -3,11 +3,14 @@ import { existsSync } from "node:fs";
 import { mkdir, readFile, rename, writeFile } from "node:fs/promises";
 import path from "node:path";
 
+import { loadForgeConfig, resolveRepoRoot } from "./config";
 import { EmetError } from "./errors";
 import { exitCodes } from "./exit-codes";
+import { appendEvent } from "./journal";
 import { didAcquireLock, didReclaimStaleLock, releaseLock, resolveLockDirectory } from "./locks";
 import { PRODUCT } from "./names";
 import { errnoCode, errorMessage } from "./narrow";
+import { closeGithubTickets, runGh, type CloseReason, type TicketCloseResult } from "./ticketclose";
 import {
   appendComment,
   computeFrontier,
@@ -31,6 +34,7 @@ subcommands (JSON on stdout; exit 0 ok, 1 not found or refused, 2 usage):
   set-state     <id> <status>
   comment       <id> --body-file <f> [--author <name>]
   close         <id> [--canceled]
+                (tracker.kind github: <ticket>... [--pr <n>] [--reason completed|not_planned])
 `;
 
 const SLUG_PATTERN = /^[a-z0-9][a-z0-9-]*$/;
@@ -320,7 +324,77 @@ async function setState(root: string, argv: readonly string[]): Promise<unknown>
   return mutateStatus(root, id, status, false);
 }
 
+const CLOSE_VALUE_FLAGS: ReadonlySet<string> = new Set(["--pr", "--reason"]);
+
+function positionalTickets(argv: readonly string[]): string[] {
+  const tickets: string[] = [];
+  for (let index = 0; index < argv.length; index += 1) {
+    const token = argv[index] ?? "";
+    if (CLOSE_VALUE_FLAGS.has(token)) index += 1;
+    else if (!token.startsWith("--")) tickets.push(token);
+  }
+  return tickets;
+}
+
+function closeReason(argv: readonly string[]): CloseReason {
+  const value = flagValue(argv, "--reason") ?? "completed";
+  if (value === "completed" || value === "not_planned") return value;
+  throw new TrackerUsageError(`invalid --reason "${value}": expected completed or not_planned`);
+}
+
+function closePullRequest(argv: readonly string[]): number | undefined {
+  const value = flagValue(argv, "--pr");
+  if (value === undefined) return undefined;
+  if (!/^\d+$/.test(value)) throw new TrackerUsageError(`invalid --pr "${value}"`);
+  return Number(value);
+}
+
+async function isGithubTracker(): Promise<boolean> {
+  const repoRoot = await resolveRepoRoot();
+  if (repoRoot === null) return false;
+  const loaded = await loadForgeConfig(repoRoot);
+  return loaded.status === "ok" && loaded.config.tracker.kind === "github";
+}
+
+function recordTicketCloses(
+  root: string,
+  results: readonly TicketCloseResult[],
+  pr: number | undefined,
+  reason: CloseReason,
+): void {
+  for (const result of results) {
+    if (result.outcome !== "closed") continue;
+    appendEvent({
+      kind: "ticket.close",
+      repo: root,
+      origin: "human",
+      data: {
+        ticket: result.ticket,
+        issue: result.issue,
+        ...(pr === undefined ? {} : { pr }),
+        reason,
+      },
+    });
+  }
+}
+
+async function closeGithub(root: string, argv: readonly string[]): Promise<unknown> {
+  const tickets = positionalTickets(argv);
+  if (tickets.length === 0) throw new TrackerUsageError(`missing <ticket>\n\n${USAGE}`);
+  const pr = closePullRequest(argv);
+  const reason = closeReason(argv);
+  const results = await closeGithubTickets(
+    tickets,
+    { ...(pr === undefined ? {} : { pr }), reason },
+    runGh,
+  );
+  recordTicketCloses(root, results, pr, reason);
+  if (results.some((result) => result.outcome === "failed")) process.exitCode = EXIT_REFUSED;
+  return { results };
+}
+
 async function close(root: string, argv: readonly string[]): Promise<unknown> {
+  if (await isGithubTracker()) return closeGithub(root, argv);
   const id = requirePositional(argv, "id");
   return mutateStatus(root, id, argv.includes("--canceled") ? "canceled" : "done", true);
 }

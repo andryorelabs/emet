@@ -64,7 +64,7 @@ const installerTools = [
   "tail",
   "uname",
 ];
-const commandNames = ["run", "init", "doctor"] as const;
+const commandNames = ["run", "init", "doctor", "setup"] as const;
 const promptDirectories = [".claude/commands", ".claude/agents", ".claude/emet/reference"];
 
 let workDir = "";

@@ -14,19 +14,26 @@ import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from 
 import path from "node:path";
 
 import { loadForgeConfigWithDefaults, resolveRepoRoot } from "./config";
+import { appendEvent } from "./journal";
+import { hasLaunchResult, resolveWaveContext, type WaveContext } from "./launch";
 import { resolveRunDir } from "./names";
 import { isObject, isOneOf } from "./narrow";
 import { writePhase } from "./phase";
 import { present } from "./present";
+import type { FindingKind } from "./review";
 
 const USAGE = `usage: emet gate <ticket> [--run <id>] [--tier passive|medium|high]
-       [--ci pass|fail|pending|none] [--integration pass|fail|pending|none]
+       [--ci pass|fail|pending|none|env-fault] [--integration pass|fail|pending|none]
        [--env-exit <code>] [--env-output <file>] [--attempts <n>] [--waves-remaining <n>] [--no-record]`;
 
 export const DEFERRED_LABEL = "forge:deferred";
 
 type Decision = "merge" | "hold" | "chain" | "stop" | "defer";
 type CheckState = "pass" | "fail" | "pending" | "none";
+type CiState = CheckState | "env-fault";
+type GateOnHold = "fix-and-continue" | "stop";
+type GateNext = "fix-findings" | "rerun-failed-specs" | "rerun-ci" | "report-infrastructure";
+const FINDING_KINDS = ["intent_gap", "bad_plan", "patch", "defer"] as const;
 const GATE_TIERS = ["passive", "medium", "high"] as const;
 type GateTier = (typeof GATE_TIERS)[number];
 const FINDING_SEVERITIES = ["blocker", "critical", "major", "minor", "nit"] as const;
@@ -36,11 +43,21 @@ export interface GateInput {
   /** null = no verify record exists. */
   readonly verifyOk: boolean | null;
   readonly tier: GateTier;
-  readonly openFindings: readonly { readonly severity: FindingSeverity }[];
+  readonly openFindings: readonly {
+    readonly severity: FindingSeverity;
+    readonly kind: FindingKind;
+  }[];
   readonly reviewRoundsUsed: number;
   readonly reviewRoundsCap: number;
-  readonly ci: CheckState;
+  readonly ci: CiState;
   readonly integration: CheckState;
+  readonly onHold: GateOnHold;
+  readonly fixRoundsUsed: number;
+  readonly fixRoundsCap: number;
+  /** Failures of the integration suite including the one being decided. */
+  readonly integrationFailures: number;
+  /** Consecutive CI environment faults including the one being decided. */
+  readonly ciEnvFaults: number;
   readonly attemptsUsed: number;
   readonly workerAttempts: number;
   readonly envFault: boolean;
@@ -53,6 +70,7 @@ export interface GateResult {
   readonly reasons: readonly string[];
   readonly chargeAttempt: boolean;
   readonly label?: string;
+  readonly next?: GateNext;
 }
 
 const OUTAGE_PATTERN =
@@ -66,18 +84,55 @@ function blockingSeverities(tier: GateTier): readonly FindingSeverity[] {
   return tier === "high" ? ["blocker", "critical", "major"] : ["blocker", "critical"];
 }
 
-function hold(reasons: string[], chargeAttempt = false): GateResult {
-  return { decision: "hold", reasons, chargeAttempt };
+function hold(reasons: string[], chargeAttempt = false, next?: GateNext): GateResult {
+  return next === undefined
+    ? { decision: "hold", reasons, chargeAttempt }
+    : { decision: "hold", reasons, chargeAttempt, next };
+}
+
+function stop(reason: string): GateResult {
+  return { decision: "stop", reasons: [reason], chargeAttempt: false };
+}
+
+function decideIntegrationFailure(input: GateInput): GateResult {
+  if (input.onHold === "fix-and-continue" && input.integrationFailures <= 1) {
+    return hold(
+      ["integration suite failed; rerun the failed specs in isolation"],
+      false,
+      "rerun-failed-specs",
+    );
+  }
+  const reason =
+    input.onHold === "fix-and-continue"
+      ? "integration suite failed again after its failed specs were rerun; rule on it"
+      : "integration suite is red; nothing merges or chains until it is green";
+  return stop(reason);
+}
+
+function decideOpenFindings(input: GateInput, summary: string, hasIntentGap: boolean): GateResult {
+  if (input.onHold === "stop") {
+    if (input.reviewRoundsUsed >= input.reviewRoundsCap) {
+      return stop(
+        `${summary}; review rounds exhausted (${input.reviewRoundsUsed}/${input.reviewRoundsCap}), rule on them`,
+      );
+    }
+    return hold([summary]);
+  }
+  if (hasIntentGap) return stop(`${summary}; an intent_gap finding needs a human ruling`);
+  if (input.fixRoundsUsed >= input.fixRoundsCap) {
+    return stop(
+      `${summary}; fix rounds exhausted (${input.fixRoundsUsed}/${input.fixRoundsCap}), rule on them`,
+    );
+  }
+  return hold(
+    [`${summary}; fix round ${input.fixRoundsUsed + 1}/${input.fixRoundsCap} next`],
+    false,
+    "fix-findings",
+  );
 }
 
 export function decide(input: GateInput): GateResult {
-  if (input.integration === "fail") {
-    return {
-      decision: "stop",
-      reasons: ["integration suite is red; nothing merges or chains until it is green"],
-      chargeAttempt: false,
-    };
-  }
+  if (input.integration === "fail") return decideIntegrationFailure(input);
   if (input.envFault) {
     return hold([
       "environment fault (exit 126/127 or provider outage); pausing without charging an attempt",
@@ -100,18 +155,22 @@ export function decide(input: GateInput): GateResult {
 
   const blocking = blockingSeverities(input.tier);
   const openBlocking = input.openFindings.filter((finding) => blocking.includes(finding.severity));
-  if (openBlocking.length > 0) {
+  const hasIntentGap =
+    input.onHold === "fix-and-continue" &&
+    input.openFindings.some((finding) => finding.kind === "intent_gap");
+  if (openBlocking.length > 0 || hasIntentGap) {
     const summary = `${openBlocking.length} open ${blocking.join("/")} finding(s) at tier ${input.tier}`;
-    if (input.reviewRoundsUsed >= input.reviewRoundsCap) {
-      return {
-        decision: "stop",
-        reasons: [
-          `${summary}; review rounds exhausted (${input.reviewRoundsUsed}/${input.reviewRoundsCap}), rule on them`,
-        ],
-        chargeAttempt: false,
-      };
+    return decideOpenFindings(input, summary, hasIntentGap);
+  }
+  if (input.ci === "env-fault") {
+    if (input.ciEnvFaults >= 2) {
+      return hold(
+        ["CI never ran twice in a row; report the infrastructure problem"],
+        false,
+        "report-infrastructure",
+      );
     }
-    return hold([summary]);
+    return hold(["CI never ran (environment fault); rerun it"], false, "rerun-ci");
   }
   if (input.ci !== "pass") {
     return hold([input.ci === "none" ? "no CI result yet" : `CI is ${input.ci}`]);
@@ -148,27 +207,76 @@ function readAttemptRecord(file: string): { count?: number } | undefined {
   return typeof raw.count === "number" ? { count: raw.count } : {};
 }
 
+interface LedgerFinding {
+  readonly status: string;
+  readonly severity: FindingSeverity;
+  readonly kind: FindingKind;
+}
+
 function readReviewLedger(
   file: string,
-): { rounds: number; findings: { status: string; severity: FindingSeverity }[] } | undefined {
+): { rounds: number; fixRounds: number; findings: LedgerFinding[] } | undefined {
   const raw = readJsonIfPresent(file);
   if (!isObject(raw)) return undefined;
   const findings = Array.isArray(raw.findings) ? raw.findings : [];
   return {
     rounds: typeof raw.rounds === "number" ? raw.rounds : 0,
-    findings: findings.filter(
-      (finding): finding is { status: string; severity: FindingSeverity } =>
-        isObject(finding) &&
-        typeof finding.status === "string" &&
-        isOneOf(FINDING_SEVERITIES, finding.severity),
+    fixRounds: typeof raw.fixRounds === "number" ? raw.fixRounds : 0,
+    findings: findings.flatMap((finding): LedgerFinding[] =>
+      isObject(finding) &&
+      typeof finding.status === "string" &&
+      isOneOf(FINDING_SEVERITIES, finding.severity)
+        ? [
+            {
+              status: finding.status,
+              severity: finding.severity,
+              kind: isOneOf(FINDING_KINDS, finding.kind) ? finding.kind : "patch",
+            },
+          ]
+        : [],
     ),
   };
 }
 
-function parseState(value: string | undefined, flag: string): CheckState {
+export function parseState(value: string | undefined, flag: string): CheckState {
   if (value === undefined) return "none";
   if (value === "pass" || value === "fail" || value === "pending" || value === "none") return value;
   throw new Error(`${flag} must be pass|fail|pending|none`);
+}
+
+function parseCiState(value: string | undefined): CiState {
+  if (value === "env-fault") return "env-fault";
+  try {
+    return parseState(value, "--ci");
+  } catch {
+    throw new Error("--ci must be pass|fail|pending|none|env-fault");
+  }
+}
+
+interface CheckCounters {
+  readonly ciEnvFaults: number;
+  readonly integrationFailures: number;
+}
+
+function count(value: unknown): number {
+  return typeof value === "number" ? value : 0;
+}
+
+function readCounters(file: string): CheckCounters {
+  const raw = readJsonIfPresent(file);
+  return isObject(raw)
+    ? { ciEnvFaults: count(raw.ciEnvFaults), integrationFailures: count(raw.integrationFailures) }
+    : { ciEnvFaults: 0, integrationFailures: 0 };
+}
+
+function nextCounters(before: CheckCounters, ci: CiState, integration: CheckState): CheckCounters {
+  let ciEnvFaults = before.ciEnvFaults;
+  if (ci === "env-fault") ciEnvFaults += 1;
+  else if (ci === "pass" || ci === "fail") ciEnvFaults = 0;
+  let integrationFailures = before.integrationFailures;
+  if (integration === "fail") integrationFailures += 1;
+  else if (integration === "pass") integrationFailures = 0;
+  return { ciEnvFaults, integrationFailures };
 }
 
 function resolveRunId(runsDir: string, ticket: string, explicit: string | undefined): string {
@@ -180,6 +288,46 @@ function resolveRunId(runsDir: string, ticket: string, explicit: string | undefi
     : [];
   if (candidates.length !== 1) throw new Error(`cannot infer run for ${ticket}; pass --run <id>`);
   return present(candidates[0]);
+}
+
+interface GateEventInput {
+  readonly repoRoot: string;
+  readonly runId: string;
+  readonly ticket: string;
+  readonly tier: GateTier;
+  readonly result: GateResult;
+  readonly waveContext: WaveContext;
+}
+
+/**
+ * Journals the decision, plus an `intervention` when no `launch.result` exists
+ * for the run's wave, meaning the coordinator session continued it by hand.
+ */
+function recordGateEvents(input: GateEventInput): void {
+  const { repoRoot, runId, ticket, tier, result, waveContext } = input;
+  const launched = hasLaunchResult(waveContext);
+  appendEvent({
+    kind: "gate.decision",
+    runId,
+    repo: repoRoot,
+    origin: launched ? "auto" : "human",
+    data: {
+      ticket,
+      tier,
+      decision: result.decision,
+      reasonCount: result.reasons.length,
+      reason: result.reasons.join("; "),
+      chargeAttempt: result.chargeAttempt,
+    },
+  });
+  if (launched) return;
+  appendEvent({
+    kind: "intervention",
+    runId,
+    repo: repoRoot,
+    origin: "human",
+    data: { ticket, source: "gate", spec: waveContext.spec, wave: waveContext.wave },
+  });
 }
 
 export async function run(argv: string[]): Promise<void> {
@@ -212,14 +360,23 @@ export async function run(argv: string[]): Promise<void> {
       envOutputFile && existsSync(envOutputFile) ? readFileSync(envOutputFile, "utf8") : "";
 
     const attemptsUsedBefore = Number(readFlag(argv, "--attempts") ?? stored?.count ?? 0);
+    const ci = parseCiState(readFlag(argv, "--ci"));
+    const integration = parseState(readFlag(argv, "--integration"), "--integration");
+    const countersFile = path.join(runDir, "checks", `${ticket}.json`);
+    const counters = nextCounters(readCounters(countersFile), ci, integration);
     const result = decide({
       verifyOk: verify === undefined ? null : verify.ok === true,
       tier,
       openFindings: (ledger?.findings ?? []).filter((finding) => finding.status === "open"),
       reviewRoundsUsed: ledger?.rounds ?? 0,
       reviewRoundsCap: config.budgets.reviewRounds,
-      ci: parseState(readFlag(argv, "--ci"), "--ci"),
-      integration: parseState(readFlag(argv, "--integration"), "--integration"),
+      ci,
+      integration,
+      onHold: config.gate.onHold,
+      fixRoundsUsed: ledger?.fixRounds ?? 0,
+      fixRoundsCap: config.budgets.fixRounds,
+      integrationFailures: counters.integrationFailures,
+      ciEnvFaults: counters.ciEnvFaults,
       attemptsUsed: attemptsUsedBefore,
       workerAttempts: config.budgets.workerAttempts,
       envFault: isEnvFault(envExit === undefined ? 0 : Number(envExit), envOutput),
@@ -234,8 +391,16 @@ export async function run(argv: string[]): Promise<void> {
         JSON.stringify({ count: attemptsUsedBefore + 1 }),
       );
     }
+    if (!argv.includes("--no-record")) {
+      mkdirSync(path.dirname(countersFile), { recursive: true });
+      writeFileSync(countersFile, JSON.stringify(counters));
+    }
+    const waveContext = resolveWaveContext(repoRoot, runId);
     writePhase(repoRoot, { phase: "checking", wave: null, spec: null, runId });
     console.log(JSON.stringify(result));
+    if (!argv.includes("--no-record")) {
+      recordGateEvents({ repoRoot, runId, ticket, tier, result, waveContext });
+    }
   } catch (error) {
     console.error(`emet gate: ${error instanceof Error ? error.message : String(error)}`);
     process.exitCode = 2;

@@ -22,7 +22,9 @@ import {
   type DependencyProbes,
 } from "./dependencies";
 import { checkWorktreeForkBase, createEnvironmentProbes, type EnvironmentProbes } from "./doctor";
+import { appendEvent } from "./journal";
 import { resolveLandedVerdict, unownedReclaimVerdict, type LandedVerdict } from "./landed";
+import { hasLaunchResult, resolveWaveContext } from "./launch";
 import { checkStale } from "./map";
 import { readEnv, TODO_MARKER, TODO_MARKERS } from "./names";
 import { isObject } from "./narrow";
@@ -1580,6 +1582,22 @@ async function main(config: ForgeConfig, repoRoot: string) {
       dependenciesSummary,
     ),
   );
+  if (approvalRunId !== undefined) recordRunStart(repoRoot, approvalRunId);
+}
+
+/**
+ * Journals the start of an approved run; `origin` is `auto` when a
+ * `launch.result` already exists for the same spec and wave.
+ */
+function recordRunStart(repoRoot: string, runId: string): void {
+  const context = resolveWaveContext(repoRoot, runId);
+  appendEvent({
+    kind: "run.start",
+    runId,
+    repo: repoRoot,
+    origin: hasLaunchResult(context) ? "auto" : "human",
+    data: { spec: context.spec, wave: context.wave },
+  });
 }
 
 /**

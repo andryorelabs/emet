@@ -2,7 +2,7 @@
 title: CLI 参考
 description: 每个 emet 子命令、关卡与记录表、退出码和环境变量。
 seoTitle: emet CLI 参考
-sourceHash: b065107f632830b7
+sourceHash: b0fbd0cfa621ff8a
 ---
 
 每个 `emet` 子命令、关卡与记录表、退出码和环境变量。术语遵循 [GLOSSARY.md](../../GLOSSARY.md)。返回 [README](../../README.md)。每个命令都可以用 `--help` 打印其用法。
@@ -16,8 +16,10 @@ sourceHash: b065107f632830b7
 ### 设置与审计
 
 - `emet migrate [--dry-run]`：将旧版仓库重命名为 emet 的名称。
-- `emet init [--tracker linear|github|local] [--force]`：自动检测包管理器、主干分支和跟踪器类型，并写入 `emet.config.json` 和 `docs/agents/*.md` 文件。`--tracker local` 会设置本地跟踪器。
+- `emet init [--tracker linear|github|local] [--after-spec release|promote|none] [--force]`：自动检测包管理器、主干分支、跟踪器类型和 after-spec 模式（参见 [`handoff.afterSpec`](configuration.md#handoff)），并写入 `emet.config.json` 和 `docs/agents/*.md` 文件。`--tracker local` 会设置本地跟踪器。
 - `emet doctor [--all] [<path> ...]`：以只读方式一次审计任意数量的仓库；默认为当前目录。
+- `emet setup [--yes] [--with <ids>] [--list] [--json]`：通过 readline 提示提供可选安装项：`mattpocock-skills`（默认开启）、`engram`、`mascot`、`orca-pet`、`gh-auth` 以及推荐的 Claude Code 设置（`claude-settings`，仅在被选中时应用，并先对 `settings.json` 做带时间戳的备份）。没有 TTY，或使用 `--yes` 或 `--with` 时，它不会询问任何内容，只安装指定的项目；没有 TTY 且没有 `--with` 时，它什么都不安装，并打印 `--list` 目录。每一步都会报告 `installed`、`already-present`、`skipped` 或 `failed`；一个失败不会阻止其他步骤，只要有失败，退出码就是 1。`/emet:setup` 是插件入口，通过 `AskUserQuestion` 询问相同的选项。
+- `emet fleet list [--root <dir>] [--json]`：列出 `--root`（默认 `~/code`）下一层、带有 `emet.config.json` 的 git 仓库，并显示 `tracker.kind`、`handoff.autoChain` 和 `models.worker`。`emet fleet set <key> <value> [--root <dir>] [--dry-run]` 会在每个列出的仓库中修改一个配置键，并先通过配置加载器校验（无效值不会改动任何内容，并以退出码 1 结束）。`emet fleet launch --feature <text> [--root <dir>] [--repos <a,b>]` 在通过 `emet chain` 的就绪检查后，在每个仓库中打开一个 `/emet:run --draft <text>` 会话。参见 [fleet 指南](../guide/fleet.md)。
 - `emet preflight [--run <id>] [--post-dispatch]`：确认仓库已具备派发条件。
 - `emet skill-path <name>`：打印某个 mattpocock-skills 技能的 `SKILL.md` 绝对路径。如果找不到该技能，则以退出码 1 退出。
 - `emet selftest`：运行 CLI 自身的单元测试。仅限源码安装；已编译的二进制文件会以退出码 1 退出，并提示你运行 `emet doctor`。
@@ -56,13 +58,18 @@ emet doctor ~/code/*
 - `emet cleanup [--run <id> | --all] [--dry-run] [--force]`：不带参数时，回收其工作已落地的已关闭或已终止的运行；`--run` 清理该次运行；`--all` 是对整个仓库的分支清扫。合并之后，`emet cleanup --run <runId>` 会释放该波次的分支、工单认领和工作者槽位。在所有模式下，它还会删除其 PR 已在分支顶端提交处合并的每个本地分支，以及持有该分支的干净且未锁定的代理工作树。
 - `emet lock-reason --run <id> --ticket <ticket> [--anchor <pid>]`：打印工作者在引导阶段写入的 `git worktree lock` 原因。
 - `emet launch <spec-id> --wave <n>`：在 Claude Code 上，以 `claude --bg` 会话启动一个波次，并按 `handoff.launcher` 打开它的 Orca 标签页（Codex 参见 [Codex 宿主](#codex-宿主)）。它会完成整个启动流程（重复会话检查、`claude --bg`、标签页），并打印 `{ name, id, attach, orcaTab: { opened, reason } }`。每当你想手动在另一个会话中运行某个波次时，请使用它，而不是直接使用 `claude --bg`。
-- `emet status [--spec <id>]`：以 JSON 加一行摘要的形式给出每个波次的 Working / Checking / Ready / Needs-decision 状态。`emet status --help` 说明了该 JSON。
+- `emet chain --ticket <id> --spec <id> --wave <n> [gate flags]`：用收到的关卡标志运行 `emet gate`，仅当决定为 `chain` 时才启动下一个波次。启动前它会检查就绪情况（主机内存余量、仓库和 `/tmp` 的可用磁盘与 inode、`orca` CLI），之后确认子会话已列出。任何其他决定、阻塞性的就绪问题（`low-memory`、`low-disk`、`low-inodes`、`orca-unavailable`）或同一规格和波次已有会话时，会连同原因以退出码 1 结束，且不启动任何内容。
+- `emet status [--spec <id>] [--brief]`：以 JSON 加一行摘要的形式给出每个波次的 Working / Checking / Ready / Needs-decision 状态。`--brief` 则最多输出三行：整体状态、等待人处理的事项（如有）以及下一步操作。`emet status --help` 说明了该 JSON。
+- `emet run current [--json]`：输出仓库当前的活动运行（运行 id、规格、波次、阶段和最近更新），读取自 `.emet/phase.json`。没有活动运行时输出 `no active run` 并以 0 退出。
+- `emet insights [--since <iso|7d|30d>] [--repo <path>] [--all] [--json] [--mark-baseline]`：读取[事件日志](../guide/journal.md)，按来源（人工或自动）报告运行、按决定和原因报告 gate 决定、每次运行的人工干预、启动结果和已关闭的工单。无法读取的行会被跳过并计数。`--mark-baseline` 追加一个基线；之后的报告只涵盖基线之后的事件，除非指定 `--all`。日志为空或不存在时输出零值报告并以 0 退出。
 - `emet usage [--session <id> | --file <path>] [--stalled [--minutes N]] [--project-dir <path>]`：报告会话用量；`--stalled` 列出停滞的工作者。
 - `emet handoff --check <path> | --render <path>`：校验或渲染工作者的 `.emet/handoff-<ticket>.md` 笔记。
 - `emet metrics [--run <id>]`：根据会话记录，按工单、按波次和按运行报告 token、折合 API 的成本和耗时。它还会比较每个工单预估的上下文预算与各工作者实际使用的量。其摘要会放在该次运行最终报告的末尾。
 
 ### 规划、评审与落地
 
+- `emet promote --spec <id> [--dry-run] [--no-promote] [--hold]`：after-spec 步骤，依据 [`handoff.afterSpec`](configuration.md#handoff)。在 `promote` 模式下，它会打开一个标题为 `chore: 🔖 promote develop` 的从 `develop` 到 `main` 的拉取请求，用 `emet ci --pr <n> --wait` 等待，仅当状态为 `pass` 时才以合并提交的方式合并，然后仅在 `develop` 落后于 `main` 时，打开并合并一个从 `main` 到 `develop` 的同步拉取请求。它会向日志追加一条带有拉取请求编号和 `merged` 的 `promote` 事件。在 `release` 模式下，它不合并任何内容，发布拉取请求留给人来处理。当 `afterSpec` 为 `none`、使用 `--no-promote`，或规范的最后一个波次被保持打开或被标记时，它以退出码 0 结束并附带 `skipped` 说明。CI 不是 `pass` 时不合并任何内容，并以退出码 1 结束。`--dry-run` 不会打开拉取请求。 `emet promote --spec <id> --hold` 会写入标记 `<run dir>/runs/<id>/no-promote` 并输出 `{"held":true}`；标记存在期间，`emet promote --spec <id>` 以 0 退出并给出 `skipped` 提示，不会打开任何 pull request，因此 `--no-promote` 会在一个规范的多个会话之间保持。
+- `emet deploy-check [--json]`：运行 `deploy.check.command`，直到它以 0 退出，最多尝试 `retries` 次或 `timeoutSeconds` 秒，每次之间等待 `intervalSeconds` 秒，并打印 `state: ok | failed | timeout` 以及 `attempts`。退出码 `0` 为 ok，`1` 为 failed，`3` 为 timeout。未配置 `deploy.check` 时，它以退出码 0 结束并输出 `skipped: "no deploy check configured"`。after-spec 的 `promote` 步骤会在合并之后运行它。参见 [`deploy`](configuration.md#deploy)。
 - `emet validate --spec <id> | --file <path>`：计划校验；参见[关卡与记录](#关卡与记录)。
 - `emet surfaces --check <file.json | ->`：如果同一波次的工单之间，允许编辑范围的 glob 存在重叠，则予以拒绝。
 - `emet approve --run <id>`、`emet materialize-log`、`emet results`、`emet verify`、`emet review-package`、`emet review`、`emet gate`：参见[关卡与记录](#关卡与记录)。
@@ -81,7 +88,11 @@ emet doctor ~/code/*
 
 ### 以 PR 落地与串联波次
 
-一个波次对应一个 PR。其正文为每个工单带有 `Closes #N`（跟踪器的关闭关键字），协调者在打开 PR 时会把工单移到评审中。随后，PR 按 `pr.autoMerge` 合并；如果该波次被标记、`autoMerge` 为 `false`，或 CI 修复次数已用尽，则 PR 保持打开（此时 PR 会带上需要人工决定的标签）。后续波次在各自的会话中运行，绝不会在运行波次 1 的那个会话中运行。接下来会发生什么，由 `pr` 和 `handoff` 部分控制；参见 [`pr`](configuration.md#pr) 和 [`handoff`](configuration.md#handoff)。
+一个波次对应一个 PR。其正文为每个工单带有一行 `Closes #N`（跟踪器的关闭关键字），协调者在打开 PR 时会把工单移到评审中。随后，PR 按 `pr.autoMerge` 合并；如果该波次被标记、`autoMerge` 为 `false`，或 CI 修复次数已用尽，则 PR 保持打开（此时 PR 会带上需要人工决定的标签）。后续波次在各自的会话中运行，绝不会在运行波次 1 的那个会话中运行。接下来会发生什么，由 `pr` 和 `handoff` 部分控制；参见 [`pr`](configuration.md#pr) 和 [`handoff`](configuration.md#handoff)。
+
+`emet ci --pr <n> --wait [--rerun-flakes] [--timeout-minutes <m>]` 轮询 PR 的检查，直到检查结束或超时（默认 30）。使用 `--rerun-flakes` 时，每个失败的检查会通过 `gh run rerun --failed` 重跑一次；重跑后通过的检查属于 Flake。它打印 `state: pass | fail | env-fault | timeout`、失败的检查和 `flakeReruns`，且从不合并。没有检查的 PR 为 `pass` 并带有 `noChecks: true`。退出码 `0` 为 pass，`1` 为 fail 或 env-fault，`3` 为 timeout。`env-fault` 指以 `STARTUP_FAILURE` 结束或排队过久的检查：即 CI 从未运行，而不是代码失败。
+
+当 `tracker.kind: "github"` 时，`emet tracker close <ticket>... [--pr <n>]` 用 `gh issue close --reason completed` 关闭每个工单（`CLA-<n>`、`#<n>` 或纯数字），验证其状态并报告 `closed` 或 `already-closed`。`--pr` 会添加评论 "Landed in #<n>"。如果有工单失败，它会在处理完其余工单后以 `1` 退出。Linear 工单由协调者通过 Linear MCP 确认为 Done。
 
 ### Codex 宿主
 
@@ -96,16 +107,16 @@ emet doctor ~/code/*
 
 各阶段不会自行判断工单是否完成、是否可以合并，或是否值得重试。它们会调用一个 CLI 命令，该命令读取磁盘上的记录并打印决定。运行记录位于 `.emet/runs/<run-id>/`，评审台账位于 `.emet/review/`，都在主检出目录中，而不在工作者的工作树中。
 
-| 步骤           | 命令                                                 | 强制执行的内容                                                                                                                                                                                      |
-| -------------- | ---------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 批准之前       | `emet validate --file <plan.json>`                   | 每个 `S#` 都至少被一个工单覆盖，并且有验收场景。每个工单至少覆盖一个 `S#`。同一波次内的编辑范围互不相交。没有依赖环。`emet preflight` 会对已批准的计划再次运行它。                                  |
-| 批准           | `emet approve --run <id> --spec <file>`              | 写入带有规格和工单列表哈希的 `approval.json`。如果之后其中任何一个发生变化，派发会被拒绝（`--check`）。                                                                                             |
-| 创建工单       | `emet materialize-log --run <id> --record/--lookup`  | 每个工单一创建出来就立即保存其 ID，因此被中断的运行不会产生重复工单。                                                                                                                               |
-| 工作者完成     | `emet results --run <id> --write/--read <ticket>`    | 工作者写入本地结果文件（`DONE`、`DONE_WITH_CONCERNS`、`BLOCKED` 或 `NEEDS_CONTEXT`，外加一行 `Risk:`）。只有协调者可以写入跟踪器。                                                                  |
-| 每个工作者之后 | `emet verify <ticket> --run <id>`                    | 检查在派发基线之后存在提交、每个变更的路径都在工单的编辑范围内、交接笔记通过 `handoff --check`，且 `commands.workerScopedSuite` 通过。评审和合并会拒绝没有通过记录的工单。                          |
-| 评审输入       | `emet review-package <base> <head> --out <file>`     | 为评审者打包 diff，评审者以文件路径的形式接收。如果范围为空，或不是 base 的后代，则以退出码 3 退出。                                                                                                |
-| 评审           | `emet review --ticket <t> --findings <file>`         | 维护问题台账，并强制执行分诊顺序（`intent_gap` → `bad_plan` → `patch` → `defer`）和轮数上限。`--escalate` 升级到下一个模型层级。`--rule`/`--rulings` 记录并列出用于报告和 PR 正文的“我做出的裁定”。 |
-| 合并或串联     | `emet gate <ticket> --tier … --ci … --integration …` | 以 JSON 打印 `merge`、`hold`、`chain`、`stop` 或 `defer` 及其原因。它会读取 verify 记录、未处理的问题、风险层级、CI、集成套件和预算。                                                               |
+| 步骤           | 命令                                                 | 强制执行的内容                                                                                                                                                                                                                                                                                                                                                                     |
+| -------------- | ---------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 批准之前       | `emet validate --file <plan.json>`                   | 每个 `S#` 都至少被一个工单覆盖，并且有验收场景。每个工单至少覆盖一个 `S#`。同一波次内的编辑范围互不相交。没有依赖环。`emet preflight` 会对已批准的计划再次运行它。                                                                                                                                                                                                                 |
+| 批准           | `emet approve --run <id> --spec <file>`              | 写入带有规格和工单列表哈希的 `approval.json`。如果之后其中任何一个发生变化，派发会被拒绝（`--check`）。                                                                                                                                                                                                                                                                            |
+| 创建工单       | `emet materialize-log --run <id> --record/--lookup`  | 每个工单一创建出来就立即保存其 ID，因此被中断的运行不会产生重复工单。                                                                                                                                                                                                                                                                                                              |
+| 工作者完成     | `emet results --run <id> --write/--read <ticket>`    | 工作者写入本地结果文件（`DONE`、`DONE_WITH_CONCERNS`、`BLOCKED` 或 `NEEDS_CONTEXT`，外加一行 `Risk:`）。只有协调者可以写入跟踪器。                                                                                                                                                                                                                                                 |
+| 每个工作者之后 | `emet verify <ticket> --run <id>`                    | 检查在派发基线之后存在提交、每个变更的路径都在工单的编辑范围内、交接笔记通过 `handoff --check`，且 `commands.workerScopedSuite` 通过。评审和合并会拒绝没有通过记录的工单。                                                                                                                                                                                                         |
+| 评审输入       | `emet review-package <base> <head> --out <file>`     | 为评审者打包 diff，评审者以文件路径的形式接收。如果范围为空，或不是 base 的后代，则以退出码 3 退出。                                                                                                                                                                                                                                                                               |
+| 评审           | `emet review --ticket <t> --findings <file>`         | 维护问题台账，并强制执行分诊顺序（`intent_gap` → `bad_plan` → `patch` → `defer`）和轮数上限。`--recheck --verdicts <file>` 结束一轮修复：只评估该轮开始时未处理的问题，问题只能通过裁决变为 `resolved`，且 recheck 计入 `budgets.fixRounds`（用尽时以退出码 1 并指明上限）。`--escalate` 升级到下一个模型层级。`--rule`/`--rulings` 记录并列出用于报告和 PR 正文的“我做出的裁定”。 |
+| 合并或串联     | `emet gate <ticket> --tier … --ci … --integration …` | 以 JSON 打印 `merge`、`hold`、`chain`、`stop` 或 `defer` 及其原因。它会读取 verify 记录、未处理的问题、风险层级、CI、集成套件和预算。`hold` 带有 `next`：`fix-findings`、`rerun-failed-specs`、`rerun-ci` 或 `report-infrastructure`。`--no-record` 使该决定不写入日志。参见 [`gate`](configuration.md#gate)。                                                                     |
 
 一个波次的各分支合并到一起之后，`commands.fullSuite` 会在集成分支上运行一次。运行失败会阻止 PR 和 `autoChain`。关卡以 `--integration` 接收这一结果。关卡所读取的预算，参见 [`budgets`](configuration.md#budgets)。
 

@@ -7,8 +7,12 @@ FEATURE: the text the user gave after `$emet:run`
 
 ## Modes
 
-Parse `the user's arguments` for a leading `--draft` or `--dispatch <spec-id>` flag
-before anything else:
+Parse `the user's arguments` for a leading `--draft` or `--dispatch <spec-id>` flag and
+for `--no-promote` before anything else. When `the user's arguments` carries
+`--no-promote` (anywhere among the leading flags, e.g. also `--dispatch <id>
+--no-promote`), remove it from FEATURE and, once the spec id exists (end of
+Phase 5, or at the start of `--dispatch`), run `emet promote --spec <spec-id>
+--hold`. A session without `--no-promote` never holds the spec:
 
 - **No flag** (default): Phases 1–5 plus the first wave in this session; each
   later wave runs in its own session — `$emet:run --dispatch <spec-id>` by hand,
@@ -82,13 +86,15 @@ unless the run continues from Phase 5 straight into Phase 6.
   Lifecycle of one wave:
   1. Dispatch the unblocked tickets; workers implement in worktrees.
   2. Integration plus review on the wave's integration branch.
-  3. One PR with a `Closes` line per ticket, or in merge mode one local merge.
-  4. Merged when `pr.autoMerge` is on and checks pass (CI fixes up to
-     `pr.maxCiFixAttempts`; in merge mode `commands.selfCheck` stands in for
-     CI); left open when autoMerge is off, anything was
-     flagged, or CI fixes ran out.
-  5. If merged, `emet cleanup --run <runId>`. Then the Phase 9 hand-off: if
-     more tickets can run, the next wave starts in a new session; if none can,
+  3. One PR with one `Closes #<n>` line per ticket, or in merge mode one local merge.
+  4. Merged when `pr.autoMerge` is on and checks pass (`emet ci` waits for
+     them; CI fixes up to `pr.maxCiFixAttempts`; in merge mode
+     `commands.selfCheck` stands in for CI); open findings hold for up to
+     `budgets.fixRounds` fix rounds (`gate.onHold`); left open when autoMerge
+     is off, anything was flagged, or fix rounds or CI fixes ran out.
+  5. If merged, `emet tracker close` for the wave's tickets (GitHub tracker),
+     then `emet cleanup --run <runId>`. Then the Phase 9 hand-off: if
+     more tickets can run, `emet chain` starts the next wave in a new session; if none can,
      the run ends with the final report. Details in `references/phases-9-handoff.md`.
 - **Phases 6–9** (every mode): dispatch → per-worker implementation → wave
   close-out → wave close and hand off. Read
@@ -102,6 +108,12 @@ unless the run continues from Phase 5 straight into Phase 6.
 - **`references/incidents.md`** — the evidence behind the five non-negotiables
   below (real run failures, with what broke and how). Never loaded during a
   normal run; read it only when someone asks why a rule exists.
+
+## Language
+
+Read `language.conversation` and `language.artifacts` from `emet.config.json`
+(both default to `en`). Answer the user in `language.conversation`. Write code,
+comments, commit messages, PR text, tickets and docs in `language.artifacts`.
 
 ## Five non-negotiables
 

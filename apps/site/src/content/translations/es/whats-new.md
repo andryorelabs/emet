@@ -2,8 +2,33 @@
 title: Novedades
 description: Notas de versión de emet: qué cambió en cada versión.
 seoTitle: Novedades de emet: notas de versión
-sourceHash: b893c45d52d54eda
+sourceHash: b47ea0e52bb41632
 ---
+
+## 0.9.0
+
+2026-11-19
+
+### Añadido
+
+- `emet gate` aplica una política de corregir y continuar: una wave retenida ejecuta rondas de corrección hasta que los hallazgos se resuelvan o se agote `budgets.fixRounds` (2 por defecto), y entonces se detiene. `gate.onHold` elige `fix-and-continue` (por defecto) o `stop`. `emet review --recheck` resuelve un hallazgo solo mediante el veredicto de un revisor.
+- `emet ci --wait` sondea las comprobaciones de un pull request, relanza los jobs inestables e informa `pass`, `fail`, `env-fault` o `timeout`. `emet tracker close` cierra tickets de GitHub de forma idempotente, y `emet chain` ejecuta gate, readiness, launch y verify como un solo paso.
+- Un diario de eventos registra decisiones del gate, intervenciones, lanzamientos, cierres de tickets y limpiezas, con rotación por tamaño. `emet insights` lo resume (`--mark-baseline` reinicia la línea base), `emet run current` muestra el spec y la wave activos, y `emet status --brief` imprime el estado en una línea.
+- Las claves de configuración `language.conversation` y `language.artifacts`.
+- Las claves de configuración `handoff.afterSpec` (`release`, `promote` o `none`, detectada por `emet init` o fijada con `emet init --after-spec`), `deploy.check` e `interview.research`.
+- `emet promote` abre el pull request de `develop` a `main` cuando la última wave está inactiva, lo fusiona si las comprobaciones pasan y sincroniza `main` de vuelta cuando `develop` queda atrás. `--no-promote` retiene un spec en todas sus sesiones.
+- `emet deploy-check` reintenta un comando de comprobación de despliegue y mata los comandos colgados.
+- `emet fleet list | set | launch` ejecuta specs en varios repositorios.
+- `emet setup` y `/emet:setup` instalan complementos opcionales desde un catálogo tras respaldar la configuración de Claude. Un hook SessionStart muestra un aviso una sola vez, e `install.sh` ejecuta setup en una TTY.
+- `emet doctor` y `emet init` recomiendan Engram sin contarlo nunca como dependencia no satisfecha.
+
+### Cambiado
+
+- Los prompts y la documentación instalados describen la política del gate, `emet ci`, `emet chain`, el diario, el paso posterior al spec, fleet y setup. La fase 8 añade un resumen de la wave y una notificación push, y `emet insights` reemplaza la referencia a `/retro`.
+
+### Corregido
+
+- `--no-promote` se guarda como una marca bajo el directorio común de git, de modo que una sesión encadenada de `/emet:run --dispatch` para la última wave ya no promueve `develop` a `main`.
 
 ## 0.8.6
 

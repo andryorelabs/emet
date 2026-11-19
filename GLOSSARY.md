@@ -76,6 +76,54 @@ _Avoid_: seat, thread, permit
 An automated check that decides whether a worker's or wave's result may proceed, merge or chain.
 _Avoid_: checkpoint, approval
 
+**Hold**:
+A **Gate** decision to leave a wave's pull request open because something emet can resolve on its own is missing: findings it can fix, or a check still running.
+_Avoid_: pause, block
+
+**Stop**:
+A **Gate** decision that a person must rule before the run goes on.
+_Avoid_: fail, abort
+
+**Review round**:
+One pass of a **Reviewer** over a wave's **Integration branch**.
+_Avoid_: review cycle
+
+**Fix round**:
+One pass in which the **Coordinator** corrects the findings still open and a **Reviewer** rechecks only those findings. It has its own budget, apart from **Review rounds**.
+_Avoid_: retry, rework
+
+**Environment fault**:
+A failure caused by the machine or the CI provider rather than the code under review: checks that never started, no runner available, a billing block or a provider outage.
+_Avoid_: infra failure, flaky CI
+
+**Flake**:
+A check that fails and then passes on a rerun with no change to the code.
+_Avoid_: intermittent failure
+
+**Chain**:
+To start a run's next **Wave** in a new session once the **Gate** allows it.
+_Avoid_: handoff, relaunch
+
+**Journal**:
+The global append-only file in which emet records what it decides and does on a host, so a later report can tell launched runs from typed ones.
+_Avoid_: log, audit trail, telemetry
+
+**Baseline**:
+The journal event that marks the start of a clean history; reports count only what comes after the latest one.
+_Avoid_: reset, checkpoint
+
+**After-spec step**:
+What a repo does once a spec's last wave has landed: a **Release**, a **Promote**, or nothing.
+_Avoid_: post-merge, cleanup
+
+**Promote**:
+Merging `develop` into `main` with a merge commit and no version tag, so a deployed application ships.
+_Avoid_: deploy, publish
+
+**Release**:
+A deliberate `develop` to `main` merge-commit pull request that carries a version tag.
+_Avoid_: publish, ship (a **Landing** is how a wave reaches trunk)
+
 **Surface**:
 A glob of files a ticket is allowed to edit, enforced by the edit guard.
 _Avoid_: scope, allowlist
@@ -118,6 +166,8 @@ _Avoid_: status file, progress file
 - A **Wave** is the **Frontier** at one moment; its **Tickets** run in parallel, one **Worker** each.
 - A **Worker** holds one **Claim**, one **Slot** and one **Worktree** while live.
 - The **Coordinator** merges **Worker** branches into the **Integration branch**; a **Reviewer** and the **Gates** check it before it lands.
+- The **Gate** answers a wave with merge, **Hold**, **Chain**, **Stop** or defer; a **Hold** over findings leads to a **Fix round**, and a **Hold** over an **Environment fault** never spends a fix attempt.
+- When a spec's last wave has landed, the **After-spec step** is a **Release**, a **Promote** or nothing, chosen per repository; the **Journal** records each step, and a **Baseline** marks where its clean history starts.
 - A **Worker** may edit only its ticket's **Surfaces** and must keep its **Handoff** current.
 - A **Claim** carries its ticket's **Surfaces**; two live **Claims** of different **Runs** never have overlapping **Surfaces**.
 - Everything above belongs to one **Run**, which executes in one **Agent host**.
@@ -125,5 +175,6 @@ _Avoid_: status file, progress file
 ## Flagged ambiguities
 
 - "Lock" means both the git worktree lock carrying a run's reason and a claim; the lock is the mechanism, the **Claim** is the concept.
+- **Handoff** is a worker's note, and the `handoff` command and the part of the config named `handoff` that sets its length are about that note. Starting the next wave is **Chain**: the config keys `autoChain` and `launcher` live in the `handoff` section only for historical reasons.
 - "Task" is not a **Ticket**: avoid it, since agent tooling uses it for unrelated work items.
 - "Session" is one conversation in an **Agent host**, not a **Run**; a run can span several sessions.

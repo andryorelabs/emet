@@ -17,6 +17,7 @@ import {
   buildTrackerConfig,
   deriveIdPrefix,
   defaultBootstrap,
+  detectAfterSpec,
   defaultSelfCheck,
   detectGoSelfCheck,
   detectJsSelfCheck,
@@ -62,18 +63,37 @@ describe("substituteTemplate", () => {
 
 describe("parseInitArguments", () => {
   test("defaults to force: false, no tracker override", () => {
-    expect(parseInitArguments([])).toEqual({ force: false, trackerOverride: null });
+    expect(parseInitArguments([])).toEqual({
+      force: false,
+      trackerOverride: null,
+      afterSpecOverride: null,
+    });
   });
 
   test("parses --force", () => {
-    expect(parseInitArguments(["--force"])).toEqual({ force: true, trackerOverride: null });
+    expect(parseInitArguments(["--force"])).toEqual({
+      force: true,
+      trackerOverride: null,
+      afterSpecOverride: null,
+    });
   });
 
   test("parses --tracker <kind>", () => {
     expect(parseInitArguments(["--tracker", "github"])).toEqual({
       force: false,
       trackerOverride: "github",
+      afterSpecOverride: null,
     });
+  });
+
+  test("parses --after-spec <mode>", () => {
+    expect(parseInitArguments(["--after-spec", "release"]).afterSpecOverride).toBe("release");
+  });
+
+  test("rejects an unknown --after-spec value", () => {
+    expect(() => parseInitArguments(["--after-spec", "ship"])).toThrow(
+      /--after-spec must be one of release\|promote\|none/,
+    );
   });
 
   test("rejects an unknown --tracker value", () => {
@@ -105,6 +125,12 @@ describe("buildForgeConfig", () => {
     expect(config.concurrency.waveSize).toBeGreaterThan(0);
     expect(config.tracker).toEqual({ kind: "local" });
     expect(config.preflight.requiredCommands).toEqual([]);
+    expect(config.language).toEqual({ conversation: "en", artifacts: "en" });
+    expect(config.handoff.afterSpec).toBe("none");
+    expect(config.interview).toEqual({ research: true });
+    expect(buildForgeConfig({ ...detected, afterSpec: "promote" }).handoff.afterSpec).toBe(
+      "promote",
+    );
   });
 
   test("local with no remote defaults landing.mode to merge", () => {
@@ -311,6 +337,38 @@ describe("filesystem-based detection", () => {
   test("hasLinearMcpServer: false on malformed JSON, never throws", async () => {
     await Bun.write(path.join(repoRoot, ".mcp.json"), "{not json");
     expect(await hasLinearMcpServer(repoRoot)).toBe(false);
+  });
+
+  async function initRepoWithCommit(): Promise<void> {
+    await Bun.$`git -C ${repoRoot} init --quiet --initial-branch=main`.quiet();
+    await Bun.$`git -C ${repoRoot} config user.email test@example.com`.quiet();
+    await Bun.$`git -C ${repoRoot} config user.name test`.quiet();
+    await Bun.$`git -C ${repoRoot} commit --quiet --allow-empty -m init`.quiet();
+  }
+
+  test("detectAfterSpec: release with a v tag and a release workflow", async () => {
+    await initRepoWithCommit();
+    await Bun.$`git -C ${repoRoot} tag -m release v1.2.0`.quiet();
+    await Bun.write(path.join(repoRoot, ".github", "workflows", "release.yml"), "name: r\n");
+    expect(await detectAfterSpec(repoRoot)).toBe("release");
+  });
+
+  test("detectAfterSpec: none with a v tag but no release workflow", async () => {
+    await initRepoWithCommit();
+    await Bun.$`git -C ${repoRoot} tag -m release v1.2.0`.quiet();
+    expect(await detectAfterSpec(repoRoot)).toBe("none");
+  });
+
+  test("detectAfterSpec: promote with develop, no tag and no release workflow", async () => {
+    await initRepoWithCommit();
+    await Bun.$`git -C ${repoRoot} branch develop`.quiet();
+    expect(await detectAfterSpec(repoRoot)).toBe("promote");
+  });
+
+  test("detectAfterSpec: none without develop or tags, and outside a repo", async () => {
+    expect(await detectAfterSpec(repoRoot)).toBe("none");
+    await initRepoWithCommit();
+    expect(await detectAfterSpec(repoRoot)).toBe("none");
   });
 
   test("detectTrunk: null outside a git repository", async () => {

@@ -379,6 +379,49 @@
           "enum": ["bypassPermissions", "auto", "acceptEdits"],
           "default": "bypassPermissions",
           "description": "Permission mode the chained wave's `claude --bg` session runs in. Defaults to bypassPermissions because auto mode's classifier can deny steps like `gh pr merge` mid-wave, leaving the wave half-finished; `permissions.deny` rules still apply in every mode."
+        },
+        "afterSpec": {
+          "type": "string",
+          "enum": ["release", "promote", "none"],
+          "default": "none",
+          "description": "What happens after a spec's last wave lands. `release` opens a release pull request and stops for a person; `promote` opens and merges a trunk-to-release-branch pull request once CI passes; `none` does nothing. `emet init` detects it; `--no-promote` forces `none` for one run."
+        }
+      }
+    },
+    "interview": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "research": {
+          "type": "boolean",
+          "default": true,
+          "description": "When true, Phase 1 of the run looks the answer up in the repo, docs or primary sources and explains why it recommends an option before asking a technical question that offers options. The person still answers."
+        }
+      }
+    },
+    "deploy": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "check": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["command", "retries", "intervalSeconds", "timeoutSeconds"],
+          "description": "A command `emet deploy-check` runs until it exits 0. Absent means no check.",
+          "properties": {
+            "command": { "type": "string", "minLength": 1, "description": "Shell command to run." },
+            "retries": { "type": "integer", "minimum": 1, "description": "Maximum attempts." },
+            "intervalSeconds": {
+              "type": "integer",
+              "minimum": 1,
+              "description": "Seconds between attempts."
+            },
+            "timeoutSeconds": {
+              "type": "integer",
+              "minimum": 1,
+              "description": "Overall time limit in seconds."
+            }
+          }
         }
       }
     },
@@ -391,6 +434,36 @@
           "enum": ["pr", "merge"],
           "default": "pr",
           "description": "How a finished wave reaches trunk, independent of the tracker. `pr` opens a pull request (requires `gh`); `merge` merges the integration branch into local trunk and never pushes."
+        }
+      }
+    },
+    "gate": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "onHold": {
+          "type": "string",
+          "enum": ["fix-and-continue", "stop"],
+          "default": "fix-and-continue",
+          "description": "What `emet gate` does with open blocking findings. `fix-and-continue` holds for a fix round while `budgets.fixRounds` has rounds left and stops only on an intent gap, exhausted fix rounds or a repeated integration failure; `stop` stops as soon as review rounds are exhausted."
+        }
+      }
+    },
+    "language": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "conversation": {
+          "type": "string",
+          "minLength": 1,
+          "default": "en",
+          "description": "Language of the text addressed to the person: replies, questions and reports. A language tag such as `en` or `es`."
+        },
+        "artifacts": {
+          "type": "string",
+          "minLength": 1,
+          "default": "en",
+          "description": "Language of written artifacts: code, comments, docs, commit messages and PR text. A language tag such as `en` or `es`."
         }
       }
     },
@@ -630,6 +703,12 @@
           "minimum": 1,
           "default": 30,
           "description": "Minutes a worker waits on an unanswered `emet ask` before it gives up."
+        },
+        "fixRounds": {
+          "type": "integer",
+          "minimum": 1,
+          "default": 2,
+          "description": "Fix rounds per wave, each ending with an `emet review --recheck`, before the gate stops."
         }
       }
     },

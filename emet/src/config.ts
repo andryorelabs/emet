@@ -86,8 +86,12 @@ export const DEFAULT_FORGE_CONFIG: ForgeConfig = {
     autoChain: false,
     launcher: "auto",
     permissionMode: "bypassPermissions",
+    afterSpec: "none",
   },
+  interview: { research: true },
   landing: { mode: "pr" },
+  gate: { onHold: "fix-and-continue" },
+  language: { conversation: "en", artifacts: "en" },
   pr: { autoMerge: true, mergeMethod: "squash", maxCiFixAttempts: 2 },
   usage: { oversizedReadLines: 400, stalledMinutes: 10 },
   models: {
@@ -100,7 +104,13 @@ export const DEFAULT_FORGE_CONFIG: ForgeConfig = {
     escalation: { sonnet: "opus" },
   },
   review: { highRiskPaths: [] },
-  budgets: { workerAttempts: 2, reviewRounds: 2, stallNudgeCap: 6, askWaitMinutes: 30 },
+  budgets: {
+    workerAttempts: 2,
+    reviewRounds: 2,
+    stallNudgeCap: 6,
+    askWaitMinutes: 30,
+    fixRounds: 2,
+  },
   sizing: { inlineMaxLines: 100 },
   map: { path: "docs/agents/codebase.md" },
   specs: { dir: "docs/specs" },
@@ -165,9 +175,24 @@ type MergeMethod = "squash" | "merge" | "rebase";
 
 const MERGE_METHODS: readonly MergeMethod[] = ["squash", "merge", "rebase"];
 
+export type AfterSpecMode = "release" | "promote" | "none";
+
+const AFTER_SPEC_MODES: readonly AfterSpecMode[] = ["release", "promote", "none"];
+
+interface DeployCheckConfig {
+  readonly command: string;
+  readonly retries: number;
+  readonly intervalSeconds: number;
+  readonly timeoutSeconds: number;
+}
+
 export type LandingMode = "pr" | "merge";
 
+/** What `emet gate` does with open blocking findings. */
+type GateOnHold = "fix-and-continue" | "stop";
+
 const LANDING_MODES: readonly LandingMode[] = ["pr", "merge"];
+const GATE_ON_HOLD_POLICIES: readonly GateOnHold[] = ["fix-and-continue", "stop"];
 
 export interface ForgeConfig {
   readonly version: 1;
@@ -241,12 +266,37 @@ export interface ForgeConfig {
     readonly launcher: HandoffLauncher;
     /** Permission mode the chained wave's `claude --bg` session runs in. */
     readonly permissionMode: HandoffPermissionMode;
+    /** What happens after a spec's last wave lands: `release` opens a release
+     * pull request for a person, `promote` merges trunk into the release
+     * branch, `none` does nothing. */
+    readonly afterSpec: AfterSpecMode;
+  };
+  readonly interview: {
+    /** When true, Phase 1 looks the answer up before asking a technical
+     * question that offers options. */
+    readonly research: boolean;
+  };
+  readonly deploy?: {
+    /** Command run after a promote until it exits 0; absent means no check. */
+    readonly check?: DeployCheckConfig;
   };
   readonly landing: {
     /** How a finished wave reaches trunk: `pr` opens a pull request, `merge`
      * merges the integration branch into local trunk. Independent of the
      * tracker. */
     readonly mode: LandingMode;
+  };
+  readonly gate: {
+    /** What `emet gate` does with open blocking findings: `fix-and-continue`
+     * holds for a fix round while `budgets.fixRounds` has rounds left; `stop`
+     * stops as soon as review rounds are exhausted. */
+    readonly onHold: GateOnHold;
+  };
+  readonly language: {
+    /** Language of the text addressed to the person (replies, questions, reports). */
+    readonly conversation: string;
+    /** Language of written artifacts: code, comments, docs, commit messages, PR text. */
+    readonly artifacts: string;
   };
   readonly pr: {
     /** When true, Phase 8 waits for the wave PR's checks and merges it. */
@@ -290,6 +340,8 @@ export interface ForgeConfig {
     readonly stallNudgeCap: number;
     /** Minutes a worker waits on an unanswered `emet ask` before it gives up. */
     readonly askWaitMinutes: number;
+    /** Fix rounds (each ends with a recheck) per wave before the gate stops. */
+    readonly fixRounds: number;
   };
   readonly sizing: {
     /** Largest ticket body (lines) kept inline in a worker prompt. */
@@ -483,6 +535,30 @@ function isPositiveInteger(value: unknown): value is number {
   return typeof value === "number" && Number.isInteger(value) && value > 0;
 }
 
+function validateDeploySection(
+  value: unknown,
+): { ok: true; check: DeployCheckConfig | undefined } | { ok: false; reason: string } {
+  const section = isRecord(value) ? value : {};
+  if (section.check === undefined) return { ok: true, check: undefined };
+  if (!isRecord(section.check)) {
+    return { ok: false, reason: '"deploy.check" must be an object' };
+  }
+  const { command, retries, intervalSeconds, timeoutSeconds } = section.check;
+  if (!isNonEmptyString(command)) {
+    return { ok: false, reason: '"deploy.check.command" must be a non-empty string' };
+  }
+  if (!isPositiveInteger(retries)) {
+    return { ok: false, reason: '"deploy.check.retries" must be a positive integer' };
+  }
+  if (!isPositiveInteger(intervalSeconds)) {
+    return { ok: false, reason: '"deploy.check.intervalSeconds" must be a positive integer' };
+  }
+  if (!isPositiveInteger(timeoutSeconds)) {
+    return { ok: false, reason: '"deploy.check.timeoutSeconds" must be a positive integer' };
+  }
+  return { ok: true, check: { command, retries, intervalSeconds, timeoutSeconds } };
+}
+
 /**
  * Validates only the fields this CLI reads, merging anything absent from
  * `DEFAULT_FORGE_CONFIG` — a repo's `emet.config.json` need not repeat every
@@ -638,11 +714,41 @@ function validateAndMerge(
       reason: '"handoff.permissionMode" must be one of bypassPermissions|auto|acceptEdits',
     };
   }
+  const afterSpec = handoffSection.afterSpec ?? DEFAULT_FORGE_CONFIG.handoff.afterSpec;
+  if (!isOneOf(AFTER_SPEC_MODES, afterSpec)) {
+    return { ok: false, reason: '"handoff.afterSpec" must be one of release|promote|none' };
+  }
+
+  const interviewSection = isRecord(raw.interview) ? raw.interview : {};
+  const interviewResearch = interviewSection.research ?? DEFAULT_FORGE_CONFIG.interview.research;
+  if (typeof interviewResearch !== "boolean") {
+    return { ok: false, reason: '"interview.research" must be a boolean' };
+  }
+
+  const deploy = validateDeploySection(raw.deploy);
+  if (!deploy.ok) return deploy;
 
   const landingSection = isRecord(raw.landing) ? raw.landing : {};
   const landingMode = landingSection.mode ?? DEFAULT_FORGE_CONFIG.landing.mode;
   if (!isOneOf(LANDING_MODES, landingMode)) {
     return { ok: false, reason: '"landing.mode" must be one of pr|merge' };
+  }
+
+  const gateSection = isRecord(raw.gate) ? raw.gate : {};
+  const gateOnHold = gateSection.onHold ?? DEFAULT_FORGE_CONFIG.gate.onHold;
+  if (!isOneOf(GATE_ON_HOLD_POLICIES, gateOnHold)) {
+    return { ok: false, reason: '"gate.onHold" must be one of fix-and-continue|stop' };
+  }
+
+  const languageSection = isRecord(raw.language) ? raw.language : {};
+  const languageConversation =
+    languageSection.conversation ?? DEFAULT_FORGE_CONFIG.language.conversation;
+  if (!isNonEmptyString(languageConversation)) {
+    return { ok: false, reason: '"language.conversation" must be a non-empty string' };
+  }
+  const languageArtifacts = languageSection.artifacts ?? DEFAULT_FORGE_CONFIG.language.artifacts;
+  if (!isNonEmptyString(languageArtifacts)) {
+    return { ok: false, reason: '"language.artifacts" must be a non-empty string' };
   }
 
   const prSection = isRecord(raw.pr) ? raw.pr : {};
@@ -746,7 +852,13 @@ function validateAndMerge(
     return { ok: false, reason: '"budgets" must be an object' };
   }
   const budgetsRecord = budgetsSection ?? {};
-  const budgetKeys = ["workerAttempts", "reviewRounds", "stallNudgeCap", "askWaitMinutes"] as const;
+  const budgetKeys = [
+    "workerAttempts",
+    "reviewRounds",
+    "stallNudgeCap",
+    "askWaitMinutes",
+    "fixRounds",
+  ] as const;
   const budgets = { ...DEFAULT_FORGE_CONFIG.budgets };
   for (const key of budgetKeys) {
     const value = budgetsRecord[key];
@@ -790,8 +902,13 @@ function validateAndMerge(
         autoChain,
         launcher,
         permissionMode,
+        afterSpec,
       },
+      interview: { research: interviewResearch },
+      ...(deploy.check === undefined ? {} : { deploy: { check: deploy.check } }),
       landing: { mode: landingMode },
+      gate: { onHold: gateOnHold },
+      language: { conversation: languageConversation, artifacts: languageArtifacts },
       pr: { autoMerge, mergeMethod, maxCiFixAttempts },
       usage: { oversizedReadLines, stalledMinutes },
       models: {

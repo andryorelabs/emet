@@ -1,5 +1,13 @@
 import { afterEach, describe, expect, test } from "bun:test";
-import { mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSync } from "node:fs";
+import {
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  realpathSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 
@@ -231,5 +239,160 @@ describe("emet tracker", () => {
     const numbers = results.map((result) => stringField(parseJson(result.stdout), "nn")).toSorted();
     expect(numbers).toEqual(["01", "02", "03", "04", "05", "06", "07", "08"]);
     expect(await frontierIds(repo)).toHaveLength(8);
+  });
+});
+
+const FAKE_GH = `#!/bin/sh
+state="$FAKE_GH_DIR/closed"
+touch "$state"
+if [ "$1" = "issue" ] && [ "$2" = "view" ]; then
+  if grep -qx "$3" "$state"; then echo CLOSED; else echo OPEN; fi
+  exit 0
+fi
+if [ "$1" = "issue" ] && [ "$2" = "close" ]; then
+  if [ "$3" = "99" ]; then echo "nope" >&2; exit 1; fi
+  echo "$@" >> "$FAKE_GH_DIR/calls"
+  echo "$3" >> "$state"
+  exit 0
+fi
+exit 1
+`;
+
+async function githubTracker(
+  repo: string,
+  ...args: string[]
+): Promise<CliResult & { calls: string }> {
+  const bin = makeTemporaryDirectory();
+  const gh = path.join(bin, "gh");
+  writeFileSync(gh, FAKE_GH, { mode: 0o755 });
+  const child = Bun.spawn([process.execPath, TRACKER_ENTRY, ...args], {
+    cwd: repo,
+    env: {
+      ...process.env,
+      PATH: `${bin}:${process.env.PATH ?? ""}`,
+      FAKE_GH_DIR: bin,
+      EMET_STATE_DIR: process.env.EMET_STATE_DIR ?? path.join(bin, "state"),
+    },
+    stdout: "pipe",
+    stderr: "pipe",
+  });
+  const [stdout, stderr, code] = await Promise.all([
+    new Response(child.stdout).text(),
+    new Response(child.stderr).text(),
+    child.exited,
+  ]);
+  const callsFile = Bun.file(path.join(bin, "calls"));
+  const calls = (await callsFile.exists()) ? await callsFile.text() : "";
+  return { code, stdout, stderr, calls };
+}
+
+function writeConfig(repo: string, content: string): void {
+  writeFileSync(path.join(repo, "emet.config.json"), content);
+}
+
+describe("emet tracker close with tracker.kind github", () => {
+  test("closes once, lists closed and already-closed, and comments with --pr", async () => {
+    const repo = await makeRepo();
+    writeConfig(repo, JSON.stringify({ version: 1, tracker: { kind: "github" } }));
+    const result = await githubTracker(repo, "close", "CLA-12", "12", "--pr", "7");
+    expect(result.code).toBe(0);
+    const parsed = parseJson(result.stdout);
+    const outcomes = isObject(parsed) && Array.isArray(parsed.results) ? parsed.results : [];
+    expect(outcomes.map((entry: unknown) => stringField(entry, "outcome"))).toEqual([
+      "closed",
+      "already-closed",
+    ]);
+    expect(result.calls.trim().split("\n")).toEqual([
+      "issue close 12 --reason completed --comment Landed in #7",
+    ]);
+  });
+
+  test("a failing ticket does not stop the others and exits 1", async () => {
+    const repo = await makeRepo();
+    writeConfig(repo, JSON.stringify({ version: 1, tracker: { kind: "github" } }));
+    const result = await githubTracker(repo, "close", "99", "#5", "--reason", "completed");
+    expect(result.code).toBe(1);
+    const parsed = parseJson(result.stdout);
+    const outcomes = isObject(parsed) && Array.isArray(parsed.results) ? parsed.results : [];
+    expect(outcomes.map((entry: unknown) => stringField(entry, "outcome"))).toEqual([
+      "failed",
+      "closed",
+    ]);
+  });
+
+  test("usage errors exit 2", async () => {
+    const repo = await makeRepo();
+    writeConfig(repo, JSON.stringify({ version: 1, tracker: { kind: "github" } }));
+    expect((await githubTracker(repo, "close")).code).toBe(2);
+    expect((await githubTracker(repo, "close", "1", "--reason", "bad")).code).toBe(2);
+    expect((await githubTracker(repo, "close", "1", "--pr", "x")).code).toBe(2);
+  });
+
+  test("a malformed config keeps the file-based close", async () => {
+    const repo = await makeRepo();
+    writeConfig(repo, "{not json");
+    await seedSpec(repo);
+    await seedTicket(repo, "One");
+    const result = await githubTracker(repo, "close", "feat-01");
+    expect(result.code).toBe(0);
+    expect(stringField(parseJson(result.stdout), "status")).toBe("done");
+  });
+
+  test("tracker.kind local keeps the file-based close", async () => {
+    const repo = await makeRepo();
+    writeConfig(repo, JSON.stringify({ version: 1, tracker: { kind: "local" } }));
+    await seedSpec(repo);
+    await seedTicket(repo, "One");
+    const result = await tracker(repo, "close", "feat-01");
+    expect(result.code).toBe(0);
+    expect(stringField(parseJson(result.stdout), "status")).toBe("done");
+  });
+});
+
+function readJournalLines(stateDirectory: string): Record<string, unknown>[] {
+  const file = path.join(stateDirectory, "journal", "events.jsonl");
+  if (!existsSync(file)) return [];
+  return readFileSync(file, "utf8")
+    .split("\n")
+    .filter((line) => line.length > 0)
+    .map((line) => {
+      const parsed: unknown = JSON.parse(line);
+      return isObject(parsed) ? parsed : {};
+    });
+}
+
+async function withStateDirectory<T>(stateDirectory: string, action: () => Promise<T>): Promise<T> {
+  const previous = process.env.EMET_STATE_DIR;
+  process.env.EMET_STATE_DIR = stateDirectory;
+  try {
+    return await action();
+  } finally {
+    if (previous === undefined) delete process.env.EMET_STATE_DIR;
+    else process.env.EMET_STATE_DIR = previous;
+  }
+}
+
+describe("emet tracker close journal events", () => {
+  test("writes one ticket.close event per closed ticket, none for already-closed or failed", async () => {
+    const repo = await makeRepo();
+    writeConfig(repo, JSON.stringify({ version: 1, tracker: { kind: "github" } }));
+    const stateDirectory = makeTemporaryDirectory();
+    await withStateDirectory(stateDirectory, () =>
+      githubTracker(repo, "close", "CLA-12", "12", "99", "--pr", "7"),
+    );
+    const events = readJournalLines(stateDirectory);
+    expect(events).toHaveLength(1);
+    expect(events[0]?.kind).toBe("ticket.close");
+    expect(events[0]?.data).toEqual({ ticket: "CLA-12", issue: 12, pr: 7, reason: "completed" });
+  });
+
+  test("an unwritable journal leaves the exit code and output unchanged", async () => {
+    const repo = await makeRepo();
+    writeConfig(repo, JSON.stringify({ version: 1, tracker: { kind: "github" } }));
+    const blocker = path.join(makeTemporaryDirectory(), "file");
+    writeFileSync(blocker, "x");
+    const result = await withStateDirectory(blocker, () => githubTracker(repo, "close", "CLA-12"));
+    expect(result.code).toBe(0);
+    expect(result.stdout).toContain("closed");
   });
 });

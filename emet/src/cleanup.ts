@@ -76,6 +76,7 @@ import { ForgeConfigError, requireForgeConfig, resolveRepoRoot, type ForgeConfig
 import { agentHostOfConfig } from "./dependencies";
 import { EmetError } from "./errors";
 import { exitCodes } from "./exit-codes";
+import { appendEvent, type JournalDeps } from "./journal";
 import {
   resolveLandedVerdict,
   unownedReclaimVerdict,
@@ -511,6 +512,32 @@ export function shouldMarkRunClosed(
   return !dryRun && mode === "run" && runId !== null && failureCount === 0;
 }
 
+/** What one real sweep did, as the journal records it. */
+export interface CleanupCounts {
+  readonly reclaimed: number;
+  readonly kept: number;
+  readonly failures: number;
+}
+
+/** Appends the `cleanup` event for a finished sweep; never throws. */
+export function recordCleanupEvent(
+  repo: string,
+  runId: string | null,
+  counts: CleanupCounts,
+  deps?: JournalDeps,
+): void {
+  appendEvent(
+    {
+      kind: "cleanup",
+      ...(runId === null ? {} : { runId }),
+      repo,
+      origin: "human",
+      data: { reclaimed: counts.reclaimed, kept: counts.kept, failures: counts.failures },
+    },
+    deps,
+  );
+}
+
 /**
  * `worktree-agent-*` scaffold branches nothing refers to anymore: not checked
  * out in any worktree, and no `.claude/worktrees/<id>` directory registered
@@ -874,6 +901,11 @@ export async function reclaimOwnedWorktrees(context: ReclaimContext): Promise<vo
   }
 
   if (!dryRun) {
+    recordCleanupEvent((await resolveRepoRoot()) ?? process.cwd(), runId, {
+      reclaimed: removed.length + removedScaffolds.length,
+      kept: scaffoldPlan.kept.length + keptDirty.length + keptNotLanded.length,
+      failures: failures.length,
+    });
     const slotRuns = mode === "run" && runId !== null ? [runId] : [...reclaimedRuns];
     for (const slotRunId of slotRuns) {
       // oxlint-disable-next-line eslint/no-await-in-loop -- sequential on purpose: later iterations depend on earlier ones or on output order

@@ -32,6 +32,12 @@ to refute them; drop or downgrade what you refute.
 Worker reports end `Risk: item N (reason)` or `Risk: none`; flag a `none` that
 ignores shared-code callers.
 
-**Recheck mode:** you get only the findings file and the fix diff. Re-emit the
-array minus what is fixed. A new blocker/critical must cite a prior finding id
-or a file changed in the fix diff, else emit it as `kind: "defer"`.
+**Recheck mode, fix round** (`gate.onHold: fix-and-continue`): you get only the
+findings file and the fix diff. Emit a JSON array of `{id, resolved}`, one entry
+per finding in the file (`resolved: true` only if the fix diff fixes it); do not
+re-emit findings. The round cap is `budgets.fixRounds`.
+
+**Recheck mode, stop-mode re-review** (`gate.onHold: stop`): you get only the
+findings file and the fix diff. Re-emit the array minus what is fixed. A new
+blocker/critical must cite a prior finding id or a file changed in the fix
+diff, else emit it as `kind: "defer"`.

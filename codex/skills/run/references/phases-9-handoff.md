@@ -21,13 +21,37 @@ what shipped, what got flagged and why, and what's still waiting on a human
 decision. This is the terminal case regardless of which mode started this
 session (default, `--draft`+`--dispatch`, or a chained `--dispatch`).
 Append `emet metrics --run <run id>` output (tokens, $, wall time per
-run/wave/ticket; peak context vs estimate) to the final report, and suggest the user run `/retro` on the run.
+run/wave/ticket; peak context vs estimate) to the final report, and point the
+user to `emet insights` for how the run compares with earlier ones.
+
+**Every wave's final report starts with a three-line TL;DR**: what landed,
+what needs a person, and the next step. Take them from `emet status --brief`, which
+prints at most three lines (overall state, what waits on a person if anything,
+next action); when nothing waits on a person it prints two, and the "needs a
+person" line says `nothing`. Right after posting the report, send one
+push notification whose text is that same TL;DR.
 
 Whenever this session ends a wave — frontier empty or not — right after
 posting its report, run `emet guard --mark-final-report <session id>` (the
 id is printed in the `Stop` hook's block message); the
 hook only blocks once no worker is in flight and claims remain, so a turn
 spent waiting on workers is never blocked.
+
+**After-spec step.** When the frontier is empty and the spec's last wave
+merged clean (not left open, not flagged), run the after-spec step chosen by
+`handoff.afterSpec` before the final report: `emet promote --spec <spec-id>`.
+It never runs when this session was started with `--no-promote` (pass the flag
+through), when the spec was held with `emet promote --spec <spec-id> --hold`,
+or when `handoff.afterSpec` is `none`: say that it was skipped and
+why. In `promote` mode it opens a `develop` to `main` pull request, waits with
+`emet ci --pr <n> --wait`, merges only when CI is `pass` (never on `fail` or
+`timeout`; report it and stop), and opens and merges a `main` to `develop` sync
+pull request only when `develop` is behind `main`. In `release` mode it opens
+nothing to merge: follow the `cut-release` skill's steps to open the release
+pull request and leave it for a person. When `deploy.check` is configured, run
+`emet deploy-check` after the merge (exit 0 `ok`, 1 `failed`, 3 `timeout`) and
+put its state in the final report; a `failed` or `timeout` check is a human
+step, never retried silently.
 
 **If the frontier is non-empty, do not loop back to Phase 6 in this same
 session.** Waves chain across sessions, not within one — each session pays
@@ -45,8 +69,16 @@ instead of one session accumulating every wave in the run (see
    folds in `handoff.autoChain`, the merged PR, the green integration suite,
    and nothing flagged); anything else — `merge` without `chain`, `hold`,
    `stop`, `defer` — is a human step. To chain, launch it yourself:
-   - Run `emet launch <spec-id> --wave <n+1>` from the repo root, as its
-     own Bash call. It refuses when a live `emet-<spec-id>-*` session
+   - Run `emet chain --spec <spec-id> --wave <n+1> --ticket <ticket> --tier
+     … --ci … --integration … --waves-remaining <n>` from the repo root, as
+     its own Bash call, with the same gate flags as Phase 8. It runs `emet
+     gate`, and only on `chain` checks readiness (host memory, free disk and
+     inodes in the repo and `/tmp`, the `orca` CLI) and launches like `emet
+     launch <spec-id> --wave <n+1>`. Any other decision, a blocking readiness
+     problem (`low-memory`, `low-disk`, `low-inodes`, `orca-unavailable`) or an
+     existing session for that spec and wave exits 1 with the reasons and
+     launches nothing: report them and use the manual path below. The launch
+     refuses when a live `emet-<spec-id>-*` session
      already exists, starts a detached `codex exec` running `$emet:run --dispatch <spec-id>` and records its thread id, so `codex exec resume <id>` continues it. It prints one JSON line. It prints one JSON line:
      `{ name, id, attach, orcaTab: { opened, reason } }`.
    - The permission mode comes from the config (default

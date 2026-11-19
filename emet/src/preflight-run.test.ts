@@ -23,8 +23,10 @@ import {
 import { tmpdir } from "node:os";
 import path from "node:path";
 
+import { writeApproval } from "./approve";
 import { didReserveTicket } from "./claims";
-import { run } from "./preflight";
+import { appendEvent, readJournalSegments } from "./journal";
+import { resolveApprovalDirectory, run } from "./preflight";
 import { markRunClosed } from "./runs";
 import { acquireSlot } from "./slots";
 
@@ -193,6 +195,53 @@ describe("preflight run (full gate)", () => {
     await run(["--approval", "no-such-run"]);
     expect(process.exitCode).toBe(1);
     expect(fixture.errors.join("\n")).toContain("approval:");
+  });
+
+  async function approveRun(runId: string): Promise<void> {
+    const directory = await resolveApprovalDirectory(runId, fixture.repo);
+    mkdirSync(directory, { recursive: true });
+    writeFileSync(
+      path.join(directory, "spec.md"),
+      "- **S1**: does a thing. Scenario: when x then y.\n",
+    );
+    writeFileSync(
+      path.join(directory, "tickets.json"),
+      JSON.stringify([{ id: "T1", covers: ["S1"], surfaces: ["a.ts"], wave: 1 }]),
+    );
+    writeApproval({
+      approvalPath: path.join(directory, "approval.json"),
+      specPath: path.join(directory, "spec.md"),
+      ticketsPath: path.join(directory, "tickets.json"),
+    });
+  }
+
+  test("journals a human run.start when no launch.result exists for the spec", async () => {
+    await approveRun("emet700w1111111");
+    await run(["--approval", "emet700w1111111"]);
+    expect(process.exitCode).toBe(0);
+    const starts = readJournalSegments().events.filter((event) => event.kind === "run.start");
+    expect(starts).toHaveLength(1);
+    expect(starts[0]?.origin).toBe("human");
+    expect(starts[0]?.runId).toBe("emet700w1111111");
+    expect(starts[0]?.data.spec).toBe("700");
+  });
+
+  test("journals an auto run.start when a launch.result exists for the spec", async () => {
+    await approveRun("emet700w1111111");
+    appendEvent({
+      kind: "launch.result",
+      repo: fixture.repo,
+      origin: "auto",
+      data: { spec: "700", wave: 1, name: "emet-700-w1", outcome: "started" },
+    });
+    await run(["--approval", "emet700w1111111"]);
+    const start = readJournalSegments().events.find((event) => event.kind === "run.start");
+    expect(start?.origin).toBe("auto");
+  });
+
+  test("writes no run.start without --approval", async () => {
+    await run([]);
+    expect(readJournalSegments().events).toEqual([]);
   });
 
   test("fails when docs/agents still carries a TODO marker", async () => {

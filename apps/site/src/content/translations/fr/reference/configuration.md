@@ -2,12 +2,19 @@
 title: Référence de configuration
 description: Chaque clé de emet.config.json avec sa valeur par défaut et sa signification.
 seoTitle: Référence de configuration d'emet
-sourceHash: f643569c960d5e35
+sourceHash: 2ff76dd878c6530c
 ---
 
 Chaque clé de `emet.config.json`, avec sa valeur par défaut et sa signification. La source de vérité est [`emet/schema/emet.config.schema.json`](../../emet/schema/emet.config.schema.json). Les termes suivent [GLOSSARY.md](../../GLOSSARY.md). Retour au [README](../../README.md).
 
 `emet init` écrit le fichier avec `$schema` défini sur l'URL publique `https://emet.andryore.dev/schema/emet.config.schema.json`, que le site web sert à l'octet près identique à la source de vérité, afin que les éditeurs proposent la complétion partout. `emet preflight` et `emet doctor` le valident. Une clé marquée « prose uniquement » est lue par les prompts de `/emet` (les skills `$emet:*` sur Codex), pas par la CLI. Une clé marquée obsolète est toujours acceptée. Le schéma autorise aussi une clé de texte libre `"//"` pour des notes (jamais lue par aucun outil) et `"version"`, qui vaut toujours `1`.
+
+## language
+
+- `conversation` (par défaut `"en"`): balise BCP 47 de la langue dans laquelle l'agent répond à l'utilisateur.
+- `artifacts` (par défaut `"en"`): balise BCP 47 de la langue du code, des commentaires, des messages de commit, du texte des PR, des tickets et de la documentation.
+
+Les deux doivent être des chaînes non vides. Une configuration sans section `language` se charge avec les deux à `"en"`, et `emet init` écrit les deux. Les prompts installés les lisent.
 
 ## pr
 
@@ -44,19 +51,55 @@ Ce qui se passe après la clôture d'une vague, et les limites de taille de la n
 
   Elle ne se lance que lorsque la PR a été fusionnée et que rien n'a été signalé, et elle est ignorée si une session `emet-<spec-id>-*` est déjà active (`claude agents --json`). Si le lancement échoue, elle se rabat sur l'affichage de `/emet:run --dispatch <spec-id>`.
 
+- `afterSpec` (par défaut `"none"`, parmi `release`, `promote`, `none`) : ce que fait `/emet:run` une fois la dernière vague d'une spec fusionnée sans problème. `promote` exécute `emet promote` : une pull request de `develop` vers `main` fusionnée avec un commit de merge dès que la CI est `pass`, puis une pull request de resynchronisation en sens inverse seulement si `develop` est en retard sur `main`. `release` ouvre la pull request de release en suivant les étapes du skill `cut-release` et s'arrête pour qu'une personne reprenne la main. `none` ne fait rien. `emet init` le détecte (`release` avec un tag `v*` et un fichier de workflow dont le nom contient `release` ; `promote` avec une branche `develop` et sans un tel tag ; sinon `none`), et `emet init --after-spec <mode>` le force. Une configuration qui ne le contient pas se charge comme `none`. `--no-promote`, passé à `/emet:run` ou à `emet promote`, met l'étape à `none` pour cette exécution.
 - `launcher` (par défaut `auto`, parmi `auto`, `orca`, `bg`) : Claude Code uniquement ; ignoré sur l'hôte Codex, où `emet launch` n'ouvre aucun onglet Orca. Ouvre aussi la vague dans un onglet Orca exécutant `claude attach`. `auto` interroge le runtime d'Orca (`orca status`), donc cela fonctionne aussi depuis des sessions `claude --bg`, qui n'ont pas de `TERM_PROGRAM` ; `orca` essaie toujours ; `bg` jamais. La vague s'exécute en arrière-plan dans tous les cas, et un onglet qui ne s'ouvre pas n'arrête jamais la chaîne. `emet launch <spec-id> --wave <n>` fait tout le lancement ; voir [`emet launch`](cli.md#exécutions-workers-et-slots).
 - `permissionMode` (par défaut `bypassPermissions`, parmi `bypassPermissions`, `auto`, `acceptEdits`) : Claude Code uniquement ; ignoré sur l'hôte Codex, où la session chaînée utilise [`codex.sandbox`](#codex). Mode d'autorisation de la session chaînée. Il n'est pas hérité de la session qui la lance, car le classificateur du mode `auto` peut refuser une étape comme `gh pr merge` et laisser une vague à moitié terminée. Vos règles `permissions.deny` s'appliquent toujours, mais l'avertissement de contournement doit avoir été accepté une fois en mode interactif (`skipDangerousModePermissionPrompt`).
+
+## deploy
+
+Optionnel. Absent, il n'y a aucune vérification de déploiement.
+
+```json
+{
+  "deploy": {
+    "check": {
+      "command": "curl -fsS https://example.com/health",
+      "retries": 10,
+      "intervalSeconds": 15,
+      "timeoutSeconds": 300
+    }
+  }
+}
+```
+
+- `check.command` : commande shell qui se termine avec 0 lorsque le déploiement est sain.
+- `check.retries`, `check.intervalSeconds`, `check.timeoutSeconds` : entiers positifs ; le nombre maximal de tentatives, l'attente entre elles et la limite de temps globale. `emet deploy-check` affiche `ok`, `failed` ou `timeout` et se termine avec 0, 1 ou 3. L'étape `promote` de `afterSpec` l'exécute après la fusion.
+
+## interview
+
+- `research` (par défaut `true`) : quand il vaut `true`, la Phase 1 de `/emet:run` fait chercher à l'agent la réponse dans le dépôt, la documentation ou des sources primaires, et expliquer pourquoi il recommande une option, avant de poser une question technique qui propose des options. L'utilisateur répond toujours. `false` le désactive.
+
+## gate
+
+Ce que fait `emet gate` des constats bloquants ouverts.
+
+```json
+{ "gate": { "onHold": "fix-and-continue" } }
+```
+
+- `onHold` (par défaut `fix-and-continue`) : avec `fix-and-continue`, les constats bloquants ouverts répondent `hold` avec `next: "fix-findings"` tant que [`budgets.fixRounds`](#budgets) a encore des tours. La porte ne répond `stop` que lorsqu'un constat ouvert est de type `intent_gap`, que les tours de correction sont épuisés avec des constats ouverts, ou que la suite d'intégration échoue une seconde fois après la relance de ses specs en échec (un premier échec répond `hold` avec `next: "rerun-failed-specs"`). `stop` conserve le comportement précédent. Une CI qui ne s'est jamais exécutée (`--ci env-fault`) répond `hold` avec `next: "rerun-ci"` sans entamer `pr.maxCiFixAttempts`, puis `next: "report-infrastructure"` la deuxième fois de suite.
 
 ## budgets
 
 Tous facultatifs.
 
 ```json
-{ "budgets": { "workerAttempts": 2, "reviewRounds": 2, "stallNudgeCap": 6 } }
+{ "budgets": { "workerAttempts": 2, "reviewRounds": 2, "fixRounds": 2, "stallNudgeCap": 6 } }
 ```
 
 - `workerAttempts` (par défaut `2`, minimum `1`) : combien de fois un ticket peut échouer à `verify` avant que le gate réponde `defer`. Le ticket reçoit le label différé et le reste de la vague continue. Un défaut d'environnement, comme la commande de tests qui se termine avec 126/127 ou une panne du fournisseur, met l'exécution en pause sans consommer de tentative.
 - `reviewRounds` (par défaut `2`, minimum `1`) : combien de tours de revue/correction un ticket reçoit avant une escalade vers le niveau de modèle suivant. Tout ce qui reste ouvert après cela reçoit une décision.
+- `fixRounds` (par défaut `2`) : combien de tours de correction reçoit une vague sous [`gate.onHold`](#gate) `fix-and-continue`. Chacun se termine par `emet review --recheck` et compte ici, jamais contre `reviewRounds`. Sans tour restant et avec un constat bloquant ouvert, la porte répond `stop`. Un registre écrit sans ce champ compte `0` tour utilisé.
 - `stallNudgeCap` (par défaut `6`, minimum `1`) : combien de fois un worker bloqué est relancé. Le compteur n'est jamais remis à zéro.
 
 ## models
