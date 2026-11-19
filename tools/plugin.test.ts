@@ -65,8 +65,8 @@ describe("plugin manifests", () => {
     ]);
   });
 
-  test("commands/ holds exactly doctor.md, init.md and run.md", () => {
-    const expected = ["doctor.md", "init.md", "run.md"];
+  test("commands/ holds exactly doctor.md, init.md, run.md and setup.md", () => {
+    const expected = ["doctor.md", "init.md", "run.md", "setup.md"];
     const unexpected = readdirSync(path.join(repoRoot, "commands")).filter(
       (file) => !expected.includes(file),
     );
