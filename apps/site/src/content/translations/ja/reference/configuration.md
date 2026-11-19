@@ -2,7 +2,7 @@
 title: 設定リファレンス
 description: emet.config.json のすべてのキーについて、既定値と意味を説明します。
 seoTitle: emet の設定リファレンス
-sourceHash: d333cfa0ad463263
+sourceHash: 2ff76dd878c6530c
 ---
 
 `emet.config.json` のすべてのキーを、既定値と意味とともに示します。信頼できる情報源は [`emet/schema/emet.config.schema.json`](../../emet/schema/emet.config.schema.json) です。用語は [GLOSSARY.md](../../GLOSSARY.md) に従います。[README](../../README.md) に戻る。
@@ -51,8 +51,33 @@ sourceHash: d333cfa0ad463263
 
   起動するのは、PR がマージされ、フラグが立っているものがない場合だけで、`emet-<spec-id>-*` セッションがすでに動作中（`claude agents --json`）であればスキップします。起動に失敗した場合は、`/emet:run --dispatch <spec-id>` を表示する動作にフォールバックします。
 
+- `afterSpec`（既定は `"none"`、`release`、`promote`、`none` のいずれか）: スペックの最後のウェーブが問題なくマージされたあとに `/emet:run` が行うことです。`promote` は `emet promote` を実行します。CI が `pass` になったら `develop` から `main` へのプルリクエストをマージコミットでマージし、`develop` が `main` より遅れている場合に限って、逆方向の同期プルリクエストを作成します。`release` は `cut-release` スキルの手順でリリースのプルリクエストを開き、人の判断を待って停止します。`none` は何もしません。`emet init` が値を検出し（`v*` タグがあり、名前に `release` を含むワークフローファイルがあれば `release`、`develop` ブランチがあってそのようなタグがなければ `promote`、それ以外は `none`）、`emet init --after-spec <mode>` で強制できます。この設定がない config は `none` として読み込まれます。`/emet:run` または `emet promote` に `--no-promote` を渡すと、その実行に限りこのステップは `none` になります。
 - `launcher`（既定は `auto`、`auto`、`orca`、`bg` のいずれか）: Claude Code のみです。Codex ホストでは無視され、`emet launch` は Orca タブを開きません。`claude attach` を実行する Orca タブでもウェーブを開きます。`auto` は Orca ランタイム（`orca status`）に問い合わせるため、`TERM_PROGRAM` のない `claude --bg` セッションからも動作します。`orca` は常に試行し、`bg` は一切試行しません。どちらの場合もウェーブはバックグラウンドで動作し、タブを開けなくてもチェーンが止まることはありません。`emet launch <spec-id> --wave <n>` が起動の全体を行います。[`emet launch`](cli.md#実行ワーカースロット) を参照してください。
 - `permissionMode`（既定は `bypassPermissions`、`bypassPermissions`、`auto`、`acceptEdits` のいずれか）: Claude Code のみです。Codex ホストでは無視され、チェーンされたセッションは [`codex.sandbox`](#codex) を使います。チェーンされたセッションの権限モードです。起動元のセッションからは継承されません。`auto` モードの分類器が `gh pr merge` のようなステップを拒否し、ウェーブが中途半端な状態で終わるおそれがあるためです。`permissions.deny` のルールは引き続き適用されますが、バイパスの警告を対話的に一度承認しておく必要があります（`skipDangerousModePermissionPrompt`）。
+
+## deploy
+
+任意です。指定がなければデプロイチェックは行われません。
+
+```json
+{
+  "deploy": {
+    "check": {
+      "command": "curl -fsS https://example.com/health",
+      "retries": 10,
+      "intervalSeconds": 15,
+      "timeoutSeconds": 300
+    }
+  }
+}
+```
+
+- `check.command`: デプロイが正常なときに終了コード 0 で終了するシェルコマンドです。
+- `check.retries`、`check.intervalSeconds`、`check.timeoutSeconds`: 正の整数です。それぞれ最大試行回数、試行の間隔、全体の制限時間を表します。`emet deploy-check` は `ok`、`failed`、`timeout` のいずれかを出力し、終了コード 0、1、3 で終了します。`afterSpec` の `promote` ステップは、マージ後にこれを実行します。
+
+## interview
+
+- `research`（既定は `true`）: `true` の場合、`/emet:run` のフェーズ 1 では、選択肢を示す技術的な質問をする前に、エージェントがリポジトリ、ドキュメント、一次情報源から答えを調べ、その選択肢を勧める理由を説明します。回答するのはこれまでどおりユーザーです。`false` で無効になります。
 
 ## gate
 

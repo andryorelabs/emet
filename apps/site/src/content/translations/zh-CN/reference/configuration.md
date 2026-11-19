@@ -2,7 +2,7 @@
 title: 配置参考
 description: emet.config.json 中的每个键，包括其默认值和含义。
 seoTitle: emet 配置参考
-sourceHash: d333cfa0ad463263
+sourceHash: 2ff76dd878c6530c
 ---
 
 `emet.config.json` 中的每个键，及其默认值和含义。权威来源是 [`emet/schema/emet.config.schema.json`](../../emet/schema/emet.config.schema.json)。术语遵循 [GLOSSARY.md](../../GLOSSARY.md)。返回 [README](../../README.md)。
@@ -51,8 +51,33 @@ sourceHash: d333cfa0ad463263
 
   只有在 PR 已合并且没有任何内容被标记时才会启动；如果已有 `emet-<spec-id>-*` 会话在运行（`claude agents --json`），则会跳过。如果启动失败，则回退为打印 `/emet:run --dispatch <spec-id>`。
 
+- `afterSpec`（默认 `"none"`，可选 `release`、`promote`、`none`）：规格的最后一个波次干净合并后，`/emet:run` 要做什么。`promote` 运行 `emet promote`：待 CI 为 `pass` 后，用合并提交合并一个从 `develop` 到 `main` 的拉取请求，仅当 `develop` 落后于 `main` 时，才再发起一个反向同步的拉取请求。`release` 按 `cut-release` 技能的步骤打开发布拉取请求，然后停下来等待人工处理。`none` 什么也不做。`emet init` 会检测该值（有 `v*` 标签且存在名称含 `release` 的工作流文件时为 `release`；有 `develop` 分支且没有此类标签时为 `promote`；否则为 `none`），`emet init --after-spec <mode>` 可强制指定。不含该键的配置按 `none` 加载。向 `/emet:run` 或 `emet promote` 传入 `--no-promote`，会让该步骤在本次运行中为 `none`。
 - `launcher`（默认 `auto`，可选 `auto`、`orca`、`bg`）：仅限 Claude Code；在 Codex 宿主上被忽略，`emet launch` 不会打开 Orca 标签页。同时在运行 `claude attach` 的 Orca 标签页中打开该波次。`auto` 会询问 Orca 运行时（`orca status`），因此对没有 `TERM_PROGRAM` 的 `claude --bg` 会话同样有效；`orca` 总是尝试；`bg` 从不尝试。无论哪种方式，波次都在后台运行，标签页打开失败也不会中断串联。`emet launch <spec-id> --wave <n>` 会完成整个启动流程；参见 [`emet launch`](cli.md#运行工作者与槽位)。
 - `permissionMode`（默认 `bypassPermissions`，可选 `bypassPermissions`、`auto`、`acceptEdits`）：仅限 Claude Code；在 Codex 宿主上被忽略，串联会话使用 [`codex.sandbox`](#codex)。串联会话的权限模式。它不继承启动会话的模式，因为 `auto` 模式的分类器可能拒绝 `gh pr merge` 之类的步骤，导致波次只完成一半。你的 `permissions.deny` 规则仍然适用，但必须已在交互环境中接受过一次绕过警告（`skipDangerousModePermissionPrompt`）。
+
+## deploy
+
+可选。缺省表示不做部署检查。
+
+```json
+{
+  "deploy": {
+    "check": {
+      "command": "curl -fsS https://example.com/health",
+      "retries": 10,
+      "intervalSeconds": 15,
+      "timeoutSeconds": 300
+    }
+  }
+}
+```
+
+- `check.command`：部署健康时以 0 退出的 shell 命令。
+- `check.retries`、`check.intervalSeconds`、`check.timeoutSeconds`：正整数；分别是最多尝试次数、两次尝试之间的等待时间和总时间上限。`emet deploy-check` 会输出 `ok`、`failed` 或 `timeout`，并以 0、1 或 3 退出。`afterSpec` 的 `promote` 步骤会在合并后运行它。
+
+## interview
+
+- `research`（默认 `true`）：为 `true` 时，`/emet:run` 的第 1 阶段会在提出带选项的技术问题之前，让智能体先在仓库、文档或一手资料中查找答案，并说明为何推荐某个选项。回答的仍是用户。`false` 则关闭此行为。
 
 ## gate
 
