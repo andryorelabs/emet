@@ -2,8 +2,18 @@
 title: Nouveautés
 description: Notes de version d'emet : ce qui a changé dans chaque version.
 seoTitle: Nouveautés d'emet : notes de version
-sourceHash: cf04666a1d6178fa
+sourceHash: bd2020ed642645f4
 ---
+
+## 0.11.1
+
+2026-11-19
+
+### Corrigé
+
+- Sous Windows natif (Git Bash) et sur tout système d'exploitation ou toute architecture non pris en charge, `bin/emet` se termine avec le code 0 au lieu d'échouer, de sorte que le guard PreToolUse ne bloque plus chaque appel d'outil. Seul le prefetch de démarrage de session affiche un avis.
+- `install.sh` refuse de s'exécuter sur `MINGW*`, `MSYS*` et `CYGWIN*` avant d'écrire quoi que ce soit.
+- Les hooks Codex portent une surcharge `commandWindows`, de sorte que Codex sous Windows (PowerShell) n'échoue plus à chaque événement.
 
 ## 0.11.0
 

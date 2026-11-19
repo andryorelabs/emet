@@ -2,8 +2,18 @@
 title: Novità
 description: Note di rilascio di emet: cosa è cambiato in ogni versione.
 seoTitle: "Novità di emet: note di rilascio"
-sourceHash: cf04666a1d6178fa
+sourceHash: bd2020ed642645f4
 ---
+
+## 0.11.1
+
+2026-11-19
+
+### Corretto
+
+- Su Windows nativo (Git Bash) e su qualsiasi sistema operativo o architettura non supportati, `bin/emet` esce con 0 invece di fallire, quindi la guard PreToolUse non blocca più ogni chiamata agli strumenti. Solo il prefetch all'avvio della sessione stampa un avviso.
+- `install.sh` rifiuta di essere eseguito su `MINGW*`, `MSYS*` e `CYGWIN*` prima di scrivere qualsiasi cosa.
+- Gli hook di Codex includono un override `commandWindows`, quindi Codex su Windows (PowerShell) non genera più un errore a ogni evento.
 
 ## 0.11.0
 

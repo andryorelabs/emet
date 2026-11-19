@@ -2,8 +2,18 @@
 title: Neuigkeiten
 description: Release Notes für emet: was sich in jeder Version geändert hat.
 seoTitle: "Neuigkeiten in emet: Release Notes"
-sourceHash: cf04666a1d6178fa
+sourceHash: bd2020ed642645f4
 ---
+
+## 0.11.1
+
+2026-11-19
+
+### Behoben
+
+- Unter nativem Windows (Git Bash) und auf jedem nicht unterstützten Betriebssystem oder jeder nicht unterstützten Architektur beendet sich `bin/emet` mit 0, statt zu fehlschlagen, sodass der PreToolUse-Guard nicht mehr jeden Tool-Aufruf blockiert. Nur der Prefetch beim Session-Start gibt eine Meldung aus.
+- `install.sh` weigert sich, unter `MINGW*`, `MSYS*` und `CYGWIN*` zu laufen, bevor es irgendetwas schreibt.
+- Die Codex-Hooks enthalten eine `commandWindows`-Überschreibung, sodass Codex unter Windows (PowerShell) nicht mehr bei jedem Event einen Fehler meldet.
 
 ## 0.11.0
 

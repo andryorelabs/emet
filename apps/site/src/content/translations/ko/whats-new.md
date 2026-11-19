@@ -2,8 +2,18 @@
 title: 새로운 소식
 description: emet 릴리스 노트. 각 버전에서 무엇이 바뀌었는지 정리합니다.
 seoTitle: "emet 새로운 소식: 릴리스 노트"
-sourceHash: cf04666a1d6178fa
+sourceHash: bd2020ed642645f4
 ---
+
+## 0.11.1
+
+2026-11-19
+
+### 수정됨
+
+- 네이티브 Windows(Git Bash)와 지원되지 않는 모든 OS 또는 아키텍처에서 `bin/emet`이 실패하는 대신 종료 코드 0으로 끝나므로, PreToolUse 가드가 더 이상 모든 도구 호출을 차단하지 않습니다. 세션 시작 시 프리페치만 안내를 한 번 출력합니다.
+- `install.sh`는 아무것도 쓰기 전에 `MINGW*`, `MSYS*`, `CYGWIN*`에서의 실행을 거부합니다.
+- Codex 훅에 `commandWindows` 오버라이드가 포함되어, Windows(PowerShell)의 Codex가 더 이상 모든 이벤트마다 오류를 내지 않습니다.
 
 ## 0.11.0
 
