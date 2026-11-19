@@ -6,7 +6,7 @@ Install emet, check that it works and run it for the first time.
 
 ## Requirements
 
-Claude Code or the Codex CLI, `git`, `gh` (authenticated) and the `mattpocock-skills` plugin, on Linux or macOS. Bun is needed only for a source install; native Windows is unsupported (use WSL): there emet shows one notice at session start and stays inactive, and `install.sh` refuses to run. The full list, with what checks each item, is in the [dependencies reference](../reference/dependencies.md).
+Claude Code or the Codex CLI, `git`, `gh` (authenticated) and the `mattpocock-skills` plugin, on Linux or macOS. Bun is needed only for a source install; native Windows is unsupported (use WSL). The full list, with what checks each item, is in the [dependencies reference](../reference/dependencies.md).
 
 ## Install
 
