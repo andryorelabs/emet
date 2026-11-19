@@ -2,8 +2,16 @@
 title: Novità
 description: Note di rilascio di emet: cosa è cambiato in ogni versione.
 seoTitle: "Novità di emet: note di rilascio"
-sourceHash: 554cd8b7c6d96f87
+sourceHash: cf04666a1d6178fa
 ---
+
+## 0.11.0
+
+2026-11-19
+
+### Aggiunto
+
+- `emet whats-new` stampa un avviso di una riga con un link alle note di rilascio la prima volta che emet viene eseguito dopo un aggiornamento, poi registra la versione in esecuzione. Con `--hook` emette la riga come oggetto JSON `systemMessage` per gli hook di sessione.
 
 ## 0.10.0
 

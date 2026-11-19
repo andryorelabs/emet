@@ -2,8 +2,16 @@
 title: Neuigkeiten
 description: Release Notes für emet: was sich in jeder Version geändert hat.
 seoTitle: "Neuigkeiten in emet: Release Notes"
-sourceHash: 554cd8b7c6d96f87
+sourceHash: cf04666a1d6178fa
 ---
+
+## 0.11.0
+
+2026-11-19
+
+### Hinzugefügt
+
+- `emet whats-new` gibt beim ersten Start von emet nach einem Update eine einzeilige Meldung mit einem Link zu den Release Notes aus und speichert dann die laufende Version. Mit `--hook` gibt es die Zeile als `systemMessage`-JSON-Objekt für Session-Hooks aus.
 
 ## 0.10.0
 
