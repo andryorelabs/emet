@@ -339,12 +339,18 @@ describe("loadForgeConfig", () => {
     expect(reasonOf(result)).toContain('"deploy.check.paths"');
   });
 
-  test("this repo's own config resolves to release with no rule", async () => {
+  test("this repo's own config promotes the Website and releases everything else", async () => {
     const ownRoot = path.resolve(import.meta.dir, "..", "..");
     const { afterSpec } = configOf(await loadForgeConfig(ownRoot)).handoff;
-    const resolution = resolveAfterSpec(afterSpec, []);
-    expect(resolution.mode).toBe("release");
-    expect(resolution.ruleIndex).toBeNull();
+    const website = resolveAfterSpec(afterSpec, ["apps/site/a.astro", "docs/x.md"]);
+    expect(website.mode).toBe("promote");
+    expect(website.ruleIndex).toBe(0);
+    const cli = resolveAfterSpec(afterSpec, ["emet/src/promote.ts"]);
+    expect(cli.mode).toBe("release");
+    expect(cli.ruleIndex).toBe(1);
+    const mixed = resolveAfterSpec(afterSpec, ["apps/site/a.astro", "emet/src/promote.ts"]);
+    expect(mixed.mode).toBe("release");
+    expect(resolveAfterSpec(afterSpec, []).mode).toBe("release");
   });
 
   test("language defaults to en and accepts overrides", async () => {
