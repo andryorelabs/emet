@@ -6,8 +6,38 @@
 # binary cannot be resolved it exits 2, which blocks the tool call, and says how
 # to recover, except that a missing release asset falls back to the newest cached
 # binary (a checksum mismatch never does). Other commands and the Stop events exit 1, which does not block.
+# On an unsupported platform (native Windows, or an OS/architecture with no
+# release asset) every invocation exits 0 and does nothing; only the prefetch
+# invocation prints one {"systemMessage":...} notice on stdout.
 
 set -u
+
+json_safe() {
+  printf '%s' "$1" | tr -d '"\\[:cntrl:]'
+}
+
+platform_os=$(uname -s 2>/dev/null) || platform_os=unknown
+platform_arch=$(uname -m 2>/dev/null) || platform_arch=unknown
+case $platform_os in
+  Linux) os=linux ;;
+  Darwin) os=darwin ;;
+  *) os= ;;
+esac
+case $platform_arch in
+  x86_64 | amd64) arch=x64 ;;
+  arm64 | aarch64) arch=arm64 ;;
+  *) arch= ;;
+esac
+if [ -z "$os" ] || [ -z "$arch" ]; then
+  if [ "${EMET_PREFETCH:-${FORGE_PREFETCH:-}}" = "1" ]; then
+    case $platform_os in
+      MINGW* | MSYS* | CYGWIN*) notice="emet does not support native Windows; run Claude Code inside WSL, or disable the plugin with 'claude plugin disable emet'." ;;
+      *) notice="emet does not support $(json_safe "$platform_os")/$(json_safe "$platform_arch"); emet stays inactive in this session." ;;
+    esac
+    printf '{"systemMessage":"%s"}\n' "$notice"
+  fi
+  exit 0
+fi
 
 guard_fails_closed=0
 if [ "${1:-}" = "guard" ]; then
@@ -61,16 +91,6 @@ cache_root=${EMET_CACHE_DIR:-${FORGE_CACHE_DIR:-${XDG_CACHE_HOME:-${HOME:-}/.cac
 cached_binary="$cache_root/$version/emet"
 
 if [ ! -x "$cached_binary" ]; then
-  case $(uname -s) in
-    Linux) os=linux ;;
-    Darwin) os=darwin ;;
-    *) fail "unsupported platform $(uname -s)" ;;
-  esac
-  case $(uname -m) in
-    x86_64 | amd64) arch=x64 ;;
-    arm64 | aarch64) arch=arm64 ;;
-    *) fail "unsupported architecture $(uname -m)" ;;
-  esac
   asset="emet-$os-$arch"
   base_url=${EMET_RELEASE_BASE_URL:-${FORGE_RELEASE_BASE_URL:-https://github.com/andryorelabs/emet/releases/download}}
   release_url="$base_url/v$version"

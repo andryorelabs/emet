@@ -172,6 +172,31 @@ describe("skill and manifest builders", () => {
   });
 });
 
+describe("buildHooks Windows overrides", () => {
+  const notice =
+    'Write-Output \'{"systemMessage":"emet does not support native Windows; run Codex inside WSL, or disable the emet plugin."}\'';
+
+  test("every hook carries its commandWindows override", () => {
+    const hooks: unknown = JSON.parse(buildHooks());
+    expect(dig(hooks, "hooks", "SessionStart", "0", "hooks", "0", "commandWindows")).toBe(notice);
+    expect(dig(hooks, "hooks", "PreToolUse", "0", "hooks", "0", "commandWindows")).toBe("exit 0");
+    expect(dig(hooks, "hooks", "UserPromptSubmit", "0", "hooks", "0", "commandWindows")).toBe(
+      "exit 0",
+    );
+    expect(dig(hooks, "hooks", "Stop", "0", "hooks", "0", "commandWindows")).toBe("exit 0");
+  });
+
+  test("the POSIX command fields are unchanged", () => {
+    const hooks: unknown = JSON.parse(buildHooks());
+    expect(dig(hooks, "hooks", "PreToolUse", "0", "hooks", "0", "command")).toBe(
+      "EMET_AGENT_HOST=codex emet guard",
+    );
+    expect(dig(hooks, "hooks", "Stop", "0", "hooks", "0", "command")).toBe(
+      "EMET_AGENT_HOST=codex emet guard --event Stop",
+    );
+  });
+});
+
 describe("committed Codex artefacts", () => {
   const files = generateArtefacts(repoRoot);
 
