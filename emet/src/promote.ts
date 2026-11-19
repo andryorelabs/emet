@@ -176,7 +176,8 @@ export function parseSpecState(text: string, specId: string): string {
   throw new Error(`${BINARY} status printed no state for spec ${specId}`);
 }
 
-async function readSpecState(specId: string): Promise<string> {
+/** Reads a spec's aggregate wave state through `emet status --spec <id>`. */
+export async function readSpecState(specId: string): Promise<string> {
   const result = await Bun.$`${BINARY} status --spec ${specId}`.nothrow().quiet();
   return parseSpecState(result.stdout.toString(), specId);
 }
@@ -184,6 +185,46 @@ async function readSpecState(specId: string): Promise<string> {
 /** A spec's last wave is clean only when no wave is working, checking, ready or waiting on a decision. */
 export function isFinalWaveClean(state: string): boolean {
   return state === "idle";
+}
+
+/** The real `gh`, CI wait and journal record behind `promoteDevelop`; `gh` and `append` are test seams. */
+export function buildPromoteDeps(options: {
+  mode: AfterSpecMode;
+  repoRoot: string;
+  specId: string;
+  gh?: GhRunner;
+  append?: typeof appendEvent;
+}): PromoteDeps {
+  const gh = options.gh ?? realGh;
+  const append = options.append ?? appendEvent;
+  return {
+    mode: options.mode,
+    gh,
+    waitForCi: (pr) =>
+      waitForChecks(
+        { pr, timeoutMs: CI_TIMEOUT_MS, pollMs: CI_POLL_MS, rerunFlakes: false },
+        {
+          gh,
+          sleep: Bun.sleep,
+          now: Date.now,
+        },
+      ),
+    record: (result) => {
+      append({
+        kind: "promote",
+        repo: options.repoRoot,
+        origin: "auto",
+        data: {
+          spec: options.specId,
+          mode: result.mode,
+          prNumber: result.prNumber,
+          merged: result.merged,
+          syncPrNumber: result.syncPrNumber,
+          ciState: result.ciState ?? null,
+        },
+      });
+    },
+  };
 }
 
 function readFlag(argv: readonly string[], flag: string): string | undefined {
@@ -210,35 +251,7 @@ export async function run(
     });
     const outcome = await promoteDevelop(
       { dryRun: argv.includes("--dry-run") },
-      {
-        mode,
-        gh: realGh,
-        waitForCi: (pr) =>
-          waitForChecks(
-            { pr, timeoutMs: CI_TIMEOUT_MS, pollMs: CI_POLL_MS, rerunFlakes: false },
-            {
-              gh: realGh,
-              sleep: (ms) => new Promise((resolve) => setTimeout(resolve, ms)),
-              now: Date.now,
-            },
-          ),
-        record: (result) => {
-          appendEvent({
-            kind: "promote",
-            repo: repoRoot,
-            origin: "auto",
-            data: {
-              spec: specId,
-              mode: result.mode,
-              prNumber: result.prNumber,
-              merged: result.merged,
-              syncPrNumber: result.syncPrNumber,
-              ciState: result.ciState ?? null,
-            },
-          });
-        },
-        ...overrides,
-      },
+      { ...buildPromoteDeps({ mode, repoRoot, specId }), ...overrides },
     );
     console.log(JSON.stringify(outcome));
     const failed = outcome.mode === "promote" && outcome.skipped === undefined && !outcome.merged;

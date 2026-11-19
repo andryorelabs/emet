@@ -1,11 +1,17 @@
 import { afterEach, describe, expect, spyOn, test } from "bun:test";
+import { chmodSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import os from "node:os";
+import path from "node:path";
 
 import type { CiOutcome, GhRunner } from "./ci";
 import { DEFAULT_FORGE_CONFIG } from "./config";
+import { BINARY } from "./names";
 import {
+  buildPromoteDeps,
   isFinalWaveClean,
   parseSpecState,
   planAfterSpec,
+  readSpecState,
   promoteDevelop,
   run,
   type PromoteDeps,
@@ -133,6 +139,75 @@ describe("promoteDevelop", () => {
       message = error instanceof Error ? error.message : String(error);
     }
     expect(message).toContain("pull request number");
+  });
+});
+
+describe("buildPromoteDeps", () => {
+  test("waits for CI through gh and passes a pull request with no checks", async () => {
+    const calls: string[][] = [];
+    const deps = buildPromoteDeps({
+      mode: "promote",
+      repoRoot: "/repo",
+      specId: "629",
+      gh: (args) => {
+        calls.push([...args]);
+        return Promise.resolve('{"statusCheckRollup":[]}');
+      },
+    });
+    const outcome = await deps.waitForCi(7);
+    expect(outcome.state).toBe("pass");
+    expect(calls[0]).toContain("statusCheckRollup");
+  });
+
+  test("records a promote event with the spec, mode and result", () => {
+    const events: unknown[] = [];
+    const deps = buildPromoteDeps({
+      mode: "promote",
+      repoRoot: "/repo",
+      specId: "629",
+      append: (event) => {
+        events.push(event);
+      },
+    });
+    deps.record({
+      mode: "promote",
+      prNumber: 7,
+      merged: true,
+      syncPrNumber: null,
+      ciState: "pass",
+    });
+    expect(events).toEqual([
+      {
+        kind: "promote",
+        repo: "/repo",
+        origin: "auto",
+        data: {
+          spec: "629",
+          mode: "promote",
+          prNumber: 7,
+          merged: true,
+          syncPrNumber: null,
+          ciState: "pass",
+        },
+      },
+    ]);
+  });
+});
+
+describe("readSpecState", () => {
+  test("reads the state from the emet binary on PATH", async () => {
+    const directory = mkdtempSync(path.join(os.tmpdir(), "emet-promote-bin-"));
+    const originalPath = process.env.PATH;
+    try {
+      const script = path.join(directory, BINARY);
+      writeFileSync(script, `#!/bin/sh\necho '{"state":"working","waves":[]}'\n`);
+      chmodSync(script, 0o755);
+      process.env.PATH = `${directory}:${originalPath ?? ""}`;
+      expect(await readSpecState("629")).toBe("working");
+    } finally {
+      process.env.PATH = originalPath;
+      rmSync(directory, { recursive: true, force: true });
+    }
   });
 });
 
