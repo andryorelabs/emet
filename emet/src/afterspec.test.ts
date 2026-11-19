@@ -56,4 +56,10 @@ describe("matchesAnyGlob", () => {
     expect(matchesAnyGlob(["docs/**", "apps/**"], "apps/site/a.astro")).toBe(true);
     expect(matchesAnyGlob(["docs/**"], "apps/site/a.astro")).toBe(false);
   });
+
+  test("reads a bracketed route segment literally", () => {
+    const globs = ["apps/site/src/pages/[locale]/**"];
+    expect(matchesAnyGlob(globs, "apps/site/src/pages/[locale]/a.astro")).toBe(true);
+    expect(matchesAnyGlob(globs, "apps/site/src/pages/l/a.astro")).toBe(false);
+  });
 });
