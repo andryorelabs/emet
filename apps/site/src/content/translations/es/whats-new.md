@@ -2,8 +2,22 @@
 title: Novedades
 description: Notas de versión de emet: qué cambió en cada versión.
 seoTitle: Novedades de emet: notas de versión
-sourceHash: d31beb683db0a11e
+sourceHash: 554cd8b7c6d96f87
 ---
+
+## 0.10.0
+
+2026-11-19
+
+### Añadido
+
+- `handoff.afterSpec` acepta una lista ordenada de reglas `{ paths?, mode }`, de modo que un repositorio con una CLI y un sitio web puede publicar la CLI y promover el sitio web. El modo se elige según las rutas que promover `develop` llevaría a `main`.
+- `deploy.check.paths` limita la comprobación de despliegue a las promociones que tocaron los globs indicados.
+- `emet promote` imprime y registra en el diario `rule` y `reason`, e imprime `deployCheck: { run, reason }`.
+
+### Cambiado
+
+- La comprobación de despliegue ya no depende de `afterSpec`: se ejecuta tras una última wave limpia en el trunk `main`, y tras una promoción fusionada en `develop`. El coordinador ejecuta `emet promote` después de cada spec, también con `afterSpec` en `none`.
 
 ## 0.9.1
 

@@ -2,8 +2,22 @@
 title: 新機能
 description: emet のリリースノート。各バージョンでの変更点をまとめています。
 seoTitle: "emet の新機能: リリースノート"
-sourceHash: d31beb683db0a11e
+sourceHash: 554cd8b7c6d96f87
 ---
+
+## 0.10.0
+
+2026-11-19
+
+### 追加
+
+- `handoff.afterSpec` が `{ paths?, mode }` ルールの順序付きリストを受け付けるようになり、CLI とウェブサイトを持つリポジトリで CLI をリリースし、ウェブサイトをプロモートできます。モードは、`develop` のプロモートで `main` に取り込まれるパスから選ばれます。
+- `deploy.check.paths` により、デプロイチェックを、指定した glob に触れたプロモートに限定できます。
+- `emet promote` が `rule` と `reason` を出力してジャーナルに記録し、`deployCheck: { run, reason }` を出力します。
+
+### 変更
+
+- デプロイチェックは `afterSpec` に依存しなくなりました。トランクが `main` の場合は最終 wave がクリーンに終わった後、`develop` の場合はプロモートがマージされた後に実行されます。コーディネーターは、`afterSpec` が `none` の場合も含め、すべての spec の後に `emet promote` を実行します。
 
 ## 0.9.1
 

@@ -8,6 +8,8 @@ and this project adheres to
 
 ## [Unreleased]
 
+## [0.10.0] - 2026-11-19
+
 ### Added
 
 - `handoff.afterSpec` accepts an ordered list of `{ paths?, mode }` rules, so a
@@ -390,7 +392,8 @@ and this project adheres to
 - Per-repo configuration through `forge.config.json`.
 - `install.sh`, which installs the CLI, command and agents.
 
-[Unreleased]: https://github.com/andryorelabs/emet/compare/v0.9.1...HEAD
+[Unreleased]: https://github.com/andryorelabs/emet/compare/v0.10.0...HEAD
+[0.10.0]: https://github.com/andryorelabs/emet/compare/v0.9.1...v0.10.0
 [0.9.1]: https://github.com/andryorelabs/emet/compare/v0.9.0...v0.9.1
 [0.9.0]: https://github.com/andryorelabs/emet/compare/v0.8.6...v0.9.0
 [0.8.6]: https://github.com/andryorelabs/emet/compare/v0.8.5...v0.8.6

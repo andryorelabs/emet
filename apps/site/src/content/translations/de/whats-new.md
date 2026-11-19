@@ -2,8 +2,22 @@
 title: Neuigkeiten
 description: Release Notes für emet: was sich in jeder Version geändert hat.
 seoTitle: "Neuigkeiten in emet: Release Notes"
-sourceHash: d31beb683db0a11e
+sourceHash: 554cd8b7c6d96f87
 ---
+
+## 0.10.0
+
+2026-11-19
+
+### Hinzugefügt
+
+- `handoff.afterSpec` akzeptiert eine geordnete Liste von `{ paths?, mode }`-Regeln, sodass ein Repository mit einer CLI und einer Website die CLI veröffentlichen und die Website promoten kann. Der Modus wird anhand der Pfade gewählt, die das Promoten von `develop` nach `main` mitnehmen würde.
+- `deploy.check.paths` beschränkt den Deploy-Check auf Promotes, die die aufgeführten Globs berührt haben.
+- `emet promote` gibt `rule` und `reason` aus und schreibt sie ins Journal und gibt `deployCheck: { run, reason }` aus.
+
+### Geändert
+
+- Der Deploy-Check hängt nicht mehr von `afterSpec` ab: Er läuft nach einer sauberen letzten Wave auf dem Trunk `main` und nach einem gemergten Promote auf `develop`. Der Koordinator führt `emet promote` nach jedem Spec aus, auch bei `afterSpec` `none`.
 
 ## 0.9.1
 
