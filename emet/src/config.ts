@@ -86,7 +86,9 @@ export const DEFAULT_FORGE_CONFIG: ForgeConfig = {
     autoChain: false,
     launcher: "auto",
     permissionMode: "bypassPermissions",
+    afterSpec: "none",
   },
+  interview: { research: true },
   landing: { mode: "pr" },
   gate: { onHold: "fix-and-continue" },
   language: { conversation: "en", artifacts: "en" },
@@ -173,6 +175,17 @@ type MergeMethod = "squash" | "merge" | "rebase";
 
 const MERGE_METHODS: readonly MergeMethod[] = ["squash", "merge", "rebase"];
 
+export type AfterSpecMode = "release" | "promote" | "none";
+
+const AFTER_SPEC_MODES: readonly AfterSpecMode[] = ["release", "promote", "none"];
+
+interface DeployCheckConfig {
+  readonly command: string;
+  readonly retries: number;
+  readonly intervalSeconds: number;
+  readonly timeoutSeconds: number;
+}
+
 export type LandingMode = "pr" | "merge";
 
 /** What `emet gate` does with open blocking findings. */
@@ -253,6 +266,19 @@ export interface ForgeConfig {
     readonly launcher: HandoffLauncher;
     /** Permission mode the chained wave's `claude --bg` session runs in. */
     readonly permissionMode: HandoffPermissionMode;
+    /** What happens after a spec's last wave lands: `release` opens a release
+     * pull request for a person, `promote` merges trunk into the release
+     * branch, `none` does nothing. */
+    readonly afterSpec: AfterSpecMode;
+  };
+  readonly interview: {
+    /** When true, Phase 1 looks the answer up before asking a technical
+     * question that offers options. */
+    readonly research: boolean;
+  };
+  readonly deploy?: {
+    /** Command run after a promote until it exits 0; absent means no check. */
+    readonly check?: DeployCheckConfig;
   };
   readonly landing: {
     /** How a finished wave reaches trunk: `pr` opens a pull request, `merge`
@@ -509,6 +535,30 @@ function isPositiveInteger(value: unknown): value is number {
   return typeof value === "number" && Number.isInteger(value) && value > 0;
 }
 
+function validateDeploySection(
+  value: unknown,
+): { ok: true; check: DeployCheckConfig | undefined } | { ok: false; reason: string } {
+  const section = isRecord(value) ? value : {};
+  if (section.check === undefined) return { ok: true, check: undefined };
+  if (!isRecord(section.check)) {
+    return { ok: false, reason: '"deploy.check" must be an object' };
+  }
+  const { command, retries, intervalSeconds, timeoutSeconds } = section.check;
+  if (!isNonEmptyString(command)) {
+    return { ok: false, reason: '"deploy.check.command" must be a non-empty string' };
+  }
+  if (!isPositiveInteger(retries)) {
+    return { ok: false, reason: '"deploy.check.retries" must be a positive integer' };
+  }
+  if (!isPositiveInteger(intervalSeconds)) {
+    return { ok: false, reason: '"deploy.check.intervalSeconds" must be a positive integer' };
+  }
+  if (!isPositiveInteger(timeoutSeconds)) {
+    return { ok: false, reason: '"deploy.check.timeoutSeconds" must be a positive integer' };
+  }
+  return { ok: true, check: { command, retries, intervalSeconds, timeoutSeconds } };
+}
+
 /**
  * Validates only the fields this CLI reads, merging anything absent from
  * `DEFAULT_FORGE_CONFIG` — a repo's `emet.config.json` need not repeat every
@@ -664,6 +714,19 @@ function validateAndMerge(
       reason: '"handoff.permissionMode" must be one of bypassPermissions|auto|acceptEdits',
     };
   }
+  const afterSpec = handoffSection.afterSpec ?? DEFAULT_FORGE_CONFIG.handoff.afterSpec;
+  if (!isOneOf(AFTER_SPEC_MODES, afterSpec)) {
+    return { ok: false, reason: '"handoff.afterSpec" must be one of release|promote|none' };
+  }
+
+  const interviewSection = isRecord(raw.interview) ? raw.interview : {};
+  const interviewResearch = interviewSection.research ?? DEFAULT_FORGE_CONFIG.interview.research;
+  if (typeof interviewResearch !== "boolean") {
+    return { ok: false, reason: '"interview.research" must be a boolean' };
+  }
+
+  const deploy = validateDeploySection(raw.deploy);
+  if (!deploy.ok) return deploy;
 
   const landingSection = isRecord(raw.landing) ? raw.landing : {};
   const landingMode = landingSection.mode ?? DEFAULT_FORGE_CONFIG.landing.mode;
@@ -839,7 +902,10 @@ function validateAndMerge(
         autoChain,
         launcher,
         permissionMode,
+        afterSpec,
       },
+      interview: { research: interviewResearch },
+      ...(deploy.check === undefined ? {} : { deploy: { check: deploy.check } }),
       landing: { mode: landingMode },
       gate: { onHold: gateOnHold },
       language: { conversation: languageConversation, artifacts: languageArtifacts },
