@@ -569,7 +569,14 @@ export const COMMANDS: readonly CommandSpec[] = [
   {
     name: "setup",
     summary: "install the optional extras",
-    flags: [bool("--yes"), val("--with"), bool("--list"), bool("--notice"), bool("--json")],
+    flags: [
+      bool("--yes"),
+      val("--with"),
+      bool("--list"),
+      bool("--notice"),
+      val("--data-dir"),
+      bool("--json"),
+    ],
     run: runModule("setup"),
   },
   {

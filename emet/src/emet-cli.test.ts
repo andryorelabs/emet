@@ -1,7 +1,12 @@
 import { describe, expect, test } from "bun:test";
+import { mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
 import path from "node:path";
 
 import { COMMANDS } from "./commands";
+import { unknownFlags } from "./flags";
+
+const repoRoot = path.join(import.meta.dir, "..", "..");
 
 function parseEnvelope(text: string): unknown {
   const parsed: unknown = JSON.parse(text);
@@ -48,6 +53,32 @@ describe("emet CLI", () => {
     const result = runCli(["status", "--bogus", "--json"]);
     expect(result.exitCode).toBe(2);
     expect(parseEnvelope(result.stdout)).toMatchObject({ ok: false, error: { code: "usage" } });
+  });
+
+  test("setup accepts --notice with --data-dir", () => {
+    const dataDirectory = mkdtempSync(path.join(tmpdir(), "emet-setup-"));
+    try {
+      const result = runCli(["setup", "--notice", "--data-dir", dataDirectory]);
+      expect(result.exitCode).toBe(0);
+      expect(result.stderr).not.toContain("unknown flag");
+    } finally {
+      rmSync(dataDirectory, { recursive: true, force: true });
+    }
+  });
+
+  test("every emet command in hooks.json uses only declared flags", () => {
+    const hookConfig = readFileSync(path.join(repoRoot, "hooks", "hooks.json"), "utf8");
+    const commands = [
+      ...hookConfig.matchAll(/bin\/emet\\"\s+([a-z-]+)((?:\s+[^"\\]+|\s+\\"[^"\\]*\\")*)/g),
+    ];
+    expect(commands.length).toBeGreaterThan(0);
+    for (const [, name, rest] of commands) {
+      const spec = COMMANDS.find((command) => command.name === name);
+      expect(spec).toBeDefined();
+      if (spec === undefined) continue;
+      const argv = (rest ?? "").trim().split(/\s+/).filter(Boolean);
+      expect(unknownFlags(spec, argv)).toEqual([]);
+    }
   });
 
   test("an unknown command exits 2", () => {
