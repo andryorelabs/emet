@@ -5,6 +5,13 @@
 # overwrites a file you edited: the new version lands beside it as `<file>.new`.
 set -euo pipefail
 
+case "$(uname -s 2>/dev/null || true)" in
+  MINGW* | MSYS* | CYGWIN*)
+    echo "error: emet does not support native Windows; run install.sh inside WSL." >&2
+    exit 1
+    ;;
+esac
+
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 if command -v bun >/dev/null 2>&1; then

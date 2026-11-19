@@ -2,8 +2,18 @@
 title: 新功能
 description: emet 的发布说明：每个版本都有哪些变化。
 seoTitle: "emet 新功能：发布说明"
-sourceHash: cf04666a1d6178fa
+sourceHash: bd2020ed642645f4
 ---
+
+## 0.11.1
+
+2026-11-19
+
+### 已修复
+
+- 在原生 Windows（Git Bash）以及任何不受支持的操作系统或架构上，`bin/emet` 会以退出码 0 结束而不是失败，因此 PreToolUse 守卫不再阻止每一次工具调用。只有会话开始时的 prefetch 会输出一条通知。
+- `install.sh` 在 `MINGW*`、`MSYS*` 和 `CYGWIN*` 上会在写入任何内容之前拒绝运行。
+- Codex 钩子带有 `commandWindows` 覆盖项，因此 Windows（PowerShell）上的 Codex 不再在每个事件上报错。
 
 ## 0.11.0
 

@@ -2,8 +2,18 @@
 title: 新機能
 description: emet のリリースノート。各バージョンでの変更点をまとめています。
 seoTitle: "emet の新機能: リリースノート"
-sourceHash: cf04666a1d6178fa
+sourceHash: bd2020ed642645f4
 ---
+
+## 0.11.1
+
+2026-11-19
+
+### 修正
+
+- ネイティブ Windows(Git Bash)と、サポート対象外の OS やアーキテクチャでは、`bin/emet` が失敗せず終了コード 0 で終了するようになり、PreToolUse ガードがすべてのツール呼び出しをブロックすることはなくなりました。通知を 1 回表示するのは、セッション開始時のプリフェッチだけです。
+- `install.sh` は、何かを書き込む前に `MINGW*`、`MSYS*`、`CYGWIN*` での実行を拒否します。
+- Codex のフックに `commandWindows` のオーバーライドが追加され、Windows(PowerShell)上の Codex がイベントのたびにエラーになることはなくなりました。
 
 ## 0.11.0
 

@@ -107,26 +107,65 @@ function addFakeBun(options: { runsEmet: boolean }): void {
   chmodSync(fakeBunPath, 0o755);
 }
 
+/** Replaces the linked `uname` with one whose `-s` answers `system`. */
+function addFakeUname(system: string): void {
+  const unamePath = path.join(toolsDir, "uname");
+  rmSync(unamePath, { force: true });
+  writeFileSync(
+    unamePath,
+    `#!/bin/sh\ncase "\${1:-}" in -m) echo x86_64 ;; *) echo '${system}' ;; esac\n`,
+  );
+  chmodSync(unamePath, 0o755);
+}
+
+/** Path of the log a fake `mktemp` appends to whenever install.sh calls it. */
+function mktempLogPath(): string {
+  return path.join(workDir, "mktemp.log");
+}
+
+/** Wraps the real `mktemp` so each call is recorded in {@link mktempLogPath}. */
+function addLoggingMktemp(): void {
+  const mktempPath = path.join(toolsDir, "mktemp");
+  const realMktemp = Bun.which("mktemp") ?? "/usr/bin/mktemp";
+  rmSync(mktempPath, { force: true });
+  writeFileSync(
+    mktempPath,
+    `#!/bin/sh\necho called >> '${mktempLogPath()}'\nexec '${realMktemp}' "$@"\n`,
+  );
+  chmodSync(mktempPath, 0o755);
+}
+
 function runInstaller(
-  options: { hashTool?: keyof typeof hashTools; withBun?: boolean; bunRunsEmet?: boolean } = {},
+  options: {
+    hashTool?: keyof typeof hashTools;
+    withBun?: boolean;
+    bunRunsEmet?: boolean;
+    unameSystem?: string;
+  } = {},
 ): {
   exitCode: number;
   output: string;
+  stderr: string;
 } {
   rmSync(toolsDir, { recursive: true, force: true });
   linkTools([...installerTools, ...hashTools[options.hashTool ?? "sha256sum"]]);
   if (options.withBun === true || options.bunRunsEmet === true)
     addFakeBun({ runsEmet: options.bunRunsEmet ?? false });
+  if (options.unameSystem !== undefined) {
+    addFakeUname(options.unameSystem);
+    addLoggingMktemp();
+  }
   const result = Bun.spawnSync([bashPath, path.join(fixtureRepo, "install.sh")], {
     cwd: fixtureRepo,
     env: { HOME: homeDir, PATH: toolsDir, EMET_RELEASE_BASE_URL: unreachableReleaseUrl },
     stdout: "pipe",
     stderr: "pipe",
   });
-  const output = `${result.stdout.toString()}${result.stderr.toString()}`;
-  if (result.exitCode !== 0)
+  const stderr = result.stderr.toString();
+  const output = `${result.stdout.toString()}${stderr}`;
+  if (result.exitCode !== 0 && options.unameSystem === undefined)
     process.stderr.write(`install.sh failed (${result.exitCode}):\n${output}\n`);
-  return { exitCode: result.exitCode, output };
+  return { exitCode: result.exitCode, output, stderr };
 }
 
 function listFilesRecursively(directory: string): string[] {
@@ -494,5 +533,29 @@ describeInstaller("install.sh what's new notice", () => {
     expect(exitCode).toBe(0);
     expect(output).toContain("warning: emet whats-new reported a failure");
     expect(output).toContain("Done.");
+  });
+});
+
+describeInstaller("install.sh on native Windows", () => {
+  test("refuses MINGW, MSYS and CYGWIN with exit 1 before writing anything", () => {
+    for (const system of ["MINGW64_NT-10.0-26200", "MSYS_NT-10.0", "CYGWIN_NT-10.0-19045"]) {
+      for (const withBun of [false, true]) {
+        rmSync(mktempLogPath(), { force: true });
+        const { exitCode, stderr } = runInstaller({ unameSystem: system, withBun });
+        expect(exitCode).toBe(1);
+        expect(stderr).toBe(
+          "error: emet does not support native Windows; run install.sh inside WSL.\n",
+        );
+        expect(readdirSync(homeDir)).toEqual([]);
+        expect(existsSync(mktempLogPath())).toBe(false);
+      }
+    }
+  });
+
+  test("a supported uname still installs, through the logged mktemp", () => {
+    const { exitCode } = runInstaller({ unameSystem: "Linux" });
+    expect(exitCode).toBe(0);
+    expect(existsSync(mktempLogPath())).toBe(true);
+    expect(existsSync(path.join(homeDir, ".claude/commands/emet/run.md"))).toBe(true);
   });
 });

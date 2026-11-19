@@ -8,6 +8,18 @@ and this project adheres to
 
 ## [Unreleased]
 
+## [0.11.1] - 2026-11-19
+
+### Fixed
+
+- On native Windows (Git Bash) and on any unsupported OS or architecture,
+  `bin/emet` exits 0 instead of failing, so the PreToolUse guard no longer
+  blocks every tool call. Only the session-start prefetch prints one notice.
+- `install.sh` refuses to run on `MINGW*`, `MSYS*` and `CYGWIN*` before it
+  writes anything.
+- The Codex hooks carry a `commandWindows` override, so Codex on Windows
+  (PowerShell) no longer errors on every event.
+
 ## [0.11.0] - 2026-11-19
 
 ### Added
@@ -401,7 +413,8 @@ and this project adheres to
 - Per-repo configuration through `forge.config.json`.
 - `install.sh`, which installs the CLI, command and agents.
 
-[Unreleased]: https://github.com/andryorelabs/emet/compare/v0.11.0...HEAD
+[Unreleased]: https://github.com/andryorelabs/emet/compare/v0.11.1...HEAD
+[0.11.1]: https://github.com/andryorelabs/emet/compare/v0.11.0...v0.11.1
 [0.11.0]: https://github.com/andryorelabs/emet/compare/v0.10.0...v0.11.0
 [0.10.0]: https://github.com/andryorelabs/emet/compare/v0.9.1...v0.10.0
 [0.9.1]: https://github.com/andryorelabs/emet/compare/v0.9.0...v0.9.1

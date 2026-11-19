@@ -292,13 +292,24 @@ export function buildSkill(name: CodexSkill, source: string): string {
   return `---\nname: ${name}\ndescription: ${quoted}\n---\n${transformPrompt(body)}`;
 }
 
+/** Windows-only hook override that succeeds without output. */
+const WINDOWS_NOOP_COMMAND = "exit 0";
+
+/** Windows-only SessionStart override that shows the unsupported-platform notice. */
+const WINDOWS_NOTICE_COMMAND =
+  'Write-Output \'{"systemMessage":"emet does not support native Windows; run Codex inside WSL, or disable the emet plugin."}\'';
+
 /**
  * One Codex command hook running `emet guard` for the Codex Agent host.
  * @param suffix Extra `emet guard` arguments, with a leading space.
  * @returns The hook entry.
  */
-function guardHook(suffix: string): { type: "command"; command: string } {
-  return { type: "command", command: `EMET_AGENT_HOST=codex emet guard${suffix}` };
+function guardHook(suffix: string): { type: "command"; command: string; commandWindows: string } {
+  return {
+    type: "command",
+    command: `EMET_AGENT_HOST=codex emet guard${suffix}`,
+    commandWindows: WINDOWS_NOOP_COMMAND,
+  };
 }
 
 /**
@@ -311,7 +322,13 @@ export function buildHooks(): string {
     hooks: {
       SessionStart: [
         {
-          hooks: [{ type: "command", command: "EMET_AGENT_HOST=codex emet whats-new --hook" }],
+          hooks: [
+            {
+              type: "command",
+              command: "EMET_AGENT_HOST=codex emet whats-new --hook",
+              commandWindows: WINDOWS_NOTICE_COMMAND,
+            },
+          ],
         },
       ],
       PreToolUse: [{ matcher: "Bash|apply_patch", hooks: [guardHook("")] }],

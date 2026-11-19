@@ -99,7 +99,7 @@ More in [Getting started](docs/guide/getting-started.md). If `doctor` reports a 
 
 ### Supported platforms
 
-Linux and macOS. Windows is supported only through WSL. See [ADR-0007](docs/adr/0007-macos-support.md) and the [dependencies reference](docs/reference/dependencies.md).
+Linux and macOS. Windows is supported only through WSL: on native Windows emet shows one notice and stays inactive, and `install.sh` refuses to run. See [ADR-0007](docs/adr/0007-macos-support.md) and the [dependencies reference](docs/reference/dependencies.md).
 
 ## Mascot (optional)
 
