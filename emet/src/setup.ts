@@ -8,7 +8,7 @@ import {
   parsePluginListOutput,
   resolveBinaryOnPath,
 } from "./dependencies";
-import { successEnvelope, failureEnvelope, stringifySorted } from "./envelope";
+import { stringifySorted } from "./envelope";
 import { exitCodes } from "./exit-codes";
 import { BINARY } from "./names";
 import { errorMessage } from "./narrow";
@@ -57,11 +57,13 @@ export interface SetupOptions {
 export interface SetupDeps {
   readonly catalog: readonly SetupItem[];
   readonly ask: (question: string) => Promise<string>;
+  readonly release?: () => void;
 }
 
 export interface SetupEnv {
   readonly commandExists: (name: string) => Promise<boolean>;
   readonly run: (argv: readonly string[]) => Promise<number>;
+  readonly probe: (argv: readonly string[]) => Promise<number>;
   readonly capture: (argv: readonly string[]) => Promise<string>;
   readonly pathExists: (target: string) => boolean;
   readonly download: (url: string, destination: string) => Promise<void>;
@@ -74,6 +76,7 @@ export const MASCOT_PLUGIN_ID = "emet-mascot@emet-marketplace";
 const ORCA_PET_BASE_URL =
   "https://raw.githubusercontent.com/andryorelabs/emet/main/docs/brand/pet/emet";
 const ORCA_PET_FILES = ["pet.json", "spritesheet.webp"] as const;
+const ENGRAM_PLUGIN_ID = "engram@engram";
 const ENGRAM_BREW_FORMULA = "gentleman-programming/tap/engram";
 const NOTICE_MARKER = "setup-notice-shown";
 const NOTICE_TEXT = `emet has optional extras (Engram memory, the mascot, recommended Claude Code settings). Run /emet:setup to choose them.`;
@@ -113,7 +116,8 @@ export function createCatalog(env: SetupEnv): readonly SetupItem[] {
       id: "engram",
       label: "Engram persistent memory (binary plus the Claude Code integration)",
       defaultOn: false,
-      detect: () => env.commandExists("engram"),
+      detect: async () =>
+        (await env.commandExists("engram")) && (await pluginInstalled(env, ENGRAM_PLUGIN_ID)),
       install: async () => {
         if (!(await env.commandExists("brew"))) {
           throw new Error(
@@ -153,7 +157,7 @@ export function createCatalog(env: SetupEnv): readonly SetupItem[] {
       id: "gh-auth",
       label: "GitHub CLI login (gh auth login)",
       defaultOn: false,
-      detect: async () => (await env.run(["gh", "auth", "status"])) === 0,
+      detect: async () => (await env.probe(["gh", "auth", "status"])) === 0,
       install: () => runChecked(env, ["gh", "auth", "login"]),
     },
     {
@@ -178,15 +182,15 @@ export function createCatalog(env: SetupEnv): readonly SetupItem[] {
 
 async function spawnExitCode(
   argv: readonly string[],
-  captureStdout: boolean,
+  mode: "inherit" | "quiet" | "capture",
 ): Promise<[number, string]> {
   try {
     const child = Bun.spawn([...argv], {
-      stdin: captureStdout ? "ignore" : "inherit",
-      stdout: captureStdout ? "pipe" : "inherit",
-      stderr: captureStdout ? "ignore" : "inherit",
+      stdin: mode === "inherit" ? "inherit" : "ignore",
+      stdout: mode === "inherit" ? "inherit" : mode === "capture" ? "pipe" : "ignore",
+      stderr: mode === "inherit" ? "inherit" : "ignore",
     });
-    const output = captureStdout ? await new Response(child.stdout).text() : "";
+    const output = mode === "capture" ? await new Response(child.stdout).text() : "";
     return [await child.exited, output];
   } catch {
     return [127, ""];
@@ -202,8 +206,9 @@ async function downloadFile(url: string, destination: string): Promise<void> {
 
 export const realSetupEnv: SetupEnv = {
   commandExists: resolveBinaryOnPath,
-  run: async (argv) => (await spawnExitCode(argv, false))[0],
-  capture: async (argv) => (await spawnExitCode(argv, true))[1],
+  run: async (argv) => (await spawnExitCode(argv, "inherit"))[0],
+  probe: async (argv) => (await spawnExitCode(argv, "quiet"))[0],
+  capture: async (argv) => (await spawnExitCode(argv, "capture"))[1],
   pathExists: existsSync,
   download: downloadFile,
   log: (line) => {
@@ -253,6 +258,7 @@ export async function runSetup(options: SetupOptions, deps: SetupDeps): Promise<
     chosen = new Set(deps.catalog.filter((item) => item.defaultOn).map((item) => item.id));
   else if (options.tty) chosen = await chooseInteractively(deps.catalog, deps.ask);
   else chosen = new Set();
+  deps.release?.();
   const results: SetupResult[] = [];
   for (const item of deps.catalog) {
     // oxlint-disable-next-line eslint/no-await-in-loop -- sequential on purpose: installs and prompts run one at a time
@@ -281,6 +287,11 @@ export function createPrompter(
       readline.close();
     },
   };
+}
+
+/** The `ask` used when nothing is interactive: every question gets an empty answer. */
+export function askNothing(): Promise<string> {
+  return Promise.resolve("");
 }
 
 function flagValue(argv: readonly string[], flag: string): string | undefined {
@@ -330,7 +341,7 @@ async function describeCatalog(
 
 function printCatalog(rows: Awaited<ReturnType<typeof describeCatalog>>, json: boolean): void {
   if (json) {
-    console.log(stringifySorted(successEnvelope({ catalog: rows })));
+    console.log(stringifySorted({ catalog: rows }));
     return;
   }
   for (const row of rows) {
@@ -342,7 +353,7 @@ function printCatalog(rows: Awaited<ReturnType<typeof describeCatalog>>, json: b
 
 function printResults(results: readonly SetupResult[], json: boolean): void {
   if (json) {
-    console.log(stringifySorted(successEnvelope({ results })));
+    console.log(stringifySorted({ results }));
     return;
   }
   for (const result of results) {
@@ -366,21 +377,27 @@ export async function run(argv: string[]): Promise<void> {
       printCatalog(await describeCatalog(SETUP_CATALOG), json);
       return;
     }
-    const prompter = createPrompter(process.stdin, process.stdout);
+    const interactive = tty && !yes && withList.length === 0;
+    const prompter = interactive ? createPrompter(process.stdin, process.stdout) : undefined;
     try {
       const results = await runSetup(
         { yes, with: withList, tty },
-        { catalog: SETUP_CATALOG, ask: prompter.ask },
+        {
+          catalog: SETUP_CATALOG,
+          ask: prompter?.ask ?? askNothing,
+          release: () => {
+            prompter?.close();
+          },
+        },
       );
       printResults(results, json);
       if (results.some((result) => result.status === "failed"))
         process.exitCode = exitCodes.findings;
     } finally {
-      prompter.close();
+      prompter?.close();
     }
   } catch (error: unknown) {
-    if (json) console.log(stringifySorted(failureEnvelope(error)));
-    else console.error(errorMessage(error));
+    console.error(errorMessage(error));
     process.exitCode = exitCodes.usage;
   }
 }

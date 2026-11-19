@@ -9,6 +9,7 @@ import {
   MASCOT_PLUGIN_ID,
   SETUP_CATALOG,
   createCatalog,
+  askNothing,
   createPrompter,
   noticeMarkerPath,
   realSetupEnv,
@@ -50,6 +51,10 @@ function fakeEnv(
     downloads,
     commandExists: () => Promise.resolve(true),
     run: (argv) => {
+      calls.push([...argv]);
+      return Promise.resolve(codes[argv.join(" ")] ?? 0);
+    },
+    probe: (argv) => {
       calls.push([...argv]);
       return Promise.resolve(codes[argv.join(" ")] ?? 0);
     },
@@ -154,12 +159,24 @@ describe("createCatalog", () => {
   test("engram installs through brew then runs engram setup claude-code", async () => {
     const env = fakeEnv();
     const engram = itemOf(createCatalog(env), "engram");
-    expect(await engram.detect()).toBe(true);
+    expect(await engram.detect()).toBe(false);
     await engram.install();
     expect(env.calls).toEqual([
       ["brew", "install", "gentleman-programming/tap/engram"],
       ["engram", "setup", "claude-code"],
     ]);
+  });
+
+  test("engram is present only when the binary and the plugin are both found", async () => {
+    const withPlugin = fakeEnv({
+      capture: () => Promise.resolve("❯ engram@engram\n  Status: enabled\n"),
+    });
+    expect(await itemOf(createCatalog(withPlugin), "engram").detect()).toBe(true);
+    const withoutBinary = fakeEnv({
+      commandExists: () => Promise.resolve(false),
+      capture: () => Promise.resolve("❯ engram@engram\n  Status: enabled\n"),
+    });
+    expect(await itemOf(createCatalog(withoutBinary), "engram").detect()).toBe(false);
   });
 
   test("engram without brew fails with a pointer to the install docs", async () => {
@@ -218,6 +235,29 @@ describe("runSetup", () => {
     const results = await runSetup(none, { catalog: [item], ask });
     expect(results).toEqual([{ id: "engram", status: "skipped" }]);
     expect(installed).toEqual([]);
+  });
+
+  test("the prompter is released before the first install runs", async () => {
+    const order: string[] = [];
+    const { item } = stubItem("engram", {});
+    const watched: SetupItem = {
+      ...item,
+      install: () => {
+        order.push("install");
+        return Promise.resolve();
+      },
+    };
+    await runSetup(
+      { ...none, with: ["engram"] },
+      {
+        catalog: [watched],
+        ask,
+        release: () => {
+          order.push("release");
+        },
+      },
+    );
+    expect(order).toEqual(["release", "install"]);
   });
 
   test("--with installs exactly the named items and never asks", async () => {
@@ -344,6 +384,12 @@ describe("realSetupEnv", () => {
     expect(await realSetupEnv.run(["emet-no-such-binary-xyz"])).toBe(127);
   });
 
+  test("probe returns the exit code without printing", async () => {
+    expect(await realSetupEnv.probe(["true"])).toBe(0);
+    expect(await realSetupEnv.probe(["false"])).toBe(1);
+    expect(await realSetupEnv.probe(["emet-no-such-binary-xyz"])).toBe(127);
+  });
+
   test("capture returns stdout and an empty string for a missing binary", async () => {
     expect((await realSetupEnv.capture(["echo", "hi"])).trim()).toBe("hi");
     expect(await realSetupEnv.capture(["emet-no-such-binary-xyz"])).toBe("");
@@ -420,8 +466,8 @@ describe("run", () => {
     await run(["--list", "--json"]);
     output.restore();
     const parsed = parseObject(output.out.join("\n"));
-    expect(parsed.ok).toBe(true);
-    expect(Array.isArray(isObject(parsed.data) ? parsed.data.catalog : null)).toBe(true);
+    expect(Array.isArray(parsed.catalog)).toBe(true);
+    expect("ok" in parsed).toBe(false);
   });
 
   test("--with an unknown item reports failed and exits 1", async () => {
@@ -435,7 +481,7 @@ describe("run", () => {
   test("--with an unknown item under --json prints the results envelope", async () => {
     const output = capture();
     await run(["--with", "nope", "--json"]);
-    expect(parseObject(output.out.join("\n")).ok).toBe(true);
+    expect(Array.isArray(parseObject(output.out.join("\n")).results)).toBe(true);
     expect(output.out.join("\n")).toContain('"detail": "unknown item"');
   });
 
@@ -455,7 +501,7 @@ describe("run", () => {
     expect(existsSync(path.join(directory, "setup-notice-shown"))).toBe(true);
   });
 
-  test("an unexpected error exits 2, as an envelope under --json", async () => {
+  test("an unexpected error exits 2 and reports on stderr, also under --json", async () => {
     const blocker = path.join(directory, "file");
     writeFileSync(blocker, "x");
     const previous = process.env.CLAUDE_PLUGIN_DATA;
@@ -470,7 +516,11 @@ describe("run", () => {
       if (previous === undefined) delete process.env.CLAUDE_PLUGIN_DATA;
       else process.env.CLAUDE_PLUGIN_DATA = previous;
     }
-    expect(output.errors).toHaveLength(1);
-    expect(parseObject(output.out[output.out.length - 1] ?? "{}").ok).toBe(false);
+    expect(output.errors).toHaveLength(2);
+    expect(output.out.every((line) => !line.startsWith("{"))).toBe(true);
+  });
+
+  test("askNothing answers every question with an empty string", async () => {
+    expect(await askNothing()).toBe("");
   });
 });
