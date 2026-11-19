@@ -6,6 +6,10 @@
           {
             "type": "command",
             "command": "EMET_PREFETCH=1 \"${CLAUDE_PLUGIN_ROOT}/bin/emet\""
+          },
+          {
+            "type": "command",
+            "command": "\"${CLAUDE_PLUGIN_ROOT}/bin/emet\" setup --notice --data-dir \"${CLAUDE_PLUGIN_DATA}\""
           }
         ]
       }

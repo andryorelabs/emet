@@ -50,7 +50,7 @@ UNSHIPPED_KEPT_FILE="$WORK_DIR/unshipped-kept.txt"
 : > "$LEGACY_KEPT_FILE"
 
 # Slash commands installed as ~/.claude/commands/emet/<name>.md, i.e. /emet:<name>.
-COMMAND_NAMES=(run init doctor)
+COMMAND_NAMES=(run init doctor setup)
 
 # Files a previous install shipped that emet no longer loads (split or renamed).
 RETIRED_PATHS=(
@@ -346,6 +346,11 @@ else
   echo "warning: jq is required to wire the SubagentStop/Stop hooks automatically — skipping." >&2
   echo "  Add {\"hooks\": [{\"type\": \"command\", \"command\": \"$GUARD_COMMAND --event SubagentStop\"}]} to hooks.SubagentStop" >&2
   echo "  and the same with --event Stop to hooks.Stop in $SETTINGS_FILE." >&2
+fi
+
+if [[ -t 0 ]] && [[ " ${COMMAND_NAMES[*]} " == *" setup "* ]]; then
+  echo
+  "$HOME/.local/bin/emet" setup || echo "warning: emet setup reported a failure — re-run \`emet setup\`." >&2
 fi
 
 echo

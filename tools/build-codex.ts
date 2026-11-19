@@ -40,7 +40,7 @@ interface Rule {
   readonly replacement: string;
 }
 
-const SKILLS = ["run", "init", "doctor"] as const;
+const SKILLS = ["run", "init", "doctor", "setup"] as const;
 
 /** A generated Codex skill name. */
 type CodexSkill = (typeof SKILLS)[number];
@@ -55,6 +55,8 @@ export const CODEX_USE_WHEN: Readonly<Record<CodexSkill, string>> = {
   init: "Use when setting up emet in a repository for the first time, or refreshing its config and docs.",
   doctor:
     "Use when emet misbehaves or before a first run, to find config, install and skill problems.",
+  setup:
+    "Use when the user wants to install the optional emet extras, such as skills, memory or Claude Code settings.",
 };
 
 const COORDINATOR_MAILBOX =
@@ -216,7 +218,7 @@ ${WORKER_ESCALATION}`,
   { pattern: /\.claude\/worktrees\//g, replacement: ".emet/worktrees/" },
   { pattern: /with the Bash tool/g, replacement: "in the shell" },
   { pattern: /plugin sessions/g, replacement: "Codex sessions" },
-  { pattern: /\/emet:(run|init|doctor)/g, replacement: "$emet:$1" },
+  { pattern: /\/emet:(run|init|doctor|setup)/g, replacement: "$emet:$1" },
   { pattern: /\$\{CLAUDE_PLUGIN_ROOT\}\/emet\/reference\//g, replacement: "references/" },
   { pattern: /\$\{CLAUDE_PLUGIN_ROOT\}\//g, replacement: "" },
 ];
