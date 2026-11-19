@@ -273,6 +273,25 @@ describe("buildPromoteDeps", () => {
   });
 });
 
+describe("buildPromoteDeps changed paths", () => {
+  test("reads the changed paths from the repository root it was given", async () => {
+    const directory = mkdtempSync(path.join(os.tmpdir(), "emet-deps-"));
+    try {
+      git(directory, "init", "-q", "-b", "main");
+      const deps = buildPromoteDeps({ mode: "promote", repoRoot: directory, specId: "629" });
+      let message = "";
+      try {
+        await deps.readChangedPaths();
+      } catch (error: unknown) {
+        message = error instanceof Error ? error.message : String(error);
+      }
+      expect(message).toContain("git fetch failed");
+    } finally {
+      rmSync(directory, { recursive: true, force: true });
+    }
+  });
+});
+
 describe("readSpecState", () => {
   test("reads the state from the emet binary on PATH", async () => {
     const directory = mkdtempSync(path.join(os.tmpdir(), "emet-promote-bin-"));
@@ -477,6 +496,28 @@ describe("readChangedPaths", () => {
     }
     expect(message).toContain("git fetch failed");
   });
+
+  test("throws the git message when main and develop share no history", async () => {
+    const origin = makeDirectory();
+    git(origin, "init", "-q", "--bare", "-b", "main");
+    const work = makeDirectory();
+    git(work, "init", "-q", "-b", "main");
+    git(work, "remote", "add", "origin", origin);
+    writeFile(work, "a.txt", "a");
+    commitAll(work, "main root");
+    git(work, "push", "-q", "origin", "main");
+    git(work, "checkout", "-q", "--orphan", "develop");
+    writeFile(work, "b.txt", "b");
+    commitAll(work, "develop root");
+    git(work, "push", "-q", "origin", "develop");
+    let message = "";
+    try {
+      await readChangedPaths(work);
+    } catch (error: unknown) {
+      message = error instanceof Error ? error.message : String(error);
+    }
+    expect(message).toContain("git diff failed");
+  });
 });
 
 describe("run: changed paths and the deploy check", () => {
@@ -643,6 +684,20 @@ describe("run", () => {
 
   test("exits 2 without --spec", async () => {
     const { errors } = await runCaptured([]);
+    expect(process.exitCode).toBe(2);
+    expect(errors.join("\n")).toContain("usage");
+  });
+
+  test("uses empty overrides when none are given", async () => {
+    const errors: string[] = [];
+    const errorSpy = spyOn(console, "error").mockImplementation((...parts: unknown[]) => {
+      errors.push(parts.join(" "));
+    });
+    try {
+      await run([]);
+    } finally {
+      errorSpy.mockRestore();
+    }
     expect(process.exitCode).toBe(2);
     expect(errors.join("\n")).toContain("usage");
   });
