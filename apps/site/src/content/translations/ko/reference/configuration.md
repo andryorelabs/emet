@@ -2,7 +2,7 @@
 title: 설정 레퍼런스
 description: emet.config.json의 모든 키를 기본값과 의미와 함께 설명합니다.
 seoTitle: emet 설정 레퍼런스
-sourceHash: 2ff76dd878c6530c
+sourceHash: 021a695d999163e3
 ---
 
 `emet.config.json`의 모든 키를 기본값과 의미와 함께 정리했습니다. 기준이 되는 원본은 [`emet/schema/emet.config.schema.json`](../../emet/schema/emet.config.schema.json)입니다. 용어는 [GLOSSARY.md](../../GLOSSARY.md)를 따릅니다. [README](../../README.md)로 돌아가기.
@@ -52,6 +52,22 @@ sourceHash: 2ff76dd878c6530c
   PR이 병합되었고 플래그가 지정된 항목이 없을 때만 시작하며, `emet-<spec-id>-*` 세션이 이미 실행 중이면(`claude agents --json`) 건너뜁니다. 시작에 실패하면 `/emet:run --dispatch <spec-id>`를 출력하는 방식으로 되돌아갑니다.
 
 - `afterSpec`(기본값 `"none"`, `release`, `promote`, `none` 중 하나): 스펙의 마지막 웨이브가 문제없이 머지된 뒤 `/emet:run`이 하는 일입니다. `promote`는 `emet promote`를 실행합니다. CI가 `pass`가 되면 `develop`에서 `main`으로 가는 풀 리퀘스트를 머지 커밋으로 머지하고, `develop`이 `main`보다 뒤처져 있을 때만 되돌려 동기화하는 풀 리퀘스트를 만듭니다. `release`는 `cut-release` 스킬의 단계에 따라 릴리스 풀 리퀘스트를 열고 사람이 처리하도록 멈춥니다. `none`은 아무것도 하지 않습니다. `emet init`이 값을 감지하며(`v*` 태그가 있고 이름에 `release`가 들어간 워크플로 파일이 있으면 `release`, `develop` 브랜치가 있고 그런 태그가 없으면 `promote`, 그 외에는 `none`), `emet init --after-spec <mode>`로 강제할 수 있습니다. 이 키가 없는 설정은 `none`으로 로드됩니다. `/emet:run` 또는 `emet promote`에 `--no-promote`를 주면 그 실행에서는 이 단계가 `none`이 됩니다.
+
+  `afterSpec`은 비어 있지 않은 순서 있는 규칙 목록 `{ "paths"?: string[], "mode": "release|promote|none" }`도 받습니다. 그래서 하나의 저장소에서 CLI는 릴리스하고 웹사이트는 프로모트할 수 있습니다. 모드는 `develop`을 프로모트할 때 `main`으로 들어올 경로로 선택됩니다. 변경된 모든 경로에 `paths`가 일치하는 첫 번째 규칙이 적용되고, 없으면 `paths`가 없는 규칙(마지막 규칙만 생략할 수 있음)이 적용되며, 그것도 없으면 `none`입니다. 변경된 경로가 없을 때도 그 대체 규칙이 적용됩니다. glob은 편집 가드의 매처를 사용하므로 `[locale]`과 `(group)` 세그먼트는 문자 그대로 취급됩니다. 변경된 경로는 `git fetch origin main develop`과 `git diff --name-only --no-renames -z origin/main...origin/develop`에서 얻으므로, 이름 변경은 이전 경로와 새 경로를 모두 셉니다. 이 경로는 `afterSpec`이 규칙 목록이거나 `deploy.check.paths`가 설정된 경우에만, 그리고 `repo.trunk`가 `develop`일 때만 읽으며, 그 외에는 목록이 비어 있습니다. git이 실패하면 `emet promote`는 아무것도 열지 않고 종료 코드 1로 끝납니다. 문자열 형식은 경로를 전혀 보지 않습니다.
+
+  ```json
+  {
+    "handoff": {
+      "afterSpec": [
+        { "paths": ["apps/site/**", "docs/**"], "mode": "promote" },
+        { "mode": "release" }
+      ]
+    }
+  }
+  ```
+
+  여기서는 웹사이트나 문서만 건드리는 스펙은 프로모트되고, CLI를 건드리는 스펙은 릴리스 풀 리퀘스트에서 멈춥니다.
+
 - `launcher`(기본값 `auto`, `auto`, `orca`, `bg` 중 하나): Claude Code 전용이며, Codex 호스트에서는 무시되고 `emet launch`는 Orca 탭을 열지 않습니다. `claude attach`를 실행하는 Orca 탭에서도 웨이브를 엽니다. `auto`는 Orca 런타임(`orca status`)에 물어보므로 `TERM_PROGRAM`이 없는 `claude --bg` 세션에서도 동작합니다. `orca`는 항상 시도하고 `bg`는 시도하지 않습니다. 어느 쪽이든 웨이브는 백그라운드에서 실행되며, 탭을 열지 못해도 체인이 멈추지 않습니다. `emet launch <spec-id> --wave <n>`이 시작 전체를 수행합니다. [`emet launch`](cli.md#실행-워커-슬롯)를 참고하세요.
 - `permissionMode`(기본값 `bypassPermissions`, `bypassPermissions`, `auto`, `acceptEdits` 중 하나): Claude Code 전용이며, Codex 호스트에서는 무시되고 이어 붙인 세션은 [`codex.sandbox`](#codex)를 사용합니다. 이어 붙인 세션의 권한 모드입니다. 시작한 세션에서 상속되지 않습니다. `auto` 모드의 분류기가 `gh pr merge` 같은 단계를 거부해 웨이브가 반쯤 끝난 상태로 남을 수 있기 때문입니다. `permissions.deny` 규칙은 계속 적용되지만, 우회 경고를 대화형으로 한 번 수락해 두어야 합니다(`skipDangerousModePermissionPrompt`).
 
@@ -66,14 +82,18 @@ sourceHash: 2ff76dd878c6530c
       "command": "curl -fsS https://example.com/health",
       "retries": 10,
       "intervalSeconds": 15,
-      "timeoutSeconds": 300
+      "timeoutSeconds": 300,
+      "paths": ["apps/site/**"]
     }
   }
 }
 ```
 
 - `check.command`: 배포가 정상일 때 종료 코드 0으로 끝나는 셸 명령입니다.
-- `check.retries`, `check.intervalSeconds`, `check.timeoutSeconds`: 양의 정수이며, 각각 최대 시도 횟수, 시도 사이의 대기 시간, 전체 제한 시간입니다. `emet deploy-check`는 `ok`, `failed`, `timeout` 중 하나를 출력하고 종료 코드 0, 1, 3으로 끝납니다. `afterSpec`의 `promote` 단계는 머지 후에 이를 실행합니다.
+- `check.retries`, `check.intervalSeconds`, `check.timeoutSeconds`: 양의 정수이며, 각각 최대 시도 횟수, 시도 사이의 대기 시간, 전체 제한 시간입니다. `emet deploy-check`는 `ok`, `failed`, `timeout` 중 하나를 출력하고 종료 코드 0, 1, 3으로 끝납니다.
+- `check.paths`(선택): 비어 있지 않은 glob의 비어 있지 않은 목록입니다. 지정하면 머지된 프로모트는 변경된 경로가 일치할 때만 검사를 실행하고, 지정하지 않으면 머지된 모든 프로모트가 실행합니다.
+
+검사는 더 이상 `afterSpec`에 의존하지 않습니다. `emet promote`는 `deployCheck: { run, reason }`을 출력하고, 코디네이터는 `run`이 true일 때만 `emet deploy-check`를 실행합니다. `deploy.check`가 없거나 마지막 웨이브가 깨끗하지 않으면 실행하지 않습니다. 모든 머지가 배포되는 `repo.trunk`가 `main`이면 깨끗한 마지막 웨이브 뒤에 모드와 상관없이 실행합니다(`--no-promote`나 보류된 스펙에서도, `paths`를 무시하고 실행). `develop`이면 `promote` 모드에서 `paths`와 일치하는 머지된 프로모트 뒤에만 실행합니다. `release` 모드에서는 배포가 사람을 기다립니다.
 
 ## interview
 

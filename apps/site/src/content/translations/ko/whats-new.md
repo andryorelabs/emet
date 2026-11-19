@@ -2,8 +2,22 @@
 title: 새로운 소식
 description: emet 릴리스 노트. 각 버전에서 무엇이 바뀌었는지 정리합니다.
 seoTitle: "emet 새로운 소식: 릴리스 노트"
-sourceHash: d31beb683db0a11e
+sourceHash: 554cd8b7c6d96f87
 ---
+
+## 0.10.0
+
+2026-11-19
+
+### 추가됨
+
+- `handoff.afterSpec`이 `{ paths?, mode }` 규칙의 순서 있는 목록을 받아들여, CLI와 웹사이트가 함께 있는 저장소에서 CLI는 릴리스하고 웹사이트는 프로모트할 수 있습니다. 모드는 `develop`을 프로모트할 때 `main`으로 들어가는 경로를 기준으로 선택됩니다.
+- `deploy.check.paths`는 나열된 glob을 건드린 프로모트로만 배포 확인을 제한합니다.
+- `emet promote`가 `rule`과 `reason`을 출력하고 저널에 기록하며, `deployCheck: { run, reason }`을 출력합니다.
+
+### 변경됨
+
+- 배포 확인은 더 이상 `afterSpec`에 의존하지 않습니다. 트렁크가 `main`이면 마지막 wave가 깔끔하게 끝난 뒤, `develop`이면 프로모트가 병합된 뒤 실행됩니다. 코디네이터는 `afterSpec`이 `none`일 때도 모든 spec 뒤에 `emet promote`를 실행합니다.
 
 ## 0.9.1
 

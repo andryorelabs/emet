@@ -2,7 +2,7 @@
 title: Referencia de configuración
 description: Cada clave de emet.config.json con su valor por defecto y su significado.
 seoTitle: Referencia de configuración de emet
-sourceHash: 2ff76dd878c6530c
+sourceHash: 021a695d999163e3
 ---
 
 Cada clave de `emet.config.json`, con su valor por defecto y su significado. La fuente de verdad es [`emet/schema/emet.config.schema.json`](../../emet/schema/emet.config.schema.json). Los términos siguen [GLOSSARY.md](../../GLOSSARY.md). Volver al [README](../../README.md).
@@ -52,6 +52,22 @@ Qué ocurre después de que se cierra una oleada, y los límites de tamaño de l
   Solo se lanza cuando el PR se fusionó y nada quedó marcado, y se omite si ya hay una sesión `emet-<spec-id>-*` activa (`claude agents --json`). Si el lanzamiento falla, recurre a imprimir `/emet:run --dispatch <spec-id>`.
 
 - `afterSpec` (por defecto `"none"`, uno de `release`, `promote`, `none`): qué hace `/emet:run` cuando la última oleada de una spec se ha fusionado sin problemas. `promote` ejecuta `emet promote`: un pull request de `develop` a `main` fusionado con un commit de merge una vez que CI está en `pass`, y luego un pull request de sincronización de vuelta solo si `develop` está por detrás de `main`. `release` abre el pull request de release con los pasos del skill `cut-release` y se detiene para que intervenga una persona. `none` no hace nada. `emet init` lo detecta (`release` con una etiqueta `v*` y un archivo de workflow cuyo nombre contiene `release`; `promote` con una rama `develop` y sin esa etiqueta; en otro caso `none`), y `emet init --after-spec <mode>` lo fuerza. Una configuración que no lo incluye se carga como `none`. `--no-promote`, pasado a `/emet:run` o a `emet promote`, hace que el paso sea `none` en esa ejecución.
+
+  `afterSpec` también acepta una lista ordenada no vacía de reglas, `{ "paths"?: string[], "mode": "release|promote|none" }`, de modo que un mismo repositorio pueda publicar una CLI y promover un sitio web. El modo se elige a partir de las rutas que promover `develop` llevaría a `main`: gana la primera regla cuyos `paths` coinciden con todas las rutas modificadas; si no, se aplica la regla sin `paths` (solo la última regla puede omitirlo); si no, `none`. Sin rutas modificadas también se recurre a esa regla de respaldo. Los globs usan el comparador del guard de edición, así que los segmentos `[locale]` y `(group)` son literales. Las rutas modificadas provienen de `git fetch origin main develop` y `git diff --name-only --no-renames -z origin/main...origin/develop`, de modo que un renombrado cuenta su ruta antigua y la nueva. Solo se leen cuando `afterSpec` es una lista de reglas o `deploy.check.paths` está definido, y solo cuando `repo.trunk` es `develop`; en otro caso la lista está vacía. Un fallo de git hace que `emet promote` salga con 1 y no abra nada. La forma de cadena nunca mira las rutas.
+
+  ```json
+  {
+    "handoff": {
+      "afterSpec": [
+        { "paths": ["apps/site/**", "docs/**"], "mode": "promote" },
+        { "mode": "release" }
+      ]
+    }
+  }
+  ```
+
+  Aquí una spec que solo toca el sitio web o la documentación se promueve, y cualquier spec que toque la CLI se detiene en un pull request de release.
+
 - `launcher` (por defecto `auto`, uno de `auto`, `orca`, `bg`): solo Claude Code; se ignora en el host de Codex, donde `emet launch` no abre ninguna pestaña de Orca. Abre además la oleada en una pestaña de Orca que ejecuta `claude attach`. `auto` consulta el runtime de Orca (`orca status`), por lo que también funciona desde sesiones `claude --bg`, que no tienen `TERM_PROGRAM`; `orca` siempre lo intenta; `bg` nunca. La oleada se ejecuta en segundo plano de cualquier forma, y una pestaña que no logra abrirse nunca detiene la cadena. `emet launch <spec-id> --wave <n>` hace todo el lanzamiento; consulta [`emet launch`](cli.md#ejecuciones-workers-y-slots).
 - `permissionMode` (por defecto `bypassPermissions`, uno de `bypassPermissions`, `auto`, `acceptEdits`): solo Claude Code; se ignora en el host de Codex, donde la sesión encadenada usa [`codex.sandbox`](#codex). Modo de permisos de la sesión encadenada. No se hereda de la sesión que la lanza, porque el clasificador del modo `auto` puede denegar un paso como `gh pr merge` y dejar una oleada a medias. Tus reglas `permissions.deny` siguen aplicándose, pero la advertencia de bypass debe haberse aceptado una vez de forma interactiva (`skipDangerousModePermissionPrompt`).
 
@@ -66,14 +82,18 @@ Opcional. Si falta, no hay comprobación de deploy.
       "command": "curl -fsS https://example.com/health",
       "retries": 10,
       "intervalSeconds": 15,
-      "timeoutSeconds": 300
+      "timeoutSeconds": 300,
+      "paths": ["apps/site/**"]
     }
   }
 }
 ```
 
 - `check.command`: comando de shell que termina con 0 cuando el deploy está sano.
-- `check.retries`, `check.intervalSeconds`, `check.timeoutSeconds`: enteros positivos; el máximo de intentos, la espera entre ellos y el límite de tiempo total. `emet deploy-check` imprime `ok`, `failed` o `timeout` y termina con 0, 1 o 3. El paso `promote` de `afterSpec` lo ejecuta tras el merge.
+- `check.retries`, `check.intervalSeconds`, `check.timeoutSeconds`: enteros positivos; el máximo de intentos, la espera entre ellos y el límite de tiempo total. `emet deploy-check` imprime `ok`, `failed` o `timeout` y termina con 0, 1 o 3.
+- `check.paths` (opcional): una lista no vacía de globs no vacíos. Con ella, un promote que se fusionó ejecuta la comprobación solo cuando coincide una ruta modificada; sin ella, todo promote fusionado la ejecuta.
+
+La comprobación ya no depende de `afterSpec`. `emet promote` imprime `deployCheck: { run, reason }` y el coordinador ejecuta `emet deploy-check` solo cuando `run` es true: nunca sin un `deploy.check` ni tras una última oleada que no esté limpia; en `repo.trunk` `main`, donde cada merge despliega, tras una última oleada limpia sea cual sea el modo (también con `--no-promote` o una spec retenida, e ignorando `paths`); en `develop`, solo en modo `promote` tras un promote fusionado que coincida con `paths`. En modo `release` el deploy espera a una persona.
 
 ## interview
 

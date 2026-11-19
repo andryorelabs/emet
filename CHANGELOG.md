@@ -8,6 +8,25 @@ and this project adheres to
 
 ## [Unreleased]
 
+## [0.10.0] - 2026-11-19
+
+### Added
+
+- `handoff.afterSpec` accepts an ordered list of `{ paths?, mode }` rules, so a
+  repository with a CLI and a Website can release the CLI and promote the
+  Website. The mode is chosen from the paths promoting `develop` would carry
+  into `main`.
+- `deploy.check.paths` limits the deploy check to promotes that touched the
+  listed globs.
+- `emet promote` prints and journals `rule` and `reason`, and prints
+  `deployCheck: { run, reason }`.
+
+### Changed
+
+- The deploy check no longer depends on `afterSpec`: it runs after a clean final
+  wave on trunk `main`, and after a merged promote on `develop`. The coordinator
+  runs `emet promote` after every spec, also under `afterSpec` `none`.
+
 ## [0.9.1] - 2026-11-19
 
 ### Fixed
@@ -373,7 +392,8 @@ and this project adheres to
 - Per-repo configuration through `forge.config.json`.
 - `install.sh`, which installs the CLI, command and agents.
 
-[Unreleased]: https://github.com/andryorelabs/emet/compare/v0.9.1...HEAD
+[Unreleased]: https://github.com/andryorelabs/emet/compare/v0.10.0...HEAD
+[0.10.0]: https://github.com/andryorelabs/emet/compare/v0.9.1...v0.10.0
 [0.9.1]: https://github.com/andryorelabs/emet/compare/v0.9.0...v0.9.1
 [0.9.0]: https://github.com/andryorelabs/emet/compare/v0.8.6...v0.9.0
 [0.8.6]: https://github.com/andryorelabs/emet/compare/v0.8.5...v0.8.6

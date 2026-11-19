@@ -2,7 +2,7 @@
 title: Referência de configuração
 description: Cada chave do emet.config.json com seu valor padrão e seu significado.
 seoTitle: Referência de configuração do emet
-sourceHash: 2ff76dd878c6530c
+sourceHash: 021a695d999163e3
 ---
 
 Cada chave do `emet.config.json`, com seu valor padrão e seu significado. A fonte da verdade é [`emet/schema/emet.config.schema.json`](../../emet/schema/emet.config.schema.json). Os termos seguem o [GLOSSARY.md](../../GLOSSARY.md). Voltar ao [README](../../README.md).
@@ -52,6 +52,22 @@ O que acontece depois que uma onda se fecha, e os limites de tamanho da nota de 
   Ela só é lançada quando o PR foi mesclado e nada foi sinalizado, e é ignorada se já houver uma sessão `emet-<spec-id>-*` ativa (`claude agents --json`). Se o lançamento falhar, recorre a imprimir `/emet:run --dispatch <spec-id>`.
 
 - `afterSpec` (padrão `"none"`, um entre `release`, `promote`, `none`): o que `/emet:run` faz quando a última onda de uma spec foi mesclada sem problemas. `promote` executa `emet promote`: um pull request de `develop` para `main` mesclado com um commit de merge assim que a CI está em `pass`, e depois um pull request de sincronização de volta apenas se `develop` estiver atrás de `main`. `release` abre o pull request de release pelos passos do skill `cut-release` e para, à espera de uma pessoa. `none` não faz nada. `emet init` o detecta (`release` com uma tag `v*` e um arquivo de workflow cujo nome contém `release`; `promote` com um branch `develop` e sem essa tag; caso contrário `none`), e `emet init --after-spec <mode>` o força. Uma configuração sem ele é carregada como `none`. `--no-promote`, passado a `/emet:run` ou a `emet promote`, faz o passo valer `none` naquela execução.
+
+  `afterSpec` também aceita uma lista ordenada não vazia de regras, `{ "paths"?: string[], "mode": "release|promote|none" }`, de modo que um mesmo repositório possa lançar uma CLI e promover um site. O modo é escolhido a partir dos caminhos que promover `develop` levaria para `main`: vence a primeira regra cujos `paths` correspondem a todos os caminhos alterados; caso contrário, vale a regra sem `paths` (só a última regra pode omiti-lo); caso contrário, `none`. Nenhum caminho alterado também cai nessa regra de reserva. Os globs usam o comparador do guard de edição, então segmentos `[locale]` e `(group)` são literais. Os caminhos alterados vêm de `git fetch origin main develop` e `git diff --name-only --no-renames -z origin/main...origin/develop`, de modo que uma renomeação conta o caminho antigo e o novo. Eles só são lidos quando `afterSpec` é uma lista de regras ou `deploy.check.paths` está definido, e só quando `repo.trunk` é `develop`; caso contrário, a lista fica vazia. Uma falha do git faz `emet promote` sair com 1 sem abrir nada. A forma em string nunca olha os caminhos.
+
+  ```json
+  {
+    "handoff": {
+      "afterSpec": [
+        { "paths": ["apps/site/**", "docs/**"], "mode": "promote" },
+        { "mode": "release" }
+      ]
+    }
+  }
+  ```
+
+  Aqui, uma spec que só toca o site ou a documentação é promovida, e qualquer spec que toque a CLI para em um pull request de release.
+
 - `launcher` (padrão `auto`, um entre `auto`, `orca`, `bg`): somente Claude Code; ignorado no host Codex, onde `emet launch` não abre aba do Orca. Abre também a onda em uma aba do Orca executando `claude attach`. O `auto` consulta o runtime do Orca (`orca status`), portanto funciona também a partir de sessões `claude --bg`, que não têm `TERM_PROGRAM`; `orca` sempre tenta; `bg` nunca. A onda roda em segundo plano de qualquer forma, e uma aba que falha ao abrir nunca interrompe a cadeia. `emet launch <spec-id> --wave <n>` faz o lançamento completo; veja [`emet launch`](cli.md#execuções-workers-e-slots).
 - `permissionMode` (padrão `bypassPermissions`, um entre `bypassPermissions`, `auto`, `acceptEdits`): somente Claude Code; ignorado no host Codex, onde a sessão encadeada usa [`codex.sandbox`](#codex). Modo de permissão da sessão encadeada. Não é herdado da sessão que a lança, porque o classificador do modo `auto` pode negar um passo como `gh pr merge` e deixar uma onda pela metade. Suas regras `permissions.deny` continuam valendo, mas o aviso de bypass precisa ter sido aceito uma vez de forma interativa (`skipDangerousModePermissionPrompt`).
 
@@ -66,14 +82,18 @@ Opcional. Se ausente, não há verificação de deploy.
       "command": "curl -fsS https://example.com/health",
       "retries": 10,
       "intervalSeconds": 15,
-      "timeoutSeconds": 300
+      "timeoutSeconds": 300,
+      "paths": ["apps/site/**"]
     }
   }
 }
 ```
 
 - `check.command`: comando de shell que termina com 0 quando o deploy está saudável.
-- `check.retries`, `check.intervalSeconds`, `check.timeoutSeconds`: inteiros positivos; o máximo de tentativas, a espera entre elas e o limite de tempo total. `emet deploy-check` imprime `ok`, `failed` ou `timeout` e termina com 0, 1 ou 3. O passo `promote` de `afterSpec` o executa após o merge.
+- `check.retries`, `check.intervalSeconds`, `check.timeoutSeconds`: inteiros positivos; o máximo de tentativas, a espera entre elas e o limite de tempo total. `emet deploy-check` imprime `ok`, `failed` ou `timeout` e termina com 0, 1 ou 3.
+- `check.paths` (opcional): uma lista não vazia de globs não vazios. Com ela, um promote mesclado executa a verificação apenas quando um caminho alterado corresponde; sem ela, todo promote mesclado a executa.
+
+A verificação não depende mais de `afterSpec`. `emet promote` imprime `deployCheck: { run, reason }` e o coordenador executa `emet deploy-check` somente quando `run` é true: nunca sem um `deploy.check` nem após uma última onda que não esteja limpa; em `repo.trunk` `main`, onde todo merge faz deploy, após uma última onda limpa qualquer que seja o modo (também com `--no-promote` ou uma spec retida, e ignorando `paths`); em `develop`, somente no modo `promote` após um promote mesclado que corresponda a `paths`. No modo `release`, o deploy espera por uma pessoa.
 
 ## interview
 

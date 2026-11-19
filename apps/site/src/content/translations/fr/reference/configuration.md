@@ -2,7 +2,7 @@
 title: Référence de configuration
 description: Chaque clé de emet.config.json avec sa valeur par défaut et sa signification.
 seoTitle: Référence de configuration d'emet
-sourceHash: 2ff76dd878c6530c
+sourceHash: 021a695d999163e3
 ---
 
 Chaque clé de `emet.config.json`, avec sa valeur par défaut et sa signification. La source de vérité est [`emet/schema/emet.config.schema.json`](../../emet/schema/emet.config.schema.json). Les termes suivent [GLOSSARY.md](../../GLOSSARY.md). Retour au [README](../../README.md).
@@ -52,6 +52,22 @@ Ce qui se passe après la clôture d'une vague, et les limites de taille de la n
   Elle ne se lance que lorsque la PR a été fusionnée et que rien n'a été signalé, et elle est ignorée si une session `emet-<spec-id>-*` est déjà active (`claude agents --json`). Si le lancement échoue, elle se rabat sur l'affichage de `/emet:run --dispatch <spec-id>`.
 
 - `afterSpec` (par défaut `"none"`, parmi `release`, `promote`, `none`) : ce que fait `/emet:run` une fois la dernière vague d'une spec fusionnée sans problème. `promote` exécute `emet promote` : une pull request de `develop` vers `main` fusionnée avec un commit de merge dès que la CI est `pass`, puis une pull request de resynchronisation en sens inverse seulement si `develop` est en retard sur `main`. `release` ouvre la pull request de release en suivant les étapes du skill `cut-release` et s'arrête pour qu'une personne reprenne la main. `none` ne fait rien. `emet init` le détecte (`release` avec un tag `v*` et un fichier de workflow dont le nom contient `release` ; `promote` avec une branche `develop` et sans un tel tag ; sinon `none`), et `emet init --after-spec <mode>` le force. Une configuration qui ne le contient pas se charge comme `none`. `--no-promote`, passé à `/emet:run` ou à `emet promote`, met l'étape à `none` pour cette exécution.
+
+  `afterSpec` accepte aussi une liste ordonnée non vide de règles, `{ "paths"?: string[], "mode": "release|promote|none" }`, de sorte qu'un même dépôt puisse publier une CLI et promouvoir un site web. Le mode est choisi d'après les chemins que la promotion de `develop` apporterait dans `main` : la première règle dont les `paths` correspondent à tous les chemins modifiés l'emporte ; sinon s'applique la règle sans `paths` (seule la dernière règle peut en être dépourvue) ; sinon `none`. Aucun chemin modifié retombe aussi sur cette règle de repli. Les globs utilisent le matcher du garde d'édition, donc les segments `[locale]` et `(group)` sont littéraux. Les chemins modifiés proviennent de `git fetch origin main develop` et de `git diff --name-only --no-renames -z origin/main...origin/develop`, si bien qu'un renommage compte son ancien et son nouveau chemin. Ils ne sont lus que lorsque `afterSpec` est une liste de règles ou que `deploy.check.paths` est défini, et seulement quand `repo.trunk` vaut `develop` ; sinon la liste est vide. Un échec de git fait sortir `emet promote` avec 1 sans rien ouvrir. La forme chaîne ne regarde jamais les chemins.
+
+  ```json
+  {
+    "handoff": {
+      "afterSpec": [
+        { "paths": ["apps/site/**", "docs/**"], "mode": "promote" },
+        { "mode": "release" }
+      ]
+    }
+  }
+  ```
+
+  Ici, une spec qui ne touche que le site web ou la documentation est promue, et toute spec qui touche la CLI s'arrête à une pull request de release.
+
 - `launcher` (par défaut `auto`, parmi `auto`, `orca`, `bg`) : Claude Code uniquement ; ignoré sur l'hôte Codex, où `emet launch` n'ouvre aucun onglet Orca. Ouvre aussi la vague dans un onglet Orca exécutant `claude attach`. `auto` interroge le runtime d'Orca (`orca status`), donc cela fonctionne aussi depuis des sessions `claude --bg`, qui n'ont pas de `TERM_PROGRAM` ; `orca` essaie toujours ; `bg` jamais. La vague s'exécute en arrière-plan dans tous les cas, et un onglet qui ne s'ouvre pas n'arrête jamais la chaîne. `emet launch <spec-id> --wave <n>` fait tout le lancement ; voir [`emet launch`](cli.md#exécutions-workers-et-slots).
 - `permissionMode` (par défaut `bypassPermissions`, parmi `bypassPermissions`, `auto`, `acceptEdits`) : Claude Code uniquement ; ignoré sur l'hôte Codex, où la session chaînée utilise [`codex.sandbox`](#codex). Mode d'autorisation de la session chaînée. Il n'est pas hérité de la session qui la lance, car le classificateur du mode `auto` peut refuser une étape comme `gh pr merge` et laisser une vague à moitié terminée. Vos règles `permissions.deny` s'appliquent toujours, mais l'avertissement de contournement doit avoir été accepté une fois en mode interactif (`skipDangerousModePermissionPrompt`).
 
@@ -66,14 +82,18 @@ Optionnel. Absent, il n'y a aucune vérification de déploiement.
       "command": "curl -fsS https://example.com/health",
       "retries": 10,
       "intervalSeconds": 15,
-      "timeoutSeconds": 300
+      "timeoutSeconds": 300,
+      "paths": ["apps/site/**"]
     }
   }
 }
 ```
 
 - `check.command` : commande shell qui se termine avec 0 lorsque le déploiement est sain.
-- `check.retries`, `check.intervalSeconds`, `check.timeoutSeconds` : entiers positifs ; le nombre maximal de tentatives, l'attente entre elles et la limite de temps globale. `emet deploy-check` affiche `ok`, `failed` ou `timeout` et se termine avec 0, 1 ou 3. L'étape `promote` de `afterSpec` l'exécute après la fusion.
+- `check.retries`, `check.intervalSeconds`, `check.timeoutSeconds` : entiers positifs ; le nombre maximal de tentatives, l'attente entre elles et la limite de temps globale. `emet deploy-check` affiche `ok`, `failed` ou `timeout` et se termine avec 0, 1 ou 3.
+- `check.paths` (facultatif) : une liste non vide de globs non vides. Avec elle, un promote fusionné n'exécute la vérification que si un chemin modifié correspond ; sans elle, tout promote fusionné l'exécute.
+
+La vérification ne dépend plus de `afterSpec`. `emet promote` affiche `deployCheck: { run, reason }` et le coordinateur n'exécute `emet deploy-check` que lorsque `run` vaut true : jamais sans `deploy.check` ni après une dernière vague qui n'est pas propre ; sur `repo.trunk` `main`, où chaque fusion déploie, après une dernière vague propre quel que soit le mode (y compris avec `--no-promote` ou une spec retenue, et en ignorant `paths`) ; sur `develop`, uniquement en mode `promote` après un promote fusionné qui correspond à `paths`. En mode `release`, le déploiement attend une personne.
 
 ## interview
 
