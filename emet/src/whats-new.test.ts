@@ -52,6 +52,20 @@ describe("whatsNewNotice", () => {
     expect(stored()).toBe("0.10.0");
   });
 
+  test("a source run neither prints nor touches the marker", () => {
+    expect(whatsNewNotice({ current: "0.0.0-dev", markerPath: marker })).toBeNull();
+    expect(existsSync(marker)).toBe(false);
+    writeFileSync(marker, "0.9.0");
+    expect(whatsNewNotice({ current: "0.0.0-dev", markerPath: marker })).toBeNull();
+    expect(stored()).toBe("0.9.0");
+  });
+
+  test("a dev version left in the marker counts as no marker", () => {
+    writeFileSync(marker, "0.0.0-dev");
+    expect(whatsNewNotice({ current: "0.10.0", markerPath: marker })).toBeNull();
+    expect(stored()).toBe("0.10.0");
+  });
+
   test("an unwritable marker never throws", () => {
     const blocked = path.join(directory, "file");
     writeFileSync(blocked, "x");

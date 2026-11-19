@@ -15,7 +15,8 @@ import { BINARY } from "./names";
  */
 declare const FORGE_BUILD_VERSION: string | undefined;
 
-const DEV_VERSION = "0.0.0-dev";
+/** The version reported when running from source rather than a compiled release. */
+export const DEV_VERSION = "0.0.0-dev";
 
 /** Narrows a text-attribute import, which the type-aware linter resolves as an error type. */
 function templateText(imported: unknown): string {

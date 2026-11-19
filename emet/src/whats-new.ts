@@ -2,7 +2,7 @@ import * as fs from "node:fs";
 import os from "node:os";
 import * as path from "node:path";
 
-import { EMET_VERSION } from "./assets";
+import { DEV_VERSION, EMET_VERSION } from "./assets";
 import { isNewer } from "./update-notice";
 
 const MARKER_FILE = "last-seen-version";
@@ -38,13 +38,18 @@ function writeMarker(markerPath: string, version: string): void {
 
 /**
  * The post-update line when the marker holds an older version than `current`,
- * else null. Always rewrites the marker with `current`; an unreadable,
- * malformed or unwritable marker yields null and never throws.
+ * else null. Rewrites the marker with `current`; an unreadable, malformed or
+ * unwritable marker yields null and never throws. A source run (`current` is
+ * the dev version) neither reads nor writes the marker, and a dev version
+ * left in the marker counts as no marker.
  */
 export function whatsNewNotice(input: { current: string; markerPath: string }): string | null {
+  if (input.current === DEV_VERSION) return null;
   const previous = readMarker(input.markerPath);
   writeMarker(input.markerPath, input.current);
-  if (previous === null || !isNewer(input.current, previous)) return null;
+  if (previous === null || previous === DEV_VERSION || !isNewer(input.current, previous)) {
+    return null;
+  }
   const anchor = input.current.replaceAll(".", "");
   return `emet updated ${previous} → ${input.current}. What's new: ${WHATS_NEW_URL}#${anchor}`;
 }
