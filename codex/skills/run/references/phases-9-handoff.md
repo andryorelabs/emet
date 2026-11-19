@@ -37,6 +37,21 @@ id is printed in the `Stop` hook's block message); the
 hook only blocks once no worker is in flight and claims remain, so a turn
 spent waiting on workers is never blocked.
 
+**After-spec step.** When the frontier is empty and the spec's last wave
+merged clean (not left open, not flagged), run the after-spec step chosen by
+`handoff.afterSpec` before the final report: `emet promote --spec <spec-id>`.
+It never runs when this session was started with `--no-promote` (pass the flag
+through) or when `handoff.afterSpec` is `none`: say that it was skipped and
+why. In `promote` mode it opens a `develop` to `main` pull request, waits with
+`emet ci --pr <n> --wait`, merges only when CI is `pass` (never on `fail` or
+`timeout`; report it and stop), and opens and merges a `main` to `develop` sync
+pull request only when `develop` is behind `main`. In `release` mode it opens
+nothing to merge: follow the `cut-release` skill's steps to open the release
+pull request and leave it for a person. When `deploy.check` is configured, run
+`emet deploy-check` after the merge (exit 0 `ok`, 1 `failed`, 3 `timeout`) and
+put its state in the final report; a `failed` or `timeout` check is a human
+step, never retried silently.
+
 **If the frontier is non-empty, do not loop back to Phase 6 in this same
 session.** Waves chain across sessions, not within one — each session pays
 its fixed startup cost once and carries one wave's worth of growing context,

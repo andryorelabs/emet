@@ -46,8 +46,33 @@ What happens after a wave closes, and the size limits of a worker's handoff note
 
   It launches only when the PR merged and nothing was flagged, and it skips if an `emet-<spec-id>-*` session is already live (`claude agents --json`). If the launch fails, it falls back to printing `/emet:run --dispatch <spec-id>`.
 
+- `afterSpec` (default `"none"`, one of `release`, `promote`, `none`): what `/emet:run` does once a spec's last wave has merged clean. `promote` runs `emet promote`: a `develop` to `main` pull request merged with a merge commit once CI is `pass`, then a sync pull request back only if `develop` is behind `main`. `release` opens the release pull request through the `cut-release` skill's steps and stops for a person. `none` does nothing. `emet init` detects it (`release` with a `v*` tag and a workflow file whose name contains `release`; `promote` with a `develop` branch and no such tag; otherwise `none`), and `emet init --after-spec <mode>` forces it. A config without it loads as `none`. `--no-promote`, given to `/emet:run` or `emet promote`, makes the step `none` for that run.
 - `launcher` (default `auto`, one of `auto`, `orca`, `bg`): Claude Code only; ignored on the Codex host, where `emet launch` opens no Orca tab. Also open the wave in an Orca tab running `claude attach`. `auto` asks the Orca runtime (`orca status`), so it works from `claude --bg` sessions too, which have no `TERM_PROGRAM`; `orca` always tries; `bg` never. The wave runs in the background either way, and a tab that fails to open never stops the chain. `emet launch <spec-id> --wave <n>` does the whole launch; see [`emet launch`](cli.md#runs-workers-and-slots).
 - `permissionMode` (default `bypassPermissions`, one of `bypassPermissions`, `auto`, `acceptEdits`): Claude Code only; ignored on the Codex host, where the chained session uses [`codex.sandbox`](#codex). Permission mode of the chained session. It is not inherited from the launching session, because `auto` mode's classifier can deny a step such as `gh pr merge` and leave a wave half-finished. Your `permissions.deny` rules still apply, but the bypass warning must have been accepted once interactively (`skipDangerousModePermissionPrompt`).
+
+## deploy
+
+Optional. Absent means no deploy check.
+
+```json
+{
+  "deploy": {
+    "check": {
+      "command": "curl -fsS https://example.com/health",
+      "retries": 10,
+      "intervalSeconds": 15,
+      "timeoutSeconds": 300
+    }
+  }
+}
+```
+
+- `check.command`: shell command that exits 0 when the deploy is healthy.
+- `check.retries`, `check.intervalSeconds`, `check.timeoutSeconds`: positive integers; the most attempts, the wait between them and the overall time cap. `emet deploy-check` prints `ok`, `failed` or `timeout` and exits 0, 1 or 3. The after-spec `promote` step runs it after the merge.
+
+## interview
+
+- `research` (default `true`): when `true`, Phase 1 of `/emet:run` has the agent look up the answer in the repo, docs or primary sources, and explain why it recommends an option, before asking a technical question that offers options. The user still answers. `false` turns it off.
 
 ## gate
 

@@ -13,7 +13,11 @@ proposes is **not written yet** — note it in the plan file, apply in Phase 5.
 Interview in **frontier rounds**, not one question at a time. Each round asks
 every currently unblocked decision together; each carries a `➡️` recommended
 answer, so the user can reply "yes" to accept all. A decision answerable from
-the repo or docs is not asked: look it up yourself with a read-only search. Fog
+the repo or docs is not asked: look it up yourself with a read-only search. When
+`interview.research` is `true` (the default), also look up the answer in the
+repo, docs or primary sources before asking a technical question that offers
+options, and explain why you recommend one option next to its `➡️`; the user
+still answers. `interview.research: false` turns this off. Fog
 answerable from primary sources is not asked either: invoke the skill with
 `research`, recording findings in the plan file. Answers unblock the next round. Soft cap: after ~4 rounds, or
 once only low-stakes decisions remain, wrap up — list the leftovers with their
