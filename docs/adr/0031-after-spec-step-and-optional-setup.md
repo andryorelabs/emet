@@ -1,6 +1,7 @@
 # 0031. An after-spec step per repo type, and an optional setup
 
 Status: Accepted (2026-11-18)
+Amended: 2026-11-19, path-based after-spec rules and a deploy check that no longer depends on the mode
 Spec: the manual-work reduction spec, spec 3 of 3 (S1, S2, S7, S8)
 
 Amends [0012](0012-develop-development-branch.md).
@@ -34,3 +35,28 @@ Amends [0012](0012-develop-development-branch.md).
 - **Ask in each interview**: rejected because the answer is the same for a repo every time; the interview still asks when a spec needs a different outcome, through `--no-promote`.
 - **Put Engram in `dependencies`**: rejected because dependencies cannot be optional.
 - **A hook that runs at plugin install**: rejected because Claude Code has none.
+
+## Amendment (2026-11-19)
+
+### Context
+
+Three of the repositories that use emet hold a published package or CLI and a Website that deploys from `main`, and two others work on `main` and deploy on every merge. A single `handoff.afterSpec` per repository cannot tell a Website-only spec, which should deploy without a release, from a CLI spec, which must stop at a release pull request. `deploy.check` ran only inside `promote`, so a repository whose waves already land on `main` never ran it.
+
+### Decision
+
+- `handoff.afterSpec` is either the string above or an ordered list of rules `{ paths?, mode }`. A rule matches when every path that promoting `develop` would carry into `main` matches one of its globs; the first match wins, the rule without `paths` is the fallback, and with no fallback the mode is `none`. A mixed set of paths therefore falls to the fallback, so a CLI change never reaches `main` without a tag.
+- The paths are read when `emet promote` runs, from `origin/main...origin/develop`. Nothing about a spec's paths or start is stored. The string form ignores paths and behaves as before.
+- `deploy.check` has an optional `paths` filter and is decoupled from the mode. It runs after a merge that reached the branch that deploys: a merged `promote` whose changed paths match, or the clean final wave when the trunk is `main`. It never runs in `release` mode, because the deploy waits for a person.
+- `emet promote` now runs after every spec's last wave, including with `none`, and reports the rule it used and whether the deploy check should run; the prompt runs `emet deploy-check` only then.
+- The prompt exception above also covers the rewritten after-spec and deploy-check paragraph of `emet/reference/phases-9-handoff.md`.
+
+### Consequences
+
+- A Website-only spec in a mixed repository is promoted and deployed with no release; any CLI change in `develop` sends the next promote down the release path.
+- A repository on the string form changes nothing.
+- A broken `git fetch` or `git diff` fails `emet promote` instead of being read as "no paths".
+
+### Alternatives considered
+
+- **Store the spec's start sha and changed paths**: rejected because `promote` already compares exactly what would reach `main`, which is also what the release safety needs, and it adds run state to keep in sync.
+- **One `afterSpec` per directory**: rejected because the choice depends on the whole set of changed paths, not on each one.

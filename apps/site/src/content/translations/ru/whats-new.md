@@ -2,8 +2,16 @@
 title: Что нового
 description: Примечания к выпускам emet: что изменилось в каждой версии.
 seoTitle: "Что нового в emet: примечания к выпускам"
-sourceHash: b47ea0e52bb41632
+sourceHash: d31beb683db0a11e
 ---
+
+## 0.9.1
+
+2026-11-19
+
+### Исправлено
+
+- `emet setup` принимает `--data-dir`, поэтому хук SessionStart плагина больше не падает с ошибкой `unknown flag --data-dir`.
 
 ## 0.9.0
 
