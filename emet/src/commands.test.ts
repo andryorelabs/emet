@@ -92,6 +92,7 @@ describe("promote, deploy-check, fleet and setup", () => {
       { name: "--with", value: true },
       { name: "--list", value: false },
       { name: "--notice", value: false },
+      { name: "--data-dir", value: true },
       { name: "--json", value: false },
     ]);
   });
