@@ -16,8 +16,9 @@ import path from "node:path";
 
 import { claudeHost } from "./agenthost";
 import { codexHost } from "./agenthost-codex";
-import type { DependencyProbes } from "./dependencies";
+import { classifyEngram, type DependencyProbes } from "./dependencies";
 import {
+  formatGlobalDependencyFinding,
   auditRepo,
   checkExternalCliFlags,
   checkTrackerTarget,
@@ -1080,6 +1081,24 @@ describe("findDoubleInstall", () => {
     expect(findDoubleInstall(home, forgePlugin)).toEqual([]);
     writeManifest();
     expect(findDoubleInstall(home, [])).toEqual([]);
+  });
+});
+
+describe("Engram note", () => {
+  test("a missing binary and plugin print one note with the README install commands", () => {
+    const line = formatGlobalDependencyFinding(
+      classifyEngram({ binary: false, plugin: { kind: "listed", status: "missing" } }),
+    );
+    expect(line).toContain("note:");
+    expect(line).toContain("brew install gentleman-programming/tap/engram");
+    expect(line).toContain("engram setup claude-code");
+  });
+
+  test("a present binary and plugin print nothing", () => {
+    const line = formatGlobalDependencyFinding(
+      classifyEngram({ binary: true, plugin: { kind: "listed", status: "installed" } }),
+    );
+    expect(line).toBeNull();
   });
 });
 

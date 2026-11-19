@@ -10,6 +10,7 @@ import {
   agentHostOfConfig,
   checkDependencies,
   classifyClaudePluginProbe,
+  classifyEngram,
   classifyForgeAgentsProbe,
   createDependencyProbes,
   formatDependencyCheck,
@@ -810,7 +811,7 @@ export function parseDoctorArguments(argv: readonly string[]): string[] {
 /** Prints the plugin's own status once, fleet-wide — the alternative,
  * repeating it under every one of N repos, would both spam a large sweep and
  * hide that it is one global fact, not something particular to any one repo. */
-function formatGlobalDependencyFinding(check: DependencyCheck): string | null {
+export function formatGlobalDependencyFinding(check: DependencyCheck): string | null {
   if (check.status === "satisfied") return null;
   const label = check.status === "unsatisfied" ? "dependency" : "note";
   return `  - ${label}: ${formatDependencyCheck(check, "    ")}`;
@@ -1120,7 +1121,14 @@ async function main(targets: readonly string[]): Promise<void> {
   const skillsChecks =
     probes.skillsContract?.() ?? checkSkillsContract(listInstalledPlugins(host), host);
   const doubleInstall = findDoubleInstall(os.homedir(), listInstalledPlugins(host), host);
-  const globalFindingLines = [globalPluginCheck, globalForgeAgentsCheck, ...skillsChecks]
+  const engramProbe = await probes.engram?.();
+  const engramChecks = engramProbe === undefined ? [] : [classifyEngram(engramProbe)];
+  const globalFindingLines = [
+    globalPluginCheck,
+    globalForgeAgentsCheck,
+    ...skillsChecks,
+    ...engramChecks,
+  ]
     .map(formatGlobalDependencyFinding)
     .filter((line): line is string => line !== null);
   if (globalFindingLines.length > 0) {

@@ -1,22 +1,274 @@
 import { afterEach, describe, expect, spyOn, test } from "bun:test";
+import { chmodSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import os from "node:os";
+import path from "node:path";
 
-import { run } from "./promote";
+import type { CiOutcome, GhRunner } from "./ci";
+import { DEFAULT_FORGE_CONFIG } from "./config";
+import { BINARY } from "./names";
+import {
+  buildPromoteDeps,
+  isFinalWaveClean,
+  parseSpecState,
+  planAfterSpec,
+  readSpecState,
+  promoteDevelop,
+  run,
+  type PromoteDeps,
+  type PromoteOutcome,
+} from "./promote";
 
-const originalExitCode = process.exitCode;
+function configWith(afterSpec: "release" | "promote" | "none") {
+  return { handoff: { ...DEFAULT_FORGE_CONFIG.handoff, afterSpec } };
+}
 
-afterEach(() => {
-  process.exitCode = originalExitCode;
+interface Harness {
+  deps: PromoteDeps;
+  calls: string[][];
+  recorded: PromoteOutcome[];
+}
+
+function harness(options: {
+  mode?: "release" | "promote" | "none";
+  ci?: CiOutcome["state"];
+  ahead?: number;
+}): Harness {
+  const calls: string[][] = [];
+  const recorded: PromoteOutcome[] = [];
+  let created = 0;
+  const gh: GhRunner = (args) => {
+    calls.push([...args]);
+    if (args[0] === "pr" && args[1] === "create") {
+      created += 1;
+      return Promise.resolve(`https://github.com/o/r/pull/${created === 1 ? 10 : 11}\n`);
+    }
+    if (args[0] === "api") return Promise.resolve(`${options.ahead ?? 0}\n`);
+    return Promise.resolve("");
+  };
+  const deps: PromoteDeps = {
+    mode: options.mode ?? "promote",
+    gh,
+    waitForCi: () =>
+      Promise.resolve({
+        state: options.ci ?? "pass",
+        failedChecks: [],
+        flakeReruns: 0,
+        noChecks: false,
+      }),
+    record: (outcome) => recorded.push({ ...outcome }),
+  };
+  return { deps, calls, recorded };
+}
+
+describe("planAfterSpec", () => {
+  test("returns the configured mode", () => {
+    expect(planAfterSpec(configWith("promote"), { noPromote: false, finalWaveClean: true })).toBe(
+      "promote",
+    );
+  });
+
+  test("--no-promote makes it none whatever the config says", () => {
+    expect(planAfterSpec(configWith("release"), { noPromote: true, finalWaveClean: true })).toBe(
+      "none",
+    );
+  });
+
+  test("an open or flagged last wave makes it none", () => {
+    expect(planAfterSpec(configWith("promote"), { noPromote: false, finalWaveClean: false })).toBe(
+      "none",
+    );
+  });
 });
 
-describe("promote skeleton", () => {
-  test("exits 2 with a not implemented message", async () => {
-    const errors: string[] = [];
-    const spy = spyOn(console, "error").mockImplementation((...parts: unknown[]) => {
-      errors.push(parts.join(" "));
+describe("promoteDevelop", () => {
+  test("none skips without touching gh", async () => {
+    const { deps, calls } = harness({ mode: "none" });
+    const outcome = await promoteDevelop({ dryRun: false }, deps);
+    expect(outcome.skipped).toBe("after-spec is none");
+    expect(calls).toHaveLength(0);
+  });
+
+  test("release opens and merges nothing", async () => {
+    const { deps, calls } = harness({ mode: "release" });
+    const outcome = await promoteDevelop({ dryRun: false }, deps);
+    expect(outcome.merged).toBe(false);
+    expect(outcome.skipped).toContain("cut-release");
+    expect(calls).toHaveLength(0);
+  });
+
+  test("dry run opens no pull request", async () => {
+    const { deps, calls } = harness({});
+    const outcome = await promoteDevelop({ dryRun: true }, deps);
+    expect(outcome.prNumber).toBeNull();
+    expect(calls).toHaveLength(0);
+  });
+
+  test("merges with a merge commit when CI passes and records one event", async () => {
+    const { deps, calls, recorded } = harness({});
+    const outcome = await promoteDevelop({ dryRun: false }, deps);
+    expect(outcome).toMatchObject({ prNumber: 10, merged: true, syncPrNumber: null });
+    expect(calls).toContainEqual(["pr", "merge", "10", "--merge"]);
+    expect(calls.find((call) => call[0] === "pr" && call[1] === "create")).toContain(
+      "chore: 🔖 promote develop",
+    );
+    expect(recorded).toHaveLength(1);
+    expect(recorded[0]?.merged).toBe(true);
+  });
+
+  test("opens and merges a sync pull request only when develop is behind main", async () => {
+    const { deps, calls } = harness({ ahead: 2 });
+    const outcome = await promoteDevelop({ dryRun: false }, deps);
+    expect(outcome.syncPrNumber).toBe(11);
+    expect(calls).toContainEqual(["pr", "merge", "11", "--merge"]);
+  });
+
+  test.each(["fail", "timeout", "env-fault"] as const)("never merges when CI is %s", async (ci) => {
+    const { deps, calls } = harness({ ci });
+    const outcome = await promoteDevelop({ dryRun: false }, deps);
+    expect(outcome).toMatchObject({ merged: false, ciState: ci });
+    expect(calls.some((call) => call[0] === "pr" && call[1] === "merge")).toBe(false);
+  });
+
+  test("rejects when gh prints no pull request URL", async () => {
+    const { deps } = harness({});
+    deps.gh = () => Promise.resolve("nope");
+    let message = "";
+    try {
+      await promoteDevelop({ dryRun: false }, deps);
+    } catch (error: unknown) {
+      message = error instanceof Error ? error.message : String(error);
+    }
+    expect(message).toContain("pull request number");
+  });
+});
+
+describe("buildPromoteDeps", () => {
+  test("waits for CI through gh and passes a pull request with no checks", async () => {
+    const calls: string[][] = [];
+    const deps = buildPromoteDeps({
+      mode: "promote",
+      repoRoot: "/repo",
+      specId: "629",
+      gh: (args) => {
+        calls.push([...args]);
+        return Promise.resolve('{"statusCheckRollup":[]}');
+      },
     });
-    await run([]);
-    spy.mockRestore();
+    const outcome = await deps.waitForCi(7);
+    expect(outcome.state).toBe("pass");
+    expect(calls[0]).toContain("statusCheckRollup");
+  });
+
+  test("records a promote event with the spec, mode and result", () => {
+    const events: unknown[] = [];
+    const deps = buildPromoteDeps({
+      mode: "promote",
+      repoRoot: "/repo",
+      specId: "629",
+      append: (event) => {
+        events.push(event);
+      },
+    });
+    deps.record({
+      mode: "promote",
+      prNumber: 7,
+      merged: true,
+      syncPrNumber: null,
+      ciState: "pass",
+    });
+    expect(events).toEqual([
+      {
+        kind: "promote",
+        repo: "/repo",
+        origin: "auto",
+        data: {
+          spec: "629",
+          mode: "promote",
+          prNumber: 7,
+          merged: true,
+          syncPrNumber: null,
+          ciState: "pass",
+        },
+      },
+    ]);
+  });
+});
+
+describe("readSpecState", () => {
+  test("reads the state from the emet binary on PATH", async () => {
+    const directory = mkdtempSync(path.join(os.tmpdir(), "emet-promote-bin-"));
+    const originalPath = process.env.PATH;
+    try {
+      const script = path.join(directory, BINARY);
+      writeFileSync(script, `#!/bin/sh\necho '{"state":"working","waves":[]}'\n`);
+      chmodSync(script, 0o755);
+      process.env.PATH = `${directory}:${originalPath ?? ""}`;
+      expect(await readSpecState("629")).toBe("working");
+    } finally {
+      process.env.PATH = originalPath;
+      rmSync(directory, { recursive: true, force: true });
+    }
+  });
+});
+
+describe("final wave state", () => {
+  test("only an idle spec has a clean final wave", () => {
+    expect(isFinalWaveClean("idle")).toBe(true);
+    for (const state of ["working", "checking", "ready", "needs-decision"]) {
+      expect(isFinalWaveClean(state)).toBe(false);
+    }
+  });
+
+  test("reads the state out of the status output", () => {
+    const output = `{\n  "state": "needs-decision",\n  "waves": []\n}\nemet status: needs-decision`;
+    expect(parseSpecState(output, "629")).toBe("needs-decision");
+  });
+
+  test("rejects output with no JSON or no state", () => {
+    expect(() => parseSpecState("emet status: idle", "629")).toThrow("could not read");
+    expect(() => parseSpecState('{"waves": []}', "629")).toThrow("no state");
+  });
+});
+
+async function runCaptured(
+  argv: string[],
+  overrides: Partial<PromoteDeps> & { specState?: (specId: string) => Promise<string> } = {},
+) {
+  const logs: string[] = [];
+  const errors: string[] = [];
+  const logSpy = spyOn(console, "log").mockImplementation((...parts: unknown[]) => {
+    logs.push(parts.join(" "));
+  });
+  const errorSpy = spyOn(console, "error").mockImplementation((...parts: unknown[]) => {
+    errors.push(parts.join(" "));
+  });
+  await run(argv, { specState: () => Promise.resolve("idle"), ...overrides });
+  logSpy.mockRestore();
+  errorSpy.mockRestore();
+  return { logs, errors };
+}
+
+describe("run", () => {
+  const originalExitCode = process.exitCode;
+
+  afterEach(() => {
+    process.exitCode = originalExitCode ?? 0;
+  });
+
+  test("exits 2 without --spec", async () => {
+    const { errors } = await runCaptured([]);
     expect(process.exitCode).toBe(2);
-    expect(errors.join("\n")).toContain("not implemented");
+    expect(errors.join("\n")).toContain("usage");
+  });
+
+  test("--no-promote skips with exit 0", async () => {
+    const { logs } = await runCaptured(["--spec", "629", "--no-promote"]);
+    expect(process.exitCode ?? 0).toBe(0);
+    expect(logs.join("\n")).toContain("after-spec is none");
+  });
+
+  test("a dry run in promote mode opens nothing and exits 0", async () => {
+    const { logs } = await runCaptured(["--spec", "629", "--dry-run"], { mode: "promote" });
+    expect(logs.join("\n")).toContain("dry run");
   });
 });
