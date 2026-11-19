@@ -65,8 +65,8 @@ describe("plugin manifests", () => {
     ]);
   });
 
-  test("commands/ holds exactly doctor.md, init.md and run.md", () => {
-    const expected = ["doctor.md", "init.md", "run.md"];
+  test("commands/ holds exactly doctor.md, init.md, run.md and setup.md", () => {
+    const expected = ["doctor.md", "init.md", "run.md", "setup.md"];
     const unexpected = readdirSync(path.join(repoRoot, "commands")).filter(
       (file) => !expected.includes(file),
     );
@@ -83,6 +83,11 @@ describe("plugin manifests", () => {
       expect(text).toMatch(/^---\ndescription: .+\n---\n/);
       expect(text).toContain(call);
     }
+  });
+
+  test("SessionStart runs the one-time setup notice with the plugin data directory", () => {
+    const hookConfig = readFileSync(path.join(repoRoot, "hooks/hooks.json"), "utf8");
+    expect(hookConfig).toContain('setup --notice --data-dir \\"${CLAUDE_PLUGIN_DATA}\\"');
   });
 
   test("no manifest, agent or hook contains forge", () => {

@@ -95,7 +95,7 @@ describe("skills", () => {
       skillFiles()
         .map(({ directory }) => directory)
         .toSorted(),
-    ).toEqual([...MODULE_SKILLS, "doctor", "init", "run"].toSorted());
+    ).toEqual([...MODULE_SKILLS, "doctor", "init", "run", "setup"].toSorted());
   });
 
   test("each skill's name equals its directory and its description says Use when", () => {

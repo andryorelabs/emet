@@ -490,6 +490,7 @@ describe("run", () => {
       output.restore();
     }
     expect(output.out).toHaveLength(1);
+    expect(parseObject(output.out[0] ?? "").systemMessage).toContain("/emet:setup");
     expect(existsSync(path.join(directory, "setup-notice-shown"))).toBe(true);
   });
 

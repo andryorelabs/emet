@@ -47,7 +47,7 @@ const hashTools = {
 };
 
 /** The slash commands install.sh ships, as `commands/<name>.md`. */
-const commandNames = ["run", "init", "doctor"] as const;
+const commandNames = ["run", "init", "doctor", "setup"] as const;
 
 let workDir = "";
 let homeDir = "";
