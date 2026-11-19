@@ -2,7 +2,7 @@
 title: CLI リファレンス
 description: すべての emet サブコマンド、ゲートと記録の表、終了コード、環境変数を説明します。
 seoTitle: emet CLI リファレンス
-sourceHash: 3f581ec5b9773165
+sourceHash: 00afab0462e7fd07
 ---
 
 すべての `emet` サブコマンド、ゲートと記録の表、終了コード、環境変数です。用語は [GLOSSARY.md](../../GLOSSARY.md) に従います。[README](../../README.md) に戻る。すべてのコマンドは `--help` で使い方を表示します。
@@ -16,8 +16,10 @@ Claude Code 内では、3 つのスラッシュコマンドが CLI をラップ�
 ### セットアップと監査
 
 - `emet migrate [--dry-run]`: 旧形式のリポジトリを emet の名前に変更します。
-- `emet init [--tracker linear|github|local] [--force]`: パッケージマネージャー、トランクブランチ、トラッカーの種類を自動検出し、`emet.config.json` と `docs/agents/*.md` ファイルを書き出します。`--tracker local` はローカルトラッカーを設定します。
+- `emet init [--tracker linear|github|local] [--after-spec release|promote|none] [--force]`: パッケージマネージャー、トランクブランチ、トラッカーの種類、after-spec モード（[`handoff.afterSpec`](configuration.md#handoff) を参照）を自動検出し、`emet.config.json` と `docs/agents/*.md` ファイルを書き出します。`--tracker local` はローカルトラッカーを設定します。
 - `emet doctor [--all] [<path> ...]`: 任意の数のリポジトリを一度に読み取り専用で監査します。既定はカレントディレクトリです。
+- `emet setup [--yes] [--with <ids>] [--list] [--json]`: 任意のインストールを readline のプロンプトで提案します。対象は `mattpocock-skills`（既定でオン）、`engram`、`mascot`、`orca-pet`、`gh-auth`、そして推奨の Claude Code 設定（`claude-settings`。選択した場合にのみ、`settings.json` のタイムスタンプ付きバックアップを取ってから適用）です。TTY がない場合、または `--yes` や `--with` を付けた場合は何も尋ねず、指定した項目だけをインストールします。TTY がなく `--with` もない場合は何もインストールせず、`--list` のカタログを表示します。各ステップは `installed`、`already-present`、`skipped`、`failed` のいずれかを報告します。1 件失敗しても他は止まらず、失敗があれば終了コードは 1 です。`/emet:setup` はプラグインの入口で、同じ選択肢を `AskUserQuestion` で尋ねます。
+- `emet fleet list [--root <dir>] [--json]`: `--root`（既定は `~/code`）の 1 階層下にある、`emet.config.json` を持つ git リポジトリを、`tracker.kind`、`handoff.autoChain`、`models.worker` とともに一覧表示します。`emet fleet set <key> <value> [--root <dir>] [--dry-run]` は一覧の全リポジトリで設定キーを 1 つ変更し、先に設定ローダーで検証します（無効な値は何も変更せず、終了コード 1 で終了します）。`emet fleet launch --feature <text> [--root <dir>] [--repos <a,b>]` は、`emet chain` の準備チェックの後、各リポジトリで `/emet:run --draft <text>` セッションを開きます。[fleet ガイド](../guide/fleet.md)を参照してください。
 - `emet preflight [--run <id>] [--post-dispatch]`: リポジトリがディスパッチ可能な状態かどうかを確認します。
 - `emet skill-path <name>`: mattpocock-skills のスキルの `SKILL.md` の絶対パスを表示します。スキルが見つからない場合は終了コード 1 で終了します。
 - `emet selftest`: CLI 自体のユニットテストを実行します。ソースからのインストールのみ対応で、コンパイル済みバイナリは終了コード 1 で終了し、`emet doctor` を実行するよう案内します。
@@ -66,6 +68,8 @@ emet doctor ~/code/*
 
 ### 計画、レビュー、ランディング
 
+- `emet promote --spec <id> [--dry-run] [--no-promote]`: [`handoff.afterSpec`](configuration.md#handoff) に従う after-spec ステップです。`promote` モードでは、`chore: 🔖 promote develop` というタイトルで `develop` から `main` へのプルリクエストを開き、`emet ci --pr <n> --wait` で待機し、状態が `pass` のときだけマージコミットでマージします。その後、`develop` が `main` より遅れている場合にのみ、`main` から `develop` への同期プルリクエストを開いてマージします。プルリクエスト番号と `merged` を持つ `promote` イベントを 1 件ジャーナルに追記します。`release` モードでは何もマージせず、リリースのプルリクエストは人に任せます。`afterSpec` が `none` の場合、`--no-promote` を付けた場合、または spec の最後のウェーブが開いたまま、もしくはフラグが付いたままの場合は、`skipped` の注記を付けて終了コード 0 で終了します。CI が `pass` でなければ何もマージせず、終了コード 1 で終了します。`--dry-run` ではプルリクエストを開きません。
+- `emet deploy-check [--json]`: `deploy.check.command` が終了コード 0 で終わるまで、最大 `retries` 回または `timeoutSeconds` 秒の範囲で、試行の間に `intervalSeconds` 秒待ちながら実行し、`attempts` とともに `state: ok | failed | timeout` を出力します。終了コードは `0` が ok、`1` が failed、`3` が timeout です。`deploy.check` が未設定の場合は、`skipped: "no deploy check configured"` を出力して終了コード 0 で終了します。after-spec の `promote` ステップはマージの後にこれを実行します。[`deploy`](configuration.md#deploy)を参照してください。
 - `emet validate --spec <id> | --file <path>`: 計画の検証です。[ゲートと記録](#ゲートと記録)を参照してください。
 - `emet surfaces --check <file.json | ->`: ウェーブ内のチケット間で、編集を許可するサーフェスのグロブが重複している場合は拒否します。
 - `emet approve --run <id>`、`emet materialize-log`、`emet results`、`emet verify`、`emet review-package`、`emet review`、`emet gate`: [ゲートと記録](#ゲートと記録)を参照してください。

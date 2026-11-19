@@ -2,7 +2,7 @@
 title: Riferimento della configurazione
 description: Ogni chiave di emet.config.json con il suo valore predefinito e il suo significato.
 seoTitle: Riferimento della configurazione di emet
-sourceHash: d333cfa0ad463263
+sourceHash: 2ff76dd878c6530c
 ---
 
 Ogni chiave di `emet.config.json`, con il suo valore predefinito e il suo significato. La fonte di verità è [`emet/schema/emet.config.schema.json`](../../emet/schema/emet.config.schema.json). I termini seguono [GLOSSARY.md](../../GLOSSARY.md). Torna al [README](../../README.md).
@@ -51,8 +51,33 @@ Cosa accade dopo la chiusura di un'ondata e i limiti di dimensione della nota di
 
   L'avvio avviene solo se la PR è stata unita e nulla era segnalato, e viene saltato se una sessione `emet-<spec-id>-*` è già attiva (`claude agents --json`). Se l'avvio fallisce, ripiega sulla stampa di `/emet:run --dispatch <spec-id>`.
 
+- `afterSpec` (predefinito `"none"`, uno tra `release`, `promote`, `none`): cosa fa `/emet:run` quando l'ultima ondata di una spec è stata unita senza problemi. `promote` esegue `emet promote`: una pull request da `develop` a `main` unita con un commit di merge una volta che la CI è `pass`, e poi una pull request di sincronizzazione a ritroso solo se `develop` è indietro rispetto a `main`. `release` apre la pull request di release con i passaggi dello skill `cut-release` e si ferma per una persona. `none` non fa nulla. `emet init` lo rileva (`release` con un tag `v*` e un file di workflow il cui nome contiene `release`; `promote` con un branch `develop` e senza un tag simile; altrimenti `none`), e `emet init --after-spec <mode>` lo forza. Una configurazione che non lo contiene viene caricata come `none`. `--no-promote`, passato a `/emet:run` o a `emet promote`, imposta il passaggio su `none` per quell'esecuzione.
 - `launcher` (predefinito `auto`, uno tra `auto`, `orca`, `bg`): solo Claude Code; ignorato sull'host Codex, dove `emet launch` non apre alcuna scheda di Orca. Apre anche l'ondata in una scheda di Orca che esegue `claude attach`. `auto` interroga il runtime di Orca (`orca status`), quindi funziona anche da sessioni `claude --bg`, che non hanno `TERM_PROGRAM`; `orca` ci prova sempre; `bg` mai. L'ondata gira comunque in background, e una scheda che non si apre non ferma mai la catena. `emet launch <spec-id> --wave <n>` esegue l'intero avvio; vedi [`emet launch`](cli.md#esecuzioni-worker-e-slot).
 - `permissionMode` (predefinito `bypassPermissions`, uno tra `bypassPermissions`, `auto`, `acceptEdits`): solo Claude Code; ignorato sull'host Codex, dove la sessione concatenata usa [`codex.sandbox`](#codex). Modalità di permesso della sessione concatenata. Non è ereditata dalla sessione che la avvia, perché il classificatore della modalità `auto` può negare un passaggio come `gh pr merge` e lasciare un'ondata a metà. Le tue regole `permissions.deny` continuano ad applicarsi, ma l'avviso di bypass deve essere stato accettato una volta in modo interattivo (`skipDangerousModePermissionPrompt`).
+
+## deploy
+
+Opzionale. Se assente, non c'è alcun controllo del deploy.
+
+```json
+{
+  "deploy": {
+    "check": {
+      "command": "curl -fsS https://example.com/health",
+      "retries": 10,
+      "intervalSeconds": 15,
+      "timeoutSeconds": 300
+    }
+  }
+}
+```
+
+- `check.command`: comando shell che termina con 0 quando il deploy è sano.
+- `check.retries`, `check.intervalSeconds`, `check.timeoutSeconds`: interi positivi; il numero massimo di tentativi, l'attesa tra l'uno e l'altro e il limite di tempo complessivo. `emet deploy-check` stampa `ok`, `failed` o `timeout` e termina con 0, 1 o 3. Il passaggio `promote` di `afterSpec` lo esegue dopo il merge.
+
+## interview
+
+- `research` (predefinito `true`): con `true`, la Fase 1 di `/emet:run` fa cercare all'agente la risposta nel repo, nella documentazione o in fonti primarie, e spiegare perché consiglia un'opzione, prima di porre una domanda tecnica che offre delle opzioni. L'utente risponde comunque. `false` lo disattiva.
 
 ## gate
 

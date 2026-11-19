@@ -2,7 +2,7 @@
 title: CLI 레퍼런스
 description: 모든 emet 하위 명령, 게이트와 기록 표, 종료 코드, 환경 변수를 설명합니다.
 seoTitle: emet CLI 레퍼런스
-sourceHash: 3f581ec5b9773165
+sourceHash: 00afab0462e7fd07
 ---
 
 모든 `emet` 하위 명령, 게이트와 기록 표, 종료 코드, 환경 변수입니다. 용어는 [GLOSSARY.md](../../GLOSSARY.md)를 따릅니다. [README](../../README.md)로 돌아가기. 모든 명령은 `--help`로 사용법을 출력합니다.
@@ -16,8 +16,10 @@ Claude Code 안에서는 슬래시 명령 세 가지가 CLI를 감쌉니다. `/e
 ### 설정과 감사
 
 - `emet migrate [--dry-run]`: 예전 형식의 리포지토리를 emet 이름으로 바꿉니다.
-- `emet init [--tracker linear|github|local] [--force]`: 패키지 매니저, 트렁크 브랜치, 트래커 종류를 자동으로 감지하고 `emet.config.json`과 `docs/agents/*.md` 파일을 작성합니다. `--tracker local`은 로컬 트래커를 설정합니다.
+- `emet init [--tracker linear|github|local] [--after-spec release|promote|none] [--force]`: 패키지 매니저, 트렁크 브랜치, 트래커 종류, after-spec 모드([`handoff.afterSpec`](configuration.md#handoff) 참고)를 자동으로 감지하고 `emet.config.json`과 `docs/agents/*.md` 파일을 작성합니다. `--tracker local`은 로컬 트래커를 설정합니다.
 - `emet doctor [--all] [<path> ...]`: 원하는 수의 리포지토리를 한 번에 읽기 전용으로 감사합니다. 기본값은 현재 디렉터리입니다.
+- `emet setup [--yes] [--with <ids>] [--list] [--json]`: 선택 설치 항목을 readline 프롬프트로 제안합니다. 대상은 `mattpocock-skills`(기본값 켜짐), `engram`, `mascot`, `orca-pet`, `gh-auth`, 그리고 권장 Claude Code 설정(`claude-settings`, 선택한 경우에만 `settings.json`의 타임스탬프 백업 후 적용)입니다. TTY가 없거나 `--yes` 또는 `--with`를 쓰면 아무것도 묻지 않고 지정한 항목만 정확히 설치합니다. TTY가 없고 `--with`도 없으면 아무것도 설치하지 않고 `--list` 카탈로그를 출력합니다. 각 단계는 `installed`, `already-present`, `skipped`, `failed` 중 하나를 보고합니다. 하나가 실패해도 나머지는 멈추지 않으며, 실패한 것이 있으면 종료 코드는 1입니다. `/emet:setup`은 플러그인 진입점이며 같은 선택지를 `AskUserQuestion`으로 묻습니다.
+- `emet fleet list [--root <dir>] [--json]`: `--root`(기본값 `~/code`) 바로 아래 한 단계에 있는, `emet.config.json`이 있는 git 리포지토리를 `tracker.kind`, `handoff.autoChain`, `models.worker`와 함께 나열합니다. `emet fleet set <key> <value> [--root <dir>] [--dry-run]`은 나열된 모든 리포지토리에서 설정 키 하나를 바꾸며, 먼저 설정 로더로 검증합니다(잘못된 값은 아무것도 바꾸지 않고 종료 코드 1로 끝납니다). `emet fleet launch --feature <text> [--root <dir>] [--repos <a,b>]`는 `emet chain`의 준비 상태 점검 후 각 리포지토리에서 `/emet:run --draft <text>` 세션을 엽니다. [fleet 가이드](../guide/fleet.md)를 참고하세요.
 - `emet preflight [--run <id>] [--post-dispatch]`: 리포지토리가 디스패치할 준비가 되었는지 확인합니다.
 - `emet skill-path <name>`: mattpocock-skills 스킬의 `SKILL.md` 절대 경로를 출력합니다. 스킬을 찾지 못하면 종료 코드 1로 끝납니다.
 - `emet selftest`: CLI 자체의 단위 테스트를 실행합니다. 소스 설치에서만 가능하며, 컴파일된 바이너리는 종료 코드 1로 끝나고 `emet doctor`를 실행하라고 안내합니다.
@@ -66,6 +68,8 @@ emet doctor ~/code/*
 
 ### 계획, 리뷰, 랜딩
 
+- `emet promote --spec <id> [--dry-run] [--no-promote]`: [`handoff.afterSpec`](configuration.md#handoff)에 따른 after-spec 단계입니다. `promote` 모드에서는 `chore: 🔖 promote develop`라는 제목으로 `develop`에서 `main`으로 가는 풀 리퀘스트를 열고, `emet ci --pr <n> --wait`로 기다리며, 상태가 `pass`일 때만 머지 커밋으로 병합합니다. 그런 다음 `develop`이 `main`보다 뒤처져 있을 때만 `main`에서 `develop`으로 가는 동기화 풀 리퀘스트를 열고 병합합니다. 풀 리퀘스트 번호와 `merged`를 담은 `promote` 이벤트를 저널에 하나 추가합니다. `release` 모드에서는 아무것도 병합하지 않고 릴리스 풀 리퀘스트는 사람에게 맡깁니다. `afterSpec`이 `none`이거나, `--no-promote`를 쓰거나, 스펙의 마지막 웨이브가 열린 채로 남았거나 플래그가 붙은 경우에는 `skipped` 메모와 함께 종료 코드 0으로 끝납니다. CI가 `pass`가 아니면 아무것도 병합하지 않고 종료 코드 1로 끝납니다. `--dry-run`은 풀 리퀘스트를 열지 않습니다.
+- `emet deploy-check [--json]`: `deploy.check.command`가 종료 코드 0으로 끝날 때까지, 최대 `retries`번 또는 `timeoutSeconds`초 동안, 시도 사이에 `intervalSeconds`초를 기다리며 실행하고 `attempts`와 함께 `state: ok | failed | timeout`을 출력합니다. 종료 코드는 `0`이 ok, `1`이 failed, `3`이 timeout입니다. `deploy.check`가 설정되지 않았으면 `skipped: "no deploy check configured"`를 출력하고 종료 코드 0으로 끝납니다. after-spec의 `promote` 단계는 병합 후에 이를 실행합니다. [`deploy`](configuration.md#deploy)를 참고하세요.
 - `emet validate --spec <id> | --file <path>`: 계획 검증입니다. [게이트와 기록](#게이트와-기록)을 참고하세요.
 - `emet surfaces --check <file.json | ->`: 웨이브 안의 티켓들 사이에서 허용된 편집 범위 글롭이 겹치면 거부합니다.
 - `emet approve --run <id>`, `emet materialize-log`, `emet results`, `emet verify`, `emet review-package`, `emet review`, `emet gate`: [게이트와 기록](#게이트와-기록)을 참고하세요.

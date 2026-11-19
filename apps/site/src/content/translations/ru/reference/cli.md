@@ -2,7 +2,7 @@
 title: Справочник по CLI
 description: Каждая подкоманда emet, таблица гейтов и записей, коды завершения и переменные окружения.
 seoTitle: Справочник по CLI emet
-sourceHash: 3f581ec5b9773165
+sourceHash: 00afab0462e7fd07
 ---
 
 Каждая подкоманда `emet`, таблица гейтов и записей, коды завершения и переменные окружения. Термины соответствуют [GLOSSARY.md](../../GLOSSARY.md). Назад к [README](../../README.md). Каждая команда выводит справку по использованию с `--help`.
@@ -16,8 +16,10 @@ sourceHash: 3f581ec5b9773165
 ### Настройка и аудит
 
 - `emet migrate [--dry-run]`: переименовывает устаревший репозиторий под имена emet.
-- `emet init [--tracker linear|github|local] [--force]`: автоматически определяет менеджер пакетов, основную ветку и вид трекера и записывает `emet.config.json` и файлы `docs/agents/*.md`. `--tracker local` настраивает локальный трекер.
+- `emet init [--tracker linear|github|local] [--after-spec release|promote|none] [--force]`: автоматически определяет менеджер пакетов, основную ветку, вид трекера и режим after-spec (см. [`handoff.afterSpec`](configuration.md#handoff)) и записывает `emet.config.json` и файлы `docs/agents/*.md`. `--tracker local` настраивает локальный трекер.
 - `emet doctor [--all] [<path> ...]`: аудит любого числа репозиториев за раз, только на чтение; по умолчанию текущий каталог.
+- `emet setup [--yes] [--with <ids>] [--list] [--json]`: предлагает необязательные установки через запросы readline: `mattpocock-skills` (по умолчанию включено), `engram`, `mascot`, `orca-pet`, `gh-auth` и рекомендуемые настройки Claude Code (`claude-settings`, применяются только при выборе, после резервной копии `settings.json` с отметкой времени). Без TTY, а также с `--yes` или `--with` ничего не спрашивает и устанавливает ровно указанные пункты; без TTY и без `--with` ничего не устанавливает и выводит каталог `--list`. Каждый шаг сообщает `installed`, `already-present`, `skipped` или `failed`; одна ошибка не останавливает остальные, а код выхода равен 1, если что-то завершилось с ошибкой. `/emet:setup` — это точка входа плагина, он задаёт те же вопросы через `AskUserQuestion`.
+- `emet fleet list [--root <dir>] [--json]`: перечисляет git-репозитории с `emet.config.json` на один уровень ниже `--root` (по умолчанию `~/code`) вместе с `tracker.kind`, `handoff.autoChain` и `models.worker`. `emet fleet set <key> <value> [--root <dir>] [--dry-run]` меняет один ключ конфигурации в каждом перечисленном репозитории, предварительно проверяя его загрузчиком конфигурации (недопустимое значение ничего не меняет и завершается с кодом 1). `emet fleet launch --feature <text> [--root <dir>] [--repos <a,b>]` открывает сессию `/emet:run --draft <text>` в каждом репозитории после проверок готовности `emet chain`. См. [руководство по fleet](../guide/fleet.md).
 - `emet preflight [--run <id>] [--post-dispatch]`: подтверждает, что репозиторий готов к диспетчеризации.
 - `emet skill-path <name>`: выводит абсолютный путь `SKILL.md` навыка из mattpocock-skills. Завершается кодом 1, если навык не найден.
 - `emet selftest`: запускает собственные модульные тесты CLI. Только для установки из исходников; скомпилированный бинарный файл завершается кодом 1 и предлагает выполнить `emet doctor`.
@@ -66,6 +68,8 @@ emet doctor ~/code/*
 
 ### Планирование, ревью и посадка
 
+- `emet promote --spec <id> [--dry-run] [--no-promote]`: шаг after-spec согласно [`handoff.afterSpec`](configuration.md#handoff). В режиме `promote` открывает pull request из `develop` в `main` с заголовком `chore: 🔖 promote develop`, ждёт через `emet ci --pr <n> --wait`, сливает его merge-коммитом только при состоянии `pass`, а затем открывает и сливает синхронизирующий pull request из `main` в `develop`, только если `develop` отстаёт от `main`. Добавляет в журнал одно событие `promote` с номером pull request и `merged`. В режиме `release` ничего не сливает и оставляет release pull request человеку. При `afterSpec` `none`, с `--no-promote` или если последняя волна спецификации оставлена открытой или помечена, завершается с кодом 0 и пометкой `skipped`. CI не в состоянии `pass` ничего не сливает и завершается с кодом 1. `--dry-run` не открывает pull request.
+- `emet deploy-check [--json]`: запускает `deploy.check.command`, пока он не завершится с кодом 0, не более `retries` попыток или `timeoutSeconds` секунд, с паузой `intervalSeconds` между попытками, и выводит `state: ok | failed | timeout` с `attempts`. Код выхода `0` — ok, `1` — failed, `3` — timeout. Если `deploy.check` не настроен, завершается с кодом 0 и `skipped: "no deploy check configured"`. Шаг after-spec `promote` запускает его после слияния. См. [`deploy`](configuration.md#deploy).
 - `emet validate --spec <id> | --file <path>`: проверка плана; см. [Гейты и записи](#гейты-и-записи).
 - `emet surfaces --check <file.json | ->`: отклоняет пересекающиеся glob-шаблоны разрешённых поверхностей между тикетами волны.
 - `emet approve --run <id>`, `emet materialize-log`, `emet results`, `emet verify`, `emet review-package`, `emet review`, `emet gate`: см. [Гейты и записи](#гейты-и-записи).

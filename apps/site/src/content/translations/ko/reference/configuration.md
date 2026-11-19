@@ -2,7 +2,7 @@
 title: 설정 레퍼런스
 description: emet.config.json의 모든 키를 기본값과 의미와 함께 설명합니다.
 seoTitle: emet 설정 레퍼런스
-sourceHash: d333cfa0ad463263
+sourceHash: 2ff76dd878c6530c
 ---
 
 `emet.config.json`의 모든 키를 기본값과 의미와 함께 정리했습니다. 기준이 되는 원본은 [`emet/schema/emet.config.schema.json`](../../emet/schema/emet.config.schema.json)입니다. 용어는 [GLOSSARY.md](../../GLOSSARY.md)를 따릅니다. [README](../../README.md)로 돌아가기.
@@ -51,8 +51,33 @@ sourceHash: d333cfa0ad463263
 
   PR이 병합되었고 플래그가 지정된 항목이 없을 때만 시작하며, `emet-<spec-id>-*` 세션이 이미 실행 중이면(`claude agents --json`) 건너뜁니다. 시작에 실패하면 `/emet:run --dispatch <spec-id>`를 출력하는 방식으로 되돌아갑니다.
 
+- `afterSpec`(기본값 `"none"`, `release`, `promote`, `none` 중 하나): 스펙의 마지막 웨이브가 문제없이 머지된 뒤 `/emet:run`이 하는 일입니다. `promote`는 `emet promote`를 실행합니다. CI가 `pass`가 되면 `develop`에서 `main`으로 가는 풀 리퀘스트를 머지 커밋으로 머지하고, `develop`이 `main`보다 뒤처져 있을 때만 되돌려 동기화하는 풀 리퀘스트를 만듭니다. `release`는 `cut-release` 스킬의 단계에 따라 릴리스 풀 리퀘스트를 열고 사람이 처리하도록 멈춥니다. `none`은 아무것도 하지 않습니다. `emet init`이 값을 감지하며(`v*` 태그가 있고 이름에 `release`가 들어간 워크플로 파일이 있으면 `release`, `develop` 브랜치가 있고 그런 태그가 없으면 `promote`, 그 외에는 `none`), `emet init --after-spec <mode>`로 강제할 수 있습니다. 이 키가 없는 설정은 `none`으로 로드됩니다. `/emet:run` 또는 `emet promote`에 `--no-promote`를 주면 그 실행에서는 이 단계가 `none`이 됩니다.
 - `launcher`(기본값 `auto`, `auto`, `orca`, `bg` 중 하나): Claude Code 전용이며, Codex 호스트에서는 무시되고 `emet launch`는 Orca 탭을 열지 않습니다. `claude attach`를 실행하는 Orca 탭에서도 웨이브를 엽니다. `auto`는 Orca 런타임(`orca status`)에 물어보므로 `TERM_PROGRAM`이 없는 `claude --bg` 세션에서도 동작합니다. `orca`는 항상 시도하고 `bg`는 시도하지 않습니다. 어느 쪽이든 웨이브는 백그라운드에서 실행되며, 탭을 열지 못해도 체인이 멈추지 않습니다. `emet launch <spec-id> --wave <n>`이 시작 전체를 수행합니다. [`emet launch`](cli.md#실행-워커-슬롯)를 참고하세요.
 - `permissionMode`(기본값 `bypassPermissions`, `bypassPermissions`, `auto`, `acceptEdits` 중 하나): Claude Code 전용이며, Codex 호스트에서는 무시되고 이어 붙인 세션은 [`codex.sandbox`](#codex)를 사용합니다. 이어 붙인 세션의 권한 모드입니다. 시작한 세션에서 상속되지 않습니다. `auto` 모드의 분류기가 `gh pr merge` 같은 단계를 거부해 웨이브가 반쯤 끝난 상태로 남을 수 있기 때문입니다. `permissions.deny` 규칙은 계속 적용되지만, 우회 경고를 대화형으로 한 번 수락해 두어야 합니다(`skipDangerousModePermissionPrompt`).
+
+## deploy
+
+선택 사항입니다. 없으면 배포 확인을 하지 않습니다.
+
+```json
+{
+  "deploy": {
+    "check": {
+      "command": "curl -fsS https://example.com/health",
+      "retries": 10,
+      "intervalSeconds": 15,
+      "timeoutSeconds": 300
+    }
+  }
+}
+```
+
+- `check.command`: 배포가 정상일 때 종료 코드 0으로 끝나는 셸 명령입니다.
+- `check.retries`, `check.intervalSeconds`, `check.timeoutSeconds`: 양의 정수이며, 각각 최대 시도 횟수, 시도 사이의 대기 시간, 전체 제한 시간입니다. `emet deploy-check`는 `ok`, `failed`, `timeout` 중 하나를 출력하고 종료 코드 0, 1, 3으로 끝납니다. `afterSpec`의 `promote` 단계는 머지 후에 이를 실행합니다.
+
+## interview
+
+- `research`(기본값 `true`): `true`이면 `/emet:run`의 1단계에서 에이전트가 선택지가 있는 기술 질문을 하기 전에 저장소, 문서, 1차 자료에서 답을 찾아보고 그 선택지를 권하는 이유를 설명합니다. 답하는 사람은 여전히 사용자입니다. `false`이면 끕니다.
 
 ## gate
 
