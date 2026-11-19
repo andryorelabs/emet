@@ -811,7 +811,7 @@ export function parseDoctorArguments(argv: readonly string[]): string[] {
 /** Prints the plugin's own status once, fleet-wide — the alternative,
  * repeating it under every one of N repos, would both spam a large sweep and
  * hide that it is one global fact, not something particular to any one repo. */
-function formatGlobalDependencyFinding(check: DependencyCheck): string | null {
+export function formatGlobalDependencyFinding(check: DependencyCheck): string | null {
   if (check.status === "satisfied") return null;
   const label = check.status === "unsatisfied" ? "dependency" : "note";
   return `  - ${label}: ${formatDependencyCheck(check, "    ")}`;

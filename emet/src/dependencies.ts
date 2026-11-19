@@ -560,7 +560,7 @@ const ENGRAM_PLUGIN_ID = "engram@engram";
 
 export const ENGRAM_INSTALL_REMEDY: readonly string[] = [
   "brew install gentleman-programming/tap/engram",
-  "engram setup",
+  "engram setup claude-code",
 ];
 
 /**

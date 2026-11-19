@@ -162,13 +162,40 @@ export async function promoteDevelop(
   return promoteViaPullRequest(options, deps);
 }
 
+/** Reads the aggregate wave state out of the text `emet status --spec <id>` prints. */
+export function parseSpecState(text: string, specId: string): string {
+  const start = text.indexOf("{");
+  const end = text.lastIndexOf("}");
+  if (start === -1 || end < start) {
+    throw new Error(`could not read the state of spec ${specId} from ${BINARY} status`);
+  }
+  const parsed: unknown = JSON.parse(text.slice(start, end + 1));
+  if (typeof parsed === "object" && parsed !== null && "state" in parsed) {
+    return String(parsed.state);
+  }
+  throw new Error(`${BINARY} status printed no state for spec ${specId}`);
+}
+
+async function readSpecState(specId: string): Promise<string> {
+  const result = await Bun.$`${BINARY} status --spec ${specId}`.nothrow().quiet();
+  return parseSpecState(result.stdout.toString(), specId);
+}
+
+/** A spec's last wave is clean only when no wave is working, checking, ready or waiting on a decision. */
+export function isFinalWaveClean(state: string): boolean {
+  return state === "idle";
+}
+
 function readFlag(argv: readonly string[], flag: string): string | undefined {
   const index = argv.indexOf(flag);
   return index === -1 ? undefined : argv[index + 1];
 }
 
 /** Entry point of `emet promote --spec <id> [--dry-run] [--no-promote]`. */
-export async function run(argv: string[], overrides: Partial<PromoteDeps> = {}): Promise<void> {
+export async function run(
+  argv: string[],
+  overrides: Partial<PromoteDeps> & { specState?: (specId: string) => Promise<string> } = {},
+): Promise<void> {
   try {
     const specId = readFlag(argv, "--spec");
     if (specId === undefined || specId === "") {
@@ -179,7 +206,7 @@ export async function run(argv: string[], overrides: Partial<PromoteDeps> = {}):
     const { config } = await loadForgeConfigWithDefaults(repoRoot);
     const mode = planAfterSpec(config, {
       noPromote: argv.includes("--no-promote"),
-      finalWaveClean: true,
+      finalWaveClean: isFinalWaveClean(await (overrides.specState ?? readSpecState)(specId)),
     });
     const outcome = await promoteDevelop(
       { dryRun: argv.includes("--dry-run") },

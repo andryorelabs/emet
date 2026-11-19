@@ -3,6 +3,8 @@ import { afterEach, describe, expect, spyOn, test } from "bun:test";
 import type { CiOutcome, GhRunner } from "./ci";
 import { DEFAULT_FORGE_CONFIG } from "./config";
 import {
+  isFinalWaveClean,
+  parseSpecState,
   planAfterSpec,
   promoteDevelop,
   run,
@@ -134,7 +136,29 @@ describe("promoteDevelop", () => {
   });
 });
 
-async function runCaptured(argv: string[], overrides?: Partial<PromoteDeps>) {
+describe("final wave state", () => {
+  test("only an idle spec has a clean final wave", () => {
+    expect(isFinalWaveClean("idle")).toBe(true);
+    for (const state of ["working", "checking", "ready", "needs-decision"]) {
+      expect(isFinalWaveClean(state)).toBe(false);
+    }
+  });
+
+  test("reads the state out of the status output", () => {
+    const output = `{\n  "state": "needs-decision",\n  "waves": []\n}\nemet status: needs-decision`;
+    expect(parseSpecState(output, "629")).toBe("needs-decision");
+  });
+
+  test("rejects output with no JSON or no state", () => {
+    expect(() => parseSpecState("emet status: idle", "629")).toThrow("could not read");
+    expect(() => parseSpecState('{"waves": []}', "629")).toThrow("no state");
+  });
+});
+
+async function runCaptured(
+  argv: string[],
+  overrides: Partial<PromoteDeps> & { specState?: (specId: string) => Promise<string> } = {},
+) {
   const logs: string[] = [];
   const errors: string[] = [];
   const logSpy = spyOn(console, "log").mockImplementation((...parts: unknown[]) => {
@@ -143,7 +167,7 @@ async function runCaptured(argv: string[], overrides?: Partial<PromoteDeps>) {
   const errorSpy = spyOn(console, "error").mockImplementation((...parts: unknown[]) => {
     errors.push(parts.join(" "));
   });
-  await run(argv, overrides);
+  await run(argv, { specState: () => Promise.resolve("idle"), ...overrides });
   logSpy.mockRestore();
   errorSpy.mockRestore();
   return { logs, errors };

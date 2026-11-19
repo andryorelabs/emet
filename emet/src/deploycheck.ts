@@ -16,7 +16,7 @@ export interface DeployCheckResult {
 
 /** The side effects the check loop needs, injectable for tests. */
 export interface DeployCheckDeps {
-  readonly run: (command: string) => Promise<number>;
+  readonly run: (command: string, timeoutMilliseconds: number) => Promise<number>;
   readonly sleep: (milliseconds: number) => Promise<void>;
   readonly now: () => number;
 }
@@ -34,7 +34,11 @@ export async function runDeployCheck(
 ): Promise<DeployCheckResult> {
   const startedAt = deps.now();
   const attempt = async (attempts: number): Promise<DeployCheckResult> => {
-    const exitCode = await deps.run(check.command);
+    const remainingMilliseconds = Math.max(
+      1,
+      check.timeoutSeconds * 1000 - (deps.now() - startedAt),
+    );
+    const exitCode = await deps.run(check.command, remainingMilliseconds);
     if (exitCode === 0) return { state: "ok", attempts };
     if (attempts >= check.retries) return { state: "failed", attempts };
     if (deps.now() - startedAt >= check.timeoutSeconds * 1000) {
@@ -46,11 +50,14 @@ export async function runDeployCheck(
   return attempt(1);
 }
 
-function runShellCommand(command: string): Promise<number> {
+/** Runs `command` through `sh -c` and kills it once `timeoutMilliseconds` pass, so a hung check cannot block the loop. */
+export function runShellCommand(command: string, timeoutMilliseconds: number): Promise<number> {
   const child = Bun.spawn(["sh", "-c", command], {
     stdin: "ignore",
     stdout: "ignore",
     stderr: "inherit",
+    timeout: timeoutMilliseconds,
+    killSignal: "SIGKILL",
   });
   return child.exited;
 }

@@ -3,7 +3,7 @@ import { mkdtempSync, realpathSync, rmSync, writeFileSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
 
-import { run, runDeployCheck, type DeployCheckDeps } from "./deploycheck";
+import { run, runDeployCheck, runShellCommand, type DeployCheckDeps } from "./deploycheck";
 
 const check = { command: "curl -f x", retries: 3, intervalSeconds: 5, timeoutSeconds: 60 };
 
@@ -76,6 +76,20 @@ async function runCaptured(
   errorSpy.mockRestore();
   return { out: out.join("\n"), err: err.join("\n"), exitCode: process.exitCode };
 }
+
+describe("runShellCommand", () => {
+  test("returns the exit code of a command that finishes", async () => {
+    expect(await runShellCommand("exit 0", 5000)).toBe(0);
+    expect(await runShellCommand("exit 7", 5000)).toBe(7);
+  });
+
+  test("kills a command that outlives its timeout", async () => {
+    const startedAt = Date.now();
+    const exitCode = await runShellCommand("sleep 30", 300);
+    expect(exitCode).not.toBe(0);
+    expect(Date.now() - startedAt).toBeLessThan(10_000);
+  });
+});
 
 describe("run", () => {
   const originalExitCode = process.exitCode;
