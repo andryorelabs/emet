@@ -18,6 +18,7 @@ forge supports Linux and macOS. Process-tree lookups use `/proc` when present an
 - macOS regressions are caught in CI.
 - CI cost and flake surface grow by one job, which `ci-passed` gates.
 - The macOS job uses a GitHub-hosted runner, not the `CI_RUNNER` expression.
+- On native Windows the launcher, the Codex hooks and the installer degrade instead of failing: one notice at session start, no blocked tool calls, and `install.sh` refuses to run.
 
 ## Alternatives considered
 
