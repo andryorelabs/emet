@@ -8,6 +8,13 @@ and this project adheres to
 
 ## [Unreleased]
 
+### Added
+
+- `emet whats-new` prints a one-line notice linking to the release notes the
+  first time emet runs after an update, then records the running version. With
+  `--hook` it emits the line as a `systemMessage` JSON object for session
+  hooks.
+
 ## [0.10.0] - 2026-11-19
 
 ### Added
