@@ -1,5 +1,8 @@
 /** `emet promote`: the after-spec step that promotes `develop` to `main` once a spec has landed. */
 
+import { existsSync, mkdirSync, writeFileSync } from "node:fs";
+import path from "node:path";
+
 import { realGh, waitForChecks, type CiOutcome, type GhRunner } from "./ci";
 import {
   ForgeConfigError,
@@ -10,8 +13,10 @@ import {
 } from "./config";
 import { exitCodes } from "./exit-codes";
 import { appendEvent } from "./journal";
-import { BINARY } from "./names";
+import { resolveLockDirectory } from "./locks";
+import { BINARY, resolveRunDir } from "./names";
 import { errorMessage } from "./narrow";
+import { assertSafeId } from "./runs";
 
 const DEVELOP_BRANCH = "develop";
 const MAIN_BRANCH = "main";
@@ -227,31 +232,80 @@ export function buildPromoteDeps(options: {
   };
 }
 
+/**
+ * The marker that holds a spec's after-spec step, under the git common dir so
+ * every worktree of the repo shares it: `<common dir>/.emet/runs/<spec id>/no-promote`.
+ */
+export function holdMarkerPath(commonDirectory: string, specId: string): string {
+  assertSafeId("spec id", specId);
+  return path.join(resolveRunDir(commonDirectory).path, "runs", specId, "no-promote");
+}
+
+/** The per-checkout location an earlier `--hold` could have used. */
+function legacyHoldMarkerPath(repoRoot: string, specId: string): string {
+  return path.join(resolveRunDir(repoRoot).path, "runs", specId, "no-promote");
+}
+
+/** Whether `emet promote --spec <id> --hold` was run for this spec, in the shared or the per-checkout location. */
+export function isSpecHeld(commonDirectory: string, repoRoot: string, specId: string): boolean {
+  return (
+    existsSync(holdMarkerPath(commonDirectory, specId)) ||
+    existsSync(legacyHoldMarkerPath(repoRoot, specId))
+  );
+}
+
+/** Writes the hold marker so every later session of the spec skips the after-spec step. */
+export function holdSpec(commonDirectory: string, specId: string): void {
+  const marker = holdMarkerPath(commonDirectory, specId);
+  mkdirSync(path.dirname(marker), { recursive: true });
+  writeFileSync(marker, "");
+}
+
 function readFlag(argv: readonly string[], flag: string): string | undefined {
   const index = argv.indexOf(flag);
   return index === -1 ? undefined : argv[index + 1];
 }
 
-/** Entry point of `emet promote --spec <id> [--dry-run] [--no-promote]`. */
+/** Entry point of `emet promote --spec <id> [--dry-run] [--no-promote] [--hold]`. */
 export async function run(
   argv: string[],
-  overrides: Partial<PromoteDeps> & { specState?: (specId: string) => Promise<string> } = {},
+  overrides: Partial<PromoteDeps> & {
+    specState?: (specId: string) => Promise<string>;
+    repoRoot?: string;
+    commonDirectory?: string;
+  } = {},
 ): Promise<void> {
   try {
     const specId = readFlag(argv, "--spec");
-    if (specId === undefined || specId === "") {
-      throw new ForgeConfigError(`usage: ${BINARY} promote --spec <id> [--dry-run] [--no-promote]`);
+    if (specId === undefined || specId === "" || specId.startsWith("-")) {
+      throw new ForgeConfigError(
+        `usage: ${BINARY} promote --spec <id> [--dry-run] [--no-promote] [--hold]`,
+      );
     }
-    const repoRoot = await resolveRepoRoot();
+    assertSafeId("spec id", specId);
+    const {
+      specState,
+      repoRoot: repoRootOverride,
+      commonDirectory: commonDirectoryOverride,
+      ...promoteOverrides
+    } = overrides;
+    const commonDirectory =
+      commonDirectoryOverride ?? (await resolveLockDirectory("promote hold marker"));
+    if (argv.includes("--hold")) {
+      holdSpec(commonDirectory, specId);
+      console.log(JSON.stringify({ held: true }));
+      return;
+    }
+    const repoRoot = repoRootOverride ?? (await resolveRepoRoot());
     if (!repoRoot) throw new ForgeConfigError(`${BINARY} promote: not inside a git repository`);
     const { config } = await loadForgeConfigWithDefaults(repoRoot);
     const mode = planAfterSpec(config, {
-      noPromote: argv.includes("--no-promote"),
-      finalWaveClean: isFinalWaveClean(await (overrides.specState ?? readSpecState)(specId)),
+      noPromote: argv.includes("--no-promote") || isSpecHeld(commonDirectory, repoRoot, specId),
+      finalWaveClean: isFinalWaveClean(await (specState ?? readSpecState)(specId)),
     });
     const outcome = await promoteDevelop(
       { dryRun: argv.includes("--dry-run") },
-      { ...buildPromoteDeps({ mode, repoRoot, specId }), ...overrides },
+      { ...buildPromoteDeps({ mode, repoRoot, specId }), ...promoteOverrides },
     );
     console.log(JSON.stringify(outcome));
     const failed = outcome.mode === "promote" && outcome.skipped === undefined && !outcome.merged;

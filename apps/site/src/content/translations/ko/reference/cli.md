@@ -2,7 +2,7 @@
 title: CLI 레퍼런스
 description: 모든 emet 하위 명령, 게이트와 기록 표, 종료 코드, 환경 변수를 설명합니다.
 seoTitle: emet CLI 레퍼런스
-sourceHash: 00afab0462e7fd07
+sourceHash: b0fbd0cfa621ff8a
 ---
 
 모든 `emet` 하위 명령, 게이트와 기록 표, 종료 코드, 환경 변수입니다. 용어는 [GLOSSARY.md](../../GLOSSARY.md)를 따릅니다. [README](../../README.md)로 돌아가기. 모든 명령은 `--help`로 사용법을 출력합니다.
@@ -68,7 +68,7 @@ emet doctor ~/code/*
 
 ### 계획, 리뷰, 랜딩
 
-- `emet promote --spec <id> [--dry-run] [--no-promote]`: [`handoff.afterSpec`](configuration.md#handoff)에 따른 after-spec 단계입니다. `promote` 모드에서는 `chore: 🔖 promote develop`라는 제목으로 `develop`에서 `main`으로 가는 풀 리퀘스트를 열고, `emet ci --pr <n> --wait`로 기다리며, 상태가 `pass`일 때만 머지 커밋으로 병합합니다. 그런 다음 `develop`이 `main`보다 뒤처져 있을 때만 `main`에서 `develop`으로 가는 동기화 풀 리퀘스트를 열고 병합합니다. 풀 리퀘스트 번호와 `merged`를 담은 `promote` 이벤트를 저널에 하나 추가합니다. `release` 모드에서는 아무것도 병합하지 않고 릴리스 풀 리퀘스트는 사람에게 맡깁니다. `afterSpec`이 `none`이거나, `--no-promote`를 쓰거나, 스펙의 마지막 웨이브가 열린 채로 남았거나 플래그가 붙은 경우에는 `skipped` 메모와 함께 종료 코드 0으로 끝납니다. CI가 `pass`가 아니면 아무것도 병합하지 않고 종료 코드 1로 끝납니다. `--dry-run`은 풀 리퀘스트를 열지 않습니다.
+- `emet promote --spec <id> [--dry-run] [--no-promote] [--hold]`: [`handoff.afterSpec`](configuration.md#handoff)에 따른 after-spec 단계입니다. `promote` 모드에서는 `chore: 🔖 promote develop`라는 제목으로 `develop`에서 `main`으로 가는 풀 리퀘스트를 열고, `emet ci --pr <n> --wait`로 기다리며, 상태가 `pass`일 때만 머지 커밋으로 병합합니다. 그런 다음 `develop`이 `main`보다 뒤처져 있을 때만 `main`에서 `develop`으로 가는 동기화 풀 리퀘스트를 열고 병합합니다. 풀 리퀘스트 번호와 `merged`를 담은 `promote` 이벤트를 저널에 하나 추가합니다. `release` 모드에서는 아무것도 병합하지 않고 릴리스 풀 리퀘스트는 사람에게 맡깁니다. `afterSpec`이 `none`이거나, `--no-promote`를 쓰거나, 스펙의 마지막 웨이브가 열린 채로 남았거나 플래그가 붙은 경우에는 `skipped` 메모와 함께 종료 코드 0으로 끝납니다. CI가 `pass`가 아니면 아무것도 병합하지 않고 종료 코드 1로 끝납니다. `--dry-run`은 풀 리퀘스트를 열지 않습니다. `emet promote --spec <id> --hold`는 마커 `<run dir>/runs/<id>/no-promote`를 쓰고 `{"held":true}`를 출력합니다. 마커가 있는 동안 `emet promote --spec <id>`는 pull request를 열지 않고 종료 코드 0과 `skipped` 노트로 끝나므로 `--no-promote`가 스펙의 여러 세션에 걸쳐 유지됩니다.
 - `emet deploy-check [--json]`: `deploy.check.command`가 종료 코드 0으로 끝날 때까지, 최대 `retries`번 또는 `timeoutSeconds`초 동안, 시도 사이에 `intervalSeconds`초를 기다리며 실행하고 `attempts`와 함께 `state: ok | failed | timeout`을 출력합니다. 종료 코드는 `0`이 ok, `1`이 failed, `3`이 timeout입니다. `deploy.check`가 설정되지 않았으면 `skipped: "no deploy check configured"`를 출력하고 종료 코드 0으로 끝납니다. after-spec의 `promote` 단계는 병합 후에 이를 실행합니다. [`deploy`](configuration.md#deploy)를 참고하세요.
 - `emet validate --spec <id> | --file <path>`: 계획 검증입니다. [게이트와 기록](#게이트와-기록)을 참고하세요.
 - `emet surfaces --check <file.json | ->`: 웨이브 안의 티켓들 사이에서 허용된 편집 범위 글롭이 겹치면 거부합니다.

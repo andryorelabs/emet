@@ -551,7 +551,7 @@ export const COMMANDS: readonly CommandSpec[] = [
   {
     name: "promote",
     summary: "promote develop to main after a spec lands",
-    flags: [val("--spec"), bool("--dry-run"), bool("--no-promote")],
+    flags: [val("--spec"), bool("--dry-run"), bool("--no-promote"), bool("--hold")],
     run: runModule("promote"),
   },
   {

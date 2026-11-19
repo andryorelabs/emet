@@ -2,7 +2,7 @@
 title: Referencia de la CLI
 description: Cada subcomando de emet, la tabla de compuertas y registros, los códigos de salida y las variables de entorno.
 seoTitle: Referencia de la CLI de emet
-sourceHash: 00afab0462e7fd07
+sourceHash: b0fbd0cfa621ff8a
 ---
 
 Cada subcomando de `emet`, la tabla de compuertas y registros, los códigos de salida y las variables de entorno. Los términos siguen [GLOSSARY.md](../../GLOSSARY.md). Volver al [README](../../README.md). Cada comando imprime su uso con `--help`.
@@ -68,7 +68,7 @@ Informa, por repositorio: un `emet.config.json` válido, los cuatro archivos `do
 
 ### Planificación, revisión y aterrizaje
 
-- `emet promote --spec <id> [--dry-run] [--no-promote]`: el paso after-spec, según [`handoff.afterSpec`](configuration.md#handoff). En modo `promote` abre un pull request de `develop` a `main` titulado `chore: 🔖 promote develop`, espera con `emet ci --pr <n> --wait`, lo fusiona con un commit de merge solo cuando el estado es `pass`, y luego abre y fusiona un pull request de sincronización de `main` a `develop` solo si `develop` está por detrás de `main`. Añade al diario un evento `promote` con el número del pull request y `merged`. En modo `release` no fusiona nada y deja el pull request de release a una persona. Con `afterSpec` `none`, con `--no-promote`, o cuando la última oleada de la especificación quedó abierta o marcada, sale con 0 y una nota `skipped`. Un CI que no sea `pass` no fusiona nada y sale con 1. `--dry-run` no abre ningún pull request.
+- `emet promote --spec <id> [--dry-run] [--no-promote] [--hold]`: el paso after-spec, según [`handoff.afterSpec`](configuration.md#handoff). En modo `promote` abre un pull request de `develop` a `main` titulado `chore: 🔖 promote develop`, espera con `emet ci --pr <n> --wait`, lo fusiona con un commit de merge solo cuando el estado es `pass`, y luego abre y fusiona un pull request de sincronización de `main` a `develop` solo si `develop` está por detrás de `main`. Añade al diario un evento `promote` con el número del pull request y `merged`. En modo `release` no fusiona nada y deja el pull request de release a una persona. Con `afterSpec` `none`, con `--no-promote`, o cuando la última oleada de la especificación quedó abierta o marcada, sale con 0 y una nota `skipped`. Un CI que no sea `pass` no fusiona nada y sale con 1. `--dry-run` no abre ningún pull request. `emet promote --spec <id> --hold` escribe el marcador `<run dir>/runs/<id>/no-promote` e imprime `{"held":true}`; mientras exista, `emet promote --spec <id>` sale con 0 y una nota `skipped` sin abrir ningún pull request, así `--no-promote` persiste entre las sesiones de una especificación.
 - `emet deploy-check [--json]`: ejecuta `deploy.check.command` hasta que sale con 0, hasta `retries` intentos o `timeoutSeconds`, esperando `intervalSeconds` entre ellos, e imprime `state: ok | failed | timeout` con `attempts`. Salida `0` ok, `1` failed, `3` timeout. Sin `deploy.check` configurado sale con 0 y `skipped: "no deploy check configured"`. El paso after-spec `promote` lo ejecuta tras el merge. Consulta [`deploy`](configuration.md#deploy).
 - `emet validate --spec <id> | --file <path>`: validación del plan; consulta [Compuertas y registros](#compuertas-y-registros).
 - `emet surfaces --check <file.json | ->`: rechaza globs de superficies permitidas que se solapen entre los tickets de una oleada.

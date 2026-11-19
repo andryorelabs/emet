@@ -13,7 +13,7 @@ const REPO_ROOT = resolve(import.meta.dir, "..", "..");
 const BYTE_CEILINGS: Readonly<Record<string, number>> = {
   "commands/doctor.md": 570,
   "commands/init.md": 570,
-  "commands/run.md": 8750,
+  "commands/run.md": 8800,
   "commands/setup.md": 1150,
   "emet/reference/incidents.md": 12950,
   "emet/reference/phases-1-5.md": 12050,

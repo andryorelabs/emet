@@ -41,7 +41,8 @@ spent waiting on workers is never blocked.
 merged clean (not left open, not flagged), run the after-spec step chosen by
 `handoff.afterSpec` before the final report: `emet promote --spec <spec-id>`.
 It never runs when this session was started with `--no-promote` (pass the flag
-through) or when `handoff.afterSpec` is `none`: say that it was skipped and
+through), when the spec was held with `emet promote --spec <spec-id> --hold`,
+or when `handoff.afterSpec` is `none`: say that it was skipped and
 why. In `promote` mode it opens a `develop` to `main` pull request, waits with
 `emet ci --pr <n> --wait`, merges only when CI is `pass` (never on `fail` or
 `timeout`; report it and stop), and opens and merges a `main` to `develop` sync

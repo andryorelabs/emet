@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, spyOn, test } from "bun:test";
-import { chmodSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { execFileSync } from "node:child_process";
+import { existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync, chmodSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
 
@@ -8,7 +9,10 @@ import { DEFAULT_FORGE_CONFIG } from "./config";
 import { BINARY } from "./names";
 import {
   buildPromoteDeps,
+  holdMarkerPath,
+  holdSpec,
   isFinalWaveClean,
+  isSpecHeld,
   parseSpecState,
   planAfterSpec,
   readSpecState,
@@ -232,7 +236,11 @@ describe("final wave state", () => {
 
 async function runCaptured(
   argv: string[],
-  overrides: Partial<PromoteDeps> & { specState?: (specId: string) => Promise<string> } = {},
+  overrides: Partial<PromoteDeps> & {
+    specState?: (specId: string) => Promise<string>;
+    repoRoot?: string;
+    commonDirectory?: string;
+  } = {},
 ) {
   const logs: string[] = [];
   const errors: string[] = [];
@@ -247,6 +255,19 @@ async function runCaptured(
   errorSpy.mockRestore();
   return { logs, errors };
 }
+
+function git(cwd: string, ...args: string[]): string {
+  return execFileSync("git", args, { cwd, encoding: "utf8" }).trim();
+}
+
+function writePromoteConfig(root: string): void {
+  writeFileSync(
+    path.join(root, "emet.config.json"),
+    JSON.stringify({ handoff: { afterSpec: "promote" } }),
+  );
+}
+
+const failingGh: GhRunner = () => Promise.reject(new Error("gh must not run"));
 
 describe("run", () => {
   const originalExitCode = process.exitCode;
@@ -270,5 +291,127 @@ describe("run", () => {
   test("a dry run in promote mode opens nothing and exits 0", async () => {
     const { logs } = await runCaptured(["--spec", "629", "--dry-run"], { mode: "promote" });
     expect(logs.join("\n")).toContain("dry run");
+  });
+
+  describe("--hold", () => {
+    const roots: string[] = [];
+    const makeRoot = (): string => {
+      const root = mkdtempSync(path.join(os.tmpdir(), "emet-hold-"));
+      roots.push(root);
+      return root;
+    };
+    const makeSetup = (): { repoRoot: string; commonDirectory: string } => ({
+      repoRoot: makeRoot(),
+      commonDirectory: makeRoot(),
+    });
+
+    afterEach(() => {
+      for (const root of roots.splice(0)) rmSync(root, { recursive: true, force: true });
+    });
+
+    test("writes the marker and prints held without a config", async () => {
+      const { commonDirectory } = makeSetup();
+      const { logs } = await runCaptured(["--spec", "629", "--hold"], { commonDirectory });
+      expect(process.exitCode ?? 0).toBe(0);
+      expect(JSON.parse(logs.join(""))).toEqual({ held: true });
+      expect(holdMarkerPath(commonDirectory, "629")).toBe(
+        path.join(commonDirectory, ".emet", "runs", "629", "no-promote"),
+      );
+      expect(existsSync(holdMarkerPath(commonDirectory, "629"))).toBe(true);
+    });
+
+    test("a held spec skips without opening a pull request", async () => {
+      const { repoRoot, commonDirectory } = makeSetup();
+      writePromoteConfig(repoRoot);
+      holdSpec(commonDirectory, "629");
+      const { logs } = await runCaptured(["--spec", "629"], {
+        repoRoot,
+        commonDirectory,
+        gh: failingGh,
+      });
+      expect(process.exitCode ?? 0).toBe(0);
+      expect(logs.join("\n")).toContain("after-spec is none");
+    });
+
+    test("a held spec skips on a dry run too", async () => {
+      const { repoRoot, commonDirectory } = makeSetup();
+      writePromoteConfig(repoRoot);
+      holdSpec(commonDirectory, "629");
+      const { logs } = await runCaptured(["--spec", "629", "--dry-run"], {
+        repoRoot,
+        commonDirectory,
+      });
+      expect(logs.join("\n")).toContain("after-spec is none");
+      expect(logs.join("\n")).not.toContain("dry run");
+    });
+
+    test("the legacy per-checkout marker is still honored", () => {
+      const { repoRoot, commonDirectory } = makeSetup();
+      const legacy = path.join(repoRoot, ".emet", "runs", "629", "no-promote");
+      mkdirSync(path.dirname(legacy), { recursive: true });
+      writeFileSync(legacy, "");
+      expect(isSpecHeld(commonDirectory, repoRoot, "629")).toBe(true);
+    });
+
+    test("another spec is not held", () => {
+      const { repoRoot, commonDirectory } = makeSetup();
+      holdSpec(commonDirectory, "629");
+      expect(isSpecHeld(commonDirectory, repoRoot, "630")).toBe(false);
+    });
+
+    test("without a marker the promote mode runs as before", async () => {
+      const { repoRoot, commonDirectory } = makeSetup();
+      writePromoteConfig(repoRoot);
+      const { logs } = await runCaptured(["--spec", "629", "--dry-run"], {
+        repoRoot,
+        commonDirectory,
+      });
+      expect(logs.join("\n")).toContain("dry run");
+    });
+
+    test("a marker written from one worktree is honored from another", () => {
+      const main = makeRoot();
+      const second = path.join(makeRoot(), "second");
+      git(main, "init", "-q", "-b", "main");
+      git(
+        main,
+        "-c",
+        "user.name=t",
+        "-c",
+        "user.email=t@t",
+        "commit",
+        "-q",
+        "--allow-empty",
+        "-m",
+        "i",
+      );
+      git(main, "worktree", "add", "-q", second);
+      const commonFromMain = git(main, "rev-parse", "--path-format=absolute", "--git-common-dir");
+      const commonFromSecond = git(
+        second,
+        "rev-parse",
+        "--path-format=absolute",
+        "--git-common-dir",
+      );
+      expect(commonFromSecond).toBe(commonFromMain);
+      holdSpec(commonFromMain, "629");
+      expect(isSpecHeld(commonFromSecond, second, "629")).toBe(true);
+    });
+
+    test("--spec followed by a flag is a usage error", async () => {
+      const { commonDirectory } = makeSetup();
+      const { errors } = await runCaptured(["--spec", "--hold"], { commonDirectory });
+      expect(process.exitCode).toBe(2);
+      expect(errors.join("\n")).toContain("usage");
+      expect(existsSync(path.join(commonDirectory, ".emet"))).toBe(false);
+    });
+
+    test("an unsafe spec id writes nothing", async () => {
+      const { commonDirectory } = makeSetup();
+      const { errors } = await runCaptured(["--spec", "../x", "--hold"], { commonDirectory });
+      expect(process.exitCode).toBe(1);
+      expect(errors.join("\n")).toContain("unsafe");
+      expect(existsSync(path.join(commonDirectory, ".emet"))).toBe(false);
+    });
   });
 });

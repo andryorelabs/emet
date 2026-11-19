@@ -72,6 +72,7 @@ describe("promote, deploy-check, fleet and setup", () => {
       { name: "--spec", value: true },
       { name: "--dry-run", value: false },
       { name: "--no-promote", value: false },
+      { name: "--hold", value: false },
     ]);
   });
 
