@@ -229,7 +229,7 @@ const UNESCAPED_BRACKET = /(?<!\\)[[\]]/g;
  * literal characters: surfaces name file paths, and a character class there
  * would widen `[locale]` to the sibling directories `l`, `o`, `c`, `a`, `e`.
  */
-function matchesSurface(surface: string, relative: string): boolean {
+export function matchesSurface(surface: string, relative: string): boolean {
   if (surface === relative) return true;
   return new Bun.Glob(surface.replace(UNESCAPED_BRACKET, "\\$&")).match(relative);
 }

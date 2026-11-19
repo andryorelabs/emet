@@ -179,7 +179,17 @@ export type AfterSpecMode = "release" | "promote" | "none";
 
 const AFTER_SPEC_MODES: readonly AfterSpecMode[] = ["release", "promote", "none"];
 
+/** One `handoff.afterSpec` rule: the mode applies when every changed path matches `paths`; a rule without `paths` is the fallback. */
+export interface AfterSpecRule {
+  readonly paths?: readonly string[];
+  readonly mode: AfterSpecMode;
+}
+
+/** `handoff.afterSpec`: a single mode, or an ordered rule list resolved against the changed paths. */
+export type AfterSpecSetting = AfterSpecMode | readonly AfterSpecRule[];
+
 interface DeployCheckConfig {
+  readonly paths?: readonly string[];
   readonly command: string;
   readonly retries: number;
   readonly intervalSeconds: number;
@@ -269,7 +279,7 @@ export interface ForgeConfig {
     /** What happens after a spec's last wave lands: `release` opens a release
      * pull request for a person, `promote` merges trunk into the release
      * branch, `none` does nothing. */
-    readonly afterSpec: AfterSpecMode;
+    readonly afterSpec: AfterSpecSetting;
   };
   readonly interview: {
     /** When true, Phase 1 looks the answer up before asking a technical
@@ -535,6 +545,41 @@ function isPositiveInteger(value: unknown): value is number {
   return typeof value === "number" && Number.isInteger(value) && value > 0;
 }
 
+function isGlobList(value: unknown): value is readonly string[] {
+  return Array.isArray(value) && value.length > 0 && value.every(isNonEmptyString);
+}
+
+const AFTER_SPEC_RULES_REASON =
+  '"handoff.afterSpec" must be one of release|promote|none, or a non-empty list of rules { paths?, mode } where only the last rule may omit paths';
+
+function validateAfterSpecRule(
+  value: unknown,
+  isLast: boolean,
+): { ok: true; rule: AfterSpecRule } | { ok: false } {
+  if (!isRecord(value) || !isOneOf(AFTER_SPEC_MODES, value.mode)) return { ok: false };
+  if (value.paths === undefined) {
+    return isLast ? { ok: true, rule: { mode: value.mode } } : { ok: false };
+  }
+  if (!isGlobList(value.paths)) return { ok: false };
+  return { ok: true, rule: { paths: value.paths, mode: value.mode } };
+}
+
+function validateAfterSpecSetting(
+  value: unknown,
+): { ok: true; setting: AfterSpecSetting } | { ok: false; reason: string } {
+  if (isOneOf(AFTER_SPEC_MODES, value)) return { ok: true, setting: value };
+  if (!Array.isArray(value) || value.length === 0) {
+    return { ok: false, reason: AFTER_SPEC_RULES_REASON };
+  }
+  const rules: AfterSpecRule[] = [];
+  for (const [index, entry] of value.entries()) {
+    const result = validateAfterSpecRule(entry, index === value.length - 1);
+    if (!result.ok) return { ok: false, reason: AFTER_SPEC_RULES_REASON };
+    rules.push(result.rule);
+  }
+  return { ok: true, setting: rules };
+}
+
 function validateDeploySection(
   value: unknown,
 ): { ok: true; check: DeployCheckConfig | undefined } | { ok: false; reason: string } {
@@ -544,6 +589,13 @@ function validateDeploySection(
     return { ok: false, reason: '"deploy.check" must be an object' };
   }
   const { command, retries, intervalSeconds, timeoutSeconds } = section.check;
+  const checkPaths = section.check.paths;
+  if (checkPaths !== undefined && !isGlobList(checkPaths)) {
+    return {
+      ok: false,
+      reason: '"deploy.check.paths" must be a non-empty list of non-empty globs',
+    };
+  }
   if (!isNonEmptyString(command)) {
     return { ok: false, reason: '"deploy.check.command" must be a non-empty string' };
   }
@@ -556,7 +608,14 @@ function validateDeploySection(
   if (!isPositiveInteger(timeoutSeconds)) {
     return { ok: false, reason: '"deploy.check.timeoutSeconds" must be a positive integer' };
   }
-  return { ok: true, check: { command, retries, intervalSeconds, timeoutSeconds } };
+  const check: DeployCheckConfig = {
+    command,
+    retries,
+    intervalSeconds,
+    timeoutSeconds,
+    ...(checkPaths === undefined ? {} : { paths: checkPaths }),
+  };
+  return { ok: true, check };
 }
 
 /**
@@ -714,10 +773,11 @@ function validateAndMerge(
       reason: '"handoff.permissionMode" must be one of bypassPermissions|auto|acceptEdits',
     };
   }
-  const afterSpec = handoffSection.afterSpec ?? DEFAULT_FORGE_CONFIG.handoff.afterSpec;
-  if (!isOneOf(AFTER_SPEC_MODES, afterSpec)) {
-    return { ok: false, reason: '"handoff.afterSpec" must be one of release|promote|none' };
-  }
+  const afterSpecResult = validateAfterSpecSetting(
+    handoffSection.afterSpec ?? DEFAULT_FORGE_CONFIG.handoff.afterSpec,
+  );
+  if (!afterSpecResult.ok) return afterSpecResult;
+  const afterSpec = afterSpecResult.setting;
 
   const interviewSection = isRecord(raw.interview) ? raw.interview : {};
   const interviewResearch = interviewSection.research ?? DEFAULT_FORGE_CONFIG.interview.research;
