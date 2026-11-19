@@ -354,6 +354,7 @@ if [[ -t 0 ]] && [[ " ${COMMAND_NAMES[*]} " == *" setup "* ]]; then
 fi
 
 echo
+"$HOME/.local/bin/emet" whats-new || echo "warning: emet whats-new reported a failure — see https://emet.andryore.dev/docs/whats-new/ for the release notes." >&2
 echo "Done. Verify with:"
 if [[ "$INSTALL_MODE" == "source" ]]; then
   echo "  emet selftest"

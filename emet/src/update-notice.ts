@@ -61,7 +61,7 @@ function parseVersion(version: string): number[] {
   return core.split(".").map((part) => Number.parseInt(part, 10) || 0);
 }
 
-function isNewer(latest: string, current: string): boolean {
+export function isNewer(latest: string, current: string): boolean {
   const latestParts = parseVersion(latest);
   const currentParts = parseVersion(current);
   const length = Math.max(latestParts.length, currentParts.length);

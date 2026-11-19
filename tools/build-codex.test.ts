@@ -163,6 +163,13 @@ describe("skill and manifest builders", () => {
     );
     expect(buildHooks()).not.toContain("CLAUDE_PLUGIN_ROOT");
   });
+
+  test("buildHooks runs the what's new notice on SessionStart", () => {
+    const hooks: unknown = JSON.parse(buildHooks());
+    expect(dig(hooks, "hooks", "SessionStart", "0", "hooks", "0", "command")).toBe(
+      "EMET_AGENT_HOST=codex emet whats-new --hook",
+    );
+  });
 });
 
 describe("committed Codex artefacts", () => {

@@ -88,8 +88,8 @@ if [ ! -x "$cached_binary" ]; then
   staging=$(mktemp -d "$cache_root/$version/.download.XXXXXX") || fail "cannot create staging directory"
   trap 'rm -rf "$staging"' EXIT
 
-  curl -fsL "$release_url/$asset" -o "$staging/$asset" || { fall_back_to_cached "$@"; fail "release asset $asset not found at $release_url"; }
-  curl -fsL "$release_url/SHA256SUMS" -o "$staging/SHA256SUMS" || fail "SHA256SUMS not found at $release_url"
+  curl -fsL --connect-timeout 15 --speed-limit 1024 --speed-time 30 "$release_url/$asset" -o "$staging/$asset" || { fall_back_to_cached "$@"; fail "release asset $asset not found at $release_url"; }
+  curl -fsL --connect-timeout 15 --speed-limit 1024 --speed-time 30 "$release_url/SHA256SUMS" -o "$staging/SHA256SUMS" || fail "SHA256SUMS not found at $release_url"
 
   expected=$(awk -v name="$asset" '{ file = $2; sub(/^\*/, "", file); if (file == name) { print $1; exit } }' "$staging/SHA256SUMS")
   [ -n "$expected" ] || fail "no checksum listed for $asset"

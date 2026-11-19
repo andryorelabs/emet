@@ -709,7 +709,10 @@ describe("run", () => {
   });
 
   test("a dry run in promote mode opens nothing and exits 0", async () => {
-    const { logs } = await runCaptured(["--spec", "629", "--dry-run"], { mode: "promote" });
+    const { logs } = await runCaptured(["--spec", "629", "--dry-run"], {
+      mode: "promote",
+      readChangedPaths: () => Promise.resolve([]),
+    });
     expect(logs.join("\n")).toContain("dry run");
   });
 
