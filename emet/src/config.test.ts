@@ -116,6 +116,11 @@ describe("loadForgeConfig", () => {
         autoChain: true,
         launcher: "orca",
         permissionMode: "acceptEdits",
+        afterSpec: "promote",
+      },
+      interview: { research: false },
+      deploy: {
+        check: { command: "curl -f x", retries: 3, intervalSeconds: 5, timeoutSeconds: 60 },
       },
       landing: { mode: "merge" },
       gate: { onHold: "stop" },
@@ -200,6 +205,37 @@ describe("loadForgeConfig", () => {
       { handoff: { permissionMode: "plan" } },
       /"handoff.permissionMode" must be one of/,
     ],
+    [
+      "handoff.afterSpec",
+      { handoff: { afterSpec: "ship" } },
+      /"handoff.afterSpec" must be one of release\|promote\|none/,
+    ],
+    [
+      "interview.research",
+      { interview: { research: "yes" } },
+      /"interview.research" must be a boolean/,
+    ],
+    ["deploy.check", { deploy: { check: "x" } }, /"deploy.check" must be an object/],
+    [
+      "deploy.check.command",
+      { deploy: { check: { command: "" } } },
+      /"deploy.check.command" must be a non-empty string/,
+    ],
+    [
+      "deploy.check.retries",
+      { deploy: { check: { command: "x", retries: 0 } } },
+      /"deploy.check.retries" must be a positive integer/,
+    ],
+    [
+      "deploy.check.intervalSeconds",
+      { deploy: { check: { command: "x", retries: 1, intervalSeconds: 0 } } },
+      /"deploy.check.intervalSeconds" must be a positive integer/,
+    ],
+    [
+      "deploy.check.timeoutSeconds",
+      { deploy: { check: { command: "x", retries: 1, intervalSeconds: 1, timeoutSeconds: -1 } } },
+      /"deploy.check.timeoutSeconds" must be a positive integer/,
+    ],
     ["landing.mode", { landing: { mode: "push" } }, /"landing.mode" must be one of pr\|merge/],
     [
       "gate.onHold",
@@ -242,6 +278,16 @@ describe("loadForgeConfig", () => {
     expect(configOf(await loadForgeConfig(repoRoot)).gate).toEqual({ onHold: "fix-and-continue" });
     await writeConfig({ gate: { onHold: "stop" } });
     expect(configOf(await loadForgeConfig(repoRoot)).gate).toEqual({ onHold: "stop" });
+  });
+
+  test("afterSpec defaults to none, interview.research to true, deploy to absent", async () => {
+    await writeConfig({});
+    const config = configOf(await loadForgeConfig(repoRoot));
+    expect(config.handoff.afterSpec).toBe("none");
+    expect(config.interview).toEqual({ research: true });
+    expect(config.deploy).toBeUndefined();
+    await writeConfig({ deploy: {} });
+    expect(configOf(await loadForgeConfig(repoRoot)).deploy).toBeUndefined();
   });
 
   test("language defaults to en and accepts overrides", async () => {

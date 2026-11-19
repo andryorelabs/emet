@@ -110,7 +110,11 @@ type ModuleName =
   | "map"
   | "metrics"
   | "insights"
-  | "runcurrent";
+  | "runcurrent"
+  | "promote"
+  | "deploycheck"
+  | "fleet"
+  | "setup";
 
 type ModuleRun = CommandSpec["run"];
 
@@ -188,6 +192,14 @@ async function loadRun(name: ModuleName): Promise<ModuleRun> {
       return (await import("./insights")).run;
     case "runcurrent":
       return (await import("./runcurrent")).run;
+    case "promote":
+      return (await import("./promote")).run;
+    case "deploycheck":
+      return (await import("./deploycheck")).run;
+    case "fleet":
+      return (await import("./fleet")).run;
+    case "setup":
+      return (await import("./setup")).run;
   }
   throw new Error(`unknown command module "${String(name)}"`);
 }
@@ -219,7 +231,7 @@ export const COMMANDS: readonly CommandSpec[] = [
   {
     name: "init",
     summary: "write emet.config.json and the docs/agents files for this repo",
-    flags: [val("--tracker"), bool("--force")],
+    flags: [val("--tracker"), val("--after-spec"), bool("--force")],
     run: runModule("init"),
   },
   {
@@ -535,6 +547,30 @@ export const COMMANDS: readonly CommandSpec[] = [
     summary: "run subcommands; `current` prints the active run",
     flags: [bool("--json")],
     run: runModule("runcurrent"),
+  },
+  {
+    name: "promote",
+    summary: "promote develop to main after a spec lands",
+    flags: [val("--spec"), bool("--dry-run"), bool("--no-promote")],
+    run: runModule("promote"),
+  },
+  {
+    name: "deploy-check",
+    summary: "run the configured post-deploy check",
+    flags: [],
+    run: runModule("deploycheck"),
+  },
+  {
+    name: "fleet",
+    summary: "list, set and launch across repos (list|set|launch)",
+    flags: [val("--root"), val("--repos"), val("--feature"), bool("--dry-run"), bool("--json")],
+    run: runModule("fleet"),
+  },
+  {
+    name: "setup",
+    summary: "install the optional extras",
+    flags: [bool("--yes"), val("--with"), bool("--list"), bool("--notice"), bool("--json")],
+    run: runModule("setup"),
   },
   {
     name: "guard",

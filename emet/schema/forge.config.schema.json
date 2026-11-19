@@ -379,6 +379,49 @@
           "enum": ["bypassPermissions", "auto", "acceptEdits"],
           "default": "bypassPermissions",
           "description": "Permission mode the chained wave's `claude --bg` session runs in. Defaults to bypassPermissions because auto mode's classifier can deny steps like `gh pr merge` mid-wave, leaving the wave half-finished; `permissions.deny` rules still apply in every mode."
+        },
+        "afterSpec": {
+          "type": "string",
+          "enum": ["release", "promote", "none"],
+          "default": "none",
+          "description": "What happens after a spec's last wave lands. `release` opens a release pull request and stops for a person; `promote` opens and merges a trunk-to-release-branch pull request once CI passes; `none` does nothing. `emet init` detects it; `--no-promote` forces `none` for one run."
+        }
+      }
+    },
+    "interview": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "research": {
+          "type": "boolean",
+          "default": true,
+          "description": "When true, Phase 1 of the run looks the answer up in the repo, docs or primary sources and explains why it recommends an option before asking a technical question that offers options. The person still answers."
+        }
+      }
+    },
+    "deploy": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "check": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["command", "retries", "intervalSeconds", "timeoutSeconds"],
+          "description": "A command `emet deploy-check` runs until it exits 0. Absent means no check.",
+          "properties": {
+            "command": { "type": "string", "minLength": 1, "description": "Shell command to run." },
+            "retries": { "type": "integer", "minimum": 1, "description": "Maximum attempts." },
+            "intervalSeconds": {
+              "type": "integer",
+              "minimum": 1,
+              "description": "Seconds between attempts."
+            },
+            "timeoutSeconds": {
+              "type": "integer",
+              "minimum": 1,
+              "description": "Overall time limit in seconds."
+            }
+          }
         }
       }
     },
