@@ -2,8 +2,16 @@
 title: Nouveautés
 description: Notes de version d'emet : ce qui a changé dans chaque version.
 seoTitle: Nouveautés d'emet : notes de version
-sourceHash: b47ea0e52bb41632
+sourceHash: d31beb683db0a11e
 ---
+
+## 0.9.1
+
+2026-11-19
+
+### Corrigé
+
+- `emet setup` accepte `--data-dir`, de sorte que le hook SessionStart du plugin n'échoue plus avec `unknown flag --data-dir`.
 
 ## 0.9.0
 

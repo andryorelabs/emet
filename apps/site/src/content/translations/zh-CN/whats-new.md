@@ -2,8 +2,16 @@
 title: 新功能
 description: emet 的发布说明：每个版本都有哪些变化。
 seoTitle: "emet 新功能：发布说明"
-sourceHash: b47ea0e52bb41632
+sourceHash: d31beb683db0a11e
 ---
+
+## 0.9.1
+
+2026-11-19
+
+### 已修复
+
+- `emet setup` 现在接受 `--data-dir`,插件的 SessionStart 钩子不再因 `unknown flag --data-dir` 而失败。
 
 ## 0.9.0
 

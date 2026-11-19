@@ -2,8 +2,16 @@
 title: 새로운 소식
 description: emet 릴리스 노트. 각 버전에서 무엇이 바뀌었는지 정리합니다.
 seoTitle: "emet 새로운 소식: 릴리스 노트"
-sourceHash: b47ea0e52bb41632
+sourceHash: d31beb683db0a11e
 ---
+
+## 0.9.1
+
+2026-11-19
+
+### 수정됨
+
+- `emet setup`이 `--data-dir`을 받아들여, 플러그인의 SessionStart 훅이 더 이상 `unknown flag --data-dir`로 실패하지 않습니다.
 
 ## 0.9.0
 
