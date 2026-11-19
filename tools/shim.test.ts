@@ -230,6 +230,134 @@ describe("bin/emet shim", () => {
   });
 });
 
+const windowsNotice = {
+  systemMessage:
+    "emet does not support native Windows; run Claude Code inside WSL, or disable the plugin with 'claude plugin disable emet'.",
+};
+
+/** Single-quotes `value` for a POSIX shell script. */
+function shellQuote(value: string): string {
+  return `'${value.replaceAll("'", `'\\''`)}'`;
+}
+
+/** Writes a fake `uname` answering `-s` and `-m`, and returns a PATH that finds it first. */
+function fakeUnamePath(system: string, machine: string): string {
+  const fakeBin = path.join(workDir, "fake-uname");
+  mkdirSync(fakeBin, { recursive: true });
+  writeFileSync(
+    path.join(fakeBin, "uname"),
+    `#!/bin/sh\ncase "\${1:-}" in -m) printf '%s\\n' ${shellQuote(machine)} ;; *) printf '%s\\n' ${shellQuote(system)} ;; esac\n`,
+  );
+  chmodSync(path.join(fakeBin, "uname"), 0o755);
+  return `${fakeBin}:${process.env.PATH ?? ""}`;
+}
+
+/** Seeds a cached binary for `version` that would print `cached <args>` if it ever ran. */
+function seedCachedBinary(): void {
+  mkdirSync(path.join(cacheDir, version), { recursive: true });
+  const cached = path.join(cacheDir, version, "emet");
+  writeFileSync(cached, '#!/bin/sh\necho "cached $*"\n');
+  chmodSync(cached, 0o755);
+}
+
+describe("bin/emet shim on an unsupported platform", () => {
+  test("the guard on MINGW exits 0 silently, downloading and caching nothing", () => {
+    publishRelease();
+    const result = runShim(["guard"], { PATH: fakeUnamePath("MINGW64_NT-10.0-26200", "x86_64") });
+    expect(result).toEqual({ code: 0, stdout: "", stderr: "" });
+    expect(existsSync(cacheDir)).toBe(false);
+  });
+
+  test("guard events on MINGW exit 0 silently", () => {
+    for (const event of ["Stop", "SubagentStop", "UserPromptSubmit"]) {
+      const result = runShim(["guard", "--event", event], {
+        PATH: fakeUnamePath("MINGW64_NT-10.0-26200", "x86_64"),
+      });
+      expect(result).toEqual({ code: 0, stdout: "", stderr: "" });
+    }
+  });
+
+  test("never execs an already cached binary", () => {
+    seedCachedBinary();
+    const result = runShim(["guard"], { PATH: fakeUnamePath("CYGWIN_NT-10.0", "x86_64") });
+    expect(result).toEqual({ code: 0, stdout: "", stderr: "" });
+  });
+
+  test("prefetch on MSYS prints exactly the Windows systemMessage line", () => {
+    publishRelease();
+    const result = runShim([], {
+      EMET_PREFETCH: "1",
+      PATH: fakeUnamePath("MSYS_NT-10.0", "x86_64"),
+    });
+    expect(result.code).toBe(0);
+    expect(result.stderr).toBe("");
+    expect(result.stdout).toBe(`${JSON.stringify(windowsNotice)}\n`);
+    expect(existsSync(cacheDir)).toBe(false);
+  });
+
+  test("prefetch prints the Windows notice for MINGW and CYGWIN too, and honours FORGE_PREFETCH", () => {
+    for (const system of ["MINGW32_NT-6.1", "CYGWIN_NT-10.0-19045"]) {
+      const result = runShim([], { FORGE_PREFETCH: "1", PATH: fakeUnamePath(system, "x86_64") });
+      expect(result.code).toBe(0);
+      expect(JSON.parse(result.stdout)).toEqual(windowsNotice);
+    }
+  });
+
+  test("setup --notice on MSYS prints nothing on stdout or stderr", () => {
+    const result = runShim(["setup", "--notice"], {
+      PATH: fakeUnamePath("MSYS_NT-10.0", "x86_64"),
+    });
+    expect(result).toEqual({ code: 0, stdout: "", stderr: "" });
+  });
+
+  test("an unsupported Linux architecture degrades the same way", () => {
+    publishRelease();
+    const unamePath = fakeUnamePath("Linux", "armv7l");
+    expect(runShim(["guard"], { PATH: unamePath })).toEqual({ code: 0, stdout: "", stderr: "" });
+    const prefetch = runShim([], { EMET_PREFETCH: "1", PATH: unamePath });
+    expect(prefetch.code).toBe(0);
+    expect(prefetch.stdout).toBe(
+      `${JSON.stringify({ systemMessage: "emet does not support Linux/armv7l; emet stays inactive in this session." })}\n`,
+    );
+    expect(existsSync(cacheDir)).toBe(false);
+  });
+
+  test("an unsupported OS gets the generic notice naming its os/arch", () => {
+    const result = runShim([], {
+      EMET_PREFETCH: "1",
+      PATH: fakeUnamePath("FreeBSD", "amd64"),
+    });
+    expect(result.code).toBe(0);
+    expect(JSON.parse(result.stdout)).toEqual({
+      systemMessage: "emet does not support FreeBSD/amd64; emet stays inactive in this session.",
+    });
+  });
+
+  test("the notice stays valid JSON when uname returns quotes or backslashes", () => {
+    const result = runShim([], {
+      EMET_PREFETCH: "1",
+      PATH: fakeUnamePath('Weird"OS\\x', 'ar"m\\'),
+    });
+    expect(result.code).toBe(0);
+    expect(result.stdout.split("\n")).toHaveLength(2);
+    expect(JSON.parse(result.stdout)).toEqual({
+      systemMessage: "emet does not support WeirdOSx/arm; emet stays inactive in this session.",
+    });
+  });
+
+  test("the platform check runs before EMET_FROM_SOURCE=1 with bun on PATH", () => {
+    const sourceEntry = path.join(pluginRoot, "emet/bin/emet.ts");
+    mkdirSync(path.dirname(sourceEntry), { recursive: true });
+    writeFileSync(sourceEntry, 'console.log("from-source", process.argv.slice(2).join(" "));\n');
+    const bunDirectory = path.dirname(process.execPath);
+    const result = runShim(["guard"], {
+      EMET_FROM_SOURCE: "1",
+      PATH: `${bunDirectory}:${fakeUnamePath("MINGW64_NT-10.0-26200", "x86_64")}`,
+    });
+    expect(result).toEqual({ code: 0, stdout: "", stderr: "" });
+  });
+});
+
 describe("bin/emet shim legacy FORGE_* fallback", () => {
   test("reads FORGE_CACHE_DIR, FORGE_RELEASE_BASE_URL and FORGE_PREFETCH", () => {
     publishRelease();
