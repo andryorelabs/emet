@@ -4,6 +4,8 @@ emet can run on Codex CLI as well as Claude Code. Terms follow [GLOSSARY.md](../
 
 On the Codex host the pipeline is the same: interview, spec, tickets, one approval, parallel workers in worktrees, a review per wave, then landing. What changes is the plumbing. Each worker and each reviewer is its own `codex exec` process started by `emet dispatch` and `emet review-run`, and the slash commands become the `$emet:run`, `$emet:init` and `$emet:doctor` skills. The Claude Code path is untouched.
 
+Native Windows is unsupported (use WSL). The plugin's hooks carry a `commandWindows` override, because Codex runs hooks through PowerShell there: at session start emet shows one notice and stays inactive, the other hooks succeed without output, and `install.sh` refuses to run.
+
 ## Install
 
 :::steps
