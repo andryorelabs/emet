@@ -2,7 +2,7 @@
 title: Справочник по CLI
 description: Каждая подкоманда emet, таблица гейтов и записей, коды завершения и переменные окружения.
 seoTitle: Справочник по CLI emet
-sourceHash: 00afab0462e7fd07
+sourceHash: b0fbd0cfa621ff8a
 ---
 
 Каждая подкоманда `emet`, таблица гейтов и записей, коды завершения и переменные окружения. Термины соответствуют [GLOSSARY.md](../../GLOSSARY.md). Назад к [README](../../README.md). Каждая команда выводит справку по использованию с `--help`.
@@ -68,7 +68,7 @@ emet doctor ~/code/*
 
 ### Планирование, ревью и посадка
 
-- `emet promote --spec <id> [--dry-run] [--no-promote]`: шаг after-spec согласно [`handoff.afterSpec`](configuration.md#handoff). В режиме `promote` открывает pull request из `develop` в `main` с заголовком `chore: 🔖 promote develop`, ждёт через `emet ci --pr <n> --wait`, сливает его merge-коммитом только при состоянии `pass`, а затем открывает и сливает синхронизирующий pull request из `main` в `develop`, только если `develop` отстаёт от `main`. Добавляет в журнал одно событие `promote` с номером pull request и `merged`. В режиме `release` ничего не сливает и оставляет release pull request человеку. При `afterSpec` `none`, с `--no-promote` или если последняя волна спецификации оставлена открытой или помечена, завершается с кодом 0 и пометкой `skipped`. CI не в состоянии `pass` ничего не сливает и завершается с кодом 1. `--dry-run` не открывает pull request.
+- `emet promote --spec <id> [--dry-run] [--no-promote] [--hold]`: шаг after-spec согласно [`handoff.afterSpec`](configuration.md#handoff). В режиме `promote` открывает pull request из `develop` в `main` с заголовком `chore: 🔖 promote develop`, ждёт через `emet ci --pr <n> --wait`, сливает его merge-коммитом только при состоянии `pass`, а затем открывает и сливает синхронизирующий pull request из `main` в `develop`, только если `develop` отстаёт от `main`. Добавляет в журнал одно событие `promote` с номером pull request и `merged`. В режиме `release` ничего не сливает и оставляет release pull request человеку. При `afterSpec` `none`, с `--no-promote` или если последняя волна спецификации оставлена открытой или помечена, завершается с кодом 0 и пометкой `skipped`. CI не в состоянии `pass` ничего не сливает и завершается с кодом 1. `--dry-run` не открывает pull request. `emet promote --spec <id> --hold` записывает маркер `<run dir>/runs/<id>/no-promote` и выводит `{"held":true}`; пока он существует, `emet promote --spec <id>` завершается с кодом 0 и пометкой `skipped`, не открывая pull request, поэтому `--no-promote` сохраняется между сессиями спецификации.
 - `emet deploy-check [--json]`: запускает `deploy.check.command`, пока он не завершится с кодом 0, не более `retries` попыток или `timeoutSeconds` секунд, с паузой `intervalSeconds` между попытками, и выводит `state: ok | failed | timeout` с `attempts`. Код выхода `0` — ok, `1` — failed, `3` — timeout. Если `deploy.check` не настроен, завершается с кодом 0 и `skipped: "no deploy check configured"`. Шаг after-spec `promote` запускает его после слияния. См. [`deploy`](configuration.md#deploy).
 - `emet validate --spec <id> | --file <path>`: проверка плана; см. [Гейты и записи](#гейты-и-записи).
 - `emet surfaces --check <file.json | ->`: отклоняет пересекающиеся glob-шаблоны разрешённых поверхностей между тикетами волны.

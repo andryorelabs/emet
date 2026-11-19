@@ -8,7 +8,10 @@ import { DEFAULT_FORGE_CONFIG } from "./config";
 import { BINARY } from "./names";
 import {
   buildPromoteDeps,
+  holdMarkerPath,
+  holdSpec,
   isFinalWaveClean,
+  isSpecHeld,
   parseSpecState,
   planAfterSpec,
   readSpecState,
@@ -232,7 +235,10 @@ describe("final wave state", () => {
 
 async function runCaptured(
   argv: string[],
-  overrides: Partial<PromoteDeps> & { specState?: (specId: string) => Promise<string> } = {},
+  overrides: Partial<PromoteDeps> & {
+    specState?: (specId: string) => Promise<string>;
+    repoRoot?: string;
+  } = {},
 ) {
   const logs: string[] = [];
   const errors: string[] = [];
@@ -247,6 +253,15 @@ async function runCaptured(
   errorSpy.mockRestore();
   return { logs, errors };
 }
+
+function writePromoteConfig(root: string): void {
+  writeFileSync(
+    path.join(root, "emet.config.json"),
+    JSON.stringify({ handoff: { afterSpec: "promote" } }),
+  );
+}
+
+const failingGh: GhRunner = () => Promise.reject(new Error("gh must not run"));
 
 describe("run", () => {
   const originalExitCode = process.exitCode;
@@ -270,5 +285,57 @@ describe("run", () => {
   test("a dry run in promote mode opens nothing and exits 0", async () => {
     const { logs } = await runCaptured(["--spec", "629", "--dry-run"], { mode: "promote" });
     expect(logs.join("\n")).toContain("dry run");
+  });
+
+  describe("--hold", () => {
+    const roots: string[] = [];
+    const makeRoot = (): string => {
+      const root = mkdtempSync(path.join(os.tmpdir(), "emet-hold-"));
+      roots.push(root);
+      return root;
+    };
+
+    afterEach(() => {
+      for (const root of roots.splice(0)) rmSync(root, { recursive: true, force: true });
+    });
+
+    test("writes the marker and prints held", async () => {
+      const repoRoot = makeRoot();
+      const { logs } = await runCaptured(["--spec", "629", "--hold"], { repoRoot });
+      expect(JSON.parse(logs.join(""))).toEqual({ held: true });
+      expect(isSpecHeld(repoRoot, "629")).toBe(true);
+      expect(holdMarkerPath(repoRoot, "629")).toBe(
+        path.join(repoRoot, ".emet", "runs", "629", "no-promote"),
+      );
+    });
+
+    test("a held spec skips without opening a pull request", async () => {
+      const repoRoot = makeRoot();
+      writePromoteConfig(repoRoot);
+      holdSpec(repoRoot, "629");
+      const { logs } = await runCaptured(["--spec", "629"], { repoRoot, gh: failingGh });
+      expect(process.exitCode ?? 0).toBe(0);
+      expect(logs.join("\n")).toContain("after-spec is none");
+    });
+
+    test("a held spec skips on a dry run too", async () => {
+      const repoRoot = makeRoot();
+      holdSpec(repoRoot, "629");
+      const { logs } = await runCaptured(["--spec", "629", "--dry-run"], { repoRoot });
+      expect(logs.join("\n")).toContain("after-spec is none");
+    });
+
+    test("another spec is not held", () => {
+      const repoRoot = makeRoot();
+      holdSpec(repoRoot, "629");
+      expect(isSpecHeld(repoRoot, "630")).toBe(false);
+    });
+
+    test("without a marker the promote mode runs as before", async () => {
+      const repoRoot = makeRoot();
+      writePromoteConfig(repoRoot);
+      const { logs } = await runCaptured(["--spec", "629", "--dry-run"], { repoRoot });
+      expect(logs.join("\n")).toContain("dry run");
+    });
   });
 });

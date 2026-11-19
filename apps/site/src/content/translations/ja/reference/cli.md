@@ -2,7 +2,7 @@
 title: CLI リファレンス
 description: すべての emet サブコマンド、ゲートと記録の表、終了コード、環境変数を説明します。
 seoTitle: emet CLI リファレンス
-sourceHash: 00afab0462e7fd07
+sourceHash: b0fbd0cfa621ff8a
 ---
 
 すべての `emet` サブコマンド、ゲートと記録の表、終了コード、環境変数です。用語は [GLOSSARY.md](../../GLOSSARY.md) に従います。[README](../../README.md) に戻る。すべてのコマンドは `--help` で使い方を表示します。
@@ -68,7 +68,7 @@ emet doctor ~/code/*
 
 ### 計画、レビュー、ランディング
 
-- `emet promote --spec <id> [--dry-run] [--no-promote]`: [`handoff.afterSpec`](configuration.md#handoff) に従う after-spec ステップです。`promote` モードでは、`chore: 🔖 promote develop` というタイトルで `develop` から `main` へのプルリクエストを開き、`emet ci --pr <n> --wait` で待機し、状態が `pass` のときだけマージコミットでマージします。その後、`develop` が `main` より遅れている場合にのみ、`main` から `develop` への同期プルリクエストを開いてマージします。プルリクエスト番号と `merged` を持つ `promote` イベントを 1 件ジャーナルに追記します。`release` モードでは何もマージせず、リリースのプルリクエストは人に任せます。`afterSpec` が `none` の場合、`--no-promote` を付けた場合、または spec の最後のウェーブが開いたまま、もしくはフラグが付いたままの場合は、`skipped` の注記を付けて終了コード 0 で終了します。CI が `pass` でなければ何もマージせず、終了コード 1 で終了します。`--dry-run` ではプルリクエストを開きません。
+- `emet promote --spec <id> [--dry-run] [--no-promote] [--hold]`: [`handoff.afterSpec`](configuration.md#handoff) に従う after-spec ステップです。`promote` モードでは、`chore: 🔖 promote develop` というタイトルで `develop` から `main` へのプルリクエストを開き、`emet ci --pr <n> --wait` で待機し、状態が `pass` のときだけマージコミットでマージします。その後、`develop` が `main` より遅れている場合にのみ、`main` から `develop` への同期プルリクエストを開いてマージします。プルリクエスト番号と `merged` を持つ `promote` イベントを 1 件ジャーナルに追記します。`release` モードでは何もマージせず、リリースのプルリクエストは人に任せます。`afterSpec` が `none` の場合、`--no-promote` を付けた場合、または spec の最後のウェーブが開いたまま、もしくはフラグが付いたままの場合は、`skipped` の注記を付けて終了コード 0 で終了します。CI が `pass` でなければ何もマージせず、終了コード 1 で終了します。`--dry-run` ではプルリクエストを開きません。 `emet promote --spec <id> --hold` はマーカー `<run dir>/runs/<id>/no-promote` を書き込み `{"held":true}` を出力します。マーカーがある間、`emet promote --spec <id>` は pull request を開かずに終了コード 0 と `skipped` の注記で終了するため、`--no-promote` は仕様の複数セッションにわたって保持されます。
 - `emet deploy-check [--json]`: `deploy.check.command` が終了コード 0 で終わるまで、最大 `retries` 回または `timeoutSeconds` 秒の範囲で、試行の間に `intervalSeconds` 秒待ちながら実行し、`attempts` とともに `state: ok | failed | timeout` を出力します。終了コードは `0` が ok、`1` が failed、`3` が timeout です。`deploy.check` が未設定の場合は、`skipped: "no deploy check configured"` を出力して終了コード 0 で終了します。after-spec の `promote` ステップはマージの後にこれを実行します。[`deploy`](configuration.md#deploy)を参照してください。
 - `emet validate --spec <id> | --file <path>`: 計画の検証です。[ゲートと記録](#ゲートと記録)を参照してください。
 - `emet surfaces --check <file.json | ->`: ウェーブ内のチケット間で、編集を許可するサーフェスのグロブが重複している場合は拒否します。

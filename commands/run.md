@@ -7,7 +7,10 @@ FEATURE: $ARGUMENTS
 ## Modes
 
 Parse `$ARGUMENTS` for a leading `--draft` or `--dispatch <spec-id>` flag
-before anything else:
+before anything else. A leading `--no-promote` is removed from FEATURE; as soon
+as the spec id exists (end of Phase 5, or at the start of `--dispatch`), run
+`emet promote --spec <spec-id> --hold` so every later session of the spec skips
+the after-spec step:
 
 - **No flag** (default): Phases 1–5 plus the first wave in this session; each
   later wave runs in its own session — `/emet:run --dispatch <spec-id>` by hand,
