@@ -124,6 +124,14 @@ _Avoid_: deploy, publish
 A deliberate `develop` to `main` merge-commit pull request that carries a version tag.
 _Avoid_: publish, ship (a **Landing** is how a wave reaches trunk)
 
+**After-spec rule**:
+One entry of the after-spec setting that picks the **After-spec step** from the paths a **Promote** would carry; the entry without paths is the fallback.
+_Avoid_: filter, route
+
+**Deploy check**:
+The command that confirms a deploy reached production after the branch that deploys was merged.
+_Avoid_: health check, smoke test
+
 **Surface**:
 A glob of files a ticket is allowed to edit, enforced by the edit guard.
 _Avoid_: scope, allowlist
@@ -168,6 +176,7 @@ _Avoid_: status file, progress file
 - The **Coordinator** merges **Worker** branches into the **Integration branch**; a **Reviewer** and the **Gates** check it before it lands.
 - The **Gate** answers a wave with merge, **Hold**, **Chain**, **Stop** or defer; a **Hold** over findings leads to a **Fix round**, and a **Hold** over an **Environment fault** never spends a fix attempt.
 - When a spec's last wave has landed, the **After-spec step** is a **Release**, a **Promote** or nothing, chosen per repository; the **Journal** records each step, and a **Baseline** marks where its clean history starts.
+- An **After-spec rule** is chosen by the paths a **Promote** would carry; a **Deploy check** runs only after a merge into the branch that deploys.
 - A **Worker** may edit only its ticket's **Surfaces** and must keep its **Handoff** current.
 - A **Claim** carries its ticket's **Surfaces**; two live **Claims** of different **Runs** never have overlapping **Surfaces**.
 - Everything above belongs to one **Run**, which executes in one **Agent host**.
