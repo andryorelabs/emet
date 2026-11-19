@@ -2,8 +2,22 @@
 title: 新功能
 description: emet 的发布说明：每个版本都有哪些变化。
 seoTitle: "emet 新功能：发布说明"
-sourceHash: d31beb683db0a11e
+sourceHash: 554cd8b7c6d96f87
 ---
+
+## 0.10.0
+
+2026-11-19
+
+### 新增
+
+- `handoff.afterSpec` 接受按顺序排列的 `{ paths?, mode }` 规则列表,因此同时包含 CLI 和网站的仓库可以发布 CLI 并推进网站。模式根据将 `develop` 推进到 `main` 时会带入的路径来选择。
+- `deploy.check.paths` 将部署检查限制在触及所列 glob 的推进上。
+- `emet promote` 会输出 `rule` 和 `reason` 并记入日志,同时输出 `deployCheck: { run, reason }`。
+
+### 变更
+
+- 部署检查不再依赖 `afterSpec`:在主干 `main` 上最终 wave 干净完成后运行,在 `develop` 上则于推进合并后运行。协调器在每个 spec 之后都会运行 `emet promote`,`afterSpec` 为 `none` 时也不例外。
 
 ## 0.9.1
 

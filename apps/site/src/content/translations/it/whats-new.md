@@ -2,8 +2,22 @@
 title: Novità
 description: Note di rilascio di emet: cosa è cambiato in ogni versione.
 seoTitle: "Novità di emet: note di rilascio"
-sourceHash: d31beb683db0a11e
+sourceHash: 554cd8b7c6d96f87
 ---
+
+## 0.10.0
+
+2026-11-19
+
+### Aggiunto
+
+- `handoff.afterSpec` accetta un elenco ordinato di regole `{ paths?, mode }`, così un repository con una CLI e un sito web può rilasciare la CLI e promuovere il sito web. La modalità viene scelta in base ai percorsi che la promozione di `develop` porterebbe in `main`.
+- `deploy.check.paths` limita il controllo di deploy alle promozioni che hanno toccato i glob elencati.
+- `emet promote` stampa e registra nel journal `rule` e `reason`, e stampa `deployCheck: { run, reason }`.
+
+### Modificato
+
+- Il controllo di deploy non dipende più da `afterSpec`: viene eseguito dopo una wave finale pulita sul trunk `main` e dopo una promozione unita su `develop`. Il coordinatore esegue `emet promote` dopo ogni spec, anche con `afterSpec` su `none`.
 
 ## 0.9.1
 
