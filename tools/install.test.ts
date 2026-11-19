@@ -19,6 +19,7 @@ const repoRoot = path.resolve(import.meta.dir, "..");
 const bashPath = Bun.which("bash") ?? "/bin/bash";
 const installerTools = [
   "awk",
+  "bash",
   "cat",
   "chmod",
   "cp",
@@ -87,22 +88,38 @@ function linkTools(names: string[]): void {
   }
 }
 
-function addFakeBun(): void {
+/** The version a released build would embed, for runs where the real CLI handles `emet.ts`. */
+const releasedVersion = "9.8.7";
+
+/** A release base URL the binary-mode shim cannot download from, keeping tests offline. */
+const unreachableReleaseUrl = "file:///nonexistent-emet-release";
+
+/**
+ * A fake bun that no-ops; with `runsEmet` it hands the installed `emet.ts` to
+ * the real bun, built as `releasedVersion` rather than the source `0.0.0-dev`.
+ */
+function addFakeBun(options: { runsEmet: boolean }): void {
   const fakeBunPath = path.join(toolsDir, "bun");
-  writeFileSync(fakeBunPath, "#!/bin/sh\nexit 0\n");
+  const emetCase = options.runsEmet
+    ? `case "\${1:-}" in */emet.ts) exec "${process.execPath}" --define 'FORGE_BUILD_VERSION="${releasedVersion}"' "$@" ;; esac\n`
+    : "";
+  writeFileSync(fakeBunPath, `#!/bin/sh\n${emetCase}exit 0\n`);
   chmodSync(fakeBunPath, 0o755);
 }
 
-function runInstaller(options: { hashTool?: keyof typeof hashTools; withBun?: boolean } = {}): {
+function runInstaller(
+  options: { hashTool?: keyof typeof hashTools; withBun?: boolean; bunRunsEmet?: boolean } = {},
+): {
   exitCode: number;
   output: string;
 } {
   rmSync(toolsDir, { recursive: true, force: true });
   linkTools([...installerTools, ...hashTools[options.hashTool ?? "sha256sum"]]);
-  if (options.withBun) addFakeBun();
+  if (options.withBun === true || options.bunRunsEmet === true)
+    addFakeBun({ runsEmet: options.bunRunsEmet ?? false });
   const result = Bun.spawnSync([bashPath, path.join(fixtureRepo, "install.sh")], {
     cwd: fixtureRepo,
-    env: { HOME: homeDir, PATH: toolsDir },
+    env: { HOME: homeDir, PATH: toolsDir, EMET_RELEASE_BASE_URL: unreachableReleaseUrl },
     stdout: "pipe",
     stderr: "pipe",
   });
@@ -443,5 +460,39 @@ describeInstaller("install.sh over a legacy forge install", () => {
       command.endsWith("--event Stop"),
     );
     expect(stopCommands).toEqual([emetStop]);
+  });
+});
+
+/** The what's new marker under the temp HOME. */
+function markerPath(): string {
+  return path.join(homeDir, ".emet/last-seen-version");
+}
+
+describeInstaller("install.sh what's new notice", () => {
+  test("prints the upgrade line before Done. when the marker holds an older version", () => {
+    mkdirSync(path.dirname(markerPath()), { recursive: true });
+    writeFileSync(markerPath(), "0.0.1\n");
+    const { exitCode, output } = runInstaller({ bunRunsEmet: true });
+    expect(exitCode).toBe(0);
+    const upgradeLine = `emet updated 0.0.1 → ${releasedVersion}. What's new: https://emet.andryore.dev/docs/whats-new/#${releasedVersion.replaceAll(".", "")}`;
+    expect(output).toContain(upgradeLine);
+    expect(output.indexOf(upgradeLine)).toBeLessThan(output.indexOf("Done."));
+    expect(output).not.toContain("whats-new reported a failure");
+    expect(readFileSync(markerPath(), "utf8").trim()).toBe(releasedVersion);
+  });
+
+  test("prints no upgrade line on a first install with no marker", () => {
+    const { exitCode, output } = runInstaller({ bunRunsEmet: true });
+    expect(exitCode).toBe(0);
+    expect(output).not.toContain("emet updated");
+    expect(output).not.toContain("whats-new reported a failure");
+    expect(readFileSync(markerPath(), "utf8").trim()).toBe(releasedVersion);
+  });
+
+  test("only warns when emet whats-new fails, and still finishes", () => {
+    const { exitCode, output } = runInstaller();
+    expect(exitCode).toBe(0);
+    expect(output).toContain("warning: emet whats-new reported a failure");
+    expect(output).toContain("Done.");
   });
 });
