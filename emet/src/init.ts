@@ -1,5 +1,5 @@
 import { existsSync } from "node:fs";
-import { stat } from "node:fs/promises";
+import { readdir, stat } from "node:fs/promises";
 import path from "node:path";
 
 import type { AgentHost } from "./agenthost";
@@ -8,6 +8,7 @@ import {
   DEFAULT_FORGE_CONFIG,
   loadForgeConfig,
   resolveRepoRoot,
+  type AfterSpecMode,
   type ForgeConfig,
   type TrackerKind,
 } from "./config";
@@ -335,6 +336,29 @@ async function detectHasRemote(repoRoot: string): Promise<boolean> {
 }
 
 /**
+ * Picks the after-spec mode from the repo: `release` with a `v*` tag and a
+ * release workflow, `promote` with a `develop` branch and no `v*` tag,
+ * otherwise `none`.
+ */
+export async function detectAfterSpec(repoRoot: string): Promise<AfterSpecMode> {
+  const tags = await Bun.$`git -C ${repoRoot} tag --list ${"v*"}`.nothrow().quiet();
+  const hasVersionTag = tags.exitCode === 0 && tags.stdout.toString().trim().length > 0;
+  if (hasVersionTag) {
+    const workflowNames = await readdir(path.join(repoRoot, ".github", "workflows")).catch(
+      () => [] as string[],
+    );
+    return workflowNames.some((name) => name.toLowerCase().includes("release"))
+      ? "release"
+      : "none";
+  }
+  const branches = await Bun.$`git -C ${repoRoot} branch --all --list ${"develop"} ${"*/develop"}`
+    .nothrow()
+    .quiet();
+  const hasDevelop = branches.exitCode === 0 && branches.stdout.toString().trim().length > 0;
+  return hasDevelop ? "promote" : "none";
+}
+
+/**
  * Reads `package.json`'s own `scripts` map (never invents a command this
  * repo doesn't already have) — prefers a single `check` alias if one exists
  * (this fleet's own convention for "format+lint+typecheck in one call"),
@@ -412,6 +436,8 @@ export interface DetectedRepoInfo {
   readonly selfCheck: readonly string[];
   /** When `false` and the tracker is `local`, landing defaults to `merge`. */
   readonly hasRemote?: boolean;
+  /** The after-spec mode to write; `none` when absent. */
+  readonly afterSpec?: AfterSpecMode;
 }
 
 const LOCAL_ID_PATTERN = String.raw`^[a-z0-9-]+-\d{2,}$`;
@@ -445,7 +471,8 @@ export function buildForgeConfig(detected: DetectedRepoInfo): ForgeConfig {
       requiredFiles: [],
       requiredCommands: detected.tracker === "github" ? ["gh"] : [],
     },
-    handoff: { ...DEFAULT_FORGE_CONFIG.handoff },
+    handoff: { ...DEFAULT_FORGE_CONFIG.handoff, afterSpec: detected.afterSpec ?? "none" },
+    interview: { ...DEFAULT_FORGE_CONFIG.interview },
     landing: { ...DEFAULT_FORGE_CONFIG.landing, mode: landingMode },
     gate: { ...DEFAULT_FORGE_CONFIG.gate },
     language: { ...DEFAULT_FORGE_CONFIG.language },
@@ -736,6 +763,7 @@ async function ensureGithubStateLabels(repoRoot: string): Promise<string[]> {
 export interface InitOptions {
   readonly force: boolean;
   readonly trackerOverride: TrackerKind | null;
+  readonly afterSpecOverride: AfterSpecMode | null;
 }
 
 export function parseInitArguments(argv: readonly string[]): InitOptions {
@@ -752,7 +780,23 @@ export function parseInitArguments(argv: readonly string[]): InitOptions {
       `emet init: --tracker must be one of linear|github|local, got "${trackerValue}"`,
     );
   }
-  return { force, trackerOverride: trackerValue ?? null };
+  const afterSpecIndex = argv.indexOf("--after-spec");
+  const afterSpecValue = afterSpecIndex === -1 ? undefined : argv[afterSpecIndex + 1];
+  if (
+    afterSpecValue !== undefined &&
+    afterSpecValue !== "release" &&
+    afterSpecValue !== "promote" &&
+    afterSpecValue !== "none"
+  ) {
+    throw new Error(
+      `emet init: --after-spec must be one of release|promote|none, got "${afterSpecValue}"`,
+    );
+  }
+  return {
+    force,
+    trackerOverride: trackerValue ?? null,
+    afterSpecOverride: afterSpecValue ?? null,
+  };
 }
 
 /**
@@ -827,6 +871,7 @@ async function main(options: InitOptions): Promise<void> {
     idPrefix,
     selfCheck,
     hasRemote: await detectHasRemote(repoRoot),
+    afterSpec: options.afterSpecOverride ?? (await detectAfterSpec(repoRoot)),
   };
 
   const config = buildForgeConfig(detected);
