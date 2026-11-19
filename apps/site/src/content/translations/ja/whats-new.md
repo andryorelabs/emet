@@ -2,8 +2,16 @@
 title: 新機能
 description: emet のリリースノート。各バージョンでの変更点をまとめています。
 seoTitle: "emet の新機能: リリースノート"
-sourceHash: 554cd8b7c6d96f87
+sourceHash: cf04666a1d6178fa
 ---
+
+## 0.11.0
+
+2026-11-19
+
+### 追加
+
+- `emet whats-new` は、更新後に emet を初めて実行したときにリリースノートへのリンクを含む 1 行の通知を表示し、実行中のバージョンを記録します。`--hook` を付けると、セッションフック向けに `systemMessage` JSON オブジェクトとしてその行を出力します。
 
 ## 0.10.0
 

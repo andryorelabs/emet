@@ -2,8 +2,16 @@
 title: 新功能
 description: emet 的发布说明：每个版本都有哪些变化。
 seoTitle: "emet 新功能：发布说明"
-sourceHash: 554cd8b7c6d96f87
+sourceHash: cf04666a1d6178fa
 ---
+
+## 0.11.0
+
+2026-11-19
+
+### 新增
+
+- `emet whats-new` 会在更新后首次运行 emet 时输出一行带有发布说明链接的通知,然后记录当前运行的版本。使用 `--hook` 时,它会将该行作为 `systemMessage` JSON 对象输出,供会话钩子使用。
 
 ## 0.10.0
 

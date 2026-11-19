@@ -2,8 +2,16 @@
 title: 새로운 소식
 description: emet 릴리스 노트. 각 버전에서 무엇이 바뀌었는지 정리합니다.
 seoTitle: "emet 새로운 소식: 릴리스 노트"
-sourceHash: 554cd8b7c6d96f87
+sourceHash: cf04666a1d6178fa
 ---
+
+## 0.11.0
+
+2026-11-19
+
+### 추가됨
+
+- `emet whats-new`는 업데이트 후 emet을 처음 실행할 때 릴리스 노트 링크가 담긴 한 줄 알림을 출력한 다음 실행 중인 버전을 기록합니다. `--hook`을 사용하면 세션 훅용 `systemMessage` JSON 객체로 해당 줄을 출력합니다.
 
 ## 0.10.0
 

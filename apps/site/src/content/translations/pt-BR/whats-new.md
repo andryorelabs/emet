@@ -2,8 +2,16 @@
 title: Novidades
 description: Notas de versão do emet: o que mudou em cada versão.
 seoTitle: Novidades do emet: notas de versão
-sourceHash: 554cd8b7c6d96f87
+sourceHash: cf04666a1d6178fa
 ---
+
+## 0.11.0
+
+2026-11-19
+
+### Adicionado
+
+- `emet whats-new` imprime um aviso de uma linha com um link para as notas de versão na primeira vez que o emet é executado após uma atualização e, em seguida, registra a versão em execução. Com `--hook`, emite a linha como um objeto JSON `systemMessage` para hooks de sessão.
 
 ## 0.10.0
 
