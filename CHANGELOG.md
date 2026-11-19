@@ -8,6 +8,50 @@ and this project adheres to
 
 ## [Unreleased]
 
+## [0.9.0] - 2026-11-19
+
+### Added
+
+- `emet gate` applies a fix-and-continue policy: a held wave runs fix rounds
+  until the findings resolve or `budgets.fixRounds` (default 2) runs out, then
+  stops. `gate.onHold` selects `fix-and-continue` (default) or `stop`.
+  `emet review --recheck` resolves a finding only through a reviewer verdict.
+- `emet ci --wait` polls a pull request's checks, reruns flaky jobs, and reports
+  `pass`, `fail`, `env-fault` or `timeout`. `emet tracker close` closes GitHub
+  tickets idempotently, and `emet chain` runs gate, readiness, launch and
+  verify as one step.
+- An event journal records gate decisions, interventions, launches, ticket
+  closes and cleanups, with size-based rotation. `emet insights` summarises it
+  (`--mark-baseline` resets the baseline), `emet run current` shows the active
+  spec and wave, and `emet status --brief` prints a one-line state.
+- `language.conversation` and `language.artifacts` config keys.
+- `handoff.afterSpec` (`release`, `promote` or `none`, detected by `emet init`,
+  or set with `emet init --after-spec`), `deploy.check` and `interview.research`
+  config keys.
+- `emet promote` opens the `develop` to `main` pull request once the final wave
+  is idle, merges it when checks pass, and syncs `main` back when `develop`
+  is behind. `--no-promote` holds a spec for all its sessions.
+- `emet deploy-check` retries a deploy check command and kills hung commands.
+- `emet fleet list | set | launch` runs specs across several repos.
+- `emet setup` and `/emet:setup` install optional companions from a catalog
+  after backing up Claude settings. A SessionStart hook shows a one-time
+  notice, and `install.sh` runs setup on a TTY.
+- `emet doctor` and `emet init` recommend Engram without ever counting it as
+  an unsatisfied dependency.
+
+### Changed
+
+- The installed prompts and docs describe the gate policy, `emet ci`,
+  `emet chain`, the journal, the after-spec step, fleet and setup. Phase 8
+  adds a wave summary and a push notification, and `emet insights` replaces the
+  `/retro` pointer.
+
+### Fixed
+
+- `--no-promote` is persisted as a marker under the git common dir, so a
+  chained `/emet:run --dispatch` session for the last wave no longer promotes
+  `develop` into `main`.
+
 ## [0.8.6] - 2026-11-17
 
 ### Fixed
@@ -322,7 +366,8 @@ and this project adheres to
 - Per-repo configuration through `forge.config.json`.
 - `install.sh`, which installs the CLI, command and agents.
 
-[Unreleased]: https://github.com/andryorelabs/emet/compare/v0.8.6...HEAD
+[Unreleased]: https://github.com/andryorelabs/emet/compare/v0.9.0...HEAD
+[0.9.0]: https://github.com/andryorelabs/emet/compare/v0.8.6...v0.9.0
 [0.8.6]: https://github.com/andryorelabs/emet/compare/v0.8.5...v0.8.6
 [0.8.5]: https://github.com/andryorelabs/emet/compare/v0.8.4...v0.8.5
 [0.8.4]: https://github.com/andryorelabs/emet/compare/v0.8.3...v0.8.4

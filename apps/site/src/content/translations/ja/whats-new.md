@@ -2,8 +2,33 @@
 title: 新機能
 description: emet のリリースノート。各バージョンでの変更点をまとめています。
 seoTitle: "emet の新機能: リリースノート"
-sourceHash: b893c45d52d54eda
+sourceHash: b47ea0e52bb41632
 ---
+
+## 0.9.0
+
+2026-11-19
+
+### 追加
+
+- `emet gate` が修正して継続するポリシーを適用します。保留された wave は、指摘が解消するか `budgets.fixRounds`（既定は 2）を使い切るまで修正ラウンドを実行し、その後停止します。`gate.onHold` で `fix-and-continue`（既定）か `stop` を選びます。`emet review --recheck` は、レビュアーの判定によってのみ指摘を解消します。
+- `emet ci --wait` はプルリクエストのチェックをポーリングし、不安定なジョブを再実行して、`pass`、`fail`、`env-fault`、`timeout` のいずれかを報告します。`emet tracker close` は GitHub のチケットを冪等にクローズし、`emet chain` は gate、readiness、launch、verify を 1 ステップで実行します。
+- イベントジャーナルが、gate の判断、介入、起動、チケットのクローズ、クリーンアップを記録し、サイズに応じてローテーションします。`emet insights` がそれを要約し（`--mark-baseline` でベースラインをリセット）、`emet run current` が現在の spec と wave を表示し、`emet status --brief` が状態を 1 行で出力します。
+- 設定キー `language.conversation` と `language.artifacts`。
+- 設定キー `handoff.afterSpec`（`release`、`promote`、`none`。`emet init` が検出するか、`emet init --after-spec` で設定）、`deploy.check`、`interview.research`。
+- `emet promote` は、最後の wave がアイドルになると `develop` から `main` へのプルリクエストを開き、チェックが通ればマージし、`develop` が遅れていれば `main` を同期し直します。`--no-promote` は spec をそのすべてのセッションで保留します。
+- `emet deploy-check` はデプロイ確認コマンドを再試行し、ハングしたコマンドを終了させます。
+- `emet fleet list | set | launch` は複数のリポジトリにまたがって spec を実行します。
+- `emet setup` と `/emet:setup` は、Claude の設定をバックアップしたうえで、カタログからオプションのコンパニオンをインストールします。SessionStart フックが通知を一度だけ表示し、`install.sh` は TTY で setup を実行します。
+- `emet doctor` と `emet init` は Engram を推奨しますが、未充足の依存関係として数えることはありません。
+
+### 変更
+
+- インストールされるプロンプトとドキュメントが、gate ポリシー、`emet ci`、`emet chain`、ジャーナル、spec 後のステップ、fleet、setup を説明するようになりました。フェーズ 8 に wave の要約とプッシュ通知が加わり、`emet insights` が `/retro` への案内に置き換わります。
+
+### 修正
+
+- `--no-promote` は git 共通ディレクトリ配下のマーカーとして保持されるため、最後の wave に対する連鎖した `/emet:run --dispatch` セッションが `develop` を `main` に昇格させることはなくなりました。
 
 ## 0.8.6
 
