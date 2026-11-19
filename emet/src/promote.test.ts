@@ -5,10 +5,11 @@ import os from "node:os";
 import path from "node:path";
 
 import type { CiOutcome, GhRunner } from "./ci";
-import { DEFAULT_FORGE_CONFIG } from "./config";
+import { DEFAULT_FORGE_CONFIG, type AfterSpecSetting } from "./config";
 import { BINARY } from "./names";
 import {
   buildPromoteDeps,
+  decideDeployCheck,
   holdMarkerPath,
   holdSpec,
   isFinalWaveClean,
@@ -17,12 +18,18 @@ import {
   planAfterSpec,
   readSpecState,
   promoteDevelop,
+  readChangedPaths,
   run,
   type PromoteDeps,
   type PromoteOutcome,
 } from "./promote";
 
-function configWith(afterSpec: "release" | "promote" | "none") {
+const websiteRules: AfterSpecSetting = [
+  { paths: ["apps/site/**", "docs/**"], mode: "promote" },
+  { mode: "release" },
+];
+
+function configWith(afterSpec: AfterSpecSetting) {
   return { handoff: { ...DEFAULT_FORGE_CONFIG.handoff, afterSpec } };
 }
 
@@ -60,27 +67,89 @@ function harness(options: {
         noChecks: false,
       }),
     record: (outcome) => recorded.push({ ...outcome }),
+    readChangedPaths: () => Promise.resolve([]),
   };
   return { deps, calls, recorded };
 }
 
 describe("planAfterSpec", () => {
+  const clean = { noPromote: false, finalWaveClean: true, changedPaths: [] };
+
   test("returns the configured mode", () => {
-    expect(planAfterSpec(configWith("promote"), { noPromote: false, finalWaveClean: true })).toBe(
-      "promote",
-    );
+    expect(planAfterSpec(configWith("promote"), clean).mode).toBe("promote");
   });
 
   test("--no-promote makes it none whatever the config says", () => {
-    expect(planAfterSpec(configWith("release"), { noPromote: true, finalWaveClean: true })).toBe(
+    expect(planAfterSpec(configWith("release"), { ...clean, noPromote: true }).mode).toBe("none");
+  });
+
+  test("an open or flagged last wave makes it none", () => {
+    expect(planAfterSpec(configWith("promote"), { ...clean, finalWaveClean: false }).mode).toBe(
       "none",
     );
   });
 
-  test("an open or flagged last wave makes it none", () => {
-    expect(planAfterSpec(configWith("promote"), { noPromote: false, finalWaveClean: false })).toBe(
-      "none",
-    );
+  test("a rule list resolves against the changed paths", () => {
+    const config = { handoff: { ...DEFAULT_FORGE_CONFIG.handoff, afterSpec: websiteRules } };
+    const resolution = planAfterSpec(config, { ...clean, changedPaths: ["apps/site/a.astro"] });
+    expect(resolution).toMatchObject({ mode: "promote", ruleIndex: 0 });
+  });
+});
+
+describe("decideDeployCheck", () => {
+  const check = {
+    command: "true",
+    retries: 1,
+    intervalSeconds: 1,
+    timeoutSeconds: 1,
+    paths: ["apps/site/**"],
+  };
+  const base = {
+    check,
+    trunk: "develop",
+    mode: "promote" as const,
+    finalWaveClean: true,
+    promoteMerged: true,
+    changedPaths: ["apps/site/a.astro"],
+  };
+
+  test("runs after a merged promote that touched the check paths", () => {
+    expect(decideDeployCheck(base).run).toBe(true);
+  });
+
+  test("skips without a check", () => {
+    expect(decideDeployCheck({ ...base, check: undefined }).run).toBe(false);
+  });
+
+  test("skips when the final wave is not clean, even on main", () => {
+    expect(decideDeployCheck({ ...base, finalWaveClean: false }).run).toBe(false);
+    expect(decideDeployCheck({ ...base, trunk: "main", finalWaveClean: false }).run).toBe(false);
+  });
+
+  test("skips release mode and says a person deploys", () => {
+    const decision = decideDeployCheck({ ...base, mode: "release" });
+    expect(decision.run).toBe(false);
+    expect(decision.reason).toContain("waits for a person");
+  });
+
+  test("skips a merged promote with no matching changed path", () => {
+    const decision = decideDeployCheck({ ...base, changedPaths: ["emet/src/a.ts"] });
+    expect(decision.run).toBe(false);
+    expect(decision.reason).toContain("no changed path matches");
+  });
+
+  test("skips a promote that did not merge", () => {
+    expect(decideDeployCheck({ ...base, promoteMerged: false }).run).toBe(false);
+  });
+
+  test("runs on trunk main in every mode and ignores the paths", () => {
+    for (const mode of ["release", "promote", "none"] as const) {
+      expect(decideDeployCheck({ ...base, trunk: "main", mode, changedPaths: [] }).run).toBe(true);
+    }
+  });
+
+  test("skips none on develop", () => {
+    expect(decideDeployCheck({ ...base, mode: "none" }).run).toBe(false);
   });
 });
 
@@ -175,9 +244,12 @@ describe("buildPromoteDeps", () => {
     });
     deps.record({
       mode: "promote",
+      rule: 0,
+      reason: "every changed path matches rule 0",
       prNumber: 7,
       merged: true,
       syncPrNumber: null,
+      deployCheck: { run: true, reason: "merged" },
       ciState: "pass",
     });
     expect(events).toEqual([
@@ -188,6 +260,9 @@ describe("buildPromoteDeps", () => {
         data: {
           spec: "629",
           mode: "promote",
+          rule: 0,
+          reason: "every changed path matches rule 0",
+          deployCheck: { run: true, reason: "merged" },
           prNumber: 7,
           merged: true,
           syncPrNumber: null,
@@ -268,6 +343,296 @@ function writePromoteConfig(root: string): void {
 }
 
 const failingGh: GhRunner = () => Promise.reject(new Error("gh must not run"));
+
+function commitAll(cwd: string, message: string): void {
+  git(cwd, "add", "-A");
+  git(cwd, "-c", "user.name=t", "-c", "user.email=t@t", "commit", "-q", "-m", message);
+}
+
+function writeFile(root: string, relative: string, content: string): void {
+  const target = path.join(root, relative);
+  mkdirSync(path.dirname(target), { recursive: true });
+  writeFileSync(target, content);
+}
+
+function deployCheck(paths?: string[]) {
+  return {
+    check: {
+      command: "true",
+      retries: 1,
+      intervalSeconds: 1,
+      timeoutSeconds: 1,
+      ...(paths === undefined ? {} : { paths }),
+    },
+  };
+}
+
+function developConfig(afterSpec: unknown, deploy?: unknown) {
+  return {
+    repo: { trunk: "develop" },
+    handoff: { afterSpec },
+    ...(deploy === undefined ? {} : { deploy }),
+  };
+}
+
+function isPromoteOutcome(value: unknown): value is PromoteOutcome {
+  return typeof value === "object" && value !== null && "mode" in value && "deployCheck" in value;
+}
+
+function fakeDeps(options: { paths?: readonly string[]; ci?: CiOutcome["state"] }) {
+  const calls: string[][] = [];
+  const pathReads: number[] = [];
+  const overrides: Partial<PromoteDeps> = {
+    gh: (args) => {
+      calls.push([...args]);
+      if (args[0] === "pr" && args[1] === "create") {
+        return Promise.resolve("https://github.com/o/r/pull/10\n");
+      }
+      if (args[0] === "api") return Promise.resolve("0\n");
+      return Promise.resolve("");
+    },
+    waitForCi: () =>
+      Promise.resolve({
+        state: options.ci ?? "pass",
+        failedChecks: [],
+        flakeReruns: 0,
+        noChecks: false,
+      }),
+    record: () => undefined,
+    readChangedPaths: () => {
+      pathReads.push(1);
+      return Promise.resolve(options.paths ?? []);
+    },
+  };
+  return { overrides, calls, pathReads };
+}
+
+describe("readChangedPaths", () => {
+  const directories: string[] = [];
+  const makeDirectory = (): string => {
+    const directory = mkdtempSync(path.join(os.tmpdir(), "emet-changed-"));
+    directories.push(directory);
+    return directory;
+  };
+
+  afterEach(() => {
+    for (const directory of directories.splice(0)) {
+      rmSync(directory, { recursive: true, force: true });
+    }
+  });
+
+  function repoWithDevelop(change: (work: string) => void): string {
+    const origin = makeDirectory();
+    git(origin, "init", "-q", "--bare", "-b", "main");
+    const work = makeDirectory();
+    git(work, "init", "-q", "-b", "main");
+    git(work, "remote", "add", "origin", origin);
+    writeFile(work, "emet/src/old name.ts", "export const a = 1;\n".repeat(20));
+    commitAll(work, "base");
+    git(work, "push", "-q", "origin", "main");
+    git(work, "checkout", "-q", "-b", "develop");
+    change(work);
+    commitAll(work, "change");
+    git(work, "push", "-q", "origin", "develop");
+    return work;
+  }
+
+  test("returns exactly the paths develop adds", async () => {
+    const work = repoWithDevelop((root) => {
+      writeFile(root, "apps/site/a.astro", "a");
+      writeFile(root, "emet/src/b.ts", "b");
+    });
+    expect((await readChangedPaths(work)).toSorted()).toEqual([
+      "apps/site/a.astro",
+      "emet/src/b.ts",
+    ]);
+  });
+
+  test("keeps spaces, unicode and brackets literal", async () => {
+    const work = repoWithDevelop((root) => {
+      writeFile(root, "apps/site/[locale]/página uno.astro", "a");
+    });
+    expect(await readChangedPaths(work)).toEqual(["apps/site/[locale]/página uno.astro"]);
+  });
+
+  test("counts both the old and the new path of a rename", async () => {
+    const work = repoWithDevelop((root) => {
+      mkdirSync(path.join(root, "apps/site"), { recursive: true });
+      git(root, "mv", "emet/src/old name.ts", "apps/site/old name.ts");
+    });
+    expect((await readChangedPaths(work)).toSorted()).toEqual([
+      "apps/site/old name.ts",
+      "emet/src/old name.ts",
+    ]);
+  });
+
+  test("throws when git fails instead of returning no paths", async () => {
+    const empty = makeDirectory();
+    git(empty, "init", "-q", "-b", "main");
+    let message = "";
+    try {
+      await readChangedPaths(empty);
+    } catch (error: unknown) {
+      message = error instanceof Error ? error.message : String(error);
+    }
+    expect(message).toContain("git fetch failed");
+  });
+});
+
+describe("run: changed paths and the deploy check", () => {
+  const originalExitCode = process.exitCode;
+  const roots: string[] = [];
+
+  afterEach(() => {
+    process.exitCode = originalExitCode ?? 0;
+    for (const root of roots.splice(0)) rmSync(root, { recursive: true, force: true });
+  });
+
+  function setup(config: Record<string, unknown>): { repoRoot: string; commonDirectory: string } {
+    const repoRoot = mkdtempSync(path.join(os.tmpdir(), "emet-promote-run-"));
+    const commonDirectory = mkdtempSync(path.join(os.tmpdir(), "emet-promote-common-"));
+    roots.push(repoRoot, commonDirectory);
+    writeFileSync(path.join(repoRoot, "emet.config.json"), JSON.stringify(config));
+    return { repoRoot, commonDirectory };
+  }
+
+  async function runOutcome(
+    argv: string[],
+    config: Record<string, unknown>,
+    options: { paths?: readonly string[]; ci?: CiOutcome["state"] } = {},
+  ) {
+    const { repoRoot, commonDirectory } = setup(config);
+    const { overrides, calls, pathReads } = fakeDeps(options);
+    const { logs, errors } = await runCaptured(["--spec", "655", ...argv], {
+      ...overrides,
+      repoRoot,
+      commonDirectory,
+    });
+    const printed = logs.find((line) => line.startsWith("{"));
+    const parsed: unknown = printed === undefined ? undefined : JSON.parse(printed);
+    const outcome = isPromoteOutcome(parsed) ? parsed : undefined;
+    return { outcome, calls, pathReads, errors };
+  }
+
+  test("a Website-only spec matches rule 0 and runs the deploy check", async () => {
+    const { outcome, calls } = await runOutcome(
+      [],
+      developConfig(websiteRules, deployCheck(["apps/site/**"])),
+      { paths: ["apps/site/a.astro", "docs/x.md"] },
+    );
+    expect(outcome).toMatchObject({ mode: "promote", rule: 0, merged: true });
+    expect(outcome?.reason).toContain("apps/site/**");
+    expect(outcome?.deployCheck.run).toBe(true);
+    expect(calls).toContainEqual(["pr", "merge", "10", "--merge"]);
+  });
+
+  test("a CLI change falls to release and skips the deploy check", async () => {
+    const { outcome, calls } = await runOutcome(
+      [],
+      developConfig(websiteRules, deployCheck(["apps/site/**"])),
+      { paths: ["emet/src/promote.ts"] },
+    );
+    expect(outcome).toMatchObject({ mode: "release", rule: 1 });
+    expect(outcome?.deployCheck.run).toBe(false);
+    expect(outcome?.deployCheck.reason).toContain("waits for a person");
+    expect(calls).toHaveLength(0);
+  });
+
+  test("a merged promote with no matching changed path skips the deploy check", async () => {
+    const { outcome } = await runOutcome(
+      [],
+      developConfig("promote", deployCheck(["apps/site/**"])),
+      { paths: ["emet/src/a.ts"] },
+    );
+    expect(outcome?.merged).toBe(true);
+    expect(outcome?.deployCheck.run).toBe(false);
+    expect(outcome?.deployCheck.reason).toContain("no changed path matches");
+  });
+
+  test("the string form reports rule null", async () => {
+    const { outcome } = await runOutcome([], developConfig("promote", deployCheck()));
+    expect(outcome?.rule).toBeNull();
+    expect(outcome?.deployCheck.run).toBe(true);
+  });
+
+  test("a promote pull request whose CI does not pass skips the deploy check", async () => {
+    const { outcome } = await runOutcome([], developConfig("promote", deployCheck()), {
+      ci: "fail",
+    });
+    expect(outcome?.merged).toBe(false);
+    expect(outcome?.deployCheck.run).toBe(false);
+    expect(process.exitCode).toBe(1);
+  });
+
+  test("a string afterSpec without check paths reads no changed paths", async () => {
+    const { pathReads } = await runOutcome([], developConfig("promote", deployCheck()));
+    expect(pathReads).toHaveLength(0);
+  });
+
+  test("a rule list on trunk main reads no changed paths and uses the fallback", async () => {
+    const { outcome, pathReads } = await runOutcome([], {
+      repo: { trunk: "main" },
+      handoff: { afterSpec: websiteRules },
+    });
+    expect(pathReads).toHaveLength(0);
+    expect(outcome).toMatchObject({ mode: "release", rule: 1 });
+  });
+
+  test("afterSpec none on trunk main still runs the deploy check", async () => {
+    const { outcome, calls } = await runOutcome([], {
+      repo: { trunk: "main" },
+      handoff: { afterSpec: "none" },
+      deploy: deployCheck(["apps/site/**"]),
+    });
+    expect(outcome?.mode).toBe("none");
+    expect(outcome?.deployCheck.run).toBe(true);
+    expect(calls).toHaveLength(0);
+  });
+
+  test("--no-promote on trunk main still runs the deploy check", async () => {
+    const { outcome } = await runOutcome(["--no-promote"], {
+      repo: { trunk: "main" },
+      handoff: { afterSpec: "promote" },
+      deploy: deployCheck(),
+    });
+    expect(outcome?.deployCheck.run).toBe(true);
+  });
+
+  test("a held spec on trunk main still runs the deploy check", async () => {
+    const { repoRoot, commonDirectory } = setup({
+      repo: { trunk: "main" },
+      handoff: { afterSpec: "release" },
+      deploy: deployCheck(),
+    });
+    holdSpec(commonDirectory, "655");
+    const { overrides } = fakeDeps({});
+    const { logs } = await runCaptured(["--spec", "655"], {
+      ...overrides,
+      repoRoot,
+      commonDirectory,
+    });
+    expect(JSON.parse(logs.join(""))).toMatchObject({ deployCheck: { run: true } });
+  });
+
+  test("afterSpec none on develop skips the deploy check", async () => {
+    const { outcome } = await runOutcome([], developConfig("none", deployCheck()));
+    expect(outcome?.deployCheck.run).toBe(false);
+  });
+
+  test("a changed-paths failure exits 1 and opens no pull request", async () => {
+    const { repoRoot, commonDirectory } = setup(developConfig(websiteRules));
+    const { overrides, calls } = fakeDeps({});
+    const { errors } = await runCaptured(["--spec", "655"], {
+      ...overrides,
+      readChangedPaths: () => Promise.reject(new Error("git diff failed: boom")),
+      repoRoot,
+      commonDirectory,
+    });
+    expect(process.exitCode).toBe(1);
+    expect(errors.join("\n")).toContain("git diff failed: boom");
+    expect(calls.some((call) => call[0] === "pr" && call[1] === "create")).toBe(false);
+  });
+});
 
 describe("run", () => {
   const originalExitCode = process.exitCode;
