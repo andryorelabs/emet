@@ -2,7 +2,7 @@
 title: 設定リファレンス
 description: emet.config.json のすべてのキーについて、既定値と意味を説明します。
 seoTitle: emet の設定リファレンス
-sourceHash: 2ff76dd878c6530c
+sourceHash: 021a695d999163e3
 ---
 
 `emet.config.json` のすべてのキーを、既定値と意味とともに示します。信頼できる情報源は [`emet/schema/emet.config.schema.json`](../../emet/schema/emet.config.schema.json) です。用語は [GLOSSARY.md](../../GLOSSARY.md) に従います。[README](../../README.md) に戻る。
@@ -52,6 +52,22 @@ sourceHash: 2ff76dd878c6530c
   起動するのは、PR がマージされ、フラグが立っているものがない場合だけで、`emet-<spec-id>-*` セッションがすでに動作中（`claude agents --json`）であればスキップします。起動に失敗した場合は、`/emet:run --dispatch <spec-id>` を表示する動作にフォールバックします。
 
 - `afterSpec`（既定は `"none"`、`release`、`promote`、`none` のいずれか）: スペックの最後のウェーブが問題なくマージされたあとに `/emet:run` が行うことです。`promote` は `emet promote` を実行します。CI が `pass` になったら `develop` から `main` へのプルリクエストをマージコミットでマージし、`develop` が `main` より遅れている場合に限って、逆方向の同期プルリクエストを作成します。`release` は `cut-release` スキルの手順でリリースのプルリクエストを開き、人の判断を待って停止します。`none` は何もしません。`emet init` が値を検出し（`v*` タグがあり、名前に `release` を含むワークフローファイルがあれば `release`、`develop` ブランチがあってそのようなタグがなければ `promote`、それ以外は `none`）、`emet init --after-spec <mode>` で強制できます。この設定がない config は `none` として読み込まれます。`/emet:run` または `emet promote` に `--no-promote` を渡すと、その実行に限りこのステップは `none` になります。
+
+  `afterSpec` は、空でない順序付きのルールのリスト `{ "paths"?: string[], "mode": "release|promote|none" }` も受け付けます。これにより、1 つのリポジトリで CLI はリリースし、Web サイトはプロモートできます。モードは、`develop` をプロモートすると `main` に取り込まれるパスから選ばれます。変更されたすべてのパスに `paths` が一致する最初のルールが採用され、なければ `paths` のないルール（省略できるのは最後のルールだけ）が適用され、それもなければ `none` です。変更パスがない場合もこのフォールバックのルールになります。glob は編集ガードのマッチャーを使うため、`[locale]` や `(group)` のセグメントはそのままの文字列として扱われます。変更パスは `git fetch origin main develop` と `git diff --name-only --no-renames -z origin/main...origin/develop` から得るので、リネームは旧パスと新パスの両方として数えられます。これらを読み取るのは、`afterSpec` がルールのリストであるか `deploy.check.paths` が設定されていて、かつ `repo.trunk` が `develop` の場合だけで、それ以外では空のリストになります。git が失敗すると、`emet promote` は何も開かずに終了コード 1 で終了します。文字列形式はパスを一切見ません。
+
+  ```json
+  {
+    "handoff": {
+      "afterSpec": [
+        { "paths": ["apps/site/**", "docs/**"], "mode": "promote" },
+        { "mode": "release" }
+      ]
+    }
+  }
+  ```
+
+  この例では、Web サイトまたはドキュメントだけに触れる spec はプロモートされ、CLI に触れる spec はリリースのプルリクエストで止まります。
+
 - `launcher`（既定は `auto`、`auto`、`orca`、`bg` のいずれか）: Claude Code のみです。Codex ホストでは無視され、`emet launch` は Orca タブを開きません。`claude attach` を実行する Orca タブでもウェーブを開きます。`auto` は Orca ランタイム（`orca status`）に問い合わせるため、`TERM_PROGRAM` のない `claude --bg` セッションからも動作します。`orca` は常に試行し、`bg` は一切試行しません。どちらの場合もウェーブはバックグラウンドで動作し、タブを開けなくてもチェーンが止まることはありません。`emet launch <spec-id> --wave <n>` が起動の全体を行います。[`emet launch`](cli.md#実行ワーカースロット) を参照してください。
 - `permissionMode`（既定は `bypassPermissions`、`bypassPermissions`、`auto`、`acceptEdits` のいずれか）: Claude Code のみです。Codex ホストでは無視され、チェーンされたセッションは [`codex.sandbox`](#codex) を使います。チェーンされたセッションの権限モードです。起動元のセッションからは継承されません。`auto` モードの分類器が `gh pr merge` のようなステップを拒否し、ウェーブが中途半端な状態で終わるおそれがあるためです。`permissions.deny` のルールは引き続き適用されますが、バイパスの警告を対話的に一度承認しておく必要があります（`skipDangerousModePermissionPrompt`）。
 
@@ -66,14 +82,18 @@ sourceHash: 2ff76dd878c6530c
       "command": "curl -fsS https://example.com/health",
       "retries": 10,
       "intervalSeconds": 15,
-      "timeoutSeconds": 300
+      "timeoutSeconds": 300,
+      "paths": ["apps/site/**"]
     }
   }
 }
 ```
 
 - `check.command`: デプロイが正常なときに終了コード 0 で終了するシェルコマンドです。
-- `check.retries`、`check.intervalSeconds`、`check.timeoutSeconds`: 正の整数です。それぞれ最大試行回数、試行の間隔、全体の制限時間を表します。`emet deploy-check` は `ok`、`failed`、`timeout` のいずれかを出力し、終了コード 0、1、3 で終了します。`afterSpec` の `promote` ステップは、マージ後にこれを実行します。
+- `check.retries`、`check.intervalSeconds`、`check.timeoutSeconds`: 正の整数です。それぞれ最大試行回数、試行の間隔、全体の制限時間を表します。`emet deploy-check` は `ok`、`failed`、`timeout` のいずれかを出力し、終了コード 0、1、3 で終了します。
+- `check.paths`（任意）: 空でない、空文字列を含まない glob のリストです。指定すると、マージされたプロモートは変更パスが一致したときだけチェックを実行し、指定しなければマージされたすべてのプロモートが実行します。
+
+チェックは `afterSpec` に依存しなくなりました。`emet promote` は `deployCheck: { run, reason }` を出力し、コーディネーターは `run` が true のときだけ `emet deploy-check` を実行します。`deploy.check` がない場合や、最後のウェーブがクリーンでない場合は実行しません。すべてのマージがデプロイされる `repo.trunk` が `main` の場合は、クリーンな最後のウェーブの後、モードに関係なく実行します（`--no-promote` や保留中の spec でも、`paths` を無視して実行します）。`develop` の場合は、`promote` モードで、`paths` に一致するマージ済みプロモートの後にのみ実行します。`release` モードでは、デプロイは人を待ちます。
 
 ## interview
 

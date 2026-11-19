@@ -2,7 +2,7 @@
 title: CLI 参考
 description: 每个 emet 子命令、关卡与记录表、退出码和环境变量。
 seoTitle: emet CLI 参考
-sourceHash: b0fbd0cfa621ff8a
+sourceHash: 90ffe4a56892f887
 ---
 
 每个 `emet` 子命令、关卡与记录表、退出码和环境变量。术语遵循 [GLOSSARY.md](../../GLOSSARY.md)。返回 [README](../../README.md)。每个命令都可以用 `--help` 打印其用法。
@@ -68,8 +68,8 @@ emet doctor ~/code/*
 
 ### 规划、评审与落地
 
-- `emet promote --spec <id> [--dry-run] [--no-promote] [--hold]`：after-spec 步骤，依据 [`handoff.afterSpec`](configuration.md#handoff)。在 `promote` 模式下，它会打开一个标题为 `chore: 🔖 promote develop` 的从 `develop` 到 `main` 的拉取请求，用 `emet ci --pr <n> --wait` 等待，仅当状态为 `pass` 时才以合并提交的方式合并，然后仅在 `develop` 落后于 `main` 时，打开并合并一个从 `main` 到 `develop` 的同步拉取请求。它会向日志追加一条带有拉取请求编号和 `merged` 的 `promote` 事件。在 `release` 模式下，它不合并任何内容，发布拉取请求留给人来处理。当 `afterSpec` 为 `none`、使用 `--no-promote`，或规范的最后一个波次被保持打开或被标记时，它以退出码 0 结束并附带 `skipped` 说明。CI 不是 `pass` 时不合并任何内容，并以退出码 1 结束。`--dry-run` 不会打开拉取请求。 `emet promote --spec <id> --hold` 会写入标记 `<run dir>/runs/<id>/no-promote` 并输出 `{"held":true}`；标记存在期间，`emet promote --spec <id>` 以 0 退出并给出 `skipped` 提示，不会打开任何 pull request，因此 `--no-promote` 会在一个规范的多个会话之间保持。
-- `emet deploy-check [--json]`：运行 `deploy.check.command`，直到它以 0 退出，最多尝试 `retries` 次或 `timeoutSeconds` 秒，每次之间等待 `intervalSeconds` 秒，并打印 `state: ok | failed | timeout` 以及 `attempts`。退出码 `0` 为 ok，`1` 为 failed，`3` 为 timeout。未配置 `deploy.check` 时，它以退出码 0 结束并输出 `skipped: "no deploy check configured"`。after-spec 的 `promote` 步骤会在合并之后运行它。参见 [`deploy`](configuration.md#deploy)。
+- `emet promote --spec <id> [--dry-run] [--no-promote] [--hold]`：after-spec 步骤，依据 [`handoff.afterSpec`](configuration.md#handoff)。在 `promote` 模式下，它会打开一个标题为 `chore: 🔖 promote develop` 的从 `develop` 到 `main` 的拉取请求，用 `emet ci --pr <n> --wait` 等待，仅当状态为 `pass` 时才以合并提交的方式合并，然后仅在 `develop` 落后于 `main` 时，打开并合并一个从 `main` 到 `develop` 的同步拉取请求。它会向日志追加一条带有拉取请求编号、`merged`、`rule` 和 `reason` 的 `promote` 事件。`afterSpec` 可以是规则列表；此时模式由提升 `develop` 会带来的路径来选择（参见 [`handoff.afterSpec`](configuration.md#handoff)），而 `git fetch` 或 `git diff` 失败会让该命令在打开任何拉取请求之前以 1 退出。打印出的结果包含 `rule`（匹配规则的索引，字符串形式或无匹配时为 `null`）、`reason` 和 `deployCheck: { run, reason }`，后者说明协调器是否应运行 `emet deploy-check`。在 `release` 模式下，它不合并任何内容，发布拉取请求留给人来处理。当 `afterSpec` 为 `none`、使用 `--no-promote`，或规范的最后一个波次被保持打开或被标记时，它以退出码 0 结束并附带 `skipped` 说明；它仍会在干净的最后一个波次之后运行，使结果包含 `deployCheck` 的决定（在主干 `main` 上，无论哪种模式都会运行部署检查）。CI 不是 `pass` 时不合并任何内容，并以退出码 1 结束。`--dry-run` 不会打开拉取请求。 `emet promote --spec <id> --hold` 会写入标记 `<run dir>/runs/<id>/no-promote` 并输出 `{"held":true}`；标记存在期间，`emet promote --spec <id>` 以 0 退出并给出 `skipped` 提示，不会打开任何 pull request，因此 `--no-promote` 会在一个规范的多个会话之间保持。
+- `emet deploy-check [--json]`：运行 `deploy.check.command`，直到它以 0 退出，最多尝试 `retries` 次或 `timeoutSeconds` 秒，每次之间等待 `intervalSeconds` 秒，并打印 `state: ok | failed | timeout` 以及 `attempts`。退出码 `0` 为 ok，`1` 为 failed，`3` 为 timeout。未配置 `deploy.check` 时，它以退出码 0 结束并输出 `skipped: "no deploy check configured"`。仅当 `emet promote` 的结果中 `deployCheck.run` 为 true 时，协调器才会运行它。参见 [`deploy`](configuration.md#deploy)。
 - `emet validate --spec <id> | --file <path>`：计划校验；参见[关卡与记录](#关卡与记录)。
 - `emet surfaces --check <file.json | ->`：如果同一波次的工单之间，允许编辑范围的 glob 存在重叠，则予以拒绝。
 - `emet approve --run <id>`、`emet materialize-log`、`emet results`、`emet verify`、`emet review-package`、`emet review`、`emet gate`：参见[关卡与记录](#关卡与记录)。

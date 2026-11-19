@@ -2,7 +2,7 @@
 title: Справочник по конфигурации
 description: Каждый ключ emet.config.json со значением по умолчанию и смыслом.
 seoTitle: Справочник по конфигурации emet
-sourceHash: 2ff76dd878c6530c
+sourceHash: 021a695d999163e3
 ---
 
 Каждый ключ `emet.config.json` со значением по умолчанию и смыслом. Источник истины — [`emet/schema/emet.config.schema.json`](../../emet/schema/emet.config.schema.json). Термины соответствуют [GLOSSARY.md](../../GLOSSARY.md). Назад к [README](../../README.md).
@@ -52,6 +52,22 @@ sourceHash: 2ff76dd878c6530c
   Запуск происходит, только если PR слит и ничего не помечено, и пропускается, если сессия `emet-<spec-id>-*` уже активна (`claude agents --json`). Если запуск не удался, выводится `/emet:run --dispatch <spec-id>`.
 
 - `afterSpec` (по умолчанию `"none"`, одно из `release`, `promote`, `none`): что делает `/emet:run`, когда последняя волна спецификации слита без замечаний. `promote` запускает `emet promote`: pull request из `develop` в `main`, который сливается merge-коммитом, как только CI в состоянии `pass`, а затем обратный pull request синхронизации, только если `develop` отстаёт от `main`. `release` открывает pull request релиза по шагам скилла `cut-release` и останавливается в ожидании человека. `none` ничего не делает. `emet init` определяет значение (`release` при теге `v*` и файле workflow, в имени которого есть `release`; `promote` при ветке `develop` и без такого тега; иначе `none`), а `emet init --after-spec <mode>` задаёт его принудительно. Конфигурация без этого ключа загружается как `none`. `--no-promote`, переданный в `/emet:run` или `emet promote`, делает шаг `none` для этого запуска.
+
+  `afterSpec` также принимает непустой упорядоченный список правил `{ "paths"?: string[], "mode": "release|promote|none" }`, чтобы один репозиторий мог выпускать CLI и продвигать сайт. Режим выбирается по путям, которые продвижение `develop` принесло бы в `main`: побеждает первое правило, чьи `paths` совпадают со всеми изменёнными путями; иначе применяется правило без `paths` (его может опустить только последнее правило); иначе `none`. Отсутствие изменённых путей также ведёт к этому запасному правилу. Глобы используют сопоставитель защиты правок, поэтому сегменты `[locale]` и `(group)` понимаются буквально. Изменённые пути берутся из `git fetch origin main develop` и `git diff --name-only --no-renames -z origin/main...origin/develop`, поэтому переименование учитывает и старый, и новый путь. Они читаются, только когда `afterSpec` является списком правил или задан `deploy.check.paths`, и только когда `repo.trunk` равен `develop`; иначе список пуст. Сбой git приводит к завершению `emet promote` с кодом 1 без открытия чего-либо. Строковая форма никогда не смотрит на пути.
+
+  ```json
+  {
+    "handoff": {
+      "afterSpec": [
+        { "paths": ["apps/site/**", "docs/**"], "mode": "promote" },
+        { "mode": "release" }
+      ]
+    }
+  }
+  ```
+
+  Здесь спецификация, затрагивающая только сайт или документацию, продвигается, а любая спецификация, затрагивающая CLI, останавливается на release pull request.
+
 - `launcher` (по умолчанию `auto`, одно из `auto`, `orca`, `bg`): только для Claude Code; на хосте Codex игнорируется, `emet launch` там не открывает вкладку Orca. Дополнительно открыть волну во вкладке Orca, выполняющей `claude attach`. `auto` опрашивает среду выполнения Orca (`orca status`), поэтому работает и из сессий `claude --bg`, у которых нет `TERM_PROGRAM`; `orca` пробует всегда; `bg` — никогда. В любом случае волна работает в фоне, а вкладка, которую не удалось открыть, никогда не останавливает цепочку. `emet launch <spec-id> --wave <n>` выполняет запуск целиком; см. [`emet launch`](cli.md#запуски-воркеры-и-слоты).
 - `permissionMode` (по умолчанию `bypassPermissions`, одно из `bypassPermissions`, `auto`, `acceptEdits`): только для Claude Code; на хосте Codex игнорируется, цепочечная сессия использует [`codex.sandbox`](#codex). Режим разрешений цепочечной сессии. Он не наследуется от запускающей сессии, потому что классификатор режима `auto` может отклонить шаг вроде `gh pr merge` и оставить волну недоделанной. Ваши правила `permissions.deny` по-прежнему действуют, но предупреждение об обходе нужно один раз принять интерактивно (`skipDangerousModePermissionPrompt`).
 
@@ -66,14 +82,18 @@ sourceHash: 2ff76dd878c6530c
       "command": "curl -fsS https://example.com/health",
       "retries": 10,
       "intervalSeconds": 15,
-      "timeoutSeconds": 300
+      "timeoutSeconds": 300,
+      "paths": ["apps/site/**"]
     }
   }
 }
 ```
 
 - `check.command`: команда оболочки, которая завершается с кодом 0, когда деплой исправен.
-- `check.retries`, `check.intervalSeconds`, `check.timeoutSeconds`: положительные целые числа; максимальное число попыток, пауза между ними и общий предел времени. `emet deploy-check` печатает `ok`, `failed` или `timeout` и завершается с кодом 0, 1 или 3. Шаг `promote` у `afterSpec` запускает её после слияния.
+- `check.retries`, `check.intervalSeconds`, `check.timeoutSeconds`: положительные целые числа; максимальное число попыток, пауза между ними и общий предел времени. `emet deploy-check` печатает `ok`, `failed` или `timeout` и завершается с кодом 0, 1 или 3.
+- `check.paths` (необязательно): непустой список непустых глобов. С ним слитый promote запускает проверку, только если совпал изменённый путь; без него её запускает каждый слитый promote.
+
+Проверка больше не зависит от `afterSpec`. `emet promote` выводит `deployCheck: { run, reason }`, а координатор запускает `emet deploy-check`, только когда `run` равно true: никогда без `deploy.check` и после последней волны, которая не чистая; на `repo.trunk` `main`, где каждое слияние деплоится, после чистой последней волны независимо от режима (также при `--no-promote` или удерживаемой спецификации и без учёта `paths`); на `develop` только в режиме `promote` после слитого promote, совпадающего с `paths`. В режиме `release` деплой ждёт человека.
 
 ## interview
 
