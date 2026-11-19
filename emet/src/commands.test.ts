@@ -98,6 +98,15 @@ describe("promote, deploy-check, fleet and setup", () => {
   });
 });
 
+describe("whats-new", () => {
+  test("declares its flags", () => {
+    expect(findCommand("whats-new")?.flags).toEqual([
+      { name: "--hook", value: false },
+      { name: "--data-dir", value: true },
+    ]);
+  });
+});
+
 describe("ci, chain and the new flags", () => {
   test("registers ci and chain with their flags", () => {
     for (const flag of ["--pr", "--wait", "--rerun-flakes", "--timeout-minutes"]) {

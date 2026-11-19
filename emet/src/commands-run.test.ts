@@ -195,6 +195,7 @@ describe("loadRun module branches", () => {
     "reply",
     "doctor",
     "tracker",
+    "whats-new",
   ]);
   const modulesWithUsageOnEmptyArgv = COMMANDS.filter((spec) => !skipped.has(spec.name));
 

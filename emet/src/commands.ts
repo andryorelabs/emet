@@ -114,7 +114,8 @@ type ModuleName =
   | "promote"
   | "deploycheck"
   | "fleet"
-  | "setup";
+  | "setup"
+  | "whatsnew";
 
 type ModuleRun = CommandSpec["run"];
 
@@ -200,6 +201,8 @@ async function loadRun(name: ModuleName): Promise<ModuleRun> {
       return (await import("./fleet")).run;
     case "setup":
       return (await import("./setup")).run;
+    case "whatsnew":
+      return (await import("./whats-new")).run;
   }
   throw new Error(`unknown command module "${String(name)}"`);
 }
@@ -578,6 +581,12 @@ export const COMMANDS: readonly CommandSpec[] = [
       bool("--json"),
     ],
     run: runModule("setup"),
+  },
+  {
+    name: "whats-new",
+    summary: "print a one-time notice after emet updates",
+    flags: [bool("--hook"), val("--data-dir")],
+    run: runModule("whatsnew"),
   },
   {
     name: "guard",
