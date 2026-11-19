@@ -3,7 +3,7 @@
 import { existsSync, mkdirSync, writeFileSync } from "node:fs";
 import path from "node:path";
 
-import { resolveAfterSpec } from "./afterspec";
+import { matchesAnyGlob, resolveAfterSpec, type AfterSpecResolution } from "./afterspec";
 import { realGh, waitForChecks, type CiOutcome, type GhRunner } from "./ci";
 import {
   ForgeConfigError,
@@ -27,12 +27,23 @@ const CI_TIMEOUT_MS = 30 * 60 * 1000;
 const CI_POLL_MS = 30 * 1000;
 const PR_URL_PATTERN = /\/pull\/(\d+)/;
 
+type DeployCheckConfig = NonNullable<NonNullable<ForgeConfig["deploy"]>["check"]>;
+
+/** Whether the coordinator should run `emet deploy-check`, and one sentence saying why. */
+export interface DeployCheckDecision {
+  readonly run: boolean;
+  readonly reason: string;
+}
+
 /** What `promoteDevelop` did. */
 export interface PromoteOutcome {
   mode: AfterSpecMode;
+  rule: number | null;
+  reason: string;
   prNumber: number | null;
   merged: boolean;
   syncPrNumber: number | null;
+  deployCheck: DeployCheckDecision;
   skipped?: string;
   ciState?: string;
 }
@@ -43,18 +54,108 @@ export interface PromoteDeps {
   gh: GhRunner;
   waitForCi: (pr: number) => Promise<CiOutcome>;
   record: (outcome: PromoteOutcome) => void;
+  readChangedPaths: () => Promise<readonly string[]>;
 }
+
+/** What `promoteDevelop` reports beyond its own actions: the resolution and the deploy decision. */
+export interface PromoteReport {
+  dryRun: boolean;
+  resolution?: AfterSpecResolution;
+  decideDeployCheck?: (promoteMerged: boolean) => DeployCheckDecision;
+}
+
+const NO_DEPLOY_CHECK: DeployCheckDecision = { run: false, reason: "no deploy check configured" };
 
 /**
  * Decides the after-spec step for a run: `none` under `--no-promote` or when
- * the spec's last wave was left open or flagged, otherwise the configured mode.
+ * the spec's last wave was left open or flagged, otherwise the configured
+ * setting resolved against the changed paths.
  */
 export function planAfterSpec(
   config: Pick<ForgeConfig, "handoff">,
-  options: { noPromote: boolean; finalWaveClean: boolean },
-): AfterSpecMode {
-  if (options.noPromote || !options.finalWaveClean) return "none";
-  return resolveAfterSpec(config.handoff.afterSpec, []).mode;
+  options: { noPromote: boolean; finalWaveClean: boolean; changedPaths: readonly string[] },
+): AfterSpecResolution {
+  if (options.noPromote) {
+    return { mode: "none", ruleIndex: null, reason: "the after-spec step is held or --no-promote" };
+  }
+  if (!options.finalWaveClean) {
+    return { mode: "none", ruleIndex: null, reason: "the final wave is not clean" };
+  }
+  return resolveAfterSpec(config.handoff.afterSpec, options.changedPaths);
+}
+
+/**
+ * Whether the deploy check should run: only with a check configured and a
+ * clean final wave. On trunk `main` every merge deploys, so it runs whatever
+ * the mode. Otherwise it runs only after a promote that merged and, when the
+ * check has `paths`, carried a matching changed path.
+ */
+export function decideDeployCheck(input: {
+  check: DeployCheckConfig | undefined;
+  trunk: string;
+  mode: AfterSpecMode;
+  finalWaveClean: boolean;
+  promoteMerged: boolean;
+  changedPaths: readonly string[];
+}): DeployCheckDecision {
+  if (input.check === undefined) return NO_DEPLOY_CHECK;
+  if (!input.finalWaveClean) {
+    return { run: false, reason: "the final wave is not clean" };
+  }
+  if (input.trunk === MAIN_BRANCH) {
+    return {
+      run: true,
+      reason: `trunk is ${MAIN_BRANCH}, so every merge deploys and the check runs after a clean final wave`,
+    };
+  }
+  if (input.mode === "release") {
+    return { run: false, reason: "release mode: the deploy waits for a person" };
+  }
+  if (input.mode !== "promote") {
+    return { run: false, reason: `after-spec is ${input.mode}: nothing reached ${MAIN_BRANCH}` };
+  }
+  if (!input.promoteMerged) {
+    return { run: false, reason: "the promote pull request did not merge" };
+  }
+  const globs = input.check.paths;
+  if (globs === undefined) {
+    return { run: true, reason: "the promote merged and deploy.check has no paths filter" };
+  }
+  if (input.changedPaths.some((changed) => matchesAnyGlob(globs, changed))) {
+    return {
+      run: true,
+      reason: "the promote merged and a changed path matches deploy.check.paths",
+    };
+  }
+  return {
+    run: false,
+    reason: "the promote merged but no changed path matches deploy.check.paths",
+  };
+}
+
+/**
+ * The paths promoting `develop` would carry into `main`: a fetch of both
+ * branches, then a NUL-separated, rename-free diff. A failure throws, so it
+ * never reads as "no paths".
+ */
+export async function readChangedPaths(repoRoot: string): Promise<string[]> {
+  const fetched = await Bun.$`git -C ${repoRoot} fetch origin ${MAIN_BRANCH} ${DEVELOP_BRANCH}`
+    .nothrow()
+    .quiet();
+  if (fetched.exitCode !== 0) {
+    throw new Error(`git fetch failed: ${fetched.stderr.toString().trim()}`);
+  }
+  const range = `origin/${MAIN_BRANCH}...origin/${DEVELOP_BRANCH}`;
+  const diffed = await Bun.$`git -C ${repoRoot} diff --name-only --no-renames -z ${range}`
+    .nothrow()
+    .quiet();
+  if (diffed.exitCode !== 0) {
+    throw new Error(`git diff failed: ${diffed.stderr.toString().trim()}`);
+  }
+  return diffed.stdout
+    .toString()
+    .split("\0")
+    .filter((entry) => entry !== "");
 }
 
 function parsePullRequestNumber(output: string): number {
@@ -97,17 +198,28 @@ async function isDevelopBehindMain(gh: GhRunner): Promise<boolean> {
   return Number(output.trim()) > 0;
 }
 
+function baseOutcome(
+  mode: AfterSpecMode,
+  report: PromoteReport,
+  promoteMerged: boolean,
+): PromoteOutcome {
+  return {
+    mode,
+    rule: report.resolution?.ruleIndex ?? null,
+    reason: report.resolution?.reason ?? `after-spec is ${mode}`,
+    prNumber: null,
+    merged: promoteMerged,
+    syncPrNumber: null,
+    deployCheck: report.decideDeployCheck?.(promoteMerged) ?? NO_DEPLOY_CHECK,
+  };
+}
+
 async function promoteViaPullRequest(
-  options: { dryRun: boolean },
+  report: PromoteReport,
   deps: PromoteDeps,
 ): Promise<PromoteOutcome> {
-  const outcome: PromoteOutcome = {
-    mode: "promote",
-    prNumber: null,
-    merged: false,
-    syncPrNumber: null,
-  };
-  if (options.dryRun) return { ...outcome, skipped: "dry run" };
+  const outcome = baseOutcome("promote", report, false);
+  if (report.dryRun) return { ...outcome, skipped: "dry run" };
   outcome.prNumber = await openPullRequest(
     deps.gh,
     DEVELOP_BRANCH,
@@ -121,6 +233,7 @@ async function promoteViaPullRequest(
     if (ci.state !== "pass") return outcome;
     await deps.gh(["pr", "merge", String(outcome.prNumber), "--merge"]);
     outcome.merged = true;
+    outcome.deployCheck = report.decideDeployCheck?.(true) ?? NO_DEPLOY_CHECK;
     if (await isDevelopBehindMain(deps.gh)) {
       outcome.syncPrNumber = await openPullRequest(
         deps.gh,
@@ -144,24 +257,15 @@ async function promoteViaPullRequest(
  * the release. `none` does nothing.
  */
 export async function promoteDevelop(
-  options: { dryRun: boolean },
+  options: PromoteReport,
   deps: PromoteDeps,
 ): Promise<PromoteOutcome> {
   if (deps.mode === "none") {
-    return {
-      mode: "none",
-      prNumber: null,
-      merged: false,
-      syncPrNumber: null,
-      skipped: "after-spec is none",
-    };
+    return { ...baseOutcome("none", options, false), skipped: "after-spec is none" };
   }
   if (deps.mode === "release") {
     return {
-      mode: "release",
-      prNumber: null,
-      merged: false,
-      syncPrNumber: null,
+      ...baseOutcome("release", options, false),
       skipped: "release mode stops for a person: open the release pull request with cut-release",
     };
   }
@@ -206,6 +310,7 @@ export function buildPromoteDeps(options: {
   return {
     mode: options.mode,
     gh,
+    readChangedPaths: () => readChangedPaths(options.repoRoot),
     waitForCi: (pr) =>
       waitForChecks(
         { pr, timeoutMs: CI_TIMEOUT_MS, pollMs: CI_POLL_MS, rerunFlakes: false },
@@ -223,6 +328,9 @@ export function buildPromoteDeps(options: {
         data: {
           spec: options.specId,
           mode: result.mode,
+          rule: result.rule,
+          reason: result.reason,
+          deployCheck: { run: result.deployCheck.run, reason: result.deployCheck.reason },
           prNumber: result.prNumber,
           merged: result.merged,
           syncPrNumber: result.syncPrNumber,
@@ -260,6 +368,15 @@ export function holdSpec(commonDirectory: string, specId: string): void {
   const marker = holdMarkerPath(commonDirectory, specId);
   mkdirSync(path.dirname(marker), { recursive: true });
   writeFileSync(marker, "");
+}
+
+function needsChangedPaths(
+  config: Pick<ForgeConfig, "handoff" | "repo" | "deploy">,
+  options: { noPromote: boolean; finalWaveClean: boolean },
+): boolean {
+  if (options.noPromote || !options.finalWaveClean) return false;
+  if (config.repo.trunk !== DEVELOP_BRANCH) return false;
+  return Array.isArray(config.handoff.afterSpec) || config.deploy?.check?.paths !== undefined;
 }
 
 function readFlag(argv: readonly string[], flag: string): string | undefined {
@@ -300,13 +417,30 @@ export async function run(
     const repoRoot = repoRootOverride ?? (await resolveRepoRoot());
     if (!repoRoot) throw new ForgeConfigError(`${BINARY} promote: not inside a git repository`);
     const { config } = await loadForgeConfigWithDefaults(repoRoot);
-    const mode = planAfterSpec(config, {
-      noPromote: argv.includes("--no-promote") || isSpecHeld(commonDirectory, repoRoot, specId),
-      finalWaveClean: isFinalWaveClean(await (specState ?? readSpecState)(specId)),
-    });
+    const noPromote =
+      argv.includes("--no-promote") || isSpecHeld(commonDirectory, repoRoot, specId);
+    const finalWaveClean = isFinalWaveClean(await (specState ?? readSpecState)(specId));
+    const base = { ...buildPromoteDeps({ mode: "none", repoRoot, specId }), ...promoteOverrides };
+    const changedPaths = needsChangedPaths(config, { noPromote, finalWaveClean })
+      ? await base.readChangedPaths()
+      : [];
+    const resolution = planAfterSpec(config, { noPromote, finalWaveClean, changedPaths });
+    const deps: PromoteDeps = { ...base, mode: resolution.mode, ...promoteOverrides };
     const outcome = await promoteDevelop(
-      { dryRun: argv.includes("--dry-run") },
-      { ...buildPromoteDeps({ mode, repoRoot, specId }), ...promoteOverrides },
+      {
+        dryRun: argv.includes("--dry-run"),
+        resolution,
+        decideDeployCheck: (promoteMerged) =>
+          decideDeployCheck({
+            check: config.deploy?.check,
+            trunk: config.repo.trunk,
+            mode: deps.mode,
+            finalWaveClean,
+            promoteMerged,
+            changedPaths,
+          }),
+      },
+      deps,
     );
     console.log(JSON.stringify(outcome));
     const failed = outcome.mode === "promote" && outcome.skipped === undefined && !outcome.merged;

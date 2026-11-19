@@ -2,7 +2,7 @@
 title: 配置参考
 description: emet.config.json 中的每个键，包括其默认值和含义。
 seoTitle: emet 配置参考
-sourceHash: 2ff76dd878c6530c
+sourceHash: 021a695d999163e3
 ---
 
 `emet.config.json` 中的每个键，及其默认值和含义。权威来源是 [`emet/schema/emet.config.schema.json`](../../emet/schema/emet.config.schema.json)。术语遵循 [GLOSSARY.md](../../GLOSSARY.md)。返回 [README](../../README.md)。
@@ -52,6 +52,22 @@ sourceHash: 2ff76dd878c6530c
   只有在 PR 已合并且没有任何内容被标记时才会启动；如果已有 `emet-<spec-id>-*` 会话在运行（`claude agents --json`），则会跳过。如果启动失败，则回退为打印 `/emet:run --dispatch <spec-id>`。
 
 - `afterSpec`（默认 `"none"`，可选 `release`、`promote`、`none`）：规格的最后一个波次干净合并后，`/emet:run` 要做什么。`promote` 运行 `emet promote`：待 CI 为 `pass` 后，用合并提交合并一个从 `develop` 到 `main` 的拉取请求，仅当 `develop` 落后于 `main` 时，才再发起一个反向同步的拉取请求。`release` 按 `cut-release` 技能的步骤打开发布拉取请求，然后停下来等待人工处理。`none` 什么也不做。`emet init` 会检测该值（有 `v*` 标签且存在名称含 `release` 的工作流文件时为 `release`；有 `develop` 分支且没有此类标签时为 `promote`；否则为 `none`），`emet init --after-spec <mode>` 可强制指定。不含该键的配置按 `none` 加载。向 `/emet:run` 或 `emet promote` 传入 `--no-promote`，会让该步骤在本次运行中为 `none`。
+
+  `afterSpec` 也接受非空的有序规则列表 `{ "paths"?: string[], "mode": "release|promote|none" }`，这样同一个仓库可以发布 CLI 并提升网站。模式由提升 `develop` 会带入 `main` 的路径来选择：`paths` 匹配所有变更路径的第一条规则生效；否则适用没有 `paths` 的规则（只有最后一条规则可以省略）；否则为 `none`。没有变更路径时同样落到该兜底规则。glob 使用编辑守卫的匹配器，因此 `[locale]` 和 `(group)` 段按字面处理。变更路径来自 `git fetch origin main develop` 和 `git diff --name-only --no-renames -z origin/main...origin/develop`，因此重命名会同时计入旧路径和新路径。仅当 `afterSpec` 是规则列表或设置了 `deploy.check.paths`，并且 `repo.trunk` 为 `develop` 时才会读取这些路径；否则列表为空。git 失败会让 `emet promote` 以 1 退出且不打开任何内容。字符串形式从不查看路径。
+
+  ```json
+  {
+    "handoff": {
+      "afterSpec": [
+        { "paths": ["apps/site/**", "docs/**"], "mode": "promote" },
+        { "mode": "release" }
+      ]
+    }
+  }
+  ```
+
+  在这里，只改动网站或文档的规格会被提升，而任何改动 CLI 的规格都会停在发布拉取请求上。
+
 - `launcher`（默认 `auto`，可选 `auto`、`orca`、`bg`）：仅限 Claude Code；在 Codex 宿主上被忽略，`emet launch` 不会打开 Orca 标签页。同时在运行 `claude attach` 的 Orca 标签页中打开该波次。`auto` 会询问 Orca 运行时（`orca status`），因此对没有 `TERM_PROGRAM` 的 `claude --bg` 会话同样有效；`orca` 总是尝试；`bg` 从不尝试。无论哪种方式，波次都在后台运行，标签页打开失败也不会中断串联。`emet launch <spec-id> --wave <n>` 会完成整个启动流程；参见 [`emet launch`](cli.md#运行工作者与槽位)。
 - `permissionMode`（默认 `bypassPermissions`，可选 `bypassPermissions`、`auto`、`acceptEdits`）：仅限 Claude Code；在 Codex 宿主上被忽略，串联会话使用 [`codex.sandbox`](#codex)。串联会话的权限模式。它不继承启动会话的模式，因为 `auto` 模式的分类器可能拒绝 `gh pr merge` 之类的步骤，导致波次只完成一半。你的 `permissions.deny` 规则仍然适用，但必须已在交互环境中接受过一次绕过警告（`skipDangerousModePermissionPrompt`）。
 
@@ -66,14 +82,18 @@ sourceHash: 2ff76dd878c6530c
       "command": "curl -fsS https://example.com/health",
       "retries": 10,
       "intervalSeconds": 15,
-      "timeoutSeconds": 300
+      "timeoutSeconds": 300,
+      "paths": ["apps/site/**"]
     }
   }
 }
 ```
 
 - `check.command`：部署健康时以 0 退出的 shell 命令。
-- `check.retries`、`check.intervalSeconds`、`check.timeoutSeconds`：正整数；分别是最多尝试次数、两次尝试之间的等待时间和总时间上限。`emet deploy-check` 会输出 `ok`、`failed` 或 `timeout`，并以 0、1 或 3 退出。`afterSpec` 的 `promote` 步骤会在合并后运行它。
+- `check.retries`、`check.intervalSeconds`、`check.timeoutSeconds`：正整数；分别是最多尝试次数、两次尝试之间的等待时间和总时间上限。`emet deploy-check` 会输出 `ok`、`failed` 或 `timeout`，并以 0、1 或 3 退出。
+- `check.paths`（可选）：非空的、元素非空的 glob 列表。设置后，已合并的 promote 仅在有变更路径匹配时才运行检查；未设置时，每个已合并的 promote 都会运行。
+
+该检查不再依赖 `afterSpec`。`emet promote` 会输出 `deployCheck: { run, reason }`，协调器仅在 `run` 为 true 时才运行 `emet deploy-check`：没有 `deploy.check` 时从不运行，最后一个波次不干净时也不运行；在 `repo.trunk` 为 `main`（每次合并都会部署）时，干净的最后一个波次之后无论哪种模式都会运行（使用 `--no-promote` 或规格被保留时也一样，并且忽略 `paths`）；在 `develop` 上，仅在 `promote` 模式下，且已合并的 promote 匹配 `paths` 之后才运行。在 `release` 模式下，部署等待人工处理。
 
 ## interview
 

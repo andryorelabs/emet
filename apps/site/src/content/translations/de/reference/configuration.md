@@ -2,7 +2,7 @@
 title: Konfigurationsreferenz
 description: Jeder Schlüssel in emet.config.json mit Standardwert und Bedeutung.
 seoTitle: emet-Konfigurationsreferenz
-sourceHash: 2ff76dd878c6530c
+sourceHash: 021a695d999163e3
 ---
 
 Jeder Schlüssel in `emet.config.json` mit Standardwert und Bedeutung. Die maßgebliche Quelle ist [`emet/schema/emet.config.schema.json`](../../emet/schema/emet.config.schema.json). Die Begriffe folgen [GLOSSARY.md](../../GLOSSARY.md). Zurück zur [README](../../README.md).
@@ -52,6 +52,22 @@ Was geschieht, nachdem eine Welle abgeschlossen ist, und die Größenlimits der 
   Der Start erfolgt nur, wenn der PR gemergt wurde und nichts markiert war, und wird übersprungen, wenn bereits eine Sitzung `emet-<spec-id>-*` läuft (`claude agents --json`). Schlägt der Start fehl, wird stattdessen `/emet:run --dispatch <spec-id>` ausgegeben.
 
 - `afterSpec` (Standard `"none"`, eines von `release`, `promote`, `none`): was `/emet:run` tut, sobald die letzte Welle einer Spec sauber gemergt wurde. `promote` führt `emet promote` aus: ein Pull Request von `develop` nach `main`, der mit einem Merge-Commit gemergt wird, sobald CI `pass` ist, und danach nur dann ein Sync-Pull-Request zurück, wenn `develop` hinter `main` liegt. `release` öffnet den Release-Pull-Request über die Schritte des Skills `cut-release` und hält für eine Person an. `none` tut nichts. `emet init` erkennt den Wert (`release` bei einem `v*`-Tag und einer Workflow-Datei, deren Name `release` enthält; `promote` bei einem `develop`-Branch ohne solchen Tag; sonst `none`), und `emet init --after-spec <mode>` erzwingt ihn. Eine Konfiguration ohne ihn wird als `none` geladen. `--no-promote`, an `/emet:run` oder `emet promote` übergeben, setzt den Schritt für diesen Lauf auf `none`.
+
+  `afterSpec` akzeptiert außerdem eine nicht leere, geordnete Liste von Regeln, `{ "paths"?: string[], "mode": "release|promote|none" }`, sodass ein Repository eine CLI veröffentlichen und eine Website promoten kann. Der Modus wird aus den Pfaden gewählt, die ein Promoten von `develop` nach `main` mitbringen würde: Es gilt die erste Regel, deren `paths` auf jeden geänderten Pfad passen; andernfalls greift die Regel ohne `paths` (nur die letzte Regel darf sie weglassen); andernfalls `none`. Auch keine geänderten Pfade fallen auf diese Auffangregel zurück. Globs nutzen den Matcher des Edit-Guards, daher sind Segmente wie `[locale]` und `(group)` wörtlich zu verstehen. Die geänderten Pfade stammen aus `git fetch origin main develop` und `git diff --name-only --no-renames -z origin/main...origin/develop`, sodass eine Umbenennung ihren alten und neuen Pfad zählt. Sie werden nur gelesen, wenn `afterSpec` eine Regelliste ist oder `deploy.check.paths` gesetzt ist, und nur wenn `repo.trunk` `develop` ist; andernfalls ist die Liste leer. Ein Git-Fehler lässt `emet promote` mit 1 enden und nichts öffnen. Die String-Form schaut nie auf Pfade.
+
+  ```json
+  {
+    "handoff": {
+      "afterSpec": [
+        { "paths": ["apps/site/**", "docs/**"], "mode": "promote" },
+        { "mode": "release" }
+      ]
+    }
+  }
+  ```
+
+  Hier wird eine Spec, die nur die Website oder die Doku berührt, promotet, und jede Spec, die die CLI berührt, endet an einem Release-Pull-Request.
+
 - `launcher` (Standard `auto`, eines von `auto`, `orca`, `bg`): nur Claude Code; auf dem Codex-Host ignoriert, wo `emet launch` keinen Orca-Tab öffnet. Die Welle zusätzlich in einem Orca-Tab öffnen, der `claude attach` ausführt. `auto` fragt die Orca-Runtime (`orca status`) und funktioniert daher auch aus `claude --bg`-Sitzungen, die kein `TERM_PROGRAM` haben; `orca` versucht es immer; `bg` nie. Die Welle läuft in beiden Fällen im Hintergrund, und ein Tab, der sich nicht öffnen lässt, stoppt die Kette nie. `emet launch <spec-id> --wave <n>` erledigt den gesamten Start; siehe [`emet launch`](cli.md#läufe-worker-und-slots).
 - `permissionMode` (Standard `bypassPermissions`, eines von `bypassPermissions`, `auto`, `acceptEdits`): nur Claude Code; auf dem Codex-Host ignoriert, wo die verkettete Sitzung [`codex.sandbox`](#codex) nutzt. Berechtigungsmodus der verketteten Sitzung. Er wird nicht von der startenden Sitzung geerbt, weil der Klassifikator des Modus `auto` einen Schritt wie `gh pr merge` ablehnen und eine Welle halb fertig zurücklassen kann. Deine `permissions.deny`-Regeln gelten weiterhin, aber die Bypass-Warnung muss einmal interaktiv akzeptiert worden sein (`skipDangerousModePermissionPrompt`).
 
@@ -66,14 +82,18 @@ Optional. Fehlt der Abschnitt, gibt es keine Deploy-Prüfung.
       "command": "curl -fsS https://example.com/health",
       "retries": 10,
       "intervalSeconds": 15,
-      "timeoutSeconds": 300
+      "timeoutSeconds": 300,
+      "paths": ["apps/site/**"]
     }
   }
 }
 ```
 
 - `check.command`: Shell-Befehl, der mit 0 endet, wenn das Deploy gesund ist.
-- `check.retries`, `check.intervalSeconds`, `check.timeoutSeconds`: positive ganze Zahlen; die maximale Zahl der Versuche, die Wartezeit zwischen ihnen und die Gesamtzeitgrenze. `emet deploy-check` gibt `ok`, `failed` oder `timeout` aus und endet mit 0, 1 oder 3. Der `promote`-Schritt von `afterSpec` führt es nach dem Merge aus.
+- `check.retries`, `check.intervalSeconds`, `check.timeoutSeconds`: positive ganze Zahlen; die maximale Zahl der Versuche, die Wartezeit zwischen ihnen und die Gesamtzeitgrenze. `emet deploy-check` gibt `ok`, `failed` oder `timeout` aus und endet mit 0, 1 oder 3.
+- `check.paths` (optional): eine nicht leere Liste nicht leerer Globs. Damit führt ein gemergter Promote die Prüfung nur aus, wenn ein geänderter Pfad passt; ohne sie führt jeder gemergte Promote sie aus.
+
+Die Prüfung hängt nicht mehr von `afterSpec` ab. `emet promote` gibt `deployCheck: { run, reason }` aus, und der Koordinator führt `emet deploy-check` nur aus, wenn `run` true ist: nie ohne `deploy.check` oder nach einer letzten Welle, die nicht sauber ist; auf `repo.trunk` `main`, wo jeder Merge deployt, nach einer sauberen letzten Welle unabhängig vom Modus (auch unter `--no-promote` oder bei einer angehaltenen Spec, und `paths` wird ignoriert); auf `develop` nur im Modus `promote` nach einem gemergten Promote, der auf `paths` passt. Im Modus `release` wartet das Deploy auf eine Person.
 
 ## interview
 

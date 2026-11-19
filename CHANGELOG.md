@@ -8,6 +8,23 @@ and this project adheres to
 
 ## [Unreleased]
 
+### Added
+
+- `handoff.afterSpec` accepts an ordered list of `{ paths?, mode }` rules, so a
+  repository with a CLI and a Website can release the CLI and promote the
+  Website. The mode is chosen from the paths promoting `develop` would carry
+  into `main`.
+- `deploy.check.paths` limits the deploy check to promotes that touched the
+  listed globs.
+- `emet promote` prints and journals `rule` and `reason`, and prints
+  `deployCheck: { run, reason }`.
+
+### Changed
+
+- The deploy check no longer depends on `afterSpec`: it runs after a clean final
+  wave on trunk `main`, and after a merged promote on `develop`. The coordinator
+  runs `emet promote` after every spec, also under `afterSpec` `none`.
+
 ## [0.9.1] - 2026-11-19
 
 ### Fixed

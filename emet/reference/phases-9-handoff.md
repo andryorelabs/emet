@@ -40,18 +40,22 @@ spent waiting on workers is never blocked.
 **After-spec step.** When the frontier is empty and the spec's last wave
 merged clean (not left open, not flagged), run the after-spec step chosen by
 `handoff.afterSpec` before the final report: `emet promote --spec <spec-id>`.
-It never runs when this session was started with `--no-promote` (pass the flag
-through), when the spec was held with `emet promote --spec <spec-id> --hold`,
-or when `handoff.afterSpec` is `none`: say that it was skipped and
-why. In `promote` mode it opens a `develop` to `main` pull request, waits with
-`emet ci --pr <n> --wait`, merges only when CI is `pass` (never on `fail` or
-`timeout`; report it and stop), and opens and merges a `main` to `develop` sync
-pull request only when `develop` is behind `main`. In `release` mode it opens
-nothing to merge: follow the `cut-release` skill's steps to open the release
-pull request and leave it for a person. When `deploy.check` is configured, run
-`emet deploy-check` after the merge (exit 0 `ok`, 1 `failed`, 3 `timeout`) and
-put its state in the final report; a `failed` or `timeout` check is a human
-step, never retried silently.
+Always run it, also when `handoff.afterSpec` is `none`, because its printed
+outcome carries `mode`, `rule`, `reason` and `deployCheck`. Pass `--no-promote`
+through when this session was started with it; the same goes for a spec held
+with `emet promote --spec <spec-id> --hold`: the mode is then `none`, so
+say that the step was skipped and why. `handoff.afterSpec` is a mode or an
+ordered rule list; `rule` is the matched rule index (`null` for the string form)
+and `reason` says why. In `promote` mode it opens a `develop` to `main` pull
+request, waits with `emet ci --pr <n> --wait`, merges only when CI is `pass`
+(never on `fail` or `timeout`; report it and stop), and opens and merges a
+`main` to `develop` sync pull request only when `develop` is behind `main`. In
+`release` mode it opens nothing to merge: follow the `cut-release` skill's steps
+to open the release pull request and leave it for a person. Run
+`emet deploy-check` (exit 0 `ok`, 1 `failed`, 3 `timeout`) only when the
+printed outcome has `deployCheck.run` true, and put its state, or the
+`deployCheck.reason` when it did not run, in the final report; a `failed` or
+`timeout` check is a human step, never retried silently.
 
 **If the frontier is non-empty, do not loop back to Phase 6 in this same
 session.** Waves chain across sessions, not within one — each session pays
