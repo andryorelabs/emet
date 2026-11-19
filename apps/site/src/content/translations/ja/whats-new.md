@@ -2,8 +2,16 @@
 title: 新機能
 description: emet のリリースノート。各バージョンでの変更点をまとめています。
 seoTitle: "emet の新機能: リリースノート"
-sourceHash: b47ea0e52bb41632
+sourceHash: d31beb683db0a11e
 ---
+
+## 0.9.1
+
+2026-11-19
+
+### 修正
+
+- `emet setup` が `--data-dir` を受け付けるようになり、プラグインの SessionStart フックが `unknown flag --data-dir` で失敗しなくなりました。
 
 ## 0.9.0
 

@@ -2,8 +2,16 @@
 title: Neuigkeiten
 description: Release Notes für emet: was sich in jeder Version geändert hat.
 seoTitle: "Neuigkeiten in emet: Release Notes"
-sourceHash: b47ea0e52bb41632
+sourceHash: d31beb683db0a11e
 ---
+
+## 0.9.1
+
+2026-11-19
+
+### Behoben
+
+- `emet setup` akzeptiert `--data-dir`, sodass der SessionStart-Hook des Plugins nicht mehr mit `unknown flag --data-dir` fehlschlägt.
 
 ## 0.9.0
 
