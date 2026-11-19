@@ -309,6 +309,11 @@ function guardHook(suffix: string): { type: "command"; command: string } {
 export function buildHooks(): string {
   const hooks = {
     hooks: {
+      SessionStart: [
+        {
+          hooks: [{ type: "command", command: "EMET_AGENT_HOST=codex emet whats-new --hook" }],
+        },
+      ],
       PreToolUse: [{ matcher: "Bash|apply_patch", hooks: [guardHook("")] }],
       UserPromptSubmit: [{ hooks: [guardHook(" --event UserPromptSubmit")] }],
       Stop: [{ hooks: [guardHook(" --event Stop")] }],
