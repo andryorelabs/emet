@@ -381,10 +381,29 @@
           "description": "Permission mode the chained wave's `claude --bg` session runs in. Defaults to bypassPermissions because auto mode's classifier can deny steps like `gh pr merge` mid-wave, leaving the wave half-finished; `permissions.deny` rules still apply in every mode."
         },
         "afterSpec": {
-          "type": "string",
-          "enum": ["release", "promote", "none"],
           "default": "none",
-          "description": "What happens after a spec's last wave lands. `release` opens a release pull request and stops for a person; `promote` opens and merges a trunk-to-release-branch pull request once CI passes; `none` does nothing. `emet init` detects it; `--no-promote` forces `none` for one run."
+          "description": "What happens after a spec's last wave lands. `release` opens a release pull request and stops for a person; `promote` opens and merges a trunk-to-release-branch pull request once CI passes; `none` does nothing. A non-empty ordered rule list picks the mode from the changed paths: the first rule whose `paths` match every changed path wins, otherwise the rule without `paths` (only the last may omit it) applies, otherwise `none`. `emet init` detects the string form; `--no-promote` forces `none` for one run.",
+          "oneOf": [
+            { "type": "string", "enum": ["release", "promote", "none"] },
+            {
+              "type": "array",
+              "minItems": 1,
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": ["mode"],
+                "properties": {
+                  "paths": {
+                    "type": "array",
+                    "minItems": 1,
+                    "items": { "type": "string", "minLength": 1 },
+                    "description": "Globs; the rule matches when every changed path matches at least one."
+                  },
+                  "mode": { "type": "string", "enum": ["release", "promote", "none"] }
+                }
+              }
+            }
+          ]
         }
       }
     },
@@ -409,6 +428,12 @@
           "required": ["command", "retries", "intervalSeconds", "timeoutSeconds"],
           "description": "A command `emet deploy-check` runs until it exits 0. Absent means no check.",
           "properties": {
+            "paths": {
+              "type": "array",
+              "minItems": 1,
+              "items": { "type": "string", "minLength": 1 },
+              "description": "Globs; when set, the check runs after a promote only if a changed path matches one."
+            },
             "command": { "type": "string", "minLength": 1, "description": "Shell command to run." },
             "retries": { "type": "integer", "minimum": 1, "description": "Maximum attempts." },
             "intervalSeconds": {
