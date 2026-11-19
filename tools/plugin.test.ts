@@ -90,6 +90,13 @@ describe("plugin manifests", () => {
     expect(hookConfig).toContain('setup --notice --data-dir \\"${CLAUDE_PLUGIN_DATA}\\"');
   });
 
+  test("SessionStart runs the what's new notice with the plugin data directory", () => {
+    const hookConfig = readFileSync(path.join(repoRoot, "hooks/hooks.json"), "utf8");
+    expect(hookConfig).toContain(
+      '\\"${CLAUDE_PLUGIN_ROOT}/bin/emet\\" whats-new --hook --data-dir \\"${CLAUDE_PLUGIN_DATA}\\"',
+    );
+  });
+
   test("no manifest, agent or hook contains forge", () => {
     const files = [
       ".claude-plugin/plugin.json",
