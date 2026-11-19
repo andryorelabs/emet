@@ -3,6 +3,7 @@
 import { existsSync, mkdirSync, writeFileSync } from "node:fs";
 import path from "node:path";
 
+import { resolveAfterSpec } from "./afterspec";
 import { realGh, waitForChecks, type CiOutcome, type GhRunner } from "./ci";
 import {
   ForgeConfigError,
@@ -53,7 +54,7 @@ export function planAfterSpec(
   options: { noPromote: boolean; finalWaveClean: boolean },
 ): AfterSpecMode {
   if (options.noPromote || !options.finalWaveClean) return "none";
-  return config.handoff.afterSpec;
+  return resolveAfterSpec(config.handoff.afterSpec, []).mode;
 }
 
 function parsePullRequestNumber(output: string): number {

@@ -3,6 +3,7 @@ import { mkdtempSync, rmSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
 
+import { resolveAfterSpec } from "./afterspec";
 import {
   DEFAULT_CODEX_CONFIG,
   DEFAULT_FORGE_CONFIG,
@@ -13,6 +14,7 @@ import {
   resolveAgentHostName,
   resolveCodexConfig,
   resolveWorkerModel,
+  type AfterSpecRule,
   type ForgeConfig,
 } from "./config";
 import { errorMessage } from "./narrow";
@@ -288,6 +290,61 @@ describe("loadForgeConfig", () => {
     expect(config.deploy).toBeUndefined();
     await writeConfig({ deploy: {} });
     expect(configOf(await loadForgeConfig(repoRoot)).deploy).toBeUndefined();
+  });
+
+  test("afterSpec accepts a rule list with a fallback", async () => {
+    const rules: AfterSpecRule[] = [
+      { paths: ["apps/site/**", "docs/**"], mode: "promote" },
+      { mode: "release" },
+    ];
+    await writeConfig({ handoff: { afterSpec: rules } });
+    expect(configOf(await loadForgeConfig(repoRoot)).handoff.afterSpec).toEqual(rules);
+  });
+
+  test("afterSpec accepts the string form", async () => {
+    await writeConfig({ handoff: { afterSpec: "promote" } });
+    const { afterSpec } = configOf(await loadForgeConfig(repoRoot)).handoff;
+    expect(resolveAfterSpec(afterSpec, ["emet/src/promote.ts"]).mode).toBe("promote");
+  });
+
+  test.each([
+    [
+      "a rule without paths that is not last",
+      [{ mode: "release" }, { paths: ["a/**"], mode: "none" }],
+    ],
+    ["an empty paths list", [{ paths: [], mode: "promote" }]],
+    ["an empty glob", [{ paths: [""], mode: "promote" }]],
+    ["an empty rule list", []],
+    ["an unknown mode", [{ mode: "ship" }]],
+  ])("rejects an afterSpec rule list with %s", async (_label, afterSpec) => {
+    await writeConfig({ handoff: { afterSpec } });
+    const result = await loadForgeConfig(repoRoot);
+    expect(result.status).toBe("malformed");
+    expect(reasonOf(result)).toContain('"handoff.afterSpec"');
+  });
+
+  test("deploy.check.paths loads when valid", async () => {
+    const check = { command: "x", retries: 1, intervalSeconds: 1, timeoutSeconds: 1 };
+    await writeConfig({ deploy: { check: { ...check, paths: ["apps/site/**"] } } });
+    expect(configOf(await loadForgeConfig(repoRoot)).deploy?.check?.paths).toEqual([
+      "apps/site/**",
+    ]);
+  });
+
+  test.each([[[]], [[""]], ["apps/**"]])("rejects deploy.check.paths %p", async (paths) => {
+    const check = { command: "x", retries: 1, intervalSeconds: 1, timeoutSeconds: 1, paths };
+    await writeConfig({ deploy: { check } });
+    const result = await loadForgeConfig(repoRoot);
+    expect(result.status).toBe("malformed");
+    expect(reasonOf(result)).toContain('"deploy.check.paths"');
+  });
+
+  test("this repo's own config resolves to release with no rule", async () => {
+    const ownRoot = path.resolve(import.meta.dir, "..", "..");
+    const { afterSpec } = configOf(await loadForgeConfig(ownRoot)).handoff;
+    const resolution = resolveAfterSpec(afterSpec, []);
+    expect(resolution.mode).toBe("release");
+    expect(resolution.ruleIndex).toBeNull();
   });
 
   test("language defaults to en and accepts overrides", async () => {
