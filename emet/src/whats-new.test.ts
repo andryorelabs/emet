@@ -88,4 +88,17 @@ describe("run", () => {
       log.mockRestore();
     }
   });
+
+  test("resolves even when printing throws", async () => {
+    const log = spyOn(console, "log").mockImplementation(() => {
+      throw new Error("EPIPE");
+    });
+    try {
+      writeFileSync(marker, "0.0.1");
+      await run(["--data-dir", directory], "1.0.0");
+      expect(log).toHaveBeenCalledTimes(1);
+    } finally {
+      log.mockRestore();
+    }
+  });
 });
