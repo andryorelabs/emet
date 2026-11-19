@@ -318,9 +318,9 @@ export function noticeMarkerPath(dataDirectory: string | undefined, homeDir: str
 /** Prints the one-time notice and writes the marker; prints nothing when the marker exists. Returns whether it printed. */
 export function showNoticeOnce(markerPath: string, log: (line: string) => void): boolean {
   if (existsSync(markerPath)) return false;
-  log(NOTICE_TEXT);
   mkdirSync(path.dirname(markerPath), { recursive: true });
   writeFileSync(markerPath, `${new Date().toISOString()}\n`);
+  log(NOTICE_TEXT);
   return true;
 }
 
@@ -370,7 +370,9 @@ export async function run(argv: string[]): Promise<void> {
     if (argv.includes("--notice")) {
       showNoticeOnce(
         noticeMarkerPath(flagValue(argv, "--data-dir"), realSetupEnv.homeDir),
-        realSetupEnv.log,
+        (line) => {
+          realSetupEnv.log(JSON.stringify({ systemMessage: line }));
+        },
       );
       return;
     }

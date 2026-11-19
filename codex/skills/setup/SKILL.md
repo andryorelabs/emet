@@ -8,7 +8,7 @@ PATH in Codex sessions.
 
 1. Run `emet setup --list --json` in the shell to get the catalog: each
    item's `id`, `label`, `defaultOn` and whether it is already `present`.
-2. Ask with `AskUserQuestion` as a multi-select, one option per item that is
+2. Ask as a multi-select question, one option per item that is
    not already present, pre-selecting nothing that has `defaultOn` false. Never
    assume a choice the user did not make.
 3. If nothing was chosen, say so and stop. Otherwise run

@@ -14,6 +14,7 @@ const BYTE_CEILINGS: Readonly<Record<string, number>> = {
   "commands/doctor.md": 570,
   "commands/init.md": 570,
   "commands/run.md": 8750,
+  "commands/setup.md": 1150,
   "emet/reference/incidents.md": 12950,
   "emet/reference/phases-1-5.md": 11300,
   "emet/reference/phases-6-7-dispatch.md": 16810,

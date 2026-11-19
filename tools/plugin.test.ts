@@ -85,6 +85,11 @@ describe("plugin manifests", () => {
     }
   });
 
+  test("SessionStart runs the one-time setup notice with the plugin data directory", () => {
+    const hookConfig = readFileSync(path.join(repoRoot, "hooks/hooks.json"), "utf8");
+    expect(hookConfig).toContain('setup --notice --data-dir \\"${CLAUDE_PLUGIN_DATA}\\"');
+  });
+
   test("no manifest, agent or hook contains forge", () => {
     const files = [
       ".claude-plugin/plugin.json",

@@ -27,6 +27,7 @@ export const FORBIDDEN_TOKENS: readonly string[] = [
   "subagent_type",
   "isolation:",
   "CLAUDE_PLUGIN_ROOT",
+  "AskUserQuestion",
 ];
 
 /** One generated file: its path relative to the repository root and its full text. */
@@ -99,6 +100,10 @@ const RULES: readonly Rule[] = [
     replacement: "FEATURE: the text the user gave after `$emet:run`",
   },
   { pattern: /\$ARGUMENTS/g, replacement: "the user's arguments" },
+  {
+    pattern: /with\s+`AskUserQuestion`\s+as\s+a\s+multi-select/g,
+    replacement: "as a multi-select question",
+  },
   {
     pattern:
       /`\/emet:run` is designed to run inside plan mode[\s\S]*?keeping Phases 1–4 write-free\./,
