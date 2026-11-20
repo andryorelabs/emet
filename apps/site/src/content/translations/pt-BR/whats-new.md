@@ -2,8 +2,21 @@
 title: Novidades
 description: Notas de versão do emet: o que mudou em cada versão.
 seoTitle: Novidades do emet: notas de versão
-sourceHash: df050c17f0f6de67
+sourceHash: ab9546b053236fcf
 ---
+
+## 0.14.3
+
+2026-11-20
+
+### Adicionado
+
+- `emet fleet launch --dry-run` executa as verificações de prontidão e imprime `would launch <name>` para cada repositório sem iniciar uma sessão.
+
+### Corrigido
+
+- `emet migrate` remove os arquivos de execução legados de `.forge/` que não estão rastreados e diferem da cópia em `.emet/`, mantendo a de `.emet/`, e assim termina em repositórios com logs remanescentes. Cada conflito que não consegue resolver é listado junto com o passo manual, e uma falha do git dentro de um repositório é tratada como conflito em vez de apagar o arquivo.
+- O preload dos testes remove seu diretório `emet-test-state-*` quando a execução termina, então `bun test` não deixa mais um diretório temporário por execução.
 
 ## 0.14.2
 
