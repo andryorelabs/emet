@@ -30,6 +30,7 @@ export type MigrationStep =
       readonly path: string;
       readonly tracked: boolean;
       readonly duplicateOf: string;
+      readonly reason: "duplicate" | "stale-run-file";
     }
   | { readonly kind: "rewrite"; readonly path: string; readonly description: string };
 
@@ -39,21 +40,35 @@ export interface MigrationResult {
   readonly applied: boolean;
 }
 
-/** A legacy path whose new-name target already exists with different content. */
-export class MigrationConflictError extends EmetError {
+/** One legacy path whose new-name target exists with different content. */
+export interface MigrationConflict {
   readonly legacyPath: string;
   readonly targetPath: string;
+  readonly tracked: boolean;
+}
 
-  constructor(legacyPath: string, targetPath: string) {
+function describeConflict(conflict: MigrationConflict): string {
+  const removal = conflict.tracked ? "git rm" : "rm";
+  return [
+    `  ${conflict.legacyPath} vs ${conflict.targetPath}:`,
+    `    1. diff ${conflict.legacyPath} ${conflict.targetPath}`,
+    `    2. ${removal} ${conflict.legacyPath}`,
+    `    3. rerun \`${BINARY} migrate\``,
+  ].join("\n");
+}
+
+/** Every legacy path whose new-name target differs, collected before failing. */
+export class MigrationConflictError extends EmetError {
+  readonly conflicts: readonly MigrationConflict[];
+
+  constructor(conflicts: readonly MigrationConflict[]) {
     super(
       "migration-conflict",
-      `cannot migrate ${legacyPath} to ${targetPath}: both exist with different content; ` +
-        "merge them by hand and rerun",
-      "merge the two files by hand and rerun the migration",
+      `cannot migrate: ${conflicts.length} file(s) exist under both names with different content; nothing was changed. Resolve each by hand:\n${conflicts.map(describeConflict).join("\n")}`,
+      "resolve each listed pair by hand and rerun the migration",
       exitCodes.findings,
     );
-    this.legacyPath = legacyPath;
-    this.targetPath = targetPath;
+    this.conflicts = conflicts;
   }
 }
 
@@ -123,19 +138,36 @@ function describeRewrite(relativePath: string): string {
   return `${LEGACY_PRODUCT} markers, TODO tags and $schema to ${PRODUCT}`;
 }
 
-function planFileRename(root: string, legacy: string, current: string): MigrationStep[] {
+function planFileRename(
+  root: string,
+  legacy: string,
+  current: string,
+  conflicts: MigrationConflict[],
+  isRunFile = false,
+): MigrationStep[] {
   if (!fs.existsSync(path.join(root, legacy))) return [];
   const tracked = isTracked(root, legacy);
   if (!fs.existsSync(path.join(root, current))) {
     return [{ kind: "rename", from: legacy, to: current, tracked }];
   }
   if (sameContent(root, legacy, current)) {
-    return [{ kind: "remove", path: legacy, tracked, duplicateOf: current }];
+    return [{ kind: "remove", path: legacy, tracked, duplicateOf: current, reason: "duplicate" }];
   }
-  throw new MigrationConflictError(legacy, current);
+  if (isRunFile && !tracked) {
+    return [
+      { kind: "remove", path: legacy, tracked, duplicateOf: current, reason: "stale-run-file" },
+    ];
+  }
+  conflicts.push({ legacyPath: legacy, targetPath: current, tracked });
+  return [];
 }
 
-function planDirRename(root: string, legacy: string, current: string): MigrationStep[] {
+function planDirRename(
+  root: string,
+  legacy: string,
+  current: string,
+  conflicts: MigrationConflict[],
+): MigrationStep[] {
   if (!fs.existsSync(path.join(root, legacy))) return [];
   if (!fs.existsSync(path.join(root, current))) {
     return [{ kind: "rename", from: legacy, to: current, tracked: isTracked(root, legacy) }];
@@ -143,7 +175,7 @@ function planDirRename(root: string, legacy: string, current: string): Migration
   const steps: MigrationStep[] = [];
   for (const file of listFiles(root, legacy)) {
     const target = `${current}${file.slice(legacy.length)}`;
-    steps.push(...planFileRename(root, file, target));
+    steps.push(...planFileRename(root, file, target, conflicts, true));
   }
   return steps;
 }
@@ -183,14 +215,17 @@ function planRewrites(root: string, renames: readonly MigrationStep[]): Migratio
 /**
  * Lists what migrating `root` to the new names would change, in apply order.
  * Empty when the repo is already migrated. Throws `MigrationConflictError`
- * when a legacy file and its new-name target differ.
+ * listing every conflict, when a legacy file and its target differ and cannot
+ * be resolved automatically.
  */
 export function planMigration(root: string): MigrationStep[] {
+  const conflicts: MigrationConflict[] = [];
   const renames = [
-    ...planFileRename(root, LEGACY_CONFIG_FILE, CONFIG_FILE),
-    ...planFileRename(root, LEGACY_AGENTS_DOC, AGENTS_DOC),
-    ...planDirRename(root, LEGACY_RUN_DIR, RUN_DIR),
+    ...planFileRename(root, LEGACY_CONFIG_FILE, CONFIG_FILE, conflicts),
+    ...planFileRename(root, LEGACY_AGENTS_DOC, AGENTS_DOC, conflicts),
+    ...planDirRename(root, LEGACY_RUN_DIR, RUN_DIR, conflicts),
   ];
+  if (conflicts.length > 0) throw new MigrationConflictError(conflicts);
   return [...renames, ...planRewrites(root, renames)];
 }
 
@@ -241,7 +276,10 @@ function describeStep(step: MigrationStep): string {
   if (step.kind === "rename") {
     return `${step.tracked ? "git mv" : "mv"} ${step.from} -> ${step.to}`;
   }
-  if (step.kind === "remove") return `remove ${step.path} (same as ${step.duplicateOf})`;
+  if (step.kind === "remove") {
+    const why = step.reason === "stale-run-file" ? "stale, keeping" : "same as";
+    return `remove ${step.path} (${why} ${step.duplicateOf})`;
+  }
   return `rewrite ${step.path}: ${step.description}`;
 }
 

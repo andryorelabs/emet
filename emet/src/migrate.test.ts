@@ -145,8 +145,65 @@ describe("runMigration", () => {
     expect(read(".emet/sub/b.txt")).toBe("b\n");
 
     write(".forge/a.txt", "different\n");
-    expect(() => planMigration(root)).toThrow(MigrationConflictError);
+    expect(planMigration(root)).toContainEqual({
+      kind: "remove",
+      path: ".forge/a.txt",
+      tracked: false,
+      duplicateOf: ".emet/a.txt",
+      reason: "stale-run-file",
+    });
     expect(read(".emet/a.txt")).toBe("a\n");
+  });
+});
+
+describe("stale run files and collected conflicts", () => {
+  it("removes an untracked differing nested run file and keeps the target", () => {
+    write(".forge/runs/a/b.json", "old\n");
+    write(".emet/runs/a/b.json", "new\n");
+    const dry = runMigration(root, { dryRun: true });
+    expect(dry.steps).toHaveLength(1);
+    expect(exists(".forge/runs/a/b.json")).toBe(true);
+    runMigration(root, { dryRun: false });
+    expect(exists(".forge")).toBe(false);
+    expect(read(".emet/runs/a/b.json")).toBe("new\n");
+  });
+
+  it("treats an untracked legacy file as stale even when the target is tracked", () => {
+    write(".emet/x.log", "kept\n");
+    git("add", "-f", ".emet/x.log");
+    git("commit", "-q", "-m", "seed");
+    write(".forge/x.log", "stale\n");
+    runMigration(root, { dryRun: false });
+    expect(exists(".forge/x.log")).toBe(false);
+    expect(read(".emet/x.log")).toBe("kept\n");
+  });
+
+  it("collects every conflict and applies nothing", () => {
+    write(".forge/stale.log", "s\n");
+    write(".emet/stale.log", "t\n");
+    write(".forge/t1.txt", "1\n");
+    write(".emet/t1.txt", "2\n");
+    write("forge.config.json", '{"a":1}\n');
+    write("emet.config.json", '{"a":2}\n');
+    git("add", "-f", ".forge/t1.txt");
+    git("commit", "-q", "-m", "seed");
+    let caught: unknown;
+    try {
+      runMigration(root, { dryRun: false });
+    } catch (error: unknown) {
+      caught = error;
+    }
+    if (!(caught instanceof MigrationConflictError)) throw new Error("expected a conflict error");
+    const error = caught;
+    expect(error.conflicts).toEqual([
+      { legacyPath: "forge.config.json", targetPath: "emet.config.json", tracked: false },
+      { legacyPath: ".forge/t1.txt", targetPath: ".emet/t1.txt", tracked: true },
+    ]);
+    expect(error.message).toContain("diff .forge/t1.txt .emet/t1.txt");
+    expect(error.message).toContain("git rm .forge/t1.txt");
+    expect(error.message).toContain("rm forge.config.json");
+    expect(exists(".forge/stale.log")).toBe(true);
+    expect(exists(".forge/t1.txt")).toBe(true);
   });
 });
 
@@ -162,6 +219,7 @@ describe("tracked duplicates", () => {
       path: "forge.config.json",
       tracked: true,
       duplicateOf: "emet.config.json",
+      reason: "duplicate",
     });
     expect(exists("forge.config.json")).toBe(false);
     expect(git("ls-files")).not.toContain("forge.config.json");
@@ -268,7 +326,7 @@ describe("migrate run", () => {
     run([]);
     restore();
     expect(process.exitCode).toBe(1);
-    expect(errors.join("\n")).toContain("both exist with different content");
+    expect(errors.join("\n")).toContain("diff forge.config.json emet.config.json");
   });
 
   it("rethrows unexpected errors", () => {
