@@ -16,6 +16,8 @@ import {
   run,
   runSetup,
   showNoticeOnce,
+  appArmorProfileMessage,
+  findAgentBrowserChrome,
   type SetupEnv,
   type SetupItem,
 } from "./setup";
@@ -60,6 +62,9 @@ function fakeEnv(
     },
     capture: () => Promise.resolve(""),
     pathExists: () => false,
+    readFile: () => undefined,
+    writeFile: () => undefined,
+    listDirectory: () => [],
     download: (url, destination) => {
       downloads.push(`${url} -> ${destination}`);
       return Promise.resolve();
@@ -117,6 +122,23 @@ function stubItem(
   };
   return { item, installed };
 }
+
+const firecrawlAddArgv = (...chrome: string[]): string[] => [
+  "claude",
+  "mcp",
+  "add",
+  "firecrawl-local",
+  "--scope",
+  "user",
+  "-e",
+  "FIRECRAWL_CLOUD=search",
+  ...chrome,
+  "--",
+  "firecrawl-local",
+  "mcp",
+  "--public-only",
+];
+const removeArgv = ["claude", "mcp", "remove", "firecrawl-local", "-s", "user"];
 
 describe("createCatalog", () => {
   test("lists the nine items with mattpocock-skills as the only default", () => {
@@ -199,8 +221,42 @@ describe("createCatalog", () => {
     expect(env.calls).toEqual([
       ["bun", "add", "-g", "agent-browser@latest"],
       ["agent-browser", "install"],
+      ["agent-browser", "doctor"],
     ]);
-    expect(await itemOf(createCatalog(fakeEnv()), "agent-browser").detect()).toBe(true);
+    expect(
+      await itemOf(createCatalog(fakeEnv({ pathExists: () => true })), "agent-browser").detect(),
+    ).toBe(true);
+    expect(await itemOf(createCatalog(fakeEnv()), "agent-browser").detect()).toBe(false);
+  });
+
+  test("agent-browser writes the config only when missing and never overwrites it", async () => {
+    const writes: [string, string][] = [];
+    const fresh = fakeEnv({ writeFile: (target, content) => writes.push([target, content]) });
+    await itemOf(createCatalog(fresh), "agent-browser").install();
+    expect(writes).toEqual([
+      [
+        path.join(directory, ".agent-browser", "config.json"),
+        `{\n  "contentBoundaries": true,\n  "maxOutput": 50000\n}\n`,
+      ],
+    ]);
+    const existing: [string, string][] = [];
+    const present = fakeEnv({
+      pathExists: () => true,
+      writeFile: (target, content) => existing.push([target, content]),
+    });
+    await itemOf(createCatalog(present), "agent-browser").install();
+    expect(existing).toEqual([]);
+  });
+
+  test("agent-browser only warns when doctor fails and still installs", async () => {
+    const env = fakeEnv({ exitCodes: { "agent-browser doctor": 1 } });
+    await itemOf(createCatalog(env), "agent-browser").install();
+    expect(env.logs.join("\n")).toContain("`agent-browser doctor`");
+    const results = await runSetup(
+      { yes: false, with: ["agent-browser"], tty: false },
+      { catalog: createCatalog(env), ask },
+    );
+    expect(results.find((result) => result.id === "agent-browser")?.status).toBe("installed");
   });
 
   test("context7 installs unpinned, then sets up Claude and Codex when codex is on PATH", async () => {
@@ -255,27 +311,91 @@ describe("createCatalog", () => {
     expect(await itemOf(createCatalog(noBinary), "context7").detect()).toBe(false);
   });
 
-  test("firecrawl-local installs the crate then registers a local-only MCP server", async () => {
-    const env = fakeEnv();
+  test("firecrawl-local installs the crate when the binary is missing, then replaces the registration", async () => {
+    const env = fakeEnv({
+      commandExists: (name) => Promise.resolve(name === "cargo"),
+    });
     await itemOf(createCatalog(env), "firecrawl-local").install();
     expect(env.calls).toEqual([
       ["cargo", "install", "firecrawl-local"],
-      [
-        "claude",
-        "mcp",
-        "add",
-        "firecrawl-local",
-        "--scope",
-        "user",
-        "-e",
-        "FIRECRAWL_CLOUD=off",
-        "--",
-        "firecrawl-local",
-        "mcp",
-        "--public-only",
-      ],
+      removeArgv,
+      firecrawlAddArgv(),
     ]);
     expect(env.logs.join("\n")).toContain("FIRECRAWL_CHROME_PATH");
+  });
+
+  test("firecrawl-local skips cargo when the binary exists and ignores a failing remove", async () => {
+    const env = fakeEnv({ exitCodes: { [removeArgv.join(" ")]: 1 } });
+    await itemOf(createCatalog(env), "firecrawl-local").install();
+    expect(env.calls).toEqual([removeArgv, firecrawlAddArgv()]);
+  });
+
+  test("firecrawl-local passes the numerically newest agent-browser Chrome", async () => {
+    const browsers = path.join(directory, ".agent-browser", "browsers");
+    const env = fakeEnv({
+      listDirectory: () => ["chrome-99.0.1", "chrome-158.0.8127.36", "notes"],
+      pathExists: () => true,
+    });
+    expect(findAgentBrowserChrome(env)).toBe(path.join(browsers, "chrome-158.0.8127.36", "chrome"));
+    await itemOf(createCatalog(env), "firecrawl-local").install();
+    expect(env.calls[1]).toEqual(
+      firecrawlAddArgv(
+        "-e",
+        `FIRECRAWL_CHROME_PATH=${path.join(browsers, "chrome-158.0.8127.36", "chrome")}`,
+      ),
+    );
+    expect(env.logs.join("\n")).not.toContain("optional");
+  });
+
+  test("findAgentBrowserChrome returns undefined without a downloaded Chrome", () => {
+    expect(findAgentBrowserChrome(fakeEnv())).toBeUndefined();
+    expect(
+      findAgentBrowserChrome(
+        fakeEnv({ listDirectory: () => ["chrome-1.0"], pathExists: () => false }),
+      ),
+    ).toBeUndefined();
+  });
+
+  test("firecrawl-local prints the AppArmor profile and sudo commands without running sudo", async () => {
+    const env = fakeEnv({
+      listDirectory: () => ["chrome-158.0.1"],
+      pathExists: () => true,
+      readFile: () => "1\n",
+    });
+    const item = itemOf(createCatalog(env), "firecrawl-local");
+    const results = await runSetup(
+      { yes: false, with: ["firecrawl-local"], tty: false },
+      { catalog: [item], ask },
+    );
+    const logs = env.logs.join("\n");
+    expect(logs).toContain("emet-agent-browser-chrome");
+    expect(logs).toContain("flags=(unconfined)");
+    expect(logs).toContain("userns,");
+    expect(logs).toContain("sudo tee /etc/apparmor.d/emet-agent-browser-chrome");
+    expect(logs).toContain("sudo apparmor_parser -r /etc/apparmor.d/emet-agent-browser-chrome");
+    expect(logs).toContain("Firecrawl Local never runs Chrome without its sandbox");
+    expect(env.calls.flat()).not.toContain("sudo");
+    expect(results.find((result) => result.id === "firecrawl-local")?.status).toBe("installed");
+  });
+
+  test("firecrawl-local prints no AppArmor guidance when the file reads 0, is missing, or no Chrome exists", async () => {
+    const envs = [
+      fakeEnv({
+        listDirectory: () => ["chrome-1.0"],
+        pathExists: () => true,
+        readFile: () => "0\n",
+      }),
+      fakeEnv({ listDirectory: () => ["chrome-1.0"], pathExists: () => true }),
+      fakeEnv({ readFile: () => "1\n" }),
+    ];
+    await Promise.all(envs.map((env) => itemOf(createCatalog(env), "firecrawl-local").install()));
+    for (const env of envs) expect(env.logs.join("\n")).not.toContain("emet-agent-browser-chrome");
+  });
+
+  test("appArmorProfileMessage targets the chrome glob under the home directory", () => {
+    expect(appArmorProfileMessage("/home/me").join("\n")).toContain(
+      "/home/me/.agent-browser/browsers/chrome-*/chrome flags=(unconfined)",
+    );
   });
 
   test("firecrawl-local fails pointing to rustup when cargo is missing and runs nothing", async () => {
@@ -287,20 +407,29 @@ describe("createCatalog", () => {
   });
 
   test("firecrawl-local stops before registering when cargo install fails", async () => {
-    const env = fakeEnv({ exitCodes: { "cargo install firecrawl-local": 101 } });
+    const env = fakeEnv({
+      exitCodes: { "cargo install firecrawl-local": 101 },
+      commandExists: (name) => Promise.resolve(name === "cargo"),
+    });
     expect(await failureOf(itemOf(createCatalog(env), "firecrawl-local").install())).toContain(
       "exited 101",
     );
     expect(env.calls).toEqual([["cargo", "install", "firecrawl-local"]]);
   });
 
-  test("firecrawl-local is detected with the binary on PATH and the MCP server registered", async () => {
-    const registered = fakeEnv();
-    expect(await itemOf(createCatalog(registered), "firecrawl-local").detect()).toBe(true);
-    expect(registered.calls).toEqual([["claude", "mcp", "get", "firecrawl-local"]]);
-    const unregistered = fakeEnv({ exitCodes: { "claude mcp get firecrawl-local": 1 } });
+  test("firecrawl-local is detected only with the binary and a FIRECRAWL_CLOUD=search registration", async () => {
+    const search = fakeEnv({
+      capture: () => Promise.resolve("Environment:\n  FIRECRAWL_CLOUD=search"),
+    });
+    expect(await itemOf(createCatalog(search), "firecrawl-local").detect()).toBe(true);
+    const older = fakeEnv({ capture: () => Promise.resolve("  FIRECRAWL_CLOUD=off") });
+    expect(await itemOf(createCatalog(older), "firecrawl-local").detect()).toBe(false);
+    const unregistered = fakeEnv({ capture: () => Promise.resolve("No MCP server found") });
     expect(await itemOf(createCatalog(unregistered), "firecrawl-local").detect()).toBe(false);
-    const noBinary = fakeEnv({ commandExists: () => Promise.resolve(false) });
+    const noBinary = fakeEnv({
+      commandExists: () => Promise.resolve(false),
+      capture: () => Promise.resolve("FIRECRAWL_CLOUD=search"),
+    });
     expect(await itemOf(createCatalog(noBinary), "firecrawl-local").detect()).toBe(false);
   });
 
@@ -580,6 +709,42 @@ function capture() {
     },
   };
 }
+
+describe("realSetupEnv file access", () => {
+  let scratch: string;
+
+  beforeEach(() => {
+    scratch = mkdtempSync(path.join(os.tmpdir(), "emet-setup-files-"));
+  });
+
+  afterEach(() => {
+    rmSync(scratch, { recursive: true, force: true });
+  });
+
+  test("writeFile creates missing parent directories and readFile reads the content back", () => {
+    const target = path.join(scratch, "nested", "deeper", "config.json");
+    realSetupEnv.writeFile(target, '{"a":1}\n');
+    expect(realSetupEnv.readFile(target)).toBe('{"a":1}\n');
+  });
+
+  test("readFile returns undefined for a missing file", () => {
+    expect(realSetupEnv.readFile(path.join(scratch, "missing.txt"))).toBeUndefined();
+  });
+
+  test("listDirectory lists entries and returns an empty list for a missing scratch", () => {
+    writeFileSync(path.join(scratch, "entry.txt"), "x");
+    expect(realSetupEnv.listDirectory(scratch)).toEqual(["entry.txt"]);
+    expect(realSetupEnv.listDirectory(path.join(scratch, "missing"))).toEqual([]);
+  });
+
+  test("findAgentBrowserChrome treats versions that differ only by trailing zeros as equal", () => {
+    const browsers = path.join(scratch, ".agent-browser", "browsers");
+    realSetupEnv.writeFile(path.join(browsers, "chrome-1.0", "chrome"), "");
+    realSetupEnv.writeFile(path.join(browsers, "chrome-1.0.0", "chrome"), "");
+    const found = findAgentBrowserChrome({ ...realSetupEnv, homeDir: scratch });
+    expect(found?.startsWith(browsers)).toBe(true);
+  });
+});
 
 describe("run", () => {
   test("without a TTY and without --with it installs nothing and prints the catalog", async () => {

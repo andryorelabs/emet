@@ -1,4 +1,4 @@
-import { existsSync, mkdirSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { createInterface } from "node:readline";
@@ -69,6 +69,9 @@ export interface SetupEnv {
   readonly probe: (argv: readonly string[]) => Promise<number>;
   readonly capture: (argv: readonly string[]) => Promise<string>;
   readonly pathExists: (target: string) => boolean;
+  readonly readFile: (target: string) => string | undefined;
+  readonly writeFile: (target: string, content: string) => void;
+  readonly listDirectory: (target: string) => readonly string[];
   readonly download: (url: string, destination: string) => Promise<void>;
   readonly log: (line: string) => void;
   readonly now: () => Date;
@@ -89,6 +92,53 @@ async function runChecked(env: SetupEnv, argv: readonly string[]): Promise<void>
   if (code !== 0) throw new Error(`\`${argv.join(" ")}\` exited ${code}`);
 }
 
+const APPARMOR_RESTRICT_USERNS_FILE = "/proc/sys/kernel/apparmor_restrict_unprivileged_userns";
+const APPARMOR_PROFILE_NAME = "emet-agent-browser-chrome";
+const APPARMOR_PROFILE_PATH = `/etc/apparmor.d/${APPARMOR_PROFILE_NAME}`;
+const AGENT_BROWSER_CONFIG = `${JSON.stringify({ contentBoundaries: true, maxOutput: 50_000 }, null, 2)}\n`;
+const CHROME_DIRECTORY_PATTERN = /^chrome-(\d+(?:\.\d+)*)$/;
+
+function compareVersions(left: readonly number[], right: readonly number[]): number {
+  const length = Math.max(left.length, right.length);
+  for (let index = 0; index < length; index += 1) {
+    const difference = (left[index] ?? 0) - (right[index] ?? 0);
+    if (difference !== 0) return difference;
+  }
+  return 0;
+}
+
+/** Returns the newest `chrome-<version>/chrome` that agent-browser downloaded, comparing versions numerically. */
+export function findAgentBrowserChrome(env: SetupEnv): string | undefined {
+  const browsersDirectory = path.join(env.homeDir, ".agent-browser", "browsers");
+  const candidates: { version: number[]; binary: string }[] = [];
+  for (const name of env.listDirectory(browsersDirectory)) {
+    const match = CHROME_DIRECTORY_PATTERN.exec(name);
+    if (match?.[1] === undefined) continue;
+    const binary = path.join(browsersDirectory, name, "chrome");
+    if (!env.pathExists(binary)) continue;
+    candidates.push({ version: match[1].split(".").map(Number), binary });
+  }
+  candidates.sort((left, right) => compareVersions(right.version, left.version));
+  return candidates[0]?.binary;
+}
+
+/** Lines that explain how to load an AppArmor profile for the downloaded Chrome; setup prints them and never runs them. */
+export function appArmorProfileMessage(homeDir: string): readonly string[] {
+  const chromeGlob = path.join(homeDir, ".agent-browser", "browsers", "chrome-*", "chrome");
+  return [
+    "AppArmor restricts unprivileged user namespaces on this machine, so the downloaded Chrome cannot start its sandbox. Firecrawl Local never runs Chrome without its sandbox.",
+    `Load a profile for it by running these commands yourself (setup never runs sudo):`,
+    `sudo tee ${APPARMOR_PROFILE_PATH} <<'EOF'`,
+    `abi <abi/4.0>,`,
+    `include <tunables/global>`,
+    `profile ${APPARMOR_PROFILE_NAME} ${chromeGlob} flags=(unconfined) {`,
+    `  userns,`,
+    `}`,
+    `EOF`,
+    `sudo apparmor_parser -r ${APPARMOR_PROFILE_PATH}`,
+  ];
+}
+
 async function pluginInstalled(env: SetupEnv, pluginId: string): Promise<boolean> {
   const output = await env.capture(["claude", "plugin", "list"]);
   return parsePluginListOutput(output, pluginId) === "installed";
@@ -97,6 +147,7 @@ async function pluginInstalled(env: SetupEnv, pluginId: string): Promise<boolean
 /** Builds the catalog over `env`: the nine optional installs in the order they are offered. */
 export function createCatalog(env: SetupEnv): readonly SetupItem[] {
   const settingsPath = path.join(env.homeDir, ".claude", "settings.json");
+  const agentBrowserConfigPath = path.join(env.homeDir, ".agent-browser", "config.json");
   const orcaPetDirectory = path.join(env.homeDir, ".emet", "orca-pet", "emet");
   return [
     {
@@ -136,7 +187,8 @@ export function createCatalog(env: SetupEnv): readonly SetupItem[] {
       label:
         "agent-browser CLI (browser automation for UI verification, plus its browser download)",
       defaultOn: false,
-      detect: () => env.commandExists("agent-browser"),
+      detect: async () =>
+        (await env.commandExists("agent-browser")) && env.pathExists(agentBrowserConfigPath),
       install: async () => {
         await runChecked(env, ["bun", "add", "-g", "agent-browser@latest"]);
         try {
@@ -146,6 +198,16 @@ export function createCatalog(env: SetupEnv): readonly SetupItem[] {
             "The browser download did not finish. Run `agent-browser install` yourself; if system libraries are missing it will say which.",
           );
           throw error;
+        }
+        if (!env.pathExists(agentBrowserConfigPath)) {
+          env.writeFile(agentBrowserConfigPath, AGENT_BROWSER_CONFIG);
+        }
+        try {
+          await runChecked(env, ["agent-browser", "doctor"]);
+        } catch (error) {
+          env.log(
+            `Warning: \`agent-browser doctor\` reported a problem (${errorMessage(error)}). Run \`agent-browser doctor\` yourself to see what is missing.`,
+          );
         }
       },
     },
@@ -174,16 +236,23 @@ export function createCatalog(env: SetupEnv): readonly SetupItem[] {
     },
     {
       id: "firecrawl-local",
-      label: "Firecrawl Local MCP server (local web research, nothing sent to Firecrawl Cloud)",
+      label:
+        "Firecrawl Local MCP server (local scrape, crawl and map; web search goes to Firecrawl Cloud)",
       defaultOn: false,
       detect: async () =>
         (await env.commandExists("firecrawl-local")) &&
-        (await env.probe(["claude", "mcp", "get", "firecrawl-local"])) === 0,
+        (await env.capture(["claude", "mcp", "get", "firecrawl-local"])).includes(
+          "FIRECRAWL_CLOUD=search",
+        ),
       install: async () => {
-        if (!(await env.commandExists("cargo"))) {
-          throw new Error("cargo is not installed; install Rust first, see https://rustup.rs");
+        if (!(await env.commandExists("firecrawl-local"))) {
+          if (!(await env.commandExists("cargo"))) {
+            throw new Error("cargo is not installed; install Rust first, see https://rustup.rs");
+          }
+          await runChecked(env, ["cargo", "install", "firecrawl-local"]);
         }
-        await runChecked(env, ["cargo", "install", "firecrawl-local"]);
+        const chrome = findAgentBrowserChrome(env);
+        await env.run(["claude", "mcp", "remove", "firecrawl-local", "-s", "user"]);
         await runChecked(env, [
           "claude",
           "mcp",
@@ -192,15 +261,20 @@ export function createCatalog(env: SetupEnv): readonly SetupItem[] {
           "--scope",
           "user",
           "-e",
-          "FIRECRAWL_CLOUD=off",
+          "FIRECRAWL_CLOUD=search",
+          ...(chrome === undefined ? [] : ["-e", `FIRECRAWL_CHROME_PATH=${chrome}`]),
           "--",
           "firecrawl-local",
           "mcp",
           "--public-only",
         ]);
-        env.log(
-          "Chrome or Chromium is optional and only needed for JavaScript pages; set FIRECRAWL_CHROME_PATH if it is not found.",
-        );
+        if (chrome === undefined) {
+          env.log(
+            "Chrome or Chromium is optional and only needed for JavaScript pages; set FIRECRAWL_CHROME_PATH if it is not found.",
+          );
+        } else if (env.readFile(APPARMOR_RESTRICT_USERNS_FILE)?.trim() === "1") {
+          for (const line of appArmorProfileMessage(env.homeDir)) env.log(line);
+        }
       },
     },
     {
@@ -285,6 +359,24 @@ export const realSetupEnv: SetupEnv = {
   probe: async (argv) => (await spawnExitCode(argv, "quiet"))[0],
   capture: async (argv) => (await spawnExitCode(argv, "capture"))[1],
   pathExists: existsSync,
+  readFile: (target) => {
+    try {
+      return readFileSync(target, "utf8");
+    } catch {
+      return undefined;
+    }
+  },
+  writeFile: (target, content) => {
+    mkdirSync(path.dirname(target), { recursive: true });
+    writeFileSync(target, content);
+  },
+  listDirectory: (target) => {
+    try {
+      return readdirSync(target);
+    } catch {
+      return [];
+    }
+  },
   download: downloadFile,
   log: (line) => {
     console.log(line);
