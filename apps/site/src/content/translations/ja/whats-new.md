@@ -2,8 +2,18 @@
 title: 新機能
 description: emet のリリースノート。各バージョンでの変更点をまとめています。
 seoTitle: "emet の新機能: リリースノート"
-sourceHash: e47aa3dd849f7d9d
+sourceHash: faaf5e170bc87a1d
 ---
+
+## 0.13.0
+
+2026-11-20
+
+### 追加
+
+- `emet setup` が `context7` と `firecrawl-local` の項目を提供します(どちらも既定ではオフ)。`context7` は `ctx7` CLI とその `find-docs` スキルをインストールします。`firecrawl-local` は `cargo` で Firecrawl Local をビルドし、ローカル専用の MCP サーバー(`FIRECRAWL_CLOUD=off`、`--public-only`)として登録します。ADR-0034 を参照してください。
+- `emet review-run --browser-verify true|false` が、ブラウザ軸を Codex レビュアーに渡します。
+- `emet.config.json` の `validate.coupledSurfaces` と `emet validate` の `coupled-surface-split` エラーにより、ページとその翻訳が同じウェーブに収まります。ADR-0033 を参照してください。
 
 ## 0.12.0
 

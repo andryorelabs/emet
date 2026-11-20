@@ -2,8 +2,18 @@
 title: Novedades
 description: Notas de versión de emet: qué cambió en cada versión.
 seoTitle: Novedades de emet: notas de versión
-sourceHash: e47aa3dd849f7d9d
+sourceHash: faaf5e170bc87a1d
 ---
+
+## 0.13.0
+
+2026-11-20
+
+### Añadido
+
+- `emet setup` ofrece los elementos `context7` y `firecrawl-local` (ambos desactivados por defecto). `context7` instala la CLI `ctx7` y su skill `find-docs`. `firecrawl-local` compila Firecrawl Local con `cargo` y lo registra como servidor MCP solo local (`FIRECRAWL_CLOUD=off`, `--public-only`). Véase ADR-0034.
+- `emet review-run --browser-verify true|false` pasa el eje de navegador al revisor de Codex.
+- `validate.coupledSurfaces` en `emet.config.json` y el error `coupled-surface-split` de `emet validate` mantienen una página y sus traducciones en una misma ola. Véase ADR-0033.
 
 ## 0.12.0
 

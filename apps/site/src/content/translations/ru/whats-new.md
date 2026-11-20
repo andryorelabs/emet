@@ -2,8 +2,18 @@
 title: Что нового
 description: Примечания к выпускам emet: что изменилось в каждой версии.
 seoTitle: "Что нового в emet: примечания к выпускам"
-sourceHash: e47aa3dd849f7d9d
+sourceHash: faaf5e170bc87a1d
 ---
+
+## 0.13.0
+
+2026-11-20
+
+### Добавлено
+
+- `emet setup` предлагает пункты `context7` и `firecrawl-local` (оба по умолчанию выключены). `context7` устанавливает CLI `ctx7` и его skill `find-docs`. `firecrawl-local` собирает Firecrawl Local через `cargo` и регистрирует его как сугубо локальный MCP-сервер (`FIRECRAWL_CLOUD=off`, `--public-only`). См. ADR-0034.
+- `emet review-run --browser-verify true|false` передаёт ось браузера ревьюеру Codex.
+- `validate.coupledSurfaces` в `emet.config.json` и ошибка `coupled-surface-split` в `emet validate` удерживают страницу и её переводы в одной волне. См. ADR-0033.
 
 ## 0.12.0
 
