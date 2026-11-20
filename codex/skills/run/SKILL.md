@@ -104,7 +104,7 @@ unless the run continues from Phase 5 straight into Phase 6.
   round), along with `references/worker-prompt.md` (the dispatch prompt
   template) and `references/tracker-<kind>.md` (`<kind>` from
   `emet.config.json`'s `tracker.kind`) for this repo's literal tracker
-  calls. Workers dispatch with `emet dispatch --role worker` and Phase 8's review runs with `emet review-run`, using `references/reviewer-prompt.md`'s template; both resolve their model and effort from the `codex` section of `emet.config.json`.
+  calls. Workers dispatch with `emet dispatch --role worker` and Phase 8's review runs with `emet review-run`; both resolve their model and effort from the `codex` section of `emet.config.json`.
 - **`references/incidents.md`** — the evidence behind the five non-negotiables
   below (real run failures, with what broke and how). Never loaded during a
   normal run; read it only when someone asks why a rule exists.

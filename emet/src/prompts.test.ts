@@ -3,6 +3,7 @@ import { readdirSync, readFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 
 import { present } from "./present";
+import { BROWSER_AXIS_PROMPT } from "./review-run";
 
 const REPO_ROOT = resolve(import.meta.dir, "..", "..");
 
@@ -123,6 +124,12 @@ describe("browser verification prompts", () => {
     expect(reviewer).toContain("agent-browser skills get core");
     expect(reviewer).toContain("--session review-{{run_id}}");
     expect(reviewer).toContain("verification-gap");
+  });
+
+  test("the review-run constant equals the fenced Browser axis block", () => {
+    const reviewer = read("emet/reference/reviewer-prompt.md");
+    const fenced = /## Browser axis text[\s\S]*?```\n([\s\S]*?)\n```/.exec(reviewer);
+    expect(fenced?.[1]).toBe(BROWSER_AXIS_PROMPT);
   });
 
   test("the closeout fills {{browser_verify}} only on browserVerify.run: true", () => {

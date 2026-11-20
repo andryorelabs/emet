@@ -9,6 +9,7 @@ import {
   ForgeConfigError,
   requireForgeConfig,
   resolveRepoRoot,
+  type CoupledSurfacePair,
   type ForgeConfig,
   type LandingMode,
 } from "./config";
@@ -1149,7 +1150,10 @@ export async function resolveApprovalDirectory(
  */
 export function evaluateRunGate(
   runDirectory: string,
-  options: { readonly inlineMaxLines: number },
+  options: {
+    readonly inlineMaxLines: number;
+    readonly coupledSurfaces?: readonly CoupledSurfacePair[];
+  },
 ): RunGateFindings {
   const failures: string[] = [];
   const warnings: string[] = [];
@@ -1162,11 +1166,14 @@ export function evaluateRunGate(
   const record = readApprovalRecord(approvalPath);
   if (record === null) return { failures: ["approval: record unreadable"], warnings };
   try {
-    const result = validatePlan({
-      specMarkdown: readFileSync(record.specPath, "utf8"),
-      tickets: toPlanTickets(JSON.parse(readFileSync(record.ticketsPath, "utf8"))),
-      inlineMaxLines: options.inlineMaxLines,
-    });
+    const result = validatePlan(
+      {
+        specMarkdown: readFileSync(record.specPath, "utf8"),
+        tickets: toPlanTickets(JSON.parse(readFileSync(record.ticketsPath, "utf8"))),
+        inlineMaxLines: options.inlineMaxLines,
+      },
+      { coupledSurfaces: options.coupledSurfaces ?? [] },
+    );
     for (const finding of result.findings) {
       const line = `validate: ${finding.message}`;
       if (finding.severity === "error") failures.push(line);
@@ -1365,6 +1372,7 @@ async function main(config: ForgeConfig, repoRoot: string) {
   if (approvalRunId !== undefined) {
     const gate = evaluateRunGate(await resolveApprovalDirectory(approvalRunId, repoRoot), {
       inlineMaxLines: config.sizing.inlineMaxLines,
+      coupledSurfaces: config.validate?.coupledSurfaces ?? [],
     });
     failures.push(...gate.failures);
     gateWarnLines.push(...gate.warnings);
