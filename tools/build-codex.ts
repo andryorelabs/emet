@@ -123,7 +123,7 @@ const RULES: readonly Rule[] = [
   {
     pattern: /Workers dispatch as `subagent_type[\s\S]*?ship with the plugin\./,
     replacement:
-      "Workers dispatch with `emet dispatch --role worker` and Phase 8's review runs with `emet review-run`, using `references/reviewer-prompt.md`'s template; both resolve their model and effort from the `codex` section of `emet.config.json`.",
+      "Workers dispatch with `emet dispatch --role worker` and Phase 8's review runs with `emet review-run`; both resolve their model and effort from the `codex` section of `emet.config.json`.",
   },
   {
     pattern: /Launch up to `concurrency\.waveSize`[\s\S]*?makes the call fail\./,
@@ -161,9 +161,15 @@ const RULES: readonly Rule[] = [
   },
   { pattern: /no `Agent`\s+calls, no forks/g, replacement: "no spawned agents, no forks" },
   {
-    pattern: /Dispatch one `Agent\(\{subagent_type: "emet:emet-reviewer"\}\)`\s+built from/,
+    pattern:
+      /Dispatch one `Agent\(\{subagent_type: "emet:emet-reviewer"\}\)`\s+built from(?:\s+`[^`]*reviewer-prompt\.md`\s+\(fill[\s\S]*?Global Constraints`\))?/,
     replacement:
-      "Run `emet review-run --run <runId> --ticket <ticket> --package <file> --tier <medium|high>` once, which builds the reviewer prompt from",
+      "Run `emet review-run --run <runId> --ticket <ticket> --package <file> --tier <medium|high>` once; it builds the reviewer prompt itself (add `--browser-verify true` when `emet assess` printed `browserVerify.run: true`)",
+  },
+  {
+    pattern: /Browser axis: fill `\{\{browser_verify\}\}`[\s\S]*?leave it empty\./,
+    replacement:
+      "Browser axis: pass `--browser-verify true` to `emet review-run` only when `emet assess` printed `browserVerify.run: true`; otherwise omit the flag.",
   },
   {
     pattern: /Fallback if `emet:emet-reviewer` is missing/,

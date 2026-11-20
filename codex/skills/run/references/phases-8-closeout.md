@@ -78,16 +78,12 @@ A worker's `Risk:` line other than `none` can only raise the tier you take
 from `emet assess`, never lower it. Package the diff first: `emet
 review-package <base> <head> --out <file>` (exit 3 on an empty or
 non-descendant range — fix the range, don't review nothing) and pass the
-reviewer that path. Run `emet review-run --run <runId> --ticket <ticket> --package <file> --tier <medium|high>` once, which builds the reviewer prompt from `references/reviewer-prompt.md` (fill `{{project_skills}}` with the
-union of the wave tickets' `## Project skills`, `none` if all say `none`; add
-the spec's `## Global Constraints`) — single-pass, never a fan-out (nesting
+reviewer that path. Run `emet review-run --run <runId> --ticket <ticket> --package <file> --tier <medium|high>` once; it builds the reviewer prompt itself (add `--browser-verify true` when `emet assess` printed `browserVerify.run: true`) — single-pass, never a fan-out (nesting
 hung workers and a fan-out roster hung ~1h45m; `references/incidents.md`).
 Fallback if `emet review-run` is unavailable: the `code-review` skill at `--level
 low|medium`. `/code-review ultra` is a manual, opt-in step only.
 
-Browser axis: fill `{{browser_verify}}` in the reviewer prompt (with the
-"Browser axis text" section of `reviewer-prompt.md`) only when `emet assess`
-printed `browserVerify.run: true`; otherwise leave it empty.
+Browser axis: pass `--browser-verify true` to `emet review-run` only when `emet assess` printed `browserVerify.run: true`; otherwise omit the flag.
 
 Record the reviewer's findings JSON per ticket: `emet review --ticket
 <ticket> --findings <file|-> [--changed <files since the last round>]`. The
