@@ -8,6 +8,10 @@ and this project adheres to
 
 ## [Unreleased]
 
+### Fixed
+
+- `emet promote` waits for the sync pull request's checks and merges it only when they pass, instead of merging it at once. A sync pull request that fails, times out or is rejected stays open without failing the promote, and the outcome and journal event carry `syncMerged` and `syncReason`.
+
 ## [0.14.1] - 2026-11-20
 
 ### Added
