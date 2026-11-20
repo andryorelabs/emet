@@ -2,8 +2,17 @@
 title: 新功能
 description: emet 的发布说明：每个版本都有哪些变化。
 seoTitle: "emet 新功能：发布说明"
-sourceHash: 3f361c0db37dc910
+sourceHash: f7d7289598b26a1e
 ---
+
+## 0.14.1
+
+2026-11-20
+
+### 新增
+
+- 当 GitHub 工单的最后一个子 issue 被关闭时，`emet tracker close` 会关闭其父级 spec issue，并在新的 `specs` 字段中报告每个 spec。读取或关闭 spec 失败时以 `1` 退出。
+- 即使 GitHub 的子 issue 摘要尚未更新，spec 也会关闭：会逐个统计该 spec 的子 issue，包括在同一次调用中关闭的工单。
 
 ## 0.14.0
 
