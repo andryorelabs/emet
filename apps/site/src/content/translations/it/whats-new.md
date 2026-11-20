@@ -2,8 +2,17 @@
 title: Novità
 description: Note di rilascio di emet: cosa è cambiato in ogni versione.
 seoTitle: "Novità di emet: note di rilascio"
-sourceHash: 3f361c0db37dc910
+sourceHash: f7d7289598b26a1e
 ---
+
+## 0.14.1
+
+2026-11-20
+
+### Aggiunto
+
+- `emet tracker close` chiude l'issue di specifica padre di un ticket GitHub quando il suo ultimo sub-issue viene chiuso, e riporta ogni specifica in un nuovo campo `specs`. Una lettura o chiusura della specifica non riuscita termina con `1`.
+- La specifica si chiude anche quando il riepilogo dei sub-issue di GitHub non è ancora aggiornato: i sub-issue della specifica vengono contati uno per uno, inclusi i ticket chiusi nella stessa chiamata.
 
 ## 0.14.0
 

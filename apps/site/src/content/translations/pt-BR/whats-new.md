@@ -2,8 +2,17 @@
 title: Novidades
 description: Notas de versão do emet: o que mudou em cada versão.
 seoTitle: Novidades do emet: notas de versão
-sourceHash: 3f361c0db37dc910
+sourceHash: f7d7289598b26a1e
 ---
+
+## 0.14.1
+
+2026-11-20
+
+### Adicionado
+
+- `emet tracker close` fecha a issue de especificação pai de um ticket do GitHub quando seu último sub-issue é fechado, e informa cada especificação em um novo campo `specs`. Uma leitura ou um fechamento de especificação que falhe termina com `1`.
+- A especificação é fechada mesmo quando o resumo de sub-issues do GitHub ainda não foi atualizado: os sub-issues da especificação são contados um a um, incluindo os tickets fechados na mesma chamada.
 
 ## 0.14.0
 
