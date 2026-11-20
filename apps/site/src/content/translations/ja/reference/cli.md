@@ -92,7 +92,7 @@ emet doctor ~/code/*
 
 `emet ci --pr <n> --wait [--rerun-flakes] [--timeout-minutes <m>]` は、PR のチェックが完了するかタイムアウト（デフォルト 30）になるまでポーリングします。`--rerun-flakes` を付けると、失敗した各チェックを `gh run rerun --failed` で 1 回だけ再実行し、再実行で通ったチェックは Flake になります。`state: pass | fail | env-fault | timeout`、失敗したチェック、`flakeReruns` を出力し、マージは行いません。チェックのない PR は `noChecks: true` 付きの `pass` です。終了コードは `0` が pass、`1` が fail または env-fault、`3` が timeout です。`env-fault` は `STARTUP_FAILURE` で終わった、または長時間キューに残ったチェックを指します。コードの失敗ではなく、CI が一度も実行されなかったことを意味します。
 
-`tracker.kind: "github"` の場合、`emet tracker close <ticket>... [--pr <n>]` は各チケット（`CLA-<n>`、`#<n>`、または数字のみ）を `gh issue close --reason completed` でクローズし、状態を確認して `closed` または `already-closed` を報告します。`--pr` を付けるとコメント "Landed in #<n>" が追加されます。残りを処理したあと、失敗したチケットがあれば `1` で終了します。Linear のチケットは、コーディネーターが Linear MCP を通じて Done であることを確認します。
+`tracker.kind: "github"` の場合、`emet tracker close <ticket>... [--pr <n>]` は各チケット（`CLA-<n>`、`#<n>`、または数字のみ）を `gh issue close --reason completed` でクローズし、状態を確認して `closed` または `already-closed` を報告します。`--pr` を付けるとコメント "Landed in #<n>" が追加されます。チケットの処理後、クローズした各チケットの親スペック issue を読み取り（`gh issue view <n> --json parent`）、`subIssuesSummary` がすべてのサブ issue の完了を示していれば、そのスペックをコメント "All <total> tickets landed." 付きで completed としてクローズし、`specs` に `closed`、`open`、`already-closed`、`failed` のいずれかで報告します。スペックの読み取りまたはクローズに失敗した場合も `1` で終了します。残りを処理したあと、失敗したチケットがあれば `1` で終了します。Linear のチケットは、コーディネーターが Linear MCP を通じて Done であることを確認します。
 
 ### Codex ホスト
 

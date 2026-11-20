@@ -92,7 +92,7 @@ emet doctor ~/code/*
 
 `emet ci --pr <n> --wait [--rerun-flakes] [--timeout-minutes <m>]` 轮询 PR 的检查，直到检查结束或超时（默认 30）。使用 `--rerun-flakes` 时，每个失败的检查会通过 `gh run rerun --failed` 重跑一次；重跑后通过的检查属于 Flake。它打印 `state: pass | fail | env-fault | timeout`、失败的检查和 `flakeReruns`，且从不合并。没有检查的 PR 为 `pass` 并带有 `noChecks: true`。退出码 `0` 为 pass，`1` 为 fail 或 env-fault，`3` 为 timeout。`env-fault` 指以 `STARTUP_FAILURE` 结束或排队过久的检查：即 CI 从未运行，而不是代码失败。
 
-当 `tracker.kind: "github"` 时，`emet tracker close <ticket>... [--pr <n>]` 用 `gh issue close --reason completed` 关闭每个工单（`CLA-<n>`、`#<n>` 或纯数字），验证其状态并报告 `closed` 或 `already-closed`。`--pr` 会添加评论 "Landed in #<n>"。如果有工单失败，它会在处理完其余工单后以 `1` 退出。Linear 工单由协调者通过 Linear MCP 确认为 Done。
+当 `tracker.kind: "github"` 时，`emet tracker close <ticket>... [--pr <n>]` 用 `gh issue close --reason completed` 关闭每个工单（`CLA-<n>`、`#<n>` 或纯数字），验证其状态并报告 `closed` 或 `already-closed`。`--pr` 会添加评论 "Landed in #<n>"。处理完工单后，它会读取每个已关闭工单的父规格 issue（`gh issue view <n> --json parent`），当 `subIssuesSummary` 显示所有子 issue 均已完成时，会以评论 "All <total> tickets landed." 将该规格按 completed 关闭，并在 `specs` 中报告为 `closed`、`open`、`already-closed` 或 `failed`；读取或关闭规格失败时同样以 `1` 退出。如果有工单失败，它会在处理完其余工单后以 `1` 退出。Linear 工单由协调者通过 Linear MCP 确认为 Done。
 
 ### Codex 宿主
 
