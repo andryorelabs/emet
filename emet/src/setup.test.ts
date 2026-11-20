@@ -710,6 +710,42 @@ function capture() {
   };
 }
 
+describe("realSetupEnv file access", () => {
+  let scratch: string;
+
+  beforeEach(() => {
+    scratch = mkdtempSync(path.join(os.tmpdir(), "emet-setup-files-"));
+  });
+
+  afterEach(() => {
+    rmSync(scratch, { recursive: true, force: true });
+  });
+
+  test("writeFile creates missing parent directories and readFile reads the content back", () => {
+    const target = path.join(scratch, "nested", "deeper", "config.json");
+    realSetupEnv.writeFile(target, '{"a":1}\n');
+    expect(realSetupEnv.readFile(target)).toBe('{"a":1}\n');
+  });
+
+  test("readFile returns undefined for a missing file", () => {
+    expect(realSetupEnv.readFile(path.join(scratch, "missing.txt"))).toBeUndefined();
+  });
+
+  test("listDirectory lists entries and returns an empty list for a missing scratch", () => {
+    writeFileSync(path.join(scratch, "entry.txt"), "x");
+    expect(realSetupEnv.listDirectory(scratch)).toEqual(["entry.txt"]);
+    expect(realSetupEnv.listDirectory(path.join(scratch, "missing"))).toEqual([]);
+  });
+
+  test("findAgentBrowserChrome treats versions that differ only by trailing zeros as equal", () => {
+    const browsers = path.join(scratch, ".agent-browser", "browsers");
+    realSetupEnv.writeFile(path.join(browsers, "chrome-1.0", "chrome"), "");
+    realSetupEnv.writeFile(path.join(browsers, "chrome-1.0.0", "chrome"), "");
+    const found = findAgentBrowserChrome({ ...realSetupEnv, homeDir: scratch });
+    expect(found?.startsWith(browsers)).toBe(true);
+  });
+});
+
 describe("run", () => {
   test("without a TTY and without --with it installs nothing and prints the catalog", async () => {
     const output = capture();
