@@ -78,6 +78,15 @@ commands:
   tracker   create-spec|create-ticket|read|frontier|set-state|comment|close  — local tracker over .scratch/ (JSON on stdout)
   map       [--refresh]
   metrics   [--run <id>]
+  ci        [--pr <n>] [--wait] [--rerun-flakes]  — wait for a PR's checks and rerun flakes
+  chain     --spec <s> --wave <n>  — gate a wave and launch the next one
+  insights  [--since <t>] [--repo <r>] [--all] [--json]  — report on the journal: runs by origin, gate decisions, interventions, launches
+  run       current  — run subcommands; \`current\` prints the active run
+  promote   --spec <s> [--dry-run]  — promote develop to main after a spec lands
+  deploy-check  — run the configured post-deploy check
+  fleet     list|set|launch  — list, set and launch across repos
+  setup     [--yes] [--with <items>] [--list]  — install the optional extras
+  whats-new [--hook]  — print a one-time notice after emet updates
   guard     — Claude Code PreToolUse hook (reads hook JSON on stdin); see src/guard.ts
   selftest  — run this CLI's own unit tests (source installs only)
   --version — print the emet version

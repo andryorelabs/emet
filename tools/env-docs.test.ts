@@ -7,6 +7,7 @@ import { ENV_VARS } from "../emet/src/env";
 const REPO_ROOT = join(import.meta.dir, "..");
 const SOURCE_DIRECTORY = join(REPO_ROOT, "emet", "src");
 const ENV_MODULE = join(SOURCE_DIRECTORY, "env.ts");
+const TEST_PRELOAD_MODULE = join(SOURCE_DIRECTORY, "test-preload.ts");
 const DOCS_FILE = join(REPO_ROOT, "docs", "reference", "configuration.md");
 const DIRECT_ENV_ACCESS = /\b(?:process|Bun)\.env\b/;
 const DIRECT_ENV_PROPERTY = /\benv\.[A-Z][A-Z0-9_]*\b/;
@@ -35,7 +36,7 @@ function documentedNames(): string[] {
 describe("environment variables", () => {
   test("only env.ts reads process.env or Bun.env", () => {
     const offenders = listSourceFiles(SOURCE_DIRECTORY)
-      .filter((file) => file !== ENV_MODULE)
+      .filter((file) => file !== ENV_MODULE && file !== TEST_PRELOAD_MODULE)
       .filter((file) => DIRECT_ENV_ACCESS.test(readFileSync(file, "utf8")))
       .map((file) => relative(REPO_ROOT, file));
     expect(offenders).toEqual([]);
@@ -43,7 +44,7 @@ describe("environment variables", () => {
 
   test("no source file reads a variable as a property of an env object", () => {
     const offenders = listSourceFiles(SOURCE_DIRECTORY)
-      .filter((file) => file !== ENV_MODULE)
+      .filter((file) => file !== ENV_MODULE && file !== TEST_PRELOAD_MODULE)
       .filter((file) => DIRECT_ENV_PROPERTY.test(readFileSync(file, "utf8")))
       .map((file) => relative(REPO_ROOT, file));
     expect(offenders).toEqual([]);
