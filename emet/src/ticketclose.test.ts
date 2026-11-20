@@ -1,6 +1,12 @@
 import { describe, expect, test } from "bun:test";
 
-import { closeGithubTickets, parseIssueNumber, runGh, type GhRunner } from "./ticketclose";
+import {
+  closeCompletedSpecs,
+  closeGithubTickets,
+  parseIssueNumber,
+  runGh,
+  type GhRunner,
+} from "./ticketclose";
 
 interface FakeOptions {
   readonly closed?: ReadonlySet<number>;
@@ -102,5 +108,231 @@ describe("runGh", () => {
     const result = await runGh(["--version"]);
     expect(typeof result.exitCode).toBe("number");
     expect(typeof result.stdout).toBe("string");
+  });
+});
+
+interface SpecFixture {
+  readonly parents: Readonly<Record<number, string>>;
+  readonly specs: Readonly<Record<number, { state: string; total: number; completed: number }>>;
+  readonly failClose?: ReadonlySet<number>;
+  readonly failParent?: ReadonlySet<number>;
+  readonly stayOpen?: ReadonlySet<number>;
+  readonly subIssues?: Readonly<Record<number, unknown>>;
+  readonly rawSpecs?: Readonly<Record<number, string>>;
+}
+
+function ok(stdout: string) {
+  return Promise.resolve({ exitCode: 0, stdout, stderr: "" });
+}
+
+function specGh(fixture: SpecFixture): { gh: GhRunner; calls: string[][] } {
+  const calls: string[][] = [];
+  const closedSpecs = new Set<number>();
+  const gh: GhRunner = (args) => {
+    calls.push([...args]);
+    const issue = Number(args[2]);
+    if (args[1] === "close") {
+      if (fixture.failClose?.has(issue)) {
+        return Promise.resolve({ exitCode: 1, stdout: "", stderr: "nope\n" });
+      }
+      closedSpecs.add(issue);
+      return ok("");
+    }
+    if (args[4] === "parent") {
+      if (fixture.failParent?.has(issue)) {
+        return Promise.resolve({ exitCode: 1, stdout: "", stderr: "denied\n" });
+      }
+      return ok(fixture.parents[issue] ?? "");
+    }
+    if (args[4] === "state") {
+      return ok(closedSpecs.has(issue) && !fixture.stayOpen?.has(issue) ? "CLOSED\n" : "OPEN\n");
+    }
+    const raw = fixture.rawSpecs?.[issue];
+    if (raw !== undefined) return ok(raw);
+    const spec = fixture.specs[issue];
+    return ok(
+      JSON.stringify({
+        state: spec?.state,
+        subIssuesSummary: { total: spec?.total, completed: spec?.completed },
+        ...(fixture.subIssues?.[issue] === undefined
+          ? {}
+          : { subIssues: fixture.subIssues[issue] }),
+      }),
+    );
+  };
+  return { gh, calls };
+}
+
+const throwingNonError: GhRunner = (args) => {
+  if (args[4] === "parent") return ok("40");
+  // oxlint-disable-next-line typescript/only-throw-error -- a runner may throw a non-Error value
+  throw "boom";
+};
+
+function closedResult(issue: number, outcome: "closed" | "already-closed" | "failed" = "closed") {
+  return { ticket: `CLA-${issue}`, issue, outcome } as const;
+}
+
+function node(number: number, state: string) {
+  return { number, state };
+}
+
+describe("closeCompletedSpecs", () => {
+  test("closes a completed spec once for two tickets, with the comment", async () => {
+    const { gh, calls } = specGh({
+      parents: { 1: "9\n", 2: "9\n" },
+      specs: { 9: { state: "OPEN", total: 5, completed: 5 } },
+    });
+    const specs = await closeCompletedSpecs([closedResult(1), closedResult(2)], gh);
+    expect(specs).toEqual([{ spec: 9, outcome: "closed" }]);
+    expect(calls.filter((call) => call[1] === "close")).toEqual([
+      ["issue", "close", "9", "--reason", "completed", "--comment", "All 5 tickets landed."],
+    ]);
+  });
+
+  test("keeps a spec with open sub-issues open", async () => {
+    const { gh, calls } = specGh({
+      parents: { 1: "9" },
+      specs: { 9: { state: "OPEN", total: 3, completed: 2 } },
+    });
+    expect(await closeCompletedSpecs([closedResult(1)], gh)).toEqual([
+      { spec: 9, outcome: "open" },
+    ]);
+    expect(calls.some((call) => call[1] === "close")).toBe(false);
+  });
+
+  test("never closes a spec with total 0 or one already closed", async () => {
+    const { gh, calls } = specGh({
+      parents: { 1: "9", 2: "8" },
+      specs: {
+        9: { state: "OPEN", total: 0, completed: 0 },
+        8: { state: "CLOSED", total: 2, completed: 2 },
+      },
+    });
+    const specs = await closeCompletedSpecs([closedResult(1), closedResult(2)], gh);
+    expect(specs).toEqual([
+      { spec: 9, outcome: "open" },
+      { spec: 8, outcome: "already-closed" },
+    ]);
+    expect(calls.some((call) => call[1] === "close")).toBe(false);
+  });
+
+  test("a null or empty parent adds no entry; a failed ticket is not read", async () => {
+    const { gh, calls } = specGh({ parents: { 1: "null" }, specs: {} });
+    const specs = await closeCompletedSpecs(
+      [closedResult(1), closedResult(2, "already-closed"), closedResult(3, "failed")],
+      gh,
+    );
+    expect(specs).toEqual([]);
+    expect(calls.map((call) => call[2])).toEqual(["1", "2"]);
+  });
+
+  test("reports failed when the spec close fails", async () => {
+    const { gh } = specGh({
+      parents: { 1: "9" },
+      specs: { 9: { state: "OPEN", total: 1, completed: 1 } },
+      failClose: new Set([9]),
+    });
+    expect(await closeCompletedSpecs([closedResult(1)], gh)).toEqual([
+      { spec: 9, outcome: "failed", detail: "nope" },
+    ]);
+  });
+
+  test("reports failed when the parent read fails", async () => {
+    const { gh } = specGh({ parents: {}, specs: {}, failParent: new Set([1]) });
+    const specs = await closeCompletedSpecs([closedResult(1)], gh);
+    expect(specs).toEqual([
+      { spec: null, ticket: 1, outcome: "failed", detail: "parent read failed: denied" },
+    ]);
+  });
+
+  test("reports failed when the spec still reads OPEN after the close", async () => {
+    const { gh } = specGh({
+      parents: { 1: "40" },
+      specs: { 40: { state: "OPEN", total: 2, completed: 2 } },
+      stayOpen: new Set([40]),
+    });
+    const specs = await closeCompletedSpecs([closedResult(1)], gh);
+    expect(specs).toEqual([{ spec: 40, outcome: "failed", detail: "issue is OPEN after close" }]);
+  });
+
+  test("reports failed when the spec summary has an unexpected shape", async () => {
+    const shapes = [
+      '{"state":"OPEN"}',
+      '{"state":"OPEN","subIssuesSummary":{"total":"2","completed":2}}',
+      '{"state":1,"subIssuesSummary":{"total":2,"completed":2}}',
+    ];
+    for (const raw of shapes) {
+      const { gh } = specGh({ parents: { 1: "40" }, specs: {}, rawSpecs: { 40: raw } });
+      // oxlint-disable-next-line eslint/no-await-in-loop -- sequential on purpose, one fixture per shape
+      const specs = await closeCompletedSpecs([closedResult(1)], gh);
+      expect(specs).toEqual([
+        { spec: 40, outcome: "failed", detail: "unexpected issue view output" },
+      ]);
+    }
+  });
+
+  test("reports failed when the spec output is not JSON or the runner throws a non-error", async () => {
+    const { gh } = specGh({ parents: { 1: "40" }, specs: {}, rawSpecs: { 40: "not json" } });
+    const [notJson] = await closeCompletedSpecs([closedResult(1)], gh);
+    expect(notJson?.outcome).toBe("failed");
+    expect(await closeCompletedSpecs([closedResult(1)], throwingNonError)).toEqual([
+      { spec: 40, outcome: "failed", detail: "boom" },
+    ]);
+  });
+
+  test("closes when the summary lags but nodes are closed or just closed", async () => {
+    const { gh, calls } = specGh({
+      parents: { 1: "9" },
+      specs: { 9: { state: "OPEN", total: 2, completed: 1 } },
+      subIssues: { 9: { nodes: [node(5, "CLOSED"), node(1, "OPEN")], totalCount: 2 } },
+    });
+    expect(await closeCompletedSpecs([closedResult(1)], gh)).toEqual([
+      { spec: 9, outcome: "closed" },
+    ]);
+    expect(calls.find((call) => call[1] === "close")).toEqual([
+      "issue",
+      "close",
+      "9",
+      "--reason",
+      "completed",
+      "--comment",
+      "All 2 tickets landed.",
+    ]);
+  });
+
+  test("keeps the spec open for an unclosed node, a truncated list, or bad nodes", async () => {
+    const cases: unknown[] = [
+      { nodes: [node(5, "OPEN"), node(1, "OPEN")], totalCount: 2 },
+      { nodes: [node(1, "OPEN")], totalCount: 2 },
+      { nodes: [], totalCount: 0 },
+      { nodes: ["x"], totalCount: 1 },
+      { nodes: [{ state: "OPEN" }], totalCount: 1 },
+      { nodes: "x", totalCount: 1 },
+      "x",
+    ];
+    for (const subIssues of cases) {
+      const { gh, calls } = specGh({
+        parents: { 1: "9" },
+        specs: { 9: { state: "OPEN", total: 2, completed: 1 } },
+        subIssues: { 9: subIssues },
+      });
+      // oxlint-disable-next-line eslint/no-await-in-loop -- sequential on purpose, one fixture per case
+      expect(await closeCompletedSpecs([closedResult(1)], gh)).toEqual([
+        { spec: 9, outcome: "open" },
+      ]);
+      expect(calls.some((call) => call[1] === "close")).toBe(false);
+    }
+  });
+
+  test("a complete summary closes even when the nodes are truncated", async () => {
+    const { gh } = specGh({
+      parents: { 1: "9" },
+      specs: { 9: { state: "OPEN", total: 3, completed: 3 } },
+      subIssues: { 9: { nodes: [node(1, "OPEN")], totalCount: 3 } },
+    });
+    expect(await closeCompletedSpecs([closedResult(1)], gh)).toEqual([
+      { spec: 9, outcome: "closed" },
+    ]);
   });
 });

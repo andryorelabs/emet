@@ -10,7 +10,13 @@ import { appendEvent } from "./journal";
 import { didAcquireLock, didReclaimStaleLock, releaseLock, resolveLockDirectory } from "./locks";
 import { PRODUCT } from "./names";
 import { errnoCode, errorMessage } from "./narrow";
-import { closeGithubTickets, runGh, type CloseReason, type TicketCloseResult } from "./ticketclose";
+import {
+  closeCompletedSpecs,
+  closeGithubTickets,
+  runGh,
+  type CloseReason,
+  type TicketCloseResult,
+} from "./ticketclose";
 import {
   appendComment,
   computeFrontier,
@@ -389,8 +395,12 @@ async function closeGithub(root: string, argv: readonly string[]): Promise<unkno
     runGh,
   );
   recordTicketCloses(root, results, pr, reason);
-  if (results.some((result) => result.outcome === "failed")) process.exitCode = EXIT_REFUSED;
-  return { results };
+  const specs = await closeCompletedSpecs(results, runGh);
+  const anyFailed =
+    results.some((result) => result.outcome === "failed") ||
+    specs.some((spec) => spec.outcome === "failed");
+  if (anyFailed) process.exitCode = EXIT_REFUSED;
+  return { results, specs };
 }
 
 async function close(root: string, argv: readonly string[]): Promise<unknown> {

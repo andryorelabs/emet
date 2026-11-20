@@ -2,7 +2,7 @@
 title: CLI 레퍼런스
 description: 모든 emet 하위 명령, 게이트와 기록 표, 종료 코드, 환경 변수를 설명합니다.
 seoTitle: emet CLI 레퍼런스
-sourceHash: 747b8a6a86e70ef1
+sourceHash: 4891ccc3dd8152ed
 ---
 
 모든 `emet` 하위 명령, 게이트와 기록 표, 종료 코드, 환경 변수입니다. 용어는 [GLOSSARY.md](../../GLOSSARY.md)를 따릅니다. [README](../../README.md)로 돌아가기. 모든 명령은 `--help`로 사용법을 출력합니다.
@@ -92,7 +92,7 @@ emet doctor ~/code/*
 
 `emet ci --pr <n> --wait [--rerun-flakes] [--timeout-minutes <m>]`는 PR의 체크가 끝나거나 타임아웃(기본값 30)이 될 때까지 폴링합니다. `--rerun-flakes`를 쓰면 실패한 각 체크를 `gh run rerun --failed`로 한 번 다시 실행하며, 재실행에서 통과한 체크는 Flake입니다. `state: pass | fail | env-fault | timeout`, 실패한 체크, `flakeReruns`를 출력하고 절대 병합하지 않습니다. 체크가 없는 PR은 `noChecks: true`와 함께 `pass`입니다. 종료 코드는 `0`이 pass, `1`이 fail 또는 env-fault, `3`이 timeout입니다. `env-fault`는 `STARTUP_FAILURE`로 끝났거나 너무 오래 대기열에 머문 체크를 뜻합니다. 코드 실패가 아니라 CI가 한 번도 실행되지 않은 것입니다.
 
-`tracker.kind: "github"`일 때 `emet tracker close <ticket>... [--pr <n>]`는 각 티켓(`CLA-<n>`, `#<n>` 또는 숫자만)을 `gh issue close --reason completed`로 닫고 상태를 확인한 뒤 `closed` 또는 `already-closed`를 보고합니다. `--pr`은 "Landed in #<n>" 코멘트를 추가합니다. 나머지를 처리한 뒤 실패한 티켓이 있으면 `1`로 종료합니다. Linear 티켓은 코디네이터가 Linear MCP를 통해 Done인지 확인합니다.
+`tracker.kind: "github"`일 때 `emet tracker close <ticket>... [--pr <n>]`는 각 티켓(`CLA-<n>`, `#<n>` 또는 숫자만)을 `gh issue close --reason completed`로 닫고 상태를 확인한 뒤 `closed` 또는 `already-closed`를 보고합니다. `--pr`은 "Landed in #<n>" 코멘트를 추가합니다. 티켓을 처리한 뒤에는 닫은 각 티켓의 상위 스펙 이슈를 읽고(`gh issue view <n> --json parent`), `subIssuesSummary`에서 모든 하위 이슈가 완료된 것으로 나타나면 해당 스펙을 코멘트 "All <total> tickets landed."와 함께 completed로 닫고 `specs`에 `closed`, `open`, `already-closed` 또는 `failed`로 보고합니다. 스펙 읽기 또는 닫기에 실패해도 `1`로 종료합니다. 나머지를 처리한 뒤 실패한 티켓이 있으면 `1`로 종료합니다. Linear 티켓은 코디네이터가 Linear MCP를 통해 Done인지 확인합니다.
 
 ### Codex 호스트
 

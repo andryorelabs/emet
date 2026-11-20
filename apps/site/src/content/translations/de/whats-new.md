@@ -2,8 +2,17 @@
 title: Neuigkeiten
 description: Release Notes für emet: was sich in jeder Version geändert hat.
 seoTitle: "Neuigkeiten in emet: Release Notes"
-sourceHash: 3f361c0db37dc910
+sourceHash: f7d7289598b26a1e
 ---
+
+## 0.14.1
+
+2026-11-20
+
+### Hinzugefügt
+
+- `emet tracker close` schließt das übergeordnete Spec-Issue eines GitHub-Tickets, wenn sein letztes Sub-Issue geschlossen wird, und meldet jede Spec in einem neuen Feld `specs`. Ein fehlgeschlagenes Lesen oder Schließen der Spec beendet mit `1`.
+- Die Spec wird auch geschlossen, wenn die Sub-Issue-Zusammenfassung von GitHub noch nicht aktuell ist: Die Sub-Issues der Spec werden einzeln gezählt, einschließlich der im selben Aufruf geschlossenen Tickets.
 
 ## 0.14.0
 

@@ -258,13 +258,42 @@ fi
 exit 1
 `;
 
+const FAKE_GH_WITH_SPEC = `#!/bin/sh
+state="$FAKE_GH_DIR/closed"
+touch "$state"
+if [ "$1" = "issue" ] && [ "$2" = "view" ]; then
+  case "$5" in
+    parent) echo 40; exit 0 ;;
+    state,subIssuesSummary,subIssues)
+      echo '{"state":"OPEN","subIssuesSummary":{"total":2,"completed":2}}'; exit 0 ;;
+  esac
+  if grep -qx "$3" "$state"; then echo CLOSED; else echo OPEN; fi
+  exit 0
+fi
+if [ "$1" = "issue" ] && [ "$2" = "close" ]; then
+  if [ "$3" = "40" ]; then echo "denied" >&2; exit 1; fi
+  echo "$@" >> "$FAKE_GH_DIR/calls"
+  echo "$3" >> "$state"
+  exit 0
+fi
+exit 1
+`;
+
 async function githubTracker(
+  repo: string,
+  ...args: string[]
+): Promise<CliResult & { calls: string }> {
+  return githubTrackerWith(FAKE_GH, repo, ...args);
+}
+
+async function githubTrackerWith(
+  script: string,
   repo: string,
   ...args: string[]
 ): Promise<CliResult & { calls: string }> {
   const bin = makeTemporaryDirectory();
   const gh = path.join(bin, "gh");
-  writeFileSync(gh, FAKE_GH, { mode: 0o755 });
+  writeFileSync(gh, script, { mode: 0o755 });
   const child = Bun.spawn([process.execPath, TRACKER_ENTRY, ...args], {
     cwd: repo,
     env: {
@@ -318,6 +347,19 @@ describe("emet tracker close with tracker.kind github", () => {
       "failed",
       "closed",
     ]);
+  });
+
+  test("reports specs and exits 1 when closing the completed spec fails", async () => {
+    const repo = await makeRepo();
+    writeConfig(repo, JSON.stringify({ version: 1, tracker: { kind: "github" } }));
+    const result = await githubTrackerWith(FAKE_GH_WITH_SPEC, repo, "close", "12", "--pr", "7");
+    expect(result.code).toBe(1);
+    const parsed = parseJson(result.stdout);
+    const outcomes = isObject(parsed) && Array.isArray(parsed.results) ? parsed.results : [];
+    expect(outcomes.map((entry: unknown) => stringField(entry, "outcome"))).toEqual(["closed"]);
+    const specs = isObject(parsed) && Array.isArray(parsed.specs) ? parsed.specs : [];
+    expect(specs.map((entry: unknown) => stringField(entry, "outcome"))).toEqual(["failed"]);
+    expect(specs.map((entry: unknown) => stringField(entry, "detail"))).toEqual(["denied"]);
   });
 
   test("usage errors exit 2", async () => {
