@@ -27,6 +27,7 @@ import {
 export type SetupItemId =
   | "mattpocock-skills"
   | "engram"
+  | "agent-browser"
   | "mascot"
   | "orca-pet"
   | "gh-auth"
@@ -91,7 +92,7 @@ async function pluginInstalled(env: SetupEnv, pluginId: string): Promise<boolean
   return parsePluginListOutput(output, pluginId) === "installed";
 }
 
-/** Builds the catalog over `env`: the six optional installs in the order they are offered. */
+/** Builds the catalog over `env`: the seven optional installs in the order they are offered. */
 export function createCatalog(env: SetupEnv): readonly SetupItem[] {
   const settingsPath = path.join(env.homeDir, ".claude", "settings.json");
   const orcaPetDirectory = path.join(env.homeDir, ".emet", "orca-pet", "emet");
@@ -126,6 +127,24 @@ export function createCatalog(env: SetupEnv): readonly SetupItem[] {
         }
         await runChecked(env, ["brew", "install", ENGRAM_BREW_FORMULA]);
         await runChecked(env, ["engram", "setup", "claude-code"]);
+      },
+    },
+    {
+      id: "agent-browser",
+      label:
+        "agent-browser CLI (browser automation for UI verification, plus its browser download)",
+      defaultOn: false,
+      detect: () => env.commandExists("agent-browser"),
+      install: async () => {
+        await runChecked(env, ["bun", "add", "-g", "agent-browser@latest"]);
+        try {
+          await runChecked(env, ["agent-browser", "install"]);
+        } catch (error) {
+          env.log(
+            "The browser download did not finish. Run `agent-browser install` yourself; if system libraries are missing it will say which.",
+          );
+          throw error;
+        }
       },
     },
     {
