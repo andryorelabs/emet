@@ -17,6 +17,8 @@ import {
   checkDependencies,
   createDependencyProbes,
   classifyClaudePluginProbe,
+  AGENT_BROWSER_INSTALL_REMEDY,
+  classifyAgentBrowser,
   classifyEngram,
   ENGRAM_INSTALL_REMEDY,
   classifyForgeAgentsProbe,
@@ -913,5 +915,29 @@ describe("host selection and remedies", () => {
     const first = probes.skillsContract?.();
     expect(first).toBeDefined();
     expect(probes.skillsContract?.()).toBe(first);
+  });
+});
+
+describe("classifyAgentBrowser", () => {
+  test("a missing binary is an indeterminate optional note with the install remedy", () => {
+    const check = classifyAgentBrowser({ binary: false, doctor: { kind: "skipped" } });
+    expect(check.status).toBe("indeterminate");
+    expect(check.summary).toStartWith("optional:");
+    expect(check.summary).toContain("agent-browser");
+    expect(check.remedy).toEqual(AGENT_BROWSER_INSTALL_REMEDY);
+  });
+
+  test("a failing agent-browser doctor is an indeterminate warning, never unsatisfied", () => {
+    const check = classifyAgentBrowser({
+      binary: true,
+      doctor: { kind: "failed", detail: "exit code 2" },
+    });
+    expect(check.status).toBe("indeterminate");
+    expect(check.summary).toStartWith("warning:");
+    expect(check.summary).toContain("exit code 2");
+  });
+
+  test("a healthy binary is satisfied", () => {
+    expect(classifyAgentBrowser({ binary: true, doctor: { kind: "ok" } }).status).toBe("satisfied");
   });
 });
