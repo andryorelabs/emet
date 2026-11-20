@@ -196,6 +196,13 @@ interface DeployCheckConfig {
   readonly timeoutSeconds: number;
 }
 
+/** `verify.browser`: how a reviewer starts the app and which changed paths warrant a browser check. */
+interface VerifyBrowserConfig {
+  readonly startCommand: string;
+  readonly url: string;
+  readonly paths?: readonly string[];
+}
+
 export type LandingMode = "pr" | "merge";
 
 /** What `emet gate` does with open blocking findings. */
@@ -289,6 +296,10 @@ export interface ForgeConfig {
   readonly deploy?: {
     /** Command run after a promote until it exits 0; absent means no check. */
     readonly check?: DeployCheckConfig;
+  };
+  readonly verify?: {
+    /** Optional browser verification of UI changes; absent means off. */
+    readonly browser?: VerifyBrowserConfig;
   };
   readonly landing: {
     /** How a finished wave reaches trunk: `pr` opens a pull request, `merge`
@@ -618,6 +629,39 @@ function validateDeploySection(
   return { ok: true, check };
 }
 
+const VERIFY_BROWSER_KEYS: ReadonlySet<string> = new Set(["startCommand", "url", "paths"]);
+
+function validateVerifySection(
+  value: unknown,
+): { ok: true; browser: VerifyBrowserConfig | undefined } | { ok: false; reason: string } {
+  if (value === undefined) return { ok: true, browser: undefined };
+  if (!isRecord(value)) return { ok: false, reason: '"verify" must be an object' };
+  const raw = value.browser;
+  if (raw === undefined) return { ok: true, browser: undefined };
+  if (!isRecord(raw)) return { ok: false, reason: '"verify.browser" must be an object' };
+  const unknownKey = Object.keys(raw).find((key) => !VERIFY_BROWSER_KEYS.has(key));
+  if (unknownKey !== undefined) {
+    return { ok: false, reason: `"verify.browser.${unknownKey}" is not a known key` };
+  }
+  const { startCommand, url, paths } = raw;
+  if (!isNonEmptyString(startCommand)) {
+    return { ok: false, reason: '"verify.browser.startCommand" must be a non-empty string' };
+  }
+  if (!isNonEmptyString(url)) {
+    return { ok: false, reason: '"verify.browser.url" must be a non-empty string' };
+  }
+  if (paths !== undefined && !isGlobList(paths)) {
+    return {
+      ok: false,
+      reason: '"verify.browser.paths" must be a non-empty list of non-empty globs',
+    };
+  }
+  return {
+    ok: true,
+    browser: { startCommand, url, ...(paths === undefined ? {} : { paths }) },
+  };
+}
+
 /**
  * Validates only the fields this CLI reads, merging anything absent from
  * `DEFAULT_FORGE_CONFIG` — a repo's `emet.config.json` need not repeat every
@@ -787,6 +831,9 @@ function validateAndMerge(
 
   const deploy = validateDeploySection(raw.deploy);
   if (!deploy.ok) return deploy;
+
+  const verify = validateVerifySection(raw.verify);
+  if (!verify.ok) return verify;
 
   const landingSection = isRecord(raw.landing) ? raw.landing : {};
   const landingMode = landingSection.mode ?? DEFAULT_FORGE_CONFIG.landing.mode;
@@ -966,6 +1013,7 @@ function validateAndMerge(
       },
       interview: { research: interviewResearch },
       ...(deploy.check === undefined ? {} : { deploy: { check: deploy.check } }),
+      ...(verify.browser === undefined ? {} : { verify: { browser: verify.browser } }),
       landing: { mode: landingMode },
       gate: { onHold: gateOnHold },
       language: { conversation: languageConversation, artifacts: languageArtifacts },
