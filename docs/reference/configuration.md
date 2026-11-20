@@ -90,6 +90,29 @@ Optional. Absent means no deploy check.
 
 The check no longer depends on `afterSpec`. `emet promote` prints `deployCheck: { run, reason }` and the coordinator runs `emet deploy-check` only when `run` is true: never without a `deploy.check` or after a final wave that is not clean; on `repo.trunk` `main`, where every merge deploys, after a clean final wave whatever the mode (also under `--no-promote` or a held spec, and ignoring `paths`); on `develop`, only in `promote` mode after a merged promote that matches `paths`. In `release` mode the deploy waits for a person.
 
+## verify
+
+Optional. Absent means no browser verification and every command behaves as before.
+
+```json
+{
+  "verify": {
+    "browser": {
+      "startCommand": "bun run dev",
+      "url": "http://localhost:4321",
+      "paths": ["apps/site/**"]
+    }
+  }
+}
+```
+
+- `browser.startCommand`: non-empty shell command that starts the app's dev server. The reviewer runs it, and stops it when done.
+- `browser.url`: non-empty URL the running app answers on.
+- `browser.paths` (optional): a non-empty list of non-empty globs. With it, the browser check runs only when a changed path matches; without it, every reviewed diff qualifies. Globs use the same matcher as `deploy.check.paths`.
+- Unknown keys under `verify` or `verify.browser` are rejected.
+
+`emet assess` prints `browserVerify: { run, reason }`, and the coordinator fills the reviewer's Browser axis only when `run` is true: the tier has a reviewer (not `passive`), `verify.browser` is configured, the optional [`agent-browser`](cli.md#setup-and-audit) binary is on PATH, and a changed path matches `paths` when set. Otherwise `reason` names the first failed condition and the review runs as before. A docs-only diff is `passive`, so a content-only change is not browser-verified. A reviewer whose browser commands fail twice falls back to Chrome DevTools MCP or reports a `verification-gap` finding; it never blocks the wave.
+
 ## interview
 
 - `research` (default `true`): when `true`, Phase 1 of `/emet:run` has the agent look up the answer in the repo, docs or primary sources, and explain why it recommends an option, before asking a technical question that offers options. The user still answers. `false` turns it off.
