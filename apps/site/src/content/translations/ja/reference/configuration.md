@@ -2,7 +2,7 @@
 title: 設定リファレンス
 description: emet.config.json のすべてのキーについて、既定値と意味を説明します。
 seoTitle: emet の設定リファレンス
-sourceHash: 021a695d999163e3
+sourceHash: 03b3df3fa773f181
 ---
 
 `emet.config.json` のすべてのキーを、既定値と意味とともに示します。信頼できる情報源は [`emet/schema/emet.config.schema.json`](../../emet/schema/emet.config.schema.json) です。用語は [GLOSSARY.md](../../GLOSSARY.md) に従います。[README](../../README.md) に戻る。
@@ -94,6 +94,29 @@ sourceHash: 021a695d999163e3
 - `check.paths`（任意）: 空でない、空文字列を含まない glob のリストです。指定すると、マージされたプロモートは変更パスが一致したときだけチェックを実行し、指定しなければマージされたすべてのプロモートが実行します。
 
 チェックは `afterSpec` に依存しなくなりました。`emet promote` は `deployCheck: { run, reason }` を出力し、コーディネーターは `run` が true のときだけ `emet deploy-check` を実行します。`deploy.check` がない場合や、最後のウェーブがクリーンでない場合は実行しません。すべてのマージがデプロイされる `repo.trunk` が `main` の場合は、クリーンな最後のウェーブの後、モードに関係なく実行します（`--no-promote` や保留中の spec でも、`paths` を無視して実行します）。`develop` の場合は、`promote` モードで、`paths` に一致するマージ済みプロモートの後にのみ実行します。`release` モードでは、デプロイは人を待ちます。
+
+## verify
+
+任意です。ない場合はブラウザ検証を行わず、すべてのコマンドはこれまでどおり動作します。
+
+```json
+{
+  "verify": {
+    "browser": {
+      "startCommand": "bun run dev",
+      "url": "http://localhost:4321",
+      "paths": ["apps/site/**"]
+    }
+  }
+}
+```
+
+- `browser.startCommand`: アプリの開発サーバーを起動する、空でないシェルコマンドです。レビュアーがこれを実行し、終わったら停止します。
+- `browser.url`: 実行中のアプリが応答する、空でない URL です。
+- `browser.paths`（任意）: 空でない、空文字列を含まない glob のリストです。指定すると、変更パスが一致したときだけブラウザチェックを実行し、指定しなければレビューされるすべての差分が対象になります。glob は `deploy.check.paths` と同じマッチャーを使います。
+- `verify` または `verify.browser` の下の未知のキーは拒否されます。
+
+`emet assess` は `browserVerify: { run, reason }` を出力し、コーディネーターは `run` が true のときだけレビュアーの Browser 軸を埋めます。条件は、ティアにレビュアーがいる（`passive` ではない）、`verify.browser` が設定されている、任意の [`agent-browser`](cli.md#setup-and-audit) バイナリが PATH 上にある、`paths` が設定されている場合は変更パスが一致する、です。そうでなければ `reason` が最初に満たされなかった条件を示し、レビューはこれまでどおり行われます。ドキュメントのみの差分は `passive` なので、コンテンツのみの変更はブラウザ検証されません。ブラウザコマンドが 2 回失敗したレビュアーは、Chrome DevTools MCP にフォールバックするか、`verification-gap` の指摘を報告します。ウェーブをブロックすることはありません。
 
 ## interview
 
