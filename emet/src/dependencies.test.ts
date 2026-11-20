@@ -1,5 +1,5 @@
-import { afterEach, beforeEach, describe, expect, test } from "bun:test";
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { afterEach, beforeEach, describe, expect, spyOn, test, type Mock } from "bun:test";
+import { chmodSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
 
@@ -939,5 +939,94 @@ describe("classifyAgentBrowser", () => {
 
   test("a healthy binary is satisfied", () => {
     expect(classifyAgentBrowser({ binary: true, doctor: { kind: "ok" } }).status).toBe("satisfied");
+  });
+});
+
+describe("createDependencyProbes agentBrowser", () => {
+  let binDirectory: string;
+  let savedPath: string | undefined;
+  let spawnSpy: Mock<typeof Bun.spawn> | undefined;
+
+  beforeEach(() => {
+    binDirectory = mkdtempSync(path.join(os.tmpdir(), "forge-agent-browser-"));
+    savedPath = process.env.PATH;
+    process.env.PATH = binDirectory;
+  });
+
+  afterEach(() => {
+    spawnSpy?.mockRestore();
+    spawnSpy = undefined;
+    if (savedPath === undefined) Reflect.deleteProperty(process.env, "PATH");
+    else process.env.PATH = savedPath;
+    rmSync(binDirectory, { recursive: true, force: true });
+  });
+
+  function installAgentBrowser(script: string): void {
+    const file = path.join(binDirectory, "agent-browser");
+    writeFileSync(file, script);
+    chmodSync(file, 0o755);
+  }
+
+  test("a missing binary skips the doctor run", async () => {
+    expect(await createDependencyProbes().agentBrowser?.()).toEqual({
+      binary: false,
+      doctor: { kind: "skipped" },
+    });
+  });
+
+  function stubSpawn(exitCode: number | null): void {
+    spawnSpy = spyOn(Bun, "spawn").mockImplementation(
+      // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- a minimal Subprocess stand-in
+      (() => ({
+        stdout: new Response("").body,
+        exited: Promise.resolve(exitCode),
+        exitCode,
+      })) as unknown as typeof Bun.spawn,
+    );
+  }
+
+  test("a doctor run that exits 0 is ok", async () => {
+    installAgentBrowser("#!/bin/sh\nexit 0\n");
+    stubSpawn(0);
+    expect(await createDependencyProbes().agentBrowser?.()).toEqual({
+      binary: true,
+      doctor: { kind: "ok" },
+    });
+  });
+
+  test("a doctor run that exits non-zero is a failure naming the exit code", async () => {
+    installAgentBrowser("#!/bin/sh\nexit 3\n");
+    stubSpawn(3);
+    expect(await createDependencyProbes().agentBrowser?.()).toEqual({
+      binary: true,
+      doctor: { kind: "failed", detail: "exit code 3" },
+    });
+  });
+
+  test("a binary that cannot be spawned is a failure carrying the spawn error", async () => {
+    installAgentBrowser("#!/bin/sh\nexit 0\n");
+    spawnSpy = spyOn(Bun, "spawn").mockImplementation(() => {
+      throw new Error("spawn exploded");
+    });
+    expect(await createDependencyProbes().agentBrowser?.()).toEqual({
+      binary: true,
+      doctor: { kind: "failed", detail: "spawn exploded" },
+    });
+  });
+
+  test("a doctor run killed by the timeout is reported as timed out", async () => {
+    installAgentBrowser("#!/bin/sh\nexit 0\n");
+    stubSpawn(null);
+    expect(await createDependencyProbes().agentBrowser?.()).toEqual({
+      binary: true,
+      doctor: { kind: "failed", detail: "timed out after 5000ms" },
+    });
+  });
+
+  test("the probe result is memoized per probe set", async () => {
+    installAgentBrowser("#!/bin/sh\nexit 0\n");
+    stubSpawn(0);
+    const probes = createDependencyProbes();
+    expect(await probes.agentBrowser?.()).toBe(await probes.agentBrowser?.());
   });
 });
