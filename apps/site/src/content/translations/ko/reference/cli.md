@@ -2,7 +2,7 @@
 title: CLI 레퍼런스
 description: 모든 emet 하위 명령, 게이트와 기록 표, 종료 코드, 환경 변수를 설명합니다.
 seoTitle: emet CLI 레퍼런스
-sourceHash: fee9f73b5e416c7f
+sourceHash: bf767a0897b794ae
 ---
 
 모든 `emet` 하위 명령, 게이트와 기록 표, 종료 코드, 환경 변수입니다. 용어는 [GLOSSARY.md](../../GLOSSARY.md)를 따릅니다. [README](../../README.md)로 돌아가기. 모든 명령은 `--help`로 사용법을 출력합니다.
@@ -99,7 +99,7 @@ emet doctor ~/code/*
 이 명령들은 Codex 에이전트 호스트(`agentHost`가 `"codex"`)를 위한 것입니다. [Codex 가이드](../guide/codex.md)를 참고하세요.
 
 - `emet dispatch --role worker --run <id> --ticket <id> --prompt-file <file> [--model <m>] [--effort <e>] [--root <dir>]`: 클레임과 슬롯을 확인한 뒤 `.emet/worktrees/agent-<ticket>`을 만들고, 실행별 `CODEX_HOME` 오버레이를 구성하여 워커를 분리된 `codex exec`로 시작합니다. `emet dispatch --wait --run <id> --ticket <id> [--timeout <s>]`는 종료될 때까지 기다렸다가 기록된 결과 상태를 출력합니다.
-- `emet review-run --run <id> --ticket <id> --package <file> --tier <medium|high|passive>`: `emet review-package`가 만든 패키지에 대해 리뷰어를 읽기 전용 `codex exec`로 실행하고, `emet review --findings`에 넘길 지적 사항 JSON을 출력합니다. `passive` 등급에서는 프로세스를 시작하지 않습니다.
+- `emet review-run --run <id> --ticket <id> --package <file> --tier <medium|high|passive> [--browser-verify true|false]`: `emet review-package`가 만든 패키지에 대해 리뷰어를 읽기 전용 `codex exec`로 실행하고, `emet review --findings`에 넘길 지적 사항 JSON을 출력합니다. `passive` 등급에서는 프로세스를 시작하지 않습니다. `--browser-verify`의 기본값은 `false`입니다. `true`이면 프롬프트가 Browser 축으로 끝나고, `--session review-<run>`은 `--run`에서 채워지므로 Codex 리뷰어가 Claude 리뷰어처럼 UI를 검증합니다(`emet assess`가 `browserVerify.run: true`를 출력했을 때 전달하세요. [`verify`](configuration.md#verify) 참고). 플래그가 없으면 프롬프트는 그대로이며, `true`나 `false`가 아닌 값은 사용법 줄을 출력하고 종료 코드 2로 끝납니다.
 - `emet launch <spec-id> --wave <n>`: 이 호스트에서는 `$emet:run --dispatch <spec>`을 실행하는 분리된 `codex exec`를 시작하고 그 스레드 ID를 기록합니다. Orca 탭은 열리지 않으며, `codex exec resume <id>`로 세션을 이어갑니다.
 - `emet guard`: `EMET_AGENT_HOST=codex`일 때 Codex 훅 입력을 읽고, `apply_patch` 경로를 `.emet/surface.json`과 대조하며, 프롬프트 줄 `approve <id>`가 올 때까지 승인 게이트를 닫아 둡니다.
 
@@ -109,7 +109,7 @@ emet doctor ~/code/*
 
 | 단계           | 명령                                                 | 강제하는 내용                                                                                                                                                                                                                                                                                                                                                                                                                                                             |
 | -------------- | ---------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 승인 전        | `emet validate --file <plan.json>`                   | 모든 `S#`가 하나 이상의 티켓에 포함되고 인수 시나리오를 가질 것. 모든 티켓이 하나 이상의 `S#`를 다룰 것. 웨이브 안에서 편집 범위가 겹치지 않을 것. 의존성 순환이 없을 것. `emet preflight`는 승인된 계획에 대해 이를 다시 실행합니다.                                                                                                                                                                                                                                     |
+| 승인 전        | `emet validate --file <plan.json>`                   | 모든 `S#`가 하나 이상의 티켓에 포함되고 인수 시나리오를 가질 것. 모든 티켓이 하나 이상의 `S#`를 다룰 것. 웨이브 안에서 편집 범위가 겹치지 않을 것. 의존성 순환이 없을 것. [`validate.coupledSurfaces`](configuration.md#validate)가 있으면, 어떤 쌍의 `source`를 건드리는 티켓이 그 `dependents`를 건드리는 티켓보다 앞선 웨이브에 있을 때 `coupled-surface-split` 오류가 납니다(종료 코드 1). `emet preflight`는 승인된 계획에 대해 이를 다시 실행합니다.                |
 | 승인           | `emet approve --run <id> --spec <file>`              | 스펙과 티켓 목록의 해시를 담은 `approval.json`을 기록합니다. 이후 둘 중 하나가 바뀌면 디스패치가 거부됩니다(`--check`).                                                                                                                                                                                                                                                                                                                                                   |
 | 티켓 생성      | `emet materialize-log --run <id> --record/--lookup`  | 생성된 각 티켓의 ID를 만들어지는 즉시 저장하므로, 중단된 실행이 중복을 만들지 않습니다.                                                                                                                                                                                                                                                                                                                                                                                   |
 | 워커 완료      | `emet results --run <id> --write/--read <ticket>`    | 워커는 로컬 결과 파일(`DONE`, `DONE_WITH_CONCERNS`, `BLOCKED`, `NEEDS_CONTEXT`와 `Risk:` 줄)을 작성합니다. 트래커에 쓸 수 있는 것은 코디네이터뿐입니다.                                                                                                                                                                                                                                                                                                                   |

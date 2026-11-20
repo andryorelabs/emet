@@ -95,5 +95,13 @@
       "url": "http://localhost:4321",
       "paths": ["apps/site/**"]
     }
+  },
+  "validate": {
+    "coupledSurfaces": [
+      {
+        "source": "docs/{guide,reference,how-to}/**/*.md",
+        "dependents": "apps/site/src/content/translations/**"
+      }
+    ]
   }
 }

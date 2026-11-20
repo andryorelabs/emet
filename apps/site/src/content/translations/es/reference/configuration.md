@@ -2,7 +2,7 @@
 title: Referencia de configuración
 description: Cada clave de emet.config.json con su valor por defecto y su significado.
 seoTitle: Referencia de configuración de emet
-sourceHash: 03b3df3fa773f181
+sourceHash: 82a86139999124d0
 ---
 
 Cada clave de `emet.config.json`, con su valor por defecto y su significado. La fuente de verdad es [`emet/schema/emet.config.schema.json`](../../emet/schema/emet.config.schema.json). Los términos siguen [GLOSSARY.md](../../GLOSSARY.md). Volver al [README](../../README.md).
@@ -117,6 +117,28 @@ Opcional. Si falta, no hay verificación en el navegador y todos los comandos se
 - Las claves desconocidas bajo `verify` o `verify.browser` se rechazan.
 
 `emet assess` imprime `browserVerify: { run, reason }`, y el coordinador rellena el eje Browser del revisor solo cuando `run` es true: el nivel tiene revisor (no es `passive`), `verify.browser` está configurado, el binario opcional [`agent-browser`](cli.md#configuración-y-auditoría) está en el PATH y, si `paths` está definido, coincide una ruta modificada. En caso contrario, `reason` nombra la primera condición que falló y la revisión se ejecuta como antes. Un diff solo de documentación es `passive`, así que un cambio solo de contenido no se verifica en el navegador. Un revisor cuyos comandos del navegador fallan dos veces recurre a Chrome DevTools MCP o informa un hallazgo `verification-gap`; nunca bloquea la oleada.
+
+## validate
+
+Opcional. Si falta, no hay comprobación de superficies acopladas y todos los comandos se comportan como antes.
+
+```json
+{
+  "validate": {
+    "coupledSurfaces": [
+      {
+        "source": "docs/{guide,reference,how-to}/**/*.md",
+        "dependents": "apps/site/src/content/translations/**"
+      }
+    ]
+  }
+}
+```
+
+- `coupledSurfaces`: una lista no vacía de pares. Cada par tiene un glob `source` y un glob `dependents`, ambos cadenas no vacías; `source` acepta globs con llaves como `docs/{guide,reference}/**/*.md`.
+- Las claves desconocidas bajo `validate` o en un par se rechazan, y una entrada mal formada hace fallar la carga con un mensaje que nombra `validate.coupledSurfaces[<n>]`.
+
+`emet validate` (`--file` y `--spec`) y la compuerta de ejecución de `emet preflight` informan un error `coupled-surface-split` cuando un ticket cuyas superficies se solapan con el `source` de un par está en una oleada anterior a la de un ticket cuyas superficies se solapan con los `dependents` de ese par. Las ediciones de una página fuente y los tickets que actualizan lo que depende de ella, como las traducciones, deben publicarse en la misma oleada. La misma oleada, o ningún ticket de dependents, pasa. Consulta [ADR-0033](../adr/0033-coupled-surfaces-ship-in-one-wave.md).
 
 ## interview
 
