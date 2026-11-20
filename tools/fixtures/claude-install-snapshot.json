@@ -48,12 +48,12 @@
     ".claude/emet/reference/incidents.md": "6437b96cd07e41709f425fa4fa9418e2e45311daea956ccd9159e4816f9d09fa",
     ".claude/emet/reference/phases-1-5.md": "82c8720535e8e5569fdca93fec37bb1348e7926ae57f23379abd4c18dda446b4",
     ".claude/emet/reference/phases-6-7-dispatch.md": "c26723a5fc1a52b5acd57306d07f8d74bfccb15af85a89b6e84cf2994311a3aa",
-    ".claude/emet/reference/phases-8-closeout.md": "d98829cd3806c09a8a2414e244e7f827db3dee315e8a50566c00a32084beed05",
+    ".claude/emet/reference/phases-8-closeout.md": "0f8504032ac096c514a1e02b394e295b601be6dfb486b54bf891721402e5f057",
     ".claude/emet/reference/phases-9-handoff.md": "8f0d77cc037f2311d6150fb1302200161790d74705dbfe2be2a11cbb4de2f912",
-    ".claude/emet/reference/reviewer-prompt.md": "07136194ae86601ada0e501d14c512ff0ee8f0444dc05a1e8f4ff33c20053336",
+    ".claude/emet/reference/reviewer-prompt.md": "53eb5661ffa3d721474cd1041c0de44ff5e0976a53d906a731a5fa32f9f9cbde",
     ".claude/emet/reference/tracker-github.md": "73b296f699ad03f29679f61440ca1946601b292b69ad5268a94a0b78a6bd6788",
     ".claude/emet/reference/tracker-linear.md": "18821b11c614e0764ab0cb176632fffc39079fbb5d0c6729fdc0117645031e2e",
     ".claude/emet/reference/tracker-local.md": "431c496589d5d516bda1fab9f0972d0c6c29d1bfba67c9aa08fcb3b095698406",
-    ".claude/emet/reference/worker-prompt.md": "66410606edbf568fba61234c56da553b3ecda525b9cdcd8433640333eddb61c3"
+    ".claude/emet/reference/worker-prompt.md": "859b9ad98e6ab99cefbe19ee6eef32785903e4f9ae76dd514c06558dfc5dc33e"
   }
 }
