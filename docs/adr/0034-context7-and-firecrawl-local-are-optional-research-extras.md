@@ -1,6 +1,6 @@
 # 0034. context7 and Firecrawl Local are optional research extras
 
-Status: Accepted (2026-11-20)
+Status: Accepted (2026-11-20). Amended by [0035](0035-firecrawl-local-search-cloud-mode-and-agent-browser-chrome.md): Firecrawl Local uses `FIRECRAWL_CLOUD=search`, not `off`.
 Spec: the research extras spec (S1 to S7)
 
 Refines [0031](0031-after-spec-step-and-optional-setup.md) for the items named below. Follows the precedent of [0032](0032-agent-browser-recommended-ui-verification.md).

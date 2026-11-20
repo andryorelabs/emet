@@ -2,8 +2,28 @@
 title: 新功能
 description: emet 的发布说明：每个版本都有哪些变化。
 seoTitle: "emet 新功能：发布说明"
-sourceHash: faaf5e170bc87a1d
+sourceHash: 3f361c0db37dc910
 ---
+
+## 0.14.0
+
+2026-11-20
+
+### 新增
+
+- 当 `emet init` 找到 Prisma schema（`prisma/schema.prisma` 或 `prisma/schema/`）或 Drizzle 迁移文件夹时，会设置 `schema.ownedPaths`，并移除 schema 归属的 `TODO(emet):` 标记。
+- `agent-browser` 设置项在 `~/.agent-browser/config.json`（`contentBoundaries` 和 `maxOutput`）不存在时写入该文件，并在安装后运行 `agent-browser doctor`。参见 ADR-0035。
+- 当主机限制非特权用户命名空间时，`emet setup` 会输出 `agent-browser` 所下载 Chrome 的 AppArmor 配置文件，以及加载它的 `sudo` 命令。它从不自行运行 `sudo`。
+
+### 变更
+
+- `firecrawl-local` 设置项使用 `FIRECRAWL_CLOUD=search` 而非 `off` 注册 MCP 服务器，替换之前的注册，并将最新的 `agent-browser` Chrome 作为 `FIRECRAWL_CHROME_PATH` 传入。参见 ADR-0035。
+
+### 已修复
+
+- `emet setup` 注册 `firecrawl-local` MCP 服务器时将服务器名称放在最前，因此注册能被正确解析。
+- `emet --help` 列出注册表中的所有命令（setup、fleet、insights、chain、promote、whats-new、deploy-check、ci、run）。
+- 测试不再写入 `~/.local/state/emet` 下的真实日志。
 
 ## 0.13.0
 
