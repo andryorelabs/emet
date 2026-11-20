@@ -2,8 +2,18 @@
 title: 新功能
 description: emet 的发布说明：每个版本都有哪些变化。
 seoTitle: "emet 新功能：发布说明"
-sourceHash: e47aa3dd849f7d9d
+sourceHash: faaf5e170bc87a1d
 ---
+
+## 0.13.0
+
+2026-11-20
+
+### 新增
+
+- `emet setup` 提供 `context7` 和 `firecrawl-local` 两个条目(默认均关闭)。`context7` 安装 `ctx7` CLI 及其 `find-docs` skill。`firecrawl-local` 使用 `cargo` 构建 Firecrawl Local,并将其注册为仅限本地的 MCP 服务器(`FIRECRAWL_CLOUD=off`、`--public-only`)。参见 ADR-0034。
+- `emet review-run --browser-verify true|false` 把浏览器维度传给 Codex 审查者。
+- `emet.config.json` 中的 `validate.coupledSurfaces` 和 `emet validate` 的 `coupled-surface-split` 错误会让页面及其译文留在同一波次。参见 ADR-0033。
 
 ## 0.12.0
 
