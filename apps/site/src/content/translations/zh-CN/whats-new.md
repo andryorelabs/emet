@@ -2,8 +2,16 @@
 title: 新功能
 description: emet 的发布说明：每个版本都有哪些变化。
 seoTitle: "emet 新功能：发布说明"
-sourceHash: f7d7289598b26a1e
+sourceHash: df050c17f0f6de67
 ---
+
+## 0.14.2
+
+2026-11-20
+
+### 已修复
+
+- `emet promote` 会等待同步拉取请求的检查，仅在检查通过后才合并，而不是立即合并。失败、超时或被拒绝的同步拉取请求会保持打开，不会让 promote 失败，结果和日志事件中包含 `syncMerged` 和 `syncReason`。
 
 ## 0.14.1
 

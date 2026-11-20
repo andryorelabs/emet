@@ -43,6 +43,8 @@ export interface PromoteOutcome {
   prNumber: number | null;
   merged: boolean;
   syncPrNumber: number | null;
+  syncMerged: boolean;
+  syncReason: string | null;
   deployCheck: DeployCheckDecision;
   skipped?: string;
   ciState?: string;
@@ -210,8 +212,34 @@ function baseOutcome(
     prNumber: null,
     merged: promoteMerged,
     syncPrNumber: null,
+    syncMerged: false,
+    syncReason: null,
     deployCheck: report.decideDeployCheck?.(promoteMerged) ?? NO_DEPLOY_CHECK,
   };
+}
+
+/**
+ * Waits for the sync pull request's checks and merges it only on `pass`. A
+ * state that is not `pass`, or a rejected merge, leaves it open and records a
+ * one-sentence reason on the outcome instead of throwing.
+ */
+async function mergeSyncPullRequest(
+  outcome: PromoteOutcome,
+  syncPrNumber: number,
+  deps: PromoteDeps,
+): Promise<void> {
+  try {
+    const ci = await deps.waitForCi(syncPrNumber);
+    if (ci.state !== "pass") {
+      outcome.syncReason = `sync pull request #${syncPrNumber} left open: its checks ended ${ci.state}`;
+      return;
+    }
+    await deps.gh(["pr", "merge", String(syncPrNumber), "--merge"]);
+    outcome.syncMerged = true;
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : String(error);
+    outcome.syncReason = `sync pull request #${syncPrNumber} left open: ${message}`;
+  }
 }
 
 async function promoteViaPullRequest(
@@ -242,7 +270,7 @@ async function promoteViaPullRequest(
         SYNC_TITLE,
         "Brings the promote merge commit back into develop.",
       );
-      await deps.gh(["pr", "merge", String(outcome.syncPrNumber), "--merge"]);
+      await mergeSyncPullRequest(outcome, outcome.syncPrNumber, deps);
     }
     return outcome;
   } finally {
@@ -252,8 +280,8 @@ async function promoteViaPullRequest(
 
 /**
  * Runs the after-spec step. `promote` opens `develop` to `main`, waits for CI,
- * merges only on `pass`, and opens and merges a sync pull request back only
- * when `develop` is behind `main`. `release` opens nothing here: a person cuts
+ * merges only on `pass`, and opens a sync pull request back only when
+ * `develop` is behind `main`, waits for its checks and merges it only on `pass`. `release` opens nothing here: a person cuts
  * the release. `none` does nothing.
  */
 export async function promoteDevelop(
@@ -334,6 +362,8 @@ export function buildPromoteDeps(options: {
           prNumber: result.prNumber,
           merged: result.merged,
           syncPrNumber: result.syncPrNumber,
+          syncMerged: result.syncMerged,
+          syncReason: result.syncReason,
           ciState: result.ciState ?? null,
         },
       });

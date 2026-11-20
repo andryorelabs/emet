@@ -2,8 +2,16 @@
 title: Neuigkeiten
 description: Release Notes für emet: was sich in jeder Version geändert hat.
 seoTitle: "Neuigkeiten in emet: Release Notes"
-sourceHash: f7d7289598b26a1e
+sourceHash: df050c17f0f6de67
 ---
+
+## 0.14.2
+
+2026-11-20
+
+### Behoben
+
+- `emet promote` wartet auf die Checks des Sync-Pull-Requests und mergt ihn nur, wenn sie bestehen, statt ihn sofort zu mergen. Ein Sync-Pull-Request, der fehlschlägt, in ein Timeout läuft oder abgelehnt wird, bleibt offen, ohne den Promote scheitern zu lassen; das Ergebnis und das Journal-Ereignis enthalten `syncMerged` und `syncReason`.
 
 ## 0.14.1
 

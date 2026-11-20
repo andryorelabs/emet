@@ -2,8 +2,16 @@
 title: Novidades
 description: Notas de versão do emet: o que mudou em cada versão.
 seoTitle: Novidades do emet: notas de versão
-sourceHash: f7d7289598b26a1e
+sourceHash: df050c17f0f6de67
 ---
+
+## 0.14.2
+
+2026-11-20
+
+### Corrigido
+
+- `emet promote` espera os checks do pull request de sincronização e só o mescla quando eles passam, em vez de mesclá-lo de imediato. Um pull request de sincronização que falha, expira ou é rejeitado permanece aberto sem fazer o promote falhar, e o resultado e o evento do journal incluem `syncMerged` e `syncReason`.
 
 ## 0.14.1
 
