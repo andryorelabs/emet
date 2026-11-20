@@ -339,6 +339,62 @@ describe("loadForgeConfig", () => {
     expect(reasonOf(result)).toContain('"deploy.check.paths"');
   });
 
+  test("verify is absent by default", async () => {
+    await writeConfig({});
+    expect(configOf(await loadForgeConfig(repoRoot)).verify).toBeUndefined();
+    await writeConfig({ verify: {} });
+    expect(configOf(await loadForgeConfig(repoRoot)).verify).toBeUndefined();
+  });
+
+  test("verify.browser loads typed when valid", async () => {
+    const browser = {
+      startCommand: "bun run dev",
+      url: "http://localhost:4321",
+      paths: ["apps/site/**"],
+    };
+    await writeConfig({ verify: { browser } });
+    expect(configOf(await loadForgeConfig(repoRoot)).verify?.browser).toEqual(browser);
+    await writeConfig({ verify: { browser: { startCommand: "x", url: "http://x" } } });
+    expect(configOf(await loadForgeConfig(repoRoot)).verify?.browser?.paths).toBeUndefined();
+  });
+
+  const validBrowser = { startCommand: "bun run dev", url: "http://localhost:4321" };
+
+  test.each([
+    ["verify", { verify: "x" }, '"verify" must be an object'],
+    ["verify.browser", { verify: { browser: "x" } }, '"verify.browser" must be an object'],
+    [
+      "verify.browser.startCommand",
+      { verify: { browser: { ...validBrowser, startCommand: "" } } },
+      '"verify.browser.startCommand"',
+    ],
+    [
+      "verify.browser.url",
+      { verify: { browser: { ...validBrowser, url: 3 } } },
+      '"verify.browser.url"',
+    ],
+    [
+      "verify.browser.paths empty",
+      { verify: { browser: { ...validBrowser, paths: [] } } },
+      '"verify.browser.paths"',
+    ],
+    [
+      "verify.browser.paths blank glob",
+      { verify: { browser: { ...validBrowser, paths: [""] } } },
+      '"verify.browser.paths"',
+    ],
+    [
+      "verify.browser unknown key",
+      { verify: { browser: { ...validBrowser, extra: true } } },
+      '"verify.browser.extra"',
+    ],
+  ])("rejects %s", async (_name, raw, message) => {
+    await writeConfig(raw);
+    const result = await loadForgeConfig(repoRoot);
+    expect(result.status).toBe("malformed");
+    expect(reasonOf(result)).toContain(message);
+  });
+
   test("this repo's own config promotes the Website and releases everything else", async () => {
     const ownRoot = path.resolve(import.meta.dir, "..", "..");
     const { afterSpec } = configOf(await loadForgeConfig(ownRoot)).handoff;
