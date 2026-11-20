@@ -107,3 +107,116 @@ export async function closeGithubTickets(
   }
   return results;
 }
+
+export interface SpecCloseResult {
+  readonly spec: number | null;
+  readonly ticket?: number;
+  readonly outcome: "closed" | "open" | "already-closed" | "failed";
+  readonly detail?: string;
+}
+
+interface SpecProgress {
+  readonly state: string;
+  readonly total: number;
+  readonly completed: number;
+}
+
+async function readParent(issue: number, gh: GhRunner): Promise<number | null> {
+  const result = await gh([
+    "issue",
+    "view",
+    String(issue),
+    "--json",
+    "parent",
+    "--jq",
+    ".parent.number",
+  ]);
+  if (result.exitCode !== 0) throw new Error(failureDetail(result));
+  const text = result.stdout.trim();
+  return parseIssueNumber(text);
+}
+
+async function readSpecProgress(spec: number, gh: GhRunner): Promise<SpecProgress> {
+  const result = await gh(["issue", "view", String(spec), "--json", "state,subIssuesSummary"]);
+  if (result.exitCode !== 0) throw new Error(failureDetail(result));
+  const parsed: unknown = JSON.parse(result.stdout);
+  if (!isRecord(parsed) || !isRecord(parsed.subIssuesSummary)) {
+    throw new Error("unexpected issue view output");
+  }
+  const { state } = parsed;
+  const { total, completed } = parsed.subIssuesSummary;
+  if (typeof state !== "string" || typeof total !== "number" || typeof completed !== "number") {
+    throw new Error("unexpected issue view output");
+  }
+  return { state, total, completed };
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null;
+}
+
+async function closeSpec(spec: number, gh: GhRunner): Promise<SpecCloseResult> {
+  try {
+    const progress = await readSpecProgress(spec, gh);
+    if (progress.state === "CLOSED") return { spec, outcome: "already-closed" };
+    if (progress.total <= 0 || progress.completed !== progress.total) {
+      return { spec, outcome: "open" };
+    }
+    const closed = await gh([
+      "issue",
+      "close",
+      String(spec),
+      "--reason",
+      "completed",
+      "--comment",
+      `All ${progress.total} tickets landed.`,
+    ]);
+    if (closed.exitCode !== 0) {
+      return { spec, outcome: "failed", detail: failureDetail(closed) };
+    }
+    const state = await readState(spec, gh);
+    if (state !== "CLOSED") {
+      return { spec, outcome: "failed", detail: `issue is ${state} after close` };
+    }
+    return { spec, outcome: "closed" };
+  } catch (error) {
+    const detail = error instanceof Error ? error.message : String(error);
+    return { spec, outcome: "failed", detail };
+  }
+}
+
+/**
+ * Closes the parent spec of every ticket that ended `closed` or
+ * `already-closed`, once per distinct parent, when all its sub-issues are
+ * completed. A ticket without a parent adds no entry; a failed parent read
+ * reports `failed` with `spec: null` and the ticket's own issue number in
+ * `ticket`, because the parent is unknown.
+ */
+export async function closeCompletedSpecs(
+  results: readonly TicketCloseResult[],
+  gh: GhRunner,
+): Promise<readonly SpecCloseResult[]> {
+  const specs: SpecCloseResult[] = [];
+  const seen = new Set<number>();
+  for (const result of results) {
+    if (result.issue === null) continue;
+    if (result.outcome !== "closed" && result.outcome !== "already-closed") continue;
+    try {
+      // oxlint-disable-next-line eslint/no-await-in-loop -- sequential on purpose: the same parent must be read once
+      const parent = await readParent(result.issue, gh);
+      if (parent === null || seen.has(parent)) continue;
+      seen.add(parent);
+      // oxlint-disable-next-line eslint/no-await-in-loop -- sequential on purpose
+      specs.push(await closeSpec(parent, gh));
+    } catch (error) {
+      const detail = error instanceof Error ? error.message : String(error);
+      specs.push({
+        spec: null,
+        ticket: result.issue,
+        outcome: "failed",
+        detail: `parent read failed: ${detail}`,
+      });
+    }
+  }
+  return specs;
+}

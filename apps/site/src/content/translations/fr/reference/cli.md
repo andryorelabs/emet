@@ -2,7 +2,7 @@
 title: Référence de la CLI
 description: Chaque sous-commande d'emet, le tableau des gates et enregistrements, les codes de sortie et les variables d'environnement.
 seoTitle: Référence de la CLI d'emet
-sourceHash: 747b8a6a86e70ef1
+sourceHash: 4891ccc3dd8152ed
 ---
 
 Chaque sous-commande d'`emet`, le tableau des gates et enregistrements, les codes de sortie et les variables d'environnement. Les termes suivent [GLOSSARY.md](../../GLOSSARY.md). Retour au [README](../../README.md). Chaque commande affiche son usage avec `--help`.
@@ -92,7 +92,7 @@ Une vague est une PR. Son corps porte une ligne `Closes #N` par ticket (le mot-c
 
 `emet ci --pr <n> --wait [--rerun-flakes] [--timeout-minutes <m>]` interroge les checks de la PR jusqu'à leur fin ou jusqu'au délai (30 par défaut). Avec `--rerun-flakes`, il relance une fois chaque check en échec via `gh run rerun --failed` ; un check qui passe à la relance est un Flake. Il affiche `state: pass | fail | env-fault | timeout`, les checks en échec et `flakeReruns`, et ne fusionne jamais. Une PR sans check est `pass` avec `noChecks: true`. Code `0` pass, `1` fail ou env-fault, `3` timeout. `env-fault` désigne des checks terminés en `STARTUP_FAILURE` ou restés trop longtemps en file : une CI qui ne s'est jamais exécutée, pas un échec du code.
 
-Avec `tracker.kind: "github"`, `emet tracker close <ticket>... [--pr <n>]` ferme chaque ticket (`CLA-<n>`, `#<n>` ou un nombre seul) avec `gh issue close --reason completed`, vérifie son état et rapporte `closed` ou `already-closed`. `--pr` ajoute le commentaire « Landed in #<n> ». Il se termine par `1` si un ticket a échoué, après avoir traité les autres. Les tickets Linear sont confirmés Done par le coordinateur via le MCP Linear.
+Avec `tracker.kind: "github"`, `emet tracker close <ticket>... [--pr <n>]` ferme chaque ticket (`CLA-<n>`, `#<n>` ou un nombre seul) avec `gh issue close --reason completed`, vérifie son état et rapporte `closed` ou `already-closed`. `--pr` ajoute le commentaire « Landed in #<n> ». Pour chaque parent distinct d'un ticket `closed` ou `already-closed`, il lit ensuite `gh issue view <spec> --json state,subIssuesSummary` ; si la spec est ouverte et que `subIssuesSummary.completed` égale un `total` non nul, il ferme la spec avec `gh issue close --reason completed` et le commentaire « All <total> tickets landed. », puis vérifie son état. La sortie gagne `specs`, un `{ spec, outcome, detail? }` par parent distinct avec le résultat `closed`, `open`, `already-closed` ou `failed` ; un ticket sans parent n'ajoute rien, et une lecture ou une fermeture de spec en échec ne change jamais le résultat d'un ticket. Il se termine par `1` si un ticket ou une spec a échoué, après avoir traité les autres. Les tickets Linear sont confirmés Done par le coordinateur via le MCP Linear.
 
 ### Hôte Codex
 
