@@ -2,8 +2,28 @@
 title: Что нового
 description: Примечания к выпускам emet: что изменилось в каждой версии.
 seoTitle: "Что нового в emet: примечания к выпускам"
-sourceHash: faaf5e170bc87a1d
+sourceHash: 3f361c0db37dc910
 ---
+
+## 0.14.0
+
+2026-11-20
+
+### Добавлено
+
+- `emet init` задаёт `schema.ownedPaths`, когда находит схему Prisma (`prisma/schema.prisma` или `prisma/schema/`) или папку миграций Drizzle, и удаляет маркер владения схемой `TODO(emet):`.
+- Элемент настройки `agent-browser` записывает `~/.agent-browser/config.json` (`contentBoundaries` и `maxOutput`), если файла нет, и после установки запускает `agent-browser doctor`. См. ADR-0035.
+- `emet setup` выводит профиль AppArmor для Chrome, загруженного `agent-browser`, и команды `sudo` для его загрузки, если хост ограничивает непривилегированные пользовательские пространства имён. Он никогда не запускает `sudo` сам.
+
+### Изменено
+
+- Элемент настройки `firecrawl-local` регистрирует MCP-сервер с `FIRECRAWL_CLOUD=search` вместо `off`, заменяет прежнюю регистрацию и передаёт самый новый Chrome от `agent-browser` как `FIRECRAWL_CHROME_PATH`. См. ADR-0035.
+
+### Исправлено
+
+- `emet setup` регистрирует MCP-сервер `firecrawl-local` с именем сервера на первом месте, поэтому регистрация разбирается корректно.
+- `emet --help` перечисляет все команды реестра (setup, fleet, insights, chain, promote, whats-new, deploy-check, ci, run).
+- Тесты больше не пишут в настоящий журнал в `~/.local/state/emet`.
 
 ## 0.13.0
 

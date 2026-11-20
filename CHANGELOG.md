@@ -8,13 +8,33 @@ and this project adheres to
 
 ## [Unreleased]
 
+## [0.14.0] - 2026-11-20
+
+### Added
+
+- `emet init` sets `schema.ownedPaths` when it finds a Prisma schema
+  (`prisma/schema.prisma` or `prisma/schema/`) or a Drizzle migrations folder, and drops
+  the schema-ownership `TODO(emet):` marker.
+- The `agent-browser` setup item writes `~/.agent-browser/config.json`
+  (`contentBoundaries` and `maxOutput`) when it does not exist, and runs
+  `agent-browser doctor` after the install. See ADR-0035.
+- `emet setup` prints an AppArmor profile for the Chrome that `agent-browser`
+  downloaded, and the `sudo` commands to load it, when the host restricts unprivileged
+  user namespaces. It never runs `sudo`.
+
+### Changed
+
+- The `firecrawl-local` setup item registers the MCP server with
+  `FIRECRAWL_CLOUD=search` instead of `off`, replaces an earlier registration, and
+  passes the newest `agent-browser` Chrome as `FIRECRAWL_CHROME_PATH`. See ADR-0035.
+
 ### Fixed
 
 - `emet setup` registers the `firecrawl-local` MCP server with the server name
-  first (`claude mcp add firecrawl-local --scope user -e FIRECRAWL_CLOUD=off -- ...`),
-  so the registration is parsed correctly.
+  first, so the registration is parsed correctly.
 - `emet --help` lists every command in the registry (setup, fleet, insights, chain,
   promote, whats-new, deploy-check, ci, run).
+- Tests no longer write to the real journal under `~/.local/state/emet`.
 
 ## [0.13.0] - 2026-11-20
 
@@ -454,7 +474,8 @@ and this project adheres to
 - Per-repo configuration through `forge.config.json`.
 - `install.sh`, which installs the CLI, command and agents.
 
-[Unreleased]: https://github.com/andryorelabs/emet/compare/v0.13.0...HEAD
+[Unreleased]: https://github.com/andryorelabs/emet/compare/v0.14.0...HEAD
+[0.14.0]: https://github.com/andryorelabs/emet/compare/v0.13.0...v0.14.0
 [0.13.0]: https://github.com/andryorelabs/emet/compare/v0.12.0...v0.13.0
 [0.12.0]: https://github.com/andryorelabs/emet/compare/v0.11.1...v0.12.0
 [0.11.1]: https://github.com/andryorelabs/emet/compare/v0.11.0...v0.11.1

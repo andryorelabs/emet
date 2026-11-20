@@ -2,8 +2,28 @@
 title: 新機能
 description: emet のリリースノート。各バージョンでの変更点をまとめています。
 seoTitle: "emet の新機能: リリースノート"
-sourceHash: faaf5e170bc87a1d
+sourceHash: 3f361c0db37dc910
 ---
+
+## 0.14.0
+
+2026-11-20
+
+### 追加
+
+- `emet init` は、Prisma スキーマ（`prisma/schema.prisma` または `prisma/schema/`）または Drizzle のマイグレーションフォルダーを見つけると `schema.ownedPaths` を設定し、スキーマ所有権の `TODO(emet):` マーカーを削除します。
+- `agent-browser` セットアップ項目は、`~/.agent-browser/config.json`（`contentBoundaries` と `maxOutput`）が存在しない場合に書き込み、インストール後に `agent-browser doctor` を実行します。ADR-0035 を参照してください。
+- ホストが非特権ユーザー名前空間を制限している場合、`emet setup` は `agent-browser` がダウンロードした Chrome 用の AppArmor プロファイルと、それを読み込む `sudo` コマンドを出力します。`sudo` を自分で実行することはありません。
+
+### 変更
+
+- `firecrawl-local` セットアップ項目は、MCP サーバーを `off` ではなく `FIRECRAWL_CLOUD=search` で登録し、以前の登録を置き換え、最新の `agent-browser` の Chrome を `FIRECRAWL_CHROME_PATH` として渡します。ADR-0035 を参照してください。
+
+### 修正
+
+- `emet setup` は `firecrawl-local` MCP サーバーをサーバー名を先頭にして登録するため、登録が正しく解析されます。
+- `emet --help` はレジストリ内のすべてのコマンド（setup、fleet、insights、chain、promote、whats-new、deploy-check、ci、run）を一覧表示します。
+- テストが `~/.local/state/emet` 配下の実際のジャーナルに書き込まなくなりました。
 
 ## 0.13.0
 
