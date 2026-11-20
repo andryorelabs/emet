@@ -8,6 +8,8 @@ and this project adheres to
 
 ## [Unreleased]
 
+## [0.14.4] - 2026-11-20
+
 ### Added
 
 - `emet doctor` on the Codex host warns when the emet plugin is enabled in `$CODEX_HOME/config.toml` but Codex has not trusted any of its hooks, so the emet guard does not run. The warning does not change the exit code.
@@ -506,7 +508,8 @@ and this project adheres to
 - Per-repo configuration through `forge.config.json`.
 - `install.sh`, which installs the CLI, command and agents.
 
-[Unreleased]: https://github.com/andryorelabs/emet/compare/v0.14.3...HEAD
+[Unreleased]: https://github.com/andryorelabs/emet/compare/v0.14.4...HEAD
+[0.14.4]: https://github.com/andryorelabs/emet/compare/v0.14.3...v0.14.4
 [0.14.3]: https://github.com/andryorelabs/emet/compare/v0.14.2...v0.14.3
 [0.14.2]: https://github.com/andryorelabs/emet/compare/v0.14.1...v0.14.2
 [0.14.1]: https://github.com/andryorelabs/emet/compare/v0.14.0...v0.14.1

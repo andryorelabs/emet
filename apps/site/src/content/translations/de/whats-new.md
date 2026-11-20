@@ -2,8 +2,20 @@
 title: Neuigkeiten
 description: Release Notes für emet: was sich in jeder Version geändert hat.
 seoTitle: "Neuigkeiten in emet: Release Notes"
-sourceHash: ab9546b053236fcf
+sourceHash: c7ab5fe94ab28e50
 ---
+
+## 0.14.4
+
+2026-11-20
+
+### Hinzugefügt
+
+- `emet doctor` warnt auf dem Codex-Host, wenn das emet-Plugin in `$CODEX_HOME/config.toml` aktiviert ist, Codex aber keinen seiner Hooks als vertrauenswürdig eingestuft hat und der emet-Guard daher nicht läuft. Die Warnung ändert den Exit-Code nicht.
+
+### Behoben
+
+- Wenn das Release-Asset für die Version des Plugins noch nicht heruntergeladen werden kann, führt `bin/emet` für jeden Befehl, nicht nur für `emet guard`, die neueste zwischengespeicherte Binärdatei aus und gibt einen Hinweis aus, dass das Release möglicherweise noch veröffentlicht wird. Mit `EMET_PREFETCH=1` gibt es den Hinweis aus und endet mit `0`, ohne die Binärdatei auszuführen. Eine Prüfsummenabweichung oder eine fehlende `SHA256SUMS` führt weiterhin nie zu einem Fallback, und das Staging-Verzeichnis des Downloads wird vor dem Fallback entfernt.
 
 ## 0.14.3
 
