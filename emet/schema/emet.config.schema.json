@@ -450,6 +450,36 @@
         }
       }
     },
+    "verify": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "browser": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["startCommand", "url"],
+          "description": "Optional browser verification of UI changes by the reviewer, using the `agent-browser` CLI when it is installed. Absent means off.",
+          "properties": {
+            "startCommand": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Shell command that starts the app, for example `bun run dev`."
+            },
+            "url": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Base URL the started app serves."
+            },
+            "paths": {
+              "type": "array",
+              "minItems": 1,
+              "items": { "type": "string", "minLength": 1 },
+              "description": "Globs; when set, the browser check runs only if a changed path matches one."
+            }
+          }
+        }
+      }
+    },
     "landing": {
       "type": "object",
       "additionalProperties": false,
