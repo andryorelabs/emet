@@ -2,7 +2,7 @@
 title: 配置参考
 description: emet.config.json 中的每个键，包括其默认值和含义。
 seoTitle: emet 配置参考
-sourceHash: 03b3df3fa773f181
+sourceHash: 82a86139999124d0
 ---
 
 `emet.config.json` 中的每个键，及其默认值和含义。权威来源是 [`emet/schema/emet.config.schema.json`](../../emet/schema/emet.config.schema.json)。术语遵循 [GLOSSARY.md](../../GLOSSARY.md)。返回 [README](../../README.md)。
@@ -117,6 +117,28 @@ sourceHash: 03b3df3fa773f181
 - `verify` 或 `verify.browser` 下的未知键会被拒绝。
 
 `emet assess` 会输出 `browserVerify: { run, reason }`，仅当 `run` 为 true 时，协调者才会填写评审者的 Browser 维度：该层级有评审者（不是 `passive`）、已配置 `verify.browser`、可选的 [`agent-browser`](cli.md#设置与审计) 二进制文件在 PATH 中，并且在设置了 `paths` 时有变更路径匹配。否则 `reason` 会指出第一个未满足的条件，评审照常进行。仅文档的 diff 属于 `passive`，因此纯内容变更不会进行浏览器验证。浏览器命令连续两次失败的评审者会回退到 Chrome DevTools MCP，或报告一项 `verification-gap` 发现；它绝不会阻塞该波次。
+
+## validate
+
+可选。缺省表示不做关联范围检查，所有命令的行为与之前一致。
+
+```json
+{
+  "validate": {
+    "coupledSurfaces": [
+      {
+        "source": "docs/{guide,reference,how-to}/**/*.md",
+        "dependents": "apps/site/src/content/translations/**"
+      }
+    ]
+  }
+}
+```
+
+- `coupledSurfaces`: 非空的配对列表。每个配对有一个 `source` glob 和一个 `dependents` glob，二者都是非空字符串；`source` 接受花括号 glob，例如 `docs/{guide,reference}/**/*.md`。
+- `validate` 或配对中的未知键会被拒绝，格式错误的条目会使加载失败，并给出指明 `validate.coupledSurfaces[<n>]` 的消息。
+
+当某个工单的范围与某个配对的 `source` 重叠，而其所在波次早于范围与该配对 `dependents` 重叠的工单时，`emet validate`（`--file` 和 `--spec`）以及 `emet preflight` 的运行关卡会报 `coupled-surface-split` 错误。源页面的编辑与更新依赖它的内容（例如翻译）的工单必须在同一波次交付。同一波次，或没有 dependents 工单，则通过。参见 [ADR-0033](../adr/0033-coupled-surfaces-ship-in-one-wave.md)。
 
 ## interview
 
