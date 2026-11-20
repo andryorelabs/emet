@@ -43,6 +43,9 @@ function harness(options: {
   mode?: "release" | "promote" | "none";
   ci?: CiOutcome["state"];
   ahead?: number;
+  syncCi?: CiOutcome["state"];
+  syncNoChecks?: boolean;
+  syncMergeError?: string;
 }): Harness {
   const calls: string[][] = [];
   const recorded: PromoteOutcome[] = [];
@@ -54,18 +57,24 @@ function harness(options: {
       return Promise.resolve(`https://github.com/o/r/pull/${created === 1 ? 10 : 11}\n`);
     }
     if (args[0] === "api") return Promise.resolve(`${options.ahead ?? 0}\n`);
+    if (args[0] === "pr" && args[1] === "merge" && args[2] === "11" && options.syncMergeError) {
+      return Promise.reject(new Error(options.syncMergeError));
+    }
     return Promise.resolve("");
   };
   const deps: PromoteDeps = {
     mode: options.mode ?? "promote",
     gh,
-    waitForCi: () =>
-      Promise.resolve({
-        state: options.ci ?? "pass",
+    waitForCi: (pr) => {
+      calls.push(["wait", String(pr)]);
+      const isSync = pr === 11;
+      return Promise.resolve({
+        state: (isSync ? options.syncCi : undefined) ?? options.ci ?? "pass",
         failedChecks: [],
         flakeReruns: 0,
-        noChecks: false,
-      }),
+        noChecks: isSync && options.syncNoChecks === true,
+      });
+    },
     record: (outcome) => recorded.push({ ...outcome }),
     readChangedPaths: () => Promise.resolve([]),
   };
@@ -188,11 +197,60 @@ describe("promoteDevelop", () => {
     expect(recorded[0]?.merged).toBe(true);
   });
 
-  test("opens and merges a sync pull request only when develop is behind main", async () => {
+  test("waits for the sync pull request, then merges it on pass", async () => {
     const { deps, calls } = harness({ ahead: 2 });
     const outcome = await promoteDevelop({ dryRun: false }, deps);
-    expect(outcome.syncPrNumber).toBe(11);
+    expect(outcome).toMatchObject({ syncPrNumber: 11, syncMerged: true, syncReason: null });
+    const waitIndex = calls.findIndex((call) => call[0] === "wait" && call[1] === "11");
+    const mergeIndex = calls.findIndex((call) => call.join(" ") === "pr merge 11 --merge");
+    expect(waitIndex).toBeGreaterThan(-1);
+    expect(mergeIndex).toBeGreaterThan(waitIndex);
+  });
+
+  test("merges a sync pull request with no checks immediately", async () => {
+    const { deps, calls } = harness({ ahead: 2, syncNoChecks: true });
+    const outcome = await promoteDevelop({ dryRun: false }, deps);
+    expect(outcome.syncMerged).toBe(true);
     expect(calls).toContainEqual(["pr", "merge", "11", "--merge"]);
+  });
+
+  test.each(["fail", "timeout", "env-fault"] as const)(
+    "leaves the sync pull request open when its CI is %s",
+    async (syncCi) => {
+      const { deps, calls, recorded } = harness({ ahead: 2, syncCi });
+      const outcome = await promoteDevelop({ dryRun: false }, deps);
+      expect(outcome).toMatchObject({ merged: true, syncPrNumber: 11, syncMerged: false });
+      expect(outcome.syncReason).toContain(syncCi);
+      expect(calls.some((call) => call.join(" ") === "pr merge 11 --merge")).toBe(false);
+      expect(recorded[0]).toMatchObject({ syncMerged: false, syncReason: outcome.syncReason });
+    },
+  );
+
+  test("leaves the sync pull request open when the merge is rejected", async () => {
+    const { deps } = harness({ ahead: 2, syncMergeError: "merge blocked" });
+    const outcome = await promoteDevelop({ dryRun: false }, deps);
+    expect(outcome).toMatchObject({ merged: true, syncPrNumber: 11, syncMerged: false });
+    expect(outcome.syncReason).toContain("merge blocked");
+  });
+
+  test("a non-Error merge rejection is recorded as text", async () => {
+    const { deps } = harness({ ahead: 2 });
+    const gh = deps.gh;
+    deps.gh = (args) => {
+      if (args[1] === "merge" && args[2] === "11") {
+        // oxlint-disable-next-line typescript/prefer-promise-reject-errors -- the test needs a non-Error rejection
+        return Promise.reject("denied");
+      }
+      return gh(args);
+    };
+    const outcome = await promoteDevelop({ dryRun: false }, deps);
+    expect(outcome.syncReason).toContain("denied");
+  });
+
+  test("opens no sync pull request when develop is not behind main", async () => {
+    const { deps } = harness({ ahead: 0 });
+    const outcome = await promoteDevelop({ dryRun: false }, deps);
+    expect(outcome).toMatchObject({ syncPrNumber: null, syncMerged: false, syncReason: null });
   });
 
   test.each(["fail", "timeout", "env-fault"] as const)("never merges when CI is %s", async (ci) => {
@@ -249,6 +307,8 @@ describe("buildPromoteDeps", () => {
       prNumber: 7,
       merged: true,
       syncPrNumber: null,
+      syncMerged: false,
+      syncReason: null,
       deployCheck: { run: true, reason: "merged" },
       ciState: "pass",
     });
@@ -266,6 +326,8 @@ describe("buildPromoteDeps", () => {
           prNumber: 7,
           merged: true,
           syncPrNumber: null,
+          syncMerged: false,
+          syncReason: null,
           ciState: "pass",
         },
       },
