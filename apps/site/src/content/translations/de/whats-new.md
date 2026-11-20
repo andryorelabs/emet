@@ -2,8 +2,28 @@
 title: Neuigkeiten
 description: Release Notes für emet: was sich in jeder Version geändert hat.
 seoTitle: "Neuigkeiten in emet: Release Notes"
-sourceHash: faaf5e170bc87a1d
+sourceHash: 3f361c0db37dc910
 ---
+
+## 0.14.0
+
+2026-11-20
+
+### Hinzugefügt
+
+- `emet init` setzt `schema.ownedPaths`, wenn es ein Prisma-Schema (`prisma/schema.prisma` oder `prisma/schema/`) oder einen Drizzle-Migrationsordner findet, und entfernt den Marker `TODO(emet):` für die Schema-Zuständigkeit.
+- Das Setup-Element `agent-browser` schreibt `~/.agent-browser/config.json` (`contentBoundaries` und `maxOutput`), wenn die Datei nicht existiert, und führt nach der Installation `agent-browser doctor` aus. Siehe ADR-0035.
+- `emet setup` gibt ein AppArmor-Profil für den von `agent-browser` heruntergeladenen Chrome aus, zusammen mit den `sudo`-Befehlen zum Laden, wenn der Host unprivilegierte User-Namespaces einschränkt. Es führt `sudo` nie selbst aus.
+
+### Geändert
+
+- Das Setup-Element `firecrawl-local` registriert den MCP-Server mit `FIRECRAWL_CLOUD=search` statt `off`, ersetzt eine frühere Registrierung und übergibt den neuesten Chrome von `agent-browser` als `FIRECRAWL_CHROME_PATH`. Siehe ADR-0035.
+
+### Behoben
+
+- `emet setup` registriert den MCP-Server `firecrawl-local` mit dem Servernamen an erster Stelle, sodass die Registrierung korrekt geparst wird.
+- `emet --help` listet jeden Befehl der Registry auf (setup, fleet, insights, chain, promote, whats-new, deploy-check, ci, run).
+- Tests schreiben nicht mehr in das echte Journal unter `~/.local/state/emet`.
 
 ## 0.13.0
 
