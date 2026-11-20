@@ -2,7 +2,7 @@
 title: Referência de configuração
 description: Cada chave do emet.config.json com seu valor padrão e seu significado.
 seoTitle: Referência de configuração do emet
-sourceHash: 021a695d999163e3
+sourceHash: 03b3df3fa773f181
 ---
 
 Cada chave do `emet.config.json`, com seu valor padrão e seu significado. A fonte da verdade é [`emet/schema/emet.config.schema.json`](../../emet/schema/emet.config.schema.json). Os termos seguem o [GLOSSARY.md](../../GLOSSARY.md). Voltar ao [README](../../README.md).
@@ -94,6 +94,29 @@ Opcional. Se ausente, não há verificação de deploy.
 - `check.paths` (opcional): uma lista não vazia de globs não vazios. Com ela, um promote mesclado executa a verificação apenas quando um caminho alterado corresponde; sem ela, todo promote mesclado a executa.
 
 A verificação não depende mais de `afterSpec`. `emet promote` imprime `deployCheck: { run, reason }` e o coordenador executa `emet deploy-check` somente quando `run` é true: nunca sem um `deploy.check` nem após uma última onda que não esteja limpa; em `repo.trunk` `main`, onde todo merge faz deploy, após uma última onda limpa qualquer que seja o modo (também com `--no-promote` ou uma spec retida, e ignorando `paths`); em `develop`, somente no modo `promote` após um promote mesclado que corresponda a `paths`. No modo `release`, o deploy espera por uma pessoa.
+
+## verify
+
+Opcional. Ausente significa nenhuma verificação no navegador, e todo comando se comporta como antes.
+
+```json
+{
+  "verify": {
+    "browser": {
+      "startCommand": "bun run dev",
+      "url": "http://localhost:4321",
+      "paths": ["apps/site/**"]
+    }
+  }
+}
+```
+
+- `browser.startCommand`: comando de shell não vazio que inicia o servidor de desenvolvimento do app. O revisor o executa e o encerra ao terminar.
+- `browser.url`: URL não vazia em que o app em execução responde.
+- `browser.paths` (opcional): lista não vazia de globs não vazios. Com ele, a verificação no navegador só roda quando um caminho alterado corresponde; sem ele, todo diff revisado qualifica. Os globs usam o mesmo matcher de `deploy.check.paths`.
+- Chaves desconhecidas em `verify` ou `verify.browser` são rejeitadas.
+
+O `emet assess` imprime `browserVerify: { run, reason }`, e o coordenador só preenche o eixo Browser do revisor quando `run` é true: o nível tem revisor (não é `passive`), `verify.browser` está configurado, o binário opcional [`agent-browser`](cli.md#configuração-e-auditoria) está no PATH e, quando `paths` está definido, um caminho alterado corresponde. Caso contrário, `reason` nomeia a primeira condição que falhou e a revisão roda como antes. Um diff somente de documentação é `passive`, então uma mudança só de conteúdo não é verificada no navegador. Um revisor cujos comandos de navegador falham duas vezes recorre ao Chrome DevTools MCP ou reporta um achado `verification-gap`; nunca bloqueia a onda.
 
 ## interview
 
