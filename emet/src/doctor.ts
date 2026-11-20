@@ -10,6 +10,7 @@ import {
   agentHostOfConfig,
   checkDependencies,
   classifyClaudePluginProbe,
+  classifyAgentBrowser,
   classifyEngram,
   classifyForgeAgentsProbe,
   createDependencyProbes,
@@ -95,6 +96,9 @@ export interface RepoDoctorReport {
    * `CONTEXT.md` without `GLOSSARY.md`, or a deprecated config field that is
    * still set. */
   readonly warnings: readonly string[];
+  /** Optional findings that never dirty a repo or change the exit code, e.g.
+   * the agent-browser check for a repo that sets `verify.browser`. */
+  readonly optionalFindings?: readonly string[];
 }
 
 /** A repo is clean if every check came back empty/false-negative — used both
@@ -732,9 +736,21 @@ export async function auditRepo(
       )
     : [];
 
+  const agentBrowserProbe =
+    configResult.status === "ok" && configResult.config.verify?.browser !== undefined
+      ? await probes.agentBrowser?.()
+      : undefined;
+  const optionalFindings =
+    agentBrowserProbe === undefined
+      ? []
+      : [classifyAgentBrowser(agentBrowserProbe)]
+          .filter((check) => check.status !== "satisfied")
+          .map((check) => formatDependencyCheck(check, "    "));
+
   return {
     path: absolutePath,
     isGitRepo: true,
+    ...(optionalFindings.length > 0 ? { optionalFindings } : {}),
     hasConfig,
     configError,
     missingDocs,
@@ -767,8 +783,10 @@ function formatReport(report: RepoDoctorReport): string {
       ...(report.maxLiveWorkersNote ? [report.maxLiveWorkersNote] : []),
       ...report.warnings,
     ];
-    return notes.length > 0
-      ? `${report.path}: OK\n${notes.map((note) => `  - note: ${note}`).join("\n")}`
+    const optionalLines = (report.optionalFindings ?? []).map((finding) => `  - ${finding}`);
+    const noteLines = [...notes.map((note) => `  - note: ${note}`), ...optionalLines];
+    return noteLines.length > 0
+      ? `${report.path}: OK\n${noteLines.join("\n")}`
       : `${report.path}: OK`;
   }
 
@@ -793,6 +811,9 @@ function formatReport(report: RepoDoctorReport): string {
   }
   for (const warning of report.warnings) {
     lines.push(`  - warning: ${warning}`);
+  }
+  for (const finding of report.optionalFindings ?? []) {
+    lines.push(`  - ${finding}`);
   }
   for (const check of report.dependencyFindings) {
     if (check.status === "unsatisfied") {
