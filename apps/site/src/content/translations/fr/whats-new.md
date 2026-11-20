@@ -2,8 +2,20 @@
 title: Nouveautés
 description: Notes de version d'emet : ce qui a changé dans chaque version.
 seoTitle: Nouveautés d'emet : notes de version
-sourceHash: ab9546b053236fcf
+sourceHash: c7ab5fe94ab28e50
 ---
+
+## 0.14.4
+
+2026-11-20
+
+### Ajouté
+
+- `emet doctor` sur l'hôte Codex avertit lorsque le plugin emet est activé dans `$CODEX_HOME/config.toml` mais que Codex n'a approuvé aucun de ses hooks, de sorte que le garde emet ne s'exécute pas. L'avertissement ne modifie pas le code de sortie.
+
+### Corrigé
+
+- Lorsque l'asset de la release pour la version du plugin ne peut pas encore être téléchargé, `bin/emet` exécute le binaire en cache le plus récent pour toutes les commandes, et pas seulement pour `emet guard`, et affiche un avis indiquant que la release est peut-être encore en cours de publication. Avec `EMET_PREFETCH=1`, il affiche l'avis et se termine avec `0` sans l'exécuter. Une somme de contrôle incorrecte ou un `SHA256SUMS` manquant ne déclenchent toujours jamais de repli, et le répertoire temporaire du téléchargement est supprimé avant le repli.
 
 ## 0.14.3
 
