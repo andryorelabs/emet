@@ -88,5 +88,12 @@
       "timeoutSeconds": 360,
       "paths": ["apps/site/**", "docs/**"]
     }
+  },
+  "verify": {
+    "browser": {
+      "startCommand": "bun run --cwd apps/site dev",
+      "url": "http://localhost:4321",
+      "paths": ["apps/site/**"]
+    }
   }
 }
