@@ -146,3 +146,49 @@ describe("local tracker spec source", () => {
     }
   });
 });
+
+const docs = (wave: number) =>
+  ticket({ id: "DOC", covers: ["S1"], surfaces: ["docs/guide/cli.md"], wave });
+const translations = (wave: number) =>
+  ticket({ id: "TR", covers: ["S2"], surfaces: ["site/translations/es/cli.md"], wave });
+
+describe("validatePlan coupled surfaces", () => {
+  const pairs = [{ source: "docs/**/*.md", dependents: "site/translations/**" }];
+  const plan = (tickets: PlanTicket[], coupledSurfaces?: typeof pairs) =>
+    validatePlan(
+      { specMarkdown: SPEC, tickets },
+      coupledSurfaces === undefined ? {} : { coupledSurfaces },
+    );
+
+  test("a dependents ticket in a later wave is an error", () => {
+    const result = plan([docs(1), translations(2)], pairs);
+    expect(result.ok).toBe(false);
+    expect(codes(result)).toEqual(["coupled-surface-split"]);
+    expect(result.findings[0]?.message).toContain("DOC");
+    expect(result.findings[0]?.message).toContain("TR");
+  });
+
+  test("the same wave passes", () => {
+    expect(plan([docs(1), translations(1)], pairs)).toEqual({ ok: true, findings: [] });
+  });
+
+  test("a dependents ticket in an earlier wave passes", () => {
+    expect(plan([docs(2), translations(1)], pairs).ok).toBe(true);
+  });
+
+  test("no dependents ticket passes", () => {
+    expect(codes(plan([docs(1)], pairs))).not.toContain("coupled-surface-split");
+  });
+
+  test("no config is a no-op", () => {
+    expect(plan([docs(1), translations(2)]).ok).toBe(true);
+    expect(plan([docs(1), translations(2)], []).ok).toBe(true);
+  });
+
+  test("brace globs on either side are expanded", () => {
+    const braces = [
+      { source: "docs/{guide,reference}/**", dependents: "site/{a,translations}/**" },
+    ];
+    expect(codes(plan([docs(1), translations(2)], braces))).toEqual(["coupled-surface-split"]);
+  });
+});

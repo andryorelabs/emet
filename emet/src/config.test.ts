@@ -395,6 +395,53 @@ describe("loadForgeConfig", () => {
     expect(reasonOf(result)).toContain(message);
   });
 
+  test("validate is absent by default", async () => {
+    await writeConfig({});
+    expect(configOf(await loadForgeConfig(repoRoot)).validate).toBeUndefined();
+    await writeConfig({ validate: {} });
+    expect(configOf(await loadForgeConfig(repoRoot)).validate).toBeUndefined();
+  });
+
+  test("validate.coupledSurfaces loads typed when valid", async () => {
+    const coupledSurfaces = [{ source: "docs/**/*.md", dependents: "apps/site/**" }];
+    await writeConfig({ validate: { coupledSurfaces } });
+    expect(configOf(await loadForgeConfig(repoRoot)).validate).toEqual({ coupledSurfaces });
+  });
+
+  const validPair = { source: "docs/**", dependents: "apps/**" };
+
+  test.each([
+    ["validate", { validate: "x" }, '"validate" must be an object'],
+    ["validate unknown key", { validate: { extra: 1 } }, '"validate.extra"'],
+    [
+      "coupledSurfaces not a list",
+      { validate: { coupledSurfaces: "x" } },
+      "validate.coupledSurfaces",
+    ],
+    ["coupledSurfaces empty", { validate: { coupledSurfaces: [] } }, "validate.coupledSurfaces"],
+    ["pair not an object", { validate: { coupledSurfaces: ["x"] } }, "validate.coupledSurfaces[0]"],
+    [
+      "pair unknown key",
+      { validate: { coupledSurfaces: [{ ...validPair, extra: 1 }] } },
+      "validate.coupledSurfaces[0].extra",
+    ],
+    [
+      "source empty",
+      { validate: { coupledSurfaces: [{ ...validPair, source: "" }] } },
+      "validate.coupledSurfaces[0].source",
+    ],
+    [
+      "dependents missing",
+      { validate: { coupledSurfaces: [{ source: "docs/**" }] } },
+      "validate.coupledSurfaces[0].dependents",
+    ],
+  ])("rejects validate %s", async (_name, raw, message) => {
+    await writeConfig(raw);
+    const result = await loadForgeConfig(repoRoot);
+    expect(result.status).toBe("malformed");
+    expect(reasonOf(result)).toContain(message);
+  });
+
   test("this repo's own config promotes the Website and releases everything else", async () => {
     const ownRoot = path.resolve(import.meta.dir, "..", "..");
     const { afterSpec } = configOf(await loadForgeConfig(ownRoot)).handoff;

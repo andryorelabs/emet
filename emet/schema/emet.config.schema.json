@@ -450,6 +450,35 @@
         }
       }
     },
+    "validate": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Optional plan-validation rules for `emet validate` and the run gate. Absent means off.",
+      "properties": {
+        "coupledSurfaces": {
+          "type": "array",
+          "minItems": 1,
+          "description": "Surface pairs that must ship in the same wave: a ticket touching `source` may not land in an earlier wave than a ticket touching `dependents`.",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["source", "dependents"],
+            "properties": {
+              "source": {
+                "type": "string",
+                "minLength": 1,
+                "description": "Glob of the source surface, for example `docs/{guide,reference}/**/*.md`."
+              },
+              "dependents": {
+                "type": "string",
+                "minLength": 1,
+                "description": "Glob of the surface that must follow the source in the same wave."
+              }
+            }
+          }
+        }
+      }
+    },
     "verify": {
       "type": "object",
       "additionalProperties": false,
