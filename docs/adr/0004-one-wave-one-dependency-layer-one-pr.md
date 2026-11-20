@@ -1,6 +1,6 @@
 # 0004. One wave = one dependency layer = one PR
 
-Status: Accepted (2026-11-03). Amended by [0010](0010-local-merge-landing.md): the landing unit is a PR or a local merge. Amended by [0012](0012-develop-development-branch.md): the landing target is `develop`, not `main`.
+Status: Accepted (2026-11-03). Amended by [0010](0010-local-merge-landing.md): the landing unit is a PR or a local merge. Amended by [0012](0012-develop-development-branch.md): the landing target is `develop`, not `main`. Amended by [0033](0033-coupled-surfaces-ship-in-one-wave.md): a ticket that edits a published English page and the tickets that translate it share one wave.
 Spec: #73
 
 ## Context
