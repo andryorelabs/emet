@@ -189,6 +189,7 @@ describe("launchFleetDraft", () => {
       [entryFor("ok"), entryFor("full"), entryFor("bad")],
       "add dark mode",
       deps,
+      { dryRun: false },
     );
     expect(results.map((result) => result.launched)).toEqual([true, false, false]);
     expect(results[1]?.reason).toContain("low-disk");
@@ -207,8 +208,32 @@ describe("launchFleetDraft", () => {
       loadSettings: () => Promise.reject(new Error("bad config")),
       checkReadiness: () => Promise.resolve([]),
     };
-    const results = await launchFleetDraft([entryFor("ok")], "x", deps);
+    const results = await launchFleetDraft([entryFor("ok")], "x", deps, { dryRun: false });
     expect(results[0]).toMatchObject({ launched: false, reason: "bad config" });
+  });
+});
+
+describe("launchFleetDraft dry run", () => {
+  test("runs readiness but never starts a session", async () => {
+    const starts: { name: string; prompt: string; cwd: string }[] = [];
+    const deps: FleetLaunchDeps = {
+      runner: () => Promise.resolve({ exitCode: 0, stdout: "", stderr: "" }),
+      loadSettings: () =>
+        Promise.resolve({ host: fakeHost(starts), launcher: "bg", permissionMode: "auto" }),
+      checkReadiness: (repoPath) =>
+        Promise.resolve(
+          repoPath.endsWith("full")
+            ? [{ code: "low-disk", blocking: true, detail: "disk low" }]
+            : [],
+        ),
+    };
+    const results = await launchFleetDraft([entryFor("ok"), entryFor("full")], "x", deps, {
+      dryRun: true,
+    });
+    expect(starts).toHaveLength(0);
+    expect(results[0]).toMatchObject({ launched: false, dryRun: true, name: "emet-draft-ok" });
+    expect(results[1]).toMatchObject({ launched: false, dryRun: false });
+    expect(results[1]?.reason).toContain("low-disk");
   });
 });
 
@@ -274,6 +299,46 @@ describe("run", () => {
     expect(starts).toHaveLength(1);
     expect(capture.out[0]).toContain("launched emet-draft-alpha");
     expect(process.exitCode).toBe(0);
+  });
+
+  test("launch --dry-run prints would launch and exits 0 without starting a session", async () => {
+    makeRepo("alpha", { tracker: { kind: "github" } });
+    const starts: { name: string; prompt: string; cwd: string }[] = [];
+    const launch: FleetLaunchDeps = {
+      runner: () => Promise.resolve({ exitCode: 0, stdout: "", stderr: "" }),
+      loadSettings: () =>
+        Promise.resolve({ host: fakeHost(starts), launcher: "bg", permissionMode: "auto" }),
+      checkReadiness: () => Promise.resolve([]),
+    };
+    process.exitCode = 0;
+    const capture = captureOutput();
+    await run(["launch", "--feature", "x", "--root", root, "--dry-run"], { launch });
+    capture.restore();
+    expect(starts).toHaveLength(0);
+    expect(capture.out[0]).toContain("would launch emet-draft-alpha");
+    expect(process.exitCode).toBe(0);
+    const jsonCapture = captureOutput();
+    await run(["launch", "--feature", "x", "--root", root, "--dry-run", "--json"], { launch });
+    jsonCapture.restore();
+    expect(jsonCapture.out[0]).toContain('"launched":false');
+    expect(jsonCapture.out[0]).toContain('"dryRun":true');
+  });
+
+  test("launch --dry-run still exits 1 on a blocking readiness issue", async () => {
+    makeRepo("alpha", { tracker: { kind: "github" } });
+    const launch: FleetLaunchDeps = {
+      runner: () => Promise.resolve({ exitCode: 0, stdout: "", stderr: "" }),
+      loadSettings: () =>
+        Promise.resolve({ host: fakeHost([]), launcher: "bg", permissionMode: "auto" }),
+      checkReadiness: () => Promise.resolve([{ code: "low-disk", blocking: true, detail: "x" }]),
+    };
+    process.exitCode = 0;
+    const capture = captureOutput();
+    await run(["launch", "--feature", "x", "--root", root, "--dry-run"], { launch });
+    capture.restore();
+    expect(capture.out[0]).toContain("not launched: low-disk");
+    expect(process.exitCode).toBe(1);
+    process.exitCode = 0;
   });
 
   test("launch reports failures as exit 1 and JSON", async () => {

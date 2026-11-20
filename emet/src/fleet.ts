@@ -49,6 +49,7 @@ export interface FleetChange {
 export interface FleetLaunch {
   readonly path: string;
   readonly launched: boolean;
+  readonly dryRun: boolean;
   readonly name: string | null;
   readonly reason: string | null;
 }
@@ -186,6 +187,7 @@ async function launchOne(
   entry: FleetEntry,
   feature: string,
   deps: FleetLaunchDeps,
+  dryRun: boolean,
 ): Promise<FleetLaunch> {
   try {
     const settings = await deps.loadSettings(entry.path);
@@ -193,9 +195,10 @@ async function launchOne(
     const blocking = issues.filter((issue) => issue.blocking);
     if (blocking.length > 0) {
       const reason = blocking.map((issue) => `${issue.code}: ${issue.detail}`).join("; ");
-      return { path: entry.path, launched: false, name: null, reason };
+      return { path: entry.path, launched: false, dryRun: false, name: null, reason };
     }
     const name = `${BINARY}-draft-${path.basename(entry.path)}`;
+    if (dryRun) return { path: entry.path, launched: false, dryRun: true, name, reason: null };
     await settings.host.sessions.start(
       {
         name,
@@ -205,26 +208,34 @@ async function launchOne(
       },
       deps.runner,
     );
-    return { path: entry.path, launched: true, name, reason: null };
+    return { path: entry.path, launched: true, dryRun: false, name, reason: null };
   } catch (error: unknown) {
-    return { path: entry.path, launched: false, name: null, reason: errorMessage(error) };
+    return {
+      path: entry.path,
+      launched: false,
+      dryRun: false,
+      name: null,
+      reason: errorMessage(error),
+    };
   }
 }
 
 /**
  * Opens a `/emet:run --draft <feature>` session in each repo after the launch
  * readiness checks of `emet chain`. A repo that fails a blocking check or
- * whose session cannot start is reported, and the others still launch.
+ * whose session cannot start is reported, and the others still launch. With
+ * `dryRun` the readiness checks still run but no session is started.
  */
 export async function launchFleetDraft(
   entries: readonly FleetEntry[],
   feature: string,
   deps: FleetLaunchDeps,
+  options: { dryRun: boolean },
 ): Promise<FleetLaunch[]> {
   const results: FleetLaunch[] = [];
   for (const entry of entries) {
     // oxlint-disable-next-line eslint/no-await-in-loop -- sequential on purpose: one session start at a time
-    results.push(await launchOne(entry, feature, deps));
+    results.push(await launchOne(entry, feature, deps, options.dryRun));
   }
   return results;
 }
@@ -325,6 +336,7 @@ function formatChange(change: FleetChange): string {
 }
 
 function formatLaunch(launch: FleetLaunch): string {
+  if (launch.dryRun) return `${launch.path}\twould launch ${launch.name}`;
   return launch.launched
     ? `${launch.path}\tlaunched ${launch.name}`
     : `${launch.path}\tnot launched: ${launch.reason}`;
@@ -376,9 +388,11 @@ export async function run(argv: string[], overrides: FleetRunDeps = {}): Promise
         selectRepos(entries, readFlagValue(argv, "--repos")),
         feature,
         overrides.launch ?? defaultLaunchDeps(),
+        { dryRun: argv.includes("--dry-run") },
       );
       print(json, launches, formatLaunch);
-      if (launches.some((launch) => !launch.launched)) process.exitCode = exitCodes.findings;
+      if (launches.some((launch) => !launch.launched && !launch.dryRun))
+        process.exitCode = exitCodes.findings;
     }
   } catch (error: unknown) {
     console.error(errorMessage(error));
