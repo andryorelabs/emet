@@ -27,6 +27,8 @@ exist); a clear violation is a finding.
 Spec axis: the per-S# verdicts above; code that does not match what the spec
 asked for is a finding.
 
+{{browser_verify}}
+
 Lenses: medium = correctness + verification-gap; high adds security/resilience.
 Verification-gap: one finding per gap, "one test that would catch <named
 regression>".
@@ -53,6 +55,24 @@ rounds, no other fields; `[]` = nothing blocks.
 
 Refuter: once, over all blocker/critical findings together, try to refute them;
 drop or downgrade what you refute.
+
+## Browser axis text
+
+The text `{{browser_verify}}` is filled with, only when `emet assess` printed
+`browserVerify.run: true` (otherwise it is empty and the review runs as
+before):
+
+```
+Browser axis: start `verify.browser.startCommand` from `emet.config.json` and
+wait for `verify.browser.url`. Load the tool's own instructions with
+`agent-browser skills get core`. Use `--session review-{{run_id}}` on every
+command. Walk the pages the diff touches with `snapshot -i`, `errors` and
+`console`. Write screenshots to a file, never inline, and read one only when
+needed. Each UI or console error is a finding with the `file:line` of the
+likely cause. Close the session and the server when done. If a command fails
+twice, fall back to Chrome DevTools MCP or emit a `verification-gap` finding;
+never block the wave.
+```
 
 ## Recheck variant: fix round
 
