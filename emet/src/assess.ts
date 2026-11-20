@@ -9,12 +9,13 @@
  * raises the tier one step (passive -> medium, medium -> high). It can never
  * lower a tier.
  *
- * Prints `{tier, reasons, reviewer:{model,effort}|null}` as JSON. Tier
+ * Prints `{tier, reasons, reviewer:{model,effort}|null, browserVerify:{run,reason}}` as JSON. Tier
  * is `passive` (reviewer null: no review) for docs-only diffs, `high` when a changed path matches a
  * high-risk token (built-in or `review.highRiskPaths`) or an added line
  * matches a dangerous-sink pattern, and `medium` otherwise.
  */
 
+import { matchesAnyGlob } from "./afterspec";
 import {
   ForgeConfigError,
   loadForgeConfigWithDefaults,
@@ -22,14 +23,34 @@ import {
   type ForgeConfig,
   type ModelChoice,
 } from "./config";
+import { resolveBinaryOnPath } from "./dependencies";
 
 type AssessTier = "passive" | "medium" | "high";
+
+/** Whether a reviewer should drive the app in a browser, and why or why not. */
+export interface BrowserVerify {
+  readonly run: boolean;
+  readonly reason: string;
+}
 
 export interface AssessResult {
   readonly tier: AssessTier;
   readonly reasons: readonly string[];
   readonly reviewer: ModelChoice | null;
+  readonly browserVerify: BrowserVerify;
 }
+
+/** Facts about the host that `classifyDiff` cannot derive from the diff or config. */
+export interface AssessEnvironment {
+  readonly agentBrowserOnPath: boolean;
+}
+
+interface AssessContext {
+  readonly input: DiffInput;
+  readonly environment: AssessEnvironment;
+}
+
+const DEFAULT_ENVIRONMENT: AssessEnvironment = { agentBrowserOnPath: false };
 
 export interface DiffInput {
   readonly paths: readonly string[];
@@ -79,7 +100,42 @@ function isDocPath(filePath: string): boolean {
   );
 }
 
-export function classifyDiff(input: DiffInput, config: ForgeConfig): AssessResult {
+function evaluateBrowserVerify(
+  input: DiffInput,
+  config: ForgeConfig,
+  reviewer: ModelChoice | null,
+  environment: AssessEnvironment,
+): BrowserVerify {
+  const browser = config.verify?.browser;
+  if (reviewer === null) {
+    return { run: false, reason: "the tier has no reviewer, so no browser verification runs" };
+  }
+  if (browser === undefined) {
+    return { run: false, reason: "verify.browser is not configured" };
+  }
+  if (!environment.agentBrowserOnPath) {
+    return { run: false, reason: "the agent-browser binary is not on PATH" };
+  }
+  if (
+    browser.paths !== undefined &&
+    !input.paths.some((changed) => matchesAnyGlob(browser.paths ?? [], changed))
+  ) {
+    return {
+      run: false,
+      reason: "no changed path matches the verify.browser.paths globs",
+    };
+  }
+  return {
+    run: true,
+    reason: "reviewer present, verify.browser configured and agent-browser found",
+  };
+}
+
+export function classifyDiff(
+  input: DiffInput,
+  config: ForgeConfig,
+  environment: AssessEnvironment = DEFAULT_ENVIRONMENT,
+): AssessResult {
   const { models, review } = config;
 
   if (input.paths.length === 0 || input.paths.every(isDocPath)) {
@@ -87,6 +143,7 @@ export function classifyDiff(input: DiffInput, config: ForgeConfig): AssessResul
       tier: "passive",
       reasons: [input.paths.length === 0 ? "empty diff" : "docs-only diff"],
       reviewer: null,
+      browserVerify: evaluateBrowserVerify(input, config, null, environment),
     };
   }
 
@@ -109,12 +166,18 @@ export function classifyDiff(input: DiffInput, config: ForgeConfig): AssessResul
   }
 
   if (reasons.length > 0) {
-    return { tier: "high", reasons: [...new Set(reasons)], reviewer: models.reviewer.high };
+    return {
+      tier: "high",
+      reasons: [...new Set(reasons)],
+      reviewer: models.reviewer.high,
+      browserVerify: evaluateBrowserVerify(input, config, models.reviewer.high, environment),
+    };
   }
   return {
     tier: "medium",
     reasons: ["source change with no high-risk signals"],
     reviewer: models.reviewer.medium,
+    browserVerify: evaluateBrowserVerify(input, config, models.reviewer.medium, environment),
   };
 }
 
@@ -132,14 +195,17 @@ export function applyRiskLine(
   result: AssessResult,
   riskLineText: string,
   config: ForgeConfig,
+  context?: AssessContext,
 ): AssessResult {
   const risk = parseRiskLine(riskLineText);
   if (risk.kind === "none" || result.tier === "high") return result;
   const reasons = [...result.reasons, `risk line: ${risk.reason}`];
-  if (result.tier === "passive") {
-    return { tier: "medium", reasons, reviewer: config.models.reviewer.medium };
-  }
-  return { tier: "high", reasons, reviewer: config.models.reviewer.high };
+  const tier = result.tier === "passive" ? "medium" : "high";
+  const reviewer = config.models.reviewer[tier];
+  const browserVerify = context
+    ? evaluateBrowserVerify(context.input, config, reviewer, context.environment)
+    : result.browserVerify;
+  return { tier, reasons, reviewer, browserVerify };
 }
 
 export function parseDiffInput(nameOnlyOutput: string, patch: string): DiffInput {
@@ -188,10 +254,14 @@ export async function run(argv: string[]): Promise<void> {
     const { config } = await loadForgeConfigWithDefaults(repoRoot);
     const nameOnly = await gitDiff(repoRoot, ["-z", "--name-only", base, head, "--"]);
     const patch = await gitDiff(repoRoot, ["-U0", base, head, "--"]);
-    const classified = classifyDiff(parseDiffInput(nameOnly, patch), config);
+    const input = parseDiffInput(nameOnly, patch);
+    const environment = { agentBrowserOnPath: await resolveBinaryOnPath("agent-browser") };
+    const classified = classifyDiff(input, config, environment);
     const riskLine = readFlagValue(argv, "--risk-line");
     const result =
-      riskLine === undefined ? classified : applyRiskLine(classified, riskLine, config);
+      riskLine === undefined
+        ? classified
+        : applyRiskLine(classified, riskLine, config, { input, environment });
     console.log(JSON.stringify(result, null, 2));
   } catch (error: unknown) {
     if (error instanceof ForgeConfigError) {

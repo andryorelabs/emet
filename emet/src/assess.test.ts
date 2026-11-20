@@ -243,3 +243,79 @@ describe("applyRiskLine", () => {
     expect(applyRiskLine(high, "Risk: item 1 (x)", DEFAULT_FORGE_CONFIG).tier).toBe("high");
   });
 });
+
+const browserConfig = (paths?: string[]): ForgeConfig => ({
+  ...DEFAULT_FORGE_CONFIG,
+  verify: {
+    browser: {
+      startCommand: "bun run dev",
+      url: "http://localhost:4321",
+      ...(paths === undefined ? {} : { paths }),
+    },
+  },
+});
+
+describe("classifyDiff browserVerify", () => {
+  const onPath = { agentBrowserOnPath: true };
+
+  test("runs when a changed path matches the configured globs", () => {
+    const result = classifyDiff(
+      diffOf(["apps/site/src/a.astro"]),
+      browserConfig(["apps/site/**"]),
+      onPath,
+    );
+    expect(result.browserVerify.run).toBe(true);
+  });
+
+  test("runs when paths is absent", () => {
+    expect(classifyDiff(diffOf(["src/a.ts"]), browserConfig(), onPath).browserVerify.run).toBe(
+      true,
+    );
+  });
+
+  test("does not run when no changed path matches", () => {
+    const { browserVerify } = classifyDiff(
+      diffOf(["emet/src/x.ts"]),
+      browserConfig(["apps/site/**"]),
+      onPath,
+    );
+    expect(browserVerify.run).toBe(false);
+    expect(browserVerify.reason).toContain("paths");
+  });
+
+  test("does not run when the binary is not on PATH", () => {
+    const { browserVerify } = classifyDiff(diffOf(["src/a.ts"]), browserConfig(), {
+      agentBrowserOnPath: false,
+    });
+    expect(browserVerify.run).toBe(false);
+    expect(browserVerify.reason).toContain("agent-browser");
+  });
+
+  test("the binary is assumed absent when no environment is given", () => {
+    expect(classifyDiff(diffOf(["src/a.ts"]), browserConfig()).browserVerify.run).toBe(false);
+  });
+
+  test("does not run when verify.browser is absent", () => {
+    const { browserVerify } = classifyDiff(diffOf(["src/a.ts"]), DEFAULT_FORGE_CONFIG, onPath);
+    expect(browserVerify.run).toBe(false);
+    expect(browserVerify.reason).toContain("verify.browser");
+  });
+
+  test("does not run for a docs-only passive diff", () => {
+    const result = classifyDiff(diffOf(["README.md"]), browserConfig(), onPath);
+    expect(result.tier).toBe("passive");
+    expect(result.browserVerify.run).toBe(false);
+    expect(result.browserVerify.reason).toContain("reviewer");
+  });
+
+  test("a risk line that raises passive to medium re-evaluates browserVerify", () => {
+    const input = diffOf(["README.md"]);
+    const config = browserConfig();
+    const passive = classifyDiff(input, config, onPath);
+    const raised = applyRiskLine(passive, "Risk: item 1 (x)", config, {
+      input,
+      environment: onPath,
+    });
+    expect(raised.browserVerify.run).toBe(true);
+  });
+});
