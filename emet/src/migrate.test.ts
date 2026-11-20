@@ -178,6 +178,22 @@ describe("stale run files and collected conflicts", () => {
     expect(read(".emet/x.log")).toBe("kept\n");
   });
 
+  it("never removes a differing legacy file when git cannot say whether it is tracked", () => {
+    write(".forge/x.log", "legacy\n");
+    write(".emet/x.log", "current\n");
+    git("add", "-f", ".forge/x.log");
+    git("commit", "-q", "-m", "seed");
+    const previous = process.env.GIT_DIR;
+    process.env.GIT_DIR = path.join(root, "no-such-git-dir");
+    try {
+      expect(() => runMigration(root, { dryRun: false })).toThrow(MigrationConflictError);
+    } finally {
+      if (previous === undefined) delete process.env.GIT_DIR;
+      else process.env.GIT_DIR = previous;
+    }
+    expect(read(".forge/x.log")).toBe("legacy\n");
+  });
+
   it("collects every conflict and applies nothing", () => {
     write(".forge/stale.log", "s\n");
     write(".emet/stale.log", "t\n");

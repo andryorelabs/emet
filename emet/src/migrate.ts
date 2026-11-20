@@ -85,12 +85,18 @@ function runGit(root: string, args: readonly string[]): string {
   return execFileSync("git", [...args], { cwd: root, encoding: "utf8", stdio: "pipe" });
 }
 
-function isTracked(root: string, relativePath: string): boolean {
+/** Whether git tracks the path, or `undefined` when git is present but cannot answer. */
+function readTracking(root: string, relativePath: string): boolean | undefined {
+  if (!fs.existsSync(path.join(root, ".git"))) return false;
   try {
     return runGit(root, ["ls-files", "--", relativePath]).trim().length > 0;
   } catch {
-    return false;
+    return undefined;
   }
+}
+
+function isTracked(root: string, relativePath: string): boolean {
+  return readTracking(root, relativePath) ?? false;
 }
 
 function listFiles(root: string, relativeDir: string): string[] {
@@ -153,7 +159,7 @@ function planFileRename(
   if (sameContent(root, legacy, current)) {
     return [{ kind: "remove", path: legacy, tracked, duplicateOf: current, reason: "duplicate" }];
   }
-  if (isRunFile && !tracked) {
+  if (isRunFile && readTracking(root, legacy) === false) {
     return [
       { kind: "remove", path: legacy, tracked, duplicateOf: current, reason: "stale-run-file" },
     ];
