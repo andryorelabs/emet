@@ -119,11 +119,12 @@ function stubItem(
 }
 
 describe("createCatalog", () => {
-  test("lists the six items with mattpocock-skills as the only default", () => {
+  test("lists the seven items with mattpocock-skills as the only default", () => {
     const catalog = createCatalog(fakeEnv());
     expect(catalog.map((item) => item.id)).toEqual([
       "mattpocock-skills",
       "engram",
+      "agent-browser",
       "mascot",
       "orca-pet",
       "gh-auth",
@@ -185,6 +186,35 @@ describe("createCatalog", () => {
       "INSTALLATION.md",
     );
     expect(env.calls).toEqual([]);
+  });
+
+  test("agent-browser installs unpinned then downloads the browser without --with-deps", async () => {
+    const env = fakeEnv({ commandExists: () => Promise.resolve(false) });
+    const item = itemOf(createCatalog(env), "agent-browser");
+    expect(item.defaultOn).toBe(false);
+    expect(await item.detect()).toBe(false);
+    await item.install();
+    expect(env.calls).toEqual([
+      ["bun", "add", "-g", "agent-browser@latest"],
+      ["agent-browser", "install"],
+    ]);
+    expect(await itemOf(createCatalog(fakeEnv()), "agent-browser").detect()).toBe(true);
+  });
+
+  test("agent-browser fails with detail when the package install fails", async () => {
+    const env = fakeEnv({ exitCodes: { "bun add -g agent-browser@latest": 1 } });
+    expect(await failureOf(itemOf(createCatalog(env), "agent-browser").install())).toContain(
+      "exited 1",
+    );
+    expect(env.calls).toEqual([["bun", "add", "-g", "agent-browser@latest"]]);
+  });
+
+  test("agent-browser logs the command to run when the browser download fails", async () => {
+    const env = fakeEnv({ exitCodes: { "agent-browser install": 1 } });
+    expect(await failureOf(itemOf(createCatalog(env), "agent-browser").install())).toContain(
+      "agent-browser install",
+    );
+    expect(env.logs.join("\n")).toContain("`agent-browser install`");
   });
 
   test("orca-pet downloads both bundle files and tells the user to import them", async () => {
@@ -422,8 +452,8 @@ describe("realSetupEnv", () => {
     }
   });
 
-  test("the real catalog has the six items", () => {
-    expect(SETUP_CATALOG).toHaveLength(6);
+  test("the real catalog has the seven items", () => {
+    expect(SETUP_CATALOG).toHaveLength(7);
   });
 });
 
