@@ -2,7 +2,7 @@
 title: 在 Codex 上运行 emet
 description: 介绍如何安装 Codex 一侧、选择 Agent 宿主、唯一的一次批准以及已知限制。
 seoTitle: 在 Codex 上运行 emet
-sourceHash: 38d79f32b248565e
+sourceHash: 8aed8797d3451a66
 ---
 
 emet 既可以在 Claude Code 上运行，也可以在 Codex CLI 上运行。术语遵循 [GLOSSARY.md](../../GLOSSARY.md)；运行所在的产品称为 **Agent 宿主**。本页介绍 Codex 一侧的安装、宿主的选择、唯一的一次批准以及已知限制。返回[文档索引](../README.md)。
@@ -53,6 +53,18 @@ emet 只在计划之后请求一次批准。在 Claude Code 上这是一个提�
 - 另一种方式是 `/plan $emet:run`：在 Codex 自己的计划模式中批准计划，而不使用钩子。
 
 该目录一旦存在，关卡就会失败即关闭：批准文件缺失或无法读取时，变更仍会被拒绝。guard 还会对照工单的 `.emet/surface.json` 检查 `apply_patch` 的每一个路径。
+
+## emet 更新之后
+
+每次插件更新后，Codex 都会再次要求你信任 emet 插件的 hook，因为插件的内容哈希会变化。要信任它们，请运行 `/hooks`，并在事件页面按 `t` 信任全部，或在启动时批准 "Hooks need review" 提示。在此之前，emet guard 和单一批准都不会运行。
+
+当 hook 从未被信任时，`emet doctor` 会发出警告：
+
+`Codex has not trusted the emet plugin hooks, so the emet guard does not run. In Codex, open /hooks and press t to trust them, or approve the "Hooks need review" prompt at startup. Codex asks again after every emet update.`
+
+发布之后的几分钟内，shim 可能会运行之前缓存的版本。此时它会输出：
+
+`emet: release v<version> has no downloadable asset yet (it may still be publishing); using the cached v<newest>. Retry in a few minutes.`
 
 ## 波次如何运行
 

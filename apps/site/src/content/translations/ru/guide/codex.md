@@ -2,7 +2,7 @@
 title: Запуск emet в Codex
 description: Как установить часть для Codex, выбрать хост агента, единственное подтверждение и известные ограничения.
 seoTitle: Запуск emet в Codex
-sourceHash: 38d79f32b248565e
+sourceHash: 8aed8797d3451a66
 ---
 
 emet может работать в Codex CLI так же, как и в Claude Code. Термины соответствуют [GLOSSARY.md](../../GLOSSARY.md); продукт, в котором выполняется запуск, называется **хостом агента**. На этой странице описаны установка части для Codex, выбор хоста, единственное подтверждение и известные ограничения. Вернуться к [оглавлению документации](../README.md).
@@ -53,6 +53,18 @@ emet запрашивает одно подтверждение, после пл
 - Альтернатива: `/plan $emet:run`. Подтвердите план в собственном режиме планирования Codex вместо хука.
 
 Как только этот каталог существует, барьер закрывается при сбое: отсутствующий или нечитаемый файл подтверждения оставляет изменения запрещёнными. Защита также проверяет каждый путь `apply_patch` по `.emet/surface.json` тикета.
+
+## После обновления emet
+
+Codex снова просит доверять хукам плагина emet после каждого обновления плагина, потому что меняется хеш содержимого плагина. Чтобы доверять им, выполните `/hooks` и нажмите `t` на странице событий, чтобы доверять всем, или подтвердите запрос "Hooks need review" при запуске. До этого emet guard и единственное подтверждение не работают.
+
+`emet doctor` предупреждает, если хукам никогда не доверяли:
+
+`Codex has not trusted the emet plugin hooks, so the emet guard does not run. In Codex, open /hooks and press t to trust them, or approve the "Hooks need review" prompt at startup. Codex asks again after every emet update.`
+
+Сразу после релиза shim может несколько минут запускать предыдущую версию из кэша. Тогда он выводит:
+
+`emet: release v<version> has no downloadable asset yet (it may still be publishing); using the cached v<newest>. Retry in a few minutes.`
 
 ## Как выполняется волна
 

@@ -2,7 +2,7 @@
 title: Eseguire emet su Codex
 description: "Usa Codex come Agent host di emet: installa il plugin, imposta agentHost, approva una sola volta e conosci i limiti."
 seoTitle: Eseguire emet su Codex
-sourceHash: 38d79f32b248565e
+sourceHash: 8aed8797d3451a66
 ---
 
 emet può girare su Codex CLI oltre che su Claude Code. I termini seguono [GLOSSARY.md](../../GLOSSARY.md); il prodotto in cui viene eseguita una run è l'**Agent host**. Questa pagina copre l'installazione lato Codex, la scelta dell'host, l'unica approvazione e i limiti noti. Torna all'[indice della documentazione](../README.md).
@@ -53,6 +53,18 @@ emet chiede una sola approvazione, dopo il piano. Su Claude Code è un prompt. S
 - L'alternativa è `/plan $emet:run`: approva il piano nella modalità piano di Codex invece che tramite l'hook.
 
 Una volta che quella directory esiste, il gate fallisce in modo chiuso: un file di approvazione mancante o illeggibile mantiene negate le mutazioni. Il guard controlla anche ogni percorso di un `apply_patch` rispetto al `.emet/surface.json` del ticket.
+
+## Dopo un aggiornamento di emet
+
+Codex chiede di nuovo di fidarsi degli hook del plugin emet dopo ogni aggiornamento del plugin, perché l'hash del contenuto del plugin cambia. Per fidarsene, esegui `/hooks` e premi `t` nella pagina degli eventi per fidarti di tutti, oppure approva il prompt "Hooks need review" all'avvio. Fino ad allora l'emet guard e l'unica approvazione non vengono eseguiti.
+
+`emet doctor` avvisa quando gli hook non sono mai stati approvati:
+
+`Codex has not trusted the emet plugin hooks, so the emet guard does not run. In Codex, open /hooks and press t to trust them, or approve the "Hooks need review" prompt at startup. Codex asks again after every emet update.`
+
+Subito dopo una release, lo shim può eseguire per qualche minuto la versione precedente in cache. Poi stampa:
+
+`emet: release v<version> has no downloadable asset yet (it may still be publishing); using the cached v<newest>. Retry in a few minutes.`
 
 ## Come procede un'ondata
 
