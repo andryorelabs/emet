@@ -221,6 +221,8 @@ describe("closeCompletedSpecs", () => {
   test("reports failed when the parent read fails", async () => {
     const { gh } = specGh({ parents: {}, specs: {}, failParent: new Set([1]) });
     const specs = await closeCompletedSpecs([closedResult(1)], gh);
-    expect(specs).toEqual([{ spec: 1, outcome: "failed", detail: "parent read failed: denied" }]);
+    expect(specs).toEqual([
+      { spec: null, ticket: 1, outcome: "failed", detail: "parent read failed: denied" },
+    ]);
   });
 });

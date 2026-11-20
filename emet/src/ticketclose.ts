@@ -109,7 +109,8 @@ export async function closeGithubTickets(
 }
 
 export interface SpecCloseResult {
-  readonly spec: number;
+  readonly spec: number | null;
+  readonly ticket?: number;
   readonly outcome: "closed" | "open" | "already-closed" | "failed";
   readonly detail?: string;
 }
@@ -188,7 +189,8 @@ async function closeSpec(spec: number, gh: GhRunner): Promise<SpecCloseResult> {
  * Closes the parent spec of every ticket that ended `closed` or
  * `already-closed`, once per distinct parent, when all its sub-issues are
  * completed. A ticket without a parent adds no entry; a failed parent read
- * reports `failed` under the ticket's own issue number.
+ * reports `failed` with `spec: null` and the ticket's own issue number in
+ * `ticket`, because the parent is unknown.
  */
 export async function closeCompletedSpecs(
   results: readonly TicketCloseResult[],
@@ -209,7 +211,8 @@ export async function closeCompletedSpecs(
     } catch (error) {
       const detail = error instanceof Error ? error.message : String(error);
       specs.push({
-        spec: result.issue,
+        spec: null,
+        ticket: result.issue,
         outcome: "failed",
         detail: `parent read failed: ${detail}`,
       });
