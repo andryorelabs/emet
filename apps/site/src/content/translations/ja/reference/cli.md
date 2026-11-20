@@ -2,7 +2,7 @@
 title: CLI リファレンス
 description: すべての emet サブコマンド、ゲートと記録の表、終了コード、環境変数を説明します。
 seoTitle: emet CLI リファレンス
-sourceHash: dc7e2d74d8727b72
+sourceHash: 44c0d5ae7d296866
 ---
 
 すべての `emet` サブコマンド、ゲートと記録の表、終了コード、環境変数です。用語は [GLOSSARY.md](../../GLOSSARY.md) に従います。[README](../../README.md) に戻る。すべてのコマンドは `--help` で使い方を表示します。
