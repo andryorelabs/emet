@@ -1,4 +1,4 @@
-import { existsSync } from "node:fs";
+import { existsSync, statSync } from "node:fs";
 import { readdir, stat } from "node:fs/promises";
 import path from "node:path";
 
@@ -443,6 +443,50 @@ export interface DetectedRepoInfo {
 
 const LOCAL_ID_PATTERN = String.raw`^[a-z0-9-]+-\d{2,}$`;
 
+const DRIZZLE_CONFIG_FILES = [
+  "drizzle.config.ts",
+  "drizzle.config.js",
+  "drizzle.config.mjs",
+  "drizzle.config.cjs",
+];
+
+function isDirectory(target: string): boolean {
+  try {
+    return statSync(target).isDirectory();
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Paths that define shared schema, for `schema.ownedPaths`: the Prisma schema
+ * file (or its `prisma/schema/` folder when the file is absent), plus
+ * `drizzle/` when a Drizzle config and that migrations folder both exist.
+ * Empty when nothing is detected.
+ */
+export function detectOwnedPaths(root: string): string[] {
+  const owned: string[] = [];
+  if (existsSync(path.join(root, "prisma", "schema.prisma"))) {
+    owned.push("prisma/schema.prisma");
+  } else if (isDirectory(path.join(root, "prisma", "schema"))) {
+    owned.push("prisma/schema/");
+  }
+  const hasDrizzleConfig = DRIZZLE_CONFIG_FILES.some((file) => existsSync(path.join(root, file)));
+  if (hasDrizzleConfig && isDirectory(path.join(root, "drizzle"))) owned.push("drizzle/");
+  return owned;
+}
+
+const SCHEMA_OWNERSHIP_TODO =
+  /TODO\(emet\): if this repo has a shared schema[\s\S]*?delete this\nsection\./;
+
+function schemaOwnershipSection(ownedPaths: readonly string[]): string {
+  const listed = ownedPaths.map((entry) => `\`${entry}\``).join(", ");
+  return (
+    `Auto-detected owned paths: ${listed} (\`schema.ownedPaths\` in \`emet.config.json\`). ` +
+    "At most one ticket per wave may touch them."
+  );
+}
+
 /**
  * Merges autodetected values into a fully-materialized {@link ForgeConfig} —
  * every field explicit, per `emet.config.json`'s own design (`emet init`
@@ -876,6 +920,7 @@ async function main(options: InitOptions): Promise<void> {
   };
 
   const config = buildForgeConfig(detected);
+  const ownedPaths = detectOwnedPaths(repoRoot);
   const configJson = {
     $schema: CONFIG_SCHEMA_URL,
     "//":
@@ -885,6 +930,7 @@ async function main(options: InitOptions): Promise<void> {
       "the summary this command printed). `commands` is prose-only (see the " +
       "schema) — the /emet command reads it directly, this CLI never does.",
     ...config,
+    ...(ownedPaths.length > 0 ? { schema: { ownedPaths } } : {}),
     ...(await readPreservedHostKeys(configPath)),
     tracker: buildTrackerConfig(detected),
     commands: { selfCheck: detected.selfCheck },
@@ -926,7 +972,11 @@ async function main(options: InitOptions): Promise<void> {
 
   const results: string[] = [];
   for (const { template, target, shared, note } of writes) {
-    const rendered = note + substituteTemplate(readTemplate(template), vars);
+    const templateText =
+      ownedPaths.length > 0
+        ? readTemplate(template).replace(SCHEMA_OWNERSHIP_TODO, schemaOwnershipSection(ownedPaths))
+        : readTemplate(template);
+    const rendered = note + substituteTemplate(templateText, vars);
     const targetPath = path.join(docsAgentsDirectory, target);
     const write = shared
       ? writeSharedDoc(targetPath, rendered)
