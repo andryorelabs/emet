@@ -5,10 +5,7 @@ import path from "node:path";
 const sourceDirectory = path.resolve(import.meta.dir, "../emet/src");
 
 /** Source modules with no colocated test, each with the reason it is exempt. */
-const EXEMPTIONS: Readonly<Record<string, string>> = {
-  "test-preload.ts":
-    "A bun test preload with no exports; tools/journal-isolation.test.ts exercises it end to end.",
-};
+const EXEMPTIONS: Readonly<Record<string, string>> = {};
 
 function walk(directory: string): string[] {
   return readdirSync(directory, { withFileTypes: true }).flatMap((entry) => {
