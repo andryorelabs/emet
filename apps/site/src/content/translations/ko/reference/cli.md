@@ -2,7 +2,7 @@
 title: CLI 레퍼런스
 description: 모든 emet 하위 명령, 게이트와 기록 표, 종료 코드, 환경 변수를 설명합니다.
 seoTitle: emet CLI 레퍼런스
-sourceHash: 90ffe4a56892f887
+sourceHash: fee9f73b5e416c7f
 ---
 
 모든 `emet` 하위 명령, 게이트와 기록 표, 종료 코드, 환경 변수입니다. 용어는 [GLOSSARY.md](../../GLOSSARY.md)를 따릅니다. [README](../../README.md)로 돌아가기. 모든 명령은 `--help`로 사용법을 출력합니다.
@@ -17,8 +17,8 @@ Claude Code 안에서는 슬래시 명령 세 가지가 CLI를 감쌉니다. `/e
 
 - `emet migrate [--dry-run]`: 예전 형식의 리포지토리를 emet 이름으로 바꿉니다.
 - `emet init [--tracker linear|github|local] [--after-spec release|promote|none] [--force]`: 패키지 매니저, 트렁크 브랜치, 트래커 종류, after-spec 모드([`handoff.afterSpec`](configuration.md#handoff) 참고)를 자동으로 감지하고 `emet.config.json`과 `docs/agents/*.md` 파일을 작성합니다. `--tracker local`은 로컬 트래커를 설정합니다.
-- `emet doctor [--all] [<path> ...]`: 원하는 수의 리포지토리를 한 번에 읽기 전용으로 감사합니다. 기본값은 현재 디렉터리입니다.
-- `emet setup [--yes] [--with <ids>] [--list] [--json]`: 선택 설치 항목을 readline 프롬프트로 제안합니다. 대상은 `mattpocock-skills`(기본값 켜짐), `engram`, `mascot`, `orca-pet`, `gh-auth`, 그리고 권장 Claude Code 설정(`claude-settings`, 선택한 경우에만 `settings.json`의 타임스탬프 백업 후 적용)입니다. TTY가 없거나 `--yes` 또는 `--with`를 쓰면 아무것도 묻지 않고 지정한 항목만 정확히 설치합니다. TTY가 없고 `--with`도 없으면 아무것도 설치하지 않고 `--list` 카탈로그를 출력합니다. 각 단계는 `installed`, `already-present`, `skipped`, `failed` 중 하나를 보고합니다. 하나가 실패해도 나머지는 멈추지 않으며, 실패한 것이 있으면 종료 코드는 1입니다. `/emet:setup`은 플러그인 진입점이며 같은 선택지를 `AskUserQuestion`으로 묻습니다.
+- `emet doctor [--all] [<path> ...]`: 원하는 수의 리포지토리를 한 번에 읽기 전용으로 감사합니다. 기본값은 현재 디렉터리입니다. [`verify.browser`](configuration.md#verify)를 설정한 리포지토리에서는 선택 사항인 `agent-browser` 관련 항목도 보고합니다. 바이너리가 없으면 `indeterminate`(설치 방법을 담은 `optional:` 줄)이고, 바이너리가 있는데 `agent-browser doctor`가 실패하면 경고로 표시됩니다. 둘 다 오류가 아니며 종료 코드도 바꾸지 않습니다. `verify.browser`가 없는 리포지토리에는 아무것도 표시되지 않습니다.
+- `emet setup [--yes] [--with <ids>] [--list] [--json]`: 선택 설치 항목을 readline 프롬프트로 제안합니다. 대상은 `mattpocock-skills`(기본값 켜짐), `engram`, `mascot`, `orca-pet`, `gh-auth`, `agent-browser`(기본값 꺼짐; `bun add -g agent-browser@latest`를 실행한 뒤 `agent-browser install`을 실행하며, 버전을 고정하지 않고 `--with-deps`도 넘기지 않으므로 시스템 라이브러리가 없으면 직접 실행할 명령을 출력합니다), 그리고 권장 Claude Code 설정(`claude-settings`, 선택한 경우에만 `settings.json`의 타임스탬프 백업 후 적용)입니다. TTY가 없거나 `--yes` 또는 `--with`를 쓰면 아무것도 묻지 않고 지정한 항목만 정확히 설치합니다. TTY가 없고 `--with`도 없으면 아무것도 설치하지 않고 `--list` 카탈로그를 출력합니다. 각 단계는 `installed`, `already-present`, `skipped`, `failed` 중 하나를 보고합니다. 하나가 실패해도 나머지는 멈추지 않으며, 실패한 것이 있으면 종료 코드는 1입니다. `/emet:setup`은 플러그인 진입점이며 같은 선택지를 `AskUserQuestion`으로 묻습니다.
 - `emet fleet list [--root <dir>] [--json]`: `--root`(기본값 `~/code`) 바로 아래 한 단계에 있는, `emet.config.json`이 있는 git 리포지토리를 `tracker.kind`, `handoff.autoChain`, `models.worker`와 함께 나열합니다. `emet fleet set <key> <value> [--root <dir>] [--dry-run]`은 나열된 모든 리포지토리에서 설정 키 하나를 바꾸며, 먼저 설정 로더로 검증합니다(잘못된 값은 아무것도 바꾸지 않고 종료 코드 1로 끝납니다). `emet fleet launch --feature <text> [--root <dir>] [--repos <a,b>]`는 `emet chain`의 준비 상태 점검 후 각 리포지토리에서 `/emet:run --draft <text>` 세션을 엽니다. [fleet 가이드](../guide/fleet.md)를 참고하세요.
 - `emet preflight [--run <id>] [--post-dispatch]`: 리포지토리가 디스패치할 준비가 되었는지 확인합니다.
 - `emet skill-path <name>`: mattpocock-skills 스킬의 `SKILL.md` 절대 경로를 출력합니다. 스킬을 찾지 못하면 종료 코드 1로 끝납니다.
@@ -73,7 +73,7 @@ emet doctor ~/code/*
 - `emet validate --spec <id> | --file <path>`: 계획 검증입니다. [게이트와 기록](#게이트와-기록)을 참고하세요.
 - `emet surfaces --check <file.json | ->`: 웨이브 안의 티켓들 사이에서 허용된 편집 범위 글롭이 겹치면 거부합니다.
 - `emet approve --run <id>`, `emet materialize-log`, `emet results`, `emet verify`, `emet review-package`, `emet review`, `emet gate`: [게이트와 기록](#게이트와-기록)을 참고하세요.
-- `emet assess --base <ref> --head <ref>`: diff를 `passive`, `medium`, `high`로 분류하고 티어, 그 이유, 권장 리뷰어 모델과 추론 강도를 JSON으로 출력합니다. [모델과 추론 강도](../../README.md#models--effort)와 [`review`](configuration.md#review)를 참고하세요.
+- `emet assess --base <ref> --head <ref>`: diff를 `passive`, `medium`, `high`로 분류하고 티어, 그 이유, 권장 리뷰어 모델과 추론 강도에 더해 `browserVerify: { run, reason }`를 JSON으로 출력합니다. `run`이 `true`인 경우는 티어에 리뷰어가 있고, [`verify.browser`](configuration.md#verify)가 설정되어 있고, `agent-browser` 바이너리가 PATH에 있고, `paths`가 설정된 경우 변경된 경로가 일치할 때뿐입니다. 그렇지 않으면 `reason`이 처음으로 충족되지 않은 조건을 알려 줍니다. [모델과 추론 강도](../../README.md#models--effort)와 [`review`](configuration.md#review)를 참고하세요.
 - `emet land --spec <s> --branch <integration> --tickets <id,...>`: 통합 브랜치를 로컬 트렁크에 병합합니다(`landing.mode`가 `merge`일 때). CI 대신 `commands.selfCheck`를 사용하며 아무것도 푸시하지 않습니다.
 - `emet spec-merge --spec <id>`: 웨이브가 자동 병합된 뒤 스펙의 `ADDED`/`MODIFIED`/`REMOVED` 요구 사항 델타를 `docs/specs/<area>.md`(`specs.dir`)에 병합합니다. 아무것도 쓰기 전에 모든 영역을 검사합니다. 충돌이 있거나 시나리오를 잃게 되는 요구 사항이 있으면 종료 코드 1로 끝나며 어떤 파일도 건드리지 않습니다.
 - `emet map [--refresh]`: 기존 코드베이스의 개요(스택, 구조, 규약, 테스트, 핫스팟)를 `docs/agents/codebase.md`(`map.path`)에 작성하고, 생성에 사용한 커밋 SHA를 찍어 둡니다. 같은 커밋에서는 항상 같은 파일이 만들어집니다. `emet map --stale`은 HEAD가 찍어 둔 값보다 앞서 나가면 종료 코드 1로 끝나며, 이 경우 `emet preflight`가 경고합니다. `emet map --for <globs>`는 티켓의 편집 대상과 일치하는 섹션만 출력합니다. 이 출력이 워커 브리프에 포함되는 맵의 유일한 부분입니다.

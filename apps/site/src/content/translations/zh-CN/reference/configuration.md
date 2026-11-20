@@ -2,7 +2,7 @@
 title: 配置参考
 description: emet.config.json 中的每个键，包括其默认值和含义。
 seoTitle: emet 配置参考
-sourceHash: 021a695d999163e3
+sourceHash: 03b3df3fa773f181
 ---
 
 `emet.config.json` 中的每个键，及其默认值和含义。权威来源是 [`emet/schema/emet.config.schema.json`](../../emet/schema/emet.config.schema.json)。术语遵循 [GLOSSARY.md](../../GLOSSARY.md)。返回 [README](../../README.md)。
@@ -94,6 +94,29 @@ sourceHash: 021a695d999163e3
 - `check.paths`（可选）：非空的、元素非空的 glob 列表。设置后，已合并的 promote 仅在有变更路径匹配时才运行检查；未设置时，每个已合并的 promote 都会运行。
 
 该检查不再依赖 `afterSpec`。`emet promote` 会输出 `deployCheck: { run, reason }`，协调器仅在 `run` 为 true 时才运行 `emet deploy-check`：没有 `deploy.check` 时从不运行，最后一个波次不干净时也不运行；在 `repo.trunk` 为 `main`（每次合并都会部署）时，干净的最后一个波次之后无论哪种模式都会运行（使用 `--no-promote` 或规格被保留时也一样，并且忽略 `paths`）；在 `develop` 上，仅在 `promote` 模式下，且已合并的 promote 匹配 `paths` 之后才运行。在 `release` 模式下，部署等待人工处理。
+
+## verify
+
+可选。缺省表示不做浏览器验证，所有命令的行为与之前一致。
+
+```json
+{
+  "verify": {
+    "browser": {
+      "startCommand": "bun run dev",
+      "url": "http://localhost:4321",
+      "paths": ["apps/site/**"]
+    }
+  }
+}
+```
+
+- `browser.startCommand`：启动应用开发服务器的非空 shell 命令。评审者运行它，并在完成后停止它。
+- `browser.url`：运行中的应用所响应的非空 URL。
+- `browser.paths`（可选）：非空的、元素均非空的 glob 列表。设置后，仅当有变更路径匹配时才运行浏览器检查；不设置则每个被评审的 diff 都符合条件。glob 使用与 `deploy.check.paths` 相同的匹配器。
+- `verify` 或 `verify.browser` 下的未知键会被拒绝。
+
+`emet assess` 会输出 `browserVerify: { run, reason }`，仅当 `run` 为 true 时，协调者才会填写评审者的 Browser 维度：该层级有评审者（不是 `passive`）、已配置 `verify.browser`、可选的 [`agent-browser`](cli.md#设置与审计) 二进制文件在 PATH 中，并且在设置了 `paths` 时有变更路径匹配。否则 `reason` 会指出第一个未满足的条件，评审照常进行。仅文档的 diff 属于 `passive`，因此纯内容变更不会进行浏览器验证。浏览器命令连续两次失败的评审者会回退到 Chrome DevTools MCP，或报告一项 `verification-gap` 发现；它绝不会阻塞该波次。
 
 ## interview
 

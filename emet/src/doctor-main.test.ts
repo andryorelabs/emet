@@ -220,6 +220,36 @@ describe("doctor run() repo reports", () => {
     expect(output).toContain("1/1 repos clean");
   }, 60_000);
 
+  test("a clean repo with verify.browser and no agent-browser prints an optional line", async () => {
+    const repo = makeGitRepo("browser-clean", {
+      ...baseConfig,
+      verify: { browser: { startCommand: "bun run dev", url: "http://localhost:4321" } },
+    });
+    writeAllDocs(repo);
+    writeFileSync(path.join(repo, "package.json"), "{}");
+    process.env.PATH = binDirectory;
+
+    const output = await runDoctor([repo]);
+
+    expect(output).toContain(`${repo}: OK\n  - optional:`);
+    expect(output).toContain("agent-browser");
+    expect(output).toContain("1/1 repos clean");
+  }, 60_000);
+
+  test("a dirty repo with verify.browser and no agent-browser still lists the optional line", async () => {
+    const repo = makeGitRepo("browser-dirty", {
+      ...baseConfig,
+      verify: { browser: { startCommand: "bun run dev", url: "http://localhost:4321" } },
+    });
+    process.env.PATH = binDirectory;
+
+    const output = await runDoctor([repo]);
+
+    expect(output).toContain("  - missing docs/agents/issue-tracker.md");
+    expect(output).toContain("  - optional:");
+    expect(output).toContain("0/1 repos clean");
+  }, 60_000);
+
   test("a leftover legacy slots directory is reported as a note", async () => {
     const repo = makeGitRepo("slots", baseConfig);
     mkdirSync(path.join(repo, ".git", "forge", "slots", "1"), { recursive: true });

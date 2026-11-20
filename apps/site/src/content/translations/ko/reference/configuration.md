@@ -2,7 +2,7 @@
 title: 설정 레퍼런스
 description: emet.config.json의 모든 키를 기본값과 의미와 함께 설명합니다.
 seoTitle: emet 설정 레퍼런스
-sourceHash: 021a695d999163e3
+sourceHash: 03b3df3fa773f181
 ---
 
 `emet.config.json`의 모든 키를 기본값과 의미와 함께 정리했습니다. 기준이 되는 원본은 [`emet/schema/emet.config.schema.json`](../../emet/schema/emet.config.schema.json)입니다. 용어는 [GLOSSARY.md](../../GLOSSARY.md)를 따릅니다. [README](../../README.md)로 돌아가기.
@@ -94,6 +94,29 @@ sourceHash: 021a695d999163e3
 - `check.paths`(선택): 비어 있지 않은 glob의 비어 있지 않은 목록입니다. 지정하면 머지된 프로모트는 변경된 경로가 일치할 때만 검사를 실행하고, 지정하지 않으면 머지된 모든 프로모트가 실행합니다.
 
 검사는 더 이상 `afterSpec`에 의존하지 않습니다. `emet promote`는 `deployCheck: { run, reason }`을 출력하고, 코디네이터는 `run`이 true일 때만 `emet deploy-check`를 실행합니다. `deploy.check`가 없거나 마지막 웨이브가 깨끗하지 않으면 실행하지 않습니다. 모든 머지가 배포되는 `repo.trunk`가 `main`이면 깨끗한 마지막 웨이브 뒤에 모드와 상관없이 실행합니다(`--no-promote`나 보류된 스펙에서도, `paths`를 무시하고 실행). `develop`이면 `promote` 모드에서 `paths`와 일치하는 머지된 프로모트 뒤에만 실행합니다. `release` 모드에서는 배포가 사람을 기다립니다.
+
+## verify
+
+선택 사항입니다. 없으면 브라우저 검증을 하지 않으며 모든 명령은 이전처럼 동작합니다.
+
+```json
+{
+  "verify": {
+    "browser": {
+      "startCommand": "bun run dev",
+      "url": "http://localhost:4321",
+      "paths": ["apps/site/**"]
+    }
+  }
+}
+```
+
+- `browser.startCommand`: 앱의 개발 서버를 시작하는, 비어 있지 않은 셸 명령입니다. 리뷰어가 이를 실행하고 끝나면 중지합니다.
+- `browser.url`: 실행 중인 앱이 응답하는, 비어 있지 않은 URL입니다.
+- `browser.paths`(선택): 비어 있지 않은 glob의 비어 있지 않은 목록입니다. 지정하면 변경된 경로가 일치할 때만 브라우저 검사를 실행하고, 지정하지 않으면 리뷰하는 모든 diff가 대상입니다. glob은 `deploy.check.paths`와 같은 매처를 씁니다.
+- `verify` 또는 `verify.browser` 아래의 알 수 없는 키는 거부됩니다.
+
+`emet assess`는 `browserVerify: { run, reason }`를 출력하며, 코디네이터는 `run`이 true일 때만 리뷰어의 Browser 축을 채웁니다. 조건은 티어에 리뷰어가 있고(`passive`가 아님), `verify.browser`가 설정되어 있고, 선택 사항인 [`agent-browser`](cli.md#setup-and-audit) 바이너리가 PATH에 있고, `paths`가 설정된 경우 변경된 경로가 일치하는 것입니다. 그렇지 않으면 `reason`이 처음으로 충족되지 않은 조건을 알려 주고 리뷰는 이전처럼 진행됩니다. 문서만 바뀐 diff는 `passive`이므로 콘텐츠만 바뀐 변경은 브라우저 검증을 하지 않습니다. 브라우저 명령이 두 번 실패한 리뷰어는 Chrome DevTools MCP로 대체하거나 `verification-gap` 항목을 보고하며, 웨이브를 막지 않습니다.
 
 ## interview
 

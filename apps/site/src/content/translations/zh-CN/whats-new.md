@@ -2,8 +2,20 @@
 title: 新功能
 description: emet 的发布说明：每个版本都有哪些变化。
 seoTitle: "emet 新功能：发布说明"
-sourceHash: bd2020ed642645f4
+sourceHash: e47aa3dd849f7d9d
 ---
+
+## 0.12.0
+
+2026-11-20
+
+### 新增
+
+- `emet.config.json` 中的 `verify.browser`(`startCommand`、`url` 和可选的 `paths`)可让仓库通过 `agent-browser` 在浏览器中验证界面变更。配置模式及其解析器会校验每个字段。
+- `emet assess` 会输出 `browserVerify: { run, reason }`。只有当该波次有评审者、已配置 `verify.browser`、`agent-browser` 位于 PATH 中且有变更路径匹配 `paths` 时,才会运行浏览器维度。
+- `emet setup` 新增 `agent-browser` 项(默认关闭),用于安装最新版本及其浏览器。
+- 对于配置了 `verify.browser` 的仓库,`emet doctor` 会报告一条可选的 agent-browser 检查结果。二进制文件缺失或 `agent-browser doctor` 失败只会显示为提示或警告,不会改变退出码。
+- 评审者提示词新增浏览器维度,仅在 `browserVerify.run` 为 true 时填充;工作者提示词新增一行可选内容,用于浏览器检查。参见 ADR-0032。
 
 ## 0.11.1
 

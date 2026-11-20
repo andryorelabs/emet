@@ -8,6 +8,25 @@ and this project adheres to
 
 ## [Unreleased]
 
+## [0.12.0] - 2026-11-20
+
+### Added
+
+- `verify.browser` in `emet.config.json` (`startCommand`, `url`, optional
+  `paths`) opts a repository into browser verification of UI changes with
+  `agent-browser`. The config schema and its parser validate every field.
+- `emet assess` prints `browserVerify: { run, reason }`. The browser axis runs
+  only when the wave has a reviewer, `verify.browser` is configured,
+  `agent-browser` is on PATH and a changed path matches `paths`.
+- `emet setup` offers an `agent-browser` item (off by default) that installs the
+  latest release and its browser.
+- `emet doctor` reports an optional agent-browser finding for a repository that
+  configures `verify.browser`. A missing binary or a failing `agent-browser
+  doctor` is a note or a warning and never changes the exit code.
+- The reviewer prompt gains a Browser axis, filled only when `browserVerify.run`
+  is true, and the worker prompt gains one optional line for browser checks.
+  See ADR-0032.
+
 ## [0.11.1] - 2026-11-19
 
 ### Fixed
@@ -413,7 +432,8 @@ and this project adheres to
 - Per-repo configuration through `forge.config.json`.
 - `install.sh`, which installs the CLI, command and agents.
 
-[Unreleased]: https://github.com/andryorelabs/emet/compare/v0.11.1...HEAD
+[Unreleased]: https://github.com/andryorelabs/emet/compare/v0.12.0...HEAD
+[0.12.0]: https://github.com/andryorelabs/emet/compare/v0.11.1...v0.12.0
 [0.11.1]: https://github.com/andryorelabs/emet/compare/v0.11.0...v0.11.1
 [0.11.0]: https://github.com/andryorelabs/emet/compare/v0.10.0...v0.11.0
 [0.10.0]: https://github.com/andryorelabs/emet/compare/v0.9.1...v0.10.0
