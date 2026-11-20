@@ -2,8 +2,20 @@
 title: 새로운 소식
 description: emet 릴리스 노트. 각 버전에서 무엇이 바뀌었는지 정리합니다.
 seoTitle: "emet 새로운 소식: 릴리스 노트"
-sourceHash: bd2020ed642645f4
+sourceHash: e47aa3dd849f7d9d
 ---
+
+## 0.12.0
+
+2026-11-20
+
+### 추가됨
+
+- `emet.config.json`의 `verify.browser`(`startCommand`, `url`, 선택 사항인 `paths`)를 설정하면 해당 저장소에서 `agent-browser`로 UI 변경 사항을 브라우저에서 검증합니다. 구성 스키마와 파서가 모든 필드를 검증합니다.
+- `emet assess`가 `browserVerify: { run, reason }`을 출력합니다. 브라우저 축은 웨이브에 리뷰어가 있고, `verify.browser`가 구성되어 있으며, `agent-browser`가 PATH에 있고, 변경된 경로가 `paths`와 일치할 때만 실행됩니다.
+- `emet setup`에 `agent-browser` 항목(기본값은 꺼짐)이 추가되어 최신 릴리스와 해당 브라우저를 설치합니다.
+- `verify.browser`를 구성한 저장소에서는 `emet doctor`가 agent-browser에 대한 선택적 결과를 보고합니다. 바이너리가 없거나 `agent-browser doctor`가 실패해도 메모 또는 경고일 뿐이며 종료 코드는 바뀌지 않습니다.
+- 리뷰어 프롬프트에 브라우저 축이 추가되며, `browserVerify.run`이 true일 때만 채워집니다. 워커 프롬프트에도 브라우저 확인을 위한 선택적 한 줄이 추가됩니다. ADR-0032를 참고하세요.
 
 ## 0.11.1
 

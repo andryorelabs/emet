@@ -2,8 +2,20 @@
 title: 新機能
 description: emet のリリースノート。各バージョンでの変更点をまとめています。
 seoTitle: "emet の新機能: リリースノート"
-sourceHash: bd2020ed642645f4
+sourceHash: e47aa3dd849f7d9d
 ---
+
+## 0.12.0
+
+2026-11-20
+
+### 追加
+
+- `emet.config.json` の `verify.browser`(`startCommand`、`url`、省略可能な `paths`)を設定すると、そのリポジトリでは `agent-browser` による UI 変更のブラウザー検証が有効になります。設定スキーマとそのパーサーはすべてのフィールドを検証します。
+- `emet assess` は `browserVerify: { run, reason }` を出力します。ブラウザー軸が実行されるのは、ウェーブにレビュアーがいて、`verify.browser` が設定されており、`agent-browser` が PATH 上にあり、変更されたパスが `paths` に一致する場合だけです。
+- `emet setup` に `agent-browser` 項目(既定ではオフ)が加わり、最新リリースとそのブラウザーをインストールします。
+- `verify.browser` を設定しているリポジトリでは、`emet doctor` が agent-browser に関する任意の検出結果を報告します。バイナリーが見つからない場合や `agent-browser doctor` が失敗した場合は、注記または警告であり、終了コードは変わりません。
+- レビュアー用プロンプトにブラウザー軸が加わります。これは `browserVerify.run` が true のときだけ埋められます。ワーカー用プロンプトにも、ブラウザー確認用の任意の 1 行が加わります。ADR-0032 を参照してください。
 
 ## 0.11.1
 
