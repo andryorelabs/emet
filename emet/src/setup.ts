@@ -28,6 +28,8 @@ export type SetupItemId =
   | "mattpocock-skills"
   | "engram"
   | "agent-browser"
+  | "context7"
+  | "firecrawl-local"
   | "mascot"
   | "orca-pet"
   | "gh-auth"
@@ -80,7 +82,7 @@ const ORCA_PET_FILES = ["pet.json", "spritesheet.webp"] as const;
 const ENGRAM_PLUGIN_ID = "engram@engram";
 const ENGRAM_BREW_FORMULA = "gentleman-programming/tap/engram";
 const NOTICE_MARKER = "setup-notice-shown";
-const NOTICE_TEXT = `emet has optional extras (Engram memory, the mascot, recommended Claude Code settings). Run /emet:setup to choose them.`;
+const NOTICE_TEXT = `emet has optional extras (Engram memory, context7 docs lookup, Firecrawl Local web research, the mascot, recommended Claude Code settings). Run /emet:setup to choose them.`;
 
 async function runChecked(env: SetupEnv, argv: readonly string[]): Promise<void> {
   const code = await env.run(argv);
@@ -92,7 +94,7 @@ async function pluginInstalled(env: SetupEnv, pluginId: string): Promise<boolean
   return parsePluginListOutput(output, pluginId) === "installed";
 }
 
-/** Builds the catalog over `env`: the seven optional installs in the order they are offered. */
+/** Builds the catalog over `env`: the nine optional installs in the order they are offered. */
 export function createCatalog(env: SetupEnv): readonly SetupItem[] {
   const settingsPath = path.join(env.homeDir, ".claude", "settings.json");
   const orcaPetDirectory = path.join(env.homeDir, ".emet", "orca-pet", "emet");
@@ -145,6 +147,60 @@ export function createCatalog(env: SetupEnv): readonly SetupItem[] {
           );
           throw error;
         }
+      },
+    },
+    {
+      id: "context7",
+      label: "context7 ctx7 CLI and its find-docs skill (current library docs lookup)",
+      defaultOn: false,
+      detect: async () =>
+        (await env.commandExists("ctx7")) &&
+        env.pathExists(path.join(env.homeDir, ".claude", "skills", "find-docs", "SKILL.md")),
+      install: async () => {
+        await runChecked(env, ["bun", "add", "-g", "ctx7@latest"]);
+        const runSetupStep = async (step: readonly string[]): Promise<void> => {
+          try {
+            await runChecked(env, step);
+          } catch (error) {
+            env.log(`The ctx7 setup did not finish. Run \`${step.join(" ")}\` yourself.`);
+            throw error;
+          }
+        };
+        await runSetupStep(["ctx7", "setup", "--cli", "--claude", "--yes"]);
+        if (await env.commandExists("codex")) {
+          await runSetupStep(["ctx7", "setup", "--cli", "--codex", "--yes"]);
+        }
+      },
+    },
+    {
+      id: "firecrawl-local",
+      label: "Firecrawl Local MCP server (local web research, nothing sent to Firecrawl Cloud)",
+      defaultOn: false,
+      detect: async () =>
+        (await env.commandExists("firecrawl-local")) &&
+        (await env.probe(["claude", "mcp", "get", "firecrawl-local"])) === 0,
+      install: async () => {
+        if (!(await env.commandExists("cargo"))) {
+          throw new Error("cargo is not installed; install Rust first, see https://rustup.rs");
+        }
+        await runChecked(env, ["cargo", "install", "firecrawl-local"]);
+        await runChecked(env, [
+          "claude",
+          "mcp",
+          "add",
+          "--scope",
+          "user",
+          "-e",
+          "FIRECRAWL_CLOUD=off",
+          "firecrawl-local",
+          "--",
+          "firecrawl-local",
+          "mcp",
+          "--public-only",
+        ]);
+        env.log(
+          "Chrome or Chromium is optional and only needed for JavaScript pages; set FIRECRAWL_CHROME_PATH if it is not found.",
+        );
       },
     },
     {
