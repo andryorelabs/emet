@@ -21,7 +21,7 @@ import { BINARY } from "./names";
 import { errorMessage, isObject, isOneOf } from "./narrow";
 import { parseFindings, type Finding } from "./review";
 
-const USAGE = `usage: ${BINARY} review-run --run <id> --ticket <id> --package <file> --tier <medium|high|passive>`;
+const USAGE = `usage: ${BINARY} review-run --run <id> --ticket <id> --package <file> --tier <medium|high|passive> [--browser-verify true|false]`;
 
 const TIERS = ["passive", "medium", "high"] as const;
 type Tier = (typeof TIERS)[number];
@@ -44,7 +44,21 @@ interface ReviewRunArgs {
   readonly ticket: string;
   readonly packagePath: string;
   readonly tier: Tier;
+  readonly browserVerify: boolean;
 }
+
+/** The Browser axis paragraph; equals the fenced block in `reference/reviewer-prompt.md`, with `{{run_id}}` filled at build time. */
+export const BROWSER_AXIS_PROMPT = [
+  "Browser axis: start `verify.browser.startCommand` from `emet.config.json` and",
+  "wait for `verify.browser.url`. Load the tool's own instructions with",
+  "`agent-browser skills get core`. Use `--session review-{{run_id}}` on every",
+  "command. Walk the pages the diff touches with `snapshot -i`, `errors` and",
+  "`console`. Write screenshots to a file, never inline, and read one only when",
+  "needed. Each UI or console error is a finding with the `file:line` of the",
+  "likely cause. Close the session and the server when done. If a command fails",
+  "twice, fall back to Chrome DevTools MCP or emit a `verification-gap` finding;",
+  "never block the wave.",
+].join("\n");
 
 const SEVERITY_VALUES = ["blocker", "critical", "major", "minor", "nit"];
 const KIND_VALUES = ["intent_gap", "bad_plan", "patch", "defer"];
@@ -94,7 +108,9 @@ function parseArguments(argv: readonly string[]): ReviewRunArgs | undefined {
   const tier = values.get("--tier");
   if (runId === undefined || ticket === undefined || packagePath === undefined) return undefined;
   if (!isOneOf(TIERS, tier)) return undefined;
-  return { run: runId, ticket, packagePath, tier };
+  const browserVerify = values.get("--browser-verify") ?? "false";
+  if (browserVerify !== "true" && browserVerify !== "false") return undefined;
+  return { run: runId, ticket, packagePath, tier, browserVerify: browserVerify === "true" };
 }
 
 /** The reviewer prompt: lenses by tier, the package path and the output contract. */
@@ -103,12 +119,14 @@ export function buildReviewerPrompt(args: ReviewRunArgs): string {
     args.tier === "high"
       ? "correctness, verification-gap, security and resilience"
       : "correctness and verification-gap";
-  return [
+  const sections = [
     `Review the work of ticket ${args.ticket}. Risk tier: ${args.tier}.`,
     `Read the review package file ${args.packagePath} FIRST: it holds the commit list, the stat and the diff. Read only what it touches plus needed context. Do not modify anything.`,
     `Lenses: ${lenses}. Verification-gap: one finding per gap, "one test that would catch <named regression>". Also check the diff against the repo's documented coding standards (AGENTS.md, CONTRIBUTING.md); a clear violation is a finding.`,
     `Answer with a JSON object { "findings": [...] } matching the output schema. Each finding has id (stable, F-001...), file, line (integer), severity (${SEVERITY_VALUES.join("|")}), kind (${KIND_VALUES.join("|")}) and claim (the failure scenario). An empty array means nothing blocks.`,
-  ].join("\n\n");
+  ];
+  if (args.browserVerify) sections.push(BROWSER_AXIS_PROMPT.replace("{{run_id}}", args.run));
+  return sections.join("\n\n");
 }
 
 /** The text of the last completed `agent_message` item in a `codex exec --json` stream. */

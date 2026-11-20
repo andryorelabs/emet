@@ -8,6 +8,20 @@ and this project adheres to
 
 ## [Unreleased]
 
+## [0.13.0] - 2026-11-20
+
+### Added
+
+- `emet setup` offers `context7` and `firecrawl-local` items (both off by default).
+  `context7` installs the `ctx7` CLI and its `find-docs` skill. `firecrawl-local`
+  builds Firecrawl Local with `cargo` and registers it as a local-only MCP server
+  (`FIRECRAWL_CLOUD=off`, `--public-only`). See ADR-0034.
+- `emet review-run --browser-verify true|false` passes the browser axis to the
+  Codex reviewer.
+- `validate.coupledSurfaces` in `emet.config.json` and the `coupled-surface-split`
+  error of `emet validate` keep a page and its translations in one wave. See
+  ADR-0033.
+
 ## [0.12.0] - 2026-11-20
 
 ### Added
@@ -432,7 +446,8 @@ and this project adheres to
 - Per-repo configuration through `forge.config.json`.
 - `install.sh`, which installs the CLI, command and agents.
 
-[Unreleased]: https://github.com/andryorelabs/emet/compare/v0.12.0...HEAD
+[Unreleased]: https://github.com/andryorelabs/emet/compare/v0.13.0...HEAD
+[0.13.0]: https://github.com/andryorelabs/emet/compare/v0.12.0...v0.13.0
 [0.12.0]: https://github.com/andryorelabs/emet/compare/v0.11.1...v0.12.0
 [0.11.1]: https://github.com/andryorelabs/emet/compare/v0.11.0...v0.11.1
 [0.11.0]: https://github.com/andryorelabs/emet/compare/v0.10.0...v0.11.0

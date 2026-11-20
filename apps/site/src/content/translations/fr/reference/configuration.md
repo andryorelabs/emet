@@ -2,7 +2,7 @@
 title: Référence de configuration
 description: Chaque clé de emet.config.json avec sa valeur par défaut et sa signification.
 seoTitle: Référence de configuration d'emet
-sourceHash: 03b3df3fa773f181
+sourceHash: 82a86139999124d0
 ---
 
 Chaque clé de `emet.config.json`, avec sa valeur par défaut et sa signification. La source de vérité est [`emet/schema/emet.config.schema.json`](../../emet/schema/emet.config.schema.json). Les termes suivent [GLOSSARY.md](../../GLOSSARY.md). Retour au [README](../../README.md).
@@ -117,6 +117,28 @@ Facultatif. Absent, il n'y a pas de vérification dans le navigateur et chaque c
 - Les clés inconnues sous `verify` ou `verify.browser` sont rejetées.
 
 `emet assess` affiche `browserVerify: { run, reason }`, et le coordinateur ne remplit l'axe Browser du relecteur que lorsque `run` vaut true : le niveau a un relecteur (pas `passive`), `verify.browser` est configuré, le binaire facultatif [`agent-browser`](cli.md#configuration-et-audit) est dans le PATH et, si `paths` est défini, un chemin modifié correspond. Sinon, `reason` nomme la première condition non remplie et la relecture se déroule comme avant. Un diff qui ne touche que la documentation est `passive` : une modification de contenu seule n'est donc pas vérifiée dans le navigateur. Un relecteur dont les commandes du navigateur échouent deux fois se rabat sur Chrome DevTools MCP ou signale un constat `verification-gap` ; il ne bloque jamais la vague.
+
+## validate
+
+Facultatif. Absent, il n'y a pas de contrôle des surfaces couplées et chaque commande se comporte comme avant.
+
+```json
+{
+  "validate": {
+    "coupledSurfaces": [
+      {
+        "source": "docs/{guide,reference,how-to}/**/*.md",
+        "dependents": "apps/site/src/content/translations/**"
+      }
+    ]
+  }
+}
+```
+
+- `coupledSurfaces` : une liste non vide de paires. Chaque paire a un glob `source` et un glob `dependents`, tous deux des chaînes non vides ; `source` accepte les globs à accolades comme `docs/{guide,reference}/**/*.md`.
+- Les clés inconnues sous `validate` ou dans une paire sont rejetées, et une entrée mal formée fait échouer le chargement avec un message nommant `validate.coupledSurfaces[<n>]`.
+
+`emet validate` (`--file` et `--spec`) et la gate d'exécution d'`emet preflight` signalent une erreur `coupled-surface-split` lorsqu'un ticket dont les surfaces recoupent la `source` d'une paire est dans une vague antérieure à celle d'un ticket dont les surfaces recoupent les `dependents` de cette paire. Les modifications d'une page source et les tickets qui mettent à jour ce qui en dépend, comme les traductions, doivent être livrés dans la même vague. La même vague, ou aucun ticket de dependents, passe. Voir [ADR-0033](../adr/0033-coupled-surfaces-ship-in-one-wave.md).
 
 ## interview
 

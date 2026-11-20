@@ -223,3 +223,46 @@ describe("validate run --spec", () => {
     expect(result.code).toBe(0);
   });
 });
+
+describe("validate run coupled surfaces", () => {
+  let originalCwd: string;
+
+  beforeEach(() => {
+    originalCwd = process.cwd();
+    execFileSync("git", ["init", "-q", "-b", "main"], { cwd: directory });
+    writeFileSync(
+      path.join(directory, "emet.config.json"),
+      JSON.stringify({
+        validate: { coupledSurfaces: [{ source: "docs/**", dependents: "site/**" }] },
+      }),
+    );
+    process.chdir(directory);
+  });
+
+  afterEach(() => {
+    process.chdir(originalCwd);
+  });
+
+  const coupledSpec =
+    "## Specs\n- **S1**: a. Scenario: WHEN x THEN y\n- **S2**: b. Scenario: WHEN x THEN y\n";
+  const planWith = (docsWave: number, siteWave: number) =>
+    writePlan({
+      spec: coupledSpec,
+      tickets: [
+        { id: "A", covers: ["S1"], surfaces: ["docs/a.md"], wave: docsWave },
+        { id: "B", covers: ["S2"], surfaces: ["site/a.md"], wave: siteWave },
+      ],
+    });
+
+  test("a split across waves exits 1 with coupled-surface-split", async () => {
+    const result = await invoke(["--file", planWith(1, 2)]);
+    expect(result.code).toBe(1);
+    expect(JSON.parse(result.out[0] ?? "")).toMatchObject({
+      findings: [{ code: "coupled-surface-split" }],
+    });
+  });
+
+  test("the same wave exits 0", async () => {
+    expect((await invoke(["--file", planWith(1, 1)])).code).toBe(0);
+  });
+});

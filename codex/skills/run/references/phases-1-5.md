@@ -141,6 +141,9 @@ Before Phase 4, run `emet validate --file <plan.json | ->` (usage:
 surfaces, dependency cycle) and re-run until it exits 0; warnings, like an
 unfolded small ticket, need a fold or a reason.
 
+A ticket that edits a published English page and the tickets that translate
+it go in the same wave.
+
 ## Phase 4 — The one freeze point
 
 Write the complete plan to the plan file: the spec, every ticket with its

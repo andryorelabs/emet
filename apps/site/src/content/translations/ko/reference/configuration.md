@@ -2,7 +2,7 @@
 title: 설정 레퍼런스
 description: emet.config.json의 모든 키를 기본값과 의미와 함께 설명합니다.
 seoTitle: emet 설정 레퍼런스
-sourceHash: 03b3df3fa773f181
+sourceHash: 82a86139999124d0
 ---
 
 `emet.config.json`의 모든 키를 기본값과 의미와 함께 정리했습니다. 기준이 되는 원본은 [`emet/schema/emet.config.schema.json`](../../emet/schema/emet.config.schema.json)입니다. 용어는 [GLOSSARY.md](../../GLOSSARY.md)를 따릅니다. [README](../../README.md)로 돌아가기.
@@ -117,6 +117,28 @@ sourceHash: 03b3df3fa773f181
 - `verify` 또는 `verify.browser` 아래의 알 수 없는 키는 거부됩니다.
 
 `emet assess`는 `browserVerify: { run, reason }`를 출력하며, 코디네이터는 `run`이 true일 때만 리뷰어의 Browser 축을 채웁니다. 조건은 티어에 리뷰어가 있고(`passive`가 아님), `verify.browser`가 설정되어 있고, 선택 사항인 [`agent-browser`](cli.md#setup-and-audit) 바이너리가 PATH에 있고, `paths`가 설정된 경우 변경된 경로가 일치하는 것입니다. 그렇지 않으면 `reason`이 처음으로 충족되지 않은 조건을 알려 주고 리뷰는 이전처럼 진행됩니다. 문서만 바뀐 diff는 `passive`이므로 콘텐츠만 바뀐 변경은 브라우저 검증을 하지 않습니다. 브라우저 명령이 두 번 실패한 리뷰어는 Chrome DevTools MCP로 대체하거나 `verification-gap` 항목을 보고하며, 웨이브를 막지 않습니다.
+
+## validate
+
+선택 사항입니다. 없으면 결합 서피스 검사를 하지 않으며 모든 명령은 이전처럼 동작합니다.
+
+```json
+{
+  "validate": {
+    "coupledSurfaces": [
+      {
+        "source": "docs/{guide,reference,how-to}/**/*.md",
+        "dependents": "apps/site/src/content/translations/**"
+      }
+    ]
+  }
+}
+```
+
+- `coupledSurfaces`: 비어 있지 않은 쌍의 목록입니다. 각 쌍은 `source` glob과 `dependents` glob을 가지며, 둘 다 비어 있지 않은 문자열입니다. `source`는 `docs/{guide,reference}/**/*.md` 같은 중괄호 glob을 받습니다.
+- `validate` 아래나 쌍 안의 알 수 없는 키는 거부되며, 형식이 잘못된 항목은 `validate.coupledSurfaces[<n>]`을 가리키는 메시지와 함께 로딩에 실패합니다.
+
+`emet validate`(`--file`과 `--spec`)와 `emet preflight`의 실행 게이트는, 어떤 쌍의 `source`와 서피스가 겹치는 티켓이 그 쌍의 `dependents`와 서피스가 겹치는 티켓보다 앞선 웨이브에 있으면 `coupled-surface-split` 오류를 보고합니다. 원본 페이지 수정과, 그에 의존하는 것(예: 번역)을 갱신하는 티켓은 같은 웨이브에 출하되어야 합니다. 같은 웨이브이거나 dependents 티켓이 없으면 통과합니다. [ADR-0033](../adr/0033-coupled-surfaces-ship-in-one-wave.md)을 참고하세요.
 
 ## interview
 

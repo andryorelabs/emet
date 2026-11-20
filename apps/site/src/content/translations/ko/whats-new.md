@@ -2,8 +2,18 @@
 title: 새로운 소식
 description: emet 릴리스 노트. 각 버전에서 무엇이 바뀌었는지 정리합니다.
 seoTitle: "emet 새로운 소식: 릴리스 노트"
-sourceHash: e47aa3dd849f7d9d
+sourceHash: faaf5e170bc87a1d
 ---
+
+## 0.13.0
+
+2026-11-20
+
+### 추가됨
+
+- `emet setup`이 `context7`과 `firecrawl-local` 항목을 제공합니다(둘 다 기본값은 꺼짐). `context7`은 `ctx7` CLI와 그 `find-docs` 스킬을 설치합니다. `firecrawl-local`은 `cargo`로 Firecrawl Local을 빌드하고 로컬 전용 MCP 서버(`FIRECRAWL_CLOUD=off`, `--public-only`)로 등록합니다. ADR-0034를 참조하세요.
+- `emet review-run --browser-verify true|false`가 브라우저 축을 Codex 리뷰어에게 전달합니다.
+- `emet.config.json`의 `validate.coupledSurfaces`와 `emet validate`의 `coupled-surface-split` 오류가 페이지와 그 번역을 같은 웨이브에 묶어 둡니다. ADR-0033을 참조하세요.
 
 ## 0.12.0
 

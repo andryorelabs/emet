@@ -65,4 +65,17 @@ describe("evaluateRunGate ticket file shapes", () => {
     expect(gate.failures).toHaveLength(1);
     expect(gate.failures[0]).toStartWith("validate:");
   });
+
+  test("flags a coupled-surface split only when pairs are configured", () => {
+    const tickets = JSON.stringify([
+      { id: "T1", covers: ["S1"], surfaces: ["docs/a.md"], wave: 1 },
+      { id: "T2", covers: ["S1"], surfaces: ["site/a.md"], wave: 2 },
+    ]);
+    const directory = approvedRun(tickets);
+    const coupledSurfaces = [{ source: "docs/**", dependents: "site/**" }];
+    const gate = evaluateRunGate(directory, { inlineMaxLines: 100, coupledSurfaces });
+    expect(gate.failures).toHaveLength(1);
+    expect(gate.failures[0]).toContain("same wave");
+    expect(evaluateRunGate(directory, { inlineMaxLines: 100 }).failures).toEqual([]);
+  });
 });

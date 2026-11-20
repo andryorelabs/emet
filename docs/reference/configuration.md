@@ -113,6 +113,28 @@ Optional. Absent means no browser verification and every command behaves as befo
 
 `emet assess` prints `browserVerify: { run, reason }`, and the coordinator fills the reviewer's Browser axis only when `run` is true: the tier has a reviewer (not `passive`), `verify.browser` is configured, the optional [`agent-browser`](cli.md#setup-and-audit) binary is on PATH, and a changed path matches `paths` when set. Otherwise `reason` names the first failed condition and the review runs as before. A docs-only diff is `passive`, so a content-only change is not browser-verified. A reviewer whose browser commands fail twice falls back to Chrome DevTools MCP or reports a `verification-gap` finding; it never blocks the wave.
 
+## validate
+
+Optional. Absent means no coupled-surface check and every command behaves as before.
+
+```json
+{
+  "validate": {
+    "coupledSurfaces": [
+      {
+        "source": "docs/{guide,reference,how-to}/**/*.md",
+        "dependents": "apps/site/src/content/translations/**"
+      }
+    ]
+  }
+}
+```
+
+- `coupledSurfaces`: a non-empty list of pairs. Each pair has a `source` glob and a `dependents` glob, both non-empty strings; `source` accepts brace globs such as `docs/{guide,reference}/**/*.md`.
+- Unknown keys under `validate` or in a pair are rejected, and a malformed entry fails loading with a message naming `validate.coupledSurfaces[<n>]`.
+
+`emet validate` (`--file` and `--spec`) and the run gate of `emet preflight` report a `coupled-surface-split` error when a ticket whose surfaces overlap a pair's `source` is in an earlier wave than a ticket whose surfaces overlap that pair's `dependents`. Edits to a source page and the tickets that update what depends on it, such as translations, must ship in the same wave. The same wave, or no dependents ticket, passes. See [ADR-0033](../adr/0033-coupled-surfaces-ship-in-one-wave.md).
+
 ## interview
 
 - `research` (default `true`): when `true`, Phase 1 of `/emet:run` has the agent look up the answer in the repo, docs or primary sources, and explain why it recommends an option, before asking a technical question that offers options. The user still answers. `false` turns it off.

@@ -2,7 +2,7 @@
 title: Konfigurationsreferenz
 description: Jeder Schlüssel in emet.config.json mit Standardwert und Bedeutung.
 seoTitle: emet-Konfigurationsreferenz
-sourceHash: 03b3df3fa773f181
+sourceHash: 82a86139999124d0
 ---
 
 Jeder Schlüssel in `emet.config.json` mit Standardwert und Bedeutung. Die maßgebliche Quelle ist [`emet/schema/emet.config.schema.json`](../../emet/schema/emet.config.schema.json). Die Begriffe folgen [GLOSSARY.md](../../GLOSSARY.md). Zurück zur [README](../../README.md).
@@ -117,6 +117,28 @@ Optional. Fehlt der Block, gibt es keine Browser-Verifikation, und jeder Befehl 
 - Unbekannte Schlüssel unter `verify` oder `verify.browser` werden abgelehnt.
 
 `emet assess` gibt `browserVerify: { run, reason }` aus, und der Koordinator füllt die Browser-Achse des Reviewers nur, wenn `run` true ist: Die Stufe hat einen Reviewer (nicht `passive`), `verify.browser` ist konfiguriert, die optionale Binärdatei [`agent-browser`](cli.md#einrichtung-und-prüfung) liegt im PATH, und, falls `paths` gesetzt ist, ein geänderter Pfad passt. Andernfalls nennt `reason` die erste nicht erfüllte Bedingung, und das Review läuft wie bisher. Ein reiner Dokumentations-Diff ist `passive`, eine reine Inhaltsänderung wird also nicht per Browser verifiziert. Ein Reviewer, dessen Browser-Befehle zweimal fehlschlagen, weicht auf Chrome DevTools MCP aus oder meldet einen `verification-gap`-Befund; er blockiert die Welle nie.
+
+## validate
+
+Optional. Fehlt der Block, gibt es keine Prüfung gekoppelter Flächen, und jeder Befehl verhält sich wie zuvor.
+
+```json
+{
+  "validate": {
+    "coupledSurfaces": [
+      {
+        "source": "docs/{guide,reference,how-to}/**/*.md",
+        "dependents": "apps/site/src/content/translations/**"
+      }
+    ]
+  }
+}
+```
+
+- `coupledSurfaces`: eine nicht leere Liste von Paaren. Jedes Paar hat einen `source`-Glob und einen `dependents`-Glob, beide nicht leere Strings; `source` akzeptiert Brace-Globs wie `docs/{guide,reference}/**/*.md`.
+- Unbekannte Schlüssel unter `validate` oder in einem Paar werden abgelehnt, und ein fehlerhafter Eintrag lässt das Laden mit einer Meldung fehlschlagen, die `validate.coupledSurfaces[<n>]` nennt.
+
+`emet validate` (`--file` und `--spec`) und das Run-Gate von `emet preflight` melden einen `coupled-surface-split`-Fehler, wenn ein Ticket, dessen Flächen sich mit der `source` eines Paars überschneiden, in einer früheren Welle liegt als ein Ticket, dessen Flächen sich mit den `dependents` dieses Paars überschneiden. Änderungen an einer Quellseite und die Tickets, die davon Abhängiges aktualisieren, etwa Übersetzungen, müssen in derselben Welle ausgeliefert werden. Dieselbe Welle oder kein Dependents-Ticket besteht die Prüfung. Siehe [ADR-0033](../adr/0033-coupled-surfaces-ship-in-one-wave.md).
 
 ## interview
 

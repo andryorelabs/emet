@@ -7,6 +7,7 @@ import { DEFAULT_FORGE_CONFIG } from "./config";
 import { isObject } from "./narrow";
 import { parseFindings, type Finding } from "./review";
 import {
+  BROWSER_AXIS_PROMPT,
   buildReviewerPrompt,
   extractFindings,
   findingsSchema,
@@ -77,6 +78,39 @@ describe("review-run usage", () => {
     const spy = spyOn(console, "error").mockReturnValue(undefined);
     expect(await run(baseArgv("extreme"))).toBe(2);
     spy.mockRestore();
+  });
+});
+
+describe("review-run browser flag", () => {
+  test("rejects a browser-verify value other than true or false", async () => {
+    const spy = spyOn(console, "error").mockReturnValue(undefined);
+    expect(await run([...baseArgv("medium"), "--browser-verify", "maybe"])).toBe(2);
+    expect(spy.mock.calls[0]?.[0]).toContain("--browser-verify true|false");
+    spy.mockRestore();
+  });
+
+  test("passes the browser axis to codex only when the flag is true", async () => {
+    const log = path.join(tempDir(), "calls.jsonl");
+    process.env.FAKE_CODEX_LOG = log;
+    script([agentMessage("[]")]);
+    const out = captureStdout();
+    const deps = { repoRoot: tempDir(), sourceHome: tempDir(), executable: FAKE };
+    expect(await run([...baseArgv("medium"), "--browser-verify", "true"], deps)).toBe(0);
+    out.restore();
+    const logged = readFileSync(log, "utf8");
+    expect(logged).toContain("agent-browser skills get core");
+    expect(logged).toContain("--session review-r1");
+  });
+
+  test("omits the browser axis when the flag is false or absent", async () => {
+    const log = path.join(tempDir(), "calls.jsonl");
+    process.env.FAKE_CODEX_LOG = log;
+    script([agentMessage("[]")]);
+    const out = captureStdout();
+    const deps = { repoRoot: tempDir(), sourceHome: tempDir(), executable: FAKE };
+    expect(await run([...baseArgv("medium"), "--browser-verify", "false"], deps)).toBe(0);
+    out.restore();
+    expect(readFileSync(log, "utf8")).not.toContain("agent-browser");
   });
 });
 
@@ -304,10 +338,25 @@ describe("review-run contract", () => {
   });
 
   test("the prompt names the package and the tier lenses", () => {
-    const base = { run: "r", ticket: "CLA-9", packagePath: "/p/pkg.md" } as const;
+    const base = {
+      run: "r",
+      ticket: "CLA-9",
+      packagePath: "/p/pkg.md",
+      browserVerify: false,
+    } as const;
     expect(buildReviewerPrompt({ ...base, tier: "medium" })).not.toContain("security");
     const high = buildReviewerPrompt({ ...base, tier: "high" });
     expect(high).toContain("/p/pkg.md");
     expect(high).toContain("security and resilience");
+  });
+
+  test("the flag-less prompt is unchanged and the axis is appended when true", () => {
+    const base = { run: "r", ticket: "CLA-9", packagePath: "/p/pkg.md", tier: "medium" } as const;
+    const plain = buildReviewerPrompt({ ...base, browserVerify: false });
+    expect(plain).not.toContain("agent-browser");
+    expect(plain.endsWith("An empty array means nothing blocks.")).toBe(true);
+    expect(buildReviewerPrompt({ ...base, browserVerify: true })).toBe(
+      `${plain}\n\n${BROWSER_AXIS_PROMPT.replace("{{run_id}}", "r")}`,
+    );
   });
 });
