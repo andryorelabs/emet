@@ -2,8 +2,16 @@
 title: 새로운 소식
 description: emet 릴리스 노트. 각 버전에서 무엇이 바뀌었는지 정리합니다.
 seoTitle: "emet 새로운 소식: 릴리스 노트"
-sourceHash: f7d7289598b26a1e
+sourceHash: df050c17f0f6de67
 ---
+
+## 0.14.2
+
+2026-11-20
+
+### 수정됨
+
+- `emet promote`는 동기화 풀 리퀘스트를 즉시 병합하는 대신 해당 체크를 기다리고, 통과한 경우에만 병합합니다. 실패하거나 시간 초과되거나 거부된 동기화 풀 리퀘스트는 promote를 실패시키지 않고 열린 상태로 남으며, 결과와 저널 이벤트에 `syncMerged`와 `syncReason`이 포함됩니다.
 
 ## 0.14.1
 

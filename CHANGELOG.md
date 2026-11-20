@@ -8,6 +8,8 @@ and this project adheres to
 
 ## [Unreleased]
 
+## [0.14.2] - 2026-11-20
+
 ### Fixed
 
 - `emet promote` waits for the sync pull request's checks and merges it only when they pass, instead of merging it at once. A sync pull request that fails, times out or is rejected stays open without failing the promote, and the outcome and journal event carry `syncMerged` and `syncReason`.
@@ -485,7 +487,8 @@ and this project adheres to
 - Per-repo configuration through `forge.config.json`.
 - `install.sh`, which installs the CLI, command and agents.
 
-[Unreleased]: https://github.com/andryorelabs/emet/compare/v0.14.1...HEAD
+[Unreleased]: https://github.com/andryorelabs/emet/compare/v0.14.2...HEAD
+[0.14.2]: https://github.com/andryorelabs/emet/compare/v0.14.1...v0.14.2
 [0.14.1]: https://github.com/andryorelabs/emet/compare/v0.14.0...v0.14.1
 [0.14.0]: https://github.com/andryorelabs/emet/compare/v0.13.0...v0.14.0
 [0.13.0]: https://github.com/andryorelabs/emet/compare/v0.12.0...v0.13.0
