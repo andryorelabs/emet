@@ -2,7 +2,7 @@
 title: Executando o emet no Codex
 description: Como instalar o lado do Codex, escolher o host do agente, a aprovação única e os limites conhecidos.
 seoTitle: Executando o emet no Codex
-sourceHash: 38d79f32b248565e
+sourceHash: 8aed8797d3451a66
 ---
 
 O emet pode rodar no Codex CLI, além do Claude Code. Os termos seguem o [GLOSSARY.md](../../GLOSSARY.md); o produto em que uma execução roda é o **host do agente**. Esta página cobre a instalação do lado do Codex, a escolha do host, a aprovação única e os limites conhecidos. Volte ao [índice da documentação](../README.md).
@@ -53,6 +53,18 @@ O emet pede uma única aprovação, depois do plano. No Claude Code ela é um pr
 - A alternativa é `/plan $emet:run`: aprove o plano no modo de plano do próprio Codex, em vez de usar o hook.
 
 Quando esse diretório existe, o bloqueio falha de forma fechada: um arquivo de aprovação ausente ou ilegível mantém as mutações negadas. O guard também confere cada caminho de um `apply_patch` com o `.emet/surface.json` do ticket.
+
+## Depois de uma atualização do emet
+
+O Codex pede de novo que você confie nos hooks do plugin do emet após cada atualização do plugin, porque o hash de conteúdo do plugin muda. Para confiar neles, execute `/hooks` e pressione `t` na página de eventos para confiar em todos, ou aprove o aviso "Hooks need review" na inicialização. Até lá, o emet guard e a aprovação única não rodam.
+
+O `emet doctor` avisa quando os hooks nunca foram confiados:
+
+`Codex has not trusted the emet plugin hooks, so the emet guard does not run. In Codex, open /hooks and press t to trust them, or approve the "Hooks need review" prompt at startup. Codex asks again after every emet update.`
+
+Logo após um release, o shim pode rodar por alguns minutos a versão anterior em cache. Ele então imprime:
+
+`emet: release v<version> has no downloadable asset yet (it may still be publishing); using the cached v<newest>. Retry in a few minutes.`
 
 ## Como uma onda roda
 
