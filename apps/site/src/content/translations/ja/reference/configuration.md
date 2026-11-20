@@ -2,7 +2,7 @@
 title: 設定リファレンス
 description: emet.config.json のすべてのキーについて、既定値と意味を説明します。
 seoTitle: emet の設定リファレンス
-sourceHash: 03b3df3fa773f181
+sourceHash: 82a86139999124d0
 ---
 
 `emet.config.json` のすべてのキーを、既定値と意味とともに示します。信頼できる情報源は [`emet/schema/emet.config.schema.json`](../../emet/schema/emet.config.schema.json) です。用語は [GLOSSARY.md](../../GLOSSARY.md) に従います。[README](../../README.md) に戻る。
@@ -117,6 +117,28 @@ sourceHash: 03b3df3fa773f181
 - `verify` または `verify.browser` の下の未知のキーは拒否されます。
 
 `emet assess` は `browserVerify: { run, reason }` を出力し、コーディネーターは `run` が true のときだけレビュアーの Browser 軸を埋めます。条件は、ティアにレビュアーがいる（`passive` ではない）、`verify.browser` が設定されている、任意の [`agent-browser`](cli.md#setup-and-audit) バイナリが PATH 上にある、`paths` が設定されている場合は変更パスが一致する、です。そうでなければ `reason` が最初に満たされなかった条件を示し、レビューはこれまでどおり行われます。ドキュメントのみの差分は `passive` なので、コンテンツのみの変更はブラウザ検証されません。ブラウザコマンドが 2 回失敗したレビュアーは、Chrome DevTools MCP にフォールバックするか、`verification-gap` の指摘を報告します。ウェーブをブロックすることはありません。
+
+## validate
+
+任意です。ない場合は結合サーフェスのチェックを行わず、すべてのコマンドはこれまでどおり動作します。
+
+```json
+{
+  "validate": {
+    "coupledSurfaces": [
+      {
+        "source": "docs/{guide,reference,how-to}/**/*.md",
+        "dependents": "apps/site/src/content/translations/**"
+      }
+    ]
+  }
+}
+```
+
+- `coupledSurfaces`: 空でないペアのリストです。各ペアは `source` glob と `dependents` glob を持ち、どちらも空でない文字列です。`source` は `docs/{guide,reference}/**/*.md` のような波括弧 glob を受け付けます。
+- `validate` の下やペア内の未知のキーは拒否され、不正な形式のエントリは `validate.coupledSurfaces[<n>]` を示すメッセージでロードに失敗します。
+
+`emet validate`（`--file` と `--spec`）と `emet preflight` の実行ゲートは、ペアの `source` とサーフェスが重なるチケットが、そのペアの `dependents` とサーフェスが重なるチケットよりも前のウェーブにある場合、`coupled-surface-split` エラーを報告します。ソースページへの編集と、それに依存するもの（翻訳など）を更新するチケットは、同じウェーブでリリースする必要があります。同じウェーブである場合、または dependents のチケットがない場合は通過します。[ADR-0033](../adr/0033-coupled-surfaces-ship-in-one-wave.md) を参照してください。
 
 ## interview
 
