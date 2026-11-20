@@ -96,6 +96,9 @@
       "paths": ["apps/site/**"]
     }
   },
+  "review": {
+    "highRiskPaths": ["guard", "settingsapply"]
+  },
   "validate": {
     "coupledSurfaces": [
       {

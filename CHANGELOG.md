@@ -8,6 +8,14 @@ and this project adheres to
 
 ## [Unreleased]
 
+### Fixed
+
+- `emet setup` registers the `firecrawl-local` MCP server with the server name
+  first (`claude mcp add firecrawl-local --scope user -e FIRECRAWL_CLOUD=off -- ...`),
+  so the registration is parsed correctly.
+- `emet --help` lists every command in the registry (setup, fleet, insights, chain,
+  promote, whats-new, deploy-check, ci, run).
+
 ## [0.13.0] - 2026-11-20
 
 ### Added

@@ -26,6 +26,21 @@ function runCli(args: string[]): { stdout: string; stderr: string; exitCode: num
   };
 }
 
+describe("emet --help", () => {
+  test("lists exactly the COMMANDS registry names plus --version", () => {
+    const result = runCli(["--help"]);
+    const listed = result.stdout
+      .split("\n")
+      .filter((line) => /^ {2}\S/.test(line))
+      .map((line) => line.trim().split(/\s+/)[0] ?? "")
+      .filter((name) => name !== "--version");
+    const registered = COMMANDS.map((command) => command.name);
+    const missing = registered.filter((name) => !listed.includes(name));
+    const extra = listed.filter((name) => !registered.includes(name));
+    expect({ missing, extra }).toEqual({ missing: [], extra: [] });
+  });
+});
+
 describe("emet CLI", () => {
   test("--version prints the bare version", () => {
     const result = runCli(["--version"]);
