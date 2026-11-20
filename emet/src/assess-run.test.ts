@@ -117,4 +117,12 @@ describe("assess run()", () => {
       rmSync(outside, { recursive: true, force: true });
     }
   });
+
+  test("prints browserVerify with run false when verify.browser is absent", async () => {
+    await commitFile("src/app.ts", "export const a = 1\n");
+    const result = await runAssess(["--base", "HEAD~1", "--head", "HEAD"]);
+    expect(JSON.parse(result.logs[0] ?? "")).toMatchObject({
+      browserVerify: { run: false, reason: "verify.browser is not configured" },
+    });
+  });
 });

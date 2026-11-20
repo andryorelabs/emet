@@ -2,7 +2,7 @@
 title: CLI 参考
 description: 每个 emet 子命令、关卡与记录表、退出码和环境变量。
 seoTitle: emet CLI 参考
-sourceHash: 90ffe4a56892f887
+sourceHash: fee9f73b5e416c7f
 ---
 
 每个 `emet` 子命令、关卡与记录表、退出码和环境变量。术语遵循 [GLOSSARY.md](../../GLOSSARY.md)。返回 [README](../../README.md)。每个命令都可以用 `--help` 打印其用法。
@@ -17,8 +17,8 @@ sourceHash: 90ffe4a56892f887
 
 - `emet migrate [--dry-run]`：将旧版仓库重命名为 emet 的名称。
 - `emet init [--tracker linear|github|local] [--after-spec release|promote|none] [--force]`：自动检测包管理器、主干分支、跟踪器类型和 after-spec 模式（参见 [`handoff.afterSpec`](configuration.md#handoff)），并写入 `emet.config.json` 和 `docs/agents/*.md` 文件。`--tracker local` 会设置本地跟踪器。
-- `emet doctor [--all] [<path> ...]`：以只读方式一次审计任意数量的仓库；默认为当前目录。
-- `emet setup [--yes] [--with <ids>] [--list] [--json]`：通过 readline 提示提供可选安装项：`mattpocock-skills`（默认开启）、`engram`、`mascot`、`orca-pet`、`gh-auth` 以及推荐的 Claude Code 设置（`claude-settings`，仅在被选中时应用，并先对 `settings.json` 做带时间戳的备份）。没有 TTY，或使用 `--yes` 或 `--with` 时，它不会询问任何内容，只安装指定的项目；没有 TTY 且没有 `--with` 时，它什么都不安装，并打印 `--list` 目录。每一步都会报告 `installed`、`already-present`、`skipped` 或 `failed`；一个失败不会阻止其他步骤，只要有失败，退出码就是 1。`/emet:setup` 是插件入口，通过 `AskUserQuestion` 询问相同的选项。
+- `emet doctor [--all] [<path> ...]`：以只读方式一次审计任意数量的仓库；默认为当前目录。另外，对于配置了 [`verify.browser`](configuration.md#verify) 的仓库，它还会报告一项可选的 `agent-browser` 检查结果：缺少该二进制文件为 `indeterminate`（带安装补救办法的 `optional:` 行），二进制文件存在时，`agent-browser doctor` 失败会显示为警告。两者都绝不算错误，也不会改变退出码。没有 `verify.browser` 的仓库不显示任何内容。
+- `emet setup [--yes] [--with <ids>] [--list] [--json]`：通过 readline 提示提供可选安装项：`mattpocock-skills`（默认开启）、`engram`、`mascot`、`orca-pet`、`gh-auth`、`agent-browser`（默认关闭；运行 `bun add -g agent-browser@latest`，然后运行 `agent-browser install`，从不固定版本，也从不传入 `--with-deps`，因此缺少系统库时，它会打印出供你自行运行的命令）以及推荐的 Claude Code 设置（`claude-settings`，仅在被选中时应用，并先对 `settings.json` 做带时间戳的备份）。没有 TTY，或使用 `--yes` 或 `--with` 时，它不会询问任何内容，只安装指定的项目；没有 TTY 且没有 `--with` 时，它什么都不安装，并打印 `--list` 目录。每一步都会报告 `installed`、`already-present`、`skipped` 或 `failed`；一个失败不会阻止其他步骤，只要有失败，退出码就是 1。`/emet:setup` 是插件入口，通过 `AskUserQuestion` 询问相同的选项。
 - `emet fleet list [--root <dir>] [--json]`：列出 `--root`（默认 `~/code`）下一层、带有 `emet.config.json` 的 git 仓库，并显示 `tracker.kind`、`handoff.autoChain` 和 `models.worker`。`emet fleet set <key> <value> [--root <dir>] [--dry-run]` 会在每个列出的仓库中修改一个配置键，并先通过配置加载器校验（无效值不会改动任何内容，并以退出码 1 结束）。`emet fleet launch --feature <text> [--root <dir>] [--repos <a,b>]` 在通过 `emet chain` 的就绪检查后，在每个仓库中打开一个 `/emet:run --draft <text>` 会话。参见 [fleet 指南](../guide/fleet.md)。
 - `emet preflight [--run <id>] [--post-dispatch]`：确认仓库已具备派发条件。
 - `emet skill-path <name>`：打印某个 mattpocock-skills 技能的 `SKILL.md` 绝对路径。如果找不到该技能，则以退出码 1 退出。
@@ -73,7 +73,7 @@ emet doctor ~/code/*
 - `emet validate --spec <id> | --file <path>`：计划校验；参见[关卡与记录](#关卡与记录)。
 - `emet surfaces --check <file.json | ->`：如果同一波次的工单之间，允许编辑范围的 glob 存在重叠，则予以拒绝。
 - `emet approve --run <id>`、`emet materialize-log`、`emet results`、`emet verify`、`emet review-package`、`emet review`、`emet gate`：参见[关卡与记录](#关卡与记录)。
-- `emet assess --base <ref> --head <ref>`：将 diff 分类为 `passive`、`medium` 或 `high`，并输出包含层级、原因以及推荐的评审者模型和推理强度的 JSON。参见[模型与推理强度](../../README.md#models--effort)和 [`review`](configuration.md#review)。
+- `emet assess --base <ref> --head <ref>`：将 diff 分类为 `passive`、`medium` 或 `high`，并输出包含层级、原因以及推荐的评审者模型和推理强度的 JSON，外加 `browserVerify: { run, reason }`：仅当该层级有评审者、已配置 [`verify.browser`](configuration.md#verify)、`agent-browser` 二进制文件在 PATH 中，并且在设置了 `paths` 时有变更路径匹配，`run` 才为 `true`；否则 `reason` 会指出第一个未满足的条件。参见[模型与推理强度](../../README.md#models--effort)和 [`review`](configuration.md#review)。
 - `emet land --spec <s> --branch <integration> --tickets <id,...>`：将集成分支合并到本地主干（`landing.mode` 为 `merge`）。用 `commands.selfCheck` 代替 CI，并且不推送任何内容。
 - `emet spec-merge --spec <id>`：波次自动合并之后，将规格中 `ADDED`/`MODIFIED`/`REMOVED` 的需求增量合并到 `docs/specs/<area>.md`（`specs.dir`）。它会在写入任何内容之前检查所有区域。如果出现冲突，或者某个需求会丢失一个场景，则以退出码 1 退出，并且不改动任何文件。
 - `emet map [--refresh]`：把现有代码库的概览（技术栈、结构、约定、测试、热点）写入 `docs/agents/codebase.md`（`map.path`），并标注生成它所用的提交 SHA。同一个提交总是生成同一个文件。一旦 HEAD 越过该标注，`emet map --stale` 就以退出码 1 退出，此时 `emet preflight` 会发出警告。`emet map --for <globs>` 只打印与工单编辑范围相匹配的部分；该输出是地图中唯一会包含在工作者简报里的部分。

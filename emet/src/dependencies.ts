@@ -73,6 +73,7 @@ const AGENT_PLUGIN_NAMES = [PRODUCT, LEGACY_PRODUCT] as const;
 const DEPENDENCY_PROBE_TIMEOUT_MS = 5_000;
 
 type DependencyName =
+  | "agent-browser"
   | "claude-plugin"
   | "engram"
   | "forge-agents"
@@ -133,6 +134,14 @@ export interface EngramProbe {
   readonly plugin: ClaudePluginProbe;
 }
 
+export interface AgentBrowserProbe {
+  readonly binary: boolean;
+  readonly doctor:
+    | { readonly kind: "ok" }
+    | { readonly kind: "failed"; readonly detail: string }
+    | { readonly kind: "skipped" };
+}
+
 export interface DependencyProbes {
   /** Memoized by {@link createDependencyProbes} — the plugin list is global,
    * so a fleet sweep over 30 repos must still shell out exactly once. */
@@ -144,6 +153,8 @@ export interface DependencyProbes {
   readonly forgeAgents: () => Promise<ForgeAgentsProbe>;
   /** Optional so existing stubs stay valid; absent means Engram is not checked. */
   readonly engram?: () => Promise<EngramProbe>;
+  /** Optional so existing stubs stay valid; absent means agent-browser is not checked. */
+  readonly agentBrowser?: () => Promise<AgentBrowserProbe>;
   /** Optional so existing stubs stay valid; absent means the contract is not checked. */
   readonly skillsContract?: () => readonly DependencyCheck[];
 }
@@ -598,6 +609,63 @@ async function probeEngram(host: AgentHost): Promise<EngramProbe> {
   };
 }
 
+export const AGENT_BROWSER_INSTALL_REMEDY: readonly string[] = [
+  "bun add -g agent-browser@latest",
+  "agent-browser install",
+];
+
+/**
+ * agent-browser is optional UI verification, so this never reports
+ * `unsatisfied`: a missing binary is a recommendation and a failing
+ * `agent-browser doctor` is a warning, neither can change the exit code.
+ */
+export function classifyAgentBrowser(probe: AgentBrowserProbe): DependencyCheck {
+  if (!probe.binary) {
+    return {
+      dependency: "agent-browser",
+      status: "indeterminate",
+      summary:
+        "optional: agent-browser is recommended for browser verification (verify.browser is set) but the `agent-browser` binary is not on PATH. Install it:",
+      remedy: AGENT_BROWSER_INSTALL_REMEDY,
+      limitation: null,
+    };
+  }
+  if (probe.doctor.kind === "failed") {
+    return {
+      dependency: "agent-browser",
+      status: "indeterminate",
+      summary: `warning: \`agent-browser doctor\` reported a problem: ${probe.doctor.detail}`,
+      remedy: [],
+      limitation: null,
+    };
+  }
+  return {
+    dependency: "agent-browser",
+    status: "satisfied",
+    summary: "agent-browser is installed",
+    remedy: [],
+    limitation: null,
+  };
+}
+
+async function probeAgentBrowser(): Promise<AgentBrowserProbe> {
+  if (!(await resolveBinaryOnPath("agent-browser")))
+    return { binary: false, doctor: { kind: "skipped" } };
+  const result = await runProbeCommand(["agent-browser", "doctor"]);
+  if (result.kind === "timed-out") {
+    return {
+      binary: true,
+      doctor: { kind: "failed", detail: `timed out after ${DEPENDENCY_PROBE_TIMEOUT_MS}ms` },
+    };
+  }
+  if (result.kind === "spawn-failed") {
+    return { binary: true, doctor: { kind: "failed", detail: result.message } };
+  }
+  return result.exitCode === 0
+    ? { binary: true, doctor: { kind: "ok" } }
+    : { binary: true, doctor: { kind: "failed", detail: `exit code ${result.exitCode}` } };
+}
+
 /**
  * An agent is present as `~/.claude/agents/<name>.md` (install.sh) or inside
  * an installed `emet` plugin, where it dispatches as `emet:<name>`. Its legacy
@@ -681,6 +749,7 @@ export function createDependencyProbes(host: AgentHost = claudeHost): Dependency
   let claudePluginResult: Promise<ClaudePluginProbe> | null = null;
   let githubCliResult: Promise<GithubCliProbe> | null = null;
   let engramResult: Promise<EngramProbe> | null = null;
+  let agentBrowserResult: Promise<AgentBrowserProbe> | null = null;
 
   let forgeAgentsResult: Promise<ForgeAgentsProbe> | null = null;
   let skillsContractResult: readonly DependencyCheck[] | null = null;
@@ -689,6 +758,7 @@ export function createDependencyProbes(host: AgentHost = claudeHost): Dependency
     claudePlugin: () => (claudePluginResult ??= probeClaudePlugin(host)),
     githubCli: () => (githubCliResult ??= probeGithubCli()),
     engram: () => (engramResult ??= probeEngram(host)),
+    agentBrowser: () => (agentBrowserResult ??= probeAgentBrowser()),
     linearMcpServer: (repoRoot) => probeLinearMcpServer(repoRoot, host),
     forgeAgents: () => {
       const agentsDirectory = host.probes.agentsDir(os.homedir());

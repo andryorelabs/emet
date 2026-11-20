@@ -259,6 +259,22 @@ describe("checkSelfCheckCommand", () => {
   });
 });
 
+async function writeBrowserRepo(repoRoot: string, withBrowser: boolean): Promise<void> {
+  await Bun.$`git -C ${repoRoot} init --quiet`.quiet();
+  await Bun.write(
+    path.join(repoRoot, "forge.config.json"),
+    JSON.stringify({
+      version: 1,
+      repo: { trunk: "main", remote: "origin" },
+      ticket: { idPattern: "^X-\\d+$", branchPrefix: "x" },
+      tracker: { kind: "github" },
+      ...(withBrowser
+        ? { verify: { browser: { startCommand: "bun run dev", url: "http://localhost:1" } } }
+        : {}),
+    }),
+  );
+}
+
 describe("auditRepo", () => {
   let repoRoot: string;
 
@@ -466,6 +482,60 @@ describe("auditRepo", () => {
     const report = await auditRepo(repoRoot, probes, healthyEnvironment);
     expect(report.dependencyFindings.map((check) => check.dependency)).toEqual(["github-cli"]);
     expect(isReportClean(report)).toBe(false);
+  });
+
+  describe("verify.browser agent-browser finding", () => {
+    test("a missing binary is an optional line and keeps the report as clean as without it", async () => {
+      await writeBrowserRepo(repoRoot, true);
+      const probes: DependencyProbes = {
+        ...healthyProbes,
+        agentBrowser: () => Promise.resolve({ binary: false, doctor: { kind: "skipped" } }),
+      };
+      const withFinding = await auditRepo(repoRoot, probes, healthyEnvironment);
+      const without = await auditRepo(repoRoot, healthyProbes, healthyEnvironment);
+      expect(withFinding.optionalFindings?.join("\n")).toContain("optional:");
+      expect(withFinding.optionalFindings?.join("\n")).toContain("agent-browser");
+      expect(isReportClean(withFinding)).toBe(isReportClean(without));
+    });
+
+    test("a failing agent-browser doctor is a warning line and never dirties the report", async () => {
+      await writeBrowserRepo(repoRoot, true);
+      const probes: DependencyProbes = {
+        ...healthyProbes,
+        agentBrowser: () =>
+          Promise.resolve({ binary: true, doctor: { kind: "failed", detail: "exit code 1" } }),
+      };
+      const report = await auditRepo(repoRoot, probes, healthyEnvironment);
+      expect(report.optionalFindings?.[0]).toStartWith("warning:");
+      expect(isReportClean(report)).toBe(
+        isReportClean(await auditRepo(repoRoot, healthyProbes, healthyEnvironment)),
+      );
+    });
+
+    test("a healthy agent-browser prints nothing", async () => {
+      await writeBrowserRepo(repoRoot, true);
+      const probes: DependencyProbes = {
+        ...healthyProbes,
+        agentBrowser: () => Promise.resolve({ binary: true, doctor: { kind: "ok" } }),
+      };
+      const report = await auditRepo(repoRoot, probes, healthyEnvironment);
+      expect(report.optionalFindings).toBeUndefined();
+    });
+
+    test("a repo without verify.browser never probes or prints agent-browser", async () => {
+      await writeBrowserRepo(repoRoot, false);
+      let probed = false;
+      const probes: DependencyProbes = {
+        ...healthyProbes,
+        agentBrowser: () => {
+          probed = true;
+          return Promise.resolve({ binary: false, doctor: { kind: "skipped" } });
+        },
+      };
+      const report = await auditRepo(repoRoot, probes, healthyEnvironment);
+      expect(probed).toBe(false);
+      expect(report.optionalFindings).toBeUndefined();
+    });
   });
 
   test("a linear tracker with no server declared produces a dependency finding", async () => {

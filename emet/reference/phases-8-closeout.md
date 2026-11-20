@@ -86,6 +86,10 @@ hung workers and a fan-out roster hung ~1h45m; `${CLAUDE_PLUGIN_ROOT}/emet/refer
 Fallback if `emet:emet-reviewer` is missing: the `code-review` skill at `--level
 low|medium`. `/code-review ultra` is a manual, opt-in step only.
 
+Browser axis: fill `{{browser_verify}}` in the reviewer prompt (with the
+"Browser axis text" section of `reviewer-prompt.md`) only when `emet assess`
+printed `browserVerify.run: true`; otherwise leave it empty.
+
 Record the reviewer's findings JSON per ticket: `emet review --ticket
 <ticket> --findings <file|-> [--changed <files since the last round>]`. The
 CLI enforces triage order (intent_gap, bad_plan, patch, defer) and the

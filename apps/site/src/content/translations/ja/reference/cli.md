@@ -2,7 +2,7 @@
 title: CLI リファレンス
 description: すべての emet サブコマンド、ゲートと記録の表、終了コード、環境変数を説明します。
 seoTitle: emet CLI リファレンス
-sourceHash: 90ffe4a56892f887
+sourceHash: fee9f73b5e416c7f
 ---
 
 すべての `emet` サブコマンド、ゲートと記録の表、終了コード、環境変数です。用語は [GLOSSARY.md](../../GLOSSARY.md) に従います。[README](../../README.md) に戻る。すべてのコマンドは `--help` で使い方を表示します。
@@ -17,8 +17,8 @@ Claude Code 内では、3 つのスラッシュコマンドが CLI をラップ�
 
 - `emet migrate [--dry-run]`: 旧形式のリポジトリを emet の名前に変更します。
 - `emet init [--tracker linear|github|local] [--after-spec release|promote|none] [--force]`: パッケージマネージャー、トランクブランチ、トラッカーの種類、after-spec モード（[`handoff.afterSpec`](configuration.md#handoff) を参照）を自動検出し、`emet.config.json` と `docs/agents/*.md` ファイルを書き出します。`--tracker local` はローカルトラッカーを設定します。
-- `emet doctor [--all] [<path> ...]`: 任意の数のリポジトリを一度に読み取り専用で監査します。既定はカレントディレクトリです。
-- `emet setup [--yes] [--with <ids>] [--list] [--json]`: 任意のインストールを readline のプロンプトで提案します。対象は `mattpocock-skills`（既定でオン）、`engram`、`mascot`、`orca-pet`、`gh-auth`、そして推奨の Claude Code 設定（`claude-settings`。選択した場合にのみ、`settings.json` のタイムスタンプ付きバックアップを取ってから適用）です。TTY がない場合、または `--yes` や `--with` を付けた場合は何も尋ねず、指定した項目だけをインストールします。TTY がなく `--with` もない場合は何もインストールせず、`--list` のカタログを表示します。各ステップは `installed`、`already-present`、`skipped`、`failed` のいずれかを報告します。1 件失敗しても他は止まらず、失敗があれば終了コードは 1 です。`/emet:setup` はプラグインの入口で、同じ選択肢を `AskUserQuestion` で尋ねます。
+- `emet doctor [--all] [<path> ...]`: 任意の数のリポジトリを一度に読み取り専用で監査します。既定はカレントディレクトリです。[`verify.browser`](configuration.md#verify) を設定しているリポジトリでは、任意の `agent-browser` に関する指摘も報告します。バイナリがない場合は `indeterminate`（インストール方法を示す `optional:` 行）になり、バイナリがあるのに `agent-browser doctor` が失敗する場合は警告として表示されます。どちらもエラーにはならず、終了コードも変わりません。`verify.browser` がないリポジトリには何も表示されません。
+- `emet setup [--yes] [--with <ids>] [--list] [--json]`: 任意のインストールを readline のプロンプトで提案します。対象は `mattpocock-skills`（既定でオン）、`engram`、`mascot`、`orca-pet`、`gh-auth`、`agent-browser`（既定でオフ。`bun add -g agent-browser@latest` に続けて `agent-browser install` を実行します。バージョンは固定せず、`--with-deps` も渡さないため、システムライブラリが不足している場合は、自分で実行するコマンドを表示します）、そして推奨の Claude Code 設定（`claude-settings`。選択した場合にのみ、`settings.json` のタイムスタンプ付きバックアップを取ってから適用）です。TTY がない場合、または `--yes` や `--with` を付けた場合は何も尋ねず、指定した項目だけをインストールします。TTY がなく `--with` もない場合は何もインストールせず、`--list` のカタログを表示します。各ステップは `installed`、`already-present`、`skipped`、`failed` のいずれかを報告します。1 件失敗しても他は止まらず、失敗があれば終了コードは 1 です。`/emet:setup` はプラグインの入口で、同じ選択肢を `AskUserQuestion` で尋ねます。
 - `emet fleet list [--root <dir>] [--json]`: `--root`（既定は `~/code`）の 1 階層下にある、`emet.config.json` を持つ git リポジトリを、`tracker.kind`、`handoff.autoChain`、`models.worker` とともに一覧表示します。`emet fleet set <key> <value> [--root <dir>] [--dry-run]` は一覧の全リポジトリで設定キーを 1 つ変更し、先に設定ローダーで検証します（無効な値は何も変更せず、終了コード 1 で終了します）。`emet fleet launch --feature <text> [--root <dir>] [--repos <a,b>]` は、`emet chain` の準備チェックの後、各リポジトリで `/emet:run --draft <text>` セッションを開きます。[fleet ガイド](../guide/fleet.md)を参照してください。
 - `emet preflight [--run <id>] [--post-dispatch]`: リポジトリがディスパッチ可能な状態かどうかを確認します。
 - `emet skill-path <name>`: mattpocock-skills のスキルの `SKILL.md` の絶対パスを表示します。スキルが見つからない場合は終了コード 1 で終了します。
@@ -73,7 +73,7 @@ emet doctor ~/code/*
 - `emet validate --spec <id> | --file <path>`: 計画の検証です。[ゲートと記録](#ゲートと記録)を参照してください。
 - `emet surfaces --check <file.json | ->`: ウェーブ内のチケット間で、編集を許可するサーフェスのグロブが重複している場合は拒否します。
 - `emet approve --run <id>`、`emet materialize-log`、`emet results`、`emet verify`、`emet review-package`、`emet review`、`emet gate`: [ゲートと記録](#ゲートと記録)を参照してください。
-- `emet assess --base <ref> --head <ref>`: 差分を `passive`、`medium`、`high` に分類し、ティア、その理由、推奨されるレビュアーのモデルとエフォートを JSON で出力します。[モデルとエフォート](../../README.md#models--effort)と [`review`](configuration.md#review) を参照してください。
+- `emet assess --base <ref> --head <ref>`: 差分を `passive`、`medium`、`high` に分類し、ティア、その理由、推奨されるレビュアーのモデルとエフォートに加えて、`browserVerify: { run, reason }` を JSON で出力します。`run` が `true` になるのは、そのティアにレビュアーがいて、[`verify.browser`](configuration.md#verify) が設定されており、`agent-browser` バイナリが PATH 上にあり、`paths` が設定されている場合は変更されたパスが一致するときだけです。そうでなければ、`reason` が最初に満たされなかった条件を示します。[モデルとエフォート](../../README.md#models--effort)と [`review`](configuration.md#review) を参照してください。
 - `emet land --spec <s> --branch <integration> --tickets <id,...>`: 統合ブランチをローカルのトランクにマージします（`landing.mode` が `merge` の場合）。CI の代わりに `commands.selfCheck` を使い、何もプッシュしません。
 - `emet spec-merge --spec <id>`: ウェーブが自動マージされた後、スペックの `ADDED`/`MODIFIED`/`REMOVED` の要件の差分を `docs/specs/<area>.md`（`specs.dir`）にマージします。何かを書き込む前にすべてのエリアを確認します。競合がある場合や、シナリオが失われる要件がある場合は、終了コード 1 で終了し、どのファイルにも手を加えません。
 - `emet map [--refresh]`: 既存のコードベースの概要（スタック、構造、規約、テスト、ホットスポット）を `docs/agents/codebase.md`（`map.path`）に書き出し、作成元のコミット SHA を刻印します。同じコミットからは常に同じファイルが生成されます。`emet map --stale` は、HEAD が刻印より先に進むと終了コード 1 で終了し、その場合 `emet preflight` は警告します。`emet map --for <globs>` は、チケットの編集対象に一致するセクションだけを出力します。その出力が、ワーカーのブリーフに含まれるマップの唯一の部分です。

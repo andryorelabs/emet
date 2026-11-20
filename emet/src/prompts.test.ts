@@ -18,9 +18,9 @@ const BYTE_CEILINGS: Readonly<Record<string, number>> = {
   "emet/reference/incidents.md": 12950,
   "emet/reference/phases-1-5.md": 12050,
   "emet/reference/phases-6-7-dispatch.md": 16810,
-  "emet/reference/phases-8-closeout.md": 16930,
+  "emet/reference/phases-8-closeout.md": 17800,
   "emet/reference/phases-9-handoff.md": 7300,
-  "emet/reference/reviewer-prompt.md": 3060,
+  "emet/reference/reviewer-prompt.md": 3930,
   "emet/reference/tracker-github.md": 3790,
   "emet/reference/tracker-linear.md": 5300,
   "emet/reference/tracker-local.md": 1810,
@@ -109,5 +109,37 @@ describe("retired phrases", () => {
       present(inlineSnippet).pattern.test("never call it through an inline `bun -e` snippet"),
     ).toBe(false);
     expect(present(placeholder).pattern.test("{{spec_summary_15_lines}}")).toBe(true);
+  });
+});
+
+function read(relativePath: string): string {
+  return readFileSync(join(REPO_ROOT, relativePath), "utf8");
+}
+
+describe("browser verification prompts", () => {
+  test("the reviewer prompt carries the Browser axis behind {{browser_verify}}", () => {
+    const reviewer = read("emet/reference/reviewer-prompt.md");
+    expect(reviewer).toContain("{{browser_verify}}");
+    expect(reviewer).toContain("agent-browser skills get core");
+    expect(reviewer).toContain("--session review-{{run_id}}");
+    expect(reviewer).toContain("verification-gap");
+  });
+
+  test("the closeout fills {{browser_verify}} only on browserVerify.run: true", () => {
+    const closeout = read("emet/reference/phases-8-closeout.md");
+    expect(closeout).toContain("{{browser_verify}}");
+    expect(closeout).toContain("browserVerify.run: true");
+  });
+
+  test("the worker prompt has the optional browser line", () => {
+    const worker = read("emet/reference/worker-prompt.md");
+    expect(worker).toContain("Optional:");
+    expect(worker).toContain("--session <ticket>");
+  });
+
+  test("no prompt pins an agent-browser version", () => {
+    for (const path of listMarkdown("emet/reference")) {
+      expect(read(path)).not.toMatch(/agent-browser@/);
+    }
   });
 });
