@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, setDefaultTimeout, test } from
 import {
   chmodSync,
   existsSync,
+  mkdirSync,
   mkdtempSync,
   readdirSync,
   readFileSync,
@@ -21,6 +22,7 @@ import {
   defaultSelfCheck,
   detectGoSelfCheck,
   detectJsSelfCheck,
+  detectOwnedPaths,
   detectPackageManager,
   detectTrackerKind,
   detectTrunk,
@@ -538,6 +540,59 @@ function readIfPresent(file: string): string {
   return existsSync(file) ? readFileSync(file, "utf8") : "";
 }
 
+describe("detectOwnedPaths", () => {
+  let repoRoot = "";
+
+  beforeEach(() => {
+    repoRoot = mkdtempSync(path.join(os.tmpdir(), "emet-init-owned-"));
+  });
+
+  afterEach(() => {
+    rmSync(repoRoot, { recursive: true, force: true });
+  });
+
+  test("empty when nothing is detected", () => {
+    expect(detectOwnedPaths(repoRoot)).toEqual([]);
+  });
+
+  test("prisma/schema.prisma file", () => {
+    mkdirSync(path.join(repoRoot, "prisma"));
+    writeFileSync(path.join(repoRoot, "prisma", "schema.prisma"), "");
+    expect(detectOwnedPaths(repoRoot)).toEqual(["prisma/schema.prisma"]);
+  });
+
+  test("prisma/schema/ folder when the file is absent", () => {
+    mkdirSync(path.join(repoRoot, "prisma", "schema"), { recursive: true });
+    expect(detectOwnedPaths(repoRoot)).toEqual(["prisma/schema/"]);
+  });
+
+  test("the file wins over the folder", () => {
+    mkdirSync(path.join(repoRoot, "prisma", "schema"), { recursive: true });
+    writeFileSync(path.join(repoRoot, "prisma", "schema.prisma"), "");
+    expect(detectOwnedPaths(repoRoot)).toEqual(["prisma/schema.prisma"]);
+  });
+
+  test("drizzle/ needs both a drizzle config and the folder", () => {
+    mkdirSync(path.join(repoRoot, "drizzle"));
+    expect(detectOwnedPaths(repoRoot)).toEqual([]);
+    writeFileSync(path.join(repoRoot, "drizzle.config.mjs"), "");
+    expect(detectOwnedPaths(repoRoot)).toEqual(["drizzle/"]);
+  });
+
+  test("a drizzle config without the folder adds nothing", () => {
+    writeFileSync(path.join(repoRoot, "drizzle.config.ts"), "");
+    expect(detectOwnedPaths(repoRoot)).toEqual([]);
+  });
+
+  test("prisma and drizzle combine", () => {
+    mkdirSync(path.join(repoRoot, "prisma"));
+    writeFileSync(path.join(repoRoot, "prisma", "schema.prisma"), "");
+    mkdirSync(path.join(repoRoot, "drizzle"));
+    writeFileSync(path.join(repoRoot, "drizzle.config.cjs"), "");
+    expect(detectOwnedPaths(repoRoot)).toEqual(["prisma/schema.prisma", "drizzle/"]);
+  });
+});
+
 describe("emet init --tracker local end to end", () => {
   let repoRoot = "";
   const entry = path.resolve(import.meta.dir, "init.ts");
@@ -575,6 +630,25 @@ describe("emet init --tracker local end to end", () => {
     expect(gitignore).not.toContain("!.emet/tickets/");
     const doc = await Bun.file(path.join(repoRoot, "docs", "agents", "issue-tracker.md")).text();
     expect(doc).toContain("emet tracker create-ticket --spec");
+  });
+
+  test("a Prisma schema writes schema.ownedPaths and drops the schema TODO marker", async () => {
+    await Bun.$`mkdir -p ${path.join(repoRoot, "prisma")}`.quiet();
+    await Bun.write(path.join(repoRoot, "prisma", "schema.prisma"), "");
+    await runInit();
+    const config: unknown = await Bun.file(path.join(repoRoot, "emet.config.json")).json();
+    expect(config).toMatchObject({ schema: { ownedPaths: ["prisma/schema.prisma"] } });
+    const doc = await Bun.file(path.join(repoRoot, "docs", "agents", "emet.md")).text();
+    expect(doc).not.toContain("Schema / migration ownership\n\nTODO(emet)");
+    expect(doc).toContain("`prisma/schema.prisma`");
+  });
+
+  test("no schema detected: no schema key and the TODO marker stays", async () => {
+    await runInit();
+    const config: unknown = await Bun.file(path.join(repoRoot, "emet.config.json")).json();
+    expect(config).not.toHaveProperty("schema");
+    const doc = await Bun.file(path.join(repoRoot, "docs", "agents", "emet.md")).text();
+    expect(doc).toContain("Schema / migration ownership\n\nTODO(emet)");
   });
 
   test("writes only new names: no file contains the legacy product name", async () => {
