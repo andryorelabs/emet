@@ -116,6 +116,8 @@ interface SpecFixture {
   readonly specs: Readonly<Record<number, { state: string; total: number; completed: number }>>;
   readonly failClose?: ReadonlySet<number>;
   readonly failParent?: ReadonlySet<number>;
+  readonly stayOpen?: ReadonlySet<number>;
+  readonly rawSpecs?: Readonly<Record<number, string>>;
 }
 
 function ok(stdout: string) {
@@ -141,7 +143,11 @@ function specGh(fixture: SpecFixture): { gh: GhRunner; calls: string[][] } {
       }
       return ok(fixture.parents[issue] ?? "");
     }
-    if (args[4] === "state") return ok(closedSpecs.has(issue) ? "CLOSED\n" : "OPEN\n");
+    if (args[4] === "state") {
+      return ok(closedSpecs.has(issue) && !fixture.stayOpen?.has(issue) ? "CLOSED\n" : "OPEN\n");
+    }
+    const raw = fixture.rawSpecs?.[issue];
+    if (raw !== undefined) return ok(raw);
     const spec = fixture.specs[issue];
     return ok(
       JSON.stringify({
@@ -152,6 +158,12 @@ function specGh(fixture: SpecFixture): { gh: GhRunner; calls: string[][] } {
   };
   return { gh, calls };
 }
+
+const throwingNonError: GhRunner = (args) => {
+  if (args[4] === "parent") return ok("40");
+  // oxlint-disable-next-line typescript/only-throw-error -- a runner may throw a non-Error value
+  throw "boom";
+};
 
 function closedResult(issue: number, outcome: "closed" | "already-closed" | "failed" = "closed") {
   return { ticket: `CLA-${issue}`, issue, outcome } as const;
@@ -223,6 +235,41 @@ describe("closeCompletedSpecs", () => {
     const specs = await closeCompletedSpecs([closedResult(1)], gh);
     expect(specs).toEqual([
       { spec: null, ticket: 1, outcome: "failed", detail: "parent read failed: denied" },
+    ]);
+  });
+
+  test("reports failed when the spec still reads OPEN after the close", async () => {
+    const { gh } = specGh({
+      parents: { 1: "40" },
+      specs: { 40: { state: "OPEN", total: 2, completed: 2 } },
+      stayOpen: new Set([40]),
+    });
+    const specs = await closeCompletedSpecs([closedResult(1)], gh);
+    expect(specs).toEqual([{ spec: 40, outcome: "failed", detail: "issue is OPEN after close" }]);
+  });
+
+  test("reports failed when the spec summary has an unexpected shape", async () => {
+    const shapes = [
+      '{"state":"OPEN"}',
+      '{"state":"OPEN","subIssuesSummary":{"total":"2","completed":2}}',
+      '{"state":1,"subIssuesSummary":{"total":2,"completed":2}}',
+    ];
+    for (const raw of shapes) {
+      const { gh } = specGh({ parents: { 1: "40" }, specs: {}, rawSpecs: { 40: raw } });
+      // oxlint-disable-next-line eslint/no-await-in-loop -- sequential on purpose, one fixture per shape
+      const specs = await closeCompletedSpecs([closedResult(1)], gh);
+      expect(specs).toEqual([
+        { spec: 40, outcome: "failed", detail: "unexpected issue view output" },
+      ]);
+    }
+  });
+
+  test("reports failed when the spec output is not JSON or the runner throws a non-error", async () => {
+    const { gh } = specGh({ parents: { 1: "40" }, specs: {}, rawSpecs: { 40: "not json" } });
+    const [notJson] = await closeCompletedSpecs([closedResult(1)], gh);
+    expect(notJson?.outcome).toBe("failed");
+    expect(await closeCompletedSpecs([closedResult(1)], throwingNonError)).toEqual([
+      { spec: 40, outcome: "failed", detail: "boom" },
     ]);
   });
 });
