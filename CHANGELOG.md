@@ -8,6 +8,14 @@ and this project adheres to
 
 ## [Unreleased]
 
+### Added
+
+- `emet doctor` on the Codex host warns when the emet plugin is enabled in `$CODEX_HOME/config.toml` but Codex has not trusted any of its hooks, so the emet guard does not run. The warning does not change the exit code.
+
+### Fixed
+
+- When the release asset for the plugin's version cannot be downloaded yet, `bin/emet` runs the newest cached binary for every command, not only `emet guard`, and prints one notice that the release may still be publishing. With `EMET_PREFETCH=1` it prints the notice and exits `0` without running it. A checksum mismatch or a missing `SHA256SUMS` still never falls back, and the download staging directory is removed before the fallback runs.
+
 ## [0.14.3] - 2026-11-20
 
 ### Added
