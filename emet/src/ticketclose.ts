@@ -118,7 +118,7 @@ export interface SpecCloseResult {
 interface SpecProgress {
   readonly state: string;
   readonly total: number;
-  readonly completed: number;
+  readonly complete: boolean;
 }
 
 async function readParent(issue: number, gh: GhRunner): Promise<number | null> {
@@ -136,8 +136,33 @@ async function readParent(issue: number, gh: GhRunner): Promise<number | null> {
   return parseIssueNumber(text);
 }
 
-async function readSpecProgress(spec: number, gh: GhRunner): Promise<SpecProgress> {
-  const result = await gh(["issue", "view", String(spec), "--json", "state,subIssuesSummary"]);
+function nodesComplete(
+  subIssues: unknown,
+  closedNow: ReadonlySet<number>,
+): { readonly total: number } | null {
+  if (!isRecord(subIssues) || !Array.isArray(subIssues.nodes)) return null;
+  const nodes: unknown[] = subIssues.nodes;
+  if (nodes.length === 0 || subIssues.totalCount !== nodes.length) return null;
+  const allDone = nodes.every((node) => {
+    if (!isRecord(node)) return false;
+    if (node.state === "CLOSED") return true;
+    return typeof node.number === "number" && closedNow.has(node.number);
+  });
+  return allDone ? { total: nodes.length } : null;
+}
+
+async function readSpecProgress(
+  spec: number,
+  gh: GhRunner,
+  closedNow: ReadonlySet<number>,
+): Promise<SpecProgress> {
+  const result = await gh([
+    "issue",
+    "view",
+    String(spec),
+    "--json",
+    "state,subIssuesSummary,subIssues",
+  ]);
   if (result.exitCode !== 0) throw new Error(failureDetail(result));
   const parsed: unknown = JSON.parse(result.stdout);
   if (!isRecord(parsed) || !isRecord(parsed.subIssuesSummary)) {
@@ -148,20 +173,25 @@ async function readSpecProgress(spec: number, gh: GhRunner): Promise<SpecProgres
   if (typeof state !== "string" || typeof total !== "number" || typeof completed !== "number") {
     throw new Error("unexpected issue view output");
   }
-  return { state, total, completed };
+  if (total > 0 && completed === total) return { state, total, complete: true };
+  const fromNodes = nodesComplete(parsed.subIssues, closedNow);
+  if (fromNodes !== null) return { state, total: fromNodes.total, complete: true };
+  return { state, total, complete: false };
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null;
 }
 
-async function closeSpec(spec: number, gh: GhRunner): Promise<SpecCloseResult> {
+async function closeSpec(
+  spec: number,
+  gh: GhRunner,
+  closedNow: ReadonlySet<number>,
+): Promise<SpecCloseResult> {
   try {
-    const progress = await readSpecProgress(spec, gh);
+    const progress = await readSpecProgress(spec, gh, closedNow);
     if (progress.state === "CLOSED") return { spec, outcome: "already-closed" };
-    if (progress.total <= 0 || progress.completed !== progress.total) {
-      return { spec, outcome: "open" };
-    }
+    if (!progress.complete) return { spec, outcome: "open" };
     const closed = await gh([
       "issue",
       "close",
@@ -198,6 +228,10 @@ export async function closeCompletedSpecs(
 ): Promise<readonly SpecCloseResult[]> {
   const specs: SpecCloseResult[] = [];
   const seen = new Set<number>();
+  const closedNow = new Set<number>();
+  for (const result of results) {
+    if (result.issue !== null && result.outcome !== "failed") closedNow.add(result.issue);
+  }
   for (const result of results) {
     if (result.issue === null) continue;
     if (result.outcome !== "closed" && result.outcome !== "already-closed") continue;
@@ -207,7 +241,7 @@ export async function closeCompletedSpecs(
       if (parent === null || seen.has(parent)) continue;
       seen.add(parent);
       // oxlint-disable-next-line eslint/no-await-in-loop -- sequential on purpose
-      specs.push(await closeSpec(parent, gh));
+      specs.push(await closeSpec(parent, gh, closedNow));
     } catch (error) {
       const detail = error instanceof Error ? error.message : String(error);
       specs.push({

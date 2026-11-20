@@ -117,6 +117,7 @@ interface SpecFixture {
   readonly failClose?: ReadonlySet<number>;
   readonly failParent?: ReadonlySet<number>;
   readonly stayOpen?: ReadonlySet<number>;
+  readonly subIssues?: Readonly<Record<number, unknown>>;
   readonly rawSpecs?: Readonly<Record<number, string>>;
 }
 
@@ -153,6 +154,9 @@ function specGh(fixture: SpecFixture): { gh: GhRunner; calls: string[][] } {
       JSON.stringify({
         state: spec?.state,
         subIssuesSummary: { total: spec?.total, completed: spec?.completed },
+        ...(fixture.subIssues?.[issue] === undefined
+          ? {}
+          : { subIssues: fixture.subIssues[issue] }),
       }),
     );
   };
@@ -167,6 +171,10 @@ const throwingNonError: GhRunner = (args) => {
 
 function closedResult(issue: number, outcome: "closed" | "already-closed" | "failed" = "closed") {
   return { ticket: `CLA-${issue}`, issue, outcome } as const;
+}
+
+function node(number: number, state: string) {
+  return { number, state };
 }
 
 describe("closeCompletedSpecs", () => {
@@ -270,6 +278,61 @@ describe("closeCompletedSpecs", () => {
     expect(notJson?.outcome).toBe("failed");
     expect(await closeCompletedSpecs([closedResult(1)], throwingNonError)).toEqual([
       { spec: 40, outcome: "failed", detail: "boom" },
+    ]);
+  });
+
+  test("closes when the summary lags but nodes are closed or just closed", async () => {
+    const { gh, calls } = specGh({
+      parents: { 1: "9" },
+      specs: { 9: { state: "OPEN", total: 2, completed: 1 } },
+      subIssues: { 9: { nodes: [node(5, "CLOSED"), node(1, "OPEN")], totalCount: 2 } },
+    });
+    expect(await closeCompletedSpecs([closedResult(1)], gh)).toEqual([
+      { spec: 9, outcome: "closed" },
+    ]);
+    expect(calls.find((call) => call[1] === "close")).toEqual([
+      "issue",
+      "close",
+      "9",
+      "--reason",
+      "completed",
+      "--comment",
+      "All 2 tickets landed.",
+    ]);
+  });
+
+  test("keeps the spec open for an unclosed node, a truncated list, or bad nodes", async () => {
+    const cases: unknown[] = [
+      { nodes: [node(5, "OPEN"), node(1, "OPEN")], totalCount: 2 },
+      { nodes: [node(1, "OPEN")], totalCount: 2 },
+      { nodes: [], totalCount: 0 },
+      { nodes: ["x"], totalCount: 1 },
+      { nodes: [{ state: "OPEN" }], totalCount: 1 },
+      { nodes: "x", totalCount: 1 },
+      "x",
+    ];
+    for (const subIssues of cases) {
+      const { gh, calls } = specGh({
+        parents: { 1: "9" },
+        specs: { 9: { state: "OPEN", total: 2, completed: 1 } },
+        subIssues: { 9: subIssues },
+      });
+      // oxlint-disable-next-line eslint/no-await-in-loop -- sequential on purpose, one fixture per case
+      expect(await closeCompletedSpecs([closedResult(1)], gh)).toEqual([
+        { spec: 9, outcome: "open" },
+      ]);
+      expect(calls.some((call) => call[1] === "close")).toBe(false);
+    }
+  });
+
+  test("a complete summary closes even when the nodes are truncated", async () => {
+    const { gh } = specGh({
+      parents: { 1: "9" },
+      specs: { 9: { state: "OPEN", total: 3, completed: 3 } },
+      subIssues: { 9: { nodes: [node(1, "OPEN")], totalCount: 3 } },
+    });
+    expect(await closeCompletedSpecs([closedResult(1)], gh)).toEqual([
+      { spec: 9, outcome: "closed" },
     ]);
   });
 });
