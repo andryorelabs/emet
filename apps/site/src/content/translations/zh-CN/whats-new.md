@@ -2,8 +2,20 @@
 title: 新功能
 description: emet 的发布说明：每个版本都有哪些变化。
 seoTitle: "emet 新功能：发布说明"
-sourceHash: ab9546b053236fcf
+sourceHash: c7ab5fe94ab28e50
 ---
+
+## 0.14.4
+
+2026-11-20
+
+### 新增
+
+- 在 Codex 宿主上，当 emet 插件已在 `$CODEX_HOME/config.toml` 中启用，但 Codex 尚未信任其任何钩子（因此 emet 守卫不会运行）时，`emet doctor` 会发出警告。该警告不会改变退出码。
+
+### 已修复
+
+- 当插件版本对应的发布资源暂时无法下载时，`bin/emet` 会对所有命令（而不仅是 `emet guard`）运行最新的缓存二进制文件，并输出一条提示，说明发布可能仍在进行中。设置 `EMET_PREFETCH=1` 时，它会输出提示并以 `0` 退出，不运行该文件。校验和不匹配或缺少 `SHA256SUMS` 时仍然从不回退，并且下载的临时目录会在回退之前被删除。
 
 ## 0.14.3
 

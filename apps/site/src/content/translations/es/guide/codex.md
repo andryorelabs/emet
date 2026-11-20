@@ -2,7 +2,7 @@
 title: Ejecutar emet en Codex
 description: Usa Codex como Agent host de emet: instala el plugin, configura agentHost, aprueba una sola vez y conoce los límites.
 seoTitle: Ejecutar emet en Codex
-sourceHash: 38d79f32b248565e
+sourceHash: 8aed8797d3451a66
 ---
 
 emet puede ejecutarse en Codex CLI además de Claude Code. Los términos siguen [GLOSSARY.md](../../GLOSSARY.md); el producto en el que se ejecuta una corrida es el **Agent host**. Esta página cubre la instalación del lado de Codex, la elección del host, la aprobación única y los límites conocidos. Volver al [índice de la documentación](../README.md).
@@ -53,6 +53,18 @@ emet pide una sola aprobación, después del plan. En Claude Code es un prompt. 
 - La alternativa es `/plan $emet:run`: aprueba el plan en el modo de plan propio de Codex en lugar del hook.
 
 Una vez que existe ese directorio, la compuerta falla en modo cerrado: un archivo de aprobación ausente o ilegible mantiene denegadas las mutaciones. El guard también comprueba cada ruta de un `apply_patch` contra el `.emet/surface.json` del ticket.
+
+## Después de actualizar emet
+
+Codex vuelve a pedir que confíes en los hooks del plugin de emet después de cada actualización del plugin, porque cambia el hash de contenido del plugin. Para confiar en ellos, ejecuta `/hooks` y pulsa `t` en la página de eventos para confiar en todos, o aprueba el aviso "Hooks need review" al iniciar. Hasta entonces, el emet guard y la aprobación única no se ejecutan.
+
+`emet doctor` avisa cuando nunca se confió en los hooks:
+
+`Codex has not trusted the emet plugin hooks, so the emet guard does not run. In Codex, open /hooks and press t to trust them, or approve the "Hooks need review" prompt at startup. Codex asks again after every emet update.`
+
+Justo después de un release, el shim puede ejecutar durante unos minutos la versión anterior en caché. Entonces imprime:
+
+`emet: release v<version> has no downloadable asset yet (it may still be publishing); using the cached v<newest>. Retry in a few minutes.`
 
 ## Cómo se ejecuta una oleada
 

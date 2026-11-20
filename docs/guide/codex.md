@@ -49,6 +49,18 @@ emet asks for one approval, after the plan. On Claude Code that is a prompt. On 
 
 Once that directory exists, the gate fails closed: a missing or unreadable approval file keeps mutations denied. The guard also checks every path of an `apply_patch` against the ticket's `.emet/surface.json`.
 
+## After an emet update
+
+Codex asks you to trust the emet plugin hooks again after every plugin update, because the plugin's content hash changes. To trust them, run `/hooks` and press `t` on the events page to trust all, or approve the "Hooks need review" prompt at startup. Until then the emet guard and the single approval do not run.
+
+`emet doctor` warns when the hooks were never trusted:
+
+`Codex has not trusted the emet plugin hooks, so the emet guard does not run. In Codex, open /hooks and press t to trust them, or approve the "Hooks need review" prompt at startup. Codex asks again after every emet update.`
+
+Right after a release, the shim may run the previous cached version for a few minutes. It then prints:
+
+`emet: release v<version> has no downloadable asset yet (it may still be publishing); using the cached v<newest>. Retry in a few minutes.`
+
 ## How a wave runs
 
 - `emet dispatch --role worker` checks the claim and the slot, creates `.emet/worktrees/agent-<ticket>`, builds a per-run `CODEX_HOME` overlay under `.emet/runs/<run>/codex-home/`, and starts `codex exec` with the resolved model and effort, the `codex.sandbox` mode (`danger-full-access` by default), `--json` and `--output-schema`. Events are captured to `.emet/runs/<run>/codex/<ticket>.jsonl`. The worker is identified by the `threadId` of its `thread.started` event and that JSONL path; the process id is only an auxiliary field.

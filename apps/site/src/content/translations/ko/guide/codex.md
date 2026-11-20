@@ -2,7 +2,7 @@
 title: Codex에서 emet 실행하기
 description: Codex CLI 쪽 설치, 에이전트 호스트 선택, 단일 승인, 알려진 한계를 설명합니다.
 seoTitle: Codex에서 emet 실행하기
-sourceHash: 38d79f32b248565e
+sourceHash: 8aed8797d3451a66
 ---
 
 emet은 Claude Code뿐 아니라 Codex CLI에서도 실행할 수 있습니다. 용어는 [GLOSSARY.md](../../GLOSSARY.md)를 따르며, 실행이 동작하는 제품을 **에이전트 호스트**라고 부릅니다. 이 페이지는 Codex 쪽 설치, 호스트 선택, 단일 승인, 알려진 한계를 다룹니다. [문서 색인](../README.md)으로 돌아갑니다.
@@ -53,6 +53,18 @@ emet은 계획 이후 단 한 번만 승인을 요청합니다. Claude Code에�
 - 대안은 `/plan $emet:run`입니다. 훅 대신 Codex 자체의 플랜 모드에서 계획을 승인합니다.
 
 그 디렉터리가 존재하면 게이트는 페일 클로즈드로 동작합니다. 승인 파일이 없거나 읽을 수 없으면 변경은 계속 거부됩니다. 가드는 `apply_patch`의 모든 경로도 티켓의 `.emet/surface.json`과 대조합니다.
+
+## emet 업데이트 후
+
+Codex는 플러그인을 업데이트할 때마다 emet 플러그인 hook을 다시 신뢰할지 묻습니다. 플러그인의 콘텐츠 해시가 바뀌기 때문입니다. 신뢰하려면 `/hooks`를 실행하고 이벤트 페이지에서 `t`를 눌러 모두 신뢰하거나, 시작 시 "Hooks need review" 프롬프트를 승인하세요. 그때까지는 emet guard와 단일 승인이 실행되지 않습니다.
+
+`emet doctor`는 hook을 한 번도 신뢰하지 않았을 때 경고합니다.
+
+`Codex has not trusted the emet plugin hooks, so the emet guard does not run. In Codex, open /hooks and press t to trust them, or approve the "Hooks need review" prompt at startup. Codex asks again after every emet update.`
+
+릴리스 직후 몇 분 동안 shim이 이전에 캐시된 버전을 실행할 수 있습니다. 이때 다음과 같이 출력합니다.
+
+`emet: release v<version> has no downloadable asset yet (it may still be publishing); using the cached v<newest>. Retry in a few minutes.`
 
 ## 웨이브가 실행되는 방식
 

@@ -2,10 +2,13 @@
 # Resolves the emet CLI: source (EMET_FROM_SOURCE=1), cached binary, or a
 # checksum-verified download. Never execs a file whose checksum did not verify.
 # Each EMET_* variable falls back to its legacy FORGE_* name.
+# When the release asset cannot be downloaded, every command falls back to the
+# newest cached binary of another version, with one stderr notice; under
+# EMET_PREFETCH=1 it prints the notice and exits 0 without running it. A checksum
+# mismatch or a missing SHA256SUMS never falls back.
 # The PreToolUse guard (`emet guard` without --event) fails closed: when the
 # binary cannot be resolved it exits 2, which blocks the tool call, and says how
-# to recover, except that a missing release asset falls back to the newest cached
-# binary (a checksum mismatch never does). Other commands and the Stop events exit 1, which does not block.
+# to recover. Other commands and the Stop events exit 1, which does not block.
 # On an unsupported platform (native Windows, or an OS/architecture with no
 # release asset) every invocation exits 0 and does nothing; only the prefetch
 # invocation prints one {"systemMessage":...} notice on stdout.
@@ -56,14 +59,24 @@ fail() {
   exit 1
 }
 
+prefetch=${EMET_PREFETCH:-${FORGE_PREFETCH:-}}
+
 fall_back_to_cached() {
-  [ "$guard_fails_closed" = "1" ] || return 0
   [ -d "${cache_root:-}" ] || return 0
-  newest=$(ls -1 "$cache_root" 2>/dev/null | sort -t. -k1,1n -k2,2n -k3,3n | while read -r candidate; do
-    [ -x "$cache_root/$candidate/emet" ] && echo "$candidate"
-  done | tail -n 1)
+  newest=$(ls -1 "$cache_root" 2>/dev/null | while read -r candidate; do
+    case $candidate in
+      "$version") continue ;;
+      [0-9]*.[0-9]*.[0-9]*) ;;
+      *) continue ;;
+    esac
+    [ -f "$cache_root/$candidate/emet" ] && [ -x "$cache_root/$candidate/emet" ] && echo "$candidate"
+  done | sort -t. -k1,1n -k2,2n -k3,3n | tail -n 1)
   [ -n "$newest" ] || return 0
-  echo "emet: release v$version has no downloadable asset; the guard is using the cached v$newest." >&2
+  echo "emet: release v$version has no downloadable asset yet (it may still be publishing); using the cached v$newest. Retry in a few minutes." >&2
+  # exec skips the EXIT trap, so the staging directory is removed here.
+  rm -rf "${staging:-}"
+  trap - EXIT
+  [ "$prefetch" = "1" ] && exit 0
   exec "$cache_root/$newest/emet" "$@"
 }
 
@@ -108,7 +121,7 @@ if [ ! -x "$cached_binary" ]; then
   staging=$(mktemp -d "$cache_root/$version/.download.XXXXXX") || fail "cannot create staging directory"
   trap 'rm -rf "$staging"' EXIT
 
-  curl -fsL --connect-timeout 15 --speed-limit 1024 --speed-time 30 "$release_url/$asset" -o "$staging/$asset" || { fall_back_to_cached "$@"; fail "release asset $asset not found at $release_url"; }
+  curl -fsL --connect-timeout 15 --speed-limit 1024 --speed-time 30 "$release_url/$asset" -o "$staging/$asset" || { fall_back_to_cached "$@"; fail "release asset $asset not found at $release_url; the release may still be publishing, retry in a few minutes."; }
   curl -fsL --connect-timeout 15 --speed-limit 1024 --speed-time 30 "$release_url/SHA256SUMS" -o "$staging/SHA256SUMS" || fail "SHA256SUMS not found at $release_url"
 
   expected=$(awk -v name="$asset" '{ file = $2; sub(/^\*/, "", file); if (file == name) { print $1; exit } }' "$staging/SHA256SUMS")
@@ -122,7 +135,7 @@ if [ ! -x "$cached_binary" ]; then
   trap - EXIT
 fi
 
-if [ "${EMET_PREFETCH:-${FORGE_PREFETCH:-}}" = "1" ]; then
+if [ "$prefetch" = "1" ]; then
   exit 0
 fi
 
