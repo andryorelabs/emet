@@ -119,12 +119,14 @@ function stubItem(
 }
 
 describe("createCatalog", () => {
-  test("lists the seven items with mattpocock-skills as the only default", () => {
+  test("lists the nine items with mattpocock-skills as the only default", () => {
     const catalog = createCatalog(fakeEnv());
     expect(catalog.map((item) => item.id)).toEqual([
       "mattpocock-skills",
       "engram",
       "agent-browser",
+      "context7",
+      "firecrawl-local",
       "mascot",
       "orca-pet",
       "gh-auth",
@@ -199,6 +201,107 @@ describe("createCatalog", () => {
       ["agent-browser", "install"],
     ]);
     expect(await itemOf(createCatalog(fakeEnv()), "agent-browser").detect()).toBe(true);
+  });
+
+  test("context7 installs unpinned, then sets up Claude and Codex when codex is on PATH", async () => {
+    const env = fakeEnv();
+    await itemOf(createCatalog(env), "context7").install();
+    expect(env.calls).toEqual([
+      ["bun", "add", "-g", "ctx7@latest"],
+      ["ctx7", "setup", "--cli", "--claude", "--yes"],
+      ["ctx7", "setup", "--cli", "--codex", "--yes"],
+    ]);
+  });
+
+  test("context7 skips the Codex step when codex is absent", async () => {
+    const env = fakeEnv({ commandExists: (name) => Promise.resolve(name !== "codex") });
+    await itemOf(createCatalog(env), "context7").install();
+    expect(env.calls).toEqual([
+      ["bun", "add", "-g", "ctx7@latest"],
+      ["ctx7", "setup", "--cli", "--claude", "--yes"],
+    ]);
+  });
+
+  test("context7 logs the command to run when a ctx7 setup step fails", async () => {
+    const env = fakeEnv({ exitCodes: { "ctx7 setup --cli --claude --yes": 1 } });
+    expect(await failureOf(itemOf(createCatalog(env), "context7").install())).toContain("exited 1");
+    expect(env.logs.join("\n")).toContain("`ctx7 setup --cli --claude --yes`");
+    expect(env.calls).toHaveLength(2);
+  });
+
+  test("context7 logs the Codex command when the Codex step fails", async () => {
+    const env = fakeEnv({ exitCodes: { "ctx7 setup --cli --codex --yes": 1 } });
+    await failureOf(itemOf(createCatalog(env), "context7").install());
+    expect(env.logs.join("\n")).toContain("`ctx7 setup --cli --codex --yes`");
+  });
+
+  test("context7 fails without a setup log when the package install fails", async () => {
+    const env = fakeEnv({ exitCodes: { "bun add -g ctx7@latest": 1 } });
+    expect(await failureOf(itemOf(createCatalog(env), "context7").install())).toContain("exited 1");
+    expect(env.calls).toEqual([["bun", "add", "-g", "ctx7@latest"]]);
+    expect(env.logs).toEqual([]);
+  });
+
+  test("context7 is detected only with ctx7 on PATH and the find-docs skill present", async () => {
+    const skillPath = path.join(directory, ".claude", "skills", "find-docs", "SKILL.md");
+    const both = fakeEnv({ pathExists: (target) => target === skillPath });
+    expect(await itemOf(createCatalog(both), "context7").detect()).toBe(true);
+    const noSkill = fakeEnv();
+    expect(await itemOf(createCatalog(noSkill), "context7").detect()).toBe(false);
+    const noBinary = fakeEnv({
+      commandExists: () => Promise.resolve(false),
+      pathExists: () => true,
+    });
+    expect(await itemOf(createCatalog(noBinary), "context7").detect()).toBe(false);
+  });
+
+  test("firecrawl-local installs the crate then registers a local-only MCP server", async () => {
+    const env = fakeEnv();
+    await itemOf(createCatalog(env), "firecrawl-local").install();
+    expect(env.calls).toEqual([
+      ["cargo", "install", "firecrawl-local"],
+      [
+        "claude",
+        "mcp",
+        "add",
+        "--scope",
+        "user",
+        "-e",
+        "FIRECRAWL_CLOUD=off",
+        "firecrawl-local",
+        "--",
+        "firecrawl-local",
+        "mcp",
+        "--public-only",
+      ],
+    ]);
+    expect(env.logs.join("\n")).toContain("FIRECRAWL_CHROME_PATH");
+  });
+
+  test("firecrawl-local fails pointing to rustup when cargo is missing and runs nothing", async () => {
+    const env = fakeEnv({ commandExists: () => Promise.resolve(false) });
+    expect(await failureOf(itemOf(createCatalog(env), "firecrawl-local").install())).toContain(
+      "https://rustup.rs",
+    );
+    expect(env.calls).toEqual([]);
+  });
+
+  test("firecrawl-local stops before registering when cargo install fails", async () => {
+    const env = fakeEnv({ exitCodes: { "cargo install firecrawl-local": 101 } });
+    expect(await failureOf(itemOf(createCatalog(env), "firecrawl-local").install())).toContain(
+      "exited 101",
+    );
+    expect(env.calls).toEqual([["cargo", "install", "firecrawl-local"]]);
+  });
+
+  test("firecrawl-local is detected with the binary on PATH and the MCP server registered", async () => {
+    const registered = fakeEnv();
+    expect(await itemOf(createCatalog(registered), "firecrawl-local").detect()).toBe(true);
+    expect(registered.calls).toEqual([["claude", "mcp", "get", "firecrawl-local"]]);
+    const unregistered = fakeEnv({ exitCodes: { "claude mcp get firecrawl-local": 1 } });
+    expect(await itemOf(createCatalog(unregistered), "firecrawl-local").detect()).toBe(false);
+    const noBinary = fakeEnv({ commandExists: () => Promise.resolve(false) });
+    expect(await itemOf(createCatalog(noBinary), "firecrawl-local").detect()).toBe(false);
   });
 
   test("agent-browser fails with detail when the package install fails", async () => {
@@ -400,6 +503,8 @@ describe("notice", () => {
     expect(showNoticeOnce(marker, log)).toBe(false);
     expect(lines).toHaveLength(1);
     expect(lines[0]).toContain("/emet:setup");
+    expect(lines[0]).toContain("context7");
+    expect(lines[0]).toContain("Firecrawl Local");
   });
 });
 
@@ -452,8 +557,8 @@ describe("realSetupEnv", () => {
     }
   });
 
-  test("the real catalog has the seven items", () => {
-    expect(SETUP_CATALOG).toHaveLength(7);
+  test("the real catalog has the nine items", () => {
+    expect(SETUP_CATALOG).toHaveLength(9);
   });
 });
 
