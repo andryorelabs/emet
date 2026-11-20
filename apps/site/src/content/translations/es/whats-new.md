@@ -2,8 +2,20 @@
 title: Novedades
 description: Notas de versión de emet: qué cambió en cada versión.
 seoTitle: Novedades de emet: notas de versión
-sourceHash: bd2020ed642645f4
+sourceHash: e47aa3dd849f7d9d
 ---
+
+## 0.12.0
+
+2026-11-20
+
+### Añadido
+
+- `verify.browser` en `emet.config.json` (`startCommand`, `url` y, opcionalmente, `paths`) activa en un repositorio la verificación en el navegador de los cambios de interfaz con `agent-browser`. El esquema de configuración y su parser validan cada campo.
+- `emet assess` imprime `browserVerify: { run, reason }`. El eje de navegador solo se ejecuta cuando la ola tiene un revisor, `verify.browser` está configurado, `agent-browser` está en el PATH y una ruta modificada coincide con `paths`.
+- `emet setup` ofrece un elemento `agent-browser` (desactivado por defecto) que instala la última versión y su navegador.
+- `emet doctor` informa de un hallazgo opcional de agent-browser en un repositorio que configura `verify.browser`. Un binario ausente o un `agent-browser doctor` que falla es una nota o una advertencia y nunca cambia el código de salida.
+- El prompt del revisor incorpora un eje de navegador, que solo se rellena cuando `browserVerify.run` es verdadero, y el prompt del worker incorpora una línea opcional para las comprobaciones en el navegador. Véase ADR-0032.
 
 ## 0.11.1
 
