@@ -33,6 +33,8 @@ import {
   deadGuardHookFix,
   findDeadGuardHooks,
   findDoubleInstall,
+  findCodexHookTrustWarnings,
+  codexConfigTomlPath,
   findGlossaryWarnings,
   findInstallDrift,
   findLegacyNameWarnings,
@@ -1267,5 +1269,57 @@ describe("legacy name findings", () => {
     } finally {
       rmSync(root, { recursive: true, force: true });
     }
+  });
+});
+
+describe("findCodexHookTrustWarnings", () => {
+  const trustWarning =
+    'Codex has not trusted the emet plugin hooks, so the emet guard does not run. In Codex, open /hooks and press t to trust them, or approve the "Hooks need review" prompt at startup. Codex asks again after every emet update.';
+  const enabledPlugin = '[plugins."emet@emet-marketplace"]\nenabled = true\n';
+
+  test("warns when the emet plugin is enabled and no emet hook is trusted", () => {
+    const config = `${enabledPlugin}\n[hooks.state."/home/me/.codex/hooks.json:pre_tool_use:0:0"]\ntrusted_hash = "sha256:abc"\n`;
+    expect(findCodexHookTrustWarnings(config)).toEqual([trustWarning]);
+  });
+
+  test("stays quiet once an emet plugin hook has a trusted_hash", () => {
+    const config = `${enabledPlugin}\n[hooks.state."emet@emet-marketplace:./codex/hooks.json:pre_tool_use:0:0"]\ntrusted_hash = "sha256:abc"\n`;
+    expect(findCodexHookTrustWarnings(config)).toEqual([]);
+  });
+
+  test("warns when the emet hook entry exists but carries no trusted_hash", () => {
+    const config = `${enabledPlugin}\n[hooks.state."emet@emet-marketplace:./codex/hooks.json:pre_tool_use:0:0"]\nenabled = true\n`;
+    expect(findCodexHookTrustWarnings(config)).toEqual([trustWarning]);
+  });
+
+  test("skips silently when the config is missing, unparsable, or the plugin is not enabled", () => {
+    expect(findCodexHookTrustWarnings(null)).toEqual([]);
+    expect(findCodexHookTrustWarnings('[plugins."emet@emet-marketplace"\nenabled = ')).toEqual([]);
+    expect(findCodexHookTrustWarnings("")).toEqual([]);
+    expect(
+      findCodexHookTrustWarnings('[plugins."emet@emet-marketplace"]\nenabled = false\n'),
+    ).toEqual([]);
+    expect(findCodexHookTrustWarnings('[plugins."other@market"]\nenabled = true\n')).toEqual([]);
+  });
+
+  test("reads hooks.state written as inline tables and keys in literal quotes", () => {
+    const trusted = `[plugins.'emet@emet-marketplace']\nenabled = true\n\n[hooks]\nstate = { 'emet@emet-marketplace:./codex/hooks.json:stop:0:0' = { trusted_hash = "sha256:x" } }\n`;
+    expect(findCodexHookTrustWarnings(trusted)).toEqual([]);
+    const untrusted = `plugins = { "emet@emet-marketplace" = { enabled = true } }\nhooks = { state = "not a table" }\n`;
+    expect(findCodexHookTrustWarnings(untrusted)).toEqual([trustWarning]);
+  });
+
+  test("matches the hook key to the enabled plugin's own marketplace", () => {
+    const config = `[plugins."emet@local"]\nenabled = true\n\n[hooks.state."emet@emet-marketplace:./codex/hooks.json:pre_tool_use:0:0"]\ntrusted_hash = "sha256:abc"\n`;
+    expect(findCodexHookTrustWarnings(config)).toEqual([trustWarning]);
+  });
+});
+
+describe("codexConfigTomlPath", () => {
+  test("uses CODEX_HOME when set, else ~/.codex", () => {
+    expect(codexConfigTomlPath({ CODEX_HOME: "/x/codex" }, "/home/me")).toBe(
+      "/x/codex/config.toml",
+    );
+    expect(codexConfigTomlPath({}, "/home/me")).toBe("/home/me/.codex/config.toml");
   });
 });
