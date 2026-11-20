@@ -2,7 +2,7 @@
 title: Справочник по конфигурации
 description: Каждый ключ emet.config.json со значением по умолчанию и смыслом.
 seoTitle: Справочник по конфигурации emet
-sourceHash: 03b3df3fa773f181
+sourceHash: 82a86139999124d0
 ---
 
 Каждый ключ `emet.config.json` со значением по умолчанию и смыслом. Источник истины — [`emet/schema/emet.config.schema.json`](../../emet/schema/emet.config.schema.json). Термины соответствуют [GLOSSARY.md](../../GLOSSARY.md). Назад к [README](../../README.md).
@@ -117,6 +117,28 @@ sourceHash: 03b3df3fa773f181
 - Неизвестные ключи под `verify` или `verify.browser` отклоняются.
 
 `emet assess` выводит `browserVerify: { run, reason }`, а координатор заполняет ось Browser ревьюера, только когда `run` равно true: у уровня есть ревьюер (не `passive`), настроен `verify.browser`, необязательный бинарный файл [`agent-browser`](cli.md#настройка-и-аудит) есть в PATH и, если задан `paths`, совпал изменённый путь. Иначе `reason` называет первое невыполненное условие, а ревью проходит как раньше. Diff только из документации имеет уровень `passive`, поэтому изменение одного лишь контента в браузере не проверяется. Ревьюер, чьи команды браузера дважды завершились неудачей, переключается на Chrome DevTools MCP или сообщает находку `verification-gap`; он никогда не блокирует волну.
+
+## validate
+
+Необязательно. Если секции нет, проверки связанных поверхностей нет, и каждая команда работает как раньше.
+
+```json
+{
+  "validate": {
+    "coupledSurfaces": [
+      {
+        "source": "docs/{guide,reference,how-to}/**/*.md",
+        "dependents": "apps/site/src/content/translations/**"
+      }
+    ]
+  }
+}
+```
+
+- `coupledSurfaces`: непустой список пар. В каждой паре есть glob `source` и glob `dependents`, оба непустые строки; `source` принимает brace-глобы вроде `docs/{guide,reference}/**/*.md`.
+- Неизвестные ключи в `validate` или в паре отклоняются, а некорректная запись приводит к ошибке загрузки с сообщением, называющим `validate.coupledSurfaces[<n>]`.
+
+`emet validate` (`--file` и `--spec`) и запускной гейт `emet preflight` сообщают ошибку `coupled-surface-split`, когда тикет, чьи поверхности пересекаются с `source` пары, стоит в более ранней волне, чем тикет, чьи поверхности пересекаются с `dependents` этой пары. Правки исходной страницы и тикеты, обновляющие зависящее от неё, например переводы, должны выходить в одной волне. Та же волна или отсутствие тикета для dependents проходит проверку. См. [ADR-0033](../adr/0033-coupled-surfaces-ship-in-one-wave.md).
 
 ## interview
 

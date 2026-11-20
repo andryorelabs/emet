@@ -2,7 +2,7 @@
 title: CLI 参考
 description: 每个 emet 子命令、关卡与记录表、退出码和环境变量。
 seoTitle: emet CLI 参考
-sourceHash: fee9f73b5e416c7f
+sourceHash: bf767a0897b794ae
 ---
 
 每个 `emet` 子命令、关卡与记录表、退出码和环境变量。术语遵循 [GLOSSARY.md](../../GLOSSARY.md)。返回 [README](../../README.md)。每个命令都可以用 `--help` 打印其用法。
@@ -99,7 +99,7 @@ emet doctor ~/code/*
 这些命令服务于 Codex Agent 宿主（`agentHost` 为 `"codex"`）；参见 [Codex 指南](../guide/codex.md)。
 
 - `emet dispatch --role worker --run <id> --ticket <id> --prompt-file <file> [--model <m>] [--effort <e>] [--root <dir>]`: 在检查认领和槽位之后，创建 `.emet/worktrees/agent-<ticket>`，构建每次运行的 `CODEX_HOME` 覆盖层，并把 worker 作为分离的 `codex exec` 启动。`emet dispatch --wait --run <id> --ticket <id> [--timeout <s>]` 会阻塞到它退出，并输出记录的结果状态。
-- `emet review-run --run <id> --ticket <id> --package <file> --tier <medium|high|passive>`: 对 `emet review-package` 生成的包，以只读的 `codex exec` 运行 reviewer，并输出供 `emet review --findings` 使用的问题 JSON。`passive` 档不会启动进程。
+- `emet review-run --run <id> --ticket <id> --package <file> --tier <medium|high|passive> [--browser-verify true|false]`: 对 `emet review-package` 生成的包，以只读的 `codex exec` 运行 reviewer，并输出供 `emet review --findings` 使用的问题 JSON。`passive` 档不会启动进程。 `--browser-verify` 默认为 `false`；设为 `true` 时，提示词以 Browser 维度结尾，其中 `--session review-<run>` 由 `--run` 填入，这样 Codex 评审者就能像 Claude 评审者一样验证 UI（当 `emet assess` 输出 `browserVerify.run: true` 时传入；参见 [`verify`](configuration.md#verify)）。不带该标志时提示词不变，`true` 或 `false` 之外的值会以退出码 2 退出并输出用法行。
 - `emet launch <spec-id> --wave <n>`: 在此宿主上，启动一个运行 `$emet:run --dispatch <spec>` 的分离 `codex exec`，并记录其线程 ID。不会打开 Orca 标签页，`codex exec resume <id>` 可继续该会话。
 - `emet guard`: 在 `EMET_AGENT_HOST=codex` 下读取 Codex 的 hook 输入，对照 `.emet/surface.json` 检查 `apply_patch` 的路径，并在收到提示行 `approve <id>` 之前保持批准闸门关闭。
 
@@ -109,7 +109,7 @@ emet doctor ~/code/*
 
 | 步骤           | 命令                                                 | 强制执行的内容                                                                                                                                                                                                                                                                                                                                                                     |
 | -------------- | ---------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 批准之前       | `emet validate --file <plan.json>`                   | 每个 `S#` 都至少被一个工单覆盖，并且有验收场景。每个工单至少覆盖一个 `S#`。同一波次内的编辑范围互不相交。没有依赖环。`emet preflight` 会对已批准的计划再次运行它。                                                                                                                                                                                                                 |
+| 批准之前       | `emet validate --file <plan.json>`                   | 每个 `S#` 都至少被一个工单覆盖，并且有验收场景。每个工单至少覆盖一个 `S#`。同一波次内的编辑范围互不相交。没有依赖环。配置 [`validate.coupledSurfaces`](configuration.md#validate) 后，当涉及某个配对 `source` 的工单所在波次早于涉及其 `dependents` 的工单时，会报 `coupled-surface-split` 错误（退出码 1）。`emet preflight` 会对已批准的计划再次运行它。                         |
 | 批准           | `emet approve --run <id> --spec <file>`              | 写入带有规格和工单列表哈希的 `approval.json`。如果之后其中任何一个发生变化，派发会被拒绝（`--check`）。                                                                                                                                                                                                                                                                            |
 | 创建工单       | `emet materialize-log --run <id> --record/--lookup`  | 每个工单一创建出来就立即保存其 ID，因此被中断的运行不会产生重复工单。                                                                                                                                                                                                                                                                                                              |
 | 工作者完成     | `emet results --run <id> --write/--read <ticket>`    | 工作者写入本地结果文件（`DONE`、`DONE_WITH_CONCERNS`、`BLOCKED` 或 `NEEDS_CONTEXT`，外加一行 `Risk:`）。只有协调者可以写入跟踪器。                                                                                                                                                                                                                                                 |
