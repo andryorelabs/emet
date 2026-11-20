@@ -8,6 +8,17 @@ and this project adheres to
 
 ## [Unreleased]
 
+## [0.14.3] - 2026-11-20
+
+### Added
+
+- `emet fleet launch --dry-run` runs the readiness checks and prints `would launch <name>` for each repo without starting a session.
+
+### Fixed
+
+- `emet migrate` removes untracked legacy `.forge/` run files that differ from their `.emet/` copy and keeps the `.emet/` one, so it finishes in repos with leftover logs. Every conflict it cannot resolve is listed together with the manual step, and a git failure inside a repo is treated as a conflict instead of deleting the file.
+- The test preload removes its `emet-test-state-*` directory when the run ends, so `bun test` no longer leaves one temp directory per run.
+
 ## [0.14.2] - 2026-11-20
 
 ### Fixed
@@ -487,7 +498,8 @@ and this project adheres to
 - Per-repo configuration through `forge.config.json`.
 - `install.sh`, which installs the CLI, command and agents.
 
-[Unreleased]: https://github.com/andryorelabs/emet/compare/v0.14.2...HEAD
+[Unreleased]: https://github.com/andryorelabs/emet/compare/v0.14.3...HEAD
+[0.14.3]: https://github.com/andryorelabs/emet/compare/v0.14.2...v0.14.3
 [0.14.2]: https://github.com/andryorelabs/emet/compare/v0.14.1...v0.14.2
 [0.14.1]: https://github.com/andryorelabs/emet/compare/v0.14.0...v0.14.1
 [0.14.0]: https://github.com/andryorelabs/emet/compare/v0.13.0...v0.14.0

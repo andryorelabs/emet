@@ -2,8 +2,21 @@
 title: 新功能
 description: emet 的发布说明：每个版本都有哪些变化。
 seoTitle: "emet 新功能：发布说明"
-sourceHash: df050c17f0f6de67
+sourceHash: ab9546b053236fcf
 ---
+
+## 0.14.3
+
+2026-11-20
+
+### 新增
+
+- `emet fleet launch --dry-run` 会运行就绪检查，并为每个仓库输出 `would launch <name>`，而不会启动会话。
+
+### 已修复
+
+- `emet migrate` 会删除与 `.emet/` 副本内容不同且未被跟踪的旧 `.forge/` 运行文件，并保留 `.emet/` 中的版本，因此在残留日志的仓库中也能完成。它无法解决的每个冲突都会连同手动步骤一并列出，仓库内的 git 失败会被视为冲突，而不是删除文件。
+- 测试 preload 会在运行结束时删除自己的 `emet-test-state-*` 目录，因此 `bun test` 不再每次运行都留下一个临时目录。
 
 ## 0.14.2
 
