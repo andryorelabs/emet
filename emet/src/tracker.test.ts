@@ -264,7 +264,7 @@ touch "$state"
 if [ "$1" = "issue" ] && [ "$2" = "view" ]; then
   case "$5" in
     parent) echo 40; exit 0 ;;
-    state,subIssuesSummary)
+    state,subIssuesSummary,subIssues)
       echo '{"state":"OPEN","subIssuesSummary":{"total":2,"completed":2}}'; exit 0 ;;
   esac
   if grep -qx "$3" "$state"; then echo CLOSED; else echo OPEN; fi
@@ -359,6 +359,7 @@ describe("emet tracker close with tracker.kind github", () => {
     expect(outcomes.map((entry: unknown) => stringField(entry, "outcome"))).toEqual(["closed"]);
     const specs = isObject(parsed) && Array.isArray(parsed.specs) ? parsed.specs : [];
     expect(specs.map((entry: unknown) => stringField(entry, "outcome"))).toEqual(["failed"]);
+    expect(specs.map((entry: unknown) => stringField(entry, "detail"))).toEqual(["denied"]);
   });
 
   test("usage errors exit 2", async () => {
