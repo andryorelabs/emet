@@ -75,6 +75,15 @@ describe("transformPrompt", () => {
     expect(findForbiddenTokens(output)).toEqual([]);
   });
 
+  test("replaces the reviewer prompt fill and the browser axis with the review-run flag", () => {
+    const output = transformPrompt(
+      'Dispatch one `Agent({subagent_type: "emet:emet-reviewer"})`\nbuilt from `${CLAUDE_PLUGIN_ROOT}/emet/reference/reviewer-prompt.md` (fill `{{project_skills}}` with the\nunion; add\nthe spec\'s `## Global Constraints`) — single-pass.\n\nBrowser axis: fill `{{browser_verify}}` in the reviewer prompt (with the\nsection) only when `emet assess`\nprinted `browserVerify.run: true`; otherwise leave it empty.',
+    );
+    expect(output).toContain("--browser-verify true");
+    expect(output).not.toContain("reviewer-prompt.md");
+    expect(output).not.toContain("{{browser_verify}}");
+  });
+
   test("replaces the plan-mode approval with the hook approval", () => {
     const output = transformPrompt("Call `ExitPlanMode` to request approval.");
     expect(output).toContain("approve <id>");
