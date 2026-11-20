@@ -2,7 +2,7 @@
 title: emet mit Codex ausführen
 description: "Codex als Agent host für emet nutzen: Plugin installieren, agentHost setzen, einmal freigeben und die Grenzen kennen."
 seoTitle: emet mit Codex ausführen
-sourceHash: 38d79f32b248565e
+sourceHash: 8aed8797d3451a66
 ---
 
 emet läuft neben Claude Code auch auf der Codex CLI. Die Begriffe folgen [GLOSSARY.md](../../GLOSSARY.md); das Produkt, in dem ein Lauf ausgeführt wird, ist der **Agent host**. Diese Seite behandelt die Installation auf der Codex-Seite, die Wahl des Hosts, die einmalige Freigabe und die bekannten Grenzen. Zurück zum [Dokumentationsindex](../README.md).
@@ -53,6 +53,18 @@ emet verlangt eine einzige Freigabe, nach dem Plan. In Claude Code ist das ein P
 - Die Alternative ist `/plan $emet:run`: Gib den Plan im eigenen Plan-Modus von Codex frei statt über den Hook.
 
 Sobald dieses Verzeichnis existiert, schlägt das Gate geschlossen fehl: Eine fehlende oder unlesbare Freigabedatei hält Änderungen verweigert. Der Guard prüft außerdem jeden Pfad eines `apply_patch` gegen die `.emet/surface.json` des Tickets.
+
+## Nach einem emet-Update
+
+Codex fragt nach jedem Plugin-Update erneut, ob du den emet-Plugin-Hooks vertraust, weil sich der Inhalts-Hash des Plugins ändert. Zum Vertrauen führst du `/hooks` aus und drückst auf der Ereignisseite `t`, um allen zu vertrauen, oder bestätigst beim Start die Meldung "Hooks need review". Bis dahin laufen der emet guard und die einmalige Freigabe nicht.
+
+`emet doctor` warnt, wenn den Hooks nie vertraut wurde:
+
+`Codex has not trusted the emet plugin hooks, so the emet guard does not run. In Codex, open /hooks and press t to trust them, or approve the "Hooks need review" prompt at startup. Codex asks again after every emet update.`
+
+Direkt nach einem Release kann der Shim für einige Minuten die zuvor zwischengespeicherte Version ausführen. Dann gibt er aus:
+
+`emet: release v<version> has no downloadable asset yet (it may still be publishing); using the cached v<newest>. Retry in a few minutes.`
 
 ## Wie eine Welle abläuft
 

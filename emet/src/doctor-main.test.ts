@@ -21,7 +21,7 @@ let home: string;
 let binDirectory: string;
 let homedirSpy: Mock<typeof os.homedir>;
 const savedEnvironment: Record<string, string | undefined> = {};
-const OVERRIDDEN = ["HOME", "PATH", "XDG_STATE_HOME", "EMET_STATE_DIR"] as const;
+const OVERRIDDEN = ["HOME", "PATH", "XDG_STATE_HOME", "EMET_STATE_DIR", "CODEX_HOME"] as const;
 
 beforeEach(() => {
   root = realpathSync(mkdtempSync(path.join(os.tmpdir(), "doctor-main-")));
@@ -35,6 +35,7 @@ beforeEach(() => {
   homedirSpy = spyOn(os, "homedir").mockReturnValue(home);
   process.env.XDG_STATE_HOME = path.join(root, "state");
   delete process.env.EMET_STATE_DIR;
+  delete process.env.CODEX_HOME;
 });
 
 afterEach(() => {
@@ -119,6 +120,21 @@ describe("doctor run() home-level sections", () => {
 
     expect(output).toContain("Double install:");
     expect(output).toContain("installed both as a plugin and by install.sh");
+  }, 60_000);
+
+  test("warns about untrusted emet hooks on the Codex host and skips a missing config", async () => {
+    const repo = makePlainDirectory();
+    writeFileSync(path.join(repo, "emet.config.json"), JSON.stringify({ agentHost: "codex" }));
+    process.env.CODEX_HOME = path.join(home, ".codex");
+    process.env.PATH = binDirectory;
+
+    const missingConfig = await runDoctor([repo]);
+    expect(missingConfig).not.toContain("Codex hooks:");
+
+    writeHomeFile(".codex/config.toml", '[plugins."emet@emet-marketplace"]\nenabled = true\n');
+    const untrusted = await runDoctor([repo]);
+    expect(untrusted).toContain("Codex hooks:");
+    expect(untrusted).toContain("warning: Codex has not trusted the emet plugin hooks");
   }, 60_000);
 
   test("reports missing external CLI flags and a failing exit code", async () => {

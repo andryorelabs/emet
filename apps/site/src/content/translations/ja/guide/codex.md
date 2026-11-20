@@ -2,7 +2,7 @@
 title: Codex で emet を実行する
 description: Codex CLI 側のインストール、エージェントホストの選択、単一の承認、既知の制限を説明します。
 seoTitle: Codex で emet を実行する
-sourceHash: 38d79f32b248565e
+sourceHash: 8aed8797d3451a66
 ---
 
 emet は Claude Code だけでなく Codex CLI でも実行できます。用語は [GLOSSARY.md](../../GLOSSARY.md) に従います。実行が動作する製品を**エージェントホスト**と呼びます。このページでは、Codex 側のインストール、ホストの選択、単一の承認、既知の制限を説明します。[ドキュメント索引](../README.md)に戻ります。
@@ -53,6 +53,18 @@ emet が求める承認は、計画の後の 1 回だけです。Claude Code で
 - 代替手段は `/plan $emet:run` です。フックの代わりに、Codex 自身のプランモードで計画を承認します。
 
 そのディレクトリが存在すると、ゲートはフェイルクローズになります。承認ファイルが存在しない、または読み取れない場合、変更は拒否されたままです。ガードは、`apply_patch` のすべてのパスも、チケットの `.emet/surface.json` と照合します。
+
+## emet の更新後
+
+Codex は、プラグインの更新のたびに emet プラグインの hook を再び信頼するよう求めます。プラグインのコンテンツハッシュが変わるためです。信頼するには、`/hooks` を実行してイベントページで `t` を押してすべてを信頼するか、起動時の "Hooks need review" プロンプトを承認します。それまでは emet guard と単一の承認は動作しません。
+
+`emet doctor` は、hook が一度も信頼されていない場合に警告します。
+
+`Codex has not trusted the emet plugin hooks, so the emet guard does not run. In Codex, open /hooks and press t to trust them, or approve the "Hooks need review" prompt at startup. Codex asks again after every emet update.`
+
+リリース直後の数分間は、shim が以前のキャッシュ済みバージョンを実行することがあります。その場合は次のように表示します。
+
+`emet: release v<version> has no downloadable asset yet (it may still be publishing); using the cached v<newest>. Retry in a few minutes.`
 
 ## ウェーブの実行の流れ
 

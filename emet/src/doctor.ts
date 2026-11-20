@@ -19,7 +19,7 @@ import {
   type DependencyCheck,
   type DependencyProbes,
 } from "./dependencies";
-import type { Env } from "./env";
+import { readEnv, type Env } from "./env";
 import {
   AGENTS_DOC,
   BINARY,
@@ -1007,6 +1007,63 @@ export function findDoubleInstall(
   ];
 }
 
+const CODEX_HOOK_TRUST_WARNING =
+  'Codex has not trusted the emet plugin hooks, so the emet guard does not run. In Codex, open /hooks and press t to trust them, or approve the "Hooks need review" prompt at startup. Codex asks again after every emet update.';
+
+/** `$CODEX_HOME/config.toml`, defaulting `CODEX_HOME` to `~/.codex`. */
+export function codexConfigTomlPath(env?: Env, home: string = os.homedir()): string {
+  const codexHome = readEnv("CODEX_HOME", env);
+  return path.join(codexHome ?? path.join(home, ".codex"), "config.toml");
+}
+
+function parseTomlOrNull(text: string): unknown {
+  try {
+    return Bun.TOML.parse(text);
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Warns when Codex's `config.toml` enables an emet plugin (`emet@<marketplace>`)
+ * but no `hooks.state` entry for that plugin's hooks carries a `trusted_hash`,
+ * so Codex skips the emet guard. Codex's source keys a plugin hook as
+ * `<plugin>@<marketplace>:<hooks file>:<event>:<group>:<handler>`, but no plugin
+ * key was observed in a real config, so a key counts when it contains the plugin
+ * id anywhere. Returns no warning for a missing or unparsable config or a
+ * disabled plugin.
+ */
+export function findCodexHookTrustWarnings(configToml: string | null): string[] {
+  if (configToml === null) return [];
+  const config = parseTomlOrNull(configToml);
+  if (!isObject(config) || !isObject(config.plugins)) return [];
+  const enabledPluginIds = Object.entries(config.plugins)
+    .filter(
+      ([pluginId, entry]) =>
+        pluginId.startsWith(`${PRODUCT}@`) && isObject(entry) && entry.enabled !== false,
+    )
+    .map(([pluginId]) => pluginId);
+  if (enabledPluginIds.length === 0) return [];
+  const hookStates =
+    isObject(config.hooks) && isObject(config.hooks.state) ? config.hooks.state : {};
+  const trusted = Object.entries(hookStates).some(
+    ([key, state]) =>
+      enabledPluginIds.some((pluginId) => key.includes(`${pluginId}:`)) &&
+      isObject(state) &&
+      typeof state.trusted_hash === "string" &&
+      state.trusted_hash.length > 0,
+  );
+  return trusted ? [] : [CODEX_HOOK_TRUST_WARNING];
+}
+
+function readTextOrNull(file: string): string | null {
+  try {
+    return readFileSync(file, "utf8");
+  } catch {
+    return null;
+  }
+}
+
 const GUARD_HOOK_PATTERN = /^(\S*\/)?(forge|emet) guard( |$)/;
 const SETTINGS_FILE_SHELL_PATH = '"$HOME/.claude/settings.json"';
 const SETTINGS_BACKUP_SHELL_PATH = '"$HOME/.claude/settings.json.bak-$(date +%Y%m%d%H%M%S)"';
@@ -1158,6 +1215,14 @@ async function main(targets: readonly string[]): Promise<void> {
 
   if (doubleInstall.length > 0) {
     console.log(`\nDouble install:\n${doubleInstall.map((line) => `  - ${line}`).join("\n")}`);
+  }
+
+  const codexHookTrustWarnings =
+    host.name === "codex" ? findCodexHookTrustWarnings(readTextOrNull(codexConfigTomlPath())) : [];
+  if (codexHookTrustWarnings.length > 0) {
+    console.log(
+      `\nCodex hooks:\n${codexHookTrustWarnings.map((line) => `  - warning: ${line}`).join("\n")}`,
+    );
   }
 
   const cliFlagFindings = await checkExternalCliFlags(environment, {

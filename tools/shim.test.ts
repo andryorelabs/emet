@@ -64,6 +64,21 @@ function runShimWithEnv(args: string[], env: Record<string, string>): ShimResult
   };
 }
 
+/** Seeds `cacheDir/<cachedVersion>/emet` with `body` and file `mode`. */
+function seedVersion(cachedVersion: string, body: string, mode = 0o755): void {
+  const directory = path.join(cacheDir, cachedVersion);
+  mkdirSync(directory, { recursive: true });
+  writeFileSync(path.join(directory, "emet"), body);
+  chmodSync(path.join(directory, "emet"), mode);
+}
+
+/** Lists the `.download.*` staging directories left under the plugin version's cache dir. */
+function stagingLeftovers(): string[] {
+  const directory = path.join(cacheDir, version);
+  if (!existsSync(directory)) return [];
+  return readdirSync(directory).filter((entry) => entry.startsWith(".download."));
+}
+
 beforeEach(() => {
   workDir = mkdtempSync(path.join(os.tmpdir(), "emet-shim-"));
   pluginRoot = path.join(workDir, "plugin");
@@ -164,6 +179,77 @@ describe("bin/emet shim", () => {
       const result = runShim(["guard", "--event", event]);
       expect(result.code).toBe(1);
       expect(result.stderr).not.toContain("blocked");
+    }
+  });
+
+  test("any command falls back to the cached binary when the release asset is missing", () => {
+    seedVersion("0.0.1", '#!/bin/sh\necho "older $*"\nexit 7\n');
+    const result = runShim(["status"]);
+    expect(result.code).toBe(7);
+    expect(result.stdout).toBe("older status\n");
+    expect(result.stderr).toBe(
+      `emet: release v${version} has no downloadable asset yet (it may still be publishing); using the cached v0.0.1. Retry in a few minutes.\n`,
+    );
+  });
+
+  test("the fallback picks the newest executable cached version, never the failed version itself", () => {
+    seedVersion("0.0.2", '#!/bin/sh\necho "v2"\n');
+    seedVersion("0.0.10", '#!/bin/sh\necho "v10"\n');
+    seedVersion("0.0.11", '#!/bin/sh\necho "v11"\n', 0o644);
+    seedVersion(version, '#!/bin/sh\necho "failed"\n', 0o644);
+    const result = runShim(["status"]);
+    expect(result.code).toBe(0);
+    expect(result.stdout).toBe("v10\n");
+    expect(result.stderr).toContain("using the cached v0.0.10");
+  });
+
+  test("no command falls back to a cached binary on a checksum mismatch", () => {
+    seedVersion("0.0.1", '#!/bin/sh\necho "older $*"\n');
+    publishRelease({ checksum: "0".repeat(64) });
+    const result = runShim(["status"]);
+    expect(result.code).toBe(1);
+    expect(result.stdout).toBe("");
+    expect(result.stderr).toContain("checksum mismatch");
+    expect(result.stderr).not.toContain("using the cached");
+  });
+
+  test("no command falls back to a cached binary when SHA256SUMS is missing", () => {
+    seedVersion("0.0.1", '#!/bin/sh\necho "older $*"\n');
+    publishRelease();
+    rmSync(path.join(releaseDir, "SHA256SUMS"));
+    const result = runShim(["status"]);
+    expect(result.code).toBe(1);
+    expect(result.stdout).toBe("");
+    expect(result.stderr).toContain("SHA256SUMS not found");
+  });
+
+  test("with no usable cache a missing asset says the release may still be publishing", () => {
+    seedVersion("0.0.1", '#!/bin/sh\necho "older $*"\n', 0o644);
+    const status = runShim(["status"]);
+    expect(status.code).toBe(1);
+    expect(status.stderr).toContain(
+      `emet: release asset ${assetName} not found at file://${path.join(workDir, "releases")}/v${version}; the release may still be publishing, retry in a few minutes.`,
+    );
+    const guard = runShim(["guard"]);
+    expect(guard.code).toBe(2);
+    expect(guard.stderr).toContain("the release may still be publishing");
+  });
+
+  test("prefetch with a missing asset and a cached binary prints the notice and runs nothing", () => {
+    seedVersion("0.0.1", '#!/bin/sh\necho "older $*"\n');
+    const result = runShim([], { EMET_PREFETCH: "1" });
+    expect(result.code).toBe(0);
+    expect(result.stdout).toBe("");
+    expect(result.stderr).toContain("using the cached v0.0.1. Retry in a few minutes.");
+    expect(stagingLeftovers()).toEqual([]);
+  });
+
+  test("a fallback exec leaves no download staging directory behind", () => {
+    seedVersion("0.0.1", '#!/bin/sh\necho "older $*"\n');
+    for (const args of [["status"], ["guard"]]) {
+      const result = runShim(args);
+      expect(result.code).toBe(0);
+      expect(stagingLeftovers()).toEqual([]);
     }
   });
 

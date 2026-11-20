@@ -2,7 +2,7 @@
 title: Exécuter emet sur Codex
 description: "Utilisez Codex comme Agent host d'emet : installez le plugin, configurez agentHost, approuvez une seule fois et connaissez les limites."
 seoTitle: Exécuter emet sur Codex
-sourceHash: 38d79f32b248565e
+sourceHash: 8aed8797d3451a66
 ---
 
 emet peut s'exécuter sur Codex CLI comme sur Claude Code. Les termes suivent [GLOSSARY.md](../../GLOSSARY.md) ; le produit dans lequel une exécution tourne est l'**Agent host**. Cette page couvre l'installation côté Codex, le choix de l'hôte, l'approbation unique et les limites connues. Retour à l'[index de la documentation](../README.md).
@@ -53,6 +53,18 @@ emet demande une seule approbation, après le plan. Sur Claude Code, c'est une i
 - L'alternative est `/plan $emet:run` : approuvez le plan dans le mode plan propre à Codex plutôt que par le hook.
 
 Dès que ce répertoire existe, le verrou échoue en mode fermé : un fichier d'approbation absent ou illisible maintient les mutations refusées. Le guard vérifie aussi chaque chemin d'un `apply_patch` par rapport au `.emet/surface.json` du ticket.
+
+## Après une mise à jour d'emet
+
+Codex redemande de faire confiance aux hooks du plugin emet après chaque mise à jour du plugin, car le hash de contenu du plugin change. Pour leur faire confiance, lancez `/hooks` et appuyez sur `t` sur la page des événements pour tous les approuver, ou validez l'invite "Hooks need review" au démarrage. Jusque-là, l'emet guard et l'approbation unique ne s'exécutent pas.
+
+`emet doctor` avertit lorsque les hooks n'ont jamais été approuvés :
+
+`Codex has not trusted the emet plugin hooks, so the emet guard does not run. In Codex, open /hooks and press t to trust them, or approve the "Hooks need review" prompt at startup. Codex asks again after every emet update.`
+
+Juste après une release, le shim peut exécuter pendant quelques minutes la version précédente en cache. Il affiche alors :
+
+`emet: release v<version> has no downloadable asset yet (it may still be publishing); using the cached v<newest>. Retry in a few minutes.`
 
 ## Comment se déroule une vague
 
