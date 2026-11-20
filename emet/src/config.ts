@@ -203,6 +203,12 @@ interface VerifyBrowserConfig {
   readonly paths?: readonly string[];
 }
 
+/** One `validate.coupledSurfaces` pair: edits under `source` must ship in the same wave as edits under `dependents`. */
+export interface CoupledSurfacePair {
+  readonly source: string;
+  readonly dependents: string;
+}
+
 export type LandingMode = "pr" | "merge";
 
 /** What `emet gate` does with open blocking findings. */
@@ -300,6 +306,10 @@ export interface ForgeConfig {
   readonly verify?: {
     /** Optional browser verification of UI changes; absent means off. */
     readonly browser?: VerifyBrowserConfig;
+  };
+  readonly validate?: {
+    /** Surface pairs that `emet validate` requires to land in the same wave. */
+    readonly coupledSurfaces: readonly CoupledSurfacePair[];
   };
   readonly landing: {
     /** How a finished wave reaches trunk: `pr` opens a pull request, `merge`
@@ -662,6 +672,42 @@ function validateVerifySection(
   };
 }
 
+const COUPLED_SURFACE_KEYS: ReadonlySet<string> = new Set(["source", "dependents"]);
+
+function validateValidateSection(
+  value: unknown,
+): { ok: true; coupledSurfaces: CoupledSurfacePair[] | undefined } | { ok: false; reason: string } {
+  if (value === undefined) return { ok: true, coupledSurfaces: undefined };
+  if (!isRecord(value)) return { ok: false, reason: '"validate" must be an object' };
+  const unknownSectionKey = Object.keys(value).find((key) => key !== "coupledSurfaces");
+  if (unknownSectionKey !== undefined) {
+    return { ok: false, reason: `"validate.${unknownSectionKey}" is not a known key` };
+  }
+  const raw = value.coupledSurfaces;
+  if (raw === undefined) return { ok: true, coupledSurfaces: undefined };
+  if (!Array.isArray(raw) || raw.length === 0) {
+    return { ok: false, reason: '"validate.coupledSurfaces" must be a non-empty list' };
+  }
+  const pairs: CoupledSurfacePair[] = [];
+  for (const [index, entry] of raw.entries()) {
+    const label = `validate.coupledSurfaces[${index}]`;
+    if (!isRecord(entry)) return { ok: false, reason: `"${label}" must be an object` };
+    const unknownKey = Object.keys(entry).find((key) => !COUPLED_SURFACE_KEYS.has(key));
+    if (unknownKey !== undefined) {
+      return { ok: false, reason: `"${label}.${unknownKey}" is not a known key` };
+    }
+    const { source, dependents } = entry;
+    if (!isNonEmptyString(source)) {
+      return { ok: false, reason: `"${label}.source" must be a non-empty string` };
+    }
+    if (!isNonEmptyString(dependents)) {
+      return { ok: false, reason: `"${label}.dependents" must be a non-empty string` };
+    }
+    pairs.push({ source, dependents });
+  }
+  return { ok: true, coupledSurfaces: pairs };
+}
+
 /**
  * Validates only the fields this CLI reads, merging anything absent from
  * `DEFAULT_FORGE_CONFIG` — a repo's `emet.config.json` need not repeat every
@@ -834,6 +880,9 @@ function validateAndMerge(
 
   const verify = validateVerifySection(raw.verify);
   if (!verify.ok) return verify;
+
+  const validateSection = validateValidateSection(raw.validate);
+  if (!validateSection.ok) return validateSection;
 
   const landingSection = isRecord(raw.landing) ? raw.landing : {};
   const landingMode = landingSection.mode ?? DEFAULT_FORGE_CONFIG.landing.mode;
@@ -1014,6 +1063,9 @@ function validateAndMerge(
       interview: { research: interviewResearch },
       ...(deploy.check === undefined ? {} : { deploy: { check: deploy.check } }),
       ...(verify.browser === undefined ? {} : { verify: { browser: verify.browser } }),
+      ...(validateSection.coupledSurfaces === undefined
+        ? {}
+        : { validate: { coupledSurfaces: validateSection.coupledSurfaces } }),
       landing: { mode: landingMode },
       gate: { onHold: gateOnHold },
       language: { conversation: languageConversation, artifacts: languageArtifacts },

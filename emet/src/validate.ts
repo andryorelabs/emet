@@ -1,11 +1,17 @@
 import { readFileSync } from "node:fs";
 import path from "node:path";
 
-import { DEFAULT_FORGE_CONFIG, loadForgeConfigWithDefaults, resolveRepoRoot } from "./config";
+import {
+  DEFAULT_FORGE_CONFIG,
+  loadForgeConfigWithDefaults,
+  resolveRepoRoot,
+  type CoupledSurfacePair,
+  type ForgeConfig,
+} from "./config";
 import { analyzeTicketGraph } from "./dependencies";
 import { isObject } from "./narrow";
 import { present } from "./present";
-import { findSurfaceOverlaps } from "./surfaces";
+import { findSurfaceOverlaps, globsOverlap } from "./surfaces";
 import { resolveTrackerRoot } from "./tracker-files";
 
 const USAGE = `usage: emet validate --file <plan.json | -> | --spec <id> --tickets <tickets.json | ->
@@ -35,7 +41,8 @@ interface ValidationFinding {
     | "surface-overlap"
     | "dependency-cycle"
     | "unknown-blocker"
-    | "undersized-ticket";
+    | "undersized-ticket"
+    | "coupled-surface-split";
   readonly message: string;
 }
 
@@ -65,11 +72,37 @@ export function parseSpecItems(specMarkdown: string): Map<string, string> {
   return items;
 }
 
-export function validatePlan(input: {
-  readonly specMarkdown: string;
-  readonly tickets: readonly PlanTicket[];
-  readonly inlineMaxLines?: number;
-}): ValidationResult {
+function touches(ticket: PlanTicket, glob: string): boolean {
+  return ticket.surfaces.some((surface) => globsOverlap(surface, glob));
+}
+
+function findCoupledSurfaceSplits(
+  tickets: readonly PlanTicket[],
+  pairs: readonly CoupledSurfacePair[],
+): string[] {
+  const messages: string[] = [];
+  for (const pair of pairs) {
+    for (const source of tickets) {
+      if (!touches(source, pair.source)) continue;
+      for (const dependent of tickets) {
+        if (dependent.wave <= source.wave || !touches(dependent, pair.dependents)) continue;
+        messages.push(
+          `${source.id} (wave ${source.wave}) touches ${pair.source} but ${dependent.id} (wave ${dependent.wave}) touches ${pair.dependents}; ship them in the same wave`,
+        );
+      }
+    }
+  }
+  return messages;
+}
+
+export function validatePlan(
+  input: {
+    readonly specMarkdown: string;
+    readonly tickets: readonly PlanTicket[];
+    readonly inlineMaxLines?: number;
+  },
+  options: { readonly coupledSurfaces?: readonly CoupledSurfacePair[] } = {},
+): ValidationResult {
   const findings: ValidationFinding[] = [];
   const add = (
     severity: ValidationFinding["severity"],
@@ -118,6 +151,10 @@ export function validatePlan(input: {
         `wave ${wave}: ${o.ticketA} (${o.globA}) overlaps ${o.ticketB} (${o.globB})`,
       );
     }
+  }
+
+  for (const message of findCoupledSurfaceSplits(input.tickets, options.coupledSurfaces ?? [])) {
+    add("error", "coupled-surface-split", message);
   }
 
   const ids = new Set(input.tickets.map((ticket) => ticket.id));
@@ -193,11 +230,10 @@ async function fetchSpecBody(specId: string, ghCommand: string): Promise<string>
   return body;
 }
 
-async function isLocalTracker(): Promise<boolean> {
+async function loadRepoConfig(): Promise<ForgeConfig> {
   const repoRoot = await resolveRepoRoot();
-  if (repoRoot === null) return false;
-  const { config } = await loadForgeConfigWithDefaults(repoRoot);
-  return config.tracker.kind === "local";
+  if (repoRoot === null) return DEFAULT_FORGE_CONFIG;
+  return (await loadForgeConfigWithDefaults(repoRoot)).config;
 }
 
 async function readLocalSpecBody(specId: string): Promise<string> {
@@ -225,6 +261,7 @@ export async function run(argv: string[], deps: ValidateDeps = {}): Promise<void
     let specMarkdown: string;
     let rawTickets: unknown;
     let inlineMaxLines: number | undefined;
+    const config = await loadRepoConfig();
     if (file !== undefined) {
       const plan: unknown = JSON.parse(await readSource(file));
       const spec = isObject(plan) ? plan.spec : undefined;
@@ -236,20 +273,24 @@ export async function run(argv: string[], deps: ValidateDeps = {}): Promise<void
       const planInlineMaxLines = isObject(sizing) ? sizing.inlineMaxLines : undefined;
       if (typeof planInlineMaxLines === "number") inlineMaxLines = planInlineMaxLines;
     } else if (specId !== undefined && ticketsSource !== undefined) {
-      specMarkdown = (await isLocalTracker())
-        ? await readLocalSpecBody(specId)
-        : await fetchSpecBody(specId, deps.ghCommand ?? "gh");
+      specMarkdown =
+        config.tracker.kind === "local"
+          ? await readLocalSpecBody(specId)
+          : await fetchSpecBody(specId, deps.ghCommand ?? "gh");
       rawTickets = JSON.parse(await readSource(ticketsSource));
     } else {
       console.error(USAGE);
       process.exitCode = 2;
       return;
     }
-    const result = validatePlan({
-      specMarkdown,
-      tickets: parseTickets(rawTickets),
-      ...(inlineMaxLines === undefined ? {} : { inlineMaxLines }),
-    });
+    const result = validatePlan(
+      {
+        specMarkdown,
+        tickets: parseTickets(rawTickets),
+        ...(inlineMaxLines === undefined ? {} : { inlineMaxLines }),
+      },
+      { coupledSurfaces: config.validate?.coupledSurfaces ?? [] },
+    );
     for (const finding of result.findings) console.error(`${finding.severity}: ${finding.message}`);
     console.log(JSON.stringify(result));
     if (!result.ok) process.exitCode = 1;
