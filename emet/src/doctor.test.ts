@@ -1287,6 +1287,11 @@ describe("findCodexHookTrustWarnings", () => {
     expect(findCodexHookTrustWarnings(config)).toEqual([]);
   });
 
+  test("stays quiet when the trusted plugin key carries a path prefix", () => {
+    const config = `${enabledPlugin}\n[hooks.state."/home/me/.codex/plugins/cache/emet@emet-marketplace:./codex/hooks.json:stop:0:0"]\ntrusted_hash = "sha256:abc"\n`;
+    expect(findCodexHookTrustWarnings(config)).toEqual([]);
+  });
+
   test("warns when the emet hook entry exists but carries no trusted_hash", () => {
     const config = `${enabledPlugin}\n[hooks.state."emet@emet-marketplace:./codex/hooks.json:pre_tool_use:0:0"]\nenabled = true\n`;
     expect(findCodexHookTrustWarnings(config)).toEqual([trustWarning]);

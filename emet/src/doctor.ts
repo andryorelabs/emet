@@ -1027,9 +1027,11 @@ function parseTomlOrNull(text: string): unknown {
 /**
  * Warns when Codex's `config.toml` enables an emet plugin (`emet@<marketplace>`)
  * but no `hooks.state` entry for that plugin's hooks carries a `trusted_hash`,
- * so Codex skips the emet guard. Codex keys a plugin hook as
- * `<plugin>@<marketplace>:<hooks file>:<event>:<group>:<handler>`. Returns no
- * warning for a missing or unparsable config or a disabled plugin.
+ * so Codex skips the emet guard. Codex's source keys a plugin hook as
+ * `<plugin>@<marketplace>:<hooks file>:<event>:<group>:<handler>`, but no plugin
+ * key was observed in a real config, so a key counts when it contains the plugin
+ * id anywhere. Returns no warning for a missing or unparsable config or a
+ * disabled plugin.
  */
 export function findCodexHookTrustWarnings(configToml: string | null): string[] {
   if (configToml === null) return [];
@@ -1046,7 +1048,7 @@ export function findCodexHookTrustWarnings(configToml: string | null): string[] 
     isObject(config.hooks) && isObject(config.hooks.state) ? config.hooks.state : {};
   const trusted = Object.entries(hookStates).some(
     ([key, state]) =>
-      enabledPluginIds.some((pluginId) => key.trim().startsWith(`${pluginId}:`)) &&
+      enabledPluginIds.some((pluginId) => key.includes(`${pluginId}:`)) &&
       isObject(state) &&
       typeof state.trusted_hash === "string" &&
       state.trusted_hash.length > 0,
