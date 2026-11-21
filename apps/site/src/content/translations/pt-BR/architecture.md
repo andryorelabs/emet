@@ -24,12 +24,12 @@ Há duas metades. Os prompts (`commands/run.md`, `agents/*.md`, `emet/reference/
 
 `commands/run.md` é um roteador curto. Ele carrega um arquivo de fase de `emet/reference/` por vez, de modo que uma compactação nunca perde as regras da fase atual.
 
-| Fase                                        | Prompt                                                                                        | Chamadas à CLI                                                                           |
-| ------------------------------------------- | --------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------- |
-| 1-5 entrevista, spec, tickets, aprovação    | `phases-1-5.md`                                                                               | `init`, `doctor`, `validate`, `surfaces`, `approve`, `tracker`                           |
-| 6-7 despacho e workers                      | `phases-6-7-dispatch.md`, `worker-prompt.md`                                                  | `preflight`, `claims`, `slots`, `launch`, `lock-reason`, `handoff`, `results`            |
-| 8 revisão, gate, aterrissagem, encerramento | `phases-8-review.md`, `phases-8-landing.md`, `phases-8-spec-landing.md`, `reviewer-prompt.md` | `verify`, `review-package`, `review`, `assess`, `gate`, `land`, `spec-branch`, `cleanup` |
-| 9 handoff e encadeamento                    | `phases-9-handoff.md`                                                                         | `status`, `metrics`, `usage`, `spec-merge`                                               |
+| Fase                                        | Prompt                                                                                        | Chamadas à CLI                                                                                         |
+| ------------------------------------------- | --------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------ |
+| 1-5 entrevista, spec, tickets, aprovação    | `phases-1-5.md`                                                                               | `init`, `doctor`, `validate`, `surfaces`, `approve`, `tracker`                                         |
+| 6-7 despacho e workers                      | `phases-6-7-dispatch.md`, `worker-prompt.md`                                                  | `preflight`, `claims`, `slots`, `launch`, `lock-reason`, `handoff`, `results`                          |
+| 8 revisão, gate, aterrissagem, encerramento | `phases-8-review.md`, `phases-8-landing.md`, `phases-8-spec-landing.md`, `reviewer-prompt.md` | `verify`, `review-package`, `review`, `assess`, `gate`, `land`, `spec-branch`, `spec-merge`, `cleanup` |
+| 9 handoff e encadeamento                    | `phases-9-handoff.md`                                                                         | `status`, `metrics`, `usage`                                                                           |
 
 O coordenador é o único que escreve no tracker (ADR-0005): os workers informam por meio de uma nota de handoff e do `emet results`, e o coordenador as publica. O `emet guard` roda como um hook `PreToolUse` e bloqueia gatilhos conhecidos de falhas em execuções sem supervisão.
 
