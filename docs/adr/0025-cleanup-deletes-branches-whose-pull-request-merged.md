@@ -1,6 +1,6 @@
 # 0025. Cleanup deletes branches whose pull request merged
 
-Status: Accepted (2026-11-11)
+Status: Accepted (2026-11-11). Amended by [0037](0037-landing-per-spec.md): `spec/<id>` is deleted only after the final landing.
 Spec: #464
 
 ## Context

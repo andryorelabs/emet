@@ -89,7 +89,7 @@ export const DEFAULT_FORGE_CONFIG: ForgeConfig = {
     afterSpec: "none",
   },
   interview: { research: true },
-  landing: { mode: "pr" },
+  landing: { mode: "pr", unit: "spec", specMergeMethod: "merge", pushSpecBranch: true },
   gate: { onHold: "fix-and-continue" },
   language: { conversation: "en", artifacts: "en" },
   pr: { autoMerge: true, mergeMethod: "squash", maxCiFixAttempts: 2 },
@@ -211,6 +211,11 @@ export interface CoupledSurfacePair {
 
 export type LandingMode = "pr" | "merge";
 
+export const LANDING_UNITS = ["spec", "wave"] as const;
+
+/** What one landing carries to trunk: the whole spec or a single wave. */
+export type LandingUnit = (typeof LANDING_UNITS)[number];
+
 /** What `emet gate` does with open blocking findings. */
 type GateOnHold = "fix-and-continue" | "stop";
 
@@ -316,6 +321,13 @@ export interface ForgeConfig {
      * merges the integration branch into local trunk. Independent of the
      * tracker. */
     readonly mode: LandingMode;
+    /** What one landing carries to trunk: `spec` lands the whole spec branch
+     * once, `wave` lands each wave. */
+    readonly unit: LandingUnit;
+    /** How a spec branch merges into trunk. Only `merge` is accepted. */
+    readonly specMergeMethod: "merge";
+    /** Whether the spec branch is pushed to the remote. */
+    readonly pushSpecBranch: boolean;
   };
   readonly gate: {
     /** What `emet gate` does with open blocking findings: `fix-and-continue`
@@ -889,6 +901,20 @@ function validateAndMerge(
   if (!isOneOf(LANDING_MODES, landingMode)) {
     return { ok: false, reason: '"landing.mode" must be one of pr|merge' };
   }
+  const landingUnit = landingSection.unit ?? DEFAULT_FORGE_CONFIG.landing.unit;
+  if (!isOneOf(LANDING_UNITS, landingUnit)) {
+    return { ok: false, reason: '"landing.unit" must be one of spec|wave' };
+  }
+  const specMergeMethod =
+    landingSection.specMergeMethod ?? DEFAULT_FORGE_CONFIG.landing.specMergeMethod;
+  if (specMergeMethod !== "merge") {
+    return { ok: false, reason: '"landing.specMergeMethod" must be merge' };
+  }
+  const pushSpecBranch =
+    landingSection.pushSpecBranch ?? DEFAULT_FORGE_CONFIG.landing.pushSpecBranch;
+  if (typeof pushSpecBranch !== "boolean") {
+    return { ok: false, reason: '"landing.pushSpecBranch" must be a boolean' };
+  }
 
   const gateSection = isRecord(raw.gate) ? raw.gate : {};
   const gateOnHold = gateSection.onHold ?? DEFAULT_FORGE_CONFIG.gate.onHold;
@@ -1066,7 +1092,7 @@ function validateAndMerge(
       ...(validateSection.coupledSurfaces === undefined
         ? {}
         : { validate: { coupledSurfaces: validateSection.coupledSurfaces } }),
-      landing: { mode: landingMode },
+      landing: { mode: landingMode, unit: landingUnit, specMergeMethod, pushSpecBranch },
       gate: { onHold: gateOnHold },
       language: { conversation: languageConversation, artifacts: languageArtifacts },
       pr: { autoMerge, mergeMethod, maxCiFixAttempts },

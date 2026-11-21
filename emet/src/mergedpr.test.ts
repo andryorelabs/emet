@@ -170,7 +170,7 @@ describe("merged branch sweep against a real repository", () => {
     ...DEFAULT_FORGE_CONFIG,
     repo: { ...DEFAULT_FORGE_CONFIG.repo, trunk: "develop", remote: "origin" },
     ticket: { ...DEFAULT_FORGE_CONFIG.ticket, branchPrefix: "cla" },
-    landing: { mode: "pr" },
+    landing: { ...DEFAULT_FORGE_CONFIG.landing, mode: "pr" },
   };
 
   function git(...args: string[]): string {
@@ -282,7 +282,7 @@ describe("merged branch sweep against a real repository", () => {
     git("commit", "-q", "-m", "more work on trunk");
 
     const result = await sweepMergedBranches({
-      config: { ...config, landing: { mode: "merge" } },
+      config: { ...config, landing: { ...DEFAULT_FORGE_CONFIG.landing, mode: "merge" } },
       host: claudeHost,
       dryRun: false,
       findMergedPullRequest: () => Promise.resolve(null),
@@ -478,7 +478,7 @@ describe("merged branch sweep against a real repository", () => {
   test("plans nothing when landing is a local merge", async () => {
     commitOn("chore/release", "a.txt");
     const plans = await planMergedBranchSweep({
-      config: { ...config, landing: { mode: "merge" } },
+      config: { ...config, landing: { ...DEFAULT_FORGE_CONFIG.landing, mode: "merge" } },
       host: claudeHost,
       dryRun: false,
       findMergedPullRequest: () => Promise.resolve(1),
