@@ -244,8 +244,8 @@ describe("loadForgeConfig", () => {
     ["landing.unit", { landing: { unit: "banana" } }, /"landing.unit" must be one of spec\|wave/],
     [
       "landing.specMergeMethod",
-      { landing: { specMergeMethod: "squash" } },
-      /"landing.specMergeMethod" must be merge/,
+      { landing: { specMergeMethod: "fast-forward" } },
+      /"landing.specMergeMethod" must be one of squash\|merge\|rebase/,
     ],
     [
       "landing.pushSpecBranch",
@@ -303,6 +303,14 @@ describe("loadForgeConfig", () => {
       pushSpecBranch: false,
     });
   });
+
+  test.each(["merge", "squash", "rebase"] as const)(
+    "landing.specMergeMethod accepts %s",
+    async (method) => {
+      await writeConfig({ landing: { specMergeMethod: method } });
+      expect(configOf(await loadForgeConfig(repoRoot)).landing.specMergeMethod).toBe(method);
+    },
+  );
 
   test("gate.onHold defaults to fix-and-continue and accepts stop", async () => {
     await writeConfig({});

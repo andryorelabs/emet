@@ -2,7 +2,7 @@
 title: Trackers y aterrizaje
 description: Dónde viven los tickets, cómo aterriza una oleada como pull request o como merge local, y cómo se encadenan las oleadas.
 seoTitle: Trackers y aterrizaje en emet
-sourceHash: 34b6b42839a8d8da
+sourceHash: da19ec4cf50e7084
 ---
 
 Dónde viven los tickets, cómo aterriza una oleada y cómo se encadenan las oleadas. Cada clave mencionada aquí está en la [referencia de configuración](../reference/configuration.md); cada subcomando está en la [referencia de la CLI](../reference/cli.md).
@@ -27,9 +27,9 @@ Con `tracker.kind: "local"`, las specs y los tickets son archivos markdown bajo 
 
 Con `landing.unit: "spec"`, el coordinador crea `spec/<id>` desde la rama troncal con `emet spec-branch ensure --spec <id>`. Cuando una oleada pasa la revisión y `commands.selfCheck`, `emet spec-branch integrate` fusiona la rama de la oleada en `spec/<id>` con `--no-ff` y un commit con los trailers `Emet-Wave` y `Emet-Tickets`. Un ticket cuya rama está en `spec/<id>` está **Integrated**, no **Landed**: cuenta como bloqueador cerrado para la frontera de la siguiente oleada, pero el tracker lo mantiene abierto hasta el aterrizaje final. Las oleadas posteriores parten de la punta de `spec/<id>`, de modo que ninguna oleada espera a la CI de un PR.
 
-`emet spec-branch sync` fusiona la rama troncal en `spec/<id>` y nunca hace rebase; ante un conflicto aborta, deja la rama sin cambios y sale con un valor distinto de cero. `emet spec-branch land` ejecuta `sync` y después aterriza la rama una vez. En modo `pr` envía `spec/<id>`, abre un PR con una línea `Closes #N` por cada ticket de cada oleada integrada y lo fusiona con un commit de merge, ignorando `pr.mergeMethod`. En modo `merge` fusiona `spec/<id>` con `--no-ff` en la rama troncal local y nunca hace push. `--partial` aterriza solo las oleadas integradas hasta el momento. `emet spec-branch abandon --spec <id> --force` etiqueta la rama como `abandoned/spec-<id>`, la elimina y devuelve a `ready-for-agent` los tickets integrados de un tracker local.
+`emet spec-branch sync` fusiona la rama troncal en `spec/<id>` y nunca hace rebase; ante un conflicto aborta, deja la rama sin cambios y sale con un valor distinto de cero. `emet spec-branch land` ejecuta `sync` y después aterriza la rama una vez. En modo `pr` envía `spec/<id>`, abre un PR con una línea `Closes #N` por cada ticket de cada oleada integrada, espera sus comprobaciones y lo fusiona con `landing.specMergeMethod` (por defecto un commit de merge, ignorando `pr.mergeMethod`). En modo `merge` fusiona `spec/<id>` con `--no-ff` en la rama troncal local y nunca hace push. `--partial` aterriza solo las oleadas integradas hasta el momento. `emet spec-branch abandon --spec <id> --force` etiqueta la rama como `abandoned/spec-<id>`, la elimina y devuelve a `ready-for-agent` los tickets integrados de un tracker local.
 
-El modo spec requiere `worktree.baseRef: "head"` en los ajustes de Claude Code para que los worktrees de los workers partan de la rama de la spec; `emet preflight` y `emet doctor` lo comprueban. `emet doctor` también avisa cuando el modo es `pr` y el repositorio no permite commits de merge.
+El modo spec requiere `worktree.baseRef: "head"` en los ajustes de Claude Code para que los worktrees de los workers partan de la rama de la spec; `emet preflight` y `emet doctor` lo comprueban. `emet doctor` también avisa cuando el modo es `pr` y los ajustes del repositorio o el ruleset de la rama troncal no permiten el `landing.specMergeMethod` configurado.
 
 ### PRs de aterrizaje
 

@@ -26,6 +26,7 @@ import {
   createEnvironmentProbes,
   checkWorktreeForkBase,
   findMergeCommitWarnings,
+  parseAllowedMergeMethods,
   findSpecsWarnings,
   findMissingFlags,
   normalizeGithubSlug,
@@ -739,6 +740,56 @@ describe("findMergeCommitWarnings", () => {
     );
     expect(warnings).toHaveLength(1);
     expect(warnings[0]).toContain("merge commits");
+  });
+  test("warns when the trunk ruleset does not allow the configured method", async () => {
+    const probes: EnvironmentProbes = {
+      ...healthyEnvironment,
+      trunkAllowedMergeMethods: () => Promise.resolve(["squash"]),
+    };
+    const merge = await findMergeCommitWarnings(
+      { mode: "pr", unit: "spec", specMergeMethod: "merge" },
+      probes,
+      "/repo",
+      "develop",
+    );
+    expect(merge).toHaveLength(1);
+    expect(merge[0]).toContain("develop ruleset only allows squash");
+    expect(
+      await findMergeCommitWarnings(
+        { mode: "pr", unit: "spec", specMergeMethod: "squash" },
+        probes,
+        "/repo",
+        "develop",
+      ),
+    ).toEqual([]);
+  });
+  test("a squash method ignores the repository merge-commit setting", async () => {
+    const probes = withProbe(() => Promise.resolve(false));
+    expect(
+      await findMergeCommitWarnings(
+        { mode: "pr", unit: "spec", specMergeMethod: "squash" },
+        probes,
+      ),
+    ).toEqual([]);
+  });
+  test.each([
+    ["unknown", () => Promise.resolve(undefined)],
+    ["failing", () => Promise.reject(new Error("x"))],
+  ])("a %s ruleset probe gives no finding", async (_label, probe) => {
+    expect(
+      await findMergeCommitWarnings(
+        { mode: "pr", unit: "spec", specMergeMethod: "merge" },
+        { ...healthyEnvironment, trunkAllowedMergeMethods: probe },
+        "/repo",
+        "develop",
+      ),
+    ).toEqual([]);
+  });
+  test("parseAllowedMergeMethods reads the gh answer", () => {
+    expect(parseAllowedMergeMethods('["squash","rebase"]')).toEqual(["squash", "rebase"]);
+    for (const raw of [null, "", "null", "[]", "nope", '{"a":1}']) {
+      expect(parseAllowedMergeMethods(raw)).toBeUndefined();
+    }
   });
   test("no finding when allowed, unknown, failing, or not spec/pr", async () => {
     const allowed = withProbe(() => Promise.resolve(true));

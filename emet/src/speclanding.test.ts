@@ -3,8 +3,10 @@ import { chmodSync, mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSy
 import os from "node:os";
 import path from "node:path";
 
+import type { WaitForChecksDeps } from "./ci";
 import { readJournalSegments } from "./journal";
 import { run, specBranchName, waveBranchName } from "./specbranch";
+import { waitForSpecChecks } from "./speclanding";
 
 let repo = "";
 let stateRoot = "";
@@ -263,17 +265,30 @@ describe("land in merge mode", () => {
   });
 });
 
+const PASSING_ROLLUP =
+  '{"statusCheckRollup":[{"name":"ci","status":"COMPLETED","conclusion":"SUCCESS"}]}';
+const FAILING_ROLLUP =
+  '{"statusCheckRollup":[{"name":"ci","status":"COMPLETED","conclusion":"FAILURE"}]}';
+
 async function landWithStub(
   trackerKind: string,
   existingUrl: string,
   checksExit = 0,
   listExit = 0,
+  specMergeMethod?: string,
 ): Promise<{ calls: string; code: number; err: string }> {
   const remote = realpathSync(mkdtempSync(path.join(os.tmpdir(), "emet-speclanding-remote-")));
   const binDirectory = realpathSync(mkdtempSync(path.join(os.tmpdir(), "emet-speclanding-bin-")));
   try {
     git(remote, "init", "-q", "--bare", "-b", "main");
-    writeConfig({ mode: "pr", pushSpecBranch: true }, trackerKind);
+    writeConfig(
+      {
+        mode: "pr",
+        pushSpecBranch: true,
+        ...(specMergeMethod === undefined ? {} : { specMergeMethod }),
+      },
+      trackerKind,
+    );
     git(repo, "remote", "add", "origin", remote);
     git(repo, "push", "-q", "origin", "main");
     git(repo, "fetch", "-q", "origin");
@@ -281,7 +296,7 @@ async function landWithStub(
     const stub = path.join(binDirectory, "gh");
     writeFileSync(
       stub,
-      `#!/bin/sh\nprintf '%s\\n---\\n' "$*" >> "${callsFile}"\nif [ "$1 $2" = "pr list" ]; then echo '${existingUrl}'; exit ${listExit}; fi\nif [ "$1 $2" = "pr create" ]; then echo https://github.com/o/r/pull/9; fi\nif [ "$1 $2" = "pr checks" ]; then exit ${checksExit}; fi\n`,
+      `#!/bin/sh\nprintf '%s\\n---\\n' "$*" >> "${callsFile}"\nif [ "$1 $2" = "pr list" ]; then echo '${existingUrl}'; exit ${listExit}; fi\nif [ "$1 $2" = "pr create" ]; then echo https://github.com/o/r/pull/9; fi\nif [ "$1 $2" = "pr view" ]; then echo '${checksExit === 0 ? PASSING_ROLLUP : FAILING_ROLLUP}'; fi\n`,
     );
     chmodSync(stub, 0o755);
     process.env.PATH = `${binDirectory}:${originalPath ?? ""}`;
@@ -317,8 +332,15 @@ describe("land in pr mode edge cases", () => {
   test("failing checks stop before the merge and leave the PR open", async () => {
     const { calls, code } = await landWithStub("github", "", 1);
     expect(code).not.toBe(0);
-    expect(calls).toContain("pr checks");
+    expect(calls).toContain("pr view");
     expect(calls).not.toContain("pr merge");
+  });
+
+  test("specMergeMethod squash merges the PR with --squash", async () => {
+    const { calls, code } = await landWithStub("github", "", 0, 0, "squash");
+    expect(code).toBe(0);
+    expect(calls).toContain("pr merge https://github.com/o/r/pull/9 --squash");
+    expect(calls).not.toContain("--merge");
   });
 
   test("a rerun reuses the open PR instead of creating a second one", async () => {
@@ -343,7 +365,7 @@ describe("land in pr mode", () => {
       const stub = path.join(binDirectory, "gh");
       writeFileSync(
         stub,
-        `#!/bin/sh\nprintf '%s\\n---\\n' "$*" >> "${callsFile}"\nif [ "$1 $2" = "pr create" ]; then echo https://github.com/o/r/pull/9; fi\n`,
+        `#!/bin/sh\nprintf '%s\\n---\\n' "$*" >> "${callsFile}"\nif [ "$1 $2" = "pr create" ]; then echo https://github.com/o/r/pull/9; fi\nif [ "$1 $2" = "pr view" ]; then echo '${PASSING_ROLLUP}'; fi\n`,
       );
       chmodSync(stub, 0o755);
       process.env.PATH = `${binDirectory}:${originalPath ?? ""}`;
@@ -361,5 +383,63 @@ describe("land in pr mode", () => {
       rmSync(remote, { recursive: true, force: true });
       rmSync(binDirectory, { recursive: true, force: true });
     }
+  });
+});
+
+describe("waitForSpecChecks", () => {
+  const EMPTY_ROLLUP = '{"statusCheckRollup":[]}';
+
+  function fakeDeps(responses: string[]): { deps: WaitForChecksDeps; sleeps: number[] } {
+    const sleeps: number[] = [];
+    let clock = 0;
+    let index = 0;
+    const deps: WaitForChecksDeps = {
+      gh: () => {
+        const response = responses[Math.min(index, responses.length - 1)] ?? EMPTY_ROLLUP;
+        index += 1;
+        return Promise.resolve(response);
+      },
+      sleep: (ms) => {
+        sleeps.push(ms);
+        clock += ms;
+        return Promise.resolve();
+      },
+      now: () => clock,
+    };
+    return { deps, sleeps };
+  }
+
+  const timing = { timeoutMs: 60_000, pollMs: 10 };
+  const url = "https://github.com/o/r/pull/9";
+
+  test("keeps polling while no checks are registered, then passes once they are green", async () => {
+    const { deps, sleeps } = fakeDeps([EMPTY_ROLLUP, EMPTY_ROLLUP, PASSING_ROLLUP]);
+    await waitForSpecChecks(url, deps, timing);
+    expect(sleeps.length).toBe(2);
+  });
+
+  test("treats a PR that never gets checks as a pass after the grace period", async () => {
+    const { deps, sleeps } = fakeDeps([EMPTY_ROLLUP]);
+    await waitForSpecChecks(url, deps, timing);
+    expect(sleeps.length).toBe(8);
+  });
+
+  test("a failing check refuses and names the check", async () => {
+    const { deps } = fakeDeps([FAILING_ROLLUP]);
+    const outcome = await waitForSpecChecks(url, deps, timing).then(
+      () => "passed",
+      (error: unknown) => String(error),
+    );
+    expect(outcome).toMatch(/ended fail: ci/);
+  });
+
+  test("a wait that runs out of time refuses", async () => {
+    const pending = '{"statusCheckRollup":[{"name":"ci","status":"IN_PROGRESS"}]}';
+    const { deps } = fakeDeps([pending]);
+    const outcome = await waitForSpecChecks(url, deps, { timeoutMs: 30, pollMs: 10 }).then(
+      () => "passed",
+      (error: unknown) => String(error),
+    );
+    expect(outcome).toMatch(/ended timeout/);
   });
 });

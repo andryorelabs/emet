@@ -4,7 +4,8 @@
  *
  * `sync` merges trunk in with a merge commit, never a rebase, and stops on a
  * conflict leaving the branch untouched. `land` runs the sync, then in `pr`
- * mode pushes the branch and opens one PR merged with a merge commit, or in
+ * mode pushes the branch and opens one PR merged with
+ * `landing.specMergeMethod` (a merge commit by default), or in
  * `merge` mode merges into local trunk with `--no-ff` and never pushes. It
  * journals `spec.land`.
  */
@@ -12,6 +13,7 @@
 import { realpath } from "node:fs/promises";
 import path from "node:path";
 
+import { realGh, waitForChecks, type WaitForChecksDeps } from "./ci";
 import { exitCodes } from "./exit-codes";
 import { appendEvent } from "./journal";
 import { errorMessage } from "./narrow";
@@ -188,17 +190,38 @@ async function runGh(root: string, ...args: string[]): Promise<string> {
   return result.stdout.toString().trim();
 }
 
-async function waitForChecks(root: string, pullRequest: string): Promise<void> {
-  const result = await Bun.$`gh pr checks ${pullRequest} --watch --fail-fast`
-    .cwd(root)
-    .nothrow()
-    .quiet();
-  if (result.exitCode === 0) return;
-  const output = `${result.stdout.toString()}${result.stderr.toString()}`.trim();
-  if (/no checks reported/i.test(output)) return;
-  throw new SpecLandingRefusedError(
-    `checks on ${pullRequest} did not pass; the PR stays open and a rerun of land reuses it: ${output}`,
-  );
+const CHECKS_TIMEOUT_MS = 30 * 60 * 1000;
+const CHECKS_POLL_MS = 15 * 1000;
+const NO_CHECKS_GRACE_POLLS = 8;
+
+/**
+ * Waits for a PR's checks to pass. A PR with no checks yet is polled for a
+ * grace period, since right after `gh pr create` GitHub has often not
+ * registered any; only then does "no checks" count as a pass. Any other
+ * outcome than a pass leaves the PR open.
+ */
+export async function waitForSpecChecks(
+  pullRequest: string,
+  deps: WaitForChecksDeps,
+  timing: { timeoutMs: number; pollMs: number } = {
+    timeoutMs: CHECKS_TIMEOUT_MS,
+    pollMs: CHECKS_POLL_MS,
+  },
+): Promise<void> {
+  for (let attempt = 0; ; attempt += 1) {
+    // oxlint-disable-next-line eslint/no-await-in-loop -- sequential on purpose: each poll depends on the previous one
+    const outcome = await waitForChecks({ pr: pullRequest, ...timing, rerunFlakes: true }, deps);
+    if (outcome.state === "pass" && outcome.noChecks && attempt < NO_CHECKS_GRACE_POLLS) {
+      // oxlint-disable-next-line eslint/no-await-in-loop -- sequential on purpose: waits between polls
+      await deps.sleep(timing.pollMs);
+      continue;
+    }
+    if (outcome.state === "pass") return;
+    const failed = outcome.failedChecks.length > 0 ? `: ${outcome.failedChecks.join(", ")}` : "";
+    throw new SpecLandingRefusedError(
+      `checks on ${pullRequest} ended ${outcome.state}${failed}; the PR stays open and a rerun of land reuses it`,
+    );
+  }
 }
 
 async function landByPullRequest(
@@ -241,8 +264,8 @@ async function landByPullRequest(
           "--body",
           body,
         );
-  await waitForChecks(root, pullRequest);
-  await runGh(root, "pr", "merge", pullRequest, "--merge");
+  await waitForSpecChecks(pullRequest, { gh: realGh, sleep: Bun.sleep, now: Date.now });
+  await runGh(root, "pr", "merge", pullRequest, `--${config.landing.specMergeMethod}`);
   return { pullRequest };
 }
 
@@ -292,7 +315,7 @@ async function mainWorktree(cwd: string): Promise<string> {
   return path.dirname(await realpath(common));
 }
 
-/** `emet spec-branch land`: syncs, then lands `spec/<id>` once as a merge commit. */
+/** `emet spec-branch land`: syncs, then lands `spec/<id>` once. */
 export async function runLand(argv: string[], context: SpecBranchContext): Promise<number> {
   try {
     const partial = argv.includes("--partial");

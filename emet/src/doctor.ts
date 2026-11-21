@@ -428,6 +428,11 @@ export interface EnvironmentProbes {
   readonly worktreeBaseRef: (repoRoot: string) => Promise<string | null>;
   /** `mergeCommitAllowed` per `gh repo view`, or `undefined` when `gh` is missing or the probe fails. */
   readonly repoMergeCommitAllowed?: (repoRoot: string) => Promise<boolean | undefined>;
+  /** Merge methods the trunk's pull-request rule allows, or `undefined` when no rule restricts them or the probe fails. */
+  readonly trunkAllowedMergeMethods?: (
+    repoRoot: string,
+    trunk: string,
+  ) => Promise<readonly string[] | undefined>;
 }
 
 export function findMissingFlags(helpText: string, flags: readonly string[]): string[] {
@@ -610,6 +615,19 @@ export function createEnvironmentProbes(host: AgentHost = claudeHost): Environme
       if (output === "false") return false;
       return undefined;
     },
+    trunkAllowedMergeMethods: async (repoRoot, trunk) => {
+      const output = await runCapture(
+        [
+          "gh",
+          "api",
+          `repos/{owner}/{repo}/rules/branches/${trunk}`,
+          "--jq",
+          '[.[] | select(.type == "pull_request") | .parameters.allowed_merge_methods // empty] | add',
+        ],
+        repoRoot,
+      );
+      return parseAllowedMergeMethods(output);
+    },
   };
 }
 
@@ -651,25 +669,62 @@ async function auditEnvironment(
   return findings;
 }
 
-/** Spec mode lands the spec branch with a merge commit; warns when GitHub
- * disallows them. A missing `gh` or a failed probe gives no finding. */
+/** Parses the `allowed_merge_methods` array `gh api` prints; `undefined` when it is absent or malformed. */
+export function parseAllowedMergeMethods(output: string | null): readonly string[] | undefined {
+  if (output === null || output.length === 0 || output === "null") return undefined;
+  try {
+    const parsed: unknown = JSON.parse(output);
+    if (!Array.isArray(parsed)) return undefined;
+    const methods = parsed.filter((entry): entry is string => typeof entry === "string");
+    return methods.length > 0 ? methods : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+/** Spec mode lands the spec PR with `landing.specMergeMethod`; warns when the
+ * repository settings or the trunk ruleset disallow that method. A missing
+ * `gh` or a failed probe gives no finding. */
 export async function findMergeCommitWarnings(
-  landing: { readonly mode: LandingMode; readonly unit: LandingUnit },
+  landing: {
+    readonly mode: LandingMode;
+    readonly unit: LandingUnit;
+    readonly specMergeMethod?: string;
+  },
   probes: EnvironmentProbes,
   repoRoot: string = process.cwd(),
+  trunk?: string,
 ): Promise<string[]> {
   if (landing.unit !== "spec" || landing.mode !== "pr") return [];
-  if (probes.repoMergeCommitAllowed === undefined) return [];
-  let allowed: boolean | undefined;
-  try {
-    allowed = await probes.repoMergeCommitAllowed(repoRoot);
-  } catch {
-    return [];
+  const method = landing.specMergeMethod ?? "merge";
+  const findings: string[] = [];
+  if (method === "merge" && probes.repoMergeCommitAllowed !== undefined) {
+    let allowed: boolean | undefined;
+    try {
+      allowed = await probes.repoMergeCommitAllowed(repoRoot);
+    } catch {
+      allowed = undefined;
+    }
+    if (allowed === false) {
+      findings.push(
+        'landing.unit is "spec" but GitHub disallows merge commits on this repository — enable "Allow merge commits" in the repository settings, set landing.specMergeMethod to "squash" or "rebase", or set landing.unit to "wave"',
+      );
+    }
   }
-  if (allowed !== false) return [];
-  return [
-    'landing.unit is "spec" but GitHub disallows merge commits on this repository — enable "Allow merge commits" in the repository settings, or set landing.unit to "wave"',
-  ];
+  if (trunk !== undefined && probes.trunkAllowedMergeMethods !== undefined) {
+    let methods: readonly string[] | undefined;
+    try {
+      methods = await probes.trunkAllowedMergeMethods(repoRoot, trunk);
+    } catch {
+      methods = undefined;
+    }
+    if (methods !== undefined && !methods.includes(method)) {
+      findings.push(
+        `landing.specMergeMethod is "${method}" but the ${trunk} ruleset only allows ${methods.join(", ")} — set landing.specMergeMethod to one of them, or set landing.unit to "wave"`,
+      );
+    }
+  }
+  return findings;
 }
 
 /** Warns, only when `specs.enabled`, if `specs.dir` is gitignored or is a file.
@@ -836,7 +891,12 @@ export async function auditRepo(
       ...(hasConfig ? findLocalTrackerWarnings(await readRawConfig(absolutePath)) : []),
       ...(hasConfig ? await findTrackedScratchWarnings(absolutePath) : []),
       ...(configResult.status === "ok"
-        ? await findMergeCommitWarnings(configResult.config.landing, environment, absolutePath)
+        ? await findMergeCommitWarnings(
+            configResult.config.landing,
+            environment,
+            absolutePath,
+            configResult.config.repo.trunk,
+          )
         : []),
       ...(configResult.status === "ok" ? findSpecsWarnings(configResult.config, absolutePath) : []),
     ],
@@ -1267,7 +1327,11 @@ async function main(targets: readonly string[]): Promise<void> {
   const globalForgeAgentsCheck = classifyForgeAgentsProbe(await probes.forgeAgents(), host);
   const skillsChecks =
     probes.skillsContract?.() ?? checkSkillsContract(listInstalledPlugins(host), host);
-  const doubleInstall = findDoubleInstall(os.homedir(), listInstalledPlugins(host), host);
+  const doubleInstall = findDoubleInstall(
+    os.homedir(),
+    probes.installedPlugins?.() ?? listInstalledPlugins(host),
+    host,
+  );
   const engramProbe = await probes.engram?.();
   const engramChecks = engramProbe === undefined ? [] : [classifyEngram(engramProbe)];
   const globalFindingLines = [

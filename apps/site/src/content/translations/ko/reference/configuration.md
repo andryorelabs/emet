@@ -2,7 +2,7 @@
 title: 설정 레퍼런스
 description: emet.config.json의 모든 키를 기본값과 의미와 함께 설명합니다.
 seoTitle: emet 설정 레퍼런스
-sourceHash: 61b46b074d095451
+sourceHash: a58a3577b2274c4a
 ---
 
 `emet.config.json`의 모든 키를 기본값과 의미와 함께 정리했습니다. 기준이 되는 원본은 [`emet/schema/emet.config.schema.json`](../../emet/schema/emet.config.schema.json)입니다. 용어는 [GLOSSARY.md](../../GLOSSARY.md)를 따릅니다. [README](../../README.md)로 돌아가기.
@@ -215,7 +215,7 @@ Claude Code 호스트의 역할별 모델과 추론 강도이며, Codex 호스�
 
 - `mode`(기본값 `pr`): `pr`은 풀 리퀘스트를 엽니다(`gh` 필요). `merge`는 `emet land`로 통합 브랜치를 로컬 트렁크에 병합하며 푸시하지 않고, CI 대신 `commands.selfCheck`를 사용합니다. 트래커와는 독립적입니다. [ADR-0010](../adr/0010-local-merge-landing.md)을 참고하세요.
 - `unit`(기본값 `spec`): `spec`은 각 웨이브를 `emet spec-branch integrate`로 브랜치 `spec/<id>`에 통합하고 `emet spec-branch land`로 스펙을 한 번만 랜딩합니다. `wave`는 기존처럼 웨이브를 하나씩 따로 랜딩합니다. 그 밖의 값은 `"landing.unit" must be one of spec|wave` 오류와 함께 로드에 실패합니다. `spec`에는 Claude Code 설정(emet 키가 아니라 하네스 설정)의 `worktree.baseRef: "head"`가 필요하며, `emet preflight`와 `emet doctor`가 이를 확인합니다. [ADR-0037](../adr/0037-landing-per-spec.md)을 참고하세요.
-- `specMergeMethod`(기본값 `merge`): 스펙 PR을 병합하는 방식. `merge`만 허용되며 `pr.mergeMethod`는 무시됩니다.
+- `specMergeMethod`(기본값 `merge`): 스펙 PR을 병합하는 방식으로, `merge`, `squash`, `rebase` 중 하나입니다. `merge`는 웨이브마다 병합 커밋을 하나씩 남기므로 웨이브를 되돌릴 수 있습니다. `squash`와 `rebase`는 병합 커밋을 허용하지 않는 트렁크에 적합하지만, 그 되돌리기를 포기해야 합니다. `pr.mergeMethod`는 무시됩니다. 저장소 설정이나 트렁크 룰셋이 선택한 방식을 허용하지 않으면 `emet doctor`가 경고합니다.
 - `pushSpecBranch`(기본값 `true`): `emet spec-branch integrate`마다 PR을 열지 않고 `spec/<id>`를 푸시합니다. 최종 랜딩까지 브랜치를 로컬에 두려면 `false`로 설정합니다.
 
 ## tracker

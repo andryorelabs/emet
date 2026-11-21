@@ -21,6 +21,7 @@ import {
   type SetupEnv,
   type SetupItem,
 } from "./setup";
+import { useBarePath } from "./test-preload";
 
 const originalExitCode = process.exitCode;
 let directory = "";
@@ -747,6 +748,15 @@ describe("realSetupEnv file access", () => {
 });
 
 describe("run", () => {
+  let restorePath: (() => void) | undefined;
+
+  beforeEach(() => {
+    restorePath = useBarePath();
+  });
+  afterEach(() => {
+    restorePath?.();
+  });
+
   test("without a TTY and without --with it installs nothing and prints the catalog", async () => {
     const output = capture();
     await run([]);

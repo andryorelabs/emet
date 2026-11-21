@@ -139,9 +139,16 @@ export function appArmorProfileMessage(homeDir: string): readonly string[] {
   ];
 }
 
+const pluginListCache = new WeakMap<SetupEnv, Promise<string>>();
+
+/** Lists the plugins once per `env` until an install invalidates it, since each call costs about a second. */
 async function pluginInstalled(env: SetupEnv, pluginId: string): Promise<boolean> {
-  const output = await env.capture(["claude", "plugin", "list"]);
-  return parsePluginListOutput(output, pluginId) === "installed";
+  let listing = pluginListCache.get(env);
+  if (listing === undefined) {
+    listing = env.capture(["claude", "plugin", "list"]);
+    pluginListCache.set(env, listing);
+  }
+  return parsePluginListOutput(await listing, pluginId) === "installed";
 }
 
 /** Builds the catalog over `env`: the nine optional installs in the order they are offered. */
@@ -149,7 +156,7 @@ export function createCatalog(env: SetupEnv): readonly SetupItem[] {
   const settingsPath = path.join(env.homeDir, ".claude", "settings.json");
   const agentBrowserConfigPath = path.join(env.homeDir, ".agent-browser", "config.json");
   const orcaPetDirectory = path.join(env.homeDir, ".emet", "orca-pet", "emet");
-  return [
+  const items: readonly SetupItem[] = [
     {
       id: "mattpocock-skills",
       label: "mattpocock-skills plugin (skills the /emet prompts use)",
@@ -327,7 +334,22 @@ export function createCatalog(env: SetupEnv): readonly SetupItem[] {
       },
     },
   ];
+  return items.map((item) => ({
+    id: item.id,
+    label: item.label,
+    defaultOn: item.defaultOn,
+    detect: item.detect,
+    install: async () => {
+      try {
+        await item.install();
+      } finally {
+        pluginListCache.delete(env);
+      }
+    },
+  }));
 }
+
+const PROBE_TIMEOUT_MS = 30_000;
 
 async function spawnExitCode(
   argv: readonly string[],
@@ -338,6 +360,7 @@ async function spawnExitCode(
       stdin: mode === "inherit" ? "inherit" : "ignore",
       stdout: mode === "inherit" ? "inherit" : mode === "capture" ? "pipe" : "ignore",
       stderr: mode === "inherit" ? "inherit" : "ignore",
+      ...(mode === "inherit" ? {} : { timeout: PROBE_TIMEOUT_MS }),
     });
     const output = mode === "capture" ? await new Response(child.stdout).text() : "";
     return [await child.exited, output];

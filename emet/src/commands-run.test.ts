@@ -9,6 +9,7 @@ import { exitCodes } from "./exit-codes";
 import * as guard from "./guard";
 import * as mailbox from "./mailbox";
 import * as skills from "./skills";
+import { useBarePath } from "./test-preload";
 
 function requireCommand(name: string): (argv: string[]) => Promise<unknown> {
   const spec = findCommand(name);
@@ -198,6 +199,14 @@ describe("loadRun module branches", () => {
     "whats-new",
   ]);
   const modulesWithUsageOnEmptyArgv = COMMANDS.filter((spec) => !skipped.has(spec.name));
+  let restorePath: (() => void) | undefined;
+
+  beforeEach(() => {
+    restorePath = useBarePath();
+  });
+  afterEach(() => {
+    restorePath?.();
+  });
 
   test("every module-backed command resolves and runs its own entry point", async () => {
     const logSpy = spyOn(console, "log").mockImplementation(() => undefined);

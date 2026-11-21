@@ -20,7 +20,7 @@ export interface CiOutcome {
 }
 
 export interface WaitForChecksOptions {
-  pr: number;
+  pr: number | string;
   timeoutMs: number;
   pollMs: number;
   rerunFlakes: boolean;
