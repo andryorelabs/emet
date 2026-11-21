@@ -17,6 +17,7 @@ import { exitCodes } from "./exit-codes";
 import { appendEvent } from "./journal";
 import { RUN_DIR } from "./names";
 import { errorMessage, isObject } from "./narrow";
+import { trunkReference } from "./worktrees";
 
 /** One integrated wave recorded in `branch.json`. */
 export interface IntegratedWave {
@@ -177,7 +178,7 @@ export async function readSpecBranchState(
   if (!(await branchExists(root, branch))) return null;
   const recorded = readRecordedWaves(root, spec);
   const { config } = await loadForgeConfigWithDefaults(root);
-  const waves = await wavesFromTrailers(root, config.repo.trunk, branch);
+  const waves = await wavesFromTrailers(root, await resolveTrunk(root, config), branch);
   const state: SpecBranchState = {
     spec,
     branch,
@@ -188,14 +189,39 @@ export async function readSpecBranchState(
   return state;
 }
 
+/** The trunk ref a spec branch forks from: `<remote>/<trunk>` in `pr` mode, local trunk in `merge` mode. */
+export function specTrunkReference(config: ForgeConfig): string {
+  return trunkReference(config.repo.remote, config.repo.trunk, config.landing.mode === "merge");
+}
+
+async function resolveTrunk(root: string, config: ForgeConfig): Promise<string> {
+  const reference = specTrunkReference(config);
+  const found = await git(root, "rev-parse", "--verify", "--quiet", `${reference}^{commit}`);
+  return found.exitCode === 0 ? reference : config.repo.trunk;
+}
+
+async function checkedOutBranches(root: string): Promise<Map<string, string>> {
+  const listing = await git(root, "worktree", "list", "--porcelain");
+  const branches = new Map<string, string>();
+  if (listing.exitCode !== 0) return branches;
+  let directory = "";
+  for (const line of listing.stdout.split("\n")) {
+    if (line.startsWith("worktree ")) directory = line.slice("worktree ".length);
+    else if (line.startsWith("branch refs/heads/")) {
+      branches.set(line.slice("branch refs/heads/".length), directory);
+    }
+  }
+  return branches;
+}
+
 async function refuseForeignCheckout(root: string, spec: string): Promise<void> {
-  const head = await git(root, "symbolic-ref", "--short", "-q", "HEAD");
-  if (head.exitCode !== 0) return;
-  const other = /^spec\/(.+?)(?:-w\d+)?$/.exec(head.stdout)?.[1];
-  if (other !== undefined && other !== spec) {
-    throw new SpecBranchRefusedError(
-      `spec ${other} is checked out here (${head.stdout}); finish or abandon it before ensuring spec ${spec}`,
-    );
+  for (const [checkedOut, directory] of await checkedOutBranches(root)) {
+    const other = /^spec\/(.+?)(?:-w\d+)?$/.exec(checkedOut)?.[1];
+    if (other !== undefined && other !== spec) {
+      throw new SpecBranchRefusedError(
+        `spec ${other} is checked out in ${directory} (${checkedOut}); finish or abandon it before ensuring spec ${spec}`,
+      );
+    }
   }
 }
 
@@ -203,7 +229,8 @@ async function ensure(context: SpecBranchContext): Promise<number> {
   const { root, spec, trunk } = context;
   await refuseForeignCheckout(root, spec);
   const branch = specBranchName(spec);
-  if (!(await branchExists(root, trunk))) {
+  const trunkCheck = await git(root, "rev-parse", "--verify", "--quiet", `${trunk}^{commit}`);
+  if (trunkCheck.exitCode !== 0) {
     throw new SpecBranchRefusedError(`trunk ${trunk} does not exist`);
   }
   if (!(await branchExists(root, branch))) await requireGit(root, "branch", branch, trunk);
@@ -227,8 +254,13 @@ async function advanceSpecBranch(
   merged: string,
   message: string[],
 ): Promise<string> {
-  const head = await git(root, "symbolic-ref", "--short", "-q", "HEAD");
-  const checkedOut = head.exitCode === 0 && head.stdout === branch;
+  const holder = (await checkedOutBranches(root)).get(branch);
+  if (holder !== undefined && path.resolve(holder) !== path.resolve(root)) {
+    throw new SpecBranchRefusedError(
+      `${branch} is checked out in ${holder}; run integrate from that checkout's main worktree or switch it away first`,
+    );
+  }
+  const checkedOut = holder !== undefined;
   if (checkedOut) {
     const dirty = await requireGit(root, "status", "--porcelain", "--untracked-files=no");
     if (dirty.length > 0) {
@@ -258,12 +290,13 @@ async function advanceSpecBranch(
 
 async function pushSpecBranch(context: SpecBranchContext, branch: string): Promise<void> {
   if (!context.config.landing.pushSpecBranch) return;
-  const remote = await git(context.root, "remote", "get-url", "origin");
+  const remoteName = context.config.repo.remote;
+  const remote = await git(context.root, "remote", "get-url", remoteName);
   if (remote.exitCode !== 0) {
-    console.error("emet spec-branch: no origin remote; spec branch not pushed");
+    console.error(`emet spec-branch: no ${remoteName} remote; spec branch not pushed`);
     return;
   }
-  const pushed = await git(context.root, "push", "origin", `${branch}:${branch}`);
+  const pushed = await git(context.root, "push", remoteName, `${branch}:${branch}`);
   if (pushed.exitCode !== 0) {
     throw new SpecBranchRefusedError(`pushing ${branch} failed: ${pushed.stderr}`);
   }
@@ -277,6 +310,7 @@ async function integrate(context: SpecBranchContext, options: IntegrateOptions):
     throw new SpecBranchRefusedError(`${branch} does not exist; run \`emet spec-branch ensure\``);
   }
   if (state.waves.some((entry) => entry.wave === options.wave)) {
+    await pushSpecBranch(context, branch);
     console.log(JSON.stringify(state));
     return exitCodes.success;
   }
@@ -362,7 +396,12 @@ async function dispatch(subcommand: string, argv: string[]): Promise<number> {
   const spec = requireFlag(argv, "--spec");
   const root = await resolveMainWorktree(process.cwd());
   const { config } = await loadForgeConfigWithDefaults(root);
-  const context: SpecBranchContext = { root, spec, config, trunk: config.repo.trunk };
+  const context: SpecBranchContext = {
+    root,
+    spec,
+    config,
+    trunk: await resolveTrunk(root, config),
+  };
   switch (subcommand) {
     case "ensure":
       return ensure(context);

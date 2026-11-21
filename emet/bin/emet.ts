@@ -53,6 +53,7 @@ commands:
   claims    --reserve <ticket> --run <id> --anchor <pid> | --release <ticket> | --list | --prune [--dry-run]
   slots     --acquire --run <id> --anchor <pid> --ticket <ticket> | --release --run <id> | --release-index <index> | --list
   land      --spec <s> --branch <integration> --tickets <id,...>  — merge an integration branch into local trunk (landing.mode merge)
+  spec-branch  ensure|integrate|status|sync|land|abandon --spec <id>  — the spec branch that collects every integrated wave (landing.unit spec)
   cleanup   [--run <id> | --all] [--dry-run] [--force]  — bare: reclaim closed or dead runs whose work landed; --run: this run; --all: repo-wide branch sweep
   usage     [--session <id> | --file <path>] [--stalled [--minutes N]] [--project-dir <path>]
   handoff   --check <path> | --render <path>

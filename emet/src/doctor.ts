@@ -421,7 +421,7 @@ export interface EnvironmentProbes {
   /** `worktree.baseRef` from the first of repo-local/user settings that sets it. */
   readonly worktreeBaseRef: (repoRoot: string) => Promise<string | null>;
   /** `mergeCommitAllowed` per `gh repo view`, or `undefined` when `gh` is missing or the probe fails. */
-  readonly repoMergeCommitAllowed?: () => Promise<boolean | undefined>;
+  readonly repoMergeCommitAllowed?: (repoRoot: string) => Promise<boolean | undefined>;
 }
 
 export function findMissingFlags(helpText: string, flags: readonly string[]): string[] {
@@ -595,10 +595,10 @@ export function createEnvironmentProbes(host: AgentHost = claudeHost): Environme
     resolveRef: (repoRoot, ref) =>
       runCapture(["git", "rev-parse", "--verify", "--quiet", `${ref}^{commit}`], repoRoot),
     worktreeBaseRef: (repoRoot) => readBaseRefSetting(repoRoot, host),
-    repoMergeCommitAllowed: async () => {
+    repoMergeCommitAllowed: async (repoRoot) => {
       const output = await runCapture(
         ["gh", "repo", "view", "--json", "mergeCommitAllowed", "-q", ".mergeCommitAllowed"],
-        process.cwd(),
+        repoRoot,
       );
       if (output === "true") return true;
       if (output === "false") return false;
@@ -650,12 +650,13 @@ async function auditEnvironment(
 export async function findMergeCommitWarnings(
   landing: { readonly mode: LandingMode; readonly unit: LandingUnit },
   probes: EnvironmentProbes,
+  repoRoot: string = process.cwd(),
 ): Promise<string[]> {
   if (landing.unit !== "spec" || landing.mode !== "pr") return [];
   if (probes.repoMergeCommitAllowed === undefined) return [];
   let allowed: boolean | undefined;
   try {
-    allowed = await probes.repoMergeCommitAllowed();
+    allowed = await probes.repoMergeCommitAllowed(repoRoot);
   } catch {
     return [];
   }
@@ -811,7 +812,7 @@ export async function auditRepo(
       ...(hasConfig ? findLocalTrackerWarnings(await readRawConfig(absolutePath)) : []),
       ...(hasConfig ? await findTrackedScratchWarnings(absolutePath) : []),
       ...(configResult.status === "ok"
-        ? await findMergeCommitWarnings(configResult.config.landing, environment)
+        ? await findMergeCommitWarnings(configResult.config.landing, environment, absolutePath)
         : []),
     ],
   };

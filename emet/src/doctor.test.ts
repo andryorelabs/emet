@@ -812,6 +812,19 @@ describe("auditRepo environment findings", () => {
     expect(isReportClean(report)).toBe(false);
   });
 
+  test("the merge-commit probe receives the audited repo path", async () => {
+    await initRepo(undefined);
+    const probed: string[] = [];
+    await auditRepo(repoRoot, healthyProbes, {
+      ...healthyEnvironment,
+      repoMergeCommitAllowed: (root) => {
+        probed.push(root);
+        return Promise.resolve(true);
+      },
+    });
+    expect(probed).toEqual([repoRoot]);
+  });
+
   test("spec mode warns when merge commits are disallowed", async () => {
     await initRepo(undefined);
     const report = await auditRepo(repoRoot, healthyProbes, {

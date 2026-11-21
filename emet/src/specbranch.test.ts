@@ -208,3 +208,99 @@ describe("dispatcher", () => {
     expect((await runCapturing(["status"])).code).toBe(2);
   });
 });
+
+function writeConfig(remote: string, mode: "pr" | "merge"): void {
+  writeFileSync(
+    path.join(repo, "emet.config.json"),
+    JSON.stringify({
+      version: 1,
+      repo: { trunk: "main", remote },
+      ticket: { idPattern: "^X-\\d+$", branchPrefix: "x" },
+      landing: { mode },
+    }),
+  );
+}
+
+function makeBareRemote(name: string): string {
+  const bare = realpathSync(mkdtempSync(path.join(os.tmpdir(), `emet-specbranch-${name}-`)));
+  git(bare, "init", "-q", "--bare", "-b", "main");
+  return bare;
+}
+
+describe("remote and checkout handling", () => {
+  test("pr mode forks spec/<id> from the remote trunk, not a stale local one", async () => {
+    const bare = makeBareRemote("trunk");
+    try {
+      writeConfig("origin", "pr");
+      git(repo, "remote", "add", "origin", bare);
+      git(repo, "push", "-q", "origin", "main");
+      commitFile("ahead.txt", "ahead\n");
+      git(repo, "push", "-q", "origin", "main");
+      git(repo, "update-ref", "refs/heads/main", "HEAD~1");
+      git(repo, "fetch", "-q", "origin");
+      const result = await runCapturing(["ensure", "--spec", "7"]);
+      expect(result.code).toBe(0);
+      expect(git(repo, "rev-parse", "spec/7")).toBe(git(repo, "rev-parse", "origin/main"));
+    } finally {
+      rmSync(bare, { recursive: true, force: true });
+    }
+  });
+
+  test("integrate pushes to the configured remote, not origin", async () => {
+    const bare = makeBareRemote("upstream");
+    try {
+      writeConfig("upstream", "merge");
+      git(repo, "remote", "add", "upstream", bare);
+      await runCapturing(["ensure", "--spec", "7"]);
+      await integrateWave(1, "X-1");
+      expect(git(bare, "rev-parse", "spec/7")).toBe(git(repo, "rev-parse", "spec/7"));
+    } finally {
+      rmSync(bare, { recursive: true, force: true });
+    }
+  });
+
+  test("a retry after a failed push pushes instead of reporting success", async () => {
+    const bare = makeBareRemote("retry");
+    const missing = path.join(os.tmpdir(), "emet-specbranch-missing-remote");
+    try {
+      writeConfig("origin", "merge");
+      git(repo, "remote", "add", "origin", missing);
+      await runCapturing(["ensure", "--spec", "7"]);
+      makeWaveBranch("7", 1, "w1.txt");
+      const args = ["integrate", "--spec", "7", "--wave", "1", "--tickets", "X-1"];
+      expect((await runCapturing(args)).code).toBe(1);
+      git(repo, "remote", "set-url", "origin", bare);
+      expect((await runCapturing(args)).code).toBe(0);
+      expect(git(bare, "rev-parse", "spec/7")).toBe(git(repo, "rev-parse", "spec/7"));
+    } finally {
+      rmSync(bare, { recursive: true, force: true });
+    }
+  });
+
+  test("a spec branch checked out in a linked worktree is refused", async () => {
+    await runCapturing(["ensure", "--spec", "7"]);
+    makeWaveBranch("7", 1, "w1.txt");
+    const linked = path.join(os.tmpdir(), `emet-specbranch-linked-${process.pid}`);
+    git(repo, "worktree", "add", "-q", linked, "spec/7");
+    try {
+      const before = git(repo, "rev-parse", "spec/7");
+      const integrate = await runCapturing([
+        "integrate",
+        "--spec",
+        "7",
+        "--wave",
+        "1",
+        "--tickets",
+        "X-1",
+      ]);
+      expect(integrate.code).not.toBe(0);
+      expect(integrate.err).toContain("checked out");
+      expect(git(repo, "rev-parse", "spec/7")).toBe(before);
+      const ensure = await runCapturing(["ensure", "--spec", "8"]);
+      expect(ensure.code).not.toBe(0);
+      expect(ensure.err).toContain("spec 7");
+    } finally {
+      git(repo, "worktree", "remove", "--force", linked);
+    }
+  });
+});
