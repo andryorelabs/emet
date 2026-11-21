@@ -2,7 +2,7 @@
 title: Tracker und Landing
 description: Wo Tickets liegen, wie eine Welle als Pull Request oder lokaler Merge landet und wie Wellen verkettet werden.
 seoTitle: Tracker und Landing in emet
-sourceHash: 6c1988e1fd68ab4d
+sourceHash: 4280f1152d8971e0
 ---
 
 Wo Tickets liegen, wie eine Welle landet und wie Wellen verkettet werden. Jeder hier genannte Schlüssel steht in der [Konfigurationsreferenz](../reference/configuration.md); jeder Unterbefehl steht in der [CLI-Referenz](../reference/cli.md).

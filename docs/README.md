@@ -111,7 +111,7 @@ Installed prompt markdown; wording changes only in a ticket that names the parag
 - [`emet/reference/phases-6-7-dispatch.md`](../emet/reference/phases-6-7-dispatch.md): dispatch and workers.
 - [`emet/reference/phases-8-review.md`](../emet/reference/phases-8-review.md): review and gate.
 - [`emet/reference/phases-8-landing.md`](../emet/reference/phases-8-landing.md): landing and closeout.
-- `emet/reference/phases-8-spec-landing.md`: spec branch integration and landing (`landing.unit: spec`).
+- [`emet/reference/phases-8-spec-landing.md`](../emet/reference/phases-8-spec-landing.md): spec branch integration and landing (`landing.unit: spec`).
 - [`emet/reference/phases-9-handoff.md`](../emet/reference/phases-9-handoff.md): handoff and chaining.
 - [`emet/reference/worker-prompt.md`](../emet/reference/worker-prompt.md): the worker prompt template.
 - [`emet/reference/reviewer-prompt.md`](../emet/reference/reviewer-prompt.md): the reviewer prompt template.
