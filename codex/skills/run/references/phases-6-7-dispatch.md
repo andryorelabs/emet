@@ -2,8 +2,8 @@
 
 Loaded in every mode. Also load `worker-prompt.md` and `tracker-<kind>.md`
 (`<kind>` from `emet.config.json`'s `tracker.kind`) before Phase 6
-dispatches anything. Continues in `phases-8-closeout.md` (wave close-out,
-plus `reviewer-prompt.md`) and `phases-9-handoff.md` (wave close and hand off).
+dispatches anything. Continues in `phases-8-review.md` (review and gate,
+plus `reviewer-prompt.md`), `phases-8-landing.md` (landing and close-out) and `phases-9-handoff.md` (wave close and hand off).
 
 ## Phase 6 — Dispatch
 
@@ -90,7 +90,7 @@ For each ticket, after its claim, slot and dispatch record exist, write the fill
 
 Just before each `emet dispatch` call, write the dispatch record
 `.emet/runs/<runId>/dispatch/<ticket>.json` = `{"baseline": "<trunk sha>",
-"surfaces": [<the ticket's globs>]}` (that sha, `git rev-parse
+"surfaces": [<the ticket's globs>], "skills": [<names from the ticket's ## Project skills>]}` (that sha, `git rev-parse
 <remote>/<trunk>` — or local `<trunk>` when `landing.mode` is `merge` — and
 never the caller's HEAD, is also the prompt's `{{expected_base}}`), and mark the ticket started yourself (`onStart`, see
 `references/tracker-<kind>.md`): workers never write the tracker. A worker
@@ -217,4 +217,4 @@ a worker does run its own scoped E2E, use whatever quiet,
 stop-on-first-failure invocation `docs/agents/emet.md`'s
 "Shared/singleton resources" names — nothing extra to pass.
 
-Next: Phase 8 is in `phases-8-closeout.md`.
+Next: Phase 8 is in `phases-8-review.md` and `phases-8-landing.md`.

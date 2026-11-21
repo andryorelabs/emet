@@ -356,6 +356,47 @@ function seedLegacyInstall(files: Record<string, string>, edited: readonly strin
   );
 }
 
+const closeoutPath = ".claude/emet/reference/phases-8-closeout.md";
+
+/** Seeds an earlier emet install's `phases-8-closeout.md`; `manifest` records it, `edited` changes it. */
+function seedCloseoutInstall(options: { manifest: boolean; edited: boolean }): string {
+  const content = "earlier phase 8 closeout\n";
+  const closeoutFile = path.join(homeDir, closeoutPath);
+  mkdirSync(path.dirname(closeoutFile), { recursive: true });
+  writeFileSync(closeoutFile, options.edited ? `${content}user edit\n` : content);
+  if (options.manifest)
+    writeFileSync(
+      path.join(homeDir, ".claude/emet/.install-manifest.json"),
+      `{\n  "${closeoutPath}": "${sha256(content)}"\n}\n`,
+    );
+  return closeoutFile;
+}
+
+describeInstaller("install.sh over an install with phases-8-closeout.md", () => {
+  test("deletes an unedited copy", () => {
+    const closeoutFile = seedCloseoutInstall({ manifest: true, edited: false });
+    expect(runInstaller().exitCode).toBe(0);
+    expect(existsSync(closeoutFile)).toBe(false);
+    expect(existsSync(`${closeoutFile}.retired`)).toBe(false);
+  });
+
+  test("moves an edited copy aside as .retired", () => {
+    const closeoutFile = seedCloseoutInstall({ manifest: true, edited: true });
+    const { exitCode, output } = runInstaller();
+    expect(exitCode).toBe(0);
+    expect(existsSync(closeoutFile)).toBe(false);
+    expect(readFileSync(`${closeoutFile}.retired`, "utf8")).toContain("user edit");
+    expect(output).toContain(`${closeoutPath}.retired`);
+  });
+
+  test("moves a pre-manifest copy aside as .retired", () => {
+    const closeoutFile = seedCloseoutInstall({ manifest: false, edited: false });
+    expect(runInstaller().exitCode).toBe(0);
+    expect(existsSync(closeoutFile)).toBe(false);
+    expect(existsSync(`${closeoutFile}.retired`)).toBe(true);
+  });
+});
+
 interface HookSettings {
   hooks?: Record<string, { hooks?: { type?: string; command?: string }[] }[]>;
 }

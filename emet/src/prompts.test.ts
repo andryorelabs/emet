@@ -19,7 +19,8 @@ const BYTE_CEILINGS: Readonly<Record<string, number>> = {
   "emet/reference/incidents.md": 12950,
   "emet/reference/phases-1-5.md": 12050,
   "emet/reference/phases-6-7-dispatch.md": 16810,
-  "emet/reference/phases-8-closeout.md": 17800,
+  "emet/reference/phases-8-landing.md": 8960,
+  "emet/reference/phases-8-review.md": 9130,
   "emet/reference/phases-9-handoff.md": 7300,
   "emet/reference/reviewer-prompt.md": 3930,
   "emet/reference/tracker-github.md": 3790,
@@ -133,7 +134,7 @@ describe("browser verification prompts", () => {
   });
 
   test("the closeout fills {{browser_verify}} only on browserVerify.run: true", () => {
-    const closeout = read("emet/reference/phases-8-closeout.md");
+    const closeout = read("emet/reference/phases-8-review.md");
     expect(closeout).toContain("{{browser_verify}}");
     expect(closeout).toContain("browserVerify.run: true");
   });

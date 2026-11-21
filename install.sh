@@ -62,6 +62,7 @@ COMMAND_NAMES=(run init doctor setup)
 # Files a previous install shipped that emet no longer loads (split or renamed).
 RETIRED_PATHS=(
   ".claude/forge/reference/phases-6-9.md"
+  ".claude/emet/reference/phases-8-closeout.md"
 )
 
 is_retired() {

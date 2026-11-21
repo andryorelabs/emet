@@ -2,8 +2,24 @@
 title: Novedades
 description: Notas de versión de emet: qué cambió en cada versión.
 seoTitle: Novedades de emet: notas de versión
-sourceHash: c7ab5fe94ab28e50
+sourceHash: 130017a5359fd93e
 ---
+
+## 0.14.5
+
+2026-11-21
+
+### Añadido
+
+- `emet handoff --check` analiza una sección `skills:` en la nota de traspaso de un worker (`none`, o `loaded: a, b; missing: c`). Es obligatoria cuando `state` es `done`. `--expect-skills a,b` falla la comprobación por cada skill indicada que no esté en ninguna de las dos listas e imprime las que faltan.
+- El registro de despacho lleva un array opcional `skills`, y `emet verify` lo pasa a `emet handoff --check` como `--expect-skills`. Un registro sin `skills` se sigue analizando.
+- El ADR-0036 permite que un ticket cambie la redacción de un prompt instalado cuando nombra los párrafos, y el mismo pull request sube los límites de bytes.
+
+### Cambiado
+
+- El prompt de la Fase 8 se divide en `phases-8-review.md` y `phases-8-landing.md`. `install.sh` retira el antiguo `phases-8-closeout.md`: una copia editada o anterior al manifiesto pasa a `phases-8-closeout.md.retired`, y una copia sin editar se elimina.
+- El prompt del worker le indica que escriba la línea `skills:` antes de su traspaso final.
+- La página de arquitectura, la referencia de la CLI y sus nueve traducciones describen los dos archivos de la Fase 8 y `--expect-skills`.
 
 ## 0.14.4
 

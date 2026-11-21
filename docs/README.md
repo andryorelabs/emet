@@ -102,14 +102,15 @@ Prose that `emet init` generates and the coordinator reads.
 
 ## Prompts
 
-Installed prompt markdown; wording changes only with an explicit ticket (ADR-0001).
+Installed prompt markdown; wording changes only in a ticket that names the paragraphs, and the same PR raises the byte ceilings ([ADR-0036](adr/0036-prompt-wording-changes-under-an-explicit-ticket.md), amending ADR-0001).
 
 - [`commands/run.md`](../commands/run.md): the `/emet:run` router.
 - [`agents/emet-worker.md`](../agents/emet-worker.md): the worker agent.
 - [`agents/emet-reviewer.md`](../agents/emet-reviewer.md): the reviewer agent.
 - [`emet/reference/phases-1-5.md`](../emet/reference/phases-1-5.md): interview to approval.
 - [`emet/reference/phases-6-7-dispatch.md`](../emet/reference/phases-6-7-dispatch.md): dispatch and workers.
-- [`emet/reference/phases-8-closeout.md`](../emet/reference/phases-8-closeout.md): review, landing and closeout.
+- [`emet/reference/phases-8-review.md`](../emet/reference/phases-8-review.md): review and gate.
+- [`emet/reference/phases-8-landing.md`](../emet/reference/phases-8-landing.md): landing and closeout.
 - [`emet/reference/phases-9-handoff.md`](../emet/reference/phases-9-handoff.md): handoff and chaining.
 - [`emet/reference/worker-prompt.md`](../emet/reference/worker-prompt.md): the worker prompt template.
 - [`emet/reference/reviewer-prompt.md`](../emet/reference/reviewer-prompt.md): the reviewer prompt template.

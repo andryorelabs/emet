@@ -1,6 +1,6 @@
 # Phase 9 — wave close and hand off
 
-Follows Phase 8 (`phases-8-closeout.md`); dispatch is in
+Follows Phase 8 (`phases-8-landing.md`); dispatch is in
 `phases-6-7-dispatch.md`.
 
 ## Phase 9 — Wave close and hand off
