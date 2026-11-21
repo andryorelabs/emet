@@ -40,6 +40,7 @@ const BOOKKEEPING_PREFIXES: readonly string[] = [`${RUN_DIR}/`, `${LEGACY_RUN_DI
 export interface DispatchRecord {
   readonly baseline: string;
   readonly surfaces: readonly string[];
+  readonly skills?: readonly string[];
 }
 
 interface CheckResult {
@@ -167,8 +168,13 @@ async function spawnCapture(command: readonly string[], cwd: string): Promise<Co
  * The argv that re-spawns `emet handoff --check`: the executable itself when
  * compiled (it embeds the dispatcher), `bun <emet.ts>` from source.
  */
-export function handoffCheckCommand(handoffPath: string, compiled: boolean): string[] {
+export function handoffCheckCommand(
+  handoffPath: string,
+  compiled: boolean,
+  expectSkills: readonly string[] = [],
+): string[] {
   const subcommand = ["handoff", "--check", handoffPath];
+  if (expectSkills.length > 0) subcommand.push("--expect-skills", expectSkills.join(","));
   if (compiled) return [process.execPath, ...subcommand];
   return [process.execPath, path.join(import.meta.dir, "..", "bin", "emet.ts"), ...subcommand];
 }
@@ -177,6 +183,7 @@ export function gitDependencies(
   worktree: string,
   handoffPath: string,
   workerScopedSuite: string | undefined,
+  expectSkills: readonly string[] = [],
 ): VerifyDependencies {
   const git = async (args: string[]): Promise<string> => {
     const result = await spawnCapture(["git", ...args], worktree);
@@ -191,7 +198,7 @@ export function gitDependencies(
     changedPaths: async (baseline) =>
       (await git(["diff", "--name-only", `${baseline}..HEAD`])).split("\n").filter(Boolean),
     handoffCheck: () =>
-      spawnCapture(handoffCheckCommand(handoffPath, isCompiledBinary()), worktree),
+      spawnCapture(handoffCheckCommand(handoffPath, isCompiledBinary(), expectSkills), worktree),
     workerScopedSuite,
     runSuite: (command) => spawnCapture(["sh", "-c", command], worktree),
   };
@@ -204,14 +211,21 @@ function readJson(file: string): unknown {
 export function parseDispatchRecord(raw: unknown): DispatchRecord {
   const candidate: Record<string, unknown> = isObject(raw) ? raw : {};
   const surfaces = candidate.surfaces;
+  const skills = candidate.skills;
   if (
     typeof candidate.baseline !== "string" ||
     !Array.isArray(surfaces) ||
-    !surfaces.every((glob) => typeof glob === "string")
+    !surfaces.every((glob) => typeof glob === "string") ||
+    (skills !== undefined &&
+      (!Array.isArray(skills) || !skills.every((name) => typeof name === "string")))
   ) {
-    throw new Error("dispatch record needs { baseline: string, surfaces: string[] }");
+    throw new Error(
+      "dispatch record needs { baseline: string, surfaces: string[], skills?: string[] }",
+    );
   }
-  return { baseline: candidate.baseline, surfaces };
+  return skills === undefined
+    ? { baseline: candidate.baseline, surfaces }
+    : { baseline: candidate.baseline, surfaces, skills };
 }
 
 function resolveRunId(repoRoot: string, ticket: string, explicit: string | undefined): string {
@@ -314,6 +328,7 @@ export async function run(argv: string[]): Promise<void> {
         workTree,
         handoffPath,
         await readWorkerScopedSuite(workTree, dispatch.baseline),
+        dispatch.skills,
       ),
     );
     const verifyDir = path.join(runDir, "verify");

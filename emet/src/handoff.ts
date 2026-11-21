@@ -5,7 +5,7 @@
  * successor session never has to re-investigate from scratch.
  *
  * Format (plain `key: value` sections, no YAML dependency): a line matching
- * `^(state|done|next|dead-ends|invariants|files|commands):` starts a
+ * `^(state|done|next|dead-ends|invariants|files|commands|skills):` starts a
  * section; everything until the next section header belongs to it.
  *
  * Usage:
@@ -31,6 +31,12 @@ const REQUIRED_SECTIONS = [
   "commands",
 ] as const;
 
+const SECTION_KEYS = [...REQUIRED_SECTIONS, "skills"] as const;
+
+const SKILLS_FORMAT = "skills: none | skills: loaded: a, b; missing: c";
+
+const SKILLS_PATTERN = /^loaded:\s*([^;]*?)\s*;\s*missing:\s*(.*)$/is;
+
 const VALID_STATES = ["investigating", "implementing", "blocked", "done"];
 
 /**
@@ -40,6 +46,41 @@ const VALID_STATES = ["investigating", "implementing", "blocked", "done"];
  */
 const MAX_LINES = 60;
 const MAX_CHARS = 8000;
+
+interface SkillsLists {
+  readonly loaded: readonly string[];
+  readonly missing: readonly string[];
+}
+
+function splitNames(value: string): string[] {
+  const names = value
+    .split(/[,\s]+/)
+    .map((name) => name.trim())
+    .filter((name) => name.length > 0 && name.toLowerCase() !== "none");
+  return [...new Set(names)];
+}
+
+/**
+ * Parses a `skills:` value (continuation lines joined) into its two lists;
+ * `none` yields empty lists, anything else off-format yields `undefined`.
+ */
+function parseSkillsValue(value: string): SkillsLists | undefined {
+  const flat = value.replace(/\s+/g, " ").trim();
+  if (flat.toLowerCase() === "none") return { loaded: [], missing: [] };
+  const match = SKILLS_PATTERN.exec(flat);
+  if (!match) return undefined;
+  return { loaded: splitNames(match[1] ?? ""), missing: splitNames(match[2] ?? "") };
+}
+
+/** Splits a `--expect-skills` value into trimmed, de-duplicated, non-empty names. */
+function parseExpectedSkills(value: string | undefined): string[] {
+  return value === undefined ? [] : splitNames(value);
+}
+
+interface HandoffReport {
+  readonly problems: string[];
+  readonly missingSkills: string[];
+}
 
 type Sections = Map<string, string>;
 
@@ -57,7 +98,7 @@ function parseSections(content: string): Sections {
   for (const line of content.split("\n")) {
     const match = /^([a-z-]+):\s?(.*)$/i.exec(line);
     const key = match?.[1]?.toLowerCase();
-    if (key && (REQUIRED_SECTIONS as readonly string[]).includes(key)) {
+    if (key && (SECTION_KEYS as readonly string[]).includes(key)) {
       flush();
       currentKey = key;
       const firstLine = match?.[2];
@@ -76,7 +117,8 @@ function checkHandoff(
   path: string,
   maxLines: number = MAX_LINES,
   maxChars: number = MAX_CHARS,
-): string[] {
+  expectedSkills: readonly string[] = [],
+): HandoffReport {
   const problems: string[] = [];
   const lineCount = content.split("\n").length;
 
@@ -111,7 +153,26 @@ function checkHandoff(
     );
   }
 
-  return problems;
+  const skillsRaw = sections.get("skills")?.trim() ?? "";
+  const skills = skillsRaw.length > 0 ? parseSkillsValue(skillsRaw) : undefined;
+  if (skillsRaw.length > 0 && !skills) {
+    problems.push(
+      `${path}: "skills: ${skillsRaw.replace(/\s+/g, " ")}" must be "none" or "loaded: a, b; missing: c"`,
+    );
+  } else if (state === "done" && !skills) {
+    problems.push(
+      `${path}: state is "done" so "skills:" is required — write it as \`${SKILLS_FORMAT}\` (loaded: skills you used; missing: ones you could not load)`,
+    );
+  }
+  for (const expected of expectedSkills) {
+    if (!skills?.loaded.includes(expected) && !skills?.missing.includes(expected)) {
+      problems.push(
+        `${path}: expected skill "${expected}" is in neither the loaded nor the missing list of "skills:"`,
+      );
+    }
+  }
+
+  return { problems, missingSkills: skills ? [...skills.missing] : [] };
 }
 
 /**
@@ -135,7 +196,7 @@ async function main(config: ForgeConfig): Promise<void> {
   const targetPath = cliArguments[1];
 
   if (!targetPath || (mode !== "--check" && mode !== "--render")) {
-    console.error("usage: emet handoff --check <path> | --render <path>");
+    console.error("usage: emet handoff --check <path> [--expect-skills a,b] | --render <path>");
     process.exitCode = 1;
     return;
   }
@@ -149,11 +210,13 @@ async function main(config: ForgeConfig): Promise<void> {
   const content = await file.text();
 
   if (mode === "--check") {
-    const problems = checkHandoff(
+    const expectFlag = cliArguments.indexOf("--expect-skills");
+    const { problems, missingSkills } = checkHandoff(
       content,
       targetPath,
       config.handoff.maxLines,
       config.handoff.maxChars,
+      expectFlag === -1 ? [] : parseExpectedSkills(cliArguments[expectFlag + 1]),
     );
     if (problems.length > 0) {
       console.error("emet:handoff --check failed:");
@@ -164,6 +227,7 @@ async function main(config: ForgeConfig): Promise<void> {
       return;
     }
     console.log(`emet:handoff --check OK (${targetPath})`);
+    if (missingSkills.length > 0) console.log(`missing skills: ${missingSkills.join(", ")}`);
     return;
   }
 
