@@ -99,7 +99,7 @@ unless the run continues from Phase 5 straight into Phase 6.
 - **Phases 6–9** (every mode): dispatch → per-worker implementation → wave
   close-out → wave close and hand off. Read
   `references/phases-6-7-dispatch.md` when you reach Phase 6
-  (Phase 8 lives in `phases-8-closeout.md`, Phase 9 in `phases-9-handoff.md`;
+  (Phase 8 lives in `phases-8-review.md` and `phases-8-landing.md`, Phase 9 in `phases-9-handoff.md`;
   load each when you reach it, and re-read Phase 8 before every fix/review
   round), along with `references/worker-prompt.md` (the dispatch prompt
   template) and `references/tracker-<kind>.md` (`<kind>` from
