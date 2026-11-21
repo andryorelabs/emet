@@ -361,6 +361,48 @@ describe("run", () => {
     }
   });
 
+  test("--deltas-dir prints the shared directory even when only the per-checkout one exists", async () => {
+    const common = mkdtempSync(path.join(os.tmpdir(), "emet-specmerge-common-"));
+    try {
+      mkdirSync(path.join(root, ".emet", "runs", "794", "spec-deltas"), { recursive: true });
+      await run(["--spec", "794", "--root", root, "--deltas-dir"], { commonDirectory: common });
+      const expected = path.join(common, ".emet", "runs", "794", "spec-deltas");
+      expect(logs).toEqual([expected]);
+      expect(existsSync(expected)).toBe(true);
+    } finally {
+      rmSync(common, { recursive: true, force: true });
+    }
+  });
+
+  test("resolves the real git common dir from a linked worktree", async () => {
+    const main = mkdtempSync(path.join(os.tmpdir(), "emet-specmerge-main-"));
+    const linked = path.join(main, "linked");
+    try {
+      const git = (...args: string[]) =>
+        Bun.spawnSync(["git", "-C", main, "-c", "user.name=t", "-c", "user.email=t@t", ...args]);
+      git("init", "-q");
+      git("commit", "-q", "--allow-empty", "-m", "init");
+      git("worktree", "add", "-q", linked);
+      writeFileSync(
+        path.join(linked, "emet.config.json"),
+        JSON.stringify({ specs: { dir: "docs/specs", enabled: true } }),
+      );
+      const sharedDirectory = path.join(main, ".git", ".emet", "runs", "s1", "spec-deltas");
+      mkdirSync(sharedDirectory, { recursive: true });
+      writeFileSync(
+        path.join(sharedDirectory, "auth.md"),
+        `## ADDED Requirements\n\n### Requirement: Login\nx\n`,
+      );
+      await run(["--spec", "s1", "--root", linked]);
+      expect(process.exitCode).toBe(0);
+      expect(readFileSync(path.join(linked, "docs", "specs", "auth.md"), "utf8")).toContain(
+        "Login",
+      );
+    } finally {
+      rmSync(main, { recursive: true, force: true });
+    }
+  });
+
   test("--deltas-dir with an unsafe spec id exits 2 and creates nothing", async () => {
     const common = mkdtempSync(path.join(os.tmpdir(), "emet-specmerge-common-"));
     try {

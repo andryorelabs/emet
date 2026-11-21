@@ -226,8 +226,14 @@ export function mergeSpecDeltas(
   return { ok: true, written: pending.map((entry) => entry.filePath) };
 }
 
+/** The shared deltas directory of a spec, always under the given common dir. */
+function sharedSpecDeltasDir(commonDirectory: string, specId: string): string {
+  return path.join(resolveRunDir(commonDirectory).path, "runs", specId, "spec-deltas");
+}
+
 /**
- * The shared deltas directory of a spec, under the git common dir so every
+ * The deltas directory a merge reads: the shared one, or the per-checkout one
+ * when only that exists. The shared directory is under the git common dir so every
  * worktree of the repo sees it: `<common dir>/.emet/runs/<spec id>/spec-deltas`.
  */
 export function resolveSpecDeltasDir(
@@ -235,12 +241,7 @@ export function resolveSpecDeltasDir(
   repoRoot: string,
   specId: string,
 ): string {
-  const sharedDirectory = path.join(
-    resolveRunDir(commonDirectory).path,
-    "runs",
-    specId,
-    "spec-deltas",
-  );
+  const sharedDirectory = sharedSpecDeltasDir(commonDirectory, specId);
   const checkoutDirectory = path.join(resolveRunDir(repoRoot).path, "runs", specId, "spec-deltas");
   return !existsSync(sharedDirectory) && existsSync(checkoutDirectory)
     ? checkoutDirectory
@@ -280,12 +281,13 @@ export async function run(
     }
     const commonDirectory =
       overrides.commonDirectory ?? (await resolveCommonDirectory(root)) ?? root;
-    const deltaDirectory = resolveSpecDeltasDir(commonDirectory, root, specId);
     if (argv.includes("--deltas-dir")) {
-      mkdirSync(deltaDirectory, { recursive: true });
-      console.log(deltaDirectory);
+      const sharedDirectory = sharedSpecDeltasDir(commonDirectory, specId);
+      mkdirSync(sharedDirectory, { recursive: true });
+      console.log(sharedDirectory);
       return;
     }
+    const deltaDirectory = resolveSpecDeltasDir(commonDirectory, root, specId);
     if (!existsSync(deltaDirectory)) {
       console.error(`emet spec-merge: no deltas at ${deltaDirectory}`);
       process.exitCode = 2;
