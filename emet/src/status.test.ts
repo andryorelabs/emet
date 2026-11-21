@@ -505,6 +505,43 @@ describe("briefLines", () => {
   });
 });
 
+function gitAt(cwd: string, ...args: string[]): string {
+  const result = Bun.spawnSync(["git", "-C", cwd, ...args], { stdout: "pipe", stderr: "pipe" });
+  if (result.exitCode !== 0) throw new Error(result.stderr.toString());
+  return result.stdout.toString().trim();
+}
+
+function integratedSpecBranch(repo: string): string {
+  const gitIn = (...args: string[]): string => gitAt(repo, ...args);
+  gitIn("init", "-q", "-b", "main");
+  gitIn("config", "user.email", "t@example.com");
+  gitIn("config", "user.name", "Test");
+  gitIn("config", "commit.gpgsign", "false");
+  writeFileSync(path.join(repo, "a.txt"), "a\n");
+  gitIn("add", "a.txt");
+  gitIn("commit", "-q", "-m", "init");
+  gitIn("branch", "spec/5");
+  gitIn("checkout", "-q", "-b", "spec/5-w1", "spec/5");
+  writeFileSync(path.join(repo, "b.txt"), "b\n");
+  gitIn("add", "b.txt");
+  gitIn("commit", "-q", "-m", "wave");
+  gitIn("checkout", "-q", "main");
+  const tip = gitIn(
+    "commit-tree",
+    gitIn("merge-tree", "--write-tree", "spec/5", "spec/5-w1"),
+    "-p",
+    "spec/5",
+    "-p",
+    "spec/5-w1",
+    "-m",
+    "integrate",
+    "-m",
+    "Emet-Wave: 1\nEmet-Tickets: a,b",
+  );
+  gitIn("update-ref", "refs/heads/spec/5", tip);
+  return tip;
+}
+
 describe("run", () => {
   const RUN_ID = "emet523w7172506";
   const ownedEntry = (directory: string, ticket: string, branch: string) => ({
@@ -603,6 +640,28 @@ describe("run", () => {
     process.env.PATH = originalPath;
     rmSync(repo, { recursive: true, force: true });
     rmSync(scratch, { recursive: true, force: true });
+  });
+
+  describe("spec branch", () => {
+    test("reports specBranch when landing.unit is spec and --spec is given", async () => {
+      makeRepo({ version: 1, landing: { unit: "spec" } });
+      const tip = integratedSpecBranch(repo);
+      await run(["--spec", "5"], deps());
+      expect(parsedReport()).toMatchObject({
+        specBranch: { branch: "spec/5", tip, integratedWaves: [1] },
+      });
+    });
+
+    test("omits specBranch for the wave unit and without --spec", async () => {
+      makeRepo({ version: 1, landing: { unit: "wave" } });
+      integratedSpecBranch(repo);
+      await run(["--spec", "5"], deps());
+      expect(parsedReport()).not.toHaveProperty("specBranch");
+      stdout = [];
+      makeRepo({ version: 1, landing: { unit: "spec" } });
+      await run([], deps());
+      expect(parsedReport()).not.toHaveProperty("specBranch");
+    });
   });
 
   test("--help prints usage and does nothing else", async () => {
