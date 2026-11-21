@@ -24,12 +24,12 @@ sourceHash: 36996125d0e6df7f
 
 `commands/run.md` 是一个简短的路由器。它每次只加载 `emet/reference/` 中的一个阶段文件，因此压缩上下文时不会丢失当前阶段的规则。
 
-| 阶段                       | 提示词                                                                                        | CLI 调用                                                                                 |
-| -------------------------- | --------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------- |
-| 1-5 访谈、规格、工单、批准 | `phases-1-5.md`                                                                               | `init`, `doctor`, `validate`, `surfaces`, `approve`, `tracker`                           |
-| 6-7 派发与工作者           | `phases-6-7-dispatch.md`, `worker-prompt.md`                                                  | `preflight`, `claims`, `slots`, `launch`, `lock-reason`, `handoff`, `results`            |
-| 8 评审、关卡、落地、收尾   | `phases-8-review.md`, `phases-8-landing.md`, `phases-8-spec-landing.md`, `reviewer-prompt.md` | `verify`, `review-package`, `review`, `assess`, `gate`, `land`, `spec-branch`, `cleanup` |
-| 9 交接与串联               | `phases-9-handoff.md`                                                                         | `status`, `metrics`, `usage`, `spec-merge`                                               |
+| 阶段                       | 提示词                                                                                        | CLI 调用                                                                                               |
+| -------------------------- | --------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------ |
+| 1-5 访谈、规格、工单、批准 | `phases-1-5.md`                                                                               | `init`, `doctor`, `validate`, `surfaces`, `approve`, `tracker`                                         |
+| 6-7 派发与工作者           | `phases-6-7-dispatch.md`, `worker-prompt.md`                                                  | `preflight`, `claims`, `slots`, `launch`, `lock-reason`, `handoff`, `results`                          |
+| 8 评审、关卡、落地、收尾   | `phases-8-review.md`, `phases-8-landing.md`, `phases-8-spec-landing.md`, `reviewer-prompt.md` | `verify`, `review-package`, `review`, `assess`, `gate`, `land`, `spec-branch`, `spec-merge`, `cleanup` |
+| 9 交接与串联               | `phases-9-handoff.md`                                                                         | `status`, `metrics`, `usage`                                                                           |
 
 协调者是唯一写入跟踪器的角色（ADR-0005）：工作者通过交接笔记和 `emet results` 报告，由协调者发布。`emet guard` 作为 `PreToolUse` 钩子运行，阻止已知会导致无人值守运行失败的操作。
 

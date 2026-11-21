@@ -86,7 +86,7 @@ emet 支持 Linear、GitHub Issues 或本地文件，由 `tracker.kind` 设置�
 
 ## 活规格、地图与指标
 
-**活规格。** 波次自动合并之后，`emet spec-merge --spec <id>` 会把规格中 `ADDED`/`MODIFIED`/`REMOVED` 的需求增量合并到 `docs/specs/<area>.md`（`specs.dir`）。它会在写入任何内容之前检查所有区域。如果出现冲突，或者某个需求会丢失一个场景，则以退出码 1 退出，并且不改动任何文件。
+**活规格。** 通过 `specs.enabled` 选择启用。在规格的最后一个波次、评审之前，协调者会写入该规格的需求增量，运行一次 `emet spec-merge --spec <id>`，把它们合并到 `docs/specs/<area>.md`（`specs.dir`），并提交结果，因此结果会随同一个 PR 一起被评审并落地。它会在写入任何内容之前检查所有区域。如果出现冲突，或者某个需求会丢失一个场景，则以退出码 1 退出，并且不改动任何文件；协调者会重试一次，之后在没有该更新的情况下落地并加以标记。
 
 **代码库地图。** `emet map` 会把现有代码库的概览（技术栈、结构、约定、测试、热点）写入 `docs/agents/codebase.md`（`map.path`），并标注生成它所用的提交 SHA。同一个提交总是生成同一个文件。一旦 HEAD 越过该标注，`emet map --stale` 就以退出码 1 退出，此时 `emet preflight` 会发出警告。`emet map --for <globs>` 只打印与工单编辑范围相匹配的部分。该输出是地图中唯一会包含在工作者简报里的部分。
 
