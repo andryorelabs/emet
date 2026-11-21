@@ -8,6 +8,8 @@ and this project adheres to
 
 ## [Unreleased]
 
+## [0.15.0] - 2026-11-21
+
 ### Changed
 
 - `landing.unit` defaults to `spec`: a spec's waves are integrated into the branch `spec/<id>` with `emet spec-branch` and the spec lands once, as one PR (or one local merge in `landing.mode: merge`), instead of one PR per wave. Set `"landing": { "unit": "wave" }` to keep the old behaviour. `spec` mode needs `worktree.baseRef: "head"` in the Claude Code settings. See ADR-0037.
@@ -527,7 +529,8 @@ and this project adheres to
 - Per-repo configuration through `forge.config.json`.
 - `install.sh`, which installs the CLI, command and agents.
 
-[Unreleased]: https://github.com/andryorelabs/emet/compare/v0.14.5...HEAD
+[Unreleased]: https://github.com/andryorelabs/emet/compare/v0.15.0...HEAD
+[0.15.0]: https://github.com/andryorelabs/emet/compare/v0.14.5...v0.15.0
 [0.14.5]: https://github.com/andryorelabs/emet/compare/v0.14.4...v0.14.5
 [0.14.4]: https://github.com/andryorelabs/emet/compare/v0.14.3...v0.14.4
 [0.14.3]: https://github.com/andryorelabs/emet/compare/v0.14.2...v0.14.3

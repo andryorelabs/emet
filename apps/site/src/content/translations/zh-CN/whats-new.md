@@ -2,8 +2,17 @@
 title: 新功能
 description: emet 的发布说明：每个版本都有哪些变化。
 seoTitle: "emet 新功能：发布说明"
-sourceHash: 130017a5359fd93e
+sourceHash: b29bae1442d54dd2
 ---
+
+## 0.15.0
+
+2026-11-21
+
+### 变更
+
+- `landing.unit` 默认值为 `spec`:一个 spec 的各个 wave 通过 `emet spec-branch` 集成到分支 `spec/<id>`,spec 只落地一次,即一个 pull request(在 `landing.mode: merge` 下为一次本地合并),而不是每个 wave 一个 pull request。设置 `"landing": { "unit": "wave" }` 可保持旧行为。`spec` 模式需要在 Claude Code 设置中配置 `worktree.baseRef: "head"`。参见 ADR-0037。
+- 日志新增 `spec.integrate`、`spec.land` 和 `spec.abandon` 三种类型,`emet status` 新增 `specBranch`。
 
 ## 0.14.5
 

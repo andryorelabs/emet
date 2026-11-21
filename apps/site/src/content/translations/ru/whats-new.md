@@ -2,8 +2,17 @@
 title: Что нового
 description: Примечания к выпускам emet: что изменилось в каждой версии.
 seoTitle: "Что нового в emet: примечания к выпускам"
-sourceHash: 130017a5359fd93e
+sourceHash: b29bae1442d54dd2
 ---
+
+## 0.15.0
+
+2026-11-21
+
+### Изменено
+
+- `landing.unit` по умолчанию равен `spec`: волны спеки интегрируются в ветку `spec/<id>` командой `emet spec-branch`, а спека приземляется один раз, одним pull request (или одним локальным слиянием при `landing.mode: merge`), вместо отдельного pull request на каждую волну. Чтобы сохранить прежнее поведение, задайте `"landing": { "unit": "wave" }`. Режиму `spec` нужен `worktree.baseRef: "head"` в настройках Claude Code. См. ADR-0037.
+- В журнале появились виды `spec.integrate`, `spec.land` и `spec.abandon`, а в `emet status` — поле `specBranch`.
 
 ## 0.14.5
 
