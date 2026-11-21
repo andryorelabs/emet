@@ -32,6 +32,9 @@ const JOURNAL_KINDS = [
   "cleanup",
   "ticket.close",
   "baseline",
+  "spec.integrate",
+  "spec.land",
+  "spec.abandon",
 ] as const;
 
 /** One of the event kinds the journal accepts. */
