@@ -63,7 +63,7 @@ emet doctor ~/code/*
 - `emet run current [--json]`: 저장소의 활성 실행(실행 id, 스펙, 웨이브, 단계, 마지막 업데이트)을 `.emet/phase.json`에서 읽어 출력합니다. 활성 실행이 없으면 `no active run`을 출력하고 0으로 종료합니다.
 - `emet insights [--since <iso|7d|30d>] [--repo <path>] [--all] [--json] [--mark-baseline]`: [이벤트 저널](../guide/journal.md)을 읽어 출처(사람 또는 자동)별 실행, 결정과 사유별 게이트 결정, 실행별 사람의 개입, 실행 시작 결과, 닫힌 티켓을 보고합니다. 읽을 수 없는 줄은 건너뛰고 개수를 셉니다. `--mark-baseline`은 기준선을 추가하며, 이후 보고서는 `--all`을 지정하지 않는 한 그 이후의 이벤트만 다룹니다. 저널이 비어 있거나 없으면 0 보고서를 출력하고 0으로 종료합니다.
 - `emet usage [--session <id> | --file <path>] [--stalled [--minutes N]] [--project-dir <path>]`: 세션 사용량을 보고합니다. `--stalled`는 멈춘 워커를 나열합니다.
-- `emet handoff --check <path> | --render <path>`: 워커의 `.emet/handoff-<ticket>.md` 노트를 검증하거나 렌더링합니다.
+- `emet handoff --check <path> [--expect-skills a,b] | --render <path>`: 워커의 `.emet/handoff-<ticket>.md` 노트를 검증하거나 렌더링합니다. 노트에는 `skills:` 섹션을 넣을 수 있으며, `skills: none` 또는 `skills: loaded: a, b; missing: c`로 씁니다. `state`가 `done`일 때만 필수이고, 그 밖의 값은 검사에 실패합니다. `--expect-skills a,b`(check 전용)는 지정한 스킬 중 `loaded` 목록에도 `missing` 목록에도 없는 각각에 대해 검사를 실패시킵니다. 검사를 통과했을 때 `missing` 목록이 비어 있지 않으면 `missing skills: …`를 출력합니다.
 - `emet metrics [--run <id>]`: 세션 트랜스크립트를 바탕으로 티켓별, 웨이브별, 실행별 토큰, API 환산 비용, 경과 시간을 보고합니다. 또한 티켓별로 추정한 컨텍스트 예산과 각 워커가 실제로 사용한 양을 비교합니다. 이 요약은 실행의 최종 보고서 끝에 들어갑니다.
 
 ### 계획, 리뷰, 랜딩

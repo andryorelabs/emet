@@ -63,7 +63,7 @@ emet doctor ~/code/*
 - `emet run current [--json]`: リポジトリのアクティブな実行 (実行 ID、スペック、ウェーブ、フェーズ、最終更新) を `.emet/phase.json` から読み取って表示します。アクティブな実行がない場合は `no active run` を表示して 0 で終了します。
 - `emet insights [--since <iso|7d|30d>] [--repo <path>] [--all] [--json] [--mark-baseline]`: [イベントジャーナル](../guide/journal.md)を読み取り、起点 (人間または自動) ごとの実行、判断と理由ごとのゲート判断、実行ごとの人間の介入、起動結果、クローズしたチケットを報告します。読み取れない行はスキップして数えます。`--mark-baseline` はベースラインを追記し、以降のレポートは `--all` を指定しない限りそれより後のイベントのみを対象にします。ジャーナルが空または存在しない場合は、ゼロのレポートを表示して 0 で終了します。
 - `emet usage [--session <id> | --file <path>] [--stalled [--minutes N]] [--project-dir <path>]`: セッションの使用状況を報告します。`--stalled` は停滞したワーカーを一覧表示します。
-- `emet handoff --check <path> | --render <path>`: ワーカーの `.emet/handoff-<ticket>.md` ノートを検証または表示します。
+- `emet handoff --check <path> [--expect-skills a,b] | --render <path>`: ワーカーの `.emet/handoff-<ticket>.md` ノートを検証または表示します。ノートには `skills:` セクションを含められ、`skills: none` または `skills: loaded: a, b; missing: c` と書きます。必須になるのは `state` が `done` のときだけで、それ以外の値はチェックに失敗します。`--expect-skills a,b`（check のみ）は、指定したスキルのうち `loaded` にも `missing` にも含まれないものごとにチェックを失敗させます。チェックに合格し、`missing` リストが空でない場合は `missing skills: …` を出力します。
 - `emet metrics [--run <id>]`: セッションのトランスクリプトから、チケットごと、ウェーブごと、実行ごとのトークン、API 換算コスト、経過時間を報告します。また、チケットごとに見積もったコンテキスト予算と、各ワーカーが実際に使った量も比較します。その要約は、実行の最終レポートの末尾に入ります。
 
 ### 計画、レビュー、ランディング
