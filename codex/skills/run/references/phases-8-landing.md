@@ -46,10 +46,7 @@ it fixed in the final report.
    with `noChecks: true`. Exit 0 pass, 1 fail or env-fault, 3 timeout.
 3. `state: pass` → the gate. Run `emet gate <ticket> --ci pass …` per ticket
    (above); merge only if every ticket answers `merge` or `chain`: `gh pr merge
-   <n> --<mergeMethod> --delete-branch`. Then, as its own call, `emet
-   spec-merge --spec <spec-id>` folds the spec's
-   `.emet/runs/<spec-id>/spec-deltas/` into `specs.dir` (exit 1 = conflict or
-   scenario loss, nothing written: report it). Then close the tickets: with
+   <n> --<mergeMethod> --delete-branch`. Then close the tickets: with
    `tracker.kind` `github`, `emet tracker close <ticket>... --pr <n>` closes
    each with `gh issue close --reason completed`, verifies its state and adds
    "Landed in #<n>" (idempotent: an already closed ticket reports
@@ -90,8 +87,8 @@ its result is the `--ci` value for `emet gate`. If every ticket answers
 --branch <integration> --tickets <id,…> --wave <n> --summary "<what the wave
 contains>"` (refuses with exit 1 unless the main
 worktree is on `repo.trunk` and clean; prints the new trunk sha as JSON). Then
-close each ticket per `onPrMerge: coordinator`, and run `emet spec-merge` and
-`emet cleanup --run <runId>` as separate calls. `pr.autoMerge` off or anything
+close each ticket per `onPrMerge: coordinator`, and run
+`emet cleanup --run <runId>` as a separate call. `pr.autoMerge` off or anything
 flagged: leave the integration branch unmerged and report it.
 
 Never auto-merge a wave with anything flagged (see below), whatever

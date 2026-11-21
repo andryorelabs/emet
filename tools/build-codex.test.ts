@@ -256,9 +256,24 @@ describe("committed Codex artefacts", () => {
   });
 
   test("findStaleFiles names a missing or edited file", () => {
-    expect(findStaleFiles([{ path: "codex/missing.md", content: "x" }], repoRoot)).toEqual([
+    expect(findStaleFiles([{ path: "codex/missing.md", content: "x" }], repoRoot)).toContain(
       "codex/missing.md",
-    ]);
+    );
+  });
+
+  test("findStaleFiles names a file in a generated directory that has no source", () => {
+    const root = mkdtempSync(path.join(os.tmpdir(), "build-codex-orphan-"));
+    try {
+      const directory = path.join(root, "codex", "skills", "run", "references");
+      mkdirSync(directory, { recursive: true });
+      writeFileSync(path.join(directory, "kept.md"), "x");
+      writeFileSync(path.join(directory, "orphan.md"), "y");
+      expect(
+        findStaleFiles([{ path: "codex/skills/run/references/kept.md", content: "x" }], root),
+      ).toEqual(["codex/skills/run/references/orphan.md"]);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
   });
 });
 
