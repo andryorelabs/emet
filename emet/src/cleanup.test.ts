@@ -604,7 +604,7 @@ describe("reclaim against a real repository", () => {
   const config: ForgeConfig = {
     ...DEFAULT_FORGE_CONFIG,
     ticket: { ...DEFAULT_FORGE_CONFIG.ticket, branchPrefix: "cla" },
-    landing: { mode: "merge" },
+    landing: { ...DEFAULT_FORGE_CONFIG.landing, mode: "merge" },
   };
 
   async function git(...args: string[]): Promise<string> {

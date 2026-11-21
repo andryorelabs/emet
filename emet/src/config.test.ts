@@ -8,6 +8,7 @@ import {
   DEFAULT_CODEX_CONFIG,
   DEFAULT_FORGE_CONFIG,
   ForgeConfigError,
+  LANDING_UNITS,
   loadForgeConfig,
   loadForgeConfigWithDefaults,
   requireForgeConfig,
@@ -16,6 +17,7 @@ import {
   resolveWorkerModel,
   type AfterSpecRule,
   type ForgeConfig,
+  type LandingUnit,
 } from "./config";
 import { errorMessage } from "./narrow";
 
@@ -277,6 +279,11 @@ describe("loadForgeConfig", () => {
     const result = await loadForgeConfig(repoRoot);
     expect(result.status).toBe("malformed");
     expect(reasonOf(result)).toMatch(reason);
+  });
+
+  test.each(LANDING_UNITS)("landing.unit accepts %s", async (unit: LandingUnit) => {
+    await writeConfig({ landing: { unit } });
+    expect(configOf(await loadForgeConfig(repoRoot)).landing.unit).toBe(unit);
   });
 
   test("landing.mode defaults to pr and accepts merge", async () => {

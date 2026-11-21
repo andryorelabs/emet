@@ -157,7 +157,7 @@ describe("resolveLandedVerdict falling back to git", () => {
   const gitConfig = {
     ...config,
     repo: { trunk: "main", remote: "origin" },
-    landing: { mode: "merge" as const },
+    landing: { ...DEFAULT_FORGE_CONFIG.landing, mode: "merge" as const },
   };
 
   test("a merged branch with no tracker answer is landed", async () => {

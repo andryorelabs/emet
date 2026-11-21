@@ -1040,7 +1040,11 @@ describe("collectDependencyChecks (S10)", () => {
 
   test("emits no github-cli check when gh is absent, tracker local, landing merge", async () => {
     const checks = await collectDependencyChecks(
-      { ...DEFAULT_FORGE_CONFIG, tracker: { kind: "local" }, landing: { mode: "merge" } },
+      {
+        ...DEFAULT_FORGE_CONFIG,
+        tracker: { kind: "local" },
+        landing: { ...DEFAULT_FORGE_CONFIG.landing, mode: "merge" },
+      },
       "/r",
       absentGithubCliProbes,
     );
@@ -1049,7 +1053,11 @@ describe("collectDependencyChecks (S10)", () => {
 
   test("still probes gh when landing mode is pr", async () => {
     const checks = await collectDependencyChecks(
-      { ...DEFAULT_FORGE_CONFIG, tracker: { kind: "local" }, landing: { mode: "pr" } },
+      {
+        ...DEFAULT_FORGE_CONFIG,
+        tracker: { kind: "local" },
+        landing: { ...DEFAULT_FORGE_CONFIG.landing, mode: "pr" },
+      },
       "/r",
       absentGithubCliProbes,
     );
