@@ -4,7 +4,13 @@ import os from "node:os";
 import path from "node:path";
 
 import { present } from "./present";
-import { applyDelta, mergeSpecDeltas, parseRequirements, run } from "./specmerge";
+import {
+  applyDelta,
+  mergeSpecDeltas,
+  parseRequirements,
+  resolveSpecDeltasDir,
+  run,
+} from "./specmerge";
 
 const BASE = `# Auth
 
@@ -242,6 +248,10 @@ describe("run", () => {
       errors.push(parts.join(" "));
     };
     process.exitCode = 0;
+    writeFileSync(
+      path.join(root, "emet.config.json"),
+      JSON.stringify({ specs: { dir: "docs/specs", enabled: true } }),
+    );
   });
   afterEach(() => {
     console.log = originalLog;
@@ -305,7 +315,121 @@ describe("run", () => {
 
   test("resolves the repository root when --root is absent", async () => {
     await run(["--spec", "definitely-not-a-run-xyz"]);
-    expect(process.exitCode).toBe(2);
-    expect(errors.join("\n")).toContain("no deltas at");
+    expect(process.exitCode).toBe(0);
+    expect(logs).toEqual(["specs.enabled is false; nothing merged"]);
+  });
+
+  test("is a no-op that exits 0 when specs.enabled is false", async () => {
+    writeFileSync(
+      path.join(root, "emet.config.json"),
+      JSON.stringify({ specs: { dir: "docs/specs", enabled: false } }),
+    );
+    writeDelta("s1", "auth.md", `## ADDED Requirements\n\n### Requirement: Login\nx\n`);
+    await run(["--spec", "s1", "--root", root]);
+    expect(process.exitCode).toBe(0);
+    expect(logs).toEqual(["specs.enabled is false; nothing merged"]);
+    expect(existsSync(path.join(root, "docs", "specs"))).toBe(false);
+  });
+
+  test("merges deltas found only in the shared run dir", async () => {
+    const common = mkdtempSync(path.join(os.tmpdir(), "emet-specmerge-common-"));
+    try {
+      const sharedDirectory = path.join(common, ".emet", "runs", "s1", "spec-deltas");
+      mkdirSync(sharedDirectory, { recursive: true });
+      writeFileSync(
+        path.join(sharedDirectory, "auth.md"),
+        `## ADDED Requirements\n\n### Requirement: Login\nx\n`,
+      );
+      await run(["--spec", "s1", "--root", root], { commonDirectory: common });
+      expect(process.exitCode).toBe(0);
+      expect(readFileSync(path.join(root, "docs", "specs", "auth.md"), "utf8")).toContain("Login");
+    } finally {
+      rmSync(common, { recursive: true, force: true });
+    }
+  });
+
+  test("--deltas-dir creates and prints the shared directory without merging", async () => {
+    const common = mkdtempSync(path.join(os.tmpdir(), "emet-specmerge-common-"));
+    try {
+      await run(["--spec", "794", "--root", root, "--deltas-dir"], { commonDirectory: common });
+      const expected = path.join(common, ".emet", "runs", "794", "spec-deltas");
+      expect(process.exitCode).toBe(0);
+      expect(logs).toEqual([expected]);
+      expect(existsSync(expected)).toBe(true);
+    } finally {
+      rmSync(common, { recursive: true, force: true });
+    }
+  });
+
+  test("--deltas-dir prints the shared directory even when only the per-checkout one exists", async () => {
+    const common = mkdtempSync(path.join(os.tmpdir(), "emet-specmerge-common-"));
+    try {
+      mkdirSync(path.join(root, ".emet", "runs", "794", "spec-deltas"), { recursive: true });
+      await run(["--spec", "794", "--root", root, "--deltas-dir"], { commonDirectory: common });
+      const expected = path.join(common, ".emet", "runs", "794", "spec-deltas");
+      expect(logs).toEqual([expected]);
+      expect(existsSync(expected)).toBe(true);
+    } finally {
+      rmSync(common, { recursive: true, force: true });
+    }
+  });
+
+  test("resolves the real git common dir from a linked worktree", async () => {
+    const main = mkdtempSync(path.join(os.tmpdir(), "emet-specmerge-main-"));
+    const linked = path.join(main, "linked");
+    try {
+      const git = (...args: string[]) =>
+        Bun.spawnSync(["git", "-C", main, "-c", "user.name=t", "-c", "user.email=t@t", ...args]);
+      git("init", "-q");
+      git("commit", "-q", "--allow-empty", "-m", "init");
+      git("worktree", "add", "-q", linked);
+      writeFileSync(
+        path.join(linked, "emet.config.json"),
+        JSON.stringify({ specs: { dir: "docs/specs", enabled: true } }),
+      );
+      const sharedDirectory = path.join(main, ".git", ".emet", "runs", "s1", "spec-deltas");
+      mkdirSync(sharedDirectory, { recursive: true });
+      writeFileSync(
+        path.join(sharedDirectory, "auth.md"),
+        `## ADDED Requirements\n\n### Requirement: Login\nx\n`,
+      );
+      await run(["--spec", "s1", "--root", linked]);
+      expect(process.exitCode).toBe(0);
+      expect(readFileSync(path.join(linked, "docs", "specs", "auth.md"), "utf8")).toContain(
+        "Login",
+      );
+    } finally {
+      rmSync(main, { recursive: true, force: true });
+    }
+  });
+
+  test("--deltas-dir with an unsafe spec id exits 2 and creates nothing", async () => {
+    const common = mkdtempSync(path.join(os.tmpdir(), "emet-specmerge-common-"));
+    try {
+      await run(["--spec", "a/b", "--root", root, "--deltas-dir"], { commonDirectory: common });
+      expect(process.exitCode).toBe(2);
+      expect(existsSync(path.join(common, ".emet"))).toBe(false);
+    } finally {
+      rmSync(common, { recursive: true, force: true });
+    }
+  });
+});
+
+describe("resolveSpecDeltasDir", () => {
+  test("prefers the shared dir, falls back to the per-checkout one when only it exists", () => {
+    const common = mkdtempSync(path.join(os.tmpdir(), "emet-specmerge-common-"));
+    const checkout = mkdtempSync(path.join(os.tmpdir(), "emet-specmerge-checkout-"));
+    try {
+      const shared = path.join(common, ".emet", "runs", "s1", "spec-deltas");
+      const local = path.join(checkout, ".emet", "runs", "s1", "spec-deltas");
+      expect(resolveSpecDeltasDir(common, checkout, "s1")).toBe(shared);
+      mkdirSync(local, { recursive: true });
+      expect(resolveSpecDeltasDir(common, checkout, "s1")).toBe(local);
+      mkdirSync(shared, { recursive: true });
+      expect(resolveSpecDeltasDir(common, checkout, "s1")).toBe(shared);
+    } finally {
+      rmSync(common, { recursive: true, force: true });
+      rmSync(checkout, { recursive: true, force: true });
+    }
   });
 });
