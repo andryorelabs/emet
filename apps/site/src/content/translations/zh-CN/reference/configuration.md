@@ -237,7 +237,8 @@ Claude Code 宿主上每个角色的模型和推理强度；Codex 宿主改为�
 
 ## specs
 
-- `dir`（默认 `docs/specs`）：活规格所在的、相对仓库的目录，由 `emet spec-merge` 写入。
+- `dir`（默认 `docs/specs`）：活规格所在的、相对仓库的目录，当 `enabled` 为 true 时由 `emet spec-merge` 写入。
+- `enabled`（默认 `false`）：开启活规格。在规格的最后一个波次，协调者会根据规格的 S# 条目写入需求增量，运行 `emet spec-merge`，并随该波次一起提交 `specs.dir`，因此该更新会随之被评审并落地。
 
 ## map
 
