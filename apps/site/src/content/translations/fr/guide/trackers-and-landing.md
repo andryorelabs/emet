@@ -86,7 +86,7 @@ Les phases ne décident pas d'elles-mêmes quand un ticket est terminé, fusionn
 
 ## Specs vivantes, carte et métriques
 
-**Specs vivantes.** Après la fusion automatique d'une vague, `emet spec-merge --spec <id>` fusionne les deltas d'exigences `ADDED`/`MODIFIED`/`REMOVED` de la spec dans `docs/specs/<area>.md` (`specs.dir`). Il vérifie toutes les zones avant d'écrire quoi que ce soit. Un conflit, ou une exigence qui perdrait un scénario, se termine avec le code 1 et laisse tous les fichiers intacts.
+**Specs vivantes.** Activez-les avec `specs.enabled`. Sur la dernière vague d'une spec, avant sa revue, le coordinateur écrit les deltas d'exigences de la spec, exécute une seule fois `emet spec-merge --spec <id>` pour les fusionner dans `docs/specs/<area>.md` (`specs.dir`) et valide le résultat dans un commit, de sorte qu'il est relu et atterrit dans la même PR. Il vérifie toutes les zones avant d'écrire quoi que ce soit. Un conflit, ou une exigence qui perdrait un scénario, se termine avec le code 1 et laisse tous les fichiers intacts ; le coordinateur réessaie une fois, puis atterrit sans la mise à jour et le signale.
 
 **Carte du code.** `emet map` écrit un résumé d'une base de code existante (stack, structure, conventions, tests, points chauds) dans `docs/agents/codebase.md` (`map.path`), estampillé avec le SHA du commit dont il est issu. Le même commit produit toujours le même fichier. `emet map --stale` se termine avec le code 1 une fois que HEAD a dépassé l'estampille, et `emet preflight` avertit dans ce cas. `emet map --for <globs>` n'affiche que les sections qui correspondent aux surfaces d'édition d'un ticket. Cette sortie est la seule partie de la carte qu'inclut le brief d'un worker.
 
