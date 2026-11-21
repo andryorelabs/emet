@@ -109,7 +109,8 @@ Installed prompt markdown; wording changes only with an explicit ticket (ADR-000
 - [`agents/emet-reviewer.md`](../agents/emet-reviewer.md): the reviewer agent.
 - [`emet/reference/phases-1-5.md`](../emet/reference/phases-1-5.md): interview to approval.
 - [`emet/reference/phases-6-7-dispatch.md`](../emet/reference/phases-6-7-dispatch.md): dispatch and workers.
-- [`emet/reference/phases-8-closeout.md`](../emet/reference/phases-8-closeout.md): review, landing and closeout.
+- [`emet/reference/phases-8-review.md`](../emet/reference/phases-8-review.md): review and gate.
+- [`emet/reference/phases-8-landing.md`](../emet/reference/phases-8-landing.md): landing and closeout.
 - [`emet/reference/phases-9-handoff.md`](../emet/reference/phases-9-handoff.md): handoff and chaining.
 - [`emet/reference/worker-prompt.md`](../emet/reference/worker-prompt.md): the worker prompt template.
 - [`emet/reference/reviewer-prompt.md`](../emet/reference/reviewer-prompt.md): the reviewer prompt template.
