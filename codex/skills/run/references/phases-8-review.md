@@ -63,6 +63,10 @@ worktrees can collide on it. Before `git checkout -b`, check `git rev-parse
 With `landing.unit: spec`, `<trunk>` below is the spec branch's `tip` from
 `emet spec-branch status`, and the landing is `phases-8-spec-landing.md`.
 
+When `specs.enabled` is true and this is the spec's last wave (no open ticket of
+the spec remains outside it), whatever `landing.unit` is, read
+`references/living-specs.md` and follow it before `emet assess`.
+
 Review here, once, over the full integration branch — this is the review
 Phase 7 deliberately deferred. First route it by risk: run
 `emet assess --base <trunk> --head <integration branch> [--risk-line "<first non-none Risk: line>"]`. It prints JSON

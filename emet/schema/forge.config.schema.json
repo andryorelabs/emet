@@ -846,6 +846,11 @@
           "minLength": 1,
           "default": "docs/specs",
           "description": "Repo-relative directory of living specs."
+        },
+        "enabled": {
+          "type": "boolean",
+          "default": false,
+          "description": "Opt-in switch for the living-specs workflow."
         }
       }
     },

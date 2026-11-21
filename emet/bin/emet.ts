@@ -75,7 +75,7 @@ commands:
   materialize-log --run <id> [--ticket <ticket> --id <tracker-id>]
   gate      <ticket> [--run <id>]  — merge|hold|chain|stop decision as JSON
   validate  --spec <id> | --file <path>
-  spec-merge --spec <id>
+  spec-merge --spec <id> [--deltas-dir]
   tracker   create-spec|create-ticket|read|frontier|set-state|comment|close  — local tracker over .scratch/ (JSON on stdout)
   map       [--refresh]
   metrics   [--run <id>]

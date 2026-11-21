@@ -113,7 +113,7 @@ export const DEFAULT_FORGE_CONFIG: ForgeConfig = {
   },
   sizing: { inlineMaxLines: 100 },
   map: { path: "docs/agents/codebase.md" },
-  specs: { dir: "docs/specs" },
+  specs: { dir: "docs/specs", enabled: false },
 };
 
 type ModelEffort = "low" | "medium" | "high" | "xhigh" | "max";
@@ -397,6 +397,8 @@ export interface ForgeConfig {
   readonly specs: {
     /** Repo-relative directory of living specs. */
     readonly dir: string;
+    /** Opt-in switch for the living-specs workflow. */
+    readonly enabled: boolean;
   };
 }
 
@@ -1068,6 +1070,10 @@ function validateAndMerge(
   if (!isNonEmptyString(specsDir)) {
     return { ok: false, reason: '"specs.dir" must be a non-empty string' };
   }
+  const specsEnabled = specsRecord.enabled ?? DEFAULT_FORGE_CONFIG.specs.enabled;
+  if (typeof specsEnabled !== "boolean") {
+    return { ok: false, reason: '"specs.enabled" must be a boolean' };
+  }
 
   return {
     ok: true,
@@ -1109,7 +1115,7 @@ function validateAndMerge(
       budgets,
       sizing: { inlineMaxLines },
       map: { path: mapPath },
-      specs: { dir: specsDir },
+      specs: { dir: specsDir, enabled: specsEnabled },
     },
   };
 }

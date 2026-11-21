@@ -54,8 +54,7 @@ merge/chain decision with the default `budgets` (`workerAttempts` 2,
 
 `emet map` writes the codebase brief to `docs/agents/codebase.md`. Each
 worker brief includes only the sections that match the ticket's edit
-surfaces. After an auto-merge, `emet spec-merge` folds the spec's
-requirement deltas into `docs/specs/`.
+surfaces. With `specs.enabled` on, `emet spec-merge` folds the spec's requirement deltas into `docs/specs/` on the last wave, before review. This repo keeps it off.
 
 ## Concurrency
 

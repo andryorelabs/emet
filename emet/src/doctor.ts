@@ -1,11 +1,17 @@
 import { createHash } from "node:crypto";
-import { existsSync, readdirSync, readFileSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { readFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
 import { type AgentHost, claudeHost } from "./agenthost";
-import { loadForgeConfig, type LandingMode, type LandingUnit, type TrackerKind } from "./config";
+import {
+  loadForgeConfig,
+  type ForgeConfig,
+  type LandingMode,
+  type LandingUnit,
+  type TrackerKind,
+} from "./config";
 import {
   agentHostOfConfig,
   checkDependencies,
@@ -666,6 +672,24 @@ export async function findMergeCommitWarnings(
   ];
 }
 
+/** Warns, only when `specs.enabled`, if `specs.dir` is gitignored or is a file.
+ * A missing directory is fine: `emet spec-merge` creates it. */
+export function findSpecsWarnings(config: ForgeConfig, root: string): string[] {
+  if (!config.specs.enabled) return [];
+  const findings: string[] = [];
+  const specsPath = path.join(root, config.specs.dir);
+  if (existsSync(specsPath) && !statSync(specsPath).isDirectory()) {
+    findings.push(`specs.dir "${config.specs.dir}" exists but is not a directory`);
+  }
+  const ignored = Bun.spawnSync(["git", "-C", root, "check-ignore", "-q", "--", config.specs.dir]);
+  if (ignored.exitCode === 0) {
+    findings.push(
+      `specs.dir "${config.specs.dir}" is gitignored, so living specs cannot be committed; remove it from .gitignore`,
+    );
+  }
+  return findings;
+}
+
 /** Audits one path. Never throws — every failure mode (not a repo, no
  * config, malformed config, missing docs) is a field on the returned
  * report, not an exception, so a fleet sweep over many paths never aborts
@@ -814,6 +838,7 @@ export async function auditRepo(
       ...(configResult.status === "ok"
         ? await findMergeCommitWarnings(configResult.config.landing, environment, absolutePath)
         : []),
+      ...(configResult.status === "ok" ? findSpecsWarnings(configResult.config, absolutePath) : []),
     ],
   };
 }

@@ -2,7 +2,7 @@
 title: Архитектура
 description: Карта кода emet/src и то, как промпты /emet управляют ею.
 seoTitle: Архитектура emet
-sourceHash: 36996125d0e6df7f
+sourceHash: d8efc16f3c2a6ed5
 ---
 
 Карта кода `emet/src` и то, как промпты `/emet` управляют ею. Термины соответствуют [GLOSSARY.md](../GLOSSARY.md); решения, определившие устройство, находятся в [docs/adr](adr/README.md). О проблемах см. [устранение неполадок](troubleshooting.md).
@@ -24,12 +24,12 @@ sourceHash: 36996125d0e6df7f
 
 `commands/run.md` — короткий маршрутизатор. Он загружает по одному файлу фазы из `emet/reference/`, поэтому уплотнение контекста никогда не теряет правила текущей фазы.
 
-| Фаза                                          | Промпт                                                                                        | Вызовы CLI                                                                               |
-| --------------------------------------------- | --------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------- |
-| 1-5 интервью, спецификация, тикеты, одобрение | `phases-1-5.md`                                                                               | `init`, `doctor`, `validate`, `surfaces`, `approve`, `tracker`                           |
-| 6-7 диспетчеризация и воркеры                 | `phases-6-7-dispatch.md`, `worker-prompt.md`                                                  | `preflight`, `claims`, `slots`, `launch`, `lock-reason`, `handoff`, `results`            |
-| 8 ревью, гейт, посадка, завершение            | `phases-8-review.md`, `phases-8-landing.md`, `phases-8-spec-landing.md`, `reviewer-prompt.md` | `verify`, `review-package`, `review`, `assess`, `gate`, `land`, `spec-branch`, `cleanup` |
-| 9 передача и цепочки                          | `phases-9-handoff.md`                                                                         | `status`, `metrics`, `usage`, `spec-merge`                                               |
+| Фаза                                          | Промпт                                                                                        | Вызовы CLI                                                                                             |
+| --------------------------------------------- | --------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------ |
+| 1-5 интервью, спецификация, тикеты, одобрение | `phases-1-5.md`                                                                               | `init`, `doctor`, `validate`, `surfaces`, `approve`, `tracker`                                         |
+| 6-7 диспетчеризация и воркеры                 | `phases-6-7-dispatch.md`, `worker-prompt.md`                                                  | `preflight`, `claims`, `slots`, `launch`, `lock-reason`, `handoff`, `results`                          |
+| 8 ревью, гейт, посадка, завершение            | `phases-8-review.md`, `phases-8-landing.md`, `phases-8-spec-landing.md`, `reviewer-prompt.md` | `verify`, `review-package`, `review`, `assess`, `gate`, `land`, `spec-branch`, `spec-merge`, `cleanup` |
+| 9 передача и цепочки                          | `phases-9-handoff.md`                                                                         | `status`, `metrics`, `usage`                                                                           |
 
 Координатор — единственный, кто пишет в трекер (ADR-0005): воркеры отчитываются через заметку передачи и `emet results`, а координатор публикует их. `emet guard` работает как хук `PreToolUse` и блокирует известные причины сбоев при запусках без присмотра.
 

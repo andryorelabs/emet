@@ -2,7 +2,7 @@
 title: 設定リファレンス
 description: emet.config.json のすべてのキーについて、既定値と意味を説明します。
 seoTitle: emet の設定リファレンス
-sourceHash: 041f1d0c3f53265f
+sourceHash: 61b46b074d095451
 ---
 
 `emet.config.json` のすべてのキーを、既定値と意味とともに示します。信頼できる情報源は [`emet/schema/emet.config.schema.json`](../../emet/schema/emet.config.schema.json) です。用語は [GLOSSARY.md](../../GLOSSARY.md) に従います。[README](../../README.md) に戻る。
@@ -237,7 +237,8 @@ Claude Code ホストにおけるロールごとのモデルとエフォート�
 
 ## specs
 
-- `dir`（既定は `docs/specs`）: `emet spec-merge` が書き込む生きたスペックの、リポジトリからの相対ディレクトリです。
+- `enabled`（既定は `false`）: 生きたスペックを有効にします。スペックの最後のウェーブで、コーディネーターがスペックの S# 項目から要件の差分を書き、`emet spec-merge` を実行して、そのウェーブとともに `specs.dir` をコミットします。そのため更新はレビューを受け、ウェーブとともにランディングします。
+- `dir`（既定は `docs/specs`）: `enabled` が true のとき `emet spec-merge` が書き込む生きたスペックの、リポジトリからの相対ディレクトリです。
 
 ## map
 

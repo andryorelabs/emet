@@ -493,8 +493,8 @@ export const COMMANDS: readonly CommandSpec[] = [
   },
   {
     name: "spec-merge",
-    summary: "merge a spec's ticket records",
-    flags: [val("--spec"), val("--root")],
+    summary: "merge a spec's requirement deltas into the living specs",
+    flags: [val("--spec"), val("--root"), bool("--deltas-dir")],
     run: runModule("specmerge"),
   },
   {

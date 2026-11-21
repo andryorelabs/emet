@@ -2,7 +2,7 @@
 title: CLI 参考
 description: 每个 emet 子命令、关卡与记录表、退出码和环境变量。
 seoTitle: emet CLI 参考
-sourceHash: 98735ed514d178bb
+sourceHash: 7597c864f7e77efd
 ---
 
 每个 `emet` 子命令、关卡与记录表、退出码和环境变量。术语遵循 [GLOSSARY.md](../../GLOSSARY.md)。返回 [README](../../README.md)。每个命令都可以用 `--help` 打印其用法。
@@ -76,7 +76,7 @@ emet doctor ~/code/*
 - `emet assess --base <ref> --head <ref>`：将 diff 分类为 `passive`、`medium` 或 `high`，并输出包含层级、原因以及推荐的评审者模型和推理强度的 JSON，外加 `browserVerify: { run, reason }`：仅当该层级有评审者、已配置 [`verify.browser`](configuration.md#verify)、`agent-browser` 二进制文件在 PATH 中，并且在设置了 `paths` 时有变更路径匹配，`run` 才为 `true`；否则 `reason` 会指出第一个未满足的条件。参见[模型与推理强度](../../README.md#models--effort)和 [`review`](configuration.md#review)。
 - `emet land --spec <s> --branch <integration> --tickets <id,...>`：将集成分支合并到本地主干（`landing.mode` 为 `merge`）。用 `commands.selfCheck` 代替 CI，并且不推送任何内容。
 - `emet spec-branch ensure|integrate|status|sync|land|abandon --spec <id>`：`landing.unit: spec` 的规格分支 `spec/<id>`（参见 [`landing`](configuration.md#landing)）。均输出 JSON。`ensure` 从主干创建该分支（幂等），写入 `.emet/specs/<id>/branch.json`，并在另一个规格的分支已被检出时拒绝执行。`integrate --wave <n> --branch <integration> --tickets a,b` 以 `--no-ff` 把波次分支合并到 `spec/<id>`，带上 trailer `Emet-Wave` 和 `Emet-Tickets`，记录该波次，追加 `spec.integrate`，并且在 `landing.pushSpecBranch` 为 true 时推送该分支而不打开 PR。`status` 输出 `branch`、`tip`、已集成的波次和工单以及 `behindTrunk`，并在缺少某个波次时根据 trailer 重建 `branch.json`。`sync` 把主干合并到分支，从不变基；遇到冲突时中止、列出路径并以非零状态退出。`land [--partial]` 先同步，然后在 `pr` 模式下推送分支、打开一个 PR（每个工单一行 `Closes`）并以合并提交方式合并（忽略 `pr.mergeMethod`），在 `merge` 模式下以 `--no-ff` 合并到本地主干且从不推送；它会追加 `spec.land`。`abandon --force` 会打上 `abandoned/spec-<id>` 标签、删除分支、追加 `spec.abandon`，并把本地跟踪器中已集成的工单重置为 `ready-for-agent`；没有 `--force` 时它拒绝执行。`emet tracker frontier` 把 `branch.json` 中列出的工单算作已关闭的阻塞项，`emet status` 新增 `specBranch`（`branch`、`tip`、`integratedWaves`）。
-- `emet spec-merge --spec <id>`：波次自动合并之后，将规格中 `ADDED`/`MODIFIED`/`REMOVED` 的需求增量合并到 `docs/specs/<area>.md`（`specs.dir`）。它会在写入任何内容之前检查所有区域。如果出现冲突，或者某个需求会丢失一个场景，则以退出码 1 退出，并且不改动任何文件。
+- `emet spec-merge --spec <id>`：将规格中 `ADDED`/`MODIFIED`/`REMOVED` 的需求增量合并到 `docs/specs/<area>.md`（`specs.dir`）。当 `specs.enabled` 开启时，协调者会写入这些增量，并在最后一个波次的集成分支上、评审之前，对每个规格运行一次该命令，然后提交结果。`--deltas-dir` 会打印存放增量的目录。它会在写入任何内容之前检查所有区域。如果出现冲突，或者某个需求会丢失一个场景，则以退出码 1 退出，并且不改动任何文件。当 `specs.enabled` 关闭时，它不合并任何内容并以 0 退出。
 - `emet map [--refresh]`：把现有代码库的概览（技术栈、结构、约定、测试、热点）写入 `docs/agents/codebase.md`（`map.path`），并标注生成它所用的提交 SHA。同一个提交总是生成同一个文件。一旦 HEAD 越过该标注，`emet map --stale` 就以退出码 1 退出，此时 `emet preflight` 会发出警告。`emet map --for <globs>` 只打印与工单编辑范围相匹配的部分；该输出是地图中唯一会包含在工作者简报里的部分。
 - `emet tracker create-spec|create-ticket|read|frontier|set-state|comment|close`：基于 `.scratch/` 的本地跟踪器，标准输出为 JSON。参见[本地跟踪器](#本地跟踪器)。
 - `emet guard`：Claude Code 的 `PreToolUse` 钩子；从标准输入读取钩子 JSON（Codex 的形式见 [Codex 宿主](#codex-宿主)）。`install.sh` 会把它接入 `~/.claude/settings.json`。它会阻止少数已知会导致无人值守运行失败的操作（参见 `emet/src/guard.ts`）。

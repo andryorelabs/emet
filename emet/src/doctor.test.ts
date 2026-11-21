@@ -16,6 +16,7 @@ import path from "node:path";
 
 import { claudeHost } from "./agenthost";
 import { codexHost } from "./agenthost-codex";
+import { DEFAULT_FORGE_CONFIG, type ForgeConfig } from "./config";
 import { classifyEngram, type DependencyProbes } from "./dependencies";
 import {
   formatGlobalDependencyFinding,
@@ -25,6 +26,7 @@ import {
   createEnvironmentProbes,
   checkWorktreeForkBase,
   findMergeCommitWarnings,
+  findSpecsWarnings,
   findMissingFlags,
   normalizeGithubSlug,
   type EnvironmentProbes,
@@ -759,6 +761,39 @@ describe("findMergeCommitWarnings", () => {
     const disallowed = withProbe(() => Promise.resolve(false));
     expect(await findMergeCommitWarnings({ mode: "merge", unit: "spec" }, disallowed)).toEqual([]);
     expect(await findMergeCommitWarnings({ mode: "pr", unit: "wave" }, disallowed)).toEqual([]);
+  });
+});
+
+const withSpecs = (enabled: boolean): ForgeConfig => ({
+  ...DEFAULT_FORGE_CONFIG,
+  specs: { dir: "docs/specs", enabled },
+});
+
+describe("findSpecsWarnings", () => {
+  let repoRoot: string;
+  beforeEach(async () => {
+    repoRoot = mkdtempSync(path.join(os.tmpdir(), "forge-doctor-specs-"));
+    await Bun.$`git init --quiet`.cwd(repoRoot).quiet();
+  });
+  afterEach(() => {
+    rmSync(repoRoot, { recursive: true, force: true });
+  });
+
+  test("warns naming specs.dir when enabled and gitignored", async () => {
+    await Bun.write(path.join(repoRoot, ".gitignore"), "docs/specs\n");
+    const warnings = findSpecsWarnings(withSpecs(true), repoRoot);
+    expect(warnings).toHaveLength(1);
+    expect(warnings[0]).toContain("specs.dir");
+  });
+  test("no warning when disabled, even if gitignored", async () => {
+    await Bun.write(path.join(repoRoot, ".gitignore"), "docs/specs\n");
+    expect(findSpecsWarnings(withSpecs(false), repoRoot)).toEqual([]);
+  });
+  test("warns when specs.dir is a file; a missing dir is fine", async () => {
+    expect(findSpecsWarnings(withSpecs(true), repoRoot)).toEqual([]);
+    mkdirSync(path.join(repoRoot, "docs"));
+    await Bun.write(path.join(repoRoot, "docs", "specs"), "x");
+    expect(findSpecsWarnings(withSpecs(true), repoRoot)[0]).toContain("not a directory");
   });
 });
 
