@@ -209,6 +209,9 @@ Read only when `agentHost` is `"codex"`. Every key is optional. Effort is one of
 ## landing
 
 - `mode` (default `pr`): `pr` opens a pull request (requires `gh`). `merge` merges the integration branch into local trunk with `emet land` and never pushes, with `commands.selfCheck` standing in for CI. Independent of the tracker. See [ADR-0010](../adr/0010-local-merge-landing.md).
+- `unit` (default `spec`): `spec` integrates each wave into the branch `spec/<id>` with `emet spec-branch integrate` and lands the spec once with `emet spec-branch land`; `wave` lands every wave on its own, as before. Any other value fails to load with `"landing.unit" must be one of spec|wave`. `spec` needs `worktree.baseRef: "head"` in the Claude Code settings (a harness setting, not an emet key), which `emet preflight` and `emet doctor` check. See [ADR-0037](../adr/0037-landing-per-spec.md).
+- `specMergeMethod` (default `merge`): how the spec PR merges. Only `merge` is accepted; it ignores `pr.mergeMethod`.
+- `pushSpecBranch` (default `true`): push `spec/<id>` after each `emet spec-branch integrate`, without opening a PR. Set `false` to keep the branch local until the final landing.
 
 ## tracker
 
