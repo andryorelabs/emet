@@ -623,6 +623,7 @@ describe("emet init --tracker local end to end", () => {
       landing: { mode: "merge" },
       ticket: { idPattern: String.raw`^[a-z0-9-]+-\d{2,}$`, branchPrefix: "emet" },
       tracker: { kind: "local" },
+      specs: { dir: "docs/specs", enabled: false },
     });
     expect(config).not.toHaveProperty("tracker.local");
     const gitignore = await Bun.file(path.join(repoRoot, ".gitignore")).text();

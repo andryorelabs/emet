@@ -2,7 +2,7 @@
 title: CLI リファレンス
 description: すべての emet サブコマンド、ゲートと記録の表、終了コード、環境変数を説明します。
 seoTitle: emet CLI リファレンス
-sourceHash: 98735ed514d178bb
+sourceHash: 7597c864f7e77efd
 ---
 
 すべての `emet` サブコマンド、ゲートと記録の表、終了コード、環境変数です。用語は [GLOSSARY.md](../../GLOSSARY.md) に従います。[README](../../README.md) に戻る。すべてのコマンドは `--help` で使い方を表示します。
@@ -76,7 +76,7 @@ emet doctor ~/code/*
 - `emet assess --base <ref> --head <ref>`: 差分を `passive`、`medium`、`high` に分類し、ティア、その理由、推奨されるレビュアーのモデルとエフォートに加えて、`browserVerify: { run, reason }` を JSON で出力します。`run` が `true` になるのは、そのティアにレビュアーがいて、[`verify.browser`](configuration.md#verify) が設定されており、`agent-browser` バイナリが PATH 上にあり、`paths` が設定されている場合は変更されたパスが一致するときだけです。そうでなければ、`reason` が最初に満たされなかった条件を示します。[モデルとエフォート](../../README.md#models--effort)と [`review`](configuration.md#review) を参照してください。
 - `emet land --spec <s> --branch <integration> --tickets <id,...>`: 統合ブランチをローカルのトランクにマージします（`landing.mode` が `merge` の場合）。CI の代わりに `commands.selfCheck` を使い、何もプッシュしません。
 - `emet spec-branch ensure|integrate|status|sync|land|abandon --spec <id>`: `landing.unit: spec` のスペックブランチ `spec/<id>`（[`landing`](configuration.md#landing) を参照）。すべて JSON を出力します。`ensure` はトランクからブランチを作成し（冪等）、`.emet/specs/<id>/branch.json` を書き込み、別のスペックのブランチがチェックアウトされている場合は拒否します。`integrate --wave <n> --branch <integration> --tickets a,b` はウェーブのブランチを `--no-ff` で `spec/<id>` にマージし、トレーラー `Emet-Wave` と `Emet-Tickets` を付け、ウェーブを記録し、`spec.integrate` を追記します。`landing.pushSpecBranch` が true の場合は、PR を開かずにブランチをプッシュします。`status` は `branch`、`tip`、統合済みのウェーブとチケット、`behindTrunk` を出力し、ウェーブが欠けている場合はトレーラーから `branch.json` を再構築します。`sync` はトランクをブランチにマージし、リベースは行わず、競合した場合は中断してパスを列挙し、ゼロ以外の終了コードで終了します。`land [--partial]` は同期した後、`pr` モードではブランチをプッシュし、チケットごとに `Closes` 行を入れた PR を 1 つ開いて、`pr.mergeMethod` を無視してマージコミットでマージします。`merge` モードでは `--no-ff` でローカルのトランクにマージし、プッシュは行いません。`spec.land` を追記します。`abandon --force` は `abandoned/spec-<id>` にタグを付け、ブランチを削除し、`spec.abandon` を追記し、ローカルトラッカーの統合済みチケットを `ready-for-agent` にリセットします。`--force` がない場合は拒否します。`emet tracker frontier` は `branch.json` に載っているチケットをクローズ済みのブロッカーとして数え、`emet status` には `specBranch`（`branch`、`tip`、`integratedWaves`）が加わります。
-- `emet spec-merge --spec <id>`: ウェーブが自動マージされた後、スペックの `ADDED`/`MODIFIED`/`REMOVED` の要件の差分を `docs/specs/<area>.md`（`specs.dir`）にマージします。何かを書き込む前にすべてのエリアを確認します。競合がある場合や、シナリオが失われる要件がある場合は、終了コード 1 で終了し、どのファイルにも手を加えません。
+- `emet spec-merge --spec <id>`: スペックの `ADDED`/`MODIFIED`/`REMOVED` の要件の差分を `docs/specs/<area>.md`（`specs.dir`）にマージします。`specs.enabled` がオンのとき、コーディネーターが差分を書き、スペックごとに最後のウェーブの統合ブランチで、そのレビューの前に一度だけ実行し、その結果をコミットします。`--deltas-dir` は差分を置くディレクトリを出力します。何かを書き込む前にすべてのエリアを確認します。競合がある場合や、シナリオが失われる要件がある場合は、終了コード 1 で終了し、どのファイルにも手を加えません。`specs.enabled` がオフのときは何もマージせず、終了コード 0 で終了します。
 - `emet map [--refresh]`: 既存のコードベースの概要（スタック、構造、規約、テスト、ホットスポット）を `docs/agents/codebase.md`（`map.path`）に書き出し、作成元のコミット SHA を刻印します。同じコミットからは常に同じファイルが生成されます。`emet map --stale` は、HEAD が刻印より先に進むと終了コード 1 で終了し、その場合 `emet preflight` は警告します。`emet map --for <globs>` は、チケットの編集対象に一致するセクションだけを出力します。その出力が、ワーカーのブリーフに含まれるマップの唯一の部分です。
 - `emet tracker create-spec|create-ticket|read|frontier|set-state|comment|close`: `.scratch/` 上のローカルトラッカーで、標準出力は JSON です。[ローカルトラッカー](#ローカルトラッカー)を参照してください。
 - `emet guard`: Claude Code の `PreToolUse` フックで、標準入力からフックの JSON を読み取ります（Codex の形式は [Codex ホスト](#codex-ホスト)にあります）。`install.sh` が `~/.claude/settings.json` に組み込みます。無人実行で失敗の引き金になることが知られているいくつかの操作をブロックします（`emet/src/guard.ts` を参照）。

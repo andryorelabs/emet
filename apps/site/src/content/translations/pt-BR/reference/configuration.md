@@ -2,7 +2,7 @@
 title: Referência de configuração
 description: Cada chave do emet.config.json com seu valor padrão e seu significado.
 seoTitle: Referência de configuração do emet
-sourceHash: 041f1d0c3f53265f
+sourceHash: 61b46b074d095451
 ---
 
 Cada chave do `emet.config.json`, com seu valor padrão e seu significado. A fonte da verdade é [`emet/schema/emet.config.schema.json`](../../emet/schema/emet.config.schema.json). Os termos seguem o [GLOSSARY.md](../../GLOSSARY.md). Voltar ao [README](../../README.md).
@@ -237,7 +237,8 @@ Com qual issue tracker o `/emet` (ou `$emet` no Codex) conversa. A CLI lê `kind
 
 ## specs
 
-- `dir` (padrão `docs/specs`): diretório, relativo ao repositório, das specs vivas, escrito por `emet spec-merge`.
+- `dir` (padrão `docs/specs`): diretório, relativo ao repositório, das specs vivas, escrito por `emet spec-merge` quando `enabled` é true.
+- `enabled` (padrão `false`): ativa as specs vivas. Na última onda de uma spec, o coordenador escreve os deltas de requisitos a partir dos itens S# da spec, executa `emet spec-merge` e faz o commit de `specs.dir` junto com essa onda, de modo que a atualização é revisada e entra com ela.
 
 ## map
 

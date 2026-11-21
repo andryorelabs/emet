@@ -21,7 +21,8 @@ const BYTE_CEILINGS: Readonly<Record<string, number>> = {
   "emet/reference/phases-6-7-dispatch.md": 16900,
   "emet/reference/phases-8-landing.md": 9000,
   "emet/reference/phases-8-spec-landing.md": 3850,
-  "emet/reference/phases-8-review.md": 9200,
+  "emet/reference/living-specs.md": 1330,
+  "emet/reference/phases-8-review.md": 9400,
   "emet/reference/phases-9-handoff.md": 7450,
   "emet/reference/reviewer-prompt.md": 3930,
   "emet/reference/tracker-github.md": 3930,
@@ -89,6 +90,40 @@ describe("reference hard cap", () => {
       }
     }
   });
+});
+
+function readReference(name: string): string {
+  return readFileSync(join(REPO_ROOT, "emet/reference", name), "utf8");
+}
+
+describe("living specs prompts", () => {
+  test("living-specs.md states every delta rule and the exact commit message", () => {
+    const content = readReference("living-specs.md");
+    for (const required of [
+      "emet spec-merge --spec <id> --deltas-dir",
+      "## ADDED Requirements",
+      "## MODIFIED Requirements",
+      "## REMOVED Requirements",
+      "### Requirement: <descriptive name>",
+      "#### Scenario: <name>",
+      "Source: #<spec> S<n>",
+      "keeps every existing scenario name",
+      "docs: 📝 update living specs for spec #<id>",
+      "fix the deltas once and rerun",
+    ]) {
+      expect(content).toContain(required);
+    }
+  });
+
+  test("phases-8-review.md sends the last wave to living-specs.md", () => {
+    expect(readReference("phases-8-review.md")).toContain("living-specs.md");
+  });
+
+  for (const name of ["phases-8-landing.md", "phases-8-spec-landing.md"]) {
+    test(`${name} does not run spec-merge after a merge`, () => {
+      expect(readReference(name)).not.toContain("spec-merge");
+    });
+  }
 });
 
 describe("retired phrases", () => {

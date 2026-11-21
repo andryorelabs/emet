@@ -2,7 +2,7 @@
 title: Référence de configuration
 description: Chaque clé de emet.config.json avec sa valeur par défaut et sa signification.
 seoTitle: Référence de configuration d'emet
-sourceHash: 041f1d0c3f53265f
+sourceHash: 61b46b074d095451
 ---
 
 Chaque clé de `emet.config.json`, avec sa valeur par défaut et sa signification. La source de vérité est [`emet/schema/emet.config.schema.json`](../../emet/schema/emet.config.schema.json). Les termes suivent [GLOSSARY.md](../../GLOSSARY.md). Retour au [README](../../README.md).
@@ -237,7 +237,8 @@ Avec quel issue tracker `/emet` (ou `$emet` sur Codex) dialogue. La CLI lit `kin
 
 ## specs
 
-- `dir` (par défaut `docs/specs`) : répertoire, relatif au dépôt, des specs vivantes, écrit par `emet spec-merge`.
+- `dir` (par défaut `docs/specs`) : répertoire, relatif au dépôt, des specs vivantes, écrit par `emet spec-merge` quand `enabled` est vrai.
+- `enabled` (par défaut `false`) : active les specs vivantes. Sur la dernière vague d'une spec, le coordinateur écrit les deltas d'exigences à partir des éléments S# de la spec, exécute `emet spec-merge` et valide `specs.dir` avec cette vague, de sorte que la mise à jour est relue et atterrit avec elle.
 
 ## map
 

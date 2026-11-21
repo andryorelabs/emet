@@ -81,7 +81,7 @@ The phases don't decide on their own when a ticket is done, mergeable or worth r
 
 ## Living specs, map and metrics
 
-**Living specs.** After a wave auto-merges, `emet spec-merge --spec <id>` merges the spec's `ADDED`/`MODIFIED`/`REMOVED` requirement deltas into `docs/specs/<area>.md` (`specs.dir`). It checks every area before writing anything. A conflict, or a requirement that would lose a scenario, exits 1 and leaves every file untouched.
+**Living specs.** Opt in with `specs.enabled`. On a spec's last wave, before its review, the coordinator writes the spec's requirement deltas, runs `emet spec-merge --spec <id>` once to merge them into `docs/specs/<area>.md` (`specs.dir`) and commits the result, so it is reviewed and lands in the same PR. It checks every area before writing anything. A conflict, or a requirement that would lose a scenario, exits 1 and leaves every file untouched; the coordinator retries once, then lands without the update and flags it.
 
 **Codebase map.** `emet map` writes a brief of an existing codebase (stack, structure, conventions, testing, hotspots) to `docs/agents/codebase.md` (`map.path`), stamped with the commit SHA it was built from. The same commit always produces the same file. `emet map --stale` exits 1 once HEAD has moved past the stamp, and `emet preflight` warns in that case. `emet map --for <globs>` prints only the sections that match a ticket's edit surfaces. That output is the only part of the map a worker brief includes.
 

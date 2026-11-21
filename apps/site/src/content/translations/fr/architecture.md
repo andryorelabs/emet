@@ -2,7 +2,7 @@
 title: Architecture
 description: Une carte du code de emet/src et la façon dont les prompts de /emet le pilotent.
 seoTitle: Architecture d'emet
-sourceHash: 36996125d0e6df7f
+sourceHash: d8efc16f3c2a6ed5
 ---
 
 Une carte du code de `emet/src` et la façon dont les prompts de `/emet` le pilotent. Les termes suivent [GLOSSARY.md](../GLOSSARY.md) ; les décisions derrière cette forme se trouvent dans [docs/adr](adr/README.md). Pour les problèmes, voir le [dépannage](troubleshooting.md).
@@ -24,12 +24,12 @@ Il y a deux moitiés. Les prompts (`commands/run.md`, `agents/*.md`, `emet/refer
 
 `commands/run.md` est un routeur court. Il charge un seul fichier de phase de `emet/reference/` à la fois, de sorte qu'une compaction ne perd jamais les règles de la phase en cours.
 
-| Phase                                     | Prompt                                                                                        | Appels à la CLI                                                                          |
-| ----------------------------------------- | --------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------- |
-| 1-5 entretien, spec, tickets, approbation | `phases-1-5.md`                                                                               | `init`, `doctor`, `validate`, `surfaces`, `approve`, `tracker`                           |
-| 6-7 distribution et workers               | `phases-6-7-dispatch.md`, `worker-prompt.md`                                                  | `preflight`, `claims`, `slots`, `launch`, `lock-reason`, `handoff`, `results`            |
-| 8 revue, gate, atterrissage, clôture      | `phases-8-review.md`, `phases-8-landing.md`, `phases-8-spec-landing.md`, `reviewer-prompt.md` | `verify`, `review-package`, `review`, `assess`, `gate`, `land`, `spec-branch`, `cleanup` |
-| 9 handoff et enchaînement                 | `phases-9-handoff.md`                                                                         | `status`, `metrics`, `usage`, `spec-merge`                                               |
+| Phase                                     | Prompt                                                                                        | Appels à la CLI                                                                                        |
+| ----------------------------------------- | --------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------ |
+| 1-5 entretien, spec, tickets, approbation | `phases-1-5.md`                                                                               | `init`, `doctor`, `validate`, `surfaces`, `approve`, `tracker`                                         |
+| 6-7 distribution et workers               | `phases-6-7-dispatch.md`, `worker-prompt.md`                                                  | `preflight`, `claims`, `slots`, `launch`, `lock-reason`, `handoff`, `results`                          |
+| 8 revue, gate, atterrissage, clôture      | `phases-8-review.md`, `phases-8-landing.md`, `phases-8-spec-landing.md`, `reviewer-prompt.md` | `verify`, `review-package`, `review`, `spec-merge`, `assess`, `gate`, `land`, `spec-branch`, `cleanup` |
+| 9 handoff et enchaînement                 | `phases-9-handoff.md`                                                                         | `status`, `metrics`, `usage`                                                                           |
 
 Le coordinateur est le seul à écrire dans le tracker (ADR-0005) : les workers font leur rapport via une note de handoff et `emet results`, et le coordinateur les publie. `emet guard` s'exécute comme un hook `PreToolUse` et bloque les déclencheurs connus d'échecs lors d'exécutions sans surveillance.
 
