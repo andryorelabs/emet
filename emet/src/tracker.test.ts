@@ -129,6 +129,22 @@ describe("emet tracker", () => {
     expect(again.code).toBe(1);
   });
 
+  test("frontier treats a ticket integrated into the spec branch as closed", async () => {
+    const repo = await makeRepo();
+    await seedSpec(repo);
+    await seedTicket(repo, "First thing");
+    await seedTicket(repo, "Second", "--blocked-by", "01");
+    await tracker(repo, "set-state", "feat-01", "in-review");
+    expect(await frontierIds(repo)).toEqual([]);
+    await Bun.$`git -C ${repo} checkout -q -b spec/feat`.quiet();
+    await Bun.$`git -C ${repo} -c user.name=t -c user.email=t@t commit -q --allow-empty -m ${"merge wave\n\nEmet-Wave: 1\nEmet-Tickets: feat-01"}`.quiet();
+    await Bun.$`git -C ${repo} checkout -q main`.quiet();
+    expect(await frontierIds(repo)).toEqual(["feat-02"]);
+    expect(stringField(parseJson((await tracker(repo, "read", "feat-01")).stdout), "status")).toBe(
+      "in-review",
+    );
+  });
+
   test("frontier follows blockers and close", async () => {
     const repo = await makeRepo();
     await seedSpec(repo);
