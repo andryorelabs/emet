@@ -2,8 +2,34 @@
 title: 新功能
 description: emet 的发布说明：每个版本都有哪些变化。
 seoTitle: "emet 新功能：发布说明"
-sourceHash: b29bae1442d54dd2
+sourceHash: e51e96e3f3669abd
 ---
+
+## 0.16.0
+
+2026-11-21
+
+### 新增
+
+- 活规范(living specs),默认关闭。设置 `specs.enabled: true` 后,在某个 spec 的最后一个 wave 中,协调器会写入该 spec 的需求增量 `ADDED`/`MODIFIED`/`REMOVED`,在该 wave 评审之前于其集成分支上运行一次 `emet spec-merge --spec <id>`,并提交更新后的 `docs/specs/<area>.md`,因此这次变更会在同一个 pull request 中被评审并落地。新的参考文档 `living-specs.md` 给出增量格式和重试规则。参见 ADR-0038。
+- 配置及两份 schema 副本中新增 `specs.enabled`(默认 `false`)。`emet init` 会写入 `"specs": { "dir": "docs/specs", "enabled": false }`。
+- 仅当 `specs.enabled` 为 `true` 时,如果 `specs.dir` 被 gitignore 忽略或是一个文件,`emet doctor` 会发出警告。缺少 `specs.dir` 不会触发警告。
+- `emet spec-merge --spec <id> --deltas-dir` 会创建并打印共享的增量目录 `<git common dir>/.emet/runs/<id>/spec-deltas`,不执行合并,并以退出码 `0` 结束。
+- `landing.specMergeMethod` 接受 `merge`(默认)、`squash` 和 `rebase`,这样 spec 就能落地到只允许 squash 合并的 trunk 上。当仓库设置或 trunk 的 ruleset 不允许所配置的方式时,`emet doctor` 会发出警告。参见 ADR-0037。
+- 如果生成的 `codex/` 目录中有文件没有对应的源文件,`bun run check:codex` 会失败。
+
+### 变更
+
+- 当 `specs.enabled` 关闭时,`emet spec-merge` 会打印 `specs.enabled is false; nothing merged` 并以退出码 `0` 结束。它从 git common dir 下的共享运行目录读取增量,找不到时回退到各个 checkout 自己的 `.emet/runs/<id>/spec-deltas/`。
+- 阶段 8 的提示词不再在 wave 或 spec 落地后运行 `emet spec-merge`;改为由 `phases-8-review.md` 在最后一个 wave 加载 `living-specs.md`。
+- `emet spec-branch land` 使用与 `emet ci` 相同的轮询器等待 PR 的检查,即使 PR 还没有任何检查也会继续轮询,并使用 `landing.specMergeMethod` 合并。
+
+### 已修复
+
+- `emet spec-branch land` 不再在 GitHub 登记任何检查之前就合并。
+- `emet setup` 只列出一次 Claude 插件,而不是最多三次,并且它的静默探测会超时而不是挂起。
+- `emet doctor` 每次运行只列出一次已安装的插件。
+- `bun run lint` 和 `bun run fix` 会先为站点生成 Astro 类型,因此在全新的 checkout 上也能通过。
 
 ## 0.15.0
 

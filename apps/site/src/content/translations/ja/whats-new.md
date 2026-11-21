@@ -2,8 +2,34 @@
 title: 新機能
 description: emet のリリースノート。各バージョンでの変更点をまとめています。
 seoTitle: "emet の新機能: リリースノート"
-sourceHash: b29bae1442d54dd2
+sourceHash: e51e96e3f3669abd
 ---
+
+## 0.16.0
+
+2026-11-21
+
+### 追加
+
+- ライビング spec(既定ではオフ)。`specs.enabled: true` のとき、spec の最後の wave でコーディネーターが spec の要件デルタ `ADDED`/`MODIFIED`/`REMOVED` を書き、その wave のレビュー前に統合ブランチで `emet spec-merge --spec <id>` を 1 回実行し、更新された `docs/specs/<area>.md` をコミットします。これにより、変更は同じ pull request でレビューされ、ランディングします。新しいリファレンス `living-specs.md` が、デルタの形式と再試行のルールを説明します。ADR-0038 を参照してください。
+- 設定と 2 つのスキーマコピーに `specs.enabled`(既定は `false`)が加わります。`emet init` は `"specs": { "dir": "docs/specs", "enabled": false }` を書き込みます。
+- `emet doctor` は、`specs.enabled` が `true` の場合に限り、`specs.dir` が gitignore されているか、ファイルである場合に警告します。`specs.dir` が存在しないことは警告になりません。
+- `emet spec-merge --spec <id> --deltas-dir` は、共有のデルタディレクトリ `<git common dir>/.emet/runs/<id>/spec-deltas` を作成して出力し、マージせずに終了コード `0` で終了します。
+- `landing.specMergeMethod` は `merge`(既定)、`squash`、`rebase` を受け付けるため、squash マージのみを許可するトランクにも spec をランディングできます。リポジトリ設定またはトランクの ruleset が設定されたメソッドを許可していない場合、`emet doctor` が警告します。ADR-0037 を参照してください。
+- `bun run check:codex` は、生成された `codex/` ディレクトリ内にソースのないファイルがあると失敗します。
+
+### 変更
+
+- `specs.enabled` がオフのとき、`emet spec-merge` は `specs.enabled is false; nothing merged` を出力して終了コード `0` で終了します。デルタは git common dir 配下の共有 run ディレクトリから読み込み、なければチェックアウトごとの `.emet/runs/<id>/spec-deltas/` にフォールバックします。
+- フェーズ 8 のプロンプトは、wave や spec のランディング後に `emet spec-merge` を実行しなくなりました。代わりに `phases-8-review.md` が最後の wave で `living-specs.md` を読み込みます。
+- `emet spec-branch land` は、`emet ci` と同じポーラーで PR のチェックを待ち、まだチェックのない PR でもポーリングを続け、`landing.specMergeMethod` でマージします。
+
+### 修正
+
+- `emet spec-branch land` は、GitHub がチェックを 1 つも登録する前にマージしなくなりました。
+- `emet setup` は Claude プラグインを最大 3 回ではなく 1 回だけ一覧表示し、サイレントなプローブはハングせずにタイムアウトします。
+- `emet doctor` は、インストール済みプラグインを実行ごとに 1 回だけ一覧表示します。
+- `bun run lint` と `bun run fix` は、先にサイト用の Astro の型を生成するため、新規チェックアウトでも成功します。
 
 ## 0.15.0
 
