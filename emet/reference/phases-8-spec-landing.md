@@ -25,7 +25,7 @@ names it otherwise.
    <integration> --tickets <id,…>`. It merges with `--no-ff` into
    `spec/<spec-id>`, records the wave, journals `spec.integrate` and pushes the
    branch when `landing.pushSpecBranch` is on. It opens no PR.
-4. Do not close tickets or run `emet spec-merge` for an integrated wave: its
+4. Do not close tickets for an integrated wave: its
    tickets are integrated, not landed. Run `emet cleanup --run <runId>`; it
    reclaims their worker worktrees and keeps `spec/<spec-id>`.
 5. Tickets listed as integrated by `emet spec-branch status` count as closed
@@ -43,13 +43,13 @@ gated after it.
 
 - `landing.mode: pr`: it pushes `spec/<spec-id>`, opens one PR with its own
   title and a `Closes #<n>` line per ticket of every integrated wave, waits for
-  the checks and merges it with a merge commit, ignoring `pr.mergeMethod`. A
+  the checks and merges it with `landing.specMergeMethod` (a merge commit by default). A
   failing check leaves the PR open; rerunning `land` reuses it. Afterwards
   verify the closing lines as `phases-8-landing.md` says.
 - `landing.mode: merge`: it merges `spec/<spec-id>` into local trunk with
   `--no-ff` and never pushes. The `selfCheck` above stands in for CI.
 
-After it lands, run `emet spec-merge --spec <spec-id>`, close the tickets of
+After it lands, close the tickets of
 every integrated wave as `phases-8-landing.md` says, then `emet cleanup --run
 <runId>` as separate calls. `emet cleanup` leaves `spec/<spec-id>` in place:
 report it.

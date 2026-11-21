@@ -2,7 +2,7 @@
 title: Trackers e aterrissagem
 description: Onde ficam os tickets, como uma onda aterrissa como pull request ou merge local, e como as ondas se encadeiam.
 seoTitle: Trackers e aterrissagem no emet
-sourceHash: 4280f1152d8971e0
+sourceHash: da19ec4cf50e7084
 ---
 
 Onde ficam os tickets, como uma onda aterrissa e como as ondas se encadeiam. Toda chave citada aqui está na [referência de configuração](../reference/configuration.md); todo subcomando está na [referência da CLI](../reference/cli.md).
@@ -27,9 +27,9 @@ Com `tracker.kind: "local"`, specs e tickets são arquivos markdown em `.scratch
 
 Com `landing.unit: "spec"`, o coordenador cria `spec/<id>` a partir do tronco com `emet spec-branch ensure --spec <id>`. Depois que uma onda passa na revisão e em `commands.selfCheck`, `emet spec-branch integrate` mescla a branch da onda em `spec/<id>` com `--no-ff` e um commit que carrega os trailers `Emet-Wave` e `Emet-Tickets`. Um ticket cuja branch está em `spec/<id>` está **Integrado**, não **Aterrissado**: conta como bloqueador fechado na fronteira da próxima onda, mas o tracker o mantém aberto até a aterrissagem final. As ondas seguintes partem da ponta de `spec/<id>`, então nenhuma onda espera pela CI de um PR.
 
-`emet spec-branch sync` mescla o tronco em `spec/<id>` e nunca faz rebase; em caso de conflito, aborta, deixa a branch intacta e sai com código diferente de zero. `emet spec-branch land` executa o sync e depois aterrissa a branch uma única vez. No modo `pr`, faz push de `spec/<id>`, abre um PR com uma linha `Closes #N` por ticket de cada onda integrada e o mescla com um commit de merge, ignorando `pr.mergeMethod`. No modo `merge`, mescla `spec/<id>` no tronco local com `--no-ff` e nunca faz push. `--partial` aterrissa apenas as ondas integradas até o momento. `emet spec-branch abandon --spec <id> --force` marca a branch com a tag `abandoned/spec-<id>`, a exclui e volta os tickets integrados de um tracker local para `ready-for-agent`.
+`emet spec-branch sync` mescla o tronco em `spec/<id>` e nunca faz rebase; em caso de conflito, aborta, deixa a branch intacta e sai com código diferente de zero. `emet spec-branch land` executa o sync e depois aterrissa a branch uma única vez. No modo `pr`, faz push de `spec/<id>`, abre um PR com uma linha `Closes #N` por ticket de cada onda integrada, espera os checks dele e o mescla com `landing.specMergeMethod` (um commit de merge por padrão, ignorando `pr.mergeMethod`). No modo `merge`, mescla `spec/<id>` no tronco local com `--no-ff` e nunca faz push. `--partial` aterrissa apenas as ondas integradas até o momento. `emet spec-branch abandon --spec <id> --force` marca a branch com a tag `abandoned/spec-<id>`, a exclui e volta os tickets integrados de um tracker local para `ready-for-agent`.
 
-O modo spec exige `worktree.baseRef: "head"` nas configurações do Claude Code para que os worktrees dos workers partam da branch do spec; `emet preflight` e `emet doctor` verificam isso. `emet doctor` também avisa quando o modo é `pr` e o repositório não permite commits de merge.
+O modo spec exige `worktree.baseRef: "head"` nas configurações do Claude Code para que os worktrees dos workers partam da branch do spec; `emet preflight` e `emet doctor` verificam isso. `emet doctor` também avisa quando o modo é `pr` e as configurações do repositório ou o ruleset do tronco não permitem o `landing.specMergeMethod` configurado.
 
 ### PRs de aterrissagem
 
@@ -86,7 +86,7 @@ As fases não decidem sozinhas quando um ticket está pronto, é mesclável ou v
 
 ## Specs vivas, mapa e métricas
 
-**Specs vivas.** Depois que uma onda recebe merge automático, `emet spec-merge --spec <id>` mescla os deltas de requisitos `ADDED`/`MODIFIED`/`REMOVED` da spec em `docs/specs/<area>.md` (`specs.dir`). Ele verifica todas as áreas antes de escrever qualquer coisa. Um conflito, ou um requisito que perderia um cenário, termina com código 1 e deixa todos os arquivos intactos.
+**Specs vivas.** Ative com `specs.enabled`. Na última onda de uma spec, antes da sua revisão, o coordenador escreve os deltas de requisitos da spec, executa `emet spec-merge --spec <id>` uma vez para mesclá-los em `docs/specs/<area>.md` (`specs.dir`) e faz o commit do resultado, que assim é revisado e entra no mesmo PR. Ele verifica todas as áreas antes de escrever qualquer coisa. Um conflito, ou um requisito que perderia um cenário, termina com código 1 e deixa todos os arquivos intactos; o coordenador tenta mais uma vez e, se falhar, faz o landing sem a atualização e sinaliza o problema.
 
 **Mapa do código.** `emet map` escreve um resumo de uma base de código existente (stack, estrutura, convenções, testes, pontos quentes) em `docs/agents/codebase.md` (`map.path`), carimbado com o SHA do commit a partir do qual foi gerado. O mesmo commit sempre produz o mesmo arquivo. `emet map --stale` termina com código 1 quando o HEAD passou do carimbo, e o `emet preflight` avisa nesse caso. `emet map --for <globs>` imprime apenas as seções que correspondem às superfícies de edição de um ticket. Essa saída é a única parte do mapa que o brief de um worker inclui.
 

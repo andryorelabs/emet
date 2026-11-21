@@ -39,6 +39,9 @@
     "requiredFiles": [],
     "requiredCommands": ["gh"]
   },
+  "landing": {
+    "specMergeMethod": "squash"
+  },
   "handoff": {
     "maxLines": 60,
     "maxChars": 8000,

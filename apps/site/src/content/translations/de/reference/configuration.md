@@ -2,7 +2,7 @@
 title: Konfigurationsreferenz
 description: Jeder Schlüssel in emet.config.json mit Standardwert und Bedeutung.
 seoTitle: emet-Konfigurationsreferenz
-sourceHash: 041f1d0c3f53265f
+sourceHash: a58a3577b2274c4a
 ---
 
 Jeder Schlüssel in `emet.config.json` mit Standardwert und Bedeutung. Die maßgebliche Quelle ist [`emet/schema/emet.config.schema.json`](../../emet/schema/emet.config.schema.json). Die Begriffe folgen [GLOSSARY.md](../../GLOSSARY.md). Zurück zur [README](../../README.md).
@@ -215,7 +215,7 @@ Wird nur gelesen, wenn `agentHost` `"codex"` ist. Alle Schlüssel sind optional.
 
 - `mode` (Standard `pr`): `pr` öffnet einen Pull Request (erfordert `gh`). `merge` mergt den Integrationsbranch mit `emet land` in den lokalen Trunk und pusht nie, wobei `commands.selfCheck` die CI ersetzt. Unabhängig vom Tracker. Siehe [ADR-0010](../adr/0010-local-merge-landing.md).
 - `unit` (Standard `spec`): `spec` integriert jede Welle mit `emet spec-branch integrate` in den Branch `spec/<id>` und landet die Spec einmal mit `emet spec-branch land`; `wave` landet jede Welle allein, wie bisher. Jeder andere Wert schlägt beim Laden mit `"landing.unit" must be one of spec|wave` fehl. `spec` erfordert `worktree.baseRef: "head"` in den Claude-Code-Einstellungen (eine Harness-Einstellung, kein emet-Schlüssel), was `emet preflight` und `emet doctor` prüfen. Siehe [ADR-0037](../adr/0037-landing-per-spec.md).
-- `specMergeMethod` (Standard `merge`): wie der Spec-PR gemergt wird. Nur `merge` wird akzeptiert; `pr.mergeMethod` wird ignoriert.
+- `specMergeMethod` (Standard `merge`): wie der Spec-PR gemergt wird: `merge`, `squash` oder `rebase`. `merge` behält einen Merge-Commit pro Welle, sodass sich eine Welle zurücknehmen lässt; `squash` und `rebase` passen zu einem Trunk, der keine Merge-Commits erlaubt, um den Preis dieser Rücknahme. Es ignoriert `pr.mergeMethod`. `emet doctor` warnt, wenn die Repository-Einstellungen oder das Trunk-Ruleset die gewählte Methode nicht erlauben.
 - `pushSpecBranch` (Standard `true`): `spec/<id>` nach jedem `emet spec-branch integrate` pushen, ohne einen PR zu öffnen. Auf `false` setzen, um den Branch bis zum endgültigen Landing lokal zu halten.
 
 ## tracker
@@ -237,7 +237,8 @@ Mit welchem Issue-Tracker `/emet` (unter Codex `$emet`) spricht. Die CLI liest `
 
 ## specs
 
-- `dir` (Standard `docs/specs`): repo-relatives Verzeichnis der lebenden Specs, geschrieben von `emet spec-merge`.
+- `enabled` (Standard `false`): aktiviert lebende Specs. Bei der letzten Welle einer Spec schreibt der Koordinator Anforderungs-Deltas aus den S#-Punkten der Spec, führt `emet spec-merge` aus und committet `specs.dir` mit dieser Welle, sodass die Aktualisierung geprüft wird und mit ihr landet.
+- `dir` (Standard `docs/specs`): repo-relatives Verzeichnis der lebenden Specs, geschrieben von `emet spec-merge`, wenn `enabled` wahr ist.
 
 ## map
 

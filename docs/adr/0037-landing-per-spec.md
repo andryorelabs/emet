@@ -1,6 +1,6 @@
 # 0037. Landing per spec
 
-Status: Accepted (2026-11-21)
+Status: Accepted (2026-11-21). Amended by [0038](0038-living-specs-hold-current-behaviour.md): the last wave of a spec gains the living-spec step. Amended (2026-11-21): the merge method of the spec PR is configurable.
 Spec: #778 (S12)
 Supersedes [0004](0004-one-wave-one-dependency-layer-one-pr.md). Amends [0010](0010-local-merge-landing.md). Amends [0012](0012-develop-development-branch.md). Amends [0013](0013-cleanup-owns-worker-worktree-lifecycle.md). Amends [0025](0025-cleanup-deletes-branches-whose-pull-request-merged.md). Amends [0031](0031-after-spec-step-and-optional-setup.md).
 Supersedes [0004](0004-one-wave-one-dependency-layer-one-pr.md). Amends [0010](0010-local-merge-landing.md), [0012](0012-develop-development-branch.md), [0013](0013-cleanup-owns-worker-worktree-lifecycle.md), [0025](0025-cleanup-deletes-branches-whose-pull-request-merged.md) and [0031](0031-after-spec-step-and-optional-setup.md).
@@ -27,7 +27,7 @@ Amendments to earlier decisions:
 
 ## Consequences
 
-One PR and one CI run per spec; the frontier advances as soon as a wave passes review and `selfCheck`. A defect that only CI catches surfaces at the final landing, after later waves built on it, and a trunk conflict surfaces at the sync, where the coordinator stops. The checkout is bound to one spec at a time; a parallel spec needs another worktree. Disk loss is bounded by the push of `spec/<id>`. The repo must allow merge commits, which `emet doctor` checks.
+One PR and one CI run per spec; the frontier advances as soon as a wave passes review and `selfCheck`. A defect that only CI catches surfaces at the final landing, after later waves built on it, and a trunk conflict surfaces at the sync, where the coordinator stops. The checkout is bound to one spec at a time; a parallel spec needs another worktree. Disk loss is bounded by the push of `spec/<id>`. With the default `landing.specMergeMethod: merge` the repo must allow merge commits, which `emet doctor` checks. A trunk that allows only squash merges, such as this repo's `develop` ([0012](0012-develop-development-branch.md)), sets `landing.specMergeMethod` to `squash` or `rebase`: the spec then lands as one commit and the per-wave revert is lost. `emet doctor` also reads the trunk ruleset, and `land` waits for the PR's checks to exist and pass before it merges.
 
 ## Alternatives considered
 

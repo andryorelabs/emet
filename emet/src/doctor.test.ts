@@ -16,6 +16,7 @@ import path from "node:path";
 
 import { claudeHost } from "./agenthost";
 import { codexHost } from "./agenthost-codex";
+import { DEFAULT_FORGE_CONFIG, type ForgeConfig } from "./config";
 import { classifyEngram, type DependencyProbes } from "./dependencies";
 import {
   formatGlobalDependencyFinding,
@@ -25,6 +26,8 @@ import {
   createEnvironmentProbes,
   checkWorktreeForkBase,
   findMergeCommitWarnings,
+  parseAllowedMergeMethods,
+  findSpecsWarnings,
   findMissingFlags,
   normalizeGithubSlug,
   type EnvironmentProbes,
@@ -738,6 +741,56 @@ describe("findMergeCommitWarnings", () => {
     expect(warnings).toHaveLength(1);
     expect(warnings[0]).toContain("merge commits");
   });
+  test("warns when the trunk ruleset does not allow the configured method", async () => {
+    const probes: EnvironmentProbes = {
+      ...healthyEnvironment,
+      trunkAllowedMergeMethods: () => Promise.resolve(["squash"]),
+    };
+    const merge = await findMergeCommitWarnings(
+      { mode: "pr", unit: "spec", specMergeMethod: "merge" },
+      probes,
+      "/repo",
+      "develop",
+    );
+    expect(merge).toHaveLength(1);
+    expect(merge[0]).toContain("develop ruleset only allows squash");
+    expect(
+      await findMergeCommitWarnings(
+        { mode: "pr", unit: "spec", specMergeMethod: "squash" },
+        probes,
+        "/repo",
+        "develop",
+      ),
+    ).toEqual([]);
+  });
+  test("a squash method ignores the repository merge-commit setting", async () => {
+    const probes = withProbe(() => Promise.resolve(false));
+    expect(
+      await findMergeCommitWarnings(
+        { mode: "pr", unit: "spec", specMergeMethod: "squash" },
+        probes,
+      ),
+    ).toEqual([]);
+  });
+  test.each([
+    ["unknown", () => Promise.resolve(undefined)],
+    ["failing", () => Promise.reject(new Error("x"))],
+  ])("a %s ruleset probe gives no finding", async (_label, probe) => {
+    expect(
+      await findMergeCommitWarnings(
+        { mode: "pr", unit: "spec", specMergeMethod: "merge" },
+        { ...healthyEnvironment, trunkAllowedMergeMethods: probe },
+        "/repo",
+        "develop",
+      ),
+    ).toEqual([]);
+  });
+  test("parseAllowedMergeMethods reads the gh answer", () => {
+    expect(parseAllowedMergeMethods('["squash","rebase"]')).toEqual(["squash", "rebase"]);
+    for (const raw of [null, "", "null", "[]", "nope", '{"a":1}']) {
+      expect(parseAllowedMergeMethods(raw)).toBeUndefined();
+    }
+  });
   test("no finding when allowed, unknown, failing, or not spec/pr", async () => {
     const allowed = withProbe(() => Promise.resolve(true));
     expect(await findMergeCommitWarnings({ mode: "pr", unit: "spec" }, allowed)).toEqual([]);
@@ -759,6 +812,39 @@ describe("findMergeCommitWarnings", () => {
     const disallowed = withProbe(() => Promise.resolve(false));
     expect(await findMergeCommitWarnings({ mode: "merge", unit: "spec" }, disallowed)).toEqual([]);
     expect(await findMergeCommitWarnings({ mode: "pr", unit: "wave" }, disallowed)).toEqual([]);
+  });
+});
+
+const withSpecs = (enabled: boolean): ForgeConfig => ({
+  ...DEFAULT_FORGE_CONFIG,
+  specs: { dir: "docs/specs", enabled },
+});
+
+describe("findSpecsWarnings", () => {
+  let repoRoot: string;
+  beforeEach(async () => {
+    repoRoot = mkdtempSync(path.join(os.tmpdir(), "forge-doctor-specs-"));
+    await Bun.$`git init --quiet`.cwd(repoRoot).quiet();
+  });
+  afterEach(() => {
+    rmSync(repoRoot, { recursive: true, force: true });
+  });
+
+  test("warns naming specs.dir when enabled and gitignored", async () => {
+    await Bun.write(path.join(repoRoot, ".gitignore"), "docs/specs\n");
+    const warnings = findSpecsWarnings(withSpecs(true), repoRoot);
+    expect(warnings).toHaveLength(1);
+    expect(warnings[0]).toContain("specs.dir");
+  });
+  test("no warning when disabled, even if gitignored", async () => {
+    await Bun.write(path.join(repoRoot, ".gitignore"), "docs/specs\n");
+    expect(findSpecsWarnings(withSpecs(false), repoRoot)).toEqual([]);
+  });
+  test("warns when specs.dir is a file; a missing dir is fine", async () => {
+    expect(findSpecsWarnings(withSpecs(true), repoRoot)).toEqual([]);
+    mkdirSync(path.join(repoRoot, "docs"));
+    await Bun.write(path.join(repoRoot, "docs", "specs"), "x");
+    expect(findSpecsWarnings(withSpecs(true), repoRoot)[0]).toContain("not a directory");
   });
 });
 

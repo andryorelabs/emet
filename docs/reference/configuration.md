@@ -210,7 +210,7 @@ Read only when `agentHost` is `"codex"`. Every key is optional. Effort is one of
 
 - `mode` (default `pr`): `pr` opens a pull request (requires `gh`). `merge` merges the integration branch into local trunk with `emet land` and never pushes, with `commands.selfCheck` standing in for CI. Independent of the tracker. See [ADR-0010](../adr/0010-local-merge-landing.md).
 - `unit` (default `spec`): `spec` integrates each wave into the branch `spec/<id>` with `emet spec-branch integrate` and lands the spec once with `emet spec-branch land`; `wave` lands every wave on its own, as before. Any other value fails to load with `"landing.unit" must be one of spec|wave`. `spec` needs `worktree.baseRef: "head"` in the Claude Code settings (a harness setting, not an emet key), which `emet preflight` and `emet doctor` check. See [ADR-0037](../adr/0037-landing-per-spec.md).
-- `specMergeMethod` (default `merge`): how the spec PR merges. Only `merge` is accepted; it ignores `pr.mergeMethod`.
+- `specMergeMethod` (default `merge`): how the spec PR merges: `merge`, `squash` or `rebase`. `merge` keeps one merge commit per wave, so a wave can be reverted; `squash` and `rebase` suit a trunk that allows no merge commits, at the cost of that revert. It ignores `pr.mergeMethod`. `emet doctor` warns when the repository settings or the trunk ruleset disallow the chosen method.
 - `pushSpecBranch` (default `true`): push `spec/<id>` after each `emet spec-branch integrate`, without opening a PR. Set `false` to keep the branch local until the final landing.
 
 ## tracker
@@ -232,7 +232,8 @@ Which issue tracker `/emet` (or `$emet` on Codex) talks to. The CLI reads `kind`
 
 ## specs
 
-- `dir` (default `docs/specs`): repo-relative directory of living specs, written by `emet spec-merge`.
+- `dir` (default `docs/specs`): repo-relative directory of living specs, written by `emet spec-merge` when `enabled` is true.
+- `enabled` (default `false`): turns on living specs. On a spec's last wave the coordinator writes requirement deltas from the spec's S# items, runs `emet spec-merge` and commits `specs.dir` with that wave, so the update is reviewed and lands with it.
 
 ## map
 

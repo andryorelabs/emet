@@ -2,8 +2,34 @@
 title: 새로운 소식
 description: emet 릴리스 노트. 각 버전에서 무엇이 바뀌었는지 정리합니다.
 seoTitle: "emet 새로운 소식: 릴리스 노트"
-sourceHash: b29bae1442d54dd2
+sourceHash: e51e96e3f3669abd
 ---
+
+## 0.16.0
+
+2026-11-21
+
+### 추가됨
+
+- 라이빙 spec(기본값은 꺼짐). `specs.enabled: true`이면 spec의 마지막 wave에서 코디네이터가 spec의 요구 사항 델타 `ADDED`/`MODIFIED`/`REMOVED`를 작성하고, 해당 wave의 리뷰 전에 통합 브랜치에서 `emet spec-merge --spec <id>`를 한 번 실행하며, 갱신된 `docs/specs/<area>.md`를 커밋합니다. 따라서 변경 사항은 같은 pull request에서 리뷰되고 랜딩합니다. 새 레퍼런스 `living-specs.md`가 델타 형식과 재시도 규칙을 설명합니다. ADR-0038을 참고하세요.
+- 구성과 두 스키마 사본에 `specs.enabled`(기본값 `false`)가 추가됩니다. `emet init`은 `"specs": { "dir": "docs/specs", "enabled": false }`를 작성합니다.
+- `emet doctor`는 `specs.enabled`가 `true`일 때만, `specs.dir`이 gitignore되어 있거나 파일이면 경고합니다. `specs.dir`이 없는 것은 경고가 아닙니다.
+- `emet spec-merge --spec <id> --deltas-dir`는 공유 델타 디렉터리 `<git common dir>/.emet/runs/<id>/spec-deltas`를 만들어 출력하고, 병합하지 않고 종료 코드 `0`으로 끝납니다.
+- `landing.specMergeMethod`는 `merge`(기본값), `squash`, `rebase`를 받으므로, squash 머지만 허용하는 트렁크에도 spec을 랜딩할 수 있습니다. 저장소 설정이나 트렁크 ruleset이 구성된 방식을 허용하지 않으면 `emet doctor`가 경고합니다. ADR-0037을 참고하세요.
+- `bun run check:codex`는 생성된 `codex/` 디렉터리에 소스가 없는 파일이 있으면 실패합니다.
+
+### 변경됨
+
+- `specs.enabled`가 꺼져 있으면 `emet spec-merge`는 `specs.enabled is false; nothing merged`를 출력하고 종료 코드 `0`으로 끝납니다. 델타는 git common dir 아래의 공유 실행 디렉터리에서 읽고, 없으면 체크아웃별 `.emet/runs/<id>/spec-deltas/`로 대체합니다.
+- 8단계 프롬프트는 wave나 spec이 랜딩된 뒤 더 이상 `emet spec-merge`를 실행하지 않습니다. 대신 `phases-8-review.md`가 마지막 wave에서 `living-specs.md`를 불러옵니다.
+- `emet spec-branch land`는 `emet ci`와 같은 폴러로 PR의 체크를 기다리고, 아직 체크가 없는 PR도 계속 폴링하며, `landing.specMergeMethod`로 병합합니다.
+
+### 수정됨
+
+- `emet spec-branch land`는 GitHub가 체크를 하나도 등록하기 전에는 더 이상 병합하지 않습니다.
+- `emet setup`은 Claude 플러그인을 최대 세 번이 아니라 한 번만 나열하며, 조용한 프로브는 멈추지 않고 시간 초과됩니다.
+- `emet doctor`는 설치된 플러그인을 실행마다 한 번만 나열합니다.
+- `bun run lint`와 `bun run fix`는 먼저 사이트의 Astro 타입을 생성하므로 새 체크아웃에서도 통과합니다.
 
 ## 0.15.0
 

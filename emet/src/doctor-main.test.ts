@@ -240,6 +240,20 @@ describe("doctor run() repo reports", () => {
     expect(await probe?.(repo)).toBeUndefined();
   });
 
+  test("the ruleset probe maps the gh answer to the allowed merge methods", async () => {
+    const repo = makeGitRepo("ruleset-probe", baseConfig);
+    process.env.PATH = binDirectory;
+    const probe = createEnvironmentProbes().trunkAllowedMergeMethods;
+    expect(probe).toBeDefined();
+
+    writeExecutable("gh", `echo '["squash"]'`);
+    expect(await probe?.(repo, "develop")).toEqual(["squash"]);
+    writeExecutable("gh", "echo null");
+    expect(await probe?.(repo, "develop")).toBeUndefined();
+    writeExecutable("gh", "exit 1");
+    expect(await probe?.(repo, "develop")).toBeUndefined();
+  });
+
   test("a clean repo with no notes prints a bare OK line", async () => {
     const repo = makeGitRepo("bare-clean", baseConfig);
     writeAllDocs(repo);

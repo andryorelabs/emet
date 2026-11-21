@@ -2,7 +2,7 @@
 title: 跟踪器与落地
 description: 工单存放在哪里，波次如何以拉取请求或本地合并的方式落地，以及波次如何串联。
 seoTitle: emet 的跟踪器与落地
-sourceHash: 4280f1152d8971e0
+sourceHash: da19ec4cf50e7084
 ---
 
 工单存放在哪里、波次如何落地、波次如何串联。此处提到的每个配置键都在[配置参考](../reference/configuration.md)中，每个子命令都在 [CLI 参考](../reference/cli.md)中。
@@ -27,9 +27,9 @@ emet 支持 Linear、GitHub Issues 或本地文件，由 `tracker.kind` 设置�
 
 设置 `landing.unit: "spec"` 后，协调者用 `emet spec-branch ensure --spec <id>` 从主干创建 `spec/<id>`。波次通过评审和 `commands.selfCheck` 之后，`emet spec-branch integrate` 会以 `--no-ff` 把波次分支合并到 `spec/<id>`，提交中带有 `Emet-Wave` 和 `Emet-Tickets` 两个 trailer。分支已在 `spec/<id>` 中的工单是 **Integrated**（已集成），而不是 **Landed**（已落地）：它对下一个波次的前沿而言算作已关闭的阻塞项，但跟踪器会让它保持打开，直到最终落地。后续波次从 `spec/<id>` 的顶端分出分支，因此没有波次需要等待 PR 的 CI。
 
-`emet spec-branch sync` 把主干合并到 `spec/<id>`，从不变基；遇到冲突时它会中止、保持分支不变并以非零状态退出。`emet spec-branch land` 先执行同步，然后一次性落地该分支。在 `pr` 模式下，它会推送 `spec/<id>`，打开一个 PR，其中为每个已集成波次的每个工单各带一行 `Closes #N`，并以合并提交的方式合并，忽略 `pr.mergeMethod`。在 `merge` 模式下，它以 `--no-ff` 把 `spec/<id>` 合并到本地主干，且从不推送。`--partial` 只落地目前已集成的波次。`emet spec-branch abandon --spec <id> --force` 会给分支打上 `abandoned/spec-<id>` 标签、删除它，并把本地跟踪器中已集成的工单重置回 `ready-for-agent`。
+`emet spec-branch sync` 把主干合并到 `spec/<id>`，从不变基；遇到冲突时它会中止、保持分支不变并以非零状态退出。`emet spec-branch land` 先执行同步，然后一次性落地该分支。在 `pr` 模式下，它会推送 `spec/<id>`，打开一个 PR，其中为每个已集成波次的每个工单各带一行 `Closes #N`，等待其检查通过，并以 `landing.specMergeMethod` 合并（默认是合并提交，忽略 `pr.mergeMethod`）。在 `merge` 模式下，它以 `--no-ff` 把 `spec/<id>` 合并到本地主干，且从不推送。`--partial` 只落地目前已集成的波次。`emet spec-branch abandon --spec <id> --force` 会给分支打上 `abandoned/spec-<id>` 标签、删除它，并把本地跟踪器中已集成的工单重置回 `ready-for-agent`。
 
-规格模式需要在 Claude Code 设置中设定 `worktree.baseRef: "head"`，使工作者工作树从规格分支起步；`emet preflight` 和 `emet doctor` 会检查这一点。当模式为 `pr` 且仓库不允许合并提交时，`emet doctor` 还会发出警告。
+规格模式需要在 Claude Code 设置中设定 `worktree.baseRef: "head"`，使工作者工作树从规格分支起步；`emet preflight` 和 `emet doctor` 会检查这一点。当模式为 `pr` 且仓库设置或主干规则集不允许已配置的 `landing.specMergeMethod` 时，`emet doctor` 还会发出警告。
 
 ### 以 PR 落地
 
@@ -86,7 +86,7 @@ emet 支持 Linear、GitHub Issues 或本地文件，由 `tracker.kind` 设置�
 
 ## 活规格、地图与指标
 
-**活规格。** 波次自动合并之后，`emet spec-merge --spec <id>` 会把规格中 `ADDED`/`MODIFIED`/`REMOVED` 的需求增量合并到 `docs/specs/<area>.md`（`specs.dir`）。它会在写入任何内容之前检查所有区域。如果出现冲突，或者某个需求会丢失一个场景，则以退出码 1 退出，并且不改动任何文件。
+**活规格。** 通过 `specs.enabled` 选择启用。在规格的最后一个波次、评审之前，协调者会写入该规格的需求增量，运行一次 `emet spec-merge --spec <id>`，把它们合并到 `docs/specs/<area>.md`（`specs.dir`），并提交结果，因此结果会随同一个 PR 一起被评审并落地。它会在写入任何内容之前检查所有区域。如果出现冲突，或者某个需求会丢失一个场景，则以退出码 1 退出，并且不改动任何文件；协调者会重试一次，之后在没有该更新的情况下落地并加以标记。
 
 **代码库地图。** `emet map` 会把现有代码库的概览（技术栈、结构、约定、测试、热点）写入 `docs/agents/codebase.md`（`map.path`），并标注生成它所用的提交 SHA。同一个提交总是生成同一个文件。一旦 HEAD 越过该标注，`emet map --stale` 就以退出码 1 退出，此时 `emet preflight` 会发出警告。`emet map --for <globs>` 只打印与工单编辑范围相匹配的部分。该输出是地图中唯一会包含在工作者简报里的部分。
 

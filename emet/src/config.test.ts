@@ -150,7 +150,7 @@ describe("loadForgeConfig", () => {
       },
       sizing: { inlineMaxLines: 50 },
       map: { path: "docs/map.md" },
-      specs: { dir: "docs/s" },
+      specs: { dir: "docs/s", enabled: true },
     };
     await writeConfig(full);
     expect(await loadForgeConfig(repoRoot)).toEqual({ status: "ok", config: full });
@@ -244,8 +244,8 @@ describe("loadForgeConfig", () => {
     ["landing.unit", { landing: { unit: "banana" } }, /"landing.unit" must be one of spec\|wave/],
     [
       "landing.specMergeMethod",
-      { landing: { specMergeMethod: "squash" } },
-      /"landing.specMergeMethod" must be merge/,
+      { landing: { specMergeMethod: "fast-forward" } },
+      /"landing.specMergeMethod" must be one of squash\|merge\|rebase/,
     ],
     [
       "landing.pushSpecBranch",
@@ -303,6 +303,14 @@ describe("loadForgeConfig", () => {
       pushSpecBranch: false,
     });
   });
+
+  test.each(["merge", "squash", "rebase"] as const)(
+    "landing.specMergeMethod accepts %s",
+    async (method) => {
+      await writeConfig({ landing: { specMergeMethod: method } });
+      expect(configOf(await loadForgeConfig(repoRoot)).landing.specMergeMethod).toBe(method);
+    },
+  );
 
   test("gate.onHold defaults to fix-and-continue and accepts stop", async () => {
     await writeConfig({});
@@ -734,6 +742,7 @@ describe("models and review sections", () => {
     [{ sizing: { inlineMaxLines: 0 } }, /"sizing.inlineMaxLines" must be a positive integer/],
     [{ map: { path: "" } }, /"map.path" must be a non-empty string/],
     [{ specs: { dir: 3 } }, /"specs.dir" must be a non-empty string/],
+    [{ specs: { enabled: "yes" } }, /"specs.enabled" must be a boolean/],
     [{ review: { highRiskPaths: "auth" } }, /"review.highRiskPaths" must be an array/],
     [{ review: { highRiskPaths: [""] } }, /"review.highRiskPaths\[0\]"/],
   ])("malformed for %j", async (value, pattern) => {

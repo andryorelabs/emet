@@ -113,7 +113,7 @@ export const DEFAULT_FORGE_CONFIG: ForgeConfig = {
   },
   sizing: { inlineMaxLines: 100 },
   map: { path: "docs/agents/codebase.md" },
-  specs: { dir: "docs/specs" },
+  specs: { dir: "docs/specs", enabled: false },
 };
 
 type ModelEffort = "low" | "medium" | "high" | "xhigh" | "max";
@@ -324,8 +324,9 @@ export interface ForgeConfig {
     /** What one landing carries to trunk: `spec` lands the whole spec branch
      * once, `wave` lands each wave. */
     readonly unit: LandingUnit;
-    /** How a spec branch merges into trunk. Only `merge` is accepted. */
-    readonly specMergeMethod: "merge";
+    /** How the spec PR merges into trunk: `merge` keeps one merge commit per
+     * wave; `squash` or `rebase` suit a trunk that disallows merge commits. */
+    readonly specMergeMethod: MergeMethod;
     /** Whether the spec branch is pushed to the remote. */
     readonly pushSpecBranch: boolean;
   };
@@ -397,6 +398,8 @@ export interface ForgeConfig {
   readonly specs: {
     /** Repo-relative directory of living specs. */
     readonly dir: string;
+    /** Opt-in switch for the living-specs workflow. */
+    readonly enabled: boolean;
   };
 }
 
@@ -907,8 +910,11 @@ function validateAndMerge(
   }
   const specMergeMethod =
     landingSection.specMergeMethod ?? DEFAULT_FORGE_CONFIG.landing.specMergeMethod;
-  if (specMergeMethod !== "merge") {
-    return { ok: false, reason: '"landing.specMergeMethod" must be merge' };
+  if (!isOneOf(MERGE_METHODS, specMergeMethod)) {
+    return {
+      ok: false,
+      reason: '"landing.specMergeMethod" must be one of squash|merge|rebase',
+    };
   }
   const pushSpecBranch =
     landingSection.pushSpecBranch ?? DEFAULT_FORGE_CONFIG.landing.pushSpecBranch;
@@ -1068,6 +1074,10 @@ function validateAndMerge(
   if (!isNonEmptyString(specsDir)) {
     return { ok: false, reason: '"specs.dir" must be a non-empty string' };
   }
+  const specsEnabled = specsRecord.enabled ?? DEFAULT_FORGE_CONFIG.specs.enabled;
+  if (typeof specsEnabled !== "boolean") {
+    return { ok: false, reason: '"specs.enabled" must be a boolean' };
+  }
 
   return {
     ok: true,
@@ -1109,7 +1119,7 @@ function validateAndMerge(
       budgets,
       sizing: { inlineMaxLines },
       map: { path: mapPath },
-      specs: { dir: specsDir },
+      specs: { dir: specsDir, enabled: specsEnabled },
     },
   };
 }

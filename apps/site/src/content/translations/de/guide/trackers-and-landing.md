@@ -2,7 +2,7 @@
 title: Tracker und Landing
 description: Wo Tickets liegen, wie eine Welle als Pull Request oder lokaler Merge landet und wie Wellen verkettet werden.
 seoTitle: Tracker und Landing in emet
-sourceHash: 4280f1152d8971e0
+sourceHash: da19ec4cf50e7084
 ---
 
 Wo Tickets liegen, wie eine Welle landet und wie Wellen verkettet werden. Jeder hier genannte Schlüssel steht in der [Konfigurationsreferenz](../reference/configuration.md); jeder Unterbefehl steht in der [CLI-Referenz](../reference/cli.md).
@@ -27,9 +27,9 @@ Mit `tracker.kind: "local"` sind Specs und Tickets Markdown-Dateien unter `.scra
 
 Mit `landing.unit: "spec"` legt der Koordinator `spec/<id>` mit `emet spec-branch ensure --spec <id>` vom Trunk an. Nachdem eine Welle Review und `commands.selfCheck` bestanden hat, mergt `emet spec-branch integrate` den Wellen-Branch mit `--no-ff` und einem Commit mit den Trailern `Emet-Wave` und `Emet-Tickets` in `spec/<id>`. Ein Ticket, dessen Branch in `spec/<id>` liegt, ist **Integrated**, nicht **Landed**: Es zählt als geschlossener Blocker für das Frontier der nächsten Welle, aber der Tracker hält es bis zum endgültigen Landing offen. Spätere Wellen zweigen von der Spitze von `spec/<id>` ab, sodass keine Welle auf die CI eines PR wartet.
 
-`emet spec-branch sync` mergt den Trunk in `spec/<id>` und rebased nie; bei einem Konflikt bricht es ab, lässt den Branch unverändert und beendet sich mit einem Wert ungleich null. `emet spec-branch land` führt `sync` aus und landet den Branch dann einmal. Im Modus `pr` pusht es `spec/<id>`, öffnet einen PR mit einer Zeile `Closes #N` pro Ticket jeder integrierten Welle und mergt ihn mit einem Merge-Commit, wobei `pr.mergeMethod` ignoriert wird. Im Modus `merge` mergt es `spec/<id>` mit `--no-ff` in den lokalen Trunk und pusht nie. `--partial` landet nur die bisher integrierten Wellen. `emet spec-branch abandon --spec <id> --force` taggt den Branch als `abandoned/spec-<id>`, löscht ihn und setzt die integrierten Tickets eines lokalen Trackers auf `ready-for-agent` zurück.
+`emet spec-branch sync` mergt den Trunk in `spec/<id>` und rebased nie; bei einem Konflikt bricht es ab, lässt den Branch unverändert und beendet sich mit einem Wert ungleich null. `emet spec-branch land` führt `sync` aus und landet den Branch dann einmal. Im Modus `pr` pusht es `spec/<id>`, öffnet einen PR mit einer Zeile `Closes #N` pro Ticket jeder integrierten Welle, wartet auf dessen Checks und mergt ihn mit `landing.specMergeMethod` (standardmäßig ein Merge-Commit, wobei `pr.mergeMethod` ignoriert wird). Im Modus `merge` mergt es `spec/<id>` mit `--no-ff` in den lokalen Trunk und pusht nie. `--partial` landet nur die bisher integrierten Wellen. `emet spec-branch abandon --spec <id> --force` taggt den Branch als `abandoned/spec-<id>`, löscht ihn und setzt die integrierten Tickets eines lokalen Trackers auf `ready-for-agent` zurück.
 
-Der Spec-Modus erfordert `worktree.baseRef: "head"` in den Claude-Code-Einstellungen, damit Worker-Worktrees vom Spec-Branch starten; `emet preflight` und `emet doctor` prüfen das. `emet doctor` warnt außerdem, wenn der Modus `pr` ist und das Repository keine Merge-Commits erlaubt.
+Der Spec-Modus erfordert `worktree.baseRef: "head"` in den Claude-Code-Einstellungen, damit Worker-Worktrees vom Spec-Branch starten; `emet preflight` und `emet doctor` prüfen das. `emet doctor` warnt außerdem, wenn der Modus `pr` ist und die Repository-Einstellungen oder das Trunk-Ruleset die konfigurierte `landing.specMergeMethod` nicht erlauben.
 
 ### Landing-PRs
 
@@ -86,7 +86,7 @@ Die Phasen entscheiden nicht selbst, wann ein Ticket fertig, mergebar oder einen
 
 ## Lebende Specs, Karte und Metriken
 
-**Lebende Specs.** Nachdem eine Welle automatisch gemergt wurde, führt `emet spec-merge --spec <id>` die Anforderungs-Deltas `ADDED`/`MODIFIED`/`REMOVED` der Spec in `docs/specs/<area>.md` (`specs.dir`) zusammen. Es prüft jeden Bereich, bevor es etwas schreibt. Ein Konflikt oder eine Anforderung, die ein Szenario verlieren würde, endet mit Exit-Code 1 und lässt jede Datei unberührt.
+**Lebende Specs.** Aktivieren Sie sie mit `specs.enabled`. Bei der letzten Welle einer Spec schreibt der Koordinator vor deren Review die Anforderungs-Deltas der Spec, führt einmal `emet spec-merge --spec <id>` aus, um sie in `docs/specs/<area>.md` (`specs.dir`) zusammenzuführen, und committet das Ergebnis, sodass es geprüft wird und im selben PR landet. Es prüft jeden Bereich, bevor es etwas schreibt. Ein Konflikt oder eine Anforderung, die ein Szenario verlieren würde, endet mit Exit-Code 1 und lässt jede Datei unberührt; der Koordinator versucht es einmal erneut, landet dann ohne die Aktualisierung und markiert dies.
 
 **Codebase-Karte.** `emet map` schreibt eine Kurzbeschreibung einer bestehenden Codebase (Stack, Struktur, Konventionen, Tests, Hotspots) nach `docs/agents/codebase.md` (`map.path`), versehen mit dem Commit-SHA, aus dem sie erstellt wurde. Derselbe Commit erzeugt immer dieselbe Datei. `emet map --stale` endet mit Exit-Code 1, sobald HEAD über den Stempel hinausgewandert ist, und `emet preflight` warnt in diesem Fall. `emet map --for <globs>` gibt nur die Abschnitte aus, die zu den Bearbeitungsflächen eines Tickets passen. Diese Ausgabe ist der einzige Teil der Karte, den ein Worker-Briefing enthält.
 

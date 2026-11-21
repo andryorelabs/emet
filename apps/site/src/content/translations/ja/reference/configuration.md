@@ -2,7 +2,7 @@
 title: 設定リファレンス
 description: emet.config.json のすべてのキーについて、既定値と意味を説明します。
 seoTitle: emet の設定リファレンス
-sourceHash: 041f1d0c3f53265f
+sourceHash: a58a3577b2274c4a
 ---
 
 `emet.config.json` のすべてのキーを、既定値と意味とともに示します。信頼できる情報源は [`emet/schema/emet.config.schema.json`](../../emet/schema/emet.config.schema.json) です。用語は [GLOSSARY.md](../../GLOSSARY.md) に従います。[README](../../README.md) に戻る。
@@ -215,7 +215,7 @@ Claude Code ホストにおけるロールごとのモデルとエフォート�
 
 - `mode`（既定は `pr`）: `pr` はプルリクエストを開きます（`gh` が必要です）。`merge` は `emet land` で統合ブランチをローカルのトランクにマージし、プッシュは行いません。CI の代わりに `commands.selfCheck` を使います。トラッカーとは独立しています。[ADR-0010](../adr/0010-local-merge-landing.md) を参照してください。
 - `unit`（既定は `spec`）: `spec` は各ウェーブを `emet spec-branch integrate` でブランチ `spec/<id>` に統合し、`emet spec-branch land` でスペックを 1 回だけランディングします。`wave` は従来どおり各ウェーブを単独でランディングします。それ以外の値は `"landing.unit" must be one of spec|wave` というエラーで読み込みに失敗します。`spec` には Claude Code の設定（emet のキーではなくハーネスの設定）で `worktree.baseRef: "head"` が必要で、`emet preflight` と `emet doctor` が確認します。[ADR-0037](../adr/0037-landing-per-spec.md) を参照してください。
-- `specMergeMethod`（既定は `merge`）: スペックの PR をどのようにマージするか。受け付けるのは `merge` だけで、`pr.mergeMethod` は無視されます。
+- `specMergeMethod`（既定は `merge`）: スペックの PR をどのようにマージするか。`merge`、`squash`、`rebase` のいずれかです。`merge` はウェーブごとに 1 つのマージコミットを残すので、ウェーブを取り消せます。`squash` と `rebase` はマージコミットを許可しないトランクに向いていますが、その取り消しができなくなります。`pr.mergeMethod` は無視されます。リポジトリの設定またはトランクのルールセットが選んだ方法を許可していない場合、`emet doctor` が警告します。
 - `pushSpecBranch`（既定は `true`）: `emet spec-branch integrate` のたびに、PR を開かずに `spec/<id>` をプッシュします。最終ランディングまでブランチをローカルに置くには `false` にします。
 
 ## tracker
@@ -237,7 +237,8 @@ Claude Code ホストにおけるロールごとのモデルとエフォート�
 
 ## specs
 
-- `dir`（既定は `docs/specs`）: `emet spec-merge` が書き込む生きたスペックの、リポジトリからの相対ディレクトリです。
+- `enabled`（既定は `false`）: 生きたスペックを有効にします。スペックの最後のウェーブで、コーディネーターがスペックの S# 項目から要件の差分を書き、`emet spec-merge` を実行して、そのウェーブとともに `specs.dir` をコミットします。そのため更新はレビューを受け、ウェーブとともにランディングします。
+- `dir`（既定は `docs/specs`）: `enabled` が true のとき `emet spec-merge` が書き込む生きたスペックの、リポジトリからの相対ディレクトリです。
 
 ## map
 

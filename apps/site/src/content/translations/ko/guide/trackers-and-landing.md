@@ -2,7 +2,7 @@
 title: 트래커와 랜딩
 description: 티켓이 있는 곳, 웨이브가 풀 리퀘스트나 로컬 병합으로 랜딩하는 방식, 웨이브를 이어 붙이는 방법을 설명합니다.
 seoTitle: emet의 트래커와 랜딩
-sourceHash: 4280f1152d8971e0
+sourceHash: da19ec4cf50e7084
 ---
 
 티켓이 있는 곳, 웨이브가 랜딩하는 방식, 웨이브를 이어 붙이는 방법을 설명합니다. 여기서 언급하는 모든 키는 [설정 레퍼런스](../reference/configuration.md)에, 모든 하위 명령은 [CLI 레퍼런스](../reference/cli.md)에 있습니다.
@@ -27,9 +27,9 @@ emet은 Linear, GitHub Issues 또는 로컬 파일과 함께 동작하며 `track
 
 `landing.unit: "spec"`에서는 코디네이터가 `emet spec-branch ensure --spec <id>`로 트렁크에서 `spec/<id>`를 만듭니다. 웨이브가 리뷰와 `commands.selfCheck`를 통과하면 `emet spec-branch integrate`가 `--no-ff`로 웨이브 브랜치를 `spec/<id>`에 병합하고, `Emet-Wave`와 `Emet-Tickets` 트레일러가 달린 커밋을 만듭니다. 브랜치가 `spec/<id>`에 들어 있는 티켓은 **Landed**가 아니라 **Integrated**입니다. 다음 웨이브의 프런티어에서는 닫힌 블로커로 계산되지만, 트래커에서는 최종 랜딩까지 열린 상태로 남습니다. 이후 웨이브는 `spec/<id>`의 끝에서 분기하므로, PR의 CI를 기다리는 웨이브는 없습니다.
 
-`emet spec-branch sync`는 트렁크를 `spec/<id>`에 병합하며 리베이스는 하지 않습니다. 충돌이 나면 중단하고, 브랜치를 바꾸지 않은 채 두며, 0이 아닌 코드로 종료합니다. `emet spec-branch land`는 동기화를 실행한 뒤 브랜치를 한 번만 랜딩합니다. `pr` 모드에서는 `spec/<id>`를 푸시하고, 통합된 모든 웨이브의 티켓마다 한 줄씩 `Closes #N`이 들어간 PR을 하나 열어 `pr.mergeMethod`를 무시하고 병합 커밋으로 병합합니다. `merge` 모드에서는 `spec/<id>`를 `--no-ff`로 로컬 트렁크에 병합하며 푸시하지 않습니다. `--partial`은 그때까지 통합된 웨이브만 랜딩합니다. `emet spec-branch abandon --spec <id> --force`는 브랜치에 `abandoned/spec-<id>` 태그를 붙여 삭제하고, 로컬 트래커의 통합된 티켓을 `ready-for-agent`로 되돌립니다.
+`emet spec-branch sync`는 트렁크를 `spec/<id>`에 병합하며 리베이스는 하지 않습니다. 충돌이 나면 중단하고, 브랜치를 바꾸지 않은 채 두며, 0이 아닌 코드로 종료합니다. `emet spec-branch land`는 동기화를 실행한 뒤 브랜치를 한 번만 랜딩합니다. `pr` 모드에서는 `spec/<id>`를 푸시하고, 통합된 모든 웨이브의 티켓마다 한 줄씩 `Closes #N`이 들어간 PR을 하나 열고, 그 검사를 기다린 뒤 `landing.specMergeMethod`(기본값은 병합 커밋이며 `pr.mergeMethod`는 무시)로 병합합니다. `merge` 모드에서는 `spec/<id>`를 `--no-ff`로 로컬 트렁크에 병합하며 푸시하지 않습니다. `--partial`은 그때까지 통합된 웨이브만 랜딩합니다. `emet spec-branch abandon --spec <id> --force`는 브랜치에 `abandoned/spec-<id>` 태그를 붙여 삭제하고, 로컬 트래커의 통합된 티켓을 `ready-for-agent`로 되돌립니다.
 
-스펙 모드에서는 워커 워크트리가 스펙 브랜치에서 시작하도록 Claude Code 설정에 `worktree.baseRef: "head"`가 필요하며, `emet preflight`와 `emet doctor`가 이를 확인합니다. 또한 `emet doctor`는 모드가 `pr`인데 저장소가 병합 커밋을 허용하지 않으면 경고합니다.
+스펙 모드에서는 워커 워크트리가 스펙 브랜치에서 시작하도록 Claude Code 설정에 `worktree.baseRef: "head"`가 필요하며, `emet preflight`와 `emet doctor`가 이를 확인합니다. 또한 `emet doctor`는 모드가 `pr`인데 저장소 설정이나 트렁크 룰셋이 구성된 `landing.specMergeMethod`를 허용하지 않으면 경고합니다.
 
 ### PR 랜딩
 
@@ -86,7 +86,7 @@ emet은 Linear, GitHub Issues 또는 로컬 파일과 함께 동작하며 `track
 
 ## 살아 있는 스펙, 맵, 지표
 
-**살아 있는 스펙.** 웨이브가 자동 병합된 뒤 `emet spec-merge --spec <id>`가 스펙의 `ADDED`/`MODIFIED`/`REMOVED` 요구 사항 델타를 `docs/specs/<area>.md`(`specs.dir`)에 병합합니다. 아무것도 쓰기 전에 모든 영역을 검사합니다. 충돌이 있거나 시나리오를 잃게 되는 요구 사항이 있으면 종료 코드 1로 끝나며 어떤 파일도 건드리지 않습니다.
+**살아 있는 스펙.** `specs.enabled`로 옵트인합니다. 스펙의 마지막 웨이브에서 그 리뷰 전에, 코디네이터가 스펙의 요구 사항 델타를 작성하고 `emet spec-merge --spec <id>`를 한 번 실행해 `docs/specs/<area>.md`(`specs.dir`)에 병합한 뒤 결과를 커밋하므로, 리뷰를 거쳐 같은 PR로 랜딩됩니다. 아무것도 쓰기 전에 모든 영역을 검사합니다. 충돌이 있거나 시나리오를 잃게 되는 요구 사항이 있으면 종료 코드 1로 끝나며 어떤 파일도 건드리지 않습니다. 코디네이터는 한 번 재시도하고, 그래도 안 되면 업데이트 없이 랜딩하고 이를 알립니다.
 
 **코드베이스 맵.** `emet map`은 기존 코드베이스의 개요(스택, 구조, 규약, 테스트, 핫스팟)를 `docs/agents/codebase.md`(`map.path`)에 작성하고, 생성에 사용한 커밋 SHA를 찍어 둡니다. 같은 커밋에서는 항상 같은 파일이 만들어집니다. `emet map --stale`은 HEAD가 찍어 둔 값보다 앞서 나가면 종료 코드 1로 끝나며, 이 경우 `emet preflight`가 경고합니다. `emet map --for <globs>`는 티켓의 편집 대상과 일치하는 섹션만 출력합니다. 이 출력이 워커 브리프에 포함되는 맵의 유일한 부분입니다.
 

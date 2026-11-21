@@ -2,7 +2,7 @@
 title: トラッカーとランディング
 description: チケットの置き場所、ウェーブがプルリクエストまたはローカルマージとしてランディングする仕組み、ウェーブの連鎖を説明します。
 seoTitle: emet のトラッカーとランディング
-sourceHash: 4280f1152d8971e0
+sourceHash: da19ec4cf50e7084
 ---
 
 チケットの置き場所、ウェーブがランディングする仕組み、ウェーブの連鎖について説明します。ここで挙げるキーはすべて[設定リファレンス](../reference/configuration.md)に、サブコマンドはすべて [CLI リファレンス](../reference/cli.md)にあります。
@@ -27,9 +27,9 @@ emet は Linear、GitHub Issues、ローカルファイルに対応しており�
 
 `landing.unit: "spec"` では、コーディネーターが `emet spec-branch ensure --spec <id>` でトランクから `spec/<id>` を作成します。ウェーブがレビューと `commands.selfCheck` を通過すると、`emet spec-branch integrate` が `--no-ff` でウェーブのブランチを `spec/<id>` にマージし、`Emet-Wave` と `Emet-Tickets` のトレーラーを付けたコミットを作ります。ブランチが `spec/<id>` に入っているチケットは **Landed** ではなく **Integrated** です。次のウェーブのフロンティアではクローズ済みのブロッカーとして数えられますが、トラッカーでは最終ランディングまで開いたままです。後続のウェーブは `spec/<id>` の先端から分岐するため、PR の CI を待つウェーブはありません。
 
-`emet spec-branch sync` はトランクを `spec/<id>` にマージし、リベースは行いません。競合した場合は中断し、ブランチを変更せずに残して、ゼロ以外の終了コードで終了します。`emet spec-branch land` は同期を実行してから、ブランチを 1 回だけランディングします。`pr` モードでは `spec/<id>` をプッシュし、統合済みの全ウェーブのチケットにつき 1 行の `Closes #N` を入れた PR を 1 つ開き、`pr.mergeMethod` を無視してマージコミットでマージします。`merge` モードでは `spec/<id>` を `--no-ff` でローカルのトランクにマージし、プッシュは行いません。`--partial` は、それまでに統合されたウェーブだけをランディングします。`emet spec-branch abandon --spec <id> --force` はブランチに `abandoned/spec-<id>` のタグを付けて削除し、ローカルトラッカーの統合済みチケットを `ready-for-agent` に戻します。
+`emet spec-branch sync` はトランクを `spec/<id>` にマージし、リベースは行いません。競合した場合は中断し、ブランチを変更せずに残して、ゼロ以外の終了コードで終了します。`emet spec-branch land` は同期を実行してから、ブランチを 1 回だけランディングします。`pr` モードでは `spec/<id>` をプッシュし、統合済みの全ウェーブのチケットにつき 1 行の `Closes #N` を入れた PR を 1 つ開き、そのチェックを待って、`landing.specMergeMethod`（既定ではマージコミットで、`pr.mergeMethod` は無視）でマージします。`merge` モードでは `spec/<id>` を `--no-ff` でローカルのトランクにマージし、プッシュは行いません。`--partial` は、それまでに統合されたウェーブだけをランディングします。`emet spec-branch abandon --spec <id> --force` はブランチに `abandoned/spec-<id>` のタグを付けて削除し、ローカルトラッカーの統合済みチケットを `ready-for-agent` に戻します。
 
-スペックモードでは、ワーカーのワークツリーがスペックブランチから始まるよう、Claude Code の設定で `worktree.baseRef: "head"` が必要です。`emet preflight` と `emet doctor` がこれを確認します。また `emet doctor` は、モードが `pr` でリポジトリがマージコミットを許可していない場合に警告します。
+スペックモードでは、ワーカーのワークツリーがスペックブランチから始まるよう、Claude Code の設定で `worktree.baseRef: "head"` が必要です。`emet preflight` と `emet doctor` がこれを確認します。また `emet doctor` は、モードが `pr` で、リポジトリの設定またはトランクのルールセットが設定済みの `landing.specMergeMethod` を許可していない場合に警告します。
 
 ### PR によるランディング
 
@@ -86,7 +86,7 @@ emet は Linear、GitHub Issues、ローカルファイルに対応しており�
 
 ## 生きたスペック、マップ、メトリクス
 
-**生きたスペック。** ウェーブが自動マージされた後、`emet spec-merge --spec <id>` が、スペックの `ADDED`/`MODIFIED`/`REMOVED` の要件の差分を `docs/specs/<area>.md`（`specs.dir`）にマージします。何かを書き込む前にすべてのエリアを確認します。競合がある場合や、シナリオが失われる要件がある場合は、終了コード 1 で終了し、どのファイルにも手を加えません。
+**生きたスペック。** `specs.enabled` でオプトインします。スペックの最後のウェーブで、そのレビューの前に、コーディネーターがスペックの要件の差分を書き、`emet spec-merge --spec <id>` を一度実行して `docs/specs/<area>.md`（`specs.dir`）にマージし、その結果をコミットします。そのためレビューを受け、同じ PR でランディングします。何かを書き込む前にすべてのエリアを確認します。競合がある場合や、シナリオが失われる要件がある場合は、終了コード 1 で終了し、どのファイルにも手を加えません。コーディネーターは一度だけ再試行し、それでもだめなら更新なしでランディングして、その旨を知らせます。
 
 **コードベースマップ。** `emet map` は、既存のコードベースの概要（スタック、構造、規約、テスト、ホットスポット）を `docs/agents/codebase.md`（`map.path`）に書き出し、作成元のコミット SHA を刻印します。同じコミットからは常に同じファイルが生成されます。`emet map --stale` は、HEAD が刻印より先に進むと終了コード 1 で終了し、その場合 `emet preflight` は警告します。`emet map --for <globs>` は、チケットの編集対象に一致するセクションだけを出力します。その出力が、ワーカーのブリーフに含まれるマップの唯一の部分です。
 

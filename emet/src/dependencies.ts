@@ -23,6 +23,7 @@ import {
   findPluginAgentFile,
   findPluginByName,
   listInstalledPlugins,
+  type InstalledPlugin,
 } from "./skills";
 
 /**
@@ -157,6 +158,8 @@ export interface DependencyProbes {
   readonly agentBrowser?: () => Promise<AgentBrowserProbe>;
   /** Optional so existing stubs stay valid; absent means the contract is not checked. */
   readonly skillsContract?: () => readonly DependencyCheck[];
+  /** Memoized `listInstalledPlugins`; absent means callers list the plugins themselves. */
+  readonly installedPlugins?: () => readonly InstalledPlugin[];
 }
 
 type ProbeRun =
@@ -546,10 +549,13 @@ function pluginStatusFromOutput(
   return entries.some((plugin) => plugin.enabled) ? "installed" : "disabled";
 }
 
-async function probeClaudePlugin(
-  host: AgentHost = claudeHost,
-  pluginId: string = host.probes.skillsPluginId,
-): Promise<ClaudePluginProbe> {
+type PluginListing =
+  | { readonly kind: "claude-not-on-path" }
+  | { readonly kind: "claude-failed"; readonly detail: string }
+  | { readonly kind: "listed"; readonly stdout: string };
+
+/** Runs the host's text plugin list once; every plugin probe reads its output. */
+async function runPluginListing(host: AgentHost): Promise<PluginListing> {
   const command = textPluginListCommand(host);
   if (!(await resolveBinaryOnPath(command[0] ?? host.name))) {
     return { kind: "claude-not-on-path" };
@@ -561,10 +567,16 @@ async function probeClaudePlugin(
   if (result.kind === "spawn-failed") return { kind: "claude-failed", detail: result.message };
   if (result.exitCode !== 0)
     return { kind: "claude-failed", detail: `exit code ${result.exitCode}` };
-  return {
-    kind: "listed",
-    status: pluginStatusFromOutput(result.stdout, host, pluginId),
-  };
+  return { kind: "listed", stdout: result.stdout };
+}
+
+function pluginProbeFromListing(
+  listing: PluginListing,
+  host: AgentHost,
+  pluginId: string,
+): ClaudePluginProbe {
+  if (listing.kind !== "listed") return listing;
+  return { kind: "listed", status: pluginStatusFromOutput(listing.stdout, host, pluginId) };
 }
 
 const ENGRAM_PLUGIN_ID = "engram@engram";
@@ -602,10 +614,10 @@ export function classifyEngram(probe: EngramProbe): DependencyCheck {
   };
 }
 
-async function probeEngram(host: AgentHost): Promise<EngramProbe> {
+async function probeEngram(host: AgentHost, listing: Promise<PluginListing>): Promise<EngramProbe> {
   return {
     binary: await resolveBinaryOnPath("engram"),
-    plugin: await probeClaudePlugin(host, ENGRAM_PLUGIN_ID),
+    plugin: pluginProbeFromListing(await listing, host, ENGRAM_PLUGIN_ID),
   };
 }
 
@@ -746,6 +758,12 @@ export function agentPluginInstallPaths(plugins: Parameters<typeof findPluginByN
 /** Memoizes the two repo-independent probes so a fleet sweep shells out once
  * rather than once per repo. */
 export function createDependencyProbes(host: AgentHost = claudeHost): DependencyProbes {
+  let pluginListing: Promise<PluginListing> | null = null;
+  const textPluginListing = (): Promise<PluginListing> =>
+    (pluginListing ??= runPluginListing(host));
+  let installedPluginsResult: readonly InstalledPlugin[] | null = null;
+  const installedPlugins = (): readonly InstalledPlugin[] =>
+    (installedPluginsResult ??= listInstalledPlugins(host));
   let claudePluginResult: Promise<ClaudePluginProbe> | null = null;
   let githubCliResult: Promise<GithubCliProbe> | null = null;
   let engramResult: Promise<EngramProbe> | null = null;
@@ -755,9 +773,12 @@ export function createDependencyProbes(host: AgentHost = claudeHost): Dependency
   let skillsContractResult: readonly DependencyCheck[] | null = null;
 
   return {
-    claudePlugin: () => (claudePluginResult ??= probeClaudePlugin(host)),
+    claudePlugin: () =>
+      (claudePluginResult ??= textPluginListing().then((listing) =>
+        pluginProbeFromListing(listing, host, host.probes.skillsPluginId),
+      )),
     githubCli: () => (githubCliResult ??= probeGithubCli()),
-    engram: () => (engramResult ??= probeEngram(host)),
+    engram: () => (engramResult ??= probeEngram(host, textPluginListing())),
     agentBrowser: () => (agentBrowserResult ??= probeAgentBrowser()),
     linearMcpServer: (repoRoot) => probeLinearMcpServer(repoRoot, host),
     forgeAgents: () => {
@@ -765,12 +786,12 @@ export function createDependencyProbes(host: AgentHost = claudeHost): Dependency
       forgeAgentsResult ??= Promise.resolve(
         agentsDirectory === undefined
           ? { kind: "present" }
-          : probeForgeAgents(agentsDirectory, agentPluginInstallPaths(listInstalledPlugins(host))),
+          : probeForgeAgents(agentsDirectory, agentPluginInstallPaths(installedPlugins())),
       );
       return forgeAgentsResult;
     },
-    skillsContract: () =>
-      (skillsContractResult ??= checkSkillsContract(listInstalledPlugins(host), host)),
+    skillsContract: () => (skillsContractResult ??= checkSkillsContract(installedPlugins(), host)),
+    installedPlugins,
   };
 }
 
