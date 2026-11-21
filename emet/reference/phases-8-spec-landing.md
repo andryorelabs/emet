@@ -17,15 +17,14 @@ names it otherwise.
    `emet spec-branch status --spec <spec-id>` (`tip`) before integrating, for
    `emet assess --base` and `emet review-package`, so the range holds only this
    wave.
-2. Merge the wave's integration branch with `emet spec-branch integrate --spec
-   <spec-id> --wave <n> --branch <integration> --tickets <id,…>`. It merges
-   with `--no-ff` into `spec/<spec-id>`, records the wave, journals
-   `spec.integrate` and pushes the branch when `landing.pushSpecBranch` is on.
-   It opens no PR.
-3. A non-final wave needs no CI: pass `--ci` to `emet gate` from
-   `commands.selfCheck` run on the integration branch (on red, up to
-   `pr.maxCiFixAttempts` fix rounds). With `--waves-remaining` above 0 a clean
-   wave answers `chain`.
+2. A wave needs no CI: pass `--ci` to `emet gate` from `commands.selfCheck`
+   run on the integration branch (on red, up to `pr.maxCiFixAttempts` fix
+   rounds). With `--waves-remaining` above 0 a clean wave answers `chain`.
+3. Only when the gate allows it, merge the wave's integration branch with
+   `emet spec-branch integrate --spec <spec-id> --wave <n> --branch
+   <integration> --tickets <id,…>`. It merges with `--no-ff` into
+   `spec/<spec-id>`, records the wave, journals `spec.integrate` and pushes the
+   branch when `landing.pushSpecBranch` is on. It opens no PR.
 4. Do not close tickets or run `emet spec-merge` for an integrated wave: its
    tickets are integrated, not landed. Run `emet cleanup --run <runId>`; it
    reclaims their worker worktrees and keeps `spec/<spec-id>`.
@@ -35,24 +34,25 @@ names it otherwise.
    the spec branch and never rebases. On a conflict it aborts, leaves the branch
    unchanged and exits non-zero: stop and report the paths it lists.
 
-**Final landing** (the last wave integrated, or `--partial`): run `emet
-spec-branch land --spec <spec-id> [--partial]`. It syncs first and refuses on a
-conflict.
+**Final landing** (the last wave integrated, or `--partial`): first `emet
+spec-branch sync --spec <spec-id>`, then `commands.selfCheck` on the spec
+branch, then `emet gate <ticket> --ci <state> …` per ticket. Call `emet
+spec-branch land --spec <spec-id> [--partial]` only when every ticket answers
+`merge` or `chain` and `pr.autoMerge` is on: `land` merges, so nothing is
+gated after it.
 
-- `landing.mode: pr`: it pushes `spec/<spec-id>`, opens one PR with one
-  `Closes #<n>` line per ticket of every integrated wave and merges it with a
-  merge commit, ignoring `pr.mergeMethod`. Write the PR body with the `pr` skill
-  as `phases-8-landing.md` says and verify the closing lines the same way.
-  Wait for CI once, with `emet ci --pr <n> --wait --rerun-flakes`, and run
-  `emet gate <ticket> --ci <state> …` on its result before merging.
+- `landing.mode: pr`: it pushes `spec/<spec-id>`, opens one PR with its own
+  title and a `Closes #<n>` line per ticket of every integrated wave, waits for
+  the checks and merges it with a merge commit, ignoring `pr.mergeMethod`. A
+  failing check leaves the PR open; rerunning `land` reuses it. Afterwards
+  verify the closing lines as `phases-8-landing.md` says.
 - `landing.mode: merge`: it merges `spec/<spec-id>` into local trunk with
-  `--no-ff` and never pushes. `commands.selfCheck` on the spec branch stands in
-  for CI.
+  `--no-ff` and never pushes. The `selfCheck` above stands in for CI.
 
 After it lands, run `emet spec-merge --spec <spec-id>`, close the tickets of
 every integrated wave as `phases-8-landing.md` says, then `emet cleanup --run
-<runId>` as separate calls. `emet cleanup --all` deletes `spec/<spec-id>` only
-now.
+<runId>` as separate calls. `emet cleanup` leaves `spec/<spec-id>` in place:
+report it.
 
 **Abandoning a spec**: `emet spec-branch abandon --spec <spec-id> --force` tags
 the branch `abandoned/spec-<spec-id>`, deletes it and resets a local tracker's
