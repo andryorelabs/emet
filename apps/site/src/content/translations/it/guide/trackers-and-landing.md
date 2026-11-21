@@ -86,7 +86,7 @@ Le fasi non decidono da sole quando un ticket è finito, unibile o vale un altro
 
 ## Spec vive, mappa e metriche
 
-**Spec vive.** Dopo che un'ondata viene unita automaticamente, `emet spec-merge --spec <id>` fonde i delta dei requisiti `ADDED`/`MODIFIED`/`REMOVED` della spec in `docs/specs/<area>.md` (`specs.dir`). Controlla ogni area prima di scrivere qualcosa. Un conflitto, o un requisito che perderebbe uno scenario, esce con 1 e lascia ogni file intatto.
+**Spec vive.** Si attivano con `specs.enabled`. Sull'ultima ondata di una spec, prima della sua review, il coordinatore scrive i delta dei requisiti della spec, esegue una sola volta `emet spec-merge --spec <id>` per fonderli in `docs/specs/<area>.md` (`specs.dir`) e fa il commit del risultato, così viene sottoposto a review e arriva nella stessa PR. Controlla ogni area prima di scrivere qualcosa. Un conflitto, o un requisito che perderebbe uno scenario, esce con 1 e lascia ogni file intatto; il coordinatore riprova una volta, poi esegue il landing senza l'aggiornamento e lo segnala.
 
 **Mappa del codebase.** `emet map` scrive una sintesi di un codebase esistente (stack, struttura, convenzioni, test, hotspot) in `docs/agents/codebase.md` (`map.path`), marcata con lo SHA del commit da cui è stata costruita. Lo stesso commit produce sempre lo stesso file. `emet map --stale` esce con 1 quando HEAD ha superato il marcatore, e in tal caso `emet preflight` avvisa. `emet map --for <globs>` stampa solo le sezioni che corrispondono alle superfici di modifica di un ticket. Quell'output è l'unica parte della mappa inclusa nel brief di un worker.
 

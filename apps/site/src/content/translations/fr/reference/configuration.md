@@ -237,7 +237,8 @@ Avec quel issue tracker `/emet` (ou `$emet` sur Codex) dialogue. La CLI lit `kin
 
 ## specs
 
-- `dir` (par défaut `docs/specs`) : répertoire, relatif au dépôt, des specs vivantes, écrit par `emet spec-merge`.
+- `dir` (par défaut `docs/specs`) : répertoire, relatif au dépôt, des specs vivantes, écrit par `emet spec-merge` quand `enabled` est vrai.
+- `enabled` (par défaut `false`) : active les specs vivantes. Sur la dernière vague d'une spec, le coordinateur écrit les deltas d'exigences à partir des éléments S# de la spec, exécute `emet spec-merge` et valide `specs.dir` avec cette vague, de sorte que la mise à jour est relue et atterrit avec elle.
 
 ## map
 
