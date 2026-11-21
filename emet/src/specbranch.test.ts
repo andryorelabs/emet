@@ -190,17 +190,20 @@ describe("integrate and status", () => {
 });
 
 describe("dispatcher", () => {
-  test("sync, land and abandon exit 1 with not implemented", async () => {
+  test("abandon without --force is refused and keeps the branch", async () => {
     await runCapturing(["ensure", "--spec", "7"]);
-    const results = [
-      await runCapturing(["sync", "--spec", "7"]),
-      await runCapturing(["land", "--spec", "7"]),
-      await runCapturing(["abandon", "--spec", "7"]),
-    ];
-    for (const result of results) {
-      expect(result.code).toBe(1);
-      expect(result.err).toContain("not implemented");
-    }
+    const result = await runCapturing(["abandon", "--spec", "7"]);
+    expect(result.code).toBe(1);
+    expect(result.err).not.toContain("not implemented");
+    expect(git(repo, "rev-parse", "--verify", "spec/7")).not.toBe("");
+  });
+
+  test("sync and land are routed to their implementations", async () => {
+    await runCapturing(["ensure", "--spec", "7"]);
+    const sync = await runCapturing(["sync", "--spec", "7"]);
+    const land = await runCapturing(["land", "--spec", "7"]);
+    expect(sync.err).not.toContain("not implemented");
+    expect(land.err).not.toContain("not implemented");
   });
 
   test("unknown subcommand and missing --spec are usage errors", async () => {
