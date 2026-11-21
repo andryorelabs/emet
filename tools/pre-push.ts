@@ -1,7 +1,7 @@
 const PROTECTED_REFS: ReadonlySet<string> = new Set(["refs/heads/main", "refs/heads/develop"]);
 const SLUG = "[a-z0-9._-]+";
 const BRANCH_PATTERN = new RegExp(
-  `^(cla-\\d+-${SLUG}|(feat|fix|docs|refactor|chore|test|ci|perf|build|style|revert|renovate)/${SLUG}(/${SLUG})*|worktree-${SLUG})$`,
+  `^(cla-\\d+-${SLUG}|(feat|fix|docs|refactor|chore|test|ci|perf|build|style|revert|renovate)/${SLUG}(/${SLUG})*|worktree-${SLUG}|spec/\\d+)$`,
 );
 const TAG_PREFIX = "refs/tags/";
 const BRANCH_PREFIX = "refs/heads/";
