@@ -13,7 +13,7 @@ One unit of work derived from a spec, with a `Covers:` line, interfaces, allowed
 _Avoid_: task, story, card
 
 **Wave**:
-One dependency layer of tickets dispatched together and landed as one unit, by PR or local merge.
+One dependency layer of tickets dispatched together; it lands on its own, or is merged into the **Spec branch** and lands with the whole **Spec**.
 _Avoid_: batch, sprint, iteration
 
 **Frontier**:
@@ -25,7 +25,7 @@ Where specs and tickets live: GitHub Issues, Linear, or local markdown files und
 _Avoid_: board, backlog
 
 **Landing**:
-How a wave's integration branch reaches trunk: a PR, or a local merge with no PR.
+How work reaches trunk: a PR, or a local merge with no PR. The unit is one **Wave** (`landing.unit: wave`) or the whole **Spec** through its **Spec branch** (`spec`, the default).
 _Avoid_: ship, deploy, release
 
 **Website**:
@@ -49,7 +49,7 @@ A git worktree holding one worker's isolated checkout on its own local branch. A
 _Avoid_: clone, sandbox, workspace
 
 **Integration branch**:
-The branch where the coordinator merges a wave's worker branches before the wave lands.
+The branch where the coordinator merges a wave's worker branches before the wave lands or is merged into the **Spec branch**.
 _Avoid_: staging branch, release branch
 
 **Unowned worktree**:
@@ -59,6 +59,14 @@ _Avoid_: orphan worktree, stale worktree
 **Claim**:
 The recorded reservation of a ticket by one run, preventing a second worker from taking it.
 _Avoid_: lock, assignment
+
+**Spec branch**:
+The local branch `spec/<id>` where each **Integrated** wave is merged `--no-ff`; the next wave forks from its tip and the whole branch lands once after the last wave.
+_Avoid_: feature branch, release branch
+
+**Integrated**:
+Of a ticket: its wave was merged into the **Spec branch** but not yet into trunk; it counts as a closed blocker for the **Frontier** and is not **Landed**.
+_Avoid_: done, merged
 
 **Landed**:
 Of a ticket: its wave was merged into trunk, as the tracker reports it.

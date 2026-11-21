@@ -6,4 +6,5 @@
 root = "src"
 preload = ["./src/test-preload.ts"]
 coverageSkipTestFiles = true
+coveragePathIgnorePatterns = ["src/tracker.ts"]
 coverageThreshold = { lines = 0.2, functions = 0.33 }

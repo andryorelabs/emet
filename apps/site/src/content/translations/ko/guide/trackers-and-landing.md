@@ -2,7 +2,7 @@
 title: 트래커와 랜딩
 description: 티켓이 있는 곳, 웨이브가 풀 리퀘스트나 로컬 병합으로 랜딩하는 방식, 웨이브를 이어 붙이는 방법을 설명합니다.
 seoTitle: emet의 트래커와 랜딩
-sourceHash: 6c1988e1fd68ab4d
+sourceHash: 4280f1152d8971e0
 ---
 
 티켓이 있는 곳, 웨이브가 랜딩하는 방식, 웨이브를 이어 붙이는 방법을 설명합니다. 여기서 언급하는 모든 키는 [설정 레퍼런스](../reference/configuration.md)에, 모든 하위 명령은 [CLI 레퍼런스](../reference/cli.md)에 있습니다.
@@ -21,11 +21,21 @@ emet은 Linear, GitHub Issues 또는 로컬 파일과 함께 동작하며 `track
 
 `landing.mode`는 `"pr"`(기본값) 또는 `"merge"`이며 트래커와는 독립적입니다. `merge` 모드에서는 웨이브가 `emet land`를 통해 트렁크로의 로컬 병합 한 번으로 랜딩하고, CI 대신 `commands.selfCheck`를 사용하며 푸시는 하지 않습니다. `gh`는 트래커가 `github`이거나 랜딩이 `pr`일 때만 필요합니다. [ADR-0010](../adr/0010-local-merge-landing.md)을 참고하세요.
 
+`landing.unit`은 무엇을 한 덩어리로 랜딩할지 정합니다. `"spec"`(기본값)은 스펙 전체를 한 번에 랜딩하고, `"wave"`는 각 웨이브를 따로 랜딩하는 기존 규칙을 유지합니다. [ADR-0037](../adr/0037-landing-per-spec.md)을 참고하세요. 이 ADR은 [ADR-0004](../adr/0004-one-wave-one-dependency-layer-one-pr.md)를 대체합니다.
+
+### 스펙 브랜치
+
+`landing.unit: "spec"`에서는 코디네이터가 `emet spec-branch ensure --spec <id>`로 트렁크에서 `spec/<id>`를 만듭니다. 웨이브가 리뷰와 `commands.selfCheck`를 통과하면 `emet spec-branch integrate`가 `--no-ff`로 웨이브 브랜치를 `spec/<id>`에 병합하고, `Emet-Wave`와 `Emet-Tickets` 트레일러가 달린 커밋을 만듭니다. 브랜치가 `spec/<id>`에 들어 있는 티켓은 **Landed**가 아니라 **Integrated**입니다. 다음 웨이브의 프런티어에서는 닫힌 블로커로 계산되지만, 트래커에서는 최종 랜딩까지 열린 상태로 남습니다. 이후 웨이브는 `spec/<id>`의 끝에서 분기하므로, PR의 CI를 기다리는 웨이브는 없습니다.
+
+`emet spec-branch sync`는 트렁크를 `spec/<id>`에 병합하며 리베이스는 하지 않습니다. 충돌이 나면 중단하고, 브랜치를 바꾸지 않은 채 두며, 0이 아닌 코드로 종료합니다. `emet spec-branch land`는 동기화를 실행한 뒤 브랜치를 한 번만 랜딩합니다. `pr` 모드에서는 `spec/<id>`를 푸시하고, 통합된 모든 웨이브의 티켓마다 한 줄씩 `Closes #N`이 들어간 PR을 하나 열어 `pr.mergeMethod`를 무시하고 병합 커밋으로 병합합니다. `merge` 모드에서는 `spec/<id>`를 `--no-ff`로 로컬 트렁크에 병합하며 푸시하지 않습니다. `--partial`은 그때까지 통합된 웨이브만 랜딩합니다. `emet spec-branch abandon --spec <id> --force`는 브랜치에 `abandoned/spec-<id>` 태그를 붙여 삭제하고, 로컬 트래커의 통합된 티켓을 `ready-for-agent`로 되돌립니다.
+
+스펙 모드에서는 워커 워크트리가 스펙 브랜치에서 시작하도록 Claude Code 설정에 `worktree.baseRef: "head"`가 필요하며, `emet preflight`와 `emet doctor`가 이를 확인합니다. 또한 `emet doctor`는 모드가 `pr`인데 저장소가 병합 커밋을 허용하지 않으면 경고합니다.
+
 ### PR 랜딩
 
-웨이브 하나는 PR 하나입니다. 본문에는 각 티켓마다 한 줄씩 `Closes #N`(트래커의 닫기 키워드)이 들어가며, 코디네이터는 PR을 열 때 티켓을 리뷰 중 상태로 옮깁니다. 이후 PR은 `pr.autoMerge`에 따라 병합되며, 웨이브에 플래그가 지정되었거나 `autoMerge`가 `false`이거나 CI 수정 횟수를 모두 소진한 경우에는 열린 채로 남습니다(이 경우 PR에는 사람의 판단이 필요하다는 라벨이 붙습니다). 병합 후에는 GitHub 트래커에서는 `emet tracker close`가 티켓을 닫고, `emet cleanup --run <runId>`가 웨이브의 브랜치, 티켓 클레임, 워커 슬롯을 해제합니다. 또한 PR이 브랜치의 최신 커밋에서 병합된 로컬 브랜치를 통합 브랜치까지 포함해 삭제합니다.
+`landing.unit: "spec"`에서는 PR이 스펙의 것입니다. 마지막 웨이브 뒤에 `emet spec-branch land`가 여는, 통합된 모든 웨이브를 아우르는 PR 하나입니다. `landing.unit: "wave"`에서는 웨이브 하나가 PR 하나입니다. 본문에는 각 티켓마다 한 줄씩 `Closes #N`(트래커의 닫기 키워드)이 들어가며, 코디네이터는 PR을 열 때 티켓을 리뷰 중 상태로 옮깁니다. 이후 PR은 `pr.autoMerge`에 따라 병합되며, 웨이브에 플래그가 지정되었거나 `autoMerge`가 `false`이거나 CI 수정 횟수를 모두 소진한 경우에는 열린 채로 남습니다(이 경우 PR에는 사람의 판단이 필요하다는 라벨이 붙습니다). 병합 후에는 GitHub 트래커에서는 `emet tracker close`가 티켓을 닫고, `emet cleanup --run <runId>`가 웨이브의 브랜치, 티켓 클레임, 워커 슬롯을 해제합니다. 또한 PR이 브랜치의 최신 커밋에서 병합된 로컬 브랜치를 통합 브랜치까지 포함해 삭제합니다.
 
-웨이브의 브랜치들이 함께 병합된 뒤에는 통합 브랜치에서 `commands.fullSuite`가 한 번 실행됩니다. 실패하면 PR과 `autoChain`이 차단됩니다. 게이트는 그 결과를 `--integration`으로 받습니다.
+웨이브의 브랜치들이 함께 병합된 뒤에는 통합 브랜치에서 `commands.fullSuite`가 한 번 실행됩니다. 실패하면 PR과 `autoChain`이 차단됩니다. 게이트는 그 결과를 `--integration`으로 받습니다. 스펙 랜딩의 마지막이 아닌 웨이브에서는 코디네이터가 `commands.selfCheck` 결과를 `--ci`로 넘기고, `emet ci --wait`로 CI를 기다리는 것은 최종 랜딩뿐입니다. 그러면 웨이브가 남아 있는 동안 게이트는 `chain`이라고 답합니다.
 
 ### 웨이브 이어 붙이기
 

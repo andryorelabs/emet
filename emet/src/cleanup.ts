@@ -78,7 +78,7 @@ import { EmetError } from "./errors";
 import { exitCodes } from "./exit-codes";
 import { appendEvent, type JournalDeps } from "./journal";
 import {
-  resolveLandedVerdict,
+  resolveCleanupVerdict,
   unownedReclaimVerdict,
   type LandedContext,
   type LandedVerdict,
@@ -462,7 +462,7 @@ export function planWorktreeRemoval(
     return verdict.reclaimable ? "remove" : "protected";
   }
   if (entry.lockedReason !== null && resolveWorktreeOwner(entry) === null) return "protected";
-  if (landed !== "landed") return "keep-not-landed";
+  if (landed !== "landed" && landed !== "integrated") return "keep-not-landed";
   if (isDirty) return "keep-dirty";
   return "remove";
 }
@@ -800,7 +800,7 @@ export async function reclaimOwnedWorktrees(context: ReclaimContext): Promise<vo
   const planned: { unit: ReclaimUnit; landed: LandedVerdict; plan: RemovalPlan }[] = [];
   for (const unit of units) {
     // oxlint-disable-next-line eslint/no-await-in-loop -- sequential on purpose: later iterations depend on earlier ones or on output order
-    const landed = await resolveLandedVerdict(
+    const landed = await resolveCleanupVerdict(
       { ticket: unit.ticket, branch: present(unit.branches[0]) },
       { config, ...optionalProperty("readTrackerState", context.readTrackerState) },
     );

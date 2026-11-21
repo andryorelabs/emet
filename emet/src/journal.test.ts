@@ -50,6 +50,17 @@ function stored(): JournalEvent[] {
 }
 
 describe("appendEvent", () => {
+  test("accepts the three spec.* kinds", () => {
+    for (const kind of ["spec.integrate", "spec.land", "spec.abandon"] as const) {
+      appendEvent({ ...event(), kind }, deps);
+    }
+    expect(stored().map((entry) => entry.kind)).toEqual([
+      "spec.integrate",
+      "spec.land",
+      "spec.abandon",
+    ]);
+  });
+
   test("writes one line with the envelope fields", () => {
     appendEvent({ ...event({ ticket: "CLA-1" }), runId: "run1" }, deps);
     const [parsed] = stored();

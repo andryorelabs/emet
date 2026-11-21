@@ -2,7 +2,7 @@
 title: Tracker und Landing
 description: Wo Tickets liegen, wie eine Welle als Pull Request oder lokaler Merge landet und wie Wellen verkettet werden.
 seoTitle: Tracker und Landing in emet
-sourceHash: 6c1988e1fd68ab4d
+sourceHash: 4280f1152d8971e0
 ---
 
 Wo Tickets liegen, wie eine Welle landet und wie Wellen verkettet werden. Jeder hier genannte Schlüssel steht in der [Konfigurationsreferenz](../reference/configuration.md); jeder Unterbefehl steht in der [CLI-Referenz](../reference/cli.md).
@@ -21,11 +21,21 @@ Mit `tracker.kind: "local"` sind Specs und Tickets Markdown-Dateien unter `.scra
 
 `landing.mode` ist `"pr"` (Standard) oder `"merge"`, unabhängig vom Tracker. Im Modus `merge` landet eine Welle mit `emet land` als ein lokaler Merge in den Trunk, wobei `commands.selfCheck` die CI ersetzt und nichts gepusht wird. `gh` ist nur erforderlich, wenn der Tracker `github` ist oder das Landing `pr` verwendet. Siehe [ADR-0010](../adr/0010-local-merge-landing.md).
 
+`landing.unit` legt fest, was auf einmal landet: `"spec"` (Standard) landet die ganze Spec auf einmal, `"wave"` behält die ältere Regel, dass jede Welle allein landet. Siehe [ADR-0037](../adr/0037-landing-per-spec.md), das [ADR-0004](../adr/0004-one-wave-one-dependency-layer-one-pr.md) ersetzt.
+
+### Spec-Branch
+
+Mit `landing.unit: "spec"` legt der Koordinator `spec/<id>` mit `emet spec-branch ensure --spec <id>` vom Trunk an. Nachdem eine Welle Review und `commands.selfCheck` bestanden hat, mergt `emet spec-branch integrate` den Wellen-Branch mit `--no-ff` und einem Commit mit den Trailern `Emet-Wave` und `Emet-Tickets` in `spec/<id>`. Ein Ticket, dessen Branch in `spec/<id>` liegt, ist **Integrated**, nicht **Landed**: Es zählt als geschlossener Blocker für das Frontier der nächsten Welle, aber der Tracker hält es bis zum endgültigen Landing offen. Spätere Wellen zweigen von der Spitze von `spec/<id>` ab, sodass keine Welle auf die CI eines PR wartet.
+
+`emet spec-branch sync` mergt den Trunk in `spec/<id>` und rebased nie; bei einem Konflikt bricht es ab, lässt den Branch unverändert und beendet sich mit einem Wert ungleich null. `emet spec-branch land` führt `sync` aus und landet den Branch dann einmal. Im Modus `pr` pusht es `spec/<id>`, öffnet einen PR mit einer Zeile `Closes #N` pro Ticket jeder integrierten Welle und mergt ihn mit einem Merge-Commit, wobei `pr.mergeMethod` ignoriert wird. Im Modus `merge` mergt es `spec/<id>` mit `--no-ff` in den lokalen Trunk und pusht nie. `--partial` landet nur die bisher integrierten Wellen. `emet spec-branch abandon --spec <id> --force` taggt den Branch als `abandoned/spec-<id>`, löscht ihn und setzt die integrierten Tickets eines lokalen Trackers auf `ready-for-agent` zurück.
+
+Der Spec-Modus erfordert `worktree.baseRef: "head"` in den Claude-Code-Einstellungen, damit Worker-Worktrees vom Spec-Branch starten; `emet preflight` und `emet doctor` prüfen das. `emet doctor` warnt außerdem, wenn der Modus `pr` ist und das Repository keine Merge-Commits erlaubt.
+
 ### Landing-PRs
 
-Eine Welle ist ein PR. Sein Text enthält für jedes Ticket eine Zeile `Closes #N` (das Schließ-Schlüsselwort des Trackers), und der Koordinator setzt die Tickets auf in-review, sobald er den PR öffnet. Der PR wird dann gemäß `pr.autoMerge` gemergt oder bleibt offen, wenn die Welle markiert wurde, `autoMerge` den Wert `false` hat oder die CI-Korrekturen aufgebraucht sind (der PR erhält dann das Label human-decision). Nach einem Merge gibt `emet tracker close` bei einem GitHub-Tracker die Tickets schließt, und `emet cleanup --run <runId>` die Branches, Ticket-Claims und Worker-Slots der Welle frei. Außerdem löscht es jeden lokalen Branch, dessen PR am Tip-Commit des Branches gemergt wurde, einschließlich des Integrations-Branches.
+Mit `landing.unit: "spec"` ist der PR der der Spec: ein PR für alle integrierten Wellen, geöffnet von `emet spec-branch land` nach der letzten Welle. Mit `landing.unit: "wave"` ist eine Welle ein PR. Der Text des PR enthält für jedes Ticket eine Zeile `Closes #N` (das Schließ-Schlüsselwort des Trackers), und der Koordinator setzt die Tickets auf in-review, sobald er den PR öffnet. Der PR wird dann gemäß `pr.autoMerge` gemergt oder bleibt offen, wenn die Welle markiert wurde, `autoMerge` den Wert `false` hat oder die CI-Korrekturen aufgebraucht sind (der PR erhält dann das Label human-decision). Nach einem Merge schließt `emet tracker close` bei einem GitHub-Tracker die Tickets, und `emet cleanup --run <runId>` gibt die Branches, Ticket-Claims und Worker-Slots der Welle frei. Außerdem löscht es jeden lokalen Branch, dessen PR am Tip-Commit des Branches gemergt wurde, einschließlich des Integrations-Branches.
 
-Nachdem die Branches einer Welle zusammengeführt wurden, läuft `commands.fullSuite` einmal auf dem Integrationsbranch. Ein roter Lauf blockiert den PR und `autoChain`. Das Gate erhält das Ergebnis als `--integration`.
+Nachdem die Branches einer Welle zusammengeführt wurden, läuft `commands.fullSuite` einmal auf dem Integrationsbranch. Ein roter Lauf blockiert den PR und `autoChain`. Das Gate erhält das Ergebnis als `--integration`. In einer nicht letzten Welle einer Spec-Landung übergibt der Koordinator `--ci` aus `commands.selfCheck`, und nur das endgültige Landing wartet mit `emet ci --wait` auf die CI; das Gate antwortet dann `chain`, solange Wellen übrig sind.
 
 ### Wellen verketten
 

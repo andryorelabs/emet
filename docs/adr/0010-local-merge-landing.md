@@ -1,6 +1,6 @@
 # 0010. Local merge landing
 
-Status: Accepted (2026-11-03)
+Status: Accepted (2026-11-03). Amended by [0037](0037-landing-per-spec.md): a wave merges into a spec branch instead of landing when `landing.unit` is `spec`.
 Spec: #106 (S13)
 
 Amends [0004](0004-one-wave-one-dependency-layer-one-pr.md).

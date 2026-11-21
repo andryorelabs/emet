@@ -78,15 +78,18 @@ unless the run continues from Phase 5 straight into Phase 6.
 - **What a "wave" is**: Phases 6–8 are the body of a loop, not three
   one-shot steps. **One wave = one dependency layer** — the set of tickets
   simultaneously unblocked, dispatched together, implemented in parallel,
-  then landed (one PR, or one local merge when `landing.mode` is `merge`) before the next layer's tickets
-  (now unblocked in turn) get computed and dispatched. A spec with 4
-  dependency layers produces 4 waves, 4 integration branches, 4 landings — never
-  one for the whole run. This is load-bearing: it keeps each landing reviewable
-  and lets a repo's E2E singleton (if any) run serialized, once per wave.
+  then integrated before the next layer's tickets (now unblocked in turn) get
+  computed and dispatched. With `landing.unit: wave` each wave also lands alone
+  (one PR, or one local merge when `landing.mode` is `merge`): 4 layers, 4
+  integration branches, 4 landings. With `landing.unit: spec` (default) each
+  wave merges into `spec/<id>` (`emet spec-branch`) and the spec lands once;
+  read `references/phases-8-spec-landing.md`. Either way a wave's
+  review stays its own and a repo's E2E singleton (if any) runs once per wave.
   Lifecycle of one wave:
   1. Dispatch the unblocked tickets; workers implement in worktrees.
   2. Integration plus review on the wave's integration branch.
-  3. One PR with one `Closes #<n>` line per ticket, or in merge mode one local merge.
+  3. One PR with one `Closes #<n>` line per ticket, or in merge mode one local
+     merge; in spec mode `emet spec-branch integrate`, no PR until the final wave.
   4. Merged when `pr.autoMerge` is on and checks pass (`emet ci` waits for
      them; CI fixes up to `pr.maxCiFixAttempts`; in merge mode
      `commands.selfCheck` stands in for CI); open findings hold for up to

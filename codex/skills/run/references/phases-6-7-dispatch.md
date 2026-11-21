@@ -38,6 +38,11 @@ prints a warning ("only N/`waveSize` free") and still lets dispatch proceed —
 `acquireSlot` is per-worker, so a partially-full pool already just drops the
 tickets it can't seat from this wave rather than blocking the ones it can.
 
+With `landing.unit: spec`, run `emet spec-branch ensure --spec <spec-id>` before
+the first dispatch; worker worktrees and the dispatch record's `baseline` then
+use the `tip` that `emet spec-branch status --spec <spec-id>` prints, not trunk,
+and its integrated tickets count as closed blockers (`phases-8-spec-landing.md`).
+
 Compute this wave's frontier against this repo's tracker
 (`references/tracker-<kind>.md` for the literal calls) —
 candidates are unassigned, in the tracker's "todo"

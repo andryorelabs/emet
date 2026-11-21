@@ -56,6 +56,20 @@ function parseData(output: string): Record<string, unknown> {
 }
 
 describe("summarizeJournal", () => {
+  test("counts spec.integrate, spec.land and spec.abandon events", () => {
+    const report = summarizeJournal(
+      [
+        event("spec.integrate", { spec: "a", wave: 1 }),
+        event("spec.integrate", { spec: "a", wave: 2 }),
+        event("spec.land", { spec: "a" }),
+        event("spec.abandon", { spec: "b" }),
+      ],
+      { all: false },
+    );
+    expect(report.specEvents).toEqual({ integrate: 2, land: 1, abandon: 1 });
+    expect(formatReport(report)).toContain("spec branch: integrated=2 landed=1 abandoned=1");
+  });
+
   test("counts runs, decisions, reasons, launches, interventions and closes", () => {
     const report = summarizeJournal(
       [

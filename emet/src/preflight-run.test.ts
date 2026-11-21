@@ -87,7 +87,7 @@ function useFixture(): Fixture {
     writeConfig: (config) => {
       writeFileSync(
         path.join(fixture.repo, "emet.config.json"),
-        JSON.stringify({ version: 1, landing: { mode: "merge" }, ...config }),
+        JSON.stringify({ version: 1, landing: { mode: "merge", unit: "wave" }, ...config }),
       );
     },
     addWorktree: (name, branch, lockReason) => {

@@ -159,6 +159,7 @@ const baseConfig = {
   version: 1,
   repo: { trunk: "main", remote: "origin" },
   ticket: { idPattern: "^X-\\d+$", branchPrefix: "x" },
+  landing: { unit: "wave" },
 };
 
 function writeAllDocs(repo: string): void {
@@ -225,6 +226,20 @@ describe("doctor run() repo reports", () => {
     expect(output).toContain("0/1 repos clean");
   }, 60_000);
 
+  test("the merge-commit probe maps the gh answer to true, false or undefined", async () => {
+    const repo = makeGitRepo("probe", baseConfig);
+    process.env.PATH = binDirectory;
+    const probe = createEnvironmentProbes().repoMergeCommitAllowed;
+    expect(probe).toBeDefined();
+
+    writeExecutable("gh", "echo true");
+    expect(await probe?.(repo)).toBe(true);
+    writeExecutable("gh", "echo false");
+    expect(await probe?.(repo)).toBe(false);
+    writeExecutable("gh", "echo maybe");
+    expect(await probe?.(repo)).toBeUndefined();
+  });
+
   test("a clean repo with no notes prints a bare OK line", async () => {
     const repo = makeGitRepo("bare-clean", baseConfig);
     writeAllDocs(repo);
@@ -286,7 +301,7 @@ describe("doctor run() repo reports", () => {
   }, 60_000);
 
   test("a merge-landing local repo skips the gh flag check", async () => {
-    const repo = makeGitRepo("merge", { ...baseConfig, landing: { mode: "merge" } });
+    const repo = makeGitRepo("merge", { ...baseConfig, landing: { unit: "wave", mode: "merge" } });
     process.env.PATH = binDirectory;
     const output = await runDoctor([repo]);
     expect(output).not.toContain("gh issue view");

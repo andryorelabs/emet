@@ -2,7 +2,7 @@
 title: Архитектура
 description: Карта кода emet/src и то, как промпты /emet управляют ею.
 seoTitle: Архитектура emet
-sourceHash: 0437733069f9c143
+sourceHash: 36996125d0e6df7f
 ---
 
 Карта кода `emet/src` и то, как промпты `/emet` управляют ею. Термины соответствуют [GLOSSARY.md](../GLOSSARY.md); решения, определившие устройство, находятся в [docs/adr](adr/README.md). О проблемах см. [устранение неполадок](troubleshooting.md).
@@ -24,12 +24,12 @@ sourceHash: 0437733069f9c143
 
 `commands/run.md` — короткий маршрутизатор. Он загружает по одному файлу фазы из `emet/reference/`, поэтому уплотнение контекста никогда не теряет правила текущей фазы.
 
-| Фаза                                          | Промпт                                                            | Вызовы CLI                                                                    |
-| --------------------------------------------- | ----------------------------------------------------------------- | ----------------------------------------------------------------------------- |
-| 1-5 интервью, спецификация, тикеты, одобрение | `phases-1-5.md`                                                   | `init`, `doctor`, `validate`, `surfaces`, `approve`, `tracker`                |
-| 6-7 диспетчеризация и воркеры                 | `phases-6-7-dispatch.md`, `worker-prompt.md`                      | `preflight`, `claims`, `slots`, `launch`, `lock-reason`, `handoff`, `results` |
-| 8 ревью, гейт, посадка, завершение            | `phases-8-review.md`, `phases-8-landing.md`, `reviewer-prompt.md` | `verify`, `review-package`, `review`, `assess`, `gate`, `land`, `cleanup`     |
-| 9 передача и цепочки                          | `phases-9-handoff.md`                                             | `status`, `metrics`, `usage`, `spec-merge`                                    |
+| Фаза                                          | Промпт                                                                                        | Вызовы CLI                                                                               |
+| --------------------------------------------- | --------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------- |
+| 1-5 интервью, спецификация, тикеты, одобрение | `phases-1-5.md`                                                                               | `init`, `doctor`, `validate`, `surfaces`, `approve`, `tracker`                           |
+| 6-7 диспетчеризация и воркеры                 | `phases-6-7-dispatch.md`, `worker-prompt.md`                                                  | `preflight`, `claims`, `slots`, `launch`, `lock-reason`, `handoff`, `results`            |
+| 8 ревью, гейт, посадка, завершение            | `phases-8-review.md`, `phases-8-landing.md`, `phases-8-spec-landing.md`, `reviewer-prompt.md` | `verify`, `review-package`, `review`, `assess`, `gate`, `land`, `spec-branch`, `cleanup` |
+| 9 передача и цепочки                          | `phases-9-handoff.md`                                                                         | `status`, `metrics`, `usage`, `spec-merge`                                               |
 
 Координатор — единственный, кто пишет в трекер (ADR-0005): воркеры отчитываются через заметку передачи и `emet results`, а координатор публикует их. `emet guard` работает как хук `PreToolUse` и блокирует известные причины сбоев при запусках без присмотра.
 
@@ -52,7 +52,7 @@ sourceHash: 0437733069f9c143
 
 ## Структура промптов
 
-`commands/run.md` (около 130 строк) — маршрутизатор `/emet` в Claude Code; в Codex эту роль играют сгенерированные `codex/skills/**` и `codex/hooks.json`. Каждый файл в `emet/reference/` — группа фаз (`phases-1-5.md`, `phases-6-7-dispatch.md`, `phases-8-review.md`, `phases-8-landing.md`, `phases-9-handoff.md`), загружаемая только тогда, когда она нужна режиму текущего запуска. Тест падает, если любой из них вырастает больше 20 000 байт, чтобы один файл не мог занять весь контекст после уплотнения. Фазы велят координатору перечитывать нужный раздел перед каждым раундом исправлений или ревью. `install.sh` откладывает старый единый `phases-6-9.md` как `phases-6-9.md.retired`, если вы его редактировали или он старше манифеста установки, и удаляет его в остальных случаях. Так же он поступает со старым `phases-8-closeout.md`, который разделён на `phases-8-review.md` (ревью и гейт) и `phases-8-landing.md` (посадка и завершение): он откладывается как `phases-8-closeout.md.retired`. `install.sh` также подключает `emet guard` в `~/.claude/settings.json` как хук `PreToolUse`.
+`commands/run.md` (около 130 строк) — маршрутизатор `/emet` в Claude Code; в Codex эту роль играют сгенерированные `codex/skills/**` и `codex/hooks.json`. Каждый файл в `emet/reference/` — группа фаз (`phases-1-5.md`, `phases-6-7-dispatch.md`, `phases-8-review.md`, `phases-8-landing.md`, `phases-8-spec-landing.md`, `phases-9-handoff.md`), загружаемая только тогда, когда она нужна режиму текущего запуска. Тест падает, если любой из них вырастает больше 20 000 байт, чтобы один файл не мог занять весь контекст после уплотнения. Фазы велят координатору перечитывать нужный раздел перед каждым раундом исправлений или ревью. `install.sh` откладывает старый единый `phases-6-9.md` как `phases-6-9.md.retired`, если вы его редактировали или он старше манифеста установки, и удаляет его в остальных случаях. Так же он поступает со старым `phases-8-closeout.md`, который разделён на `phases-8-review.md` (ревью и гейт) и `phases-8-landing.md` (посадка и завершение): он откладывается как `phases-8-closeout.md.retired`. `phases-8-spec-landing.md` хранит правила для `landing.unit: spec`: интеграцию каждой волны в `spec/<id>`, синхронизацию trunk и однократную посадку спецификации. `install.sh` также подключает `emet guard` в `~/.claude/settings.json` как хук `PreToolUse`.
 
 ## Распространение
 

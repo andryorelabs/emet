@@ -7,6 +7,7 @@ import { DEFAULT_FORGE_CONFIG } from "./config";
 import {
   parseGithubIssueState,
   readGithubIssueState,
+  resolveCleanupVerdict,
   resolveLandedVerdict,
   unownedReclaimVerdict,
   type LandedVerdict,
@@ -15,6 +16,7 @@ import type { ContentVerdict } from "./worktrees";
 
 const input = { ticket: "CLA-9", branch: "cla-9-thing" };
 const config = DEFAULT_FORGE_CONFIG;
+const open = () => Promise.resolve("open" as const);
 const unknownTracker = () => Promise.resolve("unknown" as const);
 
 function view(exitCode: number, stdout: string) {
@@ -122,6 +124,44 @@ describe("GitHub issue state mapping", () => {
   });
 });
 
+describe("resolveCleanupVerdict", () => {
+  test("an open ticket merged into a spec branch is integrated, not landed", async () => {
+    const verdict = await resolveCleanupVerdict(input, {
+      config,
+      readTrackerState: open,
+      isIntegrated: () => Promise.resolve(true),
+    });
+    expect(verdict).toBe("integrated");
+  });
+
+  test("a done ticket stays landed", async () => {
+    const verdict = await resolveCleanupVerdict(input, {
+      config,
+      readTrackerState: () => Promise.resolve("done" as const),
+      isIntegrated: () => Promise.resolve(true),
+    });
+    expect(verdict).toBe("landed");
+  });
+
+  test("a branch outside every spec branch keeps the trunk verdict", async () => {
+    const verdict = await resolveCleanupVerdict(input, {
+      config,
+      readTrackerState: open,
+      isIntegrated: () => Promise.resolve(false),
+    });
+    expect(verdict).toBe("not-landed");
+  });
+
+  test("landing.unit wave never answers integrated", async () => {
+    const verdict = await resolveCleanupVerdict(input, {
+      config: { ...config, landing: { ...config.landing, unit: "wave" } },
+      readTrackerState: open,
+      isIntegrated: () => Promise.resolve(true),
+    });
+    expect(verdict).toBe("not-landed");
+  });
+});
+
 describe("resolveLandedVerdict falling back to git", () => {
   let repo = "";
   let originalCwd = "";
@@ -157,7 +197,7 @@ describe("resolveLandedVerdict falling back to git", () => {
   const gitConfig = {
     ...config,
     repo: { trunk: "main", remote: "origin" },
-    landing: { mode: "merge" as const },
+    landing: { ...DEFAULT_FORGE_CONFIG.landing, mode: "merge" as const },
   };
 
   test("a merged branch with no tracker answer is landed", async () => {
@@ -170,6 +210,22 @@ describe("resolveLandedVerdict falling back to git", () => {
       readTrackerState: unknownTracker,
     });
     expect(verdict).toBe("landed");
+  });
+
+  test("a branch merged into spec/<id> is integrated; one only on a wave branch is not", async () => {
+    git("checkout", "-q", "-b", "cla-9-thing");
+    commitFile("a.txt", "a\n");
+    git("checkout", "-q", "main");
+    git("checkout", "-q", "-b", "spec/7-w1");
+    git("merge", "-q", "--no-ff", "-m", "wave", "cla-9-thing");
+    const base = { config: gitConfig, readTrackerState: unknownTracker };
+    expect(await resolveCleanupVerdict(input, base)).toBe("not-landed");
+    git("checkout", "-q", "main");
+    git("checkout", "-q", "-b", "spec/7");
+    git("merge", "-q", "--no-ff", "-m", "wave", "spec/7-w1");
+    git("checkout", "-q", "main");
+    expect(await resolveCleanupVerdict(input, base)).toBe("integrated");
+    expect(await resolveLandedVerdict(input, base)).toBe("not-landed");
   });
 
   test("an unmerged branch with no tracker answer is not landed", async () => {

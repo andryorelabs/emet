@@ -16,11 +16,21 @@ With `tracker.kind: "local"`, specs and tickets are markdown files under the mai
 
 `landing.mode` is `"pr"` (default) or `"merge"`, independent of the tracker. In `merge` mode a wave lands as one local merge into trunk with `emet land`, with `commands.selfCheck` standing in for CI and no push. `gh` is only required when the tracker is `github` or landing is `pr`. See [ADR-0010](../adr/0010-local-merge-landing.md).
 
+`landing.unit` picks what lands as one: `"spec"` (default) lands the whole spec at once, `"wave"` keeps the older rule that each wave lands alone. See [ADR-0037](../adr/0037-landing-per-spec.md), which supersedes [ADR-0004](../adr/0004-one-wave-one-dependency-layer-one-pr.md).
+
+### Spec branch
+
+With `landing.unit: "spec"`, the coordinator creates `spec/<id>` from trunk with `emet spec-branch ensure --spec <id>`. After a wave passes review and `commands.selfCheck`, `emet spec-branch integrate` merges the wave branch into `spec/<id>` with `--no-ff` and a commit carrying the trailers `Emet-Wave` and `Emet-Tickets`. A ticket whose branch is in `spec/<id>` is **Integrated**, not **Landed**: it counts as a closed blocker for the next wave's frontier, but the tracker keeps it open until the final landing. Later waves branch from the tip of `spec/<id>`, so no wave waits for CI on a PR.
+
+`emet spec-branch sync` merges trunk into `spec/<id>` and never rebases; on a conflict it aborts, leaves the branch unchanged and exits non-zero. `emet spec-branch land` runs the sync and then lands the branch once. In `pr` mode it pushes `spec/<id>`, opens one PR with one `Closes #N` line per ticket of every integrated wave and merges it with a merge commit, ignoring `pr.mergeMethod`. In `merge` mode it merges `spec/<id>` into local trunk with `--no-ff` and never pushes. `--partial` lands only the waves integrated so far. `emet spec-branch abandon --spec <id> --force` tags the branch `abandoned/spec-<id>`, deletes it and sets the integrated tickets of a local tracker back to `ready-for-agent`.
+
+The spec mode needs `worktree.baseRef: "head"` in the Claude Code settings so worker worktrees start from the spec branch; `emet preflight` and `emet doctor` check it. `emet doctor` also warns when the mode is `pr` and the repository does not allow merge commits.
+
 ### Landing PRs
 
-One wave is one PR. Its body carries one `Closes #N` line per ticket (the tracker's closing keyword), and the coordinator moves the tickets to in-review when it opens the PR. The PR is then merged per `pr.autoMerge`, or left open when the wave was flagged, `autoMerge` is `false`, or CI fixes ran out (the PR then gets the human-decision label). After a merge, `emet tracker close` closes the tickets on a GitHub tracker, and `emet cleanup --run <runId>` frees the wave's branches, ticket claims, and worker slots. It also deletes each local branch whose PR merged at the branch's tip commit, the integration branch included.
+With `landing.unit: "spec"` the PR is the spec's: one PR for every integrated wave, opened by `emet spec-branch land` after the final wave. With `landing.unit: "wave"`, one wave is one PR. The PR body carries one `Closes #N` line per ticket (the tracker's closing keyword), and the coordinator moves the tickets to in-review when it opens the PR. The PR is then merged per `pr.autoMerge`, or left open when the wave was flagged, `autoMerge` is `false`, or CI fixes ran out (the PR then gets the human-decision label). After a merge, `emet tracker close` closes the tickets on a GitHub tracker, and `emet cleanup --run <runId>` frees the wave's branches, ticket claims, and worker slots. It also deletes each local branch whose PR merged at the branch's tip commit, the integration branch included.
 
-After a wave's branches are merged together, `commands.fullSuite` runs once on the integration branch. A red run blocks the PR and `autoChain`. The gate receives the result as `--integration`.
+After a wave's branches are merged together, `commands.fullSuite` runs once on the integration branch. A red run blocks the PR and `autoChain`. The gate receives the result as `--integration`. In a non-final wave of a spec landing, the coordinator passes `--ci` from `commands.selfCheck`, and only the final landing waits for CI with `emet ci --wait`; the gate then answers `chain` while waves remain.
 
 ### Chaining waves
 

@@ -20,6 +20,7 @@ export interface InsightsReport {
   interventionsPerRun: number;
   launches: { ok: number; failed: number };
   ticketsClosed: number;
+  specEvents: { integrate: number; land: number; abandon: number };
   skippedLines: number;
 }
 
@@ -83,6 +84,7 @@ export function summarizeJournal(
     interventionsPerRun: 0,
     launches: { ok: 0, failed: 0 },
     ticketsClosed: 0,
+    specEvents: { integrate: 0, land: 0, abandon: 0 },
     skippedLines: 0,
   };
   const reasonCounts: Record<string, number> = {};
@@ -103,6 +105,12 @@ export function summarizeJournal(
       report.launches[failed ? "failed" : "ok"] += 1;
     } else if (event.kind === "ticket.close") {
       report.ticketsClosed += 1;
+    } else if (event.kind === "spec.integrate") {
+      report.specEvents.integrate += 1;
+    } else if (event.kind === "spec.land") {
+      report.specEvents.land += 1;
+    } else if (event.kind === "spec.abandon") {
+      report.specEvents.abandon += 1;
     }
   }
   report.topReasons = Object.entries(reasonCounts)
@@ -134,6 +142,7 @@ export function formatReport(report: InsightsReport): string {
     `interventions per run: ${report.interventionsPerRun}`,
     `launches: ok=${report.launches.ok} failed=${report.launches.failed}`,
     `tickets closed: ${report.ticketsClosed}`,
+    `spec branch: integrated=${report.specEvents.integrate} landed=${report.specEvents.land} abandoned=${report.specEvents.abandon}`,
     `skipped lines: ${report.skippedLines}`,
   ].join("\n");
 }

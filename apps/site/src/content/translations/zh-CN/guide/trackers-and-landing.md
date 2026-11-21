@@ -2,7 +2,7 @@
 title: 跟踪器与落地
 description: 工单存放在哪里，波次如何以拉取请求或本地合并的方式落地，以及波次如何串联。
 seoTitle: emet 的跟踪器与落地
-sourceHash: 6c1988e1fd68ab4d
+sourceHash: 4280f1152d8971e0
 ---
 
 工单存放在哪里、波次如何落地、波次如何串联。此处提到的每个配置键都在[配置参考](../reference/configuration.md)中，每个子命令都在 [CLI 参考](../reference/cli.md)中。
@@ -21,11 +21,21 @@ emet 支持 Linear、GitHub Issues 或本地文件，由 `tracker.kind` 设置�
 
 `landing.mode` 为 `"pr"`（默认）或 `"merge"`，与跟踪器无关。在 `merge` 模式下，波次通过 `emet land` 以一次本地合并落地到主干，用 `commands.selfCheck` 代替 CI，并且不推送。只有当跟踪器是 `github` 或落地方式是 `pr` 时才需要 `gh`。参见 [ADR-0010](../adr/0010-local-merge-landing.md)。
 
+`landing.unit` 决定以什么为单位一次落地：`"spec"`（默认）一次落地整个规格，`"wave"` 沿用旧规则，即每个波次单独落地。参见 [ADR-0037](../adr/0037-landing-per-spec.md)，它取代了 [ADR-0004](../adr/0004-one-wave-one-dependency-layer-one-pr.md)。
+
+### 规格分支
+
+设置 `landing.unit: "spec"` 后，协调者用 `emet spec-branch ensure --spec <id>` 从主干创建 `spec/<id>`。波次通过评审和 `commands.selfCheck` 之后，`emet spec-branch integrate` 会以 `--no-ff` 把波次分支合并到 `spec/<id>`，提交中带有 `Emet-Wave` 和 `Emet-Tickets` 两个 trailer。分支已在 `spec/<id>` 中的工单是 **Integrated**（已集成），而不是 **Landed**（已落地）：它对下一个波次的前沿而言算作已关闭的阻塞项，但跟踪器会让它保持打开，直到最终落地。后续波次从 `spec/<id>` 的顶端分出分支，因此没有波次需要等待 PR 的 CI。
+
+`emet spec-branch sync` 把主干合并到 `spec/<id>`，从不变基；遇到冲突时它会中止、保持分支不变并以非零状态退出。`emet spec-branch land` 先执行同步，然后一次性落地该分支。在 `pr` 模式下，它会推送 `spec/<id>`，打开一个 PR，其中为每个已集成波次的每个工单各带一行 `Closes #N`，并以合并提交的方式合并，忽略 `pr.mergeMethod`。在 `merge` 模式下，它以 `--no-ff` 把 `spec/<id>` 合并到本地主干，且从不推送。`--partial` 只落地目前已集成的波次。`emet spec-branch abandon --spec <id> --force` 会给分支打上 `abandoned/spec-<id>` 标签、删除它，并把本地跟踪器中已集成的工单重置回 `ready-for-agent`。
+
+规格模式需要在 Claude Code 设置中设定 `worktree.baseRef: "head"`，使工作者工作树从规格分支起步；`emet preflight` 和 `emet doctor` 会检查这一点。当模式为 `pr` 且仓库不允许合并提交时，`emet doctor` 还会发出警告。
+
 ### 以 PR 落地
 
-一个波次对应一个 PR。其正文为每个工单带有一行 `Closes #N`（跟踪器的关闭关键字），协调者在打开 PR 时会把工单移到评审中。随后，PR 按 `pr.autoMerge` 合并；如果该波次被标记、`autoMerge` 为 `false`，或 CI 修复次数已用尽，则 PR 保持打开（此时 PR 会带上需要人工决定的标签）。合并之后，`emet tracker close` 会关闭 GitHub 跟踪器上的工单，`emet cleanup --run <runId>` 会释放该波次的分支、工单认领和工作者槽位。它还会删除其 PR 已在分支顶端提交处合并的每个本地分支，包括集成分支。
+设置 `landing.unit: "spec"` 时，PR 属于整个规格：每个已集成的波次共用一个 PR，由 `emet spec-branch land` 在最后一个波次之后打开。设置 `landing.unit: "wave"` 时，一个波次对应一个 PR。PR 正文为每个工单带有一行 `Closes #N`（跟踪器的关闭关键字），协调者在打开 PR 时会把工单移到评审中。随后，PR 按 `pr.autoMerge` 合并；如果该波次被标记、`autoMerge` 为 `false`，或 CI 修复次数已用尽，则 PR 保持打开（此时 PR 会带上需要人工决定的标签）。合并之后，`emet tracker close` 会关闭 GitHub 跟踪器上的工单，`emet cleanup --run <runId>` 会释放该波次的分支、工单认领和工作者槽位。它还会删除其 PR 已在分支顶端提交处合并的每个本地分支，包括集成分支。
 
-一个波次的各分支合并到一起之后，`commands.fullSuite` 会在集成分支上运行一次。运行失败会阻止 PR 和 `autoChain`。关卡以 `--integration` 接收这一结果。
+一个波次的各分支合并到一起之后，`commands.fullSuite` 会在集成分支上运行一次。运行失败会阻止 PR 和 `autoChain`。关卡以 `--integration` 接收这一结果。在规格落地的非最终波次中，协调者根据 `commands.selfCheck` 传入 `--ci`，只有最终落地才用 `emet ci --wait` 等待 CI；只要还有波次剩余，关卡就回答 `chain`。
 
 ### 串联波次
 

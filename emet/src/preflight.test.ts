@@ -161,6 +161,34 @@ describe("collectForkBaseFailures (S2)", () => {
     ).toEqual([]);
   });
 
+  test("spec mode fails when baseRef is not head, even when the SHAs match, and names baseRef", async () => {
+    const failures = await collectForkBaseFailures(
+      "/r",
+      "origin",
+      "main",
+      probesFor("aaaaaaa1", "aaaaaaa1", null),
+      "pr",
+      undefined,
+      "spec",
+    );
+    expect(failures).toHaveLength(1);
+    expect(failures[0]).toContain('"baseRef": "head"');
+  });
+
+  test("spec mode passes when baseRef is head", async () => {
+    expect(
+      await collectForkBaseFailures(
+        "/r",
+        "origin",
+        "main",
+        probesFor("aaaaaaa1", "bbbbbbb2", "head"),
+        "pr",
+        undefined,
+        "spec",
+      ),
+    ).toEqual([]);
+  });
+
   test("passes when baseRef is head", async () => {
     expect(
       await collectForkBaseFailures(
@@ -1040,7 +1068,11 @@ describe("collectDependencyChecks (S10)", () => {
 
   test("emits no github-cli check when gh is absent, tracker local, landing merge", async () => {
     const checks = await collectDependencyChecks(
-      { ...DEFAULT_FORGE_CONFIG, tracker: { kind: "local" }, landing: { mode: "merge" } },
+      {
+        ...DEFAULT_FORGE_CONFIG,
+        tracker: { kind: "local" },
+        landing: { ...DEFAULT_FORGE_CONFIG.landing, mode: "merge" },
+      },
       "/r",
       absentGithubCliProbes,
     );
@@ -1049,7 +1081,11 @@ describe("collectDependencyChecks (S10)", () => {
 
   test("still probes gh when landing mode is pr", async () => {
     const checks = await collectDependencyChecks(
-      { ...DEFAULT_FORGE_CONFIG, tracker: { kind: "local" }, landing: { mode: "pr" } },
+      {
+        ...DEFAULT_FORGE_CONFIG,
+        tracker: { kind: "local" },
+        landing: { ...DEFAULT_FORGE_CONFIG.landing, mode: "pr" },
+      },
       "/r",
       absentGithubCliProbes,
     );

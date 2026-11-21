@@ -36,6 +36,7 @@ import { optionalProperty } from "./optional";
 import { present } from "./present";
 import { classifyRun, type RunVerdict } from "./runs";
 import { listOccupiedSlots } from "./slots";
+import { readSpecBranchState } from "./specbranch";
 import { findStalledTranscripts, readLastStepFor } from "./usage";
 import {
   classifyByContent,
@@ -97,6 +98,7 @@ interface WaveReport {
 export interface StatusReport {
   readonly state: OverallState;
   readonly spec: string | null;
+  readonly specBranch?: { branch: string; tip: string; integratedWaves: number[] };
   readonly waves: readonly WaveReport[];
 }
 
@@ -113,6 +115,7 @@ JSON shape:
   {
     "state": "idle" | "working" | "checking" | "ready" | "needs-decision",
     "spec": "<id>" | null,
+    "specBranch"?: { "branch": string, "tip": string, "integratedWaves": number[] },
     "waves": [{
       "runId": string, "spec": string | null, "wave": number | null,
       "runVerdict": "live" | "idle" | "dead",
@@ -640,7 +643,7 @@ export async function run(argv: string[], overrides: Partial<StatusDeps> = {}): 
       );
       if (stalled.length > 0) stalledDirectories.add(entry.directory);
     }
-    const report = buildStatusReport(
+    const baseReport = buildStatusReport(
       groupWorkers(
         entries,
         reservations,
@@ -651,6 +654,21 @@ export async function run(argv: string[], overrides: Partial<StatusDeps> = {}): 
       ),
       spec,
     );
+    const branchState =
+      config.landing.unit === "spec" && spec !== null
+        ? await readSpecBranchState(repoRoot, spec)
+        : null;
+    const report: StatusReport =
+      branchState === null
+        ? baseReport
+        : {
+            ...baseReport,
+            specBranch: {
+              branch: branchState.branch,
+              tip: branchState.tip,
+              integratedWaves: branchState.waves.map((entry) => entry.wave),
+            },
+          };
     if (argv.includes("--brief")) {
       for (const line of briefLines(report)) console.log(line);
       return;
