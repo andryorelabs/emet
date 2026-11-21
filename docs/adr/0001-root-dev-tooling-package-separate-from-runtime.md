@@ -1,6 +1,6 @@
 # 0001. Root dev-tooling package separate from the runtime `forge/`
 
-Status: Accepted (2026-11-03)
+Status: Accepted (2026-11-03). Amended by [0036](0036-prompt-wording-changes-under-an-explicit-ticket.md): prompt wording may change in a ticket that names the paragraphs.
 Spec: #73 (S1)
 
 ## Context
