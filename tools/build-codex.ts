@@ -415,18 +415,45 @@ export function generateArtefacts(root: string = repoRoot): GeneratedFile[] {
 }
 
 /**
- * Lists generated files whose committed copy is missing or different.
+ * Lists generated files whose committed copy is missing or different, plus files in a
+ * generated directory that have no source.
  * @param files The generated files.
  * @param root The repository root holding the committed copies.
  * @returns The stale paths.
  */
 export function findStaleFiles(files: readonly GeneratedFile[], root: string = repoRoot): string[] {
-  return files
+  const stale = files
     .filter((file) => {
       const target = path.join(root, file.path);
       return !existsSync(target) || readFileSync(target, "utf8") !== file.content;
     })
     .map((file) => file.path);
+  return [...stale, ...findOrphanFiles(files, root)];
+}
+
+/**
+ * Lists files in a generated directory that no generated artefact accounts for.
+ * @param files The generated files.
+ * @param root The repository root holding the committed copies.
+ * @returns The orphan paths, sorted.
+ */
+function findOrphanFiles(files: readonly GeneratedFile[], root: string): string[] {
+  const known = new Set(files.map((file) => file.path));
+  const directories = new Set(files.map((file) => path.posix.dirname(file.path)));
+  const orphans: string[] = [];
+  for (const directory of directories) {
+    const absolute = path.join(root, directory);
+    if (!existsSync(absolute)) {
+      continue;
+    }
+    for (const entry of readdirSync(absolute, { withFileTypes: true })) {
+      const relative = path.posix.join(directory, entry.name);
+      if (entry.isFile() && !known.has(relative)) {
+        orphans.push(relative);
+      }
+    }
+  }
+  return orphans.toSorted();
 }
 
 /**
