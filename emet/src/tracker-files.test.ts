@@ -162,6 +162,18 @@ describe("listTickets and computeFrontier", () => {
     ]);
   });
 
+  test("an integrated blocker counts as closed while it is still open", async () => {
+    const root = makeTemporaryDirectory();
+    writeTicket(root, "feat", "01-a.md", "# A\nStatus: in-review\nBlocked by: None\n");
+    writeTicket(root, "feat", "02-b.md", "# B\nStatus: ready-for-agent\nBlocked by: 01\n");
+    const tickets = await listTickets(root, "feat");
+    expect(computeFrontier(tickets)).toEqual([]);
+    expect(computeFrontier(tickets, new Set(["feat-01"])).map((ticket) => ticket.id)).toEqual([
+      "feat-02",
+    ]);
+    expect(computeFrontier(tickets, new Set(["feat-09"]))).toEqual([]);
+  });
+
   test("a blocker that does not exist keeps the ticket out", async () => {
     const root = makeTemporaryDirectory();
     writeTicket(root, "feat", "01-a.md", "# A\nStatus: ready-for-agent\nBlocked by: 07\n");

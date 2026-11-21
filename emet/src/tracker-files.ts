@@ -237,12 +237,19 @@ export async function listTickets(root: string, slug: string): Promise<TicketFil
 
 /**
  * The dispatchable tickets: `ready-for-agent` with every blocker present and
- * `done` or `resolved`, ordered by number ascending. A blocker naming a
- * nonexistent ticket keeps its dependant out.
+ * `done` or `resolved` or listed in `integrated` (ticket ids merged into the
+ * spec branch), ordered by number ascending. A blocker naming a nonexistent
+ * ticket keeps its dependant out.
  */
-export function computeFrontier(tickets: TicketFile[]): TicketFile[] {
+export function computeFrontier(
+  tickets: TicketFile[],
+  integrated: ReadonlySet<string> = new Set(),
+): TicketFile[] {
   const statusByNumber = new Map<number, TrackerStatus | null>(
     tickets.map((ticket) => [Number(ticket.nn), ticket.status]),
+  );
+  const integratedNumbers = new Set(
+    tickets.filter((ticket) => integrated.has(ticket.id)).map((ticket) => Number(ticket.nn)),
   );
   return tickets
     .filter(
@@ -250,7 +257,11 @@ export function computeFrontier(tickets: TicketFile[]): TicketFile[] {
         ticket.status === "ready-for-agent" &&
         ticket.blockedBy.every((blocker) => {
           const blockerStatus = statusByNumber.get(Number(blocker));
-          return blockerStatus === "done" || blockerStatus === "resolved";
+          return (
+            blockerStatus === "done" ||
+            blockerStatus === "resolved" ||
+            integratedNumbers.has(Number(blocker))
+          );
         }),
     )
     .toSorted((left, right) => Number(left.nn) - Number(right.nn));
