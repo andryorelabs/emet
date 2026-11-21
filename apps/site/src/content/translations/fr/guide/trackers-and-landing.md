@@ -2,7 +2,7 @@
 title: Trackers et atterrissage
 description: Où vivent les tickets, comment une vague atterrit en pull request ou en merge local, et comment les vagues s'enchaînent.
 seoTitle: Trackers et atterrissage dans emet
-sourceHash: 6c1988e1fd68ab4d
+sourceHash: 4280f1152d8971e0
 ---
 
 Où vivent les tickets, comment une vague atterrit et comment les vagues s'enchaînent. Chaque clé citée ici figure dans la [référence de configuration](../reference/configuration.md) ; chaque sous-commande figure dans la [référence de la CLI](../reference/cli.md).
@@ -21,11 +21,21 @@ Avec `tracker.kind: "local"`, les specs et les tickets sont des fichiers markdow
 
 `landing.mode` vaut `"pr"` (par défaut) ou `"merge"`, indépendamment du tracker. En mode `merge`, une vague atterrit en un seul merge local dans la branche principale avec `emet land`, `commands.selfCheck` tenant lieu de CI et sans push. `gh` n'est requis que lorsque le tracker est `github` ou que l'atterrissage est `pr`. Voir l'[ADR-0010](../adr/0010-local-merge-landing.md).
 
+`landing.unit` choisit ce qui atterrit d'un bloc : `"spec"` (par défaut) fait atterrir toute la spec d'un coup, `"wave"` garde l'ancienne règle où chaque vague atterrit seule. Voir l'[ADR-0037](../adr/0037-landing-per-spec.md), qui remplace l'[ADR-0004](../adr/0004-one-wave-one-dependency-layer-one-pr.md).
+
+### Branche de spec
+
+Avec `landing.unit: "spec"`, le coordinateur crée `spec/<id>` à partir de la branche principale avec `emet spec-branch ensure --spec <id>`. Une fois qu'une vague a passé la revue et `commands.selfCheck`, `emet spec-branch integrate` fusionne la branche de la vague dans `spec/<id>` avec `--no-ff` et un commit portant les trailers `Emet-Wave` et `Emet-Tickets`. Un ticket dont la branche est dans `spec/<id>` est **Integrated**, pas **Landed** : il compte comme bloqueur fermé pour la frontière de la vague suivante, mais le tracker le garde ouvert jusqu'à l'atterrissage final. Les vagues suivantes partent de la pointe de `spec/<id>`, donc aucune vague n'attend la CI d'une PR.
+
+`emet spec-branch sync` fusionne la branche principale dans `spec/<id>` et ne fait jamais de rebase ; en cas de conflit, il abandonne, laisse la branche inchangée et sort avec un code non nul. `emet spec-branch land` exécute la synchronisation puis fait atterrir la branche une seule fois. En mode `pr`, il pousse `spec/<id>`, ouvre une PR avec une ligne `Closes #N` par ticket de chaque vague intégrée et la fusionne avec un commit de merge, en ignorant `pr.mergeMethod`. En mode `merge`, il fusionne `spec/<id>` dans la branche principale locale avec `--no-ff` et ne pousse jamais. `--partial` ne fait atterrir que les vagues intégrées jusque-là. `emet spec-branch abandon --spec <id> --force` étiquette la branche `abandoned/spec-<id>`, la supprime et remet à `ready-for-agent` les tickets intégrés d'un tracker local.
+
+Le mode spec exige `worktree.baseRef: "head"` dans les réglages de Claude Code pour que les worktrees des workers partent de la branche de spec ; `emet preflight` et `emet doctor` le vérifient. `emet doctor` avertit aussi lorsque le mode est `pr` et que le dépôt n'autorise pas les commits de merge.
+
 ### PR d'atterrissage
 
-Une vague est une PR. Son corps porte une ligne `Closes #N` par ticket (le mot-clé de fermeture du tracker), et le coordinateur passe les tickets en revue à l'ouverture de la PR. La PR est ensuite fusionnée selon `pr.autoMerge`, ou laissée ouverte lorsque la vague a été signalée, que `autoMerge` vaut `false` ou que les corrections de CI sont épuisées (la PR reçoit alors le label de décision humaine). Après un merge, `emet tracker close` ferme les tickets sur un tracker GitHub, et `emet cleanup --run <runId>` libère les branches, les réservations de tickets et les emplacements de workers de la vague. Il supprime aussi chaque branche locale dont la PR a été fusionnée au commit de tête de la branche, y compris la branche d'intégration.
+Avec `landing.unit: "spec"`, la PR est celle de la spec : une PR pour toutes les vagues intégrées, ouverte par `emet spec-branch land` après la dernière vague. Avec `landing.unit: "wave"`, une vague est une PR. Le corps de la PR porte une ligne `Closes #N` par ticket (le mot-clé de fermeture du tracker), et le coordinateur passe les tickets en revue à l'ouverture de la PR. La PR est ensuite fusionnée selon `pr.autoMerge`, ou laissée ouverte lorsque la vague a été signalée, que `autoMerge` vaut `false` ou que les corrections de CI sont épuisées (la PR reçoit alors le label de décision humaine). Après un merge, `emet tracker close` ferme les tickets sur un tracker GitHub, et `emet cleanup --run <runId>` libère les branches, les réservations de tickets et les emplacements de workers de la vague. Il supprime aussi chaque branche locale dont la PR a été fusionnée au commit de tête de la branche, y compris la branche d'intégration.
 
-Une fois les branches d'une vague fusionnées ensemble, `commands.fullSuite` s'exécute une fois sur la branche d'intégration. Une exécution au rouge bloque la PR et `autoChain`. Le gate reçoit le résultat sous la forme `--integration`.
+Une fois les branches d'une vague fusionnées ensemble, `commands.fullSuite` s'exécute une fois sur la branche d'intégration. Une exécution au rouge bloque la PR et `autoChain`. Le gate reçoit le résultat sous la forme `--integration`. Dans une vague non finale d'un atterrissage de spec, le coordinateur passe `--ci` issu de `commands.selfCheck`, et seul l'atterrissage final attend la CI avec `emet ci --wait` ; le gate répond alors `chain` tant qu'il reste des vagues.
 
 ### Enchaîner les vagues
 

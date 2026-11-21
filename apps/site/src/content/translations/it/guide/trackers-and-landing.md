@@ -2,7 +2,7 @@
 title: Tracker e landing
 description: Dove vivono i ticket, come un'ondata atterra come pull request o merge locale e come si concatenano le ondate.
 seoTitle: Tracker e landing in emet
-sourceHash: 6c1988e1fd68ab4d
+sourceHash: 4280f1152d8971e0
 ---
 
 Dove vivono i ticket, come atterra un'ondata e come si concatenano le ondate. Ogni chiave citata qui è nel [riferimento della configurazione](../reference/configuration.md); ogni sottocomando è nel [riferimento della CLI](../reference/cli.md).
@@ -21,11 +21,21 @@ Con `tracker.kind: "local"`, spec e ticket sono file markdown sotto `.scratch/` 
 
 `landing.mode` è `"pr"` (predefinito) o `"merge"`, indipendente dal tracker. In modalità `merge` un'ondata atterra come un unico merge locale nel trunk con `emet land`, con `commands.selfCheck` al posto della CI e senza push. `gh` serve solo quando il tracker è `github` o il landing è `pr`. Vedi [ADR-0010](../adr/0010-local-merge-landing.md).
 
+`landing.unit` sceglie cosa atterra in blocco: `"spec"` (predefinito) fa atterrare l'intera spec in una volta, `"wave"` mantiene la regola precedente per cui ogni ondata atterra da sola. Vedi [ADR-0037](../adr/0037-landing-per-spec.md), che sostituisce [ADR-0004](../adr/0004-one-wave-one-dependency-layer-one-pr.md).
+
+### Branch della spec
+
+Con `landing.unit: "spec"`, il coordinatore crea `spec/<id>` dal trunk con `emet spec-branch ensure --spec <id>`. Dopo che un'ondata ha superato la review e `commands.selfCheck`, `emet spec-branch integrate` unisce il branch dell'ondata in `spec/<id>` con `--no-ff` e un commit che porta i trailer `Emet-Wave` ed `Emet-Tickets`. Un ticket il cui branch è in `spec/<id>` è **Integrated**, non **Landed**: conta come bloccante chiuso per la frontiera dell'ondata successiva, ma il tracker lo tiene aperto fino al landing finale. Le ondate successive partono dalla punta di `spec/<id>`, quindi nessuna ondata aspetta la CI di una PR.
+
+`emet spec-branch sync` unisce il trunk in `spec/<id>` e non fa mai rebase; in caso di conflitto annulla, lascia il branch invariato ed esce con codice diverso da zero. `emet spec-branch land` esegue la sincronizzazione e poi fa atterrare il branch una sola volta. In modalità `pr` fa push di `spec/<id>`, apre una PR con una riga `Closes #N` per ogni ticket di ogni ondata integrata e la unisce con un merge commit, ignorando `pr.mergeMethod`. In modalità `merge` unisce `spec/<id>` nel trunk locale con `--no-ff` e non fa mai push. `--partial` fa atterrare solo le ondate integrate finora. `emet spec-branch abandon --spec <id> --force` etichetta il branch `abandoned/spec-<id>`, lo elimina e riporta a `ready-for-agent` i ticket integrati di un tracker locale.
+
+La modalità spec richiede `worktree.baseRef: "head"` nelle impostazioni di Claude Code, così i worktree dei worker partono dal branch della spec; `emet preflight` ed `emet doctor` lo verificano. `emet doctor` avvisa anche quando la modalità è `pr` e il repository non consente i merge commit.
+
 ### PR di landing
 
-Un'ondata è una PR. Il suo corpo contiene una riga `Closes #N` per ogni ticket (la parola chiave di chiusura del tracker), e il coordinatore sposta i ticket in in-review quando apre la PR. La PR viene poi unita secondo `pr.autoMerge`, oppure resta aperta quando l'ondata è stata segnalata, `autoMerge` è `false` o le correzioni di CI sono esaurite (la PR riceve allora l'etichetta human-decision). Dopo un merge, `emet tracker close` chiude i ticket su un tracker GitHub e `emet cleanup --run <runId>` libera i branch, i claim dei ticket e gli slot dei worker dell'ondata. Elimina anche ogni branch locale la cui PR è stata unita al commit di testa del branch, compreso il branch di integrazione.
+Con `landing.unit: "spec"` la PR è quella della spec: una PR per tutte le ondate integrate, aperta da `emet spec-branch land` dopo l'ultima ondata. Con `landing.unit: "wave"`, un'ondata è una PR. Il corpo della PR contiene una riga `Closes #N` per ogni ticket (la parola chiave di chiusura del tracker), e il coordinatore sposta i ticket in in-review quando apre la PR. La PR viene poi unita secondo `pr.autoMerge`, oppure resta aperta quando l'ondata è stata segnalata, `autoMerge` è `false` o le correzioni di CI sono esaurite (la PR riceve allora l'etichetta human-decision). Dopo un merge, `emet tracker close` chiude i ticket su un tracker GitHub e `emet cleanup --run <runId>` libera i branch, i claim dei ticket e gli slot dei worker dell'ondata. Elimina anche ogni branch locale la cui PR è stata unita al commit di testa del branch, compreso il branch di integrazione.
 
-Dopo che i branch di un'ondata sono stati uniti, `commands.fullSuite` viene eseguito una volta sul branch di integrazione. Un'esecuzione rossa blocca la PR e `autoChain`. Il gate riceve il risultato come `--integration`.
+Dopo che i branch di un'ondata sono stati uniti, `commands.fullSuite` viene eseguito una volta sul branch di integrazione. Un'esecuzione rossa blocca la PR e `autoChain`. Il gate riceve il risultato come `--integration`. In un'ondata non finale di un landing di spec, il coordinatore passa `--ci` ricavato da `commands.selfCheck`, e solo il landing finale attende la CI con `emet ci --wait`; il gate risponde poi `chain` finché restano ondate.
 
 ### Concatenare le ondate
 
