@@ -232,7 +232,8 @@ Which issue tracker `/emet` (or `$emet` on Codex) talks to. The CLI reads `kind`
 
 ## specs
 
-- `dir` (default `docs/specs`): repo-relative directory of living specs, written by `emet spec-merge`.
+- `dir` (default `docs/specs`): repo-relative directory of living specs, written by `emet spec-merge` when `enabled` is true.
+- `enabled` (default `false`): turns on living specs. On a spec's last wave the coordinator writes requirement deltas from the spec's S# items, runs `emet spec-merge` and commits `specs.dir` with that wave, so the update is reviewed and lands with it.
 
 ## map
 

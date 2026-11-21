@@ -19,12 +19,12 @@ There are two halves. The prompts (`commands/run.md`, `agents/*.md`, `emet/refer
 
 `commands/run.md` is a short router. It loads one `emet/reference/` phase file at a time, so a compaction never drops the rules for the current phase.
 
-| Phase                                  | Prompt                                                                                        | CLI calls                                                                                |
-| -------------------------------------- | --------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------- |
-| 1-5 interview, spec, tickets, approval | `phases-1-5.md`                                                                               | `init`, `doctor`, `validate`, `surfaces`, `approve`, `tracker`                           |
-| 6-7 dispatch and workers               | `phases-6-7-dispatch.md`, `worker-prompt.md`                                                  | `preflight`, `claims`, `slots`, `launch`, `lock-reason`, `handoff`, `results`            |
-| 8 review, gate, landing, closeout      | `phases-8-review.md`, `phases-8-landing.md`, `phases-8-spec-landing.md`, `reviewer-prompt.md` | `verify`, `review-package`, `review`, `assess`, `gate`, `land`, `spec-branch`, `cleanup` |
-| 9 handoff and chaining                 | `phases-9-handoff.md`                                                                         | `status`, `metrics`, `usage`, `spec-merge`                                               |
+| Phase                                  | Prompt                                                                                        | CLI calls                                                                                              |
+| -------------------------------------- | --------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------ |
+| 1-5 interview, spec, tickets, approval | `phases-1-5.md`                                                                               | `init`, `doctor`, `validate`, `surfaces`, `approve`, `tracker`                                         |
+| 6-7 dispatch and workers               | `phases-6-7-dispatch.md`, `worker-prompt.md`                                                  | `preflight`, `claims`, `slots`, `launch`, `lock-reason`, `handoff`, `results`                          |
+| 8 review, gate, landing, closeout      | `phases-8-review.md`, `phases-8-landing.md`, `phases-8-spec-landing.md`, `reviewer-prompt.md` | `verify`, `review-package`, `review`, `assess`, `gate`, `land`, `spec-branch`, `spec-merge`, `cleanup` |
+| 9 handoff and chaining                 | `phases-9-handoff.md`                                                                         | `status`, `metrics`, `usage`                                                                           |
 
 The coordinator is the single tracker writer (ADR-0005): workers report through a handoff note and `emet results`, and the coordinator posts them. `emet guard` runs as a `PreToolUse` hook and blocks known unattended-run failure triggers.
 
