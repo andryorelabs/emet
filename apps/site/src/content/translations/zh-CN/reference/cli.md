@@ -63,7 +63,7 @@ emet doctor ~/code/*
 - `emet run current [--json]`：输出仓库当前的活动运行（运行 id、规格、波次、阶段和最近更新），读取自 `.emet/phase.json`。没有活动运行时输出 `no active run` 并以 0 退出。
 - `emet insights [--since <iso|7d|30d>] [--repo <path>] [--all] [--json] [--mark-baseline]`：读取[事件日志](../guide/journal.md)，按来源（人工或自动）报告运行、按决定和原因报告 gate 决定、每次运行的人工干预、启动结果和已关闭的工单。无法读取的行会被跳过并计数。`--mark-baseline` 追加一个基线；之后的报告只涵盖基线之后的事件，除非指定 `--all`。日志为空或不存在时输出零值报告并以 0 退出。
 - `emet usage [--session <id> | --file <path>] [--stalled [--minutes N]] [--project-dir <path>]`：报告会话用量；`--stalled` 列出停滞的工作者。
-- `emet handoff --check <path> | --render <path>`：校验或渲染工作者的 `.emet/handoff-<ticket>.md` 笔记。
+- `emet handoff --check <path> [--expect-skills a,b] | --render <path>`：校验或渲染工作者的 `.emet/handoff-<ticket>.md` 笔记。笔记可以包含 `skills:` 部分，写作 `skills: none` 或 `skills: loaded: a, b; missing: c`；只有当 `state` 为 `done` 时才必须填写，其他任何值都会使校验失败。`--expect-skills a,b`（仅用于 check）会对每个既不在 `loaded` 也不在 `missing` 列表中的指定技能判定校验失败。当 `missing` 列表不为空时，通过的校验会输出 `missing skills: …`。
 - `emet metrics [--run <id>]`：根据会话记录，按工单、按波次和按运行报告 token、折合 API 的成本和耗时。它还会比较每个工单预估的上下文预算与各工作者实际使用的量。其摘要会放在该次运行最终报告的末尾。
 
 ### 规划、评审与落地
