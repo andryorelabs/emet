@@ -147,23 +147,32 @@ export async function runSync(_argv: string[], context: SpecBranchContext): Prom
   }
 }
 
-function closesLine(ticket: string): string {
-  const number = /^#?(\d+)$/.exec(ticket)?.[1] ?? /(\d+)$/.exec(ticket)?.[1];
-  return number === undefined ? `Closes ${ticket}` : `Closes #${number}`;
+function closesLines(tickets: string[], trackerKind: string): string[] {
+  if (trackerKind === "local") return [];
+  if (trackerKind === "linear") return tickets.map((ticket) => `Closes ${ticket}`);
+  return tickets.flatMap((ticket) => {
+    const number = /(\d+)$/.exec(ticket)?.[1];
+    return number === undefined ? [] : [`Closes #${number}`];
+  });
 }
 
 function landingTitle(spec: string, partial: boolean): string {
   return `feat: ✨ land spec ${spec}${partial ? " (partial)" : ""}`;
 }
 
-function landingBody(spec: string, state: SpecBranchState, tickets: string[]): string {
+function landingBody(
+  spec: string,
+  state: SpecBranchState,
+  tickets: string[],
+  trackerKind: string,
+): string {
   const waves = state.waves.map((entry) => `- wave ${entry.wave}: ${entry.tickets.join(", ")}`);
   return [
     `Spec ${spec}, landed from ${state.branch}.`,
     "",
     ...waves,
     "",
-    ...tickets.map(closesLine),
+    ...closesLines(tickets, trackerKind),
   ].join("\n");
 }
 
@@ -187,19 +196,35 @@ async function landByPullRequest(
   if (pushed.exitCode !== 0) {
     throw new SpecLandingRefusedError(`pushing ${state.branch} failed: ${pushed.stderr}`);
   }
-  const pullRequest = await runGh(
+  const existing = await runGh(
     root,
     "pr",
-    "create",
-    "--base",
-    config.repo.trunk,
+    "list",
     "--head",
     state.branch,
-    "--title",
-    title,
-    "--body",
-    body,
+    "--state",
+    "open",
+    "--json",
+    "url",
+    "--jq",
+    ".[0].url // empty",
   );
+  const pullRequest =
+    existing.length > 0
+      ? existing
+      : await runGh(
+          root,
+          "pr",
+          "create",
+          "--base",
+          config.repo.trunk,
+          "--head",
+          state.branch,
+          "--title",
+          title,
+          "--body",
+          body,
+        );
   await runGh(root, "pr", "merge", pullRequest, "--merge");
   return { pullRequest };
 }
@@ -254,6 +279,9 @@ async function mainWorktree(cwd: string): Promise<string> {
 export async function runLand(argv: string[], context: SpecBranchContext): Promise<number> {
   try {
     const partial = argv.includes("--partial");
+    if (context.config.landing.mode !== "merge") {
+      await git(context.root, "fetch", context.config.repo.remote, context.config.repo.trunk);
+    }
     await mergeTrunkIntoSpecBranch(context);
     const state = await requireState(context);
     if (state.waves.length === 0) {
@@ -261,7 +289,7 @@ export async function runLand(argv: string[], context: SpecBranchContext): Promi
     }
     const tickets = state.waves.flatMap((entry) => entry.tickets);
     const title = landingTitle(context.spec, partial);
-    const body = landingBody(context.spec, state, tickets);
+    const body = landingBody(context.spec, state, tickets, context.config.tracker.kind ?? "github");
     const mode = context.config.landing.mode;
     const landed =
       mode === "merge"

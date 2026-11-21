@@ -51,10 +51,14 @@ async function integrateWave(wave: number, tickets: string, file = `w${wave}.txt
   expect(result.code).toBe(0);
 }
 
-function writeConfig(landing: Record<string, unknown>): void {
+function writeConfig(landing: Record<string, unknown>, trackerKind?: string): void {
   writeFileSync(
     path.join(repo, "emet.config.json"),
-    JSON.stringify({ version: 1, landing: { pushSpecBranch: false, ...landing } }),
+    JSON.stringify({
+      version: 1,
+      landing: { pushSpecBranch: false, ...landing },
+      ...(trackerKind === undefined ? {} : { tracker: { kind: trackerKind } }),
+    }),
   );
   git(repo, "add", "emet.config.json");
   git(repo, "commit", "-q", "-m", "config");
@@ -96,6 +100,19 @@ describe("sync", () => {
     const tip = git(repo, "rev-parse", "spec/7");
     expect(git(repo, "rev-parse", `${tip}^1`)).toBe(before);
     expect(git(repo, "rev-parse", `${tip}^2`)).toBe(git(repo, "rev-parse", "main"));
+  });
+
+  test("fast-forwards the checked-out worktree to the new merge commit", async () => {
+    writeConfig({ mode: "merge" });
+    await runCapturing(["ensure", "--spec", "7"]);
+    await integrateWave(1, "a");
+    commitFile("trunk.txt", "trunk\n");
+    git(repo, "checkout", "-q", "spec/7");
+    const result = await runCapturing(["sync", "--spec", "7"]);
+    expect(result.code).toBe(0);
+    expect(git(repo, "rev-parse", "HEAD")).toBe(git(repo, "rev-parse", "spec/7"));
+    expect(git(repo, "status", "--porcelain", "--untracked-files=no")).toBe("");
+    expect(git(repo, "ls-files", "trunk.txt")).toBe("trunk.txt");
   });
 
   test("is a no-op when trunk is already contained", async () => {
@@ -151,6 +168,46 @@ describe("land in merge mode", () => {
     const result = await runCapturing(["land", "--spec", "7"]);
     expect(result.code).not.toBe(0);
     expect(git(repo, "rev-parse", "main")).toBe(before);
+  });
+});
+
+async function landWithStub(trackerKind: string, existingUrl: string): Promise<string> {
+  const remote = realpathSync(mkdtempSync(path.join(os.tmpdir(), "emet-speclanding-remote-")));
+  const binDirectory = realpathSync(mkdtempSync(path.join(os.tmpdir(), "emet-speclanding-bin-")));
+  try {
+    git(remote, "init", "-q", "--bare", "-b", "main");
+    writeConfig({ mode: "pr", pushSpecBranch: true }, trackerKind);
+    git(repo, "remote", "add", "origin", remote);
+    git(repo, "push", "-q", "origin", "main");
+    git(repo, "fetch", "-q", "origin");
+    const callsFile = path.join(binDirectory, "calls.log");
+    const stub = path.join(binDirectory, "gh");
+    writeFileSync(
+      stub,
+      `#!/bin/sh\nprintf '%s\\n---\\n' "$*" >> "${callsFile}"\nif [ "$1 $2" = "pr list" ]; then echo '${existingUrl}'; fi\nif [ "$1 $2" = "pr create" ]; then echo https://github.com/o/r/pull/9; fi\n`,
+    );
+    chmodSync(stub, 0o755);
+    process.env.PATH = `${binDirectory}:${originalPath ?? ""}`;
+    await runCapturing(["ensure", "--spec", "7"]);
+    await integrateWave(1, "feat-01");
+    expect((await runCapturing(["land", "--spec", "7"])).code).toBe(0);
+    return readFileSync(callsFile, "utf8");
+  } finally {
+    rmSync(remote, { recursive: true, force: true });
+    rmSync(binDirectory, { recursive: true, force: true });
+  }
+}
+
+describe("land in pr mode edge cases", () => {
+  test("a local tracker writes no Closes line", async () => {
+    const calls = await landWithStub("local", "");
+    expect(calls).not.toContain("Closes");
+  });
+
+  test("a rerun reuses the open PR instead of creating a second one", async () => {
+    const calls = await landWithStub("github", "https://github.com/o/r/pull/5");
+    expect(calls).not.toContain("pr create");
+    expect(calls).toContain("pr merge https://github.com/o/r/pull/5 --merge");
   });
 });
 
