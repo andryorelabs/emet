@@ -2,7 +2,7 @@
 title: トラッカーとランディング
 description: チケットの置き場所、ウェーブがプルリクエストまたはローカルマージとしてランディングする仕組み、ウェーブの連鎖を説明します。
 seoTitle: emet のトラッカーとランディング
-sourceHash: 6c1988e1fd68ab4d
+sourceHash: 4280f1152d8971e0
 ---
 
 チケットの置き場所、ウェーブがランディングする仕組み、ウェーブの連鎖について説明します。ここで挙げるキーはすべて[設定リファレンス](../reference/configuration.md)に、サブコマンドはすべて [CLI リファレンス](../reference/cli.md)にあります。
@@ -21,11 +21,21 @@ emet は Linear、GitHub Issues、ローカルファイルに対応しており�
 
 `landing.mode` は `"pr"`（既定）または `"merge"` で、トラッカーとは独立しています。`merge` モードでは、ウェーブは `emet land` によるトランクへの 1 回のローカルマージとしてランディングし、CI の代わりに `commands.selfCheck` を使い、プッシュは行いません。`gh` が必要なのは、トラッカーが `github` の場合か、ランディングが `pr` の場合だけです。[ADR-0010](../adr/0010-local-merge-landing.md) を参照してください。
 
+`landing.unit` は、何を 1 つのまとまりとしてランディングするかを選びます。`"spec"`（既定）はスペック全体を一度にランディングし、`"wave"` は各ウェーブを単独でランディングする従来のルールを維持します。[ADR-0037](../adr/0037-landing-per-spec.md) を参照してください。これは [ADR-0004](../adr/0004-one-wave-one-dependency-layer-one-pr.md) を置き換えます。
+
+### スペックブランチ
+
+`landing.unit: "spec"` では、コーディネーターが `emet spec-branch ensure --spec <id>` でトランクから `spec/<id>` を作成します。ウェーブがレビューと `commands.selfCheck` を通過すると、`emet spec-branch integrate` が `--no-ff` でウェーブのブランチを `spec/<id>` にマージし、`Emet-Wave` と `Emet-Tickets` のトレーラーを付けたコミットを作ります。ブランチが `spec/<id>` に入っているチケットは **Landed** ではなく **Integrated** です。次のウェーブのフロンティアではクローズ済みのブロッカーとして数えられますが、トラッカーでは最終ランディングまで開いたままです。後続のウェーブは `spec/<id>` の先端から分岐するため、PR の CI を待つウェーブはありません。
+
+`emet spec-branch sync` はトランクを `spec/<id>` にマージし、リベースは行いません。競合した場合は中断し、ブランチを変更せずに残して、ゼロ以外の終了コードで終了します。`emet spec-branch land` は同期を実行してから、ブランチを 1 回だけランディングします。`pr` モードでは `spec/<id>` をプッシュし、統合済みの全ウェーブのチケットにつき 1 行の `Closes #N` を入れた PR を 1 つ開き、`pr.mergeMethod` を無視してマージコミットでマージします。`merge` モードでは `spec/<id>` を `--no-ff` でローカルのトランクにマージし、プッシュは行いません。`--partial` は、それまでに統合されたウェーブだけをランディングします。`emet spec-branch abandon --spec <id> --force` はブランチに `abandoned/spec-<id>` のタグを付けて削除し、ローカルトラッカーの統合済みチケットを `ready-for-agent` に戻します。
+
+スペックモードでは、ワーカーのワークツリーがスペックブランチから始まるよう、Claude Code の設定で `worktree.baseRef: "head"` が必要です。`emet preflight` と `emet doctor` がこれを確認します。また `emet doctor` は、モードが `pr` でリポジトリがマージコミットを許可していない場合に警告します。
+
 ### PR によるランディング
 
-1 つのウェーブは 1 つの PR です。本文には各チケットにつき 1 行の `Closes #N`（トラッカーのクローズ用キーワード）が入り、コーディネーターは PR を開く際にチケットをレビュー中に移します。その後、PR は `pr.autoMerge` に従ってマージされます。ウェーブにフラグが立っている場合、`autoMerge` が `false` の場合、または CI の修正回数を使い切った場合は、PR は開いたままになります（その場合、PR には人間の判断が必要であることを示すラベルが付きます）。マージ後は、GitHub トラッカーでは `emet tracker close` がチケットをクローズし、`emet cleanup --run <runId>` がウェーブのブランチ、チケットのクレーム、ワーカースロットを解放します。また、PR がブランチの先端コミットでマージされたローカルブランチを、統合ブランチも含めて削除します。
+`landing.unit: "spec"` では PR はスペックのものです。最終ウェーブの後に `emet spec-branch land` が開く、統合済みの全ウェーブをまとめた 1 つの PR です。`landing.unit: "wave"` では、1 つのウェーブは 1 つの PR です。本文には各チケットにつき 1 行の `Closes #N`（トラッカーのクローズ用キーワード）が入り、コーディネーターは PR を開く際にチケットをレビュー中に移します。その後、PR は `pr.autoMerge` に従ってマージされます。ウェーブにフラグが立っている場合、`autoMerge` が `false` の場合、または CI の修正回数を使い切った場合は、PR は開いたままになります（その場合、PR には人間の判断が必要であることを示すラベルが付きます）。マージ後は、GitHub トラッカーでは `emet tracker close` がチケットをクローズし、`emet cleanup --run <runId>` がウェーブのブランチ、チケットのクレーム、ワーカースロットを解放します。また、PR がブランチの先端コミットでマージされたローカルブランチを、統合ブランチも含めて削除します。
 
-ウェーブのブランチがまとめてマージされた後、`commands.fullSuite` が統合ブランチで 1 回実行されます。失敗すると、PR と `autoChain` がブロックされます。ゲートはその結果を `--integration` として受け取ります。
+ウェーブのブランチがまとめてマージされた後、`commands.fullSuite` が統合ブランチで 1 回実行されます。失敗すると、PR と `autoChain` がブロックされます。ゲートはその結果を `--integration` として受け取ります。スペックランディングの最終ではないウェーブでは、コーディネーターは `commands.selfCheck` の結果を `--ci` として渡し、`emet ci --wait` で CI を待つのは最終のランディングだけです。その場合、ウェーブが残っている間、ゲートは `chain` と答えます。
 
 ### ウェーブの連鎖
 
