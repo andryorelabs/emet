@@ -2,7 +2,11 @@ import type { ForgeConfig } from "./config";
 import { listTickets, parseTicketId, resolveTrackerRoot } from "./tracker-files";
 import { classifyByContent, resolveMainTree } from "./worktrees";
 
-export type LandedVerdict = "landed" | "not-landed" | "unknown";
+/**
+ * `landed` means on trunk. `integrated` means merged into a spec branch but
+ * not on trunk yet; only {@link resolveCleanupVerdict} answers it.
+ */
+export type LandedVerdict = "landed" | "not-landed" | "unknown" | "integrated";
 
 type TrackerState = "done" | "open" | "unknown";
 
@@ -10,6 +14,7 @@ export interface LandedContext {
   readonly config: ForgeConfig;
   readonly readTrackerState?: (ticket: string) => Promise<TrackerState>;
   readonly classifyContent?: typeof classifyByContent;
+  readonly isIntegrated?: (branch: string) => Promise<boolean>;
 }
 
 export type GithubIssueRunner = (
@@ -56,6 +61,22 @@ export async function readGithubIssueState(
     throw new Error(`landed: gh issue view ${issueNumber} failed with exit ${result.exitCode}`);
   }
   return parseGithubIssueState(result.stdout);
+}
+
+const WAVE_BRANCH = /-w\d+$/;
+
+/** Whether the branch is an ancestor of a local `spec/<id>` branch (wave branches excluded). */
+async function isIntegratedIntoSpecBranch(branch: string): Promise<boolean> {
+  const result =
+    await Bun.$`git for-each-ref --contains ${branch} --format=${"%(refname:short)"} refs/heads/spec/`
+      .nothrow()
+      .quiet();
+  if (result.exitCode !== 0) return false;
+  return result.stdout
+    .toString()
+    .split("\n")
+    .map((line) => line.trim())
+    .some((name) => name.length > 0 && !WAVE_BRANCH.test(name));
 }
 
 /** Reads a local tracker ticket's `Status:`: `done` is `done`, any other status is `open`. */
@@ -146,4 +167,24 @@ export function unownedReclaimVerdict(input: UnownedReclaimInput): UnownedReclai
   }
   if (!input.clean) return { reclaimable: false, reason: "dirty tree" };
   return { reclaimable: true, reason: "ticket landed and tree clean" };
+}
+
+/**
+ * The verdict `emet cleanup` plans with: {@link resolveLandedVerdict}, plus
+ * `integrated` for a ticket that is not on trunk but whose branch is an
+ * ancestor of a spec branch, when `landing.unit` is `spec`. `landed` always
+ * wins, so an integrated-but-open ticket is never reported as landed.
+ */
+export async function resolveCleanupVerdict(
+  input: { ticket: string; branch: string },
+  context: LandedContext,
+): Promise<LandedVerdict> {
+  const verdict = await resolveLandedVerdict(input, context);
+  if (verdict === "landed" || context.config.landing.unit !== "spec") return verdict;
+  const check = context.isIntegrated ?? isIntegratedIntoSpecBranch;
+  try {
+    return (await check(input.branch)) ? "integrated" : verdict;
+  } catch {
+    return verdict;
+  }
 }

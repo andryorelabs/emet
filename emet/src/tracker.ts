@@ -10,6 +10,7 @@ import { appendEvent } from "./journal";
 import { didAcquireLock, didReclaimStaleLock, releaseLock, resolveLockDirectory } from "./locks";
 import { PRODUCT } from "./names";
 import { errnoCode, errorMessage } from "./narrow";
+import { readSpecBranchState } from "./specbranch";
 import {
   closeCompletedSpecs,
   closeGithubTickets,
@@ -272,11 +273,20 @@ async function readItem(root: string, argv: readonly string[]): Promise<unknown>
   };
 }
 
+async function readIntegratedTickets(root: string, slug: string): Promise<ReadonlySet<string>> {
+  try {
+    const state = await readSpecBranchState(root, slug);
+    return new Set(state?.waves.flatMap((wave) => wave.tickets) ?? []);
+  } catch {
+    return new Set();
+  }
+}
+
 async function frontier(root: string, argv: readonly string[]): Promise<unknown> {
   const slug = requireSlug(requireFlag(argv, "--spec"));
   requireSpec(root, slug);
   const tickets = await loadTickets(root, slug);
-  return computeFrontier(tickets).map(ticketSummary);
+  return computeFrontier(tickets, await readIntegratedTickets(root, slug)).map(ticketSummary);
 }
 
 async function applyStatus(
@@ -302,7 +312,7 @@ async function applyStatus(
   return { id: target.id, status, specStatus: "done" };
 }
 
-async function mutateStatus(
+export async function mutateStatus(
   root: string,
   id: string,
   status: TrackerStatus,
