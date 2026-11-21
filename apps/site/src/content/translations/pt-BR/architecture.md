@@ -24,12 +24,12 @@ Há duas metades. Os prompts (`commands/run.md`, `agents/*.md`, `emet/reference/
 
 `commands/run.md` é um roteador curto. Ele carrega um arquivo de fase de `emet/reference/` por vez, de modo que uma compactação nunca perde as regras da fase atual.
 
-| Fase                                        | Prompt                                       | Chamadas à CLI                                                                |
-| ------------------------------------------- | -------------------------------------------- | ----------------------------------------------------------------------------- |
-| 1-5 entrevista, spec, tickets, aprovação    | `phases-1-5.md`                              | `init`, `doctor`, `validate`, `surfaces`, `approve`, `tracker`                |
-| 6-7 despacho e workers                      | `phases-6-7-dispatch.md`, `worker-prompt.md` | `preflight`, `claims`, `slots`, `launch`, `lock-reason`, `handoff`, `results` |
-| 8 revisão, gate, aterrissagem, encerramento | `phases-8-closeout.md`, `reviewer-prompt.md` | `verify`, `review-package`, `review`, `assess`, `gate`, `land`, `cleanup`     |
-| 9 handoff e encadeamento                    | `phases-9-handoff.md`                        | `status`, `metrics`, `usage`, `spec-merge`                                    |
+| Fase                                        | Prompt                                                            | Chamadas à CLI                                                                |
+| ------------------------------------------- | ----------------------------------------------------------------- | ----------------------------------------------------------------------------- |
+| 1-5 entrevista, spec, tickets, aprovação    | `phases-1-5.md`                                                   | `init`, `doctor`, `validate`, `surfaces`, `approve`, `tracker`                |
+| 6-7 despacho e workers                      | `phases-6-7-dispatch.md`, `worker-prompt.md`                      | `preflight`, `claims`, `slots`, `launch`, `lock-reason`, `handoff`, `results` |
+| 8 revisão, gate, aterrissagem, encerramento | `phases-8-review.md`, `phases-8-landing.md`, `reviewer-prompt.md` | `verify`, `review-package`, `review`, `assess`, `gate`, `land`, `cleanup`     |
+| 9 handoff e encadeamento                    | `phases-9-handoff.md`                                             | `status`, `metrics`, `usage`, `spec-merge`                                    |
 
 O coordenador é o único que escreve no tracker (ADR-0005): os workers informam por meio de uma nota de handoff e do `emet results`, e o coordenador as publica. O `emet guard` roda como um hook `PreToolUse` e bloqueia gatilhos conhecidos de falhas em execuções sem supervisão.
 
@@ -52,7 +52,7 @@ Os valores específicos de cada host ficam atrás da interface `AgentHost` em `a
 
 ## Organização dos prompts
 
-`commands/run.md` (cerca de 130 linhas) é o roteador do `/emet` no Claude Code; no Codex, os `codex/skills/**` e `codex/hooks.json` gerados cumprem esse papel. Cada arquivo de `emet/reference/` é um grupo de fases (`phases-1-5.md`, `phases-6-7-dispatch.md`, `phases-8-closeout.md`, `phases-9-handoff.md`), carregado somente quando o modo da execução atual precisa dele. Um teste falha se qualquer um deles passar de 20.000 bytes, para que um único arquivo não tome conta do contexto depois de uma compactação. As fases instruem o coordenador a reler a seção relevante antes de cada rodada de correção ou revisão. O `install.sh` separa um antigo `phases-6-9.md` único como `phases-6-9.md.retired` quando você o editou ou ele é anterior ao manifesto de instalação, e o apaga caso contrário. O `install.sh` também conecta o `emet guard` em `~/.claude/settings.json` como o hook `PreToolUse`.
+`commands/run.md` (cerca de 130 linhas) é o roteador do `/emet` no Claude Code; no Codex, os `codex/skills/**` e `codex/hooks.json` gerados cumprem esse papel. Cada arquivo de `emet/reference/` é um grupo de fases (`phases-1-5.md`, `phases-6-7-dispatch.md`, `phases-8-review.md`, `phases-8-landing.md`, `phases-9-handoff.md`), carregado somente quando o modo da execução atual precisa dele. Um teste falha se qualquer um deles passar de 20.000 bytes, para que um único arquivo não tome conta do contexto depois de uma compactação. As fases instruem o coordenador a reler a seção relevante antes de cada rodada de correção ou revisão. O `install.sh` separa um antigo `phases-6-9.md` único como `phases-6-9.md.retired` quando você o editou ou ele é anterior ao manifesto de instalação, e o apaga caso contrário. Ele faz o mesmo com o antigo `phases-8-closeout.md`, que foi dividido em `phases-8-review.md` (revisão e gate) e `phases-8-landing.md` (aterrissagem e encerramento), como `phases-8-closeout.md.retired`. O `install.sh` também conecta o `emet guard` em `~/.claude/settings.json` como o hook `PreToolUse`.
 
 ## Distribuição
 
