@@ -24,12 +24,12 @@ sourceHash: 36996125d0e6df7f
 
 `commands/run.md`는 짧은 라우터입니다. `emet/reference/`의 단계 파일을 한 번에 하나씩 불러오므로, 컴팩션이 일어나도 현재 단계의 규칙이 사라지지 않습니다.
 
-| 단계                         | 프롬프트                                                                                      | CLI 호출                                                                                 |
-| ---------------------------- | --------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------- |
-| 1-5 인터뷰, 스펙, 티켓, 승인 | `phases-1-5.md`                                                                               | `init`, `doctor`, `validate`, `surfaces`, `approve`, `tracker`                           |
-| 6-7 디스패치와 워커          | `phases-6-7-dispatch.md`, `worker-prompt.md`                                                  | `preflight`, `claims`, `slots`, `launch`, `lock-reason`, `handoff`, `results`            |
-| 8 리뷰, 게이트, 랜딩, 마무리 | `phases-8-review.md`, `phases-8-landing.md`, `phases-8-spec-landing.md`, `reviewer-prompt.md` | `verify`, `review-package`, `review`, `assess`, `gate`, `land`, `spec-branch`, `cleanup` |
-| 9 핸드오프와 체이닝          | `phases-9-handoff.md`                                                                         | `status`, `metrics`, `usage`, `spec-merge`                                               |
+| 단계                         | 프롬프트                                                                                      | CLI 호출                                                                                               |
+| ---------------------------- | --------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------ |
+| 1-5 인터뷰, 스펙, 티켓, 승인 | `phases-1-5.md`                                                                               | `init`, `doctor`, `validate`, `surfaces`, `approve`, `tracker`                                         |
+| 6-7 디스패치와 워커          | `phases-6-7-dispatch.md`, `worker-prompt.md`                                                  | `preflight`, `claims`, `slots`, `launch`, `lock-reason`, `handoff`, `results`                          |
+| 8 리뷰, 게이트, 랜딩, 마무리 | `phases-8-review.md`, `phases-8-landing.md`, `phases-8-spec-landing.md`, `reviewer-prompt.md` | `verify`, `review-package`, `review`, `spec-merge`, `assess`, `gate`, `land`, `spec-branch`, `cleanup` |
+| 9 핸드오프와 체이닝          | `phases-9-handoff.md`                                                                         | `status`, `metrics`, `usage`                                                                           |
 
 코디네이터는 유일하게 트래커에 쓸 수 있는 주체입니다(ADR-0005). 워커는 핸드오프 노트와 `emet results`로 보고하고, 코디네이터가 이를 게시합니다. `emet guard`는 `PreToolUse` 훅으로 실행되어 무인 실행에서 실패를 일으키는 것으로 알려진 동작을 차단합니다.
 

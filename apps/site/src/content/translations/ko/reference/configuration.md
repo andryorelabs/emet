@@ -237,7 +237,8 @@ Claude Code 호스트의 역할별 모델과 추론 강도이며, Codex 호스�
 
 ## specs
 
-- `dir`(기본값 `docs/specs`): `emet spec-merge`가 작성하는 살아 있는 스펙의, 리포지토리 기준 상대 디렉터리입니다.
+- `enabled`(기본값 `false`): 살아 있는 스펙을 켭니다. 스펙의 마지막 웨이브에서 코디네이터가 스펙의 S# 항목으로 요구 사항 델타를 작성하고, `emet spec-merge`를 실행한 뒤 `specs.dir`를 그 웨이브와 함께 커밋하므로, 업데이트가 리뷰를 거쳐 웨이브와 함께 랜딩됩니다.
+- `dir`(기본값 `docs/specs`): `enabled`가 true일 때 `emet spec-merge`가 작성하는 살아 있는 스펙의, 리포지토리 기준 상대 디렉터리입니다.
 
 ## map
 
