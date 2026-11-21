@@ -1,6 +1,6 @@
 # 0012. develop development branch
 
-Status: Accepted (2026-11-04)
+Status: Accepted (2026-11-04). Amended by [0037](0037-landing-per-spec.md): the landing target of a spec is its spec branch until the final landing.
 Spec: #126 (S5, S23)
 
 Amends [0004](0004-one-wave-one-dependency-layer-one-pr.md). Amended by [0031](0031-after-spec-step-and-optional-setup.md): a repo may promote `develop` into `main` without a version tag.

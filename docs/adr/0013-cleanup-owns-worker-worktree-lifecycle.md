@@ -1,6 +1,6 @@
 # 0013. Cleanup owns the worker worktree lifecycle
 
-Status: Accepted (2026-11-04)
+Status: Accepted (2026-11-04). Amended by [0037](0037-landing-per-spec.md): an integrated ticket's worker worktree is reclaimed before the final landing.
 Spec: #150 (S1-S9)
 
 ## Context

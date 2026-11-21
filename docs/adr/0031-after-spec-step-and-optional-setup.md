@@ -1,6 +1,6 @@
 # 0031. An after-spec step per repo type, and an optional setup
 
-Status: Accepted (2026-11-18)
+Status: Accepted (2026-11-18). Amended by [0037](0037-landing-per-spec.md): the after-spec step runs after the spec branch lands.
 Amended: 2026-11-19, path-based after-spec rules and a deploy check that no longer depends on the mode
 Spec: the manual-work reduction spec, spec 3 of 3 (S1, S2, S7, S8)
 
