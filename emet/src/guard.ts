@@ -185,7 +185,7 @@ export function collectProcessAncestry(
 /**
  * Whether at least one *other* run (an `anchorPid` outside this hook
  * process's own ancestry) holds a slot with a `'live'` verdict — the signal
- * `phases-8-closeout.md`'s Phase 8 uses to skip `code-review`'s finder-roster
+ * `phases-8-review.md`'s Phase 8 uses to skip `code-review`'s finder-roster
  * fan-out: several real runs measured that roster hanging when multiple
  * `/emet` coordinators' background work was contending for the same host
  * at once, unrelated to raw memory/cpu headroom.
