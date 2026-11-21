@@ -60,6 +60,9 @@ worktrees can collide on it. Before `git checkout -b`, check `git rev-parse
 --verify --quiet <type>/<slug>`; if it resolves, append a disambiguator
 (`<type>/<slug>-2`) rather than reusing it.
 
+With `landing.unit: spec`, `<trunk>` below is the spec branch's `tip` from
+`emet spec-branch status`, and the landing is `phases-8-spec-landing.md`.
+
 Review here, once, over the full integration branch — this is the review
 Phase 7 deliberately deferred. First route it by risk: run
 `emet assess --base <trunk> --head <integration branch> [--risk-line "<first non-none Risk: line>"]`. It prints JSON
