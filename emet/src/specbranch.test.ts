@@ -304,3 +304,84 @@ describe("remote and checkout handling", () => {
     }
   });
 });
+
+describe("refusals and usage errors", () => {
+  test("integrate without a spec branch says to run ensure", async () => {
+    const result = await runCapturing([
+      "integrate",
+      "--spec",
+      "7",
+      "--wave",
+      "1",
+      "--tickets",
+      "a",
+    ]);
+    expect(result.code).toBe(1);
+    expect(result.err).toContain("ensure");
+  });
+
+  test("integrate refuses a missing wave branch and an already merged one", async () => {
+    await runCapturing(["ensure", "--spec", "7"]);
+    const missing = await runCapturing([
+      "integrate",
+      "--spec",
+      "7",
+      "--wave",
+      "1",
+      "--tickets",
+      "a",
+    ]);
+    expect(missing.code).toBe(1);
+    expect(missing.err).toContain("does not exist");
+    git(repo, "branch", waveBranchName("7", 1), specBranchName("7"));
+    const merged = await runCapturing([
+      "integrate",
+      "--spec",
+      "7",
+      "--wave",
+      "1",
+      "--tickets",
+      "a",
+    ]);
+    expect(merged.code).toBe(1);
+    expect(merged.err).toContain("already merged");
+  });
+
+  test("integrate refuses a dirty checked out spec branch", async () => {
+    await runCapturing(["ensure", "--spec", "7"]);
+    makeWaveBranch("7", 1, "w1.txt");
+    git(repo, "checkout", "-q", "spec/7");
+    writeFileSync(path.join(repo, "README.md"), "dirty\n");
+    const result = await runCapturing([
+      "integrate",
+      "--spec",
+      "7",
+      "--wave",
+      "1",
+      "--tickets",
+      "a",
+    ]);
+    expect(result.code).toBe(1);
+    expect(result.err).toContain("not clean");
+  });
+
+  test("ensure on an invalid branch name and on a missing trunk are refused", async () => {
+    expect((await runCapturing(["ensure", "--spec", "bad name"])).code).toBe(1);
+    git(repo, "branch", "-m", "main", "renamed");
+    const noTrunk = await runCapturing(["ensure", "--spec", "7"]);
+    expect(noTrunk.code).toBe(1);
+  });
+
+  test("bad flags are usage errors and --help prints the usage", async () => {
+    expect((await runCapturing(["integrate", "--spec"])).code).toBe(2);
+    expect(
+      (await runCapturing(["integrate", "--spec", "7", "--wave", "x", "--tickets", "a"])).code,
+    ).toBe(2);
+    expect(
+      (await runCapturing(["integrate", "--spec", "7", "--wave", "1", "--tickets", ","])).code,
+    ).toBe(2);
+    const help = await runCapturing(["--help"]);
+    expect(help.code).toBe(0);
+    expect(help.out).toContain("usage: emet spec-branch");
+  });
+});
