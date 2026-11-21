@@ -2,8 +2,17 @@
 title: 새로운 소식
 description: emet 릴리스 노트. 각 버전에서 무엇이 바뀌었는지 정리합니다.
 seoTitle: "emet 새로운 소식: 릴리스 노트"
-sourceHash: 130017a5359fd93e
+sourceHash: b29bae1442d54dd2
 ---
+
+## 0.15.0
+
+2026-11-21
+
+### 변경됨
+
+- `landing.unit`의 기본값은 `spec`입니다. spec의 wave는 `emet spec-branch`로 `spec/<id>` 브랜치에 통합되고, wave마다 pull request를 하나씩 만드는 대신 spec이 한 번만(pull request 하나, 또는 `landing.mode: merge`에서는 로컬 머지 한 번으로) 랜딩합니다. 이전 동작을 유지하려면 `"landing": { "unit": "wave" }`를 설정하세요. `spec` 모드는 Claude Code 설정에 `worktree.baseRef: "head"`가 필요합니다. ADR-0037을 참고하세요.
+- 저널에 종류 `spec.integrate`, `spec.land`, `spec.abandon`이 추가되고, `emet status`에 `specBranch`가 추가됩니다.
 
 ## 0.14.5
 

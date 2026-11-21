@@ -2,8 +2,17 @@
 title: 新機能
 description: emet のリリースノート。各バージョンでの変更点をまとめています。
 seoTitle: "emet の新機能: リリースノート"
-sourceHash: 130017a5359fd93e
+sourceHash: b29bae1442d54dd2
 ---
+
+## 0.15.0
+
+2026-11-21
+
+### 変更
+
+- `landing.unit` の既定値は `spec` です。spec の wave は `emet spec-branch` でブランチ `spec/<id>` に統合され、wave ごとに 1 つの pull request ではなく、spec 全体が 1 回だけ(1 つの pull request、または `landing.mode: merge` ではローカルマージ 1 回で)ランディングします。従来の動作を保つには `"landing": { "unit": "wave" }` を設定してください。`spec` モードには Claude Code の設定で `worktree.baseRef: "head"` が必要です。ADR-0037 を参照してください。
+- ジャーナルに種別 `spec.integrate`、`spec.land`、`spec.abandon` が加わり、`emet status` に `specBranch` が加わります。
 
 ## 0.14.5
 
