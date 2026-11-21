@@ -214,9 +214,9 @@ Solo se lee cuando `agentHost` es `"codex"`. Todas las claves son opcionales. El
 ## landing
 
 - `mode` (por defecto `pr`): `pr` abre un pull request (requiere `gh`). `merge` fusiona la rama de integración en la rama troncal local con `emet land` y nunca hace push, con `commands.selfCheck` en lugar de la CI. Independiente del tracker. Consulta el [ADR-0010](../adr/0010-local-merge-landing.md).
-- `unit` (por defecto `spec`, uno de `spec`, `wave`): qué aterriza de una vez. `spec` integra cada oleada en la rama `spec/<id>` y aterriza la spec una vez con `emet spec-branch land`; `wave` aterriza cada oleada sola con `emet land` o un PR. Con `spec`, el ajuste del arnés `worktree.baseRef` debe ser `head` (no es una clave de emet); `emet preflight` y `emet doctor` lo comprueban. `emet doctor` también avisa cuando `unit` es `spec`, `mode` es `pr` y el repositorio no permite commits de merge. Cualquier otro valor falla al cargar con `"landing.unit" must be one of spec|wave`. Consulta el [ADR-0037](../adr/0037-landing-per-spec.md).
-- `specMergeMethod` (por defecto `merge`, solo `merge`): cómo se fusiona `spec/<id>` en la rama troncal, siempre con un commit de merge.
-- `pushSpecBranch` (por defecto `true`): envía `spec/<id>` al remoto tras cada `emet spec-branch integrate`, sin abrir un PR.
+- `unit` (por defecto `spec`): `spec` integra cada oleada en la rama `spec/<id>` con `emet spec-branch integrate` y aterriza la spec una vez con `emet spec-branch land`; `wave` aterriza cada oleada sola, como antes. Cualquier otro valor falla al cargar con `"landing.unit" must be one of spec|wave`. `spec` requiere `worktree.baseRef: "head"` en los ajustes de Claude Code (un ajuste del arnés, no una clave de emet), que `emet preflight` y `emet doctor` comprueban. Consulta el [ADR-0037](../adr/0037-landing-per-spec.md).
+- `specMergeMethod` (por defecto `merge`): cómo se fusiona el PR de la spec. Solo se acepta `merge`; ignora `pr.mergeMethod`.
+- `pushSpecBranch` (por defecto `true`): envía `spec/<id>` tras cada `emet spec-branch integrate`, sin abrir un PR. Ponlo en `false` para mantener la rama local hasta el aterrizaje final.
 
 ## tracker
 
