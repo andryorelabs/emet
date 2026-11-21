@@ -86,7 +86,7 @@ Las fases no deciden por sí solas cuándo un ticket está terminado, es fusiona
 
 ## Specs vivas, mapa y métricas
 
-**Specs vivas.** Después de que una oleada se fusiona automáticamente, `emet spec-merge --spec <id>` fusiona los deltas de requisitos `ADDED`/`MODIFIED`/`REMOVED` de la spec en `docs/specs/<area>.md` (`specs.dir`). Comprueba todas las áreas antes de escribir nada. Un conflicto, o un requisito que perdería un escenario, termina con código 1 y deja todos los archivos intactos.
+**Specs vivas.** Actívelas con `specs.enabled`. En la última oleada de una spec, antes de su revisión, el coordinador escribe los deltas de requisitos de la spec, ejecuta una vez `emet spec-merge --spec <id>` para fusionarlos en `docs/specs/<area>.md` (`specs.dir`) y confirma el resultado, de modo que se revisa y aterriza en el mismo PR. Comprueba todas las áreas antes de escribir nada. Un conflicto, o un requisito que perdería un escenario, termina con código 1 y deja todos los archivos intactos; el coordinador reintenta una vez, y si falla aterriza sin la actualización y lo señala.
 
 **Mapa del código.** `emet map` escribe un resumen de una base de código existente (stack, estructura, convenciones, pruebas, puntos calientes) en `docs/agents/codebase.md` (`map.path`), sellado con el SHA del commit a partir del cual se construyó. El mismo commit siempre produce el mismo archivo. `emet map --stale` termina con código 1 cuando HEAD ha avanzado más allá del sello, y `emet preflight` avisa en ese caso. `emet map --for <globs>` imprime solo las secciones que coinciden con las superficies de edición de un ticket. Esa salida es la única parte del mapa que incluye el brief de un worker.
 
