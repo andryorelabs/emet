@@ -93,6 +93,37 @@ describe("spec-branch abandon", () => {
     expect(ticketStatus("01-a.md")).toBe("in-review");
   });
 
+  test("a ticket that cannot be reset is reported as failed without aborting", async () => {
+    git("checkout", "-q", "spec/feat");
+    git("commit", "-q", "--allow-empty", "-m", "wave two\n\nEmet-Wave: 2\nEmet-Tickets: feat-99");
+    git("checkout", "-q", "main");
+    const logs = spyOn(console, "log").mockImplementation(() => undefined);
+    expect(await runAbandon(["--force"], contextFor("local"))).toBe(exitCodes.findings);
+    const printed = String(logs.mock.calls[0]?.[0]);
+    logs.mockRestore();
+    expect(printed).toContain('"failed":["feat-99');
+    expect(ticketStatus("01-a.md")).toBe("ready-for-agent");
+  });
+
+  test("a tag that already exists stops the abandon and keeps the branch", async () => {
+    git("-c", "tag.gpgSign=false", "tag", "abandoned/spec-feat", "main");
+    const errors = spyOn(console, "error").mockImplementation(() => undefined);
+    expect(await runAbandon(["--force"], contextFor("local"))).toBe(exitCodes.findings);
+    expect(errors.mock.calls[0]?.[0]).toContain("git tag");
+    errors.mockRestore();
+    expect(git("branch", "--list", "spec/feat")).toContain("spec/feat");
+  });
+
+  test("a branch checked out elsewhere is not deleted and the tag is removed again", async () => {
+    git("checkout", "-q", "spec/feat");
+    const errors = spyOn(console, "error").mockImplementation(() => undefined);
+    expect(await runAbandon(["--force"], contextFor("local"))).toBe(exitCodes.findings);
+    expect(errors.mock.calls[0]?.[0]).toContain("deleting");
+    errors.mockRestore();
+    expect(git("tag", "--list")).toBe("");
+    expect(git("branch", "--list", "spec/feat")).toContain("spec/feat");
+  });
+
   test("a missing branch is refused", async () => {
     git("branch", "--delete", "--force", "spec/feat");
     const errors = spyOn(console, "error").mockImplementation(() => undefined);

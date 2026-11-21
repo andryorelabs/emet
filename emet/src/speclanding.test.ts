@@ -136,6 +136,98 @@ describe("sync", () => {
   });
 });
 
+describe("land refusals", () => {
+  test("sync on a missing branch is refused", async () => {
+    writeConfig({ mode: "merge" });
+    const result = await runCapturing(["sync", "--spec", "9"]);
+    expect(result.code).not.toBe(0);
+    expect(result.err).toContain("does not exist");
+  });
+
+  test("land refuses when the main worktree is not on trunk", async () => {
+    writeConfig({ mode: "merge" });
+    await runCapturing(["ensure", "--spec", "7"]);
+    await integrateWave(1, "a");
+    git(repo, "checkout", "-q", "-b", "other");
+    const result = await runCapturing(["land", "--spec", "7"]);
+    expect(result.code).not.toBe(0);
+    expect(result.err).toContain("not main");
+  });
+
+  test("sync refuses when the spec branch is checked out in another worktree", async () => {
+    writeConfig({ mode: "merge" });
+    await runCapturing(["ensure", "--spec", "7"]);
+    await integrateWave(1, "a");
+    commitFile("trunk.txt", "trunk\n");
+    const other = path.join(realpathSync(mkdtempSync(path.join(os.tmpdir(), "emet-other-"))), "wt");
+    try {
+      git(repo, "worktree", "add", "-q", other, "spec/7");
+      const result = await runCapturing(["sync", "--spec", "7"]);
+      expect(result.code).not.toBe(0);
+      expect(result.err).toContain("is checked out in");
+    } finally {
+      git(repo, "worktree", "remove", "--force", other);
+      rmSync(path.dirname(other), { recursive: true, force: true });
+    }
+  });
+
+  test("sync refuses when the checked-out spec branch has uncommitted changes", async () => {
+    writeConfig({ mode: "merge" });
+    await runCapturing(["ensure", "--spec", "7"]);
+    await integrateWave(1, "a");
+    commitFile("trunk.txt", "trunk\n");
+    git(repo, "checkout", "-q", "spec/7");
+    writeFileSync(path.join(repo, "README.md"), "changed\n");
+    const result = await runCapturing(["sync", "--spec", "7"]);
+    expect(result.code).not.toBe(0);
+    expect(result.err).toContain("not clean");
+  });
+
+  test("land refuses on a detached HEAD", async () => {
+    writeConfig({ mode: "merge" });
+    await runCapturing(["ensure", "--spec", "7"]);
+    await integrateWave(1, "a");
+    git(repo, "checkout", "-q", "--detach");
+    const result = await runCapturing(["land", "--spec", "7"]);
+    expect(result.code).not.toBe(0);
+    expect(result.err).toContain("detached HEAD");
+  });
+
+  test("a failing merge is aborted and leaves trunk where it was", async () => {
+    writeConfig({ mode: "merge" });
+    await runCapturing(["ensure", "--spec", "7"]);
+    await integrateWave(1, "a");
+    const hook = path.join(repo, ".git", "hooks", "pre-merge-commit");
+    writeFileSync(hook, "#!/bin/sh\nexit 1\n");
+    chmodSync(hook, 0o755);
+    const before = git(repo, "rev-parse", "main");
+    const result = await runCapturing(["land", "--spec", "7"]);
+    expect(result.code).not.toBe(0);
+    expect(result.err).toContain("failed");
+    expect(git(repo, "rev-parse", "main")).toBe(before);
+  });
+
+  test("land refuses when the main worktree is dirty", async () => {
+    writeConfig({ mode: "merge" });
+    await runCapturing(["ensure", "--spec", "7"]);
+    await integrateWave(1, "a");
+    commitFile("dirty.txt", "one\n");
+    writeFileSync(path.join(repo, "dirty.txt"), "two\n");
+    const result = await runCapturing(["land", "--spec", "7"]);
+    expect(result.code).not.toBe(0);
+    expect(result.err).toContain("not clean");
+  });
+
+  test("pr mode refuses when the push fails", async () => {
+    writeConfig({ mode: "pr" });
+    await runCapturing(["ensure", "--spec", "7"]);
+    await integrateWave(1, "a");
+    const result = await runCapturing(["land", "--spec", "7"]);
+    expect(result.code).not.toBe(0);
+    expect(result.err).toContain("pushing spec/7 failed");
+  });
+});
+
 describe("land in merge mode", () => {
   test("adds one merge commit to trunk, never pushes and journals spec.land", async () => {
     writeConfig({ mode: "merge" });
@@ -175,7 +267,8 @@ async function landWithStub(
   trackerKind: string,
   existingUrl: string,
   checksExit = 0,
-): Promise<{ calls: string; code: number }> {
+  listExit = 0,
+): Promise<{ calls: string; code: number; err: string }> {
   const remote = realpathSync(mkdtempSync(path.join(os.tmpdir(), "emet-speclanding-remote-")));
   const binDirectory = realpathSync(mkdtempSync(path.join(os.tmpdir(), "emet-speclanding-bin-")));
   try {
@@ -188,14 +281,14 @@ async function landWithStub(
     const stub = path.join(binDirectory, "gh");
     writeFileSync(
       stub,
-      `#!/bin/sh\nprintf '%s\\n---\\n' "$*" >> "${callsFile}"\nif [ "$1 $2" = "pr list" ]; then echo '${existingUrl}'; fi\nif [ "$1 $2" = "pr create" ]; then echo https://github.com/o/r/pull/9; fi\nif [ "$1 $2" = "pr checks" ]; then exit ${checksExit}; fi\n`,
+      `#!/bin/sh\nprintf '%s\\n---\\n' "$*" >> "${callsFile}"\nif [ "$1 $2" = "pr list" ]; then echo '${existingUrl}'; exit ${listExit}; fi\nif [ "$1 $2" = "pr create" ]; then echo https://github.com/o/r/pull/9; fi\nif [ "$1 $2" = "pr checks" ]; then exit ${checksExit}; fi\n`,
     );
     chmodSync(stub, 0o755);
     process.env.PATH = `${binDirectory}:${originalPath ?? ""}`;
     await runCapturing(["ensure", "--spec", "7"]);
     await integrateWave(1, "feat-01");
     const result = await runCapturing(["land", "--spec", "7"]);
-    return { calls: readFileSync(callsFile, "utf8"), code: result.code };
+    return { calls: readFileSync(callsFile, "utf8"), code: result.code, err: result.err };
   } finally {
     rmSync(remote, { recursive: true, force: true });
     rmSync(binDirectory, { recursive: true, force: true });
@@ -207,6 +300,18 @@ describe("land in pr mode edge cases", () => {
     const { calls, code } = await landWithStub("local", "");
     expect(code).toBe(0);
     expect(calls).not.toContain("Closes");
+  });
+
+  test("a linear tracker writes the raw ticket id", async () => {
+    const { calls, code } = await landWithStub("linear", "");
+    expect(code).toBe(0);
+    expect(calls).toContain("Closes feat-01");
+  });
+
+  test("a failing gh call is reported and stops the landing", async () => {
+    const { code, err } = await landWithStub("github", "", 0, 1);
+    expect(code).not.toBe(0);
+    expect(err).toContain("gh pr list failed");
   });
 
   test("failing checks stop before the merge and leave the PR open", async () => {
