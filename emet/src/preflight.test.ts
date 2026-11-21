@@ -161,6 +161,34 @@ describe("collectForkBaseFailures (S2)", () => {
     ).toEqual([]);
   });
 
+  test("spec mode fails when baseRef is not head, even when the SHAs match, and names baseRef", async () => {
+    const failures = await collectForkBaseFailures(
+      "/r",
+      "origin",
+      "main",
+      probesFor("aaaaaaa1", "aaaaaaa1", null),
+      "pr",
+      undefined,
+      "spec",
+    );
+    expect(failures).toHaveLength(1);
+    expect(failures[0]).toContain('"baseRef": "head"');
+  });
+
+  test("spec mode passes when baseRef is head", async () => {
+    expect(
+      await collectForkBaseFailures(
+        "/r",
+        "origin",
+        "main",
+        probesFor("aaaaaaa1", "bbbbbbb2", "head"),
+        "pr",
+        undefined,
+        "spec",
+      ),
+    ).toEqual([]);
+  });
+
   test("passes when baseRef is head", async () => {
     expect(
       await collectForkBaseFailures(

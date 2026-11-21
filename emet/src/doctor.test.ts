@@ -24,6 +24,7 @@ import {
   checkTrackerTarget,
   createEnvironmentProbes,
   checkWorktreeForkBase,
+  findMergeCommitWarnings,
   findMissingFlags,
   normalizeGithubSlug,
   type EnvironmentProbes,
@@ -87,7 +88,7 @@ const healthyEnvironment: EnvironmentProbes = {
   ghRepoNameWithOwner: () => Promise.resolve("Owner/repo"),
   remoteUrl: () => Promise.resolve("git@github.com:owner/repo.git"),
   resolveRef: () => Promise.resolve("a".repeat(40)),
-  worktreeBaseRef: () => Promise.resolve(null),
+  worktreeBaseRef: () => Promise.resolve("head"),
 };
 
 type BunFileHandle = ReturnType<typeof Bun.file>;
@@ -697,6 +698,18 @@ describe("checkWorktreeForkBase", () => {
     expect(findings).toHaveLength(1);
     expect(findings[0]).toContain("baseRef");
   });
+  test("spec mode requires baseRef head even when the SHAs are equal", () => {
+    const findings = checkWorktreeForkBase({
+      ...base,
+      harnessBase: base.coordinatorHead,
+      landingUnit: "spec",
+    });
+    expect(findings).toHaveLength(1);
+    expect(findings[0]).toContain('"baseRef": "head"');
+    expect(checkWorktreeForkBase({ ...base, landingUnit: "spec", baseRefSetting: "head" })).toEqual(
+      [],
+    );
+  });
   test("baseRef: head makes divergence irrelevant", () => {
     expect(checkWorktreeForkBase({ ...base, baseRefSetting: "head" })).toEqual([]);
   });
@@ -708,6 +721,44 @@ describe("checkWorktreeForkBase", () => {
   });
   test("the Claude host still reports divergence when named explicitly", () => {
     expect(checkWorktreeForkBase({ ...base, host: claudeHost })).toHaveLength(1);
+  });
+});
+
+const withProbe = (probe: (() => Promise<boolean | undefined>) | undefined): EnvironmentProbes => ({
+  ...healthyEnvironment,
+  ...(probe === undefined ? {} : { repoMergeCommitAllowed: probe }),
+});
+
+describe("findMergeCommitWarnings", () => {
+  test("warns in spec/pr mode when merge commits are disallowed", async () => {
+    const warnings = await findMergeCommitWarnings(
+      { mode: "pr", unit: "spec" },
+      withProbe(() => Promise.resolve(false)),
+    );
+    expect(warnings).toHaveLength(1);
+    expect(warnings[0]).toContain("merge commits");
+  });
+  test("no finding when allowed, unknown, failing, or not spec/pr", async () => {
+    const allowed = withProbe(() => Promise.resolve(true));
+    expect(await findMergeCommitWarnings({ mode: "pr", unit: "spec" }, allowed)).toEqual([]);
+    expect(
+      await findMergeCommitWarnings(
+        { mode: "pr", unit: "spec" },
+        withProbe(() => Promise.resolve(undefined)),
+      ),
+    ).toEqual([]);
+    expect(
+      await findMergeCommitWarnings(
+        { mode: "pr", unit: "spec" },
+        withProbe(() => Promise.reject(new Error("boom"))),
+      ),
+    ).toEqual([]);
+    expect(
+      await findMergeCommitWarnings({ mode: "pr", unit: "spec" }, withProbe(undefined)),
+    ).toEqual([]);
+    const disallowed = withProbe(() => Promise.resolve(false));
+    expect(await findMergeCommitWarnings({ mode: "merge", unit: "spec" }, disallowed)).toEqual([]);
+    expect(await findMergeCommitWarnings({ mode: "pr", unit: "wave" }, disallowed)).toEqual([]);
   });
 });
 
@@ -744,10 +795,30 @@ describe("auditRepo environment findings", () => {
     await initRepo(undefined);
     const report = await auditRepo(repoRoot, healthyProbes, {
       ...healthyEnvironment,
+      worktreeBaseRef: () => Promise.resolve(null),
       resolveRef: (_root, ref) => Promise.resolve(ref === "HEAD" ? "a".repeat(40) : "b".repeat(40)),
     });
     expect(report.environmentFindings.join("\n")).toContain("baseRef");
     expect(isReportClean(report)).toBe(false);
+  });
+
+  test("spec mode without baseRef head is dirty even when the SHAs match", async () => {
+    await initRepo(undefined);
+    const report = await auditRepo(repoRoot, healthyProbes, {
+      ...healthyEnvironment,
+      worktreeBaseRef: () => Promise.resolve(null),
+    });
+    expect(report.environmentFindings.join("\n")).toContain('"baseRef": "head"');
+    expect(isReportClean(report)).toBe(false);
+  });
+
+  test("spec mode warns when merge commits are disallowed", async () => {
+    await initRepo(undefined);
+    const report = await auditRepo(repoRoot, healthyProbes, {
+      ...healthyEnvironment,
+      repoMergeCommitAllowed: () => Promise.resolve(false),
+    });
+    expect(report.warnings.join("\n")).toContain("merge commits");
   });
 });
 

@@ -12,6 +12,7 @@ import {
   type CoupledSurfacePair,
   type ForgeConfig,
   type LandingMode,
+  type LandingUnit,
 } from "./config";
 import {
   agentHostOfConfig,
@@ -1193,6 +1194,7 @@ export async function collectForkBaseFailures(
   probes: EnvironmentProbes,
   landingMode: LandingMode = "pr",
   host?: AgentHost,
+  landingUnit?: LandingUnit,
 ): Promise<string[]> {
   const harnessBaseRef = landingMode === "merge" ? trunk : `${remote}/${trunk}`;
   return checkWorktreeForkBase({
@@ -1201,6 +1203,7 @@ export async function collectForkBaseFailures(
     baseRefSetting: await probes.worktreeBaseRef(repoRoot),
     harnessBaseRef,
     ...(host === undefined ? {} : { host }),
+    ...(landingUnit === undefined ? {} : { landingUnit }),
   });
 }
 
@@ -1386,6 +1389,7 @@ async function main(config: ForgeConfig, repoRoot: string) {
       createEnvironmentProbes(host),
       config.landing.mode,
       host,
+      config.landing.unit,
     )),
   );
 
