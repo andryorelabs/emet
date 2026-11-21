@@ -5,7 +5,7 @@ import os from "node:os";
 import path from "node:path";
 
 import { type AgentHost, claudeHost } from "./agenthost";
-import { loadForgeConfig, type LandingMode, type TrackerKind } from "./config";
+import { loadForgeConfig, type LandingMode, type LandingUnit, type TrackerKind } from "./config";
 import {
   agentHostOfConfig,
   checkDependencies,
@@ -420,6 +420,8 @@ export interface EnvironmentProbes {
   readonly resolveRef: (repoRoot: string, ref: string) => Promise<string | null>;
   /** `worktree.baseRef` from the first of repo-local/user settings that sets it. */
   readonly worktreeBaseRef: (repoRoot: string) => Promise<string | null>;
+  /** `mergeCommitAllowed` per `gh repo view`, or `undefined` when `gh` is missing or the probe fails. */
+  readonly repoMergeCommitAllowed?: () => Promise<boolean | undefined>;
 }
 
 export function findMissingFlags(helpText: string, flags: readonly string[]): string[] {
@@ -500,6 +502,7 @@ export interface ForkBaseInput {
   readonly baseRefSetting: string | null;
   readonly harnessBaseRef: string;
   readonly host?: AgentHost;
+  readonly landingUnit?: LandingUnit;
 }
 
 /** The harness forks agent worktrees from `worktree.baseRef` (default: the
@@ -509,6 +512,11 @@ export interface ForkBaseInput {
 export function checkWorktreeForkBase(input: ForkBaseInput): string[] {
   if ((input.host ?? claudeHost).name === "codex") return [];
   if (input.baseRefSetting === "head") return [];
+  if (input.landingUnit === "spec") {
+    return [
+      `landing.unit is "spec" but the harness worktree base is not HEAD — set "worktree": { "baseRef": "head" } in .claude/settings.json so workers fork from the tip of the spec branch`,
+    ];
+  }
   if (input.coordinatorHead === null || input.harnessBase === null) return [];
   if (input.coordinatorHead === input.harnessBase) return [];
   return [
@@ -587,6 +595,15 @@ export function createEnvironmentProbes(host: AgentHost = claudeHost): Environme
     resolveRef: (repoRoot, ref) =>
       runCapture(["git", "rev-parse", "--verify", "--quiet", `${ref}^{commit}`], repoRoot),
     worktreeBaseRef: (repoRoot) => readBaseRefSetting(repoRoot, host),
+    repoMergeCommitAllowed: async () => {
+      const output = await runCapture(
+        ["gh", "repo", "view", "--json", "mergeCommitAllowed", "-q", ".mergeCommitAllowed"],
+        process.cwd(),
+      );
+      if (output === "true") return true;
+      if (output === "false") return false;
+      return undefined;
+    },
   };
 }
 
@@ -597,6 +614,7 @@ async function auditEnvironment(
     readonly remote: string;
     readonly kind: TrackerKind | null;
     readonly landingMode: LandingMode;
+    readonly landingUnit: LandingUnit;
     readonly host: AgentHost;
   },
   probes: EnvironmentProbes,
@@ -621,9 +639,30 @@ async function auditEnvironment(
       baseRefSetting: await probes.worktreeBaseRef(repoRoot),
       harnessBaseRef,
       host: config.host,
+      landingUnit: config.landingUnit,
     }),
   );
   return findings;
+}
+
+/** Spec mode lands the spec branch with a merge commit; warns when GitHub
+ * disallows them. A missing `gh` or a failed probe gives no finding. */
+export async function findMergeCommitWarnings(
+  landing: { readonly mode: LandingMode; readonly unit: LandingUnit },
+  probes: EnvironmentProbes,
+): Promise<string[]> {
+  if (landing.unit !== "spec" || landing.mode !== "pr") return [];
+  if (probes.repoMergeCommitAllowed === undefined) return [];
+  let allowed: boolean | undefined;
+  try {
+    allowed = await probes.repoMergeCommitAllowed();
+  } catch {
+    return [];
+  }
+  if (allowed !== false) return [];
+  return [
+    'landing.unit is "spec" but GitHub disallows merge commits on this repository — enable "Allow merge commits" in the repository settings, or set landing.unit to "wave"',
+  ];
 }
 
 /** Audits one path. Never throws — every failure mode (not a repo, no
@@ -685,6 +724,7 @@ export async function auditRepo(
             ...configResult.config.repo,
             kind: trackerKind,
             landingMode: configResult.config.landing.mode,
+            landingUnit: configResult.config.landing.unit,
             host: agentHostOfConfig(configResult.config),
           },
           environment,
@@ -770,6 +810,9 @@ export async function auditRepo(
       ...(hasConfig ? findDeprecatedConfigFields(await readRawConfig(absolutePath)) : []),
       ...(hasConfig ? findLocalTrackerWarnings(await readRawConfig(absolutePath)) : []),
       ...(hasConfig ? await findTrackedScratchWarnings(absolutePath) : []),
+      ...(configResult.status === "ok"
+        ? await findMergeCommitWarnings(configResult.config.landing, environment)
+        : []),
     ],
   };
 }
