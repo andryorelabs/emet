@@ -2,7 +2,7 @@
 title: CLI 레퍼런스
 description: 모든 emet 하위 명령, 게이트와 기록 표, 종료 코드, 환경 변수를 설명합니다.
 seoTitle: emet CLI 레퍼런스
-sourceHash: fbd3bae98f074fd0
+sourceHash: 98735ed514d178bb
 ---
 
 모든 `emet` 하위 명령, 게이트와 기록 표, 종료 코드, 환경 변수입니다. 용어는 [GLOSSARY.md](../../GLOSSARY.md)를 따릅니다. [README](../../README.md)로 돌아가기. 모든 명령은 `--help`로 사용법을 출력합니다.
@@ -75,6 +75,7 @@ emet doctor ~/code/*
 - `emet approve --run <id>`, `emet materialize-log`, `emet results`, `emet verify`, `emet review-package`, `emet review`, `emet gate`: [게이트와 기록](#게이트와-기록)을 참고하세요.
 - `emet assess --base <ref> --head <ref>`: diff를 `passive`, `medium`, `high`로 분류하고 티어, 그 이유, 권장 리뷰어 모델과 추론 강도에 더해 `browserVerify: { run, reason }`를 JSON으로 출력합니다. `run`이 `true`인 경우는 티어에 리뷰어가 있고, [`verify.browser`](configuration.md#verify)가 설정되어 있고, `agent-browser` 바이너리가 PATH에 있고, `paths`가 설정된 경우 변경된 경로가 일치할 때뿐입니다. 그렇지 않으면 `reason`이 처음으로 충족되지 않은 조건을 알려 줍니다. [모델과 추론 강도](../../README.md#models--effort)와 [`review`](configuration.md#review)를 참고하세요.
 - `emet land --spec <s> --branch <integration> --tickets <id,...>`: 통합 브랜치를 로컬 트렁크에 병합합니다(`landing.mode`가 `merge`일 때). CI 대신 `commands.selfCheck`를 사용하며 아무것도 푸시하지 않습니다.
+- `emet spec-branch ensure|integrate|status|sync|land|abandon --spec <id>`: `landing.unit: spec`의 스펙 브랜치 `spec/<id>`([`landing`](configuration.md#landing) 참고). 모두 JSON을 출력합니다. `ensure`는 트렁크에서 브랜치를 만들고(멱등), `.emet/specs/<id>/branch.json`을 쓰며, 다른 스펙의 브랜치가 체크아웃되어 있으면 거부합니다. `integrate --wave <n> --branch <integration> --tickets a,b`는 웨이브 브랜치를 `--no-ff`로 `spec/<id>`에 병합하고 트레일러 `Emet-Wave`와 `Emet-Tickets`를 달며, 웨이브를 기록하고 `spec.integrate`를 추가합니다. `landing.pushSpecBranch`가 true이면 PR을 열지 않고 브랜치를 푸시합니다. `status`는 `branch`, `tip`, 통합된 웨이브와 티켓, `behindTrunk`을 출력하며, 웨이브가 빠져 있으면 트레일러에서 `branch.json`을 다시 만듭니다. `sync`는 트렁크를 브랜치에 병합하고 리베이스하지 않으며, 충돌이 나면 중단하고 경로를 나열한 뒤 0이 아닌 코드로 종료합니다. `land [--partial]`은 동기화한 다음, `pr` 모드에서는 브랜치를 푸시하고 티켓마다 `Closes` 줄이 있는 PR 하나를 열어 `pr.mergeMethod`를 무시하고 병합 커밋으로 병합하며, `merge` 모드에서는 `--no-ff`로 로컬 트렁크에 병합하고 푸시하지 않습니다. `spec.land`를 추가합니다. `abandon --force`는 `abandoned/spec-<id>` 태그를 붙이고, 브랜치를 삭제하고, `spec.abandon`을 추가하며, 로컬 트래커의 통합된 티켓을 `ready-for-agent`로 재설정합니다. `--force` 없이는 거부합니다. `emet tracker frontier`는 `branch.json`에 나열된 티켓을 닫힌 블로커로 계산하고, `emet status`에는 `specBranch`(`branch`, `tip`, `integratedWaves`)가 추가됩니다.
 - `emet spec-merge --spec <id>`: 웨이브가 자동 병합된 뒤 스펙의 `ADDED`/`MODIFIED`/`REMOVED` 요구 사항 델타를 `docs/specs/<area>.md`(`specs.dir`)에 병합합니다. 아무것도 쓰기 전에 모든 영역을 검사합니다. 충돌이 있거나 시나리오를 잃게 되는 요구 사항이 있으면 종료 코드 1로 끝나며 어떤 파일도 건드리지 않습니다.
 - `emet map [--refresh]`: 기존 코드베이스의 개요(스택, 구조, 규약, 테스트, 핫스팟)를 `docs/agents/codebase.md`(`map.path`)에 작성하고, 생성에 사용한 커밋 SHA를 찍어 둡니다. 같은 커밋에서는 항상 같은 파일이 만들어집니다. `emet map --stale`은 HEAD가 찍어 둔 값보다 앞서 나가면 종료 코드 1로 끝나며, 이 경우 `emet preflight`가 경고합니다. `emet map --for <globs>`는 티켓의 편집 대상과 일치하는 섹션만 출력합니다. 이 출력이 워커 브리프에 포함되는 맵의 유일한 부분입니다.
 - `emet tracker create-spec|create-ticket|read|frontier|set-state|comment|close`: `.scratch/` 위의 로컬 트래커이며 표준 출력은 JSON입니다. [로컬 트래커](#로컬-트래커)를 참고하세요.
@@ -84,11 +85,11 @@ emet doctor ~/code/*
 
 `tracker.kind: "local"`일 때 스펙과 티켓은 메인 워크트리의 `.scratch/` 아래(버전 관리되지 않음)에 있는 마크다운 파일입니다. `.scratch/<slug>/spec.md`와 `.scratch/<slug>/issues/<NN>-<slug>.md`이며, 각각 `Status:` 줄과 `Blocked by:` 줄을 갖고 코멘트는 `## Comments` 아래에 둡니다. 코디네이터는 `emet tracker`(`create-spec`, `create-ticket`, `read`, `frontier`, `set-state`, `comment`, `close`)를 통해 이 파일들을 읽고 씁니다. `emet init --tracker local`로 이 구성을 설정합니다. [ADR-0011](../adr/0011-local-tracker-scratch-convention.md)을 참고하세요.
 
-`landing.mode`는 `"pr"`(기본값) 또는 `"merge"`이며 트래커와는 독립적입니다. `merge` 모드에서는 웨이브가 `emet land`를 통해 트렁크로의 로컬 병합 한 번으로 랜딩하고, CI 대신 `commands.selfCheck`를 사용하며 푸시는 하지 않습니다. `gh`는 트래커가 `github`이거나 랜딩이 `pr`일 때만 필요합니다. [ADR-0010](../adr/0010-local-merge-landing.md)과 [`landing`](configuration.md#landing)을 참고하세요.
+`landing.mode`는 `"pr"`(기본값) 또는 `"merge"`이며 트래커와는 독립적입니다. `merge` 모드에서는 웨이브가 `emet land`를 통해 트렁크로의 로컬 병합 한 번으로 랜딩하고, CI 대신 `commands.selfCheck`를 사용하며 푸시는 하지 않습니다. `landing.unit: "spec"`(기본값)에서는 스펙 전체가 `emet spec-branch land`를 통해 한 번만 랜딩합니다. `gh`는 트래커가 `github`이거나 랜딩이 `pr`일 때만 필요합니다. [ADR-0010](../adr/0010-local-merge-landing.md)과 [`landing`](configuration.md#landing)을 참고하세요.
 
 ### PR 랜딩과 웨이브 연결
 
-웨이브 하나는 PR 하나입니다. 본문에는 각 티켓마다 한 줄씩 `Closes #N`(트래커의 닫기 키워드)이 들어가며, 코디네이터는 PR을 열 때 티켓을 리뷰 중 상태로 옮깁니다. 이후 PR은 `pr.autoMerge`에 따라 병합되며, 웨이브에 플래그가 지정되었거나 `autoMerge`가 `false`이거나 CI 수정 횟수를 모두 소진한 경우에는 열린 채로 남습니다(이 경우 PR에는 사람의 판단이 필요하다는 라벨이 붙습니다). 이후 웨이브는 웨이브 1을 실행한 세션이 아니라 각자의 세션에서 실행됩니다. 다음에 일어나는 일은 `pr`과 `handoff` 섹션이 제어합니다. [`pr`](configuration.md#pr)과 [`handoff`](configuration.md#handoff)를 참고하세요.
+`landing.unit: "spec"`에서는 PR이 스펙의 것입니다. 마지막 웨이브 뒤에 `emet spec-branch land`가 여는, 통합된 모든 웨이브를 아우르는 PR 하나입니다. `landing.unit: "wave"`에서는 웨이브 하나가 PR 하나입니다. 본문에는 각 티켓마다 한 줄씩 `Closes #N`(트래커의 닫기 키워드)이 들어가며, 코디네이터는 PR을 열 때 티켓을 리뷰 중 상태로 옮깁니다. 이후 PR은 `pr.autoMerge`에 따라 병합되며, 웨이브에 플래그가 지정되었거나 `autoMerge`가 `false`이거나 CI 수정 횟수를 모두 소진한 경우에는 열린 채로 남습니다(이 경우 PR에는 사람의 판단이 필요하다는 라벨이 붙습니다). 이후 웨이브는 웨이브 1을 실행한 세션이 아니라 각자의 세션에서 실행됩니다. 다음에 일어나는 일은 `pr`과 `handoff` 섹션이 제어합니다. [`pr`](configuration.md#pr)과 [`handoff`](configuration.md#handoff)를 참고하세요.
 
 `emet ci --pr <n> --wait [--rerun-flakes] [--timeout-minutes <m>]`는 PR의 체크가 끝나거나 타임아웃(기본값 30)이 될 때까지 폴링합니다. `--rerun-flakes`를 쓰면 실패한 각 체크를 `gh run rerun --failed`로 한 번 다시 실행하며, 재실행에서 통과한 체크는 Flake입니다. `state: pass | fail | env-fault | timeout`, 실패한 체크, `flakeReruns`를 출력하고 절대 병합하지 않습니다. 체크가 없는 PR은 `noChecks: true`와 함께 `pass`입니다. 종료 코드는 `0`이 pass, `1`이 fail 또는 env-fault, `3`이 timeout입니다. `env-fault`는 `STARTUP_FAILURE`로 끝났거나 너무 오래 대기열에 머문 체크를 뜻합니다. 코드 실패가 아니라 CI가 한 번도 실행되지 않은 것입니다.
 

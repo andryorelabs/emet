@@ -2,7 +2,7 @@
 title: 아키텍처
 description: emet/src의 코드 맵과 /emet 프롬프트가 이를 어떻게 구동하는지 설명합니다.
 seoTitle: emet 아키텍처
-sourceHash: 0437733069f9c143
+sourceHash: 36996125d0e6df7f
 ---
 
 `emet/src`의 코드 맵과 `/emet` 프롬프트가 이를 어떻게 구동하는지 설명합니다. 용어는 [GLOSSARY.md](../GLOSSARY.md)를 따르며, 이 구조의 배경이 된 결정은 [docs/adr](adr/README.md)에 있습니다. 문제가 생기면 [문제 해결](troubleshooting.md)을 참고하세요.
@@ -24,12 +24,12 @@ sourceHash: 0437733069f9c143
 
 `commands/run.md`는 짧은 라우터입니다. `emet/reference/`의 단계 파일을 한 번에 하나씩 불러오므로, 컴팩션이 일어나도 현재 단계의 규칙이 사라지지 않습니다.
 
-| 단계                         | 프롬프트                                                          | CLI 호출                                                                      |
-| ---------------------------- | ----------------------------------------------------------------- | ----------------------------------------------------------------------------- |
-| 1-5 인터뷰, 스펙, 티켓, 승인 | `phases-1-5.md`                                                   | `init`, `doctor`, `validate`, `surfaces`, `approve`, `tracker`                |
-| 6-7 디스패치와 워커          | `phases-6-7-dispatch.md`, `worker-prompt.md`                      | `preflight`, `claims`, `slots`, `launch`, `lock-reason`, `handoff`, `results` |
-| 8 리뷰, 게이트, 랜딩, 마무리 | `phases-8-review.md`, `phases-8-landing.md`, `reviewer-prompt.md` | `verify`, `review-package`, `review`, `assess`, `gate`, `land`, `cleanup`     |
-| 9 핸드오프와 체이닝          | `phases-9-handoff.md`                                             | `status`, `metrics`, `usage`, `spec-merge`                                    |
+| 단계                         | 프롬프트                                                                                      | CLI 호출                                                                                 |
+| ---------------------------- | --------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------- |
+| 1-5 인터뷰, 스펙, 티켓, 승인 | `phases-1-5.md`                                                                               | `init`, `doctor`, `validate`, `surfaces`, `approve`, `tracker`                           |
+| 6-7 디스패치와 워커          | `phases-6-7-dispatch.md`, `worker-prompt.md`                                                  | `preflight`, `claims`, `slots`, `launch`, `lock-reason`, `handoff`, `results`            |
+| 8 리뷰, 게이트, 랜딩, 마무리 | `phases-8-review.md`, `phases-8-landing.md`, `phases-8-spec-landing.md`, `reviewer-prompt.md` | `verify`, `review-package`, `review`, `assess`, `gate`, `land`, `spec-branch`, `cleanup` |
+| 9 핸드오프와 체이닝          | `phases-9-handoff.md`                                                                         | `status`, `metrics`, `usage`, `spec-merge`                                               |
 
 코디네이터는 유일하게 트래커에 쓸 수 있는 주체입니다(ADR-0005). 워커는 핸드오프 노트와 `emet results`로 보고하고, 코디네이터가 이를 게시합니다. `emet guard`는 `PreToolUse` 훅으로 실행되어 무인 실행에서 실패를 일으키는 것으로 알려진 동작을 차단합니다.
 
@@ -52,7 +52,7 @@ sourceHash: 0437733069f9c143
 
 ## 프롬프트 배치
 
-`commands/run.md`(약 130줄)가 Claude Code에서 `/emet` 라우터이며, Codex에서는 생성된 `codex/skills/**`와 `codex/hooks.json`이 그 역할을 합니다. `emet/reference/`의 각 파일은 단계 그룹 하나(`phases-1-5.md`, `phases-6-7-dispatch.md`, `phases-8-review.md`, `phases-8-landing.md`, `phases-9-handoff.md`)이며, 현재 실행의 모드가 필요로 할 때만 불러옵니다. 어느 하나라도 20,000바이트를 넘으면 테스트가 실패하므로, 파일 하나가 컴팩션 이후의 컨텍스트를 차지할 수 없습니다. 각 단계는 수정이나 리뷰 라운드 전에 코디네이터가 관련 섹션을 다시 읽도록 안내합니다. `install.sh`는 예전의 단일 `phases-6-9.md`를, 직접 수정했거나 설치 매니페스트보다 오래된 경우에는 `phases-6-9.md.retired`로 옆에 옮겨 두고, 그렇지 않으면 삭제합니다. 예전의 `phases-8-closeout.md`도 마찬가지로 처리하며, 이 파일은 `phases-8-review.md`(리뷰와 게이트)와 `phases-8-landing.md`(랜딩과 마무리)로 나뉘었고 `phases-8-closeout.md.retired`로 옆에 옮겨 둡니다. 또한 `install.sh`는 `emet guard`를 `PreToolUse` 훅으로 `~/.claude/settings.json`에 연결합니다.
+`commands/run.md`(약 130줄)가 Claude Code에서 `/emet` 라우터이며, Codex에서는 생성된 `codex/skills/**`와 `codex/hooks.json`이 그 역할을 합니다. `emet/reference/`의 각 파일은 단계 그룹 하나(`phases-1-5.md`, `phases-6-7-dispatch.md`, `phases-8-review.md`, `phases-8-landing.md`, `phases-8-spec-landing.md`, `phases-9-handoff.md`)이며, 현재 실행의 모드가 필요로 할 때만 불러옵니다. 어느 하나라도 20,000바이트를 넘으면 테스트가 실패하므로, 파일 하나가 컴팩션 이후의 컨텍스트를 차지할 수 없습니다. 각 단계는 수정이나 리뷰 라운드 전에 코디네이터가 관련 섹션을 다시 읽도록 안내합니다. `install.sh`는 예전의 단일 `phases-6-9.md`를, 직접 수정했거나 설치 매니페스트보다 오래된 경우에는 `phases-6-9.md.retired`로 옆에 옮겨 두고, 그렇지 않으면 삭제합니다. 예전의 `phases-8-closeout.md`도 마찬가지로 처리하며, 이 파일은 `phases-8-review.md`(리뷰와 게이트)와 `phases-8-landing.md`(랜딩과 마무리)로 나뉘었고 `phases-8-closeout.md.retired`로 옆에 옮겨 둡니다. `phases-8-spec-landing.md`에는 `landing.unit: spec`의 규칙이 담겨 있습니다. 각 웨이브를 `spec/<id>`에 통합하고, 트렁크를 동기화하고, 스펙을 한 번만 랜딩합니다. 또한 `install.sh`는 `emet guard`를 `PreToolUse` 훅으로 `~/.claude/settings.json`에 연결합니다.
 
 ## 배포
 
