@@ -8,6 +8,20 @@ and this project adheres to
 
 ## [Unreleased]
 
+## [0.14.5] - 2026-11-21
+
+### Added
+
+- `emet handoff --check` parses a `skills:` section in a worker's handoff note (`none`, or `loaded: a, b; missing: c`). It is required when `state` is `done`. `--expect-skills a,b` fails the check for each named skill that is in neither list and prints the missing ones.
+- The dispatch record carries an optional `skills` array, and `emet verify` passes it to `emet handoff --check` as `--expect-skills`. A record without `skills` still parses.
+- ADR-0036 lets a ticket change the wording of an installed prompt when it names the paragraphs, and the same pull request raises the byte ceilings.
+
+### Changed
+
+- The Phase 8 prompt is split into `phases-8-review.md` and `phases-8-landing.md`. `install.sh` retires the old `phases-8-closeout.md`: an edited or pre-manifest copy moves to `phases-8-closeout.md.retired`, an unedited copy is deleted.
+- The worker prompt tells the worker to write the `skills:` line before its final handoff.
+- The architecture page, the CLI reference and their nine translations describe the two Phase 8 files and `--expect-skills`.
+
 ## [0.14.4] - 2026-11-20
 
 ### Added
@@ -508,7 +522,8 @@ and this project adheres to
 - Per-repo configuration through `forge.config.json`.
 - `install.sh`, which installs the CLI, command and agents.
 
-[Unreleased]: https://github.com/andryorelabs/emet/compare/v0.14.4...HEAD
+[Unreleased]: https://github.com/andryorelabs/emet/compare/v0.14.5...HEAD
+[0.14.5]: https://github.com/andryorelabs/emet/compare/v0.14.4...v0.14.5
 [0.14.4]: https://github.com/andryorelabs/emet/compare/v0.14.3...v0.14.4
 [0.14.3]: https://github.com/andryorelabs/emet/compare/v0.14.2...v0.14.3
 [0.14.2]: https://github.com/andryorelabs/emet/compare/v0.14.1...v0.14.2

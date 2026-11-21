@@ -2,8 +2,24 @@
 title: 새로운 소식
 description: emet 릴리스 노트. 각 버전에서 무엇이 바뀌었는지 정리합니다.
 seoTitle: "emet 새로운 소식: 릴리스 노트"
-sourceHash: c7ab5fe94ab28e50
+sourceHash: 130017a5359fd93e
 ---
+
+## 0.14.5
+
+2026-11-21
+
+### 추가됨
+
+- `emet handoff --check`는 워커의 인계 노트에 있는 `skills:` 섹션(`none` 또는 `loaded: a, b; missing: c`)을 파싱합니다. `state`가 `done`이면 필수입니다. `--expect-skills a,b`는 두 목록 어디에도 없는 지정 스킬마다 검사를 실패시키고, 누락된 스킬을 출력합니다.
+- 디스패치 레코드에 선택적 `skills` 배열이 추가되었고, `emet verify`는 이를 `--expect-skills`로 `emet handoff --check`에 전달합니다. `skills`가 없는 레코드도 계속 파싱됩니다.
+- ADR-0036은 티켓이 단락을 명시하면 설치된 프롬프트의 문구를 바꿀 수 있게 하며, 같은 풀 리퀘스트에서 바이트 상한을 올립니다.
+
+### 변경됨
+
+- 8단계 프롬프트를 `phases-8-review.md`와 `phases-8-landing.md`로 나눴습니다. `install.sh`는 이전 `phases-8-closeout.md`를 폐기합니다. 수정된 사본이나 매니페스트 이전 사본은 `phases-8-closeout.md.retired`로 옮기고, 수정되지 않은 사본은 삭제합니다.
+- 워커 프롬프트는 최종 인계 전에 `skills:` 줄을 쓰도록 안내합니다.
+- 아키텍처 페이지, CLI 레퍼런스와 그 번역 9종이 8단계의 두 파일과 `--expect-skills`를 설명합니다.
 
 ## 0.14.4
 

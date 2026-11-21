@@ -2,8 +2,24 @@
 title: Neuigkeiten
 description: Release Notes für emet: was sich in jeder Version geändert hat.
 seoTitle: "Neuigkeiten in emet: Release Notes"
-sourceHash: c7ab5fe94ab28e50
+sourceHash: 130017a5359fd93e
 ---
+
+## 0.14.5
+
+2026-11-21
+
+### Hinzugefügt
+
+- `emet handoff --check` liest einen Abschnitt `skills:` in der Übergabenotiz eines Workers (`none` oder `loaded: a, b; missing: c`). Er ist Pflicht, wenn `state` den Wert `done` hat. `--expect-skills a,b` lässt die Prüfung für jede genannte Skill fehlschlagen, die in keiner der beiden Listen steht, und gibt die fehlenden aus.
+- Der Dispatch-Eintrag enthält ein optionales Array `skills`, und `emet verify` übergibt es als `--expect-skills` an `emet handoff --check`. Ein Eintrag ohne `skills` wird weiterhin gelesen.
+- ADR-0036 erlaubt es einem Ticket, den Wortlaut eines installierten Prompts zu ändern, wenn es die Absätze benennt; derselbe Pull Request hebt die Byte-Grenzen an.
+
+### Geändert
+
+- Der Prompt der Phase 8 ist in `phases-8-review.md` und `phases-8-landing.md` aufgeteilt. `install.sh` entfernt das alte `phases-8-closeout.md`: Eine bearbeitete Kopie oder eine Kopie aus der Zeit vor dem Manifest wird zu `phases-8-closeout.md.retired` verschoben, eine unveränderte Kopie wird gelöscht.
+- Der Worker-Prompt weist den Worker an, die Zeile `skills:` vor seiner letzten Übergabe zu schreiben.
+- Die Architekturseite, die CLI-Referenz und ihre neun Übersetzungen beschreiben die zwei Dateien der Phase 8 und `--expect-skills`.
 
 ## 0.14.4
 
