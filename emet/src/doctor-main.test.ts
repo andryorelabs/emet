@@ -159,6 +159,7 @@ const baseConfig = {
   version: 1,
   repo: { trunk: "main", remote: "origin" },
   ticket: { idPattern: "^X-\\d+$", branchPrefix: "x" },
+  landing: { unit: "wave" },
 };
 
 function writeAllDocs(repo: string): void {
@@ -286,7 +287,7 @@ describe("doctor run() repo reports", () => {
   }, 60_000);
 
   test("a merge-landing local repo skips the gh flag check", async () => {
-    const repo = makeGitRepo("merge", { ...baseConfig, landing: { mode: "merge" } });
+    const repo = makeGitRepo("merge", { ...baseConfig, landing: { unit: "wave", mode: "merge" } });
     process.env.PATH = binDirectory;
     const output = await runDoctor([repo]);
     expect(output).not.toContain("gh issue view");
