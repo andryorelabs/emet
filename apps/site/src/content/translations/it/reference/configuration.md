@@ -2,7 +2,7 @@
 title: Riferimento della configurazione
 description: Ogni chiave di emet.config.json con il suo valore predefinito e il suo significato.
 seoTitle: Riferimento della configurazione di emet
-sourceHash: 82a86139999124d0
+sourceHash: 041f1d0c3f53265f
 ---
 
 Ogni chiave di `emet.config.json`, con il suo valore predefinito e il suo significato. La fonte di verità è [`emet/schema/emet.config.schema.json`](../../emet/schema/emet.config.schema.json). I termini seguono [GLOSSARY.md](../../GLOSSARY.md). Torna al [README](../../README.md).
@@ -214,6 +214,9 @@ Letto solo quando `agentHost` è `"codex"`. Tutte le chiavi sono facoltative. Lo
 ## landing
 
 - `mode` (predefinito `pr`): `pr` apre una pull request (richiede `gh`). `merge` unisce il branch di integrazione nel trunk locale con `emet land` e non fa mai push, con `commands.selfCheck` al posto della CI. Indipendente dal tracker. Vedi [ADR-0010](../adr/0010-local-merge-landing.md).
+- `unit` (predefinito `spec`): `spec` integra ogni ondata nel branch `spec/<id>` con `emet spec-branch integrate` e fa atterrare la spec una volta con `emet spec-branch land`; `wave` fa atterrare ogni ondata da sola, come prima. Qualsiasi altro valore fallisce al caricamento con `"landing.unit" must be one of spec|wave`. `spec` richiede `worktree.baseRef: "head"` nelle impostazioni di Claude Code (un'impostazione dell'harness, non una chiave di emet), che `emet preflight` ed `emet doctor` verificano. Vedi [ADR-0037](../adr/0037-landing-per-spec.md).
+- `specMergeMethod` (predefinito `merge`): come viene unita la PR della spec. È accettato solo `merge`; ignora `pr.mergeMethod`.
+- `pushSpecBranch` (predefinito `true`): fa push di `spec/<id>` dopo ogni `emet spec-branch integrate`, senza aprire una PR. Imposta `false` per tenere il branch locale fino al landing finale.
 
 ## tracker
 

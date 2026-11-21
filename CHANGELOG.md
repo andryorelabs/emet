@@ -8,6 +8,11 @@ and this project adheres to
 
 ## [Unreleased]
 
+### Changed
+
+- `landing.unit` defaults to `spec`: a spec's waves are integrated into the branch `spec/<id>` with `emet spec-branch` and the spec lands once, as one PR (or one local merge in `landing.mode: merge`), instead of one PR per wave. Set `"landing": { "unit": "wave" }` to keep the old behaviour. `spec` mode needs `worktree.baseRef: "head"` in the Claude Code settings. See ADR-0037.
+- The journal gains the kinds `spec.integrate`, `spec.land` and `spec.abandon`, and `emet status` gains `specBranch`.
+
 ## [0.14.5] - 2026-11-21
 
 ### Added

@@ -2,7 +2,7 @@
 title: Trackers y aterrizaje
 description: Dónde viven los tickets, cómo aterriza una oleada como pull request o como merge local, y cómo se encadenan las oleadas.
 seoTitle: Trackers y aterrizaje en emet
-sourceHash: 6c1988e1fd68ab4d
+sourceHash: 4280f1152d8971e0
 ---
 
 Dónde viven los tickets, cómo aterriza una oleada y cómo se encadenan las oleadas. Cada clave mencionada aquí está en la [referencia de configuración](../reference/configuration.md); cada subcomando está en la [referencia de la CLI](../reference/cli.md).
@@ -21,11 +21,21 @@ Con `tracker.kind: "local"`, las specs y los tickets son archivos markdown bajo 
 
 `landing.mode` es `"pr"` (por defecto) o `"merge"`, independiente del tracker. En modo `merge` una oleada aterriza como un único merge local en la rama troncal con `emet land`, con `commands.selfCheck` en lugar de la CI y sin push. `gh` solo es obligatorio cuando el tracker es `github` o el aterrizaje es `pr`. Consulta el [ADR-0010](../adr/0010-local-merge-landing.md).
 
+`landing.unit` fija qué aterriza de una vez: `"spec"` (por defecto) aterriza la spec entera de una vez, `"wave"` conserva la regla anterior de que cada oleada aterriza sola. Consulta el [ADR-0037](../adr/0037-landing-per-spec.md), que sustituye al [ADR-0004](../adr/0004-one-wave-one-dependency-layer-one-pr.md).
+
+### Rama de la spec
+
+Con `landing.unit: "spec"`, el coordinador crea `spec/<id>` desde la rama troncal con `emet spec-branch ensure --spec <id>`. Cuando una oleada pasa la revisión y `commands.selfCheck`, `emet spec-branch integrate` fusiona la rama de la oleada en `spec/<id>` con `--no-ff` y un commit con los trailers `Emet-Wave` y `Emet-Tickets`. Un ticket cuya rama está en `spec/<id>` está **Integrated**, no **Landed**: cuenta como bloqueador cerrado para la frontera de la siguiente oleada, pero el tracker lo mantiene abierto hasta el aterrizaje final. Las oleadas posteriores parten de la punta de `spec/<id>`, de modo que ninguna oleada espera a la CI de un PR.
+
+`emet spec-branch sync` fusiona la rama troncal en `spec/<id>` y nunca hace rebase; ante un conflicto aborta, deja la rama sin cambios y sale con un valor distinto de cero. `emet spec-branch land` ejecuta `sync` y después aterriza la rama una vez. En modo `pr` envía `spec/<id>`, abre un PR con una línea `Closes #N` por cada ticket de cada oleada integrada y lo fusiona con un commit de merge, ignorando `pr.mergeMethod`. En modo `merge` fusiona `spec/<id>` con `--no-ff` en la rama troncal local y nunca hace push. `--partial` aterriza solo las oleadas integradas hasta el momento. `emet spec-branch abandon --spec <id> --force` etiqueta la rama como `abandoned/spec-<id>`, la elimina y devuelve a `ready-for-agent` los tickets integrados de un tracker local.
+
+El modo spec requiere `worktree.baseRef: "head"` en los ajustes de Claude Code para que los worktrees de los workers partan de la rama de la spec; `emet preflight` y `emet doctor` lo comprueban. `emet doctor` también avisa cuando el modo es `pr` y el repositorio no permite commits de merge.
+
 ### PRs de aterrizaje
 
-Una oleada es un PR. Su cuerpo lleva una línea `Closes #N` por cada ticket (la palabra clave de cierre del tracker), y el coordinador mueve los tickets a en revisión cuando abre el PR. Después el PR se fusiona según `pr.autoMerge`, o se deja abierto cuando la oleada fue marcada, `autoMerge` es `false` o se agotaron las correcciones de CI (entonces el PR recibe la etiqueta de decisión humana). Tras un merge, `emet tracker close` cierra los tickets en un tracker de GitHub y `emet cleanup --run <runId>` libera las ramas, las reclamaciones de tickets y los espacios de workers de la oleada. También elimina cada rama local cuyo PR se fusionó en el commit de la punta de la rama, incluida la rama de integración.
+Con `landing.unit: "spec"` el PR es el de la spec: un PR para todas las oleadas integradas, abierto por `emet spec-branch land` tras la última oleada. Con `landing.unit: "wave"`, una oleada es un PR. El cuerpo del PR lleva una línea `Closes #N` por cada ticket (la palabra clave de cierre del tracker), y el coordinador mueve los tickets a en revisión cuando abre el PR. Después el PR se fusiona según `pr.autoMerge`, o se deja abierto cuando la oleada fue marcada, `autoMerge` es `false` o se agotaron las correcciones de CI (entonces el PR recibe la etiqueta de decisión humana). Tras un merge, `emet tracker close` cierra los tickets en un tracker de GitHub y `emet cleanup --run <runId>` libera las ramas, las reclamaciones de tickets y los espacios de workers de la oleada. También elimina cada rama local cuyo PR se fusionó en el commit de la punta de la rama, incluida la rama de integración.
 
-Después de fusionar las ramas de una oleada, `commands.fullSuite` se ejecuta una vez en la rama de integración. Una ejecución en rojo bloquea el PR y `autoChain`. La compuerta recibe el resultado como `--integration`.
+Después de fusionar las ramas de una oleada, `commands.fullSuite` se ejecuta una vez en la rama de integración. Una ejecución en rojo bloquea el PR y `autoChain`. La compuerta recibe el resultado como `--integration`. En una oleada que no es la última de un aterrizaje de spec, el coordinador pasa `--ci` obtenido de `commands.selfCheck`, y solo el aterrizaje final espera a la CI con `emet ci --wait`; la compuerta responde entonces `chain` mientras queden oleadas.
 
 ### Encadenar oleadas
 

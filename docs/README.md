@@ -30,11 +30,11 @@ An index of every document in this repository. Terms follow [GLOSSARY.md](../GLO
 ## Guide
 
 - [`guide/getting-started.md`](guide/getting-started.md): requirements, both install paths and the first run.
-- [`guide/trackers-and-landing.md`](guide/trackers-and-landing.md): GitHub, Linear and local trackers, `landing.mode`, landing PRs, chaining waves, budgets, living specs, map and metrics.
+- [`guide/trackers-and-landing.md`](guide/trackers-and-landing.md): GitHub, Linear and local trackers, `landing.mode`, `landing.unit`, the spec branch, landing PRs, chaining waves, budgets, living specs, map and metrics.
 - [`guide/models-and-effort.md`](guide/models-and-effort.md): the role, model and effort table, risk-tier routing, Haiku triage and what you set once.
 - [`guide/codex.md`](guide/codex.md): run emet on Codex CLI: install, `agentHost`, the single approval by hook, limits and `unverified` points.
 - [`guide/fleet.md`](guide/fleet.md): audit several repos at once with `emet doctor`.
-- [`guide/journal.md`](guide/journal.md): the event journal and `emet insights`.
+- [`guide/journal.md`](guide/journal.md): the event journal (including the `spec.*` kinds) and `emet insights`.
 
 ## Reference
 
@@ -111,6 +111,7 @@ Installed prompt markdown; wording changes only in a ticket that names the parag
 - [`emet/reference/phases-6-7-dispatch.md`](../emet/reference/phases-6-7-dispatch.md): dispatch and workers.
 - [`emet/reference/phases-8-review.md`](../emet/reference/phases-8-review.md): review and gate.
 - [`emet/reference/phases-8-landing.md`](../emet/reference/phases-8-landing.md): landing and closeout.
+- [`emet/reference/phases-8-spec-landing.md`](../emet/reference/phases-8-spec-landing.md): spec branch integration and landing (`landing.unit: spec`).
 - [`emet/reference/phases-9-handoff.md`](../emet/reference/phases-9-handoff.md): handoff and chaining.
 - [`emet/reference/worker-prompt.md`](../emet/reference/worker-prompt.md): the worker prompt template.
 - [`emet/reference/reviewer-prompt.md`](../emet/reference/reviewer-prompt.md): the reviewer prompt template.

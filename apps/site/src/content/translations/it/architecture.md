@@ -2,7 +2,7 @@
 title: Architettura
 description: Una mappa del codice di emet/src e di come i prompt di /emet la guidano.
 seoTitle: Architettura di emet
-sourceHash: 0437733069f9c143
+sourceHash: 36996125d0e6df7f
 ---
 
 Una mappa del codice di `emet/src` e di come i prompt di `/emet` la guidano. I termini seguono [GLOSSARY.md](../GLOSSARY.md); le decisioni dietro la struttura sono in [docs/adr](adr/README.md). Per i problemi, vedi la [risoluzione dei problemi](troubleshooting.md).
@@ -24,12 +24,12 @@ Ci sono due metà. I prompt (`commands/run.md`, `agents/*.md`, `emet/reference/*
 
 `commands/run.md` è un router breve. Carica un file di fase di `emet/reference/` alla volta, così una compattazione non perde mai le regole della fase corrente.
 
-| Fase                                       | Prompt                                                            | Chiamate alla CLI                                                             |
-| ------------------------------------------ | ----------------------------------------------------------------- | ----------------------------------------------------------------------------- |
-| 1-5 intervista, spec, ticket, approvazione | `phases-1-5.md`                                                   | `init`, `doctor`, `validate`, `surfaces`, `approve`, `tracker`                |
-| 6-7 dispatch e worker                      | `phases-6-7-dispatch.md`, `worker-prompt.md`                      | `preflight`, `claims`, `slots`, `launch`, `lock-reason`, `handoff`, `results` |
-| 8 review, gate, landing, chiusura          | `phases-8-review.md`, `phases-8-landing.md`, `reviewer-prompt.md` | `verify`, `review-package`, `review`, `assess`, `gate`, `land`, `cleanup`     |
-| 9 handoff e concatenamento                 | `phases-9-handoff.md`                                             | `status`, `metrics`, `usage`, `spec-merge`                                    |
+| Fase                                       | Prompt                                                                                        | Chiamate alla CLI                                                                        |
+| ------------------------------------------ | --------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------- |
+| 1-5 intervista, spec, ticket, approvazione | `phases-1-5.md`                                                                               | `init`, `doctor`, `validate`, `surfaces`, `approve`, `tracker`                           |
+| 6-7 dispatch e worker                      | `phases-6-7-dispatch.md`, `worker-prompt.md`                                                  | `preflight`, `claims`, `slots`, `launch`, `lock-reason`, `handoff`, `results`            |
+| 8 review, gate, landing, chiusura          | `phases-8-review.md`, `phases-8-landing.md`, `phases-8-spec-landing.md`, `reviewer-prompt.md` | `verify`, `review-package`, `review`, `assess`, `gate`, `land`, `spec-branch`, `cleanup` |
+| 9 handoff e concatenamento                 | `phases-9-handoff.md`                                                                         | `status`, `metrics`, `usage`, `spec-merge`                                               |
 
 Il coordinatore è l'unico a scrivere sul tracker (ADR-0005): i worker riferiscono tramite una nota di handoff e `emet results`, e il coordinatore le pubblica. `emet guard` gira come hook `PreToolUse` e blocca gli inneschi noti di fallimenti nelle esecuzioni senza supervisione.
 
@@ -52,7 +52,7 @@ I valori specifici di ogni host stanno dietro l'interfaccia `AgentHost` in `agen
 
 ## Organizzazione dei prompt
 
-`commands/run.md` (circa 130 righe) è il router di `/emet` su Claude Code; su Codex, i `codex/skills/**` e `codex/hooks.json` generati svolgono quel ruolo. Ogni file in `emet/reference/` è un gruppo di fasi (`phases-1-5.md`, `phases-6-7-dispatch.md`, `phases-8-review.md`, `phases-8-landing.md`, `phases-9-handoff.md`), caricato solo quando la modalità dell'esecuzione corrente ne ha bisogno. Un test fallisce se uno qualsiasi supera i 20.000 byte, così un file non può occupare tutto il contesto dopo una compattazione. Le fasi dicono al coordinatore di rileggere la sezione pertinente prima di ogni round di correzione o review. `install.sh` mette da parte un vecchio `phases-6-9.md` unico come `phases-6-9.md.retired` quando è stato modificato o è anteriore al manifesto di installazione, e altrimenti lo elimina. Fa lo stesso con il vecchio `phases-8-closeout.md`, diviso in `phases-8-review.md` (review e gate) e `phases-8-landing.md` (landing e chiusura), come `phases-8-closeout.md.retired`. `install.sh` collega inoltre `emet guard` in `~/.claude/settings.json` come hook `PreToolUse`.
+`commands/run.md` (circa 130 righe) è il router di `/emet` su Claude Code; su Codex, i `codex/skills/**` e `codex/hooks.json` generati svolgono quel ruolo. Ogni file in `emet/reference/` è un gruppo di fasi (`phases-1-5.md`, `phases-6-7-dispatch.md`, `phases-8-review.md`, `phases-8-landing.md`, `phases-8-spec-landing.md`, `phases-9-handoff.md`), caricato solo quando la modalità dell'esecuzione corrente ne ha bisogno. Un test fallisce se uno qualsiasi supera i 20.000 byte, così un file non può occupare tutto il contesto dopo una compattazione. Le fasi dicono al coordinatore di rileggere la sezione pertinente prima di ogni round di correzione o review. `install.sh` mette da parte un vecchio `phases-6-9.md` unico come `phases-6-9.md.retired` quando è stato modificato o è anteriore al manifesto di installazione, e altrimenti lo elimina. Fa lo stesso con il vecchio `phases-8-closeout.md`, diviso in `phases-8-review.md` (review e gate) e `phases-8-landing.md` (landing e chiusura), come `phases-8-closeout.md.retired`. `phases-8-spec-landing.md` contiene le regole di `landing.unit: spec`: integrare ogni ondata in `spec/<id>`, sincronizzare il trunk e far atterrare la spec una sola volta. `install.sh` collega inoltre `emet guard` in `~/.claude/settings.json` come hook `PreToolUse`.
 
 ## Distribuzione
 

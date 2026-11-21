@@ -2,7 +2,7 @@
 title: 配置参考
 description: emet.config.json 中的每个键，包括其默认值和含义。
 seoTitle: emet 配置参考
-sourceHash: 82a86139999124d0
+sourceHash: 041f1d0c3f53265f
 ---
 
 `emet.config.json` 中的每个键，及其默认值和含义。权威来源是 [`emet/schema/emet.config.schema.json`](../../emet/schema/emet.config.schema.json)。术语遵循 [GLOSSARY.md](../../GLOSSARY.md)。返回 [README](../../README.md)。
@@ -214,6 +214,9 @@ Claude Code 宿主上每个角色的模型和推理强度；Codex 宿主改为�
 ## landing
 
 - `mode`（默认 `pr`）：`pr` 会打开拉取请求（需要 `gh`）。`merge` 通过 `emet land` 将集成分支合并到本地主干且从不推送，用 `commands.selfCheck` 代替 CI。与跟踪器无关。参见 [ADR-0010](../adr/0010-local-merge-landing.md)。
+- `unit`（默认 `spec`）：`spec` 用 `emet spec-branch integrate` 把每个波次集成到分支 `spec/<id>`，并用 `emet spec-branch land` 一次性落地规格；`wave` 像以前一样让每个波次单独落地。任何其他值都会在加载时失败，并提示 `"landing.unit" must be one of spec|wave`。`spec` 需要在 Claude Code 设置中设定 `worktree.baseRef: "head"`（这是工具链设置，不是 emet 的键），`emet preflight` 和 `emet doctor` 会检查它。参见 [ADR-0037](../adr/0037-landing-per-spec.md)。
+- `specMergeMethod`（默认 `merge`）：规格 PR 的合并方式。只接受 `merge`；它会忽略 `pr.mergeMethod`。
+- `pushSpecBranch`（默认 `true`）：每次 `emet spec-branch integrate` 之后推送 `spec/<id>`，但不打开 PR。设为 `false` 可让分支保持本地，直到最终落地。
 
 ## tracker
 
