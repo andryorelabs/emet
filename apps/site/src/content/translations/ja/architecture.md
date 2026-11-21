@@ -24,12 +24,12 @@ sourceHash: 36996125d0e6df7f
 
 `commands/run.md` は短いルーターです。`emet/reference/` のフェーズファイルを一度に 1 つずつ読み込むため、コンパクションが起きても現在のフェーズのルールが失われることはありません。
 
-| フェーズ                                     | プロンプト                                                                                    | CLI 呼び出し                                                                             |
-| -------------------------------------------- | --------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------- |
-| 1-5 インタビュー、スペック、チケット、承認   | `phases-1-5.md`                                                                               | `init`, `doctor`, `validate`, `surfaces`, `approve`, `tracker`                           |
-| 6-7 ディスパッチとワーカー                   | `phases-6-7-dispatch.md`, `worker-prompt.md`                                                  | `preflight`, `claims`, `slots`, `launch`, `lock-reason`, `handoff`, `results`            |
-| 8 レビュー、ゲート、ランディング、締めくくり | `phases-8-review.md`, `phases-8-landing.md`, `phases-8-spec-landing.md`, `reviewer-prompt.md` | `verify`, `review-package`, `review`, `assess`, `gate`, `land`, `spec-branch`, `cleanup` |
-| 9 ハンドオフとチェーン                       | `phases-9-handoff.md`                                                                         | `status`, `metrics`, `usage`, `spec-merge`                                               |
+| フェーズ                                     | プロンプト                                                                                    | CLI 呼び出し                                                                                           |
+| -------------------------------------------- | --------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------ |
+| 1-5 インタビュー、スペック、チケット、承認   | `phases-1-5.md`                                                                               | `init`, `doctor`, `validate`, `surfaces`, `approve`, `tracker`                                         |
+| 6-7 ディスパッチとワーカー                   | `phases-6-7-dispatch.md`, `worker-prompt.md`                                                  | `preflight`, `claims`, `slots`, `launch`, `lock-reason`, `handoff`, `results`                          |
+| 8 レビュー、ゲート、ランディング、締めくくり | `phases-8-review.md`, `phases-8-landing.md`, `phases-8-spec-landing.md`, `reviewer-prompt.md` | `verify`, `review-package`, `review`, `spec-merge`, `assess`, `gate`, `land`, `spec-branch`, `cleanup` |
+| 9 ハンドオフとチェーン                       | `phases-9-handoff.md`                                                                         | `status`, `metrics`, `usage`                                                                           |
 
 コーディネーターは唯一のトラッカー書き込み担当です（ADR-0005）。ワーカーはハンドオフノートと `emet results` を通じて報告し、コーディネーターがそれを投稿します。`emet guard` は `PreToolUse` フックとして動作し、無人実行で失敗の引き金になることが知られている操作をブロックします。
 
