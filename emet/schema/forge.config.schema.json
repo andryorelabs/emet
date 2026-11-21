@@ -518,6 +518,23 @@
           "enum": ["pr", "merge"],
           "default": "pr",
           "description": "How a finished wave reaches trunk, independent of the tracker. `pr` opens a pull request (requires `gh`); `merge` merges the integration branch into local trunk and never pushes."
+        },
+        "unit": {
+          "type": "string",
+          "enum": ["spec", "wave"],
+          "default": "spec",
+          "description": "What one landing carries to trunk. `spec` lands the whole spec branch once; `wave` lands each wave."
+        },
+        "specMergeMethod": {
+          "type": "string",
+          "enum": ["merge"],
+          "default": "merge",
+          "description": "How a spec branch merges into trunk. Only `merge` is accepted."
+        },
+        "pushSpecBranch": {
+          "type": "boolean",
+          "default": true,
+          "description": "Whether the spec branch is pushed to the remote."
         }
       }
     },

@@ -124,7 +124,7 @@ describe("loadForgeConfig", () => {
       deploy: {
         check: { command: "curl -f x", retries: 3, intervalSeconds: 5, timeoutSeconds: 60 },
       },
-      landing: { mode: "merge" },
+      landing: { mode: "merge", unit: "wave", specMergeMethod: "merge", pushSpecBranch: false },
       gate: { onHold: "stop" },
       language: { conversation: "es", artifacts: "fr" },
       pr: { autoMerge: false, mergeMethod: "merge", maxCiFixAttempts: 3 },
@@ -239,6 +239,17 @@ describe("loadForgeConfig", () => {
       /"deploy.check.timeoutSeconds" must be a positive integer/,
     ],
     ["landing.mode", { landing: { mode: "push" } }, /"landing.mode" must be one of pr\|merge/],
+    ["landing.unit", { landing: { unit: "banana" } }, /"landing.unit" must be one of spec\|wave/],
+    [
+      "landing.specMergeMethod",
+      { landing: { specMergeMethod: "squash" } },
+      /"landing.specMergeMethod" must be merge/,
+    ],
+    [
+      "landing.pushSpecBranch",
+      { landing: { pushSpecBranch: "yes" } },
+      /"landing.pushSpecBranch" must be a boolean/,
+    ],
     [
       "gate.onHold",
       { gate: { onHold: "continue" } },
@@ -270,9 +281,20 @@ describe("loadForgeConfig", () => {
 
   test("landing.mode defaults to pr and accepts merge", async () => {
     await writeConfig({});
-    expect(configOf(await loadForgeConfig(repoRoot)).landing).toEqual({ mode: "pr" });
+    const defaults = { unit: "spec", specMergeMethod: "merge", pushSpecBranch: true } as const;
+    expect(configOf(await loadForgeConfig(repoRoot)).landing).toEqual({ mode: "pr", ...defaults });
     await writeConfig({ landing: { mode: "merge" } });
-    expect(configOf(await loadForgeConfig(repoRoot)).landing).toEqual({ mode: "merge" });
+    expect(configOf(await loadForgeConfig(repoRoot)).landing).toEqual({
+      mode: "merge",
+      ...defaults,
+    });
+    await writeConfig({ landing: { unit: "wave", pushSpecBranch: false } });
+    expect(configOf(await loadForgeConfig(repoRoot)).landing).toEqual({
+      mode: "pr",
+      unit: "wave",
+      specMergeMethod: "merge",
+      pushSpecBranch: false,
+    });
   });
 
   test("gate.onHold defaults to fix-and-continue and accepts stop", async () => {
