@@ -2,8 +2,17 @@
 title: Novedades
 description: Notas de versión de emet: qué cambió en cada versión.
 seoTitle: Novedades de emet: notas de versión
-sourceHash: 130017a5359fd93e
+sourceHash: b29bae1442d54dd2
 ---
+
+## 0.15.0
+
+2026-11-21
+
+### Cambiado
+
+- `landing.unit` es `spec` por defecto: las waves de una spec se integran en la rama `spec/<id>` con `emet spec-branch` y la spec aterriza una sola vez, como un pull request (o un merge local con `landing.mode: merge`), en lugar de un pull request por wave. Usa `"landing": { "unit": "wave" }` para mantener el comportamiento anterior. El modo `spec` necesita `worktree.baseRef: "head"` en la configuración de Claude Code. Consulta ADR-0037.
+- El journal añade los tipos `spec.integrate`, `spec.land` y `spec.abandon`, y `emet status` añade `specBranch`.
 
 ## 0.14.5
 
