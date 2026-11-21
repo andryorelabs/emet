@@ -2,7 +2,7 @@
 title: Architecture
 description: Une carte du code de emet/src et la façon dont les prompts de /emet le pilotent.
 seoTitle: Architecture d'emet
-sourceHash: ff28425abc92b5c9
+sourceHash: 0437733069f9c143
 ---
 
 Une carte du code de `emet/src` et la façon dont les prompts de `/emet` le pilotent. Les termes suivent [GLOSSARY.md](../GLOSSARY.md) ; les décisions derrière cette forme se trouvent dans [docs/adr](adr/README.md). Pour les problèmes, voir le [dépannage](troubleshooting.md).

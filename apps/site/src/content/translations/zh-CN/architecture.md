@@ -2,7 +2,7 @@
 title: 架构
 description: emet/src 的代码地图，以及 /emet 提示词如何驱动它。
 seoTitle: emet 架构
-sourceHash: ff28425abc92b5c9
+sourceHash: 0437733069f9c143
 ---
 
 `emet/src` 的代码地图，以及 `/emet` 提示词如何驱动它。术语遵循 [GLOSSARY.md](../GLOSSARY.md)；这种结构背后的决策见 [docs/adr](adr/README.md)。遇到问题时，参见[故障排除](troubleshooting.md)。

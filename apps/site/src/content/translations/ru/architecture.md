@@ -2,7 +2,7 @@
 title: Архитектура
 description: Карта кода emet/src и то, как промпты /emet управляют ею.
 seoTitle: Архитектура emet
-sourceHash: ff28425abc92b5c9
+sourceHash: 0437733069f9c143
 ---
 
 Карта кода `emet/src` и то, как промпты `/emet` управляют ею. Термины соответствуют [GLOSSARY.md](../GLOSSARY.md); решения, определившие устройство, находятся в [docs/adr](adr/README.md). О проблемах см. [устранение неполадок](troubleshooting.md).

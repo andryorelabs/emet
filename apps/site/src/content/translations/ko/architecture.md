@@ -2,7 +2,7 @@
 title: 아키텍처
 description: emet/src의 코드 맵과 /emet 프롬프트가 이를 어떻게 구동하는지 설명합니다.
 seoTitle: emet 아키텍처
-sourceHash: ff28425abc92b5c9
+sourceHash: 0437733069f9c143
 ---
 
 `emet/src`의 코드 맵과 `/emet` 프롬프트가 이를 어떻게 구동하는지 설명합니다. 용어는 [GLOSSARY.md](../GLOSSARY.md)를 따르며, 이 구조의 배경이 된 결정은 [docs/adr](adr/README.md)에 있습니다. 문제가 생기면 [문제 해결](troubleshooting.md)을 참고하세요.
