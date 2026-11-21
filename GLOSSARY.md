@@ -8,6 +8,14 @@ emet is the `/emet:run` command for Claude Code (`$emet:run` on Codex CLI) plus 
 The requirements document for one feature, with numbered requirements (S1..Sn), written before any ticket exists.
 _Avoid_: PRD, design doc
 
+**Living spec**:
+The current-behaviour document of one area of a repository, kept under the specs directory and updated once per landed **Spec**.
+_Avoid_: spec file, behaviour doc
+
+**Spec delta**:
+The requirements one **Spec** adds, modifies or removes in one **Living spec**, written by the **Coordinator** before the spec's last **Wave** is reviewed.
+_Avoid_: spec diff, patch
+
 **Ticket**:
 One unit of work derived from a spec, with a `Covers:` line, interfaces, allowed edit surfaces and a context budget.
 _Avoid_: task, story, card
@@ -179,6 +187,7 @@ _Avoid_: status file, progress file
 ## Relationships
 
 - A **Spec** yields many **Tickets**; each **Ticket** covers one or more numbered requirements of its **Spec**.
+- A **Spec** yields one **Spec delta** per **Living spec** it changes; they are merged once, on the last **Wave**.
 - A **Wave** is the **Frontier** at one moment; its **Tickets** run in parallel, one **Worker** each.
 - A **Worker** holds one **Claim**, one **Slot** and one **Worktree** while live.
 - The **Coordinator** merges **Worker** branches into the **Integration branch**; a **Reviewer** and the **Gates** check it before it lands.
@@ -195,3 +204,4 @@ _Avoid_: status file, progress file
 - **Handoff** is a worker's note, and the `handoff` command and the part of the config named `handoff` that sets its length are about that note. Starting the next wave is **Chain**: the config keys `autoChain` and `launcher` live in the `handoff` section only for historical reasons.
 - "Task" is not a **Ticket**: avoid it, since agent tooling uses it for unrelated work items.
 - "Session" is one conversation in an **Agent host**, not a **Run**; a run can span several sessions.
+- "Spec" alone is the tracker document for one feature; the files under `docs/specs/` are **Living specs**, despite the config section named `specs`.
