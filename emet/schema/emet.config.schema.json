@@ -527,9 +527,9 @@
         },
         "specMergeMethod": {
           "type": "string",
-          "enum": ["merge"],
+          "enum": ["merge", "squash", "rebase"],
           "default": "merge",
-          "description": "How a spec branch merges into trunk. Only `merge` is accepted."
+          "description": "How the spec PR merges into trunk. `merge` keeps one merge commit per wave; use `squash` or `rebase` when the trunk disallows merge commits."
         },
         "pushSpecBranch": {
           "type": "boolean",

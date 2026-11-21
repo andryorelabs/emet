@@ -2,7 +2,7 @@
 title: Référence de configuration
 description: Chaque clé de emet.config.json avec sa valeur par défaut et sa signification.
 seoTitle: Référence de configuration d'emet
-sourceHash: 61b46b074d095451
+sourceHash: a58a3577b2274c4a
 ---
 
 Chaque clé de `emet.config.json`, avec sa valeur par défaut et sa signification. La source de vérité est [`emet/schema/emet.config.schema.json`](../../emet/schema/emet.config.schema.json). Les termes suivent [GLOSSARY.md](../../GLOSSARY.md). Retour au [README](../../README.md).
@@ -215,7 +215,7 @@ Lu uniquement quand `agentHost` vaut `"codex"`. Toutes les clés sont facultativ
 
 - `mode` (par défaut `pr`) : `pr` ouvre une pull request (nécessite `gh`). `merge` fusionne la branche d'intégration dans la branche principale locale avec `emet land` et ne pousse jamais, `commands.selfCheck` tenant lieu de CI. Indépendant du tracker. Voir l'[ADR-0010](../adr/0010-local-merge-landing.md).
 - `unit` (par défaut `spec`) : `spec` intègre chaque vague dans la branche `spec/<id>` avec `emet spec-branch integrate` et fait atterrir la spec une fois avec `emet spec-branch land` ; `wave` fait atterrir chaque vague seule, comme avant. Toute autre valeur échoue au chargement avec `"landing.unit" must be one of spec|wave`. `spec` exige `worktree.baseRef: "head"` dans les réglages de Claude Code (un réglage du harnais, pas une clé emet), que `emet preflight` et `emet doctor` vérifient. Voir l'[ADR-0037](../adr/0037-landing-per-spec.md).
-- `specMergeMethod` (par défaut `merge`) : la manière dont la PR de la spec est fusionnée. Seul `merge` est accepté ; il ignore `pr.mergeMethod`.
+- `specMergeMethod` (par défaut `merge`) : la manière dont la PR de la spec est fusionnée : `merge`, `squash` ou `rebase`. `merge` garde un commit de merge par vague, de sorte qu'une vague peut être annulée ; `squash` et `rebase` conviennent à une branche principale qui n'autorise aucun commit de merge, au prix de cette annulation. Il ignore `pr.mergeMethod`. `emet doctor` avertit lorsque les réglages du dépôt ou le ruleset de la branche principale n'autorisent pas la méthode choisie.
 - `pushSpecBranch` (par défaut `true`) : pousse `spec/<id>` après chaque `emet spec-branch integrate`, sans ouvrir de PR. Mettez `false` pour garder la branche locale jusqu'à l'atterrissage final.
 
 ## tracker

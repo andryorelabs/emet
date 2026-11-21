@@ -2,7 +2,7 @@
 title: Справочник по конфигурации
 description: Каждый ключ emet.config.json со значением по умолчанию и смыслом.
 seoTitle: Справочник по конфигурации emet
-sourceHash: 61b46b074d095451
+sourceHash: a58a3577b2274c4a
 ---
 
 Каждый ключ `emet.config.json` со значением по умолчанию и смыслом. Источник истины — [`emet/schema/emet.config.schema.json`](../../emet/schema/emet.config.schema.json). Термины соответствуют [GLOSSARY.md](../../GLOSSARY.md). Назад к [README](../../README.md).
@@ -215,7 +215,7 @@ sourceHash: 61b46b074d095451
 
 - `mode` (по умолчанию `pr`): `pr` открывает pull request (требуется `gh`). `merge` сливает интеграционную ветку в локальный trunk командой `emet land` и никогда не отправляет изменения, при этом вместо CI выступает `commands.selfCheck`. Не зависит от трекера. См. [ADR-0010](../adr/0010-local-merge-landing.md).
 - `unit` (по умолчанию `spec`): `spec` интегрирует каждую волну в ветку `spec/<id>` командой `emet spec-branch integrate` и приземляет спецификацию один раз командой `emet spec-branch land`; `wave` приземляет каждую волну отдельно, как раньше. Любое другое значение не загружается с ошибкой `"landing.unit" must be one of spec|wave`. `spec` требует `worktree.baseRef: "head"` в настройках Claude Code (настройка харнесса, а не ключ emet), которую проверяют `emet preflight` и `emet doctor`. См. [ADR-0037](../adr/0037-landing-per-spec.md).
-- `specMergeMethod` (по умолчанию `merge`): как сливается PR спецификации. Принимается только `merge`; он игнорирует `pr.mergeMethod`.
+- `specMergeMethod` (по умолчанию `merge`): как сливается PR спецификации: `merge`, `squash` или `rebase`. `merge` сохраняет один merge-коммит на волну, поэтому волну можно откатить; `squash` и `rebase` подходят для trunk, который не допускает merge-коммитов, ценой этого отката. Он игнорирует `pr.mergeMethod`. `emet doctor` предупреждает, когда настройки репозитория или ruleset trunk не разрешают выбранный метод.
 - `pushSpecBranch` (по умолчанию `true`): отправлять `spec/<id>` после каждого `emet spec-branch integrate`, не открывая PR. Укажите `false`, чтобы держать ветку локальной до итоговой посадки.
 
 ## tracker

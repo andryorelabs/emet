@@ -43,7 +43,7 @@ gated after it.
 
 - `landing.mode: pr`: it pushes `spec/<spec-id>`, opens one PR with its own
   title and a `Closes #<n>` line per ticket of every integrated wave, waits for
-  the checks and merges it with a merge commit, ignoring `pr.mergeMethod`. A
+  the checks and merges it with `landing.specMergeMethod` (a merge commit by default). A
   failing check leaves the PR open; rerunning `land` reuses it. Afterwards
   verify the closing lines as `phases-8-landing.md` says.
 - `landing.mode: merge`: it merges `spec/<spec-id>` into local trunk with

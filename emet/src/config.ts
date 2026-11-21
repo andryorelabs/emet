@@ -324,8 +324,9 @@ export interface ForgeConfig {
     /** What one landing carries to trunk: `spec` lands the whole spec branch
      * once, `wave` lands each wave. */
     readonly unit: LandingUnit;
-    /** How a spec branch merges into trunk. Only `merge` is accepted. */
-    readonly specMergeMethod: "merge";
+    /** How the spec PR merges into trunk: `merge` keeps one merge commit per
+     * wave; `squash` or `rebase` suit a trunk that disallows merge commits. */
+    readonly specMergeMethod: MergeMethod;
     /** Whether the spec branch is pushed to the remote. */
     readonly pushSpecBranch: boolean;
   };
@@ -909,8 +910,11 @@ function validateAndMerge(
   }
   const specMergeMethod =
     landingSection.specMergeMethod ?? DEFAULT_FORGE_CONFIG.landing.specMergeMethod;
-  if (specMergeMethod !== "merge") {
-    return { ok: false, reason: '"landing.specMergeMethod" must be merge' };
+  if (!isOneOf(MERGE_METHODS, specMergeMethod)) {
+    return {
+      ok: false,
+      reason: '"landing.specMergeMethod" must be one of squash|merge|rebase',
+    };
   }
   const pushSpecBranch =
     landingSection.pushSpecBranch ?? DEFAULT_FORGE_CONFIG.landing.pushSpecBranch;
