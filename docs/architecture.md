@@ -19,12 +19,12 @@ There are two halves. The prompts (`commands/run.md`, `agents/*.md`, `emet/refer
 
 `commands/run.md` is a short router. It loads one `emet/reference/` phase file at a time, so a compaction never drops the rules for the current phase.
 
-| Phase                                  | Prompt                                       | CLI calls                                                                     |
-| -------------------------------------- | -------------------------------------------- | ----------------------------------------------------------------------------- |
-| 1-5 interview, spec, tickets, approval | `phases-1-5.md`                              | `init`, `doctor`, `validate`, `surfaces`, `approve`, `tracker`                |
-| 6-7 dispatch and workers               | `phases-6-7-dispatch.md`, `worker-prompt.md` | `preflight`, `claims`, `slots`, `launch`, `lock-reason`, `handoff`, `results` |
-| 8 review, gate, landing, closeout      | `phases-8-closeout.md`, `reviewer-prompt.md` | `verify`, `review-package`, `review`, `assess`, `gate`, `land`, `cleanup`     |
-| 9 handoff and chaining                 | `phases-9-handoff.md`                        | `status`, `metrics`, `usage`, `spec-merge`                                    |
+| Phase                                  | Prompt                                                            | CLI calls                                                                     |
+| -------------------------------------- | ----------------------------------------------------------------- | ----------------------------------------------------------------------------- |
+| 1-5 interview, spec, tickets, approval | `phases-1-5.md`                                                   | `init`, `doctor`, `validate`, `surfaces`, `approve`, `tracker`                |
+| 6-7 dispatch and workers               | `phases-6-7-dispatch.md`, `worker-prompt.md`                      | `preflight`, `claims`, `slots`, `launch`, `lock-reason`, `handoff`, `results` |
+| 8 review, gate, landing, closeout      | `phases-8-review.md`, `phases-8-landing.md`, `reviewer-prompt.md` | `verify`, `review-package`, `review`, `assess`, `gate`, `land`, `cleanup`     |
+| 9 handoff and chaining                 | `phases-9-handoff.md`                                             | `status`, `metrics`, `usage`, `spec-merge`                                    |
 
 The coordinator is the single tracker writer (ADR-0005): workers report through a handoff note and `emet results`, and the coordinator posts them. `emet guard` runs as a `PreToolUse` hook and blocks known unattended-run failure triggers.
 
@@ -47,7 +47,7 @@ Host-specific values sit behind the `AgentHost` interface in `agenthost.ts`: `ag
 
 ## Prompt layout
 
-`commands/run.md` (about 130 lines) is the `/emet` router on Claude Code; on Codex the generated `codex/skills/**` and `codex/hooks.json` play that role. Each file in `emet/reference/` is one phase group (`phases-1-5.md`, `phases-6-7-dispatch.md`, `phases-8-closeout.md`, `phases-9-handoff.md`), loaded only when the current run's mode needs it. A test fails if any of them grows past 20,000 bytes, so one file cannot take over the context after compaction. The phases tell the coordinator to re-read the relevant section before each fix or review round. `install.sh` moves an old single `phases-6-9.md` aside as `phases-6-9.md.retired` when you edited it or it predates the install manifest, and deletes it otherwise. `install.sh` also wires `emet guard` into `~/.claude/settings.json` as the `PreToolUse` hook.
+`commands/run.md` (about 130 lines) is the `/emet` router on Claude Code; on Codex the generated `codex/skills/**` and `codex/hooks.json` play that role. Each file in `emet/reference/` is one phase group (`phases-1-5.md`, `phases-6-7-dispatch.md`, `phases-8-review.md`, `phases-8-landing.md`, `phases-9-handoff.md`), loaded only when the current run's mode needs it. A test fails if any of them grows past 20,000 bytes, so one file cannot take over the context after compaction. The phases tell the coordinator to re-read the relevant section before each fix or review round. `install.sh` moves an old single `phases-6-9.md` aside as `phases-6-9.md.retired` when you edited it or it predates the install manifest, and deletes it otherwise. It does the same for the old `phases-8-closeout.md`, which is split into `phases-8-review.md` (review and gate) and `phases-8-landing.md` (landing and close-out), as `phases-8-closeout.md.retired`. `install.sh` also wires `emet guard` into `~/.claude/settings.json` as the `PreToolUse` hook.
 
 ## Distribution
 

@@ -210,6 +210,12 @@ describe("emet handoff --check", () => {
       expect(process.exitCode).toBe(0);
     });
 
+    test("an expect-skills value of none is ignored for a done handoff with skills none", async () => {
+      const filePath = await writeHandoff("AO-339", `${DONE}\nskills: none`);
+      await run(["--check", filePath, "--expect-skills", "none"]);
+      expect(process.exitCode).toBe(0);
+    });
+
     test("an empty expect-skills list is ignored", async () => {
       const filePath = await writeHandoff("AO-338", VALID_HANDOFF);
       await run(["--check", filePath, "--expect-skills", ""]);

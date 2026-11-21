@@ -2,7 +2,7 @@
 title: Referencia de la CLI
 description: Cada subcomando de emet, la tabla de compuertas y registros, los códigos de salida y las variables de entorno.
 seoTitle: Referencia de la CLI de emet
-sourceHash: 44c0d5ae7d296866
+sourceHash: fbd3bae98f074fd0
 ---
 
 Cada subcomando de `emet`, la tabla de compuertas y registros, los códigos de salida y las variables de entorno. Los términos siguen [GLOSSARY.md](../../GLOSSARY.md). Volver al [README](../../README.md). Cada comando imprime su uso con `--help`.
@@ -63,7 +63,7 @@ Informa, por repositorio: un `emet.config.json` válido, los cuatro archivos `do
 - `emet run current [--json]`: imprime la ejecución activa del repo (id de ejecución, spec, oleada, fase y última actualización), leída de `.emet/phase.json`. Sin ejecución activa imprime `no active run` y termina con 0.
 - `emet insights [--since <iso|7d|30d>] [--repo <path>] [--all] [--json] [--mark-baseline]`: lee el [diario de eventos](../guide/journal.md) e informa de ejecuciones por origen (humano o auto), decisiones del gate por decisión y motivo, intervenciones humanas por ejecución, resultados de lanzamiento y tickets cerrados. Las líneas ilegibles se omiten y se cuentan. `--mark-baseline` añade una línea base; los informes posteriores cubren solo los eventos posteriores a ella salvo que se indique `--all`. Un diario vacío o inexistente imprime un informe en cero y termina con 0.
 - `emet usage [--session <id> | --file <path>] [--stalled [--minutes N]] [--project-dir <path>]`: informa del uso de la sesión; `--stalled` lista los workers detenidos.
-- `emet handoff --check <path> | --render <path>`: valida o renderiza la nota `.emet/handoff-<ticket>.md` de un worker.
+- `emet handoff --check <path> [--expect-skills a,b] | --render <path>`: valida o renderiza la nota `.emet/handoff-<ticket>.md` de un worker. La nota puede incluir una sección `skills:`, escrita como `skills: none` o `skills: loaded: a, b; missing: c`; solo es obligatoria cuando `state` es `done`, y cualquier otro valor hace fallar la comprobación. `--expect-skills a,b` (solo con check) hace fallar la comprobación por cada skill indicado que no esté ni en la lista `loaded` ni en la lista `missing`. Una comprobación exitosa imprime `missing skills: …` cuando la lista `missing` no está vacía.
 - `emet metrics [--run <id>]`: informa tokens, costo equivalente en API y tiempo de reloj por ticket, por oleada y por ejecución, leídos de las transcripciones de sesión. También compara el presupuesto de contexto estimado por ticket con lo que realmente usó cada worker. Su resumen va al final del informe final de la ejecución.
 
 ### Planificación, revisión y aterrizaje

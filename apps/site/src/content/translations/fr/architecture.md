@@ -2,7 +2,7 @@
 title: Architecture
 description: Une carte du code de emet/src et la façon dont les prompts de /emet le pilotent.
 seoTitle: Architecture d'emet
-sourceHash: ff28425abc92b5c9
+sourceHash: 0437733069f9c143
 ---
 
 Une carte du code de `emet/src` et la façon dont les prompts de `/emet` le pilotent. Les termes suivent [GLOSSARY.md](../GLOSSARY.md) ; les décisions derrière cette forme se trouvent dans [docs/adr](adr/README.md). Pour les problèmes, voir le [dépannage](troubleshooting.md).
@@ -24,12 +24,12 @@ Il y a deux moitiés. Les prompts (`commands/run.md`, `agents/*.md`, `emet/refer
 
 `commands/run.md` est un routeur court. Il charge un seul fichier de phase de `emet/reference/` à la fois, de sorte qu'une compaction ne perd jamais les règles de la phase en cours.
 
-| Phase                                     | Prompt                                       | Appels à la CLI                                                               |
-| ----------------------------------------- | -------------------------------------------- | ----------------------------------------------------------------------------- |
-| 1-5 entretien, spec, tickets, approbation | `phases-1-5.md`                              | `init`, `doctor`, `validate`, `surfaces`, `approve`, `tracker`                |
-| 6-7 distribution et workers               | `phases-6-7-dispatch.md`, `worker-prompt.md` | `preflight`, `claims`, `slots`, `launch`, `lock-reason`, `handoff`, `results` |
-| 8 revue, gate, atterrissage, clôture      | `phases-8-closeout.md`, `reviewer-prompt.md` | `verify`, `review-package`, `review`, `assess`, `gate`, `land`, `cleanup`     |
-| 9 handoff et enchaînement                 | `phases-9-handoff.md`                        | `status`, `metrics`, `usage`, `spec-merge`                                    |
+| Phase                                     | Prompt                                                            | Appels à la CLI                                                               |
+| ----------------------------------------- | ----------------------------------------------------------------- | ----------------------------------------------------------------------------- |
+| 1-5 entretien, spec, tickets, approbation | `phases-1-5.md`                                                   | `init`, `doctor`, `validate`, `surfaces`, `approve`, `tracker`                |
+| 6-7 distribution et workers               | `phases-6-7-dispatch.md`, `worker-prompt.md`                      | `preflight`, `claims`, `slots`, `launch`, `lock-reason`, `handoff`, `results` |
+| 8 revue, gate, atterrissage, clôture      | `phases-8-review.md`, `phases-8-landing.md`, `reviewer-prompt.md` | `verify`, `review-package`, `review`, `assess`, `gate`, `land`, `cleanup`     |
+| 9 handoff et enchaînement                 | `phases-9-handoff.md`                                             | `status`, `metrics`, `usage`, `spec-merge`                                    |
 
 Le coordinateur est le seul à écrire dans le tracker (ADR-0005) : les workers font leur rapport via une note de handoff et `emet results`, et le coordinateur les publie. `emet guard` s'exécute comme un hook `PreToolUse` et bloque les déclencheurs connus d'échecs lors d'exécutions sans surveillance.
 
@@ -52,7 +52,7 @@ Les valeurs propres à chaque hôte se trouvent derrière l'interface `AgentHost
 
 ## Organisation des prompts
 
-`commands/run.md` (environ 130 lignes) est le routeur de `/emet` sur Claude Code ; sur Codex, les `codex/skills/**` et `codex/hooks.json` générés jouent ce rôle. Chaque fichier de `emet/reference/` est un groupe de phases (`phases-1-5.md`, `phases-6-7-dispatch.md`, `phases-8-closeout.md`, `phases-9-handoff.md`), chargé seulement quand le mode de l'exécution en cours en a besoin. Un test échoue si l'un d'eux dépasse 20 000 octets, afin qu'un seul fichier ne puisse pas envahir le contexte après une compaction. Les phases demandent au coordinateur de relire la section concernée avant chaque tour de correction ou de revue. `install.sh` met de côté un ancien `phases-6-9.md` unique sous le nom `phases-6-9.md.retired` lorsque vous l'avez modifié ou qu'il est antérieur au manifeste d'installation, et le supprime sinon. `install.sh` branche aussi `emet guard` dans `~/.claude/settings.json` comme hook `PreToolUse`.
+`commands/run.md` (environ 130 lignes) est le routeur de `/emet` sur Claude Code ; sur Codex, les `codex/skills/**` et `codex/hooks.json` générés jouent ce rôle. Chaque fichier de `emet/reference/` est un groupe de phases (`phases-1-5.md`, `phases-6-7-dispatch.md`, `phases-8-review.md`, `phases-8-landing.md`, `phases-9-handoff.md`), chargé seulement quand le mode de l'exécution en cours en a besoin. Un test échoue si l'un d'eux dépasse 20 000 octets, afin qu'un seul fichier ne puisse pas envahir le contexte après une compaction. Les phases demandent au coordinateur de relire la section concernée avant chaque tour de correction ou de revue. `install.sh` met de côté un ancien `phases-6-9.md` unique sous le nom `phases-6-9.md.retired` lorsque vous l'avez modifié ou qu'il est antérieur au manifeste d'installation, et le supprime sinon. Il fait de même pour l'ancien `phases-8-closeout.md`, scindé en `phases-8-review.md` (revue et gate) et `phases-8-landing.md` (atterrissage et clôture), sous le nom `phases-8-closeout.md.retired`. `install.sh` branche aussi `emet guard` dans `~/.claude/settings.json` comme hook `PreToolUse`.
 
 ## Distribution
 

@@ -2,7 +2,7 @@
 title: Referência da CLI
 description: Cada subcomando do emet, a tabela de gates e registros, os códigos de saída e as variáveis de ambiente.
 seoTitle: Referência da CLI do emet
-sourceHash: 44c0d5ae7d296866
+sourceHash: fbd3bae98f074fd0
 ---
 
 Cada subcomando do `emet`, a tabela de gates e registros, os códigos de saída e as variáveis de ambiente. Os termos seguem o [GLOSSARY.md](../../GLOSSARY.md). Voltar ao [README](../../README.md). Todo comando imprime seu uso com `--help`.
@@ -63,7 +63,7 @@ Informa, por repositório: um `emet.config.json` válido, os quatro arquivos `do
 - `emet run current [--json]`: imprime a execução ativa do repositório (id da execução, spec, onda, fase e última atualização), lida de `.emet/phase.json`. Sem execução ativa, imprime `no active run` e sai com 0.
 - `emet insights [--since <iso|7d|30d>] [--repo <path>] [--all] [--json] [--mark-baseline]`: lê o [diário de eventos](../guide/journal.md) e informa execuções por origem (humana ou auto), decisões do gate por decisão e motivo, intervenções humanas por execução, resultados de lançamento e tickets fechados. Linhas ilegíveis são ignoradas e contadas. `--mark-baseline` acrescenta uma linha de base; relatórios seguintes cobrem apenas eventos posteriores a ela, a menos que `--all` seja usado. Um diário vazio ou ausente imprime um relatório zerado e sai com 0.
 - `emet usage [--session <id> | --file <path>] [--stalled [--minutes N]] [--project-dir <path>]`: informa o uso da sessão; `--stalled` lista workers travados.
-- `emet handoff --check <path> | --render <path>`: valida ou renderiza a nota `.emet/handoff-<ticket>.md` de um worker.
+- `emet handoff --check <path> [--expect-skills a,b] | --render <path>`: valida ou renderiza a nota `.emet/handoff-<ticket>.md` de um worker. A nota pode conter uma seção `skills:`, escrita como `skills: none` ou `skills: loaded: a, b; missing: c`; ela é obrigatória apenas quando `state` é `done`, e qualquer outro valor reprova a verificação. `--expect-skills a,b` (somente com check) reprova a verificação para cada skill nomeada que não esteja nem na lista `loaded` nem na lista `missing`. Uma verificação aprovada imprime `missing skills: …` quando a lista `missing` não está vazia.
 - `emet metrics [--run <id>]`: informa tokens, custo equivalente em API e tempo de relógio por ticket, por onda e por execução, lidos das transcrições de sessão. Também compara o orçamento de contexto estimado por ticket com o que cada worker realmente usou. Seu resumo vai no final do relatório final da execução.
 
 ### Planejamento, revisão e aterrissagem
