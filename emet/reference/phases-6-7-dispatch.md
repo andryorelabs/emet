@@ -97,7 +97,7 @@ is only the fallback. If `emet doctor` flags `emet-agents` as missing, run
 
 Just before each `Agent` call, write the dispatch record
 `.emet/runs/<runId>/dispatch/<ticket>.json` = `{"baseline": "<trunk sha>",
-"surfaces": [<the ticket's globs>]}` (that sha, `git rev-parse
+"surfaces": [<the ticket's globs>], "skills": [<names from the ticket's ## Project skills>]}` (that sha, `git rev-parse
 <remote>/<trunk>` — or local `<trunk>` when `landing.mode` is `merge` — and
 never the caller's HEAD, is also the prompt's `{{expected_base}}`), and mark the ticket started yourself (`onStart`, see
 `${CLAUDE_PLUGIN_ROOT}/emet/reference/tracker-<kind>.md`): workers never write the tracker. A worker
