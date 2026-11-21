@@ -42,6 +42,13 @@ describe("journal commands", () => {
     expect(flags).toContainEqual({ name: "--mark-baseline", value: false });
   });
 
+  test("spec-branch declares its flags", () => {
+    const flags = findCommand("spec-branch")?.flags ?? [];
+    expect(flags).toContainEqual({ name: "--spec", value: true });
+    expect(flags).toContainEqual({ name: "--tickets", value: true });
+    expect(flags).toContainEqual({ name: "--force", value: false });
+  });
+
   test("run declares --json and status declares --brief", () => {
     expect(findCommand("run")?.flags).toContainEqual({ name: "--json", value: false });
     expect(findCommand("status")?.flags).toContainEqual({ name: "--brief", value: false });

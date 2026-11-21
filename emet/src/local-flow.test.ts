@@ -11,6 +11,8 @@ import {
 import os from "node:os";
 import path from "node:path";
 
+import { isObject } from "./narrow";
+
 const CLI_ENTRY = path.resolve(import.meta.dir, "../bin/emet.ts");
 
 let repo = "";
@@ -118,6 +120,20 @@ describe("local flow", () => {
 
     forgeOk("init", "--tracker", "local");
     resolveInitTodoMarkers();
+    const configPath = path.join(repo, "emet.config.json");
+    const initialConfig: unknown = JSON.parse(readFileSync(configPath, "utf8"));
+    const initialLanding = isObject(initialConfig) ? initialConfig.landing : undefined;
+    writeFileSync(
+      configPath,
+      `${JSON.stringify(
+        {
+          ...(isObject(initialConfig) ? initialConfig : {}),
+          landing: { ...(isObject(initialLanding) ? initialLanding : {}), unit: "wave" },
+        },
+        null,
+        2,
+      )}\n`,
+    );
     git(repo, "add", "-A");
     git(repo, "commit", "-q", "-m", "chore: forge init");
 
