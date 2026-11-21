@@ -84,8 +84,11 @@ async function trialMerge(root: string, tip: string, trunk: string): Promise<Tri
 }
 
 async function mergeTrunkIntoSpecBranch(context: SpecBranchContext): Promise<string> {
-  const { root, spec, trunk } = context;
+  const { root, spec, trunk, config } = context;
   const branch = specBranchName(spec);
+  if (config.landing.mode !== "merge") {
+    await git(root, "fetch", config.repo.remote, config.repo.trunk);
+  }
   const state = await requireState(context);
   const contained = await git(root, "merge-base", "--is-ancestor", trunk, branch);
   if (contained.exitCode === 0) return state.tip;
@@ -185,6 +188,19 @@ async function runGh(root: string, ...args: string[]): Promise<string> {
   return result.stdout.toString().trim();
 }
 
+async function waitForChecks(root: string, pullRequest: string): Promise<void> {
+  const result = await Bun.$`gh pr checks ${pullRequest} --watch --fail-fast`
+    .cwd(root)
+    .nothrow()
+    .quiet();
+  if (result.exitCode === 0) return;
+  const output = `${result.stdout.toString()}${result.stderr.toString()}`.trim();
+  if (/no checks reported/i.test(output)) return;
+  throw new SpecLandingRefusedError(
+    `checks on ${pullRequest} did not pass; the PR stays open and a rerun of land reuses it: ${output}`,
+  );
+}
+
 async function landByPullRequest(
   context: SpecBranchContext,
   state: SpecBranchState,
@@ -225,6 +241,7 @@ async function landByPullRequest(
           "--body",
           body,
         );
+  await waitForChecks(root, pullRequest);
   await runGh(root, "pr", "merge", pullRequest, "--merge");
   return { pullRequest };
 }
@@ -279,9 +296,6 @@ async function mainWorktree(cwd: string): Promise<string> {
 export async function runLand(argv: string[], context: SpecBranchContext): Promise<number> {
   try {
     const partial = argv.includes("--partial");
-    if (context.config.landing.mode !== "merge") {
-      await git(context.root, "fetch", context.config.repo.remote, context.config.repo.trunk);
-    }
     await mergeTrunkIntoSpecBranch(context);
     const state = await requireState(context);
     if (state.waves.length === 0) {

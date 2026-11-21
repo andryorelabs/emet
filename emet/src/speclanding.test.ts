@@ -171,7 +171,11 @@ describe("land in merge mode", () => {
   });
 });
 
-async function landWithStub(trackerKind: string, existingUrl: string): Promise<string> {
+async function landWithStub(
+  trackerKind: string,
+  existingUrl: string,
+  checksExit = 0,
+): Promise<{ calls: string; code: number }> {
   const remote = realpathSync(mkdtempSync(path.join(os.tmpdir(), "emet-speclanding-remote-")));
   const binDirectory = realpathSync(mkdtempSync(path.join(os.tmpdir(), "emet-speclanding-bin-")));
   try {
@@ -184,14 +188,14 @@ async function landWithStub(trackerKind: string, existingUrl: string): Promise<s
     const stub = path.join(binDirectory, "gh");
     writeFileSync(
       stub,
-      `#!/bin/sh\nprintf '%s\\n---\\n' "$*" >> "${callsFile}"\nif [ "$1 $2" = "pr list" ]; then echo '${existingUrl}'; fi\nif [ "$1 $2" = "pr create" ]; then echo https://github.com/o/r/pull/9; fi\n`,
+      `#!/bin/sh\nprintf '%s\\n---\\n' "$*" >> "${callsFile}"\nif [ "$1 $2" = "pr list" ]; then echo '${existingUrl}'; fi\nif [ "$1 $2" = "pr create" ]; then echo https://github.com/o/r/pull/9; fi\nif [ "$1 $2" = "pr checks" ]; then exit ${checksExit}; fi\n`,
     );
     chmodSync(stub, 0o755);
     process.env.PATH = `${binDirectory}:${originalPath ?? ""}`;
     await runCapturing(["ensure", "--spec", "7"]);
     await integrateWave(1, "feat-01");
-    expect((await runCapturing(["land", "--spec", "7"])).code).toBe(0);
-    return readFileSync(callsFile, "utf8");
+    const result = await runCapturing(["land", "--spec", "7"]);
+    return { calls: readFileSync(callsFile, "utf8"), code: result.code };
   } finally {
     rmSync(remote, { recursive: true, force: true });
     rmSync(binDirectory, { recursive: true, force: true });
@@ -200,12 +204,21 @@ async function landWithStub(trackerKind: string, existingUrl: string): Promise<s
 
 describe("land in pr mode edge cases", () => {
   test("a local tracker writes no Closes line", async () => {
-    const calls = await landWithStub("local", "");
+    const { calls, code } = await landWithStub("local", "");
+    expect(code).toBe(0);
     expect(calls).not.toContain("Closes");
   });
 
+  test("failing checks stop before the merge and leave the PR open", async () => {
+    const { calls, code } = await landWithStub("github", "", 1);
+    expect(code).not.toBe(0);
+    expect(calls).toContain("pr checks");
+    expect(calls).not.toContain("pr merge");
+  });
+
   test("a rerun reuses the open PR instead of creating a second one", async () => {
-    const calls = await landWithStub("github", "https://github.com/o/r/pull/5");
+    const { calls, code } = await landWithStub("github", "https://github.com/o/r/pull/5");
+    expect(code).toBe(0);
     expect(calls).not.toContain("pr create");
     expect(calls).toContain("pr merge https://github.com/o/r/pull/5 --merge");
   });
