@@ -113,7 +113,7 @@ function resolveInitTodoMarkers(): void {
 }
 
 describe("local flow", () => {
-  test("init, tickets, frontier, land, cleanup and preflight with no remote and no gh", () => {
+  test("init, three waves through the spec branch, land, cleanup and preflight with no remote and no gh", () => {
     expect(Bun.which("gh", { PATH: childPath() })).toBeNull();
     expect(Bun.which("git", { PATH: childPath() })).not.toBeNull();
     expect(git(repo, "remote")).toBe("");
@@ -128,11 +128,16 @@ describe("local flow", () => {
       `${JSON.stringify(
         {
           ...(isObject(initialConfig) ? initialConfig : {}),
-          landing: { ...(isObject(initialLanding) ? initialLanding : {}), unit: "wave" },
+          landing: { ...(isObject(initialLanding) ? initialLanding : {}), unit: "spec" },
         },
         null,
         2,
       )}\n`,
+    );
+    mkdirSync(path.join(repo, ".claude"), { recursive: true });
+    writeFileSync(
+      path.join(repo, ".claude", "settings.json"),
+      `${JSON.stringify({ worktree: { baseRef: "head" } }, null, 2)}\n`,
     );
     git(repo, "add", "-A");
     git(repo, "commit", "-q", "-m", "chore: forge init");
@@ -140,65 +145,71 @@ describe("local flow", () => {
     const bodyFile = path.join(scratchDir, "body.md");
     writeFileSync(bodyFile, "body\n");
     forgeOk("tracker", "create-spec", "--slug", "demo", "--title", "Demo", "--body-file", bodyFile);
-    forgeOk(
-      "tracker",
-      "create-ticket",
-      "--spec",
-      "demo",
-      "--title",
-      "One",
-      "--body-file",
-      bodyFile,
-    );
-    forgeOk(
-      "tracker",
-      "create-ticket",
-      "--spec",
-      "demo",
-      "--title",
-      "Two",
-      "--body-file",
-      bodyFile,
-      "--blocked-by",
-      "01",
-    );
+    const ticketIds = ["demo-01", "demo-02", "demo-03"];
+    ticketIds.forEach((_, index) => {
+      forgeOk(
+        "tracker",
+        "create-ticket",
+        "--spec",
+        "demo",
+        "--title",
+        `Ticket ${index + 1}`,
+        "--body-file",
+        bodyFile,
+        ...(index === 0 ? [] : ["--blocked-by", String(index).padStart(2, "0")]),
+      );
+    });
     expect(frontierIds()).toEqual(["demo-01"]);
 
-    forgeOk("tracker", "set-state", "demo-01", "in-progress");
-    forgeOk("tracker", "close", "demo-01");
-    expect(frontierIds()).toEqual(["demo-02"]);
+    const trunkBefore = git(repo, "rev-parse", "main");
+    const trunkCommitsBefore = Number(git(repo, "rev-list", "--count", "main"));
+    forgeOk("spec-branch", "ensure", "--spec", "demo");
+    expect(git(repo, "rev-parse", "spec/demo")).toBe(trunkBefore);
 
-    const branch = "emet-demo-wave-1";
-    git(repo, "checkout", "-q", "-b", branch);
-    writeFileSync(path.join(repo, "feature.txt"), "feature\n");
-    git(repo, "add", "feature.txt");
-    git(repo, "commit", "-q", "-m", "work one");
-    writeFileSync(path.join(repo, "feature-two.txt"), "feature two\n");
-    git(repo, "add", "feature-two.txt");
-    git(repo, "commit", "-q", "-m", "work two");
-    const branchTip = git(repo, "rev-parse", branch);
-    git(repo, "checkout", "-q", "main");
+    ticketIds.forEach((ticketId, index) => {
+      const wave = index + 1;
+      const waveBranch = `spec/demo-w${wave}`;
+      git(repo, "checkout", "-q", "-b", waveBranch, "spec/demo");
+      writeFileSync(path.join(repo, `feature-${wave}.txt`), `feature ${wave}\n`);
+      git(repo, "add", `feature-${wave}.txt`);
+      git(repo, "commit", "-q", "-m", `work ${wave}`);
+      git(repo, "checkout", "-q", "main");
+      forgeOk(
+        "spec-branch",
+        "integrate",
+        "--spec",
+        "demo",
+        "--wave",
+        String(wave),
+        "--branch",
+        waveBranch,
+        "--tickets",
+        ticketId,
+      );
+      forgeOk("tracker", "set-state", ticketId, "in-progress");
+      forgeOk("tracker", "close", ticketId);
+    });
+    expect(frontierIds()).toEqual([]);
+    expect(git(repo, "rev-parse", "main")).toBe(trunkBefore);
 
-    const commitsBefore = Number(git(repo, "rev-list", "--count", "main"));
-    forgeOk(
-      "land",
-      "--spec",
-      "demo",
-      "--branch",
-      branch,
-      "--tickets",
-      "demo-01",
-      "--summary",
-      "add feature",
-      "--wave",
-      "1",
+    const status: unknown = JSON.parse(forgeOk("spec-branch", "status", "--spec", "demo"));
+    const waves = isObject(status) && Array.isArray(status.waves) ? status.waves : [];
+    expect(waves).toHaveLength(3);
+
+    forgeOk("spec-branch", "sync", "--spec", "demo");
+    const specTip = git(repo, "rev-parse", "spec/demo");
+
+    forgeOk("spec-branch", "land", "--spec", "demo");
+    expect(Number(git(repo, "rev-list", "--count", "--first-parent", "main"))).toBe(
+      trunkCommitsBefore + 1,
     );
-    expect(Number(git(repo, "rev-list", "--count", "main"))).toBe(commitsBefore + 1);
-    expect(git(repo, "rev-parse", "main")).not.toBe(branchTip);
-    expect(git(repo, "rev-list", "--parents", "-n", "1", "main").split(" ")).toHaveLength(2);
+    expect(git(repo, "rev-parse", "main")).not.toBe(specTip);
+    expect(git(repo, "rev-list", "--parents", "-n", "1", "main").split(" ")).toHaveLength(3);
+    for (const wave of [1, 2, 3]) {
+      expect(git(repo, "show", "main:feature-" + wave + ".txt")).toBe(`feature ${wave}`);
+    }
 
     forgeOk("cleanup", "--all");
-    expect(git(repo, "branch", "--list", branch)).toBe("");
 
     const preflight = forge("preflight");
     expect(preflight.stderr).toBe("");
