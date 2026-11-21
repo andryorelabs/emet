@@ -17,9 +17,10 @@ for every Linear-tracker repo.
 - **frontier.candidates**: `list_issues({ team, parentId: <spec id>,
   assignee: null, state: "Todo" })` for candidates, then per candidate
   `get_issue({ id, includeRelations: true })` to read `blockedBy` —
-  `list_issues` alone can never see relations. Tickets listed by `emet
-  spec-branch status --spec <id>` are integrated: count them as closed
-  blockers while they stay open until final landing.
+  `list_issues` alone can never see relations. With `landing.unit:
+  spec`, tickets listed by `emet spec-branch status --spec <id>` are
+  integrated: count them as closed blockers while they stay open until final
+  landing.
   `assignee: null` only stays meaningful as "nobody's claimed this by hand"
   if one Linear personal preference stays off: **Settings → My Account →
   Preferences → Behavior → "On move to started status, assign to
