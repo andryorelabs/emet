@@ -85,6 +85,7 @@ type ModuleName =
   | "claims"
   | "slots"
   | "land"
+  | "specbranch"
   | "cleanup"
   | "usage"
   | "handoff"
@@ -141,6 +142,8 @@ async function loadRun(name: ModuleName): Promise<ModuleRun> {
       return (await import("./slots")).run;
     case "land":
       return (await import("./land")).run;
+    case "specbranch":
+      return (await import("./specbranch")).run;
     case "cleanup":
       return (await import("./cleanup")).run;
     case "usage":
@@ -298,6 +301,19 @@ export const COMMANDS: readonly CommandSpec[] = [
       val("--type"),
     ],
     run: runModule("land"),
+  },
+  {
+    name: "spec-branch",
+    summary: "create, integrate waves into and inspect the spec branch (ensure|integrate|status)",
+    flags: [
+      val("--spec"),
+      val("--wave"),
+      val("--branch"),
+      val("--tickets"),
+      bool("--partial"),
+      bool("--force"),
+    ],
+    run: runModule("specbranch"),
   },
   {
     name: "cleanup",
