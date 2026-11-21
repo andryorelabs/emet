@@ -150,7 +150,7 @@ describe("loadForgeConfig", () => {
       },
       sizing: { inlineMaxLines: 50 },
       map: { path: "docs/map.md" },
-      specs: { dir: "docs/s" },
+      specs: { dir: "docs/s", enabled: true },
     };
     await writeConfig(full);
     expect(await loadForgeConfig(repoRoot)).toEqual({ status: "ok", config: full });
@@ -734,6 +734,7 @@ describe("models and review sections", () => {
     [{ sizing: { inlineMaxLines: 0 } }, /"sizing.inlineMaxLines" must be a positive integer/],
     [{ map: { path: "" } }, /"map.path" must be a non-empty string/],
     [{ specs: { dir: 3 } }, /"specs.dir" must be a non-empty string/],
+    [{ specs: { enabled: "yes" } }, /"specs.enabled" must be a boolean/],
     [{ review: { highRiskPaths: "auth" } }, /"review.highRiskPaths" must be an array/],
     [{ review: { highRiskPaths: [""] } }, /"review.highRiskPaths\[0\]"/],
   ])("malformed for %j", async (value, pattern) => {
