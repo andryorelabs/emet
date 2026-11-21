@@ -2,7 +2,7 @@
 title: Référence de la CLI
 description: Chaque sous-commande d'emet, le tableau des gates et enregistrements, les codes de sortie et les variables d'environnement.
 seoTitle: Référence de la CLI d'emet
-sourceHash: 98735ed514d178bb
+sourceHash: 7597c864f7e77efd
 ---
 
 Chaque sous-commande d'`emet`, le tableau des gates et enregistrements, les codes de sortie et les variables d'environnement. Les termes suivent [GLOSSARY.md](../../GLOSSARY.md). Retour au [README](../../README.md). Chaque commande affiche son usage avec `--help`.

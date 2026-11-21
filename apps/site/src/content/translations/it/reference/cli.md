@@ -2,7 +2,7 @@
 title: Riferimento della CLI
 description: Ogni sottocomando di emet, la tabella di gate e registri, i codici di uscita e le variabili d'ambiente.
 seoTitle: Riferimento della CLI di emet
-sourceHash: 98735ed514d178bb
+sourceHash: 7597c864f7e77efd
 ---
 
 Ogni sottocomando di `emet`, la tabella di gate e registri, i codici di uscita e le variabili d'ambiente. I termini seguono [GLOSSARY.md](../../GLOSSARY.md). Torna al [README](../../README.md). Ogni comando stampa il proprio utilizzo con `--help`.

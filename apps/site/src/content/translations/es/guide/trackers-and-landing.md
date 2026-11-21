@@ -2,7 +2,7 @@
 title: Trackers y aterrizaje
 description: Dónde viven los tickets, cómo aterriza una oleada como pull request o como merge local, y cómo se encadenan las oleadas.
 seoTitle: Trackers y aterrizaje en emet
-sourceHash: 4280f1152d8971e0
+sourceHash: 34b6b42839a8d8da
 ---
 
 Dónde viven los tickets, cómo aterriza una oleada y cómo se encadenan las oleadas. Cada clave mencionada aquí está en la [referencia de configuración](../reference/configuration.md); cada subcomando está en la [referencia de la CLI](../reference/cli.md).

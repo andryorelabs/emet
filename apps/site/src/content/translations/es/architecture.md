@@ -2,7 +2,7 @@
 title: Arquitectura
 description: Un mapa del código de emet/src y cómo lo dirigen los prompts de /emet.
 seoTitle: Arquitectura de emet
-sourceHash: 36996125d0e6df7f
+sourceHash: d8efc16f3c2a6ed5
 ---
 
 Un mapa del código de `emet/src` y cómo lo dirigen los prompts de `/emet`. Los términos siguen [GLOSSARY.md](../GLOSSARY.md); las decisiones detrás de esta forma viven en [docs/adr](adr/README.md). Para los problemas, consulta la [solución de problemas](troubleshooting.md).

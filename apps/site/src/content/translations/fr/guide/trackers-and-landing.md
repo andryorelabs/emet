@@ -2,7 +2,7 @@
 title: Trackers et atterrissage
 description: Où vivent les tickets, comment une vague atterrit en pull request ou en merge local, et comment les vagues s'enchaînent.
 seoTitle: Trackers et atterrissage dans emet
-sourceHash: 4280f1152d8971e0
+sourceHash: 34b6b42839a8d8da
 ---
 
 Où vivent les tickets, comment une vague atterrit et comment les vagues s'enchaînent. Chaque clé citée ici figure dans la [référence de configuration](../reference/configuration.md) ; chaque sous-commande figure dans la [référence de la CLI](../reference/cli.md).

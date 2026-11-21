@@ -2,7 +2,7 @@
 title: Konfigurationsreferenz
 description: Jeder Schlüssel in emet.config.json mit Standardwert und Bedeutung.
 seoTitle: emet-Konfigurationsreferenz
-sourceHash: 041f1d0c3f53265f
+sourceHash: 61b46b074d095451
 ---
 
 Jeder Schlüssel in `emet.config.json` mit Standardwert und Bedeutung. Die maßgebliche Quelle ist [`emet/schema/emet.config.schema.json`](../../emet/schema/emet.config.schema.json). Die Begriffe folgen [GLOSSARY.md](../../GLOSSARY.md). Zurück zur [README](../../README.md).

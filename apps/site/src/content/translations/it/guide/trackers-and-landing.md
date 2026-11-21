@@ -2,7 +2,7 @@
 title: Tracker e landing
 description: Dove vivono i ticket, come un'ondata atterra come pull request o merge locale e come si concatenano le ondate.
 seoTitle: Tracker e landing in emet
-sourceHash: 4280f1152d8971e0
+sourceHash: 34b6b42839a8d8da
 ---
 
 Dove vivono i ticket, come atterra un'ondata e come si concatenano le ondate. Ogni chiave citata qui è nel [riferimento della configurazione](../reference/configuration.md); ogni sottocomando è nel [riferimento della CLI](../reference/cli.md).

@@ -2,7 +2,7 @@
 title: アーキテクチャ
 description: emet/src のコードマップと、/emet のプロンプトがそれをどのように動かすかを説明します。
 seoTitle: emet のアーキテクチャ
-sourceHash: 36996125d0e6df7f
+sourceHash: d8efc16f3c2a6ed5
 ---
 
 `emet/src` のコードマップと、`/emet` のプロンプトがそれをどのように動かすかを説明します。用語は [GLOSSARY.md](../GLOSSARY.md) に従います。この構成の背景にある決定は [docs/adr](adr/README.md) にあります。問題が起きた場合は、[トラブルシューティング](troubleshooting.md)を参照してください。

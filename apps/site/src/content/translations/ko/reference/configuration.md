@@ -2,7 +2,7 @@
 title: 설정 레퍼런스
 description: emet.config.json의 모든 키를 기본값과 의미와 함께 설명합니다.
 seoTitle: emet 설정 레퍼런스
-sourceHash: 041f1d0c3f53265f
+sourceHash: 61b46b074d095451
 ---
 
 `emet.config.json`의 모든 키를 기본값과 의미와 함께 정리했습니다. 기준이 되는 원본은 [`emet/schema/emet.config.schema.json`](../../emet/schema/emet.config.schema.json)입니다. 용어는 [GLOSSARY.md](../../GLOSSARY.md)를 따릅니다. [README](../../README.md)로 돌아가기.
