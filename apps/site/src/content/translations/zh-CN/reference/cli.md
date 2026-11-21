@@ -2,7 +2,7 @@
 title: CLI 参考
 description: 每个 emet 子命令、关卡与记录表、退出码和环境变量。
 seoTitle: emet CLI 参考
-sourceHash: fbd3bae98f074fd0
+sourceHash: 98735ed514d178bb
 ---
 
 每个 `emet` 子命令、关卡与记录表、退出码和环境变量。术语遵循 [GLOSSARY.md](../../GLOSSARY.md)。返回 [README](../../README.md)。每个命令都可以用 `--help` 打印其用法。
@@ -75,6 +75,7 @@ emet doctor ~/code/*
 - `emet approve --run <id>`、`emet materialize-log`、`emet results`、`emet verify`、`emet review-package`、`emet review`、`emet gate`：参见[关卡与记录](#关卡与记录)。
 - `emet assess --base <ref> --head <ref>`：将 diff 分类为 `passive`、`medium` 或 `high`，并输出包含层级、原因以及推荐的评审者模型和推理强度的 JSON，外加 `browserVerify: { run, reason }`：仅当该层级有评审者、已配置 [`verify.browser`](configuration.md#verify)、`agent-browser` 二进制文件在 PATH 中，并且在设置了 `paths` 时有变更路径匹配，`run` 才为 `true`；否则 `reason` 会指出第一个未满足的条件。参见[模型与推理强度](../../README.md#models--effort)和 [`review`](configuration.md#review)。
 - `emet land --spec <s> --branch <integration> --tickets <id,...>`：将集成分支合并到本地主干（`landing.mode` 为 `merge`）。用 `commands.selfCheck` 代替 CI，并且不推送任何内容。
+- `emet spec-branch ensure|integrate|status|sync|land|abandon --spec <id>`：`landing.unit: spec` 的规格分支 `spec/<id>`（参见 [`landing`](configuration.md#landing)）。均输出 JSON。`ensure` 从主干创建该分支（幂等），写入 `.emet/specs/<id>/branch.json`，并在另一个规格的分支已被检出时拒绝执行。`integrate --wave <n> --branch <integration> --tickets a,b` 以 `--no-ff` 把波次分支合并到 `spec/<id>`，带上 trailer `Emet-Wave` 和 `Emet-Tickets`，记录该波次，追加 `spec.integrate`，并且在 `landing.pushSpecBranch` 为 true 时推送该分支而不打开 PR。`status` 输出 `branch`、`tip`、已集成的波次和工单以及 `behindTrunk`，并在缺少某个波次时根据 trailer 重建 `branch.json`。`sync` 把主干合并到分支，从不变基；遇到冲突时中止、列出路径并以非零状态退出。`land [--partial]` 先同步，然后在 `pr` 模式下推送分支、打开一个 PR（每个工单一行 `Closes`）并以合并提交方式合并（忽略 `pr.mergeMethod`），在 `merge` 模式下以 `--no-ff` 合并到本地主干且从不推送；它会追加 `spec.land`。`abandon --force` 会打上 `abandoned/spec-<id>` 标签、删除分支、追加 `spec.abandon`，并把本地跟踪器中已集成的工单重置为 `ready-for-agent`；没有 `--force` 时它拒绝执行。`emet tracker frontier` 把 `branch.json` 中列出的工单算作已关闭的阻塞项，`emet status` 新增 `specBranch`（`branch`、`tip`、`integratedWaves`）。
 - `emet spec-merge --spec <id>`：波次自动合并之后，将规格中 `ADDED`/`MODIFIED`/`REMOVED` 的需求增量合并到 `docs/specs/<area>.md`（`specs.dir`）。它会在写入任何内容之前检查所有区域。如果出现冲突，或者某个需求会丢失一个场景，则以退出码 1 退出，并且不改动任何文件。
 - `emet map [--refresh]`：把现有代码库的概览（技术栈、结构、约定、测试、热点）写入 `docs/agents/codebase.md`（`map.path`），并标注生成它所用的提交 SHA。同一个提交总是生成同一个文件。一旦 HEAD 越过该标注，`emet map --stale` 就以退出码 1 退出，此时 `emet preflight` 会发出警告。`emet map --for <globs>` 只打印与工单编辑范围相匹配的部分；该输出是地图中唯一会包含在工作者简报里的部分。
 - `emet tracker create-spec|create-ticket|read|frontier|set-state|comment|close`：基于 `.scratch/` 的本地跟踪器，标准输出为 JSON。参见[本地跟踪器](#本地跟踪器)。
@@ -84,11 +85,11 @@ emet doctor ~/code/*
 
 设置 `tracker.kind: "local"` 后，规格和工单是主工作树 `.scratch/` 下的 Markdown 文件（不纳入版本控制）：`.scratch/<slug>/spec.md` 和 `.scratch/<slug>/issues/<NN>-<slug>.md`，每个文件都带有 `Status:` 和 `Blocked by:` 行，评论位于 `## Comments` 之下。协调者通过 `emet tracker`（`create-spec`、`create-ticket`、`read`、`frontier`、`set-state`、`comment`、`close`）读写它们。`emet init --tracker local` 会完成这一设置。参见 [ADR-0011](../adr/0011-local-tracker-scratch-convention.md)。
 
-`landing.mode` 为 `"pr"`（默认）或 `"merge"`，与跟踪器无关。在 `merge` 模式下，波次通过 `emet land` 以一次本地合并落地到主干，用 `commands.selfCheck` 代替 CI，并且不推送。只有当跟踪器是 `github` 或落地方式是 `pr` 时才需要 `gh`。参见 [ADR-0010](../adr/0010-local-merge-landing.md) 和 [`landing`](configuration.md#landing)。
+`landing.mode` 为 `"pr"`（默认）或 `"merge"`，与跟踪器无关。在 `merge` 模式下，波次通过 `emet land` 以一次本地合并落地到主干，用 `commands.selfCheck` 代替 CI，并且不推送。设置 `landing.unit: "spec"`（默认）时，整个规格通过 `emet spec-branch land` 一次落地。只有当跟踪器是 `github` 或落地方式是 `pr` 时才需要 `gh`。参见 [ADR-0010](../adr/0010-local-merge-landing.md) 和 [`landing`](configuration.md#landing)。
 
 ### 以 PR 落地与串联波次
 
-一个波次对应一个 PR。其正文为每个工单带有一行 `Closes #N`（跟踪器的关闭关键字），协调者在打开 PR 时会把工单移到评审中。随后，PR 按 `pr.autoMerge` 合并；如果该波次被标记、`autoMerge` 为 `false`，或 CI 修复次数已用尽，则 PR 保持打开（此时 PR 会带上需要人工决定的标签）。后续波次在各自的会话中运行，绝不会在运行波次 1 的那个会话中运行。接下来会发生什么，由 `pr` 和 `handoff` 部分控制；参见 [`pr`](configuration.md#pr) 和 [`handoff`](configuration.md#handoff)。
+设置 `landing.unit: "wave"` 时，一个波次对应一个 PR；设置 `"spec"` 时，一个 PR 涵盖所有已集成的波次。其正文为每个工单带有一行 `Closes #N`（跟踪器的关闭关键字），协调者在打开 PR 时会把工单移到评审中。随后，PR 按 `pr.autoMerge` 合并；如果该波次被标记、`autoMerge` 为 `false`，或 CI 修复次数已用尽，则 PR 保持打开（此时 PR 会带上需要人工决定的标签）。后续波次在各自的会话中运行，绝不会在运行波次 1 的那个会话中运行。接下来会发生什么，由 `pr` 和 `handoff` 部分控制；参见 [`pr`](configuration.md#pr) 和 [`handoff`](configuration.md#handoff)。
 
 `emet ci --pr <n> --wait [--rerun-flakes] [--timeout-minutes <m>]` 轮询 PR 的检查，直到检查结束或超时（默认 30）。使用 `--rerun-flakes` 时，每个失败的检查会通过 `gh run rerun --failed` 重跑一次；重跑后通过的检查属于 Flake。它打印 `state: pass | fail | env-fault | timeout`、失败的检查和 `flakeReruns`，且从不合并。没有检查的 PR 为 `pass` 并带有 `noChecks: true`。退出码 `0` 为 pass，`1` 为 fail 或 env-fault，`3` 为 timeout。`env-fault` 指以 `STARTUP_FAILURE` 结束或排队过久的检查：即 CI 从未运行，而不是代码失败。
 
