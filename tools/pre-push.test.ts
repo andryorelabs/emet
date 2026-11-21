@@ -26,6 +26,7 @@ describe("checkPush", () => {
     "revert/x",
     "renovate/bun-1.x",
     "worktree-agent-ab0423e696e0f08a8",
+    "spec/810",
   ])("allows branch %s", (branch) => {
     expect(checkPush(`refs/heads/${branch}`, branch)).toEqual({ ok: true });
   });
@@ -41,6 +42,9 @@ describe("checkPush", () => {
     "feat/Foo Bar",
     "cla-1-Foo",
     "worktree-A",
+    "spec/",
+    "spec/abc",
+    "spec/12/x",
   ])("rejects branch %s", (branch) => {
     const verdict = checkPush(`refs/heads/${branch}`, branch);
     expect(verdict.ok).toBe(false);
