@@ -214,6 +214,9 @@ Wird nur gelesen, wenn `agentHost` `"codex"` ist. Alle Schlüssel sind optional.
 ## landing
 
 - `mode` (Standard `pr`): `pr` öffnet einen Pull Request (erfordert `gh`). `merge` mergt den Integrationsbranch mit `emet land` in den lokalen Trunk und pusht nie, wobei `commands.selfCheck` die CI ersetzt. Unabhängig vom Tracker. Siehe [ADR-0010](../adr/0010-local-merge-landing.md).
+- `unit` (Standard `spec`, eines von `spec`, `wave`): was auf einmal landet. `spec` integriert jede Welle in den Branch `spec/<id>` und landet die Spec einmal mit `emet spec-branch land`; `wave` landet jede Welle allein mit `emet land` oder einem PR. Bei `spec` muss die Harness-Einstellung `worktree.baseRef` den Wert `head` haben (kein emet-Schlüssel); `emet preflight` und `emet doctor` prüfen das. `emet doctor` warnt außerdem, wenn `unit` `spec` und `mode` `pr` ist, das Repository aber Merge-Commits nicht erlaubt. Ein anderer Wert schlägt beim Laden mit `"landing.unit" must be one of spec|wave` fehl. Siehe [ADR-0037](../adr/0037-landing-per-spec.md).
+- `specMergeMethod` (Standard `merge`, nur `merge`): wie `spec/<id>` in den Trunk gemergt wird, immer mit einem Merge-Commit.
+- `pushSpecBranch` (Standard `true`): schickt `spec/<id>` nach jedem `emet spec-branch integrate` an den Remote, ohne einen PR zu öffnen.
 
 ## tracker
 

@@ -24,12 +24,12 @@ Es gibt zwei Hälften. Die Prompts (`commands/run.md`, `agents/*.md`, `emet/refe
 
 `commands/run.md` ist ein kurzer Router. Er lädt jeweils eine Phasendatei aus `emet/reference/`, sodass eine Kompaktierung nie die Regeln der aktuellen Phase verwirft.
 
-| Phase                                  | Prompt                                                            | CLI-Aufrufe                                                                   |
-| -------------------------------------- | ----------------------------------------------------------------- | ----------------------------------------------------------------------------- |
-| 1-5 Interview, Spec, Tickets, Freigabe | `phases-1-5.md`                                                   | `init`, `doctor`, `validate`, `surfaces`, `approve`, `tracker`                |
-| 6-7 Dispatch und Worker                | `phases-6-7-dispatch.md`, `worker-prompt.md`                      | `preflight`, `claims`, `slots`, `launch`, `lock-reason`, `handoff`, `results` |
-| 8 Review, Gate, Landing, Abschluss     | `phases-8-review.md`, `phases-8-landing.md`, `reviewer-prompt.md` | `verify`, `review-package`, `review`, `assess`, `gate`, `land`, `cleanup`     |
-| 9 Handoff und Verkettung               | `phases-9-handoff.md`                                             | `status`, `metrics`, `usage`, `spec-merge`                                    |
+| Phase                                  | Prompt                                                            | CLI-Aufrufe                                                                              |
+| -------------------------------------- | ----------------------------------------------------------------- | ---------------------------------------------------------------------------------------- |
+| 1-5 Interview, Spec, Tickets, Freigabe | `phases-1-5.md`                                                   | `init`, `doctor`, `validate`, `surfaces`, `approve`, `tracker`                           |
+| 6-7 Dispatch und Worker                | `phases-6-7-dispatch.md`, `worker-prompt.md`                      | `preflight`, `claims`, `slots`, `launch`, `lock-reason`, `handoff`, `results`            |
+| 8 Review, Gate, Landing, Abschluss     | `phases-8-review.md`, `phases-8-landing.md`, `reviewer-prompt.md` | `verify`, `review-package`, `review`, `assess`, `gate`, `land`, `spec-branch`, `cleanup` |
+| 9 Handoff und Verkettung               | `phases-9-handoff.md`                                             | `status`, `metrics`, `usage`, `spec-merge`                                               |
 
 Der Koordinator ist der einzige Tracker-Schreiber (ADR-0005): Worker berichten über eine Handoff-Notiz und `emet results`, und der Koordinator veröffentlicht sie. `emet guard` läuft als `PreToolUse`-Hook und blockiert bekannte Auslöser für Fehler bei unbeaufsichtigten Läufen.
 
@@ -43,7 +43,7 @@ Neben jedem Modul liegt eine `*.test.ts`.
 | Laufzustand             | `claims.ts` (Ticket-Reservierungen), `slots.ts` (Worker-Slot-Pool), `resources.ts` (Host-Fakten), `runs.ts` (Lebendigkeit), `locks.ts`, `lockreason.ts`, `proctree.ts`, `worktrees.ts`, `cleanup.ts`, `status.ts`, `launch.ts`                                                                  |
 | Tracker                 | `tracker.ts`, `tracker-files.ts` (lokaler `.scratch/`-Tracker), `validate.ts` (Spec-Abdeckung), `specmerge.ts`, `approve.ts`, `surfaces.ts` (Überlappung von Bearbeitungsflächen)                                                                                                               |
 | Worker-Handoff          | `handoff.ts`, `results.ts`, `materializelog.ts`                                                                                                                                                                                                                                                 |
-| Review und Landing      | `verify.ts`, `reviewpackage.ts`, `review.ts` (Befund-Ledger), `assess.ts` (Risikoklassifikator), `gate.ts`, `land.ts`                                                                                                                                                                           |
+| Review und Landing      | `verify.ts`, `reviewpackage.ts`, `review.ts` (Befund-Ledger), `assess.ts` (Risikoklassifikator), `gate.ts`, `land.ts`, `specbranch.ts`                                                                                                                                                          |
 | Berichte                | `metrics.ts`, `usage.ts`                                                                                                                                                                                                                                                                        |
 | Sicherheit              | `guard.ts`, `guard-destructive.ts`                                                                                                                                                                                                                                                              |
 | Gemeinsame Helfer       | `narrow.ts`, `optional.ts`, `assets.ts` (eingebettete Dateien in kompilierten Binärdateien)                                                                                                                                                                                                     |
