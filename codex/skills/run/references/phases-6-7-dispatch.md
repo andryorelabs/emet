@@ -2,8 +2,8 @@
 
 Loaded in every mode. Also load `worker-prompt.md` and `tracker-<kind>.md`
 (`<kind>` from `emet.config.json`'s `tracker.kind`) before Phase 6
-dispatches anything. Continues in `phases-8-closeout.md` (wave close-out,
-plus `reviewer-prompt.md`) and `phases-9-handoff.md` (wave close and hand off).
+dispatches anything. Continues in `phases-8-review.md` (review and gate,
+plus `reviewer-prompt.md`), `phases-8-landing.md` (landing and close-out) and `phases-9-handoff.md` (wave close and hand off).
 
 ## Phase 6 — Dispatch
 
@@ -217,4 +217,4 @@ a worker does run its own scoped E2E, use whatever quiet,
 stop-on-first-failure invocation `docs/agents/emet.md`'s
 "Shared/singleton resources" names — nothing extra to pass.
 
-Next: Phase 8 is in `phases-8-closeout.md`.
+Next: Phase 8 is in `phases-8-review.md` and `phases-8-landing.md`.
