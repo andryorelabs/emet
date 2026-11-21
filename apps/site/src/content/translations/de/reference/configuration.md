@@ -237,7 +237,8 @@ Mit welchem Issue-Tracker `/emet` (unter Codex `$emet`) spricht. Die CLI liest `
 
 ## specs
 
-- `dir` (Standard `docs/specs`): repo-relatives Verzeichnis der lebenden Specs, geschrieben von `emet spec-merge`.
+- `enabled` (Standard `false`): aktiviert lebende Specs. Bei der letzten Welle einer Spec schreibt der Koordinator Anforderungs-Deltas aus den S#-Punkten der Spec, führt `emet spec-merge` aus und committet `specs.dir` mit dieser Welle, sodass die Aktualisierung geprüft wird und mit ihr landet.
+- `dir` (Standard `docs/specs`): repo-relatives Verzeichnis der lebenden Specs, geschrieben von `emet spec-merge`, wenn `enabled` wahr ist.
 
 ## map
 

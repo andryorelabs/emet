@@ -237,7 +237,8 @@ Con qué issue tracker habla `/emet` (o `$emet` en Codex). La CLI lee `kind` par
 
 ## specs
 
-- `dir` (por defecto `docs/specs`): directorio, relativo al repositorio, de las specs vivas, escrito por `emet spec-merge`.
+- `enabled` (por defecto `false`): activa las specs vivas. En la última oleada de una spec, el coordinador escribe deltas de requisitos a partir de los elementos S# de la spec, ejecuta `emet spec-merge` y confirma `specs.dir` con esa oleada, de modo que la actualización se revisa y aterriza con ella.
+- `dir` (por defecto `docs/specs`): directorio, relativo al repositorio, de las specs vivas, escrito por `emet spec-merge` cuando `enabled` es verdadero.
 
 ## map
 

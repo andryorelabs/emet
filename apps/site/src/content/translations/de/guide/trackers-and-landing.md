@@ -86,7 +86,7 @@ Die Phasen entscheiden nicht selbst, wann ein Ticket fertig, mergebar oder einen
 
 ## Lebende Specs, Karte und Metriken
 
-**Lebende Specs.** Nachdem eine Welle automatisch gemergt wurde, führt `emet spec-merge --spec <id>` die Anforderungs-Deltas `ADDED`/`MODIFIED`/`REMOVED` der Spec in `docs/specs/<area>.md` (`specs.dir`) zusammen. Es prüft jeden Bereich, bevor es etwas schreibt. Ein Konflikt oder eine Anforderung, die ein Szenario verlieren würde, endet mit Exit-Code 1 und lässt jede Datei unberührt.
+**Lebende Specs.** Aktivieren Sie sie mit `specs.enabled`. Bei der letzten Welle einer Spec schreibt der Koordinator vor deren Review die Anforderungs-Deltas der Spec, führt einmal `emet spec-merge --spec <id>` aus, um sie in `docs/specs/<area>.md` (`specs.dir`) zusammenzuführen, und committet das Ergebnis, sodass es geprüft wird und im selben PR landet. Es prüft jeden Bereich, bevor es etwas schreibt. Ein Konflikt oder eine Anforderung, die ein Szenario verlieren würde, endet mit Exit-Code 1 und lässt jede Datei unberührt; der Koordinator versucht es einmal erneut, landet dann ohne die Aktualisierung und markiert dies.
 
 **Codebase-Karte.** `emet map` schreibt eine Kurzbeschreibung einer bestehenden Codebase (Stack, Struktur, Konventionen, Tests, Hotspots) nach `docs/agents/codebase.md` (`map.path`), versehen mit dem Commit-SHA, aus dem sie erstellt wurde. Derselbe Commit erzeugt immer dieselbe Datei. `emet map --stale` endet mit Exit-Code 1, sobald HEAD über den Stempel hinausgewandert ist, und `emet preflight` warnt in diesem Fall. `emet map --for <globs>` gibt nur die Abschnitte aus, die zu den Bearbeitungsflächen eines Tickets passen. Diese Ausgabe ist der einzige Teil der Karte, den ein Worker-Briefing enthält.
 
