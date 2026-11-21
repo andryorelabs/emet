@@ -16,7 +16,7 @@ A change to a stable surface that breaks an existing caller is a breaking change
 These can change in any release, without a changelog entry beyond a normal note. Do not depend on them.
 
 - The modules under `emet/src/` and their exported functions and types.
-- The prompt wording in `emet/reference/`, `commands/` and `agents/`.
+- The prompt wording in `emet/reference/`, `commands/` and `agents/`, which changes only in a ticket that names the paragraphs ([ADR-0036](adr/0036-prompt-wording-changes-under-an-explicit-ticket.md)).
 - The shape and location of state files, ledgers and records under `.emet/`, and the host-wide slot pool.
 - The generated Codex files under `codex/` and `.codex-plugin/`.
 - Anything under `tools/`, `apps/` and `docs/research/`.
