@@ -24,7 +24,7 @@ const BYTE_CEILINGS: Readonly<Record<string, number>> = {
   "emet/reference/phases-8-review.md": 9200,
   "emet/reference/phases-9-handoff.md": 7450,
   "emet/reference/reviewer-prompt.md": 3930,
-  "emet/reference/tracker-github.md": 3790,
+  "emet/reference/tracker-github.md": 3870,
   "emet/reference/tracker-linear.md": 5300,
   "emet/reference/tracker-local.md": 1810,
   "emet/reference/worker-prompt.md": 7600,

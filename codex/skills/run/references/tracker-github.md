@@ -20,7 +20,9 @@ wants prioritized dispatch (an empty `priorityLabels` degrades to
   `status:todo` label, the ready-for-dispatch triage label, and (from the
   same JSON) an empty/all-closed `blockedBy`/`blocking` set —
   `--json subIssues,subIssuesSummary` gets both in one round trip, unlike
-  Linear's `list_issues` + N×`get_issue`.
+  Linear's `list_issues` + N×`get_issue`. Tickets listed by `emet spec-branch
+  status --spec <id>` are integrated: count them as closed blockers while
+  they stay open until final landing.
 - **ticket.read**: `gh issue view <n> --json title,body,labels,assignees,
   state`. **listComments**: `gh issue view <n> --json comments`.
 - **ticket.setState**: `gh issue edit <n> --remove-label <old status
@@ -45,7 +47,8 @@ wants prioritized dispatch (an empty `priorityLabels` degrades to
   close <n> --reason completed` per ticket (`CLA-<n>`, `#<n>` or a bare
   number), verifies the state, and reports `closed` or `already-closed`.
 - **state.isClosed**: `state == "closed"` (`stateReason` distinguishes
-  `completed` from `not_planned`/canceled).
+  `completed` from `not_planned`/canceled); an integrated ticket counts as
+  closed for the frontier only.
 - **pr.referenceLines**: closing keyword, one `Closes #<n>` per line and one
   line per ticket, in the PR body:
 

@@ -55,9 +55,9 @@
     ".claude/emet/reference/phases-8-spec-landing.md": "dde0238b3aeb6df1c90157288684f77dce31dca57b1080931109371db3695cb6",
     ".claude/emet/reference/phases-9-handoff.md": "39c6a76a407ecb37564742d94f11608da95b7e0b98351e4073bd5aa26abc2bbd",
     ".claude/emet/reference/reviewer-prompt.md": "53eb5661ffa3d721474cd1041c0de44ff5e0976a53d906a731a5fa32f9f9cbde",
-    ".claude/emet/reference/tracker-github.md": "73b296f699ad03f29679f61440ca1946601b292b69ad5268a94a0b78a6bd6788",
-    ".claude/emet/reference/tracker-linear.md": "18821b11c614e0764ab0cb176632fffc39079fbb5d0c6729fdc0117645031e2e",
-    ".claude/emet/reference/tracker-local.md": "431c496589d5d516bda1fab9f0972d0c6c29d1bfba67c9aa08fcb3b095698406",
-    ".claude/emet/reference/worker-prompt.md": "0481a1f82280fe134a19e759a216e201f4bb8a63a9ca085cf47a759868e64862"
+    ".claude/emet/reference/tracker-github.md": "0e0145eff7880fb7362e91301630affd83061976b3a2553cbf5510f1cf0637e8",
+    ".claude/emet/reference/tracker-linear.md": "616b781aae0a9a1bda491af76f400158deb3e51418283f0b6956a292197a8c00",
+    ".claude/emet/reference/tracker-local.md": "7e1c126c03d9605d7e330b76b53c2f3071505419cc53585ced611fcd9933c8ba",
+    ".claude/emet/reference/worker-prompt.md": "f970dfa10a7a0a850650ddbd9ad37f6e1de95b4a88f9008ab6f875633c32960a"
   }
 }
