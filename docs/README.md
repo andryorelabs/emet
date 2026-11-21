@@ -102,7 +102,7 @@ Prose that `emet init` generates and the coordinator reads.
 
 ## Prompts
 
-Installed prompt markdown; wording changes only with an explicit ticket (ADR-0001).
+Installed prompt markdown; wording changes only in a ticket that names the paragraphs, and the same PR raises the byte ceilings ([ADR-0036](adr/0036-prompt-wording-changes-under-an-explicit-ticket.md), amending ADR-0001).
 
 - [`commands/run.md`](../commands/run.md): the `/emet:run` router.
 - [`agents/emet-worker.md`](../agents/emet-worker.md): the worker agent.

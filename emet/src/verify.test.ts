@@ -112,6 +112,17 @@ describe("parseDispatchRecord", () => {
   });
 });
 
+interface RecordedCheck {
+  readonly name: string;
+  readonly ok: boolean;
+  readonly detail: string;
+}
+
+/** Narrows a parsed verify record to one that carries a `checks` array. */
+function isRecordWithChecks(value: unknown): value is { checks: readonly RecordedCheck[] } {
+  return typeof value === "object" && value !== null && "checks" in value;
+}
+
 describe("against a real git worktree", () => {
   let repo: string;
   const git = (...args: string[]): string => {
@@ -169,6 +180,41 @@ describe("against a real git worktree", () => {
       ok: false,
       checks: [{ name: "commits" }, { name: "surfaces" }, { name: "handoff" }, { name: "suite" }],
     });
+  });
+
+  test("CLI passes the dispatch record's skills to handoff --check", () => {
+    const baseline = git("rev-parse", "HEAD");
+    const dispatchDir = path.join(repo, ".emet/runs/r2/dispatch");
+    mkdirSync(dispatchDir, { recursive: true });
+    writeFileSync(
+      path.join(dispatchDir, "T-2.json"),
+      JSON.stringify({ baseline, surfaces: ["src/a.ts"], skills: ["tdd"] }),
+    );
+    writeFileSync(
+      path.join(repo, ".emet/handoff-T-2.md"),
+      [
+        "state: done",
+        "done: x",
+        "next: none",
+        "dead-ends: none",
+        "invariants: none",
+        "files: src/a.ts",
+        "commands: none",
+        "skills: loaded: other; missing: none",
+      ].join("\n") + "\n",
+    );
+    const result = Bun.spawnSync(
+      ["bun", path.join(import.meta.dir, "verify.ts"), "T-2", "--run", "r2"],
+      { cwd: repo },
+    );
+    expect(result.exitCode).toBe(1);
+    const record: unknown = JSON.parse(
+      readFileSync(path.join(repo, ".emet/runs/r2/verify/T-2.json"), "utf8"),
+    );
+    const checks = isRecordWithChecks(record) ? record.checks : [];
+    const handoffCheck = checks.find((check) => check.name === "handoff");
+    expect(handoffCheck?.ok).toBe(false);
+    expect(handoffCheck?.detail).toContain('expected skill "tdd"');
   });
 });
 

@@ -323,7 +323,7 @@ export const COMMANDS: readonly CommandSpec[] = [
   {
     name: "handoff",
     summary: "check or render a worker handoff note",
-    flags: [val("--check"), val("--render")],
+    flags: [val("--check"), val("--render"), val("--expect-skills")],
     run: runModule("handoff"),
   },
   {
