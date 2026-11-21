@@ -13,7 +13,9 @@ agent shouldn't make — see `docs/agents/triage-labels.md`) and let the rest
 of that wave proceed.
 
 Recompute the frontier (some tickets may have just unblocked now that this
-wave's tickets are done).
+wave's tickets are done; with `landing.unit: spec`, those `emet spec-branch
+status` lists as integrated count as done, and the final landing is `emet
+spec-branch land`).
 
 **If the frontier is empty** — no further wave is possible — stop and
 produce the **final report, always, exactly once**: every wave's PR link,

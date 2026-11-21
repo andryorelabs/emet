@@ -1,7 +1,9 @@
 # Phase 8 — landing and close-out
 
 Continues `phases-8-review.md` (review and gate); the hand-off is in
-`phases-9-handoff.md`.
+`phases-9-handoff.md`. This file is the per-wave landing (`landing.unit:
+wave`); with `landing.unit: spec` follow `phases-8-spec-landing.md` instead
+(`emet spec-branch integrate|sync|land`).
 
 The coordinator writes a tracker-state transition only where
 `emet.config.json`'s `tracker.transitions` names it `coordinator` for
