@@ -23,7 +23,9 @@ stamp the worktree's slug instead — under which no transcript exists, so
 `idle` and would treat it as dead the moment your anchor process exits.
 
 Other placeholders: `{{expected_base}}` is your `git rev-parse HEAD` at
-dispatch (also the `baseline` in the dispatch record); `{{global_constraints}}`
+dispatch (also the `baseline` in the dispatch record; with `landing.unit:
+spec` it is the tip of `spec/<id>` from `emet spec-branch status`);
+`{{global_constraints}}`
 is the spec's `## Global Constraints` copied verbatim (`none` if absent);
 `{{codebase_map_sections}}` is `emet map --for <the ticket's surface globs>`
 (`none` if no map); `{{trunk}}` is the trunk branch name; `{{run_id}}` is the

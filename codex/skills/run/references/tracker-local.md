@@ -12,7 +12,8 @@ Ids: a spec id is its slug, a ticket id is `<slug>-<NN>`.
   --body-file <f> [--blocked-by NN,NN]` — assigns the next `NN`, writes
   `Status: ready-for-agent`.
 - **frontier.candidates**: `emet tracker frontier --spec <slug>` — tickets
-  `ready-for-agent` whose blockers are all `done`, ordered by `NN`.
+  `ready-for-agent` whose blockers are all `done` or integrated (listed in the spec branch's
+  `branch.json`), ordered by `NN`.
 - **ticket.read**: `emet tracker read <id>` (title, status, blockedBy, body,
   comments). **listComments**: the `comments` field of the same call.
 - **ticket.setState**: `emet tracker set-state <id> <status>` — `in-progress`
