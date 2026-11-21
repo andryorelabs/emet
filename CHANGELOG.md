@@ -8,6 +8,30 @@ and this project adheres to
 
 ## [Unreleased]
 
+## [0.16.0] - 2026-11-21
+
+### Added
+
+- Living specs, off by default. With `specs.enabled: true`, on a spec's last wave the coordinator writes the spec's `ADDED`/`MODIFIED`/`REMOVED` requirement deltas, runs `emet spec-merge --spec <id>` once on that wave's integration branch before its review, and commits the updated `docs/specs/<area>.md`, so the change is reviewed and lands in the same PR. A new reference, `living-specs.md`, gives the delta format and the retry rule. See ADR-0038.
+- `specs.enabled` (default `false`) in the config and both schema copies. `emet init` writes `"specs": { "dir": "docs/specs", "enabled": false }`.
+- `emet doctor` warns, only when `specs.enabled` is `true`, if `specs.dir` is gitignored or is a file. A missing `specs.dir` is not a warning.
+- `emet spec-merge --spec <id> --deltas-dir` creates and prints the shared deltas directory, `<git common dir>/.emet/runs/<id>/spec-deltas`, and exits `0` without merging.
+- `landing.specMergeMethod` accepts `merge` (default), `squash` and `rebase`, so a spec lands on a trunk that allows only squash merges. `emet doctor` warns when the repository settings or the trunk ruleset disallow the configured method. See ADR-0037.
+- `bun run check:codex` fails on a file in a generated `codex/` directory that has no source.
+
+### Changed
+
+- With `specs.enabled` off, `emet spec-merge` prints `specs.enabled is false; nothing merged` and exits `0`. It reads deltas from the shared run dir under the git common dir, falling back to the per-checkout `.emet/runs/<id>/spec-deltas/`.
+- The Phase 8 prompts no longer run `emet spec-merge` after a wave or spec lands; `phases-8-review.md` loads `living-specs.md` on the last wave instead.
+- `emet spec-branch land` waits for the PR's checks with the same poller as `emet ci`, polling through a PR that has no checks yet, and merges with `landing.specMergeMethod`.
+
+### Fixed
+
+- `emet spec-branch land` no longer merges before GitHub has registered any checks.
+- `emet setup` lists the Claude plugins once instead of up to three times, and its quiet probes time out instead of hanging.
+- `emet doctor` lists the installed plugins once per run.
+- `bun run lint` and `bun run fix` generate the Astro types for the site first, so they pass on a fresh checkout.
+
 ## [0.15.0] - 2026-11-21
 
 ### Changed
@@ -529,7 +553,8 @@ and this project adheres to
 - Per-repo configuration through `forge.config.json`.
 - `install.sh`, which installs the CLI, command and agents.
 
-[Unreleased]: https://github.com/andryorelabs/emet/compare/v0.15.0...HEAD
+[Unreleased]: https://github.com/andryorelabs/emet/compare/v0.16.0...HEAD
+[0.16.0]: https://github.com/andryorelabs/emet/compare/v0.15.0...v0.16.0
 [0.15.0]: https://github.com/andryorelabs/emet/compare/v0.14.5...v0.15.0
 [0.14.5]: https://github.com/andryorelabs/emet/compare/v0.14.4...v0.14.5
 [0.14.4]: https://github.com/andryorelabs/emet/compare/v0.14.3...v0.14.4

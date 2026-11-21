@@ -2,8 +2,34 @@
 title: Nouveautés
 description: Notes de version d'emet : ce qui a changé dans chaque version.
 seoTitle: Nouveautés d'emet : notes de version
-sourceHash: b29bae1442d54dd2
+sourceHash: e51e96e3f3669abd
 ---
+
+## 0.16.0
+
+2026-11-21
+
+### Ajouté
+
+- Specs vivantes, désactivées par défaut. Avec `specs.enabled: true`, lors de la dernière wave d'une spec, le coordinateur écrit les deltas d'exigences `ADDED`/`MODIFIED`/`REMOVED` de la spec, exécute `emet spec-merge --spec <id>` une seule fois sur la branche d'intégration de cette wave avant sa revue, et commite le `docs/specs/<area>.md` mis à jour, si bien que le changement est relu et atterrit dans la même pull request. Une nouvelle référence, `living-specs.md`, décrit le format des deltas et la règle de nouvelle tentative. Voir ADR-0038.
+- `specs.enabled` (`false` par défaut) dans la configuration et dans les deux copies du schéma. `emet init` écrit `"specs": { "dir": "docs/specs", "enabled": false }`.
+- `emet doctor` avertit, uniquement lorsque `specs.enabled` vaut `true`, si `specs.dir` est ignoré par gitignore ou est un fichier. L'absence de `specs.dir` n'est pas un avertissement.
+- `emet spec-merge --spec <id> --deltas-dir` crée et affiche le répertoire de deltas partagé, `<git common dir>/.emet/runs/<id>/spec-deltas`, et se termine avec le code `0` sans fusionner.
+- `landing.specMergeMethod` accepte `merge` (par défaut), `squash` et `rebase`, afin qu'une spec atterrisse sur un trunk qui n'autorise que les merges squash. `emet doctor` avertit lorsque les réglages du dépôt ou le ruleset du trunk interdisent la méthode configurée. Voir ADR-0037.
+- `bun run check:codex` échoue sur un fichier d'un répertoire `codex/` généré qui n'a pas de source.
+
+### Modifié
+
+- Avec `specs.enabled` désactivé, `emet spec-merge` affiche `specs.enabled is false; nothing merged` et se termine avec le code `0`. Il lit les deltas dans le répertoire d'exécution partagé sous le git common dir, avec repli sur le `.emet/runs/<id>/spec-deltas/` propre à chaque checkout.
+- Les prompts de la Phase 8 n'exécutent plus `emet spec-merge` après l'atterrissage d'une wave ou d'une spec ; `phases-8-review.md` charge à la place `living-specs.md` lors de la dernière wave.
+- `emet spec-branch land` attend les checks de la pull request avec le même poller que `emet ci`, en continuant d'interroger une pull request qui n'a pas encore de checks, et fusionne avec `landing.specMergeMethod`.
+
+### Corrigé
+
+- `emet spec-branch land` ne fusionne plus avant que GitHub ait enregistré le moindre check.
+- `emet setup` liste les plugins Claude une seule fois au lieu de jusqu'à trois, et ses sondes silencieuses expirent au lieu de se bloquer.
+- `emet doctor` liste les plugins installés une seule fois par exécution.
+- `bun run lint` et `bun run fix` génèrent d'abord les types Astro du site, ce qui leur permet de réussir sur un checkout neuf.
 
 ## 0.15.0
 

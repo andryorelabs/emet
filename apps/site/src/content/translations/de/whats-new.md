@@ -2,8 +2,34 @@
 title: Neuigkeiten
 description: Release Notes für emet: was sich in jeder Version geändert hat.
 seoTitle: "Neuigkeiten in emet: Release Notes"
-sourceHash: b29bae1442d54dd2
+sourceHash: e51e96e3f3669abd
 ---
+
+## 0.16.0
+
+2026-11-21
+
+### Hinzugefügt
+
+- Living Specs, standardmäßig aus. Mit `specs.enabled: true` schreibt der Koordinator in der letzten Wave einer Spec die Anforderungs-Deltas `ADDED`/`MODIFIED`/`REMOVED` der Spec, führt `emet spec-merge --spec <id>` einmal auf dem Integrations-Branch dieser Wave vor deren Review aus und committet die aktualisierte `docs/specs/<area>.md`, sodass die Änderung im selben Pull Request geprüft wird und landet. Eine neue Referenz, `living-specs.md`, beschreibt das Delta-Format und die Wiederholungsregel. Siehe ADR-0038.
+- `specs.enabled` (Standard `false`) in der Konfiguration und in beiden Schema-Kopien. `emet init` schreibt `"specs": { "dir": "docs/specs", "enabled": false }`.
+- `emet doctor` warnt, nur wenn `specs.enabled` `true` ist, falls `specs.dir` per gitignore ausgeschlossen oder eine Datei ist. Ein fehlendes `specs.dir` ist keine Warnung.
+- `emet spec-merge --spec <id> --deltas-dir` legt das gemeinsame Delta-Verzeichnis `<git common dir>/.emet/runs/<id>/spec-deltas` an, gibt es aus und endet mit `0`, ohne zu mergen.
+- `landing.specMergeMethod` akzeptiert `merge` (Standard), `squash` und `rebase`, damit eine Spec auch auf einem Trunk landet, der nur Squash-Merges erlaubt. `emet doctor` warnt, wenn die Repository-Einstellungen oder das Trunk-Ruleset die konfigurierte Methode nicht erlauben. Siehe ADR-0037.
+- `bun run check:codex` schlägt fehl, wenn in einem generierten `codex/`-Verzeichnis eine Datei ohne Quelle liegt.
+
+### Geändert
+
+- Bei ausgeschaltetem `specs.enabled` gibt `emet spec-merge` `specs.enabled is false; nothing merged` aus und endet mit `0`. Es liest Deltas aus dem gemeinsamen Run-Verzeichnis unter dem Git Common Dir und greift sonst auf das `.emet/runs/<id>/spec-deltas/` des jeweiligen Checkouts zurück.
+- Die Prompts der Phase 8 führen `emet spec-merge` nicht mehr aus, nachdem eine Wave oder Spec gelandet ist; stattdessen lädt `phases-8-review.md` in der letzten Wave `living-specs.md`.
+- `emet spec-branch land` wartet mit demselben Poller wie `emet ci` auf die Checks des Pull Requests, auch wenn dieser noch keine Checks hat, und mergt mit `landing.specMergeMethod`.
+
+### Behoben
+
+- `emet spec-branch land` mergt nicht mehr, bevor GitHub irgendwelche Checks registriert hat.
+- `emet setup` listet die Claude-Plugins einmal statt bis zu dreimal auf, und seine stillen Abfragen laufen in ein Timeout, statt zu hängen.
+- `emet doctor` listet die installierten Plugins einmal pro Lauf auf.
+- `bun run lint` und `bun run fix` erzeugen zuerst die Astro-Typen für die Website und laufen so auch in einem frischen Checkout durch.
 
 ## 0.15.0
 
