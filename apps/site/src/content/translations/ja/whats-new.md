@@ -2,8 +2,24 @@
 title: 新機能
 description: emet のリリースノート。各バージョンでの変更点をまとめています。
 seoTitle: "emet の新機能: リリースノート"
-sourceHash: c7ab5fe94ab28e50
+sourceHash: 130017a5359fd93e
 ---
+
+## 0.14.5
+
+2026-11-21
+
+### 追加
+
+- `emet handoff --check` は、ワーカーの引き継ぎノートにある `skills:` セクション(`none`、または `loaded: a, b; missing: c`)を解析します。`state` が `done` のときは必須です。`--expect-skills a,b` は、どちらのリストにもない指定スキルごとにチェックを失敗させ、不足しているスキルを出力します。
+- ディスパッチレコードにオプションの `skills` 配列が加わり、`emet verify` はそれを `--expect-skills` として `emet handoff --check` に渡します。`skills` のないレコードも引き続き解析されます。
+- ADR-0036 により、チケットが段落を名指しすれば、インストールされるプロンプトの文言を変更でき、同じプルリクエストでバイト上限を引き上げます。
+
+### 変更
+
+- フェーズ 8 のプロンプトを `phases-8-review.md` と `phases-8-landing.md` に分割しました。`install.sh` は古い `phases-8-closeout.md` を退役させます。編集済みのコピーやマニフェスト導入前のコピーは `phases-8-closeout.md.retired` に移動し、未編集のコピーは削除します。
+- ワーカーのプロンプトは、最終の引き継ぎの前に `skills:` 行を書くよう指示します。
+- アーキテクチャページ、CLI リファレンス、およびその 9 言語の翻訳が、フェーズ 8 の 2 つのファイルと `--expect-skills` を説明します。
 
 ## 0.14.4
 

@@ -2,8 +2,24 @@
 title: 新功能
 description: emet 的发布说明：每个版本都有哪些变化。
 seoTitle: "emet 新功能：发布说明"
-sourceHash: c7ab5fe94ab28e50
+sourceHash: 130017a5359fd93e
 ---
+
+## 0.14.5
+
+2026-11-21
+
+### 新增
+
+- `emet handoff --check` 会解析 worker 交接笔记中的 `skills:` 部分(`none`,或 `loaded: a, b; missing: c`)。当 `state` 为 `done` 时该部分必填。`--expect-skills a,b` 会对每个不在两个列表中的指定 skill 判定检查失败,并输出缺失的 skill。
+- 派发记录带有可选的 `skills` 数组,`emet verify` 会把它作为 `--expect-skills` 传给 `emet handoff --check`。没有 `skills` 的记录仍可解析。
+- ADR-0036 允许工单在点名段落时修改已安装提示词的措辞,同一个 pull request 会同时提高字节上限。
+
+### 变更
+
+- 第 8 阶段的提示词拆分为 `phases-8-review.md` 和 `phases-8-landing.md`。`install.sh` 会停用旧的 `phases-8-closeout.md`:已编辑或早于清单的副本会移到 `phases-8-closeout.md.retired`,未编辑的副本会被删除。
+- worker 提示词要求它在最终交接前写下 `skills:` 行。
+- 架构页面、CLI 参考及其九种翻译描述了第 8 阶段的两个文件和 `--expect-skills`。
 
 ## 0.14.4
 
