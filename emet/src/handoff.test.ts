@@ -150,6 +150,73 @@ describe("emet handoff --check", () => {
     expect(combined).not.toMatch(/but "dead-ends:" is empty/);
   });
 
+  describe("skills section", () => {
+    const DONE = VALID_HANDOFF.replace("state: implementing", "state: done");
+
+    test("a done handoff without skills fails and shows the expected format", async () => {
+      const filePath = await writeHandoff("AO-330", DONE);
+      await run(["--check", filePath]);
+      expect(process.exitCode).toBe(1);
+      expect(errors.join("\n")).toMatch(/"skills:" is required[\s\S]*loaded: a, b; missing: c/);
+    });
+
+    test("a non-done handoff may omit skills", async () => {
+      const filePath = await writeHandoff("AO-331", VALID_HANDOFF);
+      await run(["--check", filePath]);
+      expect(process.exitCode).toBe(0);
+    });
+
+    test("a done handoff with skills none passes", async () => {
+      const filePath = await writeHandoff("AO-332", `${DONE}\nskills: none`);
+      await run(["--check", filePath]);
+      expect(process.exitCode).toBe(0);
+    });
+
+    test("a malformed skills value fails", async () => {
+      const filePath = await writeHandoff("AO-333", `${DONE}\nskills: tdd`);
+      await run(["--check", filePath]);
+      expect(process.exitCode).toBe(1);
+      expect(errors.join("\n")).toMatch(/"skills: tdd" must be/);
+    });
+
+    test("expected skills in loaded or missing pass and missing ones are printed", async () => {
+      const filePath = await writeHandoff(
+        "AO-334",
+        `${DONE}\nskills: loaded: tdd; missing: codebase-design`,
+      );
+      await run(["--check", filePath, "--expect-skills", "tdd,codebase-design"]);
+      expect(process.exitCode).toBe(0);
+      expect(logs.join("\n")).toMatch(/--check OK/);
+      expect(logs.join("\n")).toMatch(/missing skills: codebase-design/);
+    });
+
+    test("an expected skill in neither list fails and names it", async () => {
+      const filePath = await writeHandoff("AO-335", `${DONE}\nskills: loaded: tdd; missing: x`);
+      await run(["--check", filePath, "--expect-skills", "tdd,other"]);
+      expect(process.exitCode).toBe(1);
+      expect(errors.join("\n")).toMatch(/expected skill "other"/);
+    });
+
+    test("expect-skills tolerates spaces, duplicates and empty entries", async () => {
+      const filePath = await writeHandoff("AO-336", `${DONE}\nskills: loaded: tdd; missing: none`);
+      await run(["--check", filePath, "--expect-skills", " tdd , tdd,,"]);
+      expect(process.exitCode).toBe(0);
+    });
+
+    test("a multi-line skills value does not swallow the next section", async () => {
+      const content = `${DONE.replace("files: src/auth/login.ts", "")}\nskills:\n  loaded: tdd;\n  missing: none\nfiles: src/auth/login.ts`;
+      const filePath = await writeHandoff("AO-337", content);
+      await run(["--check", filePath, "--expect-skills", "tdd"]);
+      expect(process.exitCode).toBe(0);
+    });
+
+    test("an empty expect-skills list is ignored", async () => {
+      const filePath = await writeHandoff("AO-338", VALID_HANDOFF);
+      await run(["--check", filePath, "--expect-skills", ""]);
+      expect(process.exitCode).toBe(0);
+    });
+  });
+
   test("fails a note over the configured line budget", async () => {
     const filler = Array.from({ length: 65 }, (_, index) => `padding line ${index}`).join("\n");
     const filePath = await writeHandoff("AO-327", `${VALID_HANDOFF}\nfiles: ${filler}`);

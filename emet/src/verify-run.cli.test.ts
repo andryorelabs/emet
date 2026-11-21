@@ -139,6 +139,34 @@ describe("verify helpers", () => {
     });
   });
 
+  test("parseDispatchRecord keeps an optional skills array and rejects a malformed one", () => {
+    expect(parseDispatchRecord({ baseline: "abc", surfaces: [], skills: ["tdd"] })).toEqual({
+      baseline: "abc",
+      surfaces: [],
+      skills: ["tdd"],
+    });
+    expect(() => parseDispatchRecord({ baseline: "abc", surfaces: [], skills: [1] })).toThrow(
+      "dispatch record needs",
+    );
+  });
+
+  test("handoffCheckCommand appends --expect-skills only for a non-empty list", () => {
+    expect(handoffCheckCommand("h.md", true, ["tdd", "x"])).toEqual([
+      process.execPath,
+      "handoff",
+      "--check",
+      "h.md",
+      "--expect-skills",
+      "tdd,x",
+    ]);
+    expect(handoffCheckCommand("h.md", true, [])).toEqual([
+      process.execPath,
+      "handoff",
+      "--check",
+      "h.md",
+    ]);
+  });
+
   test("parseDispatchRecord rejects non-string surfaces and non-objects", () => {
     expect(() => parseDispatchRecord({ baseline: "abc", surfaces: [1] })).toThrow(
       "dispatch record needs",
