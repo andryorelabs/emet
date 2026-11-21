@@ -2,7 +2,7 @@
 title: Trackers e aterrissagem
 description: Onde ficam os tickets, como uma onda aterrissa como pull request ou merge local, e como as ondas se encadeiam.
 seoTitle: Trackers e aterrissagem no emet
-sourceHash: 6c1988e1fd68ab4d
+sourceHash: 4280f1152d8971e0
 ---
 
 Onde ficam os tickets, como uma onda aterrissa e como as ondas se encadeiam. Toda chave citada aqui está na [referência de configuração](../reference/configuration.md); todo subcomando está na [referência da CLI](../reference/cli.md).
@@ -21,11 +21,21 @@ Com `tracker.kind: "local"`, specs e tickets são arquivos markdown em `.scratch
 
 `landing.mode` é `"pr"` (padrão) ou `"merge"`, independente do tracker. No modo `merge`, uma onda aterrissa como um único merge local no tronco com `emet land`, com `commands.selfCheck` no lugar da CI e sem push. O `gh` só é obrigatório quando o tracker é `github` ou a aterrissagem é `pr`. Veja o [ADR-0010](../adr/0010-local-merge-landing.md).
 
+`landing.unit` define o que aterrissa como uma unidade: `"spec"` (padrão) aterrissa o spec inteiro de uma vez, `"wave"` mantém a regra anterior em que cada onda aterrissa sozinha. Veja o [ADR-0037](../adr/0037-landing-per-spec.md), que substitui o [ADR-0004](../adr/0004-one-wave-one-dependency-layer-one-pr.md).
+
+### Branch do spec
+
+Com `landing.unit: "spec"`, o coordenador cria `spec/<id>` a partir do tronco com `emet spec-branch ensure --spec <id>`. Depois que uma onda passa na revisão e em `commands.selfCheck`, `emet spec-branch integrate` mescla a branch da onda em `spec/<id>` com `--no-ff` e um commit que carrega os trailers `Emet-Wave` e `Emet-Tickets`. Um ticket cuja branch está em `spec/<id>` está **Integrado**, não **Aterrissado**: conta como bloqueador fechado na fronteira da próxima onda, mas o tracker o mantém aberto até a aterrissagem final. As ondas seguintes partem da ponta de `spec/<id>`, então nenhuma onda espera pela CI de um PR.
+
+`emet spec-branch sync` mescla o tronco em `spec/<id>` e nunca faz rebase; em caso de conflito, aborta, deixa a branch intacta e sai com código diferente de zero. `emet spec-branch land` executa o sync e depois aterrissa a branch uma única vez. No modo `pr`, faz push de `spec/<id>`, abre um PR com uma linha `Closes #N` por ticket de cada onda integrada e o mescla com um commit de merge, ignorando `pr.mergeMethod`. No modo `merge`, mescla `spec/<id>` no tronco local com `--no-ff` e nunca faz push. `--partial` aterrissa apenas as ondas integradas até o momento. `emet spec-branch abandon --spec <id> --force` marca a branch com a tag `abandoned/spec-<id>`, a exclui e volta os tickets integrados de um tracker local para `ready-for-agent`.
+
+O modo spec exige `worktree.baseRef: "head"` nas configurações do Claude Code para que os worktrees dos workers partam da branch do spec; `emet preflight` e `emet doctor` verificam isso. `emet doctor` também avisa quando o modo é `pr` e o repositório não permite commits de merge.
+
 ### PRs de aterrissagem
 
-Uma onda é um PR. Seu corpo traz uma linha `Closes #N` para cada ticket (a palavra-chave de fechamento do tracker), e o coordenador move os tickets para em revisão ao abrir o PR. Em seguida o PR é mesclado conforme `pr.autoMerge`, ou deixado aberto quando a onda foi sinalizada, `autoMerge` é `false` ou as correções de CI se esgotaram (o PR então recebe o rótulo de decisão humana). Depois de um merge, `emet tracker close` fecha os tickets em um tracker do GitHub, e `emet cleanup --run <runId>` libera as branches, as reivindicações de tickets e os slots de workers da onda. Ele também exclui cada branch local cujo PR foi mesclado no commit da ponta da branch, incluindo a branch de integração.
+Com `landing.unit: "spec"`, o PR é o do spec: um único PR para todas as ondas integradas, aberto por `emet spec-branch land` depois da última onda. Com `landing.unit: "wave"`, uma onda é um PR. O corpo traz uma linha `Closes #N` para cada ticket (a palavra-chave de fechamento do tracker), e o coordenador move os tickets para em revisão ao abrir o PR. Em seguida o PR é mesclado conforme `pr.autoMerge`, ou deixado aberto quando a onda foi sinalizada, `autoMerge` é `false` ou as correções de CI se esgotaram (o PR então recebe o rótulo de decisão humana). Depois de um merge, `emet tracker close` fecha os tickets em um tracker do GitHub, e `emet cleanup --run <runId>` libera as branches, as reivindicações de tickets e os slots de workers da onda. Ele também exclui cada branch local cujo PR foi mesclado no commit da ponta da branch, incluindo a branch de integração.
 
-Depois que as branches de uma onda são mescladas, `commands.fullSuite` roda uma vez na branch de integração. Uma execução vermelha bloqueia o PR e o `autoChain`. O gate recebe o resultado como `--integration`.
+Depois que as branches de uma onda são mescladas, `commands.fullSuite` roda uma vez na branch de integração. Uma execução vermelha bloqueia o PR e o `autoChain`. O gate recebe o resultado como `--integration`. Em uma onda não final de uma aterrissagem de spec, o coordenador passa `--ci` a partir de `commands.selfCheck`, e somente a aterrissagem final espera pela CI com `emet ci --wait`; o gate então responde `chain` enquanto restarem ondas.
 
 ### Encadeando ondas
 
