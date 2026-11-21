@@ -14,12 +14,13 @@ import { resolveRunDir } from "./names";
 import { errorMessage, isOneOf } from "./narrow";
 import { present } from "./present";
 
-const USAGE = `usage: emet spec-merge --spec <id> [--root <dir>]
+const USAGE = `usage: emet spec-merge --spec <id> [--root <dir>] [--deltas-dir]
 
-Merges the ADDED/MODIFIED/REMOVED deltas in .emet/runs/<id>/spec-deltas/<area>.md
-into <specs.dir>/<area>.md, keyed by requirement name. Every area is checked before
-anything is written; any conflict or scenario loss aborts with exit 1 and no file
-is touched.`;
+Merges the ADDED/MODIFIED/REMOVED deltas in <git common dir>/.emet/runs/<id>/spec-deltas/<area>.md
+(or the per-checkout .emet/runs/<id>/spec-deltas/) into <specs.dir>/<area>.md, keyed by
+requirement name. Every area is checked before anything is written; any conflict or scenario
+loss aborts with exit 1 and no file is touched. A no-op when specs.enabled is false.
+--deltas-dir creates and prints the shared deltas directory without merging.`;
 
 interface Requirement {
   readonly name: string;
@@ -225,12 +226,45 @@ export function mergeSpecDeltas(
   return { ok: true, written: pending.map((entry) => entry.filePath) };
 }
 
+/**
+ * The shared deltas directory of a spec, under the git common dir so every
+ * worktree of the repo sees it: `<common dir>/.emet/runs/<spec id>/spec-deltas`.
+ */
+export function resolveSpecDeltasDir(
+  commonDirectory: string,
+  repoRoot: string,
+  specId: string,
+): string {
+  const sharedDirectory = path.join(
+    resolveRunDir(commonDirectory).path,
+    "runs",
+    specId,
+    "spec-deltas",
+  );
+  const checkoutDirectory = path.join(resolveRunDir(repoRoot).path, "runs", specId, "spec-deltas");
+  return !existsSync(sharedDirectory) && existsSync(checkoutDirectory)
+    ? checkoutDirectory
+    : sharedDirectory;
+}
+
+async function resolveCommonDirectory(root: string): Promise<string | undefined> {
+  const result = await Bun.$`git -C ${root} rev-parse --path-format=absolute --git-common-dir`
+    .quiet()
+    .nothrow();
+  if (result.exitCode !== 0) return undefined;
+  const output = result.text().trim();
+  return path.isAbsolute(output) ? output : undefined;
+}
+
 function readFlag(argv: string[], name: string): string | undefined {
   const index = argv.indexOf(name);
   return index === -1 ? undefined : argv[index + 1];
 }
 
-export async function run(argv: string[]): Promise<void> {
+export async function run(
+  argv: string[],
+  overrides: { commonDirectory?: string } = {},
+): Promise<void> {
   const specId = readFlag(argv, "--spec");
   if (specId === undefined || specId.length === 0 || /[\\/]|^\.\.?$/.test(specId)) {
     console.error(USAGE);
@@ -240,7 +274,18 @@ export async function run(argv: string[]): Promise<void> {
   try {
     const root = readFlag(argv, "--root") ?? (await resolveRepoRoot()) ?? process.cwd();
     const { config } = await loadForgeConfigWithDefaults(root);
-    const deltaDirectory = path.join(resolveRunDir(root).path, "runs", specId, "spec-deltas");
+    if (!config.specs.enabled) {
+      console.log("specs.enabled is false; nothing merged");
+      return;
+    }
+    const commonDirectory =
+      overrides.commonDirectory ?? (await resolveCommonDirectory(root)) ?? root;
+    const deltaDirectory = resolveSpecDeltasDir(commonDirectory, root, specId);
+    if (argv.includes("--deltas-dir")) {
+      mkdirSync(deltaDirectory, { recursive: true });
+      console.log(deltaDirectory);
+      return;
+    }
     if (!existsSync(deltaDirectory)) {
       console.error(`emet spec-merge: no deltas at ${deltaDirectory}`);
       process.exitCode = 2;
