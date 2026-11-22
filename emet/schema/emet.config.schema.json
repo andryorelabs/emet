@@ -774,6 +774,12 @@
           },
           "default": [],
           "description": "Extra case-insensitive path tokens that force the high review tier in `emet assess`, on top of the built-in set."
+        },
+        "dual": {
+          "type": "string",
+          "enum": ["auto", "off"],
+          "default": "auto",
+          "description": "Dual review. `auto` has `emet assess` ask for a second Codex reviewer on a high-tier wave when the agent host is claude and `codex` is on PATH; `off` never does."
         }
       }
     },

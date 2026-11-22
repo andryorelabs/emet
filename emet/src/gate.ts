@@ -46,6 +46,8 @@ export interface GateInput {
   readonly openFindings: readonly {
     readonly severity: FindingSeverity;
     readonly kind: FindingKind;
+    readonly preexisting?: boolean;
+    readonly userOption?: string;
   }[];
   readonly reviewRoundsUsed: number;
   readonly reviewRoundsCap: number;
@@ -131,7 +133,26 @@ function decideOpenFindings(input: GateInput, summary: string, hasIntentGap: boo
   );
 }
 
+function isUserOption(finding: { readonly userOption?: string }): boolean {
+  return finding.userOption !== undefined;
+}
+
+/** Drops pre-existing findings from the gate's view, keeping User option ones. */
 export function decide(input: GateInput): GateResult {
+  const ignored = input.openFindings.filter(
+    (finding) => finding.preexisting === true && !isUserOption(finding),
+  ).length;
+  const result = decideCounted({
+    ...input,
+    openFindings: input.openFindings.filter(
+      (finding) => finding.preexisting !== true || isUserOption(finding),
+    ),
+  });
+  if (ignored === 0) return result;
+  return { ...result, reasons: [...result.reasons, `${ignored} pre-existing finding(s) ignored`] };
+}
+
+function decideCounted(input: GateInput): GateResult {
   if (input.integration === "fail") return decideIntegrationFailure(input);
   if (input.envFault) {
     return hold([
@@ -154,12 +175,16 @@ export function decide(input: GateInput): GateResult {
   }
 
   const blocking = blockingSeverities(input.tier);
-  const openBlocking = input.openFindings.filter((finding) => blocking.includes(finding.severity));
+  const openBlocking = input.openFindings.filter(
+    (finding) => isUserOption(finding) || blocking.includes(finding.severity),
+  );
   const hasIntentGap =
     input.onHold === "fix-and-continue" &&
     input.openFindings.some((finding) => finding.kind === "intent_gap");
   if (openBlocking.length > 0 || hasIntentGap) {
-    const summary = `${openBlocking.length} open ${blocking.join("/")} finding(s) at tier ${input.tier}`;
+    const userOptions = openBlocking.filter(isUserOption).length;
+    const userNote = userOptions > 0 ? ` (${userOptions} user option)` : "";
+    const summary = `${openBlocking.length} open ${blocking.join("/")} finding(s)${userNote} at tier ${input.tier}`;
     return decideOpenFindings(input, summary, hasIntentGap);
   }
   if (input.ci === "env-fault") {
@@ -211,6 +236,8 @@ interface LedgerFinding {
   readonly status: string;
   readonly severity: FindingSeverity;
   readonly kind: FindingKind;
+  readonly preexisting?: boolean;
+  readonly userOption?: string;
 }
 
 function readReviewLedger(
@@ -231,6 +258,8 @@ function readReviewLedger(
               status: finding.status,
               severity: finding.severity,
               kind: isOneOf(FINDING_KINDS, finding.kind) ? finding.kind : "patch",
+              ...(finding.preexisting === true ? { preexisting: true } : {}),
+              ...(typeof finding.userOption === "string" ? { userOption: finding.userOption } : {}),
             },
           ]
         : [],

@@ -103,7 +103,7 @@ export const DEFAULT_FORGE_CONFIG: ForgeConfig = {
     triage: "haiku",
     escalation: { sonnet: "opus" },
   },
-  review: { highRiskPaths: [] },
+  review: { highRiskPaths: [], dual: "auto" },
   budgets: {
     workerAttempts: 2,
     reviewRounds: 2,
@@ -137,6 +137,10 @@ interface CodexSessionChoice extends CodexModelChoice {
 
 export type AgentHostName = "claude" | "codex";
 
+/** Whether `emet assess` may ask for a second, Codex reviewer on a high wave. */
+type ReviewDualMode = "auto" | "off";
+
+const REVIEW_DUAL_MODES: readonly ReviewDualMode[] = ["auto", "off"];
 const AGENT_HOSTS: readonly AgentHostName[] = ["claude", "codex"];
 
 type CodexSandbox = "workspace-write" | "danger-full-access";
@@ -374,6 +378,8 @@ export interface ForgeConfig {
     /** Extra path tokens (case-insensitive substrings) that force the `high`
      * tier in `emet assess`, on top of the built-in set. */
     readonly highRiskPaths: readonly string[];
+    /** `off` stops `emet assess` from asking for a second Codex reviewer on a high wave. */
+    readonly dual: ReviewDualMode;
   };
   readonly budgets: {
     /** Worker attempts per ticket before it is deferred. */
@@ -1035,6 +1041,11 @@ function validateAndMerge(
     }
   }
 
+  const dual = reviewSection.dual ?? "auto";
+  if (!isOneOf(REVIEW_DUAL_MODES, dual)) {
+    return { ok: false, reason: '"review.dual" must be one of auto|off' };
+  }
+
   const budgetsSection = raw.budgets;
   if (budgetsSection !== undefined && !isRecord(budgetsSection)) {
     return { ok: false, reason: '"budgets" must be an object' };
@@ -1115,7 +1126,7 @@ function validateAndMerge(
       },
       ...(raw.agentHost === undefined ? {} : { agentHost }),
       ...(raw.codex === undefined ? {} : { codex: codex.value }),
-      review: { highRiskPaths },
+      review: { highRiskPaths, dual },
       budgets,
       sizing: { inlineMaxLines },
       map: { path: mapPath },
