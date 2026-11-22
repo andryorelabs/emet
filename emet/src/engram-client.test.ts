@@ -18,6 +18,7 @@ interface FakeEngram {
   readonly state: { killed: boolean; stdinEnded: boolean };
   readonly requests: Record<string, unknown>[];
   emitRaw(text: string): void;
+  emitBytes(bytes: Buffer): void;
 }
 
 function toolResult(payload: unknown, isError = false): unknown {
@@ -32,6 +33,9 @@ function fakeEngram(onTool: Handler, options: { silent?: boolean } = {}): FakeEn
   const stdout = new EventEmitter();
   const emitRaw = (text: string): void => {
     stdout.emit("data", Buffer.from(text));
+  };
+  const emitBytes = (bytes: Buffer): void => {
+    stdout.emit("data", bytes);
   };
   const respond = (id: unknown, result: unknown): void => {
     emitRaw(`${JSON.stringify({ jsonrpc: "2.0", id, result })}\n`);
@@ -69,7 +73,7 @@ function fakeEngram(onTool: Handler, options: { silent?: boolean } = {}): FakeEn
     calls.push({ command, args, cwd: spawnOptions.cwd });
     return fakeChild;
   };
-  return { spawn, calls, state, requests, emitRaw };
+  return { spawn, calls, state, requests, emitRaw, emitBytes };
 }
 
 async function rejectionOf(promise: Promise<unknown>): Promise<string> {
@@ -190,6 +194,30 @@ describe("openEngramClient", () => {
     });
     const client = expectClient(await openEngramClient("/repo", { spawn: fake.spawn }));
     expect(await rejectionOf(client.search("x", 1))).toContain("ambiguous project");
+    client.close();
+  });
+
+  test("a search reply without a results key is an empty result, not a failure", async () => {
+    const fake = fakeEngram((_message, reply) => {
+      reply(toolResult({ project: "emet", result: "No memories found for: x" }));
+    });
+    const client = expectClient(await openEngramClient("/repo", { spawn: fake.spawn }));
+    expect(await client.search("x", 1)).toEqual([]);
+    client.close();
+  });
+
+  test("a multi-byte character split across two stdout chunks is decoded intact", async () => {
+    const fake: FakeEngram = fakeEngram((message) => {
+      const payload = Buffer.from(
+        `${JSON.stringify({ jsonrpc: "2.0", id: message.id, result: toolResult({ results: [{ id: 1, title: "a — b", preview: "p" }] }) })}\n`,
+      );
+      const cut = payload.indexOf(Buffer.from("—")) + 1;
+      fake.emitBytes(payload.subarray(0, cut));
+      fake.emitBytes(payload.subarray(cut));
+    });
+    const client = expectClient(await openEngramClient("/repo", { spawn: fake.spawn }));
+    const results = await client.search("x", 1);
+    expect(results[0]?.title).toBe("a — b");
     client.close();
   });
 

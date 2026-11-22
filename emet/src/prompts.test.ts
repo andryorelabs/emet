@@ -6,6 +6,7 @@ import { present } from "./present";
 import { BROWSER_AXIS_PROMPT } from "./review-run";
 
 const REPO_ROOT = resolve(import.meta.dir, "..", "..");
+const AGENTS_DIRECTORY = join(REPO_ROOT, "agents");
 
 /**
  * Byte ceilings, measured on trunk after wave 4 plus ~4% headroom. Raising one
@@ -136,6 +137,10 @@ describe("memory prompts", () => {
 
   test("no worker prompt mentions emet memory", () => {
     expect(readReference("worker-prompt.md")).not.toContain("emet memory");
+    expect(readReference("phases-6-7-dispatch.md")).not.toContain("emet memory");
+    for (const agent of readdirSync(AGENTS_DIRECTORY)) {
+      expect(readFileSync(join(AGENTS_DIRECTORY, agent), "utf8")).not.toContain("emet memory");
+    }
   });
 });
 

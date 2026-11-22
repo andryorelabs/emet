@@ -1,4 +1,5 @@
 import { spawn as nodeSpawn } from "node:child_process";
+import { StringDecoder } from "node:string_decoder";
 
 import { resolveBinaryOnPath } from "./dependencies";
 import { errorMessage, isObject } from "./narrow";
@@ -152,6 +153,7 @@ function parseObservation(
 class StdioEngramClient implements EngramClient {
   private nextId = 1;
   private buffer = "";
+  private readonly decoder = new StringDecoder("utf8");
   private closed = false;
   private readonly pending = new Map<number, PendingRequest>();
 
@@ -162,7 +164,7 @@ class StdioEngramClient implements EngramClient {
     this.child = child;
     this.timeoutMs = timeoutMs;
     child.stdout?.on("data", (chunk) => {
-      this.buffer += chunk.toString();
+      this.buffer += typeof chunk === "string" ? chunk : this.decoder.write(chunk);
       this.drainLines();
     });
     child.on("error", (error) => {
@@ -268,7 +270,11 @@ class StdioEngramClient implements EngramClient {
       response_format: "compact",
       match_mode: "any",
     });
-    const results = parseJsonObject(text).results;
+    const body = parseJsonObject(text);
+    if (!("results" in body)) {
+      return [];
+    }
+    const results = body.results;
     if (!Array.isArray(results)) {
       throw new Error("engram returned no results");
     }
