@@ -356,6 +356,36 @@ else
   echo "  and the same with --event Stop to hooks.Stop in $SETTINGS_FILE." >&2
 fi
 
+echo "==> Wiring the emet guard Notification, PermissionRequest, SessionEnd and UserPromptSubmit hooks"
+if command -v jq >/dev/null 2>&1; then
+  for ATTENTION_EVENT in Notification PermissionRequest SessionEnd UserPromptSubmit; do
+    ATTENTION_COMMAND="$GUARD_COMMAND --event $ATTENTION_EVENT"
+    ATTENTION_GROUP='{"hooks": [{"type": "command", "command": $cmd}]}'
+    [[ "$ATTENTION_EVENT" == PermissionRequest ]] && ATTENTION_GROUP='{"matcher": "*", "hooks": [{"type": "command", "command": $cmd}]}'
+    if [[ -f "$SETTINGS_FILE" ]] && jq -e --arg event "$ATTENTION_EVENT" --arg cmd "$ATTENTION_COMMAND" \
+      'any(.hooks[$event][]?.hooks[]?; .command == $cmd)' "$SETTINGS_FILE" >/dev/null 2>&1; then
+      echo "  $ATTENTION_EVENT already wired."
+    else
+      mkdir -p "$HOME/.claude"
+      [[ -f "$SETTINGS_FILE" ]] || echo '{}' > "$SETTINGS_FILE"
+      cp "$SETTINGS_FILE" "$SETTINGS_FILE.pre-emet-guard-backup.$(date -u +%Y%m%dT%H%M%SZ)"
+      jq --arg event "$ATTENTION_EVENT" --arg cmd "$ATTENTION_COMMAND" \
+        ".hooks[\$event] = ((.hooks[\$event] // []) + [$ATTENTION_GROUP])" \
+        "$SETTINGS_FILE" > "$SETTINGS_FILE.tmp" && mv "$SETTINGS_FILE.tmp" "$SETTINGS_FILE"
+      echo "  $ATTENTION_EVENT added."
+    fi
+  done
+  # shellcheck disable=SC2012
+  ls -1 "$SETTINGS_FILE".pre-emet-guard-backup.* 2>/dev/null | sort -r | tail -n +"$((BACKUPS_TO_KEEP + 1))" | while IFS= read -r stale_backup; do
+    rm -f -- "$stale_backup"
+  done
+else
+  echo "warning: jq is required to wire the Notification/PermissionRequest/SessionEnd/UserPromptSubmit hooks automatically — skipping." >&2
+  echo "  Add {\"hooks\": [{\"type\": \"command\", \"command\": \"$GUARD_COMMAND --event Notification\"}]} to hooks.Notification," >&2
+  echo "  the same with --event SessionEnd and --event UserPromptSubmit to hooks.SessionEnd and hooks.UserPromptSubmit," >&2
+  echo "  and {\"matcher\": \"*\", \"hooks\": [{\"type\": \"command\", \"command\": \"$GUARD_COMMAND --event PermissionRequest\"}]} to hooks.PermissionRequest in $SETTINGS_FILE." >&2
+fi
+
 if [[ -t 0 ]] && [[ " ${COMMAND_NAMES[*]} " == *" setup "* ]]; then
   echo
   "$HOME/.local/bin/emet" setup || echo "warning: emet setup reported a failure — re-run \`emet setup\`." >&2
