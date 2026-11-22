@@ -124,6 +124,10 @@ _Avoid_: double review, second opinion
 One pass in which the **Coordinator** corrects the findings still open and a **Reviewer** rechecks only those findings. It has its own budget, apart from **Review rounds**.
 _Avoid_: retry, rework
 
+**Lesson**:
+A short note the **Coordinator** saves at the end of a run session about what helped or hurt, kept in Engram per spec and searched before the next interview.
+_Avoid_: memory, learning, insight
+
 **Environment fault**:
 A failure caused by the machine or the CI provider rather than the code under review: checks that never started, no runner available, a billing block or a provider outage.
 _Avoid_: infra failure, flaky CI

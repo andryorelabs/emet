@@ -2,8 +2,24 @@
 title: Novidades
 description: Notas de versão do emet: o que mudou em cada versão.
 seoTitle: Novidades do emet: notas de versão
-sourceHash: d0c15a0312936cf4
+sourceHash: 946f5971d5a42a0b
 ---
+
+## 0.19.0
+
+2026-11-22
+
+### Adicionado
+
+- `emet memory search --json <query> [--limit <n>]` e `emet memory save --json --key <spec-<id>|quick-<runId>> --run <runId> --outcome <outcome>` leem e gravam Lessons no Engram. `search` mantém as notas cuja topic key começa com `emet/<repo>/lessons/` e imprime o conteúdo completo delas, `save` acrescenta uma seção por run à nota do spec ou do quick run, com de 1 a 5 bullets no stdin. Ambos imprimem um objeto JSON, saem com 0 em qualquer problema do Engram e saem com 2 apenas em uso incorreto.
+- `memory.enabled` (`auto` ou `off`, padrão `auto`) é adicionado aos esquemas de configuração. `off` nunca inicia o `engram`.
+- A Phase 1 busca na memória Lessons anteriores antes da primeira rodada de entrevista e escreve as relevantes sob `## Prior lessons` no arquivo do plano. Os hand-offs da wave e do quick salvam as Lessons do run antes do relatório final. `--draft` não salva nada.
+- `docs/reference/cli.md` e `docs/reference/configuration.md` documentam `emet memory` e `memory.enabled`, nos nove idiomas.
+
+### Alterado
+
+- O build do Codex rejeita `mcp__engram` em uma referência gerada, então os nomes das ferramentas do Engram nunca chegam ao plugin do Codex.
+- Os prompts de `/emet:run` ganham os passos de memória acima; sem `engram` no PATH, ou com `memory.enabled: "off"`, cada passo é uma nota de uma linha e o run continua como na 0.18.0.
 
 ## 0.18.0
 

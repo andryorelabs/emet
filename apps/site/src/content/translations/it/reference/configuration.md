@@ -2,7 +2,7 @@
 title: Riferimento della configurazione
 description: Ogni chiave di emet.config.json con il suo valore predefinito e il suo significato.
 seoTitle: Riferimento della configurazione di emet
-sourceHash: e1c8a9af5648125f
+sourceHash: ae0e205cbdcf4b88
 ---
 
 Ogni chiave di `emet.config.json`, con il suo valore predefinito e il suo significato. La fonte di verità è [`emet/schema/emet.config.schema.json`](../../emet/schema/emet.config.schema.json). I termini seguono [GLOSSARY.md](../../GLOSSARY.md). Torna al [README](../../README.md).
@@ -213,6 +213,14 @@ Letto solo quando `agentHost` è `"codex"`. Tutte le chiavi sono facoltative. Lo
 - `dual` (predefinito `"auto"`): `"auto"` o `"off"`. Vedi la Dual review qui sotto.
 
 Dual review: quando `emet assess` stampa `dualReview.run: true` (livello `high`, `agentHost` `claude`, `review.dual` diverso da `off` e `codex` nel PATH), il coordinatore esegue in parallelo un reviewer Claude e un reviewer Codex sullo stesso pacchetto, poi unisce i loro rilievi con `emet review --merge`. Ogni rilievo `agreement: "single"` viene valutato dal coordinatore, e viene registrata solo la copertura del reviewer Claude. `emet init` non scrive `review.dual`. Altrimenti gira un solo reviewer, come prima.
+
+## memory
+
+```json
+{ "memory": { "enabled": "auto" } }
+```
+
+- `enabled` (`"auto"` oppure `"off"`, predefinito `"auto"`): controlla [`emet memory`](cli.md#esecuzioni-worker-e-slot). Con `auto`, il comando usa Engram quando il binario `engram` è nel PATH e il suo handshake riesce. `off` fa sì che `emet memory search` e `emet memory save` stampino `{available: false, reason: "memory.enabled is off"}` ed escano con 0 senza avviare `engram`. Qualsiasi altro valore fallisce al caricamento con `"memory.enabled" must be one of auto|off`.
 
 ## landing
 

@@ -64,6 +64,11 @@ export function resolveAgentHostName(config: ForgeConfig): AgentHostName {
   return config.agentHost ?? DEFAULT_AGENT_HOST;
 }
 
+/** The effective `memory.enabled`; `auto` when the `memory` section is absent. */
+export function resolveMemoryEnabled(config: ForgeConfig): MemoryEnabledMode {
+  return config.memory?.enabled ?? "auto";
+}
+
 /** The Codex section of a config; the research defaults when `codex` is absent. */
 export function resolveCodexConfig(config: ForgeConfig): CodexConfig {
   return config.codex ?? DEFAULT_CODEX_CONFIG;
@@ -141,6 +146,10 @@ export type AgentHostName = "claude" | "codex";
 type ReviewDualMode = "auto" | "off";
 
 const REVIEW_DUAL_MODES: readonly ReviewDualMode[] = ["auto", "off"];
+
+type MemoryEnabledMode = "auto" | "off";
+
+const MEMORY_ENABLED_MODES: readonly MemoryEnabledMode[] = ["auto", "off"];
 const AGENT_HOSTS: readonly AgentHostName[] = ["claude", "codex"];
 
 type CodexSandbox = "workspace-write" | "danger-full-access";
@@ -380,6 +389,11 @@ export interface ForgeConfig {
     readonly highRiskPaths: readonly string[];
     /** `off` stops `emet assess` from asking for a second Codex reviewer on a high wave. */
     readonly dual: ReviewDualMode;
+  };
+  /** Absent means `auto`; read it through {@link resolveMemoryEnabled}. */
+  readonly memory?: {
+    /** `off` stops `emet memory` from ever spawning `engram`. */
+    readonly enabled: MemoryEnabledMode;
   };
   readonly budgets: {
     /** Worker attempts per ticket before it is deferred. */
@@ -1046,6 +1060,12 @@ function validateAndMerge(
     return { ok: false, reason: '"review.dual" must be one of auto|off' };
   }
 
+  const memorySection = isRecord(raw.memory) ? raw.memory : {};
+  const memoryEnabled = memorySection.enabled ?? "auto";
+  if (!isOneOf(MEMORY_ENABLED_MODES, memoryEnabled)) {
+    return { ok: false, reason: '"memory.enabled" must be one of auto|off' };
+  }
+
   const budgetsSection = raw.budgets;
   if (budgetsSection !== undefined && !isRecord(budgetsSection)) {
     return { ok: false, reason: '"budgets" must be an object' };
@@ -1127,6 +1147,7 @@ function validateAndMerge(
       ...(raw.agentHost === undefined ? {} : { agentHost }),
       ...(raw.codex === undefined ? {} : { codex: codex.value }),
       review: { highRiskPaths, dual },
+      ...(raw.memory === undefined ? {} : { memory: { enabled: memoryEnabled } }),
       budgets,
       sizing: { inlineMaxLines },
       map: { path: mapPath },

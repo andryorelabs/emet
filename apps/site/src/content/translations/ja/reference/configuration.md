@@ -2,7 +2,7 @@
 title: 設定リファレンス
 description: emet.config.json のすべてのキーについて、既定値と意味を説明します。
 seoTitle: emet の設定リファレンス
-sourceHash: e1c8a9af5648125f
+sourceHash: ae0e205cbdcf4b88
 ---
 
 `emet.config.json` のすべてのキーを、既定値と意味とともに示します。信頼できる情報源は [`emet/schema/emet.config.schema.json`](../../emet/schema/emet.config.schema.json) です。用語は [GLOSSARY.md](../../GLOSSARY.md) に従います。[README](../../README.md) に戻る。
@@ -213,6 +213,14 @@ Claude Code ホストにおけるロールごとのモデルとエフォート�
 - `dual`（既定は `"auto"`）: `"auto"` または `"off"`。下の Dual review を参照してください。
 
 Dual review: `emet assess` が `dualReview.run: true` を出力したとき（ティアが `high`、`agentHost` が `claude`、`review.dual` が `off` ではなく、`codex` が PATH にある場合）、コーディネーターは同じパッケージに対して Claude レビュアーと Codex レビュアーを並列で実行し、`emet review --merge` で両者の指摘をマージします。`agreement: "single"` の指摘はすべてコーディネーターがトリアージし、記録されるのは Claude レビュアーの coverage だけです。`emet init` は `review.dual` を書き込みません。それ以外の場合は、従来どおりレビュアー 1 つで実行します。
+
+## memory
+
+```json
+{ "memory": { "enabled": "auto" } }
+```
+
+- `enabled`（`"auto"` または `"off"`、既定値は `"auto"`）: [`emet memory`](cli.md#実行ワーカースロット)を制御します。`auto` では、`engram` バイナリが PATH にあり、そのハンドシェイクが成功するときに、このコマンドが Engram を使います。`off` では、`emet memory search` と `emet memory save` は `engram` を起動せずに `{available: false, reason: "memory.enabled is off"}` を出力して 0 で終了します。それ以外の値は、読み込み時に `"memory.enabled" must be one of auto|off` で失敗します。
 
 ## landing
 

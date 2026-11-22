@@ -14,6 +14,7 @@ import {
   requireForgeConfig,
   resolveAgentHostName,
   resolveCodexConfig,
+  resolveMemoryEnabled,
   resolveWorkerModel,
   type AfterSpecRule,
   type ForgeConfig,
@@ -714,6 +715,8 @@ describe("models and review sections", () => {
     expect(config.models.triage).toBe("haiku");
     expect(config.review.highRiskPaths).toEqual([]);
     expect(config.review.dual).toBe("auto");
+    expect(config.memory).toBeUndefined();
+    expect(resolveMemoryEnabled(config)).toBe("auto");
   });
 
   test("a partial models section merges onto defaults", async () => {
@@ -747,6 +750,7 @@ describe("models and review sections", () => {
     [{ review: { highRiskPaths: "auth" } }, /"review.highRiskPaths" must be an array/],
     [{ review: { highRiskPaths: [""] } }, /"review.highRiskPaths\[0\]"/],
     [{ review: { dual: "always" } }, /"review.dual" must be one of auto\|off/],
+    [{ memory: { enabled: "on" } }, /"memory.enabled" must be one of auto\|off/],
   ])("malformed for %j", async (value, pattern) => {
     await writeConfig(value);
     const result = await loadForgeConfig(repoRoot);
@@ -757,6 +761,13 @@ describe("models and review sections", () => {
   test("review.dual is read", async () => {
     await writeConfig({ review: { dual: "off" } });
     expect(configOf(await loadForgeConfig(repoRoot)).review.dual).toBe("off");
+  });
+
+  test("memory.enabled is read", async () => {
+    await writeConfig({ memory: { enabled: "off" } });
+    const config = configOf(await loadForgeConfig(repoRoot));
+    expect(config.memory).toEqual({ enabled: "off" });
+    expect(resolveMemoryEnabled(config)).toBe("off");
   });
 
   test("review.highRiskPaths is read", async () => {

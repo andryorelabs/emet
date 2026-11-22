@@ -53,6 +53,14 @@ describe("journal commands", () => {
     expect(findCommand("run")?.flags).toContainEqual({ name: "--json", value: false });
     expect(findCommand("status")?.flags).toContainEqual({ name: "--brief", value: false });
   });
+
+  test("memory declares its flags", () => {
+    const flags = findCommand("memory")?.flags ?? [];
+    expect(flags).toContainEqual({ name: "--json", value: false });
+    for (const name of ["--limit", "--key", "--run", "--outcome"]) {
+      expect(flags).toContainEqual({ name, value: true });
+    }
+  });
 });
 
 describe("outcomeCode", () => {
