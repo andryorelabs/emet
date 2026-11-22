@@ -1,9 +1,12 @@
 import { afterEach, beforeEach, describe, expect, spyOn, test } from "bun:test";
+import { mkdtempSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import path from "node:path";
 
 import { DEFAULT_FORGE_CONFIG, type ForgeConfig } from "./config";
 import type { EngramClient, EngramUnavailable } from "./engram-client";
 import { exitCodes } from "./exit-codes";
-import { mergeNote, run, type MemoryDeps } from "./memory";
+import { defaultRepoName, mergeNote, run, type MemoryDeps } from "./memory";
 
 interface Note {
   id: number;
@@ -17,19 +20,24 @@ interface FakeClient extends EngramClient {
   closed: boolean;
 }
 
-function fakeClient(notes: Note[], options: { saveError?: string } = {}): FakeClient {
+function fakeClient(
+  notes: Note[],
+  options: { saveError?: string; searchOnly?: (query: string) => readonly number[] } = {},
+): FakeClient {
   const saved: FakeClient["saved"] = [];
   const client: FakeClient = {
     saved,
     closed: false,
-    search: () =>
+    search: (query) =>
       Promise.resolve(
-        notes.map((note) => ({
-          id: note.id,
-          title: note.title,
-          topicKey: note.topicKey,
-          preview: "",
-        })),
+        notes
+          .filter((note) => options.searchOnly?.(query).includes(note.id) ?? true)
+          .map((note) => ({
+            id: note.id,
+            title: note.title,
+            topicKey: note.topicKey,
+            preview: "",
+          })),
       ),
     get: (id) => {
       const note = notes.find((candidate) => candidate.id === id);
@@ -187,6 +195,16 @@ describe("memory save", () => {
     expect(saved?.content).toBe(`${existing}\n\n## r2 — landed (2026-11-22)\n- a\n- b`);
   });
 
+  test("finds the existing note when the title search does not return it", async () => {
+    const existing = "# emet lessons: emet spec-12\n\n## r1 — hold (2026-11-01)\n- first";
+    const client = fakeClient(
+      [{ id: 9, title: "t", topicKey: "emet/emet/lessons/spec-12", content: existing }],
+      { searchOnly: (query) => (query === "emet/emet/lessons/spec-12" ? [9] : []) },
+    );
+    await run(flags, depsFor(client, { readStdin: () => Promise.resolve("- a") }));
+    expect(client.saved[0]?.content).toBe(`${existing}\n\n## r2 — landed (2026-11-22)\n- a`);
+  });
+
   test("starts a new note when none exists", async () => {
     const client = fakeClient([]);
     await run(flags, depsFor(client, { readStdin: () => Promise.resolve("- only") }));
@@ -268,5 +286,36 @@ describe("mergeNote", () => {
     expect(merged).toContain("## r2");
     expect(merged.endsWith("## r3\n- new")).toBe(true);
     expect(merged.startsWith("# head")).toBe(true);
+  });
+});
+
+describe("defaultRepoName", () => {
+  const roots: string[] = [];
+
+  function makeRepo(remoteUrl: string | null): string {
+    const root = mkdtempSync(path.join(tmpdir(), "memory-repo-"));
+    roots.push(root);
+    Bun.spawnSync(["git", "init", "-q", root]);
+    if (remoteUrl !== null) {
+      Bun.spawnSync(["git", "-C", root, "remote", "add", "origin", remoteUrl]);
+    }
+    return root;
+  }
+
+  afterEach(() => {
+    for (const root of roots.splice(0)) rmSync(root, { recursive: true, force: true });
+  });
+
+  test.each([
+    "git@github.com:org/emet.git",
+    "https://github.com/org/emet/",
+    "https://github.com/org/emet.git",
+  ])("takes the last remote segment from %s", async (url) => {
+    expect(await defaultRepoName(makeRepo(url), "origin")).toBe("emet");
+  });
+
+  test("falls back to the main worktree basename without a remote", async () => {
+    const root = makeRepo(null);
+    expect(await defaultRepoName(root, "origin")).toBe(path.basename(root));
   });
 });

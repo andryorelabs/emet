@@ -68,7 +68,7 @@ async function gitText(cwd: string, args: readonly string[]): Promise<string | n
  * The repo name lessons are keyed under: the last path segment of the remote
  * URL with `.git` stripped, else the basename of the main worktree.
  */
-async function defaultRepoName(repoRoot: string, remote: string): Promise<string> {
+export async function defaultRepoName(repoRoot: string, remote: string): Promise<string> {
   const remoteUrl = await gitText(repoRoot, ["remote", "get-url", remote]);
   const fromRemote = remoteUrl === null ? "" : lastSegment(remoteUrl);
   if (fromRemote !== "") return fromRemote;
@@ -210,6 +210,17 @@ async function runSearch(
   );
 }
 
+async function findNote(
+  client: EngramClient,
+  queries: readonly string[],
+  topicKey: string,
+): Promise<{ id: number } | undefined> {
+  const results = await Promise.all(
+    queries.map((query) => client.search(query, EXISTING_NOTE_SEARCH_LIMIT)),
+  );
+  return results.flat().find((hit) => hit.topicKey === topicKey);
+}
+
 async function runSave(
   client: EngramClient,
   request: SaveRequest,
@@ -218,8 +229,7 @@ async function runSave(
 ): Promise<string> {
   const topicKey = `emet/${repo}/lessons/${request.key}`;
   const title = `emet lessons: ${repo} ${request.key}`;
-  const hits = await client.search(title, EXISTING_NOTE_SEARCH_LIMIT);
-  const match = hits.find((hit) => hit.topicKey === topicKey);
+  const match = await findNote(client, [title, topicKey, request.key], topicKey);
   const existing = match === undefined ? "" : (await client.get(match.id)).content;
   const section = [
     `## ${request.runId} — ${request.outcome} (${date})`,
