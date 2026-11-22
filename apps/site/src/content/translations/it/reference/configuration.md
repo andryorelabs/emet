@@ -222,6 +222,14 @@ Dual review: quando `emet assess` stampa `dualReview.run: true` (livello `high`,
 
 - `enabled` (`"auto"` oppure `"off"`, predefinito `"auto"`): controlla [`emet memory`](cli.md#esecuzioni-worker-e-slot). Con `auto`, il comando usa Engram quando il binario `engram` è nel PATH e il suo handshake riesce. `off` fa sì che `emet memory search` e `emet memory save` stampino `{available: false, reason: "memory.enabled is off"}` ed escano con 0 senza avviare `engram`. Qualsiasi altro valore fallisce al caricamento con `"memory.enabled" must be one of auto|off`.
 
+## attention
+
+```json
+{ "attention": { "alert": true } }
+```
+
+- `alert` (booleano, predefinito `true`): alla sola transizione di una sessione verso `needs-decision`, emet lancia un solo avviso. Se `orca status --json` segnala un runtime raggiungibile, imposta un commento non letto sul worktree principale con `orca worktree set`; altrimenti esegue `notify-send` quando è nel PATH; altrimenti non fa nulla. Ogni chiamata esterna ha un timeout di 3 s e un errore non cambia mai il risultato del guard. Uscire da `needs-decision` non cancella mai il segno non letto di Orca. Imposta `false` per disattivare l'avviso.
+
 ## landing
 
 - `mode` (predefinito `pr`): `pr` apre una pull request (richiede `gh`). `merge` unisce il branch di integrazione nel trunk locale con `emet land` e non fa mai push, con `commands.selfCheck` al posto della CI. Indipendente dal tracker. Vedi [ADR-0010](../adr/0010-local-merge-landing.md).
