@@ -8,6 +8,23 @@ and this project adheres to
 
 ## [Unreleased]
 
+## [0.18.0] - 2026-11-22
+
+### Added
+
+- `emet review --ticket <t> --coverage <file|-> [--expect S1,S3]` stores Coverage verdicts in the ledger. A `met` verdict whose test is missing or not found in the working tree, and an expected S# with no verdict, each open a `VG-S<n>` finding.
+- `emet review --base <ref>` stores the review base on the first round and marks a finding on a line the wave did not touch as `preexisting`. `emet gate` never counts a pre-existing finding as blocking.
+- Findings accept the optional fields `s`, `userOption` and `agreement`. An open finding with `userOption` blocks at every tier and severity, and the gate answers `hold` with `next: "fix-findings"`. Phase 2 writes an S# that comes from an option the user chose as `(user option)`.
+- `emet review --merge <a.json> <b.json>` merges two findings arrays into one. Findings pair when they share `s`, or share `file` with lines at most 3 apart, and each gets `agreement: "both"` or `"single"`.
+- `emet assess` prints `dualReview: {run, reason}`, and `review.dual` (`auto` or `off`, default `auto`) is added to the config schemas. On the Claude host with `codex` on PATH, a `high` wave runs a Dual review: `emet:emet-reviewer` and `emet review-run --tier high --coverage-out <file>` in parallel, then `emet review --merge`.
+- `emet review-run --coverage-out <file>` writes the Codex reviewer's Coverage verdicts, and its output schema accepts nullable `s` and `userOption`.
+- `docs/reference/cli.md` and `docs/reference/configuration.md` document the review changes, in all nine locales.
+
+### Changed
+
+- The reviewer prompt and `agents/emet-reviewer.md` ask for a Coverage verdicts file, `.emet/coverage-<run>.json`, instead of a prose `S<n>: met | partial | unmet` line. Phase 8 records the verdicts with `emet review --coverage` and lists pre-existing findings in the wave report without fixing them.
+- Without `--base`, `--coverage`, `--merge` or a Dual review, every command behaves as on 0.17.0.
+
 ## [0.17.0] - 2026-11-22
 
 ### Added
@@ -569,7 +586,8 @@ and this project adheres to
 - Per-repo configuration through `forge.config.json`.
 - `install.sh`, which installs the CLI, command and agents.
 
-[Unreleased]: https://github.com/andryorelabs/emet/compare/v0.17.0...HEAD
+[Unreleased]: https://github.com/andryorelabs/emet/compare/v0.18.0...HEAD
+[0.18.0]: https://github.com/andryorelabs/emet/compare/v0.17.0...v0.18.0
 [0.17.0]: https://github.com/andryorelabs/emet/compare/v0.16.0...v0.17.0
 [0.16.0]: https://github.com/andryorelabs/emet/compare/v0.15.0...v0.16.0
 [0.15.0]: https://github.com/andryorelabs/emet/compare/v0.14.5...v0.15.0

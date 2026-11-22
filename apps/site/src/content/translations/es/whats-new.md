@@ -2,8 +2,27 @@
 title: Novedades
 description: Notas de versión de emet: qué cambió en cada versión.
 seoTitle: Novedades de emet: notas de versión
-sourceHash: 32b42447b1d1875a
+sourceHash: d0c15a0312936cf4
 ---
+
+## 0.18.0
+
+2026-11-22
+
+### Añadido
+
+- `emet review --ticket <t> --coverage <file|-> [--expect S1,S3]` guarda Coverage verdicts en el ledger. Un veredicto `met` cuyo test falta o no se encuentra en el árbol de trabajo, y un S# esperado sin veredicto, abren cada uno un finding `VG-S<n>`.
+- `emet review --base <ref>` guarda la base de la revisión en la primera ronda y marca como `preexisting` un finding en una línea que la wave no tocó. `emet gate` nunca cuenta un finding preexistente como bloqueante.
+- Los findings aceptan los campos opcionales `s`, `userOption` y `agreement`. Un finding abierto con `userOption` bloquea en todos los niveles y severidades, y el gate responde `hold` con `next: "fix-findings"`. La Phase 2 escribe un S# que viene de una opción elegida por el usuario como `(user option)`.
+- `emet review --merge <a.json> <b.json>` fusiona dos arrays de findings en uno. Los findings se emparejan cuando comparten `s`, o comparten `file` con líneas a lo sumo 3 de distancia, y reciben `agreement: "both"` o `"single"`.
+- `emet assess` imprime `dualReview: {run, reason}`, y `review.dual` (`auto` u `off`, por defecto `auto`) se añade a los esquemas de configuración. En el host Claude con `codex` en el PATH, una wave `high` ejecuta una Dual review: `emet:emet-reviewer` y `emet review-run --tier high --coverage-out <file>` en paralelo, y luego `emet review --merge`.
+- `emet review-run --coverage-out <file>` escribe los Coverage verdicts del revisor Codex, y su esquema de salida acepta `s` y `userOption` anulables.
+- `docs/reference/cli.md` y `docs/reference/configuration.md` documentan los cambios de revisión, en los nueve idiomas.
+
+### Cambiado
+
+- El prompt del revisor y `agents/emet-reviewer.md` piden un archivo de Coverage verdicts, `.emet/coverage-<run>.json`, en lugar de una línea en prosa `S<n>: met | partial | unmet`. La Phase 8 registra los veredictos con `emet review --coverage` y lista los findings preexistentes en el informe de la wave sin corregirlos.
+- Sin `--base`, `--coverage`, `--merge` ni una Dual review, cada comando se comporta como en 0.17.0.
 
 ## 0.17.0
 

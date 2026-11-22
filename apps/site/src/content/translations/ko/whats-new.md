@@ -2,8 +2,27 @@
 title: 새로운 소식
 description: emet 릴리스 노트. 각 버전에서 무엇이 바뀌었는지 정리합니다.
 seoTitle: "emet 새로운 소식: 릴리스 노트"
-sourceHash: 32b42447b1d1875a
+sourceHash: d0c15a0312936cf4
 ---
+
+## 0.18.0
+
+2026-11-22
+
+### 추가됨
+
+- `emet review --ticket <t> --coverage <file|-> [--expect S1,S3]`는 Coverage verdicts를 ledger에 저장합니다. 테스트가 없거나 작업 트리에서 찾을 수 없는 `met` 판정과, 판정이 없는 기대 S#는 각각 `VG-S<n>` finding을 엽니다.
+- `emet review --base <ref>`는 첫 라운드에서 리뷰 기준을 저장하고, wave가 건드리지 않은 줄의 finding을 `preexisting`으로 표시합니다. `emet gate`는 기존 finding을 차단 항목으로 세지 않습니다.
+- finding은 선택 필드 `s`, `userOption`, `agreement`를 받습니다. `userOption`이 있는 열린 finding은 모든 tier와 severity에서 차단하며, gate는 `hold`와 `next: "fix-findings"`로 응답합니다. Phase 2는 사용자가 고른 옵션에서 나온 S#를 `(user option)`으로 적습니다.
+- `emet review --merge <a.json> <b.json>`은 두 finding 배열을 하나로 병합합니다. `s`가 같거나 `file`이 같고 줄 간격이 3줄 이하인 finding은 짝지어지며 `agreement: "both"` 또는 `"single"`이 붙습니다.
+- `emet assess`는 `dualReview: {run, reason}`을 출력하고, `review.dual`(`auto` 또는 `off`, 기본값 `auto`)이 설정 스키마에 추가됩니다. `codex`가 PATH에 있는 Claude 호스트에서 `high` wave는 Dual review를 실행합니다. `emet:emet-reviewer`와 `emet review-run --tier high --coverage-out <file>`을 병렬로 실행한 뒤 `emet review --merge`를 수행합니다.
+- `emet review-run --coverage-out <file>`은 Codex 리뷰어의 Coverage verdicts를 기록하며, 출력 스키마는 null 가능한 `s`와 `userOption`을 받습니다.
+- `docs/reference/cli.md`와 `docs/reference/configuration.md`에 리뷰 변경 사항을 문서화했습니다(9개 언어 모두).
+
+### 변경됨
+
+- 리뷰어 프롬프트와 `agents/emet-reviewer.md`는 산문 형태의 `S<n>: met | partial | unmet` 줄 대신 Coverage verdicts 파일 `.emet/coverage-<run>.json`을 요구합니다. Phase 8은 `emet review --coverage`로 판정을 기록하고, 기존 finding은 수정하지 않고 wave 보고서에 나열합니다.
+- `--base`, `--coverage`, `--merge`, Dual review를 쓰지 않으면 모든 명령은 0.17.0과 동일하게 동작합니다.
 
 ## 0.17.0
 
