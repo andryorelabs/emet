@@ -2,8 +2,21 @@
 title: 新功能
 description: emet 的发布说明：每个版本都有哪些变化。
 seoTitle: "emet 新功能：发布说明"
-sourceHash: 946f5971d5a42a0b
+sourceHash: a4abfa547d27b4af
 ---
+
+## 0.20.0
+
+2026-11-22
+
+### 新增
+
+- 当 emet 自有的会话在 `working`、`idle`、`needs-decision` 和 `ended` 之间切换状态时，`emet guard` 会在 journal 中记录一个 `session.attention` 事件，格式为 `{sessionId, state, from, trigger}`。只有当状态与该会话上一次记录的状态不同时才会追加事件。journal 从不存储通知文本、prompt 或工具输入，且记录行为不会改变 guard 的裁决、stdout 或退出码。
+- `hooks/hooks.json` 和 `install.sh` 将 `Notification`、`PermissionRequest`、`SessionEnd` 和 `UserPromptSubmit` 这几个 hook 事件接入 `emet guard --event <Event>`。`install.sh` 保持幂等。`codex/hooks.json` 不变。
+- `emet status` 的 JSON 新增 `sessions: [{sessionId, state, blocked, since, runId}]`，即该仓库在过去 24 小时内每个会话的最新状态，不含 `ended`。被阻塞的会话会使整体状态变为 `needs-decision`，并在摘要行和 `--brief` 中点名。
+- `emet fleet status [--json]` 根据全局 journal 按仓库输出各会话的最新状态，被阻塞的仓库排在最前。
+- 在转入 `needs-decision` 时，emet 会发出一次提醒：Orca 可访问时，在该仓库的 Orca worktree 上添加未读标记和评论，否则在 PATH 中有 `notify-send` 时使用它。`attention.alert`（布尔值，默认 `true`）已加入配置 schema，可将其关闭。
+- `docs/reference/cli.md`、`docs/reference/configuration.md` 和 `docs/guide/fleet.md` 记录了会话注意力功能，涵盖全部九种语言。
 
 ## 0.19.0
 

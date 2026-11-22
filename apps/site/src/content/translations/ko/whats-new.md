@@ -2,8 +2,21 @@
 title: 새로운 소식
 description: emet 릴리스 노트. 각 버전에서 무엇이 바뀌었는지 정리합니다.
 seoTitle: "emet 새로운 소식: 릴리스 노트"
-sourceHash: 946f5971d5a42a0b
+sourceHash: a4abfa547d27b4af
 ---
+
+## 0.20.0
+
+2026-11-22
+
+### 추가됨
+
+- `emet guard`는 emet이 소유한 세션의 상태가 `working`, `idle`, `needs-decision`, `ended` 사이에서 바뀔 때 `session.attention` 저널 이벤트 `{sessionId, state, from, trigger}`를 기록합니다. 이벤트는 상태가 해당 세션에 마지막으로 기록된 상태와 다를 때만 추가됩니다. 저널에는 알림 텍스트, 프롬프트, 도구 입력을 저장하지 않으며, 기록이 guard의 판정, stdout, 종료 코드를 바꾸는 일은 없습니다.
+- `hooks/hooks.json`과 `install.sh`는 `Notification`, `PermissionRequest`, `SessionEnd`, `UserPromptSubmit` 훅 이벤트를 `emet guard --event <Event>`에 연결합니다. `install.sh`는 계속 멱등성을 유지합니다. `codex/hooks.json`은 바뀌지 않습니다.
+- `emet status` JSON에 `sessions: [{sessionId, state, blocked, since, runId}]`가 추가되었습니다. 저장소의 최근 24시간 동안 각 세션의 최신 상태이며 `ended`는 제외됩니다. 차단된 세션이 있으면 전체 상태가 `needs-decision`이 되고, 요약 줄과 `--brief`에 해당 세션이 표시됩니다.
+- `emet fleet status [--json]`은 전역 저널에서 저장소별 최신 세션 상태를 차단된 저장소부터 출력합니다.
+- `needs-decision`으로 전환될 때 emet은 알림을 한 번만 보냅니다. Orca에 연결할 수 있으면 저장소의 Orca 워크트리에 읽지 않음 표시와 댓글을 남기고, 그렇지 않으면 PATH에 `notify-send`가 있을 때 이를 사용합니다. `attention.alert`(불리언, 기본값 `true`)가 설정 스키마에 추가되었으며 이를 통해 알림을 끌 수 있습니다.
+- `docs/reference/cli.md`, `docs/reference/configuration.md`, `docs/guide/fleet.md`에 세션 어텐션 기능을 문서화했으며, 아홉 개 로캘 모두에 적용됩니다.
 
 ## 0.19.0
 

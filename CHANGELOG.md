@@ -8,6 +8,17 @@ and this project adheres to
 
 ## [Unreleased]
 
+## [0.20.0] - 2026-11-22
+
+### Added
+
+- `emet guard` records a `session.attention` journal event, `{sessionId, state, from, trigger}`, when an emet-owned session changes state between `working`, `idle`, `needs-decision` and `ended`. An event is appended only when the state differs from the session's last recorded one. The journal never stores notification text, prompts or tool input, and recording never changes a guard verdict, stdout or exit code.
+- `hooks/hooks.json` and `install.sh` wire the `Notification`, `PermissionRequest`, `SessionEnd` and `UserPromptSubmit` hook events to `emet guard --event <Event>`. `install.sh` stays idempotent. `codex/hooks.json` is unchanged.
+- `emet status` JSON gains `sessions: [{sessionId, state, blocked, since, runId}]`, the latest state of each session of the repo in the last 24 hours, excluding `ended`. A blocked session makes the overall state `needs-decision` and is named in the summary line and in `--brief`.
+- `emet fleet status [--json]` prints the latest session states per repo from the global journal, blocked repos first.
+- On a transition into `needs-decision`, emet raises one alert: an unread mark and comment on the repo's Orca worktree when Orca is reachable, otherwise `notify-send` when it is on PATH. `attention.alert` (boolean, default `true`) is added to the config schemas and turns it off.
+- `docs/reference/cli.md`, `docs/reference/configuration.md` and `docs/guide/fleet.md` document the session attention features, in all nine locales.
+
 ## [0.19.0] - 2026-11-22
 
 ### Added
@@ -600,7 +611,8 @@ and this project adheres to
 - Per-repo configuration through `forge.config.json`.
 - `install.sh`, which installs the CLI, command and agents.
 
-[Unreleased]: https://github.com/andryorelabs/emet/compare/v0.19.0...HEAD
+[Unreleased]: https://github.com/andryorelabs/emet/compare/v0.20.0...HEAD
+[0.20.0]: https://github.com/andryorelabs/emet/compare/v0.19.0...v0.20.0
 [0.19.0]: https://github.com/andryorelabs/emet/compare/v0.18.0...v0.19.0
 [0.18.0]: https://github.com/andryorelabs/emet/compare/v0.17.0...v0.18.0
 [0.17.0]: https://github.com/andryorelabs/emet/compare/v0.16.0...v0.17.0
