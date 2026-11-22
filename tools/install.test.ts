@@ -398,7 +398,7 @@ describeInstaller("install.sh over an install with phases-8-closeout.md", () => 
 });
 
 interface HookSettings {
-  hooks?: Record<string, { hooks?: { type?: string; command?: string }[] }[]>;
+  hooks?: Record<string, { matcher?: string; hooks?: { type?: string; command?: string }[] }[]>;
 }
 
 /** Reads settings.json as hook settings. */
@@ -414,6 +414,9 @@ function hookCommands(settings: HookSettings): string[] {
     groups.flatMap((group) => (group.hooks ?? []).map((hook) => hook.command ?? "")),
   );
 }
+
+/** The hook events whose guard runs record a session's attention state. */
+const attentionEvents = ["Notification", "PermissionRequest", "SessionEnd", "UserPromptSubmit"];
 
 const legacyFiles = {
   ".claude/forge/bin/forge.ts": "legacy entry\n",
@@ -515,6 +518,7 @@ describeInstaller("install.sh over a legacy forge install", () => {
       "other-hook",
       `${emetGuard} --event SubagentStop`,
       `${emetGuard} --event Stop`,
+      ...attentionEvents.map((event) => `${emetGuard} --event ${event}`),
     ];
     expect(hookCommands(readHookSettings(settingsPath))).toEqual(expectedCommands);
     expect(readFileSync(settingsPath, "utf8")).toContain('"model": "opusplan"');
@@ -540,6 +544,39 @@ describeInstaller("install.sh over a legacy forge install", () => {
       command.endsWith("--event Stop"),
     );
     expect(stopCommands).toEqual([emetStop]);
+  });
+});
+
+describeInstaller("install.sh attention hooks", () => {
+  test("wires each attention event once, keeping other hooks, and re-running is safe", () => {
+    const settingsPath = path.join(homeDir, ".claude/settings.json");
+    mkdirSync(path.dirname(settingsPath), { recursive: true });
+    writeFileSync(
+      settingsPath,
+      JSON.stringify({
+        hooks: { Notification: [{ hooks: [{ type: "command", command: "other-notify" }] }] },
+      }),
+    );
+    const emetGuard = `${homeDir}/.local/bin/emet guard`;
+
+    for (let run = 0; run < 2; run += 1) {
+      expect(runInstaller().exitCode).toBe(0);
+      const settings = readHookSettings(settingsPath);
+      for (const event of attentionEvents) {
+        const commands = (settings.hooks?.[event] ?? []).flatMap((group) =>
+          (group.hooks ?? []).map((hook) => hook.command ?? ""),
+        );
+        expect(
+          commands.filter((command) => command === `${emetGuard} --event ${event}`),
+        ).toHaveLength(1);
+      }
+      expect(hookCommands(settings)).toContain("other-notify");
+      expect(settings.hooks?.PermissionRequest?.[0]?.matcher).toBe("*");
+    }
+    const backups = readdirSync(path.dirname(settingsPath)).filter((name) =>
+      name.startsWith("settings.json.pre-emet-guard-backup."),
+    );
+    expect(backups.length).toBeGreaterThan(0);
   });
 });
 

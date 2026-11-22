@@ -2,8 +2,21 @@
 title: Neuigkeiten
 description: Release Notes für emet: was sich in jeder Version geändert hat.
 seoTitle: "Neuigkeiten in emet: Release Notes"
-sourceHash: 946f5971d5a42a0b
+sourceHash: a4abfa547d27b4af
 ---
+
+## 0.20.0
+
+2026-11-22
+
+### Hinzugefügt
+
+- `emet guard` schreibt ein `session.attention`-Journal-Event, `{sessionId, state, from, trigger}`, wenn eine von emet verwaltete Session ihren Zustand zwischen `working`, `idle`, `needs-decision` und `ended` wechselt. Ein Event wird nur angehängt, wenn sich der Zustand vom zuletzt aufgezeichneten der Session unterscheidet. Das Journal speichert nie Benachrichtigungstexte, Prompts oder Tool-Eingaben, und die Aufzeichnung ändert weder das Urteil, noch stdout oder den Exit-Code von guard.
+- `hooks/hooks.json` und `install.sh` binden die Hook-Events `Notification`, `PermissionRequest`, `SessionEnd` und `UserPromptSubmit` an `emet guard --event <Event>`. `install.sh` bleibt idempotent. `codex/hooks.json` bleibt unverändert.
+- Das JSON von `emet status` erhält `sessions: [{sessionId, state, blocked, since, runId}]`, den jeweils letzten Zustand jeder Session des Repos in den letzten 24 Stunden, ohne `ended`. Eine blockierte Session setzt den Gesamtzustand auf `needs-decision` und wird in der Zusammenfassungszeile und in `--brief` genannt.
+- `emet fleet status [--json]` gibt die letzten Session-Zustände je Repo aus dem globalen Journal aus, blockierte Repos zuerst.
+- Bei einem Übergang in `needs-decision` löst emet einen Alert aus: eine Ungelesen-Markierung und einen Kommentar am Orca-Worktree des Repos, wenn Orca erreichbar ist, sonst `notify-send`, falls es im PATH liegt. `attention.alert` (Boolean, Standard `true`) kommt in die Config-Schemas und schaltet ihn ab.
+- `docs/reference/cli.md`, `docs/reference/configuration.md` und `docs/guide/fleet.md` dokumentieren die Session-Attention-Funktionen, in allen neun Sprachen.
 
 ## 0.19.0
 

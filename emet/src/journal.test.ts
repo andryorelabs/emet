@@ -14,6 +14,7 @@ import path from "node:path";
 import {
   appendEvent,
   readJournalSegments,
+  readRecentEvents,
   rotateIfNeeded,
   type JournalDeps,
   type JournalEvent,
@@ -245,5 +246,43 @@ describe("readJournalSegments", () => {
     const result = readJournalSegments(deps);
     expect(result.events).toHaveLength(1);
     expect(result.skippedLines).toBe(4);
+  });
+});
+
+describe("readRecentEvents", () => {
+  test("accepts the session.attention kind", () => {
+    appendEvent({ ...event({ sessionId: "s1" }), kind: "session.attention" }, deps);
+    expect(stored().map((entry) => entry.kind)).toEqual(["session.attention"]);
+  });
+
+  test("is empty for a missing journal", () => {
+    expect(readRecentEvents(1024, () => true, deps)).toEqual([]);
+  });
+
+  test("returns the matching events of the current file newest first", () => {
+    for (let n = 1; n <= 4; n += 1) appendEvent(event({ n }), deps);
+    const events = readRecentEvents(1024 * 1024, (line) => !line.includes('"n":2'), deps);
+    expect(events.map((each) => each.data.n)).toEqual([4, 3, 1]);
+  });
+
+  test("reads only the last bytes and drops the partial first line", () => {
+    for (let n = 1; n <= 3; n += 1) appendEvent(event({ n }), deps);
+    const lineBytes = Buffer.byteLength(currentLines()[2] ?? "") + 1;
+    const events = readRecentEvents(lineBytes + 10, () => true, deps);
+    expect(events.map((each) => each.data.n)).toEqual([3]);
+  });
+
+  test("ignores rotated segments and skips invalid lines", () => {
+    deps = { ...deps, rotateAtBytes: 10 };
+    appendEvent(event({ n: 1 }), deps);
+    appendEvent(event({ n: 2 }), deps);
+    const file = path.join(directory, "events.jsonl");
+    writeFileSync(file, `${readFileSync(file, "utf8")}{"v":2}\nnot json\n`);
+    expect(readRecentEvents(1024, () => true, deps).map((each) => each.data.n)).toEqual([2]);
+  });
+
+  test("is empty when the journal path is not readable", () => {
+    mkdirSync(path.join(directory, "events.jsonl"), { recursive: true });
+    expect(readRecentEvents(1024, () => true, deps)).toEqual([]);
   });
 });

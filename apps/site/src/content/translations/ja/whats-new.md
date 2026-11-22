@@ -2,8 +2,21 @@
 title: 新機能
 description: emet のリリースノート。各バージョンでの変更点をまとめています。
 seoTitle: "emet の新機能: リリースノート"
-sourceHash: 946f5971d5a42a0b
+sourceHash: a4abfa547d27b4af
 ---
+
+## 0.20.0
+
+2026-11-22
+
+### 追加
+
+- `emet guard` は、emet が所有するセッションの状態が `working`、`idle`、`needs-decision`、`ended` の間で変わったときに、`session.attention` ジャーナルイベント `{sessionId, state, from, trigger}` を記録します。イベントが追記されるのは、状態がそのセッションで最後に記録された状態と異なる場合だけです。ジャーナルには通知テキスト、プロンプト、ツール入力を保存せず、記録が guard の判定、stdout、終了コードを変えることはありません。
+- `hooks/hooks.json` と `install.sh` は、フックイベント `Notification`、`PermissionRequest`、`SessionEnd`、`UserPromptSubmit` を `emet guard --event <Event>` に接続します。`install.sh` は冪等のままです。`codex/hooks.json` は変更されません。
+- `emet status` の JSON に `sessions: [{sessionId, state, blocked, since, runId}]` が加わりました。リポジトリの過去 24 時間のセッションごとの最新状態で、`ended` は除外されます。ブロックされたセッションがあると全体の状態が `needs-decision` になり、サマリー行と `--brief` にその名前が表示されます。
+- `emet fleet status [--json]` は、グローバルジャーナルからリポジトリごとの最新のセッション状態を、ブロックされたリポジトリを先頭にして出力します。
+- `needs-decision` への遷移時に、emet はアラートを 1 回だけ発します。Orca に接続できる場合はリポジトリの Orca ワークツリーに未読マークとコメントを付け、できない場合は PATH に `notify-send` があればそれを使います。`attention.alert`(ブール値、デフォルトは `true`)が設定スキーマに追加され、これでアラートをオフにできます。
+- `docs/reference/cli.md`、`docs/reference/configuration.md`、`docs/guide/fleet.md` にセッションのアテンション機能を記載しました(9 ロケールすべて)。
 
 ## 0.19.0
 

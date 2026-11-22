@@ -2,7 +2,7 @@
 title: Controllo della flotta
 description: Controlla un numero qualsiasi di repository in una volta con emet doctor, in sola lettura, e scopri quali richiedono attenzione.
 seoTitle: "Controllo della flotta: più repo con emet doctor"
-sourceHash: 7b3c5a56abfffcc1
+sourceHash: 5eef774032962f35
 ---
 
 Usi già emet in più repo? `emet doctor` ne controlla un numero qualsiasi in una volta, in sola lettura:
@@ -30,3 +30,14 @@ emet fleet launch --feature "add dark mode" --repos app,site
 - `launch --feature <text>` apre una sessione `/emet:run --draft <text>` in ogni repo, dopo gli stessi controlli di prontezza di `emet chain`. `--repos` la limita a un elenco separato da virgole.
 
 Ogni sonda è limitata a 5 s, così un `gh auth status` bloccato (senza rete) non può fermare un'ondata. Le `preflight.requiredCommands` di un repo sono un elenco, gestito dal repo, di binari che `emet preflight` e `emet doctor` richiedono nel PATH. Vedi il [riferimento della CLI](../reference/cli.md#controllo-della-flotta) e il [riferimento della configurazione](../reference/configuration.md#preflight).
+
+## Vedere le sessioni bloccate
+
+Quando una sessione attende una decisione, `emet fleet status` mostra quali repo hanno sessioni bloccate, quelli bloccati per primi:
+
+```bash
+emet fleet status
+emet fleet status --json
+```
+
+Legge il journal globale, quindi non serve alcuna radice né alcun controllo sui repo. Per ogni repo stampa `<repo>: <b> blocked, <w> working, <i> idle`, considerando le sessioni delle ultime 24 ore (esclusa `ended`). Dentro un repo, `emet status` elenca le sessioni in `sessions[]`. Per disattivare l'avviso alla transizione, imposta [`attention.alert`](../reference/configuration.md#attention) a `false`.
