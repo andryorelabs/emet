@@ -2,8 +2,24 @@
 title: 새로운 소식
 description: emet 릴리스 노트. 각 버전에서 무엇이 바뀌었는지 정리합니다.
 seoTitle: "emet 새로운 소식: 릴리스 노트"
-sourceHash: d0c15a0312936cf4
+sourceHash: 946f5971d5a42a0b
 ---
+
+## 0.19.0
+
+2026-11-22
+
+### 추가됨
+
+- `emet memory search --json <query> [--limit <n>]`와 `emet memory save --json --key <spec-<id>|quick-<runId>> --run <runId> --outcome <outcome>`은 Engram의 Lessons를 읽고 씁니다. `search`는 토픽 키가 `emet/<repo>/lessons/`로 시작하는 노트만 남겨 전체 내용을 출력하고, `save`는 stdin으로 받은 1~5개의 글머리 기호를 spec 또는 quick run의 노트에 run마다 한 섹션씩 추가합니다. 둘 다 JSON 객체 하나를 출력하며, Engram 문제는 항상 exit 0으로, 잘못된 사용만 exit 2로 종료합니다.
+- `memory.enabled`(`auto` 또는 `off`, 기본값 `auto`)가 설정 스키마에 추가됩니다. `off`는 `engram`을 절대 실행하지 않습니다.
+- Phase 1은 첫 인터뷰 라운드 전에 메모리에서 이전 Lessons를 검색하고, 관련 있는 항목을 계획 파일의 `## Prior lessons` 아래에 기록합니다. wave와 quick 인계는 최종 보고서 전에 해당 run의 Lessons를 저장합니다. `--draft`는 아무것도 저장하지 않습니다.
+- `docs/reference/cli.md`와 `docs/reference/configuration.md`에 `emet memory`와 `memory.enabled`를 문서화했습니다(9개 언어 모두).
+
+### 변경됨
+
+- Codex 빌드는 생성된 reference에 `mcp__engram`이 있으면 거부하므로, Engram 도구 이름이 Codex 플러그인에 도달하지 않습니다.
+- `/emet:run` 프롬프트에 위의 메모리 단계가 추가됩니다. PATH에 `engram`이 없거나 `memory.enabled: "off"`이면 각 단계는 한 줄 메모가 되고 run은 0.18.0처럼 계속됩니다.
 
 ## 0.18.0
 

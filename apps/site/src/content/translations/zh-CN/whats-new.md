@@ -2,8 +2,24 @@
 title: 新功能
 description: emet 的发布说明：每个版本都有哪些变化。
 seoTitle: "emet 新功能：发布说明"
-sourceHash: d0c15a0312936cf4
+sourceHash: 946f5971d5a42a0b
 ---
+
+## 0.19.0
+
+2026-11-22
+
+### 新增
+
+- `emet memory search --json <query> [--limit <n>]` 和 `emet memory save --json --key <spec-<id>|quick-<runId>> --run <runId> --outcome <outcome>` 在 Engram 中读写 Lessons。`search` 保留 topic key 以 `emet/<repo>/lessons/` 开头的笔记并输出其完整内容，`save` 为每个 run 向 spec 或 quick run 的笔记追加一个小节，内容为来自 stdin 的 1 到 5 条 bullet。两者都输出一个 JSON 对象，遇到任何 Engram 问题都以 0 退出，仅在用法错误时以 2 退出。
+- 配置 schema 新增 `memory.enabled`（`auto` 或 `off`，默认 `auto`）。`off` 从不启动 `engram`。
+- Phase 1 在第一轮访谈之前在记忆中搜索先前的 Lessons，并把相关的写入计划文件的 `## Prior lessons` 之下。wave 和 quick 的交接会在最终报告之前保存该 run 的 Lessons。`--draft` 不保存任何内容。
+- `docs/reference/cli.md` 和 `docs/reference/configuration.md` 记录了 `emet memory` 和 `memory.enabled`，覆盖全部九种语言。
+
+### 变更
+
+- Codex 构建会拒绝生成的参考文档中出现 `mcp__engram`，因此 Engram 工具名从不会进入 Codex 插件。
+- `/emet:run` 提示词新增上述记忆步骤；PATH 中没有 `engram`，或 `memory.enabled: "off"` 时，每个步骤只是一行说明，run 照常继续，与 0.18.0 相同。
 
 ## 0.18.0
 
