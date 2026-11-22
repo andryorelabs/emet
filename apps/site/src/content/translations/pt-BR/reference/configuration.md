@@ -321,6 +321,18 @@ Opcional, somente prosa. `null` ou omitido ignora a etapa de design/revisão de 
 
 - `canvasIndex` (obsoleto): caminho para um arquivo de canvas de design que os workers consultam antes de mudanças de UI.
 
+## attention
+
+Opcional.
+
+- `alert` (padrão `true`, booleano): quando uma sessão entra em `needs-decision`, o emet levanta um único alerta: uma marca de não lido do Orca no worktree principal quando o runtime do Orca está acessível, caso contrário `notify-send` quando ele está no PATH, caso contrário nada. `false` desativa o alerta.
+
+Exemplo:
+
+```json
+{ "attention": { "alert": true } }
+```
+
 ## Variáveis de ambiente
 
 A CLI lê estas variáveis, todas por meio de `emet/src/env.ts`. Uma variável com grafia `FORGE_` ainda funciona como alternativa ao seu nome `EMET_` e imprime um aviso uma única vez. Valores vazios contam como não definidos. `tools/env-docs.test.ts` mantém esta tabela e o código em sincronia.
