@@ -66,13 +66,34 @@ describe("validate run", () => {
   });
 
   test("an uncovered spec item exits 1 and reports the finding", async () => {
-    const file = writePlan({ spec: SPEC, tickets: [] });
+    const file = writePlan({
+      spec: `${SPEC}- **S2**: other.\n  Scenario: WHEN a THEN b\n`,
+      tickets: [{ id: "A", covers: ["S1"], surfaces: ["src/a.ts"] }],
+    });
     const result = await invoke(["--file", file]);
     expect(result.code).toBe(1);
     expect(JSON.parse(result.out[0] ?? "")).toMatchObject({
       findings: [{ code: "uncovered-spec-item" }],
     });
     expect(result.err[0]).toStartWith("error:");
+  });
+
+  test("an empty plan exits 1 with a no-tickets error", async () => {
+    const result = await invoke(["--file", writePlan({ spec: SPEC, tickets: [] })]);
+    expect(result.code).toBe(1);
+    expect(JSON.parse(result.out[0] ?? "")).toMatchObject({
+      ok: false,
+      findings: [{ severity: "error", code: "no-tickets" }, { code: "uncovered-spec-item" }],
+    });
+  });
+
+  test("one folded ticket covering every S# exits 0", async () => {
+    const file = writePlan({
+      spec: SPEC,
+      tickets: [{ id: "T1", covers: ["S1"], surfaces: ["a.ts"], folded: true }],
+    });
+    const result = await invoke(["--file", file]);
+    expect(result.code).toBe(0);
   });
 
   test("a plan without a spec string exits 2", async () => {
