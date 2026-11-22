@@ -2,6 +2,7 @@ import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from 
 import path from "node:path";
 
 import type { AgentHostName } from "./agenthost";
+import { recordAttention } from "./attention";
 import { listReservations, type Reservation } from "./claims";
 import { resolveRepoRoot } from "./config";
 import {
@@ -446,7 +447,7 @@ async function gitOutput(cwd: string, ...args: string[]): Promise<string | null>
   return result.exitCode === 0 ? result.stdout.toString().trim() : null;
 }
 
-async function resolveWorktreeEventOwner(cwd: string): Promise<CompletionEventOwner | null> {
+export async function resolveWorktreeEventOwner(cwd: string): Promise<CompletionEventOwner | null> {
   const topLevel = await gitOutput(cwd, "rev-parse", "--show-toplevel");
   const listing = await gitOutput(cwd, "worktree", "list", "--porcelain");
   if (topLevel === null || listing === null) return null;
@@ -571,13 +572,18 @@ function readEventFlag(argv: readonly string[]): string | null {
 }
 
 /**
- * Whether any worker result recorded for the run is `BLOCKED` or `NEEDS_CONTEXT`.
+ * Whether any worker result recorded for the run is `BLOCKED` or `NEEDS_CONTEXT`,
+ * resolved from the git repo of `cwd` (default: the process cwd).
  * Best effort: any read problem counts as no failure.
  */
-async function runHasUnfinishedTicket(runId: string | null): Promise<boolean> {
+export async function runHasUnfinishedTicket(
+  runId: string | null,
+  cwd: string = process.cwd(),
+): Promise<boolean> {
   if (runId === null) return false;
   try {
     const output = await Bun.$`git rev-parse --path-format=absolute --git-common-dir`
+      .cwd(cwd)
       .nothrow()
       .quiet();
     const commonDirectory = output.stdout.toString().trim();
@@ -669,8 +675,15 @@ export async function run(argv: readonly string[] = process.argv.slice(2)): Prom
 
   const event = readEventFlag(argv);
   const host = detectAgentHost();
+  if (event === "Notification" || event === "PermissionRequest" || event === "SessionEnd") {
+    await recordAttention(event, parsed);
+    return;
+  }
   if (event === "UserPromptSubmit") {
-    if (host !== "codex") return;
+    if (host !== "codex") {
+      await recordAttention(event, parsed);
+      return;
+    }
     try {
       handleUserPromptSubmit(parsed, await resolveRunsDirectory(parsedCwd(parsed)));
     } catch (error) {
@@ -682,6 +695,7 @@ export async function run(argv: readonly string[] = process.argv.slice(2)): Prom
     const stopVerdict = await evaluateStopGuard(event, toStopHookInput(parsed), process.pid);
     const stopOutput = formatStopOutput(stopVerdict);
     if (stopOutput) console.log(stopOutput);
+    if (event === "Stop" && stopVerdict.decision === "allow") await recordAttention(event, parsed);
     return;
   }
 
@@ -692,6 +706,7 @@ export async function run(argv: readonly string[] = process.argv.slice(2)): Prom
   });
   const output = formatHookOutput(verdict, host);
   if (output) console.log(output);
+  await recordAttention("PreToolUse", parsed);
 }
 
 if (import.meta.main) {
