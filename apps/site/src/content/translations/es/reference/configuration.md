@@ -220,6 +220,14 @@ Solo se lee cuando `agentHost` es `"codex"`. Todas las claves son opcionales. El
 
 - `enabled` (`"auto"` o `"off"`, por defecto `"auto"`): controla [`emet memory`](cli.md#ejecuciones-workers-y-slots). Con `auto`, el comando usa Engram cuando el binario `engram` está en el PATH y su handshake tiene éxito. `off` hace que `emet memory search` y `emet memory save` impriman `{available: false, reason: "memory.enabled is off"}` y terminen con 0 sin lanzar `engram`. Cualquier otro valor falla al cargar con `"memory.enabled" must be one of auto|off`.
 
+## attention
+
+```json
+{ "attention": { "alert": true } }
+```
+
+- `alert` (booleano, por defecto `true`): emet lanza una sola alerta cuando una sesión pasa a `needs-decision`. Si `orca status --json` informa un runtime accesible, ejecuta `orca worktree set` sobre el worktree principal con un comentario y la marca de no leído; si no, ejecuta `notify-send` cuando está en el PATH; si no, no hace nada. Cada llamada externa tiene un límite de 3 s y un fallo nunca cambia el resultado del guard. Salir de `needs-decision` nunca borra la marca de no leído de Orca. `false` desactiva la alerta.
+
 ## landing
 
 - `mode` (por defecto `pr`): `pr` abre un pull request (requiere `gh`). `merge` fusiona la rama de integración en la rama troncal local con `emet land` y nunca hace push, con `commands.selfCheck` en lugar de la CI. Independiente del tracker. Consulta el [ADR-0010](../adr/0010-local-merge-landing.md).
