@@ -22,6 +22,7 @@ import { writePhase } from "./phase";
 
 const USAGE = `usage: ${BINARY} review --ticket <ticket> --findings <file|-> [--changed <a,b>] [--base <ref>]
        ${BINARY} review --ticket <ticket> --coverage <file|-> [--expect S1,S3]
+       ${BINARY} review --merge <a.json> <b.json>
        ${BINARY} review --ticket <ticket> --escalate --model <model>
        ${BINARY} review --ticket <ticket> --rule <what> --why <why> --cost <cost>
        ${BINARY} review --ticket <ticket> --rulings
@@ -150,6 +151,56 @@ export function parseFindings(text: string): Finding[] {
   }
   if (!Array.isArray(parsed)) throw new ForgeConfigError("findings must be a JSON array");
   return parsed.map(parseFinding);
+}
+
+function findingsPair(first: Finding, second: Finding): boolean {
+  if (first.s !== undefined && first.s === second.s) return true;
+  return first.file === second.file && Math.abs(first.line - second.line) <= 3;
+}
+
+function higherSeverity(first: Severity, second: Severity): Severity {
+  return SEVERITIES.indexOf(first) <= SEVERITIES.indexOf(second) ? first : second;
+}
+
+function mergePair(first: Finding, second: Finding): Finding {
+  const userOption = first.userOption ?? second.userOption;
+  const s = first.s ?? second.s;
+  return {
+    ...first,
+    severity: higherSeverity(first.severity, second.severity),
+    agreement: "both",
+    ...(s === undefined ? {} : { s }),
+    ...(userOption === undefined ? {} : { userOption }),
+  };
+}
+
+/**
+ * Merges two reviewers' findings. Two findings pair when they share `s` or
+ * share `file` with lines at most 3 apart; each pairs at most once. A pair
+ * keeps the first finding's id and the higher severity, with agreement
+ * `both`; an unpaired finding gets `single`, and second-list ids that collide
+ * are prefixed `X-`. Nothing is dropped.
+ */
+export function mergeFindings(a: readonly Finding[], b: readonly Finding[]): Finding[] {
+  const paired = new Set<number>();
+  const merged: Finding[] = a.map((first) => {
+    const index = b.findIndex(
+      (second, position) => !paired.has(position) && findingsPair(first, second),
+    );
+    const second = b[index];
+    if (second === undefined) return { ...first, agreement: "single" };
+    paired.add(index);
+    return mergePair(first, second);
+  });
+  const usedIds = new Set(merged.map((entry) => entry.id));
+  b.forEach((second, position) => {
+    if (paired.has(position)) return;
+    let id = second.id;
+    while (usedIds.has(id)) id = `X-${id}`;
+    usedIds.add(id);
+    merged.push({ ...second, id, agreement: "single" });
+  });
+  return merged;
 }
 
 export function triageOrder<T extends { readonly kind: FindingKind }>(findings: readonly T[]): T[] {
@@ -580,8 +631,28 @@ function readFindingsInput(source: string): Promise<string> {
   return source === "-" ? Bun.stdin.text() : Promise.resolve(readFileSync(source, "utf8"));
 }
 
+function runMerge(argv: readonly string[]): void {
+  const index = argv.indexOf("--merge");
+  const first = argv[index + 1];
+  const second = argv[index + 2];
+  if (!first || !second || first.startsWith("--") || second.startsWith("--")) {
+    console.error(USAGE);
+    process.exitCode = 2;
+    return;
+  }
+  const merged = mergeFindings(
+    parseFindings(readFileSync(first, "utf8")),
+    parseFindings(readFileSync(second, "utf8")),
+  );
+  console.log(JSON.stringify(merged, null, 2));
+}
+
 export async function run(argv: string[]): Promise<void> {
   try {
+    if (argv.includes("--merge")) {
+      runMerge(argv);
+      return;
+    }
     const ticket = readFlagValue(argv, "--ticket");
     if (!ticket) {
       console.error(USAGE);

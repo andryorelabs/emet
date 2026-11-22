@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, test } from "bun:test";
+import { afterEach, beforeEach, describe, expect, spyOn, test } from "bun:test";
 import { mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
@@ -9,6 +9,7 @@ import {
   addRuling,
   emptyLedger,
   formatRulings,
+  mergeFindings,
   nextEscalationModel,
   parseAddedLines,
   parseCoverage,
@@ -862,5 +863,65 @@ describe("review CLI with a base and coverage", () => {
     const result = review([], [finding({ userOption: 3 })]);
     expect(result.exitCode).toBe(2);
     expect(result.stderr).toContain("userOption");
+  });
+});
+
+const merge = (a: Record<string, unknown>[], b: Record<string, unknown>[]) =>
+  mergeFindings(parseItems(a), parseItems(b));
+
+describe("mergeFindings", () => {
+  test("pairs findings on the same file within 3 lines into one agreeing finding", () => {
+    const merged = merge(
+      [finding({ id: "F-001", file: "x.ts", line: 10, severity: "minor" })],
+      [finding({ id: "F-001", file: "x.ts", line: 12, severity: "major" })],
+    );
+    expect(merged).toHaveLength(1);
+    expect(merged[0]).toMatchObject({ id: "F-001", severity: "major", agreement: "both" });
+  });
+
+  test("pairs findings sharing s and keeps unpaired ones as single", () => {
+    const merged = merge(
+      [finding({ id: "A", file: "x.ts", line: 1, s: "S1" })],
+      [
+        finding({ id: "B", file: "z.ts", line: 90, s: "S1" }),
+        finding({ id: "A", file: "y.ts", line: 50 }),
+      ],
+    );
+    expect(merged.map((entry) => [entry.id, entry.agreement])).toEqual([
+      ["A", "both"],
+      ["X-A", "single"],
+    ]);
+  });
+
+  test("a line gap over 3 does not pair, and each finding pairs once", () => {
+    const merged = merge(
+      [finding({ id: "A", line: 10 }), finding({ id: "B", line: 11 })],
+      [finding({ id: "C", line: 10 }), finding({ id: "D", line: 30 })],
+    );
+    expect(merged.map((entry) => entry.agreement)).toEqual(["both", "single", "single"]);
+  });
+
+  test("keeps userOption from either side of a pair", () => {
+    const merged = merge([finding({ id: "A" })], [finding({ id: "B", userOption: "S2" })]);
+    expect(merged[0]?.userOption).toBe("S2");
+  });
+});
+
+describe("review --merge CLI", () => {
+  test("prints the merged array without a ticket", async () => {
+    const dir = realpathSync(mkdtempSync(path.join(os.tmpdir(), "emet-merge-")));
+    const first = path.join(dir, "a.json");
+    const second = path.join(dir, "b.json");
+    writeFileSync(first, JSON.stringify([finding({ id: "F-001", file: "x.ts", line: 10 })]));
+    writeFileSync(second, JSON.stringify([finding({ id: "F-009", file: "y.ts", line: 50 })]));
+    const lines: string[] = [];
+    const spy = spyOn(console, "log").mockImplementation(
+      (...args) => void lines.push(args.join(" ")),
+    );
+    await run(["--merge", first, second]);
+    spy.mockRestore();
+    rmSync(dir, { recursive: true, force: true });
+    const merged: unknown = JSON.parse(lines.join("\n"));
+    expect(merged).toMatchObject([{ agreement: "single" }, { id: "F-009", agreement: "single" }]);
   });
 });
