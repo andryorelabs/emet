@@ -104,6 +104,22 @@ _Avoid_: fail, abort
 One pass of a **Reviewer** over a wave's **Integration branch**.
 _Avoid_: review cycle
 
+**Coverage verdict**:
+A **Reviewer**'s judgement of one spec requirement in a wave (met, partial or unmet), with the test that proves a met.
+_Avoid_: S# status
+
+**Pre-existing finding**:
+A finding at a line the wave did not change. It is reported but never blocks the **Gate**.
+_Avoid_: baseline finding, legacy issue
+
+**User option**:
+A spec requirement taken from an option the user explicitly chose in the interview. A finding against it always blocks.
+_Avoid_: user preference
+
+**Dual review**:
+Two **Reviewers**, one on Claude and one on Codex, reviewing the same high-tier wave in parallel. Their findings are merged.
+_Avoid_: double review, second opinion
+
 **Fix round**:
 One pass in which the **Coordinator** corrects the findings still open and a **Reviewer** rechecks only those findings. It has its own budget, apart from **Review rounds**.
 _Avoid_: retry, rework
