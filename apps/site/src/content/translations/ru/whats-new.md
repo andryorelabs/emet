@@ -2,8 +2,21 @@
 title: Что нового
 description: Примечания к выпускам emet: что изменилось в каждой версии.
 seoTitle: "Что нового в emet: примечания к выпускам"
-sourceHash: 946f5971d5a42a0b
+sourceHash: a4abfa547d27b4af
 ---
+
+## 0.20.0
+
+2026-11-22
+
+### Добавлено
+
+- `emet guard` записывает в журнал событие `session.attention`, `{sessionId, state, from, trigger}`, когда сессия, принадлежащая emet, меняет состояние между `working`, `idle`, `needs-decision` и `ended`. Событие добавляется только если состояние отличается от последнего записанного для этой сессии. Журнал никогда не хранит текст уведомлений, промпты и входные данные инструментов, а запись никогда не меняет вердикт guard, его stdout или код завершения.
+- `hooks/hooks.json` и `install.sh` подключают события хуков `Notification`, `PermissionRequest`, `SessionEnd` и `UserPromptSubmit` к `emet guard --event <Event>`. `install.sh` остаётся идемпотентным. `codex/hooks.json` не меняется.
+- JSON команды `emet status` получает `sessions: [{sessionId, state, blocked, since, runId}]` — последнее состояние каждой сессии репозитория за последние 24 часа, кроме `ended`. Заблокированная сессия переводит общее состояние в `needs-decision` и упоминается в строке сводки и в `--brief`.
+- `emet fleet status [--json]` выводит последние состояния сессий по репозиториям из глобального журнала, сначала заблокированные репозитории.
+- При переходе в `needs-decision` emet поднимает одно оповещение: отметку непрочитанного и комментарий на worktree репозитория в Orca, если Orca доступен, иначе `notify-send`, если он есть в PATH. `attention.alert` (булево значение, по умолчанию `true`) добавлен в схемы конфигурации и отключает его.
+- `docs/reference/cli.md`, `docs/reference/configuration.md` и `docs/guide/fleet.md` описывают функции внимания к сессиям на всех девяти языках.
 
 ## 0.19.0
 
