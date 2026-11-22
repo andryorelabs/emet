@@ -30,3 +30,14 @@ emet fleet launch --feature "add dark mode" --repos app,site
 - `launch --feature <text>`는 `emet chain`과 동일한 준비 상태 점검을 거친 뒤 각 리포지토리에서 `/emet:run --draft <text>` 세션을 엽니다. `--repos`로 쉼표로 구분한 목록으로 제한할 수 있습니다.
 
 모든 프로브는 5초로 제한되므로, 멈춘 `gh auth status`(네트워크 없음)가 웨이브를 멈추게 하지 않습니다. 리포지토리의 `preflight.requiredCommands`는 `emet preflight`와 `emet doctor`가 PATH에 있어야 한다고 요구하는 바이너리 목록이며, 리포지토리가 직접 관리합니다. [CLI 레퍼런스](../reference/cli.md#플릿-점검)와 [설정 레퍼런스](../reference/configuration.md#preflight)를 참고하세요.
+
+## 막힌 세션 확인하기
+
+세션이 결정을 기다리고 있을 때 `emet fleet status`로 어떤 리포지토리에 막힌 세션이 있는지 막힌 곳부터 확인할 수 있습니다.
+
+```bash
+emet fleet status
+emet fleet status --json
+```
+
+전역 저널을 읽으므로 루트를 지정하거나 리포지토리별 점검을 할 필요가 없습니다. 리포지토리마다 `<repo>: <b> blocked, <w> working, <i> idle`을 출력하며, 최근 24시간 이내의 세션(`ended` 제외)을 대상으로 합니다. 리포지토리 안에서는 `emet status`가 `sessions[]`에 세션을 나열합니다. 전환 시 알림을 끄려면 [`attention.alert`](../reference/configuration.md#attention)를 `false`로 설정합니다.

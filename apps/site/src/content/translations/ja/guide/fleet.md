@@ -30,3 +30,14 @@ emet fleet launch --feature "add dark mode" --repos app,site
 - `launch --feature <text>` は、`emet chain` と同じ準備チェックを行ったうえで、各リポジトリで `/emet:run --draft <text>` セッションを開きます。`--repos` でカンマ区切りのリストに絞り込めます。
 
 すべてのプローブは 5 秒に制限されているので、停止した `gh auth status`（ネットワークなし）がウェーブをハングさせることはありません。リポジトリの `preflight.requiredCommands` は、`emet preflight` と `emet doctor` が PATH 上に必須とするバイナリの一覧で、リポジトリ側で管理します。[CLI リファレンス](../reference/cli.md#フリートチェック)と[設定リファレンス](../reference/configuration.md#preflight)を参照してください。
+
+## ブロックされたセッションを確認する
+
+セッションが決定待ちになったら、`emet fleet status` でどのリポジトリにブロックされたセッションがあるかを、ブロックされたものを先頭にして確認できます。
+
+```bash
+emet fleet status
+emet fleet status --json
+```
+
+グローバルジャーナルを読むため、ルートの指定やリポジトリごとのチェックは不要です。リポジトリごとに `<repo>: <b> blocked, <w> working, <i> idle` を表示し、直近 24 時間以内のセッション（`ended` を除く）を対象にします。リポジトリ内では `emet status` が `sessions[]` にセッションを一覧します。遷移時の通知を無効にするには、[`attention.alert`](../reference/configuration.md#attention) を `false` に設定します。
