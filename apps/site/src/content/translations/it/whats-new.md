@@ -2,8 +2,26 @@
 title: Novità
 description: Note di rilascio di emet: cosa è cambiato in ogni versione.
 seoTitle: "Novità di emet: note di rilascio"
-sourceHash: e51e96e3f3669abd
+sourceHash: 32b42447b1d1875a
 ---
+
+## 0.17.0
+
+2026-11-22
+
+### Aggiunto
+
+- `/emet:run --quick <modifica>` esegue una Quick run per una modifica che sta in un ticket: un giro di intervista, una spec con un ticket folded, un'approvazione, un worker, la revisione e il Landing di quella singola Wave come pull request (o come merge locale), senza `emet chain`. Si ferma prima dell'approvazione e raccomanda `/emet:run` senza `--quick` quando la modifica tocca una schermata o non sta in un ticket, e viene rifiutata insieme a `--draft` o `--dispatch`. Accetta `--no-promote`. I passaggi sono nel nuovo `emet/reference/phases-quick.md`. Vedi ADR-0039.
+- `emet assess --quick` stampa il JSON consueto più `"quickRejected"` e termina con codice `1` quando il livello è `high`. Una Quick run lo tratta come uno Stop del Gate: nessun auto-merge, la pull request resta aperta e il rapporto finale riporta i motivi di alto rischio. Senza `--quick`, l'output e i codici di uscita restano invariati.
+- `emet approve --quick` scrive `"mode": "quick"` in `approval.json`. I record scritti prima di questa modifica continuano a superare `--check`.
+- `resolveLandingUnit(config, runId, root)` restituisce `wave` per un'esecuzione approvata con `--quick` e `config.landing.unit` negli altri casi. `emet landed`, `emet status` e `emet preflight` leggono l'unità di landing tramite questa funzione, così una Quick run non si aspetta mai un branch di spec.
+- `emet validate` segnala un errore `no-tickets` quando un piano non ha ticket e indica di scrivere un ticket folded.
+- `docs/reference/cli.md` e `docs/guide/trackers-and-landing.md` documentano la Quick run, in tutte e nove le lingue.
+
+### Modificato
+
+- La frase sul percorso rapido in `phases-1-5.md` ora dice di scrivere un ticket contrassegnato come `folded` per una richiesta sotto la soglia, invece di non scrivere alcun ticket.
+- `emet preflight --approval <run>` ricava l'unità di landing dal record di approvazione di quell'esecuzione quando manca `--run`.
 
 ## 0.16.0
 

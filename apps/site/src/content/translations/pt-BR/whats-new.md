@@ -2,8 +2,26 @@
 title: Novidades
 description: Notas de versão do emet: o que mudou em cada versão.
 seoTitle: Novidades do emet: notas de versão
-sourceHash: e51e96e3f3669abd
+sourceHash: 32b42447b1d1875a
 ---
+
+## 0.17.0
+
+2026-11-22
+
+### Adicionado
+
+- `/emet:run --quick <mudança>` executa uma Quick run para uma mudança que cabe em um ticket: uma rodada de entrevista, uma spec com um ticket folded, uma aprovação, um worker, revisão e o Landing dessa única Wave como pull request (ou merge local), sem `emet chain`. Ela para antes da aprovação e recomenda `/emet:run` sem `--quick` quando a mudança toca uma tela ou não cabe em um ticket, e é rejeitada junto com `--draft` ou `--dispatch`. Aceita `--no-promote`. Os passos ficam no novo `emet/reference/phases-quick.md`. Veja ADR-0039.
+- `emet assess --quick` imprime o JSON de sempre mais `"quickRejected"` e termina com código `1` quando o nível é `high`. Uma Quick run trata isso como um Stop do Gate: sem auto-merge, o pull request continua aberto e o relatório final nomeia os motivos de alto risco. Sem `--quick`, a saída e os códigos de saída não mudam.
+- `emet approve --quick` grava `"mode": "quick"` em `approval.json`. Os registros gravados antes desta mudança continuam passando em `--check`.
+- `resolveLandingUnit(config, runId, root)` retorna `wave` para uma execução aprovada com `--quick` e `config.landing.unit` nos demais casos. `emet landed`, `emet status` e `emet preflight` leem a unidade de landing por ela, de modo que uma Quick run nunca espera uma branch de spec.
+- `emet validate` informa um erro `no-tickets` quando um plano não tem tickets e orienta a escrever um ticket folded.
+- `docs/reference/cli.md` e `docs/guide/trackers-and-landing.md` documentam a Quick run, nos nove idiomas.
+
+### Alterado
+
+- A frase do caminho rápido em `phases-1-5.md` agora diz para escrever um ticket marcado como `folded` para um pedido abaixo do limite, em vez de não escrever nenhum ticket.
+- `emet preflight --approval <run>` resolve a unidade de landing a partir do registro de aprovação dessa execução quando `--run` está ausente.
 
 ## 0.16.0
 

@@ -2,8 +2,26 @@
 title: 新功能
 description: emet 的发布说明：每个版本都有哪些变化。
 seoTitle: "emet 新功能：发布说明"
-sourceHash: e51e96e3f3669abd
+sourceHash: 32b42447b1d1875a
 ---
+
+## 0.17.0
+
+2026-11-22
+
+### 新增
+
+- `/emet:run --quick <变更>` 为可放入一个工单的变更运行 Quick run：一轮访谈、一份带有一个 folded 工单的 spec、一次批准、一个 worker、审查，并将这唯一的 Wave 以 pull request（或本地 merge）的方式完成 Landing，不运行 `emet chain`。当变更涉及界面或无法放入一个工单时，它会在批准前停止，并建议改用不带 `--quick` 的 `/emet:run`；与 `--draft` 或 `--dispatch` 一起使用时会被拒绝。接受 `--no-promote`。具体步骤见新增的 `emet/reference/phases-quick.md`。参见 ADR-0039。
+- `emet assess --quick` 在原有 JSON 之外输出 `"quickRejected"`，当风险等级为 `high` 时以退出码 `1` 结束。Quick run 将其视为 Gate 的 Stop：不自动 merge，pull request 保持打开，最终报告会列出高风险原因。不带 `--quick` 时，输出和退出码保持不变。
+- `emet approve --quick` 会把 `"mode": "quick"` 写入 `approval.json`。此前写入的记录仍可通过 `--check`。
+- `resolveLandingUnit(config, runId, root)` 对以 `--quick` 批准的运行返回 `wave`，其他情况返回 `config.landing.unit`。`emet landed`、`emet status` 和 `emet preflight` 通过它读取 landing 单位，因此 Quick run 不会再期望存在 spec 分支。
+- 当计划没有任何工单时，`emet validate` 会报告 `no-tickets` 错误，并提示编写一个 folded 工单。
+- `docs/reference/cli.md` 和 `docs/guide/trackers-and-landing.md` 记录了 Quick run，涵盖全部九种语言。
+
+### 变更
+
+- `phases-1-5.md` 中关于快速路径的句子现在要求：对低于阈值的请求，编写一个标记为 `folded` 的工单，而不是不写任何工单。
+- 缺少 `--run` 时，`emet preflight --approval <run>` 会根据该运行的批准记录确定 landing 单位。
 
 ## 0.16.0
 

@@ -8,6 +8,22 @@ and this project adheres to
 
 ## [Unreleased]
 
+## [0.17.0] - 2026-11-22
+
+### Added
+
+- `/emet:run --quick <change>` runs a Quick run for a change that fits one ticket: one interview round, a spec with one folded ticket, one approval, one worker, review, and the Landing of that single Wave as a PR (or a local merge), with no `emet chain`. It stops before approval and recommends `/emet:run` without `--quick` when the change touches a screen or does not fit one ticket, and it is rejected together with `--draft` or `--dispatch`. `--no-promote` is accepted. The steps live in the new `emet/reference/phases-quick.md`. See ADR-0039.
+- `emet assess --quick` prints the usual JSON plus `"quickRejected"`, and exits `1` when the tier is `high`. A Quick run treats that as a Gate Stop: no auto-merge, the PR stays open, and the final report names the high-risk reasons. Without `--quick`, the output and exit codes are unchanged.
+- `emet approve --quick` writes `"mode": "quick"` into `approval.json`. Records written before this change still pass `--check`.
+- `resolveLandingUnit(config, runId, root)` returns `wave` for a quick-approved run and `config.landing.unit` otherwise. `emet landed`, `emet status` and `emet preflight` read the landing unit through it, so a Quick run never expects a spec branch.
+- `emet validate` reports a `no-tickets` error when a plan has no tickets and says to write one folded ticket.
+- `docs/reference/cli.md` and `docs/guide/trackers-and-landing.md` document the Quick run, in all nine locales.
+
+### Changed
+
+- The fast-path sentence in `phases-1-5.md` now says to write one ticket marked `folded` for a request below the threshold, instead of writing no tickets.
+- `emet preflight --approval <run>` resolves the landing unit from that run's approval record when `--run` is absent.
+
 ## [0.16.0] - 2026-11-21
 
 ### Added
@@ -553,7 +569,8 @@ and this project adheres to
 - Per-repo configuration through `forge.config.json`.
 - `install.sh`, which installs the CLI, command and agents.
 
-[Unreleased]: https://github.com/andryorelabs/emet/compare/v0.16.0...HEAD
+[Unreleased]: https://github.com/andryorelabs/emet/compare/v0.17.0...HEAD
+[0.17.0]: https://github.com/andryorelabs/emet/compare/v0.16.0...v0.17.0
 [0.16.0]: https://github.com/andryorelabs/emet/compare/v0.15.0...v0.16.0
 [0.15.0]: https://github.com/andryorelabs/emet/compare/v0.14.5...v0.15.0
 [0.14.5]: https://github.com/andryorelabs/emet/compare/v0.14.4...v0.14.5

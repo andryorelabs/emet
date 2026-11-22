@@ -2,8 +2,26 @@
 title: 新機能
 description: emet のリリースノート。各バージョンでの変更点をまとめています。
 seoTitle: "emet の新機能: リリースノート"
-sourceHash: e51e96e3f3669abd
+sourceHash: 32b42447b1d1875a
 ---
+
+## 0.17.0
+
+2026-11-22
+
+### 追加
+
+- `/emet:run --quick <変更>` は、1 つのチケットに収まる変更に対して Quick run を実行します。インタビュー 1 回、folded チケット 1 つの spec、承認 1 回、worker 1 つ、レビュー、そしてその 1 つの Wave の Landing を pull request（またはローカル merge）として行い、`emet chain` は使いません。変更が画面に関わる場合や 1 つのチケットに収まらない場合は、承認の前に停止し、`--quick` なしの `/emet:run` を勧めます。`--draft` や `--dispatch` との併用は拒否されます。`--no-promote` は使えます。手順は新しい `emet/reference/phases-quick.md` にあります。ADR-0039 を参照してください。
+- `emet assess --quick` は通常の JSON に加えて `"quickRejected"` を出力し、レベルが `high` のときは終了コード `1` で終了します。Quick run はこれを Gate の Stop として扱い、auto-merge は行わず、pull request は開いたままになり、最終レポートに高リスクの理由が記載されます。`--quick` なしでは、出力と終了コードは変わりません。
+- `emet approve --quick` は `approval.json` に `"mode": "quick"` を書き込みます。この変更より前に書かれたレコードも、引き続き `--check` を通ります。
+- `resolveLandingUnit(config, runId, root)` は、`--quick` で承認された実行では `wave` を、それ以外では `config.landing.unit` を返します。`emet landed`、`emet status`、`emet preflight` はこれを通して landing 単位を読むため、Quick run が spec ブランチを期待することはありません。
+- プランにチケットがない場合、`emet validate` は `no-tickets` エラーを報告し、folded チケットを 1 つ書くよう案内します。
+- `docs/reference/cli.md` と `docs/guide/trackers-and-landing.md` に Quick run を記載しました。9 言語すべてが対象です。
+
+### 変更
+
+- `phases-1-5.md` の高速パスの文は、しきい値未満のリクエストでは、チケットを書かずに済ませるのではなく、`folded` と印を付けたチケットを 1 つ書くよう改められました。
+- `--run` がない場合、`emet preflight --approval <run>` はその実行の承認レコードから landing 単位を決定します。
 
 ## 0.16.0
 
