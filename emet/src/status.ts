@@ -30,6 +30,7 @@ import {
   resolveRepoRoot,
   type ForgeConfig,
 } from "./config";
+import { resolveLandingUnit } from "./landing-unit";
 import { BINARY, LEGACY_PRODUCT, PRODUCT, resolveRunDir } from "./names";
 import { isObject } from "./narrow";
 import { optionalProperty } from "./optional";
@@ -654,10 +655,11 @@ export async function run(argv: string[], overrides: Partial<StatusDeps> = {}): 
       ),
       spec,
     );
+    const expectsSpecBranch =
+      config.landing.unit === "spec" &&
+      baseReport.waves.every((wave) => resolveLandingUnit(config, wave.runId, repoRoot) === "spec");
     const branchState =
-      config.landing.unit === "spec" && spec !== null
-        ? await readSpecBranchState(repoRoot, spec)
-        : null;
+      expectsSpecBranch && spec !== null ? await readSpecBranchState(repoRoot, spec) : null;
     const report: StatusReport =
       branchState === null
         ? baseReport

@@ -34,6 +34,7 @@ export interface PlanTicket {
 interface ValidationFinding {
   readonly severity: "error" | "warn";
   readonly code:
+    | "no-tickets"
     | "uncovered-spec-item"
     | "ticket-covers-nothing"
     | "unknown-spec-item"
@@ -111,6 +112,9 @@ export function validatePlan(
   ) => findings.push({ severity, code, message });
   const inlineMaxLines = input.inlineMaxLines ?? DEFAULT_FORGE_CONFIG.sizing.inlineMaxLines;
   const specItems = parseSpecItems(input.specMarkdown);
+
+  if (input.tickets.length === 0)
+    add("error", "no-tickets", "plan has no tickets; write one folded ticket");
 
   const covered = new Set(input.tickets.flatMap((ticket) => ticket.covers));
   for (const [id, text] of specItems) {

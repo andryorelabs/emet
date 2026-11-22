@@ -6,12 +6,13 @@ import { resolveRepoRoot } from "./config";
 import { errorMessage, isObject } from "./narrow";
 import { resolveRunArtifactPath } from "./runs";
 
-const USAGE = `usage: emet approve --run <id> --spec <file> [--tickets <file>] [--root <dir>]
+const USAGE = `usage: emet approve --run <id> --spec <file> [--tickets <file>] [--quick] [--root <dir>]
        emet approve --run <id> --check [--root <dir>]
 
 Writes <git-common-dir>/.emet/runs/<id>/approval.json (spec hash, tickets hash, timestamp).
 --tickets defaults to <git-common-dir>/.emet/runs/<id>/tickets.json, falling back to
 <root>/.emet/runs/<id>/tickets.json.
+--quick records "mode": "quick" so the run lands per wave.
 --check exits 1 when the spec or tickets changed since approval.`;
 
 export interface ApprovalRecord {
@@ -20,6 +21,7 @@ export interface ApprovalRecord {
   readonly specHash: string;
   readonly ticketsHash: string;
   readonly approvedAt: string;
+  readonly mode?: "quick";
 }
 
 export interface ApprovalCheck {
@@ -36,6 +38,7 @@ export function writeApproval(input: {
   specPath: string;
   ticketsPath: string;
   now?: Date;
+  mode?: "quick";
 }): ApprovalRecord {
   const specPath = path.resolve(input.specPath);
   const ticketsPath = path.resolve(input.ticketsPath);
@@ -45,6 +48,7 @@ export function writeApproval(input: {
     specHash: hashFile(specPath),
     ticketsHash: hashFile(ticketsPath),
     approvedAt: (input.now ?? new Date()).toISOString(),
+    ...(input.mode === undefined ? {} : { mode: input.mode }),
   };
   mkdirSync(path.dirname(input.approvalPath), { recursive: true });
   writeFileSync(input.approvalPath, `${JSON.stringify(record, null, 2)}\n`);
@@ -119,7 +123,14 @@ export async function run(argv: string[]): Promise<void> {
   const ticketsPath = readFlag(argv, "--tickets") ?? tickets.readPath ?? tickets.writePath;
   try {
     console.log(
-      JSON.stringify(writeApproval({ approvalPath: approval.writePath, specPath, ticketsPath })),
+      JSON.stringify(
+        writeApproval({
+          approvalPath: approval.writePath,
+          specPath,
+          ticketsPath,
+          ...(argv.includes("--quick") ? { mode: "quick" as const } : {}),
+        }),
+      ),
     );
   } catch (error) {
     console.error(`emet approve: ${errorMessage(error)}`);
