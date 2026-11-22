@@ -148,6 +148,10 @@ _Avoid_: log, audit trail, telemetry
 The journal event that marks the start of a clean history; reports count only what comes after the latest one.
 _Avoid_: reset, checkpoint
 
+**Attention state**:
+Whether a session is working, needs a decision from a person, is idle or has ended, as last recorded in the **Journal**. "Blocked" means needs a decision.
+_Avoid_: session status, presence
+
 **After-spec step**:
 What a repo does once a spec's last wave has landed: a **Release**, a **Promote**, or nothing.
 _Avoid_: post-merge, cleanup
@@ -217,6 +221,7 @@ _Avoid_: status file, progress file
 - The **Coordinator** merges **Worker** branches into the **Integration branch**; a **Reviewer** and the **Gates** check it before it lands.
 - The **Gate** answers a wave with merge, **Hold**, **Chain**, **Stop** or defer; a **Hold** over findings leads to a **Fix round**, and a **Hold** over an **Environment fault** never spends a fix attempt.
 - When a spec's last wave has landed, the **After-spec step** is a **Release**, a **Promote** or nothing, chosen per repository; the **Journal** records each step, and a **Baseline** marks where its clean history starts.
+- A session's **Attention state** is recorded in the **Journal**; a **Run** can span sessions in different attention states.
 - An **After-spec rule** is chosen by the paths a **Promote** would carry; a **Deploy check** runs only after a merge into the branch that deploys.
 - A **Worker** may edit only its ticket's **Surfaces** and must keep its **Handoff** current.
 - A **Claim** carries its ticket's **Surfaces**; two live **Claims** of different **Runs** never have overlapping **Surfaces**.
