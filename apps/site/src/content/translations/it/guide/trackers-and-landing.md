@@ -31,6 +31,14 @@ Con `landing.unit: "spec"`, il coordinatore crea `spec/<id>` dal trunk con `emet
 
 La modalità spec richiede `worktree.baseRef: "head"` nelle impostazioni di Claude Code, così i worktree dei worker partono dal branch della spec; `emet preflight` ed `emet doctor` lo verificano. `emet doctor` avvisa anche quando la modalità è `pr` e le impostazioni del repository o il ruleset del trunk non consentono il `landing.specMergeMethod` configurato.
 
+### Quick run
+
+`/emet:run --quick <richiesta>` avvia una **Quick run** per una modifica piccola: un solo giro di intervista, un solo ticket `folded`, una sola approvazione. Usala quando la modifica non tocca una schermata ed entra in un solo ticket (la superficie nuova resta entro `sizing.inlineMaxLines` e nessun tripwire del budget di contesto scatta); altrimenti si ferma prima dell'approvazione e raccomanda `/emet:run` senza `--quick`. Salta `domain-modeling`, il canvas, i giri di frontiera ed `emet chain`. Esegue un solo worker, poi `emet verify`, il passo delle spec vive quando `specs.enabled`, `emet assess --quick`, il reviewer a meno che il tier sia `passive`, ed `emet gate`. `--quick` insieme a `--draft` o `--dispatch` viene rifiutato; `--no-promote` è accettato.
+
+Una Quick run atterra per ondata, qualunque cosa dica `landing.unit`: `emet approve --quick` registra `"mode": "quick"` e `resolveLandingUnit` restituisce `"wave"`, quindi non si aspetta mai un branch della spec. Atterra come una sola PR (o come un merge locale quando `landing.mode` è `merge`), poi esegue il passo after-spec.
+
+Una differenza ad alto rischio la ferma: `emet assess --quick` esce con 1 quando il tier è `high`, il che è uno **Stop** del gate. Niente auto-merge, la PR resta aperta e il report finale nomina i motivi di alto rischio.
+
 ### PR di landing
 
 Con `landing.unit: "spec"` la PR è quella della spec: una PR per tutte le ondate integrate, aperta da `emet spec-branch land` dopo l'ultima ondata. Con `landing.unit: "wave"`, un'ondata è una PR. Il corpo della PR contiene una riga `Closes #N` per ogni ticket (la parola chiave di chiusura del tracker), e il coordinatore sposta i ticket in in-review quando apre la PR. La PR viene poi unita secondo `pr.autoMerge`, oppure resta aperta quando l'ondata è stata segnalata, `autoMerge` è `false` o le correzioni di CI sono esaurite (la PR riceve allora l'etichetta human-decision). Dopo un merge, `emet tracker close` chiude i ticket su un tracker GitHub e `emet cleanup --run <runId>` libera i branch, i claim dei ticket e gli slot dei worker dell'ondata. Elimina anche ogni branch locale la cui PR è stata unita al commit di testa del branch, compreso il branch di integrazione.
