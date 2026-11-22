@@ -119,6 +119,16 @@ describe("hook matchers", () => {
     }
   });
 
+  test("the Claude attention events run the guard with their event name", () => {
+    const hooks: unknown = JSON.parse(readText("hooks/hooks.json"));
+    for (const event of ["Notification", "PermissionRequest", "SessionEnd", "UserPromptSubmit"]) {
+      expect(String(dig(hooks, "hooks", event, "0", "hooks", "0", "command"))).toBe(
+        `"\${CLAUDE_PLUGIN_ROOT}/bin/emet" guard --event ${event}`,
+      );
+    }
+    expect(dig(hooks, "hooks", "PermissionRequest", "0", "matcher")).toBe("*");
+  });
+
   test("the Codex PreToolUse guard is registered for every guarded tool", () => {
     const hooks: unknown = JSON.parse(readText("codex/hooks.json"));
     const matcher = String(dig(hooks, "hooks", "PreToolUse", "0", "matcher"));

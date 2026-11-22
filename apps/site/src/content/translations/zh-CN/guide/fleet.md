@@ -2,7 +2,7 @@
 title: 批量检查
 description: 用 emet doctor 以只读方式一次审计多个仓库，并查看哪些仓库需要处理。
 seoTitle: 使用 emet doctor 批量检查仓库
-sourceHash: 7b3c5a56abfffcc1
+sourceHash: 5eef774032962f35
 ---
 
 已经在多个仓库中使用 emet 了吗？`emet doctor` 可以以只读方式一次审计任意数量的仓库：
@@ -30,3 +30,14 @@ emet fleet launch --feature "add dark mode" --repos app,site
 - `launch --feature <text>` 会在每个仓库中打开一个 `/emet:run --draft <text>` 会话，并先执行与 `emet chain` 相同的就绪检查。`--repos` 可将范围限制为以逗号分隔的列表。
 
 每次探测都限制在 5 秒内，因此卡住的 `gh auth status`（没有网络）不会使波次挂起。仓库的 `preflight.requiredCommands` 是由仓库自行维护的二进制文件列表，`emet preflight` 和 `emet doctor` 要求这些文件位于 PATH 中。参见 [CLI 参考](../reference/cli.md#批量检查)和[配置参考](../reference/configuration.md#preflight)。
+
+## 查看被阻塞的会话
+
+等待你做决定的会话会静静地停在那里。`emet fleet status` 读取全局 journal，按仓库显示最近 24 小时内有多少会话被阻塞、在工作或空闲，被阻塞的仓库排在最前：
+
+```bash
+emet fleet status
+emet fleet status --json
+```
+
+`--json` 打印 `{ repos: [{ repo, sessions }], blocked }`，其中 `blocked` 是被阻塞会话的总数。对于单个仓库，`emet status` 在 `sessions[]` 中列出会话。当会话进入 `needs-decision` 时，emet 还会发出提醒，除非 [`attention.alert`](../reference/configuration.md#attention) 为 `false`。

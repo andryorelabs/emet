@@ -2,7 +2,7 @@
 title: Referência de configuração
 description: Cada chave do emet.config.json com seu valor padrão e seu significado.
 seoTitle: Referência de configuração do emet
-sourceHash: ae0e205cbdcf4b88
+sourceHash: a9aeca59a8d1f719
 ---
 
 Cada chave do `emet.config.json`, com seu valor padrão e seu significado. A fonte da verdade é [`emet/schema/emet.config.schema.json`](../../emet/schema/emet.config.schema.json). Os termos seguem o [GLOSSARY.md](../../GLOSSARY.md). Voltar ao [README](../../README.md).
@@ -320,6 +320,18 @@ Somente prosa.
 Opcional, somente prosa. `null` ou omitido ignora a etapa de design/revisão de UI.
 
 - `canvasIndex` (obsoleto): caminho para um arquivo de canvas de design que os workers consultam antes de mudanças de UI.
+
+## attention
+
+Opcional.
+
+- `alert` (padrão `true`, booleano): quando uma sessão entra em `needs-decision`, o emet levanta um único alerta: uma marca de não lido do Orca no worktree principal quando o runtime do Orca está acessível, caso contrário `notify-send` quando ele está no PATH, caso contrário nada. `false` desativa o alerta.
+
+Exemplo:
+
+```json
+{ "attention": { "alert": true } }
+```
 
 ## Variáveis de ambiente
 

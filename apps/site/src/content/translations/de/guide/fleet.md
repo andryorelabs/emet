@@ -2,7 +2,7 @@
 title: Flottenprüfung
 description: Mit emet doctor beliebig viele Repositories gleichzeitig und nur lesend prüfen und sehen, welche Aufmerksamkeit brauchen.
 seoTitle: "Flottenprüfung: mehrere Repos mit emet doctor"
-sourceHash: 7b3c5a56abfffcc1
+sourceHash: 5eef774032962f35
 ---
 
 emet wird bereits in mehreren Repos eingesetzt? `emet doctor` prüft beliebig viele davon gleichzeitig und nur lesend:
@@ -28,5 +28,13 @@ emet fleet launch --feature "add dark mode" --repos app,site
 - `list` gibt für jedes Repo Pfad, `tracker.kind`, `handoff.autoChain` und `models.worker` aus. `--json` gibt es als Daten aus.
 - `set <key> <value>` ändert einen Config-Schlüssel in jedem aufgelisteten Repo. Jeder Wert wird vor dem Schreiben über den Config-Loader validiert; ein ungültiger Wert ändert kein Repo und endet mit Exit-Code 1. `--dry-run` schreibt nichts und gibt für jedes Repo den alten und den neuen Wert aus.
 - `launch --feature <text>` öffnet in jedem Repo eine `/emet:run --draft <text>`-Sitzung, nach denselben Bereitschaftsprüfungen wie `emet chain`. `--repos` beschränkt den Start auf eine kommagetrennte Liste.
+
+## Blockierte Sitzungen sehen
+
+```bash
+emet fleet status
+```
+
+Gibt pro Repo aus, wie viele emet-Sitzungen auf eine Entscheidung warten, arbeiten oder untätig sind, blockierte Repos zuerst. Es liest die letzten 24 Stunden des globalen Journals und schließt beendete Sitzungen aus. `--json` gibt die Sitzungen selbst aus. Innerhalb eines Repos listet `emet status` sie unter `sessions`. Ist `attention.alert` aktiv (Standard), löst emet außerdem einen Alarm aus, sobald eine Sitzung zu warten beginnt; siehe die [Konfigurationsreferenz](../reference/configuration.md#attention).
 
 Jede Sonde ist auf 5 s begrenzt, damit ein hängendes `gh auth status` (ohne Netzwerk) keine Welle blockieren kann. Die `preflight.requiredCommands` eines Repos sind eine repo-eigene Liste von Binärdateien, die `emet preflight` und `emet doctor` im PATH voraussetzen. Siehe die [CLI-Referenz](../reference/cli.md#flottenprüfung) und die [Konfigurationsreferenz](../reference/configuration.md#preflight).
