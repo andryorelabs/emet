@@ -10,8 +10,11 @@ import {
   emptyLedger,
   formatRulings,
   nextEscalationModel,
+  parseAddedLines,
+  parseCoverage,
   parseFindings,
   parseVerdicts,
+  recordCoverage,
   recordRecheck,
   recordRound,
   run,
@@ -513,5 +516,312 @@ describe("parseFindings shapes", () => {
     expect(() => parseFindings(JSON.stringify([finding({ id: "" })]))).toThrow(/id must be/);
     expect(() => parseFindings(JSON.stringify([finding({ file: 3 })]))).toThrow(/file must be/);
     expect(() => parseFindings(JSON.stringify([finding({ claim: 3 })]))).toThrow(/claim must be/);
+  });
+});
+
+const evidence = (known: Record<string, string>) => (file: string, text: string) =>
+  (known[file] ?? "").includes(text);
+
+const met = (s: string, proof?: { file: string; name: string }) => ({
+  s,
+  verdict: "met" as const,
+  ...(proof ? { test: proof } : {}),
+});
+
+describe("coverage verdicts", () => {
+  test("parseCoverage accepts verdicts and rejects bad shapes", () => {
+    expect(parseCoverage(JSON.stringify([{ s: "S1", verdict: "partial" }]))).toEqual([
+      { s: "S1", verdict: "partial" },
+    ]);
+    expect(() => parseCoverage("nope")).toThrow(/not valid JSON/);
+    expect(() => parseCoverage("{}")).toThrow(/JSON array/);
+    expect(() => parseCoverage(JSON.stringify([{ s: "S1", verdict: "x" }]))).toThrow(/verdict/);
+    expect(() => parseCoverage(JSON.stringify([{ s: "S1", verdict: "met", test: {} }]))).toThrow(
+      /test/,
+    );
+  });
+
+  test("a met whose test file lacks the test name opens VG-S1", () => {
+    const result = recordCoverage(
+      emptyLedger("T"),
+      [met("S1", { file: "emet/src/a.test.ts", name: "parses x" })],
+      { expect: [], fileContains: evidence({ "emet/src/a.test.ts": "other" }) },
+    );
+    expect(result.ok && result.ledger.findings).toMatchObject([
+      {
+        id: "VG-S1",
+        file: "emet/src/a.test.ts",
+        line: 0,
+        severity: "major",
+        kind: "patch",
+        status: "open",
+        claim: "verification-gap: S1 met without evidence",
+      },
+    ]);
+  });
+
+  test("a met with no test opens VG-S1 with an empty file", () => {
+    const result = recordCoverage(emptyLedger("T"), [met("S1")], {
+      expect: [],
+      fileContains: evidence({}),
+    });
+    expect(result.ok && result.ledger.findings[0]).toMatchObject({ id: "VG-S1", file: "" });
+  });
+
+  test("expect lists a missing S as VG and valid evidence adds nothing", () => {
+    const result = recordCoverage(
+      emptyLedger("T"),
+      [met("S1", { file: "a.test.ts", name: "parses x" })],
+      { expect: ["S1", "S2"], fileContains: evidence({ "a.test.ts": "parses x" }) },
+    );
+    expect(result.ok && result.ledger.findings).toMatchObject([
+      { id: "VG-S2", claim: "verification-gap: S2 has no coverage verdict" },
+    ]);
+    expect(result.ok && result.ledger.coverage).toHaveLength(1);
+  });
+
+  test("a later findings round omitting VG-S2 leaves it open", () => {
+    const covered = recordCoverage(emptyLedger("T"), [], {
+      expect: ["S2"],
+      fileContains: evidence({}),
+    });
+    if (!covered.ok) throw new Error("coverage failed");
+    const round = recordRound(covered.ledger, [], { changedFiles: [], reviewRounds: 3 });
+    expect(round.ok && round.ledger.findings).toMatchObject([{ id: "VG-S2", status: "open" }]);
+  });
+
+  test("a later coverage call that no longer produces the gap resolves it", () => {
+    const first = recordCoverage(emptyLedger("T"), [], {
+      expect: ["S2"],
+      fileContains: () => true,
+    });
+    if (!first.ok) throw new Error("coverage failed");
+    const second = recordCoverage(first.ledger, [met("S2", { file: "f", name: "n" })], {
+      expect: ["S2"],
+      fileContains: () => true,
+    });
+    expect(second.ok && second.ledger.findings).toMatchObject([
+      { id: "VG-S2", status: "resolved" },
+    ]);
+  });
+
+  test("a VG finding is never marked pre-existing", () => {
+    const round = recordRound(
+      emptyLedger("T"),
+      parseItems([finding({ id: "VG-S9", file: "", line: 0, severity: "major" })]),
+      { changedFiles: [], reviewRounds: 3, addedLines: new Map() },
+    );
+    expect(round.ok && round.ledger.findings[0]?.preexisting).toBeUndefined();
+  });
+});
+
+describe("pre-existing detection", () => {
+  test("parseAddedLines reads hunks and renames and ignores deletions", () => {
+    const diff = [
+      "diff --git a/old.ts b/new.ts",
+      "similarity index 80%",
+      "rename from old.ts",
+      "rename to new.ts",
+      "--- a/old.ts",
+      "+++ b/new.ts",
+      "@@ -5 +5,2 @@",
+      "+x",
+      "+y",
+      "@@ -9,2 +10,0 @@",
+      "-gone",
+      "-gone2",
+      "diff --git a/dead.ts b/dead.ts",
+      "--- a/dead.ts",
+      "+++ /dev/null",
+      "@@ -1,3 +0,0 @@",
+    ].join("\n");
+    const added = parseAddedLines(diff);
+    expect(added.get("new.ts")).toEqual([[5, 6]]);
+    expect(added.has("dead.ts")).toBe(false);
+  });
+
+  test("findings off the added lines are marked and findings on them are not", () => {
+    const round = recordRound(
+      emptyLedger("T"),
+      parseItems([
+        finding({ id: "on", file: "new.ts", line: 6 }),
+        finding({ id: "off", file: "new.ts", line: 10 }),
+        finding({ id: "other", file: "untouched.ts", line: 1 }),
+      ]),
+      { changedFiles: [], reviewRounds: 3, addedLines: new Map([["new.ts", [[5, 6]]]]) },
+    );
+    const byId = Object.fromEntries(
+      round.ok ? round.ledger.findings.map((entry) => [entry.id, entry.preexisting]) : [],
+    );
+    expect(byId).toEqual({ on: undefined, off: true, other: true });
+  });
+
+  test("without addedLines nothing is marked", () => {
+    const round = recordRound(emptyLedger("T"), parseItems([finding()]), {
+      changedFiles: [],
+      reviewRounds: 3,
+    });
+    expect(round.ok && round.ledger.findings[0]?.preexisting).toBeUndefined();
+  });
+});
+
+describe("finding fields", () => {
+  test("s, userOption, preexisting and agreement round trip", () => {
+    const [parsed] = parseItems([
+      finding({ s: "S1", userOption: "S2", preexisting: true, agreement: "both" }),
+    ]);
+    expect(parsed).toMatchObject({
+      s: "S1",
+      userOption: "S2",
+      preexisting: true,
+      agreement: "both",
+    });
+  });
+
+  test("a bad optional field is rejected naming the field", () => {
+    expect(() => parseItems([finding({ userOption: 3 })])).toThrow(/userOption/);
+    expect(() => parseItems([finding({ s: 3 })])).toThrow(/ s must/);
+    expect(() => parseItems([finding({ agreement: "x" })])).toThrow(/agreement/);
+    expect(() => parseItems([finding({ preexisting: "y" })])).toThrow(/preexisting/);
+  });
+
+  test("a null s or userOption never reaches the finding", () => {
+    const [parsed] = parseItems([finding({ s: null, userOption: null })]);
+    expect(parsed).toBeDefined();
+    expect(parsed && "s" in parsed).toBe(false);
+    expect(parsed && "userOption" in parsed).toBe(false);
+  });
+});
+
+interface SavedLedger {
+  base?: string;
+  findings: { id: string; status: string; preexisting?: boolean }[];
+}
+
+function parseLedgerFile(text: string): SavedLedger {
+  const parsed: unknown = JSON.parse(text);
+  if (!isObject(parsed) || !Array.isArray(parsed.findings)) throw new Error("bad ledger");
+  return {
+    ...(typeof parsed.base === "string" ? { base: parsed.base } : {}),
+    findings: parsed.findings.flatMap((entry: unknown) =>
+      isObject(entry) && typeof entry.id === "string" && typeof entry.status === "string"
+        ? [
+            {
+              id: entry.id,
+              status: entry.status,
+              ...(entry.preexisting === true ? { preexisting: true } : {}),
+            },
+          ]
+        : [],
+    ),
+  };
+}
+
+describe("review CLI with a base and coverage", () => {
+  let repo = "";
+  const vcs = (...args: string[]) => {
+    const result = Bun.spawnSync(
+      ["git", "-C", repo, "-c", "user.email=t@t", "-c", "user.name=t", ...args],
+      { stdout: "pipe", stderr: "pipe" },
+    );
+    return result.stdout.toString().trim();
+  };
+  const review = (args: string[], input: unknown) => {
+    const file = path.join(repo, "input.json");
+    writeFileSync(file, JSON.stringify(input));
+    const flag = args.includes("--coverage") ? "--coverage" : "--findings";
+    const rest = args.filter((arg) => arg !== flag);
+    const result = Bun.spawnSync(
+      ["bun", path.join(import.meta.dir, "review.ts"), "--ticket", "T-1", flag, file, ...rest],
+      { cwd: repo, stdout: "pipe", stderr: "pipe" },
+    );
+    return {
+      exitCode: result.exitCode,
+      stdout: result.stdout.toString(),
+      stderr: result.stderr.toString(),
+    };
+  };
+  const ledger = () =>
+    parseLedgerFile(readFileSync(path.join(repo, ".emet", "review", "T-1.json"), "utf8"));
+
+  beforeEach(() => {
+    repo = realpathSync(mkdtempSync(path.join(os.tmpdir(), "emet-review-base-")));
+    vcs("init", "-q", "-b", "main");
+    writeFileSync(path.join(repo, "old.ts"), "a\nb\nc\nd\ne\n");
+    writeFileSync(path.join(repo, "gone.ts"), "1\n2\n3\n");
+    vcs("add", ".");
+    vcs("commit", "-q", "-m", "init");
+    vcs("mv", "old.ts", "new.ts");
+    writeFileSync(path.join(repo, "new.ts"), "a\nb\nCHANGED\nd\ne\n");
+    writeFileSync(path.join(repo, "gone.ts"), "1\n3\n");
+    vcs("add", ".");
+    vcs("commit", "-q", "-m", "wave");
+  });
+
+  afterEach(() => {
+    rmSync(repo, { recursive: true, force: true });
+  });
+
+  test("a finding on a renamed file's changed line is not pre-existing, others are", () => {
+    const result = review(
+      ["--base", "HEAD~1"],
+      [
+        finding({ id: "on", file: "new.ts", line: 3 }),
+        finding({ id: "off", file: "new.ts", line: 5 }),
+        finding({ id: "deleted", file: "gone.ts", line: 2 }),
+      ],
+    );
+    expect(result.exitCode).toBe(1);
+    const saved = ledger();
+    expect(saved.base).toBe(vcs("rev-parse", "HEAD~1"));
+    const marked = Object.fromEntries(saved.findings.map((entry) => [entry.id, entry.preexisting]));
+    expect(marked).toEqual({ on: undefined, off: true, deleted: true });
+  });
+
+  test("a later round with a different base exits 2 naming the stored one", () => {
+    review(["--base", "HEAD~1"], [finding({ id: "F1", severity: "minor" })]);
+    const stored = vcs("rev-parse", "HEAD~1");
+    const second = review(["--base", "HEAD"], [finding({ id: "F1", severity: "minor" })]);
+    expect(second.exitCode).toBe(2);
+    expect(second.stderr).toContain(stored);
+  });
+
+  test("an unresolvable base exits 2", () => {
+    expect(review(["--base", "nope"], [finding()]).exitCode).toBe(2);
+  });
+
+  test("without --base nothing is marked and no base is stored", () => {
+    review([], [finding({ id: "F1", file: "new.ts", line: 5 })]);
+    const saved = ledger();
+    expect(saved.base).toBeUndefined();
+    expect(saved.findings[0]?.preexisting).toBeUndefined();
+  });
+
+  test("--coverage stores verdicts, exits 1 on a gap and keeps it through a findings round", () => {
+    const result = review(
+      ["--coverage", "--expect", "S1,S2"],
+      [{ s: "S1", verdict: "met", test: { file: "new.ts", name: "CHANGED" } }],
+    );
+    expect(result.exitCode).toBe(1);
+    const printed: unknown = JSON.parse(result.stdout);
+    expect(isObject(printed) && printed.coverage).toHaveLength(1);
+    const open = isObject(printed) && Array.isArray(printed.open) ? printed.open : [];
+    expect(open.map((entry: unknown) => isObject(entry) && entry.id)).toEqual(["VG-S2"]);
+    review([], [finding({ id: "F1", severity: "minor" })]);
+    expect(ledger().findings.find((entry) => entry.id === "VG-S2")?.status).toBe("open");
+  });
+
+  test("--coverage with every S proven exits 0", () => {
+    const result = review(
+      ["--coverage", "--expect", "S1"],
+      [{ s: "S1", verdict: "met", test: { file: "new.ts", name: "CHANGED" } }],
+    );
+    expect(result.exitCode).toBe(0);
+  });
+
+  test("a findings file with a numeric userOption exits 2 naming the field", () => {
+    const result = review([], [finding({ userOption: 3 })]);
+    expect(result.exitCode).toBe(2);
+    expect(result.stderr).toContain("userOption");
   });
 });
