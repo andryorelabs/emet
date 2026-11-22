@@ -289,6 +289,16 @@ All prose-only.
 
 - `inlineMaxLines` (default `100`, minimum `1`): largest ticket body, in lines, kept inline in a worker prompt.
 
+## attention
+
+- `alert` (default `true`, boolean): when a session enters `needs-decision`, emet raises one alert. It marks the worktree unread in Orca when `orca status --json` reports a reachable runtime, else runs `notify-send` when it is on PATH, else does nothing. Each call has a 3 s timeout and a failure never changes a hook result. Leaving `needs-decision` does not clear the Orca unread mark. Set `false` to turn the alert off.
+
+```json
+{ "attention": { "alert": true } }
+```
+
+See [`emet fleet status`](cli.md#setup-and-audit).
+
 ## schema
 
 Prose-only. This repo's data-schema ownership, used by the Phase 3 conflict-avoidance rule when splitting tickets. Empty or omitted skips the rule.
