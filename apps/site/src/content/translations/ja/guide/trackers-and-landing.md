@@ -31,6 +31,14 @@ emet は Linear、GitHub Issues、ローカルファイルに対応しており�
 
 スペックモードでは、ワーカーのワークツリーがスペックブランチから始まるよう、Claude Code の設定で `worktree.baseRef: "head"` が必要です。`emet preflight` と `emet doctor` がこれを確認します。また `emet doctor` は、モードが `pr` で、リポジトリの設定またはトランクのルールセットが設定済みの `landing.specMergeMethod` を許可していない場合に警告します。
 
+### Quick run
+
+`/emet:run --quick <依頼>` は小さな変更向けの **Quick run** を開始します。インタビューは 1 ラウンド、`folded` チケットは 1 つ、承認は 1 回です。変更が画面に触れず、1 つのチケットに収まる場合（新しいサーフェスが `sizing.inlineMaxLines` 以内で、コンテキスト予算のトリップワイヤが作動しない場合）に使います。そうでなければ承認の前に止まり、`--quick` なしの `/emet:run` を勧めます。`domain-modeling`、キャンバス、フロンティアのラウンド、`emet chain` は省略されます。実行されるのは、ワーカー 1 つ、続いて `emet verify`、`specs.enabled` のときの生きたスペックのステップ、`emet assess --quick`、ティアが `passive` でなければレビュアー、そして `emet gate` です。`--quick` を `--draft` または `--dispatch` と組み合わせると拒否されます。`--no-promote` は受け付けられます。
+
+Quick run は `landing.unit` の設定にかかわらずウェーブ単位でランディングします。`emet approve --quick` が `"mode": "quick"` を記録し、`resolveLandingUnit` が `"wave"` を返すため、スペックブランチを前提にすることはありません。1 つの PR として（`landing.mode` が `merge` ならローカルマージとして）ランディングし、その後に after-spec のステップを実行します。
+
+高リスクの差分は Quick run を止めます。`emet assess --quick` はティアが `high` のとき終了コード 1 で終了し、これがゲートの **Stop** になります。自動マージはされず、PR は開いたままで、最終レポートに高リスクの理由が示されます。
+
 ### PR によるランディング
 
 `landing.unit: "spec"` では PR はスペックのものです。最終ウェーブの後に `emet spec-branch land` が開く、統合済みの全ウェーブをまとめた 1 つの PR です。`landing.unit: "wave"` では、1 つのウェーブは 1 つの PR です。本文には各チケットにつき 1 行の `Closes #N`（トラッカーのクローズ用キーワード）が入り、コーディネーターは PR を開く際にチケットをレビュー中に移します。その後、PR は `pr.autoMerge` に従ってマージされます。ウェーブにフラグが立っている場合、`autoMerge` が `false` の場合、または CI の修正回数を使い切った場合は、PR は開いたままになります（その場合、PR には人間の判断が必要であることを示すラベルが付きます）。マージ後は、GitHub トラッカーでは `emet tracker close` がチケットをクローズし、`emet cleanup --run <runId>` がウェーブのブランチ、チケットのクレーム、ワーカースロットを解放します。また、PR がブランチの先端コミットでマージされたローカルブランチを、統合ブランチも含めて削除します。
