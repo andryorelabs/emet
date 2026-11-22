@@ -109,6 +109,17 @@ describe("promote, deploy-check, fleet and setup", () => {
       { name: "--notice", value: false },
       { name: "--data-dir", value: true },
       { name: "--json", value: false },
+      { name: "--dry-run", value: false },
+      { name: "--restore", value: true },
+    ]);
+  });
+
+  test("uninstall declares its flags", () => {
+    expect(findCommand("uninstall")?.flags).toEqual([
+      { name: "--dry-run", value: false },
+      { name: "--yes", value: false },
+      { name: "--purge", value: false },
+      { name: "--json", value: false },
     ]);
   });
 });

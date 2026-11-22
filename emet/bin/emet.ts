@@ -88,6 +88,7 @@ commands:
   deploy-check  — run the configured post-deploy check
   fleet     list|set|launch  — list, set and launch across repos
   setup     [--yes] [--with <items>] [--list]  — install the optional extras
+  uninstall [--dry-run] [--yes] [--purge]  — remove the install, its guard hooks and the setup extras
   whats-new [--hook]  — print a one-time notice after emet updates
   guard     — Claude Code PreToolUse hook (reads hook JSON on stdin); see src/guard.ts
   selftest  — run this CLI's own unit tests (source installs only)
