@@ -210,6 +210,9 @@ Letto solo quando `agentHost` è `"codex"`. Tutte le chiavi sono facoltative. Lo
 ```
 
 - `highRiskPaths` (predefinito `[]`): sottostringhe di percorso aggiuntive, senza distinzione tra maiuscole e minuscole, che impongono il livello di review `high` in `emet assess`, oltre all'insieme integrato (autenticazione, sicurezza, pagamenti, webhook, CI, l'installer, lockfile, migrazioni e sink pericolosi come SQL grezzo o pipe-to-shell).
+- `dual` (predefinito `"auto"`): `"auto"` o `"off"`. Vedi la Dual review qui sotto.
+
+Dual review: quando `emet assess` stampa `dualReview.run: true` (livello `high`, `agentHost` `claude`, `review.dual` diverso da `off` e `codex` nel PATH), il coordinatore esegue in parallelo un reviewer Claude e un reviewer Codex sullo stesso pacchetto, poi unisce i loro rilievi con `emet review --merge`. Ogni rilievo `agreement: "single"` viene valutato dal coordinatore, e viene registrata solo la copertura del reviewer Claude. `emet init` non scrive `review.dual`. Altrimenti gira un solo reviewer, come prima.
 
 ## landing
 

@@ -210,6 +210,9 @@ Claude Code ホストにおけるロールごとのモデルとエフォート�
 ```
 
 - `highRiskPaths`（既定は `[]`）: 組み込みのセット（認証、セキュリティ、決済、Webhook、CI、インストーラー、ロックファイル、マイグレーション、生の SQL やパイプでシェルに渡す処理などの危険なシンク）に加えて、`emet assess` で `high` のレビューティアを強制する、大文字小文字を区別しない追加のパス部分文字列です。
+- `dual`（既定は `"auto"`）: `"auto"` または `"off"`。下の Dual review を参照してください。
+
+Dual review: `emet assess` が `dualReview.run: true` を出力したとき（ティアが `high`、`agentHost` が `claude`、`review.dual` が `off` ではなく、`codex` が PATH にある場合）、コーディネーターは同じパッケージに対して Claude レビュアーと Codex レビュアーを並列で実行し、`emet review --merge` で両者の指摘をマージします。`agreement: "single"` の指摘はすべてコーディネーターがトリアージし、記録されるのは Claude レビュアーの coverage だけです。`emet init` は `review.dual` を書き込みません。それ以外の場合は、従来どおりレビュアー 1 つで実行します。
 
 ## landing
 
