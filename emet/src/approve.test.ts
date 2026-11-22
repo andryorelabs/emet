@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
-import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
 
@@ -29,6 +29,21 @@ describe("approval record", () => {
     expect(record.specHash).toBe(hashFile(specPath));
     expect(record.ticketsHash).toBe(hashFile(ticketsPath));
     expect(record.approvedAt).toBe("1970-01-01T00:00:00.000Z");
+  });
+
+  test("mode quick is recorded and the field is absent otherwise", () => {
+    const plain = writeApproval({ approvalPath, specPath, ticketsPath });
+    expect("mode" in plain).toBe(false);
+    const quick = writeApproval({ approvalPath, specPath, ticketsPath, mode: "quick" });
+    expect(quick.mode).toBe("quick");
+    expect(readFileSync(approvalPath, "utf8")).toContain('"mode": "quick"');
+    expect(checkApproval(approvalPath).ok).toBe(true);
+  });
+
+  test("check passes for a record written before the mode field existed", () => {
+    writeApproval({ approvalPath, specPath, ticketsPath });
+    expect(readFileSync(approvalPath, "utf8")).not.toContain("mode");
+    expect(checkApproval(approvalPath).ok).toBe(true);
   });
 
   test("check passes when nothing changed", () => {

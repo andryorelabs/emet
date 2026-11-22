@@ -1,4 +1,5 @@
 import type { ForgeConfig } from "./config";
+import { resolveLandingUnit } from "./landing-unit";
 import { listTickets, parseTicketId, resolveTrackerRoot } from "./tracker-files";
 import { classifyByContent, resolveMainTree } from "./worktrees";
 
@@ -15,6 +16,8 @@ export interface LandedContext {
   readonly readTrackerState?: (ticket: string) => Promise<TrackerState>;
   readonly classifyContent?: typeof classifyByContent;
   readonly isIntegrated?: (branch: string) => Promise<boolean>;
+  readonly runId?: string | null;
+  readonly root?: string;
 }
 
 export type GithubIssueRunner = (
@@ -173,14 +176,22 @@ export function unownedReclaimVerdict(input: UnownedReclaimInput): UnownedReclai
  * The verdict `emet cleanup` plans with: {@link resolveLandedVerdict}, plus
  * `integrated` for a ticket that is not on trunk but whose branch is an
  * ancestor of a spec branch, when `landing.unit` is `spec`. `landed` always
- * wins, so an integrated-but-open ticket is never reported as landed.
+ * wins, so an integrated-but-open ticket is never reported as landed. The unit
+ * comes from {@link resolveLandingUnit}, so a Quick run (context `runId`) never
+ * answers `integrated`.
  */
 export async function resolveCleanupVerdict(
   input: { ticket: string; branch: string },
   context: LandedContext,
 ): Promise<LandedVerdict> {
   const verdict = await resolveLandedVerdict(input, context);
-  if (verdict === "landed" || context.config.landing.unit !== "spec") return verdict;
+  if (verdict === "landed") return verdict;
+  const unit = resolveLandingUnit(
+    context.config,
+    context.runId ?? null,
+    context.root ?? process.cwd(),
+  );
+  if (unit !== "spec") return verdict;
   const check = context.isIntegrated ?? isIntegratedIntoSpecBranch;
   try {
     return (await check(input.branch)) ? "integrated" : verdict;
