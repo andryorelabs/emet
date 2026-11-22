@@ -2,7 +2,7 @@
 title: 設定リファレンス
 description: emet.config.json のすべてのキーについて、既定値と意味を説明します。
 seoTitle: emet の設定リファレンス
-sourceHash: a58a3577b2274c4a
+sourceHash: e1c8a9af5648125f
 ---
 
 `emet.config.json` のすべてのキーを、既定値と意味とともに示します。信頼できる情報源は [`emet/schema/emet.config.schema.json`](../../emet/schema/emet.config.schema.json) です。用語は [GLOSSARY.md](../../GLOSSARY.md) に従います。[README](../../README.md) に戻る。
