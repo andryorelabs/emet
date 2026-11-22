@@ -99,8 +99,10 @@ Browser axis: fill `{{browser_verify}}` in the reviewer prompt (with the
 printed `browserVerify.run: true`; otherwise leave it empty.
 
 Record the reviewer's findings JSON per ticket: `emet review --ticket
-<ticket> --findings <file|-> [--changed <files since the last round>]`. The
-CLI enforces triage order (intent_gap, bad_plan, patch, defer) and the
+<ticket> --findings <f> --base <trunk> [--changed <files since the last round>]`,
+then `emet review --ticket <ticket> --coverage <f> --expect <the wave tickets'
+Covers S#>`. List pre-existing findings in the wave report without fixing
+them. The CLI enforces triage order (intent_gap, bad_plan, patch, defer) and the
 `budgets.reviewRounds` cap, and exits 1 while findings are open. Fix, then
 with `gate.onHold: stop` (or when no fix round applies) re-dispatch
 `emet:emet-reviewer` with the "Recheck variant: stop-mode re-review" (ledger

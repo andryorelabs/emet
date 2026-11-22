@@ -94,8 +94,10 @@ low|medium`. `/code-review ultra` is a manual, opt-in step only.
 Browser axis: pass `--browser-verify true` to `emet review-run` only when `emet assess` printed `browserVerify.run: true`; otherwise omit the flag.
 
 Record the reviewer's findings JSON per ticket: `emet review --ticket
-<ticket> --findings <file|-> [--changed <files since the last round>]`. The
-CLI enforces triage order (intent_gap, bad_plan, patch, defer) and the
+<ticket> --findings <f> --base <trunk> [--changed <files since the last round>]`,
+then `emet review --ticket <ticket> --coverage <f> --expect <the wave tickets'
+Covers S#>`. List pre-existing findings in the wave report without fixing
+them. The CLI enforces triage order (intent_gap, bad_plan, patch, defer) and the
 `budgets.reviewRounds` cap, and exits 1 while findings are open. Fix, then
 with `gate.onHold: stop` (or when no fix round applies) re-dispatch
 `emet:emet-reviewer` with the "Recheck variant: stop-mode re-review" (ledger
