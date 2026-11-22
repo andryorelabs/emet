@@ -168,6 +168,10 @@ _Avoid_: status update, summary
 One execution of `/emet` for a spec, identified by a run id shared by its claims, slots, locks and results.
 _Avoid_: session, job, pipeline
 
+**Quick run**:
+A **Run** of one **Spec** with exactly one **Ticket**, one interview round and one **Wave** that lands on its own, whatever the repository's landing unit.
+_Avoid_: fast mode, lite run
+
 **Agent host**:
 The coding-agent product a run executes in: Claude Code or Codex CLI. One adapter per host holds everything specific to it.
 _Avoid_: harness, platform, client
@@ -196,6 +200,7 @@ _Avoid_: status file, progress file
 - An **After-spec rule** is chosen by the paths a **Promote** would carry; a **Deploy check** runs only after a merge into the branch that deploys.
 - A **Worker** may edit only its ticket's **Surfaces** and must keep its **Handoff** current.
 - A **Claim** carries its ticket's **Surfaces**; two live **Claims** of different **Runs** never have overlapping **Surfaces**.
+- A **Quick run** has one **Wave**, so that wave is also the spec's last one.
 - Everything above belongs to one **Run**, which executes in one **Agent host**.
 
 ## Flagged ambiguities
