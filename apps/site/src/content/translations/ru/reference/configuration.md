@@ -2,7 +2,7 @@
 title: Справочник по конфигурации
 description: Каждый ключ emet.config.json со значением по умолчанию и смыслом.
 seoTitle: Справочник по конфигурации emet
-sourceHash: a58a3577b2274c4a
+sourceHash: e1c8a9af5648125f
 ---
 
 Каждый ключ `emet.config.json` со значением по умолчанию и смыслом. Источник истины — [`emet/schema/emet.config.schema.json`](../../emet/schema/emet.config.schema.json). Термины соответствуют [GLOSSARY.md](../../GLOSSARY.md). Назад к [README](../../README.md).
@@ -206,10 +206,11 @@ sourceHash: a58a3577b2274c4a
 ## review
 
 ```json
-{ "review": { "highRiskPaths": [] } }
+{ "review": { "highRiskPaths": [], "dual": "auto" } }
 ```
 
 - `highRiskPaths` (по умолчанию `[]`): дополнительные подстроки путей без учёта регистра, которые принудительно задают уровень ревью `high` в `emet assess` сверх встроенного набора (аутентификация, безопасность, платежи, вебхуки, CI, установщик, lock-файлы, миграции и опасные sink, такие как сырой SQL или pipe-to-shell).
+- `dual` (`"auto"` или `"off"`, по умолчанию `"auto"`; `emet init` его не записывает): управляет Dual review. При `auto` волна `high` на хосте Claude Code при наличии бинарного файла `codex` в PATH запускает двух ревьюеров параллельно над одним пакетом: ревьюера Claude и `emet review-run`. Координатор объединяет их замечания через `emet review --merge`, проводит триаж каждого замечания только одного ревьюера (оставить или отбросить через `emet review --rule`) и записывает только Coverage verdicts ревьюера Claude. `off` всегда запускает одного ревьюера. `emet assess` печатает решение как `dualReview: { run, reason }`.
 
 ## landing
 

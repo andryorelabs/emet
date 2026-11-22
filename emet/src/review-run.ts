@@ -19,9 +19,9 @@ import { spawnCodex } from "./codex-process";
 import { ForgeConfigError, loadForgeConfigWithDefaults, resolveRepoRoot } from "./config";
 import { BINARY } from "./names";
 import { errorMessage, isObject, isOneOf } from "./narrow";
-import { parseFindings, type Finding } from "./review";
+import { parseCoverage, parseFindings, type CoverageVerdict, type Finding } from "./review";
 
-const USAGE = `usage: ${BINARY} review-run --run <id> --ticket <id> --package <file> --tier <medium|high|passive> [--browser-verify true|false]`;
+const USAGE = `usage: ${BINARY} review-run --run <id> --ticket <id> --package <file> --tier <medium|high|passive> [--browser-verify true|false] [--coverage-out <file>]`;
 
 const TIERS = ["passive", "medium", "high"] as const;
 type Tier = (typeof TIERS)[number];
@@ -45,6 +45,7 @@ interface ReviewRunArgs {
   readonly packagePath: string;
   readonly tier: Tier;
   readonly browserVerify: boolean;
+  readonly coverageOut?: string;
 }
 
 /** The Browser axis paragraph; equals the fenced block in `reference/reviewer-prompt.md`, with `{{run_id}}` filled at build time. */
@@ -61,6 +62,7 @@ export const BROWSER_AXIS_PROMPT = [
 ].join("\n");
 
 const SEVERITY_VALUES = ["blocker", "critical", "major", "minor", "nit"];
+const VERDICT_VALUES = ["met", "partial", "unmet"];
 const KIND_VALUES = ["intent_gap", "bad_plan", "patch", "defer"];
 
 /**
@@ -72,14 +74,32 @@ export function findingsSchema(): Record<string, unknown> {
   return {
     type: "object",
     additionalProperties: false,
-    required: ["findings"],
+    required: ["findings", "coverage"],
     properties: {
+      coverage: {
+        type: "array",
+        items: {
+          type: "object",
+          additionalProperties: false,
+          required: ["s", "verdict", "test"],
+          properties: {
+            s: { type: "string" },
+            verdict: { type: "string", enum: VERDICT_VALUES },
+            test: {
+              type: ["object", "null"],
+              additionalProperties: false,
+              required: ["file", "name"],
+              properties: { file: { type: "string" }, name: { type: "string" } },
+            },
+          },
+        },
+      },
       findings: {
         type: "array",
         items: {
           type: "object",
           additionalProperties: false,
-          required: ["id", "file", "line", "severity", "kind", "claim"],
+          required: ["id", "file", "line", "severity", "kind", "claim", "s", "userOption"],
           properties: {
             id: { type: "string" },
             file: { type: "string" },
@@ -87,6 +107,8 @@ export function findingsSchema(): Record<string, unknown> {
             severity: { type: "string", enum: SEVERITY_VALUES },
             kind: { type: "string", enum: KIND_VALUES },
             claim: { type: "string" },
+            s: { type: ["string", "null"] },
+            userOption: { type: ["string", "null"] },
           },
         },
       },
@@ -110,7 +132,15 @@ function parseArguments(argv: readonly string[]): ReviewRunArgs | undefined {
   if (!isOneOf(TIERS, tier)) return undefined;
   const browserVerify = values.get("--browser-verify") ?? "false";
   if (browserVerify !== "true" && browserVerify !== "false") return undefined;
-  return { run: runId, ticket, packagePath, tier, browserVerify: browserVerify === "true" };
+  const coverageOut = values.get("--coverage-out");
+  return {
+    run: runId,
+    ticket,
+    packagePath,
+    tier,
+    browserVerify: browserVerify === "true",
+    ...(coverageOut === undefined ? {} : { coverageOut }),
+  };
 }
 
 /** The reviewer prompt: lenses by tier, the package path and the output contract. */
@@ -125,6 +155,11 @@ export function buildReviewerPrompt(args: ReviewRunArgs): string {
     `Lenses: ${lenses}. Verification-gap: one finding per gap, "one test that would catch <named regression>". Also check the diff against the repo's documented coding standards (AGENTS.md, CONTRIBUTING.md); a clear violation is a finding.`,
     `Answer with a JSON object { "findings": [...] } matching the output schema. Each finding has id (stable, F-001...), file, line (integer), severity (${SEVERITY_VALUES.join("|")}), kind (${KIND_VALUES.join("|")}) and claim (the failure scenario). An empty array means nothing blocks.`,
   ];
+  if (args.coverageOut !== undefined) {
+    sections.push(
+      `Add s ("S<n>", or null) when a finding is about one requirement and userOption ("S<n>", or null) when it contradicts a user-option requirement. Also answer coverage: one { s, verdict (${VERDICT_VALUES.join("|")}), test: { file, name } or null } per requirement, with test naming the test that proves a met.`,
+    );
+  }
   if (args.browserVerify) sections.push(BROWSER_AXIS_PROMPT.replace("{{run_id}}", args.run));
   return sections.join("\n\n");
 }
@@ -158,6 +193,18 @@ export function extractFindings(message: string): Finding[] {
   }
   const list = isObject(parsed) && !Array.isArray(parsed) ? parsed.findings : parsed;
   return parseFindings(JSON.stringify(list));
+}
+
+/** Coverage verdicts from the reviewer's final message; empty when it has none. */
+export function extractCoverage(message: string): CoverageVerdict[] {
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(message);
+  } catch {
+    throw new ForgeConfigError("the reviewer's final message is not valid JSON");
+  }
+  if (!isObject(parsed) || Array.isArray(parsed) || parsed.coverage === undefined) return [];
+  return parseCoverage(JSON.stringify(parsed.coverage));
 }
 
 /**
@@ -266,7 +313,11 @@ async function reviewWithCodex(args: ReviewRunArgs, deps: ReviewRunDeps): Promis
     const stderr = readOptional(`${jsonlPath}.err`).trim();
     throw new Error(`codex review produced no final message${stderr ? `: ${stderr}` : ""}`);
   }
-  console.log(JSON.stringify(extractFindings(message), null, 2));
+  const findings = extractFindings(message);
+  if (args.coverageOut !== undefined) {
+    writeFileSync(args.coverageOut, `${JSON.stringify(extractCoverage(message), null, 2)}\n`);
+  }
+  console.log(JSON.stringify(findings, null, 2));
   return 0;
 }
 

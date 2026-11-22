@@ -12,7 +12,9 @@
  * raises the tier one step (passive -> medium, medium -> high). It can never
  * lower a tier.
  *
- * Prints `{tier, reasons, reviewer:{model,effort}|null, browserVerify:{run,reason}}` as JSON. Tier
+ * Prints `{tier, reasons, reviewer:{model,effort}|null, browserVerify:{run,reason},
+ * dualReview:{run,reason}}` as JSON. `dualReview.run` is true only at tier `high` on the `claude`
+ * host with `review.dual` not `off` and `codex` on PATH. Tier
  * is `passive` (reviewer null: no review) for docs-only diffs, `high` when a changed path matches a
  * high-risk token (built-in or `review.highRiskPaths`) or an added line
  * matches a dangerous-sink pattern, and `medium` otherwise.
@@ -23,6 +25,7 @@ import {
   ForgeConfigError,
   loadForgeConfigWithDefaults,
   resolveRepoRoot,
+  resolveAgentHostName,
   type ForgeConfig,
   type ModelChoice,
 } from "./config";
@@ -36,16 +39,24 @@ export interface BrowserVerify {
   readonly reason: string;
 }
 
+/** Whether a second, Codex reviewer runs beside the Claude one, and why or why not. */
+export interface DualReview {
+  readonly run: boolean;
+  readonly reason: string;
+}
+
 export interface AssessResult {
   readonly tier: AssessTier;
   readonly reasons: readonly string[];
   readonly reviewer: ModelChoice | null;
   readonly browserVerify: BrowserVerify;
+  readonly dualReview: DualReview;
 }
 
 /** Facts about the host that `classifyDiff` cannot derive from the diff or config. */
 export interface AssessEnvironment {
   readonly agentBrowserOnPath: boolean;
+  readonly codexOnPath: boolean;
 }
 
 interface AssessContext {
@@ -53,7 +64,10 @@ interface AssessContext {
   readonly environment: AssessEnvironment;
 }
 
-const DEFAULT_ENVIRONMENT: AssessEnvironment = { agentBrowserOnPath: false };
+const DEFAULT_ENVIRONMENT: AssessEnvironment = {
+  agentBrowserOnPath: false,
+  codexOnPath: false,
+};
 
 export interface DiffInput {
   readonly paths: readonly string[];
@@ -134,6 +148,19 @@ function evaluateBrowserVerify(
   };
 }
 
+function evaluateDualReview(
+  tier: AssessTier,
+  config: ForgeConfig,
+  environment: AssessEnvironment,
+): DualReview {
+  if (tier !== "high") return { run: false, reason: `the tier is ${tier}, not high` };
+  if (resolveAgentHostName(config) !== "claude")
+    return { run: false, reason: "agentHost is not claude" };
+  if (config.review.dual === "off") return { run: false, reason: "review.dual is off" };
+  if (!environment.codexOnPath) return { run: false, reason: "the codex binary is not on PATH" };
+  return { run: true, reason: "high tier, claude host, review.dual not off and codex found" };
+}
+
 export function classifyDiff(
   input: DiffInput,
   config: ForgeConfig,
@@ -147,6 +174,7 @@ export function classifyDiff(
       reasons: [input.paths.length === 0 ? "empty diff" : "docs-only diff"],
       reviewer: null,
       browserVerify: evaluateBrowserVerify(input, config, null, environment),
+      dualReview: evaluateDualReview("passive", config, environment),
     };
   }
 
@@ -174,6 +202,7 @@ export function classifyDiff(
       reasons: [...new Set(reasons)],
       reviewer: models.reviewer.high,
       browserVerify: evaluateBrowserVerify(input, config, models.reviewer.high, environment),
+      dualReview: evaluateDualReview("high", config, environment),
     };
   }
   return {
@@ -181,6 +210,7 @@ export function classifyDiff(
     reasons: ["source change with no high-risk signals"],
     reviewer: models.reviewer.medium,
     browserVerify: evaluateBrowserVerify(input, config, models.reviewer.medium, environment),
+    dualReview: evaluateDualReview("medium", config, environment),
   };
 }
 
@@ -208,7 +238,8 @@ export function applyRiskLine(
   const browserVerify = context
     ? evaluateBrowserVerify(context.input, config, reviewer, context.environment)
     : result.browserVerify;
-  return { tier, reasons, reviewer, browserVerify };
+  const dualReview = evaluateDualReview(tier, config, context?.environment ?? DEFAULT_ENVIRONMENT);
+  return { tier, reasons, reviewer, browserVerify, dualReview };
 }
 
 export function parseDiffInput(nameOnlyOutput: string, patch: string): DiffInput {
@@ -258,7 +289,10 @@ export async function run(argv: string[]): Promise<void> {
     const nameOnly = await gitDiff(repoRoot, ["-z", "--name-only", base, head, "--"]);
     const patch = await gitDiff(repoRoot, ["-U0", base, head, "--"]);
     const input = parseDiffInput(nameOnly, patch);
-    const environment = { agentBrowserOnPath: await resolveBinaryOnPath("agent-browser") };
+    const environment: AssessEnvironment = {
+      agentBrowserOnPath: await resolveBinaryOnPath("agent-browser"),
+      codexOnPath: await resolveBinaryOnPath("codex"),
+    };
     const classified = classifyDiff(input, config, environment);
     const riskLine = readFlagValue(argv, "--risk-line");
     const result =

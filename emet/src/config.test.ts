@@ -140,7 +140,7 @@ describe("loadForgeConfig", () => {
         triage: "sonnet",
         escalation: { sonnet: "opus", haiku: "sonnet" },
       },
-      review: { highRiskPaths: ["billing"] },
+      review: { highRiskPaths: ["billing"], dual: "auto" },
       budgets: {
         workerAttempts: 3,
         reviewRounds: 4,
@@ -713,6 +713,7 @@ describe("models and review sections", () => {
     expect(config.models.reviewer.high).toEqual({ model: "opus", effort: "medium" });
     expect(config.models.triage).toBe("haiku");
     expect(config.review.highRiskPaths).toEqual([]);
+    expect(config.review.dual).toBe("auto");
   });
 
   test("a partial models section merges onto defaults", async () => {
@@ -745,11 +746,17 @@ describe("models and review sections", () => {
     [{ specs: { enabled: "yes" } }, /"specs.enabled" must be a boolean/],
     [{ review: { highRiskPaths: "auth" } }, /"review.highRiskPaths" must be an array/],
     [{ review: { highRiskPaths: [""] } }, /"review.highRiskPaths\[0\]"/],
+    [{ review: { dual: "always" } }, /"review.dual" must be one of auto\|off/],
   ])("malformed for %j", async (value, pattern) => {
     await writeConfig(value);
     const result = await loadForgeConfig(repoRoot);
     expect(result.status).toBe("malformed");
     expect(reasonOf(result)).toMatch(pattern);
+  });
+
+  test("review.dual is read", async () => {
+    await writeConfig({ review: { dual: "off" } });
+    expect(configOf(await loadForgeConfig(repoRoot)).review.dual).toBe("off");
   });
 
   test("review.highRiskPaths is read", async () => {

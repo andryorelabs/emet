@@ -17,20 +17,20 @@ const BYTE_CEILINGS: Readonly<Record<string, number>> = {
   "commands/run.md": 9600,
   "commands/setup.md": 1150,
   "emet/reference/incidents.md": 12950,
-  "emet/reference/phases-1-5.md": 12170,
+  "emet/reference/phases-1-5.md": 12290,
   "emet/reference/phases-quick.md": 1770,
   "emet/reference/phases-6-7-dispatch.md": 16900,
   "emet/reference/phases-8-landing.md": 9000,
   "emet/reference/phases-8-spec-landing.md": 3850,
   "emet/reference/living-specs.md": 1330,
-  "emet/reference/phases-8-review.md": 9400,
+  "emet/reference/phases-8-review.md": 9950,
   "emet/reference/phases-9-handoff.md": 7450,
-  "emet/reference/reviewer-prompt.md": 3930,
+  "emet/reference/reviewer-prompt.md": 4150,
   "emet/reference/tracker-github.md": 3930,
   "emet/reference/tracker-linear.md": 5400,
   "emet/reference/tracker-local.md": 1870,
   "emet/reference/worker-prompt.md": 7680,
-  "agents/emet-reviewer.md": 1980,
+  "agents/emet-reviewer.md": 2180,
   "agents/emet-worker.md": 1230,
 };
 
@@ -210,6 +210,49 @@ describe("browser verification prompts", () => {
   test("no prompt pins an agent-browser version", () => {
     for (const path of listMarkdown("emet/reference")) {
       expect(read(path)).not.toMatch(/agent-browser@/);
+    }
+  });
+});
+
+describe("coverage and user option prompts", () => {
+  test("the reviewer prompt asks for the Coverage verdicts file, not prose verdicts", () => {
+    const reviewer = read("emet/reference/reviewer-prompt.md");
+    expect(reviewer).toContain(".emet/coverage-{{run_id}}.json");
+    expect(reviewer).not.toContain("S<n>: met | partial | unmet");
+    expect(reviewer).toContain("userOption");
+    expect(reviewer).toContain('"s"');
+  });
+
+  test("the reviewer agent names the Coverage verdicts file", () => {
+    const agent = read("agents/emet-reviewer.md");
+    expect(agent).toContain(".emet/coverage-<runId>.json");
+    expect(agent).toContain("userOption");
+  });
+
+  test("Phase 8 records findings with --base and coverage with --expect", () => {
+    const review = read("emet/reference/phases-8-review.md");
+    expect(review).toContain("--findings <f> --base <trunk>");
+    expect(review).toContain("--coverage <f> --expect");
+    expect(review).toContain("pre-existing");
+  });
+
+  test("Phase 2 marks user option requirements", () => {
+    expect(read("emet/reference/phases-1-5.md")).toContain("(user option)");
+  });
+});
+
+describe("dual review dispatch", () => {
+  test("phases-8-review.md runs both reviewers on dualReview.run and merges", () => {
+    const review = readReference("phases-8-review.md");
+    for (const required of [
+      "dualReview.run: true",
+      "emet review-run --tier high",
+      "emet review --merge <claude.json> <codex.json>",
+      'agreement: "single"',
+      "emet review --rule",
+      "Only the Claude reviewer's coverage",
+    ]) {
+      expect(review).toContain(required);
     }
   });
 });

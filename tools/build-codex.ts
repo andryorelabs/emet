@@ -164,7 +164,7 @@ const RULES: readonly Rule[] = [
     pattern:
       /Dispatch one `Agent\(\{subagent_type: "emet:emet-reviewer"\}\)`\s+built from(?:\s+`[^`]*reviewer-prompt\.md`\s+\(fill[\s\S]*?Global Constraints`\))?/,
     replacement:
-      "Run `emet review-run --run <runId> --ticket <ticket> --package <file> --tier <medium|high>` once; it builds the reviewer prompt itself (add `--browser-verify true` when `emet assess` printed `browserVerify.run: true`)",
+      "Run `emet review-run --run <runId> --ticket <ticket> --package <file> --tier <medium|high> --coverage-out <file>` once; it builds the reviewer prompt itself (add `--browser-verify true` when `emet assess` printed `browserVerify.run: true`)",
   },
   {
     pattern: /Browser axis: fill `\{\{browser_verify\}\}`[\s\S]*?leave it empty\./,

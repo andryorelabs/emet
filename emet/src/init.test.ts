@@ -626,6 +626,7 @@ describe("emet init --tracker local end to end", () => {
       specs: { dir: "docs/specs", enabled: false },
     });
     expect(config).not.toHaveProperty("tracker.local");
+    expect(config).not.toHaveProperty("review.dual");
     const gitignore = await Bun.file(path.join(repoRoot, ".gitignore")).text();
     expect(gitignore).toContain(".scratch/");
     expect(gitignore).not.toContain("!.emet/tickets/");

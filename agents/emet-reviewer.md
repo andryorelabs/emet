@@ -23,8 +23,11 @@ Report only problems that should block the merge, each with an exact
 `file:line` and the concrete failure scenario. Nothing blocking: emit `[]`.
 
 Output is JSON for `emet review --findings`, written to
-`.emet/review-<runId>.json` (the one file you may create, via Bash); the
-dispatch prompt gives the exact shape.
+`.emet/review-<runId>.json`, plus the Coverage verdicts
+`[{s, verdict, test:{file,name}}]` in `.emet/coverage-<runId>.json` (the only
+files you may create, via Bash). Put `s` on a finding tied to one S# and
+`userOption` on one that contradicts a `(user option)` S#; the dispatch prompt
+gives the exact shape.
 
 Refuter pass: take all `blocker`/`critical` findings together, once, and try
 to refute them; drop or downgrade what you refute.
