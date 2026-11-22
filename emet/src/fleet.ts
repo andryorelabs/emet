@@ -3,6 +3,7 @@ import os from "node:os";
 import path from "node:path";
 
 import type { AgentHost } from "./agenthost";
+import { readSessionAttention, type SessionAttention } from "./attention";
 import {
   checkLaunchReadiness,
   readDiskStats,
@@ -300,7 +301,7 @@ export function defaultLaunchDeps(runner: CommandRunner = defaultRunner): FleetL
   };
 }
 
-const USAGE = `usage: ${BINARY} fleet <list | set <key> <value> | launch --feature <text>> [--root <dir>] [--repos <a,b>] [--dry-run] [--json]`;
+const USAGE = `usage: ${BINARY} fleet <list | set <key> <value> | launch --feature <text> | status> [--root <dir>] [--repos <a,b>] [--dry-run] [--json]`;
 const VALUE_FLAGS: ReadonlySet<string> = new Set(["--root", "--repos", "--feature"]);
 
 function readFlagValue(argv: readonly string[], flag: string): string | undefined {
@@ -352,7 +353,42 @@ function selectRepos(entries: FleetEntry[], repos: string | undefined): FleetEnt
   return entries.filter((entry) => wanted.has(path.basename(entry.path)));
 }
 
+/** Sessions grouped per repo, with the count of sessions that wait on a decision. */
+export interface FleetStatus {
+  repos: { repo: string; sessions: SessionAttention[] }[];
+  blocked: number;
+}
+
+function countBlocked(group: SessionAttention[]): number {
+  return group.filter((session) => session.blocked).length;
+}
+
+/** Groups sessions per repo, repos with blocked sessions first, then by name. */
+export function buildFleetStatus(sessions: SessionAttention[]): FleetStatus {
+  const byRepo = new Map<string, SessionAttention[]>();
+  for (const session of sessions) {
+    const group = byRepo.get(session.repo) ?? [];
+    group.push(session);
+    byRepo.set(session.repo, group);
+  }
+  const repos = [...byRepo.entries()]
+    .map(([repo, group]) => ({ repo, sessions: group }))
+    .toSorted(
+      (left, right) =>
+        Number(countBlocked(right.sessions) > 0) - Number(countBlocked(left.sessions) > 0) ||
+        left.repo.localeCompare(right.repo),
+    );
+  return { repos, blocked: countBlocked(sessions) };
+}
+
+function formatStatusLine(entry: FleetStatus["repos"][number]): string {
+  const count = (state: SessionAttention["state"]): number =>
+    entry.sessions.filter((session) => session.state === state).length;
+  return `${entry.repo}: ${count("needs-decision")} blocked, ${count("working")} working, ${count("idle")} idle`;
+}
+
 export interface FleetRunDeps {
+  readonly status?: () => SessionAttention[];
   readonly list?: FleetListDeps;
   readonly set?: FleetSetDeps;
   readonly launch?: FleetLaunchDeps;
@@ -362,8 +398,22 @@ export interface FleetRunDeps {
 export async function run(argv: string[], overrides: FleetRunDeps = {}): Promise<void> {
   try {
     const [subcommand, ...rest] = positionals(argv);
-    if (subcommand !== "list" && subcommand !== "set" && subcommand !== "launch") {
+    if (
+      subcommand !== "list" &&
+      subcommand !== "set" &&
+      subcommand !== "launch" &&
+      subcommand !== "status"
+    ) {
       throw new ForgeConfigError(USAGE);
+    }
+    if (subcommand === "status") {
+      const status = buildFleetStatus((overrides.status ?? (() => readSessionAttention({})))());
+      console.log(
+        argv.includes("--json")
+          ? JSON.stringify(status)
+          : status.repos.map((entry) => formatStatusLine(entry)).join("\n"),
+      );
+      return;
     }
     const root = readFlagValue(argv, "--root") ?? path.join(os.homedir(), "code");
     const json = argv.includes("--json");
