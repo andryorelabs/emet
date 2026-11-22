@@ -12,6 +12,7 @@ import {
   unownedReclaimVerdict,
   type LandedVerdict,
 } from "./landed";
+import { runDirectory } from "./runs";
 import type { ContentVerdict } from "./worktrees";
 
 const input = { ticket: "CLA-9", branch: "cla-9-thing" };
@@ -150,6 +151,25 @@ describe("resolveCleanupVerdict", () => {
       isIntegrated: () => Promise.resolve(false),
     });
     expect(verdict).toBe("not-landed");
+  });
+
+  test("a quick run never answers integrated under landing.unit spec", async () => {
+    const root = mkdtempSync(path.join(os.tmpdir(), "emet-landed-"));
+    try {
+      const directory = runDirectory(root, "spec900");
+      mkdirSync(directory, { recursive: true });
+      writeFileSync(path.join(directory, "approval.json"), JSON.stringify({ mode: "quick" }));
+      const verdict = await resolveCleanupVerdict(input, {
+        config,
+        readTrackerState: open,
+        isIntegrated: () => Promise.resolve(true),
+        runId: "spec900",
+        root,
+      });
+      expect(verdict).toBe("not-landed");
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
   });
 
   test("landing.unit wave never answers integrated", async () => {
