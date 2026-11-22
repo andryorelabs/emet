@@ -112,6 +112,7 @@ type ModuleName =
   | "metrics"
   | "insights"
   | "runcurrent"
+  | "memory"
   | "promote"
   | "deploycheck"
   | "fleet"
@@ -196,6 +197,8 @@ async function loadRun(name: ModuleName): Promise<ModuleRun> {
       return (await import("./insights")).run;
     case "runcurrent":
       return (await import("./runcurrent")).run;
+    case "memory":
+      return (await import("./memory")).run;
     case "promote":
       return (await import("./promote")).run;
     case "deploycheck":
@@ -570,6 +573,12 @@ export const COMMANDS: readonly CommandSpec[] = [
     summary: "run subcommands; `current` prints the active run",
     flags: [bool("--json")],
     run: runModule("runcurrent"),
+  },
+  {
+    name: "memory",
+    summary: "search and save cross-run lessons in Engram (search|save)",
+    flags: [bool("--json"), val("--limit"), val("--key"), val("--run"), val("--outcome")],
+    run: runModule("memory"),
   },
   {
     name: "promote",
