@@ -8,10 +8,14 @@
 
 import {
   appendFileSync,
+  closeSync,
   existsSync,
+  fstatSync,
   mkdirSync,
+  openSync,
   readdirSync,
   readFileSync,
+  readSync,
   renameSync,
   rmSync,
   statSync,
@@ -35,6 +39,7 @@ const JOURNAL_KINDS = [
   "spec.integrate",
   "spec.land",
   "spec.abandon",
+  "session.attention",
 ] as const;
 
 /** One of the event kinds the journal accepts. */
@@ -224,4 +229,42 @@ export function readJournalSegments(deps?: JournalDeps): {
     return { events, skippedLines };
   }
   return { events, skippedLines };
+}
+
+function readTail(file: string, maxBytes: number): string {
+  const descriptor = openSync(file, "r");
+  try {
+    const size = fstatSync(descriptor).size;
+    const start = Math.max(0, size - maxBytes);
+    const buffer = Buffer.alloc(size - start);
+    readSync(descriptor, buffer, 0, buffer.length, start);
+    const text = buffer.toString("utf8");
+    return start === 0 ? text : text.slice(text.indexOf("\n") + 1);
+  } finally {
+    closeSync(descriptor);
+  }
+}
+
+/**
+ * The valid events among at most the last `maxBytes` of the current file,
+ * newest first, keeping only lines `matches` accepts before parsing them. A
+ * partial first line, rotated segments and any read failure yield nothing.
+ */
+export function readRecentEvents(
+  maxBytes: number,
+  matches: (line: string) => boolean,
+  deps?: JournalDeps,
+): JournalEvent[] {
+  try {
+    const file = path.join(journalDirectory(deps), CURRENT_FILE);
+    if (!existsSync(file)) return [];
+    return readTail(file, maxBytes)
+      .split("\n")
+      .toReversed()
+      .filter((line) => line.trim() !== "" && matches(line))
+      .map((line) => parseEvent(line))
+      .filter((event): event is JournalEvent => event !== undefined);
+  } catch {
+    return [];
+  }
 }
