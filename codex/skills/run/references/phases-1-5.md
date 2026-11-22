@@ -9,6 +9,7 @@ Reach a shared understanding of the user's arguments by invoking the skill twice
 `grilling` then `domain-modeling` (terminology per `docs/agents/domain.md`); `grill-with-docs` is
 user-invocable only, so call its two skills directly. Any `GLOSSARY.md`/`docs/adr/` edit `domain-modeling`
 proposes is **not written yet** — note it in the plan file, apply in Phase 5.
+Before the first round run `emet memory search --json "<feature title>"`; when `available` is true and results exist, write the relevant lessons under `## Prior lessons` in the plan file; when `available` is false, note it in one line and go on.
 
 Interview in **frontier rounds**, not one question at a time. Each round asks
 every currently unblocked decision together; each carries a `➡️` recommended

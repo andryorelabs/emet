@@ -21,6 +21,7 @@ export const FORBIDDEN_TOKENS: readonly string[] = [
   "SendMessage",
   "TaskStop",
   "ToolSearch",
+  "mcp__engram",
   "ScheduleWakeup",
   "EnterPlanMode",
   "ExitPlanMode",

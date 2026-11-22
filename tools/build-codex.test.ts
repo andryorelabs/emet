@@ -234,6 +234,11 @@ describe("committed Codex artefacts", () => {
     expect(FORBIDDEN_TOKENS).toContain("CLAUDE_PLUGIN_ROOT");
   });
 
+  test("mcp__engram is a forbidden token", () => {
+    expect(FORBIDDEN_TOKENS).toContain("mcp__engram");
+    expect(findForbiddenTokens("call mcp__engram__mem_save")).toEqual(["mcp__engram"]);
+  });
+
   test("the run skill wires the dispatch, review and approval CLI calls", () => {
     const text = files.map((file) => file.content).join("\n");
     expect(text).toContain("emet dispatch --role worker");
