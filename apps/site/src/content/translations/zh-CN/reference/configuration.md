@@ -2,7 +2,7 @@
 title: 配置参考
 description: emet.config.json 中的每个键，包括其默认值和含义。
 seoTitle: emet 配置参考
-sourceHash: a58a3577b2274c4a
+sourceHash: e1c8a9af5648125f
 ---
 
 `emet.config.json` 中的每个键，及其默认值和含义。权威来源是 [`emet/schema/emet.config.schema.json`](../../emet/schema/emet.config.schema.json)。术语遵循 [GLOSSARY.md](../../GLOSSARY.md)。返回 [README](../../README.md)。
@@ -206,10 +206,11 @@ Claude Code 宿主上每个角色的模型和推理强度；Codex 宿主改为�
 ## review
 
 ```json
-{ "review": { "highRiskPaths": [] } }
+{ "review": { "highRiskPaths": [], "dual": "auto" } }
 ```
 
 - `highRiskPaths`（默认 `[]`）：额外的、不区分大小写的路径子串，在内置集合（认证、安全、支付、webhook、CI、安装程序、锁文件、迁移，以及原始 SQL 或管道传给 shell 之类的危险敏感调用）之外，在 `emet assess` 中强制进入 `high` 评审层级。
+- `dual`（`"auto"` 或 `"off"`，默认 `"auto"`；`emet init` 不会写入它）：控制 Dual review。使用 `auto` 时，Claude Code 宿主上的 `high` 波次在 PATH 中有 `codex` 二进制文件时，会对同一个包并行运行两个评审者：Claude 评审者和 `emet review-run`。协调者用 `emet review --merge` 合并它们的问题，对只有一个评审者提出的每个问题进行分诊（保留，或用 `emet review --rule` 丢弃），并且只记录 Claude 评审者的 Coverage verdicts。`off` 始终只运行一个评审者。`emet assess` 将该决定输出为 `dualReview: { run, reason }`。
 
 ## landing
 
