@@ -8,6 +8,20 @@ and this project adheres to
 
 ## [Unreleased]
 
+## [0.19.0] - 2026-11-22
+
+### Added
+
+- `emet memory search --json <query> [--limit <n>]` and `emet memory save --json --key <spec-<id>|quick-<runId>> --run <runId> --outcome <outcome>` read and write Lessons in Engram. `search` keeps the notes whose topic key starts with `emet/<repo>/lessons/` and prints their full content, `save` appends one section per run to the note for the spec or quick run from 1 to 5 bullets on stdin. Both print one JSON object, exit 0 on every Engram problem and exit 2 only on bad usage.
+- `memory.enabled` (`auto` or `off`, default `auto`) is added to the config schemas. `off` never spawns `engram`.
+- Phase 1 searches memory for prior Lessons before the first interview round and writes the relevant ones under `## Prior lessons` in the plan file. The wave and quick hand-offs save the run's Lessons before the final report. `--draft` saves nothing.
+- `docs/reference/cli.md` and `docs/reference/configuration.md` document `emet memory` and `memory.enabled`, in all nine locales.
+
+### Changed
+
+- The Codex build rejects `mcp__engram` in a generated reference, so Engram tool names never reach the Codex plugin.
+- `/emet:run` prompts gain the memory steps above; with no `engram` on PATH, or `memory.enabled: "off"`, each step is a one-line note and the run goes on as in 0.18.0.
+
 ## [0.18.0] - 2026-11-22
 
 ### Added
@@ -586,7 +600,8 @@ and this project adheres to
 - Per-repo configuration through `forge.config.json`.
 - `install.sh`, which installs the CLI, command and agents.
 
-[Unreleased]: https://github.com/andryorelabs/emet/compare/v0.18.0...HEAD
+[Unreleased]: https://github.com/andryorelabs/emet/compare/v0.19.0...HEAD
+[0.19.0]: https://github.com/andryorelabs/emet/compare/v0.18.0...v0.19.0
 [0.18.0]: https://github.com/andryorelabs/emet/compare/v0.17.0...v0.18.0
 [0.17.0]: https://github.com/andryorelabs/emet/compare/v0.16.0...v0.17.0
 [0.16.0]: https://github.com/andryorelabs/emet/compare/v0.15.0...v0.16.0

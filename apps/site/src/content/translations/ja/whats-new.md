@@ -2,8 +2,24 @@
 title: 新機能
 description: emet のリリースノート。各バージョンでの変更点をまとめています。
 seoTitle: "emet の新機能: リリースノート"
-sourceHash: d0c15a0312936cf4
+sourceHash: 946f5971d5a42a0b
 ---
+
+## 0.19.0
+
+2026-11-22
+
+### 追加
+
+- `emet memory search --json <query> [--limit <n>]` と `emet memory save --json --key <spec-<id>|quick-<runId>> --run <runId> --outcome <outcome>` は Engram の Lessons を読み書きします。`search` はトピックキーが `emet/<repo>/lessons/` で始まるノートを残して全文を出力し、`save` は stdin から 1 〜 5 個の箇条書きを受け取って、spec または quick run のノートに run ごとに 1 セクションを追記します。どちらも JSON オブジェクトを 1 つ出力し、Engram の問題では常に exit 0、使い方の誤りの場合のみ exit 2 で終了します。
+- `memory.enabled`（`auto` または `off`、既定は `auto`）が設定スキーマに追加されます。`off` の場合は `engram` を一切起動しません。
+- Phase 1 は最初のインタビューラウンドの前にメモリから過去の Lessons を検索し、関連するものをプランファイルの `## Prior lessons` に書き込みます。wave と quick のハンドオフは、最終レポートの前にその run の Lessons を保存します。`--draft` は何も保存しません。
+- `docs/reference/cli.md` と `docs/reference/configuration.md` に `emet memory` と `memory.enabled` を記載しました（全 9 言語）。
+
+### 変更
+
+- Codex ビルドは生成された reference に `mcp__engram` が含まれていると拒否するため、Engram のツール名が Codex プラグインに届くことはありません。
+- `/emet:run` のプロンプトに上記のメモリ手順が追加されます。PATH に `engram` がない場合や `memory.enabled: "off"` の場合、各手順は 1 行のメモになり、run は 0.18.0 と同様に進みます。
 
 ## 0.18.0
 
