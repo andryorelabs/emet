@@ -230,6 +230,20 @@ describe("preflight run (full gate)", () => {
     expect(fixture.errors.join("\n")).not.toContain('landing.unit is "spec"');
   });
 
+  test("a Quick run gated through --approval reports no spec-branch fork-base failure", async () => {
+    fixture.writeConfig({ landing: { mode: "merge", unit: "spec" } });
+    mkdirSync(path.join(fixture.repo, ".claude"), { recursive: true });
+    writeFileSync(
+      path.join(fixture.repo, ".claude", "settings.json"),
+      JSON.stringify({ worktree: { baseRef: "fresh" } }),
+    );
+    runGit(fixture.repo, "add", "-A");
+    runGit(fixture.repo, "commit", "-q", "-m", "config");
+    await approveRunWithMode("spec902", "quick");
+    await run(["--approval", "spec902"]);
+    expect(fixture.errors.join("\n")).not.toContain('landing.unit is "spec"');
+  });
+
   test("a non-quick run still reports the spec-branch fork-base failure under landing.unit spec", async () => {
     fixture.writeConfig({ landing: { mode: "merge", unit: "spec" } });
     mkdirSync(path.join(fixture.repo, ".claude"), { recursive: true });

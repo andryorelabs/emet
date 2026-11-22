@@ -1390,7 +1390,7 @@ async function main(config: ForgeConfig, repoRoot: string) {
       createEnvironmentProbes(host),
       config.landing.mode,
       host,
-      resolveLandingUnit(config, currentRunId ?? null, repoRoot),
+      resolveLandingUnit(config, currentRunId ?? approvalRunId ?? null, repoRoot),
     )),
   );
 
