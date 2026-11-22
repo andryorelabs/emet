@@ -2,7 +2,7 @@
 title: Revisión de flota
 description: Audita varios repositorios a la vez con emet doctor, en modo de solo lectura, y mira cuáles necesitan atención.
 seoTitle: Revisión de flota con emet doctor
-sourceHash: 7b3c5a56abfffcc1
+sourceHash: 5eef774032962f35
 ---
 
 ¿Ya usas emet en varios repositorios? `emet doctor` audita cualquier cantidad de ellos a la vez, en modo de solo lectura:

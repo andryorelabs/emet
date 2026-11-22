@@ -2,7 +2,7 @@
 title: 플릿 점검
 description: emet doctor로 여러 리포지토리를 읽기 전용으로 한 번에 감사하고, 어떤 리포지토리에 조치가 필요한지 확인합니다.
 seoTitle: emet doctor로 하는 플릿 점검
-sourceHash: 7b3c5a56abfffcc1
+sourceHash: 5eef774032962f35
 ---
 
 이미 여러 리포지토리에서 emet을 사용하고 계신가요? `emet doctor`는 원하는 수만큼의 리포지토리를 읽기 전용으로 한 번에 감사합니다.

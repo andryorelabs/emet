@@ -2,7 +2,7 @@
 title: Verificação de frota
 description: Audite vários repositórios de uma só vez com emet doctor, somente leitura, e veja quais precisam de atenção.
 seoTitle: Verificação de frota com emet doctor
-sourceHash: 7b3c5a56abfffcc1
+sourceHash: 5eef774032962f35
 ---
 
 Já usa o emet em vários repositórios? O `emet doctor` audita quantos você quiser de uma só vez, somente leitura:

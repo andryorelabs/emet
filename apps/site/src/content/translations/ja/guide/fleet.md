@@ -2,7 +2,7 @@
 title: フリートチェック
 description: emet doctor で複数のリポジトリを読み取り専用でまとめて監査し、対応が必要なものを確認します。
 seoTitle: emet doctor によるフリートチェック
-sourceHash: 7b3c5a56abfffcc1
+sourceHash: 5eef774032962f35
 ---
 
 すでに複数のリポジトリで emet を使っていますか。`emet doctor` なら、任意の数のリポジトリを読み取り専用でまとめて監査できます。

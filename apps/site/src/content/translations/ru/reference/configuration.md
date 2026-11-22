@@ -2,7 +2,7 @@
 title: Справочник по конфигурации
 description: Каждый ключ emet.config.json со значением по умолчанию и смыслом.
 seoTitle: Справочник по конфигурации emet
-sourceHash: ae0e205cbdcf4b88
+sourceHash: a9aeca59a8d1f719
 ---
 
 Каждый ключ `emet.config.json` со значением по умолчанию и смыслом. Источник истины — [`emet/schema/emet.config.schema.json`](../../emet/schema/emet.config.schema.json). Термины соответствуют [GLOSSARY.md](../../GLOSSARY.md). Назад к [README](../../README.md).

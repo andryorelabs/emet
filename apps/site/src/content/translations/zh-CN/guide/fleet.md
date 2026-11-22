@@ -2,7 +2,7 @@
 title: 批量检查
 description: 用 emet doctor 以只读方式一次审计多个仓库，并查看哪些仓库需要处理。
 seoTitle: 使用 emet doctor 批量检查仓库
-sourceHash: 7b3c5a56abfffcc1
+sourceHash: 5eef774032962f35
 ---
 
 已经在多个仓库中使用 emet 了吗？`emet doctor` 可以以只读方式一次审计任意数量的仓库：

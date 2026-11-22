@@ -2,7 +2,7 @@
 title: Controllo della flotta
 description: Controlla un numero qualsiasi di repository in una volta con emet doctor, in sola lettura, e scopri quali richiedono attenzione.
 seoTitle: "Controllo della flotta: più repo con emet doctor"
-sourceHash: 7b3c5a56abfffcc1
+sourceHash: 5eef774032962f35
 ---
 
 Usi già emet in più repo? `emet doctor` ne controlla un numero qualsiasi in una volta, in sola lettura:

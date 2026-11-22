@@ -2,7 +2,7 @@
 title: Référence de configuration
 description: Chaque clé de emet.config.json avec sa valeur par défaut et sa signification.
 seoTitle: Référence de configuration d'emet
-sourceHash: ae0e205cbdcf4b88
+sourceHash: a9aeca59a8d1f719
 ---
 
 Chaque clé de `emet.config.json`, avec sa valeur par défaut et sa signification. La source de vérité est [`emet/schema/emet.config.schema.json`](../../emet/schema/emet.config.schema.json). Les termes suivent [GLOSSARY.md](../../GLOSSARY.md). Retour au [README](../../README.md).

@@ -2,7 +2,7 @@
 title: Referencia de la CLI
 description: Cada subcomando de emet, la tabla de compuertas y registros, los códigos de salida y las variables de entorno.
 seoTitle: Referencia de la CLI de emet
-sourceHash: d821b729a7e826ff
+sourceHash: f006d374f574d159
 ---
 
 Cada subcomando de `emet`, la tabla de compuertas y registros, los códigos de salida y las variables de entorno. Los términos siguen [GLOSSARY.md](../../GLOSSARY.md). Volver al [README](../../README.md). Cada comando imprime su uso con `--help`.

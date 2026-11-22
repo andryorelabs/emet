@@ -2,7 +2,7 @@
 title: Vérification de flotte
 description: Auditez plusieurs dépôts à la fois avec emet doctor, en lecture seule, et voyez lesquels demandent de l'attention.
 seoTitle: Vérification de flotte avec emet doctor
-sourceHash: 7b3c5a56abfffcc1
+sourceHash: 5eef774032962f35
 ---
 
 Vous utilisez déjà emet sur plusieurs dépôts ? `emet doctor` en audite autant que vous voulez à la fois, en lecture seule :
