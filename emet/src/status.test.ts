@@ -163,9 +163,51 @@ describe("wave states", () => {
   });
 });
 
+const blockedSession = {
+  sessionId: "s-1",
+  state: "needs-decision",
+  blocked: true,
+  since: "2026-01-01T00:00:00.000Z",
+  runId: null,
+} as const;
+const workingSession = {
+  ...blockedSession,
+  sessionId: "s-2",
+  state: "working",
+  blocked: false,
+} as const;
+
+describe("sessions in the report", () => {
+  test("a blocked session makes the state needs-decision with no wave", () => {
+    const report = buildStatusReport([], null, [blockedSession]);
+    expect(report.state).toBe("needs-decision");
+    expect(report.sessions).toEqual([blockedSession]);
+    expect(summarize(report)).toContain("1 session(s) blocked");
+    expect(briefLines(report)[1]).toContain("s-1");
+  });
+
+  test("a working session leaves the state alone and the summary silent", () => {
+    const report = buildStatusReport([wave([worker()])], null, [workingSession]);
+    expect(report.state).toBe("working");
+    expect(summarize(report)).not.toContain("blocked");
+  });
+
+  test("a blocked session beats a working wave and is named in the summary", () => {
+    const report = buildStatusReport([wave([worker()])], null, [blockedSession]);
+    expect(report.state).toBe("needs-decision");
+    expect(summarize(report)).toContain("1 session(s) blocked");
+    expect(briefLines(report)[1]).toContain("waiting on you");
+  });
+});
+
 describe("report", () => {
   test("no active run reports idle, with and without --spec", () => {
-    expect(buildStatusReport([], null)).toEqual({ state: "idle", spec: null, waves: [] });
+    expect(buildStatusReport([], null)).toEqual({
+      state: "idle",
+      spec: null,
+      sessions: [],
+      waves: [],
+    });
     expect(buildStatusReport([], "20").state).toBe("idle");
     expect(summarize(buildStatusReport([], null))).toContain("idle");
   });
@@ -184,7 +226,7 @@ describe("report", () => {
 
   test("JSON shape is stable", () => {
     const report = buildStatusReport([wave([worker({ pullRequest: greenPullRequest })])], "20");
-    expect(Object.keys(report)).toEqual(["state", "spec", "waves"]);
+    expect(Object.keys(report)).toEqual(["state", "spec", "sessions", "waves"]);
     expect(Object.keys(present(report.waves[0]))).toEqual([
       "runId",
       "spec",
@@ -569,6 +611,7 @@ describe("run", () => {
       listWorktreeEntries: () => Promise.resolve([]),
       fetchPullRequests: () => Promise.resolve(new Map()),
       findStalledTranscripts: () => Promise.resolve([]),
+      readSessionAttention: () => [],
       ...overrides,
     };
   }
@@ -662,6 +705,24 @@ describe("run", () => {
       await run([], deps());
       expect(parsedReport()).not.toHaveProperty("specBranch");
     });
+  });
+
+  test("run prints sessions from the attention journal and documents the field", async () => {
+    makeRepo();
+    await run(
+      [],
+      deps({
+        readSessionAttention: () => [{ ...blockedSession, repo: repo, runId: "r1" }],
+      }),
+    );
+    expect(parsedReport()).toMatchObject({
+      state: "needs-decision",
+      sessions: [{ sessionId: "s-1", blocked: true, runId: "r1" }],
+    });
+    expect(stdout[0]).not.toContain('"repo"');
+    stdout = [];
+    await run(["--help"], deps());
+    expect(stdout[0]).toContain('"sessions"');
   });
 
   test("--help prints usage and does nothing else", async () => {

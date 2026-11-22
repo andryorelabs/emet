@@ -15,6 +15,7 @@ import path from "node:path";
 
 import { resolveAgentHost, type AgentHost } from "./agenthost";
 import { claudeHost } from "./agenthost-claude";
+import { readSessionAttention, type SessionAttention } from "./attention";
 import { listReservations } from "./claims";
 import {
   codexWorkerLiveness,
@@ -96,9 +97,16 @@ interface WaveReport {
   readonly workers: readonly WorkerReport[];
 }
 
+/** One live session of this repo: its latest attention state. */
+export type SessionReport = Pick<
+  SessionAttention,
+  "sessionId" | "state" | "blocked" | "since" | "runId"
+>;
+
 export interface StatusReport {
   readonly state: OverallState;
   readonly spec: string | null;
+  readonly sessions: readonly SessionReport[];
   readonly specBranch?: { branch: string; tip: string; integratedWaves: number[] };
   readonly waves: readonly WaveReport[];
 }
@@ -112,10 +120,17 @@ const STATUS_USAGE = `usage: ${BINARY} status [--spec <id>] [--brief]
 Prints one JSON object, then a one-line summary. --brief prints at most three
 lines instead: state, what waits on a person, next action.
 
+"sessions" lists the latest attention state of each emet-owned session of this
+repo within the last 24 hours, ended sessions excluded; "blocked" is true when
+the session needs a decision, "since" is when it entered that state. Any
+blocked session makes the overall state needs-decision, also with no wave.
+
 JSON shape:
   {
     "state": "idle" | "working" | "checking" | "ready" | "needs-decision",
     "spec": "<id>" | null,
+    "sessions": [{ "sessionId": string, "state": "working"|"needs-decision"|"idle",
+      "blocked": boolean, "since": "<ISO timestamp>", "runId": string | null }],
     "specBranch"?: { "branch": string, "tip": string, "integratedWaves": number[] },
     "waves": [{
       "runId": string, "spec": string | null, "wave": number | null,
@@ -202,19 +217,37 @@ function classifyWave(wave: WaveInput): WaveReport {
   };
 }
 
-export function buildStatusReport(waves: readonly WaveInput[], spec: string | null): StatusReport {
+export function buildStatusReport(
+  waves: readonly WaveInput[],
+  spec: string | null,
+  sessions: readonly SessionReport[] = [],
+): StatusReport {
   const reports = waves
     .map(classifyWave)
     .filter((report) => spec === null || report.spec === spec)
     .toSorted((a, b) => a.runId.localeCompare(b.runId));
-  const state: OverallState =
+  const waveState: OverallState =
     STATE_PRIORITY.find((candidate) => reports.some((report) => report.state === candidate)) ??
     "idle";
-  return { state, spec, waves: reports };
+  const state: OverallState = sessions.some((session) => session.blocked)
+    ? "needs-decision"
+    : waveState;
+  return { state, spec, sessions, waves: reports };
+}
+
+function blockedSessions(report: StatusReport): readonly SessionReport[] {
+  return report.sessions.filter((session) => session.blocked);
+}
+
+function blockedSummary(report: StatusReport): string | null {
+  const count = blockedSessions(report).length;
+  return count === 0 ? null : `${count} session(s) blocked`;
 }
 
 export function summarize(report: StatusReport): string {
+  const blocked = blockedSummary(report);
   if (report.waves.length === 0) {
+    if (blocked) return `${BINARY} status: ${report.state} — ${blocked}`;
     return `${BINARY} status: idle — no active wave${report.spec ? ` for spec ${report.spec}` : ""}`;
   }
   const parts = report.waves.map((wave) => {
@@ -224,7 +257,7 @@ export function summarize(report: StatusReport): string {
     ];
     return `${label} ${wave.state} (${wave.workers.length} worker(s)${reasons.length ? `: ${reasons.join(", ")}` : ""})`;
   });
-  return `${BINARY} status: ${report.state} — ${parts.join("; ")}`;
+  return `${BINARY} status: ${report.state} — ${[...parts, ...(blocked ? [blocked] : [])].join("; ")}`;
 }
 
 const BRIEF_NEXT_ACTION: Readonly<Record<OverallState, string>> = {
@@ -235,7 +268,18 @@ const BRIEF_NEXT_ACTION: Readonly<Record<OverallState, string>> = {
   "needs-decision": "next: decide on the flagged tickets, then re-run status",
 };
 
+function sessionsWaitingLine(report: StatusReport): string | null {
+  const blocked = blockedSessions(report);
+  if (blocked.length === 0) return null;
+  const ids = blocked.map((session) => session.sessionId).join(", ");
+  return `waiting on you: ${blocked.length} session(s) need a decision (${ids})`;
+}
+
 function waitingLine(report: StatusReport): string | null {
+  return waveWaitingLine(report) ?? sessionsWaitingLine(report);
+}
+
+function waveWaitingLine(report: StatusReport): string | null {
   const waiting = report.waves.find((wave) => wave.state === report.state);
   if (report.state !== "needs-decision" && report.state !== "ready") return null;
   if (!waiting) return null;
@@ -565,6 +609,7 @@ export interface StatusDeps {
   readonly fetchPullRequests: typeof fetchPullRequests;
   readonly resolveAgentHost: typeof resolveAgentHost;
   readonly findStalledTranscripts: typeof findStalledTranscripts;
+  readonly readSessionAttention: typeof readSessionAttention;
 }
 
 const DEFAULT_STATUS_DEPS: StatusDeps = {
@@ -575,7 +620,23 @@ const DEFAULT_STATUS_DEPS: StatusDeps = {
   fetchPullRequests,
   resolveAgentHost,
   findStalledTranscripts,
+  readSessionAttention,
 };
+
+function readSessions(deps: StatusDeps, repoRoot: string): SessionReport[] {
+  try {
+    return deps.readSessionAttention({ repo: repoRoot }).map((session) => ({
+      sessionId: session.sessionId,
+      state: session.state,
+      blocked: session.blocked,
+      since: session.since,
+      runId: session.runId,
+    }));
+  } catch (error: unknown) {
+    console.error(`${BINARY} status: could not read session attention: ${String(error)}`);
+    return [];
+  }
+}
 
 export async function run(argv: string[], overrides: Partial<StatusDeps> = {}): Promise<void> {
   const deps: StatusDeps = { ...DEFAULT_STATUS_DEPS, ...overrides };
@@ -654,6 +715,7 @@ export async function run(argv: string[], overrides: Partial<StatusDeps> = {}): 
         codexWorkers,
       ),
       spec,
+      readSessions(deps, repoRoot),
     );
     const expectsSpecBranch =
       config.landing.unit === "spec" &&
