@@ -99,6 +99,7 @@ export const DEFAULT_FORGE_CONFIG: ForgeConfig = {
   language: { conversation: "en", artifacts: "en" },
   pr: { autoMerge: true, mergeMethod: "squash", maxCiFixAttempts: 2 },
   usage: { oversizedReadLines: 400, stalledMinutes: 10 },
+  attention: { alert: true },
   models: {
     worker: { model: "sonnet", effort: "medium" },
     reviewer: {
@@ -369,6 +370,10 @@ export interface ForgeConfig {
     readonly oversizedReadLines: number;
     /** Default `--minutes` threshold for `emet usage --stalled`. */
     readonly stalledMinutes: number;
+  };
+  readonly attention?: {
+    /** Raise one alert when a session enters `needs-decision`. */
+    readonly alert: boolean;
   };
   readonly models: {
     readonly worker: ModelChoice;
@@ -988,6 +993,12 @@ function validateAndMerge(
     return { ok: false, reason: '"usage.stalledMinutes" must be a positive integer' };
   }
 
+  const attentionSection = isRecord(raw.attention) ? raw.attention : {};
+  const attentionAlert = attentionSection.alert ?? true;
+  if (typeof attentionAlert !== "boolean") {
+    return { ok: false, reason: '"attention.alert" must be a boolean' };
+  }
+
   const modelsSection = raw.models;
   if (modelsSection !== undefined && !isRecord(modelsSection)) {
     return { ok: false, reason: '"models" must be an object' };
@@ -1138,6 +1149,7 @@ function validateAndMerge(
       language: { conversation: languageConversation, artifacts: languageArtifacts },
       pr: { autoMerge, mergeMethod, maxCiFixAttempts },
       usage: { oversizedReadLines, stalledMinutes },
+      attention: { alert: attentionAlert },
       models: {
         worker: worker.value,
         reviewer: { medium: reviewerMedium.value, high: reviewerHigh.value },

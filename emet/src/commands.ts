@@ -594,7 +594,7 @@ export const COMMANDS: readonly CommandSpec[] = [
   },
   {
     name: "fleet",
-    summary: "list, set and launch across repos (list|set|launch)",
+    summary: "list, set, launch and see blocked sessions across repos (list|set|launch|status)",
     flags: [val("--root"), val("--repos"), val("--feature"), bool("--dry-run"), bool("--json")],
     run: runModule("fleet"),
   },

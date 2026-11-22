@@ -132,6 +132,7 @@ describe("loadForgeConfig", () => {
       language: { conversation: "es", artifacts: "fr" },
       pr: { autoMerge: false, mergeMethod: "merge", maxCiFixAttempts: 3 },
       usage: { oversizedReadLines: 200, stalledMinutes: 5 },
+      attention: { alert: false },
       models: {
         worker: { model: "opus", effort: "high" },
         reviewer: {
@@ -204,6 +205,7 @@ describe("loadForgeConfig", () => {
       { handoff: { autoChain: "yes" } },
       /"handoff.autoChain" must be a boolean/,
     ],
+    ["attention.alert", { attention: { alert: "no" } }, /"attention.alert" must be a boolean/],
     ["handoff.launcher", { handoff: { launcher: "tmux" } }, /"handoff.launcher" must be one of/],
     [
       "handoff.permissionMode",

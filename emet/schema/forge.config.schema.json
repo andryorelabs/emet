@@ -609,6 +609,17 @@
         }
       }
     },
+    "attention": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "alert": {
+          "type": "boolean",
+          "default": true,
+          "description": "Raise one alert (an Orca unread mark, else notify-send) when a session enters needs-decision."
+        }
+      }
+    },
     "models": {
       "type": "object",
       "additionalProperties": false,

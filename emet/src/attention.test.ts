@@ -44,6 +44,7 @@ function deps(overrides: Partial<AttentionDeps> = {}): AttentionDeps {
     host: "claude",
     resolveOwner: () => Promise.resolve(owned),
     runBlocked: () => Promise.resolve(false),
+    alert: () => Promise.resolve("none"),
     ...overrides,
   };
 }
