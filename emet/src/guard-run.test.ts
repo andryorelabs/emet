@@ -11,6 +11,7 @@ import {
 import os from "node:os";
 import path from "node:path";
 
+import { didReserveTicket } from "./claims";
 import {
   checkCodeReviewFanoutWithSiblingRun,
   recordCompletionEvent,
@@ -404,15 +405,20 @@ describe("guard run() argument handling", () => {
     expect(existsSync(path.join(runDirectory, "approval.json"))).toBe(true);
   });
 
-  test("codex UserPromptSubmit keeps approval recording and records no attention", async () => {
+  test("codex UserPromptSubmit keeps approval recording and records working", async () => {
     process.env.EMET_AGENT_HOST = "codex";
-    const repo = makeRepoWithCommit();
-    writeFileSync(path.join(repo, "emet.config.json"), "{}\n");
-    await runWithInput(
-      [JSON.stringify({ session_id: "sess-9", prompt: "hello", cwd: repo })],
+    const repo = makeOwnedRepo();
+    const runDirectory = path.join(repo, ".emet", "runs", "spec12");
+    seedSpecRun(runDirectory);
+    const { logs } = await runWithInput(
+      [JSON.stringify({ session_id: "sess-9", prompt: "approve 12", cwd: repo })],
       ["--event", "UserPromptSubmit"],
     );
-    expect(existsSync(path.join(workingDirectory, "state", "journal", "events.jsonl"))).toBe(false);
+    expect(logs).toEqual([]);
+    expect(existsSync(path.join(runDirectory, "approval.json"))).toBe(true);
+    expect(recordedStates()).toEqual([
+      { sessionId: "sess-9", state: "working", from: null, trigger: "UserPromptSubmit" },
+    ]);
   });
 
   test("codex UserPromptSubmit prefers runs shared under the git common directory", async () => {
@@ -555,5 +561,17 @@ describe("guard run() attention recording", () => {
       { sessionId: "sess-4", state: "idle", from: null, trigger: "Stop" },
       { sessionId: "sess-5", state: "needs-decision", from: null, trigger: "Stop" },
     ]);
+  });
+
+  test("a Stop the guard blocks records no attention", async () => {
+    const repo = makeOwnedRepo();
+    process.chdir(repo);
+    expect(await didReserveTicket("run9", process.pid, "CLA-1")).toBe(true);
+    const { logs } = await runWithInput(
+      [JSON.stringify({ session_id: "sess-6", cwd: repo })],
+      ["--event", "Stop"],
+    );
+    expect(JSON.parse(logs[0] ?? "")).toMatchObject({ decision: "block" });
+    expect(recordedStates()).toEqual([]);
   });
 });

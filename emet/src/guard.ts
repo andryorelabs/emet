@@ -680,15 +680,14 @@ export async function run(argv: readonly string[] = process.argv.slice(2)): Prom
     return;
   }
   if (event === "UserPromptSubmit") {
-    if (host !== "codex") {
-      await recordAttention(event, parsed);
-      return;
+    if (host === "codex") {
+      try {
+        handleUserPromptSubmit(parsed, await resolveRunsDirectory(parsedCwd(parsed)));
+      } catch (error) {
+        console.error(`${INTERNAL_PREFIX} could not record approval:`, error);
+      }
     }
-    try {
-      handleUserPromptSubmit(parsed, await resolveRunsDirectory(parsedCwd(parsed)));
-    } catch (error) {
-      console.error(`${INTERNAL_PREFIX} could not record approval:`, error);
-    }
+    await recordAttention(event, parsed);
     return;
   }
   if (event === "SubagentStop" || event === "Stop") {
