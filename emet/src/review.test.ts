@@ -901,6 +901,13 @@ describe("mergeFindings", () => {
     expect(merged.map((entry) => entry.agreement)).toEqual(["both", "single", "single"]);
   });
 
+  test("pairs findings 3 lines apart and not 4 lines apart", () => {
+    const near = merge([finding({ id: "A", line: 10 })], [finding({ id: "B", line: 13 })]);
+    expect(near.map((entry) => entry.agreement)).toEqual(["both"]);
+    const far = merge([finding({ id: "A", line: 10 })], [finding({ id: "B", line: 14 })]);
+    expect(far.map((entry) => entry.agreement)).toEqual(["single", "single"]);
+  });
+
   test("keeps userOption from either side of a pair", () => {
     const merged = merge([finding({ id: "A" })], [finding({ id: "B", userOption: "S2" })]);
     expect(merged[0]?.userOption).toBe("S2");

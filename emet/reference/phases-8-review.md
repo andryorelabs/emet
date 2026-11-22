@@ -95,8 +95,8 @@ hung workers and a fan-out roster hung ~1h45m; `${CLAUDE_PLUGIN_ROOT}/emet/refer
 Fallback if `emet:emet-reviewer` is missing: the `code-review` skill at `--level
 low|medium`. `/code-review ultra` is a manual, opt-in step only.
 Dual review: only when `emet assess` printed `dualReview.run: true`, run
-`emet:emet-reviewer` and `emet review-run --tier high` in parallel over the same
-package, each writing its own findings file. Otherwise one reviewer runs, as
+`emet:emet-reviewer` and `emet review-run --tier high --coverage-out <file>` in
+parallel over the same package, each writing its own findings file. Otherwise one reviewer runs, as
 above.
 
 Browser axis: fill `{{browser_verify}}` in the reviewer prompt (with the
