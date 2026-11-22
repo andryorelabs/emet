@@ -30,3 +30,14 @@ emet fleet launch --feature "add dark mode" --repos app,site
 - `launch --feature <text>` abre una sesión `/emet:run --draft <text>` en cada repositorio, tras las mismas comprobaciones de preparación que `emet chain`. `--repos` lo limita a una lista separada por comas.
 
 Cada sondeo se limita a 5 s para que un `gh auth status` detenido (sin red) no pueda colgar una oleada. El `preflight.requiredCommands` de un repositorio es una lista, propiedad del repositorio, de binarios que `emet preflight` y `emet doctor` exigen en el PATH. Consulta la [referencia de la CLI](../reference/cli.md#revisión-de-flota) y la [referencia de configuración](../reference/configuration.md#preflight).
+
+## Ver las sesiones bloqueadas
+
+Cuando varias sesiones de Claude Code corren a la vez, `emet fleet status` muestra cuáles esperan una decisión tuya:
+
+```bash
+emet fleet status
+emet fleet status --json
+```
+
+Lee el journal global e imprime, por repositorio, una línea `<repo>: <b> blocked, <w> working, <i> idle` con los repositorios bloqueados primero. Solo cuentan las sesiones con actividad en las últimas 24 horas, sin las `ended`. Con `--json` imprime los repositorios, sus sesiones y el total `blocked`. Dentro de un repositorio, `emet status` también lista sus sesiones bloqueadas. Para recibir un aviso apenas una sesión se bloquea, consulta [`attention.alert`](../reference/configuration.md#attention). Consulta la [referencia de la CLI](../reference/cli.md#configuración-y-auditoría).
