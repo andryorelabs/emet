@@ -353,22 +353,34 @@ function selectRepos(entries: FleetEntry[], repos: string | undefined): FleetEnt
   return entries.filter((entry) => wanted.has(path.basename(entry.path)));
 }
 
+/** The session fields `emet fleet status` prints; the repo is the group key. */
+export type FleetSession = Pick<
+  SessionAttention,
+  "sessionId" | "state" | "blocked" | "since" | "runId"
+>;
+
 /** Sessions grouped per repo, with the count of sessions that wait on a decision. */
 export interface FleetStatus {
-  repos: { repo: string; sessions: SessionAttention[] }[];
+  repos: { repo: string; sessions: FleetSession[] }[];
   blocked: number;
 }
 
-function countBlocked(group: SessionAttention[]): number {
+function countBlocked(group: readonly { blocked: boolean }[]): number {
   return group.filter((session) => session.blocked).length;
 }
 
 /** Groups sessions per repo, repos with blocked sessions first, then by name. */
 export function buildFleetStatus(sessions: SessionAttention[]): FleetStatus {
-  const byRepo = new Map<string, SessionAttention[]>();
+  const byRepo = new Map<string, FleetSession[]>();
   for (const session of sessions) {
     const group = byRepo.get(session.repo) ?? [];
-    group.push(session);
+    group.push({
+      sessionId: session.sessionId,
+      state: session.state,
+      blocked: session.blocked,
+      since: session.since,
+      runId: session.runId,
+    });
     byRepo.set(session.repo, group);
   }
   const repos = [...byRepo.entries()]
@@ -382,7 +394,7 @@ export function buildFleetStatus(sessions: SessionAttention[]): FleetStatus {
 }
 
 function formatStatusLine(entry: FleetStatus["repos"][number]): string {
-  const count = (state: SessionAttention["state"]): number =>
+  const count = (state: FleetSession["state"]): number =>
     entry.sessions.filter((session) => session.state === state).length;
   return `${entry.repo}: ${count("needs-decision")} blocked, ${count("working")} working, ${count("idle")} idle`;
 }

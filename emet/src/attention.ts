@@ -130,7 +130,8 @@ export function lastAttentionState(sessionId: string, deps?: JournalDeps): Atten
   return null;
 }
 
-async function mainWorktreeRoot(cwd: string): Promise<string | null> {
+/** The main worktree root of the checkout at `cwd`, or `null` outside a git repo. */
+export async function mainWorktreeRoot(cwd: string): Promise<string | null> {
   const result = await Bun.$`git -C ${cwd} worktree list --porcelain`.nothrow().quiet();
   if (result.exitCode !== 0) return null;
   return parseWorktreeEntries(result.stdout.toString())[0]?.directory ?? null;

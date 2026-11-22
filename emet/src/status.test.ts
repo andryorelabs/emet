@@ -192,6 +192,13 @@ describe("sessions in the report", () => {
     expect(summarize(report)).not.toContain("blocked");
   });
 
+  test("--brief names both a needs-decision wave and a blocked session", () => {
+    const report = buildStatusReport([wave([worker()], "dead")], null, [blockedSession]);
+    const line = briefLines(report)[1] ?? "";
+    expect(line).toContain("needs a decision");
+    expect(line).toContain("s-1");
+  });
+
   test("a blocked session beats a working wave and is named in the summary", () => {
     const report = buildStatusReport([wave([worker()])], null, [blockedSession]);
     expect(report.state).toBe("needs-decision");
@@ -612,6 +619,7 @@ describe("run", () => {
       fetchPullRequests: () => Promise.resolve(new Map()),
       findStalledTranscripts: () => Promise.resolve([]),
       readSessionAttention: () => [],
+      mainWorktreeRoot: () => Promise.resolve(null),
       ...overrides,
     };
   }
@@ -723,6 +731,26 @@ describe("run", () => {
     stdout = [];
     await run(["--help"], deps());
     expect(stdout[0]).toContain('"sessions"');
+  });
+
+  test("sessions are looked up under the main worktree root of a linked worktree", async () => {
+    makeRepo();
+    const mainRoot = "/main/checkout";
+    const lookups: (string | undefined)[] = [];
+    await run(
+      [],
+      deps({
+        mainWorktreeRoot: () => Promise.resolve(mainRoot),
+        readSessionAttention: (options) => {
+          lookups.push(options.repo);
+          return options.repo === mainRoot
+            ? [{ ...blockedSession, repo: mainRoot, runId: "r1" }]
+            : [];
+        },
+      }),
+    );
+    expect(lookups).toEqual([mainRoot]);
+    expect(parsedReport()).toMatchObject({ state: "needs-decision" });
   });
 
   test("--help prints usage and does nothing else", async () => {

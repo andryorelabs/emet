@@ -15,7 +15,7 @@ import path from "node:path";
 
 import { resolveAgentHost, type AgentHost } from "./agenthost";
 import { claudeHost } from "./agenthost-claude";
-import { readSessionAttention, type SessionAttention } from "./attention";
+import { mainWorktreeRoot, readSessionAttention, type SessionAttention } from "./attention";
 import { listReservations } from "./claims";
 import {
   codexWorkerLiveness,
@@ -276,7 +276,12 @@ function sessionsWaitingLine(report: StatusReport): string | null {
 }
 
 function waitingLine(report: StatusReport): string | null {
-  return waveWaitingLine(report) ?? sessionsWaitingLine(report);
+  const wave = waveWaitingLine(report);
+  const sessions = sessionsWaitingLine(report);
+  if (wave !== null && sessions !== null) {
+    return `${wave}; ${sessions.replace("waiting on you: ", "")}`;
+  }
+  return wave ?? sessions;
 }
 
 function waveWaitingLine(report: StatusReport): string | null {
@@ -610,6 +615,7 @@ export interface StatusDeps {
   readonly resolveAgentHost: typeof resolveAgentHost;
   readonly findStalledTranscripts: typeof findStalledTranscripts;
   readonly readSessionAttention: typeof readSessionAttention;
+  readonly mainWorktreeRoot: typeof mainWorktreeRoot;
 }
 
 const DEFAULT_STATUS_DEPS: StatusDeps = {
@@ -621,11 +627,13 @@ const DEFAULT_STATUS_DEPS: StatusDeps = {
   resolveAgentHost,
   findStalledTranscripts,
   readSessionAttention,
+  mainWorktreeRoot,
 };
 
-function readSessions(deps: StatusDeps, repoRoot: string): SessionReport[] {
+async function readSessions(deps: StatusDeps, repoRoot: string): Promise<SessionReport[]> {
   try {
-    return deps.readSessionAttention({ repo: repoRoot }).map((session) => ({
+    const attentionRepo = (await deps.mainWorktreeRoot(repoRoot)) ?? repoRoot;
+    return deps.readSessionAttention({ repo: attentionRepo }).map((session) => ({
       sessionId: session.sessionId,
       state: session.state,
       blocked: session.blocked,
@@ -715,7 +723,7 @@ export async function run(argv: string[], overrides: Partial<StatusDeps> = {}): 
         codexWorkers,
       ),
       spec,
-      readSessions(deps, repoRoot),
+      await readSessions(deps, repoRoot),
     );
     const expectsSpecBranch =
       config.landing.unit === "spec" &&

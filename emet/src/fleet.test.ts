@@ -417,6 +417,9 @@ describe("run status", () => {
     const parsed: unknown = JSON.parse(capture.out[0] ?? "{}");
     expect(parsed).toMatchObject({ blocked: 2 });
     expect(parsed).toHaveProperty("repos.length", 2);
+    expect(Object.keys(buildFleetStatus(sessions).repos[0]?.sessions[0] ?? {}).toSorted()).toEqual(
+      ["blocked", "runId", "since", "sessionId", "state"].toSorted(),
+    );
   });
 
   test("prints one line per repo and exits 0 when empty", async () => {

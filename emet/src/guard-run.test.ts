@@ -436,7 +436,7 @@ describe("guard run() argument handling", () => {
 
 function makeOwnedRepo(): string {
   const repo = makeRepoWithCommit();
-  writeFileSync(path.join(repo, "emet.config.json"), "{}\n");
+  writeFileSync(path.join(repo, "emet.config.json"), '{"attention":{"alert":false}}\n');
   mkdirSync(path.join(repo, ".emet"));
   writeFileSync(
     path.join(repo, ".emet", "phase.json"),
