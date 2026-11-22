@@ -2,7 +2,7 @@
 title: Tracker e landing
 description: Dove vivono i ticket, come un'ondata atterra come pull request o merge locale e come si concatenano le ondate.
 seoTitle: Tracker e landing in emet
-sourceHash: da19ec4cf50e7084
+sourceHash: 1ebd20e303a5c747
 ---
 
 Dove vivono i ticket, come atterra un'ondata e come si concatenano le ondate. Ogni chiave citata qui è nel [riferimento della configurazione](../reference/configuration.md); ogni sottocomando è nel [riferimento della CLI](../reference/cli.md).
@@ -30,6 +30,14 @@ Con `landing.unit: "spec"`, il coordinatore crea `spec/<id>` dal trunk con `emet
 `emet spec-branch sync` unisce il trunk in `spec/<id>` e non fa mai rebase; in caso di conflitto annulla, lascia il branch invariato ed esce con codice diverso da zero. `emet spec-branch land` esegue la sincronizzazione e poi fa atterrare il branch una sola volta. In modalità `pr` fa push di `spec/<id>`, apre una PR con una riga `Closes #N` per ogni ticket di ogni ondata integrata, attende i suoi controlli e la unisce con `landing.specMergeMethod` (un merge commit per impostazione predefinita, ignorando `pr.mergeMethod`). In modalità `merge` unisce `spec/<id>` nel trunk locale con `--no-ff` e non fa mai push. `--partial` fa atterrare solo le ondate integrate finora. `emet spec-branch abandon --spec <id> --force` etichetta il branch `abandoned/spec-<id>`, lo elimina e riporta a `ready-for-agent` i ticket integrati di un tracker locale.
 
 La modalità spec richiede `worktree.baseRef: "head"` nelle impostazioni di Claude Code, così i worktree dei worker partono dal branch della spec; `emet preflight` ed `emet doctor` lo verificano. `emet doctor` avvisa anche quando la modalità è `pr` e le impostazioni del repository o il ruleset del trunk non consentono il `landing.specMergeMethod` configurato.
+
+### Quick run
+
+`/emet:run --quick <richiesta>` avvia una **Quick run** per una modifica piccola: un solo giro di intervista, un solo ticket `folded`, una sola approvazione. Usala quando la modifica non tocca una schermata ed entra in un solo ticket (la superficie nuova resta entro `sizing.inlineMaxLines` e nessun tripwire del budget di contesto scatta); altrimenti si ferma prima dell'approvazione e raccomanda `/emet:run` senza `--quick`. Salta `domain-modeling`, il canvas, i giri di frontiera ed `emet chain`. Esegue un solo worker, poi `emet verify`, il passo delle spec vive quando `specs.enabled`, `emet assess --quick`, il reviewer a meno che il tier sia `passive`, ed `emet gate`. `--quick` insieme a `--draft` o `--dispatch` viene rifiutato; `--no-promote` è accettato.
+
+Una Quick run atterra per ondata, qualunque cosa dica `landing.unit`: `emet approve --quick` registra `"mode": "quick"` e `resolveLandingUnit` restituisce `"wave"`, quindi non si aspetta mai un branch della spec. Atterra come una sola PR (o come un merge locale quando `landing.mode` è `merge`), poi esegue il passo after-spec.
+
+Una differenza ad alto rischio la ferma: `emet assess --quick` esce con 1 quando il tier è `high`, il che è uno **Stop** del gate. Niente auto-merge, la PR resta aperta e il report finale nomina i motivi di alto rischio.
 
 ### PR di landing
 

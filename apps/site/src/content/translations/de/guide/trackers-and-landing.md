@@ -2,7 +2,7 @@
 title: Tracker und Landing
 description: Wo Tickets liegen, wie eine Welle als Pull Request oder lokaler Merge landet und wie Wellen verkettet werden.
 seoTitle: Tracker und Landing in emet
-sourceHash: da19ec4cf50e7084
+sourceHash: 1ebd20e303a5c747
 ---
 
 Wo Tickets liegen, wie eine Welle landet und wie Wellen verkettet werden. Jeder hier genannte Schlüssel steht in der [Konfigurationsreferenz](../reference/configuration.md); jeder Unterbefehl steht in der [CLI-Referenz](../reference/cli.md).
@@ -36,6 +36,18 @@ Der Spec-Modus erfordert `worktree.baseRef: "head"` in den Claude-Code-Einstellu
 Mit `landing.unit: "spec"` ist der PR der der Spec: ein PR für alle integrierten Wellen, geöffnet von `emet spec-branch land` nach der letzten Welle. Mit `landing.unit: "wave"` ist eine Welle ein PR. Der Text des PR enthält für jedes Ticket eine Zeile `Closes #N` (das Schließ-Schlüsselwort des Trackers), und der Koordinator setzt die Tickets auf in-review, sobald er den PR öffnet. Der PR wird dann gemäß `pr.autoMerge` gemergt oder bleibt offen, wenn die Welle markiert wurde, `autoMerge` den Wert `false` hat oder die CI-Korrekturen aufgebraucht sind (der PR erhält dann das Label human-decision). Nach einem Merge schließt `emet tracker close` bei einem GitHub-Tracker die Tickets, und `emet cleanup --run <runId>` gibt die Branches, Ticket-Claims und Worker-Slots der Welle frei. Außerdem löscht es jeden lokalen Branch, dessen PR am Tip-Commit des Branches gemergt wurde, einschließlich des Integrations-Branches.
 
 Nachdem die Branches einer Welle zusammengeführt wurden, läuft `commands.fullSuite` einmal auf dem Integrationsbranch. Ein roter Lauf blockiert den PR und `autoChain`. Das Gate erhält das Ergebnis als `--integration`. In einer nicht letzten Welle einer Spec-Landung übergibt der Koordinator `--ci` aus `commands.selfCheck`, und nur das endgültige Landing wartet mit `emet ci --wait` auf die CI; das Gate antwortet dann `chain`, solange Wellen übrig sind.
+
+### Quick run
+
+`/emet:run --quick <Anfrage>` ist der kurze Weg für eine kleine Änderung mit einem einzigen Ticket, etwa einen Tippfehler oder eine Einzeiler-Korrektur. Nutze ihn, wenn die Änderung keinen Bildschirm berührt und in ein Ticket passt: neue Fläche innerhalb von `sizing.inlineMaxLines` und kein Kontextbudget-Stolperdraht.
+
+Er überspringt das große Interview und die Planung: eine `grilling`-Runde, kein `domain-modeling`, kein Canvas, keine Frontier-Runden. Die Spec enthält ein `folded`-Ticket, das jedes `S#` abdeckt, und du gibst eine einzige Freigabe. Danach läuft ein Worker in einem Worktree, gefolgt von `emet verify`, dem Living-Specs-Schritt bei `specs.enabled`, `emet assess --quick`, dem Reviewer, sofern die Stufe nicht `passive` ist, und `emet gate`. Es gibt kein `emet chain`.
+
+Ein **Quick run** hat eine **Welle**; er landet daher immer pro Welle, als PR oder lokaler Merge, egal was `landing.unit` sagt: `emet approve --quick` hält `mode: "quick"` fest, und es wird kein Spec-Branch angelegt oder erwartet.
+
+Ein Diff mit hohem Risiko stoppt ihn. `emet assess --quick` endet mit Exit 1, wenn die Stufe `high` ist; das Gate wertet das als **Stop**: nichts wird automatisch gemergt, der PR bleibt offen, und der Abschlussbericht nennt die Gründe des hohen Risikos.
+
+Vor der Freigabe hält der Lauf an und empfiehlt `/emet:run` ohne `--quick`, wenn die Änderung einen Bildschirm berührt oder nicht in ein Ticket passt. `--quick` lässt sich nicht mit `--draft` oder `--dispatch` kombinieren; `--no-promote` wird akzeptiert.
 
 ### Wellen verketten
 
