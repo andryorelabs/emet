@@ -431,3 +431,19 @@ describe("run status", () => {
     expect(process.exitCode).not.toBe(2);
   });
 });
+
+describe("run status default journal", () => {
+  test("reads the journal under the state dir and exits 0 when empty", async () => {
+    const previous = process.env.EMET_STATE_DIR;
+    process.env.EMET_STATE_DIR = path.join(root, "state");
+    const capture = captureOutput();
+    try {
+      await run(["status", "--json"]);
+    } finally {
+      capture.restore();
+      if (previous === undefined) delete process.env.EMET_STATE_DIR;
+      else process.env.EMET_STATE_DIR = previous;
+    }
+    expect(JSON.parse(capture.out[0] ?? "{}")).toEqual({ repos: [], blocked: 0 });
+  });
+});
