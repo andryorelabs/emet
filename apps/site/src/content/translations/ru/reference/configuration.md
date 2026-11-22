@@ -2,7 +2,7 @@
 title: Справочник по конфигурации
 description: Каждый ключ emet.config.json со значением по умолчанию и смыслом.
 seoTitle: Справочник по конфигурации emet
-sourceHash: e1c8a9af5648125f
+sourceHash: ae0e205cbdcf4b88
 ---
 
 Каждый ключ `emet.config.json` со значением по умолчанию и смыслом. Источник истины — [`emet/schema/emet.config.schema.json`](../../emet/schema/emet.config.schema.json). Термины соответствуют [GLOSSARY.md](../../GLOSSARY.md). Назад к [README](../../README.md).
@@ -211,6 +211,14 @@ sourceHash: e1c8a9af5648125f
 
 - `highRiskPaths` (по умолчанию `[]`): дополнительные подстроки путей без учёта регистра, которые принудительно задают уровень ревью `high` в `emet assess` сверх встроенного набора (аутентификация, безопасность, платежи, вебхуки, CI, установщик, lock-файлы, миграции и опасные sink, такие как сырой SQL или pipe-to-shell).
 - `dual` (`"auto"` или `"off"`, по умолчанию `"auto"`; `emet init` его не записывает): управляет Dual review. При `auto` волна `high` на хосте Claude Code при наличии бинарного файла `codex` в PATH запускает двух ревьюеров параллельно над одним пакетом: ревьюера Claude и `emet review-run`. Координатор объединяет их замечания через `emet review --merge`, проводит триаж каждого замечания только одного ревьюера (оставить или отбросить через `emet review --rule`) и записывает только Coverage verdicts ревьюера Claude. `off` всегда запускает одного ревьюера. `emet assess` печатает решение как `dualReview: { run, reason }`.
+
+## memory
+
+```json
+{ "memory": { "enabled": "auto" } }
+```
+
+- `enabled` (`"auto"` или `"off"`, по умолчанию `"auto"`): управляет [`emet memory`](cli.md#runs-workers-and-slots). При `auto` команда использует Engram, если бинарный файл `engram` есть в PATH и его handshake проходит успешно. `off` заставляет `emet memory search` и `emet memory save` выводить `{available: false, reason: "memory.enabled is off"}` и завершаться с кодом 0, не запуская `engram`. Любое другое значение не загружается с ошибкой `"memory.enabled" must be one of auto|off`.
 
 ## landing
 
