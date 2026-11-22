@@ -524,7 +524,7 @@ export function buildForgeConfig(detected: DetectedRepoInfo): ForgeConfig {
     pr: { ...DEFAULT_FORGE_CONFIG.pr },
     usage: { ...DEFAULT_FORGE_CONFIG.usage },
     models: DEFAULT_FORGE_CONFIG.models,
-    review: DEFAULT_FORGE_CONFIG.review,
+    review: { ...DEFAULT_FORGE_CONFIG.review },
     budgets: { ...DEFAULT_FORGE_CONFIG.budgets },
     sizing: { ...DEFAULT_FORGE_CONFIG.sizing },
     map: { ...DEFAULT_FORGE_CONFIG.map },
@@ -930,6 +930,7 @@ async function main(options: InitOptions): Promise<void> {
       "the summary this command printed). `commands` is prose-only (see the " +
       "schema) — the /emet command reads it directly, this CLI never does.",
     ...config,
+    review: { highRiskPaths: [...config.review.highRiskPaths] },
     ...(ownedPaths.length > 0 ? { schema: { ownedPaths } } : {}),
     ...(await readPreservedHostKeys(configPath)),
     tracker: buildTrackerConfig(detected),

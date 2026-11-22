@@ -528,6 +528,10 @@ const met = (s: string, proof?: { file: string; name: string }) => ({
   ...(proof ? { test: proof } : {}),
 });
 
+function emptyEvidence(evidenceValue: unknown): string {
+  return JSON.stringify([{ s: "S1", verdict: "met", test: evidenceValue }]);
+}
+
 describe("coverage verdicts", () => {
   test("parseCoverage accepts verdicts and rejects bad shapes", () => {
     expect(parseCoverage(JSON.stringify([{ s: "S1", verdict: "partial" }]))).toEqual([
@@ -558,6 +562,11 @@ describe("coverage verdicts", () => {
         claim: "verification-gap: S1 met without evidence",
       },
     ]);
+  });
+
+  test("parseCoverage rejects an empty test file or name", () => {
+    expect(() => parseCoverage(emptyEvidence({ file: "a.ts", name: "" }))).toThrow(/non-empty/);
+    expect(() => parseCoverage(emptyEvidence({ file: "", name: "x" }))).toThrow(/non-empty/);
   });
 
   test("a met with no test opens VG-S1 with an empty file", () => {
@@ -788,6 +797,36 @@ describe("review CLI with a base and coverage", () => {
 
   test("an unresolvable base exits 2", () => {
     expect(review(["--base", "nope"], [finding()]).exitCode).toBe(2);
+  });
+
+  test("a finding path written with ./ or absolute is matched against the diff", () => {
+    review(
+      ["--base", "HEAD~1"],
+      [
+        finding({ id: "dot", file: "./new.ts", line: 3 }),
+        finding({ id: "abs", file: path.join(repo, "new.ts"), line: 3 }),
+      ],
+    );
+    const marked = Object.fromEntries(
+      ledger().findings.map((entry) => [entry.id, entry.preexisting]),
+    );
+    expect(marked).toEqual({ dot: undefined, abs: undefined });
+  });
+
+  test("a reported preexisting flag is dropped from --findings input", () => {
+    review([], [finding({ id: "F1", severity: "blocker", preexisting: true })]);
+    expect(ledger().findings[0]?.preexisting).toBeUndefined();
+  });
+
+  test("a coverage test file outside the working tree opens VG-S1", () => {
+    writeFileSync(path.join(path.dirname(repo), "outside.test.ts"), "parses x");
+    const result = review(
+      ["--coverage"],
+      [{ s: "S1", verdict: "met", test: { file: "../outside.test.ts", name: "parses x" } }],
+    );
+    rmSync(path.join(path.dirname(repo), "outside.test.ts"), { force: true });
+    expect(result.exitCode).toBe(1);
+    expect(ledger().findings[0]?.id).toBe("VG-S1");
   });
 
   test("without --base nothing is marked and no base is stored", () => {

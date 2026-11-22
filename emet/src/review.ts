@@ -167,6 +167,8 @@ export interface RoundOptions {
   readonly reviewRounds: number;
   /** Added line ranges of the wave's diff; when set, findings off those lines are marked pre-existing. */
   readonly addedLines?: AddedLines;
+  /** Repository root used to make absolute finding paths repo-relative. */
+  readonly repoRoot?: string;
 }
 
 function isVerificationGap(id: string): boolean {
@@ -198,14 +200,32 @@ export function parseAddedLines(diff: string): Map<string, [number, number][]> {
   return ranges;
 }
 
-function touchesLine(addedLines: AddedLines, file: string, line: number): boolean {
-  return (addedLines.get(file) ?? []).some(([start, end]) => line >= start && line <= end);
+function normalizeFindingPath(file: string, repoRoot: string | undefined): string {
+  const relative =
+    repoRoot !== undefined && path.isAbsolute(file) ? path.relative(repoRoot, file) : file;
+  return path.posix.normalize(relative.replaceAll("\\", "/"));
 }
 
-function withPreexisting(entry: Finding, addedLines: AddedLines | undefined): Finding {
-  if (addedLines === undefined) return entry;
-  const { preexisting: _previous, ...rest } = entry;
-  if (isVerificationGap(entry.id) || touchesLine(addedLines, entry.file, entry.line)) return rest;
+function touchesLine(
+  addedLines: AddedLines,
+  file: string,
+  line: number,
+  repoRoot: string | undefined,
+): boolean {
+  const ranges = addedLines.get(normalizeFindingPath(file, repoRoot)) ?? [];
+  return ranges.some(([start, end]) => line >= start && line <= end);
+}
+
+function withPreexisting(
+  entry: Finding,
+  addedLines: AddedLines | undefined,
+  repoRoot: string | undefined,
+): Finding {
+  const { preexisting: _reported, ...rest } = entry;
+  if (addedLines === undefined) return rest;
+  if (isVerificationGap(entry.id) || touchesLine(addedLines, entry.file, entry.line, repoRoot)) {
+    return rest;
+  }
   return { ...rest, preexisting: true };
 }
 
@@ -236,7 +256,7 @@ export function recordRound(
   const changed = new Set(options.changedFiles);
   const added: LedgerFinding[] = [];
   for (const reported of triageOrder(findings)) {
-    const entry = withPreexisting(reported, options.addedLines);
+    const entry = withPreexisting(reported, options.addedLines, options.repoRoot);
     const exempt = round === 1 || !isBlocking(entry.severity) || keptIds.has(entry.id);
     if (exempt || citesPriorFinding(entry.claim, priorIds) || changed.has(entry.file)) {
       added.push({ ...entry, status: "open", round });
@@ -344,8 +364,14 @@ function parseCoverageVerdict(raw: unknown, index: number): CoverageVerdict {
     throw new ForgeConfigError(`coverage ${s}: verdict must be one of ${VERDICTS.join(", ")}`);
   }
   if (test === undefined || test === null) return { s, verdict };
-  if (!isRecord(test) || typeof test.file !== "string" || typeof test.name !== "string") {
-    throw new ForgeConfigError(`coverage ${s}: test must be {file, name} strings`);
+  if (
+    !isRecord(test) ||
+    typeof test.file !== "string" ||
+    typeof test.name !== "string" ||
+    !test.file ||
+    !test.name
+  ) {
+    throw new ForgeConfigError(`coverage ${s}: test must be {file, name} non-empty strings`);
   }
   return { s, verdict, test: { file: test.file, name: test.name } };
 }
@@ -490,7 +516,10 @@ function saveLedger(repoRoot: string, ledger: Ledger): void {
 
 function fileContainsText(repoRoot: string, file: string, text: string): boolean {
   const resolved = path.resolve(repoRoot, file);
-  if (!file || !existsSync(resolved)) return false;
+  const relative = path.relative(repoRoot, resolved);
+  if (!file || relative.startsWith("..") || path.isAbsolute(relative) || !existsSync(resolved)) {
+    return false;
+  }
   try {
     return readFileSync(resolved, "utf8").includes(text);
   } catch {
@@ -651,6 +680,7 @@ export async function run(argv: string[]): Promise<void> {
     const result = recordRound(ledger, findings, {
       changedFiles,
       reviewRounds: config.budgets.reviewRounds,
+      repoRoot,
       ...(base === undefined ? {} : { addedLines: await readAddedLines(repoRoot, base) }),
     });
     if (!result.ok) {
