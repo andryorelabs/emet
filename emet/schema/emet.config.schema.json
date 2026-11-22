@@ -783,6 +783,18 @@
         }
       }
     },
+    "memory": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "enabled": {
+          "type": "string",
+          "enum": ["auto", "off"],
+          "default": "auto",
+          "description": "Engram lessons memory. `auto` lets `emet memory` use the `engram` binary when it is on PATH; `off` never spawns it."
+        }
+      }
+    },
     "budgets": {
       "type": "object",
       "additionalProperties": false,
