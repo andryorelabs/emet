@@ -2,8 +2,27 @@
 title: 新功能
 description: emet 的发布说明：每个版本都有哪些变化。
 seoTitle: "emet 新功能：发布说明"
-sourceHash: 32b42447b1d1875a
+sourceHash: d0c15a0312936cf4
 ---
+
+## 0.18.0
+
+2026-11-22
+
+### 新增
+
+- `emet review --ticket <t> --coverage <file|-> [--expect S1,S3]` 把 Coverage verdicts 存入 ledger。测试缺失或在工作树中找不到的 `met` 判定，以及没有判定的预期 S#，各会打开一个 `VG-S<n>` finding。
+- `emet review --base <ref>` 在第一轮保存评审基准，并把 wave 未改动的行上的 finding 标记为 `preexisting`。`emet gate` 从不把已有的 finding 算作阻塞项。
+- finding 接受可选字段 `s`、`userOption` 和 `agreement`。带 `userOption` 的未解决 finding 在所有 tier 和 severity 下都会阻塞，gate 返回 `hold` 并带 `next: "fix-findings"`。Phase 2 把来自用户所选选项的 S# 写作 `(user option)`。
+- `emet review --merge <a.json> <b.json>` 把两个 finding 数组合并为一个。共享 `s`，或共享 `file` 且行距不超过 3 的 finding 会配对，并带上 `agreement: "both"` 或 `"single"`。
+- `emet assess` 输出 `dualReview: {run, reason}`，配置 schema 新增 `review.dual`（`auto` 或 `off`，默认 `auto`）。在 PATH 中有 `codex` 的 Claude 主机上，`high` 的 wave 会运行 Dual review：并行运行 `emet:emet-reviewer` 和 `emet review-run --tier high --coverage-out <file>`，然后执行 `emet review --merge`。
+- `emet review-run --coverage-out <file>` 写出 Codex 评审者的 Coverage verdicts，其输出 schema 接受可为 null 的 `s` 和 `userOption`。
+- `docs/reference/cli.md` 和 `docs/reference/configuration.md` 记录了评审变更，覆盖全部九种语言。
+
+### 变更
+
+- 评审者提示词和 `agents/emet-reviewer.md` 要求提供 Coverage verdicts 文件 `.emet/coverage-<run>.json`，而不是一行散文式的 `S<n>: met | partial | unmet`。Phase 8 用 `emet review --coverage` 记录判定，并在 wave 报告中列出已有的 finding 而不修复它们。
+- 不使用 `--base`、`--coverage`、`--merge` 或 Dual review 时，所有命令的行为与 0.17.0 相同。
 
 ## 0.17.0
 

@@ -257,3 +257,47 @@ describe("gate phase file", () => {
     expect(process.exitCode ?? 0).toBe(previousExit ?? 0);
   });
 });
+
+describe("pre-existing and user option findings", () => {
+  const blocker = { severity: "blocker" as const, kind: "patch" as const };
+
+  test("a pre-existing blocker does not hold and the reason counts it", () => {
+    const result = decide({ ...clean, openFindings: [{ ...blocker, preexisting: true }] });
+    expect(result.decision).toBe("merge");
+    expect(result.reasons.join(" ")).toContain("1 pre-existing finding(s) ignored");
+  });
+
+  test("a pre-existing intent_gap does not stop", () => {
+    const openFindings = [
+      { severity: "minor" as const, kind: "intent_gap" as const, preexisting: true },
+    ];
+    expect(decide({ ...clean, openFindings }).decision).toBe("merge");
+  });
+
+  test("a minor userOption finding holds for a fix round at tier medium", () => {
+    const openFindings = [{ severity: "minor" as const, kind: "patch" as const, userOption: "S2" }];
+    expect(decide({ ...clean, openFindings })).toMatchObject({
+      decision: "hold",
+      next: "fix-findings",
+    });
+  });
+
+  test("a pre-existing userOption finding still blocks", () => {
+    const openFindings = [
+      { severity: "nit" as const, kind: "patch" as const, userOption: "S2", preexisting: true },
+    ];
+    const result = decide({ ...clean, openFindings });
+    expect(result).toMatchObject({ decision: "hold", next: "fix-findings" });
+    expect(result.reasons.join(" ")).not.toContain("ignored");
+  });
+
+  test("a userOption finding stops once fix rounds are exhausted", () => {
+    const openFindings = [{ severity: "minor" as const, kind: "patch" as const, userOption: "S2" }];
+    expect(decide({ ...clean, openFindings, fixRoundsUsed: 2 }).decision).toBe("stop");
+  });
+
+  test("a userOption finding holds under onHold stop", () => {
+    const openFindings = [{ severity: "nit" as const, kind: "patch" as const, userOption: "S2" }];
+    expect(decide({ ...clean, onHold: "stop", openFindings }).decision).toBe("hold");
+  });
+});

@@ -2,7 +2,7 @@
 title: Référence de configuration
 description: Chaque clé de emet.config.json avec sa valeur par défaut et sa signification.
 seoTitle: Référence de configuration d'emet
-sourceHash: a58a3577b2274c4a
+sourceHash: e1c8a9af5648125f
 ---
 
 Chaque clé de `emet.config.json`, avec sa valeur par défaut et sa signification. La source de vérité est [`emet/schema/emet.config.schema.json`](../../emet/schema/emet.config.schema.json). Les termes suivent [GLOSSARY.md](../../GLOSSARY.md). Retour au [README](../../README.md).
@@ -206,10 +206,11 @@ Lu uniquement quand `agentHost` vaut `"codex"`. Toutes les clés sont facultativ
 ## review
 
 ```json
-{ "review": { "highRiskPaths": [] } }
+{ "review": { "highRiskPaths": [], "dual": "auto" } }
 ```
 
 - `highRiskPaths` (par défaut `[]`) : sous-chaînes de chemin supplémentaires, insensibles à la casse, qui forcent le niveau de revue `high` dans `emet assess`, en plus de l'ensemble intégré (authentification, sécurité, paiements, webhooks, CI, l'installateur, lockfiles, migrations et points sensibles dangereux comme le SQL brut ou le pipe-to-shell).
+- `dual` (`"auto"` ou `"off"`, par défaut `"auto"` ; `emet init` ne l'écrit pas) : pilote la Dual review. Avec `auto`, une vague `high` sur l'hôte Claude Code avec le binaire `codex` dans le PATH lance deux relecteurs en parallèle sur le même paquet : le relecteur Claude et `emet review-run`. Le Coordinator fusionne leurs constats avec `emet review --merge`, trie chaque constat d'un seul relecteur (le garder, ou l'écarter avec `emet review --rule`) et n'enregistre que les Coverage verdicts du relecteur Claude. `off` lance toujours un seul relecteur. `emet assess` affiche la décision sous la forme `dualReview: { run, reason }`.
 
 ## landing
 

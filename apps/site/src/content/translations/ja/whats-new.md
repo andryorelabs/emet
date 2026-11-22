@@ -2,8 +2,27 @@
 title: 新機能
 description: emet のリリースノート。各バージョンでの変更点をまとめています。
 seoTitle: "emet の新機能: リリースノート"
-sourceHash: 32b42447b1d1875a
+sourceHash: d0c15a0312936cf4
 ---
+
+## 0.18.0
+
+2026-11-22
+
+### 追加
+
+- `emet review --ticket <t> --coverage <file|-> [--expect S1,S3]` は Coverage verdicts をレッジャーに保存します。テストが存在しない、または作業ツリーで見つからない `met` の判定と、判定のない期待 S# は、それぞれ `VG-S<n>` の finding を開きます。
+- `emet review --base <ref>` は最初のラウンドでレビューのベースを保存し、wave が触れていない行の finding を `preexisting` としてマークします。`emet gate` は既存の finding をブロッキングとして数えません。
+- finding は任意のフィールド `s`、`userOption`、`agreement` を受け付けます。`userOption` を持つ未解決の finding はすべての tier と severity でブロックし、gate は `hold` と `next: "fix-findings"` を返します。Phase 2 は、ユーザーが選んだオプション由来の S# を `(user option)` と書きます。
+- `emet review --merge <a.json> <b.json>` は 2 つの finding 配列を 1 つに統合します。`s` が同じ、または `file` が同じで行が 3 行以内の finding はペアになり、`agreement: "both"` か `"single"` が付きます。
+- `emet assess` は `dualReview: {run, reason}` を出力し、`review.dual`（`auto` または `off`、既定は `auto`）が設定スキーマに追加されます。`codex` が PATH にある Claude ホストでは、`high` の wave は Dual review を実行します。`emet:emet-reviewer` と `emet review-run --tier high --coverage-out <file>` を並行実行し、その後 `emet review --merge` を行います。
+- `emet review-run --coverage-out <file>` は Codex レビュアーの Coverage verdicts を書き出し、出力スキーマは null 許容の `s` と `userOption` を受け付けます。
+- `docs/reference/cli.md` と `docs/reference/configuration.md` にレビューの変更を記載しました（全 9 言語）。
+
+### 変更
+
+- レビュアーのプロンプトと `agents/emet-reviewer.md` は、散文の `S<n>: met | partial | unmet` 行の代わりに、Coverage verdicts ファイル `.emet/coverage-<run>.json` を求めます。Phase 8 は `emet review --coverage` で判定を記録し、既存の finding は修正せず wave レポートに列挙します。
+- `--base`、`--coverage`、`--merge`、Dual review のいずれも使わない場合、すべてのコマンドは 0.17.0 と同じ動作をします。
 
 ## 0.17.0
 

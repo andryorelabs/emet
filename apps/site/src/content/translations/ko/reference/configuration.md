@@ -2,7 +2,7 @@
 title: 설정 레퍼런스
 description: emet.config.json의 모든 키를 기본값과 의미와 함께 설명합니다.
 seoTitle: emet 설정 레퍼런스
-sourceHash: a58a3577b2274c4a
+sourceHash: e1c8a9af5648125f
 ---
 
 `emet.config.json`의 모든 키를 기본값과 의미와 함께 정리했습니다. 기준이 되는 원본은 [`emet/schema/emet.config.schema.json`](../../emet/schema/emet.config.schema.json)입니다. 용어는 [GLOSSARY.md](../../GLOSSARY.md)를 따릅니다. [README](../../README.md)로 돌아가기.
@@ -210,6 +210,9 @@ Claude Code 호스트의 역할별 모델과 추론 강도이며, Codex 호스�
 ```
 
 - `highRiskPaths`(기본값 `[]`): 내장된 집합(인증, 보안, 결제, 웹훅, CI, 설치 프로그램, 락파일, 마이그레이션, 원시 SQL이나 파이프로 셸에 전달하는 코드 같은 위험한 싱크)에 더해, `emet assess`에서 `high` 리뷰 티어를 강제하는 대소문자 구분 없는 추가 경로 부분 문자열입니다.
+- `dual`(기본값 `"auto"`): `"auto"` 또는 `"off"`. 아래 Dual review를 참고하세요.
+
+Dual review: `emet assess`가 `dualReview.run: true`를 출력하면(티어 `high`, `agentHost` `claude`, `review.dual`이 `off`가 아니고 `codex`가 PATH에 있을 때) 코디네이터는 같은 패키지에 Claude 리뷰어와 Codex 리뷰어를 병렬로 실행한 뒤 `emet review --merge`로 두 지적 사항을 병합합니다. `agreement: "single"`인 지적 사항은 모두 코디네이터가 분류하며, Claude 리뷰어의 coverage만 기록됩니다. `emet init`은 `review.dual`을 쓰지 않습니다. 그렇지 않으면 이전처럼 리뷰어 하나만 실행됩니다.
 
 ## landing
 

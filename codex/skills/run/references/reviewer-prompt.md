@@ -13,8 +13,10 @@ Diff: read the file `{{diff_path}}` FIRST, before any worker report. Read
 only what it touches plus needed context.
 
 Spec {{spec_id}}: read its `## Specs` via `{{spec_read_call}}`. Give a verdict
-per covered S#: `S<n>: met | partial | unmet`, reason, `file:line`. Partial or
-unmet is a finding.
+per covered S#, written to the Coverage verdicts file
+`.emet/coverage-{{run_id}}.json`: `[{"s": "S1", "verdict": "met", "test":
+{"file": "a.test.ts", "name": "parses x"}}]`. `verdict` is `met|partial|unmet`;
+`test` names the test that proves a `met`. Partial or unmet is a finding.
 
 Project skills: {{project_skills}}. Read each `.claude/skills/<name>/SKILL.md`;
 a clear violation is a finding.
@@ -23,7 +25,7 @@ Standards axis: check the diff against the repo's documented coding
 standards (`CODING_STANDARDS.md`, `CONTRIBUTING.md`, `AGENTS.md`, whichever
 exist); a clear violation is a finding.
 
-Spec axis: the per-S# verdicts above; code that does not match what the spec
+Spec axis: the Coverage verdicts above; code that does not match what the spec
 asked for is a finding.
 
 {{browser_verify}}
@@ -43,14 +45,18 @@ input of `emet review --ticket <t> --findings <file|->`):
     "line": 42,
     "severity": "blocker",
     "kind": "patch",
-    "claim": "failure scenario"
+    "claim": "failure scenario",
+    "s": "S1",
+    "userOption": "S2"
   }
 ]
 ```
 
 `severity`: blocker|critical|major|minor|nit. `kind`: intent_gap|bad_plan|
 patch|defer (triaged in that order). `line` is an integer, `id` stable across
-rounds, no other fields; `[]` = nothing blocks.
+rounds. `s` (`"S<n>"`) only on a finding tied to one S#; `userOption`
+(`"S<n>"`) only on a finding that contradicts a `(user option)` S#. No other
+fields; `[]` = nothing blocks.
 
 Refuter: once, over all blocker/critical findings together, try to refute them;
 drop or downgrade what you refute.

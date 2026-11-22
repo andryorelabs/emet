@@ -2,8 +2,27 @@
 title: Что нового
 description: Примечания к выпускам emet: что изменилось в каждой версии.
 seoTitle: "Что нового в emet: примечания к выпускам"
-sourceHash: 32b42447b1d1875a
+sourceHash: d0c15a0312936cf4
 ---
+
+## 0.18.0
+
+2026-11-22
+
+### Добавлено
+
+- `emet review --ticket <t> --coverage <file|-> [--expect S1,S3]` сохраняет Coverage verdicts в ledger. Вердикт `met`, тест которого отсутствует или не найден в рабочем дереве, и ожидаемый S# без вердикта открывают по одному finding `VG-S<n>`.
+- `emet review --base <ref>` сохраняет базу ревью в первом раунде и помечает как `preexisting` finding на строке, которую wave не трогала. `emet gate` никогда не считает ранее существовавший finding блокирующим.
+- Findings принимают необязательные поля `s`, `userOption` и `agreement`. Открытый finding с `userOption` блокирует на любом уровне и при любой severity, а gate отвечает `hold` с `next: "fix-findings"`. Phase 2 записывает S#, пришедший из выбранной пользователем опции, как `(user option)`.
+- `emet review --merge <a.json> <b.json>` объединяет два массива findings в один. Findings образуют пару, если у них общий `s` или общий `file` со строками не дальше 3 друг от друга, и получают `agreement: "both"` или `"single"`.
+- `emet assess` выводит `dualReview: {run, reason}`, а `review.dual` (`auto` или `off`, по умолчанию `auto`) добавлен в схемы конфигурации. На хосте Claude при наличии `codex` в PATH wave уровня `high` запускает Dual review: `emet:emet-reviewer` и `emet review-run --tier high --coverage-out <file>` параллельно, затем `emet review --merge`.
+- `emet review-run --coverage-out <file>` записывает Coverage verdicts ревьюера Codex, а его схема вывода принимает `s` и `userOption` со значением null.
+- `docs/reference/cli.md` и `docs/reference/configuration.md` описывают изменения ревью на всех девяти языках.
+
+### Изменено
+
+- Промпт ревьюера и `agents/emet-reviewer.md` запрашивают файл Coverage verdicts `.emet/coverage-<run>.json` вместо строки прозой `S<n>: met | partial | unmet`. Phase 8 записывает вердикты через `emet review --coverage` и перечисляет ранее существовавшие findings в отчёте wave, не исправляя их.
+- Без `--base`, `--coverage`, `--merge` и Dual review каждая команда ведёт себя как в 0.17.0.
 
 ## 0.17.0
 
