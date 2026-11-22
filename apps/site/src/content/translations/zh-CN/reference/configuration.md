@@ -321,6 +321,18 @@ Claude Code 宿主上每个角色的模型和推理强度；Codex 宿主改为�
 
 - `canvasIndex`（deprecated）：设计画布文件的路径，工作者在进行 UI 变更之前会查看它。
 
+## attention
+
+可选。
+
+- `alert`（默认 `true`，boolean）：当会话进入 `needs-decision` 时，emet 只发出一次提醒：Orca 运行时可达时，在主 worktree 上设置 Orca 未读标记；否则在 PATH 中有 `notify-send` 时使用它；否则什么也不做。`false` 会关闭提醒。
+
+示例：
+
+```json
+{ "attention": { "alert": true } }
+```
+
 ## 环境变量
 
 CLI 会读取这些变量，全部通过 `emet/src/env.ts` 完成。采用 `FORGE_` 拼写的变量仍可作为对应 `EMET_` 名称的回退使用，并会打印一次警告。空值视为未设置。`tools/env-docs.test.ts` 使该表与代码保持一致。
