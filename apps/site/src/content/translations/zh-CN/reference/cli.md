@@ -2,7 +2,7 @@
 title: CLI 参考
 description: 每个 emet 子命令、关卡与记录表、退出码和环境变量。
 seoTitle: emet CLI 参考
-sourceHash: 16928daf4911a344
+sourceHash: d821b729a7e826ff
 ---
 
 每个 `emet` 子命令、关卡与记录表、退出码和环境变量。术语遵循 [GLOSSARY.md](../../GLOSSARY.md)。返回 [README](../../README.md)。每个命令都可以用 `--help` 打印其用法。
@@ -61,6 +61,10 @@ emet doctor ~/code/*
 - `emet chain --ticket <id> --spec <id> --wave <n> [gate flags]`：用收到的关卡标志运行 `emet gate`，仅当决定为 `chain` 时才启动下一个波次。启动前它会检查就绪情况（主机内存余量、仓库和 `/tmp` 的可用磁盘与 inode、`orca` CLI），之后确认子会话已列出。任何其他决定、阻塞性的就绪问题（`low-memory`、`low-disk`、`low-inodes`、`orca-unavailable`）或同一规格和波次已有会话时，会连同原因以退出码 1 结束，且不启动任何内容。
 - `emet status [--spec <id>] [--brief]`：以 JSON 加一行摘要的形式给出每个波次的 Working / Checking / Ready / Needs-decision 状态。`--brief` 则最多输出三行：整体状态、等待人处理的事项（如有）以及下一步操作。`emet status --help` 说明了该 JSON。
 - `emet run current [--json]`：输出仓库当前的活动运行（运行 id、规格、波次、阶段和最近更新），读取自 `.emet/phase.json`。没有活动运行时输出 `no active run` 并以 0 退出。
+- `emet memory search --json <query> [--limit <n>]`：在 [Engram](https://github.com/Gentleman-Programming/engram) 中搜索以往运行的经验教训。它以 `match_mode: "any"` 搜索（`--limit` 默认 5，最大 20），只保留 topic key 以 `emet/<repo>/lessons/` 开头的笔记，并输出 `{available: true, results: [{id, topicKey, title, content}]}`，其中 `content` 截断为 2000 个字符。`<repo>` 是 `git remote get-url <repo.remote>` 去掉 `.git` 后的最后一个路径段，否则取主 worktree 的目录名。
+- `emet memory save --json --key <spec-<id>|quick-<runId>> --run <runId> --outcome <landed|chained|hold|stop|blocked>`：从 stdin 读取 1 到 5 条经验要点（以 `- ` 开头、每条最多 300 个字符的行），并将其作为 `## <runId> — <outcome> (<date>)` 小节追加到 topic key 为 `emet/<repo>/lessons/<key>` 的笔记中，或新建该笔记。超过 20000 个字符的笔记会丢弃最旧的小节。输出 `{available: true, saved: true, topicKey}`。
+  - 两个子命令都通过在仓库根目录启动 `engram mcp --tools=agent` 与 Engram 通信；不需要 Engram 插件。它们从不向 Engram 传递 `project`。
+  - 退出码：用法错误时为 `2`（没有子命令、缺少查询、没有要点、超过 5 条要点、某条要点超过 300 个字符、未知的 outcome、错误的 key）。Engram 的任何问题（不在 PATH 中、握手失败、工具错误、超时、JSON 格式错误）都以 `0` 退出。握手成功之前输出为 `{available: false, reason}`；之后，`search` 输出 `{available: true, results: [], reason}`，`save` 输出 `{available: true, saved: false, reason}`。`memory.enabled: "off"` 输出 `{available: false, reason: "memory.enabled is off"}`，且不启动任何进程。参见 [`memory`](configuration.md#memory)。
 - `emet insights [--since <iso|7d|30d>] [--repo <path>] [--all] [--json] [--mark-baseline]`：读取[事件日志](../guide/journal.md)，按来源（人工或自动）报告运行、按决定和原因报告 gate 决定、每次运行的人工干预、启动结果和已关闭的工单。无法读取的行会被跳过并计数。`--mark-baseline` 追加一个基线；之后的报告只涵盖基线之后的事件，除非指定 `--all`。日志为空或不存在时输出零值报告并以 0 退出。
 - `emet usage [--session <id> | --file <path>] [--stalled [--minutes N]] [--project-dir <path>]`：报告会话用量；`--stalled` 列出停滞的工作者。
 - `emet handoff --check <path> [--expect-skills a,b] | --render <path>`：校验或渲染工作者的 `.emet/handoff-<ticket>.md` 笔记。笔记可以包含 `skills:` 部分，写作 `skills: none` 或 `skills: loaded: a, b; missing: c`；只有当 `state` 为 `done` 时才必须填写，其他任何值都会使校验失败。`--expect-skills a,b`（仅用于 check）会对每个既不在 `loaded` 也不在 `missing` 列表中的指定技能判定校验失败。当 `missing` 列表不为空时，通过的校验会输出 `missing skills: …`。

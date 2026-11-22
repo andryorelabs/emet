@@ -14,7 +14,7 @@ Stop, write nothing, and recommend `/emet:run` without `--quick` when the change
 4. Dispatch the one worker in a worktree (Phases 6-7).
 5. Close out the wave: `emet verify`; when `specs.enabled`, `${CLAUDE_PLUGIN_ROOT}/emet/reference/living-specs.md` before assess; `emet assess --base <trunk> --head <integration branch> --quick`; the reviewer unless the tier is `passive`; `emet gate`.
 6. Landing: one wave as one PR, or one local merge when `landing.mode` is `merge`.
-7. Run the after-spec step as in `phases-9-handoff.md`. Never run `emet chain`.
+7. Run the after-spec step as in `phases-9-handoff.md`, and after landing run `emet memory save --json --key quick-<run id> --run <run id> --outcome <outcome>` with 1–5 lesson bullets on stdin; a `saved:false` or `available:false` result is mentioned in the report, never stops it. Never run `emet chain`.
 
 ## High-risk Stop
 

@@ -6,6 +6,7 @@ import { present } from "./present";
 import { BROWSER_AXIS_PROMPT } from "./review-run";
 
 const REPO_ROOT = resolve(import.meta.dir, "..", "..");
+const AGENTS_DIRECTORY = join(REPO_ROOT, "agents");
 
 /**
  * Byte ceilings, measured on trunk after wave 4 plus ~4% headroom. Raising one
@@ -17,14 +18,14 @@ const BYTE_CEILINGS: Readonly<Record<string, number>> = {
   "commands/run.md": 9600,
   "commands/setup.md": 1150,
   "emet/reference/incidents.md": 12950,
-  "emet/reference/phases-1-5.md": 12290,
-  "emet/reference/phases-quick.md": 1770,
+  "emet/reference/phases-1-5.md": 12590,
+  "emet/reference/phases-quick.md": 2050,
   "emet/reference/phases-6-7-dispatch.md": 16900,
   "emet/reference/phases-8-landing.md": 9000,
   "emet/reference/phases-8-spec-landing.md": 3850,
   "emet/reference/living-specs.md": 1330,
   "emet/reference/phases-8-review.md": 9950,
-  "emet/reference/phases-9-handoff.md": 7450,
+  "emet/reference/phases-9-handoff.md": 7770,
   "emet/reference/reviewer-prompt.md": 4150,
   "emet/reference/tracker-github.md": 3930,
   "emet/reference/tracker-linear.md": 5400,
@@ -125,6 +126,22 @@ describe("living specs prompts", () => {
       expect(readReference(name)).not.toContain("spec-merge");
     });
   }
+});
+
+describe("memory prompts", () => {
+  test("phases 1, 9 and quick run the memory commands", () => {
+    expect(readReference("phases-1-5.md")).toContain("emet memory search --json");
+    expect(readReference("phases-9-handoff.md")).toContain("emet memory save --json");
+    expect(readReference("phases-quick.md")).toContain("emet memory save --json");
+  });
+
+  test("no worker prompt mentions emet memory", () => {
+    expect(readReference("worker-prompt.md")).not.toContain("emet memory");
+    expect(readReference("phases-6-7-dispatch.md")).not.toContain("emet memory");
+    for (const agent of readdirSync(AGENTS_DIRECTORY)) {
+      expect(readFileSync(join(AGENTS_DIRECTORY, agent), "utf8")).not.toContain("emet memory");
+    }
+  });
 });
 
 describe("quick run prompts", () => {
