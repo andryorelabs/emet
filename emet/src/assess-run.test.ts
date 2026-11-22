@@ -149,4 +149,32 @@ describe("assess run()", () => {
     expect(result.code).toBe(0);
     expect(JSON.parse(result.logs[0] ?? "")).not.toHaveProperty("quickRejected");
   });
+
+  test("prints dualReview and finds codex on PATH", async () => {
+    await commitFile(".github/workflows/ci.yml", "name: ci\n");
+    const binDirectory = realpathSync(mkdtempSync(path.join(os.tmpdir(), "assess-bin-")));
+    const codexPath = path.join(binDirectory, "codex");
+    await Bun.write(codexPath, "#!/bin/sh\n");
+    await Bun.$`chmod +x ${codexPath}`.quiet();
+    const previousPath = process.env.PATH;
+    process.env.PATH = `${binDirectory}:${previousPath ?? ""}`;
+    try {
+      const result = await runAssess(["--base", "HEAD~1", "--head", "HEAD"]);
+      expect(JSON.parse(result.logs[0] ?? "")).toMatchObject({
+        tier: "high",
+        dualReview: { run: true },
+      });
+    } finally {
+      process.env.PATH = previousPath;
+      rmSync(binDirectory, { recursive: true, force: true });
+    }
+  });
+
+  test("dualReview is false for a medium tier", async () => {
+    await commitFile("src/app.ts", "export const a = 1\n");
+    const result = await runAssess(["--base", "HEAD~1", "--head", "HEAD"]);
+    expect(JSON.parse(result.logs[0] ?? "")).toMatchObject({
+      dualReview: { run: false, reason: expect.stringContaining("tier") as unknown },
+    });
+  });
 });
