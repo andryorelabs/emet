@@ -2,8 +2,26 @@
 title: Что нового
 description: Примечания к выпускам emet: что изменилось в каждой версии.
 seoTitle: "Что нового в emet: примечания к выпускам"
-sourceHash: e51e96e3f3669abd
+sourceHash: 32b42447b1d1875a
 ---
+
+## 0.17.0
+
+2026-11-22
+
+### Добавлено
+
+- `/emet:run --quick <изменение>` запускает Quick run для изменения, которое умещается в один тикет: один раунд интервью, spec с одним folded-тикетом, одно подтверждение, один worker, ревью и Landing этой единственной Wave в виде pull request (или локального merge), без `emet chain`. Перед подтверждением он останавливается и рекомендует `/emet:run` без `--quick`, если изменение затрагивает экран или не умещается в один тикет; вместе с `--draft` или `--dispatch` он отклоняется. `--no-promote` принимается. Шаги описаны в новом `emet/reference/phases-quick.md`. См. ADR-0039.
+- `emet assess --quick` выводит обычный JSON плюс `"quickRejected"` и завершается с кодом `1`, когда уровень равен `high`. Quick run считает это Stop гейта: без auto-merge, pull request остаётся открытым, а итоговый отчёт называет причины высокого риска. Без `--quick` вывод и коды завершения не меняются.
+- `emet approve --quick` записывает `"mode": "quick"` в `approval.json`. Записи, сделанные до этого изменения, по-прежнему проходят `--check`.
+- `resolveLandingUnit(config, runId, root)` возвращает `wave` для запуска, подтверждённого с `--quick`, и `config.landing.unit` в остальных случаях. `emet landed`, `emet status` и `emet preflight` читают единицу landing через неё, поэтому Quick run никогда не ожидает ветку spec.
+- `emet validate` сообщает об ошибке `no-tickets`, когда в плане нет тикетов, и предлагает написать один folded-тикет.
+- `docs/reference/cli.md` и `docs/guide/trackers-and-landing.md` описывают Quick run на всех девяти языках.
+
+### Изменено
+
+- Фраза о быстром пути в `phases-1-5.md` теперь предписывает для запроса ниже порога написать один тикет с пометкой `folded`, а не оставлять план без тикетов.
+- `emet preflight --approval <run>` определяет единицу landing по записи подтверждения этого запуска, когда `--run` не указан.
 
 ## 0.16.0
 

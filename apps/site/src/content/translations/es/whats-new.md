@@ -2,8 +2,26 @@
 title: Novedades
 description: Notas de versión de emet: qué cambió en cada versión.
 seoTitle: Novedades de emet: notas de versión
-sourceHash: e51e96e3f3669abd
+sourceHash: 32b42447b1d1875a
 ---
+
+## 0.17.0
+
+2026-11-22
+
+### Añadido
+
+- `/emet:run --quick <cambio>` ejecuta una Quick run para un cambio que cabe en un ticket: una ronda de entrevista, una spec con un ticket folded, una aprobación, un worker, revisión y el Landing de esa única Wave como pull request (o como merge local), sin `emet chain`. Se detiene antes de la aprobación y recomienda `/emet:run` sin `--quick` cuando el cambio toca una pantalla o no cabe en un ticket, y se rechaza junto con `--draft` o `--dispatch`. Acepta `--no-promote`. Los pasos están en el nuevo `emet/reference/phases-quick.md`. Consulta ADR-0039.
+- `emet assess --quick` imprime el JSON habitual más `"quickRejected"` y termina con código `1` cuando el nivel es `high`. Una Quick run lo trata como un Stop del Gate: sin auto-merge, el pull request queda abierto y el informe final nombra los motivos de alto riesgo. Sin `--quick`, la salida y los códigos de salida no cambian.
+- `emet approve --quick` escribe `"mode": "quick"` en `approval.json`. Los registros escritos antes de este cambio siguen pasando `--check`.
+- `resolveLandingUnit(config, runId, root)` devuelve `wave` para una ejecución aprobada con `--quick` y `config.landing.unit` en los demás casos. `emet landed`, `emet status` y `emet preflight` leen la unidad de landing a través de ella, así que una Quick run nunca espera una rama de spec.
+- `emet validate` informa un error `no-tickets` cuando un plan no tiene tickets e indica que se escriba un ticket folded.
+- `docs/reference/cli.md` y `docs/guide/trackers-and-landing.md` documentan la Quick run, en los nueve idiomas.
+
+### Cambiado
+
+- La frase de la vía rápida en `phases-1-5.md` ahora indica escribir un ticket marcado como `folded` para una petición por debajo del umbral, en lugar de no escribir ningún ticket.
+- `emet preflight --approval <run>` resuelve la unidad de landing a partir del registro de aprobación de esa ejecución cuando falta `--run`.
 
 ## 0.16.0
 
