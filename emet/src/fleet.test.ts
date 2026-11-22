@@ -5,10 +5,12 @@ import path from "node:path";
 
 import type { AgentHost } from "./agenthost";
 import { claudeHost } from "./agenthost-claude";
+import type { SessionAttention } from "./attention";
 import {
   defaultLaunchDeps,
   defaultListDeps,
   defaultSetDeps,
+  buildFleetStatus,
   launchFleetDraft,
   listFleet,
   run,
@@ -367,5 +369,81 @@ describe("run", () => {
     await run(["launch", "--root", root]);
     capture.restore();
     expect(process.exitCode).toBe(2);
+  });
+});
+
+function session(
+  sessionId: string,
+  repo: string,
+  state: SessionAttention["state"],
+): SessionAttention {
+  return {
+    sessionId,
+    repo,
+    runId: null,
+    state,
+    blocked: state === "needs-decision",
+    since: "2026-01-01T00:00:00.000Z",
+  };
+}
+
+describe("buildFleetStatus", () => {
+  test("groups sessions per repo, blocked repos first, and counts blocked", () => {
+    const status = buildFleetStatus([
+      session("a", "/r/quiet", "working"),
+      session("b", "/r/busy", "needs-decision"),
+      session("c", "/r/quiet", "idle"),
+      session("d", "/r/other", "needs-decision"),
+    ]);
+    expect(status.blocked).toBe(2);
+    expect(status.repos.map((entry) => entry.repo)).toEqual(["/r/busy", "/r/other", "/r/quiet"]);
+    expect(status.repos[2]?.sessions).toHaveLength(2);
+  });
+
+  test("is empty for no sessions", () => {
+    expect(buildFleetStatus([])).toEqual({ repos: [], blocked: 0 });
+  });
+});
+
+describe("run status", () => {
+  test("prints JSON with both blocked repos", async () => {
+    const sessions = [
+      session("a", "/r/one", "needs-decision"),
+      session("b", "/r/two", "needs-decision"),
+    ];
+    const capture = captureOutput();
+    await run(["status", "--json"], { status: () => sessions });
+    capture.restore();
+    const parsed: unknown = JSON.parse(capture.out[0] ?? "{}");
+    expect(parsed).toMatchObject({ blocked: 2 });
+    expect(parsed).toHaveProperty("repos.length", 2);
+  });
+
+  test("prints one line per repo and exits 0 when empty", async () => {
+    const capture = captureOutput();
+    await run(["status"], {
+      status: () => [session("a", "/r/one", "working"), session("b", "/r/one", "idle")],
+    });
+    await run(["status"], { status: () => [] });
+    capture.restore();
+    expect(capture.out[0]).toBe("/r/one: 0 blocked, 1 working, 1 idle");
+    expect(capture.out[1]).toBe("");
+    expect(process.exitCode).not.toBe(2);
+  });
+});
+
+describe("run status default journal", () => {
+  test("reads the journal under the state dir and exits 0 when empty", async () => {
+    const previous = process.env.EMET_STATE_DIR;
+    process.env.EMET_STATE_DIR = path.join(root, "state");
+    const capture = captureOutput();
+    try {
+      await run(["status", "--json"]);
+    } finally {
+      capture.restore();
+      if (previous === undefined) delete process.env.EMET_STATE_DIR;
+      else process.env.EMET_STATE_DIR = previous;
+    }
+    expect(JSON.parse(capture.out[0] ?? "{}")).toEqual({ repos: [], blocked: 0 });
   });
 });
