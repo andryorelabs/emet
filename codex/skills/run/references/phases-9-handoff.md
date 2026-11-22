@@ -34,7 +34,7 @@ person" line says `nothing`. Right after posting the report, send one
 push notification whose text is that same TL;DR.
 
 Whenever this session ends a wave — frontier empty or not — right after
-posting its report, run `emet guard --mark-final-report <session id>` (the
+posting its report, first run `emet memory save --json --key spec-<spec-id> --run <run id> --outcome <landed|chained|hold|stop|blocked>` with 1–5 lesson bullets on stdin (`--draft` saves nothing; a `saved:false` or `available:false` result is mentioned in the report, never stops it), then run `emet guard --mark-final-report <session id>` (the
 id is printed in the `Stop` hook's block message); the
 hook only blocks once no worker is in flight and claims remain, so a turn
 spent waiting on workers is never blocked.
