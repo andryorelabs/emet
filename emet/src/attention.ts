@@ -9,6 +9,7 @@ import { existsSync } from "node:fs";
 import path from "node:path";
 
 import type { AgentHostName } from "./agenthost";
+import { alertNeedsDecision } from "./attention-alert";
 import { isValidSessionId, resolveWorktreeEventOwner, runHasUnfinishedTicket } from "./guard";
 import { detectAgentHost } from "./guard-codex";
 import {
@@ -61,6 +62,7 @@ export interface AttentionDeps {
   readonly host?: AgentHostName;
   readonly resolveOwner?: (cwd: string) => Promise<AttentionOwner | null>;
   readonly runBlocked?: (runId: string | null, cwd: string) => Promise<boolean>;
+  readonly alert?: (transition: AttentionTransition) => Promise<unknown>;
 }
 
 /** One recorded change of a session's attention state. */
@@ -215,6 +217,9 @@ export async function recordAttention(
       },
       deps.journal,
     );
+    if (transition.to === "needs-decision" && transition.from !== "needs-decision") {
+      await (deps.alert ?? ((entered) => alertNeedsDecision(entered)))(transition);
+    }
     return transition;
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
