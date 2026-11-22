@@ -2,7 +2,7 @@
 title: 트래커와 랜딩
 description: 티켓이 있는 곳, 웨이브가 풀 리퀘스트나 로컬 병합으로 랜딩하는 방식, 웨이브를 이어 붙이는 방법을 설명합니다.
 seoTitle: emet의 트래커와 랜딩
-sourceHash: da19ec4cf50e7084
+sourceHash: 1ebd20e303a5c747
 ---
 
 티켓이 있는 곳, 웨이브가 랜딩하는 방식, 웨이브를 이어 붙이는 방법을 설명합니다. 여기서 언급하는 모든 키는 [설정 레퍼런스](../reference/configuration.md)에, 모든 하위 명령은 [CLI 레퍼런스](../reference/cli.md)에 있습니다.
@@ -30,6 +30,14 @@ emet은 Linear, GitHub Issues 또는 로컬 파일과 함께 동작하며 `track
 `emet spec-branch sync`는 트렁크를 `spec/<id>`에 병합하며 리베이스는 하지 않습니다. 충돌이 나면 중단하고, 브랜치를 바꾸지 않은 채 두며, 0이 아닌 코드로 종료합니다. `emet spec-branch land`는 동기화를 실행한 뒤 브랜치를 한 번만 랜딩합니다. `pr` 모드에서는 `spec/<id>`를 푸시하고, 통합된 모든 웨이브의 티켓마다 한 줄씩 `Closes #N`이 들어간 PR을 하나 열고, 그 검사를 기다린 뒤 `landing.specMergeMethod`(기본값은 병합 커밋이며 `pr.mergeMethod`는 무시)로 병합합니다. `merge` 모드에서는 `spec/<id>`를 `--no-ff`로 로컬 트렁크에 병합하며 푸시하지 않습니다. `--partial`은 그때까지 통합된 웨이브만 랜딩합니다. `emet spec-branch abandon --spec <id> --force`는 브랜치에 `abandoned/spec-<id>` 태그를 붙여 삭제하고, 로컬 트래커의 통합된 티켓을 `ready-for-agent`로 되돌립니다.
 
 스펙 모드에서는 워커 워크트리가 스펙 브랜치에서 시작하도록 Claude Code 설정에 `worktree.baseRef: "head"`가 필요하며, `emet preflight`와 `emet doctor`가 이를 확인합니다. 또한 `emet doctor`는 모드가 `pr`인데 저장소 설정이나 트렁크 룰셋이 구성된 `landing.specMergeMethod`를 허용하지 않으면 경고합니다.
+
+### Quick run
+
+`/emet:run --quick <요청>`은 작은 변경을 위한 **Quick run**을 시작합니다. 인터뷰는 한 라운드, `folded` 티켓은 하나, 승인은 한 번입니다. 변경이 화면을 건드리지 않고 티켓 하나에 들어갈 때(새 표면이 `sizing.inlineMaxLines` 이내이고 컨텍스트 예산 트립와이어가 작동하지 않을 때) 사용하세요. 그렇지 않으면 승인 전에 멈추고 `--quick` 없는 `/emet:run`을 권합니다. `domain-modeling`, 캔버스, 프런티어 라운드, `emet chain`은 건너뜁니다. 워커 하나를 실행한 뒤 `emet verify`, `specs.enabled`일 때의 살아 있는 스펙 단계, `emet assess --quick`, 티어가 `passive`가 아니면 리뷰어, 그리고 `emet gate`를 실행합니다. `--quick`을 `--draft` 또는 `--dispatch`와 함께 쓰면 거부되며, `--no-promote`는 허용됩니다.
+
+Quick run은 `landing.unit` 설정과 상관없이 웨이브 단위로 랜딩합니다. `emet approve --quick`이 `"mode": "quick"`을 기록하고 `resolveLandingUnit`이 `"wave"`를 반환하므로 스펙 브랜치를 기대하지 않습니다. 하나의 PR로(`landing.mode`가 `merge`이면 로컬 머지로) 랜딩한 뒤 after-spec 단계를 실행합니다.
+
+고위험 diff는 Quick run을 멈춥니다. `emet assess --quick`은 티어가 `high`이면 종료 코드 1로 끝나며, 이것이 게이트의 **Stop**입니다. 자동 머지는 없고 PR은 열린 채로 남으며, 최종 보고서에 고위험 사유가 적힙니다.
 
 ### PR 랜딩
 

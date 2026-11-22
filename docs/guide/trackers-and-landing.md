@@ -32,6 +32,18 @@ With `landing.unit: "spec"` the PR is the spec's: one PR for every integrated wa
 
 After a wave's branches are merged together, `commands.fullSuite` runs once on the integration branch. A red run blocks the PR and `autoChain`. The gate receives the result as `--integration`. In a non-final wave of a spec landing, the coordinator passes `--ci` from `commands.selfCheck`, and only the final landing waits for CI with `emet ci --wait`; the gate then answers `chain` while waves remain.
 
+### Quick run
+
+`/emet:run --quick <request>` is the short path for a small, single-ticket change such as a typo or a one-line fix. Use it when the change touches no screen and fits one ticket: new surface within `sizing.inlineMaxLines` and no context-budget tripwire.
+
+It skips the larger interview and planning: one `grilling` round, no `domain-modeling`, no canvas and no frontier rounds. The spec holds one `folded` ticket that covers every `S#`, and you give one approval. One worker then runs in a worktree, followed by `emet verify`, the living-specs step when `specs.enabled`, `emet assess --quick`, the reviewer unless the tier is `passive`, and `emet gate`. There is no `emet chain`.
+
+A **Quick run** has one **Wave**, so it always lands per wave, as a PR or a local merge, whatever `landing.unit` says: `emet approve --quick` records `mode: "quick"`, and no spec branch is created or expected.
+
+A high-risk diff stops it. `emet assess --quick` exits 1 when the tier is `high`; the Gate treats that as a **Stop**, so nothing is auto-merged, the PR stays open and the final report names the high-risk reasons.
+
+Before approval, the run stops and recommends `/emet:run` without `--quick` when the change touches a screen or does not fit one ticket. `--quick` cannot be combined with `--draft` or `--dispatch`; `--no-promote` is accepted.
+
 ### Chaining waves
 
 Later waves run in their own sessions, never in the one that ran wave 1. Two optional `emet.config.json` sections control what happens next (both validated by `emet preflight`):

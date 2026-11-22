@@ -2,7 +2,7 @@
 title: Trackers e aterrissagem
 description: Onde ficam os tickets, como uma onda aterrissa como pull request ou merge local, e como as ondas se encadeiam.
 seoTitle: Trackers e aterrissagem no emet
-sourceHash: da19ec4cf50e7084
+sourceHash: 1ebd20e303a5c747
 ---
 
 Onde ficam os tickets, como uma onda aterrissa e como as ondas se encadeiam. Toda chave citada aqui está na [referência de configuração](../reference/configuration.md); todo subcomando está na [referência da CLI](../reference/cli.md).
@@ -36,6 +36,18 @@ O modo spec exige `worktree.baseRef: "head"` nas configurações do Claude Code 
 Com `landing.unit: "spec"`, o PR é o do spec: um único PR para todas as ondas integradas, aberto por `emet spec-branch land` depois da última onda. Com `landing.unit: "wave"`, uma onda é um PR. O corpo traz uma linha `Closes #N` para cada ticket (a palavra-chave de fechamento do tracker), e o coordenador move os tickets para em revisão ao abrir o PR. Em seguida o PR é mesclado conforme `pr.autoMerge`, ou deixado aberto quando a onda foi sinalizada, `autoMerge` é `false` ou as correções de CI se esgotaram (o PR então recebe o rótulo de decisão humana). Depois de um merge, `emet tracker close` fecha os tickets em um tracker do GitHub, e `emet cleanup --run <runId>` libera as branches, as reivindicações de tickets e os slots de workers da onda. Ele também exclui cada branch local cujo PR foi mesclado no commit da ponta da branch, incluindo a branch de integração.
 
 Depois que as branches de uma onda são mescladas, `commands.fullSuite` roda uma vez na branch de integração. Uma execução vermelha bloqueia o PR e o `autoChain`. O gate recebe o resultado como `--integration`. Em uma onda não final de uma aterrissagem de spec, o coordenador passa `--ci` a partir de `commands.selfCheck`, e somente a aterrissagem final espera pela CI com `emet ci --wait`; o gate então responde `chain` enquanto restarem ondas.
+
+### Quick run
+
+`/emet:run --quick <solicitação>` é o caminho curto para uma mudança pequena de um único ticket, como um erro de digitação ou uma correção de uma linha. Use-o quando a mudança não toca nenhuma tela e cabe em um ticket: superfície nova dentro de `sizing.inlineMaxLines` e sem alarme de orçamento de contexto.
+
+Ele pula a entrevista e o planejamento longos: uma rodada de `grilling`, sem `domain-modeling`, sem canvas e sem rodadas de fronteira. O spec contém um ticket `folded` que cobre todos os `S#`, e você dá uma única aprovação. Depois roda um worker em um worktree, seguido de `emet verify`, a etapa de living specs quando `specs.enabled`, `emet assess --quick`, o revisor, a menos que o nível seja `passive`, e `emet gate`. Não há `emet chain`.
+
+Uma **Quick run** tem uma única **onda**, então sempre aterrissa por onda, como PR ou como merge local, seja qual for o `landing.unit`: `emet approve --quick` registra `mode: "quick"`, e nenhuma branch de spec é criada ou esperada.
+
+Um diff de alto risco a interrompe. `emet assess --quick` sai com código 1 quando o nível é `high`; o Gate trata isso como um **Stop**: nada é mesclado automaticamente, o PR continua aberto e o relatório final nomeia os motivos do alto risco.
+
+Antes da aprovação, a execução para e recomenda `/emet:run` sem `--quick` quando a mudança toca uma tela ou não cabe em um ticket. `--quick` não pode ser combinado com `--draft` nem com `--dispatch`; `--no-promote` é aceito.
 
 ### Encadeando ondas
 
