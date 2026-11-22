@@ -48,7 +48,8 @@ can't happen before the approval. Section it as a spec block per
 in Phase 5.
 
 Put the requirements in a `## Specs` section, numbered `S1..Sn`, one per
-line (`- **S1**: …`). Quote the user's own strings, commands and examples
+line (`- **S1**: …`); an S# that comes from an option the user explicitly chose
+in the interview is written `- **S<n>** (user option): …`. Quote the user's own strings, commands and examples
 verbatim inside each one — never paraphrase them. Tickets and prompts cite
 these numbers, and workers read this section directly from the tracker, so
 whatever is not in `## Specs` does not reach them. Give every S# an
