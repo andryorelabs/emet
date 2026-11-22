@@ -80,7 +80,8 @@ Phase 7 deliberately deferred. First route it by risk: run
   `emet assess` printed: pass its model, and its effort where the dispatch
   supports one). Auto-merge is additionally gated: `pr.autoMerge` lands the PR
   only when every check is green **and** the ledger has no open finding;
-  otherwise leave it open with the human-decision label.
+  otherwise leave it open with the human-decision label. When `emet assess`
+  printed `dualReview.run: true`, a second reviewer joins (Dual review below).
 
 A worker's `Risk:` line other than `none` can only raise the tier you take
 from `emet assess`, never lower it. Package the diff first: `emet
@@ -93,10 +94,18 @@ the spec's `## Global Constraints`) — single-pass, never a fan-out (nesting
 hung workers and a fan-out roster hung ~1h45m; `${CLAUDE_PLUGIN_ROOT}/emet/reference/incidents.md`).
 Fallback if `emet:emet-reviewer` is missing: the `code-review` skill at `--level
 low|medium`. `/code-review ultra` is a manual, opt-in step only.
+Dual review: only when `emet assess` printed `dualReview.run: true`, run
+`emet:emet-reviewer` and `emet review-run --tier high --coverage-out <file>` in
+parallel over the same package, each writing its own findings file. Otherwise one reviewer runs, as
+above.
 
 Browser axis: fill `{{browser_verify}}` in the reviewer prompt (with the
 "Browser axis text" section of `reviewer-prompt.md`) only when `emet assess`
 printed `browserVerify.run: true`; otherwise leave it empty.
+
+With a Dual review, run `emet review --merge <claude.json> <codex.json>` and
+triage every `agreement: "single"` finding: keep it, or drop it and record
+`emet review --rule`. Record the merged array below. Only the Claude reviewer's coverage is recorded.
 
 Record the reviewer's findings JSON per ticket: `emet review --ticket
 <ticket> --findings <f> --base <trunk> [--changed <files since the last round>]`,

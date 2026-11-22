@@ -2,7 +2,7 @@
 title: Referencia de configuración
 description: Cada clave de emet.config.json con su valor por defecto y su significado.
 seoTitle: Referencia de configuración de emet
-sourceHash: a58a3577b2274c4a
+sourceHash: e1c8a9af5648125f
 ---
 
 Cada clave de `emet.config.json`, con su valor por defecto y su significado. La fuente de verdad es [`emet/schema/emet.config.schema.json`](../../emet/schema/emet.config.schema.json). Los términos siguen [GLOSSARY.md](../../GLOSSARY.md). Volver al [README](../../README.md).
@@ -206,10 +206,11 @@ Solo se lee cuando `agentHost` es `"codex"`. Todas las claves son opcionales. El
 ## review
 
 ```json
-{ "review": { "highRiskPaths": [] } }
+{ "review": { "highRiskPaths": [], "dual": "auto" } }
 ```
 
 - `highRiskPaths` (por defecto `[]`): subcadenas de ruta adicionales, sin distinguir mayúsculas, que fuerzan el nivel de revisión `high` en `emet assess`, además del conjunto integrado (autenticación, seguridad, pagos, webhooks, CI, el instalador, lockfiles, migraciones y puntos sensibles peligrosos como SQL sin procesar o pipe-to-shell).
+- `dual` (`"auto"` o `"off"`, por defecto `"auto"`; `emet init` no lo escribe): controla la Dual review. Con `auto`, una ola `high` en el host Claude Code con el binario `codex` en el PATH ejecuta dos revisores en paralelo sobre el mismo paquete: el revisor Claude y `emet review-run`. El Coordinator combina sus hallazgos con `emet review --merge`, hace el triaje de cada hallazgo de un solo revisor (conservarlo, o descartarlo con `emet review --rule`) y registra solo los Coverage verdicts del revisor Claude. `off` ejecuta siempre un solo revisor. `emet assess` imprime la decisión como `dualReview: { run, reason }`.
 
 ## landing
 

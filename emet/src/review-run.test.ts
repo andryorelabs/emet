@@ -333,8 +333,11 @@ describe("review-run Codex models cache", () => {
 describe("review-run contract", () => {
   test("the schema wraps findings in an object with every field required", () => {
     const schema = JSON.stringify(findingsSchema());
-    expect(schema).toContain(`"required":["findings"]`);
-    expect(schema).toContain(`"required":["id","file","line","severity","kind","claim"]`);
+    expect(schema).toContain(`"required":["findings","coverage"]`);
+    expect(schema).toContain(
+      `"required":["id","file","line","severity","kind","claim","s","userOption"]`,
+    );
+    expect(schema).toContain(`"s":{"type":["string","null"]}`);
   });
 
   test("the prompt names the package and the tier lenses", () => {
@@ -358,5 +361,37 @@ describe("review-run contract", () => {
     expect(buildReviewerPrompt({ ...base, browserVerify: true })).toBe(
       `${plain}\n\n${BROWSER_AXIS_PROMPT.replace("{{run_id}}", "r")}`,
     );
+  });
+});
+
+describe("review-run coverage output", () => {
+  const verdict = { s: "S1", verdict: "met", test: { file: "a", name: "b" } };
+
+  test("--coverage-out writes the verdicts and stdout keeps the findings", async () => {
+    script([agentMessage(JSON.stringify({ findings: [], coverage: [verdict] }))]);
+    const coverageOut = path.join(tempDir(), "c.json");
+    const out = captureStdout();
+    const code = await run([...baseArgv("medium"), "--coverage-out", coverageOut], {
+      repoRoot: tempDir(),
+      sourceHome: tempDir(),
+      executable: FAKE,
+    });
+    out.restore();
+    expect(code).toBe(0);
+    expect(out.lines().join("\n")).toBe("[]");
+    expect(JSON.parse(readFileSync(coverageOut, "utf8"))).toEqual([verdict]);
+  });
+
+  test("null s and userOption are dropped from the findings", () => {
+    const finding = {
+      id: "F-001",
+      file: "a.ts",
+      line: 1,
+      severity: "minor" as const,
+      kind: "patch" as const,
+      claim: "c",
+    };
+    const message = JSON.stringify({ findings: [{ ...finding, s: null, userOption: "S2" }] });
+    expect(extractFindings(message)).toEqual([{ ...finding, userOption: "S2" }]);
   });
 });

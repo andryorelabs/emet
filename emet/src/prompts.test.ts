@@ -23,7 +23,7 @@ const BYTE_CEILINGS: Readonly<Record<string, number>> = {
   "emet/reference/phases-8-landing.md": 9000,
   "emet/reference/phases-8-spec-landing.md": 3850,
   "emet/reference/living-specs.md": 1330,
-  "emet/reference/phases-8-review.md": 9570,
+  "emet/reference/phases-8-review.md": 9950,
   "emet/reference/phases-9-handoff.md": 7450,
   "emet/reference/reviewer-prompt.md": 4150,
   "emet/reference/tracker-github.md": 3930,
@@ -238,5 +238,21 @@ describe("coverage and user option prompts", () => {
 
   test("Phase 2 marks user option requirements", () => {
     expect(read("emet/reference/phases-1-5.md")).toContain("(user option)");
+  });
+});
+
+describe("dual review dispatch", () => {
+  test("phases-8-review.md runs both reviewers on dualReview.run and merges", () => {
+    const review = readReference("phases-8-review.md");
+    for (const required of [
+      "dualReview.run: true",
+      "emet review-run --tier high",
+      "emet review --merge <claude.json> <codex.json>",
+      'agreement: "single"',
+      "emet review --rule",
+      "Only the Claude reviewer's coverage",
+    ]) {
+      expect(review).toContain(required);
+    }
   });
 });

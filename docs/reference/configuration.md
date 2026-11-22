@@ -201,10 +201,11 @@ Read only when `agentHost` is `"codex"`. Every key is optional. Effort is one of
 ## review
 
 ```json
-{ "review": { "highRiskPaths": [] } }
+{ "review": { "highRiskPaths": [], "dual": "auto" } }
 ```
 
 - `highRiskPaths` (default `[]`): extra case-insensitive path substrings that force the `high` review tier in `emet assess`, on top of the built-in set (auth, security, payments, webhooks, CI, the installer, lockfiles, migrations and dangerous sinks such as raw SQL or pipe-to-shell).
+- `dual` (`"auto"` or `"off"`, default `"auto"`; `emet init` does not write it): controls the Dual review. With `auto`, a `high` wave on the Claude Code host with the `codex` binary on PATH runs two reviewers in parallel, the Claude reviewer and `emet review-run`, over the same package. The Coordinator merges their findings with `emet review --merge`, triages each single-reviewer finding (keep, or drop it with `emet review --rule`) and records only the Claude reviewer's Coverage verdicts. `off` always runs one reviewer. `emet assess` prints the decision as `dualReview: { run, reason }`.
 
 ## landing
 

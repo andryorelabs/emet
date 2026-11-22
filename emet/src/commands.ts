@@ -400,6 +400,7 @@ export const COMMANDS: readonly CommandSpec[] = [
       val("--coverage"),
       val("--expect"),
       val("--base"),
+      val("--merge"),
       bool("--rulings"),
       bool("--escalate"),
       bool("--recheck"),
@@ -425,7 +426,7 @@ export const COMMANDS: readonly CommandSpec[] = [
   {
     name: "review-run",
     summary: "run a Codex review (Codex host)",
-    flags: [val("--run"), val("--ticket"), val("--package"), val("--tier")],
+    flags: [val("--run"), val("--ticket"), val("--package"), val("--tier"), val("--coverage-out")],
     run: runModule("review-run"),
   },
   {
