@@ -83,6 +83,7 @@ commands:
   chain     --spec <s> --wave <n>  — gate a wave and launch the next one
   insights  [--since <t>] [--repo <r>] [--all] [--json]  — report on the journal: runs by origin, gate decisions, interventions, launches
   run       current  — run subcommands; \`current\` prints the active run
+  memory    search|save  — search and save cross-run lessons in Engram; an Engram problem never fails the command
   promote   --spec <s> [--dry-run]  — promote develop to main after a spec lands
   deploy-check  — run the configured post-deploy check
   fleet     list|set|launch  — list, set and launch across repos

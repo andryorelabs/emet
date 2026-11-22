@@ -207,6 +207,14 @@ Read only when `agentHost` is `"codex"`. Every key is optional. Effort is one of
 - `highRiskPaths` (default `[]`): extra case-insensitive path substrings that force the `high` review tier in `emet assess`, on top of the built-in set (auth, security, payments, webhooks, CI, the installer, lockfiles, migrations and dangerous sinks such as raw SQL or pipe-to-shell).
 - `dual` (`"auto"` or `"off"`, default `"auto"`; `emet init` does not write it): controls the Dual review. With `auto`, a `high` wave on the Claude Code host with the `codex` binary on PATH runs two reviewers in parallel, the Claude reviewer and `emet review-run`, over the same package. The Coordinator merges their findings with `emet review --merge`, triages each single-reviewer finding (keep, or drop it with `emet review --rule`) and records only the Claude reviewer's Coverage verdicts. `off` always runs one reviewer. `emet assess` prints the decision as `dualReview: { run, reason }`.
 
+## memory
+
+```json
+{ "memory": { "enabled": "auto" } }
+```
+
+- `enabled` (`"auto"` or `"off"`, default `"auto"`): controls [`emet memory`](cli.md#runs-workers-and-slots). With `auto`, the command uses Engram when the `engram` binary is on PATH and its handshake succeeds. `off` makes `emet memory search` and `emet memory save` print `{available: false, reason: "memory.enabled is off"}` and exit 0 without spawning `engram`. Any other value fails to load with `"memory.enabled" must be one of auto|off`.
+
 ## landing
 
 - `mode` (default `pr`): `pr` opens a pull request (requires `gh`). `merge` merges the integration branch into local trunk with `emet land` and never pushes, with `commands.selfCheck` standing in for CI. Independent of the tracker. See [ADR-0010](../adr/0010-local-merge-landing.md).
