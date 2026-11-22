@@ -2,7 +2,10 @@
  * Deterministic diff risk classifier behind review routing.
  *
  * Usage:
- *   emet assess --base <ref> --head <ref> [--risk-line <text>]
+ *   emet assess --base <ref> --head <ref> [--risk-line <text>] [--quick]
+ *
+ * `--quick` adds `quickRejected` (true when the tier is `high`) to the JSON and exits 1 when it
+ * is true. Without `--quick` the output and exit codes are unchanged.
  *
  * `--risk-line` takes the worker report's `Risk:` line. `Risk: none` changes
  * nothing; any other text (a `Risk: item N (reason)`, or anything unparseable)
@@ -57,7 +60,7 @@ export interface DiffInput {
   readonly addedLines: readonly { readonly path: string; readonly line: string }[];
 }
 
-const USAGE = "usage: emet assess --base <ref> --head <ref> [--risk-line <text>]";
+const USAGE = "usage: emet assess --base <ref> --head <ref> [--risk-line <text>] [--quick]";
 
 const DOC_EXTENSIONS = /\.(md|mdx|markdown|txt|rst|adoc)$/i;
 const DOC_DIRECTORIES = /(^|\/)(docs?|documentation)\//i;
@@ -262,6 +265,12 @@ export async function run(argv: string[]): Promise<void> {
       riskLine === undefined
         ? classified
         : applyRiskLine(classified, riskLine, config, { input, environment });
+    if (argv.includes("--quick")) {
+      const quickRejected = result.tier === "high";
+      console.log(JSON.stringify({ ...result, quickRejected }, null, 2));
+      if (quickRejected) process.exitCode = 1;
+      return;
+    }
     console.log(JSON.stringify(result, null, 2));
   } catch (error: unknown) {
     if (error instanceof ForgeConfigError) {
