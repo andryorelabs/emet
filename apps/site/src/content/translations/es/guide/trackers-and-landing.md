@@ -2,7 +2,7 @@
 title: Trackers y aterrizaje
 description: Dónde viven los tickets, cómo aterriza una oleada como pull request o como merge local, y cómo se encadenan las oleadas.
 seoTitle: Trackers y aterrizaje en emet
-sourceHash: da19ec4cf50e7084
+sourceHash: 1ebd20e303a5c747
 ---
 
 Dónde viven los tickets, cómo aterriza una oleada y cómo se encadenan las oleadas. Cada clave mencionada aquí está en la [referencia de configuración](../reference/configuration.md); cada subcomando está en la [referencia de la CLI](../reference/cli.md).
@@ -36,6 +36,18 @@ El modo spec requiere `worktree.baseRef: "head"` en los ajustes de Claude Code p
 Con `landing.unit: "spec"` el PR es el de la spec: un PR para todas las oleadas integradas, abierto por `emet spec-branch land` tras la última oleada. Con `landing.unit: "wave"`, una oleada es un PR. El cuerpo del PR lleva una línea `Closes #N` por cada ticket (la palabra clave de cierre del tracker), y el coordinador mueve los tickets a en revisión cuando abre el PR. Después el PR se fusiona según `pr.autoMerge`, o se deja abierto cuando la oleada fue marcada, `autoMerge` es `false` o se agotaron las correcciones de CI (entonces el PR recibe la etiqueta de decisión humana). Tras un merge, `emet tracker close` cierra los tickets en un tracker de GitHub y `emet cleanup --run <runId>` libera las ramas, las reclamaciones de tickets y los espacios de workers de la oleada. También elimina cada rama local cuyo PR se fusionó en el commit de la punta de la rama, incluida la rama de integración.
 
 Después de fusionar las ramas de una oleada, `commands.fullSuite` se ejecuta una vez en la rama de integración. Una ejecución en rojo bloquea el PR y `autoChain`. La compuerta recibe el resultado como `--integration`. En una oleada que no es la última de un aterrizaje de spec, el coordinador pasa `--ci` obtenido de `commands.selfCheck`, y solo el aterrizaje final espera a la CI con `emet ci --wait`; la compuerta responde entonces `chain` mientras queden oleadas.
+
+### Quick run
+
+`/emet:run --quick <solicitud>` es el camino corto para un cambio pequeño de un solo ticket, como una errata o una corrección de una línea. Úsalo cuando el cambio no toca ninguna pantalla y cabe en un ticket: superficie nueva dentro de `sizing.inlineMaxLines` y sin alarma de presupuesto de contexto.
+
+Se salta la entrevista y la planificación largas: una ronda de `grilling`, sin `domain-modeling`, sin canvas y sin rondas de frontera. La spec contiene un ticket `folded` que cubre todos los `S#`, y das una única aprobación. Después corre un worker en un worktree, seguido de `emet verify`, el paso de living specs cuando `specs.enabled`, `emet assess --quick`, el revisor salvo que el nivel sea `passive`, y `emet gate`. No hay `emet chain`.
+
+Una **Quick run** tiene una sola **oleada**, así que siempre aterriza por oleada, como PR o como merge local, sin importar `landing.unit`: `emet approve --quick` registra `mode: "quick"` y no se crea ni se espera ninguna rama de spec.
+
+Un diff de alto riesgo la detiene. `emet assess --quick` sale con código 1 cuando el nivel es `high`; el Gate lo trata como un **Stop**: no se hace auto-merge, el PR queda abierto y el informe final nombra los motivos del alto riesgo.
+
+Antes de la aprobación, la ejecución se detiene y recomienda `/emet:run` sin `--quick` cuando el cambio toca una pantalla o no cabe en un ticket. `--quick` no se puede combinar con `--draft` ni con `--dispatch`; `--no-promote` se acepta.
 
 ### Encadenar oleadas
 
