@@ -2,7 +2,7 @@
 title: 跟踪器与落地
 description: 工单存放在哪里，波次如何以拉取请求或本地合并的方式落地，以及波次如何串联。
 seoTitle: emet 的跟踪器与落地
-sourceHash: da19ec4cf50e7084
+sourceHash: 1ebd20e303a5c747
 ---
 
 工单存放在哪里、波次如何落地、波次如何串联。此处提到的每个配置键都在[配置参考](../reference/configuration.md)中，每个子命令都在 [CLI 参考](../reference/cli.md)中。
@@ -37,7 +37,17 @@ emet 支持 Linear、GitHub Issues 或本地文件，由 `tracker.kind` 设置�
 
 一个波次的各分支合并到一起之后，`commands.fullSuite` 会在集成分支上运行一次。运行失败会阻止 PR 和 `autoChain`。关卡以 `--integration` 接收这一结果。在规格落地的非最终波次中，协调者根据 `commands.selfCheck` 传入 `--ci`，只有最终落地才用 `emet ci --wait` 等待 CI；只要还有波次剩余，关卡就回答 `chain`。
 
-### 串联波次
+### Quick run
+
+`/emet:run --quick <请求>` 是针对单工单小改动的快捷路径，例如错别字或一行修复。当改动不涉及任何界面且能放进一个工单时使用：新增范围在 `sizing.inlineMaxLines` 之内，且没有触发上下文预算警报。
+
+它会跳过冗长的访谈和规划：只进行一轮 `grilling`，不做 `domain-modeling`，不用画布，也没有边界轮次。规格中只有一个覆盖所有 `S#` 的 `folded` 工单，你只需批准一次。随后一个 worker 在 worktree 中运行，接着是 `emet verify`、`specs.enabled` 时的 living specs 步骤、`emet assess --quick`、评审者（层级为 `passive` 时除外）以及 `emet gate`。没有 `emet chain`。
+
+**Quick run** 只有一个**波次**，因此无论 `landing.unit` 如何设置，它总是按波次落地，以 PR 或本地合并的方式：`emet approve --quick` 会记录 `mode: "quick"`，不会创建也不会期待规格分支。
+
+高风险 diff 会使其中止。当层级为 `high` 时，`emet assess --quick` 以退出码 1 退出；Gate 将其视为 **Stop**：不会自动合并，PR 保持打开，最终报告会列出高风险的原因。
+
+批准之前，当改动涉及界面或无法放进一个工单时，运行会停止并建议不带 `--quick` 使用 `/emet:run`。`--quick` 不能与 `--draft` 或 `--dispatch` 组合；`--no-promote` 可以使用。
 
 后续波次在各自的会话中运行，绝不会在运行波次 1 的那个会话中运行。接下来会发生什么，由 `emet.config.json` 中两个可选部分控制（两者都由 `emet preflight` 校验）：
 
