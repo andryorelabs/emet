@@ -26,6 +26,7 @@ import {
 import { checkWorktreeForkBase, createEnvironmentProbes, type EnvironmentProbes } from "./doctor";
 import { appendEvent } from "./journal";
 import { resolveLandedVerdict, unownedReclaimVerdict, type LandedVerdict } from "./landed";
+import { resolveLandingUnit } from "./landing-unit";
 import { hasLaunchResult, resolveWaveContext } from "./launch";
 import { checkStale } from "./map";
 import { readEnv, TODO_MARKER, TODO_MARKERS } from "./names";
@@ -1389,7 +1390,7 @@ async function main(config: ForgeConfig, repoRoot: string) {
       createEnvironmentProbes(host),
       config.landing.mode,
       host,
-      config.landing.unit,
+      resolveLandingUnit(config, currentRunId ?? null, repoRoot),
     )),
   );
 
