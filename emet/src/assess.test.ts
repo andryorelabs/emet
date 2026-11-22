@@ -82,7 +82,7 @@ describe("classifyDiff", () => {
     expect(classifyDiff(input, DEFAULT_FORGE_CONFIG).tier).toBe("medium");
     const extended: ForgeConfig = {
       ...DEFAULT_FORGE_CONFIG,
-      review: { highRiskPaths: ["Billing"] },
+      review: { highRiskPaths: ["Billing"], dual: "auto" },
     };
     const result = classifyDiff(input, extended);
     expect(result.tier).toBe("high");
@@ -256,7 +256,7 @@ const browserConfig = (paths?: string[]): ForgeConfig => ({
 });
 
 describe("classifyDiff browserVerify", () => {
-  const onPath = { agentBrowserOnPath: true };
+  const onPath = { agentBrowserOnPath: true, codexOnPath: false };
 
   test("runs when a changed path matches the configured globs", () => {
     const result = classifyDiff(
@@ -286,6 +286,7 @@ describe("classifyDiff browserVerify", () => {
   test("does not run when the binary is not on PATH", () => {
     const { browserVerify } = classifyDiff(diffOf(["src/a.ts"]), browserConfig(), {
       agentBrowserOnPath: false,
+      codexOnPath: false,
     });
     expect(browserVerify.run).toBe(false);
     expect(browserVerify.reason).toContain("agent-browser");
@@ -317,5 +318,58 @@ describe("classifyDiff browserVerify", () => {
       environment: onPath,
     });
     expect(raised.browserVerify.run).toBe(true);
+  });
+});
+
+describe("classifyDiff dualReview", () => {
+  const withCodex = { agentBrowserOnPath: false, codexOnPath: true };
+  const highDiff = diffOf([".github/workflows/ci.yml"]);
+
+  test("runs for a high tier on the claude host with codex on PATH", () => {
+    const { dualReview } = classifyDiff(highDiff, DEFAULT_FORGE_CONFIG, withCodex);
+    expect(dualReview.run).toBe(true);
+  });
+
+  test("names the tier when it is not high", () => {
+    const { dualReview } = classifyDiff(diffOf(["src/a.ts"]), DEFAULT_FORGE_CONFIG, withCodex);
+    expect(dualReview.run).toBe(false);
+    expect(dualReview.reason).toContain("tier");
+  });
+
+  test("names agentHost when the host is codex", () => {
+    const config: ForgeConfig = { ...DEFAULT_FORGE_CONFIG, agentHost: "codex" };
+    const { dualReview } = classifyDiff(highDiff, config, withCodex);
+    expect(dualReview.run).toBe(false);
+    expect(dualReview.reason).toContain("agentHost");
+  });
+
+  test("names review.dual when it is off", () => {
+    const config: ForgeConfig = {
+      ...DEFAULT_FORGE_CONFIG,
+      review: { highRiskPaths: [], dual: "off" },
+    };
+    const { dualReview } = classifyDiff(highDiff, config, withCodex);
+    expect(dualReview.run).toBe(false);
+    expect(dualReview.reason).toContain("review.dual");
+  });
+
+  test("names codex when the binary is missing, and by default", () => {
+    const missing = { agentBrowserOnPath: false, codexOnPath: false };
+    expect(classifyDiff(highDiff, DEFAULT_FORGE_CONFIG, missing).dualReview.reason).toContain(
+      "codex",
+    );
+    const byDefault = classifyDiff(highDiff, DEFAULT_FORGE_CONFIG).dualReview;
+    expect(byDefault.run).toBe(false);
+  });
+
+  test("a risk line that raises medium to high re-evaluates dualReview", () => {
+    const input = diffOf(["src/a.ts"]);
+    const medium = classifyDiff(input, DEFAULT_FORGE_CONFIG, withCodex);
+    const raised = applyRiskLine(medium, "Risk: item 1 (x)", DEFAULT_FORGE_CONFIG, {
+      input,
+      environment: withCodex,
+    });
+    expect(raised.tier).toBe("high");
+    expect(raised.dualReview.run).toBe(true);
   });
 });
