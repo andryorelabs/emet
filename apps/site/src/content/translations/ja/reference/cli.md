@@ -2,7 +2,7 @@
 title: CLI リファレンス
 description: すべての emet サブコマンド、ゲートと記録の表、終了コード、環境変数を説明します。
 seoTitle: emet CLI リファレンス
-sourceHash: 16928daf4911a344
+sourceHash: d821b729a7e826ff
 ---
 
 すべての `emet` サブコマンド、ゲートと記録の表、終了コード、環境変数です。用語は [GLOSSARY.md](../../GLOSSARY.md) に従います。[README](../../README.md) に戻る。すべてのコマンドは `--help` で使い方を表示します。
@@ -61,6 +61,10 @@ emet doctor ~/code/*
 - `emet chain --ticket <id> --spec <id> --wave <n> [gate flags]`: 受け取ったゲートのフラグで `emet gate` を実行し、判定が `chain` のときだけ次のウェーブを開始します。起動前に準備状況（ホストのメモリ余裕、リポジトリと `/tmp` の空きディスクと inode、`orca` CLI）を確認し、起動後に子セッションが一覧に表示されることを確かめます。それ以外の判定、ブロックとなる準備上の問題（`low-memory`、`low-disk`、`low-inodes`、`orca-unavailable`）、または同じ仕様とウェーブの既存セッションがある場合は、理由とともに終了コード 1 で終了し、何も起動しません。
 - `emet status [--spec <id>] [--brief]`: ウェーブごとの Working / Checking / Ready / Needs-decision を JSON とサマリー行で表示します。`--brief` を指定すると、代わりに最大 3 行を表示します。全体の状態、人の対応待ちがあればその内容、次のアクションです。`emet status --help` に JSON の説明があります。
 - `emet run current [--json]`: リポジトリのアクティブな実行 (実行 ID、スペック、ウェーブ、フェーズ、最終更新) を `.emet/phase.json` から読み取って表示します。アクティブな実行がない場合は `no active run` を表示して 0 で終了します。
+- `emet memory search --json <query> [--limit <n>]`: 過去の実行の教訓を [Engram](https://github.com/Gentleman-Programming/engram) から検索します。`match_mode: "any"` で検索し（`--limit` の既定値は 5、最大 20）、トピックキーが `emet/<repo>/lessons/` で始まるノートだけを残して、`content` を 2000 文字に切り詰めた `{available: true, results: [{id, topicKey, title, content}]}` を出力します。`<repo>` は `git remote get-url <repo.remote>` の最後のパス要素から `.git` を除いたもので、なければメインワークツリーのベース名です。
+- `emet memory save --json --key <spec-<id>|quick-<runId>> --run <runId> --outcome <landed|chained|hold|stop|blocked>`: 標準入力から 1 〜 5 個の教訓の箇条書き（それぞれ最大 300 文字の `- ` 行）を読み取り、トピックキー `emet/<repo>/lessons/<key>` のノートに `## <runId> — <outcome> (<date>)` セクションとして追記します。そのノートがなければ新規に作成します。20000 文字を超えたノートは最も古いセクションから削除されます。`{available: true, saved: true, topicKey}` を出力します。
+  - どちらのサブコマンドも、リポジトリのルートで `engram mcp --tools=agent` を起動して Engram と通信します。Engram プラグインは不要です。Engram に `project` を渡すことはありません。
+  - 終了コード: 使い方の誤り（サブコマンドなし、クエリなし、箇条書きなし、箇条書きが 5 個超、300 文字を超える箇条書き、未知の outcome、不正な key）は `2` です。Engram の問題（PATH にない、ハンドシェイク失敗、ツールエラー、タイムアウト、不正な JSON）はすべて `0` で終了します。ハンドシェイクが成功する前の出力は `{available: false, reason}`、成功後は `search` では `{available: true, results: [], reason}`、`save` では `{available: true, saved: false, reason}` です。`memory.enabled: "off"` では `{available: false, reason: "memory.enabled is off"}` を出力し、何も起動しません。[`memory`](configuration.md#memory) を参照してください。
 - `emet insights [--since <iso|7d|30d>] [--repo <path>] [--all] [--json] [--mark-baseline]`: [イベントジャーナル](../guide/journal.md)を読み取り、起点 (人間または自動) ごとの実行、判断と理由ごとのゲート判断、実行ごとの人間の介入、起動結果、クローズしたチケットを報告します。読み取れない行はスキップして数えます。`--mark-baseline` はベースラインを追記し、以降のレポートは `--all` を指定しない限りそれより後のイベントのみを対象にします。ジャーナルが空または存在しない場合は、ゼロのレポートを表示して 0 で終了します。
 - `emet usage [--session <id> | --file <path>] [--stalled [--minutes N]] [--project-dir <path>]`: セッションの使用状況を報告します。`--stalled` は停滞したワーカーを一覧表示します。
 - `emet handoff --check <path> [--expect-skills a,b] | --render <path>`: ワーカーの `.emet/handoff-<ticket>.md` ノートを検証または表示します。ノートには `skills:` セクションを含められ、`skills: none` または `skills: loaded: a, b; missing: c` と書きます。必須になるのは `state` が `done` のときだけで、それ以外の値はチェックに失敗します。`--expect-skills a,b`（check のみ）は、指定したスキルのうち `loaded` にも `missing` にも含まれないものごとにチェックを失敗させます。チェックに合格し、`missing` リストが空でない場合は `missing skills: …` を出力します。

@@ -2,7 +2,7 @@
 title: 설정 레퍼런스
 description: emet.config.json의 모든 키를 기본값과 의미와 함께 설명합니다.
 seoTitle: emet 설정 레퍼런스
-sourceHash: e1c8a9af5648125f
+sourceHash: ae0e205cbdcf4b88
 ---
 
 `emet.config.json`의 모든 키를 기본값과 의미와 함께 정리했습니다. 기준이 되는 원본은 [`emet/schema/emet.config.schema.json`](../../emet/schema/emet.config.schema.json)입니다. 용어는 [GLOSSARY.md](../../GLOSSARY.md)를 따릅니다. [README](../../README.md)로 돌아가기.
@@ -213,6 +213,14 @@ Claude Code 호스트의 역할별 모델과 추론 강도이며, Codex 호스�
 - `dual`(기본값 `"auto"`): `"auto"` 또는 `"off"`. 아래 Dual review를 참고하세요.
 
 Dual review: `emet assess`가 `dualReview.run: true`를 출력하면(티어 `high`, `agentHost` `claude`, `review.dual`이 `off`가 아니고 `codex`가 PATH에 있을 때) 코디네이터는 같은 패키지에 Claude 리뷰어와 Codex 리뷰어를 병렬로 실행한 뒤 `emet review --merge`로 두 지적 사항을 병합합니다. `agreement: "single"`인 지적 사항은 모두 코디네이터가 분류하며, Claude 리뷰어의 coverage만 기록됩니다. `emet init`은 `review.dual`을 쓰지 않습니다. 그렇지 않으면 이전처럼 리뷰어 하나만 실행됩니다.
+
+## memory
+
+```json
+{ "memory": { "enabled": "auto" } }
+```
+
+- `enabled`(`"auto"` 또는 `"off"`, 기본값 `"auto"`): [`emet memory`](cli.md#실행-워커-슬롯)를 제어합니다. `auto`에서는 `engram` 바이너리가 PATH에 있고 핸드셰이크가 성공하면 이 명령이 Engram을 사용합니다. `off`이면 `emet memory search`와 `emet memory save`는 `engram`을 실행하지 않고 `{available: false, reason: "memory.enabled is off"}`를 출력한 뒤 0으로 종료합니다. 그 외의 값은 로드 시 `"memory.enabled" must be one of auto|off`로 실패합니다.
 
 ## landing
 

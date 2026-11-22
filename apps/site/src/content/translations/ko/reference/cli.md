@@ -2,7 +2,7 @@
 title: CLI 레퍼런스
 description: 모든 emet 하위 명령, 게이트와 기록 표, 종료 코드, 환경 변수를 설명합니다.
 seoTitle: emet CLI 레퍼런스
-sourceHash: 16928daf4911a344
+sourceHash: d821b729a7e826ff
 ---
 
 모든 `emet` 하위 명령, 게이트와 기록 표, 종료 코드, 환경 변수입니다. 용어는 [GLOSSARY.md](../../GLOSSARY.md)를 따릅니다. [README](../../README.md)로 돌아가기. 모든 명령은 `--help`로 사용법을 출력합니다.
@@ -61,6 +61,10 @@ emet doctor ~/code/*
 - `emet chain --ticket <id> --spec <id> --wave <n> [gate flags]`: 전달받은 게이트 플래그로 `emet gate`를 실행하고, 결정이 `chain`일 때만 다음 웨이브를 시작합니다. 실행 전에 준비 상태(호스트 메모리 여유, 리포지토리와 `/tmp`의 여유 디스크 및 inode, `orca` CLI)를 확인하고, 실행 후에는 자식 세션이 목록에 있는지 확인합니다. 그 외의 결정, 차단하는 준비 문제(`low-memory`, `low-disk`, `low-inodes`, `orca-unavailable`), 또는 같은 스펙과 웨이브에 이미 세션이 있으면 이유와 함께 종료 코드 1로 끝나며 아무것도 실행하지 않습니다.
 - `emet status [--spec <id>] [--brief]`: 웨이브별 Working / Checking / Ready / Needs-decision을 JSON과 요약 줄로 출력합니다. `--brief`는 대신 최대 세 줄을 출력합니다. 전체 상태, 사람을 기다리는 항목(있다면), 다음 동작입니다. `emet status --help`에 JSON 설명이 있습니다.
 - `emet run current [--json]`: 저장소의 활성 실행(실행 id, 스펙, 웨이브, 단계, 마지막 업데이트)을 `.emet/phase.json`에서 읽어 출력합니다. 활성 실행이 없으면 `no active run`을 출력하고 0으로 종료합니다.
+- `emet memory search --json <query> [--limit <n>]`: 이전 실행에서 얻은 교훈을 [Engram](https://github.com/Gentleman-Programming/engram)에서 검색합니다. `match_mode: "any"`로 검색하고(`--limit` 기본값 5, 최대 20), 토픽 키가 `emet/<repo>/lessons/`로 시작하는 노트만 남기며, `content`를 2000자로 자른 `{available: true, results: [{id, topicKey, title, content}]}`를 출력합니다. `<repo>`는 `git remote get-url <repo.remote>`의 마지막 경로 세그먼트에서 `.git`을 뺀 값이며, 없으면 메인 워크트리의 basename입니다.
+- `emet memory save --json --key <spec-<id>|quick-<runId>> --run <runId> --outcome <landed|chained|hold|stop|blocked>`: 표준 입력에서 교훈 글머리 기호 1~5개(각각 최대 300자의 `- ` 줄)를 읽어, 토픽 키 `emet/<repo>/lessons/<key>`인 노트에 `## <runId> — <outcome> (<date>)` 섹션으로 덧붙이거나, 그 노트가 없으면 새로 만듭니다. 20000자를 넘는 노트는 가장 오래된 섹션부터 삭제됩니다. `{available: true, saved: true, topicKey}`를 출력합니다.
+  - 두 하위 명령 모두 저장소 루트에서 `engram mcp --tools=agent`를 실행해 Engram과 통신하며, Engram 플러그인은 필요하지 않습니다. Engram에 `project`를 넘기지 않습니다.
+  - 종료 코드: 잘못된 사용(하위 명령 없음, 쿼리 누락, 글머리 기호 없음, 글머리 기호 5개 초과, 300자를 넘는 글머리 기호, 알 수 없는 outcome, 잘못된 key)은 `2`입니다. Engram 관련 문제(PATH에 없음, 핸드셰이크 실패, 도구 오류, 타임아웃, 잘못된 JSON)는 모두 `0`으로 종료합니다. 핸드셰이크가 성공하기 전의 출력은 `{available: false, reason}`이고, 성공한 뒤에는 `search`가 `{available: true, results: [], reason}`, `save`가 `{available: true, saved: false, reason}`입니다. `memory.enabled: "off"`이면 `{available: false, reason: "memory.enabled is off"}`를 출력하고 아무것도 실행하지 않습니다. [`memory`](configuration.md#memory)를 참고하세요.
 - `emet insights [--since <iso|7d|30d>] [--repo <path>] [--all] [--json] [--mark-baseline]`: [이벤트 저널](../guide/journal.md)을 읽어 출처(사람 또는 자동)별 실행, 결정과 사유별 게이트 결정, 실행별 사람의 개입, 실행 시작 결과, 닫힌 티켓을 보고합니다. 읽을 수 없는 줄은 건너뛰고 개수를 셉니다. `--mark-baseline`은 기준선을 추가하며, 이후 보고서는 `--all`을 지정하지 않는 한 그 이후의 이벤트만 다룹니다. 저널이 비어 있거나 없으면 0 보고서를 출력하고 0으로 종료합니다.
 - `emet usage [--session <id> | --file <path>] [--stalled [--minutes N]] [--project-dir <path>]`: 세션 사용량을 보고합니다. `--stalled`는 멈춘 워커를 나열합니다.
 - `emet handoff --check <path> [--expect-skills a,b] | --render <path>`: 워커의 `.emet/handoff-<ticket>.md` 노트를 검증하거나 렌더링합니다. 노트에는 `skills:` 섹션을 넣을 수 있으며, `skills: none` 또는 `skills: loaded: a, b; missing: c`로 씁니다. `state`가 `done`일 때만 필수이고, 그 밖의 값은 검사에 실패합니다. `--expect-skills a,b`(check 전용)는 지정한 스킬 중 `loaded` 목록에도 `missing` 목록에도 없는 각각에 대해 검사를 실패시킵니다. 검사를 통과했을 때 `missing` 목록이 비어 있지 않으면 `missing skills: …`를 출력합니다.
