@@ -85,8 +85,8 @@ export async function defaultRepoName(repoRoot: string, remote: string): Promise
 const DEFAULT_DEPS: MemoryDeps = {
   resolveRepoRoot,
   loadConfig: defaultLoadConfig,
-  openClient: (repoRoot) => openEngramClient(repoRoot),
-  readStdin: () => Bun.stdin.text(),
+  openClient: openEngramClient,
+  readStdin: Bun.stdin.text.bind(Bun.stdin),
   repoName: defaultRepoName,
   now: () => new Date(),
 };

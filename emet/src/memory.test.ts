@@ -319,3 +319,56 @@ describe("defaultRepoName", () => {
     expect(await defaultRepoName(root, "origin")).toBe(path.basename(root));
   });
 });
+
+describe("memory edges", () => {
+  test("a valid --limit is accepted", async () => {
+    const client = fakeClient([]);
+    await run(["search", "--limit", "3", "q"], depsFor(client));
+    expect(printed()).toEqual({ available: true, results: [] });
+    expect(process.exitCode).toBe(0);
+  });
+
+  test("outside a git repository exits 2 without opening a client", async () => {
+    let opened = false;
+    await run(
+      ["search", "q"],
+      depsFor(fakeClient([]), {
+        resolveRepoRoot: () => Promise.resolve(null),
+        openClient: () => {
+          opened = true;
+          return Promise.resolve(fakeClient([]));
+        },
+      }),
+    );
+    expect(opened).toBe(false);
+    expect(errors.join("\n")).toContain("not inside a git repository");
+    expect(process.exitCode).toBe(exitCodes.usage);
+  });
+
+  test("loads the repo config from disk by default", async () => {
+    const root = mkdtempSync(path.join(tmpdir(), "memory-config-"));
+    try {
+      const { loadConfig: _omitted, ...deps } = depsFor(fakeClient([]), {
+        resolveRepoRoot: () => Promise.resolve(root),
+      });
+      await run(["search", "q"], deps);
+      expect(printed()).toEqual({ available: true, results: [] });
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  test("save stamps the section with today's date by default", async () => {
+    const client = fakeClient([]);
+    const { now: _omitted, ...deps } = depsFor(client, {
+      readStdin: () => Promise.resolve("- a"),
+    });
+    await run(["save", "--key", "spec-12", "--run", "r2", "--outcome", "landed"], deps);
+    expect(client.saved[0]?.content).toMatch(/## r2 — landed \(\d{4}-\d{2}-\d{2}\)/);
+  });
+
+  test("mergeNote keeps a note that starts with a section", () => {
+    const merged = mergeNote("## r1\n- a", "## r2\n- b", "# head");
+    expect(merged).toBe("# head\n\n## r1\n- a\n\n## r2\n- b");
+  });
+});
