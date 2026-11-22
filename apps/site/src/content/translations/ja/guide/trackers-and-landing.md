@@ -2,7 +2,7 @@
 title: トラッカーとランディング
 description: チケットの置き場所、ウェーブがプルリクエストまたはローカルマージとしてランディングする仕組み、ウェーブの連鎖を説明します。
 seoTitle: emet のトラッカーとランディング
-sourceHash: da19ec4cf50e7084
+sourceHash: 1ebd20e303a5c747
 ---
 
 チケットの置き場所、ウェーブがランディングする仕組み、ウェーブの連鎖について説明します。ここで挙げるキーはすべて[設定リファレンス](../reference/configuration.md)に、サブコマンドはすべて [CLI リファレンス](../reference/cli.md)にあります。
@@ -30,6 +30,14 @@ emet は Linear、GitHub Issues、ローカルファイルに対応しており�
 `emet spec-branch sync` はトランクを `spec/<id>` にマージし、リベースは行いません。競合した場合は中断し、ブランチを変更せずに残して、ゼロ以外の終了コードで終了します。`emet spec-branch land` は同期を実行してから、ブランチを 1 回だけランディングします。`pr` モードでは `spec/<id>` をプッシュし、統合済みの全ウェーブのチケットにつき 1 行の `Closes #N` を入れた PR を 1 つ開き、そのチェックを待って、`landing.specMergeMethod`（既定ではマージコミットで、`pr.mergeMethod` は無視）でマージします。`merge` モードでは `spec/<id>` を `--no-ff` でローカルのトランクにマージし、プッシュは行いません。`--partial` は、それまでに統合されたウェーブだけをランディングします。`emet spec-branch abandon --spec <id> --force` はブランチに `abandoned/spec-<id>` のタグを付けて削除し、ローカルトラッカーの統合済みチケットを `ready-for-agent` に戻します。
 
 スペックモードでは、ワーカーのワークツリーがスペックブランチから始まるよう、Claude Code の設定で `worktree.baseRef: "head"` が必要です。`emet preflight` と `emet doctor` がこれを確認します。また `emet doctor` は、モードが `pr` で、リポジトリの設定またはトランクのルールセットが設定済みの `landing.specMergeMethod` を許可していない場合に警告します。
+
+### Quick run
+
+`/emet:run --quick <依頼>` は小さな変更向けの **Quick run** を開始します。インタビューは 1 ラウンド、`folded` チケットは 1 つ、承認は 1 回です。変更が画面に触れず、1 つのチケットに収まる場合（新しいサーフェスが `sizing.inlineMaxLines` 以内で、コンテキスト予算のトリップワイヤが作動しない場合）に使います。そうでなければ承認の前に止まり、`--quick` なしの `/emet:run` を勧めます。`domain-modeling`、キャンバス、フロンティアのラウンド、`emet chain` は省略されます。実行されるのは、ワーカー 1 つ、続いて `emet verify`、`specs.enabled` のときの生きたスペックのステップ、`emet assess --quick`、ティアが `passive` でなければレビュアー、そして `emet gate` です。`--quick` を `--draft` または `--dispatch` と組み合わせると拒否されます。`--no-promote` は受け付けられます。
+
+Quick run は `landing.unit` の設定にかかわらずウェーブ単位でランディングします。`emet approve --quick` が `"mode": "quick"` を記録し、`resolveLandingUnit` が `"wave"` を返すため、スペックブランチを前提にすることはありません。1 つの PR として（`landing.mode` が `merge` ならローカルマージとして）ランディングし、その後に after-spec のステップを実行します。
+
+高リスクの差分は Quick run を止めます。`emet assess --quick` はティアが `high` のとき終了コード 1 で終了し、これがゲートの **Stop** になります。自動マージはされず、PR は開いたままで、最終レポートに高リスクの理由が示されます。
 
 ### PR によるランディング
 

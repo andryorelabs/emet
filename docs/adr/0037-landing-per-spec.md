@@ -1,6 +1,6 @@
 # 0037. Landing per spec
 
-Status: Accepted (2026-11-21). Amended by [0038](0038-living-specs-hold-current-behaviour.md): the last wave of a spec gains the living-spec step. Amended (2026-11-21): the merge method of the spec PR is configurable.
+Status: Accepted (2026-11-21). Amended by [0038](0038-living-specs-hold-current-behaviour.md): the last wave of a spec gains the living-spec step. Amended (2026-11-21): the merge method of the spec PR is configurable. Amended by [0039](0039-quick-mode-lands-per-wave.md): a **Quick run** lands per wave.
 Spec: #778 (S12)
 Supersedes [0004](0004-one-wave-one-dependency-layer-one-pr.md). Amends [0010](0010-local-merge-landing.md). Amends [0012](0012-develop-development-branch.md). Amends [0013](0013-cleanup-owns-worker-worktree-lifecycle.md). Amends [0025](0025-cleanup-deletes-branches-whose-pull-request-merged.md). Amends [0031](0031-after-spec-step-and-optional-setup.md).
 Supersedes [0004](0004-one-wave-one-dependency-layer-one-pr.md). Amends [0010](0010-local-merge-landing.md), [0012](0012-develop-development-branch.md), [0013](0013-cleanup-owns-worker-worktree-lifecycle.md), [0025](0025-cleanup-deletes-branches-whose-pull-request-merged.md) and [0031](0031-after-spec-step-and-optional-setup.md).

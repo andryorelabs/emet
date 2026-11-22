@@ -2,7 +2,7 @@
 title: Trackers et atterrissage
 description: Où vivent les tickets, comment une vague atterrit en pull request ou en merge local, et comment les vagues s'enchaînent.
 seoTitle: Trackers et atterrissage dans emet
-sourceHash: da19ec4cf50e7084
+sourceHash: 1ebd20e303a5c747
 ---
 
 Où vivent les tickets, comment une vague atterrit et comment les vagues s'enchaînent. Chaque clé citée ici figure dans la [référence de configuration](../reference/configuration.md) ; chaque sous-commande figure dans la [référence de la CLI](../reference/cli.md).
@@ -36,6 +36,18 @@ Le mode spec exige `worktree.baseRef: "head"` dans les réglages de Claude Code 
 Avec `landing.unit: "spec"`, la PR est celle de la spec : une PR pour toutes les vagues intégrées, ouverte par `emet spec-branch land` après la dernière vague. Avec `landing.unit: "wave"`, une vague est une PR. Le corps de la PR porte une ligne `Closes #N` par ticket (le mot-clé de fermeture du tracker), et le coordinateur passe les tickets en revue à l'ouverture de la PR. La PR est ensuite fusionnée selon `pr.autoMerge`, ou laissée ouverte lorsque la vague a été signalée, que `autoMerge` vaut `false` ou que les corrections de CI sont épuisées (la PR reçoit alors le label de décision humaine). Après un merge, `emet tracker close` ferme les tickets sur un tracker GitHub, et `emet cleanup --run <runId>` libère les branches, les réservations de tickets et les emplacements de workers de la vague. Il supprime aussi chaque branche locale dont la PR a été fusionnée au commit de tête de la branche, y compris la branche d'intégration.
 
 Une fois les branches d'une vague fusionnées ensemble, `commands.fullSuite` s'exécute une fois sur la branche d'intégration. Une exécution au rouge bloque la PR et `autoChain`. Le gate reçoit le résultat sous la forme `--integration`. Dans une vague non finale d'un atterrissage de spec, le coordinateur passe `--ci` issu de `commands.selfCheck`, et seul l'atterrissage final attend la CI avec `emet ci --wait` ; le gate répond alors `chain` tant qu'il reste des vagues.
+
+### Quick run
+
+`/emet:run --quick <demande>` est le chemin court pour un petit changement à un seul ticket, comme une coquille ou un correctif d'une ligne. Utilisez-le quand le changement ne touche aucun écran et tient dans un ticket : nouvelle surface sous `sizing.inlineMaxLines` et aucune alerte de budget de contexte.
+
+Elle saute l'entretien et la planification longs : un tour de `grilling`, pas de `domain-modeling`, pas de canvas, pas de tours de frontière. La spec contient un ticket `folded` qui couvre tous les `S#`, et vous donnez une seule approbation. Un worker s'exécute ensuite dans un worktree, suivi de `emet verify`, de l'étape living specs quand `specs.enabled`, de `emet assess --quick`, du reviewer sauf si le niveau est `passive`, et de `emet gate`. Il n'y a pas de `emet chain`.
+
+Une **Quick run** n'a qu'une **vague** : elle atterrit donc toujours par vague, en PR ou en merge local, quelle que soit la valeur de `landing.unit`. `emet approve --quick` enregistre `mode: "quick"`, et aucune branche de spec n'est créée ni attendue.
+
+Un diff à haut risque l'arrête. `emet assess --quick` sort avec le code 1 quand le niveau est `high` ; le Gate le traite comme un **Stop** : aucun auto-merge, la PR reste ouverte et le rapport final nomme les raisons du haut risque.
+
+Avant l'approbation, l'exécution s'arrête et recommande `/emet:run` sans `--quick` quand le changement touche un écran ou ne tient pas dans un ticket. `--quick` ne se combine pas avec `--draft` ni `--dispatch` ; `--no-promote` est accepté.
 
 ### Enchaîner les vagues
 

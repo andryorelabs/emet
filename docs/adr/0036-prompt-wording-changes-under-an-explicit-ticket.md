@@ -2,6 +2,7 @@
 
 Status: Accepted (2026-11-21)
 Spec: #763 (S1)
+Amended by [0039](0039-quick-mode-lands-per-wave.md): it names two more paragraphs.
 
 Amends [0001](0001-root-dev-tooling-package-separate-from-runtime.md): the rule that installed prompt markdown changes only in whitespace and wrapping.
 

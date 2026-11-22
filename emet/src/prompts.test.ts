@@ -14,10 +14,11 @@ const REPO_ROOT = resolve(import.meta.dir, "..", "..");
 const BYTE_CEILINGS: Readonly<Record<string, number>> = {
   "commands/doctor.md": 570,
   "commands/init.md": 570,
-  "commands/run.md": 9050,
+  "commands/run.md": 9600,
   "commands/setup.md": 1150,
   "emet/reference/incidents.md": 12950,
-  "emet/reference/phases-1-5.md": 12050,
+  "emet/reference/phases-1-5.md": 12170,
+  "emet/reference/phases-quick.md": 1770,
   "emet/reference/phases-6-7-dispatch.md": 16900,
   "emet/reference/phases-8-landing.md": 9000,
   "emet/reference/phases-8-spec-landing.md": 3850,
@@ -124,6 +125,31 @@ describe("living specs prompts", () => {
       expect(readReference(name)).not.toContain("spec-merge");
     });
   }
+});
+
+describe("quick run prompts", () => {
+  test("phases-quick.md states the quick steps", () => {
+    const content = readReference("phases-quick.md");
+    for (const required of [
+      "emet approve --run",
+      "--quick",
+      "emet assess --base <trunk> --head <integration branch> --quick",
+      "living-specs.md",
+      "emet gate",
+      "Never run `emet chain`",
+      "`--draft` or `--dispatch`",
+      "`--no-promote` is accepted",
+    ]) {
+      expect(content).toContain(required);
+    }
+  });
+
+  test("run.md lists --quick and the fast path writes one folded ticket", () => {
+    expect(readFileSync(join(REPO_ROOT, "commands/run.md"), "utf8")).toContain(
+      "**`--quick <feature>`**",
+    );
+    expect(readReference("phases-1-5.md")).toContain("write one ticket marked `folded`");
+  });
 });
 
 describe("retired phrases", () => {

@@ -7,8 +7,8 @@ FEATURE: the text the user gave after `$emet:run`
 
 ## Modes
 
-Parse `the user's arguments` for a leading `--draft` or `--dispatch <spec-id>` flag and
-for `--no-promote` before anything else. When `the user's arguments` carries
+Parse `the user's arguments` for a leading `--draft`, `--dispatch <spec-id>` or `--quick`
+flag and for `--no-promote` before anything else. When `the user's arguments` carries
 `--no-promote` (anywhere among the leading flags, e.g. also `--dispatch <id>
 --no-promote`), remove it from FEATURE and, once the spec id exists (end of
 Phase 5, or at the start of `--dispatch`), run `emet promote --spec <spec-id>
@@ -20,6 +20,9 @@ Phase 5, or at the start of `--dispatch`), run `emet promote --spec <spec-id>
   `references/phases-9-handoff.md`).
   To run a wave in another session, always use `emet launch <spec-id> --wave
   <n>` — never a bare `codex exec`.
+- **`--quick <feature>`**: a Quick run, one folded ticket and one landing. Read
+  `references/phases-quick.md` instead of Phases 1–5;
+  rejected with `--draft` or `--dispatch`.
 - **`--draft <feature>`**: run Phases 0–5 and then stop (see the note at the
   end of Phase 5). Nothing gets dispatched; the run ends with a spec issue
   and its tickets sitting in the tracker, ready for `--dispatch` later, in

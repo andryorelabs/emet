@@ -125,4 +125,28 @@ describe("assess run()", () => {
       browserVerify: { run: false, reason: "verify.browser is not configured" },
     });
   });
+
+  test("--quick on a docs-only diff reports quickRejected false and exits 0", async () => {
+    await commitFile("README.md", "changed\n");
+    const result = await runAssess(["--base", "HEAD~1", "--head", "HEAD", "--quick"]);
+    expect(result.code).toBe(0);
+    expect(JSON.parse(result.logs[0] ?? "")).toMatchObject({
+      tier: "passive",
+      quickRejected: false,
+    });
+  });
+
+  test("--quick on a workflow diff reports quickRejected true and exits 1", async () => {
+    await commitFile(".github/workflows/ci.yml", "name: ci\n");
+    const result = await runAssess(["--base", "HEAD~1", "--head", "HEAD", "--quick"]);
+    expect(result.code).toBe(1);
+    expect(JSON.parse(result.logs[0] ?? "")).toMatchObject({ tier: "high", quickRejected: true });
+  });
+
+  test("without --quick the output has no quickRejected field", async () => {
+    await commitFile(".github/workflows/ci.yml", "name: ci\n");
+    const result = await runAssess(["--base", "HEAD~1", "--head", "HEAD"]);
+    expect(result.code).toBe(0);
+    expect(JSON.parse(result.logs[0] ?? "")).not.toHaveProperty("quickRejected");
+  });
 });

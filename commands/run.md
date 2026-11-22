@@ -6,8 +6,8 @@ FEATURE: $ARGUMENTS
 
 ## Modes
 
-Parse `$ARGUMENTS` for a leading `--draft` or `--dispatch <spec-id>` flag and
-for `--no-promote` before anything else. When `$ARGUMENTS` carries
+Parse `$ARGUMENTS` for a leading `--draft`, `--dispatch <spec-id>` or `--quick`
+flag and for `--no-promote` before anything else. When `$ARGUMENTS` carries
 `--no-promote` (anywhere among the leading flags, e.g. also `--dispatch <id>
 --no-promote`), remove it from FEATURE and, once the spec id exists (end of
 Phase 5, or at the start of `--dispatch`), run `emet promote --spec <spec-id>
@@ -19,6 +19,9 @@ Phase 5, or at the start of `--dispatch`), run `emet promote --spec <spec-id>
   `${CLAUDE_PLUGIN_ROOT}/emet/reference/phases-9-handoff.md`).
   To run a wave in another session, always use `emet launch <spec-id> --wave
   <n>` — never a bare `claude --bg`.
+- **`--quick <feature>`**: a Quick run, one folded ticket and one landing. Read
+  `${CLAUDE_PLUGIN_ROOT}/emet/reference/phases-quick.md` instead of Phases 1–5;
+  rejected with `--draft` or `--dispatch`.
 - **`--draft <feature>`**: run Phases 0–5 and then stop (see the note at the
   end of Phase 5). Nothing gets dispatched; the run ends with a spec issue
   and its tickets sitting in the tracker, ready for `--dispatch` later, in

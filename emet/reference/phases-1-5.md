@@ -74,7 +74,7 @@ Phase 2. Reinforce two rules on top of the skill's own breakdown:
 - Fast path: a unit of ≲100 changed lines (`sizing.inlineMaxLines`) that
   passes the resume-from-diff test is folded into a sibling worker's ticket
   (one worktree), never given its own. If the whole request is below that
-  threshold, write no tickets: one worker plus review.
+  threshold, write one ticket marked `folded`: one worker plus review.
 - Any change to a path listed in `schema.ownedPaths` (`emet.config.json`)
   goes in exactly one ticket, first in the dependency chain, blocking every
   other ticket that touches the feature — see `docs/agents/emet.md` for why

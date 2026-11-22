@@ -197,6 +197,68 @@ describe("preflight run (full gate)", () => {
     expect(fixture.errors.join("\n")).toContain("approval:");
   });
 
+  async function approveRunWithMode(runId: string, mode?: "quick"): Promise<void> {
+    const directory = await resolveApprovalDirectory(runId, fixture.repo);
+    mkdirSync(directory, { recursive: true });
+    writeFileSync(
+      path.join(directory, "spec.md"),
+      "- **S1**: does a thing. Scenario: when x then y.\n",
+    );
+    writeFileSync(
+      path.join(directory, "tickets.json"),
+      JSON.stringify([{ id: "T1", covers: ["S1"], surfaces: ["a.ts"], wave: 1 }]),
+    );
+    writeApproval({
+      approvalPath: path.join(directory, "approval.json"),
+      specPath: path.join(directory, "spec.md"),
+      ticketsPath: path.join(directory, "tickets.json"),
+      ...(mode === undefined ? {} : { mode }),
+    });
+  }
+
+  test("a Quick run reports no spec-branch fork-base failure under landing.unit spec", async () => {
+    fixture.writeConfig({ landing: { mode: "merge", unit: "spec" } });
+    mkdirSync(path.join(fixture.repo, ".claude"), { recursive: true });
+    writeFileSync(
+      path.join(fixture.repo, ".claude", "settings.json"),
+      JSON.stringify({ worktree: { baseRef: "fresh" } }),
+    );
+    runGit(fixture.repo, "add", "-A");
+    runGit(fixture.repo, "commit", "-q", "-m", "config");
+    await approveRunWithMode("spec900", "quick");
+    await run(["--run", "spec900"]);
+    expect(fixture.errors.join("\n")).not.toContain('landing.unit is "spec"');
+  });
+
+  test("a Quick run gated through --approval reports no spec-branch fork-base failure", async () => {
+    fixture.writeConfig({ landing: { mode: "merge", unit: "spec" } });
+    mkdirSync(path.join(fixture.repo, ".claude"), { recursive: true });
+    writeFileSync(
+      path.join(fixture.repo, ".claude", "settings.json"),
+      JSON.stringify({ worktree: { baseRef: "fresh" } }),
+    );
+    runGit(fixture.repo, "add", "-A");
+    runGit(fixture.repo, "commit", "-q", "-m", "config");
+    await approveRunWithMode("spec902", "quick");
+    await run(["--approval", "spec902"]);
+    expect(fixture.errors.join("\n")).not.toContain('landing.unit is "spec"');
+  });
+
+  test("a non-quick run still reports the spec-branch fork-base failure under landing.unit spec", async () => {
+    fixture.writeConfig({ landing: { mode: "merge", unit: "spec" } });
+    mkdirSync(path.join(fixture.repo, ".claude"), { recursive: true });
+    writeFileSync(
+      path.join(fixture.repo, ".claude", "settings.json"),
+      JSON.stringify({ worktree: { baseRef: "fresh" } }),
+    );
+    runGit(fixture.repo, "add", "-A");
+    runGit(fixture.repo, "commit", "-q", "-m", "config");
+    await approveRunWithMode("spec901");
+    await run(["--run", "spec901"]);
+    expect(process.exitCode).toBe(1);
+    expect(fixture.errors.join("\n")).toContain('landing.unit is "spec"');
+  });
+
   async function approveRun(runId: string): Promise<void> {
     const directory = await resolveApprovalDirectory(runId, fixture.repo);
     mkdirSync(directory, { recursive: true });

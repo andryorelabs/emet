@@ -24,6 +24,18 @@ const ticket = (overrides: Partial<PlanTicket> & { id: string }): PlanTicket => 
 const codes = (result: ReturnType<typeof validatePlan>) => result.findings.map((f) => f.code);
 
 describe("validatePlan", () => {
+  test("an empty ticket list is a no-tickets error even without spec items", () => {
+    const result = validatePlan({ specMarkdown: "", tickets: [] });
+    expect(result.ok).toBe(false);
+    expect(result.findings).toEqual([
+      {
+        severity: "error",
+        code: "no-tickets",
+        message: "plan has no tickets; write one folded ticket",
+      },
+    ]);
+  });
+
   test("parses multi-line spec items", () => {
     expect([...parseSpecItems(SPEC).keys()]).toEqual(["S1", "S2"]);
   });
