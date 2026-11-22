@@ -2,7 +2,7 @@
 title: Konfigurationsreferenz
 description: Jeder Schlüssel in emet.config.json mit Standardwert und Bedeutung.
 seoTitle: emet-Konfigurationsreferenz
-sourceHash: e1c8a9af5648125f
+sourceHash: ae0e205cbdcf4b88
 ---
 
 Jeder Schlüssel in `emet.config.json` mit Standardwert und Bedeutung. Die maßgebliche Quelle ist [`emet/schema/emet.config.schema.json`](../../emet/schema/emet.config.schema.json). Die Begriffe folgen [GLOSSARY.md](../../GLOSSARY.md). Zurück zur [README](../../README.md).
@@ -211,6 +211,14 @@ Wird nur gelesen, wenn `agentHost` `"codex"` ist. Alle Schlüssel sind optional.
 
 - `highRiskPaths` (Standard `[]`): zusätzliche, nicht zwischen Groß- und Kleinschreibung unterscheidende Pfad-Teilstrings, die in `emet assess` die Review-Stufe `high` erzwingen, zusätzlich zum eingebauten Satz (Authentifizierung, Sicherheit, Zahlungen, Webhooks, CI, der Installer, Lockfiles, Migrationen und gefährliche Senken wie rohes SQL oder Pipe-to-Shell).
 - `dual` (`"auto"` oder `"off"`, Standard `"auto"`; `emet init` schreibt es nicht): steuert das Dual review. Mit `auto` führt eine `high`-Welle auf dem Claude-Code-Host bei vorhandener Binärdatei `codex` im PATH zwei Reviewer parallel über dasselbe Paket aus, den Claude-Reviewer und `emet review-run`. Der Coordinator führt ihre Befunde mit `emet review --merge` zusammen, triagiert jeden Befund nur eines Reviewers (behalten oder mit `emet review --rule` verwerfen) und erfasst nur die Coverage verdicts des Claude-Reviewers. `off` führt immer einen Reviewer aus. `emet assess` gibt die Entscheidung als `dualReview: { run, reason }` aus.
+
+## memory
+
+```json
+{ "memory": { "enabled": "auto" } }
+```
+
+- `enabled` (`"auto"` oder `"off"`, Standard `"auto"`): steuert [`emet memory`](cli.md#läufe-worker-und-slots). Mit `auto` nutzt der Befehl Engram, wenn die Binärdatei `engram` im PATH liegt und ihr Handshake gelingt. `off` lässt `emet memory search` und `emet memory save` `{available: false, reason: "memory.enabled is off"}` ausgeben und mit 0 enden, ohne `engram` zu starten. Jeder andere Wert lässt das Laden mit `"memory.enabled" must be one of auto|off` fehlschlagen.
 
 ## landing
 

@@ -2,7 +2,7 @@
 title: Referência de configuração
 description: Cada chave do emet.config.json com seu valor padrão e seu significado.
 seoTitle: Referência de configuração do emet
-sourceHash: e1c8a9af5648125f
+sourceHash: ae0e205cbdcf4b88
 ---
 
 Cada chave do `emet.config.json`, com seu valor padrão e seu significado. A fonte da verdade é [`emet/schema/emet.config.schema.json`](../../emet/schema/emet.config.schema.json). Os termos seguem o [GLOSSARY.md](../../GLOSSARY.md). Voltar ao [README](../../README.md).
@@ -211,6 +211,14 @@ Lido apenas quando `agentHost` é `"codex"`. Todas as chaves são opcionais. O e
 
 - `highRiskPaths` (padrão `[]`): trechos de caminho adicionais, sem diferenciar maiúsculas de minúsculas, que forçam o nível de revisão `high` no `emet assess`, além do conjunto embutido (autenticação, segurança, pagamentos, webhooks, CI, o instalador, lockfiles, migrações e pontos sensíveis perigosos, como SQL bruto ou pipe-to-shell).
 - `dual` (`"auto"` ou `"off"`, padrão `"auto"`; o `emet init` não o grava): controla o Dual review. Com `auto`, uma onda `high` no host Claude Code com o binário `codex` no PATH executa dois revisores em paralelo sobre o mesmo pacote, o revisor Claude e `emet review-run`. O coordenador mescla os achados deles com `emet review --merge`, faz a triagem de cada achado de um único revisor (mantê-lo ou descartá-lo com `emet review --rule`) e registra apenas os Coverage verdicts do revisor Claude. `off` executa sempre um único revisor. O `emet assess` imprime a decisão como `dualReview: { run, reason }`.
+
+## memory
+
+```json
+{ "memory": { "enabled": "auto" } }
+```
+
+- `enabled` (`"auto"` ou `"off"`, padrão `"auto"`): controla o [`emet memory`](cli.md#runs-workers-and-slots). Com `auto`, o comando usa o Engram quando o binário `engram` está no PATH e seu handshake tem êxito. `off` faz `emet memory search` e `emet memory save` imprimirem `{available: false, reason: "memory.enabled is off"}` e saírem com 0 sem iniciar o `engram`. Qualquer outro valor falha ao carregar com `"memory.enabled" must be one of auto|off`.
 
 ## landing
 
