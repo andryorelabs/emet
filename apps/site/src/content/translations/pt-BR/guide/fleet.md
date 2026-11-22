@@ -2,7 +2,7 @@
 title: Verificação de frota
 description: Audite vários repositórios de uma só vez com emet doctor, somente leitura, e veja quais precisam de atenção.
 seoTitle: Verificação de frota com emet doctor
-sourceHash: 7b3c5a56abfffcc1
+sourceHash: 5eef774032962f35
 ---
 
 Já usa o emet em vários repositórios? O `emet doctor` audita quantos você quiser de uma só vez, somente leitura:
@@ -30,3 +30,14 @@ emet fleet launch --feature "add dark mode" --repos app,site
 - `launch --feature <text>` abre uma sessão `/emet:run --draft <text>` em cada repositório, após as mesmas verificações de prontidão do `emet chain`. `--repos` limita a uma lista separada por vírgulas.
 
 Cada sondagem é limitada a 5 s para que um `gh auth status` travado (sem rede) não possa pendurar uma onda. O `preflight.requiredCommands` de um repositório é uma lista, de responsabilidade do repositório, de binários que `emet preflight` e `emet doctor` exigem no PATH. Veja a [referência da CLI](../reference/cli.md#verificação-de-frota) e a [referência de configuração](../reference/configuration.md#preflight).
+
+## Ver sessões bloqueadas
+
+Uma sessão que espera uma decisão sua fica parada em silêncio. O `emet fleet status` lê o journal global e mostra, por repositório, quantas sessões estão bloqueadas, em andamento ou ociosas nas últimas 24 horas, com os repositórios bloqueados primeiro:
+
+```bash
+emet fleet status
+emet fleet status --json
+```
+
+`--json` imprime `{ repos: [{ repo, sessions }], blocked }`, onde `blocked` é o total de sessões bloqueadas. Para um único repositório, `emet status` lista as sessões em `sessions[]`. Quando uma sessão entra em `needs-decision`, o emet também levanta um alerta, a menos que [`attention.alert`](../reference/configuration.md#attention) seja `false`.

@@ -2,7 +2,7 @@
 title: Vérification de flotte
 description: Auditez plusieurs dépôts à la fois avec emet doctor, en lecture seule, et voyez lesquels demandent de l'attention.
 seoTitle: Vérification de flotte avec emet doctor
-sourceHash: 7b3c5a56abfffcc1
+sourceHash: 5eef774032962f35
 ---
 
 Vous utilisez déjà emet sur plusieurs dépôts ? `emet doctor` en audite autant que vous voulez à la fois, en lecture seule :
@@ -30,3 +30,14 @@ emet fleet launch --feature "add dark mode" --repos app,site
 - `launch --feature <text>` ouvre une session `/emet:run --draft <text>` dans chaque dépôt, après les mêmes contrôles de disponibilité que `emet chain`. `--repos` la limite à une liste séparée par des virgules.
 
 Chaque sonde est plafonnée à 5 s pour qu'un `gh auth status` bloqué (sans réseau) ne puisse pas figer une vague. Le `preflight.requiredCommands` d'un dépôt est une liste, propre au dépôt, de binaires que `emet preflight` et `emet doctor` exigent dans le PATH. Voir la [référence de la CLI](../reference/cli.md#vérification-de-flotte) et la [référence de configuration](../reference/configuration.md#preflight).
+
+## Voir les sessions bloquées
+
+Quand plusieurs sessions Claude Code tournent en même temps, `emet fleet status` montre lesquelles attendent une décision de votre part :
+
+```bash
+emet fleet status
+emet fleet status --json
+```
+
+Il lit le journal global et affiche, pour chaque dépôt, une ligne `<repo>: <b> blocked, <w> working, <i> idle`, les dépôts bloqués d'abord. Seules comptent les sessions actives dans les dernières 24 heures, hors `ended`. Avec `--json`, il affiche les dépôts, leurs sessions et le total `blocked`. Dans un dépôt, `emet status` liste aussi ses sessions bloquées. Pour être prévenu dès qu'une session se bloque, voir [`attention.alert`](../reference/configuration.md#attention). Voir la [référence de la CLI](../reference/cli.md#configuration-et-audit).

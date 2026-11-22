@@ -2,7 +2,7 @@
 title: 設定リファレンス
 description: emet.config.json のすべてのキーについて、既定値と意味を説明します。
 seoTitle: emet の設定リファレンス
-sourceHash: ae0e205cbdcf4b88
+sourceHash: a9aeca59a8d1f719
 ---
 
 `emet.config.json` のすべてのキーを、既定値と意味とともに示します。信頼できる情報源は [`emet/schema/emet.config.schema.json`](../../emet/schema/emet.config.schema.json) です。用語は [GLOSSARY.md](../../GLOSSARY.md) に従います。[README](../../README.md) に戻る。
@@ -221,6 +221,14 @@ Dual review: `emet assess` が `dualReview.run: true` を出力したとき（�
 ```
 
 - `enabled`（`"auto"` または `"off"`、既定値は `"auto"`）: [`emet memory`](cli.md#実行ワーカースロット)を制御します。`auto` では、`engram` バイナリが PATH にあり、そのハンドシェイクが成功するときに、このコマンドが Engram を使います。`off` では、`emet memory search` と `emet memory save` は `engram` を起動せずに `{available: false, reason: "memory.enabled is off"}` を出力して 0 で終了します。それ以外の値は、読み込み時に `"memory.enabled" must be one of auto|off` で失敗します。
+
+## attention
+
+```json
+{ "attention": { "alert": true } }
+```
+
+- `alert`（真偽値、既定は `true`）: セッションが `needs-decision` に遷移したときだけ、emet が通知を 1 回行います。`orca status --json` が到達可能なランタイムを報告する場合は、`orca worktree set` でメイン worktree に未読コメントを設定します。そうでなければ PATH にある場合は `notify-send` を実行し、どちらもなければ何もしません。外部呼び出しのタイムアウトは各 3 秒で、失敗してもガードの結果は変わりません。`needs-decision` から抜けても Orca の未読マークは消されません。通知を無効にするには `false` を設定します。
 
 ## landing
 

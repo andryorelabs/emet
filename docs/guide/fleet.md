@@ -24,4 +24,12 @@ emet fleet launch --feature "add dark mode" --repos app,site
 - `set <key> <value>` changes one config key in every listed repo. Each value is validated through the config loader before anything is written; an invalid value modifies no repo and exits 1. `--dry-run` writes nothing and prints each repo's old and new value.
 - `launch --feature <text>` opens a `/emet:run --draft <text>` session in each repo, after the same readiness checks as `emet chain`. `--repos` limits it to a comma-separated list.
 
+## See blocked sessions
+
+```bash
+emet fleet status
+```
+
+Prints, per repo, how many emet sessions are blocked on a decision, working or idle, blocked repos first. It reads the last 24 hours of the global journal and excludes ended sessions. `--json` prints the sessions themselves. Inside one repo, `emet status` lists them under `sessions`. With `attention.alert` on (the default), emet also raises one alert when a session starts waiting; see the [configuration reference](../reference/configuration.md#attention).
+
 Every probe is capped at 5s so a stalled `gh auth status` (no network) can't hang a wave. A repo's `preflight.requiredCommands` is a repo-owned list of binaries that `emet preflight` and `emet doctor` require on PATH. See the [CLI reference](../reference/cli.md#fleet-check) and the [configuration reference](../reference/configuration.md#preflight).

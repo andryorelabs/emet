@@ -2,7 +2,7 @@
 title: 설정 레퍼런스
 description: emet.config.json의 모든 키를 기본값과 의미와 함께 설명합니다.
 seoTitle: emet 설정 레퍼런스
-sourceHash: ae0e205cbdcf4b88
+sourceHash: a9aeca59a8d1f719
 ---
 
 `emet.config.json`의 모든 키를 기본값과 의미와 함께 정리했습니다. 기준이 되는 원본은 [`emet/schema/emet.config.schema.json`](../../emet/schema/emet.config.schema.json)입니다. 용어는 [GLOSSARY.md](../../GLOSSARY.md)를 따릅니다. [README](../../README.md)로 돌아가기.
@@ -221,6 +221,14 @@ Dual review: `emet assess`가 `dualReview.run: true`를 출력하면(티어 `hig
 ```
 
 - `enabled`(`"auto"` 또는 `"off"`, 기본값 `"auto"`): [`emet memory`](cli.md#실행-워커-슬롯)를 제어합니다. `auto`에서는 `engram` 바이너리가 PATH에 있고 핸드셰이크가 성공하면 이 명령이 Engram을 사용합니다. `off`이면 `emet memory search`와 `emet memory save`는 `engram`을 실행하지 않고 `{available: false, reason: "memory.enabled is off"}`를 출력한 뒤 0으로 종료합니다. 그 외의 값은 로드 시 `"memory.enabled" must be one of auto|off`로 실패합니다.
+
+## attention
+
+```json
+{ "attention": { "alert": true } }
+```
+
+- `alert`(불리언, 기본값 `true`): 세션이 `needs-decision`으로 전환될 때만 emet이 알림을 한 번 보냅니다. `orca status --json`이 도달 가능한 런타임을 보고하면 `orca worktree set`으로 메인 worktree에 읽지 않음 코멘트를 설정하고, 그렇지 않으면 PATH에 있을 때 `notify-send`를 실행하며, 둘 다 아니면 아무것도 하지 않습니다. 외부 호출은 각각 3초 타임아웃이 있고 실패해도 가드 결과는 바뀌지 않습니다. `needs-decision`에서 벗어나도 Orca의 읽지 않음 표시는 지워지지 않습니다. 알림을 끄려면 `false`로 설정합니다.
 
 ## landing
 

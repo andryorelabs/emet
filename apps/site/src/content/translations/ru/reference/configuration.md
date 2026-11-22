@@ -2,7 +2,7 @@
 title: Справочник по конфигурации
 description: Каждый ключ emet.config.json со значением по умолчанию и смыслом.
 seoTitle: Справочник по конфигурации emet
-sourceHash: ae0e205cbdcf4b88
+sourceHash: a9aeca59a8d1f719
 ---
 
 Каждый ключ `emet.config.json` со значением по умолчанию и смыслом. Источник истины — [`emet/schema/emet.config.schema.json`](../../emet/schema/emet.config.schema.json). Термины соответствуют [GLOSSARY.md](../../GLOSSARY.md). Назад к [README](../../README.md).
@@ -320,6 +320,18 @@ sourceHash: ae0e205cbdcf4b88
 Необязательно, prose-only. `null` или отсутствие пропускает шаг ревью дизайна и интерфейса.
 
 - `canvasIndex` (deprecated): путь к файлу дизайн-холста, который воркеры проверяют перед изменениями интерфейса.
+
+## attention
+
+Необязательно.
+
+- `alert` (по умолчанию `true`, boolean): когда сессия переходит в `needs-decision`, emet поднимает одно оповещение: метку непрочитанного в Orca на основном worktree, если рантайм Orca доступен, иначе `notify-send`, если он есть в PATH, иначе ничего. `false` отключает оповещение.
+
+Пример:
+
+```json
+{ "attention": { "alert": true } }
+```
 
 ## Переменные окружения
 

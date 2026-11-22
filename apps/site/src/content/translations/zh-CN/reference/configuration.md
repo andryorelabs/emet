@@ -2,7 +2,7 @@
 title: 配置参考
 description: emet.config.json 中的每个键，包括其默认值和含义。
 seoTitle: emet 配置参考
-sourceHash: ae0e205cbdcf4b88
+sourceHash: a9aeca59a8d1f719
 ---
 
 `emet.config.json` 中的每个键，及其默认值和含义。权威来源是 [`emet/schema/emet.config.schema.json`](../../emet/schema/emet.config.schema.json)。术语遵循 [GLOSSARY.md](../../GLOSSARY.md)。返回 [README](../../README.md)。
@@ -320,6 +320,18 @@ Claude Code 宿主上每个角色的模型和推理强度；Codex 宿主改为�
 可选，prose-only。设为 `null` 或省略时，将跳过设计/UI 评审步骤。
 
 - `canvasIndex`（deprecated）：设计画布文件的路径，工作者在进行 UI 变更之前会查看它。
+
+## attention
+
+可选。
+
+- `alert`（默认 `true`，boolean）：当会话进入 `needs-decision` 时，emet 只发出一次提醒：Orca 运行时可达时，在主 worktree 上设置 Orca 未读标记；否则在 PATH 中有 `notify-send` 时使用它；否则什么也不做。`false` 会关闭提醒。
+
+示例：
+
+```json
+{ "attention": { "alert": true } }
+```
 
 ## 环境变量
 

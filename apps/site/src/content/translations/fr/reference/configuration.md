@@ -2,7 +2,7 @@
 title: Référence de configuration
 description: Chaque clé de emet.config.json avec sa valeur par défaut et sa signification.
 seoTitle: Référence de configuration d'emet
-sourceHash: ae0e205cbdcf4b88
+sourceHash: a9aeca59a8d1f719
 ---
 
 Chaque clé de `emet.config.json`, avec sa valeur par défaut et sa signification. La source de vérité est [`emet/schema/emet.config.schema.json`](../../emet/schema/emet.config.schema.json). Les termes suivent [GLOSSARY.md](../../GLOSSARY.md). Retour au [README](../../README.md).
@@ -219,6 +219,14 @@ Lu uniquement quand `agentHost` vaut `"codex"`. Toutes les clés sont facultativ
 ```
 
 - `enabled` (`"auto"` ou `"off"`, par défaut `"auto"`) : pilote [`emet memory`](cli.md#exécutions-workers-et-slots). Avec `auto`, la commande utilise Engram lorsque le binaire `engram` est dans le PATH et que son handshake réussit. `off` fait que `emet memory search` et `emet memory save` affichent `{available: false, reason: "memory.enabled is off"}` et se terminent par 0 sans lancer `engram`. Toute autre valeur fait échouer le chargement avec `"memory.enabled" must be one of auto|off`.
+
+## attention
+
+```json
+{ "attention": { "alert": true } }
+```
+
+- `alert` (booléen, par défaut `true`) : emet déclenche une seule alerte quand une session passe à `needs-decision`. Si `orca status --json` signale un runtime joignable, il exécute `orca worktree set` sur le worktree principal avec un commentaire et la marque non lu ; sinon il exécute `notify-send` lorsqu'il est dans le PATH ; sinon il ne fait rien. Chaque appel externe est plafonné à 3 s et un échec ne change jamais le résultat du guard. Quitter `needs-decision` n'efface jamais la marque non lu d'Orca. `false` désactive l'alerte.
 
 ## landing
 

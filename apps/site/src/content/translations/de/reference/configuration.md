@@ -2,7 +2,7 @@
 title: Konfigurationsreferenz
 description: Jeder Schlüssel in emet.config.json mit Standardwert und Bedeutung.
 seoTitle: emet-Konfigurationsreferenz
-sourceHash: ae0e205cbdcf4b88
+sourceHash: a9aeca59a8d1f719
 ---
 
 Jeder Schlüssel in `emet.config.json` mit Standardwert und Bedeutung. Die maßgebliche Quelle ist [`emet/schema/emet.config.schema.json`](../../emet/schema/emet.config.schema.json). Die Begriffe folgen [GLOSSARY.md](../../GLOSSARY.md). Zurück zur [README](../../README.md).
@@ -293,6 +293,16 @@ Alle prose-only.
 ## sizing
 
 - `inlineMaxLines` (Standard `100`, Minimum `1`): der größte Ticket-Text, in Zeilen, der inline in einem Worker-Prompt bleibt.
+
+## attention
+
+- `alert` (Standard `true`, boolesch): Wenn eine Sitzung in `needs-decision` übergeht, löst emet einen Alarm aus. Er markiert den Worktree in Orca als ungelesen, wenn `orca status --json` eine erreichbare Laufzeit meldet, führt sonst `notify-send` aus, falls es im PATH liegt, und tut sonst nichts. Jeder Aufruf hat ein Timeout von 3 s, und ein Fehler ändert nie das Ergebnis eines Hooks. Das Verlassen von `needs-decision` entfernt die ungelesen-Markierung in Orca nicht. Mit `false` wird der Alarm abgeschaltet.
+
+```json
+{ "attention": { "alert": true } }
+```
+
+Siehe [`emet fleet status`](cli.md#einrichtung-und-prüfung).
 
 ## schema
 
