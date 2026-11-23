@@ -28,12 +28,18 @@ const starlightLocales = Object.fromEntries(
   ]),
 );
 
-const docsRedirects = Object.fromEntries(
-  LOCALES.map((locale) => [
-    localePath(locale, "/docs/"),
-    localePath(locale, "/docs/guide/getting-started/"),
-  ]),
-);
+const INSTALL_SCRIPT_URL =
+  "https://github.com/andryorelabs/emet/releases/latest/download/install.sh";
+
+const docsRedirects = {
+  ...Object.fromEntries(
+    LOCALES.map((locale) => [
+      localePath(locale, "/docs/"),
+      localePath(locale, "/docs/guide/getting-started/"),
+    ]),
+  ),
+  "/install.sh": { status: 302 as const, destination: INSTALL_SCRIPT_URL },
+};
 
 export default defineConfig({
   site: "https://emet.andryore.dev",
