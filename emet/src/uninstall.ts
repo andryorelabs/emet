@@ -127,7 +127,11 @@ function isInside(target: string, directory: string): boolean {
   return target.startsWith(`${directory}${path.sep}`);
 }
 
-/** Whether the shim at `shimPath` is the install's wrapper or a symlink into the install directory. */
+/**
+ * Whether the shim at `shimPath` is safe to remove: a symlink into the install directory, the
+ * manifest's wrapper with its recorded hash, or, when the manifest records no shim, a wrapper
+ * whose content runs the install.
+ */
 function shimPointsIntoInstall(
   layout: InstallLayout,
   manifest: ReadonlyMap<string, string>,
@@ -138,7 +142,8 @@ function shimPointsIntoInstall(
     return isInside(target, layout.installDir);
   }
   if (!stat.isFile()) return false;
-  if (manifest.get(SHIM_RELATIVE_PATH) === fileHash(layout.shimPath)) return true;
+  const recordedHash = manifest.get(SHIM_RELATIVE_PATH);
+  if (recordedHash !== undefined) return recordedHash === fileHash(layout.shimPath);
   const content = readFileSync(layout.shimPath, "utf8");
   return (
     content.includes("$HOME/.claude/emet/bin/emet") ||
@@ -315,6 +320,14 @@ function removeManifestFile(target: string, context: StepContext): void {
   unlinkSync(target);
 }
 
+/** Unlinks the shim, refusing a regular file whose hash no longer matches the manifest's entry for it. */
+function removeShim(target: string, context: StepContext): void {
+  const recorded = context.hashes.get(target);
+  if (recorded !== undefined && lstatSync(target).isFile() && fileHash(target) !== recorded)
+    throw new Error(`${target}: edited since the plan; kept`);
+  unlinkSync(target);
+}
+
 /** Executes one step; throws when it fails. */
 export function executeStep(step: UninstallStep, context: StepContext): void {
   switch (step.kind) {
@@ -322,7 +335,7 @@ export function executeStep(step: UninstallStep, context: StepContext): void {
       removeManifestFile(step.path, context);
       return;
     case "remove-shim":
-      unlinkSync(step.path);
+      removeShim(step.path, context);
       return;
     case "remove-hooks":
       removeGuardHooks(step.settingsPath, context.env.now());

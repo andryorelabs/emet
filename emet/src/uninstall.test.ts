@@ -195,11 +195,46 @@ describe("S5: manifest files and shim", () => {
     expect(existsSync(home(".local/bin/emet"))).toBe(false);
   });
 
-  test("recognizes a wrapper that points into the install even when its hash changed", async () => {
+  test("keeps and lists an edited wrapper the manifest recorded, even when it points into the install", async () => {
     write(".local/bin/emet", `${WRAPPER}# tweaked\n`);
     writeManifest({ ".local/bin/emet": sha(WRAPPER) });
     const steps = await planUninstall(DEFAULTS, fakeEnv());
+    expect(steps).toContainEqual({ kind: "keep-edited", path: home(".local/bin/emet") });
+    expect(steps).not.toContainEqual({ kind: "remove-shim", path: home(".local/bin/emet") });
+    await runUninstall(DEFAULTS, fakeEnv());
+    expect(readFileSync(home(".local/bin/emet"), "utf8")).toBe(`${WRAPPER}# tweaked\n`);
+  });
+
+  test("removes an unedited wrapper the manifest recorded", async () => {
+    write(".local/bin/emet", WRAPPER);
+    writeManifest({ ".local/bin/emet": sha(WRAPPER) });
+    const steps = await planUninstall(DEFAULTS, fakeEnv());
     expect(steps).toContainEqual({ kind: "remove-shim", path: home(".local/bin/emet") });
+    await runUninstall(DEFAULTS, fakeEnv());
+    expect(existsSync(home(".local/bin/emet"))).toBe(false);
+  });
+
+  test("removes a wrapper the manifest does not record when it points into the install", async () => {
+    write(".claude/emet/bin/emet.ts", "cli");
+    write(".local/bin/emet", `${WRAPPER}# tweaked\n`);
+    writeManifest({ ".claude/emet/bin/emet.ts": sha("cli") });
+    const steps = await planUninstall(DEFAULTS, fakeEnv());
+    expect(steps).toContainEqual({ kind: "remove-shim", path: home(".local/bin/emet") });
+    await runUninstall(DEFAULTS, fakeEnv());
+    expect(existsSync(home(".local/bin/emet"))).toBe(false);
+  });
+
+  test("a recorded wrapper edited between plan and execution is kept and the step fails", () => {
+    write(".local/bin/emet", `${WRAPPER}# edited later\n`);
+    const context = {
+      manifestPath: home(MANIFEST),
+      hashes: new Map([[home(".local/bin/emet"), sha(WRAPPER)]]),
+      env: fakeEnv(),
+    };
+    expect(() => {
+      executeStep({ kind: "remove-shim", path: home(".local/bin/emet") }, context);
+    }).toThrow("edited since the plan");
+    expect(existsSync(home(".local/bin/emet"))).toBe(true);
   });
 
   test("keeps a shim that does not point into the install", async () => {
