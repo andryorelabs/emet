@@ -14,6 +14,10 @@ const UPLOAD_ACTION = "actions/upload-artifact@";
 const DOWNLOAD_ACTION = "actions/download-artifact@";
 const SBOM_ACTION = "anchore/sbom-action@";
 const SBOM_PATH = "dist/emet.cdx.json";
+const INSTALL_SCRIPT_STEP = "Stage the install script";
+const SUMS_STEP = "Write SHA256SUMS";
+const INSTALL_ASSET = "dist/install.sh";
+const RELEASE_BINARIES = ["linux-x64", "linux-arm64", "darwin-x64", "darwin-arm64"];
 
 /** A workflow step as far as these tests read it. */
 interface Step {
@@ -147,6 +151,53 @@ describe("release.yml invariants", () => {
     expect(publishScript).not.toContain("${{");
     expect(publishScript).toContain('cp "${PROVENANCE_BUNDLE_PATH}" dist/emet.intoto.jsonl');
   });
+
+  test("stages scripts/install-remote.sh as dist/install.sh before the checksums", () => {
+    const steps = jobSteps("publish");
+    const stage = steps.findIndex(({ name }) => name === INSTALL_SCRIPT_STEP);
+    const sums = steps.findIndex(({ name }) => name === SUMS_STEP);
+    expect(stage).toBeGreaterThan(-1);
+    expect(stage).toBeLessThan(sums);
+    expect(readStepScript(INSTALL_SCRIPT_STEP)).toContain(
+      "cp scripts/install-remote.sh dist/install.sh",
+    );
+  });
+
+  test("lists install.sh among the attestation subjects", () => {
+    const attest = jobSteps("publish").find(({ name }) => name === "Attest build provenance");
+    const subjectPath = attest?.with?.["subject-path"];
+    const subjects = (typeof subjectPath === "string" ? subjectPath : "")
+      .split("\n")
+      .filter(Boolean);
+    expect(subjects).toEqual([
+      "dist/emet-linux-x64",
+      "dist/emet-linux-arm64",
+      "dist/emet-darwin-x64",
+      "dist/emet-darwin-arm64",
+      INSTALL_ASSET,
+    ]);
+  });
+});
+
+describe("release checksum behaviour", () => {
+  test("writes a SHA256SUMS line for every binary and install.sh", () => {
+    const directory = mkdtempSync(join(tmpdir(), "emet-release-sums-"));
+    try {
+      const assets = [...RELEASE_BINARIES.map((binary) => `emet-${binary}`), "install.sh"];
+      for (const asset of assets) writeFileSync(join(directory, asset), asset);
+      const scriptPath = join(directory, "sums.sh");
+      writeFileSync(scriptPath, readStepScript(SUMS_STEP));
+      const result = Bun.spawnSync(["bash", "-e", scriptPath], { cwd: directory });
+      expect(result.exitCode).toBe(0);
+      const listed = readFileSync(join(directory, "SHA256SUMS"), "utf8")
+        .trim()
+        .split("\n")
+        .map((line) => line.split(/\s+/)[1]);
+      expect(listed).toEqual(assets);
+    } finally {
+      rmSync(directory, { recursive: true, force: true });
+    }
+  });
 });
 
 /** Extracts the shell script of the named step from the release workflow. */
@@ -258,10 +309,11 @@ describe("release publish behaviour", () => {
   test("attaches emet.intoto.jsonl next to the binaries and SHA256SUMS", () => {
     const args = runPublishScript(true);
     expect(args).toContain("dist/emet.intoto.jsonl");
-    for (const binary of ["linux-x64", "linux-arm64", "darwin-x64", "darwin-arm64"]) {
+    for (const binary of RELEASE_BINARIES) {
       expect(args).toContain(`dist/emet-${binary}`);
     }
     expect(args).toContain("dist/SHA256SUMS");
+    expect(args).toContain(INSTALL_ASSET);
   });
 
   test("still creates the release without the bundle when the attest step was skipped", () => {
