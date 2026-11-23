@@ -119,7 +119,7 @@ describe("doctor run() home-level sections", () => {
     pluginSpy.mockRestore();
 
     expect(output).toContain("Double install:");
-    expect(output).toContain("installed both as a plugin and by install.sh");
+    expect(output).toContain("installed standalone and as a plugin");
   }, 60_000);
 
   test("warns about untrusted emet hooks on the Codex host and skips a missing config", async () => {
