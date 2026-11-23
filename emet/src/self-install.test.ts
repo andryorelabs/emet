@@ -77,6 +77,14 @@ function snapshotTree(root: string): Map<string, string> {
   return files;
 }
 
+/** A directory holding a fake `bun`, for a `pathEnv` on which the source install finds bun. */
+function fakeBunDirectory(): string {
+  const directory = path.join(sandbox, "fake-bun-bin");
+  mkdirSync(directory, { recursive: true });
+  writeFileSync(path.join(directory, "bun"), "#!/bin/sh\nexit 0\n", { mode: 0o755 });
+  return directory;
+}
+
 function enablePlugin(): void {
   mkdirSync(path.join(home, ".claude"), { recursive: true });
   writeFileSync(
@@ -278,8 +286,10 @@ describe("selfInstall", () => {
   });
 
   test("--from hands off to the source install", async () => {
-    expect(await install({ from: sandbox })).toBe(1);
-    expect(errors.join("\n")).toContain(`--from ${sandbox}`);
+    expect(await install({ from: sandbox }, { pathEnv: fakeBunDirectory() })).toBe(2);
+    expect(errors.join("\n")).toContain(
+      `emet self install --from: ${sandbox} is not an emet checkout`,
+    );
     expect(existsSync(path.join(home, ".local"))).toBe(false);
   });
 });
@@ -309,8 +319,14 @@ describe("runSelf", () => {
   });
 
   test("install --from takes the next token as the checkout", async () => {
-    expect(await runSelf(["install", "--from", sandbox], deps())).toBe(1);
-    expect(errors.join("\n")).toContain(`--from ${sandbox}`);
+    const checkout = path.join(sandbox, "checkout");
+    mkdirSync(checkout);
+    const code = await runSelf(
+      ["install", "--from", checkout],
+      deps({ pathEnv: fakeBunDirectory() }),
+    );
+    expect(code).toBe(2);
+    expect(errors.join("\n")).toContain(`${checkout} is not an emet checkout`);
   });
 
   test("rejects a missing --from value, an unknown flag and a second version", async () => {

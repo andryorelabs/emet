@@ -1,3 +1,4 @@
+import { spawn } from "node:child_process";
 import {
   chmodSync,
   copyFileSync,
@@ -24,6 +25,19 @@ export interface SourceInstallOptions {
   from?: string;
   dryRun: boolean;
   force?: boolean;
+  /** Runs `<bun> install` in `cwd` and resolves to its exit code; defaults to spawning it. */
+  runBunInstall?: (bun: string, cwd: string) => Promise<number>;
+}
+
+/** Runs `<bun> install --silent` in `cwd`, attached to this terminal, and resolves to its exit code. */
+function spawnBunInstall(bun: string, cwd: string): Promise<number> {
+  return new Promise((resolve, reject) => {
+    const child = spawn(bun, ["install", "--silent"], { cwd, stdio: "inherit" });
+    child.once("error", reject);
+    child.once("exit", (code) => {
+      resolve(code ?? 1);
+    });
+  });
 }
 
 const WRAPPER_CONTENT = '#!/usr/bin/env bash\nexec bun "$HOME/.claude/emet/bin/emet.ts" "$@"\n';
@@ -144,18 +158,23 @@ function reportWrites(
 /**
  * Installs emet from the checkout at `options.from` as a Bun source install: the CLI source
  * (without `node_modules` or the reference prompts, which the Claude adapter writes rewritten)
- * is copied to `~/.claude/emet`, the Claude adapter installs from the checkout,
+ * is copied to `~/.claude/emet` and its dependencies installed there with `bun install` (which
+ * `emet selftest` needs), the Claude adapter installs from the checkout,
  * `~/.local/bin/emet` becomes an `exec bun` wrapper and the install state records
  * `mode: "source"`. Fails with a message and writes nothing when `bun` is missing, the checkout
  * has no `emet/bin/emet.ts`, or `~/.local/bin/emet` is something the wrapper must not replace.
  */
-export function sourceInstall(options: SourceInstallOptions, deps: SelfDeps): Promise<number> {
-  const fail = (message: string, code: number): Promise<number> => {
+export async function sourceInstall(
+  options: SourceInstallOptions,
+  deps: SelfDeps,
+): Promise<number> {
+  const fail = (message: string, code: number): number => {
     deps.error(`emet self install --from: ${message}`);
-    return Promise.resolve(code);
+    return code;
   };
   if (options.from === undefined) return fail("needs a checkout path", exitCodes.usage);
-  if (findBun(deps.pathEnv) === undefined) {
+  const bun = findBun(deps.pathEnv);
+  if (bun === undefined) {
     return fail(
       "bun was not found on PATH; install bun (https://bun.sh) first. Nothing was written",
       exitCodes.findings,
@@ -206,13 +225,21 @@ export function sourceInstall(options: SourceInstallOptions, deps: SelfDeps): Pr
   ];
   if (options.dryRun) {
     reportWrites(deps, "would write", ownWrites, preview);
-    return Promise.resolve(exitCodes.success);
+    deps.log(`would run: bun install in ${installRoot}`);
+    return exitCodes.success;
   }
 
   for (const relative of changedFiles) {
     writeFileAtomically(path.join(installRoot, relative), (temporary) => {
       copyFileSync(path.join(sourceRoot, relative), temporary);
     });
+  }
+  const bunInstallCode = await (options.runBunInstall ?? spawnBunInstall)(bun, installRoot);
+  if (bunInstallCode !== exitCodes.success) {
+    return fail(
+      `bun install exited ${bunInstallCode} in ${installRoot}; fix it and re-run \`emet self install --from ${checkout}\``,
+      exitCodes.findings,
+    );
   }
   const applied = installClaudeHost(context(false, deps.log));
   if (writeWrapper) {
@@ -227,5 +254,5 @@ export function sourceInstall(options: SourceInstallOptions, deps: SelfDeps): Pr
   reportWrites(deps, "wrote", ownWrites, applied);
   deps.log("");
   deps.log(`emet ${deps.version} installed from ${checkout}; wrapper at ${shim}`);
-  return Promise.resolve(exitCodes.success);
+  return exitCodes.success;
 }

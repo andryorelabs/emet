@@ -187,7 +187,7 @@ export function buildRunHome(opts: RunHomeOptions): { codexHome: string } {
   }
   const configPath = path.join(codexHome, "config.toml");
   clearPath(configPath);
-  const standalone = readInstallState(opts.home ?? homedir()) !== null;
+  const standalone = readInstallState(opts.home ?? homedir())?.mode === "standalone";
   const marketplacePath = standalone ? undefined : sourceMarketplacePath(source);
   writeFileSync(
     configPath,
