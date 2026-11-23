@@ -8,6 +8,7 @@ import {
   mkdtempSync,
   readdirSync,
   readFileSync,
+  readlinkSync,
   rmSync,
   symlinkSync,
   writeFileSync,
@@ -141,6 +142,7 @@ function runInstaller(
     withBun?: boolean;
     bunRunsEmet?: boolean;
     unameSystem?: string;
+    args?: readonly string[];
   } = {},
 ): {
   exitCode: number;
@@ -155,7 +157,8 @@ function runInstaller(
     addFakeUname(options.unameSystem);
     addLoggingMktemp();
   }
-  const result = Bun.spawnSync([bashPath, path.join(fixtureRepo, "install.sh")], {
+  const installScript = path.join(fixtureRepo, "install.sh");
+  const result = Bun.spawnSync([bashPath, installScript, ...(options.args ?? [])], {
     cwd: fixtureRepo,
     env: { HOME: homeDir, PATH: toolsDir, EMET_RELEASE_BASE_URL: unreachableReleaseUrl },
     stdout: "pipe",
@@ -635,5 +638,70 @@ describeInstaller("install.sh on native Windows", () => {
     expect(exitCode).toBe(0);
     expect(existsSync(mktempLogPath())).toBe(true);
     expect(existsSync(path.join(homeDir, ".claude/commands/emet/run.md"))).toBe(true);
+  });
+});
+
+/** Bun's own runtime cache, which the real bun writes under HOME whatever script it runs. */
+const bunCacheDirectory = ".bun";
+
+/** HOME's top-level entries, without {@link bunCacheDirectory}. */
+function homeEntries(): string[] {
+  return readdirSync(homeDir).filter((name) => name !== bunCacheDirectory);
+}
+
+/** Every path under HOME but bun's cache, with its content or symlink target, to compare HOME before and after. */
+function snapshotHome(): Record<string, string> {
+  const snapshot: Record<string, string> = {};
+  const walk = (directory: string): void => {
+    for (const entry of readdirSync(directory, { withFileTypes: true })) {
+      const entryPath = path.join(directory, entry.name);
+      if (entryPath === path.join(homeDir, bunCacheDirectory)) continue;
+      if (entry.isDirectory()) {
+        snapshot[`${entryPath}/`] = "";
+        walk(entryPath);
+      } else if (entry.isSymbolicLink()) {
+        snapshot[entryPath] = `-> ${readlinkSync(entryPath)}`;
+      } else {
+        snapshot[entryPath] = readFileSync(entryPath, "utf8");
+      }
+    }
+  };
+  walk(homeDir);
+  return snapshot;
+}
+
+describeInstaller("install.sh --uninstall", () => {
+  test("--uninstall --dry-run prints the plan through the shim and leaves HOME unchanged", () => {
+    expect(runInstaller({ bunRunsEmet: true }).exitCode).toBe(0);
+    const before = snapshotHome();
+    const { exitCode, output } = runInstaller({
+      bunRunsEmet: true,
+      args: ["--uninstall", "--dry-run"],
+    });
+    expect(exitCode).toBe(0);
+    expect(output).toContain(`remove shim ${path.join(homeDir, ".local/bin/emet")}`);
+    expect(output).toContain(`remove ${path.join(homeDir, ".claude/commands/emet/run.md")}`);
+    expect(output).not.toContain("Done.");
+    expect(snapshotHome()).toEqual(before);
+  });
+
+  test("without a shim it runs the checkout's emet.ts, before any staging step", () => {
+    const { exitCode, output } = runInstaller({
+      bunRunsEmet: true,
+      unameSystem: "Linux",
+      args: ["--dry-run", "--uninstall"],
+    });
+    expect(exitCode).toBe(0);
+    expect(output).toContain("no install manifest");
+    expect(homeEntries()).toEqual([]);
+    expect(existsSync(mktempLogPath())).toBe(false);
+  });
+
+  test("without a shim or bun it fails before writing anything", () => {
+    const { exitCode, stderr } = runInstaller({ unameSystem: "Linux", args: ["--uninstall"] });
+    expect(exitCode).toBe(1);
+    expect(stderr).toContain("error: --uninstall needs ~/.local/bin/emet or bun");
+    expect(homeEntries()).toEqual([]);
+    expect(existsSync(mktempLogPath())).toBe(false);
   });
 });

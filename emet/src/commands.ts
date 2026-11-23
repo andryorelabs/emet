@@ -117,6 +117,7 @@ type ModuleName =
   | "deploycheck"
   | "fleet"
   | "setup"
+  | "uninstall"
   | "whatsnew";
 
 type ModuleRun = CommandSpec["run"];
@@ -207,6 +208,8 @@ async function loadRun(name: ModuleName): Promise<ModuleRun> {
       return (await import("./fleet")).run;
     case "setup":
       return (await import("./setup")).run;
+    case "uninstall":
+      return (await import("./uninstall")).run;
     case "whatsnew":
       return (await import("./whats-new")).run;
   }
@@ -608,8 +611,16 @@ export const COMMANDS: readonly CommandSpec[] = [
       bool("--notice"),
       val("--data-dir"),
       bool("--json"),
+      bool("--dry-run"),
+      val("--restore"),
     ],
     run: runModule("setup"),
+  },
+  {
+    name: "uninstall",
+    summary: "remove the install, its guard hooks and the setup extras",
+    flags: [bool("--dry-run"), bool("--yes"), bool("--purge"), bool("--json")],
+    run: runModule("uninstall"),
   },
   {
     name: "whats-new",

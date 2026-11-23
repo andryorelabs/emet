@@ -14,6 +14,27 @@ esac
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
+# `--uninstall [flags]` hands off to `emet uninstall` before any staging or install step.
+UNINSTALL_REQUESTED=0
+UNINSTALL_FLAGS=()
+for argument in "$@"; do
+  if [ "$argument" = "--uninstall" ]; then
+    UNINSTALL_REQUESTED=1
+  else
+    UNINSTALL_FLAGS+=("$argument")
+  fi
+done
+if [ "$UNINSTALL_REQUESTED" = 1 ]; then
+  if [ -x "$HOME/.local/bin/emet" ]; then
+    exec "$HOME/.local/bin/emet" uninstall ${UNINSTALL_FLAGS[@]+"${UNINSTALL_FLAGS[@]}"}
+  elif command -v bun >/dev/null 2>&1 && [ -f "$SCRIPT_DIR/emet/bin/emet.ts" ]; then
+    exec bun "$SCRIPT_DIR/emet/bin/emet.ts" uninstall ${UNINSTALL_FLAGS[@]+"${UNINSTALL_FLAGS[@]}"}
+  else
+    echo "error: --uninstall needs ~/.local/bin/emet or bun with this checkout's emet/bin/emet.ts; neither was found." >&2
+    exit 1
+  fi
+fi
+
 if command -v bun >/dev/null 2>&1; then
   INSTALL_MODE="source"
 else
