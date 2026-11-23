@@ -151,6 +151,13 @@ test("removal leaves foreign hooks and unrelated documents untouched", () => {
   expect(removeEmetHooks({ a: 1 }).doc).toEqual({ a: 1 });
 });
 
+test("removal keeps events that are not arrays", () => {
+  const document = {
+    hooks: { Odd: "x", Stop: [{ hooks: [{ type: "command", command: "emet guard" }] }] },
+  };
+  expect(removeEmetHooks(document).doc).toEqual({ hooks: { Odd: "x" } });
+});
+
 test("standaloneExtraHooks is empty for now", () => {
   expect(standaloneExtraHooks(BIN)).toEqual({});
 });

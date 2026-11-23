@@ -63,6 +63,11 @@ test("detects the Codex plugin from config.toml", () => {
   });
 });
 
+test("an unreadable config is treated as absent", () => {
+  mkdirSync(join(home, ".codex", "config.toml"), { recursive: true });
+  expect(detectEmetPlugin(home).codex).toBe(false);
+});
+
 test("an unrelated Codex config is not the plugin", () => {
   write(".codex/config.toml", '[plugins."other@market"]\nenabled = true\n');
   expect(detectEmetPlugin(home).codex).toBe(false);
