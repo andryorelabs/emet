@@ -2,8 +2,21 @@
 title: 新機能
 description: emet のリリースノート。各バージョンでの変更点をまとめています。
 seoTitle: "emet の新機能: リリースノート"
-sourceHash: a4abfa547d27b4af
+sourceHash: 52353f60ae0e5795
 ---
+
+## 0.21.0
+
+2026-11-23
+
+### 追加
+
+- `emet setup --dry-run`（`--with`、`--yes`、`--json` と併用可）は、選択した各項目の計画ステップ、または `already-present` を表示し、何も変更しません。コマンドの実行も、ファイルや台帳エントリの書き込みもありません。
+- `emet setup` は、結果が `installed` になったすべての項目を、状態ディレクトリの `setup-ledger.json` であるセットアップ台帳に、元に戻すために必要な取り消し記録とともに記録します。台帳の書き込みはアトミックで、形式が不正な台帳はそのパスを示すエラーになります。
+- `emet setup --restore <id>` は `claude-settings`（以前の `model` と、emet が追加した deny ルール。タイムスタンプ付きバックアップを取った後）または `firecrawl-local`（以前のユーザースコープの MCP エントリ）を元に戻します。それ以外の id は終了コード 2 で終了し、台帳にエントリがない id は終了コード 1 で終了します。
+- `emet uninstall [--dry-run] [--yes] [--purge] [--json]` は `install.sh` によるインストールを削除します。対象は、ハッシュがまだ一致するマニフェストのファイル、shim、`~/.claude/settings.json` 内のすべての `emet guard` フック（タイムスタンプ付きバックアップの後）、およびセットアップ台帳に記録された追加項目です。編集されたファイルは残され、一覧表示されます。brew、bun、cargo のグローバルインストールについては、削除コマンドを表示するだけで、実行はしません。
+- `./install.sh --uninstall [flags]` は `emet uninstall` を実行します。
+- `docs/reference/cli.md` と `README.md` に、セットアップ台帳、`--dry-run`、`--restore`、`emet uninstall` を 9 つのロケールすべてで記載しました。
 
 ## 0.20.0
 
