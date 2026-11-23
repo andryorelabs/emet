@@ -17,6 +17,16 @@ import {
   applyClaudeSettings,
   isRecommendedApplied,
 } from "./settingsapply";
+import {
+  appendLedgerEntry,
+  isRestorableId,
+  ledgerPath,
+  readLedger,
+  readUserMcpEntry,
+  removeLedgerEntry,
+  restoreUndo,
+  type UndoRecord,
+} from "./setupledger";
 
 /**
  * `emet setup`: the optional installs. Each item detects itself and installs
@@ -46,7 +56,8 @@ export interface SetupItem {
   readonly label: string;
   readonly defaultOn: boolean;
   readonly detect: () => Promise<boolean>;
-  readonly install: () => Promise<void>;
+  /** Installs the item and returns what it takes to undo it; an item that changed nothing returns no records. */
+  readonly install: () => Promise<readonly UndoRecord[]>;
   /** The steps `install()` would take, computed with read-only probes; it never runs a command or writes a file. */
   readonly plan: () => Promise<readonly PlannedStep[]>;
 }
@@ -71,6 +82,9 @@ export interface SetupDeps {
   readonly catalog: readonly SetupItem[];
   readonly ask: (question: string) => Promise<string>;
   readonly release?: () => void;
+  /** The Setup ledger file; when set, an item that ends `installed` records one entry there. */
+  readonly ledgerFile?: string;
+  readonly now?: () => Date;
 }
 
 export interface SetupEnv {
@@ -230,6 +244,7 @@ async function pluginInstalled(env: SetupEnv, pluginId: string): Promise<boolean
 /** Builds the catalog over `env`: the nine optional installs in the order they are offered. */
 export function createCatalog(env: SetupEnv): readonly SetupItem[] {
   const settingsPath = path.join(env.homeDir, ".claude", "settings.json");
+  const claudeJsonPath = path.join(env.homeDir, ".claude.json");
   const agentBrowserConfigPath = path.join(env.homeDir, ".agent-browser", "config.json");
   const orcaPetDirectory = path.join(env.homeDir, ".emet", "orca-pet", "emet");
   const items: readonly SetupItem[] = [
@@ -247,6 +262,7 @@ export function createCatalog(env: SetupEnv): readonly SetupItem[] {
           "anthropics/claude-plugins-official",
         ]);
         await runChecked(env, ["claude", "plugin", "install", MATTPOCOCK_SKILLS_PLUGIN_ID]);
+        return [{ kind: "plugin", pluginId: MATTPOCOCK_SKILLS_PLUGIN_ID }];
       },
       plan: () =>
         Promise.resolve([
@@ -268,6 +284,10 @@ export function createCatalog(env: SetupEnv): readonly SetupItem[] {
         }
         await runChecked(env, ["brew", "install", ENGRAM_BREW_FORMULA]);
         await runChecked(env, ["engram", "setup", "claude-code"]);
+        return [
+          { kind: "global-package", manager: "brew", name: ENGRAM_BREW_FORMULA },
+          { kind: "plugin", pluginId: ENGRAM_PLUGIN_ID },
+        ];
       },
       plan: async () =>
         (await env.commandExists("brew"))
@@ -286,6 +306,9 @@ export function createCatalog(env: SetupEnv): readonly SetupItem[] {
         (await env.commandExists("agent-browser")) && env.pathExists(agentBrowserConfigPath),
       install: async () => {
         await runChecked(env, ["bun", "add", "-g", "agent-browser@latest"]);
+        const undo: UndoRecord[] = [
+          { kind: "global-package", manager: "bun", name: "agent-browser" },
+        ];
         try {
           await runChecked(env, ["agent-browser", "install"]);
         } catch (error) {
@@ -296,6 +319,7 @@ export function createCatalog(env: SetupEnv): readonly SetupItem[] {
         }
         if (!env.pathExists(agentBrowserConfigPath)) {
           env.writeFile(agentBrowserConfigPath, AGENT_BROWSER_CONFIG);
+          undo.push({ kind: "files", paths: [agentBrowserConfigPath] });
         }
         try {
           await runChecked(env, ["agent-browser", "doctor"]);
@@ -304,6 +328,7 @@ export function createCatalog(env: SetupEnv): readonly SetupItem[] {
             `Warning: \`agent-browser doctor\` reported a problem (${errorMessage(error)}). Run \`agent-browser doctor\` yourself to see what is missing.`,
           );
         }
+        return undo;
       },
       plan: () =>
         Promise.resolve([
@@ -334,6 +359,7 @@ export function createCatalog(env: SetupEnv): readonly SetupItem[] {
         if (await env.commandExists("codex")) {
           await runSetupStep(["ctx7", "setup", "--cli", "--codex", "--yes"]);
         }
+        return [{ kind: "global-package", manager: "bun", name: "ctx7" }];
       },
       plan: async () => [
         runStep(["bun", "add", "-g", "ctx7@latest"]),
@@ -354,13 +380,20 @@ export function createCatalog(env: SetupEnv): readonly SetupItem[] {
           "FIRECRAWL_CLOUD=search",
         ),
       install: async () => {
+        const undo: UndoRecord[] = [];
         if (!(await env.commandExists("firecrawl-local"))) {
           if (!(await env.commandExists("cargo"))) {
             throw new Error("cargo is not installed; install Rust first, see https://rustup.rs");
           }
           await runChecked(env, ["cargo", "install", "firecrawl-local"]);
+          undo.push({ kind: "global-package", manager: "cargo", name: "firecrawl-local" });
         }
         const chrome = findAgentBrowserChrome(env);
+        undo.push({
+          kind: "mcp-entry",
+          name: "firecrawl-local",
+          previousEntry: readUserMcpEntry(env.readFile(claudeJsonPath), "firecrawl-local"),
+        });
         await env.run([...FIRECRAWL_REMOVE_ARGV]);
         await runChecked(env, firecrawlAddArgv(chrome));
         if (chrome === undefined) {
@@ -370,6 +403,7 @@ export function createCatalog(env: SetupEnv): readonly SetupItem[] {
         } else if (env.readFile(APPARMOR_RESTRICT_USERNS_FILE)?.trim() === "1") {
           for (const line of appArmorProfileMessage(env.homeDir)) env.log(line);
         }
+        return undo;
       },
       plan: async () => {
         const steps: PlannedStep[] = [];
@@ -404,6 +438,7 @@ export function createCatalog(env: SetupEnv): readonly SetupItem[] {
       install: async () => {
         await env.run(["claude", "plugin", "marketplace", "add", "andryorelabs/emet"]);
         await runChecked(env, ["claude", "plugin", "install", MASCOT_PLUGIN_ID]);
+        return [{ kind: "plugin", pluginId: MASCOT_PLUGIN_ID }];
       },
       plan: () =>
         Promise.resolve([
@@ -424,6 +459,9 @@ export function createCatalog(env: SetupEnv): readonly SetupItem[] {
         env.log(
           `Orca pet saved to ${orcaPetDirectory}; use "Import .codex-pet bundle..." in Orca.`,
         );
+        return [
+          { kind: "files", paths: ORCA_PET_FILES.map((file) => path.join(orcaPetDirectory, file)) },
+        ];
       },
       plan: () =>
         Promise.resolve(
@@ -437,7 +475,10 @@ export function createCatalog(env: SetupEnv): readonly SetupItem[] {
       label: "GitHub CLI login (gh auth login)",
       defaultOn: false,
       detect: async () => (await env.probe(["gh", "auth", "status"])) === 0,
-      install: () => runChecked(env, ["gh", "auth", "login"]),
+      install: async () => {
+        await runChecked(env, ["gh", "auth", "login"]);
+        return [];
+      },
       plan: () => Promise.resolve([runStep(["gh", "auth", "login"])]),
     },
     {
@@ -448,13 +489,26 @@ export function createCatalog(env: SetupEnv): readonly SetupItem[] {
       detect: () =>
         Promise.resolve(isRecommendedApplied(settingsPath, RECOMMENDED_CLAUDE_SETTINGS)),
       install: () => {
-        const { backupPath } = applyClaudeSettings(settingsPath, RECOMMENDED_CLAUDE_SETTINGS, env);
+        const { backupPath, previousModel, addedDeny } = applyClaudeSettings(
+          settingsPath,
+          RECOMMENDED_CLAUDE_SETTINGS,
+          env,
+        );
         env.log(
           backupPath === ""
             ? `Created ${settingsPath}`
             : `Backed up ${settingsPath} to ${backupPath}`,
         );
-        return Promise.resolve();
+        return Promise.resolve([
+          {
+            kind: "claude-settings",
+            settingsPath,
+            previousModel,
+            addedDeny,
+            setModel: RECOMMENDED_CLAUDE_SETTINGS.model,
+            backupPath,
+          },
+        ]);
       },
       plan: () => Promise.resolve().then(() => planClaudeSettings(env, settingsPath)),
     },
@@ -467,7 +521,7 @@ export function createCatalog(env: SetupEnv): readonly SetupItem[] {
     plan: item.plan,
     install: async () => {
       try {
-        await item.install();
+        return await item.install();
       } finally {
         pluginListCache.delete(env);
       }
@@ -536,11 +590,18 @@ export const realSetupEnv: SetupEnv = {
 
 export const SETUP_CATALOG: readonly SetupItem[] = createCatalog(realSetupEnv);
 
-async function applyItem(item: SetupItem, dryRun: boolean): Promise<SetupResult> {
+async function applyItem(
+  item: SetupItem,
+  dryRun: boolean,
+  ledger: { file: string; now: () => Date } | undefined,
+): Promise<SetupResult> {
   try {
     if (await item.detect()) return { id: item.id, status: "already-present" };
     if (dryRun) return { id: item.id, status: "planned", planned: await item.plan() };
-    await item.install();
+    const undo = await item.install();
+    if (ledger !== undefined) {
+      appendLedgerEntry(ledger.file, { id: item.id, at: ledger.now().toISOString(), undo });
+    }
     return { id: item.id, status: "installed" };
   } catch (error: unknown) {
     return { id: item.id, status: "failed", detail: errorMessage(error) };
@@ -577,6 +638,11 @@ export async function runSetup(options: SetupOptions, deps: SetupDeps): Promise<
   else if (options.tty) chosen = await chooseInteractively(deps.catalog, deps.ask);
   else chosen = new Set();
   deps.release?.();
+  const ledger =
+    deps.ledgerFile === undefined
+      ? undefined
+      : { file: deps.ledgerFile, now: deps.now ?? (() => new Date()) };
+  if (ledger !== undefined && options.dryRun !== true) readLedger(ledger.file);
   const results: SetupResult[] = [];
   for (const item of deps.catalog) {
     if (!chosen.has(item.id)) {
@@ -584,12 +650,51 @@ export async function runSetup(options: SetupOptions, deps: SetupDeps): Promise<
       continue;
     }
     // oxlint-disable-next-line eslint/no-await-in-loop -- sequential on purpose: installs and prompts run one at a time
-    results.push(await applyItem(item, options.dryRun === true));
+    results.push(await applyItem(item, options.dryRun === true, ledger));
   }
   for (const name of chosen) {
     if (!known.has(name)) results.push({ id: name, status: "failed", detail: "unknown item" });
   }
   return results;
+}
+
+/** The outcome of `emet setup --restore <id>`. */
+export type RestoreOutcome = "restored" | "nothing-to-restore" | "unknown-id" | "failed";
+
+/**
+ * Restores one setup item from its ledger entry: claude-settings and
+ * firecrawl-local only. An unknown id is `unknown-id`; an id without an entry
+ * prints `nothing to restore for <id>`. A successful restore removes the entry;
+ * a failing undo keeps it and is `failed`. An unreadable ledger throws.
+ */
+export async function restoreSetupItem(
+  id: string,
+  env: SetupEnv,
+  ledgerFile: string,
+): Promise<RestoreOutcome> {
+  if (!isRestorableId(id)) {
+    env.log(`cannot restore ${id}; restorable ids: claude-settings, firecrawl-local`);
+    return "unknown-id";
+  }
+  const entry = readLedger(ledgerFile).find((candidate) => candidate.id === id);
+  if (entry === undefined) {
+    env.log(`nothing to restore for ${id}`);
+    return "nothing-to-restore";
+  }
+  const warnings: string[] = [];
+  try {
+    for (const record of entry.undo) {
+      // oxlint-disable-next-line eslint/no-await-in-loop -- sequential on purpose: undo steps run in order
+      warnings.push(...(await restoreUndo(record, env)).warnings);
+    }
+  } catch (error: unknown) {
+    env.log(`restore of ${id} failed: ${errorMessage(error)}`);
+    return "failed";
+  }
+  for (const warning of warnings) env.log(`warning: ${warning}`);
+  removeLedgerEntry(ledgerFile, id);
+  env.log(`restored ${id}`);
+  return "restored";
 }
 
 /** A readline prompter over `input`/`output`; end of input answers every question with an empty string. */
@@ -699,6 +804,16 @@ export async function run(argv: string[]): Promise<void> {
       );
       return;
     }
+    const restoreId = flagValue(argv, "--restore");
+    if (argv.includes("--restore")) {
+      if (restoreId === undefined || restoreId.startsWith("--")) {
+        throw new Error("--restore needs an id: claude-settings or firecrawl-local");
+      }
+      const outcome = await restoreSetupItem(restoreId, realSetupEnv, ledgerPath());
+      if (outcome === "unknown-id") process.exitCode = exitCodes.usage;
+      else if (outcome !== "restored") process.exitCode = exitCodes.findings;
+      return;
+    }
     const withList = parseWithList(argv);
     const yes = argv.includes("--yes");
     const tty = process.stdin.isTTY && !json;
@@ -715,6 +830,8 @@ export async function run(argv: string[]): Promise<void> {
         { yes, with: withList, tty, dryRun },
         {
           catalog,
+          ledgerFile: ledgerPath(),
+          now: realSetupEnv.now,
           ask: prompter?.ask ?? askNothing,
           release: () => {
             prompter?.close();
