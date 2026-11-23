@@ -11,6 +11,8 @@ bun install
 bun install --cwd emet
 ```
 
+To run your checkout as the installed `emet` (the wrapper runs `bun` on the copied source, so `emet selftest` works), use `emet self install --from .` from the repo root.
+
 Use bun only. `emet selftest` runs `bunx tsc` from the installed copy, so `emet/package.json` keeps `typescript`. Dev dependencies and config live at the root or in `tools/`; `emet/` gains none ([ADR-0001](adr/0001-root-dev-tooling-package-separate-from-runtime.md)).
 
 ## Scripts

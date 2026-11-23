@@ -7,7 +7,7 @@ What emet needs on the machine, and which command checks each item. Terms follow
 Shared by both Agent hosts first, then what each host adds.
 
 - **[bun](https://bun.sh)**: only for source installs. The standalone binary needs no runtime.
-- **`rsync`** and **`sha256sum` or `shasum`**: required by `install.sh`.
+- **`sha256sum` or `shasum`**: used by the `install.sh` release asset (`curl -fsSL https://emet.andryore.dev/install.sh | sh`) to verify the download. `emet self install` itself needs neither.
 - **`git`**: required at runtime. Nearly every subcommand shells out to it.
 - **`gh` CLI, authenticated**: required when the tracker is `github` or landing is `pr`. PRs always use it. With `tracker.kind: "local"` and `landing.mode: "merge"`, `gh` is not required.
 - **The `mattpocock-skills` plugin**: the interview, spec and ticket phases call skills that live there. On Claude Code it comes from the `claude-plugins-official` marketplace; on Codex see [Codex host](#codex-host).
@@ -18,7 +18,7 @@ Shared by both Agent hosts first, then what each host adds.
   ```
 
 - **The `claude` CLI and the emet plugin commands** (`/emet:run`, `/emet:init`, `/emet:doctor`): Claude Code host only.
-- **The `emet-worker` and `emet-reviewer` agents** in `~/.claude/agents/`: Claude Code host only, installed by `install.sh`. Phase 6 and Phase 8 dispatch by `subagent_type`, so either one missing breaks dispatch. See [Models & effort](../../README.md#models--effort).
+- **The `emet-worker` and `emet-reviewer` agents** in `~/.claude/agents/`: Claude Code host only, installed by `emet self install`. Phase 6 and Phase 8 dispatch by `subagent_type`, so either one missing breaks dispatch. See [Models & effort](../../README.md#models--effort).
 - **A Linear MCP server declared in `.mcp.json` (or at user scope)**: only if the repo uses the `linear` tracker. emet verifies the declaration. Whether the connection is authenticated lives in the Agent host's own credential store and cannot be checked from here. On Claude Code, if a run fails to read tickets, restart Claude Code and approve the connection. The equivalent step on Codex is unverified.
 
 None of the above is ever installed or logged in on your behalf. What differs is who checks it and how hard.
