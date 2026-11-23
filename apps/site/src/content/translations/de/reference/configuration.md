@@ -2,7 +2,7 @@
 title: Konfigurationsreferenz
 description: Jeder Schlüssel in emet.config.json mit Standardwert und Bedeutung.
 seoTitle: emet-Konfigurationsreferenz
-sourceHash: a9aeca59a8d1f719
+sourceHash: e6fb30702c28d97e
 ---
 
 Jeder Schlüssel in `emet.config.json` mit Standardwert und Bedeutung. Die maßgebliche Quelle ist [`emet/schema/emet.config.schema.json`](../../emet/schema/emet.config.schema.json). Die Begriffe folgen [GLOSSARY.md](../../GLOSSARY.md). Zurück zur [README](../../README.md).
@@ -345,6 +345,8 @@ Die CLI liest diese Variablen, alle über `emet/src/env.ts`. Eine Variable mit `
 | `EMET_MEM_RESERVE_GIB`        | `FORGE_MEM_RESERVE_GIB`        | GiB Arbeitsspeicher, die frei bleiben, bevor ein Worker-Slot vergeben wird.                                                                 |
 | `EMET_MEM_PER_WORKER_GIB`     | `FORGE_MEM_PER_WORKER_GIB`     | GiB Arbeitsspeicher, die die automatische Worker-Obergrenze pro Worker annimmt.                                                             |
 | `EMET_AGENT_HOST`             |                                | Auf `codex` setzen, wenn unter dem Codex-Agent-Host gelaufen wird; jeder andere Wert bedeutet Claude.                                       |
+| `EMET_AUTO_UPDATE`            |                                | Auf `0` setzen, um `emet self update --auto` bei einer Standalone-Installation auszuschalten.                                               |
+| `EMET_RELEASE_BASE_URL`       |                                | Download-Wurzel für `emet self update`: Assets werden aus `<root>/vX.Y.Z` oder `<root>/latest` gelesen.                                     |
 | `CODEX_HOME`                  |                                | Das Codex-Home-Verzeichnis; Standard `~/.codex`. Wird nur gelesen.                                                                          |
 | `XDG_STATE_HOME`              |                                | Basis des Zustandsverzeichnisses, wenn `EMET_STATE_DIR` nicht gesetzt ist.                                                                  |
 | `NO_COLOR`                    |                                | Wenn gesetzt, wird das Banner ohne Farbe ausgegeben.                                                                                        |

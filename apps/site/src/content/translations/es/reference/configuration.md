@@ -2,7 +2,7 @@
 title: Referencia de configuración
 description: Cada clave de emet.config.json con su valor por defecto y su significado.
 seoTitle: Referencia de configuración de emet
-sourceHash: a9aeca59a8d1f719
+sourceHash: e6fb30702c28d97e
 ---
 
 Cada clave de `emet.config.json`, con su valor por defecto y su significado. La fuente de verdad es [`emet/schema/emet.config.schema.json`](../../emet/schema/emet.config.schema.json). Los términos siguen [GLOSSARY.md](../../GLOSSARY.md). Volver al [README](../../README.md).
@@ -343,6 +343,8 @@ La CLI lee estas variables, todas a través de `emet/src/env.ts`. Una variable c
 | `EMET_MEM_RESERVE_GIB`        | `FORGE_MEM_RESERVE_GIB`        | GiB de memoria que se mantienen libres antes de conceder un slot de worker.                                                                                   |
 | `EMET_MEM_PER_WORKER_GIB`     | `FORGE_MEM_PER_WORKER_GIB`     | GiB de memoria que el límite automático de workers supone por worker.                                                                                         |
 | `EMET_AGENT_HOST`             |                                | Defínelo en `codex` al ejecutar bajo el host de agente Codex; cualquier otro valor significa Claude.                                                          |
+| `EMET_AUTO_UPDATE`            |                                | Defínelo en `0` para desactivar `emet self update --auto` en una instalación independiente.                                                                   |
+| `EMET_RELEASE_BASE_URL`       |                                | Raíz de descarga de `emet self update`: los recursos se leen de `<root>/vX.Y.Z` o `<root>/latest`.                                                            |
 | `CODEX_HOME`                  |                                | El directorio home de Codex; por defecto `~/.codex`. Solo se lee.                                                                                             |
 | `XDG_STATE_HOME`              |                                | Base del directorio de estado cuando `EMET_STATE_DIR` no está definida.                                                                                       |
 | `NO_COLOR`                    |                                | Si está definida, el banner se imprime sin color.                                                                                                             |
