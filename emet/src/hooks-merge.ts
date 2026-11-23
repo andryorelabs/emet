@@ -15,6 +15,12 @@ function isUnknownArray(value: unknown): value is unknown[] {
   return Array.isArray(value);
 }
 
+const QUOTED_BINARY = /^((?:[A-Za-z_][A-Za-z0-9_]*=\S+ )*)"([^"]*)"/;
+
+function normalizeCommand(command: string): string {
+  return command.replace(QUOTED_BINARY, "$1$2");
+}
+
 function quote(emetBin: string): string {
   return `"${emetBin}"`;
 }
@@ -85,7 +91,9 @@ function mergeRewritten(
       const missing: JsonObject[] = [];
       for (const { hook, command } of hooks) {
         const holderIndex = nextGroups.findIndex((candidate) =>
-          groupCommands(candidate).includes(command),
+          groupCommands(candidate).some(
+            (existing) => normalizeCommand(existing) === normalizeCommand(command),
+          ),
         );
         const holder = nextGroups[holderIndex];
         if (holderIndex === -1 || !isObject(holder)) {

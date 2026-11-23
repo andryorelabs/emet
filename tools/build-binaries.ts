@@ -1,7 +1,7 @@
 import { existsSync, readFileSync } from "node:fs";
 import path from "node:path";
 
-import { writeModule } from "./build-embedded-tree";
+import { regenerateModule } from "./build-embedded-tree";
 
 export const TARGETS = [
   "bun-linux-x64",
@@ -81,14 +81,15 @@ export async function buildBinary(
   return outfile;
 }
 
-/** Entry point: builds every requested target in turn and logs each output path. `build` and `log` default to the real compile and `console.log`. */
+/** Entry point: builds every requested target in turn and logs each output path. `build`, `log` and `regenerate` default to the real compile, `console.log` and the module regeneration. */
 export async function main(
   argv: readonly string[],
   build: typeof buildBinary = buildBinary,
   log: (message: string) => void = console.log,
+  regenerate: () => number = regenerateModule,
 ): Promise<void> {
   const { targets, outdir } = parseArguments(argv);
-  writeModule();
+  regenerate();
   const version = readPluginVersion();
   for (const target of targets) {
     // oxlint-disable-next-line eslint/no-await-in-loop -- sequential on purpose: one compile at a time keeps memory bounded

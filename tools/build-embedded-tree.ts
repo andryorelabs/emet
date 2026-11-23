@@ -8,6 +8,7 @@
  * names the stale tree files when the committed module differs from what the
  * generator would write.
  */
+import { spawnSync } from "node:child_process";
 import { existsSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
 
@@ -96,6 +97,22 @@ export function writeModule(root: string = repoRoot): number {
   return listTreePaths(root).length;
 }
 
+/** Formats `file` in place with the repo's formatter so the written module passes `format:check`. */
+function formatFile(file: string): void {
+  const result = spawnSync("bun", ["x", "oxfmt", file], { cwd: repoRoot, encoding: "utf8" });
+  if (result.status !== 0) throw new Error(`oxfmt failed on ${file}: ${result.stderr}`);
+}
+
+/** Writes the generated module under `root`, formats it and returns how many files it embeds. */
+export function regenerateModule(
+  root: string = repoRoot,
+  format: (file: string) => void = formatFile,
+): number {
+  const count = writeModule(root);
+  format(path.join(root, GENERATED_PATH));
+  return count;
+}
+
 /**
  * Entry point: writes the module, or with `--check` reports stale files.
  * @param argv The command-line arguments.
@@ -118,7 +135,7 @@ export async function main(
     }
     return 0;
   }
-  log(`embedded ${writeModule(root)} install tree files`);
+  log(`embedded ${regenerateModule(root)} install tree files`);
   return 0;
 }
 

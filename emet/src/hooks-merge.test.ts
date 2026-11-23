@@ -161,3 +161,19 @@ test("removal keeps events that are not arrays", () => {
 test("standaloneExtraHooks is empty for now", () => {
   expect(standaloneExtraHooks(BIN)).toEqual({});
 });
+
+test("mergeClaudeHooks does not duplicate a legacy unquoted install.sh guard hook", () => {
+  const legacy: JsonObject = {
+    hooks: {
+      PreToolUse: [{ matcher: "Bash", hooks: [{ type: "command", command: `${BIN} guard` }] }],
+      Stop: [{ hooks: [{ type: "command", command: `${BIN} guard --event Stop` }] }],
+    },
+  };
+  const { settings } = mergeClaudeHooks(legacy, claudeDefinitions, BIN);
+  const hooks = settings.hooks;
+  if (!isObject(hooks)) throw new Error("hooks missing");
+  const countOf = (event: string): number =>
+    JSON.stringify(hooks[event]).split(" guard").length - 1;
+  expect(countOf("PreToolUse")).toBe(1);
+  expect(countOf("Stop")).toBe(1);
+});
