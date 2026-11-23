@@ -2,7 +2,6 @@ import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { createHash } from "node:crypto";
 import {
   chmodSync,
-  copyFileSync,
   existsSync,
   lstatSync,
   mkdirSync,
@@ -18,7 +17,6 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 
 import { embeddedTree } from "./assets";
-import { mergeCodexHooks } from "./hooks-merge";
 import { isObject } from "./narrow";
 import { selfInstall } from "./self-install";
 import {
@@ -726,26 +724,6 @@ async function standaloneInstall(): Promise<void> {
   expect(code).toBe(0);
 }
 
-/**
- * Writes what the Codex host adapter installs, as the spike decided: the skills under
- * `~/.agents/skills/emet/` at their tree paths, and the embedded hooks appended to
- * `$CODEX_HOME/hooks.json` after a backup.
- */
-function simulateCodexHost(): void {
-  const tree = embeddedTree();
-  for (const treePath of tree.list()) {
-    if (treePath === ".codex-plugin/plugin.json" || treePath.startsWith("codex/skills/")) {
-      write(`${CODEX_SKILLS}/${treePath}`, tree.read(treePath));
-    }
-  }
-  const current: unknown = JSON.parse(readFileSync(home(CODEX_HOOKS), "utf8"));
-  const definitions: unknown = JSON.parse(tree.read("codex/hooks.json"));
-  if (!isObject(current) || !isObject(definitions)) throw new Error("hooks are not objects");
-  const { hooksJson } = mergeCodexHooks(current, definitions, home(".local/bin/emet"));
-  copyFileSync(home(CODEX_HOOKS), home(`${CODEX_HOOKS}.pre-emet-guard-backup.20261123T100000Z`));
-  write(CODEX_HOOKS, `${JSON.stringify(hooksJson, null, 2)}\n`);
-}
-
 describe("S7: standalone install", () => {
   test("install then uninstall leaves the home byte for byte as before", async () => {
     seedHostHome();
@@ -753,10 +731,10 @@ describe("S7: standalone install", () => {
     const before = snapshotHome();
 
     await standaloneInstall();
-    simulateCodexHost();
     expect(lstatSync(home(".local/bin/emet")).isSymbolicLink()).toBe(true);
     expect(readFileSync(home(SETTINGS), "utf8")).toContain("whats-new --hook");
     expect(readFileSync(home(CODEX_HOOKS), "utf8")).toContain("emet");
+    expect(existsSync(home(`${CODEX_SKILLS}/codex/skills/run/SKILL.md`))).toBe(true);
 
     const result = await runUninstall(
       DEFAULTS,
@@ -787,7 +765,6 @@ describe("S7: standalone install", () => {
   test("an edited command file, an edited skill and foreign hooks survive", async () => {
     seedHostHome();
     await standaloneInstall();
-    simulateCodexHost();
     write(".claude/commands/emet/run.md", "my own run");
     write(`${CODEX_SKILLS}/codex/skills/run/SKILL.md`, "my own skill");
     const settings: unknown = JSON.parse(readFileSync(home(SETTINGS), "utf8"));
@@ -879,7 +856,6 @@ describe("S7: standalone install", () => {
   test("--dry-run lists the standalone artifacts and removes nothing", async () => {
     seedHostHome();
     await standaloneInstall();
-    simulateCodexHost();
     const installed = snapshotHome();
 
     const result = await runUninstall({ ...DEFAULTS, dryRun: true }, standaloneEnv());

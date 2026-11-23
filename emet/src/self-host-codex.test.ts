@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, test } from "bun:test";
-import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
 
@@ -114,6 +114,42 @@ describe("installCodexHost", () => {
     expect(second.status).toBe("unchanged");
     expect(second.writes).toEqual([]);
     expect(readFileSync(hooksPath, "utf8")).toBe(afterFirst);
+  });
+
+  test("backs up an existing hooks.json byte for byte before merging into it", () => {
+    useDefaultCodexHome();
+    const home = tempDir();
+    const codexHome = path.join(home, ".codex");
+    mkdirSync(codexHome);
+    const hooksPath = path.join(codexHome, "hooks.json");
+    const original = foreignHooksFile();
+    writeFileSync(hooksPath, original);
+    const result = installCodexHost(
+      contextFor(home, { now: () => new Date("2026-11-23T21:30:05.123Z") }),
+    );
+    const backupPath = `${hooksPath}.pre-emet-guard-backup.20261123T213005Z`;
+    expect(readOrNull(backupPath)).toBe(original);
+    expect(result.writes).toContain(backupPath);
+    expect(readFileSync(hooksPath, "utf8")).not.toBe(original);
+  });
+
+  test("creates hooks.json without a backup when none existed", () => {
+    useDefaultCodexHome();
+    const home = tempDir();
+    const codexHome = path.join(home, ".codex");
+    mkdirSync(codexHome);
+    installCodexHost(contextFor(home));
+    expect(readdirSync(codexHome)).toEqual(["hooks.json"]);
+  });
+
+  test("writes no backup under dryRun", () => {
+    useDefaultCodexHome();
+    const home = tempDir();
+    const codexHome = path.join(home, ".codex");
+    mkdirSync(codexHome);
+    writeFileSync(path.join(codexHome, "hooks.json"), foreignHooksFile());
+    installCodexHost(contextFor(home, { dryRun: true }));
+    expect(readdirSync(codexHome)).toEqual(["hooks.json"]);
   });
 
   test("uses CODEX_HOME when set and leaves config.toml byte-identical", () => {

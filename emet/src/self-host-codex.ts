@@ -18,6 +18,9 @@ const SKILLS_RELATIVE_DIRECTORY = ".agents/skills/emet";
 /** The tree prefix of the skill files. */
 const SKILLS_TREE_PREFIX = "codex/skills/";
 
+/** The infix of a hooks.json backup's name, shared with the Claude adapter and `emet uninstall`. */
+const HOOKS_BACKUP_INFIX = ".pre-emet-guard-backup.";
+
 /** The one-time step Codex requires before it runs a user hook. */
 const TRUST_STEP =
   "open Codex and run /hooks once to review and trust the emet hooks; until then Codex skips them";
@@ -47,6 +50,14 @@ function parseJsonObject(text: string, filePath: string): JsonObject {
   return parsed;
 }
 
+/** `2026-11-23T21:30:05.123Z` as `20261123T213005Z`, the backup suffix the Claude adapter uses. */
+function backupTimestamp(now: Date): string {
+  return now
+    .toISOString()
+    .replace(/\.\d{3}Z$/, "Z")
+    .replaceAll(/[-:]/g, "");
+}
+
 interface PlannedWrite {
   target: string;
   content: string;
@@ -72,25 +83,30 @@ function planSkillWrites(context: HostContext): PlannedWrite[] {
 
 /**
  * Plans the append of the embedded Codex hooks after the existing entries of
- * `<codexHome>/hooks.json`, with commands on the `emetBin` symlink. Throws naming the file when it
- * is not a JSON object. Returns no write when every hook is already present.
+ * `<codexHome>/hooks.json`, with commands on the `emetBin` symlink. An existing file is first
+ * copied to `hooks.json.pre-emet-guard-backup.<timestamp>`, which `emet uninstall` restores byte for
+ * byte. Throws naming the file when it is not a JSON object. Returns no write when every hook is
+ * already present.
  */
 function planHooks(
   context: HostContext,
   codexHome: string,
-): { write: PlannedWrite | undefined; added: readonly string[] } {
-  if (!context.tree.list().includes(HOOK_DEFINITIONS_PATH)) return { write: undefined, added: [] };
+): { writes: readonly PlannedWrite[]; added: readonly string[] } {
+  if (!context.tree.list().includes(HOOK_DEFINITIONS_PATH)) return { writes: [], added: [] };
   const hooksPath = path.join(codexHome, "hooks.json");
-  const text = existsSync(hooksPath) ? readFileSync(hooksPath, "utf8") : "";
+  const exists = existsSync(hooksPath);
+  const text = exists ? readFileSync(hooksPath, "utf8") : "";
   const current = text.trim() === "" ? {} : parseJsonObject(text, hooksPath);
   const definitions = parseJsonObject(
     context.tree.read(HOOK_DEFINITIONS_PATH),
     HOOK_DEFINITIONS_PATH,
   );
   const { hooksJson, added } = mergeCodexHooks(current, definitions, context.emetBin);
-  if (added.length === 0) return { write: undefined, added };
+  if (added.length === 0) return { writes: [], added };
+  const backupPath = `${hooksPath}${HOOKS_BACKUP_INFIX}${backupTimestamp(context.now())}`;
+  const backup: PlannedWrite[] = exists ? [{ target: backupPath, content: text }] : [];
   return {
-    write: { target: hooksPath, content: `${JSON.stringify(hooksJson, null, 2)}\n` },
+    writes: [...backup, { target: hooksPath, content: `${JSON.stringify(hooksJson, null, 2)}\n` }],
     added,
   };
 }
@@ -119,7 +135,7 @@ export function installCodexHost(context: HostContext): HostResult {
   }
   const skillWrites = planSkillWrites(context);
   const hooks = planHooks(context, codexHome);
-  const planned = hooks.write === undefined ? skillWrites : [...skillWrites, hooks.write];
+  const planned = [...skillWrites, ...hooks.writes];
   if (context.dryRun) {
     for (const command of hooks.added) context.log(`would add Codex hook: ${command}`);
   } else {
