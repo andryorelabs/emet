@@ -109,5 +109,8 @@
         "dependents": "apps/site/src/content/translations/**"
       }
     ]
+  },
+  "specs": {
+    "enabled": true
   }
 }
