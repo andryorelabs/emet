@@ -49,6 +49,7 @@ describe("build-binaries buildBinary and entry point", () => {
         return Promise.resolve(`${outdir}/${binaryName(target)}`);
       },
       (message) => logged.push(message),
+      () => 0,
     );
     expect(built).toHaveLength(4);
     expect(built[0]).toStartWith("bun-linux-x64|o|");
