@@ -314,7 +314,17 @@ describe("run", () => {
   });
 
   test("resolves the repository root when --root is absent", async () => {
-    await run(["--spec", "definitely-not-a-run-xyz"]);
+    writeFileSync(
+      path.join(root, "emet.config.json"),
+      JSON.stringify({ specs: { dir: "docs/specs", enabled: false } }),
+    );
+    const originalDirectory = process.cwd();
+    process.chdir(root);
+    try {
+      await run(["--spec", "definitely-not-a-run-xyz"]);
+    } finally {
+      process.chdir(originalDirectory);
+    }
     expect(process.exitCode).toBe(0);
     expect(logs).toEqual(["specs.enabled is false; nothing merged"]);
   });
