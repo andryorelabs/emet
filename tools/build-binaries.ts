@@ -1,6 +1,8 @@
 import { existsSync, readFileSync } from "node:fs";
 import path from "node:path";
 
+import { writeModule } from "./build-embedded-tree";
+
 export const TARGETS = [
   "bun-linux-x64",
   "bun-linux-arm64",
@@ -86,6 +88,7 @@ export async function main(
   log: (message: string) => void = console.log,
 ): Promise<void> {
   const { targets, outdir } = parseArguments(argv);
+  writeModule();
   const version = readPluginVersion();
   for (const target of targets) {
     // oxlint-disable-next-line eslint/no-await-in-loop -- sequential on purpose: one compile at a time keeps memory bounded
