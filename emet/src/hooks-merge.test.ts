@@ -158,8 +158,10 @@ test("removal keeps events that are not arrays", () => {
   expect(removeEmetHooks(document).doc).toEqual({ hooks: { Odd: "x" } });
 });
 
-test("standaloneExtraHooks is empty for now", () => {
-  expect(standaloneExtraHooks(BIN)).toEqual({});
+test("standaloneExtraHooks merges to the SessionStart auto-update hook", () => {
+  expect(mergeClaudeHooks({}, standaloneExtraHooks(BIN), BIN).added).toEqual([
+    `"${BIN}" self update --auto`,
+  ]);
 });
 
 test("mergeClaudeHooks does not duplicate a legacy unquoted install.sh guard hook", () => {

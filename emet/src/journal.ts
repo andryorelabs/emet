@@ -40,6 +40,7 @@ const JOURNAL_KINDS = [
   "spec.land",
   "spec.abandon",
   "session.attention",
+  "self.update",
 ] as const;
 
 /** One of the event kinds the journal accepts. */

@@ -3,10 +3,12 @@ import { createHash } from "node:crypto";
 import {
   chmodSync,
   existsSync,
+  lstatSync,
   mkdirSync,
   mkdtempSync,
   readFileSync,
   readdirSync,
+  readlinkSync,
   rmSync,
   symlinkSync,
   writeFileSync,
@@ -14,7 +16,9 @@ import {
 import { tmpdir } from "node:os";
 import path from "node:path";
 
+import { embeddedTree } from "./assets";
 import { isObject } from "./narrow";
+import { selfInstall } from "./self-install";
 import {
   GUARD_COMMAND_PATTERN,
   describeStep,
@@ -25,7 +29,6 @@ import {
   realUninstallEnv,
   runCommand,
   runUninstall,
-  withoutGuardHooks,
   type UninstallEnv,
   type UninstallOptions,
 } from "./uninstall";
@@ -531,18 +534,6 @@ describe("S6: guard hooks", () => {
     expect(readFileSync(backup, "utf8")).toBe(before);
   });
 
-  test("drops the hooks key when every event empties, keeps unrelated shapes", () => {
-    expect(
-      withoutGuardHooks({ hooks: { Stop: [{ hooks: [{ command: "emet guard --event Stop" }] }] } }),
-    ).toEqual({});
-    expect(
-      withoutGuardHooks({
-        hooks: { Odd: "x", Empty: [], Stop: ["raw", { matcher: "*" }] },
-      }),
-    ).toEqual({ hooks: { Odd: "x", Empty: [], Stop: ["raw", { matcher: "*" }] } });
-    expect(withoutGuardHooks({ hooks: [] })).toEqual({ hooks: [] });
-  });
-
   test("plans nothing for settings without guard hooks", async () => {
     write(SETTINGS, JSON.stringify({ hooks: { Stop: [{ hooks: [{ command: "other" }] }] } }));
     const steps = await planUninstall(DEFAULTS, fakeEnv());
@@ -647,6 +638,263 @@ describe("S8: flags", () => {
     expect(describeStep({ kind: "purge", path: "/s" })).toBe("purge /s");
     expect(describeStep({ kind: "note", text: "hi" })).toBe("note: hi");
     expect(describeStep({ kind: "remove-shim", path: "/b" })).toBe("remove shim /b");
+    expect(describeStep({ kind: "remove-dir", path: "/v" })).toBe("remove directory /v");
+    expect(describeStep({ kind: "remove-state", path: "/i" })).toBe("remove install state /i");
+  });
+});
+
+const CODEX_HOOKS = ".codex/hooks.json";
+const CODEX_SKILLS = ".agents/skills/emet";
+const STANDALONE_VERSION = "9.8.7";
+const INSTALL_TIME = new Date("2026-11-23T10:00:00.000Z");
+
+function standaloneEnv(overrides: Partial<UninstallEnv> = {}): UninstallEnv {
+  return fakeEnv({ codexHome: home(".codex"), tree: embeddedTree, ...overrides });
+}
+
+/** Every entry under the home directory: a directory, a symlink's target, or a file's mode and bytes. */
+function snapshotHome(): Map<string, string> {
+  const entries = new Map<string, string>();
+  for (const entry of new Bun.Glob("**/*").scanSync({
+    cwd: homeDir,
+    dot: true,
+    onlyFiles: false,
+    followSymlinks: false,
+  })) {
+    const absolute = home(entry);
+    const stat = lstatSync(absolute);
+    if (stat.isSymbolicLink()) entries.set(entry, `link:${readlinkSync(absolute)}`);
+    else if (stat.isDirectory()) entries.set(entry, "dir");
+    else
+      entries.set(
+        entry,
+        `${(stat.mode & 0o777).toString(8)}:${readFileSync(absolute).toString("base64")}`,
+      );
+  }
+  return new Map([...entries].toSorted(([a], [b]) => a.localeCompare(b)));
+}
+
+const FOREIGN_CLAUDE_HOOK = { type: "command", command: "my-linter --fix" };
+const FOREIGN_CODEX_HOOK = { type: "command", command: "audit-log" };
+
+/** A home where Claude Code and Codex are already set up, each hook file holding a foreign hook. */
+function seedHostHome(): void {
+  write(
+    SETTINGS,
+    JSON.stringify(
+      { model: "opus", hooks: { PreToolUse: [{ matcher: "Bash", hooks: [FOREIGN_CLAUDE_HOOK] }] } },
+      null,
+      4,
+    ),
+  );
+  write(".claude/agents/mine.md", "my agent");
+  mkdirSync(home(".claude/commands"), { recursive: true });
+  write(".local/bin/other-tool", "#!/bin/sh\n");
+  write(".local/share/other/data", "x");
+  write(".codex/config.toml", 'model = "gpt"\n');
+  write(
+    CODEX_HOOKS,
+    `${JSON.stringify({ hooks: { PreToolUse: [{ hooks: [FOREIGN_CODEX_HOOK] }] } }, null, 2)}\n`,
+  );
+  mkdirSync(home(".agents/skills"), { recursive: true });
+}
+
+/** Runs `emet self install` from a fake compiled binary into the temporary home. */
+async function standaloneInstall(): Promise<void> {
+  const executable = home("fake-emet-binary");
+  if (!existsSync(executable)) write("fake-emet-binary", "binary bytes");
+  const code = await selfInstall(
+    { dryRun: false, force: false },
+    {
+      home: homeDir,
+      executablePath: executable,
+      compiled: true,
+      version: STANDALONE_VERSION,
+      tree: embeddedTree,
+      interactive: false,
+      pathEnv: home(".local/bin"),
+      runSetup: () => Promise.resolve(0),
+      now: () => INSTALL_TIME,
+      log: () => undefined,
+      error: (line) => {
+        throw new Error(line);
+      },
+    },
+  );
+  expect(code).toBe(0);
+}
+
+describe("S7: standalone install", () => {
+  test("install then uninstall leaves the home byte for byte as before", async () => {
+    seedHostHome();
+    write("fake-emet-binary", "binary bytes");
+    const before = snapshotHome();
+
+    await standaloneInstall();
+    expect(lstatSync(home(".local/bin/emet")).isSymbolicLink()).toBe(true);
+    expect(readFileSync(home(SETTINGS), "utf8")).toContain("whats-new --hook");
+    expect(readFileSync(home(CODEX_HOOKS), "utf8")).toContain("emet");
+    expect(existsSync(home(`${CODEX_SKILLS}/codex/skills/run/SKILL.md`))).toBe(true);
+
+    const result = await runUninstall(
+      DEFAULTS,
+      standaloneEnv({ commandExists: () => Promise.resolve(true) }),
+    );
+
+    expect(result.failed).toEqual([]);
+    expect(result.steps.filter((step) => step.kind === "note")).toEqual([]);
+    expect(snapshotHome()).toEqual(before);
+  });
+
+  test("a home with no settings.json gets none back", async () => {
+    mkdirSync(home(".claude/commands"), { recursive: true });
+    mkdirSync(home(".claude/agents"), { recursive: true });
+    mkdirSync(home(".local/share"), { recursive: true });
+    mkdirSync(home(".local/bin"), { recursive: true });
+    write("fake-emet-binary", "binary bytes");
+    const before = snapshotHome();
+
+    await standaloneInstall();
+    expect(existsSync(home(SETTINGS))).toBe(true);
+    const result = await runUninstall(DEFAULTS, standaloneEnv());
+
+    expect(result.failed).toEqual([]);
+    expect(snapshotHome()).toEqual(before);
+  });
+
+  test("an edited command file, an edited skill and foreign hooks survive", async () => {
+    seedHostHome();
+    await standaloneInstall();
+    write(".claude/commands/emet/run.md", "my own run");
+    write(`${CODEX_SKILLS}/codex/skills/run/SKILL.md`, "my own skill");
+    const settings: unknown = JSON.parse(readFileSync(home(SETTINGS), "utf8"));
+    if (!isObject(settings)) throw new Error("settings is not an object");
+    write(SETTINGS, JSON.stringify({ ...settings, theme: "dark" }));
+
+    const result = await runUninstall(DEFAULTS, standaloneEnv());
+
+    expect(result.failed).toEqual([]);
+    expect(readFileSync(home(".claude/commands/emet/run.md"), "utf8")).toBe("my own run");
+    expect(readFileSync(home(`${CODEX_SKILLS}/codex/skills/run/SKILL.md`), "utf8")).toBe(
+      "my own skill",
+    );
+    expect(existsSync(home(`${CODEX_SKILLS}/.codex-plugin/plugin.json`))).toBe(false);
+    expect(result.steps).toContainEqual({
+      kind: "keep-edited",
+      path: home(".claude/commands/emet/run.md"),
+    });
+    expect(JSON.parse(readFileSync(home(SETTINGS), "utf8"))).toEqual({
+      model: "opus",
+      hooks: { PreToolUse: [{ matcher: "Bash", hooks: [FOREIGN_CLAUDE_HOOK] }] },
+      theme: "dark",
+    });
+    expect(JSON.parse(readFileSync(home(CODEX_HOOKS), "utf8"))).toEqual({
+      hooks: { PreToolUse: [{ hooks: [FOREIGN_CODEX_HOOK] }] },
+    });
+    expect(existsSync(home(".local/share/emet"))).toBe(false);
+    expect(existsSync(home(".local/bin/emet"))).toBe(false);
+  });
+
+  test("removes every emet hook command, not only emet guard", async () => {
+    const shim = home(".local/bin/emet");
+    write(
+      SETTINGS,
+      JSON.stringify({
+        hooks: {
+          SessionStart: [
+            {
+              hooks: [
+                { type: "command", command: `"${shim}" setup --notice` },
+                { type: "command", command: `"${shim}" whats-new --hook` },
+                { type: "command", command: `"${shim}" self update --auto` },
+                FOREIGN_CLAUDE_HOOK,
+              ],
+            },
+          ],
+        },
+      }),
+    );
+    write(
+      CODEX_HOOKS,
+      JSON.stringify({
+        hooks: {
+          PreToolUse: [
+            { hooks: [FOREIGN_CODEX_HOOK] },
+            { hooks: [{ type: "command", command: `EMET_AGENT_HOST=codex "${shim}" guard` }] },
+          ],
+        },
+      }),
+    );
+
+    const steps = await planUninstall(DEFAULTS, standaloneEnv());
+    expect(steps).toContainEqual({ kind: "remove-hooks", settingsPath: home(SETTINGS), count: 3 });
+    expect(steps).toContainEqual({
+      kind: "remove-hooks",
+      settingsPath: home(CODEX_HOOKS),
+      count: 1,
+    });
+    await runUninstall(DEFAULTS, standaloneEnv());
+
+    expect(JSON.parse(readFileSync(home(SETTINGS), "utf8"))).toEqual({
+      hooks: { SessionStart: [{ hooks: [FOREIGN_CLAUDE_HOOK] }] },
+    });
+    expect(JSON.parse(readFileSync(home(CODEX_HOOKS), "utf8"))).toEqual({
+      hooks: { PreToolUse: [{ hooks: [FOREIGN_CODEX_HOOK] }] },
+    });
+  });
+
+  test("CODEX_HOME points the Codex hook removal at a custom directory", async () => {
+    const custom = "custom-codex/hooks.json";
+    write(
+      custom,
+      JSON.stringify({ hooks: { Stop: [{ hooks: [{ command: "emet guard --event Stop" }] }] } }),
+    );
+    const steps = await planUninstall(DEFAULTS, standaloneEnv({ codexHome: home("custom-codex") }));
+    expect(steps).toContainEqual({ kind: "remove-hooks", settingsPath: home(custom), count: 1 });
+  });
+
+  test("--dry-run lists the standalone artifacts and removes nothing", async () => {
+    seedHostHome();
+    await standaloneInstall();
+    const installed = snapshotHome();
+
+    const result = await runUninstall({ ...DEFAULTS, dryRun: true }, standaloneEnv());
+
+    expect(snapshotHome()).toEqual(installed);
+    expect(result.steps).toContainEqual({
+      kind: "remove-dir",
+      path: home(".local/share/emet/versions"),
+    });
+    expect(result.steps).toContainEqual({
+      kind: "remove-state",
+      path: home(".local/share/emet/install.json"),
+    });
+    expect(result.steps).toContainEqual({ kind: "remove-shim", path: home(".local/bin/emet") });
+    expect(result.steps).toContainEqual({
+      kind: "remove-file",
+      path: home(`${CODEX_SKILLS}/codex/skills/run/SKILL.md`),
+    });
+    expect(result.steps.filter((step) => step.kind === "remove-hooks")).toHaveLength(2);
+    expect(logged).toContain(`remove directory ${home(".local/share/emet/versions")}`);
+    expect(logged).toContain(`remove install state ${home(".local/share/emet/install.json")}`);
+  });
+
+  test("a Codex skill edited between plan and execution is kept and the step fails", async () => {
+    const target = `${CODEX_SKILLS}/codex/skills/run/SKILL.md`;
+    write(target, embeddedTree().read("codex/skills/run/SKILL.md"));
+    const env = standaloneEnv();
+    const steps = await planUninstall(DEFAULTS, env);
+    expect(steps).toContainEqual({ kind: "remove-file", path: home(target) });
+    write(target, "edited later");
+    const context = {
+      manifestPath: home(MANIFEST),
+      hashes: new Map([[home(target), sha(embeddedTree().read("codex/skills/run/SKILL.md"))]]),
+      env,
+    };
+    expect(
+      await rejectionOf(executeStep({ kind: "remove-file", path: home(target) }, context)),
+    ).toContain("edited since the plan");
+    expect(readFileSync(home(target), "utf8")).toBe("edited later");
   });
 });
 
@@ -694,7 +942,7 @@ describe("runCommand", () => {
     }
     expect(code).toBe(1);
     expect(readFileSync(home(SETTINGS), "utf8")).toContain("emet guard");
-    expect(logged.some((line) => line.startsWith("failed: remove 7 emet guard"))).toBe(true);
+    expect(logged.some((line) => line.startsWith("failed: remove 7 emet hook(s)"))).toBe(true);
   });
 });
 
@@ -706,6 +954,7 @@ describe("emet uninstall", () => {
       env: {
         ...process.env,
         HOME: homeDir,
+        CODEX_HOME: path.join(homeDir, ".codex"),
         EMET_STATE_DIR: path.join(homeDir, "state"),
         NO_COLOR: "1",
       },

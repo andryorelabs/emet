@@ -2,7 +2,7 @@
 title: Référence de configuration
 description: Chaque clé de emet.config.json avec sa valeur par défaut et sa signification.
 seoTitle: Référence de configuration d'emet
-sourceHash: a9aeca59a8d1f719
+sourceHash: e6fb30702c28d97e
 ---
 
 Chaque clé de `emet.config.json`, avec sa valeur par défaut et sa signification. La source de vérité est [`emet/schema/emet.config.schema.json`](../../emet/schema/emet.config.schema.json). Les termes suivent [GLOSSARY.md](../../GLOSSARY.md). Retour au [README](../../README.md).
@@ -343,6 +343,8 @@ La CLI lit ces variables, toutes via `emet/src/env.ts`. Une variable écrite ave
 | `EMET_MEM_RESERVE_GIB`        | `FORGE_MEM_RESERVE_GIB`        | Gio de mémoire laissés libres avant l'attribution d'un slot de worker.                                                                                                       |
 | `EMET_MEM_PER_WORKER_GIB`     | `FORGE_MEM_PER_WORKER_GIB`     | Gio de mémoire supposés par worker par le plafond automatique de workers.                                                                                                    |
 | `EMET_AGENT_HOST`             |                                | À définir à `codex` lors d'une exécution sous l'hôte d'agent Codex ; toute autre valeur signifie Claude.                                                                     |
+| `EMET_AUTO_UPDATE`            |                                | À définir à `0` pour désactiver `emet self update --auto` sur une installation autonome.                                                                                     |
+| `EMET_RELEASE_BASE_URL`       |                                | Racine de téléchargement de `emet self update` : les ressources sont lues depuis `<root>/vX.Y.Z` ou `<root>/latest`.                                                         |
 | `CODEX_HOME`                  |                                | Le répertoire personnel de Codex ; `~/.codex` par défaut. Uniquement lu.                                                                                                     |
 | `XDG_STATE_HOME`              |                                | Base du répertoire d'état lorsque `EMET_STATE_DIR` n'est pas définie.                                                                                                        |
 | `NO_COLOR`                    |                                | Si elle est définie, la bannière est affichée sans couleur.                                                                                                                  |

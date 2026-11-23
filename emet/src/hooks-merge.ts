@@ -148,10 +148,21 @@ export function mergeCodexHooks(
   return { hooksJson: document, added };
 }
 
-/** Standalone-only hooks merged beside the embedded definitions; none exist yet. */
+/**
+ * Standalone-only hook definitions merged beside the embedded ones: the `SessionStart` hook that
+ * runs `self update --auto`, which detaches itself before any network call. The command uses the
+ * plugin binary placeholder so `mergeClaudeHooks` rewrites it onto `emetBin` like every other hook;
+ * `emetBin` is taken for that merge, not read here.
+ */
 export function standaloneExtraHooks(emetBin: string): JsonObject {
   void emetBin;
-  return {};
+  return {
+    hooks: {
+      SessionStart: [
+        { hooks: [{ type: "command", command: `${CLAUDE_PLUGIN_BIN} self update --auto` }] },
+      ],
+    },
+  };
 }
 
 /** Drops every emet hook command from `doc`, then the groups and events that removal empties. */
