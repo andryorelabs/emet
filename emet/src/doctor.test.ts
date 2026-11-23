@@ -37,6 +37,9 @@ import {
   deadGuardHookFix,
   findDeadGuardHooks,
   findDoubleInstall,
+  findEmbeddedTreeDrift,
+  findStandaloneCodexTrustWarnings,
+  findUpdateWarnings,
   findCodexHookTrustWarnings,
   codexConfigTomlPath,
   findGlossaryWarnings,
@@ -1306,7 +1309,8 @@ describe("findDoubleInstall", () => {
   test("warns when the plugin and the install manifest both exist", () => {
     writeManifest();
     const [message] = findDoubleInstall(home, forgePlugin);
-    expect(message).toContain("~/.claude/commands/emet/");
+    expect(message).toContain("emet uninstall");
+    expect(message).not.toContain("install.sh");
   });
 
   test("is silent on the Codex host even with the plugin and the install manifest", () => {
@@ -1323,6 +1327,107 @@ describe("findDoubleInstall", () => {
     expect(findDoubleInstall(home, forgePlugin)).toEqual([]);
     writeManifest();
     expect(findDoubleInstall(home, [])).toEqual([]);
+  });
+});
+
+describe("standalone install findings", () => {
+  let home: string;
+  let stateDirectory: string;
+
+  beforeEach(() => {
+    home = mkdtempSync(path.join(os.tmpdir(), "emet-standalone-"));
+    stateDirectory = path.join(home, "state");
+    mkdirSync(stateDirectory);
+  });
+  afterEach(() => {
+    rmSync(home, { recursive: true, force: true });
+  });
+
+  function writeHomeFile(relativePath: string, content: string): void {
+    const file = path.join(home, relativePath);
+    mkdirSync(path.dirname(file), { recursive: true });
+    writeFileSync(file, content);
+  }
+
+  function writeInstallState(hosts: readonly string[]): void {
+    writeHomeFile(
+      ".local/share/emet/install.json",
+      JSON.stringify({
+        version: "1.0.0",
+        installedAt: "2026-11-23T00:00:00.000Z",
+        hosts,
+        binary: "/x/emet",
+        mode: "standalone",
+      }),
+    );
+  }
+
+  const fakeTree = {
+    list: () => ["agents/emet-worker.md", "hooks/hooks.json"],
+    read: (relativePath: string) =>
+      relativePath === "agents/emet-worker.md" ? "use emet:emet-worker" : "{}",
+  };
+
+  test("a clean standalone install raises no warning", () => {
+    writeInstallState(["claude"]);
+    writeHomeFile(".claude/agents/emet-worker.md", "use emet-worker");
+    expect(findEmbeddedTreeDrift(home, fakeTree)).toEqual([]);
+    expect(findUpdateWarnings(home, stateDirectory)).toEqual([]);
+    expect(findStandaloneCodexTrustWarnings(home, null)).toEqual([]);
+    expect(findDoubleInstall(home, [])).toEqual([]);
+  });
+
+  test("the plugin next to a standalone install warns with the removal commands", () => {
+    writeInstallState(["claude"]);
+    const [message] = findDoubleInstall(home, [
+      { id: "emet@marketplace", version: "1.0.0", enabled: true, installPath: "/x" },
+    ]);
+    expect(message).toContain("claude plugin uninstall emet@emet-marketplace");
+    expect(message).toContain("emet uninstall");
+  });
+
+  test("an installed file that differs from the embedded tree names the remedy", () => {
+    writeInstallState(["claude"]);
+    writeHomeFile(".claude/agents/emet-worker.md", "stale");
+    const [finding] = findEmbeddedTreeDrift(home, fakeTree);
+    expect(finding).toContain("~/.claude/agents/emet-worker.md");
+    expect(finding).toContain("emet self install");
+  });
+
+  test("drift is not checked without a standalone install", () => {
+    writeHomeFile(".claude/agents/emet-worker.md", "stale");
+    expect(findEmbeddedTreeDrift(home, fakeTree)).toEqual([]);
+  });
+
+  test("a Codex hook without a trusted_hash key prints the /hooks step", () => {
+    writeInstallState(["claude", "codex"]);
+    const untrusted = '[hooks.state."/h/.codex/hooks.json:pre_tool_use:0:0"]\nenabled = true\n';
+    const [warning] = findStandaloneCodexTrustWarnings(home, untrusted);
+    expect(warning).toContain("/hooks");
+    expect(findStandaloneCodexTrustWarnings(home, null)).toHaveLength(1);
+    const trusted =
+      '[hooks.state."/h/.codex/hooks.json:pre_tool_use:0:0"]\ntrusted_hash = "sha256:abc"\n';
+    expect(findStandaloneCodexTrustWarnings(home, trusted)).toEqual([]);
+  });
+
+  test("the Codex trust check is silent when the install does not cover Codex", () => {
+    writeInstallState(["claude"]);
+    expect(findStandaloneCodexTrustWarnings(home, null)).toEqual([]);
+  });
+
+  test("a staged update prints how to apply it", () => {
+    writeInstallState(["claude"]);
+    writeHomeFile(".local/share/emet/pending-update.json", JSON.stringify({ version: "1.2.3" }));
+    const [warning] = findUpdateWarnings(home, stateDirectory);
+    expect(warning).toContain("1.2.3");
+    expect(warning).toContain("emet self update");
+  });
+
+  test("auto-update off prints how to turn it on", () => {
+    writeInstallState(["claude"]);
+    writeFileSync(path.join(stateDirectory, "self-update.json"), JSON.stringify({ auto: "off" }));
+    const [warning] = findUpdateWarnings(home, stateDirectory);
+    expect(warning).toContain("emet self update --auto on");
   });
 });
 

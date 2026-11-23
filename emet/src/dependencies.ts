@@ -48,7 +48,7 @@ import {
 
 export const MATTPOCOCK_SKILLS_PLUGIN_ID = "mattpocock-skills@claude-plugins-official";
 
-/** The two `~/.claude/agents/*.md` files `install.sh` copies from this repo's
+/** The two `~/.claude/agents/*.md` files `emet self install` copies from the install tree
  * own `agents/` directory. Phase 6 dispatches workers as `emet-worker` and
  * Phase 8 dispatches the reviewer as `emet-reviewer` — either name missing
  * makes that `Agent({subagent_type: ...})` call fail outright. */
@@ -112,7 +112,7 @@ export type ClaudePluginProbe =
   | { readonly kind: "claude-failed"; readonly detail: string };
 
 /** Filesystem-only — unlike the plugin/gh/Linear probes, there's no binary to
- * shell out to: `install.sh` just copies files, so checking they landed is a
+ * shell out to: `emet self install` just copies files, so checking they landed is a
  * plain `existsSync` per name. */
 export type ForgeAgentsProbe =
   | { readonly kind: "present" }
@@ -377,7 +377,7 @@ export function classifyForgeAgentsProbe(
     summary:
       `${displayAgentsDirectory(host)} is missing ${probe.missing.join(", ")} — Phase 6/8 dispatch will fail to resolve ` +
       "the subagent_type. Re-run:",
-    remedy: ["./install.sh"],
+    remedy: ["emet self install"],
   };
 }
 
@@ -679,7 +679,7 @@ async function probeAgentBrowser(): Promise<AgentBrowserProbe> {
 }
 
 /**
- * An agent is present as `~/.claude/agents/<name>.md` (install.sh) or inside
+ * An agent is present as `~/.claude/agents/<name>.md` (`emet self install`) or inside
  * an installed `emet` plugin, where it dispatches as `emet:<name>`. Its legacy
  * `forge-*` name counts too, so a pre-rename install still resolves.
  */
