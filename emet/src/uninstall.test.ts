@@ -224,16 +224,18 @@ describe("S5: manifest files and shim", () => {
     expect(existsSync(home(".local/bin/emet"))).toBe(false);
   });
 
-  test("a recorded wrapper edited between plan and execution is kept and the step fails", () => {
+  test("a recorded wrapper edited between plan and execution is kept and the step fails", async () => {
     write(".local/bin/emet", `${WRAPPER}# edited later\n`);
     const context = {
       manifestPath: home(MANIFEST),
       hashes: new Map([[home(".local/bin/emet"), sha(WRAPPER)]]),
       env: fakeEnv(),
     };
-    expect(() => {
-      executeStep({ kind: "remove-shim", path: home(".local/bin/emet") }, context);
-    }).toThrow("edited since the plan");
+    expect(
+      await rejectionOf(
+        executeStep({ kind: "remove-shim", path: home(".local/bin/emet") }, context),
+      ),
+    ).toContain("edited since the plan");
     expect(existsSync(home(".local/bin/emet"))).toBe(true);
   });
 
@@ -308,27 +310,204 @@ describe("S5: manifest files and shim", () => {
     expect(await rejectionOf(planUninstall(DEFAULTS, fakeEnv()))).toContain("ENAMETOOLONG");
   });
 
-  test("a file edited between plan and execution is kept and the step fails", () => {
+  test("a file edited between plan and execution is kept and the step fails", async () => {
     write(".claude/commands/emet/run.md", "edited later");
     const context = {
       manifestPath: home(MANIFEST),
       hashes: new Map([[home(".claude/commands/emet/run.md"), sha("run")]]),
       env: fakeEnv(),
     };
-    expect(() => {
-      executeStep({ kind: "remove-file", path: home(".claude/commands/emet/run.md") }, context);
-    }).toThrow("edited since the plan");
-    expect(() => {
-      executeStep({ kind: "remove-file", path: home("not-listed") }, context);
-    }).toThrow("not in the install manifest");
+    expect(
+      await rejectionOf(
+        executeStep({ kind: "remove-file", path: home(".claude/commands/emet/run.md") }, context),
+      ),
+    ).toContain("edited since the plan");
+    expect(
+      await rejectionOf(executeStep({ kind: "remove-file", path: home("not-listed") }, context)),
+    ).toContain("not in the install manifest");
     expect(existsSync(home(".claude/commands/emet/run.md"))).toBe(true);
   });
+});
 
-  test("revert-extra is a stub that fails visibly", () => {
+const LEDGER = ".local/state/emet/setup-ledger.json";
+const CONTEXT7_ENTRY = {
+  id: "context7",
+  at: "2026-11-20T00:00:00.000Z",
+  undo: [{ kind: "global-package", manager: "bun", name: "ctx7" }],
+};
+const MASCOT_ENTRY = {
+  id: "mascot",
+  at: "2026-11-20T00:00:00.000Z",
+  undo: [{ kind: "plugin", pluginId: "emet-mascot@emet-marketplace" }],
+};
+
+function writeLedger(entries: readonly unknown[]): void {
+  write(LEDGER, `${JSON.stringify({ version: 1, entries }, null, 2)}\n`);
+}
+
+function ledgerIds(): string[] {
+  const parsed: unknown = JSON.parse(readFileSync(home(LEDGER), "utf8"));
+  if (!isObject(parsed) || !Array.isArray(parsed.entries)) throw new Error("bad ledger");
+  return parsed.entries.map((entry: unknown) => (isObject(entry) ? String(entry.id) : ""));
+}
+
+/** settings.json as `emet setup` left it, plus the ledger entry that undoes it. */
+function claudeSettingsEntry(): unknown {
+  write(
+    SETTINGS,
+    JSON.stringify({ model: "opus", permissions: { deny: ["Bash(rm -rf:*)", "Read(./secrets)"] } }),
+  );
+  return {
+    id: "claude-settings",
+    at: "2026-11-20T00:00:00.000Z",
+    undo: [
+      {
+        kind: "claude-settings",
+        settingsPath: home(SETTINGS),
+        previousModel: "sonnet",
+        addedDeny: ["Bash(rm -rf:*)"],
+        setModel: "opus",
+        backupPath: home(`${SETTINGS}.bak-setup`),
+      },
+    ],
+  };
+}
+
+function recordingRun(exitCodeFor: (argv: readonly string[]) => number = () => 0): {
+  ran: string[];
+  run: UninstallEnv["run"];
+} {
+  const ran: string[] = [];
+  return {
+    ran,
+    run: (argv) => {
+      ran.push(argv.join(" "));
+      return Promise.resolve(exitCodeFor(argv));
+    },
+  };
+}
+
+describe("S7: ledger extras", () => {
+  test("reverts settings, uninstalls the plugin, prints the bun removal and empties the ledger", async () => {
+    writeLedger([claudeSettingsEntry(), MASCOT_ENTRY, CONTEXT7_ENTRY]);
+    const { ran, run } = recordingRun();
+
+    const steps = await planUninstall(DEFAULTS, fakeEnv({ run }));
+    expect(steps.filter((step) => step.kind === "revert-extra")).toEqual([
+      { kind: "revert-extra", id: "claude-settings" },
+      { kind: "revert-extra", id: "mascot" },
+      { kind: "revert-extra", id: "context7" },
+    ]);
+    const result = await runUninstall(DEFAULTS, fakeEnv({ run }));
+
+    expect(result.failed).toEqual([]);
+    expect(JSON.parse(readFileSync(home(SETTINGS), "utf8"))).toEqual({
+      model: "sonnet",
+      permissions: { deny: ["Read(./secrets)"] },
+    });
+    expect(readdirSync(home(".claude")).some((name) => name.startsWith("settings.json.bak-"))).toBe(
+      true,
+    );
+    expect(ran).toEqual(["claude plugin uninstall emet-mascot@emet-marketplace"]);
+    expect(logged.some((line) => line.includes("bun remove -g ctx7"))).toBe(true);
+    expect(ledgerIds()).toEqual([]);
+  });
+
+  test("firecrawl-local removes the entry and re-adds the previous one; orca-pet files go", async () => {
+    write(".claude/pets/emet.json", "pet");
+    writeLedger([
+      {
+        id: "firecrawl-local",
+        at: "2026-11-20T00:00:00.000Z",
+        undo: [
+          { kind: "mcp-entry", name: "firecrawl-local", previousEntry: { command: "old" } },
+          { kind: "global-package", manager: "cargo", name: "firecrawl-mcp" },
+        ],
+      },
+      {
+        id: "orca-pet",
+        at: "2026-11-20T00:00:00.000Z",
+        undo: [{ kind: "files", paths: [home(".claude/pets/emet.json")] }],
+      },
+    ]);
+    const { ran, run } = recordingRun();
+    const result = await runUninstall(DEFAULTS, fakeEnv({ run }));
+
+    expect(result.failed).toEqual([]);
+    expect(ran).toEqual([
+      "claude mcp remove firecrawl-local -s user",
+      'claude mcp add-json firecrawl-local {"command":"old"} -s user',
+    ]);
+    expect(logged.some((line) => line.includes("cargo uninstall firecrawl-mcp"))).toBe(true);
+    expect(existsSync(home(".claude/pets/emet.json"))).toBe(false);
+    expect(ledgerIds()).toEqual([]);
+  });
+
+  test("one failing extra does not stop the others and keeps only its unreverted records", async () => {
+    write(".claude/pets/emet.json", "pet");
+    writeLedger([
+      {
+        id: "mascot",
+        at: "2026-11-20T00:00:00.000Z",
+        undo: [
+          { kind: "files", paths: [home(".claude/pets/emet.json")] },
+          { kind: "plugin", pluginId: "emet-mascot@emet-marketplace" },
+        ],
+      },
+      CONTEXT7_ENTRY,
+    ]);
+    const { run } = recordingRun((argv) => (argv.includes("emet-mascot@emet-marketplace") ? 1 : 0));
+    const result = await runUninstall(DEFAULTS, fakeEnv({ run }));
+
+    expect(result.failed).toHaveLength(1);
+    expect(result.failed[0]).toContain("revert extra mascot");
+    expect(result.failed[0]).toContain("exited 1");
+    expect(existsSync(home(".claude/pets/emet.json"))).toBe(false);
+    expect(logged.some((line) => line.includes("bun remove -g ctx7"))).toBe(true);
+    const parsed: unknown = JSON.parse(readFileSync(home(LEDGER), "utf8"));
+    expect(isObject(parsed) ? parsed.entries : undefined).toEqual([MASCOT_ENTRY]);
+  });
+
+  test("a partial revert logs its warnings and still leaves the ledger", async () => {
+    writeLedger([
+      {
+        id: "orca-pet",
+        at: "2026-11-20T00:00:00.000Z",
+        undo: [{ kind: "files", paths: [home(".claude/pets/gone.json")] }],
+      },
+    ]);
+    const result = await runUninstall(DEFAULTS, fakeEnv());
+    expect(result.failed).toEqual([]);
+    expect(logged).toContain(
+      `warning: orca-pet: ${home(".claude/pets/gone.json")} is already gone`,
+    );
+    expect(ledgerIds()).toEqual([]);
+  });
+
+  test("--dry-run lists the extras and runs nothing", async () => {
+    writeLedger([claudeSettingsEntry(), MASCOT_ENTRY]);
+    const ledgerBefore = readFileSync(home(LEDGER), "utf8");
+    const settingsBefore = readFileSync(home(SETTINGS), "utf8");
+    const { ran, run } = recordingRun();
+    await runUninstall({ ...DEFAULTS, dryRun: true }, fakeEnv({ run }));
+    expect(logged).toContain("revert extra claude-settings");
+    expect(logged).toContain("revert extra mascot");
+    expect(ran).toEqual([]);
+    expect(readFileSync(home(LEDGER), "utf8")).toBe(ledgerBefore);
+    expect(readFileSync(home(SETTINGS), "utf8")).toBe(settingsBefore);
+  });
+
+  test("a malformed ledger fails the plan naming its path", async () => {
+    write(LEDGER, "{");
+    expect(await rejectionOf(planUninstall(DEFAULTS, fakeEnv()))).toContain(home(LEDGER));
+  });
+
+  test("an entry gone between plan and execution fails the step", async () => {
+    writeLedger([]);
     const context = { manifestPath: home(MANIFEST), hashes: new Map(), env: fakeEnv() };
-    expect(() => {
-      executeStep({ kind: "revert-extra", id: "context7" }, context);
-    }).toThrow("not supported yet");
+    expect(
+      await rejectionOf(executeStep({ kind: "revert-extra", id: "context7" }, context)),
+    ).toContain(`no Setup ledger entry for context7 in ${home(LEDGER)}`);
   });
 });
 
@@ -379,10 +558,12 @@ describe("S6: guard hooks", () => {
     fullInstall();
     const context = { manifestPath: home(MANIFEST), hashes: new Map(), env: fakeEnv() };
     write(SETTINGS, "[1]");
-    expect(() => {
-      executeStep({ kind: "remove-hooks", settingsPath: home(SETTINGS), count: 7 }, context);
-    }).toThrow(home(SETTINGS));
-    expect(await Promise.resolve(readFileSync(home(SETTINGS), "utf8"))).toBe("[1]");
+    expect(
+      await rejectionOf(
+        executeStep({ kind: "remove-hooks", settingsPath: home(SETTINGS), count: 7 }, context),
+      ),
+    ).toContain(home(SETTINGS));
+    expect(readFileSync(home(SETTINGS), "utf8")).toBe("[1]");
   });
 });
 

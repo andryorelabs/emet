@@ -20,6 +20,13 @@ import { stringifySorted } from "./envelope";
 import { exitCodes } from "./exit-codes";
 import { stateDir } from "./names";
 import { errnoCode, errorMessage, isObject } from "./narrow";
+import {
+  appendLedgerEntry,
+  readLedger,
+  removeLedgerEntry,
+  restoreUndo,
+  type UndoRecord,
+} from "./setupledger";
 
 /** One thing `emet uninstall` does, or would do under `--dry-run`. */
 export type UninstallStep =
@@ -227,9 +234,14 @@ function planHooks(settingsPath: string): UninstallStep[] {
   return count === 0 ? [] : [{ kind: "remove-hooks", settingsPath, count }];
 }
 
-/** The ledger's extras to revert; a stub until the Setup ledger lands. */
-function planExtras(): UninstallStep[] {
-  return [];
+/** The Setup ledger under the uninstall env's state directory. */
+function ledgerFileFor(env: UninstallEnv): string {
+  return path.join(env.stateDir, "setup-ledger.json");
+}
+
+/** One `revert-extra` step per Setup ledger entry; a malformed ledger throws naming its path. */
+function planExtras(env: UninstallEnv): UninstallStep[] {
+  return readLedger(ledgerFileFor(env)).map((entry) => ({ kind: "revert-extra", id: entry.id }));
 }
 
 function planPurge(env: UninstallEnv): UninstallStep[] {
@@ -257,7 +269,7 @@ export async function planUninstall(
   }
   steps.push(...planShim(layout, manifest));
   if (hasManifest) steps.push({ kind: "remove-file", path: layout.manifestPath });
-  steps.push(...planHooks(layout.settingsPath), ...planExtras());
+  steps.push(...planHooks(layout.settingsPath), ...planExtras(env));
   if (await env.commandExists("codex")) {
     steps.push({
       kind: "note",
@@ -328,8 +340,35 @@ function removeShim(target: string, context: StepContext): void {
   unlinkSync(target);
 }
 
-/** Executes one step; throws when it fails. */
-export function executeStep(step: UninstallStep, context: StepContext): void {
+/**
+ * Reverts every undo record of the ledger entry `id`, logging each warning. When all succeed the
+ * entry leaves the ledger; otherwise it stays holding only the records that failed, so a re-run
+ * retries just those, and the step throws listing each failure.
+ */
+async function revertExtra(id: string, env: UninstallEnv): Promise<void> {
+  const ledgerFile = ledgerFileFor(env);
+  const entry = readLedger(ledgerFile).find((candidate) => candidate.id === id);
+  if (entry === undefined) throw new Error(`no Setup ledger entry for ${id} in ${ledgerFile}`);
+  const unreverted: UndoRecord[] = [];
+  const failures: string[] = [];
+  for (const record of entry.undo) {
+    try {
+      // oxlint-disable-next-line eslint/no-await-in-loop -- sequential on purpose: records of one entry may touch the same file
+      const { warnings } = await restoreUndo(record, env);
+      for (const warning of warnings) env.log(`warning: ${id}: ${warning}`);
+    } catch (error: unknown) {
+      unreverted.push(record);
+      failures.push(errorMessage(error));
+    }
+  }
+  removeLedgerEntry(ledgerFile, id);
+  if (unreverted.length === 0) return;
+  appendLedgerEntry(ledgerFile, { ...entry, undo: unreverted });
+  throw new Error(failures.join("; "));
+}
+
+/** Executes one step; rejects when it fails. */
+export async function executeStep(step: UninstallStep, context: StepContext): Promise<void> {
   switch (step.kind) {
     case "remove-file":
       removeManifestFile(step.path, context);
@@ -341,7 +380,8 @@ export function executeStep(step: UninstallStep, context: StepContext): void {
       removeGuardHooks(step.settingsPath, context.env.now());
       return;
     case "revert-extra":
-      throw new Error(`reverting ${step.id} is not supported yet`);
+      await revertExtra(step.id, context.env);
+      return;
     case "purge":
       rmSync(step.path, { recursive: true, force: true });
       return;
@@ -418,7 +458,8 @@ export async function runUninstall(
   const removed: string[] = [];
   for (const step of steps) {
     try {
-      executeStep(step, context);
+      // oxlint-disable-next-line eslint/no-await-in-loop -- sequential on purpose: steps share settings.json and the ledger, and output keeps plan order
+      await executeStep(step, context);
       if (step.kind === "remove-file" || step.kind === "remove-shim") removed.push(step.path);
     } catch (error: unknown) {
       const line = `${describeStep(step)}: ${errorMessage(error)}`;
