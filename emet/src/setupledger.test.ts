@@ -1,5 +1,13 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
-import { existsSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs";
+import {
+  chmodSync,
+  existsSync,
+  mkdtempSync,
+  readFileSync,
+  readdirSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
 import os from "node:os";
 import path from "node:path";
 
@@ -14,6 +22,7 @@ import {
   readLedger,
   readUserMcpEntry,
   removeLedgerEntry,
+  replaceLedgerEntry,
   restoreUndo,
   type LedgerEntry,
   type RestoreDeps,
@@ -112,6 +121,35 @@ describe("ledger read and write", () => {
     expect(readLedger(ledgerFile)).toEqual([]);
     removeLedgerEntry(path.join(directory, "absent.json"), "mascot");
     expect(existsSync(path.join(directory, "absent.json"))).toBe(false);
+  });
+
+  test("replaces an entry in place with one write and ignores an unknown id", () => {
+    appendLedgerEntry(ledgerFile, pluginEntry);
+    appendLedgerEntry(ledgerFile, { ...pluginEntry, id: "context7" });
+    const replacement: LedgerEntry = { ...pluginEntry, undo: [] };
+    replaceLedgerEntry(ledgerFile, replacement);
+    expect(readLedger(ledgerFile).map((entry) => [entry.id, entry.undo.length])).toEqual([
+      ["mascot", 0],
+      ["context7", pluginEntry.undo.length],
+    ]);
+    const before = readFileSync(ledgerFile, "utf8");
+    replaceLedgerEntry(ledgerFile, { ...pluginEntry, id: "nope" });
+    expect(readFileSync(ledgerFile, "utf8")).toBe(before);
+  });
+
+  test("a failed replace write keeps the entry and its records in the ledger", () => {
+    appendLedgerEntry(ledgerFile, pluginEntry);
+    const before = readFileSync(ledgerFile, "utf8");
+    const stateDirectory = path.dirname(ledgerFile);
+    chmodSync(stateDirectory, 0o500);
+    try {
+      expect(() => {
+        replaceLedgerEntry(ledgerFile, { ...pluginEntry, undo: [] });
+      }).toThrow();
+    } finally {
+      chmodSync(stateDirectory, 0o700);
+    }
+    expect(readFileSync(ledgerFile, "utf8")).toBe(before);
   });
 
   test("a malformed ledger is an error naming its path and is left alone", () => {

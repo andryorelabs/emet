@@ -21,9 +21,9 @@ import { exitCodes } from "./exit-codes";
 import { stateDir } from "./names";
 import { errnoCode, errorMessage, isObject } from "./narrow";
 import {
-  appendLedgerEntry,
   readLedger,
   removeLedgerEntry,
+  replaceLedgerEntry,
   restoreUndo,
   type UndoRecord,
 } from "./setupledger";
@@ -361,9 +361,11 @@ async function revertExtra(id: string, env: UninstallEnv): Promise<void> {
       failures.push(errorMessage(error));
     }
   }
-  removeLedgerEntry(ledgerFile, id);
-  if (unreverted.length === 0) return;
-  appendLedgerEntry(ledgerFile, { ...entry, undo: unreverted });
+  if (unreverted.length === 0) {
+    removeLedgerEntry(ledgerFile, id);
+    return;
+  }
+  replaceLedgerEntry(ledgerFile, { ...entry, undo: unreverted });
   throw new Error(failures.join("; "));
 }
 

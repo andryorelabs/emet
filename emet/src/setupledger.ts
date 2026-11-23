@@ -157,6 +157,19 @@ export function removeLedgerEntry(ledgerFile: string, id: string): void {
 }
 
 /**
+ * Replaces the entry with the same id as `entry` in one atomic write, keeping its position.
+ * An absent entry changes nothing.
+ */
+export function replaceLedgerEntry(ledgerFile: string, entry: LedgerEntry): void {
+  const entries = readLedger(ledgerFile);
+  if (!entries.some((existing) => existing.id === entry.id)) return;
+  writeLedger(
+    ledgerFile,
+    entries.map((existing) => (existing.id === entry.id ? entry : existing)),
+  );
+}
+
+/**
  * The user-scope `mcpServers[name]` entry of a `~/.claude.json` body, or `null`
  * when the file is absent or has no such entry. Invalid JSON throws.
  */
