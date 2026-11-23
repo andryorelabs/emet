@@ -41,35 +41,26 @@ Erase one letter and it stops; here, nothing merges when something is flagged.
 
 <img src="docs/brand/mascot/mascot-work.svg" alt="emet mascot, working" width="96" align="right">
 
-Requirements: Claude Code or the Codex CLI, `git`, `gh` (authenticated) and the `mattpocock-skills` plugin. Bun is needed only for a source install. See [Requirements](#requirements).
+Requirements: Claude Code or the Codex CLI, `git`, `gh` (authenticated) and the `mattpocock-skills` plugin. Bun is needed only for `emet self install --from`. See [Requirements](#requirements).
 
-1. On Claude Code (no Bun needed):
+1. Install emet. No Bun, clone or sudo needed:
+
+   ```bash
+   curl -fsSL https://emet.andryore.dev/install.sh | sh
+   ```
+
+   Add `-s -- --dry-run` after `sh` to preview the writes. It installs the terminal `emet`, the Claude Code commands and agents and, when Codex is present, the Codex skills and hooks; on Codex, trust the hooks once with `/hooks` (needs `mattpocock-skills` too; see [Codex](docs/guide/codex.md)). Updates are automatic once a day (`EMET_AUTO_UPDATE=0` turns that off; `emet self update` updates by hand). To remove it, run `emet uninstall` (add `--dry-run` to preview). See the [CLI reference](docs/reference/cli.md#setup-ledger-and-restore) and [Update emet](docs/how-to/update-emet.md).
+
+   Optional: install the plugin instead, for Claude Code or Codex:
 
    ```bash
    claude plugin marketplace add andryorelabs/emet
    claude plugin install emet@emet-marketplace
-   ```
-
-   Or from a clone, with `./install.sh`, which also installs the terminal `emet` that the Codex host needs:
-
-   ```bash
-   git clone git@github.com:andryorelabs/emet.git
-   cd emet
-   ./install.sh
-   ```
-
-   Optional: a pixel mascot, see [Mascot](#mascot-optional).
-
-   To remove a clone install, run `./install.sh --uninstall` (or `emet uninstall`; add `--dry-run` to preview). It deletes the files it installed, drops the `emet guard` hooks from `~/.claude/settings.json` and reverts the extras that `emet setup` recorded. See the [CLI reference](docs/reference/cli.md#setup-ledger-and-restore).
-
-   On Codex, install the plugin instead, then install the terminal `emet` as in [Getting started](docs/guide/getting-started.md) (needs `mattpocock-skills` too; the full steps are in [Codex](docs/guide/codex.md)):
-
-   ```bash
    codex plugin marketplace add andryorelabs/emet
    codex plugin add emet@emet-marketplace
    ```
 
-   To update later on Claude Code, refresh the marketplace and update each plugin, then restart Claude Code. On Codex, run `codex plugin marketplace upgrade emet-marketplace`, then `codex plugin add emet@emet-marketplace`. Auto-update is off by default for third-party marketplaces; turn it on in Claude Code in `/plugin`, tab **Marketplaces**, `emet-marketplace`, **Enable auto-update**. See [Update emet](docs/how-to/update-emet.md).
+   Optional: a pixel mascot, see [Mascot](#mascot-optional).
 
 2. In your repo, set it up and check it. On Claude Code:
 
@@ -85,7 +76,7 @@ Requirements: Claude Code or the Codex CLI, `git`, `gh` (authenticated) and the 
    $emet:doctor
    ```
 
-   In a plain terminal, `emet init` and `emet doctor .` work only after `install.sh`.
+   In a plain terminal, `emet init` and `emet doctor .` work after the standalone install.
 
 3. Inside Claude Code:
 
@@ -101,7 +92,7 @@ More in [Getting started](docs/guide/getting-started.md). If `doctor` reports a 
 
 ### Supported platforms
 
-Linux and macOS. Windows is supported only through WSL: on native Windows emet shows one notice and stays inactive, and `install.sh` refuses to run. See [ADR-0007](docs/adr/0007-macos-support.md) and the [dependencies reference](docs/reference/dependencies.md).
+Linux and macOS. Windows is supported only through WSL: on native Windows emet shows one notice and stays inactive, and the bootstrap script refuses to run. See [ADR-0007](docs/adr/0007-macos-support.md) and the [dependencies reference](docs/reference/dependencies.md).
 
 ## Mascot (optional)
 
