@@ -2,7 +2,7 @@
 title: emet mit Codex ausführen
 description: "Codex als Agent host für emet nutzen: Plugin installieren, agentHost setzen, einmal freigeben und die Grenzen kennen."
 seoTitle: emet mit Codex ausführen
-sourceHash: 8aed8797d3451a66
+sourceHash: 73105866204493fa
 ---
 
 emet läuft neben Claude Code auch auf der Codex CLI. Die Begriffe folgen [GLOSSARY.md](../../GLOSSARY.md); das Produkt, in dem ein Lauf ausgeführt wird, ist der **Agent host**. Diese Seite behandelt die Installation auf der Codex-Seite, die Wahl des Hosts, die einmalige Freigabe und die bekannten Grenzen. Zurück zum [Dokumentationsindex](../README.md).
@@ -21,18 +21,31 @@ Auf dem Codex-Host bleibt die Pipeline dieselbe: Interview, Spec, Tickets, eine 
    codex plugin add mattpocock-skills@mattpocock
    ```
 
-3. Installiere das emet-Plugin. Das Repository enthält `.codex-plugin/plugin.json` sowie die generierten Skills und Hooks unter `codex/`:
+3. Installiere emet mit der eigenständigen Installation. Sie schreibt die emet-Skills nach `~/.agents/skills/emet/` und hängt die emet-Hooks an `$CODEX_HOME/hooks.json` an (Standard `~/.codex`); `config.toml` schreibt sie nie:
 
    ```bash
-   codex plugin marketplace add andryorelabs/emet
-   codex plugin add emet@emet-marketplace
+   curl -fsSL https://emet.andryore.dev/install.sh | sh
    ```
 
-4. Installiere die `emet` CLI wie in [Erste Schritte](getting-started.md) beschrieben und führe dann `emet doctor .` aus. `install.sh` installiert außerdem die Claude-Code-Befehle und -Agents unter `~/.claude`; das ist unter Codex harmlos, und `emet doctor` warnt nicht davor, dass das Codex-Plugin und `install.sh` zusammen vorhanden sind. Auf dem Codex-Host meldet es ein `codex`, das älter als `codex.minVersion` ist, ein fehlendes Flag `--json` oder `--output-schema` bei `codex exec` und ein fehlendes `mattpocock-skills` samt den beiden Befehlen oben.
+   Mit `-s -- --dry-run` nach `sh` lassen sich die Schreibzugriffe vorab anzeigen. Sie installiert außerdem das `emet` im Terminal sowie die Claude-Code-Befehle und -Agents unter `~/.claude`; das ist unter Codex harmlos.
+
+4. Vertraue den Hooks. Codex führt einen Hook erst aus, wenn du ihm vertraust: `/hooks` öffnen und auf der Ereignisseite `t` drücken oder beim Start die Meldung "Hooks need review" bestätigen.
+5. Führe `emet doctor .` aus. Auf dem Codex-Host meldet es ein `codex`, das älter als `codex.minVersion` ist, ein fehlendes Flag `--json` oder `--output-schema` bei `codex exec`, nicht vertraute Hooks und ein fehlendes `mattpocock-skills` samt den beiden Befehlen oben.
 
 :::
 
-Beide Plugin-Befehle aus Schritt 3 wurden gegen das echte `codex` (0.167.0) ausgeführt: In einem frischen `CODEX_HOME` enden sie mit Exit-Code 0, und `codex plugin list` zeigt `emet@emet-marketplace installed, enabled`. Die Form mit lokalem Pfad, `codex plugin marketplace add <repo>`, liefert dasselbe Ergebnis.
+### Optional: das Codex-Plugin
+
+Statt der eigenständigen Installation lässt sich das emet-Plugin installieren. Das Repository enthält `.codex-plugin/plugin.json` sowie die generierten Skills und Hooks unter `codex/`:
+
+```bash
+codex plugin marketplace add andryorelabs/emet
+codex plugin add emet@emet-marketplace
+```
+
+Das Plugin bringt keinen `emet`-Shim mit, daher braucht das `emet` im Terminal weiterhin die eigenständige Installation. `emet self install` verweigert den Dienst, solange das Plugin installiert ist, außer du übergibst `--force`, und `emet doctor` warnt, wenn beide nebeneinander vorhanden sind.
+
+Beide Plugin-Befehle oben wurden gegen das echte `codex` (0.167.0) ausgeführt: In einem frischen `CODEX_HOME` enden sie mit Exit-Code 0, und `codex plugin list` zeigt `emet@emet-marketplace installed, enabled`. Die Form mit lokalem Pfad, `codex plugin marketplace add <repo>`, liefert dasselbe Ergebnis.
 
 ## Den Agent host wählen
 
@@ -56,7 +69,7 @@ Sobald dieses Verzeichnis existiert, schlägt das Gate geschlossen fehl: Eine fe
 
 ## Nach einem emet-Update
 
-Codex fragt nach jedem Plugin-Update erneut, ob du den emet-Plugin-Hooks vertraust, weil sich der Inhalts-Hash des Plugins ändert. Zum Vertrauen führst du `/hooks` aus und drückst auf der Ereignisseite `t`, um allen zu vertrauen, oder bestätigst beim Start die Meldung "Hooks need review". Bis dahin laufen der emet guard und die einmalige Freigabe nicht.
+Bei der eigenständigen Installation sind die Hooks einfache Einträge in `hooks.json`; vertraue ihnen einmal über `/hooks`, wie in den Installationsschritten. Beim Plugin fragt Codex nach jedem Plugin-Update erneut, ob du den emet-Plugin-Hooks vertraust, weil sich der Inhalts-Hash des Plugins ändert. Zum Vertrauen führst du `/hooks` aus und drückst auf der Ereignisseite `t`, um allen zu vertrauen, oder bestätigst beim Start die Meldung "Hooks need review". Bis dahin laufen der emet guard und die einmalige Freigabe nicht.
 
 `emet doctor` warnt, wenn den Hooks nie vertraut wurde:
 
@@ -69,7 +82,7 @@ Direkt nach einem Release kann der Shim für einige Minuten die zuvor zwischenge
 ## Wie eine Welle abläuft
 
 - `emet dispatch --role worker` prüft den Claim und den Slot, legt `.emet/worktrees/agent-<ticket>` an, baut ein `CODEX_HOME`-Overlay pro Lauf unter `.emet/runs/<run>/codex-home/` und startet `codex exec` mit dem aufgelösten Modell und Aufwand, dem Modus `codex.sandbox` (standardmäßig `danger-full-access`), `--json` und `--output-schema`. Ereignisse werden in `.emet/runs/<run>/codex/<ticket>.jsonl` erfasst. Der Worker wird über die `threadId` seines `thread.started`-Ereignisses und diesen JSONL-Pfad identifiziert; die Prozess-ID ist nur ein Hilfsfeld.
-- Das Overlay wird erzeugt, nicht verlinkt. Deine `auth.json` wird per Symlink eingebunden (nie kopiert), der Plugin-Cache von emet wird aus deinem Codex-Home verlinkt, wenn er existiert, und das Overlay schreibt seine eigene minimale `config.toml`: den lokalen Marketplace und `[plugins."emet@emet-marketplace"] enabled = true`, eine `trusted`-Tabelle `[projects."<dir>"]` nur für die eigenen Verzeichnisse des Laufs sowie das aufgelöste `model` und `model_reasoning_effort`. Keine deiner `[projects]`-Tabellen und keine anderen Einstellungen werden kopiert, und dein `~/.codex` wird nie beschrieben.
+- Das Overlay hat zwei Modi. Existiert die Statusdatei der eigenständigen Installation, lässt die `config.toml` des Overlays die Tabellen für das emet-Plugin und den Marketplace weg, und Worker sehen die emet-Skills weiterhin aus `~/.agents/skills`; im Plugin-Modus behält sie diese, wie als Nächstes beschrieben. Das Overlay wird erzeugt, nicht verlinkt. Deine `auth.json` wird per Symlink eingebunden (nie kopiert), der Plugin-Cache von emet wird aus deinem Codex-Home verlinkt, wenn er existiert, und das Overlay schreibt seine eigene minimale `config.toml`: den lokalen Marketplace und `[plugins."emet@emet-marketplace"] enabled = true`, eine `trusted`-Tabelle `[projects."<dir>"]` nur für die eigenen Verzeichnisse des Laufs sowie das aufgelöste `model` und `model_reasoning_effort`. Keine deiner `[projects]`-Tabellen und keine anderen Einstellungen werden kopiert, und dein `~/.codex` wird nie beschrieben.
 - Die `rules/default.rules` des Overlays erlaubt `git add`, `git commit`, `git status`, `git worktree`, `git -C <dir> ...` und die `emet`-Unterbefehle `dispatch`, `review-run`, `launch`, `claims`, `slots`, `results`, `handoff` und `ask` und verbietet `git push`. Weil die Standard-Sandbox Schreibzugriffe nicht mehr blockiert, verweigert `emet guard` zusätzlich jeden `Bash`-Befehl, dessen argv `git push` ausführt, einschließlich `git -C <dir> push` und `git --git-dir=<dir> push`, unabhängig von der Sandbox.
 - Ein Worker hat nie einen Seitenkanal zum Koordinator. Er eskaliert über das Postfach des Laufs: `emet ask --run <run> --ticket <ticket> --body <text>` zeichnet eine Frage auf und gibt ihre ID aus, und `emet ask ... --wait <n>` fragt die Antwort ab (Exit-Code 0 gibt sie aus, 3 bedeutet, dass das Zeitfenster abgelaufen ist, 4 bedeutet, dass `budgets.askWaitMinutes` aufgebraucht ist, sodass der Worker ein BLOCKED-Ergebnis schreibt und endet). Solange ein lebender Worker eine offene Frage hat, gibt `emet dispatch --wait` `question <ticket> <id>` statt eines Ergebnisstatus aus und stuft den Worker nie als festgefahren ein; der Koordinator liest `emet inbox --run <run>`, antwortet mit `emet reply --run <run> --ticket <ticket> --id <n> --body <text>` und setzt `emet dispatch --wait` fort. Ein aufgezeichnetes Ergebnis hat immer Vorrang vor einer offenen Frage. Siehe [ADR-0023](../adr/0023-cli-owned-mailbox-for-codex-workers.md).
 - Ergebnisse werden aus `<git-common-dir>/.emet/runs/<run>/results/` gelesen, demselben Ort, an den `emet results --write` schreibt, sodass ein Worker in seinem eigenen Worktree gefunden wird.
