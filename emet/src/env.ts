@@ -51,6 +51,15 @@ export const ENV_VARS = [
     summary: "Set to `codex` when running under the Codex Agent host; anything else means Claude.",
   },
   {
+    name: "EMET_AUTO_UPDATE",
+    summary: "Set to `0` to turn `emet self update --auto` off for a standalone install.",
+  },
+  {
+    name: "EMET_RELEASE_BASE_URL",
+    summary:
+      "Download root for `emet self update`: assets are read from `<root>/vX.Y.Z` or `<root>/latest`.",
+  },
+  {
     name: "CODEX_HOME",
     summary: "The Codex home directory; defaults to `~/.codex`. Only ever read.",
   },
