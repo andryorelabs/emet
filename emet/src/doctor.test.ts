@@ -1310,7 +1310,7 @@ describe("findDoubleInstall", () => {
     writeManifest();
     const [message] = findDoubleInstall(home, forgePlugin);
     expect(message).toContain("emet uninstall");
-    expect(message).not.toContain("install.sh");
+    expect(message).not.toMatch(/install\.sh/);
   });
 
   test("is silent on the Codex host even with the plugin and the install manifest", () => {
@@ -1372,7 +1372,7 @@ describe("standalone install findings", () => {
     writeInstallState(["claude"]);
     writeHomeFile(".claude/agents/emet-worker.md", "use emet-worker");
     expect(findEmbeddedTreeDrift(home, fakeTree)).toEqual([]);
-    expect(findUpdateWarnings(home, stateDirectory)).toEqual([]);
+    expect(findUpdateWarnings(home, stateDirectory, {})).toEqual([]);
     expect(findStandaloneCodexTrustWarnings(home, null)).toEqual([]);
     expect(findDoubleInstall(home, [])).toEqual([]);
   });
@@ -1394,20 +1394,69 @@ describe("standalone install findings", () => {
     expect(finding).toContain("emet self install");
   });
 
+  test("an installed prompt edited since install is left to the edit finding", () => {
+    writeInstallState(["claude"]);
+    writeHomeFile(".claude/agents/emet-worker.md", "my edit");
+    const installedHash = createHash("sha256").update("use emet-worker").digest("hex");
+    writeHomeFile(
+      ".claude/emet/.install-manifest.json",
+      JSON.stringify({ ".claude/agents/emet-worker.md": installedHash }),
+    );
+    expect(findEmbeddedTreeDrift(home, fakeTree)).toEqual([]);
+  });
+
+  test("an unedited install that predates this emet still names the remedy", () => {
+    writeInstallState(["claude"]);
+    writeHomeFile(".claude/agents/emet-worker.md", "older release");
+    const installedHash = createHash("sha256").update("older release").digest("hex");
+    writeHomeFile(
+      ".claude/emet/.install-manifest.json",
+      JSON.stringify({ ".claude/agents/emet-worker.md": installedHash }),
+    );
+    const [finding] = findEmbeddedTreeDrift(home, fakeTree);
+    expect(finding).toContain("emet self install");
+  });
+
   test("drift is not checked without a standalone install", () => {
     writeHomeFile(".claude/agents/emet-worker.md", "stale");
     expect(findEmbeddedTreeDrift(home, fakeTree)).toEqual([]);
   });
 
+  function writeCodexHooks(): string {
+    const foreign = { type: "command", command: "my-linter --check" };
+    const emetGuard = { type: "command", command: 'EMET_AGENT_HOST=codex "/x/bin/emet" guard' };
+    writeHomeFile(
+      ".codex/hooks.json",
+      JSON.stringify({ hooks: { PreToolUse: [{ hooks: [foreign] }, { hooks: [emetGuard] }] } }),
+    );
+    return path.join(home, ".codex", "hooks.json");
+  }
+
   test("a Codex hook without a trusted_hash key prints the /hooks step", () => {
     writeInstallState(["claude", "codex"]);
-    const untrusted = '[hooks.state."/h/.codex/hooks.json:pre_tool_use:0:0"]\nenabled = true\n';
+    const hooksPath = writeCodexHooks();
+    const untrusted = `[hooks.state."${hooksPath}:pre_tool_use:1:0"]\nenabled = true\n`;
     const [warning] = findStandaloneCodexTrustWarnings(home, untrusted);
     expect(warning).toContain("/hooks");
     expect(findStandaloneCodexTrustWarnings(home, null)).toHaveLength(1);
-    const trusted =
-      '[hooks.state."/h/.codex/hooks.json:pre_tool_use:0:0"]\ntrusted_hash = "sha256:abc"\n';
+    const trusted = `[hooks.state."${hooksPath}:pre_tool_use:1:0"]\ntrusted_hash = "sha256:abc"\n`;
     expect(findStandaloneCodexTrustWarnings(home, trusted)).toEqual([]);
+  });
+
+  test("a trusted foreign hook in the same hooks.json does not count as trusting emet", () => {
+    writeInstallState(["claude", "codex"]);
+    const hooksPath = writeCodexHooks();
+    const foreignTrusted = `[hooks.state."${hooksPath}:pre_tool_use:0:0"]\ntrusted_hash = "sha256:abc"\n`;
+    const pluginTrusted = `[hooks.state."emet@emet-marketplace:./codex/hooks.json:pre_tool_use:1:0"]\ntrusted_hash = "sha256:abc"\n`;
+    expect(findStandaloneCodexTrustWarnings(home, foreignTrusted)[0]).toContain("/hooks");
+    expect(findStandaloneCodexTrustWarnings(home, pluginTrusted)[0]).toContain("/hooks");
+  });
+
+  test("the Codex trust check reads hooks.json from the given Codex home", () => {
+    writeInstallState(["claude", "codex"]);
+    const hooksPath = writeCodexHooks();
+    expect(findStandaloneCodexTrustWarnings(home, null, path.join(home, "elsewhere"))).toEqual([]);
+    expect(findStandaloneCodexTrustWarnings(home, null, path.dirname(hooksPath))).toHaveLength(1);
   });
 
   test("the Codex trust check is silent when the install does not cover Codex", () => {
@@ -1418,15 +1467,22 @@ describe("standalone install findings", () => {
   test("a staged update prints how to apply it", () => {
     writeInstallState(["claude"]);
     writeHomeFile(".local/share/emet/pending-update.json", JSON.stringify({ version: "1.2.3" }));
-    const [warning] = findUpdateWarnings(home, stateDirectory);
+    const [warning] = findUpdateWarnings(home, stateDirectory, {});
     expect(warning).toContain("1.2.3");
     expect(warning).toContain("emet self update");
+  });
+
+  test("EMET_AUTO_UPDATE=0 reports auto-update as off", () => {
+    writeInstallState(["claude"]);
+    const [warning] = findUpdateWarnings(home, stateDirectory, { EMET_AUTO_UPDATE: "0" });
+    expect(warning).toContain("auto-update is off");
+    expect(warning).toContain("EMET_AUTO_UPDATE=0");
   });
 
   test("auto-update off prints how to turn it on", () => {
     writeInstallState(["claude"]);
     writeFileSync(path.join(stateDirectory, "self-update.json"), JSON.stringify({ auto: "off" }));
-    const [warning] = findUpdateWarnings(home, stateDirectory);
+    const [warning] = findUpdateWarnings(home, stateDirectory, {});
     expect(warning).toContain("emet self update --auto on");
   });
 });

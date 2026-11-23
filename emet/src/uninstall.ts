@@ -68,9 +68,6 @@ export interface UninstallOptions {
   json: boolean;
 }
 
-/** Matches a hook command that runs `emet guard`, bare or through any path to the binary. */
-export const GUARD_COMMAND_PATTERN = /^(\S*\/)?emet guard( |$)/;
-
 const SHIM_RELATIVE_PATH = ".local/bin/emet";
 const PLUGIN_UNINSTALL_COMMAND = "claude plugin uninstall emet@emet-marketplace";
 const CODEX_UNINSTALL_COMMAND = "codex plugin remove emet@emet-marketplace";

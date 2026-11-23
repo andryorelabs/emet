@@ -14,7 +14,7 @@
 | Review, `high` tier (risky paths or sinks)     | Opus                   | `medium` by default | `models.reviewer.high`                      |
 | CI-log triage (Phase 8)                        | Haiku                  | —                   | `models.triage`                             |
 
-On Claude Code, the two agent definitions (installed by `install.sh` to `~/.claude/agents/`) pin their own `model`/`effort` in frontmatter, so the coordinator's own model/effort choice never leaks into a worker or the reviewer. `emet doctor` reports (never blocks on) either file going missing. `emet preflight` does block dispatch when `emet-worker` or `emet-reviewer` is missing, because Phase 6 and Phase 8 dispatch by `subagent_type`.
+On Claude Code, the two agent definitions (installed by `emet self install` to `~/.claude/agents/`) pin their own `model`/`effort` in frontmatter, so the coordinator's own model/effort choice never leaks into a worker or the reviewer. `emet doctor` reports (never blocks on) either file going missing. `emet preflight` does block dispatch when `emet-worker` or `emet-reviewer` is missing, because Phase 6 and Phase 8 dispatch by `subagent_type`.
 
 ## Risk-tier routing
 
