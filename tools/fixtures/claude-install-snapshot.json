@@ -39,8 +39,8 @@
     ".claude/emet/templates/triage-labels-local.md.tpl",
     ".claude/emet/tsconfig.json",
     ".claude/settings.json",
-    ".claude/settings.json.pre-emet-guard-backup.<timestamp>",
-    ".local/bin/emet"
+    ".local/bin/emet",
+    ".local/share/emet/install.json"
   ],
   "promptSha256": {
     ".claude/agents/emet-reviewer.md": "11e9504d7147f38980d54e8bc42e74c3bd5f21d6110279ad1c19dc3f76c20a6e",
@@ -52,7 +52,7 @@
     ".claude/emet/reference/incidents.md": "6437b96cd07e41709f425fa4fa9418e2e45311daea956ccd9159e4816f9d09fa",
     ".claude/emet/reference/living-specs.md": "ed7492a04f837c225eb556c13369f8a984d8730f29140f883f9f6f292856e56f",
     ".claude/emet/reference/phases-1-5.md": "75d0618bcc3c688dc9e0606e74612abee1e2ce262205e6ca9b8632077744d7fc",
-    ".claude/emet/reference/phases-6-7-dispatch.md": "474f0ef5c09578929fc75d37c99e49a9e17cae2f14c22ea0f3bfe2962608154d",
+    ".claude/emet/reference/phases-6-7-dispatch.md": "a1d7998344d711bb31698460a879d96785c5df66871a13cf655c652a150eaeaa",
     ".claude/emet/reference/phases-8-landing.md": "d486d4b561744727be44d8dadd8ccc2c1e02992a861a6226368a26c28a2ea88d",
     ".claude/emet/reference/phases-8-review.md": "2e58944f501a99f37595eb606b1c9053aefec2ae6f3915102a5446ba08307e34",
     ".claude/emet/reference/phases-8-spec-landing.md": "daa8f10a50bdcaefd0c42887518afaf57bd755ff466a0ef1d8ddae8db182bd59",
