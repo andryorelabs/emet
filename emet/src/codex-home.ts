@@ -12,6 +12,7 @@ import path from "node:path";
 
 import { readEnv } from "./env";
 import { isObject } from "./narrow";
+import { readInstallState } from "./self-install";
 
 /**
  * The execpolicy rules of a worker run (`unverified` location, see
@@ -149,6 +150,8 @@ interface RunHomeOptions {
   readonly run: string;
   readonly repoRoot: string;
   readonly sourceHome?: string;
+  /** The home directory the install state file is read from; defaults to the real one. */
+  readonly home?: string;
   readonly trustedDirectories?: readonly string[];
   readonly model?: string;
   readonly effort?: string;
@@ -184,7 +187,8 @@ export function buildRunHome(opts: RunHomeOptions): { codexHome: string } {
   }
   const configPath = path.join(codexHome, "config.toml");
   clearPath(configPath);
-  const marketplacePath = sourceMarketplacePath(source);
+  const standalone = readInstallState(opts.home ?? homedir()) !== null;
+  const marketplacePath = standalone ? undefined : sourceMarketplacePath(source);
   writeFileSync(
     configPath,
     renderOverlayConfig({
