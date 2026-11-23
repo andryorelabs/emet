@@ -8,6 +8,17 @@ and this project adheres to
 
 ## [Unreleased]
 
+## [0.21.0] - 2026-11-23
+
+### Added
+
+- `emet setup --dry-run` (combinable with `--with`, `--yes` and `--json`) prints each chosen item's planned steps, or `already-present`, and changes nothing: it runs no command and writes no file or ledger entry.
+- `emet setup` records every item that ends `installed` in the Setup ledger, `setup-ledger.json` in the state directory, with the undo records needed to revert it. Ledger writes are atomic, and a malformed ledger is an error naming its path.
+- `emet setup --restore <id>` reverts `claude-settings` (the previous `model` and the deny rules emet added, after a timestamped backup) or `firecrawl-local` (the previous user-scope MCP entry). Any other id exits 2, and an id with no ledger entry exits 1.
+- `emet uninstall [--dry-run] [--yes] [--purge] [--json]` removes an `install.sh` install: manifest files whose hash still matches, the shim, every `emet guard` hook in `~/.claude/settings.json` (after a timestamped backup), and the Setup ledger's extras. Edited files are kept and listed. For brew, bun and cargo globals it prints the removal command and never runs it.
+- `./install.sh --uninstall [flags]` runs `emet uninstall`.
+- `docs/reference/cli.md` and `README.md` document the Setup ledger, `--dry-run`, `--restore` and `emet uninstall`, in all nine locales.
+
 ## [0.20.0] - 2026-11-22
 
 ### Added
@@ -611,7 +622,8 @@ and this project adheres to
 - Per-repo configuration through `forge.config.json`.
 - `install.sh`, which installs the CLI, command and agents.
 
-[Unreleased]: https://github.com/andryorelabs/emet/compare/v0.20.0...HEAD
+[Unreleased]: https://github.com/andryorelabs/emet/compare/v0.21.0...HEAD
+[0.21.0]: https://github.com/andryorelabs/emet/compare/v0.20.0...v0.21.0
 [0.20.0]: https://github.com/andryorelabs/emet/compare/v0.19.0...v0.20.0
 [0.19.0]: https://github.com/andryorelabs/emet/compare/v0.18.0...v0.19.0
 [0.18.0]: https://github.com/andryorelabs/emet/compare/v0.17.0...v0.18.0
