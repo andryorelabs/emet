@@ -5,6 +5,7 @@ Spec: draft #799
 
 Amends [0031](0031-after-spec-step-and-optional-setup.md) with a preview, a **Setup ledger** and an **Uninstall**.
 Amends [0001](0001-root-dev-tooling-package-separate-from-runtime.md) with one `install.sh` flag.
+Amended by [0044](0044-standalone-install-without-plugins.md): hook definitions ship inside the binary and `install.sh` is removed.
 
 ## Context
 
