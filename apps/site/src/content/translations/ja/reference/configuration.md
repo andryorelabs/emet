@@ -2,7 +2,7 @@
 title: 設定リファレンス
 description: emet.config.json のすべてのキーについて、既定値と意味を説明します。
 seoTitle: emet の設定リファレンス
-sourceHash: a9aeca59a8d1f719
+sourceHash: e6fb30702c28d97e
 ---
 
 `emet.config.json` のすべてのキーを、既定値と意味とともに示します。信頼できる情報源は [`emet/schema/emet.config.schema.json`](../../emet/schema/emet.config.schema.json) です。用語は [GLOSSARY.md](../../GLOSSARY.md) に従います。[README](../../README.md) に戻る。
@@ -345,6 +345,8 @@ CLI はこれらの変数を、すべて `emet/src/env.ts` 経由で読み取り
 | `EMET_MEM_RESERVE_GIB`        | `FORGE_MEM_RESERVE_GIB`        | ワーカースロットを付与する前に空けておくメモリの GiB 数です。                                                                                         |
 | `EMET_MEM_PER_WORKER_GIB`     | `FORGE_MEM_PER_WORKER_GIB`     | 自動ワーカー上限がワーカー 1 つあたりに見込むメモリの GiB 数です。                                                                                    |
 | `EMET_AGENT_HOST`             |                                | Codex エージェントホストで実行している場合は `codex` に設定します。それ以外の値は Claude を意味します。                                               |
+| `EMET_AUTO_UPDATE`            |                                | スタンドアロンインストールで `emet self update --auto` を無効にするには `0` に設定します。                                                            |
+| `EMET_RELEASE_BASE_URL`       |                                | `emet self update` のダウンロード元ルート。アセットは `<root>/vX.Y.Z` または `<root>/latest` から読み込まれます。                                     |
 | `CODEX_HOME`                  |                                | Codex のホームディレクトリで、既定は `~/.codex` です。読み取りのみ行われます。                                                                        |
 | `XDG_STATE_HOME`              |                                | `EMET_STATE_DIR` が未設定のときの、状態ディレクトリの基準です。                                                                                       |
 | `NO_COLOR`                    |                                | 設定すると、バナーが色なしで出力されます。                                                                                                            |

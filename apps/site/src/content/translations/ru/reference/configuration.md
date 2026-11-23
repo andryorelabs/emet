@@ -2,7 +2,7 @@
 title: Справочник по конфигурации
 description: Каждый ключ emet.config.json со значением по умолчанию и смыслом.
 seoTitle: Справочник по конфигурации emet
-sourceHash: a9aeca59a8d1f719
+sourceHash: e6fb30702c28d97e
 ---
 
 Каждый ключ `emet.config.json` со значением по умолчанию и смыслом. Источник истины — [`emet/schema/emet.config.schema.json`](../../emet/schema/emet.config.schema.json). Термины соответствуют [GLOSSARY.md](../../GLOSSARY.md). Назад к [README](../../README.md).
@@ -347,6 +347,8 @@ CLI читает эти переменные, все через `emet/src/env.ts
 | `EMET_MEM_RESERVE_GIB`        | `FORGE_MEM_RESERVE_GIB`        | Сколько ГиБ памяти остаётся свободными до выдачи слота воркера.                                                                                         |
 | `EMET_MEM_PER_WORKER_GIB`     | `FORGE_MEM_PER_WORKER_GIB`     | Сколько ГиБ памяти автоматическое ограничение числа воркеров закладывает на одного воркера.                                                             |
 | `EMET_AGENT_HOST`             |                                | Задайте `codex` при работе под агентным хостом Codex; любое другое значение означает Claude.                                                            |
+| `EMET_AUTO_UPDATE`            |                                | Задайте `0`, чтобы отключить `emet self update --auto` для автономной установки.                                                                        |
+| `EMET_RELEASE_BASE_URL`       |                                | Корень загрузки для `emet self update`: ресурсы читаются из `<root>/vX.Y.Z` или `<root>/latest`.                                                        |
 | `CODEX_HOME`                  |                                | Домашний каталог Codex; по умолчанию `~/.codex`. Только читается.                                                                                       |
 | `XDG_STATE_HOME`              |                                | Основа каталога состояния, когда `EMET_STATE_DIR` не задана.                                                                                            |
 | `NO_COLOR`                    |                                | Если задана, баннер выводится без цвета.                                                                                                                |

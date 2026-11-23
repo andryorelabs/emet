@@ -2,7 +2,7 @@
 title: 설정 레퍼런스
 description: emet.config.json의 모든 키를 기본값과 의미와 함께 설명합니다.
 seoTitle: emet 설정 레퍼런스
-sourceHash: a9aeca59a8d1f719
+sourceHash: e6fb30702c28d97e
 ---
 
 `emet.config.json`의 모든 키를 기본값과 의미와 함께 정리했습니다. 기준이 되는 원본은 [`emet/schema/emet.config.schema.json`](../../emet/schema/emet.config.schema.json)입니다. 용어는 [GLOSSARY.md](../../GLOSSARY.md)를 따릅니다. [README](../../README.md)로 돌아가기.
@@ -345,6 +345,8 @@ CLI는 이 변수들을 모두 `emet/src/env.ts`를 통해 읽습니다. `FORGE_
 | `EMET_MEM_RESERVE_GIB`        | `FORGE_MEM_RESERVE_GIB`        | 워커 슬롯을 부여하기 전에 비워 두는 메모리의 GiB 수입니다.                                                                                       |
 | `EMET_MEM_PER_WORKER_GIB`     | `FORGE_MEM_PER_WORKER_GIB`     | 자동 워커 상한이 워커 하나당 가정하는 메모리의 GiB 수입니다.                                                                                     |
 | `EMET_AGENT_HOST`             |                                | Codex 에이전트 호스트에서 실행할 때 `codex`로 설정합니다. 그 외의 값은 Claude를 의미합니다.                                                      |
+| `EMET_AUTO_UPDATE`            |                                | 독립 실행형 설치에서 `emet self update --auto`를 끄려면 `0`으로 설정합니다.                                                                      |
+| `EMET_RELEASE_BASE_URL`       |                                | `emet self update`의 다운로드 루트. 에셋은 `<root>/vX.Y.Z` 또는 `<root>/latest`에서 읽습니다.                                                    |
 | `CODEX_HOME`                  |                                | Codex 홈 디렉터리이며 기본값은 `~/.codex`입니다. 읽기만 합니다.                                                                                  |
 | `XDG_STATE_HOME`              |                                | `EMET_STATE_DIR`가 설정되지 않았을 때 상태 디렉터리의 기준입니다.                                                                                |
 | `NO_COLOR`                    |                                | 설정하면 배너를 색 없이 출력합니다.                                                                                                              |
