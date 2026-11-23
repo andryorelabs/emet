@@ -2,7 +2,7 @@
 title: 依赖
 description: emet 在机器上需要什么，以及用哪个命令检查每一项。
 seoTitle: emet 依赖
-sourceHash: 1c97a7ccd5572ab4
+sourceHash: 54f288bd696fe862
 ---
 
 emet 在机器上需要什么，以及用哪个命令检查每一项。术语遵循 [GLOSSARY.md](../../GLOSSARY.md)。返回 [README](../../README.md)。
@@ -12,7 +12,7 @@ emet 在机器上需要什么，以及用哪个命令检查每一项。术语遵
 先列出两种代理宿主共有的，再列出每种宿主额外需要的。
 
 - **[bun](https://bun.sh)**：仅源码安装需要。独立二进制文件不需要运行时。
-- **`rsync`** 以及 **`sha256sum` 或 `shasum`**：`install.sh` 需要。
+- **`sha256sum` 或 `shasum`**：`install.sh` 发布资产（`curl -fsSL https://emet.andryore.dev/install.sh | sh`）用它来验证下载。`emet self install` 本身两者都不需要。
 - **`git`**：运行时必需。几乎每个子命令都会调用它。
 - **已认证的 `gh` CLI**：当跟踪器是 `github` 或落地方式是 `pr` 时必需。PR 始终使用它。如果 `tracker.kind: "local"` 且 `landing.mode: "merge"`，则不需要 `gh`。
 - **`mattpocock-skills` 插件**：访谈、规格和工单阶段会调用其中的技能。在 Claude Code 上它来自 `claude-plugins-official` 市场；Codex 参见 [Codex 宿主](#codex-宿主)。
@@ -23,7 +23,7 @@ emet 在机器上需要什么，以及用哪个命令检查每一项。术语遵
   ```
 
 - **`claude` CLI 和 emet 插件命令**（`/emet:run`、`/emet:init`、`/emet:doctor`）：仅限 Claude Code 宿主。
-- **`~/.claude/agents/` 中的 `emet-worker` 和 `emet-reviewer` 代理**：仅限 Claude Code 宿主，由 `install.sh` 安装。阶段 6 和阶段 8 通过 `subagent_type` 进行派发，因此缺少任何一个都会导致派发失败。参见[模型与推理强度](../../README.md#models--effort)。
+- **`~/.claude/agents/` 中的 `emet-worker` 和 `emet-reviewer` 代理**：仅限 Claude Code 宿主，由 `emet self install` 安装。阶段 6 和阶段 8 通过 `subagent_type` 进行派发，因此缺少任何一个都会导致派发失败。参见[模型与推理强度](../../README.md#models--effort)。
 - **在 `.mcp.json`（或用户范围）中声明的 Linear MCP 服务器**：仅当仓库使用 `linear` 跟踪器时需要。emet 会验证该声明。连接是否已认证存放在代理宿主自己的凭据存储中，无法在这里检查。在 Claude Code 上，如果运行时读取工单失败，请重启 Claude Code 并批准该连接。Codex 上的对应步骤尚未验证。
 
 以上任何一项都不会替你安装或登录。区别在于由谁检查，以及检查的严格程度。

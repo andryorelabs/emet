@@ -2,7 +2,7 @@
 title: Codex에서 emet 실행하기
 description: Codex CLI 쪽 설치, 에이전트 호스트 선택, 단일 승인, 알려진 한계를 설명합니다.
 seoTitle: Codex에서 emet 실행하기
-sourceHash: 8aed8797d3451a66
+sourceHash: 73105866204493fa
 ---
 
 emet은 Claude Code뿐 아니라 Codex CLI에서도 실행할 수 있습니다. 용어는 [GLOSSARY.md](../../GLOSSARY.md)를 따르며, 실행이 동작하는 제품을 **에이전트 호스트**라고 부릅니다. 이 페이지는 Codex 쪽 설치, 호스트 선택, 단일 승인, 알려진 한계를 다룹니다. [문서 색인](../README.md)으로 돌아갑니다.
@@ -21,18 +21,31 @@ Codex 호스트에서도 파이프라인은 같습니다. 인터뷰, 스펙, 티
    codex plugin add mattpocock-skills@mattpocock
    ```
 
-3. emet 플러그인을 설치합니다. 저장소에는 `.codex-plugin/plugin.json`과 `codex/` 아래에 생성된 스킬 및 훅이 들어 있습니다.
+3. 독립 실행형 설치로 emet을 설치합니다. emet 스킬을 `~/.agents/skills/emet/` 아래에 쓰고 emet 훅을 `$CODEX_HOME/hooks.json`(기본값 `~/.codex`)에 추가하며, `config.toml`은 절대 쓰지 않습니다.
 
    ```bash
-   codex plugin marketplace add andryorelabs/emet
-   codex plugin add emet@emet-marketplace
+   curl -fsSL https://emet.andryore.dev/install.sh | sh
    ```
 
-4. [시작하기](getting-started.md)에 설명된 대로 `emet` CLI를 설치한 다음 `emet doctor .`를 실행합니다. `install.sh`는 `~/.claude` 아래에 Claude Code 명령과 에이전트도 설치하지만 Codex에서는 무해하며, `emet doctor`는 Codex 플러그인과 `install.sh`를 함께 쓰는 경우에 경고하지 않습니다. Codex 호스트에서는 `codex.minVersion`보다 오래된 `codex`, `codex exec`에서 빠진 `--json` 또는 `--output-schema` 플래그, 그리고 빠진 `mattpocock-skills`(위의 두 명령을 안내)를 보고합니다.
+   쓰기를 미리 보려면 `sh` 뒤에 `-s -- --dry-run`을 추가하세요. 터미널용 `emet`과 `~/.claude` 아래의 Claude Code 명령 및 에이전트도 함께 설치하지만 Codex에서는 무해합니다.
+
+4. 훅을 신뢰합니다. Codex는 훅을 신뢰하기 전에는 실행하지 않습니다. `/hooks`를 열고 이벤트 페이지에서 `t`를 누르거나, 시작 시 "Hooks need review" 프롬프트를 승인하세요.
+5. `emet doctor .`를 실행합니다. Codex 호스트에서는 `codex.minVersion`보다 오래된 `codex`, `codex exec`에서 빠진 `--json` 또는 `--output-schema` 플래그, 신뢰하지 않은 훅, 그리고 빠진 `mattpocock-skills`(위의 두 명령을 안내)를 보고합니다.
 
 :::
 
-3단계의 두 플러그인 명령은 실제 `codex`(0.167.0)에 대해 실행되었습니다. 새 `CODEX_HOME`에서 종료 코드 0으로 끝나며, `codex plugin list`에 `emet@emet-marketplace installed, enabled`가 표시됩니다. 로컬 경로 형식인 `codex plugin marketplace add <repo>`도 같은 결과를 냅니다.
+### 선택 사항: Codex 플러그인
+
+독립 실행형 설치 대신 emet 플러그인을 설치할 수 있습니다. 저장소에는 `.codex-plugin/plugin.json`과 `codex/` 아래에 생성된 스킬 및 훅이 들어 있습니다.
+
+```bash
+codex plugin marketplace add andryorelabs/emet
+codex plugin add emet@emet-marketplace
+```
+
+플러그인에는 `emet` 심이 없으므로 터미널의 `emet`에는 여전히 독립 실행형 설치가 필요합니다. 플러그인이 설치되어 있는 동안 `emet self install`은 `--force`를 주지 않으면 거부하며, 둘이 공존하면 `emet doctor`가 경고합니다.
+
+위의 두 플러그인 명령은 실제 `codex`(0.167.0)에 대해 실행되었습니다. 새 `CODEX_HOME`에서 종료 코드 0으로 끝나며, `codex plugin list`에 `emet@emet-marketplace installed, enabled`가 표시됩니다. 로컬 경로 형식인 `codex plugin marketplace add <repo>`도 같은 결과를 냅니다.
 
 ## 에이전트 호스트 선택
 
@@ -56,7 +69,7 @@ emet은 계획 이후 단 한 번만 승인을 요청합니다. Claude Code에�
 
 ## emet 업데이트 후
 
-Codex는 플러그인을 업데이트할 때마다 emet 플러그인 hook을 다시 신뢰할지 묻습니다. 플러그인의 콘텐츠 해시가 바뀌기 때문입니다. 신뢰하려면 `/hooks`를 실행하고 이벤트 페이지에서 `t`를 눌러 모두 신뢰하거나, 시작 시 "Hooks need review" 프롬프트를 승인하세요. 그때까지는 emet guard와 단일 승인이 실행되지 않습니다.
+독립 실행형 설치에서는 훅이 `hooks.json`의 일반 항목이므로 설치 단계에서처럼 `/hooks`로 한 번만 신뢰하면 됩니다. 플러그인을 쓰면 Codex는 플러그인을 업데이트할 때마다 emet 플러그인 hook을 다시 신뢰할지 묻습니다. 플러그인의 콘텐츠 해시가 바뀌기 때문입니다. 신뢰하려면 `/hooks`를 실행하고 이벤트 페이지에서 `t`를 눌러 모두 신뢰하거나, 시작 시 "Hooks need review" 프롬프트를 승인하세요. 그때까지는 emet guard와 단일 승인이 실행되지 않습니다.
 
 `emet doctor`는 hook을 한 번도 신뢰하지 않았을 때 경고합니다.
 
@@ -69,7 +82,7 @@ Codex는 플러그인을 업데이트할 때마다 emet 플러그인 hook을 다
 ## 웨이브가 실행되는 방식
 
 - `emet dispatch --role worker`는 클레임과 슬롯을 확인하고, `.emet/worktrees/agent-<ticket>`을 만들고, `.emet/runs/<run>/codex-home/` 아래에 실행별 `CODEX_HOME` 오버레이를 구성합니다. 그런 다음 확정된 모델과 추론 강도, `codex.sandbox` 모드(기본값 `danger-full-access`), `--json`, `--output-schema`와 함께 `codex exec`를 시작합니다. 이벤트는 `.emet/runs/<run>/codex/<ticket>.jsonl`에 기록됩니다. 워커는 `thread.started` 이벤트의 `threadId`와 그 JSONL 경로로 식별되며, 프로세스 ID는 보조 필드일 뿐입니다.
-- 오버레이는 링크가 아니라 생성됩니다. `auth.json`은 심볼릭 링크로 연결되고(복사되지 않습니다), emet 플러그인 캐시는 Codex 홈에 있으면 거기서 링크되며, 오버레이는 자체 최소 `config.toml`을 씁니다. 내용은 로컬 마켓플레이스와 `[plugins."emet@emet-marketplace"] enabled = true`, 그 실행 자체의 디렉터리에 대해서만 만드는 `trusted` `[projects."<dir>"]` 테이블, 확정된 `model`과 `model_reasoning_effort`입니다. 사용자의 `[projects]` 테이블이나 다른 설정은 복사되지 않으며, `~/.codex`에는 절대 쓰지 않습니다.
+- 오버레이에는 두 가지 모드가 있습니다. 독립 실행형 설치 상태 파일이 있으면 오버레이의 `config.toml`은 emet 플러그인과 마켓플레이스 테이블을 생략하고, 워커는 `~/.agents/skills`의 emet 스킬을 그대로 봅니다. 플러그인 모드에서는 다음에 설명하는 대로 이들을 유지합니다. 오버레이는 링크가 아니라 생성됩니다. `auth.json`은 심볼릭 링크로 연결되고(복사되지 않습니다), emet 플러그인 캐시는 Codex 홈에 있으면 거기서 링크되며, 오버레이는 자체 최소 `config.toml`을 씁니다. 내용은 로컬 마켓플레이스와 `[plugins."emet@emet-marketplace"] enabled = true`, 그 실행 자체의 디렉터리에 대해서만 만드는 `trusted` `[projects."<dir>"]` 테이블, 확정된 `model`과 `model_reasoning_effort`입니다. 사용자의 `[projects]` 테이블이나 다른 설정은 복사되지 않으며, `~/.codex`에는 절대 쓰지 않습니다.
 - 오버레이의 `rules/default.rules`는 `git add`, `git commit`, `git status`, `git worktree`, `git -C <dir> ...`, 그리고 `emet` 하위 명령 `dispatch`, `review-run`, `launch`, `claims`, `slots`, `results`, `handoff`, `ask`를 허용하고 `git push`를 금지합니다. 기본 샌드박스가 더 이상 쓰기를 막지 않으므로, `emet guard`도 argv가 `git push`를 실행하는 `Bash` 명령을 `git -C <dir> push`와 `git --git-dir=<dir> push`를 포함해 샌드박스와 상관없이 거부합니다.
 - 워커는 코디네이터와 별도의 사이드 채널을 갖지 않습니다. 실행별 메일박스를 통해 에스컬레이션합니다. `emet ask --run <run> --ticket <ticket> --body <text>`는 질문을 기록하고 그 id를 출력하며, `emet ask ... --wait <n>`은 답변을 폴링합니다(종료 코드 0은 답변을 출력하고, 3은 대기 구간이 지났다는 뜻이며, 4는 `budgets.askWaitMinutes`를 모두 썼다는 뜻이므로 워커는 BLOCKED 결과를 쓰고 종료합니다). 살아 있는 워커에게 열린 질문이 있는 동안 `emet dispatch --wait`는 결과 상태 대신 `question <ticket> <id>`를 출력하고 그 워커를 정체된 것으로 분류하지 않습니다. 코디네이터는 `emet inbox --run <run>`을 읽고 `emet reply --run <run> --ticket <ticket> --id <n> --body <text>`로 답한 뒤 `emet dispatch --wait`를 재개합니다. 기록된 결과는 항상 열린 질문보다 우선합니다. [ADR-0023](../adr/0023-cli-owned-mailbox-for-codex-workers.md)을 참고하세요.
 - 결과는 `emet results --write`가 쓰는 곳과 같은 `<git-common-dir>/.emet/runs/<run>/results/`에서 읽으므로, 자체 worktree에 있는 워커도 찾을 수 있습니다.
