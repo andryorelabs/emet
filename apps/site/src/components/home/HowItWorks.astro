@@ -29,11 +29,7 @@ const codexCommands = [
   "codex plugin marketplace add andryorelabs/emet",
   "codex plugin add emet@emet-marketplace",
 ].join("\n");
-const cloneCommands = [
-  "git clone git@github.com:andryorelabs/emet.git",
-  "cd emet",
-  "./install.sh",
-].join("\n");
+const standaloneCommand = "curl -fsSL https://emet.andryore.dev/install.sh | sh";
 
 const banner = [
   "emet  plugin for Claude Code and Codex",
@@ -71,12 +67,12 @@ const waveTwoTickets = [
       <h3>{how.install}</h3>
       <p class="io">{how.youType}</p>
       <CodeBlock
-        code={claudeCommands}
+        code={standaloneCommand}
         lang="bash"
         tabs={[
-          { label: "Claude Code", code: claudeCommands },
-          { label: "Codex", code: codexCommands },
-          { label: how.tabClone, code: cloneCommands },
+          { label: "Terminal", code: standaloneCommand },
+          { label: "Claude Code plugin", code: claudeCommands },
+          { label: "Codex plugin", code: codexCommands },
         ]}
       />
       <p class="io">{how.emetReplies}</p>
