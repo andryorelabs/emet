@@ -322,8 +322,8 @@ describe("runSelf", () => {
   });
 
   test("update hands off to the updater", async () => {
-    expect(await runSelf(["update", "latest"], deps())).toBe(1);
-    expect(errors.join("\n")).toContain("emet self update latest");
+    expect(await runSelf(["update", "latest"], deps())).toBe(0);
+    expect(output.join("\n")).toContain("not a standalone install");
   });
 
   test("an unknown or missing subcommand prints usage", async () => {

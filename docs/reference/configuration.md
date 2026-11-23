@@ -340,6 +340,8 @@ The CLI reads these variables, all through `emet/src/env.ts`. A variable with a 
 | `EMET_MEM_RESERVE_GIB`        | `FORGE_MEM_RESERVE_GIB`        | GiB of memory kept free before a worker slot is granted.                                                             |
 | `EMET_MEM_PER_WORKER_GIB`     | `FORGE_MEM_PER_WORKER_GIB`     | GiB of memory assumed per worker by the automatic worker cap.                                                        |
 | `EMET_AGENT_HOST`             |                                | Set to `codex` when running under the Codex Agent host; anything else means Claude.                                  |
+| `EMET_AUTO_UPDATE`            |                                | Set to `0` to turn `emet self update --auto` off for a standalone install.                                           |
+| `EMET_RELEASE_BASE_URL`       |                                | Download root for `emet self update`: assets are read from `<root>/vX.Y.Z` or `<root>/latest`.                       |
 | `CODEX_HOME`                  |                                | The Codex home directory; defaults to `~/.codex`. Only ever read.                                                    |
 | `XDG_STATE_HOME`              |                                | Base for the state directory when `EMET_STATE_DIR` is unset.                                                         |
 | `NO_COLOR`                    |                                | When set, the banner is printed without color.                                                                       |

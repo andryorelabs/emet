@@ -121,6 +121,7 @@ describe("installClaudeHost settings.json hooks", () => {
     expect(commandsOf(settings, "SessionStart")).toEqual([
       `${bin} setup --notice`,
       `${bin} whats-new --hook`,
+      `${bin} self update --auto`,
     ]);
     expect(result.writes).toContain(settingsPath());
     expect(backups()).toEqual([]);
@@ -251,10 +252,16 @@ describe("installClaudeHost settings.json hooks", () => {
     expect(statSync(realPath).mode & 0o777).toBe(0o600);
   });
 
-  test("a tree without hooks/hooks.json leaves settings.json alone", () => {
+  test("a tree without hooks/hooks.json writes only the standalone auto-update hook", () => {
     const tree = { list: () => [], read: (file: string): string => file };
     const result = installClaudeHost(context({ tree }));
-    expect(existsSync(settingsPath())).toBe(false);
-    expect(result.writes).toEqual([path.join(home, ".claude/emet/.install-manifest.json")]);
+    const bin = `"${path.join(home, ".local/bin/emet")}"`;
+    expect(hooksOf(readSettings())).toEqual({
+      SessionStart: [{ hooks: [{ type: "command", command: `${bin} self update --auto` }] }],
+    });
+    expect(result.writes).toEqual([
+      path.join(home, ".claude/emet/.install-manifest.json"),
+      settingsPath(),
+    ]);
   });
 });
