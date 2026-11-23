@@ -244,10 +244,14 @@ jobs:
         with:
           name: release-build
 
+      - name: Stage the install script
+        run: |
+          cp scripts/install-remote.sh dist/install.sh
+
       - name: Write SHA256SUMS
         working-directory: dist
         run: |
-          sha256sum emet-linux-x64 emet-linux-arm64 emet-darwin-x64 emet-darwin-arm64 > SHA256SUMS
+          sha256sum emet-linux-x64 emet-linux-arm64 emet-darwin-x64 emet-darwin-arm64 install.sh > SHA256SUMS
 
       - name: Write checksums to the job summary
         run: |
@@ -278,6 +282,7 @@ jobs:
             dist/emet-linux-arm64
             dist/emet-darwin-x64
             dist/emet-darwin-arm64
+            dist/install.sh
 
       - name: Publish GitHub Release
         env:
@@ -306,6 +311,7 @@ jobs:
             dist/emet-linux-arm64 \
             dist/emet-darwin-x64 \
             dist/emet-darwin-arm64 \
+            dist/install.sh \
             dist/SHA256SUMS \
             dist/emet.cdx.json \
             "${provenance_assets[@]}"

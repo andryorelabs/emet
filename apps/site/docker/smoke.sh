@@ -60,6 +60,9 @@ for pair in "/es:/es/" "/docs:/docs/" "/docs/:/docs/guide/getting-started/" "/es
   [ "$(location "$base$from")" = "$to" ] || fail "$from does not redirect to $to"
 done
 [ "$(location "$base/es?a=1")" = "/es/?a=1" ] || fail "the trailing-slash redirect drops the query string"
+install_script_url="https://github.com/andryorelabs/emet/releases/latest/download/install.sh"
+[ "$(status "$base/install.sh")" = 302 ] || fail "/install.sh is not 302"
+[ "$(location "$base/install.sh")" = "$install_script_url" ] || fail "/install.sh does not redirect to $install_script_url"
 
 headers="$(curl -s -o /dev/null -D - "$base/" | tr -d '\r')"
 for header in content-security-policy x-content-type-options referrer-policy permissions-policy \
