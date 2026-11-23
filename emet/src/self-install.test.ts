@@ -121,6 +121,23 @@ describe("selfInstall", () => {
     expect(errors).toEqual([]);
   });
 
+  test("writes nothing when settings.json is invalid JSON", async () => {
+    mkdirSync(path.join(home, ".claude"), { recursive: true });
+    const settingsPath = path.join(home, ".claude/settings.json");
+    writeFileSync(settingsPath, "{ broken");
+
+    const failure = await install().then(
+      () => undefined,
+      (error: unknown) => error,
+    );
+
+    expect(String(failure)).toContain("settings.json");
+
+    expect(readFileSync(settingsPath, "utf8")).toBe("{ broken");
+    expect(existsSync(shimPath())).toBe(false);
+    expect(existsSync(path.join(home, ".local/share"))).toBe(false);
+  });
+
   test("a second run changes nothing", async () => {
     expect(await install()).toBe(0);
     const before = snapshotTree(home);

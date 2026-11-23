@@ -315,6 +315,15 @@ export async function selfInstall(options: SelfInstallOptions, deps: SelfDeps): 
   const copyBinary = !sameBytes(deps.executablePath, layout.binary);
   const repointShim = !shimIsCurrent(layout);
   if (!options.dryRun) {
+    runHosts({
+      home: deps.home,
+      emetBin: layout.shim,
+      tree: deps.tree(),
+      dryRun: true,
+      force: options.force,
+      now: deps.now,
+      log: () => undefined,
+    });
     if (copyBinary) installBinary(deps.executablePath, layout.binary);
     if (repointShim) linkShim(layout.binary, layout.shim);
   }
