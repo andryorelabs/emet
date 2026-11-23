@@ -3,6 +3,8 @@
 Status: Accepted (2026-11-03)
 Spec: #88
 
+Amended by [0044](0044-standalone-install-without-plugins.md): `install.sh` is replaced by `emet self install`.
+
 ## Context
 
 forge required Bun and a source checkout installed by `install.sh`. Other users should install it as a Claude Code plugin without Bun.
