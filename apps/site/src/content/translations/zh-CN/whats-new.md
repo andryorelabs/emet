@@ -2,8 +2,21 @@
 title: 新功能
 description: emet 的发布说明：每个版本都有哪些变化。
 seoTitle: "emet 新功能：发布说明"
-sourceHash: a4abfa547d27b4af
+sourceHash: 52353f60ae0e5795
 ---
+
+## 0.21.0
+
+2026-11-23
+
+### 新增
+
+- `emet setup --dry-run`（可与 `--with`、`--yes` 和 `--json` 组合）会打印每个所选项目的计划步骤，或 `already-present`，并且不做任何更改：不运行任何命令，也不写入任何文件或台账条目。
+- `emet setup` 会把每个结果为 `installed` 的项目记录到 Setup 台账中，即状态目录里的 `setup-ledger.json`，同时附上还原它所需的撤销记录。台账写入是原子的，格式错误的台账会报错并指出其路径。
+- `emet setup --restore <id>` 会还原 `claude-settings`（之前的 `model` 和 emet 添加的 deny 规则，先做带时间戳的备份）或 `firecrawl-local`（之前的用户级 MCP 条目）。任何其他 id 以退出码 2 退出，没有台账条目的 id 以退出码 1 退出。
+- `emet uninstall [--dry-run] [--yes] [--purge] [--json]` 会移除 `install.sh` 的安装：哈希仍然匹配的清单文件、shim、`~/.claude/settings.json` 中的每个 `emet guard` 钩子（先做带时间戳的备份）以及 Setup 台账中的附加项。被编辑过的文件会保留并列出。对于 brew、bun 和 cargo 的全局安装，它只打印移除命令，从不执行。
+- `./install.sh --uninstall [flags]` 会运行 `emet uninstall`。
+- `docs/reference/cli.md` 和 `README.md` 以全部九种语言记录了 Setup 台账、`--dry-run`、`--restore` 和 `emet uninstall`。
 
 ## 0.20.0
 

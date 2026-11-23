@@ -212,6 +212,14 @@ _Avoid_: avatar
 The `.emet/phase.json` record the CLI writes as a run advances, which the mascot polls to label the current phase.
 _Avoid_: status file, progress file
 
+**Setup ledger**:
+The record, in the state directory, of what `emet setup` changed on this machine and what undoes each change.
+_Avoid_: install log, setup state
+
+**Uninstall**:
+Removing what `install.sh` and `emet setup` added, keeping every file the user edited and every shared global package.
+_Avoid_: cleanup, teardown
+
 ## Relationships
 
 - A **Spec** yields many **Tickets**; each **Ticket** covers one or more numbered requirements of its **Spec**.
@@ -221,6 +229,7 @@ _Avoid_: status file, progress file
 - The **Coordinator** merges **Worker** branches into the **Integration branch**; a **Reviewer** and the **Gates** check it before it lands.
 - The **Gate** answers a wave with merge, **Hold**, **Chain**, **Stop** or defer; a **Hold** over findings leads to a **Fix round**, and a **Hold** over an **Environment fault** never spends a fix attempt.
 - When a spec's last wave has landed, the **After-spec step** is a **Release**, a **Promote** or nothing, chosen per repository; the **Journal** records each step, and a **Baseline** marks where its clean history starts.
+- **Uninstall** reads the install manifest and the **Setup ledger**; `emet setup --restore` reads the ledger alone.
 - A session's **Attention state** is recorded in the **Journal**; a **Run** can span sessions in different attention states.
 - An **After-spec rule** is chosen by the paths a **Promote** would carry; a **Deploy check** runs only after a merge into the branch that deploys.
 - A **Worker** may edit only its ticket's **Surfaces** and must keep its **Handoff** current.

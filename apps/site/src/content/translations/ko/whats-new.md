@@ -2,8 +2,21 @@
 title: 새로운 소식
 description: emet 릴리스 노트. 각 버전에서 무엇이 바뀌었는지 정리합니다.
 seoTitle: "emet 새로운 소식: 릴리스 노트"
-sourceHash: a4abfa547d27b4af
+sourceHash: 52353f60ae0e5795
 ---
+
+## 0.21.0
+
+2026-11-23
+
+### 추가됨
+
+- `emet setup --dry-run`(`--with`, `--yes`, `--json`과 함께 사용 가능)은 선택한 각 항목의 계획 단계 또는 `already-present`를 출력하고 아무것도 변경하지 않습니다. 명령 실행, 파일 쓰기, 원장 항목 쓰기가 모두 없습니다.
+- `emet setup`은 결과가 `installed`인 모든 항목을 상태 디렉터리의 `setup-ledger.json`인 설정 원장에, 되돌리는 데 필요한 실행 취소 기록과 함께 남깁니다. 원장 쓰기는 원자적이며, 형식이 잘못된 원장은 해당 경로를 알려 주는 오류가 됩니다.
+- `emet setup --restore <id>`는 `claude-settings`(이전 `model`과 emet이 추가한 deny 규칙, 타임스탬프 백업을 만든 뒤) 또는 `firecrawl-local`(이전 사용자 범위 MCP 항목)을 되돌립니다. 그 밖의 id는 종료 코드 2로 끝나고, 원장 항목이 없는 id는 종료 코드 1로 끝납니다.
+- `emet uninstall [--dry-run] [--yes] [--purge] [--json]`은 `install.sh` 설치를 제거합니다. 대상은 해시가 아직 일치하는 매니페스트 파일, shim, `~/.claude/settings.json`의 모든 `emet guard` 훅(타임스탬프 백업 후), 그리고 설정 원장의 추가 항목입니다. 편집된 파일은 유지되고 목록으로 표시됩니다. brew, bun, cargo 전역 설치의 경우 제거 명령을 출력할 뿐 실행하지는 않습니다.
+- `./install.sh --uninstall [flags]`는 `emet uninstall`을 실행합니다.
+- `docs/reference/cli.md`와 `README.md`에 설정 원장, `--dry-run`, `--restore`, `emet uninstall`이 9개 로캘 모두에 문서화되었습니다.
 
 ## 0.20.0
 

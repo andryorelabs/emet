@@ -2,8 +2,21 @@
 title: Neuigkeiten
 description: Release Notes für emet: was sich in jeder Version geändert hat.
 seoTitle: "Neuigkeiten in emet: Release Notes"
-sourceHash: a4abfa547d27b4af
+sourceHash: 52353f60ae0e5795
 ---
+
+## 0.21.0
+
+2026-11-23
+
+### Hinzugefügt
+
+- `emet setup --dry-run` (kombinierbar mit `--with`, `--yes` und `--json`) gibt für jedes gewählte Element die geplanten Schritte oder `already-present` aus und ändert nichts: Es führt keinen Befehl aus und schreibt weder eine Datei noch einen Ledger-Eintrag.
+- `emet setup` hält jedes Element, das mit `installed` endet, im Setup-Ledger fest, `setup-ledger.json` im Zustandsverzeichnis, samt den Undo-Einträgen, die zum Zurücksetzen nötig sind. Ledger-Schreibvorgänge sind atomar, und ein fehlerhaftes Ledger ist ein Fehler, der seinen Pfad nennt.
+- `emet setup --restore <id>` setzt `claude-settings` zurück (das vorherige `model` und die von emet hinzugefügten Deny-Regeln, nach einem Backup mit Zeitstempel) oder `firecrawl-local` (den vorherigen MCP-Eintrag im User-Scope). Jede andere ID beendet mit 2, und eine ID ohne Ledger-Eintrag beendet mit 1.
+- `emet uninstall [--dry-run] [--yes] [--purge] [--json]` entfernt eine `install.sh`-Installation: Manifest-Dateien, deren Hash noch passt, den Shim, jeden `emet guard`-Hook in `~/.claude/settings.json` (nach einem Backup mit Zeitstempel) und die Extras des Setup-Ledgers. Bearbeitete Dateien bleiben erhalten und werden aufgelistet. Für globale Installationen über brew, bun und cargo gibt es den Entfernen-Befehl aus und führt ihn nie aus.
+- `./install.sh --uninstall [flags]` führt `emet uninstall` aus.
+- `docs/reference/cli.md` und `README.md` dokumentieren das Setup-Ledger, `--dry-run`, `--restore` und `emet uninstall`, in allen neun Sprachen.
 
 ## 0.20.0
 

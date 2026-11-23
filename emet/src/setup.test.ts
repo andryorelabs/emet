@@ -1,5 +1,13 @@
 import { afterEach, beforeEach, describe, expect, spyOn, test } from "bun:test";
-import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import {
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readdirSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { PassThrough } from "node:stream";
@@ -15,12 +23,14 @@ import {
   realSetupEnv,
   run,
   runSetup,
+  restoreSetupItem,
   showNoticeOnce,
   appArmorProfileMessage,
   findAgentBrowserChrome,
   type SetupEnv,
   type SetupItem,
 } from "./setup";
+import { readLedger } from "./setupledger";
 import { useBarePath } from "./test-preload";
 
 const originalExitCode = process.exitCode;
@@ -118,8 +128,9 @@ function stubItem(
     detect: () => Promise.resolve(behaviour.present === true),
     install: () => {
       installed.push(id);
-      return behaviour.fail === true ? Promise.reject(new Error("boom")) : Promise.resolve();
+      return behaviour.fail === true ? Promise.reject(new Error("boom")) : Promise.resolve([]);
     },
+    plan: () => Promise.resolve([{ kind: "run", description: `install ${id}` }]),
   };
   return { item, installed };
 }
@@ -490,6 +501,329 @@ describe("createCatalog", () => {
   });
 });
 
+function realFileEnv() {
+  const writes: string[] = [];
+  const env = fakeEnv({
+    readFile: (target) => (existsSync(target) ? readFileSync(target, "utf8") : undefined),
+    pathExists: (target) => existsSync(target),
+    writeFile: (target) => writes.push(target),
+  });
+  return { env, writes };
+}
+
+function backupFiles(home: string): string[] {
+  return readdirSync(path.join(home, ".claude"))
+    .filter((name) => name.includes(".bak-"))
+    .map((name) => path.join(home, ".claude", name));
+}
+
+describe("plan parity with install", () => {
+  const settingsRelative = path.join(".claude", "settings.json");
+
+  const itemIds = [
+    "mattpocock-skills",
+    "engram",
+    "agent-browser",
+    "context7",
+    "firecrawl-local",
+    "mascot",
+    "orca-pet",
+    "gh-auth",
+    "claude-settings",
+  ] as const;
+
+  for (const id of itemIds) {
+    test(`${id}: install runs and writes exactly what plan lists`, async () => {
+      mkdirSync(path.join(directory, ".claude"), { recursive: true });
+      writeFileSync(
+        path.join(directory, settingsRelative),
+        JSON.stringify({ model: "sonnet", permissions: { deny: ["Bash(rm -rf:*)"] } }),
+      );
+      const { env, writes } = realFileEnv();
+      const item = itemOf(createCatalog(env), id);
+      const planned = await item.plan();
+      expect(env.calls).toEqual([]);
+      expect(writes).toEqual([]);
+      await item.install();
+      const plannedRuns = planned.filter((step) => step.kind === "run").map((s) => s.description);
+      expect(env.calls.map((call) => call.join(" "))).toEqual(plannedRuns);
+      const plannedWrites = planned.filter((step) => step.kind === "write");
+      const effects = [
+        ...writes,
+        ...env.downloads.map((line) => line.split(" -> ")[1] ?? ""),
+        ...(id === "claude-settings"
+          ? [path.join(directory, settingsRelative), ...backupFiles(directory)]
+          : []),
+      ];
+      expect(plannedWrites).toHaveLength(effects.length);
+      for (const effect of effects) {
+        expect(plannedWrites.some((step) => step.description.startsWith(effect))).toBe(true);
+      }
+    });
+  }
+
+  test("plan notes a missing brew and a missing cargo instead of throwing", async () => {
+    const env = fakeEnv({ commandExists: () => Promise.resolve(false) });
+    const catalog = createCatalog(env);
+    expect((await itemOf(catalog, "engram").plan())[0]?.kind).toBe("note");
+    expect((await itemOf(catalog, "firecrawl-local").plan())[0]?.kind).toBe("note");
+  });
+
+  test("claude-settings plan fails naming the path of an unreadable settings file", async () => {
+    const settingsPath = path.join(directory, settingsRelative);
+    const env = fakeEnv({ readFile: () => "{not json" });
+    expect(await failureOf(itemOf(createCatalog(env), "claude-settings").plan())).toContain(
+      settingsPath,
+    );
+  });
+});
+
+const fixedNow = () => new Date("2026-01-02T03:04:05.000Z");
+
+function ledgerFileOf(): string {
+  return path.join(directory, "state", "setup-ledger.json");
+}
+
+function writeSettings(body: unknown): string {
+  mkdirSync(path.join(directory, ".claude"), { recursive: true });
+  const settingsPath = path.join(directory, ".claude", "settings.json");
+  writeFileSync(settingsPath, JSON.stringify(body));
+  return settingsPath;
+}
+
+const ledgerFile = ledgerFileOf;
+const settingsFile = () => path.join(directory, ".claude", "settings.json");
+
+describe("setup ledger", () => {
+  const none = { yes: false, with: [], tty: false };
+
+  test("an installed claude-settings records the previous model and only the deny rules it added", async () => {
+    const settingsPath = writeSettings({
+      model: "sonnet",
+      permissions: { deny: ["Bash(rm -rf:*)"] },
+    });
+    const { env } = realFileEnv();
+    env.homeDir = directory;
+    const results = await runSetup(
+      { ...none, with: ["claude-settings"] },
+      { catalog: createCatalog(env), ask, ledgerFile: ledgerFileOf(), now: fixedNow },
+    );
+    expect(results.find((result) => result.id === "claude-settings")?.status).toBe("installed");
+    const [entry] = readLedger(ledgerFileOf());
+    expect(entry?.id).toBe("claude-settings");
+    expect(entry?.at).toBe("2026-01-02T03:04:05.000Z");
+    const [record] = entry?.undo ?? [];
+    expect(record).toMatchObject({
+      kind: "claude-settings",
+      settingsPath,
+      previousModel: "sonnet",
+      setModel: "opusplan",
+    });
+    expect(record?.kind === "claude-settings" ? record.addedDeny : []).toHaveLength(3);
+  });
+
+  test("an already-present item records nothing and a second install keeps the first before-state", async () => {
+    const { item } = stubItem("engram", { present: true });
+    await runSetup(
+      { ...none, with: ["engram"] },
+      { catalog: [item], ask, ledgerFile: ledgerFileOf() },
+    );
+    expect(readLedger(ledgerFileOf())).toEqual([]);
+    const first: SetupItem = {
+      ...item,
+      detect: () => Promise.resolve(false),
+      install: () => Promise.resolve([{ kind: "plugin", pluginId: "first" }]),
+    };
+    const second: SetupItem = {
+      ...first,
+      install: () => Promise.resolve([{ kind: "plugin", pluginId: "second" }]),
+    };
+    for (const candidate of [first, second]) {
+      // oxlint-disable-next-line eslint/no-await-in-loop -- sequential on purpose
+      await runSetup(
+        { ...none, with: ["engram"] },
+        { catalog: [candidate], ask, ledgerFile: ledgerFileOf() },
+      );
+    }
+    expect(readLedger(ledgerFileOf())).toHaveLength(1);
+    expect(readLedger(ledgerFileOf())[0]?.undo).toEqual([{ kind: "plugin", pluginId: "first" }]);
+  });
+
+  test("a failed item and a dry run write no ledger", async () => {
+    const failing = stubItem("engram", { fail: true });
+    await runSetup(
+      { ...none, with: ["engram"] },
+      { catalog: [failing.item], ask, ledgerFile: ledgerFileOf() },
+    );
+    const fine = stubItem("mascot", {});
+    await runSetup(
+      { ...none, with: ["mascot"], dryRun: true },
+      { catalog: [fine.item], ask, ledgerFile: ledgerFileOf() },
+    );
+    expect(existsSync(ledgerFileOf())).toBe(false);
+  });
+
+  test("a malformed ledger fails the setup naming its path before any install", async () => {
+    mkdirSync(path.dirname(ledgerFileOf()), { recursive: true });
+    writeFileSync(ledgerFileOf(), "{nope");
+    const { item, installed } = stubItem("engram", {});
+    const failure = await failureOf(
+      runSetup({ ...none, with: ["engram"] }, { catalog: [item], ask, ledgerFile: ledgerFileOf() }),
+    );
+    expect(failure).toContain(ledgerFileOf());
+    expect(installed).toEqual([]);
+  });
+
+  test("each item records its undo: plugins, packages, files", async () => {
+    const env = fakeEnv({
+      commandExists: (name) => Promise.resolve(name !== "firecrawl-local"),
+    });
+    env.homeDir = directory;
+    const catalog = createCatalog(env);
+    const undoOf = (id: string) => itemOf(catalog, id).install();
+    expect(await undoOf("mascot")).toEqual([{ kind: "plugin", pluginId: MASCOT_PLUGIN_ID }]);
+    expect(await undoOf("context7")).toEqual([
+      { kind: "global-package", manager: "bun", name: "ctx7" },
+    ]);
+    expect(await undoOf("engram")).toEqual([
+      { kind: "global-package", manager: "brew", name: "gentleman-programming/tap/engram" },
+      { kind: "plugin", pluginId: "engram@engram" },
+    ]);
+    expect(await undoOf("agent-browser")).toEqual([
+      { kind: "global-package", manager: "bun", name: "agent-browser" },
+      { kind: "files", paths: [path.join(directory, ".agent-browser", "config.json")] },
+    ]);
+    expect(await undoOf("orca-pet")).toEqual([
+      {
+        kind: "files",
+        paths: ["pet.json", "spritesheet.webp"].map((file) =>
+          path.join(directory, ".emet", "orca-pet", "emet", file),
+        ),
+      },
+    ]);
+    expect(await undoOf("gh-auth")).toEqual([]);
+    expect(await undoOf("firecrawl-local")).toEqual([
+      { kind: "global-package", manager: "cargo", name: "firecrawl-local" },
+      { kind: "mcp-entry", name: "firecrawl-local", previousEntry: null },
+    ]);
+  });
+
+  test("firecrawl-local reads the existing registration before it runs the remove", async () => {
+    const entry = { type: "stdio", command: "firecrawl-local", env: { FIRECRAWL_CLOUD: "off" } };
+    writeFileSync(
+      path.join(directory, ".claude.json"),
+      JSON.stringify({ mcpServers: { "firecrawl-local": entry } }),
+    );
+    const order: string[] = [];
+    const env = fakeEnv({
+      readFile: (target) => {
+        order.push("read");
+        return existsSync(target) ? readFileSync(target, "utf8") : undefined;
+      },
+      run: (argv) => {
+        order.push(argv.slice(0, 3).join(" "));
+        return Promise.resolve(0);
+      },
+    });
+    env.homeDir = directory;
+    const undo = await itemOf(createCatalog(env), "firecrawl-local").install();
+    expect(undo).toEqual([{ kind: "mcp-entry", name: "firecrawl-local", previousEntry: entry }]);
+    expect(order.indexOf("read")).toBeLessThan(order.indexOf("claude mcp remove"));
+  });
+});
+
+async function setupSettings(body: unknown): Promise<FakeEnv> {
+  mkdirSync(path.join(directory, ".claude"), { recursive: true });
+  writeFileSync(settingsFile(), JSON.stringify(body));
+  const { env } = realFileEnv();
+  env.homeDir = directory;
+  await runSetup(
+    { yes: false, with: ["claude-settings"], tty: false },
+    { catalog: createCatalog(env), ask, ledgerFile: ledgerFile() },
+  );
+  return env;
+}
+
+describe("restoreSetupItem", () => {
+  test("claude-settings restores the model, keeps user rules, then has nothing left to restore", async () => {
+    const env = await setupSettings({
+      model: "sonnet",
+      permissions: { deny: ["Read(./secrets)"] },
+    });
+    expect(await restoreSetupItem("claude-settings", env, ledgerFile())).toBe("restored");
+    const restored = parseObject(readFileSync(settingsFile(), "utf8"));
+    expect(restored.model).toBe("sonnet");
+    expect(restored.permissions).toEqual({ deny: ["Read(./secrets)"] });
+    expect(readLedger(ledgerFile())).toEqual([]);
+    expect(await restoreSetupItem("claude-settings", env, ledgerFile())).toBe("nothing-to-restore");
+    expect(env.logs).toContain("nothing to restore for claude-settings");
+  });
+
+  test("claude-settings keeps a model changed since setup and warns", async () => {
+    const env = await setupSettings({ model: "sonnet" });
+    writeFileSync(settingsFile(), JSON.stringify({ model: "haiku" }));
+    await restoreSetupItem("claude-settings", env, ledgerFile());
+    expect(parseObject(readFileSync(settingsFile(), "utf8")).model).toBe("haiku");
+    expect(env.logs.some((line) => line.startsWith("warning:") && line.includes("haiku"))).toBe(
+      true,
+    );
+  });
+
+  test("firecrawl-local removes the registration and re-adds the recorded one", async () => {
+    const entry = { type: "stdio", command: "firecrawl-local", env: { FIRECRAWL_CLOUD: "off" } };
+    writeFileSync(
+      path.join(directory, ".claude.json"),
+      JSON.stringify({ mcpServers: { "firecrawl-local": entry } }),
+    );
+    const { env } = realFileEnv();
+    env.homeDir = directory;
+    await runSetup(
+      { yes: false, with: ["firecrawl-local"], tty: false },
+      { catalog: createCatalog(env), ask, ledgerFile: ledgerFile() },
+    );
+    env.calls.length = 0;
+    expect(await restoreSetupItem("firecrawl-local", env, ledgerFile())).toBe("restored");
+    expect(env.calls.map((call) => call.join(" "))).toEqual([
+      "claude mcp remove firecrawl-local -s user",
+      `claude mcp add-json firecrawl-local ${JSON.stringify(entry)} -s user`,
+    ]);
+    expect(readLedger(ledgerFile())).toEqual([]);
+  });
+
+  test("a failing undo keeps the ledger entry and reports failed", async () => {
+    const env = await setupSettings({});
+    writeFileSync(settingsFile(), "{broken");
+    expect(await restoreSetupItem("claude-settings", env, ledgerFile())).toBe("failed");
+    expect(readLedger(ledgerFile())).toHaveLength(1);
+    expect(env.logs.join("\n")).toContain(settingsFile());
+  });
+
+  test("an id that is not restorable is unknown", async () => {
+    const env = fakeEnv();
+    expect(await restoreSetupItem("context7", env, ledgerFile())).toBe("unknown-id");
+  });
+});
+
+describe("runSetup dry run", () => {
+  test("reports planned steps for missing items and already-present for the rest, installing nothing", async () => {
+    const missing = stubItem("engram", {});
+    const present = stubItem("mascot", { present: true });
+    const results = await runSetup(
+      { yes: false, with: ["engram", "mascot"], tty: false, dryRun: true },
+      { catalog: [missing.item, present.item], ask },
+    );
+    expect(results).toEqual([
+      {
+        id: "engram",
+        status: "planned",
+        planned: [{ kind: "run", description: "install engram" }],
+      },
+      { id: "mascot", status: "already-present" },
+    ]);
+    expect(missing.installed).toEqual([]);
+  });
+});
+
 describe("runSetup", () => {
   const none = { yes: false, with: [], tty: false };
 
@@ -507,7 +841,7 @@ describe("runSetup", () => {
       ...item,
       install: () => {
         order.push("install");
-        return Promise.resolve();
+        return Promise.resolve([]);
       },
     };
     await runSetup(
@@ -791,6 +1125,50 @@ describe("run", () => {
     expect(output.out.join("\n")).toContain('"detail": "unknown item"');
   });
 
+  test("--dry-run prints the planned steps, changes no file and exits 0", async () => {
+    mkdirSync(path.join(directory, ".claude"), { recursive: true });
+    const settingsPath = path.join(directory, ".claude", "settings.json");
+    const claudeJsonPath = path.join(directory, ".claude.json");
+    const settingsBefore = `${JSON.stringify({ model: "sonnet" }, null, 2)}\n`;
+    const claudeJsonBefore = `${JSON.stringify({ mcpServers: {} })}\n`;
+    writeFileSync(settingsPath, settingsBefore);
+    writeFileSync(claudeJsonPath, claudeJsonBefore);
+    const originalHome = realSetupEnv.homeDir;
+    realSetupEnv.homeDir = directory;
+    process.exitCode = 0;
+    const output = capture();
+    try {
+      await run(["--dry-run", "--with", "claude-settings,firecrawl-local"]);
+    } finally {
+      output.restore();
+      realSetupEnv.homeDir = originalHome;
+    }
+    const text = output.out.join("\n");
+    expect(text).toContain("planned\tclaude-settings");
+    expect(text).toContain("planned\tfirecrawl-local");
+    expect(text).toContain("claude mcp add firecrawl-local");
+    expect(readFileSync(settingsPath, "utf8")).toBe(settingsBefore);
+    expect(readFileSync(claudeJsonPath, "utf8")).toBe(claudeJsonBefore);
+    expect(readdirSync(path.join(directory, ".claude"))).toEqual(["settings.json"]);
+    expect(process.exitCode).toBe(0);
+  });
+
+  test("--dry-run --json prints the planned steps in the results envelope", async () => {
+    const originalHome = realSetupEnv.homeDir;
+    realSetupEnv.homeDir = directory;
+    const output = capture();
+    try {
+      await run(["--dry-run", "--json", "--with", "claude-settings"]);
+    } finally {
+      output.restore();
+      realSetupEnv.homeDir = originalHome;
+    }
+    const parsed = parseObject(output.out.join("\n"));
+    expect(output.out.join("\n")).toContain('"status": "planned"');
+    expect(output.out.join("\n")).toContain('"kind": "write"');
+    expect(Array.isArray(parsed.results)).toBe(true);
+  });
+
   test("--notice prints the notice once under --data-dir", async () => {
     const output = capture();
     try {
@@ -818,6 +1196,72 @@ describe("run", () => {
     }
     expect(output.errors).toHaveLength(2);
     expect(output.out.every((line) => !line.startsWith("{"))).toBe(true);
+  });
+
+  describe("--restore", () => {
+    let stateDirectory = "";
+    let originalState: string | undefined;
+    let originalHome = "";
+
+    beforeEach(() => {
+      stateDirectory = path.join(directory, "state");
+      originalState = process.env.EMET_STATE_DIR;
+      process.env.EMET_STATE_DIR = stateDirectory;
+      originalHome = realSetupEnv.homeDir;
+      realSetupEnv.homeDir = directory;
+    });
+    afterEach(() => {
+      if (originalState === undefined) delete process.env.EMET_STATE_DIR;
+      else process.env.EMET_STATE_DIR = originalState;
+      realSetupEnv.homeDir = originalHome;
+    });
+
+    test("setup then --restore returns the settings, and a second --restore exits 1", async () => {
+      mkdirSync(path.join(directory, ".claude"), { recursive: true });
+      const settingsPath = path.join(directory, ".claude", "settings.json");
+      writeFileSync(
+        settingsPath,
+        JSON.stringify({ model: "sonnet", permissions: { deny: ["Read(./secrets)"] } }),
+      );
+      const output = capture();
+      try {
+        await run(["--with", "claude-settings"]);
+        expect(existsSync(path.join(stateDirectory, "setup-ledger.json"))).toBe(true);
+        await run(["--restore", "claude-settings"]);
+        expect(process.exitCode).not.toBe(1);
+        const restored = parseObject(readFileSync(settingsPath, "utf8"));
+        expect(restored.model).toBe("sonnet");
+        expect(restored.permissions).toEqual({ deny: ["Read(./secrets)"] });
+        await run(["--restore", "claude-settings"]);
+      } finally {
+        output.restore();
+      }
+      expect(output.out).toContain("nothing to restore for claude-settings");
+      expect(process.exitCode).toBe(1);
+    });
+
+    test("an unknown id exits 2", async () => {
+      const output = capture();
+      try {
+        await run(["--restore", "context7"]);
+      } finally {
+        output.restore();
+      }
+      expect(process.exitCode).toBe(2);
+    });
+
+    test("a malformed ledger exits 2 naming its path", async () => {
+      mkdirSync(stateDirectory, { recursive: true });
+      writeFileSync(path.join(stateDirectory, "setup-ledger.json"), "{nope");
+      const output = capture();
+      try {
+        await run(["--restore", "claude-settings"]);
+      } finally {
+        output.restore();
+      }
+      expect(output.errors.join("\n")).toContain("setup-ledger.json");
+      expect(process.exitCode).toBe(2);
+    });
   });
 
   test("askNothing answers every question with an empty string", async () => {

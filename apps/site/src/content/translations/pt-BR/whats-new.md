@@ -2,8 +2,21 @@
 title: Novidades
 description: Notas de versão do emet: o que mudou em cada versão.
 seoTitle: Novidades do emet: notas de versão
-sourceHash: a4abfa547d27b4af
+sourceHash: 52353f60ae0e5795
 ---
+
+## 0.21.0
+
+2026-11-23
+
+### Adicionado
+
+- `emet setup --dry-run` (combinável com `--with`, `--yes` e `--json`) imprime os passos planejados de cada item escolhido, ou `already-present`, e não altera nada: não executa nenhum comando e não grava nenhum arquivo nem entrada do ledger.
+- `emet setup` registra no ledger do setup, `setup-ledger.json` no diretório de estado, cada item que termina `installed`, com os registros de desfazer necessários para revertê-lo. As gravações do ledger são atômicas, e um ledger malformado é um erro que informa seu caminho.
+- `emet setup --restore <id>` reverte `claude-settings` (o `model` anterior e as regras deny que o emet adicionou, depois de um backup com data e hora) ou `firecrawl-local` (a entrada MCP anterior de escopo de usuário). Qualquer outro id sai com 2, e um id sem entrada no ledger sai com 1.
+- `emet uninstall [--dry-run] [--yes] [--purge] [--json]` remove uma instalação do `install.sh`: os arquivos do manifesto cujo hash ainda confere, o shim, cada hook `emet guard` em `~/.claude/settings.json` (depois de um backup com data e hora) e os extras do ledger do setup. Os arquivos editados são mantidos e listados. Para instalações globais de brew, bun e cargo, imprime o comando de remoção e nunca o executa.
+- `./install.sh --uninstall [flags]` executa `emet uninstall`.
+- `docs/reference/cli.md` e `README.md` documentam o ledger do setup, `--dry-run`, `--restore` e `emet uninstall`, nos nove idiomas.
 
 ## 0.20.0
 
