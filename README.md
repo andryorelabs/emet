@@ -60,6 +60,8 @@ Requirements: Claude Code or the Codex CLI, `git`, `gh` (authenticated) and the 
 
    Optional: a pixel mascot, see [Mascot](#mascot-optional).
 
+   To remove a clone install, run `./install.sh --uninstall` (or `emet uninstall`; add `--dry-run` to preview). It deletes the files it installed, drops the `emet guard` hooks from `~/.claude/settings.json` and reverts the extras that `emet setup` recorded. See the [CLI reference](docs/reference/cli.md#setup-ledger-and-restore).
+
    On Codex, install the plugin instead, then install the terminal `emet` as in [Getting started](docs/guide/getting-started.md) (needs `mattpocock-skills` too; the full steps are in [Codex](docs/guide/codex.md)):
 
    ```bash
