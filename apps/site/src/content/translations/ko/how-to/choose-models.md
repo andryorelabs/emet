@@ -2,10 +2,15 @@
 title: 모델과 추론 강도
 description: emet이 역할마다 모델과 추론 강도를 어떻게 고르는지, 그리고 이를 바꾸는 설정 키를 설명합니다.
 seoTitle: emet의 모델과 추론 강도
-sourceHash: 114cc60ff1358691
+sourceHash: 0807a288317cba93
 ---
 
 `/emet`은 역할마다 모델과 추론 강도(effort)를 자동으로 선택합니다. 실행 중에 수동으로 바꿀 것은 없습니다. 첫 번째 섹션들은 Claude Code 호스트를 설명하며, [Codex 호스트](#codex-호스트)에는 별도의 기본값이 있습니다. Claude Code의 모든 키는 [설정 레퍼런스](../reference/configuration.md#models)에 있습니다.
+
+## 사전 준비
+
+- emet이 설치되어 있어야 합니다. [설치](../start/install.md)를 참고하세요.
+- `emet.config.json`이 있는 리포지토리가 있어야 합니다(없으면 `emet init`을 실행하세요).
 
 ## Claude Code 호스트
 
@@ -59,28 +64,28 @@ Claude Code에서 코디네이터는 CI 로그를 통째로 읽지 않습니다.
 
 `agentHost`를 `"codex"`로 설정하면 각 워커와 리뷰어는 역할별로 `-m`과 `model_reasoning_effort`가 지정된 독립적인 `codex exec` 프로세스가 됩니다. [`codex`](../reference/configuration.md) 섹션의 기본값은 다음과 같습니다.
 
-| 역할                    | 모델          | 노력 수준                 | 대체 모델                     |
+| 역할                    | 모델          | 추론 강도                 | 대체 모델                     |
 | ----------------------- | ------------- | ------------------------- | ----------------------------- |
 | 세션 (`$emet:run`)      | `gpt-6.1-sol` | `medium` (`high` 계획 중) | 없음                          |
 | 워커                    | `gpt-6.1-sol` | `medium`                  | `gpt-6.1-terra`, `gpt-6-luna` |
 | `Model:` 줄이 있는 워커 | `gpt-6.1-sol` | `xhigh`                   | `gpt-6-astra`                 |
-| 리뷰어, `medium` 등급   | `gpt-6.1-sol` | `high`                    | 없음                          |
-| 리뷰어, `high` 등급     | `gpt-6-astra` | `high`                    | `gpt-6.1-sol`                 |
-| 트리아지                | `gpt-6-luna`  | `medium`                  | `gpt-6.1-terra`               |
+| 리뷰어, `medium` 티어   | `gpt-6.1-sol` | `high`                    | 없음                          |
+| 리뷰어, `high` 티어     | `gpt-6-astra` | `high`                    | `gpt-6.1-sol`                 |
+| 분류                    | `gpt-6-luna`  | `medium`                  | `gpt-6.1-terra`               |
 
-`emet dispatch`와 `emet review-run`은 각 슬러그를 `models_cache.json`과 대조합니다. 이 파일은 실행의 오버레이 홈에서, 없으면 실제 Codex 홈에서(읽기 전용으로) 읽습니다. 캐시에 있고 해당 추론 강도를 지원하는 슬러그는 그대로 쓰고, 아니면 모델의 업그레이드 대상, 그다음 대체 모델을 따르고, 마지막에는 `-m`을 생략하며, 모든 대체를 기록합니다. 아무것도 확정되지 않으면 `emet review-run`은 모델 호출 전에 역할과 목록에 있는 슬러그를 밝히며 실패합니다. 실행이 생성하는 오버레이 `config.toml`에도 확정된 `model`과 `model_reasoning_effort`가 들어갑니다. 추론 강도 `ultra`는 전송되지 않습니다. `passive` 등급은 리뷰어를 시작하지 않습니다.
+`emet dispatch`와 `emet review-run`은 각 슬러그를 `models_cache.json`과 대조합니다. 이 파일은 실행의 오버레이 홈에서, 없으면 실제 Codex 홈에서(읽기 전용으로) 읽습니다. 캐시에 있고 해당 추론 강도를 지원하는 슬러그는 그대로 쓰고, 아니면 모델의 업그레이드 대상, 그다음 대체 모델을 따르고, 마지막에는 `-m`을 생략하며, 모든 대체를 기록합니다. 아무것도 확정되지 않으면 `emet review-run`은 모델 호출 전에 역할과 목록에 있는 슬러그를 밝히며 실패합니다. 실행이 생성하는 오버레이 `config.toml`에도 확정된 `model`과 `model_reasoning_effort`가 들어갑니다. 추론 강도 `ultra`는 전송되지 않습니다. `passive` 티어는 리뷰어를 시작하지 않습니다.
 
 실제 웨이브를 몇 번 돌린 뒤 다음과 같은 경우 다시 조정하세요.
 
 - 워커가 수정 라운드를 반복해서 필요로 할 때: `codex.models.worker.effort`를 올리거나 위험한 티켓에 `Model:` 줄을 넣으세요.
-- `high` 등급 웨이브의 리뷰가 지적 사항을 놓칠 때: `codex.models.reviewer.high.effort`를 올리세요.
+- `high` 티어 웨이브의 리뷰가 지적 사항을 놓칠 때: `codex.models.reviewer.high.effort`를 올리세요.
 - 로그에 대체가 표시될 때: Codex가 슬러그 이름을 바꾸거나 없앴으니 슬러그를 업데이트하세요.
 
 [프로브 보고서](../research/codex-probe-report.md)의 실제 Codex 실행은 추론 강도 `low`와 확정된 가장 저렴한 모델(`gpt-6-luna`)을 사용했고, 리뷰어 모델도 캐시를 통해 확정되었습니다.
 
-## 리뷰어가 하나인 이유
+## high 티어에 리뷰어가 둘인 이유
 
-여러 관점으로 나누지 않고 컨텍스트가 새로운 단일 리뷰어를 쓰는 이유는 다음과 같습니다. 둘을 직접 비교한 공개 벤치마크는 없지만, 관점별 분산 방식은 관점마다 diff 전체를 다시 읽기 때문에 이 리포지토리에서 한 시간 넘게 멈춘 적이 있습니다. 또한 Anthropic과 제3자의 Opus 급 모델 보고서에 따르면 모델 업그레이드가 관점을 늘린 것과 비슷한 효과를 냅니다. Claude Code에서 중요도가 높은 웨이브는 이후에 직접 `/code-review ultra`를 실행하세요. `/emet`은 이를 스스로 디스패치하지 않습니다. `/code-review ultra`는 Claude Code 명령이며, 이 페이지는 Codex 대응 기능을 문서화하지 않습니다.
+Claude Code 호스트에서 `high` 웨이브는 `codex`가 PATH에 있으면 이중 리뷰를 받습니다. Claude 리뷰어와 Codex 리뷰어가 같은 패키지를 병렬로 읽고, 코디네이터가 두 지적 사항을 병합합니다. 하나의 모델은 자신의 사각지대를 그대로 공유하므로, 두 번째 리뷰를 다른 모델이 맡습니다. `medium` 웨이브는 리뷰어를 하나로 유지하므로 비용이 달라지지 않으며, `review.dual: off`는 항상 하나만 실행합니다. [리뷰와 게이트](../concepts/review-and-gates.md)와 [ADR-0040](../adr/0040-dual-review-in-the-high-tier.md)을 참고하세요. 중요도가 더 높은 웨이브라면 Claude Code에서 이후에 직접 `/code-review ultra`를 실행할 수도 있습니다. `/emet`은 이를 스스로 디스패치하지 않습니다. `/code-review ultra`는 Claude Code 명령이며, 이 페이지는 Codex 대응 기능을 문서화하지 않습니다.
 
 ## 직접 한 번만 설정하는 것(Claude Code)
 
@@ -91,3 +96,7 @@ Claude Code 호스트에서 `/emet`은 실행 중에 다음을 바꿀 수 없습
 - 무인으로 실행할 수 있는 `permissions.defaultMode`(`auto`, `acceptEdits`, `bypassPermissions`)와 `git push * main|master` 및 `git push --force *`를 차단하는 `permissions.deny` 규칙입니다. `emet doctor`는 둘 다 경고합니다. 권한 프롬프트에서 멈추는 웨이브나 트렁크 브랜치를 강제로 넘을 수 있는 웨이브는 무인 실행의 의미를 없애기 때문입니다.
 
 이 값들은 출발점이지 확정된 수치가 아닙니다. Opus 5.5는 2026-09-22에 출시되었고, 코딩 에이전트의 추론 강도와 모델 선택은 아직 활발히 연구되는 분야입니다. 이 표를 최종본으로 여기지 말고, 실제 웨이브를 몇 번 실행한 뒤 다시 조정하세요.
+
+## 확인
+
+`emet doctor`를 실행합니다. `~/.claude/settings.json`의 `model: "opusplan"`, 세션 추론 강도, `permissions.defaultMode`가 위의 출발점과 다르면 경고합니다.
