@@ -1,41 +1,50 @@
-# Event journal
+# Attention and the journal
 
-emet appends its own events to one global file, so a later analysis can tell a run that `emet launch` or `emet chain` started from one a person typed by hand. Back to the [docs index](../README.md).
+emet records its own events in one global journal. One kind of event tells you when a session is waiting for you. Terms follow [GLOSSARY.md](../../GLOSSARY.md); the decisions are in [ADR-0030](../adr/0030-global-event-journal.md) and [ADR-0042](../adr/0042-session-attention-state-in-the-journal.md).
 
-## Where it lives
+## The journal
 
-`<stateDir>/journal/events.jsonl`, in the host-wide state directory that also holds the worker slot pool (`~/.local/state/emet` unless `EMET_STATE_DIR` or `XDG_STATE_HOME` say otherwise). Each line is one JSON object of at most 2 KiB: `{v, ts, id, kind, runId?, repo, host, origin, pid, data}`. `origin` is `human` or `auto`.
+The journal is a single append-only file of JSON lines, one event per line, in the host-wide state directory that also holds the worker slot pool. Because it is global, a later analysis can tell a run that `emet launch` or `emet chain` started from one a person typed by hand: every event carries its repo, host and an origin of `human` or `auto`.
 
-Events are written by commands that already exist:
+Existing commands write the events: starting a run, a gate decision, a human intervention in an unattended wave, a launch result, a closed ticket, a cleanup, a baseline mark, and the integrating, landing or abandoning of a spec branch.
 
-| Kind             | Written by                                                                                                   |
-| ---------------- | ------------------------------------------------------------------------------------------------------------ |
-| `run.start`      | `emet preflight`; `origin` is `auto` when a `launch.result` exists for the same spec and wave, else `human`. |
-| `gate.decision`  | `emet gate` (skipped with `--no-record`).                                                                    |
-| `intervention`   | `emet gate`, when a wave that `emet launch` or `emet chain` did not start is continued by hand.              |
-| `launch.result`  | `emet launch` and `emet chain`.                                                                              |
-| `ticket.close`   | `emet tracker close`.                                                                                        |
-| `cleanup`        | `emet cleanup`, with counts.                                                                                 |
-| `baseline`       | `emet insights --mark-baseline`.                                                                             |
-| `spec.integrate` | `emet spec-branch integrate`, with the wave and its tickets.                                                 |
-| `spec.land`      | `emet spec-branch land`.                                                                                     |
-| `spec.abandon`   | `emet spec-branch abandon`.                                                                                  |
+### What it never records
 
-## What it never records
+Prompts, assistant text, hook input, environment variables, argv, tokens, diffs and issue bodies. An event holds only ids, codes, counts, durations and a short reason. An event that would grow past 2 KiB loses its data and is marked as truncated.
 
-Prompts, assistant text, hook input, environment variables, argv, tokens, diffs and issue bodies. `data` holds only ids, codes, counts, durations and a `reason` cut to 200 characters. An event that would pass 2 KiB loses its `data` and is stored with `truncated: true`.
+### Failures and rotation
 
-## Failures and rotation
+A journal that cannot be written never changes a command's output or exit code. When the file passes about 10 MiB the next append moves it to a numbered segment and keeps the five newest. On a network filesystem concurrent writes can interleave, so `emet doctor` warns, without failing, when the state directory is on one.
 
-A journal that cannot be written never changes a command's output or exit code. Past about 10 MiB the next append renames the file to a numbered segment (`events.1.jsonl`, older ones shift) and keeps the five newest. On a network filesystem concurrent writes can interleave, so `emet doctor` warns, without failing, when the state directory is on one.
+### Reading it
 
-## Reading it
+`emet insights` reads every segment and reports runs by origin, gate decisions, interventions, launch outcomes, spec events and tickets closed. By default it covers the events since the latest baseline; `--mark-baseline` starts counting from now. It skips lines it cannot parse and counts them, and it prints a zero report when the journal is empty. Because the file is plain JSON lines, `jq` works on it too. See the [CLI reference](../reference/cli.md#runs-workers-and-slots).
 
-```bash
-emet insights                  # events since the latest baseline
-emet insights --since 7d       # last seven days
-emet insights --all --json     # everything, machine-readable
-emet insights --mark-baseline  # start counting from now
-```
+## Attention
 
-`insights` counts the three `spec.*` kinds. It reads every segment in order, skips and counts lines it cannot parse (`skippedLines`), and prints a zero report when the journal is empty or missing. Because the file is plain JSON lines, `jq` works on it too. See the [CLI reference](../reference/cli.md#runs-workers-and-slots).
+A run can sit blocked on a permission prompt or a question while nobody looks. Attention is the answer to "does a session need me?".
+
+Each session of an emet-owned run is in one of four states:
+
+- **working**: the agent is acting.
+- **needs-decision**: the agent waits for a person, for example on a permission prompt or a question. "Blocked" is another word for it.
+- **idle**: the agent stopped and is waiting for the next prompt.
+- **ended**: the session is over.
+
+The `emet guard` hook, already installed on the host, notices the transitions and appends a `session.attention` event to the journal only when the state changes, so there is no second store. A session counts as emet-owned when it runs in an emet worker worktree, or in a repo with an emet config and an unfinished run. On Codex there are no notification events, so a stop is idle unless the run has a blocked result, which is needs-decision.
+
+The event holds the session id, the old and new state, the trigger and the run id. It never holds the notification text, the tool name or the tool input. Recording never blocks: a failure is swallowed and the permission dialog is unchanged.
+
+### The alert
+
+Entering needs-decision raises one alert: an Orca unread mark on the worktree when the Orca runtime is reachable, otherwise a desktop notification when one is available. emet never clears it, and `attention.alert` turns it off.
+
+### Where you see it
+
+`emet status` lists the sessions and their state, and a blocked session raises the overall state to needs-decision even when no wave is running. `emet fleet status` shows the same across repos.
+
+## See also
+
+- [Runs, waves and specs](runs-waves-specs.md)
+- [Security](security.md)
+- [Configuration reference](../reference/configuration.md) for `attention.alert`
