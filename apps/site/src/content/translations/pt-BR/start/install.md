@@ -1,13 +1,11 @@
 ---
-title: Primeiros passos
-description: Instale o emet com a instalação independente, confirme que ele funciona com emet doctor e execute-o pela primeira vez.
-seoTitle: Primeiros passos com o emet
-sourceHash: ce83e38591b3de64
+title: Instalar
+description: Instale o emet, mantenha-o atualizado e remova-o.
+seoTitle: Instalar o emet
+sourceHash: e67d7c2c6b22d556
 ---
 
-Instale o emet, confirme que ele funciona e execute-o pela primeira vez.
-
-<img src="../brand/mascot/mascot-done.svg" alt="mascote do emet, pronto" width="96" align="right">
+Instale o emet, mantenha-o atualizado e remova-o. Depois, [execute-o pela primeira vez](first-run.md).
 
 ## Requisitos
 
@@ -35,11 +33,20 @@ Você também pode fixar uma versão, como em `sh -s -- 1.2.3`; o padrão é `la
 
 ### Codex
 
-Quando o Codex está presente, o `emet self install` imprime um passo único: abra `/hooks` no Codex e pressione `t` na página de eventos para confiar nos hooks do emet (ou aprove o aviso "Hooks need review" na inicialização). Até lá, o emet guard não roda. Veja [Executando o emet no Codex](codex.md#instalação).
+Quando o Codex está presente, o `emet self install` imprime um passo único: abra `/hooks` no Codex e pressione `t` na página de eventos para confiar nos hooks do emet (ou aprove o aviso "Hooks need review" na inicialização). Até lá, o emet guard não roda. Veja [Executando o emet no Codex](../how-to/use-codex.md#install).
+
+### Atualizar
+
+```bash
+emet self update            # latest
+emet self update 1.2.3      # a specific version
+```
+
+A versão é baixada, verificada contra o `SHA256SUMS` (e a atestação quando o `gh` está presente) e preparada. A troca do link simbólico e dos arquivos instalados só acontece quando nenhum slot de worker está ocupado; caso contrário a atualização fica pendente e é aplicada no próximo início de sessão. Uma falha deixa a versão atual intacta e é registrada no journal. A versão anterior é mantida para rollback e as mais antigas são removidas. O `emet doctor` avisa quando há uma atualização pendente.
 
 ### Atualização automática
 
-Um hook `SessionStart` executa `emet self update --auto` no máximo uma vez por dia, em segundo plano e em silêncio quando está offline. Ele verifica o checksum, prepara a nova versão e troca o link simbólico só quando nenhum slot de worker está ocupado; caso contrário a atualização fica pendente até o próximo início de sessão. A versão anterior é mantida para rollback. Para desativá-la, defina `EMET_AUTO_UPDATE=0` ou execute `emet self update --auto off`; `emet self update --auto on` a ativa de novo. Veja [Atualizar o emet](../how-to/update-emet.md).
+Um hook `SessionStart` executa `emet self update --auto` no máximo uma vez por dia, em segundo plano e em silêncio quando está offline. Ele verifica o checksum, prepara a nova versão e troca o link simbólico só quando nenhum slot de worker está ocupado; caso contrário a atualização fica pendente até o próximo início de sessão. A versão anterior é mantida para rollback. Para desativá-la, defina `EMET_AUTO_UPDATE=0` ou execute `emet self update --auto off`; `emet self update --auto on` a ativa de novo. A atualização automática não faz nada em instalações por plugin.
 
 ### Desinstalar
 
@@ -48,7 +55,7 @@ emet uninstall --dry-run     # list what would be removed
 emet uninstall
 ```
 
-Ele remove o diretório de versões, o link simbólico `~/.local/bin/emet`, o arquivo de estado da instalação, as skills do Codex e todo hook do emet nos dois arquivos de hooks, e reverte os extras que o `emet setup` registrou. Um arquivo de comando que você editou e quaisquer hooks de terceiros são mantidos. Veja a [referência da CLI](../reference/cli.md#subcomandos).
+Ele remove o diretório de versões, o link simbólico `~/.local/bin/emet`, o arquivo de estado da instalação, as skills do Codex e todo hook do emet nos dois arquivos de hooks, e reverte os extras que o `emet setup` registrou. Um arquivo de comando que você editou e quaisquer hooks de terceiros são mantidos. Veja a [referência da CLI](../reference/cli.md#setup-ledger-and-restore).
 
 ### Opcional: plugins
 
@@ -70,35 +77,8 @@ codex plugin add emet@emet-marketplace
 
 Toda instalação dá a você os mesmos três pontos de entrada. No Claude Code são os comandos de barra `/emet:run`, `/emet:init` e `/emet:doctor`; no Codex são as skills `$emet:run`, `$emet:init` e `$emet:doctor`. A instalação independente também coloca o `emet` no seu `PATH`, então `emet init` e `emet doctor .` funcionam em um terminal comum; com apenas um plugin, use os comandos de barra, ou `! emet <subcommand>` dentro de uma sessão do Claude Code ou do Codex. No Claude Code, os nomes dos agentes diferem: `emet:emet-worker` no plugin, `emet-worker` na instalação independente. O Codex não tem agentes do emet, porque cada worker é seu próprio processo `codex exec`.
 
-Ordem recomendada, em cada repositório: execute primeiro a skill `setup-matt-pocock-skills` (`/setup-matt-pocock-skills` no Claude Code; no Codex, a mesma skill do plugin `mattpocock-skills`, com a sintaxe `$` do Codex) e depois `emet init`.
-
-Verifique se funcionou com `/emet:doctor` dentro do Claude Code (`$emet:doctor` no Codex), ou `emet doctor .` em um terminal (o `selftest` precisa de uma instalação `--from` a partir do código-fonte).
-
-Se o `doctor` ou o `preflight` relatar um problema, veja a [solução de problemas](../troubleshooting.md). Nada é instalado nem autenticado em seu nome; veja a [referência de dependências](../reference/dependencies.md) para saber quem verifica o quê e para `EMET_SKIP_DEPENDENCY_CHECKS`.
-
-## Primeira execução
-
-Em qualquer repositório git:
-
-```bash
-emet init          # autodetects package manager, trunk branch, tracker kind
-emet preflight      # confirms the repo is dispatch-ready
-```
-
-Dentro de uma sessão, `/emet:init` faz o mesmo que `emet init`. Depois, dentro do Claude Code (no Codex, use `$emet:run` em vez de `/emet:run`):
-
-```
-/emet:run <describe the feature>              # interview → wave 1; later waves via --dispatch/autoChain
-/emet:run --draft <describe the feature>      # stop after tickets are created
-/emet:run --dispatch <spec-id>                # dispatch a --draft'd spec later
-```
-
-O `emet init` deixa um marcador `TODO(emet):` nos arquivos `docs/agents/*.md` gerados para tudo o que ele não consegue inferir sozinho (um lock compartilhado do banco de dados de testes, a propriedade do schema etc.); preencha-os. O `emet preflight` se recusa a despachar enquanto restar algum.
+Para atualizar uma instalação por plugin, veja [Atualizar o emet](../how-to/update-emet.md).
 
 ## Próximos passos
 
-- [Trackers e aterrissagem](trackers-and-landing.md): tickets do GitHub, do Linear ou locais, e como uma onda aterrissa.
-- [Executando o emet no Codex](codex.md): instalação, a aprovação única e os limites do host de agente Codex.
-- [Modelos e esforço](models-and-effort.md): qual modelo e qual esforço cada papel usa.
-- [Verificação de frota](fleet.md): audite vários repositórios de uma só vez.
-- [Referência de configuração](../reference/configuration.md) e [referência da CLI](../reference/cli.md): cada chave e subcomando.
+[Primeira execução](first-run.md): confirme a instalação e execute o emet em um repositório.
