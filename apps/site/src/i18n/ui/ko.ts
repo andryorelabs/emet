@@ -46,13 +46,18 @@ export const ko = {
     emetReplies: "emet 응답",
     alt: "세 개울이 하나의 강으로 합쳐지는 계곡.",
     merged: "병합됨",
+    otherInstall: "다른 설치 방법",
+    wave: "웨이브 {n}",
+    caption: "각 웨이브는 하나의 스펙 브랜치로 합류합니다. 스펙은 풀 리퀘스트 하나로 랜딩됩니다.",
+    prTitle: "스펙 41: 설정의 다크 모드",
+    checks: "체크 통과",
   },
   showcase: {
-    heading: "웨이브가 머지됩니다",
-    headingHeld: "웨이브가 대기합니다",
-    status: "웨이브 2 리뷰 완료. CI 통과. 머지됨, 티켓 3개 종료.",
-    statusHeld: "웨이브 2 보류: 티켓 1개에 플래그. 머지된 것은 없습니다.",
-    flag: "티켓 #255 표시",
+    heading: "스펙이 머지됩니다",
+    headingHeld: "스펙이 대기합니다",
+    status: "스펙 41 리뷰 완료. CI 통과. 풀 리퀘스트 하나로 머지됨, 티켓 4개 종료.",
+    statusHeld: "스펙 41 보류: 티켓 1개에 플래그. 머지된 것은 없습니다.",
+    flag: "티켓 #44 표시",
   },
   features: {
     heading: "실행이 지키는 것",
@@ -67,6 +72,25 @@ export const ko = {
       { title: "격리된 worktree", line: "worker마다 git worktree 하나." },
       { title: "트래커는 선택, 없어도 됨", line: "Linear, GitHub Issues 또는 로컬 파일." },
     ],
+    extra: [
+      {
+        title: "작은 변경을 위한 빠른 모드",
+        line: "플래그 하나로 인터뷰를 건너뛰고 티켓 하나, 리뷰 한 번, 랜딩 한 번으로 실행합니다.",
+      },
+      {
+        title: "효과가 있던 것을 기억합니다",
+        line: "각 실행의 교훈이 저장되고 다음 실행에서 불러옵니다.",
+      },
+      {
+        title: "위험한 변경에는 리뷰어 두 명",
+        line: "위험도가 높은 작업은 랜딩 전에 두 번째 리뷰어가 확인합니다.",
+      },
+      { title: "필요할 때 알려 줍니다", line: "실행이 승인을 기다리거나 멈추면 알림을 보냅니다." },
+      {
+        title: "깔끔하게 설치하고 제거합니다",
+        line: "emet이 설치한 모든 것을 제거하고, 직접 수정한 파일은 그대로 둡니다.",
+      },
+    ],
   },
   stats: {
     label: "숫자로 보기",
@@ -80,6 +104,16 @@ export const ko = {
   faq: {
     heading: "질문",
     items: [
+      {
+        question: "emet은 어떻게 제거하나요?",
+        answer:
+          "`emet uninstall`을 실행하세요. emet이 설치한 것을 제거하고 직접 수정한 파일은 그대로 둡니다. 먼저 미리 보려면 `--dry-run`을 붙이세요.",
+      },
+      {
+        question: "빠른 모드가 무엇인가요?",
+        answer:
+          "작은 변경에는 `--quick`을 붙이세요. 인터뷰를 건너뛰고 티켓 하나, 리뷰 한 번, 랜딩 한 번으로 실행합니다.",
+      },
       {
         question: "무엇이 필요한가요?",
         answer:
