@@ -2,15 +2,16 @@
 title: 故障排除
 description: 按你看到的现象归类 emet doctor 和 emet preflight 的失败，并给出各自的原因与修复方法。
 seoTitle: emet doctor 与 preflight 故障排除
-sourceHash: c1ebb76c9250d743
+sourceHash: 459018815038cdc0
 ---
 
-按你看到的现象归类 `emet doctor` 和 `emet preflight` 的失败，并给出各自的原因与修复方法。术语遵循 [GLOSSARY.md](../GLOSSARY.md)。各项检查如何配合，参见[架构](architecture.md)。
+按你看到的现象归类 `emet doctor` 和 `emet preflight` 的失败，并给出各自的原因与修复方法。术语遵循 [GLOSSARY.md](../GLOSSARY.md)。各项检查如何配合，参见[架构](concepts/architecture.md)。
 
 <img src="brand/mascot/mascot-error.svg" alt="" width="96">
 
 仅保留 `forge.config.json`、`.forge/` 或 `FORGE_*` 变量的仓库仍可继续工作：`emet` 会读取旧名称，打印一行点名每个旧文件的 stderr 信息，而 `emet migrate` 会将它们重命名。
 
+- [前提条件](#前提条件)
 - [no emet.config.json](#no-emetconfigjson)
 - [emet.config.json is malformed](#emetconfigjson-is-malformed)
 - [docs/agents still has TODO(emet) markers](#docsagents-still-has-todoemet-markers)
@@ -22,7 +23,15 @@ sourceHash: c1ebb76c9250d743
 - [锁定的工作树比预期的少](#锁定的工作树比预期的少)
 - [一个工单被多个工作树或分支认领](#一个工单被多个工作树或分支认领)
 - [requiredCommands not on PATH](#requiredcommands-not-on-path)
+- [Codex 宿主](#codex-宿主)
+- [检查](#检查)
 - [另请参阅](#另请参阅)
+
+## 前提条件
+
+- `emet` 在 `PATH` 中；参见[安装](start/install.md)。
+- 一个位于出问题的仓库根目录的 shell。
+- 来自 `emet doctor .` 或 `emet preflight` 的确切信息：在上面的列表中找到它。
 
 ## no emet.config.json
 
@@ -30,7 +39,10 @@ sourceHash: c1ebb76c9250d743
 
 **原因：** 该仓库还没有 `/emet` 配置。
 
-**修复：** 在仓库根目录运行 `emet init`，然后检查生成的配置并填写 `docs/agents/` 中的文件。
+**修复：**
+
+1. 在仓库根目录运行 `emet init`。
+2. 检查生成的配置，并填写 `docs/agents/` 中的文件。
 
 ## emet.config.json is malformed
 
@@ -38,7 +50,10 @@ sourceHash: c1ebb76c9250d743
 
 **原因：** 配置是严格的 JSON，并根据 `emet/schema/emet.config.schema.json` 校验。注释和末尾逗号会被拒绝。
 
-**修复：** 修正原因中指出的字段，或使用 `emet init --force` 重新生成。
+**修复：**
+
+1. 修正原因中指出的字段。
+2. 或使用 `emet init --force` 重新生成配置。
 
 ## docs/agents still has TODO(emet) markers
 
@@ -46,7 +61,10 @@ sourceHash: c1ebb76c9250d743
 
 **原因：** `emet init` 会在任何无法检测到值的位置留下一个标记。
 
-**修复：** 填写每个带标记的行，或解决它们之后运行 `emet init --force`。只要还有标记残留，preflight 就会拒绝派发。
+**修复：**
+
+1. 填写每个带标记的行，或解决它们之后运行 `emet init --force`。
+2. 运行 `emet preflight`；只要还有标记残留，它就会拒绝派发。
 
 ## 依赖检查失败
 
@@ -54,7 +72,10 @@ sourceHash: c1ebb76c9250d743
 
 **原因：** `/emet` 需要 `git`、`gh` 和 mattpocock-skills 插件；参见 `emet/src/dependencies.ts` 和 `emet/src/skills.ts`。
 
-**修复：** 安装或认证该工具，或运行 `setup-matt-pocock-skills` 技能（在 Claude Code 上是 `/setup-matt-pocock-skills`，在 Codex 上通过 Codex 的 `$` 语法调用同一技能）。如果某项检查对你的环境来说是错误的，`EMET_SKIP_DEPENDENCY_CHECKS=1 emet preflight` 会将其降级为警告。
+**修复：**
+
+1. 安装或认证该工具，或运行 `setup-matt-pocock-skills` 技能（在 Claude Code 上是 `/setup-matt-pocock-skills`，在 Codex 上通过 Codex 的 `$` 语法调用同一技能）。
+2. 如果某项检查对你的环境来说是错误的，请运行 `EMET_SKIP_DEPENDENCY_CHECKS=1 emet preflight` 将其降级为警告。
 
 ## no longer documents a flag in --help
 
@@ -66,11 +87,14 @@ sourceHash: c1ebb76c9250d743
 
 ## 已安装的文件缺失或在安装后被编辑过
 
-**症状：** `~/<path> is missing — re-run install.sh` 或 `~/<path> was edited since install`。
+**症状：** `~/<path> is missing — re-run emet self install` 或 `~/<path> was edited since install`。
 
 **原因：** 已安装的副本与安装清单不再一致。
 
-**修复：** 重新运行 `install.sh`。如果被编辑的文件旁边存在待处理的 `.new` 文件，请合并或删除它。
+**修复：**
+
+1. 重新运行 `emet self install`（在源码检出目录中使用 `emet self install --from .`）。
+2. 如果被编辑的文件旁边存在待处理的 `.new` 文件，请合并或删除它。
 
 ## Stop hook error: forge: No such file or directory
 
@@ -78,7 +102,10 @@ sourceHash: c1ebb76c9250d743
 
 **原因：** `~/.claude/settings.json` 中仍有 `forge guard` 或 `emet guard` 钩子，而其二进制文件已被移动或删除。
 
-**修复：** 运行 `emet doctor .`。它会列出每个失效的守卫钩子及其事件，并打印一条 `cp … && jq …` 命令，用来备份 `settings.json` 并仅移除这些钩子。doctor 本身从不编辑该文件。
+**修复：**
+
+1. 运行 `emet doctor .`。它会列出每个失效的守卫钩子及其事件。
+2. 运行它打印的那一条 `cp … && jq …` 命令；它会备份 `settings.json` 并仅移除这些钩子。doctor 本身从不编辑该文件。
 
 ## 没有空闲的工作者槽位
 
@@ -86,7 +113,10 @@ sourceHash: c1ebb76c9250d743
 
 **原因：** `~/.local/state/emet/slots` 中的每个槽位都被存活或空闲的运行占用，因此波次无法完整派发。
 
-**修复：** 等待某个运行释放槽位，或对你确知已经结束的运行执行 `emet cleanup --run <runId>`。`emet status` 会显示谁占用了什么。
+**修复：**
+
+1. 运行 `emet status` 查看谁占用了每个槽位。
+2. 等待某个运行释放槽位，或对你确知已经结束的运行执行 `emet cleanup --run <runId>`。
 
 ## 锁定的工作树比预期的少
 
@@ -96,7 +126,10 @@ sourceHash: c1ebb76c9250d743
 
 **原因：** 工作者没有用锁定原因认领其工作树，或者 `isolation: "worktree"` 把它们放到了别处。参见 [`incidents.md`](../emet/reference/incidents.md)。
 
-**修复：** 用 `git worktree list --porcelain` 检查已锁定的条目，并用 `emet lock-reason` 查看预期的原因格式。
+**修复：**
+
+1. 运行 `git worktree list --porcelain` 并查看已锁定的条目。
+2. 运行 `emet lock-reason` 查看预期的原因格式，并用它重新锁定工作者的工作树。
 
 ## 一个工单被多个工作树或分支认领
 
@@ -104,7 +137,11 @@ sourceHash: c1ebb76c9250d743
 
 **原因：** 重试或被错误路由的 shell 留下了重复项。
 
-**修复：** 保留规范的工作树或分支，删除或重新锁定其余的，然后重新运行 `emet preflight`。
+**修复：**
+
+1. 保留规范的工作树或分支。
+2. 删除或重新锁定其余的。
+3. 重新运行 `emet preflight`。
 
 ## requiredCommands not on PATH
 
@@ -112,11 +149,14 @@ sourceHash: c1ebb76c9250d743
 
 **原因：** `emet.config.json` 中的 `preflight.requiredCommands` 列出了仓库所需的二进制文件。
 
-**修复：** 安装所指明的二进制文件，如果不再需要，则从配置中移除它们。
+**修复：**
+
+1. 安装所指明的二进制文件。
+2. 或者，如果不再需要，则从 `preflight.requiredCommands` 中移除它们。
 
 ## Codex 宿主
 
-这些情况适用于 `agentHost` 为 `"codex"` 时。参见[在 Codex 上运行 emet](guide/codex.md)。
+这些情况适用于 `agentHost` 为 `"codex"` 时。参见[在 Codex 上运行 emet](how-to/use-codex.md)。
 
 **`codex` 比 `codex.minVersion` 旧。** `emet doctor .` 会报告。请安装版本不低于 `codex.minVersion`（默认 `0.167.0`）的 `codex` CLI，然后再次运行 `emet doctor .`。
 
@@ -124,10 +164,15 @@ sourceHash: c1ebb76c9250d743
 
 **配置的模型不在列表中。** emet 会根据运行主目录中的 `models_cache.json` 解析模型，否则根据你真实 Codex 主目录中的该文件（只读）。不在列表中的 slug 会被替换，并记录这次替换。如果什么都解析不出，`emet review-run` 会在调用模型之前失败，并指出角色和已列出的 slug。请在 `codex.models` 中设置列表中的 slug；参见[配置参考](reference/configuration.md#codex)。
 
+## 检查
+
+1. 运行 `emet doctor .`，确认它不再为你修复的问题报告失败。
+2. 运行 `emet preflight`，确认它以 0 退出。
+
 ## 另请参阅
 
 - [文档索引](README.md)
 - [README](../README.md)
-- [快速开始](guide/getting-started.md)
+- [快速开始](start/install.md)
 - [配置参考](reference/configuration.md)
 - [依赖参考](reference/dependencies.md)

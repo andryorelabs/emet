@@ -216,8 +216,16 @@ _Avoid_: status file, progress file
 The record, in the state directory, of what `emet setup` changed on this machine and what undoes each change.
 _Avoid_: install log, setup state
 
+**Standalone install**:
+Installing emet with `emet self install`, which writes the commands, agents, prompts, skills and hooks straight into an **Agent host**'s user configuration, without the host's plugin system.
+_Avoid_: plugin-less install, manual install
+
+**Auto-update**:
+The background `emet self update --auto` run that fetches a newer release and swaps it in only when no **Slot** is held.
+_Avoid_: self-upgrade, silent update
+
 **Uninstall**:
-Removing what `install.sh` and `emet setup` added, keeping every file the user edited and every shared global package.
+Removing what the **Standalone install** and `emet setup` added, keeping every file the user edited and every shared global package.
 _Avoid_: cleanup, teardown
 
 ## Relationships
@@ -229,7 +237,8 @@ _Avoid_: cleanup, teardown
 - The **Coordinator** merges **Worker** branches into the **Integration branch**; a **Reviewer** and the **Gates** check it before it lands.
 - The **Gate** answers a wave with merge, **Hold**, **Chain**, **Stop** or defer; a **Hold** over findings leads to a **Fix round**, and a **Hold** over an **Environment fault** never spends a fix attempt.
 - When a spec's last wave has landed, the **After-spec step** is a **Release**, a **Promote** or nothing, chosen per repository; the **Journal** records each step, and a **Baseline** marks where its clean history starts.
-- **Uninstall** reads the install manifest and the **Setup ledger**; `emet setup --restore` reads the ledger alone.
+- **Uninstall** reads the install manifest, the install state and the **Setup ledger**; `emet setup --restore` reads the ledger alone.
+- An **Auto-update** never swaps a **Standalone install** while a **Slot** is held.
 - A session's **Attention state** is recorded in the **Journal**; a **Run** can span sessions in different attention states.
 - An **After-spec rule** is chosen by the paths a **Promote** would carry; a **Deploy check** runs only after a merge into the branch that deploys.
 - A **Worker** may edit only its ticket's **Surfaces** and must keep its **Handoff** current.

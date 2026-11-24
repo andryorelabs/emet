@@ -2,7 +2,7 @@
 title: Riferimento della configurazione
 description: Ogni chiave di emet.config.json con il suo valore predefinito e il suo significato.
 seoTitle: Riferimento della configurazione di emet
-sourceHash: a9aeca59a8d1f719
+sourceHash: 23bd286ba357cde6
 ---
 
 Ogni chiave di `emet.config.json`, con il suo valore predefinito e il suo significato. La fonte di verità è [`emet/schema/emet.config.schema.json`](../../emet/schema/emet.config.schema.json). I termini seguono [GLOSSARY.md](../../GLOSSARY.md). Torna al [README](../../README.md).
@@ -191,28 +191,26 @@ Modello e impegno per ruolo per l'host Claude Code; l'host Codex legge invece [`
 
 ## agentHost
 
-`agentHost` (predefinito `"claude"`): l'host dell'agente in cui gira un'esecuzione, `"claude"` o `"codex"`. Vedi la [guida a Codex](../guide/codex.md).
+`agentHost` (predefinito `"claude"`): l'host dell'agente in cui gira un'esecuzione, `"claude"` o `"codex"`. Vedi la [guida a Codex](../how-to/use-codex.md).
 
 ## codex
 
 Letto solo quando `agentHost` è `"codex"`. Tutte le chiavi sono facoltative. Lo sforzo è uno tra `low`, `medium`, `high`, `xhigh`, `max`; `ultra` non è mai accettato.
 
-- `models.worker`, `models.workerOverride`, `models.reviewer.medium`, `models.reviewer.high`, `models.triage`: ognuna è `{ "model", "effort", "fallback" }`. `fallback` elenca gli slug provati in ordine quando `model` manca dalla cache dei modelli di Codex. I valori predefiniti sono in [Modelli e sforzo](../guide/models-and-effort.md).
+- `models.worker`, `models.workerOverride`, `models.reviewer.medium`, `models.reviewer.high`, `models.triage`: ognuna è `{ "model", "effort", "fallback" }`. `fallback` elenca gli slug provati in ordine quando `model` manca dalla cache dei modelli di Codex. I valori predefiniti sono in [Modelli e sforzo](../how-to/choose-models.md).
 - `models.session`: `{ "model", "effort", "planEffort", "fallback" }` per la sessione che esegue `$emet:run`. `planEffort` vale fino alla prima approvazione.
 - `effort`: se impostato, sostituisce lo sforzo di tutti i ruoli.
 - `minVersion` (predefinito `0.167.0`): la versione più vecchia della CLI `codex` supportata da emet. `emet doctor` non confronta con essa la versione installata.
-- `sandbox` (predefinito `danger-full-access`): la modalità sandbox passata come `-s` da `emet dispatch`, `emet review-run` e da un `emet launch` Codex. Anche `workspace-write` è accettato, ma rende `.git` di sola lettura, quindi i worker non possono fare commit. Qualunque sia il valore, `emet guard` nega `git push` su Codex, e il `config.toml` dell'overlay generato contiene solo il marketplace e il plugin emet, tabelle trusted per le directory proprie del run e il modello e lo sforzo risolti (mai le tue tabelle). Vedi la [guida a Codex](../guide/codex.md) e [ADR-0022](../adr/0022-codex-workers-run-unsandboxed-by-default.md).
+- `sandbox` (predefinito `danger-full-access`): la modalità sandbox passata come `-s` da `emet dispatch`, `emet review-run` e da un `emet launch` Codex. Anche `workspace-write` è accettato, ma rende `.git` di sola lettura, quindi i worker non possono fare commit. Qualunque sia il valore, `emet guard` nega `git push` su Codex, e il `config.toml` dell'overlay generato contiene solo il marketplace e il plugin emet, tabelle trusted per le directory proprie del run e il modello e lo sforzo risolti (mai le tue tabelle). Vedi la [guida a Codex](../how-to/use-codex.md) e [ADR-0022](../adr/0022-codex-workers-run-unsandboxed-by-default.md).
 
 ## review
 
 ```json
-{ "review": { "highRiskPaths": [] } }
+{ "review": { "highRiskPaths": [], "dual": "auto" } }
 ```
 
 - `highRiskPaths` (predefinito `[]`): sottostringhe di percorso aggiuntive, senza distinzione tra maiuscole e minuscole, che impongono il livello di review `high` in `emet assess`, oltre all'insieme integrato (autenticazione, sicurezza, pagamenti, webhook, CI, l'installer, lockfile, migrazioni e sink pericolosi come SQL grezzo o pipe-to-shell).
-- `dual` (predefinito `"auto"`): `"auto"` o `"off"`. Vedi la Dual review qui sotto.
-
-Dual review: quando `emet assess` stampa `dualReview.run: true` (livello `high`, `agentHost` `claude`, `review.dual` diverso da `off` e `codex` nel PATH), il coordinatore esegue in parallelo un reviewer Claude e un reviewer Codex sullo stesso pacchetto, poi unisce i loro rilievi con `emet review --merge`. Ogni rilievo `agreement: "single"` viene valutato dal coordinatore, e viene registrata solo la copertura del reviewer Claude. `emet init` non scrive `review.dual`. Altrimenti gira un solo reviewer, come prima.
+- `dual` (`"auto"` o `"off"`, predefinito `"auto"`; `emet init` non lo scrive): controlla la Dual review. Con `auto`, un'ondata `high` sull'host Claude Code con il binario `codex` nel PATH esegue in parallelo due reviewer, il reviewer Claude e `emet review-run`, sullo stesso pacchetto. Il coordinatore unisce i loro rilievi con `emet review --merge`, valuta ogni rilievo di un solo reviewer (lo tiene, oppure lo scarta con `emet review --rule`) e registra solo i verdetti di copertura del reviewer Claude. `off` esegue sempre un solo reviewer. `emet assess` stampa la decisione come `dualReview: { run, reason }`.
 
 ## memory
 
@@ -221,14 +219,6 @@ Dual review: quando `emet assess` stampa `dualReview.run: true` (livello `high`,
 ```
 
 - `enabled` (`"auto"` oppure `"off"`, predefinito `"auto"`): controlla [`emet memory`](cli.md#esecuzioni-worker-e-slot). Con `auto`, il comando usa Engram quando il binario `engram` è nel PATH e il suo handshake riesce. `off` fa sì che `emet memory search` e `emet memory save` stampino `{available: false, reason: "memory.enabled is off"}` ed escano con 0 senza avviare `engram`. Qualsiasi altro valore fallisce al caricamento con `"memory.enabled" must be one of auto|off`.
-
-## attention
-
-```json
-{ "attention": { "alert": true } }
-```
-
-- `alert` (booleano, predefinito `true`): alla sola transizione di una sessione verso `needs-decision`, emet lancia un solo avviso. Se `orca status --json` segnala un runtime raggiungibile, imposta un commento non letto sul worktree principale con `orca worktree set`; altrimenti esegue `notify-send` quando è nel PATH; altrimenti non fa nulla. Ogni chiamata esterna ha un timeout di 3 s e un errore non cambia mai il risultato del guard. Uscire da `needs-decision` non cancella mai il segno non letto di Orca. Imposta `false` per disattivare l'avviso.
 
 ## landing
 
@@ -304,6 +294,16 @@ Tutti prose-only.
 
 - `inlineMaxLines` (predefinito `100`, minimo `1`): il corpo di ticket più grande, in righe, mantenuto inline nel prompt di un worker.
 
+## attention
+
+- `alert` (booleano, predefinito `true`): quando una sessione entra in `needs-decision`, emet lancia un solo avviso. Se `orca status --json` segnala un runtime raggiungibile, segna il worktree come non letto in Orca; altrimenti esegue `notify-send` quando è nel PATH; altrimenti non fa nulla. Ogni chiamata ha un timeout di 3 s e un errore non cambia mai il risultato di un hook. Uscire da `needs-decision` non cancella il segno non letto di Orca. Imposta `false` per disattivare l'avviso.
+
+```json
+{ "attention": { "alert": true } }
+```
+
+Vedi [`emet fleet status`](cli.md#setup-and-audit).
+
 ## schema
 
 Prose-only. La proprietà degli schemi di dati di questo repo, usata dalla regola di prevenzione dei conflitti della fase 3 quando si dividono i ticket. Vuoto od omesso salta la regola.
@@ -345,6 +345,8 @@ La CLI legge queste variabili, tutte tramite `emet/src/env.ts`. Una variabile co
 | `EMET_MEM_RESERVE_GIB`        | `FORGE_MEM_RESERVE_GIB`        | GiB di memoria mantenuti liberi prima di concedere uno slot di worker.                                                                                           |
 | `EMET_MEM_PER_WORKER_GIB`     | `FORGE_MEM_PER_WORKER_GIB`     | GiB di memoria presunti per worker dal limite automatico di worker.                                                                                              |
 | `EMET_AGENT_HOST`             |                                | Impostala a `codex` quando si esegue sotto l'host agente Codex; qualsiasi altro valore indica Claude.                                                            |
+| `EMET_AUTO_UPDATE`            |                                | Impostala a `0` per disattivare `emet self update --auto` in un'installazione standalone.                                                                        |
+| `EMET_RELEASE_BASE_URL`       |                                | Radice di download per `emet self update`: le risorse vengono lette da `<root>/vX.Y.Z` o `<root>/latest`.                                                        |
 | `CODEX_HOME`                  |                                | La home directory di Codex; predefinita `~/.codex`. Viene solo letta.                                                                                            |
 | `XDG_STATE_HOME`              |                                | Base della directory di stato quando `EMET_STATE_DIR` non è impostata.                                                                                           |
 | `NO_COLOR`                    |                                | Se impostata, il banner viene stampato senza colore.                                                                                                             |

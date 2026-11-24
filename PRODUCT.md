@@ -31,5 +31,5 @@ emet is a plugin for Claude Code and Codex. It takes a feature from idea to merg
 ## Where to go next
 
 - [ROADMAP.md](ROADMAP.md): what is planned.
-- [docs/architecture.md](docs/architecture.md): how the pieces fit.
-- [docs/guide/getting-started.md](docs/guide/getting-started.md): install and first run.
+- [docs/architecture.md](docs/concepts/architecture.md): how the pieces fit.
+- [docs/guide/getting-started.md](docs/start/install.md): install and first run.

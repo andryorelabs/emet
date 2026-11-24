@@ -3,6 +3,7 @@
 Status: Accepted (2026-11-03). Amended by [0036](0036-prompt-wording-changes-under-an-explicit-ticket.md): prompt wording may change in a ticket that names the paragraphs.
 Spec: #73 (S1)
 Amended by [0043](0043-reversible-setup-and-data-driven-uninstall.md): `install.sh` gains the `--uninstall` wrapper.
+Amended by [0044](0044-standalone-install-without-plugins.md): `install.sh` is removed and the installer is `emet self install`.
 
 ## Context
 

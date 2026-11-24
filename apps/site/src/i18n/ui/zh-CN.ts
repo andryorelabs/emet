@@ -47,13 +47,18 @@ export const zhCN = {
     emetReplies: "emet 回复",
     alt: "三条溪流汇入一条河的山谷.",
     merged: "已合并",
+    otherInstall: "其他安装方式",
+    wave: "第 {n} 波",
+    caption: "每一波都并入一个规格分支。规格作为一个拉取请求落地。",
+    prTitle: "规格 41：设置的深色模式",
+    checks: "检查通过",
   },
   showcase: {
-    heading: "这一波已合并",
-    headingHeld: "这一波在等待",
-    status: "第 2 波已评审。CI 通过。已合并，关闭 3 个工单。",
-    statusHeld: "第 2 波被拦下：有一个工单被标记。未合并任何内容。",
-    flag: "标记工单 #255",
+    heading: "规格已合并",
+    headingHeld: "规格在等待",
+    status: "规格 41 已评审。CI 通过。作为一个拉取请求合并，关闭 4 个工单。",
+    statusHeld: "规格 41 被拦下：有一个工单被标记。未合并任何内容。",
+    flag: "标记工单 #44",
   },
   features: {
     heading: "一次运行守护什么",
@@ -68,6 +73,16 @@ export const zhCN = {
       { title: "隔离的 worktree", line: "每个 worker 一个 git worktree。" },
       { title: "用你的追踪器，或不用", line: "Linear、GitHub Issues 或本地文件。" },
     ],
+    extra: [
+      {
+        title: "小改动的快速模式",
+        line: "一个标志即可把访谈缩成一轮，只运行一个工单、一次评审和一次落地。",
+      },
+      { title: "记住有效的做法", line: "每次运行的经验会被保存，并在下一次运行中调用。" },
+      { title: "高风险改动由两位评审", line: "高风险的工作在落地前会多一位评审。" },
+      { title: "需要你时会通知你", line: "运行在等待审批或卡住时发出提醒。" },
+      { title: "干净安装，干净卸载", line: "删除 emet 安装的一切，并保留你编辑过的任何文件。" },
+    ],
   },
   stats: {
     label: "数字一览",
@@ -81,6 +96,15 @@ export const zhCN = {
   faq: {
     heading: "常见问题",
     items: [
+      {
+        question: "如何卸载 emet？",
+        answer:
+          "运行 `emet uninstall`。它会删除 emet 安装的内容，并保留你编辑过的任何文件。先加上 `--dry-run` 可预览。",
+      },
+      {
+        question: "什么是快速模式？",
+        answer: "小改动请传入 `--quick`。它会把访谈缩成一轮，只运行一个工单、一次评审和一次落地。",
+      },
       {
         question: "我需要什么？",
         answer:

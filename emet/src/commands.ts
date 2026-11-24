@@ -118,6 +118,7 @@ type ModuleName =
   | "fleet"
   | "setup"
   | "uninstall"
+  | "self"
   | "whatsnew";
 
 type ModuleRun = CommandSpec["run"];
@@ -210,6 +211,8 @@ async function loadRun(name: ModuleName): Promise<ModuleRun> {
       return (await import("./setup")).run;
     case "uninstall":
       return (await import("./uninstall")).run;
+    case "self":
+      return (await import("./self")).run;
     case "whatsnew":
       return (await import("./whats-new")).run;
   }
@@ -621,6 +624,12 @@ export const COMMANDS: readonly CommandSpec[] = [
     summary: "remove the install, its guard hooks and the setup extras",
     flags: [bool("--dry-run"), bool("--yes"), bool("--purge"), bool("--json")],
     run: runModule("uninstall"),
+  },
+  {
+    name: "self",
+    summary: "install or update the standalone emet binary (install|update)",
+    flags: [bool("--dry-run"), bool("--force"), val("--from"), bool("--auto")],
+    run: runModule("self"),
   },
   {
     name: "whats-new",

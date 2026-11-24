@@ -2,7 +2,7 @@
 title: 配置参考
 description: emet.config.json 中的每个键，包括其默认值和含义。
 seoTitle: emet 配置参考
-sourceHash: a9aeca59a8d1f719
+sourceHash: 23bd286ba357cde6
 ---
 
 `emet.config.json` 中的每个键，及其默认值和含义。权威来源是 [`emet/schema/emet.config.schema.json`](../../emet/schema/emet.config.schema.json)。术语遵循 [GLOSSARY.md](../../GLOSSARY.md)。返回 [README](../../README.md)。
@@ -191,17 +191,17 @@ Claude Code 宿主上每个角色的模型和推理强度；Codex 宿主改为�
 
 ## agentHost
 
-`agentHost` (默认 `"claude"`): 运行所在的 Agent 宿主，`"claude"` 或 `"codex"`。参见 [Codex 指南](../guide/codex.md)。
+`agentHost` (默认 `"claude"`): 运行所在的 Agent 宿主，`"claude"` 或 `"codex"`。参见 [Codex 指南](../how-to/use-codex.md)。
 
 ## codex
 
 仅当 `agentHost` 为 `"codex"` 时才会读取。所有键都是可选的。强度取 `low`、`medium`、`high`、`xhigh`、`max` 之一，永远不接受 `ultra`。
 
-- `models.worker`, `models.workerOverride`, `models.reviewer.medium`, `models.reviewer.high`, `models.triage`: 每项都是 `{ "model", "effort", "fallback" }`。当 `model` 不在 Codex 模型缓存中时，`fallback` 列出按顺序尝试的 slug。默认值见[模型与强度](../guide/models-and-effort.md)。
+- `models.worker`, `models.workerOverride`, `models.reviewer.medium`, `models.reviewer.high`, `models.triage`: 每项都是 `{ "model", "effort", "fallback" }`。当 `model` 不在 Codex 模型缓存中时，`fallback` 列出按顺序尝试的 slug。默认值见[模型与强度](../how-to/choose-models.md)。
 - `models.session`: 用于运行 `$emet:run` 的会话：`{ "model", "effort", "planEffort", "fallback" }`。`planEffort` 在首次批准之前生效。
 - `effort`: 设置后会替换所有角色的强度。
 - `minVersion` (默认 `0.167.0`): emet 支持的最旧 `codex` CLI 版本。`emet doctor` 不会将已安装的版本与它比较。
-- `sandbox` (默认 `danger-full-access`): `emet dispatch`、`emet review-run` 以及 Codex 的 `emet launch` 以 `-s` 传入的沙箱模式。也接受 `workspace-write`，但它会让 `.git` 变为只读，worker 因而无法提交。无论取何值，`emet guard` 都会在 Codex 上拒绝 `git push`，生成的覆盖层 `config.toml` 只包含 emet 市场和插件、针对本次运行自身目录的 trusted 表，以及解析出的模型和强度（绝不包含你自己的表）。参见 [Codex 指南](../guide/codex.md)和 [ADR-0022](../adr/0022-codex-workers-run-unsandboxed-by-default.md)。
+- `sandbox` (默认 `danger-full-access`): `emet dispatch`、`emet review-run` 以及 Codex 的 `emet launch` 以 `-s` 传入的沙箱模式。也接受 `workspace-write`，但它会让 `.git` 变为只读，worker 因而无法提交。无论取何值，`emet guard` 都会在 Codex 上拒绝 `git push`，生成的覆盖层 `config.toml` 只包含 emet 市场和插件、针对本次运行自身目录的 trusted 表，以及解析出的模型和强度（绝不包含你自己的表）。参见 [Codex 指南](../how-to/use-codex.md)和 [ADR-0022](../adr/0022-codex-workers-run-unsandboxed-by-default.md)。
 
 ## review
 
@@ -218,7 +218,7 @@ Claude Code 宿主上每个角色的模型和推理强度；Codex 宿主改为�
 { "memory": { "enabled": "auto" } }
 ```
 
-- `enabled`（`"auto"` 或 `"off"`，默认 `"auto"`）：控制 [`emet memory`](cli.md#runs-workers-and-slots)。设为 `auto` 时，只要 `engram` 二进制文件在 PATH 中且握手成功，该命令就会使用 Engram。`off` 会让 `emet memory search` 和 `emet memory save` 输出 `{available: false, reason: "memory.enabled is off"}` 并以 0 退出，不启动 `engram`。其他任何值都会在加载时失败，并报错 `"memory.enabled" must be one of auto|off`。
+- `enabled`（`"auto"` 或 `"off"`，默认 `"auto"`）：控制 [`emet memory`](cli.md#运行工作者与槽位)。设为 `auto` 时，只要 `engram` 二进制文件在 PATH 中且握手成功，该命令就会使用 Engram。`off` 会让 `emet memory search` 和 `emet memory save` 输出 `{available: false, reason: "memory.enabled is off"}` 并以 0 退出，不启动 `engram`。其他任何值都会在加载时失败，并报错 `"memory.enabled" must be one of auto|off`。
 
 ## landing
 
@@ -294,6 +294,16 @@ Claude Code 宿主上每个角色的模型和推理强度；Codex 宿主改为�
 
 - `inlineMaxLines`（默认 `100`，最小 `1`）：工作者提示词中以内联方式保留的工单正文的最大行数。
 
+## attention
+
+- `alert`（默认 `true`，boolean）：当会话进入 `needs-decision` 时，emet 只发出一次提醒。当 `orca status --json` 报告运行时可达时，它会在 Orca 中把该工作树标记为未读；否则在 PATH 中有 `notify-send` 时运行它；否则什么也不做。每次调用有 3 秒超时，失败绝不会改变钩子的结果。离开 `needs-decision` 不会清除 Orca 的未读标记。设为 `false` 可关闭提醒。
+
+```json
+{ "attention": { "alert": true } }
+```
+
+参见 [`emet fleet status`](cli.md#设置与审计)。
+
 ## schema
 
 仅 prose-only。本仓库的数据模式归属，在阶段 3 拆分工单时由避免冲突的规则使用。为空或省略时，将跳过该规则。
@@ -321,18 +331,6 @@ Claude Code 宿主上每个角色的模型和推理强度；Codex 宿主改为�
 
 - `canvasIndex`（deprecated）：设计画布文件的路径，工作者在进行 UI 变更之前会查看它。
 
-## attention
-
-可选。
-
-- `alert`（默认 `true`，boolean）：当会话进入 `needs-decision` 时，emet 只发出一次提醒：Orca 运行时可达时，在主 worktree 上设置 Orca 未读标记；否则在 PATH 中有 `notify-send` 时使用它；否则什么也不做。`false` 会关闭提醒。
-
-示例：
-
-```json
-{ "attention": { "alert": true } }
-```
-
 ## 环境变量
 
 CLI 会读取这些变量，全部通过 `emet/src/env.ts` 完成。采用 `FORGE_` 拼写的变量仍可作为对应 `EMET_` 名称的回退使用，并会打印一次警告。空值视为未设置。`tools/env-docs.test.ts` 使该表与代码保持一致。
@@ -347,6 +345,8 @@ CLI 会读取这些变量，全部通过 `emet/src/env.ts` 完成。采用 `FORG
 | `EMET_MEM_RESERVE_GIB`        | `FORGE_MEM_RESERVE_GIB`        | 授予工作者槽位之前保持空闲的内存 GiB 数。                                                         |
 | `EMET_MEM_PER_WORKER_GIB`     | `FORGE_MEM_PER_WORKER_GIB`     | 自动工作者上限为每个工作者假定的内存 GiB 数。                                                     |
 | `EMET_AGENT_HOST`             |                                | 在 Codex 智能体宿主下运行时设为 `codex`；其他任何值都表示 Claude。                                |
+| `EMET_AUTO_UPDATE`            |                                | 设为 `0` 可为独立安装关闭 `emet self update --auto`。                                             |
+| `EMET_RELEASE_BASE_URL`       |                                | `emet self update` 的下载根地址：资源从 `<root>/vX.Y.Z` 或 `<root>/latest` 读取。                 |
 | `CODEX_HOME`                  |                                | Codex 的主目录；默认为 `~/.codex`。只会被读取。                                                   |
 | `XDG_STATE_HOME`              |                                | 未设置 `EMET_STATE_DIR` 时，状态目录的基准。                                                      |
 | `NO_COLOR`                    |                                | 设置后，横幅将不带颜色输出。                                                                      |

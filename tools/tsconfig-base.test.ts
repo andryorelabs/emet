@@ -59,7 +59,7 @@ describe("tsconfig.base.json", () => {
     },
   );
 
-  test("emet/tsconfig.json carries every base flag itself, because install.sh ships only emet/", () => {
+  test("emet/tsconfig.json carries every base flag itself, because `emet self install --from` copies only emet/", () => {
     const emetOptions = compilerOptionsOf(readTsconfig("emet/tsconfig.json"));
     const drifted = Object.entries(baseOptions)
       .filter(([flag, value]) => emetOptions[flag] !== value)

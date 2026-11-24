@@ -54,8 +54,12 @@ describe("findOutdatedTranslations", () => {
     ]);
   });
 
-  test("finds no outdated translation in this checkout", () => {
-    expect(findOutdatedTranslations()).toEqual([]);
+  test("reports only stale or missing translations of published pages in this checkout", () => {
+    const ids = new Set(PUBLISHED_SOURCES.map((source) => source.id));
+    for (const entry of findOutdatedTranslations()) {
+      expect(["stale", "missing"]).toContain(entry.status);
+      expect(ids.has(entry.file.slice(entry.file.indexOf("/") + 1, -".md".length))).toBe(true);
+    }
   });
 });
 

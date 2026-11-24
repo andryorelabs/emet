@@ -1,11 +1,12 @@
 # Troubleshooting
 
-Failures of `emet doctor` and `emet preflight`, grouped by what you see, each with the cause and a fix. Terms follow [GLOSSARY.md](../GLOSSARY.md). For how the checks fit together, see [architecture](architecture.md).
+Fix the failures of `emet doctor` and `emet preflight`, grouped by what you see, each with the cause and the steps to fix it. Terms follow [GLOSSARY.md](../GLOSSARY.md). For how the checks fit together, see [architecture](concepts/architecture.md).
 
 <img src="brand/mascot/mascot-error.svg" alt="" width="96">
 
 A repo that still has only `forge.config.json`, `.forge/` or `FORGE_*` variables keeps working: `emet` reads the legacy names, prints one stderr line naming each legacy file, and `emet migrate` renames them.
 
+- [Prerequisites](#prerequisites)
 - [no emet.config.json](#no-emetconfigjson)
 - [emet.config.json is malformed](#emetconfigjson-is-malformed)
 - [docs/agents still has TODO(emet) markers](#docsagents-still-has-todoemet-markers)
@@ -17,7 +18,15 @@ A repo that still has only `forge.config.json`, `.forge/` or `FORGE_*` variables
 - [Expected locked worktrees, found fewer](#expected-locked-worktrees-found-fewer)
 - [A ticket is claimed by several worktrees or branches](#a-ticket-is-claimed-by-several-worktrees-or-branches)
 - [requiredCommands not on PATH](#requiredcommands-not-on-path)
+- [Codex host](#codex-host)
+- [Check](#check)
 - [See also](#see-also)
+
+## Prerequisites
+
+- `emet` on `PATH`; see [Install](start/install.md).
+- A shell at the repo root with the problem.
+- The exact message from `emet doctor .` or `emet preflight`: find it in the list above.
 
 ## no emet.config.json
 
@@ -25,7 +34,10 @@ A repo that still has only `forge.config.json`, `.forge/` or `FORGE_*` variables
 
 **Cause:** The repo has no `/emet` config yet.
 
-**Fix:** Run `emet init` at the repo root, then review the generated config and fill the `docs/agents/` files.
+**Fix:**
+
+1. Run `emet init` at the repo root.
+2. Review the generated config and fill the `docs/agents/` files.
 
 ## emet.config.json is malformed
 
@@ -33,7 +45,10 @@ A repo that still has only `forge.config.json`, `.forge/` or `FORGE_*` variables
 
 **Cause:** The config is strict JSON and is validated against `emet/schema/emet.config.schema.json`. Comments and trailing commas are rejected.
 
-**Fix:** Correct the field named in the reason, or regenerate with `emet init --force`.
+**Fix:**
+
+1. Correct the field named in the reason.
+2. Or regenerate the config with `emet init --force`.
 
 ## docs/agents still has TODO(emet) markers
 
@@ -41,7 +56,10 @@ A repo that still has only `forge.config.json`, `.forge/` or `FORGE_*` variables
 
 **Cause:** `emet init` leaves a marker wherever it cannot detect a value.
 
-**Fix:** Fill each marked line, or resolve them and run `emet init --force`. Preflight refuses to dispatch while one remains.
+**Fix:**
+
+1. Fill each marked line, or resolve them and run `emet init --force`.
+2. Run `emet preflight`; it refuses to dispatch while one marker remains.
 
 ## A dependency check fails
 
@@ -49,7 +67,10 @@ A repo that still has only `forge.config.json`, `.forge/` or `FORGE_*` variables
 
 **Cause:** `/emet` needs `git`, `gh` and the mattpocock-skills plugin; see `emet/src/dependencies.ts` and `emet/src/skills.ts`.
 
-**Fix:** Install or authenticate the tool, or run the `setup-matt-pocock-skills` skill (`/setup-matt-pocock-skills` on Claude Code, the same skill via Codex's `$` syntax on Codex). If a check is wrong for your environment, `EMET_SKIP_DEPENDENCY_CHECKS=1 emet preflight` downgrades it to a warning.
+**Fix:**
+
+1. Install or authenticate the tool, or run the `setup-matt-pocock-skills` skill (`/setup-matt-pocock-skills` on Claude Code, the same skill via Codex's `$` syntax on Codex).
+2. If a check is wrong for your environment, run `EMET_SKIP_DEPENDENCY_CHECKS=1 emet preflight` to downgrade it to a warning.
 
 ## no longer documents a flag in --help
 
@@ -61,11 +82,14 @@ A repo that still has only `forge.config.json`, `.forge/` or `FORGE_*` variables
 
 ## An installed file is missing or was edited since install
 
-**Symptom:** `~/<path> is missing — re-run install.sh` or `~/<path> was edited since install`.
+**Symptom:** `~/<path> is missing — re-run emet self install` or `~/<path> was edited since install`.
 
 **Cause:** The installed copy no longer matches the install manifest.
 
-**Fix:** Re-run `install.sh`. If a pending `.new` file exists beside an edited file, merge it or delete it.
+**Fix:**
+
+1. Re-run `emet self install` (from a source checkout, `emet self install --from .`).
+2. If a pending `.new` file exists beside an edited file, merge it or delete it.
 
 ## Stop hook error: forge: No such file or directory
 
@@ -73,7 +97,10 @@ A repo that still has only `forge.config.json`, `.forge/` or `FORGE_*` variables
 
 **Cause:** `~/.claude/settings.json` still has a `forge guard` or `emet guard` hook whose binary was moved or removed.
 
-**Fix:** Run `emet doctor .`. It lists each dead guard hook with its event and prints one `cp … && jq …` command that backs up `settings.json` and removes only those hooks. Doctor never edits the file itself.
+**Fix:**
+
+1. Run `emet doctor .`. It lists each dead guard hook with its event.
+2. Run the one `cp … && jq …` command it prints; it backs up `settings.json` and removes only those hooks. Doctor never edits the file itself.
 
 ## No free worker slots
 
@@ -81,7 +108,10 @@ A repo that still has only `forge.config.json`, `.forge/` or `FORGE_*` variables
 
 **Cause:** Every slot in `~/.local/state/emet/slots` is held by a live or idle run, so the wave cannot dispatch fully.
 
-**Fix:** Wait for a run to free a slot, or run `emet cleanup --run <runId>` for a run you know is finished. `emet status` shows who holds what.
+**Fix:**
+
+1. Run `emet status` to see who holds each slot.
+2. Wait for a run to free a slot, or run `emet cleanup --run <runId>` for a run you know is finished.
 
 ## Expected locked worktrees, found fewer
 
@@ -91,7 +121,10 @@ A repo that still has only `forge.config.json`, `.forge/` or `FORGE_*` variables
 
 **Cause:** Workers did not claim their worktree with the lock reason, or `isolation: "worktree"` placed them elsewhere. See [`incidents.md`](../emet/reference/incidents.md).
 
-**Fix:** Check `git worktree list --porcelain` for the locked entries, and `emet lock-reason` for the expected reason format.
+**Fix:**
+
+1. Run `git worktree list --porcelain` and look at the locked entries.
+2. Run `emet lock-reason` for the expected reason format and re-lock a worker's worktree with it.
 
 ## A ticket is claimed by several worktrees or branches
 
@@ -99,7 +132,11 @@ A repo that still has only `forge.config.json`, `.forge/` or `FORGE_*` variables
 
 **Cause:** A retry or a mis-routed shell left a duplicate.
 
-**Fix:** Keep the canonical worktree or branch, delete or re-lock the rest, then re-run `emet preflight`.
+**Fix:**
+
+1. Keep the canonical worktree or branch.
+2. Delete or re-lock the rest.
+3. Re-run `emet preflight`.
 
 ## requiredCommands not on PATH
 
@@ -107,11 +144,14 @@ A repo that still has only `forge.config.json`, `.forge/` or `FORGE_*` variables
 
 **Cause:** `preflight.requiredCommands` in `emet.config.json` lists binaries the repo needs.
 
-**Fix:** Install the named binaries, or remove them from the config if they are no longer needed.
+**Fix:**
+
+1. Install the named binaries.
+2. Or remove them from `preflight.requiredCommands` if they are no longer needed.
 
 ## Codex host
 
-These apply when `agentHost` is `"codex"`. See [Running emet on Codex](guide/codex.md).
+These apply when `agentHost` is `"codex"`. See [Running emet on Codex](how-to/use-codex.md).
 
 **A `codex` older than `codex.minVersion`.** `emet doctor .` reports it. Install the `codex` CLI at the version in `codex.minVersion` (default `0.167.0`) or newer, then run `emet doctor .` again.
 
@@ -119,10 +159,15 @@ These apply when `agentHost` is `"codex"`. See [Running emet on Codex](guide/cod
 
 **A configured model is not listed.** emet resolves models against `models_cache.json` in the run home, else in your real Codex home (read only). A slug that is not listed is substituted and the substitution is logged. If nothing resolves, `emet review-run` fails before the model call, naming the role and the listed slugs. Set a listed slug in `codex.models`; see the [configuration reference](reference/configuration.md#codex).
 
+## Check
+
+1. Run `emet doctor .` and confirm it reports no failure for the problem you fixed.
+2. Run `emet preflight` and confirm it exits 0.
+
 ## See also
 
 - [Documentation index](README.md)
 - [README](../README.md)
-- [Getting started](guide/getting-started.md)
+- [Getting started](start/install.md)
 - [Configuration reference](reference/configuration.md)
 - [Dependencies reference](reference/dependencies.md)

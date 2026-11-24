@@ -41,35 +41,17 @@ Erase one letter and it stops; here, nothing merges when something is flagged.
 
 <img src="docs/brand/mascot/mascot-work.svg" alt="emet mascot, working" width="96" align="right">
 
-Requirements: Claude Code or the Codex CLI, `git`, `gh` (authenticated) and the `mattpocock-skills` plugin. Bun is needed only for a source install. See [Requirements](#requirements).
+Requirements: Claude Code or the Codex CLI, `git`, `gh` (authenticated) and the `mattpocock-skills` plugin. Bun is needed only for `emet self install --from`. See [Requirements](#requirements).
 
-1. On Claude Code (no Bun needed):
-
-   ```bash
-   claude plugin marketplace add andryorelabs/emet
-   claude plugin install emet@emet-marketplace
-   ```
-
-   Or from a clone, with `./install.sh`, which also installs the terminal `emet` that the Codex host needs:
+1. Install emet. No Bun, clone or sudo needed:
 
    ```bash
-   git clone git@github.com:andryorelabs/emet.git
-   cd emet
-   ./install.sh
+   curl -fsSL https://emet.andryore.dev/install.sh | sh
    ```
+
+   It installs the terminal `emet`, the Claude Code commands and agents and, when Codex is present, the Codex skills and hooks. Updates, auto-update, plugins and uninstall are in [Install](docs/start/install.md).
 
    Optional: a pixel mascot, see [Mascot](#mascot-optional).
-
-   To remove a clone install, run `./install.sh --uninstall` (or `emet uninstall`; add `--dry-run` to preview). It deletes the files it installed, drops the `emet guard` hooks from `~/.claude/settings.json` and reverts the extras that `emet setup` recorded. See the [CLI reference](docs/reference/cli.md#setup-ledger-and-restore).
-
-   On Codex, install the plugin instead, then install the terminal `emet` as in [Getting started](docs/guide/getting-started.md) (needs `mattpocock-skills` too; the full steps are in [Codex](docs/guide/codex.md)):
-
-   ```bash
-   codex plugin marketplace add andryorelabs/emet
-   codex plugin add emet@emet-marketplace
-   ```
-
-   To update later on Claude Code, refresh the marketplace and update each plugin, then restart Claude Code. On Codex, run `codex plugin marketplace upgrade emet-marketplace`, then `codex plugin add emet@emet-marketplace`. Auto-update is off by default for third-party marketplaces; turn it on in Claude Code in `/plugin`, tab **Marketplaces**, `emet-marketplace`, **Enable auto-update**. See [Update emet](docs/how-to/update-emet.md).
 
 2. In your repo, set it up and check it. On Claude Code:
 
@@ -85,7 +67,7 @@ Requirements: Claude Code or the Codex CLI, `git`, `gh` (authenticated) and the 
    $emet:doctor
    ```
 
-   In a plain terminal, `emet init` and `emet doctor .` work only after `install.sh`.
+   In a plain terminal, `emet init` and `emet doctor .` work after the standalone install.
 
 3. Inside Claude Code:
 
@@ -95,13 +77,13 @@ Requirements: Claude Code or the Codex CLI, `git`, `gh` (authenticated) and the 
 
    On Codex, run the skill `$emet:run <describe the feature>`.
 
-More in [Getting started](docs/guide/getting-started.md). If `doctor` reports a problem, see [troubleshooting](docs/troubleshooting.md).
+More in [Install](docs/start/install.md) and [First run](docs/start/first-run.md); [Overview](docs/start/overview.md) says what a run does. If `doctor` reports a problem, see [troubleshooting](docs/troubleshooting.md).
 
 ## Requirements
 
 ### Supported platforms
 
-Linux and macOS. Windows is supported only through WSL: on native Windows emet shows one notice and stays inactive, and `install.sh` refuses to run. See [ADR-0007](docs/adr/0007-macos-support.md) and the [dependencies reference](docs/reference/dependencies.md).
+Linux and macOS. Windows is supported only through WSL: on native Windows emet shows one notice and stays inactive, and the bootstrap script refuses to run. See [ADR-0007](docs/adr/0007-macos-support.md) and the [dependencies reference](docs/reference/dependencies.md).
 
 ## Mascot (optional)
 
@@ -122,11 +104,11 @@ Options and the Orca import are in the [mascot how-to](docs/how-to/mascot.md).
 
 ## Models & effort
 
-On Claude Code, emet picks a model and a reasoning effort per role automatically: Opus plans, Sonnet coordinates and implements, Opus reviews by risk tier, and Haiku triages CI logs. On Codex, it uses the `codex.models` defaults instead. The role table, the `review.highRiskPaths` rule and what you set once are in [Models and effort](docs/guide/models-and-effort.md).
+On Claude Code, emet picks a model and a reasoning effort per role automatically: Opus plans, Sonnet coordinates and implements, Opus reviews by risk tier, and Haiku triages CI logs. On Codex, it uses the `codex.models` defaults instead. The role table, the `review.highRiskPaths` rule and what you set once are in [Models and effort](docs/how-to/choose-models.md).
 
 ## Safety
 
-emet registers a `PreToolUse` guard in [`hooks/hooks.json`](hooks/hooks.json). It runs `emet guard` before every Bash, Skill, ScheduleWakeup and file-edit tool call, and blocks the ones that break the run's rules. See [Security](docs/security.md) for the threat model.
+emet registers a `PreToolUse` guard in [`hooks/hooks.json`](hooks/hooks.json). It runs `emet guard` before every Bash, Skill, ScheduleWakeup and file-edit tool call, and blocks the ones that break the run's rules. See [Security](docs/concepts/security.md) for the threat model.
 
 ## Verify a release
 
@@ -141,9 +123,9 @@ Use the file name of your platform: `emet-linux-x64`, `emet-linux-arm64`, `emet-
 
 ## Documentation
 
-- Guide: [getting started](docs/guide/getting-started.md), [trackers and landing](docs/guide/trackers-and-landing.md), [models and effort](docs/guide/models-and-effort.md), [fleet check](docs/guide/fleet.md), [Codex](docs/guide/codex.md)
+- Guide: [overview](docs/start/overview.md), [install](docs/start/install.md), [first run](docs/start/first-run.md), [trackers and landing](docs/how-to/configure-tracker.md), [models and effort](docs/how-to/choose-models.md), [fleet check](docs/how-to/check-a-fleet.md), [Codex](docs/how-to/use-codex.md)
 - Reference: [configuration](docs/reference/configuration.md), [CLI](docs/reference/cli.md), [dependencies](docs/reference/dependencies.md)
-- Project: [architecture](docs/architecture.md), [troubleshooting](docs/troubleshooting.md), [documentation index](docs/README.md), [changelog](CHANGELOG.md), [product](PRODUCT.md), [roadmap](ROADMAP.md), [design](DESIGN.md), [accessibility](ACCESSIBILITY.md)
+- Project: [architecture](docs/concepts/architecture.md), [troubleshooting](docs/troubleshooting.md), [documentation index](docs/README.md), [changelog](CHANGELOG.md), [product](PRODUCT.md), [roadmap](ROADMAP.md), [design](DESIGN.md), [accessibility](ACCESSIBILITY.md)
 
 ## Contributing
 

@@ -2,15 +2,16 @@
 title: Risoluzione dei problemi
 description: Errori di emet doctor ed emet preflight, raggruppati per ciò che si vede, ciascuno con causa e soluzione.
 seoTitle: Risoluzione dei problemi di emet doctor e preflight
-sourceHash: c1ebb76c9250d743
+sourceHash: 459018815038cdc0
 ---
 
-Errori di `emet doctor` ed `emet preflight`, raggruppati per ciò che si vede, ciascuno con causa e soluzione. I termini seguono [GLOSSARY.md](../GLOSSARY.md). Per come i controlli si combinano, vedi l'[architettura](architecture.md).
+Risolvi gli errori di `emet doctor` ed `emet preflight`, raggruppati per ciò che si vede, ciascuno con causa e passaggi di soluzione. I termini seguono [GLOSSARY.md](../GLOSSARY.md). Per come i controlli si combinano, vedi l'[architettura](concepts/architecture.md).
 
 <img src="brand/mascot/mascot-error.svg" alt="" width="96">
 
 Un repo che ha ancora solo `forge.config.json`, `.forge/` o variabili `FORGE_*` continua a funzionare: `emet` legge i nomi legacy, stampa una riga su stderr che nomina ogni file legacy, e `emet migrate` li rinomina.
 
+- [Prerequisiti](#prerequisiti)
 - [no emet.config.json](#no-emetconfigjson)
 - [emet.config.json is malformed](#emetconfigjson-is-malformed)
 - [docs/agents still has TODO(emet) markers](#docsagents-still-has-todoemet-markers)
@@ -22,7 +23,15 @@ Un repo che ha ancora solo `forge.config.json`, `.forge/` o variabili `FORGE_*` 
 - [Worktree bloccati attesi, ne sono stati trovati meno](#worktree-bloccati-attesi-ne-sono-stati-trovati-meno)
 - [Un ticket è rivendicato da più worktree o branch](#un-ticket-è-rivendicato-da-più-worktree-o-branch)
 - [requiredCommands not on PATH](#requiredcommands-not-on-path)
+- [Host Codex](#host-codex)
+- [Verifica](#verifica)
 - [Vedi anche](#vedi-anche)
+
+## Prerequisiti
+
+- `emet` nel `PATH`; vedi [Installazione](start/install.md).
+- Una shell nella radice del repo che ha il problema.
+- Il messaggio esatto di `emet doctor .` o `emet preflight`: trovalo nell'elenco qui sopra.
 
 ## no emet.config.json
 
@@ -30,7 +39,10 @@ Un repo che ha ancora solo `forge.config.json`, `.forge/` o variabili `FORGE_*` 
 
 **Causa:** Il repo non ha ancora una configurazione `/emet`.
 
-**Soluzione:** Esegui `emet init` nella radice del repo, poi controlla la configurazione generata e compila i file in `docs/agents/`.
+**Soluzione:**
+
+1. Esegui `emet init` nella radice del repo.
+2. Controlla la configurazione generata e compila i file in `docs/agents/`.
 
 ## emet.config.json is malformed
 
@@ -38,7 +50,10 @@ Un repo che ha ancora solo `forge.config.json`, `.forge/` o variabili `FORGE_*` 
 
 **Causa:** La configurazione è JSON rigoroso e viene validata rispetto a `emet/schema/emet.config.schema.json`. Commenti e virgole finali vengono respinti.
 
-**Soluzione:** Correggi il campo indicato nel motivo, oppure rigenera con `emet init --force`.
+**Soluzione:**
+
+1. Correggi il campo indicato nel motivo.
+2. Oppure rigenera la configurazione con `emet init --force`.
 
 ## docs/agents still has TODO(emet) markers
 
@@ -46,7 +61,10 @@ Un repo che ha ancora solo `forge.config.json`, `.forge/` o variabili `FORGE_*` 
 
 **Causa:** `emet init` lascia un marcatore ovunque non riesca a rilevare un valore.
 
-**Soluzione:** Compila ogni riga marcata, oppure risolvile ed esegui `emet init --force`. Preflight rifiuta il dispatch finché ne resta uno.
+**Soluzione:**
+
+1. Compila ogni riga marcata, oppure risolvile ed esegui `emet init --force`.
+2. Esegui `emet preflight`; rifiuta il dispatch finché resta un marcatore.
 
 ## Un controllo delle dipendenze fallisce
 
@@ -54,7 +72,10 @@ Un repo che ha ancora solo `forge.config.json`, `.forge/` o variabili `FORGE_*` 
 
 **Causa:** `/emet` richiede `git`, `gh` e il plugin mattpocock-skills; vedi `emet/src/dependencies.ts` e `emet/src/skills.ts`.
 
-**Soluzione:** Installa o autentica lo strumento, oppure esegui la skill `setup-matt-pocock-skills` (`/setup-matt-pocock-skills` su Claude Code, la stessa skill con la sintassi `$` di Codex su Codex). Se un controllo è sbagliato per il tuo ambiente, `EMET_SKIP_DEPENDENCY_CHECKS=1 emet preflight` lo declassa a un avviso.
+**Soluzione:**
+
+1. Installa o autentica lo strumento, oppure esegui la skill `setup-matt-pocock-skills` (`/setup-matt-pocock-skills` su Claude Code, la stessa skill con la sintassi `$` di Codex su Codex).
+2. Se un controllo è sbagliato per il tuo ambiente, esegui `EMET_SKIP_DEPENDENCY_CHECKS=1 emet preflight` per declassarlo a un avviso.
 
 ## no longer documents a flag in --help
 
@@ -66,11 +87,14 @@ Un repo che ha ancora solo `forge.config.json`, `.forge/` o variabili `FORGE_*` 
 
 ## Un file installato manca o è stato modificato dopo l'installazione
 
-**Sintomo:** `~/<path> is missing — re-run install.sh` oppure `~/<path> was edited since install`.
+**Sintomo:** `~/<path> is missing — re-run emet self install` oppure `~/<path> was edited since install`.
 
 **Causa:** La copia installata non corrisponde più al manifesto di installazione.
 
-**Soluzione:** Riesegui `install.sh`. Se accanto a un file modificato esiste un file `.new` in sospeso, uniscilo o eliminalo.
+**Soluzione:**
+
+1. Riesegui `emet self install` (da un checkout dei sorgenti, `emet self install --from .`).
+2. Se accanto a un file modificato esiste un file `.new` in sospeso, uniscilo o eliminalo.
 
 ## Stop hook error: forge: No such file or directory
 
@@ -78,7 +102,10 @@ Un repo che ha ancora solo `forge.config.json`, `.forge/` o variabili `FORGE_*` 
 
 **Causa:** `~/.claude/settings.json` contiene ancora un hook `forge guard` o `emet guard` il cui binario è stato spostato o rimosso.
 
-**Soluzione:** Esegui `emet doctor .`. Elenca ogni hook guard morto con il suo evento e stampa un solo comando `cp … && jq …` che fa il backup di `settings.json` e rimuove solo quegli hook. Doctor non modifica mai il file da solo.
+**Soluzione:**
+
+1. Esegui `emet doctor .`. Elenca ogni hook guard morto con il suo evento.
+2. Esegui l'unico comando `cp … && jq …` che stampa; fa il backup di `settings.json` e rimuove solo quegli hook. Doctor non modifica mai il file da solo.
 
 ## Nessuno slot worker libero
 
@@ -86,7 +113,10 @@ Un repo che ha ancora solo `forge.config.json`, `.forge/` o variabili `FORGE_*` 
 
 **Causa:** Ogni slot in `~/.local/state/emet/slots` è occupato da un'esecuzione attiva o inattiva, quindi l'ondata non può essere inviata per intero.
 
-**Soluzione:** Attendi che un'esecuzione liberi uno slot, oppure esegui `emet cleanup --run <runId>` per un'esecuzione che sai essere terminata. `emet status` mostra chi occupa cosa.
+**Soluzione:**
+
+1. Esegui `emet status` per vedere chi occupa ogni slot.
+2. Attendi che un'esecuzione liberi uno slot, oppure esegui `emet cleanup --run <runId>` per un'esecuzione che sai essere terminata.
 
 ## Worktree bloccati attesi, ne sono stati trovati meno
 
@@ -96,7 +126,10 @@ Un repo che ha ancora solo `forge.config.json`, `.forge/` o variabili `FORGE_*` 
 
 **Causa:** I worker non hanno rivendicato il proprio worktree con il motivo del lock, oppure `isolation: "worktree"` li ha collocati altrove. Vedi [`incidents.md`](../emet/reference/incidents.md).
 
-**Soluzione:** Controlla `git worktree list --porcelain` per le voci bloccate, ed `emet lock-reason` per il formato atteso del motivo.
+**Soluzione:**
+
+1. Esegui `git worktree list --porcelain` e guarda le voci bloccate.
+2. Esegui `emet lock-reason` per il formato atteso del motivo e blocca di nuovo con esso il worktree di un worker.
 
 ## Un ticket è rivendicato da più worktree o branch
 
@@ -104,7 +137,11 @@ Un repo che ha ancora solo `forge.config.json`, `.forge/` o variabili `FORGE_*` 
 
 **Causa:** Un nuovo tentativo o una shell instradata male ha lasciato un duplicato.
 
-**Soluzione:** Mantieni il worktree o il branch canonico, elimina o blocca di nuovo gli altri, poi riesegui `emet preflight`.
+**Soluzione:**
+
+1. Mantieni il worktree o il branch canonico.
+2. Elimina o blocca di nuovo gli altri.
+3. Riesegui `emet preflight`.
 
 ## requiredCommands not on PATH
 
@@ -112,11 +149,14 @@ Un repo che ha ancora solo `forge.config.json`, `.forge/` o variabili `FORGE_*` 
 
 **Causa:** `preflight.requiredCommands` in `emet.config.json` elenca i binari di cui il repo ha bisogno.
 
-**Soluzione:** Installa i binari indicati, oppure rimuovili dalla configurazione se non servono più.
+**Soluzione:**
+
+1. Installa i binari indicati.
+2. Oppure rimuovili da `preflight.requiredCommands` se non servono più.
 
 ## Host Codex
 
-Questi casi valgono quando `agentHost` è `"codex"`. Vedi [Eseguire emet su Codex](guide/codex.md).
+Questi casi valgono quando `agentHost` è `"codex"`. Vedi [Eseguire emet su Codex](how-to/use-codex.md).
 
 **Un `codex` più vecchio di `codex.minVersion`.** `emet doctor .` lo segnala. Installa la CLI `codex` alla versione indicata da `codex.minVersion` (predefinita `0.167.0`) o successiva, poi riesegui `emet doctor .`.
 
@@ -124,10 +164,15 @@ Questi casi valgono quando `agentHost` è `"codex"`. Vedi [Eseguire emet su Code
 
 **Un modello configurato non è elencato.** emet risolve i modelli rispetto a `models_cache.json` nella home dell'esecuzione, altrimenti nella tua vera home di Codex (sola lettura). Uno slug non elencato viene sostituito e la sostituzione viene registrata. Se non si risolve nulla, `emet review-run` fallisce prima della chiamata al modello, indicando il ruolo e gli slug elencati. Imposta uno slug elencato in `codex.models`; vedi il [riferimento della configurazione](reference/configuration.md#codex).
 
+## Verifica
+
+1. Esegui `emet doctor .` e conferma che non segnali più errori per il problema che hai risolto.
+2. Esegui `emet preflight` e conferma che esca con 0.
+
 ## Vedi anche
 
 - [Indice della documentazione](README.md)
 - [README](../README.md)
-- [Per iniziare](guide/getting-started.md)
+- [Per iniziare](start/install.md)
 - [Riferimento della configurazione](reference/configuration.md)
 - [Riferimento delle dipendenze](reference/dependencies.md)

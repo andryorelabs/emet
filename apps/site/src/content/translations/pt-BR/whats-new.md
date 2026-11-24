@@ -2,8 +2,35 @@
 title: Novidades
 description: Notas de versão do emet: o que mudou em cada versão.
 seoTitle: Novidades do emet: notas de versão
-sourceHash: 52353f60ae0e5795
+sourceHash: adecd188f36bb789
 ---
+
+## 0.22.0
+
+2026-11-24
+
+### Adicionado
+
+- O binário `emet` embute a árvore de instalação (comandos, agentes, prompts de referência, hooks, skills do Codex e manifestos de plugin), gerada no momento do build e verificada contra desvios por `bun run check`, de modo que um binário compilado não precisa de checkout.
+- `emet self install [latest|X.Y.Z] [--dry-run] [--from <checkout>] [--force]` instala o binário standalone em `~/.local/share/emet/versions/<v>/` com o symlink `~/.local/bin/emet`, grava os arquivos do Claude Code e mescla os hooks do emet em `~/.claude/settings.json` após um backup, sem tocar nos hooks de terceiros. Recusa-se quando o plugin do emet está instalado, a menos que `--force` seja informado. `--from` reproduz a instalação a partir do código-fonte com Bun.
+- O adaptador do Codex de `emet self install` grava as skills do emet em `~/.agents/skills` e acrescenta os hooks embutidos a `$CODEX_HOME/hooks.json`, sem nunca gravar `config.toml`, e imprime o passo único de confiança em `/hooks`. O overlay de worker do Codex omite as tabelas do plugin do emet quando detecta uma instalação standalone.
+- `emet self update [latest|X.Y.Z]` e `emet self update --auto` baixam a versão, verificam `SHA256SUMS` (e a atestação quando `gh` está presente) e a preparam. A troca espera até que nenhum slot de worker esteja ocupado. `--auto` é executado a partir de um hook `SessionStart` no máximo uma vez por dia.
+- `scripts/install-remote.sh`, anexado a cada versão como `install.sh`, baixa o binário, verifica seu checksum e executa `emet self install`: `curl -fsSL https://emet.andryore.dev/install.sh | sh`.
+- `emet doctor` avisa quando a instalação standalone e o plugin coexistem, quando os arquivos instalados divergem da árvore embutida, quando um hook do Codex não tem entrada `trusted_hash` e quando há uma atualização pendente ou a atualização automática está desativada.
+- `docs/reference/stability.md` é publicado, e `docs/specs/translations.md` é uma nova spec viva.
+
+### Alterado
+
+- A documentação é reestruturada em cinco grupos, Get started, Concepts, How-to, Reference e Help, nos dez idiomas. Toda rota publicada antes desta versão redireciona para a nova rota, e `/docs/` redireciona para `/docs/start/overview/`.
+- `start/overview`, `start/install` e `start/first-run` contêm as únicas instruções de instalação. A instalação standalone vem primeiro e os plugins são marcados como opcionais.
+- As páginas de Concepts explicam seu tema sem tabelas de configuração, `concepts/landing` afirma que uma spec é integrada como um único pull request por padrão, e `concepts/architecture` lista todos os módulos de `emet/src` que não são de teste. As páginas de How-to são passos de tarefa com pré-requisitos e uma verificação do resultado, e `reference/cli` tem um título por comando.
+- A home do Website mostra um pull request por spec e cobre o modo rápido, a memória, a revisão dupla, os alertas de atenção e a instalação reversível.
+- `emet uninstall` também remove os artefatos standalone: o diretório de versões, o symlink, o arquivo de estado da instalação, as skills e os hooks do Codex, e todo comando de hook do emet nos dois arquivos de hooks. Os arquivos editados e os hooks de terceiros são mantidos.
+- Toda página publicada, exceto `whats-new`, tem uma tradução atual em cada um dos nove idiomas, incluindo a nova página `reference/stability`.
+
+### Removido
+
+- `install.sh` foi removido. `emet self install` e o comando `curl` o substituem, e as verificações de dependências e os remédios do doctor apontam para eles.
 
 ## 0.21.0
 

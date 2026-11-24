@@ -16,10 +16,14 @@ import {
 import os from "node:os";
 import path from "node:path";
 
+import { embeddedTree, type TreeSource } from "./assets";
+import { readEnv } from "./env";
 import { stringifySorted } from "./envelope";
 import { exitCodes } from "./exit-codes";
+import { type JsonObject, removeEmetHooks } from "./hooks-merge";
 import { stateDir } from "./names";
 import { errnoCode, errorMessage, isObject } from "./narrow";
+import { readInstallState } from "./self-install";
 import {
   readLedger,
   removeLedgerEntry,
@@ -34,6 +38,8 @@ export type UninstallStep =
   | { kind: "keep-edited"; path: string }
   | { kind: "remove-shim"; path: string }
   | { kind: "remove-hooks"; settingsPath: string; count: number }
+  | { kind: "remove-dir"; path: string }
+  | { kind: "remove-state"; path: string }
   | { kind: "revert-extra"; id: string }
   | { kind: "purge"; path: string }
   | { kind: "note"; text: string };
@@ -42,6 +48,10 @@ export type UninstallStep =
 export interface UninstallEnv {
   homeDir: string;
   stateDir: string;
+  /** `$CODEX_HOME`; `~/.codex` when undefined. */
+  codexHome?: string;
+  /** The install tree the Codex skills are compared against; the embedded tree when undefined. */
+  tree?: () => TreeSource;
   run(argv: readonly string[]): Promise<number>;
   commandExists(name: string): Promise<boolean>;
   now(): Date;
@@ -58,27 +68,54 @@ export interface UninstallOptions {
   json: boolean;
 }
 
-/** Matches a hook command that runs `emet guard`, bare or through any path to the binary. */
-export const GUARD_COMMAND_PATTERN = /^(\S*\/)?emet guard( |$)/;
-
 const SHIM_RELATIVE_PATH = ".local/bin/emet";
 const PLUGIN_UNINSTALL_COMMAND = "claude plugin uninstall emet@emet-marketplace";
 const CODEX_UNINSTALL_COMMAND = "codex plugin remove emet@emet-marketplace";
 
+/** The infix of a hook file backup's name, shared with the installers. */
+const HOOKS_BACKUP_INFIX = ".pre-emet-guard-backup.";
+
+/** Tree paths the Codex host writes under `~/.agents/skills/emet/`, keeping their tree path. */
+function isCodexSkillTreePath(treePath: string): boolean {
+  return (
+    treePath === ".codex-plugin/plugin.json" ||
+    treePath === "codex/hooks.json" ||
+    treePath.startsWith("codex/skills/")
+  );
+}
+
 interface InstallLayout {
+  homeDir: string;
   installDir: string;
   manifestPath: string;
   shimPath: string;
   settingsPath: string;
+  versionsDir: string;
+  statePath: string;
+  codexSkillsDir: string;
+  codexHome: string;
+  codexHooksPath: string;
 }
 
-function layoutFor(homeDir: string): InstallLayout {
+function layoutFor(env: Pick<UninstallEnv, "homeDir" | "codexHome">): InstallLayout {
+  const { homeDir } = env;
   const installDir = path.join(homeDir, ".claude", "emet");
+  const shareDir = path.join(homeDir, ".local", "share", "emet");
+  const codexHome =
+    env.codexHome !== undefined && env.codexHome.length > 0
+      ? env.codexHome
+      : path.join(homeDir, ".codex");
   return {
+    homeDir,
     installDir,
     manifestPath: path.join(installDir, ".install-manifest.json"),
     shimPath: path.join(homeDir, SHIM_RELATIVE_PATH),
     settingsPath: path.join(homeDir, ".claude", "settings.json"),
+    versionsDir: path.join(shareDir, "versions"),
+    statePath: path.join(shareDir, "install.json"),
+    codexSkillsDir: path.join(homeDir, ".agents", "skills", "emet"),
+    codexHome,
+    codexHooksPath: path.join(codexHome, "hooks.json"),
   };
 }
 
@@ -146,7 +183,7 @@ function shimPointsIntoInstall(
   const stat = lstatSync(layout.shimPath);
   if (stat.isSymbolicLink()) {
     const target = path.resolve(path.dirname(layout.shimPath), readlinkSync(layout.shimPath));
-    return isInside(target, layout.installDir);
+    return isInside(target, layout.installDir) || isInside(target, layout.versionsDir);
   }
   if (!stat.isFile()) return false;
   const recordedHash = manifest.get(SHIM_RELATIVE_PATH);
@@ -181,57 +218,56 @@ function planShim(layout: InstallLayout, manifest: ReadonlyMap<string, string>):
   return [{ kind: "keep-edited", path: layout.shimPath }];
 }
 
-function isGuardHook(hook: unknown): boolean {
-  return (
-    isObject(hook) && typeof hook.command === "string" && GUARD_COMMAND_PATTERN.test(hook.command)
-  );
+function isJsonObject(value: unknown): value is JsonObject {
+  return isObject(value) && !Array.isArray(value);
 }
 
-function hookGroups(settings: unknown): unknown[][] {
-  if (!isObject(settings) || !isObject(settings.hooks) || Array.isArray(settings.hooks)) return [];
-  return Object.values(settings.hooks).filter((groups): groups is unknown[] =>
-    Array.isArray(groups),
-  );
-}
-
-function countGuardHooks(settings: unknown): number {
-  let count = 0;
-  for (const groups of hookGroups(settings)) {
-    for (const group of groups) {
-      if (isObject(group) && Array.isArray(group.hooks)) {
-        count += group.hooks.filter((hook) => isGuardHook(hook)).length;
-      }
-    }
-  }
-  return count;
-}
-
-/** `settings` with every `emet guard` hook dropped, and the groups and events that removal empties. */
-export function withoutGuardHooks(settings: Record<string, unknown>): Record<string, unknown> {
-  const { hooks } = settings;
-  if (!isObject(hooks) || Array.isArray(hooks)) return settings;
-  const nextHooks: Record<string, unknown> = {};
-  for (const [event, groups] of Object.entries(hooks)) {
-    if (!Array.isArray(groups)) {
-      nextHooks[event] = groups;
-      continue;
-    }
-    const nextGroups = groups.flatMap((group: unknown) => {
-      if (!isObject(group) || !Array.isArray(group.hooks)) return [group];
-      const remaining = group.hooks.filter((hook) => !isGuardHook(hook));
-      if (remaining.length === group.hooks.length) return [group];
-      return remaining.length === 0 ? [] : [{ ...group, hooks: remaining }];
-    });
-    if (nextGroups.length > 0 || groups.length === 0) nextHooks[event] = nextGroups;
-  }
-  if (Object.keys(nextHooks).length > 0) return { ...settings, hooks: nextHooks };
-  return Object.fromEntries(Object.entries(settings).filter(([key]) => key !== "hooks"));
-}
-
+/** One `remove-hooks` step when the hook file holds any emet hook command; a malformed file throws naming it. */
 function planHooks(settingsPath: string): UninstallStep[] {
   if (!existsSync(settingsPath)) return [];
-  const count = countGuardHooks(readJsonFile(settingsPath));
+  const parsed = readJsonFile(settingsPath);
+  if (!isJsonObject(parsed)) return [];
+  const count = removeEmetHooks(parsed).removed.length;
   return count === 0 ? [] : [{ kind: "remove-hooks", settingsPath, count }];
+}
+
+/** Absolute path to SHA-256 of every Codex skill file the tree would install under `layout.codexSkillsDir`. */
+function codexSkillHashes(layout: InstallLayout, env: UninstallEnv): ReadonlyMap<string, string> {
+  if (lstatOrUndefined(layout.codexSkillsDir)?.isDirectory() !== true) return new Map();
+  const tree = (env.tree ?? embeddedTree)();
+  return new Map(
+    tree
+      .list()
+      .filter((treePath) => isCodexSkillTreePath(treePath))
+      .map((treePath) => [
+        path.join(layout.codexSkillsDir, treePath),
+        createHash("sha256").update(tree.read(treePath)).digest("hex"),
+      ]),
+  );
+}
+
+/** Removes the Codex skill files that still match the tree; edited ones are kept and listed. */
+function planCodexSkills(hashes: ReadonlyMap<string, string>): UninstallStep[] {
+  const removals: UninstallStep[] = [];
+  const kept: UninstallStep[] = [];
+  for (const [target, hash] of [...hashes].toSorted(([a], [b]) => a.localeCompare(b))) {
+    if (!isFile(target)) continue;
+    if (fileHash(target) === hash) removals.push({ kind: "remove-file", path: target });
+    else kept.push({ kind: "keep-edited", path: target });
+  }
+  return [...removals, ...kept];
+}
+
+/** The versions directory and the install state file, when present. */
+function planStandalone(layout: InstallLayout): UninstallStep[] {
+  const steps: UninstallStep[] = [];
+  if (lstatOrUndefined(layout.versionsDir) !== undefined) {
+    steps.push({ kind: "remove-dir", path: layout.versionsDir });
+  }
+  if (lstatOrUndefined(layout.statePath) !== undefined) {
+    steps.push({ kind: "remove-state", path: layout.statePath });
+  }
+  return steps;
 }
 
 /** The Setup ledger under the uninstall env's state directory. */
@@ -255,13 +291,14 @@ export async function planUninstall(
   options: UninstallOptions,
   env: UninstallEnv,
 ): Promise<readonly UninstallStep[]> {
-  const layout = layoutFor(env.homeDir);
+  const layout = layoutFor(env);
   const steps: UninstallStep[] = [];
   const hasManifest = existsSync(layout.manifestPath);
   const manifest = hasManifest ? readManifest(layout.manifestPath) : new Map<string, string>();
+  const standalone = readInstallState(env.homeDir) !== null;
   if (hasManifest) {
     steps.push(...planManifestFiles(env.homeDir, manifest));
-  } else {
+  } else if (!standalone) {
     steps.push({
       kind: "note",
       text: `no install manifest at ${layout.manifestPath} (a plugin install?): run \`${PLUGIN_UNINSTALL_COMMAND}\``,
@@ -269,8 +306,14 @@ export async function planUninstall(
   }
   steps.push(...planShim(layout, manifest));
   if (hasManifest) steps.push({ kind: "remove-file", path: layout.manifestPath });
-  steps.push(...planHooks(layout.settingsPath), ...planExtras(env));
-  if (await env.commandExists("codex")) {
+  steps.push(
+    ...planHooks(layout.settingsPath),
+    ...planCodexSkills(codexSkillHashes(layout, env)),
+    ...planHooks(layout.codexHooksPath),
+    ...planStandalone(layout),
+    ...planExtras(env),
+  );
+  if (!standalone && (await env.commandExists("codex"))) {
     steps.push({
       kind: "note",
       text: `remove the Codex plugin with \`${CODEX_UNINSTALL_COMMAND}\``,
@@ -284,13 +327,15 @@ export async function planUninstall(
 export function describeStep(step: UninstallStep): string {
   if (step.kind === "note") return `note: ${step.text}`;
   if (step.kind === "remove-hooks") {
-    return `remove ${step.count} emet guard hook(s) from ${step.settingsPath}`;
+    return `remove ${step.count} emet hook(s) from ${step.settingsPath}`;
   }
   if (step.kind === "revert-extra") return `revert extra ${step.id}`;
   const verbs: Record<typeof step.kind, string> = {
     "remove-file": "remove",
     "keep-edited": "keep",
     "remove-shim": "remove shim",
+    "remove-dir": "remove directory",
+    "remove-state": "remove install state",
     purge: "purge",
   };
   const suffix = step.kind === "keep-edited" ? " (edited since install)" : "";
@@ -304,15 +349,52 @@ function backupTimestamp(now: Date): string {
     .replaceAll(/[-:]/g, "");
 }
 
-function removeGuardHooks(settingsPath: string, now: Date): void {
-  const settings = readJsonFile(settingsPath);
-  if (!isObject(settings) || Array.isArray(settings)) {
-    throw new Error(`${settingsPath}: expected a JSON object`);
+/**
+ * The newest installer backup of `hooksPath` whose JSON equals `stripped`, so restoring its bytes
+ * undoes the install exactly; undefined when none does. Unreadable backups are skipped.
+ */
+function matchingInstallBackup(hooksPath: string, stripped: JsonObject): string | undefined {
+  const directory = path.dirname(hooksPath);
+  const prefix = `${path.basename(hooksPath)}${HOOKS_BACKUP_INFIX}`;
+  const expected = JSON.stringify(stripped);
+  const candidates = readdirSync(directory)
+    .filter((name) => name.startsWith(prefix))
+    .toSorted()
+    .toReversed()
+    .map((name) => path.join(directory, name));
+  return candidates.find((candidate) => {
+    try {
+      return JSON.stringify(JSON.parse(readFileSync(candidate, "utf8"))) === expected;
+    } catch {
+      return false;
+    }
+  });
+}
+
+/**
+ * Drops every emet hook command from the hook file at `hooksPath`. When an installer backup holds
+ * exactly the remaining content its bytes are restored and the backup removed; when nothing remains
+ * the file is removed; otherwise the file is backed up and rewritten.
+ */
+function removeHooksFrom(hooksPath: string, now: Date): void {
+  const parsed = readJsonFile(hooksPath);
+  if (!isJsonObject(parsed)) throw new Error(`${hooksPath}: expected a JSON object`);
+  const { doc: stripped, removed } = removeEmetHooks(parsed);
+  if (removed.length === 0) return;
+  const backup = matchingInstallBackup(hooksPath, stripped);
+  if (backup !== undefined) {
+    writeFileSync(hooksPath, readFileSync(backup));
+    unlinkSync(backup);
+    return;
   }
-  copyFileSync(settingsPath, `${settingsPath}.pre-emet-guard-backup.${backupTimestamp(now)}`);
-  const temporaryPath = `${settingsPath}.tmp`;
-  writeFileSync(temporaryPath, `${JSON.stringify(withoutGuardHooks(settings), null, 2)}\n`);
-  renameSync(temporaryPath, settingsPath);
+  if (Object.keys(stripped).length === 0) {
+    unlinkSync(hooksPath);
+    return;
+  }
+  copyFileSync(hooksPath, `${hooksPath}${HOOKS_BACKUP_INFIX}${backupTimestamp(now)}`);
+  const temporaryPath = `${hooksPath}.tmp`;
+  writeFileSync(temporaryPath, `${JSON.stringify(stripped, null, 2)}\n`);
+  renameSync(temporaryPath, hooksPath);
 }
 
 /** What executing a step needs beyond the step itself. */
@@ -379,7 +461,13 @@ export async function executeStep(step: UninstallStep, context: StepContext): Pr
       removeShim(step.path, context);
       return;
     case "remove-hooks":
-      removeGuardHooks(step.settingsPath, context.env.now());
+      removeHooksFrom(step.settingsPath, context.env.now());
+      return;
+    case "remove-dir":
+      rmSync(step.path, { recursive: true, force: true });
+      return;
+    case "remove-state":
+      unlinkSync(step.path);
       return;
     case "revert-extra":
       await revertExtra(step.id, context.env);
@@ -398,13 +486,23 @@ function isEmptyDirectory(directory: string): boolean {
 }
 
 /** Removes the directories the removed files left empty, walking up but never past the shared roots; returns each failure. */
-function pruneEmptyDirectories(removed: readonly string[], homeDir: string): string[] {
+function pruneEmptyDirectories(removed: readonly string[], layout: InstallLayout): string[] {
+  const { homeDir } = layout;
   const failures: string[] = [];
-  const protectedDirectories = new Set(
-    ["", ".claude", ".claude/commands", ".claude/agents", ".local", ".local/bin"].map((relative) =>
-      path.join(homeDir, relative),
-    ),
-  );
+  const protectedDirectories = new Set([
+    ...[
+      "",
+      ".claude",
+      ".claude/commands",
+      ".claude/agents",
+      ".local",
+      ".local/bin",
+      ".local/share",
+      ".agents",
+      ".agents/skills",
+    ].map((relative) => path.join(homeDir, relative)),
+    layout.codexHome,
+  ]);
   for (const file of removed) {
     let directory = path.dirname(file);
     try {
@@ -430,6 +528,20 @@ function manifestHashes(homeDir: string, manifestPath: string): ReadonlyMap<stri
   );
 }
 
+/** The path an executed step removed, whose emptied parent directories are then pruned. */
+function removedPathOf(step: UninstallStep): string | undefined {
+  if (
+    step.kind === "remove-file" ||
+    step.kind === "remove-shim" ||
+    step.kind === "remove-dir" ||
+    step.kind === "remove-state"
+  ) {
+    return step.path;
+  }
+  if (step.kind === "remove-hooks" && !existsSync(step.settingsPath)) return step.settingsPath;
+  return undefined;
+}
+
 async function confirmed(options: UninstallOptions, env: UninstallEnv): Promise<boolean> {
   if (options.yes) return true;
   if (!env.tty) {
@@ -450,10 +562,13 @@ export async function runUninstall(
   const steps = await planUninstall(options, env);
   for (const step of steps) env.log(describeStep(step));
   if (options.dryRun || !(await confirmed(options, env))) return { steps, failed: [] };
-  const layout = layoutFor(env.homeDir);
+  const layout = layoutFor(env);
   const context: StepContext = {
     manifestPath: layout.manifestPath,
-    hashes: manifestHashes(env.homeDir, layout.manifestPath),
+    hashes: new Map([
+      ...manifestHashes(env.homeDir, layout.manifestPath),
+      ...codexSkillHashes(layout, env),
+    ]),
     env,
   };
   const failed: string[] = [];
@@ -462,14 +577,15 @@ export async function runUninstall(
     try {
       // oxlint-disable-next-line eslint/no-await-in-loop -- sequential on purpose: steps share settings.json and the ledger, and output keeps plan order
       await executeStep(step, context);
-      if (step.kind === "remove-file" || step.kind === "remove-shim") removed.push(step.path);
+      const removedPath = removedPathOf(step);
+      if (removedPath !== undefined) removed.push(removedPath);
     } catch (error: unknown) {
       const line = `${describeStep(step)}: ${errorMessage(error)}`;
       failed.push(line);
       env.log(`failed: ${line}`);
     }
   }
-  for (const failure of pruneEmptyDirectories(removed, env.homeDir)) {
+  for (const failure of pruneEmptyDirectories(removed, layout)) {
     failed.push(failure);
     env.log(`failed: ${failure}`);
   }
@@ -491,6 +607,11 @@ async function spawnInherited(argv: readonly string[]): Promise<number> {
   return child.exited;
 }
 
+/** `{ codexHome }` when `CODEX_HOME` is set, so an unset variable leaves the default `~/.codex`. */
+function optionalCodexHome(codexHome: string | undefined): Pick<UninstallEnv, "codexHome"> {
+  return codexHome === undefined ? {} : { codexHome };
+}
+
 /** The real host env for `emet uninstall`. */
 export async function realUninstallEnv(
   json: boolean,
@@ -504,6 +625,7 @@ export async function realUninstallEnv(
     env: {
       homeDir: os.homedir(),
       stateDir: stateDir(),
+      ...optionalCodexHome(readEnv("CODEX_HOME")),
       run: spawnInherited,
       commandExists: (name) => Promise.resolve(Bun.which(name) !== null),
       now: () => new Date(),

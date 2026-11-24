@@ -8,6 +8,31 @@ and this project adheres to
 
 ## [Unreleased]
 
+## [0.22.0] - 2026-11-24
+
+### Added
+
+- The `emet` binary embeds the install tree (commands, agents, reference prompts, hooks, Codex skills and plugin manifests), generated at build time and drift-checked by `bun run check`, so a compiled binary needs no checkout.
+- `emet self install [latest|X.Y.Z] [--dry-run] [--from <checkout>] [--force]` installs the standalone binary under `~/.local/share/emet/versions/<v>/` with the `~/.local/bin/emet` symlink, writes the Claude Code files and merges the emet hooks into `~/.claude/settings.json` after a backup, leaving foreign hooks untouched. It refuses when the emet plugin is installed unless `--force` is given. `--from` reproduces the Bun source install.
+- The Codex adapter of `emet self install` writes the emet skills under `~/.agents/skills` and appends the embedded hooks to `$CODEX_HOME/hooks.json`, never writing `config.toml`, and prints the one-time `/hooks` trust step. The Codex worker overlay omits the emet plugin tables when it detects a standalone install.
+- `emet self update [latest|X.Y.Z]` and `emet self update --auto` download the release, verify `SHA256SUMS` (and the attestation when `gh` is present) and stage it. The swap waits until no worker slot is held. `--auto` runs from a `SessionStart` hook at most once a day.
+- `scripts/install-remote.sh`, attached to each release as `install.sh`, downloads the binary, verifies its checksum and runs `emet self install`: `curl -fsSL https://emet.andryore.dev/install.sh | sh`.
+- `emet doctor` warns when the standalone install and the plugin coexist, when installed files drift from the embedded tree, when a Codex hook has no `trusted_hash` entry, and when an update is pending or auto-update is off.
+- `docs/reference/stability.md` is published, and `docs/specs/translations.md` is a new living spec.
+
+### Changed
+
+- The docs are restructured into five groups, Get started, Concepts, How-to, Reference and Help, in all ten locales. Every route published before this release redirects to its new route, and `/docs/` redirects to `/docs/start/overview/`.
+- `start/overview`, `start/install` and `start/first-run` hold the only install instructions. The standalone install comes first and the plugins are marked as optional.
+- Concepts pages explain their topic without configuration tables, `concepts/landing` states that a spec lands as one pull request by default, and `concepts/architecture` lists every non-test module of `emet/src`. How-to pages are task steps with prerequisites and a result check, and `reference/cli` has one heading per command.
+- The Website home shows one pull request per spec and covers fast mode, memory, double review, attention alerts and the reversible install.
+- `emet uninstall` also removes the standalone artifacts: the versions directory, the symlink, the install state file, the Codex skills and hooks, and every emet hook command in both hook files. Edited files and foreign hooks are kept.
+- Every published page except `whats-new` has a current translation in each of the nine locales, including the new `reference/stability` page.
+
+### Removed
+
+- `install.sh` is gone. `emet self install` and the `curl` command replace it, and the dependency checks and doctor remedies point there.
+
 ## [0.21.0] - 2026-11-23
 
 ### Added
@@ -622,7 +647,8 @@ and this project adheres to
 - Per-repo configuration through `forge.config.json`.
 - `install.sh`, which installs the CLI, command and agents.
 
-[Unreleased]: https://github.com/andryorelabs/emet/compare/v0.21.0...HEAD
+[Unreleased]: https://github.com/andryorelabs/emet/compare/v0.22.0...HEAD
+[0.22.0]: https://github.com/andryorelabs/emet/compare/v0.21.0...v0.22.0
 [0.21.0]: https://github.com/andryorelabs/emet/compare/v0.20.0...v0.21.0
 [0.20.0]: https://github.com/andryorelabs/emet/compare/v0.19.0...v0.20.0
 [0.19.0]: https://github.com/andryorelabs/emet/compare/v0.18.0...v0.19.0

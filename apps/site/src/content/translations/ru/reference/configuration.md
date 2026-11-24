@@ -2,7 +2,7 @@
 title: Справочник по конфигурации
 description: Каждый ключ emet.config.json со значением по умолчанию и смыслом.
 seoTitle: Справочник по конфигурации emet
-sourceHash: a9aeca59a8d1f719
+sourceHash: 23bd286ba357cde6
 ---
 
 Каждый ключ `emet.config.json` со значением по умолчанию и смыслом. Источник истины — [`emet/schema/emet.config.schema.json`](../../emet/schema/emet.config.schema.json). Термины соответствуют [GLOSSARY.md](../../GLOSSARY.md). Назад к [README](../../README.md).
@@ -191,17 +191,17 @@ sourceHash: a9aeca59a8d1f719
 
 ## agentHost
 
-`agentHost` (по умолчанию `"claude"`): хост агента, в котором выполняется запуск: `"claude"` или `"codex"`. См. [руководство по Codex](../guide/codex.md).
+`agentHost` (по умолчанию `"claude"`): хост агента, в котором выполняется запуск: `"claude"` или `"codex"`. См. [руководство по Codex](../how-to/use-codex.md).
 
 ## codex
 
 Читается только когда `agentHost` равен `"codex"`. Все ключи необязательны. Усилие — одно из `low`, `medium`, `high`, `xhigh`, `max`; `ultra` не принимается никогда.
 
-- `models.worker`, `models.workerOverride`, `models.reviewer.medium`, `models.reviewer.high`, `models.triage`: каждый имеет вид `{ "model", "effort", "fallback" }`. `fallback` перечисляет слаги, которые пробуются по порядку, когда `model` нет в кэше моделей Codex. Значения по умолчанию — в разделе [Модели и усилие](../guide/models-and-effort.md).
+- `models.worker`, `models.workerOverride`, `models.reviewer.medium`, `models.reviewer.high`, `models.triage`: каждый имеет вид `{ "model", "effort", "fallback" }`. `fallback` перечисляет слаги, которые пробуются по порядку, когда `model` нет в кэше моделей Codex. Значения по умолчанию — в разделе [Модели и усилие](../how-to/choose-models.md).
 - `models.session`: `{ "model", "effort", "planEffort", "fallback" }` для сессии, которая выполняет `$emet:run`. `planEffort` действует до первого одобрения.
 - `effort`: если задан, заменяет усилие всех ролей.
 - `minVersion` (по умолчанию `0.167.0`): самая старая версия CLI `codex`, которую поддерживает emet. `emet doctor` не сравнивает с ней установленную версию.
-- `sandbox` (по умолчанию `danger-full-access`): режим песочницы, который передают как `-s` команды `emet dispatch`, `emet review-run` и `emet launch` для Codex. `workspace-write` тоже допустим, но делает `.git` доступным только для чтения, поэтому воркеры не могут делать коммиты. При любом значении `emet guard` отклоняет `git push` на Codex, а генерируемый `config.toml` оверлея содержит только маркетплейс и плагин emet, таблицы trusted для собственных каталогов прогона и выбранные модель и усилие (но не ваши собственные таблицы). См. [руководство по Codex](../guide/codex.md) и [ADR-0022](../adr/0022-codex-workers-run-unsandboxed-by-default.md).
+- `sandbox` (по умолчанию `danger-full-access`): режим песочницы, который передают как `-s` команды `emet dispatch`, `emet review-run` и `emet launch` для Codex. `workspace-write` тоже допустим, но делает `.git` доступным только для чтения, поэтому воркеры не могут делать коммиты. При любом значении `emet guard` отклоняет `git push` на Codex, а генерируемый `config.toml` оверлея содержит только маркетплейс и плагин emet, таблицы trusted для собственных каталогов прогона и выбранные модель и усилие (но не ваши собственные таблицы). См. [руководство по Codex](../how-to/use-codex.md) и [ADR-0022](../adr/0022-codex-workers-run-unsandboxed-by-default.md).
 
 ## review
 
@@ -294,6 +294,16 @@ sourceHash: a9aeca59a8d1f719
 
 - `inlineMaxLines` (по умолчанию `100`, минимум `1`): наибольший размер текста тикета в строках, остающегося встроенным в промпт воркера.
 
+## attention
+
+- `alert` (по умолчанию `true`, boolean): когда сессия переходит в `needs-decision`, emet поднимает одно оповещение. Он помечает worktree как непрочитанный в Orca, если `orca status --json` сообщает о доступной среде выполнения, иначе запускает `notify-send`, если он есть в PATH, иначе ничего не делает. У каждого вызова тайм-аут 3 с, а сбой никогда не меняет результат хука. Выход из `needs-decision` не снимает метку непрочитанного в Orca. Укажите `false`, чтобы отключить оповещение.
+
+```json
+{ "attention": { "alert": true } }
+```
+
+См. [`emet fleet status`](cli.md#настройка-и-аудит).
+
 ## schema
 
 Только prose-only. Принадлежность схем данных в этом репозитории, используется правилом избежания конфликтов фазы 3 при разбиении тикетов. Пустое значение или отсутствие пропускает правило.
@@ -321,18 +331,6 @@ sourceHash: a9aeca59a8d1f719
 
 - `canvasIndex` (deprecated): путь к файлу дизайн-холста, который воркеры проверяют перед изменениями интерфейса.
 
-## attention
-
-Необязательно.
-
-- `alert` (по умолчанию `true`, boolean): когда сессия переходит в `needs-decision`, emet поднимает одно оповещение: метку непрочитанного в Orca на основном worktree, если рантайм Orca доступен, иначе `notify-send`, если он есть в PATH, иначе ничего. `false` отключает оповещение.
-
-Пример:
-
-```json
-{ "attention": { "alert": true } }
-```
-
 ## Переменные окружения
 
 CLI читает эти переменные, все через `emet/src/env.ts`. Переменная с написанием `FORGE_` по-прежнему работает как запасной вариант для своего имени `EMET_` и один раз выводит предупреждение. Пустые значения считаются незаданными. `tools/env-docs.test.ts` поддерживает эту таблицу и код согласованными.
@@ -347,6 +345,8 @@ CLI читает эти переменные, все через `emet/src/env.ts
 | `EMET_MEM_RESERVE_GIB`        | `FORGE_MEM_RESERVE_GIB`        | Сколько ГиБ памяти остаётся свободными до выдачи слота воркера.                                                                                         |
 | `EMET_MEM_PER_WORKER_GIB`     | `FORGE_MEM_PER_WORKER_GIB`     | Сколько ГиБ памяти автоматическое ограничение числа воркеров закладывает на одного воркера.                                                             |
 | `EMET_AGENT_HOST`             |                                | Задайте `codex` при работе под агентным хостом Codex; любое другое значение означает Claude.                                                            |
+| `EMET_AUTO_UPDATE`            |                                | Задайте `0`, чтобы отключить `emet self update --auto` для автономной установки.                                                                        |
+| `EMET_RELEASE_BASE_URL`       |                                | Корень загрузки для `emet self update`: ресурсы читаются из `<root>/vX.Y.Z` или `<root>/latest`.                                                        |
 | `CODEX_HOME`                  |                                | Домашний каталог Codex; по умолчанию `~/.codex`. Только читается.                                                                                       |
 | `XDG_STATE_HOME`              |                                | Основа каталога состояния, когда `EMET_STATE_DIR` не задана.                                                                                            |
 | `NO_COLOR`                    |                                | Если задана, баннер выводится без цвета.                                                                                                                |

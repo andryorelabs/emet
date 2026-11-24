@@ -2,7 +2,7 @@
 title: 設定リファレンス
 description: emet.config.json のすべてのキーについて、既定値と意味を説明します。
 seoTitle: emet の設定リファレンス
-sourceHash: a9aeca59a8d1f719
+sourceHash: 23bd286ba357cde6
 ---
 
 `emet.config.json` のすべてのキーを、既定値と意味とともに示します。信頼できる情報源は [`emet/schema/emet.config.schema.json`](../../emet/schema/emet.config.schema.json) です。用語は [GLOSSARY.md](../../GLOSSARY.md) に従います。[README](../../README.md) に戻る。
@@ -191,28 +191,26 @@ Claude Code ホストにおけるロールごとのモデルとエフォート�
 
 ## agentHost
 
-`agentHost` (既定 `"claude"`): 実行が動作するエージェントホスト。`"claude"` または `"codex"`。[Codex ガイド](../guide/codex.md)を参照してください。
+`agentHost` (既定 `"claude"`): 実行が動作するエージェントホスト。`"claude"` または `"codex"`。[Codex ガイド](../how-to/use-codex.md)を参照してください。
 
 ## codex
 
 `agentHost` が `"codex"` のときだけ読まれます。すべてのキーは任意です。エフォートは `low`、`medium`、`high`、`xhigh`、`max` のいずれかで、`ultra` は受け付けません。
 
-- `models.worker`, `models.workerOverride`, `models.reviewer.medium`, `models.reviewer.high`, `models.triage`: それぞれ `{ "model", "effort", "fallback" }` の形です。`fallback` は、`model` が Codex のモデルキャッシュにないときに順に試すスラッグの一覧です。既定値は[モデルとエフォート](../guide/models-and-effort.md)にあります。
+- `models.worker`, `models.workerOverride`, `models.reviewer.medium`, `models.reviewer.high`, `models.triage`: それぞれ `{ "model", "effort", "fallback" }` の形です。`fallback` は、`model` が Codex のモデルキャッシュにないときに順に試すスラッグの一覧です。既定値は[モデルとエフォート](../how-to/choose-models.md)にあります。
 - `models.session`: `$emet:run` を実行するセッション用の `{ "model", "effort", "planEffort", "fallback" }`。`planEffort` は最初の承認まで適用されます。
 - `effort`: 設定すると、すべてのロールのエフォートを置き換えます。
 - `minVersion` (既定 `0.167.0`): emet がサポートする `codex` CLI の最も古いバージョンです。`emet doctor` は、インストールされているバージョンをこの値と比較しません。
-- `sandbox` (既定 `danger-full-access`): `emet dispatch`、`emet review-run`、および Codex の `emet launch` が `-s` として渡すサンドボックスモード。`workspace-write` も指定できますが、`.git` が読み取り専用になるため、ワーカーはコミットできません。値にかかわらず、`emet guard` は Codex で `git push` を拒否し、生成されるオーバーレイの `config.toml` には、emet のマーケットプレイスとプラグイン、その実行自身のディレクトリに対する trusted テーブル、解決済みのモデルとエフォートだけが入ります（あなた自身のテーブルは入りません）。[Codex ガイド](../guide/codex.md)と [ADR-0022](../adr/0022-codex-workers-run-unsandboxed-by-default.md) を参照してください。
+- `sandbox` (既定 `danger-full-access`): `emet dispatch`、`emet review-run`、および Codex の `emet launch` が `-s` として渡すサンドボックスモード。`workspace-write` も指定できますが、`.git` が読み取り専用になるため、ワーカーはコミットできません。値にかかわらず、`emet guard` は Codex で `git push` を拒否し、生成されるオーバーレイの `config.toml` には、emet のマーケットプレイスとプラグイン、その実行自身のディレクトリに対する trusted テーブル、解決済みのモデルとエフォートだけが入ります（あなた自身のテーブルは入りません）。[Codex ガイド](../how-to/use-codex.md)と [ADR-0022](../adr/0022-codex-workers-run-unsandboxed-by-default.md) を参照してください。
 
 ## review
 
 ```json
-{ "review": { "highRiskPaths": [] } }
+{ "review": { "highRiskPaths": [], "dual": "auto" } }
 ```
 
 - `highRiskPaths`（既定は `[]`）: 組み込みのセット（認証、セキュリティ、決済、Webhook、CI、インストーラー、ロックファイル、マイグレーション、生の SQL やパイプでシェルに渡す処理などの危険なシンク）に加えて、`emet assess` で `high` のレビューティアを強制する、大文字小文字を区別しない追加のパス部分文字列です。
-- `dual`（既定は `"auto"`）: `"auto"` または `"off"`。下の Dual review を参照してください。
-
-Dual review: `emet assess` が `dualReview.run: true` を出力したとき（ティアが `high`、`agentHost` が `claude`、`review.dual` が `off` ではなく、`codex` が PATH にある場合）、コーディネーターは同じパッケージに対して Claude レビュアーと Codex レビュアーを並列で実行し、`emet review --merge` で両者の指摘をマージします。`agreement: "single"` の指摘はすべてコーディネーターがトリアージし、記録されるのは Claude レビュアーの coverage だけです。`emet init` は `review.dual` を書き込みません。それ以外の場合は、従来どおりレビュアー 1 つで実行します。
+- `dual`（`"auto"` または `"off"`、既定は `"auto"`。`emet init` は書き込みません）: Dual review を制御します。`auto` では、Claude Code ホストで `codex` バイナリが PATH にある `high` のウェーブは、同じパッケージに対して Claude レビュアーと `emet review-run` の 2 つのレビュアーを並列で実行します。コーディネーターは `emet review --merge` で両者の指摘をマージし、単独のレビュアーだけが出した指摘をそれぞれトリアージし（残すか、`emet review --rule` で破棄します）、記録するのは Claude レビュアーの Coverage の判定だけです。`off` は常に 1 つのレビュアーで実行します。`emet assess` はこの判断を `dualReview: { run, reason }` として出力します。
 
 ## memory
 
@@ -221,14 +219,6 @@ Dual review: `emet assess` が `dualReview.run: true` を出力したとき（�
 ```
 
 - `enabled`（`"auto"` または `"off"`、既定値は `"auto"`）: [`emet memory`](cli.md#実行ワーカースロット)を制御します。`auto` では、`engram` バイナリが PATH にあり、そのハンドシェイクが成功するときに、このコマンドが Engram を使います。`off` では、`emet memory search` と `emet memory save` は `engram` を起動せずに `{available: false, reason: "memory.enabled is off"}` を出力して 0 で終了します。それ以外の値は、読み込み時に `"memory.enabled" must be one of auto|off` で失敗します。
-
-## attention
-
-```json
-{ "attention": { "alert": true } }
-```
-
-- `alert`（真偽値、既定は `true`）: セッションが `needs-decision` に遷移したときだけ、emet が通知を 1 回行います。`orca status --json` が到達可能なランタイムを報告する場合は、`orca worktree set` でメイン worktree に未読コメントを設定します。そうでなければ PATH にある場合は `notify-send` を実行し、どちらもなければ何もしません。外部呼び出しのタイムアウトは各 3 秒で、失敗してもガードの結果は変わりません。`needs-decision` から抜けても Orca の未読マークは消されません。通知を無効にするには `false` を設定します。
 
 ## landing
 
@@ -256,8 +246,8 @@ Dual review: `emet assess` が `dualReview.run: true` を出力したとき（�
 
 ## specs
 
-- `enabled`（既定は `false`）: 生きたスペックを有効にします。スペックの最後のウェーブで、コーディネーターがスペックの S# 項目から要件の差分を書き、`emet spec-merge` を実行して、そのウェーブとともに `specs.dir` をコミットします。そのため更新はレビューを受け、ウェーブとともにランディングします。
 - `dir`（既定は `docs/specs`）: `enabled` が true のとき `emet spec-merge` が書き込む生きたスペックの、リポジトリからの相対ディレクトリです。
+- `enabled`（既定は `false`）: 生きたスペックを有効にします。スペックの最後のウェーブで、コーディネーターがスペックの S# 項目から要件の差分を書き、`emet spec-merge` を実行して、そのウェーブとともに `specs.dir` をコミットします。そのため更新はレビューを受け、ウェーブとともにランディングします。
 
 ## map
 
@@ -304,6 +294,16 @@ Dual review: `emet assess` が `dualReview.run: true` を出力したとき（�
 
 - `inlineMaxLines`（既定は `100`、最小は `1`）: ワーカーのプロンプトにインラインで含めるチケット本文の最大行数です。
 
+## attention
+
+- `alert`（既定は `true`、真偽値）: セッションが `needs-decision` に遷移したときに、emet が通知を 1 回行います。`orca status --json` が到達可能なランタイムを報告する場合は、worktree に未読マークを付けます。そうでなければ PATH にある場合は `notify-send` を実行し、どちらもなければ何もしません。各呼び出しのタイムアウトは 3 秒で、失敗してもフックの結果は変わりません。`needs-decision` から抜けても Orca の未読マークは消されません。通知を無効にするには `false` を設定します。
+
+```json
+{ "attention": { "alert": true } }
+```
+
+[`emet fleet status`](cli.md#setup-and-audit) を参照してください。
+
 ## schema
 
 prose-only です。このリポジトリのデータスキーマの所有者を示し、フェーズ 3 でチケットを分割する際の競合回避ルールに使われます。空または省略した場合、このルールはスキップされます。
@@ -345,6 +345,8 @@ CLI はこれらの変数を、すべて `emet/src/env.ts` 経由で読み取り
 | `EMET_MEM_RESERVE_GIB`        | `FORGE_MEM_RESERVE_GIB`        | ワーカースロットを付与する前に空けておくメモリの GiB 数です。                                                                                         |
 | `EMET_MEM_PER_WORKER_GIB`     | `FORGE_MEM_PER_WORKER_GIB`     | 自動ワーカー上限がワーカー 1 つあたりに見込むメモリの GiB 数です。                                                                                    |
 | `EMET_AGENT_HOST`             |                                | Codex エージェントホストで実行している場合は `codex` に設定します。それ以外の値は Claude を意味します。                                               |
+| `EMET_AUTO_UPDATE`            |                                | スタンドアロンインストールで `emet self update --auto` を無効にするには `0` に設定します。                                                            |
+| `EMET_RELEASE_BASE_URL`       |                                | `emet self update` のダウンロード元ルート。アセットは `<root>/vX.Y.Z` または `<root>/latest` から読み込まれます。                                     |
 | `CODEX_HOME`                  |                                | Codex のホームディレクトリで、既定は `~/.codex` です。読み取りのみ行われます。                                                                        |
 | `XDG_STATE_HOME`              |                                | `EMET_STATE_DIR` が未設定のときの、状態ディレクトリの基準です。                                                                                       |
 | `NO_COLOR`                    |                                | 設定すると、バナーが色なしで出力されます。                                                                                                            |

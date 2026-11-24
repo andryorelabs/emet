@@ -48,18 +48,30 @@ for pair in es:es de:de fr:fr it:it ja:ja ko:ko pt-br:pt-BR ru:ru zh-cn:zh-CN; d
   grep -q "<html[^>]*lang=\"$lang\"" <<<"$(curl -s "$base/$segment/nope/")" || fail "/$segment/nope/ is not the $lang 404"
 done
 [ "$(status "$base/sitemap-index.xml")" = 404 ] || fail "Starlight's sitemap index is built"
-[ "$(curl -s "$base/docs/guide/getting-started/" | grep -o 'rel="sitemap"[^>]*' | wc -l)" = 1 ] || fail "the docs head does not name exactly one sitemap"
-curl -s "$base/docs/guide/getting-started/" | grep -q 'rel="sitemap"[^>]*href="/sitemap.xml"' || fail "the docs head does not name /sitemap.xml"
+[ "$(curl -s "$base/docs/start/install/" | grep -o 'rel="sitemap"[^>]*' | wc -l)" = 1 ] || fail "the docs head does not name exactly one sitemap"
+curl -s "$base/docs/start/install/" | grep -q 'rel="sitemap"[^>]*href="/sitemap.xml"' || fail "the docs head does not name /sitemap.xml"
 [ "$(status "$base/es/404/")" = 200 ] || fail "/es/404/ is not 200"
 [ "$(header_of cache-control "$base/es/nope/")" = no-cache ] || fail "the locale 404 lacks no-cache"
 
-for pair in "/es:/es/" "/docs:/docs/" "/docs/:/docs/guide/getting-started/" "/es/docs/:/es/docs/guide/getting-started/" "/index.html:/" "/es/index.html:/es/" "/pt-BR/:/pt-br/" "/zh_CN/:/zh-cn/"; do
+for pair in "/es:/es/" "/docs:/docs/" "/docs/:/docs/start/overview/" "/es/docs/:/es/docs/start/overview/" "/index.html:/" "/es/index.html:/es/" "/pt-BR/:/pt-br/" "/zh_CN/:/zh-cn/"; do
   from="${pair%%:*}"
   to="${pair##*:}"
   [ "$(status "$base$from")" = 301 ] || fail "$from is not 301"
   [ "$(location "$base$from")" = "$to" ] || fail "$from does not redirect to $to"
 done
+for old_route in /docs/guide/getting-started/ /es/docs/guide/codex/ /docs/architecture/; do
+  [ "$(status "$base$old_route")" != 404 ] || fail "the old route $old_route is 404"
+done
+for pair in "/docs/guide/getting-started.md:/docs/start/install.md" "/es/docs/guide/fleet.md:/es/docs/how-to/check-a-fleet.md" "/docs/guide/codex/:/docs/how-to/use-codex/"; do
+  from="${pair%%:*}"
+  to="${pair##*:}"
+  [ "$(status "$base$from")" = 301 ] || fail "the old route $from is not 301"
+  [ "$(location "$base$from")" = "$to" ] || fail "the old route $from does not redirect to $to"
+done
 [ "$(location "$base/es?a=1")" = "/es/?a=1" ] || fail "the trailing-slash redirect drops the query string"
+install_script_url="https://github.com/andryorelabs/emet/releases/latest/download/install.sh"
+[ "$(status "$base/install.sh")" = 302 ] || fail "/install.sh is not 302"
+[ "$(location "$base/install.sh")" = "$install_script_url" ] || fail "/install.sh does not redirect to $install_script_url"
 
 headers="$(curl -s -o /dev/null -D - "$base/" | tr -d '\r')"
 for header in content-security-policy x-content-type-options referrer-policy permissions-policy \
@@ -78,11 +90,11 @@ done
 page="$(curl -s "$base/")"
 grep -qi 'http-equiv="content-security-policy"' <<<"$page" || fail "/ has no CSP meta tag"
 grep -q "'sha256-" <<<"$page" || fail "the CSP meta tag has no hashes"
-for path in /es/docs/guide/fleet.md /llms-full.txt; do
+for path in /es/docs/how-to/check-a-fleet.md /llms-full.txt; do
   [ "$(status "$base$path")" = 200 ] || fail "$path is not 200"
 done
-[ "$(header_of content-type "$base/es/docs/guide/fleet.md")" = "text/markdown; charset=utf-8" ] || fail "the Markdown twin is not text/markdown; charset=utf-8"
-[ "$(header_of content-encoding "$base/es/docs/guide/fleet.md")" = gzip ] || fail "the Markdown twin is not gzipped"
+[ "$(header_of content-type "$base/es/docs/how-to/check-a-fleet.md")" = "text/markdown; charset=utf-8" ] || fail "the Markdown twin is not text/markdown; charset=utf-8"
+[ "$(header_of content-encoding "$base/es/docs/how-to/check-a-fleet.md")" = gzip ] || fail "the Markdown twin is not gzipped"
 [ "$(header_of content-encoding "$base/")" = gzip ] || fail "/ is not gzipped"
 
 for path in /robots.txt /sitemap.xml /llms.txt /llms-full.txt /manifest.webmanifest \

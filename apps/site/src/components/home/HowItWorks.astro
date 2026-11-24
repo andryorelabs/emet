@@ -9,31 +9,32 @@
 import { Picture } from "astro:assets";
 
 import sourceImage from "../../assets/source.webp";
+import type { Locale } from "../../i18n/locales";
+import { DEFAULT_LOCALE, localePath, LOCALES, localeSegment } from "../../i18n/locales";
 import type { UiStrings } from "../../i18n/ui/en";
 import CodeBlock from "../code/CodeBlock.astro";
 import PaintingStreams from "./graphics/PaintingStreams.astro";
 import PixelMascot from "./graphics/PixelMascot.astro";
+import WaveDiagram from "./WaveDiagram.astro";
 
 interface Props {
   strings: UiStrings;
+  locale?: Locale;
 }
 
-const { strings } = Astro.props;
+const { strings, locale: localeProp } = Astro.props;
 const { how } = strings;
+const locale =
+  localeProp ??
+  LOCALES.find(
+    (candidate) =>
+      candidate !== DEFAULT_LOCALE &&
+      Astro.url.pathname.startsWith(`/${localeSegment(candidate)}/`),
+  ) ??
+  DEFAULT_LOCALE;
+const installPath = localePath(locale, "/docs/start/install/");
 
-const claudeCommands = [
-  "claude plugin marketplace add andryorelabs/emet",
-  "claude plugin install emet@emet-marketplace",
-].join("\n");
-const codexCommands = [
-  "codex plugin marketplace add andryorelabs/emet",
-  "codex plugin add emet@emet-marketplace",
-].join("\n");
-const cloneCommands = [
-  "git clone git@github.com:andryorelabs/emet.git",
-  "cd emet",
-  "./install.sh",
-].join("\n");
+const standaloneCommand = "curl -fsSL https://emet.andryore.dev/install.sh | sh";
 
 const banner = [
   "emet  plugin for Claude Code and Codex",
@@ -42,12 +43,13 @@ const banner = [
   "Not affiliated with or endorsed by Anthropic or OpenAI",
 ].join("\n");
 
-const waveOneTickets = [{ id: "#253", name: "monorepo scaffold" }];
+const waveOneTickets = [{ id: "#42", name: "theme tokens" }];
 const waveTwoTickets = [
-  { id: "#254", name: "home layout" },
-  { id: "#255", name: "code blocks" },
-  { id: "#256", name: "docker and deploy" },
+  { id: "#43", name: "settings toggle" },
+  { id: "#44", name: "remember the choice" },
+  { id: "#45", name: "docs and screenshots" },
 ];
+const waveLabel = (number: number): string => how.wave.replace("{n}", String(number));
 ---
 
 <section class="how" data-drift="6" aria-labelledby="how-title">
@@ -70,15 +72,8 @@ const waveTwoTickets = [
     <article class="exchange" id="install" data-typed>
       <h3>{how.install}</h3>
       <p class="io">{how.youType}</p>
-      <CodeBlock
-        code={claudeCommands}
-        lang="bash"
-        tabs={[
-          { label: "Claude Code", code: claudeCommands },
-          { label: "Codex", code: codexCommands },
-          { label: how.tabClone, code: cloneCommands },
-        ]}
-      />
+      <CodeBlock code={standaloneCommand} lang="bash" />
+      <a class="install-more" href={installPath}>{how.otherInstall}</a>
       <p class="io">{how.emetReplies}</p>
       <div class="fragment banner" data-ui data-reveal="item">
         <PixelMascot />
@@ -99,9 +94,9 @@ const waveTwoTickets = [
       />
       <p class="io">{how.emetReplies}</p>
       <div class="out" data-ui data-reveal="item">
-        <p class="out-head"><b>Spec 252 &middot; the Website</b><span>S1 monorepo &middot; S2 site app &middot; S3 home page</span></p>
+        <p class="out-head"><b>Spec 41 &middot; Dark mode for settings</b><span>S1 tokens &middot; S2 toggle &middot; S3 docs</span></p>
         <section class="out-group">
-          <h4>Wave 1</h4>
+          <h4>{waveLabel(1)}</h4>
           <ul class="out-rows">
             {
               waveOneTickets.map((ticket) => (
@@ -115,7 +110,7 @@ const waveTwoTickets = [
           </ul>
         </section>
         <section class="out-group">
-          <h4>Wave 2 <em>starts after #253</em></h4>
+          <h4>{waveLabel(2)}</h4>
           <ul class="out-rows">
             {
               waveTwoTickets.map((ticket) => (
@@ -136,32 +131,46 @@ const waveTwoTickets = [
       <p class="io">{how.youType}</p>
       <CodeBlock code="emet status" lang="bash" />
       <p class="io">{how.emetReplies}</p>
+      <WaveDiagram waveLabel={waveLabel} caption={how.caption} />
       <div class="out land" data-ui data-reveal="item" data-land>
-        <ul class="out-rows" aria-label="Closed tickets">
-          {
-            waveTwoTickets.map((ticket) => (
-              <li class="out-row">
-                <span class="out-mark" aria-hidden="true" />
-                <span class="out-name">{ticket.name}</span>
-                <span class="out-id">{ticket.id}</span>
-              </li>
-            ))
-          }
-        </ul>
         <div class="pr-card">
           <p class="pr-title">
             <span class="pr-state">
               <span class="pr-state-open" aria-hidden="true">Open</span>
-              <span class="pr-state-merged">Merged</span>
+              <span class="pr-state-merged">{how.merged}</span>
             </span>
-            Wave 2: home layout
+            {how.prTitle}
           </p>
-          <p class="pr-meta">Closes #254, #255, #256 &middot; checks passing &middot; reviewed</p>
+          <ul class="pr-closes">
+            {["#42", "#43", "#44", "#45"].map((id) => <li><code lang="en" translate="no">Closes {id}</code></li>)}
+          </ul>
+          <p class="pr-meta">{how.checks}</p>
         </div>
       </div>
     </article>
   </div>
 </section>
+
+<style>
+  .install-more {
+    align-self: flex-start;
+    font-size: 16px;
+    text-decoration: underline;
+    text-underline-offset: 4px;
+  }
+
+  .pr-closes {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px 12px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    font-family: var(--font-mono, ui-monospace, monospace);
+    font-size: 13px;
+    color: var(--text-muted);
+  }
+</style>
 
 <script>
   import { initLandCard } from "./graphics/land-card";

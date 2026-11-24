@@ -192,6 +192,7 @@ describe("buildRunHome", () => {
       run: "r1",
       repoRoot,
       sourceHome: source,
+      home: tempDir(),
       trustedDirectories: [repoRoot],
       model: "gpt-run",
       effort: "high",
@@ -207,6 +208,68 @@ describe("buildRunHome", () => {
     expect(overlay).toContain('model = "gpt-run"');
     expect(overlay).toContain('model_reasoning_effort = "high"');
     expect(readFileSync(path.join(source, "config.toml"), "utf8")).toBe(userConfig);
+  });
+
+  test("omits the emet plugin and marketplace tables for a standalone install", () => {
+    const source = sourceHome();
+    const configText = [
+      "[marketplaces.emet-marketplace]",
+      'source_type = "local"',
+      'source = "/opt/emet-plugin"',
+      "",
+    ].join("\n");
+    writeFileSync(path.join(source, "config.toml"), configText);
+    const home = tempDir();
+    const pluginOverlay = buildRunHome({ run: "p", repoRoot: tempDir(), sourceHome: source, home });
+    const pluginConfig = readFileSync(path.join(pluginOverlay.codexHome, "config.toml"), "utf8");
+    expect(pluginConfig).toContain("[plugins.");
+    const stateDirectory = path.join(home, ".local", "share", "emet");
+    mkdirSync(stateDirectory, { recursive: true });
+    writeFileSync(
+      path.join(stateDirectory, "install.json"),
+      JSON.stringify({
+        version: "1.0.0",
+        installedAt: "2026-01-01T00:00:00.000Z",
+        hosts: ["codex"],
+        binary: "/x/emet",
+        mode: "standalone",
+      }),
+    );
+    const standalone = buildRunHome({ run: "s", repoRoot: tempDir(), sourceHome: source, home });
+    const standaloneConfig = readFileSync(path.join(standalone.codexHome, "config.toml"), "utf8");
+    expect(standaloneConfig).not.toContain("emet-marketplace");
+    expect(standaloneConfig).not.toContain("plugins.");
+    expect(readFileSync(path.join(standalone.codexHome, "hooks.json"), "utf8")).toBe(
+      hooksFileText(),
+    );
+    expect(readFileSync(path.join(source, "config.toml"), "utf8")).toBe(configText);
+  });
+
+  test("keeps the emet plugin and marketplace tables for a source install", () => {
+    const source = sourceHome();
+    writeFileSync(
+      path.join(source, "config.toml"),
+      ["[marketplaces.emet-marketplace]", 'source_type = "local"', 'source = "/opt/emet"', ""].join(
+        "\n",
+      ),
+    );
+    const home = tempDir();
+    const stateDirectory = path.join(home, ".local", "share", "emet");
+    mkdirSync(stateDirectory, { recursive: true });
+    writeFileSync(
+      path.join(stateDirectory, "install.json"),
+      JSON.stringify({
+        version: "1.0.0",
+        installedAt: "2026-01-01T00:00:00.000Z",
+        hosts: ["claude"],
+        binary: "/x/emet",
+        mode: "source",
+      }),
+    );
+    const overlay = buildRunHome({ run: "src", repoRoot: tempDir(), sourceHome: source, home });
+    const config = readFileSync(path.join(overlay.codexHome, "config.toml"), "utf8");
+    expect(config).toContain("[marketplaces.emet-marketplace]");
+    expect(config).toContain('[plugins."emet@emet-marketplace"]');
   });
 
   test("replaces a config.toml symlink left by an older overlay without writing through it", () => {

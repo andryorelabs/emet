@@ -2,7 +2,6 @@ import { afterEach, beforeEach, describe, expect, setDefaultTimeout, test } from
 import { createHash } from "node:crypto";
 import {
   chmodSync,
-  copyFileSync,
   existsSync,
   lstatSync,
   mkdirSync,
@@ -10,18 +9,21 @@ import {
   readdirSync,
   readFileSync,
   rmSync,
-  symlinkSync,
   writeFileSync,
 } from "node:fs";
 import os from "node:os";
 import path from "node:path";
 
+import { embeddedTree } from "../emet/src/assets";
+import type { SelfDeps } from "../emet/src/self-install";
+import { sourceInstall } from "../emet/src/self-source";
+
 /**
- * Snapshot of what `install.sh` writes for the Claude Code path: the sorted installed paths and
- * the sha256 of every shipped prompt (`commands/*.md`, `agents/*.md`, `emet/reference/*.md`, as
- * installed). Adding, removing or rewording any of them fails the test and names the file.
- * Runtime modules under `.claude/emet/src/` are left out of the path list: they are code covered
- * by their own tests, and every feature adds some.
+ * Snapshot of what `emet self install --from <checkout>` writes for the Claude Code path: the
+ * sorted installed paths and the sha256 of every shipped prompt (`commands/*.md`, `agents/*.md`,
+ * `emet/reference/*.md`, as installed). Adding, removing or rewording any of them fails the test
+ * and names the file. Runtime modules under `.claude/emet/src/` are left out of the path list:
+ * they are code covered by their own tests, and every feature adds some.
  *
  * To update the snapshot after an intentional change to the Claude install set, run:
  *
@@ -38,85 +40,44 @@ interface ClaudeInstallSnapshot {
 const repoRoot = path.resolve(import.meta.dir, "..");
 const snapshotPath = path.join(import.meta.dir, "fixtures/claude-install-snapshot.json");
 const updateRequested = process.env.EMET_UPDATE_CLAUDE_INSTALL_SNAPSHOT === "1";
-const bashPath = Bun.which("bash") ?? "/bin/bash";
-const installerTools = [
-  "awk",
-  "cat",
-  "chmod",
-  "cp",
-  "curl",
-  "cut",
-  "date",
-  "dirname",
-  "find",
-  "grep",
-  "jq",
-  "ln",
-  "ls",
-  "mkdir",
-  "mktemp",
-  "mv",
-  "rm",
-  "rsync",
-  "sed",
-  "sha256sum",
-  "sort",
-  "tail",
-  "uname",
-];
-const commandNames = ["run", "init", "doctor", "setup"] as const;
 const promptDirectories = [".claude/commands", ".claude/agents", ".claude/emet/reference"];
 
 let workDir = "";
 let homeDir = "";
 let toolsDir = "";
-let fixtureRepo = "";
+let errors: string[] = [];
 
-/** Builds a repo copy laid out as install.sh expects, linking the real sources into it. */
-function buildFixtureRepo(): void {
-  fixtureRepo = path.join(workDir, "repo");
-  mkdirSync(path.join(fixtureRepo, "agents"), { recursive: true });
-  mkdirSync(path.join(fixtureRepo, "bin"), { recursive: true });
-  copyFileSync(path.join(repoRoot, "install.sh"), path.join(fixtureRepo, "install.sh"));
-  for (const directory of ["emet", ".claude-plugin"]) {
-    symlinkSync(path.join(repoRoot, directory), path.join(fixtureRepo, directory));
-  }
-  mkdirSync(path.join(fixtureRepo, "commands"));
-  for (const commandName of commandNames) {
-    symlinkSync(
-      path.join(repoRoot, "commands", `${commandName}.md`),
-      path.join(fixtureRepo, "commands", `${commandName}.md`),
-    );
-  }
-  for (const role of ["worker", "reviewer"]) {
-    symlinkSync(
-      path.join(repoRoot, `agents/emet-${role}.md`),
-      path.join(fixtureRepo, "agents", `emet-${role}.md`),
-    );
-  }
-  symlinkSync(path.join(repoRoot, "bin/emet"), path.join(fixtureRepo, "bin", "emet"));
-}
-
-function prepareTools(): void {
+/** A `bun` on the fixture PATH, so the source install finds one; `bun install` itself is stubbed. */
+function prepareFakeBun(): void {
   mkdirSync(toolsDir, { recursive: true });
-  for (const name of installerTools) {
-    const resolved = Bun.which(name);
-    if (resolved) symlinkSync(resolved, path.join(toolsDir, name));
-  }
   const fakeBunPath = path.join(toolsDir, "bun");
   writeFileSync(fakeBunPath, "#!/bin/sh\nexit 0\n");
   chmodSync(fakeBunPath, 0o755);
 }
 
-function runInstaller(): void {
-  const result = Bun.spawnSync([bashPath, path.join(fixtureRepo, "install.sh")], {
-    cwd: fixtureRepo,
-    env: { HOME: homeDir, PATH: toolsDir },
-    stdout: "pipe",
-    stderr: "pipe",
-  });
-  if (result.exitCode !== 0) {
-    throw new Error(`install.sh failed (${result.exitCode}): ${result.stderr.toString()}`);
+function installDeps(): SelfDeps {
+  return {
+    home: homeDir,
+    executablePath: path.join(workDir, "emet"),
+    compiled: false,
+    version: "0.0.0-snapshot",
+    tree: embeddedTree,
+    interactive: false,
+    pathEnv: toolsDir,
+    runSetup: () => Promise.resolve(0),
+    now: () => new Date("2026-11-23T00:00:00Z"),
+    log: () => undefined,
+    error: (line) => errors.push(line),
+  };
+}
+
+async function runInstaller(): Promise<void> {
+  const exitCode = await sourceInstall(
+    { from: repoRoot, dryRun: false, runBunInstall: () => Promise.resolve(0) },
+    installDeps(),
+  );
+  if (exitCode !== 0) {
+    throw new Error(`emet self install --from failed (${exitCode}): ${errors.join("\n")}`);
   }
 }
 
@@ -129,11 +90,7 @@ function listEntries(directory: string): string[] {
 }
 
 function relativeToHome(absolutePath: string): string {
-  return path
-    .relative(homeDir, absolutePath)
-    .split(path.sep)
-    .join("/")
-    .replace(/\.pre-emet-guard-backup\.\d{8}T\d{6}Z$/, ".pre-emet-guard-backup.<timestamp>");
+  return path.relative(homeDir, absolutePath).split(path.sep).join("/");
 }
 
 function sha256Of(filePath: string): string {
@@ -192,9 +149,9 @@ beforeEach(() => {
   workDir = mkdtempSync(path.join(os.tmpdir(), "emet-claude-snapshot-"));
   homeDir = path.join(workDir, "home");
   toolsDir = path.join(workDir, "tools");
+  errors = [];
   mkdirSync(homeDir, { recursive: true });
-  buildFixtureRepo();
-  prepareTools();
+  prepareFakeBun();
 });
 
 afterEach(() => {
@@ -203,9 +160,9 @@ afterEach(() => {
 
 setDefaultTimeout(60_000);
 
-describe.skipIf(!Bun.which("rsync"))("claude install invariant", () => {
-  test("claude install invariant", () => {
-    runInstaller();
+describe("claude install invariant", () => {
+  test("claude install invariant", async () => {
+    await runInstaller();
     expect(lstatSync(path.join(homeDir, ".claude/commands/emet/run.md")).isFile()).toBe(true);
     const actual = captureInstall();
     if (updateRequested) {
@@ -215,5 +172,15 @@ describe.skipIf(!Bun.which("rsync"))("claude install invariant", () => {
     const expected = parseSnapshot(readFileSync(snapshotPath, "utf8"));
     expect(describeDrift(expected, actual)).toEqual([]);
     expect(actual).toEqual(expected);
+  });
+
+  test("a second install writes nothing", async () => {
+    await runInstaller();
+    const first = captureInstall();
+    const manifestPath = path.join(homeDir, ".claude/emet/.install-manifest.json");
+    const manifestBefore = readFileSync(manifestPath, "utf8");
+    await runInstaller();
+    expect(captureInstall()).toEqual(first);
+    expect(readFileSync(manifestPath, "utf8")).toBe(manifestBefore);
   });
 });

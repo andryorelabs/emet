@@ -2,7 +2,7 @@
 title: Référence de configuration
 description: Chaque clé de emet.config.json avec sa valeur par défaut et sa signification.
 seoTitle: Référence de configuration d'emet
-sourceHash: a9aeca59a8d1f719
+sourceHash: 23bd286ba357cde6
 ---
 
 Chaque clé de `emet.config.json`, avec sa valeur par défaut et sa signification. La source de vérité est [`emet/schema/emet.config.schema.json`](../../emet/schema/emet.config.schema.json). Les termes suivent [GLOSSARY.md](../../GLOSSARY.md). Retour au [README](../../README.md).
@@ -191,17 +191,17 @@ Modèle et effort par rôle pour l'hôte Claude Code ; l'hôte Codex lit plutôt
 
 ## agentHost
 
-`agentHost` (par défaut `"claude"`): l'hôte d'agent dans lequel s'exécute un run, `"claude"` ou `"codex"`. Voir le [guide Codex](../guide/codex.md).
+`agentHost` (par défaut `"claude"`): l'hôte d'agent dans lequel s'exécute un run, `"claude"` ou `"codex"`. Voir le [guide Codex](../how-to/use-codex.md).
 
 ## codex
 
 Lu uniquement quand `agentHost` vaut `"codex"`. Toutes les clés sont facultatives. L'effort est l'un de `low`, `medium`, `high`, `xhigh`, `max` ; `ultra` n'est jamais accepté.
 
-- `models.worker`, `models.workerOverride`, `models.reviewer.medium`, `models.reviewer.high`, `models.triage`: chacune est `{ "model", "effort", "fallback" }`. `fallback` liste les slugs essayés dans l'ordre quand `model` est absent du cache de modèles de Codex. Les valeurs par défaut sont dans [Modèles et effort](../guide/models-and-effort.md).
+- `models.worker`, `models.workerOverride`, `models.reviewer.medium`, `models.reviewer.high`, `models.triage`: chacune est `{ "model", "effort", "fallback" }`. `fallback` liste les slugs essayés dans l'ordre quand `model` est absent du cache de modèles de Codex. Les valeurs par défaut sont dans [Modèles et effort](../how-to/choose-models.md).
 - `models.session`: `{ "model", "effort", "planEffort", "fallback" }` pour la session qui exécute `$emet:run`. `planEffort` s'applique jusqu'à la première approbation.
 - `effort`: s'il est défini, remplace l'effort de tous les rôles.
 - `minVersion` (par défaut `0.167.0`) : la plus ancienne version de la CLI `codex` que emet prend en charge. `emet doctor` ne compare pas la version installée à cette valeur.
-- `sandbox` (par défaut `danger-full-access`): le mode de sandbox transmis comme `-s` par `emet dispatch`, `emet review-run` et un `emet launch` Codex. `workspace-write` est aussi accepté, mais il rend `.git` en lecture seule, si bien que les workers ne peuvent pas committer. Quelle que soit la valeur, `emet guard` refuse `git push` sur Codex, et le `config.toml` de la surcouche générée ne contient que le marketplace et le plugin emet, des tables de confiance pour les répertoires propres à l'exécution, ainsi que le modèle et l'effort résolus (jamais vos propres tables). Voir le [guide Codex](../guide/codex.md) et [ADR-0022](../adr/0022-codex-workers-run-unsandboxed-by-default.md).
+- `sandbox` (par défaut `danger-full-access`): le mode de sandbox transmis comme `-s` par `emet dispatch`, `emet review-run` et un `emet launch` Codex. `workspace-write` est aussi accepté, mais il rend `.git` en lecture seule, si bien que les workers ne peuvent pas committer. Quelle que soit la valeur, `emet guard` refuse `git push` sur Codex, et le `config.toml` de la surcouche générée ne contient que le marketplace et le plugin emet, des tables de confiance pour les répertoires propres à l'exécution, ainsi que le modèle et l'effort résolus (jamais vos propres tables). Voir le [guide Codex](../how-to/use-codex.md) et [ADR-0022](../adr/0022-codex-workers-run-unsandboxed-by-default.md).
 
 ## review
 
@@ -343,6 +343,8 @@ La CLI lit ces variables, toutes via `emet/src/env.ts`. Une variable écrite ave
 | `EMET_MEM_RESERVE_GIB`        | `FORGE_MEM_RESERVE_GIB`        | Gio de mémoire laissés libres avant l'attribution d'un slot de worker.                                                                                                       |
 | `EMET_MEM_PER_WORKER_GIB`     | `FORGE_MEM_PER_WORKER_GIB`     | Gio de mémoire supposés par worker par le plafond automatique de workers.                                                                                                    |
 | `EMET_AGENT_HOST`             |                                | À définir à `codex` lors d'une exécution sous l'hôte d'agent Codex ; toute autre valeur signifie Claude.                                                                     |
+| `EMET_AUTO_UPDATE`            |                                | À définir à `0` pour désactiver `emet self update --auto` sur une installation autonome.                                                                                     |
+| `EMET_RELEASE_BASE_URL`       |                                | Racine de téléchargement de `emet self update` : les ressources sont lues depuis `<root>/vX.Y.Z` ou `<root>/latest`.                                                         |
 | `CODEX_HOME`                  |                                | Le répertoire personnel de Codex ; `~/.codex` par défaut. Uniquement lu.                                                                                                     |
 | `XDG_STATE_HOME`              |                                | Base du répertoire d'état lorsque `EMET_STATE_DIR` n'est pas définie.                                                                                                        |
 | `NO_COLOR`                    |                                | Si elle est définie, la bannière est affichée sans couleur.                                                                                                                  |

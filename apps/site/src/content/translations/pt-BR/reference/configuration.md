@@ -2,7 +2,7 @@
 title: Referência de configuração
 description: Cada chave do emet.config.json com seu valor padrão e seu significado.
 seoTitle: Referência de configuração do emet
-sourceHash: a9aeca59a8d1f719
+sourceHash: 23bd286ba357cde6
 ---
 
 Cada chave do `emet.config.json`, com seu valor padrão e seu significado. A fonte da verdade é [`emet/schema/emet.config.schema.json`](../../emet/schema/emet.config.schema.json). Os termos seguem o [GLOSSARY.md](../../GLOSSARY.md). Voltar ao [README](../../README.md).
@@ -68,7 +68,7 @@ O que acontece depois que uma onda se fecha, e os limites de tamanho da nota de 
 
   Aqui, uma spec que só toca o site ou a documentação é promovida, e qualquer spec que toque a CLI para em um pull request de release.
 
-- `launcher` (padrão `auto`, um entre `auto`, `orca`, `bg`): somente Claude Code; ignorado no host Codex, onde `emet launch` não abre aba do Orca. Abre também a onda em uma aba do Orca executando `claude attach`. O `auto` consulta o runtime do Orca (`orca status`), portanto funciona também a partir de sessões `claude --bg`, que não têm `TERM_PROGRAM`; `orca` sempre tenta; `bg` nunca. A onda roda em segundo plano de qualquer forma, e uma aba que falha ao abrir nunca interrompe a cadeia. `emet launch <spec-id> --wave <n>` faz o lançamento completo; veja [`emet launch`](cli.md#execuções-workers-e-slots).
+- `launcher` (padrão `auto`, um entre `auto`, `orca`, `bg`): somente Claude Code; ignorado no host Codex, onde `emet launch` não abre aba do Orca. Abre também a onda em uma aba do Orca executando `claude attach`. O `auto` consulta o runtime do Orca (`orca status`), portanto funciona também a partir de sessões `claude --bg`, que não têm `TERM_PROGRAM`; `orca` sempre tenta; `bg` nunca. A onda roda em segundo plano de qualquer forma, e uma aba que falha ao abrir nunca interrompe a cadeia. `emet launch <spec-id> --wave <n>` faz o lançamento completo; veja [`emet launch`](cli.md#runs-workers-and-slots).
 - `permissionMode` (padrão `bypassPermissions`, um entre `bypassPermissions`, `auto`, `acceptEdits`): somente Claude Code; ignorado no host Codex, onde a sessão encadeada usa [`codex.sandbox`](#codex). Modo de permissão da sessão encadeada. Não é herdado da sessão que a lança, porque o classificador do modo `auto` pode negar um passo como `gh pr merge` e deixar uma onda pela metade. Suas regras `permissions.deny` continuam valendo, mas o aviso de bypass precisa ter sido aceito uma vez de forma interativa (`skipDangerousModePermissionPrompt`).
 
 ## deploy
@@ -116,7 +116,7 @@ Opcional. Ausente significa nenhuma verificação no navegador, e todo comando s
 - `browser.paths` (opcional): lista não vazia de globs não vazios. Com ele, a verificação no navegador só roda quando um caminho alterado corresponde; sem ele, todo diff revisado qualifica. Os globs usam o mesmo matcher de `deploy.check.paths`.
 - Chaves desconhecidas em `verify` ou `verify.browser` são rejeitadas.
 
-O `emet assess` imprime `browserVerify: { run, reason }`, e o coordenador só preenche o eixo Browser do revisor quando `run` é true: o nível tem revisor (não é `passive`), `verify.browser` está configurado, o binário opcional [`agent-browser`](cli.md#configuração-e-auditoria) está no PATH e, quando `paths` está definido, um caminho alterado corresponde. Caso contrário, `reason` nomeia a primeira condição que falhou e a revisão roda como antes. Um diff somente de documentação é `passive`, então uma mudança só de conteúdo não é verificada no navegador. Um revisor cujos comandos de navegador falham duas vezes recorre ao Chrome DevTools MCP ou reporta um achado `verification-gap`; nunca bloqueia a onda.
+O `emet assess` imprime `browserVerify: { run, reason }`, e o coordenador só preenche o eixo Browser do revisor quando `run` é true: o nível tem revisor (não é `passive`), `verify.browser` está configurado, o binário opcional [`agent-browser`](cli.md#setup-and-audit) está no PATH e, quando `paths` está definido, um caminho alterado corresponde. Caso contrário, `reason` nomeia a primeira condição que falhou e a revisão roda como antes. Um diff somente de documentação é `passive`, então uma mudança só de conteúdo não é verificada no navegador. Um revisor cujos comandos de navegador falham duas vezes recorre ao Chrome DevTools MCP ou reporta um achado `verification-gap`; nunca bloqueia a onda.
 
 ## validate
 
@@ -191,17 +191,17 @@ Modelo e esforço por papel para o host Claude Code; o host Codex lê [`codex.mo
 
 ## agentHost
 
-`agentHost` (padrão `"claude"`): o host do agente em que uma execução roda, `"claude"` ou `"codex"`. Veja o [guia do Codex](../guide/codex.md).
+`agentHost` (padrão `"claude"`): o host do agente em que uma execução roda, `"claude"` ou `"codex"`. Veja o [guia do Codex](../how-to/use-codex.md).
 
 ## codex
 
 Lido apenas quando `agentHost` é `"codex"`. Todas as chaves são opcionais. O esforço é um entre `low`, `medium`, `high`, `xhigh`, `max`; `ultra` nunca é aceito.
 
-- `models.worker`, `models.workerOverride`, `models.reviewer.medium`, `models.reviewer.high`, `models.triage`: cada uma é `{ "model", "effort", "fallback" }`. `fallback` lista os slugs tentados em ordem quando `model` não está no cache de modelos do Codex. Os padrões estão em [Modelos e esforço](../guide/models-and-effort.md).
+- `models.worker`, `models.workerOverride`, `models.reviewer.medium`, `models.reviewer.high`, `models.triage`: cada uma é `{ "model", "effort", "fallback" }`. `fallback` lista os slugs tentados em ordem quando `model` não está no cache de modelos do Codex. Os padrões estão em [Modelos e esforço](../how-to/choose-models.md).
 - `models.session`: `{ "model", "effort", "planEffort", "fallback" }` para a sessão que executa `$emet:run`. `planEffort` vale até a primeira aprovação.
 - `effort`: quando definido, substitui o esforço de todos os papéis.
 - `minVersion` (padrão `0.167.0`): a versão mais antiga da CLI `codex` que o emet suporta. O `emet doctor` não compara a versão instalada com ela.
-- `sandbox` (padrão `danger-full-access`): o modo de sandbox passado como `-s` por `emet dispatch`, `emet review-run` e por um `emet launch` do Codex. `workspace-write` também é aceito, mas deixa `.git` somente leitura, então os workers não conseguem fazer commit. Seja qual for o valor, `emet guard` nega `git push` no Codex, e o `config.toml` do overlay gerado contém apenas o marketplace e o plugin do emet, tabelas trusted para os diretórios da própria execução e o modelo e o esforço resolvidos (nunca as suas próprias tabelas). Veja o [guia do Codex](../guide/codex.md) e o [ADR-0022](../adr/0022-codex-workers-run-unsandboxed-by-default.md).
+- `sandbox` (padrão `danger-full-access`): o modo de sandbox passado como `-s` por `emet dispatch`, `emet review-run` e por um `emet launch` do Codex. `workspace-write` também é aceito, mas deixa `.git` somente leitura, então os workers não conseguem fazer commit. Seja qual for o valor, `emet guard` nega `git push` no Codex, e o `config.toml` do overlay gerado contém apenas o marketplace e o plugin do emet, tabelas trusted para os diretórios da própria execução e o modelo e o esforço resolvidos (nunca as suas próprias tabelas). Veja o [guia do Codex](../how-to/use-codex.md) e o [ADR-0022](../adr/0022-codex-workers-run-unsandboxed-by-default.md).
 
 ## review
 
@@ -231,7 +231,7 @@ Lido apenas quando `agentHost` é `"codex"`. Todas as chaves são opcionais. O e
 
 Com qual issue tracker o `/emet` (ou `$emet` no Codex) conversa. A CLI lê `kind` para decidir quais verificações de dependências se aplicam; o restante documenta o adaptador que o comando `/emet` segue (veja [`docs/agents/issue-tracker.md`](../agents/issue-tracker.md)).
 
-- `kind` (obrigatório): `linear`, `github` ou `local`. Para `local`, veja [Tracker local](cli.md#tracker-local) e o [ADR-0011](../adr/0011-local-tracker-scratch-convention.md).
+- `kind` (obrigatório): `linear`, `github` ou `local`. Para `local`, veja [Tracker local](cli.md#local-tracker) e o [ADR-0011](../adr/0011-local-tracker-scratch-convention.md).
 - `transitions.onStart`, `transitions.onPrOpen`, `transitions.onPrMerge`: quem escreve cada transição de estado do ticket: `worker`, `coordinator` ou `automatic` (a integração do tracker faz isso, por exemplo a integração do Linear com o GitHub ao abrir ou mesclar um PR). O coordenador nunca escreve uma transição marcada como `automatic`.
 - `github.priorityLabels`: mapeia um nível de prioridade (`"1"` = P0 a mais alta até `"4"` = P3) para um nome de rótulo do GitHub, por exemplo `{"1":"P0","2":"P1"}`. Sem nenhum declarado, os tickets são ordenados por `createdAt` ascendente e o `emet doctor` avisa.
 - `github.stateLabels`: mapeia um estado do fluxo de trabalho (`todo`, `in-progress`, `in-review`) para um nome de rótulo do GitHub, por exemplo `{"todo":"status:todo"}`. `done` e `canceled` são inferidos do estado fechado da issue e de `state_reason`.
@@ -242,7 +242,7 @@ Com qual issue tracker o `/emet` (ou `$emet` no Codex) conversa. A CLI lê `kind
 ## preflight
 
 - `requiredFiles` (padrão nenhum): arquivos que o `emet preflight` exige na raiz do repositório antes de despachar uma onda, cada um `{ "path", "why" }`; `why` aparece na mensagem de falha. Vazio significa que a verificação não roda.
-- `requiredCommands` (padrão nenhum): binários que precisam ser resolvidos no PATH antes do despacho. O `emet preflight` falha com código 1 nomeando os que não são, e o `emet doctor` os informa. É a lista do próprio repositório, separada das [verificações de dependências](dependencies.md#o-que-verifica-o-quê) guiadas pelo tracker; o `gh` já tem uma verificação dedicada, então listá-lo é opcional. Adições comuns: `rg` e `sg`.
+- `requiredCommands` (padrão nenhum): binários que precisam ser resolvidos no PATH antes do despacho. O `emet preflight` falha com código 1 nomeando os que não são, e o `emet doctor` os informa. É a lista do próprio repositório, separada das [verificações de dependências](dependencies.md#what-checks-what) guiadas pelo tracker; o `gh` já tem uma verificação dedicada, então listá-lo é opcional. Adições comuns: `rg` e `sg`.
 
 ## specs
 
@@ -259,7 +259,7 @@ Com qual issue tracker o `/emet` (ou `$emet` no Codex) conversa. A CLI lê `kind
 - `maxLiveWorkers` (padrão `auto`): limite global compartilhado por todos os coordenadores `/emet` rodando neste host, em todos os repositórios. O pool de slots fica em `~/.local/state/emet/slots`, não em nenhum repositório específico. O `auto` deriva o limite da contagem de CPUs e da RAM do host; um inteiro positivo o fixa. Uma verificação separada de folga de memória (`EMET_MEM_RESERVE_GIB`, padrão 8 GiB) nega uma aquisição quando a memória disponível é baixa demais, independentemente desse limite. A variável de ambiente `EMET_MAX_LIVE_WORKERS` substitui este campo e também aceita `auto`.
 - `runIdleThresholdMs` (padrão `5400000`, 90 minutos): por quanto tempo uma execução sem âncora viva ainda é classificada como ociosa em vez de morta, com base apenas na atualidade da transcrição. A variável de ambiente `EMET_RUN_IDLE_THRESHOLD_MS` a substitui.
 
-Veja [Variáveis de ambiente](cli.md#variáveis-de-ambiente).
+Veja [Variáveis de ambiente](cli.md#environment-variables).
 
 ## ticket
 
@@ -294,6 +294,16 @@ Todos somente prosa.
 
 - `inlineMaxLines` (padrão `100`, mínimo `1`): o maior corpo de ticket, em linhas, mantido inline no prompt de um worker.
 
+## attention
+
+- `alert` (padrão `true`, booleano): quando uma sessão entra em `needs-decision`, o emet levanta um único alerta. Ele marca o worktree como não lido no Orca quando `orca status --json` informa um runtime acessível, caso contrário executa `notify-send` quando ele está no PATH, caso contrário não faz nada. Cada chamada tem um timeout de 3 s e uma falha nunca altera o resultado de um hook. Sair de `needs-decision` não limpa a marca de não lido do Orca. Defina `false` para desativar o alerta.
+
+```json
+{ "attention": { "alert": true } }
+```
+
+Veja [`emet fleet status`](cli.md#setup-and-audit).
+
 ## schema
 
 Somente prosa. A propriedade do schema de dados deste repositório, usada pela regra de evitação de conflitos da fase 3 ao dividir tickets. Vazio ou omitido ignora a regra.
@@ -321,18 +331,6 @@ Opcional, somente prosa. `null` ou omitido ignora a etapa de design/revisão de 
 
 - `canvasIndex` (obsoleto): caminho para um arquivo de canvas de design que os workers consultam antes de mudanças de UI.
 
-## attention
-
-Opcional.
-
-- `alert` (padrão `true`, booleano): quando uma sessão entra em `needs-decision`, o emet levanta um único alerta: uma marca de não lido do Orca no worktree principal quando o runtime do Orca está acessível, caso contrário `notify-send` quando ele está no PATH, caso contrário nada. `false` desativa o alerta.
-
-Exemplo:
-
-```json
-{ "attention": { "alert": true } }
-```
-
 ## Variáveis de ambiente
 
 A CLI lê estas variáveis, todas por meio de `emet/src/env.ts`. Uma variável com grafia `FORGE_` ainda funciona como alternativa ao seu nome `EMET_` e imprime um aviso uma única vez. Valores vazios contam como não definidos. `tools/env-docs.test.ts` mantém esta tabela e o código em sincronia.
@@ -347,6 +345,8 @@ A CLI lê estas variáveis, todas por meio de `emet/src/env.ts`. Uma variável c
 | `EMET_MEM_RESERVE_GIB`        | `FORGE_MEM_RESERVE_GIB`        | GiB de memória mantidos livres antes de conceder um slot de worker.                                                                                 |
 | `EMET_MEM_PER_WORKER_GIB`     | `FORGE_MEM_PER_WORKER_GIB`     | GiB de memória presumidos por worker pelo limite automático de workers.                                                                             |
 | `EMET_AGENT_HOST`             |                                | Defina como `codex` ao executar sob o host de agente Codex; qualquer outro valor significa Claude.                                                  |
+| `EMET_AUTO_UPDATE`            |                                | Defina como `0` para desativar `emet self update --auto` em uma instalação standalone.                                                              |
+| `EMET_RELEASE_BASE_URL`       |                                | Raiz de download de `emet self update`: os recursos são lidos de `<root>/vX.Y.Z` ou `<root>/latest`.                                                |
 | `CODEX_HOME`                  |                                | O diretório home do Codex; o padrão é `~/.codex`. Apenas lido.                                                                                      |
 | `XDG_STATE_HOME`              |                                | Base do diretório de estado quando `EMET_STATE_DIR` não está definida.                                                                              |
 | `NO_COLOR`                    |                                | Quando definida, o banner é impresso sem cor.                                                                                                       |

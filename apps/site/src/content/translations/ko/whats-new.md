@@ -2,8 +2,35 @@
 title: 새로운 소식
 description: emet 릴리스 노트. 각 버전에서 무엇이 바뀌었는지 정리합니다.
 seoTitle: "emet 새로운 소식: 릴리스 노트"
-sourceHash: 52353f60ae0e5795
+sourceHash: adecd188f36bb789
 ---
+
+## 0.22.0
+
+2026-11-24
+
+### 추가됨
+
+- `emet` 바이너리가 설치 트리(명령, 에이전트, 레퍼런스 프롬프트, 훅, Codex 스킬, 플러그인 매니페스트)를 내장합니다. 빌드 시점에 생성되고 `bun run check`가 드리프트를 검사하므로, 컴파일된 바이너리에는 체크아웃이 필요 없습니다.
+- `emet self install [latest|X.Y.Z] [--dry-run] [--from <checkout>] [--force]`는 독립 실행형 바이너리를 `~/.local/share/emet/versions/<v>/`에 설치하고 `~/.local/bin/emet` 심볼릭 링크를 만들며, Claude Code 파일을 쓰고 백업 후 emet 훅을 `~/.claude/settings.json`에 병합합니다. 다른 훅은 건드리지 않습니다. emet 플러그인이 설치되어 있으면 `--force`를 지정하지 않는 한 거부합니다. `--from`은 Bun 소스 설치를 재현합니다.
+- `emet self install`의 Codex 어댑터는 emet 스킬을 `~/.agents/skills`에 쓰고 내장된 훅을 `$CODEX_HOME/hooks.json`에 추가하며, `config.toml`은 절대 쓰지 않고 한 번만 필요한 `/hooks` 신뢰 단계를 출력합니다. Codex worker 오버레이는 독립 실행형 설치를 감지하면 emet 플러그인 테이블을 생략합니다.
+- `emet self update [latest|X.Y.Z]`와 `emet self update --auto`는 릴리스를 내려받아 `SHA256SUMS`(`gh`가 있으면 증명도)를 검증하고 스테이징합니다. 교체는 worker 슬롯을 점유한 것이 하나도 없을 때까지 기다립니다. `--auto`는 `SessionStart` 훅에서 하루에 최대 한 번 실행됩니다.
+- 각 릴리스에 `install.sh`로 첨부되는 `scripts/install-remote.sh`는 바이너리를 내려받고 체크섬을 검증한 뒤 `emet self install`을 실행합니다: `curl -fsSL https://emet.andryore.dev/install.sh | sh`.
+- `emet doctor`는 독립 실행형 설치와 플러그인이 공존할 때, 설치된 파일이 내장 트리와 어긋날 때, Codex 훅에 `trusted_hash` 항목이 없을 때, 업데이트가 대기 중이거나 자동 업데이트가 꺼져 있을 때 경고합니다.
+- `docs/reference/stability.md`가 게시되었고, `docs/specs/translations.md`가 새로운 라이빙 spec으로 추가되었습니다.
+
+### 변경됨
+
+- 문서가 시작하기, 개념, 하우투, 레퍼런스, 도움말의 다섯 그룹으로 재구성되었으며, 열 개 로캘 모두에 적용됩니다. 이번 릴리스 이전에 게시된 모든 경로는 새 경로로 리디렉션되고, `/docs/`는 `/docs/start/overview/`로 리디렉션됩니다.
+- `start/overview`, `start/install`, `start/first-run`에만 설치 안내가 있습니다. 독립 실행형 설치가 먼저 나오고 플러그인은 선택 사항으로 표시됩니다.
+- 개념 페이지는 설정 표 없이 주제를 설명하고, `concepts/landing`은 spec이 기본적으로 pull request 하나로 랜딩한다고 설명하며, `concepts/architecture`는 `emet/src`의 테스트가 아닌 모든 모듈을 나열합니다. 하우투 페이지는 사전 요건과 결과 확인이 있는 작업 단계이고, `reference/cli`는 명령마다 제목이 하나씩 있습니다.
+- Website 홈은 spec당 pull request 하나를 보여 주고, 빠른 모드, 메모리, 이중 리뷰, 어텐션 알림, 되돌릴 수 있는 설치를 다룹니다.
+- `emet uninstall`은 독립 실행형 산출물도 제거합니다: 버전 디렉터리, 심볼릭 링크, 설치 상태 파일, Codex 스킬과 훅, 두 훅 파일에 있는 모든 emet 훅 명령입니다. 편집된 파일과 다른 훅은 유지됩니다.
+- `whats-new`를 제외한 게시된 모든 페이지는 아홉 개 로캘 각각에 최신 번역이 있으며, 새 `reference/stability` 페이지도 포함됩니다.
+
+### 제거됨
+
+- `install.sh`가 없어졌습니다. `emet self install`과 `curl` 명령이 이를 대체하며, 의존성 검사와 doctor 해결 안내도 이쪽을 가리킵니다.
 
 ## 0.21.0
 

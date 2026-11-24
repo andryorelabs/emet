@@ -6,11 +6,14 @@
 !bun.lock
 !tsconfig.base.json
 !apps/site
-!docs/guide
+!docs/start
+!docs/concepts
 !docs/reference
 !docs/troubleshooting.md
-!docs/architecture.md
-!docs/how-to/update-emet.md
+!docs/how-to/use-codex.md
+!docs/how-to/check-a-fleet.md
+!docs/how-to/configure-tracker.md
+!docs/how-to/choose-models.md
 !docs/how-to/mascot.md
 !docs/brand/mascot
 !CHANGELOG.md

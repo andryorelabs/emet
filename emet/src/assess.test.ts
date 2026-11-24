@@ -33,7 +33,7 @@ describe("classifyDiff", () => {
 
   test.each([
     ["CI workflow", ".github/workflows/ci.yml"],
-    ["installer", "scripts/install.sh"],
+    ["installer", "scripts/install-remote.sh"],
     ["installer", "emet/src/installer.ts"],
     ["lockfile", "emet/bun.lock"],
     ["lockfile", "package-lock.json"],
