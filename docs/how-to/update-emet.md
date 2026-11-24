@@ -4,6 +4,10 @@ How to move an installed emet plugin to a new release. Terms follow [GLOSSARY.md
 
 To update the standalone install, by hand or automatically, see [Install](../start/install.md#update). This page covers plugin installs.
 
+## Prerequisites
+
+- emet installed as a plugin in Claude Code or Codex. For the standalone install, use [Install](../start/install.md#update) instead.
+
 ## Optional: plugins
 
 emet and the optional `emet-mascot` plugin come from the same marketplace, `emet-marketplace`. Claude Code does not update third-party marketplaces on its own by default, and a marketplace cannot change that default for its users.
@@ -30,3 +34,7 @@ codex plugin add emet@emet-marketplace
 ```
 
 `codex plugin list` shows whether `emet@emet-marketplace` is installed and enabled. Auto-update is a Claude Code feature; on Codex, upgrade by hand.
+
+## Check
+
+Run `claude plugin list` (Claude Code) or `codex plugin list` (Codex) and confirm `emet@emet-marketplace` shows the release in [CHANGELOG.md](../../CHANGELOG.md).

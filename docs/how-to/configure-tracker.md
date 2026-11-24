@@ -25,11 +25,11 @@ Choose where tickets live, how a spec lands and whether waves chain. Every key n
 
 :::steps
 
-1. Set `landing.mode` to `"pr"` (default) or `"merge"`. In `merge` mode a spec lands as one local merge into trunk with `emet land`, `commands.selfCheck` stands in for CI, and nothing is pushed. See [ADR-0010](../adr/0010-local-merge-landing.md).
+1. Set `landing.mode` to `"pr"` (default) or `"merge"`. In `merge` mode a spec lands as one local merge into trunk (`emet spec-branch land`, or `emet land` per wave with `landing.unit: "wave"`), `commands.selfCheck` stands in for CI, and nothing is pushed. See [ADR-0010](../adr/0010-local-merge-landing.md).
 2. Set `landing.unit` to `"spec"` (default, the whole spec lands as one) or `"wave"` (each wave lands alone). See [ADR-0037](../adr/0037-landing-per-spec.md).
 3. With `landing.unit: "spec"`, set `worktree.baseRef: "head"` in the Claude Code settings so worker worktrees start from the `spec/<id>` branch. `emet preflight` and `emet doctor` check it.
 4. In `pr` mode, set `landing.specMergeMethod` (a merge commit by default) to a method the repository settings and trunk ruleset allow; `emet doctor` warns when they do not.
-5. To control the merge, set `pr.autoMerge` (default `true`), `pr.mergeMethod` and `pr.maxCiFixAttempts`. A wave with anything flagged is never auto-merged.
+5. To control the merge, set `pr.autoMerge` (default `true`) and `pr.maxCiFixAttempts`. Set `pr.mergeMethod` only with `landing.unit: "wave"`; a spec pull request uses `landing.specMergeMethod` from step 4 and ignores it. A wave with anything flagged is never auto-merged.
 
 :::
 
@@ -72,7 +72,7 @@ Chaining launches only when the PR merged and nothing was flagged, skips when an
    { "budgets": { "workerAttempts": 2, "reviewRounds": 2, "stallNudgeCap": 6 } }
    ```
 
-   `workerAttempts` is how many times a ticket can fail `verify` before it is deferred; `reviewRounds` is how many review/fix rounds a ticket gets before one escalation; `stallNudgeCap` is how many times a stalled worker is nudged. See [Review and gates](../concepts/review-and-gates.md).
+   `workerAttempts` is how many times a ticket can fail `verify` before it is deferred; `reviewRounds` is how many review rounds a ticket gets before one escalation (fix rounds have their own `budgets.fixRounds`, default 2); `stallNudgeCap` is how many times a stalled worker is nudged. See [Review and gates](../concepts/review-and-gates.md).
 
 2. Set `specs.enabled` to keep [living specs](../concepts/living-specs.md) in `docs/specs/` (`specs.dir`).
 3. Run `emet map` to write a codebase map to `docs/agents/codebase.md` (`map.path`). `emet map --stale` exits 1 once HEAD has moved past the stamp.
