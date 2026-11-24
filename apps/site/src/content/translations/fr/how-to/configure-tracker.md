@@ -2,104 +2,97 @@
 title: Trackers et atterrissage
 description: Où vivent les tickets, comment une vague atterrit en pull request ou en merge local, et comment les vagues s'enchaînent.
 seoTitle: Trackers et atterrissage dans emet
-sourceHash: 1ebd20e303a5c747
+sourceHash: c79d8a04687b4620
 ---
 
-Où vivent les tickets, comment une vague atterrit et comment les vagues s'enchaînent. Chaque clé citée ici figure dans la [référence de configuration](../reference/configuration.md) ; chaque sous-commande figure dans la [référence de la CLI](../reference/cli.md).
+Choisissez où vivent les tickets, comment une spec atterrit et si les vagues s'enchaînent. Chaque clé citée ici figure dans la [référence de configuration](../reference/configuration.md) ; chaque sous-commande figure dans la [référence de la CLI](../reference/cli.md). Les termes suivent [GLOSSARY.md](../../GLOSSARY.md).
 
 <img src="../brand/mascot/mascot-work.svg" alt="mascotte d'emet, au travail" width="96" align="right">
 
-## Trackers
+## Prérequis
 
-emet fonctionne avec Linear, GitHub Issues ou des fichiers locaux, selon `tracker.kind`. `gh` est requis pour le tracker `github`. Un serveur MCP Linear doit être déclaré dans `.mcp.json` (ou au niveau utilisateur) pour le tracker `linear` ; voir la [référence des dépendances](../reference/dependencies.md).
+- emet est installé et un dépôt a un `emet.config.json` ; exécutez `emet init` s'il n'en a pas.
+- Pour le tracker `github` ou l'atterrissage `pr` : `gh` est dans le `PATH` et authentifié.
+- Pour le tracker `linear` : un serveur MCP Linear déclaré dans `.mcp.json` (ou au niveau utilisateur). Voir la [référence des dépendances](../reference/dependencies.md).
+- Pour comprendre ce que ces réglages changent, lisez [Atterrissage](../concepts/landing.md) et [Runs, vagues et specs](../concepts/runs-waves-specs.md).
 
-### Tracker local
+## Choisir le tracker
 
-Avec `tracker.kind: "local"`, les specs et les tickets sont des fichiers markdown sous `.scratch/` du worktree principal (non versionnés) : `.scratch/<slug>/spec.md` et `.scratch/<slug>/issues/<NN>-<slug>.md`, chacun avec des lignes `Status:` et `Blocked by:` et des commentaires sous `## Comments`. Le coordinateur les lit et les écrit via `emet tracker` (`create-spec`, `create-ticket`, `read`, `frontier`, `set-state`, `comment`, `close`). `emet init --tracker local` met cela en place. Voir l'[ADR-0011](../adr/0011-local-tracker-scratch-convention.md).
+:::steps
 
-## Atterrissage
+1. Définissez `tracker.kind` dans `emet.config.json` sur `"linear"`, `"github"` ou `"local"`.
+2. Pour un tracker local, exécutez `emet init --tracker local`. Les specs et les tickets sont alors des fichiers markdown sous `.scratch/` du worktree principal (non versionnés) : `.scratch/<slug>/spec.md` et `.scratch/<slug>/issues/<NN>-<slug>.md`, chacun avec des lignes `Status:` et `Blocked by:` et des commentaires sous `## Comments`. Le coordinateur les lit et les écrit via `emet tracker`. Voir l'[ADR-0011](../adr/0011-local-tracker-scratch-convention.md).
+3. Pour les autres types, vérifiez le prérequis correspondant ci-dessus.
 
-`landing.mode` vaut `"pr"` (par défaut) ou `"merge"`, indépendamment du tracker. En mode `merge`, une vague atterrit en un seul merge local dans la branche principale avec `emet land`, `commands.selfCheck` tenant lieu de CI et sans push. `gh` n'est requis que lorsque le tracker est `github` ou que l'atterrissage est `pr`. Voir l'[ADR-0010](../adr/0010-local-merge-landing.md).
+:::
 
-`landing.unit` choisit ce qui atterrit d'un bloc : `"spec"` (par défaut) fait atterrir toute la spec d'un coup, `"wave"` garde l'ancienne règle où chaque vague atterrit seule. Voir l'[ADR-0037](../adr/0037-landing-per-spec.md), qui remplace l'[ADR-0004](../adr/0004-one-wave-one-dependency-layer-one-pr.md).
+## Choisir comment une spec atterrit
 
-### Branche de spec
+:::steps
 
-Avec `landing.unit: "spec"`, le coordinateur crée `spec/<id>` à partir de la branche principale avec `emet spec-branch ensure --spec <id>`. Une fois qu'une vague a passé la revue et `commands.selfCheck`, `emet spec-branch integrate` fusionne la branche de la vague dans `spec/<id>` avec `--no-ff` et un commit portant les trailers `Emet-Wave` et `Emet-Tickets`. Un ticket dont la branche est dans `spec/<id>` est **Integrated**, pas **Landed** : il compte comme bloqueur fermé pour la frontière de la vague suivante, mais le tracker le garde ouvert jusqu'à l'atterrissage final. Les vagues suivantes partent de la pointe de `spec/<id>`, donc aucune vague n'attend la CI d'une PR.
+1. Définissez `landing.mode` sur `"pr"` (par défaut) ou `"merge"`. En mode `merge`, une spec atterrit en un seul merge local dans la branche principale (`emet spec-branch land`, ou `emet land` par vague avec `landing.unit: "wave"`), `commands.selfCheck` tient lieu de CI et rien n'est poussé. Voir l'[ADR-0010](../adr/0010-local-merge-landing.md).
+2. Définissez `landing.unit` sur `"spec"` (par défaut, toute la spec atterrit d'un bloc) ou `"wave"` (chaque vague atterrit seule). Voir l'[ADR-0037](../adr/0037-landing-per-spec.md).
+3. Avec `landing.unit: "spec"`, définissez `worktree.baseRef: "head"` dans les réglages de Claude Code pour que les worktrees des workers partent de la branche `spec/<id>`. `emet preflight` et `emet doctor` le vérifient.
+4. En mode `pr`, définissez `landing.specMergeMethod` (un commit de merge par défaut) sur une méthode que les réglages du dépôt et le ruleset de la branche principale autorisent ; `emet doctor` avertit quand ce n'est pas le cas.
+5. Pour contrôler le merge, définissez `pr.autoMerge` (`true` par défaut) et `pr.maxCiFixAttempts`. Ne définissez `pr.mergeMethod` qu'avec `landing.unit: "wave"` ; une pull request de spec utilise `landing.specMergeMethod` de l'étape 4 et l'ignore. Une vague où quelque chose est signalé n'est jamais fusionnée automatiquement.
 
-`emet spec-branch sync` fusionne la branche principale dans `spec/<id>` et ne fait jamais de rebase ; en cas de conflit, il abandonne, laisse la branche inchangée et sort avec un code non nul. `emet spec-branch land` exécute la synchronisation puis fait atterrir la branche une seule fois. En mode `pr`, il pousse `spec/<id>`, ouvre une PR avec une ligne `Closes #N` par ticket de chaque vague intégrée, attend ses vérifications et la fusionne avec `landing.specMergeMethod` (un commit de merge par défaut, en ignorant `pr.mergeMethod`). En mode `merge`, il fusionne `spec/<id>` dans la branche principale locale avec `--no-ff` et ne pousse jamais. `--partial` ne fait atterrir que les vagues intégrées jusque-là. `emet spec-branch abandon --spec <id> --force` étiquette la branche `abandoned/spec-<id>`, la supprime et remet à `ready-for-agent` les tickets intégrés d'un tracker local.
+:::
 
-Le mode spec exige `worktree.baseRef: "head"` dans les réglages de Claude Code pour que les worktrees des workers partent de la branche de spec ; `emet preflight` et `emet doctor` le vérifient. `emet doctor` avertit aussi lorsque le mode est `pr` et que les réglages du dépôt ou le ruleset de la branche principale n'autorisent pas le `landing.specMergeMethod` configuré.
+Les commandes de branche de spec (`emet spec-branch ensure`, `integrate`, `sync`, `land`, `abandon`) sont pilotées par le coordinateur ; leurs options figurent dans la [référence de la CLI](../reference/cli.md).
 
-### PR d'atterrissage
+## Enchaîner les vagues
 
-Avec `landing.unit: "spec"`, la PR est celle de la spec : une PR pour toutes les vagues intégrées, ouverte par `emet spec-branch land` après la dernière vague. Avec `landing.unit: "wave"`, une vague est une PR. Le corps de la PR porte une ligne `Closes #N` par ticket (le mot-clé de fermeture du tracker), et le coordinateur passe les tickets en revue à l'ouverture de la PR. La PR est ensuite fusionnée selon `pr.autoMerge`, ou laissée ouverte lorsque la vague a été signalée, que `autoMerge` vaut `false` ou que les corrections de CI sont épuisées (la PR reçoit alors le label de décision humaine). Après un merge, `emet tracker close` ferme les tickets sur un tracker GitHub, et `emet cleanup --run <runId>` libère les branches, les réservations de tickets et les emplacements de workers de la vague. Il supprime aussi chaque branche locale dont la PR a été fusionnée au commit de tête de la branche, y compris la branche d'intégration.
+Les vagues suivantes s'exécutent dans leurs propres sessions. L'enchaînement est désactivé par défaut.
 
-Une fois les branches d'une vague fusionnées ensemble, `commands.fullSuite` s'exécute une fois sur la branche d'intégration. Une exécution au rouge bloque la PR et `autoChain`. Le gate reçoit le résultat sous la forme `--integration`. Dans une vague non finale d'un atterrissage de spec, le coordinateur passe `--ci` issu de `commands.selfCheck`, et seul l'atterrissage final attend la CI avec `emet ci --wait` ; le gate répond alors `chain` tant qu'il reste des vagues.
+:::steps
 
-### Quick run
+1. Définissez la section `handoff` dans `emet.config.json` :
 
-`/emet:run --quick <demande>` est le chemin court pour un petit changement à un seul ticket, comme une coquille ou un correctif d'une ligne. Utilisez-le quand le changement ne touche aucun écran et tient dans un ticket : nouvelle surface sous `sizing.inlineMaxLines` et aucune alerte de budget de contexte.
+   ```json
+   {
+     "handoff": {
+       "autoChain": true,
+       "launcher": "auto",
+       "permissionMode": "bypassPermissions"
+     }
+   }
+   ```
 
-Elle saute l'entretien et la planification longs : un tour de `grilling`, pas de `domain-modeling`, pas de canvas, pas de tours de frontière. La spec contient un ticket `folded` qui couvre tous les `S#`, et vous donnez une seule approbation. Un worker s'exécute ensuite dans un worktree, suivi de `emet verify`, de l'étape living specs quand `specs.enabled`, de `emet assess --quick`, du reviewer sauf si le niveau est `passive`, et de `emet gate`. Il n'y a pas de `emet chain`.
+2. Sur Claude Code, vérifiez que `claude` est dans le `PATH` avec la prise en charge de `--bg`, que l'espace de travail est approuvé (ouvrez `claude` en mode interactif dans le dépôt une fois et acceptez-le), et que l'avertissement de contournement a été accepté une fois dans une session interactive (`skipDangerousModePermissionPrompt`).
+3. Sur Codex, vérifiez que `codex` est dans le `PATH` à la version `codex.minVersion` ou plus récente, avec `--json` et `--output-schema` sur `codex exec` ; la vague suivante démarre comme un `codex exec` détaché. Voir [Exécuter emet sur Codex](use-codex.md).
+4. Définissez `handoff.launcher` (Claude Code uniquement) sur `auto`, `orca` ou `bg` pour choisir si la vague ouvre aussi un onglet Orca. `permissionMode` ne concerne que Claude Code ; sur Codex, la session enchaînée utilise `codex.sandbox`.
+5. Pour démarrer une vague à la main dans une autre session, exécutez `emet launch <spec-id> --wave <n>` plutôt qu'un simple `claude --bg`. Il affiche `{ name, id, attach, orcaTab: { opened, reason } }`.
 
-Une **Quick run** n'a qu'une **vague** : elle atterrit donc toujours par vague, en PR ou en merge local, quelle que soit la valeur de `landing.unit`. `emet approve --quick` enregistre `mode: "quick"`, et aucune branche de spec n'est créée ni attendue.
+:::
 
-Un diff à haut risque l'arrête. `emet assess --quick` sort avec le code 1 quand le niveau est `high` ; le Gate le traite comme un **Stop** : aucun auto-merge, la PR reste ouverte et le rapport final nomme les raisons du haut risque.
+L'enchaînement ne se lance que si la PR a été fusionnée et que rien n'a été signalé, il est ignoré quand une session `emet-<spec-id>-*` est déjà active, et il se rabat sur l'affichage de `/emet:run --dispatch <spec-id>` si le lancement échoue. Inspectez une vague enchaînée avec `claude agents` ou `claude attach emet-<spec-id>-w<n>`.
 
-Avant l'approbation, l'exécution s'arrête et recommande `/emet:run` sans `--quick` quand le changement touche un écran ou ne tient pas dans un ticket. `--quick` ne se combine pas avec `--draft` ni `--dispatch` ; `--no-promote` est accepté.
+## Définir les budgets et les fonctionnalités facultatives
 
-### Enchaîner les vagues
+:::steps
 
-Les vagues suivantes s'exécutent dans leurs propres sessions, jamais dans celle qui a exécuté la vague 1. Deux sections facultatives de `emet.config.json` contrôlent la suite (toutes deux validées par `emet preflight`) :
+1. Définissez la section `budgets` si les valeurs par défaut ne conviennent pas :
 
-```json
-{
-  "pr": { "autoMerge": true, "mergeMethod": "squash", "maxCiFixAttempts": 2 },
-  "handoff": {
-    "autoChain": false,
-    "launcher": "auto",
-    "permissionMode": "bypassPermissions"
-  }
-}
-```
+   ```json
+   { "budgets": { "workerAttempts": 2, "reviewRounds": 2, "stallNudgeCap": 6 } }
+   ```
 
-- `pr.autoMerge` (par défaut `true`) : attend les checks de la PR puis fusionne ; sans checks, fusionne immédiatement. Un check en échec est corrigé et poussé, jusqu'à `maxCiFixAttempts` fois, puis la PR est laissée ouverte à un humain. Une vague avec quoi que ce soit de signalé n'est jamais fusionnée automatiquement.
-- `handoff.autoChain` (par défaut `false`) : après une vague propre et fusionnée, s'il reste des vagues, lance la suivante avec `claude --bg` au lieu d'afficher `/emet:run --dispatch <spec-id>`. Inspectez-la avec `claude agents` / `claude attach emet-<spec-id>-w<n>`. Prérequis sur Claude Code :
-  1. `claude` dans le PATH, avec la prise en charge de `--bg`.
-  2. Un espace de travail de confiance. `--bg` s'exécute de façon non interactive, donc la boîte de dialogue de confiance ne s'affiche jamais ; ouvrez `claude` en mode interactif dans le dépôt une fois et acceptez-la.
-  3. L'avertissement de contournement accepté une fois dans une session interactive (`skipDangerousModePermissionPrompt`), puisque la vague suivante s'exécute dans `handoff.permissionMode` (ci-dessous), et non dans le mode de la session qui la lance.
+   `workerAttempts` est le nombre de fois qu'un ticket peut échouer à `verify` avant d'être reporté ; `reviewRounds` est le nombre de tours de revue qu'un ticket reçoit avant une escalade (les tours de correction ont leur propre `budgets.fixRounds`, 2 par défaut) ; `stallNudgeCap` est le nombre de fois qu'un worker bloqué est relancé. Voir [Revue et portes](../concepts/review-and-gates.md).
 
-  Sur l'hôte Codex, la vague suivante démarre plutôt comme un `codex exec` détaché (voir `handoff.launcher` ci-dessous) ; le prérequis est donc `codex` dans le PATH en version `codex.minVersion` ou plus récente, avec `--json` et `--output-schema` sur `codex exec` ; `emet doctor` vérifie les options, pas le numéro de version. La boîte de dialogue de confiance et l'avertissement de contournement de Claude ne s'appliquent pas. Que Codex exige un espace de travail de confiance pour une exécution détachée n'est pas vérifié dans la documentation de ce dépôt.
+2. Définissez `specs.enabled` pour conserver des [specs vivantes](../concepts/living-specs.md) dans `docs/specs/` (`specs.dir`).
+3. Exécutez `emet map` pour écrire une carte du code dans `docs/agents/codebase.md` (`map.path`). `emet map --stale` se termine avec le code 1 dès que HEAD a dépassé l'empreinte.
+4. Exécutez `emet metrics --run <id>` après un run pour obtenir les tokens, le coût et le temps écoulé par ticket, par vague et par run.
 
-  Elle ne se lance que lorsque la PR a été fusionnée et que rien n'a été signalé, et elle est ignorée si une session `emet-<spec-id>-*` est déjà active (`claude agents --json`). Si le lancement échoue, elle se rabat sur l'affichage de `/emet:run --dispatch <spec-id>`.
+:::
 
-- `handoff.launcher` (par défaut `auto`) : ouvre aussi la vague dans un onglet Orca exécutant `claude attach`. `auto` interroge le runtime d'Orca (`orca status`), donc cela fonctionne aussi depuis des sessions `claude --bg`, qui n'ont pas de `TERM_PROGRAM` ; `orca` essaie toujours, `bg` jamais. `launcher` ne s'applique qu'à l'hôte Claude Code ; sur Codex, `emet launch` se comporte toujours comme `bg`. La vague s'exécute en arrière-plan dans tous les cas, et un onglet qui ne s'ouvre pas n'arrête jamais la chaîne.
+Pour une petite modification d'un seul ticket, lancez `/emet:run --quick <request>` plutôt que le pipeline complet ; il atterrit toujours par vague et s'arrête sur un diff à haut risque.
 
-  `emet launch <spec-id> --wave <n>` fait tout le lancement (vérification de session en double, `claude --bg`, onglet) et affiche `{ name, id, attach, orcaTab: { opened, reason } }`. Utilisez-le, plutôt qu'un simple `claude --bg`, chaque fois que vous voulez une vague dans une autre session à la main.
+## Vérifier
 
-  Sur l'Agent host Codex, `emet launch` démarre un `codex exec` détaché qui exécute `$emet:run --dispatch <spec-id>` et enregistre son identifiant de fil. Il n'ouvre aucun onglet Orca, et `codex exec resume <id>` reprend la session. Voir la [référence de la CLI](../reference/cli.md#hôte-codex) et [Exécuter emet sur Codex](codex.md).
+:::steps
 
-- `handoff.permissionMode` (par défaut `bypassPermissions`) : Claude Code uniquement ; mode d'autorisation de la session chaînée. Sur l'hôte Codex il est ignoré et la session chaînée utilise `codex.sandbox` (par défaut `danger-full-access` ; voir [Exécuter emet sur Codex](codex.md)). Il n'est pas hérité de la session qui la lance, car le classificateur du mode `auto` peut refuser une étape comme `gh pr merge` et laisser une vague à moitié terminée. Vos règles `permissions.deny` s'appliquent toujours, mais l'avertissement de contournement doit avoir été accepté une fois en mode interactif (`skipDangerousModePermissionPrompt`).
+1. Exécutez `emet preflight` ; il valide les sections `tracker`, `landing`, `pr`, `handoff` et `budgets` et se termine avec le code 2 sur une configuration mal formée.
+2. Exécutez `emet doctor .` et confirmez qu'aucun échec ne mentionne le tracker, `gh`, le serveur MCP Linear ou les réglages d'atterrissage.
+3. Pour un tracker local, exécutez `emet tracker frontier --spec <slug>` et confirmez qu'il liste les tickets attendus.
 
-## Gates, budgets et enregistrements
-
-Les phases ne décident pas d'elles-mêmes quand un ticket est terminé, fusionnable ou mérite une nouvelle tentative. Elles appellent une commande de la CLI qui lit un enregistrement sur disque et affiche la décision. Les enregistrements d'exécution se trouvent sous `.emet/runs/<run-id>/` et le registre de revue sous `.emet/review/`, dans le checkout principal, pas dans le worktree d'un worker. Chaque commande affiche son usage avec `--help`. Le tableau des commandes et de ce que chacune impose se trouve dans [Gates et enregistrements](../reference/cli.md#gates-et-enregistrements).
-
-**Budgets** (`emet.config.json`, tous facultatifs) :
-
-```json
-{ "budgets": { "workerAttempts": 2, "reviewRounds": 2, "stallNudgeCap": 6 } }
-```
-
-- `workerAttempts` : combien de fois un ticket peut échouer à `verify` avant que le gate réponde `defer`. Le ticket reçoit le label différé et le reste de la vague continue. Un défaut d'environnement, comme la commande de tests qui se termine avec 126/127 ou une panne du fournisseur, met l'exécution en pause sans consommer de tentative.
-- `reviewRounds` : combien de tours de revue/correction un ticket reçoit avant une escalade vers le niveau de modèle suivant. Tout ce qui reste ouvert après cela reçoit une décision.
-- `stallNudgeCap` : combien de fois un worker bloqué est relancé. Le compteur n'est jamais remis à zéro.
-
-## Specs vivantes, carte et métriques
-
-**Specs vivantes.** Activez-les avec `specs.enabled`. Sur la dernière vague d'une spec, avant sa revue, le coordinateur écrit les deltas d'exigences de la spec, exécute une seule fois `emet spec-merge --spec <id>` pour les fusionner dans `docs/specs/<area>.md` (`specs.dir`) et valide le résultat dans un commit, de sorte qu'il est relu et atterrit dans la même PR. Il vérifie toutes les zones avant d'écrire quoi que ce soit. Un conflit, ou une exigence qui perdrait un scénario, se termine avec le code 1 et laisse tous les fichiers intacts ; le coordinateur réessaie une fois, puis atterrit sans la mise à jour et le signale.
-
-**Carte du code.** `emet map` écrit un résumé d'une base de code existante (stack, structure, conventions, tests, points chauds) dans `docs/agents/codebase.md` (`map.path`), estampillé avec le SHA du commit dont il est issu. Le même commit produit toujours le même fichier. `emet map --stale` se termine avec le code 1 une fois que HEAD a dépassé l'estampille, et `emet preflight` avertit dans ce cas. `emet map --for <globs>` n'affiche que les sections qui correspondent aux surfaces d'édition d'un ticket. Cette sortie est la seule partie de la carte qu'inclut le brief d'un worker.
-
-**Métriques.** `emet metrics --run <id>` indique les tokens, le coût équivalent API et le temps écoulé par ticket, par vague et par exécution, lus dans les transcriptions de session. Il compare aussi le budget de contexte estimé par ticket avec ce que chaque worker a réellement utilisé. Son résumé figure à la fin du rapport final de l'exécution.
+:::
