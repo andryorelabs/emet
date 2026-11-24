@@ -1,13 +1,11 @@
 ---
-title: Per iniziare
-description: Installa emet come plugin di Claude Code, verifica che funzioni con emet doctor ed eseguilo per la prima volta.
-seoTitle: Iniziare con emet
-sourceHash: ce83e38591b3de64
+title: Installazione
+description: Installa emet, mantienilo aggiornato e rimuovilo.
+seoTitle: Installare emet
+sourceHash: e67d7c2c6b22d556
 ---
 
-Installa emet, verifica che funzioni ed eseguilo per la prima volta.
-
-<img src="../brand/mascot/mascot-done.svg" alt="emet mascot, done" width="96" align="right">
+Installa emet, mantienilo aggiornato e rimuovilo. Poi [eseguilo per la prima volta](first-run.md).
 
 ## Requisiti
 
@@ -35,11 +33,20 @@ Puoi anche fissare una versione, come in `sh -s -- 1.2.3`; il valore predefinito
 
 ### Codex
 
-Quando Codex è presente, `emet self install` stampa un passaggio una tantum: apri `/hooks` in Codex e premi `t` nella pagina degli eventi per fidarti degli hook di emet (oppure approva il prompt "Hooks need review" all'avvio). Fino ad allora l'emet guard non viene eseguito. Vedi [Eseguire emet su Codex](codex.md#installazione).
+Quando Codex è presente, `emet self install` stampa un passaggio una tantum: apri `/hooks` in Codex e premi `t` nella pagina degli eventi per fidarti degli hook di emet (oppure approva il prompt "Hooks need review" all'avvio). Fino ad allora l'emet guard non viene eseguito. Vedi [Eseguire emet su Codex](../how-to/use-codex.md#installazione).
+
+### Aggiornamento
+
+```bash
+emet self update            # latest
+emet self update 1.2.3      # a specific version
+```
+
+La release viene scaricata, verificata rispetto a `SHA256SUMS` (e all'attestazione quando `gh` è presente) e messa in staging. Lo scambio del symlink e dei file installati avviene solo quando nessuno slot worker è occupato; altrimenti l'aggiornamento resta in sospeso e viene applicato al successivo avvio di sessione. Un errore lascia intatta la versione corrente e viene registrato nel journal. La versione precedente viene mantenuta per il rollback e quelle più vecchie vengono eliminate. `emet doctor` avvisa quando un aggiornamento è in sospeso.
 
 ### Aggiornamento automatico
 
-Un hook `SessionStart` esegue `emet self update --auto` al massimo una volta al giorno, in background e in silenzio quando sei offline. Verifica il checksum, mette in staging la nuova versione e scambia il symlink solo quando nessuno slot worker è occupato; altrimenti l'aggiornamento resta in sospeso fino al successivo avvio di sessione. La versione precedente viene mantenuta per il rollback. Per disattivarlo, imposta `EMET_AUTO_UPDATE=0` oppure esegui `emet self update --auto off`; `emet self update --auto on` lo riattiva. Vedi [Aggiornare emet](../how-to/update-emet.md).
+Un hook `SessionStart` esegue `emet self update --auto` al massimo una volta al giorno, in background e in silenzio quando sei offline. Verifica il checksum, mette in staging la nuova versione e scambia il symlink solo quando nessuno slot worker è occupato; altrimenti l'aggiornamento resta in sospeso fino al successivo avvio di sessione. La versione precedente viene mantenuta per il rollback. Per disattivarlo, imposta `EMET_AUTO_UPDATE=0` oppure esegui `emet self update --auto off`; `emet self update --auto on` lo riattiva. L'aggiornamento automatico non fa nulla per le installazioni tramite plugin.
 
 ### Disinstallazione
 
@@ -70,35 +77,8 @@ codex plugin add emet@emet-marketplace
 
 Ogni installazione fornisce gli stessi tre punti di ingresso. Su Claude Code sono i comandi slash `/emet:run`, `/emet:init` e `/emet:doctor`; su Codex sono le skill `$emet:run`, `$emet:init` e `$emet:doctor`. L'installazione standalone mette inoltre `emet` nel tuo `PATH`, quindi `emet init` ed `emet doctor .` funzionano in un normale terminale; con il solo plugin, usa i comandi slash, oppure `! emet <subcommand>` all'interno di una sessione di Claude Code o di Codex. Su Claude Code i nomi degli agenti differiscono: `emet:emet-worker` nel plugin, `emet-worker` standalone; Codex non ha agenti emet, perché ogni worker è un proprio processo `codex exec`.
 
-Ordine consigliato, in ogni repo: esegui prima la skill `setup-matt-pocock-skills` (`/setup-matt-pocock-skills` su Claude Code; su Codex, la stessa skill del plugin `mattpocock-skills` con la sintassi `$` di Codex), poi `emet init`.
+Per aggiornare un'installazione tramite plugin, vedi [Aggiornare emet](../how-to/update-emet.md).
 
-Verifica che sia andato tutto bene con `/emet:doctor` dentro Claude Code (`$emet:doctor` su Codex), oppure con `emet doctor .` in un terminale (`selftest` richiede un'installazione `--from` da sorgenti).
+## Prossimo passo
 
-Se `doctor` o `preflight` segnala un problema, vedi la [risoluzione dei problemi](../troubleshooting.md). Nulla viene mai installato o autenticato al posto dell'utente; vedi il [riferimento delle dipendenze](../reference/dependencies.md) per sapere chi controlla cosa e per `EMET_SKIP_DEPENDENCY_CHECKS`.
-
-## Primo avvio
-
-In qualsiasi repo git:
-
-```bash
-emet init          # autodetects package manager, trunk branch, tracker kind
-emet preflight      # confirms the repo is dispatch-ready
-```
-
-All'interno di una sessione, `/emet:init` fa lo stesso di `emet init`. Poi, dentro Claude Code (su Codex usa `$emet:run` al posto di `/emet:run`):
-
-```
-/emet:run <describe the feature>              # interview → wave 1; later waves via --dispatch/autoChain
-/emet:run --draft <describe the feature>      # stop after tickets are created
-/emet:run --dispatch <spec-id>                # dispatch a --draft'd spec later
-```
-
-`emet init` lascia un marcatore `TODO(emet):` nei file `docs/agents/*.md` generati per tutto ciò che non riesce a dedurre da solo (un lock condiviso del database di test, la proprietà dello schema, ecc.); compilali. `emet preflight` rifiuta il dispatch finché ne resta uno.
-
-## Prossimi passi
-
-- [Tracker e landing](trackers-and-landing.md): ticket su GitHub, Linear o locali, e come atterra un'ondata.
-- [Eseguire emet su Codex](codex.md): installazione, l'approvazione unica e i limiti sull'Agent host Codex.
-- [Modelli e impegno](models-and-effort.md): quale modello e quale impegno usa ogni ruolo.
-- [Controllo della flotta](fleet.md): controlla più repo in una volta.
-- [Riferimento della configurazione](../reference/configuration.md) e [riferimento della CLI](../reference/cli.md): ogni chiave e ogni sottocomando.
+[Primo avvio](first-run.md): verifica l'installazione ed esegui emet in un repo.
