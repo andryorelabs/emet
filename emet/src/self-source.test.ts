@@ -6,6 +6,7 @@ import {
   mkdirSync,
   mkdtempSync,
   readFileSync,
+  realpathSync,
   rmSync,
   symlinkSync,
   writeFileSync,
@@ -126,7 +127,7 @@ describe("sourceInstall", () => {
     const { runBunInstall: _recorded, ...withoutRunner } = options();
     expect(await sourceInstall(withoutRunner, depsWith(binDirectory))).toBe(0);
     expect(readFileSync(marker, "utf8")).toBe(
-      `install --silent ${path.join(home, ".claude", "emet")}\n`,
+      `install --silent ${realpathSync(path.join(home, ".claude", "emet"))}\n`,
     );
   });
 
