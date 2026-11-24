@@ -2,15 +2,16 @@
 title: Fehlerbehebung
 description: Fehler von emet doctor und emet preflight, nach dem Sichtbaren gruppiert, jeweils mit Ursache und Lösung.
 seoTitle: Fehlerbehebung für emet doctor und preflight
-sourceHash: 9d8a014c547eeed9
+sourceHash: 459018815038cdc0
 ---
 
-Fehler von `emet doctor` und `emet preflight`, nach dem Sichtbaren gruppiert, jeweils mit Ursache und Lösung. Die Begriffe folgen [GLOSSARY.md](../GLOSSARY.md). Wie die Prüfungen zusammenspielen, steht in der [Architektur](architecture.md).
+Die Fehler von `emet doctor` und `emet preflight` beheben, nach dem Sichtbaren gruppiert, jeweils mit Ursache und Lösungsschritten. Die Begriffe folgen [GLOSSARY.md](../GLOSSARY.md). Wie die Prüfungen zusammenspielen, steht in der [Architektur](concepts/architecture.md).
 
 <img src="brand/mascot/mascot-error.svg" alt="" width="96">
 
 Ein Repo, das noch nur `forge.config.json`, `.forge/` oder `FORGE_*`-Variablen hat, funktioniert weiter: `emet` liest die Legacy-Namen, gibt eine stderr-Zeile aus, die jede Legacy-Datei nennt, und `emet migrate` benennt sie um.
 
+- [Voraussetzungen](#voraussetzungen)
 - [no emet.config.json](#no-emetconfigjson)
 - [emet.config.json is malformed](#emetconfigjson-is-malformed)
 - [docs/agents still has TODO(emet) markers](#docsagents-still-has-todoemet-markers)
@@ -22,7 +23,15 @@ Ein Repo, das noch nur `forge.config.json`, `.forge/` oder `FORGE_*`-Variablen h
 - [Gesperrte Worktrees erwartet, weniger gefunden](#gesperrte-worktrees-erwartet-weniger-gefunden)
 - [Ein Ticket wird von mehreren Worktrees oder Branches beansprucht](#ein-ticket-wird-von-mehreren-worktrees-oder-branches-beansprucht)
 - [requiredCommands not on PATH](#requiredcommands-not-on-path)
+- [Codex-Host](#codex-host)
+- [Prüfen](#prüfen)
 - [Siehe auch](#siehe-auch)
+
+## Voraussetzungen
+
+- `emet` liegt im `PATH`; siehe [Installation](start/install.md).
+- Eine Shell im Repo-Stamm mit dem Problem.
+- Die genaue Meldung von `emet doctor .` oder `emet preflight`: in der Liste oben suchen.
 
 ## no emet.config.json
 
@@ -30,7 +39,10 @@ Ein Repo, das noch nur `forge.config.json`, `.forge/` oder `FORGE_*`-Variablen h
 
 **Ursache:** Das Repo hat noch keine `/emet`-Konfiguration.
 
-**Lösung:** `emet init` im Repo-Stamm ausführen, dann die erzeugte Konfiguration prüfen und die Dateien in `docs/agents/` ausfüllen.
+**Lösung:**
+
+1. `emet init` im Repo-Stamm ausführen.
+2. Die erzeugte Konfiguration prüfen und die Dateien in `docs/agents/` ausfüllen.
 
 ## emet.config.json is malformed
 
@@ -38,7 +50,10 @@ Ein Repo, das noch nur `forge.config.json`, `.forge/` oder `FORGE_*`-Variablen h
 
 **Ursache:** Die Konfiguration ist striktes JSON und wird gegen `emet/schema/emet.config.schema.json` validiert. Kommentare und abschließende Kommas werden abgelehnt.
 
-**Lösung:** Das in der Begründung genannte Feld korrigieren oder mit `emet init --force` neu erzeugen.
+**Lösung:**
+
+1. Das in der Begründung genannte Feld korrigieren.
+2. Oder die Konfiguration mit `emet init --force` neu erzeugen.
 
 ## docs/agents still has TODO(emet) markers
 
@@ -46,7 +61,10 @@ Ein Repo, das noch nur `forge.config.json`, `.forge/` oder `FORGE_*`-Variablen h
 
 **Ursache:** `emet init` hinterlässt überall dort eine Markierung, wo es keinen Wert erkennen kann.
 
-**Lösung:** Jede markierte Zeile ausfüllen oder auflösen und `emet init --force` ausführen. Preflight verweigert den Dispatch, solange eine übrig ist.
+**Lösung:**
+
+1. Jede markierte Zeile ausfüllen oder auflösen und `emet init --force` ausführen.
+2. `emet preflight` ausführen; es verweigert den Dispatch, solange eine Markierung übrig ist.
 
 ## Eine Abhängigkeitsprüfung schlägt fehl
 
@@ -54,7 +72,10 @@ Ein Repo, das noch nur `forge.config.json`, `.forge/` oder `FORGE_*`-Variablen h
 
 **Ursache:** `/emet` braucht `git`, `gh` und das Plugin mattpocock-skills; siehe `emet/src/dependencies.ts` und `emet/src/skills.ts`.
 
-**Lösung:** Das Tool installieren oder anmelden oder den Skill `setup-matt-pocock-skills` ausführen (`/setup-matt-pocock-skills` unter Claude Code, derselbe Skill mit der `$`-Syntax von Codex unter Codex). Ist eine Prüfung für die eigene Umgebung falsch, stuft `EMET_SKIP_DEPENDENCY_CHECKS=1 emet preflight` sie zu einer Warnung herab.
+**Lösung:**
+
+1. Das Tool installieren oder anmelden oder den Skill `setup-matt-pocock-skills` ausführen (`/setup-matt-pocock-skills` unter Claude Code, derselbe Skill mit der `$`-Syntax von Codex unter Codex).
+2. Ist eine Prüfung für die eigene Umgebung falsch, `EMET_SKIP_DEPENDENCY_CHECKS=1 emet preflight` ausführen, um sie zu einer Warnung herabzustufen.
 
 ## no longer documents a flag in --help
 
@@ -70,7 +91,10 @@ Ein Repo, das noch nur `forge.config.json`, `.forge/` oder `FORGE_*`-Variablen h
 
 **Ursache:** Die installierte Kopie stimmt nicht mehr mit dem Installationsmanifest überein.
 
-**Lösung:** `emet self install` erneut ausführen (aus einem Quellcode-Checkout `emet self install --from .`). Liegt neben einer bearbeiteten Datei eine ausstehende `.new`-Datei, diese zusammenführen oder löschen.
+**Lösung:**
+
+1. `emet self install` erneut ausführen (aus einem Quellcode-Checkout `emet self install --from .`).
+2. Liegt neben einer bearbeiteten Datei eine ausstehende `.new`-Datei, diese zusammenführen oder löschen.
 
 ## Stop hook error: forge: No such file or directory
 
@@ -78,7 +102,10 @@ Ein Repo, das noch nur `forge.config.json`, `.forge/` oder `FORGE_*`-Variablen h
 
 **Ursache:** `~/.claude/settings.json` enthält noch einen Hook `forge guard` oder `emet guard`, dessen Binärdatei verschoben oder entfernt wurde.
 
-**Lösung:** `emet doctor .` ausführen. Es listet jeden toten Guard-Hook mit seinem Ereignis auf und gibt einen `cp … && jq …`-Befehl aus, der `settings.json` sichert und nur diese Hooks entfernt. Doctor ändert die Datei nie selbst.
+**Lösung:**
+
+1. `emet doctor .` ausführen. Es listet jeden toten Guard-Hook mit seinem Ereignis auf.
+2. Den einen `cp … && jq …`-Befehl ausführen, den es ausgibt; er sichert `settings.json` und entfernt nur diese Hooks. Doctor ändert die Datei nie selbst.
 
 ## Keine freien Worker-Slots
 
@@ -86,7 +113,10 @@ Ein Repo, das noch nur `forge.config.json`, `.forge/` oder `FORGE_*`-Variablen h
 
 **Ursache:** Jeder Slot in `~/.local/state/emet/slots` wird von einem aktiven oder untätigen Lauf gehalten, sodass die Welle nicht vollständig dispatcht werden kann.
 
-**Lösung:** Warten, bis ein Lauf einen Slot freigibt, oder `emet cleanup --run <runId>` für einen Lauf ausführen, von dem bekannt ist, dass er beendet ist. `emet status` zeigt, wer was hält.
+**Lösung:**
+
+1. `emet status` ausführen, um zu sehen, wer jeden Slot hält.
+2. Warten, bis ein Lauf einen Slot freigibt, oder `emet cleanup --run <runId>` für einen Lauf ausführen, von dem bekannt ist, dass er beendet ist.
 
 ## Gesperrte Worktrees erwartet, weniger gefunden
 
@@ -96,7 +126,10 @@ Ein Repo, das noch nur `forge.config.json`, `.forge/` oder `FORGE_*`-Variablen h
 
 **Ursache:** Worker haben ihren Worktree nicht mit dem Sperrgrund beansprucht, oder `isolation: "worktree"` hat sie anderswo platziert. Siehe [`incidents.md`](../emet/reference/incidents.md).
 
-**Lösung:** `git worktree list --porcelain` auf die gesperrten Einträge prüfen und `emet lock-reason` für das erwartete Format des Grundes.
+**Lösung:**
+
+1. `git worktree list --porcelain` ausführen und die gesperrten Einträge ansehen.
+2. `emet lock-reason` für das erwartete Format des Grundes ausführen und den Worktree eines Workers damit neu sperren.
 
 ## Ein Ticket wird von mehreren Worktrees oder Branches beansprucht
 
@@ -104,7 +137,11 @@ Ein Repo, das noch nur `forge.config.json`, `.forge/` oder `FORGE_*`-Variablen h
 
 **Ursache:** Ein Wiederholungsversuch oder eine fehlgeleitete Shell hat ein Duplikat hinterlassen.
 
-**Lösung:** Den kanonischen Worktree oder Branch behalten, den Rest löschen oder neu sperren und dann `emet preflight` erneut ausführen.
+**Lösung:**
+
+1. Den kanonischen Worktree oder Branch behalten.
+2. Den Rest löschen oder neu sperren.
+3. `emet preflight` erneut ausführen.
 
 ## requiredCommands not on PATH
 
@@ -112,11 +149,14 @@ Ein Repo, das noch nur `forge.config.json`, `.forge/` oder `FORGE_*`-Variablen h
 
 **Ursache:** `preflight.requiredCommands` in `emet.config.json` listet Binärdateien auf, die das Repo braucht.
 
-**Lösung:** Die genannten Binärdateien installieren oder aus der Konfiguration entfernen, wenn sie nicht mehr gebraucht werden.
+**Lösung:**
+
+1. Die genannten Binärdateien installieren.
+2. Oder sie aus `preflight.requiredCommands` entfernen, wenn sie nicht mehr gebraucht werden.
 
 ## Codex-Host
 
-Diese Hinweise gelten, wenn `agentHost` `"codex"` ist. Siehe [emet mit Codex ausführen](guide/codex.md).
+Diese Hinweise gelten, wenn `agentHost` `"codex"` ist. Siehe [emet mit Codex ausführen](how-to/use-codex.md).
 
 **Ein `codex`, das älter als `codex.minVersion` ist.** `emet doctor .` meldet es. Die `codex`-CLI in der Version aus `codex.minVersion` (Standard `0.167.0`) oder neuer installieren und dann `emet doctor .` erneut ausführen.
 
@@ -124,10 +164,15 @@ Diese Hinweise gelten, wenn `agentHost` `"codex"` ist. Siehe [emet mit Codex aus
 
 **Ein konfiguriertes Modell ist nicht aufgeführt.** emet löst Modelle gegen `models_cache.json` im Run-Home auf, sonst im echten Codex-Home (nur lesend). Ein nicht aufgeführter Slug wird ersetzt, und die Ersetzung wird protokolliert. Wenn nichts aufgelöst wird, schlägt `emet review-run` vor dem Modellaufruf fehl und nennt die Rolle sowie die aufgeführten Slugs. Einen aufgeführten Slug in `codex.models` setzen; siehe die [Konfigurationsreferenz](reference/configuration.md#codex).
 
+## Prüfen
+
+1. `emet doctor .` ausführen und bestätigen, dass es für das behobene Problem keinen Fehler mehr meldet.
+2. `emet preflight` ausführen und bestätigen, dass es mit 0 endet.
+
 ## Siehe auch
 
 - [Dokumentationsindex](README.md)
 - [README](../README.md)
-- [Erste Schritte](guide/getting-started.md)
+- [Erste Schritte](start/install.md)
 - [Konfigurationsreferenz](reference/configuration.md)
 - [Referenz der Abhängigkeiten](reference/dependencies.md)

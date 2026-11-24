@@ -2,32 +2,63 @@
 title: Flottenprüfung
 description: Mit emet doctor beliebig viele Repositories gleichzeitig und nur lesend prüfen und sehen, welche Aufmerksamkeit brauchen.
 seoTitle: "Flottenprüfung: mehrere Repos mit emet doctor"
-sourceHash: 5eef774032962f35
+sourceHash: 511c25889b2a8244
 ---
 
-emet wird bereits in mehreren Repos eingesetzt? `emet doctor` prüft beliebig viele davon gleichzeitig und nur lesend:
+emet in mehreren Repos gleichzeitig prüfen, ändern und starten. Die Begriffe folgen [GLOSSARY.md](../../GLOSSARY.md).
+
+## Voraussetzungen
+
+- emet ist installiert; siehe [Installation](../start/install.md).
+- Jedes Repo hat eine `emet.config.json` und liegt eine Ebene unter einem Root (Standard `~/code`).
+- `gh` ist im `PATH` und angemeldet; siehe die [Referenz der Abhängigkeiten](../reference/dependencies.md).
+
+## Die Repos prüfen
+
+:::steps
+
+1. Führe die nur lesende Prüfung für beliebig viele Repos aus:
+
+   ```bash
+   emet doctor ~/code/*
+   ```
+
+2. Lies den Bericht pro Repo: eine gültige `emet.config.json`, alle vier `docs/agents/*.md`-Dateien, keine übrig gebliebenen `TODO(emet):`-Markierungen, `commands.selfCheck`-Befehle, die sich auflösen lassen, sowie die Befunde zu den Tracker-Abhängigkeiten des Repos.
+3. Lies die Befunde für den gesamten Durchlauf, die einmal ausgegeben werden: das Plugin mattpocock-skills und die Flags der externen CLIs, geprüft über `--help` (`gh`, unter Claude Code `claude --bg` und `claude agents --json`, unter Codex `codex exec --json` und `--output-schema`). Ein umbenanntes Flag wird hier gemeldet, bevor es eine Welle scheitern lässt.
+
+:::
+
+## Eine Einstellung in jedem Repo ändern
+
+:::steps
+
+1. Liste auf, was jedes Repo derzeit hat:
+
+   ```bash
+   emet fleet list --root ~/code
+   ```
+
+   Es gibt für jedes Repo Pfad, `tracker.kind`, `handoff.autoChain` und `models.worker` aus; `--json` gibt es als Daten aus.
+
+2. Sieh dir die Änderung vorab an:
+
+   ```bash
+   emet fleet set handoff.autoChain false --dry-run
+   ```
+
+   `--dry-run` schreibt nichts und gibt für jedes Repo den alten und den neuen Wert aus.
+
+3. Wende sie an, indem du denselben Befehl ohne `--dry-run` ausführst. Der Wert wird zuvor über den Config-Loader validiert; ein ungültiger Wert ändert kein Repo und endet mit Exit-Code 1.
+
+:::
+
+## Ein Feature in mehreren Repos starten
 
 ```bash
-emet doctor ~/code/*
-```
-
-Der Bericht enthält pro Repo: eine gültige `emet.config.json`, alle vier vorhandenen `docs/agents/*.md`-Dateien, keine übrig gebliebenen `TODO(emet):`-Markierungen, ob die Befehle in `commands.selfCheck` tatsächlich aufgelöst werden, sowie die trackerspezifischen Abhängigkeitsbefunde des Repos (`gh`, Linear; siehe die [Referenz der Abhängigkeiten](../reference/dependencies.md)). Das Plugin mattpocock-skills und die Flags der externen CLIs (`gh`, dazu die der CLI des Agent-Hosts selbst: unter Claude Code `claude --bg` und `claude agents --json`, unter Codex `codex exec --json` und `--output-schema`, alle geprüft über `--help`) werden einmal für den gesamten Durchlauf geprüft, nicht pro Repo.
-
-`emet doctor` prüft die Flags selbst, nicht nur, ob die Binärdateien existieren. Es liest `--help` für `gh issue view`/`gh repo view` (`--json`), `gh issue edit` (`--add-label`, `--remove-label`) und, unter Claude Code, `claude` (`--bg`) und `claude agents` (`--json`) und meldet jedes Flag, das eine neuere oder ältere CLI nicht mehr dokumentiert. Ein umbenanntes Flag würde sonst eine Welle mittendrin scheitern lassen. Die Prüfungen von `claude` und `claude agents` gehören zum Claude-Code-Host. Auf dem Codex-Host ersetzen die Host-Flag-Prüfungen sie, statt hinzuzukommen: `emet doctor` prüft `codex exec` auf `--json` und `--output-schema` (`hostCliFlagRequirements` in `emet/src/doctor.ts`). Die Version von `codex` wird nicht mit `codex.minVersion` verglichen; siehe [emet mit Codex ausführen](codex.md).
-
-## Repos gemeinsam ändern und starten
-
-`emet fleet` arbeitet mit den Repos, die eine `emet.config.json` haben und eine Ebene unter einem Root liegen (Standard `~/code`):
-
-```bash
-emet fleet list --root ~/code
-emet fleet set handoff.autoChain false --dry-run
 emet fleet launch --feature "add dark mode" --repos app,site
 ```
 
-- `list` gibt für jedes Repo Pfad, `tracker.kind`, `handoff.autoChain` und `models.worker` aus. `--json` gibt es als Daten aus.
-- `set <key> <value>` ändert einen Config-Schlüssel in jedem aufgelisteten Repo. Jeder Wert wird vor dem Schreiben über den Config-Loader validiert; ein ungültiger Wert ändert kein Repo und endet mit Exit-Code 1. `--dry-run` schreibt nichts und gibt für jedes Repo den alten und den neuen Wert aus.
-- `launch --feature <text>` öffnet in jedem Repo eine `/emet:run --draft <text>`-Sitzung, nach denselben Bereitschaftsprüfungen wie `emet chain`. `--repos` beschränkt den Start auf eine kommagetrennte Liste.
+Es öffnet in jedem Repo eine `/emet:run --draft <text>`-Sitzung, nach denselben Bereitschaftsprüfungen wie `emet chain`. `--repos` beschränkt den Start auf eine kommagetrennte Liste.
 
 ## Blockierte Sitzungen sehen
 
@@ -35,6 +66,16 @@ emet fleet launch --feature "add dark mode" --repos app,site
 emet fleet status
 ```
 
-Gibt pro Repo aus, wie viele emet-Sitzungen auf eine Entscheidung warten, arbeiten oder untätig sind, blockierte Repos zuerst. Es liest die letzten 24 Stunden des globalen Journals und schließt beendete Sitzungen aus. `--json` gibt die Sitzungen selbst aus. Innerhalb eines Repos listet `emet status` sie unter `sessions`. Ist `attention.alert` aktiv (Standard), löst emet außerdem einen Alarm aus, sobald eine Sitzung zu warten beginnt; siehe die [Konfigurationsreferenz](../reference/configuration.md#attention).
+Es gibt pro Repo aus, wie viele emet-Sitzungen auf eine Entscheidung warten, arbeiten oder untätig sind, blockierte Repos zuerst. Es liest die letzten 24 Stunden des globalen Journals und schließt beendete Sitzungen aus; `--json` gibt die Sitzungen aus. Innerhalb eines Repos listet `emet status` sie unter `sessions`. Siehe [Aufmerksamkeit und Journal](../concepts/attention-and-journal.md) und die [Konfigurationsreferenz](../reference/configuration.md#attention).
 
-Jede Sonde ist auf 5 s begrenzt, damit ein hängendes `gh auth status` (ohne Netzwerk) keine Welle blockieren kann. Die `preflight.requiredCommands` eines Repos sind eine repo-eigene Liste von Binärdateien, die `emet preflight` und `emet doctor` im PATH voraussetzen. Siehe die [CLI-Referenz](../reference/cli.md#flottenprüfung) und die [Konfigurationsreferenz](../reference/configuration.md#preflight).
+## Prüfen
+
+:::steps
+
+1. Führe `emet doctor ~/code/*` erneut aus und prüfe, dass kein Repo einen Fehler meldet.
+2. Führe `emet fleet list --root ~/code` aus und prüfe, dass der geänderte Schlüssel in jedem Repo den neuen Wert zeigt.
+3. Führe `emet fleet status` aus und prüfe, dass kein Repo unerwartet blockiert ist.
+
+:::
+
+Jede Sonde ist auf 5 s begrenzt, sodass ein hängendes `gh auth status` keine Welle blockieren kann. `preflight.requiredCommands` ist eine repo-eigene Liste von Binärdateien, die `emet preflight` und `emet doctor` voraussetzen; siehe die [CLI-Referenz](../reference/cli.md#fleet-check) und die [Konfigurationsreferenz](../reference/configuration.md#preflight).
