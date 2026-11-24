@@ -7,7 +7,7 @@ What emet needs on the machine, and which command checks each item. Terms follow
 Shared by both Agent hosts first, then what each host adds.
 
 - **[bun](https://bun.sh)**: only for source installs. The standalone binary needs no runtime.
-- **`sha256sum` or `shasum`**: used by the `install.sh` release asset (`curl -fsSL https://emet.andryore.dev/install.sh | sh`) to verify the download. `emet self install` itself needs neither.
+- **`sha256sum` or `shasum`**: used by the release install script (see [Install](../start/install.md)) to verify the download. `emet self install` itself needs neither.
 - **`git`**: required at runtime. Nearly every subcommand shells out to it.
 - **`gh` CLI, authenticated**: required when the tracker is `github` or landing is `pr`. PRs always use it. With `tracker.kind: "local"` and `landing.mode: "merge"`, `gh` is not required.
 - **The `mattpocock-skills` plugin**: the interview, spec and ticket phases call skills that live there. On Claude Code it comes from the `claude-plugins-official` marketplace; on Codex see [Codex host](#codex-host).
