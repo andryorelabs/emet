@@ -2,7 +2,7 @@
 title: Referencia de configuración
 description: Cada clave de emet.config.json con su valor por defecto y su significado.
 seoTitle: Referencia de configuración de emet
-sourceHash: e6fb30702c28d97e
+sourceHash: 23bd286ba357cde6
 ---
 
 Cada clave de `emet.config.json`, con su valor por defecto y su significado. La fuente de verdad es [`emet/schema/emet.config.schema.json`](../../emet/schema/emet.config.schema.json). Los términos siguen [GLOSSARY.md](../../GLOSSARY.md). Volver al [README](../../README.md).
@@ -191,17 +191,17 @@ Modelo y esfuerzo por rol para el host de Claude Code; el host de Codex lee en s
 
 ## agentHost
 
-`agentHost` (por defecto `"claude"`): el host de agente en el que se ejecuta una ejecución, `"claude"` o `"codex"`. Consulta la [guía de Codex](../guide/codex.md).
+`agentHost` (por defecto `"claude"`): el host de agente en el que se ejecuta una ejecución, `"claude"` o `"codex"`. Consulta la [guía de Codex](../how-to/use-codex.md).
 
 ## codex
 
 Solo se lee cuando `agentHost` es `"codex"`. Todas las claves son opcionales. El esfuerzo es uno de `low`, `medium`, `high`, `xhigh`, `max`; `ultra` nunca se acepta.
 
-- `models.worker`, `models.workerOverride`, `models.reviewer.medium`, `models.reviewer.high`, `models.triage`: cada una es `{ "model", "effort", "fallback" }`. `fallback` lista los slugs que se prueban en orden cuando `model` no está en la caché de modelos de Codex. Los valores por defecto están en [Modelos y esfuerzo](../guide/models-and-effort.md).
+- `models.worker`, `models.workerOverride`, `models.reviewer.medium`, `models.reviewer.high`, `models.triage`: cada una es `{ "model", "effort", "fallback" }`. `fallback` lista los slugs que se prueban en orden cuando `model` no está en la caché de modelos de Codex. Los valores por defecto están en [Modelos y esfuerzo](../how-to/choose-models.md).
 - `models.session`: `{ "model", "effort", "planEffort", "fallback" }` para la sesión que ejecuta `$emet:run`. `planEffort` se aplica hasta la primera aprobación.
 - `effort`: si se define, reemplaza el esfuerzo de todos los roles.
 - `minVersion` (por defecto `0.167.0`): la versión más antigua de la CLI `codex` que admite emet. `emet doctor` no compara con ella la versión instalada.
-- `sandbox` (por defecto `danger-full-access`): el modo de sandbox que pasan como `-s` `emet dispatch`, `emet review-run` y un `emet launch` de Codex. `workspace-write` también se acepta, pero deja `.git` en solo lectura, así que los workers no pueden hacer commit. Sea cual sea el valor, `emet guard` deniega `git push` en Codex, y el `config.toml` de la superposición generada solo contiene el marketplace y el plugin de emet, tablas de confianza para los directorios propios de la corrida y el modelo y el esfuerzo resueltos (nunca tus propias tablas). Consulta la [guía de Codex](../guide/codex.md) y [ADR-0022](../adr/0022-codex-workers-run-unsandboxed-by-default.md).
+- `sandbox` (por defecto `danger-full-access`): el modo de sandbox que pasan como `-s` `emet dispatch`, `emet review-run` y un `emet launch` de Codex. `workspace-write` también se acepta, pero deja `.git` en solo lectura, así que los workers no pueden hacer commit. Sea cual sea el valor, `emet guard` deniega `git push` en Codex, y el `config.toml` de la superposición generada solo contiene el marketplace y el plugin de emet, tablas de confianza para los directorios propios de la corrida y el modelo y el esfuerzo resueltos (nunca tus propias tablas). Consulta la [guía de Codex](../how-to/use-codex.md) y [ADR-0022](../adr/0022-codex-workers-run-unsandboxed-by-default.md).
 
 ## review
 
@@ -219,14 +219,6 @@ Solo se lee cuando `agentHost` es `"codex"`. Todas las claves son opcionales. El
 ```
 
 - `enabled` (`"auto"` o `"off"`, por defecto `"auto"`): controla [`emet memory`](cli.md#ejecuciones-workers-y-slots). Con `auto`, el comando usa Engram cuando el binario `engram` está en el PATH y su handshake tiene éxito. `off` hace que `emet memory search` y `emet memory save` impriman `{available: false, reason: "memory.enabled is off"}` y terminen con 0 sin lanzar `engram`. Cualquier otro valor falla al cargar con `"memory.enabled" must be one of auto|off`.
-
-## attention
-
-```json
-{ "attention": { "alert": true } }
-```
-
-- `alert` (booleano, por defecto `true`): emet lanza una sola alerta cuando una sesión pasa a `needs-decision`. Si `orca status --json` informa un runtime accesible, ejecuta `orca worktree set` sobre el worktree principal con un comentario y la marca de no leído; si no, ejecuta `notify-send` cuando está en el PATH; si no, no hace nada. Cada llamada externa tiene un límite de 3 s y un fallo nunca cambia el resultado del guard. Salir de `needs-decision` nunca borra la marca de no leído de Orca. `false` desactiva la alerta.
 
 ## landing
 
@@ -254,8 +246,8 @@ Con qué issue tracker habla `/emet` (o `$emet` en Codex). La CLI lee `kind` par
 
 ## specs
 
-- `enabled` (por defecto `false`): activa las specs vivas. En la última oleada de una spec, el coordinador escribe deltas de requisitos a partir de los elementos S# de la spec, ejecuta `emet spec-merge` y confirma `specs.dir` con esa oleada, de modo que la actualización se revisa y aterriza con ella.
 - `dir` (por defecto `docs/specs`): directorio, relativo al repositorio, de las specs vivas, escrito por `emet spec-merge` cuando `enabled` es verdadero.
+- `enabled` (por defecto `false`): activa las specs vivas. En la última oleada de una spec, el coordinador escribe deltas de requisitos a partir de los elementos S# de la spec, ejecuta `emet spec-merge` y confirma `specs.dir` con esa oleada, de modo que la actualización se revisa y aterriza con ella.
 
 ## map
 
@@ -301,6 +293,16 @@ Todos son solo prosa.
 ## sizing
 
 - `inlineMaxLines` (por defecto `100`, mínimo `1`): el cuerpo de ticket más grande, en líneas, que se mantiene en línea en el prompt de un worker.
+
+## attention
+
+- `alert` (por defecto `true`, booleano): cuando una sesión pasa a `needs-decision`, emet lanza una sola alerta. Marca el worktree como no leído en Orca cuando `orca status --json` informa un runtime accesible; si no, ejecuta `notify-send` cuando está en el PATH; si no, no hace nada. Cada llamada tiene un límite de 3 s y un fallo nunca cambia el resultado de un hook. Salir de `needs-decision` no borra la marca de no leído de Orca. Ponlo en `false` para desactivar la alerta.
+
+```json
+{ "attention": { "alert": true } }
+```
+
+Consulta [`emet fleet status`](cli.md#configuración-y-auditoría).
 
 ## schema
 
