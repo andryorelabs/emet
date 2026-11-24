@@ -14,7 +14,7 @@ const FETCH_RETRY_DELAY_MS = 1_000;
 const DEV_SERVER_URL = /http:\/\/localhost:(?<port>\d+)/;
 const STYLE_ATTRIBUTE = /\sstyle="(?<value>[^"]*)"/g;
 const DOCS_LINK = /href="(?<path>\/docs\/[^"#?]*)"/g;
-const EXTRA_PAGES = ["/pt-br/docs/guide/getting-started/", "/ja/docs/guide/getting-started/"];
+const EXTRA_PAGES = ["/pt-br/docs/start/install/", "/ja/docs/start/install/"];
 
 let devServer: Bun.Subprocess | undefined;
 let origin = "";
@@ -77,7 +77,7 @@ afterAll(async () => {
 
 describe("inline style attributes on the docs pages", () => {
   test("every one is covered by the style-src-attr hashes", async () => {
-    const entry = await fetchPage("/docs/guide/getting-started/");
+    const entry = await fetchPage("/docs/start/install/");
     const linked = [...entry.matchAll(DOCS_LINK)].map(({ groups }) => groups?.path ?? "");
     const pages = [...new Set([...linked, ...EXTRA_PAGES])].filter((page) => page.length > 0);
     expect(pages.length).toBeGreaterThan(3);

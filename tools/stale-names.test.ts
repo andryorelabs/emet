@@ -31,7 +31,7 @@ export const STALE_NAME_ALLOW_LIST: readonly string[] = [
   "tools/fixtures/claude-install-snapshot.json",
   "GLOSSARY.md",
   "docs/troubleshooting.md",
-  "docs/architecture.md",
+  "docs/concepts/architecture.md",
   "apps/site/src/content/translations/",
   ".claude/skills/",
 ];

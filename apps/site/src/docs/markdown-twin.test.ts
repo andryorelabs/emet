@@ -9,16 +9,18 @@ import {
 } from "./markdown-twin";
 import { PUBLISHED_SOURCES } from "./published";
 
-const fleet = PUBLISHED_SOURCES.find((source) => source.id === "guide/fleet");
-if (!fleet) throw new Error("guide/fleet is not published");
+const fleet = PUBLISHED_SOURCES.find((source) => source.id === "how-to/check-a-fleet");
+if (!fleet) throw new Error("how-to/check-a-fleet is not published");
 
 const ENGLISH = "# Fleet Check\n\nEnglish body.\n";
 const readSource = () => ENGLISH;
 
 describe("markdownTwinPath", () => {
   test("appends .md under the page route", () => {
-    expect(markdownTwinPath("docs/guide/fleet")).toBe("/docs/guide/fleet.md");
-    expect(markdownTwinPath("es/docs/guide/fleet")).toBe("/es/docs/guide/fleet.md");
+    expect(markdownTwinPath("docs/how-to/check-a-fleet")).toBe("/docs/how-to/check-a-fleet.md");
+    expect(markdownTwinPath("es/docs/how-to/check-a-fleet")).toBe(
+      "/es/docs/how-to/check-a-fleet.md",
+    );
   });
 });
 

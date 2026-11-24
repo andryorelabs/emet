@@ -46,7 +46,7 @@ Husky wires three Git hooks:
 - `pre-commit` runs lint-staged on the staged files.
 - `pre-push` runs `tools/pre-push.ts`: it refuses a push to `main` or `develop`, refuses a branch name outside the allowed patterns, and runs the typecheck and format check. Tag pushes pass.
 
-For agents, `.claude/settings.json` adds the `rm-guard` PreToolUse hook and push denies; see [security.md](security.md).
+For agents, `.claude/settings.json` adds the `rm-guard` PreToolUse hook and push denies; see [security.md](concepts/security.md).
 
 ## Skills install and update
 
@@ -73,7 +73,7 @@ Locally, the host-wide worker slot pool lives in `~/.local/state/emet/slots`, no
 
 ## Releases
 
-A release is a signed tag on `main`. The runbook is [how-to/cut-a-release.md](how-to/cut-a-release.md): bump `.claude-plugin/plugin.json`, run `bun run build:codex`, move the `CHANGELOG.md` section, land the release PR in `develop`, merge `develop` into `main` with a merge commit, then create the tag with `git tag -s` and verify it with `git tag -v`. Pushing the tag runs the Release workflow, which checks CI, fails when `CHANGELOG.md` has no section, or an empty one, for the tag, and publishes the standalone binaries. The `cut-release` skill walks an agent through the same steps.
+A release is a signed tag on `main`. The runbook is [how-to/cut-a-release.md](contributing/cut-a-release.md): bump `.claude-plugin/plugin.json`, run `bun run build:codex`, move the `CHANGELOG.md` section, land the release PR in `develop`, merge `develop` into `main` with a merge commit, then create the tag with `git tag -s` and verify it with `git tag -v`. Pushing the tag runs the Release workflow, which checks CI, fails when `CHANGELOG.md` has no section, or an empty one, for the tag, and publishes the standalone binaries. The `cut-release` skill walks an agent through the same steps.
 
 ## Rulesets
 

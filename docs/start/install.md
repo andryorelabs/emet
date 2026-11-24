@@ -30,7 +30,7 @@ You can also pin a version, as in `sh -s -- 1.2.3`; the default is `latest`. To 
 
 ### Codex
 
-When Codex is present, `emet self install` prints a one-time step: open `/hooks` in Codex and press `t` on the events page to trust the emet hooks (or approve the "Hooks need review" prompt at startup). Until then the emet guard does not run. See [Running emet on Codex](codex.md#install).
+When Codex is present, `emet self install` prints a one-time step: open `/hooks` in Codex and press `t` on the events page to trust the emet hooks (or approve the "Hooks need review" prompt at startup). Until then the emet guard does not run. See [Running emet on Codex](../how-to/use-codex.md#install).
 
 ### Auto-update
 
@@ -92,8 +92,8 @@ Inside a session, `/emet:init` does the same as `emet init`. Then, inside Claude
 
 ## Next
 
-- [Trackers and landing](trackers-and-landing.md): GitHub, Linear or local tickets, and how a wave lands.
-- [Running emet on Codex](codex.md): install, the single approval and the limits on the Codex Agent host.
-- [Models and effort](models-and-effort.md): which model and effort each role uses.
-- [Fleet check](fleet.md): audit several repos at once.
+- [Trackers and landing](../how-to/configure-tracker.md): GitHub, Linear or local tickets, and how a wave lands.
+- [Running emet on Codex](../how-to/use-codex.md): install, the single approval and the limits on the Codex Agent host.
+- [Models and effort](../how-to/choose-models.md): which model and effort each role uses.
+- [Fleet check](../how-to/check-a-fleet.md): audit several repos at once.
 - [Configuration reference](../reference/configuration.md) and [CLI reference](../reference/cli.md): every key and subcommand.

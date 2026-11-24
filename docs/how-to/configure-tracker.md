@@ -73,9 +73,9 @@ Later waves run in their own sessions, never in the one that ran wave 1. Two opt
 
   `emet launch <spec-id> --wave <n>` does the whole launch (duplicate-session check, `claude --bg`, tab) and prints `{ name, id, attach, orcaTab: { opened, reason } }`. Use it, not a bare `claude --bg`, whenever you want a wave in another session by hand.
 
-  On the Codex Agent host, `emet launch` starts a detached `codex exec` running `$emet:run --dispatch <spec-id>` and records its thread id. It opens no Orca tab, and `codex exec resume <id>` continues the session. See the [CLI reference](../reference/cli.md#codex-host) and [Running emet on Codex](codex.md).
+  On the Codex Agent host, `emet launch` starts a detached `codex exec` running `$emet:run --dispatch <spec-id>` and records its thread id. It opens no Orca tab, and `codex exec resume <id>` continues the session. See the [CLI reference](../reference/cli.md#codex-host) and [Running emet on Codex](use-codex.md).
 
-- `handoff.permissionMode` (default `bypassPermissions`): Claude Code only; permission mode of the chained session. On the Codex host it is ignored and the chained session uses `codex.sandbox` (default `danger-full-access`; see [Running emet on Codex](codex.md)). Not inherited from the launching session, because `auto` mode's classifier can deny a step such as `gh pr merge` and leave a wave half-finished. Your `permissions.deny` rules still apply, but the bypass warning must have been accepted once interactively (`skipDangerousModePermissionPrompt`).
+- `handoff.permissionMode` (default `bypassPermissions`): Claude Code only; permission mode of the chained session. On the Codex host it is ignored and the chained session uses `codex.sandbox` (default `danger-full-access`; see [Running emet on Codex](use-codex.md)). Not inherited from the launching session, because `auto` mode's classifier can deny a step such as `gh pr merge` and leave a wave half-finished. Your `permissions.deny` rules still apply, but the bypass warning must have been accepted once interactively (`skipDangerousModePermissionPrompt`).
 
 ## Gates, budgets and records
 

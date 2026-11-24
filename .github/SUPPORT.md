@@ -2,7 +2,7 @@
 
 ## Before you ask
 
-Start with [Getting started](../docs/guide/getting-started.md), the [troubleshooting](../docs/troubleshooting.md) page and the [CLI reference](../docs/reference/cli.md).
+Start with [Getting started](../docs/start/install.md), the [troubleshooting](../docs/troubleshooting.md) page and the [CLI reference](../docs/reference/cli.md).
 
 ## Questions and bugs
 

@@ -27,10 +27,10 @@ describe("docker/site.conf", () => {
     }
   });
 
-  test("redirects each docs root to the getting-started page before the trailing-slash locations", () => {
+  test("redirects each docs root to the overview page before the trailing-slash locations", () => {
     const docsLocation = siteConf.indexOf("?<docs_locale>");
     expect(docsLocation).toBeGreaterThan(-1);
-    expect(siteConf).toContain("return 301 $docs_locale/docs/guide/getting-started/$is_args$args;");
+    expect(siteConf).toContain("return 301 $docs_locale/docs/start/overview/$is_args$args;");
     expect(docsLocation).toBeLessThan(siteConf.indexOf("?<index_dir>"));
     expect(docsLocation).toBeLessThan(siteConf.indexOf("?<slash_path>"));
   });
@@ -38,8 +38,8 @@ describe("docker/site.conf", () => {
 
 describe("docker/smoke.sh", () => {
   test("checks the docs root redirects and no longer expects /docs/ to be 200", () => {
-    expect(smoke).toContain('"/docs/:/docs/guide/getting-started/"');
-    expect(smoke).toContain('"/es/docs/:/es/docs/guide/getting-started/"');
+    expect(smoke).toContain('"/docs/:/docs/start/overview/"');
+    expect(smoke).toContain('"/es/docs/:/es/docs/start/overview/"');
     expect(smoke).not.toContain("/es/ /docs/;");
   });
 

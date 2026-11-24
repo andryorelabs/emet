@@ -8,18 +8,27 @@ import { REPOSITORY_ROOT } from "./paths";
 import { PUBLISHED_SOURCES } from "./published";
 
 const EXPECTED_SOURCES = [
-  "docs/guide/getting-started.md",
-  "docs/guide/fleet.md",
-  "docs/guide/models-and-effort.md",
-  "docs/guide/trackers-and-landing.md",
-  "docs/guide/codex.md",
+  "docs/start/overview.md",
+  "docs/start/install.md",
+  "docs/start/first-run.md",
+  "docs/concepts/runs-waves-specs.md",
+  "docs/concepts/landing.md",
+  "docs/concepts/review-and-gates.md",
+  "docs/concepts/memory.md",
+  "docs/concepts/attention-and-journal.md",
+  "docs/concepts/living-specs.md",
+  "docs/concepts/security.md",
+  "docs/concepts/architecture.md",
+  "docs/how-to/use-codex.md",
+  "docs/how-to/check-a-fleet.md",
+  "docs/how-to/configure-tracker.md",
+  "docs/how-to/choose-models.md",
+  "docs/how-to/mascot.md",
   "docs/reference/cli.md",
   "docs/reference/configuration.md",
   "docs/reference/dependencies.md",
+  "docs/reference/stability.md",
   "docs/troubleshooting.md",
-  "docs/architecture.md",
-  "docs/how-to/update-emet.md",
-  "docs/how-to/mascot.md",
   "CHANGELOG.md",
 ];
 
@@ -42,7 +51,8 @@ describe("the published allowlist", () => {
       "docs/agents/",
       "docs/brand/",
       "docs/specs/",
-      "docs/how-to/cut-a-release.md",
+      "docs/how-to/update-emet.md",
+      "docs/contributing/",
     ];
     for (const source of PUBLISHED_SOURCES) {
       expect(forbidden.some((prefix) => source.sourcePath.startsWith(prefix))).toBe(false);

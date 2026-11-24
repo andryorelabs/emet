@@ -1,6 +1,6 @@
 # Security
 
-How emet limits the damage an unattended run can do. Terms follow [GLOSSARY.md](../GLOSSARY.md). To report a vulnerability, see [SECURITY.md](../.github/SECURITY.md).
+How emet limits the damage an unattended run can do. Terms follow [GLOSSARY.md](../../GLOSSARY.md). To report a vulnerability, see [SECURITY.md](../../.github/SECURITY.md).
 
 ## Threat model of an unattended run
 
@@ -18,9 +18,9 @@ Controls are layered. No single layer is a sandbox, and none replaces reviewing 
 
 On Claude Code, workers run with the permission mode in `handoff.permissionMode`, `bypassPermissions` by default, so no prompt stops an unattended wave. The `emet guard` hook is the control that remains in that mode.
 
-On Codex CLI, workers run unsandboxed by default ([ADR-0022](adr/0022-codex-workers-run-unsandboxed-by-default.md)), because the `workspace-write` sandbox blocks commits in a linked worktree and blocks `emet dispatch` from a Codex coordinator. The approval is a hook decision, and writing `approval.json` by hand is denied. See the [Codex guide](guide/codex.md).
+On Codex CLI, workers run unsandboxed by default ([ADR-0022](../adr/0022-codex-workers-run-unsandboxed-by-default.md)), because the `workspace-write` sandbox blocks commits in a linked worktree and blocks `emet dispatch` from a Codex coordinator. The approval is a hook decision, and writing `approval.json` by hand is denied. See the [Codex guide](../how-to/use-codex.md).
 
-Only the coordinator writes the tracker ([ADR-0005](adr/0005-coordinator-is-the-single-tracker-writer.md)), and workers commit to local branches only ([ADR-0004](adr/0004-one-wave-one-dependency-layer-one-pr.md)).
+Only the coordinator writes the tracker ([ADR-0005](../adr/0005-coordinator-is-the-single-tracker-writer.md)), and workers commit to local branches only ([ADR-0004](../adr/0004-one-wave-one-dependency-layer-one-pr.md)).
 
 ## What the guards cover
 
@@ -30,7 +30,7 @@ Only the coordinator writes the tracker ([ADR-0005](adr/0005-coordinator-is-the-
 
 **Push denies** in `.claude/settings.json` block `git push origin main` and `git push origin develop`, and the `HEAD:main` and `HEAD:develop` forms. The `pre-push` Git hook refuses the same refs and any branch name outside the allowed patterns. Tag pushes are allowed.
 
-**Rulesets** enforce the same rules on GitHub: no deletion or non-fast-forward on `main` and `develop`, required checks, and protected `v*` tags. See [development.md](development.md#rulesets).
+**Rulesets** enforce the same rules on GitHub: no deletion or non-fast-forward on `main` and `develop`, required checks, and protected `v*` tags. See [development.md](../development.md#rulesets).
 
 ## What they do not cover
 

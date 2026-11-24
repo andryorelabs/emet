@@ -34,44 +34,124 @@ export interface PublishedSource {
  */
 export const PUBLISHED_SOURCES: readonly PublishedSource[] = [
   {
-    id: "guide/getting-started",
-    sourcePath: "docs/guide/getting-started.md",
+    id: "start/overview",
+    sourcePath: "docs/start/overview.md",
     kind: "markdown",
-    seoTitle: "Getting Started with emet",
+    seoTitle: "emet Overview: What It Does",
     description:
-      "Install emet as a plugin for Claude Code or Codex, check that it works with emet doctor and run it for the first time.",
+      "What emet is, what a run does from spec to merged pull request, and where to go next in the docs.",
   },
   {
-    id: "guide/fleet",
-    sourcePath: "docs/guide/fleet.md",
+    id: "start/install",
+    sourcePath: "docs/start/install.md",
+    kind: "markdown",
+    seoTitle: "Install emet",
+    description:
+      "Install emet with the standalone installer, add the optional plugins, update, turn on auto-update and uninstall.",
+  },
+  {
+    id: "start/first-run",
+    sourcePath: "docs/start/first-run.md",
+    kind: "markdown",
+    seoTitle: "Your First emet Run",
+    description:
+      "Check the install with emet doctor, then run emet for the first time on a repository.",
+  },
+  {
+    id: "concepts/runs-waves-specs",
+    sourcePath: "docs/concepts/runs-waves-specs.md",
+    kind: "markdown",
+    seoTitle: "Runs, Waves and Specs in emet",
+    description: "How a run, a wave and a spec relate, and what each one holds.",
+  },
+  {
+    id: "concepts/landing",
+    sourcePath: "docs/concepts/landing.md",
+    kind: "markdown",
+    seoTitle: "Landing in emet",
+    description:
+      "How a spec lands: as one pull request by default, or one wave at a time with landing.unit set to wave.",
+  },
+  {
+    id: "concepts/review-and-gates",
+    sourcePath: "docs/concepts/review-and-gates.md",
+    kind: "markdown",
+    seoTitle: "Review and Gates in emet",
+    description: "How the double review and the gates decide whether work can land.",
+  },
+  {
+    id: "concepts/memory",
+    sourcePath: "docs/concepts/memory.md",
+    kind: "markdown",
+    seoTitle: "Memory in emet",
+    description: "What emet remembers between runs and where it keeps it.",
+  },
+  {
+    id: "concepts/attention-and-journal",
+    sourcePath: "docs/concepts/attention-and-journal.md",
+    kind: "markdown",
+    seoTitle: "Attention Alerts and the Event Journal",
+    description: "How emet asks for attention and records its own events in one global journal.",
+  },
+  {
+    id: "concepts/living-specs",
+    sourcePath: "docs/concepts/living-specs.md",
+    kind: "markdown",
+    seoTitle: "Living Specs in emet",
+    description: "How a spec stays current while its tickets land.",
+  },
+  {
+    id: "concepts/security",
+    sourcePath: "docs/concepts/security.md",
+    kind: "markdown",
+    seoTitle: "Security Model of emet",
+    description: "How emet limits the damage an unattended run can do.",
+  },
+  {
+    id: "concepts/architecture",
+    sourcePath: "docs/concepts/architecture.md",
+    kind: "markdown",
+    seoTitle: "emet Architecture",
+    description: "A code map of emet/src and how the /emet prompts drive it.",
+  },
+  {
+    id: "how-to/use-codex",
+    sourcePath: "docs/how-to/use-codex.md",
+    kind: "markdown",
+    seoTitle: "Run emet with Codex",
+    description:
+      "Use Codex as the Agent host for emet: configure agentHost, dispatch workers and reviewers, and run the opt-in e2e.",
+  },
+  {
+    id: "how-to/check-a-fleet",
+    sourcePath: "docs/how-to/check-a-fleet.md",
     kind: "markdown",
     seoTitle: "Fleet Check: Audit Several Repos with emet doctor",
     description:
       "Audit any number of repositories at once with emet doctor, read-only, and see which ones need attention.",
   },
   {
-    id: "guide/models-and-effort",
-    sourcePath: "docs/guide/models-and-effort.md",
+    id: "how-to/configure-tracker",
+    sourcePath: "docs/how-to/configure-tracker.md",
     kind: "markdown",
-    seoTitle: "Models and Effort in emet",
+    seoTitle: "Configure the Tracker and Landing in emet",
     description:
-      "How emet picks a model and a reasoning effort for each role, and which configuration keys change them.",
+      "Choose where tickets live and how work lands, as a pull request or a local merge, and check the setting.",
   },
   {
-    id: "guide/trackers-and-landing",
-    sourcePath: "docs/guide/trackers-and-landing.md",
+    id: "how-to/choose-models",
+    sourcePath: "docs/how-to/choose-models.md",
     kind: "markdown",
-    seoTitle: "Trackers and Landing in emet",
+    seoTitle: "Choose Models and Effort in emet",
     description:
-      "Where tickets live, how a wave lands as a pull request or a local merge, and how waves chain.",
+      "Pick a model and a reasoning effort for each role, and which configuration keys change them.",
   },
   {
-    id: "guide/codex",
-    sourcePath: "docs/guide/codex.md",
+    id: "how-to/mascot",
+    sourcePath: "docs/how-to/mascot.md",
     kind: "markdown",
-    seoTitle: "Run emet with Codex",
-    description:
-      "Use Codex as the Agent host for emet: configure agentHost, dispatch workers and reviewers, and run the opt-in e2e.",
+    seoTitle: "Use the emet Mascot in Claude Code and Orca",
+    description: "Show the emet Mascot in Claude Code with the mod and in Orca with the pet.",
   },
   {
     id: "reference/cli",
@@ -96,34 +176,19 @@ export const PUBLISHED_SOURCES: readonly PublishedSource[] = [
     description: "What emet needs on the machine, and which command checks each item.",
   },
   {
+    id: "reference/stability",
+    sourcePath: "docs/reference/stability.md",
+    kind: "markdown",
+    seoTitle: "emet Stability Promises",
+    description: "What emet promises not to break, and what it reserves the right to change.",
+  },
+  {
     id: "troubleshooting",
     sourcePath: "docs/troubleshooting.md",
     kind: "markdown",
     seoTitle: "Troubleshooting emet doctor and preflight",
     description:
       "Failures of emet doctor and emet preflight, grouped by what you see, each with the cause and a fix.",
-  },
-  {
-    id: "architecture",
-    sourcePath: "docs/architecture.md",
-    kind: "markdown",
-    seoTitle: "emet Architecture",
-    description: "A code map of emet/src and how the /emet prompts drive it.",
-  },
-  {
-    id: "how-to/update-emet",
-    sourcePath: "docs/how-to/update-emet.md",
-    kind: "markdown",
-    seoTitle: "Update emet",
-    description:
-      "Move an installed emet to a new release and turn on marketplace auto-update for the plugins.",
-  },
-  {
-    id: "how-to/mascot",
-    sourcePath: "docs/how-to/mascot.md",
-    kind: "markdown",
-    seoTitle: "Use the emet Mascot in Claude Code and Orca",
-    description: "Show the emet Mascot in Claude Code with the mod and in Orca with the pet.",
   },
   {
     id: "whats-new",
