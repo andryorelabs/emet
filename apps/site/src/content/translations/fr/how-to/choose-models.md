@@ -2,10 +2,15 @@
 title: Modèles et effort
 description: Comment emet choisit un modèle et un effort de raisonnement pour chaque rôle, et quelles clés de configuration les modifient.
 seoTitle: Modèles et effort dans emet
-sourceHash: 114cc60ff1358691
+sourceHash: 0807a288317cba93
 ---
 
 `/emet` choisit automatiquement un modèle et un effort de raisonnement par rôle ; il n'y a rien à changer à la main en cours d'exécution. Les premières sections décrivent l'hôte Claude Code ; l'[hôte Codex](#hôte-codex) a ses propres valeurs par défaut. Toutes les clés de Claude Code figurent dans la [référence de configuration](../reference/configuration.md#models).
+
+## Prérequis
+
+- emet est installé ; voir [Installer](../start/install.md).
+- Un dépôt avec `emet.config.json` (exécutez `emet init` s'il manque).
 
 ## Hôte Claude Code
 
@@ -33,11 +38,11 @@ Un ticket qui touche des chemins à haut risque peut porter une ligne `Model:` (
 
 ## Triage avec Haiku
 
-Sur Claude Code, le coordinateur ne lit jamais un log de CI en entier. Un check en échec est confié à un agent sur `models.triage` (par défaut `haiku`), qui renvoie au plus environ 2k tokens avec des pointeurs `file:line` pour la correction.
+Sur Claude Code, le coordinateur ne lit jamais un log de CI en entier. Un check en échec est confié à un agent sur `models.triage` (`haiku` par défaut), qui renvoie au plus environ 2k tokens avec des pointeurs `file:line` pour la correction.
 
 ## Configuration
 
-Ce sont les clés `models` de Claude Code. Toutes les clés sont facultatives, et les valeurs par défaut reproduisent le tableau Claude Code ci-dessus :
+Voici les clés `models` de Claude Code. Chaque clé est facultative, et les valeurs par défaut reproduisent le tableau Claude Code ci-dessus :
 
 ```json
 {
@@ -53,41 +58,45 @@ Ce sont les clés `models` de Claude Code. Toutes les clés sont facultatives, e
 }
 ```
 
-`review.highRiskPaths` est une liste de sous-chaînes de chemin supplémentaires, insensibles à la casse, qui forcent le niveau `high`. Pour obtenir plus de rigueur sur les vagues risquées, augmentez `models.reviewer.high.effort` (par exemple à `high`).
+`review.highRiskPaths` est une liste de sous-chaînes de chemin supplémentaires, insensibles à la casse, qui forcent le niveau `high`. Pour obtenir plus de rigueur sur les vagues à risque, augmentez `models.reviewer.high.effort` (par exemple à `high`).
 
 ## Hôte Codex
 
-Avec `agentHost` à `"codex"`, chaque worker et chaque reviewer est son propre processus `codex exec`, avec `-m` et `model_reasoning_effort` fixés par rôle. Les valeurs par défaut de la section [`codex`](../reference/configuration.md) sont :
+Avec `agentHost` défini sur `"codex"`, chaque worker et chaque relecteur est son propre processus `codex exec`, avec `-m` et `model_reasoning_effort` définis par rôle. Les valeurs par défaut de la section [`codex`](../reference/configuration.md) sont :
 
-| Rôle                           | Modèle        | Effort                                     | Repli                         |
-| ------------------------------ | ------------- | ------------------------------------------ | ----------------------------- |
-| Session (`$emet:run`)          | `gpt-6.1-sol` | `medium` (`high` pendant la planification) | aucun                         |
-| Worker                         | `gpt-6.1-sol` | `medium`                                   | `gpt-6.1-terra`, `gpt-6-luna` |
-| Worker avec une ligne `Model:` | `gpt-6.1-sol` | `xhigh`                                    | `gpt-6-astra`                 |
-| Reviewer, niveau `medium`      | `gpt-6.1-sol` | `high`                                     | aucun                         |
-| Reviewer, niveau `high`        | `gpt-6-astra` | `high`                                     | `gpt-6.1-sol`                 |
-| Triage                         | `gpt-6-luna`  | `medium`                                   | `gpt-6.1-terra`               |
+| Rôle                           | Modèle        | Effort                               | Repli                         |
+| ------------------------------ | ------------- | ------------------------------------ | ----------------------------- |
+| Session (`$emet:run`)          | `gpt-6.1-sol` | `medium` (`high` pendant la planif.) | aucun                         |
+| Worker                         | `gpt-6.1-sol` | `medium`                             | `gpt-6.1-terra`, `gpt-6-luna` |
+| Worker avec une ligne `Model:` | `gpt-6.1-sol` | `xhigh`                              | `gpt-6-astra`                 |
+| Relecteur, niveau `medium`     | `gpt-6.1-sol` | `high`                               | aucun                         |
+| Relecteur, niveau `high`       | `gpt-6-astra` | `high`                               | `gpt-6.1-sol`                 |
+| Triage                         | `gpt-6-luna`  | `medium`                             | `gpt-6.1-terra`               |
 
-`emet dispatch` et `emet review-run` résolvent chaque slug dans `models_cache.json`, lu depuis le home de la surcouche de l'exécution, sinon depuis votre vrai home Codex (en lecture seule). Ils gardent un slug qui y figure et accepte l'effort, sinon suivent la mise à niveau du modèle, puis les replis, puis omettent `-m`, et journalisent chaque substitution ; quand rien ne se résout, `emet review-run` échoue avant l'appel au modèle et nomme le rôle et les slugs listés. Le `config.toml` de la surcouche que génère l'exécution porte aussi le `model` et le `model_reasoning_effort` résolus. L'effort `ultra` n'est jamais envoyé. Le niveau `passive` ne lance aucun reviewer.
+`emet dispatch` et `emet review-run` résolvent chaque slug à partir de `models_cache.json`, lu depuis le home de superposition du run, sinon depuis votre vrai home Codex (en lecture seule). Ils conservent un slug qui y figure et prend en charge l'effort, sinon ils suivent la mise à niveau du modèle, puis les replis, puis omettent `-m`, et journalisent chaque substitution ; quand rien ne se résout, `emet review-run` échoue avant l'appel au modèle et nomme le rôle et les slugs listés. Le `config.toml` de superposition que le run génère porte aussi les `model` et `model_reasoning_effort` résolus. L'effort `ultra` n'est jamais envoyé. Le niveau `passive` ne démarre aucun relecteur.
 
-Réglez de nouveau après quelques vraies vagues quand :
+Réajustez après quelques vraies vagues quand :
 
-- les workers demandent plusieurs tours de correction : augmentez `codex.models.worker.effort` ou mettez une ligne `Model:` sur le ticket risqué ;
-- les revues de vagues de niveau `high` manquent des constats : augmentez `codex.models.reviewer.high.effort` ;
-- le journal montre une substitution : Codex a renommé ou retiré un slug, mettez-le à jour.
+- les workers demandent des tours de correction répétés : augmentez `codex.models.worker.effort`, ou mettez une ligne `Model:` sur le ticket à risque ;
+- les revues des vagues de niveau `high` manquent des constats : augmentez `codex.models.reviewer.high.effort` ;
+- le journal montre une substitution : Codex a renommé ou retiré un slug, donc mettez le slug à jour.
 
-L'exécution réelle de Codex du [rapport de sonde](../research/codex-probe-report.md) a utilisé l'effort `low` et le modèle résolu le moins cher (`gpt-6-luna`), et le modèle du reviewer s'est résolu via le cache.
+L'exécution réelle de Codex du [rapport de sonde](../research/codex-probe-report.md) a utilisé l'effort `low` et le modèle résolu le moins cher (`gpt-6-luna`), et le modèle du relecteur s'est résolu via le cache.
 
-## Pourquoi un seul relecteur
+## Pourquoi deux relecteurs au niveau high
 
-Pourquoi un seul relecteur à contexte neuf plutôt qu'un éventail de plusieurs angles : aucun benchmark public ne compare directement les deux, mais un éventail relit tout le diff une fois par angle et s'est bloqué pendant plus d'une heure dans ce dépôt, tandis que des rapports d'Anthropic et de tiers sur les modèles de classe Opus suggèrent que la montée en gamme du modèle apporte autant que les angles supplémentaires. Pour une vague à forts enjeux sur Claude Code, lancez ensuite `/code-review ultra` à la main ; `/emet` ne le distribue jamais de lui-même. `/code-review ultra` est une commande de Claude Code ; cette page ne documente aucun équivalent Codex.
+Une vague `high` sur l'hôte Claude Code reçoit la Dual review quand `codex` est dans le PATH : le relecteur Claude et un relecteur Codex lisent le même paquet en parallèle, et le coordinateur fusionne leurs constats. Un modèle partage ses propres angles morts, c'est pourquoi la seconde lecture vient d'un autre modèle. Les vagues `medium` gardent un seul relecteur, donc leur coût ne change pas, et `review.dual: off` en exécute toujours un seul. Voir [Revue et portes](../concepts/review-and-gates.md) et l'[ADR-0040](../adr/0040-dual-review-in-the-high-tier.md). Pour une vague à enjeux encore plus élevés sur Claude Code, vous pouvez aussi exécuter `/code-review ultra` à la main ensuite ; `/emet` ne le distribue jamais de lui-même. `/code-review ultra` est une commande de Claude Code ; cette page ne documente aucun équivalent Codex.
 
 ## Ce que vous définissez une fois, vous-même (Claude Code)
 
-Sur l'hôte Claude Code, `/emet` ne peut pas changer ceci en cours d'exécution. Cela se trouve dans le `~/.claude/settings.json` de Claude Code ; l'hôte Codex ne lit pas ce fichier, et ses modèles viennent de la section `codex` ci-dessus.
+Sur l'hôte Claude Code, `/emet` ne peut pas changer ces réglages en cours d'exécution. Ils vivent dans le `~/.claude/settings.json` de Claude Code ; l'hôte Codex ne lit pas ce fichier, et ses modèles viennent de la section `codex` ci-dessus.
 
 - `model: "opusplan"` dans `~/.claude/settings.json` : c'est ce qui fait tourner les phases 1–4 sur Opus et la phase 5 et suivantes sur Sonnet, sans `/model`. `emet doctor` avertit (sans jamais modifier vos réglages) s'il n'est pas défini.
-- Un effort de session `medium` ou `high` plutôt que `xhigh` : les workers et le relecteur portent déjà leur propre effort quel que soit le vôtre, et une valeur globale élevée par défaut ajoute surtout du coût aux tours du coordinateur lui-même (suivi des distributions, merges, rapports) qui n'en ont pas besoin.
-- Un `permissions.defaultMode` capable de tourner sans surveillance (`auto`, `acceptEdits` ou `bypassPermissions`), plus des règles `permissions.deny` bloquant `git push * main|master` et `git push --force *`. `emet doctor` avertit pour les deux, car une vague qui reste bloquée sur une demande d'autorisation ou qui peut forcer le passage sur la branche principale va à l'encontre du but d'une exécution sans surveillance.
+- Un effort de session `medium` ou `high` plutôt que `xhigh` : les workers et le relecteur portent déjà leur propre effort quel que soit le vôtre, et une valeur globale élevée n'ajoute surtout que du coût aux tours du coordinateur (gestion de la distribution, merges, rapports) qui n'en ont pas besoin.
+- `permissions.defaultMode` capable de s'exécuter sans surveillance (`auto`, `acceptEdits` ou `bypassPermissions`), plus des règles `permissions.deny` bloquant `git push * main|master` et `git push --force *`. `emet doctor` avertit sur les deux, car une vague qui reste bloquée sur une demande de permission, ou qui peut forcer le passage sur la branche principale, va à l'encontre de l'exécution sans surveillance.
 
-Ce sont des points de départ, pas des chiffres définitifs. Opus 5.5 est sorti le 2026-09-22, et le choix d'effort et de modèle pour les agents de programmation reste un domaine actif ; réajustez après quelques vagues réelles plutôt que de considérer ce tableau comme final.
+Ce sont des points de départ, pas des valeurs définitives. Opus 5.5 est sorti le 2026-09-22, et le choix de l'effort et du modèle pour les agents de code est encore un domaine actif ; réajustez après quelques vraies vagues plutôt que de considérer ce tableau comme définitif.
+
+## Vérifier
+
+Exécutez `emet doctor`. Il avertit lorsque `model: "opusplan"`, l'effort de session ou `permissions.defaultMode` dans `~/.claude/settings.json` diffèrent des points de départ ci-dessus.
