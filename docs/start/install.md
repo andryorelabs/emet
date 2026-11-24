@@ -1,8 +1,6 @@
-# Getting started
+# Install
 
-Install emet, check that it works and run it for the first time.
-
-<img src="../brand/mascot/mascot-done.svg" alt="emet mascot, done" width="96" align="right">
+Install emet, keep it up to date and remove it. Then [run it for the first time](first-run.md).
 
 ## Requirements
 
@@ -30,11 +28,20 @@ You can also pin a version, as in `sh -s -- 1.2.3`; the default is `latest`. To 
 
 ### Codex
 
-When Codex is present, `emet self install` prints a one-time step: open `/hooks` in Codex and press `t` on the events page to trust the emet hooks (or approve the "Hooks need review" prompt at startup). Until then the emet guard does not run. See [Running emet on Codex](codex.md#install).
+When Codex is present, `emet self install` prints a one-time step: open `/hooks` in Codex and press `t` on the events page to trust the emet hooks (or approve the "Hooks need review" prompt at startup). Until then the emet guard does not run. See [Running emet on Codex](../how-to/use-codex.md#install).
+
+### Update
+
+```bash
+emet self update            # latest
+emet self update 1.2.3      # a specific version
+```
+
+The release is downloaded, verified against `SHA256SUMS` (and the attestation when `gh` is present) and staged. The swap of the symlink and the installed files happens only when no worker slot is held; otherwise the update stays pending and is applied at the next session start. A failure leaves the current version untouched and is recorded in the journal. The previous version is kept for rollback and older ones are pruned. `emet doctor` warns when an update is pending.
 
 ### Auto-update
 
-A `SessionStart` hook runs `emet self update --auto` at most once a day, detached and silent when offline. It verifies the checksum, stages the new version and swaps the symlink only when no worker slot is held; otherwise the update stays pending until the next session start. The previous version is kept for rollback. To turn it off, set `EMET_AUTO_UPDATE=0` or run `emet self update --auto off`; `emet self update --auto on` turns it back on. See [Update emet](../how-to/update-emet.md).
+A `SessionStart` hook runs `emet self update --auto` at most once a day, detached and silent when offline. It verifies the checksum, stages the new version and swaps the symlink only when no worker slot is held; otherwise the update stays pending until the next session start. The previous version is kept for rollback. To turn it off, set `EMET_AUTO_UPDATE=0` or run `emet self update --auto off`; `emet self update --auto on` turns it back on. Auto-update does nothing for plugin installs.
 
 ### Uninstall
 
@@ -65,35 +72,8 @@ codex plugin add emet@emet-marketplace
 
 Every install gives you the same three entry points. On Claude Code they are the slash commands `/emet:run`, `/emet:init` and `/emet:doctor`; on Codex they are the `$emet:run`, `$emet:init` and `$emet:doctor` skills. The standalone install also puts `emet` on your `PATH`, so `emet init` and `emet doctor .` work in a plain terminal; with only a plugin, use the slash commands, or `! emet <subcommand>` inside a Claude Code or Codex session. On Claude Code the agent names differ: `emet:emet-worker` in the plugin, `emet-worker` standalone; Codex has no emet agents, because each worker is its own `codex exec` process.
 
-Recommended order, in each repo: run the `setup-matt-pocock-skills` skill first (`/setup-matt-pocock-skills` on Claude Code; on Codex, the same skill from the `mattpocock-skills` plugin with Codex's `$` skill syntax), then `emet init`.
-
-Verify it worked with `/emet:doctor` inside Claude Code (`$emet:doctor` on Codex), or `emet doctor .` in a terminal (`selftest` needs a `--from` source install).
-
-If `doctor` or `preflight` reports a problem, see [troubleshooting](../troubleshooting.md). Nothing is ever installed or logged in on your behalf; see the [dependencies reference](../reference/dependencies.md) for who checks what and for `EMET_SKIP_DEPENDENCY_CHECKS`.
-
-## First run
-
-In any git repo:
-
-```bash
-emet init          # autodetects package manager, trunk branch, tracker kind
-emet preflight      # confirms the repo is dispatch-ready
-```
-
-Inside a session, `/emet:init` does the same as `emet init`. Then, inside Claude Code (on Codex, use `$emet:run` instead of `/emet:run`):
-
-```
-/emet:run <describe the feature>              # interview → wave 1; later waves via --dispatch/autoChain
-/emet:run --draft <describe the feature>      # stop after tickets are created
-/emet:run --dispatch <spec-id>                # dispatch a --draft'd spec later
-```
-
-`emet init` leaves a `TODO(emet):` marker in the generated `docs/agents/*.md` files for anything it can't infer on its own (a shared test-database lock, schema ownership, etc.); fill those in. `emet preflight` refuses to dispatch while one remains.
+To update a plugin install, see [Update emet](../how-to/update-emet.md).
 
 ## Next
 
-- [Trackers and landing](trackers-and-landing.md): GitHub, Linear or local tickets, and how a wave lands.
-- [Running emet on Codex](codex.md): install, the single approval and the limits on the Codex Agent host.
-- [Models and effort](models-and-effort.md): which model and effort each role uses.
-- [Fleet check](fleet.md): audit several repos at once.
-- [Configuration reference](../reference/configuration.md) and [CLI reference](../reference/cli.md): every key and subcommand.
+[First run](first-run.md): check the install and run emet in a repo.

@@ -3,7 +3,7 @@ import { describe, expect, test } from "bun:test";
 import { rewriteImageSource, rewriteLink } from "./links";
 import { rewriteMarkdownLinks } from "./markdown";
 
-const guide = { sourcePath: "docs/guide/getting-started.md" };
+const guide = { sourcePath: "docs/start/install.md" };
 
 describe("rewriteLink", () => {
   test("turns a published file into a site route", () => {
@@ -11,8 +11,8 @@ describe("rewriteLink", () => {
   });
 
   test("keeps the fragment and uses the locale prefix", () => {
-    expect(rewriteLink("fleet.md#usage", { ...guide, locale: "pt-BR" })).toBe(
-      "/pt-br/docs/guide/fleet/#usage",
+    expect(rewriteLink("../how-to/check-a-fleet.md#usage", { ...guide, locale: "pt-BR" })).toBe(
+      "/pt-br/docs/how-to/check-a-fleet/#usage",
     );
   });
 
@@ -38,8 +38,8 @@ describe("rewriteLink", () => {
   });
 
   test("resolves links of the changelog from the repository root", () => {
-    expect(rewriteLink("docs/guide/fleet.md", { sourcePath: "CHANGELOG.md" })).toBe(
-      "/docs/guide/fleet/",
+    expect(rewriteLink("docs/how-to/check-a-fleet.md", { sourcePath: "CHANGELOG.md" })).toBe(
+      "/docs/how-to/check-a-fleet/",
     );
   });
 });

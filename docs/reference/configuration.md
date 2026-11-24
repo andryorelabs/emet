@@ -186,17 +186,17 @@ Model and effort per role for the Claude Code host; the Codex host reads [`codex
 
 ## agentHost
 
-`agentHost` (default `"claude"`): the Agent host a run executes in, `"claude"` or `"codex"`. See the [Codex guide](../guide/codex.md).
+`agentHost` (default `"claude"`): the Agent host a run executes in, `"claude"` or `"codex"`. See the [Codex guide](../how-to/use-codex.md).
 
 ## codex
 
 Read only when `agentHost` is `"codex"`. Every key is optional. Effort is one of `low`, `medium`, `high`, `xhigh`, `max`; `ultra` is never accepted.
 
-- `models.worker`, `models.workerOverride`, `models.reviewer.medium`, `models.reviewer.high`, `models.triage`: each is `{ "model", "effort", "fallback" }`. `fallback` lists the slugs tried in order when `model` is missing from the Codex models cache. The defaults are in [Models and effort](../guide/models-and-effort.md).
+- `models.worker`, `models.workerOverride`, `models.reviewer.medium`, `models.reviewer.high`, `models.triage`: each is `{ "model", "effort", "fallback" }`. `fallback` lists the slugs tried in order when `model` is missing from the Codex models cache. The defaults are in [Models and effort](../how-to/choose-models.md).
 - `models.session`: `{ "model", "effort", "planEffort", "fallback" }` for the session that runs `$emet:run`. `planEffort` applies until the first approval.
 - `effort`: when set, replaces the effort of every role.
 - `minVersion` (default `0.167.0`): the oldest `codex` CLI version emet supports. `emet doctor` does not compare the installed version against it.
-- `sandbox` (default `danger-full-access`): the sandbox mode passed as `-s` by `emet dispatch`, `emet review-run` and a Codex `emet launch`. `workspace-write` is also accepted but makes `.git` read-only, so workers cannot commit. Whatever the value, `emet guard` denies `git push` on Codex, and the generated overlay `config.toml` holds only the emet marketplace and plugin, trusted tables for the run's own directories, and the resolved model and effort (never your own tables). See the [Codex guide](../guide/codex.md) and [ADR-0022](../adr/0022-codex-workers-run-unsandboxed-by-default.md).
+- `sandbox` (default `danger-full-access`): the sandbox mode passed as `-s` by `emet dispatch`, `emet review-run` and a Codex `emet launch`. `workspace-write` is also accepted but makes `.git` read-only, so workers cannot commit. Whatever the value, `emet guard` denies `git push` on Codex, and the generated overlay `config.toml` holds only the emet marketplace and plugin, trusted tables for the run's own directories, and the resolved model and effort (never your own tables). See the [Codex guide](../how-to/use-codex.md) and [ADR-0022](../adr/0022-codex-workers-run-unsandboxed-by-default.md).
 
 ## review
 

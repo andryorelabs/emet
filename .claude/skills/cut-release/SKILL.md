@@ -5,7 +5,7 @@ description: Cut a release of this project. Use when the user asks to release, t
 
 # Cutting a release
 
-1. Read the release runbook (`docs/how-to/cut-a-release.md` when it exists) and follow it; this skill only orders the steps.
+1. Read the release runbook (`docs/contributing/cut-a-release.md` when it exists) and follow it; this skill only orders the steps.
 2. Confirm the working tree is clean and you are on the trunk branch, up to date with the remote.
 3. Run the full local check script (`bun run ci:local` when it exists, otherwise `check` and `test`) and stop on any failure.
 4. Check that `[Unreleased]` in `CHANGELOG.md` has entries. If the project's release script moves them into a dated section for the new version, leave that to the script; otherwise move them by hand.

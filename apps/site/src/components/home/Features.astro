@@ -11,6 +11,7 @@ import FlagsScene from "./bento/scenes/FlagsScene.astro";
 import ReviewScene from "./bento/scenes/ReviewScene.astro";
 import TrackerScene from "./bento/scenes/TrackerScene.astro";
 import WorkersScene from "./bento/scenes/WorkersScene.astro";
+import FeatureRows from "./FeatureRows.astro";
 
 interface Props {
   strings: UiStrings;
@@ -59,6 +60,7 @@ const keyWidth = 10;
       })
     }
   </ul>
+  <FeatureRows strings={strings} />
 </section>
 
 <script>

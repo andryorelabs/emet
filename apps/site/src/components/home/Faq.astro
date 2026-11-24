@@ -1,6 +1,6 @@
 ---
 /**
- * The FAQ between About and the closing panel: six native disclosure rows
+ * The FAQ between About and the closing panel: eight native disclosure rows, the first open,
  * and a link to the localized troubleshooting page.
  */
 import type { Locale } from "../../i18n/locales";
@@ -15,14 +15,23 @@ interface Props {
 const { strings, locale } = Astro.props;
 const { faq } = strings;
 const troubleshootingPath = localePath(locale, "/docs/troubleshooting/");
+
+/**
+ * Splits an answer on backticks so the commands and flags inside it render as code.
+ * @param text - An answer that marks code with backticks.
+ * @returns The segments in order, each flagged as code or prose.
+ */
+function segments(text: string): { text: string; code: boolean }[] {
+  return text.split("`").map((part, index) => ({ text: part, code: index % 2 === 1 }));
+}
 ---
 
 <section class="faq" aria-labelledby="faq-title">
   <h2 id="faq-title" data-reveal="heading"><span class="reveal-line">{faq.heading}</span></h2>
   <div class="faq-list">
     {
-      faq.items.map((item) => (
-        <details class="faq-item" data-reveal="item">
+      faq.items.map((item, index) => (
+        <details class="faq-item" data-reveal="item" open={index === 0}>
           <summary>
             <span>{item.question}</span>
             <svg class="faq-chevron" viewBox="0 0 16 16" width="16" height="16" aria-hidden="true">
@@ -36,10 +45,19 @@ const troubleshootingPath = localePath(locale, "/docs/troubleshooting/");
               />
             </svg>
           </summary>
-          <p>{item.answer}</p>
+          <p>{segments(item.answer).map((part) => (part.code ? <code>{part.text}</code> : part.text))}</p>
         </details>
       ))
     }
   </div>
   <a class="faq-more" href={troubleshootingPath}>{faq.more}</a>
 </section>
+
+<style>
+  .faq-item code {
+    font-family: var(--font-mono, ui-monospace, monospace);
+    font-size: 0.9em;
+    color: var(--text);
+    overflow-wrap: anywhere;
+  }
+</style>

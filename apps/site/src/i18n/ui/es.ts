@@ -47,13 +47,20 @@ export const es = {
     emetReplies: "emet responde",
     alt: "El valle donde tres arroyos se unen en un río.",
     merged: "Fusionado",
+    otherInstall: "Otras formas de instalar",
+    wave: "Oleada {n}",
+    caption:
+      "Cada oleada se une a una rama de la spec. La spec se integra como una sola pull request.",
+    prTitle: "Spec 41: modo oscuro para los ajustes",
+    checks: "checks superados",
   },
   showcase: {
-    heading: "La oleada se integra",
-    headingHeld: "La oleada espera",
-    status: "Oleada 2 revisada. CI superado. Integrada, 3 tickets cerrados.",
-    statusHeld: "Oleada 2 retenida: un ticket marcado. No se integró nada.",
-    flag: "Marcar el ticket #255",
+    heading: "La spec se integra",
+    headingHeld: "La spec espera",
+    status:
+      "Spec 41 revisada. CI superado. Integrada como una sola pull request, 4 tickets cerrados.",
+    statusHeld: "Spec 41 retenida: un ticket marcado. No se integró nada.",
+    flag: "Marcar el ticket #44",
   },
   features: {
     heading: "Lo que protege una ejecución",
@@ -67,6 +74,28 @@ export const es = {
       },
       { title: "Worktrees aislados", line: "Un git worktree por worker." },
       { title: "Tu tracker, o ninguno", line: "Linear, GitHub Issues o archivos locales." },
+    ],
+    extra: [
+      {
+        title: "Modo rápido para cambios pequeños",
+        line: "Una opción reduce la entrevista a una ronda y ejecuta un ticket, una revisión y una integración.",
+      },
+      {
+        title: "Recuerda lo que funcionó",
+        line: "Las lecciones de cada ejecución se guardan y se recuperan en la siguiente.",
+      },
+      {
+        title: "Dos revisores para cambios de riesgo",
+        line: "El trabajo de riesgo alto recibe un segundo revisor antes de integrarse.",
+      },
+      {
+        title: "Te avisa cuando te necesita",
+        line: "Una alerta cuando una ejecución espera tu aprobación o se ha atascado.",
+      },
+      {
+        title: "Se instala y se desinstala limpiamente",
+        line: "Elimina todo lo que emet instaló y conserva cualquier archivo que hayas editado.",
+      },
     ],
   },
   stats: {
@@ -85,6 +114,16 @@ export const es = {
   faq: {
     heading: "Preguntas",
     items: [
+      {
+        question: "¿Cómo desinstalo emet?",
+        answer:
+          "Ejecuta `emet uninstall`. Elimina lo que emet instaló y conserva cualquier archivo que hayas editado. Añade `--dry-run` para verlo antes.",
+      },
+      {
+        question: "¿Qué es el modo rápido?",
+        answer:
+          "Usa `--quick` para un cambio pequeño. Reduce la entrevista a una ronda y ejecuta un ticket, una revisión y una integración.",
+      },
       {
         question: "¿Qué necesito?",
         answer:

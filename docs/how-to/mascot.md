@@ -1,48 +1,68 @@
 # Use the emet mascot (Claude Code mod and Orca pet)
 
-How to show the emet **Mascot** in Claude Code and in Orca. Terms follow [GLOSSARY.md](../../GLOSSARY.md).
+Show the emet **Mascot** in Claude Code and in Orca. Terms follow [GLOSSARY.md](../../GLOSSARY.md).
 
-There are two independent pieces: the optional `emet-mascot` plugin, which draws the mascot in Claude Code, and the Orca pet bundle, which gives Orca the same character.
+There are two independent pieces: the optional `emet-mascot` plugin, which draws the mascot in Claude Code, and the Orca pet bundle, which gives Orca the same character. emet does not need either.
+
+## Prerequisites
+
+- Claude Code, for the plugin.
+- emet installed, so a run writes the phase file the mascot follows; see [Install](../start/install.md).
+- Orca, for the pet. The import needs the `docs/brand/pet/emet/` folder on the machine where the Orca app runs.
 
 ## Install the mascot plugin
 
-The plugin ships in the same marketplace as emet and is optional. emet does not need it.
+:::steps
 
-```bash
-claude plugin marketplace add andryorelabs/emet
-claude plugin install emet-mascot@emet-marketplace
-```
+1. Add the marketplace and install the plugin:
 
-The mascot follows your session (sleeping, working, waiting, done, error). While a **Run** is active it also reads the **Phase file** and shows a dim label such as `emet · wave 2 · review`.
+   ```bash
+   claude plugin marketplace add andryorelabs/emet
+   claude plugin install emet-mascot@emet-marketplace
+   ```
 
-Plugin options:
+2. Restart Claude Code. The mascot follows your session (sleeping, working, waiting, done, error). While a **Run** is active it also reads the phase file and shows a dim label such as `emet · wave 2 · review`.
+3. Optionally set the plugin options:
+   - `position`: `pane` (default), `band` or `status`. `pane` docks the mascot beside the transcript and needs the fullscreen layout and a terminal at least 144 columns wide until you open the pane once yourself (about 110 after that); when it cannot dock, the mascot shows above the prompt. `band` always draws it above the prompt. `status` shows only the text label as the status line.
+   - `size`: `small` (16 x 8 cells, default) or `medium` (24 x 12 cells).
+   - `showLabel`: show or hide the label (default on).
 
-- `position`: `pane` (the default), `band` or `status`. `pane` docks the mascot beside the transcript, which needs the fullscreen layout and a terminal at least 144 columns wide until you open the pane once yourself (about 110 after that); when it cannot dock, or the terminal narrows later, the mascot shows above the prompt instead. `band` always draws it above the prompt. `status` shows only the text label as the plugin status line, with no mascot art.
-- `size`: `small` (16 x 8 cells, the default) or `medium` (24 x 12 cells).
-- `showLabel`: show or hide the label beside the mascot (default on).
+:::
 
 ## Update the mascot plugin
 
-Marketplaces other than Anthropic's have auto-update off by default, and a marketplace cannot turn it on for its users. Update by hand:
+Marketplaces other than Anthropic's have auto-update off by default, so update by hand or turn it on once.
 
-```bash
-claude plugin marketplace update emet-marketplace
-claude plugin update emet-mascot@emet-marketplace
-```
+:::steps
 
-Restart Claude Code afterwards. To update on its own, run `/plugin`, open the **Marketplaces** tab, select `emet-marketplace` and choose **Enable auto-update**. Each user does this once on their own machine. See [Update emet](update-emet.md) for the main plugin too.
+1. Update the marketplace and the plugin:
 
-## The phase file
+   ```bash
+   claude plugin marketplace update emet-marketplace
+   claude plugin update emet-mascot@emet-marketplace
+   ```
 
-The emet CLI writes `.emet/phase.json` in the repo as a run moves along, and the mascot polls it about every two seconds. A file older than the freshness window is ignored, so a crashed run does not leave a stale label.
+2. Restart Claude Code.
+3. To update on its own, run `/plugin`, open the **Marketplaces** tab, select `emet-marketplace` and choose **Enable auto-update**. Each user does this once on their own machine. See [Update emet](update-emet.md) for the main plugin.
 
-The file holds `phase` (`planning`, `dispatch`, `working`, `review`, `checking`, `landing`, `done` or `failed`), `wave`, `spec`, `runId`, `updatedAt` and an optional `outcome`. A write that fails never fails the subcommand that reported the phase.
+:::
 
 ## Use the pet in Orca
 
-The pet bundle lives in `docs/brand/pet/emet/`: `pet.json` and `spritesheet.webp`. In Orca's settings, use "Import .codex-pet bundle…" and pick that folder. The import needs `docs/brand/pet/emet/` on the machine where the Orca app runs, so copy the folder there if Orca runs elsewhere than this repo. Regenerate it with `bun run brand:export` after changing a mascot SVG, and commit the result.
+:::steps
 
-## Troubleshooting
+1. Make sure `docs/brand/pet/emet/` (`pet.json` and `spritesheet.webp`) is on the machine where Orca runs; copy the folder there if Orca runs elsewhere than this repo.
+2. In Orca's settings, choose "Import .codex-pet bundle…" and pick that folder.
+3. After changing a mascot SVG, regenerate the bundle with `bun run brand:export` and commit the result.
 
-- No mascot: run `claude plugin list`, check that `emet-mascot` is enabled, then restart Claude Code.
-- No label: check that `.emet/phase.json` exists and was updated recently.
+:::
+
+## Check
+
+:::steps
+
+1. Run `claude plugin list` and confirm `emet-mascot` is enabled; if the mascot is missing, restart Claude Code.
+2. During a run, confirm `.emet/phase.json` exists and was updated in the last few seconds. The mascot polls it about every two seconds and ignores a file older than its freshness window, so a crashed run leaves no stale label. It holds `phase` (`planning`, `dispatch`, `working`, `review`, `checking`, `landing`, `done` or `failed`), `wave`, `spec`, `runId`, `updatedAt` and an optional `outcome`.
+3. In Orca, confirm the emet pet appears in the pet list.
+
+:::
