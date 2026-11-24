@@ -14,11 +14,11 @@ This repository uses [bun](https://bun.sh) only. Install the root dev tooling wi
 `package.json` scripts before running anything, and do not run the build unless
 asked.
 
-To try the tool itself, see [Getting started](docs/guide/getting-started.md); the config keys are in the [configuration reference](docs/reference/configuration.md).
+To try the tool itself, see [Getting started](docs/start/install.md); the config keys are in the [configuration reference](docs/reference/configuration.md).
 
 ## Where to start
 
-Look for issues labeled `good first issue` or `help wanted`. For anything larger than a small fix, open an issue first so the approach is agreed before you write code. Documentation fixes and translations are welcome too: see [Translate the docs](docs/how-to/translate.md). Before relying on an interface, check [what is stable](docs/stability.md).
+Look for issues labeled `good first issue` or `help wanted`. For anything larger than a small fix, open an issue first so the approach is agreed before you write code. Documentation fixes and translations are welcome too: see [Translate the docs](docs/contributing/translate.md). Before relying on an interface, check [what is stable](docs/reference/stability.md).
 
 ## Branch naming and commit format
 

@@ -1,6 +1,6 @@
 # Codex probe report
 
-The real-Codex check of every `unverified` point in [Running emet on Codex](../guide/codex.md), made by `tools/codex-probe.ts` (`EMET_CODEX_PROBE=1 bun run probe:codex -- --flow`). Terms follow [GLOSSARY.md](../../GLOSSARY.md). Background: [the viability research](codex-viability.md).
+The real-Codex check of every `unverified` point in [Running emet on Codex](../how-to/use-codex.md), made by `tools/codex-probe.ts` (`EMET_CODEX_PROBE=1 bun run probe:codex -- --flow`). Terms follow [GLOSSARY.md](../../GLOSSARY.md). Background: [the viability research](codex-viability.md).
 
 Re-run on 2026-11-09 and 2026-11-10 (spec #376), after the fixes of its wave 1: the `danger-full-access` worker default with the `emet guard` push denial, the generated overlay `config.toml`, the registered Codex Agent host, model resolution from the real models cache, and the thread-id worker identity. The run used `codex-cli 0.167.0`, signed in with a ChatGPT free plan, on Linux. Every model run used effort `low` and the cheapest resolved model (`gpt-6-luna`), with a 15 minute cap. Each run used a throwaway repo under `/tmp` with no remote. No run hit a plan limit, so no row is `blocked-by-plan-limit`. The first report (spec #370) had five `failed` rows; all five are `verified` now.
 

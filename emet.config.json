@@ -105,7 +105,11 @@
   "validate": {
     "coupledSurfaces": [
       {
-        "source": "docs/{guide,reference,how-to}/**/*.md",
+        "source": "docs/{start,concepts,how-to,reference}/**/*.md",
+        "dependents": "apps/site/src/content/translations/**"
+      },
+      {
+        "source": "docs/troubleshooting.md",
         "dependents": "apps/site/src/content/translations/**"
       }
     ]

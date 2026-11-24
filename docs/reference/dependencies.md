@@ -25,7 +25,7 @@ None of the above is ever installed or logged in on your behalf. What differs is
 
 ## Codex host
 
-Only when `agentHost` is `"codex"`; see the [Codex guide](../guide/codex.md). The `emet-worker` and `emet-reviewer` agents are not used there.
+Only when `agentHost` is `"codex"`; see the [Codex guide](../how-to/use-codex.md). The `emet-worker` and `emet-reviewer` agents are not used there.
 
 - **The `codex` CLI**, logged in, at `codex.minVersion` (default `0.167.0`) or newer. `emet doctor` checks that `codex exec --help` lists `--json` and `--output-schema`.
 - **The `mattpocock-skills` plugin** in Codex, probed with `codex plugin list`:

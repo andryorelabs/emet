@@ -50,7 +50,7 @@ Set `agentHost` in `emet.config.json`:
 { "agentHost": "codex" }
 ```
 
-The default is `"claude"`. The `codex` section sets the models, the effort, the minimum version and the sandbox; see the [configuration reference](../reference/configuration.md#codex) and [Models and effort](models-and-effort.md). Start a run from Codex with `$emet:run`. `emet launch <spec> --wave <n>` starts a wave in a detached `codex exec` and records its thread id, so `codex exec resume <id>` continues it; no Orca tab is opened.
+The default is `"claude"`. The `codex` section sets the models, the effort, the minimum version and the sandbox; see the [configuration reference](../reference/configuration.md#codex) and [Models and effort](choose-models.md). Start a run from Codex with `$emet:run`. `emet launch <spec> --wave <n>` starts a wave in a detached `codex exec` and records its thread id, so `codex exec resume <id>` continues it; no Orca tab is opened.
 
 ## The single approval
 

@@ -5,6 +5,7 @@ import tailwindcss from "@tailwindcss/vite";
 import { THEME_INIT_HASH } from "./src/components/site/theme";
 import { codeColorsPlugin } from "./src/docs/code-colors-plugin";
 import { emetDirectives } from "./src/docs/directives";
+import { buildDocsRedirects } from "./src/docs/legacy-routes";
 import { repoAssets } from "./src/docs/repo-assets";
 import { buildSidebar } from "./src/docs/sidebar";
 import {
@@ -12,13 +13,7 @@ import {
   collectStarlightInlineStyleHashes,
 } from "./src/docs/starlight-inline-hashes";
 import { sharedCodeConfig } from "./src/highlight/code-config";
-import {
-  DEFAULT_LOCALE,
-  LOCALE_NAMES,
-  LOCALES,
-  localePath,
-  localeSegment,
-} from "./src/i18n/locales";
+import { DEFAULT_LOCALE, LOCALE_NAMES, LOCALES, localeSegment } from "./src/i18n/locales";
 import { sitemapOptOut } from "./src/seo/sitemap-opt-out";
 
 const starlightLocales = Object.fromEntries(
@@ -32,12 +27,7 @@ const INSTALL_SCRIPT_URL =
   "https://github.com/andryorelabs/emet/releases/latest/download/install.sh";
 
 const docsRedirects = {
-  ...Object.fromEntries(
-    LOCALES.map((locale) => [
-      localePath(locale, "/docs/"),
-      localePath(locale, "/docs/guide/getting-started/"),
-    ]),
-  ),
+  ...buildDocsRedirects(),
   "/install.sh": { status: 302 as const, destination: INSTALL_SCRIPT_URL },
 };
 
