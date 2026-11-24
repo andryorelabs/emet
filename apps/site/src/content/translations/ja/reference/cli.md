@@ -2,10 +2,10 @@
 title: CLI リファレンス
 description: すべての emet サブコマンド、ゲートと記録の表、終了コード、環境変数を説明します。
 seoTitle: emet CLI リファレンス
-sourceHash: 2f7460d3af4ee862
+sourceHash: 7c398958687b5ea3
 ---
 
-すべての `emet` サブコマンド、ゲートと記録の表、終了コード、環境変数です。用語は [GLOSSARY.md](../../GLOSSARY.md) に従います。[README](../../README.md) に戻る。すべてのコマンドは `--help` で使い方を表示します。
+すべての `emet` サブコマンド、ゲートと記録、終了コード、環境変数です。用語は [GLOSSARY.md](../../GLOSSARY.md) に従います。[README](../../README.md) に戻る。すべてのコマンドは `--help` で使い方を表示します。
 
 ## サブコマンド
 
@@ -13,33 +13,16 @@ Claude Code 内では、3 つのスラッシュコマンドが CLI をラップ�
 
 `emet <command> [...args]`。`emet --version` はバージョンを表示します。
 
-### セットアップと監査
-
-- `emet migrate [--dry-run]`: 旧形式のリポジトリを emet の名前に変更します。
-- `emet init [--tracker linear|github|local] [--after-spec release|promote|none] [--force]`: パッケージマネージャー、トランクブランチ、トラッカーの種類、after-spec モード（[`handoff.afterSpec`](configuration.md#handoff) を参照）を自動検出し、Prisma スキーマ（`prisma/schema.prisma` または `prisma/schema/` フォルダー）や Drizzle のマイグレーションフォルダー（`drizzle.config.*` の隣にある `drizzle/`）を見つけた場合は [`schema.ownedPaths`](configuration.md#schema) を設定し、`emet.config.json` と `docs/agents/*.md` ファイルを書き出します。`--tracker local` はローカルトラッカーを設定します。
-- `emet doctor [--all] [<path> ...]`: 任意の数のリポジトリを一度に読み取り専用で監査します。既定はカレントディレクトリです。[`verify.browser`](configuration.md#verify) を設定しているリポジトリでは、任意の `agent-browser` に関する指摘も報告します。バイナリがない場合は `indeterminate`（インストール方法を示す `optional:` 行）になり、バイナリがあるのに `agent-browser doctor` が失敗する場合は警告として表示されます。どちらもエラーにはならず、終了コードも変わりません。`verify.browser` がないリポジトリには何も表示されません。
-- `emet setup [--yes] [--with <ids>] [--list] [--json] [--dry-run] [--restore <id>]`: 任意のインストールを readline のプロンプトで提案します。対象は `mattpocock-skills`（既定でオン）、`engram`、`mascot`、`orca-pet`、`gh-auth`、`agent-browser`（既定でオフ。`bun add -g agent-browser@latest` に続けて `agent-browser install` を実行します。`~/.agent-browser/config.json` が存在しない場合にのみ、`contentBoundaries: true` と `maxOutput: 50000` を書き込み、続けて `agent-browser doctor` を実行して、失敗した場合は警告を表示します。バージョンは固定せず、`--with-deps` も渡さないため、システムライブラリが不足している場合は、自分で実行するコマンドを表示します）、`context7`（既定でオフ。`bun add -g ctx7@latest` に続けて `ctx7 setup --cli --claude --yes` を実行し、`ctx7 setup --cli --codex --yes` は `codex` が PATH にある場合にのみ実行します。`ctx7` CLI とその `find-docs` スキルをインストールし、MCP サーバーはインストールしません。バージョンは固定せず、`ctx7 setup` のステップが失敗した場合は、手動で実行するコマンドを表示します。`CTX7_TELEMETRY_DISABLED=1` を設定しない限り、`ctx7` は匿名の利用イベントを送信します。また、環境内の `CONTEXT7_API_KEY` は、`ctx7 login` で保存されたアカウントより優先されます）、`firecrawl-local`（既定でオフ。`cargo` が必要で、バイナリがない場合に `cargo install firecrawl-local` を実行し、続けて `FIRECRAWL_CLOUD=search` と `--public-only` を付けてユーザースコープの Claude Code MCP サーバーを登録し、別の設定による以前の登録は置き換えます。スクレイプ、クロール、マップはマシン上で実行され、Web 検索だけが Firecrawl Cloud に送られ、プライベートアドレスはブロックされます。`agent-browser` がダウンロードした最新の Chrome を `FIRECRAWL_CHROME_PATH` として渡します。AppArmor が非特権ユーザー名前空間を制限している Linux では、AppArmor プロファイルとそれを読み込む `sudo` コマンドを表示します。Firecrawl Local はサンドボックスなしでは Chrome を実行しないためです。使える Chrome がない場合、JavaScript でレンダリングされるページは空で返ります）、そして推奨の Claude Code 設定（`claude-settings`。選択した場合にのみ、`settings.json` のタイムスタンプ付きバックアップを取ってから適用）です。TTY がない場合、または `--yes` や `--with` を付けた場合は何も尋ねず、指定した項目だけをインストールします。TTY がなく `--with` もない場合は何もインストールせず、`--list` のカタログを表示します。各ステップは `installed`、`already-present`、`skipped`、`failed` のいずれかを報告します。1 件失敗しても他は止まらず、失敗があれば終了コードは 1 です。`/emet:setup` はプラグインの入口で、同じ選択肢を `AskUserQuestion` で尋ねます。
-- `emet setup --dry-run`（`--with`、`--yes`、`--json` と併用可）：選択した各項目の計画ステップ（または `already-present`）を、読み取り専用のプローブだけで表示し、何も実行しません。コマンドの実行も、ファイルの書き込みも、台帳の書き込みもありません。終了コードは 0 です。
-- セットアップ台帳：`setup-ledger.json` は状態ディレクトリ（`EMET_STATE_DIR`、次に `XDG_STATE_HOME`）に置かれます。結果が `installed` になった項目ごとに、元に戻すための記録を 1 件残します（`claude-settings` は以前の `model` と実際に追加した deny ルールとバックアップのパス、`firecrawl-local` は以前のユーザースコープの MCP エントリと `cargo install` を実行したかどうか、プラグインはプラグイン ID、`orca-pet` は書き込んだファイル、`agent-browser` と `context7` は bun のグローバルパッケージ、`engram` は brew のフォーミュラとプラグイン）。`already-present` の項目は何も記録せず、同じ ID が再度 `installed` になっても最初の変更前の状態を保持します。書き込みはアトミックです。壊れた台帳は空として扱われず、そのパスを示すエラーになります。
-- `emet setup --restore <id>`：`claude-settings` と `firecrawl-local` だけを受け付けます。`claude-settings` は、タイムスタンプ付きバックアップを取ってから以前の `model` を復元し（なかった場合はキーを削除）、emet が追加した deny ルールだけを削除します。現在の `model` がセットアップで設定したものと異なる場合は、それを残して警告を表示します。`firecrawl-local` は `claude mcp remove firecrawl-local -s user` を実行し、記録されたエントリがあれば `claude mcp add-json firecrawl-local '<previous json>' -s user` で戻します。復元に成功すると台帳のエントリは削除されます。それ以外の ID は終了コード 2（使い方の誤り）、台帳にエントリがない ID は `nothing to restore for <id>` を表示して終了コード 1 で終了します。
-- `emet self install [latest|X.Y.Z] [--dry-run] [--force] [--from <checkout>]`：スタンドアロンインストールです。バイナリを `~/.local/share/emet/versions/<v>/emet` に配置してシンボリックリンク `~/.local/bin/emet` を作成し、参照プロンプトと `.install-manifest.json` を `~/.claude/emet/` に、コマンドを `~/.claude/commands/emet/` に、エージェントを `~/.claude/agents/` に書き込みます。また、emet のフックを `~/.claude/settings.json` にマージし（バックアップを取り、他のフックには手を加えません）、Codex がある場合はスキルを `~/.agents/skills` の下に書き込み、フックを `$CODEX_HOME/hooks.json`（既定は `~/.codex`。`config.toml` は書き込まないため、フックは `/hooks` で 1 回承認してください）に追記します。2 回目の実行では何も変わりません。編集されたファイルは残され、新しいバージョンは `<file>.new` として隣に置かれます。`--dry-run` はすべての書き込みを一覧表示し、何も書き込みません。emet プラグインがインストールされている間は拒否し、`--force` を付ければそのまま続行します。`--from <checkout>` は Bun のソースインストールを再現します。CLI のソースが `~/.claude/emet` にコピーされ、`~/.local/bin/emet` はそれに対して `bun` を実行するラッパーになるため、`emet selftest` が動作します。`bun` がない場合は失敗します。コントリビューターは `emet self install --from .` を使います。1 行の `curl -fsSL https://emet.andryore.dev/install.sh | sh` は、リリースのバイナリをダウンロードし、`SHA256SUMS` を検証して、このコマンドを実行します。
-- `emet self update [latest|X.Y.Z]`：リリースをダウンロードし、`SHA256SUMS`（`gh` がある場合はアテステーションも）を検証してステージングします。シンボリックリンクとインストール済みファイルの切り替えは、ワーカースロットが 1 つも保持されていない場合にのみ行われ、保持されている場合は次のセッション開始まで保留されます。失敗しても現在のバージョンには手が加えられず、ジャーナルに記録されます。以前のバージョンはロールバック用に保持され、それより古いものは削除されます。プラグインのインストールには何も行いません。`emet self update --auto [off|on]` は `SessionStart` フックが実行するもので、1 日に最大 1 回、バックグラウンドで実行され、オフラインのときは何も表示しません。`off` または `on` で切り替えます。`EMET_AUTO_UPDATE=0` でも無効になります。
-- `emet uninstall [--dry-run] [--yes] [--purge] [--json]`：`emet self install` によるインストールと `emet setup` が追加したものを削除します。まず計画全体を作成してから実行します。インストールマニフェストに記録されたハッシュと現在のハッシュが一致するファイルと、その `.new` ファイルを削除します。編集されたファイルは残して一覧表示します。シム `~/.local/bin/emet` は、インストールのラッパーである場合、または `~/.claude/emet` もしくは `~/.local/share/emet/versions` へのシンボリックリンクである場合に限り削除し、続けてマニフェストと空になったディレクトリを削除します。`~/.claude/settings.json` と `$CODEX_HOME/hooks.json`（デフォルトは `~/.codex`）からは、イベントを問わず emet のフックコマンド（`emet guard`、`emet setup --notice`、`emet whats-new --hook`、`emet self update --auto`）をすべて削除し、他のフックはすべて残し、空になったグループとイベントも削除します。インストール時のバックアップ（`.pre-emet-guard-backup.`）が残った内容とまったく同じ場合はそのバイト列を復元し、何も残らない場合はファイルを削除し、それ以外の場合は先にタイムスタンプ付きのバックアップを書き込みます。この emet と一致したままの `~/.agents/skills/emet/` 以下の Codex スキル（編集されたものは残して一覧表示）、バージョンディレクトリ `~/.local/share/emet/versions`、インストール状態 `~/.local/share/emet/install.json` を削除します。その後、Setup 台帳の追加項目を元に戻します（下記参照）。マニフェストもインストール状態もない場合（プラグインのインストール）はファイルをスキップし、`claude plugin uninstall emet@emet-marketplace` を表示します。`codex` が PATH にある場合は、Codex プラグインの削除方法も表示します。`--dry-run` は計画を表示して何も変更しません。`--yes` は確認を省略します。TTY があり `--yes` がない場合は確認を 1 回尋ね、TTY も `--yes` もない場合は計画を表示して何も変更せず終了コード 0 で終わります。`--purge` は状態ディレクトリ（`EMET_STATE_DIR`、なければ `XDG_STATE_HOME/emet`）と `~/.emet` も削除します。指定しない場合はどちらも残ります。`--json` は結果を JSON で表示します。ステップが 1 件でも失敗するか、読み取りが必要なファイル（マニフェスト、設定、台帳）が読めない場合は終了コードが 1 になり、そのパスを表示します。
-- `emet fleet list [--root <dir>] [--json]`: `--root`（既定は `~/code`）の 1 階層下にある、`emet.config.json` を持つ git リポジトリを、`tracker.kind`、`handoff.autoChain`、`models.worker` とともに一覧表示します。`emet fleet set <key> <value> [--root <dir>] [--dry-run]` は一覧の全リポジトリで設定キーを 1 つ変更し、先に設定ローダーで検証します（無効な値は何も変更せず、終了コード 1 で終了します）。`emet fleet launch --feature <text> [--root <dir>] [--repos <a,b>] [--dry-run]` は、`emet chain` の準備チェックの後、各リポジトリで `/emet:run --draft <text>` セッションを開きます。`[--dry-run]` は、セッションを開始せずに予定されている起動内容を表示します。`emet fleet status [--json]` はグローバルジャーナルを読み、リポジトリごとに直近 24 時間以内の各セッションの最新状態（`ended` を除く）を表示します。`--json` では `{ repos: [{ repo, sessions: [{ sessionId, state, blocked, since, runId }] }], blocked: <count> }` を出力し、それ以外ではリポジトリごとに 1 行、`<repo>: <b> blocked, <w> working, <i> idle` を、ブロックされたリポジトリを先頭にして表示します。空の場合も終了コードは 0 です。[fleet ガイド](../guide/fleet.md)を参照してください。
-- `emet preflight [--run <id>] [--post-dispatch]`: リポジトリがディスパッチ可能な状態かどうかを確認します。
-- `emet skill-path <name>`: mattpocock-skills のスキルの `SKILL.md` の絶対パスを表示します。スキルが見つからない場合は終了コード 1 で終了します。
-- `emet selftest`: CLI 自体のユニットテストを実行します。ソースからのインストールのみ対応で、コンパイル済みバイナリは終了コード 1 で終了し、`emet doctor` を実行するよう案内します。
-
-任意の git リポジトリで:
+任意の git リポジトリで次を実行します。
 
 ```bash
 emet init          # autodetects package manager, trunk branch, tracker kind
 emet preflight      # confirms the repo is dispatch-ready
 ```
 
-`emet init` は、自力で推測できないもの（共有テストデータベースのロック、スキーマの所有者など）について、生成した `docs/agents/*.md` ファイルに `TODO(emet):` マーカーを残します。それらを埋めてください。マーカーが残っている間、`emet preflight` はディスパッチを拒否します。
+`emet init` は、自力で推測できないもの（共有テストデータベースのロック、スキーマの所有者など）について、生成した `docs/agents/*.md` ファイルに `TODO(emet):` マーカーを残します。これらを埋めてください。マーカーが残っている間、`emet preflight` はディスパッチを拒否します。
 
-その後、Claude Code 内で（Codex では同じ引数で `$emet:run` を使います）:
+その後、Claude Code 内で次を実行します（Codex では同じ引数で `$emet:run` を使います）。
 
 ```text
 /emet:run <describe the feature>              # interview → wave 1; later waves via --dispatch/autoChain
@@ -47,132 +30,531 @@ emet preflight      # confirms the repo is dispatch-ready
 /emet:run --dispatch <spec-id>                # dispatch a --draft'd spec later
 ```
 
+## セットアップと監査
+
+### `emet migrate`
+
+旧形式のリポジトリを emet の名前に変更します。
+
+- `--dry-run`
+
+### `emet init`
+
+パッケージマネージャー、トランクブランチ、トラッカーの種類、after-spec モード（[`handoff.afterSpec`](configuration.md#handoff) を参照）を自動検出します。Prisma スキーマ（`prisma/schema.prisma` または `prisma/schema/` フォルダー）や Drizzle のマイグレーションフォルダー（`drizzle.config.*` の隣にある `drizzle/`）を見つけた場合は [`schema.ownedPaths`](configuration.md#schema) を設定し、`emet.config.json` と `docs/agents/*.md` ファイルを書き出します。
+
+- `--tracker linear|github|local`: `--tracker local` はローカルトラッカーを設定します。
+- `--after-spec release|promote|none`
+- `--force`
+
+### `emet doctor`
+
+任意の数のリポジトリを一度に読み取り専用で監査します。既定はカレントディレクトリです。
+
+- `--all`
+- `<path> ...`: 監査するリポジトリ。
+
+[`verify.browser`](configuration.md#verify) を設定しているリポジトリでは、任意の `agent-browser` に関する指摘も報告します。バイナリがない場合は `indeterminate`（インストール方法を示す `optional:` 行）になり、バイナリがあるのに `agent-browser doctor` が失敗する場合は警告として表示されます。どちらもエラーにはならず、終了コードも変わりません。`verify.browser` がないリポジトリには何も表示されません。
+
 #### フリートチェック
 
-`emet doctor` は、複数のリポジトリを読み取り専用で一度に監査します。
+`emet doctor` は複数のリポジトリを一度に、読み取り専用で監査します。
 
 ```bash
 emet doctor ~/code/*
 ```
 
-リポジトリごとに次の項目を報告します。有効な `emet.config.json`、4 つの `docs/agents/*.md` ファイルがすべてあること、`TODO(emet):` マーカーが残っていないこと、`commands.selfCheck` のコマンドが実際に解決できるかどうか、そしてそのリポジトリのトラッカー固有の依存関係の検出結果（`gh`、Linear。[依存関係](dependencies.md#何が何を確認するか)を参照）です。mattpocock-skills プラグインと外部 CLI のフラグ（`gh`、およびエージェントホストのもの。Claude Code では `claude --bg` と `claude agents --json`、Codex では `codex exec --json` と `--output-schema`。`--help` で確認）は、リポジトリごとではなく、スイープ全体で 1 回だけ確認します。
+リポジトリごとに次を報告します。有効な `emet.config.json`、4 つの `docs/agents/*.md` ファイルがすべて存在すること、残っている `TODO(emet):` マーカーがゼロであること、`commands.selfCheck` のコマンドが実際に解決できるか、そしてそのリポジトリのトラッカー固有の依存関係の指摘（`gh`、Linear。[依存関係](dependencies.md#何が何を確認するか)を参照）です。
 
-### 実行、ワーカー、スロット
+mattpocock-skills プラグインと外部 CLI のフラグは、リポジトリごとではなく、スイープ全体で 1 回だけ確認されます。対象は `gh` と、エージェントホストのものです。Claude Code では `claude --bg` と `claude agents --json`、Codex では `codex exec --json` と `--output-schema` で、`--help` で確認します。
 
-- `emet claims --reserve <ticket> --run <id> --anchor <pid>`: 実行のためにチケットを予約します。`--release <ticket>`、`--list`、`--prune [--dry-run]` は、それぞれクレームの解放、クレームの一覧表示、古いクレームの整理を行います。
-- `emet slots --acquire --run <id> --anchor <pid> --ticket <ticket>`: `~/.local/state/emet/slots` にあるホスト全体のプールからワーカースロットを取得します。`--release --run <id>`、`--release-index <index>`、`--list` は、スロットの解放や一覧表示を行います。
-- `emet cleanup [--run <id> | --all] [--dry-run] [--force]`: 引数なしの場合は、作業がランディング済みの完了した実行または終了した実行を回収します。`--run` はこの実行を片付け、`--all` はリポジトリ全体のブランチ整理です。マージ後に `emet cleanup --run <runId>` を実行すると、ウェーブのブランチ、チケットのクレーム、ワーカースロットが解放されます。どのモードでも、PR がブランチの先端コミットでマージされたローカルブランチを、それを保持するクリーンでロックされていないエージェントのワークツリーとともに削除します。
-- `emet lock-reason --run <id> --ticket <ticket> [--anchor <pid>]`: ワーカーがブートストラップ時に書き込む `git worktree lock` の理由を表示します。
-- `emet launch <spec-id> --wave <n>`: Claude Code では、ウェーブを `claude --bg` セッションとして開始し、`handoff.launcher` に従って Orca タブを開きます（Codex については [Codex ホスト](#codex-ホスト)を参照）。起動の全体（重複セッションの確認、`claude --bg`、タブ）を行い、`{ name, id, attach, orcaTab: { opened, reason } }` を出力します。別のセッションで手動でウェーブを動かしたいときは、素の `claude --bg` ではなくこちらを使ってください。
-- `emet chain --ticket <id> --spec <id> --wave <n> [gate flags]`: 受け取ったゲートのフラグで `emet gate` を実行し、判定が `chain` のときだけ次のウェーブを開始します。起動前に準備状況（ホストのメモリ余裕、リポジトリと `/tmp` の空きディスクと inode、`orca` CLI）を確認し、起動後に子セッションが一覧に表示されることを確かめます。それ以外の判定、ブロックとなる準備上の問題（`low-memory`、`low-disk`、`low-inodes`、`orca-unavailable`）、または同じ仕様とウェーブの既存セッションがある場合は、理由とともに終了コード 1 で終了し、何も起動しません。
-- `emet status [--spec <id>] [--brief]`: ウェーブごとの Working / Checking / Ready / Needs-decision を JSON とサマリー行で表示します。`--brief` を指定すると、代わりに最大 3 行を表示します。全体の状態、人の対応待ちがあればその内容、次のアクションです。`emet status --help` に JSON の説明があります。JSON には `sessions[]` が含まれ、このリポジトリで直近 24 時間以内の各セッションの最新の `session.attention` イベント（`ended` を除く）を `{ sessionId, state, blocked, since, runId }` で返します。`state` が `needs-decision` のとき `blocked` は `true` です。ブロックされたセッションが 1 つでもあれば、ウェーブがなくても全体の状態は `needs-decision` になり、サマリー行にはブロック数が表示され、`--brief` では「人の対応待ち」の行に一覧されます。
-- `emet run current [--json]`: リポジトリのアクティブな実行 (実行 ID、スペック、ウェーブ、フェーズ、最終更新) を `.emet/phase.json` から読み取って表示します。アクティブな実行がない場合は `no active run` を表示して 0 で終了します。
-- `emet memory search --json <query> [--limit <n>]`: 過去の実行の教訓を [Engram](https://github.com/Gentleman-Programming/engram) から検索します。`match_mode: "any"` で検索し（`--limit` の既定値は 5、最大 20）、トピックキーが `emet/<repo>/lessons/` で始まるノートだけを残して、`content` を 2000 文字に切り詰めた `{available: true, results: [{id, topicKey, title, content}]}` を出力します。`<repo>` は `git remote get-url <repo.remote>` の最後のパス要素から `.git` を除いたもので、なければメインワークツリーのベース名です。
-- `emet memory save --json --key <spec-<id>|quick-<runId>> --run <runId> --outcome <landed|chained|hold|stop|blocked>`: 標準入力から 1 〜 5 個の教訓の箇条書き（それぞれ最大 300 文字の `- ` 行）を読み取り、トピックキー `emet/<repo>/lessons/<key>` のノートに `## <runId> — <outcome> (<date>)` セクションとして追記します。そのノートがなければ新規に作成します。20000 文字を超えたノートは最も古いセクションから削除されます。`{available: true, saved: true, topicKey}` を出力します。
-  - どちらのサブコマンドも、リポジトリのルートで `engram mcp --tools=agent` を起動して Engram と通信します。Engram プラグインは不要です。Engram に `project` を渡すことはありません。
-  - 終了コード: 使い方の誤り（サブコマンドなし、クエリなし、箇条書きなし、箇条書きが 5 個超、300 文字を超える箇条書き、未知の outcome、不正な key）は `2` です。Engram の問題（PATH にない、ハンドシェイク失敗、ツールエラー、タイムアウト、不正な JSON）はすべて `0` で終了します。ハンドシェイクが成功する前の出力は `{available: false, reason}`、成功後は `search` では `{available: true, results: [], reason}`、`save` では `{available: true, saved: false, reason}` です。`memory.enabled: "off"` では `{available: false, reason: "memory.enabled is off"}` を出力し、何も起動しません。[`memory`](configuration.md#memory) を参照してください。
-- `emet insights [--since <iso|7d|30d>] [--repo <path>] [--all] [--json] [--mark-baseline]`: [イベントジャーナル](../guide/journal.md)を読み取り、起点 (人間または自動) ごとの実行、判断と理由ごとのゲート判断、実行ごとの人間の介入、起動結果、クローズしたチケットを報告します。読み取れない行はスキップして数えます。`--mark-baseline` はベースラインを追記し、以降のレポートは `--all` を指定しない限りそれより後のイベントのみを対象にします。ジャーナルが空または存在しない場合は、ゼロのレポートを表示して 0 で終了します。
-- `emet usage [--session <id> | --file <path>] [--stalled [--minutes N]] [--project-dir <path>]`: セッションの使用状況を報告します。`--stalled` は停滞したワーカーを一覧表示します。
-- `emet handoff --check <path> [--expect-skills a,b] | --render <path>`: ワーカーの `.emet/handoff-<ticket>.md` ノートを検証または表示します。ノートには `skills:` セクションを含められ、`skills: none` または `skills: loaded: a, b; missing: c` と書きます。必須になるのは `state` が `done` のときだけで、それ以外の値はチェックに失敗します。`--expect-skills a,b`（check のみ）は、指定したスキルのうち `loaded` にも `missing` にも含まれないものごとにチェックを失敗させます。チェックに合格し、`missing` リストが空でない場合は `missing skills: …` を出力します。
-- `emet metrics [--run <id>]`: セッションのトランスクリプトから、チケットごと、ウェーブごと、実行ごとのトークン、API 換算コスト、経過時間を報告します。また、チケットごとに見積もったコンテキスト予算と、各ワーカーが実際に使った量も比較します。その要約は、実行の最終レポートの末尾に入ります。
+### `emet setup`
 
-### 計画、レビュー、ランディング
+任意のインストールを readline のプロンプトで提示します。
 
-- `emet promote --spec <id> [--dry-run] [--no-promote] [--hold]`: [`handoff.afterSpec`](configuration.md#handoff) に従う after-spec ステップです。`promote` モードでは、`chore: 🔖 promote develop` というタイトルで `develop` から `main` へのプルリクエストを開き、`emet ci --pr <n> --wait` で待機し、状態が `pass` のときだけマージコミットでマージします。その後、`develop` が `main` より遅れている場合にのみ、`main` から `develop` への同期プルリクエストを開き、同じ方法でそのチェックを待機し、状態が `pass` のときだけマージコミットでマージします。状態が `fail`、`timeout`、`env-fault` の同期プルリクエスト、またはマージが拒否された同期プルリクエストは開いたままになり、promote の結果は変わりません。プルリクエスト番号、`merged`、`syncPrNumber`、`syncMerged`、`syncReason`、`rule`、`reason` を持つ `promote` イベントを 1 件ジャーナルに追記します。`afterSpec` はルールのリストにでき、その場合のモードは、`develop` をプロモートすると取り込まれるパスから選ばれます（[`handoff.afterSpec`](configuration.md#handoff) を参照）。`git fetch` または `git diff` が失敗すると、プルリクエストを開く前に終了コード 1 で終了します。出力される結果には `rule`（一致したルールのインデックス。文字列形式または一致なしの場合は `null`）、`reason`、`syncPrNumber`（同期プルリクエストを開かなかった場合は `null`）、`syncMerged`、`syncReason`（同期プルリクエストが開いたままになった理由を述べる文。なければ `null`）、`deployCheck: { run, reason }` が含まれ、コーディネーターが `emet deploy-check` を実行すべきかどうかを示します。`release` モードでは何もマージせず、リリースのプルリクエストは人に任せます。`afterSpec` が `none` の場合、`--no-promote` を付けた場合、または spec の最後のウェーブが開いたまま、もしくはフラグが付いたままの場合は、`skipped` の注記を付けて終了コード 0 で終了します。ただし、クリーンな最後のウェーブの後でも実行され、結果に `deployCheck` の判断が含まれます（トランク `main` では、モードに関係なくデプロイチェックが実行されます）。CI が `pass` でなければ何もマージせず、終了コード 1 で終了します。`--dry-run` ではプルリクエストを開きません。 `emet promote --spec <id> --hold` はマーカー `<run dir>/runs/<id>/no-promote` を書き込み `{"held":true}` を出力します。マーカーがある間、`emet promote --spec <id>` は pull request を開かずに終了コード 0 と `skipped` の注記で終了するため、`--no-promote` は仕様の複数セッションにわたって保持されます。
-- `emet deploy-check [--json]`: `deploy.check.command` が終了コード 0 で終わるまで、最大 `retries` 回または `timeoutSeconds` 秒の範囲で、試行の間に `intervalSeconds` 秒待ちながら実行し、`attempts` とともに `state: ok | failed | timeout` を出力します。終了コードは `0` が ok、`1` が failed、`3` が timeout です。`deploy.check` が未設定の場合は、`skipped: "no deploy check configured"` を出力して終了コード 0 で終了します。コーディネーターは、`emet promote` の結果で `deployCheck.run` が true の場合にのみこれを実行します。[`deploy`](configuration.md#deploy)を参照してください。
-- `emet validate --spec <id> | --file <path>`: 計画の検証です。[ゲートと記録](#ゲートと記録)を参照してください。
-- `emet surfaces --check <file.json | ->`: ウェーブ内のチケット間で、編集を許可するサーフェスのグロブが重複している場合は拒否します。
-- `emet approve --run <id>`、`emet materialize-log`、`emet results`、`emet verify`、`emet review-package`、`emet review`、`emet gate`: [ゲートと記録](#ゲートと記録)を参照してください。
-- `emet approve --run <id> --spec <file> [--tickets <file>] --quick`: `approval.json` に `"mode": "quick"` を書き込みます。`--quick` がなければこのフィールドはなく、この変更より前に書かれた記録も `--check` を通ります。`emet landed`、`emet status`、`emet preflight` は `resolveLandingUnit` を通してランディング単位を読みます。これは **Quick run** では `"wave"` を、それ以外では `landing.unit` を返すため、Quick run がスペックブランチを前提にすることはありません。
-- `emet assess --base <ref> --head <ref>`: 差分を `passive`、`medium`、`high` に分類し、ティア、その理由、推奨されるレビュアーのモデルとエフォートに加えて、`browserVerify: { run, reason }` を JSON で出力します。`run` が `true` になるのは、そのティアにレビュアーがいて、[`verify.browser`](configuration.md#verify) が設定されており、`agent-browser` バイナリが PATH 上にあり、`paths` が設定されている場合は変更されたパスが一致するときだけです。そうでなければ、`reason` が最初に満たされなかった条件を示します。[モデルとエフォート](../../README.md#models--effort)と [`review`](configuration.md#review) を参照してください。 `--quick` を付けると、同じ JSON に `"quickRejected": true|false` を加えて出力し、ティアが `high` のとき終了コード 1、それ以外は 0 で終了します。`--quick` がなければ出力と終了コードは変わりません。`/emet:run --quick` は終了コード 1 をゲートの **Stop** として扱います。`dualReview: { run, reason }` も出力します。`run` が `true` になるのは、ティアが `high`、`agentHost` が `claude`、[`review.dual`](configuration.md#review) が `off` ではなく、`codex` バイナリーが PATH にある場合だけです。それ以外では `reason` が最初に満たされなかった条件を示します。
-- `emet land --spec <s> --branch <integration> --tickets <id,...>`: 統合ブランチをローカルのトランクにマージします（`landing.mode` が `merge` の場合）。CI の代わりに `commands.selfCheck` を使い、何もプッシュしません。
-- `emet spec-branch ensure|integrate|status|sync|land|abandon --spec <id>`: `landing.unit: spec` のスペックブランチ `spec/<id>`（[`landing`](configuration.md#landing) を参照）。すべて JSON を出力します。`ensure` はトランクからブランチを作成し（冪等）、`.emet/specs/<id>/branch.json` を書き込み、別のスペックのブランチがチェックアウトされている場合は拒否します。`integrate --wave <n> --branch <integration> --tickets a,b` はウェーブのブランチを `--no-ff` で `spec/<id>` にマージし、トレーラー `Emet-Wave` と `Emet-Tickets` を付け、ウェーブを記録し、`spec.integrate` を追記します。`landing.pushSpecBranch` が true の場合は、PR を開かずにブランチをプッシュします。`status` は `branch`、`tip`、統合済みのウェーブとチケット、`behindTrunk` を出力し、ウェーブが欠けている場合はトレーラーから `branch.json` を再構築します。`sync` はトランクをブランチにマージし、リベースは行わず、競合した場合は中断してパスを列挙し、ゼロ以外の終了コードで終了します。`land [--partial]` は同期した後、`pr` モードではブランチをプッシュし、チケットごとに `Closes` 行を入れた PR を 1 つ開き、そのチェックを待って、`landing.specMergeMethod`（既定ではマージコミットで、`pr.mergeMethod` は無視）でマージします。`merge` モードでは `--no-ff` でローカルのトランクにマージし、プッシュは行いません。`spec.land` を追記します。`abandon --force` は `abandoned/spec-<id>` にタグを付け、ブランチを削除し、`spec.abandon` を追記し、ローカルトラッカーの統合済みチケットを `ready-for-agent` にリセットします。`--force` がない場合は拒否します。`emet tracker frontier` は `branch.json` に載っているチケットをクローズ済みのブロッカーとして数え、`emet status` には `specBranch`（`branch`、`tip`、`integratedWaves`）が加わります。
-- `emet spec-merge --spec <id>`: スペックの `ADDED`/`MODIFIED`/`REMOVED` の要件の差分を `docs/specs/<area>.md`（`specs.dir`）にマージします。`specs.enabled` がオンのとき、コーディネーターが差分を書き、スペックごとに最後のウェーブの統合ブランチで、そのレビューの前に一度だけ実行し、その結果をコミットします。`--deltas-dir` は差分を置くディレクトリを出力します。何かを書き込む前にすべてのエリアを確認します。競合がある場合や、シナリオが失われる要件がある場合は、終了コード 1 で終了し、どのファイルにも手を加えません。`specs.enabled` がオフのときは何もマージせず、終了コード 0 で終了します。
-- `emet map [--refresh]`: 既存のコードベースの概要（スタック、構造、規約、テスト、ホットスポット）を `docs/agents/codebase.md`（`map.path`）に書き出し、作成元のコミット SHA を刻印します。同じコミットからは常に同じファイルが生成されます。`emet map --stale` は、HEAD が刻印より先に進むと終了コード 1 で終了し、その場合 `emet preflight` は警告します。`emet map --for <globs>` は、チケットの編集対象に一致するセクションだけを出力します。その出力が、ワーカーのブリーフに含まれるマップの唯一の部分です。
-- `emet tracker create-spec|create-ticket|read|frontier|set-state|comment|close`: `.scratch/` 上のローカルトラッカーで、標準出力は JSON です。[ローカルトラッカー](#ローカルトラッカー)を参照してください。
-- `emet guard`: Claude Code の `PreToolUse` フックで、標準入力からフックの JSON を読み取ります（Codex の形式は [Codex ホスト](#codex-ホスト)にあります）。`emet self install` が `~/.claude/settings.json` に組み込みます。無人実行で失敗の引き金になることが知られているいくつかの操作をブロックします（`emet/src/guard.ts` を参照）。
+- `--yes`
+- `--with <ids>`
+- `--list`
+- `--json`
+- `--dry-run`: `--with`、`--yes`、`--json` と組み合わせられます。選ばれた各項目の予定ステップ、または `already-present` を表示し、何も変更しません。コマンドを実行せず、ファイルも台帳エントリも書かず、終了コードは 0 です。
+- `--restore <id>`: 復元できる 2 つの項目のうち 1 つを元に戻します。[セットアップ台帳と復元](#セットアップ台帳と復元)を参照してください。
 
-### ローカルトラッカー
+TTY がない場合、または `--yes` か `--with` を指定した場合は、何も尋ねず、指定された項目だけをインストールします。TTY がなく `--with` もない場合は、何もインストールせず `--list` のカタログを表示します。各ステップは `installed`、`already-present`、`skipped`、`failed` のいずれかを報告します。1 つ失敗しても他は止まらず、失敗が 1 つでもあれば終了コードは 1 です。`/emet:setup` はプラグインの入口で、同じ選択肢を `AskUserQuestion` で尋ねます。`installed` になった項目はすべて Setup ledger（セットアップ台帳）に記録されます。
 
-`tracker.kind: "local"` の場合、スペックとチケットはメインワークツリーの `.scratch/` 配下（バージョン管理されません）にある Markdown ファイルです。`.scratch/<slug>/spec.md` と `.scratch/<slug>/issues/<NN>-<slug>.md` で、それぞれ `Status:` 行と `Blocked by:` 行を持ち、コメントは `## Comments` の下に置きます。コーディネーターは `emet tracker`（`create-spec`、`create-ticket`、`read`、`frontier`、`set-state`、`comment`、`close`）を通じてこれらを読み書きします。`emet init --tracker local` でこの構成を設定できます。[ADR-0011](../adr/0011-local-tracker-scratch-convention.md) を参照してください。
+項目は次のとおりです。
 
-`landing.mode` は `"pr"`（既定）または `"merge"` で、トラッカーとは独立しています。`merge` モードでは、ウェーブは `emet land` によるトランクへの 1 回のローカルマージとしてランディングし、CI の代わりに `commands.selfCheck` を使い、プッシュは行いません。`landing.unit: "spec"`（既定）では、スペック全体が `emet spec-branch land` によって 1 回だけランディングします。`gh` が必要なのは、トラッカーが `github` の場合か、ランディングが `pr` の場合だけです。[ADR-0010](../adr/0010-local-merge-landing.md) と [`landing`](configuration.md#landing) を参照してください。
+- `mattpocock-skills`（既定でオン）、`engram`、`mascot`、`orca-pet`、`gh-auth`。
+- `agent-browser`（既定でオフ）: `bun add -g agent-browser@latest` を実行してから `agent-browser install` を実行し、`~/.agent-browser/config.json` が存在しない場合に限り、`contentBoundaries: true` と `maxOutput: 50000` を書き込みます。その後 `agent-browser doctor` を実行し、失敗した場合は警告を表示します。バージョンを固定せず、`--with-deps` も渡さないため、システムライブラリが不足している場合は、実行すべきコマンドを表示します。
+- `context7`（既定でオフ）: `bun add -g ctx7@latest` を実行し、続いて `ctx7 setup --cli --claude --yes` を、`codex` が PATH にある場合に限り `ctx7 setup --cli --codex --yes` も実行します。インストールするのは `ctx7` CLI とその `find-docs` スキルで、MCP サーバーではありません。バージョンは固定せず、`ctx7 setup` のステップが失敗した場合は、手動で実行するコマンドを表示します。`CTX7_TELEMETRY_DISABLED=1` を設定しない限り、`ctx7` は匿名の利用イベントを送信します。環境に `CONTEXT7_API_KEY` がある場合は、`ctx7 login` で保存されたアカウントより優先されます。
+- `firecrawl-local`（既定でオフ）: `cargo` が必要で、バイナリがない場合は `cargo install firecrawl-local` を実行します。その後、`FIRECRAWL_CLOUD=search` と `--public-only` を付けてユーザースコープの Claude Code MCP サーバーを登録し、設定の異なる以前の登録は置き換えます。スクレイプ、クロール、マップはマシン上で実行され、Web 検索だけが Firecrawl Cloud に送られ、プライベートアドレスはブロックされます。
+  - `agent-browser` がダウンロードした最新の Chrome を `FIRECRAWL_CHROME_PATH` として渡します。
+  - AppArmor が特権のないユーザー名前空間を制限している Linux では、AppArmor プロファイルと、それを読み込むための `sudo` コマンドを表示します。Firecrawl Local は、サンドボックスなしで Chrome を実行することがないためです。
+  - 使用可能な Chrome がない場合、JavaScript でレンダリングされるページは空で返ります。
+- `claude-settings`: 推奨される Claude Code の設定です。選択した場合にのみ、`settings.json` のタイムスタンプ付きバックアップを取ったうえで適用されます。
 
-### PR のランディングとウェーブの連鎖
+#### セットアップ台帳と復元
 
-`landing.unit: "spec"` では PR はスペックのものです。最終ウェーブの後に `emet spec-branch land` が開く、統合済みの全ウェーブをまとめた 1 つの PR です。`landing.unit: "wave"` では、1 つのウェーブは 1 つの PR です。本文には各チケットにつき 1 行の `Closes #N`（トラッカーのクローズ用キーワード）が入り、コーディネーターは PR を開く際にチケットをレビュー中に移します。その後、PR は `pr.autoMerge` に従ってマージされます。ウェーブにフラグが立っている場合、`autoMerge` が `false` の場合、または CI の修正回数を使い切った場合は、PR は開いたままになります（その場合、PR には人間の判断が必要であることを示すラベルが付きます）。後続のウェーブは、ウェーブ 1 を実行したセッションではなく、それぞれ独自のセッションで実行されます。次に何が起きるかは `pr` セクションと `handoff` セクションで制御します。[`pr`](configuration.md#pr) と [`handoff`](configuration.md#handoff) を参照してください。
+`emet setup` は、`installed` で終わったすべての項目を、状態ディレクトリ内の `setup-ledger.json` に `{ id, at, undo }` として記録します。`already-present` の項目は何も記録せず、同じ id が再度 `installed` になっても、最初のエントリの変更前の状態が保持されます。台帳の書き込みはアトミックで、不正な形式の台帳は、空として読まれることなく、そのパスを示すエラーになります。
 
-`emet ci --pr <n> --wait [--rerun-flakes] [--timeout-minutes <m>]` は、PR のチェックが完了するかタイムアウト（デフォルト 30）になるまでポーリングします。`--rerun-flakes` を付けると、失敗した各チェックを `gh run rerun --failed` で 1 回だけ再実行し、再実行で通ったチェックは Flake になります。`state: pass | fail | env-fault | timeout`、失敗したチェック、`flakeReruns` を出力し、マージは行いません。チェックのない PR は `noChecks: true` 付きの `pass` です。終了コードは `0` が pass、`1` が fail または env-fault、`3` が timeout です。`env-fault` は `STARTUP_FAILURE` で終わった、または長時間キューに残ったチェックを指します。コードの失敗ではなく、CI が一度も実行されなかったことを意味します。
+undo レコードには、元に戻すために必要なものが入っています。
 
-`tracker.kind: "github"` の場合、`emet tracker close <ticket>... [--pr <n>]` は各チケット（`CLA-<n>`、`#<n>`、または数字のみ）を `gh issue close --reason completed` でクローズし、状態を確認して `closed` または `already-closed` を報告します。`--pr` を付けるとコメント "Landed in #<n>" が追加されます。チケットの処理後、クローズした各チケットの親スペック issue を読み取り（`gh issue view <n> --json parent`）、`subIssuesSummary` がすべてのサブ issue の完了を示していれば、そのスペックをコメント "All <total> tickets landed." 付きで completed としてクローズし、`specs` に `closed`、`open`、`already-closed`、`failed` のいずれかで報告します。スペックの読み取りまたはクローズに失敗した場合も `1` で終了します。残りを処理したあと、失敗したチケットがあれば `1` で終了します。Linear のチケットは、コーディネーターが Linear MCP を通じて Done であることを確認します。
+- `claude-settings`: 以前の `model`（またはなし）、実際に追加した deny ルール、バックアップのパス。
+- `firecrawl-local`: 以前のユーザースコープの MCP エントリ（`claude mcp remove` を実行する前に `~/.claude.json` から読み取ったもの）と、emet が `cargo install` を実行したかどうか。
+- プラグイン: プラグインの id。
+- `orca-pet`: 書き込まれたファイル。
+- `agent-browser`: bun のグローバルパッケージ（および emet が作成した場合は設定ファイル）。
+- `context7`: bun のグローバルパッケージ。
+- `engram`: brew の formula とプラグイン。
 
-### Codex ホスト
+`emet setup --restore <id>` が受け付けるのは `claude-settings` と `firecrawl-local` だけで、それ以外の id は終了コード 2 で終了します。
 
-これらのコマンドは Codex エージェントホスト (`agentHost` が `"codex"`) 用です。[Codex ガイド](../guide/codex.md)を参照してください。
+- `claude-settings` は、以前の `model` を復元し（なかった場合はキーを削除し）、emet が追加した deny ルールだけを削除します。その前にタイムスタンプ付きバックアップを取ります。現在の `model` がセットアップで設定されたものでない場合は、それを保持して警告を表示します。
+- `firecrawl-local` は `claude mcp remove firecrawl-local -s user` を実行し、エントリが記録されていた場合は続けて `claude mcp add-json firecrawl-local '<previous json>' -s user` を実行します。
 
-- `emet dispatch --role worker --run <id> --ticket <id> --prompt-file <file> [--model <m>] [--effort <e>] [--root <dir>]`: クレームとスロットを確認したあと、`.emet/worktrees/agent-<ticket>` を作り、実行ごとの `CODEX_HOME` オーバーレイを構築して、ワーカーを切り離した `codex exec` として起動します。`emet dispatch --wait --run <id> --ticket <id> [--timeout <s>]` は終了まで待ち、記録された結果ステータスを出力します。
-- `emet review-run --run <id> --ticket <id> --package <file> --tier <medium|high|passive> [--browser-verify true|false]`: `emet review-package` が作ったパッケージに対して、レビュアーを読み取り専用の `codex exec` として実行し、`emet review --findings` 向けの指摘 JSON を出力します。`passive` ティアではプロセスを起動しません。`--browser-verify` の既定は `false` です。`true` を指定するとプロンプトの末尾に Browser 軸が付き、`--session review-<run>` は `--run` から埋められるため、Codex レビュアーは Claude レビュアーと同じように UI を検証します（`emet assess` が `browserVerify.run: true` を出力したときに渡してください。[`verify`](configuration.md#verify) を参照）。フラグがなければプロンプトは変わらず、`true` と `false` 以外の値は使い方の行を出して終了コード 2 で終了します。`--coverage-out <file>` は Codex レビュアーの Coverage verdicts をファイルに書き出します。レビュアーが 1 つだけ動く Codex ホストで使い、標準出力には引き続き指摘が出力されます。指摘の出力では、任意のフィールド `s` と `userOption` も受け付けます。
-- `emet launch <spec-id> --wave <n>`: このホストでは、`$emet:run --dispatch <spec>` を実行する切り離した `codex exec` を起動し、そのスレッド ID を記録します。Orca のタブは開かず、`codex exec resume <id>` でセッションを再開できます。
-- `emet guard`: `EMET_AGENT_HOST=codex` のとき Codex のフック入力を読み、`apply_patch` のパスを `.emet/surface.json` と照合し、プロンプト行 `approve <id>` が届くまで承認ゲートを閉じたままにします。
+復元に成功すると台帳のエントリが削除されます。エントリのない id は `nothing to restore for <id>` を表示して終了コード 1 で終了します。
+
+`emet uninstall` は、台帳のすべてのエントリを同じ方法で元に戻します。`claude-settings` と `firecrawl-local` は `--restore` と同様に、プラグインは `claude plugin uninstall <id>` で、`orca-pet` のファイルと emet が作成した agent-browser の設定は削除によって戻します。brew、bun、cargo のグローバルパッケージについては、削除コマンド（たとえば `bun remove -g ctx7`）を表示するだけで、実行はせず、`gh auth` にも触れません。元に戻したエントリは台帳から削除され、1 つの追加項目が失敗しても他は止まりません。
+
+### `emet self install`
+
+スタンドアロンのインストールです: `emet self install [latest|X.Y.Z]`。
+
+- `--dry-run`: すべての書き込みを一覧表示し、何も書き込みません。
+- `--force`: emet プラグインがインストールされていても続行します。指定しない場合、プラグインがインストールされている間はコマンドが拒否されます。
+- `--from <checkout>`: Bun のソースインストールを再現します。CLI のソースが `~/.claude/emet` にコピーされ、`~/.local/bin/emet` はそれに対して `bun` を実行するラッパーになるため、`emet selftest` が動作します。`bun` がない場合は失敗します。コントリビューターは `emet self install --from .` を使います。
+
+バイナリを `~/.local/share/emet/versions/<v>/emet` に配置してシンボリックリンク `~/.local/bin/emet` を張り、リファレンスプロンプトと `.install-manifest.json` を `~/.claude/emet/` に、コマンドを `~/.claude/commands/emet/` に、エージェントを `~/.claude/agents/` に書き込みます。
+
+emet のフックを `~/.claude/settings.json` にマージします（バックアップを取り、他のフックには触れません）。Codex がある場合は、スキルを `~/.agents/skills` に書き込み、フックを `$CODEX_HOME/hooks.json`（既定は `~/.codex`）に追記します。`config.toml` は書き込まれないため、`/hooks` でフックを一度承認してください。
+
+2 回目の実行では何も変わりません。編集されたファイルは保持され、新しいバージョンは `<file>.new` として隣に置かれます。[インストール](../start/install.md)の 1 行のインストールスクリプトは、リリースバイナリをダウンロードし、`SHA256SUMS` を検証して、このコマンドを実行します。
+
+### `emet self update`
+
+`emet self update [latest|X.Y.Z]` は、リリースをダウンロードし、`SHA256SUMS`（`gh` がある場合は attestation も）を検証して、ステージングします。シンボリックリンクとインストール済みファイルの入れ替えは、ワーカースロットが保持されていないときにのみ行われ、そうでない場合は次のセッション開始まで保留されます。失敗しても現在のバージョンには触れず、ジャーナルに記録されます。以前のバージョンはロールバック用に保持され、それより古いものは削除されます。プラグインでのインストールでは何もしません。
+
+- `--auto [off|on]`: `SessionStart` フックが実行するものです。1 日に最大 1 回、デタッチされて実行され、オフラインのときは何も出力しません。`off` または `on` で切り替えます。`EMET_AUTO_UPDATE=0` でも無効になります。
+
+### `emet uninstall`
+
+`emet self install` によるインストールと、`emet setup` が追加したものを削除します。最初にプラン全体を作成してから実行します。
+
+- `--dry-run`: プランを表示し、何も変更しません。
+- `--yes`: 確認を省略します。TTY があり `--yes` がない場合は一度だけ尋ね、TTY も `--yes` もない場合は、プランを表示し、何も変更せず、終了コード 0 で終了します。
+- `--purge`: 状態ディレクトリ（`EMET_STATE_DIR`、なければ `XDG_STATE_HOME/emet`）と `~/.emet` も削除します。指定しない場合、どちらも残ります。
+- `--json`: 結果を JSON で表示します。
+
+削除されるもの:
+
+- インストールマニフェスト内の、ハッシュが記録されたものと一致するすべてのファイルと、その `.new` ファイル。編集されたファイルは残り、一覧表示されます。
+- シム `~/.local/bin/emet`。ただし、インストールのラッパー、または `~/.claude/emet` か `~/.local/share/emet/versions` へのシンボリックリンクである場合に限ります。続いてマニフェストと、空になったディレクトリ。
+- `~/.claude/settings.json` と `$CODEX_HOME/hooks.json`（既定は `~/.codex`）から、あらゆるイベント内のすべての emet フックコマンド（`emet guard`、`emet setup --notice`、`emet whats-new --hook`、`emet self update --auto`）。他のフックはすべて保持し、空になったグループとイベントは削除します。
+- `~/.agents/skills/emet/` 配下の、この emet と一致する Codex スキル（編集されたものは残り、一覧表示されます）、バージョンディレクトリ `~/.local/share/emet/versions`、インストール状態 `~/.local/share/emet/install.json`。
+- Setup ledger の追加項目（[セットアップ台帳と復元](#セットアップ台帳と復元)を参照）。
+
+インストールのバックアップ（`.pre-emet-guard-backup.`）が残っているものとまったく同じ内容を保持している場合は、そのバイト列が復元されます。何も残っていない場合はファイルが削除されます。それ以外の場合は、先にタイムスタンプ付きバックアップが書き込まれます。
+
+マニフェストもインストール状態もない場合（プラグインでのインストール）は、ファイルの処理を省略し、`claude plugin uninstall emet@emet-marketplace` を表示します。`codex` が PATH にある場合は、Codex プラグインの削除方法も表示します。いずれかのステップが失敗した場合、または読み取る必要のあるファイル（マニフェスト、設定、台帳）が読めない場合は、そのパスを示して終了コード 1 で終了します。
+
+### `emet whats-new`
+
+emet の更新後に、一度だけお知らせを表示します。
+
+- `--hook`: `SessionStart` フックが実行する形式。
+
+### `emet fleet`
+
+`--root`（既定は `~/code`）の 1 階層下にある、`emet.config.json` を持つ git リポジトリ全体を対象に動作します。[フリートガイド](../how-to/check-a-fleet.md)を参照してください。
+
+- `emet fleet list [--root <dir>] [--json]`: リポジトリを `tracker.kind`、`handoff.autoChain`、`models.worker` とともに一覧表示します。
+- `emet fleet set <key> <value> [--root <dir>] [--dry-run]`: 一覧にあるすべてのリポジトリで、設定キーを 1 つ変更します。最初に設定ローダーで検証します（無効な値は何も変更せず、終了コード 1 で終了します）。
+- `emet fleet launch --feature <text> [--root <dir>] [--repos <a,b>] [--dry-run]`: `emet chain` の準備チェックを行ったうえで、各リポジトリで `/emet:run --draft <text>` のセッションを開きます。`--dry-run` はセッションを開始せずに、予定された起動を表示します。
+- `emet fleet status [--json]`: グローバルジャーナルを読み、過去 24 時間以内の各セッションの最新の状態をリポジトリごとに表示します（`ended` は除く）。
+
+`fleet status` は、リポジトリごとに `<repo>: <b> blocked, <w> working, <i> idle` の 1 行を、ブロックされたリポジトリを先頭にして表示します。`--json` は `{repos: [{repo, sessions: [{sessionId, state, blocked, since, runId}]}], blocked: <count>}` を表示します。セッションがない場合も終了コードは 0 です。
+
+### `emet preflight`
+
+リポジトリがディスパッチ可能であることを確認します。
+
+- `--run <id>`
+- `--post-dispatch`
+
+### `emet skill-path`
+
+`emet skill-path <name>` は、mattpocock-skills のスキルの `SKILL.md` の絶対パスを表示します。スキルが見つからない場合は終了コード 1 で終了します。
+
+### `emet selftest`
+
+CLI 自身のユニットテストを実行します。ソースからのインストールのみで、コンパイル済みバイナリは終了コード 1 で終了し、`emet doctor` を実行するよう案内します。
+
+## 実行、ワーカー、スロット
+
+### `emet claims`
+
+実行のためにチケットを予約します: `emet claims --reserve <ticket> --run <id> --anchor <pid>`。
+
+- `--release <ticket>`: 予約を解放します。
+- `--list`: 予約を一覧表示します。
+- `--prune [--dry-run]`: 古い予約を削除します。
+
+### `emet slots`
+
+`~/.local/state/emet/slots` にあるホスト全体のプールから、ワーカースロットを取得します: `emet slots --acquire --run <id> --anchor <pid> --ticket <ticket>`。
+
+- `--release --run <id>`: その実行のスロットを解放します。
+- `--release-index <index>`: スロットを 1 つ解放します。
+- `--list`: スロットを一覧表示します。
+
+### `emet cleanup`
+
+`emet cleanup [--run <id> | --all] [--dry-run] [--force]`。引数なしの場合は、作業がランディング済みの、クローズされた、または終了した実行を回収します。マージ後に `emet cleanup --run <runId>` を実行すると、そのウェーブのブランチ、チケットの予約、ワーカースロットが解放されます。
+
+- `--run <id>`: この実行をクリーンアップします。
+- `--all`: リポジトリ全体のブランチを一掃します。
+- `--dry-run`
+- `--force`
+
+どのモードでも、PR がブランチの先端コミットでマージされたローカルブランチを、それを保持するクリーンでロックされていないエージェントのワークツリーとともに削除します。
+
+### `emet lock-reason`
+
+`emet lock-reason --run <id> --ticket <ticket> [--anchor <pid>]` は、ワーカーがブートストラップ時に書き込む `git worktree lock` の理由を表示します。
+
+### `emet launch`
+
+`emet launch <spec-id> --wave <n>`: Claude Code では、ウェーブを `claude --bg` セッションとして開始し、`handoff.launcher` に従って Orca タブを開きます（Codex については [Codex ホスト](#codex-ホスト)を参照）。起動の全体（重複セッションのチェック、`claude --bg`、タブ）を行い、`{ name, id, attach, orcaTab: { opened, reason } }` を表示します。別のセッションで手動でウェーブを起動したいときは、素の `claude --bg` ではなく、これを使ってください。
+
+### `emet chain`
+
+`emet chain --ticket <id> --spec <id> --wave <n> [gate flags]` は、渡されたゲートフラグで `emet gate` を実行し、判定が `chain` の場合にのみ次のウェーブを開始します。
+
+起動する前に、準備状況（ホストのメモリの余裕、リポジトリと `/tmp` の空きディスクと inode、`orca` CLI）を確認し、起動後は子セッションが一覧にあることを確認します。それ以外の判定、準備に関するブロッキングの問題（`low-memory`、`low-disk`、`low-inodes`、`orca-unavailable`）、または同じスペックとウェーブの既存セッションがある場合は、理由を表示して何も起動せず、終了コード 1 で終了します。
+
+### `emet status`
+
+`emet status [--spec <id>] [--brief]` は、ウェーブごとの Working / Checking / Ready / Needs-decision を JSON とサマリー行で表示します。`emet status --help` に JSON の説明があります。
+
+- `--spec <id>`
+- `--brief`: 代わりに最大 3 行を表示します。全体の状態、人を待っているもの（あれば）、次のアクションです。
+
+JSON には `sessions: [{sessionId, state, blocked, since, runId}]` も含まれます。これは、このリポジトリの emet が所有する各セッションの、過去 24 時間以内の最新のアテンション状態で、`ended` のセッションは除かれます。`blocked` は `state` が `needs-decision` のとき true で、`since` はその状態になった時刻です。ブロックされたセッションが 1 つでもあれば、アクティブなウェーブがない場合でも、全体の `state` は `needs-decision` になります。サマリー行にはブロックされたセッションの数が示され、`--brief` は人を待っているものの行にそれらを一覧表示します。
+
+### `emet run`
+
+`emet run current [--json]` は、`.emet/phase.json` から読み取った、リポジトリのアクティブな実行（実行 id、スペック、ウェーブ、フェーズ、最終更新）を表示します。アクティブな実行がない場合は `no active run` を表示し、終了コード 0 で終了します。
+
+### `emet memory`
+
+[Engram](https://github.com/Gentleman-Programming/engram) でレッスンを検索し、保存します。
+
+- `emet memory search --json <query> [--limit <n>]`: 以前の実行からのレッスンを検索します。`match_mode: "any"` で検索し（`--limit` の既定は 5、最大 20）、トピックキーが `emet/<repo>/lessons/` で始まるノートだけを残して、`{available: true, results: [{id, topicKey, title, content}]}` を表示します。`content` は 2000 文字に切り詰められます。`<repo>` は、`git remote get-url <repo.remote>` の最後のパスセグメントから `.git` を除いたもので、なければメインワークツリーのベース名です。
+- `emet memory save --json --key <spec-<id>|quick-<runId>> --run <runId> --outcome <landed|chained|hold|stop|blocked>`: 標準入力から 1 〜 5 個のレッスンの箇条書き（それぞれ最大 300 文字の `- ` 行）を読み取り、トピックキー `emet/<repo>/lessons/<key>` のノートに `## <runId> — <outcome> (<date>)` セクションとして追記します。ノートがなければ新規作成します。20000 文字を超えたノートは、最も古いセクションから削除されます。`{available: true, saved: true, topicKey}` を表示します。
+
+どちらのサブコマンドも、リポジトリのルートで `engram mcp --tools=agent` を起動して Engram と通信します。Engram プラグインは不要です。Engram に `project` を渡すことはありません。
+
+終了コード: `2` は使い方の誤りです（サブコマンドがない、クエリがない、箇条書きがない、箇条書きが 5 個を超える、300 文字を超える箇条書きがある、不明な outcome、不正なキー）。Engram に関する問題（PATH にない、ハンドシェイクの失敗、ツールエラー、タイムアウト、不正な JSON）は、すべて `0` で終了します。
+
+- ハンドシェイクに成功する前の出力は `{available: false, reason}` です。
+- 成功した後は、`search` では `{available: true, results: [], reason}`、`save` では `{available: true, saved: false, reason}` です。
+- `memory.enabled: "off"` は `{available: false, reason: "memory.enabled is off"}` を表示し、何も起動しません。[`memory`](configuration.md#memory) を参照してください。
+
+### `emet insights`
+
+[イベントジャーナル](../concepts/attention-and-journal.md)を読み、実行を起点（人か自動か）別に、ゲートの判定を判定と理由別に、実行ごとの人間の介入、起動の結果、クローズされたチケットを報告します。読めない行はスキップされ、数えられます。ジャーナルが空、またはない場合は、ゼロのレポートを表示して終了コード 0 で終了します。
+
+- `--since <iso|7d|30d>`
+- `--repo <path>`
+- `--all`
+- `--json`
+- `--mark-baseline`: ベースラインを追記します。`--all` を指定しない限り、以降のレポートはそれより後のイベントだけを対象にします。
+
+### `emet usage`
+
+セッションの使用量を報告します。
+
+- `--session <id>` または `--file <path>`
+- `--stalled [--minutes N]`: 停止したワーカーを一覧表示します。
+- `--project-dir <path>`
+
+### `emet handoff`
+
+`emet handoff --check <path> [--expect-skills a,b] | --render <path>` は、ワーカーの `.emet/handoff-<ticket>.md` ノートを検証または描画します。
+
+- `--check <path>`: ノートを検証します。チェックに通り、`missing` リストが空でない場合は `missing skills: …` を表示します。
+- `--expect-skills a,b`（check のみ）: `loaded` リストにも `missing` リストにもない、指定したスキルごとにチェックを失敗させます。
+- `--render <path>`: ノートを描画します。
+
+ノートには `skills:` セクションを含めることができ、`skills: none` または `skills: loaded: a, b; missing: c` と書きます。必須なのは `state` が `done` のときだけで、それ以外の値はチェックに失敗します。
+
+### `emet metrics`
+
+`emet metrics [--run <id>]` は、セッションのトランスクリプトを読んで、チケット別、ウェーブ別、実行別のトークン、API 換算コスト、経過時間を報告します。また、チケットごとに見積もったコンテキスト予算と、各ワーカーが実際に使った量を比較します。そのサマリーは、実行の最終レポートの末尾に入ります。
+
+### `emet ask`
+
+ワーカーのメールボックスです。コーディネーターに質問するか、返信を待ちます。
+
+- `--run <id>`
+- `--ticket <ticket>`
+- `--body <text>`: 質問を送信します。
+- `--wait <n>`: 返信を待ちます。
+- `--slice <seconds>`
+
+`--wait` の場合、終了コード `0` は返信あり、`3` はスライスのタイムアウト、`4` は期限切れです。
+
+### `emet inbox`
+
+`emet inbox --run <id>` は、未回答のワーカーの質問を JSON で一覧表示します。
+
+### `emet reply`
+
+`emet reply --run <id> --ticket <ticket> --id <n> --body <text>` は、ワーカーの質問に回答します。
+
+## 計画、レビュー、ランディング
+
+### `emet promote`
+
+`emet promote --spec <id> [--dry-run] [--no-promote] [--hold]` は、[`handoff.afterSpec`](configuration.md#handoff) に従った after-spec ステップです。
+
+- `--dry-run`: プルリクエストを開きません。
+- `--no-promote`: ステップをスキップします。
+- `--hold`: マーカー `<run dir>/runs/<id>/no-promote` を書き込み、`{"held":true}` を表示します。それが存在する間は、`emet promote --spec <id>` は `skipped` のメモを付けて終了コード 0 で終了し、プルリクエストを開かないため、`--no-promote` はスペックのセッションをまたいで維持されます。
+
+`promote` モードでは、`chore: 🔖 promote develop` というタイトルの `develop` から `main` へのプルリクエストを開き、`emet ci --pr <n> --wait` で待ち、状態が `pass` の場合にのみマージコミットでマージします。その後、`develop` が `main` より遅れている場合に限り、`main` から `develop` への同期プルリクエストを開き、同じ方法でチェックを待ち、状態が `pass` の場合にのみマージコミットでマージします。状態が `fail`、`timeout`、`env-fault` の同期プルリクエスト、またはマージが拒否された同期プルリクエストは開いたままになり、promote の結果が変わることはありません。
+
+プルリクエスト番号、`merged`、`syncPrNumber`、`syncMerged`、`syncReason`、`rule`、`reason` を含む `promote` イベントを 1 件、ジャーナルに追記します。`afterSpec` はルールのリストにできます。その場合、`develop` をプロモートしたときに含まれるパスからモードが選ばれ（[`handoff.afterSpec`](configuration.md#handoff) を参照）、`git fetch` または `git diff` が失敗すると、プルリクエストを開く前にコマンドが終了コード 1 で終了します。
+
+表示される結果には次が含まれます。
+
+- `rule`: 一致したルールのインデックス。文字列形式の場合や一致がない場合は `null`。
+- `reason`。
+- `syncPrNumber`: 同期プルリクエストが開かれなかった場合は `null`。
+- `syncMerged` と `syncReason`: 同期プルリクエストが開いたままになった理由を述べる文。そうでなければ `null`。
+- `deployCheck: { run, reason }`: コーディネーターが `emet deploy-check` を実行すべきかどうかを示します。
+
+`release` モードでは何もマージせず、リリースのプルリクエストは人に任せます。`afterSpec` が `none` の場合、`--no-promote` の場合、スペックが保留中の場合、またはスペックの最後のウェーブが開いたまま、またはフラグが立ったままの場合は、`skipped` のメモを付けて終了コード 0 で終了します。クリーンな最後のウェーブの後も実行されるため、結果には `deployCheck` の判定が含まれます（トランクが `main` の場合、デプロイチェックはモードに関係なく実行されます）。CI が `pass` でない場合は何もマージせず、終了コード 1 で終了します。
+
+### `emet deploy-check`
+
+`deploy.check.command` を、終了コード 0 になるまで、最大 `retries` 回または `timeoutSeconds` まで、試行の間に `intervalSeconds` 待ちながら実行し、`attempts` とともに `state: ok | failed | timeout` を表示します。
+
+- `--json`
+
+終了コードは `0` が ok、`1` が failed、`3` が timeout です。`deploy.check` が設定されていない場合は、`skipped: "no deploy check configured"` を付けて終了コード 0 で終了します。コーディネーターは、`emet promote` の結果で `deployCheck.run` が true の場合にのみ実行します。[`deploy`](configuration.md#deploy) を参照してください。
+
+### `emet surfaces`
+
+`emet surfaces --check <file.json | ->` は、ウェーブ内のチケット間で、許可されたサーフェスの glob が重複している場合に拒否します。
+
+### `emet assess`
+
+`emet assess --base <ref> --head <ref>` は、差分を `passive`、`medium`、`high` に分類し、ティア、理由、推奨されるレビュアーのモデルとエフォートを JSON で表示します。[モデルとエフォート](../../README.md#models--effort)と [`review`](configuration.md#review) を参照してください。
+
+- `--quick`: JSON に `"quickRejected": true|false` も含まれ、ティアが `high` の場合はコマンドが終了コード 1（**Quick run** の **Stop**: 自動マージなし、PR は開いたまま）、それ以外は 0 で終了します。`--quick` がない場合、出力と終了コードは変わりません。
+
+JSON には 2 つの判定も含まれます。
+
+- `browserVerify: { run, reason }`: `run` が `true` になるのは、ティアにレビュアーがいて、[`verify.browser`](configuration.md#verify) が設定されていて、`agent-browser` バイナリが PATH 上にあり、`paths` が設定されている場合は変更パスが一致するときだけです。そうでなければ、`reason` が最初に満たされなかった条件を示します。
+- `dualReview: { run, reason }`: `run` が `true` になるのは、ティアが `high` で、`agentHost` が `claude` で、[`review.dual`](configuration.md#review) が `off` でなく、`codex` バイナリが PATH 上にあるときだけです。そうでなければ、`reason` が最初に満たされなかった条件を示します。
+
+### `emet land`
+
+`emet land --spec <s> --branch <integration> --tickets <id,...>` は、統合ブランチをローカルのトランクにマージします（`landing.mode` が `merge`）。CI の代わりに `commands.selfCheck` が使われ、何もプッシュされません。
+
+### `emet spec-branch`
+
+`emet spec-branch ensure|integrate|status|sync|land|abandon --spec <id>` は、`landing.unit: spec` のスペックブランチ `spec/<id>` を管理します（[`landing`](configuration.md#landing) を参照）。いずれも JSON を表示します。
+
+- `ensure`: トランクからブランチを作成し（冪等）、`.emet/specs/<id>/branch.json` を書き込みます。別のスペックのブランチがチェックアウトされている場合は拒否します。
+- `integrate --wave <n> --branch <integration> --tickets a,b`: ウェーブブランチを `--no-ff` とトレーラー `Emet-Wave` および `Emet-Tickets` 付きで `spec/<id>` にマージし、ウェーブを記録し、`spec.integrate` を追記します。`landing.pushSpecBranch` が true の場合は、PR を開かずにブランチをプッシュします。
+- `status`: `branch`、`tip`、統合済みのウェーブとチケット、`behindTrunk` を表示し、ウェーブが欠けている場合はトレーラーから `branch.json` を再構築します。
+- `sync`: トランクをブランチにマージします。リベースはせず、競合した場合は中止してパスを一覧表示し、ゼロ以外で終了します。
+- `land [--partial]`: 同期したうえで、`pr` モードではブランチをプッシュし、チケットごとに `Closes` の行を付けた PR を 1 つ開き、そのチェックを待って、`landing.specMergeMethod`（既定はマージコミットで、`pr.mergeMethod` は無視されます）でマージします。`merge` モードでは、`--no-ff` でローカルのトランクにマージし、プッシュは行いません。`spec.land` を追記します。
+- `abandon --force`: `abandoned/spec-<id>` にタグを付け、ブランチを削除し、`spec.abandon` を追記し、ローカルトラッカーの統合済みチケットを `ready-for-agent` に戻します。`--force` がない場合は拒否します。
+
+`emet tracker frontier` は `branch.json` に載っているチケットをクローズ済みのブロッカーとして数え、`emet status` には `specBranch`（`branch`、`tip`、`integratedWaves`）が加わります。
+
+### `emet spec-merge`
+
+`emet spec-merge --spec <id>` は、スペックの `ADDED`/`MODIFIED`/`REMOVED` の要件デルタを `docs/specs/<area>.md`（`specs.dir`）にマージします。
+
+- `--deltas-dir`: デルタを置くディレクトリを表示します。
+
+`specs.enabled` がオンの場合、コーディネーターはデルタを書き込み、最後のウェーブの統合ブランチで、そのレビューの前にスペックごとに 1 回実行し、結果をコミットします。何かを書き込む前に、すべてのエリアをチェックします。競合がある場合、またはシナリオを失う要件がある場合は、終了コード 1 で終了し、すべてのファイルに手を付けません。`specs.enabled` がオフの場合は何もマージせず、終了コード 0 で終了します。
+
+### `emet map`
+
+`emet map [--refresh]` は、既存のコードベースの概要（スタック、構造、規約、テスト、ホットスポット）を `docs/agents/codebase.md`（`map.path`）に書き込み、作成元のコミット SHA を刻印します。同じコミットからは常に同じファイルが生成されます。
+
+- `--refresh`
+- `--stale`: HEAD が刻印より先に進んだ場合は終了コード 1 で終了し、その場合は `emet preflight` が警告します。
+- `--for <globs>`: チケットの編集サーフェスに一致するセクションだけを表示します。その出力が、ワーカーへの指示に含まれるマップの唯一の部分です。
+
+### `emet guard`
+
+Claude Code の `PreToolUse` フックです。標準入力のフックの JSON を読みます（Codex 形式は [Codex ホスト](#codex-ホスト)の項を参照）。`emet self install` が `~/.claude/settings.json` に組み込みます。無人実行で失敗の引き金になることが知られているいくつかの操作をブロックします（`emet/src/guard.ts` を参照）。
+
+## ローカルトラッカー
+
+`tracker.kind: "local"` の場合、スペックとチケットは、メインワークツリーの `.scratch/`（バージョン管理されません）配下の markdown ファイルです。`.scratch/<slug>/spec.md` と `.scratch/<slug>/issues/<NN>-<slug>.md` で、それぞれに `Status:` と `Blocked by:` の行があり、コメントは `## Comments` の下に置かれます。`emet init --tracker local` で設定します。[ADR-0011](../adr/0011-local-tracker-scratch-convention.md) を参照してください。
+
+`landing.mode` は `"pr"`（既定）または `"merge"` で、トラッカーとは独立しています。`merge` モードでは、ウェーブは `emet land` によってトランクへのローカルマージ 1 回でランディングされ、CI の代わりに `commands.selfCheck` が使われ、プッシュは行われません。`landing.unit: "spec"`（既定）では、スペック全体が `emet spec-branch land` で 1 回でランディングされます。`gh` が必要なのは、トラッカーが `github` の場合、またはランディングが `pr` の場合だけです。[ADR-0010](../adr/0010-local-merge-landing.md) と [`landing`](configuration.md#landing) を参照してください。
+
+### `emet tracker`
+
+`emet tracker create-spec|create-ticket|read|frontier|set-state|comment|close` は、`.scratch/` を対象とするローカルトラッカーで、標準出力に JSON を出力します。コーディネーターはこれを通じてスペックとチケットを読み書きします。
+
+#### `emet tracker close`
+
+`tracker.kind: "github"` の場合、`emet tracker close <ticket>... [--pr <n>]` は、各チケット（`CLA-<n>`、`#<n>`、または数字のみ）を `gh issue close --reason completed` でクローズし、その状態を確認して、`closed` または `already-closed` を報告します。
+
+- `--pr <n>`: コメント "Landed in #<n>" を追加します。
+
+`closed` または `already-closed` になったチケットの親ごとに、続けて `gh issue view <spec> --json state,subIssuesSummary` を読み取ります。スペックが開いていて、`subIssuesSummary.completed` がゼロでない `total` と等しい場合は、`gh issue close --reason completed` とコメント "All <total> tickets landed." でスペックをクローズし、確認します。
+
+出力には `specs` が加わり、親ごとに `{ spec, outcome, detail? }` が 1 つ入ります。outcome は `closed`、`open`、`already-closed`、`failed` のいずれかです。親のないチケットは何も追加せず、スペックの読み取りやクローズの失敗が、チケットの結果を変えることはありません。チケットまたはスペックが 1 つでも失敗した場合は、残りを処理した後に終了コード `1` で終了します。Linear のチケットは、コーディネーターが Linear MCP を通じて Done であることを確認します。
+
+## PR のランディングとウェーブの連鎖
+
+`landing.unit: "wave"` では 1 ウェーブが 1 つの PR になり、`"spec"` では 1 つの PR が統合されたすべてのウェーブをカバーします。本文にはチケットごとに `Closes #N` の行が 1 つ入り（トラッカーのクローズ用キーワード）、コーディネーターは PR を開くときにチケットを in-review に移します。その後、PR は `pr.autoMerge` に従ってマージされます。ただし、ウェーブにフラグが立っている場合、`autoMerge` が `false` の場合、または CI の修正が尽きた場合は、開いたままになります（その場合、PR には人間の判断を求めるラベルが付きます）。以降のウェーブは、ウェーブ 1 を実行したセッションではなく、それぞれ独自のセッションで実行されます。次に何が起きるかは `pr` と `handoff` のセクションで制御します。[`pr`](configuration.md#pr) と [`handoff`](configuration.md#handoff) を参照してください。
+
+### `emet ci`
+
+`emet ci --pr <n> --wait [--rerun-flakes] [--timeout-minutes <m>]` は、PR のチェックが終了するか、タイムアウト（既定は 30）に達するまでポーリングします。`state: pass | fail | env-fault | timeout`、失敗したチェック、`flakeReruns` を表示し、マージは行いません。
+
+- `--rerun-flakes`: 失敗した各チェックを `gh run rerun --failed` で 1 回再実行します。再実行で通ったチェックは Flake です。
+- `--timeout-minutes <m>`
+
+チェックのない PR は `noChecks: true` の `pass` です。終了コードは `0` が pass、`1` が fail または env-fault、`3` が timeout です。`env-fault` は、`STARTUP_FAILURE` で終わった、または長時間キューに留まったチェックを意味します。コードの失敗ではなく、CI が一度も実行されなかったということです。
+
+## Codex ホスト
+
+これらのコマンドは、Codex のエージェントホスト（`agentHost` が `"codex"`）向けです。[Codex ガイド](../how-to/use-codex.md)を参照してください。
+
+### `emet dispatch`
+
+`emet dispatch --role worker --run <id> --ticket <id> --prompt-file <file> [--model <m>] [--effort <e>] [--root <dir>]`: 予約とスロットを確認したうえで、`.emet/worktrees/agent-<ticket>` を作成し、実行ごとの `CODEX_HOME` オーバーレイを構築して、ワーカーをデタッチされた `codex exec` として開始します。
+
+- `emet dispatch --wait --run <id> --ticket <id> [--timeout <s>]`: 終了するまでブロックし、記録された結果のステータスを表示します。
+
+### `emet review-run`
+
+`emet review-run --run <id> --ticket <id> --package <file> --tier <medium|high|passive> [--browser-verify true|false]` は、`emet review-package` が作成したパッケージに対して、レビュアーを読み取り専用の `codex exec` として実行し、`emet review --findings` 用の指摘 JSON を表示します。`passive` ティアではプロセスを起動しません。
+
+- `--browser-verify true|false`: 既定は `false` です。`true` の場合、プロンプトは Browser 軸で終わり、`--session review-<run>` が `--run` から埋められるため、Codex のレビュアーも Claude のレビュアーと同じように UI を検証します（`emet assess` が `browserVerify.run: true` を表示したときに渡します。[`verify`](configuration.md#verify) を参照）。このフラグがない場合、プロンプトは変わらず、`true` か `false` 以外の値は、使い方の行を表示して終了コード 2 で終了します。
+- `--coverage-out <file>`: Codex のレビュアーの Coverage の判定も、JSON 配列として `<file>` に書き込みます（標準出力には引き続き指摘だけが出ます）。レビュアーが 1 つだけ動く Codex ホストで使います。
+
+指摘には、`emet review` の項で説明する任意の `s` と `userOption` フィールドを含めることができます。
+
+### Codex での `emet launch`
+
+`emet launch <spec-id> --wave <n>` は、`$emet:run --dispatch <spec>` を実行する、デタッチされた `codex exec` を開始し、そのスレッド id を記録します。Orca タブは開かれず、`codex exec resume <id>` でセッションを続行できます。
+
+### Codex での `emet guard`
+
+`EMET_AGENT_HOST=codex` の場合、`emet guard` は Codex のフック入力を読み、`apply_patch` のパスを `.emet/surface.json` と照合し、プロンプトの行 `approve <id>` が来るまで承認ゲートを閉じたままにします。
 
 ## ゲートと記録
 
-フェーズは、チケットが完了したか、マージ可能か、再試行する価値があるかを自分では判断しません。ディスク上の記録を読み、判断を出力する CLI コマンドを呼び出します。実行記録は `.emet/runs/<run-id>/` に、レビュー台帳は `.emet/review/` にあり、どちらもワーカーのワークツリーではなくメインのチェックアウトにあります。
+フェーズは、チケットがいつ完了したか、マージ可能か、再試行する価値があるかを、自分では判断しません。ディスク上の記録を読んで判定を表示する CLI コマンドを呼び出します。実行の記録は `.emet/runs/<run-id>/` に、レビュー台帳は `.emet/review/` にあり、ワーカーのワークツリーではなく、メインのチェックアウトにあります。以下のコマンドは、パイプラインの順に並べています。
 
-| ステップ             | コマンド                                             | 強制する内容                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               |
-| -------------------- | ---------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 承認前               | `emet validate --file <plan.json>`                   | すべての `S#` が少なくとも 1 つのチケットでカバーされ、受け入れシナリオを持つこと。すべてのチケットが少なくとも 1 つの `S#` をカバーすること。ウェーブ内で編集サーフェスが重複しないこと。依存関係に循環がないこと。[`validate.coupledSurfaces`](configuration.md#validate) を設定している場合、ペアの `source` に触れるチケットが、その `dependents` に触れるチケットより前のウェーブにあると `coupled-surface-split` エラーになります（終了コード 1）。`emet preflight` は承認済みの計画に対してこれを再度実行します。 チケットが 1 つもない計画は、スペックに `S#` 項目があるかどうかにかかわらず `no-tickets` エラー（"plan has no tickets; write one folded ticket"）になります。`folded: true` の付いたチケットが 1 つで、すべての `S#` をカバーしていれば通ります。 |                                                                                                                                                                                                                                                                                                                                                                                                                                                  | 承認 | `emet approve --run <id> --spec <file>` | スペックとチケット一覧のハッシュを含む `approval.json` を書き込みます。その後どちらかが変更された場合、ディスパッチは拒否されます（`--check`）。 |
-| チケット作成         | `emet materialize-log --run <id> --record/--lookup`  | 作成された各チケットの ID を作成直後に保存するため、中断された実行が重複を作ることはありません。                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           |
-| ワーカー完了         | `emet results --run <id> --write/--read <ticket>`    | ワーカーはローカルの結果ファイル（`DONE`、`DONE_WITH_CONCERNS`、`BLOCKED`、`NEEDS_CONTEXT` と `Risk:` 行）を書きます。トラッカーに書き込めるのはコーディネーターだけです。                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
-| 各ワーカーの後       | `emet verify <ticket> --run <id>`                    | ディスパッチ時の基準点より後にコミットがあること、変更されたすべてのパスがチケットの編集サーフェス内にあること、ハンドオフノートが `handoff --check` に合格すること、`commands.workerScopedSuite` が成功することを確認します。レビューとマージは、合格記録のないチケットを拒否します。                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
-| レビューの入力       | `emet review-package <base> <head> --out <file>`     | レビュアー向けに差分をまとめます。レビュアーはファイルパスとして受け取ります。範囲が空の場合や、base の子孫でない場合は終了コード 3 で終了します。                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
-| レビュー             | `emet review --ticket <t> --findings <file>`         | 指摘の台帳を管理し、トリアージの順序（`intent_gap` → `bad_plan` → `patch` → `defer`）とラウンド数の上限を強制します。`--recheck --verdicts <file>` は修正ラウンドを終了させます。開始時に未解決だった指摘だけが評価され、指摘が `resolved` になるのは判定を通じてのみで、recheck は `budgets.fixRounds` に数えられます（使い切った場合は上限を示して終了コード 1）。`--escalate` は次のモデルティアに移ります。`--rule`/`--rulings` は、レポートと PR 本文のための「下した裁定」を記録および一覧表示します。`--base <ref>` は最初のラウンドで参照を sha に解決して ledger に保存します。ウェーブが変更していない行への指摘は `preexisting: true` で保存され、`userOption` を持たない限り `emet gate` はそれをブロックとして数えません。`--coverage <file                   | -> [--expect S1,S3]`は Coverage verdicts`{s, verdict, test:{file,name}}`を保存し、証拠のない`met`と、verdict のない期待された S# のそれぞれに`VG-S<n>`（verification-gap）の指摘を開きます。ラウンドは消費しません。指摘は任意のフィールド `s`、`userOption`、`agreement` を受け付けます。`--merge a.json b.json`（`--ticket` 不要）は 2 人のレビュアーの指摘を 1 つの配列にマージして出力し、`agreement`は`"both"`または`"single"` になります。 |
-| マージまたはチェーン | `emet gate <ticket> --tier … --ci … --integration …` | `merge`、`hold`、`chain`、`stop`、`defer` のいずれかを、理由とともに JSON で出力します。verify の記録、未解決の指摘、リスクティア、CI、統合スイート、予算を読み取ります。`hold` には `next` が付きます: `fix-findings`、`rerun-failed-specs`、`rerun-ci`、`report-infrastructure`。`--no-record` は判断をジャーナルに記録しません。[`gate`](configuration.md#gate) を参照してください。                                                                                                                                                                                                                                                                                                                                                                                    |
+### `emet validate`
 
-ウェーブのブランチがまとめてマージされた後、`commands.fullSuite` が統合ブランチで 1 回実行されます。失敗すると、PR と `autoChain` がブロックされます。ゲートはその結果を `--integration` として受け取ります。ゲートが読み取る予算については、[`budgets`](configuration.md#budgets) を参照してください。
+承認の前に: `emet validate --spec <id> | --file <plan.json>` がプランの検証を実行します。
+
+- すべての `S#` が少なくとも 1 つのチケットでカバーされ、受け入れシナリオがあること。
+- すべてのチケットが少なくとも 1 つの `S#` をカバーしていること。
+- 編集サーフェスがウェーブ内で互いに素であること。
+- 依存関係の循環がないこと。
+- [`validate.coupledSurfaces`](configuration.md#validate) がある場合、ペアの `source` に触れるチケットが、その `dependents` に触れるチケットより前のウェーブにあると、`coupled-surface-split` エラー（終了コード 1）。
+- 空のチケットリストは、`S#` の項目の有無にかかわらず `no-tickets` エラー（終了コード 1、"plan has no tickets; write one folded ticket"）です。すべての `S#` をカバーする、`folded: true` のチケットが 1 つのプランは通過します。
+
+`emet preflight` は、承認済みのプランに対してこれを再度実行します。
+
+### `emet approve`
+
+承認: `emet approve --run <id> --spec <file>` は、スペックとチケットリストのハッシュを含む `approval.json` を書き込みます。その後どちらかが変更された場合、ディスパッチは拒否されます（`--check`）。
+
+- `--quick`: `"mode": "quick"` も書き込み、その実行のランディング単位が `wave` になります。指定しない場合、このフィールドはなく、古い記録でも `--check` は通ります。
+
+### `emet materialize-log`
+
+チケットの作成: `emet materialize-log --run <id> --record/--lookup` は、作成された各チケットの ID を、作成された直後に保存するため、中断された実行が重複を作ることはありません。
+
+### `emet results`
+
+ワーカーの完了: `emet results --run <id> --write/--read <ticket>`。ワーカーはローカルの結果ファイル（`DONE`、`DONE_WITH_CONCERNS`、`BLOCKED`、`NEEDS_CONTEXT` のいずれかと、`Risk:` の行）を書きます。トラッカーに書き込むのはコーディネーターだけです。
+
+### `emet verify`
+
+各ワーカーの後に: `emet verify <ticket> --run <id>` は、ディスパッチ時のベースラインより先にコミットがあること、変更されたすべてのパスがチケットの編集サーフェスの内側にあること、ハンドオフノートが `handoff --check` に通ること、`commands.workerScopedSuite` が通ることを確認します。レビューとマージは、通過の記録がないチケットを拒否します。
+
+### `emet review-package`
+
+レビューの入力: `emet review-package <base> <head> --out <file>` は、レビュアー向けに差分をまとめます。レビュアーはそれをファイルパスとして受け取ります。範囲が空、または base の子孫でない場合は、終了コード 3 で終了します。
+
+### `emet review`
+
+レビュー: `emet review --ticket <t> --findings <file>` は、指摘の台帳を保持し、トリアージの順序（`intent_gap` → `bad_plan` → `patch` → `defer`）とラウンドの上限を強制します。
+
+- `--base <ref>`: 最初のラウンドで `<ref>` を sha に解決して保存します。以降のラウンドはそれを再利用し、異なる sha を渡すと、保存されているものを示して終了コード 2 で終了します。差分 `<base>..HEAD` が追加も変更もしていない行への指摘は `preexisting: true` で保存され、`emet gate` はそれをブロッキングとして数えません。
+- `--findings <file>`: 指摘には、任意の `s: "S<n>"`（関係する要件）、`userOption: "S<n>"`、`agreement: "both"` または `"single"` を指定できます。`userOption` の指摘は `(user option)` の要件と矛盾するもので、既存の指摘であっても常にブロッキングであり、`gate.onHold: fix-and-continue` の下では `next: fix-findings` で保留になります。文字列でない `userOption` は終了コード 2 で終了します。
+- `--coverage <file or -> [--expect S1,S3]`: Coverage の判定 `{s, verdict, test:{file,name}}`（`verdict` は `met`、`partial`、`unmet`）の JSON 配列を、それまでのものを置き換える形で台帳の `coverage` として保存し、レビューラウンドは消費しません。`test` がない、ファイルが存在しない、またはファイルに `test.name` が含まれていない `met` ごと、および判定のない `--expect` の S# ごとに、`VG-S<n>` の指摘（major、`patch`）を開きます。`VG-` の指摘がクローズされるのは、後の `--coverage` でそれが生成されなくなったとき、または recheck の判定で解決されたときだけで、`--findings` のラウンドに現れなかったことでクローズされることはありません。`{coverage, open}` を表示し、指摘が 1 つでも開いている間は終了コード 1 で終了します。テストは実行しません。
+- `--merge <a.json> <b.json>`（`--ticket` なし）: `--findings -` 用に、マージした指摘の配列を 1 つ表示します。2 つの指摘は、`s` を共有するか、行が最大 3 行以内の同じ `file` を共有するとペアになり、ペアは最初のファイルの `id`、より高い重大度、`agreement: "both"` を保持します。ペアにならない指摘は `agreement: "single"` になり、2 つ目のファイルの id が衝突する場合は `X-` を前置します。`userOption` の指摘が捨てられることはありません。
+- `--recheck --verdicts <file>`: 修正ラウンドを終了します。開始時に開いていた指摘だけが評価され、指摘が `resolved` になるのは判定を通じてのみで、recheck は `budgets.fixRounds` に数えられます（使い切った場合は、上限を示して終了コード 1）。
+- `--escalate`: 次のモデルティアに移ります。
+- `--rule` と `--rulings`: レポートと PR 本文のための「Rulings I made」を記録し、一覧表示します。
+
+### `emet gate`
+
+マージまたはチェーン: `emet gate <ticket> --tier … --ci … --integration …` は、`merge`、`hold`、`chain`、`stop`、`defer` のいずれかを、理由とともに JSON で表示します。verify の記録、未解決の指摘、リスクティア、CI、統合スイート、予算を読みます。`hold` には `next` が付きます: `fix-findings`、`rerun-failed-specs`、`rerun-ci`、`report-infrastructure` のいずれかです。[`gate`](configuration.md#gate) を参照してください。
+
+- `--no-record`: 判定をジャーナルに残しません。
+
+ウェーブのブランチが一緒にマージされた後、`commands.fullSuite` が統合ブランチで 1 回実行されます。赤になると、PR と `autoChain` がブロックされます。ゲートはその結果を `--integration` として受け取ります。ゲートが読む予算については、[`budgets`](configuration.md#budgets) を参照してください。
 
 ## 終了コード
 
-終了コードは、すべてのサブコマンドで共通の意味を持ちます。
+終了コードは、すべてのサブコマンドを通じて同じ意味を持ちます。
 
-| コード | 意味                                                                                       |
-| ------ | ------------------------------------------------------------------------------------------ |
-| `0`    | 問題なし。                                                                                 |
-| `1`    | 対応が必要な指摘があります。                                                               |
-| `2`    | 設定または使い方のエラーで、ツールは実際には実行されていません。未知のコマンドも含みます。 |
-| `3`    | 内部エラー。                                                                               |
+| コード | 意味                                                                                     |
+| ------ | ---------------------------------------------------------------------------------------- |
+| `0`    | クリーン。                                                                               |
+| `1`    | 対処すべき指摘。                                                                         |
+| `2`    | 設定または使い方のエラー。ツールは実際には実行されていません。不明なコマンドも含みます。 |
+| `3`    | 内部エラー。                                                                             |
 
-未知のフラグも `2` で終了し、そのフラグ名を示します。Ctrl-C は `130` で終了します。
+不明なフラグも終了コード `2` で終了し、そのフラグ名を示します。Ctrl-C は `130` で終了します。
 
 ## グローバルフラグ
 
-すべてのコマンドが以下を受け付けます。各コマンド固有のフラグは `emet <command> --help` で一覧できます。
+すべてのコマンドがこれらを受け付けます。各コマンド固有のフラグは `emet <command> --help` で一覧できます。
 
-| フラグ       | 効果                                                                                                                     |
-| ------------ | ------------------------------------------------------------------------------------------------------------------------ |
-| `--json`     | `--help` と `--version` を含め、エンベロープ `{ok, data, error: {code, message, fix}}` を 1 つだけ stdout に出力します。 |
-| `--no-color` | ANSI カラーを無効にします。カラーは `NO_COLOR`、`FORCE_COLOR`、`TERM=dumb`、出力が TTY かどうかにも従います。            |
-| `--verbose`  | 予期しないエラーのスタックを出力します。指定しない場合、最上位の catch は 1 行のエラーを出力します。                     |
-| `--help`     | コマンドの使い方を出力します。                                                                                           |
+| フラグ       | 効果                                                                                                                        |
+| ------------ | --------------------------------------------------------------------------------------------------------------------------- |
+| `--json`     | `{ok, data, error: {code, message, fix}}` のエンベロープを標準出力に 1 つ表示します。`--help` と `--version` でも同様です。 |
+| `--no-color` | ANSI カラーを無効にします。カラーは `NO_COLOR`、`FORCE_COLOR`、`TERM=dumb`、出力が TTY かどうかにも従います。               |
+| `--verbose`  | 想定外のエラーのスタックを表示します。指定しない場合、最上位の catch は 1 行のエラーを表示します。                          |
+| `--help`     | コマンドの使い方を表示します。                                                                                              |
 
-`emet --version` はバージョンを出力します。`emet --version --json` は `{"ok": true, "data": {"version": ...}, "error": null}` を出力します。`--json` の下で失敗したコマンドは通常の終了コードで終了し、`ok: false` と、`findings`、`usage`、`internal`、`slice-timeout`、`expired`、`bad-range`、`exit-<n>` のいずれかのエラー `code` を出力します。コマンドが stdout に出力した内容は、エンベロープの `data` になります。
+`emet --version` はバージョンを表示し、`emet --version --json` は `{"ok": true, "data": {"version": ...}, "error": null}` を表示します。`--json` の下で失敗したコマンドは、通常の終了コードで終了し、`ok: false` と、`findings`、`usage`、`internal`、`slice-timeout`、`expired`、`bad-range`、`exit-<n>` のいずれかのエラー `code` を表示します。コマンドが標準出力に出したものは、エンベロープの `data` になります。
 
-TTY では、より新しいリリースが分かっている場合、`emet` は 1 行の通知を stderr に出力します。確認は 1 日に多くても 1 回で、結果をキャッシュし、ネットワークを待つことはなく、`--json` の場合や TTY でない場合は何も出力しません。
+TTY では、より新しいリリースが分かっている場合、`emet` は stderr に 1 行のお知らせを表示します。確認は 1 日に最大 1 回で、答えをキャッシュし、ネットワークを待つことはなく、`--json` の下や TTY がない場合は何も表示しません。
 
 ## 環境変数
 
-ユーザー向けの変数です。設定されている場合、対応する設定値よりも優先されます。
+ユーザー向けの変数です。変数が設定されている場合は、対応する設定値を上書きします。
 
-| 変数                          | 効果                                                                                                                                                                                                              |
-| ----------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `EMET_SKIP_DEPENDENCY_CHECKS` | `EMET_SKIP_DEPENDENCY_CHECKS=1 emet preflight` は、その 1 回の実行に限り、依存関係によるブロックを警告に格下げします。自分のシェルで設定し、コーディネーターが無人で実行するものには設定しないでください。        |
-| `EMET_MAX_LIVE_WORKERS`       | [`concurrency.maxLiveWorkers`](configuration.md#concurrency) を上書きします。正の整数または `auto` を受け付けます。                                                                                               |
-| `EMET_RUN_IDLE_THRESHOLD_MS`  | [`concurrency.runIdleThresholdMs`](configuration.md#concurrency) をミリ秒単位で上書きします。                                                                                                                     |
-| `EMET_STATE_DIR`              | ホスト全体の状態ディレクトリで、ワーカースロットのプールを保持します。解決の順序は、`$EMET_STATE_DIR`、次に `$XDG_STATE_HOME/emet`、次に `~/.local/state/emet` です。                                             |
-| `EMET_MEM_RESERVE_GIB`        | 空けておく必要があるメモリの余裕（GiB）です。利用可能なメモリがこれを下回ると、取得は拒否されます。既定は 8 です。`auto` のワーカー上限の計算にも使われます。                                                     |
-| `EMET_MEM_PER_WORKER_GIB`     | `maxLiveWorkers` が `auto` のときに、ワーカー 1 つあたりに想定するメモリ（GiB）です。既定は 2 です。ワークツリーごとにブラウザ駆動の E2E スイートを動かすなど、ワーカーごとの構成が重い場合は引き上げてください。 |
-| `EMET_CPU_OVERSUBSCRIBE`      | `auto` のワーカー上限に使う CPU の倍率です。既定は 1 です。                                                                                                                                                       |
-| `EMET_AUTO_UPDATE`            | `EMET_AUTO_UPDATE=0` で `emet self update --auto` が無効になり、ネットワーク呼び出しなしで終了コード 0 で終わります。`emet self update --auto off` と同じです。                                                   |
-| `EMET_AGENT_HOST`             | `codex` にすると `emet guard` が Codex のフック入力を読みます。Codex のフックが設定します。Claude Code では未設定のままにしてください。                                                                           |
+| 変数                          | 効果                                                                                                                                                                                                     |
+| ----------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `EMET_SKIP_DEPENDENCY_CHECKS` | `EMET_SKIP_DEPENDENCY_CHECKS=1 emet preflight` は、その 1 回の実行に限って、依存関係のブロックを警告に格下げします。自分のシェルで設定し、コーディネーターが無人で実行するものには設定しないでください。 |
+| `EMET_MAX_LIVE_WORKERS`       | [`concurrency.maxLiveWorkers`](configuration.md#concurrency) を上書きします。正の整数または `auto` を受け付けます。                                                                                      |
+| `EMET_RUN_IDLE_THRESHOLD_MS`  | [`concurrency.runIdleThresholdMs`](configuration.md#concurrency) をミリ秒で上書きします。                                                                                                                |
+| `EMET_STATE_DIR`              | ホスト全体の状態ディレクトリで、ワーカースロットのプールを保持します。解決順序は `$EMET_STATE_DIR`、次に `$XDG_STATE_HOME/emet`、次に `~/.local/state/emet` です。                                       |
+| `EMET_MEM_RESERVE_GIB`        | 空けておく必要があるメモリの余裕（GiB）。利用可能なメモリがこれを下回ると、取得は拒否されます。既定は 8 です。`auto` のワーカー上限にも使われます。                                                      |
+| `EMET_MEM_PER_WORKER_GIB`     | `maxLiveWorkers` が `auto` のときに、ワーカーごとに想定するメモリ（GiB）。既定は 2 です。ワークツリーごとにブラウザ駆動の E2E スイートを動かすような、重いワーカー構成では引き上げてください。           |
+| `EMET_CPU_OVERSUBSCRIBE`      | `auto` のワーカー上限に使う CPU の倍率。既定は 1 です。                                                                                                                                                  |
+| `EMET_AUTO_UPDATE`            | `EMET_AUTO_UPDATE=0` は `emet self update --auto` を無効にします。ネットワーク呼び出しなしで終了コード 0 で終了します。`emet self update --auto off` と同じです。                                        |
+| `EMET_AGENT_HOST`             | `codex` にすると、`emet guard` が Codex のフック入力を読みます。Codex のフックが設定するもので、Claude Code では未設定のままにしてください。                                                             |
 
-`auto` の上限は `clamp(min(cpuCount × EMET_CPU_OVERSUBSCRIBE, floor((memTotal − EMET_MEM_RESERVE_GIB) / EMET_MEM_PER_WORKER_GIB)), min, max)` です。旧来の `FORGE_*` 名も引き続き読み取られ、両方が設定されている場合は `EMET_*` が優先されます。
+`auto` の上限は `clamp(min(cpuCount × EMET_CPU_OVERSUBSCRIBE, floor((memTotal − EMET_MEM_RESERVE_GIB) / EMET_MEM_PER_WORKER_GIB)), min, max)` です。従来の `FORGE_*` の名前も引き続き読み込まれ、両方が設定されている場合は `EMET_*` が優先されます。
