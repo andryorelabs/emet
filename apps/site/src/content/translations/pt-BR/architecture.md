@@ -2,7 +2,7 @@
 title: Arquitetura
 description: Um mapa do código de emet/src e como os prompts do /emet o conduzem.
 seoTitle: Arquitetura do emet
-sourceHash: d8efc16f3c2a6ed5
+sourceHash: 52ecb4018731cf4e
 ---
 
 Um mapa do código de `emet/src` e como os prompts do `/emet` o conduzem. Os termos seguem o [GLOSSARY.md](../GLOSSARY.md); as decisões por trás desse formato ficam em [docs/adr](adr/README.md). Para problemas, veja a [solução de problemas](troubleshooting.md).
@@ -52,11 +52,11 @@ Os valores específicos de cada host ficam atrás da interface `AgentHost` em `a
 
 ## Organização dos prompts
 
-`commands/run.md` (cerca de 130 linhas) é o roteador do `/emet` no Claude Code; no Codex, os `codex/skills/**` e `codex/hooks.json` gerados cumprem esse papel. Cada arquivo de `emet/reference/` é um grupo de fases (`phases-1-5.md`, `phases-6-7-dispatch.md`, `phases-8-review.md`, `phases-8-landing.md`, `phases-8-spec-landing.md`, `phases-9-handoff.md`), carregado somente quando o modo da execução atual precisa dele. Um teste falha se qualquer um deles passar de 20.000 bytes, para que um único arquivo não tome conta do contexto depois de uma compactação. As fases instruem o coordenador a reler a seção relevante antes de cada rodada de correção ou revisão. O `install.sh` separa um antigo `phases-6-9.md` único como `phases-6-9.md.retired` quando você o editou ou ele é anterior ao manifesto de instalação, e o apaga caso contrário. Ele faz o mesmo com o antigo `phases-8-closeout.md`, que foi dividido em `phases-8-review.md` (revisão e gate) e `phases-8-landing.md` (aterrissagem e encerramento), como `phases-8-closeout.md.retired`. O `phases-8-spec-landing.md` guarda as regras de `landing.unit: spec`: integrar cada onda em `spec/<id>`, sincronizar o tronco e aterrissar o spec uma única vez. O `install.sh` também conecta o `emet guard` em `~/.claude/settings.json` como o hook `PreToolUse`.
+`commands/run.md` (cerca de 130 linhas) é o roteador do `/emet` no Claude Code; no Codex, os `codex/skills/**` e `codex/hooks.json` gerados cumprem esse papel. Cada arquivo de `emet/reference/` é um grupo de fases (`phases-1-5.md`, `phases-6-7-dispatch.md`, `phases-8-review.md`, `phases-8-landing.md`, `phases-8-spec-landing.md`, `phases-9-handoff.md`), carregado somente quando o modo da execução atual precisa dele. Um teste falha se qualquer um deles passar de 20.000 bytes, para que um único arquivo não tome conta do contexto depois de uma compactação. As fases instruem o coordenador a reler a seção relevante antes de cada rodada de correção ou revisão. O `emet self install` apaga um `phases-8-closeout.md` remanescente que ainda coincide com o manifesto de instalação e, caso contrário, o separa como `phases-8-closeout.md.retired`; esse arquivo foi dividido em `phases-8-review.md` (revisão e gate) e `phases-8-landing.md` (aterrissagem e encerramento). O `phases-8-spec-landing.md` guarda as regras de `landing.unit: spec`: integrar cada onda em `spec/<id>`, sincronizar o tronco e aterrissar o spec uma única vez. O `emet self install` também mescla os hooks do emet, entre eles o `emet guard` como o hook `PreToolUse`, em `~/.claude/settings.json`.
 
 ## Distribuição
 
-O `install.sh` copia `emet/` para `~/.claude/emet` e reescreve os prompts. O plugin do Codex é descrito por `.codex-plugin/plugin.json`, gerado com `bun run build:codex` junto com `codex/skills/**` e `codex/hooks.json`. O caminho do plugin do Claude Code traz um shim que baixa um binário independente com checksum verificado, construído por `tools/build-binaries.ts`. Veja o [ADR-0008](adr/0008-standalone-binaries-and-plugin-distribution.md).
+O `emet self install` coloca o binário independente, grava os prompts reescritos em `~/.claude/` e, com `--from <checkout>`, copia o código-fonte de `emet/` para `~/.claude/emet`. O plugin do Codex é descrito por `.codex-plugin/plugin.json`, gerado com `bun run build:codex` junto com `codex/skills/**` e `codex/hooks.json`. O caminho do plugin do Claude Code traz um shim que baixa um binário independente com checksum verificado, construído por `tools/build-binaries.ts`. Veja o [ADR-0008](adr/0008-standalone-binaries-and-plugin-distribution.md).
 
 ## Veja também
 

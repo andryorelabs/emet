@@ -2,7 +2,7 @@
 title: Modèles et effort
 description: Comment emet choisit un modèle et un effort de raisonnement pour chaque rôle, et quelles clés de configuration les modifient.
 seoTitle: Modèles et effort dans emet
-sourceHash: 482995e2b98c659b
+sourceHash: 114cc60ff1358691
 ---
 
 `/emet` choisit automatiquement un modèle et un effort de raisonnement par rôle ; il n'y a rien à changer à la main en cours d'exécution. Les premières sections décrivent l'hôte Claude Code ; l'[hôte Codex](#hôte-codex) a ses propres valeurs par défaut. Toutes les clés de Claude Code figurent dans la [référence de configuration](../reference/configuration.md#models).
@@ -19,7 +19,7 @@ sourceHash: 482995e2b98c659b
 | Revue, niveau `high` (chemins ou points sensibles)         | Opus                   | `medium` par défaut    | `models.reviewer.high`                      |
 | Triage des logs de CI (phase 8)                            | Haiku                  | —                      | `models.triage`                             |
 
-Sur Claude Code, les deux définitions d'agent (installées par `install.sh` dans `~/.claude/agents/`) fixent leur propre `model`/`effort` dans le frontmatter, si bien que le choix de modèle/effort du coordinateur ne déborde jamais sur un worker ou sur le relecteur. `emet doctor` signale (sans jamais bloquer) l'absence de l'un ou l'autre fichier. `emet preflight` bloque en revanche la distribution lorsque `emet-worker` ou `emet-reviewer` est absent, car la phase 6 et la phase 8 distribuent par `subagent_type`.
+Sur Claude Code, les deux définitions d'agent (installées par `emet self install` dans `~/.claude/agents/`) fixent leur propre `model`/`effort` dans le frontmatter, si bien que le choix de modèle/effort du coordinateur ne déborde jamais sur un worker ou sur le relecteur. `emet doctor` signale (sans jamais bloquer) l'absence de l'un ou l'autre fichier. `emet preflight` bloque en revanche la distribution lorsque `emet-worker` ou `emet-reviewer` est absent, car la phase 6 et la phase 8 distribuent par `subagent_type`.
 
 ## Routage par niveau de risque
 

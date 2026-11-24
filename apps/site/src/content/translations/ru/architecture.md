@@ -2,7 +2,7 @@
 title: Архитектура
 description: Карта кода emet/src и то, как промпты /emet управляют ею.
 seoTitle: Архитектура emet
-sourceHash: d8efc16f3c2a6ed5
+sourceHash: 52ecb4018731cf4e
 ---
 
 Карта кода `emet/src` и то, как промпты `/emet` управляют ею. Термины соответствуют [GLOSSARY.md](../GLOSSARY.md); решения, определившие устройство, находятся в [docs/adr](adr/README.md). О проблемах см. [устранение неполадок](troubleshooting.md).
@@ -52,11 +52,11 @@ sourceHash: d8efc16f3c2a6ed5
 
 ## Структура промптов
 
-`commands/run.md` (около 130 строк) — маршрутизатор `/emet` в Claude Code; в Codex эту роль играют сгенерированные `codex/skills/**` и `codex/hooks.json`. Каждый файл в `emet/reference/` — группа фаз (`phases-1-5.md`, `phases-6-7-dispatch.md`, `phases-8-review.md`, `phases-8-landing.md`, `phases-8-spec-landing.md`, `phases-9-handoff.md`), загружаемая только тогда, когда она нужна режиму текущего запуска. Тест падает, если любой из них вырастает больше 20 000 байт, чтобы один файл не мог занять весь контекст после уплотнения. Фазы велят координатору перечитывать нужный раздел перед каждым раундом исправлений или ревью. `install.sh` откладывает старый единый `phases-6-9.md` как `phases-6-9.md.retired`, если вы его редактировали или он старше манифеста установки, и удаляет его в остальных случаях. Так же он поступает со старым `phases-8-closeout.md`, который разделён на `phases-8-review.md` (ревью и гейт) и `phases-8-landing.md` (посадка и завершение): он откладывается как `phases-8-closeout.md.retired`. `phases-8-spec-landing.md` хранит правила для `landing.unit: spec`: интеграцию каждой волны в `spec/<id>`, синхронизацию trunk и однократную посадку спецификации. `install.sh` также подключает `emet guard` в `~/.claude/settings.json` как хук `PreToolUse`.
+`commands/run.md` (около 130 строк) — маршрутизатор `/emet` в Claude Code; в Codex эту роль играют сгенерированные `codex/skills/**` и `codex/hooks.json`. Каждый файл в `emet/reference/` — группа фаз (`phases-1-5.md`, `phases-6-7-dispatch.md`, `phases-8-review.md`, `phases-8-landing.md`, `phases-8-spec-landing.md`, `phases-9-handoff.md`), загружаемая только тогда, когда она нужна режиму текущего запуска. Тест падает, если любой из них вырастает больше 20 000 байт, чтобы один файл не мог занять весь контекст после уплотнения. Фазы велят координатору перечитывать нужный раздел перед каждым раундом исправлений или ревью. `emet self install` удаляет оставшийся `phases-8-closeout.md`, если он всё ещё совпадает с манифестом установки, а в противном случае откладывает его как `phases-8-closeout.md.retired`; этот файл разделён на `phases-8-review.md` (ревью и гейт) и `phases-8-landing.md` (посадка и завершение). `phases-8-spec-landing.md` хранит правила для `landing.unit: spec`: интеграцию каждой волны в `spec/<id>`, синхронизацию trunk и однократную посадку спецификации. Также `emet self install` объединяет хуки emet, среди них `emet guard` как хук `PreToolUse`, с `~/.claude/settings.json`.
 
 ## Распространение
 
-`install.sh` копирует `emet/` в `~/.claude/emet` и переписывает промпты. Плагин Codex описывается файлом `.codex-plugin/plugin.json`, который генерируется командой `bun run build:codex` вместе с `codex/skills/**` и `codex/hooks.json`. Путь через плагин Claude Code поставляет шим, который скачивает автономный бинарный файл с проверкой контрольной суммы, собранный `tools/build-binaries.ts`. См. [ADR-0008](adr/0008-standalone-binaries-and-plugin-distribution.md).
+`emet self install` помещает автономный бинарный файл, записывает переписанные промпты в `~/.claude/` и, с `--from <checkout>`, копирует исходники `emet/` в `~/.claude/emet`. Плагин Codex описывается файлом `.codex-plugin/plugin.json`, который генерируется командой `bun run build:codex` вместе с `codex/skills/**` и `codex/hooks.json`. Путь через плагин Claude Code поставляет шим, который скачивает автономный бинарный файл с проверкой контрольной суммы, собранный `tools/build-binaries.ts`. См. [ADR-0008](adr/0008-standalone-binaries-and-plugin-distribution.md).
 
 ## См. также
 

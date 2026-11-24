@@ -2,7 +2,7 @@
 title: Modelli e impegno
 description: Come emet sceglie un modello e un livello di ragionamento per ogni ruolo e quali chiavi di configurazione li modificano.
 seoTitle: Modelli e impegno in emet
-sourceHash: 482995e2b98c659b
+sourceHash: 114cc60ff1358691
 ---
 
 `/emet` sceglie automaticamente un modello e un livello di ragionamento per ogni ruolo; non c'è nulla da cambiare a mano durante l'esecuzione. Le prime sezioni descrivono l'host Claude Code; l'[host Codex](#host-codex) ha i propri valori predefiniti. Ogni chiave di Claude Code è nel [riferimento della configurazione](../reference/configuration.md#models).
@@ -19,7 +19,7 @@ sourceHash: 482995e2b98c659b
 | Review, livello `high` (percorsi o sink a rischio)      | Opus                       | `medium` per impostazione predefinita | `models.reviewer.high`                     |
 | Triage dei log di CI (fase 8)                           | Haiku                      | —                                     | `models.triage`                            |
 
-Su Claude Code, le due definizioni di agente (installate da `install.sh` in `~/.claude/agents/`) fissano da sole `model`/`effort` nel frontmatter, così la scelta di modello e impegno del coordinatore non si trasmette mai a un worker o al reviewer. `emet doctor` segnala (senza mai bloccare) la scomparsa di uno dei due file. `emet preflight` blocca invece il dispatch quando manca `emet-worker` o `emet-reviewer`, perché la fase 6 e la fase 8 fanno il dispatch tramite `subagent_type`.
+Su Claude Code, le due definizioni di agente (installate da `emet self install` in `~/.claude/agents/`) fissano da sole `model`/`effort` nel frontmatter, così la scelta di modello e impegno del coordinatore non si trasmette mai a un worker o al reviewer. `emet doctor` segnala (senza mai bloccare) la scomparsa di uno dei due file. `emet preflight` blocca invece il dispatch quando manca `emet-worker` o `emet-reviewer`, perché la fase 6 e la fase 8 fanno il dispatch tramite `subagent_type`.
 
 ## Instradamento per livello di rischio
 

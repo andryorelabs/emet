@@ -2,7 +2,7 @@
 title: Arquitectura
 description: Un mapa del código de emet/src y cómo lo dirigen los prompts de /emet.
 seoTitle: Arquitectura de emet
-sourceHash: d8efc16f3c2a6ed5
+sourceHash: 52ecb4018731cf4e
 ---
 
 Un mapa del código de `emet/src` y cómo lo dirigen los prompts de `/emet`. Los términos siguen [GLOSSARY.md](../GLOSSARY.md); las decisiones detrás de esta forma viven en [docs/adr](adr/README.md). Para los problemas, consulta la [solución de problemas](troubleshooting.md).
@@ -52,11 +52,11 @@ Los valores específicos de cada host están tras la interfaz `AgentHost` de `ag
 
 ## Estructura de los prompts
 
-`commands/run.md` (unas 130 líneas) es el enrutador de `/emet` en Claude Code; en Codex, los `codex/skills/**` y `codex/hooks.json` generados cumplen ese papel. Cada archivo de `emet/reference/` es un grupo de fases (`phases-1-5.md`, `phases-6-7-dispatch.md`, `phases-8-review.md`, `phases-8-landing.md`, `phases-8-spec-landing.md`, `phases-9-handoff.md`), que se carga solo cuando el modo de la ejecución actual lo necesita. Una prueba falla si alguno crece por encima de 20 000 bytes, de modo que un solo archivo no pueda apoderarse del contexto tras una compactación. Las fases le indican al coordinador que vuelva a leer la sección pertinente antes de cada ronda de corrección o revisión. `install.sh` aparta un antiguo `phases-6-9.md` único como `phases-6-9.md.retired` cuando lo editaste o es anterior al manifiesto de instalación, y lo elimina en caso contrario. Hace lo mismo con el antiguo `phases-8-closeout.md`, que se divide en `phases-8-review.md` (revisión y compuerta) y `phases-8-landing.md` (aterrizaje y cierre), como `phases-8-closeout.md.retired`. `phases-8-spec-landing.md` contiene las reglas de `landing.unit: spec`: integrar cada oleada en `spec/<id>`, sincronizar la rama troncal y aterrizar la spec una vez. `install.sh` también conecta `emet guard` en `~/.claude/settings.json` como el hook `PreToolUse`.
+`commands/run.md` (unas 130 líneas) es el enrutador de `/emet` en Claude Code; en Codex, los `codex/skills/**` y `codex/hooks.json` generados cumplen ese papel. Cada archivo de `emet/reference/` es un grupo de fases (`phases-1-5.md`, `phases-6-7-dispatch.md`, `phases-8-review.md`, `phases-8-landing.md`, `phases-8-spec-landing.md`, `phases-9-handoff.md`), que se carga solo cuando el modo de la ejecución actual lo necesita. Una prueba falla si alguno crece por encima de 20 000 bytes, de modo que un solo archivo no pueda apoderarse del contexto tras una compactación. Las fases le indican al coordinador que vuelva a leer la sección pertinente antes de cada ronda de corrección o revisión. `emet self install` elimina un `phases-8-closeout.md` sobrante que todavía coincide con el manifiesto de instalación y, en caso contrario, lo aparta como `phases-8-closeout.md.retired`; ese archivo se divide en `phases-8-review.md` (revisión y compuerta) y `phases-8-landing.md` (aterrizaje y cierre). `phases-8-spec-landing.md` contiene las reglas de `landing.unit: spec`: integrar cada oleada en `spec/<id>`, sincronizar la rama troncal y aterrizar la spec una vez. `emet self install` también fusiona los hooks de emet, entre ellos `emet guard` como el hook `PreToolUse`, en `~/.claude/settings.json`.
 
 ## Distribución
 
-`install.sh` copia `emet/` a `~/.claude/emet` y reescribe los prompts. El plugin de Codex se describe en `.codex-plugin/plugin.json`, generado con `bun run build:codex` junto con `codex/skills/**` y `codex/hooks.json`. La vía del plugin de Claude Code incluye un shim que descarga un binario independiente con suma de verificación, construido por `tools/build-binaries.ts`. Consulta el [ADR-0008](adr/0008-standalone-binaries-and-plugin-distribution.md).
+`emet self install` coloca el binario independiente, escribe los prompts reescritos bajo `~/.claude/` y, con `--from <checkout>`, copia el código fuente de `emet/` a `~/.claude/emet`. El plugin de Codex se describe en `.codex-plugin/plugin.json`, generado con `bun run build:codex` junto con `codex/skills/**` y `codex/hooks.json`. La vía del plugin de Claude Code incluye un shim que descarga un binario independiente con suma de verificación, construido por `tools/build-binaries.ts`. Consulta el [ADR-0008](adr/0008-standalone-binaries-and-plugin-distribution.md).
 
 ## Véase también
 

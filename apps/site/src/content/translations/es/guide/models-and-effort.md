@@ -2,7 +2,7 @@
 title: Modelos y esfuerzo
 description: Cómo emet elige un modelo y un esfuerzo de razonamiento para cada rol, y qué claves de configuración los cambian.
 seoTitle: Modelos y esfuerzo en emet
-sourceHash: 482995e2b98c659b
+sourceHash: 114cc60ff1358691
 ---
 
 `/emet` elige automáticamente un modelo y un esfuerzo de razonamiento por rol; no hay nada que cambiar a mano durante una ejecución. Las primeras secciones describen el host de Claude Code; el [host de Codex](#host-de-codex) tiene sus propios valores por defecto. Todas las claves de Claude Code están en la [referencia de configuración](../reference/configuration.md#models).
@@ -19,7 +19,7 @@ sourceHash: 482995e2b98c659b
 | Revisión, nivel `high` (rutas o puntos sensibles)      | Opus                   | `medium` por defecto | `models.reviewer.high`                     |
 | Triaje de logs de CI (fase 8)                          | Haiku                  | —                    | `models.triage`                            |
 
-En Claude Code, las dos definiciones de agente (instaladas por `install.sh` en `~/.claude/agents/`) fijan su propio `model`/`effort` en el frontmatter, de modo que la elección de modelo/esfuerzo del propio coordinador nunca se filtra a un worker ni al revisor. `emet doctor` informa (sin bloquear nunca) si falta alguno de los dos archivos. `emet preflight` sí bloquea el despacho cuando falta `emet-worker` o `emet-reviewer`, porque la fase 6 y la fase 8 despachan por `subagent_type`.
+En Claude Code, las dos definiciones de agente (instaladas por `emet self install` en `~/.claude/agents/`) fijan su propio `model`/`effort` en el frontmatter, de modo que la elección de modelo/esfuerzo del propio coordinador nunca se filtra a un worker ni al revisor. `emet doctor` informa (sin bloquear nunca) si falta alguno de los dos archivos. `emet preflight` sí bloquea el despacho cuando falta `emet-worker` o `emet-reviewer`, porque la fase 6 y la fase 8 despachan por `subagent_type`.
 
 ## Enrutamiento por nivel de riesgo
 

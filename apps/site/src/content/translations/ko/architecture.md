@@ -2,7 +2,7 @@
 title: 아키텍처
 description: emet/src의 코드 맵과 /emet 프롬프트가 이를 어떻게 구동하는지 설명합니다.
 seoTitle: emet 아키텍처
-sourceHash: d8efc16f3c2a6ed5
+sourceHash: 52ecb4018731cf4e
 ---
 
 `emet/src`의 코드 맵과 `/emet` 프롬프트가 이를 어떻게 구동하는지 설명합니다. 용어는 [GLOSSARY.md](../GLOSSARY.md)를 따르며, 이 구조의 배경이 된 결정은 [docs/adr](adr/README.md)에 있습니다. 문제가 생기면 [문제 해결](troubleshooting.md)을 참고하세요.
@@ -52,11 +52,11 @@ sourceHash: d8efc16f3c2a6ed5
 
 ## 프롬프트 배치
 
-`commands/run.md`(약 130줄)가 Claude Code에서 `/emet` 라우터이며, Codex에서는 생성된 `codex/skills/**`와 `codex/hooks.json`이 그 역할을 합니다. `emet/reference/`의 각 파일은 단계 그룹 하나(`phases-1-5.md`, `phases-6-7-dispatch.md`, `phases-8-review.md`, `phases-8-landing.md`, `phases-8-spec-landing.md`, `phases-9-handoff.md`)이며, 현재 실행의 모드가 필요로 할 때만 불러옵니다. 어느 하나라도 20,000바이트를 넘으면 테스트가 실패하므로, 파일 하나가 컴팩션 이후의 컨텍스트를 차지할 수 없습니다. 각 단계는 수정이나 리뷰 라운드 전에 코디네이터가 관련 섹션을 다시 읽도록 안내합니다. `install.sh`는 예전의 단일 `phases-6-9.md`를, 직접 수정했거나 설치 매니페스트보다 오래된 경우에는 `phases-6-9.md.retired`로 옆에 옮겨 두고, 그렇지 않으면 삭제합니다. 예전의 `phases-8-closeout.md`도 마찬가지로 처리하며, 이 파일은 `phases-8-review.md`(리뷰와 게이트)와 `phases-8-landing.md`(랜딩과 마무리)로 나뉘었고 `phases-8-closeout.md.retired`로 옆에 옮겨 둡니다. `phases-8-spec-landing.md`에는 `landing.unit: spec`의 규칙이 담겨 있습니다. 각 웨이브를 `spec/<id>`에 통합하고, 트렁크를 동기화하고, 스펙을 한 번만 랜딩합니다. 또한 `install.sh`는 `emet guard`를 `PreToolUse` 훅으로 `~/.claude/settings.json`에 연결합니다.
+`commands/run.md`(약 130줄)가 Claude Code에서 `/emet` 라우터이며, Codex에서는 생성된 `codex/skills/**`와 `codex/hooks.json`이 그 역할을 합니다. `emet/reference/`의 각 파일은 단계 그룹 하나(`phases-1-5.md`, `phases-6-7-dispatch.md`, `phases-8-review.md`, `phases-8-landing.md`, `phases-8-spec-landing.md`, `phases-9-handoff.md`)이며, 현재 실행의 모드가 필요로 할 때만 불러옵니다. 어느 하나라도 20,000바이트를 넘으면 테스트가 실패하므로, 파일 하나가 컴팩션 이후의 컨텍스트를 차지할 수 없습니다. 각 단계는 수정이나 리뷰 라운드 전에 코디네이터가 관련 섹션을 다시 읽도록 안내합니다. `emet self install`은 설치 매니페스트와 여전히 일치하는 남아 있는 `phases-8-closeout.md`를 삭제하고, 그렇지 않으면 `phases-8-closeout.md.retired`로 옆에 옮겨 둡니다. 이 파일은 `phases-8-review.md`(리뷰와 게이트)와 `phases-8-landing.md`(랜딩과 마무리)로 나뉘었습니다. `phases-8-spec-landing.md`에는 `landing.unit: spec`의 규칙이 담겨 있습니다. 각 웨이브를 `spec/<id>`에 통합하고, 트렁크를 동기화하고, 스펙을 한 번만 랜딩합니다. 또한 `emet self install`은 `PreToolUse` 훅인 `emet guard`를 포함한 emet 훅을 `~/.claude/settings.json`에 병합합니다.
 
 ## 배포
 
-`install.sh`는 `emet/`를 `~/.claude/emet`에 복사하고 프롬프트를 다시 씁니다. Codex 플러그인은 `.codex-plugin/plugin.json`으로 기술되며, `codex/skills/**`, `codex/hooks.json`과 함께 `bun run build:codex`로 생성됩니다. Claude Code 플러그인 경로는 `tools/build-binaries.ts`가 빌드한 체크섬 검증 독립 실행형 바이너리를 내려받는 심을 제공합니다. [ADR-0008](adr/0008-standalone-binaries-and-plugin-distribution.md)을 참고하세요.
+`emet self install`은 독립 실행형 바이너리를 배치하고, 다시 쓴 프롬프트를 `~/.claude/` 아래에 기록하며, `--from <checkout>`을 지정하면 `emet/` 소스를 `~/.claude/emet`에 복사합니다. Codex 플러그인은 `.codex-plugin/plugin.json`으로 기술되며, `codex/skills/**`, `codex/hooks.json`과 함께 `bun run build:codex`로 생성됩니다. Claude Code 플러그인 경로는 `tools/build-binaries.ts`가 빌드한 체크섬 검증 독립 실행형 바이너리를 내려받는 심을 제공합니다. [ADR-0008](adr/0008-standalone-binaries-and-plugin-distribution.md)을 참고하세요.
 
 ## 함께 보기
 
