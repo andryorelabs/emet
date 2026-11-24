@@ -2,8 +2,35 @@
 title: 新功能
 description: emet 的发布说明：每个版本都有哪些变化。
 seoTitle: "emet 新功能：发布说明"
-sourceHash: 52353f60ae0e5795
+sourceHash: adecd188f36bb789
 ---
+
+## 0.22.0
+
+2026-11-24
+
+### 新增
+
+- `emet` 二进制文件内嵌了安装树（命令、agent、参考 prompt、hook、Codex skill 和插件清单），在构建时生成，并由 `bun run check` 检查是否漂移，因此编译后的二进制文件无需 checkout。
+- `emet self install [latest|X.Y.Z] [--dry-run] [--from <checkout>] [--force]` 会把独立二进制文件安装到 `~/.local/share/emet/versions/<v>/`，并创建符号链接 `~/.local/bin/emet`，写入 Claude Code 文件，并在备份后把 emet 的 hook 合并进 `~/.claude/settings.json`，不会动第三方 hook。当已安装 emet 插件时它会拒绝执行，除非给出 `--force`。`--from` 可复现基于 Bun 的源码安装。
+- `emet self install` 的 Codex 适配器会把 emet 的 skill 写入 `~/.agents/skills`，并把内嵌的 hook 追加到 `$CODEX_HOME/hooks.json`，从不写入 `config.toml`，并会打印一次性的 `/hooks` 信任步骤。当检测到独立安装时，Codex 的 worker 叠加层会省略 emet 插件表。
+- `emet self update [latest|X.Y.Z]` 和 `emet self update --auto` 会下载发布版本，校验 `SHA256SUMS`（存在 `gh` 时还会校验证明），并将其暂存。切换会等到没有 worker 槽位被占用时才进行。`--auto` 由 `SessionStart` hook 运行，每天最多一次。
+- `scripts/install-remote.sh` 作为 `install.sh` 附在每个发布版本上，它会下载二进制文件，校验其校验和，并运行 `emet self install`：`curl -fsSL https://emet.andryore.dev/install.sh | sh`。
+- 当独立安装与插件并存、已安装文件与内嵌树不一致、Codex hook 没有 `trusted_hash` 条目，以及有待处理的更新或自动更新处于关闭状态时，`emet doctor` 会发出警告。
+- `docs/reference/stability.md` 已发布，`docs/specs/translations.md` 是一份新的活规范。
+
+### 变更
+
+- 文档重组为五个分组：Get started、Concepts、How-to、Reference 和 Help，涵盖全部十种语言。此版本之前发布的每个路由都会重定向到其新路由，`/docs/` 重定向到 `/docs/start/overview/`。
+- `start/overview`、`start/install` 和 `start/first-run` 包含唯一的安装说明。独立安装排在最前，插件被标记为可选。
+- Concepts 页面不使用配置表来解释其主题，`concepts/landing` 说明一个 spec 默认作为一个 pull request 合入，`concepts/architecture` 列出 `emet/src` 中所有非测试模块。How-to 页面是带有前提条件和结果检查的任务步骤，`reference/cli` 每个命令一个标题。
+- Website 首页展示每个 spec 对应一个 pull request，并介绍快速模式、记忆、双重审查、注意力提醒和可还原的安装。
+- `emet uninstall` 现在还会移除独立安装的产物：versions 目录、符号链接、安装状态文件、Codex skill 和 hook，以及两个 hook 文件中的每条 emet hook 命令。被编辑过的文件和第三方 hook 会保留。
+- 除 `whats-new` 外，每个已发布页面在九种语言中都有最新的翻译，包括新的 `reference/stability` 页面。
+
+### 移除
+
+- `install.sh` 已被移除。`emet self install` 和 `curl` 命令取而代之，依赖检查和 doctor 的补救提示都指向它们。
 
 ## 0.21.0
 
