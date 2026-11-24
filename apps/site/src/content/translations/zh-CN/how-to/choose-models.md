@@ -2,10 +2,15 @@
 title: 模型与推理强度
 description: emet 如何为每个角色选择模型和推理强度，以及哪些配置键可以修改它们。
 seoTitle: emet 的模型与推理强度
-sourceHash: 114cc60ff1358691
+sourceHash: 0807a288317cba93
 ---
 
 `/emet` 会自动为每个角色选择模型和推理强度；运行中无需手动切换任何设置。前面的部分描述 Claude Code 宿主；[Codex 宿主](#codex-宿主)有自己的默认值。Claude Code 的所有配置键都在[配置参考](../reference/configuration.md#models)中。
+
+## 前提条件
+
+- 已安装 emet；参见[安装](../start/install.md)。
+- 带有 `emet.config.json` 的仓库（如果缺失，请运行 `emet init`）。
 
 ## Claude Code 宿主
 
@@ -78,16 +83,20 @@ sourceHash: 114cc60ff1358691
 
 [探测报告](../research/codex-probe-report.md)中的真实 Codex 运行使用了强度 `low` 和解析出的最便宜模型（`gpt-6-luna`），reviewer 模型也是通过缓存解析的。
 
-## 为什么只用一个评审者
+## 为什么高风险层级用两个评审者
 
-为什么使用一个上下文全新的评审者，而不是多角度并行：目前没有公开基准直接比较两者，但并行方案会按角度把整个 diff 重读一遍，并且在这个仓库中曾挂起超过一个小时；而 Anthropic 和第三方关于 Opus 级模型的报告表明，升级模型带来的收益与增加角度相当。对于 Claude Code 上的高风险波次，请在之后手动运行 `/code-review ultra`；`/emet` 不会自行派发它。`/code-review ultra` 是 Claude Code 的命令；本页没有记录 Codex 上的等效命令。
+当 `codex` 在 PATH 中时，Claude Code 宿主上的 `high` 波次会获得 Dual review：Claude 评审者和 Codex 评审者并行阅读同一个评审包，协调者再合并它们的发现。单个模型会共享自己的盲区，所以第二次阅读来自另一个模型。`medium` 波次仍然只有一个评审者，因此成本不变；`review.dual: off` 则始终只运行一个。参见[评审与关卡](../concepts/review-and-gates.md)和 [ADR-0040](../adr/0040-dual-review-in-the-high-tier.md)。对于风险更高的 Claude Code 波次，你也可以在之后手动运行 `/code-review ultra`；`/emet` 不会自行派发它。`/code-review ultra` 是 Claude Code 的命令；本页没有记录 Codex 上的等效命令。
 
 ## 需要你自己设置一次的内容（Claude Code）
 
-在 Claude Code 宿主上，`/emet` 无法在运行中切换这些设置。它们位于 Claude Code 的 `~/.claude/settings.json` 中；Codex 宿主不读取该文件，其模型来自上面的 `codex` 部分：
+在 Claude Code 宿主上，`/emet` 无法在运行中切换这些设置。它们位于 Claude Code 的 `~/.claude/settings.json` 中；Codex 宿主不读取该文件，其模型来自上面的 `codex` 部分。
 
 - `~/.claude/settings.json` 中的 `model: "opusplan"`：这使阶段 1–4 使用 Opus，阶段 5 起使用 Sonnet，无需 `/model`。如果未设置，`emet doctor` 会发出警告（不会修改你的设置）。
 - 会话的推理强度设为 `medium` 或 `high`，而不是 `xhigh`：无论你如何设置，工作者和评审者都有各自的推理强度；而全局默认值设得过高，只会增加协调者自身轮次（派发管理、合并、报告）的成本，这些轮次并不需要。
 - 能够无人值守运行的 `permissions.defaultMode`（`auto`、`acceptEdits` 或 `bypassPermissions`），以及阻止 `git push * main|master` 和 `git push --force *` 的 `permissions.deny` 规则。`emet doctor` 会对这两项发出警告，因为一个卡在权限提示上的波次，或者能强行越过主干分支的波次，会让无人值守运行失去意义。
 
 这些只是起点，并非定论。Opus 5.5 于 2026-09-22 发布，面向编码代理的推理强度与模型选择仍是活跃的研究领域；请在实际运行几个波次后再重新调整，而不要把这张表当作最终结论。
+
+## 检查
+
+运行 `emet doctor`。当 `~/.claude/settings.json` 中的 `model: "opusplan"`、会话推理强度或 `permissions.defaultMode` 与上面的起点不同时，它会发出警告。
