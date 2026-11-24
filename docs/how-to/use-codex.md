@@ -21,13 +21,7 @@ How a wave runs on Codex, the guard and the sandbox trade-offs are explained in 
    codex plugin add mattpocock-skills@mattpocock
    ```
 
-2. Install emet with the standalone install. It writes the emet skills under `~/.agents/skills/emet/` and appends the emet hooks to `$CODEX_HOME/hooks.json` (default `~/.codex`), and never writes `config.toml`:
-
-   ```bash
-   curl -fsSL https://emet.andryore.dev/install.sh | sh
-   ```
-
-   Add `-s -- --dry-run` after `sh` to preview the writes. It also installs the terminal `emet` and the Claude Code commands and agents under `~/.claude`; that is harmless on Codex.
+2. Install emet with the standalone install from [Install](../start/install.md). It writes the emet skills under `~/.agents/skills/emet/` and appends the emet hooks to `$CODEX_HOME/hooks.json` (default `~/.codex`), and never writes `config.toml`. It also installs the terminal `emet` and the Claude Code commands and agents under `~/.claude`; that is harmless on Codex.
 
 3. Trust the hooks. Codex does not run a hook until you trust it: open `/hooks` and press `t` on the events page, or approve the "Hooks need review" prompt at startup.
 

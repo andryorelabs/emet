@@ -28,7 +28,7 @@ The CLI checks what the **Reviewer** claims, and the high tier gets a **Dual rev
 
 ## Alternatives considered
 
-- **A stronger single reviewer at high effort**: rejected because one model shares its own blind spots, and the draft's goal was an independent second read.
+- **A stronger lone reviewer at high effort**: rejected because one model shares its own blind spots, and the draft's goal was an independent second read.
 - **Dual review at every tier**: rejected because it multiplies the cost of ordinary waves for little added risk coverage.
 - **The CLI runs the named tests**: rejected because the integration suite already runs once per wave and a second run adds time without a new signal.
 - **A `baseline.json` per run**: rejected because it collides with **Baseline** and a per-ticket ledger already owns the review state.
