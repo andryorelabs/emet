@@ -2,8 +2,35 @@
 title: Neuigkeiten
 description: Release Notes für emet: was sich in jeder Version geändert hat.
 seoTitle: "Neuigkeiten in emet: Release Notes"
-sourceHash: 52353f60ae0e5795
+sourceHash: adecd188f36bb789
 ---
+
+## 0.22.0
+
+2026-11-24
+
+### Hinzugefügt
+
+- Das `emet`-Binary bettet den Installationsbaum ein (Commands, Agents, Referenz-Prompts, Hooks, Codex-Skills und Plugin-Manifeste). Der Baum wird beim Build erzeugt und von `bun run check` auf Abweichungen geprüft, sodass ein kompiliertes Binary keinen Checkout braucht.
+- `emet self install [latest|X.Y.Z] [--dry-run] [--from <checkout>] [--force]` installiert das eigenständige Binary unter `~/.local/share/emet/versions/<v>/` mit dem Symlink `~/.local/bin/emet`, schreibt die Claude-Code-Dateien und führt die emet-Hooks nach einem Backup in `~/.claude/settings.json` ein, wobei fremde Hooks unangetastet bleiben. Es verweigert die Ausführung, wenn das emet-Plugin installiert ist, außer `--force` ist angegeben. `--from` reproduziert die Bun-Quellinstallation.
+- Der Codex-Adapter von `emet self install` schreibt die emet-Skills nach `~/.agents/skills` und hängt die eingebetteten Hooks an `$CODEX_HOME/hooks.json` an, schreibt nie `config.toml` und gibt den einmaligen Trust-Schritt `/hooks` aus. Das Codex-Worker-Overlay lässt die emet-Plugin-Tabellen weg, wenn es eine eigenständige Installation erkennt.
+- `emet self update [latest|X.Y.Z]` und `emet self update --auto` laden das Release herunter, prüfen `SHA256SUMS` (und die Attestation, wenn `gh` vorhanden ist) und legen es bereit. Der Austausch wartet, bis kein Worker-Slot mehr belegt ist. `--auto` läuft aus einem `SessionStart`-Hook höchstens einmal am Tag.
+- `scripts/install-remote.sh`, jedem Release als `install.sh` beigefügt, lädt das Binary herunter, prüft seine Prüfsumme und führt `emet self install` aus: `curl -fsSL https://emet.andryore.dev/install.sh | sh`.
+- `emet doctor` warnt, wenn die eigenständige Installation und das Plugin nebeneinander existieren, wenn installierte Dateien vom eingebetteten Baum abweichen, wenn ein Codex-Hook keinen `trusted_hash`-Eintrag hat und wenn ein Update aussteht oder das automatische Update aus ist.
+- `docs/reference/stability.md` ist veröffentlicht, und `docs/specs/translations.md` ist eine neue Living Spec.
+
+### Geändert
+
+- Die Docs sind in fünf Gruppen neu gegliedert, Get started, Concepts, How-to, Reference und Help, in allen zehn Sprachen. Jede vor diesem Release veröffentlichte Route leitet auf ihre neue Route um, und `/docs/` leitet auf `/docs/start/overview/` um.
+- `start/overview`, `start/install` und `start/first-run` enthalten die einzigen Installationsanleitungen. Die eigenständige Installation steht zuerst, und die Plugins sind als optional gekennzeichnet.
+- Concepts-Seiten erklären ihr Thema ohne Konfigurationstabellen, `concepts/landing` hält fest, dass eine Spec standardmäßig als ein Pull Request landet, und `concepts/architecture` listet jedes Nicht-Test-Modul von `emet/src` auf. How-to-Seiten sind Aufgabenschritte mit Voraussetzungen und einer Ergebnisprüfung, und `reference/cli` hat eine Überschrift pro Befehl.
+- Die Startseite der Website zeigt einen Pull Request pro Spec und behandelt Fast Mode, Memory, Double Review, Attention-Alerts und die umkehrbare Installation.
+- `emet uninstall` entfernt auch die Artefakte der eigenständigen Installation: das Versionsverzeichnis, den Symlink, die Install-State-Datei, die Codex-Skills und -Hooks sowie jeden emet-Hook-Befehl in beiden Hook-Dateien. Bearbeitete Dateien und fremde Hooks bleiben erhalten.
+- Jede veröffentlichte Seite außer `whats-new` hat in jeder der neun Sprachen eine aktuelle Übersetzung, einschließlich der neuen Seite `reference/stability`.
+
+### Entfernt
+
+- `install.sh` entfällt. `emet self install` und der `curl`-Befehl ersetzen es, und die Abhängigkeitsprüfungen und Doctor-Hinweise verweisen darauf.
 
 ## 0.21.0
 

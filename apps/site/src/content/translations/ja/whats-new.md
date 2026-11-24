@@ -2,8 +2,35 @@
 title: 新機能
 description: emet のリリースノート。各バージョンでの変更点をまとめています。
 seoTitle: "emet の新機能: リリースノート"
-sourceHash: 52353f60ae0e5795
+sourceHash: adecd188f36bb789
 ---
+
+## 0.22.0
+
+2026-11-24
+
+### 追加
+
+- `emet` バイナリにインストールツリー（コマンド、エージェント、リファレンスプロンプト、フック、Codex スキル、プラグインマニフェスト）が埋め込まれました。ビルド時に生成され、`bun run check` でずれが検査されるため、コンパイル済みバイナリにチェックアウトは不要です。
+- `emet self install [latest|X.Y.Z] [--dry-run] [--from <checkout>] [--force]` は、スタンドアロンバイナリを `~/.local/share/emet/versions/<v>/` にインストールして `~/.local/bin/emet` のシンボリックリンクを張り、Claude Code のファイルを書き込み、バックアップの後に emet のフックを `~/.claude/settings.json` にマージします。他のフックには手を加えません。emet プラグインがインストールされている場合は、`--force` を指定しない限り実行を拒否します。`--from` は Bun のソースインストールを再現します。
+- `emet self install` の Codex アダプターは、emet のスキルを `~/.agents/skills` に書き込み、埋め込まれたフックを `$CODEX_HOME/hooks.json` に追記します。`config.toml` には一切書き込まず、初回のみ必要な `/hooks` の信頼手順を表示します。Codex の worker オーバーレイは、スタンドアロンインストールを検出すると emet プラグインのテーブルを省略します。
+- `emet self update [latest|X.Y.Z]` と `emet self update --auto` は、リリースをダウンロードし、`SHA256SUMS`（`gh` がある場合は証明も）を検証して、ステージングします。入れ替えは、worker スロットが 1 つも保持されなくなるまで待ちます。`--auto` は `SessionStart` フックから 1 日に最大 1 回実行されます。
+- `scripts/install-remote.sh` は各リリースに `install.sh` として添付され、バイナリをダウンロードし、チェックサムを検証して、`emet self install` を実行します：`curl -fsSL https://emet.andryore.dev/install.sh | sh`。
+- `emet doctor` は、スタンドアロンインストールとプラグインが共存しているとき、インストール済みファイルが埋め込みツリーとずれているとき、Codex のフックに `trusted_hash` エントリがないとき、更新が保留中または自動更新がオフのときに警告します。
+- `docs/reference/stability.md` が公開され、`docs/specs/translations.md` が新しいリビング spec として追加されました。
+
+### 変更
+
+- ドキュメントは、はじめに、コンセプト、ハウツー、リファレンス、ヘルプの 5 つのグループに再構成されました。10 ロケールすべてが対象です。このリリース以前に公開されたすべてのルートは新しいルートにリダイレクトされ、`/docs/` は `/docs/start/overview/` にリダイレクトされます。
+- インストール手順は `start/overview`、`start/install`、`start/first-run` にのみ記載されます。スタンドアロンインストールが先に来て、プラグインはオプションと明記されます。
+- コンセプトのページは、設定の表を使わずにそのトピックを説明します。`concepts/landing` は、spec がデフォルトで 1 つのプルリクエストとしてランディングすると述べ、`concepts/architecture` は `emet/src` のテスト以外のすべてのモジュールを一覧にします。ハウツーのページは、前提条件と結果の確認を含む作業手順で、`reference/cli` はコマンドごとに 1 つの見出しを持ちます。
+- Website のホームは spec ごとに 1 つのプルリクエストを示し、ファストモード、メモリ、ダブルレビュー、アテンションアラート、元に戻せるインストールを取り上げます。
+- `emet uninstall` は、スタンドアロンの成果物も削除します。対象は、バージョンのディレクトリ、シンボリックリンク、インストール状態ファイル、Codex のスキルとフック、および両方のフックファイルにあるすべての emet フックコマンドです。編集されたファイルと他のフックは残されます。
+- `whats-new` を除く公開済みのすべてのページに、9 つのロケールそれぞれで最新の翻訳があります。新しい `reference/stability` ページも含まれます。
+
+### 削除
+
+- `install.sh` は廃止されました。`emet self install` と `curl` コマンドがこれに代わり、依存関係チェックと doctor の対処法もそちらを案内します。
 
 ## 0.21.0
 
