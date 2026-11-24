@@ -29,14 +29,14 @@ An index of every document in this repository. Terms follow [GLOSSARY.md](../GLO
 
 ## Guide
 
-- [`start/overview.md`](start/overview.md): what emet is and where to go next (stub until spec 2).
+- [`start/overview.md`](start/overview.md): what emet is and where to go next.
 - [`start/install.md`](start/install.md): requirements, both install paths and the first run.
-- [`start/first-run.md`](start/first-run.md): check the install and run emet for the first time (stub until spec 2).
-- [`concepts/runs-waves-specs.md`](concepts/runs-waves-specs.md): runs, waves and specs (stub until spec 2).
-- [`concepts/landing.md`](concepts/landing.md): how a spec lands (stub until spec 2).
-- [`concepts/review-and-gates.md`](concepts/review-and-gates.md): the double review and the gates (stub until spec 2).
-- [`concepts/memory.md`](concepts/memory.md): what emet remembers between runs (stub until spec 2).
-- [`concepts/living-specs.md`](concepts/living-specs.md): how a spec stays current (stub until spec 2).
+- [`start/first-run.md`](start/first-run.md): check the install and run emet for the first time.
+- [`concepts/runs-waves-specs.md`](concepts/runs-waves-specs.md): runs, waves and specs.
+- [`concepts/landing.md`](concepts/landing.md): how a spec lands.
+- [`concepts/review-and-gates.md`](concepts/review-and-gates.md): the double review and the gates.
+- [`concepts/memory.md`](concepts/memory.md): what emet remembers between runs.
+- [`concepts/living-specs.md`](concepts/living-specs.md): how a spec stays current.
 - [`how-to/configure-tracker.md`](how-to/configure-tracker.md): GitHub, Linear and local trackers, `landing.mode`, `landing.unit`, the spec branch, landing PRs, chaining waves, budgets, living specs, map and metrics.
 - [`how-to/choose-models.md`](how-to/choose-models.md): the role, model and effort table, risk-tier routing, Haiku triage and what you set once.
 - [`how-to/use-codex.md`](how-to/use-codex.md): run emet on Codex CLI: install, `agentHost`, the single approval by hook, limits and `unverified` points.

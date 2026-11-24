@@ -49,16 +49,7 @@ Requirements: Claude Code or the Codex CLI, `git`, `gh` (authenticated) and the 
    curl -fsSL https://emet.andryore.dev/install.sh | sh
    ```
 
-   Add `-s -- --dry-run` after `sh` to preview the writes. It installs the terminal `emet`, the Claude Code commands and agents and, when Codex is present, the Codex skills and hooks; on Codex, trust the hooks once with `/hooks` (needs `mattpocock-skills` too; see [Codex](docs/how-to/use-codex.md)). Updates are automatic once a day (`EMET_AUTO_UPDATE=0` turns that off; `emet self update` updates by hand). To remove it, run `emet uninstall` (add `--dry-run` to preview). See the [CLI reference](docs/reference/cli.md#setup-ledger-and-restore) and [Update emet](docs/how-to/update-emet.md).
-
-   Optional: install the plugin instead, for Claude Code or Codex:
-
-   ```bash
-   claude plugin marketplace add andryorelabs/emet
-   claude plugin install emet@emet-marketplace
-   codex plugin marketplace add andryorelabs/emet
-   codex plugin add emet@emet-marketplace
-   ```
+   It installs the terminal `emet`, the Claude Code commands and agents and, when Codex is present, the Codex skills and hooks. Updates, auto-update, plugins and uninstall are in [Install](docs/start/install.md).
 
    Optional: a pixel mascot, see [Mascot](#mascot-optional).
 
@@ -86,7 +77,7 @@ Requirements: Claude Code or the Codex CLI, `git`, `gh` (authenticated) and the 
 
    On Codex, run the skill `$emet:run <describe the feature>`.
 
-More in [Getting started](docs/start/install.md). If `doctor` reports a problem, see [troubleshooting](docs/troubleshooting.md).
+More in [Install](docs/start/install.md) and [First run](docs/start/first-run.md); [Overview](docs/start/overview.md) says what a run does. If `doctor` reports a problem, see [troubleshooting](docs/troubleshooting.md).
 
 ## Requirements
 
@@ -132,7 +123,7 @@ Use the file name of your platform: `emet-linux-x64`, `emet-linux-arm64`, `emet-
 
 ## Documentation
 
-- Guide: [getting started](docs/start/install.md), [trackers and landing](docs/how-to/configure-tracker.md), [models and effort](docs/how-to/choose-models.md), [fleet check](docs/how-to/check-a-fleet.md), [Codex](docs/how-to/use-codex.md)
+- Guide: [overview](docs/start/overview.md), [install](docs/start/install.md), [first run](docs/start/first-run.md), [trackers and landing](docs/how-to/configure-tracker.md), [models and effort](docs/how-to/choose-models.md), [fleet check](docs/how-to/check-a-fleet.md), [Codex](docs/how-to/use-codex.md)
 - Reference: [configuration](docs/reference/configuration.md), [CLI](docs/reference/cli.md), [dependencies](docs/reference/dependencies.md)
 - Project: [architecture](docs/concepts/architecture.md), [troubleshooting](docs/troubleshooting.md), [documentation index](docs/README.md), [changelog](CHANGELOG.md), [product](PRODUCT.md), [roadmap](ROADMAP.md), [design](DESIGN.md), [accessibility](ACCESSIBILITY.md)
 

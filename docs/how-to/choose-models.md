@@ -2,6 +2,11 @@
 
 `/emet` picks a model and a reasoning effort per role automatically; there is nothing to switch by hand mid-run. The first sections describe the Claude Code host; the [Codex host](#codex-host) has its own defaults. Every Claude Code key is in the [configuration reference](../reference/configuration.md#models).
 
+## Prerequisites
+
+- emet installed; see [Install](../start/install.md).
+- A repository with `emet.config.json` (run `emet init` if it is missing).
+
 ## Claude Code host
 
 | Role                                           | Model                  | Effort              | Set by                                      |
@@ -73,9 +78,9 @@ Re-tune after a few real waves when:
 
 The real-Codex run in the [probe report](../research/codex-probe-report.md) used effort `low` and the cheapest resolved model (`gpt-6-luna`), and the reviewer model resolved through the cache.
 
-## Why a single reviewer
+## Why two reviewers in the high tier
 
-Why a single fresh-context reviewer instead of a multi-angle fan-out: no public benchmark compares the two directly, but a fan-out re-reads the whole diff once per angle and has hung for over an hour in this repo, while Anthropic and third-party reports on Opus-tier models suggest the model upgrade buys as much as the extra angles would. For a high-stakes wave on Claude Code, run `/code-review ultra` by hand afterward; `/emet` never dispatches that on its own. `/code-review ultra` is a Claude Code command; this page documents no Codex equivalent.
+A `high` wave on the Claude Code host gets the Dual review when `codex` is on PATH: the Claude reviewer and a Codex reviewer read the same package in parallel, and the coordinator merges their findings. One model shares its own blind spots, which is why the second read comes from another model. Medium waves keep one reviewer, so their cost does not change, and `review.dual: off` always runs one. See [Review and gates](../concepts/review-and-gates.md) and [ADR-0040](../adr/0040-dual-review-in-the-high-tier.md). For an even higher-stakes wave on Claude Code, you can also run `/code-review ultra` by hand afterward; `/emet` never dispatches that on its own. `/code-review ultra` is a Claude Code command; this page documents no Codex equivalent.
 
 ## What you set once, yourself (Claude Code)
 
@@ -86,3 +91,7 @@ On the Claude Code host, `/emet` can't switch these mid-run. They live in Claude
 - `permissions.defaultMode` able to run unattended (`auto`, `acceptEdits`, or `bypassPermissions`), plus `permissions.deny` rules blocking `git push * main|master` and `git push --force *`. `emet doctor` warns on both, since a wave that stalls on a permission prompt or that can force its way past the trunk branch defeats the point of running unattended.
 
 These are starting points, not settled numbers. Opus 5.5 launched 2026-09-22, and effort/model choice for coding agents is still an active area; re-tune after a few real waves rather than treating this table as final.
+
+## Check
+
+Run `emet doctor`. It warns when `model: "opusplan"`, the session effort or `permissions.defaultMode` in `~/.claude/settings.json` differ from the starting points above.
