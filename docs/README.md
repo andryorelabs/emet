@@ -64,6 +64,7 @@ An index of every document in this repository. Terms follow [GLOSSARY.md](../GLO
 ## Specs
 
 - [`specs/standalone-install.md`](specs/standalone-install.md): the living spec of the standalone install: the embedded install tree, `emet self install`, self-update, uninstall and doctor checks.
+- [`specs/translations.md`](specs/translations.md): the living spec of the Website translations: every published page current in each locale, and code, paths, links and front matter keys preserved.
 
 ## Research
 
