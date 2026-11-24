@@ -2,7 +2,7 @@
 title: 설정 레퍼런스
 description: emet.config.json의 모든 키를 기본값과 의미와 함께 설명합니다.
 seoTitle: emet 설정 레퍼런스
-sourceHash: e6fb30702c28d97e
+sourceHash: 23bd286ba357cde6
 ---
 
 `emet.config.json`의 모든 키를 기본값과 의미와 함께 정리했습니다. 기준이 되는 원본은 [`emet/schema/emet.config.schema.json`](../../emet/schema/emet.config.schema.json)입니다. 용어는 [GLOSSARY.md](../../GLOSSARY.md)를 따릅니다. [README](../../README.md)로 돌아가기.
@@ -191,28 +191,26 @@ Claude Code 호스트의 역할별 모델과 추론 강도이며, Codex 호스�
 
 ## agentHost
 
-`agentHost` (기본값 `"claude"`): 실행이 동작하는 에이전트 호스트입니다. `"claude"` 또는 `"codex"`. [Codex 가이드](../guide/codex.md)를 참고하세요.
+`agentHost` (기본값 `"claude"`): 실행이 동작하는 에이전트 호스트입니다. `"claude"` 또는 `"codex"`. [Codex 가이드](../how-to/use-codex.md)를 참고하세요.
 
 ## codex
 
 `agentHost`가 `"codex"`일 때만 읽습니다. 모든 키는 선택 사항입니다. 노력 수준은 `low`, `medium`, `high`, `xhigh`, `max` 중 하나이며 `ultra`는 허용되지 않습니다.
 
-- `models.worker`, `models.workerOverride`, `models.reviewer.medium`, `models.reviewer.high`, `models.triage`: 각각 `{ "model", "effort", "fallback" }` 형태입니다. `fallback`은 `model`이 Codex 모델 캐시에 없을 때 순서대로 시도할 슬러그 목록입니다. 기본값은 [모델과 노력 수준](../guide/models-and-effort.md)에 있습니다.
+- `models.worker`, `models.workerOverride`, `models.reviewer.medium`, `models.reviewer.high`, `models.triage`: 각각 `{ "model", "effort", "fallback" }` 형태입니다. `fallback`은 `model`이 Codex 모델 캐시에 없을 때 순서대로 시도할 슬러그 목록입니다. 기본값은 [모델과 노력 수준](../how-to/choose-models.md)에 있습니다.
 - `models.session`: `$emet:run`을 실행하는 세션용 `{ "model", "effort", "planEffort", "fallback" }`. `planEffort`는 첫 승인 전까지 적용됩니다.
 - `effort`: 설정하면 모든 역할의 노력 수준을 대체합니다.
 - `minVersion` (기본값 `0.167.0`): emet이 지원하는 가장 오래된 `codex` CLI 버전입니다. `emet doctor`는 설치된 버전을 이 값과 비교하지 않습니다.
-- `sandbox` (기본값 `danger-full-access`): `emet dispatch`, `emet review-run`, Codex의 `emet launch`가 `-s`로 전달하는 샌드박스 모드입니다. `workspace-write`도 허용되지만 `.git`이 읽기 전용이 되어 워커가 커밋할 수 없습니다. 값과 상관없이 `emet guard`는 Codex에서 `git push`를 거부하며, 생성되는 오버레이 `config.toml`에는 emet 마켓플레이스와 플러그인, 그 실행 자체의 디렉터리에 대한 trusted 테이블, 확정된 모델과 추론 강도만 들어갑니다(사용자 자신의 테이블은 들어가지 않습니다). [Codex 가이드](../guide/codex.md)와 [ADR-0022](../adr/0022-codex-workers-run-unsandboxed-by-default.md)를 참고하세요.
+- `sandbox` (기본값 `danger-full-access`): `emet dispatch`, `emet review-run`, Codex의 `emet launch`가 `-s`로 전달하는 샌드박스 모드입니다. `workspace-write`도 허용되지만 `.git`이 읽기 전용이 되어 워커가 커밋할 수 없습니다. 값과 상관없이 `emet guard`는 Codex에서 `git push`를 거부하며, 생성되는 오버레이 `config.toml`에는 emet 마켓플레이스와 플러그인, 그 실행 자체의 디렉터리에 대한 trusted 테이블, 확정된 모델과 추론 강도만 들어갑니다(사용자 자신의 테이블은 들어가지 않습니다). [Codex 가이드](../how-to/use-codex.md)와 [ADR-0022](../adr/0022-codex-workers-run-unsandboxed-by-default.md)를 참고하세요.
 
 ## review
 
 ```json
-{ "review": { "highRiskPaths": [] } }
+{ "review": { "highRiskPaths": [], "dual": "auto" } }
 ```
 
 - `highRiskPaths`(기본값 `[]`): 내장된 집합(인증, 보안, 결제, 웹훅, CI, 설치 프로그램, 락파일, 마이그레이션, 원시 SQL이나 파이프로 셸에 전달하는 코드 같은 위험한 싱크)에 더해, `emet assess`에서 `high` 리뷰 티어를 강제하는 대소문자 구분 없는 추가 경로 부분 문자열입니다.
-- `dual`(기본값 `"auto"`): `"auto"` 또는 `"off"`. 아래 Dual review를 참고하세요.
-
-Dual review: `emet assess`가 `dualReview.run: true`를 출력하면(티어 `high`, `agentHost` `claude`, `review.dual`이 `off`가 아니고 `codex`가 PATH에 있을 때) 코디네이터는 같은 패키지에 Claude 리뷰어와 Codex 리뷰어를 병렬로 실행한 뒤 `emet review --merge`로 두 지적 사항을 병합합니다. `agreement: "single"`인 지적 사항은 모두 코디네이터가 분류하며, Claude 리뷰어의 coverage만 기록됩니다. `emet init`은 `review.dual`을 쓰지 않습니다. 그렇지 않으면 이전처럼 리뷰어 하나만 실행됩니다.
+- `dual`(`"auto"` 또는 `"off"`, 기본값 `"auto"`. `emet init`은 이 값을 쓰지 않습니다): Dual review를 제어합니다. `auto`에서는 Claude Code 호스트에서 PATH에 `codex` 바이너리가 있는 `high` 웨이브가 같은 패키지에 대해 Claude 리뷰어와 `emet review-run`, 두 리뷰어를 병렬로 실행합니다. 코디네이터는 `emet review --merge`로 두 지적 사항을 병합하고, 리뷰어 한 쪽만 낸 지적 사항을 각각 분류해(유지하거나 `emet review --rule`로 버림) Claude 리뷰어의 Coverage 판정만 기록합니다. `off`는 항상 리뷰어 하나만 실행합니다. `emet assess`는 이 결정을 `dualReview: { run, reason }`으로 출력합니다.
 
 ## memory
 
@@ -221,14 +219,6 @@ Dual review: `emet assess`가 `dualReview.run: true`를 출력하면(티어 `hig
 ```
 
 - `enabled`(`"auto"` 또는 `"off"`, 기본값 `"auto"`): [`emet memory`](cli.md#실행-워커-슬롯)를 제어합니다. `auto`에서는 `engram` 바이너리가 PATH에 있고 핸드셰이크가 성공하면 이 명령이 Engram을 사용합니다. `off`이면 `emet memory search`와 `emet memory save`는 `engram`을 실행하지 않고 `{available: false, reason: "memory.enabled is off"}`를 출력한 뒤 0으로 종료합니다. 그 외의 값은 로드 시 `"memory.enabled" must be one of auto|off`로 실패합니다.
-
-## attention
-
-```json
-{ "attention": { "alert": true } }
-```
-
-- `alert`(불리언, 기본값 `true`): 세션이 `needs-decision`으로 전환될 때만 emet이 알림을 한 번 보냅니다. `orca status --json`이 도달 가능한 런타임을 보고하면 `orca worktree set`으로 메인 worktree에 읽지 않음 코멘트를 설정하고, 그렇지 않으면 PATH에 있을 때 `notify-send`를 실행하며, 둘 다 아니면 아무것도 하지 않습니다. 외부 호출은 각각 3초 타임아웃이 있고 실패해도 가드 결과는 바뀌지 않습니다. `needs-decision`에서 벗어나도 Orca의 읽지 않음 표시는 지워지지 않습니다. 알림을 끄려면 `false`로 설정합니다.
 
 ## landing
 
@@ -256,8 +246,8 @@ Dual review: `emet assess`가 `dualReview.run: true`를 출력하면(티어 `hig
 
 ## specs
 
-- `enabled`(기본값 `false`): 살아 있는 스펙을 켭니다. 스펙의 마지막 웨이브에서 코디네이터가 스펙의 S# 항목으로 요구 사항 델타를 작성하고, `emet spec-merge`를 실행한 뒤 `specs.dir`를 그 웨이브와 함께 커밋하므로, 업데이트가 리뷰를 거쳐 웨이브와 함께 랜딩됩니다.
 - `dir`(기본값 `docs/specs`): `enabled`가 true일 때 `emet spec-merge`가 작성하는 살아 있는 스펙의, 리포지토리 기준 상대 디렉터리입니다.
+- `enabled`(기본값 `false`): 살아 있는 스펙을 켭니다. 스펙의 마지막 웨이브에서 코디네이터가 스펙의 S# 항목으로 요구 사항 델타를 작성하고, `emet spec-merge`를 실행한 뒤 `specs.dir`를 그 웨이브와 함께 커밋하므로, 업데이트가 리뷰를 거쳐 웨이브와 함께 랜딩됩니다.
 
 ## map
 
@@ -303,6 +293,16 @@ Dual review: `emet assess`가 `dualReview.run: true`를 출력하면(티어 `hig
 ## sizing
 
 - `inlineMaxLines`(기본값 `100`, 최솟값 `1`): 워커 프롬프트에 인라인으로 포함하는 티켓 본문의 최대 줄 수입니다.
+
+## attention
+
+- `alert`(불리언, 기본값 `true`): 세션이 `needs-decision`으로 전환되면 emet이 알림을 한 번 보냅니다. `orca status --json`이 도달 가능한 런타임을 보고하면 worktree에 읽지 않음 표시를 하고, 그렇지 않으면 PATH에 있을 때 `notify-send`를 실행하며, 둘 다 아니면 아무것도 하지 않습니다. 각 호출에는 3초 타임아웃이 있고 실패해도 훅 결과는 바뀌지 않습니다. `needs-decision`에서 벗어나도 Orca의 읽지 않음 표시는 지워지지 않습니다. 알림을 끄려면 `false`로 설정합니다.
+
+```json
+{ "attention": { "alert": true } }
+```
+
+[`emet fleet status`](cli.md#setup-and-audit)를 참고하세요.
 
 ## schema
 
