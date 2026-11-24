@@ -2,10 +2,15 @@
 title: Modelle und Aufwand
 description: Wie emet für jede Rolle ein Modell und einen Denkaufwand wählt und welche Konfigurationsschlüssel sie ändern.
 seoTitle: Modelle und Aufwand in emet
-sourceHash: 114cc60ff1358691
+sourceHash: 0807a288317cba93
 ---
 
 `/emet` wählt für jede Rolle automatisch ein Modell und einen Denkaufwand; mitten im Lauf muss nichts von Hand umgestellt werden. Die ersten Abschnitte beschreiben den Claude-Code-Host; der [Codex-Host](#codex-host) hat eigene Standardwerte. Jeder Claude-Code-Schlüssel steht in der [Konfigurationsreferenz](../reference/configuration.md#models).
+
+## Voraussetzungen
+
+- emet ist installiert; siehe [Installation](../start/install.md).
+- Ein Repository mit `emet.config.json` (führe `emet init` aus, wenn sie fehlt).
 
 ## Claude-Code-Host
 
@@ -53,7 +58,7 @@ Das sind die `models`-Schlüssel von Claude Code. Jeder Schlüssel ist optional,
 }
 ```
 
-`review.highRiskPaths` ist eine Liste zusätzlicher, nicht zwischen Groß- und Kleinschreibung unterscheidender Pfad-Teilstrings, die die Stufe `high` erzwingen. Für mehr Sorgfalt bei riskanten Wellen `models.reviewer.high.effort` erhöhen (zum Beispiel auf `high`).
+`review.highRiskPaths` ist eine Liste zusätzlicher, nicht zwischen Groß- und Kleinschreibung unterscheidender Pfad-Teilstrings, die die Stufe `high` erzwingen. Für mehr Sorgfalt bei riskanten Wellen erhöhe `models.reviewer.high.effort` (zum Beispiel auf `high`).
 
 ## Codex-Host
 
@@ -78,9 +83,9 @@ Stelle nach einigen echten Wellen neu ein, wenn:
 
 Der echte Codex-Lauf im [Probe-Bericht](../research/codex-probe-report.md) nutzte den Aufwand `low` und das günstigste aufgelöste Modell (`gpt-6-luna`), und das Reviewer-Modell wurde über den Cache aufgelöst.
 
-## Warum ein einzelner Reviewer
+## Warum zwei Reviewer in der Stufe high
 
-Warum ein einzelner Reviewer mit frischem Kontext statt eines Fächers aus mehreren Blickwinkeln: Kein öffentlicher Benchmark vergleicht beide direkt, aber ein Fächer liest den gesamten Diff einmal pro Blickwinkel neu und hat in diesem Repo über eine Stunde lang gehangen, während Berichte von Anthropic und Dritten zu Modellen der Opus-Klasse nahelegen, dass das Modell-Upgrade so viel bringt wie die zusätzlichen Blickwinkel. Für eine Welle mit hohem Einsatz unter Claude Code danach `/code-review ultra` von Hand ausführen; `/emet` dispatcht das nie von sich aus. `/code-review ultra` ist ein Claude-Code-Befehl; diese Seite dokumentiert kein Codex-Pendant.
+Eine Welle der Stufe `high` erhält auf dem Claude-Code-Host das Dual review, wenn `codex` im PATH ist: Der Claude-Reviewer und ein Codex-Reviewer lesen dasselbe Paket parallel, und der Koordinator führt ihre Befunde zusammen. Ein einzelnes Modell teilt seine eigenen blinden Flecken, weshalb die zweite Lesung von einem anderen Modell kommt. Wellen der Stufe `medium` behalten einen Reviewer, sodass sich ihre Kosten nicht ändern, und `review.dual: off` führt immer nur einen aus. Siehe [Review und Gates](../concepts/review-and-gates.md) und [ADR-0040](../adr/0040-dual-review-in-the-high-tier.md). Für eine Welle mit noch höherem Einsatz unter Claude Code kannst du danach zusätzlich `/code-review ultra` von Hand ausführen; `/emet` dispatcht das nie von sich aus. `/code-review ultra` ist ein Claude-Code-Befehl; diese Seite dokumentiert kein Codex-Pendant.
 
 ## Was du einmalig selbst festlegst (Claude Code)
 
@@ -90,4 +95,8 @@ Auf dem Claude-Code-Host kann `/emet` diese Einstellungen nicht mitten im Lauf u
 - Ein Sitzungsaufwand von `medium` oder `high` statt `xhigh`: Die Worker und der Reviewer tragen ihren eigenen Aufwand unabhängig von deinem, und ein hoher globaler Standard verursacht vor allem Kosten bei den eigenen Zügen des Koordinators (Dispatch-Buchhaltung, Merges, Berichte), die ihn nicht brauchen.
 - Ein `permissions.defaultMode`, der unbeaufsichtigt laufen kann (`auto`, `acceptEdits` oder `bypassPermissions`), plus `permissions.deny`-Regeln, die `git push * main|master` und `git push --force *` blockieren. `emet doctor` warnt bei beiden, denn eine Welle, die an einer Berechtigungsabfrage hängt oder sich am Trunk-Branch vorbeizwingen kann, verfehlt den Sinn des unbeaufsichtigten Laufs.
 
-Das sind Ausgangspunkte, keine endgültigen Zahlen. Opus 5.5 erschien am 2026-09-22, und die Wahl von Aufwand und Modell für Coding-Agents ist weiterhin ein aktives Feld; nach einigen echten Wellen neu abstimmen, statt diese Tabelle als endgültig zu behandeln.
+Das sind Ausgangspunkte, keine endgültigen Zahlen. Opus 5.5 erschien am 2026-09-22, und die Wahl von Aufwand und Modell für Coding-Agents ist weiterhin ein aktives Feld; stelle nach einigen echten Wellen neu ein, statt diese Tabelle als endgültig zu behandeln.
+
+## Prüfen
+
+Führe `emet doctor` aus. Es warnt, wenn `model: "opusplan"`, der Sitzungsaufwand oder `permissions.defaultMode` in `~/.claude/settings.json` von den obigen Ausgangspunkten abweichen.
