@@ -2,10 +2,10 @@
 title: 架构
 description: emet/src 的代码地图，以及 /emet 提示词如何驱动它。
 seoTitle: emet 架构
-sourceHash: 52ecb4018731cf4e
+sourceHash: ac65f41cf78af13e
 ---
 
-`emet/src` 的代码地图，以及 `/emet` 提示词如何驱动它。术语遵循 [GLOSSARY.md](../GLOSSARY.md)；这种结构背后的决策见 [docs/adr](adr/README.md)。遇到问题时，参见[故障排除](troubleshooting.md)。
+`emet/src` 的代码地图，以及 `/emet` 提示词如何驱动它。术语遵循 [GLOSSARY.md](../../GLOSSARY.md)；这种结构背后的决策见 [docs/adr](../adr/README.md)。遇到问题时，参见[故障排除](../troubleshooting.md)。
 
 - [结构](#结构)
 - [提示词如何驱动 CLI](#提示词如何驱动-cli)
@@ -35,20 +35,51 @@ sourceHash: 52ecb4018731cf4e
 
 ## 模块地图
 
-每个模块旁边都有一个 `*.test.ts`。
+每个模块旁边都有一个 `*.test.ts`。当 `emet/src` 中某个非测试模块没有出现在此列表中时，`tools/architecture-map.test.ts` 会失败。
 
-| 领域         | 模块                                                                                                                                                                                                                                     |
-| ------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 设置与审计   | `init.ts`（配置和文档骨架）、`config.ts`（`emet.config.json`，旧版 `forge.config.json` 仍会读取）、`doctor.ts`（批量扫描）、`preflight.ts`（派发卫生）、`dependencies.ts`、`skills.ts`（mattpocock-skills 契约）、`map.ts`（代码库概览） |
-| 运行状态     | `claims.ts`（工单预留）、`slots.ts`（工作者槽位池）、`resources.ts`（主机信息）、`runs.ts`（存活判断）、`locks.ts`、`lockreason.ts`、`proctree.ts`、`worktrees.ts`、`cleanup.ts`、`status.ts`、`launch.ts`                               |
-| 跟踪器       | `tracker.ts`、`tracker-files.ts`（本地 `.scratch/` 跟踪器）、`validate.ts`（规格覆盖）、`specmerge.ts`、`approve.ts`、`surfaces.ts`（编辑范围重叠）                                                                                      |
-| 工作者交接   | `handoff.ts`、`results.ts`、`materializelog.ts`                                                                                                                                                                                          |
-| 评审与落地   | `verify.ts`、`reviewpackage.ts`、`review.ts`（问题台账）、`assess.ts`（风险分类器）、`gate.ts`、`land.ts`                                                                                                                                |
-| 报告         | `metrics.ts`、`usage.ts`                                                                                                                                                                                                                 |
-| 安全         | `guard.ts`、`guard-destructive.ts`                                                                                                                                                                                                       |
-| 共享辅助模块 | `narrow.ts`、`optional.ts`、`assets.ts`（嵌入编译后二进制文件中的文件）                                                                                                                                                                  |
+**设置、安装与审计**
 
-与宿主相关的值位于 `agenthost.ts` 中的 `AgentHost` 接口之后：`agenthost-claude.ts` 是 Claude Code 适配器，`agenthost-codex.ts` 是 Codex 适配器，由配置中的 `agentHost` 选择。Codex 一侧新增 `codex-models.ts`（模型解析）、`codex-home.ts`（每次运行的 `CODEX_HOME` 覆盖层）、`codex-process.ts` 和 `codex-session.ts`（进程运行器与交接）、`codex-usage.ts`（从 `exec --json` 读取用量）、`guard-codex.ts`（hook 输入与批准闸门）、`dispatch.ts` 和 `review-run.ts`。参见 [Codex 指南](guide/codex.md)。
+- `init.ts` 写入配置和文档骨架；`config.ts` 读取 `emet.config.json`（旧版 `forge.config.json` 仍会读取）；`names.ts` 把名称解析为其当前或旧版写法。
+- `doctor.ts` 是批量扫描；`preflight.ts` 检查派发卫生；`dependencies.ts` 和 `skills.ts`（mattpocock-skills 契约）检查运行所需的内容；`map.ts` 写入代码库概览；`plugin-detect.ts` 报告已安装的插件。
+- `setup.ts` 安装可选的附加项，`setupledger.ts` 记录每次更改以便撤销，`settingsapply.ts` 保存推荐的 Claude Code 设置。
+- `self.ts`、`self-install.ts`、`self-source.ts`、`self-types.ts`、`self-update.ts`、`self-host-claude.ts` 和 `self-host-codex.ts` 实现 `emet self`：安装、源码安装、更新以及各宿主的文件。`hooks-merge.ts` 把 emet 的钩子合并到宿主设置中，`uninstall.ts` 依据台账撤销一次安装，`migrate.ts` 迁移旧名称，`update-notice.ts` 和 `whats-new.ts` 向用户告知新版本，`embedded-tree.generated.ts` 保存嵌入编译后二进制文件中的文件。
+- `assets.ts` 读取这些嵌入的文件。
+
+**运行状态**
+
+- `claims.ts` 保存工单预留，`slots.ts` 保存工作者槽位池，`resources.ts` 保存主机信息，`runs.ts` 负责存活判断，`runcurrent.ts` 记录某个检出当前的运行。
+- `locks.ts`、`lockreason.ts`、`proctree.ts`、`worktrees.ts`、`cleanup.ts`、`mergedpr.ts` 和 `landed.ts` 管理 worktree、锁，以及已落地分支的清理。
+- `status.ts` 报告波次和会话，`launch.ts` 和 `chain.ts` 以无人值守方式启动运行和下一个波次，`fleet.ts` 跨仓库工作，`phase.ts` 记录当前阶段。
+- `signals.ts` 在中断时进行清理。
+
+**跟踪器与规格**
+
+- `tracker.ts` 和 `tracker-files.ts`（本地 `.scratch/` 跟踪器）读写工单，`ticketclose.ts` 关闭工单，`validate.ts` 检查规格覆盖，`approve.ts` 记录批准，`surfaces.ts` 查找编辑范围重叠。
+- `specmerge.ts` 把规格增量合并到活规格中；`specbranch.ts`、`speclanding.ts` 和 `specabandon.ts` 管理 `spec/<id>` 分支；`landing-unit.ts` 决定一次运行按规格还是按波次落地；`afterspec.ts` 和 `promote.ts` 执行规格之后的步骤。
+
+**工作者交接**
+
+- `handoff.ts`、`results.ts` 和 `materializelog.ts` 把工作者的报告传递给协调者，`mailbox.ts` 是由 CLI 拥有、供 Codex 工作者使用的邮箱。
+
+**评审与落地**
+
+- `verify.ts`、`reviewpackage.ts`、`review.ts`（问题台账）、`review-run.ts`（Codex 评审者）、`assess.ts`（风险分类器）、`gate.ts`、`land.ts` 和 `ci.ts` 负责检查、评审并落地一个波次。`deploycheck.ts` 运行部署后检查。
+
+**日志、注意力与报告**
+
+- `journal.ts` 追加事件，`insights.ts` 读取它们；`attention.ts` 记录会话的注意力状态，`attention-alert.ts` 发出提醒；`metrics.ts` 和 `usage.ts` 报告成本和结果。
+- `memory.ts` 和 `engram-client.ts` 在 Engram 中搜索并保存经验教训。
+
+**安全**
+
+- `guard.ts`、`guard-destructive.ts` 和 `guard-codex.ts` 是防护钩子。
+
+**命令管线与共享辅助模块**
+
+- `commands.ts` 描述命令及其标志，`flags.ts` 描述每个命令都接受的标志，`envelope.ts` 负责 `--json` 输出，`errors.ts` 定义错误代码，`exit-codes.ts` 和 `exit-code.ts` 定义退出码，`env.ts` 是环境视图，`color.ts` 和 `banner.ts` 负责终端输出，`present.ts`、`narrow.ts` 和 `optional.ts` 是小型的类型收窄辅助模块。
+- `test-preload.ts` 和 `expect-rejection.ts` 为测试提供支持。
+
+与宿主相关的值位于 `agenthost.ts` 中的 `AgentHost` 接口之后：`agenthost-claude.ts` 是 Claude Code 适配器，`agenthost-codex.ts` 是 Codex 适配器，由配置中的 `agentHost` 选择。Codex 一侧新增 `codex-models.ts`（模型解析）、`codex-home.ts`（每次运行的 `CODEX_HOME` 覆盖层）、`codex-process.ts` 和 `codex-session.ts`（进程运行器与交接）、`codex-usage.ts`（从 `exec --json` 读取用量）、`guard-codex.ts`（hook 输入与批准闸门）以及 `dispatch.ts`。参见 [Codex 指南](../how-to/use-codex.md)。
 
 ## 提示词布局
 
@@ -56,11 +87,11 @@ sourceHash: 52ecb4018731cf4e
 
 ## 分发
 
-`emet self install` 会放置独立二进制文件，把改写后的提示词写入 `~/.claude/`，并在带 `--from <checkout>` 时把 `emet/` 源码复制到 `~/.claude/emet`。Codex 插件由 `.codex-plugin/plugin.json` 描述，它与 `codex/skills/**` 和 `codex/hooks.json` 一起通过 `bun run build:codex` 生成。Claude Code 插件路径则提供一个 shim，它会下载由 `tools/build-binaries.ts` 构建、经过校验和验证的独立二进制文件。参见 [ADR-0008](adr/0008-standalone-binaries-and-plugin-distribution.md)。
+`emet self install` 会放置独立二进制文件，把改写后的提示词写入 `~/.claude/`，并在带 `--from <checkout>` 时把 `emet/` 源码复制到 `~/.claude/emet`。Codex 插件由 `.codex-plugin/plugin.json` 描述，它与 `codex/skills/**` 和 `codex/hooks.json` 一起通过 `bun run build:codex` 生成。Claude Code 插件路径则提供一个 shim，它会下载由 `tools/build-binaries.ts` 构建、经过校验和验证的独立二进制文件。参见 [ADR-0008](../adr/0008-standalone-binaries-and-plugin-distribution.md)。
 
 ## 另请参阅
 
-- [快速开始](guide/getting-started.md)和[跟踪器与落地](guide/trackers-and-landing.md)
-- [配置参考](reference/configuration.md)、[CLI 参考](reference/cli.md)和[依赖](reference/dependencies.md)
-- [AGENTS.md](../AGENTS.md) 和 [emet/AGENTS.md](../emet/AGENTS.md)
-- [文档索引](README.md)
+- [快速开始](../start/install.md)和[跟踪器与落地](../how-to/configure-tracker.md)
+- [配置参考](../reference/configuration.md)、[CLI 参考](../reference/cli.md)和[依赖](../reference/dependencies.md)
+- [AGENTS.md](../../AGENTS.md) 和 [emet/AGENTS.md](../../emet/AGENTS.md)
+- [文档索引](../README.md)
