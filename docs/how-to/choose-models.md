@@ -73,9 +73,9 @@ Re-tune after a few real waves when:
 
 The real-Codex run in the [probe report](../research/codex-probe-report.md) used effort `low` and the cheapest resolved model (`gpt-6-luna`), and the reviewer model resolved through the cache.
 
-## Why a single reviewer
+## Why two reviewers in the high tier
 
-Why a single fresh-context reviewer instead of a multi-angle fan-out: no public benchmark compares the two directly, but a fan-out re-reads the whole diff once per angle and has hung for over an hour in this repo, while Anthropic and third-party reports on Opus-tier models suggest the model upgrade buys as much as the extra angles would. For a high-stakes wave on Claude Code, run `/code-review ultra` by hand afterward; `/emet` never dispatches that on its own. `/code-review ultra` is a Claude Code command; this page documents no Codex equivalent.
+A `high` wave on the Claude Code host gets the Dual review when `codex` is on PATH: the Claude reviewer and a Codex reviewer read the same package in parallel, and the coordinator merges their findings. One model shares its own blind spots, which is why the second read comes from another model. Medium waves keep one reviewer, so their cost does not change, and `review.dual: off` always runs one. See [Review and gates](../concepts/review-and-gates.md) and [ADR-0040](../adr/0040-dual-review-in-the-high-tier.md). For an even higher-stakes wave on Claude Code, you can also run `/code-review ultra` by hand afterward; `/emet` never dispatches that on its own. `/code-review ultra` is a Claude Code command; this page documents no Codex equivalent.
 
 ## What you set once, yourself (Claude Code)
 
