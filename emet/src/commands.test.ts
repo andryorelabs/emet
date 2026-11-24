@@ -124,6 +124,27 @@ describe("promote, deploy-check, fleet and setup", () => {
   });
 });
 
+describe("self", () => {
+  test("declares its flags", () => {
+    expect(findCommand("self")?.flags).toEqual([
+      { name: "--dry-run", value: false },
+      { name: "--force", value: false },
+      { name: "--from", value: true },
+      { name: "--auto", value: false },
+    ]);
+  });
+
+  test("runs the self module, which prints usage for an unknown subcommand", async () => {
+    const errorSpy = spyOn(console, "error").mockImplementation(() => undefined);
+    try {
+      expect(await findCommand("self")?.run(["bogus"])).toBe(2);
+      expect(String(errorSpy.mock.calls[0]?.[0])).toContain("usage: emet self install");
+    } finally {
+      errorSpy.mockRestore();
+    }
+  });
+});
+
 describe("whats-new", () => {
   test("declares its flags", () => {
     expect(findCommand("whats-new")?.flags).toEqual([

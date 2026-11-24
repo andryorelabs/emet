@@ -8,6 +8,9 @@ const stateDirectory = mkdtempSync(join(tmpdir(), "emet-test-state-"));
 /** Points every test run at a fresh state dir so no test writes the real journal. */
 process.env.EMET_STATE_DIR = stateDirectory;
 
+/** Drops the host's Codex home so no test reads or merges into the real `$CODEX_HOME`. */
+delete process.env.CODEX_HOME;
+
 afterAll(() => {
   rmSync(stateDirectory, { recursive: true, force: true });
 });

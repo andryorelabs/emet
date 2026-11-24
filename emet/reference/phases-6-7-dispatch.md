@@ -98,7 +98,7 @@ message, multiple tool uses), each with `isolation: "worktree"` **and
 else `models.worker`. Pass its model as the `Agent` `model` parameter for every
 worker (effort too where dispatch supports it); the agent file's frontmatter
 is only the fallback. If `emet doctor` flags `emet-agents` as missing, run
-`./install.sh` first — a missing agent definition makes the call fail.
+`emet self install` first — a missing agent definition makes the call fail.
 
 Just before each `Agent` call, write the dispatch record
 `.emet/runs/<runId>/dispatch/<ticket>.json` = `{"baseline": "<trunk sha>",

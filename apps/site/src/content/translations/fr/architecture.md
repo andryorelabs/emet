@@ -2,7 +2,7 @@
 title: Architecture
 description: Une carte du code de emet/src et la façon dont les prompts de /emet le pilotent.
 seoTitle: Architecture d'emet
-sourceHash: d8efc16f3c2a6ed5
+sourceHash: 52ecb4018731cf4e
 ---
 
 Une carte du code de `emet/src` et la façon dont les prompts de `/emet` le pilotent. Les termes suivent [GLOSSARY.md](../GLOSSARY.md) ; les décisions derrière cette forme se trouvent dans [docs/adr](adr/README.md). Pour les problèmes, voir le [dépannage](troubleshooting.md).
@@ -52,11 +52,11 @@ Les valeurs propres à chaque hôte se trouvent derrière l'interface `AgentHost
 
 ## Organisation des prompts
 
-`commands/run.md` (environ 130 lignes) est le routeur de `/emet` sur Claude Code ; sur Codex, les `codex/skills/**` et `codex/hooks.json` générés jouent ce rôle. Chaque fichier de `emet/reference/` est un groupe de phases (`phases-1-5.md`, `phases-6-7-dispatch.md`, `phases-8-review.md`, `phases-8-landing.md`, `phases-8-spec-landing.md`, `phases-9-handoff.md`), chargé seulement quand le mode de l'exécution en cours en a besoin. Un test échoue si l'un d'eux dépasse 20 000 octets, afin qu'un seul fichier ne puisse pas envahir le contexte après une compaction. Les phases demandent au coordinateur de relire la section concernée avant chaque tour de correction ou de revue. `install.sh` met de côté un ancien `phases-6-9.md` unique sous le nom `phases-6-9.md.retired` lorsque vous l'avez modifié ou qu'il est antérieur au manifeste d'installation, et le supprime sinon. Il fait de même pour l'ancien `phases-8-closeout.md`, scindé en `phases-8-review.md` (revue et gate) et `phases-8-landing.md` (atterrissage et clôture), sous le nom `phases-8-closeout.md.retired`. `phases-8-spec-landing.md` contient les règles de `landing.unit: spec` : intégrer chaque vague dans `spec/<id>`, synchroniser la branche principale et faire atterrir la spec une seule fois. `install.sh` branche aussi `emet guard` dans `~/.claude/settings.json` comme hook `PreToolUse`.
+`commands/run.md` (environ 130 lignes) est le routeur de `/emet` sur Claude Code ; sur Codex, les `codex/skills/**` et `codex/hooks.json` générés jouent ce rôle. Chaque fichier de `emet/reference/` est un groupe de phases (`phases-1-5.md`, `phases-6-7-dispatch.md`, `phases-8-review.md`, `phases-8-landing.md`, `phases-8-spec-landing.md`, `phases-9-handoff.md`), chargé seulement quand le mode de l'exécution en cours en a besoin. Un test échoue si l'un d'eux dépasse 20 000 octets, afin qu'un seul fichier ne puisse pas envahir le contexte après une compaction. Les phases demandent au coordinateur de relire la section concernée avant chaque tour de correction ou de revue. `emet self install` supprime un `phases-8-closeout.md` résiduel qui correspond encore au manifeste d'installation et, sinon, le met de côté sous le nom `phases-8-closeout.md.retired` ; ce fichier est scindé en `phases-8-review.md` (revue et gate) et `phases-8-landing.md` (atterrissage et clôture). `phases-8-spec-landing.md` contient les règles de `landing.unit: spec` : intégrer chaque vague dans `spec/<id>`, synchroniser la branche principale et faire atterrir la spec une seule fois. `emet self install` fusionne aussi les hooks d'emet, dont `emet guard` comme hook `PreToolUse`, dans `~/.claude/settings.json`.
 
 ## Distribution
 
-`install.sh` copie `emet/` dans `~/.claude/emet` et réécrit les prompts. Le plugin Codex est décrit par `.codex-plugin/plugin.json`, généré avec `bun run build:codex` en même temps que `codex/skills/**` et `codex/hooks.json`. La voie par plugin de Claude Code fournit un shim qui télécharge un binaire autonome à somme de contrôle vérifiée, construit par `tools/build-binaries.ts`. Voir l'[ADR-0008](adr/0008-standalone-binaries-and-plugin-distribution.md).
+`emet self install` place le binaire autonome, écrit les prompts réécrits sous `~/.claude/` et, avec `--from <checkout>`, copie les sources de `emet/` dans `~/.claude/emet`. Le plugin Codex est décrit par `.codex-plugin/plugin.json`, généré avec `bun run build:codex` en même temps que `codex/skills/**` et `codex/hooks.json`. La voie par plugin de Claude Code fournit un shim qui télécharge un binaire autonome à somme de contrôle vérifiée, construit par `tools/build-binaries.ts`. Voir l'[ADR-0008](adr/0008-standalone-binaries-and-plugin-distribution.md).
 
 ## Voir aussi
 

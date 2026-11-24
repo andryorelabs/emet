@@ -7,6 +7,7 @@ import issueTrackerLocalTemplate from "../templates/issue-tracker-local.md.tpl" 
 import triageLabelsGithubTemplate from "../templates/triage-labels-github.md.tpl" with { type: "text" };
 import triageLabelsLinearTemplate from "../templates/triage-labels-linear.md.tpl" with { type: "text" };
 import triageLabelsLocalTemplate from "../templates/triage-labels-local.md.tpl" with { type: "text" };
+import { EMBEDDED_TREE } from "./embedded-tree.generated";
 import { BINARY } from "./names";
 
 /**
@@ -53,4 +54,23 @@ export function readSchema(): string {
 /** True when running from a `bun build --compile` executable rather than source. */
 export function isCompiledBinary(): boolean {
   return Bun.main.startsWith("/$bunfs/") || Bun.main.includes("~BUN");
+}
+
+/** A read-only view of the install tree: repo-relative paths and their text. */
+export interface TreeSource {
+  list(): readonly string[];
+  read(relativePath: string): string;
+}
+
+/** The install tree embedded at build time; `read` throws for a path outside it. */
+export function embeddedTree(): TreeSource {
+  const paths = Object.keys(EMBEDDED_TREE).toSorted();
+  return {
+    list: () => paths,
+    read(relativePath) {
+      const content = EMBEDDED_TREE[relativePath];
+      if (content === undefined) throw new Error(`${BINARY}: unknown tree file "${relativePath}"`);
+      return content;
+    },
+  };
 }

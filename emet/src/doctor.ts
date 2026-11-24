@@ -5,6 +5,7 @@ import os from "node:os";
 import path from "node:path";
 
 import { type AgentHost, claudeHost } from "./agenthost";
+import { embeddedTree, type TreeSource } from "./assets";
 import {
   loadForgeConfig,
   type ForgeConfig,
@@ -26,6 +27,7 @@ import {
   type DependencyProbes,
 } from "./dependencies";
 import { readEnv, type Env } from "./env";
+import { findEmetHookPositions } from "./hooks-merge";
 import {
   AGENTS_DOC,
   BINARY,
@@ -43,6 +45,8 @@ import { isObject } from "./narrow";
 import { DEPRECATED_CONFIG_FIELDS, findTodoMarkersInDocsAgents } from "./preflight";
 import { present } from "./present";
 import { computeAutoMaxLiveWorkers, readHostResources } from "./resources";
+import { promptDestinationOf, rewritePrompt } from "./self-host-claude";
+import { readInstallState } from "./self-install";
 import {
   checkSkillsContract,
   findPluginByName,
@@ -1008,7 +1012,7 @@ async function formatHostResourcesSummary(): Promise<string> {
 
 /**
  * Advisories on `~/.claude/settings.json` keys that specifically affect
- * `/emet` — never blocking, never written by this CLI (only `install.sh`'s
+ * `/emet` — never blocking, never written by this CLI (only the install's
  * guard-hook wiring touches that file). Personal keys (theme, OTEL, IDE
  * integration, other plugins) are deliberately out of scope: this checks
  * only what determines whether an unattended `/emet` run behaves, not the
@@ -1101,7 +1105,7 @@ export async function findInstallDrift(homeDirectory: string): Promise<string[]>
         .update(await readFile(absolutePath))
         .digest("hex");
     } catch {
-      findings.push(`~/${relativePath} is missing — re-run install.sh`);
+      findings.push(`~/${relativePath} is missing — re-run \`${SELF_INSTALL_REMEDY}\``);
       continue;
     }
     if (currentHash !== expectedHash) {
@@ -1115,10 +1119,9 @@ export async function findInstallDrift(homeDirectory: string): Promise<string[]>
 }
 
 /**
- * Warns when emet is installed both as a plugin and by `install.sh` (the
- * installer's manifest is present), which would load two copies of the
- * `/emet` command and agents. Claude-only: on Codex the plugin plus
- * `install.sh` (for the terminal `emet`) is the documented setup.
+ * Warns when a standalone install (`emet self install`) and the emet plugin
+ * coexist, which would load two copies of the `/emet` command and agents.
+ * Claude-only: on Codex the plugin plus a standalone binary is a supported setup.
  */
 export function findDoubleInstall(
   homeDirectory: string,
@@ -1126,14 +1129,153 @@ export function findDoubleInstall(
   host: AgentHost = claudeHost,
 ): string[] {
   if (host.name === "codex") return [];
-  const installedByScript = findInstallManifestPath(homeDirectory) !== undefined;
   const pluginInstalled =
     findPluginByName(plugins, PRODUCT) !== null ||
     findPluginByName(plugins, LEGACY_PRODUCT) !== null;
-  if (!installedByScript || !pluginInstalled) return [];
+  if (!hasStandaloneInstall(homeDirectory) || !pluginInstalled) return [];
   return [
-    "emet is installed both as a plugin and by install.sh; remove one (uninstall the plugin, or delete ~/.claude/emet, ~/.claude/commands/emet/ and the emet agents)",
+    "emet is installed standalone and as a plugin, so /emet and the emet agents load twice; remove one: `claude plugin uninstall emet@emet-marketplace`, or `emet uninstall` for the standalone install",
   ];
+}
+
+/** The command that repairs or refreshes a standalone install. */
+const SELF_INSTALL_REMEDY = "emet self install";
+
+function hasStandaloneInstall(homeDirectory: string): boolean {
+  return (
+    readInstallState(homeDirectory) !== null || findInstallManifestPath(homeDirectory) !== undefined
+  );
+}
+
+/** The SHA-256 of each file the install manifest records, keyed by home-relative path. */
+function readInstallManifestHashes(homeDirectory: string): ReadonlyMap<string, string> {
+  const relativePath = findInstallManifestPath(homeDirectory);
+  if (relativePath === undefined) return new Map();
+  const manifest = readJsonOrNull(path.join(homeDirectory, relativePath));
+  if (!isObject(manifest)) return new Map();
+  return new Map(
+    Object.entries(manifest).filter(
+      (entry): entry is [string, string] => typeof entry[1] === "string",
+    ),
+  );
+}
+
+/**
+ * Lists installed prompt files whose bytes differ from this binary's embedded tree (after the
+ * user-level rewrite), for a standalone install. Missing files are left to `findInstallDrift`, and
+ * so are files edited since install: `emet self install` keeps those, so it cannot clear this drift.
+ */
+export function findEmbeddedTreeDrift(
+  homeDirectory: string,
+  tree: TreeSource = embeddedTree(),
+): string[] {
+  if (!hasStandaloneInstall(homeDirectory)) return [];
+  const manifestHashes = readInstallManifestHashes(homeDirectory);
+  const findings: string[] = [];
+  for (const treePath of tree.list()) {
+    const relativePath = promptDestinationOf(treePath);
+    if (relativePath === undefined) continue;
+    const installed = readTextOrNull(path.join(homeDirectory, relativePath));
+    if (installed === null || installed === rewritePrompt(tree.read(treePath))) continue;
+    const recordedHash = manifestHashes.get(relativePath);
+    const installedHash = createHash("sha256").update(installed).digest("hex");
+    if (recordedHash !== undefined && recordedHash !== installedHash) continue;
+    findings.push(
+      `~/${relativePath} differs from the files embedded in this emet; run \`${SELF_INSTALL_REMEDY}\``,
+    );
+  }
+  return findings;
+}
+
+function readJsonOrNull(file: string): unknown {
+  const text = readTextOrNull(file);
+  if (text === null) return null;
+  try {
+    return JSON.parse(text) as unknown;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Warns, for a standalone install, when an update is staged but not applied or when auto-update
+ * is switched off, by `self-update.json` in `stateDirectory` or by `EMET_AUTO_UPDATE=0`.
+ */
+export function findUpdateWarnings(
+  homeDirectory: string,
+  stateDirectory: string,
+  env?: Env,
+): string[] {
+  if (!hasStandaloneInstall(homeDirectory)) return [];
+  const warnings: string[] = [];
+  const pending = readJsonOrNull(
+    path.join(homeDirectory, ".local", "share", "emet", "pending-update.json"),
+  );
+  if (pending !== null) {
+    const version =
+      isObject(pending) && typeof pending.version === "string" ? ` ${pending.version}` : "";
+    warnings.push(
+      `an emet update${version} is staged but not applied; run \`emet self update\` to apply it`,
+    );
+  }
+  const autoState = readJsonOrNull(path.join(stateDirectory, "self-update.json"));
+  if (readEnv("EMET_AUTO_UPDATE", env) === "0") {
+    warnings.push("emet auto-update is off because EMET_AUTO_UPDATE=0; unset it to turn it on");
+  } else if (isObject(autoState) && autoState.auto === "off") {
+    warnings.push("emet auto-update is off; run `emet self update --auto on` to turn it on");
+  }
+  return warnings;
+}
+
+const STANDALONE_CODEX_HOOK_WARNING =
+  'Codex has not trusted the emet hooks in ~/.codex/hooks.json, so the emet guard does not run. In Codex, open /hooks and press t to trust them, or approve the "Hooks need review" prompt at startup. Codex asks again after every emet update.';
+
+/** Codex's `hooks.state` event segment: `PreToolUse` as `pre_tool_use`. */
+function codexHookStateEvent(event: string): string {
+  return event.replace(/(?<=[a-z0-9])(?=[A-Z])/g, "_").toLowerCase();
+}
+
+/** The `hooks.state` keys of emet's own entries in `<codexHome>/hooks.json`, in Codex's format. */
+function emetCodexHookStateKeys(codexHome: string): string[] {
+  const hooksPath = path.join(codexHome, "hooks.json");
+  const hooksJson = readJsonOrNull(hooksPath);
+  if (!isObject(hooksJson)) return [];
+  return findEmetHookPositions(hooksJson).map(
+    ({ event, groupIndex, handlerIndex }) =>
+      `${hooksPath}:${codexHookStateEvent(event)}:${groupIndex}:${handlerIndex}`,
+  );
+}
+
+/**
+ * Warns when a standalone install covers Codex and an emet entry of `<codexHome>/hooks.json` has
+ * no `trusted_hash` in the `hooks.state` table of `config.toml`. Codex keys a hook as
+ * `<hooks file>:<event>:<group>:<handler>`; only the exact key of each emet entry counts, so a
+ * trusted foreign hook in the same file never satisfies the check. Judged by key presence only;
+ * the hash is not recomputed. Returns nothing for an unparsable config or a hooks.json without
+ * emet entries.
+ */
+export function findStandaloneCodexTrustWarnings(
+  homeDirectory: string,
+  configToml: string | null,
+  codexHome: string = path.join(homeDirectory, ".codex"),
+): string[] {
+  if (readInstallState(homeDirectory)?.hosts.includes("codex") !== true) return [];
+  const emetKeys = emetCodexHookStateKeys(codexHome);
+  if (emetKeys.length === 0) return [];
+  if (configToml === null) return [STANDALONE_CODEX_HOOK_WARNING];
+  const config = parseTomlOrNull(configToml);
+  if (config === null) return [];
+  const hookStates =
+    isObject(config) && isObject(config.hooks) && isObject(config.hooks.state)
+      ? config.hooks.state
+      : {};
+  const trusted = emetKeys.every((key) => {
+    const state = hookStates[key];
+    return (
+      isObject(state) && typeof state.trusted_hash === "string" && state.trusted_hash.length > 0
+    );
+  });
+  return trusted ? [] : [STANDALONE_CODEX_HOOK_WARNING];
 }
 
 const CODEX_HOOK_TRUST_WARNING =
@@ -1141,8 +1283,12 @@ const CODEX_HOOK_TRUST_WARNING =
 
 /** `$CODEX_HOME/config.toml`, defaulting `CODEX_HOME` to `~/.codex`. */
 export function codexConfigTomlPath(env?: Env, home: string = os.homedir()): string {
-  const codexHome = readEnv("CODEX_HOME", env);
-  return path.join(codexHome ?? path.join(home, ".codex"), "config.toml");
+  return path.join(codexHomeDirectory(env, home), "config.toml");
+}
+
+/** `CODEX_HOME`, defaulting to `~/.codex`. */
+function codexHomeDirectory(env?: Env, home: string = os.homedir()): string {
+  return readEnv("CODEX_HOME", env) ?? path.join(home, ".codex");
 }
 
 function parseTomlOrNull(text: string): unknown {
@@ -1350,8 +1496,11 @@ async function main(targets: readonly string[]): Promise<void> {
     console.log(`\nDouble install:\n${doubleInstall.map((line) => `  - ${line}`).join("\n")}`);
   }
 
-  const codexHookTrustWarnings =
-    host.name === "codex" ? findCodexHookTrustWarnings(readTextOrNull(codexConfigTomlPath())) : [];
+  const codexConfigToml = readTextOrNull(codexConfigTomlPath());
+  const codexHookTrustWarnings = [
+    ...(host.name === "codex" ? findCodexHookTrustWarnings(codexConfigToml) : []),
+    ...findStandaloneCodexTrustWarnings(os.homedir(), codexConfigToml, codexHomeDirectory()),
+  ];
   if (codexHookTrustWarnings.length > 0) {
     console.log(
       `\nCodex hooks:\n${codexHookTrustWarnings.map((line) => `  - warning: ${line}`).join("\n")}`,
@@ -1396,10 +1545,17 @@ async function main(targets: readonly string[]): Promise<void> {
   const journalBlock = formatJournalFindings(findJournalFilesystemFindings());
   if (journalBlock !== "") console.log(journalBlock);
 
-  const installDrift = await findInstallDrift(os.homedir());
+  const installDrift = [
+    ...(await findInstallDrift(os.homedir())),
+    ...findEmbeddedTreeDrift(os.homedir()),
+  ];
+  const updateWarnings = findUpdateWarnings(os.homedir(), stateDir());
+  if (updateWarnings.length > 0) {
+    console.log(`\nUpdates:\n${updateWarnings.map((line) => `  - warning: ${line}`).join("\n")}`);
+  }
   if (installDrift.length > 0) {
     console.log(
-      `\nInstall drift (informational — install.sh keeps your edits and writes <file>.new):\n${installDrift
+      `\nInstall drift (informational — ${SELF_INSTALL_REMEDY} keeps your edits and writes <file>.new):\n${installDrift
         .map((line) => `  - ${line}`)
         .join("\n")}`,
     );

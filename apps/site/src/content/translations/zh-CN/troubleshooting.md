@@ -2,7 +2,7 @@
 title: 故障排除
 description: 按你看到的现象归类 emet doctor 和 emet preflight 的失败，并给出各自的原因与修复方法。
 seoTitle: emet doctor 与 preflight 故障排除
-sourceHash: c1ebb76c9250d743
+sourceHash: 9d8a014c547eeed9
 ---
 
 按你看到的现象归类 `emet doctor` 和 `emet preflight` 的失败，并给出各自的原因与修复方法。术语遵循 [GLOSSARY.md](../GLOSSARY.md)。各项检查如何配合，参见[架构](architecture.md)。
@@ -66,11 +66,11 @@ sourceHash: c1ebb76c9250d743
 
 ## 已安装的文件缺失或在安装后被编辑过
 
-**症状：** `~/<path> is missing — re-run install.sh` 或 `~/<path> was edited since install`。
+**症状：** `~/<path> is missing — re-run emet self install` 或 `~/<path> was edited since install`。
 
 **原因：** 已安装的副本与安装清单不再一致。
 
-**修复：** 重新运行 `install.sh`。如果被编辑的文件旁边存在待处理的 `.new` 文件，请合并或删除它。
+**修复：** 重新运行 `emet self install`（在源码检出目录中使用 `emet self install --from .`）。如果被编辑的文件旁边存在待处理的 `.new` 文件，请合并或删除它。
 
 ## Stop hook error: forge: No such file or directory
 

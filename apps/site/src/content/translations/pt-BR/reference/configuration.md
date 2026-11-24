@@ -2,7 +2,7 @@
 title: Referência de configuração
 description: Cada chave do emet.config.json com seu valor padrão e seu significado.
 seoTitle: Referência de configuração do emet
-sourceHash: a9aeca59a8d1f719
+sourceHash: e6fb30702c28d97e
 ---
 
 Cada chave do `emet.config.json`, com seu valor padrão e seu significado. A fonte da verdade é [`emet/schema/emet.config.schema.json`](../../emet/schema/emet.config.schema.json). Os termos seguem o [GLOSSARY.md](../../GLOSSARY.md). Voltar ao [README](../../README.md).
@@ -347,6 +347,8 @@ A CLI lê estas variáveis, todas por meio de `emet/src/env.ts`. Uma variável c
 | `EMET_MEM_RESERVE_GIB`        | `FORGE_MEM_RESERVE_GIB`        | GiB de memória mantidos livres antes de conceder um slot de worker.                                                                                 |
 | `EMET_MEM_PER_WORKER_GIB`     | `FORGE_MEM_PER_WORKER_GIB`     | GiB de memória presumidos por worker pelo limite automático de workers.                                                                             |
 | `EMET_AGENT_HOST`             |                                | Defina como `codex` ao executar sob o host de agente Codex; qualquer outro valor significa Claude.                                                  |
+| `EMET_AUTO_UPDATE`            |                                | Defina como `0` para desativar `emet self update --auto` em uma instalação standalone.                                                              |
+| `EMET_RELEASE_BASE_URL`       |                                | Raiz de download de `emet self update`: os recursos são lidos de `<root>/vX.Y.Z` ou `<root>/latest`.                                                |
 | `CODEX_HOME`                  |                                | O diretório home do Codex; o padrão é `~/.codex`. Apenas lido.                                                                                      |
 | `XDG_STATE_HOME`              |                                | Base do diretório de estado quando `EMET_STATE_DIR` não está definida.                                                                              |
 | `NO_COLOR`                    |                                | Quando definida, o banner é impresso sem cor.                                                                                                       |

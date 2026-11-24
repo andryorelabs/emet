@@ -2,7 +2,7 @@
 title: 模型与推理强度
 description: emet 如何为每个角色选择模型和推理强度，以及哪些配置键可以修改它们。
 seoTitle: emet 的模型与推理强度
-sourceHash: 482995e2b98c659b
+sourceHash: 114cc60ff1358691
 ---
 
 `/emet` 会自动为每个角色选择模型和推理强度；运行中无需手动切换任何设置。前面的部分描述 Claude Code 宿主；[Codex 宿主](#codex-宿主)有自己的默认值。Claude Code 的所有配置键都在[配置参考](../reference/configuration.md#models)中。
@@ -19,7 +19,7 @@ sourceHash: 482995e2b98c659b
 | 评审，`high` 层级（高风险路径或敏感调用） | Opus                    | 默认为 `medium` | `models.reviewer.high`                     |
 | CI 日志分诊（阶段 8）                     | Haiku                   | —               | `models.triage`                            |
 
-在 Claude Code 上，两个代理定义文件（由 `install.sh` 安装到 `~/.claude/agents/`）在 frontmatter 中固定了各自的 `model`/`effort`，因此协调者自己选择的模型和推理强度不会影响工作者或评审者。如果其中任一文件丢失，`emet doctor` 只会报告，不会阻止。而 `emet preflight` 在 `emet-worker` 或 `emet-reviewer` 缺失时会阻止派发，因为阶段 6 和阶段 8 是通过 `subagent_type` 进行派发的。
+在 Claude Code 上，两个代理定义文件（由 `emet self install` 安装到 `~/.claude/agents/`）在 frontmatter 中固定了各自的 `model`/`effort`，因此协调者自己选择的模型和推理强度不会影响工作者或评审者。如果其中任一文件丢失，`emet doctor` 只会报告，不会阻止。而 `emet preflight` 在 `emet-worker` 或 `emet-reviewer` 缺失时会阻止派发，因为阶段 6 和阶段 8 是通过 `subagent_type` 进行派发的。
 
 ## 按风险层级路由
 

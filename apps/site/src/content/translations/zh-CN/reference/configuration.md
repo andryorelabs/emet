@@ -2,7 +2,7 @@
 title: 配置参考
 description: emet.config.json 中的每个键，包括其默认值和含义。
 seoTitle: emet 配置参考
-sourceHash: a9aeca59a8d1f719
+sourceHash: e6fb30702c28d97e
 ---
 
 `emet.config.json` 中的每个键，及其默认值和含义。权威来源是 [`emet/schema/emet.config.schema.json`](../../emet/schema/emet.config.schema.json)。术语遵循 [GLOSSARY.md](../../GLOSSARY.md)。返回 [README](../../README.md)。
@@ -347,6 +347,8 @@ CLI 会读取这些变量，全部通过 `emet/src/env.ts` 完成。采用 `FORG
 | `EMET_MEM_RESERVE_GIB`        | `FORGE_MEM_RESERVE_GIB`        | 授予工作者槽位之前保持空闲的内存 GiB 数。                                                         |
 | `EMET_MEM_PER_WORKER_GIB`     | `FORGE_MEM_PER_WORKER_GIB`     | 自动工作者上限为每个工作者假定的内存 GiB 数。                                                     |
 | `EMET_AGENT_HOST`             |                                | 在 Codex 智能体宿主下运行时设为 `codex`；其他任何值都表示 Claude。                                |
+| `EMET_AUTO_UPDATE`            |                                | 设为 `0` 可为独立安装关闭 `emet self update --auto`。                                             |
+| `EMET_RELEASE_BASE_URL`       |                                | `emet self update` 的下载根地址：资源从 `<root>/vX.Y.Z` 或 `<root>/latest` 读取。                 |
 | `CODEX_HOME`                  |                                | Codex 的主目录；默认为 `~/.codex`。只会被读取。                                                   |
 | `XDG_STATE_HOME`              |                                | 未设置 `EMET_STATE_DIR` 时，状态目录的基准。                                                      |
 | `NO_COLOR`                    |                                | 设置后，横幅将不带颜色输出。                                                                      |

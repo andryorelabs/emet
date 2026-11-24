@@ -2,7 +2,7 @@
 title: Dependencias
 description: Qué necesita emet en la máquina y qué comando comprueba cada elemento.
 seoTitle: Dependencias de emet
-sourceHash: 1c97a7ccd5572ab4
+sourceHash: 54f288bd696fe862
 ---
 
 Qué necesita emet en la máquina y qué comando comprueba cada elemento. Los términos siguen [GLOSSARY.md](../../GLOSSARY.md). Volver al [README](../../README.md).
@@ -12,7 +12,7 @@ Qué necesita emet en la máquina y qué comando comprueba cada elemento. Los t�
 Primero lo que comparten ambos Agent hosts, luego lo que añade cada host.
 
 - **[bun](https://bun.sh)**: solo para instalaciones desde el código fuente. El binario independiente no necesita ningún runtime.
-- **`rsync`** y **`sha256sum` o `shasum`**: los exige `install.sh`.
+- **`sha256sum` o `shasum`**: los usa el recurso de versión `install.sh` (`curl -fsSL https://emet.andryore.dev/install.sh | sh`) para verificar la descarga. `emet self install` en sí no necesita ninguno de los dos.
 - **`git`**: obligatorio en tiempo de ejecución. Casi todos los subcomandos lo invocan.
 - **CLI `gh`, autenticada**: obligatoria cuando el tracker es `github` o el aterrizaje es `pr`. Los PR siempre la usan. Con `tracker.kind: "local"` y `landing.mode: "merge"`, `gh` no es obligatoria.
 - **El plugin `mattpocock-skills`**: las fases de entrevista, spec y tickets llaman a skills que viven allí. En Claude Code viene del marketplace `claude-plugins-official`; en Codex consulta [Host de Codex](#host-de-codex).
@@ -23,7 +23,7 @@ Primero lo que comparten ambos Agent hosts, luego lo que añade cada host.
   ```
 
 - **La CLI `claude` y los comandos del plugin de emet** (`/emet:run`, `/emet:init`, `/emet:doctor`): solo el host de Claude Code.
-- **Los agentes `emet-worker` y `emet-reviewer`** en `~/.claude/agents/`: solo el host de Claude Code, los instala `install.sh`. La fase 6 y la fase 8 despachan por `subagent_type`, así que si falta cualquiera de los dos, el despacho se rompe. Consulta [Models & effort](../../README.md#models--effort).
+- **Los agentes `emet-worker` y `emet-reviewer`** en `~/.claude/agents/`: solo el host de Claude Code, los instala `emet self install`. La fase 6 y la fase 8 despachan por `subagent_type`, así que si falta cualquiera de los dos, el despacho se rompe. Consulta [Models & effort](../../README.md#models--effort).
 - **Un servidor MCP de Linear declarado en `.mcp.json` (o en el ámbito de usuario)**: solo si el repositorio usa el tracker `linear`. emet verifica la declaración. Que la conexión esté autenticada depende del almacén de credenciales propio del Agent host y no se puede comprobar desde aquí. En Claude Code, si una ejecución no logra leer los tickets, reinicia Claude Code y aprueba la conexión. El paso equivalente en Codex no está verificado.
 
 Nada de lo anterior se instala ni se inicia sesión en tu nombre. Lo que cambia es quién lo comprueba y con qué rigor.

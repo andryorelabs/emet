@@ -2,7 +2,7 @@
 title: アーキテクチャ
 description: emet/src のコードマップと、/emet のプロンプトがそれをどのように動かすかを説明します。
 seoTitle: emet のアーキテクチャ
-sourceHash: d8efc16f3c2a6ed5
+sourceHash: 52ecb4018731cf4e
 ---
 
 `emet/src` のコードマップと、`/emet` のプロンプトがそれをどのように動かすかを説明します。用語は [GLOSSARY.md](../GLOSSARY.md) に従います。この構成の背景にある決定は [docs/adr](adr/README.md) にあります。問題が起きた場合は、[トラブルシューティング](troubleshooting.md)を参照してください。
@@ -52,11 +52,11 @@ sourceHash: d8efc16f3c2a6ed5
 
 ## プロンプトの配置
 
-`commands/run.md`（約 130 行）が Claude Code での `/emet` のルーターで、Codex ではその役割を生成された `codex/skills/**` と `codex/hooks.json` が担います。`emet/reference/` の各ファイルは 1 つのフェーズグループ（`phases-1-5.md`、`phases-6-7-dispatch.md`、`phases-8-review.md`、`phases-8-landing.md`、`phases-8-spec-landing.md`、`phases-9-handoff.md`）で、現在の実行のモードが必要とするときにだけ読み込まれます。いずれかが 20,000 バイトを超えるとテストが失敗するため、1 つのファイルがコンパクション後のコンテキストを占有することはありません。フェーズは、修正やレビューの各ラウンドの前に、該当するセクションを読み直すようコーディネーターに指示します。`install.sh` は、古い単一の `phases-6-9.md` を、編集されている場合やインストールマニフェストより前のものである場合は `phases-6-9.md.retired` として脇に移し、そうでなければ削除します。古い `phases-8-closeout.md` についても同様で、これは `phases-8-review.md`（レビューとゲート）と `phases-8-landing.md`（ランディングと締めくくり）に分割されており、`phases-8-closeout.md.retired` として脇に移します。`phases-8-spec-landing.md` には `landing.unit: spec` のルールがまとまっています。各ウェーブを `spec/<id>` に統合し、トランクを同期し、スペックを 1 回だけランディングします。また `install.sh` は、`emet guard` を `PreToolUse` フックとして `~/.claude/settings.json` に組み込みます。
+`commands/run.md`（約 130 行）が Claude Code での `/emet` のルーターで、Codex ではその役割を生成された `codex/skills/**` と `codex/hooks.json` が担います。`emet/reference/` の各ファイルは 1 つのフェーズグループ（`phases-1-5.md`、`phases-6-7-dispatch.md`、`phases-8-review.md`、`phases-8-landing.md`、`phases-8-spec-landing.md`、`phases-9-handoff.md`）で、現在の実行のモードが必要とするときにだけ読み込まれます。いずれかが 20,000 バイトを超えるとテストが失敗するため、1 つのファイルがコンパクション後のコンテキストを占有することはありません。フェーズは、修正やレビューの各ラウンドの前に、該当するセクションを読み直すようコーディネーターに指示します。`emet self install` は、インストールマニフェストと一致したままの古い `phases-8-closeout.md` を削除し、そうでなければ `phases-8-closeout.md.retired` として脇に移します。このファイルは `phases-8-review.md`（レビューとゲート）と `phases-8-landing.md`（ランディングと締めくくり）に分割されています。`phases-8-spec-landing.md` には `landing.unit: spec` のルールがまとまっています。各ウェーブを `spec/<id>` に統合し、トランクを同期し、スペックを 1 回だけランディングします。また `emet self install` は、emet のフック（その 1 つが `PreToolUse` フックの `emet guard`）を `~/.claude/settings.json` にマージします。
 
 ## 配布
 
-`install.sh` は `emet/` を `~/.claude/emet` にコピーし、プロンプトを書き換えます。Codex プラグインは `.codex-plugin/plugin.json` で記述され、`codex/skills/**` および `codex/hooks.json` とともに `bun run build:codex` で生成されます。Claude Code のプラグインの経路では、`tools/build-binaries.ts` がビルドしたチェックサム検証済みのスタンドアロンバイナリをダウンロードするシムが提供されます。[ADR-0008](adr/0008-standalone-binaries-and-plugin-distribution.md) を参照してください。
+`emet self install` はスタンドアロンバイナリを配置し、書き換えたプロンプトを `~/.claude/` 以下に書き込み、`--from <checkout>` を付けると `emet/` のソースを `~/.claude/emet` にコピーします。Codex プラグインは `.codex-plugin/plugin.json` で記述され、`codex/skills/**` および `codex/hooks.json` とともに `bun run build:codex` で生成されます。Claude Code のプラグインの経路では、`tools/build-binaries.ts` がビルドしたチェックサム検証済みのスタンドアロンバイナリをダウンロードするシムが提供されます。[ADR-0008](adr/0008-standalone-binaries-and-plugin-distribution.md) を参照してください。
 
 ## 関連項目
 

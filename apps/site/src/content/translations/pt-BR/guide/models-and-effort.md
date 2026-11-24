@@ -2,7 +2,7 @@
 title: Modelos e esforço
 description: Como o emet escolhe um modelo e um esforço de raciocínio para cada papel, e quais chaves de configuração os alteram.
 seoTitle: Modelos e esforço no emet
-sourceHash: 482995e2b98c659b
+sourceHash: 114cc60ff1358691
 ---
 
 O `/emet` escolhe automaticamente um modelo e um esforço de raciocínio por papel; não há nada para trocar manualmente no meio de uma execução. As primeiras seções descrevem o host Claude Code; o [host Codex](#host-codex) tem seus próprios padrões. Todas as chaves do Claude Code estão na [referência de configuração](../reference/configuration.md#models).
@@ -19,7 +19,7 @@ O `/emet` escolhe automaticamente um modelo e um esforço de raciocínio por pap
 | Revisão, nível `high` (caminhos ou pontos sensíveis)    | Opus                   | `medium` por padrão | `models.reviewer.high`                      |
 | Triagem de logs de CI (fase 8)                          | Haiku                  | —                   | `models.triage`                             |
 
-No Claude Code, as duas definições de agente (instaladas pelo `install.sh` em `~/.claude/agents/`) fixam seu próprio `model`/`effort` no frontmatter, de modo que a escolha de modelo/esforço do próprio coordenador nunca vaza para um worker nem para o revisor. O `emet doctor` informa (sem nunca bloquear) se qualquer um dos arquivos estiver ausente. O `emet preflight` bloqueia o despacho quando `emet-worker` ou `emet-reviewer` está ausente, porque a fase 6 e a fase 8 despacham por `subagent_type`.
+No Claude Code, as duas definições de agente (instaladas pelo `emet self install` em `~/.claude/agents/`) fixam seu próprio `model`/`effort` no frontmatter, de modo que a escolha de modelo/esforço do próprio coordenador nunca vaza para um worker nem para o revisor. O `emet doctor` informa (sem nunca bloquear) se qualquer um dos arquivos estiver ausente. O `emet preflight` bloqueia o despacho quando `emet-worker` ou `emet-reviewer` está ausente, porque a fase 6 e a fase 8 despacham por `subagent_type`.
 
 ## Roteamento por nível de risco
 

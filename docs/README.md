@@ -54,10 +54,15 @@ An index of every document in this repository. Terms follow [GLOSSARY.md](../GLO
 
 - [`adr/README.md`](adr/README.md): the architecture decision record index, one file per decision (`adr/NNNN-*.md`).
 
+## Specs
+
+- [`specs/standalone-install.md`](specs/standalone-install.md): the living spec of the standalone install: the embedded install tree, `emet self install`, self-update, uninstall and doctor checks.
+
 ## Research
 
 - [`research/codex-viability.md`](research/codex-viability.md): whether emet can run on Codex CLI: capability matrix, parity table, integration models A, B and C, a ten-experiment spike and a follow-up spec outline.
 - [`research/codex-probe-report.md`](research/codex-probe-report.md): the real-Codex check of each `unverified` point in the Codex guide, the e2e and full-flow results, follow-ups and a manual check.
+- [`research/standalone-install-spike.md`](research/standalone-install-spike.md): the four checks before the standalone install: embedding the install tree in the binary, Codex skill names under `~/.agents/skills`, a literal `$HOME` in Claude Code prompts, and appended Codex user hooks.
 
 ## Brand
 

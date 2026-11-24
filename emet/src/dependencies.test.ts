@@ -223,7 +223,7 @@ describe("classifyForgeAgentsProbe", () => {
     const check = classifyForgeAgentsProbe({ kind: "missing", missing: ["emet-reviewer"] });
     expect(check.status).toBe("unsatisfied");
     expect(check.summary).toContain("emet-reviewer");
-    expect(check.remedy).toEqual(["./install.sh"]);
+    expect(check.remedy).toEqual(["emet self install"]);
   });
 });
 
