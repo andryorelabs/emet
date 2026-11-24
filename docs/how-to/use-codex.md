@@ -1,22 +1,27 @@
-# Running emet on Codex
+# Run emet on Codex
 
-emet can run on Codex CLI as well as Claude Code. Terms follow [GLOSSARY.md](../../GLOSSARY.md); the product a run executes in is the **Agent host**. This page covers installing the Codex side, choosing the host, the single approval and the known limits. Back to the [documentation index](../README.md).
+Run the emet pipeline on Codex CLI instead of Claude Code. Terms follow [GLOSSARY.md](../../GLOSSARY.md); the product a run executes in is the **Agent host**. Back to the [documentation index](../README.md).
 
-On the Codex host the pipeline is the same: interview, spec, tickets, one approval, parallel workers in worktrees, a review per wave, then landing. What changes is the plumbing. Each worker and each reviewer is its own `codex exec` process started by `emet dispatch` and `emet review-run`, and the slash commands become the `$emet:run`, `$emet:init` and `$emet:doctor` skills. The Claude Code path is untouched.
+How a wave runs on Codex, the guard and the sandbox trade-offs are explained in [Security](../concepts/security.md) and [Runs, waves and specs](../concepts/runs-waves-specs.md).
+
+## Prerequisites
+
+- The `codex` CLI at the version in `codex.minVersion` (default `0.167.0`) or newer, logged in.
+- `git` and `gh` on `PATH`; see the [dependencies reference](../reference/dependencies.md).
+- A repo with an `emet.config.json` (run `emet init` if it has none).
 
 ## Install
 
 :::steps
 
-1. Install the `codex` CLI at the version in `codex.minVersion` (default `0.167.0`) or newer, and log in.
-2. Install the `mattpocock-skills` plugin in Codex:
+1. Install the `mattpocock-skills` plugin in Codex:
 
    ```bash
    codex plugin marketplace add mattpocock/skills
    codex plugin add mattpocock-skills@mattpocock
    ```
 
-3. Install emet with the standalone install. It writes the emet skills under `~/.agents/skills/emet/` and appends the emet hooks to `$CODEX_HOME/hooks.json` (default `~/.codex`), and never writes `config.toml`:
+2. Install emet with the standalone install. It writes the emet skills under `~/.agents/skills/emet/` and appends the emet hooks to `$CODEX_HOME/hooks.json` (default `~/.codex`), and never writes `config.toml`:
 
    ```bash
    curl -fsSL https://emet.andryore.dev/install.sh | sh
@@ -24,14 +29,13 @@ On the Codex host the pipeline is the same: interview, spec, tickets, one approv
 
    Add `-s -- --dry-run` after `sh` to preview the writes. It also installs the terminal `emet` and the Claude Code commands and agents under `~/.claude`; that is harmless on Codex.
 
-4. Trust the hooks. Codex does not run a hook until you trust it: open `/hooks` and press `t` on the events page, or approve the "Hooks need review" prompt at startup.
-5. Run `emet doctor .`. On the Codex host it reports a `codex` older than `codex.minVersion`, a missing `--json` or `--output-schema` flag on `codex exec`, untrusted hooks and a missing `mattpocock-skills` with the two commands above.
+3. Trust the hooks. Codex does not run a hook until you trust it: open `/hooks` and press `t` on the events page, or approve the "Hooks need review" prompt at startup.
 
 :::
 
 ### Optional: the Codex plugin
 
-Instead of the standalone install you can install the emet plugin. The repository ships `.codex-plugin/plugin.json` and the generated skills and hooks under `codex/`:
+Instead of the standalone install you can install the emet plugin:
 
 ```bash
 codex plugin marketplace add andryorelabs/emet
@@ -40,66 +44,51 @@ codex plugin add emet@emet-marketplace
 
 The plugin brings no `emet` shim, so the terminal `emet` still needs the standalone install. `emet self install` refuses while the plugin is installed unless you pass `--force`, and `emet doctor` warns when both coexist.
 
-Both plugin commands above were run against the real `codex` (0.167.0): in a fresh `CODEX_HOME` they exit 0 and `codex plugin list` shows `emet@emet-marketplace installed, enabled`. The local-path form, `codex plugin marketplace add <repo>`, gives the same result.
-
 ## Choose the Agent host
 
-Set `agentHost` in `emet.config.json`:
+:::steps
 
-```json
-{ "agentHost": "codex" }
-```
+1. Set `agentHost` in `emet.config.json` (the default is `"claude"`):
 
-The default is `"claude"`. The `codex` section sets the models, the effort, the minimum version and the sandbox; see the [configuration reference](../reference/configuration.md#codex) and [Models and effort](choose-models.md). Start a run from Codex with `$emet:run`. `emet launch <spec> --wave <n>` starts a wave in a detached `codex exec` and records its thread id, so `codex exec resume <id>` continues it; no Orca tab is opened.
+   ```json
+   { "agentHost": "codex" }
+   ```
 
-## The single approval
+2. Set models, effort, minimum version and sandbox in the `codex` section if the defaults do not fit; see the [configuration reference](../reference/configuration.md#codex) and [Choose models](choose-models.md).
+3. Start a run from Codex with `$emet:run`. To start a wave from a terminal, run `emet launch <spec> --wave <n>`; it starts a detached `codex exec` and records its thread id, so `codex exec resume <id>` continues it. No Orca tab is opened.
 
-emet asks for one approval, after the plan. On Claude Code that is a prompt. On Codex it is a hook:
+:::
 
-- Until `.emet/runs/spec<id>/approval.json` exists, `emet guard` denies every mutation (`apply_patch`, `Bash`) except writes under `.emet/runs/**/draft/**`, with the reason `not approved: send approve <id>`. The gate applies once a `.emet/runs/spec<id>/` directory exists without its `approval.json`, which is the state `$emet:run` leaves after Phase 4 materializes the spec.
-- You approve by sending a prompt line that is exactly `approve <id>`. The `UserPromptSubmit` hook then writes the approval file with the same hashing as `emet approve`. The same words in tool output or model text do nothing.
-- The alternative is `/plan $emet:run`: approve the plan in Codex's own plan mode instead of the hook.
+## Approve the plan
 
-Once that directory exists, the gate fails closed: a missing or unreadable approval file keeps mutations denied. The guard also checks every path of an `apply_patch` against the ticket's `.emet/surface.json`.
+emet asks for one approval, after the plan. On Codex it is a hook.
+
+:::steps
+
+1. Wait for `$emet:run` to materialize the spec. Until `.emet/runs/spec<id>/approval.json` exists, `emet guard` denies every mutation with the reason `not approved: send approve <id>`.
+2. Send a prompt line that is exactly `approve <id>`. The `UserPromptSubmit` hook writes the approval file. The same words in tool output or model text do nothing.
+3. Alternatively, start with `/plan $emet:run` and approve the plan in Codex's own plan mode.
+
+:::
 
 ## After an emet update
 
-With the standalone install the hooks are plain entries in `hooks.json`; trust them once through `/hooks` as in the install steps. With the plugin, Codex asks you to trust the emet plugin hooks again after every plugin update, because the plugin's content hash changes. To trust them, run `/hooks` and press `t` on the events page to trust all, or approve the "Hooks need review" prompt at startup. Until then the emet guard and the single approval do not run.
+With the standalone install, the hooks are plain entries in `hooks.json` and stay trusted. With the plugin, Codex asks you to trust the plugin hooks again after every update.
 
-`emet doctor` warns when the hooks were never trusted:
+:::steps
 
-`Codex has not trusted the emet plugin hooks, so the emet guard does not run. In Codex, open /hooks and press t to trust them, or approve the "Hooks need review" prompt at startup. Codex asks again after every emet update.`
+1. Open `/hooks` and press `t` on the events page, or approve the "Hooks need review" prompt at startup. Until then the emet guard and the single approval do not run.
+2. If the shim prints `release v<version> has no downloadable asset yet`, it is running the cached version. Retry in a few minutes.
 
-Right after a release, the shim may run the previous cached version for a few minutes. It then prints:
+:::
 
-`emet: release v<version> has no downloadable asset yet (it may still be publishing); using the cached v<newest>. Retry in a few minutes.`
+## Check
 
-## How a wave runs
+:::steps
 
-- `emet dispatch --role worker` checks the claim and the slot, creates `.emet/worktrees/agent-<ticket>`, builds a per-run `CODEX_HOME` overlay under `.emet/runs/<run>/codex-home/`, and starts `codex exec` with the resolved model and effort, the `codex.sandbox` mode (`danger-full-access` by default), `--json` and `--output-schema`. Events are captured to `.emet/runs/<run>/codex/<ticket>.jsonl`. The worker is identified by the `threadId` of its `thread.started` event and that JSONL path; the process id is only an auxiliary field.
-- The overlay has two modes. When the standalone install state file exists, the overlay's `config.toml` omits the emet plugin and marketplace tables and workers still see the emet skills from `~/.agents/skills`; in plugin mode it keeps them, as described next. The overlay is generated, not linked. Your `auth.json` is symlinked (never copied), the emet plugin cache is linked from your Codex home when it exists, and the overlay writes its own minimal `config.toml`: the local marketplace and `[plugins."emet@emet-marketplace"] enabled = true`, a `trusted` `[projects."<dir>"]` table only for the run's own directories, and the resolved `model` and `model_reasoning_effort`. None of your `[projects]` tables or other settings are copied, and your `~/.codex` is never written.
-- The overlay's `rules/default.rules` allows `git add`, `git commit`, `git status`, `git worktree`, `git -C <dir> ...` and the `emet` subcommands `dispatch`, `review-run`, `launch`, `claims`, `slots`, `results`, `handoff` and `ask`, and forbids `git push`. Because the default sandbox no longer blocks writes, `emet guard` also denies any `Bash` command whose argv runs `git push`, including `git -C <dir> push` and `git --git-dir=<dir> push`, whatever the sandbox.
-- A worker never has a side channel to the coordinator. It escalates through the run's mailbox: `emet ask --run <run> --ticket <ticket> --body <text>` records a question and prints its id, and `emet ask ... --wait <n>` polls for the reply (exit 0 prints it, exit 3 means the slice elapsed, exit 4 means `budgets.askWaitMinutes` is spent, so the worker writes a BLOCKED result and exits). While a live worker has an open question, `emet dispatch --wait` prints `question <ticket> <id>` instead of a result status and never classifies the worker as stalled; the coordinator reads `emet inbox --run <run>`, answers with `emet reply --run <run> --ticket <ticket> --id <n> --body <text>`, and resumes `emet dispatch --wait`. A recorded result always wins over an open question. See [ADR-0023](../adr/0023-cli-owned-mailbox-for-codex-workers.md).
-- Results are read from `<git-common-dir>/.emet/runs/<run>/results/`, the same place `emet results --write` writes, so a worker in its own worktree is found.
-- `emet review-run` runs the reviewer read-only over a package from `emet review-package`; the `passive` tier starts no process.
-- Models resolve against `models_cache.json` in the run home, else in your real Codex home (read only). A configured slug that is not listed is substituted and the substitution is logged; if nothing resolves, `emet review-run` fails before the model call, naming the role and the listed slugs.
-- Usage and stall detection read the captured JSONL: token usage from `turn.completed` events and liveness from the file growing, so a worker in another pid namespace still reads as live. `emet preflight` and `emet cleanup` share one rule for a reclaimable unowned worktree (worker branch, ticket landed, clean tree, no foreign lock), so preflight only says to run `emet cleanup` when cleanup would act.
+1. Run `emet doctor .`. On the Codex host it reports a `codex` older than `codex.minVersion`, a missing `--json` or `--output-schema` flag on `codex exec`, untrusted hooks and a missing `mattpocock-skills`.
+2. Fix what it reports using the matching entry in [Troubleshooting](../troubleshooting.md#codex-host), then run it again until it reports no failures.
 
-## What the real-Codex run showed
+:::
 
-The [probe report](../research/codex-probe-report.md) re-ran every check against `codex-cli 0.167.0` (ChatGPT free plan, Linux) after these changes. All earlier `failed` rows are now `verified`:
-
-- A 2-wave flow landed real commits by Codex workers on the trunk: wave 1 from `emet dispatch`, wave 2 from a session started by `emet launch <spec> --wave 2` that loaded `$emet:run` from the overlay's plugin cache. `emet review-run` ran in every flow.
-- The opt-in e2e (`EMET_CODEX_E2E=1`) passes: the worker commits under `danger-full-access`, and `codex execpolicy check` answers `forbidden` for `git push origin develop` and `allow` for `git -C <dir> commit`.
-- `~/.codex/config.toml` kept the same sha256 across the probe, the e2e and seven flows.
-
-## Limits and `unverified` points
-
-- Effort `ultra` is never sent and is rejected in configuration.
-- `danger-full-access` is the default `codex.sandbox` for Codex workers and `emet launch`, because the `workspace-write` sandbox makes `.git` read-only and a worker could not commit. Set `codex.sandbox` to `"workspace-write"` to keep the sandbox; workers then cannot commit. [ADR-0022](../adr/0022-codex-workers-run-unsandboxed-by-default.md) records the trade-off. The Claude path never uses it. With no sandbox, the push denial in `emet guard` and the rules file are the guard rails.
-- There are no `ScheduleWakeup`, `TaskStop` or `LSP` equivalents. emet polls its own CLI instead.
-- Rollout files under `~/.codex/sessions` have no stable format, so emet reads the `exec --json` output it captured itself.
-- Verified against the real CLI, and still behind small functions so a Codex change touches one place: a per-run `CODEX_HOME` with linked auth, the rules file at `rules/default.rules`, `--dangerously-bypass-hook-trust`, the `CLAUDE_PLUGIN_ROOT` alias in hook commands, the output format of `codex plugin list`, a model loading a skill by name, `emet dispatch` inside a nested session, a model trying to forge `approval.json` (denied), and both `codex plugin marketplace add` forms. See [the viability research](../research/codex-viability.md).
-- Still `unverified`: running Codex from an unattended supervisor under systemd or in a container (only a detached process was tested).
-- Known follow-ups from the probe report: `emet init` writes Claude model names into `models` for `agentHost: "codex"`, an explicit `emet dispatch --model` is not resolved against the cache, `emet lock-reason` looks for a `claude` ancestor, and a ticket whose worker died cannot be re-dispatched into the same worktree.
-- Codex model names and prices change; the price table needs a re-check once real waves have run.
+Known limits: effort `ultra` is never sent and is rejected in configuration, and `codex.sandbox` defaults to `danger-full-access` so workers can commit; set it to `"workspace-write"` to keep the sandbox, and workers then cannot commit. See [ADR-0022](../adr/0022-codex-workers-run-unsandboxed-by-default.md) and the [probe report](../research/codex-probe-report.md).
