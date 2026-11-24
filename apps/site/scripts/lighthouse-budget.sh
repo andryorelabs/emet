@@ -13,7 +13,7 @@ base="${1%/}"
 reports="${2:-e2e/.output/lighthouse}"
 site_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 lighthouse_version="13.6.0"
-pages=(/ /docs/guide/getting-started/ /es/)
+pages=(/ /docs/start/install/ /es/)
 # Runs per page; the budget applies to the median, which absorbs one noisy run.
 runs=3
 
@@ -35,8 +35,8 @@ declare -A known_defects=(
   ["/|min_best_practices"]=0.9
   ["/es/|min_best_practices"]=0.9
   # The docs content container shifts after load (CLS up to 0.3).
-  ["/docs/guide/getting-started/|max_cls"]=0.35
-  ["/docs/guide/getting-started/|min_performance"]=0.8
+  ["/docs/start/install/|max_cls"]=0.35
+  ["/docs/start/install/|min_performance"]=0.8
 )
 
 # budget <page> <name>: the page's known-defect budget, else the default one.

@@ -2,7 +2,7 @@ import { describe, expect, test } from "bun:test";
 
 import { rewriteMarkdownLinks } from "./markdown";
 
-const guide = { sourcePath: "docs/guide/getting-started.md" };
+const guide = { sourcePath: "docs/start/install.md" };
 
 describe("rewriteMarkdownLinks reference definitions", () => {
   test("rewrites the target of a reference definition and keeps its title", () => {
@@ -11,9 +11,12 @@ describe("rewriteMarkdownLinks reference definitions", () => {
   });
 
   test("rewrites an indented definition and a localized one", () => {
-    expect(rewriteMarkdownLinks("  [fleet]: fleet.md#usage", { ...guide, locale: "pt-BR" })).toBe(
-      "  [fleet]: /pt-br/docs/guide/fleet/#usage",
-    );
+    expect(
+      rewriteMarkdownLinks("  [fleet]: ../how-to/check-a-fleet.md#usage", {
+        ...guide,
+        locale: "pt-BR",
+      }),
+    ).toBe("  [fleet]: /pt-br/docs/how-to/check-a-fleet/#usage");
   });
 
   test("leaves a definition inside a fence untouched", () => {

@@ -1,6 +1,6 @@
 # Troubleshooting
 
-Failures of `emet doctor` and `emet preflight`, grouped by what you see, each with the cause and a fix. Terms follow [GLOSSARY.md](../GLOSSARY.md). For how the checks fit together, see [architecture](architecture.md).
+Failures of `emet doctor` and `emet preflight`, grouped by what you see, each with the cause and a fix. Terms follow [GLOSSARY.md](../GLOSSARY.md). For how the checks fit together, see [architecture](concepts/architecture.md).
 
 <img src="brand/mascot/mascot-error.svg" alt="" width="96">
 
@@ -111,7 +111,7 @@ A repo that still has only `forge.config.json`, `.forge/` or `FORGE_*` variables
 
 ## Codex host
 
-These apply when `agentHost` is `"codex"`. See [Running emet on Codex](guide/codex.md).
+These apply when `agentHost` is `"codex"`. See [Running emet on Codex](how-to/use-codex.md).
 
 **A `codex` older than `codex.minVersion`.** `emet doctor .` reports it. Install the `codex` CLI at the version in `codex.minVersion` (default `0.167.0`) or newer, then run `emet doctor .` again.
 
@@ -123,6 +123,6 @@ These apply when `agentHost` is `"codex"`. See [Running emet on Codex](guide/cod
 
 - [Documentation index](README.md)
 - [README](../README.md)
-- [Getting started](guide/getting-started.md)
+- [Getting started](start/install.md)
 - [Configuration reference](reference/configuration.md)
 - [Dependencies reference](reference/dependencies.md)

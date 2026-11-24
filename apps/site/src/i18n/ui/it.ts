@@ -47,13 +47,20 @@ export const it = {
     emetReplies: "emet risponde",
     alt: "La valle dove tre ruscelli confluiscono in un fiume.",
     merged: "Unito",
+    otherInstall: "Altri modi per installare",
+    wave: "Ondata {n}",
+    caption:
+      "Ogni ondata confluisce in un branch della spec. La spec arriva come una sola pull request.",
+    prTitle: "Spec 41: modalità scura per le impostazioni",
+    checks: "check superati",
   },
   showcase: {
-    heading: "L'ondata viene integrata",
-    headingHeld: "L'ondata attende",
-    status: "Ondata 2 revisionata. CI superata. Integrata, 3 ticket chiusi.",
-    statusHeld: "Ondata 2 trattenuta: un ticket segnalato. Nulla è stato integrato.",
-    flag: "Segnala il ticket #255",
+    heading: "La spec viene integrata",
+    headingHeld: "La spec attende",
+    status:
+      "Spec 41 revisionata. CI superata. Integrata come una sola pull request, 4 ticket chiusi.",
+    statusHeld: "Spec 41 trattenuta: un ticket segnalato. Nulla è stato integrato.",
+    flag: "Segnala il ticket #44",
   },
   features: {
     heading: "Cosa protegge un'esecuzione",
@@ -71,6 +78,28 @@ export const it = {
       { title: "Worktree isolati", line: "Un git worktree per worker." },
       { title: "Il tuo tracker, o nessuno", line: "Linear, GitHub Issues o file locali." },
     ],
+    extra: [
+      {
+        title: "Modalità rapida per piccole modifiche",
+        line: "Un'opzione riduce l'intervista a un solo giro ed esegue un ticket, una revisione e un'integrazione.",
+      },
+      {
+        title: "Ricorda ciò che ha funzionato",
+        line: "Le lezioni di ogni esecuzione vengono salvate e richiamate nella successiva.",
+      },
+      {
+        title: "Due revisori per modifiche rischiose",
+        line: "Il lavoro ad alto rischio ottiene un secondo revisore prima dell'integrazione.",
+      },
+      {
+        title: "Ti avvisa quando ha bisogno di te",
+        line: "Un avviso quando un'esecuzione attende la tua approvazione o è bloccata.",
+      },
+      {
+        title: "Si installa e si disinstalla in modo pulito",
+        line: "Rimuove tutto ciò che emet ha installato e conserva ogni file che hai modificato.",
+      },
+    ],
   },
   stats: {
     label: "In numeri",
@@ -84,6 +113,16 @@ export const it = {
   faq: {
     heading: "Domande",
     items: [
+      {
+        question: "Come disinstallo emet?",
+        answer:
+          "Esegui `emet uninstall`. Rimuove ciò che emet ha installato e conserva ogni file che hai modificato. Aggiungi `--dry-run` per vedere prima un'anteprima.",
+      },
+      {
+        question: "Che cos'è la modalità rapida?",
+        answer:
+          "Passa `--quick` per una piccola modifica. Riduce l'intervista a un solo giro ed esegue un ticket, una revisione e un'integrazione.",
+      },
       {
         question: "Di cosa ho bisogno?",
         answer:

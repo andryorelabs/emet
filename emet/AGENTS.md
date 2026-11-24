@@ -8,4 +8,4 @@ Runtime-only rules for the `emet` CLI in this directory. Everything else is in t
 - The runtime behaviour of the CLI does not change without an explicit ticket.
 - Comments are JSDoc only. See [ADR-0003](../docs/adr/0003-jsdoc-only-comments.md).
 - Prompt markdown in `reference/`: whitespace and wrapping only, never wording.
-- Module map: [docs/architecture.md](../docs/architecture.md).
+- Module map: [docs/architecture.md](../docs/concepts/architecture.md).

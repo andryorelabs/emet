@@ -47,13 +47,19 @@ export const fr = {
     emetReplies: "emet répond",
     alt: "La vallée où trois ruisseaux se jettent dans une rivière.",
     merged: "Fusionné",
+    otherInstall: "Autres façons d'installer",
+    wave: "Vague {n}",
+    caption:
+      "Chaque vague rejoint une branche de spec. La spec atterrit en une seule pull request.",
+    prTitle: "Spec 41 : mode sombre pour les réglages",
+    checks: "checks réussis",
   },
   showcase: {
-    heading: "La vague est fusionnée",
-    headingHeld: "La vague attend",
-    status: "Vague 2 relue. CI réussie. Fusionnée, 3 tickets fermés.",
-    statusHeld: "Vague 2 retenue : un ticket signalé. Rien n'a été fusionné.",
-    flag: "Signaler le ticket #255",
+    heading: "La spec est fusionnée",
+    headingHeld: "La spec attend",
+    status: "Spec 41 relue. CI réussie. Fusionnée en une seule pull request, 4 tickets fermés.",
+    statusHeld: "Spec 41 retenue : un ticket signalé. Rien n'a été fusionné.",
+    flag: "Signaler le ticket #44",
   },
   features: {
     heading: "Ce qu'une exécution protège",
@@ -68,6 +74,28 @@ export const fr = {
       { title: "Worktrees isolés", line: "Un git worktree par worker." },
       { title: "Votre tracker, ou aucun", line: "Linear, GitHub Issues ou fichiers locaux." },
     ],
+    extra: [
+      {
+        title: "Mode rapide pour les petits changements",
+        line: "Une option réduit l'entretien à un tour et lance un ticket, une relecture et un atterrissage.",
+      },
+      {
+        title: "Se souvient de ce qui a marché",
+        line: "Les leçons de chaque exécution sont enregistrées et rappelées à la suivante.",
+      },
+      {
+        title: "Deux relecteurs pour les changements risqués",
+        line: "Le travail à risque élevé reçoit un second relecteur avant d'atterrir.",
+      },
+      {
+        title: "Vous prévient quand il a besoin de vous",
+        line: "Une alerte quand une exécution attend votre approbation ou est bloquée.",
+      },
+      {
+        title: "S'installe et se désinstalle proprement",
+        line: "Retire tout ce qu'emet a installé et garde chaque fichier que vous avez modifié.",
+      },
+    ],
   },
   stats: {
     label: "En chiffres",
@@ -81,6 +109,16 @@ export const fr = {
   faq: {
     heading: "Questions",
     items: [
+      {
+        question: "Comment désinstaller emet ?",
+        answer:
+          "Lancez `emet uninstall`. La commande retire ce qu'emet a installé et garde chaque fichier que vous avez modifié. Ajoutez `--dry-run` pour prévisualiser.",
+      },
+      {
+        question: "Qu'est-ce que le mode rapide ?",
+        answer:
+          "Passez `--quick` pour un petit changement. Il réduit l'entretien à un tour et lance un ticket, une relecture et un atterrissage.",
+      },
       {
         question: "De quoi ai-je besoin ?",
         answer:

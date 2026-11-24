@@ -19,7 +19,7 @@ interface KnownAxeIssue {
 /** The pages every site change must keep accessible: home, a docs page, the 404 and a translated page. */
 const KEY_PAGES: readonly KeyPage[] = [
   { name: "home", path: "/", status: 200, lang: "en" },
-  { name: "docs page", path: "/docs/guide/getting-started/", status: 200, lang: "en" },
+  { name: "docs page", path: "/docs/start/install/", status: 200, lang: "en" },
   { name: "404", path: "/nope/", status: 404, lang: "en" },
   { name: "translated page", path: "/es/", status: 200, lang: "es" },
 ];

@@ -1,6 +1,6 @@
 # Architecture
 
-A code map of `emet/src` and how the `/emet` prompts drive it. Terms follow [GLOSSARY.md](../GLOSSARY.md); decisions behind the shape live in [docs/adr](adr/README.md). For problems, see [troubleshooting](troubleshooting.md).
+A code map of `emet/src` and how the `/emet` prompts drive it. Terms follow [GLOSSARY.md](../../GLOSSARY.md); decisions behind the shape live in [docs/adr](../adr/README.md). For problems, see [troubleshooting](../troubleshooting.md).
 
 - [Shape](#shape)
 - [How the prompts drive the CLI](#how-the-prompts-drive-the-cli)
@@ -43,7 +43,7 @@ Each module has a `*.test.ts` beside it.
 | Safety          | `guard.ts`, `guard-destructive.ts`                                                                                                                                                                                                                                 |
 | Shared helpers  | `narrow.ts`, `optional.ts`, `assets.ts` (embedded files in compiled binaries)                                                                                                                                                                                      |
 
-Host-specific values sit behind the `AgentHost` interface in `agenthost.ts`: `agenthost-claude.ts` is the Claude Code adapter and `agenthost-codex.ts` the Codex one, chosen by `agentHost` in the config. The Codex side adds `codex-models.ts` (model resolution), `codex-home.ts` (per-run `CODEX_HOME` overlay), `codex-process.ts` and `codex-session.ts` (process runner and hand-off), `codex-usage.ts` (usage from `exec --json`), `guard-codex.ts` (hook input and the approval gate), `dispatch.ts` and `review-run.ts`. See the [Codex guide](guide/codex.md).
+Host-specific values sit behind the `AgentHost` interface in `agenthost.ts`: `agenthost-claude.ts` is the Claude Code adapter and `agenthost-codex.ts` the Codex one, chosen by `agentHost` in the config. The Codex side adds `codex-models.ts` (model resolution), `codex-home.ts` (per-run `CODEX_HOME` overlay), `codex-process.ts` and `codex-session.ts` (process runner and hand-off), `codex-usage.ts` (usage from `exec --json`), `guard-codex.ts` (hook input and the approval gate), `dispatch.ts` and `review-run.ts`. See the [Codex guide](../how-to/use-codex.md).
 
 ## Prompt layout
 
@@ -51,11 +51,11 @@ Host-specific values sit behind the `AgentHost` interface in `agenthost.ts`: `ag
 
 ## Distribution
 
-`emet self install` places the standalone binary, writes the rewritten prompts under `~/.claude/` and, with `--from <checkout>`, copies the `emet/` source to `~/.claude/emet`. The Codex plugin is described by `.codex-plugin/plugin.json`, generated with `bun run build:codex` together with `codex/skills/**` and `codex/hooks.json`. The Claude Code plugin path ships a shim that downloads a checksum-verified standalone binary built by `tools/build-binaries.ts`. See [ADR-0008](adr/0008-standalone-binaries-and-plugin-distribution.md).
+`emet self install` places the standalone binary, writes the rewritten prompts under `~/.claude/` and, with `--from <checkout>`, copies the `emet/` source to `~/.claude/emet`. The Codex plugin is described by `.codex-plugin/plugin.json`, generated with `bun run build:codex` together with `codex/skills/**` and `codex/hooks.json`. The Claude Code plugin path ships a shim that downloads a checksum-verified standalone binary built by `tools/build-binaries.ts`. See [ADR-0008](../adr/0008-standalone-binaries-and-plugin-distribution.md).
 
 ## See also
 
-- [Getting started](guide/getting-started.md) and [Trackers and landing](guide/trackers-and-landing.md)
-- [Configuration reference](reference/configuration.md), [CLI reference](reference/cli.md) and [Dependencies](reference/dependencies.md)
-- [AGENTS.md](../AGENTS.md) and [emet/AGENTS.md](../emet/AGENTS.md)
-- [Documentation index](README.md)
+- [Getting started](../start/install.md) and [Trackers and landing](../how-to/configure-tracker.md)
+- [Configuration reference](../reference/configuration.md), [CLI reference](../reference/cli.md) and [Dependencies](../reference/dependencies.md)
+- [AGENTS.md](../../AGENTS.md) and [emet/AGENTS.md](../../emet/AGENTS.md)
+- [Documentation index](../README.md)

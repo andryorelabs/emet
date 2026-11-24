@@ -47,7 +47,7 @@
       "source": "registry-src",
       "sourceType": "local",
       "skillPath": ".claude/skills/cut-release/SKILL.md",
-      "computedHash": "7c3be9d0b08fc08e20d38a7855f0392d92776fc6199fb7540cd42ba7bbcb016e",
+      "computedHash": "ca6394fc86a319d94343a64014e56b40308578ab56bfeb990dde530fe882ecb4",
       "installMode": "copy"
     },
     "design-taste-frontend": {

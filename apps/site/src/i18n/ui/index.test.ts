@@ -92,7 +92,7 @@ describe("locale string parity", () => {
       expect(strings.footer.notice).not.toBe(en.footer.notice);
       expect(strings.footer.notice).toContain("Anthropic");
       const answers = strings.faq.items.map((item) => item.answer).join("\n");
-      expect(strings.faq.items).toHaveLength(6);
+      expect(strings.faq.items).toHaveLength(8);
       for (const name of ["Claude Code", "mattpocock-skills", "WSL", "Anthropic"]) {
         expect(answers).toContain(name);
       }
