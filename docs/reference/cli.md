@@ -121,7 +121,7 @@ It places the binary at `~/.local/share/emet/versions/<v>/emet` with the symlink
 
 It merges the emet hooks into `~/.claude/settings.json` (with a backup, foreign hooks untouched) and, when Codex is present, writes the skills under `~/.agents/skills` and appends the hooks to `$CODEX_HOME/hooks.json` (default `~/.codex`; `config.toml` is never written, so approve the hooks once with `/hooks`).
 
-A second run changes nothing; an edited file is kept and the new version lands beside it as `<file>.new`. The one-line `curl -fsSL https://emet.andryore.dev/install.sh | sh` downloads the release binary, verifies `SHA256SUMS` and runs this command.
+A second run changes nothing; an edited file is kept and the new version lands beside it as `<file>.new`. The one-line install script from [Install](../start/install.md) downloads the release binary, verifies `SHA256SUMS` and runs this command.
 
 ### `emet self update`
 
