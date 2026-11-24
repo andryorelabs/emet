@@ -2,31 +2,16 @@
 title: Référence de la CLI
 description: Chaque sous-commande d'emet, le tableau des gates et enregistrements, les codes de sortie et les variables d'environnement.
 seoTitle: Référence de la CLI d'emet
-sourceHash: 2f7460d3af4ee862
+sourceHash: 7c398958687b5ea3
 ---
 
-Chaque sous-commande d'`emet`, le tableau des gates et enregistrements, les codes de sortie et les variables d'environnement. Les termes suivent [GLOSSARY.md](../../GLOSSARY.md). Retour au [README](../../README.md). Chaque commande affiche son usage avec `--help`.
+Chaque sous-commande d'`emet`, les gates et enregistrements, les codes de sortie et les variables d'environnement. Les termes suivent [GLOSSARY.md](../../GLOSSARY.md). Retour au [README](../../README.md). Chaque commande affiche son usage avec `--help`.
 
 ## Sous-commandes
 
 Trois commandes slash enveloppent la CLI dans Claude Code : `/emet:run` (le pipeline), `/emet:init` (`emet init`) et `/emet:doctor` (`emet doctor .`). Sur Codex, ce sont les skills `$emet:run`, `$emet:init` et `$emet:doctor`. Un `emet` dans un terminal ordinaire nécessite `emet self install` ; sinon, exécutez `! emet <subcommand>` dans une session.
 
 `emet <command> [...args]`. `emet --version` affiche la version.
-
-### Configuration et audit
-
-- `emet migrate [--dry-run]` : renomme un dépôt hérité vers les noms d'emet.
-- `emet init [--tracker linear|github|local] [--after-spec release|promote|none] [--force]` : détecte automatiquement le gestionnaire de paquets, la branche principale, le type de tracker et le mode after-spec (voir [`handoff.afterSpec`](configuration.md#handoff)), définit [`schema.ownedPaths`](configuration.md#schema) lorsqu'il trouve un schéma Prisma (`prisma/schema.prisma` ou un dossier `prisma/schema/`) ou un dossier de migrations Drizzle (`drizzle/` à côté d'un `drizzle.config.*`), puis écrit `emet.config.json` et les fichiers `docs/agents/*.md`. `--tracker local` met en place le tracker local.
-- `emet doctor [--all] [<path> ...]` : audit en lecture seule d'autant de dépôts que vous voulez à la fois ; par défaut, le répertoire courant. Pour un dépôt qui configure [`verify.browser`](configuration.md#verify), il signale aussi un constat facultatif sur `agent-browser` : un binaire absent est `indeterminate` (une ligne `optional:` avec un remède d'installation), et quand le binaire existe, un `agent-browser doctor` en échec apparaît comme un avertissement. Aucun des deux n'est jamais une erreur, et aucun ne change le code de sortie. Un dépôt sans `verify.browser` n'affiche rien.
-- `emet setup [--yes] [--with <ids>] [--list] [--json] [--dry-run] [--restore <id>]` : propose les installations facultatives avec des invites readline : `mattpocock-skills` (activé par défaut), `engram`, `mascot`, `orca-pet`, `gh-auth`, `agent-browser` (désactivé par défaut ; exécute `bun add -g agent-browser@latest` puis `agent-browser install`, écrit `~/.agent-browser/config.json` avec `contentBoundaries: true` et `maxOutput: 50000` uniquement si ce fichier n'existe pas, puis exécute `agent-browser doctor` et affiche un avertissement en cas d'échec ; n'épingle jamais de version et ne passe jamais `--with-deps`, de sorte que si des bibliothèques système manquent, il affiche la commande à exécuter vous-même), `context7` (désactivé par défaut ; exécute `bun add -g ctx7@latest`, puis `ctx7 setup --cli --claude --yes`, et `ctx7 setup --cli --codex --yes` seulement si `codex` est dans le PATH ; installe la CLI `ctx7` et son skill `find-docs`, pas le serveur MCP, n'épingle jamais de version et affiche la commande à exécuter à la main quand une étape `ctx7 setup` échoue ; `ctx7` envoie des événements d'usage anonymes sauf si `CTX7_TELEMETRY_DISABLED=1` est défini, et un `CONTEXT7_API_KEY` présent dans l'environnement a priorité sur le compte enregistré par `ctx7 login`), `firecrawl-local` (désactivé par défaut ; nécessite `cargo`, exécute `cargo install firecrawl-local` lorsque le binaire est absent, puis enregistre un serveur MCP Claude Code de portée utilisateur avec `FIRECRAWL_CLOUD=search` et `--public-only`, en remplaçant un enregistrement antérieur aux réglages différents : scrape, crawl et map s'exécutent sur la machine, seule la recherche web va à Firecrawl Cloud, et les adresses privées sont bloquées. Il passe le Chrome le plus récent téléchargé par `agent-browser` comme `FIRECRAWL_CHROME_PATH` ; sous Linux, où AppArmor restreint les espaces de noms utilisateur non privilégiés, il affiche un profil AppArmor et les commandes `sudo` pour le charger, car Firecrawl Local n'exécute jamais Chrome sans son bac à sable. Sans Chrome utilisable, les pages rendues avec JavaScript reviennent vides) et les réglages recommandés de Claude Code (`claude-settings`, appliqués seulement s'ils sont choisis, après une sauvegarde horodatée de `settings.json`). Sans TTY, ou avec `--yes` ou `--with`, il ne demande rien et installe exactement les éléments nommés ; sans TTY et sans `--with`, il n'installe rien et affiche le catalogue `--list`. Chaque étape indique `installed`, `already-present`, `skipped` ou `failed` ; un échec n'arrête pas les autres, et le code de sortie est 1 si l'une a échoué. `/emet:setup` est le point d'entrée du plugin et pose les mêmes choix avec `AskUserQuestion`. `--dry-run` (combinable avec `--with`, `--yes` et `--json`) affiche les étapes prévues de chaque élément choisi, ou `already-present`, et ne change rien : il n'exécute aucune commande, n'écrit aucun fichier ni aucune entrée du registre, et se termine par 0. Chaque élément qui termine `installed` est consigné dans le registre de setup, et `--restore <id>` annule les deux qui sont restaurables ; voir [Registre de setup et restauration](#registre-de-setup-et-restauration).
-- `emet self install [latest|X.Y.Z] [--dry-run] [--force] [--from <checkout>]` : l'installation autonome. Elle place le binaire dans `~/.local/share/emet/versions/<v>/emet` avec le lien symbolique `~/.local/bin/emet`, écrit les prompts de référence et `.install-manifest.json` dans `~/.claude/emet/`, les commandes dans `~/.claude/commands/emet/` et les agents dans `~/.claude/agents/`, fusionne les hooks emet dans `~/.claude/settings.json` (avec une sauvegarde, sans toucher aux hooks étrangers) et, quand Codex est présent, écrit les skills sous `~/.agents/skills` et ajoute les hooks à `$CODEX_HOME/hooks.json` (par défaut `~/.codex` ; `config.toml` n'est jamais écrit, donc approuvez les hooks une fois avec `/hooks`). Une deuxième exécution ne change rien ; un fichier modifié est conservé et la nouvelle version est déposée à côté sous le nom `<file>.new`. `--dry-run` liste chaque écriture et n'écrit rien. Elle refuse tant que le plugin emet est installé ; `--force` poursuit malgré tout. `--from <checkout>` reproduit une installation Bun depuis les sources : les sources de la CLI sont copiées dans `~/.claude/emet` et `~/.local/bin/emet` devient un wrapper qui exécute `bun` dessus, de sorte que `emet selftest` fonctionne ; elle échoue sans `bun`. Les contributeurs utilisent `emet self install --from .`. La commande en une ligne `curl -fsSL https://emet.andryore.dev/install.sh | sh` télécharge le binaire de la release, vérifie `SHA256SUMS` et exécute cette commande.
-- `emet self update [latest|X.Y.Z]` : télécharge la release, vérifie `SHA256SUMS` (et l'attestation quand `gh` est présent) et la prépare. Le basculement du lien symbolique et des fichiers installés n'a lieu que si aucun slot de worker n'est détenu ; sinon la mise à jour reste en attente jusqu'au prochain démarrage de session. Un échec laisse la version actuelle intacte et est consigné dans le journal. La version précédente est conservée pour un retour en arrière et les plus anciennes sont élaguées. Elle ne fait rien pour les installations par plugin. `emet self update --auto [off|on]` est ce qu'exécute le hook `SessionStart` : au plus une fois par jour, détaché et silencieux hors ligne ; `off` ou `on` l'active ou le désactive. `EMET_AUTO_UPDATE=0` le désactive aussi.
-- `emet uninstall [--dry-run] [--yes] [--purge] [--json]` : supprime une installation `emet self install` et ce qu'`emet setup` a ajouté. Il construit d'abord le plan complet, puis l'exécute. Il supprime chaque fichier du manifeste d'installation dont le hash correspond encore à celui enregistré, ainsi que son frère `.new` ; les fichiers modifiés restent et sont listés. Il supprime le shim `~/.local/bin/emet` seulement quand c'est le wrapper de l'installation ou un lien symbolique vers `~/.claude/emet` ou `~/.local/share/emet/versions`, puis le manifeste et les répertoires devenus vides. Dans `~/.claude/settings.json` et dans `$CODEX_HOME/hooks.json` (par défaut `~/.codex`), il retire toute commande de hook d'emet dans n'importe quel événement (`emet guard`, `emet setup --notice`, `emet whats-new --hook` et `emet self update --auto`), garde tous les autres hooks et supprime les groupes et événements devenus vides. Quand une sauvegarde d'installation (`.pre-emet-guard-backup.`) contient exactement ce qui reste, ses octets sont restaurés ; quand il ne reste rien, le fichier est supprimé ; sinon, une sauvegarde horodatée est d'abord écrite. Il supprime les skills Codex sous `~/.agents/skills/emet/` qui correspondent encore à cet emet (ceux qui ont été modifiés restent et sont listés), le répertoire des versions `~/.local/share/emet/versions` et l'état d'installation `~/.local/share/emet/install.json`. Il annule ensuite les extras du registre de setup (voir ci-dessous). Sans manifeste ni état d'installation (installation par plugin), il ignore les fichiers et affiche `claude plugin uninstall emet@emet-marketplace` ; quand `codex` est dans le PATH, il affiche aussi comment retirer le plugin Codex. `--dry-run` affiche le plan et ne change rien. `--yes` saute la confirmation ; avec un TTY et sans `--yes` il demande une fois, et sans TTY et sans `--yes` il affiche le plan, ne change rien et se termine par 0. `--purge` supprime aussi le répertoire d'état (`EMET_STATE_DIR`, sinon `XDG_STATE_HOME/emet`) et `~/.emet` ; sans lui, les deux restent. `--json` affiche le résultat en JSON. Il se termine par 1 quand une étape a échoué ou qu'un fichier à lire (manifeste, settings, registre) est illisible, et nomme son chemin.
-- `emet fleet list [--root <dir>] [--json]` : liste les dépôts git contenant un `emet.config.json` un niveau sous `--root` (par défaut `~/code`), avec `tracker.kind`, `handoff.autoChain` et `models.worker`. `emet fleet set <key> <value> [--root <dir>] [--dry-run]` modifie une clé de configuration dans chaque dépôt listé, en validant d'abord via le chargeur de configuration (une valeur invalide ne change rien et sort avec 1). `emet fleet launch --feature <text> [--root <dir>] [--repos <a,b>] [--dry-run]` ouvre une session `/emet:run --draft <text>` dans chaque dépôt après les vérifications de disponibilité de `emet chain`. `[--dry-run]` affiche les lancements prévus sans démarrer de session. Voir le [guide fleet](../guide/fleet.md).
-- `emet fleet status [--json]` : lit le journal global et affiche, pour chaque dépôt, le dernier état de chaque session des dernières 24 heures (hors `ended`). Sans `--json`, une ligne par dépôt, `<repo>: <b> blocked, <w> working, <i> idle`, les dépôts bloqués d'abord ; avec `--json`, `{ repos: [{ repo, sessions: [{ sessionId, state, blocked, since, runId }] }], blocked: <count> }`. Se termine avec 0 aussi quand il n'y a rien. Voir [Voir les sessions bloquées](../guide/fleet.md#voir-les-sessions-bloquées).
-- `emet preflight [--run <id>] [--post-dispatch]` : confirme que le dépôt est prêt pour la distribution.
-- `emet skill-path <name>` : affiche le chemin absolu du `SKILL.md` d'une skill de mattpocock-skills. Se termine avec le code 1 si la skill est introuvable.
-- `emet selftest` : exécute les tests unitaires propres à la CLI. Installations depuis les sources uniquement ; un binaire compilé se termine avec le code 1 et vous demande d'exécuter `emet doctor`.
 
 Dans n'importe quel dépôt git :
 
@@ -45,6 +30,31 @@ Ensuite, dans Claude Code (sur Codex, utilisez `$emet:run` avec les mêmes argum
 /emet:run --dispatch <spec-id>                # dispatch a --draft'd spec later
 ```
 
+## Configuration et audit
+
+### `emet migrate`
+
+Renomme un dépôt hérité vers les noms d'emet.
+
+- `--dry-run`
+
+### `emet init`
+
+Détecte automatiquement le gestionnaire de paquets, la branche principale, le type de tracker et le mode after-spec (voir [`handoff.afterSpec`](configuration.md#handoff)). Il définit [`schema.ownedPaths`](configuration.md#schema) lorsqu'il trouve un schéma Prisma (`prisma/schema.prisma` ou un dossier `prisma/schema/`) ou un dossier de migrations Drizzle (`drizzle/` à côté d'un `drizzle.config.*`), puis écrit `emet.config.json` et les fichiers `docs/agents/*.md`.
+
+- `--tracker linear|github|local` : `--tracker local` met en place le tracker local.
+- `--after-spec release|promote|none`
+- `--force`
+
+### `emet doctor`
+
+Audit en lecture seule d'autant de dépôts que vous voulez à la fois ; par défaut, le répertoire courant.
+
+- `--all`
+- `<path> ...` : les dépôts à auditer.
+
+Pour un dépôt qui configure [`verify.browser`](configuration.md#verify), il signale aussi un constat facultatif sur `agent-browser` : un binaire absent est `indeterminate` (une ligne `optional:` avec un remède d'installation), et quand le binaire existe, un `agent-browser doctor` en échec apparaît comme un avertissement. Aucun des deux n'est jamais une erreur, et aucun ne change le code de sortie. Un dépôt sans `verify.browser` n'affiche rien.
+
 #### Vérification de flotte
 
 `emet doctor` audite plusieurs dépôts à la fois, en lecture seule :
@@ -53,87 +63,453 @@ Ensuite, dans Claude Code (sur Codex, utilisez `$emet:run` avec les mêmes argum
 emet doctor ~/code/*
 ```
 
-Il indique, pour chaque dépôt : un `emet.config.json` valide, les quatre fichiers `docs/agents/*.md` présents, aucun marqueur `TODO(emet):` restant, si les commandes de `commands.selfCheck` se résolvent réellement, et les constats de dépendances propres au tracker de ce dépôt (`gh`, Linear ; voir [dépendances](dependencies.md#qui-vérifie-quoi)). Le plugin mattpocock-skills et les options des CLI externes (`gh`, plus celles de l'Agent host : `claude --bg` et `claude agents --json` sur Claude Code, `codex exec --json` et `--output-schema` sur Codex, vérifiées via `--help`) sont contrôlés une seule fois pour tout le balayage, et non par dépôt.
+Il indique, pour chaque dépôt : un `emet.config.json` valide, les quatre fichiers `docs/agents/*.md` présents, aucun marqueur `TODO(emet):` restant, si les commandes de `commands.selfCheck` se résolvent réellement, et les constats de dépendances propres au tracker de ce dépôt (`gh`, Linear ; voir [dépendances](dependencies.md#qui-vérifie-quoi)).
 
-### Exécutions, workers et slots
+Le plugin mattpocock-skills et les options des CLI externes sont contrôlés une seule fois pour tout le balayage, et non par dépôt. Il s'agit de `gh`, plus celles de l'Agent host : `claude --bg` et `claude agents --json` sur Claude Code, `codex exec --json` et `--output-schema` sur Codex, vérifiées via `--help`.
 
-- `emet claims --reserve <ticket> --run <id> --anchor <pid>` : réserve un ticket pour une exécution. `--release <ticket>`, `--list` et `--prune [--dry-run]` libèrent une réservation, listent les réservations ou élaguent les périmées.
-- `emet slots --acquire --run <id> --anchor <pid> --ticket <ticket>` : prend un slot de worker dans le pool commun à l'hôte, situé dans `~/.local/state/emet/slots`. `--release --run <id>`, `--release-index <index>` et `--list` libèrent des slots ou les listent.
-- `emet cleanup [--run <id> | --all] [--dry-run] [--force]` : sans argument, récupère les exécutions terminées ou mortes dont le travail a atterri ; `--run` nettoie cette exécution ; `--all` est un balayage de branches sur tout le dépôt. Après un merge, `emet cleanup --run <runId>` libère les branches, les réservations de tickets et les slots de workers de la vague. Dans tous les modes, il supprime aussi chaque branche locale dont la PR a été fusionnée au commit de tête de la branche, avec le worktree d'agent propre et non verrouillé qui la contient.
-- `emet lock-reason --run <id> --ticket <ticket> [--anchor <pid>]` : affiche la raison du `git worktree lock` qu'un worker écrit au démarrage.
-- `emet launch <spec-id> --wave <n>` : sur Claude Code, démarre une vague comme une session `claude --bg` et ouvre son onglet Orca selon `handoff.launcher` (sur Codex, voir [Hôte Codex](#hôte-codex)). Il fait tout le lancement (vérification de session en double, `claude --bg`, onglet) et affiche `{ name, id, attach, orcaTab: { opened, reason } }`. Utilisez-le, plutôt qu'un simple `claude --bg`, chaque fois que vous voulez une vague dans une autre session à la main.
-- `emet chain --ticket <id> --spec <id> --wave <n> [gate flags]` : exécute `emet gate` avec les flags de la porte qu'il reçoit et ne démarre la vague suivante que lorsque la décision est `chain`. Avant le lancement, il vérifie la disponibilité (marge de mémoire de l'hôte, disque et inodes libres dans le dépôt et dans `/tmp`, la CLI `orca`) puis confirme que la session enfant est listée. Toute autre décision, un problème de disponibilité bloquant (`low-memory`, `low-disk`, `low-inodes`, `orca-unavailable`) ou une session existante pour la même spécification et la même vague se termine par le code 1 avec les raisons et ne lance rien.
-- `emet status [--spec <id>] [--brief]` : Working / Checking / Ready / Needs-decision par vague en JSON, plus une ligne de résumé. `--brief` n'affiche que trois lignes au plus : l'état global, ce qui attend une personne (le cas échéant) et la prochaine action. `emet status --help` documente le JSON. `emet status` lit aussi le journal global : le JSON inclut `sessions: [{ sessionId, state, blocked, since, runId }]`, le dernier événement `session.attention` de chaque session de ce dépôt dans les dernières 24 heures (hors `ended`) ; `blocked` vaut `true` quand `state` est `needs-decision`. Une seule session bloquée rend le `state` global `needs-decision`, même sans vague active ; la ligne de résumé indique combien de sessions sont bloquées et `--brief` les liste sur la ligne de ce qui attend une personne.
-- `emet run current [--json]` : affiche l'exécution active du dépôt (id d'exécution, spec, vague, phase et dernière mise à jour), lue dans `.emet/phase.json`. Sans exécution active, il affiche `no active run` et se termine avec 0.
-- `emet memory search --json <query> [--limit <n>]` : cherche dans [Engram](https://github.com/Gentleman-Programming/engram) des leçons d'exécutions précédentes. Il cherche avec `match_mode: "any"` (`--limit` vaut 5 par défaut, maximum 20), ne garde que les notes dont la clé de sujet commence par `emet/<repo>/lessons/` et affiche `{available: true, results: [{id, topicKey, title, content}]}` avec `content` tronqué à 2000 caractères. `<repo>` est le dernier segment de `git remote get-url <repo.remote>` sans `.git`, sinon le nom de base du worktree principal.
-- `emet memory save --json --key <spec-<id>|quick-<runId>> --run <runId> --outcome <landed|chained|hold|stop|blocked>` : lit sur stdin de 1 à 5 puces de leçons (lignes `- ` d'au plus 300 caractères chacune) et les ajoute sous la forme d'une section `## <runId> — <outcome> (<date>)` à la note de clé de sujet `emet/<repo>/lessons/<key>`, ou crée cette note. Une note de plus de 20000 caractères perd ses sections les plus anciennes. Il affiche `{available: true, saved: true, topicKey}`.
-  - Les deux sous-commandes parlent à Engram en lançant `engram mcp --tools=agent` à la racine du dépôt ; le plugin Engram n'est pas requis. Elles ne transmettent jamais de `project` à Engram.
-  - Codes de sortie : `2` pour un mauvais usage (aucune sous-commande, requête manquante, aucune puce, plus de 5 puces, une puce de plus de 300 caractères, un outcome inconnu, une clé invalide). Tout problème Engram (absent du PATH, handshake échoué, erreur d'outil, timeout, JSON mal formé) se termine par `0`. Avant un handshake réussi, la sortie est `{available: false, reason}` ; après, `{available: true, results: [], reason}` pour `search` ou `{available: true, saved: false, reason}` pour `save`. `memory.enabled: "off"` affiche `{available: false, reason: "memory.enabled is off"}` et ne lance rien. Voir [`memory`](configuration.md#memory).
-- `emet insights [--since <iso|7d|30d>] [--repo <path>] [--all] [--json] [--mark-baseline]` : lit le [journal d'événements](../guide/journal.md) et rapporte les exécutions par origine (humaine ou auto), les décisions du gate par décision et motif, les interventions humaines par exécution, les résultats de lancement et les tickets fermés. Les lignes illisibles sont ignorées et comptées. `--mark-baseline` ajoute une base de référence ; les rapports suivants ne couvrent que les événements postérieurs, sauf avec `--all`. Un journal vide ou absent affiche un rapport à zéro et se termine avec 0.
-- `emet usage [--session <id> | --file <path>] [--stalled [--minutes N]] [--project-dir <path>]` : indique l'usage de la session ; `--stalled` liste les workers bloqués.
-- `emet handoff --check <path> [--expect-skills a,b] | --render <path>` : valide ou rend la note `.emet/handoff-<ticket>.md` d'un worker. La note peut contenir une section `skills:`, écrite `skills: none` ou `skills: loaded: a, b; missing: c` ; elle n'est requise que lorsque `state` vaut `done`, et toute autre valeur fait échouer la vérification. `--expect-skills a,b` (check uniquement) fait échouer la vérification pour chaque skill nommé qui ne figure ni dans la liste `loaded` ni dans la liste `missing`. Une vérification réussie affiche `missing skills: …` lorsque la liste `missing` n'est pas vide.
-- `emet metrics [--run <id>]` : indique les tokens, le coût équivalent API et le temps écoulé par ticket, par vague et par exécution, lus dans les transcriptions de session. Il compare aussi le budget de contexte estimé par ticket avec ce que chaque worker a réellement utilisé. Son résumé figure à la fin du rapport final de l'exécution.
+### `emet setup`
 
-### Registre de setup et restauration
+Propose les installations facultatives avec des invites readline.
 
-`emet setup` consigne chaque élément qui termine `installed` dans `setup-ledger.json`, sous le répertoire d'état, sous la forme `{ id, at, undo }` ; un élément `already-present` ne consigne rien, et un second `installed` du même id garde l'état antérieur de la première entrée. Les enregistrements d'annulation contiennent ce qu'il faut pour revenir en arrière : pour `claude-settings`, le `model` précédent (ou aucun), les règles deny réellement ajoutées et le chemin de la sauvegarde ; pour `firecrawl-local`, l'entrée MCP de portée utilisateur précédente (lue dans `~/.claude.json` avant `claude mcp remove`) et si emet a exécuté `cargo install` ; pour les plugins, l'id du plugin ; pour `orca-pet`, les fichiers écrits ; pour `agent-browser`, le global bun (et le fichier de configuration quand emet l'a créé) ; pour `context7`, le global bun ; pour `engram`, la formule brew et le plugin. Les écritures du registre sont atomiques, et un registre malformé est une erreur qui nomme son chemin, jamais lu comme vide.
+- `--yes`
+- `--with <ids>`
+- `--list`
+- `--json`
+- `--dry-run` : combinable avec `--with`, `--yes` et `--json`. Il affiche les étapes prévues de chaque élément choisi, ou `already-present`, et ne change rien : il n'exécute aucune commande, n'écrit aucun fichier ni aucune entrée du registre, et se termine par 0.
+- `--restore <id>` : annule l'un des deux éléments restaurables ; voir [Registre de setup et restauration](#registre-de-setup-et-restauration).
 
-`emet setup --restore <id>` n'accepte que `claude-settings` et `firecrawl-local` ; tout autre id se termine par 2. `claude-settings` rétablit le `model` précédent (ou supprime la clé quand il n'y en avait pas) et retire uniquement les règles deny ajoutées par emet, après une sauvegarde horodatée ; quand le `model` actuel n'est pas celui que setup a défini, il le garde et affiche un avertissement. `firecrawl-local` exécute `claude mcp remove firecrawl-local -s user`, puis `claude mcp add-json firecrawl-local '<previous json>' -s user` quand une entrée avait été consignée. Une restauration réussie supprime l'entrée du registre ; un id sans entrée affiche `nothing to restore for <id>` et se termine par 1.
+Sans TTY, ou avec `--yes` ou `--with`, il ne demande rien et installe exactement les éléments nommés ; sans TTY et sans `--with`, il n'installe rien et affiche le catalogue `--list`. Chaque étape indique `installed`, `already-present`, `skipped` ou `failed` ; un échec n'arrête pas les autres, et le code de sortie est 1 si l'une a échoué. `/emet:setup` est le point d'entrée du plugin et pose les mêmes choix avec `AskUserQuestion`. Chaque élément `installed` est consigné dans le registre de setup.
+
+Les éléments :
+
+- `mattpocock-skills` (activé par défaut), `engram`, `mascot`, `orca-pet` et `gh-auth`.
+- `agent-browser` (désactivé par défaut) : exécute `bun add -g agent-browser@latest` puis `agent-browser install`, et écrit `~/.agent-browser/config.json` avec `contentBoundaries: true` et `maxOutput: 50000` uniquement si ce fichier n'existe pas. Il exécute ensuite `agent-browser doctor` et affiche un avertissement en cas d'échec. Il n'épingle jamais de version et ne passe jamais `--with-deps`, de sorte que si des bibliothèques système manquent, il affiche la commande à exécuter vous-même.
+- `context7` (désactivé par défaut) : exécute `bun add -g ctx7@latest`, puis `ctx7 setup --cli --claude --yes`, et `ctx7 setup --cli --codex --yes` seulement si `codex` est dans le PATH. Il installe la CLI `ctx7` et son skill `find-docs`, pas le serveur MCP, n'épingle jamais de version et affiche la commande à exécuter à la main quand une étape `ctx7 setup` échoue. `ctx7` envoie des événements d'usage anonymes sauf si `CTX7_TELEMETRY_DISABLED=1` est défini, et un `CONTEXT7_API_KEY` présent dans l'environnement a priorité sur le compte enregistré par `ctx7 login`.
+- `firecrawl-local` (désactivé par défaut) : nécessite `cargo`, et exécute `cargo install firecrawl-local` lorsque le binaire est absent. Il enregistre ensuite un serveur MCP Claude Code de portée utilisateur avec `FIRECRAWL_CLOUD=search` et `--public-only`, en remplaçant un enregistrement antérieur aux réglages différents. Scrape, crawl et map s'exécutent sur la machine, seule la recherche web va à Firecrawl Cloud, et les adresses privées sont bloquées.
+  - Il passe le Chrome le plus récent téléchargé par `agent-browser` comme `FIRECRAWL_CHROME_PATH`.
+  - Sous Linux, où AppArmor restreint les espaces de noms utilisateur non privilégiés, il affiche un profil AppArmor et les commandes `sudo` pour le charger, car Firecrawl Local n'exécute jamais Chrome sans son bac à sable.
+  - Sans Chrome utilisable, les pages rendues avec JavaScript reviennent vides.
+- `claude-settings` : les réglages recommandés de Claude Code, appliqués seulement s'ils sont choisis, après une sauvegarde horodatée de `settings.json`.
+
+#### Registre de setup et restauration
+
+`emet setup` consigne chaque élément qui termine `installed` dans `setup-ledger.json`, sous le répertoire d'état, sous la forme `{ id, at, undo }`. Un élément `already-present` ne consigne rien, et un second `installed` du même id garde l'état antérieur de la première entrée. Les écritures du registre sont atomiques, et un registre malformé est une erreur qui nomme son chemin, jamais lu comme vide.
+
+Les enregistrements d'annulation contiennent ce qu'il faut pour revenir en arrière :
+
+- `claude-settings` : le `model` précédent (ou aucun), les règles deny réellement ajoutées et le chemin de la sauvegarde.
+- `firecrawl-local` : l'entrée MCP de portée utilisateur précédente (lue dans `~/.claude.json` avant `claude mcp remove`) et si emet a exécuté `cargo install`.
+- Plugins : l'id du plugin.
+- `orca-pet` : les fichiers écrits.
+- `agent-browser` : le global bun (et le fichier de configuration quand emet l'a créé).
+- `context7` : le global bun.
+- `engram` : la formule brew et le plugin.
+
+`emet setup --restore <id>` n'accepte que `claude-settings` et `firecrawl-local` ; tout autre id se termine par 2.
+
+- `claude-settings` rétablit le `model` précédent (ou supprime la clé quand il n'y en avait pas) et retire uniquement les règles deny ajoutées par emet, après une sauvegarde horodatée. Quand le `model` actuel n'est pas celui que setup a défini, il le garde et affiche un avertissement.
+- `firecrawl-local` exécute `claude mcp remove firecrawl-local -s user`, puis `claude mcp add-json firecrawl-local '<previous json>' -s user` quand une entrée avait été consignée.
+
+Une restauration réussie supprime l'entrée du registre ; un id sans entrée affiche `nothing to restore for <id>` et se termine par 1.
 
 `emet uninstall` annule chaque entrée du registre de la même façon : `claude-settings` et `firecrawl-local` comme avec `--restore`, les plugins avec `claude plugin uninstall <id>`, les fichiers d'`orca-pet` et une configuration agent-browser créée par emet en les supprimant. Pour les globaux brew, bun et cargo, il affiche la commande de suppression (par exemple `bun remove -g ctx7`) et ne l'exécute jamais, et il ne touche jamais à `gh auth`. Chaque entrée annulée quitte le registre, et un extra qui échoue n'arrête pas les autres.
 
-### Planification, revue et atterrissage
+### `emet self install`
 
-- `emet promote --spec <id> [--dry-run] [--no-promote] [--hold]` : l'étape after-spec, selon [`handoff.afterSpec`](configuration.md#handoff). En mode `promote`, elle ouvre une pull request de `develop` vers `main` intitulée `chore: 🔖 promote develop`, attend avec `emet ci --pr <n> --wait`, la fusionne avec un commit de fusion uniquement quand l'état est `pass`, puis, seulement si `develop` est en retard sur `main`, ouvre une pull request de synchronisation de `main` vers `develop`, attend ses vérifications de la même manière et la fusionne avec un commit de fusion uniquement quand l'état est `pass` ; une pull request de synchronisation dont l'état est `fail`, `timeout` ou `env-fault`, ou dont la fusion est rejetée, reste ouverte et ne modifie jamais le résultat de promote. Elle ajoute au journal un événement `promote` avec le numéro de la pull request, `merged`, `syncPrNumber`, `syncMerged`, `syncReason`, `rule` et `reason`. `afterSpec` peut être une liste de règles ; le mode est alors choisi d'après les chemins que la promotion de `develop` apporterait (voir [`handoff.afterSpec`](configuration.md#handoff)), et un `git fetch` ou un `git diff` en échec fait sortir la commande avec 1 avant l'ouverture de toute pull request. Le résultat affiché contient `rule` (l'indice de la règle retenue, ou `null` pour la forme chaîne ou en l'absence de correspondance), `reason`, `syncPrNumber` (`null` quand aucune pull request de synchronisation n'a été ouverte), `syncMerged` et `syncReason` (une phrase qui dit pourquoi une pull request de synchronisation est restée ouverte, sinon `null`) et `deployCheck: { run, reason }`, qui indique si le coordinateur doit exécuter `emet deploy-check`. En mode `release`, elle ne fusionne rien et laisse la pull request de release à une personne. Avec `afterSpec` `none`, avec `--no-promote`, ou quand la dernière vague de la spec a été laissée ouverte ou signalée, elle sort avec 0 et une note `skipped` ; elle s'exécute tout de même après une dernière vague propre afin que le résultat contienne la décision `deployCheck` (sur le trunk `main`, la vérification de déploiement s'exécute quel que soit le mode). Une CI qui n'est pas `pass` ne fusionne rien et sort avec 1. `--dry-run` n'ouvre aucune pull request. `emet promote --spec <id> --hold` écrit le marqueur `<run dir>/runs/<id>/no-promote` et affiche `{"held":true}` ; tant qu'il existe, `emet promote --spec <id>` se termine avec 0 et une note `skipped` sans ouvrir de pull request, de sorte que `--no-promote` persiste d'une session à l'autre d'une spécification.
-- `emet deploy-check [--json]` : exécute `deploy.check.command` jusqu'à ce qu'elle sorte avec 0, dans la limite de `retries` tentatives ou de `timeoutSeconds`, en attendant `intervalSeconds` entre elles, et affiche `state: ok | failed | timeout` avec `attempts`. Sortie `0` ok, `1` failed, `3` timeout. Sans `deploy.check` configuré, elle sort avec 0 et `skipped: "no deploy check configured"`. Le coordinateur ne l'exécute que lorsque le résultat de `emet promote` a `deployCheck.run` à true. Voir [`deploy`](configuration.md#deploy).
-- `emet validate --spec <id> | --file <path>` : validation du plan ; voir [Gates et enregistrements](#gates-et-enregistrements).
-- `emet surfaces --check <file.json | ->` : rejette les globs de surfaces autorisées qui se chevauchent entre les tickets d'une vague.
-- `emet approve --run <id>`, `emet materialize-log`, `emet results`, `emet verify`, `emet review-package`, `emet review`, `emet gate` : voir [Gates et enregistrements](#gates-et-enregistrements).
-- `emet assess --base <ref> --head <ref>` : classe un diff comme `passive`, `medium` ou `high` et affiche du JSON avec le niveau, les raisons ainsi que le modèle et l'effort recommandés pour le relecteur, ainsi que `browserVerify: { run, reason }` : `run` vaut `true` uniquement lorsque le niveau a un relecteur, que [`verify.browser`](configuration.md#verify) est configuré, que le binaire `agent-browser` est dans le PATH et, si `paths` est défini, qu'un chemin modifié correspond ; sinon `reason` nomme la première condition non remplie. Avec `--quick`, le JSON contient aussi `"quickRejected": true|false` et la commande sort avec le code 1 quand le niveau est `high` (un **Stop** pour une **Quick run** : pas d'auto-merge, la PR reste ouverte), et avec 0 sinon ; sans `--quick`, la sortie et les codes de sortie restent inchangés. Voir [Models & effort](../../README.md#models--effort) et [`review`](configuration.md#review). Il affiche aussi `dualReview: { run, reason }` : `run` vaut `true` seulement quand le niveau est `high`, que `agentHost` est `claude`, que [`review.dual`](configuration.md#review) n'est pas `off` et que le binaire `codex` est dans le PATH ; sinon `reason` nomme la première condition non remplie.
-- `emet land --spec <s> --branch <integration> --tickets <id,...>` : fusionne une branche d'intégration dans la branche principale locale (`landing.mode` `merge`). `commands.selfCheck` tient lieu de CI et rien n'est poussé.
-- `emet spec-branch ensure|integrate|status|sync|land|abandon --spec <id>` : la branche de spec `spec/<id>` de `landing.unit: spec` (voir [`landing`](configuration.md#landing)). Tous affichent du JSON. `ensure` crée la branche à partir de la branche principale (idempotent), écrit `.emet/specs/<id>/branch.json` et refuse lorsque la branche d'une autre spec est extraite. `integrate --wave <n> --branch <integration> --tickets a,b` fusionne la branche de la vague dans `spec/<id>` avec `--no-ff` et les trailers `Emet-Wave` et `Emet-Tickets`, enregistre la vague, ajoute `spec.integrate` et, lorsque `landing.pushSpecBranch` vaut true, pousse la branche sans ouvrir de PR. `status` affiche `branch`, `tip`, les vagues et tickets intégrés et `behindTrunk`, et reconstruit `branch.json` à partir des trailers lorsqu'une vague manque. `sync` fusionne la branche principale dans la branche, ne fait jamais de rebase et, en cas de conflit, abandonne, liste les chemins et sort avec un code non nul. `land [--partial]` synchronise, puis en mode `pr` pousse la branche, ouvre une PR avec une ligne `Closes` par ticket, attend ses vérifications et fusionne avec `landing.specMergeMethod` (un commit de merge par défaut, en ignorant `pr.mergeMethod`), et en mode `merge` fusionne dans la branche principale locale avec `--no-ff` sans jamais pousser ; il ajoute `spec.land`. `abandon --force` étiquette `abandoned/spec-<id>`, supprime la branche, ajoute `spec.abandon` et remet à `ready-for-agent` les tickets intégrés d'un tracker local ; sans `--force`, il refuse. `emet tracker frontier` compte les tickets listés dans `branch.json` comme bloqueurs fermés, et `emet status` gagne `specBranch` (`branch`, `tip`, `integratedWaves`).
-- `emet spec-merge --spec <id>` : fusionne les deltas d'exigences `ADDED`/`MODIFIED`/`REMOVED` de la spec dans `docs/specs/<area>.md` (`specs.dir`). Avec `specs.enabled` activé, le coordinateur écrit les deltas et l'exécute une fois par spec, sur la branche d'intégration de la dernière vague avant sa revue, puis valide le résultat dans un commit. `--deltas-dir` affiche le répertoire où placer les deltas. Il vérifie toutes les zones avant d'écrire quoi que ce soit. Un conflit, ou une exigence qui perdrait un scénario, se termine avec le code 1 et laisse tous les fichiers intacts. Avec `specs.enabled` désactivé, il ne fusionne rien et se termine avec le code 0.
-- `emet map [--refresh]` : écrit un résumé d'une base de code existante (stack, structure, conventions, tests, points chauds) dans `docs/agents/codebase.md` (`map.path`), estampillé avec le SHA du commit dont il est issu. Le même commit produit toujours le même fichier. `emet map --stale` se termine avec le code 1 une fois que HEAD a dépassé l'estampille, et `emet preflight` avertit dans ce cas. `emet map --for <globs>` n'affiche que les sections qui correspondent aux surfaces d'édition d'un ticket ; cette sortie est la seule partie de la carte qu'inclut le brief d'un worker.
-- `emet tracker create-spec|create-ticket|read|frontier|set-state|comment|close` : le tracker local sur `.scratch/`, JSON sur stdout. Voir [Tracker local](#tracker-local).
-- `emet guard` : le hook `PreToolUse` de Claude Code ; lit le JSON du hook sur stdin (la forme Codex figure sous [Hôte Codex](#hôte-codex)). `emet self install` le branche dans `~/.claude/settings.json`. Il bloque une poignée de déclencheurs connus d'échecs lors d'exécutions sans surveillance (voir `emet/src/guard.ts`).
+L'installation autonome : `emet self install [latest|X.Y.Z]`.
 
-### Tracker local
+- `--dry-run` : liste chaque écriture et n'écrit rien.
+- `--force` : poursuit malgré l'installation du plugin emet ; sans lui, la commande refuse tant que le plugin est installé.
+- `--from <checkout>` : reproduit une installation Bun depuis les sources. Les sources de la CLI sont copiées dans `~/.claude/emet` et `~/.local/bin/emet` devient un wrapper qui exécute `bun` dessus, de sorte que `emet selftest` fonctionne ; elle échoue sans `bun`. Les contributeurs utilisent `emet self install --from .`.
 
-Avec `tracker.kind: "local"`, les specs et les tickets sont des fichiers markdown sous `.scratch/` du worktree principal (non versionnés) : `.scratch/<slug>/spec.md` et `.scratch/<slug>/issues/<NN>-<slug>.md`, chacun avec des lignes `Status:` et `Blocked by:` et des commentaires sous `## Comments`. Le coordinateur les lit et les écrit via `emet tracker` (`create-spec`, `create-ticket`, `read`, `frontier`, `set-state`, `comment`, `close`). `emet init --tracker local` met cela en place. Voir l'[ADR-0011](../adr/0011-local-tracker-scratch-convention.md).
+Elle place le binaire dans `~/.local/share/emet/versions/<v>/emet` avec le lien symbolique `~/.local/bin/emet`, écrit les prompts de référence et `.install-manifest.json` dans `~/.claude/emet/`, les commandes dans `~/.claude/commands/emet/` et les agents dans `~/.claude/agents/`.
+
+Elle fusionne les hooks emet dans `~/.claude/settings.json` (avec une sauvegarde, sans toucher aux hooks étrangers) et, quand Codex est présent, écrit les skills sous `~/.agents/skills` et ajoute les hooks à `$CODEX_HOME/hooks.json` (par défaut `~/.codex` ; `config.toml` n'est jamais écrit, donc approuvez les hooks une fois avec `/hooks`).
+
+Une deuxième exécution ne change rien ; un fichier modifié est conservé et la nouvelle version est déposée à côté sous le nom `<file>.new`. Le script d'installation en une ligne de [Installer](../start/install.md) télécharge le binaire de la release, vérifie `SHA256SUMS` et exécute cette commande.
+
+### `emet self update`
+
+`emet self update [latest|X.Y.Z]` télécharge la release, vérifie `SHA256SUMS` (et l'attestation quand `gh` est présent) et la prépare. Le basculement du lien symbolique et des fichiers installés n'a lieu que si aucun slot de worker n'est détenu ; sinon la mise à jour reste en attente jusqu'au prochain démarrage de session. Un échec laisse la version actuelle intacte et est consigné dans le journal. La version précédente est conservée pour un retour en arrière et les plus anciennes sont élaguées. Elle ne fait rien pour les installations par plugin.
+
+- `--auto [off|on]` : ce qu'exécute le hook `SessionStart`. Il s'exécute au plus une fois par jour, détaché et silencieux hors ligne ; `off` ou `on` l'active ou le désactive. `EMET_AUTO_UPDATE=0` le désactive aussi.
+
+### `emet uninstall`
+
+Supprime une installation `emet self install` et ce qu'`emet setup` a ajouté. Il construit d'abord le plan complet, puis l'exécute.
+
+- `--dry-run` : affiche le plan et ne change rien.
+- `--yes` : saute la confirmation. Avec un TTY et sans `--yes` il demande une fois, et sans TTY et sans `--yes` il affiche le plan, ne change rien et se termine par 0.
+- `--purge` : supprime aussi le répertoire d'état (`EMET_STATE_DIR`, sinon `XDG_STATE_HOME/emet`) et `~/.emet` ; sans lui, les deux restent.
+- `--json` : affiche le résultat en JSON.
+
+Ce qu'il supprime :
+
+- Chaque fichier du manifeste d'installation dont le hash correspond encore à celui enregistré, ainsi que son frère `.new` ; les fichiers modifiés restent et sont listés.
+- Le shim `~/.local/bin/emet`, seulement quand c'est le wrapper de l'installation ou un lien symbolique vers `~/.claude/emet` ou `~/.local/share/emet/versions`, puis le manifeste et les répertoires devenus vides.
+- Dans `~/.claude/settings.json` et dans `$CODEX_HOME/hooks.json` (par défaut `~/.codex`), toute commande de hook d'emet dans n'importe quel événement (`emet guard`, `emet setup --notice`, `emet whats-new --hook` et `emet self update --auto`). Il garde tous les autres hooks et supprime les groupes et événements devenus vides.
+- Les skills Codex sous `~/.agents/skills/emet/` qui correspondent encore à cet emet (ceux qui ont été modifiés restent et sont listés), le répertoire des versions `~/.local/share/emet/versions` et l'état d'installation `~/.local/share/emet/install.json`.
+- Les extras du registre de setup (voir [Registre de setup et restauration](#registre-de-setup-et-restauration)).
+
+Quand une sauvegarde d'installation (`.pre-emet-guard-backup.`) contient exactement ce qui reste, ses octets sont restaurés ; quand il ne reste rien, le fichier est supprimé ; sinon, une sauvegarde horodatée est d'abord écrite.
+
+Sans manifeste ni état d'installation (installation par plugin), il ignore les fichiers et affiche `claude plugin uninstall emet@emet-marketplace` ; quand `codex` est dans le PATH, il affiche aussi comment retirer le plugin Codex. Il se termine par 1 quand une étape a échoué ou qu'un fichier à lire (manifeste, settings, registre) est illisible, et nomme son chemin.
+
+### `emet whats-new`
+
+Affiche un avis unique après une mise à jour d'emet.
+
+- `--hook` : la forme qu'exécute le hook `SessionStart`.
+
+### `emet fleet`
+
+Travaille sur les dépôts git contenant un `emet.config.json` un niveau sous `--root` (par défaut `~/code`). Voir le [guide fleet](../how-to/check-a-fleet.md).
+
+- `emet fleet list [--root <dir>] [--json]` : liste les dépôts avec `tracker.kind`, `handoff.autoChain` et `models.worker`.
+- `emet fleet set <key> <value> [--root <dir>] [--dry-run]` : modifie une clé de configuration dans chaque dépôt listé, en validant d'abord via le chargeur de configuration (une valeur invalide ne change rien et sort avec 1).
+- `emet fleet launch --feature <text> [--root <dir>] [--repos <a,b>] [--dry-run]` : ouvre une session `/emet:run --draft <text>` dans chaque dépôt après les vérifications de disponibilité de `emet chain`. `--dry-run` affiche les lancements prévus sans démarrer de session.
+- `emet fleet status [--json]` : lit le journal global et affiche, pour chaque dépôt, le dernier état de chaque session des dernières 24 heures (hors `ended`).
+
+`fleet status` affiche une ligne `<repo>: <b> blocked, <w> working, <i> idle` par dépôt, les dépôts bloqués d'abord. `--json` affiche `{repos: [{repo, sessions: [{sessionId, state, blocked, since, runId}]}], blocked: <count>}`. Il se termine avec 0 aussi quand il n'y a aucune session.
+
+### `emet preflight`
+
+Confirme que le dépôt est prêt pour la distribution.
+
+- `--run <id>`
+- `--post-dispatch`
+
+### `emet skill-path`
+
+`emet skill-path <name>` affiche le chemin absolu du `SKILL.md` d'une skill de mattpocock-skills. Se termine avec le code 1 si la skill est introuvable.
+
+### `emet selftest`
+
+Exécute les tests unitaires propres à la CLI. Installations depuis les sources uniquement ; un binaire compilé se termine avec le code 1 et vous demande d'exécuter `emet doctor`.
+
+## Exécutions, workers et slots
+
+### `emet claims`
+
+Réserve un ticket pour une exécution : `emet claims --reserve <ticket> --run <id> --anchor <pid>`.
+
+- `--release <ticket>` : libère une réservation.
+- `--list` : liste les réservations.
+- `--prune [--dry-run]` : élague les réservations périmées.
+
+### `emet slots`
+
+Prend un slot de worker dans le pool commun à l'hôte, situé dans `~/.local/state/emet/slots` : `emet slots --acquire --run <id> --anchor <pid> --ticket <ticket>`.
+
+- `--release --run <id>` : libère les slots de l'exécution.
+- `--release-index <index>` : libère un slot.
+- `--list` : liste les slots.
+
+### `emet cleanup`
+
+`emet cleanup [--run <id> | --all] [--dry-run] [--force]`. Sans argument, il récupère les exécutions terminées ou mortes dont le travail a atterri. Après un merge, `emet cleanup --run <runId>` libère les branches, les réservations de tickets et les slots de workers de la vague.
+
+- `--run <id>` : nettoie cette exécution.
+- `--all` : un balayage de branches sur tout le dépôt.
+- `--dry-run`
+- `--force`
+
+Dans tous les modes, il supprime aussi chaque branche locale dont la PR a été fusionnée au commit de tête de la branche, avec le worktree d'agent propre et non verrouillé qui la contient.
+
+### `emet lock-reason`
+
+`emet lock-reason --run <id> --ticket <ticket> [--anchor <pid>]` affiche la raison du `git worktree lock` qu'un worker écrit au démarrage.
+
+### `emet launch`
+
+`emet launch <spec-id> --wave <n>` : sur Claude Code, démarre une vague comme une session `claude --bg` et ouvre son onglet Orca selon `handoff.launcher` (sur Codex, voir [Hôte Codex](#hôte-codex)). Il fait tout le lancement (vérification de session en double, `claude --bg`, onglet) et affiche `{ name, id, attach, orcaTab: { opened, reason } }`. Utilisez-le, plutôt qu'un simple `claude --bg`, chaque fois que vous voulez une vague dans une autre session à la main.
+
+### `emet chain`
+
+`emet chain --ticket <id> --spec <id> --wave <n> [gate flags]` exécute `emet gate` avec les flags de la porte qu'il reçoit et ne démarre la vague suivante que lorsque la décision est `chain`.
+
+Avant le lancement, il vérifie la disponibilité (marge de mémoire de l'hôte, disque et inodes libres dans le dépôt et dans `/tmp`, la CLI `orca`) puis confirme que la session enfant est listée. Toute autre décision, un problème de disponibilité bloquant (`low-memory`, `low-disk`, `low-inodes`, `orca-unavailable`) ou une session existante pour la même spec et la même vague se termine par le code 1 avec les raisons et ne lance rien.
+
+### `emet status`
+
+`emet status [--spec <id>] [--brief]` affiche Working / Checking / Ready / Needs-decision par vague en JSON, plus une ligne de résumé. `emet status --help` documente le JSON.
+
+- `--spec <id>`
+- `--brief` : n'affiche que trois lignes au plus : l'état global, ce qui attend une personne (le cas échéant) et la prochaine action.
+
+Le JSON inclut aussi `sessions: [{sessionId, state, blocked, since, runId}]` : le dernier état d'attention de chaque session appartenant à emet de ce dépôt dans les dernières 24 heures, sessions `ended` exclues. `blocked` vaut `true` quand `state` est `needs-decision`, et `since` est l'heure de cet état. Une seule session bloquée rend le `state` global `needs-decision`, même sans vague active ; la ligne de résumé indique combien de sessions sont bloquées et `--brief` les liste sur la ligne de ce qui attend une personne.
+
+### `emet run`
+
+`emet run current [--json]` affiche l'exécution active du dépôt (id d'exécution, spec, vague, phase et dernière mise à jour), lue dans `.emet/phase.json`. Sans exécution active, il affiche `no active run` et se termine avec 0.
+
+### `emet memory`
+
+Cherche et enregistre des leçons dans [Engram](https://github.com/Gentleman-Programming/engram).
+
+- `emet memory search --json <query> [--limit <n>]` : cherche des leçons d'exécutions précédentes. Il cherche avec `match_mode: "any"` (`--limit` vaut 5 par défaut, maximum 20), ne garde que les notes dont la clé de sujet commence par `emet/<repo>/lessons/` et affiche `{available: true, results: [{id, topicKey, title, content}]}` avec `content` tronqué à 2000 caractères. `<repo>` est le dernier segment de `git remote get-url <repo.remote>` sans `.git`, sinon le nom de base du worktree principal.
+- `emet memory save --json --key <spec-<id>|quick-<runId>> --run <runId> --outcome <landed|chained|hold|stop|blocked>` : lit sur stdin de 1 à 5 puces de leçons (lignes `- ` d'au plus 300 caractères chacune) et les ajoute sous la forme d'une section `## <runId> — <outcome> (<date>)` à la note de clé de sujet `emet/<repo>/lessons/<key>`, ou crée cette note. Une note de plus de 20000 caractères perd ses sections les plus anciennes. Il affiche `{available: true, saved: true, topicKey}`.
+
+Les deux sous-commandes parlent à Engram en lançant `engram mcp --tools=agent` à la racine du dépôt ; le plugin Engram n'est pas requis. Elles ne transmettent jamais de `project` à Engram.
+
+Codes de sortie : `2` pour un mauvais usage (aucune sous-commande, requête manquante, aucune puce, plus de 5 puces, une puce de plus de 300 caractères, un outcome inconnu, une clé invalide). Tout problème Engram (absent du PATH, handshake échoué, erreur d'outil, timeout, JSON mal formé) se termine par `0`.
+
+- Avant un handshake réussi, la sortie est `{available: false, reason}`.
+- Après, la sortie est `{available: true, results: [], reason}` pour `search` ou `{available: true, saved: false, reason}` pour `save`.
+- `memory.enabled: "off"` affiche `{available: false, reason: "memory.enabled is off"}` et ne lance rien. Voir [`memory`](configuration.md#memory).
+
+### `emet insights`
+
+Lit le [journal d'événements](../concepts/attention-and-journal.md) et rapporte les exécutions par origine (humaine ou auto), les décisions du gate par décision et motif, les interventions humaines par exécution, les résultats de lancement et les tickets fermés. Les lignes illisibles sont ignorées et comptées. Un journal vide ou absent affiche un rapport à zéro et se termine avec 0.
+
+- `--since <iso|7d|30d>`
+- `--repo <path>`
+- `--all`
+- `--json`
+- `--mark-baseline` : ajoute une base de référence ; les rapports suivants ne couvrent que les événements postérieurs, sauf avec `--all`.
+
+### `emet usage`
+
+Indique l'usage de la session.
+
+- `--session <id>` ou `--file <path>`
+- `--stalled [--minutes N]` : liste les workers bloqués.
+- `--project-dir <path>`
+
+### `emet handoff`
+
+`emet handoff --check <path> [--expect-skills a,b] | --render <path>` valide ou rend la note `.emet/handoff-<ticket>.md` d'un worker.
+
+- `--check <path>` : valide la note. Une vérification réussie affiche `missing skills: …` lorsque la liste `missing` n'est pas vide.
+- `--expect-skills a,b` (check uniquement) : fait échouer la vérification pour chaque skill nommé qui ne figure ni dans la liste `loaded` ni dans la liste `missing`.
+- `--render <path>` : rend la note.
+
+La note peut contenir une section `skills:`, écrite `skills: none` ou `skills: loaded: a, b; missing: c`. Elle n'est requise que lorsque `state` vaut `done`, et toute autre valeur fait échouer la vérification.
+
+### `emet metrics`
+
+`emet metrics [--run <id>]` indique les tokens, le coût équivalent API et le temps écoulé par ticket, par vague et par exécution, lus dans les transcriptions de session. Il compare aussi le budget de contexte estimé par ticket avec ce que chaque worker a réellement utilisé. Son résumé figure à la fin du rapport final de l'exécution.
+
+### `emet ask`
+
+La boîte aux lettres des workers : interroge le coordinateur, ou attend la réponse.
+
+- `--run <id>`
+- `--ticket <ticket>`
+- `--body <text>` : envoie la question.
+- `--wait <n>` : attend la réponse.
+- `--slice <seconds>`
+
+Avec `--wait`, le code `0` est une réponse, `3` un dépassement de tranche et `4` une expiration.
+
+### `emet inbox`
+
+`emet inbox --run <id>` liste en JSON les questions de workers encore ouvertes.
+
+### `emet reply`
+
+`emet reply --run <id> --ticket <ticket> --id <n> --body <text>` répond à une question d'un worker.
+
+## Planification, revue et atterrissage
+
+### `emet promote`
+
+`emet promote --spec <id> [--dry-run] [--no-promote] [--hold]` est l'étape after-spec, selon [`handoff.afterSpec`](configuration.md#handoff).
+
+- `--dry-run` : n'ouvre aucune pull request.
+- `--no-promote` : saute l'étape.
+- `--hold` : écrit le marqueur `<run dir>/runs/<id>/no-promote` et affiche `{"held":true}`. Tant qu'il existe, `emet promote --spec <id>` se termine avec 0 et une note `skipped` sans ouvrir de pull request, de sorte que `--no-promote` persiste d'une session à l'autre d'une spec.
+
+En mode `promote`, il ouvre une pull request de `develop` vers `main` intitulée `chore: 🔖 promote develop`, attend avec `emet ci --pr <n> --wait`, et la fusionne avec un commit de fusion uniquement quand l'état est `pass`. Ensuite, seulement si `develop` est en retard sur `main`, il ouvre une pull request de synchronisation de `main` vers `develop`, attend ses vérifications de la même manière et la fusionne avec un commit de fusion uniquement quand l'état est `pass`. Une pull request de synchronisation dont l'état est `fail`, `timeout` ou `env-fault`, ou dont la fusion est rejetée, reste ouverte et ne modifie jamais le résultat de promote.
+
+Il ajoute au journal un événement `promote` avec le numéro de la pull request, `merged`, `syncPrNumber`, `syncMerged`, `syncReason`, `rule` et `reason`. `afterSpec` peut être une liste de règles ; le mode est alors choisi d'après les chemins que la promotion de `develop` apporterait (voir [`handoff.afterSpec`](configuration.md#handoff)), et un `git fetch` ou un `git diff` en échec fait sortir la commande avec 1 avant l'ouverture de toute pull request.
+
+Le résultat affiché contient :
+
+- `rule` : l'indice de la règle retenue, ou `null` pour la forme chaîne ou en l'absence de correspondance.
+- `reason`.
+- `syncPrNumber` : `null` quand aucune pull request de synchronisation n'a été ouverte.
+- `syncMerged` et `syncReason` : une phrase qui dit pourquoi une pull request de synchronisation est restée ouverte, sinon `null`.
+- `deployCheck: { run, reason }` : indique si le coordinateur doit exécuter `emet deploy-check`.
+
+En mode `release`, il ne fusionne rien et laisse la pull request de release à une personne. Avec `afterSpec` `none`, avec `--no-promote`, avec une spec retenue, ou quand la dernière vague de la spec a été laissée ouverte ou signalée, il sort avec 0 et une note `skipped`. Il s'exécute tout de même après une dernière vague propre afin que le résultat contienne la décision `deployCheck` (sur le trunk `main`, la vérification de déploiement s'exécute quel que soit le mode). Une CI qui n'est pas `pass` ne fusionne rien et sort avec 1.
+
+### `emet deploy-check`
+
+Exécute `deploy.check.command` jusqu'à ce qu'elle sorte avec 0, dans la limite de `retries` tentatives ou de `timeoutSeconds`, en attendant `intervalSeconds` entre elles, et affiche `state: ok | failed | timeout` avec `attempts`.
+
+- `--json`
+
+Sortie `0` ok, `1` failed, `3` timeout. Sans `deploy.check` configuré, il sort avec 0 et `skipped: "no deploy check configured"`. Le coordinateur ne l'exécute que lorsque le résultat de `emet promote` a `deployCheck.run` à true. Voir [`deploy`](configuration.md#deploy).
+
+### `emet surfaces`
+
+`emet surfaces --check <file.json | ->` rejette les globs de surfaces autorisées qui se chevauchent entre les tickets d'une vague.
+
+### `emet assess`
+
+`emet assess --base <ref> --head <ref>` classe un diff comme `passive`, `medium` ou `high` et affiche du JSON avec le niveau, les raisons ainsi que le modèle et l'effort recommandés pour le relecteur. Voir [Models & effort](../../README.md#models--effort) et [`review`](configuration.md#review).
+
+- `--quick` : le JSON contient aussi `"quickRejected": true|false` et la commande sort avec le code 1 quand le niveau est `high` (un **Stop** pour une **Quick run** : pas d'auto-merge, la PR reste ouverte), et avec 0 sinon. Sans `--quick`, la sortie et les codes de sortie restent inchangés.
+
+Le JSON contient aussi deux décisions :
+
+- `browserVerify: { run, reason }` : `run` vaut `true` uniquement lorsque le niveau a un relecteur, que [`verify.browser`](configuration.md#verify) est configuré, que le binaire `agent-browser` est dans le PATH et, si `paths` est défini, qu'un chemin modifié correspond. Sinon `reason` nomme la première condition non remplie.
+- `dualReview: { run, reason }` : `run` vaut `true` seulement quand le niveau est `high`, que `agentHost` est `claude`, que [`review.dual`](configuration.md#review) n'est pas `off` et que le binaire `codex` est dans le PATH. Sinon `reason` nomme la première condition non remplie.
+
+### `emet land`
+
+`emet land --spec <s> --branch <integration> --tickets <id,...>` fusionne une branche d'intégration dans la branche principale locale (`landing.mode` `merge`). `commands.selfCheck` tient lieu de CI et rien n'est poussé.
+
+### `emet spec-branch`
+
+`emet spec-branch ensure|integrate|status|sync|land|abandon --spec <id>` gère la branche de spec `spec/<id>` de `landing.unit: spec` (voir [`landing`](configuration.md#landing)). Tous affichent du JSON.
+
+- `ensure` : crée la branche à partir de la branche principale (idempotent), écrit `.emet/specs/<id>/branch.json` et refuse lorsque la branche d'une autre spec est extraite.
+- `integrate --wave <n> --branch <integration> --tickets a,b` : fusionne la branche de la vague dans `spec/<id>` avec `--no-ff` et les trailers `Emet-Wave` et `Emet-Tickets`, enregistre la vague, ajoute `spec.integrate` et, lorsque `landing.pushSpecBranch` vaut true, pousse la branche sans ouvrir de PR.
+- `status` : affiche `branch`, `tip`, les vagues et tickets intégrés et `behindTrunk`, et reconstruit `branch.json` à partir des trailers lorsqu'une vague manque.
+- `sync` : fusionne la branche principale dans la branche, ne fait jamais de rebase et, en cas de conflit, abandonne, liste les chemins et sort avec un code non nul.
+- `land [--partial]` : synchronise, puis en mode `pr` pousse la branche, ouvre une PR avec une ligne `Closes` par ticket, attend ses vérifications et la fusionne avec `landing.specMergeMethod` (un commit de merge par défaut, en ignorant `pr.mergeMethod`). En mode `merge`, il fusionne dans la branche principale locale avec `--no-ff` sans jamais pousser. Il ajoute `spec.land`.
+- `abandon --force` : étiquette `abandoned/spec-<id>`, supprime la branche, ajoute `spec.abandon` et remet à `ready-for-agent` les tickets intégrés d'un tracker local ; sans `--force`, il refuse.
+
+`emet tracker frontier` compte les tickets listés dans `branch.json` comme bloqueurs fermés, et `emet status` gagne `specBranch` (`branch`, `tip`, `integratedWaves`).
+
+### `emet spec-merge`
+
+`emet spec-merge --spec <id>` fusionne les deltas d'exigences `ADDED`/`MODIFIED`/`REMOVED` de la spec dans `docs/specs/<area>.md` (`specs.dir`).
+
+- `--deltas-dir` : affiche le répertoire où placer les deltas.
+
+Avec `specs.enabled` activé, le coordinateur écrit les deltas et l'exécute une fois par spec, sur la branche d'intégration de la dernière vague avant sa revue, puis valide le résultat dans un commit. Il vérifie toutes les zones avant d'écrire quoi que ce soit. Un conflit, ou une exigence qui perdrait un scénario, se termine avec le code 1 et laisse tous les fichiers intacts. Avec `specs.enabled` désactivé, il ne fusionne rien et se termine avec le code 0.
+
+### `emet map`
+
+`emet map [--refresh]` écrit un résumé d'une base de code existante (stack, structure, conventions, tests, points chauds) dans `docs/agents/codebase.md` (`map.path`), estampillé avec le SHA du commit dont il est issu. Le même commit produit toujours le même fichier.
+
+- `--refresh`
+- `--stale` : se termine avec le code 1 une fois que HEAD a dépassé l'estampille, et `emet preflight` avertit dans ce cas.
+- `--for <globs>` : n'affiche que les sections qui correspondent aux surfaces d'édition d'un ticket ; cette sortie est la seule partie de la carte qu'inclut le brief d'un worker.
+
+### `emet guard`
+
+Le hook `PreToolUse` de Claude Code ; lit le JSON du hook sur stdin (la forme Codex figure sous [Hôte Codex](#hôte-codex)). `emet self install` le branche dans `~/.claude/settings.json`. Il bloque une poignée de déclencheurs connus d'échecs lors d'exécutions sans surveillance (voir `emet/src/guard.ts`).
+
+## Tracker local
+
+Avec `tracker.kind: "local"`, les specs et les tickets sont des fichiers markdown sous `.scratch/` du worktree principal (non versionnés) : `.scratch/<slug>/spec.md` et `.scratch/<slug>/issues/<NN>-<slug>.md`, chacun avec des lignes `Status:` et `Blocked by:` et des commentaires sous `## Comments`. `emet init --tracker local` met cela en place. Voir l'[ADR-0011](../adr/0011-local-tracker-scratch-convention.md).
 
 `landing.mode` vaut `"pr"` (par défaut) ou `"merge"`, indépendamment du tracker. En mode `merge`, une vague atterrit en un seul merge local dans la branche principale avec `emet land`, `commands.selfCheck` tenant lieu de CI et sans push. Avec `landing.unit: "spec"` (par défaut), toute la spec atterrit une fois via `emet spec-branch land`. `gh` n'est requis que lorsque le tracker est `github` ou que l'atterrissage est `pr`. Voir l'[ADR-0010](../adr/0010-local-merge-landing.md) et [`landing`](configuration.md#landing).
 
-### PR d'atterrissage et enchaînement des vagues
+### `emet tracker`
+
+`emet tracker create-spec|create-ticket|read|frontier|set-state|comment|close` est le tracker local sur `.scratch/`, JSON sur stdout. Le coordinateur lit et écrit les specs et les tickets par son intermédiaire.
+
+#### `emet tracker close`
+
+Avec `tracker.kind: "github"`, `emet tracker close <ticket>... [--pr <n>]` ferme chaque ticket (`CLA-<n>`, `#<n>` ou un nombre seul) avec `gh issue close --reason completed`, vérifie son état et rapporte `closed` ou `already-closed`.
+
+- `--pr <n>` : ajoute le commentaire « Landed in #<n> ».
+
+Pour chaque parent distinct d'un ticket `closed` ou `already-closed`, il lit ensuite `gh issue view <spec> --json state,subIssuesSummary`. Quand la spec est ouverte et que `subIssuesSummary.completed` égale un `total` non nul, il ferme la spec avec `gh issue close --reason completed` et le commentaire « All <total> tickets landed. », puis vérifie son état.
+
+La sortie gagne `specs`, un `{ spec, outcome, detail? }` par parent distinct avec le résultat `closed`, `open`, `already-closed` ou `failed`. Un ticket sans parent n'ajoute rien, et une lecture ou une fermeture de spec en échec ne change jamais le résultat d'un ticket. Il se termine par `1` si un ticket ou une spec a échoué, après avoir traité les autres. Les tickets Linear sont confirmés Done par le coordinateur via le MCP Linear.
+
+## PR d'atterrissage et enchaînement des vagues
 
 Avec `landing.unit: "wave"`, une vague est une PR ; avec `"spec"`, une PR couvre toutes les vagues intégrées. Son corps porte une ligne `Closes #N` par ticket (le mot-clé de fermeture du tracker), et le coordinateur passe les tickets en revue à l'ouverture de la PR. La PR est ensuite fusionnée selon `pr.autoMerge`, ou laissée ouverte lorsque la vague a été signalée, que `autoMerge` vaut `false` ou que les corrections de CI sont épuisées (la PR reçoit alors le label de décision humaine). Les vagues suivantes s'exécutent dans leurs propres sessions, jamais dans celle qui a exécuté la vague 1. Les sections `pr` et `handoff` contrôlent la suite ; voir [`pr`](configuration.md#pr) et [`handoff`](configuration.md#handoff).
 
-`emet ci --pr <n> --wait [--rerun-flakes] [--timeout-minutes <m>]` interroge les checks de la PR jusqu'à leur fin ou jusqu'au délai (30 par défaut). Avec `--rerun-flakes`, il relance une fois chaque check en échec via `gh run rerun --failed` ; un check qui passe à la relance est un Flake. Il affiche `state: pass | fail | env-fault | timeout`, les checks en échec et `flakeReruns`, et ne fusionne jamais. Une PR sans check est `pass` avec `noChecks: true`. Code `0` pass, `1` fail ou env-fault, `3` timeout. `env-fault` désigne des checks terminés en `STARTUP_FAILURE` ou restés trop longtemps en file : une CI qui ne s'est jamais exécutée, pas un échec du code.
+### `emet ci`
 
-Avec `tracker.kind: "github"`, `emet tracker close <ticket>... [--pr <n>]` ferme chaque ticket (`CLA-<n>`, `#<n>` ou un nombre seul) avec `gh issue close --reason completed`, vérifie son état et rapporte `closed` ou `already-closed`. `--pr` ajoute le commentaire « Landed in #<n> ». Pour chaque parent distinct d'un ticket `closed` ou `already-closed`, il lit ensuite `gh issue view <spec> --json state,subIssuesSummary` ; si la spec est ouverte et que `subIssuesSummary.completed` égale un `total` non nul, il ferme la spec avec `gh issue close --reason completed` et le commentaire « All <total> tickets landed. », puis vérifie son état. La sortie gagne `specs`, un `{ spec, outcome, detail? }` par parent distinct avec le résultat `closed`, `open`, `already-closed` ou `failed` ; un ticket sans parent n'ajoute rien, et une lecture ou une fermeture de spec en échec ne change jamais le résultat d'un ticket. Il se termine par `1` si un ticket ou une spec a échoué, après avoir traité les autres. Les tickets Linear sont confirmés Done par le coordinateur via le MCP Linear.
+`emet ci --pr <n> --wait [--rerun-flakes] [--timeout-minutes <m>]` interroge les checks de la PR jusqu'à leur fin ou jusqu'au délai (30 par défaut). Il affiche `state: pass | fail | env-fault | timeout`, les checks en échec et `flakeReruns`, et ne fusionne jamais.
 
-### Hôte Codex
+- `--rerun-flakes` : relance une fois chaque check en échec via `gh run rerun --failed` ; un check qui passe à la relance est un Flake.
+- `--timeout-minutes <m>`
 
-Ces commandes servent l'hôte d'agent Codex (`agentHost` `"codex"`) ; voir le [guide Codex](../guide/codex.md).
+Une PR sans check est `pass` avec `noChecks: true`. Code `0` pass, `1` fail ou env-fault, `3` timeout. `env-fault` désigne des checks terminés en `STARTUP_FAILURE` ou restés trop longtemps en file : une CI qui ne s'est jamais exécutée, pas un échec du code.
 
-- `emet dispatch --role worker --run <id> --ticket <id> --prompt-file <file> [--model <m>] [--effort <e>] [--root <dir>]`: après avoir vérifié la réservation et le slot, crée `.emet/worktrees/agent-<ticket>`, construit une surcouche `CODEX_HOME` par run et lance le worker comme un `codex exec` détaché. `emet dispatch --wait --run <id> --ticket <id> [--timeout <s>]` attend sa fin et affiche le statut de résultat enregistré.
-- `emet review-run --run <id> --ticket <id> --package <file> --tier <medium|high|passive> [--browser-verify true|false]`: exécute le reviewer comme un `codex exec` en lecture seule sur un paquet issu de `emet review-package` et affiche le JSON des constats pour `emet review --findings`. Le niveau `passive` ne lance aucun processus. `--browser-verify` vaut `false` par défaut ; avec `true`, le prompt se termine par l'axe Browser, avec `--session review-<run>` rempli à partir de `--run`, afin que le reviewer Codex vérifie l'UI comme le fait le reviewer Claude (à passer quand `emet assess` a affiché `browserVerify.run: true` ; voir [`verify`](configuration.md#verify)). Sans le flag, le prompt est inchangé, et une valeur autre que `true` ou `false` sort avec le code 2 et la ligne d'usage. `--coverage-out <file>` écrit en plus les Coverage verdicts du relecteur Codex dans `<file>` sous forme de tableau JSON (stdout n'affiche toujours que les constats) ; à utiliser sur l'hôte Codex, où un seul relecteur tourne. Les constats peuvent porter les champs optionnels `s` et `userOption`, décrits sous `emet review`.
-- `emet launch <spec-id> --wave <n>`: sur cet hôte, lance un `codex exec` détaché qui exécute `$emet:run --dispatch <spec>` et enregistre son id de thread. Aucun onglet Orca n'est ouvert, et `codex exec resume <id>` reprend la session.
-- `emet guard`: avec `EMET_AGENT_HOST=codex`, lit l'entrée de hooks de Codex, vérifie les chemins d'`apply_patch` par rapport à `.emet/surface.json` et garde la porte d'approbation fermée jusqu'à une ligne de prompt `approve <id>`.
+## Hôte Codex
+
+Ces commandes servent l'hôte d'agent Codex (`agentHost` `"codex"`) ; voir le [guide Codex](../how-to/use-codex.md).
+
+### `emet dispatch`
+
+`emet dispatch --role worker --run <id> --ticket <id> --prompt-file <file> [--model <m>] [--effort <e>] [--root <dir>]` : après avoir vérifié la réservation et le slot, crée `.emet/worktrees/agent-<ticket>`, construit une surcouche `CODEX_HOME` par run et lance le worker comme un `codex exec` détaché.
+
+- `emet dispatch --wait --run <id> --ticket <id> [--timeout <s>]` : attend sa fin et affiche le statut de résultat enregistré.
+
+### `emet review-run`
+
+`emet review-run --run <id> --ticket <id> --package <file> --tier <medium|high|passive> [--browser-verify true|false]` exécute le reviewer comme un `codex exec` en lecture seule sur un paquet issu de `emet review-package` et affiche le JSON des constats pour `emet review --findings`. Le niveau `passive` ne lance aucun processus.
+
+- `--browser-verify true|false` : vaut `false` par défaut. Avec `true`, le prompt se termine par l'axe Browser, avec `--session review-<run>` rempli à partir de `--run`, afin que le reviewer Codex vérifie l'UI comme le fait le reviewer Claude (à passer quand `emet assess` a affiché `browserVerify.run: true` ; voir [`verify`](configuration.md#verify)). Sans le flag, le prompt est inchangé, et une valeur autre que `true` ou `false` sort avec le code 2 et la ligne d'usage.
+- `--coverage-out <file>` : écrit en plus les Coverage verdicts du reviewer Codex dans `<file>` sous forme de tableau JSON (stdout n'affiche toujours que les constats) ; à utiliser sur l'hôte Codex, où un seul reviewer tourne.
+
+Les constats peuvent porter les champs optionnels `s` et `userOption`, décrits sous `emet review`.
+
+### `emet launch` sur Codex
+
+`emet launch <spec-id> --wave <n>` lance un `codex exec` détaché qui exécute `$emet:run --dispatch <spec>` et enregistre son id de thread. Aucun onglet Orca n'est ouvert, et `codex exec resume <id>` reprend la session.
+
+### `emet guard` sur Codex
+
+Avec `EMET_AGENT_HOST=codex`, `emet guard` lit l'entrée de hooks de Codex, vérifie les chemins d'`apply_patch` par rapport à `.emet/surface.json` et garde la porte d'approbation fermée jusqu'à une ligne de prompt `approve <id>`.
 
 ## Gates et enregistrements
 
-Les phases ne décident pas d'elles-mêmes quand un ticket est terminé, fusionnable ou mérite une nouvelle tentative. Elles appellent une commande de la CLI qui lit un enregistrement sur disque et affiche la décision. Les enregistrements d'exécution se trouvent sous `.emet/runs/<run-id>/` et le registre de revue sous `.emet/review/`, dans le checkout principal, pas dans le worktree d'un worker.
+Les phases ne décident pas d'elles-mêmes quand un ticket est terminé, fusionnable ou mérite une nouvelle tentative. Elles appellent une commande de la CLI qui lit un enregistrement sur disque et affiche la décision. Les enregistrements d'exécution se trouvent sous `.emet/runs/<run-id>/` et le registre de revue sous `.emet/review/`, dans le checkout principal, pas dans le worktree d'un worker. Les commandes ci-dessous sont listées dans l'ordre du pipeline.
 
-| Étape                 | Commande                                             | Ce qu'elle impose                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           |
-| --------------------- | ---------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Avant l'approbation   | `emet validate --file <plan.json>`                   | Chaque `S#` est couvert par au moins un ticket et a un scénario d'acceptation. Chaque ticket couvre au moins un `S#`. Les surfaces d'édition sont disjointes au sein d'une vague. Aucun cycle de dépendances. Avec [`validate.coupledSurfaces`](configuration.md#validate), une erreur `coupled-surface-split` lorsqu'un ticket qui touche la `source` d'une paire est dans une vague antérieure à celle d'un ticket qui touche ses `dependents` (code de sortie 1). `emet preflight` le relance sur le plan approuvé. Une liste de tickets vide est une erreur `no-tickets` (code de sortie 1, "plan has no tickets; write one folded ticket"), avec ou sans éléments `S#` ; un plan avec un ticket marqué `folded: true` qui couvre tous les `S#` passe.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
-| Approbation           | `emet approve --run <id> --spec <file>`              | Écrit `approval.json` avec les hashes de la spec et de la liste de tickets. La distribution refuse si l'un des deux a changé ensuite (`--check`). Avec `--quick`, elle écrit aussi `"mode": "quick"`, ce qui fait de `wave` l'unité d'atterrissage de cette exécution ; sans lui, le champ est absent et les enregistrements antérieurs passent toujours `--check`.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
-| Création des tickets  | `emet materialize-log --run <id> --record/--lookup`  | Enregistre l'ID de chaque ticket créé dès qu'il existe, de sorte qu'une exécution interrompue ne crée jamais de doublons.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
-| Worker terminé        | `emet results --run <id> --write/--read <ticket>`    | Les workers écrivent un fichier de résultat local (`DONE`, `DONE_WITH_CONCERNS`, `BLOCKED` ou `NEEDS_CONTEXT`, plus une ligne `Risk:`). Seul le coordinateur écrit dans le tracker.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
-| Après chaque worker   | `emet verify <ticket> --run <id>`                    | Vérifie que des commits existent au-delà de la base de distribution, que chaque chemin modifié se trouve dans les surfaces d'édition du ticket, que la note de handoff passe `handoff --check` et que `commands.workerScopedSuite` passe. La revue et le merge refusent un ticket sans enregistrement de réussite.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
-| Entrée de la revue    | `emet review-package <base> <head> --out <file>`     | Regroupe le diff pour le relecteur, qui le reçoit sous forme de chemin de fichier. Se termine avec le code 3 si la plage est vide ou n'est pas un descendant de la base.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
-| Revue                 | `emet review --ticket <t> --findings <file>`         | Tient le registre des constats et impose l'ordre de triage (`intent_gap` → `bad_plan` → `patch` → `defer`) et le plafond de tours. `--base <ref>` résout `<ref>` en un sha au premier tour et le stocke ; les tours suivants le réutilisent, et un sha différent sort avec le code 2 en nommant celui stocké. Un constat sur une ligne que le diff `<base>..HEAD` n'a ni ajoutée ni modifiée est stocké avec `preexisting: true`, et `emet gate` ne le compte pas comme bloquant. Les constats acceptent les champs optionnels `s: "S<n>"` (l'exigence concernée), `userOption: "S<n>"` (un constat qui contredit une exigence `(user option)` : toujours bloquant, même préexistant, et avec `gate.onHold: fix-and-continue` il donne `hold` avec `next: fix-findings`) et `agreement: "both"` ou `"single"` ; un `userOption` qui n'est pas une chaîne sort avec le code 2. `--coverage <file or -> [--expect S1,S3]` stocke un tableau JSON de Coverage verdicts `{s, verdict, test:{file,name}}` (`verdict` : `met`, `partial`, `unmet`) comme `coverage` du registre, en remplaçant le précédent, et ne consomme aucun tour de revue. Il ouvre un constat `VG-S<n>` (major, `patch`) pour chaque `met` dont le `test` manque, dont le fichier n'existe pas ou ne contient pas `test.name`, et pour chaque S# de `--expect` sans verdict. Un constat `VG-` ne se ferme que lorsqu'un `--coverage` ultérieur ne le produit plus ou qu'un verdict de recheck le résout, jamais par son absence d'un tour `--findings`. Il affiche `{coverage, open}` et sort avec 1 tant qu'un constat est ouvert ; il n'exécute aucun test. `--merge <a.json> <b.json>` (sans `--ticket`) affiche un seul tableau de constats fusionné pour `--findings -` : deux constats forment une paire s'ils partagent `s` ou partagent `file` avec des lignes distantes d'au plus 3 ; la paire garde l'`id` du premier fichier, la sévérité la plus haute et `agreement: "both"`. Un constat sans paire reçoit `agreement: "single"`, et un `id` du second fichier qui entre en collision est préfixé par `X-` ; un constat avec `userOption` n'est jamais écarté. `--recheck --verdicts <file>` termine un tour de correction : seuls les constats ouverts à son début sont évalués, un constat ne devient `resolved` que par un verdict, et le recheck compte contre `budgets.fixRounds` (code 1 nommant le plafond une fois épuisé). `--escalate` passe au niveau de modèle suivant. `--rule`/`--rulings` enregistrent et listent les « Rulings I made » pour le rapport et le corps de la PR. |
-| Merge ou enchaînement | `emet gate <ticket> --tier … --ci … --integration …` | Affiche `merge`, `hold`, `chain`, `stop` ou `defer` en JSON avec ses raisons. Il lit l'enregistrement verify, les constats ouverts, le niveau de risque, la CI, la suite d'intégration et les budgets. Un `hold` porte `next` : `fix-findings`, `rerun-failed-specs`, `rerun-ci` ou `report-infrastructure`. `--no-record` garde la décision hors du journal. Voir [`gate`](configuration.md#gate).                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
+### `emet validate`
+
+Avant l'approbation : `emet validate --spec <id> | --file <plan.json>` exécute la validation du plan.
+
+- Chaque `S#` est couvert par au moins un ticket et a un scénario d'acceptation.
+- Chaque ticket couvre au moins un `S#`.
+- Les surfaces d'édition sont disjointes au sein d'une vague.
+- Il n'y a aucun cycle de dépendances.
+- Avec [`validate.coupledSurfaces`](configuration.md#validate), une erreur `coupled-surface-split` lorsqu'un ticket qui touche la `source` d'une paire est dans une vague antérieure à celle d'un ticket qui touche ses `dependents` (code de sortie 1).
+- Une liste de tickets vide est une erreur `no-tickets` (code de sortie 1, "plan has no tickets; write one folded ticket"), avec ou sans éléments `S#`. Un plan avec un ticket marqué `folded: true` qui couvre tous les `S#` passe.
+
+`emet preflight` le relance sur le plan approuvé.
+
+### `emet approve`
+
+Approbation : `emet approve --run <id> --spec <file>` écrit `approval.json` avec les hashes de la spec et de la liste de tickets. La distribution refuse si l'un des deux a changé ensuite (`--check`).
+
+- `--quick` : écrit aussi `"mode": "quick"`, ce qui fait de `wave` l'unité d'atterrissage de cette exécution. Sans lui, le champ est absent et les enregistrements antérieurs passent toujours `--check`.
+
+### `emet materialize-log`
+
+Création des tickets : `emet materialize-log --run <id> --record/--lookup` enregistre l'ID de chaque ticket créé dès qu'il existe, de sorte qu'une exécution interrompue ne crée jamais de doublons.
+
+### `emet results`
+
+Worker terminé : `emet results --run <id> --write/--read <ticket>`. Les workers écrivent un fichier de résultat local (`DONE`, `DONE_WITH_CONCERNS`, `BLOCKED` ou `NEEDS_CONTEXT`, plus une ligne `Risk:`). Seul le coordinateur écrit dans le tracker.
+
+### `emet verify`
+
+Après chaque worker : `emet verify <ticket> --run <id>` vérifie que des commits existent au-delà de la base de distribution, que chaque chemin modifié se trouve dans les surfaces d'édition du ticket, que la note de handoff passe `handoff --check` et que `commands.workerScopedSuite` passe. La revue et le merge refusent un ticket sans enregistrement de réussite.
+
+### `emet review-package`
+
+Entrée de la revue : `emet review-package <base> <head> --out <file>` regroupe le diff pour le reviewer, qui le reçoit sous forme de chemin de fichier. Se termine avec le code 3 si la plage est vide ou n'est pas un descendant de la base.
+
+### `emet review`
+
+Revue : `emet review --ticket <t> --findings <file>` tient le registre des constats et impose l'ordre de triage (`intent_gap` → `bad_plan` → `patch` → `defer`) et le plafond de tours.
+
+- `--base <ref>` : résout `<ref>` en un sha au premier tour et le stocke ; les tours suivants le réutilisent, et un sha différent sort avec le code 2 en nommant celui stocké. Un constat sur une ligne que le diff `<base>..HEAD` n'a ni ajoutée ni modifiée est stocké avec `preexisting: true`, et `emet gate` ne le compte pas comme bloquant.
+- `--findings <file>` : les constats acceptent les champs optionnels `s: "S<n>"` (l'exigence concernée), `userOption: "S<n>"` et `agreement: "both"` ou `"single"`. Un constat `userOption` contredit une exigence `(user option)` : il est toujours bloquant, même préexistant, et avec `gate.onHold: fix-and-continue` il donne `hold` avec `next: fix-findings`. Un `userOption` qui n'est pas une chaîne sort avec le code 2.
+- `--coverage <file or -> [--expect S1,S3]` : stocke un tableau JSON de Coverage verdicts `{s, verdict, test:{file,name}}` (`verdict` : `met`, `partial`, `unmet`) comme `coverage` du registre, en remplaçant le précédent, et ne consomme aucun tour de revue. Il ouvre un constat `VG-S<n>` (major, `patch`) pour chaque `met` dont le `test` manque, dont le fichier n'existe pas ou ne contient pas `test.name`, et pour chaque S# de `--expect` sans verdict. Un constat `VG-` ne se ferme que lorsqu'un `--coverage` ultérieur ne le produit plus ou qu'un verdict de recheck le résout, jamais par son absence d'un tour `--findings`. Il affiche `{coverage, open}` et sort avec 1 tant qu'un constat est ouvert ; il n'exécute aucun test.
+- `--merge <a.json> <b.json>` (sans `--ticket`) : affiche un seul tableau de constats fusionné pour `--findings -`. Deux constats forment une paire s'ils partagent `s` ou partagent `file` avec des lignes distantes d'au plus 3, et la paire garde l'`id` du premier fichier, la sévérité la plus haute et `agreement: "both"`. Un constat sans paire reçoit `agreement: "single"`, et un `id` du second fichier qui entre en collision est préfixé par `X-` ; un constat avec `userOption` n'est jamais écarté.
+- `--recheck --verdicts <file>` : termine un tour de correction. Seuls les constats ouverts à son début sont évalués, un constat ne devient `resolved` que par un verdict, et le recheck compte contre `budgets.fixRounds` (code 1 nommant le plafond une fois épuisé).
+- `--escalate` : passe au niveau de modèle suivant.
+- `--rule` et `--rulings` : enregistrent et listent les « Rulings I made » pour le rapport et le corps de la PR.
+
+### `emet gate`
+
+Merge ou enchaînement : `emet gate <ticket> --tier … --ci … --integration …` affiche `merge`, `hold`, `chain`, `stop` ou `defer` en JSON avec ses raisons. Il lit l'enregistrement verify, les constats ouverts, le niveau de risque, la CI, la suite d'intégration et les budgets. Un `hold` porte `next` : `fix-findings`, `rerun-failed-specs`, `rerun-ci` ou `report-infrastructure`. Voir [`gate`](configuration.md#gate).
+
+- `--no-record` : garde la décision hors du journal.
 
 Une fois les branches d'une vague fusionnées ensemble, `commands.fullSuite` s'exécute une fois sur la branche d'intégration. Une exécution au rouge bloque la PR et `autoChain`. Le gate reçoit le résultat sous la forme `--integration`. Pour les budgets que lit le gate, voir [`budgets`](configuration.md#budgets).
 
