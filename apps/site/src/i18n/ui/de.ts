@@ -47,13 +47,18 @@ export const de = {
     emetReplies: "emet antwortet",
     alt: "Das Tal, in dem drei Bäche in einen Fluss münden.",
     merged: "Gemergt",
+    otherInstall: "Weitere Installationswege",
+    wave: "Welle {n}",
+    caption: "Jede Welle fließt in einen Spec-Branch. Die Spec landet als ein Pull Request.",
+    prTitle: "Spec 41: Dunkelmodus für die Einstellungen",
+    checks: "Checks bestanden",
   },
   showcase: {
-    heading: "Die Welle wird gemergt",
-    headingHeld: "Die Welle wartet",
-    status: "Welle 2 geprüft. CI bestanden. Gemergt, 3 Tickets geschlossen.",
-    statusHeld: "Welle 2 angehalten: ein Ticket markiert. Nichts gemergt.",
-    flag: "Ticket #255 markieren",
+    heading: "Die Spec wird gemergt",
+    headingHeld: "Die Spec wartet",
+    status: "Spec 41 geprüft. CI bestanden. Als ein Pull Request gemergt, 4 Tickets geschlossen.",
+    statusHeld: "Spec 41 angehalten: ein Ticket markiert. Nichts gemergt.",
+    flag: "Ticket #44 markieren",
   },
   features: {
     heading: "Was ein Lauf absichert",
@@ -71,6 +76,28 @@ export const de = {
       { title: "Isolierte Worktrees", line: "Ein git worktree pro Worker." },
       { title: "Dein Tracker, oder keiner", line: "Linear, GitHub Issues oder lokale Dateien." },
     ],
+    extra: [
+      {
+        title: "Schnellmodus für kleine Änderungen",
+        line: "Ein Flag überspringt das Interview und führt ein Ticket, ein Review und ein Landing aus.",
+      },
+      {
+        title: "Merkt sich, was funktioniert hat",
+        line: "Erkenntnisse jedes Laufs werden gespeichert und im nächsten abgerufen.",
+      },
+      {
+        title: "Zwei Reviewer für riskante Änderungen",
+        line: "Riskante Arbeit bekommt einen zweiten Reviewer, bevor etwas landet.",
+      },
+      {
+        title: "Meldet sich, wenn es dich braucht",
+        line: "Ein Hinweis, wenn ein Lauf auf deine Freigabe wartet oder feststeckt.",
+      },
+      {
+        title: "Sauber installiert und deinstalliert",
+        line: "Entfernt alles, was emet installiert hat, und behält jede Datei, die du bearbeitet hast.",
+      },
+    ],
   },
   stats: {
     label: "In Zahlen",
@@ -84,6 +111,16 @@ export const de = {
   faq: {
     heading: "Fragen",
     items: [
+      {
+        question: "Wie deinstalliere ich emet?",
+        answer:
+          "Führe `emet uninstall` aus. Es entfernt, was emet installiert hat, und behält jede Datei, die du bearbeitet hast. Mit `--dry-run` siehst du vorher eine Vorschau.",
+      },
+      {
+        question: "Was ist der Schnellmodus?",
+        answer:
+          "Übergib `--quick` für eine kleine Änderung. Er überspringt das Interview und führt ein Ticket, ein Review und ein Landing aus.",
+      },
       {
         question: "Was brauche ich?",
         answer:

@@ -127,9 +127,9 @@ describe("Stats band", () => {
 });
 
 describe("FAQ", () => {
-  it("has six rows in every locale", () => {
+  it("has eight rows in every locale", () => {
     for (const locale of LOCALES) {
-      expect(getStrings(locale).faq.items).toHaveLength(6);
+      expect(getStrings(locale).faq.items).toHaveLength(8);
     }
     expect(faqSource).toContain("<details");
   });
@@ -149,5 +149,34 @@ describe("FAQ", () => {
       /@media \(prefers-reduced-motion: no-preference\) \{\s*\.faq-chevron \{\s*transition: transform 200ms var\(--ease-out\)/,
     );
     expect(css).not.toMatch(/^\.faq-chevron \{[^}]*transition/m);
+  });
+});
+
+const howSource = readFileSync(new URL("HowItWorks.astro", import.meta.url), "utf8");
+const featureRowsSource = readFileSync(new URL("FeatureRows.astro", import.meta.url), "utf8");
+
+describe("Home per-spec flow", () => {
+  it("shows one install snippet that links to the install page", () => {
+    expect(howSource).toContain('localePath(locale, "/docs/start/install/")');
+    expect(howSource).not.toContain("claude plugin install");
+    expect(howSource).not.toContain("codex plugin add");
+  });
+
+  it("lands one pull request for the spec and none for a wave", () => {
+    expect(howSource).toContain("how.prTitle");
+    expect(howSource).not.toContain("Wave 2: home layout");
+    for (const locale of LOCALES) {
+      const { how, showcase } = getStrings(locale);
+      expect(how.wave).toContain("{n}");
+      expect(how.caption.trim().length).toBeGreaterThan(0);
+      expect(showcase.status).toContain("41");
+    }
+  });
+
+  it("has five more feature rows in every locale", () => {
+    expect(featureRowsSource).toContain('data-reveal="item"');
+    for (const locale of LOCALES) {
+      expect(getStrings(locale).features.extra).toHaveLength(5);
+    }
   });
 });

@@ -46,13 +46,18 @@ export const en = {
     emetReplies: "emet replies",
     alt: "The valley where three streams join one river.",
     merged: "Merged",
+    otherInstall: "Other ways to install",
+    wave: "Wave {n}",
+    caption: "Each wave joins one spec branch. The spec lands as one pull request.",
+    prTitle: "Spec 41: Dark mode for settings",
+    checks: "checks passing",
   },
   showcase: {
-    heading: "The wave merges",
-    headingHeld: "The wave waits",
-    status: "Wave 2 reviewed. CI passed. Merged, 3 tickets closed.",
-    statusHeld: "Wave 2 held: one ticket flagged. Nothing merged.",
-    flag: "Flag ticket #255",
+    heading: "The spec merges",
+    headingHeld: "The spec waits",
+    status: "Spec 41 reviewed. CI passed. Merged as one pull request, 4 tickets closed.",
+    statusHeld: "Spec 41 held: one ticket flagged. Nothing merged.",
+    flag: "Flag ticket #44",
   },
   features: {
     heading: "What a run guards",
@@ -67,6 +72,28 @@ export const en = {
       { title: "Isolated worktrees", line: "One git worktree per worker." },
       { title: "Your tracker, or none", line: "Linear, GitHub Issues or local files." },
     ],
+    extra: [
+      {
+        title: "Fast mode for small changes",
+        line: "One flag skips the interview and runs one ticket, one review and one landing.",
+      },
+      {
+        title: "Remembers what worked",
+        line: "Lessons from each run are saved and recalled in the next one.",
+      },
+      {
+        title: "Two reviewers for risky changes",
+        line: "High-risk work gets a second reviewer before anything lands.",
+      },
+      {
+        title: "Tells you when it needs you",
+        line: "An alert when a run is waiting for approval or stuck.",
+      },
+      {
+        title: "Installs and uninstalls cleanly",
+        line: "Remove everything emet installed, and keep any file you edited.",
+      },
+    ],
   },
   stats: {
     label: "In numbers",
@@ -80,6 +107,16 @@ export const en = {
   faq: {
     heading: "Questions",
     items: [
+      {
+        question: "How do I uninstall emet?",
+        answer:
+          "Run `emet uninstall`. It removes what emet installed and keeps any file you edited. Add `--dry-run` to preview first.",
+      },
+      {
+        question: "What is fast mode?",
+        answer:
+          "Pass `--quick` for a small change. It skips the interview and runs one ticket, one review and one landing.",
+      },
       {
         question: "What do I need?",
         answer:
