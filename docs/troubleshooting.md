@@ -61,11 +61,11 @@ A repo that still has only `forge.config.json`, `.forge/` or `FORGE_*` variables
 
 ## An installed file is missing or was edited since install
 
-**Symptom:** `~/<path> is missing — re-run install.sh` or `~/<path> was edited since install`.
+**Symptom:** `~/<path> is missing — re-run emet self install` or `~/<path> was edited since install`.
 
 **Cause:** The installed copy no longer matches the install manifest.
 
-**Fix:** Re-run `install.sh`. If a pending `.new` file exists beside an edited file, merge it or delete it.
+**Fix:** Re-run `emet self install` (from a source checkout, `emet self install --from .`). If a pending `.new` file exists beside an edited file, merge it or delete it.
 
 ## Stop hook error: forge: No such file or directory
 

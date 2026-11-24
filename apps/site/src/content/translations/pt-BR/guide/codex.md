@@ -2,7 +2,7 @@
 title: Executando o emet no Codex
 description: Como instalar o lado do Codex, escolher o host do agente, a aprovação única e os limites conhecidos.
 seoTitle: Executando o emet no Codex
-sourceHash: 8aed8797d3451a66
+sourceHash: 73105866204493fa
 ---
 
 O emet pode rodar no Codex CLI, além do Claude Code. Os termos seguem o [GLOSSARY.md](../../GLOSSARY.md); o produto em que uma execução roda é o **host do agente**. Esta página cobre a instalação do lado do Codex, a escolha do host, a aprovação única e os limites conhecidos. Volte ao [índice da documentação](../README.md).
@@ -21,18 +21,31 @@ No host Codex o pipeline é o mesmo: entrevista, especificação, tickets, uma a
    codex plugin add mattpocock-skills@mattpocock
    ```
 
-3. Instale o plugin do emet. O repositório inclui `.codex-plugin/plugin.json` e as skills e hooks gerados em `codex/`:
+3. Instale o emet com a instalação independente. Ela grava as skills do emet em `~/.agents/skills/emet/` e acrescenta os hooks do emet a `$CODEX_HOME/hooks.json` (padrão `~/.codex`), e nunca escreve o `config.toml`:
 
    ```bash
-   codex plugin marketplace add andryorelabs/emet
-   codex plugin add emet@emet-marketplace
+   curl -fsSL https://emet.andryore.dev/install.sh | sh
    ```
 
-4. Instale o `emet` CLI como descrito em [Primeiros passos](getting-started.md) e execute `emet doctor .`. O `install.sh` também instala os comandos e agentes do Claude Code em `~/.claude`; isso é inofensivo no Codex, e `emet doctor` não avisa sobre o plugin do Codex junto com o `install.sh`. No host Codex ele informa um `codex` mais antigo que `codex.minVersion`, a falta da flag `--json` ou `--output-schema` em `codex exec` e a ausência do `mattpocock-skills`, indicando os dois comandos acima.
+   Adicione `-s -- --dry-run` depois de `sh` para visualizar as escritas. Ela também instala o `emet` do terminal e os comandos e agentes do Claude Code em `~/.claude`; isso é inofensivo no Codex.
+
+4. Confie nos hooks. O Codex não executa um hook até você confiar nele: abra `/hooks` e pressione `t` na página de eventos, ou aprove o aviso "Hooks need review" na inicialização.
+5. Execute `emet doctor .`. No host Codex ele informa um `codex` mais antigo que `codex.minVersion`, a falta da flag `--json` ou `--output-schema` em `codex exec`, hooks sem confiança e a ausência do `mattpocock-skills`, indicando os dois comandos acima.
 
 :::
 
-Os dois comandos de plugin do passo 3 foram executados no `codex` real (0.167.0): em um `CODEX_HOME` novo eles terminam com código 0 e `codex plugin list` mostra `emet@emet-marketplace installed, enabled`. A forma com caminho local, `codex plugin marketplace add <repo>`, dá o mesmo resultado.
+### Opcional: o plugin do Codex
+
+Em vez da instalação independente, você pode instalar o plugin do emet. O repositório inclui `.codex-plugin/plugin.json` e as skills e hooks gerados em `codex/`:
+
+```bash
+codex plugin marketplace add andryorelabs/emet
+codex plugin add emet@emet-marketplace
+```
+
+O plugin não traz shim `emet`, então o `emet` do terminal ainda precisa da instalação independente. O `emet self install` se recusa enquanto o plugin estiver instalado, a menos que você passe `--force`, e o `emet doctor` avisa quando os dois coexistem.
+
+Os dois comandos de plugin acima foram executados no `codex` real (0.167.0): em um `CODEX_HOME` novo eles terminam com código 0 e `codex plugin list` mostra `emet@emet-marketplace installed, enabled`. A forma com caminho local, `codex plugin marketplace add <repo>`, dá o mesmo resultado.
 
 ## Escolher o host do agente
 
@@ -56,7 +69,7 @@ Quando esse diretório existe, o bloqueio falha de forma fechada: um arquivo de 
 
 ## Depois de uma atualização do emet
 
-O Codex pede de novo que você confie nos hooks do plugin do emet após cada atualização do plugin, porque o hash de conteúdo do plugin muda. Para confiar neles, execute `/hooks` e pressione `t` na página de eventos para confiar em todos, ou aprove o aviso "Hooks need review" na inicialização. Até lá, o emet guard e a aprovação única não rodam.
+Com a instalação independente, os hooks são entradas comuns em `hooks.json`; confie neles uma vez por `/hooks`, como nos passos de instalação. Com o plugin, o Codex pede de novo que você confie nos hooks do plugin do emet após cada atualização do plugin, porque o hash de conteúdo do plugin muda. Para confiar neles, execute `/hooks` e pressione `t` na página de eventos para confiar em todos, ou aprove o aviso "Hooks need review" na inicialização. Até lá, o emet guard e a aprovação única não rodam.
 
 O `emet doctor` avisa quando os hooks nunca foram confiados:
 
@@ -69,7 +82,7 @@ Logo após um release, o shim pode rodar por alguns minutos a versão anterior e
 ## Como uma onda roda
 
 - `emet dispatch --role worker` verifica a reivindicação e o slot, cria `.emet/worktrees/agent-<ticket>`, monta um overlay de `CODEX_HOME` por execução em `.emet/runs/<run>/codex-home/` e inicia `codex exec` com o modelo e o esforço resolvidos, o modo `codex.sandbox` (`danger-full-access` por padrão), `--json` e `--output-schema`. Os eventos são capturados em `.emet/runs/<run>/codex/<ticket>.jsonl`. O worker é identificado pelo `threadId` do evento `thread.started` e por esse caminho JSONL; o id do processo é apenas um campo auxiliar.
-- O overlay é gerado, não linkado. Seu `auth.json` recebe um link simbólico (nunca é copiado), o cache do plugin do emet é linkado a partir do seu Codex home quando ele existe, e o overlay escreve seu próprio `config.toml` mínimo: o marketplace local e `[plugins."emet@emet-marketplace"] enabled = true`, uma tabela `[projects."<dir>"]` `trusted` apenas para os diretórios da própria execução, e o `model` e o `model_reasoning_effort` resolvidos. Nenhuma das suas tabelas `[projects]` nem outras configurações são copiadas, e seu `~/.codex` nunca é escrito.
+- O overlay tem dois modos. Quando o arquivo de estado da instalação independente existe, o `config.toml` do overlay omite as tabelas do plugin e do marketplace do emet e os workers continuam vendo as skills do emet em `~/.agents/skills`; no modo plugin ele as mantém, como descrito a seguir. O overlay é gerado, não linkado. Seu `auth.json` recebe um link simbólico (nunca é copiado), o cache do plugin do emet é linkado a partir do seu Codex home quando ele existe, e o overlay escreve seu próprio `config.toml` mínimo: o marketplace local e `[plugins."emet@emet-marketplace"] enabled = true`, uma tabela `[projects."<dir>"]` `trusted` apenas para os diretórios da própria execução, e o `model` e o `model_reasoning_effort` resolvidos. Nenhuma das suas tabelas `[projects]` nem outras configurações são copiadas, e seu `~/.codex` nunca é escrito.
 - O `rules/default.rules` do overlay permite `git add`, `git commit`, `git status`, `git worktree`, `git -C <dir> ...` e os subcomandos `dispatch`, `review-run`, `launch`, `claims`, `slots`, `results`, `handoff` e `ask` do `emet`, e proíbe `git push`. Como o sandbox padrão não bloqueia mais as escritas, o `emet guard` também nega qualquer comando `Bash` cujo argv execute `git push`, inclusive `git -C <dir> push` e `git --git-dir=<dir> push`, seja qual for o sandbox.
 - Um worker nunca tem um canal paralelo com o coordenador. Ele escala pela caixa de correio da execução: `emet ask --run <run> --ticket <ticket> --body <text>` registra uma pergunta e imprime seu id, e `emet ask ... --wait <n>` consulta a resposta (o código de saída 0 a imprime, 3 significa que a janela terminou, 4 significa que `budgets.askWaitMinutes` se esgotou, então o worker escreve um resultado BLOCKED e encerra). Enquanto um worker ativo tem uma pergunta aberta, `emet dispatch --wait` imprime `question <ticket> <id>` em vez de um status de resultado e nunca classifica o worker como travado; o coordenador lê `emet inbox --run <run>`, responde com `emet reply --run <run> --ticket <ticket> --id <n> --body <text>` e retoma `emet dispatch --wait`. Um resultado registrado sempre prevalece sobre uma pergunta aberta. Veja [ADR-0023](../adr/0023-cli-owned-mailbox-for-codex-workers.md).
 - Os resultados são lidos de `<git-common-dir>/.emet/runs/<run>/results/`, o mesmo lugar em que `emet results --write` escreve, de modo que um worker em seu próprio worktree é encontrado.

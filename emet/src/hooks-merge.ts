@@ -196,3 +196,30 @@ export function removeEmetHooks(doc: JsonObject): { doc: JsonObject; removed: re
     removed,
   };
 }
+
+/** Where one emet hook command sits in a hooks document. */
+export interface EmetHookPosition {
+  readonly event: string;
+  readonly groupIndex: number;
+  readonly handlerIndex: number;
+}
+
+/** Lists the event, group index and handler index of every emet hook command in `doc`. */
+export function findEmetHookPositions(doc: JsonObject): EmetHookPosition[] {
+  const { hooks } = doc;
+  if (!isObject(hooks)) return [];
+  const positions: EmetHookPosition[] = [];
+  for (const [event, groups] of Object.entries(hooks)) {
+    if (!isUnknownArray(groups)) continue;
+    for (const [groupIndex, group] of groups.entries()) {
+      if (!isObject(group) || !isUnknownArray(group.hooks)) continue;
+      for (const [handlerIndex, hook] of group.hooks.entries()) {
+        const command = hookCommand(hook);
+        if (command !== undefined && EMET_HOOK_COMMAND.test(command)) {
+          positions.push({ event, groupIndex, handlerIndex });
+        }
+      }
+    }
+  }
+  return positions;
+}

@@ -2,7 +2,7 @@
 title: Устранение неполадок
 description: Сбои emet doctor и emet preflight, сгруппированные по тому, что вы видите, каждый с причиной и исправлением.
 seoTitle: Устранение неполадок emet doctor и preflight
-sourceHash: c1ebb76c9250d743
+sourceHash: 9d8a014c547eeed9
 ---
 
 Сбои `emet doctor` и `emet preflight`, сгруппированные по тому, что вы видите, каждый с причиной и исправлением. Термины соответствуют [GLOSSARY.md](../GLOSSARY.md). О том, как проверки связаны между собой, см. [архитектуру](architecture.md).
@@ -66,11 +66,11 @@ sourceHash: c1ebb76c9250d743
 
 ## Установленный файл отсутствует или был изменён после установки
 
-**Симптом:** `~/<path> is missing — re-run install.sh` или `~/<path> was edited since install`.
+**Симптом:** `~/<path> is missing — re-run emet self install` или `~/<path> was edited since install`.
 
 **Причина:** Установленная копия больше не совпадает с манифестом установки.
 
-**Исправление:** Снова запустите `install.sh`. Если рядом с изменённым файлом лежит ожидающий файл `.new`, объедините его или удалите.
+**Исправление:** Снова запустите `emet self install` (из клона исходников — `emet self install --from .`). Если рядом с изменённым файлом лежит ожидающий файл `.new`, объедините его или удалите.
 
 ## Stop hook error: forge: No such file or directory
 

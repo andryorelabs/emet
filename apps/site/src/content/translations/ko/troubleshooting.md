@@ -2,7 +2,7 @@
 title: 문제 해결
 description: emet doctor와 emet preflight의 실패를 눈에 보이는 증상별로 묶어, 각각의 원인과 해결 방법을 설명합니다.
 seoTitle: emet doctor와 preflight 문제 해결
-sourceHash: c1ebb76c9250d743
+sourceHash: 9d8a014c547eeed9
 ---
 
 `emet doctor`와 `emet preflight`의 실패를 눈에 보이는 증상별로 묶어, 각각의 원인과 해결 방법을 정리했습니다. 용어는 [GLOSSARY.md](../GLOSSARY.md)를 따릅니다. 점검들이 어떻게 맞물리는지는 [아키텍처](architecture.md)를 참고하세요.
@@ -66,11 +66,11 @@ sourceHash: c1ebb76c9250d743
 
 ## 설치된 파일이 없거나 설치 후 수정되었습니다
 
-**증상:** `~/<path> is missing — re-run install.sh` 또는 `~/<path> was edited since install`.
+**증상:** `~/<path> is missing — re-run emet self install` 또는 `~/<path> was edited since install`.
 
 **원인:** 설치된 사본이 설치 매니페스트와 더 이상 일치하지 않습니다.
 
-**해결:** `install.sh`를 다시 실행하세요. 수정된 파일 옆에 보류 중인 `.new` 파일이 있으면 병합하거나 삭제하세요.
+**해결:** `emet self install`을 다시 실행하세요(소스 체크아웃에서는 `emet self install --from .`). 수정된 파일 옆에 보류 중인 `.new` 파일이 있으면 병합하거나 삭제하세요.
 
 ## Stop hook error: forge: No such file or directory
 

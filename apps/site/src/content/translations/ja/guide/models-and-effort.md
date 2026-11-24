@@ -2,7 +2,7 @@
 title: モデルとエフォート
 description: emet がロールごとにモデルと推論エフォートをどう選ぶか、またそれを変更する設定キーを説明します。
 seoTitle: emet のモデルとエフォート
-sourceHash: 482995e2b98c659b
+sourceHash: 114cc60ff1358691
 ---
 
 `/emet` はロールごとにモデルと推論エフォートを自動で選びます。実行中に手動で切り替えるものはありません。最初のセクションは Claude Code ホストについての説明です。[Codex ホスト](#codex-ホスト)には独自の既定値があります。Claude Code のすべてのキーは[設定リファレンス](../reference/configuration.md#models)にあります。
@@ -19,7 +19,7 @@ sourceHash: 482995e2b98c659b
 | レビュー、`high` ティア（リスクの高いパスやシンク）  | Opus                      | 既定は `medium`  | `models.reviewer.high`                          |
 | CI ログのトリアージ（フェーズ 8）                    | Haiku                     | —                | `models.triage`                                 |
 
-Claude Code では、2 つのエージェント定義（`install.sh` が `~/.claude/agents/` にインストールします）は、フロントマターで自身の `model`/`effort` を固定しているため、コーディネーターのモデルやエフォートの選択がワーカーやレビュアーに影響することはありません。`emet doctor` はどちらかのファイルがなくなっても報告するだけで、ブロックはしません。`emet preflight` は、`emet-worker` または `emet-reviewer` がない場合にディスパッチをブロックします。フェーズ 6 とフェーズ 8 が `subagent_type` でディスパッチするためです。
+Claude Code では、2 つのエージェント定義（`emet self install` が `~/.claude/agents/` にインストールします）は、フロントマターで自身の `model`/`effort` を固定しているため、コーディネーターのモデルやエフォートの選択がワーカーやレビュアーに影響することはありません。`emet doctor` はどちらかのファイルがなくなっても報告するだけで、ブロックはしません。`emet preflight` は、`emet-worker` または `emet-reviewer` がない場合にディスパッチをブロックします。フェーズ 6 とフェーズ 8 が `subagent_type` でディスパッチするためです。
 
 ## リスクティアによるルーティング
 

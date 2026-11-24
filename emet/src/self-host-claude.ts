@@ -29,10 +29,10 @@ const SETTINGS_RELATIVE_PATH = ".claude/settings.json";
 /** The tree file holding the plugin's Claude Code hook definitions. */
 const HOOK_DEFINITIONS_PATH = "hooks/hooks.json";
 
-/** The infix of a settings backup's name, shared with `install.sh` and `emet uninstall`. */
+/** The infix of a settings backup's name, shared with `emet uninstall`. */
 const SETTINGS_BACKUP_INFIX = ".pre-emet-guard-backup.";
 
-/** How many settings backups survive a write, as `install.sh` kept. */
+/** How many settings backups survive a write. */
 const SETTINGS_BACKUPS_TO_KEEP = 5;
 /** Tree directory to home-relative install directory, for every prompt the Claude host installs. */
 const PROMPT_DESTINATIONS: readonly (readonly [string, string])[] = [
@@ -47,7 +47,7 @@ const RETIRED_PATHS: readonly string[] = [".claude/emet/reference/phases-8-close
 /** The placeholder Claude Code expands to the plugin root in plugin prompts. */
 const PLUGIN_ROOT_PLACEHOLDER = "${CLAUDE_PLUGIN_ROOT}";
 
-/** The rewrites `install.sh` applied with `sed`, in the same order. */
+/** The rewrites applied to every prompt for a user-level install, in this order. */
 const PROMPT_REWRITES: readonly (readonly [string, string])[] = [
   [PLUGIN_ROOT_PLACEHOLDER, "$HOME/.claude"],
   ["emet:emet-worker", "emet-worker"],
@@ -126,7 +126,7 @@ function hashOnDisk(absolutePath: string): string | undefined {
 }
 
 /** The home-relative destination of a tree file, or undefined when the Claude host does not install it. */
-function destinationOf(treePath: string): string | undefined {
+export function promptDestinationOf(treePath: string): string | undefined {
   if (!treePath.endsWith(".md")) return undefined;
   for (const [treeDirectory, installDirectory] of PROMPT_DESTINATIONS) {
     const name = treePath.slice(treeDirectory.length);
@@ -147,7 +147,7 @@ function isOwnedByClaudeHost(relativePath: string): boolean {
 function stageTree(tree: TreeSource): ReadonlyMap<string, string> {
   const staged = new Map<string, string>();
   for (const treePath of tree.list()) {
-    const destination = destinationOf(treePath);
+    const destination = promptDestinationOf(treePath);
     if (destination !== undefined) staged.set(destination, rewritePrompt(tree.read(treePath)));
   }
   return staged;
@@ -174,7 +174,7 @@ function readManifest(manifestPath: string): ReadonlyMap<string, string> {
   return entries;
 }
 
-/** Renders the manifest exactly as `install.sh` did: byte-sorted keys, two-space indent, trailing newline. */
+/** Renders the manifest: byte-sorted keys, two-space indent, trailing newline. */
 function renderManifest(entries: ReadonlyMap<string, string>): string {
   const lines = [...entries]
     .toSorted(([left], [right]) => (left < right ? -1 : left > right ? 1 : 0))
@@ -187,7 +187,7 @@ interface InstallPlan {
   notes: string[];
 }
 
-/** Plans the staged files against what is on disk and in the manifest, as `install.sh` did. */
+/** Plans the staged files against what is on disk and in the manifest. */
 function planStagedFiles(
   home: string,
   staged: ReadonlyMap<string, string>,
@@ -318,7 +318,7 @@ function parseJsonObject(text: string, filePath: string): JsonObject {
   return parsed;
 }
 
-/** `2026-11-23T21:30:05.123Z` as `20261123T213005Z`, the backup suffix `install.sh` used. */
+/** `2026-11-23T21:30:05.123Z` as `20261123T213005Z`, the backup suffix. */
 function backupTimestamp(now: Date): string {
   return now
     .toISOString()

@@ -21,7 +21,14 @@ let home: string;
 let binDirectory: string;
 let homedirSpy: Mock<typeof os.homedir>;
 const savedEnvironment: Record<string, string | undefined> = {};
-const OVERRIDDEN = ["HOME", "PATH", "XDG_STATE_HOME", "EMET_STATE_DIR", "CODEX_HOME"] as const;
+const OVERRIDDEN = [
+  "HOME",
+  "PATH",
+  "XDG_STATE_HOME",
+  "EMET_STATE_DIR",
+  "CODEX_HOME",
+  "EMET_AUTO_UPDATE",
+] as const;
 
 beforeEach(() => {
   root = realpathSync(mkdtempSync(path.join(os.tmpdir(), "doctor-main-")));
@@ -36,6 +43,7 @@ beforeEach(() => {
   process.env.XDG_STATE_HOME = path.join(root, "state");
   delete process.env.EMET_STATE_DIR;
   delete process.env.CODEX_HOME;
+  delete process.env.EMET_AUTO_UPDATE;
 });
 
 afterEach(() => {
@@ -119,7 +127,7 @@ describe("doctor run() home-level sections", () => {
     pluginSpy.mockRestore();
 
     expect(output).toContain("Double install:");
-    expect(output).toContain("installed both as a plugin and by install.sh");
+    expect(output).toContain("installed standalone and as a plugin");
   }, 60_000);
 
   test("warns about untrusted emet hooks on the Codex host and skips a missing config", async () => {
@@ -135,6 +143,34 @@ describe("doctor run() home-level sections", () => {
     const untrusted = await runDoctor([repo]);
     expect(untrusted).toContain("Codex hooks:");
     expect(untrusted).toContain("warning: Codex has not trusted the emet plugin hooks");
+  }, 60_000);
+
+  test("reports a staged update and untrusted standalone Codex hooks", async () => {
+    writeHomeFile(
+      ".local/share/emet/install.json",
+      JSON.stringify({
+        version: "1.0.0",
+        installedAt: "2026-11-23T00:00:00.000Z",
+        hosts: ["claude", "codex"],
+        binary: "/x/emet",
+        mode: "standalone",
+      }),
+    );
+    writeHomeFile(".local/share/emet/pending-update.json", JSON.stringify({ version: "9.9.9" }));
+    writeHomeFile(
+      ".codex/hooks.json",
+      JSON.stringify({
+        hooks: { PreToolUse: [{ hooks: [{ type: "command", command: '"/x/emet" guard' }] }] },
+      }),
+    );
+    process.env.CODEX_HOME = path.join(home, ".codex");
+
+    const output = await runDoctor([makePlainDirectory()]);
+
+    expect(output).toContain("Updates:");
+    expect(output).toContain("an emet update 9.9.9 is staged but not applied");
+    expect(output).toContain("Codex hooks:");
+    expect(output).toContain("Codex has not trusted the emet hooks");
   }, 60_000);
 
   test("reports missing external CLI flags and a failing exit code", async () => {

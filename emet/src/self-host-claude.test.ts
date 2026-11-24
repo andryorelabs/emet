@@ -113,7 +113,7 @@ describe("rewritePrompt", () => {
 });
 
 describe("installClaudeHost", () => {
-  test("installs every prompt with the hash pinned by the install.sh snapshot", () => {
+  test("installs every prompt with the hash pinned by the install snapshot", () => {
     const snapshot: unknown = JSON.parse(readFileSync(snapshotPath, "utf8"));
     const pinned = parseStringRecord(JSON.stringify(Reflect.get(Object(snapshot), "promptSha256")));
     const result = installClaudeHost(context());
@@ -132,7 +132,7 @@ describe("installClaudeHost", () => {
     );
   });
 
-  test("records the manifest in install.sh's format: byte-sorted, two-space indent", () => {
+  test("records the manifest byte-sorted with a two-space indent", () => {
     installClaudeHost(context());
     const text = readFileSync(path.join(home, manifestRelativePath), "utf8");
     const lines = text.split("\n");
@@ -260,9 +260,7 @@ describe("checkoutTree", () => {
   });
 
   test("rejects a path outside the tree", () => {
-    expect(() => checkoutTree(repoRoot).read("install.sh")).toThrow(
-      'unknown tree file "install.sh"',
-    );
+    expect(() => checkoutTree(repoRoot).read("README.md")).toThrow('unknown tree file "README.md"');
   });
 
   test("an empty directory is an empty tree", () => {

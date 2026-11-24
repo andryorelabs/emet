@@ -2,7 +2,7 @@
 title: 의존성
 description: emet이 머신에서 필요로 하는 것과 각 항목을 확인하는 명령을 설명합니다.
 seoTitle: emet 의존성
-sourceHash: 1c97a7ccd5572ab4
+sourceHash: 54f288bd696fe862
 ---
 
 emet이 머신에서 필요로 하는 것과 각 항목을 확인하는 명령입니다. 용어는 [GLOSSARY.md](../../GLOSSARY.md)를 따릅니다. [README](../../README.md)로 돌아가기.
@@ -12,7 +12,7 @@ emet이 머신에서 필요로 하는 것과 각 항목을 확인하는 명령�
 먼저 두 에이전트 호스트가 공통으로 필요로 하는 것을, 그다음 각 호스트가 추가하는 것을 나열합니다.
 
 - **[bun](https://bun.sh)**: 소스 설치에만 필요합니다. 독립 실행형 바이너리에는 런타임이 필요 없습니다.
-- **`rsync`** 및 **`sha256sum` 또는 `shasum`**: `install.sh`가 필요로 합니다.
+- **`sha256sum` 또는 `shasum`**: `install.sh` 릴리스 에셋(`curl -fsSL https://emet.andryore.dev/install.sh | sh`)이 다운로드를 검증하는 데 사용합니다. `emet self install` 자체에는 둘 다 필요하지 않습니다.
 - **`git`**: 실행 시 필수입니다. 거의 모든 하위 명령이 git을 호출합니다.
 - **인증된 `gh` CLI**: 트래커가 `github`이거나 랜딩이 `pr`일 때 필수입니다. PR은 항상 이것을 사용합니다. `tracker.kind: "local"`이고 `landing.mode: "merge"`이면 `gh`는 필요 없습니다.
 - **`mattpocock-skills` 플러그인**: 인터뷰, 스펙, 티켓 단계는 그곳에 있는 스킬을 호출합니다. Claude Code에서는 `claude-plugins-official` 마켓플레이스에서 받으며, Codex는 [Codex 호스트](#codex-호스트)를 참고하세요.
@@ -23,7 +23,7 @@ emet이 머신에서 필요로 하는 것과 각 항목을 확인하는 명령�
   ```
 
 - **`claude` CLI와 emet 플러그인 명령**(`/emet:run`, `/emet:init`, `/emet:doctor`): Claude Code 호스트 전용입니다.
-- **`~/.claude/agents/`의 `emet-worker` 및 `emet-reviewer` 에이전트**: Claude Code 호스트 전용이며 `install.sh`가 설치합니다. 6단계와 8단계는 `subagent_type`으로 디스패치하므로 둘 중 하나라도 없으면 디스패치가 동작하지 않습니다. [모델과 추론 강도](../../README.md#models--effort)를 참고하세요.
+- **`~/.claude/agents/`의 `emet-worker` 및 `emet-reviewer` 에이전트**: Claude Code 호스트 전용이며 `emet self install`이 설치합니다. 6단계와 8단계는 `subagent_type`으로 디스패치하므로 둘 중 하나라도 없으면 디스패치가 동작하지 않습니다. [모델과 추론 강도](../../README.md#models--effort)를 참고하세요.
 - **`.mcp.json`(또는 사용자 범위)에 선언된 Linear MCP 서버**: 리포지토리가 `linear` 트래커를 사용할 때만 필요합니다. emet은 선언이 있는지 확인합니다. 연결이 인증되었는지는 에이전트 호스트 자체의 자격 증명 저장소에 있어 여기서는 확인할 수 없습니다. Claude Code에서 실행 중 티켓을 읽지 못하면 Claude Code를 다시 시작하고 연결을 승인하세요. Codex에서의 동등한 절차는 확인되지 않았습니다.
 
 위의 어떤 것도 사용자를 대신해 설치되거나 로그인되지 않습니다. 다른 점은 누가, 얼마나 엄격하게 확인하느냐입니다.

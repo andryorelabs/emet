@@ -54,6 +54,10 @@ An index of every document in this repository. Terms follow [GLOSSARY.md](../GLO
 
 - [`adr/README.md`](adr/README.md): the architecture decision record index, one file per decision (`adr/NNNN-*.md`).
 
+## Specs
+
+- [`specs/standalone-install.md`](specs/standalone-install.md): the living spec of the standalone install: the embedded install tree, `emet self install`, self-update, uninstall and doctor checks.
+
 ## Research
 
 - [`research/codex-viability.md`](research/codex-viability.md): whether emet can run on Codex CLI: capability matrix, parity table, integration models A, B and C, a ten-experiment spike and a follow-up spec outline.

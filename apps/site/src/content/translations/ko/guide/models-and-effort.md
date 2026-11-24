@@ -2,7 +2,7 @@
 title: 모델과 추론 강도
 description: emet이 역할마다 모델과 추론 강도를 어떻게 고르는지, 그리고 이를 바꾸는 설정 키를 설명합니다.
 seoTitle: emet의 모델과 추론 강도
-sourceHash: 482995e2b98c659b
+sourceHash: 114cc60ff1358691
 ---
 
 `/emet`은 역할마다 모델과 추론 강도(effort)를 자동으로 선택합니다. 실행 중에 수동으로 바꿀 것은 없습니다. 첫 번째 섹션들은 Claude Code 호스트를 설명하며, [Codex 호스트](#codex-호스트)에는 별도의 기본값이 있습니다. Claude Code의 모든 키는 [설정 레퍼런스](../reference/configuration.md#models)에 있습니다.
@@ -19,7 +19,7 @@ sourceHash: 482995e2b98c659b
 | 리뷰, `high` 티어(위험한 경로나 싱크)  | Opus                    | 기본값은 `medium` | `models.reviewer.high`                       |
 | CI 로그 분류(8단계)                    | Haiku                   | —                 | `models.triage`                              |
 
-Claude Code에서는 두 에이전트 정의(`install.sh`가 `~/.claude/agents/`에 설치합니다)는 프런트매터에 자체 `model`/`effort`를 고정해 두므로, 코디네이터의 모델이나 추론 강도 선택이 워커나 리뷰어에게 새어 들어가지 않습니다. `emet doctor`는 두 파일 중 하나가 없어져도 보고만 하며 차단하지 않습니다. `emet preflight`는 `emet-worker` 또는 `emet-reviewer`가 없으면 디스패치를 차단합니다. 6단계와 8단계가 `subagent_type`으로 디스패치하기 때문입니다.
+Claude Code에서는 두 에이전트 정의(`emet self install`가 `~/.claude/agents/`에 설치합니다)는 프런트매터에 자체 `model`/`effort`를 고정해 두므로, 코디네이터의 모델이나 추론 강도 선택이 워커나 리뷰어에게 새어 들어가지 않습니다. `emet doctor`는 두 파일 중 하나가 없어져도 보고만 하며 차단하지 않습니다. `emet preflight`는 `emet-worker` 또는 `emet-reviewer`가 없으면 디스패치를 차단합니다. 6단계와 8단계가 `subagent_type`으로 디스패치하기 때문입니다.
 
 ## 위험 티어 라우팅
 

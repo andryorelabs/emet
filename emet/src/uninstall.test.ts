@@ -20,7 +20,6 @@ import { embeddedTree } from "./assets";
 import { isObject } from "./narrow";
 import { selfInstall } from "./self-install";
 import {
-  GUARD_COMMAND_PATTERN,
   describeStep,
   executeStep,
   parseUninstallOptions,
@@ -138,15 +137,6 @@ beforeEach(() => {
 
 afterEach(() => {
   rmSync(homeDir, { recursive: true, force: true });
-});
-
-describe("GUARD_COMMAND_PATTERN", () => {
-  test("matches emet guard bare, by path and with flags, and nothing else", () => {
-    expect(GUARD_COMMAND_PATTERN.test("emet guard")).toBe(true);
-    expect(GUARD_COMMAND_PATTERN.test("/home/u/.local/bin/emet guard --event Stop")).toBe(true);
-    expect(GUARD_COMMAND_PATTERN.test("emet guardian")).toBe(false);
-    expect(GUARD_COMMAND_PATTERN.test("my-linter emet guard")).toBe(false);
-  });
 });
 
 describe("S5: manifest files and shim", () => {

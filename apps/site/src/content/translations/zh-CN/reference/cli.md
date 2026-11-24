@@ -2,14 +2,14 @@
 title: CLI 参考
 description: 每个 emet 子命令、关卡与记录表、退出码和环境变量。
 seoTitle: emet CLI 参考
-sourceHash: d742353c90a5770c
+sourceHash: 2f7460d3af4ee862
 ---
 
 每个 `emet` 子命令、关卡与记录表、退出码和环境变量。术语遵循 [GLOSSARY.md](../../GLOSSARY.md)。返回 [README](../../README.md)。每个命令都可以用 `--help` 打印其用法。
 
 ## 子命令
 
-在 Claude Code 内，有三个斜杠命令封装了 CLI：`/emet:run`（流水线）、`/emet:init`（`emet init`）和 `/emet:doctor`（`emet doctor .`）。在 Codex 上它们是 `$emet:run`、`$emet:init` 和 `$emet:doctor` 技能。在普通终端中使用 `emet` 需要 `install.sh`；否则请在会话中运行 `! emet <subcommand>`。
+在 Claude Code 内，有三个斜杠命令封装了 CLI：`/emet:run`（流水线）、`/emet:init`（`emet init`）和 `/emet:doctor`（`emet doctor .`）。在 Codex 上它们是 `$emet:run`、`$emet:init` 和 `$emet:doctor` 技能。在普通终端中使用 `emet` 需要 `emet self install`；否则请在会话中运行 `! emet <subcommand>`。
 
 `emet <command> [...args]`。`emet --version` 打印版本号。
 
@@ -22,7 +22,9 @@ sourceHash: d742353c90a5770c
 - `emet setup --dry-run`（可与 `--with`、`--yes`、`--json` 组合）：仅用只读探测，为每个选中的项目打印计划步骤（或 `already-present`），不执行任何操作：不运行命令、不写文件、不写台账，退出码为 0。
 - Setup 台账：`setup-ledger.json` 位于状态目录（先看 `EMET_STATE_DIR`，再看 `XDG_STATE_HOME`）。每个结果为 `installed` 的项目记录一条撤销信息（`claude-settings` 记录之前的 `model`、实际添加的 deny 规则和备份路径；`firecrawl-local` 记录之前的用户级 MCP 条目以及是否运行过 `cargo install`；插件记录插件 id；`orca-pet` 记录它写入的文件；`agent-browser` 和 `context7` 记录 bun 全局包；`engram` 记录 brew formula 和插件）。`already-present` 的项目不记录任何内容，同一 id 再次 `installed` 时保留第一条记录的原始状态。写入是原子的。格式错误的台账不会被当作空台账读取，而是报错并指出其路径。
 - `emet setup --restore <id>`：只接受 `claude-settings` 和 `firecrawl-local`。`claude-settings` 在带时间戳的备份之后恢复之前的 `model`（原本没有则删除该键），并且只移除 emet 添加的 deny 规则。当前 `model` 不是 setup 设置的值时，保留它并打印警告。`firecrawl-local` 运行 `claude mcp remove firecrawl-local -s user`，如果记录过之前的条目，再运行 `claude mcp add-json firecrawl-local '<previous json>' -s user`。恢复成功后会删除对应的台账条目。其他 id 以退出码 2（用法错误）结束；台账中没有条目的 id 会打印 `nothing to restore for <id>` 并以退出码 1 结束。
-- `emet uninstall [--dry-run] [--yes] [--purge] [--json]`：删除安装清单中当前哈希与记录哈希一致的每个文件，以及它的 `.new` 同名文件。已被编辑的文件会保留并列出。仅当 shim `~/.local/bin/emet` 是该安装的包装脚本，或是指向 `~/.claude/emet` 的符号链接时才删除它，随后删除清单和变空的目录；指向安装之外的 shim 会保留并列出。没有清单时（插件安装）跳过这些文件，并打印 `claude plugin uninstall emet@emet-marketplace`。当 `codex` 在 PATH 中时，会打印如何移除 Codex 插件。对于 `~/.claude/settings.json`，只删除任意事件中命令为 `emet guard` 的钩子（清除变空的分组和事件，保留其他所有钩子，并先生成带时间戳的 `.pre-emet-guard-backup.` 副本），并还原台账中的附加项（`claude-settings` 和 `firecrawl-local` 同上；插件运行 `claude plugin uninstall <id>`；`orca-pet` 的文件和 emet 创建的 `agent-browser` 配置文件会被删除）。对于 brew、bun 和 cargo 的全局包，只打印移除命令而从不执行，也绝不触碰 `gh auth`。每个已还原的条目都会从台账中移除，某个附加项失败不会阻止其他项。`--dry-run` 打印完整计划，不做任何更改，退出码为 0。`--yes` 跳过确认，`--purge` 还会删除状态目录和 `~/.emet`（不带它则两者都保留）。有 TTY 且没有 `--yes` 时会询问一次确认；没有 TTY 且没有 `--yes` 时打印计划，不做任何更改，退出码为 0。任何步骤失败时退出码为 1。`./install.sh --uninstall [flags]` 会在任何暂存或安装步骤之前，带上其余标志运行 `emet uninstall`（存在 `~/.local/bin/emet` 时通过它运行，否则使用检出目录中的 `bun emet/bin/emet.ts`）。
+- `emet self install [latest|X.Y.Z] [--dry-run] [--force] [--from <checkout>]`：独立安装。它把二进制文件放到 `~/.local/share/emet/versions/<v>/emet`，并创建符号链接 `~/.local/bin/emet`；把参考提示词和 `.install-manifest.json` 写入 `~/.claude/emet/`，命令写入 `~/.claude/commands/emet/`，代理写入 `~/.claude/agents/`；把 emet 钩子合并进 `~/.claude/settings.json`（带备份，不触碰其他钩子）；当存在 Codex 时，还会把技能写入 `~/.agents/skills`，并把钩子追加到 `$CODEX_HOME/hooks.json`（默认 `~/.codex`；绝不写入 `config.toml`，因此需用 `/hooks` 批准一次这些钩子）。再次运行不会有任何改动；被编辑过的文件会保留，新版本写在旁边，命名为 `<file>.new`。`--dry-run` 列出每一次写入但不写入任何内容。当 emet 插件已安装时它会拒绝执行；`--force` 则强行继续。`--from <checkout>` 复现 Bun 源码安装：CLI 源码被复制到 `~/.claude/emet`，`~/.local/bin/emet` 变成一个用 `bun` 运行它的包装脚本，因此 `emet selftest` 可用；没有 `bun` 时会失败。贡献者使用 `emet self install --from .`。单行命令 `curl -fsSL https://emet.andryore.dev/install.sh | sh` 会下载发布的二进制文件，验证 `SHA256SUMS`，然后运行此命令。
+- `emet self update [latest|X.Y.Z]`：下载发布版本，验证 `SHA256SUMS`（存在 `gh` 时还验证证明），并将其暂存。只有在没有持有任何 worker 槽位时，才会切换符号链接和已安装文件；否则它保持待处理状态，直到下一次会话启动。失败不会改动当前版本，并会记录在日志中。上一个版本会保留以便回滚，更早的版本会被清理。对插件安装它不做任何事。`emet self update --auto [off|on]` 是 `SessionStart` 钩子运行的命令：每天最多一次，在后台分离运行，离线时保持静默；`off` 或 `on` 用于切换开关。`EMET_AUTO_UPDATE=0` 同样会将其禁用。
+- `emet uninstall [--dry-run] [--yes] [--purge] [--json]`：移除 `emet self install` 的安装以及 `emet setup` 添加的内容。它先构建完整计划，再执行。删除安装清单中当前哈希与记录哈希一致的每个文件，以及它的 `.new` 同名文件；已被编辑的文件会保留并列出。仅当 shim `~/.local/bin/emet` 是该安装的包装脚本，或是指向 `~/.claude/emet` 或 `~/.local/share/emet/versions` 的符号链接时才删除它，随后删除清单和变空的目录。从 `~/.claude/settings.json` 和 `$CODEX_HOME/hooks.json`（默认 `~/.codex`）中移除任意事件里的每个 emet 钩子命令（`emet guard`、`emet setup --notice`、`emet whats-new --hook` 和 `emet self update --auto`），保留其他所有钩子，并清除变空的分组和事件。当安装备份（`.pre-emet-guard-backup.`）与剩余内容完全一致时，恢复其字节；当没有任何内容剩下时，删除该文件；否则先写入带时间戳的备份。删除 `~/.agents/skills/emet/` 下仍与此 emet 一致的 Codex 技能（已被编辑的会保留并列出）、版本目录 `~/.local/share/emet/versions` 和安装状态 `~/.local/share/emet/install.json`。然后还原 Setup 台账中的附加项（见下文）。没有清单或安装状态时（插件安装）跳过这些文件，并打印 `claude plugin uninstall emet@emet-marketplace`；当 `codex` 在 PATH 中时，还会打印如何移除 Codex 插件。`--dry-run` 打印计划，不做任何更改。`--yes` 跳过确认；有 TTY 且没有 `--yes` 时会询问一次，没有 TTY 且没有 `--yes` 时打印计划，不做任何更改，退出码为 0。`--purge` 还会删除状态目录（`EMET_STATE_DIR`，否则为 `XDG_STATE_HOME/emet`）和 `~/.emet`；不带它则两者都保留。`--json` 以 JSON 打印结果。任何步骤失败，或必须读取的文件（清单、设置、台账）无法读取时，退出码为 1，并指出该路径。
 - `emet fleet list [--root <dir>] [--json]`：列出 `--root`（默认 `~/code`）下一层、带有 `emet.config.json` 的 git 仓库，并显示 `tracker.kind`、`handoff.autoChain` 和 `models.worker`。`emet fleet set <key> <value> [--root <dir>] [--dry-run]` 会在每个列出的仓库中修改一个配置键，并先通过配置加载器校验（无效值不会改动任何内容，并以退出码 1 结束）。`emet fleet launch --feature <text> [--root <dir>] [--repos <a,b>] [--dry-run]` 在通过 `emet chain` 的就绪检查后，在每个仓库中打开一个 `/emet:run --draft <text>` 会话。`[--dry-run]` 会打印计划的启动内容，而不会启动会话。参见 [fleet 指南](../guide/fleet.md)。
 - `emet fleet status [--json]`：读取全局 journal，按仓库打印每个会话在最近 24 小时内的最新状态（不含 `ended`）。`--json` 打印 `{ repos: [{ repo, sessions: [{ sessionId, state, blocked, since, runId }] }], blocked: <count> }`；否则每个仓库打印一行 `<repo>: <b> blocked, <w> working, <i> idle`，被阻塞的仓库排在最前。为空时同样以 0 退出。参见[查看被阻塞的会话](../guide/fleet.md#查看被阻塞的会话)。
 - `emet preflight [--run <id>] [--post-dispatch]`：确认仓库已具备派发条件。
@@ -88,7 +90,7 @@ emet doctor ~/code/*
 - `emet spec-merge --spec <id>`：将规格中 `ADDED`/`MODIFIED`/`REMOVED` 的需求增量合并到 `docs/specs/<area>.md`（`specs.dir`）。当 `specs.enabled` 开启时，协调者会写入这些增量，并在最后一个波次的集成分支上、评审之前，对每个规格运行一次该命令，然后提交结果。`--deltas-dir` 会打印存放增量的目录。它会在写入任何内容之前检查所有区域。如果出现冲突，或者某个需求会丢失一个场景，则以退出码 1 退出，并且不改动任何文件。当 `specs.enabled` 关闭时，它不合并任何内容并以 0 退出。
 - `emet map [--refresh]`：把现有代码库的概览（技术栈、结构、约定、测试、热点）写入 `docs/agents/codebase.md`（`map.path`），并标注生成它所用的提交 SHA。同一个提交总是生成同一个文件。一旦 HEAD 越过该标注，`emet map --stale` 就以退出码 1 退出，此时 `emet preflight` 会发出警告。`emet map --for <globs>` 只打印与工单编辑范围相匹配的部分；该输出是地图中唯一会包含在工作者简报里的部分。
 - `emet tracker create-spec|create-ticket|read|frontier|set-state|comment|close`：基于 `.scratch/` 的本地跟踪器，标准输出为 JSON。参见[本地跟踪器](#本地跟踪器)。
-- `emet guard`：Claude Code 的 `PreToolUse` 钩子；从标准输入读取钩子 JSON（Codex 的形式见 [Codex 宿主](#codex-宿主)）。`install.sh` 会把它接入 `~/.claude/settings.json`。它会阻止少数已知会导致无人值守运行失败的操作（参见 `emet/src/guard.ts`）。
+- `emet guard`：Claude Code 的 `PreToolUse` 钩子；从标准输入读取钩子 JSON（Codex 的形式见 [Codex 宿主](#codex-宿主)）。`emet self install` 会把它接入 `~/.claude/settings.json`。它会阻止少数已知会导致无人值守运行失败的操作（参见 `emet/src/guard.ts`）。
 
 ### 本地跟踪器
 
@@ -171,6 +173,7 @@ emet doctor ~/code/*
 | `EMET_MEM_RESERVE_GIB`        | 必须保持空闲的内存余量（GiB）；可用内存低于该值时，获取槽位会被拒绝。默认为 8。它也参与 `auto` 工作者上限的计算。                                                       |
 | `EMET_MEM_PER_WORKER_GIB`     | 当 `maxLiveWorkers` 为 `auto` 时，假定每个工作者占用的内存（GiB）。默认为 2。如果每个工作者的技术栈更重，例如每个工作树都运行由浏览器驱动的端到端测试套件，请调高该值。 |
 | `EMET_CPU_OVERSUBSCRIBE`      | `auto` 工作者上限所用的 CPU 倍数。默认为 1。                                                                                                                            |
+| `EMET_AUTO_UPDATE`            | `EMET_AUTO_UPDATE=0` 会禁用 `emet self update --auto`：它不进行任何网络调用并以退出码 0 退出。与 `emet self update --auto off` 相同。                                   |
 | `EMET_AGENT_HOST`             | 设为 `codex` 时，`emet guard` 读取 Codex 的 hook 输入。由 Codex 的 hook 设置；在 Claude Code 上请保持未设置。                                                           |
 
 `auto` 上限为 `clamp(min(cpuCount × EMET_CPU_OVERSUBSCRIBE, floor((memTotal − EMET_MEM_RESERVE_GIB) / EMET_MEM_PER_WORKER_GIB)), min, max)`。旧版的 `FORGE_*` 名称仍然会被读取；两者同时设置时，`EMET_*` 优先。

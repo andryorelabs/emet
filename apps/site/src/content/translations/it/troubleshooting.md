@@ -2,7 +2,7 @@
 title: Risoluzione dei problemi
 description: Errori di emet doctor ed emet preflight, raggruppati per ciò che si vede, ciascuno con causa e soluzione.
 seoTitle: Risoluzione dei problemi di emet doctor e preflight
-sourceHash: c1ebb76c9250d743
+sourceHash: 9d8a014c547eeed9
 ---
 
 Errori di `emet doctor` ed `emet preflight`, raggruppati per ciò che si vede, ciascuno con causa e soluzione. I termini seguono [GLOSSARY.md](../GLOSSARY.md). Per come i controlli si combinano, vedi l'[architettura](architecture.md).
@@ -66,11 +66,11 @@ Un repo che ha ancora solo `forge.config.json`, `.forge/` o variabili `FORGE_*` 
 
 ## Un file installato manca o è stato modificato dopo l'installazione
 
-**Sintomo:** `~/<path> is missing — re-run install.sh` oppure `~/<path> was edited since install`.
+**Sintomo:** `~/<path> is missing — re-run emet self install` oppure `~/<path> was edited since install`.
 
 **Causa:** La copia installata non corrisponde più al manifesto di installazione.
 
-**Soluzione:** Riesegui `install.sh`. Se accanto a un file modificato esiste un file `.new` in sospeso, uniscilo o eliminalo.
+**Soluzione:** Riesegui `emet self install` (da un checkout dei sorgenti, `emet self install --from .`). Se accanto a un file modificato esiste un file `.new` in sospeso, uniscilo o eliminalo.
 
 ## Stop hook error: forge: No such file or directory
 

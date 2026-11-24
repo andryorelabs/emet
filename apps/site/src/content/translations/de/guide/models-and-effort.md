@@ -2,7 +2,7 @@
 title: Modelle und Aufwand
 description: Wie emet für jede Rolle ein Modell und einen Denkaufwand wählt und welche Konfigurationsschlüssel sie ändern.
 seoTitle: Modelle und Aufwand in emet
-sourceHash: 482995e2b98c659b
+sourceHash: 114cc60ff1358691
 ---
 
 `/emet` wählt für jede Rolle automatisch ein Modell und einen Denkaufwand; mitten im Lauf muss nichts von Hand umgestellt werden. Die ersten Abschnitte beschreiben den Claude-Code-Host; der [Codex-Host](#codex-host) hat eigene Standardwerte. Jeder Claude-Code-Schlüssel steht in der [Konfigurationsreferenz](../reference/configuration.md#models).
@@ -19,7 +19,7 @@ sourceHash: 482995e2b98c659b
 | Review, Stufe `high` (riskante Pfade oder Senken)  | Opus                    | standardmäßig `medium` | `models.reviewer.high`                       |
 | CI-Log-Triage (Phase 8)                            | Haiku                   | —                      | `models.triage`                              |
 
-Unter Claude Code legen die beiden Agent-Definitionen (von `install.sh` nach `~/.claude/agents/` installiert) `model`/`effort` selbst im Frontmatter fest, sodass die Modell- und Aufwandswahl des Koordinators nie in einen Worker oder den Reviewer durchsickert. `emet doctor` meldet (blockiert aber nie), wenn eine der beiden Dateien fehlt. `emet preflight` blockiert den Dispatch, wenn `emet-worker` oder `emet-reviewer` fehlt, weil Phase 6 und Phase 8 über `subagent_type` dispatchen.
+Unter Claude Code legen die beiden Agent-Definitionen (von `emet self install` nach `~/.claude/agents/` installiert) `model`/`effort` selbst im Frontmatter fest, sodass die Modell- und Aufwandswahl des Koordinators nie in einen Worker oder den Reviewer durchsickert. `emet doctor` meldet (blockiert aber nie), wenn eine der beiden Dateien fehlt. `emet preflight` blockiert den Dispatch, wenn `emet-worker` oder `emet-reviewer` fehlt, weil Phase 6 und Phase 8 über `subagent_type` dispatchen.
 
 ## Routing nach Risikostufe
 

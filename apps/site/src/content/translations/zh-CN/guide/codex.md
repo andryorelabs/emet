@@ -2,7 +2,7 @@
 title: 在 Codex 上运行 emet
 description: 介绍如何安装 Codex 一侧、选择 Agent 宿主、唯一的一次批准以及已知限制。
 seoTitle: 在 Codex 上运行 emet
-sourceHash: 8aed8797d3451a66
+sourceHash: 73105866204493fa
 ---
 
 emet 既可以在 Claude Code 上运行，也可以在 Codex CLI 上运行。术语遵循 [GLOSSARY.md](../../GLOSSARY.md)；运行所在的产品称为 **Agent 宿主**。本页介绍 Codex 一侧的安装、宿主的选择、唯一的一次批准以及已知限制。返回[文档索引](../README.md)。
@@ -21,18 +21,31 @@ emet 既可以在 Claude Code 上运行，也可以在 Codex CLI 上运行。术
    codex plugin add mattpocock-skills@mattpocock
    ```
 
-3. 安装 emet 插件。仓库附带 `.codex-plugin/plugin.json`，以及 `codex/` 下生成的技能和钩子：
+3. 使用独立安装来安装 emet。它会把 emet 技能写入 `~/.agents/skills/emet/`，并把 emet 钩子追加到 `$CODEX_HOME/hooks.json`（默认 `~/.codex`），绝不写入 `config.toml`：
 
    ```bash
-   codex plugin marketplace add andryorelabs/emet
-   codex plugin add emet@emet-marketplace
+   curl -fsSL https://emet.andryore.dev/install.sh | sh
    ```
 
-4. 按照[快速开始](getting-started.md)安装 `emet` CLI，然后运行 `emet doctor .`。`install.sh` 还会在 `~/.claude` 下安装 Claude Code 的命令和代理；这在 Codex 上无害，`emet doctor` 也不会对同时使用 Codex 插件和 `install.sh` 发出警告。在 Codex 宿主上，它会报告早于 `codex.minVersion` 的 `codex`、`codex exec` 缺少 `--json` 或 `--output-schema` 标志，以及缺少 `mattpocock-skills`（并给出上面的两条命令）。
+   在 `sh` 之后加上 `-s -- --dry-run` 可预览写入内容。它还会安装终端中的 `emet`，以及 `~/.claude` 下的 Claude Code 命令和代理；这在 Codex 上无害。
+
+4. 信任这些钩子。Codex 在你信任某个钩子之前不会运行它：打开 `/hooks` 并在事件页面按 `t`，或在启动时批准 "Hooks need review" 提示。
+5. 运行 `emet doctor .`。在 Codex 宿主上，它会报告早于 `codex.minVersion` 的 `codex`、`codex exec` 缺少 `--json` 或 `--output-schema` 标志、未被信任的钩子，以及缺少 `mattpocock-skills`（并给出上面的两条命令）。
 
 :::
 
-第 3 步中的两条插件命令已在真实的 `codex`（0.167.0）上运行过：在全新的 `CODEX_HOME` 中它们退出码为 0，`codex plugin list` 显示 `emet@emet-marketplace installed, enabled`。本地路径形式 `codex plugin marketplace add <repo>` 的结果相同。
+### 可选：Codex 插件
+
+你也可以安装 emet 插件来代替独立安装。仓库附带 `.codex-plugin/plugin.json`，以及 `codex/` 下生成的技能和钩子：
+
+```bash
+codex plugin marketplace add andryorelabs/emet
+codex plugin add emet@emet-marketplace
+```
+
+插件不带 `emet` shim，因此终端中的 `emet` 仍然需要独立安装。插件已安装时，`emet self install` 会拒绝执行，除非你传入 `--force`，并且当两者并存时 `emet doctor` 会发出警告。
+
+上面的两条插件命令已在真实的 `codex`（0.167.0）上运行过：在全新的 `CODEX_HOME` 中它们退出码为 0，`codex plugin list` 显示 `emet@emet-marketplace installed, enabled`。本地路径形式 `codex plugin marketplace add <repo>` 的结果相同。
 
 ## 选择 Agent 宿主
 
@@ -56,7 +69,7 @@ emet 只在计划之后请求一次批准。在 Claude Code 上这是一个提�
 
 ## emet 更新之后
 
-每次插件更新后，Codex 都会再次要求你信任 emet 插件的 hook，因为插件的内容哈希会变化。要信任它们，请运行 `/hooks`，并在事件页面按 `t` 信任全部，或在启动时批准 "Hooks need review" 提示。在此之前，emet guard 和单一批准都不会运行。
+使用独立安装时，这些钩子只是 `hooks.json` 中的普通条目；如安装步骤所述，通过 `/hooks` 信任一次即可。使用插件时，每次插件更新后，Codex 都会再次要求你信任 emet 插件的 hook，因为插件的内容哈希会变化。要信任它们，请运行 `/hooks`，并在事件页面按 `t` 信任全部，或在启动时批准 "Hooks need review" 提示。在此之前，emet guard 和单一批准都不会运行。
 
 当 hook 从未被信任时，`emet doctor` 会发出警告：
 
@@ -69,7 +82,7 @@ emet 只在计划之后请求一次批准。在 Claude Code 上这是一个提�
 ## 波次如何运行
 
 - `emet dispatch --role worker` 会检查认领和槽位，创建 `.emet/worktrees/agent-<ticket>`，在 `.emet/runs/<run>/codex-home/` 下构建每次运行专用的 `CODEX_HOME` 覆盖层，并使用解析出的模型和推理强度、`codex.sandbox` 模式（默认 `danger-full-access`）、`--json` 和 `--output-schema` 启动 `codex exec`。事件被捕获到 `.emet/runs/<run>/codex/<ticket>.jsonl`。worker 通过其 `thread.started` 事件的 `threadId` 和该 JSONL 路径来识别；进程 id 只是辅助字段。
-- 覆盖层是生成的，而不是链接的。你的 `auth.json` 会以符号链接方式接入（绝不复制），emet 插件缓存在你的 Codex 主目录中存在时会被链接，覆盖层会写入它自己的最小 `config.toml`：本地市场和 `[plugins."emet@emet-marketplace"] enabled = true`、仅针对本次运行自身目录的 `trusted` `[projects."<dir>"]` 表，以及解析出的 `model` 和 `model_reasoning_effort`。你的 `[projects]` 表和其他设置都不会被复制，你的 `~/.codex` 也绝不会被写入。
+- 覆盖层有两种模式。当独立安装的状态文件存在时，覆盖层的 `config.toml` 会省略 emet 插件和市场表，worker 仍能从 `~/.agents/skills` 看到 emet 技能；在插件模式下则保留它们，如下所述。覆盖层是生成的，而不是链接的。你的 `auth.json` 会以符号链接方式接入（绝不复制），emet 插件缓存在你的 Codex 主目录中存在时会被链接，覆盖层会写入它自己的最小 `config.toml`：本地市场和 `[plugins."emet@emet-marketplace"] enabled = true`、仅针对本次运行自身目录的 `trusted` `[projects."<dir>"]` 表，以及解析出的 `model` 和 `model_reasoning_effort`。你的 `[projects]` 表和其他设置都不会被复制，你的 `~/.codex` 也绝不会被写入。
 - 覆盖层的 `rules/default.rules` 允许 `git add`、`git commit`、`git status`、`git worktree`、`git -C <dir> ...` 以及 `emet` 的子命令 `dispatch`、`review-run`、`launch`、`claims`、`slots`、`results`、`handoff` 和 `ask`，并禁止 `git push`。由于默认沙箱不再阻止写入，`emet guard` 还会拒绝任何 argv 运行 `git push` 的 `Bash` 命令，包括 `git -C <dir> push` 和 `git --git-dir=<dir> push`，无论沙箱如何。
 - worker 从不拥有通往协调者的旁路通道。它通过本次运行的邮箱进行上报：`emet ask --run <run> --ticket <ticket> --body <text>` 记录一个问题并打印其 id，`emet ask ... --wait <n>` 轮询回复（退出码 0 表示打印回复，3 表示等待时间片已过，4 表示 `budgets.askWaitMinutes` 已用尽，此时 worker 写入 BLOCKED 结果并退出）。只要存活的 worker 有未解决的问题，`emet dispatch --wait` 就会打印 `question <ticket> <id>` 而不是结果状态，并且绝不会将该 worker 归类为停滞；协调者读取 `emet inbox --run <run>`，用 `emet reply --run <run> --ticket <ticket> --id <n> --body <text>` 回复，然后继续 `emet dispatch --wait`。已记录的结果始终优先于未解决的问题。参见 [ADR-0023](../adr/0023-cli-owned-mailbox-for-codex-workers.md)。
 - 结果从 `<git-common-dir>/.emet/runs/<run>/results/` 读取，与 `emet results --write` 写入的位置相同，因此位于自己 worktree 中的 worker 也能被找到。

@@ -164,7 +164,7 @@ test("standaloneExtraHooks merges to the SessionStart auto-update hook", () => {
   ]);
 });
 
-test("mergeClaudeHooks does not duplicate a legacy unquoted install.sh guard hook", () => {
+test("mergeClaudeHooks does not duplicate a legacy unquoted guard hook", () => {
   const legacy: JsonObject = {
     hooks: {
       PreToolUse: [{ matcher: "Bash", hooks: [{ type: "command", command: `${BIN} guard` }] }],
