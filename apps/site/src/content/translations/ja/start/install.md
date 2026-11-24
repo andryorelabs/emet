@@ -1,11 +1,11 @@
 ---
-title: はじめに
-description: スタンドアロンインストールで emet をインストールし、emet doctor で動作を確認して、初めて実行します。
-seoTitle: emet をはじめよう
-sourceHash: ce83e38591b3de64
+title: インストール
+description: emet をインストールし、最新に保ち、削除します。
+seoTitle: emet のインストール
+sourceHash: e67d7c2c6b22d556
 ---
 
-emet をインストールし、動作を確認して、初めて実行します。
+emet をインストールし、最新に保ち、削除します。その後、[初めて実行します](first-run.md)。
 
 <img src="../brand/mascot/mascot-done.svg" alt="emet のマスコット、完了" width="96" align="right">
 
@@ -35,11 +35,20 @@ curl -fsSL https://emet.andryore.dev/install.sh | sh -s -- --dry-run
 
 ### Codex
 
-Codex がある場合、`emet self install` は 1 回限りの手順を表示します。Codex で `/hooks` を開き、イベントページで `t` を押して emet のフックを信頼します（または起動時の "Hooks need review" プロンプトを承認します）。それまでは emet のガードは実行されません。[Codex で emet を実行する](codex.md#インストール)を参照してください。
+Codex がある場合、`emet self install` は 1 回限りの手順を表示します。Codex で `/hooks` を開き、イベントページで `t` を押して emet のフックを信頼します（または起動時の "Hooks need review" プロンプトを承認します）。それまでは emet のガードは実行されません。[Codex で emet を実行する](../how-to/use-codex.md#インストール)を参照してください。
+
+### 更新
+
+```bash
+emet self update            # latest
+emet self update 1.2.3      # a specific version
+```
+
+リリースがダウンロードされ、`SHA256SUMS`（`gh` がある場合はアテステーションも）で検証され、ステージングされます。シンボリックリンクとインストール済みファイルの切り替えは、ワーカースロットが 1 つも保持されていない場合にのみ行われます。保持されている場合、更新は保留され、次のセッション開始時に適用されます。失敗しても現在のバージョンには手が加えられず、ジャーナルに記録されます。以前のバージョンはロールバック用に保持され、それより古いものは削除されます。更新が保留中の場合、`emet doctor` が警告します。
 
 ### 自動更新
 
-`SessionStart` フックが `emet self update --auto` を 1 日に最大 1 回、バックグラウンドで実行し、オフラインのときは何も表示しません。チェックサムを検証し、新しいバージョンをステージングして、ワーカースロットが 1 つも保持されていない場合にのみシンボリックリンクを切り替えます。保持されている場合、更新は次のセッション開始まで保留されます。以前のバージョンはロールバック用に保持されます。無効にするには、`EMET_AUTO_UPDATE=0` を設定するか `emet self update --auto off` を実行します。`emet self update --auto on` で再び有効になります。[emet を更新する](../how-to/update-emet.md)を参照してください。
+`SessionStart` フックが `emet self update --auto` を 1 日に最大 1 回、バックグラウンドで実行し、オフラインのときは何も表示しません。チェックサムを検証し、新しいバージョンをステージングして、ワーカースロットが 1 つも保持されていない場合にのみシンボリックリンクを切り替えます。保持されている場合、更新は次のセッション開始まで保留されます。以前のバージョンはロールバック用に保持されます。無効にするには、`EMET_AUTO_UPDATE=0` を設定するか `emet self update --auto off` を実行します。`emet self update --auto on` で再び有効になります。自動更新はプラグインのインストールには何もしません。
 
 ### アンインストール
 
@@ -70,35 +79,8 @@ codex plugin add emet@emet-marketplace
 
 どのインストールでも、同じ 3 つのエントリポイントが使えます。Claude Code ではスラッシュコマンド `/emet:run`、`/emet:init`、`/emet:doctor`、Codex では `$emet:run`、`$emet:init`、`$emet:doctor` スキルです。スタンドアロンインストールでは `emet` が `PATH` にも置かれるため、通常のターミナルで `emet init` や `emet doctor .` が使えます。プラグインだけの場合は、スラッシュコマンドを使うか、Claude Code または Codex セッション内で `! emet <subcommand>` を使ってください。Claude Code ではエージェント名は異なり、プラグインでは `emet:emet-worker`、スタンドアロンでは `emet-worker` です。Codex には emet のエージェントはありません。各ワーカーが独立した `codex exec` プロセスだからです。
 
-推奨順序は、まず `setup-matt-pocock-skills` スキルを実行し（Claude Code では `/setup-matt-pocock-skills`、Codex では `mattpocock-skills` プラグインの同じスキルを Codex の `$` 構文で実行します）、次に `emet init` を実行することです。
-
-動作の確認は、Claude Code 内で `/emet:doctor`（Codex では `$emet:doctor`）を実行するか、ターミナルで `emet doctor .` を実行します（`selftest` には `--from` によるソースインストールが必要です）。
-
-`doctor` または `preflight` が問題を報告した場合は、[トラブルシューティング](../troubleshooting.md)を参照してください。ユーザーに代わって何かがインストールされたりログインされたりすることはありません。誰が何を確認するか、また `EMET_SKIP_DEPENDENCY_CHECKS` については[依存関係リファレンス](../reference/dependencies.md)を参照してください。
-
-## 初回の実行
-
-任意の git リポジトリで:
-
-```bash
-emet init          # autodetects package manager, trunk branch, tracker kind
-emet preflight      # confirms the repo is dispatch-ready
-```
-
-セッション内では、`/emet:init` が `emet init` と同じことを行います。その後、Claude Code 内で（Codex では `/emet:run` の代わりに `$emet:run` を使います）次のように実行します。
-
-```
-/emet:run <describe the feature>              # interview → wave 1; later waves via --dispatch/autoChain
-/emet:run --draft <describe the feature>      # stop after tickets are created
-/emet:run --dispatch <spec-id>                # dispatch a --draft'd spec later
-```
-
-`emet init` は、自力で推測できないもの（共有テストデータベースのロック、スキーマの所有者など）について、生成した `docs/agents/*.md` ファイルに `TODO(emet):` マーカーを残します。それらを埋めてください。マーカーが残っている間、`emet preflight` はディスパッチを拒否します。
+プラグインのインストールを更新するには、[emet を更新する](../how-to/update-emet.md)を参照してください。
 
 ## 次のステップ
 
-- [トラッカーとランディング](trackers-and-landing.md): GitHub、Linear、ローカルのチケットと、ウェーブがどのようにランディングするか。
-- [Codex で emet を実行する](codex.md): インストール、単一の承認、Codex のエージェントホストにおける制限。
-- [モデルとエフォート](models-and-effort.md): 各ロールが使うモデルとエフォート。
-- [フリートチェック](fleet.md): 複数のリポジトリをまとめて監査します。
-- [設定リファレンス](../reference/configuration.md)と [CLI リファレンス](../reference/cli.md): すべてのキーとサブコマンド。
+[初回の実行](first-run.md): インストールを確認し、リポジトリで emet を実行します。
