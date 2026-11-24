@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
 
+import { LEGACY_DOC_IDS } from "../docs/legacy-routes";
 import { DEFAULT_LOCALE, LOCALES, localeSegment } from "../i18n/locales";
 
 const siteConf = readFileSync(new URL("../../docker/site.conf", import.meta.url), "utf8");
@@ -33,6 +34,15 @@ describe("docker/site.conf", () => {
     expect(siteConf).toContain("return 301 $docs_locale/docs/start/overview/$is_args$args;");
     expect(docsLocation).toBeLessThan(siteConf.indexOf("?<index_dir>"));
     expect(docsLocation).toBeLessThan(siteConf.indexOf("?<slash_path>"));
+  });
+});
+
+describe("docker/site.conf legacy docs routes", () => {
+  test("301s every legacy docs id, and its Markdown twin, to its new id", () => {
+    for (const [oldId, newId] of Object.entries(LEGACY_DOC_IDS)) {
+      expect(siteConf).toContain(`/docs/${oldId}(?<docs_ext>/|\\.md)$ {`);
+      expect(siteConf).toContain(`return 301 $docs_locale/docs/${newId}$docs_ext$is_args$args;`);
+    }
   });
 });
 

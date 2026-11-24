@@ -75,7 +75,7 @@ export const en = {
     extra: [
       {
         title: "Fast mode for small changes",
-        line: "One flag skips the interview and runs one ticket, one review and one landing.",
+        line: "One flag keeps the interview to one round and runs one ticket, one review and one landing.",
       },
       {
         title: "Remembers what worked",
@@ -115,7 +115,7 @@ export const en = {
       {
         question: "What is fast mode?",
         answer:
-          "Pass `--quick` for a small change. It skips the interview and runs one ticket, one review and one landing.",
+          "Pass `--quick` for a small change. It keeps the interview to one round and runs one ticket, one review and one landing.",
       },
       {
         question: "What do I need?",

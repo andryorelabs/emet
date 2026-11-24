@@ -81,7 +81,7 @@ export const it = {
     extra: [
       {
         title: "Modalità rapida per piccole modifiche",
-        line: "Un'opzione salta l'intervista ed esegue un ticket, una revisione e un'integrazione.",
+        line: "Un'opzione riduce l'intervista a un solo giro ed esegue un ticket, una revisione e un'integrazione.",
       },
       {
         title: "Ricorda ciò che ha funzionato",
@@ -121,7 +121,7 @@ export const it = {
       {
         question: "Che cos'è la modalità rapida?",
         answer:
-          "Passa `--quick` per una piccola modifica. Salta l'intervista ed esegue un ticket, una revisione e un'integrazione.",
+          "Passa `--quick` per una piccola modifica. Riduce l'intervista a un solo giro ed esegue un ticket, una revisione e un'integrazione.",
       },
       {
         question: "Di cosa ho bisogno?",

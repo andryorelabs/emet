@@ -79,7 +79,7 @@ export const de = {
     extra: [
       {
         title: "Schnellmodus für kleine Änderungen",
-        line: "Ein Flag überspringt das Interview und führt ein Ticket, ein Review und ein Landing aus.",
+        line: "Ein Flag hält das Interview auf eine Runde und führt ein Ticket, ein Review und ein Landing aus.",
       },
       {
         title: "Merkt sich, was funktioniert hat",
@@ -119,7 +119,7 @@ export const de = {
       {
         question: "Was ist der Schnellmodus?",
         answer:
-          "Übergib `--quick` für eine kleine Änderung. Er überspringt das Interview und führt ein Ticket, ein Review und ein Landing aus.",
+          "Übergib `--quick` für eine kleine Änderung. Er hält das Interview auf eine Runde und führt ein Ticket, ein Review und ein Landing aus.",
       },
       {
         question: "Was brauche ich?",

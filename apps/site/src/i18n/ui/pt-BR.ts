@@ -78,7 +78,7 @@ export const ptBR = {
     extra: [
       {
         title: "Modo rápido para mudanças pequenas",
-        line: "Uma flag pula a entrevista e executa um ticket, uma revisão e uma integração.",
+        line: "Uma flag reduz a entrevista a uma rodada e executa um ticket, uma revisão e uma integração.",
       },
       {
         title: "Lembra o que funcionou",
@@ -118,7 +118,7 @@ export const ptBR = {
       {
         question: "O que é o modo rápido?",
         answer:
-          "Passe `--quick` para uma mudança pequena. Ele pula a entrevista e executa um ticket, uma revisão e uma integração.",
+          "Passe `--quick` para uma mudança pequena. Ele reduz a entrevista a uma rodada e executa um ticket, uma revisão e uma integração.",
       },
       {
         question: "O que eu preciso?",

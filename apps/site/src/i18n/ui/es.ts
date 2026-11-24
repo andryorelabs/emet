@@ -78,7 +78,7 @@ export const es = {
     extra: [
       {
         title: "Modo rápido para cambios pequeños",
-        line: "Una opción omite la entrevista y ejecuta un ticket, una revisión y una integración.",
+        line: "Una opción reduce la entrevista a una ronda y ejecuta un ticket, una revisión y una integración.",
       },
       {
         title: "Recuerda lo que funcionó",
@@ -122,7 +122,7 @@ export const es = {
       {
         question: "¿Qué es el modo rápido?",
         answer:
-          "Usa `--quick` para un cambio pequeño. Omite la entrevista y ejecuta un ticket, una revisión y una integración.",
+          "Usa `--quick` para un cambio pequeño. Reduce la entrevista a una ronda y ejecuta un ticket, una revisión y una integración.",
       },
       {
         question: "¿Qué necesito?",

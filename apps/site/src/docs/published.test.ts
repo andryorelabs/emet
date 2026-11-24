@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { existsSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import path from "node:path";
 
 import { LOCALES } from "../i18n/locales";
@@ -42,6 +42,19 @@ describe("the published allowlist", () => {
   test("only names files that exist", () => {
     for (const source of PUBLISHED_SOURCES) {
       expect(existsSync(path.join(REPOSITORY_ROOT, source.sourcePath))).toBe(true);
+    }
+  });
+
+  test("keeps every published source inside the Docker build context", () => {
+    const allowed = readFileSync(path.join(REPOSITORY_ROOT, ".dockerignore"), "utf8")
+      .split("\n")
+      .filter((line) => line.startsWith("!"))
+      .map((line) => line.slice(1));
+    for (const source of PUBLISHED_SOURCES) {
+      const covered = allowed.some(
+        (entry) => source.sourcePath === entry || source.sourcePath.startsWith(`${entry}/`),
+      );
+      expect(covered).toBe(true);
     }
   });
 

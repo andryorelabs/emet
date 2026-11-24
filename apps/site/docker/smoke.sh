@@ -62,6 +62,12 @@ done
 for old_route in /docs/guide/getting-started/ /es/docs/guide/codex/ /docs/architecture/; do
   [ "$(status "$base$old_route")" != 404 ] || fail "the old route $old_route is 404"
 done
+for pair in "/docs/guide/getting-started.md:/docs/start/install.md" "/es/docs/guide/fleet.md:/es/docs/how-to/check-a-fleet.md" "/docs/guide/codex/:/docs/how-to/use-codex/"; do
+  from="${pair%%:*}"
+  to="${pair##*:}"
+  [ "$(status "$base$from")" = 301 ] || fail "the old route $from is not 301"
+  [ "$(location "$base$from")" = "$to" ] || fail "the old route $from does not redirect to $to"
+done
 [ "$(location "$base/es?a=1")" = "/es/?a=1" ] || fail "the trailing-slash redirect drops the query string"
 install_script_url="https://github.com/andryorelabs/emet/releases/latest/download/install.sh"
 [ "$(status "$base/install.sh")" = 302 ] || fail "/install.sh is not 302"

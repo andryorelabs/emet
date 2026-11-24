@@ -77,7 +77,7 @@ export const fr = {
     extra: [
       {
         title: "Mode rapide pour les petits changements",
-        line: "Une option saute l'entretien et lance un ticket, une relecture et un atterrissage.",
+        line: "Une option réduit l'entretien à un tour et lance un ticket, une relecture et un atterrissage.",
       },
       {
         title: "Se souvient de ce qui a marché",
@@ -117,7 +117,7 @@ export const fr = {
       {
         question: "Qu'est-ce que le mode rapide ?",
         answer:
-          "Passez `--quick` pour un petit changement. Il saute l'entretien et lance un ticket, une relecture et un atterrissage.",
+          "Passez `--quick` pour un petit changement. Il réduit l'entretien à un tour et lance un ticket, une relecture et un atterrissage.",
       },
       {
         question: "De quoi ai-je besoin ?",
