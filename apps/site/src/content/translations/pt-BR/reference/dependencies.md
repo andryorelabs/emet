@@ -2,7 +2,7 @@
 title: Dependências
 description: O que o emet precisa na máquina e qual comando verifica cada item.
 seoTitle: Dependências do emet
-sourceHash: 54f288bd696fe862
+sourceHash: d29472c96a3da69f
 ---
 
 O que o emet precisa na máquina e qual comando verifica cada item. Os termos seguem o [GLOSSARY.md](../../GLOSSARY.md). Voltar ao [README](../../README.md).
@@ -12,7 +12,7 @@ O que o emet precisa na máquina e qual comando verifica cada item. Os termos se
 Primeiro o que é comum aos dois hosts de agente, depois o que cada host acrescenta.
 
 - **[bun](https://bun.sh)**: somente para instalações a partir do código-fonte. O binário independente não precisa de nenhum runtime.
-- **`sha256sum` ou `shasum`**: usados pelo asset de release `install.sh` (`curl -fsSL https://emet.andryore.dev/install.sh | sh`) para verificar o download. O próprio `emet self install` não precisa de nenhum dos dois.
+- **`sha256sum` ou `shasum`**: usados pelo script de instalação da release (veja [Instalação](../start/install.md)) para verificar o download. O próprio `emet self install` não precisa de nenhum dos dois.
 - **`git`**: obrigatório em tempo de execução. Quase todo subcomando o invoca.
 - **CLI `gh`, autenticada**: obrigatória quando o tracker é `github` ou a aterrissagem é `pr`. Os PRs sempre a usam. Com `tracker.kind: "local"` e `landing.mode: "merge"`, o `gh` não é obrigatório.
 - **O plugin `mattpocock-skills`**: as fases de entrevista, spec e tickets chamam skills que ficam lá. No Claude Code ele vem do marketplace `claude-plugins-official`; no Codex, veja [Host Codex](#host-codex).
@@ -30,7 +30,7 @@ Nada do acima é instalado nem autenticado em seu nome. O que muda é quem verif
 
 ## Host Codex
 
-Apenas quando `agentHost` é `"codex"`; veja o [guia do Codex](../guide/codex.md). Os agentes `emet-worker` e `emet-reviewer` não são usados ali.
+Apenas quando `agentHost` é `"codex"`; veja o [guia do Codex](../how-to/use-codex.md). Os agentes `emet-worker` e `emet-reviewer` não são usados ali.
 
 - **A CLI `codex`**, com login feito, na versão `codex.minVersion` (padrão `0.167.0`) ou mais nova. O `emet doctor` verifica se `codex exec --help` lista `--json` e `--output-schema`.
 - **O plugin `mattpocock-skills`** no Codex, verificado com `codex plugin list`:

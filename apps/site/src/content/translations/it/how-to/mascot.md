@@ -2,52 +2,72 @@
 title: Usare la mascotte di emet (mod di Claude Code e pet di Orca)
 description: Mostra la mascotte di emet in Claude Code con il mod e in Orca con il pet.
 seoTitle: Mascotte di emet in Claude Code e Orca
-sourceHash: caca9eb66e693e32
+sourceHash: a6d2945308d1d44b
 ---
 
-Come mostrare la **Mascotte** di emet in Claude Code e in Orca. I termini seguono [GLOSSARY.md](../../GLOSSARY.md).
+Mostra la **Mascotte** di emet in Claude Code e in Orca. I termini seguono [GLOSSARY.md](../../GLOSSARY.md).
 
-Ci sono due elementi indipendenti: il plugin facoltativo `emet-mascot`, che disegna la mascotte in Claude Code, e il bundle pet di Orca, che dà a Orca lo stesso personaggio.
+Ci sono due elementi indipendenti: il plugin facoltativo `emet-mascot`, che disegna la mascotte in Claude Code, e il bundle pet di Orca, che dà a Orca lo stesso personaggio. emet non ha bisogno di nessuno dei due.
+
+## Prerequisiti
+
+- Claude Code, per il plugin.
+- emet installato, così un'esecuzione scrive il phase file che la mascotte segue; vedi [Installazione](../start/install.md).
+- Orca, per il pet. L'importazione richiede la cartella `docs/brand/pet/emet/` sulla macchina in cui gira l'app Orca.
 
 ## Installare il plugin della mascotte
 
-Il plugin è distribuito nello stesso marketplace di emet ed è facoltativo. emet non ne ha bisogno.
+:::steps
 
-```bash
-claude plugin marketplace add andryorelabs/emet
-claude plugin install emet-mascot@emet-marketplace
-```
+1. Aggiungi il marketplace e installa il plugin:
 
-La mascotte segue la tua sessione (dorme, lavora, attende, ha finito, errore). Mentre un **Run** è attivo legge anche il **Phase file** e mostra un'etichetta attenuata come `emet · wave 2 · review`.
+   ```bash
+   claude plugin marketplace add andryorelabs/emet
+   claude plugin install emet-mascot@emet-marketplace
+   ```
 
-Opzioni del plugin:
+2. Riavvia Claude Code. La mascotte segue la tua sessione (dorme, lavora, attende, ha finito, errore). Mentre un **Run** è attivo legge anche il phase file e mostra un'etichetta attenuata come `emet · wave 2 · review`.
+3. Se vuoi, imposta le opzioni del plugin:
+   - `position`: `pane` (predefinito), `band` o `status`. `pane` aggancia la mascotte accanto alla trascrizione e richiede il layout a schermo intero e un terminale largo almeno 144 colonne finché non apri tu stesso il pannello una volta (circa 110 dopo); quando non riesce ad agganciarsi, la mascotte compare sopra il prompt. `band` la disegna sempre sopra il prompt. `status` mostra solo l'etichetta di testo come riga di stato.
+   - `size`: `small` (16 x 8 celle, predefinito) o `medium` (24 x 12 celle).
+   - `showLabel`: mostra o nasconde l'etichetta (predefinito attivo).
 
-- `position`: `pane` (predefinito), `band` o `status`. `pane` aggancia la mascotte accanto alla trascrizione, cosa che richiede il layout a schermo intero e un terminale largo almeno 144 colonne finché non apri tu stesso il pannello una volta (circa 110 dopo); quando non riesce ad agganciarsi, o il terminale si restringe in seguito, la mascotte compare invece sopra il prompt. `band` la disegna sempre sopra il prompt. `status` mostra solo l'etichetta di testo come riga di stato del plugin, senza la grafica della mascotte.
-- `size`: `small` (16 x 8 celle, predefinito) o `medium` (24 x 12 celle).
-- `showLabel`: mostra o nasconde l'etichetta accanto alla mascotte (predefinito attivo).
+:::
 
 ## Aggiornare il plugin della mascotte
 
-I marketplace diversi da quello di Anthropic hanno l'aggiornamento automatico disattivato per impostazione predefinita, e un marketplace non può attivarlo per i propri utenti. Aggiorna a mano:
+I marketplace diversi da quello di Anthropic hanno l'aggiornamento automatico disattivato per impostazione predefinita, quindi aggiorna a mano oppure attivalo una volta.
 
-```bash
-claude plugin marketplace update emet-marketplace
-claude plugin update emet-mascot@emet-marketplace
-```
+:::steps
 
-Poi riavvia Claude Code. Per aggiornare automaticamente, esegui `/plugin`, apri la scheda **Marketplaces**, seleziona `emet-marketplace` e scegli **Enable auto-update**. Ogni utente lo fa una volta sulla propria macchina. Vedi [Aggiornare emet](update-emet.md) anche per il plugin principale.
+1. Aggiorna il marketplace e il plugin:
 
-## Il phase file
+   ```bash
+   claude plugin marketplace update emet-marketplace
+   claude plugin update emet-mascot@emet-marketplace
+   ```
 
-La CLI di emet scrive `.emet/phase.json` nel repo man mano che un'esecuzione avanza, e la mascotte lo legge circa ogni due secondi. Un file più vecchio della finestra di freschezza viene ignorato, così un'esecuzione andata in crash non lascia un'etichetta obsoleta.
+2. Riavvia Claude Code.
+3. Per aggiornare in autonomia, esegui `/plugin`, apri la scheda **Marketplaces**, seleziona `emet-marketplace` e scegli **Enable auto-update**. Ogni utente lo fa una volta sulla propria macchina. Vedi [Aggiornare emet](update-emet.md) per il plugin principale.
 
-Il file contiene `phase` (`planning`, `dispatch`, `working`, `review`, `checking`, `landing`, `done` o `failed`), `wave`, `spec`, `runId`, `updatedAt` e un `outcome` facoltativo. Una scrittura che fallisce non fa mai fallire il sottocomando che ha segnalato la fase.
+:::
 
 ## Usare il pet in Orca
 
-Il bundle pet si trova in `docs/brand/pet/emet/`: `pet.json` e `spritesheet.webp`. Nelle impostazioni di Orca usa «Import .codex-pet bundle…» e scegli quella cartella. L'importazione richiede `docs/brand/pet/emet/` sulla macchina in cui gira l'app Orca, quindi copia la cartella lì se Orca gira altrove rispetto a questo repo. Rigeneralo con `bun run brand:export` dopo aver modificato un SVG della mascotte e fai il commit del risultato.
+:::steps
 
-## Risoluzione dei problemi
+1. Assicurati che `docs/brand/pet/emet/` (`pet.json` e `spritesheet.webp`) sia sulla macchina in cui gira Orca; copia lì la cartella se Orca gira altrove rispetto a questo repo.
+2. Nelle impostazioni di Orca scegli «Import .codex-pet bundle…» e seleziona quella cartella.
+3. Dopo aver modificato un SVG della mascotte, rigenera il bundle con `bun run brand:export` e fai il commit del risultato.
 
-- Nessuna mascotte: esegui `claude plugin list`, controlla che `emet-mascot` sia abilitato, poi riavvia Claude Code.
-- Nessuna etichetta: controlla che `.emet/phase.json` esista e sia stato aggiornato di recente.
+:::
+
+## Verifica
+
+:::steps
+
+1. Esegui `claude plugin list` e conferma che `emet-mascot` sia abilitato; se la mascotte manca, riavvia Claude Code.
+2. Durante un'esecuzione, conferma che `.emet/phase.json` esista e sia stato aggiornato negli ultimi secondi. La mascotte lo legge circa ogni due secondi e ignora un file più vecchio della sua finestra di freschezza, così un'esecuzione andata in crash non lascia un'etichetta obsoleta. Contiene `phase` (`planning`, `dispatch`, `working`, `review`, `checking`, `landing`, `done` o `failed`), `wave`, `spec`, `runId`, `updatedAt` e un `outcome` facoltativo.
+3. In Orca, conferma che il pet di emet compaia nell'elenco dei pet.
+
+:::

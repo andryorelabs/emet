@@ -2,104 +2,97 @@
 title: Trackers y aterrizaje
 description: Dónde viven los tickets, cómo aterriza una oleada como pull request o como merge local, y cómo se encadenan las oleadas.
 seoTitle: Trackers y aterrizaje en emet
-sourceHash: 1ebd20e303a5c747
+sourceHash: c79d8a04687b4620
 ---
 
-Dónde viven los tickets, cómo aterriza una oleada y cómo se encadenan las oleadas. Cada clave mencionada aquí está en la [referencia de configuración](../reference/configuration.md); cada subcomando está en la [referencia de la CLI](../reference/cli.md).
+Elige dónde viven los tickets, cómo aterriza una spec y si las oleadas se encadenan. Cada clave mencionada aquí está en la [referencia de configuración](../reference/configuration.md); cada subcomando está en la [referencia de la CLI](../reference/cli.md). Los términos siguen [GLOSSARY.md](../../GLOSSARY.md).
 
 <img src="../brand/mascot/mascot-work.svg" alt="mascota de emet, trabajando" width="96" align="right">
 
-## Trackers
+## Requisitos previos
 
-emet funciona con Linear, GitHub Issues o archivos locales, según `tracker.kind`. `gh` es obligatorio para el tracker `github`. Para el tracker `linear` hay que declarar un servidor MCP de Linear en `.mcp.json` (o en el ámbito de usuario); consulta la [referencia de dependencias](../reference/dependencies.md).
+- emet instalado y un repositorio con un `emet.config.json`; ejecuta `emet init` si no lo tiene.
+- Para el tracker `github` o el aterrizaje `pr`: `gh` en el `PATH` y autenticado.
+- Para el tracker `linear`: un servidor MCP de Linear declarado en `.mcp.json` (o en el ámbito de usuario). Consulta la [referencia de dependencias](../reference/dependencies.md).
+- Para entender qué cambian estos ajustes, lee [Aterrizaje](../concepts/landing.md) y [Corridas, oleadas y specs](../concepts/runs-waves-specs.md).
 
-### Tracker local
+## Elegir el tracker
 
-Con `tracker.kind: "local"`, las specs y los tickets son archivos markdown bajo `.scratch/` del worktree principal (sin versionar): `.scratch/<slug>/spec.md` y `.scratch/<slug>/issues/<NN>-<slug>.md`, cada uno con líneas `Status:` y `Blocked by:` y comentarios bajo `## Comments`. El coordinador los lee y escribe mediante `emet tracker` (`create-spec`, `create-ticket`, `read`, `frontier`, `set-state`, `comment`, `close`). `emet init --tracker local` lo configura. Consulta el [ADR-0011](../adr/0011-local-tracker-scratch-convention.md).
+:::steps
 
-## Aterrizaje
+1. Define `tracker.kind` en `emet.config.json` como `"linear"`, `"github"` o `"local"`.
+2. Para un tracker local, ejecuta `emet init --tracker local`. Las specs y los tickets son entonces archivos markdown bajo `.scratch/` del worktree principal (sin versionar): `.scratch/<slug>/spec.md` y `.scratch/<slug>/issues/<NN>-<slug>.md`, cada uno con líneas `Status:` y `Blocked by:` y comentarios bajo `## Comments`. El coordinador los lee y escribe mediante `emet tracker`. Consulta el [ADR-0011](../adr/0011-local-tracker-scratch-convention.md).
+3. Para los demás tipos, confirma el requisito previo correspondiente de arriba.
 
-`landing.mode` es `"pr"` (por defecto) o `"merge"`, independiente del tracker. En modo `merge` una oleada aterriza como un único merge local en la rama troncal con `emet land`, con `commands.selfCheck` en lugar de la CI y sin push. `gh` solo es obligatorio cuando el tracker es `github` o el aterrizaje es `pr`. Consulta el [ADR-0010](../adr/0010-local-merge-landing.md).
+:::
 
-`landing.unit` fija qué aterriza de una vez: `"spec"` (por defecto) aterriza la spec entera de una vez, `"wave"` conserva la regla anterior de que cada oleada aterriza sola. Consulta el [ADR-0037](../adr/0037-landing-per-spec.md), que sustituye al [ADR-0004](../adr/0004-one-wave-one-dependency-layer-one-pr.md).
+## Elegir cómo aterriza una spec
 
-### Rama de la spec
+:::steps
 
-Con `landing.unit: "spec"`, el coordinador crea `spec/<id>` desde la rama troncal con `emet spec-branch ensure --spec <id>`. Cuando una oleada pasa la revisión y `commands.selfCheck`, `emet spec-branch integrate` fusiona la rama de la oleada en `spec/<id>` con `--no-ff` y un commit con los trailers `Emet-Wave` y `Emet-Tickets`. Un ticket cuya rama está en `spec/<id>` está **Integrated**, no **Landed**: cuenta como bloqueador cerrado para la frontera de la siguiente oleada, pero el tracker lo mantiene abierto hasta el aterrizaje final. Las oleadas posteriores parten de la punta de `spec/<id>`, de modo que ninguna oleada espera a la CI de un PR.
+1. Define `landing.mode` como `"pr"` (por defecto) o `"merge"`. En modo `merge`, una spec aterriza como un único merge local en la rama troncal (`emet spec-branch land`, o `emet land` por oleada con `landing.unit: "wave"`), `commands.selfCheck` hace las veces de CI y no se hace push. Consulta el [ADR-0010](../adr/0010-local-merge-landing.md).
+2. Define `landing.unit` como `"spec"` (por defecto, la spec entera aterriza de una vez) o `"wave"` (cada oleada aterriza sola). Consulta el [ADR-0037](../adr/0037-landing-per-spec.md).
+3. Con `landing.unit: "spec"`, define `worktree.baseRef: "head"` en los ajustes de Claude Code para que los worktrees de los workers partan de la rama `spec/<id>`. `emet preflight` y `emet doctor` lo comprueban.
+4. En modo `pr`, define `landing.specMergeMethod` (un commit de merge por defecto) con un método que permitan los ajustes del repositorio y el ruleset de la rama troncal; `emet doctor` avisa cuando no lo permiten.
+5. Para controlar el merge, define `pr.autoMerge` (por defecto `true`) y `pr.maxCiFixAttempts`. Define `pr.mergeMethod` solo con `landing.unit: "wave"`; un pull request de spec usa `landing.specMergeMethod` del paso 4 e ignora este. Una oleada con cualquier cosa marcada nunca se fusiona automáticamente.
 
-`emet spec-branch sync` fusiona la rama troncal en `spec/<id>` y nunca hace rebase; ante un conflicto aborta, deja la rama sin cambios y sale con un valor distinto de cero. `emet spec-branch land` ejecuta `sync` y después aterriza la rama una vez. En modo `pr` envía `spec/<id>`, abre un PR con una línea `Closes #N` por cada ticket de cada oleada integrada, espera sus comprobaciones y lo fusiona con `landing.specMergeMethod` (por defecto un commit de merge, ignorando `pr.mergeMethod`). En modo `merge` fusiona `spec/<id>` con `--no-ff` en la rama troncal local y nunca hace push. `--partial` aterriza solo las oleadas integradas hasta el momento. `emet spec-branch abandon --spec <id> --force` etiqueta la rama como `abandoned/spec-<id>`, la elimina y devuelve a `ready-for-agent` los tickets integrados de un tracker local.
+:::
 
-El modo spec requiere `worktree.baseRef: "head"` en los ajustes de Claude Code para que los worktrees de los workers partan de la rama de la spec; `emet preflight` y `emet doctor` lo comprueban. `emet doctor` también avisa cuando el modo es `pr` y los ajustes del repositorio o el ruleset de la rama troncal no permiten el `landing.specMergeMethod` configurado.
+Los comandos de la rama de la spec (`emet spec-branch ensure`, `integrate`, `sync`, `land`, `abandon`) los maneja el coordinador; sus banderas están en la [referencia de la CLI](../reference/cli.md).
 
-### PRs de aterrizaje
+## Encadenar oleadas
 
-Con `landing.unit: "spec"` el PR es el de la spec: un PR para todas las oleadas integradas, abierto por `emet spec-branch land` tras la última oleada. Con `landing.unit: "wave"`, una oleada es un PR. El cuerpo del PR lleva una línea `Closes #N` por cada ticket (la palabra clave de cierre del tracker), y el coordinador mueve los tickets a en revisión cuando abre el PR. Después el PR se fusiona según `pr.autoMerge`, o se deja abierto cuando la oleada fue marcada, `autoMerge` es `false` o se agotaron las correcciones de CI (entonces el PR recibe la etiqueta de decisión humana). Tras un merge, `emet tracker close` cierra los tickets en un tracker de GitHub y `emet cleanup --run <runId>` libera las ramas, las reclamaciones de tickets y los espacios de workers de la oleada. También elimina cada rama local cuyo PR se fusionó en el commit de la punta de la rama, incluida la rama de integración.
+Las oleadas posteriores se ejecutan en sus propias sesiones. El encadenamiento está desactivado por defecto.
 
-Después de fusionar las ramas de una oleada, `commands.fullSuite` se ejecuta una vez en la rama de integración. Una ejecución en rojo bloquea el PR y `autoChain`. La compuerta recibe el resultado como `--integration`. En una oleada que no es la última de un aterrizaje de spec, el coordinador pasa `--ci` obtenido de `commands.selfCheck`, y solo el aterrizaje final espera a la CI con `emet ci --wait`; la compuerta responde entonces `chain` mientras queden oleadas.
+:::steps
 
-### Quick run
+1. Define la sección `handoff` en `emet.config.json`:
 
-`/emet:run --quick <solicitud>` es el camino corto para un cambio pequeño de un solo ticket, como una errata o una corrección de una línea. Úsalo cuando el cambio no toca ninguna pantalla y cabe en un ticket: superficie nueva dentro de `sizing.inlineMaxLines` y sin alarma de presupuesto de contexto.
+   ```json
+   {
+     "handoff": {
+       "autoChain": true,
+       "launcher": "auto",
+       "permissionMode": "bypassPermissions"
+     }
+   }
+   ```
 
-Se salta la entrevista y la planificación largas: una ronda de `grilling`, sin `domain-modeling`, sin canvas y sin rondas de frontera. La spec contiene un ticket `folded` que cubre todos los `S#`, y das una única aprobación. Después corre un worker en un worktree, seguido de `emet verify`, el paso de living specs cuando `specs.enabled`, `emet assess --quick`, el revisor salvo que el nivel sea `passive`, y `emet gate`. No hay `emet chain`.
+2. En Claude Code, asegúrate de que `claude` esté en el `PATH` con compatibilidad con `--bg`, de que el espacio de trabajo sea de confianza (abre `claude` de forma interactiva en el repositorio una vez y acéptalo) y de que la advertencia de bypass se haya aceptado una vez en una sesión interactiva (`skipDangerousModePermissionPrompt`).
+3. En Codex, asegúrate de que `codex` esté en el `PATH` en la versión `codex.minVersion` o posterior, con `--json` y `--output-schema` en `codex exec`; la siguiente oleada se inicia como un `codex exec` desacoplado. Consulta [Ejecutar emet en Codex](use-codex.md).
+4. Define `handoff.launcher` (solo Claude Code) como `auto`, `orca` o `bg` para elegir si la oleada también abre una pestaña de Orca. `permissionMode` es solo de Claude Code; en Codex la sesión encadenada usa `codex.sandbox`.
+5. Para iniciar una oleada en otra sesión a mano, ejecuta `emet launch <spec-id> --wave <n>` y no un `claude --bg` a secas. Imprime `{ name, id, attach, orcaTab: { opened, reason } }`.
 
-Una **Quick run** tiene una sola **oleada**, así que siempre aterriza por oleada, como PR o como merge local, sin importar `landing.unit`: `emet approve --quick` registra `mode: "quick"` y no se crea ni se espera ninguna rama de spec.
+:::
 
-Un diff de alto riesgo la detiene. `emet assess --quick` sale con código 1 cuando el nivel es `high`; el Gate lo trata como un **Stop**: no se hace auto-merge, el PR queda abierto y el informe final nombra los motivos del alto riesgo.
+El encadenamiento solo lanza cuando el PR se fusionó y nada quedó marcado, se omite si ya hay una sesión `emet-<spec-id>-*` activa y recurre a imprimir `/emet:run --dispatch <spec-id>` si el lanzamiento falla. Inspecciona una oleada encadenada con `claude agents` o `claude attach emet-<spec-id>-w<n>`.
 
-Antes de la aprobación, la ejecución se detiene y recomienda `/emet:run` sin `--quick` cuando el cambio toca una pantalla o no cabe en un ticket. `--quick` no se puede combinar con `--draft` ni con `--dispatch`; `--no-promote` se acepta.
+## Definir presupuestos y funciones opcionales
 
-### Encadenar oleadas
+:::steps
 
-Las oleadas posteriores se ejecutan en sus propias sesiones, nunca en la que ejecutó la oleada 1. Dos secciones opcionales de `emet.config.json` controlan lo que ocurre después (ambas validadas por `emet preflight`):
+1. Define la sección `budgets` si los valores por defecto no te sirven:
 
-```json
-{
-  "pr": { "autoMerge": true, "mergeMethod": "squash", "maxCiFixAttempts": 2 },
-  "handoff": {
-    "autoChain": false,
-    "launcher": "auto",
-    "permissionMode": "bypassPermissions"
-  }
-}
-```
+   ```json
+   { "budgets": { "workerAttempts": 2, "reviewRounds": 2, "stallNudgeCap": 6 } }
+   ```
 
-- `pr.autoMerge` (por defecto `true`): espera los checks del PR y lo fusiona; sin checks, lo fusiona de inmediato. Un check que falla se corrige y se sube, hasta `maxCiFixAttempts` veces, y luego el PR se deja abierto para una persona. Una oleada con cualquier cosa marcada nunca se fusiona automáticamente.
-- `handoff.autoChain` (por defecto `false`): tras una oleada limpia y fusionada con más oleadas pendientes, lanza la siguiente con `claude --bg` en lugar de imprimir `/emet:run --dispatch <spec-id>`. Inspecciónala con `claude agents` / `claude attach emet-<spec-id>-w<n>`. Requisitos en Claude Code:
-  1. `claude` en el PATH, con compatibilidad con `--bg`.
-  2. Un espacio de trabajo de confianza. `--bg` se ejecuta sin interacción, así que el diálogo de confianza nunca aparece; abre `claude` de forma interactiva en el repositorio una vez y acéptalo.
-  3. La advertencia de bypass aceptada una vez en una sesión interactiva (`skipDangerousModePermissionPrompt`), ya que la siguiente oleada se ejecuta en `handoff.permissionMode` (abajo), no en el modo de la sesión que la lanza.
+   `workerAttempts` es cuántas veces puede fallar un ticket en `verify` antes de diferirse; `reviewRounds` es cuántas rondas de revisión recibe un ticket antes de una escalada (las rondas de corrección tienen su propio `budgets.fixRounds`, por defecto 2); `stallNudgeCap` es cuántas veces se empuja a un worker detenido. Consulta [Revisión y compuertas](../concepts/review-and-gates.md).
 
-  En el host de Codex, la siguiente oleada se inicia como un `codex exec` desacoplado (consulta `handoff.launcher` abajo), así que el requisito es `codex` en el PATH en la versión `codex.minVersion` o posterior, con `--json` y `--output-schema` en `codex exec`; `emet doctor` comprueba las banderas, no el número de versión. El diálogo de confianza y la advertencia de bypass de Claude no se aplican. Si Codex necesita un espacio de trabajo de confianza para una ejecución desacoplada no está verificado en la documentación de este repositorio.
+2. Define `specs.enabled` para mantener [specs vivas](../concepts/living-specs.md) en `docs/specs/` (`specs.dir`).
+3. Ejecuta `emet map` para escribir un mapa del código en `docs/agents/codebase.md` (`map.path`). `emet map --stale` termina con código 1 cuando HEAD ha avanzado más allá del sello.
+4. Ejecuta `emet metrics --run <id>` tras una ejecución para ver tokens, costo y tiempo de reloj por ticket, oleada y ejecución.
 
-  Solo se lanza cuando el PR se fusionó y nada quedó marcado, y se omite si ya hay una sesión `emet-<spec-id>-*` activa (`claude agents --json`). Si el lanzamiento falla, recurre a imprimir `/emet:run --dispatch <spec-id>`.
+:::
 
-- `handoff.launcher` (por defecto `auto`): abre además la oleada en una pestaña de Orca que ejecuta `claude attach`. `auto` consulta el runtime de Orca (`orca status`), por lo que también funciona desde sesiones `claude --bg`, que no tienen `TERM_PROGRAM`; `orca` siempre lo intenta, `bg` nunca. `launcher` se aplica solo al host de Claude Code; en Codex `emet launch` siempre se comporta como `bg`. La oleada se ejecuta en segundo plano de cualquier forma, y una pestaña que no logra abrirse nunca detiene la cadena.
+Para un cambio pequeño de un solo ticket, inicia `/emet:run --quick <solicitud>` en lugar del pipeline completo; siempre aterriza por oleada y se detiene ante un diff de alto riesgo.
 
-  `emet launch <spec-id> --wave <n>` hace todo el lanzamiento (comprobación de sesión duplicada, `claude --bg`, pestaña) e imprime `{ name, id, attach, orcaTab: { opened, reason } }`. Úsalo, y no un `claude --bg` a secas, siempre que quieras una oleada en otra sesión a mano.
+## Comprobar
 
-  En el Agent host de Codex, `emet launch` inicia un `codex exec` desacoplado que ejecuta `$emet:run --dispatch <spec-id>` y registra su id de hilo. No abre ninguna pestaña de Orca, y `codex exec resume <id>` continúa la sesión. Consulta la [referencia de la CLI](../reference/cli.md#host-de-codex) y [Ejecutar emet en Codex](codex.md).
+:::steps
 
-- `handoff.permissionMode` (por defecto `bypassPermissions`): solo Claude Code; modo de permisos de la sesión encadenada. En el host de Codex se ignora y la sesión encadenada usa `codex.sandbox` (por defecto `danger-full-access`; consulta [Ejecutar emet en Codex](codex.md)). No se hereda de la sesión que la lanza, porque el clasificador del modo `auto` puede denegar un paso como `gh pr merge` y dejar una oleada a medias. Tus reglas `permissions.deny` siguen aplicándose, pero la advertencia de bypass debe haberse aceptado una vez de forma interactiva (`skipDangerousModePermissionPrompt`).
+1. Ejecuta `emet preflight`; valida las secciones `tracker`, `landing`, `pr`, `handoff` y `budgets` y termina con código 2 si la configuración está mal formada.
+2. Ejecuta `emet doctor .` y confirma que ningún fallo nombre el tracker, `gh`, el servidor MCP de Linear ni los ajustes de aterrizaje.
+3. Para un tracker local, ejecuta `emet tracker frontier --spec <slug>` y confirma que lista los tickets que esperas.
 
-## Compuertas, presupuestos y registros
-
-Las fases no deciden por sí solas cuándo un ticket está terminado, es fusionable o vale la pena reintentarlo. Llaman a un comando de la CLI que lee un registro en disco e imprime la decisión. Los registros de ejecución viven en `.emet/runs/<run-id>/` y el libro de revisión en `.emet/review/`, en el checkout principal, no en el worktree de un worker. Cada comando imprime su uso con `--help`. La tabla de comandos y lo que cada uno hace cumplir está en [Compuertas y registros](../reference/cli.md#compuertas-y-registros).
-
-**Presupuestos** (`emet.config.json`, todos opcionales):
-
-```json
-{ "budgets": { "workerAttempts": 2, "reviewRounds": 2, "stallNudgeCap": 6 } }
-```
-
-- `workerAttempts`: cuántas veces puede fallar un ticket en `verify` antes de que la compuerta responda `defer`. El ticket recibe la etiqueta de diferido y el resto de la oleada continúa. Un fallo del entorno, como que el comando de pruebas termine con 126/127 o una caída del proveedor, pausa la ejecución sin gastar un intento.
-- `reviewRounds`: cuántas rondas de revisión/corrección recibe un ticket antes de una escalada al siguiente nivel de modelo. Lo que siga abierto después de eso recibe un dictamen.
-- `stallNudgeCap`: cuántas veces se empuja a un worker detenido. El conteo nunca se reinicia.
-
-## Specs vivas, mapa y métricas
-
-**Specs vivas.** Actívelas con `specs.enabled`. En la última oleada de una spec, antes de su revisión, el coordinador escribe los deltas de requisitos de la spec, ejecuta una vez `emet spec-merge --spec <id>` para fusionarlos en `docs/specs/<area>.md` (`specs.dir`) y confirma el resultado, de modo que se revisa y aterriza en el mismo PR. Comprueba todas las áreas antes de escribir nada. Un conflicto, o un requisito que perdería un escenario, termina con código 1 y deja todos los archivos intactos; el coordinador reintenta una vez, y si falla aterriza sin la actualización y lo señala.
-
-**Mapa del código.** `emet map` escribe un resumen de una base de código existente (stack, estructura, convenciones, pruebas, puntos calientes) en `docs/agents/codebase.md` (`map.path`), sellado con el SHA del commit a partir del cual se construyó. El mismo commit siempre produce el mismo archivo. `emet map --stale` termina con código 1 cuando HEAD ha avanzado más allá del sello, y `emet preflight` avisa en ese caso. `emet map --for <globs>` imprime solo las secciones que coinciden con las superficies de edición de un ticket. Esa salida es la única parte del mapa que incluye el brief de un worker.
-
-**Métricas.** `emet metrics --run <id>` informa tokens, costo equivalente en API y tiempo de reloj por ticket, por oleada y por ejecución, leídos de las transcripciones de sesión. También compara el presupuesto de contexto estimado por ticket con lo que realmente usó cada worker. Su resumen va al final del informe final de la ejecución.
+:::

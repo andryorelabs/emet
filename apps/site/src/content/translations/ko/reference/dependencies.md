@@ -2,7 +2,7 @@
 title: 의존성
 description: emet이 머신에서 필요로 하는 것과 각 항목을 확인하는 명령을 설명합니다.
 seoTitle: emet 의존성
-sourceHash: 54f288bd696fe862
+sourceHash: d29472c96a3da69f
 ---
 
 emet이 머신에서 필요로 하는 것과 각 항목을 확인하는 명령입니다. 용어는 [GLOSSARY.md](../../GLOSSARY.md)를 따릅니다. [README](../../README.md)로 돌아가기.
@@ -12,7 +12,7 @@ emet이 머신에서 필요로 하는 것과 각 항목을 확인하는 명령�
 먼저 두 에이전트 호스트가 공통으로 필요로 하는 것을, 그다음 각 호스트가 추가하는 것을 나열합니다.
 
 - **[bun](https://bun.sh)**: 소스 설치에만 필요합니다. 독립 실행형 바이너리에는 런타임이 필요 없습니다.
-- **`sha256sum` 또는 `shasum`**: `install.sh` 릴리스 에셋(`curl -fsSL https://emet.andryore.dev/install.sh | sh`)이 다운로드를 검증하는 데 사용합니다. `emet self install` 자체에는 둘 다 필요하지 않습니다.
+- **`sha256sum` 또는 `shasum`**: 릴리스 설치 스크립트([설치](../start/install.md) 참고)가 다운로드를 검증하는 데 사용합니다. `emet self install` 자체에는 둘 다 필요하지 않습니다.
 - **`git`**: 실행 시 필수입니다. 거의 모든 하위 명령이 git을 호출합니다.
 - **인증된 `gh` CLI**: 트래커가 `github`이거나 랜딩이 `pr`일 때 필수입니다. PR은 항상 이것을 사용합니다. `tracker.kind: "local"`이고 `landing.mode: "merge"`이면 `gh`는 필요 없습니다.
 - **`mattpocock-skills` 플러그인**: 인터뷰, 스펙, 티켓 단계는 그곳에 있는 스킬을 호출합니다. Claude Code에서는 `claude-plugins-official` 마켓플레이스에서 받으며, Codex는 [Codex 호스트](#codex-호스트)를 참고하세요.
@@ -30,7 +30,7 @@ emet이 머신에서 필요로 하는 것과 각 항목을 확인하는 명령�
 
 ## Codex 호스트
 
-`agentHost`가 `"codex"`일 때만 필요합니다. [Codex 가이드](../guide/codex.md)를 참고하세요. `emet-worker`와 `emet-reviewer` 에이전트는 여기서 사용하지 않습니다.
+`agentHost`가 `"codex"`일 때만 필요합니다. [Codex 가이드](../how-to/use-codex.md)를 참고하세요. `emet-worker`와 `emet-reviewer` 에이전트는 여기서 사용하지 않습니다.
 
 - **`codex` CLI**: 로그인된 상태에서 `codex.minVersion`(기본값 `0.167.0`) 이상의 버전. `emet doctor`는 `codex exec --help`에 `--json`과 `--output-schema`가 나오는지 확인합니다.
 - Codex의 **`mattpocock-skills` 플러그인**: `codex plugin list`로 확인합니다.

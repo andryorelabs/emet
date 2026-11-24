@@ -2,7 +2,7 @@
 title: Konfigurationsreferenz
 description: Jeder Schlüssel in emet.config.json mit Standardwert und Bedeutung.
 seoTitle: emet-Konfigurationsreferenz
-sourceHash: e6fb30702c28d97e
+sourceHash: 23bd286ba357cde6
 ---
 
 Jeder Schlüssel in `emet.config.json` mit Standardwert und Bedeutung. Die maßgebliche Quelle ist [`emet/schema/emet.config.schema.json`](../../emet/schema/emet.config.schema.json). Die Begriffe folgen [GLOSSARY.md](../../GLOSSARY.md). Zurück zur [README](../../README.md).
@@ -191,17 +191,17 @@ Modell und Aufwand pro Rolle für den Claude-Code-Host; der Codex-Host liest sta
 
 ## agentHost
 
-`agentHost` (Standard `"claude"`): der Agent-Host, in dem ein Lauf ausgeführt wird, `"claude"` oder `"codex"`. Siehe den [Codex-Leitfaden](../guide/codex.md).
+`agentHost` (Standard `"claude"`): der Agent-Host, in dem ein Lauf ausgeführt wird, `"claude"` oder `"codex"`. Siehe den [Codex-Leitfaden](../how-to/use-codex.md).
 
 ## codex
 
 Wird nur gelesen, wenn `agentHost` `"codex"` ist. Alle Schlüssel sind optional. Der Aufwand ist einer von `low`, `medium`, `high`, `xhigh`, `max`; `ultra` wird nie akzeptiert.
 
-- `models.worker`, `models.workerOverride`, `models.reviewer.medium`, `models.reviewer.high`, `models.triage`: jeweils `{ "model", "effort", "fallback" }`. `fallback` listet die Slugs, die der Reihe nach versucht werden, wenn `model` im Modell-Cache von Codex fehlt. Die Standardwerte stehen unter [Modelle und Aufwand](../guide/models-and-effort.md).
+- `models.worker`, `models.workerOverride`, `models.reviewer.medium`, `models.reviewer.high`, `models.triage`: jeweils `{ "model", "effort", "fallback" }`. `fallback` listet die Slugs, die der Reihe nach versucht werden, wenn `model` im Modell-Cache von Codex fehlt. Die Standardwerte stehen unter [Modelle und Aufwand](../how-to/choose-models.md).
 - `models.session`: `{ "model", "effort", "planEffort", "fallback" }` für die Sitzung, die `$emet:run` ausführt. `planEffort` gilt bis zur ersten Freigabe.
 - `effort`: wenn gesetzt, ersetzt er den Aufwand aller Rollen.
 - `minVersion` (Standard `0.167.0`): die älteste Version der `codex`-CLI, die emet unterstützt. `emet doctor` vergleicht die installierte Version nicht damit.
-- `sandbox` (Standard `danger-full-access`): der Sandbox-Modus, den `emet dispatch`, `emet review-run` und ein Codex-`emet launch` als `-s` übergeben. `workspace-write` wird ebenfalls akzeptiert, macht aber `.git` schreibgeschützt, sodass Worker nicht committen können. Unabhängig vom Wert verweigert `emet guard` `git push` auf Codex, und die erzeugte Overlay-`config.toml` enthält nur den emet-Marketplace und das Plugin, vertrauenswürdige Tabellen für die eigenen Verzeichnisse des Laufs sowie das aufgelöste Modell und den aufgelösten Aufwand (nie deine eigenen Tabellen). Siehe den [Codex-Leitfaden](../guide/codex.md) und [ADR-0022](../adr/0022-codex-workers-run-unsandboxed-by-default.md).
+- `sandbox` (Standard `danger-full-access`): der Sandbox-Modus, den `emet dispatch`, `emet review-run` und ein Codex-`emet launch` als `-s` übergeben. `workspace-write` wird ebenfalls akzeptiert, macht aber `.git` schreibgeschützt, sodass Worker nicht committen können. Unabhängig vom Wert verweigert `emet guard` `git push` auf Codex, und die erzeugte Overlay-`config.toml` enthält nur den emet-Marketplace und das Plugin, vertrauenswürdige Tabellen für die eigenen Verzeichnisse des Laufs sowie das aufgelöste Modell und den aufgelösten Aufwand (nie deine eigenen Tabellen). Siehe den [Codex-Leitfaden](../how-to/use-codex.md) und [ADR-0022](../adr/0022-codex-workers-run-unsandboxed-by-default.md).
 
 ## review
 

@@ -2,7 +2,7 @@
 title: 依赖
 description: emet 在机器上需要什么，以及用哪个命令检查每一项。
 seoTitle: emet 依赖
-sourceHash: 54f288bd696fe862
+sourceHash: d29472c96a3da69f
 ---
 
 emet 在机器上需要什么，以及用哪个命令检查每一项。术语遵循 [GLOSSARY.md](../../GLOSSARY.md)。返回 [README](../../README.md)。
@@ -12,7 +12,7 @@ emet 在机器上需要什么，以及用哪个命令检查每一项。术语遵
 先列出两种代理宿主共有的，再列出每种宿主额外需要的。
 
 - **[bun](https://bun.sh)**：仅源码安装需要。独立二进制文件不需要运行时。
-- **`sha256sum` 或 `shasum`**：`install.sh` 发布资产（`curl -fsSL https://emet.andryore.dev/install.sh | sh`）用它来验证下载。`emet self install` 本身两者都不需要。
+- **`sha256sum` 或 `shasum`**：发布的安装脚本（参见[安装](../start/install.md)）用它来验证下载。`emet self install` 本身两者都不需要。
 - **`git`**：运行时必需。几乎每个子命令都会调用它。
 - **已认证的 `gh` CLI**：当跟踪器是 `github` 或落地方式是 `pr` 时必需。PR 始终使用它。如果 `tracker.kind: "local"` 且 `landing.mode: "merge"`，则不需要 `gh`。
 - **`mattpocock-skills` 插件**：访谈、规格和工单阶段会调用其中的技能。在 Claude Code 上它来自 `claude-plugins-official` 市场；Codex 参见 [Codex 宿主](#codex-宿主)。
@@ -30,7 +30,7 @@ emet 在机器上需要什么，以及用哪个命令检查每一项。术语遵
 
 ## Codex 宿主
 
-仅当 `agentHost` 为 `"codex"` 时需要；参见 [Codex 指南](../guide/codex.md)。那里不使用 `emet-worker` 和 `emet-reviewer` 代理。
+仅当 `agentHost` 为 `"codex"` 时需要；参见 [Codex 指南](../how-to/use-codex.md)。那里不使用 `emet-worker` 和 `emet-reviewer` 代理。
 
 - **`codex` CLI**，已登录，版本为 `codex.minVersion`（默认 `0.167.0`）或更新。`emet doctor` 会检查 `codex exec --help` 是否列出 `--json` 和 `--output-schema`。
 - Codex 中的 **`mattpocock-skills` 插件**，通过 `codex plugin list` 探测：

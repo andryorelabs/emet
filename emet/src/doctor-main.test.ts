@@ -229,6 +229,7 @@ describe("doctor run() repo reports", () => {
   test("a dirty repo lists every kind of finding", async () => {
     const repo = makeGitRepo("dirty", {
       ...baseConfig,
+      agentHost: "codex",
       tracker: { kind: "linear" },
       commands: { selfCheck: ["bun run nothing", "definitely-not-a-binary-xyz"] },
     });

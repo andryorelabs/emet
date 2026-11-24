@@ -2,10 +2,15 @@
 title: Modelli e impegno
 description: Come emet sceglie un modello e un livello di ragionamento per ogni ruolo e quali chiavi di configurazione li modificano.
 seoTitle: Modelli e impegno in emet
-sourceHash: 114cc60ff1358691
+sourceHash: 0807a288317cba93
 ---
 
 `/emet` sceglie automaticamente un modello e un livello di ragionamento per ogni ruolo; non c'è nulla da cambiare a mano durante l'esecuzione. Le prime sezioni descrivono l'host Claude Code; l'[host Codex](#host-codex) ha i propri valori predefiniti. Ogni chiave di Claude Code è nel [riferimento della configurazione](../reference/configuration.md#models).
+
+## Prerequisiti
+
+- emet installato; vedi [Installazione](../start/install.md).
+- Un repository con `emet.config.json` (esegui `emet init` se manca).
 
 ## Host Claude Code
 
@@ -78,9 +83,9 @@ Ritara dopo alcune ondate reali quando:
 
 Il run Codex reale nel [report della sonda](../research/codex-probe-report.md) ha usato lo sforzo `low` e il modello risolto più economico (`gpt-6-luna`), e il modello del reviewer è stato risolto tramite la cache.
 
-## Perché un solo reviewer
+## Perché due reviewer nel livello high
 
-Perché un solo reviewer a contesto pulito invece di una ventola di più punti di vista: nessun benchmark pubblico confronta direttamente le due soluzioni, ma una ventola rilegge l'intero diff una volta per ogni punto di vista e in questo repo è rimasta bloccata per oltre un'ora, mentre i resoconti di Anthropic e di terze parti sui modelli di classe Opus suggeriscono che l'aggiornamento del modello valga quanto i punti di vista aggiuntivi. Per un'ondata ad alta posta in gioco su Claude Code, esegui poi `/code-review ultra` a mano; `/emet` non lo invia mai da solo. `/code-review ultra` è un comando di Claude Code; questa pagina non documenta alcun equivalente per Codex.
+Un'ondata `high` sull'host Claude Code riceve la Dual review quando `codex` è nel PATH: il reviewer Claude e un reviewer Codex leggono in parallelo lo stesso pacchetto, e il coordinatore unisce i loro rilievi. Un solo modello condivide i propri punti ciechi, ed è per questo che la seconda lettura viene da un altro modello. Le ondate `medium` mantengono un solo reviewer, quindi il loro costo non cambia, e `review.dual: off` ne esegue sempre uno. Vedi [Review e gate](../concepts/review-and-gates.md) e [ADR-0040](../adr/0040-dual-review-in-the-high-tier.md). Per un'ondata ancora più delicata su Claude Code, puoi anche eseguire poi `/code-review ultra` a mano; `/emet` non lo invia mai da solo. `/code-review ultra` è un comando di Claude Code; questa pagina non documenta alcun equivalente per Codex.
 
 ## Cosa imposti una volta, di persona (Claude Code)
 
@@ -91,3 +96,7 @@ Sull'host Claude Code, `/emet` non può cambiare queste impostazioni durante l'e
 - Un `permissions.defaultMode` in grado di funzionare senza supervisione (`auto`, `acceptEdits` o `bypassPermissions`), più regole `permissions.deny` che bloccano `git push * main|master` e `git push --force *`. `emet doctor` avvisa su entrambi, perché un'ondata che si ferma su una richiesta di permesso o che può forzare il passaggio oltre il branch trunk vanifica lo scopo dell'esecuzione senza supervisione.
 
 Sono punti di partenza, non numeri definitivi. Opus 5.5 è stato lanciato il 2026-09-22, e la scelta di impegno e modello per gli agenti di programmazione è ancora un campo attivo; ritara dopo alcune ondate reali invece di considerare questa tabella definitiva.
+
+## Verifica
+
+Esegui `emet doctor`. Avvisa quando `model: "opusplan"`, l'impegno di sessione o `permissions.defaultMode` in `~/.claude/settings.json` differiscono dai punti di partenza indicati sopra.

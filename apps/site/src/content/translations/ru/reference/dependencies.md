@@ -2,7 +2,7 @@
 title: Зависимости
 description: Что нужно emet на машине и какая команда проверяет каждый пункт.
 seoTitle: Зависимости emet
-sourceHash: 54f288bd696fe862
+sourceHash: d29472c96a3da69f
 ---
 
 Что нужно emet на машине и какая команда проверяет каждый пункт. Термины соответствуют [GLOSSARY.md](../../GLOSSARY.md). Назад к [README](../../README.md).
@@ -12,7 +12,7 @@ sourceHash: 54f288bd696fe862
 Сначала то, что общее для обоих хостов агента, затем то, что добавляет каждый хост.
 
 - **[bun](https://bun.sh)**: только для установки из исходников. Автономному бинарному файлу среда выполнения не нужна.
-- **`sha256sum` или `shasum`**: используются ресурсом релиза `install.sh` (`curl -fsSL https://emet.andryore.dev/install.sh | sh`) для проверки загрузки. Сам `emet self install` не нуждается ни в одном из них.
+- **`sha256sum` или `shasum`**: используются скриптом установки релиза (см. [Установка](../start/install.md)) для проверки загрузки. Сам `emet self install` не нуждается ни в одном из них.
 - **`git`**: нужен во время работы. Почти каждая подкоманда вызывает его через оболочку.
 - **CLI `gh` с авторизацией**: нужен, если трекер — `github` или посадка выполняется через `pr`. PR всегда используют его. При `tracker.kind: "local"` и `landing.mode: "merge"` `gh` не требуется.
 - **Плагин `mattpocock-skills`**: фазы интервью, спецификации и тикетов вызывают навыки, которые находятся в нём. В Claude Code он берётся из маркетплейса `claude-plugins-official`; о Codex см. [Хост Codex](#хост-codex).
@@ -30,7 +30,7 @@ sourceHash: 54f288bd696fe862
 
 ## Хост Codex
 
-Только когда `agentHost` равен `"codex"`; см. [руководство по Codex](../guide/codex.md). Агенты `emet-worker` и `emet-reviewer` там не используются.
+Только когда `agentHost` равен `"codex"`; см. [руководство по Codex](../how-to/use-codex.md). Агенты `emet-worker` и `emet-reviewer` там не используются.
 
 - **CLI `codex`** с выполненным входом, версии `codex.minVersion` (по умолчанию `0.167.0`) или новее. `emet doctor` проверяет, что `codex exec --help` перечисляет `--json` и `--output-schema`.
 - **Плагин `mattpocock-skills`** в Codex, проверяется через `codex plugin list`:

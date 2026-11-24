@@ -2,41 +2,39 @@
 title: 在 Codex 上运行 emet
 description: 介绍如何安装 Codex 一侧、选择 Agent 宿主、唯一的一次批准以及已知限制。
 seoTitle: 在 Codex 上运行 emet
-sourceHash: 73105866204493fa
+sourceHash: 71c6c7d0686a6725
 ---
 
-emet 既可以在 Claude Code 上运行，也可以在 Codex CLI 上运行。术语遵循 [GLOSSARY.md](../../GLOSSARY.md)；运行所在的产品称为 **Agent 宿主**。本页介绍 Codex 一侧的安装、宿主的选择、唯一的一次批准以及已知限制。返回[文档索引](../README.md)。
+在 Codex CLI 而不是 Claude Code 上运行 emet 流水线。术语遵循 [GLOSSARY.md](../../GLOSSARY.md)；运行所在的产品称为 **Agent 宿主**。返回[文档索引](../README.md)。
 
-在 Codex 宿主上，流水线保持不变：访谈、规格、工单、一次批准、在 worktree 中并行的 worker、每个波次一次评审，然后落地。变化的只是底层机制。每个 worker 和每个 reviewer 都是由 `emet dispatch` 和 `emet review-run` 启动的独立 `codex exec` 进程，斜杠命令则变成 `$emet:run`、`$emet:init` 和 `$emet:doctor` 技能。Claude Code 路径保持不变。
+波次如何在 Codex 上运行，以及 guard 和沙箱的取舍，请参见[安全](../concepts/security.md)和[运行、波次与规格](../concepts/runs-waves-specs.md)。
+
+## 前提条件
+
+- 版本为 `codex.minVersion`（默认 `0.167.0`）或更新的 `codex` CLI，并已登录。
+- `git` 和 `gh` 在 `PATH` 中；参见[依赖参考](../reference/dependencies.md)。
+- 带有 `emet.config.json` 的仓库（如果没有，请运行 `emet init`）。
 
 ## 安装
 
 :::steps
 
-1. 安装版本为 `codex.minVersion`（默认 `0.167.0`）或更新的 `codex` CLI，并登录。
-2. 在 Codex 中安装 `mattpocock-skills` 插件：
+1. 在 Codex 中安装 `mattpocock-skills` 插件：
 
    ```bash
    codex plugin marketplace add mattpocock/skills
    codex plugin add mattpocock-skills@mattpocock
    ```
 
-3. 使用独立安装来安装 emet。它会把 emet 技能写入 `~/.agents/skills/emet/`，并把 emet 钩子追加到 `$CODEX_HOME/hooks.json`（默认 `~/.codex`），绝不写入 `config.toml`：
+2. 使用[安装](../start/install.md)中的独立安装来安装 emet。它会把 emet 技能写入 `~/.agents/skills/emet/`，并把 emet 钩子追加到 `$CODEX_HOME/hooks.json`（默认 `~/.codex`），绝不写入 `config.toml`。它还会安装终端中的 `emet`，以及 `~/.claude` 下的 Claude Code 命令和代理；这在 Codex 上无害。
 
-   ```bash
-   curl -fsSL https://emet.andryore.dev/install.sh | sh
-   ```
-
-   在 `sh` 之后加上 `-s -- --dry-run` 可预览写入内容。它还会安装终端中的 `emet`，以及 `~/.claude` 下的 Claude Code 命令和代理；这在 Codex 上无害。
-
-4. 信任这些钩子。Codex 在你信任某个钩子之前不会运行它：打开 `/hooks` 并在事件页面按 `t`，或在启动时批准 "Hooks need review" 提示。
-5. 运行 `emet doctor .`。在 Codex 宿主上，它会报告早于 `codex.minVersion` 的 `codex`、`codex exec` 缺少 `--json` 或 `--output-schema` 标志、未被信任的钩子，以及缺少 `mattpocock-skills`（并给出上面的两条命令）。
+3. 信任这些钩子。Codex 在你信任某个钩子之前不会运行它：打开 `/hooks` 并在事件页面按 `t`，或在启动时批准 "Hooks need review" 提示。
 
 :::
 
 ### 可选：Codex 插件
 
-你也可以安装 emet 插件来代替独立安装。仓库附带 `.codex-plugin/plugin.json`，以及 `codex/` 下生成的技能和钩子：
+你也可以安装 emet 插件来代替独立安装：
 
 ```bash
 codex plugin marketplace add andryorelabs/emet
@@ -45,66 +43,51 @@ codex plugin add emet@emet-marketplace
 
 插件不带 `emet` shim，因此终端中的 `emet` 仍然需要独立安装。插件已安装时，`emet self install` 会拒绝执行，除非你传入 `--force`，并且当两者并存时 `emet doctor` 会发出警告。
 
-上面的两条插件命令已在真实的 `codex`（0.167.0）上运行过：在全新的 `CODEX_HOME` 中它们退出码为 0，`codex plugin list` 显示 `emet@emet-marketplace installed, enabled`。本地路径形式 `codex plugin marketplace add <repo>` 的结果相同。
-
 ## 选择 Agent 宿主
 
-在 `emet.config.json` 中设置 `agentHost`：
+:::steps
 
-```json
-{ "agentHost": "codex" }
-```
+1. 在 `emet.config.json` 中设置 `agentHost`（默认值为 `"claude"`）：
 
-默认值为 `"claude"`。`codex` 部分用于设置模型、推理强度、最低版本和沙箱；参见[配置参考](../reference/configuration.md#codex)和[模型与推理强度](models-and-effort.md)。在 Codex 中用 `$emet:run` 启动一次运行。`emet launch <spec> --wave <n>` 会在分离的 `codex exec` 中启动一个波次并记录其线程 id，因此可以用 `codex exec resume <id>` 继续；不会打开 Orca 标签页。
+   ```json
+   { "agentHost": "codex" }
+   ```
 
-## 唯一的一次批准
+2. 如果默认值不合适，在 `codex` 部分设置模型、推理强度、最低版本和沙箱；参见[配置参考](../reference/configuration.md#codex)和[选择模型](choose-models.md)。
+3. 在 Codex 中用 `$emet:run` 启动一次运行。若要从终端启动一个波次，请运行 `emet launch <spec> --wave <n>`；它会启动一个分离的 `codex exec` 并记录其线程 id，因此可以用 `codex exec resume <id>` 继续；不会打开 Orca 标签页。
 
-emet 只在计划之后请求一次批准。在 Claude Code 上这是一个提示；在 Codex 上则是一个钩子：
+:::
 
-- 在 `.emet/runs/spec<id>/approval.json` 存在之前，`emet guard` 会拒绝所有变更（`apply_patch`、`Bash`），写入 `.emet/runs/**/draft/**` 下的除外，原因为 `not approved: send approve <id>`。只要存在没有 `approval.json` 的 `.emet/runs/spec<id>/` 目录，这道关卡就会生效，这正是 `$emet:run` 在第 4 阶段落实规格之后留下的状态。
-- 发送内容恰好是 `approve <id>` 的一行提示即可批准。随后 `UserPromptSubmit` 钩子会用与 `emet approve` 相同的哈希方式写入批准文件。工具输出或模型文本中出现同样的文字不会产生任何效果。
-- 另一种方式是 `/plan $emet:run`：在 Codex 自己的计划模式中批准计划，而不使用钩子。
+## 批准计划
 
-该目录一旦存在，关卡就会失败即关闭：批准文件缺失或无法读取时，变更仍会被拒绝。guard 还会对照工单的 `.emet/surface.json` 检查 `apply_patch` 的每一个路径。
+emet 只在计划之后请求一次批准。在 Codex 上它是一个钩子。
+
+:::steps
+
+1. 等待 `$emet:run` 落实规格。在 `.emet/runs/spec<id>/approval.json` 存在之前，`emet guard` 会拒绝所有变更，原因为 `not approved: send approve <id>`。
+2. 发送内容恰好是 `approve <id>` 的一行提示。`UserPromptSubmit` 钩子会写入批准文件。工具输出或模型文本中出现同样的文字不会产生任何效果。
+3. 另一种方式是以 `/plan $emet:run` 开始，并在 Codex 自己的计划模式中批准计划。
+
+:::
 
 ## emet 更新之后
 
-使用独立安装时，这些钩子只是 `hooks.json` 中的普通条目；如安装步骤所述，通过 `/hooks` 信任一次即可。使用插件时，每次插件更新后，Codex 都会再次要求你信任 emet 插件的 hook，因为插件的内容哈希会变化。要信任它们，请运行 `/hooks`，并在事件页面按 `t` 信任全部，或在启动时批准 "Hooks need review" 提示。在此之前，emet guard 和单一批准都不会运行。
+使用独立安装时，这些钩子只是 `hooks.json` 中的普通条目，并保持受信任状态。使用插件时，每次更新后，Codex 都会再次要求你信任插件的 hook。
 
-当 hook 从未被信任时，`emet doctor` 会发出警告：
+:::steps
 
-`Codex has not trusted the emet plugin hooks, so the emet guard does not run. In Codex, open /hooks and press t to trust them, or approve the "Hooks need review" prompt at startup. Codex asks again after every emet update.`
+1. 打开 `/hooks` 并在事件页面按 `t`，或在启动时批准 "Hooks need review" 提示。在此之前，emet guard 和单一批准都不会运行。
+2. 如果 shim 输出 `release v<version> has no downloadable asset yet`，说明它正在运行缓存的版本。请在几分钟后重试。
 
-发布之后的几分钟内，shim 可能会运行之前缓存的版本。此时它会输出：
+:::
 
-`emet: release v<version> has no downloadable asset yet (it may still be publishing); using the cached v<newest>. Retry in a few minutes.`
+## 检查
 
-## 波次如何运行
+:::steps
 
-- `emet dispatch --role worker` 会检查认领和槽位，创建 `.emet/worktrees/agent-<ticket>`，在 `.emet/runs/<run>/codex-home/` 下构建每次运行专用的 `CODEX_HOME` 覆盖层，并使用解析出的模型和推理强度、`codex.sandbox` 模式（默认 `danger-full-access`）、`--json` 和 `--output-schema` 启动 `codex exec`。事件被捕获到 `.emet/runs/<run>/codex/<ticket>.jsonl`。worker 通过其 `thread.started` 事件的 `threadId` 和该 JSONL 路径来识别；进程 id 只是辅助字段。
-- 覆盖层有两种模式。当独立安装的状态文件存在时，覆盖层的 `config.toml` 会省略 emet 插件和市场表，worker 仍能从 `~/.agents/skills` 看到 emet 技能；在插件模式下则保留它们，如下所述。覆盖层是生成的，而不是链接的。你的 `auth.json` 会以符号链接方式接入（绝不复制），emet 插件缓存在你的 Codex 主目录中存在时会被链接，覆盖层会写入它自己的最小 `config.toml`：本地市场和 `[plugins."emet@emet-marketplace"] enabled = true`、仅针对本次运行自身目录的 `trusted` `[projects."<dir>"]` 表，以及解析出的 `model` 和 `model_reasoning_effort`。你的 `[projects]` 表和其他设置都不会被复制，你的 `~/.codex` 也绝不会被写入。
-- 覆盖层的 `rules/default.rules` 允许 `git add`、`git commit`、`git status`、`git worktree`、`git -C <dir> ...` 以及 `emet` 的子命令 `dispatch`、`review-run`、`launch`、`claims`、`slots`、`results`、`handoff` 和 `ask`，并禁止 `git push`。由于默认沙箱不再阻止写入，`emet guard` 还会拒绝任何 argv 运行 `git push` 的 `Bash` 命令，包括 `git -C <dir> push` 和 `git --git-dir=<dir> push`，无论沙箱如何。
-- worker 从不拥有通往协调者的旁路通道。它通过本次运行的邮箱进行上报：`emet ask --run <run> --ticket <ticket> --body <text>` 记录一个问题并打印其 id，`emet ask ... --wait <n>` 轮询回复（退出码 0 表示打印回复，3 表示等待时间片已过，4 表示 `budgets.askWaitMinutes` 已用尽，此时 worker 写入 BLOCKED 结果并退出）。只要存活的 worker 有未解决的问题，`emet dispatch --wait` 就会打印 `question <ticket> <id>` 而不是结果状态，并且绝不会将该 worker 归类为停滞；协调者读取 `emet inbox --run <run>`，用 `emet reply --run <run> --ticket <ticket> --id <n> --body <text>` 回复，然后继续 `emet dispatch --wait`。已记录的结果始终优先于未解决的问题。参见 [ADR-0023](../adr/0023-cli-owned-mailbox-for-codex-workers.md)。
-- 结果从 `<git-common-dir>/.emet/runs/<run>/results/` 读取，与 `emet results --write` 写入的位置相同，因此位于自己 worktree 中的 worker 也能被找到。
-- `emet review-run` 以只读方式对 `emet review-package` 生成的包运行 reviewer；`passive` 层级不会启动任何进程。
-- 模型会依据运行主目录中的 `models_cache.json` 解析，否则依据你真实 Codex 主目录中的该文件（只读）。已配置但未列出的 slug 会被替换，并记录这次替换；如果什么都解析不出，`emet review-run` 会在调用模型之前失败，并指出角色和已列出的 slug。
-- 用量和停滞检测读取捕获的 JSONL：token 用量来自 `turn.completed` 事件，存活状态来自文件是否在增长，因此位于另一个 pid 命名空间中的 worker 仍会被视为存活。`emet preflight` 和 `emet cleanup` 对可回收的无主 worktree 使用同一条规则（worker 分支、工单已合入、工作区干净、没有他人的锁），因此只有在 cleanup 真的会动手时，preflight 才会提示运行 `emet cleanup`。
+1. 运行 `emet doctor .`。在 Codex 宿主上，它会报告早于 `codex.minVersion` 的 `codex`、`codex exec` 缺少 `--json` 或 `--output-schema` 标志、未被信任的钩子，以及缺少 `mattpocock-skills`。
+2. 使用[故障排除](../troubleshooting.md#codex-host)中对应的条目修复它报告的问题，然后再次运行，直到不再报告失败。
 
-## 真实 Codex 运行的结果
+:::
 
-[探测报告](../research/codex-probe-report.md)在这些改动之后，针对 `codex-cli 0.167.0`（ChatGPT 免费计划，Linux）重新运行了所有检查。此前所有 `failed` 的行现在都是 `verified`：
-
-- 一个 2 波次的流程把 Codex worker 的真实提交合入了主干：波次 1 来自 `emet dispatch`，波次 2 来自由 `emet launch <spec> --wave 2` 启动的会话，该会话从覆盖层的插件缓存中加载了 `$emet:run`。`emet review-run` 在每个流程中都运行了。
-- 可选的 e2e（`EMET_CODEX_E2E=1`）通过：worker 在 `danger-full-access` 下提交，`codex execpolicy check` 对 `git push origin develop` 回答 `forbidden`，对 `git -C <dir> commit` 回答 `allow`。
-- `~/.codex/config.toml` 在探测、e2e 和七个流程中保持了相同的 sha256。
-
-## 限制与 `unverified` 要点
-
-- 推理强度 `ultra` 绝不会被发送，并且在配置中会被拒绝。
-- `danger-full-access` 是 Codex worker 和 `emet launch` 默认的 `codex.sandbox`，因为 `workspace-write` 沙箱会让 `.git` 变为只读，worker 将无法提交。把 `codex.sandbox` 设为 `"workspace-write"` 即可保留沙箱；此时 worker 无法提交。[ADR-0022](../adr/0022-codex-workers-run-unsandboxed-by-default.md) 记录了这一权衡。Claude 路径从不使用它。没有沙箱时，`emet guard` 中对 push 的拒绝和规则文件就是防护措施。
-- 没有 `ScheduleWakeup`、`TaskStop` 或 `LSP` 的对应功能。emet 改为轮询自己的 CLI。
-- `~/.codex/sessions` 下的 rollout 文件没有稳定的格式，因此 emet 读取它自己捕获的 `exec --json` 输出。
-- 已对照真实 CLI 验证，并且仍放在小函数之后，因此 Codex 的变化只会影响一处：带有已链接认证的每次运行专用 `CODEX_HOME`、位于 `rules/default.rules` 的规则文件、`--dangerously-bypass-hook-trust`、钩子命令中的 `CLAUDE_PLUGIN_ROOT` 别名、`codex plugin list` 的输出格式、模型按名称加载技能、嵌套会话内的 `emet dispatch`、模型试图伪造 `approval.json`（被拒绝），以及 `codex plugin marketplace add` 的两种形式。参见[可行性调研](../research/codex-viability.md)。
-- 仍为 `unverified`：在 systemd 或容器下，从无人值守的监督进程运行 Codex（只测试过分离进程）。
-- 探测报告中已知的后续事项：`emet init` 在 `agentHost: "codex"` 时仍把 Claude 模型名写入 `models`，显式的 `emet dispatch --model` 不会依据缓存解析，`emet lock-reason` 会查找 `claude` 祖先进程，以及 worker 已死亡的工单无法重新派发到同一个 worktree。
-- Codex 的模型名称和价格会变化；在真实波次运行之后，需要重新核对价格表。
+已知限制：推理强度 `ultra` 绝不会被发送，并且在配置中会被拒绝；`codex.sandbox` 默认为 `danger-full-access`，以便 worker 可以提交；把它设为 `"workspace-write"` 即可保留沙箱，此时 worker 无法提交。参见 [ADR-0022](../adr/0022-codex-workers-run-unsandboxed-by-default.md) 和[探测报告](../research/codex-probe-report.md)。

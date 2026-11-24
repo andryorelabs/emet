@@ -2,10 +2,15 @@
 title: Modelos y esfuerzo
 description: Cómo emet elige un modelo y un esfuerzo de razonamiento para cada rol, y qué claves de configuración los cambian.
 seoTitle: Modelos y esfuerzo en emet
-sourceHash: 114cc60ff1358691
+sourceHash: 0807a288317cba93
 ---
 
 `/emet` elige automáticamente un modelo y un esfuerzo de razonamiento por rol; no hay nada que cambiar a mano durante una ejecución. Las primeras secciones describen el host de Claude Code; el [host de Codex](#host-de-codex) tiene sus propios valores por defecto. Todas las claves de Claude Code están en la [referencia de configuración](../reference/configuration.md#models).
+
+## Requisitos previos
+
+- emet instalado; consulta [Instalación](../start/install.md).
+- Un repositorio con `emet.config.json` (ejecuta `emet init` si falta).
 
 ## Host de Claude Code
 
@@ -70,17 +75,17 @@ Con `agentHost` en `"codex"`, cada worker y revisor es su propio proceso `codex 
 
 `emet dispatch` y `emet review-run` resuelven cada slug contra `models_cache.json`, que se lee del home de la superposición de la corrida y, si no está ahí, de tu home real de Codex (solo lectura). Conservan un slug que aparece ahí y admite el esfuerzo; si no, siguen la actualización del modelo, luego las alternativas, luego omiten `-m`, y registran cada sustitución; cuando nada se resuelve, `emet review-run` falla antes de la llamada al modelo y nombra el rol y los slugs listados. El `config.toml` de la superposición que genera la corrida también lleva el `model` y el `model_reasoning_effort` resueltos. El esfuerzo `ultra` nunca se envía. El nivel `passive` no inicia ningún revisor.
 
-Reajusta tras unas cuantas olas reales cuando:
+Reajusta tras unas cuantas oleadas reales cuando:
 
 - los workers necesitan varias rondas de corrección: sube `codex.models.worker.effort` o pon una línea `Model:` en el ticket riesgoso;
-- las revisiones de olas de nivel `high` pasan por alto hallazgos: sube `codex.models.reviewer.high.effort`;
-- el registro muestra una sustitución: Codex renombró o retiró un slug, así que actualízalo.
+- las revisiones de oleadas de nivel `high` pasan por alto hallazgos: sube `codex.models.reviewer.high.effort`;
+- el registro muestra una sustitución: Codex renombró o retiró un slug, así que actualiza el slug.
 
 La ejecución real de Codex del [informe de la sonda](../research/codex-probe-report.md) usó el esfuerzo `low` y el modelo resuelto más económico (`gpt-6-luna`), y el modelo del revisor se resolvió a través de la caché.
 
-## Por qué un solo revisor
+## Por qué dos revisores en el nivel high
 
-Por qué un único revisor de contexto limpio en lugar de un abanico de múltiples ángulos: ningún benchmark público compara ambos directamente, pero un abanico vuelve a leer todo el diff una vez por ángulo y se ha quedado colgado durante más de una hora en este repositorio, mientras que informes de Anthropic y de terceros sobre modelos de nivel Opus sugieren que la mejora del modelo aporta tanto como lo harían los ángulos adicionales. Para una oleada de alto riesgo en Claude Code, ejecuta `/code-review ultra` a mano después; `/emet` nunca lo despacha por su cuenta. `/code-review ultra` es un comando de Claude Code; esta página no documenta ningún equivalente en Codex.
+Una oleada `high` en el host de Claude Code recibe la Dual review cuando `codex` está en el PATH: el revisor de Claude y un revisor de Codex leen el mismo paquete en paralelo, y el coordinador fusiona sus hallazgos. Un modelo comparte sus propios puntos ciegos, por eso la segunda lectura viene de otro modelo. Las oleadas `medium` conservan un solo revisor, así que su costo no cambia, y `review.dual: off` siempre ejecuta uno. Consulta [Revisión y compuertas](../concepts/review-and-gates.md) y [ADR-0040](../adr/0040-dual-review-in-the-high-tier.md). Para una oleada de aún más riesgo en Claude Code, también puedes ejecutar `/code-review ultra` a mano después; `/emet` nunca lo despacha por su cuenta. `/code-review ultra` es un comando de Claude Code; esta página no documenta ningún equivalente en Codex.
 
 ## Lo que configuras una vez, tú mismo (Claude Code)
 
@@ -91,3 +96,7 @@ En el host de Claude Code, `/emet` no puede cambiar esto durante una ejecución.
 - Un `permissions.defaultMode` capaz de ejecutarse sin supervisión (`auto`, `acceptEdits` o `bypassPermissions`), más reglas `permissions.deny` que bloqueen `git push * main|master` y `git push --force *`. `emet doctor` avisa de ambos, porque una oleada que se detiene en una solicitud de permiso, o que puede forzar su camino más allá de la rama troncal, anula el sentido de ejecutar sin supervisión.
 
 Son puntos de partida, no cifras definitivas. Opus 5.5 se lanzó el 2026-09-22, y la elección de esfuerzo y modelo para los agentes de programación sigue siendo un área activa; vuelve a ajustar tras unas cuantas oleadas reales en lugar de tratar esta tabla como final.
+
+## Comprobar
+
+Ejecuta `emet doctor`. Avisa cuando `model: "opusplan"`, el esfuerzo de sesión o `permissions.defaultMode` en `~/.claude/settings.json` difieren de los puntos de partida anteriores.
