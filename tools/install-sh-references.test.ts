@@ -19,6 +19,7 @@ const ALLOWED_PATHS: readonly string[] = [
   ".github/workflows/release.yml",
   "scripts/install-remote.sh",
   "tools/release-invariants.test.ts",
+  "tools/install-sh-references.test.ts",
   "apps/site/astro.config.ts",
   "apps/site/docker/",
 ];
