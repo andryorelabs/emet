@@ -31,7 +31,7 @@ Run from the repo root (`bun run check`, `bun run test`), or here with `bun run 
 - Customise in `.tsx` wrappers outside `ui/`. `.astro` files never mount a shadcn component directly: they mount a wrapper island, or use the `*Variants` helpers for static markup.
 - Use `cn` from `@/lib/utils` in hand-written code. The generated ui files import `cn` from the shadcn `cn` package; that is the CLI's output, not an error.
 - Island tests use `renderIsland` from `src/test/render.tsx` on happy-dom, which cannot open Base UI popups: cover open menus, the sheet and search in `e2e/interactions.spec.ts`.
-- Header menus announce themselves with `announceHeaderMenuOpen` and close on `onOtherHeaderMenuOpen` (`src/components/site/header-menu-events.ts`), so only one is open.
+- Header menus announce themselves with `announceHeaderMenuOpen` and close on `onOtherHeaderMenuOpen` (`src/components/site/header-menu-events.ts`), so only one is open. The announcement carries the opening menu's trigger as `source`, and `close` receives it: `MobileMenu` stays open when `source` is inside its panel.
 
 ## Layout
 

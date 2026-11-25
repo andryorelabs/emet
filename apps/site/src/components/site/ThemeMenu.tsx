@@ -1,4 +1,4 @@
-import { useEffect, useId, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 
 import {
   DropdownMenu,
@@ -52,6 +52,7 @@ function ChoiceIcon({ choice }: { choice: ThemeChoice }) {
 export function ThemeMenu({ labels }: ThemeMenuProps) {
   const menuId = `theme-${useId()}`;
   const [open, setOpen] = useState(false);
+  const triggerRef = useRef<HTMLButtonElement>(null);
   const [choice, setChoice] = useState<ThemeChoice>("system");
   const choices = [
     { value: "light", label: labels.light },
@@ -72,12 +73,12 @@ export function ThemeMenu({ labels }: ThemeMenuProps) {
       onOpenChange={(next) => {
         if (next) {
           setChoice(readStoredTheme());
-          announceHeaderMenuOpen(menuId);
+          if (triggerRef.current) announceHeaderMenuOpen(menuId, triggerRef.current);
         }
         setOpen(next);
       }}
     >
-      <DropdownMenuTrigger data-menu="theme-button" aria-label={labels.label}>
+      <DropdownMenuTrigger ref={triggerRef} data-menu="theme-button" aria-label={labels.label}>
         <ChoiceIcon choice="light" />
         <ChoiceIcon choice="dark" />
         <ChoiceIcon choice="system" />

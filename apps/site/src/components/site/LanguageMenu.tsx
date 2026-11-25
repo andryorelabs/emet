@@ -1,4 +1,4 @@
-import { useEffect, useId, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 
 import {
   DropdownMenu,
@@ -28,6 +28,7 @@ interface LanguageMenuProps {
 export function LanguageMenu({ locale, currentPath, labels }: LanguageMenuProps) {
   const menuId = `language-${useId()}`;
   const [open, setOpen] = useState(false);
+  const triggerRef = useRef<HTMLButtonElement>(null);
 
   useEffect(
     () =>
@@ -41,11 +42,12 @@ export function LanguageMenu({ locale, currentPath, labels }: LanguageMenuProps)
     <DropdownMenu
       open={open}
       onOpenChange={(next) => {
-        if (next) announceHeaderMenuOpen(menuId);
+        if (next && triggerRef.current) announceHeaderMenuOpen(menuId, triggerRef.current);
         setOpen(next);
       }}
     >
       <DropdownMenuTrigger
+        ref={triggerRef}
         data-menu="lang-trigger"
         aria-label={`${labels.label}: ${LOCALE_NAMES[locale]}`}
       >
