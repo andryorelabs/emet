@@ -2,7 +2,7 @@
 title: CLI-Referenz
 description: Jeder emet-Unterbefehl, die Tabelle der Gates und Aufzeichnungen, Exit-Codes und Umgebungsvariablen.
 seoTitle: emet-CLI-Referenz
-sourceHash: 7c398958687b5ea3
+sourceHash: cde063f67e8e54d7
 ---
 
 Jeder `emet`-Unterbefehl, die Gates und Aufzeichnungen, Exit-Codes und Umgebungsvariablen. Die Begriffe folgen [GLOSSARY.md](../../GLOSSARY.md). Zurück zur [README](../../README.md). Jeder Befehl gibt seine Verwendung mit `--help` aus.
@@ -320,7 +320,7 @@ Mit `--wait` bedeutet Exit `0` eine Antwort, `3` ein Slice-Timeout und `4` abgel
 - `--no-promote`: überspringt den Schritt.
 - `--hold`: schreibt die Markierung `<run dir>/runs/<id>/no-promote` und gibt `{"held":true}` aus. Solange sie existiert, endet `emet promote --spec <id>` mit 0 und einer `skipped`-Notiz und öffnet keinen Pull Request, sodass `--no-promote` über die Sitzungen einer Spec hinweg erhalten bleibt.
 
-Im Modus `promote` öffnet es einen Pull Request `develop` nach `main` mit dem Titel `chore: 🔖 promote develop`, wartet mit `emet ci --pr <n> --wait` und mergt ihn nur dann mit einem Merge-Commit, wenn der Zustand `pass` ist. Danach, nur wenn `develop` hinter `main` liegt, öffnet es einen Sync-Pull-Request `main` nach `develop`, wartet auf dessen Checks auf dieselbe Weise und mergt ihn nur dann mit einem Merge-Commit, wenn der Zustand `pass` ist. Ein Sync-Pull-Request, dessen Zustand `fail`, `timeout` oder `env-fault` ist oder dessen Merge abgelehnt wird, bleibt offen und ändert nie das Promote-Ergebnis.
+Im Modus `promote` öffnet es einen Pull Request `develop` nach `main` mit dem Titel `chore: 🔖 promote develop`, wartet mit `emet ci --pr <n> --wait` und mergt ihn nur dann mit einem Merge-Commit, wenn der Zustand `pass` ist. Danach, nur wenn `main` Inhalte enthält, die `develop` fehlen (der Vergleich `develop...main` listet mindestens eine geänderte Datei; Merge-Commits allein zählen nicht), öffnet es einen Sync-Pull-Request `main` nach `develop`, wartet auf dessen Checks auf dieselbe Weise und mergt ihn mit [`pr.mergeMethod`](configuration.md#pr) nur dann, wenn der Zustand `pass` ist. Enthält `main` nur Merge-Commits, wird kein Sync-Pull-Request geöffnet, und `syncReason` nennt den Grund. Ein Sync-Pull-Request, dessen Zustand `fail`, `timeout` oder `env-fault` ist oder dessen Merge abgelehnt wird, bleibt offen und ändert nie das Promote-Ergebnis.
 
 Es hängt ein `promote`-Ereignis mit der Pull-Request-Nummer, `merged`, `syncPrNumber`, `syncMerged`, `syncReason`, `rule` und `reason` an das Journal an. `afterSpec` kann eine Regelliste sein; der Modus wird dann anhand der Pfade gewählt, die das Promoten von `develop` mitnähme (siehe [`handoff.afterSpec`](configuration.md#handoff)), und ein fehlschlagendes `git fetch` oder `git diff` lässt den Befehl mit 1 enden, bevor ein Pull Request geöffnet wird.
 

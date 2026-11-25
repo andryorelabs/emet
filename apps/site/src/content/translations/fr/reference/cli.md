@@ -2,7 +2,7 @@
 title: Référence de la CLI
 description: Chaque sous-commande d'emet, le tableau des gates et enregistrements, les codes de sortie et les variables d'environnement.
 seoTitle: Référence de la CLI d'emet
-sourceHash: 7c398958687b5ea3
+sourceHash: cde063f67e8e54d7
 ---
 
 Chaque sous-commande d'`emet`, les gates et enregistrements, les codes de sortie et les variables d'environnement. Les termes suivent [GLOSSARY.md](../../GLOSSARY.md). Retour au [README](../../README.md). Chaque commande affiche son usage avec `--help`.
@@ -320,7 +320,7 @@ Avec `--wait`, le code `0` est une réponse, `3` un dépassement de tranche et `
 - `--no-promote` : saute l'étape.
 - `--hold` : écrit le marqueur `<run dir>/runs/<id>/no-promote` et affiche `{"held":true}`. Tant qu'il existe, `emet promote --spec <id>` se termine avec 0 et une note `skipped` sans ouvrir de pull request, de sorte que `--no-promote` persiste d'une session à l'autre d'une spec.
 
-En mode `promote`, il ouvre une pull request de `develop` vers `main` intitulée `chore: 🔖 promote develop`, attend avec `emet ci --pr <n> --wait`, et la fusionne avec un commit de fusion uniquement quand l'état est `pass`. Ensuite, seulement si `develop` est en retard sur `main`, il ouvre une pull request de synchronisation de `main` vers `develop`, attend ses vérifications de la même manière et la fusionne avec un commit de fusion uniquement quand l'état est `pass`. Une pull request de synchronisation dont l'état est `fail`, `timeout` ou `env-fault`, ou dont la fusion est rejetée, reste ouverte et ne modifie jamais le résultat de promote.
+En mode `promote`, il ouvre une pull request de `develop` vers `main` intitulée `chore: 🔖 promote develop`, attend avec `emet ci --pr <n> --wait`, et la fusionne avec un commit de fusion uniquement quand l'état est `pass`. Ensuite, seulement si `main` contient du contenu qui manque à `develop` (la comparaison `develop...main` liste au moins un fichier modifié ; les commits de fusion seuls ne comptent pas), il ouvre une pull request de synchronisation de `main` vers `develop`, attend ses vérifications de la même manière et la fusionne avec [`pr.mergeMethod`](configuration.md#pr) uniquement quand l'état est `pass`. Quand `main` ne contient que des commits de fusion, aucune pull request de synchronisation n'est ouverte et `syncReason` en donne la raison. Une pull request de synchronisation dont l'état est `fail`, `timeout` ou `env-fault`, ou dont la fusion est rejetée, reste ouverte et ne modifie jamais le résultat de promote.
 
 Il ajoute au journal un événement `promote` avec le numéro de la pull request, `merged`, `syncPrNumber`, `syncMerged`, `syncReason`, `rule` et `reason`. `afterSpec` peut être une liste de règles ; le mode est alors choisi d'après les chemins que la promotion de `develop` apporterait (voir [`handoff.afterSpec`](configuration.md#handoff)), et un `git fetch` ou un `git diff` en échec fait sortir la commande avec 1 avant l'ouverture de toute pull request.
 
