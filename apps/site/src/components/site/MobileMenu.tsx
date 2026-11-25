@@ -84,16 +84,16 @@ export function MobileMenu({ links, locale, labels, children }: MobileMenuProps)
         "--menu-top",
         `${headerBottom(triggerRef.current)}px`,
       );
-      announceHeaderMenuOpen(MENU_ID);
+      if (triggerRef.current) announceHeaderMenuOpen(MENU_ID, triggerRef.current);
     }
     setOpen(next);
   }, []);
 
   useEffect(
     () =>
-      onOtherHeaderMenuOpen(MENU_ID, () => {
+      onOtherHeaderMenuOpen(MENU_ID, (source) => {
         const panel = document.getElementById(PANEL_ID);
-        if (panel?.contains(document.activeElement)) return;
+        if (panel?.contains(source)) return;
         setOpen(false);
       }),
     [],

@@ -159,7 +159,7 @@ describe("ThemeMenu", () => {
     await openMenu();
     expect(items().length).toBe(3);
     await settle(() => {
-      announceHeaderMenuOpen("language-other");
+      announceHeaderMenuOpen("language-other", document.body);
     });
     expect(items().length).toBe(0);
   });

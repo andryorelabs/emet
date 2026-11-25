@@ -101,9 +101,8 @@ describe("MobileMenu", () => {
     const { unmount } = mount();
     await tap(trigger());
     expect(sheet()).not.toBeNull();
-    if (document.activeElement instanceof HTMLElement) document.activeElement.blur();
     await act(async () => {
-      announceHeaderMenuOpen("theme-1");
+      announceHeaderMenuOpen("theme-1", document.body);
       await settle();
     });
     expect(sheet()).toBeNull();
@@ -115,10 +114,8 @@ describe("MobileMenu", () => {
     await tap(trigger());
     const control = document.querySelector<HTMLElement>("[data-controls]");
     if (control === null) throw new Error("no controls");
-    control.tabIndex = 0;
-    control.focus();
     await act(async () => {
-      announceHeaderMenuOpen("theme-1");
+      announceHeaderMenuOpen("theme-1", control);
       await settle();
     });
     expect(sheet()).not.toBeNull();
