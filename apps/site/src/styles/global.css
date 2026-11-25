@@ -1,6 +1,6 @@
 /**
  * Website stylesheet entry: Tailwind 4 with the brand tokens mapped into its
- * theme, so utilities such as `bg-bg`, `text-muted` or `font-mono` use them.
+ * theme, so utilities such as `bg-bg`, `text-muted-foreground` or `font-mono` use them.
  * `--font-sans` and `--font-mono` share Tailwind's names, and the unlayered
  * tokens override Tailwind's layered defaults, so they need no mapping.
  * The shadcn variables (`--background`, `--primary`, ...) are aliases of those

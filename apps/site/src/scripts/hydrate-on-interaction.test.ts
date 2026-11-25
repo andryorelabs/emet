@@ -1,4 +1,4 @@
-import { describe, expect, mock, test } from "bun:test";
+import { describe, expect, mock, spyOn, test } from "bun:test";
 
 import { hydrateOnInteraction, INTERACTION_EVENTS } from "./hydrate-on-interaction";
 
@@ -68,5 +68,32 @@ describe("hydrateOnInteraction", () => {
     await wait(REPLAY_WAIT_MS);
     expect(hydrate).toHaveBeenCalledTimes(1);
     expect(root.click).not.toHaveBeenCalled();
+  });
+
+  test("stops suppressing clicks and replays them when loading fails", async () => {
+    const root = new FakeRoot();
+    const failure = Promise.withResolvers<() => Promise<void>>();
+    const errors = spyOn(console, "error").mockImplementation(() => undefined);
+    hydrateOnInteraction(root, () => failure.promise);
+    root.dispatchEvent(new Event("touchstart"));
+    root.dispatchEvent(new Event("click", { cancelable: true }));
+    failure.reject(new Error("chunk 404"));
+    await wait(REPLAY_WAIT_MS);
+    const later = new Event("click", { cancelable: true });
+    root.dispatchEvent(later);
+    expect(later.defaultPrevented).toBe(false);
+    expect(root.click).toHaveBeenCalledTimes(1);
+    expect(errors).toHaveBeenCalledTimes(1);
+    errors.mockRestore();
+  });
+
+  test("replays a click whose target is an icon inside a clickable ancestor", async () => {
+    const { root, finishLoading } = setup();
+    const icon = Object.assign(new EventTarget(), { parentElement: root });
+    root.dispatchEvent(new Event("touchstart"));
+    root.dispatchEvent(Object.defineProperty(new Event("click"), "target", { value: icon }));
+    finishLoading();
+    await wait(REPLAY_WAIT_MS);
+    expect(root.click).toHaveBeenCalledTimes(1);
   });
 });

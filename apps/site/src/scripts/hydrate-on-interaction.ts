@@ -22,12 +22,28 @@ function isDetached(target: EventTarget): boolean {
 }
 
 /**
- * Whether the target can be clicked programmatically.
- * @param target - The target of a recorded click.
- * @returns A type guard for targets with a `click` method.
+ * Whether the node can be clicked programmatically.
+ * @param node - A node of the recorded click's ancestry.
+ * @returns A type guard for nodes with a `click` method.
  */
-function isClickable(target: EventTarget): target is EventTarget & { click: () => void } {
-  return "click" in target && typeof target.click === "function";
+function isClickable(node: object): node is { click: () => void } {
+  return "click" in node && typeof node.click === "function";
+}
+
+/**
+ * The nearest node from the target upwards that can be clicked
+ * programmatically; an SVG icon has no `click` method, but its button does.
+ * @param target - The target of a recorded click.
+ * @returns The target itself or its closest clickable ancestor, if any.
+ */
+function clickableFrom(target: EventTarget): { click: () => void } | undefined {
+  let node: object | undefined = target;
+  while (node) {
+    if (isClickable(node)) return node;
+    const parent: unknown = "parentElement" in node ? node.parentElement : undefined;
+    node = typeof parent === "object" && parent !== null ? parent : undefined;
+  }
+  return undefined;
 }
 
 /**
@@ -50,24 +66,36 @@ export function hydrateOnInteraction(
     earlyClickTargets.push(event.target);
   };
 
+  const replayEarlyClicks = () => {
+    for (const target of earlyClickTargets) {
+      if (isDetached(target)) continue;
+      clickableFrom(target)?.click();
+    }
+  };
+
   const hydrateAndReplay = async () => {
-    const hydrate = await load();
-    root.removeEventListener("click", recordClick, CAPTURE);
-    await hydrate();
+    try {
+      const hydrate = await load();
+      root.removeEventListener("click", recordClick, CAPTURE);
+      await hydrate();
+    } catch (error) {
+      root.removeEventListener("click", recordClick, CAPTURE);
+      replayEarlyClicks();
+      throw error;
+    }
     if (earlyClickTargets.length > 0) {
       await new Promise((resolve) => setTimeout(resolve, HYDRATION_SETTLE_MS));
     }
-    for (const target of earlyClickTargets) {
-      if (isDetached(target)) continue;
-      if (isClickable(target)) target.click();
-    }
+    replayEarlyClicks();
   };
 
   const start = () => {
     for (const type of INTERACTION_EVENTS) {
       root.removeEventListener(type, start, CAPTURE);
     }
-    void hydrateAndReplay();
+    hydrateAndReplay().catch((error: unknown) => {
+      console.error("Island hydration failed", error);
+    });
   };
 
   for (const type of INTERACTION_EVENTS) {

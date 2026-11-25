@@ -294,12 +294,52 @@ const shadcnRules = {
 } satisfies Linter.RulesRecord;
 
 /**
- * The Website's `.astro` files, which still style themselves with hook
- * classes declared in plain stylesheets and `<style>` blocks. Until each is
- * migrated to shadcn wrappers, the three rules that flag those hooks are off
- * for them; the other `shadcn/*` rules already apply.
+ * The Website's `.astro` files that still style themselves with hook classes
+ * declared in plain stylesheets and `<style>` blocks. Until each is migrated
+ * to shadcn wrappers, the three rules that flag those hooks are off for the
+ * files listed here and nowhere else: a new `.astro` file gets every `shadcn/*`
+ * rule, and a ticket that migrates a file removes it from this list.
  */
-const siteLegacyAstroFiles = ["apps/site/**/*.astro", "apps/site/**/*.astro/*.ts"];
+const siteLegacyAstroPaths = [
+  "apps/site/src/components/code/CodeBlock.astro",
+  "apps/site/src/components/docs/DocsFooter.astro",
+  "apps/site/src/components/docs/DocsHeader.astro",
+  "apps/site/src/components/docs/DocsPageTitle.astro",
+  "apps/site/src/components/docs/DocsSearch.astro",
+  "apps/site/src/components/docs/PageActions.astro",
+  "apps/site/src/components/home/About.astro",
+  "apps/site/src/components/home/AnnouncementPill.astro",
+  "apps/site/src/components/home/Closing.astro",
+  "apps/site/src/components/home/Faq.astro",
+  "apps/site/src/components/home/FeatureRows.astro",
+  "apps/site/src/components/home/Features.astro",
+  "apps/site/src/components/home/Hero.astro",
+  "apps/site/src/components/home/HowItWorks.astro",
+  "apps/site/src/components/home/Showcase.astro",
+  "apps/site/src/components/home/Stats.astro",
+  "apps/site/src/components/home/WaveDiagram.astro",
+  "apps/site/src/components/home/bento/scenes/ApprovalScene.astro",
+  "apps/site/src/components/home/bento/scenes/CiScene.astro",
+  "apps/site/src/components/home/bento/scenes/FlagsScene.astro",
+  "apps/site/src/components/home/bento/scenes/ReviewScene.astro",
+  "apps/site/src/components/home/bento/scenes/TrackerScene.astro",
+  "apps/site/src/components/home/bento/scenes/WorkersScene.astro",
+  "apps/site/src/components/home/graphics/Fireflies.astro",
+  "apps/site/src/components/home/graphics/PaintingStreams.astro",
+  "apps/site/src/components/home/graphics/PixelMascot.astro",
+  "apps/site/src/components/home/graphics/Valley.astro",
+  "apps/site/src/components/site/GithubStars.astro",
+  "apps/site/src/components/site/LanguageSwitcher.astro",
+  "apps/site/src/components/site/MobileMenu.astro",
+  "apps/site/src/components/site/SearchButton.astro",
+  "apps/site/src/components/site/SiteFooter.astro",
+  "apps/site/src/components/site/SiteHeader.astro",
+  "apps/site/src/components/site/ThemeSelect.astro",
+  "apps/site/src/layouts/BaseLayout.astro",
+  "apps/site/src/seo/NotFoundDocument.astro",
+];
+
+const siteLegacyAstroFiles = siteLegacyAstroPaths.flatMap((path) => [path, `${path}/*.ts`]);
 
 const shadcnLegacyAstroOverrides = {
   "shadcn/no-unknown-classes": "off",
