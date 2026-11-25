@@ -206,7 +206,7 @@ export async function mainCarriesContentDevelopLacks(gh: GhRunner): Promise<bool
     "api",
     `repos/{owner}/{repo}/compare/${DEVELOP_BRANCH}...${MAIN_BRANCH}`,
     "--jq",
-    ".files | length",
+    'if .files == null then "no files key" else (.files | length) end',
   ]);
   const text = output.trim();
   if (!/^\d+$/.test(text)) {

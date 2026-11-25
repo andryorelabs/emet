@@ -276,7 +276,7 @@ describe("promoteDevelop", () => {
       "api",
       "repos/{owner}/{repo}/compare/develop...main",
       "--jq",
-      ".files | length",
+      'if .files == null then "no files key" else (.files | length) end',
     ]);
   });
 
@@ -851,6 +851,23 @@ describe("run", () => {
         path.join(commonDirectory, ".emet", "runs", "629", "no-promote"),
       );
       expect(existsSync(holdMarkerPath(commonDirectory, "629"))).toBe(true);
+    });
+
+    test("writes the marker under the real git common directory when no override is given", async () => {
+      const repo = makeRoot();
+      execFileSync("git", ["init", "-q", repo]);
+      const originalCwd = process.cwd();
+      process.chdir(repo);
+      try {
+        await runCaptured(["--spec", "629", "--hold"], {});
+      } finally {
+        process.chdir(originalCwd);
+      }
+      const gitDirectory = execFileSync("git", ["-C", repo, "rev-parse", "--absolute-git-dir"], {
+        encoding: "utf8",
+      }).trim();
+      expect(existsSync(path.join(gitDirectory, ".emet", "runs", "629", "no-promote"))).toBe(true);
+      expect(existsSync(path.join(gitDirectory, "promote hold marker"))).toBe(false);
     });
 
     test("an old-path-only marker holds the spec", () => {
