@@ -258,11 +258,6 @@
   display: none;
 }
 
-.menu-panel .github-stars-count {
-  color: var(--text-muted);
-  font-size: 14px;
-}
-
 @media (prefers-reduced-motion: reduce) {
   .site-header a.github-pill {
     transition: none;

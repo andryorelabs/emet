@@ -23,18 +23,18 @@ Run from the repo root (`bun run check`, `bun run test`), or here with `bun run 
 - `check`: typecheck with the root `typescript7` by path, `.astro` files included through `@astrojs/ts-content-mapper`.
 - `test`: `bun test`.
 - `build`: only when a ticket needs the production build.
+- `test:e2e`, `test:dist`: Playwright with axe and the dist audit, against a running site. Build, serve `dist`, then set `SITE_URL` (default `http://127.0.0.1:8080`, often taken locally).
 
 ## shadcn ui layer
 
 - `src/components/ui/` is vendored with the pinned CLI and never hand-edited: `bunx shadcn@4.23.0 add <component>` (add `--overwrite` to re-sync), then `bun run format:write`. The layer is exempt from lint, knip exports and the coverage gate.
 - Customise in `.tsx` wrappers outside `ui/`. `.astro` files never mount a shadcn component directly: they mount a wrapper island, or use the `*Variants` helpers for static markup.
 - Use `cn` from `@/lib/utils` in hand-written code. The generated ui files import `cn` from the shadcn `cn` package; that is the CLI's output, not an error.
-- Island tests use `renderIsland` from `src/test/render.tsx` on happy-dom.
+- Island tests use `renderIsland` from `src/test/render.tsx` on happy-dom, which cannot open Base UI popups: cover open menus, the sheet and search in `e2e/interactions.spec.ts`.
 - Header menus announce themselves with `announceHeaderMenuOpen` and close on `onOtherHeaderMenuOpen` (`src/components/site/header-menu-events.ts`), so only one is open.
 
 ## Layout
 
 - `src/i18n/locales.ts`: `LOCALES`, `DEFAULT_LOCALE`, `LOCALE_NAMES`, `localePath()`. English is at `/`, the others under their lower-case tag (`/pt-br/`).
 - `src/layouts/BaseLayout.astro`: the document shell (`title`, `description`, `locale`).
-- `src/components/code/CodeBlock.astro`: plain `<pre>` stub until Expressive Code replaces it.
 - `design/`: the home page's design direction, run notes and painting masters.

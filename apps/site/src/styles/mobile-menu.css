@@ -103,8 +103,7 @@ body:has([data-menu-panel]) [data-slot="sheet-overlay"] {
   backdrop-filter: none;
 }
 
-[data-menu-panel] a,
-[data-menu-panel] summary {
+[data-menu-panel] a {
   color: inherit;
   text-decoration: none;
   font-size: 15px;
@@ -151,32 +150,6 @@ body:has([data-menu-panel]) [data-slot="sheet-overlay"] {
 [data-menu-controls] .lang {
   flex: 1;
   min-width: 0;
-}
-
-[data-menu-panel] .lang summary,
-[data-menu-panel] .theme-button {
-  border-color: var(--border);
-  background: var(--bg);
-  color: var(--text);
-}
-
-[data-menu-panel] .lang summary {
-  box-sizing: border-box;
-  display: flex;
-  justify-content: space-between;
-  height: 36px;
-  padding-block: 0;
-}
-
-[data-menu-panel] .lang ul {
-  position: static;
-  width: auto;
-  max-width: none;
-  margin-top: 8px;
-}
-
-[data-menu-panel] .theme-menu {
-  right: 0;
 }
 
 @media (max-width: 900px) {
