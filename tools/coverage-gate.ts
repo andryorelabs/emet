@@ -139,12 +139,18 @@ export function evaluatePerFile(
   return { passed: false, message: problems.join("\n") };
 }
 
-/** Keeps only the records of the root-level `tools/` workspace, which also loads other workspaces' sources. */
+/** Matches the records of the Website's vendored shadcn ui layer, which is generated code the gate never measures (ADR-0045). */
+const VENDORED_UI_RECORD = /^SF:(apps\/site\/)?src\/components\/ui\//m;
+
+/**
+ * Drops the vendored ui layer's records and, for the root-level `tools/` workspace,
+ * keeps only its own records because it also loads other workspaces' sources.
+ */
 function scopeLcov(workspace: string, lcov: string): string {
-  if (workspace !== "tools") return lcov;
   return lcov
     .split("end_of_record")
-    .filter((record) => /^SF:tools\//m.test(record))
+    .filter((record) => !VENDORED_UI_RECORD.test(record))
+    .filter((record) => workspace !== "tools" || /^SF:tools\//m.test(record))
     .map((record) => `${record}end_of_record`)
     .join("\n");
 }

@@ -1,16 +1,18 @@
 ---
 /**
- * Mobile menu of the home and flow headers, shown below 900px where the nav
- * links hide: a button that opens a full-width panel under the header with the
- * three links, then the language and theme controls. Hidden until the script
- * wires it; without script the header keeps its language and theme controls.
+ * Shell of the mobile menu of the home and flow headers, shown below 900px
+ * where the nav links hide: it mounts the `MobileMenu` sheet island and slots
+ * the server-rendered language and theme controls into it. Desktop header
+ * controls stay until the page marks the header's menu as ready.
  */
 import type { Locale } from "../../i18n/locales";
 import { getStrings } from "../../i18n/ui";
 import type { en } from "../../i18n/ui/en";
-import { externalLinkAttributes, isExternalHref } from "../../lib/external-links";
-import GithubStars from "./GithubStars.astro";
+import { isExternalHref } from "../../lib/external-links";
+import { formatStarCount, getBuildStarCount } from "./github-stars";
+import { GITHUB_STARS_TOOLTIP, starsTooltip } from "./github-strings";
 import LanguageSwitcher from "./LanguageSwitcher.astro";
+import { MobileMenu } from "./MobileMenu.tsx";
 import ThemeSelect from "./ThemeSelect.astro";
 
 interface Props {
@@ -23,82 +25,29 @@ interface Props {
 
 const { locale, currentPath, strings, theme, links } = Astro.props;
 const { newTab } = getStrings(locale).links;
+const count = await getBuildStarCount();
+const stars = {
+  count: count === null ? null : formatStarCount(count),
+  tooltip: count === null ? null : starsTooltip(locale, count),
+  template: GITHUB_STARS_TOOLTIP[locale],
+};
+const menuLinks = links.map((link) => ({
+  href: link.href,
+  label: link.label,
+  current: link.current,
+  external: isExternalHref(link.href),
+  stars: link.stars ? stars : undefined,
+}));
+const labels = { menu: strings.menu, navigation: strings.label, newTab };
 ---
 
 <div class="mobile-menu" data-mobile-menu>
-  <button
-    type="button"
-    class="menu-button"
-    aria-expanded="false"
-    aria-controls="mobile-menu-panel"
-    aria-label={strings.menu}
-    hidden
-  >
-    <svg class="menu-icon menu-icon--open" viewBox="0 0 24 24" aria-hidden="true">
-      <path d="M4 7h16M4 12h16M4 17h16"></path>
-    </svg>
-    <svg class="menu-icon menu-icon--close" viewBox="0 0 24 24" aria-hidden="true">
-      <path d="M6 6l12 12M18 6L6 18"></path>
-    </svg>
-  </button>
-  <div class="menu-panel" id="mobile-menu-panel" tabindex="-1" hidden>
-    <nav aria-label={strings.label}>
-      {
-        links.map((link) => (
-          <a
-            href={link.href}
-            aria-current={link.current ? "page" : undefined}
-            {...externalLinkAttributes(link.href)}
-          >
-            {link.stars ? <GithubStars locale={locale} label={link.label} placement="menu" /> : link.label}
-            {isExternalHref(link.href) && <span class="sr-only">{newTab}</span>}
-          </a>
-        ))
-      }
-    </nav>
-    <div class="menu-controls">
-      <LanguageSwitcher locale={locale} currentPath={currentPath} label={strings.language} />
-      <ThemeSelect labels={theme} id="mobile-theme" />
-    </div>
-  </div>
+  <MobileMenu client:interaction links={menuLinks} locale={locale} labels={labels}>
+    <LanguageSwitcher locale={locale} currentPath={currentPath} label={strings.language} />
+    <ThemeSelect labels={theme} id="mobile-theme" />
+  </MobileMenu>
 </div>
 
 <script>
-  import { HEADER_MENU_OPEN_EVENT } from "./theme-menu";
-
-  const root = document.querySelector<HTMLElement>("[data-mobile-menu]");
-  const button = root?.querySelector<HTMLButtonElement>(".menu-button");
-  const panel = root?.querySelector<HTMLElement>(".menu-panel");
-
-  if (root && button && panel) {
-    const close = (restoreFocus: boolean): void => {
-      panel.hidden = true;
-      button.setAttribute("aria-expanded", "false");
-      document.dispatchEvent(new CustomEvent(HEADER_MENU_OPEN_EVENT, { detail: button }));
-      if (restoreFocus) button.focus();
-    };
-    const open = (): void => {
-      document.dispatchEvent(new CustomEvent(HEADER_MENU_OPEN_EVENT, { detail: panel }));
-      panel.hidden = false;
-      button.setAttribute("aria-expanded", "true");
-      panel.querySelector<HTMLElement>("nav a")?.focus();
-    };
-
-    button.addEventListener("click", () => (panel.hidden ? open() : close(true)));
-    panel.addEventListener("click", (event) => {
-      if ((event.target as Element).closest("nav a")) close(false);
-    });
-    root.addEventListener("keydown", (event) => {
-      if (event.key !== "Escape" || panel.hidden || event.defaultPrevented) return;
-      if ((event.target as Element).closest(".theme-menu")) return;
-      event.preventDefault();
-      close(true);
-    });
-    document.addEventListener("click", (event) => {
-      if (!panel.hidden && !root.contains(event.target as Node)) close(false);
-    });
-
-    button.hidden = false;
-    root.closest(".site-header")?.setAttribute("data-menu-ready", "");
-  }
+  document.querySelector("[data-mobile-menu]")?.closest(".site-header")?.setAttribute("data-menu-ready", "");
 </script>

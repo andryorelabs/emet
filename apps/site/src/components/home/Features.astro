@@ -42,7 +42,7 @@ const keyWidth = 10;
         const card = cards[index];
         return (
           card && (
-            <li class={`bento-card bento-${card.key}`} data-reveal="item">
+            <li data-slot="card" data-size="default" class={`bento-card bento-${card.key}`} data-reveal="item">
               <div class="bento-claim">
                 <h3>{note.title}</h3>
                 <p>{note.line}</p>

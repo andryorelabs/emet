@@ -100,10 +100,11 @@ describe("external links wiring", () => {
   });
 
   test("the mobile menu marks external links from the shared helper", async () => {
-    const menu = await readSource("components/site/MobileMenu.astro");
-    expect(menu).toContain("{...externalLinkAttributes(link.href)}");
-    expect(menu).toContain("isExternalHref(link.href)");
-    expect(menu).toContain('<span class="sr-only">{newTab}</span>');
+    const shell = await readSource("components/site/MobileMenu.astro");
+    const island = await readSource("components/site/MobileMenu.tsx");
+    expect(shell).toContain("isExternalHref(link.href)");
+    expect(island).toContain('{ target: "_blank", rel: "noopener noreferrer" }');
+    expect(island).toContain('<span className="sr-only">{labels.newTab}</span>');
   });
 
   test("the footer author link keeps the period glued to the link", async () => {

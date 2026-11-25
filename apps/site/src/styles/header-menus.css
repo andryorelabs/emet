@@ -1,0 +1,224 @@
+/**
+ * Theme selector and language menu of the header: the triggers and their
+ * dropdown menus. Motion is transform and opacity only, eased out, and off under reduced
+ * motion. Over the hero the buttons use the dark header ink on the pale pill.
+ */
+
+.menu-button[hidden],
+.menu-panel[hidden] {
+  display: none;
+}
+
+.theme-select {
+  position: relative;
+}
+
+[data-menu="theme-button"],
+[data-menu="lang-trigger"],
+.menu-button {
+  box-sizing: border-box;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--bg);
+  color: var(--text);
+  cursor: pointer;
+  transition:
+    background-color 160ms cubic-bezier(0.23, 1, 0.32, 1),
+    transform 160ms cubic-bezier(0.23, 1, 0.32, 1);
+}
+
+[data-menu="theme-button"]:hover,
+[data-menu="lang-trigger"]:hover,
+.menu-button:hover {
+  background: var(--surface);
+}
+
+[data-menu="theme-button"]:active,
+[data-menu="lang-trigger"]:active,
+.menu-button:active {
+  transform: scale(0.97);
+}
+
+.site-header--home [data-menu="theme-button"],
+.site-header--home [data-menu="lang-trigger"],
+.site-header--home .menu-button {
+  border-color: var(--glass-border);
+  background: var(--glass-fill);
+  backdrop-filter: var(--glass-blur);
+  color: var(--header-ink);
+}
+
+.site-header--home [data-menu="theme-button"]:hover,
+.site-header--home [data-menu="lang-trigger"]:hover,
+.site-header--home .menu-button:hover {
+  background: var(--glass-fill-hover);
+}
+
+svg[data-icon],
+.menu-icon {
+  width: 18px;
+  height: 18px;
+  fill: none;
+  stroke: currentcolor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+[data-menu="theme-button"] svg[data-icon] {
+  display: none;
+}
+
+:root[data-theme-choice="light"] [data-menu="theme-button"] svg[data-icon="light"],
+:root[data-theme-choice="dark"] [data-menu="theme-button"] svg[data-icon="dark"],
+:root[data-theme-choice="system"] [data-menu="theme-button"] svg[data-icon="system"],
+:root:not([data-theme-choice]) [data-menu="theme-button"] svg[data-icon="system"] {
+  display: block;
+}
+
+.menu-button .menu-icon--close,
+.menu-button[aria-expanded="true"] .menu-icon--open {
+  display: none;
+}
+
+.menu-button[aria-expanded="true"] .menu-icon--close {
+  display: block;
+}
+
+[data-menu="lang-trigger"] {
+  width: auto;
+  gap: 6px;
+  padding: 6px 12px;
+  font: inherit;
+  font-size: 14px;
+  line-height: 1.4;
+}
+
+[data-menu="lang-caret"] {
+  font-size: 12px;
+}
+
+.docs-header [data-menu="lang-trigger"] {
+  max-width: 9.5rem;
+}
+
+.docs-header [data-menu="lang-trigger"] > span:first-child {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+[data-menu="theme-menu"],
+[data-menu="lang-menu"] {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  max-width: calc(100vw - 32px);
+  padding: 6px;
+  background: var(--bg);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  box-shadow: 0 12px 32px rgb(0 0 0 / 0.22);
+  transform-origin: top right;
+  animation: header-pop 160ms cubic-bezier(0.23, 1, 0.32, 1);
+}
+
+[data-menu="theme-menu"] {
+  width: 180px;
+}
+
+[data-menu="lang-menu"] {
+  width: 260px;
+  box-shadow: none;
+}
+
+[data-menu="theme-item"],
+[data-menu="lang-item"] {
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  height: 40px;
+  padding: 0 10px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-size: 15px;
+  text-align: start;
+  text-decoration: none;
+  cursor: pointer;
+  outline: none;
+}
+
+[data-menu="theme-item"] {
+  gap: 10px;
+}
+
+[data-menu="lang-item"] {
+  justify-content: space-between;
+  gap: 12px;
+}
+
+[data-menu="theme-item"]:hover,
+[data-menu="theme-item"][data-highlighted],
+[data-menu="theme-item"][data-checked],
+[data-menu="lang-item"]:hover,
+[data-menu="lang-item"][data-highlighted],
+[data-menu="lang-item"][aria-current="true"] {
+  background: var(--surface);
+  color: inherit;
+}
+
+[data-menu="theme-item"][data-checked],
+[data-menu="lang-item"][aria-current="true"] {
+  font-weight: 700;
+}
+
+[data-menu="theme-item"]:focus-visible,
+[data-menu="lang-item"]:focus-visible {
+  outline: 2px solid var(--text);
+  outline-offset: -2px;
+}
+
+[data-menu="lang-code"] {
+  color: var(--text-muted);
+  font-size: 13px;
+  font-weight: 400;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [data-menu="theme-button"],
+  [data-menu="lang-trigger"] {
+    transition: none;
+  }
+
+  [data-menu="theme-menu"],
+  [data-menu="lang-menu"] {
+    animation: none;
+  }
+}
+
+.site-header .menu-panel [data-menu="theme-button"],
+.site-header .menu-panel [data-menu="lang-trigger"] {
+  border-color: var(--border);
+  background: var(--bg);
+  color: var(--text);
+}
+
+.site-header .menu-panel [data-menu="lang-trigger"] {
+  display: flex;
+  justify-content: space-between;
+  width: 100%;
+  height: 36px;
+  padding-block: 0;
+}
