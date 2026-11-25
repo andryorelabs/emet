@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { join, relative, sep } from "node:path";
 
@@ -6,6 +7,9 @@ import { join, relative, sep } from "node:path";
  * page loads (scripts, stylesheets, images, frames, media, resource hints, CSS
  * `url()` and inline-script imports) must be same-origin or on the allow list.
  * Outbound `<a>` links and `canonical`/`alternate` links are not requests.
+ * It also audits the Islands: a page with no island must not reference the
+ * React runtime, and every executable inline script must have its hash in the
+ * page's `script-src` policy.
  * Usage: `bun scripts/audit-dist.ts <dist-directory>`.
  */
 
@@ -18,10 +22,14 @@ export const SITE_ORIGIN = "https://emet.andryore.dev";
  */
 export const ALLOWED_ORIGINS: readonly string[] = [SITE_ORIGIN];
 
-/** A third-party origin and the page, relative to the dist directory, that references it. */
+/** What an audit found: a third-party origin, a React runtime reference on an island-free page, or an inline script with no CSP hash. */
+export type AuditFindingKind = "third-party-origin" | "react-runtime" | "inline-script";
+
+/** One problem, with the page (relative to the dist directory) it was found on and a detail: the origin, the runtime path or the script hash. */
 export interface AuditFinding {
   readonly file: string;
-  readonly origin: string;
+  readonly kind: AuditFindingKind;
+  readonly detail: string;
 }
 
 const PLACEHOLDER_BASE = "https://same-origin.invalid/";
@@ -191,9 +199,95 @@ export function auditDist(directory: string, allow: readonly string[]): readonly
   return htmlFiles(directory).flatMap((path) =>
     thirdPartyOrigins(readFileSync(join(directory, path), "utf8"), allow).map((origin) => ({
       file: relative(directory, join(directory, path)),
-      origin,
+      kind: "third-party-origin" as const,
+      detail: origin,
     })),
   );
+}
+
+const ISLAND_PATTERN = /<astro-island\b/i;
+const REACT_RUNTIME_PATTERN = /\/_astro\/(?:client|react|react-dom|jsx-runtime)\.[\w-]+\.js/g;
+const CSP_META_PATTERN = /<meta\b[^>]*\bhttp-equiv\s*=\s*["']?content-security-policy["']?[^>]*>/i;
+const CSP_HASH_PATTERN = /'(sha(?:256|384|512)-[A-Za-z0-9+/=]+)'/g;
+const NON_EXECUTABLE_SCRIPT_TYPES = new Set([
+  "application/ld+json",
+  "application/json",
+  "importmap",
+  "speculationrules",
+]);
+
+/**
+ * Returns the CSP source token (`sha256-<base64>`) that allows an inline script with this exact body.
+ */
+export function inlineScriptHash(body: string): string {
+  return `sha256-${createHash("sha256").update(body).digest("base64")}`;
+}
+
+/**
+ * Lists the hash tokens a page's `<meta>` policy puts in its `script-src` directive.
+ */
+function scriptSourceHashes(html: string): ReadonlySet<string> {
+  const meta = CSP_META_PATTERN.exec(html)?.[0];
+  const content =
+    meta === undefined ? undefined : parseAttributes(meta.slice(5, -1)).get("content");
+  const directive = content
+    ?.split(";")
+    .map((part) => part.trim())
+    .find((part) => part.toLowerCase().startsWith("script-src "));
+  if (directive === undefined) {
+    return new Set();
+  }
+  return new Set([...directive.matchAll(CSP_HASH_PATTERN)].map((match) => match[1] ?? ""));
+}
+
+/**
+ * Lists the bodies of the executable inline scripts of a page.
+ */
+function inlineScriptBodies(html: string): readonly string[] {
+  return [...html.matchAll(RAW_TEXT_PATTERN)].flatMap((match) => {
+    const attributes = parseAttributes(match[2] ?? "");
+    const type = (attributes.get("type") ?? "").toLowerCase();
+    const executable = match[1]?.toLowerCase() === "script" && !attributes.has("src");
+    return executable && !NON_EXECUTABLE_SCRIPT_TYPES.has(type) ? [match[3] ?? ""] : [];
+  });
+}
+
+/**
+ * Audits the Islands of a built site: a page with no `astro-island` must not reference the React runtime, and every executable inline script must have its hash in the page's `script-src`.
+ */
+export function auditIslands(directory: string): readonly AuditFinding[] {
+  return htmlFiles(directory).flatMap((path) => {
+    const html = stripComments(readFileSync(join(directory, path), "utf8"));
+    const file = relative(directory, join(directory, path));
+    const findings: AuditFinding[] = [];
+    if (!ISLAND_PATTERN.test(html.replaceAll(RAW_TEXT_PATTERN, ""))) {
+      const references = [...new Set(html.match(REACT_RUNTIME_PATTERN) ?? [])].toSorted();
+      findings.push(
+        ...references.map((detail) => ({ file, kind: "react-runtime" as const, detail })),
+      );
+    }
+    const allowed = scriptSourceHashes(html);
+    for (const body of inlineScriptBodies(html)) {
+      const hash = inlineScriptHash(body);
+      if (!allowed.has(hash)) {
+        findings.push({ file, kind: "inline-script", detail: hash });
+      }
+    }
+    return findings;
+  });
+}
+
+/**
+ * Formats a finding as one line of the report.
+ */
+function describeFinding(finding: AuditFinding): string {
+  const file = finding.file.split(sep).join("/");
+  const messages: Readonly<Record<AuditFindingKind, string>> = {
+    "third-party-origin": `loads ${finding.detail}`,
+    "react-runtime": `has no island but references the React runtime ${finding.detail}`,
+    "inline-script": `inline script ${finding.detail} has no CSP hash`,
+  };
+  return `${file}: ${messages[finding.kind]}`;
 }
 
 /**
@@ -209,12 +303,12 @@ export function main(argv: readonly string[], print: (line: string) => void): nu
     print(`${directory} does not exist; build the site first`);
     return 2;
   }
-  const findings = auditDist(directory, ALLOWED_ORIGINS);
-  for (const { file, origin } of findings) {
-    print(`${file.split(sep).join("/")}: loads ${origin}`);
+  const findings = [...auditDist(directory, ALLOWED_ORIGINS), ...auditIslands(directory)];
+  for (const finding of findings) {
+    print(describeFinding(finding));
   }
   if (findings.length > 0) {
-    print(`${findings.length} third-party origin reference(s) in the built site`);
+    print(`${findings.length} finding(s) in the built site`);
     return 1;
   }
   return 0;
