@@ -1,4 +1,5 @@
 import { defineConfig } from "astro/config";
+import react from "@astrojs/react";
 import starlight from "@astrojs/starlight";
 import tailwindcss from "@tailwindcss/vite";
 
@@ -14,6 +15,7 @@ import {
 } from "./src/docs/starlight-inline-hashes";
 import { sharedCodeConfig } from "./src/highlight/code-config";
 import { DEFAULT_LOCALE, LOCALE_NAMES, LOCALES, localeSegment } from "./src/i18n/locales";
+import { interactionDirective } from "./src/scripts/interaction-integration";
 import { sitemapOptOut } from "./src/seo/sitemap-opt-out";
 
 const starlightLocales = Object.fromEntries(
@@ -49,6 +51,8 @@ export default defineConfig({
     },
   },
   integrations: [
+    react(),
+    interactionDirective(),
     sitemapOptOut,
     emetDirectives(),
     repoAssets(),
