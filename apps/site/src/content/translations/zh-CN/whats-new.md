@@ -2,8 +2,24 @@
 title: 新功能
 description: emet 的发布说明：每个版本都有哪些变化。
 seoTitle: "emet 新功能：发布说明"
-sourceHash: 430c2148791d921f
+sourceHash: 2e828f2cf39020f5
 ---
+
+## 0.22.2
+
+2026-11-25
+
+### 变更
+
+- 网站的交互部分（页眉菜单、移动菜单、搜索、页面操作菜单、FAQ、安装标签页、404 页面和公告胶囊）改为基于 shadcn `base-nova` 的 React 岛，并在首次交互时水合。
+- `bun run lint` 使用 `@shadcn/lint` 检查 `.tsx` 文件，覆盖率门槛和 knip 会跳过内置的 `apps/site/src/components/ui` 层。
+- `emet` CLI 除版本号外保持不变。
+
+### 已修复
+
+- 网站的 FAQ 不再触发 Content-Security-Policy 违规：它渲染的两个内联样式值已通过哈希放行。
+- FAQ 问题在强制颜色模式下仍保留可见的焦点轮廓。
+- 语言菜单通过一个简单的链接列表，在没有脚本时仍可使用。
 
 ## 0.22.1
 

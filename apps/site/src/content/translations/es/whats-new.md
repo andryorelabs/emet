@@ -2,8 +2,24 @@
 title: Novedades
 description: Notas de versión de emet: qué cambió en cada versión.
 seoTitle: Novedades de emet: notas de versión
-sourceHash: 430c2148791d921f
+sourceHash: 2e828f2cf39020f5
 ---
+
+## 0.22.2
+
+2026-11-25
+
+### Cambiado
+
+- Las partes interactivas del sitio web (menús de la cabecera, menú móvil, búsqueda, menú de acciones de página, FAQ, pestañas de instalación, página 404 y píldora de anuncio) son islas de React sobre shadcn `base-nova`, que se hidratan en la primera interacción.
+- `bun run lint` revisa los archivos `.tsx` con `@shadcn/lint`, y el umbral de cobertura y knip omiten la capa vendorizada `apps/site/src/components/ui`.
+- La CLI de `emet` no cambia, salvo su versión.
+
+### Corregido
+
+- El FAQ del sitio web ya no provoca una violación de la Content-Security-Policy: los dos valores de estilo en línea que renderiza se permiten por hash.
+- Las preguntas del FAQ mantienen un contorno de foco visible en el modo de colores forzados.
+- El menú de idioma sigue funcionando sin script mediante una lista simple de enlaces.
 
 ## 0.22.1
 
