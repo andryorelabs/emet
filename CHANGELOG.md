@@ -8,6 +8,20 @@ and this project adheres to
 
 ## [Unreleased]
 
+## [0.22.2] - 2026-11-25
+
+### Changed
+
+- The Website's interactive parts (header menus, mobile menu, search, page actions menu, FAQ, install tabs, 404 page and announcement pill) are React islands on shadcn `base-nova`, hydrated on first interaction.
+- `bun run lint` checks `.tsx` files with `@shadcn/lint`, and the coverage gate and knip skip the vendored `apps/site/src/components/ui` layer.
+- The `emet` CLI is unchanged apart from its version.
+
+### Fixed
+
+- The Website's FAQ no longer triggers a Content-Security-Policy violation: the two inline style values it renders are allowed by hash.
+- The FAQ questions keep a visible focus outline in forced-colors mode.
+- The language menu keeps working without script through a plain list of links.
+
 ## [0.22.1] - 2026-11-25
 
 ### Fixed
@@ -655,7 +669,8 @@ and this project adheres to
 - Per-repo configuration through `forge.config.json`.
 - `install.sh`, which installs the CLI, command and agents.
 
-[Unreleased]: https://github.com/andryorelabs/emet/compare/v0.22.1...HEAD
+[Unreleased]: https://github.com/andryorelabs/emet/compare/v0.22.2...HEAD
+[0.22.2]: https://github.com/andryorelabs/emet/compare/v0.22.1...v0.22.2
 [0.22.1]: https://github.com/andryorelabs/emet/compare/v0.22.0...v0.22.1
 [0.22.0]: https://github.com/andryorelabs/emet/compare/v0.21.0...v0.22.0
 [0.21.0]: https://github.com/andryorelabs/emet/compare/v0.20.0...v0.21.0
