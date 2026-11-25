@@ -6,6 +6,7 @@ import path from "node:path";
 import { matchesAnyGlob, resolveAfterSpec, type AfterSpecResolution } from "./afterspec";
 import { realGh, waitForChecks, type CiOutcome, type GhRunner } from "./ci";
 import {
+  DEFAULT_FORGE_CONFIG,
   ForgeConfigError,
   loadForgeConfigWithDefaults,
   resolveRepoRoot,
@@ -14,7 +15,7 @@ import {
 } from "./config";
 import { exitCodes } from "./exit-codes";
 import { appendEvent } from "./journal";
-import { resolveLockDirectory } from "./locks";
+import { resolveGitCommonDirectory } from "./locks";
 import { BINARY, resolveRunDir } from "./names";
 import { errorMessage } from "./narrow";
 import { assertSafeId } from "./runs";
@@ -23,6 +24,9 @@ const DEVELOP_BRANCH = "develop";
 const MAIN_BRANCH = "main";
 const PROMOTE_TITLE = "chore: 🔖 promote develop";
 const SYNC_TITLE = "chore: 🔖 sync main into develop";
+/** The reason recorded when `main` is only ahead by merge commits and no sync pull request opens. */
+export const SYNC_SKIPPED_REASON =
+  "develop already carries the content of main; only merge commits differ";
 const CI_TIMEOUT_MS = 30 * 60 * 1000;
 const CI_POLL_MS = 30 * 1000;
 const PR_URL_PATTERN = /\/pull\/(\d+)/;
@@ -57,6 +61,7 @@ export interface PromoteDeps {
   waitForCi: (pr: number) => Promise<CiOutcome>;
   record: (outcome: PromoteOutcome) => void;
   readChangedPaths: () => Promise<readonly string[]>;
+  mergeMethod: ForgeConfig["pr"]["mergeMethod"];
 }
 
 /** What `promoteDevelop` reports beyond its own actions: the resolution and the deploy decision. */
@@ -190,14 +195,26 @@ async function openPullRequest(
   return parsePullRequestNumber(output);
 }
 
-async function isDevelopBehindMain(gh: GhRunner): Promise<boolean> {
+/**
+ * Whether `main` carries content `develop` lacks: the `compare/develop...main`
+ * file count is above zero, so merge commits alone do not count. An empty or
+ * non-numeric answer throws instead of reading as "no content", so an unreadable
+ * comparison never silently skips the sync.
+ */
+export async function mainCarriesContentDevelopLacks(gh: GhRunner): Promise<boolean> {
   const output = await gh([
     "api",
     `repos/{owner}/{repo}/compare/${DEVELOP_BRANCH}...${MAIN_BRANCH}`,
     "--jq",
-    ".ahead_by",
+    ".files | length",
   ]);
-  return Number(output.trim()) > 0;
+  const text = output.trim();
+  if (!/^\d+$/.test(text)) {
+    throw new Error(
+      `could not read the changed file count of ${DEVELOP_BRANCH}...${MAIN_BRANCH} from: ${text}`,
+    );
+  }
+  return Number(text) > 0;
 }
 
 function baseOutcome(
@@ -234,12 +251,40 @@ async function mergeSyncPullRequest(
       outcome.syncReason = `sync pull request #${syncPrNumber} left open: its checks ended ${ci.state}`;
       return;
     }
-    await deps.gh(["pr", "merge", String(syncPrNumber), "--merge"]);
+    await deps.gh(["pr", "merge", String(syncPrNumber), `--${deps.mergeMethod}`]);
     outcome.syncMerged = true;
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : String(error);
     outcome.syncReason = `sync pull request #${syncPrNumber} left open: ${message}`;
   }
+}
+
+/**
+ * Opens and merges the sync pull request only when `main` carries content
+ * `develop` lacks. With none it opens nothing and records
+ * {@link SYNC_SKIPPED_REASON}; an unreadable comparison records its error as
+ * the reason and opens nothing.
+ */
+async function syncMainIntoDevelop(outcome: PromoteOutcome, deps: PromoteDeps): Promise<void> {
+  let carriesContent: boolean;
+  try {
+    carriesContent = await mainCarriesContentDevelopLacks(deps.gh);
+  } catch (error: unknown) {
+    outcome.syncReason = `sync skipped: ${errorMessage(error)}`;
+    return;
+  }
+  if (!carriesContent) {
+    outcome.syncReason = SYNC_SKIPPED_REASON;
+    return;
+  }
+  outcome.syncPrNumber = await openPullRequest(
+    deps.gh,
+    MAIN_BRANCH,
+    DEVELOP_BRANCH,
+    SYNC_TITLE,
+    "Brings the content of main back into develop.",
+  );
+  await mergeSyncPullRequest(outcome, outcome.syncPrNumber, deps);
 }
 
 async function promoteViaPullRequest(
@@ -262,16 +307,7 @@ async function promoteViaPullRequest(
     await deps.gh(["pr", "merge", String(outcome.prNumber), "--merge"]);
     outcome.merged = true;
     outcome.deployCheck = report.decideDeployCheck?.(true) ?? NO_DEPLOY_CHECK;
-    if (await isDevelopBehindMain(deps.gh)) {
-      outcome.syncPrNumber = await openPullRequest(
-        deps.gh,
-        MAIN_BRANCH,
-        DEVELOP_BRANCH,
-        SYNC_TITLE,
-        "Brings the promote merge commit back into develop.",
-      );
-      await mergeSyncPullRequest(outcome, outcome.syncPrNumber, deps);
-    }
+    await syncMainIntoDevelop(outcome, deps);
     return outcome;
   } finally {
     deps.record(outcome);
@@ -280,8 +316,9 @@ async function promoteViaPullRequest(
 
 /**
  * Runs the after-spec step. `promote` opens `develop` to `main`, waits for CI,
- * merges only on `pass`, and opens a sync pull request back only when
- * `develop` is behind `main`, waits for its checks and merges it only on `pass`. `release` opens nothing here: a person cuts
+ * merges only on `pass`, and opens a sync pull request back only when `main`
+ * carries content `develop` lacks, waits for its checks and merges it with
+ * `pr.mergeMethod` only on `pass`. `release` opens nothing here: a person cuts
  * the release. `none` does nothing.
  */
 export async function promoteDevelop(
@@ -330,6 +367,7 @@ export function buildPromoteDeps(options: {
   mode: AfterSpecMode;
   repoRoot: string;
   specId: string;
+  mergeMethod?: PromoteDeps["mergeMethod"];
   gh?: GhRunner;
   append?: typeof appendEvent;
 }): PromoteDeps {
@@ -337,6 +375,7 @@ export function buildPromoteDeps(options: {
   const append = options.append ?? appendEvent;
   return {
     mode: options.mode,
+    mergeMethod: options.mergeMethod ?? DEFAULT_FORGE_CONFIG.pr.mergeMethod,
     gh,
     readChangedPaths: () => readChangedPaths(options.repoRoot),
     waitForCi: (pr) =>
@@ -385,10 +424,16 @@ function legacyHoldMarkerPath(repoRoot: string, specId: string): string {
   return path.join(resolveRunDir(repoRoot).path, "runs", specId, "no-promote");
 }
 
-/** Whether `emet promote --spec <id> --hold` was run for this spec, in the shared or the per-checkout location. */
+/** The shared location an earlier `--hold` wrote under a `promote hold marker` directory. */
+function oldSharedHoldMarkerPath(commonDirectory: string, specId: string): string {
+  return holdMarkerPath(path.join(commonDirectory, "promote hold marker"), specId);
+}
+
+/** Whether `emet promote --spec <id> --hold` was run for this spec, in the shared, the old shared or the per-checkout location. */
 export function isSpecHeld(commonDirectory: string, repoRoot: string, specId: string): boolean {
   return (
     existsSync(holdMarkerPath(commonDirectory, specId)) ||
+    existsSync(oldSharedHoldMarkerPath(commonDirectory, specId)) ||
     existsSync(legacyHoldMarkerPath(repoRoot, specId))
   );
 }
@@ -437,8 +482,7 @@ export async function run(
       commonDirectory: commonDirectoryOverride,
       ...promoteOverrides
     } = overrides;
-    const commonDirectory =
-      commonDirectoryOverride ?? (await resolveLockDirectory("promote hold marker"));
+    const commonDirectory = commonDirectoryOverride ?? (await resolveGitCommonDirectory());
     if (argv.includes("--hold")) {
       holdSpec(commonDirectory, specId);
       console.log(JSON.stringify({ held: true }));
@@ -450,7 +494,15 @@ export async function run(
     const noPromote =
       argv.includes("--no-promote") || isSpecHeld(commonDirectory, repoRoot, specId);
     const finalWaveClean = isFinalWaveClean(await (specState ?? readSpecState)(specId));
-    const base = { ...buildPromoteDeps({ mode: "none", repoRoot, specId }), ...promoteOverrides };
+    const base = {
+      ...buildPromoteDeps({
+        mode: "none",
+        repoRoot,
+        specId,
+        mergeMethod: config.pr.mergeMethod,
+      }),
+      ...promoteOverrides,
+    };
     const changedPaths = needsChangedPaths(config, { noPromote, finalWaveClean })
       ? await base.readChangedPaths()
       : [];

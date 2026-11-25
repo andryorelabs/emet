@@ -22,6 +22,7 @@ import {
   type LockHolder,
   readLockHolder,
   releaseLock,
+  resolveGitCommonDirectory,
   resolveLockDirectory,
 } from "./locks";
 import { errorMessage } from "./narrow";
@@ -374,6 +375,30 @@ describe("emet-locks", () => {
       afterEach(() => {
         process.env.PATH = originalPath;
         process.chdir(originalDirectory);
+      });
+
+      test("resolveGitCommonDirectory returns the absolute common directory", async () => {
+        installFakeGit("/abs/repo/.git");
+        expect(await resolveGitCommonDirectory()).toBe("/abs/repo/.git");
+      });
+
+      test("resolveGitCommonDirectory refuses empty and relative output", async () => {
+        installFakeGit("");
+        let empty = "";
+        try {
+          await resolveGitCommonDirectory();
+        } catch (error) {
+          empty = errorMessage(error);
+        }
+        expect(empty).toContain("could not resolve --git-common-dir");
+        installFakeGit(".git");
+        let relative = "";
+        try {
+          await resolveGitCommonDirectory();
+        } catch (error) {
+          relative = errorMessage(error);
+        }
+        expect(relative).toContain("non-absolute path");
       });
 
       test("joins the lock name onto the absolute common directory", async () => {
