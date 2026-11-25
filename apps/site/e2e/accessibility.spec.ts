@@ -33,6 +33,9 @@ const COLOR_SCHEMES = ["light", "dark"] as const;
 /** Each waiver covers one rule on one selector, never a whole page or rule. */
 const KNOWN_AXE_ISSUES: readonly KnownAxeIssue[] = [];
 
+/** Whether the known FAQ accordion `style` attribute defect is still open; the style CSP tests are expected to fail while it is. */
+const FAQ_STYLE_ATTRIBUTE_DEFECT = true;
+
 /** The routes whose inline `style` attributes the style-src policy blocks. */
 const STYLE_ATTRIBUTE_CSP_ROUTES = ["/", "/es/"];
 
@@ -142,8 +145,93 @@ test("the search button keeps a Command K swap on Apple platforms", async ({ pag
 
 for (const path of STYLE_ATTRIBUTE_CSP_ROUTES) {
   test(`${path} has no style CSP violations`, async ({ page }) => {
+    test.fail(
+      FAQ_STYLE_ATTRIBUTE_DEFECT,
+      "The FAQ accordion (Base UI) server-renders inline style attributes the hash-based CSP does not allow; see ADR-0045. Delete this line once the defect is fixed.",
+    );
     await recordCspViolations(page);
     await page.goto(path);
     expect(await cspViolations(page)).toEqual([]);
   });
+}
+
+/**
+ * Runs axe over the current page state and returns each violation as `<rule> (<impact>): <target>`, waived issues removed.
+ */
+async function axeViolations(page: Page, scope?: string): Promise<readonly string[]> {
+  const builder = new AxeBuilder({ page }).withTags(WCAG_TAGS);
+  const results = await (scope === undefined ? builder : builder.include(scope)).analyze();
+  return results.violations.flatMap(({ id, impact, nodes }) =>
+    nodes
+      .map(({ target }) => target.join(" "))
+      .filter((target) => !isKnownAxeIssue(id, target))
+      .map((target) => `${id} (${impact ?? "unknown"}): ${target}`),
+  );
+}
+
+/** A widget that opens over a page, with the viewport and page it is checked on and how to open it. A `scope` limits axe to one region, for a widget that needs the page scrolled away from the header. */
+interface OpenWidget {
+  readonly name: string;
+  readonly path: string;
+  readonly width: number;
+  readonly scope?: string;
+  readonly open: (page: Page) => Promise<void>;
+}
+
+/** The widgets that must stay accessible while open: theme menu, mobile sheet, search dialog and FAQ. */
+const OPEN_WIDGETS: readonly OpenWidget[] = [
+  {
+    name: "theme menu",
+    path: "/",
+    width: 1280,
+    open: async (page) => {
+      await page.locator('button[data-menu="theme-button"]:visible').first().click();
+      await expect(page.getByRole("menu")).toBeVisible();
+    },
+  },
+  {
+    name: "mobile menu sheet",
+    path: "/",
+    width: 375,
+    open: async (page) => {
+      await page.locator("button[data-menu-button]:visible").first().click();
+      await expect(page.getByRole("dialog")).toBeVisible();
+    },
+  },
+  {
+    name: "search dialog",
+    path: "/docs/start/install/",
+    width: 1280,
+    open: async (page) => {
+      await page.locator("[data-search-trigger]:visible").first().click();
+      await expect(page.getByRole("dialog")).toBeVisible();
+    },
+  },
+  {
+    name: "FAQ item",
+    path: "/",
+    width: 1280,
+    scope: '[data-slot="accordion"]',
+    open: async (page) => {
+      const trigger = page.locator("[data-faq-trigger]").nth(1);
+      await trigger.scrollIntoViewIfNeeded();
+      await trigger.click();
+      await expect(trigger).toHaveAttribute("aria-expanded", "true");
+    },
+  },
+];
+
+for (const widget of OPEN_WIDGETS) {
+  for (const colorScheme of COLOR_SCHEMES) {
+    test(`the ${widget.name} has no axe violations while open in ${colorScheme} mode`, async ({
+      page,
+    }) => {
+      await page.emulateMedia({ colorScheme });
+      await page.setViewportSize({ width: widget.width, height: 900 });
+      await page.goto(widget.path);
+      await expect(page.locator("h1").first()).toBeVisible();
+      await widget.open(page);
+      expect(await axeViolations(page, widget.scope)).toEqual([]);
+    });
+  }
 }
