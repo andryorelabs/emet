@@ -18,14 +18,28 @@ const docsSearch = read("../components/docs/DocsSearch.astro");
 
 describe("search dialog stylesheet", () => {
   it("sizes the dialog to its content up to the existing max-height", () => {
-    expect(dialogCss).toMatch(/site-search dialog \{[^}]*height: fit-content;/);
-    expect(dialogCss).not.toMatch(/site-search dialog \{[^}]*height: auto;/);
-    expect(dialogCss).toMatch(/site-search dialog \{[^}]*max-height: calc\(100dvh - 192px\);/);
+    expect(dialogCss).toMatch(/\[data-search-part="dialog"\] \{[^}]*height: fit-content;/);
+    expect(dialogCss).not.toMatch(/\[data-search-part="dialog"\] \{[^}]*height: auto;/);
+    expect(dialogCss).toMatch(
+      /\[data-search-part="dialog"\] \{[^}]*max-height: calc\(100dvh - 192px\);/,
+    );
   });
 
   it("contains overscroll inside the results container", () => {
     expect(dialogCss).toMatch(
-      /site-search \.search-container \{[^}]*overscroll-behavior: contain;/,
+      /\[data-search-part="dialog"\] \.search-container \{[^}]*overscroll-behavior: contain;/,
+    );
+  });
+
+  it("styles the shadcn dialog popup, not Starlight's native dialog", () => {
+    expect(dialogCss).not.toContain("site-search");
+    expect(dialogCss).toMatch(/\[data-search-part="dialog"\] \{[^}]*position: fixed;/);
+    expect(dialogCss).toContain('[data-slot="dialog-overlay"]:has(+ [data-search-part="dialog"])');
+  });
+
+  it("maps Starlight tokens to the site tokens only on the standalone home page", () => {
+    expect(dialogCss).toMatch(
+      /\[data-search-part="dialog"\]\[data-standalone\] \{[^}]*--sl-color-text: var\(--text\);/,
     );
   });
 
