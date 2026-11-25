@@ -315,7 +315,9 @@ With `--wait`, exit `0` is a reply, `3` a slice timeout and `4` expired.
 - `--no-promote`: skips the step.
 - `--hold`: writes the marker `<run dir>/runs/<id>/no-promote` and prints `{"held":true}`. While it exists, `emet promote --spec <id>` exits 0 with a `skipped` note and opens no pull request, so `--no-promote` survives across a spec's sessions.
 
-In `promote` mode it opens a `develop` to `main` pull request titled `chore: 🔖 promote develop`, waits with `emet ci --pr <n> --wait`, and merges it with a merge commit only when the state is `pass`. Then, only if `develop` is behind `main`, it opens a `main` to `develop` sync pull request, waits for its checks the same way and merges it with a merge commit only when the state is `pass`. A sync pull request whose state is `fail`, `timeout` or `env-fault`, or whose merge is rejected, stays open and never changes the promote result.
+In `promote` mode it opens a `develop` to `main` pull request titled `chore: 🔖 promote develop`, waits with `emet ci --pr <n> --wait`, and merges it with a merge commit only when the state is `pass`.
+
+Then, only if `main` carries content that `develop` lacks (the `develop...main` comparison lists at least one changed file; merge commits alone do not count), it opens a `main` to `develop` sync pull request, waits for its checks the same way and merges it with [`pr.mergeMethod`](configuration.md#pr) only when the state is `pass`. When `main` carries only merge commits, no sync pull request opens and `syncReason` says why. A sync pull request whose state is `fail`, `timeout` or `env-fault`, or whose merge is rejected, stays open and never changes the promote result.
 
 It appends one `promote` event with the pull request number, `merged`, `syncPrNumber`, `syncMerged`, `syncReason`, `rule` and `reason` to the journal. `afterSpec` may be a rule list; the mode is then chosen from the paths promoting `develop` would carry (see [`handoff.afterSpec`](configuration.md#handoff)), and a failing `git fetch` or `git diff` makes the command exit 1 before any pull request opens.
 
