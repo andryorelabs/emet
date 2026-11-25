@@ -1,9 +1,18 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
+import { createHash } from "node:crypto";
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
-import { ALLOWED_ORIGINS, auditDist, main, SITE_ORIGIN, thirdPartyOrigins } from "./audit-dist.ts";
+import {
+  ALLOWED_ORIGINS,
+  auditDist,
+  auditIslands,
+  inlineScriptHash,
+  main,
+  SITE_ORIGIN,
+  thirdPartyOrigins,
+} from "./audit-dist.ts";
 
 const NO_ALLOW: readonly string[] = [];
 
@@ -133,13 +142,17 @@ describe("auditDist and main", () => {
       `<script src="https://cdn.example.com/tracker.js"></script>`,
     );
     expect(auditDist(directory, [SITE_ORIGIN])).toEqual([
-      { file: join("docs", "guide", "index.html"), origin: "https://cdn.example.com" },
+      {
+        file: join("docs", "guide", "index.html"),
+        kind: "third-party-origin",
+        detail: "https://cdn.example.com",
+      },
     ]);
     const lines: string[] = [];
     expect(main([directory], (line) => lines.push(line))).toBe(1);
     expect(lines).toEqual([
       "docs/guide/index.html: loads https://cdn.example.com",
-      "1 third-party origin reference(s) in the built site",
+      "1 finding(s) in the built site",
     ]);
   });
 
@@ -149,7 +162,11 @@ describe("auditDist and main", () => {
       `<img src="https://raw.githubusercontent.com/andryorelabs/emet/main/docs/brand/logo/mark.svg">`,
     );
     expect(auditDist(directory, ALLOWED_ORIGINS)).toEqual([
-      { file: join("docs", "guide", "index.html"), origin: "https://raw.githubusercontent.com" },
+      {
+        file: join("docs", "guide", "index.html"),
+        kind: "third-party-origin",
+        detail: "https://raw.githubusercontent.com",
+      },
     ]);
     expect(main([directory], () => undefined)).toBe(1);
   });
@@ -165,5 +182,121 @@ describe("auditDist and main", () => {
     const lines: string[] = [];
     expect(main([], (line) => lines.push(line))).toBe(2);
     expect(lines).toEqual(["usage: bun scripts/audit-dist.ts <dist-directory>"]);
+  });
+});
+
+/**
+ * Builds a page whose CSP meta allows the given inline script bodies.
+ */
+function page(body: string, allowedScripts: readonly string[] = []): string {
+  const hashes = allowedScripts.map((script) => `'${inlineScriptHash(script)}'`).join(" ");
+  return `<!doctype html><meta http-equiv="content-security-policy" content="script-src 'self' ${hashes}; style-src 'self'">${body}`;
+}
+
+const ISLAND = `<astro-island uid="a" component-url="/_astro/Menu.abc.js" renderer-url="/_astro/client.abc.js"></astro-island>`;
+
+describe("inlineScriptHash", () => {
+  test("is the CSP sha256 token of the raw script body", () => {
+    const body = "console.log(1)";
+    const expected = `sha256-${createHash("sha256").update(body).digest("base64")}`;
+    expect(inlineScriptHash(body)).toBe(expected);
+  });
+});
+
+describe("auditIslands", () => {
+  let directory = "";
+
+  beforeEach(() => {
+    directory = mkdtempSync(join(tmpdir(), "audit-islands-"));
+  });
+
+  afterEach(() => {
+    rmSync(directory, { recursive: true, force: true });
+  });
+
+  test("passes a page with an island that loads the React runtime", () => {
+    writeFileSync(
+      join(directory, "index.html"),
+      page(`${ISLAND}<script type="module" src="/_astro/client.abc.js"></script>`),
+    );
+    expect(auditIslands(directory)).toEqual([]);
+  });
+
+  test("passes a page with no island and no React reference", () => {
+    writeFileSync(
+      join(directory, "index.html"),
+      page(`<script src="/_astro/page.abc.js"></script>`),
+    );
+    expect(auditIslands(directory)).toEqual([]);
+  });
+
+  test("fails a page with no island that references the React runtime", () => {
+    writeFileSync(
+      join(directory, "plain.html"),
+      page(`<link rel="modulepreload" href="/_astro/react-dom.abc.js">`),
+    );
+    expect(auditIslands(directory)).toEqual([
+      { file: "plain.html", kind: "react-runtime", detail: "/_astro/react-dom.abc.js" },
+    ]);
+  });
+
+  test("flags a client renderer or island url with no island element", () => {
+    writeFileSync(
+      join(directory, "a.html"),
+      page(`<script type="module" src="/_astro/client.abc.js"></script>`),
+    );
+    expect(auditIslands(directory)).toEqual([
+      { file: "a.html", kind: "react-runtime", detail: "/_astro/client.abc.js" },
+    ]);
+  });
+
+  test("passes an inline script whose hash is in the CSP", () => {
+    const body = "document.documentElement.dataset.theme = 'dark';";
+    writeFileSync(join(directory, "index.html"), page(`<script>${body}</script>`, [body]));
+    expect(auditIslands(directory)).toEqual([]);
+  });
+
+  test("fails an inline script whose hash is missing from the CSP", () => {
+    const body = "alert(1)";
+    writeFileSync(join(directory, "index.html"), page(`<script type="module">${body}</script>`));
+    expect(auditIslands(directory)).toEqual([
+      { file: "index.html", kind: "inline-script", detail: inlineScriptHash(body) },
+    ]);
+  });
+
+  test("fails an inline script on a page with no CSP at all", () => {
+    writeFileSync(join(directory, "index.html"), `<script>alert(1)</script>`);
+    expect(auditIslands(directory)).toEqual([
+      { file: "index.html", kind: "inline-script", detail: inlineScriptHash("alert(1)") },
+    ]);
+  });
+
+  test("ignores data blocks and external scripts", () => {
+    writeFileSync(
+      join(directory, "index.html"),
+      page(
+        `<script type="application/ld+json">{"a":1}</script><script src="/_astro/a.js"></script>`,
+      ),
+    );
+    expect(auditIslands(directory)).toEqual([]);
+  });
+
+  test("ignores hashes that belong to a directive other than script-src", () => {
+    const body = "alert(1)";
+    writeFileSync(
+      join(directory, "index.html"),
+      `<meta http-equiv="content-security-policy" content="script-src 'self'; style-src '${inlineScriptHash(body)}'"><script>${body}</script>`,
+    );
+    expect(auditIslands(directory)).toHaveLength(1);
+  });
+
+  test("main reports island findings and exits 1", () => {
+    writeFileSync(join(directory, "index.html"), `<script>alert(1)</script>`);
+    const lines: string[] = [];
+    expect(main([directory], (line) => lines.push(line))).toBe(1);
+    expect(lines[0]).toBe(
+      `index.html: inline script ${inlineScriptHash("alert(1)")} has no CSP hash`,
+    );
+    expect(lines.at(-1)).toBe("1 finding(s) in the built site");
   });
 });
