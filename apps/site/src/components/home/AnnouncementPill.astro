@@ -10,6 +10,7 @@ import path from "node:path";
 import { REPOSITORY_ROOT } from "../../docs/paths";
 import { LOCALES, DEFAULT_LOCALE, localeSegment } from "../../i18n/locales";
 import type { Locale } from "../../i18n/locales";
+import { badgeVariants } from "../ui/badge";
 import { latestRelease } from "./announcement";
 
 interface Props {
@@ -26,7 +27,11 @@ const release = latestRelease(readFileSync(path.join(REPOSITORY_ROOT, "CHANGELOG
 
 {
   release && (
-    <a class="announcement" href={release.href}>
+    <a
+      data-slot="badge"
+      class:list={["announcement", badgeVariants({ variant: "outline" })]}
+      href={release.href}
+    >
       <span class="announcement-version">v{release.version}</span>
       <span class="announcement-divider" aria-hidden="true" />
       <span class="announcement-label">{label}</span>

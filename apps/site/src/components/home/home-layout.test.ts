@@ -4,6 +4,7 @@ import { readdirSync, readFileSync } from "node:fs";
 const css = readFileSync(new URL("../../styles/home.css", import.meta.url), "utf8");
 const sceneDirectory = new URL("../../styles/bento/", import.meta.url);
 const sceneCss = readFileSync(new URL("scene.css", sceneDirectory), "utf8");
+const featuresSource = readFileSync(new URL("Features.astro", import.meta.url), "utf8");
 
 const motionGuard = "@media (scripting: enabled) and (prefers-reduced-motion: no-preference) {";
 
@@ -91,6 +92,10 @@ describe("Home hero", () => {
 });
 
 describe("Features bento", () => {
+  it("marks each bento card as a card shell", () => {
+    expect(featuresSource).toContain('data-slot="card"');
+  });
+
   it("falls to one column under 760px", () => {
     expect(css).toMatch(
       /@media \(max-width: 760px\) \{\s*\.bento \{\s*grid-template-columns: minmax\(0, 1fr\);/,

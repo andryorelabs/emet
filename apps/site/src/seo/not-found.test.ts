@@ -10,3 +10,13 @@ describe("notFoundTitle", () => {
     });
   }
 });
+
+describe("NotFoundDocument markup", () => {
+  test("renders shadcn empty and button markup with no island", async () => {
+    const markup = await Bun.file(new URL("NotFoundDocument.astro", import.meta.url)).text();
+    expect(markup).toContain('data-slot="empty"');
+    expect(markup).toContain('data-slot="empty-title"');
+    expect(markup).toContain("buttonVariants(");
+    expect(markup).not.toContain("client:");
+  });
+});

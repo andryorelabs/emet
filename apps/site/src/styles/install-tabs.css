@@ -1,10 +1,11 @@
 /**
- * The `:::install-tabs` docs block: the Home install block's frame with pill
- * tabs. Without script each panel is a plain block under its label; the client
+ * The `:::install-tabs` docs block: the Home install block's frame with
+ * base-nova `tabs` markup restyled as pill tabs. Without script each panel is a plain block under its label; the client
  * marks the block `data-ready`, shows the tab list and hides the other panels.
  */
 
-.sl-markdown-content .emet-install-tabs {
+.sl-markdown-content .emet-install-tabs[data-slot="tabs"] {
+  display: block;
   margin: 1.25rem 0;
   border: 1px solid var(--border);
   border-radius: 12px;
@@ -12,20 +13,25 @@
   overflow: hidden;
 }
 
-.sl-markdown-content .emet-install-tabs__list {
+.sl-markdown-content .emet-install-tabs [data-slot="tabs-list"] {
   display: flex;
   align-items: center;
+  justify-content: flex-start;
   gap: 0.25rem;
+  width: 100%;
   height: 40px;
-  padding-inline: 0.5rem;
+  padding: 0 0.5rem;
   border-bottom: 1px solid var(--border);
+  border-radius: 0;
+  background: transparent;
 }
 
-.sl-markdown-content .emet-install-tabs__list[hidden] {
+.sl-markdown-content .emet-install-tabs [data-slot="tabs-list"][hidden] {
   display: none;
 }
 
-.sl-markdown-content .emet-install-tabs__tab {
+.sl-markdown-content .emet-install-tabs [data-slot="tabs-trigger"] {
+  flex: none;
   height: 28px;
   padding-inline: 0.75rem;
   border: 0;
@@ -34,6 +40,8 @@
   color: var(--text-muted);
   font-family: var(--font-sans);
   font-size: var(--text-sm);
+  font-weight: 400;
+  box-shadow: none;
   cursor: pointer;
   transition:
     background-color 160ms cubic-bezier(0.23, 1, 0.32, 1),
@@ -41,21 +49,23 @@
     transform 160ms cubic-bezier(0.23, 1, 0.32, 1);
 }
 
-.sl-markdown-content .emet-install-tabs__tab:active {
+.sl-markdown-content .emet-install-tabs [data-slot="tabs-trigger"]:active {
   transform: scale(0.97);
 }
 
-.sl-markdown-content .emet-install-tabs__tab[aria-selected="true"] {
+.sl-markdown-content .emet-install-tabs [data-slot="tabs-trigger"][data-active] {
   background: var(--border);
   color: var(--text);
+  box-shadow: none;
 }
 
-.sl-markdown-content .emet-install-tabs__tab:focus-visible {
+.sl-markdown-content .emet-install-tabs [data-slot="tabs-trigger"]:focus-visible {
   outline: 2px solid var(--text);
   outline-offset: 2px;
+  box-shadow: none;
 }
 
-.sl-markdown-content .emet-install-tabs__panel[hidden] {
+.sl-markdown-content .emet-install-tabs [data-slot="tabs-content"][hidden] {
   display: none;
 }
 
@@ -81,11 +91,11 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .sl-markdown-content .emet-install-tabs__tab {
+  .sl-markdown-content .emet-install-tabs [data-slot="tabs-trigger"] {
     transition: none;
   }
 
-  .sl-markdown-content .emet-install-tabs__tab:active {
+  .sl-markdown-content .emet-install-tabs [data-slot="tabs-trigger"]:active {
     transform: none;
   }
 }
