@@ -2,6 +2,7 @@
 
 Status: Accepted (2026-11-18). Amended by [0037](0037-landing-per-spec.md): the after-spec step runs after the spec branch lands.
 Amended: 2026-11-19, path-based after-spec rules and a deploy check that no longer depends on the mode
+Amended: 2026-11-25, the sync pull request opens on content and merges with pr.mergeMethod
 Spec: the manual-work reduction spec, spec 3 of 3 (S1, S2, S7, S8)
 Amended by [0043](0043-reversible-setup-and-data-driven-uninstall.md): setup can be previewed and restored, and emet can be uninstalled.
 
@@ -16,7 +17,7 @@ Amends [0012](0012-develop-development-branch.md).
 ## Decision
 
 - `handoff.afterSpec` is `release`, `promote` or `none` and defaults to `none`. `emet init` detects it: a `v*` tag plus a workflow named for releases gives `release`; a `develop` branch without those gives `promote`.
-- `promote` opens a `develop` to `main` pull request, waits for CI, merges it with a merge commit and opens a sync pull request back to `develop` only if `develop` is behind. `release` opens the release pull request and stops for a person. Neither runs when CI is not green, when the last wave was flagged or left open, or when the run was started with `--no-promote`.
+- `promote` opens a `develop` to `main` pull request, waits for CI, merges it with a merge commit and opens a sync pull request back to `develop` only if `main` carries content `develop` lacks, merged with `pr.mergeMethod` (see the 2026-11-25 amendment). `release` opens the release pull request and stops for a person. Neither runs when CI is not green, when the last wave was flagged or left open, or when the run was started with `--no-promote`.
 - `deploy.check` is an optional command that `emet deploy-check` retries until it succeeds or times out; `promote` runs it after the merge.
 - `emet setup` offers the optional installs with prompts, and installs exactly what is named when there is no terminal or `--with` is given. Each step reports its own result and one failure does not stop the rest. Claude Code settings are changed only when chosen, after a backup.
 - The plugin reaches `emet setup` through `/emet:setup` and a SessionStart notice shown once, because a plugin has no install hook. `install.sh` calls `emet setup` when stdin is a terminal.
@@ -27,7 +28,7 @@ Amends [0012](0012-develop-development-branch.md).
 
 - A deployed application reaches `main` without a manual merge, and `--no-promote` or `afterSpec: none` restores the old behaviour.
 - A repository without the signals stays on `none`, so no existing repo starts merging into `main` on its own.
-- A second pull request appears only when `develop` is behind `main`.
+- A second pull request appears only when `main` carries content `develop` lacks (see the 2026-11-25 amendment).
 - A new user can pick the optional installs in one place, and a fresh plugin session says so once.
 
 ## Alternatives considered
@@ -61,3 +62,28 @@ Three of the repositories that use emet hold a published package or CLI and a We
 
 - **Store the spec's start sha and changed paths**: rejected because `promote` already compares exactly what would reach `main`, which is also what the release safety needs, and it adds run state to keep in sync.
 - **One `afterSpec` per directory**: rejected because the choice depends on the whole set of changed paths, not on each one.
+
+## Amendment (2026-11-25)
+
+### Context
+
+[ADR-0012](0012-develop-development-branch.md) makes `develop` squash-only, so the sync pull request, merged with `--merge`, was rejected. The "is `develop` behind" check counted commits (`ahead_by`), and the promote merge commits never clear that count: on v0.22.0 `main` was 39 merge commits ahead of `develop` with an empty diff. Every promote therefore opened a sync pull request that could not merge.
+
+### Decision
+
+- The sync pull request opens only when the `develop...main` comparison lists changed files. Merge commits alone do not count.
+- It merges with `pr.mergeMethod`, the per-repo setting, not a fixed merge commit.
+- When only merge commits differ, nothing opens and `syncReason` says why.
+- The `develop` to `main` promote pull request keeps its merge commit.
+
+### Consequences
+
+- A promote of a squash-only `develop` no longer leaves a stuck sync pull request.
+- A real change that lands on `main` alone, such as a hotfix, still comes back to `develop`.
+- A repository can merge the sync pull request however its `pr.mergeMethod` says.
+
+### Alternatives considered
+
+- **Allow merge commits on `develop`**: rejected because it breaks the linear history that ADR-0012 sets.
+- **Always squash the sync pull request**: rejected because it ignores the per-repo `pr.mergeMethod`.
+- **Keep the commit-count check**: rejected because the count never clears after a merge-commit promote.

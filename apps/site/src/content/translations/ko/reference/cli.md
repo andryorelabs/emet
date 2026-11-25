@@ -2,7 +2,7 @@
 title: CLI 레퍼런스
 description: 모든 emet 하위 명령, 게이트와 기록 표, 종료 코드, 환경 변수를 설명합니다.
 seoTitle: emet CLI 레퍼런스
-sourceHash: 7c398958687b5ea3
+sourceHash: cde063f67e8e54d7
 ---
 
 모든 `emet` 하위 명령, 게이트와 기록, 종료 코드, 환경 변수입니다. 용어는 [GLOSSARY.md](../../GLOSSARY.md)를 따릅니다. [README](../../README.md)로 돌아가기. 모든 명령은 `--help`로 사용법을 출력합니다.
@@ -320,7 +320,7 @@ JSON에는 `sessions: [{sessionId, state, blocked, since, runId}]`도 담깁니�
 - `--no-promote`: 이 단계를 건너뜁니다.
 - `--hold`: 마커 `<run dir>/runs/<id>/no-promote`를 쓰고 `{"held":true}`를 출력합니다. 마커가 있는 동안 `emet promote --spec <id>`는 풀 리퀘스트를 열지 않고 `skipped` 노트와 함께 종료 코드 0으로 끝나므로, `--no-promote`가 스펙의 여러 세션에 걸쳐 유지됩니다.
 
-`promote` 모드에서는 `chore: 🔖 promote develop`라는 제목으로 `develop`에서 `main`으로 가는 풀 리퀘스트를 열고, `emet ci --pr <n> --wait`로 기다리며, 상태가 `pass`일 때만 머지 커밋으로 병합합니다. 그런 다음 `develop`이 `main`보다 뒤처져 있을 때만 `main`에서 `develop`으로 가는 동기화 풀 리퀘스트를 열고, 같은 방식으로 그 체크를 기다리며, 상태가 `pass`일 때만 머지 커밋으로 병합합니다. 상태가 `fail`, `timeout`, `env-fault`이거나 병합이 거부된 동기화 풀 리퀘스트는 열린 채로 남으며 promote 결과를 바꾸지 않습니다.
+`promote` 모드에서는 `chore: 🔖 promote develop`라는 제목으로 `develop`에서 `main`으로 가는 풀 리퀘스트를 열고, `emet ci --pr <n> --wait`로 기다리며, 상태가 `pass`일 때만 머지 커밋으로 병합합니다. 그런 다음 `main`에 `develop`에 없는 내용이 있을 때만(`develop...main` 비교가 변경된 파일을 하나 이상 나열하는 경우이며, 머지 커밋만 있는 경우는 해당하지 않습니다) `main`에서 `develop`으로 가는 동기화 풀 리퀘스트를 열고, 같은 방식으로 그 체크를 기다리며, 상태가 `pass`일 때만 [`pr.mergeMethod`](configuration.md#pr)로 병합합니다. `main`에 머지 커밋만 있으면 동기화 풀 리퀘스트를 열지 않으며 `syncReason`이 그 이유를 알려 줍니다. 상태가 `fail`, `timeout`, `env-fault`이거나 병합이 거부된 동기화 풀 리퀘스트는 열린 채로 남으며 promote 결과를 바꾸지 않습니다.
 
 풀 리퀘스트 번호, `merged`, `syncPrNumber`, `syncMerged`, `syncReason`, `rule`, `reason`을 담은 `promote` 이벤트를 저널에 하나 추가합니다. `afterSpec`은 규칙 목록일 수 있으며, 그 경우 모드는 `develop`을 프로모트할 때 포함될 경로로 선택됩니다([`handoff.afterSpec`](configuration.md#handoff) 참고). `git fetch` 또는 `git diff`가 실패하면 풀 리퀘스트를 열기 전에 종료 코드 1로 끝납니다.
 

@@ -2,7 +2,7 @@
 title: CLI 参考
 description: 每个 emet 子命令、关卡与记录表、退出码和环境变量。
 seoTitle: emet CLI 参考
-sourceHash: 7c398958687b5ea3
+sourceHash: cde063f67e8e54d7
 ---
 
 每个 `emet` 子命令、关卡与记录表、退出码和环境变量。术语遵循 [GLOSSARY.md](../../GLOSSARY.md)。返回 [README](../../README.md)。每个命令都可以用 `--help` 打印其用法。
@@ -320,7 +320,7 @@ mattpocock-skills 插件和外部 CLI 的标志在整次扫描中只检查一次
 - `--no-promote`：跳过该步骤。
 - `--hold`：写入标记文件 `<run dir>/runs/<id>/no-promote` 并打印 `{"held":true}`。该文件存在期间，`emet promote --spec <id>` 以退出码 0 退出并给出 `skipped` 说明，且不打开任何 pull request，因此 `--no-promote` 在一个规格的多个会话之间始终有效。
 
-在 `promote` 模式下，它会打开一个标题为 `chore: 🔖 promote develop` 的 `develop` 到 `main` 的 pull request，用 `emet ci --pr <n> --wait` 等待，并且仅当状态为 `pass` 时以合并提交将其合并。然后，仅当 `develop` 落后于 `main` 时，它会打开一个 `main` 到 `develop` 的同步 pull request，以同样的方式等待其检查，并且仅当状态为 `pass` 时以合并提交将其合并。状态为 `fail`、`timeout` 或 `env-fault`，或合并被拒绝的同步 pull request 会保持打开，且绝不会改变 promote 的结果。
+在 `promote` 模式下，它会打开一个标题为 `chore: 🔖 promote develop` 的 `develop` 到 `main` 的 pull request，用 `emet ci --pr <n> --wait` 等待，并且仅当状态为 `pass` 时以合并提交将其合并。然后，仅当 `main` 带有 `develop` 所缺少的内容时（`develop...main` 比较至少列出一个已更改文件；仅有合并提交不算），它会打开一个 `main` 到 `develop` 的同步 pull request，以同样的方式等待其检查，并且仅当状态为 `pass` 时通过 [`pr.mergeMethod`](configuration.md#pr) 将其合并。当 `main` 只带有合并提交时，不会打开同步 pull request，`syncReason` 会说明原因。状态为 `fail`、`timeout` 或 `env-fault`，或合并被拒绝的同步 pull request 会保持打开，且绝不会改变 promote 的结果。
 
 它会向日志追加一条 `promote` 事件，包含 pull request 编号、`merged`、`syncPrNumber`、`syncMerged`、`syncReason`、`rule` 和 `reason`。`afterSpec` 可以是一个规则列表；此时模式由提升 `develop` 会带上的路径来选择（参见 [`handoff.afterSpec`](configuration.md#handoff)），并且 `git fetch` 或 `git diff` 失败会让命令在打开任何 pull request 之前以退出码 1 退出。
 

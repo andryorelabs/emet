@@ -2,7 +2,7 @@
 title: CLI リファレンス
 description: すべての emet サブコマンド、ゲートと記録の表、終了コード、環境変数を説明します。
 seoTitle: emet CLI リファレンス
-sourceHash: 7c398958687b5ea3
+sourceHash: cde063f67e8e54d7
 ---
 
 すべての `emet` サブコマンド、ゲートと記録、終了コード、環境変数です。用語は [GLOSSARY.md](../../GLOSSARY.md) に従います。[README](../../README.md) に戻る。すべてのコマンドは `--help` で使い方を表示します。
@@ -320,7 +320,7 @@ JSON には `sessions: [{sessionId, state, blocked, since, runId}]` も含まれ
 - `--no-promote`: ステップをスキップします。
 - `--hold`: マーカー `<run dir>/runs/<id>/no-promote` を書き込み、`{"held":true}` を表示します。それが存在する間は、`emet promote --spec <id>` は `skipped` のメモを付けて終了コード 0 で終了し、プルリクエストを開かないため、`--no-promote` はスペックのセッションをまたいで維持されます。
 
-`promote` モードでは、`chore: 🔖 promote develop` というタイトルの `develop` から `main` へのプルリクエストを開き、`emet ci --pr <n> --wait` で待ち、状態が `pass` の場合にのみマージコミットでマージします。その後、`develop` が `main` より遅れている場合に限り、`main` から `develop` への同期プルリクエストを開き、同じ方法でチェックを待ち、状態が `pass` の場合にのみマージコミットでマージします。状態が `fail`、`timeout`、`env-fault` の同期プルリクエスト、またはマージが拒否された同期プルリクエストは開いたままになり、promote の結果が変わることはありません。
+`promote` モードでは、`chore: 🔖 promote develop` というタイトルの `develop` から `main` へのプルリクエストを開き、`emet ci --pr <n> --wait` で待ち、状態が `pass` の場合にのみマージコミットでマージします。その後、`main` に `develop` にない内容がある場合に限り（`develop...main` の比較が変更ファイルを 1 つ以上挙げる場合で、マージコミットだけは数えません）、`main` から `develop` への同期プルリクエストを開き、同じ方法でチェックを待ち、状態が `pass` の場合にのみ [`pr.mergeMethod`](configuration.md#pr) でマージします。`main` にマージコミットしかない場合、同期プルリクエストは開かれず、`syncReason` がその理由を示します。状態が `fail`、`timeout`、`env-fault` の同期プルリクエスト、またはマージが拒否された同期プルリクエストは開いたままになり、promote の結果が変わることはありません。
 
 プルリクエスト番号、`merged`、`syncPrNumber`、`syncMerged`、`syncReason`、`rule`、`reason` を含む `promote` イベントを 1 件、ジャーナルに追記します。`afterSpec` はルールのリストにできます。その場合、`develop` をプロモートしたときに含まれるパスからモードが選ばれ（[`handoff.afterSpec`](configuration.md#handoff) を参照）、`git fetch` または `git diff` が失敗すると、プルリクエストを開く前にコマンドが終了コード 1 で終了します。
 

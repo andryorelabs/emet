@@ -58,20 +58,18 @@ export interface LockHolder {
 }
 
 /**
- * Resolves `<git-common-dir>/<lockName>`. `--git-common-dir`, not
+ * Resolves the absolute `--git-common-dir`. `--git-common-dir`, not
  * `process.cwd()`, is deliberate: every `/emet` worktree shares one
- * `.git`, and a lock only serializes access if every worktree agrees on its
+ * `.git`, and shared state only works if every worktree agrees on its
  * path — one scoped to a single worktree's own `.git` would let two
- * worktrees each "hold" an independent lock while stepping on the same
+ * worktrees each keep an independent copy while stepping on the same
  * underlying resource anyway.
  */
-export async function resolveLockDirectory(lockName: string): Promise<string> {
+export async function resolveGitCommonDirectory(): Promise<string> {
   const output = await Bun.$`git rev-parse --path-format=absolute --git-common-dir`.text();
   const gitCommonDirectory = output.trim();
   if (!gitCommonDirectory) {
-    throw new Error(
-      `emet-locks: could not resolve --git-common-dir for lock "${lockName}" — are we inside a git repo?`,
-    );
+    throw new Error("emet-locks: could not resolve --git-common-dir — are we inside a git repo?");
   }
   /**
    * `--path-format=absolute` (git ≥2.31) is load-bearing, not cosmetic: a
@@ -89,10 +87,15 @@ export async function resolveLockDirectory(lockName: string): Promise<string> {
    */
   if (!path.isAbsolute(gitCommonDirectory)) {
     throw new Error(
-      `emet-locks: --git-common-dir returned a non-absolute path ("${gitCommonDirectory}") for lock "${lockName}" — refusing to build a lock path that could resolve differently depending on cwd`,
+      `emet-locks: --git-common-dir returned a non-absolute path ("${gitCommonDirectory}") — refusing to build a path that could resolve differently depending on cwd`,
     );
   }
-  return path.join(gitCommonDirectory, lockName);
+  return gitCommonDirectory;
+}
+
+/** Resolves `<git-common-dir>/<lockName>` so every worktree agrees on one lock path. */
+export async function resolveLockDirectory(lockName: string): Promise<string> {
+  return path.join(await resolveGitCommonDirectory(), lockName);
 }
 
 function isProcessAlive(pid: number): boolean {

@@ -2,7 +2,7 @@
 title: Riferimento della CLI
 description: Ogni sottocomando di emet, i gate e i registri, i codici di uscita e le variabili d'ambiente.
 seoTitle: Riferimento della CLI di emet
-sourceHash: 7c398958687b5ea3
+sourceHash: cde063f67e8e54d7
 ---
 
 Ogni sottocomando di `emet`, i gate e i registri, i codici di uscita e le variabili d'ambiente. I termini seguono [GLOSSARY.md](../../GLOSSARY.md). Torna al [README](../../README.md). Ogni comando stampa il proprio utilizzo con `--help`.
@@ -320,7 +320,7 @@ Con `--wait`, l'uscita `0` è una risposta, `3` un timeout della slice e `4` sca
 - `--no-promote`: salta il passo.
 - `--hold`: scrive il marcatore `<run dir>/runs/<id>/no-promote` e stampa `{"held":true}`. Finché esiste, `emet promote --spec <id>` esce con 0 con una nota `skipped` e non apre alcuna pull request, così `--no-promote` sopravvive tra le sessioni di una spec.
 
-In modalità `promote` apre una pull request da `develop` a `main` con titolo `chore: 🔖 promote develop`, attende con `emet ci --pr <n> --wait` e la unisce con un merge commit solo quando lo stato è `pass`. Poi, solo se `develop` è indietro rispetto a `main`, apre una pull request di sincronizzazione da `main` a `develop`, ne attende i check allo stesso modo e la unisce con un merge commit solo quando lo stato è `pass`. Una pull request di sincronizzazione il cui stato è `fail`, `timeout` o `env-fault`, o il cui merge viene rifiutato, resta aperta e non cambia mai il risultato del promote.
+In modalità `promote` apre una pull request da `develop` a `main` con titolo `chore: 🔖 promote develop`, attende con `emet ci --pr <n> --wait` e la unisce con un merge commit solo quando lo stato è `pass`. Poi, solo se `main` contiene contenuti che mancano a `develop` (il confronto `develop...main` elenca almeno un file modificato; i soli merge commit non contano), apre una pull request di sincronizzazione da `main` a `develop`, ne attende i check allo stesso modo e la unisce con [`pr.mergeMethod`](configuration.md#pr) solo quando lo stato è `pass`. Quando `main` contiene soltanto merge commit, non si apre alcuna pull request di sincronizzazione e `syncReason` ne spiega il motivo. Una pull request di sincronizzazione il cui stato è `fail`, `timeout` o `env-fault`, o il cui merge viene rifiutato, resta aperta e non cambia mai il risultato del promote.
 
 Aggiunge al journal un evento `promote` con il numero della pull request, `merged`, `syncPrNumber`, `syncMerged`, `syncReason`, `rule` e `reason`. `afterSpec` può essere un elenco di regole; la modalità viene allora scelta in base ai percorsi che il promote di `develop` porterebbe con sé (vedi [`handoff.afterSpec`](configuration.md#handoff)), e un `git fetch` o `git diff` che fallisce fa uscire il comando con 1 prima che si apra qualsiasi pull request.
 

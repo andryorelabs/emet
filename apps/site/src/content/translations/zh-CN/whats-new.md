@@ -2,8 +2,18 @@
 title: 新功能
 description: emet 的发布说明：每个版本都有哪些变化。
 seoTitle: "emet 新功能：发布说明"
-sourceHash: adecd188f36bb789
+sourceHash: 430c2148791d921f
 ---
+
+## 0.22.1
+
+2026-11-25
+
+### 已修复
+
+- 只有当 `main` 带有 `develop` 所缺的内容时，`emet promote` 才会打开从 `main` 到 `develop` 的同步拉取请求，因此仅允许 squash 的 `develop` 不会在每次 promote 后留下无法合并的同步拉取请求。当只有合并提交不同时，不会打开任何拉取请求，`syncReason` 会说明原因。
+- 同步拉取请求使用 `pr.mergeMethod` 合并，而不是合并提交。
+- `emet promote --hold` 把标记写入 `<git common dir>/.emet/runs/<id>/no-promote`，而不是 `promote hold marker` 目录下。旧位置的标记仍会挂起该 spec。
 
 ## 0.22.0
 
