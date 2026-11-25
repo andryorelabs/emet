@@ -39,7 +39,12 @@
 }
 
 .search-button:active {
+  translate: none;
   transform: scale(0.98);
+}
+
+.search-button:focus-visible {
+  box-shadow: none;
 }
 
 .search-button-icon {
@@ -77,6 +82,8 @@
 
 .search-button-keys kbd {
   box-sizing: border-box;
+  height: auto;
+  font-weight: 400;
   min-width: 20px;
   padding: 3px 5px;
   border: 1px solid var(--border);
@@ -195,6 +202,21 @@
   }
 }
 
+.github-stars {
+  border: 0;
+  border-radius: inherit;
+  background: transparent;
+  color: inherit;
+  font-size: inherit;
+  font-weight: inherit;
+}
+
+.github-stars:hover,
+.github-stars:active {
+  background: transparent;
+  translate: none;
+}
+
 .github-stars--header {
   display: inline-flex;
   align-items: center;
@@ -206,7 +228,10 @@
 .github-stars--menu {
   display: inline-flex;
   align-items: baseline;
+  justify-content: flex-start;
   gap: 8px;
+  height: auto;
+  padding: 0;
 }
 
 .github-stars-mark {
@@ -217,6 +242,15 @@
 }
 
 .github-stars-count {
+  height: auto;
+  padding: 0;
+  overflow: visible;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: inherit;
+  font-size: inherit;
+  font-weight: inherit;
   font-variant-numeric: tabular-nums;
 }
 
@@ -224,7 +258,7 @@
   display: none;
 }
 
-.site-header .menu-panel .github-stars-count {
+.menu-panel .github-stars-count {
   color: var(--text-muted);
   font-size: 14px;
 }
