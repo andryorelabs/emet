@@ -275,6 +275,8 @@
 }
 
 .not-found-header[data-slot="empty-header"] {
+  display: flex;
+  flex-direction: column;
   align-items: center;
   gap: 16px;
   max-width: none;
