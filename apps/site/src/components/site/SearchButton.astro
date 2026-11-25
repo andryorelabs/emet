@@ -7,6 +7,8 @@
  */
 import type { Locale } from "../../i18n/locales";
 import { SEARCH_STRINGS } from "../../docs/search-strings";
+import { buttonVariants } from "../ui/button";
+import { Kbd } from "../ui/kbd";
 
 interface Props {
   locale: Locale;
@@ -18,7 +20,8 @@ const strings = SEARCH_STRINGS[locale];
 
 <button
   type="button"
-  class="search-button"
+  data-slot="button"
+  class:list={["search-button", buttonVariants({ variant: "outline" })]}
   data-search-trigger
   aria-keyshortcuts="Control+K"
 >
@@ -34,7 +37,7 @@ const strings = SEARCH_STRINGS[locale];
   </span>
   <span class="sr-only search-button-name">{strings.searchButtonLabel}</span>
   <span class="search-button-keys">
-    <kbd data-search-modifier>Ctrl</kbd>{" "}<kbd>K</kbd>
+    <Kbd data-search-modifier>Ctrl</Kbd>{" "}<Kbd>K</Kbd>
   </span>
 </button>
 
