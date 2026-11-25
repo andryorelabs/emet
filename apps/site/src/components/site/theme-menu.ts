@@ -3,10 +3,14 @@
  * model and the DOM wiring. Kept free of Node imports so it can ship to the
  * browser; `theme.ts` builds the inline init script from the same constants.
  */
+import { announceHeaderMenuOpen, onOtherHeaderMenuOpen } from "./header-menu-events";
+
+export { HEADER_MENU_OPEN_EVENT } from "./header-menu-events";
+
+let themeSelectCount = 0;
 
 export const THEME_STORAGE_KEY = "emet:theme";
 export const THEME_CHANGE_EVENT = "emet:theme";
-export const HEADER_MENU_OPEN_EVENT = "emet:header-menu-open";
 const THEME_CHOICES = ["light", "dark", "system"] as const;
 
 export type ThemeChoice = (typeof THEME_CHOICES)[number];
@@ -70,6 +74,8 @@ function initThemeSelect(root: HTMLElement): void {
   if (button === null || menu === null) return;
   const rows = [...menu.querySelectorAll<HTMLButtonElement>('[role="menuitemradio"]')];
   const view = root.ownerDocument.defaultView;
+  themeSelectCount += 1;
+  const menuId = `theme-${themeSelectCount}`;
 
   const syncChecked = (): void => {
     const current = readStoredTheme();
@@ -85,7 +91,7 @@ function initThemeSelect(root: HTMLElement): void {
   };
   const open = (): void => {
     syncChecked();
-    root.ownerDocument.dispatchEvent(new CustomEvent(HEADER_MENU_OPEN_EVENT, { detail: root }));
+    announceHeaderMenuOpen(menuId);
     menu.hidden = false;
     button.setAttribute("aria-expanded", "true");
     const checked = rows.find((row) => row.getAttribute("aria-checked") === "true");
@@ -129,8 +135,8 @@ function initThemeSelect(root: HTMLElement): void {
       if (choice !== undefined) choose(choice);
     });
   }
-  root.ownerDocument.addEventListener(HEADER_MENU_OPEN_EVENT, (event) => {
-    if (event instanceof CustomEvent && event.detail !== root && isOpen()) close(false);
+  onOtherHeaderMenuOpen(menuId, () => {
+    if (isOpen()) close(false);
   });
   root.ownerDocument.addEventListener("click", (event) => {
     const inside = event.target instanceof Node && root.contains(event.target);

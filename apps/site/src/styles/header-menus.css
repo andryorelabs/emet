@@ -1,0 +1,150 @@
+/**
+ * Theme selector and language menu of the header: the icon buttons and the radio
+ * menu. Motion is transform and opacity only, eased out, and off under reduced
+ * motion. Over the hero the buttons use the dark header ink on the pale pill.
+ */
+
+.theme-select[hidden],
+.menu-button[hidden],
+.theme-menu[hidden],
+.menu-panel[hidden] {
+  display: none;
+}
+
+.theme-select {
+  position: relative;
+}
+
+.theme-button,
+.menu-button {
+  box-sizing: border-box;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--bg);
+  color: var(--text);
+  cursor: pointer;
+  transition:
+    background-color 160ms cubic-bezier(0.23, 1, 0.32, 1),
+    transform 160ms cubic-bezier(0.23, 1, 0.32, 1);
+}
+
+.theme-button:hover,
+.menu-button:hover {
+  background: var(--surface);
+}
+
+.theme-button:active,
+.menu-button:active {
+  transform: scale(0.97);
+}
+
+.site-header--home .theme-button,
+.site-header--home .menu-button {
+  border-color: var(--glass-border);
+  background: var(--glass-fill);
+  backdrop-filter: var(--glass-blur);
+  color: var(--header-ink);
+}
+
+.site-header--home .theme-button:hover,
+.site-header--home .menu-button:hover {
+  background: var(--glass-fill-hover);
+}
+
+.theme-icon,
+.menu-icon {
+  width: 18px;
+  height: 18px;
+  fill: none;
+  stroke: currentcolor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.theme-button .theme-icon {
+  display: none;
+}
+
+:root[data-theme-choice="light"] .theme-button .theme-icon--light,
+:root[data-theme-choice="dark"] .theme-button .theme-icon--dark,
+:root[data-theme-choice="system"] .theme-button .theme-icon--system,
+:root:not([data-theme-choice]) .theme-button .theme-icon--system {
+  display: block;
+}
+
+.menu-button .menu-icon--close,
+.menu-button[aria-expanded="true"] .menu-icon--open {
+  display: none;
+}
+
+.menu-button[aria-expanded="true"] .menu-icon--close {
+  display: block;
+}
+
+.theme-menu {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 8px);
+  z-index: 6;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  width: 180px;
+  max-width: calc(100vw - 32px);
+  padding: 6px;
+  background: var(--bg);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  box-shadow: 0 12px 32px rgb(0 0 0 / 0.22);
+  transform-origin: top right;
+  animation: header-pop 160ms cubic-bezier(0.23, 1, 0.32, 1);
+}
+
+.theme-menu [role="menuitemradio"] {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  height: 40px;
+  padding: 0 10px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-size: 15px;
+  text-align: start;
+  cursor: pointer;
+}
+
+.theme-menu [role="menuitemradio"]:hover,
+.theme-menu [role="menuitemradio"]:focus-visible,
+.theme-menu [role="menuitemradio"][aria-checked="true"] {
+  background: var(--surface);
+}
+
+.theme-menu [role="menuitemradio"][aria-checked="true"] {
+  font-weight: 700;
+}
+
+.theme-menu [role="menuitemradio"]:focus-visible {
+  outline: 2px solid var(--text);
+  outline-offset: -2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .theme-button {
+    transition: none;
+  }
+
+  .theme-menu {
+    animation: none;
+  }
+}
