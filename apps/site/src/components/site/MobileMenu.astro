@@ -44,7 +44,7 @@ const labels = { menu: strings.menu, navigation: strings.label, newTab };
 <div class="mobile-menu" data-mobile-menu>
   <MobileMenu client:interaction links={menuLinks} locale={locale} labels={labels}>
     <LanguageSwitcher locale={locale} currentPath={currentPath} label={strings.language} />
-    <ThemeSelect labels={theme} id="mobile-theme" />
+    <ThemeSelect labels={theme} />
   </MobileMenu>
 </div>
 

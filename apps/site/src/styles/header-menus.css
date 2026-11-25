@@ -4,18 +4,12 @@
  * motion. Over the hero the buttons use the dark header ink on the pale pill.
  */
 
-.menu-button[hidden],
-.menu-panel[hidden] {
-  display: none;
-}
-
 .theme-select {
   position: relative;
 }
 
 [data-menu="theme-button"],
-[data-menu="lang-trigger"],
-.menu-button {
+[data-menu="lang-trigger"] {
   box-sizing: border-box;
   display: inline-flex;
   align-items: center;
@@ -34,20 +28,17 @@
 }
 
 [data-menu="theme-button"]:hover,
-[data-menu="lang-trigger"]:hover,
-.menu-button:hover {
+[data-menu="lang-trigger"]:hover {
   background: var(--surface);
 }
 
 [data-menu="theme-button"]:active,
-[data-menu="lang-trigger"]:active,
-.menu-button:active {
+[data-menu="lang-trigger"]:active {
   transform: scale(0.97);
 }
 
 .site-header--home [data-menu="theme-button"],
-.site-header--home [data-menu="lang-trigger"],
-.site-header--home .menu-button {
+.site-header--home [data-menu="lang-trigger"] {
   border-color: var(--glass-border);
   background: var(--glass-fill);
   backdrop-filter: var(--glass-blur);
@@ -55,13 +46,11 @@
 }
 
 .site-header--home [data-menu="theme-button"]:hover,
-.site-header--home [data-menu="lang-trigger"]:hover,
-.site-header--home .menu-button:hover {
+.site-header--home [data-menu="lang-trigger"]:hover {
   background: var(--glass-fill-hover);
 }
 
-svg[data-icon],
-.menu-icon {
+svg[data-icon] {
   width: 18px;
   height: 18px;
   fill: none;
@@ -79,15 +68,6 @@ svg[data-icon],
 :root[data-theme-choice="dark"] [data-menu="theme-button"] svg[data-icon="dark"],
 :root[data-theme-choice="system"] [data-menu="theme-button"] svg[data-icon="system"],
 :root:not([data-theme-choice]) [data-menu="theme-button"] svg[data-icon="system"] {
-  display: block;
-}
-
-.menu-button .menu-icon--close,
-.menu-button[aria-expanded="true"] .menu-icon--open {
-  display: none;
-}
-
-.menu-button[aria-expanded="true"] .menu-icon--close {
   display: block;
 }
 
