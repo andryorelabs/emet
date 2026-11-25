@@ -8,6 +8,14 @@ and this project adheres to
 
 ## [Unreleased]
 
+## [0.22.1] - 2026-11-25
+
+### Fixed
+
+- `emet promote` opens the `main` to `develop` sync pull request only when `main` carries content `develop` lacks, so a squash-only `develop` no longer collects an unmergeable sync pull request after every promote. When only merge commits differ, nothing opens and `syncReason` says why.
+- The sync pull request merges with `pr.mergeMethod` instead of a merge commit.
+- `emet promote --hold` writes its marker at `<git common dir>/.emet/runs/<id>/no-promote` instead of under a `promote hold marker` directory; markers at the old locations still hold the spec.
+
 ## [0.22.0] - 2026-11-24
 
 ### Added
@@ -647,7 +655,8 @@ and this project adheres to
 - Per-repo configuration through `forge.config.json`.
 - `install.sh`, which installs the CLI, command and agents.
 
-[Unreleased]: https://github.com/andryorelabs/emet/compare/v0.22.0...HEAD
+[Unreleased]: https://github.com/andryorelabs/emet/compare/v0.22.1...HEAD
+[0.22.1]: https://github.com/andryorelabs/emet/compare/v0.22.0...v0.22.1
 [0.22.0]: https://github.com/andryorelabs/emet/compare/v0.21.0...v0.22.0
 [0.21.0]: https://github.com/andryorelabs/emet/compare/v0.20.0...v0.21.0
 [0.20.0]: https://github.com/andryorelabs/emet/compare/v0.19.0...v0.20.0

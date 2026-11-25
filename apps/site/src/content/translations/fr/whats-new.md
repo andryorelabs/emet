@@ -2,8 +2,18 @@
 title: Nouveautés
 description: Notes de version d'emet : ce qui a changé dans chaque version.
 seoTitle: Nouveautés d'emet : notes de version
-sourceHash: adecd188f36bb789
+sourceHash: 430c2148791d921f
 ---
+
+## 0.22.1
+
+2026-11-25
+
+### Corrigé
+
+- `emet promote` n'ouvre la pull request de synchronisation de `main` vers `develop` que lorsque `main` porte du contenu absent de `develop`. Un `develop` en squash seul ne cumule donc plus, après chaque promote, une pull request de synchronisation impossible à fusionner. Quand seuls des commits de merge diffèrent, rien ne s'ouvre et `syncReason` en donne la raison.
+- La pull request de synchronisation est fusionnée avec `pr.mergeMethod` au lieu d'un commit de merge.
+- `emet promote --hold` écrit son marqueur dans `<git common dir>/.emet/runs/<id>/no-promote` au lieu d'un répertoire `promote hold marker`. Les marqueurs aux anciens emplacements retiennent toujours le spec.
 
 ## 0.22.0
 

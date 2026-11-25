@@ -2,8 +2,18 @@
 title: Neuigkeiten
 description: Release Notes für emet: was sich in jeder Version geändert hat.
 seoTitle: "Neuigkeiten in emet: Release Notes"
-sourceHash: adecd188f36bb789
+sourceHash: 430c2148791d921f
 ---
+
+## 0.22.1
+
+2026-11-25
+
+### Behoben
+
+- `emet promote` öffnet den Sync-Pull-Request von `main` nach `develop` nur noch, wenn `main` Inhalt trägt, der `develop` fehlt. Ein `develop` mit reinem Squash sammelt damit nach jedem Promote keinen nicht mergebaren Sync-Pull-Request mehr an. Unterscheiden sich nur Merge-Commits, wird nichts geöffnet und `syncReason` nennt den Grund.
+- Der Sync-Pull-Request wird mit `pr.mergeMethod` statt mit einem Merge-Commit gemergt.
+- `emet promote --hold` schreibt seine Markierung nach `<git common dir>/.emet/runs/<id>/no-promote` statt in ein Verzeichnis `promote hold marker`. Markierungen an den alten Orten halten den Spec weiterhin an.
 
 ## 0.22.0
 
