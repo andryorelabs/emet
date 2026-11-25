@@ -3,6 +3,8 @@
 Status: Accepted (2026-11-03)
 Spec: #73 (S2, S4, S6, S7)
 
+Amended by [0045](0045-website-on-shadcn-base-nova-with-react-islands.md): the vendored shadcn layer of the Website is exempt from lint.
+
 ## Context
 
 The repo had a single typecheck (`tsc --noEmit`) and no linter, formatter or dead-code check. The same choices were already made and proven in aokit, which uses the Oxc tools and the native TypeScript compiler.
