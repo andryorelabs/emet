@@ -7,6 +7,7 @@ import { refreshStarCounts } from "./github-stars";
 import { announceHeaderMenuOpen, onOtherHeaderMenuOpen } from "./header-menu-events";
 
 const MENU_ID = "mobile-menu";
+const PANEL_ID = "mobile-menu-panel";
 
 /**
  * The star count of the GitHub link as the build baked it in.
@@ -91,6 +92,8 @@ export function MobileMenu({ links, locale, labels, children }: MobileMenuProps)
   useEffect(
     () =>
       onOtherHeaderMenuOpen(MENU_ID, () => {
+        const panel = document.getElementById(PANEL_ID);
+        if (panel?.contains(document.activeElement)) return;
         setOpen(false);
       }),
     [],
@@ -103,7 +106,7 @@ export function MobileMenu({ links, locale, labels, children }: MobileMenuProps)
         type="button"
         data-menu-button=""
         aria-label={labels.menu}
-        aria-controls="mobile-menu-panel"
+        aria-controls={PANEL_ID}
       >
         <svg data-menu-icon="open" viewBox="0 0 24 24" aria-hidden="true">
           <path d="M4 7h16M4 12h16M4 17h16" />
@@ -112,7 +115,7 @@ export function MobileMenu({ links, locale, labels, children }: MobileMenuProps)
           <path d="M6 6l12 12M18 6L6 18" />
         </svg>
       </SheetTrigger>
-      <SheetContent side="top" showCloseButton={false} id="mobile-menu-panel" data-menu-panel="">
+      <SheetContent side="top" showCloseButton={false} id={PANEL_ID} data-menu-panel="">
         <SheetTitle className="sr-only">{labels.menu}</SheetTitle>
         <nav aria-label={labels.navigation}>
           {links.map((link) => (

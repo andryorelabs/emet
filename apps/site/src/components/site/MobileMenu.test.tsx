@@ -101,11 +101,27 @@ describe("MobileMenu", () => {
     const { unmount } = mount();
     await tap(trigger());
     expect(sheet()).not.toBeNull();
+    if (document.activeElement instanceof HTMLElement) document.activeElement.blur();
     await act(async () => {
       announceHeaderMenuOpen("theme-1");
       await settle();
     });
     expect(sheet()).toBeNull();
+    unmount();
+  });
+
+  test("stays open when a control inside the sheet opens its own menu", async () => {
+    const { unmount } = mount();
+    await tap(trigger());
+    const control = document.querySelector<HTMLElement>("[data-controls]");
+    if (control === null) throw new Error("no controls");
+    control.tabIndex = 0;
+    control.focus();
+    await act(async () => {
+      announceHeaderMenuOpen("theme-1");
+      await settle();
+    });
+    expect(sheet()).not.toBeNull();
     unmount();
   });
 
@@ -116,6 +132,7 @@ describe("MobileMenu", () => {
     if (content === null) throw new Error("sheet did not open");
     await press(content, "Escape");
     expect(sheet()).toBeNull();
+    expect(document.activeElement).toBe(trigger());
     unmount();
   });
 
