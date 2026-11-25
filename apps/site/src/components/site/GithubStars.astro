@@ -7,6 +7,8 @@
  * alone and the count stays hidden until the refresh succeeds.
  */
 import type { Locale } from "../../i18n/locales";
+import { badgeVariants } from "../ui/badge";
+import { buttonVariants } from "../ui/button";
 import { formatStarCount, getBuildStarCount } from "./github-stars";
 import { GITHUB_STARS_TOOLTIP, starsTooltip } from "./github-strings";
 
@@ -21,7 +23,8 @@ const count = await getBuildStarCount();
 ---
 
 <span
-  class:list={["github-stars", `github-stars--${placement}`]}
+  data-slot="button"
+  class:list={["github-stars", `github-stars--${placement}`, buttonVariants({ variant: "ghost" })]}
   lang={locale}
   title={count === null ? undefined : starsTooltip(locale, count)}
   data-github-stars-link
@@ -37,7 +40,12 @@ const count = await getBuildStarCount();
       <span>{label}</span>
     )
   }
-  <span class="github-stars-count" data-github-stars hidden={count === null}>
+  <span
+  data-slot="badge"
+  class:list={["github-stars-count", badgeVariants({ variant: "ghost" })]}
+  data-github-stars
+  hidden={count === null}
+>
     {count === null ? "" : formatStarCount(count)}
   </span>
 </span>

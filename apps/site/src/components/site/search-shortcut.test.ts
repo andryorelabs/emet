@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 
-import { isApplePlatform } from "./search-shortcut";
+import { isApplePlatform, isSearchSlashKey, isSearchToggleKey } from "./search-shortcut";
 
 describe("isApplePlatform", () => {
   test("detects macOS and iOS platforms", () => {
@@ -28,5 +28,37 @@ describe("isApplePlatform", () => {
 
   test("defaults to false with nothing to read", () => {
     expect(isApplePlatform({})).toBe(false);
+  });
+});
+
+describe("isSearchToggleKey", () => {
+  test("accepts Ctrl K and Command K", () => {
+    expect(isSearchToggleKey({ key: "k", ctrlKey: true, metaKey: false })).toBe(true);
+    expect(isSearchToggleKey({ key: "k", ctrlKey: false, metaKey: true })).toBe(true);
+  });
+
+  test("rejects a bare K and other keys", () => {
+    expect(isSearchToggleKey({ key: "k", ctrlKey: false, metaKey: false })).toBe(false);
+    expect(isSearchToggleKey({ key: "j", ctrlKey: true, metaKey: false })).toBe(false);
+  });
+});
+
+describe("isSearchSlashKey", () => {
+  const plain = { key: "/", ctrlKey: false, metaKey: false, altKey: false };
+  const outside = { closest: () => null };
+
+  test("accepts a bare slash outside a text field", () => {
+    expect(isSearchSlashKey(plain, outside)).toBe(true);
+    expect(isSearchSlashKey(plain, null)).toBe(true);
+  });
+
+  test("rejects a slash inside a text field", () => {
+    expect(isSearchSlashKey(plain, { closest: () => ({}) })).toBe(false);
+  });
+
+  test("rejects a slash with a modifier and other keys", () => {
+    expect(isSearchSlashKey({ ...plain, ctrlKey: true }, outside)).toBe(false);
+    expect(isSearchSlashKey({ ...plain, altKey: true }, outside)).toBe(false);
+    expect(isSearchSlashKey({ ...plain, key: "a" }, outside)).toBe(false);
   });
 });
