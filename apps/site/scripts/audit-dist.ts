@@ -205,7 +205,7 @@ export function auditDist(directory: string, allow: readonly string[]): readonly
   );
 }
 
-const ISLAND_PATTERN = /<astro-island\b/i;
+const ISLAND_OR_RAW_TEXT_PATTERN = /<(script|style)\b[^>]*>[\s\S]*?<\/\1\s*>|<astro-island\b/gi;
 const REACT_RUNTIME_PATTERN = /\/_astro\/(?:client|react|react-dom|jsx-runtime)\.[\w-]+\.js/g;
 const CSP_META_PATTERN = /<meta\b[^>]*\bhttp-equiv\s*=\s*["']?content-security-policy["']?[^>]*>/i;
 const CSP_HASH_PATTERN = /'(sha(?:256|384|512)-[A-Za-z0-9+/=]+)'/g;
@@ -253,6 +253,13 @@ function inlineScriptBodies(html: string): readonly string[] {
 }
 
 /**
+ * Tells whether a page holds an `astro-island` element outside its script and style bodies.
+ */
+function hasIsland(html: string): boolean {
+  return [...html.matchAll(ISLAND_OR_RAW_TEXT_PATTERN)].some((match) => match[1] === undefined);
+}
+
+/**
  * Audits the Islands of a built site: a page with no `astro-island` must not reference the React runtime, and every executable inline script must have its hash in the page's `script-src`.
  */
 export function auditIslands(directory: string): readonly AuditFinding[] {
@@ -260,7 +267,7 @@ export function auditIslands(directory: string): readonly AuditFinding[] {
     const html = stripComments(readFileSync(join(directory, path), "utf8"));
     const file = relative(directory, join(directory, path));
     const findings: AuditFinding[] = [];
-    if (!ISLAND_PATTERN.test(html.replaceAll(RAW_TEXT_PATTERN, ""))) {
+    if (!hasIsland(html)) {
       const references = [...new Set(html.match(REACT_RUNTIME_PATTERN) ?? [])].toSorted();
       findings.push(
         ...references.map((detail) => ({ file, kind: "react-runtime" as const, detail })),

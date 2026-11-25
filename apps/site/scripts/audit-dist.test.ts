@@ -240,6 +240,18 @@ describe("auditIslands", () => {
     ]);
   });
 
+  test("does not count an island named inside a script body", () => {
+    writeFileSync(
+      join(directory, "text.html"),
+      page(
+        `<script type="application/json">"<astro-island>"</script><link rel="modulepreload" href="/_astro/react-dom.abc.js">`,
+      ),
+    );
+    expect(auditIslands(directory)).toEqual([
+      { file: "text.html", kind: "react-runtime", detail: "/_astro/react-dom.abc.js" },
+    ]);
+  });
+
   test("flags a client renderer or island url with no island element", () => {
     writeFileSync(
       join(directory, "a.html"),
