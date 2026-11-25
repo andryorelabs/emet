@@ -178,7 +178,7 @@ interface OpenWidget {
   readonly open: (page: Page) => Promise<void>;
 }
 
-/** The widgets that must stay accessible while open: theme menu, mobile sheet, search dialog and FAQ. */
+/** The widgets that must stay accessible while open: theme menu, language menu, page actions menu, mobile sheet, search dialog and FAQ. */
 const OPEN_WIDGETS: readonly OpenWidget[] = [
   {
     name: "theme menu",
@@ -186,6 +186,27 @@ const OPEN_WIDGETS: readonly OpenWidget[] = [
     width: 1280,
     open: async (page) => {
       await page.locator('button[data-menu="theme-button"]:visible').first().click();
+      await expect(page.getByRole("menu")).toBeVisible();
+    },
+  },
+  {
+    name: "language menu",
+    path: "/",
+    width: 1280,
+    open: async (page) => {
+      await page.locator('button[data-menu="lang-trigger"]:visible').first().click();
+      await expect(page.getByRole("menu")).toBeVisible();
+    },
+  },
+  {
+    name: "page actions menu",
+    path: "/docs/start/install/",
+    width: 1280,
+    open: async (page) => {
+      await page
+        .locator('[data-page-actions] button[aria-haspopup="menu"]:visible')
+        .first()
+        .click();
       await expect(page.getByRole("menu")).toBeVisible();
     },
   },
