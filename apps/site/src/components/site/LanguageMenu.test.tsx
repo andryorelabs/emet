@@ -106,7 +106,7 @@ describe("LanguageMenu", () => {
   test("another header menu opening closes it", async () => {
     await openMenu();
     await settle(() => {
-      announceHeaderMenuOpen("mobile-menu");
+      announceHeaderMenuOpen("mobile-menu", document.body);
     });
     expect(links().length).toBe(0);
   });
