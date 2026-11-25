@@ -3,9 +3,15 @@
  * theme, so utilities such as `bg-bg`, `text-muted` or `font-mono` use them.
  * `--font-sans` and `--font-mono` share Tailwind's names, and the unlayered
  * tokens override Tailwind's layered defaults, so they need no mapping.
+ * The shadcn variables (`--background`, `--primary`, ...) are aliases of those
+ * tokens, so shadcn components follow the brand palette in light and dark.
+ * `--accent` stays the brand accent: shadcn's `accent` utilities map to the
+ * secondary surface instead.
  */
 
 @import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
 @import "./tokens.css";
 
 @custom-variant dark {
@@ -20,13 +26,54 @@
   }
 }
 
+:root {
+  --radius: 0.625rem;
+  --background: var(--bg);
+  --foreground: var(--text);
+  --card: var(--surface);
+  --card-foreground: var(--text);
+  --popover: var(--bg);
+  --popover-foreground: var(--text);
+  --primary: var(--accent);
+  --primary-foreground: var(--on-accent);
+  --secondary: var(--surface);
+  --secondary-foreground: var(--text);
+  --muted: var(--surface);
+  --muted-foreground: var(--text-muted);
+  --destructive: var(--error);
+  --input: var(--border);
+  --ring: var(--text);
+}
+
 @theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--secondary);
+  --color-accent-foreground: var(--secondary-foreground);
+  --color-destructive: var(--destructive);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: calc(var(--radius) * 0.8);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.4);
+  --radius-2xl: calc(var(--radius) * 1.8);
+  --radius-3xl: calc(var(--radius) * 2.2);
+  --radius-4xl: calc(var(--radius) * 2.6);
   --color-bg: var(--bg);
   --color-surface: var(--surface);
   --color-border: var(--border);
   --color-text: var(--text);
-  --color-muted: var(--text-muted);
-  --color-accent: var(--accent);
   --color-accent-text: var(--accent-text);
   --color-on-accent: var(--on-accent);
   --color-ok: var(--ok);

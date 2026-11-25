@@ -1,0 +1,103 @@
+/**
+ * Mobile menu of the header: the menu button and the panel under the header
+ * that holds the navigation, language and theme controls below 900px.
+ */
+
+.mobile-menu {
+  display: none;
+}
+
+.menu-panel {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 100%;
+  z-index: 6;
+  box-sizing: border-box;
+  padding: 8px 16px 16px;
+  background: var(--bg);
+  color: var(--text);
+  border-bottom: 1px solid var(--border);
+  box-shadow: 0 12px 32px rgb(0 0 0 / 0.22);
+  animation: header-drop 200ms cubic-bezier(0.23, 1, 0.32, 1);
+}
+
+.menu-panel:focus {
+  outline: none;
+}
+
+.site-header .menu-panel nav {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.site-header .menu-panel nav a {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  min-height: 44px;
+  text-align: start;
+  padding: 0 4px;
+  border-bottom: 1px solid var(--border);
+  font-size: 17px;
+}
+
+.menu-controls {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  margin-top: 16px;
+}
+
+.menu-controls .lang {
+  flex: 1;
+  min-width: 0;
+}
+
+.site-header .menu-panel .lang summary,
+.site-header .menu-panel .theme-button {
+  border-color: var(--border);
+  background: var(--bg);
+  color: var(--text);
+}
+
+.site-header .menu-panel .lang summary {
+  box-sizing: border-box;
+  display: flex;
+  justify-content: space-between;
+  height: 36px;
+  padding-block: 0;
+}
+
+.site-header .menu-panel .lang ul {
+  position: static;
+  width: auto;
+  max-width: none;
+  margin-top: 8px;
+}
+
+.menu-panel .theme-menu {
+  right: 0;
+}
+
+@media (max-width: 900px) {
+  .mobile-menu {
+    display: block;
+  }
+
+  .site-header[data-menu-ready] .site-header-end > .theme-select,
+  .site-header[data-menu-ready] .site-header-end > .lang {
+    display: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .menu-button {
+    transition: none;
+  }
+
+  .menu-panel {
+    animation: none;
+  }
+}
