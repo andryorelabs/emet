@@ -5,8 +5,6 @@ import { Sheet, SheetContent, SheetTitle, SheetTrigger } from "@/components/ui/s
 
 import { refreshStarCounts } from "./github-stars";
 import { announceHeaderMenuOpen, onOtherHeaderMenuOpen } from "./header-menu-events";
-import { initHeaderMenus } from "./header-menus";
-import { initThemeSelects } from "./theme-menu";
 
 const MENU_ID = "mobile-menu";
 
@@ -61,14 +59,11 @@ function headerBottom(trigger: HTMLElement | null): number {
 }
 
 /**
- * Wires the server-rendered language and theme controls once they mount in
- * the sheet, and refreshes the GitHub star count shown in it.
+ * Refreshes the GitHub star count shown in the sheet once its controls mount.
  * @param node - The controls container, or null when it unmounts.
  */
 function wireControls(node: HTMLDivElement | null): void {
   if (node === null) return;
-  initHeaderMenus(node);
-  initThemeSelects(node);
   void refreshStarCounts(node.ownerDocument);
 }
 
