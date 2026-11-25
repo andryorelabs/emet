@@ -92,6 +92,7 @@ Source: #988 S12
 - **THEN** it reports no finding
 
 ### Requirement: A header menu announces its source element
+
 Source: #1003 S2
 
 `announceHeaderMenuOpen(id, source)` takes the opening menu's trigger element, and `onOtherHeaderMenuOpen` hands it to the listener, so the mobile sheet decides from the source and never from the focused element.
@@ -107,6 +108,7 @@ Source: #1003 S2
 - THEN the sheet closes
 
 ### Requirement: Website interactions are verified in a real browser
+
 Source: #1003 S1
 
 The e2e spec covers what happy-dom cannot open: the header menus, the mobile sheet, search, the page actions menu, install tabs, the FAQ, theme sync across tabs and the language list without script. A case that exposes a real bug is fixed in the code, never marked as an expected failure.

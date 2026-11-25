@@ -356,15 +356,35 @@ test.describe("mobile sheet visibility and navigation", () => {
     await expect(page.locator(MENU_BUTTON).first()).toBeVisible();
   });
 
-  test("a nav link in the sheet navigates and the sheet is closed afterwards", async ({ page }) => {
+  test("a nav link in the sheet navigates to the docs", async ({ page }) => {
     await page.setViewportSize(PHONE);
     await page.goto("/");
     await page.locator(MENU_BUTTON).first().click();
     const sheet = page.getByRole("dialog");
     await expect(sheet).toBeVisible();
-    const link = sheet.locator('nav a[href^="/docs/"]:not([target])').first();
-    await link.click();
+    await sheet.locator('nav a[href^="/docs/"]:not([target])').first().click();
     await expect(page).toHaveURL(/\/docs\//);
+  });
+
+  test("clicking a nav link closes the sheet on the same page", async ({ page }) => {
+    await page.setViewportSize(PHONE);
+    await page.goto("/");
+    const menuButton = page.locator(MENU_BUTTON).first();
+    await menuButton.click();
+    const sheet = page.getByRole("dialog");
+    await expect(sheet).toBeVisible();
+    await page.evaluate(() => {
+      document.addEventListener(
+        "click",
+        (event) => {
+          event.preventDefault();
+        },
+        { capture: true },
+      );
+    });
+    await sheet.locator('nav a[href^="/docs/"]:not([target])').first().click();
+    await expect(page).toHaveURL(/\/$/);
     await expect(page.getByRole("dialog")).toBeHidden();
+    await expect(menuButton).toHaveAttribute("aria-expanded", "false");
   });
 });
