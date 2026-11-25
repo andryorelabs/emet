@@ -2,8 +2,18 @@
 title: Что нового
 description: Примечания к выпускам emet: что изменилось в каждой версии.
 seoTitle: "Что нового в emet: примечания к выпускам"
-sourceHash: adecd188f36bb789
+sourceHash: 430c2148791d921f
 ---
+
+## 0.22.1
+
+2026-11-25
+
+### Исправлено
+
+- `emet promote` открывает синхронизирующий pull request из `main` в `develop` только тогда, когда в `main` есть содержимое, которого нет в `develop`. Поэтому `develop` со слиянием только через squash больше не копит после каждого promote pull request синхронизации, который нельзя смержить. Если различаются только merge-коммиты, ничего не открывается, а `syncReason` объясняет причину.
+- Синхронизирующий pull request сливается через `pr.mergeMethod`, а не merge-коммитом.
+- `emet promote --hold` записывает маркер в `<git common dir>/.emet/runs/<id>/no-promote`, а не в каталог `promote hold marker`. Маркеры в старых местах по-прежнему удерживают spec.
 
 ## 0.22.0
 

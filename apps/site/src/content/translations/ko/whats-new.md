@@ -2,8 +2,18 @@
 title: 새로운 소식
 description: emet 릴리스 노트. 각 버전에서 무엇이 바뀌었는지 정리합니다.
 seoTitle: "emet 새로운 소식: 릴리스 노트"
-sourceHash: adecd188f36bb789
+sourceHash: 430c2148791d921f
 ---
+
+## 0.22.1
+
+2026-11-25
+
+### 수정됨
+
+- `emet promote`는 `develop`에 없는 내용이 `main`에 있을 때만 `main`에서 `develop`으로 가는 동기화 풀 리퀘스트를 엽니다. 그래서 squash만 허용하는 `develop`에 promote마다 병합할 수 없는 동기화 풀 리퀘스트가 쌓이지 않습니다. 머지 커밋만 다르면 아무것도 열지 않고 `syncReason`이 이유를 알려 줍니다.
+- 동기화 풀 리퀘스트는 머지 커밋 대신 `pr.mergeMethod`로 병합됩니다.
+- `emet promote --hold`는 마커를 `promote hold marker` 디렉터리 아래가 아니라 `<git common dir>/.emet/runs/<id>/no-promote`에 씁니다. 이전 위치의 마커도 계속 spec을 보류합니다.
 
 ## 0.22.0
 

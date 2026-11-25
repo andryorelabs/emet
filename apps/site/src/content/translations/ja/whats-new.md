@@ -2,8 +2,18 @@
 title: 新機能
 description: emet のリリースノート。各バージョンでの変更点をまとめています。
 seoTitle: "emet の新機能: リリースノート"
-sourceHash: adecd188f36bb789
+sourceHash: 430c2148791d921f
 ---
+
+## 0.22.1
+
+2026-11-25
+
+### 修正
+
+- `emet promote` は、`develop` にない内容が `main` にある場合にのみ、`main` から `develop` への同期プルリクエストを開くようになりました。squash のみの `develop` では、promote のたびにマージできない同期プルリクエストが残ることがなくなります。差があるのがマージコミットだけの場合は何も開かず、`syncReason` が理由を示します。
+- 同期プルリクエストは、マージコミットではなく `pr.mergeMethod` でマージされます。
+- `emet promote --hold` は、マーカーを `promote hold marker` ディレクトリ配下ではなく `<git common dir>/.emet/runs/<id>/no-promote` に書き込みます。以前の場所にあるマーカーも引き続き spec を保留します。
 
 ## 0.22.0
 
