@@ -68,9 +68,13 @@ main p {
 
 .button:focus-visible,
 a:focus-visible,
-summary:focus-visible {
+[data-faq-trigger]:focus-visible {
   outline: 2px solid var(--text);
   outline-offset: 3px;
+}
+
+[data-faq-trigger]:focus-visible {
+  box-shadow: none;
 }
 
 .text-link {
@@ -963,27 +967,6 @@ pre {
 [data-faq-item] [data-faq-trigger] svg {
   flex: none;
   color: var(--text-muted);
-}
-
-[data-faq-heading-line] {
-  display: block;
-}
-
-@media (scripting: enabled) and (prefers-reduced-motion: no-preference) {
-  [data-faq-heading-line] {
-    transition:
-      opacity 400ms var(--ease-out),
-      transform 400ms var(--ease-out);
-  }
-
-  [data-reveal="heading"]:not(.is-in) > [data-faq-heading-line] {
-    opacity: 0;
-    transform: translateY(12px);
-  }
-
-  html:not([data-motion]) [data-reveal="heading"] > [data-faq-heading-line] {
-    animation: reveal-failsafe 1ms 2500ms forwards;
-  }
 }
 
 [data-faq-answer] {

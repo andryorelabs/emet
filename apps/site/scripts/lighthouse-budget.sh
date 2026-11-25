@@ -31,9 +31,6 @@ max_total_kib=1024
 # Per-page budgets for known Website defects pending a follow-up ticket, keyed
 # "<page>|<budget>". Delete an entry once its defect is fixed.
 declare -A known_defects=(
-  # The style-src-attr CSP console errors cost 0.08 of best-practices.
-  ["/|min_best_practices"]=0.9
-  ["/es/|min_best_practices"]=0.9
   # The docs content container shifts after load (CLS up to 0.3).
   ["/docs/start/install/|max_cls"]=0.35
   ["/docs/start/install/|min_performance"]=0.8

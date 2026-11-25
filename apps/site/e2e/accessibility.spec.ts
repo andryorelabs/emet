@@ -33,16 +33,10 @@ const COLOR_SCHEMES = ["light", "dark"] as const;
 /** Each waiver covers one rule on one selector, never a whole page or rule. */
 const KNOWN_AXE_ISSUES: readonly KnownAxeIssue[] = [];
 
-/** Whether the known FAQ accordion `style` attribute defect is still open; the style CSP tests are expected to fail while it is. */
-const FAQ_STYLE_ATTRIBUTE_DEFECT = true;
-
-/** The routes whose inline `style` attributes the style-src policy blocks. */
-const STYLE_ATTRIBUTE_CSP_ROUTES = ["/", "/es/"];
-
 /**
  * Records every Content-Security-Policy violation the page reports, as
- * `<directive> <blocked URI>`, so an inline script whose hash is missing from
- * the policy fails the spec.
+ * `<directive> <blocked URI>`, so an inline script or style attribute whose
+ * hash is missing from the policy fails the spec.
  */
 async function recordCspViolations(page: Page): Promise<void> {
   await page.addInitScript(() => {
@@ -73,7 +67,7 @@ function isKnownAxeIssue(rule: string, target: string): boolean {
 
 for (const keyPage of KEY_PAGES) {
   for (const colorScheme of COLOR_SCHEMES) {
-    test(`${keyPage.name} (${keyPage.path}) has no axe or script CSP violations in ${colorScheme} mode`, async ({
+    test(`${keyPage.name} (${keyPage.path}) has no axe or CSP violations in ${colorScheme} mode`, async ({
       page,
     }) => {
       await page.emulateMedia({ colorScheme });
@@ -84,10 +78,7 @@ for (const keyPage of KEY_PAGES) {
       await expect(page.locator("main")).toHaveCount(1);
       await expect(page.locator("h1").first()).toBeVisible();
 
-      const scriptViolations = (await cspViolations(page)).filter((violation) =>
-        violation.startsWith("script-src"),
-      );
-      expect.soft(scriptViolations).toEqual([]);
+      expect.soft(await cspViolations(page)).toEqual([]);
 
       const results = await new AxeBuilder({ page }).withTags(WCAG_TAGS).analyze();
       const violations = results.violations.flatMap(({ id, impact, nodes }) =>
@@ -142,18 +133,6 @@ test("the search button keeps a Command K swap on Apple platforms", async ({ pag
   await expect(trigger.locator("[data-search-modifier]")).toHaveText("⌘");
   await expect(trigger).toHaveAccessibleName("Search documentation… ⌘ K");
 });
-
-for (const path of STYLE_ATTRIBUTE_CSP_ROUTES) {
-  test(`${path} has no style CSP violations`, async ({ page }) => {
-    test.fail(
-      FAQ_STYLE_ATTRIBUTE_DEFECT,
-      "The FAQ accordion (Base UI) server-renders inline style attributes the hash-based CSP does not allow; see ADR-0045. Delete this line once the defect is fixed.",
-    );
-    await recordCspViolations(page);
-    await page.goto(path);
-    expect(await cspViolations(page)).toEqual([]);
-  });
-}
 
 /**
  * Runs axe over the current page state and returns each violation as `<rule> (<impact>): <target>`, waived issues removed.
@@ -244,15 +223,17 @@ const OPEN_WIDGETS: readonly OpenWidget[] = [
 
 for (const widget of OPEN_WIDGETS) {
   for (const colorScheme of COLOR_SCHEMES) {
-    test(`the ${widget.name} has no axe violations while open in ${colorScheme} mode`, async ({
+    test(`the ${widget.name} has no axe or CSP violations while open in ${colorScheme} mode`, async ({
       page,
     }) => {
       await page.emulateMedia({ colorScheme });
       await page.setViewportSize({ width: widget.width, height: 900 });
+      await recordCspViolations(page);
       await page.goto(widget.path);
       await expect(page.locator("h1").first()).toBeVisible();
       await widget.open(page);
       expect(await axeViolations(page, widget.scope)).toEqual([]);
+      expect(await cspViolations(page)).toEqual([]);
     });
   }
 }
