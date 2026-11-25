@@ -20,6 +20,7 @@ import {
   promoteDevelop,
   readChangedPaths,
   run,
+  SYNC_SKIPPED_REASON,
   type PromoteDeps,
   type PromoteOutcome,
 } from "./promote";
@@ -42,7 +43,9 @@ interface Harness {
 function harness(options: {
   mode?: "release" | "promote" | "none";
   ci?: CiOutcome["state"];
-  ahead?: number;
+  files?: number;
+  mergeMethod?: PromoteDeps["mergeMethod"];
+  compareOutput?: string;
   syncCi?: CiOutcome["state"];
   syncNoChecks?: boolean;
   syncMergeError?: string;
@@ -56,7 +59,8 @@ function harness(options: {
       created += 1;
       return Promise.resolve(`https://github.com/o/r/pull/${created === 1 ? 10 : 11}\n`);
     }
-    if (args[0] === "api") return Promise.resolve(`${options.ahead ?? 0}\n`);
+    if (args[0] === "api")
+      return Promise.resolve(options.compareOutput ?? `${options.files ?? 0}\n`);
     if (args[0] === "pr" && args[1] === "merge" && args[2] === "11" && options.syncMergeError) {
       return Promise.reject(new Error(options.syncMergeError));
     }
@@ -64,6 +68,7 @@ function harness(options: {
   };
   const deps: PromoteDeps = {
     mode: options.mode ?? "promote",
+    mergeMethod: options.mergeMethod ?? "squash",
     gh,
     waitForCi: (pr) => {
       calls.push(["wait", String(pr)]);
@@ -198,43 +203,43 @@ describe("promoteDevelop", () => {
   });
 
   test("waits for the sync pull request, then merges it on pass", async () => {
-    const { deps, calls } = harness({ ahead: 2 });
+    const { deps, calls } = harness({ files: 2 });
     const outcome = await promoteDevelop({ dryRun: false }, deps);
     expect(outcome).toMatchObject({ syncPrNumber: 11, syncMerged: true, syncReason: null });
     const waitIndex = calls.findIndex((call) => call[0] === "wait" && call[1] === "11");
-    const mergeIndex = calls.findIndex((call) => call.join(" ") === "pr merge 11 --merge");
+    const mergeIndex = calls.findIndex((call) => call.join(" ") === "pr merge 11 --squash");
     expect(waitIndex).toBeGreaterThan(-1);
     expect(mergeIndex).toBeGreaterThan(waitIndex);
   });
 
   test("merges a sync pull request with no checks immediately", async () => {
-    const { deps, calls } = harness({ ahead: 2, syncNoChecks: true });
+    const { deps, calls } = harness({ files: 2, syncNoChecks: true });
     const outcome = await promoteDevelop({ dryRun: false }, deps);
     expect(outcome.syncMerged).toBe(true);
-    expect(calls).toContainEqual(["pr", "merge", "11", "--merge"]);
+    expect(calls).toContainEqual(["pr", "merge", "11", "--squash"]);
   });
 
   test.each(["fail", "timeout", "env-fault"] as const)(
     "leaves the sync pull request open when its CI is %s",
     async (syncCi) => {
-      const { deps, calls, recorded } = harness({ ahead: 2, syncCi });
+      const { deps, calls, recorded } = harness({ files: 2, syncCi });
       const outcome = await promoteDevelop({ dryRun: false }, deps);
       expect(outcome).toMatchObject({ merged: true, syncPrNumber: 11, syncMerged: false });
       expect(outcome.syncReason).toContain(syncCi);
-      expect(calls.some((call) => call.join(" ") === "pr merge 11 --merge")).toBe(false);
+      expect(calls.some((call) => call.join(" ") === "pr merge 11 --squash")).toBe(false);
       expect(recorded[0]).toMatchObject({ syncMerged: false, syncReason: outcome.syncReason });
     },
   );
 
   test("leaves the sync pull request open when the merge is rejected", async () => {
-    const { deps } = harness({ ahead: 2, syncMergeError: "merge blocked" });
+    const { deps } = harness({ files: 2, syncMergeError: "merge blocked" });
     const outcome = await promoteDevelop({ dryRun: false }, deps);
     expect(outcome).toMatchObject({ merged: true, syncPrNumber: 11, syncMerged: false });
     expect(outcome.syncReason).toContain("merge blocked");
   });
 
   test("a non-Error merge rejection is recorded as text", async () => {
-    const { deps } = harness({ ahead: 2 });
+    const { deps } = harness({ files: 2 });
     const gh = deps.gh;
     deps.gh = (args) => {
       if (args[1] === "merge" && args[2] === "11") {
@@ -247,11 +252,54 @@ describe("promoteDevelop", () => {
     expect(outcome.syncReason).toContain("denied");
   });
 
-  test("opens no sync pull request when develop is not behind main", async () => {
-    const { deps } = harness({ ahead: 0 });
+  test("opens no sync pull request when main differs only by merge commits", async () => {
+    const { deps, calls, recorded } = harness({ files: 0 });
     const outcome = await promoteDevelop({ dryRun: false }, deps);
-    expect(outcome).toMatchObject({ syncPrNumber: null, syncMerged: false, syncReason: null });
+    expect(outcome).toMatchObject({
+      merged: true,
+      syncPrNumber: null,
+      syncMerged: false,
+      syncReason: SYNC_SKIPPED_REASON,
+    });
+    expect(SYNC_SKIPPED_REASON).toBe(
+      "develop already carries the content of main; only merge commits differ",
+    );
+    expect(calls.filter((call) => call[0] === "pr" && call[1] === "create")).toHaveLength(1);
+    expect(recorded[0]).toMatchObject({ syncReason: SYNC_SKIPPED_REASON, syncMerged: false });
   });
+
+  test("opens the sync pull request when the comparison lists a file", async () => {
+    const { deps, calls } = harness({ files: 1 });
+    const outcome = await promoteDevelop({ dryRun: false }, deps);
+    expect(outcome).toMatchObject({ syncPrNumber: 11, syncMerged: true });
+    expect(calls).toContainEqual([
+      "api",
+      "repos/{owner}/{repo}/compare/develop...main",
+      "--jq",
+      ".files | length",
+    ]);
+  });
+
+  test.each(["squash", "merge", "rebase"] as const)(
+    "merges the sync pull request with --%s and the promote with --merge",
+    async (mergeMethod) => {
+      const { deps, calls } = harness({ files: 2, mergeMethod });
+      await promoteDevelop({ dryRun: false }, deps);
+      expect(calls).toContainEqual(["pr", "merge", "11", `--${mergeMethod}`]);
+      expect(calls).toContainEqual(["pr", "merge", "10", "--merge"]);
+    },
+  );
+
+  test.each(["", "\n", "null", "abc"])(
+    "an unreadable comparison (%j) opens no sync and records why",
+    async (compareOutput) => {
+      const { deps, calls } = harness({ compareOutput });
+      const outcome = await promoteDevelop({ dryRun: false }, deps);
+      expect(outcome).toMatchObject({ merged: true, syncPrNumber: null, syncMerged: false });
+      expect(outcome.syncReason).toContain("could not read the changed file count");
+      expect(calls.filter((call) => call[0] === "pr" && call[1] === "create")).toHaveLength(1);
+    },
+  );
 
   test.each(["fail", "timeout", "env-fault"] as const)("never merges when CI is %s", async (ci) => {
     const { deps, calls } = harness({ ci });
@@ -803,6 +851,22 @@ describe("run", () => {
         path.join(commonDirectory, ".emet", "runs", "629", "no-promote"),
       );
       expect(existsSync(holdMarkerPath(commonDirectory, "629"))).toBe(true);
+    });
+
+    test("an old-path-only marker holds the spec", () => {
+      const { repoRoot, commonDirectory } = makeSetup();
+      const oldMarker = path.join(
+        commonDirectory,
+        "promote hold marker",
+        ".emet",
+        "runs",
+        "629",
+        "no-promote",
+      );
+      mkdirSync(path.dirname(oldMarker), { recursive: true });
+      writeFileSync(oldMarker, "");
+      expect(existsSync(holdMarkerPath(commonDirectory, "629"))).toBe(false);
+      expect(isSpecHeld(commonDirectory, repoRoot, "629")).toBe(true);
     });
 
     test("a held spec skips without opening a pull request", async () => {

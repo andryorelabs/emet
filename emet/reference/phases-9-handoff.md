@@ -51,7 +51,7 @@ ordered rule list; `rule` is the matched rule index (`null` for the string form)
 and `reason` says why. In `promote` mode it opens a `develop` to `main` pull
 request, waits with `emet ci --pr <n> --wait`, merges only when CI is `pass`
 (never on `fail` or `timeout`; report it and stop), and opens and merges a
-`main` to `develop` sync pull request only when `develop` is behind `main`. In
+`main` to `develop` sync pull request only when `main` carries content `develop` lacks. In
 `release` mode it opens nothing to merge: follow the `cut-release` skill's steps
 to open the release pull request and leave it for a person. Run
 `emet deploy-check` (exit 0 `ok`, 1 `failed`, 3 `timeout`) only when the
