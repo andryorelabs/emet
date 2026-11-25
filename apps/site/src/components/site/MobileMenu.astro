@@ -64,7 +64,7 @@ const { newTab } = getStrings(locale).links;
 </div>
 
 <script>
-  import { HEADER_MENU_OPEN_EVENT } from "./theme-menu";
+  import { announceHeaderMenuOpen } from "./header-menu-events";
 
   const root = document.querySelector<HTMLElement>("[data-mobile-menu]");
   const button = root?.querySelector<HTMLButtonElement>(".menu-button");
@@ -74,11 +74,11 @@ const { newTab } = getStrings(locale).links;
     const close = (restoreFocus: boolean): void => {
       panel.hidden = true;
       button.setAttribute("aria-expanded", "false");
-      document.dispatchEvent(new CustomEvent(HEADER_MENU_OPEN_EVENT, { detail: button }));
+      announceHeaderMenuOpen("mobile-menu");
       if (restoreFocus) button.focus();
     };
     const open = (): void => {
-      document.dispatchEvent(new CustomEvent(HEADER_MENU_OPEN_EVENT, { detail: panel }));
+      announceHeaderMenuOpen("mobile-menu");
       panel.hidden = false;
       button.setAttribute("aria-expanded", "true");
       panel.querySelector<HTMLElement>("nav a")?.focus();

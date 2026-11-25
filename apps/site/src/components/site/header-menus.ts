@@ -4,7 +4,9 @@
  * `details` the outside-click and Escape closing the theme menu already has.
  * Progressive enhancement: without script the `details` still works.
  */
-import { HEADER_MENU_OPEN_EVENT } from "./theme-menu";
+import { announceHeaderMenuOpen, onOtherHeaderMenuOpen } from "./header-menu-events";
+
+let languageMenuCount = 0;
 
 const wired = new WeakSet<HTMLDetailsElement>();
 
@@ -16,15 +18,15 @@ function initHeaderMenu(details: HTMLDetailsElement): void {
   if (wired.has(details)) return;
   wired.add(details);
   const doc = details.ownerDocument;
+  languageMenuCount += 1;
+  const menuId = `language-${languageMenuCount}`;
   const summary = details.querySelector<HTMLElement>("summary");
 
   details.addEventListener("toggle", () => {
-    if (details.open) {
-      doc.dispatchEvent(new CustomEvent(HEADER_MENU_OPEN_EVENT, { detail: details }));
-    }
+    if (details.open) announceHeaderMenuOpen(menuId);
   });
-  doc.addEventListener(HEADER_MENU_OPEN_EVENT, (event) => {
-    if (event instanceof CustomEvent && event.detail !== details) details.open = false;
+  onOtherHeaderMenuOpen(menuId, () => {
+    details.open = false;
   });
   doc.addEventListener("click", (event) => {
     if (details.open && !(event.target instanceof Node && details.contains(event.target))) {
