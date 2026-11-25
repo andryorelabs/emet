@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto";
 
-import { THEME_CHANGE_EVENT, THEME_STORAGE_KEY } from "./theme-menu";
+import { THEME_CHANGE_EVENT, THEME_STORAGE_KEY } from "./theme-storage";
 
 const LIGHT_COLOR = "#f4fdf6";
 const DARK_COLOR = "#0a100b";

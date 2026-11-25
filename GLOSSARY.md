@@ -40,6 +40,10 @@ _Avoid_: ship, deploy, release
 The public site at emet.andryore.dev: the home page and the docs, in every locale.
 _Avoid_: landing, landing page (**Landing** is how a wave reaches trunk)
 
+**Island**:
+An interactive part of the Website that hydrates a component in the browser; everything else on the Website is rendered ahead of time and hydrates no component.
+_Avoid_: widget, component (a component can be static)
+
 **Coordinator**:
 The single session that runs the phases, dispatches workers, merges their branches and is the only writer of the tracker.
 _Avoid_: orchestrator, manager, lead

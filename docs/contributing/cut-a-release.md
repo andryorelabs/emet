@@ -21,11 +21,12 @@ A release is a tag on `main`. Pushing a `v*` tag runs `.github/workflows/release
    It exits 1 and writes nothing when the version is not semver, already has a section, or `[Unreleased]` is empty. The release notes are the text of the `## [X.Y.Z]` section, and the release fails when that section is missing or empty.
 
 3. Run `bun run build:codex` so `.codex-plugin/plugin.json` carries the same version; `tools/build-codex.test.ts` fails otherwise.
-4. Translate the release notes. The What's new page is built from `CHANGELOG.md`, so the nine `apps/site/src/content/translations/<locale>/whats-new.md` files go stale when a version is released. Add the `## X.Y.Z` section to each one, in that locale, above the previous version. Then run `bun run i18n:status`: it lists every outdated translation with the `sourceHash` it must carry. Set that hash in each file's frontmatter and run it again until it prints `translations: all current`.
-5. Run `bun run check` and `bun run test`.
-6. Commit with `chore: 🔖 release vX.Y.Z` and open a PR into `develop`. It lands as a squash.
-7. Open a PR from `develop` into `main`. Merge it with a merge commit, never a squash or rebase, so `main` keeps the `develop` history. Wait for the `CI passed` check to be green on it.
-8. Tag the merge commit on `main` and push the tag:
+4. Run `bun run build:tree` so `emet/src/embedded-tree.generated.ts` embeds the new version; `bun run check:tree` fails otherwise.
+5. Translate the release notes. The What's new page is built from `CHANGELOG.md`, so the nine `apps/site/src/content/translations/<locale>/whats-new.md` files go stale when a version is released. Add the `## X.Y.Z` section to each one, in that locale, above the previous version. Then run `bun run i18n:status`: it lists every outdated translation with the `sourceHash` it must carry. Set that hash in each file's frontmatter and run it again until it prints `translations: all current`.
+6. Run `bun run check` and `bun run test`.
+7. Commit with `chore: 🔖 release vX.Y.Z` and open a PR into `develop`. It lands as a squash.
+8. Open a PR from `develop` into `main`. Merge it with a merge commit, never a squash or rebase, so `main` keeps the `develop` history. Wait for the `CI passed` check to be green on it.
+9. Tag the merge commit on `main` and push the tag:
 
    ```sh
    git switch main

@@ -2,8 +2,24 @@
 title: Novità
 description: Note di rilascio di emet: cosa è cambiato in ogni versione.
 seoTitle: "Novità di emet: note di rilascio"
-sourceHash: 430c2148791d921f
+sourceHash: 2e828f2cf39020f5
 ---
+
+## 0.22.2
+
+2026-11-25
+
+### Modificato
+
+- Le parti interattive del sito web (menu dell'intestazione, menu mobile, ricerca, menu delle azioni di pagina, FAQ, schede di installazione, pagina 404 e pillola di annuncio) sono isole React su shadcn `base-nova`, idratate alla prima interazione.
+- `bun run lint` controlla i file `.tsx` con `@shadcn/lint`, e la soglia di copertura e knip ignorano il livello vendorizzato `apps/site/src/components/ui`.
+- La CLI `emet` resta invariata, a parte la versione.
+
+### Corretto
+
+- La FAQ del sito web non genera più una violazione della Content-Security-Policy: i due valori di stile inline che renderizza sono consentiti tramite hash.
+- Le domande della FAQ mantengono un contorno di focus visibile in modalità colori forzati.
+- Il menu della lingua continua a funzionare senza script tramite un semplice elenco di link.
 
 ## 0.22.1
 

@@ -4,23 +4,7 @@ import { readFileSync } from "node:fs";
 import { GlobalRegistrator } from "@happy-dom/global-registrator";
 
 import { THEME_INIT_HASH, THEME_INIT_SCRIPT } from "./theme";
-import {
-  THEME_STORAGE_KEY,
-  initThemeSelects,
-  menuIndexAfterKey,
-  parseThemeChoice,
-  readStoredTheme,
-} from "./theme-menu";
-
-const MARKUP = `
-<div class="theme-select" data-theme-select hidden>
-  <button type="button" class="theme-button" aria-haspopup="menu" aria-expanded="false"></button>
-  <div class="theme-menu" role="menu" hidden>
-    <button type="button" role="menuitemradio" aria-checked="false" data-choice="light"></button>
-    <button type="button" role="menuitemradio" aria-checked="false" data-choice="dark"></button>
-    <button type="button" role="menuitemradio" aria-checked="false" data-choice="system"></button>
-  </div>
-</div>`;
+import { THEME_STORAGE_KEY } from "./theme-storage";
 
 let osDark = false;
 let osListeners: (() => void)[] = [];
@@ -42,22 +26,6 @@ function runInitScript(): void {
   window.eval(THEME_INIT_SCRIPT);
 }
 
-function themeButton(): HTMLElement {
-  const button = document.querySelector<HTMLElement>(".theme-button");
-  if (button === null) throw new Error("no theme button");
-  return button;
-}
-
-function key(target: Element, name: string): void {
-  target.dispatchEvent(new KeyboardEvent("keydown", { key: name, bubbles: true }));
-}
-
-function rowOf(choice: string): HTMLElement {
-  const row = document.querySelector<HTMLElement>(`[data-choice="${choice}"]`);
-  if (row === null) throw new Error(`no ${choice} row`);
-  return row;
-}
-
 beforeAll(() => {
   GlobalRegistrator.register();
 });
@@ -73,7 +41,7 @@ beforeEach(() => {
   document.documentElement.className = "";
   document.documentElement.removeAttribute("data-theme");
   document.head.innerHTML = "";
-  document.body.innerHTML = MARKUP;
+  document.body.innerHTML = "";
   installMatchMedia();
 });
 
@@ -161,84 +129,5 @@ describe("the init script", () => {
     runInitScript();
     if (original !== undefined) Object.defineProperty(window, "localStorage", original);
     expect(document.documentElement.dataset.themeChoice).toBe("system");
-  });
-});
-
-describe("theme helpers", () => {
-  test("parseThemeChoice accepts only the three choices", () => {
-    expect(parseThemeChoice("dark")).toBe("dark");
-    expect(parseThemeChoice("blue")).toBeUndefined();
-    expect(parseThemeChoice(null)).toBeUndefined();
-  });
-
-  test("readStoredTheme defaults to system", () => {
-    expect(readStoredTheme()).toBe("system");
-    localStorage.setItem(THEME_STORAGE_KEY, "nope");
-    expect(readStoredTheme()).toBe("system");
-  });
-
-  test("menuIndexAfterKey wraps and jumps", () => {
-    expect(menuIndexAfterKey("ArrowDown", 2, 3)).toBe(0);
-    expect(menuIndexAfterKey("ArrowUp", 0, 3)).toBe(2);
-    expect(menuIndexAfterKey("Home", 2, 3)).toBe(0);
-    expect(menuIndexAfterKey("End", 0, 3)).toBe(2);
-    expect(menuIndexAfterKey("a", 0, 3)).toBeUndefined();
-  });
-});
-
-describe("the theme menu", () => {
-  beforeEach(() => {
-    runInitScript();
-    initThemeSelects();
-  });
-
-  test("shows itself and opens on ArrowDown with the checked row focused", () => {
-    const root = document.querySelector<HTMLElement>("[data-theme-select]");
-    const button = themeButton();
-    expect(root?.hidden).toBe(false);
-    key(button, "ArrowDown");
-    expect(button.getAttribute("aria-expanded")).toBe("true");
-    expect(document.activeElement).toBe(rowOf("system"));
-    expect(rowOf("system").getAttribute("aria-checked")).toBe("true");
-  });
-
-  test("ArrowDown, ArrowDown, Enter applies the next choice and returns focus", () => {
-    const button = themeButton();
-    key(button, "ArrowDown");
-    key(rowOf("system"), "ArrowDown");
-    expect(document.activeElement).toBe(rowOf("light"));
-    rowOf("light").click();
-    expect(localStorage.getItem(THEME_STORAGE_KEY)).toBe("light");
-    expect(document.documentElement.classList.contains("light")).toBe(true);
-    expect(document.activeElement).toBe(button);
-    expect(button.getAttribute("aria-expanded")).toBe("false");
-  });
-
-  test("Escape closes and returns focus to the button", () => {
-    const button = document.querySelector<HTMLElement>(".theme-button");
-    button?.click();
-    key(rowOf("system"), "Escape");
-    expect(document.querySelector<HTMLElement>(".theme-menu")?.hidden).toBe(true);
-    expect(document.activeElement).toBe(button);
-  });
-
-  test("End and Home move to the last and first rows", () => {
-    document.querySelector<HTMLElement>(".theme-button")?.click();
-    key(rowOf("system"), "Home");
-    expect(document.activeElement).toBe(rowOf("light"));
-    key(rowOf("light"), "End");
-    expect(document.activeElement).toBe(rowOf("system"));
-  });
-
-  test("a click outside closes the menu", () => {
-    document.querySelector<HTMLElement>(".theme-button")?.click();
-    document.body.click();
-    expect(document.querySelector<HTMLElement>(".theme-menu")?.hidden).toBe(true);
-  });
-
-  test("Tab closes the menu", () => {
-    document.querySelector<HTMLElement>(".theme-button")?.click();
-    key(rowOf("system"), "Tab");
-    expect(document.querySelector<HTMLElement>(".theme-menu")?.hidden).toBe(true);
   });
 });

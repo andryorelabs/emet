@@ -1,7 +1,9 @@
 import { defineConfig } from "astro/config";
+import react from "@astrojs/react";
 import starlight from "@astrojs/starlight";
 import tailwindcss from "@tailwindcss/vite";
 
+import { FAQ_STYLE_ATTRIBUTE_HASHES } from "./src/components/home/faq-style-attributes";
 import { THEME_INIT_HASH } from "./src/components/site/theme";
 import { codeColorsPlugin } from "./src/docs/code-colors-plugin";
 import { emetDirectives } from "./src/docs/directives";
@@ -14,6 +16,7 @@ import {
 } from "./src/docs/starlight-inline-hashes";
 import { sharedCodeConfig } from "./src/highlight/code-config";
 import { DEFAULT_LOCALE, LOCALE_NAMES, LOCALES, localeSegment } from "./src/i18n/locales";
+import { interactionDirective } from "./src/scripts/interaction-integration";
 import { sitemapOptOut } from "./src/seo/sitemap-opt-out";
 
 const starlightLocales = Object.fromEntries(
@@ -44,11 +47,15 @@ export default defineConfig({
       },
       styleDirective: {
         resources: [{ resource: "'unsafe-hashes'", kind: "attribute" }],
-        hashes: collectStarlightInlineStyleHashes().map((hash) => ({ hash, kind: "attribute" })),
+        hashes: [...collectStarlightInlineStyleHashes(), ...FAQ_STYLE_ATTRIBUTE_HASHES].map(
+          (hash) => ({ hash, kind: "attribute" }),
+        ),
       },
     },
   },
   integrations: [
+    react(),
+    interactionDirective(),
     sitemapOptOut,
     emetDirectives(),
     repoAssets(),

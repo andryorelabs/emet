@@ -33,13 +33,10 @@ const COLOR_SCHEMES = ["light", "dark"] as const;
 /** Each waiver covers one rule on one selector, never a whole page or rule. */
 const KNOWN_AXE_ISSUES: readonly KnownAxeIssue[] = [];
 
-/** The routes whose inline `style` attributes the style-src policy blocks. */
-const STYLE_ATTRIBUTE_CSP_ROUTES = ["/", "/es/"];
-
 /**
  * Records every Content-Security-Policy violation the page reports, as
- * `<directive> <blocked URI>`, so an inline script whose hash is missing from
- * the policy fails the spec.
+ * `<directive> <blocked URI>`, so an inline script or style attribute whose
+ * hash is missing from the policy fails the spec.
  */
 async function recordCspViolations(page: Page): Promise<void> {
   await page.addInitScript(() => {
@@ -70,7 +67,7 @@ function isKnownAxeIssue(rule: string, target: string): boolean {
 
 for (const keyPage of KEY_PAGES) {
   for (const colorScheme of COLOR_SCHEMES) {
-    test(`${keyPage.name} (${keyPage.path}) has no axe or script CSP violations in ${colorScheme} mode`, async ({
+    test(`${keyPage.name} (${keyPage.path}) has no axe or CSP violations in ${colorScheme} mode`, async ({
       page,
     }) => {
       await page.emulateMedia({ colorScheme });
@@ -81,10 +78,7 @@ for (const keyPage of KEY_PAGES) {
       await expect(page.locator("main")).toHaveCount(1);
       await expect(page.locator("h1").first()).toBeVisible();
 
-      const scriptViolations = (await cspViolations(page)).filter((violation) =>
-        violation.startsWith("script-src"),
-      );
-      expect.soft(scriptViolations).toEqual([]);
+      expect.soft(await cspViolations(page)).toEqual([]);
 
       const results = await new AxeBuilder({ page }).withTags(WCAG_TAGS).analyze();
       const violations = results.violations.flatMap(({ id, impact, nodes }) =>
@@ -140,10 +134,106 @@ test("the search button keeps a Command K swap on Apple platforms", async ({ pag
   await expect(trigger).toHaveAccessibleName("Search documentation… ⌘ K");
 });
 
-for (const path of STYLE_ATTRIBUTE_CSP_ROUTES) {
-  test(`${path} has no style CSP violations`, async ({ page }) => {
-    await recordCspViolations(page);
-    await page.goto(path);
-    expect(await cspViolations(page)).toEqual([]);
-  });
+/**
+ * Runs axe over the current page state and returns each violation as `<rule> (<impact>): <target>`, waived issues removed.
+ */
+async function axeViolations(page: Page, scope?: string): Promise<readonly string[]> {
+  const builder = new AxeBuilder({ page }).withTags(WCAG_TAGS);
+  const results = await (scope === undefined ? builder : builder.include(scope)).analyze();
+  return results.violations.flatMap(({ id, impact, nodes }) =>
+    nodes
+      .map(({ target }) => target.join(" "))
+      .filter((target) => !isKnownAxeIssue(id, target))
+      .map((target) => `${id} (${impact ?? "unknown"}): ${target}`),
+  );
+}
+
+/** A widget that opens over a page, with the viewport and page it is checked on and how to open it. A `scope` limits axe to one region, for a widget that needs the page scrolled away from the header. */
+interface OpenWidget {
+  readonly name: string;
+  readonly path: string;
+  readonly width: number;
+  readonly scope?: string;
+  readonly open: (page: Page) => Promise<void>;
+}
+
+/** The widgets that must stay accessible while open: theme menu, language menu, page actions menu, mobile sheet, search dialog and FAQ. */
+const OPEN_WIDGETS: readonly OpenWidget[] = [
+  {
+    name: "theme menu",
+    path: "/",
+    width: 1280,
+    open: async (page) => {
+      await page.locator('button[data-menu="theme-button"]:visible').first().click();
+      await expect(page.getByRole("menu")).toBeVisible();
+    },
+  },
+  {
+    name: "language menu",
+    path: "/",
+    width: 1280,
+    open: async (page) => {
+      await page.locator('button[data-menu="lang-trigger"]:visible').first().click();
+      await expect(page.getByRole("menu")).toBeVisible();
+    },
+  },
+  {
+    name: "page actions menu",
+    path: "/docs/start/install/",
+    width: 1280,
+    open: async (page) => {
+      await page
+        .locator('[data-page-actions] button[aria-haspopup="menu"]:visible')
+        .first()
+        .click();
+      await expect(page.getByRole("menu")).toBeVisible();
+    },
+  },
+  {
+    name: "mobile menu sheet",
+    path: "/",
+    width: 375,
+    open: async (page) => {
+      await page.locator("button[data-menu-button]:visible").first().click();
+      await expect(page.getByRole("dialog")).toBeVisible();
+    },
+  },
+  {
+    name: "search dialog",
+    path: "/docs/start/install/",
+    width: 1280,
+    open: async (page) => {
+      await page.locator("[data-search-trigger]:visible").first().click();
+      await expect(page.getByRole("dialog")).toBeVisible();
+    },
+  },
+  {
+    name: "FAQ item",
+    path: "/",
+    width: 1280,
+    scope: '[data-slot="accordion"]',
+    open: async (page) => {
+      const trigger = page.locator("[data-faq-trigger]").nth(1);
+      await trigger.scrollIntoViewIfNeeded();
+      await trigger.click();
+      await expect(trigger).toHaveAttribute("aria-expanded", "true");
+    },
+  },
+];
+
+for (const widget of OPEN_WIDGETS) {
+  for (const colorScheme of COLOR_SCHEMES) {
+    test(`the ${widget.name} has no axe or CSP violations while open in ${colorScheme} mode`, async ({
+      page,
+    }) => {
+      await page.emulateMedia({ colorScheme });
+      await page.setViewportSize({ width: widget.width, height: 900 });
+      await recordCspViolations(page);
+      await page.goto(widget.path);
+      await expect(page.locator("h1").first()).toBeVisible();
+      await widget.open(page);
+      expect(await axeViolations(page, widget.scope)).toEqual([]);
+      expect(await cspViolations(page)).toEqual([]);
+    });
+  }
 }

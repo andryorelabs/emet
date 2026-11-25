@@ -20,6 +20,9 @@ describe(":::install-tabs", () => {
     expect(list?.data?.hProperties?.role).toBe("tablist");
     expect(first?.data?.hProperties?.["data-tab-label"]).toBe("Claude Code");
     expect(second?.data?.hProperties?.["data-tab-label"]).toBe("Codex");
+    expect(result?.data?.hProperties?.["data-slot"]).toBe("tabs");
+    expect(list?.data?.hProperties?.["data-slot"]).toBe("tabs-list");
+    expect(first?.data?.hProperties?.["data-slot"]).toBe("tabs-content");
     expect(first?.children?.[1]).toMatchObject({ type: "code", value: "a", meta: "frame=none" });
   });
 

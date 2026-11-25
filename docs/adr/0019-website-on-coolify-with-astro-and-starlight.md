@@ -3,6 +3,8 @@
 Status: Accepted (2026-11-06)
 Spec: emet Website (S2, S8, S9, S10)
 
+Amended by [0045](0045-website-on-shadcn-base-nova-with-react-islands.md): the Website keeps Astro and Starlight, and its interactive parts move to shadcn base-nova through React islands.
+
 ## Context
 
 emet has an approved brand kit ([ADR-0014](0014-brand-kit-in-docs-brand.md)) and a domain (`emet.andryore.dev`), but the brand brief listed a landing page as out of scope. Visitors reach the GitHub README, and the docs are English-only markdown on GitHub. The maintainer's sibling projects solved the same problem: animated-fluent-emojis ADR 0018 (Astro and Starlight in a bun then nginx image on Coolify) and snug ADR 0019 (docs read from the repository through an allowlist, translated with a source hash) and ADR 0022 (deploy token as a GitHub secret).

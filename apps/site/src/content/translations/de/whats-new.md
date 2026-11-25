@@ -2,8 +2,24 @@
 title: Neuigkeiten
 description: Release Notes für emet: was sich in jeder Version geändert hat.
 seoTitle: "Neuigkeiten in emet: Release Notes"
-sourceHash: 430c2148791d921f
+sourceHash: 2e828f2cf39020f5
 ---
+
+## 0.22.2
+
+2026-11-25
+
+### Geändert
+
+- Die interaktiven Teile der Website (Header-Menüs, mobiles Menü, Suche, Seitenaktionen-Menü, FAQ, Installations-Tabs, 404-Seite und Ankündigungs-Pill) sind React-Islands auf shadcn `base-nova` und werden bei der ersten Interaktion hydriert.
+- `bun run lint` prüft `.tsx`-Dateien mit `@shadcn/lint`, und Coverage-Gate und knip überspringen die vendorte Schicht `apps/site/src/components/ui`.
+- Die `emet`-CLI bleibt bis auf ihre Version unverändert.
+
+### Behoben
+
+- Das FAQ der Website löst keine Content-Security-Policy-Verletzung mehr aus: Die beiden Inline-Stilwerte, die es rendert, sind per Hash erlaubt.
+- Die FAQ-Fragen behalten im Modus für erzwungene Farben einen sichtbaren Fokusrahmen.
+- Das Sprachmenü funktioniert ohne Skript weiter, über eine einfache Liste von Links.
 
 ## 0.22.1
 
