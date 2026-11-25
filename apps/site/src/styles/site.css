@@ -269,6 +269,23 @@
   color: oklch(0.22 0.013 150);
 }
 
+.not-found-copy[data-slot="empty"] {
+  justify-content: flex-start;
+  border-radius: 0;
+}
+
+.not-found-header[data-slot="empty-header"] {
+  align-items: center;
+  gap: 16px;
+  max-width: none;
+}
+
+.not-found-actions[data-slot="empty-content"] {
+  flex-direction: row;
+  width: auto;
+  max-width: none;
+}
+
 .not-found-copy h1 {
   margin: 0;
   font-size: clamp(34px, 3.6vw, 52px);
@@ -290,6 +307,12 @@
   justify-content: center;
   gap: 12px 20px;
   margin-top: 8px;
+}
+
+.not-found-actions .button[data-slot="button"] {
+  height: auto;
+  border: 0;
+  font-size: 17px;
 }
 
 .not-found-actions a:not(.button) {

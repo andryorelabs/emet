@@ -1,3 +1,4 @@
+import { TABS_TRIGGER_CLASS } from "../../docs/directives/install-tabs";
 import { readInstallTarget, writeInstallTarget } from "./install-target";
 import { resolveTabIndex } from "./tab-navigation";
 
@@ -23,6 +24,8 @@ function select(block: HTMLElement, label: string): void {
   for (const tab of tabsOf(block)) {
     const selected = tab.dataset.tab === label;
     tab.setAttribute("aria-selected", String(selected));
+    if (selected) tab.setAttribute("data-active", "");
+    else tab.removeAttribute("data-active");
     tab.tabIndex = selected ? 0 : -1;
   }
   for (const panel of panelsOf(block)) {
@@ -46,7 +49,8 @@ function build(block: HTMLElement, index: number): void {
     const tab = document.createElement("button");
     tab.type = "button";
     tab.id = id;
-    tab.className = "emet-install-tabs__tab";
+    tab.className = `${TABS_TRIGGER_CLASS} emet-install-tabs__tab`;
+    tab.dataset.slot = "tabs-trigger";
     tab.dataset.tab = label;
     tab.setAttribute("role", "tab");
     tab.setAttribute("aria-controls", `${id}-panel`);
