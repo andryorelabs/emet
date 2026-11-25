@@ -1,46 +1,68 @@
 /**
- * Search dialog: the one element that casts a shadow.
+ * Search dialog: the one element that casts a shadow. It is the shadcn dialog
+ * popup, so the rules below override its utility classes.
  */
-site-search dialog {
+[data-search-part="dialog"][data-standalone] {
+  --sl-color-white: var(--text);
+  --sl-color-gray-1: var(--text);
+  --sl-color-gray-2: var(--text-muted);
+  --sl-color-gray-3: var(--text-muted);
+  --sl-color-gray-4: color-mix(in oklab, var(--text-muted) 55%, var(--bg));
+  --sl-color-gray-5: var(--border);
+  --sl-color-gray-6: var(--surface);
+  --sl-color-black: var(--bg);
+  --sl-color-text: var(--text);
+  --sl-color-text-accent: var(--accent-text);
+  --sl-color-accent-low: var(--surface);
+  --sl-color-accent: var(--accent-text);
+  --sl-color-accent-high: var(--accent-text);
+  --sl-color-text-invert: var(--on-accent);
+  --sl-color-bg: var(--bg);
+  --sl-color-gray-7: var(--surface);
+  --sl-color-bg-inline-code: var(--surface);
+  --sl-color-hairline: var(--border);
+  --sl-color-hairline-light: var(--border);
+  --sl-color-hairline-shade: var(--border);
+  --__sl-font: var(--font-sans);
+}
+
+[data-search-part="dialog"] {
+  position: fixed;
+  inset: 96px 0 auto;
+  z-index: 50;
   box-sizing: border-box;
-  display: none;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
   width: 640px;
   max-width: calc(100% - 32px);
   height: fit-content;
   min-height: 0;
   max-height: calc(100dvh - 192px);
-  margin: 96px auto auto;
+  margin: 0 auto;
   padding: 0;
   overflow: hidden;
+  translate: none;
+  transform: none;
   border: 1px solid var(--border);
   border-radius: 10px;
   background: var(--bg);
   color: var(--text);
   box-shadow: 0 16px 48px rgb(0 0 0 / 0.3);
+  font-family: var(--font-sans);
+  font-size: inherit;
+  outline: none;
+  --tw-ring-shadow: 0 0 #0000;
 }
 
-site-search dialog[open] {
-  display: flex;
-  flex-direction: column;
-  opacity: 1;
-  transform: none;
-  transition:
-    opacity 180ms cubic-bezier(0.23, 1, 0.32, 1),
-    transform 180ms cubic-bezier(0.23, 1, 0.32, 1);
-
-  @starting-style {
-    opacity: 0;
-    transform: scale(0.97);
-  }
-}
-
-site-search dialog::backdrop {
+[data-slot="dialog-overlay"]:has(+ [data-search-part="dialog"]) {
   background: oklch(0.165 0.013 150 / 0.4);
   backdrop-filter: none;
   -webkit-backdrop-filter: none;
 }
 
-site-search .dialog-frame {
+[data-search-part="dialog"] [data-search-part="frame"] {
+  position: relative;
   display: flex;
   flex: 1;
   flex-direction: column;
@@ -50,23 +72,48 @@ site-search .dialog-frame {
   overflow: hidden;
 }
 
-site-search .search-container {
+[data-search-part="dialog"] [data-search-part="host"] {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
+}
+
+[data-search-part="dialog"] .search-container {
   flex: 1;
   min-height: 0;
   overflow-y: auto;
   overscroll-behavior: contain;
 }
 
-site-search button[data-close-modal] {
+[data-search-part="dialog"] [data-search-part="cancel"] {
+  position: absolute;
   inset-block-start: 0;
   inset-inline-end: 0;
+  z-index: 1;
+  display: flex;
+  align-items: center;
   height: 56px;
   padding-inline: 16px;
+  border: 0;
+  background: transparent;
   color: var(--text-muted);
+  font: inherit;
   font-size: 14px;
+  cursor: pointer;
 }
 
-site-search dialog kbd.search-esc {
+[data-search-part="dialog"] [data-search-part="cancel"]:hover {
+  color: var(--text);
+}
+
+@media (min-width: 50rem) {
+  [data-search-part="dialog"] [data-search-part="cancel"] {
+    display: none;
+  }
+}
+
+[data-search-part="dialog"] kbd[data-search-part="esc"] {
   position: absolute;
   inset-block-start: 16px;
   inset-inline-end: 16px;
@@ -83,13 +130,13 @@ site-search dialog kbd.search-esc {
 }
 
 @media (max-width: 49.99rem) {
-  site-search dialog kbd.search-esc,
-  .search-footer-keys {
+  [data-search-part="dialog"] kbd[data-search-part="esc"],
+  [data-search-part="footer-keys"] {
     display: none;
   }
 }
 
-.search-status {
+[data-search-part="status"] {
   position: absolute;
   width: 1px;
   height: 1px;
@@ -99,7 +146,7 @@ site-search dialog kbd.search-esc {
   white-space: nowrap;
 }
 
-.search-footer {
+[data-search-part="footer"] {
   display: flex;
   flex: none;
   flex-wrap: wrap;
@@ -112,7 +159,7 @@ site-search dialog kbd.search-esc {
   line-height: 1.4;
 }
 
-.search-footer p {
+[data-search-part="footer"] p {
   margin: 0;
 }
 
@@ -302,7 +349,9 @@ site-search dialog kbd.search-esc {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  site-search dialog[open] {
+  [data-search-part="dialog"],
+  [data-slot="dialog-overlay"]:has(+ [data-search-part="dialog"]) {
+    animation: none;
     transition: none;
   }
 

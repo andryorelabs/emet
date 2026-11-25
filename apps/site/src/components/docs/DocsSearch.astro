@@ -2,9 +2,10 @@
 /**
  * Starlight's Pagefind search, served from the site's own origin, with the
  * Trusted Types policy that lets only its `<mark>` excerpts and its worker
- * through, the localized strings of the canvas dialog, and the small script
- * that adds the dialog's footer, Esc key, states and keyboard handling. The
- * same script localizes and animates the copy button of every code block.
+ * through, and the shadcn dialog island (`DocsSearch.tsx`) that adopts
+ * Pagefind's container while open. Starlight's own dialog never opens: the
+ * small script routes its open button, Ctrl K and `/` to the island. The same
+ * script localizes and animates the copy button of every code block.
  * It takes the locale as a prop and, with `standalone`, fills in the
  * translator Starlight's `Search` reads, so it also works on the home page.
  * The header's search bar opens it; Starlight's own button stays hidden.
@@ -14,6 +15,7 @@ import Search from "@astrojs/starlight/components/Search.astro";
 import { SEARCH_STRINGS, SEARCH_TERM_TOKEN } from "../../docs/search-strings";
 import type { Locale } from "../../i18n/locales";
 import SearchButton from "../site/SearchButton.astro";
+import { DocsSearch as DocsSearchDialog } from "./DocsSearch";
 // oxlint-disable-next-line import/no-unassigned-import -- Astro bundles a stylesheet imported for its side effect
 import "../../styles/search-dialog.css";
 
@@ -44,15 +46,16 @@ const pagefindOverrides = {
 const baseDictionary = Astro.locals.t.all.bind(Astro.locals.t);
 Astro.locals.t.all = () => ({ ...baseDictionary(), ...pagefindOverrides });
 
-const clientStrings = {
+const clientStrings = { copy: strings.copy, copied: strings.copied };
+const dialogStrings = {
+  label: strings.searchButtonLabel,
+  cancel: strings.cancel,
   token: SEARCH_TERM_TOKEN,
   searching: strings.searching,
   noResults: strings.noResults(SEARCH_TERM_TOKEN),
   footerPrivacy: strings.footerPrivacy,
   footerKeys: strings.footerKeys,
   escapeKey: strings.escapeKey,
-  copy: strings.copy,
-  copied: strings.copied,
 };
 ---
 
@@ -63,121 +66,66 @@ const clientStrings = {
 >
   <Search />
 </div>
+<DocsSearchDialog client:idle strings={dialogStrings} standalone={standalone} />
 
 <script>
   import {
     installSearchTrustedTypesPolicy,
     type TrustedTypesFactory,
   } from "../../docs/search-trusted-types";
-  import { classifySearchState, moveSearchFocus } from "../../docs/search-markup";
+  import {
+    SEARCH_PENDING_ATTRIBUTE,
+    SEARCH_REQUEST_EVENT,
+    type SearchRequestMode,
+  } from "../../docs/search-markup";
+  import { isSearchSlashKey, isSearchToggleKey } from "../site/search-shortcut";
 
   interface ClientStrings {
-    token: string;
-    searching: string;
-    noResults: string;
-    footerPrivacy: string;
-    footerKeys: string;
-    escapeKey: string;
     copy: string;
     copied: string;
   }
 
   const COPIED_STATE_MS = 2000;
-  const EDITABLE_TARGET = "input, textarea, select, [contenteditable]";
+  const STARLIGHT_OPEN_BUTTON = "site-search button[data-open-modal]";
+  const DIALOG_SELECTOR = '[data-search-part="dialog"]';
 
   installSearchTrustedTypesPolicy(
     (globalThis as { trustedTypes?: TrustedTypesFactory }).trustedTypes,
     globalThis.location.origin,
   );
 
-  function createElement(tag: string, className: string, text: string): HTMLElement {
-    const element = document.createElement(tag);
-    element.className = className;
-    element.textContent = text;
-    return element;
+  function requestSearch(root: Element, mode: SearchRequestMode): void {
+    root.setAttribute(SEARCH_PENDING_ATTRIBUTE, mode);
+    root.dispatchEvent(new CustomEvent<SearchRequestMode>(SEARCH_REQUEST_EVENT, { detail: mode }));
   }
 
-  function addDialogChrome(frame: Element, strings: ClientStrings): HTMLElement {
-    const escapeKey = createElement("kbd", "search-esc", strings.escapeKey);
-    escapeKey.setAttribute("aria-hidden", "true");
-    const status = createElement("p", "search-status", "");
-    status.setAttribute("role", "status");
-    status.setAttribute("aria-live", "polite");
-    const footer = document.createElement("div");
-    footer.className = "search-footer";
-    footer.append(
-      createElement("p", "search-footer-privacy", strings.footerPrivacy),
-      createElement("p", "search-footer-keys", strings.footerKeys),
-    );
-    frame.append(escapeKey, status, footer);
-    return status;
-  }
-
-  function trackSearchState(
-    dialog: HTMLDialogElement,
-    container: Element,
-    status: HTMLElement,
-    strings: ClientStrings,
-  ): void {
-    const update = (): void => {
-      const message = container.querySelector(".pagefind-ui__message")?.textContent ?? "";
-      const hasResults = container.querySelector(".pagefind-ui__result") !== null;
-      const state = classifySearchState({ message, hasResults }, strings);
-      dialog.dataset.searchState = state;
-      const announcement = state === "idle" ? "" : message.trim();
-      if (status.textContent !== announcement) status.textContent = announcement;
-    };
-    new MutationObserver(update).observe(container, {
-      childList: true,
-      subtree: true,
-      characterData: true,
-    });
-    update();
-  }
-
-  function handleDialogKeys(dialog: HTMLDialogElement): void {
-    dialog.addEventListener("keydown", (event) => {
-      const input = dialog.querySelector<HTMLInputElement>(".pagefind-ui__search-input");
-      const links = [...dialog.querySelectorAll<HTMLElement>(".pagefind-ui__result-link")];
-      if (event.key === "Enter" && event.target === input && links[0]) {
+  function takeOverSearchTriggers(root: Element): void {
+    window.addEventListener(
+      "click",
+      (event) => {
+        const target = event.target instanceof Element ? event.target : null;
+        if (!target?.closest(STARLIGHT_OPEN_BUTTON)) return;
         event.preventDefault();
-        links[0].click();
-        return;
-      }
-      if (event.key !== "ArrowDown" && event.key !== "ArrowUp") return;
-      const items = input ? [input, ...links] : links;
-      const current = items.indexOf(document.activeElement as HTMLElement);
-      const next = items[moveSearchFocus(current, items.length, event.key === "ArrowDown" ? 1 : -1)];
-      event.preventDefault();
-      next?.focus();
-      next?.scrollIntoView({ block: "nearest" });
-    });
-  }
-
-  function handleShortcuts(openButton: HTMLButtonElement, dialog: HTMLDialogElement): void {
-    window.addEventListener("keydown", (event) => {
-      const target = event.target instanceof Element ? event.target : null;
-      const plain = !(event.ctrlKey || event.metaKey || event.altKey);
-      if (event.key !== "/" || !plain || dialog.open || target?.closest(EDITABLE_TARGET)) return;
-      event.preventDefault();
-      openButton.click();
-    });
-    dialog.addEventListener("close", () => {
-      const visibleTrigger = document.querySelector<HTMLElement>("[data-search-trigger]");
-      (visibleTrigger ?? openButton).focus();
-    });
-  }
-
-  function enhanceSearch(root: Element, strings: ClientStrings): void {
-    const dialog = root.querySelector("dialog");
-    const frame = root.querySelector(".dialog-frame");
-    const container = root.querySelector("#starlight__search");
-    const openButton = root.querySelector<HTMLButtonElement>("button[data-open-modal]");
-    if (!dialog || !frame || !container || !openButton) return;
-    const status = addDialogChrome(frame, strings);
-    trackSearchState(dialog, container, status, strings);
-    handleDialogKeys(dialog);
-    handleShortcuts(openButton, dialog);
+        event.stopImmediatePropagation();
+        requestSearch(root, "open");
+      },
+      true,
+    );
+    window.addEventListener(
+      "keydown",
+      (event) => {
+        const target = event.target instanceof Element ? event.target : null;
+        if (isSearchToggleKey(event)) {
+          event.preventDefault();
+          event.stopImmediatePropagation();
+          requestSearch(root, "toggle");
+        } else if (!document.querySelector(DIALOG_SELECTOR) && isSearchSlashKey(event, target)) {
+          event.preventDefault();
+          requestSearch(root, "open");
+        }
+      },
+      true,
+    );
   }
 
   const copiedTimers = new WeakMap<HTMLElement, ReturnType<typeof setTimeout>>();
@@ -208,7 +156,7 @@ const clientStrings = {
   const root = document.querySelector<HTMLElement>("[data-docs-search]");
   if (root?.dataset.docsSearch) {
     const strings = JSON.parse(root.dataset.docsSearch) as ClientStrings;
-    enhanceSearch(root, strings);
+    takeOverSearchTriggers(root);
     enhanceCopyButtons(strings);
   }
 </script>
