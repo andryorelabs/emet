@@ -2,7 +2,7 @@
 title: 配置参考
 description: emet.config.json 中的每个键，包括其默认值和含义。
 seoTitle: emet 配置参考
-sourceHash: 23bd286ba357cde6
+sourceHash: d10a9e6169f1f7ea
 ---
 
 `emet.config.json` 中的每个键，及其默认值和含义。权威来源是 [`emet/schema/emet.config.schema.json`](../../emet/schema/emet.config.schema.json)。术语遵循 [GLOSSARY.md](../../GLOSSARY.md)。返回 [README](../../README.md)。

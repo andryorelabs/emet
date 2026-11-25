@@ -2,7 +2,7 @@
 title: Riferimento della configurazione
 description: Ogni chiave di emet.config.json con il suo valore predefinito e il suo significato.
 seoTitle: Riferimento della configurazione di emet
-sourceHash: 23bd286ba357cde6
+sourceHash: d10a9e6169f1f7ea
 ---
 
 Ogni chiave di `emet.config.json`, con il suo valore predefinito e il suo significato. La fonte di verità è [`emet/schema/emet.config.schema.json`](../../emet/schema/emet.config.schema.json). I termini seguono [GLOSSARY.md](../../GLOSSARY.md). Torna al [README](../../README.md).

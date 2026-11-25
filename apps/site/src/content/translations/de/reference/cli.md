@@ -2,7 +2,7 @@
 title: CLI-Referenz
 description: Jeder emet-Unterbefehl, die Tabelle der Gates und Aufzeichnungen, Exit-Codes und Umgebungsvariablen.
 seoTitle: emet-CLI-Referenz
-sourceHash: 7c398958687b5ea3
+sourceHash: cde063f67e8e54d7
 ---
 
 Jeder `emet`-Unterbefehl, die Gates und Aufzeichnungen, Exit-Codes und Umgebungsvariablen. Die Begriffe folgen [GLOSSARY.md](../../GLOSSARY.md). Zurück zur [README](../../README.md). Jeder Befehl gibt seine Verwendung mit `--help` aus.

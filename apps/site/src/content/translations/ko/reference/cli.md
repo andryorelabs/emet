@@ -2,7 +2,7 @@
 title: CLI 레퍼런스
 description: 모든 emet 하위 명령, 게이트와 기록 표, 종료 코드, 환경 변수를 설명합니다.
 seoTitle: emet CLI 레퍼런스
-sourceHash: 7c398958687b5ea3
+sourceHash: cde063f67e8e54d7
 ---
 
 모든 `emet` 하위 명령, 게이트와 기록, 종료 코드, 환경 변수입니다. 용어는 [GLOSSARY.md](../../GLOSSARY.md)를 따릅니다. [README](../../README.md)로 돌아가기. 모든 명령은 `--help`로 사용법을 출력합니다.
