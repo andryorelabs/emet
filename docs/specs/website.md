@@ -90,3 +90,38 @@ Source: #988 S12
 
 - **WHEN** the audit runs on the production build
 - **THEN** it reports no finding
+
+### Requirement: A header menu announces its source element
+Source: #1003 S2
+
+`announceHeaderMenuOpen(id, source)` takes the opening menu's trigger element, and `onOtherHeaderMenuOpen` hands it to the listener, so the mobile sheet decides from the source and never from the focused element.
+
+#### Scenario: A menu opened inside the sheet keeps the sheet open
+
+- WHEN a theme or language menu opens from a control inside the mobile sheet
+- THEN the sheet stays open
+
+#### Scenario: A menu opened outside the sheet closes it
+
+- WHEN a header menu outside the sheet announces it opened
+- THEN the sheet closes
+
+### Requirement: Website interactions are verified in a real browser
+Source: #1003 S1
+
+The e2e spec covers what happy-dom cannot open: the header menus, the mobile sheet, search, the page actions menu, install tabs, the FAQ, theme sync across tabs and the language list without script. A case that exposes a real bug is fixed in the code, never marked as an expected failure.
+
+#### Scenario: Theme choice syncs across tabs
+
+- WHEN a visitor picks Dark in one tab
+- THEN a second tab of the same browser switches to the dark theme
+
+#### Scenario: Install tabs without script
+
+- WHEN the docs install page loads with JavaScript disabled
+- THEN the first tab's panel is visible
+
+#### Scenario: Popups do not animate under reduced motion
+
+- WHEN the theme menu opens with `prefers-reduced-motion: reduce`
+- THEN its content plays no animation
