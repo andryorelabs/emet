@@ -22,7 +22,8 @@ html.lenis body {
   overflow: clip;
 }
 
-.reveal-line {
+.reveal-line,
+[data-reveal-line] {
   display: block;
 }
 
@@ -122,7 +123,7 @@ html.lenis body {
   }
 
   [data-reveal="item"],
-  [data-reveal="heading"] > .reveal-line {
+  [data-reveal="heading"] > :is(.reveal-line, [data-reveal-line]) {
     transition:
       opacity 400ms var(--ease-out),
       transform 400ms var(--ease-out);
@@ -135,7 +136,7 @@ html.lenis body {
   }
 
   html:not([data-motion]) [data-reveal="item"],
-  html:not([data-motion]) [data-reveal="heading"] > .reveal-line {
+  html:not([data-motion]) [data-reveal="heading"] > :is(.reveal-line, [data-reveal-line]) {
     animation: reveal-failsafe 1ms 2500ms forwards;
   }
 }

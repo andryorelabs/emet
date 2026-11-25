@@ -4,6 +4,7 @@ import { act } from "react";
 import { renderToString } from "react-dom/server";
 
 import { renderIsland } from "../../test/render";
+import { FAQ_STYLE_ATTRIBUTE_HASHES, FAQ_STYLE_ATTRIBUTES } from "./faq-style-attributes";
 import { FaqAccordion, segments } from "./FaqAccordion";
 
 const items = [
@@ -70,6 +71,26 @@ describe("FaqAccordion", () => {
     const answers = parsed.querySelectorAll("[data-faq-answer]");
     expect(answers[0]?.hasAttribute("hidden")).toBe(false);
     expect(answers[1]?.hasAttribute("hidden")).toBe(true);
+  });
+
+  test("every inline style of the server markup is a hashed value", () => {
+    const html = renderToString(
+      <FaqAccordion items={items} heading="Questions" more="More" href="/docs/troubleshooting/" />,
+    );
+    const parsed = new DOMParser().parseFromString(html, "text/html");
+    const values = new Set(
+      [...parsed.querySelectorAll("[style]")].map((node) => node.getAttribute("style") ?? ""),
+    );
+    const allowed = new Set<string>(FAQ_STYLE_ATTRIBUTES);
+    expect([...values].filter((value) => !allowed.has(value))).toEqual([]);
+    expect([...values].toSorted()).toEqual([...FAQ_STYLE_ATTRIBUTES].toSorted());
+  });
+
+  test("hashes the style values for the CSP", () => {
+    expect(FAQ_STYLE_ATTRIBUTE_HASHES).toEqual([
+      "sha256-jfnFjtn+jSjy+nAst/rw/uqtsgKhs4oOkHm3s6V/eqE=",
+      "sha256-MBVAbreFEHNpsPIb3y1RJ+JKmmDtPU+LfXNsgTZ+tZ4=",
+    ]);
   });
 
   test("opening a question shows its answer", async () => {

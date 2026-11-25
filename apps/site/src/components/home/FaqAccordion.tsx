@@ -45,7 +45,7 @@ export function FaqAccordion({ items, heading, more, href }: FaqAccordionProps):
   return (
     <section data-faq aria-labelledby="faq-title">
       <h2 id="faq-title" data-reveal="heading">
-        <span data-faq-heading-line>{heading}</span>
+        <span data-reveal-line>{heading}</span>
       </h2>
       <Accordion data-faq-list multiple defaultValue={["faq-0"]}>
         {items.map((item, index) => (
