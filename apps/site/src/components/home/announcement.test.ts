@@ -40,3 +40,12 @@ describe("latestRelease", () => {
     expect(latestRelease(changelog, "pt-BR")?.href).toBe("/pt-br/docs/whats-new/#082");
   });
 });
+
+describe("AnnouncementPill markup", () => {
+  it("renders badge markup with no island", async () => {
+    const markup = await Bun.file(new URL("AnnouncementPill.astro", import.meta.url)).text();
+    expect(markup).toContain('data-slot="badge"');
+    expect(markup).toContain("badgeVariants(");
+    expect(markup).not.toContain("client:");
+  });
+});

@@ -11,6 +11,7 @@ import { Picture } from "astro:assets";
 import bookendImage from "../assets/bookend.webp";
 import SiteFooter from "../components/site/SiteFooter.astro";
 import SiteHeader from "../components/site/SiteHeader.astro";
+import { buttonVariants } from "../components/ui/button";
 import { localePath, type Locale } from "../i18n/locales";
 import { getStrings } from "../i18n/ui";
 import BaseLayout from "../layouts/BaseLayout.astro";
@@ -42,11 +43,13 @@ const copy = NOT_FOUND_STRINGS[locale];
         loading="lazy"
         decoding="async"
       />
-      <div class="not-found-copy">
-        <h1 id="not-found-title">{copy.title}</h1>
-        <p>{copy.text}</p>
-        <div class="not-found-actions">
-          <a class="button" href={localePath(locale, "/")}>{copy.homeAction}</a>
+      <div data-slot="empty" class="not-found-copy">
+        <div data-slot="empty-header" class="not-found-header">
+          <h1 id="not-found-title" data-slot="empty-title">{copy.title}</h1>
+          <p data-slot="empty-description">{copy.text}</p>
+        </div>
+        <div data-slot="empty-content" class="not-found-actions">
+          <a data-slot="button" class:list={["button", buttonVariants()]} href={localePath(locale, "/")}>{copy.homeAction}</a>
           <a href={localePath(locale, "/docs/")}>{copy.docsAction}</a>
         </div>
       </div>
