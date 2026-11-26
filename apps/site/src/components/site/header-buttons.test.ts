@@ -28,6 +28,20 @@ describe("header buttons render shadcn markup on the server", () => {
     expect(css).toContain("height: 36px;");
   });
 
+  test("the home search pill grows from a 260 px minimum and the home wordmark is 20 px", async () => {
+    const css = await Bun.file(new URL("../../styles/header-buttons.css", import.meta.url)).text();
+    const wide = css.slice(
+      css.indexOf("@media (min-width: 1000px) {\n  .site-header--home .search-button {"),
+    );
+    const rule = wide.slice(0, wide.indexOf("@media (max-width: 480px)"));
+    expect(rule).toContain("width: auto;");
+    expect(rule).toContain("min-width: 260px;");
+    expect(rule).not.toMatch(/\n\s+width: 260px;/);
+    expect(rule).toContain("overflow: visible;");
+    expect(rule).toContain("text-overflow: clip;");
+    expect(css).toContain(".site-header--home .wordmark {\n  font-size: 20px !important;");
+  });
+
   test("the GitHub stars pill uses button and badge data-slot markup and no island", async () => {
     const markup = await source("GithubStars.astro");
     expect(markup).toContain('data-slot="button"');
