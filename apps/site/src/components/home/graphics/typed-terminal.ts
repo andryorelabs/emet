@@ -6,7 +6,13 @@
  * (the untyped tail is transparent, so layout never shifts) and the opacity
  * of whole lines change.
  */
-import { createSchedule, progressAt, revealCounts, type TypingSchedule } from "./typing-schedule";
+import {
+  charMsForStep,
+  createSchedule,
+  progressAt,
+  revealCounts,
+  type TypingSchedule,
+} from "./typing-schedule";
 
 const VIEW_THRESHOLD = 0.3;
 
@@ -86,7 +92,7 @@ function linesOf(block: Element): HTMLElement[] {
   return [...block.querySelectorAll<HTMLElement>(".ec-line")];
 }
 
-function prepareExchange(exchange: Element): TypedExchange | undefined {
+function prepareExchange(exchange: Element, index: number): TypedExchange | undefined {
   const blocks = [...exchange.querySelectorAll(".emet-code, .fragment pre.terminal")];
   const first = blocks[0];
   const hasCommand = first?.classList.contains("emet-code") === true;
@@ -97,6 +103,7 @@ function prepareExchange(exchange: Element): TypedExchange | undefined {
   const schedule = createSchedule(
     commandChars,
     outputs.map((lines) => lines.length),
+    charMsForStep(index),
   );
   return { command, outputs, schedule };
 }
@@ -133,8 +140,8 @@ export function initTypedTerminal(root: ParentNode): void {
   if (matchMedia("(prefers-reduced-motion: reduce)").matches) return;
   const armed = new Map<Element, TypedExchange>();
   const visible = new Set<Element>();
-  for (const exchange of root.querySelectorAll("[data-typed]")) {
-    const typed = prepareExchange(exchange);
+  for (const [index, exchange] of [...root.querySelectorAll("[data-typed]")].entries()) {
+    const typed = prepareExchange(exchange, index);
     if (!typed) continue;
     armed.set(exchange, typed);
     for (const lines of typed.outputs) {

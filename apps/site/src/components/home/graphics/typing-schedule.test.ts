@@ -1,6 +1,13 @@
 import { describe, expect, test } from "bun:test";
 
-import { createSchedule, progressAt, revealCounts } from "./typing-schedule";
+import {
+  charMsForStep,
+  createSchedule,
+  FIRST_STEP_CHAR_MS,
+  progressAt,
+  revealCounts,
+  STEP_CHAR_MS,
+} from "./typing-schedule";
 
 describe("revealCounts", () => {
   test("fills text nodes in order", () => {
@@ -43,8 +50,17 @@ describe("typing schedule", () => {
     expect(progressAt(createSchedule(0, []), 0).done).toBe(true);
   });
 
-  test("keeps long commands under two seconds", () => {
-    expect(createSchedule(300, []).commandMs).toBeLessThanOrEqual(4500);
-    expect(createSchedule(30, []).commandMs).toBeLessThanOrEqual(1500);
+  test("types step 0 at 18 ms per character and the others at 22 ms", () => {
+    expect(FIRST_STEP_CHAR_MS).toBe(18);
+    expect(STEP_CHAR_MS).toBe(22);
+    expect(charMsForStep(0)).toBe(18);
+    expect(charMsForStep(1)).toBe(22);
+    expect(charMsForStep(2)).toBe(22);
+  });
+
+  test("the rate does not depend on the command length", () => {
+    expect(createSchedule(300, []).charMs).toBe(22);
+    expect(createSchedule(300, [], 18).commandMs).toBe(300 * 18);
+    expect(progressAt(createSchedule(40, [], 18), 18 * 10).chars).toBe(10);
   });
 });
