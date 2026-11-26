@@ -19,7 +19,7 @@ describe("banner art", () => {
   });
 
   it("names both Agent hosts in the tagline", () => {
-    expect(BANNER_TEXT).toContain("emet  plugin for Claude Code and Codex");
+    expect(BANNER_TEXT).toContain("emet  workflow for Claude Code and Codex");
   });
 
   it("carries the Anthropic and OpenAI notice verbatim", () => {
