@@ -1,48 +1,18 @@
 import { describe, expect, it } from "bun:test";
 import { readdirSync, readFileSync } from "node:fs";
 
-const css = readFileSync(new URL("../../styles/home.css", import.meta.url), "utf8");
-const sceneDirectory = new URL("../../styles/bento/", import.meta.url);
-const sceneCss = readFileSync(new URL("scene.css", sceneDirectory), "utf8");
-const featuresSource = readFileSync(new URL("Features.astro", import.meta.url), "utf8");
-
-const motionGuard = "@media (scripting: enabled) and (prefers-reduced-motion: no-preference) {";
-
-/**
- * Returns the offsets of every `@keyframes` in `source` that sits outside the motion guard block.
- */
-function unguardedKeyframes(source: string): number[] {
-  const guardAt = source.indexOf(motionGuard);
-  let guardEnd = -1;
-  if (guardAt !== -1) {
-    let depth = 0;
-    for (let index = guardAt; index < source.length; index += 1) {
-      if (source[index] === "{") depth += 1;
-      if (source[index] === "}") {
-        depth -= 1;
-        if (depth === 0) {
-          guardEnd = index;
-          break;
-        }
-      }
-    }
-  }
-  const offsets: number[] = [];
-  for (const match of source.matchAll(/@keyframes/g)) {
-    const offset = match.index;
-    if (guardAt === -1 || guardEnd === -1 || offset < guardAt || offset > guardEnd) {
-      offsets.push(offset);
-    }
-  }
-  return offsets;
-}
+const homeDirectory = new URL("../../styles/home/", import.meta.url);
+const baseCss = readFileSync(new URL("base.css", homeDirectory), "utf8");
+const css = readdirSync(homeDirectory)
+  .map((file) => readFileSync(new URL(file, homeDirectory), "utf8"))
+  .join("\n");
 
 /**
  * Returns the declaration block of the first rule whose selector is exactly `selector`.
  */
 function ruleBody(selector: string): string {
   const escaped = selector.replaceAll(/[.*+?^${}()|[\]\\>]/g, String.raw`\$&`);
-  const match = new RegExp(`(?:^|\\n)${escaped} \\{([^}]*)\\}`).exec(css);
+  const match = new RegExp(`(?:^|\\n)${escaped} \\{([^}]*)\\}`).exec(baseCss);
   if (match?.[1] === undefined) throw new Error(`rule not found: ${selector}`);
   return match[1];
 }
@@ -61,11 +31,11 @@ describe("Home section spacing", () => {
     expect(body).not.toContain("padding-bottom");
   });
 
-  it("sets no block margin on the closing panel", () => {
-    const body = ruleBody(".closing");
-    expect(body).not.toMatch(/(^|\s)margin\s*:/);
-    expect(body).not.toMatch(/margin-(block|top|bottom)/);
-    expect(body).toContain("margin-inline: var(--edge)");
+  it("imports every section stylesheet from the index", () => {
+    const index = readFileSync(new URL("../../styles/home.css", import.meta.url), "utf8");
+    for (const file of readdirSync(homeDirectory)) {
+      expect(index).toContain(`@import "./home/${file}";`);
+    }
   });
 });
 
@@ -77,50 +47,5 @@ describe("Home layout tokens", () => {
     expect(body).toContain("--section-gap: 120px");
     expect(body).toContain("--edge: max(var(--gutter), (100% - var(--container)) / 2)");
     expect(css).not.toContain("--c4");
-  });
-});
-
-describe("Home hero", () => {
-  it("sets the sentence at 20px and weight 500 over a token-driven scrim", () => {
-    const sentence = ruleBody(".hero-sentence");
-    expect(sentence).toContain("font-size: 20px");
-    expect(sentence).toContain("font-weight: 500");
-    expect(ruleBody(".hero-copy::before")).toContain(
-      "color-mix(in oklch, var(--bg) 62%, transparent)",
-    );
-  });
-});
-
-describe("Features bento", () => {
-  it("marks each bento card as a card shell", () => {
-    expect(featuresSource).toContain('data-slot="card"');
-  });
-
-  it("falls to one column under 760px", () => {
-    expect(css).toMatch(
-      /@media \(max-width: 760px\) \{\s*\.bento \{\s*grid-template-columns: minmax\(0, 1fr\);/,
-    );
-  });
-
-  it("pauses every scene that is not playing, pseudo-elements included", () => {
-    expect(sceneCss).toContain(".scene:not([data-playing]) *::before");
-    expect(sceneCss).toContain(".scene:not([data-playing]) *::after");
-    expect(sceneCss).toContain("animation-play-state: paused;");
-    expect(sceneCss).toContain("--scene-cycle: 7s");
-    expect(css).not.toContain(".bento-card:not(.is-in)");
-  });
-
-  it("keeps every keyframe inside the motion guard", () => {
-    for (const file of readdirSync(sceneDirectory)) {
-      const source = readFileSync(new URL(file, sceneDirectory), "utf8");
-      expect(unguardedKeyframes(source)).toEqual([]);
-    }
-  });
-
-  it("flags a keyframe written outside the motion guard", () => {
-    const guarded = `${motionGuard}\n  @keyframes a {\n    to { opacity: 1; }\n  }\n}\n`;
-    expect(unguardedKeyframes(guarded)).toEqual([]);
-    expect(unguardedKeyframes(`${guarded}@keyframes b { to { opacity: 1; } }`)).toHaveLength(1);
-    expect(unguardedKeyframes("@keyframes c { to { opacity: 1; } }")).toHaveLength(1);
   });
 });

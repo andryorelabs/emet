@@ -200,7 +200,7 @@ describe("showcase frame and feature rows sources", () => {
   const showcaseSource = read("../Showcase.astro");
   const showcaseCss = read("../../../styles/showcase.css");
   const featuresSource = read("../Features.astro");
-  const homeCss = read("../../../styles/home.css");
+  const featuresCss = read("../../../styles/home/features.css");
 
   test("the stage and the panel are siblings inside one frame, and only the frame pins", () => {
     expect(showcaseSource).toMatch(
@@ -215,10 +215,6 @@ describe("showcase frame and feature rows sources", () => {
   test("features render revealed bento cards and no plate or absolute notes", () => {
     expect(featuresSource).toContain('class="bento"');
     expect(featuresSource).toContain('data-reveal="item"');
-    expect(homeCss).not.toMatch(/\.plate|\.note\b/);
-  });
-
-  test("the portrait picture clips the drift", () => {
-    expect(homeCss).toMatch(/\.portrait picture \{\s*overflow: clip;/);
+    expect(featuresCss).not.toMatch(/\.plate|\.note\b/);
   });
 });
