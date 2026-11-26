@@ -30,7 +30,7 @@ export const ko = {
     name: "emet",
     lineOne: "스펙에서 머지까지,",
     lineTwo: "승인은 한 번.",
-    sentence: "Claude Code와 Codex용 플러그인. 아이디어에서 머지된 변경까지, 승인은 한 번.",
+    sentence: "Claude Code와 Codex용 워크플로. 아이디어에서 머지된 변경까지, 승인은 한 번.",
     install: "emet 설치",
     readDocs: "문서 읽기",
     alt: "세 개의 시냇물이 하나의 강으로 합쳐지는 그림 속 계곡. 계단식 밭과, 고요한 하늘 아래 풀이 덮인 언덕 위의 작은 점토 골렘.",
@@ -162,7 +162,7 @@ export const ko = {
     alt: "낮게 깔린 아침 안개 아래의 계곡. 옅은 해와 파스텔빛 하늘.",
   },
   footer: {
-    description: "Claude Code와 Codex용 플러그인.",
+    description: "Claude Code와 Codex용 워크플로.",
     notice: "Anthropic 또는 OpenAI와 제휴하거나 Anthropic 또는 OpenAI의 보증을 받지 않았습니다",
     docs: "문서",
     whatsNew: "새 소식",

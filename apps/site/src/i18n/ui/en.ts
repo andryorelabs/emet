@@ -30,7 +30,7 @@ export const en = {
     name: "emet",
     lineOne: "Spec to merge,",
     lineTwo: "on one approval.",
-    sentence: "A plugin for Claude Code and Codex. Idea to merged change, one approval.",
+    sentence: "A workflow for Claude Code and Codex. Idea to merged change, one approval.",
     install: "Install emet",
     readDocs: "Read the docs",
     alt: "A painted valley where three streams join one river, with terraced fields and a small clay golem on a grassy rise under a calm sky.",
@@ -164,7 +164,7 @@ export const en = {
     alt: "A valley under low morning mist with a pale sun and pastel sky.",
   },
   footer: {
-    description: "Plugin for Claude Code and Codex.",
+    description: "Workflow for Claude Code and Codex.",
     notice: "Not affiliated with or endorsed by Anthropic or OpenAI",
     docs: "Docs",
     whatsNew: "What's new",
