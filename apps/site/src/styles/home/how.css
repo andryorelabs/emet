@@ -159,7 +159,6 @@
 
 .how[data-pinned] .step:not([data-step-state="on"]) .step-body {
   grid-template-rows: 0fr;
-  visibility: hidden;
 }
 
 .how[data-pinned] .step:not([data-step-state="on"]) .step-inner {
@@ -169,15 +168,11 @@
 
 @media (prefers-reduced-motion: no-preference) {
   .how[data-pinned] .step-body {
-    transition:
-      grid-template-rows 400ms var(--ease-out),
-      visibility 0s;
+    transition: grid-template-rows 400ms var(--ease-out);
   }
 
   .how[data-pinned] .step:not([data-step-state="on"]) .step-body {
-    transition:
-      grid-template-rows 400ms var(--ease-out),
-      visibility 0s 400ms;
+    transition: grid-template-rows 400ms var(--ease-out);
   }
 }
 
