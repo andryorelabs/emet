@@ -123,4 +123,12 @@ describe("initPaintingStreams", () => {
     expect(observed).toHaveLength(0);
     expect(overlay().dataset.stage).toBeUndefined();
   });
+
+  test("leaves an overlay inside a pinned runway to the pin", () => {
+    document.body.innerHTML = `<section data-pinned="true">${MARKUP}</section>`;
+    install({ reducedMotion: false, wide: true });
+    initPaintingStreams(document);
+    expect(observed).toHaveLength(0);
+    expect(overlay().dataset.stage).toBeUndefined();
+  });
 });
