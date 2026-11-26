@@ -31,3 +31,31 @@ export interface PaintingData {
   readonly waterRegion: Rect | null;
   readonly river: readonly Polyline[];
 }
+
+/** Which effects `paintingFx` may run. */
+interface PaintingFxEffects {
+  readonly clouds?: boolean;
+  readonly water?: boolean;
+  readonly eyes?: boolean;
+}
+
+/** Options of `paintingFx`; the host must contain the painting `<img>`. */
+export interface PaintingFxOptions {
+  readonly painting: PaintingData;
+  readonly effects: PaintingFxEffects;
+  readonly gaze?: () => { x: number; y: number } | null;
+  readonly when?: () => boolean;
+  readonly eyeScale?: number;
+  readonly skyMask?: readonly [number, number];
+  readonly objectPosition?: readonly [number, number];
+}
+
+/** Controls of a running `paintingFx`. */
+export interface PaintingFxHandle {
+  /** Blinks the eyes on the next frame. */
+  blink(): void;
+  /** Lights the eyes; the glow fades over 900 ms. */
+  glow(): void;
+  /** Stops the loop, frees GL resources, removes the layers and `data-fx`. */
+  destroy(): void;
+}
