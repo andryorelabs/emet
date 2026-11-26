@@ -4,7 +4,9 @@
  * With reduced motion the whole line appears at once.
  */
 
-export const TYPE_INTERVAL_MS = 45;
+export const TYPE_DURATION_MS = 700;
+export const TYPE_STEPS = 16;
+export const TYPE_INTERVAL_MS = TYPE_DURATION_MS / TYPE_STEPS;
 const REDUCED_MOTION_QUERY = "(prefers-reduced-motion: reduce)";
 
 /**

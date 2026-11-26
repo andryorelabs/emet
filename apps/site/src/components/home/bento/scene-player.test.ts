@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it } from "bun:test";
 
-import { initBentoScenes } from "./scene-player";
+import { initBentoScenes, SCENE_VISIBILITY_THRESHOLD } from "./scene-player";
 
 interface FakeScene {
   dataset: Record<string, string | undefined>;
@@ -10,7 +10,12 @@ interface FakeScene {
 type ObserverCallback = (entries: { target: unknown; isIntersecting: boolean }[]) => void;
 
 const globals = globalThis as Record<string, unknown>;
-let observers: { callback: ObserverCallback; observed: unknown[]; disconnected: boolean }[] = [];
+let observers: {
+  callback: ObserverCallback;
+  options: { threshold?: number } | undefined;
+  observed: unknown[];
+  disconnected: boolean;
+}[] = [];
 let documentListeners: Map<string, () => void>;
 let mediaListeners: (() => void)[];
 let fakeDocument: { hidden: boolean };
@@ -48,8 +53,8 @@ beforeEach(() => {
   for (const key of ["IntersectionObserver", "matchMedia", "document"]) saved[key] = globals[key];
   globals.IntersectionObserver = class {
     record: (typeof observers)[number];
-    constructor(callback: ObserverCallback) {
-      this.record = { callback, observed: [], disconnected: false };
+    constructor(callback: ObserverCallback, options?: { threshold?: number }) {
+      this.record = { callback, options, observed: [], disconnected: false };
       observers.push(this.record);
     }
     observe(target: unknown): void {
@@ -87,6 +92,12 @@ describe("initBentoScenes", () => {
     expect(scene.dataset.playing).toBe("");
     intersect(scene, false);
     expect(scene.dataset.playing).toBeUndefined();
+  });
+
+  it("starts scenes at 15 % visibility", () => {
+    initBentoScenes(makeRoot([makeScene()]));
+    expect(SCENE_VISIBILITY_THRESHOLD).toBe(0.15);
+    expect(observers[0]?.options).toEqual({ threshold: 0.15 });
   });
 
   it("phases each scene by its index", () => {
