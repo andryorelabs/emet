@@ -70,7 +70,9 @@ function root(): HTMLElement {
 }
 
 function dusk(): HTMLImageElement {
-  return pick(".showcase-dusk");
+  const found = document.querySelector<HTMLImageElement>(".showcase-dusk");
+  if (!found) throw new Error("missing .showcase-dusk");
+  return found;
 }
 
 function setLoaded(image: HTMLImageElement, loaded: boolean): void {

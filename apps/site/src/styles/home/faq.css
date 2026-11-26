@@ -47,7 +47,7 @@
 }
 
 [data-faq-item] [data-faq-trigger]::after {
-  content: "+";
+  content: "+" / "";
   flex: none;
   font-size: 28px;
   font-weight: 400;

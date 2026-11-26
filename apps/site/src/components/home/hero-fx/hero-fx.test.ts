@@ -344,10 +344,33 @@ describe("initHeroFx", () => {
     const hero = buildHero();
     start(hero);
     const bubble = hero.querySelector<HTMLElement>("[data-hero-bubble]");
-    expect(bubble?.textContent).toBe("one");
+    expect(bubble?.textContent).toBe("");
     hero.querySelector<HTMLElement>("[data-hero-golem]")?.click();
     expect(bubble?.textContent).toBe("two");
     expect(bubble?.classList.contains("is-on")).toBe(true);
+  });
+
+  test("keeps the bubble empty until the first hover, then shows the first phrase", () => {
+    const hero = buildHero();
+    start(hero);
+    const bubble = hero.querySelector<HTMLElement>("[data-hero-bubble]");
+    expect(bubble?.textContent).toBe("");
+    hero.querySelector<HTMLElement>("[data-hero-golem]")?.dispatchEvent(new Event("pointerenter"));
+    expect(bubble?.textContent).toBe("one");
+    expect(bubble?.classList.contains("is-on")).toBe(true);
+  });
+
+  test("stops the firefly loop when the window narrows below the effect width", () => {
+    const hero = buildHero();
+    start(hero);
+    observerCallback([{ isIntersecting: true }]);
+    expect(frames.size).toBe(1);
+    define("innerWidth", 600);
+    window.dispatchEvent(new Event("resize"));
+    expect(frames.size).toBe(0);
+    define("innerWidth", 1440);
+    window.dispatchEvent(new Event("resize"));
+    expect(frames.size).toBe(1);
   });
 });
 

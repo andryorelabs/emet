@@ -53,6 +53,7 @@ export function initGolemHotspot(options: GolemHotspotOptions): () => void {
   let index = 0;
   let timer: ReturnType<typeof setTimeout> | undefined;
   const show = (): void => {
+    if (bubble.textContent === "") bubble.textContent = phrases[index] ?? "";
     bubble.classList.add("is-on");
   };
   const hide = (): void => {
@@ -66,7 +67,6 @@ export function initGolemHotspot(options: GolemHotspotOptions): () => void {
     timer = setTimeout(hide, BUBBLE_VISIBLE_MS);
     onClick();
   };
-  bubble.textContent = phrases[0] ?? "";
   const events: [string, () => void][] = [
     ["pointerenter", show],
     ["focus", show],

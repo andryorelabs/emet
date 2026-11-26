@@ -126,7 +126,9 @@ export function initHeroFx(root: HTMLElement): { destroy(): void } {
   }
 
   function sync(): void {
-    const running = visible && !document.hidden;
+    const allowed = heroFxEnabled(readEnv());
+    if (!allowed) drawing.clearRect(0, 0, root.clientWidth, root.clientHeight);
+    const running = allowed && visible && !document.hidden;
     if (running && frame === 0) {
       lastTime = performance.now();
       frame = requestAnimationFrame(tick);
@@ -142,6 +144,11 @@ export function initHeroFx(root: HTMLElement): { destroy(): void } {
     pointer.target = [event.clientX - rect.left, event.clientY - rect.top];
     if (!pointer.inside) pointer.eased = pointer.target;
     pointer.inside = true;
+  }
+
+  function onResize(): void {
+    layout();
+    sync();
   }
 
   function onLeave(): void {
@@ -173,7 +180,7 @@ export function initHeroFx(root: HTMLElement): { destroy(): void } {
   root.addEventListener("pointermove", onMove);
   root.addEventListener("pointerleave", onLeave);
   document.addEventListener("visibilitychange", sync);
-  addEventListener("resize", layout, { passive: true });
+  addEventListener("resize", onResize, { passive: true });
 
   return {
     destroy() {
@@ -181,7 +188,7 @@ export function initHeroFx(root: HTMLElement): { destroy(): void } {
       root.removeEventListener("pointermove", onMove);
       root.removeEventListener("pointerleave", onLeave);
       document.removeEventListener("visibilitychange", sync);
-      removeEventListener("resize", layout);
+      removeEventListener("resize", onResize);
       stopHotspot();
       painting.destroy();
       if (frame !== 0) cancelAnimationFrame(frame);
