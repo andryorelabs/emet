@@ -1,0 +1,96 @@
+/**
+ * Home page tokens, layout variables and shared controls.
+ */
+
+:root {
+  --container: 1280px;
+  --axis: 160px;
+  --gutter: 32px;
+  --edge: max(var(--gutter), (100% - var(--container)) / 2);
+  --section-gap: 120px;
+  --radius-panel: 12px;
+  --radius-control: 10px;
+  --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+}
+
+@media (max-width: 1000px) {
+  :root {
+    --axis: 0px;
+    --gutter: 24px;
+  }
+}
+
+@media (max-width: 640px) {
+  :root {
+    --gutter: 16px;
+    --section-gap: 80px;
+  }
+}
+
+main {
+  display: flex;
+  flex-direction: column;
+  row-gap: var(--section-gap);
+}
+
+main h2 {
+  font-size: clamp(32px, 3.2vw, 48px);
+  font-weight: 400;
+  line-height: 1.1;
+  letter-spacing: -0.02em;
+  margin: 0;
+}
+
+main p {
+  font-size: 18px;
+  line-height: 1.55;
+  margin: 0;
+}
+
+.button {
+  display: inline-flex;
+  align-items: center;
+  min-height: 48px;
+  padding: 0 24px;
+  border-radius: var(--radius-control);
+  background: var(--accent);
+  color: var(--on-accent);
+  font-size: 17px;
+  font-weight: 500;
+  text-decoration: none;
+  transition: transform 160ms var(--ease-out);
+}
+
+.button:active {
+  transform: scale(0.97);
+}
+
+.button:focus-visible,
+a:focus-visible,
+[data-faq-trigger]:focus-visible {
+  outline: 2px solid var(--text);
+  outline-offset: 3px;
+}
+
+[data-faq-trigger]:focus-visible {
+  box-shadow: none;
+}
+
+.text-link {
+  color: var(--text);
+  font-size: 17px;
+  text-underline-offset: 4px;
+}
+
+.showcase {
+  padding: 0 var(--gutter);
+}
+
+.showcase-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 48px;
+  border-radius: var(--radius-panel);
+  background: var(--surface);
+}
