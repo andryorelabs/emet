@@ -62,6 +62,13 @@ export const zhCN = {
   },
   features: {
     heading: "一次运行守护什么",
+    scenes: {
+      approve: "批准",
+      approveName: "批准:长按",
+      approved: "已批准",
+      gateName: "评审关卡:1 条评论,已解决",
+      gateTip: "第 2 波:1 条评论,已解决",
+    },
     notes: [
       { title: "一次批准", line: "规格和工单只评审一次。" },
       { title: "每一波都有评审", line: "评审者检查每一波。" },

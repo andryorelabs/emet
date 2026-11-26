@@ -63,6 +63,13 @@ export const fr = {
   },
   features: {
     heading: "Ce qu'une exécution protège",
+    scenes: {
+      approve: "Approuver",
+      approveName: "Approuver : maintenir appuyé",
+      approved: "Approuvé",
+      gateName: "Barrière de revue : 1 commentaire, résolu",
+      gateTip: "vague 2 : 1 commentaire, résolu",
+    },
     notes: [
       { title: "Une seule approbation", line: "Spécification et tickets, relus une fois." },
       { title: "Une revue par vague", line: "Un relecteur vérifie chaque vague." },

@@ -61,6 +61,13 @@ export const en = {
   },
   features: {
     heading: "What a run guards",
+    scenes: {
+      approve: "Approve",
+      approveName: "Approve: press and hold",
+      approved: "Approved",
+      gateName: "Review gate: 1 comment, resolved",
+      gateTip: "wave 2: 1 comment, resolved",
+    },
     notes: [
       { title: "One approval", line: "Spec and tickets, reviewed once." },
       { title: "A review per wave", line: "A reviewer checks every wave." },

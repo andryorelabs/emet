@@ -1,15 +1,7 @@
 /**
- * Accessible names and status text of the interactive bento scenes.
+ * Shape of the translated accessible names and status text of the
+ * interactive bento scenes, taken from `features.scenes` in the UI strings.
  */
+import type { UiStrings } from "../../../../i18n/ui/en";
 
-export const sceneLabels = {
-  approval: {
-    button: "Approve",
-    buttonName: "Approve: press and hold",
-    done: "Approved",
-  },
-  review: {
-    gateName: "Review gate: 1 comment, resolved",
-    tip: "wave 2: 1 comment, resolved",
-  },
-} as const;
+export type SceneStrings = UiStrings["features"]["scenes"];

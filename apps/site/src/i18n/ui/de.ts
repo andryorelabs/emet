@@ -62,6 +62,13 @@ export const de = {
   },
   features: {
     heading: "Was ein Lauf absichert",
+    scenes: {
+      approve: "Freigeben",
+      approveName: "Freigeben: gedrückt halten",
+      approved: "Freigegeben",
+      gateName: "Review-Gate: 1 Kommentar, erledigt",
+      gateTip: "Welle 2: 1 Kommentar, erledigt",
+    },
     notes: [
       { title: "Eine Freigabe", line: "Spezifikation und Tickets, einmal geprüft." },
       { title: "Ein Review pro Welle", line: "Ein Reviewer prüft jede Welle." },
