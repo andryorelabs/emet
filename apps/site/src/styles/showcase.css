@@ -3,7 +3,7 @@
  * holding the flag switch, the git lanes and the status line. From 901px the
  * runway pins and scroll grows the frame from an inset card to full bleed (a
  * clip-path scrubbed through --showcase-* properties set by the script), then
- * the panel fades in. Narrower, or under reduced motion, it stacks with the
+ * the heading and the panel fade in on the eased grow value. Narrower, or under reduced motion, it stacks with the
  * final state. Flagging cross-fades day to dusk (opacity only); the knob moves
  * with transform only.
  */
@@ -64,7 +64,7 @@ section.showcase {
 
 .showcase-dusk {
   opacity: 0;
-  transition: opacity 600ms var(--ease-out);
+  transition: opacity 1s var(--ease-out);
 }
 
 .showcase[data-state="held"] .showcase-dusk {
@@ -301,6 +301,10 @@ section.showcase .showcase-panel {
 
   section.showcase[data-pinned] .showcase-panel {
     opacity: var(--showcase-panel, 1);
+  }
+
+  section.showcase[data-pinned] h2 {
+    opacity: var(--showcase-heading, 1);
   }
 }
 
