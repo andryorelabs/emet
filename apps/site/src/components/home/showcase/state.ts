@@ -36,12 +36,12 @@ export function viewFor(state: ShowcaseState): ShowcaseView {
   };
 }
 
-const HOLD_AT = 0.55;
-const RELEASE_AT = 0.45;
+const HOLD_AT = 0.74;
+const RELEASE_AT = 0.66;
 
 /**
- * Scroll-driven state with hysteresis: held at progress >= 0.55, merged at
- * <= 0.45 and unchanged in the dead band between.
+ * Scroll-driven state with hysteresis: held at progress >= 0.74, merged at
+ * <= 0.66 and unchanged in the dead band between.
  */
 export function stateForProgress(progress: number, previous: ShowcaseState): ShowcaseState {
   if (progress >= HOLD_AT) return previous.held ? previous : { held: true };

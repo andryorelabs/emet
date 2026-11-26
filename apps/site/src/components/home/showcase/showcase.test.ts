@@ -5,6 +5,7 @@ import { GlobalRegistrator } from "@happy-dom/global-registrator";
 const MARKUP = `
 <section data-showcase data-state="merged">
   <div class="showcase-panel">
+    <canvas data-showcase-lanes></canvas>
     <h2><span data-variant="merged">The wave merges</span><span data-variant="held">The wave waits</span></h2>
     <p data-showcase-status><span data-variant="merged">Merged.</span><span data-variant="held">Held.</span></p>
     <button type="button" aria-pressed="false" data-showcase-flag hidden></button>
@@ -71,8 +72,8 @@ describe("showcase DOM sync", () => {
     GlobalRegistrator.register();
     document.body.innerHTML = MARKUP;
     define("CSS", { supports: () => true });
-    define("matchMedia", () => ({
-      matches: false,
+    define("matchMedia", (query: string) => ({
+      matches: query.includes("min-width"),
       addEventListener: () => undefined,
     }));
     define("requestAnimationFrame", (callback: FrameRequestCallback) => {
@@ -101,13 +102,26 @@ describe("showcase DOM sync", () => {
     });
   });
 
-  test("scrolling past 0.55 flags the ticket and keeps the three views in step", () => {
-    scrollToProgress(0.6);
+  test("scrolling past 0.74 flags the ticket and keeps the three views in step", () => {
+    scrollToProgress(0.8);
     expect(parts()).toEqual({ state: "held", pressed: "true", live: "Held.", hidden: "true" });
   });
 
-  test("the dead band keeps the state, going back under 0.45 unflags it", () => {
-    scrollToProgress(0.5);
+  test("scroll grows the frame and shows the panel from 70%", () => {
+    const root = document.querySelector<HTMLElement>("[data-showcase]");
+    const panel = document.querySelector<HTMLElement>(".showcase-panel");
+    scrollToProgress(0.2);
+    expect(Number(root?.style.getPropertyValue("--showcase-x"))).toBeCloseTo(9);
+    expect(root?.style.getPropertyValue("--showcase-panel")).toBe("0");
+    expect(panel?.inert).toBe(true);
+    scrollToProgress(0.8);
+    expect(root?.style.getPropertyValue("--showcase-x")).toBe("0");
+    expect(root?.style.getPropertyValue("--showcase-panel")).toBe("1");
+    expect(panel?.inert).toBe(false);
+  });
+
+  test("the dead band keeps the state, going back under 0.66 unflags it", () => {
+    scrollToProgress(0.7);
     expect(parts().state).toBe("held");
     scrollToProgress(0.4);
     expect(parts()).toEqual({ state: "merged", pressed: "false", live: "Merged.", hidden: "true" });
@@ -120,7 +134,7 @@ describe("showcase DOM sync", () => {
     expect(parts()).toEqual({ state: "held", pressed: "true", live: "Held.", hidden: "true" });
     scrollToProgress(0.3);
     expect(parts().state).toBe("held");
-    scrollToProgress(0.6);
+    scrollToProgress(0.8);
     expect(parts().state).toBe("held");
     scrollToProgress(0.3);
     expect(parts()).toEqual({ state: "merged", pressed: "false", live: "Merged.", hidden: "true" });
@@ -130,6 +144,7 @@ describe("showcase DOM sync", () => {
 const DUSK_MARKUP = `
 <section data-showcase data-state="merged">
   <img data-srcset="dusk.avif 1x" data-sizes="50vw" alt="">
+  <canvas data-showcase-lanes></canvas>
   <p data-showcase-status><span data-variant="merged">Merged.</span><span data-variant="held">Held.</span></p>
   <button type="button" aria-pressed="false" data-showcase-flag hidden></button>
 </section>`;
@@ -138,15 +153,19 @@ describe("showcase without idle callbacks and with reduced motion", () => {
   const timeouts: { callback: () => void; delay: number | undefined }[] = [];
   const changeListeners: (() => void)[] = [];
   const motion = { matches: true };
+  const viewport = { wide: true };
   const originalSetTimeout = globalThis.setTimeout;
 
   beforeAll(async () => {
     GlobalRegistrator.register();
     document.body.innerHTML = DUSK_MARKUP;
+    const surface = new Proxy({}, { get: () => () => undefined, set: () => true });
+    const canvas = document.querySelector("canvas");
+    if (canvas) Object.defineProperty(canvas, "getContext", { value: () => surface });
     define("CSS", { supports: () => true });
-    define("matchMedia", () => ({
+    define("matchMedia", (query: string) => ({
       get matches() {
-        return motion.matches;
+        return query.includes("min-width") ? viewport.wide : motion.matches;
       },
       addEventListener: (_type: string, listener: () => void) => {
         changeListeners.push(listener);
@@ -190,6 +209,18 @@ describe("showcase without idle callbacks and with reduced motion", () => {
     for (const listener of changeListeners) listener();
     expect(root && "pinned" in root.dataset).toBe(false);
   });
+
+  test("does not pin below 901px and clears the grow properties", () => {
+    const root = document.querySelector<HTMLElement>("[data-showcase]");
+    motion.matches = false;
+    root?.style.setProperty("--showcase-x", "9");
+    viewport.wide = false;
+    for (const listener of changeListeners) listener();
+    expect(root && "pinned" in root.dataset).toBe(false);
+    expect(root?.style.getPropertyValue("--showcase-x")).toBe("");
+    viewport.wide = true;
+    motion.matches = true;
+  });
 });
 
 function read(path: string): string {
@@ -202,14 +233,17 @@ describe("showcase frame and feature rows sources", () => {
   const featuresSource = read("../Features.astro");
   const featuresCss = read("../../../styles/home/features.css");
 
-  test("the stage and the panel are siblings inside one frame, and only the frame pins", () => {
+  test("the stage, marks, heading and panel are siblings inside one frame, and only the frame pins", () => {
     expect(showcaseSource).toMatch(
-      /<div class="showcase-frame">\s*<div class="showcase-stage" aria-hidden="true">[\s\S]*<\/div>\s*<div class="showcase-panel">/,
+      /<div class="showcase-frame">\s*<div class="showcase-stage" aria-hidden="true">[\s\S]*<\/div>\s*<div class="showcase-marks" aria-hidden="true">[\s\S]*<h2 id="showcase-title"[\s\S]*<div class="showcase-panel">/,
     );
+    expect(showcaseSource).toContain("data-showcase-lanes");
     expect(showcaseCss).toMatch(
       /\[data-pinned\] \.showcase-frame \{\s*position: sticky;\s*top: 0;\s*height: 100svh;/,
     );
-    expect(showcaseCss).not.toMatch(/\[data-pinned\] \.showcase-panel/);
+    expect(showcaseCss).toMatch(
+      /@media \(min-width: 901px\) \{\s*section\.showcase\[data-pinned\] \{[^}]*height: 340svh;/,
+    );
   });
 
   test("features render revealed bento cards and no plate or absolute notes", () => {

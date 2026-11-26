@@ -3,9 +3,13 @@
  * the visible variants through a root attribute, mirrors the active status into
  * a live region, cross-fades the paintings and loads the dusk painting on first
  * interaction or when the browser idles. When scroll-driven animation is
- * supported and motion is allowed it pins the section and flips the state with
- * scroll progress, a click holding until the next threshold crossing.
+ * supported, motion is allowed and the viewport is at least 901px wide it pins
+ * the runway, grows the frame, fades in the glass panel and flips the state with
+ * scroll progress, a click holding until the next threshold crossing. The git
+ * lanes canvas animates while on screen and draws one frame under reduced motion.
  */
+import { frameInset, panelOpacity } from "./grow";
+import { initLanes, LANES_REFRESH_EVENT } from "./lanes";
 import {
   clickStep,
   initialState,
@@ -16,6 +20,32 @@ import {
   type ScrollTrack,
   type ShowcaseState,
 } from "./state";
+
+const WIDE_QUERY = "(min-width: 901px)";
+const GROW_PROPERTIES = [
+  "--showcase-x",
+  "--showcase-y",
+  "--showcase-r",
+  "--showcase-marks",
+  "--showcase-panel",
+];
+
+function writeGrow(root: HTMLElement, progress: number): void {
+  const panel = root.querySelector<HTMLElement>(".showcase-panel");
+  if (panel) panel.inert = panelOpacity(progress) === 0;
+  const inset = frameInset(progress);
+  root.style.setProperty("--showcase-x", String(inset.x));
+  root.style.setProperty("--showcase-y", String(inset.y));
+  root.style.setProperty("--showcase-r", String(inset.radius));
+  root.style.setProperty("--showcase-marks", String(inset.marks));
+  root.style.setProperty("--showcase-panel", String(panelOpacity(progress)));
+}
+
+function clearGrow(root: HTMLElement): void {
+  const panel = root.querySelector<HTMLElement>(".showcase-panel");
+  if (panel) panel.inert = false;
+  for (const property of GROW_PROPERTIES) root.style.removeProperty(property);
+}
 
 function loadDusk(root: HTMLElement): void {
   const dusk = root.querySelector<HTMLImageElement>("img[data-srcset]");
@@ -61,6 +91,9 @@ function mount(root: HTMLElement): void {
   const live = createLiveRegion(status);
   const supportsPin = CSS.supports("animation-timeline: view()");
   const reducedMotion = globalThis.matchMedia("(prefers-reduced-motion: reduce)");
+  const wide = globalThis.matchMedia(WIDE_QUERY);
+  const canvas = root.querySelector<HTMLCanvasElement>("canvas[data-showcase-lanes]");
+  let lanes: { destroy(): void } | undefined;
   let state: ShowcaseState = initialState;
   let track: ScrollTrack = initialTrack;
   let intersecting = false;
@@ -71,12 +104,14 @@ function mount(root: HTMLElement): void {
     live.textContent = activeText(status, view.held);
     control.setAttribute("aria-pressed", view.pressed);
     root.dataset.state = view.held ? "held" : "merged";
+    canvas?.dispatchEvent(new Event(LANES_REFRESH_EVENT));
   };
 
   const syncFromScroll = (): void => {
     frame = 0;
     if (!("pinned" in root.dataset) || !intersecting) return;
     const progress = runwayProgress(root.getBoundingClientRect(), globalThis.innerHeight);
+    writeGrow(root, progress);
     const next = scrollStep(progress, state, track);
     track = next.track;
     if (next.state.held === state.held) return;
@@ -90,12 +125,20 @@ function mount(root: HTMLElement): void {
   };
 
   const applyPin = (): void => {
-    if (supportsPin && !reducedMotion.matches) {
+    if (supportsPin && wide.matches && !reducedMotion.matches) {
       root.dataset.pinned = "";
       onScroll();
     } else {
       delete root.dataset.pinned;
+      clearGrow(root);
     }
+  };
+
+  const applyLanes = (): void => {
+    lanes?.destroy();
+    lanes = canvas
+      ? initLanes(canvas, { reduce: reducedMotion.matches, isHeld: () => state.held })
+      : undefined;
   };
 
   const observer = new IntersectionObserver((entries) => {
@@ -105,6 +148,8 @@ function mount(root: HTMLElement): void {
   observer.observe(root);
   globalThis.addEventListener("scroll", onScroll, { passive: true });
   reducedMotion.addEventListener("change", applyPin);
+  reducedMotion.addEventListener("change", applyLanes);
+  wide.addEventListener("change", applyPin);
 
   control.hidden = false;
   root.dataset.enhanced = "";
@@ -116,6 +161,7 @@ function mount(root: HTMLElement): void {
     render();
   });
   applyPin();
+  applyLanes();
   schedulePreload(root);
 }
 

@@ -60,20 +60,27 @@ const duskSrcset = duskVariants
     />
     <Valley variant="showcase"><Fireflies /></Valley>
   </div>
+  <div class="showcase-marks" aria-hidden="true">
+    <i class="showcase-corner" data-corner="a"></i>
+    <i class="showcase-corner" data-corner="b"></i>
+    <i class="showcase-corner" data-corner="c"></i>
+    <i class="showcase-corner" data-corner="d"></i>
+  </div>
+  <h2 id="showcase-title" class="showcase-heading showcase-stack">
+    <span data-variant="merged">{showcase.heading}</span>
+    <span data-variant="held">{showcase.headingHeld}</span>
+  </h2>
   <div class="showcase-panel">
-    <h2 id="showcase-title" class="showcase-stack">
-      <span data-variant="merged">{showcase.heading}</span>
-      <span data-variant="held">{showcase.headingHeld}</span>
-    </h2>
+    <button type="button" class="showcase-flag" aria-pressed="false" data-showcase-flag hidden>
+      <span class="showcase-switch" aria-hidden="true"><span class="showcase-knob"></span></span>
+      <span>{showcase.flag}</span>
+    </button>
+    <canvas class="showcase-lanes" data-showcase-lanes aria-hidden="true"></canvas>
     <p class="showcase-status showcase-stack" data-showcase-status>
       <span data-variant="merged">{showcase.status}</span>
       <span data-variant="held">{showcase.statusHeld}</span>
     </p>
     <noscript><p class="showcase-status">{showcase.statusHeld}</p></noscript>
-    <button type="button" class="showcase-flag" aria-pressed="false" data-showcase-flag hidden>
-      <span class="showcase-switch" aria-hidden="true"><span class="showcase-knob"></span></span>
-      <span>{showcase.flag}</span>
-    </button>
     <p class="showcase-mark" aria-hidden="true"><span class="showcase-letter">e</span>met</p>
   </div>
   </div>
