@@ -89,4 +89,11 @@ describe("How it works pinned runway markup", () => {
     expect(cssSource).toMatch(/\.how-dither \{\s*display: none;/);
     expect(cssSource).toMatch(/\.how\[data-pinned\] \.how-dither \{[^}]*display: block/);
   });
+
+  it("hides the dither canvas once painting-fx is active so the clouds and eyes show", () => {
+    expect(cssSource).toMatch(/\.how-painting\[data-fx="on"\] \.how-dither \{\s*display: none;/);
+    const pinnedBlock = cssSource.indexOf(".how[data-pinned] .how-dither");
+    const fxBlock = cssSource.indexOf('.how-painting[data-fx="on"] .how-dither');
+    expect(fxBlock).toBeGreaterThan(pinnedBlock);
+  });
 });
