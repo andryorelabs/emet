@@ -15,6 +15,29 @@ const NOOP_HANDLE: PaintingFxHandle = {
   destroy: () => undefined,
 };
 
+/** Which effects are drawing right now; each one replaces its CSS Valley layer. */
+interface FxActive {
+  readonly clouds: boolean;
+  readonly water: boolean;
+  readonly eyes: boolean;
+}
+
+/** Sets or clears one `data-fx-*` marker attribute on the host. */
+function toggleMarker(host: HTMLElement, attribute: string, on: boolean): void {
+  if (on) host.setAttribute(attribute, "");
+  else host.removeAttribute(attribute);
+}
+
+/** Mirrors the active effects onto the host so `graphics.css` hides only the Valley layers that were replaced. */
+function setFxMarkers(host: HTMLElement, active: FxActive): void {
+  const any = active.clouds || active.water || active.eyes;
+  if (any) host.dataset.fx = "on";
+  else delete host.dataset.fx;
+  toggleMarker(host, "data-fx-clouds", active.clouds);
+  toggleMarker(host, "data-fx-water", active.water);
+  toggleMarker(host, "data-fx-eyes", active.eyes);
+}
+
 function overlayElement<K extends "div" | "canvas">(tag: K): HTMLElementTagNameMap[K] {
   const element = document.createElement(tag);
   element.setAttribute("aria-hidden", "true");
@@ -152,7 +175,7 @@ export function paintingFx(host: HTMLElement, options: PaintingFxOptions): Paint
       sky.hidden = true;
       waterCanvas.hidden = true;
       eyesCanvas.hidden = true;
-      delete host.dataset.fx;
+      setFxMarkers(host, { clouds: false, water: false, eyes: false });
       return;
     }
     const clouds = effects.clouds === true;
@@ -162,8 +185,7 @@ export function paintingFx(host: HTMLElement, options: PaintingFxOptions): Paint
     const eyesDrawn = drawEyes(nowMs);
     waterCanvas.hidden = !waterDrawn;
     eyesCanvas.hidden = !eyesDrawn;
-    if (clouds || waterDrawn || eyesDrawn) host.dataset.fx = "on";
-    else delete host.dataset.fx;
+    setFxMarkers(host, { clouds, water: waterDrawn, eyes: eyesDrawn });
   }
 
   function shouldRun(): boolean {
@@ -210,7 +232,7 @@ export function paintingFx(host: HTMLElement, options: PaintingFxOptions): Paint
       sky.remove();
       waterCanvas.remove();
       eyesCanvas.remove();
-      delete host.dataset.fx;
+      setFxMarkers(host, { clouds: false, water: false, eyes: false });
     },
   };
 }

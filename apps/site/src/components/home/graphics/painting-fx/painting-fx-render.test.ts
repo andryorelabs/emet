@@ -546,6 +546,21 @@ describe("paintingFx", () => {
     expect(host.dataset.fx).toBeUndefined();
   });
 
+  test("replaces only the Valley layers whose effect rendered", () => {
+    env.glFlags = { failShader: true };
+    const { host, handle } = start();
+    show();
+    runFrame(1000);
+    runFrame(1016);
+    expect(host.dataset.fx).toBe("on");
+    expect(host.dataset.fxClouds).toBe("");
+    expect(host.dataset.fxWater).toBeUndefined();
+    expect(host.dataset.fxEyes).toBeUndefined();
+    handle.destroy();
+    expect(host.dataset.fx).toBeUndefined();
+    expect(host.dataset.fxClouds).toBeUndefined();
+  });
+
   test("hides a layer whose context was lost", () => {
     const { host } = start();
     show();

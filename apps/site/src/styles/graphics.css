@@ -571,9 +571,9 @@
   }
 }
 
-[data-fx="on"] .v-cloud,
-[data-fx="on"] .v-glint,
-[data-fx="on"] .v-eye,
-[data-fx="on"] .v-lid {
+[data-fx="on"][data-fx-clouds] .v-cloud,
+[data-fx="on"][data-fx-water] .v-glint,
+[data-fx="on"][data-fx-eyes] .v-eye,
+[data-fx="on"][data-fx-eyes] .v-lid {
   display: none;
 }
