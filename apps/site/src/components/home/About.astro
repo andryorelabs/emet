@@ -56,4 +56,11 @@ const { about } = strings;
 <script>
   // oxlint-disable-next-line import/no-unassigned-import -- the module wires itself to the page
   import "./about/about";
+  import { initAboutFx } from "./about/fx";
+
+  const portrait = document.querySelector<HTMLElement>(".portrait-frame");
+  const reveal = portrait?.querySelector<HTMLCanvasElement>("canvas[data-pixel-reveal]");
+  if (portrait) {
+    initAboutFx(portrait, () => reveal?.dataset.state === "done");
+  }
 </script>
