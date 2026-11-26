@@ -1,7 +1,7 @@
 ---
 /**
  * First screen: the painted valley fills the viewport, the headline rises from
- * a mask around the golem, the sentence and actions sit on the left. The picture is preloaded.
+ * a mask around the golem and its letters warm toward amber near the pointer, the painting zooms with the scroll, the sentence and actions sit on the left. The picture is preloaded.
  */
 import { getImage, Picture } from "astro:assets";
 
@@ -39,7 +39,7 @@ const phrases = JSON.stringify([
   imagesizes="100vw"
   fetchpriority="high"
 />
-<section class="hero" data-recede data-phrases={phrases} aria-labelledby="hero-title">
+<section class="hero" data-zoom data-phrases={phrases} aria-labelledby="hero-title">
   <Picture
     class="hero-picture"
     src={heroImage}
@@ -69,8 +69,8 @@ const phrases = JSON.stringify([
   <div class="hero-copy">
     <h1 id="hero-title">
       <span class="sr-only">{hero.name}. </span>
-      <span class="hero-line hero-line-one"><span>{hero.lineOne}</span></span>
-      <span class="hero-line hero-line-two"><span>{hero.lineTwo}</span></span>
+      <span class="hero-line hero-line-one"><span data-letters>{hero.lineOne}</span></span>
+      <span class="hero-line hero-line-two"><span data-letters>{hero.lineTwo}</span></span>
     </h1>
     <div class="hero-mid">
       <AnnouncementPill label={strings.nav.whatsNew} />
@@ -86,10 +86,14 @@ const phrases = JSON.stringify([
 <script>
   import { initAmbient } from "./graphics/ambient";
   import { initHeroFx } from "./hero-fx";
+  import { initLetters } from "./hero-fx/letters";
   import { initMotion } from "./motion/motion";
 
   initMotion(document);
   initAmbient(document);
   const heroSection = document.querySelector<HTMLElement>(".hero");
-  if (heroSection) initHeroFx(heroSection);
+  if (heroSection) {
+    initHeroFx(heroSection);
+    initLetters(heroSection);
+  }
 </script>

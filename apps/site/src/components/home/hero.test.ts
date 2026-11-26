@@ -3,6 +3,7 @@ import { readFileSync } from "node:fs";
 
 const css = readFileSync(new URL("../../styles/home/hero.css", import.meta.url), "utf8");
 const siteCss = readFileSync(new URL("../../styles/site.css", import.meta.url), "utf8");
+const motionCss = readFileSync(new URL("../../styles/motion.css", import.meta.url), "utf8");
 const markup = readFileSync(new URL("Hero.astro", import.meta.url), "utf8");
 
 /**
@@ -36,7 +37,29 @@ describe("Home hero", () => {
   it("keeps the actions on the left and the screen-reader name in the h1", () => {
     expect(ruleBody(css, ".hero-mid")).toContain("align-items: flex-start");
     expect(markup).toContain('<span class="sr-only">{hero.name}. </span>');
-    expect(markup).toContain("data-recede");
+    expect(markup).toContain("data-zoom");
+    expect(markup).not.toContain("data-recede");
+  });
+
+  it("frames the painting at 50% 62% and zooms it from the 50% 70% origin", () => {
+    expect(ruleBody(css, ".hero picture img")).toContain("object-position: 50% 62%");
+    const zoom = ruleBody(css, ".hero picture,\n.hero .valley");
+    expect(zoom).toContain("transform: scale(var(--hs, 1))");
+    expect(zoom).toContain("transform-origin: 50% 70%");
+    expect(ruleBody(css, ".hero-copy::before")).toContain("oklch(0.16 0.03 150 / 0) 58%");
+  });
+
+  it("rises the headline over 1.1s on the prototype curve", () => {
+    expect(motionCss).toContain("rise-mask 1100ms cubic-bezier(0.2, 0.8, 0.2, 1) both");
+    expect(motionCss).not.toContain("recede");
+  });
+
+  it("marks both lines for the letter reaction and tints toward amber with a glow", () => {
+    expect(markup.match(/data-letters/g)).toHaveLength(2);
+    const letter = ruleBody(css, ".hero-letter");
+    expect(letter).toContain("var(--k, 0) * 60%");
+    expect(letter).toContain("var(--k, 0) * 28px");
+    expect(ruleBody(css, ".hero")).toContain("--hero-amber: oklch(0.92 0.14 95)");
   });
 
   it("gives the home header white ink over the hero", () => {
