@@ -95,19 +95,32 @@ html.lenis body {
   }
 }
 
+@keyframes rise-mask {
+  from {
+    transform: translateY(105%);
+  }
+}
+
 @media (prefers-reduced-motion: no-preference) {
-  .hero h1,
+  .hero-line > span {
+    animation: rise-mask 1100ms var(--ease-out) both;
+  }
+
+  .hero-line-two > span {
+    animation-delay: 160ms;
+  }
+
   .hero-sentence,
   .hero-actions {
     animation: rise 500ms var(--ease-out) both;
   }
 
   .hero-sentence {
-    animation-delay: 80ms;
+    animation-delay: 280ms;
   }
 
   .hero-actions {
-    animation-delay: 160ms;
+    animation-delay: 360ms;
   }
 
   [data-drift] picture img {
