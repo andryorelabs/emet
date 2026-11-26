@@ -5,6 +5,8 @@ const css = readFileSync(new URL("../../styles/home/hero.css", import.meta.url),
 const siteCss = readFileSync(new URL("../../styles/site.css", import.meta.url), "utf8");
 const motionCss = readFileSync(new URL("../../styles/motion.css", import.meta.url), "utf8");
 const markup = readFileSync(new URL("Hero.astro", import.meta.url), "utf8");
+const graphicsCss = readFileSync(new URL("../../styles/graphics.css", import.meta.url), "utf8");
+const heroFxSource = readFileSync(new URL("hero-fx/index.ts", import.meta.url), "utf8");
 
 /**
  * Returns the declaration block of the first rule whose selector is exactly `selector`.
@@ -17,6 +19,14 @@ function ruleBody(source: string, selector: string): string {
 }
 
 describe("Home hero", () => {
+  it("frames the painting at 50% 62% in the picture, the effects and the Valley scene", () => {
+    expect(css.match(/object-position:[^;]+;/g)).toEqual(["object-position: 50% 62%;"]);
+    expect(heroFxSource).toContain("HERO_OBJECT_POSITION: readonly [number, number] = [0.5, 0.62]");
+    expect(ruleBody(graphicsCss.replaceAll(/\n {2}/g, "\n"), "[data-zoom] .valley")).toContain(
+      "--oy: 0.62",
+    );
+  });
+
   it("sets the sentence at 20px and weight 500 in white over a dark scrim", () => {
     const sentence = ruleBody(css, ".hero-sentence");
     expect(sentence).toContain("font-size: 20px");

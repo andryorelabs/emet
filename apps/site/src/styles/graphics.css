@@ -181,6 +181,10 @@
 }
 
 @media (prefers-reduced-motion: no-preference) {
+  [data-zoom] .valley {
+    --oy: 0.62;
+  }
+
   .valley {
     --ox: 0.5;
     --oy: 1;
@@ -305,6 +309,10 @@
 @media (max-width: 640px) {
   .valley {
     --ox: 0.94;
+  }
+
+  [data-zoom] .valley {
+    --ox: 0.5;
   }
 }
 

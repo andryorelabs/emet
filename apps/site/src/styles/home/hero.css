@@ -32,12 +32,6 @@
   object-position: 50% 62%;
 }
 
-@media (max-width: 640px) {
-  .hero picture img {
-    object-position: 94% 62%;
-  }
-}
-
 .hero-copy {
   position: relative;
   z-index: 1;

@@ -102,7 +102,6 @@ function mount(root: HTMLElement): void {
   if (!control || !status) return;
 
   const live = createLiveRegion(status);
-  const supportsPin = CSS.supports("animation-timeline: view()");
   const reducedMotion = globalThis.matchMedia("(prefers-reduced-motion: reduce)");
   const wide = globalThis.matchMedia(WIDE_QUERY);
   const canvas = root.querySelector<HTMLCanvasElement>("canvas[data-showcase-lanes]");
@@ -139,7 +138,7 @@ function mount(root: HTMLElement): void {
   };
 
   const applyPin = (): void => {
-    if (supportsPin && wide.matches && !reducedMotion.matches) {
+    if (wide.matches && !reducedMotion.matches) {
       root.dataset.pinned = "";
       onScroll();
     } else {
