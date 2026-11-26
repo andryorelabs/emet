@@ -31,6 +31,7 @@ export const ignoredPaths = [
   "coverage/**",
   "dist/**",
   "mods/*/hooks/**/*.tsx",
+  "apps/site/design/prototype-v17/**",
 ];
 
 /**
