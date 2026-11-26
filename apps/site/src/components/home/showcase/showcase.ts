@@ -5,10 +5,11 @@
  * interaction or when the browser idles. When scroll-driven animation is
  * supported, motion is allowed and the viewport is at least 901px wide it pins
  * the runway, grows the frame, fades in the glass panel and flips the state with
- * scroll progress, a click holding until the next threshold crossing. The git
+ * scroll progress, a click holding until the next threshold crossing. Scroll
+ * work is skipped while the section is off screen or the tab is hidden. The git
  * lanes canvas animates while on screen and draws one frame under reduced motion.
  */
-import { frameInset, panelOpacity } from "./grow";
+import { frameInset, headingOpacity, panelOpacity } from "./grow";
 import { initLanes, LANES_REFRESH_EVENT } from "./lanes";
 import {
   clickStep,
@@ -29,6 +30,7 @@ const GROW_PROPERTIES = [
   "--showcase-r",
   "--showcase-marks",
   "--showcase-panel",
+  "--showcase-heading",
 ];
 
 function writeGrow(root: HTMLElement, progress: number): void {
@@ -46,6 +48,7 @@ function writeGrow(root: HTMLElement, progress: number): void {
   root.style.setProperty("--showcase-r", String(inset.radius));
   root.style.setProperty("--showcase-marks", String(inset.marks));
   root.style.setProperty("--showcase-panel", String(panelOpacity(progress)));
+  root.style.setProperty("--showcase-heading", String(headingOpacity(progress)));
 }
 
 function clearGrow(root: HTMLElement): void {
@@ -131,7 +134,7 @@ function mount(root: HTMLElement): void {
   };
 
   const onScroll = (): void => {
-    if (frame) return;
+    if (frame || !intersecting || document.hidden) return;
     frame = requestAnimationFrame(syncFromScroll);
   };
 
@@ -163,6 +166,7 @@ function mount(root: HTMLElement): void {
   });
   observer.observe(root);
   globalThis.addEventListener("scroll", onScroll, { passive: true });
+  document.addEventListener("visibilitychange", onScroll);
   reducedMotion.addEventListener("change", applyPin);
   reducedMotion.addEventListener("change", applyLanes);
   wide.addEventListener("change", applyPin);
