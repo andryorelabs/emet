@@ -28,10 +28,17 @@ export function createProgram(
   const vertexShader = compile(gl, gl.VERTEX_SHADER, vertex);
   const fragmentShader = compile(gl, gl.FRAGMENT_SHADER, fragment);
   const program = nullable(gl.createProgram());
-  if (!vertexShader || !fragmentShader || !program) return null;
+  if (!vertexShader || !fragmentShader || !program) {
+    if (vertexShader) gl.deleteShader(vertexShader);
+    if (fragmentShader) gl.deleteShader(fragmentShader);
+    if (program) gl.deleteProgram(program);
+    return null;
+  }
   gl.attachShader(program, vertexShader);
   gl.attachShader(program, fragmentShader);
   gl.linkProgram(program);
+  gl.deleteShader(vertexShader);
+  gl.deleteShader(fragmentShader);
   if (!gl.getProgramParameter(program, gl.LINK_STATUS)) {
     gl.deleteProgram(program);
     return null;

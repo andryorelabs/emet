@@ -291,6 +291,8 @@ describe("createProgram", () => {
       "attachShader",
       "attachShader",
       "linkProgram",
+      "deleteShader",
+      "deleteShader",
       "getProgramParameter",
       "useProgram",
     ]);
@@ -306,6 +308,12 @@ describe("createProgram", () => {
     const { gl, calls } = fakeGl({ failLink: true });
     expect(createProgram(gl, "v", "f")).toBeNull();
     expect(names(calls)).toContain("deleteProgram");
+  });
+
+  test("frees the compiled shaders when the program cannot be created", () => {
+    const { gl, calls } = fakeGl({ noProgram: true });
+    expect(createProgram(gl, "v", "f")).toBeNull();
+    expect(names(calls).filter((name) => name === "deleteShader")).toHaveLength(2);
   });
 
   test("returns null when the context cannot create shaders or programs", () => {

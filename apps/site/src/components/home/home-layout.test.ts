@@ -39,6 +39,25 @@ describe("Home section spacing", () => {
   });
 });
 
+describe("Home stylesheet index order", () => {
+  it("imports the section stylesheets in cascade order", () => {
+    const index = readFileSync(new URL("../../styles/home.css", import.meta.url), "utf8");
+    const imported = [...index.matchAll(/@import "\.\/home\/([a-z]+)\.css";/g)].map(
+      (match) => match[1],
+    );
+    expect(imported).toEqual([
+      "base",
+      "hero",
+      "how",
+      "features",
+      "about",
+      "stats",
+      "faq",
+      "closing",
+    ]);
+  });
+});
+
 describe("Home layout tokens", () => {
   it("defines the container, the axis and the section gap on :root", () => {
     const body = ruleBody(":root");
