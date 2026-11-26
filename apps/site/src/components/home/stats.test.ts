@@ -42,7 +42,7 @@ describe("Stats band", () => {
 
   it("shows the final state under reduced motion", () => {
     expect(css).toMatch(/@media \(prefers-reduced-motion: reduce\) \{[^}]*transition: none/);
-    expect(css).toMatch(/\.stat::before \{[^}]*width: 62%/);
+    expect(css).toMatch(/\.stat::before \{[^}]*width: 62%[^}]*transition: transform/);
   });
 
   it("falls to two columns under 600px", () => {

@@ -55,15 +55,16 @@
   height: 2px;
   width: 62%;
   background: var(--moss);
-  transition: width 1.6s var(--ease-out);
+  transform-origin: left;
+  transition: transform 1.6s var(--ease-out);
 }
 
 .stats[data-armed] .stat::before {
-  width: 0;
+  transform: scaleX(0);
 }
 
 .stats[data-armed] .stat[data-rolled]::before {
-  width: 62%;
+  transform: scaleX(1);
 }
 
 .stat-value {

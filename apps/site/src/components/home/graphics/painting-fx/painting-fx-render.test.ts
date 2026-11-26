@@ -537,6 +537,15 @@ describe("paintingFx", () => {
     expect([...host.querySelectorAll("canvas")].every((canvas) => canvas.hidden)).toBe(true);
   });
 
+  test("keeps the Valley fallback visible when no layer rendered", () => {
+    env.glFlags = { failShader: true };
+    const { host } = start({ effects: { water: true, eyes: true } });
+    show();
+    runFrame(1000);
+    runFrame(1016);
+    expect(host.dataset.fx).toBeUndefined();
+  });
+
   test("hides a layer whose context was lost", () => {
     const { host } = start();
     show();

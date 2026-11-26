@@ -102,6 +102,7 @@ describe("initOdometer", () => {
     const columns = Array.from(ten?.querySelectorAll<HTMLElement>(".odo-digit") ?? []);
     expect(columns.map((column) => column.style.getPropertyValue("--digit"))).toEqual(["1", "0"]);
     expect(columns[0]?.style.getPropertyValue("--order")).toBe("1");
+    expect(ten?.style.getPropertyValue("--order")).toBe("1");
     expect(columns[0]?.querySelectorAll(".odo-roll > span")).toHaveLength(10);
     expect(columns[0]?.querySelector(".odo-roll")?.textContent).toBe("0123456789");
     expect(ten?.dataset.odo).toBe("");

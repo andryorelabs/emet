@@ -49,6 +49,7 @@ export function initOdometer(root: HTMLElement): void {
   if (matchMedia("(prefers-reduced-motion: reduce)").matches) return;
   const stats = Array.from(root.querySelectorAll<HTMLElement>(".stat"));
   stats.forEach((stat, order) => {
+    stat.style.setProperty("--order", String(order));
     const value = Number(stat.dataset.n);
     if (stat.dataset.n !== undefined && Number.isInteger(value) && value >= 0) {
       buildOdometer(stat, value, order);

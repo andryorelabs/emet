@@ -158,9 +158,12 @@ export function paintingFx(host: HTMLElement, options: PaintingFxOptions): Paint
     const clouds = effects.clouds === true;
     sky.hidden = !clouds;
     if (clouds) sky.style.setProperty("transform", cloudTransform(nowMs, hostWidth));
-    waterCanvas.hidden = !drawWater(nowMs);
-    eyesCanvas.hidden = !drawEyes(nowMs);
-    host.dataset.fx = "on";
+    const waterDrawn = drawWater(nowMs);
+    const eyesDrawn = drawEyes(nowMs);
+    waterCanvas.hidden = !waterDrawn;
+    eyesCanvas.hidden = !eyesDrawn;
+    if (clouds || waterDrawn || eyesDrawn) host.dataset.fx = "on";
+    else delete host.dataset.fx;
   }
 
   function shouldRun(): boolean {
