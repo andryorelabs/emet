@@ -123,7 +123,9 @@ reaching for `diagnosing-bugs` if stuck.
 
 Optional: when the ticket touches `verify.browser.paths` and `agent-browser`
 exists, you may verify the UI with `--session <ticket>`, writing screenshots to
-a file.
+a file. When `docs/agents/emet.md` names a parity command, run it for the
+touched sections and write the capture paths and each visible difference from
+the reference (fixed or a documented deviation) into the handoff.
 
 Write/update `{{handoff_path}}` at its three fixed triggers: first green
 test, each closed dead-end, before each E2E run. Continuous, not once at the

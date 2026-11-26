@@ -41,6 +41,15 @@ CI runs the same commands as separate `check` and `test` jobs
 (`.github/workflows/ci.yml`), gated by a final `ci-passed` job.
 `tools/workflows-invariants.test.ts` enforces the workflow hardening rules.
 
+## Visual parity
+
+Parity command: `bun run --cwd apps/site parity`. It is advisory in CI and
+mandatory in review: for every touched section the worker and the reviewer run
+it, attach the capture paths and record each visible difference from the
+reference (prototype v17, [ADR-0048](../adr/0048-prototype-v17-is-the-visual-reference-with-an-advisory-parity-harness.md))
+as a finding or a documented deviation. Captures land under
+`apps/site/e2e/.output/parity/`.
+
 ## Gates and budgets
 
 `emet verify <ticket>` runs after each worker and checks its commits, edit

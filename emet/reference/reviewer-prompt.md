@@ -77,7 +77,9 @@ command. Walk the pages the diff touches with `snapshot -i`, `errors` and
 needed. Each UI or console error is a finding with the `file:line` of the
 likely cause. Close the session and the server when done. If a command fails
 twice, fall back to Chrome DevTools MCP or emit a `verification-gap` finding;
-never block the wave.
+never block the wave. When `docs/agents/emet.md` names a parity command, run it
+for the touched sections, attach the capture paths, and record each visible
+difference from the reference as a finding or a documented deviation.
 ```
 
 ## Recheck variant: fix round
