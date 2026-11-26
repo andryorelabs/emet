@@ -199,10 +199,13 @@ const waveLabel = (number: number): string => how.wave.replace("{n}", String(num
   import { initMascot } from "./graphics/mascot-motion";
   import { initPaintingStreams } from "./graphics/painting-streams";
   import { initTypedTerminal } from "./graphics/typed-terminal";
+  import { initHowFx, isRunwayRevealed } from "./how/fx";
   import { initHowPin } from "./how/pin";
 
   const runway = document.querySelector<HTMLElement>("[data-how-pin]");
   if (runway) initHowPin(runway);
+  const stage = document.querySelector<HTMLElement>("[data-how-stage]");
+  if (runway && stage) initHowFx(stage, () => isRunwayRevealed(runway));
   initTypedTerminal(document);
   initMascot(document);
   initLandCard(document);

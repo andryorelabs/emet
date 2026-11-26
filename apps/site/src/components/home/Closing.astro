@@ -62,8 +62,18 @@ const { closing } = strings;
 
 <script>
   import { initClosingCopy } from "./closing/closing-client";
+  import { initClosingFx } from "./closing/fx";
 
   initClosingCopy(document, {
     writeText: (text) => navigator.clipboard.writeText(text),
   });
+
+  const panel = document.querySelector<HTMLElement>(".closing");
+  const command = panel?.querySelector<HTMLElement>(".closing-command");
+  if (panel && command) {
+    const fx = initClosingFx(panel, command);
+    panel.querySelector("[data-closing-copy]")?.addEventListener("click", () => {
+      fx.blink();
+    });
+  }
 </script>
