@@ -59,6 +59,10 @@ worker worktrees as not landed.
 - Every S# needs an acceptance scenario (`Scenario: WHEN … THEN …`); `emet
   validate` enforces coverage, scenarios, disjoint wave surfaces and acyclic
   blockers before approval.
+- A spec about visual or motion work also carries, per section, a parity
+  Scenario: `WHEN <capture id> is compared with its reference THEN <named
+  property> matches within <tolerance>`. Its Global Constraints forbid
+  excluding a reference effect without the user's explicit option.
 
 ## External surface
 
