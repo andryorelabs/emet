@@ -47,3 +47,22 @@ Deviations and concerns:
 - The wave diagram animates `stroke-dashoffset`, as the ticket specifies, which is a paint property, against the transform and opacity rule. The SVG is tiny (about 0.9 KB, six paths), so the cost is negligible.
 - The lid is a flat stone-coloured disc sampled from each painting, so the blink is only believable at the 150ms it lasts.
 - Gate: `inspect.mjs` on the production build at 1440, 768 and 390 gives 0 FAIL with `--allow outlined-box,palette-purple`, the same two allowances as the scroll section. Reduced motion and no-script were checked in a real browser: content complete, valley hidden under reduced motion, no CSP violation.
+
+## End-to-end coverage (CLA-1030, S19)
+
+Verified with Playwright against the production build (`apps/site/e2e/interactions.spec.ts` and `accessibility.spec.ts`): 95 tests, 0 `securitypolicyviolation` events.
+
+- How it works: pins at 1440 (`data-pinned`, runway above 3.5 viewports tall), steps change at about 30% and 62% (`data-step` 0, 1, 2, stream stage 2 at the end); Claude Code and Codex tabs, copy puts `/emet:run ...` or `$emet:run ...` on the clipboard; stacked with no `data-step-state` at 390 and under reduced motion at 1440.
+- Features: hold-to-approve stamps after 0.9 s and announces it, an early release approves nothing; the flag toggle sets `aria-pressed`, `data-held` and the caption, and clears them.
+- Showcase: pinned at 1440, auto-flags past 74%, a click stops auto-flagging; stacked and usable at 390; stacked final state under reduced motion.
+- Closing: the copy button puts the exact `curl -fsSL https://emet.andryore.dev/install.sh | sh` on the clipboard and sets the done state.
+- Companion: away over the hero, four-question menu, Escape returns focus, arrows and outside click, fixed answers, drag springs back without opening the menu, under reduced motion the eyes and drag never write their properties, a copy moves it to done.
+- Layout: no horizontal scroll at 1440 and 390, reduced and full motion, at `/` and `/es/`, top and bottom of the page.
+- CSP: a full scroll at 1440 with and without reduced motion raises no violation; axe also runs with motion on at 1440 and 390, light and dark, at `/` and `/es/`, after each runway is scrolled into view.
+
+Findings waived in `KNOWN_AXE_ISSUES` (each needs a source fix outside the e2e edit surface; the pre-existing home and menu axe tests were already failing on them):
+
+- `color-contrast` on dimmed idle How it works steps (`article[data-step-state="idle"]`, the spec card head and group labels).
+- `scrollable-region-focusable` on the banner `.terminal` and the install command `pre`: scrollable but not keyboard focusable.
+
+Not run here: the Lighthouse budget (CI job) and the coverage floors beyond `bun run test`.
