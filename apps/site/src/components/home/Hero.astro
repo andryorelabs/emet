@@ -1,7 +1,7 @@
 ---
 /**
- * First screen: the painted valley fills the viewport, the h1 and the one
- * primary action sit in its calm sky. The picture is preloaded.
+ * First screen: the painted valley fills the viewport, the headline rises from
+ * a mask around the golem, the sentence and actions sit on the left. The picture is preloaded.
  */
 import { getImage, Picture } from "astro:assets";
 
@@ -48,16 +48,18 @@ const { hero } = strings;
   />
   <Valley variant="hero" />
   <div class="hero-copy">
-    <AnnouncementPill label={strings.nav.whatsNew} />
     <h1 id="hero-title">
       <span class="sr-only">{hero.name}. </span>
-      <span class="hero-line">{hero.lineOne}</span>
-      <span class="hero-line">{hero.lineTwo}</span>
+      <span class="hero-line hero-line-one"><span>{hero.lineOne}</span></span>
+      <span class="hero-line hero-line-two"><span>{hero.lineTwo}</span></span>
     </h1>
-    <p class="hero-sentence">{hero.sentence}</p>
-    <div class="hero-actions">
-      <a class="button" href="#install">{hero.install}</a>
-      <a class="text-link" href="/docs/">{hero.readDocs}</a>
+    <div class="hero-mid">
+      <AnnouncementPill label={strings.nav.whatsNew} />
+      <p class="hero-sentence">{hero.sentence}</p>
+      <div class="hero-actions">
+        <a class="button" href="#install">{hero.install}</a>
+        <a class="text-link" href="/docs/">{hero.readDocs}</a>
+      </div>
     </div>
   </div>
 </section>

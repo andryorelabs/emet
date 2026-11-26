@@ -1,13 +1,12 @@
 /**
- * Home page hero: painted hero, announcement pill, headline and actions.
+ * Home page hero: painted hero, announcement pill, split headline and actions.
  */
 
 .hero {
   position: relative;
-  min-height: 100svh;
+  min-height: max(720px, 100svh);
   overflow: clip;
   display: grid;
-  place-items: start center;
   background: var(--surface);
 }
 
@@ -35,29 +34,45 @@
 .hero-copy {
   position: relative;
   z-index: 1;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  text-align: center;
-  gap: 24px;
-  padding: clamp(112px, 17svh, 176px) var(--gutter) 0;
+  display: grid;
+  grid-area: 1 / 1;
+  grid-template-rows: 1fr auto auto auto;
+  width: 100%;
+  min-height: inherit;
+  padding: 0 var(--gutter) 28px;
+  color: var(--ink-over-painting);
+  text-align: left;
 }
 
 .hero-copy::before {
   content: "";
   position: absolute;
-  inset: -48px -160px -40px;
+  inset: 0;
   z-index: -1;
   pointer-events: none;
-  background: radial-gradient(
-    closest-side,
-    color-mix(in oklch, var(--bg) 62%, transparent),
-    transparent
+  background: linear-gradient(
+    180deg,
+    oklch(0.22 0.04 250 / 0.5),
+    oklch(0.22 0.04 250 / 0) 34%,
+    oklch(0.16 0.03 150 / 0) 52%,
+    oklch(0.16 0.03 150 / 0.66)
   );
 }
 
-.hero-copy:has(.announcement) {
-  padding-top: calc(clamp(112px, 17svh, 176px) - 56px);
+.hero-mid {
+  grid-row: 3;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 18px;
+  max-width: min(520px, 60%);
+  margin: 8px 0 24px;
+}
+
+@media (max-width: 640px) {
+  .hero-mid {
+    max-width: 100%;
+  }
 }
 
 .announcement {
@@ -71,7 +86,7 @@
   border-radius: 999px;
   background: var(--glass-fill);
   backdrop-filter: var(--glass-blur);
-  color: oklch(0.22 0.013 150);
+  color: var(--ink-night);
   font-size: 14px;
   font-weight: 400;
   line-height: 1;
@@ -109,7 +124,7 @@
   height: 22px;
   border-radius: 50%;
   background: var(--accent);
-  color: oklch(0.22 0.013 150);
+  color: var(--ink-night);
   transition: transform 150ms ease-out;
 }
 
@@ -130,27 +145,64 @@
 }
 
 .hero h1 {
-  margin: 0;
-  font-size: clamp(38px, 4vw, 60px);
-  font-weight: 400;
-  line-height: 1.08;
-  letter-spacing: -0.025em;
+  display: contents;
 }
 
 .hero-line {
   display: block;
+  overflow: clip;
+  padding-bottom: 0.06em;
+  font-size: clamp(36px, 9.3vw, 168px);
+  font-weight: 600;
+  line-height: 0.92;
+  letter-spacing: -0.05em;
+  text-wrap: balance;
+  overflow-wrap: normal;
+  word-break: normal;
+}
+
+.hero-line > span {
+  display: block;
+}
+
+.hero-line-one {
+  grid-row: 2;
+  align-self: end;
+  margin-bottom: 12px;
+}
+
+.hero-line-two {
+  grid-row: 4;
+  justify-self: end;
+  margin-left: 14%;
+  text-align: right;
 }
 
 .hero-sentence {
   max-width: 34ch;
+  margin: 0;
   font-size: 20px;
   font-weight: 500;
+  line-height: 1.5;
+  text-wrap: pretty;
 }
 
 .hero-actions {
   display: flex;
   align-items: center;
-  gap: 24px;
+  gap: 14px;
   flex-wrap: wrap;
-  justify-content: center;
+}
+
+.hero-actions .text-link {
+  display: inline-flex;
+  align-items: center;
+  min-height: 48px;
+  padding: 0 24px;
+  border: 1px solid color-mix(in oklab, var(--ink-over-painting) 50%, transparent);
+  border-radius: var(--radius-control);
+  backdrop-filter: blur(6px);
+  color: inherit;
+  font-weight: 500;
+  text-decoration: none;
 }

@@ -100,7 +100,7 @@
   border-color: var(--glass-border);
   background: var(--glass-fill);
   backdrop-filter: var(--glass-blur);
-  color: oklch(0.3 0.013 150);
+  color: var(--header-ink);
 }
 
 .site-header--home .search-button:hover,
@@ -110,7 +110,7 @@
 }
 
 .site-header--home .search-button-keys kbd {
-  border-color: oklch(0.22 0.013 150 / 0.2);
+  border-color: color-mix(in oklab, var(--ink-over-painting) 30%, transparent);
 }
 
 @media (min-width: 1280px) {
@@ -187,7 +187,7 @@
   border-color: var(--glass-border);
   background: var(--glass-fill);
   backdrop-filter: var(--glass-blur);
-  color: oklch(0.3 0.013 150);
+  color: var(--header-ink);
 }
 
 .site-header--home a.github-pill:hover,

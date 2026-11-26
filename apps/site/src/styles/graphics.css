@@ -570,3 +570,10 @@
     opacity: 0;
   }
 }
+
+[data-fx="on"][data-fx-clouds] .v-cloud,
+[data-fx="on"][data-fx-water] .v-glint,
+[data-fx="on"][data-fx-eyes] .v-eye,
+[data-fx="on"][data-fx-eyes] .v-lid {
+  display: none;
+}
