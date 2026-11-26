@@ -413,3 +413,18 @@ describe("interactive scene markup", () => {
     },
   );
 });
+
+describe("approval overlays", () => {
+  const css = readFileSync(
+    new URL("../../../../styles/bento/approval.css", import.meta.url),
+    "utf8",
+  );
+
+  it.each([".approval-stamp", ".approval-cursor"])(
+    "%s lets pointer events through to the button",
+    (selector) => {
+      const rule = new RegExp(`^${selector.replace(".", "\\.")} \\{[^}]*\\}`, "m").exec(css);
+      expect(rule?.[0]).toContain("pointer-events: none;");
+    },
+  );
+});

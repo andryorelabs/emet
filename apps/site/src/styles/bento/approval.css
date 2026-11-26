@@ -130,6 +130,7 @@
 }
 
 .approval-cursor {
+  pointer-events: none;
   position: absolute;
   top: 50%;
   left: 50%;
@@ -140,6 +141,7 @@
 }
 
 .approval-stamp {
+  pointer-events: none;
   padding: 4px 14px;
   border: 2px solid var(--moss);
   border-radius: 6px;
