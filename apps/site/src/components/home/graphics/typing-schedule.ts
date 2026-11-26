@@ -3,9 +3,10 @@
  * how many lines of each output block are visible after a given time.
  */
 
-const COMMAND_BUDGET_MS = 1400;
-const MIN_CHAR_MS = 14;
-const MAX_CHAR_MS = 40;
+/** Milliseconds per typed character on step 0. */
+export const FIRST_STEP_CHAR_MS = 18;
+/** Milliseconds per typed character on every later step. */
+export const STEP_CHAR_MS = 22;
 const OUTPUT_PAUSE_MS = 240;
 const BLOCK_GAP_MS = 120;
 const LINE_MS = 90;
@@ -36,12 +37,17 @@ export function revealCounts(lengths: number[], revealed: number): number[] {
   });
 }
 
-/** Builds the timeline: the command types first, then each output block reveals its lines. */
-export function createSchedule(commandChars: number, lineCounts: number[]): TypingSchedule {
-  const charMs = Math.min(
-    MAX_CHAR_MS,
-    Math.max(MIN_CHAR_MS, COMMAND_BUDGET_MS / Math.max(1, commandChars)),
-  );
+/** Typing speed of the exchange at `index`: 18 ms per character on step 0, 22 ms on the others. */
+export function charMsForStep(index: number): number {
+  return index === 0 ? FIRST_STEP_CHAR_MS : STEP_CHAR_MS;
+}
+
+/** Builds the timeline: the command types first at `charMs` per character, then each output block reveals its lines. */
+export function createSchedule(
+  commandChars: number,
+  lineCounts: number[],
+  charMs: number = STEP_CHAR_MS,
+): TypingSchedule {
   const commandMs = commandChars * charMs;
   const lineStartsMs: number[] = [];
   let cursor = commandMs + (lineCounts.length > 0 ? OUTPUT_PAUSE_MS : 0);
