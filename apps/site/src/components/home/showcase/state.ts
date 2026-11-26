@@ -77,14 +77,22 @@ export function clickStep(
   return { state: toggle(state), track: { natural: track.natural, overridden: true } };
 }
 
-/** Applies scroll progress; a click override survives until the scroll state crosses a threshold. */
+/**
+ * Applies scroll progress. A click override survives every threshold crossing
+ * until `releaseOverride` runs, so auto-flagging stays off while the viewer's
+ * choice stands.
+ */
 export function scrollStep(
   progress: number,
   state: ShowcaseState,
   track: ScrollTrack,
 ): { state: ShowcaseState; track: ScrollTrack } {
   const natural = stateForProgress(progress, track.natural);
-  const crossed = natural.held !== track.natural.held;
-  if (track.overridden && !crossed) return { state, track: { natural, overridden: true } };
+  if (track.overridden) return { state, track: { natural, overridden: true } };
   return { state: natural, track: { natural, overridden: false } };
+}
+
+/** Drops a click override, called once the section leaves the viewport. */
+export function releaseOverride(track: ScrollTrack): ScrollTrack {
+  return { natural: track.natural, overridden: false };
 }

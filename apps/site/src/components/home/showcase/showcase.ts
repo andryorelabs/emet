@@ -14,6 +14,7 @@ import {
   clickStep,
   initialState,
   initialTrack,
+  releaseOverride,
   runwayProgress,
   scrollStep,
   viewFor,
@@ -32,7 +33,13 @@ const GROW_PROPERTIES = [
 
 function writeGrow(root: HTMLElement, progress: number): void {
   const panel = root.querySelector<HTMLElement>(".showcase-panel");
-  if (panel) panel.inert = panelOpacity(progress) === 0;
+  if (panel) {
+    const inert = panelOpacity(progress) === 0;
+    if (panel.inert !== inert) {
+      panel.inert = inert;
+      panel.querySelector("canvas")?.dispatchEvent(new Event(LANES_REFRESH_EVENT));
+    }
+  }
   const inset = frameInset(progress);
   root.style.setProperty("--showcase-x", String(inset.x));
   root.style.setProperty("--showcase-y", String(inset.y));
@@ -43,7 +50,10 @@ function writeGrow(root: HTMLElement, progress: number): void {
 
 function clearGrow(root: HTMLElement): void {
   const panel = root.querySelector<HTMLElement>(".showcase-panel");
-  if (panel) panel.inert = false;
+  if (panel?.inert) {
+    panel.inert = false;
+    panel.querySelector("canvas")?.dispatchEvent(new Event(LANES_REFRESH_EVENT));
+  }
   for (const property of GROW_PROPERTIES) root.style.removeProperty(property);
 }
 
@@ -74,7 +84,7 @@ function createLiveRegion(status: HTMLElement): HTMLElement {
   live.setAttribute("aria-live", "polite");
   live.textContent = activeText(status, false);
   status.setAttribute("aria-hidden", "true");
-  status.after(live);
+  status.closest("[data-showcase]")?.append(live);
   return live;
 }
 
@@ -93,6 +103,7 @@ function mount(root: HTMLElement): void {
   const reducedMotion = globalThis.matchMedia("(prefers-reduced-motion: reduce)");
   const wide = globalThis.matchMedia(WIDE_QUERY);
   const canvas = root.querySelector<HTMLCanvasElement>("canvas[data-showcase-lanes]");
+  const panel = root.querySelector<HTMLElement>(".showcase-panel");
   let lanes: { destroy(): void } | undefined;
   let state: ShowcaseState = initialState;
   let track: ScrollTrack = initialTrack;
@@ -137,12 +148,17 @@ function mount(root: HTMLElement): void {
   const applyLanes = (): void => {
     lanes?.destroy();
     lanes = canvas
-      ? initLanes(canvas, { reduce: reducedMotion.matches, isHeld: () => state.held })
+      ? initLanes(canvas, {
+          reduce: reducedMotion.matches,
+          isHeld: () => state.held,
+          isActive: () => !panel?.inert,
+        })
       : undefined;
   };
 
   const observer = new IntersectionObserver((entries) => {
     intersecting = entries.some((entry) => entry.isIntersecting);
+    if (!intersecting) track = releaseOverride(track);
     if (intersecting) onScroll();
   });
   observer.observe(root);

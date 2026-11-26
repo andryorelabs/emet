@@ -17,15 +17,17 @@ const RUNWAY = 2000;
 
 let frames: FrameRequestCallback[] = [];
 let runwayTop = 0;
+let observerCallback: ((entries: unknown[]) => void) | undefined;
 
 function define(name: string, value: unknown): void {
   Object.defineProperty(globalThis, name, { value, configurable: true, writable: true });
 }
 
 class ImmediateObserver {
-  private readonly callback: (entries: unknown[]) => void;
+  readonly callback: (entries: unknown[]) => void;
   constructor(callback: (entries: unknown[]) => void) {
     this.callback = callback;
+    observerCallback = callback;
   }
   observe(target: Element): void {
     this.callback([{ target, isIntersecting: true }]);
@@ -102,6 +104,11 @@ describe("showcase DOM sync", () => {
     });
   });
 
+  test("the live region sits outside the panel that goes inert", () => {
+    const live = document.querySelector('[role="status"]');
+    expect(live?.closest(".showcase-panel")).toBeNull();
+  });
+
   test("scrolling past 0.74 flags the ticket and keeps the three views in step", () => {
     scrollToProgress(0.8);
     expect(parts()).toEqual({ state: "held", pressed: "true", live: "Held.", hidden: "true" });
@@ -127,7 +134,7 @@ describe("showcase DOM sync", () => {
     expect(parts()).toEqual({ state: "merged", pressed: "false", live: "Merged.", hidden: "true" });
   });
 
-  test("a click flips all three views and holds until the next threshold crossing", () => {
+  test("a click flips all three views and holds until the section leaves the viewport", () => {
     const control = document.querySelector<HTMLButtonElement>("[data-showcase-flag]");
     if (!control) throw new Error("missing control");
     control.click();
@@ -137,6 +144,10 @@ describe("showcase DOM sync", () => {
     scrollToProgress(0.8);
     expect(parts().state).toBe("held");
     scrollToProgress(0.3);
+    expect(parts().state).toBe("held");
+    observerCallback?.([{ target: document.body, isIntersecting: false }]);
+    observerCallback?.([{ target: document.body, isIntersecting: true }]);
+    scrollToProgress(0.3);
     expect(parts()).toEqual({ state: "merged", pressed: "false", live: "Merged.", hidden: "true" });
   });
 });
@@ -144,7 +155,7 @@ describe("showcase DOM sync", () => {
 const DUSK_MARKUP = `
 <section data-showcase data-state="merged">
   <img data-srcset="dusk.avif 1x" data-sizes="50vw" alt="">
-  <canvas data-showcase-lanes></canvas>
+  <div class="showcase-panel"><canvas data-showcase-lanes></canvas></div>
   <p data-showcase-status><span data-variant="merged">Merged.</span><span data-variant="held">Held.</span></p>
   <button type="button" aria-pressed="false" data-showcase-flag hidden></button>
 </section>`;
@@ -214,10 +225,13 @@ describe("showcase without idle callbacks and with reduced motion", () => {
     const root = document.querySelector<HTMLElement>("[data-showcase]");
     motion.matches = false;
     root?.style.setProperty("--showcase-x", "9");
+    const panel = document.querySelector<HTMLElement>(".showcase-panel");
+    if (panel) panel.inert = true;
     viewport.wide = false;
     for (const listener of changeListeners) listener();
     expect(root && "pinned" in root.dataset).toBe(false);
     expect(root?.style.getPropertyValue("--showcase-x")).toBe("");
+    expect(panel?.inert).toBe(false);
     viewport.wide = true;
     motion.matches = true;
   });

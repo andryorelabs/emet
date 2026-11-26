@@ -31,6 +31,8 @@ export interface CanvasSize {
 export interface LaneOptions {
   reduce: boolean;
   isHeld: () => boolean;
+  /** Optional gate: the loop idles while it returns false, e.g. an invisible panel. */
+  isActive?: () => boolean;
 }
 
 /** The drawing surface the lanes need, so tests can pass a recording fake. */
@@ -162,31 +164,42 @@ export function drawLanes(
 export function initLanes(canvas: HTMLCanvasElement, options: LaneOptions): { destroy(): void } {
   const context = canvas.getContext("2d");
   if (!context) return { destroy: () => undefined };
+  const isActive = options.isActive ?? (() => true);
   let visible = false;
   let frameId = 0;
+  let scale = 1;
 
-  const draw = (time: number): void => {
-    const scale = Math.min(globalThis.devicePixelRatio || 1, 2);
+  const measure = (): void => {
+    scale = Math.min(globalThis.devicePixelRatio || 1, 2);
     const box = canvas.getBoundingClientRect();
     canvas.width = Math.max(1, Math.round(box.width * scale));
     canvas.height = Math.max(1, Math.round(box.height * scale));
+  };
+
+  const draw = (time: number): void => {
     const held = options.isHeld();
     const progress = options.reduce ? SWEEP_LENGTH : (time / SWEEP_MS) % SWEEP_LENGTH;
     const size = { width: canvas.width, height: canvas.height, scale };
     drawLanes(context, size, laneDots(progress, held), held);
   };
 
+  measure();
+
   if (options.reduce) {
     const refresh = (): void => {
       draw(0);
     };
+    const resize = (): void => {
+      measure();
+      draw(0);
+    };
     refresh();
     canvas.addEventListener(LANES_REFRESH_EVENT, refresh);
-    globalThis.addEventListener("resize", refresh);
+    globalThis.addEventListener("resize", resize);
     return {
       destroy(): void {
         canvas.removeEventListener(LANES_REFRESH_EVENT, refresh);
-        globalThis.removeEventListener("resize", refresh);
+        globalThis.removeEventListener("resize", resize);
       },
     };
   }
@@ -197,8 +210,11 @@ export function initLanes(canvas: HTMLCanvasElement, options: LaneOptions): { de
   };
 
   const sync = (): void => {
-    const running = visible && !document.hidden;
-    if (running && !frameId) frameId = requestAnimationFrame(tick);
+    const running = visible && !document.hidden && isActive();
+    if (running && !frameId) {
+      measure();
+      frameId = requestAnimationFrame(tick);
+    }
     if (!running && frameId) {
       cancelAnimationFrame(frameId);
       frameId = 0;
@@ -211,10 +227,14 @@ export function initLanes(canvas: HTMLCanvasElement, options: LaneOptions): { de
   });
   observer.observe(canvas);
   document.addEventListener("visibilitychange", sync);
+  canvas.addEventListener(LANES_REFRESH_EVENT, sync);
+  globalThis.addEventListener("resize", measure);
   return {
     destroy(): void {
       observer.disconnect();
       document.removeEventListener("visibilitychange", sync);
+      canvas.removeEventListener(LANES_REFRESH_EVENT, sync);
+      globalThis.removeEventListener("resize", measure);
       visible = false;
       sync();
     },
