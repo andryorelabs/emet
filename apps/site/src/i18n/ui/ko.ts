@@ -61,6 +61,13 @@ export const ko = {
   },
   features: {
     heading: "실행이 지키는 것",
+    scenes: {
+      approve: "승인",
+      approveName: "승인: 길게 누르기",
+      approved: "승인됨",
+      gateName: "리뷰 게이트: 댓글 1개, 해결됨",
+      gateTip: "웨이브 2: 댓글 1개, 해결됨",
+    },
     notes: [
       { title: "승인은 한 번", line: "스펙과 티켓을 한 번만 검토합니다." },
       { title: "웨이브마다 리뷰", line: "리뷰어가 모든 웨이브를 확인합니다." },

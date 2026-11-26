@@ -64,6 +64,13 @@ export const it = {
   },
   features: {
     heading: "Cosa protegge un'esecuzione",
+    scenes: {
+      approve: "Approva",
+      approveName: "Approva: tieni premuto",
+      approved: "Approvato",
+      gateName: "Gate di revisione: 1 commento, risolto",
+      gateTip: "ondata 2: 1 commento, risolto",
+    },
     notes: [
       { title: "Una sola approvazione", line: "Specifica e ticket, rivisti una volta." },
       { title: "Una revisione per ondata", line: "Un revisore controlla ogni ondata." },

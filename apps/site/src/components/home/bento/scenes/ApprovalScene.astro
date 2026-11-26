@@ -3,18 +3,31 @@
  * Approval card picture: four tickets, an Approve button with a cursor, and the
  * stamp. The markup is the static final frame (approved tickets and the
  * stamp); the loop in `approval.css` starts from skeletons and ends there.
- * Decorative and `aria-hidden`.
+ * The tickets, cursor and stamp are decorative and `aria-hidden`; the Approve
+ * button is a real control that script wires for hold-to-approve, and it stays
+ * `inert` until then.
  */
 // oxlint-disable-next-line import/no-unassigned-import -- Astro bundles a stylesheet imported for its side effect
 import "../../../../styles/bento/scene.css";
 // oxlint-disable-next-line import/no-unassigned-import -- Astro bundles a stylesheet imported for its side effect
 import "../../../../styles/bento/approval.css";
+import type { SceneStrings } from "../interact/labels";
 
 const tickets = ["monorepo scaffold", "home layout", "code blocks", "docker and deploy"];
+interface Props {
+  labels: SceneStrings;
+}
+
+const { labels } = Astro.props;
 ---
 
-<div class="scene scene-approval bento-visual" data-scene aria-hidden="true">
-  <ul class="approval-tickets">
+<div
+  class="scene scene-approval bento-visual"
+  data-scene
+  data-interact="approval"
+  data-done-text={labels.approved}
+>
+  <ul class="approval-tickets" aria-hidden="true">
     {
       tickets.map((ticket) => (
         <li>
@@ -27,10 +40,13 @@ const tickets = ["monorepo scaffold", "home layout", "code blocks", "docker and 
     }
   </ul>
   <div class="approval-footer">
-    <span class="approval-button">Approve</span>
-    <svg class="approval-cursor" viewBox="0 0 14 14" fill="currentColor">
+    <button type="button" class="approval-button" aria-label={labels.approveName} inert>
+      <span>{labels.approve}</span>
+    </button>
+    <svg class="approval-cursor" viewBox="0 0 14 14" fill="currentColor" aria-hidden="true">
       <path d="M1 1l4.5 12 1.8-4.7L12 6.5z"></path>
     </svg>
-    <span class="approval-stamp">Approved</span>
+    <span class="approval-stamp" aria-hidden="true">{labels.approved}</span>
   </div>
+  <span class="approval-status" role="status"></span>
 </div>

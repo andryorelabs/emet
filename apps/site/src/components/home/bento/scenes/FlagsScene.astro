@@ -2,21 +2,31 @@
 /**
  * Flags card picture: three branches flow toward a merge node, a red flag
  * holds them back, then lifts and the node turns green. The static frame
- * (reduced motion or no script) is the finished state. Decorative and
- * `aria-hidden`.
+ * (reduced motion or no script) is the finished state. The graph is decorative
+ * and `aria-hidden`; the toggle is a real `aria-pressed` button that script
+ * wires to hold the wave, `inert` until then, with a status caption.
  */
 // oxlint-disable-next-line import/no-unassigned-import -- Astro bundles a stylesheet imported for its side effect
 import "../../../../styles/bento/scene.css";
 // oxlint-disable-next-line import/no-unassigned-import -- Astro bundles a stylesheet imported for its side effect
 import "../../../../styles/bento/flags.css";
+
+interface Props {
+  flagLabel: string;
+  heldText: string;
+}
+
+const { flagLabel, heldText } = Astro.props;
 ---
 
-<div class="scene scene-flags bento-visual" data-scene aria-hidden="true">
-  <div class="flags-graph">
+<div class="scene scene-flags bento-visual" data-scene data-interact="flags" data-held-text={heldText}>
+  <div class="flags-graph" aria-hidden="true">
     <span class="flags-branch"><span class="flags-dash"></span></span>
     <span class="flags-branch"><span class="flags-dash"></span></span>
     <span class="flags-branch"><span class="flags-dash"></span></span>
     <span class="flags-node"><span class="flags-node-lit"></span></span>
     <span class="flags-flag"></span>
   </div>
+  <button type="button" class="flags-toggle" aria-pressed="false" inert>{flagLabel}</button>
+  <p class="flags-caption" role="status"></p>
 </div>

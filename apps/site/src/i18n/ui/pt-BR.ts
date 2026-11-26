@@ -64,6 +64,13 @@ export const ptBR = {
   },
   features: {
     heading: "O que uma execução protege",
+    scenes: {
+      approve: "Aprovar",
+      approveName: "Aprovar: mantenha pressionado",
+      approved: "Aprovado",
+      gateName: "Portão de revisão: 1 comentário, resolvido",
+      gateTip: "onda 2: 1 comentário, resolvido",
+    },
     notes: [
       { title: "Uma única aprovação", line: "Especificação e tickets, revisados uma vez." },
       { title: "Uma revisão por onda", line: "Um revisor confere cada onda." },

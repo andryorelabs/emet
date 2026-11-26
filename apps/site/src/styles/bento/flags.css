@@ -80,6 +80,76 @@
   clip-path: polygon(0 0, 100% 0, 70% 50%, 100% 100%, 0 100%);
 }
 
+.flags-toggle {
+  min-height: 44px;
+  padding: 0 16px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  font-weight: 500;
+  cursor: pointer;
+  transition:
+    border-color 200ms,
+    background-color 200ms;
+}
+
+.flags-toggle:hover {
+  border-color: var(--text-muted);
+}
+
+.flags-toggle:focus-visible {
+  outline: 2px solid var(--moss);
+  outline-offset: 2px;
+}
+
+.flags-toggle[aria-pressed="true"] {
+  border-color: var(--moss);
+  background: color-mix(in oklab, var(--moss) 18%, transparent);
+}
+
+.flags-caption {
+  min-height: 2.7em;
+  max-width: 260px;
+  margin: 0;
+  color: var(--warn);
+  font-size: 12px;
+  line-height: 1.35;
+  text-align: center;
+}
+
+.scene-flags[data-held] .flags-graph {
+  opacity: 1;
+}
+
+.scene-flags[data-held] .flags-branch {
+  transform: scaleX(0.9675);
+}
+
+.scene-flags[data-held] .flags-dash {
+  transform: translateX(48px);
+}
+
+.scene-flags[data-held] .flags-flag {
+  opacity: 1;
+  transform: none;
+}
+
+.scene-flags[data-held] .flags-node-lit {
+  opacity: 0;
+}
+
+.scene-flags[data-held] .flags-node {
+  background: var(--warn);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .flags-toggle {
+    transition: none;
+  }
+}
+
 @media (scripting: enabled) and (prefers-reduced-motion: no-preference) {
   .flags-graph {
     animation: flags-fade var(--scene-cycle) linear calc(var(--scene-offset) * -1) infinite both;
@@ -102,6 +172,11 @@
   .flags-flag {
     animation: flags-drop var(--scene-cycle) var(--ease-out) calc(var(--scene-offset) * -1) infinite
       both;
+  }
+
+  .scene-flags[data-held],
+  .scene-flags[data-held] * {
+    animation-name: none !important;
   }
 
   @keyframes flags-fade {

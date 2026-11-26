@@ -54,3 +54,39 @@ describe("How it works per-spec flow", () => {
     }
   });
 });
+
+describe("How it works pinned runway markup", () => {
+  const cssSource = readFileSync(new URL("../../styles/home/how.css", import.meta.url), "utf8");
+
+  it("is a runway with three steps and a stage the pin can drive", () => {
+    expect(howSource).toContain('id="how"');
+    expect(howSource).toContain("data-how-pin");
+    expect(howSource.match(/class="exchange step"/g)).toHaveLength(3);
+    expect(howSource).toContain("data-how-stage");
+    expect(howSource).toContain("data-dither-src");
+    expect(howSource).toContain("initHowPin(runway)");
+    expect(howSource).not.toContain("style=");
+  });
+
+  it("keeps Claude Code and Codex tabs with a terminal-icon header and literal host commands", () => {
+    expect(howSource).toContain('label: "Claude Code"');
+    expect(howSource).toContain('label: "Codex"');
+    expect(howSource).toContain("`/emet:run ${how.request}`");
+    expect(howSource).toContain("`$emet:run ${how.request}`");
+    expect(howSource.match(/<Fragment set:html=\{terminalIcon\} \/>/g)).toHaveLength(3);
+  });
+
+  it("pins only when the script marks the runway and stacks otherwise", () => {
+    expect(cssSource).toMatch(/\.how\[data-pinned\] \{[^}]*height: 420vh/);
+    expect(cssSource).toMatch(/\.how\[data-pinned\] \.how-stick \{[^}]*position: sticky/);
+    expect(cssSource).not.toMatch(/^\.how \{[^}]*height: 420vh/m);
+    expect(cssSource).toContain('[data-step-state="idle"]');
+    expect(cssSource).toContain("grid-template-rows: 0fr");
+    expect(cssSource).not.toMatch(/(^|\n)\.how-stick \{[^}]*position: sticky/);
+  });
+
+  it("shows no dither canvas unless pinned", () => {
+    expect(cssSource).toMatch(/\.how-dither \{\s*display: none;/);
+    expect(cssSource).toMatch(/\.how\[data-pinned\] \.how-dither \{[^}]*display: block/);
+  });
+});

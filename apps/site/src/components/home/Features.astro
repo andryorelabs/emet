@@ -2,7 +2,8 @@
 /**
  * Six claims as a bento: each card pairs its claim with a small picture of
  * the guard working and the run-report line it leaves behind. The pictures
- * are scene components, decorative and `aria-hidden`; each loops only while on screen.
+ * are scene components that loop only while on screen; the Approval, Review and
+ * Flags pictures carry real buttons, the others are decorative and `aria-hidden`.
  */
 import type { UiStrings } from "../../i18n/ui/en";
 import ApprovalScene from "./bento/scenes/ApprovalScene.astro";
@@ -36,7 +37,7 @@ const keyWidth = 10;
   <h2 id="features-title" data-reveal="heading">
     <span class="reveal-line">{features.heading}</span>
   </h2>
-  <ul class="bento">
+  <ul class="bento" data-interact="spotlight">
     {
       features.notes.map((note, index) => {
         const card = cards[index];
@@ -47,9 +48,9 @@ const keyWidth = 10;
                 <h3>{note.title}</h3>
                 <p>{note.line}</p>
               </div>
-              {card.key === "approval" && <ApprovalScene />}
-              {card.key === "review" && <ReviewScene />}
-              {card.key === "flags" && <FlagsScene />}
+              {card.key === "approval" && <ApprovalScene labels={features.scenes} />}
+              {card.key === "review" && <ReviewScene labels={features.scenes} />}
+              {card.key === "flags" && <FlagsScene flagLabel={strings.showcase.flag} heldText={strings.showcase.statusHeld} />}
               {card.key === "ci" && <CiScene />}
               {card.key === "workers" && <WorkersScene />}
               {card.key === "tracker" && <TrackerScene />}
@@ -64,7 +65,9 @@ const keyWidth = 10;
 </section>
 
 <script>
+  import { initBentoInteractions } from "./bento/interact";
   import { initBentoScenes } from "./bento/scene-player";
 
   initBentoScenes(document);
+  initBentoInteractions(document);
 </script>

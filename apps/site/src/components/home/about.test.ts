@@ -24,20 +24,16 @@ describe("About Hebrew word pair", () => {
     }
   });
 
-  it("fades the aleph only inside a motion guard", () => {
+  it("scrubs the aleph fade and strike from --strike only inside a motion guard", () => {
     expect(css).toMatch(
-      /@media \(prefers-reduced-motion: no-preference\) \{[^@]*html\[data-motion\] \.hebrew-pair\.is-in \.hebrew-aleph \{\s*color: color-mix\(in oklab, var\(--text\) 25%, transparent\);/,
+      /@media \(prefers-reduced-motion: no-preference\) \{[^@]*html\[data-motion\] \.hebrew-aleph \{[^}]*var\(--strike, 0\)/,
     );
-    expect(css).not.toMatch(/^\.hebrew-pair\.is-in/m);
-    expect(css).not.toMatch(/^\.hebrew-aleph \{[^}]*(color|opacity|transition)/m);
-  });
-
-  it("draws the strike only inside the motion guard and without blur", () => {
     expect(css).toMatch(
-      /@media \(prefers-reduced-motion: no-preference\) \{[^@]*html\[data-motion\] \.hebrew-aleph::after \{/,
+      /html\[data-motion\] \.hebrew-aleph::after \{[^}]*rotate\(-24deg\) scaleX\(var\(--strike, 0\)\)/,
     );
     expect(css).not.toMatch(/^\.hebrew-aleph::after/m);
-    expect(css).not.toMatch(/\.hebrew-aleph[^{]*\{[^}]*filter:\s*blur/);
+    expect(css).not.toMatch(/^\.hebrew-aleph \{[^}]*(color|opacity|transition)/m);
+    expect(css).not.toMatch(/\.hebrew-aleph[^{]*\{[^}]*(transition|filter:\s*blur)/);
   });
 
   it("aligns the pair with the letter text instead of centring it", () => {
@@ -68,6 +64,15 @@ describe("About Hebrew word pair", () => {
 });
 
 describe("About portrait", () => {
+  it("keeps the image and adds a canvas shown only under motion once ready", () => {
+    expect(aboutSource).toContain("data-pixel-reveal");
+    expect(aboutSource).toContain('import "./about/about"');
+    expect(css).toMatch(/\.portrait-frame canvas \{\s*display: none;/);
+    expect(css).toMatch(
+      /@media \(prefers-reduced-motion: no-preference\) \{[^@]*canvas\[data-state="ready"\] \{\s*display: block;/,
+    );
+  });
+
   it("clips the drift on the portrait picture", () => {
     expect(css).toMatch(/\.portrait picture \{\s*overflow: clip;/);
   });
