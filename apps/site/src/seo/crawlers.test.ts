@@ -78,7 +78,7 @@ describe("buildLlmsTxt", () => {
 
   test("names both Agent hosts", () => {
     const body = buildLlmsTxt("A summary.", []);
-    expect(body).toContain("emet is a plugin for Claude Code and Codex.");
+    expect(body).toContain("emet is a workflow for Claude Code and Codex.");
   });
 
   test("names both vendors in the notice", () => {

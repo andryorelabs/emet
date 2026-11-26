@@ -1,0 +1,334 @@
+/**
+ * Home page hero: painted hero, announcement pill, split headline and actions.
+ */
+
+.hero {
+  position: relative;
+  min-height: max(720px, 100svh);
+  overflow: clip;
+  display: grid;
+  background: var(--surface);
+}
+
+.hero-picture,
+.hero picture {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.hero picture img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: 50% 100%;
+}
+
+@media (max-width: 640px) {
+  .hero picture img {
+    object-position: 94% 100%;
+  }
+}
+
+.hero-copy {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  grid-area: 1 / 1;
+  grid-template-rows: 1fr auto auto auto;
+  width: 100%;
+  min-height: inherit;
+  padding: 0 var(--gutter) 28px;
+  color: var(--ink-over-painting);
+  text-align: left;
+}
+
+.hero-copy::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background: linear-gradient(
+    180deg,
+    oklch(0.22 0.04 250 / 0.5),
+    oklch(0.22 0.04 250 / 0) 34%,
+    oklch(0.16 0.03 150 / 0) 52%,
+    oklch(0.16 0.03 150 / 0.66)
+  );
+}
+
+.hero-mid {
+  grid-row: 3;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 18px;
+  max-width: min(520px, 60%);
+  margin: 8px 0 24px;
+}
+
+@media (max-width: 640px) {
+  .hero-mid {
+    max-width: 100%;
+  }
+}
+
+.announcement {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  height: 32px;
+  margin-bottom: -4px;
+  padding: 0 5px 0 14px;
+  border: 1px solid var(--glass-border);
+  border-radius: 999px;
+  background: var(--glass-fill);
+  backdrop-filter: var(--glass-blur);
+  color: var(--ink-night);
+  font-size: 14px;
+  font-weight: 400;
+  line-height: 1;
+  text-decoration: none;
+  transition: background-color 150ms ease-out;
+}
+
+.announcement:hover {
+  background: var(--glass-fill-hover);
+}
+
+.announcement:focus-visible {
+  box-shadow: none;
+  outline: 3px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.announcement-version {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.announcement-divider {
+  width: 1px;
+  height: 14px;
+  background: currentcolor;
+  opacity: 0.25;
+}
+
+.announcement-arrow {
+  display: grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: var(--accent);
+  color: var(--ink-night);
+  transition: transform 150ms ease-out;
+}
+
+.announcement:hover .announcement-arrow {
+  transform: translateX(2px);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .announcement:hover .announcement-arrow {
+    transform: none;
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .announcement {
+    animation: rise 500ms var(--ease-out) both;
+  }
+}
+
+.hero h1 {
+  display: contents;
+}
+
+.hero-line {
+  display: block;
+  overflow: clip;
+  padding-bottom: 0.06em;
+  font-size: clamp(36px, 9.3vw, 168px);
+  font-weight: 600;
+  line-height: 0.92;
+  letter-spacing: -0.05em;
+  text-wrap: balance;
+  overflow-wrap: normal;
+  word-break: normal;
+}
+
+.hero-line > span {
+  display: block;
+}
+
+.hero-line-one {
+  grid-row: 2;
+  align-self: end;
+  margin-bottom: 12px;
+}
+
+.hero-line-two {
+  grid-row: 4;
+  justify-self: end;
+  margin-left: 14%;
+  text-align: right;
+}
+
+.hero-sentence {
+  max-width: 34ch;
+  margin: 0;
+  font-size: 20px;
+  font-weight: 500;
+  line-height: 1.5;
+  text-wrap: pretty;
+}
+
+.hero-actions {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+
+.hero-actions .text-link {
+  display: inline-flex;
+  align-items: center;
+  min-height: 48px;
+  padding: 0 24px;
+  border: 1px solid color-mix(in oklab, var(--ink-over-painting) 50%, transparent);
+  border-radius: var(--radius-control);
+  backdrop-filter: blur(6px);
+  color: inherit;
+  font-weight: 500;
+  text-decoration: none;
+}
+
+.hero-rays,
+.hero-grain,
+.hero-light,
+.hero-fireflies {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
+.hero-rays {
+  mix-blend-mode: screen;
+  filter: blur(5px);
+  opacity: 0.85;
+  background: conic-gradient(
+    from 196deg at 88% -6%,
+    transparent 0deg,
+    oklch(0.97 0.08 95 / 0.24) 3deg,
+    transparent 7deg,
+    transparent 11deg,
+    oklch(0.97 0.08 95 / 0.17) 14deg,
+    transparent 19deg,
+    transparent 24deg,
+    oklch(0.97 0.08 95 / 0.2) 27deg,
+    transparent 33deg,
+    transparent 40deg
+  );
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .hero-rays {
+    animation: hero-rays 14s ease-in-out infinite alternate;
+  }
+}
+
+@keyframes hero-rays {
+  from {
+    transform: rotate(-1.5deg) scale(1.04);
+    opacity: 0.7;
+  }
+
+  to {
+    transform: rotate(1.5deg) scale(1.08);
+    opacity: 1;
+  }
+}
+
+.hero-grain {
+  opacity: 0.15;
+  mix-blend-mode: overlay;
+}
+
+.hero-light {
+  opacity: 0;
+  transition: opacity 500ms ease-out;
+  mix-blend-mode: soft-light;
+  background: radial-gradient(
+    circle 140px at var(--mx, 50%) var(--my, 50%),
+    oklch(0.96 0.1 95 / 0.38),
+    transparent 100%
+  );
+  mask-image: linear-gradient(180deg, transparent 38%, #000 62%);
+}
+
+.hero-light[data-on] {
+  opacity: 1;
+}
+
+.hero-golem {
+  position: absolute;
+  z-index: 2;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: radial-gradient(circle, oklch(0.9 0.14 95 / 0.55), transparent 65%);
+  cursor: pointer;
+  animation: hero-golem-pulse 3s ease-in-out infinite;
+}
+
+.hero-golem:focus-visible {
+  outline: 3px solid var(--accent);
+  outline-offset: 2px;
+}
+
+@keyframes hero-golem-pulse {
+  50% {
+    transform: scale(1.25);
+    opacity: 0.7;
+  }
+}
+
+.hero-bubble {
+  position: absolute;
+  z-index: 3;
+  max-width: 220px;
+  margin: 0;
+  padding: 10px 14px;
+  border-radius: 10px;
+  background: oklch(0.985 0.013 150 / 0.94);
+  color: oklch(0.22 0.013 150);
+  font-size: 14px;
+  opacity: 0;
+  transform: translateY(6px);
+  transition:
+    opacity 250ms ease-out,
+    transform 250ms ease-out;
+  pointer-events: none;
+}
+
+.hero-bubble.is-on {
+  opacity: 1;
+  transform: none;
+}
+
+.hero-bubble:empty {
+  display: none;
+}
+
+@media (max-width: 900px), (pointer: coarse) {
+  .hero-golem,
+  .hero-bubble {
+    display: none;
+  }
+}

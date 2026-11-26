@@ -36,12 +36,12 @@ export function viewFor(state: ShowcaseState): ShowcaseView {
   };
 }
 
-const HOLD_AT = 0.55;
-const RELEASE_AT = 0.45;
+const HOLD_AT = 0.74;
+const RELEASE_AT = 0.66;
 
 /**
- * Scroll-driven state with hysteresis: held at progress >= 0.55, merged at
- * <= 0.45 and unchanged in the dead band between.
+ * Scroll-driven state with hysteresis: held at progress >= 0.74, merged at
+ * <= 0.66 and unchanged in the dead band between.
  */
 export function stateForProgress(progress: number, previous: ShowcaseState): ShowcaseState {
   if (progress >= HOLD_AT) return previous.held ? previous : { held: true };
@@ -77,14 +77,22 @@ export function clickStep(
   return { state: toggle(state), track: { natural: track.natural, overridden: true } };
 }
 
-/** Applies scroll progress; a click override survives until the scroll state crosses a threshold. */
+/**
+ * Applies scroll progress. A click override survives every threshold crossing
+ * until `releaseOverride` runs, so auto-flagging stays off while the viewer's
+ * choice stands.
+ */
 export function scrollStep(
   progress: number,
   state: ShowcaseState,
   track: ScrollTrack,
 ): { state: ShowcaseState; track: ScrollTrack } {
   const natural = stateForProgress(progress, track.natural);
-  const crossed = natural.held !== track.natural.held;
-  if (track.overridden && !crossed) return { state, track: { natural, overridden: true } };
+  if (track.overridden) return { state, track: { natural, overridden: true } };
   return { state: natural, track: { natural, overridden: false } };
+}
+
+/** Drops a click override, called once the section leaves the viewport. */
+export function releaseOverride(track: ScrollTrack): ScrollTrack {
+  return { natural: track.natural, overridden: false };
 }

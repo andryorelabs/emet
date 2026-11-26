@@ -6,7 +6,7 @@ What emet is, who it is for and what it will not do. Terms follow [GLOSSARY.md](
 
 Spec to merge, on one approval.
 
-emet is a plugin for Claude Code and Codex. It takes a feature from idea to merged change: interview, spec, tickets, one approval, then parallel workers implement and test in isolated worktrees. Each wave gets a review, CI must be green before merge, and nothing merges when something is flagged.
+emet is a workflow for Claude Code and Codex. It takes a feature from idea to merged change: interview, spec, tickets, one approval, then parallel workers implement and test in isolated worktrees. Each wave gets a review, CI must be green before merge, and nothing merges when something is flagged.
 
 ## Users
 

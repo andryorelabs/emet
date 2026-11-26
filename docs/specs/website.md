@@ -127,3 +127,145 @@ The e2e spec covers what happy-dom cannot open: the header menus, the mobile she
 
 - WHEN the theme menu opens with `prefers-reduced-motion: reduce`
 - THEN its content plays no animation
+
+### Requirement: The Website tagline names a workflow for Claude Code and Codex
+
+Source: #1012 S1
+
+#### Scenario: The home renders in any locale
+
+- **WHEN** the home renders in any locale
+- **THEN** no tagline string contains the retired plugin tagline and the English strings carry the workflow tagline
+
+### Requirement: The home stylesheet and tests are split per section
+
+Source: #1012 S4
+
+#### Scenario: The tests run after the split
+
+- **WHEN** `bun run test` runs
+- **THEN** the per-section style and test files pass and the built home CSS holds the same rules as before the split
+
+### Requirement: The header and hero float over the painting
+
+Source: #1012 S5
+
+#### Scenario: The home loads on desktop
+
+- **WHEN** the home loads at 1440×900
+- **THEN** the white-ink header floats over the painting, the headline lines rise from a mask and the CTAs do not cover the golem
+
+#### Scenario: The home loads on a phone
+
+- **WHEN** the viewport is 390px wide
+- **THEN** the headline never breaks inside a word
+
+### Requirement: Painting effects degrade without WebGL
+
+Source: #1012 S6, #1012 S7, #1012 S16, #1012 S17
+
+#### Scenario: Reduced motion disables the effect
+
+- **WHEN** reduced motion is set
+- **THEN** the painting effect enable decision is false and the CSS Valley fallback shows
+
+#### Scenario: WebGL is missing
+
+- **WHEN** WebGL is unavailable
+- **THEN** nothing is drawn, no error is thrown and the CSS fallback stays visible
+
+### Requirement: Hero effects respond to the pointer
+
+Source: #1012 S8
+
+#### Scenario: The golem hotspot is clicked
+
+- **WHEN** the golem hotspot is clicked
+- **THEN** the bubble shows the next phrase and the eyes glow
+
+### Requirement: How it works is a pinned runway that stacks on small screens
+
+Source: #1012 S9, #1012 S10
+
+#### Scenario: The runway is scrolled on desktop
+
+- **WHEN** the page is scrolled through the How it works runway at 1440
+- **THEN** the steps change at about 30% and 62% progress and the stage dither resolves
+
+#### Scenario: The runway stacks
+
+- **WHEN** the viewport is 390px or reduced motion is set
+- **THEN** all three steps show stacked with final content
+
+### Requirement: Showcase auto-flags until the viewer clicks
+
+Source: #1012 S11
+
+#### Scenario: The viewer scrolls without clicking
+
+- **WHEN** scrolling through Showcase past about 74% without clicking
+- **THEN** the flag turns on and the dusk painting appears
+
+#### Scenario: The viewer clicks the switch
+
+- **WHEN** the viewer clicks the switch
+- **THEN** auto-flagging stops
+
+### Requirement: Feature scenes are interactive and accessible
+
+Source: #1012 S12
+
+#### Scenario: The approval button is held
+
+- **WHEN** the approval button is held for 0.9 s
+- **THEN** the stamp appears and the status text updates
+
+#### Scenario: The approval button is released early
+
+- **WHEN** the approval button is released early
+- **THEN** nothing is approved
+
+### Requirement: Stats roll to their values
+
+Source: #1012 S13
+
+#### Scenario: Stats enters the viewport
+
+- **WHEN** Stats enters the viewport
+- **THEN** the numeric values roll to their final values and the MIT item stays static
+
+### Requirement: About reveals the portrait with a pixel mosaic
+
+Source: #1012 S14
+
+#### Scenario: About enters the viewport
+
+- **WHEN** About enters the viewport
+- **THEN** the portrait resolves from a mosaic to the full image, or shows at once under reduced motion
+
+### Requirement: The closing command can be copied
+
+Source: #1012 S15
+
+#### Scenario: The copy button is pressed
+
+- **WHEN** the copy button of the closing command is pressed
+- **THEN** the exact install command is on the clipboard and the button shows its done state
+
+### Requirement: A companion golem answers fixed questions
+
+Source: #1012 S18
+
+#### Scenario: The companion is clicked
+
+- **WHEN** the companion is clicked
+- **THEN** a menu with four questions opens and Escape closes it returning focus
+
+### Requirement: Home interactions are covered end to end
+
+Source: #1012 S19
+
+#### Scenario: The e2e suite runs
+
+- **WHEN** `bun run --cwd apps/site test:e2e` runs
+- **THEN** every home interaction passes with zero `securitypolicyviolation` events

@@ -1,18 +1,24 @@
 /**
- * The showcase: a full-bleed 16:9 painted valley with one paper panel.
- * Flagging cross-fades day to dusk (opacity only); the switch knob moves with
- * transform only. Reduced motion swaps at once.
+ * The showcase: a painted valley with a heading over it and a glass panel
+ * holding the flag switch, the git lanes and the status line. From 901px the
+ * runway pins and scroll grows the frame from an inset card to full bleed (a
+ * clip-path scrubbed through --showcase-* properties set by the script), then
+ * the panel fades in. Narrower, or under reduced motion, it stacks with the
+ * final state. Flagging cross-fades day to dusk (opacity only); the knob moves
+ * with transform only.
  */
 
 section.showcase {
+  --showcase-edge: clamp(16px, 5vw, 72px);
   padding: 0;
   position: relative;
   width: 100%;
   aspect-ratio: 16 / 9;
   max-height: 828px;
-  min-height: 560px;
+  min-height: 640px;
   overflow: clip;
   background: var(--surface);
+  color: var(--ink-over-painting);
 }
 
 .showcase-frame,
@@ -25,9 +31,35 @@ section.showcase {
   height: 100%;
 }
 
+.showcase-stage {
+  clip-path: inset(
+    calc(var(--showcase-y, 0) * 1vh) calc(var(--showcase-x, 0) * 1vw) round
+      calc(var(--showcase-r, 0) * 1px)
+  );
+}
+
 .showcase-stage img {
   object-fit: cover;
   object-position: 50% 100%;
+}
+
+.showcase-stage::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    linear-gradient(
+      180deg,
+      color-mix(in oklab, var(--ink-night) 55%, transparent) 0,
+      color-mix(in oklab, var(--ink-night) 12%, transparent) 32%,
+      transparent 55%
+    ),
+    linear-gradient(
+      90deg,
+      color-mix(in oklab, var(--ink-night) 50%, transparent) 0,
+      transparent 55%
+    );
 }
 
 .showcase-dusk {
@@ -39,24 +71,94 @@ section.showcase {
   opacity: 1;
 }
 
+.showcase-marks {
+  position: absolute;
+  inset: calc(var(--showcase-y, 0) * 1vh) calc(var(--showcase-x, 0) * 1vw);
+  opacity: var(--showcase-marks, 0);
+  pointer-events: none;
+}
+
+.showcase-corner {
+  position: absolute;
+  width: 30px;
+  height: 30px;
+  border: 2px solid color-mix(in oklab, var(--ink-over-painting) 85%, transparent);
+}
+
+.showcase-corner[data-corner="a"] {
+  top: -14px;
+  left: -14px;
+  border-right: 0;
+  border-bottom: 0;
+}
+
+.showcase-corner[data-corner="b"] {
+  top: -14px;
+  right: -14px;
+  border-left: 0;
+  border-bottom: 0;
+}
+
+.showcase-corner[data-corner="c"] {
+  bottom: -14px;
+  left: -14px;
+  border-right: 0;
+  border-top: 0;
+}
+
+.showcase-corner[data-corner="d"] {
+  right: -14px;
+  bottom: -14px;
+  border-left: 0;
+  border-top: 0;
+}
+
+.showcase h2 {
+  position: absolute;
+  z-index: 2;
+  top: clamp(24px, 6vh, 72px);
+  left: var(--showcase-edge);
+  right: var(--showcase-edge);
+  max-width: 14em;
+  margin: 0;
+  font-size: clamp(32px, 3.2vw, 48px);
+  font-weight: 400;
+  line-height: 1.05;
+  letter-spacing: -0.02em;
+}
+
 section.showcase .showcase-panel {
   position: absolute;
-  top: var(--gutter);
-  left: max(var(--gutter, 32px), (100% - var(--container, 1280px)) / 2);
+  z-index: 2;
+  bottom: clamp(16px, 6vh, 64px);
+  left: var(--showcase-edge);
   display: flex;
   flex-direction: column;
   align-items: flex-start;
-  gap: 12px;
-  width: min(440px, calc(100% - 2 * var(--gutter)));
-  padding: 32px;
+  gap: 14px;
+  width: min(620px, calc(100% - 2 * var(--showcase-edge)));
+  padding: 24px;
+  border: 1px solid color-mix(in oklab, var(--ink-over-painting) 20%, transparent);
   border-radius: var(--radius-panel);
-  background: var(--surface);
-  color: var(--text);
+  background: color-mix(in oklab, var(--ink-night) 60%, transparent);
+  backdrop-filter: blur(18px);
+  color: var(--ink-over-painting);
+}
+
+@supports not (backdrop-filter: blur(1px)) {
+  section.showcase .showcase-panel {
+    background: var(--ink-night);
+  }
+}
+
+.showcase-lanes {
+  width: 100%;
+  height: 140px;
 }
 
 .showcase-mark {
-  margin: 8px 0 0;
-  color: var(--text);
+  margin: 0;
+  color: var(--ink-over-painting);
   font-size: 28px;
   font-weight: 500;
   letter-spacing: -0.02em;
@@ -70,14 +172,6 @@ section.showcase .showcase-panel {
 
 .showcase[data-state="held"] .showcase-letter {
   opacity: 0.2;
-}
-
-.showcase h2 {
-  margin: 0;
-  font-size: clamp(32px, 3.2vw, 48px);
-  font-weight: 400;
-  line-height: 1.05;
-  letter-spacing: -0.02em;
 }
 
 .showcase-stack {
@@ -95,8 +189,10 @@ section.showcase .showcase-panel {
 
 .showcase-status {
   margin: 0;
+  padding-top: 12px;
+  border-top: 1px solid color-mix(in oklab, var(--ink-over-painting) 20%, transparent);
   font-size: 17px;
-  line-height: 1.4;
+  line-height: 1.45;
 }
 
 .showcase-flag {
@@ -104,11 +200,10 @@ section.showcase .showcase-panel {
   align-items: center;
   gap: 12px;
   min-height: 48px;
-  margin-top: 8px;
   padding: 0;
   border: 0;
   background: none;
-  color: var(--text);
+  color: inherit;
   font: inherit;
   font-size: 17px;
   font-weight: 500;
@@ -120,7 +215,7 @@ section.showcase .showcase-panel {
 }
 
 .showcase-flag:focus-visible {
-  outline: 2px solid var(--text);
+  outline: 2px solid var(--ink-over-painting);
   outline-offset: 4px;
   border-radius: var(--radius-control);
 }
@@ -131,7 +226,7 @@ section.showcase .showcase-panel {
   width: 52px;
   height: 30px;
   border-radius: 999px;
-  background: var(--moss);
+  background: color-mix(in oklab, var(--ink-over-painting) 30%, transparent);
 }
 
 .showcase-switch::after {
@@ -139,7 +234,7 @@ section.showcase .showcase-panel {
   position: absolute;
   inset: 0;
   border-radius: inherit;
-  background: var(--lamp);
+  background: var(--warn);
   opacity: 0;
   transition: opacity 250ms var(--ease-out);
 }
@@ -152,7 +247,7 @@ section.showcase .showcase-panel {
   width: 22px;
   height: 22px;
   border-radius: 999px;
-  background: var(--bg);
+  background: var(--ink-over-painting);
   transition: transform 250ms var(--ease-out);
 }
 
@@ -172,10 +267,11 @@ section.showcase .showcase-panel {
   transform: translateX(22px) scale(0.97);
 }
 
-@media (max-width: 640px) {
+@media (max-width: 900px) {
   section.showcase {
     aspect-ratio: auto;
-    height: 720px;
+    height: 780px;
+    max-height: none;
   }
 
   .showcase-stage img {
@@ -183,27 +279,28 @@ section.showcase .showcase-panel {
   }
 
   section.showcase .showcase-panel {
-    padding: 24px;
+    bottom: 16px;
+    padding: 20px;
   }
 }
 
-section.showcase[data-pinned] {
-  display: grid;
-  height: 250svh;
-  aspect-ratio: auto;
-  min-height: 0;
-  max-height: none;
-}
-
-section.showcase[data-pinned] .showcase-frame {
-  position: sticky;
-  top: 0;
-  height: 100svh;
-}
-
-@media (max-width: 640px) {
+@media (min-width: 901px) {
   section.showcase[data-pinned] {
-    height: calc(100svh + 60svh);
+    display: grid;
+    height: 340svh;
+    aspect-ratio: auto;
+    min-height: 0;
+    max-height: none;
+  }
+
+  section.showcase[data-pinned] .showcase-frame {
+    position: sticky;
+    top: 0;
+    height: 100svh;
+  }
+
+  section.showcase[data-pinned] .showcase-panel {
+    opacity: var(--showcase-panel, 1);
   }
 }
 

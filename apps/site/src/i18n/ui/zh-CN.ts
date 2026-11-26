@@ -31,7 +31,7 @@ export const zhCN = {
     name: "emet",
     lineOne: "从规格到合并，",
     lineTwo: "只需一次批准。",
-    sentence: "Claude Code 和 Codex 的插件。从想法到已合并的改动，只需一次批准。",
+    sentence: "Claude Code 和 Codex 的工作流。从想法到已合并的改动，只需一次批准。",
     install: "安装 emet",
     readDocs: "阅读文档",
     alt: "一幅画出的山谷，三条溪流汇成一条河，有梯田，一个小小的黏土魔像站在平静天空下的草坡上。",
@@ -62,6 +62,13 @@ export const zhCN = {
   },
   features: {
     heading: "一次运行守护什么",
+    scenes: {
+      approve: "批准",
+      approveName: "批准:长按",
+      approved: "已批准",
+      gateName: "评审关卡:1 条评论,已解决",
+      gateTip: "第 2 波:1 条评论,已解决",
+    },
     notes: [
       { title: "一次批准", line: "规格和工单只评审一次。" },
       { title: "每一波都有评审", line: "评审者检查每一波。" },
@@ -139,8 +146,26 @@ export const zhCN = {
     action: "安装 emet",
     alt: "低垂晨雾下的山谷，淡淡的太阳和粉彩色的天空。",
   },
+  companion: {
+    label: "emet 魔像伙伴，按下以打开菜单",
+    menu: "向 emet 提问",
+    sleep: "休息中。滚动页面唤醒我。",
+    work: "灯已亮起。正在阅读规格。",
+    wait: "已搁置。不会合并任何内容。",
+    done: "完成。一次批准，已合并。",
+    questions: [
+      {
+        question: "emet 是什么？",
+        answer: "面向 Claude Code 和 Codex 的工作流。从想法到合并，只需一次批准。",
+      },
+      { question: "如何安装？", answer: "curl -fsSL https://emet.andryore.dev/install.sh | sh" },
+      { question: "免费吗？", answer: "是的。emet 采用 MIT 许可证。" },
+      { question: "文档在哪里？", answer: "只需点击一下。" },
+    ],
+    docs: "打开文档",
+  },
   footer: {
-    description: "Claude Code 和 Codex 的插件。",
+    description: "Claude Code 和 Codex 的工作流。",
     notice: "与 Anthropic 或 OpenAI 无关联，也未获得 Anthropic 或 OpenAI 认可",
     docs: "文档",
     whatsNew: "新动态",

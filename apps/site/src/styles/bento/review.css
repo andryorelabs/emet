@@ -1,3 +1,98 @@
+.review-lanes {
+  position: relative;
+  width: 100%;
+  max-width: 320px;
+  height: 56px;
+}
+
+.review-lane {
+  position: absolute;
+  left: 0;
+  width: calc(100% - 14px);
+  height: 2px;
+  background: var(--moss);
+}
+
+.review-lane:nth-child(1) {
+  top: 8px;
+}
+
+.review-lane:nth-child(2) {
+  top: 27px;
+}
+
+.review-lane:nth-child(3) {
+  top: 46px;
+}
+
+.review-gate {
+  position: absolute;
+  top: 0;
+  left: calc((100% - 14px) * 0.62);
+  width: 44px;
+  height: 56px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--text);
+  cursor: help;
+  transform: translateX(-50%);
+}
+
+.review-gate::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 50%;
+  border-left: 1px dashed var(--text-muted);
+}
+
+.review-gate:focus-visible {
+  outline: 2px solid var(--moss);
+  outline-offset: 2px;
+}
+
+.review-tip {
+  position: absolute;
+  bottom: calc(100% - 2px);
+  left: 50%;
+  padding: 4px 8px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--surface);
+  font-size: 12px;
+  line-height: 1.4;
+  white-space: nowrap;
+  opacity: 0;
+  pointer-events: none;
+  transform: translate(-50%, 4px);
+  transition:
+    opacity 150ms,
+    transform 150ms;
+}
+
+.review-gate[data-open] .review-tip {
+  opacity: 1;
+  transform: translate(-50%, 0);
+}
+
+.review-merge {
+  position: absolute;
+  top: 21px;
+  right: 0;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--moss);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .review-tip {
+    transition: none;
+  }
+}
+
 .review-waves {
   display: flex;
   flex-direction: column;

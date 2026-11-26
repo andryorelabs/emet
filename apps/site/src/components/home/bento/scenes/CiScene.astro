@@ -2,19 +2,25 @@
 /**
  * CI card picture: lint, test and build run, test fails and a fix commit
  * re-runs it, then a "ready" badge pulses. The static frame (reduced motion or
- * no script) is the finished state: three green dots and the badge.
- * Decorative and `aria-hidden`.
+ * no script) is the finished state: three green dots and the badge. The
+ * pipeline and the retries diff are decorative and `aria-hidden`; the Run
+ * again button is real, `inert` until script wires it to restart the loop.
  */
 // oxlint-disable-next-line import/no-unassigned-import -- Astro bundles a stylesheet imported for its side effect
 import "../../../../styles/bento/scene.css";
 // oxlint-disable-next-line import/no-unassigned-import -- Astro bundles a stylesheet imported for its side effect
 import "../../../../styles/bento/ci.css";
 
+interface Props {
+  runAgainLabel?: string;
+}
+
+const { runAgainLabel = "Run again" } = Astro.props;
 const checks = ["lint", "test", "build"];
 ---
 
-<div class="scene scene-ci bento-visual" data-scene aria-hidden="true">
-  <div class="ci-pipeline">
+<div class="scene scene-ci bento-visual" data-scene data-interact="ci">
+  <div class="ci-pipeline" aria-hidden="true">
     <ul class="ci-checks">
       {
         checks.map((check) => (
@@ -34,4 +40,15 @@ const checks = ["lint", "test", "build"];
       <span class="ci-badge">ready</span>
     </div>
   </div>
+  <button type="button" class="ci-rerun" inert>{runAgainLabel}</button>
+  <pre class="ci-code" aria-hidden="true"><span class="ci-rm">- retries: 0</span>
+<span class="ci-add">+ retries: 3</span></pre>
 </div>
+
+<script>
+  import { initCiRerun } from "../interact/ci-rerun";
+  import { initBentoInteractions, registerScene } from "../interact/registry";
+
+  registerScene("ci", initCiRerun);
+  initBentoInteractions(document);
+</script>

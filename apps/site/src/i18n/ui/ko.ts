@@ -30,7 +30,7 @@ export const ko = {
     name: "emet",
     lineOne: "스펙에서 머지까지,",
     lineTwo: "승인은 한 번.",
-    sentence: "Claude Code와 Codex용 플러그인. 아이디어에서 머지된 변경까지, 승인은 한 번.",
+    sentence: "Claude Code와 Codex용 워크플로. 아이디어에서 머지된 변경까지, 승인은 한 번.",
     install: "emet 설치",
     readDocs: "문서 읽기",
     alt: "세 개의 시냇물이 하나의 강으로 합쳐지는 그림 속 계곡. 계단식 밭과, 고요한 하늘 아래 풀이 덮인 언덕 위의 작은 점토 골렘.",
@@ -61,6 +61,13 @@ export const ko = {
   },
   features: {
     heading: "실행이 지키는 것",
+    scenes: {
+      approve: "승인",
+      approveName: "승인: 길게 누르기",
+      approved: "승인됨",
+      gateName: "리뷰 게이트: 댓글 1개, 해결됨",
+      gateTip: "웨이브 2: 댓글 1개, 해결됨",
+    },
     notes: [
       { title: "승인은 한 번", line: "스펙과 티켓을 한 번만 검토합니다." },
       { title: "웨이브마다 리뷰", line: "리뷰어가 모든 웨이브를 확인합니다." },
@@ -161,8 +168,30 @@ export const ko = {
     action: "emet 설치",
     alt: "낮게 깔린 아침 안개 아래의 계곡. 옅은 해와 파스텔빛 하늘.",
   },
+  companion: {
+    label: "emet 골렘 컴패니언, 눌러서 메뉴 열기",
+    menu: "emet에게 묻기",
+    sleep: "쉬는 중입니다. 스크롤하면 깨어납니다.",
+    work: "램프 켜짐. 스펙을 읽는 중입니다.",
+    wait: "보류 중. 아무것도 병합되지 않습니다.",
+    done: "완료. 승인은 한 번, 병합되었습니다.",
+    questions: [
+      {
+        question: "emet이 무엇인가요?",
+        answer:
+          "Claude Code와 Codex를 위한 워크플로입니다. 아이디어에서 병합까지, 승인은 한 번입니다.",
+      },
+      {
+        question: "어떻게 설치하나요?",
+        answer: "curl -fsSL https://emet.andryore.dev/install.sh | sh",
+      },
+      { question: "무료인가요?", answer: "네. emet은 MIT 라이선스입니다." },
+      { question: "문서는 어디에 있나요?", answer: "한 번의 클릭이면 됩니다." },
+    ],
+    docs: "문서 열기",
+  },
   footer: {
-    description: "Claude Code와 Codex용 플러그인.",
+    description: "Claude Code와 Codex용 워크플로.",
     notice: "Anthropic 또는 OpenAI와 제휴하거나 Anthropic 또는 OpenAI의 보증을 받지 않았습니다",
     docs: "문서",
     whatsNew: "새 소식",

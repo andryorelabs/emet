@@ -31,7 +31,7 @@ export const de = {
     lineOne: "Von Idee zu Merge,",
     lineTwo: "mit einer Freigabe.",
     sentence:
-      "Ein Plugin für Claude Code und Codex. Von der Idee zur gemergten Änderung, mit einer Freigabe.",
+      "Ein Workflow für Claude Code und Codex. Von der Idee zur gemergten Änderung, mit einer Freigabe.",
     install: "emet installieren",
     readDocs: "Doku lesen",
     alt: "Ein gemaltes Tal, in dem drei Bäche in einen Fluss münden, mit Terrassenfeldern und einem kleinen Lehm-Golem auf einer grasigen Anhöhe unter ruhigem Himmel.",
@@ -62,6 +62,13 @@ export const de = {
   },
   features: {
     heading: "Was ein Lauf absichert",
+    scenes: {
+      approve: "Freigeben",
+      approveName: "Freigeben: gedrückt halten",
+      approved: "Freigegeben",
+      gateName: "Review-Gate: 1 Kommentar, erledigt",
+      gateTip: "Welle 2: 1 Kommentar, erledigt",
+    },
     notes: [
       { title: "Eine Freigabe", line: "Spezifikation und Tickets, einmal geprüft." },
       { title: "Ein Review pro Welle", line: "Ein Reviewer prüft jede Welle." },
@@ -168,8 +175,30 @@ export const de = {
     action: "emet installieren",
     alt: "Ein Tal unter tiefem Morgennebel mit blasser Sonne und Pastellhimmel.",
   },
+  companion: {
+    label: "emet-Golem-Begleiter, drücken, um das Menü zu öffnen",
+    menu: "Frag emet",
+    sleep: "Ich ruhe. Scrolle, um mich zu wecken.",
+    work: "Lampe an. Ich lese die Spezifikation.",
+    wait: "Angehalten. Nichts wird gemergt.",
+    done: "Fertig. Eine Freigabe, gemergt.",
+    questions: [
+      {
+        question: "Was ist emet?",
+        answer:
+          "Ein Workflow für Claude Code und Codex. Von der Idee zur gemergten Änderung, mit einer einzigen Freigabe.",
+      },
+      {
+        question: "Wie installiere ich es?",
+        answer: "curl -fsSL https://emet.andryore.dev/install.sh | sh",
+      },
+      { question: "Ist es kostenlos?", answer: "Ja. emet steht unter der MIT-Lizenz." },
+      { question: "Wo finde ich die Dokumentation?", answer: "Nur einen Klick entfernt." },
+    ],
+    docs: "Dokumentation öffnen",
+  },
   footer: {
-    description: "Plugin für Claude Code und Codex.",
+    description: "Workflow für Claude Code und Codex.",
     notice:
       "Nicht mit Anthropic oder OpenAI verbunden und nicht von Anthropic oder OpenAI unterstützt",
     docs: "Doku",

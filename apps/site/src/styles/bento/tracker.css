@@ -229,3 +229,54 @@
     }
   }
 }
+
+.tracker-chip {
+  width: 100%;
+  min-height: 44px;
+  background: transparent;
+  font: inherit;
+  cursor: pointer;
+  transition: border-color 200ms;
+}
+
+.tracker-chip:hover {
+  border-color: var(--text-muted);
+}
+
+.tracker-chip:focus-visible {
+  outline: 2px solid var(--moss);
+  outline-offset: 2px;
+}
+
+.tracker-id {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  transition:
+    opacity 140ms,
+    transform 140ms;
+}
+
+.tracker-id[data-swap] {
+  opacity: 0;
+  transform: translateY(4px);
+}
+
+.scene-tracker[data-manual] .tracker-pill {
+  transform: translateX(calc(var(--tracker-selected, 1) * (100% + 8px)));
+  transition: transform 200ms var(--ease-out);
+}
+
+@media (scripting: enabled) and (prefers-reduced-motion: no-preference) {
+  .scene-tracker[data-manual] :is(.tracker-stage, .tracker-pill, .tracker-status, .tracker-check),
+  .scene-tracker[data-restart] :is(.tracker-stage, .tracker-pill, .tracker-status, .tracker-check) {
+    animation-name: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tracker-chip,
+  .tracker-id,
+  .scene-tracker[data-manual] .tracker-pill {
+    transition: none;
+  }
+}

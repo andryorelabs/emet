@@ -31,7 +31,7 @@ export const ja = {
     lineOne: "仕様からマージへ、",
     lineTwo: "承認は一度だけ。",
     sentence:
-      "Claude Code と Codex のプラグイン。アイデアからマージ済みの変更まで、承認は一度だけ。",
+      "Claude Code と Codex のワークフロー。アイデアからマージ済みの変更まで、承認は一度だけ。",
     install: "emet をインストール",
     readDocs: "ドキュメントを読む",
     alt: "三本の小川が一つの川に合流する絵の谷。段々畑と、穏やかな空の下の草の丘に立つ小さな粘土のゴーレム。",
@@ -64,6 +64,13 @@ export const ja = {
   },
   features: {
     heading: "実行が守るもの",
+    scenes: {
+      approve: "承認",
+      approveName: "承認: 長押し",
+      approved: "承認済み",
+      gateName: "レビューゲート: コメント1件、解決済み",
+      gateTip: "ウェーブ2: コメント1件、解決済み",
+    },
     notes: [
       { title: "承認は一度だけ", line: "仕様とチケットのレビューは一度で済みます。" },
       { title: "ウェーブごとのレビュー", line: "レビュアーがすべてのウェーブを確認します。" },
@@ -174,8 +181,30 @@ export const ja = {
     action: "emet をインストール",
     alt: "低い朝霧に包まれた谷。淡い太陽とパステルの空。",
   },
+  companion: {
+    label: "emet のゴーレムコンパニオン、押すとメニューが開きます",
+    menu: "emet に質問",
+    sleep: "休憩中。スクロールすると起きます。",
+    work: "ランプ点灯。仕様を読んでいます。",
+    wait: "保留中。何もマージされません。",
+    done: "完了。承認は一度で、マージ済みです。",
+    questions: [
+      {
+        question: "emet とは?",
+        answer:
+          "Claude Code と Codex のためのワークフローです。アイデアからマージまで、承認は一度だけです。",
+      },
+      {
+        question: "インストール方法は?",
+        answer: "curl -fsSL https://emet.andryore.dev/install.sh | sh",
+      },
+      { question: "無料ですか?", answer: "はい。emet は MIT ライセンスです。" },
+      { question: "ドキュメントはどこ?", answer: "ワンクリックで開けます。" },
+    ],
+    docs: "ドキュメントを開く",
+  },
   footer: {
-    description: "Claude Code と Codex のプラグイン。",
+    description: "Claude Code と Codex のワークフロー。",
     notice: "Anthropic または OpenAI とは提携しておらず、その承認も受けていません",
     docs: "ドキュメント",
     whatsNew: "新着情報",

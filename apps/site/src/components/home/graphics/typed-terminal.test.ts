@@ -129,4 +129,23 @@ describe("typed terminal DOM", () => {
     expect(document.querySelector(".emet-code__panel pre")?.textContent).toBe(COMMAND);
     expect(queue.length).toBe(0);
   });
+
+  test("waits for an idle step state before typing", async () => {
+    document.body.innerHTML = MARKUP.replace(
+      "<article data-typed>",
+      '<article data-typed data-step-state="idle">',
+    );
+    install(false);
+    initTypedTerminal(document);
+    runFrames(60_000);
+    expect(document.querySelectorAll(".tt-off").length).toBe(5);
+
+    document.querySelector("article")?.setAttribute("data-step-state", "on");
+    await Promise.resolve();
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    runFrames(120_000);
+
+    expect(document.querySelectorAll(".tt-off").length).toBe(0);
+    expect(commandPanel().querySelector("pre")?.textContent).toBe(COMMAND);
+  });
 });

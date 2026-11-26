@@ -26,11 +26,16 @@ export function pickStage(ratios: readonly number[], previous: Stage = 0): Stage
   return best;
 }
 
-/** Stages every `[data-streams]` under `root` from the `.exchange` articles; no-op with reduced motion or below 1001px. */
+/**
+ * Stages every `[data-streams]` under `root` from the `.exchange` articles; no-op with reduced
+ * motion or below 1001px. An overlay inside a `[data-pinned]` runway is staged by the pin instead.
+ */
 export function initPaintingStreams(root: ParentNode): void {
   if (matchMedia("(prefers-reduced-motion: reduce)").matches) return;
   if (!matchMedia(DESKTOP_QUERY).matches) return;
-  const overlays = [...root.querySelectorAll<HTMLElement>("[data-streams]")];
+  const overlays = [...root.querySelectorAll<HTMLElement>("[data-streams]")].filter(
+    (overlay) => overlay.closest("[data-pinned]") === null,
+  );
   const exchanges = [...root.querySelectorAll<HTMLElement>(".exchange")];
   if (overlays.length === 0 || exchanges.length === 0) return;
   const ratios = exchanges.map(() => 0);

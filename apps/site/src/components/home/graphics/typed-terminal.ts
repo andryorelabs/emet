@@ -118,10 +118,21 @@ function play(typed: TypedExchange): void {
   requestAnimationFrame(frame);
 }
 
-/** Arms every `[data-typed]` exchange under `root`; does nothing with reduced motion. */
+const WAITING_STATE = "idle";
+
+function isWaiting(exchange: Element): boolean {
+  return exchange.getAttribute("data-step-state") === WAITING_STATE;
+}
+
+/**
+ * Arms every `[data-typed]` exchange under `root`; does nothing with reduced motion.
+ * An exchange types once it is in view and, when it carries `data-step-state`, once
+ * that state is no longer `idle` (the pinned runway of how it works sets it).
+ */
 export function initTypedTerminal(root: ParentNode): void {
   if (matchMedia("(prefers-reduced-motion: reduce)").matches) return;
   const armed = new Map<Element, TypedExchange>();
+  const visible = new Set<Element>();
   for (const exchange of root.querySelectorAll("[data-typed]")) {
     const typed = prepareExchange(exchange);
     if (!typed) continue;
@@ -132,16 +143,31 @@ export function initTypedTerminal(root: ParentNode): void {
     if (typed.command) renderCommand(typed.command, 0);
   }
   if (armed.size === 0) return;
-  const observer = new IntersectionObserver(
+  let observer: IntersectionObserver | undefined;
+  const tryPlay = (exchange: Element): void => {
+    const typed = armed.get(exchange);
+    if (!typed || !visible.has(exchange) || isWaiting(exchange)) return;
+    armed.delete(exchange);
+    observer?.unobserve(exchange);
+    play(typed);
+  };
+  const states = new MutationObserver((records) => {
+    for (const record of records) {
+      if (record.target instanceof Element) tryPlay(record.target);
+    }
+  });
+  observer = new IntersectionObserver(
     (entries) => {
       for (const entry of entries) {
-        const typed = armed.get(entry.target);
-        if (!entry.isIntersecting || !typed) continue;
-        observer.unobserve(entry.target);
-        play(typed);
+        if (entry.isIntersecting) visible.add(entry.target);
+        else visible.delete(entry.target);
+        tryPlay(entry.target);
       }
     },
     { threshold: VIEW_THRESHOLD },
   );
-  for (const exchange of armed.keys()) observer.observe(exchange);
+  for (const exchange of armed.keys()) {
+    states.observe(exchange, { attributes: true, attributeFilter: ["data-step-state"] });
+    observer.observe(exchange);
+  }
 }

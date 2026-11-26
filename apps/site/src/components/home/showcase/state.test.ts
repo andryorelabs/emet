@@ -4,6 +4,7 @@ import {
   clickStep,
   initialState,
   initialTrack,
+  releaseOverride,
   runwayProgress,
   scrollStep,
   stateForProgress,
@@ -43,18 +44,18 @@ describe("stateForProgress", () => {
   const merged = { held: false };
   const held = { held: true };
 
-  test("holds at 0.55 and above, releases at 0.45 and below", () => {
-    expect(stateForProgress(0.55, merged)).toEqual(held);
+  test("holds at 0.74 and above, releases at 0.66 and below", () => {
+    expect(stateForProgress(0.74, merged)).toEqual(held);
     expect(stateForProgress(1, merged)).toEqual(held);
-    expect(stateForProgress(0.45, held)).toEqual(merged);
+    expect(stateForProgress(0.66, held)).toEqual(merged);
     expect(stateForProgress(0, held)).toEqual(merged);
   });
 
   test("keeps the previous state inside the dead band", () => {
-    expect(stateForProgress(0.5, merged)).toEqual(merged);
-    expect(stateForProgress(0.5, held)).toEqual(held);
-    expect(stateForProgress(0.54, merged)).toEqual(merged);
-    expect(stateForProgress(0.46, held)).toEqual(held);
+    expect(stateForProgress(0.7, merged)).toEqual(merged);
+    expect(stateForProgress(0.7, held)).toEqual(held);
+    expect(stateForProgress(0.73, merged)).toEqual(merged);
+    expect(stateForProgress(0.67, held)).toEqual(held);
   });
 });
 
@@ -81,22 +82,26 @@ describe("click override", () => {
     expect(scrolled.track.overridden).toBe(true);
   });
 
-  test("the next threshold crossing clears the override and follows scroll", () => {
+  test("a threshold crossing does not clear the override", () => {
     const clicked = clickStep(initialState, initialTrack);
-    const crossed = scrollStep(0.6, clicked.state, clicked.track);
-    expect(crossed.track.overridden).toBe(false);
-    expect(crossed.state.held).toBe(true);
-    expect(scrollStep(0.3, crossed.state, crossed.track).state.held).toBe(false);
+    const crossed = scrollStep(0.8, clicked.state, clicked.track);
+    expect(crossed.track).toEqual({ natural: { held: true }, overridden: true });
+    expect(scrollStep(0.3, crossed.state, crossed.track).state.held).toBe(true);
   });
 
-  test("a click against the scroll side lasts until scroll crosses", () => {
-    const heldByScroll = scrollStep(0.7, initialState, initialTrack);
-    const clicked = clickStep(heldByScroll.state, heldByScroll.track);
+  test("a click against the scroll side keeps the choice until released", () => {
+    const byScroll = scrollStep(0.8, initialState, initialTrack);
+    const clicked = clickStep(byScroll.state, byScroll.track);
     expect(clicked.state.held).toBe(false);
     expect(scrollStep(0.9, clicked.state, clicked.track).state.held).toBe(false);
-    const crossed = scrollStep(0.2, clicked.state, clicked.track);
-    expect(crossed.state.held).toBe(false);
-    expect(crossed.track.overridden).toBe(false);
-    expect(scrollStep(0.7, crossed.state, crossed.track).state.held).toBe(true);
+    expect(scrollStep(0.2, clicked.state, clicked.track).state.held).toBe(false);
+  });
+
+  test("releasing the override lets scroll drive the state again", () => {
+    const clicked = clickStep(initialState, initialTrack);
+    const released = releaseOverride(clicked.track);
+    expect(released.overridden).toBe(false);
+    expect(scrollStep(0.8, clicked.state, released).state.held).toBe(true);
+    expect(scrollStep(0.2, clicked.state, released).state.held).toBe(false);
   });
 });

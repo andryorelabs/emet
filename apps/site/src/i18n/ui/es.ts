@@ -31,7 +31,7 @@ export const es = {
     lineOne: "De la idea al merge,",
     lineTwo: "con una aprobación.",
     sentence:
-      "Un plugin para Claude Code y Codex. De la idea al cambio integrado, con una sola aprobación.",
+      "Un flujo de trabajo para Claude Code y Codex. De la idea al cambio integrado, con una sola aprobación.",
     install: "Instalar emet",
     readDocs: "Leer la documentación",
     alt: "Un valle pintado donde tres arroyos se unen en un río, con campos en terrazas y un pequeño gólem de arcilla sobre una loma cubierta de hierba bajo un cielo en calma.",
@@ -64,6 +64,13 @@ export const es = {
   },
   features: {
     heading: "Lo que protege una ejecución",
+    scenes: {
+      approve: "Aprobar",
+      approveName: "Aprobar: mantén pulsado",
+      approved: "Aprobado",
+      gateName: "Puerta de revisión: 1 comentario, resuelto",
+      gateTip: "oleada 2: 1 comentario, resuelto",
+    },
     notes: [
       { title: "Una sola aprobación", line: "Especificación y tickets, revisados una vez." },
       { title: "Una revisión por oleada", line: "Un revisor comprueba cada oleada." },
@@ -170,8 +177,30 @@ export const es = {
     action: "Instalar emet",
     alt: "Un valle bajo una neblina matinal baja, con un sol pálido y un cielo en tonos pastel.",
   },
+  companion: {
+    label: "Compañero golem de emet, pulsa para abrir el menú",
+    menu: "Pregunta a emet",
+    sleep: "Descansando. Desplázate para despertarme.",
+    work: "Lámpara encendida. Leyendo la especificación.",
+    wait: "En espera. Nada se fusiona.",
+    done: "Listo. Una aprobación, fusionado.",
+    questions: [
+      {
+        question: "¿Qué es emet?",
+        answer:
+          "Un flujo de trabajo para Claude Code y Codex. De la idea al cambio fusionado, con una sola aprobación.",
+      },
+      {
+        question: "¿Cómo lo instalo?",
+        answer: "curl -fsSL https://emet.andryore.dev/install.sh | sh",
+      },
+      { question: "¿Es gratis?", answer: "Sí. emet tiene licencia MIT." },
+      { question: "¿Dónde está la documentación?", answer: "Está a un clic." },
+    ],
+    docs: "Abrir la documentación",
+  },
   footer: {
-    description: "Plugin para Claude Code y Codex.",
+    description: "Flujo de trabajo para Claude Code y Codex.",
     notice: "Sin afiliación ni respaldo de Anthropic u OpenAI",
     docs: "Documentación",
     whatsNew: "Novedades",

@@ -7,6 +7,8 @@
  * `object-position` as the painting, so the eyes stay on the painted eyes at
  * any viewport. Decorative CSS shapes with no inline styles (the CSP forbids
  * them), so every position lives in `graphics.css`; off with reduced motion.
+ * It is the fallback of `paintingFx`: while a host carries `data-fx="on"`,
+ * the clouds, glints and eyes here are hidden and the WebGL layers take over.
  */
 // oxlint-disable-next-line import/no-unassigned-import -- Astro bundles a stylesheet imported for its side effect
 import "../../../styles/graphics.css";

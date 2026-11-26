@@ -408,3 +408,380 @@ test.describe("mobile sheet visibility and navigation", () => {
     await expect(menuButton).toHaveAttribute("aria-expanded", "false");
   });
 });
+
+const WIDE = { width: 1440, height: 900 } as const;
+const NARROW = { width: 390, height: 844 } as const;
+
+/**
+ * Opens a home page with the motion preference given.
+ */
+async function openHome(
+  page: Page,
+  viewport: { readonly width: number; readonly height: number },
+  motion: "reduce" | "no-preference",
+  path = "/",
+): Promise<void> {
+  await page.emulateMedia({ reducedMotion: motion });
+  await page.setViewportSize(viewport);
+  await page.goto(path);
+  await expect(page.locator("h1").first()).toBeAttached();
+}
+
+/**
+ * Scrolls the window so a runway sits at `progress` of its pinned travel.
+ */
+async function scrollRunway(page: Page, selector: string, progress: number): Promise<void> {
+  await page.evaluate(
+    ({ target, amount }) => {
+      const runway = document.querySelector(target);
+      if (runway === null) throw new Error(`missing ${target}`);
+      const rect = runway.getBoundingClientRect();
+      const travel = rect.height - window.innerHeight;
+      window.scrollTo({
+        top: rect.top + window.scrollY + amount * travel,
+        behavior: "instant",
+      });
+    },
+    { target: selector, amount: progress },
+  );
+}
+
+/**
+ * Whether the page scrolls sideways.
+ */
+async function overflowsHorizontally(page: Page): Promise<boolean> {
+  return page.evaluate(
+    () => document.documentElement.scrollWidth > document.documentElement.clientWidth,
+  );
+}
+
+test.describe("home How it works runway", () => {
+  test("pins at 1440 and the steps change at about 30% and 62%", async ({ page }) => {
+    await openHome(page, WIDE, "no-preference");
+    const runway = page.locator("[data-how-pin]");
+    await expect(runway).toHaveAttribute("data-pinned", "true");
+    const height = await runway.evaluate((element) => element.getBoundingClientRect().height);
+    expect(height).toBeGreaterThan(WIDE.height * 3.5);
+    for (const [progress, step] of [
+      [0.1, "0"],
+      [0.45, "1"],
+      [0.85, "2"],
+    ] as const) {
+      /* oxlint-disable-next-line eslint/no-await-in-loop -- sequential on purpose: each step depends on the scroll before it */
+      await scrollRunway(page, "[data-how-pin]", progress);
+      /* oxlint-disable-next-line eslint/no-await-in-loop -- sequential on purpose: each step depends on the scroll before it */
+      await expect(runway).toHaveAttribute("data-step", step);
+    }
+    await expect(runway.locator(".step").nth(2)).toHaveAttribute("data-step-state", "on");
+    await expect(runway.locator(".step").nth(0)).toHaveAttribute("data-step-state", "done");
+    await expect(runway.locator("[data-streams]").first()).toHaveAttribute("data-stage", "2");
+  });
+
+  test("the code block offers Claude Code and Codex tabs and copies the active command", async ({
+    context,
+    page,
+  }) => {
+    await context.grantPermissions(["clipboard-read", "clipboard-write"]);
+    await openHome(page, WIDE, "reduce");
+    const block = page.locator("[data-how-pin] [data-code-block]").filter({
+      has: page.getByRole("tab", { name: "Codex" }),
+    });
+    const tabs = block.getByRole("tab");
+    await expect(tabs).toHaveCount(2);
+    await expect(tabs.nth(0)).toHaveText("Claude Code");
+    await expect(tabs.nth(0)).toHaveAttribute("aria-selected", "true");
+    await block.scrollIntoViewIfNeeded();
+    await block.locator("[data-copy]").click();
+    await expect(block.locator("[data-copy]")).toHaveAttribute("data-state", "copied");
+    expect(await page.evaluate(() => navigator.clipboard.readText())).toMatch(/^\/emet:run /);
+    await tabs.nth(1).click();
+    await expect(tabs.nth(1)).toHaveAttribute("aria-selected", "true");
+    await block.locator("[data-copy]").click();
+    await expect(block.locator("[data-copy]")).toHaveAttribute("data-state", "copied");
+    expect(await page.evaluate(() => navigator.clipboard.readText())).toMatch(/^\$emet:run /);
+  });
+
+  test("stacks all three steps at 390 with no pin and no sideways scroll", async ({ page }) => {
+    await openHome(page, NARROW, "no-preference");
+    const runway = page.locator("[data-how-pin]");
+    await expect(runway).not.toHaveAttribute("data-pinned", /.*/);
+    await expect(runway.locator(".step")).toHaveCount(3);
+    await expect(runway.locator(".step[data-step-state]")).toHaveCount(0);
+    await runway.scrollIntoViewIfNeeded();
+    expect(await overflowsHorizontally(page)).toBe(false);
+  });
+
+  test("shows the stacked final state at 1440 under reduced motion", async ({ page }) => {
+    await openHome(page, WIDE, "reduce");
+    const runway = page.locator("[data-how-pin]");
+    await expect(runway).not.toHaveAttribute("data-pinned", /.*/);
+    const height = await runway.evaluate((element) => element.getBoundingClientRect().height);
+    expect(height).toBeLessThan(WIDE.height * 3.5);
+    await expect(runway.locator(".step .step-inner").last()).toBeAttached();
+  });
+});
+
+test.describe("home bento interactions", () => {
+  test.beforeEach(async ({ page }) => {
+    await openHome(page, WIDE, "reduce");
+  });
+
+  test("holding the approval button for 0.9 s stamps and announces it", async ({ page }) => {
+    const scene = page.locator('[data-interact="approval"]');
+    const button = scene.locator(".approval-button");
+    await button.scrollIntoViewIfNeeded();
+    await button.hover();
+    await page.mouse.down();
+    await page.waitForTimeout(1200);
+    await page.mouse.up();
+    await expect(scene).toHaveAttribute("data-done", "");
+    await expect(scene.locator(".approval-status")).not.toBeEmpty();
+  });
+
+  test("releasing the approval button early approves nothing", async ({ page }) => {
+    const scene = page.locator('[data-interact="approval"]');
+    const button = scene.locator(".approval-button");
+    await button.scrollIntoViewIfNeeded();
+    await button.hover();
+    await page.mouse.down();
+    await page.waitForTimeout(300);
+    await page.mouse.up();
+    await page.waitForTimeout(800);
+    await expect(scene).not.toHaveAttribute("data-done", /.*/);
+    await expect(scene.locator(".approval-status")).toBeEmpty();
+  });
+
+  test("the features flag toggle holds the wave and releases it", async ({ page }) => {
+    const scene = page.locator('[data-interact="flags"]');
+    const toggle = scene.locator(".flags-toggle");
+    await toggle.scrollIntoViewIfNeeded();
+    await expect(toggle).toHaveAttribute("aria-pressed", "false");
+    await toggle.click();
+    await expect(toggle).toHaveAttribute("aria-pressed", "true");
+    await expect(scene).toHaveAttribute("data-held", "");
+    await expect(scene.locator(".flags-caption")).not.toBeEmpty();
+    await toggle.click();
+    await expect(toggle).toHaveAttribute("aria-pressed", "false");
+    await expect(scene.locator(".flags-caption")).toBeEmpty();
+  });
+});
+
+test.describe("home showcase", () => {
+  test("pins at 1440, auto-flags past 74% and stops auto-flagging after a click", async ({
+    page,
+  }) => {
+    await openHome(page, WIDE, "no-preference");
+    const showcase = page.locator("[data-showcase]");
+    const flag = showcase.locator("[data-showcase-flag]");
+    await expect(showcase).toHaveAttribute("data-pinned", /.*/);
+    await scrollRunway(page, "[data-showcase]", 0.3);
+    await expect(flag).toHaveAttribute("aria-pressed", "false");
+    await scrollRunway(page, "[data-showcase]", 0.9);
+    await expect(flag).toHaveAttribute("aria-pressed", "true");
+    await expect(showcase).toHaveAttribute("data-state", "held");
+    await flag.click();
+    await expect(flag).toHaveAttribute("aria-pressed", "false");
+    await scrollRunway(page, "[data-showcase]", 0.95);
+    await page.waitForTimeout(400);
+    await expect(flag).toHaveAttribute("aria-pressed", "false");
+  });
+
+  test("stacks with the switch usable at 390 and no sideways scroll", async ({ page }) => {
+    await openHome(page, NARROW, "no-preference");
+    const showcase = page.locator("[data-showcase]");
+    await expect(showcase).not.toHaveAttribute("data-pinned", /.*/);
+    const flag = showcase.locator("[data-showcase-flag]");
+    await flag.scrollIntoViewIfNeeded();
+    await flag.click();
+    await expect(flag).toHaveAttribute("aria-pressed", "true");
+    expect(await overflowsHorizontally(page)).toBe(false);
+  });
+
+  test("shows the stacked final state under reduced motion at 1440", async ({ page }) => {
+    await openHome(page, WIDE, "reduce");
+    const showcase = page.locator("[data-showcase]");
+    await expect(showcase).not.toHaveAttribute("data-pinned", /.*/);
+    await expect(showcase.locator("[data-showcase-lanes]")).toBeAttached();
+    expect(await overflowsHorizontally(page)).toBe(false);
+  });
+});
+
+test.describe("home closing", () => {
+  test("copies the exact install command", async ({ context, page }) => {
+    await context.grantPermissions(["clipboard-read", "clipboard-write"]);
+    await openHome(page, WIDE, "reduce");
+    const copy = page.locator("[data-closing-copy]");
+    await copy.scrollIntoViewIfNeeded();
+    await copy.click();
+    await expect(copy).toHaveAttribute("data-state", "copied");
+    expect(await page.evaluate(() => navigator.clipboard.readText())).toBe(
+      "curl -fsSL https://emet.andryore.dev/install.sh | sh",
+    );
+  });
+});
+
+test.describe("home companion", () => {
+  const COMPANION = "[data-companion]";
+  const BUTTON = "[data-companion-button]";
+  const MENU = "[data-companion-menu]";
+
+  /**
+   * Scrolls past the hero so the companion wakes.
+   */
+  async function wakeCompanion(page: Page): Promise<void> {
+    await page.evaluate(() => {
+      window.scrollTo({ top: window.innerHeight * 2, behavior: "instant" });
+    });
+    await expect(page.locator(COMPANION)).not.toHaveAttribute("data-away", /.*/);
+  }
+
+  /**
+   * Reads one inline custom property of the companion.
+   */
+  async function companionProperty(page: Page, name: string): Promise<string> {
+    return page
+      .locator(COMPANION)
+      .evaluate((element, property) => element.style.getPropertyValue(property), name);
+  }
+
+  test("stays away over the hero", async ({ page }) => {
+    await openHome(page, WIDE, "no-preference");
+    await expect(page.locator(COMPANION)).toHaveAttribute("data-away", "");
+  });
+
+  test("opens a four-question menu and Escape closes it returning the focus", async ({ page }) => {
+    await openHome(page, WIDE, "reduce");
+    await wakeCompanion(page);
+    const button = page.locator(BUTTON);
+    await button.click();
+    await expect(page.locator(MENU).getByRole("menuitem")).toHaveCount(4);
+    await expect(button).toHaveAttribute("aria-expanded", "true");
+    await page.keyboard.press("Escape");
+    await expect(page.locator(MENU)).toBeHidden();
+    await expect(button).toBeFocused();
+  });
+
+  test("arrow keys move through the menu and an outside click closes it", async ({ page }) => {
+    await openHome(page, WIDE, "reduce");
+    await wakeCompanion(page);
+    await page.locator(BUTTON).click();
+    const items = page.locator(MENU).getByRole("menuitem");
+    await items.nth(0).focus();
+    await page.keyboard.press("ArrowDown");
+    await expect(items.nth(1)).toBeFocused();
+    await page.mouse.click(40, 300);
+    await expect(page.locator(MENU)).toBeHidden();
+  });
+
+  test("choosing a question shows its fixed answer", async ({ page }) => {
+    await openHome(page, WIDE, "reduce");
+    await wakeCompanion(page);
+    await page.locator(BUTTON).click();
+    const first = page.locator(MENU).getByRole("menuitem").first();
+    const answer = await first.getAttribute("data-answer");
+    await first.click();
+    await expect(page.locator("[data-companion-say]")).toHaveText(answer ?? "");
+  });
+
+  test("drags with the pointer and springs back on release without opening the menu", async ({
+    page,
+  }) => {
+    await openHome(page, WIDE, "no-preference");
+    await wakeCompanion(page);
+    const button = page.locator(BUTTON);
+    const box = await button.boundingBox();
+    expect(box).not.toBeNull();
+    if (box === null) return;
+    const centerX = box.x + box.width / 2;
+    const centerY = box.y + box.height / 2;
+    await page.mouse.move(centerX, centerY);
+    await page.mouse.down();
+    await page.mouse.move(centerX - 80, centerY - 60, { steps: 6 });
+    await expect.poll(() => companionProperty(page, "--companion-dx")).not.toBe("");
+    expect(await companionProperty(page, "--companion-dx")).not.toBe("0px");
+    await page.mouse.up();
+    await expect(page.locator(COMPANION)).toHaveAttribute("data-back", "");
+    await expect.poll(() => companionProperty(page, "--companion-dx")).toBe("0px");
+    await expect(button).toHaveAttribute("aria-expanded", "false");
+  });
+
+  test("under reduced motion the eyes hold still and dragging moves nothing", async ({ page }) => {
+    await openHome(page, WIDE, "reduce");
+    await wakeCompanion(page);
+    const box = await page.locator(BUTTON).boundingBox();
+    expect(box).not.toBeNull();
+    if (box === null) return;
+    const centerX = box.x + box.width / 2;
+    const centerY = box.y + box.height / 2;
+    await page.mouse.move(centerX, centerY);
+    await page.mouse.down();
+    await page.mouse.move(centerX - 120, centerY - 120, { steps: 6 });
+    await page.mouse.up();
+    expect(await companionProperty(page, "--eye-x")).toBe("");
+    expect(await companionProperty(page, "--companion-dx")).toBe("");
+  });
+
+  test("copying a command moves the companion to its done state", async ({ context, page }) => {
+    await context.grantPermissions(["clipboard-read", "clipboard-write"]);
+    await openHome(page, WIDE, "reduce");
+    await wakeCompanion(page);
+    const copy = page.locator("[data-closing-copy]");
+    await copy.scrollIntoViewIfNeeded();
+    await copy.click();
+    await expect(page.locator(COMPANION)).toHaveAttribute("data-state", "done");
+  });
+});
+
+test.describe("home layout at both widths", () => {
+  for (const [name, viewport] of [
+    ["1440", WIDE],
+    ["390", NARROW],
+  ] as const) {
+    for (const motion of ["reduce", "no-preference"] as const) {
+      for (const path of ["/", "/es/"]) {
+        test(`${path} has no horizontal scroll at ${name} with ${motion} motion`, async ({
+          page,
+        }) => {
+          await openHome(page, viewport, motion, path);
+          expect(await overflowsHorizontally(page)).toBe(false);
+          await page.evaluate(() => {
+            window.scrollTo({ top: document.documentElement.scrollHeight, behavior: "instant" });
+          });
+          expect(await overflowsHorizontally(page)).toBe(false);
+        });
+      }
+    }
+  }
+});
+
+test.describe("home content security policy", () => {
+  for (const motion of ["reduce", "no-preference"] as const) {
+    test(`a full scroll with ${motion} motion raises no securitypolicyviolation`, async ({
+      page,
+    }) => {
+      await page.addInitScript(() => {
+        const violations: string[] = [];
+        Object.defineProperty(window, "__cspViolations", { value: violations });
+        document.addEventListener("securitypolicyviolation", (event) => {
+          violations.push(`${event.violatedDirective} ${event.blockedURI}`);
+        });
+      });
+      await openHome(page, WIDE, motion);
+      await page.evaluate(async () => {
+        const height = document.documentElement.scrollHeight;
+        for (let top = 0; top < height; top += 600) {
+          window.scrollTo({ top, behavior: "instant" });
+          /* oxlint-disable-next-line eslint/no-await-in-loop -- sequential on purpose: each step depends on the scroll before it */
+          await new Promise((resolve) => {
+            requestAnimationFrame(resolve);
+          });
+        }
+      });
+      const violations = await page.evaluate((): string[] => {
+        const value: unknown = Reflect.get(window, "__cspViolations");
+        return Array.isArray(value) ? value.map(String) : [];
+      });
+      expect(violations).toEqual([]);
+    });
+  }
+});

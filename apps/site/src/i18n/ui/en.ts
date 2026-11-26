@@ -30,7 +30,7 @@ export const en = {
     name: "emet",
     lineOne: "Spec to merge,",
     lineTwo: "on one approval.",
-    sentence: "A plugin for Claude Code and Codex. Idea to merged change, one approval.",
+    sentence: "A workflow for Claude Code and Codex. Idea to merged change, one approval.",
     install: "Install emet",
     readDocs: "Read the docs",
     alt: "A painted valley where three streams join one river, with terraced fields and a small clay golem on a grassy rise under a calm sky.",
@@ -61,6 +61,13 @@ export const en = {
   },
   features: {
     heading: "What a run guards",
+    scenes: {
+      approve: "Approve",
+      approveName: "Approve: press and hold",
+      approved: "Approved",
+      gateName: "Review gate: 1 comment, resolved",
+      gateTip: "wave 2: 1 comment, resolved",
+    },
     notes: [
       { title: "One approval", line: "Spec and tickets, reviewed once." },
       { title: "A review per wave", line: "A reviewer checks every wave." },
@@ -163,8 +170,30 @@ export const en = {
     action: "Install emet",
     alt: "A valley under low morning mist with a pale sun and pastel sky.",
   },
+  companion: {
+    label: "emet golem companion, press to open the menu",
+    menu: "Ask emet",
+    sleep: "Resting. Scroll to wake me.",
+    work: "Lamp on. Reading the spec.",
+    wait: "Held. Nothing merges.",
+    done: "Done. One approval, merged.",
+    questions: [
+      {
+        question: "What is emet?",
+        answer:
+          "A workflow for Claude Code and Codex. From idea to merged change, on one approval.",
+      },
+      {
+        question: "How do I install it?",
+        answer: "curl -fsSL https://emet.andryore.dev/install.sh | sh",
+      },
+      { question: "Is it free?", answer: "Yes. emet is MIT licensed." },
+      { question: "Where are the docs?", answer: "They are one click away." },
+    ],
+    docs: "Open the docs",
+  },
   footer: {
-    description: "Plugin for Claude Code and Codex.",
+    description: "Workflow for Claude Code and Codex.",
     notice: "Not affiliated with or endorsed by Anthropic or OpenAI",
     docs: "Docs",
     whatsNew: "What's new",
