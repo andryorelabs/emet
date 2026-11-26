@@ -49,15 +49,17 @@ const duskSrcset = duskVariants
       loading="lazy"
       decoding="async"
     />
-    <img
-      class="showcase-dusk"
-      alt=""
-      data-srcset={duskSrcset}
-      data-sizes="100vw"
-      width={duskVariants[2]?.options.width}
-      height={duskVariants[2]?.options.height}
-      decoding="async"
-    />
+    <picture data-fx-dusk>
+      <img
+        class="showcase-dusk"
+        alt=""
+        data-srcset={duskSrcset}
+        data-sizes="100vw"
+        width={duskVariants[2]?.options.width}
+        height={duskVariants[2]?.options.height}
+        decoding="async"
+      />
+    </picture>
     <Valley variant="showcase"><Fireflies /></Valley>
   </div>
   <div class="showcase-marks" aria-hidden="true">
@@ -89,4 +91,16 @@ const duskSrcset = duskVariants
 <script>
   // oxlint-disable-next-line import/no-unassigned-import -- the module wires itself to the page
   import "./showcase/showcase";
+  import { initShowcaseFx } from "./showcase/fx";
+
+  const root = document.querySelector<HTMLElement>("[data-showcase]");
+  const frame = root?.querySelector<HTMLElement>(".showcase-frame");
+  const flag = root?.querySelector<HTMLElement>(".showcase-switch");
+  if (root && frame && flag) {
+    initShowcaseFx(frame, flag, (callback) => {
+      new MutationObserver(() => {
+        callback(root.dataset.state === "held");
+      }).observe(root, { attributes: true, attributeFilter: ["data-state"] });
+    });
+  }
 </script>
