@@ -50,4 +50,16 @@ describe("Stats band", () => {
       /@media \(max-width: 600px\) \{\s*\.stats-grid \{\s*grid-template-columns: repeat\(2, minmax\(0, 1fr\)\)/,
     );
   });
+
+  it("matches the prototype digit size, curve, bar and night background", () => {
+    expect(css).toMatch(
+      /\.stat-value \{[^}]*font-size: clamp\(80px, 10vw, 150px\)[^}]*font-weight: 300/,
+    );
+    expect(css).toMatch(
+      /\.odo-roll \{[^}]*transition: transform 1\.8s cubic-bezier\(0\.2, 0\.8, 0\.2, 1\)/,
+    );
+    expect(css).toMatch(/\.stat::before \{[^}]*transition: transform 1\.6s ease/);
+    expect(css).toMatch(/transition-delay: calc\(var\(--order\) \* 120ms\)/);
+    expect(css).toMatch(/\.stats \{[^}]*background: var\(--bg\)[^}]*padding-block: 120px 110px/);
+  });
 });
