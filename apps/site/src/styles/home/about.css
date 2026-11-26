@@ -76,27 +76,22 @@
 @media (prefers-reduced-motion: no-preference) {
   html[data-motion] .hebrew-aleph {
     position: relative;
-    transition: color 600ms var(--ease-out) 300ms;
+    color: color-mix(in oklab, var(--text) calc(100% - 65% * var(--strike, 0)), transparent);
   }
 
   html[data-motion] .hebrew-aleph::after {
     content: "";
     position: absolute;
-    inset-inline: 0;
+    inset-inline: -6%;
     top: 52%;
-    height: 3px;
-    background: var(--text);
-    transform: scaleX(0);
-    transform-origin: right;
-    transition: transform 300ms var(--ease-out);
+    height: 4px;
+    background: var(--error);
+    transform: rotate(-24deg) scaleX(var(--strike, 0));
+    transform-origin: left;
   }
 
-  html[data-motion] .hebrew-pair.is-in .hebrew-aleph {
-    color: color-mix(in oklab, var(--text) 25%, transparent);
-  }
-
-  html[data-motion] .hebrew-pair.is-in .hebrew-aleph::after {
-    transform: scaleX(1);
+  .portrait-frame canvas[data-state="ready"] {
+    display: block;
   }
 }
 
@@ -124,6 +119,19 @@
 
 .portrait {
   margin: 0;
+}
+
+.portrait-frame {
+  position: relative;
+}
+
+.portrait-frame canvas {
+  display: none;
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  border-radius: var(--radius-panel);
 }
 
 .portrait picture,
