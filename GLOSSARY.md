@@ -44,6 +44,14 @@ _Avoid_: landing, landing page (**Landing** is how a wave reaches trunk)
 An interactive part of the Website that hydrates a component in the browser; everything else on the Website is rendered ahead of time and hydrates no component.
 _Avoid_: widget, component (a component can be static)
 
+**Parity harness**:
+The repeatable command that captures the prototype and the production build side by side and reports how far apart they are; it advises, it never blocks a build.
+_Avoid_: visual regression test (it compares against a reference design, not a previous build)
+
+**Parity capture**:
+One image pair, prototype and Website, at a fixed viewport, colour scheme, motion setting and scroll progress.
+_Avoid_: screenshot (a screenshot has no reference side)
+
 **Coordinator**:
 The single session that runs the phases, dispatches workers, merges their branches and is the only writer of the tracker.
 _Avoid_: orchestrator, manager, lead
