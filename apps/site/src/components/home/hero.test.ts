@@ -40,8 +40,9 @@ describe("Home hero", () => {
   });
 
   it("gives the home header white ink over the hero", () => {
+    expect(ruleBody(siteCss, ":root")).toContain("--ink-over-painting: oklch(0.985 0.013 150)");
     expect(ruleBody(siteCss, ".site-header--home")).toContain(
-      "--header-ink: oklch(0.985 0.013 150)",
+      "--header-ink: var(--ink-over-painting)",
     );
   });
 });

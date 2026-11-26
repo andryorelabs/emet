@@ -110,7 +110,7 @@
 }
 
 .site-header--home .search-button-keys kbd {
-  border-color: rgb(255 255 255 / 0.3);
+  border-color: color-mix(in oklab, var(--ink-over-painting) 30%, transparent);
 }
 
 @media (min-width: 1280px) {

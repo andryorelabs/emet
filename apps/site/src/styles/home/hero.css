@@ -199,7 +199,7 @@
   align-items: center;
   min-height: 48px;
   padding: 0 24px;
-  border: 1px solid rgb(255 255 255 / 0.5);
+  border: 1px solid color-mix(in oklab, var(--ink-over-painting) 50%, transparent);
   border-radius: var(--radius-control);
   backdrop-filter: blur(6px);
   color: inherit;
