@@ -26,5 +26,27 @@ export function initBentoInteractions(root: ParentNode): void {
     if (init === undefined || wired.has(element)) continue;
     wired.add(element);
     init(element);
+    announce(element, element.dataset.interact ?? "");
+  }
+}
+
+/**
+ * Reports the visitor actions of the approval and flags scenes to the
+ * companion as `CustomEvent`s on `window`: a finished hold-to-approve
+ * (`data-done` appears) and a flag toggle (with the held state).
+ */
+function announce(element: HTMLElement, name: string): void {
+  if (name === "flags") {
+    element.querySelector(".flags-toggle")?.addEventListener("click", () => {
+      globalThis.dispatchEvent(
+        new CustomEvent("emet:flag-toggle", { detail: { held: "held" in element.dataset } }),
+      );
+    });
+  }
+  if (name === "approval") {
+    new MutationObserver(() => {
+      if ("done" in element.dataset)
+        globalThis.dispatchEvent(new CustomEvent("emet:approval-hold"));
+    }).observe(element, { attributeFilter: ["data-done"] });
   }
 }

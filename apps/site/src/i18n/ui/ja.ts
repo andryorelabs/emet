@@ -181,6 +181,28 @@ export const ja = {
     action: "emet をインストール",
     alt: "低い朝霧に包まれた谷。淡い太陽とパステルの空。",
   },
+  companion: {
+    label: "emet のゴーレムコンパニオン、押すとメニューが開きます",
+    menu: "emet に質問",
+    sleep: "休憩中。スクロールすると起きます。",
+    work: "ランプ点灯。仕様を読んでいます。",
+    wait: "保留中。何もマージされません。",
+    done: "完了。承認は一度で、マージ済みです。",
+    questions: [
+      {
+        question: "emet とは?",
+        answer:
+          "Claude Code と Codex のためのワークフローです。アイデアからマージまで、承認は一度だけです。",
+      },
+      {
+        question: "インストール方法は?",
+        answer: "curl -fsSL https://emet.andryore.dev/install.sh | sh",
+      },
+      { question: "無料ですか?", answer: "はい。emet は MIT ライセンスです。" },
+      { question: "ドキュメントはどこ?", answer: "ワンクリックで開けます。" },
+    ],
+    docs: "ドキュメントを開く",
+  },
   footer: {
     description: "Claude Code と Codex のワークフロー。",
     notice: "Anthropic または OpenAI とは提携しておらず、その承認も受けていません",
