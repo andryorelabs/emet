@@ -42,9 +42,9 @@
   inset: 0;
   border-radius: inherit;
   background: radial-gradient(
-    220px circle at var(--spot-x, 50%) var(--spot-y, 50%),
-    color-mix(in oklab, var(--lamp) 16%, transparent),
-    transparent 70%
+    420px circle at var(--spot-x, 50%) var(--spot-y, 50%),
+    color-mix(in oklab, var(--moss) 18%, transparent),
+    transparent 60%
   );
   opacity: 0;
   pointer-events: none;

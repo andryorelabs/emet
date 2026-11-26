@@ -11,7 +11,14 @@ import {
   trackerRow,
   type TrackerKind,
 } from "./tracker-chips";
-import { createTyper, initWorkerDiff, TYPE_INTERVAL_MS, typedPrefix } from "./worker-diff";
+import {
+  createTyper,
+  initWorkerDiff,
+  TYPE_DURATION_MS,
+  TYPE_INTERVAL_MS,
+  TYPE_STEPS,
+  typedPrefix,
+} from "./worker-diff";
 
 const globals = globalThis as Record<string, unknown>;
 
@@ -153,6 +160,14 @@ describe("typedPrefix", () => {
     expect(typedPrefix("abc", 2)).toBe("ab");
     expect(typedPrefix("abc", 9)).toBe("abc");
     expect(typedPrefix("abc", -1)).toBe("");
+  });
+});
+
+describe("typing cadence", () => {
+  it("types a 16 character diff in 0.7 s over 16 steps", () => {
+    expect(TYPE_DURATION_MS).toBe(700);
+    expect(TYPE_STEPS).toBe(16);
+    expect(TYPE_INTERVAL_MS * TYPE_STEPS).toBe(TYPE_DURATION_MS);
   });
 });
 
