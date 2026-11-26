@@ -2,33 +2,47 @@
 /**
  * Looping picture of the workers card: the trunk sprouts three branches into
  * three worktree boxes, a cursor types in each in parallel and each box marks
- * a check. Its resting state is the finished frame. Decorative and
- * `aria-hidden`.
+ * a check. Its resting state is the finished frame. Each box is a real button,
+ * `inert` until script wires it to type a mini diff on hover or focus; the
+ * rest is decorative and `aria-hidden`.
  */
 // oxlint-disable-next-line import/no-unassigned-import -- Astro bundles a stylesheet imported for its side effect
 import "../../../../styles/bento/scene.css";
 // oxlint-disable-next-line import/no-unassigned-import -- Astro bundles a stylesheet imported for its side effect
 import "../../../../styles/bento/workers.css";
 
-const worktrees = ["cla-254-home-layout", "cla-255-code-blocks", "cla-256-docker-deploy"];
+const worktrees = [
+  { name: "cla-254-home-layout", diff: "+ grid-cols: 12" },
+  { name: "cla-255-code-blocks", diff: "+ wrap: pre-wrap" },
+  { name: "cla-256-docker-deploy", diff: "+ FROM oven/bun" },
+];
 ---
 
-<div class="scene scene-workers bento-visual" data-scene aria-hidden="true">
+<div class="scene scene-workers bento-visual" data-scene data-interact="workers">
   <ul class="trees">
-    <li class="trees-root">repo/</li>
+    <li class="trees-root" aria-hidden="true">repo/</li>
     {
       worktrees.map((tree) => (
         <li class="trees-branch">
-          <span class="trees-box">
-            <span class="trees-name">{tree}</span>
-            <span class="trees-typing">
+          <button type="button" class="trees-box" data-diff={tree.diff} inert>
+            <span class="trees-name">{tree.name}</span>
+            <span class="trees-typing" aria-hidden="true">
               <i />
               <i />
             </span>
-            <span class="trees-check" />
-          </span>
+            <span class="trees-mini" aria-hidden="true" />
+            <span class="trees-check" aria-hidden="true" />
+          </button>
         </li>
       ))
     }
   </ul>
 </div>
+
+<script>
+  import { initBentoInteractions, registerScene } from "../interact/registry";
+  import { initWorkerDiff } from "../interact/worker-diff";
+
+  registerScene("workers", initWorkerDiff);
+  initBentoInteractions(document);
+</script>

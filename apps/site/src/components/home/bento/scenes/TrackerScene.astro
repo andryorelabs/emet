@@ -2,15 +2,20 @@
 /**
  * Looping picture of the tracker card: the selection pill slides between the
  * trackers while one ticket advances from todo to closed. Its resting state is
- * the finished frame: GitHub picked and the ticket closed. Decorative and
- * `aria-hidden`.
+ * the finished frame: GitHub picked and the ticket closed. The chips are real
+ * `aria-pressed` buttons, `inert` until script wires them to swap the ticket
+ * row; the ticket itself is decorative and `aria-hidden`.
  */
 // oxlint-disable-next-line import/no-unassigned-import -- Astro bundles a stylesheet imported for its side effect
 import "../../../../styles/bento/scene.css";
 // oxlint-disable-next-line import/no-unassigned-import -- Astro bundles a stylesheet imported for its side effect
 import "../../../../styles/bento/tracker.css";
 
-const trackers = ["Linear", "GitHub", "local files"];
+const trackers = [
+  { kind: "linear", label: "Linear" },
+  { kind: "github", label: "GitHub" },
+  { kind: "local", label: "local files" },
+];
 const statuses = [
   { name: "todo", key: "todo" },
   { name: "in progress", key: "progress" },
@@ -19,15 +24,23 @@ const statuses = [
 ];
 ---
 
-<div class="scene scene-tracker bento-visual" data-scene aria-hidden="true">
+<div class="scene scene-tracker bento-visual" data-scene data-interact="tracker">
   <div class="tracker-stage">
     <div class="tracker-track">
-      <span class="tracker-pill"></span>
+      <span class="tracker-pill" aria-hidden="true"></span>
       <ul class="tracker-chips">
-        {trackers.map((tracker) => <li class="tracker-chip">{tracker}</li>)}
+        {
+          trackers.map((tracker) => (
+            <li>
+              <button type="button" class="tracker-chip" data-kind={tracker.kind} aria-pressed="false" inert>
+                {tracker.label}
+              </button>
+            </li>
+          ))
+        }
       </ul>
     </div>
-    <div class="tracker-ticket">
+    <div class="tracker-ticket" aria-hidden="true">
       <span class="tracker-id">CLA-254</span>
       <span class="tracker-state">
         <span class="tracker-statuses">
@@ -42,3 +55,11 @@ const statuses = [
     </div>
   </div>
 </div>
+
+<script>
+  import { initBentoInteractions, registerScene } from "../interact/registry";
+  import { initTrackerChips } from "../interact/tracker-chips";
+
+  registerScene("tracker", initTrackerChips);
+  initBentoInteractions(document);
+</script>

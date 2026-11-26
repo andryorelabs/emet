@@ -23,6 +23,12 @@ const variants = await Promise.all(
 );
 const preloadSrcset = variants.map((variant) => `${variant.src} ${variant.options.width}w`).join(", ");
 const { hero } = strings;
+const phrases = JSON.stringify([
+  strings.showcase.statusHeld,
+  strings.showcase.status,
+  strings.how.caption,
+  hero.lineTwo,
+]);
 ---
 
 <link
@@ -33,7 +39,7 @@ const { hero } = strings;
   imagesizes="100vw"
   fetchpriority="high"
 />
-<section class="hero" data-recede aria-labelledby="hero-title">
+<section class="hero" data-recede data-phrases={phrases} aria-labelledby="hero-title">
   <Picture
     class="hero-picture"
     src={heroImage}
@@ -47,6 +53,19 @@ const { hero } = strings;
     decoding="async"
   />
   <Valley variant="hero" />
+  <div class="hero-rays" aria-hidden="true"></div>
+  <svg class="hero-grain" aria-hidden="true" focusable="false">
+    <filter id="hero-grain-noise">
+      <feTurbulence type="fractalNoise" baseFrequency="0.85" numOctaves="2" stitchTiles="stitch"></feTurbulence>
+    </filter>
+    <rect width="100%" height="100%" filter="url(#hero-grain-noise)"></rect>
+  </svg>
+  <div class="hero-light" data-hero-light hidden aria-hidden="true"></div>
+  <canvas class="hero-fireflies" data-hero-fireflies hidden aria-hidden="true"></canvas>
+  <button class="hero-golem" data-hero-golem type="button" hidden aria-describedby="hero-bubble">
+    <span class="sr-only">{hero.name}</span>
+  </button>
+  <p class="hero-bubble" id="hero-bubble" data-hero-bubble role="status"></p>
   <div class="hero-copy">
     <h1 id="hero-title">
       <span class="sr-only">{hero.name}. </span>
@@ -66,8 +85,11 @@ const { hero } = strings;
 
 <script>
   import { initAmbient } from "./graphics/ambient";
+  import { initHeroFx } from "./hero-fx";
   import { initMotion } from "./motion/motion";
 
   initMotion(document);
   initAmbient(document);
+  const heroSection = document.querySelector<HTMLElement>(".hero");
+  if (heroSection) initHeroFx(heroSection);
 </script>
