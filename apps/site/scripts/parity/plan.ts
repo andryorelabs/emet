@@ -1,14 +1,46 @@
 /** Which build a capture was taken from. */
 export type Side = "prototype" | "site";
 
-/** One screenshot to take: a section of one side at a scroll progress. */
+/** The page width and height of a capture variant. */
+interface Viewport {
+  readonly width: number;
+  readonly height: number;
+}
+
+/** One browser configuration: a viewport, a colour scheme and a motion preference. */
+export interface Variant {
+  readonly id: string;
+  readonly viewport: Viewport;
+  readonly scheme: "light" | "dark";
+  readonly motion: "motion" | "reduced";
+}
+
+/** One screenshot to take: a section of one side at a scroll progress under one variant. */
 export interface Capture {
   readonly side: Side;
+  readonly variant: string;
   readonly section: string;
   readonly selector: string;
   readonly progress: number;
   readonly file: string;
 }
+
+const VIEWPORTS: readonly { readonly name: string; readonly viewport: Viewport }[] = [
+  { name: "desktop", viewport: { width: 1440, height: 900 } },
+  { name: "mobile", viewport: { width: 390, height: 844 } },
+];
+
+/** Every browser configuration captured: both viewports, both colour schemes, motion and reduced motion. */
+export const VARIANTS: readonly Variant[] = VIEWPORTS.flatMap(({ name, viewport }) =>
+  (["light", "dark"] as const).flatMap((scheme) =>
+    (["motion", "reduced"] as const).map((motion) => ({
+      id: `${name}-${scheme}-${motion}`,
+      viewport,
+      scheme,
+      motion,
+    })),
+  ),
+);
 
 /** The sections compared, with the selector of each on both sides. */
 export const SECTIONS: readonly {
@@ -26,28 +58,53 @@ export const SECTIONS: readonly {
   { name: "closing", prototype: "#close", site: ".closing" },
 ];
 
-/** The scroll progress through each section at which both sides are captured. */
-export const PROGRESS_STEPS: readonly number[] = [0, 0.25, 0.5, 0.75, 1];
+/** The scroll progresses captured for sections without their own steps. */
+export const DEFAULT_PROGRESS_STEPS: readonly number[] = [0, 0.25, 0.5, 0.75, 1];
+
+/** The scroll progresses of the sections whose motion has its own beats. */
+const SECTION_PROGRESS_STEPS: Readonly<Record<string, readonly number[]>> = {
+  how: [0, 0.15, 0.45, 0.62, 1],
+  showcase: [0, 0.3, 0.7, 0.74, 1],
+};
+
+/** The scroll progresses at which a section is captured on both sides. */
+export function progressSteps(section: string): readonly number[] {
+  return SECTION_PROGRESS_STEPS[section] ?? DEFAULT_PROGRESS_STEPS;
+}
 
 /** Milliseconds to wait after a scroll so smooth scrolling and effects settle. */
 export const SETTLE_MS = 1600;
 
-/** The file name of a capture, without a directory. */
-export function captureFile(side: Side, section: string, progress: number): string {
-  return `${side}-${section}-${Math.round(progress * 100)}.png`;
+/** Milliseconds to wait after a scroll when motion is reduced and little needs to settle. */
+export const REDUCED_SETTLE_MS = 500;
+
+/** The settle time of a variant. */
+export function settleMs(variant: Variant): number {
+  return variant.motion === "reduced" ? REDUCED_SETTLE_MS : SETTLE_MS;
 }
 
-/** Every capture of both sides: each section at each progress step. */
-export function captureTargets(): Capture[] {
+/** The file name of a capture, without a directory. */
+export function captureFile(
+  side: Side,
+  variant: string,
+  section: string,
+  progress: number,
+): string {
+  return `${side}-${variant}-${section}-${Math.round(progress * 100)}.png`;
+}
+
+/** Every capture of both sides under one variant: each section at each of its progress steps. */
+export function captureTargets(variant: string): Capture[] {
   const sides: readonly Side[] = ["prototype", "site"];
   return sides.flatMap((side) =>
     SECTIONS.flatMap((entry) =>
-      PROGRESS_STEPS.map((progress) => ({
+      progressSteps(entry.name).map((progress) => ({
         side,
+        variant,
         section: entry.name,
         selector: entry[side],
         progress,
-        file: captureFile(side, entry.name, progress),
+        file: captureFile(side, variant, entry.name, progress),
       })),
     ),
   );
@@ -63,26 +120,59 @@ export function scrollTarget(
   return sectionTop + Math.max(0, sectionHeight - viewportHeight) * progress;
 }
 
-/** A prototype capture and the site capture of the same section and progress. */
-export interface CapturePair {
+/** A prototype capture and the site capture of the same variant, section and progress. */
+interface CapturePair {
+  readonly variant: string;
   readonly section: string;
   readonly progress: number;
   readonly prototype: string;
   readonly site: string;
 }
 
-/** Pairs prototype and site captures by section and progress; an unmatched capture is dropped. */
-export function pairCaptures(captures: readonly Capture[]): CapturePair[] {
+/** A capture that exists on one side only. */
+export interface MissingCapture {
+  readonly variant: string;
+  readonly section: string;
+  readonly progress: number;
+  readonly missing: Side;
+}
+
+/** The paired and the one-sided captures of a run. */
+export interface Pairing {
+  readonly pairs: readonly CapturePair[];
+  readonly missing: readonly MissingCapture[];
+}
+
+/** Pairs the expected captures that were taken on both sides, and lists each expected capture that was not taken as missing on its side. */
+export function pairCaptures(expected: readonly Capture[], captured: readonly Capture[]): Pairing {
+  const taken = new Set(captured.map((capture) => capture.file));
   const sites = new Map(
-    captures
+    expected
       .filter((capture) => capture.side === "site")
-      .map((capture) => [`${capture.section}@${capture.progress}`, capture.file]),
+      .map((capture) => [`${capture.variant}@${capture.section}@${capture.progress}`, capture]),
   );
-  return captures.flatMap((capture) => {
-    const site = sites.get(`${capture.section}@${capture.progress}`);
-    if (capture.side !== "prototype" || site === undefined) return [];
-    return [
-      { section: capture.section, progress: capture.progress, prototype: capture.file, site },
-    ];
-  });
+  const pairs: CapturePair[] = [];
+  const missing: MissingCapture[] = [];
+  for (const capture of expected) {
+    const site = sites.get(`${capture.variant}@${capture.section}@${capture.progress}`);
+    if (taken.has(capture.file)) {
+      if (capture.side === "prototype" && site !== undefined && taken.has(site.file)) {
+        pairs.push({
+          variant: capture.variant,
+          section: capture.section,
+          progress: capture.progress,
+          prototype: capture.file,
+          site: site.file,
+        });
+      }
+    } else {
+      missing.push({
+        variant: capture.variant,
+        section: capture.section,
+        progress: capture.progress,
+        missing: capture.side,
+      });
+    }
+  }
+  return { pairs, missing };
 }
