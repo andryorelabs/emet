@@ -211,6 +211,43 @@ describe("initLanes", () => {
     expect(cancelled).toHaveLength(2);
   });
 
+  test("idles while the active gate is closed and resumes when it reopens", () => {
+    const rec = recorder();
+    const canvas = makeCanvas(rec);
+    let active = false;
+    initLanes(canvas, { reduce: false, isHeld: () => held, isActive: () => active });
+    observers[0]?.set(true);
+    expect(frames).toHaveLength(0);
+    active = true;
+    canvas.dispatchEvent(new Event(LANES_REFRESH_EVENT));
+    expect(frames).toHaveLength(1);
+    active = false;
+    canvas.dispatchEvent(new Event(LANES_REFRESH_EVENT));
+    expect(cancelled).toHaveLength(1);
+  });
+
+  test("measures on start and resize, not on every frame", () => {
+    const rec = recorder();
+    const canvas = makeCanvas(rec);
+    let measures = 0;
+    canvas.getBoundingClientRect = () => {
+      measures += 1;
+      return new DOMRect(0, 0, 320, 140);
+    };
+    const handle = initLanes(canvas, { reduce: false, isHeld: () => held });
+    expect(measures).toBe(1);
+    observers[0]?.set(true);
+    expect(measures).toBe(2);
+    frames.shift()?.(100);
+    frames.shift()?.(200);
+    expect(measures).toBe(2);
+    globalThis.dispatchEvent(new Event("resize"));
+    expect(measures).toBe(3);
+    handle.destroy();
+    globalThis.dispatchEvent(new Event("resize"));
+    expect(measures).toBe(3);
+  });
+
   test("destroy stops the loop and disconnects the observer", () => {
     const rec = recorder();
     const handle = initLanes(makeCanvas(rec), { reduce: false, isHeld: () => held });
