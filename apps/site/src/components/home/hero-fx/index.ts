@@ -1,4 +1,4 @@
-import { fxEnabled, paintingFx, VALLEY_PAINTING } from "../graphics/painting-fx";
+import { coverGeometry, fxEnabled, paintingFx, VALLEY_PAINTING } from "../graphics/painting-fx";
 import type { Point, PaintingFxHandle } from "../graphics/painting-fx";
 import { applyCursorLight, easePoint } from "./cursor-light";
 import {
@@ -9,17 +9,25 @@ import {
   stepFirefly,
 } from "./fireflies";
 import type { Firefly } from "./fireflies";
-import { bubblePlacement, golemPlacement, initGolemHotspot } from "./golem-hotspot";
+import {
+  BLINK_POINT,
+  bubblePlacement,
+  golemPlacement,
+  initGolemHotspot,
+  isNearPoint,
+  RING_POINT,
+  ringPlacement,
+  spawnRing,
+} from "./golem-hotspot";
 
 const GOLEM_POINT: Point = [1385, 690];
-const HERO_OBJECT_POSITION: readonly [number, number] = [0.5, 1];
+const HERO_OBJECT_POSITION: readonly [number, number] = [0.5, 0.62];
 const MAX_PIXEL_RATIO = 2;
 const MAX_STEP_MS = 40;
 
 /** Facts that decide whether the hero effects run. */
 export interface HeroFxEnv {
   readonly reducedMotion: boolean;
-  readonly viewportWidth: number;
   readonly coarsePointer: boolean;
 }
 
@@ -53,7 +61,6 @@ export function gazeOf(pointer: PointerState): { x: number; y: number } | null {
 function readEnv(): HeroFxEnv {
   return {
     reducedMotion: matchMedia("(prefers-reduced-motion: reduce)").matches,
-    viewportWidth: innerWidth,
     coarsePointer: matchMedia("(pointer: coarse)").matches,
   };
 }
@@ -70,11 +77,14 @@ function place(element: HTMLElement, x: number, y: number, size?: number): void 
 /**
  * Starts the hero effects inside `root` (the hero section): fireflies that
  * avoid the cursor, a soft cursor light, the golem hotspot and `paintingFx`
- * (clouds, river, eyes following the cursor). Nothing starts for reduced
- * motion, small screens or coarse pointers; the loop pauses off screen and on
- * a hidden tab. Rays and grain are plain CSS and need no script.
+ * (clouds, river, eyes following the cursor and blinking when it nears the
+ * golem). Nothing starts for reduced motion or coarse pointers; the loop pauses off screen and on
+ * a hidden tab. `startPainting` is injectable for tests. Rays and grain are plain CSS and need no script.
  */
-export function initHeroFx(root: HTMLElement): { destroy(): void } {
+export function initHeroFx(
+  root: HTMLElement,
+  startPainting: typeof paintingFx = paintingFx,
+): { destroy(): void } {
   const canvas = root.querySelector<HTMLCanvasElement>("[data-hero-fireflies]");
   const light = root.querySelector<HTMLElement>("[data-hero-light]");
   const button = root.querySelector<HTMLElement>("[data-hero-golem]");
@@ -91,6 +101,8 @@ export function initHeroFx(root: HTMLElement): { destroy(): void } {
   let visible = false;
   let frame = 0;
   let lastTime = 0;
+  let nearGolem = false;
+  let geometry = coverGeometry(VALLEY_PAINTING.size, size(), HERO_OBJECT_POSITION);
 
   function size(): { width: number; height: number } {
     return { width: root.clientWidth, height: root.clientHeight };
@@ -106,6 +118,7 @@ export function initHeroFx(root: HTMLElement): { destroy(): void } {
       flies.length === 0
         ? createFireflies(FIREFLY_COUNT, box, Math.random)
         : clampHomes(flies, box);
+    geometry = coverGeometry(VALLEY_PAINTING.size, box, HERO_OBJECT_POSITION);
     const spot = golemPlacement(VALLEY_PAINTING.size, box, HERO_OBJECT_POSITION, GOLEM_POINT);
     const bubbleAt = bubblePlacement(spot, box.width);
     place(elements.button, spot.x, spot.y, spot.width);
@@ -118,6 +131,9 @@ export function initHeroFx(root: HTMLElement): { destroy(): void } {
     lastTime = now;
     if (!pointer.inside) pointer.target = [root.clientWidth * 0.5, root.clientHeight * 0.6];
     pointer.eased = easePoint(pointer.eased, pointer.target);
+    const near = pointer.inside && isNearPoint(pointer.target, BLINK_POINT, geometry);
+    if (near && !nearGolem) painting.blink();
+    nearGolem = near;
     applyCursorLight(elements.light, pointer.eased, pointer.inside);
     drawing.clearRect(0, 0, root.clientWidth, root.clientHeight);
     flies = flies.map((fly) => stepFirefly(fly, pointer.inside ? pointer.eased : null, dt, now));
@@ -164,7 +180,7 @@ export function initHeroFx(root: HTMLElement): { destroy(): void } {
   canvas.hidden = false;
   light.hidden = false;
   button.hidden = false;
-  const painting: PaintingFxHandle = paintingFx(root, {
+  const painting: PaintingFxHandle = startPainting(root, {
     painting: VALLEY_PAINTING,
     effects: { clouds: true, water: true, eyes: true },
     objectPosition: HERO_OBJECT_POSITION,
@@ -174,7 +190,11 @@ export function initHeroFx(root: HTMLElement): { destroy(): void } {
     button,
     bubble,
     phrases: readPhrases(root.dataset.phrases),
-    onClick: painting.glow.bind(painting),
+    onClick: () => {
+      painting.glow();
+      const box = ringPlacement(VALLEY_PAINTING.size, size(), HERO_OBJECT_POSITION, RING_POINT);
+      spawnRing(root, box);
+    },
   });
   observer.observe(root);
   root.addEventListener("pointermove", onMove);

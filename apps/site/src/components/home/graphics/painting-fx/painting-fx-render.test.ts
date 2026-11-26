@@ -256,8 +256,8 @@ describe("layout helpers", () => {
   });
 
   test("cloudTransform drifts with a sine and stretches", () => {
-    expect(cloudTransform(0, 1000)).toBe("translateX(0.00px) scaleX(1.05)");
-    expect(cloudTransform(17500, 1000)).toBe("translateX(26.00px) scaleX(1.05)");
+    expect(cloudTransform(0)).toBe("translateX(0.00px) scaleX(1.05)");
+    expect(cloudTransform(17500)).toBe("translateX(38.00px) scaleX(1.05)");
   });
 
   test("canvasSize rounds and never drops below two pixels", () => {

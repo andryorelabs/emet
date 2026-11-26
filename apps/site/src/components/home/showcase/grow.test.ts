@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 
-import { frameInset, panelOpacity } from "./grow";
+import { frameInset, growEase, headingOpacity, panelOpacity } from "./grow";
 
 describe("frameInset", () => {
   test("starts as an inset card with all four marks visible", () => {
@@ -24,12 +24,37 @@ describe("frameInset", () => {
   });
 });
 
+describe("growEase", () => {
+  test("eases the grow from 0 at the start to 1 at 40%", () => {
+    expect(growEase(0)).toBe(0);
+    expect(growEase(0.2)).toBeCloseTo(0.5);
+    expect(growEase(0.4)).toBe(1);
+    expect(growEase(2)).toBe(1);
+  });
+});
+
 describe("panelOpacity", () => {
-  test("is hidden before 70% and opaque from 80%", () => {
-    expect(panelOpacity(0.5)).toBe(0);
-    expect(panelOpacity(0.7)).toBe(0);
-    expect(panelOpacity(0.75)).toBeCloseTo(0.5);
-    expect(panelOpacity(0.8)).toBe(1);
+  test("follows (e - 0.7) / 0.3 on the eased grow value", () => {
+    expect(panelOpacity(0)).toBe(0);
+    expect(panelOpacity(0.2)).toBe(0);
+    expect(panelOpacity(0.4)).toBe(1);
     expect(panelOpacity(1)).toBe(1);
+    const progress = 0.3;
+    expect(panelOpacity(progress)).toBeCloseTo((growEase(progress) - 0.7) / 0.3);
+  });
+
+  test("is visible from about 25% and full at 40%", () => {
+    expect(panelOpacity(0.25)).toBe(0);
+    expect(panelOpacity(0.27)).toBeGreaterThan(0);
+    expect(panelOpacity(0.4)).toBe(1);
+  });
+});
+
+describe("headingOpacity", () => {
+  test("is clamp(e * 1.6): fully visible from e = 0.625", () => {
+    expect(headingOpacity(0)).toBe(0);
+    expect(headingOpacity(0.2)).toBeCloseTo(0.8);
+    expect(headingOpacity(0.3)).toBe(1);
+    expect(headingOpacity(1)).toBe(1);
   });
 });

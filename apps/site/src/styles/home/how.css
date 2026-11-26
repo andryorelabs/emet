@@ -141,16 +141,14 @@
   flex: none;
 }
 
-.how[data-pinned] .step {
-  transition: opacity 400ms var(--ease-out);
+.how[data-pinned] .step[data-step-state="idle"] h3,
+.how[data-pinned] .step[data-step-state="done"] h3 {
+  color: var(--text-muted);
 }
 
-.how[data-pinned] .step[data-step-state="idle"] {
-  opacity: 0.7;
-}
-
-.how[data-pinned] .step[data-step-state="done"] {
-  opacity: 0.7;
+.how[data-pinned] .step[data-step-state="idle"]::before,
+.how[data-pinned] .step[data-step-state="idle"] .step-dot {
+  opacity: 0.38;
 }
 
 .how[data-pinned] .step[data-step-state="idle"] .step-dot {
@@ -161,21 +159,47 @@
   box-shadow: 0 0 0 6px color-mix(in oklab, var(--lamp) 30%, transparent);
 }
 
-.how[data-pinned] .step:not([data-step-state="on"]) .step-body {
+.how[data-pinned] .step[data-step-state="idle"] .step-body {
   grid-template-rows: 0fr;
 }
 
-.how[data-pinned] .step:not([data-step-state="on"]) .step-inner {
+.how[data-pinned] .step[data-step-state="idle"] .step-inner {
   overflow: hidden;
   padding-top: 0;
 }
 
+.how[data-pinned] .step[data-step-state="done"] .step-inner {
+  padding-top: 12px;
+}
+
+.how[data-pinned] .step[data-step-state="done"] .step-inner > :not(.emet-code:first-of-type),
+.how[data-pinned] .step[data-step-state="done"] .emet-code__header {
+  display: none;
+}
+
+.how[data-pinned] .step[data-step-state="done"] .emet-code {
+  height: 42px;
+  overflow: hidden;
+}
+
+.how[data-pinned] .step[data-step-state="done"] .emet-code pre {
+  padding-block: 9px;
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .how[data-pinned] .step h3,
+  .how[data-pinned] .step::before,
+  .how[data-pinned] .step-dot {
+    transition:
+      color 500ms var(--ease-out),
+      opacity 500ms var(--ease-out);
+  }
+}
+
 @media (prefers-reduced-motion: no-preference) {
   .how[data-pinned] .step-body {
-    transition: grid-template-rows 400ms var(--ease-out);
-  }
-
-  .how[data-pinned] .step:not([data-step-state="on"]) .step-body {
     transition: grid-template-rows 400ms var(--ease-out);
   }
 }
