@@ -28,11 +28,19 @@ describe("FAQ", () => {
     }
   });
 
-  it("drops the panel animation when motion is reduced", () => {
+  it("animates the panel through grid rows and rotates the plus", () => {
+    expect(css).toContain("grid-template-columns: minmax(0, 380px) minmax(0, 1fr)");
+    expect(css).toMatch(/grid-template-rows: 1fr;/);
+    expect(css).toMatch(/\[data-ending-style\] \{\s*grid-template-rows: 0fr;/);
+    expect(css).toContain('[aria-expanded="true"]::after');
+    expect(css).toContain("rotate(45deg)");
+    expect(faqAccordionSource).toContain("data-faq-more");
+  });
+
+  it("drops the panel transition when motion is reduced", () => {
     expect(css).toMatch(
-      /@media \(prefers-reduced-motion: reduce\) \{\s*\[data-faq-item\] \[data-slot="accordion-content"\] \{\s*animation: none;/,
+      /@media \(prefers-reduced-motion: reduce\) \{\s*\[data-faq-item\] \[data-slot="accordion-content"\],\s*\[data-faq-item\] \[data-faq-trigger\]::after \{\s*transition: none;/,
     );
     expect(css).not.toContain(".faq-chevron");
-    expect(css).toContain("[data-faq-item]");
   });
 });
