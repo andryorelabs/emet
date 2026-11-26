@@ -12,7 +12,7 @@ export interface Firefly {
 }
 
 export const FIREFLY_AVOID_RADIUS = 80;
-export const FIREFLY_COUNT = 15;
+export const FIREFLY_COUNT = 9;
 const FIREFLY_PUSH = 0.9;
 const FIREFLY_SPRING = 0.0006;
 const FIREFLY_DRIFT = 0.004;

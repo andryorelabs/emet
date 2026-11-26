@@ -1,6 +1,5 @@
 import { describe, expect, test } from "bun:test";
 
-import { FX_MAX_SMALL_VIEWPORT } from "./enable";
 import { BLINK_MS, GAZE_FULL_DISTANCE, GAZE_MAX_UNITS, GLOW_DECAY_MS } from "./eyes";
 import {
   blink,
@@ -189,20 +188,17 @@ describe("eyes", () => {
 describe("fxEnabled", () => {
   const base: FxEnv = {
     reducedMotion: false,
-    viewportWidth: 1440,
     coarsePointer: false,
     webgl: true,
   };
 
-  test("is on for a wide fine-pointer viewer with WebGL", () => {
+  test("is on for a fine-pointer viewer with WebGL at any width", () => {
     expect(fxEnabled(base)).toBe(true);
-    expect(fxEnabled({ ...base, viewportWidth: FX_MAX_SMALL_VIEWPORT + 1 })).toBe(true);
+    expect(fxEnabled({ ...base, viewportWidth: 390 } as FxEnv)).toBe(true);
   });
 
   test.each([
     ["reduced motion", { reducedMotion: true }],
-    ["viewport at 900px", { viewportWidth: 900 }],
-    ["narrow viewport", { viewportWidth: 390 }],
     ["coarse pointer", { coarsePointer: true }],
     ["no WebGL", { webgl: false }],
   ])("is off with %s", (_name, patch) => {
