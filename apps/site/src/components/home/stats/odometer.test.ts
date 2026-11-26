@@ -112,7 +112,7 @@ describe("initOdometer", () => {
   test("rolls every item once the band is in view, then disconnects", () => {
     initOdometer(band());
     const [observer] = observers;
-    expect(observer?.options).toEqual({ threshold: 0.3 });
+    expect(observer?.options).toEqual({ threshold: 0.35 });
     expect(stats().every((stat) => stat.dataset.rolled === undefined)).toBe(true);
     observer?.callback([{ isIntersecting: false }]);
     expect(stats().every((stat) => stat.dataset.rolled === undefined)).toBe(true);

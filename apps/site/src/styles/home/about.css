@@ -59,6 +59,18 @@
   color: var(--text-muted);
 }
 
+.hebrew-pair {
+  flex-wrap: wrap;
+}
+
+.latin {
+  padding-bottom: 18px;
+  font-size: clamp(56px, 7vw, 92px);
+  font-weight: 500;
+  line-height: 1;
+  letter-spacing: -0.04em;
+}
+
 @media (max-width: 600px) {
   .hebrew {
     font-size: 40px;
@@ -88,6 +100,17 @@
     background: var(--error);
     transform: rotate(-24deg) scaleX(var(--strike, 0));
     transform-origin: left;
+  }
+
+  html[data-motion] .latin-e {
+    opacity: calc(1 - 0.65 * var(--strike, 0));
+    text-decoration: line-through;
+    text-decoration-thickness: 4px;
+    text-decoration-color: color-mix(
+      in oklab,
+      var(--error) calc(var(--strike, 0) * 100%),
+      transparent
+    );
   }
 
   .portrait-frame canvas[data-state="ready"] {

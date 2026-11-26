@@ -17,7 +17,7 @@ const CLOSING_PAINTING: PaintingData = {
     [1353.5, 674],
     [1388.1, 674.7],
   ],
-  objectPosition: [0.5, 1],
+  objectPosition: [0.5, 0.7],
 };
 
 /** Starts the Closing effects on `host`, with the eyes looking at `command`. */
