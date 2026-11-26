@@ -146,6 +146,24 @@ export const zhCN = {
     action: "安装 emet",
     alt: "低垂晨雾下的山谷，淡淡的太阳和粉彩色的天空。",
   },
+  companion: {
+    label: "emet 魔像伙伴，按下以打开菜单",
+    menu: "向 emet 提问",
+    sleep: "休息中。滚动页面唤醒我。",
+    work: "灯已亮起。正在阅读规格。",
+    wait: "已搁置。不会合并任何内容。",
+    done: "完成。一次批准，已合并。",
+    questions: [
+      {
+        question: "emet 是什么？",
+        answer: "面向 Claude Code 和 Codex 的工作流。从想法到合并，只需一次批准。",
+      },
+      { question: "如何安装？", answer: "curl -fsSL https://emet.andryore.dev/install.sh | sh" },
+      { question: "免费吗？", answer: "是的。emet 采用 MIT 许可证。" },
+      { question: "文档在哪里？", answer: "只需点击一下。" },
+    ],
+    docs: "打开文档",
+  },
   footer: {
     description: "Claude Code 和 Codex 的工作流。",
     notice: "与 Anthropic 或 OpenAI 无关联，也未获得 Anthropic 或 OpenAI 认可",

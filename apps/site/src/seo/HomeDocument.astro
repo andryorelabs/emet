@@ -8,6 +8,7 @@
 import "../styles/home.css";
 
 import DocsSearch from "../components/docs/DocsSearch.astro";
+import Companion from "../components/home/companion/Companion.astro";
 import About from "../components/home/About.astro";
 import Closing from "../components/home/Closing.astro";
 import Faq from "../components/home/Faq.astro";
@@ -46,5 +47,6 @@ const strings = getStrings(locale);
     <Faq strings={strings} locale={locale} />
     <Closing strings={strings} />
   </main>
+  <Companion strings={strings} locale={locale} />
   <SiteFooter locale={locale} strings={strings.footer} />
 </BaseLayout>

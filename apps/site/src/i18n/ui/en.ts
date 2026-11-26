@@ -170,6 +170,28 @@ export const en = {
     action: "Install emet",
     alt: "A valley under low morning mist with a pale sun and pastel sky.",
   },
+  companion: {
+    label: "emet golem companion, press to open the menu",
+    menu: "Ask emet",
+    sleep: "Resting. Scroll to wake me.",
+    work: "Lamp on. Reading the spec.",
+    wait: "Held. Nothing merges.",
+    done: "Done. One approval, merged.",
+    questions: [
+      {
+        question: "What is emet?",
+        answer:
+          "A workflow for Claude Code and Codex. From idea to merged change, on one approval.",
+      },
+      {
+        question: "How do I install it?",
+        answer: "curl -fsSL https://emet.andryore.dev/install.sh | sh",
+      },
+      { question: "Is it free?", answer: "Yes. emet is MIT licensed." },
+      { question: "Where are the docs?", answer: "They are one click away." },
+    ],
+    docs: "Open the docs",
+  },
   footer: {
     description: "Workflow for Claude Code and Codex.",
     notice: "Not affiliated with or endorsed by Anthropic or OpenAI",
