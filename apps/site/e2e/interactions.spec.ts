@@ -298,6 +298,26 @@ test.describe("page actions", () => {
     await page.locator('[data-page-actions] a[data-step="prev"]').click();
     await expect(page).toHaveURL(/\/docs\/start\/install\/$/);
   });
+
+  for (const colorScheme of ["light", "dark"] as const) {
+    test(`the previous and next links use the text color in ${colorScheme} mode`, async ({
+      page,
+    }) => {
+      await page.emulateMedia({ colorScheme, reducedMotion: "reduce" });
+      await page.setViewportSize(DESKTOP);
+      await page.goto("/docs/start/install/");
+      const colors = await page.evaluate(() => {
+        const step = document.querySelector('[data-page-actions] a[data-step="next"]');
+        const heading = document.querySelector("h1");
+        return {
+          step: step === null ? "" : getComputedStyle(step).color,
+          heading: heading === null ? "" : getComputedStyle(heading).color,
+        };
+      });
+      expect(colors.step).not.toBe("");
+      expect(colors.step).toBe(colors.heading);
+    });
+  }
 });
 
 test.describe("install tabs", () => {

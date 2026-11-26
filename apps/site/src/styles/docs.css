@@ -481,3 +481,7 @@ mobile-starlight-toc .caret {
 .pagination-links a svg {
   font-size: 1.5rem;
 }
+
+[data-page-actions] a[data-step] {
+  color: var(--text);
+}
