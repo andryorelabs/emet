@@ -175,6 +175,7 @@ function mount(root: HTMLElement): void {
     state = next.state;
     track = next.track;
     render();
+    globalThis.dispatchEvent(new CustomEvent("emet:flag-toggle", { detail: { held: state.held } }));
   });
   applyPin();
   applyLanes();

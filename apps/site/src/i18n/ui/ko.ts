@@ -168,6 +168,28 @@ export const ko = {
     action: "emet 설치",
     alt: "낮게 깔린 아침 안개 아래의 계곡. 옅은 해와 파스텔빛 하늘.",
   },
+  companion: {
+    label: "emet 골렘 컴패니언, 눌러서 메뉴 열기",
+    menu: "emet에게 묻기",
+    sleep: "쉬는 중입니다. 스크롤하면 깨어납니다.",
+    work: "램프 켜짐. 스펙을 읽는 중입니다.",
+    wait: "보류 중. 아무것도 병합되지 않습니다.",
+    done: "완료. 승인은 한 번, 병합되었습니다.",
+    questions: [
+      {
+        question: "emet이 무엇인가요?",
+        answer:
+          "Claude Code와 Codex를 위한 워크플로입니다. 아이디어에서 병합까지, 승인은 한 번입니다.",
+      },
+      {
+        question: "어떻게 설치하나요?",
+        answer: "curl -fsSL https://emet.andryore.dev/install.sh | sh",
+      },
+      { question: "무료인가요?", answer: "네. emet은 MIT 라이선스입니다." },
+      { question: "문서는 어디에 있나요?", answer: "한 번의 클릭이면 됩니다." },
+    ],
+    docs: "문서 열기",
+  },
   footer: {
     description: "Claude Code와 Codex용 워크플로.",
     notice: "Anthropic 또는 OpenAI와 제휴하거나 Anthropic 또는 OpenAI의 보증을 받지 않았습니다",

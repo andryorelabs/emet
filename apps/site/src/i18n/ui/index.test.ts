@@ -42,6 +42,19 @@ describe("getStrings", () => {
   });
 });
 
+describe("companion strings", () => {
+  for (const locale of LOCALES) {
+    test(`${locale} has four questions, each with an answer`, () => {
+      const { questions } = getStrings(locale).companion;
+      expect(questions).toHaveLength(4);
+      for (const item of questions) {
+        expect(item.question.length).toBeGreaterThan(0);
+        expect(item.answer.length).toBeGreaterThan(0);
+      }
+    });
+  }
+});
+
 const HOST_NAMES = ["Claude Code", "Codex"] as const;
 
 /**

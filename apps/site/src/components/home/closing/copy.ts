@@ -13,6 +13,9 @@ export async function copyCommand(
 ): Promise<boolean> {
   try {
     await clipboard.writeText(text);
+    if (typeof globalThis.dispatchEvent === "function") {
+      globalThis.dispatchEvent(new CustomEvent("emet:copy"));
+    }
     return true;
   } catch {
     return false;

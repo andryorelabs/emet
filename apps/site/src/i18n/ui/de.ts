@@ -175,6 +175,28 @@ export const de = {
     action: "emet installieren",
     alt: "Ein Tal unter tiefem Morgennebel mit blasser Sonne und Pastellhimmel.",
   },
+  companion: {
+    label: "emet-Golem-Begleiter, drücken, um das Menü zu öffnen",
+    menu: "Frag emet",
+    sleep: "Ich ruhe. Scrolle, um mich zu wecken.",
+    work: "Lampe an. Ich lese die Spezifikation.",
+    wait: "Angehalten. Nichts wird gemergt.",
+    done: "Fertig. Eine Freigabe, gemergt.",
+    questions: [
+      {
+        question: "Was ist emet?",
+        answer:
+          "Ein Workflow für Claude Code und Codex. Von der Idee zur gemergten Änderung, mit einer einzigen Freigabe.",
+      },
+      {
+        question: "Wie installiere ich es?",
+        answer: "curl -fsSL https://emet.andryore.dev/install.sh | sh",
+      },
+      { question: "Ist es kostenlos?", answer: "Ja. emet steht unter der MIT-Lizenz." },
+      { question: "Wo finde ich die Dokumentation?", answer: "Nur einen Klick entfernt." },
+    ],
+    docs: "Dokumentation öffnen",
+  },
   footer: {
     description: "Workflow für Claude Code und Codex.",
     notice:
