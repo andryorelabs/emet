@@ -206,10 +206,10 @@ describe("browser verification prompts", () => {
     expect(reviewer).toContain("verification-gap");
   });
 
-  test("the fenced Browser axis block starts with the review-run constant", () => {
+  test("the review-run constant equals the fenced Browser axis block", () => {
     const reviewer = read("emet/reference/reviewer-prompt.md");
     const fenced = /## Browser axis text[\s\S]*?```\n([\s\S]*?)\n```/.exec(reviewer);
-    expect(fenced?.[1]?.startsWith(BROWSER_AXIS_PROMPT)).toBe(true);
+    expect(fenced?.[1]).toBe(BROWSER_AXIS_PROMPT);
   });
 
   test("the closeout fills {{browser_verify}} only on browserVerify.run: true", () => {

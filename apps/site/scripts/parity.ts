@@ -18,7 +18,7 @@ import { buildReport, summaryLine, type MeasuredPair } from "./parity/report";
 const siteRoot = join(import.meta.dir, "..");
 const distDir = join(siteRoot, "dist");
 const prototypeDir = join(siteRoot, "design", "prototype-v17");
-const assetsDir = join(siteRoot, "src", "assets");
+const assetDirs = [join(siteRoot, "src", "assets"), join(siteRoot, "design", "pictures")];
 const outputDir = join(siteRoot, "e2e", ".output", "parity");
 const prototypeImages = ["hero", "held", "bookend", "portrait", "source"];
 const viewport = { width: 1440, height: 900 };
@@ -50,8 +50,10 @@ function stagePrototype(): string {
   cpSync(join(prototypeDir, "parts"), join(staged, "parts"), { recursive: true });
   mkdirSync(join(staged, "img"));
   for (const name of prototypeImages) {
-    const source = join(assetsDir, `${name}.webp`);
-    if (existsSync(source)) cpSync(source, join(staged, "img", `${name}.webp`));
+    const source = assetDirs
+      .map((dir) => join(dir, `${name}.webp`))
+      .find((file) => existsSync(file));
+    if (source !== undefined) cpSync(source, join(staged, "img", `${name}.webp`));
     else console.log(`parity: missing asset ${name}.webp, the prototype renders without it`);
   }
   return staged;
