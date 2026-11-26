@@ -6,6 +6,7 @@ Spec: standalone install (spec 1 of the v0.22 plan)
 Amends [0008](0008-standalone-binaries-and-plugin-distribution.md): `install.sh` is replaced by `emet self install`.
 Amends [0001](0001-root-dev-tooling-package-separate-from-runtime.md): the installer is now `emet self install`, and it changes under an explicit ticket like the rest of the runtime.
 Amends [0043](0043-reversible-setup-and-data-driven-uninstall.md): hook definitions now ship inside the binary, which reverses its rejected alternative "Ship `hooks.json` with the install".
+Amended by [0047](0047-workflow-tagline-replaces-plugin.md): the descriptive tagline says "workflow", not "plugin".
 
 ## Context
 

@@ -24,6 +24,7 @@
     "LICENSE",
     "CODE_OF_CONDUCT.md",
     "**/node_modules/**",
-    ".claude/**"
+    ".claude/**",
+    "apps/site/design/prototype-v17/**"
   ]
 }
