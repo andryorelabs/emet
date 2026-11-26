@@ -31,7 +31,26 @@ const WCAG_TAGS = ["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "wcag22aa"];
 const COLOR_SCHEMES = ["light", "dark"] as const;
 
 /** Each waiver covers one rule on one selector, never a whole page or rule. */
-const KNOWN_AXE_ISSUES: readonly KnownAxeIssue[] = [];
+const KNOWN_AXE_ISSUES: readonly KnownAxeIssue[] = [
+  {
+    rule: "color-contrast",
+    target: /^article\[data-step-state="idle"\]/,
+    reason:
+      "CLA-1030 finding: the How it works heading of a step that has not started is dimmed below 4.5:1 in the pinned runway. Needs a stylesheet fix in styles/home/how.css, outside the e2e edit surface.",
+  },
+  {
+    rule: "color-contrast",
+    target: /^(\.out-head > |\.out-group:nth-child\(\d\) > h4$|b$)/,
+    reason:
+      "CLA-1030 finding: the spec card heading, its sub-line and the wave labels inside an idle step inherit the dimmed colour. Same stylesheet fix as above.",
+  },
+  {
+    rule: "scrollable-region-focusable",
+    target: /^(\.terminal$|.*pre\[data-language="bash"\]$)/,
+    reason:
+      "CLA-1030 finding: the banner terminal and the install command code block can scroll horizontally but take no keyboard focus. Needs tabindex on those regions in the home components, outside the e2e edit surface.",
+  },
+];
 
 /**
  * Records every Content-Security-Policy violation the page reports, as
@@ -220,6 +239,46 @@ const OPEN_WIDGETS: readonly OpenWidget[] = [
     },
   },
 ];
+
+/** The viewports the animated home is checked at while its runways pin or stack. */
+const HOME_VIEWPORTS = [
+  { name: "1440", width: 1440, height: 900 },
+  { name: "390", width: 390, height: 844 },
+] as const;
+
+/** The home sections axe visits after scrolling them into view, so pinned states and the awake companion are audited. */
+const HOME_STOPS = ["#how", "[data-features]", "[data-showcase]", ".closing"] as const;
+
+for (const path of ["/", "/es/"]) {
+  for (const viewport of HOME_VIEWPORTS) {
+    for (const colorScheme of COLOR_SCHEMES) {
+      test(`${path} has no axe or CSP violations with motion on at ${viewport.name} in ${colorScheme} mode`, async ({
+        page,
+      }) => {
+        await page.emulateMedia({ colorScheme, reducedMotion: "no-preference" });
+        await page.setViewportSize({ width: viewport.width, height: viewport.height });
+        await recordCspViolations(page);
+        await page.goto(path);
+        await expect(page.locator("h1").first()).toBeAttached();
+        const found: string[] = [...(await axeViolations(page))];
+        for (const stop of HOME_STOPS) {
+          /* oxlint-disable-next-line eslint/no-await-in-loop -- sequential on purpose: each step depends on the scroll before it */
+          await page.locator(stop).first().scrollIntoViewIfNeeded();
+          /* oxlint-disable-next-line eslint/no-await-in-loop -- sequential on purpose: each step depends on the scroll before it */
+          await page.evaluate(() => {
+            window.scrollBy({ top: 200, behavior: "instant" });
+          });
+          /* oxlint-disable-next-line eslint/no-await-in-loop -- sequential on purpose: each step depends on the scroll before it */
+          await page.waitForTimeout(800);
+          /* oxlint-disable-next-line eslint/no-await-in-loop -- sequential on purpose: each step depends on the scroll before it */
+          found.push(...(await axeViolations(page)));
+        }
+        expect(found).toEqual([]);
+        expect(await cspViolations(page)).toEqual([]);
+      });
+    }
+  }
+}
 
 for (const widget of OPEN_WIDGETS) {
   for (const colorScheme of COLOR_SCHEMES) {
