@@ -14,7 +14,7 @@
 }
 
 .site-header {
-  --header-ink: oklch(0.22 0.013 150);
+  --header-ink: var(--ink-night);
   position: relative;
   z-index: 5;
   display: grid;
@@ -31,9 +31,11 @@
   font-size: 15px;
 }
 
-/** White ink for UI that sits over the fixed painting; constant in light and dark. */
+/** Constant inks for UI over the fixed painting: white, plus the dark pair used for buttons and glass in both themes. */
 :root {
   --ink-over-painting: oklch(0.985 0.013 150);
+  --ink-night: oklch(0.22 0.013 150);
+  --ink-night-raised: oklch(0.29 0.013 150);
 }
 
 .announcement {
@@ -60,8 +62,8 @@
   }
 
   .site-header--home {
-    --glass-fill: oklch(0.22 0.013 150);
-    --glass-fill-hover: oklch(0.29 0.013 150);
+    --glass-fill: var(--ink-night);
+    --glass-fill-hover: var(--ink-night-raised);
     --glass-border: transparent;
     --glass-blur: none;
   }
@@ -76,8 +78,8 @@
   }
 
   .site-header--home {
-    --glass-fill: oklch(0.22 0.013 150);
-    --glass-fill-hover: oklch(0.29 0.013 150);
+    --glass-fill: var(--ink-night);
+    --glass-fill-hover: var(--ink-night-raised);
     --glass-border: transparent;
     --glass-blur: none;
   }
@@ -290,7 +292,7 @@
   gap: 16px;
   padding: clamp(40px, 4.5cqw, 62px) 24px 32px;
   text-align: center;
-  color: oklch(0.22 0.013 150);
+  color: var(--ink-night);
 }
 
 .not-found-copy[data-slot="empty"] {

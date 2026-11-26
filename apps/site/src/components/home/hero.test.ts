@@ -20,7 +20,7 @@ describe("Home hero", () => {
     const sentence = ruleBody(css, ".hero-sentence");
     expect(sentence).toContain("font-size: 20px");
     expect(sentence).toContain("font-weight: 500");
-    expect(ruleBody(css, ".hero-copy")).toContain("color: oklch(0.985 0.013 150)");
+    expect(ruleBody(css, ".hero-copy")).toContain("color: var(--ink-over-painting)");
     expect(ruleBody(css, ".hero-copy::before")).toContain("linear-gradient");
   });
 
