@@ -271,4 +271,25 @@ describe("initHowPin", () => {
     runFrames();
     expect(root().dataset.step).toBeUndefined();
   });
+
+  test("activates the step that receives focus and stops listening when unpinned", () => {
+    document.querySelectorAll(".step").forEach((step) => {
+      step.innerHTML = '<a href="#x">link</a>';
+    });
+    initHowPin(root(), fakeDither()[1]);
+    const links = document.querySelectorAll<HTMLElement>(".step a");
+    links[2]?.dispatchEvent(new FocusEvent("focusin", { bubbles: true }));
+    expect(states()).toEqual(["done", "done", "on"]);
+    expect(root().dataset.step).toBe("2");
+    links[1]?.dispatchEvent(new FocusEvent("focusin", { bubbles: true }));
+    expect(states()).toEqual(["done", "on", "idle"]);
+    links[1]?.dispatchEvent(new FocusEvent("focusin", { bubbles: true }));
+    root().dispatchEvent(new FocusEvent("focusin"));
+    expect(root().dataset.step).toBe("1");
+
+    harness.wide = false;
+    for (const handler of harness.changeHandlers) handler();
+    links[2]?.dispatchEvent(new FocusEvent("focusin", { bubbles: true }));
+    expect(root().dataset.step).toBeUndefined();
+  });
 });

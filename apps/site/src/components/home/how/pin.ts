@@ -106,7 +106,16 @@ export function initHowPin(
   const schedule = (): void => {
     if (!pending) pending = requestAnimationFrame(update);
   };
+  const onFocusIn = (event: FocusEvent): void => {
+    const index = steps.findIndex(
+      (step) => event.target instanceof Node && step.contains(event.target),
+    );
+    if (index < 0 || index === last) return;
+    last = index;
+    applyStep(root, steps, index === 0 ? 0 : index === 1 ? 1 : 2);
+  };
   const start = (): void => {
+    root.addEventListener("focusin", onFocusIn);
     root.dataset.pinned = "true";
     const source = canvas?.dataset.ditherSrc;
     if (canvas && source && !dither) {
@@ -123,6 +132,7 @@ export function initHowPin(
     addEventListener("resize", schedule, { passive: true });
   };
   const stop = (): void => {
+    root.removeEventListener("focusin", onFocusIn);
     removeEventListener("scroll", schedule);
     removeEventListener("resize", schedule);
     cancelAnimationFrame(pending);
