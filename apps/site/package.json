@@ -20,6 +20,7 @@
     "preview": "astro preview",
     "sync": "astro sync",
     "check": "bun ../../node_modules/typescript7/bin/tsc --noEmit --runExternalCode -p tsconfig.json",
+    "parity": "bun scripts/parity.ts",
     "test:dist": "bun scripts/audit-dist.ts dist",
     "test:e2e": "playwright test",
     "test": "bun test --pass-with-no-tests --path-ignore-patterns 'e2e/**' --coverage --coverage-reporter=text --coverage-reporter=lcov && bun ../../tools/coverage-gate.ts apps/site coverage/lcov.info"
