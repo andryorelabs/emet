@@ -1,6 +1,7 @@
 import { describe, expect, it } from "bun:test";
 import { readFileSync } from "node:fs";
 
+const source = readFileSync(new URL("Closing.astro", import.meta.url), "utf8");
 const css = readFileSync(new URL("../../styles/home/closing.css", import.meta.url), "utf8");
 
 /**
@@ -19,5 +20,12 @@ describe("Home closing", () => {
     expect(body).not.toMatch(/(^|\s)margin\s*:/);
     expect(body).not.toMatch(/margin-(block|top|bottom)/);
     expect(body).toContain("margin-inline: var(--edge)");
+  });
+
+  it("left-aligns the copy and offers the install command with a copy button", () => {
+    expect(ruleBody(".closing-copy")).toContain("align-items: flex-start");
+    expect(source).toContain("INSTALL_COMMAND");
+    expect(source).toContain("data-closing-copy");
+    expect(source).toContain('aria-label="Copy install command"');
   });
 });
