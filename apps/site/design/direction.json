@@ -4,7 +4,7 @@
   "seed": 341960445,
   "redraws": 0,
   "input": {
-    "brief": "emet: a plugin for Claude Code that takes a feature from idea to merged change on one approval; parallel workers in isolated worktrees, a review per wave, nothing merges when flagged. Named for the golem word emet (truth). The mascot is a gentle clay-and-moss golem in an overgrown, solarpunk world.",
+    "brief": "emet: a workflow for Claude Code that takes a feature from idea to merged change on one approval; parallel workers in isolated worktrees, a review per wave, nothing merges when flagged. Named for the golem word emet (truth). The mascot is a gentle clay-and-moss golem in an overgrown, solarpunk world.",
     "sector": "dev-tool",
     "tone": "quiet",
     "have": ["product-ui", "illustration"],

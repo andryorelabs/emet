@@ -31,7 +31,7 @@ export const fr = {
     lineOne: "De l'idée au merge,",
     lineTwo: "en une approbation.",
     sentence:
-      "Un plugin pour Claude Code et Codex. De l'idée au changement fusionné, en une seule approbation.",
+      "Un workflow pour Claude Code et Codex. De l'idée au changement fusionné, en une seule approbation.",
     install: "Installer emet",
     readDocs: "Lire la documentation",
     alt: "Une vallée peinte où trois ruisseaux se joignent en une rivière, avec des champs en terrasses et un petit golem d'argile sur une butte herbeuse sous un ciel calme.",
@@ -167,7 +167,7 @@ export const fr = {
     alt: "Une vallée sous une brume matinale basse, avec un soleil pâle et un ciel pastel.",
   },
   footer: {
-    description: "Plugin pour Claude Code et Codex.",
+    description: "Workflow pour Claude Code et Codex.",
     notice: "Non affilié à Anthropic ou OpenAI et non approuvé par Anthropic ou OpenAI",
     docs: "Docs",
     whatsNew: "Nouveautés",

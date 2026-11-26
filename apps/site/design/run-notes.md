@@ -6,7 +6,7 @@ Terms: the Website is the public site (home page and docs). Landing is how a wav
 
 ## 1. Brief and subject inventory
 
-- Subject: emet, a plugin for Claude Code. One approval, then parallel workers in isolated worktrees, a review per wave, CI green before merge, nothing merges when flagged.
+- Subject: emet, a workflow for Claude Code. One approval, then parallel workers in isolated worktrees, a review per wave, CI green before merge, nothing merges when flagged.
 - Audience: developers who use Claude Code every day. Secondary: open source maintainers.
 - The one thing to do: install the plugin.
 - Brand (fixed, so `--keep palette,type`): P2 Moss tokens in `docs/brand/tokens.css`, Space Grotesk for text, JetBrains Mono for code only, the COMBO mascot, logo concept 04. Voice: sober and precise, dry humour only in the mascot and terminal lines.
@@ -25,7 +25,7 @@ What belongs to emet and to no competitor:
 
 ## 2. Argument
 
-1. It is a plugin for Claude Code that takes a feature from idea to merged change, on one approval. Proof: the name, tagline and a working wave.
+1. It is a workflow for Claude Code that takes a feature from idea to merged change, on one approval. Proof: the name, tagline and a working wave.
 2. You install it, describe the feature and approve once. Proof: the three exchanges, real banner, spec and tickets, status.
 3. One flag holds the wave and nothing merges. Proof: the working control, blown up.
 4. A run guards six things. Proof: one tall run report with six notes.
@@ -70,7 +70,7 @@ Rule: minimum words, because people do not read. No paragraph over two short lin
 
 Sample content is real, from the Website run (spec #252, wave 2 tickets #254 to #256, PR #266). Real strings come from `docs/brand/copy.md`, `docs/brand/terminal/banner.txt` and `emet status --help`.
 
-- Hero h1: Spec to merge, / on one approval. (two authored lines, centred). Sentence: A plugin for Claude Code. Idea to merged change, one approval.
+- Hero h1: Spec to merge, / on one approval. (two authored lines, centred). Sentence: A workflow for Claude Code. Idea to merged change, one approval.
 - Primary action: Install emet. Text link: Read the docs.
 - Nav over the picture: wordmark, Docs, What's new, GitHub, language.
 - How it works, h2: From idea to merge. No lead. Exchange lines: Install. / Describe it. / Watch it land.
@@ -78,7 +78,7 @@ Sample content is real, from the Website run (spec #252, wave 2 tickets #254 to 
 - Features, h2: What a run guards. Six notes: the claim title plus one short line (Spec and tickets, reviewed once. / One git worktree per worker. / A reviewer checks every wave. / A flag holds the whole wave. / Failing checks get a few fixes, then wait for you. / Linear, GitHub Issues or local files.)
 - About, h2: Why it is called emet. Two lines (Hebrew for truth. A golem is clay brought to life by that word. / Erase one letter and it stops. Here, nothing merges when something is flagged.), signed AndryOre, Maintainer. A proposal for the maintainer to approve.
 - Close, h2: Try it in one repo. A button, no sentence.
-- Footer: Plugin for Claude Code. Not affiliated with or endorsed by Anthropic. Docs, What's new, GitHub. 2026, MIT. Paintings generated with AI from prompts by the maintainer.
+- Footer: Workflow for Claude Code. Not affiliated with or endorsed by Anthropic. Docs, What's new, GitHub. 2026, MIT. Paintings generated with AI from prompts by the maintainer.
 - 404, h1: This page wandered off. Text: That address does not exist, or the page moved. Start from the home page or the docs.
 
 ## 6. Motion plan
