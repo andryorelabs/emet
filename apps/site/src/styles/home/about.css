@@ -1,0 +1,162 @@
+/**
+ * Home page about: Hebrew word pair, signature and portrait.
+ */
+
+.about {
+  padding-inline: calc(var(--edge) + var(--axis)) var(--edge);
+  display: grid;
+  grid-template-columns: minmax(0, 520px) minmax(0, 420px);
+  gap: 80px;
+  align-items: center;
+}
+
+.letter {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.hebrew-pair {
+  display: flex;
+  align-items: flex-end;
+  gap: 24px;
+  margin: 8px 0 24px;
+}
+
+.hebrew-word {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+
+.hebrew {
+  font-family: "Frank Ruhl Libre", serif;
+  font-size: 56px;
+  font-weight: 400;
+  line-height: 1;
+}
+
+.hebrew-aleph {
+  display: inline-block;
+}
+
+.hebrew-roman {
+  font-family: var(--font-mono);
+  font-size: 14px;
+  color: var(--text);
+}
+
+.hebrew-gloss {
+  font-size: 14px;
+  color: var(--text-muted);
+}
+
+.hebrew-arrow {
+  padding-bottom: 38px;
+  font-size: 24px;
+  line-height: 1;
+  color: var(--text-muted);
+}
+
+@media (max-width: 600px) {
+  .hebrew {
+    font-size: 40px;
+  }
+
+  .hebrew-pair {
+    gap: 16px;
+  }
+
+  .hebrew-arrow {
+    padding-bottom: 36px;
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  html[data-motion] .hebrew-aleph {
+    position: relative;
+    transition: color 600ms var(--ease-out) 300ms;
+  }
+
+  html[data-motion] .hebrew-aleph::after {
+    content: "";
+    position: absolute;
+    inset-inline: 0;
+    top: 52%;
+    height: 3px;
+    background: var(--text);
+    transform: scaleX(0);
+    transform-origin: right;
+    transition: transform 300ms var(--ease-out);
+  }
+
+  html[data-motion] .hebrew-pair.is-in .hebrew-aleph {
+    color: color-mix(in oklab, var(--text) 25%, transparent);
+  }
+
+  html[data-motion] .hebrew-pair.is-in .hebrew-aleph::after {
+    transform: scaleX(1);
+  }
+}
+
+.mark {
+  padding: 0 4px;
+  border-radius: 4px;
+  background: var(--lamp);
+  color: var(--on-accent);
+}
+
+.signature {
+  margin-top: 8px;
+  font-size: 22px;
+  font-style: italic;
+  line-height: 1.3;
+}
+
+.signature small {
+  display: block;
+  margin-top: 4px;
+  font-size: 14px;
+  font-style: normal;
+  color: var(--text-muted);
+}
+
+.portrait {
+  margin: 0;
+}
+
+.portrait picture,
+.portrait img {
+  display: block;
+  width: 100%;
+}
+
+.portrait picture {
+  overflow: clip;
+  border-radius: var(--radius-panel);
+}
+
+.portrait img {
+  aspect-ratio: 4 / 5;
+  object-fit: cover;
+  border-radius: var(--radius-panel);
+}
+
+.portrait figcaption {
+  margin-top: 10px;
+  font-size: 14px;
+  color: var(--text-muted);
+}
+
+@media (max-width: 1000px) {
+  .about {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 40px;
+    padding-inline: var(--gutter);
+  }
+
+  .portrait {
+    max-width: 420px;
+  }
+}

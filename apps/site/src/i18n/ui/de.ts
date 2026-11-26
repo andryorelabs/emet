@@ -31,7 +31,7 @@ export const de = {
     lineOne: "Von Idee zu Merge,",
     lineTwo: "mit einer Freigabe.",
     sentence:
-      "Ein Plugin für Claude Code und Codex. Von der Idee zur gemergten Änderung, mit einer Freigabe.",
+      "Ein Workflow für Claude Code und Codex. Von der Idee zur gemergten Änderung, mit einer Freigabe.",
     install: "emet installieren",
     readDocs: "Doku lesen",
     alt: "Ein gemaltes Tal, in dem drei Bäche in einen Fluss münden, mit Terrassenfeldern und einem kleinen Lehm-Golem auf einer grasigen Anhöhe unter ruhigem Himmel.",
@@ -169,7 +169,7 @@ export const de = {
     alt: "Ein Tal unter tiefem Morgennebel mit blasser Sonne und Pastellhimmel.",
   },
   footer: {
-    description: "Plugin für Claude Code und Codex.",
+    description: "Workflow für Claude Code und Codex.",
     notice:
       "Nicht mit Anthropic oder OpenAI verbunden und nicht von Anthropic oder OpenAI unterstützt",
     docs: "Doku",

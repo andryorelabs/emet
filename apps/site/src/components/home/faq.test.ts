@@ -1,0 +1,38 @@
+import { describe, expect, it } from "bun:test";
+import { readFileSync } from "node:fs";
+
+import { findPublishedSourceById, publishedRoute } from "../../docs/published";
+import { LOCALES, localePath } from "../../i18n/locales";
+import { getStrings } from "../../i18n/ui";
+
+const faqSource = readFileSync(new URL("Faq.astro", import.meta.url), "utf8");
+const faqAccordionSource = readFileSync(new URL("FaqAccordion.tsx", import.meta.url), "utf8");
+const css = readFileSync(new URL("../../styles/home/faq.css", import.meta.url), "utf8");
+
+describe("FAQ", () => {
+  it("has eight rows in every locale", () => {
+    for (const locale of LOCALES) {
+      expect(getStrings(locale).faq.items).toHaveLength(8);
+    }
+    expect(faqSource).toContain("<FaqAccordion client:visible");
+    expect(faqAccordionSource).toContain("AccordionTrigger");
+  });
+
+  it("links More questions to the localized troubleshooting page in every locale", () => {
+    const source = findPublishedSourceById("troubleshooting");
+    expect(source).toBeDefined();
+    expect(faqSource).toContain('localePath(locale, "/docs/troubleshooting/")');
+    for (const locale of LOCALES) {
+      if (source === undefined) throw new Error("troubleshooting source missing");
+      expect(localePath(locale, "/docs/troubleshooting/")).toBe(publishedRoute(source, locale));
+    }
+  });
+
+  it("drops the panel animation when motion is reduced", () => {
+    expect(css).toMatch(
+      /@media \(prefers-reduced-motion: reduce\) \{\s*\[data-faq-item\] \[data-slot="accordion-content"\] \{\s*animation: none;/,
+    );
+    expect(css).not.toContain(".faq-chevron");
+    expect(css).toContain("[data-faq-item]");
+  });
+});
