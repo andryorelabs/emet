@@ -24,6 +24,7 @@
 }
 
 .bento-card {
+  position: relative;
   display: grid;
   grid-template-rows: auto 1fr auto;
   gap: 16px;
@@ -33,6 +34,25 @@
   border-radius: var(--radius-panel);
   background: var(--surface);
   overflow: clip;
+}
+
+.bento-card::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: radial-gradient(
+    220px circle at var(--spot-x, 50%) var(--spot-y, 50%),
+    color-mix(in oklab, var(--lamp) 16%, transparent),
+    transparent 70%
+  );
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 250ms var(--ease-out);
+}
+
+.bento-card[data-spot]::after {
+  opacity: 1;
 }
 
 .bento-approval {
