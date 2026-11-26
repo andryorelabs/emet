@@ -1,18 +1,26 @@
 /* oxlint-disable eslint/no-await-in-loop -- sequential on purpose: one page is scrolled and screenshotted step by step */
-import { cpSync, existsSync, mkdirSync, mkdtempSync, rmSync } from "node:fs";
-import { tmpdir } from "node:os";
+import { cpSync, existsSync, mkdirSync, rmSync } from "node:fs";
 import { join, normalize } from "node:path";
-import { chromium, type Page } from "@playwright/test";
+import { chromium, type Browser, type Page } from "@playwright/test";
 import sharp from "sharp";
 
 import { diffRatio } from "./parity/diff";
-import { SETTLE_MS, captureTargets, pairCaptures, scrollTarget, type Capture } from "./parity/plan";
+import {
+  VARIANTS,
+  captureTargets,
+  pairCaptures,
+  scrollTarget,
+  settleMs,
+  type Capture,
+  type Variant,
+} from "./parity/plan";
 import { buildReport, summaryLine, type MeasuredPair } from "./parity/report";
 
 /**
  * Advisory visual parity check: screenshots each section of the prototype and
- * of the built Website at several scroll progresses and reports how much they
- * differ. It never fails; run it with `bun run parity` after `bun run build`.
+ * of the built Website at several scroll progresses, on desktop and mobile, in
+ * light and dark, with motion and with reduced motion, and reports how much
+ * they differ. It never fails; run it with `bun run parity` after `bun run build`.
  */
 
 const siteRoot = join(import.meta.dir, "..");
@@ -21,7 +29,6 @@ const prototypeDir = join(siteRoot, "design", "prototype-v17");
 const assetDirs = [join(siteRoot, "src", "assets"), join(siteRoot, "design", "pictures")];
 const outputDir = join(siteRoot, "e2e", ".output", "parity");
 const prototypeImages = ["hero", "held", "bookend", "portrait", "source"];
-const viewport = { width: 1440, height: 900 };
 const compareSize = { width: 720, height: 450 };
 
 /** Serves a directory over HTTP on a free 127.0.0.1 port. */
@@ -43,9 +50,10 @@ function serveDirectory(root: string): { readonly origin: string; readonly stop:
   return { origin: `http://127.0.0.1:${server.port}`, stop: () => void server.stop(true) };
 }
 
-/** Copies the prototype and its images, which are not in the prototype folder, into a temporary directory. */
+/** Copies the prototype and its images, which are not in the prototype folder, into the git-ignored parity output directory. */
 function stagePrototype(): string {
-  const staged = mkdtempSync(join(tmpdir(), "emet-parity-"));
+  const staged = join(outputDir, ".prototype");
+  mkdirSync(staged, { recursive: true });
   cpSync(join(prototypeDir, "index.html"), join(staged, "index.html"));
   cpSync(join(prototypeDir, "parts"), join(staged, "parts"), { recursive: true });
   mkdirSync(join(staged, "img"));
@@ -60,7 +68,7 @@ function stagePrototype(): string {
 }
 
 /** Scrolls to a capture's progress, waits for smooth scrolling to settle and saves a screenshot; false when the section is absent. */
-async function takeCapture(page: Page, capture: Capture): Promise<boolean> {
+async function takeCapture(page: Page, capture: Capture, variant: Variant): Promise<boolean> {
   const target = await page.evaluate((selector) => {
     const element = document.querySelector(selector);
     if (element === null) return null;
@@ -68,11 +76,11 @@ async function takeCapture(page: Page, capture: Capture): Promise<boolean> {
     return { top: box.top + window.scrollY, height: box.height };
   }, capture.selector);
   if (target === null) return false;
-  const top = scrollTarget(target.top, target.height, viewport.height, capture.progress);
+  const top = scrollTarget(target.top, target.height, variant.viewport.height, capture.progress);
   await page.evaluate((y) => {
     window.scrollTo({ top: y, behavior: "instant" });
   }, top);
-  await page.waitForTimeout(SETTLE_MS);
+  await page.waitForTimeout(settleMs(variant));
   await page.screenshot({ path: join(outputDir, capture.file) });
   return true;
 }
@@ -87,6 +95,31 @@ async function decode(file: string): Promise<Uint8Array> {
   return new Uint8Array(data);
 }
 
+/** Captures every variant on both sides, one browser context at a time, and returns the captures that were taken. */
+async function captureAll(
+  browser: Browser,
+  origins: Record<"prototype" | "site", string>,
+): Promise<Capture[]> {
+  const captured: Capture[] = [];
+  for (const variant of VARIANTS) {
+    for (const side of ["prototype", "site"] as const) {
+      const context = await browser.newContext({
+        viewport: variant.viewport,
+        colorScheme: variant.scheme,
+        reducedMotion: variant.motion === "reduced" ? "reduce" : "no-preference",
+      });
+      const page = await context.newPage();
+      await page.goto(origins[side], { waitUntil: "networkidle" });
+      for (const capture of captureTargets(variant.id).filter((entry) => entry.side === side)) {
+        if (await takeCapture(page, capture, variant)) captured.push(capture);
+        else console.log(`parity: ${side} has no ${capture.selector} (${variant.id})`);
+      }
+      await context.close();
+    }
+  }
+  return captured;
+}
+
 async function main(): Promise<void> {
   if (!existsSync(join(distDir, "index.html"))) {
     console.log("parity: apps/site/dist is missing; run `bun run build` first. Skipping.");
@@ -96,30 +129,39 @@ async function main(): Promise<void> {
   mkdirSync(outputDir, { recursive: true });
   const stagedPrototype = stagePrototype();
   const servers = { prototype: serveDirectory(stagedPrototype), site: serveDirectory(distDir) };
-  const browser = await chromium.launch();
   try {
-    const captured: Capture[] = [];
-    for (const side of ["prototype", "site"] as const) {
-      const context = await browser.newContext({ viewport, reducedMotion: "reduce" });
-      const page = await context.newPage();
-      await page.goto(servers[side].origin, { waitUntil: "networkidle" });
-      for (const capture of captureTargets().filter((entry) => entry.side === side)) {
-        if (await takeCapture(page, capture)) captured.push(capture);
-        else console.log(`parity: ${side} has no ${capture.selector}`);
+    const browser = await chromium.launch().catch((error: unknown) => {
+      console.log(
+        `parity: could not launch Chromium (run \`bunx playwright install chromium\`), advisory only: ${error instanceof Error ? error.message.split("\n")[0] : String(error)}`,
+      );
+      return undefined;
+    });
+    if (browser === undefined) return;
+    try {
+      const captured = await captureAll(browser, {
+        prototype: servers.prototype.origin,
+        site: servers.site.origin,
+      });
+      const expected = VARIANTS.flatMap((variant) => captureTargets(variant.id));
+      const { pairs, missing } = pairCaptures(expected, captured);
+      const measured: MeasuredPair[] = [];
+      for (const pair of pairs) {
+        const ratio = diffRatio(await decode(pair.prototype), await decode(pair.site));
+        measured.push({
+          variant: pair.variant,
+          section: pair.section,
+          progress: pair.progress,
+          ratio,
+        });
       }
-      await context.close();
+      const report = buildReport(measured, missing);
+      await Bun.write(join(outputDir, "report.json"), JSON.stringify(report, null, 2));
+      console.log(summaryLine(report));
+      console.log(`parity: screenshots and report.json in ${outputDir}`);
+    } finally {
+      await browser.close();
     }
-    const measured: MeasuredPair[] = [];
-    for (const pair of pairCaptures(captured)) {
-      const ratio = diffRatio(await decode(pair.prototype), await decode(pair.site));
-      measured.push({ section: pair.section, progress: pair.progress, ratio });
-    }
-    const report = buildReport(measured);
-    await Bun.write(join(outputDir, "report.json"), JSON.stringify(report, null, 2));
-    console.log(summaryLine(report));
-    console.log(`parity: screenshots and report.json in ${outputDir}`);
   } finally {
-    await browser.close();
     servers.prototype.stop();
     servers.site.stop();
     rmSync(stagedPrototype, { recursive: true, force: true });
