@@ -16,7 +16,7 @@ function trackedFiles(): string[] {
 }
 
 describe("tagline guard", () => {
-  test("no tracked text file calls emet a plugin for Claude Code", () => {
+  test("no tracked text file uses the retired tagline", () => {
     const root = new URL("..", import.meta.url).pathname;
     const offenders = trackedFiles()
       .filter((file) => !ALLOWED.some((pattern) => pattern.test(file)))
