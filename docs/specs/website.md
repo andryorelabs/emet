@@ -135,7 +135,7 @@ Source: #1012 S1
 #### Scenario: The home renders in any locale
 
 - **WHEN** the home renders in any locale
-- **THEN** no tagline string contains the old "plugin for Claude Code and Codex" wording and the English strings carry the workflow tagline
+- **THEN** no tagline string contains the retired plugin tagline and the English strings carry the workflow tagline
 
 ### Requirement: The home stylesheet and tests are split per section
 
