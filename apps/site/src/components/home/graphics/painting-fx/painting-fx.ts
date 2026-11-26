@@ -57,7 +57,6 @@ function placeElement(element: HTMLElement, box: Rect): void {
 function readEnv(): Parameters<typeof fxEnabled>[0] {
   return {
     reducedMotion: matchMedia("(prefers-reduced-motion: reduce)").matches,
-    viewportWidth: innerWidth,
     coarsePointer: matchMedia("(pointer: coarse)").matches,
     webgl: probeWebgl(),
   };
@@ -180,7 +179,7 @@ export function paintingFx(host: HTMLElement, options: PaintingFxOptions): Paint
     }
     const clouds = effects.clouds === true;
     sky.hidden = !clouds;
-    if (clouds) sky.style.setProperty("transform", cloudTransform(nowMs, hostWidth));
+    if (clouds) sky.style.setProperty("transform", cloudTransform(nowMs));
     const waterDrawn = drawWater(nowMs);
     const eyesDrawn = drawEyes(nowMs);
     waterCanvas.hidden = !waterDrawn;

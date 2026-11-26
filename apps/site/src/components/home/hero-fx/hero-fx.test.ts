@@ -1,7 +1,7 @@
 import { afterAll, afterEach, beforeAll, describe, expect, test } from "bun:test";
 import { GlobalRegistrator } from "@happy-dom/global-registrator";
 
-import { coverGeometry } from "../graphics/painting-fx";
+import * as paintingModule from "../graphics/painting-fx";
 import { applyCursorLight, easePoint } from "./cursor-light";
 import {
   clampHomes,
@@ -17,9 +17,25 @@ import {
   bubblePlacement,
   golemPlacement,
   initGolemHotspot,
+  isNearPoint,
   nextPhrase,
+  ringPlacement,
 } from "./golem-hotspot";
 import { gazeOf, heroFxEnabled, initHeroFx, readPhrases } from "./index";
+
+const { coverGeometry } = paintingModule;
+let blinks = 0;
+let glows = 0;
+
+const fakePainting: typeof paintingModule.paintingFx = () => ({
+  blink: () => {
+    blinks += 1;
+  },
+  glow: () => {
+    glows += 1;
+  },
+  destroy: () => undefined,
+});
 
 beforeAll(() => {
   GlobalRegistrator.register();
@@ -162,12 +178,11 @@ describe("gazeOf", () => {
 });
 
 describe("heroFxEnabled and readPhrases", () => {
-  const base = { reducedMotion: false, viewportWidth: 1440, coarsePointer: false };
+  const base = { reducedMotion: false, coarsePointer: false };
 
-  test("runs only for wide, fine-pointer, motion-tolerant viewers", () => {
+  test("runs for fine-pointer, motion-tolerant viewers at any width", () => {
     expect(heroFxEnabled(base)).toBe(true);
     expect(heroFxEnabled({ ...base, reducedMotion: true })).toBe(false);
-    expect(heroFxEnabled({ ...base, viewportWidth: 900 })).toBe(false);
     expect(heroFxEnabled({ ...base, coarsePointer: true })).toBe(false);
   });
 
@@ -185,7 +200,9 @@ let nextFrame = 1;
 let observerCallback: (entries: { isIntersecting: boolean }[]) => void = () => undefined;
 let tabHidden = false;
 let reduced = false;
-let width = 1440;
+let coarse = false;
+let animations: [unknown, unknown][] = [];
+let finishRing: (() => void) | undefined;
 let clears = 0;
 
 class FakeObserver {
@@ -241,24 +258,37 @@ describe("initHeroFx", () => {
     });
     define("IntersectionObserver", FakeObserver);
     define("matchMedia", (query: string) => ({
-      matches: query.includes("reduce") ? reduced : false,
+      matches: query.includes("reduce") ? reduced : query.includes("coarse") && coarse,
     }));
     define("innerWidth", 1440);
+    Object.defineProperty(HTMLElement.prototype, "animate", {
+      configurable: true,
+      value(keyframes: unknown, timing: unknown) {
+        animations.push([keyframes, timing]);
+        const handle: { onfinish: (() => void) | null } = { onfinish: null };
+        finishRing = () => handle.onfinish?.();
+        return handle;
+      },
+    });
     Object.defineProperty(document, "hidden", { configurable: true, get: () => tabHidden });
   });
 
   afterEach(() => {
     for (const handle of started.splice(0)) handle.destroy();
     reduced = false;
-    width = 1440;
-    define("innerWidth", width);
+    coarse = false;
+    animations = [];
+    finishRing = undefined;
+    blinks = 0;
+    glows = 0;
+    define("innerWidth", 1440);
     tabHidden = false;
     clears = 0;
     frames = new Map();
   });
 
   function start(hero: HTMLElement): { destroy(): void } {
-    const handle = initHeroFx(hero);
+    const handle = initHeroFx(hero, fakePainting);
     started.push(handle);
     return handle;
   }
@@ -271,11 +301,15 @@ describe("initHeroFx", () => {
     expect(frames.size).toBe(0);
   });
 
-  test("does nothing on small screens, without markup or without a 2D context", () => {
-    define("innerWidth", 600);
+  test("runs on small screens with a fine pointer", () => {
+    define("innerWidth", 390);
     start(buildHero());
-    expect(document.querySelector<HTMLElement>("[data-hero-golem]")?.hidden).toBe(true);
-    define("innerWidth", 1440);
+    expect(document.querySelector<HTMLElement>("[data-hero-golem]")?.hidden).toBe(false);
+    observerCallback([{ isIntersecting: true }]);
+    expect(frames.size).toBe(1);
+  });
+
+  test("does nothing without markup or without a 2D context", () => {
     start(buildHero(false));
     expect(document.querySelector<HTMLElement>("[data-hero-golem]")?.hidden).toBe(true);
     const empty = document.createElement("section");
@@ -360,17 +394,60 @@ describe("initHeroFx", () => {
     expect(bubble?.classList.contains("is-on")).toBe(true);
   });
 
-  test("stops the firefly loop when the window narrows below the effect width", () => {
+  test("stops the firefly loop when the pointer turns coarse and resumes after", () => {
     const hero = buildHero();
     start(hero);
     observerCallback([{ isIntersecting: true }]);
     expect(frames.size).toBe(1);
-    define("innerWidth", 600);
+    coarse = true;
     window.dispatchEvent(new Event("resize"));
     expect(frames.size).toBe(0);
-    define("innerWidth", 1440);
+    coarse = false;
     window.dispatchEvent(new Event("resize"));
     expect(frames.size).toBe(1);
+  });
+
+  test("clicking the golem spawns a ring that scales 1 to 7 in 0.9 s and removes itself", () => {
+    const hero = buildHero();
+    start(hero);
+    hero.querySelector<HTMLElement>("[data-hero-golem]")?.click();
+    const ring = hero.querySelector<HTMLElement>("span[aria-hidden]");
+    expect(ring).not.toBeNull();
+    expect(animations).toHaveLength(1);
+    expect(glows).toBe(1);
+    const [keyframes, timing] = animations[0] ?? [[], {}];
+    expect(keyframes).toEqual([
+      { opacity: 0.9, transform: "scale(1)" },
+      { opacity: 0, transform: "scale(7)" },
+    ]);
+    expect(timing).toEqual({ duration: 900, easing: "ease-out" });
+    finishRing?.();
+    expect(hero.querySelector("span[aria-hidden]")).toBeNull();
+  });
+
+  test("blinks once when the pointer comes within 60 px of the golem", () => {
+    const hero = buildHero();
+    start(hero);
+    observerCallback([{ isIntersecting: true }]);
+    const { scale, offsetX, offsetY } = coverGeometry(
+      { width: 1672, height: 941 },
+      { width: 1440, height: 900 },
+      [0.5, 1],
+    );
+    const nearX = offsetX + 1369 * scale;
+    const nearY = offsetY + 672 * scale;
+    hero.dispatchEvent(new MouseEvent("pointermove", { clientX: 10, clientY: 10 }));
+    runFrame(20);
+    const base = blinks;
+    hero.dispatchEvent(new MouseEvent("pointermove", { clientX: nearX + 20, clientY: nearY }));
+    runFrame(40);
+    runFrame(60);
+    expect(blinks).toBe(base + 1);
+    hero.dispatchEvent(new MouseEvent("pointermove", { clientX: 10, clientY: 10 }));
+    runFrame(80);
+    hero.dispatchEvent(new MouseEvent("pointermove", { clientX: nearX, clientY: nearY }));
+    runFrame(100);
+    expect(blinks).toBe(base + 2);
   });
 });
 
@@ -420,5 +497,24 @@ describe("initGolemHotspot", () => {
     stop();
     button.click();
     expect(clicks()).toBe(4);
+  });
+});
+
+describe("ring and blink geometry", () => {
+  const image = { width: 1672, height: 941 };
+  const box = { width: 1440, height: 900 };
+
+  test("ringPlacement centres a 10-unit-radius circle on the painting point", () => {
+    const { scale, offsetX, offsetY } = coverGeometry(image, box, [0.5, 1]);
+    const ring = ringPlacement(image, box, [0.5, 1], [1366, 690]);
+    expect(ring.width).toBeCloseTo(20 * scale);
+    expect(ring.x + ring.width / 2).toBeCloseTo(offsetX + 1366 * scale);
+    expect(ring.y + ring.height / 2).toBeCloseTo(offsetY + 690 * scale);
+  });
+
+  test("isNearPoint is true strictly inside 60 px", () => {
+    const geometry = { scale: 1, offsetX: 0, offsetY: 0 };
+    expect(isNearPoint([100, 159], [100, 100], geometry)).toBe(true);
+    expect(isNearPoint([100, 160], [100, 100], geometry)).toBe(false);
   });
 });
