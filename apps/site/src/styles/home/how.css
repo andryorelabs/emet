@@ -79,6 +79,10 @@
   height: 100%;
 }
 
+.how-painting[data-fx="on"] .how-dither {
+  display: none;
+}
+
 .step {
   position: relative;
   padding-left: 44px;
