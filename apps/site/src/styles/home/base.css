@@ -4,7 +4,15 @@
 
 :root {
   --container: 1280px;
-  --axis: 160px;
+  --axis: 16px;
+  --content-inset: calc(var(--edge) + var(--axis));
+  --h2-size: clamp(40px, 5.4vw, 76px);
+  --h2-weight: 600;
+  --h2-tracking: -0.04em;
+  --hero-size: clamp(64px, 9.3vw, 168px);
+  --hero-weight: 700;
+  --hero-tracking: -0.05em;
+  --closing-size: clamp(48px, 8vw, 120px);
   --gutter: 32px;
   --edge: max(var(--gutter), (100% - var(--container)) / 2);
   --section-gap: 120px;
@@ -34,11 +42,30 @@ main {
 }
 
 main h2 {
-  font-size: clamp(32px, 3.2vw, 48px);
-  font-weight: 400;
-  line-height: 1.1;
-  letter-spacing: -0.02em;
+  font-size: var(--h2-size);
+  font-weight: var(--h2-weight);
+  line-height: 1;
+  letter-spacing: var(--h2-tracking);
+  text-wrap: balance;
   margin: 0;
+}
+
+.heading-hero {
+  font-size: var(--hero-size);
+  font-weight: var(--hero-weight);
+  letter-spacing: var(--hero-tracking);
+}
+
+.heading-closing {
+  font-size: var(--closing-size);
+}
+
+.home-inner {
+  box-sizing: border-box;
+  width: 100%;
+  max-width: var(--container);
+  margin-inline: auto;
+  padding-inline: var(--axis);
 }
 
 main p {

@@ -273,3 +273,56 @@
     transition: none;
   }
 }
+
+/**
+ * Home header pills: Docs, search, GitHub, theme, language and menu share one
+ * 44 px glass pill shape over the painting; the docs headers keep the 36 px buttons.
+ */
+
+.site-header--home nav a:first-child,
+.site-header--home .search-button,
+.site-header--home a.github-pill,
+.site-header--home [data-menu="theme-button"],
+.site-header--home [data-menu="lang-trigger"],
+.site-header--home [data-menu-button] {
+  box-sizing: border-box;
+  height: 44px;
+  border-radius: 12px;
+  font-size: 15px;
+}
+
+.site-header--home nav a:first-child {
+  display: inline-flex;
+  align-items: center;
+  padding: 0 16px;
+  border: 1px solid var(--glass-border);
+  background: var(--glass-fill);
+  backdrop-filter: var(--glass-blur);
+  color: var(--header-ink);
+}
+
+.site-header--home nav a:first-child:hover {
+  background: var(--glass-fill-hover);
+  opacity: 1;
+}
+
+.site-header--home [data-menu="theme-button"],
+.site-header--home [data-menu-button] {
+  width: 44px;
+}
+
+.site-header--home [data-menu="lang-trigger"] {
+  padding: 0 16px;
+}
+
+@media (min-width: 1000px) {
+  .site-header--home .search-button {
+    width: 260px;
+  }
+}
+
+@media (max-width: 480px) {
+  .site-header--home .search-button {
+    width: 44px;
+  }
+}
