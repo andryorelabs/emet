@@ -21,7 +21,7 @@ import {
 } from "./golem-hotspot";
 
 const GOLEM_POINT: Point = [1385, 690];
-const HERO_OBJECT_POSITION: readonly [number, number] = [0.5, 1];
+const HERO_OBJECT_POSITION: readonly [number, number] = [0.5, 0.62];
 const MAX_PIXEL_RATIO = 2;
 const MAX_STEP_MS = 40;
 

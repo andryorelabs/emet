@@ -368,14 +368,6 @@
 
 @supports (animation-timeline: view()) {
   @media (prefers-reduced-motion: no-preference) {
-    [data-recede] .valley {
-      animation-name: recede-sink;
-      animation-timing-function: linear;
-      animation-fill-mode: both;
-      animation-timeline: --recede;
-      animation-range: exit 0% exit 100%;
-    }
-
     [data-drift] .valley {
       animation-name: drift;
       animation-timing-function: linear;
@@ -387,10 +379,6 @@
 }
 
 @media (prefers-reduced-motion: no-preference) {
-  html[data-scroll-fallback] [data-recede] .valley {
-    transform: translateY(calc(var(--p, 0) * var(--recede-sink)));
-  }
-
   html[data-scroll-fallback] [data-drift] .valley {
     transform: translateY(calc((var(--p, 0) * 2 - 1) * var(--drift-shift)))
       scale(var(--drift-scale));
