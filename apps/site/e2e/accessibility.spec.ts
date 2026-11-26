@@ -31,26 +31,7 @@ const WCAG_TAGS = ["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "wcag22aa"];
 const COLOR_SCHEMES = ["light", "dark"] as const;
 
 /** Each waiver covers one rule on one selector, never a whole page or rule. */
-const KNOWN_AXE_ISSUES: readonly KnownAxeIssue[] = [
-  {
-    rule: "color-contrast",
-    target: /^article\[data-step-state="idle"\]/,
-    reason:
-      "CLA-1030 finding: the How it works heading of a step that has not started is dimmed below 4.5:1 in the pinned runway. Needs a stylesheet fix in styles/home/how.css, outside the e2e edit surface.",
-  },
-  {
-    rule: "color-contrast",
-    target: /^(\.out-head > |\.out-group:nth-child\(\d\) > h4$|b$)/,
-    reason:
-      "CLA-1030 finding: the spec card heading, its sub-line and the wave labels inside an idle step inherit the dimmed colour. Same stylesheet fix as above.",
-  },
-  {
-    rule: "scrollable-region-focusable",
-    target: /^(\.terminal$|.*pre\[data-language="bash"\]$)/,
-    reason:
-      "CLA-1030 finding: the banner terminal and the install command code block can scroll horizontally but take no keyboard focus. Needs tabindex on those regions in the home components, outside the e2e edit surface.",
-  },
-];
+const KNOWN_AXE_ISSUES: readonly KnownAxeIssue[] = [];
 
 /**
  * Records every Content-Security-Policy violation the page reports, as
