@@ -48,8 +48,8 @@ const keyWidth = 10;
                 <h3>{note.title}</h3>
                 <p>{note.line}</p>
               </div>
-              {card.key === "approval" && <ApprovalScene />}
-              {card.key === "review" && <ReviewScene />}
+              {card.key === "approval" && <ApprovalScene labels={features.scenes} />}
+              {card.key === "review" && <ReviewScene labels={features.scenes} />}
               {card.key === "flags" && <FlagsScene flagLabel={strings.showcase.flag} heldText={strings.showcase.statusHeld} />}
               {card.key === "ci" && <CiScene />}
               {card.key === "workers" && <WorkersScene />}

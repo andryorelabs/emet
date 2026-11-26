@@ -11,17 +11,21 @@
 import "../../../../styles/bento/scene.css";
 // oxlint-disable-next-line import/no-unassigned-import -- Astro bundles a stylesheet imported for its side effect
 import "../../../../styles/bento/approval.css";
-import { sceneLabels } from "../interact/labels";
+import type { SceneStrings } from "../interact/labels";
 
 const tickets = ["monorepo scaffold", "home layout", "code blocks", "docker and deploy"];
-const labels = sceneLabels.approval;
+interface Props {
+  labels: SceneStrings;
+}
+
+const { labels } = Astro.props;
 ---
 
 <div
   class="scene scene-approval bento-visual"
   data-scene
   data-interact="approval"
-  data-done-text={labels.done}
+  data-done-text={labels.approved}
 >
   <ul class="approval-tickets" aria-hidden="true">
     {
@@ -36,13 +40,13 @@ const labels = sceneLabels.approval;
     }
   </ul>
   <div class="approval-footer">
-    <button type="button" class="approval-button" aria-label={labels.buttonName} inert>
-      <span>{labels.button}</span>
+    <button type="button" class="approval-button" aria-label={labels.approveName} inert>
+      <span>{labels.approve}</span>
     </button>
     <svg class="approval-cursor" viewBox="0 0 14 14" fill="currentColor" aria-hidden="true">
       <path d="M1 1l4.5 12 1.8-4.7L12 6.5z"></path>
     </svg>
-    <span class="approval-stamp" aria-hidden="true">{labels.done}</span>
+    <span class="approval-stamp" aria-hidden="true">{labels.approved}</span>
   </div>
   <span class="approval-status" role="status"></span>
 </div>

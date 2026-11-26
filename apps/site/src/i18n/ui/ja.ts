@@ -64,6 +64,13 @@ export const ja = {
   },
   features: {
     heading: "実行が守るもの",
+    scenes: {
+      approve: "承認",
+      approveName: "承認: 長押し",
+      approved: "承認済み",
+      gateName: "レビューゲート: コメント1件、解決済み",
+      gateTip: "ウェーブ2: コメント1件、解決済み",
+    },
     notes: [
       { title: "承認は一度だけ", line: "仕様とチケットのレビューは一度で済みます。" },
       { title: "ウェーブごとのレビュー", line: "レビュアーがすべてのウェーブを確認します。" },

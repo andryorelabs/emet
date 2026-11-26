@@ -64,6 +64,13 @@ export const es = {
   },
   features: {
     heading: "Lo que protege una ejecución",
+    scenes: {
+      approve: "Aprobar",
+      approveName: "Aprobar: mantén pulsado",
+      approved: "Aprobado",
+      gateName: "Puerta de revisión: 1 comentario, resuelto",
+      gateTip: "oleada 2: 1 comentario, resuelto",
+    },
     notes: [
       { title: "Una sola aprobación", line: "Especificación y tickets, revisados una vez." },
       { title: "Una revisión por oleada", line: "Un revisor comprueba cada oleada." },
