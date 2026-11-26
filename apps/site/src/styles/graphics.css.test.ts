@@ -48,6 +48,14 @@ describe("graphics.css", () => {
     }
   });
 
+  it("hides the valley clouds, glints and eye glow once painting-fx is active", () => {
+    const rule = /(\[data-fx="on"\][^{}]*)\{\s*display:\s*none;\s*\}/.exec(css);
+    expect(rule?.[1]).toBeDefined();
+    for (const part of [".v-cloud", ".v-glint", ".v-eye", ".v-lid"]) {
+      expect(rule?.[1]).toContain(`[data-fx="on"] ${part}`);
+    }
+  });
+
   it("keeps the valley hidden until motion is allowed", () => {
     expect(css).toMatch(/\.valley\s*\{\s*display:\s*none;\s*\}/);
     const shown = enclosingAtRules(css, /^\s*display:\s*block/).filter((rules) =>

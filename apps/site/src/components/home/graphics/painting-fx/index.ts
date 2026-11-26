@@ -12,5 +12,14 @@ export {
   QUAD_VERTEX_SHADER,
 } from "./gl";
 export type { FullQuad } from "./gl";
+export { paintingFx } from "./painting-fx";
 export { PORTRAIT_PAINTING, VALLEY_PAINTING } from "./painting-data";
-export type { PaintingData, Point, Polyline, Rect, Size } from "./types";
+export type {
+  PaintingData,
+  PaintingFxHandle,
+  PaintingFxOptions,
+  Point,
+  Polyline,
+  Rect,
+  Size,
+} from "./types";
