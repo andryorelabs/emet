@@ -17,7 +17,7 @@ In qualsiasi repo git:
 
 ```bash
 emet init       # autodetects package manager, trunk branch, tracker kind
-emet preflight # confirms the repo is dispatch-ready
+emet preflight  # confirms the repo is dispatch-ready
 ```
 
 `emet init` lascia un marcatore `TODO(emet):` nei file `docs/agents/*.md` generati per tutto ciò che non riesce a dedurre da solo (un lock condiviso del database di test, la proprietà dello schema e così via). Compilali; `emet preflight` rifiuta il dispatch finché ne resta uno.
