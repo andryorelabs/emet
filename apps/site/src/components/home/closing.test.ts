@@ -15,6 +15,11 @@ function ruleBody(selector: string): string {
 }
 
 describe("Home closing", () => {
+  it("is min(760px, 92svh) tall with the painting at 50% 70%", () => {
+    expect(ruleBody(".closing")).toContain("height: min(760px, 92svh)");
+    expect(ruleBody(".closing picture img")).toContain("object-position: 50% 70%");
+  });
+
   it("sets no block margin on the closing panel", () => {
     const body = ruleBody(".closing");
     expect(body).not.toMatch(/(^|\s)margin\s*:/);

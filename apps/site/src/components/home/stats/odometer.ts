@@ -8,7 +8,7 @@
  * attributes (no inline style attributes, so the CSP holds).
  */
 
-const VIEW_THRESHOLD = 0.3;
+const VIEW_THRESHOLD = 0.35;
 const DIGITS = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9] as const;
 
 /** The decimal digits of a non-negative whole number, most significant first. */

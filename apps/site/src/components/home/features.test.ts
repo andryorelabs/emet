@@ -60,6 +60,11 @@ describe("Features bento", () => {
     expect(css).not.toContain(".bento-card:not(.is-in)");
   });
 
+  it("lights the pointer spotlight as a 420px moss circle at 18 %", () => {
+    expect(css).toContain("420px circle at var(--spot-x, 50%) var(--spot-y, 50%)");
+    expect(css).toContain("color-mix(in oklab, var(--moss) 18%, transparent)");
+  });
+
   it("keeps every keyframe inside the motion guard", () => {
     for (const file of readdirSync(sceneDirectory)) {
       const source = readFileSync(new URL(file, sceneDirectory), "utf8");

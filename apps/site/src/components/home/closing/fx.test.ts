@@ -67,4 +67,10 @@ describe("closing fx", () => {
     handle.destroy();
     expect(calls).toEqual(["blink", "glow", "destroy"]);
   });
+
+  test("frames the painting at 50% 70%", () => {
+    const host = document.createElement("section");
+    initClosingFx(host, document.createElement("div"), fakePaintingFx);
+    expect(received?.options.painting?.objectPosition).toEqual([0.5, 0.7]);
+  });
 });

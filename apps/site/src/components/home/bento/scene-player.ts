@@ -7,6 +7,7 @@
 
 const REDUCED_MOTION_QUERY = "(prefers-reduced-motion: reduce)";
 const OFFSET_STEP_SECONDS = 0.9;
+export const SCENE_VISIBILITY_THRESHOLD = 0.15;
 
 function assignOffsets(scenes: HTMLElement[]): void {
   scenes.forEach((scene, index) => {
@@ -27,15 +28,18 @@ function observeScenes(scenes: HTMLElement[]): () => void {
     for (const scene of scenes) setPlaying(scene, visible.has(scene) && !document.hidden);
   };
 
-  const observer = new IntersectionObserver((entries) => {
-    for (const entry of entries) {
-      const scene = byElement.get(entry.target);
-      if (scene === undefined) continue;
-      if (entry.isIntersecting) visible.add(scene);
-      else visible.delete(scene);
-    }
-    sync();
-  });
+  const observer = new IntersectionObserver(
+    (entries) => {
+      for (const entry of entries) {
+        const scene = byElement.get(entry.target);
+        if (scene === undefined) continue;
+        if (entry.isIntersecting) visible.add(scene);
+        else visible.delete(scene);
+      }
+      sync();
+    },
+    { threshold: SCENE_VISIBILITY_THRESHOLD },
+  );
   for (const scene of scenes) observer.observe(scene);
   document.addEventListener("visibilitychange", sync);
 

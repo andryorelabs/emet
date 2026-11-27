@@ -10,6 +10,10 @@ const faqAccordionSource = readFileSync(new URL("FaqAccordion.tsx", import.meta.
 const css = readFileSync(new URL("../../styles/home/faq.css", import.meta.url), "utf8");
 
 describe("FAQ", () => {
+  it("opens the answer in 0.4s with the prototype ease", () => {
+    expect(css).toContain("transition: grid-template-rows 400ms ease;");
+  });
+
   it("has eight rows in every locale", () => {
     for (const locale of LOCALES) {
       expect(getStrings(locale).faq.items).toHaveLength(8);

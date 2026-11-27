@@ -36,6 +36,14 @@ describe("About Hebrew word pair", () => {
     expect(css).not.toMatch(/\.hebrew-aleph[^{]*\{[^}]*(transition|filter:\s*blur)/);
   });
 
+  it("strikes the Latin e with the same scroll progress at the prototype size", () => {
+    expect(aboutSource).toContain('<span class="latin-e">e</span>met');
+    expect(css).toMatch(/\.latin \{[^}]*font-size: clamp\(56px, 7vw, 92px\)/);
+    expect(css).toMatch(
+      /html\[data-motion\] \.latin-e \{[^}]*line-through[^}]*calc\(var\(--strike, 0\) \* 100%\)/,
+    );
+  });
+
   it("aligns the pair with the letter text instead of centring it", () => {
     const pairRule = /^\.hebrew-pair \{[^}]*\}/m.exec(css)?.[0] ?? "";
     expect(pairRule).not.toContain("justify-content");
