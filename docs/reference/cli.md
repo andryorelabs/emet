@@ -11,8 +11,8 @@ Three slash commands wrap the CLI inside Claude Code: `/emet:run` (the pipeline)
 In any git repo:
 
 ```bash
-emet init          # autodetects package manager, trunk branch, tracker kind
-emet preflight      # confirms the repo is dispatch-ready
+emet init       # autodetects package manager, trunk branch, tracker kind
+emet preflight # confirms the repo is dispatch-ready
 ```
 
 `emet init` leaves a `TODO(emet):` marker in the generated `docs/agents/*.md` files for anything it cannot infer on its own (a shared test-database lock, schema ownership, and so on). Fill those in; `emet preflight` refuses to dispatch while one remains.

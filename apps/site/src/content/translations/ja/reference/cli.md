@@ -16,8 +16,8 @@ Claude Code 内では、3 つのスラッシュコマンドが CLI をラップ�
 任意の git リポジトリで次を実行します。
 
 ```bash
-emet init          # autodetects package manager, trunk branch, tracker kind
-emet preflight      # confirms the repo is dispatch-ready
+emet init       # autodetects package manager, trunk branch, tracker kind
+emet preflight # confirms the repo is dispatch-ready
 ```
 
 `emet init` は、自力で推測できないもの（共有テストデータベースのロック、スキーマの所有者など）について、生成した `docs/agents/*.md` ファイルに `TODO(emet):` マーカーを残します。これらを埋めてください。マーカーが残っている間、`emet preflight` はディスパッチを拒否します。

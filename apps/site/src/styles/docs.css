@@ -299,20 +299,6 @@ site-search kbd {
   position: relative;
 }
 
-.expressive-code
-  .frame:not(.has-title)
-  pre[data-language]:not([data-language="plaintext"]):has(.ec-line:nth-child(2))::after {
-  content: attr(data-language);
-  position: absolute;
-  right: 3rem;
-  bottom: 0.5rem;
-  color: var(--text-muted);
-  font-family: var(--font-sans);
-  font-size: 12px;
-  pointer-events: none;
-  user-select: none;
-}
-
 .expressive-code .frame .header {
   box-sizing: border-box;
   height: 40px;
@@ -353,7 +339,7 @@ site-search kbd {
   width: 32px;
   height: 32px;
   border-radius: 8px;
-  background: transparent;
+  background: var(--surface);
   color: var(--text-muted);
   opacity: 1;
   transition:
