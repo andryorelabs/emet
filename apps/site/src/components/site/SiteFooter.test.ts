@@ -2,6 +2,7 @@ import { describe, expect, test } from "bun:test";
 import path from "node:path";
 
 const source = await Bun.file(path.join(import.meta.dir, "SiteFooter.astro")).text();
+const siteCss = await Bun.file(path.join(import.meta.dir, "../../styles/site.css")).text();
 const expanded = source.replaceAll("${REPOSITORY_URL}", "https://github.com/andryorelabs/emet");
 
 describe("SiteFooter", () => {
@@ -51,6 +52,51 @@ describe("SiteFooter", () => {
 
   test("groups both columns in one block", () => {
     expect(source).toContain('class="footer-columns"');
-    expect(source).toContain('buttonVariants({ variant: "link" })');
+  });
+
+  test("sets the column links as plain anchors, as prototype v17 does", () => {
+    expect(source).not.toContain("buttonVariants");
+    expect(source).toContain('<a class="footer-link" href={link.href}');
+  });
+});
+
+/** The body of the first top-level `site.css` rule for exactly `selector`. */
+function rule(selector: string): string {
+  const start = siteCss.indexOf(`\n${selector} {`);
+  expect(start).toBeGreaterThan(-1);
+  return siteCss.slice(start, siteCss.indexOf("}", start));
+}
+
+describe("site footer styles", () => {
+  test("spans the full width with its top border and insets its content like the prototype's .inner", () => {
+    const footer = rule(".site-footer");
+    expect(footer).not.toContain("margin-inline");
+    expect(footer).toContain("padding: 48px 0 32px;");
+    expect(footer).toContain(
+      "padding-inline: max(calc(2 * var(--footer-pad)), calc((100% - var(--footer-inner)) / 2 + var(--footer-pad)));",
+    );
+    expect(footer).toContain("border-top: 1px solid var(--border);");
+  });
+
+  test("keeps the docs footer flush with the content column, with a single border", () => {
+    expect(rule(".docs-site-footer .site-footer")).toContain("padding-inline: 0;");
+  });
+
+  test("sizes the docs wordmark by the content column so it never runs under the table of contents", () => {
+    expect(rule(".docs-site-footer")).toContain("container-type: inline-size;");
+    expect(rule(".docs-site-footer .footer-wordmark")).toContain(
+      "font-size: min(260px, calc(100cqi / 3.2));",
+    );
+  });
+
+  test("caps the wordmark below the prototype's 120px floor so it never scrolls a phone sideways", () => {
+    expect(rule(".footer-wordmark")).toContain(
+      "font-size: min(clamp(120px, 19vw, 260px), calc((100vw - 64px) / 3.2));",
+    );
+  });
+
+  test("sets headings and links at line-height normal so rows match the prototype", () => {
+    expect(rule(".site-footer .footer-heading")).toContain("line-height: normal;");
+    expect(rule(".footer-column a.footer-link")).toContain("line-height: normal;");
   });
 });

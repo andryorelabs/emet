@@ -8,8 +8,6 @@
 import "../../styles/site.css";
 
 import { Separator } from "@/components/ui/separator";
-import { buttonVariants } from "@/components/ui/button";
-import { cn } from "cn";
 import mark from "../../assets/mark.svg";
 import { localePath, type Locale } from "../../i18n/locales";
 import { getStrings } from "../../i18n/ui";
@@ -26,10 +24,6 @@ const REPOSITORY_URL = "https://github.com/andryorelabs/emet";
 const AUTHOR_URL = "https://andryore.dev";
 
 const { locale, strings = en.footer } = Astro.props;
-const linkClass = cn(
-  buttonVariants({ variant: "link" }),
-  "footer-link h-auto p-0 text-base font-normal text-foreground",
-);
 const { newTab } = getStrings(locale).links;
 
 const columns = [
@@ -74,7 +68,7 @@ const columns = [
           <ul>
             {column.links.map((link) => (
               <li>
-                <a class={linkClass} href={link.href} {...externalLinkAttributes(link.href)}>
+                <a class="footer-link" href={link.href} {...externalLinkAttributes(link.href)}>
                   {link.label}
                   {isExternalHref(link.href) && <span class="sr-only">{newTab}</span>}
                 </a>
