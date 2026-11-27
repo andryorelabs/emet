@@ -62,20 +62,26 @@ Not run here: the Lighthouse budget (CI job) and the coverage floors beyond `bun
 
 ## Final parity pass (CLA-1045, S13)
 
-`bun run --cwd apps/site parity` on the final build: 320 pairs (8 sections, 8 variants: 1440x900 and 390x844, light and dark, motion and reduced), 0 missing captures, mean pixel difference 37.9%, every pair above the 5% flag threshold, worst `desktop-light-motion/showcase@0` at 97.2%. Captures and `report.json` are in `apps/site/e2e/.output/parity/`.
+Run on the final build (wave 5 integrated, CLA-1046 to CLA-1049): `bun run --cwd apps/site parity` gives 320 pairs (8 sections, 8 variants: 1440x900 and 390x844, light and dark, motion and reduced), 0 missing captures, mean pixel difference 36.8%, 318 flagged above the 5% threshold, worst `desktop-light-motion/closing@75` at 80.5%. Captures and `report.json` are in `apps/site/e2e/.output/parity/`. The e2e suite on the same build, served by the repo's nginx configuration with the rendered CSP: 99 tests, 0 axe violations, 0 `securitypolicyviolation` events, no waiver. Under host load (load average near 40) four parallel workers hit 30 s timeouts on three axe tests; all 36 accessibility tests pass at two workers.
 
-The whole-frame pixel metric is not within tolerance anywhere, so the pass is not closed. Mean difference per section, desktop and mobile: hero 14% and 34%, How it works 44% and 31%, showcase 76% and 81%, features 7% and 15%, stats 23% and 17%, about 38% and 53%, FAQ 15% and 18%, closing 70% and 62%.
+The whole-frame pixel metric stays far above tolerance, so the pass is closed by documenting each remaining difference, not by the number. Mean difference per section, desktop and mobile: hero 17% and 34%, How it works 41% and 30%, showcase 33% and 66%, features 8% and 15%, stats 17% and 22%, about 60% and 52%, FAQ 24% and 23%, closing 80% and 66%. Against the previous pass the showcase desktop dropped from 76% to 33%: the dark section background, the painting inset and the crop now match, and the doubled eyes and the narrow closing panel are gone (closing is full-bleed with the heading at the prototype size).
 
-Documented deviations (allowed list): axe contrast (dimmed waiting steps use colour, not opacity), CSP (CSSOM and `data-*` instead of inline styles, rendered script hashes), i18n (copy comes from `src/i18n/ui/*.ts`, so strings such as the companion lines differ), reduced motion, `pointer: coarse`, and the prototype's dev-only lab panels (the "Painting lab" button in every prototype capture).
+Why the ratio stays high even where the content matches:
 
-Differences seen in the captures that are not on the allowed list and are not fixed by this ticket (its edit surface is `e2e/**` and this file):
+- Capture framing: the harness clips each section from its top edge, and the prototype sections carry a 40 px top margin, a 880 px closing frame against the site's 760 px (`min(760px, 92svh)` at 900 px is 760 px by S11), and an about frame of 859 px against 581 px. The same fraction of a taller or shorter section lands on different content. This is a harness limitation and the main driver of about (60%) and closing (80%).
+- Subpixel text and the dithered painting in How it works change many pixels without a visible difference.
 
-- Showcase at progress 0 and 30%: the prototype paints a near-black section background in the light scheme with the painting inset about 267 px, the site shows the light page colour with the painting inset about 259 px and a different crop (the site crop shows more of the lower fields). This drives the 97% and 88% pairs.
-- Closing: the prototype panel is full-bleed (about 1424 px wide) with a dark command pill; the site panel is 1280 px wide with a light pill, a smaller heading (about 115 px against about 130 px) and, in the site capture, a second ghost set of eyes beside the golem and glowing river stream strokes that read as a ghost overlay on the painting. The eye doubling is a product defect to fix in the valley and painting layers.
-- Scroll-to-progress mapping: the harness scrolls both sides to the same fraction of the section, but section heights differ (the site's closing panel and footer share the frame), so framing differs even where the content matches; this inflates every pair and is a harness limitation, not a visual finding.
-- Not diagnosed per capture: How it works, about and mobile hero. Their ratios are listed above and the PNG pairs are available for the follow-up.
+Documented deviations (allowed list), each visible in every relevant capture: axe contrast (waiting steps are dimmed with colour, not opacity), CSP (CSSOM and `data-*`, rendered script hashes), i18n (strings come from `src/i18n/ui/*.ts`, so companion lines such as "Lamp on. Reading the spec." differ from the prototype's), reduced motion, `pointer: coarse`, and the prototype's dev-only lab panels (the "Painting lab" button in every prototype capture).
 
-Follow-up needed before S13 can be called closed: fix or document the showcase background and crop, the closing width, pill and heading size, and the doubled eyes, then rerun the harness. Until then the scenario "no undocumented difference above tolerance" is not met.
+Differences seen in the captures that are not on the allowed list. Each is out of this ticket's edit surface (`e2e/**` and this file) and is listed for a follow-up ticket; S13's "no undocumented difference above tolerance" is therefore met only as far as they are listed here:
+
+- How it works step 1 and 2 content: the site shows a ticket-tree card (spec title, waves, rows with ticket numbers) under the typed command where the prototype types the wave list inside the terminal block; step 0 in the site omits the "Other ways to install" link and the dimmed `$ ` prompt, and the site code uses the `github-light` token colours where the prototype uses plain ink and green.
+- Showcase panel (30%): the prototype draws labelled pills and a "review" tag in the diagram and a bordered "Flag ticket #44" pill; the site draws a plain toggle row, evenly spaced dots, no review tag, an extra "emet" wordmark in the panel footer and four corner brackets around the frame. The panel is about 60 px taller in the site.
+- About: at progress 0 the site Latin "e" strike and the Hebrew aleph strike are a stronger red where the prototype shows a faint pink; the site painting shows a pale clipped patch at its top-left corner during the reveal.
+- Closing: the heading weight reads lighter in the site than in the prototype's 700, and the install button label is smaller (15 px against 17 px).
+- Section top offsets: the site starts How it works, showcase and about 8 to 40 px higher than the prototype at the same progress; this is the harness framing above and not a layout finding.
+
+Follow-up needed to take the pixel metric to tolerance: align the How it works step content, the showcase panel and frame decoration, the about strike colour and the closing heading weight, then rerun the harness.
 
 ## Palette constants
 
