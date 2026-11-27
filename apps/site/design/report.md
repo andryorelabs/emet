@@ -48,24 +48,40 @@ Deviations and concerns:
 - The lid is a flat stone-coloured disc sampled from each painting, so the blink is only believable at the 150ms it lasts.
 - Gate: `inspect.mjs` on the production build at 1440, 768 and 390 gives 0 FAIL with `--allow outlined-box,palette-purple`, the same two allowances as the scroll section. Reduced motion and no-script were checked in a real browser: content complete, valley hidden under reduced motion, no CSP violation.
 
-## End-to-end coverage (CLA-1030, S19)
+## End-to-end coverage (CLA-1030, rewritten by CLA-1045)
 
-Verified with Playwright against the production build (`apps/site/e2e/interactions.spec.ts` and `accessibility.spec.ts`): 95 tests, 0 `securitypolicyviolation` events.
+Verified with Playwright against the production build served by the repo's nginx configuration with the rendered CSP header (`apps/site/e2e/`: `accessibility.spec.ts`, `interactions.spec.ts`, `pointer-effects.spec.ts`): 99 tests pass, 0 axe violations and 0 `securitypolicyviolation` events. `KNOWN_AXE_ISSUES` is empty: there is no waiver. The earlier waivers (dimmed idle How it works steps, scrollable `.terminal` and install `pre`) were fixed in the product code.
 
-- How it works: pins at 1440 (`data-pinned`, runway above 3.5 viewports tall), steps change at about 30% and 62% (`data-step` 0, 1, 2, stream stage 2 at the end); Claude Code and Codex tabs, copy puts `/emet:run ...` or `$emet:run ...` on the clipboard; stacked with no `data-step-state` at 390 and under reduced motion at 1440.
-- Features: hold-to-approve stamps after 0.9 s and announces it, an early release approves nothing; the flag toggle sets `aria-pressed`, `data-held` and the caption, and clears them.
-- Showcase: pinned at 1440, auto-flags past 74%, a click stops auto-flagging; stacked and usable at 390; stacked final state under reduced motion.
-- Closing: the copy button puts the exact `curl -fsSL https://emet.andryore.dev/install.sh | sh` on the clipboard and sets the done state.
-- Companion: away over the hero, four-question menu, Escape returns focus, arrows and outside click, fixed answers, drag springs back without opening the menu, under reduced motion the eyes and drag never write their properties, a copy moves it to done.
-- Layout: no horizontal scroll at 1440 and 390, reduced and full motion, at `/` and `/es/`, top and bottom of the page.
-- CSP: a full scroll at 1440 with and without reduced motion raises no violation; axe also runs with motion on at 1440 and 390, light and dark, at `/` and `/es/`, after each runway is scrolled into view.
-
-Findings waived in `KNOWN_AXE_ISSUES` (each needs a source fix outside the e2e edit surface; the pre-existing home and menu axe tests were already failing on them):
-
-- `color-contrast` on dimmed idle How it works steps (`article[data-step-state="idle"]`, the spec card head and group labels).
-- `scrollable-region-focusable` on the banner `.terminal` and the install command `pre`: scrollable but not keyboard focusable.
+- How it works: pins at 1440, steps change at about 30% and 62%, Claude Code and Codex tabs with copy, stacked at 390 and under reduced motion.
+- Features: hold-to-approve, flag toggle. Showcase: pin, auto-flags, stacked at 390 and under reduced motion. Closing: exact install command copied.
+- Hero (CLA-1045): the pointer over a headline line sets a letter `--k` above 0.5; under reduced motion no letter is split; a golem click adds a ring animating `scale(1)` to `scale(7)` over 900 ms.
+- Companion: menu, drag spring-back, reduced motion; with Playwright fake timers (`page.clock`) it falls asleep after 20 s without input (not at 19 s) and wakes on a pointer move.
+- Layout: no horizontal scroll at 1440 and 390, both motion modes, `/` and `/es/`. CSP: a full scroll with and without reduced motion raises no violation.
 
 Not run here: the Lighthouse budget (CI job) and the coverage floors beyond `bun run test`.
+
+## Final parity pass (CLA-1045, S13)
+
+Run on the final build (wave 5 integrated, CLA-1046 to CLA-1049): `bun run --cwd apps/site parity` gives 320 pairs (8 sections, 8 variants: 1440x900 and 390x844, light and dark, motion and reduced), 0 missing captures, mean pixel difference 36.8%, 318 flagged above the 5% threshold, worst `desktop-light-motion/closing@75` at 80.5%. Captures and `report.json` are in `apps/site/e2e/.output/parity/`. The e2e suite on the same build, served by the repo's nginx configuration with the rendered CSP: 99 tests, 0 axe violations, 0 `securitypolicyviolation` events, no waiver. Under host load (load average near 40) four parallel workers hit 30 s timeouts on three axe tests; all 36 accessibility tests pass at two workers.
+
+The whole-frame pixel metric stays far above tolerance, so the pass is closed by documenting each remaining difference, not by the number. Mean difference per section, desktop and mobile: hero 17% and 34%, How it works 41% and 30%, showcase 33% and 66%, features 8% and 15%, stats 17% and 22%, about 60% and 52%, FAQ 24% and 23%, closing 80% and 66%. Against the previous pass the showcase desktop dropped from 76% to 33%: the dark section background, the painting inset and the crop now match, and the doubled eyes and the narrow closing panel are gone (closing is full-bleed with the heading at the prototype size).
+
+Why the ratio stays high even where the content matches:
+
+- Capture framing: the harness clips each section from its top edge, and the prototype sections carry a 40 px top margin, a 880 px closing frame against the site's 760 px (`min(760px, 92svh)` at 900 px is 760 px by S11), and an about frame of 859 px against 581 px. The same fraction of a taller or shorter section lands on different content. This is a harness limitation and the main driver of about (60%) and closing (80%).
+- Subpixel text and the dithered painting in How it works change many pixels without a visible difference.
+
+Documented deviations (allowed list), each visible in every relevant capture: axe contrast (waiting steps are dimmed with colour, not opacity), CSP (CSSOM and `data-*`, rendered script hashes), i18n (strings come from `src/i18n/ui/*.ts`, so companion lines such as "Lamp on. Reading the spec." differ from the prototype's), reduced motion, `pointer: coarse`, and the prototype's dev-only lab panels (the "Painting lab" button in every prototype capture).
+
+Differences seen in the captures that are not on the allowed list. Each is out of this ticket's edit surface (`e2e/**` and this file) and is listed for a follow-up ticket; S13's "no undocumented difference above tolerance" is therefore met only as far as they are listed here:
+
+- How it works step 1 and 2 content: the site shows a ticket-tree card (spec title, waves, rows with ticket numbers) under the typed command where the prototype types the wave list inside the terminal block; step 0 in the site omits the "Other ways to install" link and the dimmed `$ ` prompt, and the site code uses the `github-light` token colours where the prototype uses plain ink and green.
+- Showcase panel (30%): the prototype draws labelled pills and a "review" tag in the diagram and a bordered "Flag ticket #44" pill; the site draws a plain toggle row, evenly spaced dots, no review tag, an extra "emet" wordmark in the panel footer and four corner brackets around the frame. The panel is about 60 px taller in the site.
+- About: at progress 0 the site Latin "e" strike and the Hebrew aleph strike are a stronger red where the prototype shows a faint pink; the site painting shows a pale clipped patch at its top-left corner during the reveal.
+- Closing: the heading weight reads lighter in the site than in the prototype's 700, and the install button label is smaller (15 px against 17 px).
+- Section top offsets: the site starts How it works, showcase and about 8 to 40 px higher than the prototype at the same progress; this is the harness framing above and not a layout finding.
+
+Follow-up needed to take the pixel metric to tolerance: align the How it works step content, the showcase panel and frame decoration, the about strike colour and the closing heading weight, then rerun the harness.
 
 ## Palette constants
 
