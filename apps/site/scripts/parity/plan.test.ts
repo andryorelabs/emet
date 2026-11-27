@@ -9,6 +9,7 @@ import {
   captureFile,
   captureTargets,
   commonHeight,
+  heightAdjustedRatio,
   pairCaptures,
   progressSteps,
   scrollTarget,
@@ -124,6 +125,26 @@ describe("commonHeight", () => {
   test("is the shorter of the two captures", () => {
     expect(commonHeight(900, 810)).toBe(810);
     expect(commonHeight(400, 760)).toBe(400);
+  });
+});
+
+describe("heightAdjustedRatio", () => {
+  test("is the shared ratio when both clips are the same height", () => {
+    expect(heightAdjustedRatio(0.02, 800, 800)).toBeCloseTo(0.02);
+  });
+
+  test("counts the rows only the taller clip has as fully different, from either side", () => {
+    expect(heightAdjustedRatio(0, 1000, 500)).toBeCloseTo(0.5);
+    expect(heightAdjustedRatio(0, 500, 1000)).toBeCloseTo(0.5);
+    expect(heightAdjustedRatio(0.1, 900, 810)).toBeCloseTo((0.1 * 810 + 90) / 900);
+  });
+
+  test("flags a section a tenth taller or shorter even when the overlap matches", () => {
+    expect(heightAdjustedRatio(0, 1100, 1000)).toBeGreaterThan(0.05);
+  });
+
+  test("falls back to the shared ratio for empty clips", () => {
+    expect(heightAdjustedRatio(0.3, 0, 0)).toBe(0.3);
   });
 });
 
