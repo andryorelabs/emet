@@ -65,3 +65,45 @@ test("the page-actions menu does not lock scroll or shift the layout", async ({ 
   expect(await measure()).toEqual(before);
   expect(before.bodyOverflow).toBe("visible");
 });
+
+for (const viewport of [
+  { width: 1440, height: 900 },
+  { width: 1980, height: 1080 },
+  { width: 390, height: 844 },
+] as const) {
+  test(`the companion hides at the end of the page at ${viewport.width}x${viewport.height}`, async ({
+    page,
+  }) => {
+    await page.setViewportSize(viewport);
+    await page.goto("/");
+    const companion = page.locator("[data-companion]");
+    await page.evaluate(() => {
+      window.scrollTo(0, document.documentElement.scrollHeight);
+    });
+    await expect(companion).toHaveAttribute("data-away", "");
+    await expect(companion).toHaveJSProperty("inert", true);
+    await expect(companion).toHaveCSS("opacity", "0");
+    await expect(companion).toHaveCSS("pointer-events", "none");
+    await page.evaluate(() => {
+      window.scrollTo(0, document.documentElement.scrollHeight / 2);
+    });
+    await expect(companion).not.toHaveAttribute("data-away", "");
+  });
+}
+
+test("the About reveal canvas fades out before it is hidden", async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: "no-preference" });
+  await page.goto("/");
+  await page.locator(".portrait-frame").scrollIntoViewIfNeeded();
+  const canvas = page.locator("canvas[data-pixel-reveal]");
+  await expect(canvas).toHaveAttribute("data-state", "done", { timeout: 15_000 });
+  const style = await canvas.evaluate((node) => {
+    const computed = getComputedStyle(node);
+    return { transition: computed.transitionDuration, pointerEvents: computed.pointerEvents };
+  });
+  expect(style.transition).toBe("0.2s");
+  expect(style.pointerEvents).toBe("none");
+  await expect(canvas).toHaveJSProperty("hidden", true);
+  const display = await canvas.evaluate((node) => getComputedStyle(node).display);
+  expect(display).toBe("none");
+});

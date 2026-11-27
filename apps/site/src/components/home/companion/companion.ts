@@ -23,6 +23,7 @@ const DRAG_THRESHOLD = 6;
 const EYE_REACH = 400;
 const EDGE_GAP = 32;
 const SUPPRESS_MS = 60;
+const FOOTER_CLEARANCE_PX = 16;
 const noop = (): void => undefined;
 const REDUCED_QUERY = "(prefers-reduced-motion: reduce)";
 
@@ -58,6 +59,7 @@ export function initCompanion(
   const abort = new AbortController();
   const { signal } = abort;
   let section = "hero";
+  let nearFooter = false;
   let event: CompanionEvent | null = null;
   let answer: { text: string; withDocs: boolean } | null = null;
   let eventTimer: ReturnType<typeof setTimeout> | undefined;
@@ -79,7 +81,7 @@ export function initCompanion(
       held: document.querySelector<HTMLElement>("#showcase")?.dataset.state === "held",
       asleep,
     });
-    const away = section === "hero";
+    const away = section === "hero" || nearFooter;
     root.dataset.state = state;
     if (away) root.dataset.away = "";
     else delete root.dataset.away;
@@ -98,6 +100,9 @@ export function initCompanion(
       return [{ id: entry.id, top, bottom }];
     });
     section = sectionAtLine(rects, globalThis.innerHeight / 2) || "other";
+    const footer = document.querySelector(".site-footer")?.getBoundingClientRect();
+    nearFooter =
+      !!footer && footer.top < globalThis.innerHeight - root.offsetHeight - FOOTER_CLEARANCE_PX;
     render();
   };
 

@@ -11,8 +11,10 @@ const EYE_PAD_X = 24;
 const EYE_PAD_TOP = 22;
 const EYE_PAD_BOTTOM = 24;
 const CLOUD_PERIOD_MS = 70000;
-const CLOUD_SWING_PX = 38;
-const CLOUD_STRETCH = 1.05;
+const CLOUD_MAX_SWING_PX = 38;
+const CLOUD_SWING_PER_WIDTH = 0.026;
+const CLOUD_STRETCH = 0.05;
+const CLOUD_EASE_IN_MS = 2000;
 
 /** Painting-space box around both eyes that the eyes shader redraws. */
 export function eyeRegion(eyes: readonly [Point, Point], eyeScale: number): Rect {
@@ -44,10 +46,16 @@ export function skyMaskGradient(
   return `linear-gradient(180deg,#000 0,#000 ${solid}px,transparent ${clear}px)`;
 }
 
-/** CSS transform of the sky copy at `nowMs`: a slow sine drift of a fixed 38 px, slightly stretched. */
-export function cloudTransform(nowMs: number): string {
-  const drift = Math.sin((nowMs / CLOUD_PERIOD_MS) * Math.PI * 2) * CLOUD_SWING_PX;
-  return `translateX(${drift.toFixed(2)}px) scaleX(${CLOUD_STRETCH})`;
+/**
+ * CSS transform of the sky copy `elapsedMs` after the effects started: a slow
+ * sine drift whose swing is proportional to `width` (capped at 38 px) and a
+ * slight stretch, both easing in from no offset and no stretch.
+ */
+export function cloudTransform(elapsedMs: number, width: number): string {
+  const swing = Math.min(CLOUD_MAX_SWING_PX, CLOUD_SWING_PER_WIDTH * width);
+  const drift = Math.sin((elapsedMs / CLOUD_PERIOD_MS) * Math.PI * 2) * swing;
+  const stretch = 1 + CLOUD_STRETCH * Math.min(1, elapsedMs / CLOUD_EASE_IN_MS);
+  return `translateX(${Number(drift.toFixed(2))}px) scaleX(${Number(stretch.toFixed(4))})`;
 }
 
 /** Canvas backing size in device pixels for a painting-space rectangle; never below 2. */

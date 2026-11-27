@@ -100,6 +100,17 @@
   .portrait-frame canvas[data-pixel-reveal][data-state="ready"] {
     display: block;
   }
+
+  .portrait-frame canvas[data-pixel-reveal][data-state="done"] {
+    display: block;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 200ms ease-out;
+  }
+
+  .portrait-frame canvas[data-pixel-reveal][hidden] {
+    display: none;
+  }
 }
 
 .mark {

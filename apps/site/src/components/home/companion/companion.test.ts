@@ -110,6 +110,34 @@ describe("initCompanion", () => {
     handle.destroy();
   });
 
+  test("hides near the footer, returns when it scrolls away and follows resizes", async () => {
+    document.body.innerHTML = `<footer class="site-footer"></footer>${MARKUP}`;
+    layout("how");
+    const footer = document.querySelector<HTMLElement>(".site-footer");
+    const root = document.querySelector<HTMLElement>("[data-companion]");
+    if (!footer || !root) throw new Error("fixture");
+    Object.defineProperty(root, "offsetHeight", { value: 100, configurable: true });
+    const viewport = globalThis.innerHeight;
+    footer.getBoundingClientRect = rect(viewport - 200, viewport + 400);
+    const handle = initCompanion(root);
+    expect("away" in root.dataset).toBe(true);
+    expect(root.inert).toBe(true);
+    footer.getBoundingClientRect = rect(viewport - 100, viewport + 500);
+    globalThis.dispatchEvent(new Event("scroll"));
+    await frame();
+    expect("away" in root.dataset).toBe(false);
+    expect(root.inert).toBe(false);
+    footer.getBoundingClientRect = rect(viewport - 116, viewport + 500);
+    globalThis.dispatchEvent(new Event("scroll"));
+    await frame();
+    expect("away" in root.dataset).toBe(false);
+    footer.getBoundingClientRect = rect(viewport - 117, viewport + 500);
+    globalThis.dispatchEvent(new Event("resize"));
+    await frame();
+    expect("away" in root.dataset).toBe(true);
+    handle.destroy();
+  });
+
   test("re-measures on scroll", async () => {
     const { root, handle } = mount("hero");
     layout("how");

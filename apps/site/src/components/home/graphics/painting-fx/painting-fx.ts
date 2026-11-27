@@ -112,6 +112,7 @@ export function paintingFx(host: HTMLElement, options: PaintingFxOptions): Paint
   let visible = false;
   let destroyed = false;
   let frameId = 0;
+  let fxStart: number | null = null;
 
   function layout(): void {
     hostWidth = host.clientWidth;
@@ -171,15 +172,21 @@ export function paintingFx(host: HTMLElement, options: PaintingFxOptions): Paint
 
   function render(nowMs: number): void {
     if (options.when && !options.when()) {
+      fxStart = null;
       sky.hidden = true;
       waterCanvas.hidden = true;
       eyesCanvas.hidden = true;
       setFxMarkers(host, { clouds: false, water: false, eyes: false });
       return;
     }
+    fxStart ??= nowMs;
     const clouds = effects.clouds === true;
     sky.hidden = !clouds;
-    if (clouds) sky.style.setProperty("transform", cloudTransform(nowMs));
+    if (clouds) {
+      const skySource = image.currentSrc || image.src;
+      if (ready() && skyImage.src !== skySource) skyImage.src = skySource;
+      sky.style.setProperty("transform", cloudTransform(nowMs - fxStart, hostWidth));
+    }
     const waterDrawn = drawWater(nowMs);
     const eyesDrawn = drawEyes(nowMs);
     waterCanvas.hidden = !waterDrawn;
