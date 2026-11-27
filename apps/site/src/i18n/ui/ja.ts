@@ -49,6 +49,7 @@ export const ja = {
     merged: "マージ済み",
     otherInstall: "ほかのインストール方法",
     wave: "ウェーブ {n}",
+    waveLine: "ウェーブ {n}",
     caption:
       "各ウェーブは 1 つのスペックブランチに合流します。スペックは 1 件のプルリクエストとして着地します。",
     prTitle: "スペック 41: 設定のダークモード",

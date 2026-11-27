@@ -49,6 +49,7 @@ export const it = {
     merged: "Unito",
     otherInstall: "Altri modi per installare",
     wave: "Ondata {n}",
+    waveLine: "ondata {n}",
     caption:
       "Ogni ondata confluisce in un branch della spec. La spec arriva come una sola pull request.",
     prTitle: "Spec 41: modalità scura per le impostazioni",

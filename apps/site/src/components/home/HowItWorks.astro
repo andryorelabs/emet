@@ -47,15 +47,16 @@ const banner = [
   "Not affiliated with or endorsed by Anthropic or OpenAI",
 ].join("\n");
 
-const waveOneTickets = [{ id: "#42", name: "theme tokens" }];
-const waveTwoTickets = [
-  { id: "#43", name: "settings toggle" },
-  { id: "#44", name: "remember the choice" },
-  { id: "#45", name: "docs and screenshots" },
-];
 const terminalIcon =
   '<svg class="how-term-icon" width="16" height="16" viewBox="0 0 16 16" aria-hidden="true" focusable="false"><rect width="16" height="16" rx="3" fill="currentColor" opacity=".35"/><path d="M4 5l3 3-3 3M8.5 11.5h3.5" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>';
 const waveLabel = (number: number): string => how.wave.replace("{n}", String(number));
+const waveLine = (number: number): string => how.waveLine.replace("{n}", String(number));
+const planOutput = [
+  "Spec 41 \u00b7 Dark mode for settings",
+  `${waveLine(1)}  theme tokens #42`,
+  `${waveLine(2)}  settings toggle #43 \u00b7 remember the choice #44 \u00b7 docs and screenshots #45`,
+].join("\n");
+const landOutput = [`Open  ${how.prTitle}`, `Closes #42 #43 #44 #45 \u00b7 ${how.checks}`].join("\n");
 ---
 
 <section class="how" id="how" data-how-pin aria-labelledby="how-title">
@@ -79,7 +80,7 @@ const waveLabel = (number: number): string => how.wave.replace("{n}", String(num
         </div>
       </article>
 
-      <article class="exchange step" data-typed>
+      <article class="exchange step" data-typed data-terminal="joined">
         <h3><span class="step-dot" aria-hidden="true"></span>{how.describe}</h3>
         <div class="step-body">
           <div class="step-inner">
@@ -93,37 +94,7 @@ const waveLabel = (number: number): string => how.wave.replace("{n}", String(num
               ]}
             />
             <p class="io">{how.emetReplies}</p>
-            <div class="out" data-ui data-reveal="item">
-              <p class="out-head"><b>Spec 41 &middot; Dark mode for settings</b><span>S1 tokens &middot; S2 toggle &middot; S3 docs</span></p>
-              <section class="out-group">
-                <h4>{waveLabel(1)}</h4>
-                <ul class="out-rows">
-                  {
-                    waveOneTickets.map((ticket) => (
-                      <li class="out-row">
-                        <span class="out-mark is-open" aria-hidden="true" />
-                        <span class="out-name">{ticket.name}</span>
-                        <span class="out-id">{ticket.id}</span>
-                      </li>
-                    ))
-                  }
-                </ul>
-              </section>
-              <section class="out-group">
-                <h4>{waveLabel(2)}</h4>
-                <ul class="out-rows">
-                  {
-                    waveTwoTickets.map((ticket) => (
-                      <li class="out-row">
-                        <span class="out-mark is-open" aria-hidden="true" />
-                        <span class="out-name">{ticket.name}</span>
-                        <span class="out-id">{ticket.id}</span>
-                      </li>
-                    ))
-                  }
-                </ul>
-              </section>
-            </div>
+            <CodeBlock code={planOutput} lang="text" />
           </div>
         </div>
       </article>
@@ -136,21 +107,7 @@ const waveLabel = (number: number): string => how.wave.replace("{n}", String(num
             <CodeBlock code="emet status" lang="bash" />
             <p class="io">{how.emetReplies}</p>
             <WaveDiagram waveLabel={waveLabel} caption={how.caption} />
-            <div class="out land" data-ui data-reveal="item" data-land>
-              <div class="pr-card">
-                <p class="pr-title">
-                  <span class="pr-state">
-                    <span class="pr-state-open" aria-hidden="true">Open</span>
-                    <span class="pr-state-merged">{how.merged}</span>
-                  </span>
-                  {how.prTitle}
-                </p>
-                <ul class="pr-closes">
-                  {["#42", "#43", "#44", "#45"].map((id) => <li><code lang="en" translate="no">Closes {id}</code></li>)}
-                </ul>
-                <p class="pr-meta">{how.checks}</p>
-              </div>
-            </div>
+            <CodeBlock code={landOutput} lang="text" />
           </div>
         </div>
       </article>
@@ -179,18 +136,6 @@ const waveLabel = (number: number): string => how.wave.replace("{n}", String(num
     font-size: 16px;
     text-decoration: underline;
     text-underline-offset: 4px;
-  }
-
-  .pr-closes {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 4px 12px;
-    margin: 0;
-    padding: 0;
-    list-style: none;
-    font-family: var(--font-mono, ui-monospace, monospace);
-    font-size: 13px;
-    color: var(--text-muted);
   }
 </style>
 

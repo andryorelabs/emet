@@ -49,6 +49,7 @@ export const zhCN = {
     merged: "已合并",
     otherInstall: "其他安装方式",
     wave: "第 {n} 波",
+    waveLine: "第 {n} 波",
     caption: "每一波都并入一个规格分支。规格作为一个拉取请求落地。",
     prTitle: "规格 41：设置的深色模式",
     checks: "检查通过",

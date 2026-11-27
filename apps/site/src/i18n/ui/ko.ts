@@ -48,6 +48,7 @@ export const ko = {
     merged: "병합됨",
     otherInstall: "다른 설치 방법",
     wave: "웨이브 {n}",
+    waveLine: "웨이브 {n}",
     caption: "각 웨이브는 하나의 스펙 브랜치로 합류합니다. 스펙은 풀 리퀘스트 하나로 랜딩됩니다.",
     prTitle: "스펙 41: 설정의 다크 모드",
     checks: "체크 통과",
