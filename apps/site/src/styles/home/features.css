@@ -88,7 +88,7 @@
 }
 
 .bento-tracker {
-  grid-column: 1 / 5;
+  grid-column: 1 / -1;
   grid-row: 3;
 }
 
@@ -143,9 +143,9 @@
   color: var(--accent-text);
 }
 
-@media (min-width: 761px) and (max-width: 1100px) {
+@media (min-width: 1024px) {
   .bento-tracker {
-    grid-column: 1 / 6;
+    grid-column: 1 / 5;
   }
 }
 
