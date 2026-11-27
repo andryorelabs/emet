@@ -1,7 +1,7 @@
 ---
 /**
- * Closing panel: the morning-mist painting with the heading, the install action
- * and a command box with a copy button, left-aligned over its pale top.
+ * Closing panel: the morning-mist painting with the heading
+ * and an install command box with a copy button, left-aligned over its pale top.
  */
 import { Picture } from "astro:assets";
 
@@ -36,7 +36,6 @@ const { closing } = strings;
       <span class="reveal-line">{closing.heading}</span>
     </h2>
     <div class="closing-actions">
-      <a class="button" href="#install">{closing.action}</a>
       <div class="closing-command">
         <span class="closing-prompt" aria-hidden="true">$</span>
         <code>{INSTALL_COMMAND}</code>

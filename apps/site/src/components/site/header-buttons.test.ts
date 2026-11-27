@@ -48,4 +48,20 @@ describe("header buttons render shadcn markup on the server", () => {
     expect(markup).toContain('data-slot="badge"');
     expect(markup).not.toContain("client:");
   });
+
+  test("the home pills match the prototype padding, icon sizes and chips", async () => {
+    const css = await Bun.file(new URL("../../styles/header-buttons.css", import.meta.url)).text();
+    expect(css).toContain("font-weight: 500;");
+    expect(css).toContain(".site-header--home .search-button {\n  gap: 8px;\n  padding: 0 16px;");
+    expect(css).toContain(
+      ".site-header--home .search-button-icon {\n  width: 18px;\n  height: 18px;",
+    );
+    expect(css).toContain(".site-header--home .search-button-label {\n  opacity: 0.85;");
+    expect(css).toContain("padding: 2px 7px;\n  border-radius: 6px;");
+    expect(css).toContain("line-height: normal;");
+    expect(css).toContain(
+      ".site-header--home .github-stars--header {\n  gap: 8px;\n  padding: 0 16px;",
+    );
+    expect(css).toContain("width: 20px;\n  height: 20px;");
+  });
 });

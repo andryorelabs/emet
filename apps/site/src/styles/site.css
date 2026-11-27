@@ -38,29 +38,15 @@
   --ink-night-raised: oklch(0.29 0.013 150);
 }
 
-.announcement {
-  --glass-fill: color-mix(in oklab, var(--ink-over-painting) 42%, transparent);
-  --glass-fill-hover: color-mix(in oklab, var(--ink-over-painting) 65%, transparent);
-  --glass-border: color-mix(in oklab, var(--ink-over-painting) 45%, transparent);
-  --glass-blur: blur(14px) saturate(1.3);
-}
-
 .site-header--home {
   --header-ink: var(--ink-over-painting);
-  --glass-fill: color-mix(in oklab, var(--ink-over-painting) 14%, transparent);
-  --glass-fill-hover: color-mix(in oklab, var(--ink-over-painting) 26%, transparent);
-  --glass-border: color-mix(in oklab, var(--ink-over-painting) 30%, transparent);
-  --glass-blur: blur(14px) saturate(1.3);
+  --glass-fill: color-mix(in oklab, var(--ink-over-painting) 10%, transparent);
+  --glass-fill-hover: color-mix(in oklab, var(--ink-over-painting) 22%, transparent);
+  --glass-border: color-mix(in oklab, var(--ink-over-painting) 22%, transparent);
+  --glass-blur: blur(10px);
 }
 
 @supports not (backdrop-filter: blur(1px)) {
-  .announcement {
-    --glass-fill: #f3f9f5;
-    --glass-fill-hover: #fff;
-    --glass-border: transparent;
-    --glass-blur: none;
-  }
-
   .site-header--home {
     --glass-fill: var(--ink-night);
     --glass-fill-hover: var(--ink-night-raised);
@@ -70,13 +56,6 @@
 }
 
 @media (prefers-reduced-transparency: reduce) {
-  .announcement {
-    --glass-fill: #f3f9f5;
-    --glass-fill-hover: #fff;
-    --glass-border: transparent;
-    --glass-blur: none;
-  }
-
   .site-header--home {
     --glass-fill: var(--ink-night);
     --glass-fill-hover: var(--ink-night-raised);
@@ -139,6 +118,10 @@
   align-items: center;
   justify-content: flex-end;
   gap: 12px;
+}
+
+.site-header--home .site-header-end {
+  gap: 10px;
 }
 
 .lang {
