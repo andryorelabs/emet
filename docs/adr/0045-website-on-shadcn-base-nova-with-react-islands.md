@@ -5,6 +5,7 @@ Spec: Website on shadcn with Base UI (issue #988)
 
 Amends [0019](0019-website-on-coolify-with-astro-and-starlight.md): the Website keeps Astro and Starlight, and its interactive parts move to shadcn `base-nova` on Base UI through React **Islands**.
 Amends [0002](0002-oxc-toolchain-and-typescript-7-typecheck.md): the vendored shadcn layer is exempt from lint, one deliberate and scoped exception to "never loosen a lint setting".
+Amended by [0049](0049-website-uses-ready-made-registry-components.md): home code blocks and typed terminals are vendored registry components, not Expressive Code and hand-written modules.
 
 ## Context
 
