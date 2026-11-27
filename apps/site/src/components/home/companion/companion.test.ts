@@ -116,7 +116,6 @@ describe("initCompanion", () => {
     const footer = document.querySelector<HTMLElement>(".site-footer");
     const root = document.querySelector<HTMLElement>("[data-companion]");
     if (!footer || !root) throw new Error("fixture");
-    Object.defineProperty(root, "offsetHeight", { value: 100, configurable: true });
     const viewport = globalThis.innerHeight;
     footer.getBoundingClientRect = rect(viewport - 200, viewport + 400);
     const handle = initCompanion(root);
@@ -125,13 +124,13 @@ describe("initCompanion", () => {
     footer.getBoundingClientRect = rect(viewport - 100, viewport + 500);
     globalThis.dispatchEvent(new Event("scroll"));
     await frame();
-    expect("away" in root.dataset).toBe(false);
-    expect(root.inert).toBe(false);
-    footer.getBoundingClientRect = rect(viewport - 116, viewport + 500);
+    expect("away" in root.dataset).toBe(true);
+    footer.getBoundingClientRect = rect(viewport, viewport + 600);
     globalThis.dispatchEvent(new Event("scroll"));
     await frame();
     expect("away" in root.dataset).toBe(false);
-    footer.getBoundingClientRect = rect(viewport - 117, viewport + 500);
+    expect(root.inert).toBe(false);
+    footer.getBoundingClientRect = rect(viewport - 1, viewport + 600);
     globalThis.dispatchEvent(new Event("resize"));
     await frame();
     expect("away" in root.dataset).toBe(true);

@@ -23,7 +23,6 @@ const DRAG_THRESHOLD = 6;
 const EYE_REACH = 400;
 const EDGE_GAP = 32;
 const SUPPRESS_MS = 60;
-const FOOTER_CLEARANCE_PX = 16;
 const noop = (): void => undefined;
 const REDUCED_QUERY = "(prefers-reduced-motion: reduce)";
 
@@ -101,8 +100,7 @@ export function initCompanion(
     });
     section = sectionAtLine(rects, globalThis.innerHeight / 2) || "other";
     const footer = document.querySelector(".site-footer")?.getBoundingClientRect();
-    nearFooter =
-      !!footer && footer.top < globalThis.innerHeight - root.offsetHeight - FOOTER_CLEARANCE_PX;
+    nearFooter = !!footer && footer.top < globalThis.innerHeight;
     render();
   };
 
