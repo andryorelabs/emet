@@ -1,3 +1,11 @@
+.showcase-stage {
+  inset: calc(var(--showcase-y, 0) * 1vh) calc(var(--showcase-x, 0) * 1vw);
+  width: auto;
+  height: auto;
+  overflow: clip;
+  border-radius: calc(var(--showcase-r, 0) * 1px);
+}
+
 /**
  * The showcase: a painted valley with a heading over it and a glass panel
  * holding the flag switch, the git lanes and the status line. From 901px the
@@ -17,7 +25,8 @@ section.showcase {
   max-height: 828px;
   min-height: 640px;
   overflow: clip;
-  background: var(--surface);
+  color-scheme: dark;
+  background: var(--bg);
   color: var(--ink-over-painting);
 }
 
@@ -32,15 +41,23 @@ section.showcase {
 }
 
 .showcase-stage {
-  clip-path: inset(
-    calc(var(--showcase-y, 0) * 1vh) calc(var(--showcase-x, 0) * 1vw) round
-      calc(var(--showcase-r, 0) * 1px)
-  );
+  inset: calc(var(--showcase-y, 0) * 1vh) calc(var(--showcase-x, 0) * 1vw);
+  width: auto;
+  height: auto;
+  overflow: clip;
+  border-radius: calc(var(--showcase-r, 0) * 1px);
+}
+
+.showcase-stage img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
 }
 
 .showcase-stage img {
   object-fit: cover;
-  object-position: 50% 100%;
+  object-position: 50% 50%;
 }
 
 .showcase-stage::after {
@@ -119,12 +136,12 @@ section.showcase {
   top: clamp(24px, 6vh, 72px);
   left: var(--showcase-edge);
   right: var(--showcase-edge);
-  max-width: 14em;
   margin: 0;
-  font-size: clamp(32px, 3.2vw, 48px);
-  font-weight: 400;
-  line-height: 1.05;
-  letter-spacing: -0.02em;
+  font-size: clamp(40px, 5.4vw, 76px);
+  font-weight: 600;
+  line-height: 1;
+  letter-spacing: -0.04em;
+  text-wrap: balance;
 }
 
 section.showcase .showcase-panel {
@@ -265,6 +282,12 @@ section.showcase .showcase-panel {
 
 .showcase-flag[aria-pressed="true"]:active .showcase-knob {
   transform: translateX(22px) scale(0.97);
+}
+
+@media (min-width: 901px) {
+  section.showcase .valley {
+    --oy: 0.5;
+  }
 }
 
 @media (max-width: 900px) {
