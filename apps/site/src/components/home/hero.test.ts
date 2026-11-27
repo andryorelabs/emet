@@ -91,6 +91,23 @@ describe("Home hero", () => {
     expect(ruleBody(css, ".hero-actions .hero-docs")).toContain("font-weight: 500");
   });
 
+  it("pins the button box so dev and build agree and keeps the glass blur visible from the first frame", () => {
+    const button = ruleBody(css, '.hero-actions [data-slot="button"]');
+    expect(button).toContain("height: auto");
+    expect(button).toContain("line-height: normal");
+    expect(button).toContain("gap: 8px");
+    expect(button).toContain("background-clip: border-box");
+    expect(button).toMatch(/transition:\s+color[^;]*background-color[^;]*border-color[^;]*;/);
+    expect(button).not.toContain("transition: all");
+    const docs = ruleBody(css, ".hero-actions .hero-docs");
+    expect(docs).toContain("border-color: oklch(1 0 0 / 0.5)");
+    expect(docs).toContain("backdrop-filter: blur(6px)");
+    expect(css).toMatch(/\.hero \.hero-actions \{[^}]*animation-name: hero-actions-rise;/);
+    expect(css).toMatch(/@keyframes hero-actions-rise \{[^@]*transform: translateY\(12px\)/);
+    expect(css).not.toMatch(/@keyframes hero-actions-rise \{[^@]*opacity/);
+    expect(markup).toContain('variant: "ghost"');
+  });
+
   it("links the hero actions to the localized docs and uses shadcn buttons", () => {
     expect(markup).toContain('localePath(locale, "/docs/start/install/")');
     expect(markup).toContain('localePath(locale, "/docs/")');

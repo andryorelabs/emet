@@ -84,22 +84,35 @@ for (const scheme of ["light", "dark"] as const) {
 }
 
 for (const size of [
+  { width: 1980, height: 1020 },
   { width: 1440, height: 900 },
   { width: 1366, height: 768 },
+  { width: 1280, height: 680 },
 ]) {
-  test(`Watch it land is one five-line panel above the viewport bottom at ${size.width}x${size.height}`, async ({
+  test(`Watch it land fits the whole terminal panel with a 16px margin at ${size.width}x${size.height}`, async ({
     page,
   }) => {
     await page.emulateMedia({ reducedMotion: "no-preference" });
     await page.setViewportSize(size);
     await page.goto("/");
     await scrollRunway(page, 0.95);
-    const lines = page.locator(".step").nth(2).locator("[data-terminal-line]");
-    await expect(lines).toHaveCount(5);
-    await expect(lines.last()).toBeVisible();
-    await expect
-      .poll(async () => lines.last().evaluate((line) => line.getBoundingClientRect().bottom))
-      .toBeLessThanOrEqual(size.height);
+    const step = page.locator(".step").nth(2);
+    await expect(step.locator("[data-terminal-line]")).toHaveCount(5);
+    const panel = step.locator("[data-terminal-animated] pre").locator("xpath=..");
+    await expect(panel).toBeVisible();
+    const box = async (): Promise<{ top: number; bottom: number }> =>
+      panel.evaluate((node) => {
+        const { top, bottom } = node.getBoundingClientRect();
+        return { top, bottom };
+      });
+    await expect.poll(async () => (await box()).bottom).toBeLessThanOrEqual(size.height - 16);
+    await expect.poll(async () => (await box()).top).toBeGreaterThanOrEqual(0);
+    const heading = await page.locator(".how h2").evaluate((node) => {
+      const { top, bottom } = node.getBoundingClientRect();
+      return { top, bottom, height: window.innerHeight };
+    });
+    expect(heading.top).toBeGreaterThanOrEqual(0);
+    expect(heading.bottom).toBeLessThanOrEqual(heading.height);
     await expect(page.locator(".step").nth(0).locator(".install-more")).toBeHidden();
   });
 }

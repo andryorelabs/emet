@@ -190,12 +190,32 @@
   margin-top: 4px;
 }
 
+@keyframes hero-actions-rise {
+  from {
+    transform: translateY(12px);
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .hero .hero-actions {
+    animation-name: hero-actions-rise;
+  }
+}
+
 .hero-actions [data-slot="button"] {
   box-sizing: border-box;
+  height: auto;
   min-height: 52px;
+  gap: 8px;
   padding: 0 26px;
   border: 1px solid transparent;
   border-radius: 8px;
+  background-clip: border-box;
+  line-height: normal;
+  transition:
+    color 150ms ease-out,
+    background-color 150ms ease-out,
+    border-color 150ms ease-out;
   font-size: 18px;
   font-weight: 600;
   text-decoration: none;
@@ -207,7 +227,7 @@
 }
 
 .hero-actions .hero-docs {
-  border-color: color-mix(in oklab, var(--ink-over-painting) 50%, transparent);
+  border-color: oklch(1 0 0 / 0.5);
   background: transparent;
   backdrop-filter: blur(6px);
   color: inherit;
