@@ -23,7 +23,11 @@ export interface Capture {
   readonly selector: string;
   readonly progress: number;
   readonly file: string;
+  readonly box: BoxKind;
 }
+
+/** Which box of a section is clipped: its full border box, or its content box without padding and borders. */
+export type BoxKind = "border" | "content";
 
 const VIEWPORTS: readonly { readonly name: string; readonly viewport: Viewport }[] = [
   { name: "desktop", viewport: { width: 1440, height: 900 } },
@@ -47,15 +51,17 @@ export const SECTIONS: readonly {
   readonly name: string;
   readonly prototype: string;
   readonly site: string;
+  readonly box: BoxKind;
 }[] = [
-  { name: "hero", prototype: "#hero", site: ".hero" },
-  { name: "how", prototype: "#how", site: "#how" },
-  { name: "showcase", prototype: "#show", site: "#showcase" },
-  { name: "features", prototype: "#guards", site: ".features" },
-  { name: "stats", prototype: "#stats", site: ".stats" },
-  { name: "about", prototype: "#about", site: ".about" },
-  { name: "faq", prototype: "#faq", site: "[data-faq]" },
-  { name: "closing", prototype: "#close", site: ".closing" },
+  { name: "hero", prototype: "#hero", site: ".hero", box: "border" },
+  { name: "how", prototype: "#how", site: "#how", box: "border" },
+  { name: "showcase", prototype: "#show", site: "#showcase", box: "border" },
+  { name: "features", prototype: "#guards", site: ".features", box: "border" },
+  { name: "stats", prototype: "#stats", site: ".stats", box: "content" },
+  { name: "about", prototype: "#about", site: ".about", box: "content" },
+  { name: "faq", prototype: "#faq", site: "[data-faq]", box: "content" },
+  { name: "closing", prototype: "#close", site: ".closing", box: "content" },
+  { name: "footer", prototype: "footer", site: ".site-footer", box: "content" },
 ];
 
 /** The scroll progresses captured for sections without their own steps. */
@@ -65,6 +71,7 @@ export const DEFAULT_PROGRESS_STEPS: readonly number[] = [0, 0.25, 0.5, 0.75, 1]
 const SECTION_PROGRESS_STEPS: Readonly<Record<string, readonly number[]>> = {
   how: [0, 0.15, 0.45, 0.62, 1],
   showcase: [0, 0.3, 0.7, 0.74, 1],
+  footer: [0, 1],
 };
 
 /** The scroll progresses at which a section is captured on both sides. */
@@ -103,6 +110,7 @@ export function captureTargets(variant: string): Capture[] {
         variant,
         section: entry.name,
         selector: entry[side],
+        box: entry.box,
         progress,
         file: captureFile(side, variant, entry.name, progress),
       })),
@@ -127,6 +135,23 @@ export interface ClipBox {
   readonly y: number;
   readonly width: number;
   readonly height: number;
+}
+
+/** A section's box in viewport coordinates with its vertical padding and border widths. */
+export interface BoxInsets {
+  readonly top: number;
+  readonly height: number;
+  readonly paddingTop: number;
+  readonly paddingBottom: number;
+  readonly borderTop: number;
+  readonly borderBottom: number;
+}
+
+/** The vertical content box of a section: its border box minus padding and borders, so both sides clip the same inner box whatever padding each puts on the section itself. */
+export function contentBox(box: BoxInsets): { readonly top: number; readonly height: number } {
+  const inset = box.paddingTop + box.borderTop;
+  const trim = inset + box.paddingBottom + box.borderBottom;
+  return { top: box.top + inset, height: Math.max(0, box.height - trim) };
 }
 
 /** The part of a section's box that is inside the viewport, or null when nothing of it is visible. */

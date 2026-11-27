@@ -9,6 +9,7 @@ import {
   VARIANTS,
   captureTargets,
   commonHeight,
+  contentBox,
   heightAdjustedRatio,
   pairCaptures,
   scrollTarget,
@@ -71,7 +72,7 @@ function stagePrototype(): string {
   return staged;
 }
 
-/** Scrolls to a capture's progress, waits for smooth scrolling to settle and saves a screenshot clipped to the section's own box (see `sectionClip`); false when the section is absent. */
+/** Scrolls to a capture's progress, waits for smooth scrolling to settle and saves a screenshot clipped to the section's own box, or to its content box for padded sections so both sides frame the same inner box (see `sectionClip`, `contentBox`); false when the section is absent. */
 async function takeCapture(page: Page, capture: Capture, variant: Variant): Promise<boolean> {
   const target = await page.evaluate((selector) => {
     const element = document.querySelector(selector);
@@ -86,10 +87,21 @@ async function takeCapture(page: Page, capture: Capture, variant: Variant): Prom
   }, top);
   await page.waitForTimeout(settleMs(variant));
   const live = await page.evaluate((selector) => {
-    const box = document.querySelector(selector)?.getBoundingClientRect();
-    return box === undefined ? null : { top: box.top, height: box.height };
+    const element = document.querySelector(selector);
+    if (element === null) return null;
+    const box = element.getBoundingClientRect();
+    const style = getComputedStyle(element);
+    return {
+      top: box.top,
+      height: box.height,
+      paddingTop: Number.parseFloat(style.paddingTop),
+      paddingBottom: Number.parseFloat(style.paddingBottom),
+      borderTop: Number.parseFloat(style.borderTopWidth),
+      borderBottom: Number.parseFloat(style.borderBottomWidth),
+    };
   }, capture.selector);
-  const clip = live === null ? null : sectionClip(live.top, live.height, variant.viewport);
+  const framed = live === null ? null : capture.box === "content" ? contentBox(live) : live;
+  const clip = framed === null ? null : sectionClip(framed.top, framed.height, variant.viewport);
   if (clip === null) return false;
   await page.screenshot({ path: join(outputDir, capture.file), clip });
   return true;

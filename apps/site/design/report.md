@@ -102,3 +102,22 @@ Follow-up to take the pixel metric to tolerance, if wanted later: clip the same 
 ## Palette constants
 
 - Golem ring and hero amber: `oklch(0.92 0.14 95)`, the prototype's amber. It lives in `--hero-amber` (`hero.css`) and `RING_COLOUR` (`golem-hotspot.ts`) as a documented canvas and effect constant, not a token.
+
+## Parity harness, deviations and final browser pass (CLA-1078, S12)
+
+The harness (`scripts/parity/plan.ts`, `scripts/parity.ts`) gains a `footer` section (prototype `footer`, site `.site-footer`, captured at progress 0 and 1) and clips the same inner box on both sides: sections whose prototype box carries padding (stats, about, FAQ, closing, footer) are clipped to their content box (`contentBox`: border box minus vertical padding and borders) instead of the border box, which removes the 40 px (closing), 140 px (about), 101 px (FAQ) and about 70 px (stats) framing offsets measured in the CLA-1054 pass. Hero, How it works, showcase and features keep the border box. Unit tests pin the section table, the footer steps and `contentBox`.
+
+Run on the built site (`bun run build`, `bun run --cwd apps/site parity`): 336 pairs (9 sections, 8 variants), 0 missing, mean difference 31.0% (36.6% before), worst `mobile-dark-motion/about@100` at 71.3%. Mean per section: showcase 51%, how 38%, hero 31%, about 34%, closing 39%, stats 28%, footer 21%, faq 19%, features 12%. Footer: about 20% on every desktop and mobile variant; the clips are 321 px (prototype) against 328 px (site) on desktop and 531 against 534 on mobile, so heights now match within 7 px and the rest is wordmark and text rendering. Closing fell from 80% to 39% and FAQ from 24% to 19% once the box is aligned. About stays high (34%, 71% worst on mobile): the About mobile wrap and painting width difference from CLA-1054 is still not isolated.
+
+Tests: `bun test scripts/parity` 33 pass. The e2e suite on the built site, served with `astro preview` on a free port because port 8080 was held by another process: 113 pass and 12 fail, none in S3 to S10 (the home sections, search and S5/S6 specs pass). The failures are the home motion axe/CSP cases and the page-actions-menu axe cases (`astro preview` sends no nginx CSP header; the first passes alone), the search Ctrl+K focus-return case and the companion idle-clock case (`clock.pauseAt` in the past under host load). They need the nginx image the suite is written for.
+
+User-chosen deviations from prototype v17 (every other difference is a bug):
+
+- S3: the closing "Install emet" button is removed and the command with its copy button stays. Hero "Install emet" links to the localized install docs page and "Read the docs" to the docs index, where the prototype scrolls to `#install`.
+- S6: home code blocks use the vendored shadcn base-nova `code-block` (client shiki, copy, wrapped lines) instead of the prototype's hand-written `pre`.
+- S9: the five extra features are compact cards (title plus code line, no paragraph) linking to localized docs pages; the prototype has full notes.
+- S10: the About golem's eyes animate and the About portrait has no `data-drift`, as in the prototype; the eyes canvas is displayed after the reveal.
+
+Footer side by side (1440x900 light, `prototype-` against `site-desktop-light-motion-footer-0.png`): layout matches (wordmark left, tagline, Product and Trust right, one legal row). Visible differences: the site footer's left and right edges sit at 73 px against the prototype's 96 px (the site's outer margin is narrower), the link rows are 38 px apart against 33 px, and the column headings sit about 18 px higher on the site. No shadcn component was involved; these are for a follow-up ticket, not fixed here (outside this ticket's surfaces). The design-taste-frontend look-and-fix loop was applied to these captures only; it changed no file in the allowed surfaces.
+
+Not done in this pass: screenshots at 1980x1080 and the manual side-by-side of the other reported spots. The harness captures at 1440x900 and 390x844, light and dark, are in `apps/site/e2e/.output/parity/` (git-ignored).
