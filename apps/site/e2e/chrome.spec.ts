@@ -107,3 +107,23 @@ test("the About reveal canvas fades out before it is hidden", async ({ page }) =
   const display = await canvas.evaluate((node) => getComputedStyle(node).display);
   expect(display).toBe("none");
 });
+
+test("the companion hides as soon as the footer enters the viewport and returns above it", async ({
+  page,
+}) => {
+  await page.goto("/");
+  const companion = page.locator("[data-companion]");
+  const scrollToFooterGap = async (gap: number): Promise<void> => {
+    await page.evaluate((distance) => {
+      const footer = document.querySelector(".site-footer");
+      if (!footer) throw new Error("missing footer");
+      window.scrollBy(0, footer.getBoundingClientRect().top - window.innerHeight + distance);
+    }, gap);
+  };
+  await scrollToFooterGap(16);
+  await expect(companion).toHaveAttribute("data-away", "");
+  await scrollToFooterGap(60);
+  await expect(companion).toHaveAttribute("data-away", "");
+  await scrollToFooterGap(-8);
+  await expect(companion).not.toHaveAttribute("data-away", "");
+});
