@@ -46,8 +46,17 @@
 .closing h2 {
   max-width: 9em;
   color: var(--closing-ink);
+  font-weight: 600;
   line-height: 0.95;
   letter-spacing: -0.05em;
+}
+
+.closing .button {
+  justify-content: center;
+  min-height: 52px;
+  padding: 0 26px;
+  font-size: 18px;
+  font-weight: 600;
 }
 
 .closing-actions {
