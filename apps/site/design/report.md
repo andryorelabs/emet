@@ -48,24 +48,34 @@ Deviations and concerns:
 - The lid is a flat stone-coloured disc sampled from each painting, so the blink is only believable at the 150ms it lasts.
 - Gate: `inspect.mjs` on the production build at 1440, 768 and 390 gives 0 FAIL with `--allow outlined-box,palette-purple`, the same two allowances as the scroll section. Reduced motion and no-script were checked in a real browser: content complete, valley hidden under reduced motion, no CSP violation.
 
-## End-to-end coverage (CLA-1030, S19)
+## End-to-end coverage (CLA-1030, rewritten by CLA-1045)
 
-Verified with Playwright against the production build (`apps/site/e2e/interactions.spec.ts` and `accessibility.spec.ts`): 95 tests, 0 `securitypolicyviolation` events.
+Verified with Playwright against the production build served by the repo's nginx configuration with the rendered CSP header (`apps/site/e2e/`: `accessibility.spec.ts`, `interactions.spec.ts`, `pointer-effects.spec.ts`): 99 tests pass, 0 axe violations and 0 `securitypolicyviolation` events. `KNOWN_AXE_ISSUES` is empty: there is no waiver. The earlier waivers (dimmed idle How it works steps, scrollable `.terminal` and install `pre`) were fixed in the product code.
 
-- How it works: pins at 1440 (`data-pinned`, runway above 3.5 viewports tall), steps change at about 30% and 62% (`data-step` 0, 1, 2, stream stage 2 at the end); Claude Code and Codex tabs, copy puts `/emet:run ...` or `$emet:run ...` on the clipboard; stacked with no `data-step-state` at 390 and under reduced motion at 1440.
-- Features: hold-to-approve stamps after 0.9 s and announces it, an early release approves nothing; the flag toggle sets `aria-pressed`, `data-held` and the caption, and clears them.
-- Showcase: pinned at 1440, auto-flags past 74%, a click stops auto-flagging; stacked and usable at 390; stacked final state under reduced motion.
-- Closing: the copy button puts the exact `curl -fsSL https://emet.andryore.dev/install.sh | sh` on the clipboard and sets the done state.
-- Companion: away over the hero, four-question menu, Escape returns focus, arrows and outside click, fixed answers, drag springs back without opening the menu, under reduced motion the eyes and drag never write their properties, a copy moves it to done.
-- Layout: no horizontal scroll at 1440 and 390, reduced and full motion, at `/` and `/es/`, top and bottom of the page.
-- CSP: a full scroll at 1440 with and without reduced motion raises no violation; axe also runs with motion on at 1440 and 390, light and dark, at `/` and `/es/`, after each runway is scrolled into view.
-
-Findings waived in `KNOWN_AXE_ISSUES` (each needs a source fix outside the e2e edit surface; the pre-existing home and menu axe tests were already failing on them):
-
-- `color-contrast` on dimmed idle How it works steps (`article[data-step-state="idle"]`, the spec card head and group labels).
-- `scrollable-region-focusable` on the banner `.terminal` and the install command `pre`: scrollable but not keyboard focusable.
+- How it works: pins at 1440, steps change at about 30% and 62%, Claude Code and Codex tabs with copy, stacked at 390 and under reduced motion.
+- Features: hold-to-approve, flag toggle. Showcase: pin, auto-flags, stacked at 390 and under reduced motion. Closing: exact install command copied.
+- Hero (CLA-1045): the pointer over a headline line sets a letter `--k` above 0.5; under reduced motion no letter is split; a golem click adds a ring animating `scale(1)` to `scale(7)` over 900 ms.
+- Companion: menu, drag spring-back, reduced motion; with Playwright fake timers (`page.clock`) it falls asleep after 20 s without input (not at 19 s) and wakes on a pointer move.
+- Layout: no horizontal scroll at 1440 and 390, both motion modes, `/` and `/es/`. CSP: a full scroll with and without reduced motion raises no violation.
 
 Not run here: the Lighthouse budget (CI job) and the coverage floors beyond `bun run test`.
+
+## Final parity pass (CLA-1045, S13)
+
+`bun run --cwd apps/site parity` on the final build: 320 pairs (8 sections, 8 variants: 1440x900 and 390x844, light and dark, motion and reduced), 0 missing captures, mean pixel difference 37.9%, every pair above the 5% flag threshold, worst `desktop-light-motion/showcase@0` at 97.2%. Captures and `report.json` are in `apps/site/e2e/.output/parity/`.
+
+The whole-frame pixel metric is not within tolerance anywhere, so the pass is not closed. Mean difference per section, desktop and mobile: hero 14% and 34%, How it works 44% and 31%, showcase 76% and 81%, features 7% and 15%, stats 23% and 17%, about 38% and 53%, FAQ 15% and 18%, closing 70% and 62%.
+
+Documented deviations (allowed list): axe contrast (dimmed waiting steps use colour, not opacity), CSP (CSSOM and `data-*` instead of inline styles, rendered script hashes), i18n (copy comes from `src/i18n/ui/*.ts`, so strings such as the companion lines differ), reduced motion, `pointer: coarse`, and the prototype's dev-only lab panels (the "Painting lab" button in every prototype capture).
+
+Differences seen in the captures that are not on the allowed list and are not fixed by this ticket (its edit surface is `e2e/**` and this file):
+
+- Showcase at progress 0 and 30%: the prototype paints a near-black section background in the light scheme with the painting inset about 267 px, the site shows the light page colour with the painting inset about 259 px and a different crop (the site crop shows more of the lower fields). This drives the 97% and 88% pairs.
+- Closing: the prototype panel is full-bleed (about 1424 px wide) with a dark command pill; the site panel is 1280 px wide with a light pill, a smaller heading (about 115 px against about 130 px) and, in the site capture, a second ghost set of eyes beside the golem and glowing river stream strokes that read as a ghost overlay on the painting. The eye doubling is a product defect to fix in the valley and painting layers.
+- Scroll-to-progress mapping: the harness scrolls both sides to the same fraction of the section, but section heights differ (the site's closing panel and footer share the frame), so framing differs even where the content matches; this inflates every pair and is a harness limitation, not a visual finding.
+- Not diagnosed per capture: How it works, about and mobile hero. Their ratios are listed above and the PNG pairs are available for the follow-up.
+
+Follow-up needed before S13 can be called closed: fix or document the showcase background and crop, the closing width, pill and heading size, and the doubled eyes, then rerun the harness. Until then the scenario "no undocumented difference above tolerance" is not met.
 
 ## Palette constants
 
