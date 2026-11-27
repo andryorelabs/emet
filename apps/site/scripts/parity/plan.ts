@@ -110,6 +110,54 @@ export function captureTargets(variant: string): Capture[] {
   );
 }
 
+/**
+ * Section-aligned framing. Both sides are scrolled to the same fraction of the
+ * section's own scrollable range, then, once smooth scrolling has settled, the
+ * section's live box is read back and the screenshot is clipped to it,
+ * intersected with the viewport (`sectionClip`). A capture therefore shows only
+ * the section itself, never the neighbouring section that happens to share the
+ * viewport, and a section shorter than the viewport is framed on its own box
+ * instead of on whatever sits below it. The clip is read after the scroll so a
+ * page that clamps the scroll at its end still frames the real box.
+ */
+
+/** A pixel box in viewport coordinates. */
+export interface ClipBox {
+  readonly x: number;
+  readonly y: number;
+  readonly width: number;
+  readonly height: number;
+}
+
+/** The part of a section's box that is inside the viewport, or null when nothing of it is visible. */
+export function sectionClip(
+  sectionTop: number,
+  sectionHeight: number,
+  viewport: Viewport,
+): ClipBox | null {
+  const top = Math.max(0, Math.floor(sectionTop));
+  const bottom = Math.min(viewport.height, Math.ceil(sectionTop + sectionHeight));
+  if (bottom <= top) return null;
+  return { x: 0, y: top, width: viewport.width, height: bottom - top };
+}
+
+/**
+ * Both clips start at the section's top edge, so a pair is compared on the
+ * pixel rows both sides have, `commonHeight`, instead of stretching the shorter
+ * capture over the taller one.
+ */
+
+/** The height both captures of a pair are compared on: the shorter of the two. */
+export function commonHeight(prototypeHeight: number, siteHeight: number): number {
+  return Math.min(prototypeHeight, siteHeight);
+}
+
+/** The capture width of a variant id such as `mobile-dark-reduced`. */
+export function variantWidth(variantId: string): number {
+  const match = VARIANTS.find((variant) => variant.id === variantId);
+  return match?.viewport.width ?? VIEWPORTS[0]?.viewport.width ?? 0;
+}
+
 /** The scroll offset that puts a section at `progress` of its scrollable range; a section no taller than the viewport stays at its top. */
 export function scrollTarget(
   sectionTop: number,

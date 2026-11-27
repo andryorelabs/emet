@@ -8,10 +8,13 @@ import {
   VARIANTS,
   captureFile,
   captureTargets,
+  commonHeight,
   pairCaptures,
   progressSteps,
   scrollTarget,
+  sectionClip,
   settleMs,
+  variantWidth,
 } from "./plan";
 
 const desktop = "desktop-light-motion";
@@ -93,6 +96,45 @@ describe("scrollTarget", () => {
 
   test("keeps a short section at its top", () => {
     expect(scrollTarget(500, 400, 1000, 1)).toBe(500);
+  });
+});
+
+describe("sectionClip", () => {
+  const viewport = { width: 1440, height: 900 };
+
+  test("clips a short section to its own box", () => {
+    expect(sectionClip(100.4, 300, viewport)).toEqual({ x: 0, y: 100, width: 1440, height: 301 });
+  });
+
+  test("clips a tall section to the viewport", () => {
+    expect(sectionClip(-1200, 3000, viewport)).toEqual({ x: 0, y: 0, width: 1440, height: 900 });
+  });
+
+  test("clips the visible tail of a section", () => {
+    expect(sectionClip(-200, 500, viewport)).toEqual({ x: 0, y: 0, width: 1440, height: 300 });
+  });
+
+  test("returns null when the section is not visible", () => {
+    expect(sectionClip(950, 400, viewport)).toBeNull();
+    expect(sectionClip(-500, 400, viewport)).toBeNull();
+  });
+});
+
+describe("commonHeight", () => {
+  test("is the shorter of the two captures", () => {
+    expect(commonHeight(900, 810)).toBe(810);
+    expect(commonHeight(400, 760)).toBe(400);
+  });
+});
+
+describe("variantWidth", () => {
+  test("is the viewport width of the variant", () => {
+    expect(variantWidth("mobile-dark-reduced")).toBe(390);
+    expect(variantWidth("desktop-light-motion")).toBe(1440);
+  });
+
+  test("falls back to the desktop width for an unknown variant", () => {
+    expect(variantWidth("nope")).toBe(1440);
   });
 });
 
