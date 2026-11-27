@@ -103,8 +103,28 @@ describe("Features bento", () => {
     for (const key of ["flags", "ci", "workers"]) {
       expect(css).toMatch(new RegExp(`\\.bento-${key} \\{\\s*grid-column: \\d+ \\/ \\d+;`));
     }
-    expect(css).toMatch(/\.bento-tracker \{\s*grid-column: 1 \/ 13;/);
+    expect(css).toMatch(/\.bento-tracker \{\s*grid-column: 1 \/ 5;\s*grid-row: 3;/);
     expect(css).not.toContain("grid-row: 1 / 3");
+  });
+
+  it("gives the Tracker 4 columns beside the compact cards in the other 8", () => {
+    expect(css).not.toContain("auto-fit");
+    expect(featureRowsSource).not.toContain("auto-fit");
+    expect(featureRowsSource).toMatch(/\.bento-compact \{\s*grid-column: 5 \/ 13;\s*grid-row: 3;/);
+    expect(featureRowsSource).toContain("grid-template-columns: repeat(2, minmax(0, 1fr));");
+    expect(featureRowsSource).toContain("grid-template-rows: repeat(3, auto);");
+    expect(featureRowsSource).toContain("align-content: stretch;");
+    expect(featureRowsSource).toMatch(/\.feature-row:nth-child\(5\) \{\s*grid-column: 1 \/ -1;/);
+    expect(featuresSource).toMatch(/<FeatureRows[^>]*\/>\s*<\/ul>/);
+  });
+
+  it("gives the Tracker 5 columns and the compact cards 7 from 761px to 1100px", () => {
+    expect(css).toMatch(
+      /@media \(min-width: 761px\) and \(max-width: 1100px\) \{\s*\.bento-tracker \{\s*grid-column: 1 \/ 6;/,
+    );
+    expect(featureRowsSource).toMatch(
+      /@media \(min-width: 761px\) and \(max-width: 1100px\) \{\s*\.bento-compact \{\s*grid-column: 6 \/ 13;/,
+    );
   });
 
   it("anchors scene content to the bottom", () => {
