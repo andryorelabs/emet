@@ -28,7 +28,6 @@
 
 [data-search-part="dialog"] {
   position: fixed;
-  inset: 96px 0 auto;
   z-index: 50;
   box-sizing: border-box;
   display: flex;
@@ -38,12 +37,9 @@
   max-width: calc(100% - 32px);
   height: fit-content;
   min-height: 0;
-  max-height: calc(100dvh - 192px);
-  margin: 0 auto;
+  max-height: calc(100dvh - 32px);
   padding: 0;
   overflow: hidden;
-  translate: none;
-  transform: none;
   border: 1px solid var(--border);
   border-radius: 10px;
   background: var(--bg);
@@ -134,6 +130,16 @@
   [data-search-part="footer-keys"] {
     display: none;
   }
+}
+
+[data-search-state="unavailable"] [data-search-part="host"] {
+  display: none;
+}
+
+[data-search-part="dialog"] [data-search-part="unavailable"] {
+  padding: 56px 24px;
+  border: 0;
+  color: var(--text-muted);
 }
 
 [data-search-part="status"] {

@@ -25,6 +25,7 @@ const strings: DocsSearchStrings = {
   footerPrivacy: "Search runs in your browser.",
   footerKeys: "↑↓ to move, Enter to open",
   escapeKey: "Esc",
+  unavailable: "Search is only available in production builds.",
 };
 
 const focusTargets: { initial?: unknown; final?: unknown } = {};
@@ -317,5 +318,17 @@ describe("DocsSearch", () => {
     await settle();
     expect(document.querySelector('[data-search-part="dialog"]')).toBeNull();
     expect(document.querySelector(".docs-search .search-container")).not.toBeNull();
+  });
+
+  test("shows the unavailable state when Starlight rendered no search container", () => {
+    fixture = document.createElement("div");
+    fixture.innerHTML = `<button data-search-trigger>Search</button><div class="docs-search" data-docs-search="{}"></div>`;
+    document.body.append(fixture);
+    island = renderIsland(<DocsSearch strings={strings} />);
+    request(getElement("[data-docs-search]"), "open");
+    const frame = getElement('[data-search-part="frame"]');
+    expect(frame.getAttribute("data-search-state")).toBe("unavailable");
+    expect(frame.querySelector('[data-slot="empty"]')?.textContent).toContain(strings.unavailable);
+    expect(getElement('[data-search-part="status"]').textContent).toBe(strings.unavailable);
   });
 });

@@ -89,26 +89,11 @@ export const de = {
       { title: "Dein Tracker, oder keiner", line: "Linear, GitHub Issues oder lokale Dateien." },
     ],
     extra: [
-      {
-        title: "Schnellmodus für kleine Änderungen",
-        line: "Ein Flag hält das Interview auf eine Runde und führt ein Ticket, ein Review und ein Landing aus.",
-      },
-      {
-        title: "Merkt sich, was funktioniert hat",
-        line: "Erkenntnisse jedes Laufs werden gespeichert und im nächsten abgerufen.",
-      },
-      {
-        title: "Zwei Reviewer für riskante Änderungen",
-        line: "Riskante Arbeit bekommt einen zweiten Reviewer, bevor etwas landet.",
-      },
-      {
-        title: "Meldet sich, wenn es dich braucht",
-        line: "Ein Hinweis, wenn ein Lauf auf deine Freigabe wartet oder feststeckt.",
-      },
-      {
-        title: "Sauber installiert und deinstalliert",
-        line: "Entfernt alles, was emet installiert hat, und behält jede Datei, die du bearbeitet hast.",
-      },
+      { title: "Schnellmodus für kleine Änderungen", docs: "/docs/reference/cli/" },
+      { title: "Merkt sich, was funktioniert hat", docs: "/docs/concepts/memory/" },
+      { title: "Zwei Reviewer für riskante Änderungen", docs: "/docs/concepts/review-and-gates/" },
+      { title: "Meldet sich, wenn es dich braucht", docs: "/docs/how-to/check-a-fleet/" },
+      { title: "Sauber installiert und deinstalliert", docs: "/docs/start/install/" },
     ],
   },
   stats: {
@@ -177,7 +162,6 @@ export const de = {
   },
   closing: {
     heading: "Probiere es in einem Repo",
-    action: "emet installieren",
     alt: "Ein Tal unter tiefem Morgennebel mit blasser Sonne und Pastellhimmel.",
   },
   companion: {

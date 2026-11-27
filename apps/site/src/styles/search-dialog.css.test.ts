@@ -21,7 +21,13 @@ describe("search dialog stylesheet", () => {
     expect(dialogCss).toMatch(/\[data-search-part="dialog"\] \{[^}]*height: fit-content;/);
     expect(dialogCss).not.toMatch(/\[data-search-part="dialog"\] \{[^}]*height: auto;/);
     expect(dialogCss).toMatch(
-      /\[data-search-part="dialog"\] \{[^}]*max-height: calc\(100dvh - 192px\);/,
+      /\[data-search-part="dialog"\] \{[^}]*max-height: calc\(100dvh - 32px\);/,
+    );
+  });
+
+  it("leaves the centering to the shadcn dialog utilities", () => {
+    expect(dialogCss).not.toMatch(
+      /\[data-search-part="dialog"\] \{[^}]*(inset|translate|transform|margin):/,
     );
   });
 

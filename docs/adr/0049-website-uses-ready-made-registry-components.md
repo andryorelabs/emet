@@ -17,6 +17,7 @@ The v17 prototype was built from shadcn-registry components (magicui `terminal`,
 - **CSP.** No `'unsafe-inline'`. A server-rendered `style` attribute that a registry component emits (the `counter-reset` of `code-block`) is allowed by hash and pinned by a unit test, as the FAQ is in 0045. A component whose output needs any other inline `style`, or a heavy dependency, is rejected, not patched.
 - **Licences.** Each item's licence is checked before it is vendored and recorded in the ticket handoff.
 - Every worker records which item it installed, or which it checked and rejected and why.
+- **One recorded exception.** `apps/site/src/lib/highlighter.tsx` carries a one-line type-only patch (`...(state === undefined ? {} : { grammarState: state })`) because the vendored file does not compile under `exactOptionalPropertyTypes` (TS2379) and shiki 4.6.0 has no wider type. Any `shadcn add --overwrite` re-sync must re-apply it, and `bun run check` fails until it does. The vendored-file lint exemption covers only the exact vendored paths, never the `HomeCodeBlock` and `HomeTerminal` wrappers.
 
 ## Consequences
 

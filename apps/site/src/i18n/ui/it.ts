@@ -91,26 +91,11 @@ export const it = {
       { title: "Il tuo tracker, o nessuno", line: "Linear, GitHub Issues o file locali." },
     ],
     extra: [
-      {
-        title: "Modalità rapida per piccole modifiche",
-        line: "Un'opzione riduce l'intervista a un solo giro ed esegue un ticket, una revisione e un'integrazione.",
-      },
-      {
-        title: "Ricorda ciò che ha funzionato",
-        line: "Le lezioni di ogni esecuzione vengono salvate e richiamate nella successiva.",
-      },
-      {
-        title: "Due revisori per modifiche rischiose",
-        line: "Il lavoro ad alto rischio ottiene un secondo revisore prima dell'integrazione.",
-      },
-      {
-        title: "Ti avvisa quando ha bisogno di te",
-        line: "Un avviso quando un'esecuzione attende la tua approvazione o è bloccata.",
-      },
-      {
-        title: "Si installa e si disinstalla in modo pulito",
-        line: "Rimuove tutto ciò che emet ha installato e conserva ogni file che hai modificato.",
-      },
+      { title: "Modalità rapida per piccole modifiche", docs: "/docs/reference/cli/" },
+      { title: "Ricorda ciò che ha funzionato", docs: "/docs/concepts/memory/" },
+      { title: "Due revisori per modifiche rischiose", docs: "/docs/concepts/review-and-gates/" },
+      { title: "Ti avvisa quando ha bisogno di te", docs: "/docs/how-to/check-a-fleet/" },
+      { title: "Si installa e si disinstalla in modo pulito", docs: "/docs/start/install/" },
     ],
   },
   stats: {
@@ -178,7 +163,6 @@ export const it = {
   },
   closing: {
     heading: "Provalo in un repository",
-    action: "Installa emet",
     alt: "Una valle sotto una bassa foschia mattutina, con un sole pallido e un cielo pastello.",
   },
   companion: {

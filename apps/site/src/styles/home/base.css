@@ -103,12 +103,6 @@ a:focus-visible,
   box-shadow: none;
 }
 
-.text-link {
-  color: var(--text);
-  font-size: 17px;
-  text-underline-offset: 4px;
-}
-
 .showcase {
   padding: 0 var(--gutter);
 }

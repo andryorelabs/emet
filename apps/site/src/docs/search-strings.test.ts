@@ -19,6 +19,15 @@ describe("SEARCH_STRINGS", () => {
     }
   });
 
+  test("labels the search button without an ellipsis in every locale", () => {
+    for (const locale of LOCALES) {
+      const { searchButton, searchButtonShort, searchButtonLabel } = SEARCH_STRINGS[locale];
+      expect(searchButton).toBe(searchButtonLabel);
+      expect(searchButton).not.toContain("…");
+      expect(searchButtonShort).not.toContain("…");
+    }
+  });
+
   test("keeps the English copy of the canvas", () => {
     const en = SEARCH_STRINGS.en;
     expect(en.placeholder).toBe("Search the docs");

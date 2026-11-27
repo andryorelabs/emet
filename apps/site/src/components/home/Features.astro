@@ -13,6 +13,7 @@ import ReviewScene from "./bento/scenes/ReviewScene.astro";
 import TrackerScene from "./bento/scenes/TrackerScene.astro";
 import WorkersScene from "./bento/scenes/WorkersScene.astro";
 import FeatureRows from "./FeatureRows.astro";
+import { Card, CardDescription, CardHeader, CardTitle } from "../ui/card";
 
 interface Props {
   strings: UiStrings;
@@ -43,18 +44,24 @@ const keyWidth = 10;
         const card = cards[index];
         return (
           card && (
-            <li data-slot="card" data-size="default" class={`bento-card bento-${card.key}`} data-reveal="item">
-              <div class="bento-claim">
-                <h3>{note.title}</h3>
-                <p>{note.line}</p>
-              </div>
+            <li class={`bento-card bento-${card.key}`} data-reveal="item">
+              <Card>
+                <CardHeader>
+                  <CardTitle>
+                    <h3>{note.title}</h3>
+                  </CardTitle>
+                  <CardDescription>
+                    <p>{note.line}</p>
+                  </CardDescription>
+                </CardHeader>
               {card.key === "approval" && <ApprovalScene labels={features.scenes} />}
               {card.key === "review" && <ReviewScene labels={features.scenes} />}
               {card.key === "flags" && <FlagsScene flagLabel={strings.showcase.flag} heldText={strings.showcase.statusHeld} />}
               {card.key === "ci" && <CiScene />}
               {card.key === "workers" && <WorkersScene />}
               {card.key === "tracker" && <TrackerScene />}
-              <pre class="bento-report"><span class="features-key">{card.key.padEnd(keyWidth)}</span>{`${card.value}\n${" ".repeat(keyWidth)}${card.result}`}</pre>
+                <pre class="bento-report"><span class="features-key">{card.key.padEnd(keyWidth)}</span>{`${card.value}\n${" ".repeat(keyWidth)}${card.result}`}</pre>
+              </Card>
             </li>
           )
         );
