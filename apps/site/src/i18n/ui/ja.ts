@@ -49,10 +49,13 @@ export const ja = {
     merged: "マージ済み",
     otherInstall: "ほかのインストール方法",
     wave: "ウェーブ {n}",
+    waveLine: "ウェーブ {n}",
     caption:
       "各ウェーブは 1 つのスペックブランチに合流します。スペックは 1 件のプルリクエストとして着地します。",
     prTitle: "スペック 41: 設定のダークモード",
     checks: "チェック成功",
+    open: "オープン",
+    closes: "クローズ",
   },
   showcase: {
     heading: "スペックはマージされる",
@@ -61,6 +64,8 @@ export const ja = {
       "スペック 41 レビュー済み。CI 成功。1 件のプルリクエストとしてマージ済み、チケット 4 件クローズ。",
     statusHeld: "スペック 41 保留: チケット 1 件にフラグ。何もマージされていません。",
     flag: "チケット #44 にフラグを立てる",
+    laneReview: "レビュー",
+    laneHeld: "保留",
   },
   features: {
     heading: "実行が守るもの",

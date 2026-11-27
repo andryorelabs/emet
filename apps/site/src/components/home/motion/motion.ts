@@ -1,7 +1,8 @@
 /**
  * Scroll motion layer of the home page: Lenis smooth scroll on pointer
  * devices, once-only reveals with a 60ms stagger, and the scroll progress
- * fallback for browsers without `animation-timeline: view()`. Every state
+ * fallback for browsers without `animation-timeline: view()`, and the
+ * scroll zoom of the hero painting. Every state
  * is reachable without script; the root attribute `data-motion` only turns
  * the hidden starting states of `motion.css` into transitions.
  */
@@ -9,7 +10,7 @@ import Lenis from "lenis";
 
 import {
   coverProgress,
-  exitProgress,
+  heroZoom,
   isSmoothScrollExempt,
   motionPolicy,
   type MotionEnvironment,
@@ -68,7 +69,6 @@ function observeReveals(root: ParentNode): () => void {
 }
 
 function trackScrollProgress(root: ParentNode): () => void {
-  const recede = [...root.querySelectorAll<HTMLElement>("[data-recede]")];
   const drift = [...root.querySelectorAll<HTMLElement>("[data-drift]")];
   const visible = new Set<HTMLElement>();
   const watcher = new IntersectionObserver((entries) => {
@@ -86,17 +86,14 @@ function trackScrollProgress(root: ParentNode): () => void {
     frame = 0;
     for (const target of visible) {
       const box = target.getBoundingClientRect();
-      const progress = recede.includes(target)
-        ? exitProgress(box)
-        : coverProgress(box, innerHeight);
-      target.style.setProperty("--p", progress.toFixed(4));
+      target.style.setProperty("--p", coverProgress(box, innerHeight).toFixed(4));
     }
   };
   function schedule(): void {
     if (frame === 0) frame = requestAnimationFrame(write);
   }
 
-  for (const target of [...recede, ...drift]) watcher.observe(target);
+  for (const target of drift) watcher.observe(target);
   addEventListener("scroll", schedule, { passive: true });
   addEventListener("resize", schedule, { passive: true });
   return () => {
@@ -104,6 +101,50 @@ function trackScrollProgress(root: ParentNode): () => void {
     removeEventListener("scroll", schedule);
     removeEventListener("resize", schedule);
     cancelAnimationFrame(frame);
+  };
+}
+
+/**
+ * Writes `--hs`, the painting scale of each `[data-zoom]` hero, from the
+ * scroll position. It reads and writes nothing while the hero is off screen
+ * or the tab is hidden, and resumes with a fresh value when either returns.
+ */
+function trackZoom(root: ParentNode): () => void {
+  const targets = [...root.querySelectorAll<HTMLElement>("[data-zoom]")];
+  if (targets.length === 0) return () => undefined;
+  const visible = new Set<HTMLElement>();
+  let frame = 0;
+
+  const write = (): void => {
+    frame = 0;
+    if (document.hidden) return;
+    const scale = heroZoom(scrollY, innerHeight).toFixed(4);
+    for (const target of visible) target.style.setProperty("--hs", scale);
+  };
+  const schedule = (): void => {
+    if (frame === 0 && !document.hidden) frame = requestAnimationFrame(write);
+  };
+  const watcher = new IntersectionObserver((entries) => {
+    for (const entry of entries) {
+      const target = entry.target;
+      if (!(target instanceof HTMLElement)) continue;
+      if (entry.isIntersecting) visible.add(target);
+      else visible.delete(target);
+    }
+    schedule();
+  });
+
+  for (const target of targets) watcher.observe(target);
+  addEventListener("scroll", schedule, { passive: true });
+  addEventListener("resize", schedule, { passive: true });
+  document.addEventListener("visibilitychange", schedule);
+  return () => {
+    watcher.disconnect();
+    removeEventListener("scroll", schedule);
+    removeEventListener("resize", schedule);
+    document.removeEventListener("visibilitychange", schedule);
+    cancelAnimationFrame(frame);
+    for (const target of targets) target.style.removeProperty("--hs");
   };
 }
 
@@ -133,6 +174,7 @@ export function initMotion(root: ParentNode): void {
     const html = document.documentElement;
     html.dataset.motion = "ready";
     stops.push(observeReveals(root));
+    stops.push(trackZoom(root));
     if (policy.scrollFallback) {
       html.dataset.scrollFallback = "";
       stops.push(trackScrollProgress(root));

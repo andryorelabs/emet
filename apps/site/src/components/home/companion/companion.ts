@@ -11,6 +11,7 @@ import {
   COMPANION_SECTIONS,
   companionState,
   eyeShift,
+  IDLE_SLEEP_MS,
   menuTarget,
   sectionAtLine,
   type CompanionEvent,
@@ -39,9 +40,13 @@ function heldOf(event: Event): boolean {
 /**
  * Wires one companion element.
  * @param root - The `[data-companion]` element rendered by `Companion.astro`.
+ * @param idleMs - How long without input before the golem sleeps.
  * @returns A handle that removes every listener and timer.
  */
-export function initCompanion(root: HTMLElement): { destroy(): void } {
+export function initCompanion(
+  root: HTMLElement,
+  idleMs: number = IDLE_SLEEP_MS,
+): { destroy(): void } {
   const button = root.querySelector<HTMLButtonElement>("[data-companion-button]");
   const menu = root.querySelector<HTMLElement>("[data-companion-menu]");
   const say = root.querySelector<HTMLElement>("[data-companion-say]");
@@ -58,6 +63,8 @@ export function initCompanion(root: HTMLElement): { destroy(): void } {
   let eventTimer: ReturnType<typeof setTimeout> | undefined;
   let answerTimer: ReturnType<typeof setTimeout> | undefined;
   let frame = 0;
+  let asleep = false;
+  let idleTimer: ReturnType<typeof setTimeout> | undefined;
   let suppressClick = false;
 
   const setMenu = (open: boolean): void => {
@@ -67,7 +74,11 @@ export function initCompanion(root: HTMLElement): { destroy(): void } {
   };
 
   const render = (): void => {
-    const state = companionState(section, event);
+    const state = companionState(section, event, {
+      step: Number(document.querySelector<HTMLElement>("#how")?.dataset.step ?? -1),
+      held: document.querySelector<HTMLElement>("#showcase")?.dataset.state === "held",
+      asleep,
+    });
     const away = section === "hero";
     root.dataset.state = state;
     if (away) root.dataset.away = "";
@@ -116,6 +127,29 @@ export function initCompanion(root: HTMLElement): { destroy(): void } {
   listen(COMPANION_EVENT_NAMES.flagToggle, (received) => {
     react({ kind: "flag-toggle", held: heldOf(received) });
   });
+  const wake = (): void => {
+    clearTimeout(idleTimer);
+    if (asleep) {
+      asleep = false;
+      render();
+    }
+    if (!reduced) {
+      idleTimer = setTimeout(() => {
+        asleep = true;
+        render();
+      }, idleMs);
+    }
+  };
+  for (const name of ["pointermove", "pointerdown", "keydown", "scroll"]) {
+    globalThis.addEventListener(name, wake, { passive: true, signal });
+  }
+  const follow = new MutationObserver(schedule);
+  for (const selector of ["#how", "#showcase"]) {
+    const target = document.querySelector(selector);
+    if (target) {
+      follow.observe(target, { attributes: true, attributeFilter: ["data-step", "data-state"] });
+    }
+  }
   globalThis.addEventListener("scroll", schedule, { passive: true, signal });
   globalThis.addEventListener("resize", schedule, { signal });
 
@@ -203,9 +237,12 @@ export function initCompanion(root: HTMLElement): { destroy(): void } {
 
   root.hidden = false;
   measure();
+  wake();
   return {
     destroy(): void {
       abort.abort();
+      follow.disconnect();
+      clearTimeout(idleTimer);
       clearTimeout(eventTimer);
       clearTimeout(answerTimer);
       if (frame !== 0) cancelAnimationFrame(frame);

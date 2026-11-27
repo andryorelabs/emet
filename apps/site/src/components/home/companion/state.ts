@@ -20,6 +20,22 @@ export const COMPANION_EVENT_NAMES = {
   copy: "emet:copy",
 } as const;
 
+/** Milliseconds without input after which the golem falls asleep. */
+export const IDLE_SLEEP_MS = 20_000;
+
+/** Live facts about the page the golem reads besides the section in view. */
+export interface CompanionContext {
+  /** The active How it works step, or `-1` when none is known. */
+  readonly step: number;
+  /** Whether the Showcase wave is held, by click or by scroll. */
+  readonly held: boolean;
+  /** Whether the visitor has been idle for {@link IDLE_SLEEP_MS}. */
+  readonly asleep: boolean;
+}
+
+/** The context with nothing known, idle or held. */
+const EMPTY_CONTEXT: CompanionContext = { step: -1, held: false, asleep: false };
+
 /** One view region of the page and the selector that finds it. */
 export interface CompanionSection {
   readonly id: string;
@@ -44,16 +60,35 @@ const SECTION_STATES: Readonly<Record<string, CompanionState>> = {
 };
 
 /**
- * The golem's state for a section and an optional visitor action. An action
- * wins over the section, except over the hero where the golem sleeps.
+ * The golem's mood for How it works: work, then wait at the second step, then
+ * done at the third.
+ * @param step - The active step index.
+ * @returns The state for that step.
+ */
+function howState(step: number): CompanionState {
+  if (step === 2) return "done";
+  return step === 1 ? "wait" : "work";
+}
+
+/**
+ * The golem's state for a section and an optional visitor action. Idle sleep
+ * wins over everything, then the hero sleeps, then an action wins over the
+ * section.
  * @param sectionId - The section in view, such as `hero` or `closing`.
  * @param event - The last visitor action, or `null` when there is none.
+ * @param context - The How it works step, the Showcase hold and the idle flag.
  * @returns The state to show.
  */
-export function companionState(sectionId: string, event: CompanionEvent | null): CompanionState {
-  if (sectionId === "hero") return "sleep";
+export function companionState(
+  sectionId: string,
+  event: CompanionEvent | null,
+  context: CompanionContext = EMPTY_CONTEXT,
+): CompanionState {
+  if (context.asleep || sectionId === "hero") return "sleep";
   if (event?.kind === "approval-hold" || event?.kind === "copy") return "done";
   if (event?.kind === "flag-toggle") return event.held ? "wait" : "work";
+  if (sectionId === "how") return howState(context.step);
+  if (sectionId === "showcase") return context.held ? "wait" : "work";
   return SECTION_STATES[sectionId] ?? "work";
 }
 

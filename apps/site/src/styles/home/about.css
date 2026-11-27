@@ -1,82 +1,78 @@
 /**
- * Home page about: Hebrew word pair, signature and portrait.
+ * Home page about: Hebrew word, Latin word and portrait.
  */
 
 .about {
-  padding-inline: calc(var(--edge) + var(--axis)) var(--edge);
+  padding-inline: var(--content-inset);
   display: grid;
-  grid-template-columns: minmax(0, 520px) minmax(0, 420px);
-  gap: 80px;
-  align-items: center;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 440px);
+  gap: 96px;
+  align-items: start;
 }
 
 .letter {
   display: flex;
   flex-direction: column;
-  gap: 20px;
+}
+
+.letter > p {
+  max-width: 560px;
+  margin: 0 0 16px;
+  font-size: 22px;
+  line-height: 1.5;
+}
+
+.letter > p.mute {
+  color: var(--text-muted);
 }
 
 .hebrew-pair {
   display: flex;
   align-items: flex-end;
-  gap: 24px;
-  margin: 8px 0 24px;
+  flex-wrap: wrap;
+  gap: 48px;
+  margin: 40px 0 32px;
 }
 
 .hebrew-word {
   display: flex;
   flex-direction: column;
-  align-items: center;
-  gap: 4px;
 }
 
 .hebrew {
   font-family: "Frank Ruhl Libre", serif;
-  font-size: 56px;
+  font-size: clamp(92px, 11vw, 150px);
   font-weight: 400;
   line-height: 1;
+}
+
+.hebrew-glosses {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 6px;
+  font-family: var(--font-mono);
+  font-size: 13px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-muted);
 }
 
 .hebrew-aleph {
   display: inline-block;
 }
 
-.hebrew-roman {
-  font-family: var(--font-mono);
-  font-size: 14px;
-  color: var(--text);
-}
-
-.hebrew-gloss {
-  font-size: 14px;
-  color: var(--text-muted);
-}
-
-.hebrew-arrow {
-  padding-bottom: 38px;
-  font-size: 24px;
+.latin {
+  padding-bottom: 18px;
+  font-size: clamp(56px, 7vw, 92px);
+  font-weight: 500;
   line-height: 1;
-  color: var(--text-muted);
-}
-
-@media (max-width: 600px) {
-  .hebrew {
-    font-size: 40px;
-  }
-
-  .hebrew-pair {
-    gap: 16px;
-  }
-
-  .hebrew-arrow {
-    padding-bottom: 36px;
-  }
+  letter-spacing: -0.04em;
 }
 
 @media (prefers-reduced-motion: no-preference) {
   html[data-motion] .hebrew-aleph {
     position: relative;
-    color: color-mix(in oklab, var(--text) calc(100% - 65% * var(--strike, 0)), transparent);
+    opacity: calc(1 - 0.65 * var(--strike, 0));
   }
 
   html[data-motion] .hebrew-aleph::after {
@@ -90,31 +86,28 @@
     transform-origin: left;
   }
 
+  html[data-motion] .latin-e {
+    opacity: calc(1 - 0.65 * var(--strike, 0));
+    text-decoration: line-through;
+    text-decoration-thickness: 4px;
+    text-decoration-color: color-mix(
+      in oklab,
+      var(--error) calc(var(--strike, 0) * 100%),
+      transparent
+    );
+  }
+
   .portrait-frame canvas[data-state="ready"] {
     display: block;
   }
 }
 
 .mark {
-  padding: 0 4px;
-  border-radius: 4px;
-  background: var(--lamp);
-  color: var(--on-accent);
-}
-
-.signature {
-  margin-top: 8px;
-  font-size: 22px;
-  font-style: italic;
-  line-height: 1.3;
-}
-
-.signature small {
-  display: block;
-  margin-top: 4px;
-  font-size: 14px;
-  font-style: normal;
-  color: var(--text-muted);
+  background: linear-gradient(
+    transparent 62%,
+    color-mix(in oklab, var(--lamp) 55%, transparent) 62%
+  );
+  color: var(--text);
 }
 
 .portrait {
@@ -123,6 +116,8 @@
 
 .portrait-frame {
   position: relative;
+  overflow: clip;
+  border-radius: 10px;
 }
 
 .portrait-frame canvas {
@@ -131,7 +126,7 @@
   inset: 0;
   width: 100%;
   height: 100%;
-  border-radius: var(--radius-panel);
+  border-radius: 10px;
 }
 
 .portrait picture,
@@ -142,16 +137,18 @@
 
 .portrait picture {
   overflow: clip;
-  border-radius: var(--radius-panel);
+  border-radius: 10px;
 }
 
 .portrait img {
   aspect-ratio: 4 / 5;
   object-fit: cover;
-  border-radius: var(--radius-panel);
+  border-radius: 10px;
 }
 
 .portrait figcaption {
+  display: flex;
+  justify-content: space-between;
   margin-top: 10px;
   font-size: 14px;
   color: var(--text-muted);
@@ -160,7 +157,7 @@
 @media (max-width: 1000px) {
   .about {
     grid-template-columns: minmax(0, 1fr);
-    gap: 40px;
+    gap: 48px;
     padding-inline: var(--gutter);
   }
 

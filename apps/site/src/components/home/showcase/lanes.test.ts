@@ -1,7 +1,14 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, test } from "bun:test";
 import { GlobalRegistrator } from "@happy-dom/global-registrator";
 
-import { drawLanes, type LaneContext, initLanes, LANES_REFRESH_EVENT, laneDots } from "./lanes";
+import {
+  drawLanes,
+  type LaneContext,
+  initLanes,
+  LANES_REFRESH_EVENT,
+  laneDots,
+  readLaneLabels,
+} from "./lanes";
 
 describe("laneDots", () => {
   test("lights no dot at the start of the sweep", () => {
@@ -34,6 +41,8 @@ class Recorder implements LaneContext {
   dashes: number[][] = [];
   fills: (string | CanvasGradient | CanvasPattern)[] = [];
   fillStyle: string | CanvasGradient | CanvasPattern = "";
+  font = "";
+  texts: { text: string; x: number; y: number }[] = [];
   strokeStyle: string | CanvasGradient | CanvasPattern = "";
   lineWidth = 1;
   arc(): void {
@@ -50,6 +59,9 @@ class Recorder implements LaneContext {
   }
   fill(): void {
     this.fills.push(this.fillStyle);
+  }
+  fillText(text: string, x: number, y: number): void {
+    this.texts.push({ text, x, y });
   }
   lineTo(): void {
     this.calls.push("lineTo");
@@ -89,6 +101,43 @@ describe("drawLanes", () => {
     drawLanes(rec, size, laneDots(1.4, true), true);
     expect(rec.fills.at(-1)).toBe("oklch(0.76 0.15 80)");
     expect(rec.dashes.filter((dash) => dash.length === 2 && dash[0] === 6)).toHaveLength(1);
+  });
+});
+
+describe("lane labels", () => {
+  const size = { width: 300, height: 140, scale: 2 };
+
+  test("writes review above the gate and merged beside the node", () => {
+    const rec = recorder();
+    drawLanes(rec, size, laneDots(1.4, false), false, {
+      review: "review",
+      merged: "merged",
+      held: "held",
+      family: "JetBrains Mono",
+    });
+    expect(rec.texts).toEqual([
+      { text: "review", x: 0.46 * 300, y: 14 * 2 },
+      { text: "merged", x: 0.8 * 300 + 24, y: 0.88 * 140 + 8 },
+    ]);
+    expect(rec.font).toBe("24px JetBrains Mono");
+  });
+
+  test("writes held instead of merged while held", () => {
+    const rec = recorder();
+    drawLanes(rec, size, laneDots(1.4, true), true, { held: "held", merged: "merged" });
+    expect(rec.texts.map((entry) => entry.text)).toEqual(["held"]);
+    expect(rec.font).toBe("24px monospace");
+  });
+
+  test("keeps the review word above a tall gate and draws nothing without words", () => {
+    const tall = recorder();
+    drawLanes(tall, { width: 300, height: 600, scale: 1 }, laneDots(1, false), false, {
+      review: "review",
+    });
+    expect(tall.texts[0]?.y).toBe(0.04 * 600 - 6);
+    const bare = recorder();
+    drawLanes(bare, size, laneDots(1, false), false);
+    expect(bare.texts).toEqual([]);
   });
 });
 
@@ -258,5 +307,30 @@ describe("initLanes", () => {
     setHidden(true);
     setHidden(false);
     expect(frames).toHaveLength(1);
+  });
+});
+
+describe("readLaneLabels", () => {
+  beforeAll(() => {
+    GlobalRegistrator.register();
+  });
+  afterAll(() => GlobalRegistrator.unregister());
+
+  test("reads lowercase words and the mono family from the canvas", () => {
+    const canvas = document.createElement("canvas");
+    canvas.dataset.labelReview = "Review";
+    canvas.dataset.labelMerged = "Merged";
+    canvas.style.fontFamily = "Mono";
+    document.body.append(canvas);
+    expect(readLaneLabels(canvas)).toEqual({
+      review: "review",
+      merged: "merged",
+      held: undefined,
+      family: "Mono",
+    });
+  });
+
+  test("falls back to no family when the canvas has none", () => {
+    expect(readLaneLabels(document.createElement("canvas")).family).toBeUndefined();
   });
 });

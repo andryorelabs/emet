@@ -138,6 +138,63 @@ describe("initCompanion", () => {
     handle.destroy();
   });
 
+  test("falls asleep after the idle delay and wakes on a pointer move", async () => {
+    document.body.innerHTML = MARKUP;
+    layout("how");
+    const root = document.querySelector<HTMLElement>("[data-companion]");
+    if (!root) throw new Error("fixture");
+    const handle = initCompanion(root, 40);
+    expect(root.dataset.state).toBe("work");
+    await new Promise((resolve) => setTimeout(resolve, 80));
+    expect(root.dataset.state).toBe("sleep");
+    globalThis.dispatchEvent(new Event("pointermove"));
+    expect(root.dataset.state).toBe("work");
+    handle.destroy();
+  });
+
+  test("never sleeps under reduced motion", async () => {
+    reduced = true;
+    document.body.innerHTML = MARKUP;
+    layout("how");
+    const root = document.querySelector<HTMLElement>("[data-companion]");
+    if (!root) throw new Error("fixture");
+    const handle = initCompanion(root, 20);
+    await new Promise((resolve) => setTimeout(resolve, 60));
+    expect(root.dataset.state).toBe("work");
+    handle.destroy();
+  });
+
+  test("follows the How it works step and the Showcase hold", async () => {
+    const { root, handle } = mount("how");
+    const how = document.querySelector<HTMLElement>("#how");
+    if (!how) throw new Error("fixture");
+    how.dataset.step = "1";
+    await frame();
+    expect(root.dataset.state).toBe("wait");
+    how.dataset.step = "2";
+    await frame();
+    expect(root.dataset.state).toBe("done");
+    handle.destroy();
+  });
+
+  test("waits while the Showcase is held by scroll", async () => {
+    document.body.innerHTML = `${MARKUP}<section id="showcase" data-state="merged"></section>`;
+    const showcase = document.querySelector<HTMLElement>("#showcase");
+    const how = document.querySelector<HTMLElement>("#how");
+    const hero = document.querySelector<HTMLElement>(".hero");
+    const root = document.querySelector<HTMLElement>("[data-companion]");
+    if (!showcase || !how || !hero || !root) throw new Error("fixture");
+    hero.getBoundingClientRect = rect(-1000, -500);
+    how.getBoundingClientRect = rect(-500, 0);
+    showcase.getBoundingClientRect = rect(0, 2000);
+    const handle = initCompanion(root);
+    expect(root.dataset.state).toBe("work");
+    showcase.dataset.state = "held";
+    await frame();
+    expect(root.dataset.state).toBe("wait");
+    handle.destroy();
+  });
+
   test("opens the menu on click and focuses the first item", () => {
     const { button, menu, handle } = mount();
     button.click();

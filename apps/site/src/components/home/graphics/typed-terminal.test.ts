@@ -62,6 +62,9 @@ function install(reducedMotion: boolean): void {
   performance.now = () => clock;
 }
 
+const exchange = (code: string): string =>
+  `<article data-typed><div class="emet-code"><div class="emet-code__panel"><pre><code><div class="ec-line"><div class="code"><span>${code}</span></div></div></code></pre></div></div></article>`;
+
 function commandPanel(): Element {
   const panel = document.querySelector(".emet-code__panel");
   if (!panel) throw new Error("missing command panel");
@@ -118,6 +121,17 @@ describe("typed terminal DOM", () => {
     expect(panel.getAttribute("data-code")).toBe(COMMAND);
     expect(panel.querySelector("pre")?.textContent).toBe(COMMAND);
     expect(document.querySelector(".tt-cursor")).not.toBeNull();
+  });
+
+  test("types the first exchange at 18 ms per character and later ones at 22 ms", () => {
+    document.body.innerHTML = exchange("a".repeat(100)) + exchange("b".repeat(100));
+    install(false);
+    initTypedTerminal(document);
+    runFrames(1000, 1);
+
+    const [first, second] = [...document.querySelectorAll(".emet-code__panel")];
+    expect(first ? visibleText(first).length : 0).toBe(Math.floor(1000 / 18));
+    expect(second ? visibleText(second).length : 0).toBe(Math.floor(1000 / 22));
   });
 
   test("arms nothing with reduced motion", () => {

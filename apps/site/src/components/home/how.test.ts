@@ -53,6 +53,37 @@ describe("How it works per-spec flow", () => {
       expect(showcase.status).toContain("41");
     }
   });
+
+  it("keeps the plan lines of step 2 on the prototype plan in a joined exchange", () => {
+    expect(howSource).toContain('data-terminal="joined"');
+    expect(howSource).toContain("`${waveLine(1)}  theme tokens #42`");
+    expect(howSource).toContain(
+      "`${waveLine(2)}  settings toggle #43 \\u00b7 remember the choice #44 \\u00b7 docs and screenshots #45`",
+    );
+    for (const locale of LOCALES) {
+      expect(getStrings(locale).how.waveLine).toContain("{n}");
+    }
+  });
+
+  it("prints the land line in one piece with localized Open and Closes words", () => {
+    expect(howSource).toContain(
+      "${how.open}  ${how.prTitle} \\u00b7 ${how.closes} #42 #43 #44 #45",
+    );
+    expect(howSource).not.toContain("`Open ");
+    for (const locale of LOCALES) {
+      const { how, showcase } = getStrings(locale);
+      expect(how.open.trim().length).toBeGreaterThan(0);
+      expect(how.closes.trim().length).toBeGreaterThan(0);
+      expect(showcase.laneReview.trim().length).toBeGreaterThan(0);
+      expect(showcase.laneHeld.trim().length).toBeGreaterThan(0);
+    }
+  });
+
+  it("passes the review and held lane words to the lanes canvas", () => {
+    const showcaseSource = readFileSync(new URL("Showcase.astro", import.meta.url), "utf8");
+    expect(showcaseSource).toContain("data-label-review={showcase.laneReview}");
+    expect(showcaseSource).toContain("data-label-held={showcase.laneHeld}");
+  });
 });
 
 describe("How it works pinned runway markup", () => {
@@ -95,5 +126,48 @@ describe("How it works pinned runway markup", () => {
     const pinnedBlock = cssSource.indexOf(".how[data-pinned] .how-dither");
     const fxBlock = cssSource.indexOf('.how-painting[data-fx="on"] .how-dither');
     expect(fxBlock).toBeGreaterThan(pinnedBlock);
+  });
+});
+
+describe("How it works waiting, done and stream styling", () => {
+  const cssSource = readFileSync(new URL("../../styles/home/how.css", import.meta.url), "utf8");
+  const graphicsSource = readFileSync(
+    new URL("../../styles/graphics.css", import.meta.url),
+    "utf8",
+  );
+
+  it("dims waiting steps to 0.38 with a muted colour, never an opacity on their text", () => {
+    expect(cssSource).toMatch(
+      /\[data-step-state="idle"\]::before,\s*\.how\[data-pinned\] \.step\[data-step-state="idle"\] \.step-dot \{\s*opacity: 0\.38;/,
+    );
+    expect(cssSource).toMatch(
+      /\[data-step-state="idle"\] h3,[^{]*\{\s*color: var\(--text-muted\);/,
+    );
+    expect(cssSource).not.toMatch(/\.step\[data-step-state="(idle|done)"\] \{[^}]*opacity/);
+  });
+
+  it("shrinks a done step to a 42px one-line panel", () => {
+    expect(cssSource).toMatch(/\[data-step-state="done"\] \.emet-code \{\s*height: 42px;/);
+    expect(cssSource).toMatch(/\.emet-code pre \{[^}]*white-space: nowrap/);
+  });
+
+  it("times the streams: lines 0.9s, river 0.9s after 0.2s, pills 0.5s, Merged 0.5s after 0.5s", () => {
+    expect(graphicsSource).toMatch(
+      /\.ps-line \{\s*transition: stroke-dashoffset 900ms var\(--ease-out\);/,
+    );
+    expect(graphicsSource).toMatch(
+      /\.ps-river \{\s*transition: stroke-dashoffset 900ms var\(--ease-out\) 200ms;/,
+    );
+    expect(graphicsSource).toMatch(/\.ps-pill \{\s*transition: opacity 500ms/);
+    expect(graphicsSource).toContain("opacity: 0.6;");
+    expect(graphicsSource).toContain("opacity 500ms var(--ease-out) 500ms");
+    expect(graphicsSource).toContain("transform: scale(0.8);");
+  });
+
+  it("loops the flow dots every 1.8s with 0.25s and 0.5s delays and pauses them off-screen", () => {
+    expect(graphicsSource).toContain("animation: ps-flow 1800ms ease-in-out infinite both;");
+    expect(graphicsSource).toMatch(/nth-child\(6\) \{\s*animation-delay: 250ms;/);
+    expect(graphicsSource).toMatch(/nth-child\(7\) \{\s*animation-delay: 500ms;/);
+    expect(graphicsSource).toMatch(/\[data-paused\] \.ps-dot \{\s*animation-play-state: paused;/);
   });
 });

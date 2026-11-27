@@ -24,6 +24,25 @@ describe("companionState", () => {
   });
 });
 
+describe("companionState context", () => {
+  test("follows the How it works step", () => {
+    expect(companionState("how", null, { step: 0, held: false, asleep: false })).toBe("work");
+    expect(companionState("how", null, { step: 1, held: false, asleep: false })).toBe("wait");
+    expect(companionState("how", null, { step: 2, held: false, asleep: false })).toBe("done");
+  });
+
+  test("waits while the Showcase is held", () => {
+    expect(companionState("showcase", null, { step: -1, held: true, asleep: false })).toBe("wait");
+    expect(companionState("showcase", null, { step: -1, held: false, asleep: false })).toBe("work");
+  });
+
+  test("sleeps when idle whatever the section", () => {
+    expect(companionState("closing", { kind: "copy" }, { step: 2, held: true, asleep: true })).toBe(
+      "sleep",
+    );
+  });
+});
+
 describe("sectionAtLine", () => {
   const rects = [
     { id: "hero", top: -500, bottom: 100 },

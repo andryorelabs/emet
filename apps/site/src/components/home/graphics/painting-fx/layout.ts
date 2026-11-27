@@ -11,7 +11,7 @@ const EYE_PAD_X = 24;
 const EYE_PAD_TOP = 22;
 const EYE_PAD_BOTTOM = 24;
 const CLOUD_PERIOD_MS = 70000;
-const CLOUD_SWING = 0.026;
+const CLOUD_SWING_PX = 38;
 const CLOUD_STRETCH = 1.05;
 
 /** Painting-space box around both eyes that the eyes shader redraws. */
@@ -44,9 +44,9 @@ export function skyMaskGradient(
   return `linear-gradient(180deg,#000 0,#000 ${solid}px,transparent ${clear}px)`;
 }
 
-/** CSS transform of the sky copy at `nowMs`: a slow sine drift of the host width, slightly stretched. */
-export function cloudTransform(nowMs: number, hostWidth: number): string {
-  const drift = Math.sin((nowMs / CLOUD_PERIOD_MS) * Math.PI * 2) * hostWidth * CLOUD_SWING;
+/** CSS transform of the sky copy at `nowMs`: a slow sine drift of a fixed 38 px, slightly stretched. */
+export function cloudTransform(nowMs: number): string {
+  const drift = Math.sin((nowMs / CLOUD_PERIOD_MS) * Math.PI * 2) * CLOUD_SWING_PX;
   return `translateX(${drift.toFixed(2)}px) scaleX(${CLOUD_STRETCH})`;
 }
 

@@ -114,7 +114,48 @@ describe("showcase DOM sync", () => {
     expect(parts()).toEqual({ state: "held", pressed: "true", live: "Held.", hidden: "true" });
   });
 
-  test("scroll grows the frame and shows the panel from 70%", () => {
+  test("the panel shows from about 25% and the heading is full at 30%", () => {
+    const root = document.querySelector<HTMLElement>("[data-showcase]");
+    const panel = document.querySelector<HTMLElement>(".showcase-panel");
+    scrollToProgress(0.3);
+    expect(Number(root?.style.getPropertyValue("--showcase-panel"))).toBeGreaterThan(0.4);
+    expect(panel?.inert).toBe(false);
+    expect(root?.style.getPropertyValue("--showcase-heading")).toBe("1");
+    scrollToProgress(0.1);
+    expect(Number(root?.style.getPropertyValue("--showcase-heading"))).toBeGreaterThan(0);
+    expect(Number(root?.style.getPropertyValue("--showcase-heading"))).toBeLessThan(1);
+  });
+
+  test("does no work while the tab is hidden", () => {
+    const root = document.querySelector<HTMLElement>("[data-showcase]");
+    scrollToProgress(0.1);
+    const before = root?.style.getPropertyValue("--showcase-x");
+    Object.defineProperty(document, "hidden", { value: true, configurable: true });
+    scrollToProgress(0.35);
+    expect(root?.style.getPropertyValue("--showcase-x")).toBe(before);
+    Object.defineProperty(document, "hidden", { value: false, configurable: true });
+    document.dispatchEvent(new Event("visibilitychange"));
+    const pending = frames;
+    frames = [];
+    for (const callback of pending) callback(0);
+    expect(root?.style.getPropertyValue("--showcase-x")).not.toBe(before);
+  });
+
+  test("does no work while the section is off screen", () => {
+    const root = document.querySelector<HTMLElement>("[data-showcase]");
+    scrollToProgress(0.1);
+    const before = root?.style.getPropertyValue("--showcase-x");
+    observerCallback?.([{ target: document.body, isIntersecting: false }]);
+    scrollToProgress(0.35);
+    expect(root?.style.getPropertyValue("--showcase-x")).toBe(before);
+    observerCallback?.([{ target: document.body, isIntersecting: true }]);
+    const pending = frames;
+    frames = [];
+    for (const callback of pending) callback(0);
+    expect(root?.style.getPropertyValue("--showcase-x")).not.toBe(before);
+  });
+
+  test("scroll grows the frame and shows the panel once grown", () => {
     const root = document.querySelector<HTMLElement>("[data-showcase]");
     const panel = document.querySelector<HTMLElement>(".showcase-panel");
     scrollToProgress(0.2);

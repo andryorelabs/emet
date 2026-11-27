@@ -5,7 +5,7 @@
  * failsafe shows them if the script never runs) or with reduced motion.
  *
  * Data attributes: `data-reveal="heading|item"` reveals once as it enters,
- * `data-recede` marks the hero that sinks and dims as it leaves, and
+ * `data-zoom` marks the hero whose painting zooms with the scroll, and
  * `data-drift` (empty or "6") marks a section whose painting drifts.
  */
 
@@ -25,21 +25,6 @@ html.lenis body {
 .reveal-line,
 [data-reveal-line] {
   display: block;
-}
-
-[data-recede] {
-  --recede-sink: 8%;
-  --recede-dim: 0.35;
-  --recede-lift: -6%;
-}
-
-[data-recede]::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  background: var(--text);
-  opacity: 0;
-  pointer-events: none;
 }
 
 [data-drift] {
@@ -66,25 +51,6 @@ html.lenis body {
   }
 }
 
-@keyframes recede-sink {
-  to {
-    transform: translateY(var(--recede-sink));
-  }
-}
-
-@keyframes recede-dim {
-  to {
-    opacity: var(--recede-dim);
-  }
-}
-
-@keyframes recede-lift {
-  to {
-    transform: translateY(var(--recede-lift));
-    opacity: 0;
-  }
-}
-
 @keyframes drift {
   from {
     transform: translateY(calc(var(--drift-shift) * -1)) scale(var(--drift-scale));
@@ -103,7 +69,7 @@ html.lenis body {
 
 @media (prefers-reduced-motion: no-preference) {
   .hero-line > span {
-    animation: rise-mask 1100ms var(--ease-out) both;
+    animation: rise-mask 1100ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
   }
 
   .hero-line-two > span {
@@ -156,34 +122,6 @@ html.lenis body {
 
 @supports (animation-timeline: view()) {
   @media (prefers-reduced-motion: no-preference) {
-    [data-recede] {
-      view-timeline: --recede block;
-    }
-
-    [data-recede] picture img {
-      animation-name: recede-sink;
-      animation-timing-function: linear;
-      animation-fill-mode: both;
-      animation-timeline: --recede;
-      animation-range: exit 0% exit 100%;
-    }
-
-    [data-recede]::after {
-      animation-name: recede-dim;
-      animation-timing-function: linear;
-      animation-fill-mode: both;
-      animation-timeline: --recede;
-      animation-range: exit 0% exit 100%;
-    }
-
-    [data-recede] .hero-copy {
-      animation-name: recede-lift;
-      animation-timing-function: linear;
-      animation-fill-mode: both;
-      animation-timeline: --recede;
-      animation-range: exit 0% exit 70%;
-    }
-
     [data-drift] {
       view-timeline: --drift block;
     }
@@ -199,19 +137,6 @@ html.lenis body {
 }
 
 @media (prefers-reduced-motion: no-preference) {
-  html[data-scroll-fallback] [data-recede] picture img {
-    transform: translateY(calc(var(--p, 0) * var(--recede-sink)));
-  }
-
-  html[data-scroll-fallback] [data-recede]::after {
-    opacity: calc(var(--p, 0) * var(--recede-dim));
-  }
-
-  html[data-scroll-fallback] [data-recede] .hero-copy {
-    transform: translateY(calc(min(var(--p, 0) / 0.7, 1) * var(--recede-lift)));
-    opacity: max(0, calc(1 - var(--p, 0) / 0.7));
-  }
-
   html[data-scroll-fallback] [data-drift] picture img {
     transform: translateY(calc((var(--p, 0) * 2 - 1) * var(--drift-shift)))
       scale(var(--drift-scale));

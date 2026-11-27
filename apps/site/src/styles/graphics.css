@@ -39,6 +39,8 @@
   --el: 80.95%;
   --er: 83%;
   --ey: 71.65%;
+  --ox: 0.5;
+  --oy: 0.7;
   --lid: 132 123 109;
 }
 
@@ -181,6 +183,10 @@
 }
 
 @media (prefers-reduced-motion: no-preference) {
+  [data-zoom] .valley {
+    --oy: 0.62;
+  }
+
   .valley {
     --ox: 0.5;
     --oy: 1;
@@ -306,6 +312,10 @@
   .valley {
     --ox: 0.94;
   }
+
+  [data-zoom] .valley {
+    --ox: 0.5;
+  }
 }
 
 @keyframes v-drift {
@@ -368,14 +378,6 @@
 
 @supports (animation-timeline: view()) {
   @media (prefers-reduced-motion: no-preference) {
-    [data-recede] .valley {
-      animation-name: recede-sink;
-      animation-timing-function: linear;
-      animation-fill-mode: both;
-      animation-timeline: --recede;
-      animation-range: exit 0% exit 100%;
-    }
-
     [data-drift] .valley {
       animation-name: drift;
       animation-timing-function: linear;
@@ -387,10 +389,6 @@
 }
 
 @media (prefers-reduced-motion: no-preference) {
-  html[data-scroll-fallback] [data-recede] .valley {
-    transform: translateY(calc(var(--p, 0) * var(--recede-sink)));
-  }
-
   html[data-scroll-fallback] [data-drift] .valley {
     transform: translateY(calc((var(--p, 0) * 2 - 1) * var(--drift-shift)))
       scale(var(--drift-scale));
@@ -496,29 +494,24 @@
 }
 
 @media (prefers-reduced-motion: no-preference) and (min-width: 1001px) {
-  .ps-line,
+  .ps-line {
+    transition: stroke-dashoffset 900ms var(--ease-out);
+  }
+
   .ps-river {
-    transition: stroke-dashoffset 600ms var(--ease-out);
+    transition: stroke-dashoffset 900ms var(--ease-out) 200ms;
   }
 
   .ps-pill {
-    transition: opacity 300ms var(--ease-out);
+    transition: opacity 500ms var(--ease-out);
   }
 
   .ps-merged {
     transform-box: fill-box;
     transform-origin: center;
     transition:
-      opacity 300ms var(--ease-out),
-      transform 300ms var(--ease-out);
-  }
-
-  .ps-line:nth-child(2) {
-    transition-delay: 120ms;
-  }
-
-  .ps-line:nth-child(3) {
-    transition-delay: 240ms;
+      opacity 500ms var(--ease-out) 500ms,
+      transform 500ms var(--ease-out) 500ms;
   }
 
   [data-streams][data-stage="0"] .ps-line {
@@ -526,7 +519,7 @@
   }
 
   [data-streams][data-stage="0"] .ps-pill {
-    opacity: 0;
+    opacity: 0.6;
   }
 
   [data-streams]:is([data-stage="0"], [data-stage="1"]) .ps-river {
@@ -535,23 +528,23 @@
 
   [data-streams]:is([data-stage="0"], [data-stage="1"]) .ps-merged {
     opacity: 0;
-    transform: scale(0.92);
+    transform: scale(0.8);
   }
 
   [data-streams][data-stage="2"] .ps-dot {
-    animation: ps-flow 1600ms ease-in-out 1 both;
+    animation: ps-flow 1800ms ease-in-out infinite both;
   }
 
   [data-streams][data-stage="2"] .ps-dot:nth-child(6) {
-    animation-delay: 120ms;
+    animation-delay: 250ms;
   }
 
   [data-streams][data-stage="2"] .ps-dot:nth-child(7) {
-    animation-delay: 240ms;
+    animation-delay: 500ms;
   }
 
-  [data-streams][data-stage="2"] .ps-river {
-    transition-delay: 1200ms;
+  [data-streams][data-paused] .ps-dot {
+    animation-play-state: paused;
   }
 }
 
@@ -561,12 +554,12 @@
     opacity: 1;
   }
 
-  92% {
+  85% {
     opacity: 1;
   }
 
   100% {
-    stroke-dashoffset: -0.99;
+    stroke-dashoffset: -1;
     opacity: 0;
   }
 }

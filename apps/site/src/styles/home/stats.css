@@ -7,7 +7,7 @@
   position: relative;
   overflow: hidden;
   color-scheme: dark;
-  background: var(--surface);
+  background: var(--bg);
   color: var(--text);
   padding-block: 120px 110px;
   padding-inline: calc(var(--edge) + var(--axis)) var(--edge);
@@ -56,7 +56,7 @@
   width: 62%;
   background: var(--moss);
   transform-origin: left;
-  transition: transform 1.6s var(--ease-out);
+  transition: transform 1.6s ease;
 }
 
 .stats[data-armed] .stat::before {
@@ -70,7 +70,7 @@
 .stat-value {
   order: 1;
   margin: 0;
-  font-size: clamp(56px, 6.5vw, 96px);
+  font-size: clamp(80px, 10vw, 150px);
   font-weight: 300;
   line-height: 1;
   letter-spacing: -0.06em;
@@ -90,7 +90,7 @@
 
 .odo-roll {
   display: block;
-  transition: transform 1.8s var(--ease-out);
+  transition: transform 1.8s cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 
 .odo-roll > span {

@@ -3,7 +3,7 @@ import { initDitherImage, type DitherImage } from "../graphics/dither-image";
 /** The active step of the pinned How it works runway. */
 export type HowStep = 0 | 1 | 2;
 
-/** Lifecycle of one step: upcoming, expanded or collapsed to one line. */
+/** Lifecycle of one step: `idle` is dimmed and collapsed, `on` is expanded, `done` shrinks to a 42px one-line panel. */
 export type StepState = "idle" | "on" | "done";
 
 /** Pin progress at which step 1 takes over. */

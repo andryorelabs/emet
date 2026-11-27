@@ -41,9 +41,12 @@ export function coverProgress(box: BoxMetrics, viewportHeight: number): number {
   return clamp01((viewportHeight - box.top) / (viewportHeight + box.height));
 }
 
-/** Progress from the box top meeting the viewport top to its bottom meeting it. */
-export function exitProgress(box: BoxMetrics): number {
-  return clamp01(-box.top / box.height);
+const HERO_ZOOM_GAIN = 0.08;
+
+/** Painting scale of the hero: 1 at the top, 1.08 once one viewport has been scrolled. */
+export function heroZoom(scrollY: number, viewportHeight: number): number {
+  if (viewportHeight <= 0) return 1;
+  return 1 + HERO_ZOOM_GAIN * clamp01(scrollY / viewportHeight);
 }
 
 /** Lenis `prevent` hook: nested dialogs such as the search dialog scroll natively. */

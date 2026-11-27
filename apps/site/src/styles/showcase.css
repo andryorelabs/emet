@@ -1,10 +1,10 @@
 /**
  * The showcase: a painted valley with a heading over it and a glass panel
  * holding the flag switch, the git lanes and the status line. From 901px the
- * runway pins and scroll grows the frame from an inset card to full bleed (a
- * clip-path scrubbed through --showcase-* properties set by the script), then
- * the panel fades in. Narrower, or under reduced motion, it stacks with the
- * final state. Flagging cross-fades day to dusk (opacity only); the knob moves
+ * runway pins and scroll grows the frame from an inset card to full bleed (the
+ * stage and marks inset and radius are scrubbed through --showcase-* properties
+ * set by the script), then the heading and the panel fade in on the eased grow
+ * value. Narrower, or under reduced motion, it stacks with the final state. Flagging cross-fades day to dusk (opacity only); the knob moves
  * with transform only.
  */
 
@@ -17,7 +17,8 @@ section.showcase {
   max-height: 828px;
   min-height: 640px;
   overflow: clip;
-  background: var(--surface);
+  color-scheme: dark;
+  background: var(--bg);
   color: var(--ink-over-painting);
 }
 
@@ -32,15 +33,16 @@ section.showcase {
 }
 
 .showcase-stage {
-  clip-path: inset(
-    calc(var(--showcase-y, 0) * 1vh) calc(var(--showcase-x, 0) * 1vw) round
-      calc(var(--showcase-r, 0) * 1px)
-  );
+  inset: calc(var(--showcase-y, 0) * 1vh) calc(var(--showcase-x, 0) * 1vw);
+  width: auto;
+  height: auto;
+  overflow: clip;
+  border-radius: calc(var(--showcase-r, 0) * 1px);
 }
 
 .showcase-stage img {
   object-fit: cover;
-  object-position: 50% 100%;
+  object-position: 50% 50%;
 }
 
 .showcase-stage::after {
@@ -64,7 +66,7 @@ section.showcase {
 
 .showcase-dusk {
   opacity: 0;
-  transition: opacity 600ms var(--ease-out);
+  transition: opacity 1s var(--ease-out);
 }
 
 .showcase[data-state="held"] .showcase-dusk {
@@ -119,12 +121,12 @@ section.showcase {
   top: clamp(24px, 6vh, 72px);
   left: var(--showcase-edge);
   right: var(--showcase-edge);
-  max-width: 14em;
   margin: 0;
-  font-size: clamp(32px, 3.2vw, 48px);
-  font-weight: 400;
-  line-height: 1.05;
-  letter-spacing: -0.02em;
+  font-size: clamp(40px, 5.4vw, 76px);
+  font-weight: 600;
+  line-height: 1;
+  letter-spacing: -0.04em;
+  text-wrap: balance;
 }
 
 section.showcase .showcase-panel {
@@ -139,7 +141,7 @@ section.showcase .showcase-panel {
   width: min(620px, calc(100% - 2 * var(--showcase-edge)));
   padding: 24px;
   border: 1px solid color-mix(in oklab, var(--ink-over-painting) 20%, transparent);
-  border-radius: var(--radius-panel);
+  border-radius: 10px;
   background: color-mix(in oklab, var(--ink-night) 60%, transparent);
   backdrop-filter: blur(18px);
   color: var(--ink-over-painting);
@@ -154,24 +156,7 @@ section.showcase .showcase-panel {
 .showcase-lanes {
   width: 100%;
   height: 140px;
-}
-
-.showcase-mark {
-  margin: 0;
-  color: var(--ink-over-painting);
-  font-size: 28px;
-  font-weight: 500;
-  letter-spacing: -0.02em;
-}
-
-.showcase-letter {
-  display: inline-block;
-  opacity: 1;
-  transition: opacity 400ms var(--ease-out);
-}
-
-.showcase[data-state="held"] .showcase-letter {
-  opacity: 0.2;
+  font-family: var(--font-mono);
 }
 
 .showcase-stack {
@@ -199,13 +184,14 @@ section.showcase .showcase-panel {
   display: inline-flex;
   align-items: center;
   gap: 12px;
-  min-height: 48px;
-  padding: 0;
-  border: 0;
-  background: none;
+  min-height: 44px;
+  padding: 0 16px 0 10px;
+  border: 1px solid color-mix(in oklab, var(--ink-over-painting) 35%, transparent);
+  border-radius: 999px;
+  background: color-mix(in oklab, var(--ink-night) 40%, transparent);
   color: inherit;
   font: inherit;
-  font-size: 17px;
+  font-size: 15px;
   font-weight: 500;
   cursor: pointer;
 }
@@ -216,15 +202,14 @@ section.showcase .showcase-panel {
 
 .showcase-flag:focus-visible {
   outline: 2px solid var(--ink-over-painting);
-  outline-offset: 4px;
-  border-radius: var(--radius-control);
+  outline-offset: 3px;
 }
 
 .showcase-switch {
   position: relative;
   flex: none;
-  width: 52px;
-  height: 30px;
+  width: 40px;
+  height: 24px;
   border-radius: 999px;
   background: color-mix(in oklab, var(--ink-over-painting) 30%, transparent);
 }
@@ -242,10 +227,10 @@ section.showcase .showcase-panel {
 .showcase-knob {
   position: absolute;
   z-index: 1;
-  top: 4px;
-  left: 4px;
-  width: 22px;
-  height: 22px;
+  top: 3px;
+  left: 3px;
+  width: 18px;
+  height: 18px;
   border-radius: 999px;
   background: var(--ink-over-painting);
   transition: transform 250ms var(--ease-out);
@@ -256,7 +241,7 @@ section.showcase .showcase-panel {
 }
 
 .showcase-flag[aria-pressed="true"] .showcase-knob {
-  transform: translateX(22px);
+  transform: translateX(16px);
 }
 
 .showcase-flag:active .showcase-knob {
@@ -264,7 +249,13 @@ section.showcase .showcase-panel {
 }
 
 .showcase-flag[aria-pressed="true"]:active .showcase-knob {
-  transform: translateX(22px) scale(0.97);
+  transform: translateX(16px) scale(0.97);
+}
+
+@media (min-width: 901px) {
+  section.showcase .valley {
+    --oy: 0.5;
+  }
 }
 
 @media (max-width: 900px) {
@@ -302,11 +293,14 @@ section.showcase .showcase-panel {
   section.showcase[data-pinned] .showcase-panel {
     opacity: var(--showcase-panel, 1);
   }
+
+  section.showcase[data-pinned] h2 {
+    opacity: var(--showcase-heading, 1);
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
   .showcase-dusk,
-  .showcase-letter,
   .showcase-switch::after,
   .showcase-knob {
     transition: none;
