@@ -47,3 +47,21 @@ test("the footer shows its legal items on one row with uppercase headings", asyn
     .evaluate((node) => getComputedStyle(node).textTransform);
   expect(transform).toBe("uppercase");
 });
+
+test("the page-actions menu does not lock scroll or shift the layout", async ({ page }) => {
+  await page.goto("/docs/guide/fleet/", { waitUntil: "load" });
+  const trigger = page.getByRole("button", { name: "More page actions" });
+  await expect(trigger).toBeVisible();
+  await page.waitForLoadState("networkidle");
+  const measure = () =>
+    page.evaluate(() => ({
+      htmlOverflow: getComputedStyle(document.documentElement).overflow,
+      bodyOverflow: getComputedStyle(document.body).overflow,
+      clientWidth: document.documentElement.clientWidth,
+    }));
+  const before = await measure();
+  await trigger.click();
+  await expect(trigger).toHaveAttribute("aria-expanded", "true");
+  expect(await measure()).toEqual(before);
+  expect(before.bodyOverflow).toBe("visible");
+});
