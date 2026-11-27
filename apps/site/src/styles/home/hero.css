@@ -1,5 +1,8 @@
 /**
  * Home page hero: painted hero, announcement pill, split headline and actions.
+ * The scrim, ray and glow gradients and the `--hero-amber` light are documented
+ * painting-overlay constants: they sit on the artwork and do not follow the
+ * colour scheme. The glass and bubble fills come from `tokens.css`.
  */
 
 .hero {
@@ -76,9 +79,9 @@
   align-items: center;
   gap: 10px;
   padding: 7px 14px;
-  border: 1px solid oklch(1 0 0 / 0.3);
+  border: 1px solid var(--glass-line);
   border-radius: 999px;
-  background: oklch(0.2 0.02 150 / 0.35);
+  background: var(--glass-fill);
   backdrop-filter: blur(8px);
   color: var(--ink-over-painting);
   font-size: 14px;
@@ -89,7 +92,7 @@
 }
 
 .announcement:hover {
-  background: oklch(0.3 0.04 150 / 0.5);
+  background: var(--glass-fill-hover);
 }
 
 .announcement:focus-visible {
@@ -297,8 +300,8 @@
   margin: 0;
   padding: 10px 14px;
   border-radius: 10px;
-  background: oklch(0.985 0.013 150 / 0.94);
-  color: oklch(0.22 0.013 150);
+  background: var(--bubble-fill);
+  color: var(--bubble-text);
   font-size: 14px;
   opacity: 0;
   transform: translateY(6px);

@@ -103,7 +103,10 @@
 }
 
 .mark {
-  background: linear-gradient(transparent 62%, oklch(0.84 0.14 95 / 0.55) 62%);
+  background: linear-gradient(
+    transparent 62%,
+    color-mix(in oklab, var(--lamp) 55%, transparent) 62%
+  );
   color: var(--text);
 }
 

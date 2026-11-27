@@ -4,10 +4,10 @@
 
 .closing {
   --edge: max(8px, env(safe-area-inset-left, 0px));
-  --closing-ink: #1d201e;
-  --closing-pill: oklch(0.2 0.02 150 / 0.8);
-  --closing-pill-text: #eef2e6;
-  --closing-pill-line: oklch(1 0 0 / 0.25);
+  --closing-ink: var(--painting-ink);
+  --closing-pill: var(--pill-fill);
+  --closing-pill-text: var(--pill-text);
+  --closing-pill-line: var(--pill-line);
 
   position: relative;
   margin-inline: var(--edge);
