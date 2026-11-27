@@ -72,7 +72,7 @@
 @media (prefers-reduced-motion: no-preference) {
   html[data-motion] .hebrew-aleph {
     position: relative;
-    color: color-mix(in oklab, var(--text) calc(100% - 65% * var(--strike, 0)), transparent);
+    opacity: calc(1 - 0.65 * var(--strike, 0));
   }
 
   html[data-motion] .hebrew-aleph::after {
@@ -116,6 +116,8 @@
 
 .portrait-frame {
   position: relative;
+  overflow: clip;
+  border-radius: var(--radius-panel);
 }
 
 .portrait-frame canvas {
