@@ -60,11 +60,15 @@ describe("SiteFooter", () => {
   });
 });
 
-/** The body of the first top-level `site.css` rule for exactly `selector`. */
+/** The body of the first top-level `site.css` rule for exactly `selector`, with the formatter's line wrapping undone. */
 function rule(selector: string): string {
   const start = siteCss.indexOf(`\n${selector} {`);
   expect(start).toBeGreaterThan(-1);
-  return siteCss.slice(start, siteCss.indexOf("}", start));
+  return siteCss
+    .slice(start, siteCss.indexOf("}", start))
+    .replaceAll(/\s+/g, " ")
+    .replaceAll("( ", "(")
+    .replaceAll(" )", ")");
 }
 
 describe("site footer styles", () => {
