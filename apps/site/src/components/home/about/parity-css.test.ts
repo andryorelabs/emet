@@ -11,6 +11,16 @@ describe("About CSS parity with prototype v17", () => {
     expect(css).not.toMatch(/html\[data-motion\] \.hebrew-aleph \{[^}]*color:/);
   });
 
+  test("scopes the hiding rule to the reveal canvas so the eyes canvas stays displayable", () => {
+    expect(css).toMatch(/\.portrait-frame canvas\[data-pixel-reveal\] \{\s*display: none;/);
+    expect(css).not.toMatch(/\.portrait-frame canvas \{/);
+  });
+
+  test("leaves About without data-drift so the eyes stay aligned", () => {
+    const source = readFileSync(new URL("../About.astro", import.meta.url), "utf8");
+    expect(source).not.toContain("data-drift");
+  });
+
   test("clips the portrait frame so the drifting sky copy cannot poke out of its corners", () => {
     expect(css).toMatch(/\.portrait-frame \{[^}]*overflow: clip;[^}]*border-radius: 10px/);
   });

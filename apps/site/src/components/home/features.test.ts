@@ -1,5 +1,5 @@
 import { describe, expect, it } from "bun:test";
-import { readdirSync, readFileSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync } from "node:fs";
 
 import { LOCALES } from "../../i18n/locales";
 import { getStrings } from "../../i18n/ui";
@@ -42,8 +42,24 @@ function unguardedKeyframes(source: string): number[] {
 }
 
 describe("Features bento", () => {
-  it("marks each bento card as a card shell", () => {
-    expect(featuresSource).toContain('data-slot="card"');
+  it("renders each bento card with the shadcn Card and no hand-written shell", () => {
+    expect(featuresSource).toContain('from "../ui/card"');
+    expect(featuresSource).toContain("<Card>");
+    expect(featuresSource).not.toContain('data-slot="card"');
+  });
+
+  it("links the memory and review cards to their concept pages in every locale", () => {
+    for (const locale of LOCALES) {
+      const { extra } = getStrings(locale).features;
+      expect(extra[1]?.docs).toBe("/docs/concepts/memory/");
+      expect(extra[2]?.docs).toBe("/docs/concepts/review-and-gates/");
+    }
+  });
+
+  it("no longer carries the unused closing action string", () => {
+    for (const locale of LOCALES) {
+      expect(Object.keys(getStrings(locale).closing)).not.toContain("action");
+    }
   });
 
   it("falls to one column under 760px", () => {
@@ -79,10 +95,36 @@ describe("Features bento", () => {
     expect(unguardedKeyframes("@keyframes c { to { opacity: 1; } }")).toHaveLength(1);
   });
 
-  it("has five more feature rows in every locale", () => {
-    expect(featureRowsSource).toContain('data-reveal="item"');
+  it("fills the content width with the 5/7, 4/4/4 and 12 spans", () => {
+    expect(css).not.toMatch(/\.bento \{[^}]*max-width/);
+    expect(css).toMatch(/\.bento \{[^}]*gap: 20px/);
+    expect(css).toMatch(/\.bento-approval \{\s*grid-column: 1 \/ 6;\s*\}/);
+    expect(css).toMatch(/\.bento-review \{\s*grid-column: 6 \/ 13;\s*\}/);
+    for (const key of ["flags", "ci", "workers"]) {
+      expect(css).toMatch(new RegExp(`\\.bento-${key} \\{\\s*grid-column: \\d+ \\/ \\d+;`));
+    }
+    expect(css).toMatch(/\.bento-tracker \{\s*grid-column: 1 \/ 13;/);
+    expect(css).not.toContain("grid-row: 1 / 3");
+  });
+
+  it("anchors scene content to the bottom", () => {
+    expect(css).toMatch(
+      /\.bento-visual \{[^}]*align-items: stretch;[^}]*justify-content: flex-end/,
+    );
+  });
+
+  it("has five compact cards in every locale, each linking to a docs page", () => {
+    expect(featureRowsSource).toContain("localePath(locale, note.docs)");
+    expect(featureRowsSource).toContain("CardTitle");
     for (const locale of LOCALES) {
-      expect(getStrings(locale).features.extra).toHaveLength(5);
+      const extra = getStrings(locale).features.extra;
+      expect(extra).toHaveLength(5);
+      for (const note of extra) {
+        expect(Object.keys(note).toSorted()).toEqual(["docs", "title"]);
+        expect(
+          existsSync(new URL(`../../../../..${note.docs.replace(/\/$/, ".md")}`, import.meta.url)),
+        ).toBe(true);
+      }
     }
   });
 });

@@ -16,8 +16,7 @@
   display: grid;
   grid-template-columns: repeat(12, minmax(0, 1fr));
   grid-auto-rows: minmax(200px, auto);
-  gap: 12px;
-  max-width: 960px;
+  gap: 20px;
   margin: 0 0 0 var(--axis);
   padding: 0;
   list-style: none;
@@ -26,14 +25,27 @@
 .bento-card {
   position: relative;
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  min-width: 0;
+  border-radius: var(--radius-panel);
+  overflow: clip;
+}
+
+.bento-card > [data-slot="card"] {
+  display: grid;
   grid-template-rows: auto 1fr auto;
   gap: 16px;
-  min-width: 0;
   padding: 20px;
   border: 1px solid var(--border);
   border-radius: var(--radius-panel);
   background: var(--surface);
-  overflow: clip;
+  box-shadow: none;
+}
+
+.bento-card [data-slot="card-header"] {
+  display: block;
+  padding: 0;
+  border-radius: 0;
 }
 
 .bento-card::after {
@@ -57,7 +69,6 @@
 
 .bento-approval {
   grid-column: 1 / 6;
-  grid-row: 1 / 3;
 }
 
 .bento-review {
@@ -65,29 +76,29 @@
 }
 
 .bento-flags {
-  grid-column: 6 / 10;
+  grid-column: 1 / 5;
 }
 
 .bento-ci {
-  grid-column: 10 / 13;
+  grid-column: 5 / 9;
 }
 
 .bento-workers {
-  grid-column: 1 / 8;
+  grid-column: 9 / 13;
 }
 
 .bento-tracker {
-  grid-column: 8 / 13;
+  grid-column: 1 / 13;
 }
 
-.bento-claim h3 {
+.bento-card [data-slot="card-header"] h3 {
   margin: 0;
   font-size: 18px;
   font-weight: 500;
   line-height: 1.3;
 }
 
-.bento-claim p {
+.bento-card [data-slot="card-header"] p {
   margin: 4px 0 0;
   font-size: 16px;
   line-height: 1.5;
@@ -97,8 +108,8 @@
 .bento-visual {
   display: flex;
   flex-direction: column;
-  align-items: center;
-  justify-content: center;
+  align-items: stretch;
+  justify-content: flex-end;
   gap: 16px;
   min-width: 0;
   font-family: var(--font-mono, ui-monospace, monospace);
@@ -119,10 +130,12 @@
   border-top: 1px solid var(--border);
   border-radius: 0;
   background: transparent;
-  overflow-x: auto;
+  overflow: visible;
   font-family: var(--font-mono, ui-monospace, monospace);
   font-size: 13px;
   line-height: 1.7;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
 }
 
 .features-key {

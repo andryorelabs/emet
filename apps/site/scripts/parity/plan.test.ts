@@ -9,6 +9,7 @@ import {
   captureFile,
   captureTargets,
   commonHeight,
+  contentBox,
   heightAdjustedRatio,
   pairCaptures,
   progressSteps,
@@ -191,5 +192,53 @@ describe("pairCaptures", () => {
     expect(result.pairs).toEqual([]);
     expect(result.missing.every((entry) => entry.missing === "prototype")).toBe(true);
     expect(pairCaptures(targets, []).missing).toHaveLength(targets.length);
+  });
+});
+
+describe("footer section", () => {
+  test("is captured on both sides at its top and bottom, as a content box", () => {
+    const footer = SECTIONS.find((entry) => entry.name === "footer");
+    expect(footer).toEqual({
+      name: "footer",
+      prototype: "footer",
+      site: ".site-footer",
+      box: "content",
+    });
+    expect(progressSteps("footer")).toEqual([0, 1]);
+    const targets = captureTargets(desktop).filter((target) => target.section === "footer");
+    expect(targets.map((target) => [target.side, target.selector, target.progress])).toEqual([
+      ["prototype", "footer", 0],
+      ["prototype", "footer", 1],
+      ["site", ".site-footer", 0],
+      ["site", ".site-footer", 1],
+    ]);
+  });
+
+  test("clips the padded sections to the same inner box on both sides", () => {
+    for (const name of ["stats", "about", "faq", "closing", "footer"]) {
+      expect(SECTIONS.find((entry) => entry.name === name)?.box).toBe("content");
+    }
+    expect(SECTIONS.find((entry) => entry.name === "hero")?.box).toBe("border");
+  });
+});
+
+describe("contentBox", () => {
+  test("removes the vertical padding and borders from the box", () => {
+    expect(
+      contentBox({
+        top: 100,
+        height: 500,
+        paddingTop: 48,
+        paddingBottom: 32,
+        borderTop: 1,
+        borderBottom: 0,
+      }),
+    ).toEqual({ top: 149, height: 419 });
+  });
+
+  test("is the box itself without padding and never negative", () => {
+    const flat = { paddingTop: 0, paddingBottom: 0, borderTop: 0, borderBottom: 0 };
+    expect(contentBox({ ...flat, top: 7, height: 300 })).toEqual({ top: 7, height: 300 });
+    expect(contentBox({ ...flat, top: 0, height: 10, paddingTop: 20 }).height).toBe(0);
   });
 });

@@ -86,14 +86,11 @@ export const zhCN = {
       { title: "用你的追踪器，或不用", line: "Linear、GitHub Issues 或本地文件。" },
     ],
     extra: [
-      {
-        title: "小改动的快速模式",
-        line: "一个标志即可把访谈缩成一轮，只运行一个工单、一次评审和一次落地。",
-      },
-      { title: "记住有效的做法", line: "每次运行的经验会被保存，并在下一次运行中调用。" },
-      { title: "高风险改动由两位评审", line: "高风险的工作在落地前会多一位评审。" },
-      { title: "需要你时会通知你", line: "运行在等待审批或卡住时发出提醒。" },
-      { title: "干净安装，干净卸载", line: "删除 emet 安装的一切，并保留你编辑过的任何文件。" },
+      { title: "小改动的快速模式", docs: "/docs/reference/cli/" },
+      { title: "记住有效的做法", docs: "/docs/concepts/memory/" },
+      { title: "高风险改动由两位评审", docs: "/docs/concepts/review-and-gates/" },
+      { title: "需要你时会通知你", docs: "/docs/how-to/check-a-fleet/" },
+      { title: "干净安装，干净卸载", docs: "/docs/start/install/" },
     ],
   },
   stats: {
@@ -148,7 +145,6 @@ export const zhCN = {
   },
   closing: {
     heading: "先在一个仓库里试试",
-    action: "安装 emet",
     alt: "低垂晨雾下的山谷，淡淡的太阳和粉彩色的天空。",
   },
   companion: {

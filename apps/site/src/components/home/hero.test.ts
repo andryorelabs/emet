@@ -27,10 +27,9 @@ describe("Home hero", () => {
     );
   });
 
-  it("sets the sentence at 20px and weight 500 in white over a dark scrim", () => {
+  it("sets the sentence at 20px in white over a dark scrim", () => {
     const sentence = ruleBody(css, ".hero-sentence");
     expect(sentence).toContain("font-size: 20px");
-    expect(sentence).toContain("font-weight: 500");
     expect(ruleBody(css, ".hero-copy")).toContain("color: var(--ink-over-painting)");
     expect(ruleBody(css, ".hero-copy::before")).toContain("linear-gradient");
   });
@@ -77,5 +76,48 @@ describe("Home hero", () => {
     expect(ruleBody(siteCss, ".site-header--home")).toContain(
       "--header-ink: var(--ink-over-painting)",
     );
+  });
+
+  it("sizes the lede at 440px weight 400 and the buttons at 52px with 26px padding", () => {
+    const sentence = ruleBody(css, ".hero-sentence");
+    expect(sentence).toContain("max-width: 440px");
+    expect(sentence).toContain("font-weight: 400");
+    expect(ruleBody(css, ".hero-actions")).toContain("margin-top: 4px");
+    const button = ruleBody(css, '.hero-actions [data-slot="button"]');
+    expect(button).toContain("min-height: 52px");
+    expect(button).toContain("padding: 0 26px");
+    expect(button).toContain("border-radius: 8px");
+    expect(button).toContain("font-size: 18px");
+    expect(ruleBody(css, ".hero-actions .hero-docs")).toContain("font-weight: 500");
+  });
+
+  it("links the hero actions to the localized docs and uses shadcn buttons", () => {
+    expect(markup).toContain('localePath(locale, "/docs/start/install/")');
+    expect(markup).toContain('localePath(locale, "/docs/")');
+    expect(markup).toContain("buttonVariants(");
+    expect(markup).not.toContain("#install");
+    expect(markup).not.toContain('class="button"');
+  });
+
+  it("drops the announcement glass overrides so the pill uses the dark glass token", () => {
+    expect(siteCss).not.toContain(".announcement");
+    expect(ruleBody(css, ".announcement")).toContain("background: var(--glass-fill)");
+    expect(ruleBody(css, ".announcement")).toContain("line-height: normal");
+    expect(ruleBody(css, ".announcement")).toContain("font-weight: 700");
+  });
+
+  it("matches the prototype glass of the home header", () => {
+    const header = ruleBody(siteCss, ".site-header--home");
+    expect(header).toContain("var(--ink-over-painting) 10%");
+    expect(header).toContain("var(--ink-over-painting) 22%");
+    expect(header).toContain("--glass-blur: blur(10px)");
+    expect(ruleBody(siteCss, ".site-header--home .site-header-end")).toContain("gap: 10px");
+  });
+
+  it("leaves the closing with the command and its copy button only", () => {
+    const closing = readFileSync(new URL("Closing.astro", import.meta.url), "utf8");
+    expect(closing).not.toContain('class="button"');
+    expect(closing).not.toContain('href="#install"');
+    expect(closing).toContain("<HomeCodeBlock");
   });
 });

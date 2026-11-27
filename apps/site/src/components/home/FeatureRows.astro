@@ -1,10 +1,14 @@
 ---
 /**
- * Five more claims as plain rows under the bento: the claim, one line, and
- * the run-report line it leaves behind. No pictures and no motion. Commands,
- * flags and report keys are not translated; only the claim and its line are.
+ * Five more claims as compact cards under the bento: the claim and the
+ * run-report line it leaves behind, each linking to the docs page that covers
+ * it. No paragraph, no pictures and no motion. Commands, flags and report keys
+ * are not translated; only the claim is.
  */
 import type { UiStrings } from "../../i18n/ui/en";
+import { DEFAULT_LOCALE, localePath, LOCALES, localeSegment } from "../../i18n/locales";
+import { Card, CardContent, CardHeader, CardTitle } from "../ui/card";
+import { Kbd } from "../ui/kbd";
 
 interface Props {
   strings: UiStrings;
@@ -12,6 +16,11 @@ interface Props {
 
 const { strings } = Astro.props;
 const { features } = strings;
+const locale =
+  LOCALES.find(
+    (candidate) =>
+      candidate !== DEFAULT_LOCALE && Astro.url.pathname.startsWith(`/${localeSegment(candidate)}/`),
+  ) ?? DEFAULT_LOCALE;
 
 const reports = [
   { key: "/emet:run", value: "--quick" },
@@ -29,9 +38,20 @@ const reports = [
       return (
         report && (
           <li class="feature-row" data-reveal="item">
-            <h3>{note.title}</h3>
-            <p>{note.line}</p>
-            <pre class="feature-report"><span class="feature-key">{report.key}</span>{`  ${report.value}`}</pre>
+            <a class="feature-link" href={localePath(locale, note.docs)}>
+              <Card size="sm">
+                <CardHeader>
+                  <CardTitle>
+                    <h3>{note.title}</h3>
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <Kbd className="h-auto whitespace-normal break-words">
+                    <span class="feature-key">{report.key}</span> {report.value}
+                  </Kbd>
+                </CardContent>
+              </Card>
+            </a>
           </li>
         )
       );
@@ -41,48 +61,32 @@ const reports = [
 
 <style>
   .feature-rows {
-    max-width: 960px;
-    margin: 48px 0 0 var(--axis);
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 260px), 1fr));
+    gap: 20px;
+    margin: 20px 0 0 var(--axis);
     padding: 0;
     list-style: none;
-    border-top: 1px solid var(--border);
   }
 
   .feature-row {
-    display: grid;
-    gap: 4px;
     min-width: 0;
-    padding: 24px 0;
-    border-bottom: 1px solid var(--border);
+  }
+
+  .feature-link {
+    display: block;
+    height: 100%;
+    color: inherit;
+    text-decoration: none;
+    border-radius: var(--radius-panel);
   }
 
   .feature-row h3 {
     margin: 0;
-    font-size: 18px;
+    font-size: 16px;
     font-weight: 500;
     line-height: 1.3;
     overflow-wrap: anywhere;
-  }
-
-  .feature-row p {
-    margin: 0;
-    font-size: 16px;
-    line-height: 1.5;
-    color: var(--text-muted);
-    overflow-wrap: anywhere;
-  }
-
-  .feature-report {
-    margin: 12px 0 0;
-    padding: 0;
-    border: 0;
-    border-radius: 0;
-    background: transparent;
-    overflow-wrap: anywhere;
-    font-family: var(--font-mono, ui-monospace, monospace);
-    font-size: 13px;
-    line-height: 1.7;
-    white-space: pre-wrap;
   }
 
   .feature-key {

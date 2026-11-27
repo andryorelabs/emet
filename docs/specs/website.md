@@ -269,3 +269,124 @@ Source: #1012 S19
 
 - **WHEN** `bun run --cwd apps/site test:e2e` runs
 - **THEN** every home interaction passes with zero `securitypolicyviolation` events
+
+### Requirement: The home header and hero match prototype v17
+
+Source: #1071 S1, #1071 S2
+
+The home header pills and the hero (release pill, lede, buttons) use the prototype v17 measurements, and the release pill uses the dark glass token.
+
+#### Scenario: Header and hero measure like the prototype
+
+- **WHEN** the home loads at 1440×900
+- **THEN** each header pill has the prototype computed styles and the hero buttons measure 52px tall
+
+### Requirement: Landing install links lead to the docs
+
+Source: #1071 S3
+
+The hero install button links to the localized install docs page, the hero docs button to the localized docs index, and the closing keeps only the command with its copy button.
+
+#### Scenario: The Spanish home links to docs
+
+- **WHEN** the Spanish home renders
+- **THEN** the hero install href is `/es/docs/start/install/` and no landing link points to `#install`
+
+### Requirement: Search works in production and degrades in dev
+
+Source: #1071 S4
+
+The search dialog shows results in a production build, stays inside the viewport and scrolls its results, and in `astro dev` states that search is only available in production builds.
+
+#### Scenario: Search finds results in the built site
+
+- **WHEN** the built site is previewed at 1440×900 and 390×844 and Ctrl K and `review` are typed
+- **THEN** results show and the dialog bounding box is within the viewport
+
+### Requirement: Header menus do not lock page scroll
+
+Source: #1071 S5
+
+Opening the theme, language or page-actions menu leaves `html` and `body` overflow and width unchanged, and `html` reserves a stable scrollbar gutter.
+
+#### Scenario: The theme menu opens
+
+- **WHEN** the theme menu opens
+- **THEN** `body` overflow stays `visible` and the header pills do not move
+
+### Requirement: Home code blocks use the shadcn code-block
+
+Source: #1071 S6
+
+Home code blocks use the vendored shadcn `code-block` through a wrapper, wrap long lines and copy the exact command.
+
+#### Scenario: The install command fits
+
+- **WHEN** the Install step renders at 1440×900 and 390×844
+- **THEN** the install command is fully visible, `scrollWidth <= clientWidth` and copy puts that exact string on the clipboard
+
+### Requirement: Watch it land is one five-line panel that fits the viewport
+
+Source: #1071 S7
+
+The How it works panel shows the five prototype lines and the pinned column fits inside the viewport.
+
+#### Scenario: Step 3 fits
+
+- **WHEN** step 3 is active at 1440×900 and 1366×768
+- **THEN** the last line's bottom is above the viewport bottom
+
+### Requirement: The bento fills the content width
+
+Source: #1071 S8
+
+The bento spans the content width with the prototype column spans and a single column under 760px.
+
+#### Scenario: Bento edges align
+
+- **WHEN** the home loads at 1980×1080
+- **THEN** the bento's right edge equals the stats section's right edge and the Approval and Review cards have equal height
+
+### Requirement: Extra features are compact docs-linked cards
+
+Source: #1071 S9
+
+The five extra features are compact cards with a title and a code line, each linking to an existing localized docs page.
+
+#### Scenario: Cards link to docs
+
+- **WHEN** the home renders in any locale
+- **THEN** there are 5 cards and each href resolves to a published docs page
+
+### Requirement: The About eyes animate
+
+Source: #1071 S10
+
+After the pixel reveal the eyes canvas is displayed, aligned and blinking.
+
+#### Scenario: Eyes blink after the reveal
+
+- **WHEN** the reveal finishes with motion allowed and `pointer: fine`
+- **THEN** the eyes canvas display is not `none` and it blinks within 8s
+
+### Requirement: The footer matches prototype v17
+
+Source: #1071 S11
+
+The footer has the brand and tagline left, Product and Trust grouped right, and a one-row legal bar with no double border on docs pages.
+
+#### Scenario: Legal items share a row
+
+- **WHEN** the footer renders at 1980 wide
+- **THEN** the three legal items share one row and the column headings are uppercase
+
+### Requirement: Visual regressions are guarded by the parity harness and e2e
+
+Source: #1071 S12
+
+The parity harness captures a footer section and clips the same inner box on both sides, and `apps/site/design/report.md` records the user-chosen deviations.
+
+#### Scenario: Harness covers the footer
+
+- **WHEN** `bun run --cwd apps/site parity` runs on the built site
+- **THEN** it captures a footer pair for the prototype and the site

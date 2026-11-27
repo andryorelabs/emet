@@ -88,26 +88,11 @@ export const ptBR = {
       { title: "Seu tracker, ou nenhum", line: "Linear, GitHub Issues ou arquivos locais." },
     ],
     extra: [
-      {
-        title: "Modo rápido para mudanças pequenas",
-        line: "Uma flag reduz a entrevista a uma rodada e executa um ticket, uma revisão e uma integração.",
-      },
-      {
-        title: "Lembra o que funcionou",
-        line: "As lições de cada execução são salvas e recuperadas na seguinte.",
-      },
-      {
-        title: "Dois revisores para mudanças de risco",
-        line: "Trabalho de alto risco recebe um segundo revisor antes de ser integrado.",
-      },
-      {
-        title: "Avisa quando precisa de você",
-        line: "Um alerta quando uma execução espera sua aprovação ou travou.",
-      },
-      {
-        title: "Instala e desinstala sem sobras",
-        line: "Remove tudo o que o emet instalou e mantém qualquer arquivo que você editou.",
-      },
+      { title: "Modo rápido para mudanças pequenas", docs: "/docs/reference/cli/" },
+      { title: "Lembra o que funcionou", docs: "/docs/concepts/memory/" },
+      { title: "Dois revisores para mudanças de risco", docs: "/docs/concepts/review-and-gates/" },
+      { title: "Avisa quando precisa de você", docs: "/docs/how-to/check-a-fleet/" },
+      { title: "Instala e desinstala sem sobras", docs: "/docs/start/install/" },
     ],
   },
   stats: {
@@ -175,7 +160,6 @@ export const ptBR = {
   },
   closing: {
     heading: "Experimente em um repositório",
-    action: "Instalar o emet",
     alt: "Um vale sob uma névoa baixa da manhã, com um sol pálido e um céu em tons pastel.",
   },
   companion: {

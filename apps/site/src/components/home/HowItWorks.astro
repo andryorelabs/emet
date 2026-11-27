@@ -14,10 +14,13 @@ import sourceImage from "../../assets/source.webp";
 import type { Locale } from "../../i18n/locales";
 import { DEFAULT_LOCALE, localePath, LOCALES, localeSegment } from "../../i18n/locales";
 import type { UiStrings } from "../../i18n/ui/en";
-import CodeBlock from "../code/CodeBlock.astro";
+import { HomeCodeBlock } from "../code/HomeCodeBlock";
+import { HomeHostTabs } from "../code/HomeHostTabs";
+import { HomeTerminal } from "../code/HomeTerminal";
+import { PAGE_ACTIONS_STRINGS } from "../../docs/page-actions-strings";
+import { SEARCH_STRINGS } from "../../docs/search-strings";
 import PaintingStreams from "./graphics/PaintingStreams.astro";
 import PixelMascot from "./graphics/PixelMascot.astro";
-import WaveDiagram from "./WaveDiagram.astro";
 
 interface Props {
   strings: UiStrings;
@@ -34,6 +37,7 @@ const locale =
       Astro.url.pathname.startsWith(`/${localeSegment(candidate)}/`),
   ) ??
   DEFAULT_LOCALE;
+const copyStrings = { copy: SEARCH_STRINGS[locale].copy, copied: PAGE_ACTIONS_STRINGS[locale].copied };
 const installPath = localePath(locale, "/docs/start/install/");
 
 const ditherSource = await getImage({ src: sourceImage, format: "webp", width: 1672 });
@@ -49,7 +53,6 @@ const banner = [
 
 const terminalIcon =
   '<svg class="how-term-icon" width="16" height="16" viewBox="0 0 16 16" aria-hidden="true" focusable="false"><rect width="16" height="16" rx="3" fill="currentColor" opacity=".35"/><path d="M4 5l3 3-3 3M8.5 11.5h3.5" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>';
-const waveLabel = (number: number): string => how.wave.replace("{n}", String(number));
 const waveLine = (number: number): string => how.waveLine.replace("{n}", String(number));
 const planOutput = [
   "Spec 41 \u00b7 Dark mode for settings",
@@ -57,6 +60,13 @@ const planOutput = [
   `${waveLine(2)}  settings toggle #43 \u00b7 remember the choice #44 \u00b7 docs and screenshots #45`,
 ].join("\n");
 const landOutput = `${how.open}  ${how.prTitle} \u00b7 ${how.closes} #42 #43 #44 #45 \u00b7 ${how.checks}`;
+const landLines = [
+  { kind: "command", text: "emet status" },
+  { kind: "output", text: `${waveLine(1)}  #42` },
+  { kind: "output", text: `${waveLine(2)}  #43 #44 #45` },
+  { kind: "output", text: `spec/41. ${how.caption}`, muted: true },
+  { kind: "output", text: landOutput },
+] as const;
 ---
 
 <section class="how" id="how" data-how-pin aria-labelledby="how-title">
@@ -64,12 +74,12 @@ const landOutput = `${how.open}  ${how.prTitle} \u00b7 ${how.closes} #42 #43 #44
     <div class="how-column">
       <h2 id="how-title" data-reveal="heading"><span class="reveal-line">{how.heading}</span></h2>
 
-      <article class="exchange step" id="install" data-typed>
+      <article class="exchange step" id="install">
         <h3><span class="step-dot" aria-hidden="true"></span>{how.install}</h3>
         <div class="step-body">
           <div class="step-inner">
             <p class="io how-term"><Fragment set:html={terminalIcon} />{how.youType}</p>
-            <CodeBlock code={standaloneCommand} lang="bash" />
+            <div class="snippet"><HomeCodeBlock client:idle code={standaloneCommand} lang="bash" prompt strings={copyStrings} /></div>
             <a class="install-more" href={installPath}>{how.otherInstall}</a>
             <p class="io">{how.emetReplies}</p>
             <div class="fragment banner" data-ui data-reveal="item">
@@ -80,34 +90,33 @@ const landOutput = `${how.open}  ${how.prTitle} \u00b7 ${how.closes} #42 #43 #44
         </div>
       </article>
 
-      <article class="exchange step" data-typed data-terminal="joined">
+      <article class="exchange step">
         <h3><span class="step-dot" aria-hidden="true"></span>{how.describe}</h3>
         <div class="step-body">
           <div class="step-inner">
             <p class="io how-term"><Fragment set:html={terminalIcon} />{how.youType}</p>
-            <CodeBlock
-              code={`/emet:run ${how.request}`}
-              lang="bash"
-              tabs={[
-                { label: "Claude Code", code: `/emet:run ${how.request}` },
-                { label: "Codex", code: `$emet:run ${how.request}` },
-              ]}
-            />
+            <div class="snippet">
+              <HomeHostTabs
+                client:idle
+                strings={copyStrings}
+                tabs={[
+                  { label: "Claude Code", code: `/emet:run ${how.request}` },
+                  { label: "Codex", code: `$emet:run ${how.request}` },
+                ]}
+              />
+            </div>
             <p class="io">{how.emetReplies}</p>
-            <CodeBlock code={planOutput} lang="text" />
+            <div class="snippet"><HomeCodeBlock client:idle code={planOutput} lang="text" strings={copyStrings} copyable={false} /></div>
           </div>
         </div>
       </article>
 
-      <article class="exchange step" data-typed>
+      <article class="exchange step">
         <h3><span class="step-dot" aria-hidden="true"></span>{how.land}</h3>
         <div class="step-body">
           <div class="step-inner">
             <p class="io how-term"><Fragment set:html={terminalIcon} />{how.youType}</p>
-            <CodeBlock code="emet status" lang="bash" />
-            <p class="io">{how.emetReplies}</p>
-            <WaveDiagram waveLabel={waveLabel} caption={how.caption} />
-            <CodeBlock code={landOutput} lang="text" />
+            <div class="snippet"><HomeTerminal client:visible lines={landLines} /></div>
           </div>
         </div>
       </article>
@@ -142,7 +151,6 @@ const landOutput = `${how.open}  ${how.prTitle} \u00b7 ${how.closes} #42 #43 #44
 <script>
   import { initMascot } from "./graphics/mascot-motion";
   import { initPaintingStreams } from "./graphics/painting-streams";
-  import { initTypedTerminal } from "./graphics/typed-terminal";
   import { initHowFx, isRunwayRevealed } from "./how/fx";
   import { initHowPin } from "./how/pin";
 
@@ -150,7 +158,6 @@ const landOutput = `${how.open}  ${how.prTitle} \u00b7 ${how.closes} #42 #43 #44
   if (runway) initHowPin(runway);
   const stage = document.querySelector<HTMLElement>("[data-how-stage]");
   if (runway && stage) initHowFx(stage, () => isRunwayRevealed(runway));
-  initTypedTerminal(document);
   initMascot(document);
   initPaintingStreams(document);
 </script>

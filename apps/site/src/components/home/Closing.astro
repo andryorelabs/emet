@@ -1,21 +1,36 @@
 ---
 /**
- * Closing panel: the morning-mist painting with the heading, the install action
- * and a command box with a copy button, left-aligned over its pale top.
+ * Closing panel: the morning-mist painting with the heading
+ * and an install command box with a copy button, left-aligned over its pale top.
  */
 import { Picture } from "astro:assets";
 
 import bookendImage from "../../assets/bookend.webp";
+import { PAGE_ACTIONS_STRINGS } from "../../docs/page-actions-strings";
+import { SEARCH_STRINGS } from "../../docs/search-strings";
+import type { Locale } from "../../i18n/locales";
+import { DEFAULT_LOCALE, LOCALES, localeSegment } from "../../i18n/locales";
 import type { UiStrings } from "../../i18n/ui/en";
+import { HomeCodeBlock } from "../code/HomeCodeBlock";
 import { INSTALL_COMMAND } from "./closing/copy";
 import Valley from "./graphics/Valley.astro";
 
 interface Props {
   strings: UiStrings;
+  locale?: Locale;
 }
 
-const { strings } = Astro.props;
+const { strings, locale: localeProp } = Astro.props;
 const { closing } = strings;
+const locale =
+  localeProp ??
+  LOCALES.find(
+    (candidate) =>
+      candidate !== DEFAULT_LOCALE &&
+      Astro.url.pathname.startsWith(`/${localeSegment(candidate)}/`),
+  ) ??
+  DEFAULT_LOCALE;
+const copyStrings = { copy: SEARCH_STRINGS[locale].copy, copied: PAGE_ACTIONS_STRINGS[locale].copied };
 ---
 
 <section class="closing" aria-labelledby="closing-title">
@@ -36,44 +51,22 @@ const { closing } = strings;
       <span class="reveal-line">{closing.heading}</span>
     </h2>
     <div class="closing-actions">
-      <a class="button" href="#install">{closing.action}</a>
       <div class="closing-command">
-        <span class="closing-prompt" aria-hidden="true">$</span>
-        <code>{INSTALL_COMMAND}</code>
-        <button
-          type="button"
-          class="closing-copy-button"
-          data-closing-copy
-          data-state="idle"
-          data-command={INSTALL_COMMAND}
-          aria-label="Copy install command"
-        >
-          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-            <g data-icon="copy"><rect x="9" y="9" width="11" height="11" rx="2"></rect><path d="M5 15V6a2 2 0 0 1 2-2h9"></path></g>
-            <path data-icon="check" d="M20 6 9 17l-5-5"></path>
-            <path data-icon="failed" d="M18 6 6 18M6 6l12 12"></path>
-          </svg>
-        </button>
-        <span class="sr-only" role="status" data-closing-status></span>
+        <HomeCodeBlock client:idle code={INSTALL_COMMAND} lang="bash" prompt strings={copyStrings} />
       </div>
     </div>
   </div>
 </section>
 
 <script>
-  import { initClosingCopy } from "./closing/closing-client";
   import { initClosingFx } from "./closing/fx";
-
-  initClosingCopy(document, {
-    writeText: (text) => navigator.clipboard.writeText(text),
-  });
 
   const panel = document.querySelector<HTMLElement>(".closing");
   const command = panel?.querySelector<HTMLElement>(".closing-command");
   if (panel && command) {
     const fx = initClosingFx(panel, command);
-    panel.querySelector("[data-closing-copy]")?.addEventListener("click", () => {
-      fx.blink();
+    panel.addEventListener("click", (event) => {
+      if (event.target instanceof Element && event.target.closest("[data-home-code-copy]")) fx.blink();
     });
   }
 </script>
