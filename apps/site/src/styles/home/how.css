@@ -173,21 +173,25 @@
   padding-top: 12px;
 }
 
-.how[data-pinned]
-  .step[data-step-state="done"]
-  .step-inner
-  > :not(.emet-code:first-of-type, .install-more),
-.how[data-pinned] .step[data-step-state="done"] .emet-code__header {
+.how[data-pinned] .step[data-step-state="done"] .step-inner > :not(.snippet:first-of-type) {
   display: none;
 }
 
-.how[data-pinned] .step[data-step-state="done"] .emet-code {
+.how[data-pinned] .step[data-step-state="done"] .snippet {
   height: 42px;
   overflow: hidden;
 }
 
-.how[data-pinned] .step[data-step-state="done"] .emet-code pre {
-  padding-block: 9px;
+.how[data-pinned] .step[data-step-state="done"] .snippet [data-home-code] {
+  height: 42px;
+  overflow: hidden;
+}
+
+.how[data-pinned] .step[data-step-state="done"] .snippet [data-slot="tabs-list"] {
+  display: none;
+}
+
+.how[data-pinned] .step[data-step-state="done"] .snippet pre {
   overflow: hidden;
   white-space: nowrap;
 }
@@ -222,20 +226,6 @@
   font-weight: 400;
 }
 
-pre {
-  margin: 0;
-  overflow-x: auto;
-  padding: 16px 20px;
-  border-radius: var(--radius-panel);
-  background: var(--surface);
-  font-size: 14px;
-  line-height: 1.55;
-}
-
-.emet-code pre {
-  overflow-x: visible;
-}
-
 .fragment {
   border: 1px solid var(--border);
   border-radius: var(--radius-panel);
@@ -245,13 +235,24 @@ pre {
 }
 
 .fragment pre {
+  margin: 0;
+  padding: 16px 20px;
   border-radius: 0;
   background: transparent;
+  font-size: 14px;
+  line-height: 1.55;
 }
 
-.step-inner > .fragment,
-.step-inner > .emet-code ~ .emet-code {
+.step-inner > .fragment {
   background: var(--bg);
+}
+
+.snippet {
+  min-width: 0;
+}
+
+.snippet pre {
+  overflow-wrap: anywhere;
 }
 
 .io {
@@ -343,69 +344,4 @@ pre {
   .how h2 {
     font-size: clamp(34px, 10vw, 48px);
   }
-}
-
-.how .step-inner > .emet-code:first-of-type .ec-line,
-.how .step-inner > .emet-code:first-of-type .ec-line span {
-  color: var(--text);
-}
-
-.how .step:not(#install) .step-inner > .emet-code:first-of-type .ec-line,
-.how .step:not(#install) .step-inner > .emet-code:first-of-type .ec-line span {
-  color: var(--accent-text);
-}
-
-.how #install .step-inner > .emet-code:first-of-type .ec-line:first-child::before {
-  content: "$ ";
-  color: var(--text-muted);
-}
-
-.how .step-inner > .emet-code ~ .emet-code .ec-line:nth-child(n + 2),
-.how .step-inner > .emet-code ~ .emet-code .ec-line:nth-child(n + 2) span {
-  color: var(--text-muted);
-}
-
-.how[data-pinned] [data-terminal="joined"] .step-inner > .emet-code:has(~ .emet-code) {
-  border-end-start-radius: 0;
-  border-end-end-radius: 0;
-}
-
-.how[data-pinned] [data-terminal="joined"] .step-inner > .emet-code ~ .emet-code {
-  margin-top: -13px;
-  border-top-color: transparent;
-  border-start-start-radius: 0;
-  border-start-end-radius: 0;
-}
-
-.how .step-inner > .emet-code ~ .emet-code {
-  background: var(--surface);
-}
-
-.how .step-inner > .emet-code ~ .emet-code .emet-code__copy {
-  display: none;
-}
-
-.how .step-inner > .emet-code ~ .emet-code code {
-  width: auto;
-}
-
-.how .step-inner > .emet-code ~ .emet-code .ec-line {
-  white-space: pre-wrap;
-  overflow-wrap: anywhere;
-}
-
-.how[data-pinned] [data-terminal="joined"] .step-inner > .emet-code:has(~ .emet-code) {
-  border-bottom-color: transparent;
-}
-
-.how[data-pinned] [data-terminal="joined"] .step-inner > .emet-code:has(~ .emet-code) code {
-  padding-bottom: 0;
-}
-
-.how[data-pinned] [data-terminal="joined"] .step-inner > .emet-code ~ .emet-code code {
-  padding-top: 0;
-}
-
-.how .step-inner > .emet-code ~ .emet-code .tt-line {
-  transition: none;
 }

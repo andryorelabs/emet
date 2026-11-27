@@ -1,6 +1,7 @@
 import { describe, expect, it } from "bun:test";
 import { readFileSync } from "node:fs";
 
+import { SEARCH_STRINGS } from "../../docs/search-strings";
 import { LOCALES } from "../../i18n/locales";
 import { getStrings } from "../../i18n/ui";
 
@@ -54,8 +55,7 @@ describe("How it works per-spec flow", () => {
     }
   });
 
-  it("keeps the plan lines of step 2 on the prototype plan in a joined exchange", () => {
-    expect(howSource).toContain('data-terminal="joined"');
+  it("keeps the plan lines of step 2 and prints them as plain text", () => {
     expect(howSource).toContain("`${waveLine(1)}  theme tokens #42`");
     expect(howSource).toContain(
       "`${waveLine(2)}  settings toggle #43 \\u00b7 remember the choice #44 \\u00b7 docs and screenshots #45`",
@@ -63,6 +63,15 @@ describe("How it works per-spec flow", () => {
     for (const locale of LOCALES) {
       expect(getStrings(locale).how.waveLine).toContain("{n}");
     }
+  });
+
+  it("lands as one five-line terminal panel and drops the hand-written diagram", () => {
+    expect(howSource).toContain("<HomeTerminal");
+    expect(howSource).toContain("lines={landLines}");
+    expect(howSource).toContain('text: "emet status"');
+    expect(howSource).toContain("`spec/41. ${how.caption}`");
+    expect(howSource).not.toContain("WaveDiagram");
+    expect(howSource).not.toContain("graphics/typed-terminal");
   });
 
   it("prints the land line in one piece with localized Open and Closes words", () => {
@@ -99,12 +108,22 @@ describe("How it works pinned runway markup", () => {
     expect(howSource).not.toContain("style=");
   });
 
-  it("keeps Claude Code and Codex tabs with a terminal-icon header and literal host commands", () => {
-    expect(howSource).toContain('label: "Claude Code"');
-    expect(howSource).toContain('label: "Codex"');
+  it("uses the shadcn code block with literal host commands and a terminal-icon header", () => {
+    expect(howSource).toContain("<HomeCodeBlock");
+    expect(howSource).not.toContain("CodeBlock.astro");
     expect(howSource).toContain("`/emet:run ${how.request}`");
     expect(howSource).toContain("`$emet:run ${how.request}`");
     expect(howSource.match(/<Fragment set:html=\{terminalIcon\} \/>/g)).toHaveLength(3);
+  });
+
+  it("localizes the copy label, keeps the host switch and copies only what the user types", () => {
+    expect(howSource).toContain("SEARCH_STRINGS[locale].copy");
+    expect(howSource).not.toContain('copy: "Copy"');
+    expect(howSource).toContain("<HomeHostTabs");
+    expect(howSource).toContain("copyable={false}");
+    for (const locale of LOCALES) {
+      expect(SEARCH_STRINGS[locale].copy.trim().length).toBeGreaterThan(0);
+    }
   });
 
   it("pins only when the script marks the runway and stacks otherwise", () => {
@@ -147,8 +166,9 @@ describe("How it works waiting, done and stream styling", () => {
   });
 
   it("shrinks a done step to a 42px one-line panel", () => {
-    expect(cssSource).toMatch(/\[data-step-state="done"\] \.emet-code \{\s*height: 42px;/);
-    expect(cssSource).toMatch(/\.emet-code pre \{[^}]*white-space: nowrap/);
+    expect(cssSource).toMatch(/\[data-step-state="done"\] \.snippet \{\s*height: 42px;/);
+    expect(cssSource).toMatch(/\.snippet pre \{[^}]*white-space: nowrap/);
+    expect(cssSource).not.toMatch(/(^|\n)pre \{/);
   });
 
   it("times the streams: lines 0.9s, river 0.9s after 0.2s, pills 0.5s, Merged 0.5s after 0.5s", () => {

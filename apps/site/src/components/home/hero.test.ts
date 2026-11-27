@@ -118,6 +118,6 @@ describe("Home hero", () => {
     const closing = readFileSync(new URL("Closing.astro", import.meta.url), "utf8");
     expect(closing).not.toContain('class="button"');
     expect(closing).not.toContain('href="#install"');
-    expect(closing).toContain("data-closing-copy");
+    expect(closing).toContain("<HomeCodeBlock");
   });
 });

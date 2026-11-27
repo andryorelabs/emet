@@ -42,9 +42,15 @@ describe("SiteFooter", () => {
     expect(source).toContain('class="footer-bottom"');
   });
 
-  test("stacks two credit lines", () => {
-    expect(source).toContain('<p class="footer-fine">');
-    expect(source).toContain('<p class="footer-fine footer-paintings">{strings.paintings}</p>');
-    expect(source).not.toContain("{strings.builtBy}</a>. {strings.paintings}");
+  test("puts the three legal items in one bottom row", () => {
+    expect(source).toContain('<Separator className="mt-10" />');
+    expect(source).toContain("{strings.legal} {strings.notice}");
+    expect(source).toContain("<span>{strings.paintings}</span>");
+    expect(source).toContain("{strings.builtBy}");
+  });
+
+  test("groups both columns in one block", () => {
+    expect(source).toContain('class="footer-columns"');
+    expect(source).toContain('buttonVariants({ variant: "link" })');
   });
 });

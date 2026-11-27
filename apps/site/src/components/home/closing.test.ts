@@ -30,7 +30,9 @@ describe("Home closing", () => {
   it("left-aligns the copy and offers the install command with a copy button", () => {
     expect(ruleBody(".closing-copy")).toContain("align-items: flex-start");
     expect(source).toContain("INSTALL_COMMAND");
-    expect(source).toContain("data-closing-copy");
-    expect(source).toContain('aria-label="Copy install command"');
+    expect(source).toContain("<HomeCodeBlock");
+    expect(source).not.toContain('class="button"');
+    expect(source).toContain("SEARCH_STRINGS[locale].copy");
+    expect(css).toContain("var(--shiki-dark");
   });
 });

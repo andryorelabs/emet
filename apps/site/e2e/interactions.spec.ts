@@ -477,27 +477,25 @@ test.describe("home How it works runway", () => {
     await expect(runway.locator("[data-streams]").first()).toHaveAttribute("data-stage", "2");
   });
 
-  test("the code block offers Claude Code and Codex tabs and copies the active command", async ({
+  test("the host switch labels Claude Code and Codex and copies the active command", async ({
     context,
     page,
   }) => {
     await context.grantPermissions(["clipboard-read", "clipboard-write"]);
     await openHome(page, WIDE, "reduce");
-    const block = page.locator("[data-how-pin] [data-code-block]").filter({
-      has: page.getByRole("tab", { name: "Codex" }),
-    });
-    const tabs = block.getByRole("tab");
+    const hosts = page.locator("[data-how-pin] [data-home-host-tabs]");
+    const tabs = hosts.getByRole("tab");
     await expect(tabs).toHaveCount(2);
     await expect(tabs.nth(0)).toHaveText("Claude Code");
     await expect(tabs.nth(0)).toHaveAttribute("aria-selected", "true");
-    await block.scrollIntoViewIfNeeded();
-    await block.locator("[data-copy]").click();
-    await expect(block.locator("[data-copy]")).toHaveAttribute("data-state", "copied");
+    await hosts.scrollIntoViewIfNeeded();
+    await hosts.locator("[data-home-code-copy]").click();
+    await expect(hosts.locator("[data-home-code-copy]")).toHaveAttribute("data-copied", "true");
     expect(await page.evaluate(() => navigator.clipboard.readText())).toMatch(/^\/emet:run /);
     await tabs.nth(1).click();
     await expect(tabs.nth(1)).toHaveAttribute("aria-selected", "true");
-    await block.locator("[data-copy]").click();
-    await expect(block.locator("[data-copy]")).toHaveAttribute("data-state", "copied");
+    await expect(hosts.locator("[data-home-code-copy]")).not.toHaveAttribute("data-copied", "true");
+    await hosts.locator("[data-home-code-copy]").click();
     expect(await page.evaluate(() => navigator.clipboard.readText())).toMatch(/^\$emet:run /);
   });
 
@@ -610,10 +608,10 @@ test.describe("home closing", () => {
   test("copies the exact install command", async ({ context, page }) => {
     await context.grantPermissions(["clipboard-read", "clipboard-write"]);
     await openHome(page, WIDE, "reduce");
-    const copy = page.locator("[data-closing-copy]");
+    const copy = page.locator(".closing [data-home-code-copy]");
     await copy.scrollIntoViewIfNeeded();
     await copy.click();
-    await expect(copy).toHaveAttribute("data-state", "copied");
+    await expect(copy).toHaveAttribute("data-copied", "true");
     expect(await page.evaluate(() => navigator.clipboard.readText())).toBe(
       "curl -fsSL https://emet.andryore.dev/install.sh | sh",
     );
@@ -725,9 +723,16 @@ test.describe("home companion", () => {
     await context.grantPermissions(["clipboard-read", "clipboard-write"]);
     await openHome(page, WIDE, "reduce");
     await wakeCompanion(page);
-    const copy = page.locator("[data-closing-copy]");
+    const copy = page.locator(".closing [data-home-code-copy]");
     await copy.scrollIntoViewIfNeeded();
+    await page.evaluate(() => {
+      document.body.dataset.copyEvents = "0";
+      addEventListener("emet:copy", () => {
+        document.body.dataset.copyEvents = String(Number(document.body.dataset.copyEvents) + 1);
+      });
+    });
     await copy.click();
+    await expect(page.locator("body")).toHaveAttribute("data-copy-events", "1");
     await expect(page.locator(COMPANION)).toHaveAttribute("data-state", "done");
   });
 });

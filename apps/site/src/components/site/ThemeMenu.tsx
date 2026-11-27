@@ -69,6 +69,7 @@ export function ThemeMenu({ labels }: ThemeMenuProps) {
 
   return (
     <DropdownMenu
+      modal={false}
       open={open}
       onOpenChange={(next) => {
         if (next) {
