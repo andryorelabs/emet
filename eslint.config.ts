@@ -425,5 +425,6 @@ export default defineConfig([
     ".claude/**",
     ".emet/**",
     "apps/site/src/components/ui/**",
+    "apps/site/src/lib/highlighter.tsx",
   ]),
 ]);
