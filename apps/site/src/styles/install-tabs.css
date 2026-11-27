@@ -40,3 +40,16 @@
   border: 0;
   border-radius: 0;
 }
+
+.sl-markdown-content .emet-install-tabs [data-slot="tabs-trigger"] {
+  font-family: inherit;
+  cursor: pointer;
+}
+
+.sl-markdown-content .emet-install-tabs [data-slot="tabs-trigger"]:not([data-active]) {
+  background-color: transparent;
+}
+
+.sl-markdown-content .emet-install-tabs [data-slot="tabs-trigger"]:not([data-active], :hover) {
+  color: var(--text-muted);
+}
