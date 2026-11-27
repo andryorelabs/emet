@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import { Dialog, DialogClose, DialogContent, DialogTitle } from "@/components/ui/dialog";
+import { Empty, EmptyDescription, EmptyHeader } from "@/components/ui/empty";
+import { Kbd } from "@/components/ui/kbd";
 
 import {
   applySearchRequest,
@@ -30,6 +32,7 @@ export interface DocsSearchStrings {
   footerPrivacy: string;
   footerKeys: string;
   escapeKey: string;
+  unavailable: string;
 }
 
 /**
@@ -88,12 +91,17 @@ function usePagefindHost(strings: DocsSearchStrings): {
   const hostRef = useRef<HTMLDivElement>(null);
   const [state, setState] = useState<SearchState>("idle");
   const [announcement, setAnnouncement] = useState("");
-  const { token, searching, noResults } = strings;
+  const { token, searching, noResults, unavailable } = strings;
 
   useEffect(() => {
     const host = hostRef.current;
     const source = document.querySelector<HTMLElement>(SOURCE_SELECTOR);
-    if (!host || !source) return undefined;
+    if (!host) return undefined;
+    if (!source) {
+      setState("unavailable");
+      setAnnouncement(unavailable);
+      return undefined;
+    }
     const home = source.parentElement;
     host.append(source);
     const update = (): void => {
@@ -110,7 +118,7 @@ function usePagefindHost(strings: DocsSearchStrings): {
       observer.disconnect();
       home?.append(source);
     };
-  }, [token, searching, noResults]);
+  }, [token, searching, noResults, unavailable]);
 
   return { hostRef, state, announcement };
 }
@@ -145,9 +153,16 @@ function SearchBody({
     >
       <DialogClose data-search-part="cancel">{strings.cancel}</DialogClose>
       <div ref={hostRef} data-search-part="host" />
-      <kbd data-search-part="esc" aria-hidden="true">
+      {state === "unavailable" ? (
+        <Empty data-search-part="unavailable">
+          <EmptyHeader>
+            <EmptyDescription>{strings.unavailable}</EmptyDescription>
+          </EmptyHeader>
+        </Empty>
+      ) : null}
+      <Kbd data-search-part="esc" aria-hidden="true">
         {strings.escapeKey}
-      </kbd>
+      </Kbd>
       <p data-search-part="status" role="status" aria-live="polite">
         {announcement}
       </p>

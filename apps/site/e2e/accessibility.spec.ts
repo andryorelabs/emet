@@ -110,7 +110,7 @@ for (const keyPage of KEY_PAGES) {
 }
 
 const SEARCH_BUTTON_NAMES = [
-  { width: 1280, name: "Search documentation… Ctrl K" },
+  { width: 1280, name: "Search documentation Ctrl K" },
   { width: 768, name: "Search… Ctrl K" },
   { width: 375, name: "Search documentation" },
 ] as const;
@@ -131,7 +131,7 @@ test("the search button keeps a Command K swap on Apple platforms", async ({ pag
   await page.goto("/");
   const trigger = page.locator("[data-search-trigger]").first();
   await expect(trigger.locator("[data-search-modifier]")).toHaveText("⌘");
-  await expect(trigger).toHaveAccessibleName("Search documentation… ⌘ K");
+  await expect(trigger).toHaveAccessibleName("Search documentation ⌘ K");
 });
 
 /**
