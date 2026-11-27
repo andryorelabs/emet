@@ -1,18 +1,10 @@
-.showcase-stage {
-  inset: calc(var(--showcase-y, 0) * 1vh) calc(var(--showcase-x, 0) * 1vw);
-  width: auto;
-  height: auto;
-  overflow: clip;
-  border-radius: calc(var(--showcase-r, 0) * 1px);
-}
-
 /**
  * The showcase: a painted valley with a heading over it and a glass panel
  * holding the flag switch, the git lanes and the status line. From 901px the
- * runway pins and scroll grows the frame from an inset card to full bleed (a
- * clip-path scrubbed through --showcase-* properties set by the script), then
- * the heading and the panel fade in on the eased grow value. Narrower, or under reduced motion, it stacks with the
- * final state. Flagging cross-fades day to dusk (opacity only); the knob moves
+ * runway pins and scroll grows the frame from an inset card to full bleed (the
+ * stage and marks inset and radius are scrubbed through --showcase-* properties
+ * set by the script), then the heading and the panel fade in on the eased grow
+ * value. Narrower, or under reduced motion, it stacks with the final state. Flagging cross-fades day to dusk (opacity only); the knob moves
  * with transform only.
  */
 
@@ -46,13 +38,6 @@ section.showcase {
   height: auto;
   overflow: clip;
   border-radius: calc(var(--showcase-r, 0) * 1px);
-}
-
-.showcase-stage img {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
 }
 
 .showcase-stage img {

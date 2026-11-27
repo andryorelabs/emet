@@ -9,7 +9,21 @@
 import { paintingFx, VALLEY_PAINTING } from "../graphics/painting-fx";
 import type { PaintingData, PaintingFxHandle, PaintingFxOptions } from "../graphics/painting-fx";
 
-const SHOWCASE_OBJECT_POSITION = [0.5, 1] as const;
+const WIDE_QUERY = "(min-width: 901px)";
+
+/** The CSS image framing of `.showcase-stage img` at 901px and wider (`showcase.css`). */
+export const WIDE_OBJECT_POSITION = [0.5, 0.5] as const;
+
+/** The CSS image framing of `.showcase-stage img` below 901px (`showcase.css`). */
+export const NARROW_OBJECT_POSITION = [0.94, 1] as const;
+
+/** Where the painting sits in its box at the current width, matching the CSS image. */
+export function showcaseObjectPosition(): readonly [number, number] {
+  const wide =
+    typeof globalThis.matchMedia === "function" && globalThis.matchMedia(WIDE_QUERY).matches;
+  return wide ? WIDE_OBJECT_POSITION : NARROW_OBJECT_POSITION;
+}
+
 const EFFECTS = { clouds: true, water: true, eyes: true } as const;
 
 const DAY_PAINTING: PaintingData = {
@@ -18,7 +32,6 @@ const DAY_PAINTING: PaintingData = {
     [1352.75, 671],
     [1387.25, 671.9],
   ],
-  objectPosition: SHOWCASE_OBJECT_POSITION,
 };
 
 const DUSK_PAINTING: PaintingData = {
@@ -27,7 +40,6 @@ const DUSK_PAINTING: PaintingData = {
     [1354, 673.25],
     [1388.5, 673.5],
   ],
-  objectPosition: SHOWCASE_OBJECT_POSITION,
 };
 
 const FX_MARKERS = ["data-fx", "data-fx-clouds", "data-fx-water", "data-fx-eyes"];
@@ -103,10 +115,25 @@ export function initShowcaseFx(
   ): PaintingFxHandle =>
     createFx(host, {
       painting,
+      objectPosition: showcaseObjectPosition(),
       effects: EFFECTS,
       gaze: () => gazeFor(host, frame, sw, pointer),
       when: active,
     });
+
+  const wideQuery =
+    typeof globalThis.matchMedia === "function" ? globalThis.matchMedia(WIDE_QUERY) : undefined;
+  const onFramingChange = (): void => {
+    if (destroyed) return;
+    const hadDusk = dusk !== undefined;
+    day?.destroy();
+    dusk?.destroy();
+    day = undefined;
+    dusk = undefined;
+    if (dayHost) day = build(dayHost, DAY_PAINTING, () => !held);
+    if (hadDusk && duskHost) dusk = build(duskHost, DUSK_PAINTING, () => held);
+  };
+  wideQuery?.addEventListener("change", onFramingChange);
 
   const buildDusk = (): void => {
     if (!duskHost || !duskImage || dusk || duskPending) return;
@@ -147,6 +174,7 @@ export function initShowcaseFx(
       destroyed = true;
       markers.disconnect();
       removeEventListener("pointermove", onPointerMove);
+      wideQuery?.removeEventListener("change", onFramingChange);
       day?.destroy();
       dusk?.destroy();
       day = undefined;

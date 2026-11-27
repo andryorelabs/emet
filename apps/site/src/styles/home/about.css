@@ -61,24 +61,6 @@
   display: inline-block;
 }
 
-.hebrew-roman {
-  font-family: var(--font-mono);
-  font-size: 14px;
-  color: var(--text);
-}
-
-.hebrew-gloss {
-  font-size: 14px;
-  color: var(--text-muted);
-}
-
-.hebrew-arrow {
-  padding-bottom: 38px;
-  font-size: 24px;
-  line-height: 1;
-  color: var(--text-muted);
-}
-
 .latin {
   padding-bottom: 18px;
   font-size: clamp(56px, 7vw, 92px);
