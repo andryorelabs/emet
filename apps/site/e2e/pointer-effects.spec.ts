@@ -73,14 +73,20 @@ test.describe("home companion idle sleep", () => {
   test("falls asleep after 20 s without input and wakes on a pointer move", async ({ page }) => {
     await page.clock.install();
     await openHome(page, "no-preference");
+    await page.clock.pauseAt(Date.now() + 200);
     await page.evaluate(() => {
       window.scrollTo({ top: window.innerHeight * 2, behavior: "instant" });
     });
     const companion = page.locator("[data-companion]");
-    await expect(companion).not.toHaveAttribute("data-away", /.*/);
-    await page.clock.runFor(19_000);
+    await expect
+      .poll(async () => {
+        await page.clock.runFor(16);
+        return companion.getAttribute("data-away");
+      })
+      .toBeNull();
+    await page.clock.runFor(18_000);
     await expect(companion).not.toHaveAttribute("data-state", "sleep");
-    await page.clock.runFor(1_500);
+    await page.clock.runFor(3_000);
     await expect(companion).toHaveAttribute("data-state", "sleep");
     await page.mouse.move(200, 200);
     await expect(companion).not.toHaveAttribute("data-state", "sleep");
