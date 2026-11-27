@@ -53,6 +53,8 @@ export const de = {
     caption: "Jede Welle fließt in einen Spec-Branch. Die Spec landet als ein Pull Request.",
     prTitle: "Spec 41: Dunkelmodus für die Einstellungen",
     checks: "Checks bestanden",
+    open: "Offen",
+    closes: "Schließt",
   },
   showcase: {
     heading: "Die Spec wird gemergt",
@@ -60,6 +62,8 @@ export const de = {
     status: "Spec 41 geprüft. CI bestanden. Als ein Pull Request gemergt, 4 Tickets geschlossen.",
     statusHeld: "Spec 41 angehalten: ein Ticket markiert. Nichts gemergt.",
     flag: "Ticket #44 markieren",
+    laneReview: "Review",
+    laneHeld: "gehalten",
   },
   features: {
     heading: "Was ein Lauf absichert",

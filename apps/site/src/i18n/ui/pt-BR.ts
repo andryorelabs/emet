@@ -54,6 +54,8 @@ export const ptBR = {
     caption: "Cada onda se junta a uma branch da spec. A spec chega como um único pull request.",
     prTitle: "Spec 41: modo escuro para as configurações",
     checks: "checks aprovados",
+    open: "Aberto",
+    closes: "Fecha",
   },
   showcase: {
     heading: "A spec é integrada",
@@ -62,6 +64,8 @@ export const ptBR = {
       "Spec 41 revisada. CI aprovada. Integrada como um único pull request, 4 tickets fechados.",
     statusHeld: "Spec 41 retida: um ticket sinalizado. Nada foi integrado.",
     flag: "Sinalizar o ticket #44",
+    laneReview: "revisão",
+    laneHeld: "retido",
   },
   features: {
     heading: "O que uma execução protege",

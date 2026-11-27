@@ -54,6 +54,8 @@ export const fr = {
       "Chaque vague rejoint une branche de spec. La spec atterrit en une seule pull request.",
     prTitle: "Spec 41 : mode sombre pour les réglages",
     checks: "checks réussis",
+    open: "Ouvert",
+    closes: "Ferme",
   },
   showcase: {
     heading: "La spec est fusionnée",
@@ -61,6 +63,8 @@ export const fr = {
     status: "Spec 41 relue. CI réussie. Fusionnée en une seule pull request, 4 tickets fermés.",
     statusHeld: "Spec 41 retenue : un ticket signalé. Rien n'a été fusionné.",
     flag: "Signaler le ticket #44",
+    laneReview: "revue",
+    laneHeld: "retenu",
   },
   features: {
     heading: "Ce qu'une exécution protège",

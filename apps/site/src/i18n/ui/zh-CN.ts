@@ -53,6 +53,8 @@ export const zhCN = {
     caption: "每一波都并入一个规格分支。规格作为一个拉取请求落地。",
     prTitle: "规格 41：设置的深色模式",
     checks: "检查通过",
+    open: "打开",
+    closes: "关闭",
   },
   showcase: {
     heading: "规格已合并",
@@ -60,6 +62,8 @@ export const zhCN = {
     status: "规格 41 已评审。CI 通过。作为一个拉取请求合并，关闭 4 个工单。",
     statusHeld: "规格 41 被拦下：有一个工单被标记。未合并任何内容。",
     flag: "标记工单 #44",
+    laneReview: "评审",
+    laneHeld: "暂停",
   },
   features: {
     heading: "一次运行守护什么",

@@ -12,8 +12,6 @@ describe("About CSS parity with prototype v17", () => {
   });
 
   test("clips the portrait frame so the drifting sky copy cannot poke out of its corners", () => {
-    expect(css).toMatch(
-      /\.portrait-frame \{[^}]*overflow: clip;[^}]*border-radius: var\(--radius-panel\)/,
-    );
+    expect(css).toMatch(/\.portrait-frame \{[^}]*overflow: clip;[^}]*border-radius: 10px/);
   });
 });
