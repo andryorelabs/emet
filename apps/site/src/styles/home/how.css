@@ -62,9 +62,13 @@
   height: 100svh;
   grid-template-columns: minmax(0, 560px) minmax(0, 1fr);
   gap: 72px;
-  align-items: center;
-  padding: 72px max(16px, env(safe-area-inset-right, 0px)) 24px
-    calc(max(16px, env(safe-area-inset-left, 0px)) + 24px);
+  align-items: safe center;
+  padding: clamp(16px, 7svh, 72px) max(16px, env(safe-area-inset-right, 0px))
+    clamp(12px, 3svh, 24px) calc(max(16px, env(safe-area-inset-left, 0px)) + 24px);
+}
+
+.how[data-pinned] .how-stick h2 {
+  font-size: min(var(--h2-size), 8svh);
 }
 
 .how[data-pinned] .how-painting {

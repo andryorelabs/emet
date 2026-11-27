@@ -135,6 +135,15 @@ describe("How it works pinned runway markup", () => {
     expect(cssSource).not.toMatch(/(^|\n)\.how-stick \{[^}]*position: sticky/);
   });
 
+  it("fits the pinned column in short viewports with svh padding, a capped h2 and safe centring", () => {
+    expect(cssSource).toMatch(
+      /\.how\[data-pinned\] \.how-stick \{[^}]*align-items: safe center;[^}]*padding: clamp\(16px, 7svh, 72px\)[^}]*clamp\(12px, 3svh, 24px\)/,
+    );
+    expect(cssSource).toMatch(
+      /\.how\[data-pinned\] \.how-stick h2 \{[^}]*font-size: min\(var\(--h2-size\), 8svh\)/,
+    );
+  });
+
   it("shows no dither canvas unless pinned", () => {
     expect(cssSource).toMatch(/\.how-dither \{\s*display: none;/);
     expect(cssSource).toMatch(/\.how\[data-pinned\] \.how-dither \{[^}]*display: block/);
