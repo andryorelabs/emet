@@ -21,6 +21,7 @@ export interface SearchStrings {
   searchButtonShort: string;
   searchButtonLabel: string;
   cancel: string;
+  unavailable: string;
 }
 
 /**
@@ -36,10 +37,11 @@ export const SEARCH_STRINGS: Record<Locale, SearchStrings> = {
     escapeKey: "Esc",
     copy: "Copy",
     copied: "Copied",
-    searchButton: "Search documentation…",
+    searchButton: "Search documentation",
     searchButtonShort: "Search…",
     searchButtonLabel: "Search documentation",
     cancel: "Cancel",
+    unavailable: "Search is only available in production builds.",
   },
   es: {
     placeholder: "Buscar en la documentación",
@@ -50,10 +52,11 @@ export const SEARCH_STRINGS: Record<Locale, SearchStrings> = {
     escapeKey: "Esc",
     copy: "Copiar",
     copied: "Copiado",
-    searchButton: "Buscar en la documentación…",
+    searchButton: "Buscar en la documentación",
     searchButtonShort: "Buscar…",
     searchButtonLabel: "Buscar en la documentación",
     cancel: "Cancelar",
+    unavailable: "La búsqueda solo está disponible en las compilaciones de producción.",
   },
   de: {
     placeholder: "In der Dokumentation suchen",
@@ -64,10 +67,11 @@ export const SEARCH_STRINGS: Record<Locale, SearchStrings> = {
     escapeKey: "Esc",
     copy: "Kopieren",
     copied: "Kopiert",
-    searchButton: "Dokumentation durchsuchen…",
+    searchButton: "Dokumentation durchsuchen",
     searchButtonShort: "Suchen…",
     searchButtonLabel: "Dokumentation durchsuchen",
     cancel: "Abbrechen",
+    unavailable: "Die Suche ist nur in Produktions-Builds verfügbar.",
   },
   fr: {
     placeholder: "Rechercher dans la documentation",
@@ -78,10 +82,11 @@ export const SEARCH_STRINGS: Record<Locale, SearchStrings> = {
     escapeKey: "Échap",
     copy: "Copier",
     copied: "Copié",
-    searchButton: "Rechercher dans la documentation…",
+    searchButton: "Rechercher dans la documentation",
     searchButtonShort: "Rechercher…",
     searchButtonLabel: "Rechercher dans la documentation",
     cancel: "Annuler",
+    unavailable: "La recherche n’est disponible que dans les builds de production.",
   },
   it: {
     placeholder: "Cerca nella documentazione",
@@ -92,10 +97,11 @@ export const SEARCH_STRINGS: Record<Locale, SearchStrings> = {
     escapeKey: "Esc",
     copy: "Copia",
     copied: "Copiato",
-    searchButton: "Cerca nella documentazione…",
+    searchButton: "Cerca nella documentazione",
     searchButtonShort: "Cerca…",
     searchButtonLabel: "Cerca nella documentazione",
     cancel: "Annulla",
+    unavailable: "La ricerca è disponibile solo nelle build di produzione.",
   },
   ja: {
     placeholder: "ドキュメントを検索",
@@ -106,10 +112,11 @@ export const SEARCH_STRINGS: Record<Locale, SearchStrings> = {
     escapeKey: "Esc",
     copy: "コピー",
     copied: "コピーしました",
-    searchButton: "ドキュメントを検索…",
+    searchButton: "ドキュメントを検索",
     searchButtonShort: "検索…",
     searchButtonLabel: "ドキュメントを検索",
     cancel: "キャンセル",
+    unavailable: "検索は本番ビルドでのみ利用できます。",
   },
   ko: {
     placeholder: "문서 검색",
@@ -120,10 +127,11 @@ export const SEARCH_STRINGS: Record<Locale, SearchStrings> = {
     escapeKey: "Esc",
     copy: "복사",
     copied: "복사됨",
-    searchButton: "문서 검색…",
+    searchButton: "문서 검색",
     searchButtonShort: "검색…",
     searchButtonLabel: "문서 검색",
     cancel: "취소",
+    unavailable: "검색은 프로덕션 빌드에서만 사용할 수 있습니다.",
   },
   "pt-BR": {
     placeholder: "Pesquisar na documentação",
@@ -134,10 +142,11 @@ export const SEARCH_STRINGS: Record<Locale, SearchStrings> = {
     escapeKey: "Esc",
     copy: "Copiar",
     copied: "Copiado",
-    searchButton: "Pesquisar na documentação…",
+    searchButton: "Pesquisar na documentação",
     searchButtonShort: "Pesquisar…",
     searchButtonLabel: "Pesquisar na documentação",
     cancel: "Cancelar",
+    unavailable: "A pesquisa só está disponível em builds de produção.",
   },
   ru: {
     placeholder: "Поиск по документации",
@@ -148,10 +157,11 @@ export const SEARCH_STRINGS: Record<Locale, SearchStrings> = {
     escapeKey: "Esc",
     copy: "Копировать",
     copied: "Скопировано",
-    searchButton: "Поиск по документации…",
+    searchButton: "Поиск по документации",
     searchButtonShort: "Поиск…",
     searchButtonLabel: "Поиск по документации",
     cancel: "Отмена",
+    unavailable: "Поиск доступен только в производственных сборках.",
   },
   "zh-CN": {
     placeholder: "搜索文档",
@@ -162,9 +172,10 @@ export const SEARCH_STRINGS: Record<Locale, SearchStrings> = {
     escapeKey: "Esc",
     copy: "复制",
     copied: "已复制",
-    searchButton: "搜索文档…",
+    searchButton: "搜索文档",
     searchButtonShort: "搜索…",
     searchButtonLabel: "搜索文档",
     cancel: "取消",
+    unavailable: "搜索仅在生产构建中可用。",
   },
 };
