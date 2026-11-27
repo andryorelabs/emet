@@ -30,8 +30,22 @@ const WCAG_TAGS = ["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "wcag22aa"];
 /** The color schemes the site renders, since its tokens use `light-dark()`. */
 const COLOR_SCHEMES = ["light", "dark"] as const;
 
+/**
+ * The selector axe gives a Base UI focus guard: a `span` with the guard attribute, optionally typed
+ * `inside` or `outside`, as the last compound of the target, so no other node can match.
+ */
+const BASE_UI_FOCUS_GUARD_TARGET =
+  /(?:^|[\s>])span(?:\[data-type="(?:inside|outside)"\])?\[data-base-ui-focus-guard=""\]\[aria-hidden="true"\](?::nth-child\(\d+\))?$/;
+
 /** Each waiver covers one rule on one selector, never a whole page or rule. */
-const KNOWN_AXE_ISSUES: readonly KnownAxeIssue[] = [];
+const KNOWN_AXE_ISSUES: readonly KnownAxeIssue[] = [
+  {
+    rule: "aria-hidden-focus",
+    target: BASE_UI_FOCUS_GUARD_TARGET,
+    reason:
+      "Floating UI and Base UI focus guards are aria-hidden tabindex=0 spans by design: they hand focus straight back to the trigger or the popup. Base UI renders them for every open menu, modal or not, and no prop removes them. axe only downgrades them to incomplete when an overlay covers 75% of the viewport, which a non-modal menu intentionally lacks (S5: no scroll lock, outside clicks reach the page).",
+  },
+];
 
 /**
  * Records every Content-Security-Policy violation the page reports, as
@@ -64,6 +78,26 @@ async function cspViolations(page: Page): Promise<readonly string[]> {
 function isKnownAxeIssue(rule: string, target: string): boolean {
   return KNOWN_AXE_ISSUES.some((issue) => issue.rule === rule && issue.target.test(target));
 }
+
+test("the focus guard waiver matches only Base UI focus guards on aria-hidden-focus", () => {
+  for (const guard of [
+    'astro-island[uid="M4ATO"] > span[data-base-ui-focus-guard=""][aria-hidden="true"]:nth-child(1)',
+    'span[data-type="outside"][data-base-ui-focus-guard=""][aria-hidden="true"]:nth-child(5)',
+    'span[data-type="inside"][data-base-ui-focus-guard=""][aria-hidden="true"]:nth-child(3)',
+  ]) {
+    expect(isKnownAxeIssue("aria-hidden-focus", guard)).toBe(true);
+    expect(isKnownAxeIssue("color-contrast", guard)).toBe(false);
+  }
+  for (const other of [
+    'div[aria-hidden="true"]',
+    'span[aria-hidden="true"]',
+    '.hero > picture > div[aria-hidden="true"]',
+    'span[data-base-ui-focus-guard=""][aria-hidden="true"] > a',
+    'span[data-base-ui-focus-guard=""][aria-hidden="true"]:nth-child(1) button',
+  ]) {
+    expect(isKnownAxeIssue("aria-hidden-focus", other)).toBe(false);
+  }
+});
 
 for (const keyPage of KEY_PAGES) {
   for (const colorScheme of COLOR_SCHEMES) {
@@ -157,7 +191,7 @@ interface OpenWidget {
   readonly open: (page: Page) => Promise<void>;
 }
 
-/** The widgets that must stay accessible while open: theme menu, language menu, page actions menu, mobile sheet, search dialog and FAQ. */
+/** The widgets that must stay accessible while open: theme and language menus on the home and a docs page, page actions menu, mobile sheet, search dialog and FAQ. */
 const OPEN_WIDGETS: readonly OpenWidget[] = [
   {
     name: "theme menu",
@@ -171,6 +205,24 @@ const OPEN_WIDGETS: readonly OpenWidget[] = [
   {
     name: "language menu",
     path: "/",
+    width: 1280,
+    open: async (page) => {
+      await page.locator('button[data-menu="lang-trigger"]:visible').first().click();
+      await expect(page.getByRole("menu")).toBeVisible();
+    },
+  },
+  {
+    name: "theme menu on a docs page",
+    path: "/docs/start/install/",
+    width: 1280,
+    open: async (page) => {
+      await page.locator('button[data-menu="theme-button"]:visible').first().click();
+      await expect(page.getByRole("menu")).toBeVisible();
+    },
+  },
+  {
+    name: "language menu on a docs page",
+    path: "/docs/start/install/",
     width: 1280,
     open: async (page) => {
       await page.locator('button[data-menu="lang-trigger"]:visible').first().click();
