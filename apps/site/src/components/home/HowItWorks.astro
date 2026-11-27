@@ -56,7 +56,7 @@ const planOutput = [
   `${waveLine(1)}  theme tokens #42`,
   `${waveLine(2)}  settings toggle #43 \u00b7 remember the choice #44 \u00b7 docs and screenshots #45`,
 ].join("\n");
-const landOutput = [`Open  ${how.prTitle}`, `Closes #42 #43 #44 #45 \u00b7 ${how.checks}`].join("\n");
+const landOutput = `${how.open}  ${how.prTitle} \u00b7 ${how.closes} #42 #43 #44 #45 \u00b7 ${how.checks}`;
 ---
 
 <section class="how" id="how" data-how-pin aria-labelledby="how-title">
@@ -140,7 +140,6 @@ const landOutput = [`Open  ${how.prTitle}`, `Closes #42 #43 #44 #45 \u00b7 ${how
 </style>
 
 <script>
-  import { initLandCard } from "./graphics/land-card";
   import { initMascot } from "./graphics/mascot-motion";
   import { initPaintingStreams } from "./graphics/painting-streams";
   import { initTypedTerminal } from "./graphics/typed-terminal";
@@ -153,6 +152,5 @@ const landOutput = [`Open  ${how.prTitle}`, `Closes #42 #43 #44 #45 \u00b7 ${how
   if (runway && stage) initHowFx(stage, () => isRunwayRevealed(runway));
   initTypedTerminal(document);
   initMascot(document);
-  initLandCard(document);
   initPaintingStreams(document);
 </script>
