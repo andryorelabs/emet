@@ -21,7 +21,10 @@ describe("SEARCH_STRINGS", () => {
 
   test("labels the search button without an ellipsis in every locale", () => {
     for (const locale of LOCALES) {
-      expect(SEARCH_STRINGS[locale].searchButton).toBe(SEARCH_STRINGS[locale].searchButtonLabel);
+      const { searchButton, searchButtonShort, searchButtonLabel } = SEARCH_STRINGS[locale];
+      expect(searchButton).toBe(searchButtonLabel);
+      expect(searchButton).not.toContain("…");
+      expect(searchButtonShort).not.toContain("…");
     }
   });
 

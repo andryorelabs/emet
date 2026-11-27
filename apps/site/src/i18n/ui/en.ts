@@ -86,8 +86,8 @@ export const en = {
     ],
     extra: [
       { title: "Fast mode for small changes", docs: "/docs/reference/cli/" },
-      { title: "Remembers what worked", docs: "/docs/reference/cli/" },
-      { title: "Two reviewers for risky changes", docs: "/docs/reference/configuration/" },
+      { title: "Remembers what worked", docs: "/docs/concepts/memory/" },
+      { title: "Two reviewers for risky changes", docs: "/docs/concepts/review-and-gates/" },
       { title: "Tells you when it needs you", docs: "/docs/how-to/check-a-fleet/" },
       { title: "Installs and uninstalls cleanly", docs: "/docs/start/install/" },
     ],
@@ -157,7 +157,6 @@ export const en = {
   },
   closing: {
     heading: "Try it in one repo",
-    action: "Install emet",
     alt: "A valley under low morning mist with a pale sun and pastel sky.",
   },
   companion: {

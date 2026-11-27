@@ -111,7 +111,7 @@ for (const keyPage of KEY_PAGES) {
 
 const SEARCH_BUTTON_NAMES = [
   { width: 1280, name: "Search documentation Ctrl K" },
-  { width: 768, name: "Search… Ctrl K" },
+  { width: 768, name: "Search Ctrl K" },
   { width: 375, name: "Search documentation" },
 ] as const;
 

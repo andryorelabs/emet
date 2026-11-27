@@ -95,8 +95,8 @@ export const ja = {
     ],
     extra: [
       { title: "小さな変更のための高速モード", docs: "/docs/reference/cli/" },
-      { title: "うまくいったことを覚えている", docs: "/docs/reference/cli/" },
-      { title: "リスクの高い変更には 2 人のレビュアー", docs: "/docs/reference/configuration/" },
+      { title: "うまくいったことを覚えている", docs: "/docs/concepts/memory/" },
+      { title: "リスクの高い変更には 2 人のレビュアー", docs: "/docs/concepts/review-and-gates/" },
       { title: "必要なときに知らせる", docs: "/docs/how-to/check-a-fleet/" },
       { title: "きれいにインストール、きれいに削除", docs: "/docs/start/install/" },
     ],
@@ -168,7 +168,6 @@ export const ja = {
   },
   closing: {
     heading: "まず一つのリポジトリで",
-    action: "emet をインストール",
     alt: "低い朝霧に包まれた谷。淡い太陽とパステルの空。",
   },
   companion: {

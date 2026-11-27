@@ -55,4 +55,27 @@ test.describe("home sections", () => {
     const box = await visible.boundingBox();
     expect(box?.width ?? 0).toBeGreaterThan(0);
   });
+
+  test("the About eyes canvas keeps painting new frames over time", async ({ page }) => {
+    test.setTimeout(45_000);
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await page.emulateMedia({ reducedMotion: "no-preference" });
+    await page.goto("/");
+    await page.locator(".portrait-frame").scrollIntoViewIfNeeded();
+    await page.waitForSelector('canvas[data-pixel-reveal][data-state="done"]', {
+      state: "attached",
+      timeout: 15_000,
+    });
+    const eyes = page.locator(".portrait-frame canvas:not([data-pixel-reveal])").filter({
+      visible: true,
+    });
+    await expect(eyes).toHaveCount(1);
+    const first = (await eyes.screenshot()).toString("base64");
+    await expect
+      .poll(async () => (await eyes.screenshot()).toString("base64") !== first, {
+        intervals: [250],
+        timeout: 20_000,
+      })
+      .toBe(true);
+  });
 });

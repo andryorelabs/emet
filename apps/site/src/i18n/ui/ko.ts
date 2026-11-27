@@ -86,8 +86,8 @@ export const ko = {
     ],
     extra: [
       { title: "작은 변경을 위한 빠른 모드", docs: "/docs/reference/cli/" },
-      { title: "효과가 있던 것을 기억합니다", docs: "/docs/reference/cli/" },
-      { title: "위험한 변경에는 리뷰어 두 명", docs: "/docs/reference/configuration/" },
+      { title: "효과가 있던 것을 기억합니다", docs: "/docs/concepts/memory/" },
+      { title: "위험한 변경에는 리뷰어 두 명", docs: "/docs/concepts/review-and-gates/" },
       { title: "필요할 때 알려 줍니다", docs: "/docs/how-to/check-a-fleet/" },
       { title: "깔끔하게 설치하고 제거합니다", docs: "/docs/start/install/" },
     ],
@@ -158,7 +158,6 @@ export const ko = {
   },
   closing: {
     heading: "저장소 하나에서 시작해 보세요",
-    action: "emet 설치",
     alt: "낮게 깔린 아침 안개 아래의 계곡. 옅은 해와 파스텔빛 하늘.",
   },
   companion: {

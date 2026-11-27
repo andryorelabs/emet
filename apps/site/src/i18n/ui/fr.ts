@@ -88,10 +88,10 @@ export const fr = {
     ],
     extra: [
       { title: "Mode rapide pour les petits changements", docs: "/docs/reference/cli/" },
-      { title: "Se souvient de ce qui a marché", docs: "/docs/reference/cli/" },
+      { title: "Se souvient de ce qui a marché", docs: "/docs/concepts/memory/" },
       {
         title: "Deux relecteurs pour les changements risqués",
-        docs: "/docs/reference/configuration/",
+        docs: "/docs/concepts/review-and-gates/",
       },
       { title: "Vous prévient quand il a besoin de vous", docs: "/docs/how-to/check-a-fleet/" },
       { title: "S'installe et se désinstalle proprement", docs: "/docs/start/install/" },
@@ -163,7 +163,6 @@ export const fr = {
   },
   closing: {
     heading: "Essayez-le dans un dépôt",
-    action: "Installer emet",
     alt: "Une vallée sous une brume matinale basse, avec un soleil pâle et un ciel pastel.",
   },
   companion: {

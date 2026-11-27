@@ -50,3 +50,27 @@ test("the search button label has no ellipsis", async ({ page }) => {
   const label = page.locator(".search-button-label--full").first();
   await expect(label).toHaveText("Search documentation");
 });
+
+for (const path of ["/docs/", "/de/docs/"]) {
+  test(`the search button label is not cut off on ${path} at 1440x900`, async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await page.goto(path);
+    const label = page.locator(".search-button-label--full").first();
+    await expect(label).toBeVisible();
+    const { scrollWidth, clientWidth } = await label.evaluate((element) => ({
+      scrollWidth: element.scrollWidth,
+      clientWidth: element.clientWidth,
+    }));
+    expect(scrollWidth).toBeLessThanOrEqual(clientWidth);
+  });
+
+  test(`the header does not overflow on ${path} at 390x844`, async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.goto(path, { waitUntil: "networkidle" });
+    const overflow = await page.evaluate(
+      () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
+    );
+    expect(overflow).toBeLessThanOrEqual(0);
+    await expect(page.locator("[data-search-trigger]").first()).toHaveAccessibleName(/\S/);
+  });
+}
