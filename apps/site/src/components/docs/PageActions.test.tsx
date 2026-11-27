@@ -318,6 +318,10 @@ describe("menu items", () => {
     }
   });
 
+  test("keeps the menu non-modal so it never locks scroll", () => {
+    expect(source).toContain("<DropdownMenu modal={false}>");
+  });
+
   test("draws each icon inline, decorative and in currentColor", () => {
     expect(source).toMatch(/<svg\s+aria-hidden="true"\s+focusable="false"/);
     expect(source).toContain(`fill="currentColor"`);
