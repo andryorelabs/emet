@@ -49,6 +49,7 @@ export const de = {
     merged: "Gemergt",
     otherInstall: "Weitere Installationswege",
     wave: "Welle {n}",
+    waveLine: "Welle {n}",
     caption: "Jede Welle fließt in einen Spec-Branch. Die Spec landet als ein Pull Request.",
     prTitle: "Spec 41: Dunkelmodus für die Einstellungen",
     checks: "Checks bestanden",

@@ -49,6 +49,7 @@ export const fr = {
     merged: "Fusionné",
     otherInstall: "Autres façons d'installer",
     wave: "Vague {n}",
+    waveLine: "vague {n}",
     caption:
       "Chaque vague rejoint une branche de spec. La spec atterrit en une seule pull request.",
     prTitle: "Spec 41 : mode sombre pour les réglages",

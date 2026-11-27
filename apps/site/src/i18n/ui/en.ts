@@ -48,6 +48,7 @@ export const en = {
     merged: "Merged",
     otherInstall: "Other ways to install",
     wave: "Wave {n}",
+    waveLine: "wave {n}",
     caption: "Each wave joins one spec branch. The spec lands as one pull request.",
     prTitle: "Spec 41: Dark mode for settings",
     checks: "checks passing",

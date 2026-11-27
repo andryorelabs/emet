@@ -50,6 +50,7 @@ export const ptBR = {
     merged: "Mesclado",
     otherInstall: "Outras formas de instalar",
     wave: "Onda {n}",
+    waveLine: "onda {n}",
     caption: "Cada onda se junta a uma branch da spec. A spec chega como um único pull request.",
     prTitle: "Spec 41: modo escuro para as configurações",
     checks: "checks aprovados",

@@ -49,6 +49,7 @@ export const es = {
     merged: "Fusionado",
     otherInstall: "Otras formas de instalar",
     wave: "Oleada {n}",
+    waveLine: "oleada {n}",
     caption:
       "Cada oleada se une a una rama de la spec. La spec se integra como una sola pull request.",
     prTitle: "Spec 41: modo oscuro para los ajustes",
