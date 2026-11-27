@@ -187,6 +187,10 @@
   overflow: hidden;
 }
 
+.how[data-pinned] .step[data-step-state="done"] .snippet [data-slot="tabs-list"] {
+  display: none;
+}
+
 .how[data-pinned] .step[data-step-state="done"] .snippet pre {
   overflow: hidden;
   white-space: nowrap;

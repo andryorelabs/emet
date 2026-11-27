@@ -95,3 +95,15 @@
     font-size: 13px;
   }
 }
+
+.closing-command [data-slot="code-block-line"] span {
+  color: var(--shiki-dark, color-mix(in oklab, var(--closing-pill-text) 70%, transparent));
+}
+
+.closing-command [data-home-code-copy] {
+  color: var(--closing-pill-text);
+}
+
+.closing-command [data-home-code-copy]:hover {
+  background: var(--closing-pill-line);
+}

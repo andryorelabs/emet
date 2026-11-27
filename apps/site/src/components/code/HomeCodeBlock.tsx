@@ -6,6 +6,8 @@ import { CodeBlock, CodeBlockContent, CodeBlockLine } from "@/components/ui/code
 import { useHighlightedCode } from "@/hooks/use-highlighted-code";
 import { copyWithFeedback, FEEDBACK_MS } from "@/lib/copy-feedback";
 
+import { COMPANION_EVENT_NAMES } from "../home/companion/state";
+
 /** The localized labels of the copy button. */
 interface HomeCodeBlockStrings {
   readonly copy: string;
@@ -21,6 +23,8 @@ export interface HomeCodeBlockProps {
   /** Shows a muted, unselectable `$` before each line; it is never copied. */
   readonly prompt?: boolean;
   readonly strings: HomeCodeBlockStrings;
+  /** Shows the copy button; `true` by default, `false` for what emet replies. */
+  readonly copyable?: boolean;
 }
 
 /**
@@ -34,6 +38,7 @@ export function HomeCodeBlock({
   lang,
   prompt = false,
   strings,
+  copyable = true,
 }: HomeCodeBlockProps): ReactElement {
   const lines = useHighlightedCode(code, lang);
   const [copied, setCopied] = useState(false);
@@ -49,6 +54,7 @@ export function HomeCodeBlock({
   async function copy(): Promise<void> {
     const result = await copyWithFeedback(code);
     if (result !== "copied") return;
+    globalThis.dispatchEvent(new CustomEvent(COMPANION_EVENT_NAMES.copy));
     setCopied(true);
     clearTimeout(timer.current);
     timer.current = setTimeout(() => {
@@ -70,24 +76,26 @@ export function HomeCodeBlock({
           </CodeBlockLine>
         ))}
       </CodeBlockContent>
-      <div className="shrink-0 p-1.5">
-        <Button
-          type="button"
-          variant="ghost"
-          size="icon"
-          data-home-code-copy=""
-          data-copied={copied || undefined}
-          aria-label={copied ? strings.copied : strings.copy}
-          onClick={() => {
-            void copy();
-          }}
-        >
-          {copied ? <CheckIcon aria-hidden="true" /> : <CopyIcon aria-hidden="true" />}
-        </Button>
-        <span aria-live="polite" className="sr-only">
-          {copied ? strings.copied : ""}
-        </span>
-      </div>
+      {copyable && (
+        <div className="shrink-0 p-1.5">
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            data-home-code-copy=""
+            data-copied={copied || undefined}
+            aria-label={copied ? strings.copied : strings.copy}
+            onClick={() => {
+              void copy();
+            }}
+          >
+            {copied ? <CheckIcon aria-hidden="true" /> : <CopyIcon aria-hidden="true" />}
+          </Button>
+          <span aria-live="polite" className="sr-only">
+            {copied ? strings.copied : ""}
+          </span>
+        </div>
+      )}
     </CodeBlock>
   );
 }

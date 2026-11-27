@@ -1,6 +1,7 @@
 import { describe, expect, it } from "bun:test";
 import { readFileSync } from "node:fs";
 
+import { SEARCH_STRINGS } from "../../docs/search-strings";
 import { LOCALES } from "../../i18n/locales";
 import { getStrings } from "../../i18n/ui";
 
@@ -113,6 +114,16 @@ describe("How it works pinned runway markup", () => {
     expect(howSource).toContain("`/emet:run ${how.request}`");
     expect(howSource).toContain("`$emet:run ${how.request}`");
     expect(howSource.match(/<Fragment set:html=\{terminalIcon\} \/>/g)).toHaveLength(3);
+  });
+
+  it("localizes the copy label, keeps the host switch and copies only what the user types", () => {
+    expect(howSource).toContain("SEARCH_STRINGS[locale].copy");
+    expect(howSource).not.toContain('copy: "Copy"');
+    expect(howSource).toContain("<HomeHostTabs");
+    expect(howSource).toContain("copyable={false}");
+    for (const locale of LOCALES) {
+      expect(SEARCH_STRINGS[locale].copy.trim().length).toBeGreaterThan(0);
+    }
   });
 
   it("pins only when the script marks the runway and stacks otherwise", () => {

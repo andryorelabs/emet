@@ -61,6 +61,27 @@ for (const viewport of VIEWPORTS) {
   });
 }
 
+for (const scheme of ["light", "dark"] as const) {
+  test(`the closing command stays readable on its pill in ${scheme} mode`, async ({ page }) => {
+    await page.emulateMedia({ reducedMotion: "reduce", colorScheme: scheme });
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await page.goto("/");
+    const block = page.locator(".closing [data-home-code]");
+    await block.scrollIntoViewIfNeeded();
+    const lightness = await block
+      .locator("[data-slot=code-block-line] span")
+      .last()
+      .evaluate((node) => {
+        const [red = 0, green = 0, blue = 0] =
+          getComputedStyle(node)
+            .color.match(/[\d.]+/g)
+            ?.map(Number) ?? [];
+        return (0.2126 * red + 0.7152 * green + 0.0722 * blue) / 255;
+      });
+    expect(lightness).toBeGreaterThan(0.5);
+  });
+}
+
 for (const size of [
   { width: 1440, height: 900 },
   { width: 1366, height: 768 },
