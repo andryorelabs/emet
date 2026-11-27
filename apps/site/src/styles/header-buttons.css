@@ -289,6 +289,43 @@
   height: 44px;
   border-radius: 12px;
   font-size: 15px;
+  font-weight: 500;
+}
+
+.site-header--home .search-button {
+  gap: 8px;
+  padding: 0 16px;
+}
+
+.site-header--home .search-button-icon {
+  width: 18px;
+  height: 18px;
+}
+
+.site-header--home .search-button-label {
+  opacity: 0.85;
+}
+
+.site-header--home .search-button-keys {
+  gap: 8px;
+}
+
+.site-header--home .search-button-keys kbd {
+  min-width: 0;
+  padding: 2px 7px;
+  border-radius: 6px;
+  font-weight: 400;
+  line-height: normal;
+}
+
+.site-header--home .github-stars--header {
+  gap: 8px;
+  padding: 0 16px;
+}
+
+.site-header--home .github-stars--header .github-stars-mark {
+  width: 20px;
+  height: 20px;
 }
 
 .site-header--home .wordmark {
