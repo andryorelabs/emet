@@ -90,8 +90,8 @@ export const de = {
     ],
     extra: [
       { title: "Schnellmodus für kleine Änderungen", docs: "/docs/reference/cli/" },
-      { title: "Merkt sich, was funktioniert hat", docs: "/docs/reference/cli/" },
-      { title: "Zwei Reviewer für riskante Änderungen", docs: "/docs/reference/configuration/" },
+      { title: "Merkt sich, was funktioniert hat", docs: "/docs/concepts/memory/" },
+      { title: "Zwei Reviewer für riskante Änderungen", docs: "/docs/concepts/review-and-gates/" },
       { title: "Meldet sich, wenn es dich braucht", docs: "/docs/how-to/check-a-fleet/" },
       { title: "Sauber installiert und deinstalliert", docs: "/docs/start/install/" },
     ],
@@ -162,7 +162,6 @@ export const de = {
   },
   closing: {
     heading: "Probiere es in einem Repo",
-    action: "emet installieren",
     alt: "Ein Tal unter tiefem Morgennebel mit blasser Sonne und Pastellhimmel.",
   },
   companion: {

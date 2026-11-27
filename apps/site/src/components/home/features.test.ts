@@ -42,8 +42,24 @@ function unguardedKeyframes(source: string): number[] {
 }
 
 describe("Features bento", () => {
-  it("marks each bento card as a card shell", () => {
-    expect(featuresSource).toContain('data-slot="card"');
+  it("renders each bento card with the shadcn Card and no hand-written shell", () => {
+    expect(featuresSource).toContain('from "../ui/card"');
+    expect(featuresSource).toContain("<Card>");
+    expect(featuresSource).not.toContain('data-slot="card"');
+  });
+
+  it("links the memory and review cards to their concept pages in every locale", () => {
+    for (const locale of LOCALES) {
+      const { extra } = getStrings(locale).features;
+      expect(extra[1]?.docs).toBe("/docs/concepts/memory/");
+      expect(extra[2]?.docs).toBe("/docs/concepts/review-and-gates/");
+    }
+  });
+
+  it("no longer carries the unused closing action string", () => {
+    for (const locale of LOCALES) {
+      expect(Object.keys(getStrings(locale).closing)).not.toContain("action");
+    }
   });
 
   it("falls to one column under 760px", () => {

@@ -87,8 +87,8 @@ export const ru = {
     ],
     extra: [
       { title: "Быстрый режим для мелких правок", docs: "/docs/reference/cli/" },
-      { title: "Помнит, что сработало", docs: "/docs/reference/cli/" },
-      { title: "Два ревьюера для рискованных правок", docs: "/docs/reference/configuration/" },
+      { title: "Помнит, что сработало", docs: "/docs/concepts/memory/" },
+      { title: "Два ревьюера для рискованных правок", docs: "/docs/concepts/review-and-gates/" },
       { title: "Сообщает, когда нужна вам", docs: "/docs/how-to/check-a-fleet/" },
       { title: "Чисто ставится и чисто удаляется", docs: "/docs/start/install/" },
     ],
@@ -158,7 +158,6 @@ export const ru = {
   },
   closing: {
     heading: "Попробуйте в одном репозитории",
-    action: "Установить emet",
     alt: "Долина в низком утреннем тумане с бледным солнцем и пастельным небом.",
   },
   companion: {

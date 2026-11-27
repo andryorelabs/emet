@@ -87,8 +87,8 @@ export const zhCN = {
     ],
     extra: [
       { title: "小改动的快速模式", docs: "/docs/reference/cli/" },
-      { title: "记住有效的做法", docs: "/docs/reference/cli/" },
-      { title: "高风险改动由两位评审", docs: "/docs/reference/configuration/" },
+      { title: "记住有效的做法", docs: "/docs/concepts/memory/" },
+      { title: "高风险改动由两位评审", docs: "/docs/concepts/review-and-gates/" },
       { title: "需要你时会通知你", docs: "/docs/how-to/check-a-fleet/" },
       { title: "干净安装，干净卸载", docs: "/docs/start/install/" },
     ],
@@ -145,7 +145,6 @@ export const zhCN = {
   },
   closing: {
     heading: "先在一个仓库里试试",
-    action: "安装 emet",
     alt: "低垂晨雾下的山谷，淡淡的太阳和粉彩色的天空。",
   },
   companion: {

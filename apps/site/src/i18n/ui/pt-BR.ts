@@ -89,8 +89,8 @@ export const ptBR = {
     ],
     extra: [
       { title: "Modo rápido para mudanças pequenas", docs: "/docs/reference/cli/" },
-      { title: "Lembra o que funcionou", docs: "/docs/reference/cli/" },
-      { title: "Dois revisores para mudanças de risco", docs: "/docs/reference/configuration/" },
+      { title: "Lembra o que funcionou", docs: "/docs/concepts/memory/" },
+      { title: "Dois revisores para mudanças de risco", docs: "/docs/concepts/review-and-gates/" },
       { title: "Avisa quando precisa de você", docs: "/docs/how-to/check-a-fleet/" },
       { title: "Instala e desinstala sem sobras", docs: "/docs/start/install/" },
     ],
@@ -160,7 +160,6 @@ export const ptBR = {
   },
   closing: {
     heading: "Experimente em um repositório",
-    action: "Instalar o emet",
     alt: "Um vale sob uma névoa baixa da manhã, com um sol pálido e um céu em tons pastel.",
   },
   companion: {
