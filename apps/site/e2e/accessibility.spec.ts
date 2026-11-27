@@ -282,12 +282,33 @@ const HOME_VIEWPORTS = [
 /** The home sections axe visits after scrolling them into view, so pinned states and the awake companion are audited. */
 const HOME_STOPS = ["#how", "[data-features]", "[data-showcase]", ".closing"] as const;
 
+/**
+ * Waits until no home terminal is part-way through its sequence: each animated terminal shows every
+ * fading output line (a `div`; typed commands are spans that never fade) or none, so axe never
+ * measures a line caught mid fade-in.
+ */
+async function settleTerminals(page: Page): Promise<void> {
+  await page.waitForFunction(() =>
+    [...document.querySelectorAll("[data-terminal-animated]")].every((terminal) => {
+      const opacities = [...terminal.querySelectorAll("div[data-terminal-line]")].map((line) =>
+        Number(getComputedStyle(line).opacity),
+      );
+      return opacities.every((value) => value === 1) || opacities.every((value) => value === 0);
+    }),
+  );
+}
+
 for (const path of ["/", "/es/"]) {
   for (const viewport of HOME_VIEWPORTS) {
     for (const colorScheme of COLOR_SCHEMES) {
       test(`${path} has no axe or CSP violations with motion on at ${viewport.name} in ${colorScheme} mode`, async ({
         page,
       }) => {
+        /**
+         * Five full-page axe passes over the animated home take about 10s alone and near 30s when
+         * the suite's other workers load the CPU, so this spec gets three times the default timeout.
+         */
+        test.slow();
         await page.emulateMedia({ colorScheme, reducedMotion: "no-preference" });
         await page.setViewportSize({ width: viewport.width, height: viewport.height });
         await recordCspViolations(page);
@@ -303,6 +324,8 @@ for (const path of ["/", "/es/"]) {
           });
           /* oxlint-disable-next-line eslint/no-await-in-loop -- sequential on purpose: each step depends on the scroll before it */
           await page.waitForTimeout(800);
+          /* oxlint-disable-next-line eslint/no-await-in-loop -- sequential on purpose: each step depends on the scroll before it */
+          await settleTerminals(page);
           /* oxlint-disable-next-line eslint/no-await-in-loop -- sequential on purpose: each step depends on the scroll before it */
           found.push(...(await axeViolations(page)));
         }
