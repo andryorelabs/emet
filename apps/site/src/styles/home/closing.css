@@ -67,11 +67,10 @@
 }
 
 .closing-command {
-  display: flex;
-  align-items: center;
-  gap: 12px;
+  min-width: 0;
+  max-width: 100%;
   min-height: 52px;
-  padding: 0 8px 0 18px;
+  padding: 0 4px 0 6px;
   border-radius: 8px;
   background: var(--closing-pill);
   color: var(--closing-pill-text);
@@ -80,68 +79,19 @@
   backdrop-filter: blur(10px);
 }
 
-.closing-prompt {
-  color: color-mix(in oklab, var(--closing-pill-text) 70%, transparent);
-}
-
-.closing-command code {
-  font: inherit;
+.closing-command pre {
   overflow-wrap: anywhere;
 }
 
-.closing-copy-button {
-  display: grid;
-  place-items: center;
-  flex: none;
-  min-width: 44px;
-  min-height: 44px;
-  border: 1px solid var(--closing-pill-line);
-  border-radius: 6px;
+.closing-command [data-home-code] {
+  border: 0;
   background: transparent;
   color: inherit;
-  cursor: pointer;
-  transition:
-    transform 160ms ease-out,
-    background-color 160ms ease-out;
-}
-
-.closing-copy-button:hover {
-  background: var(--closing-pill-line);
-}
-
-.closing-copy-button:active {
-  transform: scale(0.97);
-}
-
-.closing-copy-button [data-icon="check"],
-.closing-copy-button [data-icon="failed"] {
-  display: none;
-}
-
-.closing-copy-button[data-state="copied"] [data-icon="copy"],
-.closing-copy-button[data-state="failed"] [data-icon="copy"] {
-  display: none;
-}
-
-.closing-copy-button[data-state="copied"] [data-icon="check"] {
-  display: inline;
-  color: var(--ok);
-}
-
-.closing-copy-button[data-state="failed"] [data-icon="failed"] {
-  display: inline;
-  color: var(--error);
+  font-size: 15px;
 }
 
 @media (max-width: 640px) {
-  .closing-command {
+  .closing-command [data-home-code] {
     font-size: 13px;
-    padding-left: 14px;
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .closing-copy-button {
-    transition: none;
   }
 }
