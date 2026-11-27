@@ -18,7 +18,7 @@ const { strings } = Astro.props;
 const { closing } = strings;
 ---
 
-<section class="closing" data-drift aria-labelledby="closing-title">
+<section class="closing" aria-labelledby="closing-title">
   <Picture
     class="closing-picture"
     src={bookendImage}
@@ -32,7 +32,7 @@ const { closing } = strings;
   />
   <Valley variant="closing" />
   <div class="closing-copy">
-    <h2 id="closing-title" data-reveal="heading">
+    <h2 id="closing-title" class="heading-closing" data-reveal="heading">
       <span class="reveal-line">{closing.heading}</span>
     </h2>
     <div class="closing-actions">
