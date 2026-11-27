@@ -31,6 +31,19 @@ describe("Closing parity with the prototype", () => {
     expect(body).toContain("max-width: 9em");
   });
 
+  it("sets the heading at the prototype's 600 weight", () => {
+    expect(ruleBody(css, ".closing h2")).toContain("font-weight: 600");
+  });
+
+  it("sizes the install button like the prototype: 18px, 600, 52px tall, 26px gutters", () => {
+    const body = ruleBody(css, ".closing .button");
+    expect(body).toContain("font-size: 18px");
+    expect(body).toContain("font-weight: 600");
+    expect(body).toContain("min-height: 52px");
+    expect(body).toContain("padding: 0 26px");
+    expect(body).toContain("justify-content: center");
+  });
+
   it("keeps the command pill dark in both schemes", () => {
     const body = ruleBody(css, ".closing-command");
     expect(body).toContain("background: var(--closing-pill)");
