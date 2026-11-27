@@ -142,14 +142,29 @@ export function sectionClip(
 }
 
 /**
- * Both clips start at the section's top edge, so a pair is compared on the
- * pixel rows both sides have, `commonHeight`, instead of stretching the shorter
- * capture over the taller one.
+ * Both clips start at the section's top edge, so the pixels are compared on the
+ * rows both sides have, `commonHeight`, instead of stretching the shorter
+ * capture over the taller one. The rows only the taller capture has count as
+ * fully different (`heightAdjustedRatio`), and both clip heights are recorded
+ * per pair in the report, so a section much shorter or taller on one side is
+ * never scored on the overlap alone.
  */
 
 /** The height both captures of a pair are compared on: the shorter of the two. */
 export function commonHeight(prototypeHeight: number, siteHeight: number): number {
   return Math.min(prototypeHeight, siteHeight);
+}
+
+/** The ratio over the taller capture: the shared rows weigh in at `sharedRatio` and every row only the taller capture has counts as different. */
+export function heightAdjustedRatio(
+  sharedRatio: number,
+  prototypeHeight: number,
+  siteHeight: number,
+): number {
+  const shared = commonHeight(prototypeHeight, siteHeight);
+  const total = Math.max(prototypeHeight, siteHeight);
+  if (total <= 0) return sharedRatio;
+  return (sharedRatio * shared + (total - shared)) / total;
 }
 
 /** The capture width of a variant id such as `mobile-dark-reduced`. */

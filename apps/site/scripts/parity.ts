@@ -9,6 +9,7 @@ import {
   VARIANTS,
   captureTargets,
   commonHeight,
+  heightAdjustedRatio,
   pairCaptures,
   scrollTarget,
   sectionClip,
@@ -162,17 +163,22 @@ async function main(): Promise<void> {
       const { pairs, missing } = pairCaptures(expected, captured);
       const measured: MeasuredPair[] = [];
       for (const pair of pairs) {
-        const height = commonHeight(await heightOf(pair.prototype), await heightOf(pair.site));
+        const prototypeHeight = await heightOf(pair.prototype);
+        const siteHeight = await heightOf(pair.site);
+        const height = commonHeight(prototypeHeight, siteHeight);
         const width = variantWidth(pair.variant);
-        const ratio = diffRatio(
+        const sharedRatio = diffRatio(
           await decode(pair.prototype, width, height),
           await decode(pair.site, width, height),
         );
+        const ratio = heightAdjustedRatio(sharedRatio, prototypeHeight, siteHeight);
         measured.push({
           variant: pair.variant,
           section: pair.section,
           progress: pair.progress,
           ratio,
+          prototypeHeight,
+          siteHeight,
         });
       }
       const report = buildReport(measured, missing);
