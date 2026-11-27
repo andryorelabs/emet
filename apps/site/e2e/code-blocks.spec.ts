@@ -68,17 +68,18 @@ for (const scheme of ["light", "dark"] as const) {
     await page.goto("/");
     const block = page.locator(".closing [data-home-code]");
     await block.scrollIntoViewIfNeeded();
-    const lightness = await block
-      .locator("[data-slot=code-block-line] span")
-      .last()
-      .evaluate((node) => {
-        const [red = 0, green = 0, blue = 0] =
-          getComputedStyle(node)
-            .color.match(/[\d.]+/g)
-            ?.map(Number) ?? [];
-        return (0.2126 * red + 0.7152 * green + 0.0722 * blue) / 255;
-      });
-    expect(lightness).toBeGreaterThan(0.5);
+    const lightness = async (): Promise<number> =>
+      block
+        .locator("[data-slot=code-block-line] span")
+        .last()
+        .evaluate((node) => {
+          const [red = 0, green = 0, blue = 0] =
+            getComputedStyle(node)
+              .color.match(/[\d.]+/g)
+              ?.map(Number) ?? [];
+          return (0.2126 * red + 0.7152 * green + 0.0722 * blue) / 255;
+        });
+    await expect.poll(lightness, { timeout: 15_000 }).toBeGreaterThan(0.5);
   });
 }
 
@@ -96,8 +97,9 @@ for (const size of [
     const lines = page.locator(".step").nth(2).locator("[data-terminal-line]");
     await expect(lines).toHaveCount(5);
     await expect(lines.last()).toBeVisible();
-    const bottom = await lines.last().evaluate((line) => line.getBoundingClientRect().bottom);
-    expect(bottom).toBeLessThanOrEqual(size.height);
+    await expect
+      .poll(async () => lines.last().evaluate((line) => line.getBoundingClientRect().bottom))
+      .toBeLessThanOrEqual(size.height);
     await expect(page.locator(".step").nth(0).locator(".install-more")).toBeHidden();
   });
 }
