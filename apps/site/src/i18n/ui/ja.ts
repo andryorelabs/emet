@@ -94,26 +94,11 @@ export const ja = {
       },
     ],
     extra: [
-      {
-        title: "小さな変更のための高速モード",
-        line: "フラグ 1 つでインタビューを 1 回にまとめ、チケット 1 件、レビュー 1 回、着地 1 回で実行します。",
-      },
-      {
-        title: "うまくいったことを覚えている",
-        line: "各実行の教訓が保存され、次の実行で呼び出されます。",
-      },
-      {
-        title: "リスクの高い変更には 2 人のレビュアー",
-        line: "高リスクの作業は、着地の前に 2 人目のレビュアーが確認します。",
-      },
-      {
-        title: "必要なときに知らせる",
-        line: "実行が承認待ちになったり止まったりすると通知します。",
-      },
-      {
-        title: "きれいにインストール、きれいに削除",
-        line: "emet が入れたものをすべて削除し、あなたが編集したファイルは残します。",
-      },
+      { title: "小さな変更のための高速モード", docs: "/docs/reference/cli/" },
+      { title: "うまくいったことを覚えている", docs: "/docs/reference/cli/" },
+      { title: "リスクの高い変更には 2 人のレビュアー", docs: "/docs/reference/configuration/" },
+      { title: "必要なときに知らせる", docs: "/docs/how-to/check-a-fleet/" },
+      { title: "きれいにインストール、きれいに削除", docs: "/docs/start/install/" },
     ],
   },
   stats: {

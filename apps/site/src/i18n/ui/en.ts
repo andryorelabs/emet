@@ -85,26 +85,11 @@ export const en = {
       { title: "Your tracker, or none", line: "Linear, GitHub Issues or local files." },
     ],
     extra: [
-      {
-        title: "Fast mode for small changes",
-        line: "One flag keeps the interview to one round and runs one ticket, one review and one landing.",
-      },
-      {
-        title: "Remembers what worked",
-        line: "Lessons from each run are saved and recalled in the next one.",
-      },
-      {
-        title: "Two reviewers for risky changes",
-        line: "High-risk work gets a second reviewer before anything lands.",
-      },
-      {
-        title: "Tells you when it needs you",
-        line: "An alert when a run is waiting for approval or stuck.",
-      },
-      {
-        title: "Installs and uninstalls cleanly",
-        line: "Remove everything emet installed, and keep any file you edited.",
-      },
+      { title: "Fast mode for small changes", docs: "/docs/reference/cli/" },
+      { title: "Remembers what worked", docs: "/docs/reference/cli/" },
+      { title: "Two reviewers for risky changes", docs: "/docs/reference/configuration/" },
+      { title: "Tells you when it needs you", docs: "/docs/how-to/check-a-fleet/" },
+      { title: "Installs and uninstalls cleanly", docs: "/docs/start/install/" },
     ],
   },
   stats: {
