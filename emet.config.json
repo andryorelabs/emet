@@ -102,6 +102,13 @@
   "review": {
     "highRiskPaths": ["guard", "settingsapply"]
   },
+  "codex": {
+    "models": {
+      "reviewer": {
+        "high": { "model": "gpt-6-luna", "effort": "high", "fallback": ["gpt-5.6-terra"] }
+      }
+    }
+  },
   "validate": {
     "coupledSurfaces": [
       {

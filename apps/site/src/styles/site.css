@@ -346,11 +346,29 @@
 }
 
 .site-footer {
+  --footer-pad: max(16px, env(safe-area-inset-left, 0px));
+  --footer-inner: 1280px;
+
   display: block;
-  margin-inline: var(--edge, 0);
   padding: 48px 0 32px;
+  padding-inline: max(
+    calc(2 * var(--footer-pad)),
+    calc((100% - var(--footer-inner)) / 2 + var(--footer-pad))
+  );
   border-top: 1px solid var(--border);
   font-size: 15px;
+}
+
+.docs-site-footer {
+  container-type: inline-size;
+}
+
+.docs-site-footer .site-footer {
+  padding-inline: 0;
+}
+
+.docs-site-footer .footer-wordmark {
+  font-size: min(260px, calc(100cqi / 3.2));
 }
 
 .site-footer p {
@@ -379,7 +397,7 @@
   align-self: flex-start;
   margin-bottom: 14px;
   color: var(--text);
-  font-size: clamp(120px, 19vw, 260px);
+  font-size: min(clamp(120px, 19vw, 260px), calc((100vw - 64px) / 3.2));
   font-weight: 700;
   letter-spacing: -0.06em;
   line-height: 0.8;
@@ -394,6 +412,7 @@
 
 .site-footer .footer-brand p {
   color: var(--text-muted);
+  line-height: normal;
 }
 
 .footer-columns {
@@ -413,6 +432,7 @@
   color: var(--text-muted);
   font-family: var(--font-mono);
   font-size: 13px;
+  line-height: normal;
   letter-spacing: 0.08em;
   text-transform: uppercase;
 }
@@ -427,12 +447,21 @@
 }
 
 .footer-column a.footer-link {
-  justify-content: flex-start;
+  display: block;
+  width: fit-content;
+  color: var(--text);
+  line-height: normal;
   text-decoration: none;
+  text-underline-offset: 4px;
 }
 
 .footer-column a.footer-link:hover {
   text-decoration: underline;
+}
+
+.footer-column a.footer-link:focus-visible {
+  outline: 2px solid var(--text);
+  outline-offset: 3px;
 }
 
 .footer-bottom {
@@ -443,6 +472,7 @@
   padding-top: 20px;
   color: var(--text-muted);
   font-size: 14px;
+  line-height: normal;
 }
 
 .footer-bottom a {
