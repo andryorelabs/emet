@@ -18,23 +18,15 @@ const { about } = strings;
 <section class="about" data-drift aria-labelledby="about-title">
   <div class="letter">
     <h2 id="about-title" data-reveal="heading"><span class="reveal-line">{about.heading}</span></h2>
-    <p>{about.lineOne}</p>
     <div class="hebrew-pair" data-reveal="item" role="img" aria-label={about.wordLabel}>
       <div class="hebrew-word" aria-hidden="true">
         <span class="hebrew" lang="he" dir="rtl"><span class="hebrew-aleph">א</span>מת</span>
-        <span class="hebrew-roman">emet</span>
-        <span class="hebrew-gloss">{about.truth}</span>
-      </div>
-      <span class="hebrew-arrow" aria-hidden="true">→</span>
-      <div class="hebrew-word" aria-hidden="true">
-        <span class="hebrew" lang="he" dir="rtl">מת</span>
-        <span class="hebrew-roman">met</span>
-        <span class="hebrew-gloss">{about.dead}</span>
+        <span class="hebrew-glosses"><span>{about.truth}</span><span>{about.dead}</span></span>
       </div>
       <span class="latin" aria-hidden="true"><span class="latin-e">e</span>met</span>
     </div>
-    <p>{about.lineTwoBefore}<span class="mark">{about.flag}</span>{about.lineTwoAfter}</p>
-    <p class="signature">AndryOre<small>{about.role}</small></p>
+    <p>{about.lineOne}</p>
+    <p class="mute">{about.lineTwoBefore}<span class="mark">{about.flag}</span>{about.lineTwoAfter}</p>
   </div>
   <figure class="portrait">
     <div class="portrait-frame">
@@ -50,7 +42,7 @@ const { about } = strings;
       />
       <canvas data-pixel-reveal aria-hidden="true"></canvas>
     </div>
-    <figcaption>{about.caption}</figcaption>
+    <figcaption><span>{about.caption}</span><span>{about.role}</span></figcaption>
   </figure>
 </section>
 
