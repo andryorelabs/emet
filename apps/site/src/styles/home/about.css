@@ -72,7 +72,7 @@
 @media (prefers-reduced-motion: no-preference) {
   html[data-motion] .hebrew-aleph {
     position: relative;
-    color: color-mix(in oklab, var(--text) calc(100% - 65% * var(--strike, 0)), transparent);
+    opacity: calc(1 - 0.65 * var(--strike, 0));
   }
 
   html[data-motion] .hebrew-aleph::after {
@@ -116,6 +116,8 @@
 
 .portrait-frame {
   position: relative;
+  overflow: clip;
+  border-radius: 10px;
 }
 
 .portrait-frame canvas {
@@ -124,7 +126,7 @@
   inset: 0;
   width: 100%;
   height: 100%;
-  border-radius: var(--radius-panel);
+  border-radius: 10px;
 }
 
 .portrait picture,
@@ -135,13 +137,13 @@
 
 .portrait picture {
   overflow: clip;
-  border-radius: var(--radius-panel);
+  border-radius: 10px;
 }
 
 .portrait img {
   aspect-ratio: 4 / 5;
   object-fit: cover;
-  border-radius: var(--radius-panel);
+  border-radius: 10px;
 }
 
 .portrait figcaption {

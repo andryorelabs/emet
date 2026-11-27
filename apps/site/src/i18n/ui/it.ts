@@ -49,10 +49,13 @@ export const it = {
     merged: "Unito",
     otherInstall: "Altri modi per installare",
     wave: "Ondata {n}",
+    waveLine: "ondata {n}",
     caption:
       "Ogni ondata confluisce in un branch della spec. La spec arriva come una sola pull request.",
     prTitle: "Spec 41: modalità scura per le impostazioni",
     checks: "check superati",
+    open: "Aperto",
+    closes: "Chiude",
   },
   showcase: {
     heading: "La spec viene integrata",
@@ -61,6 +64,8 @@ export const it = {
       "Spec 41 revisionata. CI superata. Integrata come una sola pull request, 4 ticket chiusi.",
     statusHeld: "Spec 41 trattenuta: un ticket segnalato. Nulla è stato integrato.",
     flag: "Segnala il ticket #44",
+    laneReview: "revisione",
+    laneHeld: "trattenuto",
   },
   features: {
     heading: "Cosa protegge un'esecuzione",

@@ -49,10 +49,13 @@ export const es = {
     merged: "Fusionado",
     otherInstall: "Otras formas de instalar",
     wave: "Oleada {n}",
+    waveLine: "oleada {n}",
     caption:
       "Cada oleada se une a una rama de la spec. La spec se integra como una sola pull request.",
     prTitle: "Spec 41: modo oscuro para los ajustes",
     checks: "checks superados",
+    open: "Abierto",
+    closes: "Cierra",
   },
   showcase: {
     heading: "La spec se integra",
@@ -61,6 +64,8 @@ export const es = {
       "Spec 41 revisada. CI superado. Integrada como una sola pull request, 4 tickets cerrados.",
     statusHeld: "Spec 41 retenida: un ticket marcado. No se integró nada.",
     flag: "Marcar el ticket #44",
+    laneReview: "revisión",
+    laneHeld: "retenido",
   },
   features: {
     heading: "Lo que protege una ejecución",

@@ -77,13 +77,18 @@ const duskSrcset = duskVariants
       <span class="showcase-switch" aria-hidden="true"><span class="showcase-knob"></span></span>
       <span>{showcase.flag}</span>
     </button>
-    <canvas class="showcase-lanes" data-showcase-lanes aria-hidden="true"></canvas>
+    <canvas
+      class="showcase-lanes"
+      data-showcase-lanes
+      data-label-review={showcase.laneReview}
+      data-label-merged={strings.how.merged}
+      data-label-held={showcase.laneHeld}
+      aria-hidden="true"></canvas>
     <p class="showcase-status showcase-stack" data-showcase-status>
       <span data-variant="merged">{showcase.status}</span>
       <span data-variant="held">{showcase.statusHeld}</span>
     </p>
     <noscript><p class="showcase-status">{showcase.statusHeld}</p></noscript>
-    <p class="showcase-mark" aria-hidden="true"><span class="showcase-letter">e</span>met</p>
   </div>
   </div>
 </section>

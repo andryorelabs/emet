@@ -48,9 +48,12 @@ export const en = {
     merged: "Merged",
     otherInstall: "Other ways to install",
     wave: "Wave {n}",
+    waveLine: "wave {n}",
     caption: "Each wave joins one spec branch. The spec lands as one pull request.",
     prTitle: "Spec 41: Dark mode for settings",
     checks: "checks passing",
+    open: "Open",
+    closes: "Closes",
   },
   showcase: {
     heading: "The spec merges",
@@ -58,6 +61,8 @@ export const en = {
     status: "Spec 41 reviewed. CI passed. Merged as one pull request, 4 tickets closed.",
     statusHeld: "Spec 41 held: one ticket flagged. Nothing merged.",
     flag: "Flag ticket #44",
+    laneReview: "review",
+    laneHeld: "held",
   },
   features: {
     heading: "What a run guards",

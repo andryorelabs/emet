@@ -53,6 +53,37 @@ describe("How it works per-spec flow", () => {
       expect(showcase.status).toContain("41");
     }
   });
+
+  it("keeps the plan lines of step 2 on the prototype plan in a joined exchange", () => {
+    expect(howSource).toContain('data-terminal="joined"');
+    expect(howSource).toContain("`${waveLine(1)}  theme tokens #42`");
+    expect(howSource).toContain(
+      "`${waveLine(2)}  settings toggle #43 \\u00b7 remember the choice #44 \\u00b7 docs and screenshots #45`",
+    );
+    for (const locale of LOCALES) {
+      expect(getStrings(locale).how.waveLine).toContain("{n}");
+    }
+  });
+
+  it("prints the land line in one piece with localized Open and Closes words", () => {
+    expect(howSource).toContain(
+      "${how.open}  ${how.prTitle} \\u00b7 ${how.closes} #42 #43 #44 #45",
+    );
+    expect(howSource).not.toContain("`Open ");
+    for (const locale of LOCALES) {
+      const { how, showcase } = getStrings(locale);
+      expect(how.open.trim().length).toBeGreaterThan(0);
+      expect(how.closes.trim().length).toBeGreaterThan(0);
+      expect(showcase.laneReview.trim().length).toBeGreaterThan(0);
+      expect(showcase.laneHeld.trim().length).toBeGreaterThan(0);
+    }
+  });
+
+  it("passes the review and held lane words to the lanes canvas", () => {
+    const showcaseSource = readFileSync(new URL("Showcase.astro", import.meta.url), "utf8");
+    expect(showcaseSource).toContain("data-label-review={showcase.laneReview}");
+    expect(showcaseSource).toContain("data-label-held={showcase.laneHeld}");
+  });
 });
 
 describe("How it works pinned runway markup", () => {
