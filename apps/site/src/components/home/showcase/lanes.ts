@@ -44,6 +44,8 @@ export type LaneContext = Pick<
   | "clearRect"
   | "fill"
   | "fillStyle"
+  | "fillText"
+  | "font"
   | "lineTo"
   | "lineWidth"
   | "moveTo"
@@ -67,7 +69,7 @@ const MERGE_Y = 0.88;
 /**
  * Canvas palette, drawn over the dark glass panel in both themes so it stays
  * constant: moss lane, warn held lane, lamp dots, a soft white rail, a teal
- * merged node. The canvas carries no text: the status line says it.
+ * merged node and a soft white label ink.
  */
 const PALETTE = {
   lane: "oklch(0.74 0.13 135)",
@@ -76,7 +78,37 @@ const PALETTE = {
   idle: "oklch(1 0 0 / .3)",
   rail: "oklch(1 0 0 / .28)",
   merged: "oklch(0.85 0.1 182)",
+  label: "oklch(1 0 0 / .7)",
 };
+
+const LABEL_SIZE = 12;
+const FALLBACK_FAMILY = "monospace";
+
+/** The words the canvas writes beside the gate and the merge node; a missing word is not drawn. */
+export interface LaneLabels {
+  review?: string | undefined;
+  merged?: string | undefined;
+  held?: string | undefined;
+  /** CSS font family the words are set in. */
+  family?: string | undefined;
+}
+
+/** Reads the lane words from the canvas `data-label-*` attributes, set from the page strings. */
+export function readLaneLabels(canvas: HTMLElement): LaneLabels {
+  const lang = document.documentElement.lang;
+  const word = (name: string): string | undefined =>
+    nonBlank(canvas.dataset[name]?.toLocaleLowerCase(lang === "" ? undefined : lang));
+  return {
+    review: word("labelReview"),
+    merged: word("labelMerged"),
+    held: word("labelHeld"),
+    family: nonBlank(getComputedStyle(canvas).fontFamily.trim()),
+  };
+}
+
+function nonBlank(text: string | undefined): string | undefined {
+  return text === "" ? undefined : text;
+}
 
 /** Event the showcase dispatches on the canvas when the held state changes. */
 export const LANES_REFRESH_EVENT = "showcase:refresh";
@@ -134,6 +166,7 @@ export function drawLanes(
   size: CanvasSize,
   frame: LaneFrame,
   held: boolean,
+  labels: LaneLabels = {},
 ): void {
   const { width, height, scale } = size;
   const mergeY = MERGE_Y * height;
@@ -149,10 +182,17 @@ export function drawLanes(
   context.setLineDash([5 * scale, 5 * scale]);
   context.strokeRect(0.46 * width, 0.04 * height, 0.08 * width, 0.62 * height);
   context.setLineDash([]);
+  context.font = `${LABEL_SIZE * scale}px ${labels.family ?? FALLBACK_FAMILY}`;
+  context.fillStyle = PALETTE.label;
+  const gateTop = 0.04 * height;
+  const reviewY = gateTop - 6 * scale < LABEL_SIZE * scale ? 14 * scale : gateTop - 6 * scale;
+  if (labels.review) context.fillText(labels.review, 0.46 * width, reviewY);
   context.fillStyle = held ? PALETTE.held : PALETTE.merged;
   context.beginPath();
   context.arc(MERGE_X * width, mergeY, 7 * scale, 0, Math.PI * 2);
   context.fill();
+  const outcome = held ? labels.held : labels.merged;
+  if (outcome) context.fillText(outcome, MERGE_X * width + 12 * scale, mergeY + 4 * scale);
 }
 
 /**
@@ -168,6 +208,7 @@ export function initLanes(canvas: HTMLCanvasElement, options: LaneOptions): { de
   let visible = false;
   let frameId = 0;
   let scale = 1;
+  const labels = readLaneLabels(canvas);
 
   const measure = (): void => {
     scale = Math.min(globalThis.devicePixelRatio || 1, 2);
@@ -180,7 +221,7 @@ export function initLanes(canvas: HTMLCanvasElement, options: LaneOptions): { de
     const held = options.isHeld();
     const progress = options.reduce ? SWEEP_LENGTH : (time / SWEEP_MS) % SWEEP_LENGTH;
     const size = { width: canvas.width, height: canvas.height, scale };
-    drawLanes(context, size, laneDots(progress, held), held);
+    drawLanes(context, size, laneDots(progress, held), held, labels);
   };
 
   measure();
