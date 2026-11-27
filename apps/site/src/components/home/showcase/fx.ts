@@ -97,6 +97,8 @@ export function initShowcaseFx(
   const duskImage = duskHost?.querySelector("img") ?? null;
 
   let held = root?.dataset.state === "held";
+  const dayActive = (): boolean => !held;
+  const duskActive = (): boolean => held;
   let pointer: GazePoint | null = null;
   let destroyed = false;
   let day: PaintingFxHandle | undefined;
@@ -130,8 +132,8 @@ export function initShowcaseFx(
     dusk?.destroy();
     day = undefined;
     dusk = undefined;
-    if (dayHost) day = build(dayHost, DAY_PAINTING, () => !held);
-    if (hadDusk && duskHost) dusk = build(duskHost, DUSK_PAINTING, () => held);
+    if (dayHost) day = build(dayHost, DAY_PAINTING, dayActive);
+    if (hadDusk && duskHost) dusk = build(duskHost, DUSK_PAINTING, duskActive);
   };
   wideQuery?.addEventListener("change", onFramingChange);
 
@@ -140,7 +142,7 @@ export function initShowcaseFx(
     const make = (): void => {
       duskPending = false;
       if (destroyed) return;
-      dusk = build(duskHost, DUSK_PAINTING, () => held);
+      dusk = build(duskHost, DUSK_PAINTING, duskActive);
     };
     if (duskImage.complete && duskImage.naturalWidth > 0) {
       make();
@@ -158,7 +160,7 @@ export function initShowcaseFx(
   for (const host of hosts)
     markers.observe(host, { attributes: true, attributeFilter: FX_MARKERS });
 
-  if (dayHost) day = build(dayHost, DAY_PAINTING, () => !held);
+  if (dayHost) day = build(dayHost, DAY_PAINTING, dayActive);
   if (held) buildDusk();
 
   onFlag((nextHeld) => {
