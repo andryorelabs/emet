@@ -3,6 +3,12 @@
  */
 
 .closing {
+  --edge: max(8px, env(safe-area-inset-left, 0px));
+  --closing-ink: #1d201e;
+  --closing-pill: oklch(0.2 0.02 150 / 0.8);
+  --closing-pill-text: #eef2e6;
+  --closing-pill-line: oklch(1 0 0 / 0.25);
+
   position: relative;
   margin-inline: var(--edge);
   height: min(760px, 92svh);
@@ -37,6 +43,13 @@
   text-align: left;
 }
 
+.closing h2 {
+  max-width: 9em;
+  color: var(--closing-ink);
+  line-height: 0.95;
+  letter-spacing: -0.05em;
+}
+
 .closing-actions {
   display: flex;
   flex-wrap: wrap;
@@ -50,17 +63,16 @@
   gap: 12px;
   min-height: 52px;
   padding: 0 8px 0 18px;
-  border: 1px solid var(--border);
   border-radius: 8px;
-  background: color-mix(in oklab, var(--surface) 88%, transparent);
-  color: var(--text);
+  background: var(--closing-pill);
+  color: var(--closing-pill-text);
   font-family: var(--font-mono);
   font-size: 15px;
   backdrop-filter: blur(10px);
 }
 
 .closing-prompt {
-  color: var(--text-muted);
+  color: color-mix(in oklab, var(--closing-pill-text) 70%, transparent);
 }
 
 .closing-command code {
@@ -74,7 +86,7 @@
   flex: none;
   min-width: 44px;
   min-height: 44px;
-  border: 1px solid var(--border);
+  border: 1px solid var(--closing-pill-line);
   border-radius: 6px;
   background: transparent;
   color: inherit;
@@ -85,7 +97,7 @@
 }
 
 .closing-copy-button:hover {
-  background: var(--surface);
+  background: var(--closing-pill-line);
 }
 
 .closing-copy-button:active {
