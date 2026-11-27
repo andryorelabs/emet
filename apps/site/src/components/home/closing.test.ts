@@ -32,5 +32,7 @@ describe("Home closing", () => {
     expect(source).toContain("INSTALL_COMMAND");
     expect(source).toContain("<HomeCodeBlock");
     expect(source).not.toContain('class="button"');
+    expect(source).toContain("SEARCH_STRINGS[locale].copy");
+    expect(css).toContain("var(--shiki-dark");
   });
 });

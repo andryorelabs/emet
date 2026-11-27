@@ -114,6 +114,30 @@ describe("HomeCodeBlock on the client", () => {
     unmount();
   });
 
+  test("tells the companion about a copy and omits the button when not copyable", async () => {
+    mockClipboard();
+    let events = 0;
+    const listener = (): void => {
+      events += 1;
+    };
+    addEventListener("emet:copy", listener);
+    const { container, unmount } = renderIsland(
+      <HomeCodeBlock code={INSTALL} lang="text" strings={strings} />,
+    );
+    await act(async () => {
+      container.querySelector<HTMLButtonElement>("[data-home-code-copy]")?.click();
+      await Promise.resolve();
+    });
+    expect(events).toBe(1);
+    removeEventListener("emet:copy", listener);
+    unmount();
+    const plain = renderIsland(
+      <HomeCodeBlock code={INSTALL} lang="text" strings={strings} copyable={false} />,
+    );
+    expect(plain.container.querySelector("[data-home-code-copy]")).toBeNull();
+    plain.unmount();
+  });
+
   test("keeps the copy label when the clipboard refuses", async () => {
     Object.defineProperty(navigator, "clipboard", {
       configurable: true,
