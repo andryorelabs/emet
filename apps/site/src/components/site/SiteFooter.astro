@@ -1,12 +1,15 @@
 ---
 /**
- * Website footer: the brand block, a Product and a Trust column of links, then
- * two stacked credit lines: the legal line with the author credit, then the AI
- * disclosure of the paintings.
+ * Website footer: the brand block on the left, a Product and a Trust column of
+ * links grouped on the right, then one bottom row with the legal line, the AI
+ * disclosure of the paintings and the author credit.
  */
 // oxlint-disable-next-line import/no-unassigned-import -- Astro bundles a stylesheet imported for its side effect
 import "../../styles/site.css";
 
+import { Separator } from "@/components/ui/separator";
+import { buttonVariants } from "@/components/ui/button";
+import { cn } from "cn";
 import mark from "../../assets/mark.svg";
 import { localePath, type Locale } from "../../i18n/locales";
 import { getStrings } from "../../i18n/ui";
@@ -23,6 +26,10 @@ const REPOSITORY_URL = "https://github.com/andryorelabs/emet";
 const AUTHOR_URL = "https://andryore.dev";
 
 const { locale, strings = en.footer } = Astro.props;
+const linkClass = cn(
+  buttonVariants({ variant: "link" }),
+  "footer-link h-auto p-0 text-base font-normal text-foreground",
+);
 const { newTab } = getStrings(locale).links;
 
 const columns = [
@@ -56,8 +63,8 @@ const columns = [
         <span>emet</span>
       </a>
       <p>{strings.description}</p>
-      <p class="footer-notice">{strings.notice}</p>
     </div>
+    <div class="footer-columns">
     {
       columns.map((column) => (
         <nav class="footer-column" aria-labelledby={column.id}>
@@ -67,7 +74,7 @@ const columns = [
           <ul>
             {column.links.map((link) => (
               <li>
-                <a href={link.href} {...externalLinkAttributes(link.href)}>
+                <a class={linkClass} href={link.href} {...externalLinkAttributes(link.href)}>
                   {link.label}
                   {isExternalHref(link.href) && <span class="sr-only">{newTab}</span>}
                 </a>
@@ -77,13 +84,14 @@ const columns = [
         </nav>
       ))
     }
+    </div>
   </div>
+  <Separator className="mt-10" />
   <div class="footer-bottom">
-    <p class="footer-fine">
-      {strings.legal} <a href={AUTHOR_URL} {...externalLinkAttributes(AUTHOR_URL, "author")}
-        >{strings.builtBy}<span class="sr-only">{newTab}</span></a
-      >.
-    </p>
-    <p class="footer-fine footer-paintings">{strings.paintings}</p>
+    <span>{strings.legal} {strings.notice}</span>
+    <span>{strings.paintings}</span>
+    <a href={AUTHOR_URL} {...externalLinkAttributes(AUTHOR_URL, "author")}
+      >{strings.builtBy}<span class="sr-only">{newTab}</span></a
+    >
   </div>
 </footer>

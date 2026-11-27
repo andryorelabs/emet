@@ -107,9 +107,9 @@ describe("external links wiring", () => {
     expect(island).toContain('<span className="sr-only">{labels.newTab}</span>');
   });
 
-  test("the footer author link keeps the period glued to the link", async () => {
+  test("the footer author link keeps its hidden new-tab label inside the link", async () => {
     const footer = await readSource("components/site/SiteFooter.astro");
-    expect(footer).toContain('<span class="sr-only">{newTab}</span></a\n      >.');
+    expect(footer).toContain('{strings.builtBy}<span class="sr-only">{newTab}</span></a');
   });
 
   test("the docs loader marks external links with the page's own locale", async () => {

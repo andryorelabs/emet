@@ -278,7 +278,7 @@ export function PageActions({
           <CopyIcon aria-hidden="true" />
           <span>{feedback === "" ? labels.copyPage : feedback}</span>
         </Button>
-        <DropdownMenu>
+        <DropdownMenu modal={false}>
           <DropdownMenuTrigger
             render={<Button variant="outline" size="icon-lg" aria-label={labels.moreActions} />}
           >
