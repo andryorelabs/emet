@@ -26,10 +26,8 @@ test.describe("home sections", () => {
     expect(Math.abs(edges.approvalHeight - edges.reviewHeight)).toBeLessThanOrEqual(1);
   });
 
-  for (const width of [1980, 1440, 1024]) {
-    test(`the Tracker takes 4 columns and the compact cards fill the rest at ${width}px`, async ({
-      page,
-    }) => {
+  for (const width of [1980, 1440, 1024, 900, 761, 390]) {
+    test(`the Tracker and the compact cards fit the bento at ${width}px`, async ({ page }) => {
       await page.setViewportSize({ width, height: 900 });
       await page.goto("/");
       await page.locator(".bento-tracker").scrollIntoViewIfNeeded();
@@ -38,28 +36,45 @@ test.describe("home sections", () => {
         const tracker = document.querySelector(".bento-tracker")?.getBoundingClientRect();
         const flags = document.querySelector(".bento-flags")?.getBoundingClientRect();
         const compact = document.querySelector(".feature-rows")?.getBoundingClientRect();
-        const rights = [...document.querySelectorAll(".feature-row")].map(
-          (row) => row.getBoundingClientRect().right,
+        const rows = [...document.querySelectorAll(".feature-row")].map((row) =>
+          row.getBoundingClientRect(),
         );
+        const chipGrid = document.querySelector(".tracker-chips");
+        const clipped = [...document.querySelectorAll(".bento-compact h3, .tracker-chip")].filter(
+          (element) => element.scrollWidth > element.clientWidth,
+        ).length;
         return {
+          bentoLeft: bento?.left ?? 0,
           bentoRight: bento?.right ?? 0,
           trackerWidth: tracker?.width ?? 0,
-          flagsWidth: flags?.width ?? 1,
           trackerHeight: tracker?.height ?? 0,
+          flagsWidth: flags?.width ?? 1,
           compactHeight: compact?.height ?? 0,
-          rights,
+          rights: rows.map((row) => row.right),
+          rowTops: rows.map((row) => Math.round(row.top)),
+          chipOverflow: chipGrid ? chipGrid.scrollWidth - chipGrid.clientWidth : 0,
+          clipped,
+          pageOverflow: document.documentElement.scrollWidth - document.documentElement.clientWidth,
         };
       });
-      if (width > 1100) {
-        expect(Math.abs(layout.trackerWidth - layout.flagsWidth)).toBeLessThanOrEqual(1);
-      } else {
-        expect(layout.trackerWidth).toBeGreaterThan(layout.flagsWidth);
-      }
-      expect(Math.abs(layout.trackerHeight - layout.compactHeight)).toBeLessThanOrEqual(24);
       expect(layout.rights).toHaveLength(5);
-      expect(Math.max(...layout.rights)).toBeCloseTo(layout.bentoRight, 0);
-      for (const right of layout.rights.slice(0, 4)) {
+      expect(layout.pageOverflow).toBeLessThanOrEqual(0);
+      expect(layout.chipOverflow).toBeLessThanOrEqual(0);
+      expect(layout.clipped).toBe(0);
+      for (const right of layout.rights) {
         expect(right).toBeLessThanOrEqual(layout.bentoRight + 1);
+      }
+      if (width >= 1024) {
+        expect(Math.abs(layout.trackerWidth - layout.flagsWidth)).toBeLessThanOrEqual(1);
+        expect(Math.abs(layout.trackerHeight - layout.compactHeight)).toBeLessThanOrEqual(24);
+        expect(Math.max(...layout.rights)).toBeCloseTo(layout.bentoRight, 0);
+      } else if (width > 760) {
+        expect(
+          Math.abs(layout.trackerWidth - (layout.bentoRight - layout.bentoLeft)),
+        ).toBeLessThanOrEqual(1);
+        expect(Math.max(...layout.rights)).toBeCloseTo(layout.bentoRight, 0);
+      } else {
+        expect(new Set(layout.rights.map(Math.round)).size).toBe(1);
       }
     });
   }

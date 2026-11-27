@@ -280,3 +280,10 @@
     transition: none;
   }
 }
+
+@media (max-width: 1280px) {
+  .tracker-chip {
+    padding-inline: 2px;
+    font-size: 11px;
+  }
+}

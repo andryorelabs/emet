@@ -103,14 +103,20 @@ describe("Features bento", () => {
     for (const key of ["flags", "ci", "workers"]) {
       expect(css).toMatch(new RegExp(`\\.bento-${key} \\{\\s*grid-column: \\d+ \\/ \\d+;`));
     }
-    expect(css).toMatch(/\.bento-tracker \{\s*grid-column: 1 \/ 5;\s*grid-row: 3;/);
+    expect(css).toMatch(/\.bento-tracker \{\s*grid-column: 1 \/ -1;\s*grid-row: 3;/);
     expect(css).not.toContain("grid-row: 1 / 3");
   });
 
-  it("gives the Tracker 4 columns beside the compact cards in the other 8", () => {
+  it("gives the Tracker 4 columns beside the compact cards in the other 8 from 1024px", () => {
     expect(css).not.toContain("auto-fit");
     expect(featureRowsSource).not.toContain("auto-fit");
-    expect(featureRowsSource).toMatch(/\.bento-compact \{\s*grid-column: 5 \/ 13;\s*grid-row: 3;/);
+    expect(css).toMatch(/\.bento-tracker \{\s*grid-column: 1 \/ -1;\s*grid-row: 3;/);
+    expect(css).toMatch(
+      /@media \(min-width: 1024px\) \{\s*\.bento-tracker \{\s*grid-column: 1 \/ 5;/,
+    );
+    expect(featureRowsSource).toMatch(
+      /@media \(min-width: 1024px\) \{\s*\.bento-compact \{\s*grid-column: 5 \/ 13;\s*grid-row: 3;/,
+    );
     expect(featureRowsSource).toContain("grid-template-columns: repeat(2, minmax(0, 1fr));");
     expect(featureRowsSource).toContain("grid-template-rows: repeat(3, auto);");
     expect(featureRowsSource).toContain("align-content: stretch;");
@@ -118,13 +124,11 @@ describe("Features bento", () => {
     expect(featuresSource).toMatch(/<FeatureRows[^>]*\/>\s*<\/ul>/);
   });
 
-  it("gives the Tracker 5 columns and the compact cards 7 from 761px to 1100px", () => {
-    expect(css).toMatch(
-      /@media \(min-width: 761px\) and \(max-width: 1100px\) \{\s*\.bento-tracker \{\s*grid-column: 1 \/ 6;/,
-    );
+  it("puts the Tracker on a full row with the compact block below it from 761px to 1023px", () => {
     expect(featureRowsSource).toMatch(
-      /@media \(min-width: 761px\) and \(max-width: 1100px\) \{\s*\.bento-compact \{\s*grid-column: 6 \/ 13;/,
+      /@media \(min-width: 761px\) \{\s*\.bento-compact \{\s*grid-column: 1 \/ -1;\s*grid-row: 4;/,
     );
+    expect(featureRowsSource).not.toContain("grid-column: 6 / 13");
   });
 
   it("anchors scene content to the bottom", () => {
