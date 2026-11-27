@@ -8,10 +8,14 @@ import {
   VARIANTS,
   captureFile,
   captureTargets,
+  commonHeight,
+  heightAdjustedRatio,
   pairCaptures,
   progressSteps,
   scrollTarget,
+  sectionClip,
   settleMs,
+  variantWidth,
 } from "./plan";
 
 const desktop = "desktop-light-motion";
@@ -93,6 +97,65 @@ describe("scrollTarget", () => {
 
   test("keeps a short section at its top", () => {
     expect(scrollTarget(500, 400, 1000, 1)).toBe(500);
+  });
+});
+
+describe("sectionClip", () => {
+  const viewport = { width: 1440, height: 900 };
+
+  test("clips a short section to its own box", () => {
+    expect(sectionClip(100.4, 300, viewport)).toEqual({ x: 0, y: 100, width: 1440, height: 301 });
+  });
+
+  test("clips a tall section to the viewport", () => {
+    expect(sectionClip(-1200, 3000, viewport)).toEqual({ x: 0, y: 0, width: 1440, height: 900 });
+  });
+
+  test("clips the visible tail of a section", () => {
+    expect(sectionClip(-200, 500, viewport)).toEqual({ x: 0, y: 0, width: 1440, height: 300 });
+  });
+
+  test("returns null when the section is not visible", () => {
+    expect(sectionClip(950, 400, viewport)).toBeNull();
+    expect(sectionClip(-500, 400, viewport)).toBeNull();
+  });
+});
+
+describe("commonHeight", () => {
+  test("is the shorter of the two captures", () => {
+    expect(commonHeight(900, 810)).toBe(810);
+    expect(commonHeight(400, 760)).toBe(400);
+  });
+});
+
+describe("heightAdjustedRatio", () => {
+  test("is the shared ratio when both clips are the same height", () => {
+    expect(heightAdjustedRatio(0.02, 800, 800)).toBeCloseTo(0.02);
+  });
+
+  test("counts the rows only the taller clip has as fully different, from either side", () => {
+    expect(heightAdjustedRatio(0, 1000, 500)).toBeCloseTo(0.5);
+    expect(heightAdjustedRatio(0, 500, 1000)).toBeCloseTo(0.5);
+    expect(heightAdjustedRatio(0.1, 900, 810)).toBeCloseTo((0.1 * 810 + 90) / 900);
+  });
+
+  test("flags a section a tenth taller or shorter even when the overlap matches", () => {
+    expect(heightAdjustedRatio(0, 1100, 1000)).toBeGreaterThan(0.05);
+  });
+
+  test("falls back to the shared ratio for empty clips", () => {
+    expect(heightAdjustedRatio(0.3, 0, 0)).toBe(0.3);
+  });
+});
+
+describe("variantWidth", () => {
+  test("is the viewport width of the variant", () => {
+    expect(variantWidth("mobile-dark-reduced")).toBe(390);
+    expect(variantWidth("desktop-light-motion")).toBe(1440);
+  });
+
+  test("falls back to the desktop width for an unknown variant", () => {
+    expect(variantWidth("nope")).toBe(1440);
   });
 });
 

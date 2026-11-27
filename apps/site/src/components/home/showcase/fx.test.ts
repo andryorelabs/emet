@@ -1,8 +1,57 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, test } from "bun:test";
+import { readFileSync } from "node:fs";
 import { GlobalRegistrator } from "@happy-dom/global-registrator";
 
 import type { PaintingFxOptions } from "../graphics/painting-fx";
-import { initShowcaseFx, gazeFor, mirrorMarkers } from "./fx";
+import {
+  initShowcaseFx,
+  gazeFor,
+  mirrorMarkers,
+  NARROW_OBJECT_POSITION,
+  showcaseObjectPosition,
+  WIDE_OBJECT_POSITION,
+} from "./fx";
+
+const showcaseCss = readFileSync(new URL("../../../styles/showcase.css", import.meta.url), "utf8");
+
+function cssPosition(value: string): [number, number] {
+  const [x, y] = value.split(" ").map((part) => Number.parseFloat(part) / 100);
+  if (x === undefined || y === undefined) throw new Error(`bad position ${value}`);
+  return [x, y];
+}
+
+function mediaBlock(query: string): string {
+  const start = showcaseCss.indexOf(`@media (${query})`);
+  if (start < 0) throw new Error(`missing media ${query}`);
+  return showcaseCss.slice(start, start + 1400);
+}
+
+function stubMedia(wide: boolean): { fire(next: boolean): void; removed: () => number } {
+  const listeners = new Set<() => void>();
+  let matches = wide;
+  let removedCount = 0;
+  Object.defineProperty(globalThis, "matchMedia", {
+    configurable: true,
+    writable: true,
+    value: () => ({
+      get matches() {
+        return matches;
+      },
+      addEventListener: (_type: string, cb: () => void) => listeners.add(cb),
+      removeEventListener: (_type: string, cb: () => void) => {
+        removedCount += 1;
+        listeners.delete(cb);
+      },
+    }),
+  });
+  return {
+    fire(next) {
+      matches = next;
+      for (const cb of listeners) cb();
+    },
+    removed: () => removedCount,
+  };
+}
 
 const MARKUP = `
 <section data-showcase data-state="merged">
@@ -230,5 +279,64 @@ describe("showcase fx", () => {
     await Promise.resolve();
     await new Promise((resolve) => setTimeout(resolve, 0));
     expect(document.querySelector(".showcase-stage")?.getAttribute("data-fx")).toBe("on");
+  });
+
+  test("frames the fx like the CSS image: 50% 50% from 901px, the narrow position below", () => {
+    const wideBlock = mediaBlock("min-width: 901px");
+    const narrowBlock = mediaBlock("max-width: 900px");
+    const baseImage =
+      /\.showcase-stage img \{\s*object-fit: cover;\s*object-position: ([^;]+);/.exec(
+        showcaseCss,
+      )?.[1];
+    const narrowImage = /\.showcase-stage img \{\s*object-position: ([^;]+);/.exec(
+      narrowBlock,
+    )?.[1];
+    expect(cssPosition(baseImage ?? "")).toEqual([...WIDE_OBJECT_POSITION]);
+    expect(cssPosition(narrowImage ?? "")).toEqual([...NARROW_OBJECT_POSITION]);
+    expect(/--ox: ([\d.]+)/.exec(wideBlock)?.[1] ?? "0.5").toBe(String(WIDE_OBJECT_POSITION[0]));
+    expect(/--oy: ([\d.]+)/.exec(wideBlock)?.[1]).toBe(String(WIDE_OBJECT_POSITION[1]));
+  });
+
+  test("hands the width-matched object position to each painting and reframes on change", () => {
+    setLoaded(dusk(), true);
+    const media = stubMedia(true);
+    const handle = initShowcaseFx(frame(), switchEl(), subscribe, fakePaintingFx);
+    flagCallback?.(true);
+    expect(created.map((entry) => entry.options.objectPosition)).toEqual([
+      WIDE_OBJECT_POSITION,
+      WIDE_OBJECT_POSITION,
+    ]);
+    media.fire(false);
+    expect(created).toHaveLength(4);
+    expect(created.slice(0, 2).every((entry) => entry.destroyed)).toBe(true);
+    expect(created.slice(2).map((entry) => entry.options.objectPosition)).toEqual([
+      NARROW_OBJECT_POSITION,
+      NARROW_OBJECT_POSITION,
+    ]);
+    handle.destroy();
+    expect(media.removed()).toBe(1);
+    media.fire(true);
+    expect(created).toHaveLength(4);
+  });
+
+  test("reframes only the day painting while the dusk one was never built", () => {
+    setLoaded(dusk(), true);
+    const media = stubMedia(false);
+    initShowcaseFx(frame(), switchEl(), subscribe, fakePaintingFx);
+    media.fire(true);
+    expect(created).toHaveLength(2);
+    expect(created[1]?.options.objectPosition).toEqual(WIDE_OBJECT_POSITION);
+    expect(showcaseObjectPosition()).toEqual(WIDE_OBJECT_POSITION);
+  });
+
+  test("falls back to the narrow position without matchMedia", () => {
+    Object.defineProperty(globalThis, "matchMedia", {
+      configurable: true,
+      writable: true,
+      value: undefined,
+    });
+    expect(showcaseObjectPosition()).toEqual(NARROW_OBJECT_POSITION);
+    initShowcaseFx(frame(), switchEl(), subscribe, fakePaintingFx);
+    expect(created[0]?.options.objectPosition).toEqual(NARROW_OBJECT_POSITION);
   });
 });

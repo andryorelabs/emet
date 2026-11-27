@@ -1,11 +1,13 @@
 import type { MissingCapture } from "./plan";
 
-/** The measured difference of one section at one progress under one variant. */
+/** The measured difference of one section at one progress under one variant, with the clip height of each side; the ratio counts the rows only the taller clip has as different. */
 export interface MeasuredPair {
   readonly variant: string;
   readonly section: string;
   readonly progress: number;
   readonly ratio: number;
+  readonly prototypeHeight?: number;
+  readonly siteHeight?: number;
 }
 
 /** The summary of all measured pairs and of the captures missing on one side. */

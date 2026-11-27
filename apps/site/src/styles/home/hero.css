@@ -1,5 +1,8 @@
 /**
  * Home page hero: painted hero, announcement pill, split headline and actions.
+ * The scrim, ray and glow gradients and the `--hero-amber` light are documented
+ * painting-overlay constants: they sit on the artwork and do not follow the
+ * colour scheme. The glass and bubble fills come from `tokens.css`.
  */
 
 .hero {
@@ -40,7 +43,8 @@
   grid-template-rows: 1fr auto auto auto;
   width: 100%;
   min-height: inherit;
-  padding: 0 var(--gutter) 28px;
+  padding: 0 max(16px, env(safe-area-inset-right, 0px)) 28px
+    calc(max(16px, env(safe-area-inset-left, 0px)) + 16px);
   color: var(--ink-over-painting);
   text-align: left;
 }
@@ -70,24 +74,16 @@
   margin: 8px 0 24px;
 }
 
-@media (max-width: 640px) {
-  .hero-mid {
-    max-width: 100%;
-  }
-}
-
 .announcement {
   display: inline-flex;
   align-items: center;
   gap: 10px;
-  height: 32px;
-  margin-bottom: -4px;
-  padding: 0 5px 0 14px;
-  border: 1px solid var(--glass-border);
+  padding: 7px 14px;
+  border: 1px solid var(--glass-line);
   border-radius: 999px;
   background: var(--glass-fill);
-  backdrop-filter: var(--glass-blur);
-  color: var(--ink-night);
+  backdrop-filter: blur(8px);
+  color: var(--ink-over-painting);
   font-size: 14px;
   font-weight: 400;
   line-height: 1;
@@ -111,32 +107,24 @@
   font-weight: 600;
 }
 
-.announcement-divider {
-  width: 1px;
-  height: 14px;
-  background: currentcolor;
-  opacity: 0.25;
-}
-
-.announcement-arrow {
-  display: grid;
-  place-items: center;
-  width: 22px;
-  height: 22px;
+.announcement-version::before {
+  content: "";
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  margin-right: 10px;
   border-radius: 50%;
-  background: var(--accent);
-  color: var(--ink-night);
-  transition: transform 150ms ease-out;
+  background: var(--lamp);
+  box-shadow: 0 0 10px var(--lamp);
 }
 
-.announcement:hover .announcement-arrow {
-  transform: translateX(2px);
+.announcement-divider,
+.announcement-arrow {
+  display: none;
 }
 
-@media (prefers-reduced-motion: reduce) {
-  .announcement:hover .announcement-arrow {
-    transform: none;
-  }
+.announcement-label {
+  font-weight: 600;
 }
 
 @media (prefers-reduced-motion: no-preference) {
@@ -153,11 +141,10 @@
   display: block;
   overflow: clip;
   padding-bottom: 0.06em;
-  font-size: clamp(36px, 9.3vw, 168px);
-  font-weight: 600;
-  line-height: 0.92;
-  letter-spacing: -0.05em;
-  text-wrap: balance;
+  font-size: var(--hero-size);
+  font-weight: var(--hero-weight);
+  line-height: 0.88;
+  letter-spacing: var(--hero-tracking);
   overflow-wrap: normal;
   word-break: normal;
 }
@@ -313,8 +300,8 @@
   margin: 0;
   padding: 10px 14px;
   border-radius: 10px;
-  background: oklch(0.985 0.013 150 / 0.94);
-  color: oklch(0.22 0.013 150);
+  background: var(--bubble-fill);
+  color: var(--bubble-text);
   font-size: 14px;
   opacity: 0;
   transform: translateY(6px);

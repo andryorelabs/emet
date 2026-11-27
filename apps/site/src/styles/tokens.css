@@ -50,6 +50,20 @@
   --moss: light-dark(oklch(0.56 0.13 135), oklch(0.74 0.13 135));
   --lamp: light-dark(oklch(0.84 0.14 95), oklch(0.9 0.14 95));
 
+  /**
+   * Overlays that sit on the painted artwork or on a glass pill read the same in
+   * both schemes, so these are plain values rather than light-dark() pairs.
+   */
+  --painting-ink: oklch(0.24 0.006 157);
+  --pill-fill: oklch(0.2 0.02 150 / 0.8);
+  --pill-text: oklch(0.955 0.016 122);
+  --pill-line: oklch(1 0 0 / 0.25);
+  --glass-fill: oklch(0.2 0.02 150 / 0.35);
+  --glass-fill-hover: oklch(0.3 0.04 150 / 0.5);
+  --glass-line: oklch(1 0 0 / 0.3);
+  --bubble-fill: oklch(0.985 0.013 150 / 0.94);
+  --bubble-text: oklch(0.22 0.013 150);
+
   --font-sans: "Space Grotesk", system-ui, sans-serif;
   --font-mono: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, monospace;
 

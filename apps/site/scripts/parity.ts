@@ -8,9 +8,13 @@ import { diffRatio } from "./parity/diff";
 import {
   VARIANTS,
   captureTargets,
+  commonHeight,
+  heightAdjustedRatio,
   pairCaptures,
   scrollTarget,
+  sectionClip,
   settleMs,
+  variantWidth,
   type Capture,
   type Variant,
 } from "./parity/plan";
@@ -67,7 +71,7 @@ function stagePrototype(): string {
   return staged;
 }
 
-/** Scrolls to a capture's progress, waits for smooth scrolling to settle and saves a screenshot; false when the section is absent. */
+/** Scrolls to a capture's progress, waits for smooth scrolling to settle and saves a screenshot clipped to the section's own box (see `sectionClip`); false when the section is absent. */
 async function takeCapture(page: Page, capture: Capture, variant: Variant): Promise<boolean> {
   const target = await page.evaluate((selector) => {
     const element = document.querySelector(selector);
@@ -81,13 +85,26 @@ async function takeCapture(page: Page, capture: Capture, variant: Variant): Prom
     window.scrollTo({ top: y, behavior: "instant" });
   }, top);
   await page.waitForTimeout(settleMs(variant));
-  await page.screenshot({ path: join(outputDir, capture.file) });
+  const live = await page.evaluate((selector) => {
+    const box = document.querySelector(selector)?.getBoundingClientRect();
+    return box === undefined ? null : { top: box.top, height: box.height };
+  }, capture.selector);
+  const clip = live === null ? null : sectionClip(live.top, live.height, variant.viewport);
+  if (clip === null) return false;
+  await page.screenshot({ path: join(outputDir, capture.file), clip });
   return true;
 }
 
-/** Decodes a screenshot to a raw RGBA buffer of the comparison size. */
-async function decode(file: string): Promise<Uint8Array> {
+/** The pixel height of a saved screenshot. */
+async function heightOf(file: string): Promise<number> {
+  const { height } = await sharp(join(outputDir, file)).metadata();
+  return height;
+}
+
+/** Decodes the top `height` pixel rows of a screenshot to a raw RGBA buffer of the comparison size. */
+async function decode(file: string, width: number, height: number): Promise<Uint8Array> {
   const { data } = await sharp(join(outputDir, file))
+    .extract({ left: 0, top: 0, width, height })
     .resize(compareSize.width, compareSize.height, { fit: "fill" })
     .ensureAlpha()
     .raw()
@@ -146,12 +163,22 @@ async function main(): Promise<void> {
       const { pairs, missing } = pairCaptures(expected, captured);
       const measured: MeasuredPair[] = [];
       for (const pair of pairs) {
-        const ratio = diffRatio(await decode(pair.prototype), await decode(pair.site));
+        const prototypeHeight = await heightOf(pair.prototype);
+        const siteHeight = await heightOf(pair.site);
+        const height = commonHeight(prototypeHeight, siteHeight);
+        const width = variantWidth(pair.variant);
+        const sharedRatio = diffRatio(
+          await decode(pair.prototype, width, height),
+          await decode(pair.site, width, height),
+        );
+        const ratio = heightAdjustedRatio(sharedRatio, prototypeHeight, siteHeight);
         measured.push({
           variant: pair.variant,
           section: pair.section,
           progress: pair.progress,
           ratio,
+          prototypeHeight,
+          siteHeight,
         });
       }
       const report = buildReport(measured, missing);
