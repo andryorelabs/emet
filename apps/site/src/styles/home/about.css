@@ -97,7 +97,7 @@
     );
   }
 
-  .portrait-frame canvas[data-state="ready"] {
+  .portrait-frame canvas[data-pixel-reveal][data-state="ready"] {
     display: block;
   }
 }
@@ -120,7 +120,7 @@
   border-radius: 10px;
 }
 
-.portrait-frame canvas {
+.portrait-frame canvas[data-pixel-reveal] {
   display: none;
   position: absolute;
   inset: 0;

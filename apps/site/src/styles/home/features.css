@@ -16,8 +16,7 @@
   display: grid;
   grid-template-columns: repeat(12, minmax(0, 1fr));
   grid-auto-rows: minmax(200px, auto);
-  gap: 12px;
-  max-width: 960px;
+  gap: 20px;
   margin: 0 0 0 var(--axis);
   padding: 0;
   list-style: none;
@@ -57,7 +56,6 @@
 
 .bento-approval {
   grid-column: 1 / 6;
-  grid-row: 1 / 3;
 }
 
 .bento-review {
@@ -65,19 +63,19 @@
 }
 
 .bento-flags {
-  grid-column: 6 / 10;
+  grid-column: 1 / 5;
 }
 
 .bento-ci {
-  grid-column: 10 / 13;
+  grid-column: 5 / 9;
 }
 
 .bento-workers {
-  grid-column: 1 / 8;
+  grid-column: 9 / 13;
 }
 
 .bento-tracker {
-  grid-column: 8 / 13;
+  grid-column: 1 / 13;
 }
 
 .bento-claim h3 {
@@ -97,8 +95,8 @@
 .bento-visual {
   display: flex;
   flex-direction: column;
-  align-items: center;
-  justify-content: center;
+  align-items: stretch;
+  justify-content: flex-end;
   gap: 16px;
   min-width: 0;
   font-family: var(--font-mono, ui-monospace, monospace);

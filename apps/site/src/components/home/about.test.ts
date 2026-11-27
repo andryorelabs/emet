@@ -75,9 +75,9 @@ describe("About portrait", () => {
   it("keeps the image and adds a canvas shown only under motion once ready", () => {
     expect(aboutSource).toContain("data-pixel-reveal");
     expect(aboutSource).toContain('import "./about/about"');
-    expect(css).toMatch(/\.portrait-frame canvas \{\s*display: none;/);
+    expect(css).toMatch(/\.portrait-frame canvas\[data-pixel-reveal\] \{\s*display: none;/);
     expect(css).toMatch(
-      /@media \(prefers-reduced-motion: no-preference\) \{[^@]*canvas\[data-state="ready"\] \{\s*display: block;/,
+      /@media \(prefers-reduced-motion: no-preference\) \{[^@]*canvas\[data-pixel-reveal\]\[data-state="ready"\] \{\s*display: block;/,
     );
   });
 

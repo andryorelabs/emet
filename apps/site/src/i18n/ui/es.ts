@@ -88,26 +88,11 @@ export const es = {
       { title: "Tu tracker, o ninguno", line: "Linear, GitHub Issues o archivos locales." },
     ],
     extra: [
-      {
-        title: "Modo rápido para cambios pequeños",
-        line: "Una opción reduce la entrevista a una ronda y ejecuta un ticket, una revisión y una integración.",
-      },
-      {
-        title: "Recuerda lo que funcionó",
-        line: "Las lecciones de cada ejecución se guardan y se recuperan en la siguiente.",
-      },
-      {
-        title: "Dos revisores para cambios de riesgo",
-        line: "El trabajo de riesgo alto recibe un segundo revisor antes de integrarse.",
-      },
-      {
-        title: "Te avisa cuando te necesita",
-        line: "Una alerta cuando una ejecución espera tu aprobación o se ha atascado.",
-      },
-      {
-        title: "Se instala y se desinstala limpiamente",
-        line: "Elimina todo lo que emet instaló y conserva cualquier archivo que hayas editado.",
-      },
+      { title: "Modo rápido para cambios pequeños", docs: "/docs/reference/cli/" },
+      { title: "Recuerda lo que funcionó", docs: "/docs/reference/cli/" },
+      { title: "Dos revisores para cambios de riesgo", docs: "/docs/reference/configuration/" },
+      { title: "Te avisa cuando te necesita", docs: "/docs/how-to/check-a-fleet/" },
+      { title: "Se instala y se desinstala limpiamente", docs: "/docs/start/install/" },
     ],
   },
   stats: {
