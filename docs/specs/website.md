@@ -427,3 +427,14 @@ Source: #1089 S6
 
 - **WHEN** reduced motion is set or the viewport is 1000px wide or less
 - **THEN** the overlay shows its final lit state with no transition or animation
+
+### Requirement: Website dependencies track Latest
+
+Source: #1093 S4
+
+The Website's dependencies, including Astro, Starlight and the nginx image digest, are at Latest and the site builds and behaves unchanged.
+
+#### Scenario: Checks run after a site dependency bump
+
+- **WHEN** `bun run check` and `bun run test` run
+- **THEN** they pass and the site's e2e suite passes in CI
