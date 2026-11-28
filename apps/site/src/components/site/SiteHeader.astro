@@ -1,7 +1,7 @@
 ---
 /**
  * Website header: the mark and wordmark, a few plain links, the theme selector
- * and the language pill; the home and flow variants add the mobile menu. The `home` variant floats over the hero, `flow` sits in the page flow,
+ * and the language pill; the home and flow variants add the mobile menu, and the docs variant takes its own through the `menu` slot. The `home` variant floats over the hero, `flow` sits in the page flow,
  * `docs` is the one-row docs header with a search slot.
  */
 // oxlint-disable-next-line import/no-unassigned-import -- Astro bundles a stylesheet imported for its side effect
@@ -80,6 +80,7 @@ const links = [
     }
     <ThemeSelect labels={theme} />
     <LanguageSwitcher locale={locale} currentPath={currentPath} label={strings.language} />
+    {variant === "docs" && <slot name="menu" />}
     {
       variant !== "docs" && (
         <MobileMenu

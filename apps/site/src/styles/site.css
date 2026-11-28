@@ -368,7 +368,7 @@
 }
 
 .docs-site-footer .footer-wordmark {
-  font-size: min(260px, calc(100cqi / 3.2));
+  font-size: min(120px, calc(100cqi / 3.2));
 }
 
 .site-footer p {
