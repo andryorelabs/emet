@@ -39,7 +39,8 @@ describe("How it works painting overlay", () => {
   it("draws light with no inline style and none of the old white lines, pills or dots", () => {
     expect(streamsSource).not.toContain("style=");
     expect(streamsSource).not.toMatch(/ps-line|ps-pill/);
-    expect(streamsSource).toContain('class="ps-dot"');
+    expect(streamsSource).not.toContain("ps-dot");
+    expect(streamsSource).toContain('class="ps-source"');
     expect(streamsSource).toContain("streamPaths()");
   });
 });
@@ -207,5 +208,42 @@ describe("How it works waiting, done and stream styling", () => {
     expect(graphicsSource).toMatch(/ps-stream-2\.ps-spark \{\s*animation-delay: 300ms;/);
     expect(graphicsSource).toMatch(/ps-stream-3\.ps-spark \{\s*animation-delay: 600ms;/);
     expect(graphicsSource).toMatch(/\[data-paused\] \.ps-spark \{\s*animation-play-state: paused;/);
+  });
+
+  it("hides a whole path at stage 0: the dash offset reaches past the dash into the gap", () => {
+    const pattern = /\.ps-layer \{[^}]*stroke-dasharray: (\d+) (\d+);/.exec(graphicsSource);
+    const hidden = /ps-layer:not\(\.ps-river, \.ps-spark\) \{\s*stroke-dashoffset: (\d+);/.exec(
+      graphicsSource,
+    );
+    expect(pattern).not.toBeNull();
+    expect(hidden).not.toBeNull();
+    const dash = Number(pattern?.[1]);
+    const gap = Number(pattern?.[2]);
+    const offset = Number(hidden?.[1]);
+    expect(offset).toBeGreaterThanOrEqual(dash);
+    expect(offset + 1).toBeLessThanOrEqual(dash + gap);
+  });
+
+  it("leaves the static state final: bloom, ring and spark start hidden and nothing moves outside the motion query", () => {
+    expect(graphicsSource).toMatch(/\.ps-bloom,\s*\.ps-ring \{\s*opacity: 0;/);
+    expect(graphicsSource).toMatch(/\.ps-spark \{[^}]*opacity: 0;/);
+    const start = graphicsSource.indexOf(".painting-streams {");
+    const motion = graphicsSource.indexOf(
+      "@media (prefers-reduced-motion: no-preference) and (min-width: 1001px)",
+      start,
+    );
+    expect(start).toBeGreaterThan(-1);
+    expect(motion).toBeGreaterThan(start);
+    const staticBlock = graphicsSource.slice(start, motion);
+    expect(staticBlock).not.toMatch(/transition|animation/);
+  });
+
+  it("fixes the chip and badge colours so they do not follow the theme", () => {
+    expect(graphicsSource).toMatch(/\.ps-merged-bg \{\s*fill: #4a7d2b;/);
+    expect(graphicsSource).toMatch(/\.ps-merged-text \{\s*fill: #f3f9f5;/);
+    expect(graphicsSource).toMatch(/\.ps-chip-bg \{[^}]*stroke: rgb\(74 125 43 \/ 0\.75\);/);
+    expect(graphicsSource).not.toMatch(
+      /\.ps-(chip-bg|source|merged-bg|check)[^{]*\{[^}]*var\(--accent/,
+    );
   });
 });
