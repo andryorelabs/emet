@@ -29,7 +29,7 @@ import { resolveLandedVerdict, unownedReclaimVerdict, type LandedVerdict } from 
 import { resolveLandingUnit } from "./landing-unit";
 import { hasLaunchResult, resolveWaveContext } from "./launch";
 import { checkStale } from "./map";
-import { readEnv, TODO_MARKER, TODO_MARKERS } from "./names";
+import { BINARY, readEnv, TODO_MARKER, TODO_MARKERS } from "./names";
 import { isObject } from "./narrow";
 import {
   classifyRun,
@@ -45,6 +45,8 @@ import {
   resolveMaxLiveWorkers,
   resolveSlotsDirectory,
 } from "./slots";
+import { specBranchName } from "./specbranch";
+import { parseRunIdentity } from "./status";
 import { validatePlan, type PlanTicket } from "./validate";
 import {
   classifyByContent,
@@ -1247,16 +1249,72 @@ export async function checkHeadDescendsFromTrunk(
 /** Paths Phase 5 defers, which must already be on trunk before dispatch. */
 const PHASE_FIVE_RECORD_PATHS = ["GLOSSARY.md", "docs/adr/"] as const;
 
+/** The run's spec branch when preflight is running on it, as the spec id and branch name. */
+export interface ActiveSpecBranch {
+  readonly id: string;
+  readonly name: string;
+}
+
+/** The spec id named by `--run` through `parseRunIdentity`, else by `--approval spec<id>`. */
+function resolveSpecId(
+  approvalRunId: string | undefined,
+  runId: string | undefined,
+): string | null {
+  const named = runId ?? approvalRunId;
+  if (named === undefined) return null;
+  const parsed = parseRunIdentity(named).spec;
+  if (parsed !== null) return parsed;
+  return named.startsWith("spec") && named.length > "spec".length
+    ? named.slice("spec".length)
+    : null;
+}
+
+/**
+ * The spec branch the S10 and S11 checks treat specially: only under
+ * `landing.unit: spec`, with an id resolvable from the run, and with HEAD on
+ * exactly `specBranchName(id)`. `null` keeps the trunk comparison.
+ */
+async function resolveActiveSpecBranch(
+  config: ForgeConfig,
+  approvalRunId: string | undefined,
+  runId: string | undefined,
+  repoRoot: string,
+): Promise<ActiveSpecBranch | null> {
+  if (resolveLandingUnit(config, runId ?? approvalRunId ?? null, repoRoot) !== "spec") return null;
+  const id = resolveSpecId(approvalRunId, runId);
+  if (id === null) return null;
+  const head = (
+    await Bun.$`git rev-parse --abbrev-ref HEAD`.cwd(repoRoot).quiet().nothrow().text()
+  ).trim();
+  const name = specBranchName(id);
+  return head === name ? { id, name } : null;
+}
+
+/** Result of {@link checkPhaseFiveRecordsLanded}. */
+export type PhaseFiveRecordsResult =
+  | { readonly ok: true }
+  | {
+      readonly ok: false;
+      readonly paths: string[];
+      readonly reason?: "differs" | "committed-directly";
+    };
+
 /**
  * S10: `GLOSSARY.md` and `docs/adr/` must match `trunkRef`, in commits and in
  * the working tree, so a worker branching from trunk sees every record a
- * ticket cites. Lists the differing or untracked paths on failure.
+ * ticket cites. Lists the differing or untracked paths on failure. With
+ * `specBranch`, records that arrived through an integration or sync merge are
+ * accepted: only uncommitted differences from `HEAD` ("differs") and records
+ * changed by a first-parent non-merge commit past `trunkRef`
+ * ("committed-directly") fail.
  */
 export async function checkPhaseFiveRecordsLanded(
   trunkRef: string,
   repoRoot: string = process.cwd(),
-): Promise<{ ok: true } | { ok: false; paths: string[] }> {
-  const changed = await Bun.$`git diff --name-only ${trunkRef} -- ${PHASE_FIVE_RECORD_PATHS}`
+  specBranch?: string,
+): Promise<PhaseFiveRecordsResult> {
+  const baseline = specBranch === undefined ? trunkRef : "HEAD";
+  const changed = await Bun.$`git diff --name-only ${baseline} -- ${PHASE_FIVE_RECORD_PATHS}`
     .cwd(repoRoot)
     .quiet()
     .nothrow()
@@ -1268,7 +1326,21 @@ export async function checkPhaseFiveRecordsLanded(
       .nothrow()
       .text();
   const paths = [...new Set(`${changed}\n${untracked}`.split("\n").filter(Boolean))];
-  return paths.length === 0 ? { ok: true } : { ok: false, paths };
+  if (paths.length > 0)
+    return specBranch === undefined
+      ? { ok: false, paths }
+      : { ok: false, paths, reason: "differs" };
+  if (specBranch === undefined) return { ok: true };
+  const direct =
+    await Bun.$`git log --first-parent --no-merges --no-renames --name-only --format= ${`${trunkRef}..HEAD`} -- ${PHASE_FIVE_RECORD_PATHS}`
+      .cwd(repoRoot)
+      .quiet()
+      .nothrow()
+      .text();
+  const directPaths = [...new Set(direct.split("\n").filter(Boolean))];
+  return directPaths.length === 0
+    ? { ok: true }
+    : { ok: false, paths: directPaths, reason: "committed-directly" };
 }
 
 /** The S11 preflight failure line, or `null` when HEAD descends from trunk. */
@@ -1278,17 +1350,25 @@ async function collectHeadTrunkFailure(
   trunk: string,
   probes: EnvironmentProbes,
   landingMode: LandingMode = "pr",
+  specBranch: ActiveSpecBranch | null = null,
 ): Promise<string | null> {
   const trunkRef = trunkReference(remote, trunk, landingMode === "merge");
   const headSha = await probes.resolveRef(repoRoot, "HEAD");
   if (headSha === null) return null;
   const verdict = await checkHeadDescendsFromTrunk(headSha, trunkRef, trunk, remote);
   if (verdict.ok) {
-    const records = await checkPhaseFiveRecordsLanded(trunkRef, repoRoot);
+    const records = await checkPhaseFiveRecordsLanded(trunkRef, repoRoot, specBranch?.name);
     if (records.ok) return null;
-    return `Phase 5 records are not on ${trunkRef}: ${records.paths.join(", ")} — land them on trunk (PR, or local merge) before dispatch.`;
+    const listed = records.paths.join(", ");
+    if (specBranch === null)
+      return `Phase 5 records are not on ${trunkRef}: ${listed} — land them on trunk (PR, or local merge) before dispatch.`;
+    if (records.reason === "differs")
+      return `Phase 5 records differ from ${specBranch.name}: ${listed} — commit them through a wave or discard them.`;
+    return `Phase 5 records were committed directly on ${specBranch.name}: ${listed} — land them on ${trunkRef} and run \`${BINARY} spec-branch sync --spec ${specBranch.id}\`.`;
   }
-  return `HEAD (${verdict.branch}) is not ${trunkRef} or a descendant of it — dispatch from trunk so workers contain Phase 5's landed records. Fix: ${verdict.fix}`;
+  const fix =
+    specBranch === null ? verdict.fix : `${BINARY} spec-branch sync --spec ${specBranch.id}`;
+  return `HEAD (${verdict.branch}) is not ${trunkRef} or a descendant of it — dispatch from trunk so workers contain Phase 5's landed records. Fix: ${fix}`;
 }
 
 const MAP_STALE_MAX_COMMITS = 10;
@@ -1400,6 +1480,7 @@ async function main(config: ForgeConfig, repoRoot: string) {
     config.repo.trunk,
     createEnvironmentProbes(host),
     config.landing.mode,
+    await resolveActiveSpecBranch(config, approvalRunId, currentRunId, repoRoot),
   );
   if (headTrunkFailure !== null) failures.push(headTrunkFailure);
 
