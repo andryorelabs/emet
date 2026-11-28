@@ -591,3 +591,85 @@ describe("preflight run --post-dispatch", () => {
     expect(fixture.errors.join("\n")).not.toContain("re-dispatch");
   });
 });
+
+describe("preflight run (spec branch Phase 5 records)", () => {
+  const fixture = useFixture();
+
+  function commitAdr(name: string): void {
+    mkdirSync(path.join(fixture.repo, "docs", "adr"), { recursive: true });
+    writeFileSync(path.join(fixture.repo, "docs", "adr", name), "adr");
+    runGit(fixture.repo, "add", "-A");
+    runGit(fixture.repo, "commit", "-q", "-m", name);
+  }
+
+  function useLandingUnit(unit: "spec" | "wave"): void {
+    fixture.writeConfig({ landing: { mode: "merge", unit } });
+    runGit(fixture.repo, "commit", "-q", "--allow-empty", "-am", "config");
+  }
+
+  test("accepts an ADR integrated by a no-ff merge on spec/42", async () => {
+    useLandingUnit("spec");
+    runGit(fixture.repo, "switch", "-q", "-c", "spec/42");
+    runGit(fixture.repo, "switch", "-q", "-c", "spec/42-w1");
+    commitAdr("0001-x.md");
+    runGit(fixture.repo, "switch", "-q", "spec/42");
+    runGit(fixture.repo, "merge", "-q", "--no-ff", "-m", "integrate", "spec/42-w1");
+    await run(["--run", "emet42w1135700"]);
+    expect(fixture.errors.join("\n")).not.toContain("Phase 5 records");
+  });
+
+  test("reports an ADR committed directly on spec/42", async () => {
+    useLandingUnit("spec");
+    runGit(fixture.repo, "switch", "-q", "-c", "spec/42");
+    commitAdr("0001-x.md");
+    await run(["--approval", "spec42"]);
+    expect(process.exitCode).toBe(1);
+    expect(fixture.errors.join("\n")).toContain(
+      "Phase 5 records were committed directly on spec/42: docs/adr/0001-x.md — land them on main and run `emet spec-branch sync --spec 42`.",
+    );
+  });
+
+  test("reports an untracked ADR on spec/42", async () => {
+    useLandingUnit("spec");
+    runGit(fixture.repo, "switch", "-q", "-c", "spec/42");
+    mkdirSync(path.join(fixture.repo, "docs", "adr"), { recursive: true });
+    writeFileSync(path.join(fixture.repo, "docs", "adr", "0002-y.md"), "adr");
+    await run(["--run", "emet42w1135700"]);
+    expect(process.exitCode).toBe(1);
+    expect(fixture.errors.join("\n")).toContain(
+      "Phase 5 records differ from spec/42: docs/adr/0002-y.md — commit them through a wave or discard them.",
+    );
+  });
+
+  test("keeps the trunk comparison under landing.unit wave", async () => {
+    useLandingUnit("wave");
+    runGit(fixture.repo, "switch", "-q", "-c", "spec/42");
+    commitAdr("0001-x.md");
+    await run(["--run", "emet42w1135700"]);
+    expect(process.exitCode).toBe(1);
+    expect(fixture.errors.join("\n")).toContain("Phase 5 records are not on main");
+  });
+
+  test("keeps the trunk comparison on a wave branch and without a run", async () => {
+    useLandingUnit("spec");
+    runGit(fixture.repo, "switch", "-q", "-c", "spec/42-w2");
+    commitAdr("0001-x.md");
+    await run(["--run", "emet42w2135700"]);
+    expect(fixture.errors.join("\n")).toContain("Phase 5 records are not on main");
+    fixture.errors.length = 0;
+    runGit(fixture.repo, "switch", "-q", "-c", "spec/42");
+    await run([]);
+    expect(fixture.errors.join("\n")).toContain("Phase 5 records are not on main");
+  });
+
+  test("names spec-branch sync when trunk moved past spec/42", async () => {
+    useLandingUnit("spec");
+    runGit(fixture.repo, "switch", "-q", "-c", "spec/42");
+    runGit(fixture.repo, "switch", "-q", "main");
+    runGit(fixture.repo, "commit", "-q", "--allow-empty", "-m", "trunk moves");
+    runGit(fixture.repo, "switch", "-q", "spec/42");
+    await run(["--run", "emet42w1135700"]);
+    expect(process.exitCode).toBe(1);
+    expect(fixture.errors.join("\n")).toContain("Fix: emet spec-branch sync --spec 42");
+  });
+});
