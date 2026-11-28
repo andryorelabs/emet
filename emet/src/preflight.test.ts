@@ -1267,3 +1267,69 @@ describe("worktreeDirectoryLabel (S5)", () => {
     expect(preflightOkSummary("claude", "a", "b", "c")).toContain(".claude/worktrees/ clean");
   });
 });
+
+function commitAdr(directory: string, name: string): void {
+  mkdirSync(path.join(directory, "docs/adr"), { recursive: true });
+  writeFileSync(path.join(directory, "docs/adr", name), "adr");
+  runGit(directory, "add", ".");
+  runGit(directory, "commit", "-q", "-m", name);
+}
+
+describe("checkPhaseFiveRecordsLanded on a spec branch", () => {
+  test("accepts an ADR that arrived through a no-ff integration merge", async () => {
+    const directory = repoWithTrunk();
+    runGit(directory, "switch", "-q", "-c", "spec/42");
+    runGit(directory, "switch", "-q", "-c", "spec/42-w1");
+    commitAdr(directory, "0001-x.md");
+    runGit(directory, "switch", "-q", "spec/42");
+    runGit(directory, "merge", "-q", "--no-ff", "-m", "integrate", "spec/42-w1");
+    expect(
+      await inside(directory, () => checkPhaseFiveRecordsLanded("main", directory, "spec/42")),
+    ).toEqual({ ok: true });
+  });
+
+  test("lists an ADR committed directly on the spec branch", async () => {
+    const directory = repoWithTrunk();
+    runGit(directory, "switch", "-q", "-c", "spec/42");
+    commitAdr(directory, "0001-x.md");
+    expect(
+      await inside(directory, () => checkPhaseFiveRecordsLanded("main", directory, "spec/42")),
+    ).toEqual({ ok: false, paths: ["docs/adr/0001-x.md"], reason: "committed-directly" });
+  });
+
+  test("lists a record deleted by a direct commit", async () => {
+    const directory = repoWithTrunk();
+    commitAdr(directory, "0001-x.md");
+    runGit(directory, "branch", "-f", "trunk-ref", "HEAD");
+    runGit(directory, "switch", "-q", "-c", "spec/42");
+    runGit(directory, "rm", "-q", "docs/adr/0001-x.md");
+    runGit(directory, "commit", "-q", "-m", "drop");
+    expect(
+      await inside(directory, () => checkPhaseFiveRecordsLanded("trunk-ref", directory, "spec/42")),
+    ).toEqual({ ok: false, paths: ["docs/adr/0001-x.md"], reason: "committed-directly" });
+  });
+
+  test("lists an untracked and a staged record as differing", async () => {
+    const directory = repoWithTrunk();
+    runGit(directory, "switch", "-q", "-c", "spec/42");
+    mkdirSync(path.join(directory, "docs/adr"), { recursive: true });
+    writeFileSync(path.join(directory, "docs/adr/0002-y.md"), "adr");
+    writeFileSync(path.join(directory, "GLOSSARY.md"), "terms");
+    runGit(directory, "add", "GLOSSARY.md");
+    expect(
+      await inside(directory, () => checkPhaseFiveRecordsLanded("main", directory, "spec/42")),
+    ).toEqual({ ok: false, paths: ["GLOSSARY.md", "docs/adr/0002-y.md"], reason: "differs" });
+  });
+
+  test("accepts an ADR carried by a trunk sync merge", async () => {
+    const directory = repoWithTrunk();
+    runGit(directory, "switch", "-q", "-c", "spec/42");
+    runGit(directory, "switch", "-q", "main");
+    commitAdr(directory, "0003-z.md");
+    runGit(directory, "switch", "-q", "spec/42");
+    runGit(directory, "merge", "-q", "--no-ff", "-m", "sync", "main");
+    expect(
+      await inside(directory, () => checkPhaseFiveRecordsLanded("main", directory, "spec/42")),
+    ).toEqual({ ok: true });
+  });
+});
