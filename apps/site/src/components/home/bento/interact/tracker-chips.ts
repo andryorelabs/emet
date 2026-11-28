@@ -26,7 +26,7 @@ function isKind(value: string | undefined): value is TrackerKind {
 
 function restartLoop(scene: HTMLElement): void {
   scene.dataset.restart = "";
-  void scene.offsetWidth;
+  scene.getBoundingClientRect();
   delete scene.dataset.restart;
 }
 

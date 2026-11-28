@@ -2,7 +2,7 @@
 # Build context is the repo root: docker build -f apps/site/Dockerfile .
 # .dockerignore keeps the context to the workspace manifests, apps/site and the
 # allowlisted docs; a new workspace needs its package.json copied below.
-FROM oven/bun:1.4.4-alpine@sha256:4cf82f5686b196504fe119db3fcd9185b191f82ece82c40680e597228ec6070a AS build
+FROM oven/bun:1.4.5-alpine@sha256:da816670775f4c2b4e990b6b1847cf5540dcdc721a42033dd331ce7a88ba6a3b AS build
 WORKDIR /repo
 
 COPY package.json bun.lock tsconfig.base.json ./
@@ -22,7 +22,7 @@ RUN bun run --cwd apps/site build
 RUN bun apps/site/src/security/render-security-headers.ts apps/site/dist \
   apps/site/docker/security-headers.conf /repo/security-headers.conf
 
-FROM nginx:1.31-alpine@sha256:713fc2ebfd92e8217db451477182ee91944b123d2b1ee9fd5a8c6e91ca6c3a11
+FROM nginx:1.31-alpine@sha256:fb4658584bd9a916ffb6f6e365f97c25cfdb2923801f551ea08356e695f14ff7
 RUN rm -f /etc/nginx/conf.d/default.conf
 COPY apps/site/docker/nginx.conf /etc/nginx/nginx.conf
 COPY --from=build /repo/security-headers.conf /etc/nginx/snippets/security-headers.conf
