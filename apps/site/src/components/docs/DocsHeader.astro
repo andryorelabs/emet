@@ -3,14 +3,53 @@
  * Docs header: the Website's own header in its docs variant, with the
  * Pagefind search field before the language pill.
  */
+import SidebarSublist from "@astrojs/starlight/components/SidebarSublist.astro";
+
 import { englishPathOf, resolveLocale } from "../../docs/route";
+import { localePath } from "../../i18n/locales";
 import { getStrings } from "../../i18n/ui";
+import { isExternalHref } from "../../lib/external-links";
+import { formatStarCount, getBuildStarCount } from "../site/github-stars";
+import { GITHUB_STARS_TOOLTIP, starsTooltip } from "../site/github-strings";
+import { MobileMenu } from "../site/MobileMenu.tsx";
 import SiteHeader from "../site/SiteHeader.astro";
 import DocsSearch from "./DocsSearch.astro";
 
-const { lang } = Astro.locals.starlightRoute;
+const { lang, sidebar } = Astro.locals.starlightRoute;
 const locale = resolveLocale(lang);
 const currentPath = englishPathOf(Astro.url.pathname, locale);
+const strings = getStrings(locale);
+const { nav } = strings;
+const count = await getBuildStarCount();
+const stars = {
+  count: count === null ? null : formatStarCount(count),
+  tooltip: count === null ? null : starsTooltip(locale, count),
+  template: GITHUB_STARS_TOOLTIP[locale],
+};
+const githubUrl = "https://github.com/andryorelabs/emet";
+const onWhatsNew = currentPath.startsWith("/docs/whats-new/");
+const menuLinks = [
+  {
+    href: localePath(locale, "/docs/"),
+    label: nav.docs,
+    current: currentPath.startsWith("/docs/") && !onWhatsNew,
+    external: false,
+  },
+  {
+    href: localePath(locale, "/docs/whats-new/"),
+    label: nav.whatsNew,
+    current: onWhatsNew,
+    external: false,
+  },
+  {
+    href: githubUrl,
+    label: nav.github,
+    current: false,
+    external: isExternalHref(githubUrl),
+    stars,
+  },
+];
+const labels = { menu: nav.menu, navigation: nav.label, newTab: strings.links.newTab };
 ---
 
 <div class="docs-header">
@@ -18,8 +57,24 @@ const currentPath = englishPathOf(Astro.url.pathname, locale);
     variant="docs"
     locale={locale}
     currentPath={currentPath}
-    strings={getStrings(locale).nav}
+    strings={nav}
   >
+    <div slot="menu" class="mobile-menu" data-mobile-menu data-docs-menu>
+      <MobileMenu client:interaction links={menuLinks} locale={locale} labels={labels}>
+        <div data-menu-sidebar>
+          <SidebarSublist sublist={sidebar} />
+        </div>
+      </MobileMenu>
+    </div>
     <DocsSearch slot="search" locale={locale} />
   </SiteHeader>
 </div>
+
+<script>
+  const footer = document.querySelector(".docs-site-footer");
+  if (footer && "IntersectionObserver" in window) {
+    new IntersectionObserver(([entry]) => {
+      document.documentElement.toggleAttribute("data-footer-reached", entry?.isIntersecting === true);
+    }).observe(footer);
+  }
+</script>

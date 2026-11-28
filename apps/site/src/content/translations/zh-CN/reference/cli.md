@@ -16,8 +16,8 @@ sourceHash: cde063f67e8e54d7
 在任意 git 仓库中：
 
 ```bash
-emet init          # autodetects package manager, trunk branch, tracker kind
-emet preflight      # confirms the repo is dispatch-ready
+emet init       # autodetects package manager, trunk branch, tracker kind
+emet preflight  # confirms the repo is dispatch-ready
 ```
 
 对于 `emet init` 无法自行推断的内容（共享测试数据库锁、模式归属等），它会在生成的 `docs/agents/*.md` 文件中留下 `TODO(emet):` 标记；请把这些内容补全。只要还有标记残留，`emet preflight` 就会拒绝派发。

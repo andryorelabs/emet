@@ -256,8 +256,10 @@ describe("layout helpers", () => {
   });
 
   test("cloudTransform drifts with a sine and stretches", () => {
-    expect(cloudTransform(0)).toBe("translateX(0.00px) scaleX(1.05)");
-    expect(cloudTransform(17500)).toBe("translateX(38.00px) scaleX(1.05)");
+    expect(cloudTransform(0, 1440)).toBe("translateX(0px) scaleX(1)");
+    expect(cloudTransform(1000, 1440)).toBe("translateX(3.36px) scaleX(1.025)");
+    expect(cloudTransform(17500, 1980)).toBe("translateX(38px) scaleX(1.05)");
+    expect(cloudTransform(17500, 440)).toBe("translateX(11.44px) scaleX(1.05)");
   });
 
   test("canvasSize rounds and never drops below two pixels", () => {
@@ -430,13 +432,15 @@ describe("paintingFx", () => {
     expect(host.dataset.fx).toBe("on");
     const [sky] = host.querySelectorAll("div");
     expect(sky?.hidden).toBe(false);
-    expect(sky?.style.getPropertyValue("transform")).toContain("scaleX(1.05)");
+    expect(sky?.style.getPropertyValue("transform")).toBe("translateX(0px) scaleX(1)");
     expect(sky?.style.getPropertyValue("mask-image")).toContain("linear-gradient");
     const canvases = [...host.querySelectorAll("canvas")];
     expect(canvases.map((canvas) => canvas.hidden)).toEqual([false, false]);
     expect(canvases[0]?.style.getPropertyValue("width")).not.toBe("");
     expect(names().filter((name) => name === "drawArrays")).toHaveLength(2);
     expect(frames).toHaveLength(1);
+    runFrame(4000);
+    expect(sky?.style.getPropertyValue("transform")).toContain("scaleX(1.05)");
   });
 
   test("keeps the loop going frame after frame", () => {

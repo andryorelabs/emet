@@ -14,6 +14,7 @@ let observerCallback: (entries: { isIntersecting: boolean }[]) => void = () => u
 let observerDisconnected = false;
 let calls: Call[] = [];
 let tabHidden = false;
+let qualities: (string | undefined)[] = [];
 
 function define(name: string, value: unknown): void {
   Object.defineProperty(globalThis, name, { value, configurable: true, writable: true });
@@ -38,8 +39,10 @@ function isContext(value: object): value is CanvasRenderingContext2D {
 function fakeContext(): CanvasRenderingContext2D {
   const context = {
     imageSmoothingEnabled: true,
+    imageSmoothingQuality: undefined as string | undefined,
     canvas: {},
     drawImage: (...args: unknown[]) => {
+      qualities.push(context.imageSmoothingQuality);
       calls.push({ method: "drawImage", args });
     },
   };
@@ -192,6 +195,35 @@ describe("initPixelReveal", () => {
     expect(calls).toHaveLength(1);
     expect(calls[0]?.args.slice(5)).toEqual([0, 0, 440, 550]);
     expect(frames.size).toBe(0);
+  });
+
+  test("draws the last frame with high smoothing quality", () => {
+    const canvas = fakeCanvas();
+    const { image } = fakeImage(true);
+    start(canvas.element, image, 1000);
+    observerCallback([{ isIntersecting: true }]);
+    qualities = [];
+    runFrame(performance.now() + 5000);
+    expect(qualities).toEqual(["high"]);
+  });
+
+  test("hides the canvas once its fade ends, or after a fallback delay", async () => {
+    const first = fakeCanvas();
+    const { image } = fakeImage(true);
+    start(first.element, image, 1000);
+    observerCallback([{ isIntersecting: true }]);
+    runFrame(performance.now() + 5000);
+    expect(first.state()).toBe("done");
+    expect(first.element.hidden).toBe(false);
+    first.element.dispatchEvent(new Event("transitionend"));
+    expect(first.element.hidden).toBe(true);
+    const second = fakeCanvas();
+    start(second.element, image, 1000);
+    observerCallback([{ isIntersecting: true }]);
+    runFrame(performance.now() + 5000);
+    expect(second.element.hidden).toBe(false);
+    await new Promise((resolve) => setTimeout(resolve, 350));
+    expect(second.element.hidden).toBe(true);
   });
 
   test("pauses off-screen and on a hidden tab and resumes afterwards", () => {

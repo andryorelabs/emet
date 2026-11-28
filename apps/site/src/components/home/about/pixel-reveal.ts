@@ -25,6 +25,8 @@ const CELLS_ACROSS = 22;
 const REVEAL_OVERSHOOT = 1.25;
 const MAX_PIXEL_RATIO = 2;
 const VISIBLE_THRESHOLD = 0.25;
+const FADE_OUT_MS = 200;
+const HIDE_FALLBACK_MS = FADE_OUT_MS + 100;
 
 /** The centred source window that covers a canvas of `cw` by `ch`, like `object-fit: cover`. */
 export function coverRect(iw: number, ih: number, cw: number, ch: number): SourceRect {
@@ -64,6 +66,7 @@ function drawMosaic(
 ): void {
   const source = coverRect(image.naturalWidth, image.naturalHeight, width, height);
   if (progress >= 1) {
+    context.imageSmoothingQuality = "high";
     context.drawImage(image, source.sx, source.sy, source.sw, source.sh, 0, 0, width, height);
     return;
   }
@@ -110,6 +113,13 @@ export function initPixelReveal(
   let lastTime = 0;
   let frame = 0;
   let thresholds: number[] = [];
+  let hideTimer: ReturnType<typeof setTimeout> | undefined;
+
+  function hideCanvas(): void {
+    clearTimeout(hideTimer);
+    canvas.removeEventListener("transitionend", hideCanvas);
+    canvas.hidden = true;
+  }
 
   function progress(): number {
     return Math.min(1, elapsed / options.durationMs);
@@ -136,6 +146,8 @@ export function initPixelReveal(
     paint();
     if (progress() >= 1) {
       finished = true;
+      canvas.addEventListener("transitionend", hideCanvas, { once: true });
+      hideTimer = setTimeout(hideCanvas, HIDE_FALLBACK_MS);
       canvas.dataset.state = "done";
       return;
     }
@@ -181,6 +193,8 @@ export function initPixelReveal(
   return {
     destroy() {
       observer.disconnect();
+      clearTimeout(hideTimer);
+      canvas.removeEventListener("transitionend", hideCanvas);
       document.removeEventListener("visibilitychange", sync);
       removeEventListener("resize", onResize);
       image.removeEventListener("load", onReady);
