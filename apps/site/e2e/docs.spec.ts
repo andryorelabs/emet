@@ -1,7 +1,6 @@
 import { expect, test, type Page } from "@playwright/test";
 
-test.afterEach(({ page }, testInfo) => {
-  void page;
+test.afterEach(({ page: _page }, testInfo) => {
   if (testInfo.status === testInfo.expectedStatus) return;
   for (const error of testInfo.errors) {
     process.stdout.write(
