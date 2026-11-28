@@ -89,7 +89,7 @@ describe("site footer styles", () => {
   test("sizes the docs wordmark by the content column so it never runs under the table of contents", () => {
     expect(rule(".docs-site-footer")).toContain("container-type: inline-size;");
     expect(rule(".docs-site-footer .footer-wordmark")).toContain(
-      "font-size: min(260px, calc(100cqi / 3.2));",
+      "font-size: min(120px, calc(100cqi / 3.2));",
     );
   });
 

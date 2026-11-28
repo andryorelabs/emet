@@ -261,6 +261,12 @@ site-search kbd {
   letter-spacing: -0.02em;
 }
 
+.sl-markdown-content h3:not(:where(.not-content *)) {
+  font-size: 21px;
+  font-weight: 500;
+  letter-spacing: -0.01em;
+}
+
 .sidebar-content a {
   border-radius: 8px;
   transition: background-color 160ms cubic-bezier(0.23, 1, 0.32, 1);
@@ -468,4 +474,50 @@ mobile-starlight-toc .caret {
 
 [data-page-actions] a[data-step] {
   color: var(--text);
+}
+
+.sl-menu-button {
+  display: none;
+}
+
+.docs-header .mobile-menu {
+  display: none;
+}
+
+@media (max-width: 72em) {
+  .docs-header .mobile-menu {
+    display: block;
+    flex: none;
+  }
+
+  .docs-header .site-header-end {
+    justify-content: flex-end;
+    padding-inline-end: 0;
+  }
+}
+
+.pagination-links a {
+  box-shadow: none;
+  border-radius: var(--radius-lg, 10px);
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--text);
+}
+
+@media (hover: hover) {
+  .pagination-links a:hover {
+    border-color: var(--border);
+    background: var(--surface);
+  }
+}
+
+.pagination-links .link-title {
+  font-size: 1rem;
+  font-weight: 500;
+}
+
+html[data-footer-reached] mobile-starlight-toc {
+  visibility: hidden;
+  opacity: 0;
+  pointer-events: none;
 }

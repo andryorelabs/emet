@@ -125,6 +125,29 @@ describe("PageActions", () => {
     unmount();
   });
 
+  test("keeps the page actions out of the search index", () => {
+    const { container, unmount } = renderIsland(
+      <PageActions markdownUrl={TWIN_URL} pageUrl={PAGE_URL} labels={labels} />,
+    );
+    expect(
+      container.querySelector("[data-page-actions]")?.hasAttribute("data-pagefind-ignore"),
+    ).toBe(true);
+    unmount();
+  });
+
+  test("gives enabled and disabled steps the same border classes", () => {
+    const { container, unmount } = renderIsland(
+      <PageActions markdownUrl={TWIN_URL} pageUrl={PAGE_URL} labels={labels} next={next} />,
+    );
+    const enabled = container.querySelector('[rel="next"]')?.className ?? "";
+    const disabled = container.querySelector('[aria-disabled="true"]')?.className ?? "";
+    for (const className of [enabled, disabled]) {
+      expect(className).toContain("border-border");
+      expect(className).toContain("dark:border-input");
+    }
+    unmount();
+  });
+
   test("marks a missing neighbour as a disabled link", () => {
     const { container, unmount } = renderIsland(
       <PageActions markdownUrl={TWIN_URL} pageUrl={PAGE_URL} labels={labels} />,
