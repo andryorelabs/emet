@@ -494,6 +494,24 @@ mobile-starlight-toc .caret {
     justify-content: flex-end;
     padding-inline-end: 0;
   }
+
+  .docs-header .site-header nav {
+    display: none;
+  }
+}
+
+@media (scripting: none) {
+  .sl-menu-button {
+    display: revert;
+  }
+
+  .docs-header .mobile-menu {
+    display: none;
+  }
+
+  .docs-header .site-header nav {
+    display: revert;
+  }
 }
 
 .pagination-links a {
