@@ -63,6 +63,7 @@ An index of every document in this repository. Terms follow [GLOSSARY.md](../GLO
 
 ## Specs
 
+- [`specs/dev-tooling.md`](specs/dev-tooling.md): the living spec of the dev tooling: toolchain pins matching the pin table, the pinned zizmor action, and major bumps fixed in code.
 - [`specs/promote-sync.md`](specs/promote-sync.md): the living spec of the promote sync: when the `main` to `develop` sync pull request opens, how it merges, why a skip is reported, and where the hold marker lives.
 - [`specs/standalone-install.md`](specs/standalone-install.md): the living spec of the standalone install: the embedded install tree, `emet self install`, self-update, uninstall and doctor checks.
 - [`specs/translations.md`](specs/translations.md): the living spec of the Website translations: every published page current in each locale, and code, paths, links and front matter keys preserved.
