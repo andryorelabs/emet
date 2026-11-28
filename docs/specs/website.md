@@ -390,3 +390,40 @@ The parity harness captures a footer section and clips the same inner box on bot
 
 - **WHEN** `bun run --cwd apps/site parity` runs on the built site
 - **THEN** it captures a footer pair for the prototype and the site
+
+### Requirement: The How it works painting shows the merge as light in the water
+
+Source: #1089 S1, #1089 S2, #1089 S3
+
+#### Scenario: The streams are drawn from the painting geometry
+
+- **WHEN** the home is built
+- **THEN** the overlay paths come from the painting stream points and carry no white diagram lines, pills or flow dots
+
+#### Scenario: The light follows the three stages
+
+- **WHEN** the runway moves from step 1 to step 3 on desktop
+- **THEN** the streams light up from source to waterfall, the river and bloom follow, and a spark loops along each stream
+
+### Requirement: The merge overlay uses outline chips and a solid green Merged badge
+
+Source: #1089 S4, #1089 S5
+
+#### Scenario: The tickets are marked by chips
+
+- **WHEN** the overlay shows the sample tickets
+- **THEN** each ticket is an outline chip with a source dot, inside the 360px crop of the painting, and colours do not follow the theme
+
+#### Scenario: The spec merges
+
+- **WHEN** the runway reaches the last step
+- **THEN** a solid dark green Merged badge with the localized label appears below the falls
+
+### Requirement: The merge overlay is static without motion or on small screens
+
+Source: #1089 S6
+
+#### Scenario: Reduced motion or a narrow viewport
+
+- **WHEN** reduced motion is set or the viewport is 1000px wide or less
+- **THEN** the overlay shows its final lit state with no transition or animation
