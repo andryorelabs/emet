@@ -49,7 +49,7 @@ for pair in es:es de:de fr:fr it:it ja:ja ko:ko pt-br:pt-BR ru:ru zh-cn:zh-CN; d
 done
 [ "$(status "$base/sitemap-index.xml")" = 404 ] || fail "Starlight's sitemap index is built"
 [ "$(curl -s "$base/docs/start/install/" | grep -o 'rel="sitemap"[^>]*' | wc -l)" = 1 ] || fail "the docs head does not name exactly one sitemap"
-curl -s "$base/docs/start/install/" | grep -q 'rel="sitemap"[^>]*href="/sitemap.xml"' || fail "the docs head does not name /sitemap.xml"
+grep -q 'rel="sitemap"[^>]*href="/sitemap.xml"' <<<"$(curl -s "$base/docs/start/install/")" || fail "the docs head does not name /sitemap.xml"
 [ "$(status "$base/es/404/")" = 200 ] || fail "/es/404/ is not 200"
 [ "$(header_of cache-control "$base/es/nope/")" = no-cache ] || fail "the locale 404 lacks no-cache"
 
@@ -114,7 +114,7 @@ fi
 stars_status="$(status "$base/api/github-stars")"
 if [ "$stars_status" = 200 ]; then
   [[ "$(header_of content-type "$base/api/github-stars")" == application/json* ]] || fail "/api/github-stars is not JSON"
-  curl -s "$base/api/github-stars" | grep -q '"stargazers_count"' || fail "/api/github-stars has no stargazers_count"
+  grep -q '"stargazers_count"' <<<"$(curl -s "$base/api/github-stars")" || fail "/api/github-stars has no stargazers_count"
 else
   echo "NOTE: /api/github-stars returned $stars_status (GitHub unreachable); skipped"
 fi

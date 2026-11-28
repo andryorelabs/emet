@@ -1,48 +1,18 @@
 import { describe, expect, it } from "bun:test";
 import { readdirSync, readFileSync } from "node:fs";
 
-const css = readFileSync(new URL("../../styles/home.css", import.meta.url), "utf8");
-const sceneDirectory = new URL("../../styles/bento/", import.meta.url);
-const sceneCss = readFileSync(new URL("scene.css", sceneDirectory), "utf8");
-const featuresSource = readFileSync(new URL("Features.astro", import.meta.url), "utf8");
-
-const motionGuard = "@media (scripting: enabled) and (prefers-reduced-motion: no-preference) {";
-
-/**
- * Returns the offsets of every `@keyframes` in `source` that sits outside the motion guard block.
- */
-function unguardedKeyframes(source: string): number[] {
-  const guardAt = source.indexOf(motionGuard);
-  let guardEnd = -1;
-  if (guardAt !== -1) {
-    let depth = 0;
-    for (let index = guardAt; index < source.length; index += 1) {
-      if (source[index] === "{") depth += 1;
-      if (source[index] === "}") {
-        depth -= 1;
-        if (depth === 0) {
-          guardEnd = index;
-          break;
-        }
-      }
-    }
-  }
-  const offsets: number[] = [];
-  for (const match of source.matchAll(/@keyframes/g)) {
-    const offset = match.index;
-    if (guardAt === -1 || guardEnd === -1 || offset < guardAt || offset > guardEnd) {
-      offsets.push(offset);
-    }
-  }
-  return offsets;
-}
+const homeDirectory = new URL("../../styles/home/", import.meta.url);
+const baseCss = readFileSync(new URL("base.css", homeDirectory), "utf8");
+const css = readdirSync(homeDirectory)
+  .map((file) => readFileSync(new URL(file, homeDirectory), "utf8"))
+  .join("\n");
 
 /**
  * Returns the declaration block of the first rule whose selector is exactly `selector`.
  */
 function ruleBody(selector: string): string {
   const escaped = selector.replaceAll(/[.*+?^${}()|[\]\\>]/g, String.raw`\$&`);
-  const match = new RegExp(`(?:^|\\n)${escaped} \\{([^}]*)\\}`).exec(css);
+  const match = new RegExp(`(?:^|\\n)${escaped} \\{([^}]*)\\}`).exec(baseCss);
   if (match?.[1] === undefined) throw new Error(`rule not found: ${selector}`);
   return match[1];
 }
@@ -61,11 +31,30 @@ describe("Home section spacing", () => {
     expect(body).not.toContain("padding-bottom");
   });
 
-  it("sets no block margin on the closing panel", () => {
-    const body = ruleBody(".closing");
-    expect(body).not.toMatch(/(^|\s)margin\s*:/);
-    expect(body).not.toMatch(/margin-(block|top|bottom)/);
-    expect(body).toContain("margin-inline: var(--edge)");
+  it("imports every section stylesheet from the index", () => {
+    const index = readFileSync(new URL("../../styles/home.css", import.meta.url), "utf8");
+    for (const file of readdirSync(homeDirectory)) {
+      expect(index).toContain(`@import "./home/${file}";`);
+    }
+  });
+});
+
+describe("Home stylesheet index order", () => {
+  it("imports the section stylesheets in cascade order", () => {
+    const index = readFileSync(new URL("../../styles/home.css", import.meta.url), "utf8");
+    const imported = [...index.matchAll(/@import "\.\/home\/([a-z]+)\.css";/g)].map(
+      (match) => match[1],
+    );
+    expect(imported).toEqual([
+      "base",
+      "hero",
+      "how",
+      "features",
+      "about",
+      "stats",
+      "faq",
+      "closing",
+    ]);
   });
 });
 
@@ -73,54 +62,38 @@ describe("Home layout tokens", () => {
   it("defines the container, the axis and the section gap on :root", () => {
     const body = ruleBody(":root");
     expect(body).toContain("--container: 1280px");
-    expect(body).toContain("--axis: 160px");
+    expect(body).toContain("--axis: 16px");
     expect(body).toContain("--section-gap: 120px");
     expect(body).toContain("--edge: max(var(--gutter), (100% - var(--container)) / 2)");
     expect(css).not.toContain("--c4");
   });
 });
 
-describe("Home hero", () => {
-  it("sets the sentence at 20px and weight 500 over a token-driven scrim", () => {
-    const sentence = ruleBody(".hero-sentence");
-    expect(sentence).toContain("font-size: 20px");
-    expect(sentence).toContain("font-weight: 500");
-    expect(ruleBody(".hero-copy::before")).toContain(
-      "color-mix(in oklch, var(--bg) 62%, transparent)",
-    );
-  });
-});
-
-describe("Features bento", () => {
-  it("marks each bento card as a card shell", () => {
-    expect(featuresSource).toContain('data-slot="card"');
+describe("Home typography and width tokens", () => {
+  it("defines the prototype heading clamps and weights on :root", () => {
+    const body = ruleBody(":root");
+    expect(body).toContain("--h2-size: clamp(40px, 5.4vw, 76px)");
+    expect(body).toContain("--h2-weight: 600");
+    expect(body).toContain("--h2-tracking: -0.04em");
+    expect(body).toContain("--hero-size: clamp(64px, 9.3vw, 168px)");
+    expect(body).toContain("--hero-weight: 700");
+    expect(body).toContain("--hero-tracking: -0.05em");
+    expect(body).toContain("--closing-size: clamp(48px, 8vw, 120px)");
   });
 
-  it("falls to one column under 760px", () => {
-    expect(css).toMatch(
-      /@media \(max-width: 760px\) \{\s*\.bento \{\s*grid-template-columns: minmax\(0, 1fr\);/,
-    );
+  it("sets section headings from the tokens", () => {
+    const body = ruleBody("main h2");
+    expect(body).toContain("font-size: var(--h2-size)");
+    expect(body).toContain("font-weight: var(--h2-weight)");
+    expect(body).toContain("letter-spacing: var(--h2-tracking)");
   });
 
-  it("pauses every scene that is not playing, pseudo-elements included", () => {
-    expect(sceneCss).toContain(".scene:not([data-playing]) *::before");
-    expect(sceneCss).toContain(".scene:not([data-playing]) *::after");
-    expect(sceneCss).toContain("animation-play-state: paused;");
-    expect(sceneCss).toContain("--scene-cycle: 7s");
-    expect(css).not.toContain(".bento-card:not(.is-in)");
-  });
-
-  it("keeps every keyframe inside the motion guard", () => {
-    for (const file of readdirSync(sceneDirectory)) {
-      const source = readFileSync(new URL(file, sceneDirectory), "utf8");
-      expect(unguardedKeyframes(source)).toEqual([]);
-    }
-  });
-
-  it("flags a keyframe written outside the motion guard", () => {
-    const guarded = `${motionGuard}\n  @keyframes a {\n    to { opacity: 1; }\n  }\n}\n`;
-    expect(unguardedKeyframes(guarded)).toEqual([]);
-    expect(unguardedKeyframes(`${guarded}@keyframes b { to { opacity: 1; } }`)).toHaveLength(1);
-    expect(unguardedKeyframes("@keyframes c { to { opacity: 1; } }")).toHaveLength(1);
+  it("exposes the shared content width class and inset token", () => {
+    expect(ruleBody(":root")).toContain("--content-inset: calc(var(--edge) + var(--axis))");
+    const body = ruleBody(".home-inner");
+    expect(body).toContain("max-width: var(--container)");
+    expect(body).toContain("padding-inline: var(--axis)");
+    expect(ruleBody(".heading-hero")).toContain("var(--hero-size)");
+    expect(ruleBody(".heading-closing")).toContain("var(--closing-size)");
   });
 });

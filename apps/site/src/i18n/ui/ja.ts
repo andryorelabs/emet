@@ -31,7 +31,7 @@ export const ja = {
     lineOne: "仕様からマージへ、",
     lineTwo: "承認は一度だけ。",
     sentence:
-      "Claude Code と Codex のプラグイン。アイデアからマージ済みの変更まで、承認は一度だけ。",
+      "Claude Code と Codex のワークフロー。アイデアからマージ済みの変更まで、承認は一度だけ。",
     install: "emet をインストール",
     readDocs: "ドキュメントを読む",
     alt: "三本の小川が一つの川に合流する絵の谷。段々畑と、穏やかな空の下の草の丘に立つ小さな粘土のゴーレム。",
@@ -49,10 +49,13 @@ export const ja = {
     merged: "マージ済み",
     otherInstall: "ほかのインストール方法",
     wave: "ウェーブ {n}",
+    waveLine: "ウェーブ {n}",
     caption:
       "各ウェーブは 1 つのスペックブランチに合流します。スペックは 1 件のプルリクエストとして着地します。",
     prTitle: "スペック 41: 設定のダークモード",
     checks: "チェック成功",
+    open: "オープン",
+    closes: "クローズ",
   },
   showcase: {
     heading: "スペックはマージされる",
@@ -61,9 +64,18 @@ export const ja = {
       "スペック 41 レビュー済み。CI 成功。1 件のプルリクエストとしてマージ済み、チケット 4 件クローズ。",
     statusHeld: "スペック 41 保留: チケット 1 件にフラグ。何もマージされていません。",
     flag: "チケット #44 にフラグを立てる",
+    laneReview: "レビュー",
+    laneHeld: "保留",
   },
   features: {
     heading: "実行が守るもの",
+    scenes: {
+      approve: "承認",
+      approveName: "承認: 長押し",
+      approved: "承認済み",
+      gateName: "レビューゲート: コメント1件、解決済み",
+      gateTip: "ウェーブ2: コメント1件、解決済み",
+    },
     notes: [
       { title: "承認は一度だけ", line: "仕様とチケットのレビューは一度で済みます。" },
       { title: "ウェーブごとのレビュー", line: "レビュアーがすべてのウェーブを確認します。" },
@@ -82,26 +94,11 @@ export const ja = {
       },
     ],
     extra: [
-      {
-        title: "小さな変更のための高速モード",
-        line: "フラグ 1 つでインタビューを 1 回にまとめ、チケット 1 件、レビュー 1 回、着地 1 回で実行します。",
-      },
-      {
-        title: "うまくいったことを覚えている",
-        line: "各実行の教訓が保存され、次の実行で呼び出されます。",
-      },
-      {
-        title: "リスクの高い変更には 2 人のレビュアー",
-        line: "高リスクの作業は、着地の前に 2 人目のレビュアーが確認します。",
-      },
-      {
-        title: "必要なときに知らせる",
-        line: "実行が承認待ちになったり止まったりすると通知します。",
-      },
-      {
-        title: "きれいにインストール、きれいに削除",
-        line: "emet が入れたものをすべて削除し、あなたが編集したファイルは残します。",
-      },
+      { title: "小さな変更のための高速モード", docs: "/docs/reference/cli/" },
+      { title: "うまくいったことを覚えている", docs: "/docs/concepts/memory/" },
+      { title: "リスクの高い変更には 2 人のレビュアー", docs: "/docs/concepts/review-and-gates/" },
+      { title: "必要なときに知らせる", docs: "/docs/how-to/check-a-fleet/" },
+      { title: "きれいにインストール、きれいに削除", docs: "/docs/start/install/" },
     ],
   },
   stats: {
@@ -171,11 +168,32 @@ export const ja = {
   },
   closing: {
     heading: "まず一つのリポジトリで",
-    action: "emet をインストール",
     alt: "低い朝霧に包まれた谷。淡い太陽とパステルの空。",
   },
+  companion: {
+    label: "emet のゴーレムコンパニオン、押すとメニューが開きます",
+    menu: "emet に質問",
+    sleep: "休憩中。スクロールすると起きます。",
+    work: "ランプ点灯。仕様を読んでいます。",
+    wait: "保留中。何もマージされません。",
+    done: "完了。承認は一度で、マージ済みです。",
+    questions: [
+      {
+        question: "emet とは?",
+        answer:
+          "Claude Code と Codex のためのワークフローです。アイデアからマージまで、承認は一度だけです。",
+      },
+      {
+        question: "インストール方法は?",
+        answer: "curl -fsSL https://emet.andryore.dev/install.sh | sh",
+      },
+      { question: "無料ですか?", answer: "はい。emet は MIT ライセンスです。" },
+      { question: "ドキュメントはどこ?", answer: "ワンクリックで開けます。" },
+    ],
+    docs: "ドキュメントを開く",
+  },
   footer: {
-    description: "Claude Code と Codex のプラグイン。",
+    description: "Claude Code と Codex のワークフロー。",
     notice: "Anthropic または OpenAI とは提携しておらず、その承認も受けていません",
     docs: "ドキュメント",
     whatsNew: "新着情報",

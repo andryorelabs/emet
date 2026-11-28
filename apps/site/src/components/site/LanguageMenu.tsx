@@ -40,6 +40,7 @@ export function LanguageMenu({ locale, currentPath, labels }: LanguageMenuProps)
 
   return (
     <DropdownMenu
+      modal={false}
       open={open}
       onOpenChange={(next) => {
         if (next && triggerRef.current) announceHeaderMenuOpen(menuId, triggerRef.current);

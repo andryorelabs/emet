@@ -16,8 +16,8 @@ Drei Slash-Befehle umhüllen die CLI innerhalb von Claude Code: `/emet:run` (die
 In einem beliebigen Git-Repo:
 
 ```bash
-emet init          # autodetects package manager, trunk branch, tracker kind
-emet preflight      # confirms the repo is dispatch-ready
+emet init       # autodetects package manager, trunk branch, tracker kind
+emet preflight  # confirms the repo is dispatch-ready
 ```
 
 `emet init` hinterlässt in den erzeugten `docs/agents/*.md`-Dateien eine `TODO(emet):`-Markierung für alles, was es nicht selbst ableiten kann (eine gemeinsame Sperre der Testdatenbank, die Schema-Zuständigkeit und so weiter). Diese ausfüllen; `emet preflight` verweigert den Dispatch, solange eine übrig ist.

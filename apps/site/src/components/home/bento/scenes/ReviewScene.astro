@@ -1,19 +1,37 @@
 ---
 /**
- * Review card picture: both waves reviewed and checked. The markup is the
- * static final frame; the diff lines and scan line are hidden at rest and only
- * show during the loop in `review.css`. Decorative and `aria-hidden`.
+ * Review card picture: three lanes of work meet a review gate and reach the
+ * merge node, above both waves reviewed and checked. The markup is the static
+ * final frame; the diff lines and scan line are hidden at rest and only show
+ * during the loop in `review.css`. The gate is a real button with a tooltip
+ * that script wires, `inert` until then; the rest is decorative and
+ * `aria-hidden`.
  */
 // oxlint-disable-next-line import/no-unassigned-import -- Astro bundles a stylesheet imported for its side effect
 import "../../../../styles/bento/scene.css";
 // oxlint-disable-next-line import/no-unassigned-import -- Astro bundles a stylesheet imported for its side effect
 import "../../../../styles/bento/review.css";
+import type { SceneStrings } from "../interact/labels";
 
 const waves = ["wave 1", "wave 2"];
+interface Props {
+  labels: SceneStrings;
+}
+
+const { labels } = Astro.props;
 ---
 
-<div class="scene scene-review bento-visual" data-scene aria-hidden="true">
-  <ul class="review-waves">
+<div class="scene scene-review bento-visual" data-scene data-interact="review">
+  <div class="review-lanes">
+    <span class="review-lane" aria-hidden="true"></span>
+    <span class="review-lane" aria-hidden="true"></span>
+    <span class="review-lane" aria-hidden="true"></span>
+    <button type="button" class="review-gate" aria-label={labels.gateName} inert>
+      <span class="review-tip" role="tooltip">{labels.gateTip}</span>
+    </button>
+    <span class="review-merge" aria-hidden="true"></span>
+  </div>
+  <ul class="review-waves" aria-hidden="true">
     {
       waves.map((wave, index) => (
         <li>

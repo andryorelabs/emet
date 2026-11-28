@@ -1,0 +1,351 @@
+/**
+ * Home page how it works: pinned runway, timeline steps, stage painting, output card and pull request card.
+ */
+
+.how {
+  position: relative;
+  padding-inline: calc(var(--edge) + var(--axis)) var(--edge);
+}
+
+.how-stick {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 40px;
+  align-items: start;
+}
+
+.how-column {
+  display: flex;
+  flex-direction: column;
+  gap: 28px;
+  min-width: 0;
+}
+
+.how-painting {
+  position: relative;
+  min-width: 0;
+  margin: 0;
+  aspect-ratio: 16 / 10;
+  border-radius: var(--radius-panel);
+  overflow: clip;
+}
+
+.how-painting picture,
+.how-painting img {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.how-painting img {
+  object-fit: cover;
+  object-position: 50% 50%;
+}
+
+.how-dither {
+  display: none;
+}
+
+.how-painting .painting-streams {
+  position: absolute;
+  inset: 0;
+}
+
+.how[data-pinned] {
+  height: 420vh;
+  padding-inline: 0;
+}
+
+.how[data-pinned] .how-stick {
+  position: sticky;
+  top: 0;
+  height: 100svh;
+  grid-template-columns: minmax(0, 560px) minmax(0, 1fr);
+  gap: 72px;
+  align-items: safe center;
+  padding: clamp(16px, 7svh, 72px) max(16px, env(safe-area-inset-right, 0px))
+    clamp(12px, 3svh, 24px) calc(max(16px, env(safe-area-inset-left, 0px)) + 24px);
+}
+
+.how[data-pinned] .how-stick h2 {
+  font-size: min(var(--h2-size), 8svh);
+}
+
+.how[data-pinned] .how-painting {
+  height: min(78svh, 760px);
+  aspect-ratio: auto;
+}
+
+.how[data-pinned] .how-dither {
+  position: absolute;
+  inset: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.how-painting[data-fx="on"] .how-dither {
+  display: none;
+}
+
+.step {
+  position: relative;
+  padding-left: 44px;
+}
+
+.step::before {
+  content: "";
+  position: absolute;
+  left: 8px;
+  top: 28px;
+  bottom: -20px;
+  width: 2px;
+  background: var(--border);
+}
+
+.step:last-child::before {
+  display: none;
+}
+
+.step-dot {
+  position: absolute;
+  left: 0;
+  top: 4px;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  border: 3px solid var(--bg);
+  background: var(--moss);
+}
+
+.step:last-child .step-dot {
+  background: var(--lamp);
+}
+
+.step-body {
+  display: grid;
+  grid-template-rows: 1fr;
+}
+
+.step-inner {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  min-width: 0;
+  min-height: 0;
+  padding-top: 14px;
+}
+
+.how-term {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.how-term-icon {
+  flex: none;
+}
+
+.how[data-pinned] .step[data-step-state="idle"] h3,
+.how[data-pinned] .step[data-step-state="done"] h3 {
+  color: var(--text-muted);
+}
+
+.how[data-pinned] .step[data-step-state="idle"]::before,
+.how[data-pinned] .step[data-step-state="idle"] .step-dot {
+  opacity: 0.38;
+}
+
+.how[data-pinned] .step[data-step-state="idle"] .step-dot {
+  background: var(--border);
+}
+
+.how[data-pinned] .step[data-step-state="on"]:last-child .step-dot {
+  box-shadow: 0 0 0 6px color-mix(in oklab, var(--lamp) 30%, transparent);
+}
+
+.how[data-pinned] .step[data-step-state="idle"] .step-body {
+  grid-template-rows: 0fr;
+}
+
+.how[data-pinned] .step[data-step-state="idle"] .step-inner {
+  overflow: hidden;
+  padding-top: 0;
+}
+
+.how[data-pinned] .step[data-step-state="done"] .step-inner {
+  padding-top: 12px;
+}
+
+.how[data-pinned] .step[data-step-state="done"] .step-inner > :not(.snippet:first-of-type) {
+  display: none;
+}
+
+.how[data-pinned] .step[data-step-state="done"] .snippet {
+  height: 42px;
+  overflow: hidden;
+}
+
+.how[data-pinned] .step[data-step-state="done"] .snippet [data-home-code] {
+  height: 42px;
+  overflow: hidden;
+}
+
+.how[data-pinned] .step[data-step-state="done"] .snippet [data-slot="tabs-list"] {
+  display: none;
+}
+
+.how[data-pinned] .step[data-step-state="done"] .snippet pre {
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .how[data-pinned] .step h3,
+  .how[data-pinned] .step::before,
+  .how[data-pinned] .step-dot {
+    transition:
+      color 500ms var(--ease-out),
+      opacity 500ms var(--ease-out);
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .how[data-pinned] .step-body {
+    transition: grid-template-rows 400ms var(--ease-out);
+  }
+}
+
+.how h2 {
+  letter-spacing: -0.03em;
+}
+
+.exchange {
+  min-width: 0;
+}
+
+.exchange h3 {
+  margin: 0;
+  font-size: 22px;
+  font-weight: 400;
+}
+
+.fragment {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-panel);
+  background: var(--surface);
+  overflow: clip;
+  min-width: 0;
+}
+
+.fragment pre {
+  margin: 0;
+  padding: 16px 20px;
+  border-radius: 0;
+  background: transparent;
+  font-size: 14px;
+  line-height: 1.55;
+}
+
+.step-inner > .fragment {
+  background: var(--bg);
+}
+
+.snippet {
+  min-width: 0;
+}
+
+.snippet pre {
+  overflow-wrap: anywhere;
+}
+
+.io {
+  margin: 0 0 -8px 2px;
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  color: light-dark(var(--text-muted), color-mix(in oklab, var(--text-muted) 75%, transparent));
+}
+
+.fragment.banner {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  padding-left: 24px;
+  border-color: transparent;
+  background: var(--surface);
+}
+
+.banner pre {
+  flex: 1;
+  min-width: 0;
+  padding-left: 0;
+  overflow-x: visible;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.mascot {
+  flex: none;
+  display: block;
+  max-width: 96px;
+  height: auto;
+}
+
+.mascot-frame {
+  display: none;
+}
+
+.mascot-frame.is-on {
+  display: inline;
+}
+
+@media (max-width: 640px) {
+  .fragment.banner {
+    gap: 14px;
+    padding-left: 16px;
+  }
+
+  .mascot {
+    max-width: 64px;
+  }
+}
+
+@media (max-width: 1000px) {
+  .how:not([data-pinned]) {
+    padding-inline: var(--gutter);
+  }
+}
+
+@media (max-width: 600px) {
+  .how:not([data-pinned]) {
+    padding-top: 80px;
+  }
+}
+
+.how[data-pinned] .io {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.how[data-pinned] .step-inner {
+  gap: 12px;
+}
+
+@media (max-width: 900px) {
+  .how:not([data-pinned]) {
+    padding-inline: max(16px, env(safe-area-inset-left, 0px))
+      max(16px, env(safe-area-inset-right, 0px));
+    padding-left: calc(max(16px, env(safe-area-inset-left, 0px)) + 40px);
+  }
+
+  .how h2 {
+    font-size: clamp(34px, 10vw, 48px);
+  }
+}

@@ -180,7 +180,10 @@ function StepLink({
   label: string;
 }): ReactElement {
   const Icon = direction === "prev" ? ChevronLeftIcon : ChevronRightIcon;
-  const className = buttonVariants({ variant: "outline", size: "icon-lg" });
+  const className = cn(
+    buttonVariants({ variant: "outline", size: "icon-lg" }),
+    "border-border dark:border-input",
+  );
   if (link === undefined) {
     return (
       <span
@@ -264,7 +267,11 @@ export function PageActions({
   const feedback = state === "copied" ? labels.copied : state === "failed" ? labels.copyFailed : "";
 
   return (
-    <div className="mt-3 mb-1 flex flex-wrap items-center gap-2" data-page-actions="">
+    <div
+      className="mt-3 mb-1 flex flex-wrap items-center gap-2"
+      data-page-actions=""
+      data-pagefind-ignore=""
+    >
       <ButtonGroup>
         <Button
           variant="outline"
@@ -278,7 +285,7 @@ export function PageActions({
           <CopyIcon aria-hidden="true" />
           <span>{feedback === "" ? labels.copyPage : feedback}</span>
         </Button>
-        <DropdownMenu>
+        <DropdownMenu modal={false}>
           <DropdownMenuTrigger
             render={<Button variant="outline" size="icon-lg" aria-label={labels.moreActions} />}
           >

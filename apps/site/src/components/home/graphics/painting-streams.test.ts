@@ -13,6 +13,9 @@ interface Entry {
 
 let observed: Element[] = [];
 let callback: ((entries: Entry[]) => void) | undefined;
+let pauseCallback: ((entries: Entry[]) => void) | undefined;
+let constructed = 0;
+let pauseTargets: Element[] = [];
 
 function define(name: string, value: unknown): void {
   Object.defineProperty(globalThis, name, { value, configurable: true, writable: true });
@@ -20,10 +23,13 @@ function define(name: string, value: unknown): void {
 
 class RecordingObserver {
   constructor(handler: (entries: Entry[]) => void) {
-    callback = handler;
+    constructed += 1;
+    if (constructed === 1) pauseCallback = handler;
+    else callback = handler;
   }
   observe(target: Element): void {
-    observed.push(target);
+    if (constructed > 1) observed.push(target);
+    else pauseTargets.push(target);
   }
   readonly unobserved: Element[] = [];
   disconnected = false;
@@ -88,6 +94,9 @@ describe("initPaintingStreams", () => {
   beforeEach(() => {
     observed = [];
     callback = undefined;
+    pauseCallback = undefined;
+    pauseTargets = [];
+    constructed = 0;
     document.body.innerHTML = MARKUP;
   });
 
@@ -122,5 +131,38 @@ describe("initPaintingStreams", () => {
     initPaintingStreams(document);
     expect(observed).toHaveLength(0);
     expect(overlay().dataset.stage).toBeUndefined();
+  });
+
+  test("leaves an overlay inside a pinned runway to the pin", () => {
+    document.body.innerHTML = `<section data-pinned="true">${MARKUP}</section>`;
+    install({ reducedMotion: false, wide: true });
+    initPaintingStreams(document);
+    expect(observed).toHaveLength(0);
+    expect(overlay().dataset.stage).toBeUndefined();
+  });
+
+  test("pauses an overlay while it is off-screen and resumes it in view, pinned or not", () => {
+    document.body.innerHTML = `<section data-pinned="true">${MARKUP}</section>`;
+    install({ reducedMotion: false, wide: true });
+    initPaintingStreams(document);
+    expect(pauseTargets).toEqual([overlay()]);
+    expect(overlay().dataset.paused).toBe("true");
+    pauseCallback?.([{ target: overlay(), intersectionRatio: 1, isIntersecting: true }]);
+    expect(overlay().dataset.paused).toBeUndefined();
+    pauseCallback?.([{ target: overlay(), intersectionRatio: 0, isIntersecting: false }]);
+    expect(overlay().dataset.paused).toBe("true");
+  });
+
+  test("pauses a visible overlay on a hidden tab", () => {
+    install({ reducedMotion: false, wide: true });
+    initPaintingStreams(document);
+    pauseCallback?.([{ target: overlay(), intersectionRatio: 1, isIntersecting: true }]);
+    expect(overlay().dataset.paused).toBeUndefined();
+    Object.defineProperty(document, "hidden", { value: true, configurable: true });
+    document.dispatchEvent(new Event("visibilitychange"));
+    expect(overlay().dataset.paused).toBe("true");
+    Object.defineProperty(document, "hidden", { value: false, configurable: true });
+    document.dispatchEvent(new Event("visibilitychange"));
+    expect(overlay().dataset.paused).toBeUndefined();
   });
 });

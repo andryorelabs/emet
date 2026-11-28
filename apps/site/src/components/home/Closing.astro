@@ -1,23 +1,39 @@
 ---
 /**
- * Closing panel: the morning-mist painting with the heading and one action
- * centred over its pale top.
+ * Closing panel: the morning-mist painting with the heading
+ * and an install command box with a copy button, left-aligned over its pale top.
  */
 import { Picture } from "astro:assets";
 
 import bookendImage from "../../assets/bookend.webp";
+import { PAGE_ACTIONS_STRINGS } from "../../docs/page-actions-strings";
+import { SEARCH_STRINGS } from "../../docs/search-strings";
+import type { Locale } from "../../i18n/locales";
+import { DEFAULT_LOCALE, LOCALES, localeSegment } from "../../i18n/locales";
 import type { UiStrings } from "../../i18n/ui/en";
+import { HomeCodeBlock } from "../code/HomeCodeBlock";
+import { INSTALL_COMMAND } from "./closing/copy";
 import Valley from "./graphics/Valley.astro";
 
 interface Props {
   strings: UiStrings;
+  locale?: Locale;
 }
 
-const { strings } = Astro.props;
+const { strings, locale: localeProp } = Astro.props;
 const { closing } = strings;
+const locale =
+  localeProp ??
+  LOCALES.find(
+    (candidate) =>
+      candidate !== DEFAULT_LOCALE &&
+      Astro.url.pathname.startsWith(`/${localeSegment(candidate)}/`),
+  ) ??
+  DEFAULT_LOCALE;
+const copyStrings = { copy: SEARCH_STRINGS[locale].copy, copied: PAGE_ACTIONS_STRINGS[locale].copied };
 ---
 
-<section class="closing" data-drift aria-labelledby="closing-title">
+<section class="closing" aria-labelledby="closing-title">
   <Picture
     class="closing-picture"
     src={bookendImage}
@@ -31,9 +47,26 @@ const { closing } = strings;
   />
   <Valley variant="closing" />
   <div class="closing-copy">
-    <h2 id="closing-title" data-reveal="heading">
+    <h2 id="closing-title" class="heading-closing" data-reveal="heading">
       <span class="reveal-line">{closing.heading}</span>
     </h2>
-    <a class="button" href="#install">{closing.action}</a>
+    <div class="closing-actions">
+      <div class="closing-command">
+        <HomeCodeBlock client:idle code={INSTALL_COMMAND} lang="bash" prompt strings={copyStrings} />
+      </div>
+    </div>
   </div>
 </section>
+
+<script>
+  import { initClosingFx } from "./closing/fx";
+
+  const panel = document.querySelector<HTMLElement>(".closing");
+  const command = panel?.querySelector<HTMLElement>(".closing-command");
+  if (panel && command) {
+    const fx = initClosingFx(panel, command);
+    panel.addEventListener("click", (event) => {
+      if (event.target instanceof Element && event.target.closest("[data-home-code-copy]")) fx.blink();
+    });
+  }
+</script>

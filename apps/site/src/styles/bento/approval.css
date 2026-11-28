@@ -45,15 +45,92 @@
 }
 
 .approval-button {
-  padding: 4px 14px;
+  position: relative;
+  overflow: hidden;
+  min-height: 44px;
+  padding: 0 22px;
   border: 1px solid var(--border);
   border-radius: 6px;
+  background: transparent;
   color: var(--text);
+  font: inherit;
   font-weight: 600;
+  cursor: pointer;
+  opacity: 0;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+  transition: color 200ms;
+}
+
+.approval-button::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: var(--moss);
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: transform 150ms;
+}
+
+.approval-button > span {
+  position: relative;
+}
+
+.approval-button:focus-visible {
+  outline: 2px solid var(--moss);
+  outline-offset: 2px;
+}
+
+.approval-button[data-holding] {
+  color: var(--bg);
+}
+
+.approval-button[data-holding]::before {
+  transform: scaleX(1);
+  transition: transform 900ms linear;
+}
+
+.approval-status {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.scene-approval[data-manual] .approval-button {
+  opacity: 1;
+}
+
+.scene-approval[data-manual]:not([data-done]) .approval-stamp {
   opacity: 0;
 }
 
+.scene-approval[data-manual]:not([data-done]) .approval-tickets li::before {
+  opacity: 0.2;
+  transform: scale(0.8);
+}
+
+.scene-approval[data-manual] .approval-skeleton,
+.scene-approval[data-manual] .approval-cursor {
+  opacity: 0;
+}
+
+.scene-approval[data-done] .approval-button {
+  opacity: 0.25;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .approval-button,
+  .approval-button::before {
+    transition: none;
+  }
+}
+
 .approval-cursor {
+  pointer-events: none;
   position: absolute;
   top: 50%;
   left: 50%;
@@ -64,6 +141,7 @@
 }
 
 .approval-stamp {
+  pointer-events: none;
   padding: 4px 14px;
   border: 2px solid var(--moss);
   border-radius: 6px;
@@ -143,6 +221,27 @@
 
   .scene-approval .approval-stamp {
     animation: approval-stamp-drop var(--approval-run);
+  }
+
+  .scene-approval[data-manual],
+  .scene-approval[data-manual] *,
+  .scene-approval[data-manual] *::before {
+    animation-name: none !important;
+  }
+
+  .scene-approval[data-manual] .approval-stamp[data-pop] {
+    animation: approval-pop 360ms var(--ease-out) both !important;
+  }
+
+  @keyframes approval-pop {
+    from {
+      opacity: 0;
+      transform: rotate(-6deg) scale(1.7);
+    }
+    to {
+      opacity: 1;
+      transform: rotate(-6deg) scale(1);
+    }
   }
 
   @keyframes approval-fade {

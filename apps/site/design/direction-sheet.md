@@ -3,7 +3,7 @@
 # DIRECTION SHEET — The place carries it
 
 seed 341960445 · drawn 2026-11-06 · sector dev-tool · tone quiet
-Brief: emet: a plugin for Claude Code that takes a feature from idea to merged change on one approval; parallel workers in isolated worktrees, a review per wave, nothing merges when flagged. Named for the golem word emet (truth). The mascot is a gentle clay-and-moss golem in an overgrown, solarpunk world.
+Brief: emet: a workflow for Claude Code that takes a feature from idea to merged change on one approval; parallel workers in isolated worktrees, a review per wave, nothing merges when flagged. Named for the golem word emet (truth). The mascot is a gentle clay-and-moss golem in an overgrown, solarpunk world.
 
 |             |                                                                                                                                                                                                                                                        |
 | ----------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |

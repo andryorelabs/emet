@@ -303,3 +303,47 @@
     }
   }
 }
+
+.trees-box {
+  width: 100%;
+  min-height: 44px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: default;
+  transition: border-color 200ms;
+}
+
+.trees-box:hover,
+.trees-box:focus-visible {
+  border-color: var(--moss);
+}
+
+.trees-box:focus-visible {
+  outline: 2px solid var(--moss);
+  outline-offset: 2px;
+}
+
+.trees-mini {
+  display: none;
+  flex: none;
+  min-width: 16ch;
+  color: var(--moss);
+  font-size: 12px;
+  white-space: pre;
+}
+
+.trees-box[data-typing] .trees-typing {
+  display: none;
+}
+
+.trees-box[data-typing] .trees-mini {
+  display: block;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .trees-box {
+    transition: none;
+  }
+}

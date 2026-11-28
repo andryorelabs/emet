@@ -1,4 +1,5 @@
 import { describe, expect, test } from "bun:test";
+import { readFileSync } from "node:fs";
 
 import { DEFAULT_LOCALE, LOCALES } from "../locales";
 import { en } from "./en";
@@ -39,6 +40,19 @@ describe("getStrings", () => {
       expect(getStrings(locale)).toBeDefined();
     }
   });
+});
+
+describe("companion strings", () => {
+  for (const locale of LOCALES) {
+    test(`${locale} has four questions, each with an answer`, () => {
+      const { questions } = getStrings(locale).companion;
+      expect(questions).toHaveLength(4);
+      for (const item of questions) {
+        expect(item.question.length).toBeGreaterThan(0);
+        expect(item.answer.length).toBeGreaterThan(0);
+      }
+    });
+  }
 });
 
 const HOST_NAMES = ["Claude Code", "Codex"] as const;
@@ -178,6 +192,34 @@ describe("host naming guard", () => {
       expect(() => {
         expectNamesBothHosts(mutated);
       }).toThrow();
+    }
+  });
+});
+
+describe("workflow tagline", () => {
+  const oldWords = ["plugin", "プラグイン", "플러그인", "плагин", "插件"];
+
+  test("pins the English tagline strings", () => {
+    expect(en.hero.sentence).toBe(
+      "A workflow for Claude Code and Codex. Idea to merged change, one approval.",
+    );
+    expect(en.footer.description).toBe("Workflow for Claude Code and Codex.");
+  });
+
+  test("pins the How it works banner line", () => {
+    const banner = readFileSync(
+      new URL("../../components/home/HowItWorks.astro", import.meta.url),
+      "utf8",
+    );
+    expect(banner).toContain("emet  workflow for Claude Code and Codex");
+  });
+
+  test.each([...LOCALES])("%s tagline does not call emet a plugin", (locale) => {
+    const strings = getStrings(locale);
+    for (const text of [strings.hero.sentence, strings.footer.description]) {
+      for (const word of oldWords) {
+        expect(text.toLowerCase()).not.toContain(word);
+      }
     }
   });
 });

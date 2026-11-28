@@ -172,3 +172,14 @@ body:has([data-menu-panel]) [data-slot="sheet-overlay"] {
     animation: none;
   }
 }
+
+[data-menu-controls]:has([data-menu-sidebar]) {
+  flex-wrap: wrap;
+}
+
+[data-menu-sidebar] {
+  flex: 0 0 100%;
+  max-height: calc(100dvh - var(--menu-top, 0px) - 300px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}

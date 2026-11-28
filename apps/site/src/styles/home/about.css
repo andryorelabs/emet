@@ -1,0 +1,178 @@
+/**
+ * Home page about: Hebrew word, Latin word and portrait.
+ */
+
+.about {
+  padding-inline: var(--content-inset);
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 440px);
+  gap: 96px;
+  align-items: start;
+}
+
+.letter {
+  display: flex;
+  flex-direction: column;
+}
+
+.letter > p {
+  max-width: 560px;
+  margin: 0 0 16px;
+  font-size: 22px;
+  line-height: 1.5;
+}
+
+.letter > p.mute {
+  color: var(--text-muted);
+}
+
+.hebrew-pair {
+  display: flex;
+  align-items: flex-end;
+  flex-wrap: wrap;
+  gap: 48px;
+  margin: 40px 0 32px;
+}
+
+.hebrew-word {
+  display: flex;
+  flex-direction: column;
+}
+
+.hebrew {
+  font-family: "Frank Ruhl Libre", serif;
+  font-size: clamp(92px, 11vw, 150px);
+  font-weight: 400;
+  line-height: 1;
+}
+
+.hebrew-glosses {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 6px;
+  font-family: var(--font-mono);
+  font-size: 13px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.hebrew-aleph {
+  display: inline-block;
+}
+
+.latin {
+  padding-bottom: 18px;
+  font-size: clamp(56px, 7vw, 92px);
+  font-weight: 500;
+  line-height: 1;
+  letter-spacing: -0.04em;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  html[data-motion] .hebrew-aleph {
+    position: relative;
+    opacity: calc(1 - 0.65 * var(--strike, 0));
+  }
+
+  html[data-motion] .hebrew-aleph::after {
+    content: "";
+    position: absolute;
+    inset-inline: -6%;
+    top: 52%;
+    height: 4px;
+    background: var(--error);
+    transform: rotate(-24deg) scaleX(var(--strike, 0));
+    transform-origin: left;
+  }
+
+  html[data-motion] .latin-e {
+    opacity: calc(1 - 0.65 * var(--strike, 0));
+    text-decoration: line-through;
+    text-decoration-thickness: 4px;
+    text-decoration-color: color-mix(
+      in oklab,
+      var(--error) calc(var(--strike, 0) * 100%),
+      transparent
+    );
+  }
+
+  .portrait-frame canvas[data-pixel-reveal][data-state="ready"] {
+    display: block;
+  }
+
+  .portrait-frame canvas[data-pixel-reveal][data-state="done"] {
+    display: block;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 200ms ease-out;
+  }
+
+  .portrait-frame canvas[data-pixel-reveal][hidden] {
+    display: none;
+  }
+}
+
+.mark {
+  background: linear-gradient(
+    transparent 62%,
+    color-mix(in oklab, var(--lamp) 55%, transparent) 62%
+  );
+  color: var(--text);
+}
+
+.portrait {
+  margin: 0;
+}
+
+.portrait-frame {
+  position: relative;
+  overflow: clip;
+  border-radius: 10px;
+}
+
+.portrait-frame canvas[data-pixel-reveal] {
+  display: none;
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  border-radius: 10px;
+}
+
+.portrait picture,
+.portrait img {
+  display: block;
+  width: 100%;
+}
+
+.portrait picture {
+  overflow: clip;
+  border-radius: 10px;
+}
+
+.portrait img {
+  aspect-ratio: 4 / 5;
+  object-fit: cover;
+  border-radius: 10px;
+}
+
+.portrait figcaption {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 10px;
+  font-size: 14px;
+  color: var(--text-muted);
+}
+
+@media (max-width: 1000px) {
+  .about {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 48px;
+    padding-inline: var(--gutter);
+  }
+
+  .portrait {
+    max-width: 420px;
+  }
+}

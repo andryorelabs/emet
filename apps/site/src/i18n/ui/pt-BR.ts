@@ -32,7 +32,7 @@ export const ptBR = {
     lineOne: "Da ideia ao merge,",
     lineTwo: "uma só aprovação.",
     sentence:
-      "Um plugin para o Claude Code e o Codex. Da ideia à mudança integrada, com uma única aprovação.",
+      "Um workflow para o Claude Code e o Codex. Da ideia à mudança integrada, com uma única aprovação.",
     install: "Instalar o emet",
     readDocs: "Ler a documentação",
     alt: "Um vale pintado onde três riachos se unem em um rio, com campos em terraços e um pequeno golem de argila em um outeiro gramado sob um céu calmo.",
@@ -50,9 +50,12 @@ export const ptBR = {
     merged: "Mesclado",
     otherInstall: "Outras formas de instalar",
     wave: "Onda {n}",
+    waveLine: "onda {n}",
     caption: "Cada onda se junta a uma branch da spec. A spec chega como um único pull request.",
     prTitle: "Spec 41: modo escuro para as configurações",
     checks: "checks aprovados",
+    open: "Aberto",
+    closes: "Fecha",
   },
   showcase: {
     heading: "A spec é integrada",
@@ -61,9 +64,18 @@ export const ptBR = {
       "Spec 41 revisada. CI aprovada. Integrada como um único pull request, 4 tickets fechados.",
     statusHeld: "Spec 41 retida: um ticket sinalizado. Nada foi integrado.",
     flag: "Sinalizar o ticket #44",
+    laneReview: "revisão",
+    laneHeld: "retido",
   },
   features: {
     heading: "O que uma execução protege",
+    scenes: {
+      approve: "Aprovar",
+      approveName: "Aprovar: mantenha pressionado",
+      approved: "Aprovado",
+      gateName: "Portão de revisão: 1 comentário, resolvido",
+      gateTip: "onda 2: 1 comentário, resolvido",
+    },
     notes: [
       { title: "Uma única aprovação", line: "Especificação e tickets, revisados uma vez." },
       { title: "Uma revisão por onda", line: "Um revisor confere cada onda." },
@@ -76,26 +88,11 @@ export const ptBR = {
       { title: "Seu tracker, ou nenhum", line: "Linear, GitHub Issues ou arquivos locais." },
     ],
     extra: [
-      {
-        title: "Modo rápido para mudanças pequenas",
-        line: "Uma flag reduz a entrevista a uma rodada e executa um ticket, uma revisão e uma integração.",
-      },
-      {
-        title: "Lembra o que funcionou",
-        line: "As lições de cada execução são salvas e recuperadas na seguinte.",
-      },
-      {
-        title: "Dois revisores para mudanças de risco",
-        line: "Trabalho de alto risco recebe um segundo revisor antes de ser integrado.",
-      },
-      {
-        title: "Avisa quando precisa de você",
-        line: "Um alerta quando uma execução espera sua aprovação ou travou.",
-      },
-      {
-        title: "Instala e desinstala sem sobras",
-        line: "Remove tudo o que o emet instalou e mantém qualquer arquivo que você editou.",
-      },
+      { title: "Modo rápido para mudanças pequenas", docs: "/docs/reference/cli/" },
+      { title: "Lembra o que funcionou", docs: "/docs/concepts/memory/" },
+      { title: "Dois revisores para mudanças de risco", docs: "/docs/concepts/review-and-gates/" },
+      { title: "Avisa quando precisa de você", docs: "/docs/how-to/check-a-fleet/" },
+      { title: "Instala e desinstala sem sobras", docs: "/docs/start/install/" },
     ],
   },
   stats: {
@@ -163,11 +160,29 @@ export const ptBR = {
   },
   closing: {
     heading: "Experimente em um repositório",
-    action: "Instalar o emet",
     alt: "Um vale sob uma névoa baixa da manhã, com um sol pálido e um céu em tons pastel.",
   },
+  companion: {
+    label: "Companheiro golem do emet, pressione para abrir o menu",
+    menu: "Pergunte ao emet",
+    sleep: "Descansando. Role a página para me acordar.",
+    work: "Lâmpada acesa. Lendo a especificação.",
+    wait: "Em espera. Nada é mesclado.",
+    done: "Pronto. Uma aprovação, mesclado.",
+    questions: [
+      {
+        question: "O que é o emet?",
+        answer:
+          "Um fluxo de trabalho para Claude Code e Codex. Da ideia à mudança mesclada, com uma única aprovação.",
+      },
+      { question: "Como instalo?", answer: "curl -fsSL https://emet.andryore.dev/install.sh | sh" },
+      { question: "É gratuito?", answer: "Sim. O emet tem licença MIT." },
+      { question: "Onde fica a documentação?", answer: "A um clique de distância." },
+    ],
+    docs: "Abrir a documentação",
+  },
   footer: {
-    description: "Plugin para o Claude Code e o Codex.",
+    description: "Workflow para o Claude Code e o Codex.",
     notice: "Sem afiliação com a Anthropic ou a OpenAI nem endosso delas",
     docs: "Documentação",
     whatsNew: "Novidades",

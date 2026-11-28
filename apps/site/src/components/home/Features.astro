@@ -2,7 +2,8 @@
 /**
  * Six claims as a bento: each card pairs its claim with a small picture of
  * the guard working and the run-report line it leaves behind. The pictures
- * are scene components, decorative and `aria-hidden`; each loops only while on screen.
+ * are scene components that loop only while on screen; the Approval, Review and
+ * Flags pictures carry real buttons, the others are decorative and `aria-hidden`.
  */
 import type { UiStrings } from "../../i18n/ui/en";
 import ApprovalScene from "./bento/scenes/ApprovalScene.astro";
@@ -12,6 +13,7 @@ import ReviewScene from "./bento/scenes/ReviewScene.astro";
 import TrackerScene from "./bento/scenes/TrackerScene.astro";
 import WorkersScene from "./bento/scenes/WorkersScene.astro";
 import FeatureRows from "./FeatureRows.astro";
+import { Card, CardDescription, CardHeader, CardTitle } from "../ui/card";
 
 interface Props {
   strings: UiStrings;
@@ -36,35 +38,43 @@ const keyWidth = 10;
   <h2 id="features-title" data-reveal="heading">
     <span class="reveal-line">{features.heading}</span>
   </h2>
-  <ul class="bento">
+  <ul class="bento" data-interact="spotlight">
     {
       features.notes.map((note, index) => {
         const card = cards[index];
         return (
           card && (
-            <li data-slot="card" data-size="default" class={`bento-card bento-${card.key}`} data-reveal="item">
-              <div class="bento-claim">
-                <h3>{note.title}</h3>
-                <p>{note.line}</p>
-              </div>
-              {card.key === "approval" && <ApprovalScene />}
-              {card.key === "review" && <ReviewScene />}
-              {card.key === "flags" && <FlagsScene />}
+            <li class={`bento-card bento-${card.key}`} data-reveal="item">
+              <Card>
+                <CardHeader>
+                  <CardTitle>
+                    <h3>{note.title}</h3>
+                  </CardTitle>
+                  <CardDescription>
+                    <p>{note.line}</p>
+                  </CardDescription>
+                </CardHeader>
+              {card.key === "approval" && <ApprovalScene labels={features.scenes} />}
+              {card.key === "review" && <ReviewScene labels={features.scenes} />}
+              {card.key === "flags" && <FlagsScene flagLabel={strings.showcase.flag} heldText={strings.showcase.statusHeld} />}
               {card.key === "ci" && <CiScene />}
               {card.key === "workers" && <WorkersScene />}
               {card.key === "tracker" && <TrackerScene />}
-              <pre class="bento-report"><span class="features-key">{card.key.padEnd(keyWidth)}</span>{`${card.value}\n${" ".repeat(keyWidth)}${card.result}`}</pre>
+                <pre class="bento-report"><span class="features-key">{card.key.padEnd(keyWidth)}</span>{`${card.value}\n${" ".repeat(keyWidth)}${card.result}`}</pre>
+              </Card>
             </li>
           )
         );
       })
     }
+    <FeatureRows strings={strings} />
   </ul>
-  <FeatureRows strings={strings} />
 </section>
 
 <script>
+  import { initBentoInteractions } from "./bento/interact";
   import { initBentoScenes } from "./bento/scene-player";
 
   initBentoScenes(document);
+  initBentoInteractions(document);
 </script>

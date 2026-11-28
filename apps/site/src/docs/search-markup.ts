@@ -15,7 +15,7 @@ export function restrictToMarkTags(html: string): string {
 /**
  * What the search dialog shows below the query row.
  */
-export type SearchState = "idle" | "searching" | "empty" | "results";
+export type SearchState = "idle" | "searching" | "empty" | "results" | "unavailable";
 
 /**
  * Whether a message is a template with its placeholder filled.

@@ -31,7 +31,7 @@ export const de = {
     lineOne: "Von Idee zu Merge,",
     lineTwo: "mit einer Freigabe.",
     sentence:
-      "Ein Plugin für Claude Code und Codex. Von der Idee zur gemergten Änderung, mit einer Freigabe.",
+      "Ein Workflow für Claude Code und Codex. Von der Idee zur gemergten Änderung, mit einer Freigabe.",
     install: "emet installieren",
     readDocs: "Doku lesen",
     alt: "Ein gemaltes Tal, in dem drei Bäche in einen Fluss münden, mit Terrassenfeldern und einem kleinen Lehm-Golem auf einer grasigen Anhöhe unter ruhigem Himmel.",
@@ -49,9 +49,12 @@ export const de = {
     merged: "Gemergt",
     otherInstall: "Weitere Installationswege",
     wave: "Welle {n}",
+    waveLine: "Welle {n}",
     caption: "Jede Welle fließt in einen Spec-Branch. Die Spec landet als ein Pull Request.",
     prTitle: "Spec 41: Dunkelmodus für die Einstellungen",
     checks: "Checks bestanden",
+    open: "Offen",
+    closes: "Schließt",
   },
   showcase: {
     heading: "Die Spec wird gemergt",
@@ -59,9 +62,18 @@ export const de = {
     status: "Spec 41 geprüft. CI bestanden. Als ein Pull Request gemergt, 4 Tickets geschlossen.",
     statusHeld: "Spec 41 angehalten: ein Ticket markiert. Nichts gemergt.",
     flag: "Ticket #44 markieren",
+    laneReview: "Review",
+    laneHeld: "gehalten",
   },
   features: {
     heading: "Was ein Lauf absichert",
+    scenes: {
+      approve: "Freigeben",
+      approveName: "Freigeben: gedrückt halten",
+      approved: "Freigegeben",
+      gateName: "Review-Gate: 1 Kommentar, erledigt",
+      gateTip: "Welle 2: 1 Kommentar, erledigt",
+    },
     notes: [
       { title: "Eine Freigabe", line: "Spezifikation und Tickets, einmal geprüft." },
       { title: "Ein Review pro Welle", line: "Ein Reviewer prüft jede Welle." },
@@ -77,26 +89,11 @@ export const de = {
       { title: "Dein Tracker, oder keiner", line: "Linear, GitHub Issues oder lokale Dateien." },
     ],
     extra: [
-      {
-        title: "Schnellmodus für kleine Änderungen",
-        line: "Ein Flag hält das Interview auf eine Runde und führt ein Ticket, ein Review und ein Landing aus.",
-      },
-      {
-        title: "Merkt sich, was funktioniert hat",
-        line: "Erkenntnisse jedes Laufs werden gespeichert und im nächsten abgerufen.",
-      },
-      {
-        title: "Zwei Reviewer für riskante Änderungen",
-        line: "Riskante Arbeit bekommt einen zweiten Reviewer, bevor etwas landet.",
-      },
-      {
-        title: "Meldet sich, wenn es dich braucht",
-        line: "Ein Hinweis, wenn ein Lauf auf deine Freigabe wartet oder feststeckt.",
-      },
-      {
-        title: "Sauber installiert und deinstalliert",
-        line: "Entfernt alles, was emet installiert hat, und behält jede Datei, die du bearbeitet hast.",
-      },
+      { title: "Schnellmodus für kleine Änderungen", docs: "/docs/reference/cli/" },
+      { title: "Merkt sich, was funktioniert hat", docs: "/docs/concepts/memory/" },
+      { title: "Zwei Reviewer für riskante Änderungen", docs: "/docs/concepts/review-and-gates/" },
+      { title: "Meldet sich, wenn es dich braucht", docs: "/docs/how-to/check-a-fleet/" },
+      { title: "Sauber installiert und deinstalliert", docs: "/docs/start/install/" },
     ],
   },
   stats: {
@@ -165,11 +162,32 @@ export const de = {
   },
   closing: {
     heading: "Probiere es in einem Repo",
-    action: "emet installieren",
     alt: "Ein Tal unter tiefem Morgennebel mit blasser Sonne und Pastellhimmel.",
   },
+  companion: {
+    label: "emet-Golem-Begleiter, drücken, um das Menü zu öffnen",
+    menu: "Frag emet",
+    sleep: "Ich ruhe. Scrolle, um mich zu wecken.",
+    work: "Lampe an. Ich lese die Spezifikation.",
+    wait: "Angehalten. Nichts wird gemergt.",
+    done: "Fertig. Eine Freigabe, gemergt.",
+    questions: [
+      {
+        question: "Was ist emet?",
+        answer:
+          "Ein Workflow für Claude Code und Codex. Von der Idee zur gemergten Änderung, mit einer einzigen Freigabe.",
+      },
+      {
+        question: "Wie installiere ich es?",
+        answer: "curl -fsSL https://emet.andryore.dev/install.sh | sh",
+      },
+      { question: "Ist es kostenlos?", answer: "Ja. emet steht unter der MIT-Lizenz." },
+      { question: "Wo finde ich die Dokumentation?", answer: "Nur einen Klick entfernt." },
+    ],
+    docs: "Dokumentation öffnen",
+  },
   footer: {
-    description: "Plugin für Claude Code und Codex.",
+    description: "Workflow für Claude Code und Codex.",
     notice:
       "Nicht mit Anthropic oder OpenAI verbunden und nicht von Anthropic oder OpenAI unterstützt",
     docs: "Doku",

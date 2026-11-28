@@ -26,6 +26,13 @@ describe(":::install-tabs", () => {
     expect(first?.children?.[1]).toMatchObject({ type: "code", value: "a", meta: "frame=none" });
   });
 
+  test("opts the block out of Starlight content flow spacing", () => {
+    const result = remarkEmetDirectives.containerDirective(directive([code('tab="Codex"', "a")]));
+    const classes = String(result?.data?.hProperties?.class).split(" ");
+    expect(classes).toContain("not-content");
+    expect(classes).toContain("emet-install-tabs");
+  });
+
   test("leaves a directive without labelled code alone", () => {
     expect(
       remarkEmetDirectives.containerDirective(

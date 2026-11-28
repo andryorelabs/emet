@@ -139,8 +139,9 @@ export function evaluatePerFile(
   return { passed: false, message: problems.join("\n") };
 }
 
-/** Matches the records of the Website's vendored shadcn ui layer, which is generated code the gate never measures (ADR-0045). */
-const VENDORED_UI_RECORD = /^SF:(apps\/site\/)?src\/components\/ui\//m;
+/** Matches the records of the Website's vendored shadcn layer (the ui folder, the `code-block` hook and its highlighter), which is generated code the gate never measures (ADR-0045, ADR-0049). */
+const VENDORED_UI_RECORD =
+  /^SF:(apps\/site\/)?src\/(components\/ui\/|hooks\/use-highlighted-code\.ts$|lib\/highlighter\.tsx$)/m;
 
 /**
  * Drops the vendored ui layer's records and, for the root-level `tools/` workspace,

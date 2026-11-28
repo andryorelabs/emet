@@ -293,3 +293,60 @@
     }
   }
 }
+
+.ci-rerun {
+  min-height: 44px;
+  padding: 0 16px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  font-weight: 500;
+  cursor: pointer;
+  transition: border-color 200ms;
+}
+
+.ci-rerun:hover {
+  border-color: var(--text-muted);
+}
+
+.ci-rerun:focus-visible {
+  outline: 2px solid var(--moss);
+  outline-offset: 2px;
+}
+
+.ci-code {
+  width: 100%;
+  max-width: 300px;
+  margin: 0;
+  padding: 6px 10px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text-muted);
+  font: inherit;
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+.ci-rm {
+  color: var(--error);
+}
+
+.ci-add {
+  color: var(--moss);
+}
+
+@media (scripting: enabled) and (prefers-reduced-motion: no-preference) {
+  .scene-ci[data-restart],
+  .scene-ci[data-restart] * {
+    animation-name: none !important;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ci-rerun {
+    transition: none;
+  }
+}

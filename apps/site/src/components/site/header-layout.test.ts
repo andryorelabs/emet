@@ -40,6 +40,18 @@ describe("SiteHeader GitHub pill position on home", () => {
   });
 });
 
+describe("SiteHeader home inset", () => {
+  test("uses the prototype inset and keeps the docs header padding", async () => {
+    const css = await Bun.file(path.join(import.meta.dir, "../../styles/site.css")).text();
+    const home = css.slice(css.indexOf(".site-header--home {\n  position: absolute;"));
+    expect(home).toContain("calc(max(16px, env(safe-area-inset-left, 0px)) + 16px)");
+    expect(home).toContain("justify-self: end;");
+    expect(css).toContain(
+      "padding: 20px max(var(--gutter, 32px), (100% - var(--container, 1280px)) / 2);",
+    );
+  });
+});
+
 describe("SiteHeader home grid", () => {
   test("has one column track per direct child above 900px", async () => {
     const css = await Bun.file(path.join(import.meta.dir, "../../styles/site.css")).text();

@@ -26,11 +26,41 @@ export function pickStage(ratios: readonly number[], previous: Stage = 0): Stage
   return best;
 }
 
-/** Stages every `[data-streams]` under `root` from the `.exchange` articles; no-op with reduced motion or below 1001px. */
+/**
+ * Marks every overlay `data-paused` while it is off-screen or the tab is hidden, so the
+ * stylesheet can hold the looping flow dots and no frame is spent on them.
+ */
+function pauseWhenIdle(overlays: readonly HTMLElement[]): void {
+  const visible = new Set<Element>();
+  const sync = (): void => {
+    for (const overlay of overlays) {
+      if (document.hidden || !visible.has(overlay)) overlay.dataset.paused = "true";
+      else delete overlay.dataset.paused;
+    }
+  };
+  const observer = new IntersectionObserver((entries) => {
+    for (const entry of entries) {
+      if (entry.isIntersecting) visible.add(entry.target);
+      else visible.delete(entry.target);
+    }
+    sync();
+  });
+  for (const overlay of overlays) observer.observe(overlay);
+  document.addEventListener("visibilitychange", sync);
+  sync();
+}
+
+/**
+ * Stages every `[data-streams]` under `root` from the `.exchange` articles; no-op with reduced
+ * motion or below 1001px. An overlay inside a `[data-pinned]` runway is staged by the pin instead.
+ * Every overlay is paused while off-screen or on a hidden tab.
+ */
 export function initPaintingStreams(root: ParentNode): void {
   if (matchMedia("(prefers-reduced-motion: reduce)").matches) return;
   if (!matchMedia(DESKTOP_QUERY).matches) return;
-  const overlays = [...root.querySelectorAll<HTMLElement>("[data-streams]")];
+  const everyOverlay = [...root.querySelectorAll<HTMLElement>("[data-streams]")];
+  if (everyOverlay.length > 0) pauseWhenIdle(everyOverlay);
+  const overlays = everyOverlay.filter((overlay) => overlay.closest("[data-pinned]") === null);
   const exchanges = [...root.querySelectorAll<HTMLElement>(".exchange")];
   if (overlays.length === 0 || exchanges.length === 0) return;
   const ratios = exchanges.map(() => 0);

@@ -1,0 +1,109 @@
+/**
+ * Home page closing panel.
+ */
+
+.closing {
+  --edge: max(8px, env(safe-area-inset-left, 0px));
+  --closing-ink: var(--painting-ink);
+  --closing-pill: var(--pill-fill);
+  --closing-pill-text: var(--pill-text);
+  --closing-pill-line: var(--pill-line);
+
+  position: relative;
+  margin-inline: var(--edge);
+  height: min(760px, 92svh);
+  border-radius: var(--radius-panel);
+  overflow: clip;
+  display: grid;
+  place-items: start start;
+}
+
+.closing picture,
+.closing-picture {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.closing picture img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: 50% 70%;
+}
+
+.closing-copy {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 28px;
+  padding: clamp(24px, 5vw, 72px);
+  text-align: left;
+}
+
+.closing h2 {
+  max-width: 9em;
+  color: var(--closing-ink);
+  font-weight: 600;
+  line-height: 0.95;
+  letter-spacing: -0.05em;
+}
+
+.closing .button {
+  justify-content: center;
+  min-height: 52px;
+  padding: 0 26px;
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.closing-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 14px;
+}
+
+.closing-command {
+  min-width: 0;
+  max-width: 100%;
+  min-height: 52px;
+  padding: 0 4px 0 6px;
+  border-radius: 8px;
+  background: var(--closing-pill);
+  color: var(--closing-pill-text);
+  font-family: var(--font-mono);
+  font-size: 15px;
+  backdrop-filter: blur(10px);
+}
+
+.closing-command pre {
+  overflow-wrap: anywhere;
+}
+
+.closing-command [data-home-code] {
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font-size: 15px;
+}
+
+@media (max-width: 640px) {
+  .closing-command [data-home-code] {
+    font-size: 13px;
+  }
+}
+
+.closing-command [data-slot="code-block-line"] span {
+  color: var(--shiki-dark, color-mix(in oklab, var(--closing-pill-text) 70%, transparent));
+}
+
+.closing-command [data-home-code-copy] {
+  color: var(--closing-pill-text);
+}
+
+.closing-command [data-home-code-copy]:hover {
+  background: var(--closing-pill-line);
+}

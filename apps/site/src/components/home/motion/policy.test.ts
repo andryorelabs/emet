@@ -1,6 +1,6 @@
 import { describe, expect, it } from "bun:test";
 
-import { clamp01, coverProgress, exitProgress, isSmoothScrollExempt, motionPolicy } from "./policy";
+import { clamp01, coverProgress, heroZoom, isSmoothScrollExempt, motionPolicy } from "./policy";
 
 describe("motionPolicy", () => {
   it("turns everything off with reduced motion", () => {
@@ -35,10 +35,13 @@ describe("scroll progress", () => {
     expect(coverProgress({ top: 200, height: 400 }, 800)).toBe(0.5);
   });
 
-  it("exits from the moment the top meets the viewport top", () => {
-    expect(exitProgress({ top: 0, height: 800 })).toBe(0);
-    expect(exitProgress({ top: -400, height: 800 })).toBe(0.5);
-    expect(exitProgress({ top: 100, height: 800 })).toBe(0);
+  it("zooms the hero painting from 1 to 1.08 over one viewport of scroll", () => {
+    expect(heroZoom(0, 900)).toBe(1);
+    expect(heroZoom(450, 900)).toBeCloseTo(1.04, 10);
+    expect(heroZoom(900, 900)).toBeCloseTo(1.08, 10);
+    expect(heroZoom(2700, 900)).toBeCloseTo(1.08, 10);
+    expect(heroZoom(-50, 900)).toBe(1);
+    expect(heroZoom(300, 0)).toBe(1);
   });
 });
 

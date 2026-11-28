@@ -6,7 +6,7 @@
  */
 import { getImage, Picture } from "astro:assets";
 
-import heroImage from "../../assets/hero.webp";
+import dayImage from "../../assets/source.webp";
 import duskImage from "../../../design/pictures/held.webp";
 import type { UiStrings } from "../../i18n/ui/en";
 import Fireflies from "./graphics/Fireflies.astro";
@@ -40,7 +40,7 @@ const duskSrcset = duskVariants
   <div class="showcase-stage" aria-hidden="true">
     <Picture
       class="showcase-day"
-      src={heroImage}
+      src={dayImage}
       formats={["avif", "webp"]}
       fallbackFormat="webp"
       widths={widths}
@@ -49,32 +49,46 @@ const duskSrcset = duskVariants
       loading="lazy"
       decoding="async"
     />
-    <img
-      class="showcase-dusk"
-      alt=""
-      data-srcset={duskSrcset}
-      data-sizes="100vw"
-      width={duskVariants[2]?.options.width}
-      height={duskVariants[2]?.options.height}
-      decoding="async"
-    />
+    <picture data-fx-dusk>
+      <img
+        class="showcase-dusk"
+        alt=""
+        data-srcset={duskSrcset}
+        data-sizes="100vw"
+        width={duskVariants[2]?.options.width}
+        height={duskVariants[2]?.options.height}
+        decoding="async"
+      />
+    </picture>
     <Valley variant="showcase"><Fireflies /></Valley>
   </div>
+  <div class="showcase-marks" aria-hidden="true">
+    <i class="showcase-corner" data-corner="a"></i>
+    <i class="showcase-corner" data-corner="b"></i>
+    <i class="showcase-corner" data-corner="c"></i>
+    <i class="showcase-corner" data-corner="d"></i>
+  </div>
+  <h2 id="showcase-title" class="showcase-heading showcase-stack">
+    <span data-variant="merged">{showcase.heading}</span>
+    <span data-variant="held">{showcase.headingHeld}</span>
+  </h2>
   <div class="showcase-panel">
-    <h2 id="showcase-title" class="showcase-stack">
-      <span data-variant="merged">{showcase.heading}</span>
-      <span data-variant="held">{showcase.headingHeld}</span>
-    </h2>
+    <button type="button" class="showcase-flag" aria-pressed="false" data-showcase-flag hidden>
+      <span class="showcase-switch" aria-hidden="true"><span class="showcase-knob"></span></span>
+      <span>{showcase.flag}</span>
+    </button>
+    <canvas
+      class="showcase-lanes"
+      data-showcase-lanes
+      data-label-review={showcase.laneReview}
+      data-label-merged={strings.how.merged}
+      data-label-held={showcase.laneHeld}
+      aria-hidden="true"></canvas>
     <p class="showcase-status showcase-stack" data-showcase-status>
       <span data-variant="merged">{showcase.status}</span>
       <span data-variant="held">{showcase.statusHeld}</span>
     </p>
     <noscript><p class="showcase-status">{showcase.statusHeld}</p></noscript>
-    <button type="button" class="showcase-flag" aria-pressed="false" data-showcase-flag hidden>
-      <span class="showcase-switch" aria-hidden="true"><span class="showcase-knob"></span></span>
-      <span>{showcase.flag}</span>
-    </button>
-    <p class="showcase-mark" aria-hidden="true"><span class="showcase-letter">e</span>met</p>
   </div>
   </div>
 </section>
@@ -82,4 +96,16 @@ const duskSrcset = duskVariants
 <script>
   // oxlint-disable-next-line import/no-unassigned-import -- the module wires itself to the page
   import "./showcase/showcase";
+  import { initShowcaseFx } from "./showcase/fx";
+
+  const root = document.querySelector<HTMLElement>("[data-showcase]");
+  const frame = root?.querySelector<HTMLElement>(".showcase-frame");
+  const flag = root?.querySelector<HTMLElement>(".showcase-switch");
+  if (root && frame && flag) {
+    initShowcaseFx(frame, flag, (callback) => {
+      new MutationObserver(() => {
+        callback(root.dataset.state === "held");
+      }).observe(root, { attributes: true, attributeFilter: ["data-state"] });
+    });
+  }
 </script>

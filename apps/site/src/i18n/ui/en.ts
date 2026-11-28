@@ -30,7 +30,7 @@ export const en = {
     name: "emet",
     lineOne: "Spec to merge,",
     lineTwo: "on one approval.",
-    sentence: "A plugin for Claude Code and Codex. Idea to merged change, one approval.",
+    sentence: "A workflow for Claude Code and Codex. Idea to merged change, one approval.",
     install: "Install emet",
     readDocs: "Read the docs",
     alt: "A painted valley where three streams join one river, with terraced fields and a small clay golem on a grassy rise under a calm sky.",
@@ -48,9 +48,12 @@ export const en = {
     merged: "Merged",
     otherInstall: "Other ways to install",
     wave: "Wave {n}",
+    waveLine: "wave {n}",
     caption: "Each wave joins one spec branch. The spec lands as one pull request.",
     prTitle: "Spec 41: Dark mode for settings",
     checks: "checks passing",
+    open: "Open",
+    closes: "Closes",
   },
   showcase: {
     heading: "The spec merges",
@@ -58,9 +61,18 @@ export const en = {
     status: "Spec 41 reviewed. CI passed. Merged as one pull request, 4 tickets closed.",
     statusHeld: "Spec 41 held: one ticket flagged. Nothing merged.",
     flag: "Flag ticket #44",
+    laneReview: "review",
+    laneHeld: "held",
   },
   features: {
     heading: "What a run guards",
+    scenes: {
+      approve: "Approve",
+      approveName: "Approve: press and hold",
+      approved: "Approved",
+      gateName: "Review gate: 1 comment, resolved",
+      gateTip: "wave 2: 1 comment, resolved",
+    },
     notes: [
       { title: "One approval", line: "Spec and tickets, reviewed once." },
       { title: "A review per wave", line: "A reviewer checks every wave." },
@@ -73,26 +85,11 @@ export const en = {
       { title: "Your tracker, or none", line: "Linear, GitHub Issues or local files." },
     ],
     extra: [
-      {
-        title: "Fast mode for small changes",
-        line: "One flag keeps the interview to one round and runs one ticket, one review and one landing.",
-      },
-      {
-        title: "Remembers what worked",
-        line: "Lessons from each run are saved and recalled in the next one.",
-      },
-      {
-        title: "Two reviewers for risky changes",
-        line: "High-risk work gets a second reviewer before anything lands.",
-      },
-      {
-        title: "Tells you when it needs you",
-        line: "An alert when a run is waiting for approval or stuck.",
-      },
-      {
-        title: "Installs and uninstalls cleanly",
-        line: "Remove everything emet installed, and keep any file you edited.",
-      },
+      { title: "Fast mode for small changes", docs: "/docs/reference/cli/" },
+      { title: "Remembers what worked", docs: "/docs/concepts/memory/" },
+      { title: "Two reviewers for risky changes", docs: "/docs/concepts/review-and-gates/" },
+      { title: "Tells you when it needs you", docs: "/docs/how-to/check-a-fleet/" },
+      { title: "Installs and uninstalls cleanly", docs: "/docs/start/install/" },
     ],
   },
   stats: {
@@ -160,11 +157,32 @@ export const en = {
   },
   closing: {
     heading: "Try it in one repo",
-    action: "Install emet",
     alt: "A valley under low morning mist with a pale sun and pastel sky.",
   },
+  companion: {
+    label: "emet golem companion, press to open the menu",
+    menu: "Ask emet",
+    sleep: "Resting. Scroll to wake me.",
+    work: "Lamp on. Reading the spec.",
+    wait: "Held. Nothing merges.",
+    done: "Done. One approval, merged.",
+    questions: [
+      {
+        question: "What is emet?",
+        answer:
+          "A workflow for Claude Code and Codex. From idea to merged change, on one approval.",
+      },
+      {
+        question: "How do I install it?",
+        answer: "curl -fsSL https://emet.andryore.dev/install.sh | sh",
+      },
+      { question: "Is it free?", answer: "Yes. emet is MIT licensed." },
+      { question: "Where are the docs?", answer: "They are one click away." },
+    ],
+    docs: "Open the docs",
+  },
   footer: {
-    description: "Plugin for Claude Code and Codex.",
+    description: "Workflow for Claude Code and Codex.",
     notice: "Not affiliated with or endorsed by Anthropic or OpenAI",
     docs: "Docs",
     whatsNew: "What's new",

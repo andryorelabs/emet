@@ -127,3 +127,303 @@ The e2e spec covers what happy-dom cannot open: the header menus, the mobile she
 
 - WHEN the theme menu opens with `prefers-reduced-motion: reduce`
 - THEN its content plays no animation
+
+### Requirement: The Website tagline names a workflow for Claude Code and Codex
+
+Source: #1012 S1
+
+#### Scenario: The home renders in any locale
+
+- **WHEN** the home renders in any locale
+- **THEN** no tagline string contains the retired plugin tagline and the English strings carry the workflow tagline
+
+### Requirement: The home stylesheet and tests are split per section
+
+Source: #1012 S4
+
+#### Scenario: The tests run after the split
+
+- **WHEN** `bun run test` runs
+- **THEN** the per-section style and test files pass and the built home CSS holds the same rules as before the split
+
+### Requirement: The header and hero float over the painting
+
+Source: #1012 S5
+
+#### Scenario: The home loads on desktop
+
+- **WHEN** the home loads at 1440×900
+- **THEN** the white-ink header floats over the painting, the headline lines rise from a mask and the CTAs do not cover the golem
+
+#### Scenario: The home loads on a phone
+
+- **WHEN** the viewport is 390px wide
+- **THEN** the headline never breaks inside a word
+
+### Requirement: Painting effects degrade without WebGL
+
+Source: #1012 S6, #1012 S7, #1012 S16, #1012 S17
+
+#### Scenario: Reduced motion disables the effect
+
+- **WHEN** reduced motion is set
+- **THEN** the painting effect enable decision is false and the CSS Valley fallback shows
+
+#### Scenario: WebGL is missing
+
+- **WHEN** WebGL is unavailable
+- **THEN** nothing is drawn, no error is thrown and the CSS fallback stays visible
+
+### Requirement: Hero effects respond to the pointer
+
+Source: #1012 S8
+
+#### Scenario: The golem hotspot is clicked
+
+- **WHEN** the golem hotspot is clicked
+- **THEN** the bubble shows the next phrase and the eyes glow
+
+### Requirement: How it works is a pinned runway that stacks on small screens
+
+Source: #1012 S9, #1012 S10
+
+#### Scenario: The runway is scrolled on desktop
+
+- **WHEN** the page is scrolled through the How it works runway at 1440
+- **THEN** the steps change at about 30% and 62% progress and the stage dither resolves
+
+#### Scenario: The runway stacks
+
+- **WHEN** the viewport is 390px or reduced motion is set
+- **THEN** all three steps show stacked with final content
+
+### Requirement: Showcase auto-flags until the viewer clicks
+
+Source: #1012 S11
+
+#### Scenario: The viewer scrolls without clicking
+
+- **WHEN** scrolling through Showcase past about 74% without clicking
+- **THEN** the flag turns on and the dusk painting appears
+
+#### Scenario: The viewer clicks the switch
+
+- **WHEN** the viewer clicks the switch
+- **THEN** auto-flagging stops
+
+### Requirement: Feature scenes are interactive and accessible
+
+Source: #1012 S12
+
+#### Scenario: The approval button is held
+
+- **WHEN** the approval button is held for 0.9 s
+- **THEN** the stamp appears and the status text updates
+
+#### Scenario: The approval button is released early
+
+- **WHEN** the approval button is released early
+- **THEN** nothing is approved
+
+### Requirement: Stats roll to their values
+
+Source: #1012 S13
+
+#### Scenario: Stats enters the viewport
+
+- **WHEN** Stats enters the viewport
+- **THEN** the numeric values roll to their final values and the MIT item stays static
+
+### Requirement: About reveals the portrait with a pixel mosaic
+
+Source: #1012 S14
+
+#### Scenario: About enters the viewport
+
+- **WHEN** About enters the viewport
+- **THEN** the portrait resolves from a mosaic to the full image, or shows at once under reduced motion
+
+### Requirement: The closing command can be copied
+
+Source: #1012 S15
+
+#### Scenario: The copy button is pressed
+
+- **WHEN** the copy button of the closing command is pressed
+- **THEN** the exact install command is on the clipboard and the button shows its done state
+
+### Requirement: A companion golem answers fixed questions
+
+Source: #1012 S18
+
+#### Scenario: The companion is clicked
+
+- **WHEN** the companion is clicked
+- **THEN** a menu with four questions opens and Escape closes it returning focus
+
+### Requirement: Home interactions are covered end to end
+
+Source: #1012 S19
+
+#### Scenario: The e2e suite runs
+
+- **WHEN** `bun run --cwd apps/site test:e2e` runs
+- **THEN** every home interaction passes with zero `securitypolicyviolation` events
+
+### Requirement: The home header and hero match prototype v17
+
+Source: #1071 S1, #1071 S2
+
+The home header pills and the hero (release pill, lede, buttons) use the prototype v17 measurements, and the release pill uses the dark glass token.
+
+#### Scenario: Header and hero measure like the prototype
+
+- **WHEN** the home loads at 1440×900
+- **THEN** each header pill has the prototype computed styles and the hero buttons measure 52px tall
+
+### Requirement: Landing install links lead to the docs
+
+Source: #1071 S3
+
+The hero install button links to the localized install docs page, the hero docs button to the localized docs index, and the closing keeps only the command with its copy button.
+
+#### Scenario: The Spanish home links to docs
+
+- **WHEN** the Spanish home renders
+- **THEN** the hero install href is `/es/docs/start/install/` and no landing link points to `#install`
+
+### Requirement: Search works in production and degrades in dev
+
+Source: #1071 S4
+
+The search dialog shows results in a production build, stays inside the viewport and scrolls its results, and in `astro dev` states that search is only available in production builds.
+
+#### Scenario: Search finds results in the built site
+
+- **WHEN** the built site is previewed at 1440×900 and 390×844 and Ctrl K and `review` are typed
+- **THEN** results show and the dialog bounding box is within the viewport
+
+### Requirement: Header menus do not lock page scroll
+
+Source: #1071 S5
+
+Opening the theme, language or page-actions menu leaves `html` and `body` overflow and width unchanged, and `html` reserves a stable scrollbar gutter.
+
+#### Scenario: The theme menu opens
+
+- **WHEN** the theme menu opens
+- **THEN** `body` overflow stays `visible` and the header pills do not move
+
+### Requirement: Home code blocks use the shadcn code-block
+
+Source: #1071 S6
+
+Home code blocks use the vendored shadcn `code-block` through a wrapper, wrap long lines and copy the exact command.
+
+#### Scenario: The install command fits
+
+- **WHEN** the Install step renders at 1440×900 and 390×844
+- **THEN** the install command is fully visible, `scrollWidth <= clientWidth` and copy puts that exact string on the clipboard
+
+### Requirement: Watch it land is one five-line panel that fits the viewport
+
+Source: #1071 S7
+
+The How it works panel shows the five prototype lines and the pinned column fits inside the viewport.
+
+#### Scenario: Step 3 fits
+
+- **WHEN** step 3 is active at 1440×900 and 1366×768
+- **THEN** the last line's bottom is above the viewport bottom
+
+### Requirement: The bento fills the content width
+
+Source: #1071 S8
+
+The bento spans the content width with the prototype column spans and a single column under 760px.
+
+#### Scenario: Bento edges align
+
+- **WHEN** the home loads at 1980×1080
+- **THEN** the bento's right edge equals the stats section's right edge and the Approval and Review cards have equal height
+
+### Requirement: Extra features are compact docs-linked cards
+
+Source: #1071 S9
+
+The five extra features are compact cards with a title and a code line, each linking to an existing localized docs page.
+
+#### Scenario: Cards link to docs
+
+- **WHEN** the home renders in any locale
+- **THEN** there are 5 cards and each href resolves to a published docs page
+
+### Requirement: The About eyes animate
+
+Source: #1071 S10
+
+After the pixel reveal the eyes canvas is displayed, aligned and blinking.
+
+#### Scenario: Eyes blink after the reveal
+
+- **WHEN** the reveal finishes with motion allowed and `pointer: fine`
+- **THEN** the eyes canvas display is not `none` and it blinks within 8s
+
+### Requirement: The footer matches prototype v17
+
+Source: #1071 S11
+
+The footer has the brand and tagline left, Product and Trust grouped right, and a one-row legal bar with no double border on docs pages.
+
+#### Scenario: Legal items share a row
+
+- **WHEN** the footer renders at 1980 wide
+- **THEN** the three legal items share one row and the column headings are uppercase
+
+### Requirement: Visual regressions are guarded by the parity harness and e2e
+
+Source: #1071 S12
+
+The parity harness captures a footer section and clips the same inner box on both sides, and `apps/site/design/report.md` records the user-chosen deviations.
+
+#### Scenario: Harness covers the footer
+
+- **WHEN** `bun run --cwd apps/site parity` runs on the built site
+- **THEN** it captures a footer pair for the prototype and the site
+
+### Requirement: The How it works painting shows the merge as light in the water
+
+Source: #1089 S1, #1089 S2, #1089 S3
+
+#### Scenario: The streams are drawn from the painting geometry
+
+- **WHEN** the home is built
+- **THEN** the overlay paths come from the painting stream points and carry no white diagram lines, pills or flow dots
+
+#### Scenario: The light follows the three stages
+
+- **WHEN** the runway moves from step 1 to step 3 on desktop
+- **THEN** the streams light up from source to waterfall, the river and bloom follow, and a spark loops along each stream
+
+### Requirement: The merge overlay uses outline chips and a solid green Merged badge
+
+Source: #1089 S4, #1089 S5
+
+#### Scenario: The tickets are marked by chips
+
+- **WHEN** the overlay shows the sample tickets
+- **THEN** each ticket is an outline chip with a source dot, inside the 360px crop of the painting, and colours do not follow the theme
+
+#### Scenario: The spec merges
+
+- **WHEN** the runway reaches the last step
+- **THEN** a solid dark green Merged badge with the localized label appears below the falls
+
+### Requirement: The merge overlay is static without motion or on small screens
+
+Source: #1089 S6
+
+#### Scenario: Reduced motion or a narrow viewport
+
+- **WHEN** reduced motion is set or the viewport is 1000px wide or less
+- **THEN** the overlay shows its final lit state with no transition or animation
