@@ -25,15 +25,23 @@ describe("How it works painting overlay", () => {
     }
   });
 
-  it("keeps every ticket pill inside the 360px crop of the master (x 533 to 1139)", () => {
-    const heads = [...streamsSource.matchAll(/head: \[(\d+), \d+\]/g)].map((match) =>
+  it("keeps every ticket chip inside the 360px crop of the master (x 533 to 1139)", () => {
+    const anchors = [...streamsSource.matchAll(/chip: \[(\d+), \d+\]/g)].map((match) =>
       Number(match[1]),
     );
-    expect(heads).toHaveLength(3);
-    for (const x of heads) {
-      expect(x - 48).toBeGreaterThanOrEqual(533);
-      expect(x + 48).toBeLessThanOrEqual(1139);
+    expect(anchors).toEqual([606, 837, 1066]);
+    for (const x of anchors) {
+      expect(x - 42).toBeGreaterThanOrEqual(533);
+      expect(x + 42).toBeLessThanOrEqual(1139);
     }
+  });
+
+  it("draws light with no inline style and none of the old white lines, pills or dots", () => {
+    expect(streamsSource).not.toContain("style=");
+    expect(streamsSource).not.toMatch(/ps-line|ps-pill/);
+    expect(streamsSource).not.toContain("ps-dot");
+    expect(streamsSource).toContain('class="ps-source"');
+    expect(streamsSource).toContain("streamPaths()");
   });
 });
 
@@ -180,23 +188,62 @@ describe("How it works waiting, done and stream styling", () => {
     expect(cssSource).not.toMatch(/(^|\n)pre \{/);
   });
 
-  it("times the streams: lines 0.9s, river 0.9s after 0.2s, pills 0.5s, Merged 0.5s after 0.5s", () => {
+  it("times the streams: glow 0.9s with 80ms stagger, river 0.9s after 0.2s, chips 0.5s, Merged 0.5s after 0.5s", () => {
     expect(graphicsSource).toMatch(
-      /\.ps-line \{\s*transition: stroke-dashoffset 900ms var\(--ease-out\);/,
+      /\.ps-layer \{\s*transition: stroke-dashoffset 900ms var\(--ease-out\);/,
     );
+    expect(graphicsSource).toMatch(/\.ps-stream-2 \{\s*transition-delay: 80ms;/);
+    expect(graphicsSource).toMatch(/\.ps-stream-3 \{\s*transition-delay: 160ms;/);
     expect(graphicsSource).toMatch(
       /\.ps-river \{\s*transition: stroke-dashoffset 900ms var\(--ease-out\) 200ms;/,
     );
-    expect(graphicsSource).toMatch(/\.ps-pill \{\s*transition: opacity 500ms/);
-    expect(graphicsSource).toContain("opacity: 0.6;");
+    expect(graphicsSource).toMatch(/\.ps-chip \{\s*transition: opacity 500ms/);
+    expect(graphicsSource).toContain("opacity: 0.72;");
     expect(graphicsSource).toContain("opacity 500ms var(--ease-out) 500ms");
     expect(graphicsSource).toContain("transform: scale(0.8);");
   });
 
-  it("loops the flow dots every 1.8s with 0.25s and 0.5s delays and pauses them off-screen", () => {
-    expect(graphicsSource).toContain("animation: ps-flow 1800ms ease-in-out infinite both;");
-    expect(graphicsSource).toMatch(/nth-child\(6\) \{\s*animation-delay: 250ms;/);
-    expect(graphicsSource).toMatch(/nth-child\(7\) \{\s*animation-delay: 500ms;/);
-    expect(graphicsSource).toMatch(/\[data-paused\] \.ps-dot \{\s*animation-play-state: paused;/);
+  it("loops a spark along each stream every 3s, 0.3s apart, and pauses it off-screen", () => {
+    expect(graphicsSource).toContain("animation: ps-spark 3000ms linear infinite both;");
+    expect(graphicsSource).toMatch(/ps-stream-2\.ps-spark \{\s*animation-delay: 300ms;/);
+    expect(graphicsSource).toMatch(/ps-stream-3\.ps-spark \{\s*animation-delay: 600ms;/);
+    expect(graphicsSource).toMatch(/\[data-paused\] \.ps-spark \{\s*animation-play-state: paused;/);
+  });
+
+  it("hides a whole path at stage 0: the dash offset reaches past the dash into the gap", () => {
+    const pattern = /\.ps-layer \{[^}]*stroke-dasharray: (\d+) (\d+);/.exec(graphicsSource);
+    const hidden = /ps-layer:not\(\.ps-river, \.ps-spark\) \{\s*stroke-dashoffset: (\d+);/.exec(
+      graphicsSource,
+    );
+    expect(pattern).not.toBeNull();
+    expect(hidden).not.toBeNull();
+    const dash = Number(pattern?.[1]);
+    const gap = Number(pattern?.[2]);
+    const offset = Number(hidden?.[1]);
+    expect(offset).toBeGreaterThanOrEqual(dash);
+    expect(offset + 1).toBeLessThanOrEqual(dash + gap);
+  });
+
+  it("leaves the static state final: bloom, ring and spark start hidden and nothing moves outside the motion query", () => {
+    expect(graphicsSource).toMatch(/\.ps-bloom,\s*\.ps-ring \{\s*opacity: 0;/);
+    expect(graphicsSource).toMatch(/\.ps-spark \{[^}]*opacity: 0;/);
+    const start = graphicsSource.indexOf(".painting-streams {");
+    const motion = graphicsSource.indexOf(
+      "@media (prefers-reduced-motion: no-preference) and (min-width: 1001px)",
+      start,
+    );
+    expect(start).toBeGreaterThan(-1);
+    expect(motion).toBeGreaterThan(start);
+    const staticBlock = graphicsSource.slice(start, motion);
+    expect(staticBlock).not.toMatch(/transition|animation/);
+  });
+
+  it("fixes the chip and badge colours so they do not follow the theme", () => {
+    expect(graphicsSource).toMatch(/\.ps-merged-bg \{\s*fill: #4a7d2b;/);
+    expect(graphicsSource).toMatch(/\.ps-merged-text \{\s*fill: #f3f9f5;/);
+    expect(graphicsSource).toMatch(/\.ps-chip-bg \{[^}]*stroke: rgb\(74 125 43 \/ 0\.75\);/);
+    expect(graphicsSource).not.toMatch(
+      /\.ps-(chip-bg|source|merged-bg|check)[^{]*\{[^}]*var\(--accent/,
+    );
   });
 });

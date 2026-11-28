@@ -445,64 +445,139 @@
   pointer-events: none;
 }
 
-.ps-line,
-.ps-river,
-.ps-dot {
+.ps-light {
+  mix-blend-mode: screen;
+}
+
+.ps-layer {
   fill: none;
   stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-dasharray: 1 3;
 }
 
-.ps-line {
-  stroke: #f3f9f5;
-  stroke-width: 5;
-  stroke-dasharray: 1;
+.ps-wash {
+  stroke: #ffcf4a;
+  stroke-width: 120;
+  opacity: 0.4;
 }
 
-.ps-river {
-  stroke: var(--lamp);
-  stroke-width: 9;
-  stroke-dasharray: 1;
+.ps-wide {
+  stroke: #ffcf4a;
+  stroke-width: 30;
+  opacity: 0.55;
 }
 
-.ps-dot {
-  stroke: var(--lamp);
-  stroke-width: 16;
-  stroke-dasharray: 0.0001 1;
+.ps-mid {
+  stroke: #ffe38a;
+  stroke-width: 12;
+  opacity: 0.85;
+}
+
+.ps-core {
+  stroke: #fff8d6;
+  stroke-width: 3.5;
+  opacity: 0.95;
+}
+
+.ps-spark {
+  stroke: #fff;
+  stroke-width: 8;
+  stroke-dasharray: 0.06 3;
   opacity: 0;
 }
 
-.ps-pill rect {
-  fill: #f3f9f5;
+.ps-river.ps-wide {
+  stroke-width: 52;
 }
 
-.ps-pill text {
+.ps-river.ps-mid {
+  stroke-width: 22;
+}
+
+.ps-river.ps-core {
+  stroke-width: 6;
+}
+
+.ps-river.ps-spark {
+  stroke-width: 12;
+}
+
+.ps-bloom,
+.ps-ring {
+  opacity: 0;
+  transform-box: fill-box;
+  transform-origin: center;
+}
+
+.ps-ring {
+  fill: none;
+  stroke: #fff2b0;
+  stroke-width: 3;
+  vector-effect: non-scaling-stroke;
+}
+
+.ps-chip-bg {
+  fill: rgb(243 249 245 / 0.92);
+  stroke: rgb(74 125 43 / 0.75);
+  stroke-width: 2;
+}
+
+.ps-chip-text {
   fill: var(--on-accent);
   font-family: var(--font-mono);
-  font-size: 26px;
-  font-weight: 600;
-}
-
-.ps-merged rect {
-  fill: color-mix(in oklch, var(--accent) 35%, #f3f9f5);
-}
-
-.ps-merged text {
-  fill: var(--on-accent);
-  font-family: var(--font-sans);
-  font-size: 26px;
+  font-size: 23px;
   font-weight: 700;
 }
 
+.ps-stem {
+  stroke: rgb(243 249 245 / 0.85);
+  stroke-width: 2;
+}
+
+.ps-source {
+  fill: #f3f9f5;
+  stroke: rgb(74 125 43 / 0.85);
+  stroke-width: 2.5;
+}
+
+.ps-merged-bg {
+  fill: #4a7d2b;
+}
+
+.ps-merged-text {
+  fill: #f3f9f5;
+  font-family: var(--font-sans);
+  font-size: 25px;
+  font-weight: 700;
+}
+
+.ps-check {
+  fill: none;
+  stroke: #f3f9f5;
+  stroke-width: 3.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
 @media (prefers-reduced-motion: no-preference) and (min-width: 1001px) {
-  .ps-line {
+  .ps-layer {
     transition: stroke-dashoffset 900ms var(--ease-out);
+  }
+
+  .ps-stream-2 {
+    transition-delay: 80ms;
+  }
+
+  .ps-stream-3 {
+    transition-delay: 160ms;
   }
 
   .ps-river {
     transition: stroke-dashoffset 900ms var(--ease-out) 200ms;
   }
 
-  .ps-pill {
+  .ps-chip {
     transition: opacity 500ms var(--ease-out);
   }
 
@@ -514,15 +589,15 @@
       transform 500ms var(--ease-out) 500ms;
   }
 
-  [data-streams][data-stage="0"] .ps-line {
+  [data-streams][data-stage="0"] .ps-chip {
+    opacity: 0.72;
+  }
+
+  [data-streams][data-stage="0"] .ps-layer:not(.ps-river, .ps-spark) {
     stroke-dashoffset: 1;
   }
 
-  [data-streams][data-stage="0"] .ps-pill {
-    opacity: 0.6;
-  }
-
-  [data-streams]:is([data-stage="0"], [data-stage="1"]) .ps-river {
+  [data-streams]:is([data-stage="0"], [data-stage="1"]) .ps-river:not(.ps-spark) {
     stroke-dashoffset: 1;
   }
 
@@ -531,36 +606,80 @@
     transform: scale(0.8);
   }
 
-  [data-streams][data-stage="2"] .ps-dot {
-    animation: ps-flow 1800ms ease-in-out infinite both;
+  [data-streams][data-stage="2"] .ps-spark {
+    animation: ps-spark 3000ms linear infinite both;
   }
 
-  [data-streams][data-stage="2"] .ps-dot:nth-child(6) {
-    animation-delay: 250ms;
+  [data-streams][data-stage="2"] .ps-stream-2.ps-spark {
+    animation-delay: 300ms;
   }
 
-  [data-streams][data-stage="2"] .ps-dot:nth-child(7) {
-    animation-delay: 500ms;
+  [data-streams][data-stage="2"] .ps-stream-3.ps-spark {
+    animation-delay: 600ms;
   }
 
-  [data-streams][data-paused] .ps-dot {
+  [data-streams][data-stage="2"] .ps-river.ps-spark {
+    animation-delay: 900ms;
+  }
+
+  [data-streams][data-stage="2"] .ps-bloom {
+    animation: ps-bloom 1100ms var(--ease-out) 200ms both;
+  }
+
+  [data-streams][data-stage="2"] .ps-ring {
+    animation: ps-ring 800ms var(--ease-out) 200ms both;
+  }
+
+  [data-streams][data-paused] .ps-spark {
     animation-play-state: paused;
   }
 }
 
-@keyframes ps-flow {
+@keyframes ps-spark {
   0% {
-    stroke-dashoffset: 0;
-    opacity: 1;
+    stroke-dashoffset: 0.03;
+    opacity: 0;
   }
 
-  85% {
-    opacity: 1;
+  6% {
+    opacity: 0.95;
+  }
+
+  94% {
+    opacity: 0.95;
   }
 
   100% {
-    stroke-dashoffset: -1;
+    stroke-dashoffset: -0.97;
     opacity: 0;
+  }
+}
+
+@keyframes ps-bloom {
+  0% {
+    opacity: 0;
+    transform: scale(0.55);
+  }
+
+  25% {
+    opacity: 0.95;
+  }
+
+  100% {
+    opacity: 0;
+    transform: scale(1.36);
+  }
+}
+
+@keyframes ps-ring {
+  0% {
+    opacity: 0.85;
+    transform: scale(0.08);
+  }
+
+  100% {
+    opacity: 0;
+    transform: scale(1);
   }
 }
 
