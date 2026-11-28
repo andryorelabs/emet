@@ -154,8 +154,7 @@ export function mergeCodexHooks(
  * plugin binary placeholder so `mergeClaudeHooks` rewrites it onto `emetBin` like every other hook;
  * `emetBin` is taken for that merge, not read here.
  */
-export function standaloneExtraHooks(emetBin: string): JsonObject {
-  void emetBin;
+export function standaloneExtraHooks(_emetBin: string): JsonObject {
   return {
     hooks: {
       SessionStart: [
