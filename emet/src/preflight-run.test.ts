@@ -672,4 +672,26 @@ describe("preflight run (spec branch Phase 5 records)", () => {
     expect(process.exitCode).toBe(1);
     expect(fixture.errors.join("\n")).toContain("Fix: emet spec-branch sync --spec 42");
   });
+
+  test("compares against the remote trunk under landing.mode pr", async () => {
+    const remote = mkdtempSync(path.join(tmpdir(), "preflight-remote-"));
+    runGit(remote, "init", "-q", "--bare", "-b", "main");
+    runGit(fixture.repo, "remote", "add", "origin", remote);
+    fixture.writeConfig({ landing: { mode: "pr", unit: "spec" } });
+    runGit(fixture.repo, "commit", "-q", "--allow-empty", "-am", "config");
+    runGit(fixture.repo, "push", "-q", "origin", "main");
+    runGit(fixture.repo, "fetch", "-q", "origin");
+    runGit(fixture.repo, "switch", "-q", "-c", "spec/42");
+    runGit(fixture.repo, "switch", "-q", "-c", "spec/42-w1");
+    commitAdr("0001-x.md");
+    runGit(fixture.repo, "switch", "-q", "spec/42");
+    runGit(fixture.repo, "merge", "-q", "--no-ff", "-m", "integrate", "spec/42-w1");
+    await run(["--run", "emet42w1135700"]);
+    expect(fixture.errors.join("\n")).not.toContain("Phase 5 records");
+    commitAdr("0002-y.md");
+    await run(["--run", "emet42w1135700"]);
+    expect(fixture.errors.join("\n")).toContain(
+      "Phase 5 records were committed directly on spec/42: docs/adr/0002-y.md — land them on origin/main and run `emet spec-branch sync --spec 42`.",
+    );
+  });
 });
