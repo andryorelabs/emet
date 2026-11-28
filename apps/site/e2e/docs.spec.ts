@@ -1,5 +1,15 @@
 import { expect, test, type Page } from "@playwright/test";
 
+test.afterEach(({ page }, testInfo) => {
+  void page;
+  if (testInfo.status === testInfo.expectedStatus) return;
+  for (const error of testInfo.errors) {
+    process.stdout.write(
+      `DOCS-SWEEP-FAILURE ${testInfo.title}: ${(error.message ?? "").slice(0, 700)}\n`,
+    );
+  }
+});
+
 const LOCALES = ["en", "es", "de", "fr", "it", "ja", "ko", "pt-BR", "ru", "zh-CN"] as const;
 const PAGES = [
   { name: "install", path: "/docs/start/install/" },
