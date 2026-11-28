@@ -16,8 +16,8 @@ Trois commandes slash enveloppent la CLI dans Claude Code : `/emet:run` (le pipe
 Dans n'importe quel dépôt git :
 
 ```bash
-emet init          # autodetects package manager, trunk branch, tracker kind
-emet preflight      # confirms the repo is dispatch-ready
+emet init       # autodetects package manager, trunk branch, tracker kind
+emet preflight  # confirms the repo is dispatch-ready
 ```
 
 `emet init` laisse un marqueur `TODO(emet):` dans les fichiers `docs/agents/*.md` générés pour tout ce qu'il ne peut pas déduire seul (un verrou partagé de la base de données de test, la propriété du schéma, etc.). Complétez-les ; `emet preflight` refuse de distribuer tant qu'il en reste un.

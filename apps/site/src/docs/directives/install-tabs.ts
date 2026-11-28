@@ -41,7 +41,7 @@ export function installTabs(node: ContainerDirectiveNode): MdastNode | undefined
   return element(
     "div",
     {
-      class: `${TABS_CLASS} emet-install-tabs`,
+      class: `${TABS_CLASS} not-content emet-install-tabs`,
       "data-slot": "tabs",
       "data-orientation": "horizontal",
       "data-install-tabs": "",

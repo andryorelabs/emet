@@ -16,8 +16,8 @@ Três comandos de barra envolvem a CLI dentro do Claude Code: `/emet:run` (o pip
 Em qualquer repositório git:
 
 ```bash
-emet init          # autodetects package manager, trunk branch, tracker kind
-emet preflight      # confirms the repo is dispatch-ready
+emet init       # autodetects package manager, trunk branch, tracker kind
+emet preflight  # confirms the repo is dispatch-ready
 ```
 
 O `emet init` deixa um marcador `TODO(emet):` nos arquivos `docs/agents/*.md` gerados para tudo o que ele não consegue inferir sozinho (um lock compartilhado do banco de dados de testes, a propriedade do schema e assim por diante). Preencha-os; o `emet preflight` se recusa a despachar enquanto restar algum.

@@ -16,8 +16,8 @@ sourceHash: cde063f67e8e54d7
 В любом git-репозитории:
 
 ```bash
-emet init          # autodetects package manager, trunk branch, tracker kind
-emet preflight      # confirms the repo is dispatch-ready
+emet init       # autodetects package manager, trunk branch, tracker kind
+emet preflight  # confirms the repo is dispatch-ready
 ```
 
 `emet init` оставляет маркер `TODO(emet):` в сгенерированных файлах `docs/agents/*.md` для всего, что не может определить сам (общая блокировка тестовой базы данных, владелец схемы и так далее). Заполните их; пока остаётся хотя бы один, `emet preflight` отказывается запускать диспетчеризацию.

@@ -88,7 +88,8 @@
 }
 
 .bento-tracker {
-  grid-column: 1 / 13;
+  grid-column: 1 / -1;
+  grid-row: 3;
 }
 
 .bento-card [data-slot="card-header"] h3 {
@@ -142,6 +143,12 @@
   color: var(--accent-text);
 }
 
+@media (min-width: 1024px) {
+  .bento-tracker {
+    grid-column: 1 / 5;
+  }
+}
+
 @media (max-width: 1100px) {
   .features {
     padding-inline: 24px;
@@ -157,7 +164,8 @@
     grid-template-columns: minmax(0, 1fr);
   }
 
-  .bento-card {
+  .bento-card,
+  .bento-tracker {
     grid-column: 1;
     grid-row: auto;
   }
