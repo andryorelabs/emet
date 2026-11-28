@@ -8,6 +8,20 @@ and this project adheres to
 
 ## [Unreleased]
 
+## [0.23.0] - 2026-11-28
+
+### Changed
+
+- The Website home page is redesigned to match prototype v17, with a parity harness (`bun run --cwd apps/site parity`) that compares each section with its reference and records every visible difference.
+- The Website's merge animation gets a light-in-the-water overlay, and a review round fixes the home page's bento layout, docs tab contrast and footer.
+- The Website, tooling and toolchain dependencies are at their latest versions: Astro 7, Starlight 0.43, `@types/node` 26, `eslint-plugin-unicorn` 80, oxlint 1.95, oxfmt 0.80, bun 1.4.5, node 26.13.1 and zizmor 1.33.1.
+- The `emet` CLI is unchanged apart from its version.
+
+### Fixed
+
+- The Website's page step links use the text color instead of the browser blue.
+- The Website image smoke test no longer fails at random on `curl` piped into `grep -q`.
+
 ## [0.22.2] - 2026-11-25
 
 ### Changed
@@ -669,7 +683,8 @@ and this project adheres to
 - Per-repo configuration through `forge.config.json`.
 - `install.sh`, which installs the CLI, command and agents.
 
-[Unreleased]: https://github.com/andryorelabs/emet/compare/v0.22.2...HEAD
+[Unreleased]: https://github.com/andryorelabs/emet/compare/v0.23.0...HEAD
+[0.23.0]: https://github.com/andryorelabs/emet/compare/v0.22.2...v0.23.0
 [0.22.2]: https://github.com/andryorelabs/emet/compare/v0.22.1...v0.22.2
 [0.22.1]: https://github.com/andryorelabs/emet/compare/v0.22.0...v0.22.1
 [0.22.0]: https://github.com/andryorelabs/emet/compare/v0.21.0...v0.22.0
