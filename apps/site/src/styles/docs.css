@@ -281,7 +281,10 @@ site-search kbd {
 
 .sidebar-content a[aria-current="page"],
 .sidebar-content a[aria-current="page"]:hover,
-.sidebar-content a[aria-current="page"]:focus {
+.sidebar-content a[aria-current="page"]:focus,
+[data-menu-sidebar] a[aria-current="page"],
+[data-menu-sidebar] a[aria-current="page"]:hover,
+[data-menu-sidebar] a[aria-current="page"]:focus {
   background-color: var(--surface);
   color: var(--text);
   font-weight: 600;

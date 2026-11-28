@@ -36,6 +36,20 @@
   margin: 0;
 }
 
+.sl-markdown-content .emet-install-tabs .expressive-code pre,
+.sl-markdown-content .emet-install-tabs .expressive-code .ec-line .code {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.sl-markdown-content .emet-install-tabs .expressive-code pre > code {
+  min-width: 0;
+}
+
+.sl-markdown-content .emet-install-tabs .expressive-code .ec-line .code {
+  padding-inline-end: 3rem;
+}
+
 .sl-markdown-content .emet-install-tabs .expressive-code figure {
   border: 0;
   border-radius: 0;
