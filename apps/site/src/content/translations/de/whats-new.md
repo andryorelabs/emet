@@ -2,8 +2,24 @@
 title: Neuigkeiten
 description: Release Notes für emet: was sich in jeder Version geändert hat.
 seoTitle: "Neuigkeiten in emet: Release Notes"
-sourceHash: 2e828f2cf39020f5
+sourceHash: 7cd403f7cf42abea
 ---
+
+## 0.23.0
+
+2026-11-28
+
+### Geändert
+
+- Die Startseite der Website ist nach dem Prototyp v17 neu gestaltet, mit einem Parity-Harness (`bun run --cwd apps/site parity`), der jeden Abschnitt mit seiner Referenz vergleicht und jeden sichtbaren Unterschied festhält.
+- Die Merge-Animation der Website erhält ein „Light in the water“-Overlay, und eine Review-Runde korrigiert das Bento-Layout der Startseite, den Kontrast der Docs-Tabs und den Footer.
+- Die Abhängigkeiten von Website, Tooling und Toolchain sind auf dem neuesten Stand: Astro 7, Starlight 0.43, `@types/node` 26, `eslint-plugin-unicorn` 80, oxlint 1.95, oxfmt 0.80, bun 1.4.5, node 26.13.1 und zizmor 1.33.1.
+- Die `emet`-CLI bleibt bis auf ihre Version unverändert.
+
+### Behoben
+
+- Die Links der Seitenschritte auf der Website verwenden die Textfarbe statt des Browser-Blaus.
+- Der Smoke-Test des Website-Images schlägt bei `curl` mit Pipe nach `grep -q` nicht mehr zufällig fehl.
 
 ## 0.22.2
 

@@ -2,8 +2,24 @@
 title: 新功能
 description: emet 的发布说明：每个版本都有哪些变化。
 seoTitle: "emet 新功能：发布说明"
-sourceHash: 2e828f2cf39020f5
+sourceHash: 7cd403f7cf42abea
 ---
+
+## 0.23.0
+
+2026-11-28
+
+### 变更
+
+- 网站首页按原型 v17 重新设计，并新增一致性测试工具（`bun run --cwd apps/site parity`），它会将每个区块与其参考对比，并记录每一处可见差异。
+- 网站的合并动画新增“light in the water”叠加层，并通过一轮评审修复了首页的 bento 布局、文档标签页的对比度和页脚。
+- 网站、工具和工具链的依赖已更新到最新版本：Astro 7、Starlight 0.43、`@types/node` 26、`eslint-plugin-unicorn` 80、oxlint 1.95、oxfmt 0.80、bun 1.4.5、node 26.13.1 和 zizmor 1.33.1。
+- `emet` CLI 除版本号外保持不变。
+
+### 已修复
+
+- 网站的页面步骤链接使用文本颜色，而不是浏览器默认的蓝色。
+- 网站镜像的冒烟测试不再因 `curl` 通过管道传给 `grep -q` 而随机失败。
 
 ## 0.22.2
 

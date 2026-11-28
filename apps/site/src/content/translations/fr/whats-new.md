@@ -2,8 +2,24 @@
 title: Nouveautés
 description: Notes de version d'emet : ce qui a changé dans chaque version.
 seoTitle: Nouveautés d'emet : notes de version
-sourceHash: 2e828f2cf39020f5
+sourceHash: 7cd403f7cf42abea
 ---
+
+## 0.23.0
+
+2026-11-28
+
+### Modifié
+
+- La page d'accueil du site web est repensée d'après le prototype v17, avec un harnais de parité (`bun run --cwd apps/site parity`) qui compare chaque section à sa référence et consigne chaque différence visible.
+- L'animation de fusion du site web reçoit une superposition « light in the water », et un tour de revue corrige la disposition bento de la page d'accueil, le contraste des onglets de la documentation et le pied de page.
+- Les dépendances du site web, de l'outillage et de la toolchain sont à leurs dernières versions : Astro 7, Starlight 0.43, `@types/node` 26, `eslint-plugin-unicorn` 80, oxlint 1.95, oxfmt 0.80, bun 1.4.5, node 26.13.1 et zizmor 1.33.1.
+- La CLI `emet` reste inchangée, hors sa version.
+
+### Corrigé
+
+- Les liens des étapes de page du site web utilisent la couleur du texte au lieu du bleu du navigateur.
+- Le test de fumée de l'image du site web n'échoue plus au hasard avec `curl` redirigé vers `grep -q`.
 
 ## 0.22.2
 
