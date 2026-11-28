@@ -1271,6 +1271,13 @@ export async function checkPhaseFiveRecordsLanded(
   return paths.length === 0 ? { ok: true } : { ok: false, paths };
 }
 
+/**
+ * `spec/<id>` with no wave suffix. Under `landing.unit: spec` its committed
+ * `docs/adr/` and `GLOSSARY.md` changes are earlier waves' integrated work,
+ * not unlanded Phase 5 edits, so only uncommitted drift counts there.
+ */
+const SPEC_BRANCH_PATTERN = /^spec\/(?!.*-w\d+$)[^/]+$/;
+
 /** The S11 preflight failure line, or `null` when HEAD descends from trunk. */
 async function collectHeadTrunkFailure(
   repoRoot: string,
@@ -1284,9 +1291,13 @@ async function collectHeadTrunkFailure(
   if (headSha === null) return null;
   const verdict = await checkHeadDescendsFromTrunk(headSha, trunkRef, trunk, remote);
   if (verdict.ok) {
-    const records = await checkPhaseFiveRecordsLanded(trunkRef, repoRoot);
+    const onSpecBranch = SPEC_BRANCH_PATTERN.test(
+      (await Bun.$`git rev-parse --abbrev-ref HEAD`.cwd(repoRoot).quiet().nothrow().text()).trim(),
+    );
+    const recordsRef = onSpecBranch ? "HEAD" : trunkRef;
+    const records = await checkPhaseFiveRecordsLanded(recordsRef, repoRoot);
     if (records.ok) return null;
-    return `Phase 5 records are not on ${trunkRef}: ${records.paths.join(", ")} — land them on trunk (PR, or local merge) before dispatch.`;
+    return `Phase 5 records are not on ${onSpecBranch ? "the spec branch" : trunkRef}: ${records.paths.join(", ")} — land them on ${onSpecBranch ? "it" : "trunk"} (PR, or local merge) before dispatch.`;
   }
   return `HEAD (${verdict.branch}) is not ${trunkRef} or a descendant of it — dispatch from trunk so workers contain Phase 5's landed records. Fix: ${verdict.fix}`;
 }

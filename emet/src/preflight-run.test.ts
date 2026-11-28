@@ -331,6 +331,38 @@ describe("preflight run (full gate)", () => {
     expect(fixture.errors.join("\n")).toContain("Phase 5 records are not on main: GLOSSARY.md");
   });
 
+  test("accepts committed docs/adr changes on a spec branch", async () => {
+    runGit(fixture.repo, "checkout", "-q", "-b", "spec/42");
+    mkdirSync(path.join(fixture.repo, "docs", "adr"), { recursive: true });
+    writeFileSync(path.join(fixture.repo, "docs", "adr", "0001-wave-one.md"), "# adr\n");
+    runGit(fixture.repo, "add", "-A");
+    runGit(fixture.repo, "commit", "-q", "-m", "wave one adr");
+    await run([]);
+    expect(fixture.errors.join("\n")).not.toContain("Phase 5 records");
+  });
+
+  test("still fails on uncommitted docs/adr changes on a spec branch", async () => {
+    runGit(fixture.repo, "checkout", "-q", "-b", "spec/42");
+    mkdirSync(path.join(fixture.repo, "docs", "adr"), { recursive: true });
+    writeFileSync(path.join(fixture.repo, "docs", "adr", "0001-draft.md"), "# adr\n");
+    await run([]);
+    expect(process.exitCode).toBe(1);
+    expect(fixture.errors.join("\n")).toContain(
+      "Phase 5 records are not on the spec branch: docs/adr/0001-draft.md",
+    );
+  });
+
+  test("keeps the trunk comparison on a spec wave branch", async () => {
+    runGit(fixture.repo, "checkout", "-q", "-b", "spec/42-w2");
+    mkdirSync(path.join(fixture.repo, "docs", "adr"), { recursive: true });
+    writeFileSync(path.join(fixture.repo, "docs", "adr", "0001-wave.md"), "# adr\n");
+    runGit(fixture.repo, "add", "-A");
+    runGit(fixture.repo, "commit", "-q", "-m", "wave adr");
+    await run([]);
+    expect(process.exitCode).toBe(1);
+    expect(fixture.errors.join("\n")).toContain("Phase 5 records are not on main");
+  });
+
   test("warns about an orphaned worktree-agent scaffold branch without failing", async () => {
     runGit(fixture.repo, "branch", "worktree-agent-gone");
     await run([]);
