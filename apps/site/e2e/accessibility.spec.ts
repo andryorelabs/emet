@@ -191,7 +191,7 @@ interface OpenWidget {
   readonly open: (page: Page) => Promise<void>;
 }
 
-/** The widgets that must stay accessible while open: theme and language menus on the home and a docs page, page actions menu, mobile sheet, search dialog and FAQ. */
+/** The widgets that must stay accessible while open: theme and language menus on the home and a docs page, page actions menu, mobile sheet, search dialog, docs prev/next cards and FAQ. */
 const OPEN_WIDGETS: readonly OpenWidget[] = [
   {
     name: "theme menu",
@@ -248,6 +248,16 @@ const OPEN_WIDGETS: readonly OpenWidget[] = [
     open: async (page) => {
       await page.locator("button[data-menu-button]:visible").first().click();
       await expect(page.getByRole("dialog")).toBeVisible();
+    },
+  },
+  {
+    name: "docs prev/next cards",
+    path: "/docs/how-to/check-a-fleet/",
+    width: 1280,
+    scope: ".pagination-links",
+    open: async (page) => {
+      await page.locator(".pagination-links").scrollIntoViewIfNeeded();
+      await expect(page.locator(".pagination-links a")).toHaveCount(2);
     },
   },
   {
