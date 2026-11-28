@@ -2,8 +2,16 @@
 title: 新功能
 description: emet 的发布说明：每个版本都有哪些变化。
 seoTitle: "emet 新功能：发布说明"
-sourceHash: 7cd403f7cf42abea
+sourceHash: 68a8e260bc8c91a3
 ---
+
+## 0.23.1
+
+2026-11-28
+
+### 已修复
+
+- `emet preflight` 不再从按 spec 落地的 spec 的第二个 wave 起阻止 dispatch。它接受较早的 wave 集成到 `spec/<id>` 中的 `GLOSSARY.md` 和 `docs/adr/` 记录，对未提交的记录或直接提交到 spec 分支的记录仍然报错。当 trunk 领先于 spec 分支时，它现在会建议运行 `emet spec-branch sync`。
 
 ## 0.23.0
 

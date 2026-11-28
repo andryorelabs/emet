@@ -2,8 +2,16 @@
 title: Nouveautés
 description: Notes de version d'emet : ce qui a changé dans chaque version.
 seoTitle: Nouveautés d'emet : notes de version
-sourceHash: 7cd403f7cf42abea
+sourceHash: 68a8e260bc8c91a3
 ---
+
+## 0.23.1
+
+2026-11-28
+
+### Corrigé
+
+- `emet preflight` ne bloque plus le dispatch à partir de la deuxième vague d'une spec livrée par spec. Il accepte les enregistrements de `GLOSSARY.md` et `docs/adr/` qu'une vague précédente a intégrés dans `spec/<id>`, et échoue toujours sur des enregistrements non commités ou commités directement sur la branche de la spec. Quand le trunk a dépassé la branche de la spec, il suggère désormais `emet spec-branch sync`.
 
 ## 0.23.0
 

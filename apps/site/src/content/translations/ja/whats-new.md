@@ -2,8 +2,16 @@
 title: 新機能
 description: emet のリリースノート。各バージョンでの変更点をまとめています。
 seoTitle: "emet の新機能: リリースノート"
-sourceHash: 7cd403f7cf42abea
+sourceHash: 68a8e260bc8c91a3
 ---
+
+## 0.23.1
+
+2026-11-28
+
+### 修正
+
+- `emet preflight` は、スペック単位でランディングするスペックの 2 番目のウェーブ以降で dispatch をブロックしなくなりました。前のウェーブが `spec/<id>` に統合した `GLOSSARY.md` と `docs/adr/` の記録を受け入れ、未コミットの記録やスペックブランチに直接コミットされた記録では引き続き失敗します。trunk がスペックブランチより進んでいる場合は、`emet spec-branch sync` を提案するようになりました。
 
 ## 0.23.0
 

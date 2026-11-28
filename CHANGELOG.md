@@ -8,6 +8,12 @@ and this project adheres to
 
 ## [Unreleased]
 
+## [0.23.1] - 2026-11-28
+
+### Fixed
+
+- `emet preflight` no longer blocks dispatch from the second wave of a spec landed per spec. It accepts the `GLOSSARY.md` and `docs/adr/` records that an earlier wave integrated into `spec/<id>`, and still fails on uncommitted records or records committed directly on the spec branch. When trunk moved past the spec branch it now suggests `emet spec-branch sync`.
+
 ## [0.23.0] - 2026-11-28
 
 ### Changed
@@ -683,7 +689,8 @@ and this project adheres to
 - Per-repo configuration through `forge.config.json`.
 - `install.sh`, which installs the CLI, command and agents.
 
-[Unreleased]: https://github.com/andryorelabs/emet/compare/v0.23.0...HEAD
+[Unreleased]: https://github.com/andryorelabs/emet/compare/v0.23.1...HEAD
+[0.23.1]: https://github.com/andryorelabs/emet/compare/v0.23.0...v0.23.1
 [0.23.0]: https://github.com/andryorelabs/emet/compare/v0.22.2...v0.23.0
 [0.22.2]: https://github.com/andryorelabs/emet/compare/v0.22.1...v0.22.2
 [0.22.1]: https://github.com/andryorelabs/emet/compare/v0.22.0...v0.22.1
