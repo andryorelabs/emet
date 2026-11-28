@@ -28,6 +28,16 @@ describe("docs chrome", () => {
     );
   });
 
+  it("styles the active link of the docs mobile menu sheet like the sidebar one", () => {
+    const activeRules = [
+      ...css.matchAll(/([^{}]*a\[aria-current="page"\][^{}]*)\{[^}]*--surface[^}]*\}/g),
+    ];
+    const selectors = activeRules.map((rule) => rule[1]).join(",");
+    for (const state of ["", ":hover", ":focus"]) {
+      expect(selectors).toContain(`[data-menu-sidebar] a[aria-current="page"]${state}`);
+    }
+  });
+
   it("mounts the site mobile menu inside the docs header", () => {
     expect(header).toContain("MobileMenu");
   });

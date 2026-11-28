@@ -82,14 +82,12 @@ for (const viewport of VIEWPORTS) {
             .filter((node) => node.getClientRects().length > 0)
             .map((node) => ({
               overflowing: node.scrollWidth > node.clientWidth,
-              scrolls: ["auto", "scroll"].includes(getComputedStyle(node).overflowX),
               frameFits: node.getBoundingClientRect().right <= window.innerWidth,
             })),
         );
         for (const code of codeOverflow) {
           expect(code.frameFits).toBe(true);
-          if (viewport.width > 390) expect(code.overflowing).toBe(false);
-          else expect(!code.overflowing || code.scrolls).toBe(true);
+          expect(code.overflowing).toBe(false);
         }
 
         if (docsPage.name === "install") {
@@ -101,26 +99,42 @@ for (const viewport of VIEWPORTS) {
         }
 
         if (viewport.width === 390) {
-          const boxes = await page.evaluate(() => {
-            const [menu, language] = [
-              "button[data-menu-button], .sl-menu-button",
-              '[data-menu="lang-trigger"], .docs-header .lang summary',
-            ].map((selector) =>
-              [...document.querySelectorAll(selector)]
-                .find((candidate) => candidate.getClientRects().length > 0)
-                ?.getBoundingClientRect(),
+          const menuButtons = await page.evaluate(() =>
+            [...document.querySelectorAll("button[data-menu-button], .sl-menu-button")]
+              .filter((candidate) => candidate.getClientRects().length > 0)
+              .map((candidate) => candidate.className),
+          );
+          expect(menuButtons).toHaveLength(1);
+          expect(menuButtons.join(" ")).not.toContain("sl-menu-button");
+
+          const overlaps = await page.evaluate(() => {
+            const menu = [...document.querySelectorAll("button[data-menu-button]")].find(
+              (candidate) => candidate.getClientRects().length > 0,
             );
-            return { menu: menu ?? null, language: language ?? null };
+            const menuBox = menu?.getBoundingClientRect();
+            const neighbours = [
+              ...document.querySelectorAll(
+                '.docs-header button, .docs-header summary, .docs-header a[href], [data-menu="lang-trigger"]',
+              ),
+            ].filter((node) => node !== menu && node.getClientRects().length > 0);
+            return {
+              neighbours: neighbours.length,
+              hasMenu: menuBox !== undefined,
+              overlapping: neighbours.filter((node) => {
+                const box = node.getBoundingClientRect();
+                return (
+                  menuBox !== undefined &&
+                  box.left < menuBox.right &&
+                  menuBox.left < box.right &&
+                  box.top < menuBox.bottom &&
+                  menuBox.top < box.bottom
+                );
+              }).length,
+            };
           });
-          expect(boxes.menu).not.toBeNull();
-          if (boxes.menu !== null && boxes.language !== null) {
-            const apart =
-              boxes.menu.right <= boxes.language.left ||
-              boxes.language.right <= boxes.menu.left ||
-              boxes.menu.bottom <= boxes.language.top ||
-              boxes.language.bottom <= boxes.menu.top;
-            expect(apart).toBe(true);
-          }
+          expect(overlaps.hasMenu).toBe(true);
+          expect(overlaps.neighbours).toBeGreaterThan(0);
+          expect(overlaps.overlapping).toBe(0);
         }
 
         expect(problems()).toEqual([]);
@@ -135,20 +149,41 @@ for (const viewport of VIEWPORTS) {
     await page.goto("/docs/how-to/check-a-fleet/", { waitUntil: "load" });
     const links = page.locator(".pagination-links a");
     await expect(links).toHaveCount(2);
-    const borders = async (): Promise<string[]> =>
-      links.evaluateAll((nodes) =>
-        nodes.map((node) => {
-          const style = getComputedStyle(node);
-          return `${style.borderTopWidth} ${style.borderTopStyle} ${style.borderTopColor}`;
-        }),
-      );
+    const read = async (): Promise<{
+      borders: string[];
+      alphas: number[];
+      background: string;
+      prefersDark: boolean;
+    }> => {
+      const [borders, alphas] = await links.evaluateAll((nodes) => {
+        const styles = nodes.map((node) => getComputedStyle(node));
+        return [
+          styles.map((s) => `${s.borderTopWidth} ${s.borderTopStyle} ${s.borderTopColor}`),
+          styles.map((s) => {
+            const match = /(?:,|\/)\s*([\d.]+)\s*\)$/.exec(s.borderTopColor);
+            return match?.[1] === undefined ? 1 : Number(match[1]);
+          }),
+        ] as const;
+      });
+      return {
+        borders,
+        alphas,
+        background: await page.evaluate(() => getComputedStyle(document.body).backgroundColor),
+        prefersDark: await page.evaluate(() => matchMedia("(prefers-color-scheme: dark)").matches),
+      };
+    };
+    const backgrounds: string[] = [];
     for (const colorScheme of ["light", "dark"] as const) {
       /* oxlint-disable-next-line eslint/no-await-in-loop -- sequential on purpose: each scheme re-renders the same page */
       await page.emulateMedia({ colorScheme });
       /* oxlint-disable-next-line eslint/no-await-in-loop -- sequential on purpose: reads the scheme just applied */
-      const [previous, next] = await borders();
-      expect(previous).toBe(next);
-      expect(previous).not.toContain("0px");
+      const state = await read();
+      expect(state.prefersDark).toBe(colorScheme === "dark");
+      expect(state.borders[0]).toBe(state.borders[1]);
+      expect(state.borders[0]).toMatch(/^[1-9]\d*(\.\d+)?px solid /);
+      for (const alpha of state.alphas) expect(alpha).toBeGreaterThan(0);
+      backgrounds.push(state.background);
     }
+    expect(backgrounds[0]).not.toBe(backgrounds[1]);
   });
 }

@@ -251,6 +251,15 @@ const OPEN_WIDGETS: readonly OpenWidget[] = [
     },
   },
   {
+    name: "docs mobile menu sheet",
+    path: "/docs/how-to/check-a-fleet/",
+    width: 375,
+    open: async (page) => {
+      await page.locator("button[data-menu-button]:visible").first().click();
+      await expect(page.getByRole("dialog")).toBeVisible();
+    },
+  },
+  {
     name: "docs prev/next cards",
     path: "/docs/how-to/check-a-fleet/",
     width: 1280,
