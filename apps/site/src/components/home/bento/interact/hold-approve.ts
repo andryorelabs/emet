@@ -90,7 +90,7 @@ export function initApproval(scene: HTMLElement): void {
       delete button.dataset.holding;
       scene.dataset.done = "";
       delete stamp.dataset.pop;
-      void stamp.offsetWidth;
+      stamp.getBoundingClientRect();
       stamp.dataset.pop = "";
       status.textContent = doneText;
       if (!hovering && !focused) settle();

@@ -9,7 +9,7 @@
 export function restartScene(scene: HTMLElement): void {
   scene.style.setProperty("--scene-offset", "0s");
   scene.dataset.restart = "";
-  void scene.offsetWidth;
+  scene.getBoundingClientRect();
   delete scene.dataset.restart;
 }
 
