@@ -60,6 +60,9 @@ for (const viewport of VIEWPORTS) {
       test(`docs sweep: ${docsPage.name} in ${locale} at ${viewport.name}`, async ({ page }) => {
         await page.emulateMedia({ reducedMotion: "reduce" });
         await page.setViewportSize({ width: viewport.width, height: viewport.height });
+        await page.route("**/api/github-stars", (route) =>
+          route.fulfill({ json: { stargazers_count: 1200 } }),
+        );
         const problems = watchProblems(page);
         await page.goto(localized(locale, docsPage.path), { waitUntil: "load" });
         await page.waitForLoadState("networkidle");
