@@ -2,8 +2,16 @@
 title: 새로운 소식
 description: emet 릴리스 노트. 각 버전에서 무엇이 바뀌었는지 정리합니다.
 seoTitle: "emet 새로운 소식: 릴리스 노트"
-sourceHash: 7cd403f7cf42abea
+sourceHash: 68a8e260bc8c91a3
 ---
+
+## 0.23.1
+
+2026-11-28
+
+### 수정됨
+
+- `emet preflight`가 스펙 단위로 랜딩하는 스펙의 두 번째 웨이브부터 dispatch를 막지 않습니다. 이전 웨이브가 `spec/<id>`에 통합한 `GLOSSARY.md`와 `docs/adr/` 기록은 허용하고, 커밋되지 않은 기록이나 스펙 브랜치에 직접 커밋된 기록은 계속 실패로 처리합니다. trunk가 스펙 브랜치보다 앞서 있으면 이제 `emet spec-branch sync`를 제안합니다.
 
 ## 0.23.0
 

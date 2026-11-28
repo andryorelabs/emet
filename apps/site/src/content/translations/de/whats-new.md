@@ -2,8 +2,16 @@
 title: Neuigkeiten
 description: Release Notes für emet: was sich in jeder Version geändert hat.
 seoTitle: "Neuigkeiten in emet: Release Notes"
-sourceHash: 7cd403f7cf42abea
+sourceHash: 68a8e260bc8c91a3
 ---
+
+## 0.23.1
+
+2026-11-28
+
+### Behoben
+
+- `emet preflight` blockiert den Dispatch ab der zweiten Welle einer pro Spec gelandeten Spec nicht mehr. Es akzeptiert die Einträge in `GLOSSARY.md` und `docs/adr/`, die eine frühere Welle in `spec/<id>` integriert hat, und schlägt weiterhin bei nicht committeten Einträgen oder direkt auf dem Spec-Branch committeten Einträgen fehl. Ist der Trunk dem Spec-Branch voraus, schlägt es jetzt `emet spec-branch sync` vor.
 
 ## 0.23.0
 
